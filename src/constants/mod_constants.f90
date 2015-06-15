@@ -38,7 +38,7 @@ module mod_constants
     real(rk), parameter     :: NINTH    = 1._rk/9._rk
 
     real(rk), parameter     :: TWO_THR  = 2._rk/3._rk
-    real(rk), parameter     :: THR_FIF  = 3._rk/5._rk
+    real(rk), parameter     :: THR_FIV  = 3._rk/5._rk
 
     !> Indexing for faces directions and jacobian blocks
     integer(ishort), parameter :: XI_MIN    = 1

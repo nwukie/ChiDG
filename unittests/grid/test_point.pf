@@ -1,0 +1,22 @@
+@Test
+subroutine testPoint_set() 
+    use pfunit_mod
+    use type_point
+    use mod_kinds, only: rk,ik
+    
+    implicit none
+    type(point_t)   :: pnt
+    real(rk)        :: x_ref, y_ref, z_ref, tol
+    
+    tol = 1.e-16_rk
+    
+    x_ref = 1.5_rk
+    y_ref = 2.8_rk
+    z_ref = 10.5_rk
+    
+    call pnt%set(x_ref,y_ref,z_ref)
+    
+    @assertEqual(x_ref,pnt%x_)
+    @assertEqual(y_ref,pnt%y_)
+    @assertEqual(z_ref,pnt%z_)
+end subroutine

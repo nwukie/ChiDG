@@ -1,0 +1,156 @@
+! Test init_gen procedure for initializing general matrix storage
+@Test
+subroutine test_INIT_GEN() 
+    use pfunit_mod
+    use mod_kinds, only: rk,ik
+    use type_denseblock
+    
+    implicit none
+    type(denseblock_t)   :: blk
+    integer(ik)          :: idim,jdim,parent,nentries
+    
+    
+    ! Test initialization procedure
+    idim   = 4
+    jdim   = 10
+    nentries = idim*jdim
+    parent = 55
+    
+    call blk%init(idim,jdim,parent)
+    
+    @assertEqual(idim,blk%idim())
+    @assertEqual(jdim,blk%jdim())
+    @assertEqual(nentries,blk%nentries())
+    @assertEqual(parent,blk%parent())
+    
+    
+    ! Test reinitialization procedure
+    idim   = 6
+    jdim   = 12
+    nentries = idim*jdim
+    parent = 12
+    
+    call blk%init(idim,jdim,parent)
+    
+    @assertEqual(idim,blk%idim())
+    @assertEqual(jdim,blk%jdim())
+    @assertEqual(nentries,blk%nentries())
+    @assertEqual(parent,blk%parent())
+    
+end subroutine
+
+
+! Test init_square procedure for initializing square matrix storage
+@Test
+subroutine test_INIT_SQUARE()
+    use pfunit_mod
+    use mod_kinds, only: rk,ik
+    use type_denseblock
+    
+    implicit none
+    type(denseblock_t)   :: blk
+    integer(ik)          :: bsize,parent,nentries
+    
+    
+    ! Test initialization procedure
+    bsize   = 4
+    nentries = bsize*bsize
+    parent = 55
+    
+    call blk%init(bsize,parent)
+    
+    @assertEqual(bsize,blk%idim())
+    @assertEqual(bsize,blk%jdim())
+    @assertEqual(nentries,blk%nentries())
+    @assertEqual(parent,blk%parent())
+    
+    
+    ! Test reinitialization procedure
+    bsize   = 12
+    nentries = bsize*bsize
+    parent = 22
+    
+    call blk%init(bsize,parent)
+    
+    @assertEqual(bsize,blk%idim())
+    @assertEqual(bsize,blk%jdim())
+    @assertEqual(nentries,blk%nentries())
+    @assertEqual(parent,blk%parent())
+
+end subroutine
+
+
+
+! Test 'resize' procedure for resizing matrix storage
+@Test
+subroutine test_RESIZE()
+    use pfunit_mod
+    use mod_kinds, only: rk,ik
+    use type_denseblock
+    
+    implicit none
+    type(denseblock_t)   :: blk
+    integer(ik)          :: idim,jdim,parent,nentries
+    
+    
+    ! Initialize block
+    idim   = 4
+    jdim   = 7
+    parent = 55
+    
+    call blk%init(idim,jdim,parent)
+    
+    ! Test resize procedure
+    idim   = 12
+    jdim   = 33
+    nentries = idim*jdim
+    
+    call blk%resize(idim,jdim)
+    
+    @assertEqual(idim,blk%idim())
+    @assertEqual(jdim,blk%jdim())
+    @assertEqual(nentries,blk%nentries())
+    @assertEqual(parent,blk%parent())
+
+end subroutine
+
+
+! Test 'reparent' procedure for assigning new parent element index
+@Test
+subroutine test_REPARENT()
+    use pfunit_mod
+    use mod_kinds, only: rk,ik
+    use type_denseblock
+    
+    implicit none
+    type(denseblock_t)   :: blk
+    integer(ik)          :: idim,jdim,parent,nentries
+    
+    
+    ! Initialize block
+    idim   = 4
+    jdim   = 7
+    nentries = idim*jdim
+    parent = 55
+    
+    call blk%init(idim,jdim,parent)
+    
+    ! Test resize procedure
+    parent = 21
+    
+    call blk%reparent(parent)
+    
+    @assertEqual(idim,blk%idim())
+    @assertEqual(jdim,blk%jdim())
+    @assertEqual(nentries,blk%nentries())
+    @assertEqual(parent,blk%parent())
+
+end subroutine
+
+
+
+
+
+
+
+

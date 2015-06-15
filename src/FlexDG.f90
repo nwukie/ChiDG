@@ -10,6 +10,9 @@
 
 program flexdg
     use mod_kinds,              only: ik,rk
+    use cgns
+    use hdf5_interface
+    use messenger
 
     !-----------------------------------------------------------
     !-----------------------------------------------------------
@@ -21,10 +24,7 @@ program flexdg
     !   Initialization
     !
     !======================================================
-
-
-
-
+    call plot3d_to_hdf5()
 
 
 

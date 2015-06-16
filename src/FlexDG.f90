@@ -11,7 +11,7 @@
 program flexdg
     use mod_kinds,              only: ik,rk
     use cgns
-    use hdf5_interface
+    use hdf5_dgtools
     use messenger
 
     !-----------------------------------------------------------

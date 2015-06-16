@@ -1,0 +1,187 @@
+!> Utility to convert a plot3d grid to an hdf5 file
+!! which is read by the FlexDG code
+!!
+!! @author Nathan A. Wukie
+!!
+program plot3d_to_hdf5
+    use mod_kinds,   only: rk,ik
+    use hdf5
+    implicit none
+    ! Version info
+    integer, parameter          :: STORAGE_FORMAT_MAJOR = 0
+    integer, parameter          :: STORAGE_FORMAT_MINOR = 1
+
+    ! File, group vars
+    character(1024)             :: arg_file, file_prefix, hdf_file, blockgroup, gridgroup, blockname
+    logical                     :: file_exists
+
+    ! HDF5 vars
+    integer(HID_T)              :: file_id,   bgroup_id, ggroup_id
+    integer(HID_T)              :: xspace_id, yspace_id, zspace_id
+    integer(HID_T)              :: xset_id,   yset_id,   zset_id
+    integer(HSIZE_T)            :: dims(3)
+
+    ! plot3d vars
+    integer(ik)                 :: i,j,k,imax,jmax,kmax,ext_loc
+    integer(ik)                 :: ierr,igrid,nelem,nblks
+    integer(ik), allocatable    :: blkdims(:,:)
+    real(rk),    allocatable    :: xcoords(:,:,:), ycoords(:,:,:), zcoords(:,:,:)
+
+
+    ! Get file name from command-line argument
+    !-------------------------------------------------
+    call get_command_argument(1, arg_file)
+
+
+    ! Check if a filename was provided to the program
+    !-------------------------------------------------
+    if (len_trim(arg_file) == 0) then
+        print*, "Usage: plot3d_to_hdf5 'plot3dfile'"
+        stop
+    end if
+
+
+
+    ! Check if input file exists
+    !-------------------------------------------------
+    inquire(file=arg_file, exist=file_exists)
+    if (file_exists) then
+        print*, "Found ", trim(arg_file)
+        ext_loc = index(arg_file,'.')           ! get location of extension
+        file_prefix = arg_file(1:(ext_loc-1))   ! save file prefix w/o extension
+        hdf_file = trim(file_prefix)//'.h5'     ! set hdf5 filename with extension
+    else
+        print*, "Error: could not find file ", arg_file
+    end if
+
+
+
+    ! Initialize HDF5
+    !-------------------------------------------------
+    ! HDF5 interface
+    call h5open_f(ierr)
+    if (ierr /= 0) stop "Error: h5open_f"
+
+    ! Create HDF5 file
+    call h5fcreate_f(hdf_file, H5F_ACC_TRUNC_F, file_id, ierr)
+    if (ierr /= 0) stop "Error: h5fcreate_f"
+
+
+    ! Read plot3d grid
+    !-------------------------------------------------
+    open(unit=7, file=trim(arg_file), form='unformatted')
+    read(7) nblks
+    print*, nblks," grid blocks"
+
+    ! Make space for storing dimensions of each block domain
+    allocate(blkdims(3,nblks),stat=ierr)
+    if (ierr /= 0) stop "Error: allocate blkdims"
+
+    ! read index dimensions for each block
+    read(7) (blkdims(1,igrid), blkdims(2,igrid), blkdims(3,igrid), igrid=1,nblks)
+
+
+
+    ! Loop through grid domain and for each domain, create an HDF5 group (D_$BLOCKNAME)
+    do igrid = 1,nblks
+        ! Dimensions for reading plot3d grid
+        imax = blkdims(1,igrid)
+        jmax = blkdims(2,igrid)
+        kmax = blkdims(3,igrid)
+
+        ! Dimensions for writing HDF5 grid
+        dims = [blkdims(1,igrid), blkdims(2,igrid), blkdims(3,igrid)]
+
+        allocate(xcoords(imax,jmax,kmax),ycoords(imax,jmax,kmax),zcoords(imax,jmax,kmax),stat=ierr)
+        if (ierr /= 0) stop "memory allocation error: plot3d_to_hdf5"
+
+        read(7) ((( xcoords(i,j,k), i=1,imax), j=1,jmax), k=1,kmax), &
+                ((( ycoords(i,j,k), i=1,imax), j=1,jmax), k=1,kmax), &
+                ((( zcoords(i,j,k), i=1,imax), j=1,jmax), k=1,kmax)
+
+
+        ! Create a block-group for the current block domain
+        write(blockname, '(I2.2)') igrid
+        blockgroup = "D_"//trim(blockname)
+        call h5gcreate_f(file_id, trim(blockgroup), bgroup_id, ierr)
+        if (ierr /= 0) stop "Error: h5gcreate_f"
+
+
+        ! Create a grid-group within the current block domain
+        gridgroup = trim(blockgroup)//"/"//"Grid"
+        call h5gcreate_f(file_id, gridgroup, ggroup_id, ierr)
+        if (ierr /= 0) stop "Error: h5gcreate_f"
+
+
+        ! Create dataspaces for grid coordinates
+        call h5screate_simple_f(3, dims, xspace_id, ierr)
+        if (ierr /= 0) stop "Error: h5screate_simple_f"
+        call h5screate_simple_f(3, dims, yspace_id, ierr)
+        if (ierr /= 0) stop "Error: h5screate_simple_f"
+        call h5screate_simple_f(3, dims, zspace_id, ierr)
+        if (ierr /= 0) stop "Error: h5screate_simple_f"
+
+
+        ! Create datasets for grid coordinates
+        call h5dcreate_f(file_id, trim(gridgroup)//'/'//'CoordinateX', H5T_NATIVE_DOUBLE, xspace_id, xset_id, ierr)
+        if (ierr /= 0) stop "Error: h5dcreate_f"
+        call h5dcreate_f(file_id, trim(gridgroup)//'/'//'CoordinateY', H5T_NATIVE_DOUBLE, yspace_id, yset_id, ierr)
+        if (ierr /= 0) stop "Error: h5dcreate_f"
+        call h5dcreate_f(file_id, trim(gridgroup)//'/'//'CoordinateZ', H5T_NATIVE_DOUBLE, zspace_id, zset_id, ierr)
+        if (ierr /= 0) stop "Error: h5dcreate_f"
+
+
+        ! Write coordinates to datasets
+        call h5dwrite_f(xset_id, H5T_NATIVE_DOUBLE, xcoords, dims, ierr)
+        if (ierr /= 0) stop "Error: h5dwrite_f"
+        call h5dwrite_f(yset_id, H5T_NATIVE_DOUBLE, ycoords, dims, ierr)
+        if (ierr /= 0) stop "Error: h5dwrite_f"
+        call h5dwrite_f(zset_id, H5T_NATIVE_DOUBLE, zcoords, dims, ierr)
+        if (ierr /= 0) stop "Error: h5dwrite_f"
+
+
+        ! Close datasets
+        call h5dclose_f(xset_id,ierr)
+        if (ierr /= 0) stop "Error: h5dclose_f"
+        call h5dclose_f(yset_id,ierr)
+        if (ierr /= 0) stop "Error: h5dclose_f"
+        call h5dclose_f(zset_id,ierr)
+        if (ierr /= 0) stop "Error: h5dclose_f"
+
+
+        ! Close dataspaces
+        call h5sclose_f(xspace_id,ierr)
+        if (ierr /= 0) stop "Error: h5sclose_f"
+        call h5sclose_f(yspace_id,ierr)
+        if (ierr /= 0) stop "Error: h5sclose_f"
+        call h5sclose_f(zspace_id,ierr)
+        if (ierr /= 0) stop "Error: h5sclose_f"
+
+
+        ! Close active groups
+        call h5gclose_f(ggroup_id, ierr)
+        if (ierr /= 0) stop "Error: h5gclose_f"
+        call h5gclose_f(bgroup_id, ierr)
+        if (ierr /= 0) stop "Error: h5gclose_f"
+
+
+        deallocate(zcoords,ycoords,xcoords)
+    end do
+
+
+    ! Close plot3d file
+    close(7)
+
+    ! Close HDF5 file
+    call h5fclose_f(file_id,ierr)
+    if (ierr /= 0) stop "Error: h5fclose_f"
+
+    ! Close HDF5
+    call h5close_F(ierr)
+    if (ierr /= 0) stop "Error: h5close_f"
+
+
+
+    print*, "Saved ", trim(file_prefix)//'.h5'
+
+end program plot3d_to_hdf5

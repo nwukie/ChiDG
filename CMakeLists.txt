@@ -15,10 +15,11 @@ get_filename_component (Fortran_COMPILER_NAME ${CMAKE_Fortran_COMPILER} NAME)
 #                     Set compiler flags
 #------------------------------------------------------------------                                                                        
 if (Fortran_COMPILER_NAME MATCHES "ifort.*")
-    set (CMAKE_Fortran_COMPILE_FLAGS_DEBUG   "-O0 -debug -p -g -traceback -check all -check bounds -fp-stack-check")
+    set (CMAKE_Fortran_COMPILE_FLAGS_DEBUG   "-O0 -debug -p -g -traceback -check all -check bounds -fp-stack-check -assume realloc_lhs")
 #    set (CMAKE_Fortran_COMPILE_FLAGS_DEBUG   "-O3 -p -g")
 #    set (CMAKE_Fortran_COMPILE_FLAGS_RELEASE "-O3")
-    set (CMAKE_Fortran_COMPILE_FLAGS_RELEASE "-O3 -p -g -fpp")
+    #set (CMAKE_Fortran_COMPILE_FLAGS_RELEASE "-O3 -p -g -fpp")
+    set (CMAKE_Fortran_COMPILE_FLAGS_RELEASE "-O3 -p -g -assume realloc_lhs")
     #set (CMAKE_Fortran_FLAGS_RELEASE "-O0 -g -traceback -check uninit -debug all")
     #set (CMAKE_Fortran_FLAGS_DEBUG "-p -g")
     set (CMAKE_Fortran_LINK_FLAGS_DEBUG "-g -traceback -check all -check bounds")
@@ -58,7 +59,7 @@ set(CMAKE_Fortran_MODULE_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 # NOTE: export HDF5_ROOT path as shell environment variable such that 
 # $HDF5_ROOT/lib  $HDF5_ROOT/include are valid. The find_package
 # module looks first for $HDF5_ROOT
-find_package(HDF5 COMPONENTS Fortran)
+find_package(HDF5 COMPONENTS Fortran HL Fortran_HL)
 include_directories(${HDF5_INCLUDE_DIRS})
 
 message(STATUS "HDF5_LIBRARIES: " ${HDF5_LIBRARIES})
@@ -67,7 +68,8 @@ message(STATUS "HDF5_LIBRARIES: " ${HDF5_LIBRARIES})
 
 #------------------------------------------------------------------                                                                        
 #                        Add source tree
-#------------------------------------------------------------------                                                                        
+#------------------------------------------------------------------
+add_subdirectory(DNAD)                                                                        
 add_subdirectory(src)
 
 
@@ -83,9 +85,9 @@ set_target_properties(coredg PROPERTIES
                              LINK_FLAGS    "${CMAKE_Fortran_LINK_FLAGS}")
 
 # Add driver program
-add_executable(flexdg ${EXE_SRCS})
-target_link_libraries(flexdg coredg ${HDF5_LIBRARIES})
-set_target_properties(flexdg PROPERTIES 
+add_executable(chidg ${EXE_SRCS})
+target_link_libraries(chidg coredg ${HDF5_LIBRARIES})
+set_target_properties(chidg PROPERTIES 
                             COMPILE_FLAGS "${CMAKE_Fortran_COMPILE_FLAGS}"
                             LINK_FLAGS    "${CMAKE_Fortran_LINK_FLAGS} -lstdc++ -lgfortran")
                             # need to link lstdc++ here for tecio
@@ -99,9 +101,9 @@ set_target_properties(flexdg PROPERTIES
 #------------------------------------------------------------------                                                                        
 set(UNITTEST TRUE CACHE BOOL "Enable building unit tests")
 if (UNITTEST)
+    enable_testing()
     set(PFUNIT /Users/nathanwukie/Documents/pbus/pFUnit/install/gnu/serial)
     set(PFU_LIB ${PFUNIT}/lib)
-
 
     # Add tests
     add_subdirectory(unittests)

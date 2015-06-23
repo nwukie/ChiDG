@@ -18,7 +18,6 @@ module type_blockmatrix
         !!    .
         !!    .
         type(denseblock_t), allocatable :: localblocks(:,:)
-
         type(denseblock_t), allocatable :: chimerablocks(:,:)
 
 

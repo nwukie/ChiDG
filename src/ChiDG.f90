@@ -8,7 +8,7 @@
 !! @author Nathan A. Wukie
 
 
-program flexdg
+program chidg
     use mod_kinds,              only: ik,rk
     use cgns
     use hdf5_dgtools
@@ -51,4 +51,4 @@ program flexdg
 !    print*, "Done!"
 !    print*, "======================="
 
-end program flexdg
+end program chidg

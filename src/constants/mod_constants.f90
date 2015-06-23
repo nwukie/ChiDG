@@ -11,7 +11,7 @@ module mod_constants
     use mod_kinds, only: rk,ik,ishort
     implicit none
 
-    !> Mathematical constants
+    !> Floating-point mathematical constants
     real(rk), parameter     :: PI       = 3.14159265358979323846_rk
 
     !> Floating-point numbers
@@ -25,6 +25,7 @@ module mod_constants
     real(rk), parameter     :: SEVEN    = 7._rk
     real(rk), parameter     :: EIGHT    = 8._rk
     real(rk), parameter     :: NINE     = 9._rk
+    real(rk), parameter     :: TEN      = 10._rk
 
 
     !> Floating-point fractions

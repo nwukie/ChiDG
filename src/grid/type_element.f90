@@ -9,32 +9,28 @@ module type_element
     use mod_inv,                only: inv
 
     use type_point,             only: point_t
-    use type_variablesVector,   only: variablesVector_t
-    use type_variables,         only: variables_t
-    use type_sparserow,         only: sparserow_t
+
     use type_elementQuadrature, only: elementQuadrature_t
 
 
     implicit none
 
-    ! Declare BLAS routines
-    EXTERNAL    dgemv
 
 
-    !=========================================================
-    !=========================================================
+    !> Element data type
+    !------------------------------------------------------------
     type, public :: element_t
-        integer(kind=ik)                :: neqns
-        integer(kind=ik)                :: nterms_sol
-        integer(kind=ik)                :: nterms_mesh
-
-
+        integer(ik)                 :: neqns            !> Number of equations being solved
+        integer(ik)                 :: nterms_sol       !> Number of terms in solution expansion. (polynomial_order + 1) or (Ns + 1)
+        integer(ik)                 :: nterms_mesh      !> Number of terms in mesh expansion.     (polynomial_order + 1) or (Ng + 1)
+        integer(ik)                 :: g_index          !> Block-global element index
 
         !=========================================================
         ! Element mesh points and modes
         !=========================================================
         type(point_t),      allocatable :: mesh_pts(:)
-        type(variables_t)               :: mesh_modes       ! mesh_modes(nterms_var,(x,y,z))
+        type(poly_t)                    :: mesh_modes       ! mesh_modes(nterms_var,(x,y,z))
+
 
         !=========================================================
         ! cartesian coordinates at quadrature values,
@@ -48,13 +44,11 @@ module type_element
         ! jacobian terms at quadrature nodes
         !=========================================================
         real(kind=rk),      allocatable :: jinv(:)
-        real(kind=rk),      allocatable :: jinv_over(:)
 
         !=========================================================
         ! metric matrix for each quadrature node    (mat_i,mat_j,quad_pt)
         !=========================================================
         real(kind=rk),      allocatable :: metric(:,:,:)
-        real(kind=rk),      allocatable :: metric_over(:,:,:)
 
 
         !=========================================================
@@ -82,9 +76,6 @@ module type_element
         real(kind=rk),      allocatable :: mass(:,:)
         real(kind=rk),      allocatable :: diagmass(:)
         real(kind=rk),      allocatable :: invmass(:,:)
-        real(kind=rk),      allocatable :: Sxi(:,:)
-        real(kind=rk),      allocatable :: Seta(:,:)
-        real(kind=rk),      allocatable :: Szeta(:,:)
 
         !=========================================================
         ! Solution storage
@@ -105,22 +96,6 @@ module type_element
         type(variables_t)               :: rhs
         type(variables_t)               :: rhs_ref
 
-        type(variables_t)               :: q_next
-
-        type(variables_t)               :: dq
-        type(variables_t)               :: dq_next
-
-        ! Total lift mode storage for volume integrals
-        type(variablesVector_t)         :: lift_g
-
-        ! Local lift mode storage for each face
-        type(variablesVector_t)         :: lift_l(NFACES)
-
-        !=========================================================
-        ! Storage of linearization for implicit solver
-        !=========================================================
-        type(sparserow_t)               :: linrow
-
 
 
     contains
@@ -128,7 +103,6 @@ module type_element
         procedure :: init
         procedure, public   :: compute_metrics
         procedure, public   :: compute_mass_matrix
-        procedure, public   :: compute_stiffness_matrices
         procedure, public   :: initialize_solution
 
         ! Interpolation procedures
@@ -187,7 +161,7 @@ contains
         allocate(self%jinv(nquad_nodes),stat=AllocateStatus)
         if (AllocateStatus /= 0) stop "Memory allocation error: element%init"
 
-!        allocate(self%jinv_over(nquad_nodes_over),stat=AllocateStatus)
+
         allocate(self%metric(SPACEDIM,SPACEDIM,nquad_nodes),stat=AllocateStatus)
         if (AllocateStatus /= 0) stop "Memory allocation error: element%init"
 
@@ -201,9 +175,6 @@ contains
         allocate(self%mass(nterms_sol,nterms_sol),stat=AllocateStatus)
         allocate(self%diagmass(nterms_sol),stat=AllocateStatus)
         allocate(self%invmass(nterms_sol,nterms_sol),stat=AllocateStatus)
-        allocate(self%Sxi(  nterms_sol,nterms_sol),stat=AllocateStatus)
-        allocate(self%Seta( nterms_sol,nterms_sol),stat=AllocateStatus)
-        allocate(self%Szeta(nterms_sol,nterms_sol),stat=AllocateStatus)
         if (AllocateStatus /= 0) stop "Memory allocation error: element%init"
 
 
@@ -213,31 +184,12 @@ contains
         ! Solution and right-hand side storage
         call self%q%init(      nterms_sol,neqns)
         call self%q_ref%init(  nterms_sol,neqns)
-        call self%q_next%init( nterms_sol,neqns)
 
         call self%rhs%init(    nterms_sol,neqns)
         call self%rhs_ref%init(nterms_sol,neqns)
 
-        ! 1D update vectors so they can be multiplied by the linearization matrices
-        call self%dq%init(      neqns*nterms_sol,1)
-        call self%dq_next%init( neqns*nterms_sol,1)
-
-        ! global and face-local lifting mode storage
-        call self%lift_g%init(nterms_sol,neqns)
-
-        call self%lift_l(XI_MIN)%init(nterms_sol,neqns)
-        call self%lift_l(XI_MAX)%init(nterms_sol,neqns)
-        call self%lift_l(ETA_MIN)%init(nterms_sol,neqns)
-        call self%lift_l(ETA_MAX)%init(nterms_sol,neqns)
-        call self%lift_l(ZETA_MIN)%init(nterms_sol,neqns)
-        call self%lift_l(ZETA_MAX)%init(nterms_sol,neqns)
-        if (AllocateStatus /= 0) stop "Memory allocation error: element%init"
 
 
-
-        ! The subblock sizes for the linearization storage will be
-        ! square of size (nterms_sol*neqns  x  nterms_sol*neqns)
-        call self%linrow%init(nterms_sol*neqns)
 
         ! Associate quadrature pointers to static objects so we can
         ! access them if we need to
@@ -620,54 +572,6 @@ contains
 
 
 
-    !============================================================
-    !
-    !  Compute stiffness matrices
-    !
-    !============================================================
-    subroutine compute_stiffness_matrices(self)
-        class(element_t), intent(inout) :: self
-
-        type(point_t)                      :: node
-        real(kind=rk)                      :: weight
-        type(elementQuadrature_t), pointer :: gq
-
-        integer(kind=ik)                   :: iterm
-        real(kind=rk)                      :: xi_val,eta_val,polyval_i,polyval_j,val,invjac
-
-        real(kind=rk), dimension(self%nterms_sol,self%gq%vol%nnodes) :: &
-                            tempx, tempy, tempz
-
-
-        gq => self%gq
-
-
-        ! Compute stiffness matrices for current element
-        self%Sxi   = 0._rk
-        self%Seta  = 0._rk
-        self%Szeta = 0._rk
-
-
-
-        tempx = transpose(self%dtdx)
-        tempy = transpose(self%dtdy)
-        tempz = transpose(self%dtdz)
-
-        ! Multiply rows by quadrature weights and cell jacobians
-        do iterm = 1,self%nterms_sol
-            tempx(iterm,:) = tempx(iterm,:) * gq%vol%weights * self%jinv
-            tempy(iterm,:) = tempy(iterm,:) * gq%vol%weights * self%jinv
-            tempz(iterm,:) = tempz(iterm,:) * gq%vol%weights * self%jinv
-        end do
-
-        ! Perform the matrix multiplication of the transposed derivative matrix by
-        ! the standard polynomial matrix. This produces the stiffness matrix.
-        self%Sxi   = matmul(tempx,gq%vol%val)
-        self%Seta  = matmul(tempy,gq%vol%val)
-        self%Szeta = matmul(tempz,gq%vol%val)
-
-
-    end subroutine ! compute_stiffness_matrices
 
 
 

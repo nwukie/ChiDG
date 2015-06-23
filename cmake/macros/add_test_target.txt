@@ -47,4 +47,12 @@ macro (add_test_target target_subdirectory)
 	add_executable(${target_name} ${PFUNIT}/include/driver.F90 ${_test_sources})
 	target_link_libraries(${target_name} ${PFUNIT}/lib/libpfunit.a coredg)
 	
+	
+	######################################################################
+	##	Add test that can be run with 'make test' or 'ctest'
+	######################################################################
+	add_test(NAME ${target_name}
+			 WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
+			 COMMAND $<TARGET_FILE:${target_name}>)
+	
 endmacro()

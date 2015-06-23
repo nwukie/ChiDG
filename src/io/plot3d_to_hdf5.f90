@@ -6,19 +6,21 @@
 program plot3d_to_hdf5
     use mod_kinds,   only: rk,ik
     use hdf5
+    use h5lt
     implicit none
     ! Version info
-    integer, parameter          :: STORAGE_FORMAT_MAJOR = 0
-    integer, parameter          :: STORAGE_FORMAT_MINOR = 1
+    integer, dimension(1), parameter  :: STORAGE_FORMAT_MAJOR = 0
+    integer, dimension(1), parameter  :: STORAGE_FORMAT_MINOR = 1
 
     ! File, group vars
-    character(1024)             :: arg_file, file_prefix, hdf_file, blockgroup, gridgroup, blockname
+    character(1024)             :: arg_file, file_prefix, hdf_file, blockgroup, blockname
     logical                     :: file_exists
 
     ! HDF5 vars
-    integer(HID_T)              :: file_id,   bgroup_id, ggroup_id
+    integer(HID_T)              :: file_id,   Block_id,  Grid_id,  BC_id
     integer(HID_T)              :: xspace_id, yspace_id, zspace_id
     integer(HID_T)              :: xset_id,   yset_id,   zset_id
+    integer(HID_T)              :: ximin_id,  ximax_id,  etamin_id,  etamax_id,  zetamin_id,  zetamax_id
     integer(HSIZE_T)            :: dims(3)
 
     ! plot3d vars
@@ -26,6 +28,9 @@ program plot3d_to_hdf5
     integer(ik)                 :: ierr,igrid,nelem,nblks
     integer(ik), allocatable    :: blkdims(:,:)
     real(rk),    allocatable    :: xcoords(:,:,:), ycoords(:,:,:), zcoords(:,:,:)
+
+    ! boundary condition types
+    integer(ik)                 :: ximin_bc, ximax_bc, etamin_bc, etamax_bc, zetamin_bc, zetamax_bc
 
 
     ! Get file name from command-line argument
@@ -66,6 +71,11 @@ program plot3d_to_hdf5
     call h5fcreate_f(hdf_file, H5F_ACC_TRUNC_F, file_id, ierr)
     if (ierr /= 0) stop "Error: h5fcreate_f"
 
+    ! Add file major.minor version numbers as attributes
+    call h5ltset_attribute_int_f(file_id, "/", 'FORMAT_MAJOR', STORAGE_FORMAT_MAJOR, 1, ierr)
+    call h5ltset_attribute_int_f(file_id, "/", 'FORMAT_MINOR', STORAGE_FORMAT_MINOR, 1, ierr)
+
+
 
     ! Read plot3d grid
     !-------------------------------------------------
@@ -102,15 +112,16 @@ program plot3d_to_hdf5
 
         ! Create a block-group for the current block domain
         write(blockname, '(I2.2)') igrid
-        blockgroup = "D_"//trim(blockname)
-        call h5gcreate_f(file_id, trim(blockgroup), bgroup_id, ierr)
+        blockgroup = "B_"//trim(blockname)
+        call h5gcreate_f(file_id, trim(blockgroup), Block_id, ierr)
         if (ierr /= 0) stop "Error: h5gcreate_f"
+
 
 
         ! Create a grid-group within the current block domain
-        gridgroup = trim(blockgroup)//"/"//"Grid"
-        call h5gcreate_f(file_id, gridgroup, ggroup_id, ierr)
+        call h5gcreate_f(Block_id, "Grid", Grid_id, ierr)
         if (ierr /= 0) stop "Error: h5gcreate_f"
+
 
 
         ! Create dataspaces for grid coordinates
@@ -122,13 +133,15 @@ program plot3d_to_hdf5
         if (ierr /= 0) stop "Error: h5screate_simple_f"
 
 
+
         ! Create datasets for grid coordinates
-        call h5dcreate_f(file_id, trim(gridgroup)//'/'//'CoordinateX', H5T_NATIVE_DOUBLE, xspace_id, xset_id, ierr)
+        call h5dcreate_f(Grid_id, 'CoordinateX', H5T_NATIVE_DOUBLE, xspace_id, xset_id, ierr)
         if (ierr /= 0) stop "Error: h5dcreate_f"
-        call h5dcreate_f(file_id, trim(gridgroup)//'/'//'CoordinateY', H5T_NATIVE_DOUBLE, yspace_id, yset_id, ierr)
+        call h5dcreate_f(Grid_id, 'CoordinateY', H5T_NATIVE_DOUBLE, yspace_id, yset_id, ierr)
         if (ierr /= 0) stop "Error: h5dcreate_f"
-        call h5dcreate_f(file_id, trim(gridgroup)//'/'//'CoordinateZ', H5T_NATIVE_DOUBLE, zspace_id, zset_id, ierr)
+        call h5dcreate_f(Grid_id, 'CoordinateZ', H5T_NATIVE_DOUBLE, zspace_id, zset_id, ierr)
         if (ierr /= 0) stop "Error: h5dcreate_f"
+
 
 
         ! Write coordinates to datasets
@@ -140,6 +153,57 @@ program plot3d_to_hdf5
         if (ierr /= 0) stop "Error: h5dwrite_f"
 
 
+
+        ! Create a boundary condition-group within the current block domain
+        call h5gcreate_f(Block_id, "BoundaryConditions", BC_id, ierr)
+        if (ierr /= 0) stop "Error: h5gcreate_f"
+
+
+
+        ! Create empty groups for boundary conditions
+        call h5gcreate_f(BC_id,"XI_MIN",ximin_id, ierr)
+        if (ierr /= 0) stop "Error: h5gcreate_f"
+        call h5gcreate_f(BC_id,"XI_MAX",ximax_id, ierr)
+        if (ierr /= 0) stop "Error: h5gcreate_f"
+        call h5gcreate_f(BC_id,"ETA_MIN",etamin_id, ierr)
+        if (ierr /= 0) stop "Error: h5gcreate_f"
+        call h5gcreate_f(BC_id,"ETA_MAX",etamax_id, ierr)
+        if (ierr /= 0) stop "Error: h5gcreate_f"
+        call h5gcreate_f(BC_id,"ZETA_MIN",zetamin_id, ierr)
+        if (ierr /= 0) stop "Error: h5gcreate_f"
+        call h5gcreate_f(BC_id,"ZETA_MAX",zetamax_id, ierr)
+        if (ierr /= 0) stop "Error: h5gcreate_f"
+
+
+
+        ! Read boundary conditions from user
+        !----------------------------------------------------
+        print*, "Setting boundary conditions for domain ", igrid
+        print*, "Enter xi_min boundary type: "
+        read*, ximin_bc
+        print*, "Enter xi_max boundary type: "
+        read*, ximax_bc
+        print*, "Enter eta_min boundary type: "
+        read*, etamin_bc
+        print*, "Enter eta_max boundary type: "
+        read*, etamax_bc
+        print*, "Enter zeta_min boundary type: "
+        read*, zetamin_bc
+        print*, "Enter zeta_max boundary type: "
+        read*, zetamax_bc
+
+
+
+        ! Write boundary condition types as attributes for each boundary condition face group
+        call h5ltset_attribute_int_f(BC_id, "XI_MIN", 'BCTYPE', [ximin_bc], 1, ierr)
+        call h5ltset_attribute_int_f(BC_id, "XI_MAX", 'BCTYPE', [ximax_bc], 1, ierr)
+        call h5ltset_attribute_int_f(BC_id, "ETA_MIN", 'BCTYPE', [etamin_bc], 1, ierr)
+        call h5ltset_attribute_int_f(BC_id, "ETA_MAX", 'BCTYPE', [etamax_bc], 1, ierr)
+        call h5ltset_attribute_int_f(BC_id, "ZETA_MIN", 'BCTYPE', [zetamin_bc], 1, ierr)
+        call h5ltset_attribute_int_f(BC_id, "ZETA_MAX", 'BCTYPE', [zetamax_bc], 1, ierr)
+
+
+
         ! Close datasets
         call h5dclose_f(xset_id,ierr)
         if (ierr /= 0) stop "Error: h5dclose_f"
@@ -147,6 +211,7 @@ program plot3d_to_hdf5
         if (ierr /= 0) stop "Error: h5dclose_f"
         call h5dclose_f(zset_id,ierr)
         if (ierr /= 0) stop "Error: h5dclose_f"
+
 
 
         ! Close dataspaces
@@ -158,11 +223,13 @@ program plot3d_to_hdf5
         if (ierr /= 0) stop "Error: h5sclose_f"
 
 
+
         ! Close active groups
-        call h5gclose_f(ggroup_id, ierr)
+        call h5gclose_f(Grid_id, ierr)
         if (ierr /= 0) stop "Error: h5gclose_f"
-        call h5gclose_f(bgroup_id, ierr)
+        call h5gclose_f(Block_id, ierr)
         if (ierr /= 0) stop "Error: h5gclose_f"
+
 
 
         deallocate(zcoords,ycoords,xcoords)

@@ -1,0 +1,475 @@
+!> Test to make sure element mapping matrices are being allocated
+@Test
+subroutine testElementMapping_allocated() 
+    use pfunit_mod
+    use mod_element_mapping,    only: compute_element_mappings, elem_map
+    use mod_kinds,              only: rk,ik
+    implicit none
+    
+    call compute_element_mappings()
+    
+    @assertTrue(allocated(elem_map(1)%mat))
+    @assertTrue(allocated(elem_map(2)%mat))
+    @assertTrue(allocated(elem_map(3)%mat))
+    @assertTrue(allocated(elem_map(4)%mat))
+    
+end subroutine
+
+
+
+
+!> Test to make sure element mapping matrices are correct sizes
+@Test
+subroutine testElementMapping_sizes() 
+    use pfunit_mod
+    use mod_element_mapping,    only: compute_element_mappings, elem_map
+    use mod_kinds,              only: rk,ik
+    implicit none
+    
+    call compute_element_mappings()
+    
+    @assertTrue(size(elem_map(1)%mat,1) == 8)
+    @assertTrue(size(elem_map(2)%mat,1) == 27)
+    @assertTrue(size(elem_map(3)%mat,1) == 64)
+    @assertTrue(size(elem_map(4)%mat,1) == 125)
+    
+end subroutine
+
+
+
+
+
+
+
+
+
+!> Test to compute modal representation of coordinates with the element mapping and then
+!! to recover the original point representation back from the mapping - linear
+@Test
+subroutine testElementMapping_reversability_linear() 
+    use pfunit_mod
+    use mod_element_mapping,    only: compute_element_mappings, elem_map
+    use mod_kinds,              only: rk,ik
+    use mod_constants,          only: ZERO, ONE, TWO, TENTH
+    use mod_polynomial,         only: polynomialVal
+    use type_point,             only: point_t
+    use type_expansion,         only: expansion_t
+
+    implicit none
+    type(expansion_t)   :: coords
+    type(point_t)       :: pts_init(8), pts_test(8), pts_ref(8)   !> Linear Element
+    real(rk)            :: mat(8,8), tol
+    real(rk)            :: x, y, z, x_ref, y_ref, z_ref, pert
+    integer(ik)         :: ipt, iterm, inode, i, j, k
+    
+    tol = 1.e-13_rk
+    
+    
+    call compute_element_mappings()
+    
+    call coords%init(8,3)   !> 8 terms, 3 coordinates (x,y,z)
+    
+    ! Compute coordinates of a Hex-element with appropriate number of points
+    call random_seed()
+    call random_number(pert)
+    x = ZERO + TENTH*pert
+    x_ref = -ONE
+    call random_seed()
+    call random_number(pert)
+    y = ZERO + TENTH*pert
+    y_ref = -ONE
+    call random_seed()
+    call random_number(pert)
+    z = ZERO + TENTH*pert
+    z_ref = -ONE
+    ipt = 1
+    do k = 1,2
+        do j = 1,2
+            do i = 1,2
+                call pts_init(ipt)%set(x,y,z)
+                call pts_ref(ipt)%set(x_ref,y_ref,z_ref)
+                call random_seed()
+                call random_number(pert)
+                x     = x + TWO + TENTH*pert
+                x_ref = x_ref + (TWO/(TWO-ONE))
+                ipt = ipt + 1     
+            end do
+            call random_seed()
+            call random_number(pert)
+            x     = ZERO + TENTH*pert
+            x_ref = -ONE
+            call random_seed()
+            call random_number(pert)
+            y     = y + TWO + TENTH*pert
+            y_ref = y_ref + (TWO/(TWO-ONE))
+        end do
+        call random_seed()
+        call random_number(pert)
+        x     = ZERO + TENTH*pert
+        x_ref = -ONE
+        call random_seed()
+        call random_number(pert)
+        y     = ZERO + TENTH*pert
+        y_ref = -ONE
+        call random_seed()
+        call random_number(pert)
+        z     = z + TWO + TENTH*pert
+        z_ref = z_ref + (TWO/(TWO-ONE))
+    end do
+    
+    ! Compute modal coordinates
+    coords%modes(:,1) = matmul(elem_map(1)%mat,pts_init(:)%x_)
+    coords%modes(:,2) = matmul(elem_map(1)%mat,pts_init(:)%y_)
+    coords%modes(:,3) = matmul(elem_map(1)%mat,pts_init(:)%z_)
+    
+    
+    ! Compute matrix of polynomial values for reverse calculation
+    do iterm = 1,8
+        do inode = 1,8
+            mat(inode,iterm) = polynomialVal(3,8,iterm,pts_ref(inode))
+        end do
+    end do
+    
+    ! Recompute coordinate point values from modes
+    pts_test(:)%x_ = matmul(mat,coords%modes(:,1))
+    pts_test(:)%y_ = matmul(mat,coords%modes(:,2))
+    pts_test(:)%z_ = matmul(mat,coords%modes(:,3))
+    
+    
+    ! Test that recomputed coordinates are equal to the original coordinate values
+    @assertEqual(pts_init(:)%x_,pts_test(:)%x_,tol)
+    @assertEqual(pts_init(:)%y_,pts_test(:)%y_,tol)
+    @assertEqual(pts_init(:)%z_,pts_test(:)%z_,tol)
+    
+    
+end subroutine
+
+
+
+
+
+
+
+!> Test to compute modal representation of coordinates with the element mapping and then
+!! to recover the original point representation back from the mapping - quadratic
+@Test
+subroutine testElementMapping_reversability_quadratic() 
+    use pfunit_mod
+    use mod_element_mapping,    only: compute_element_mappings, elem_map
+    use mod_kinds,              only: rk,ik
+    use mod_constants,          only: ZERO, ONE, TWO, THREE, TENTH
+    use mod_polynomial,         only: polynomialVal
+    use type_point,             only: point_t
+    use type_expansion,         only: expansion_t
+
+    implicit none
+    type(expansion_t)   :: coords
+    type(point_t)       :: pts_init(27), pts_test(27), pts_ref(27)   !> Quadratic Element
+    real(rk)            :: mat(27,27), tol
+    real(rk)            :: x, y, z, x_ref, y_ref, z_ref, pert
+    integer(ik)         :: ipt, iterm, inode, i, j, k, npt_1d
+    
+    tol    = 1.e-13_rk
+    npt_1d = 3
+    
+    call compute_element_mappings()
+    
+    call coords%init(27,3)   !> 27 terms, 3 coordinates (x,y,z)
+    
+    ! Compute coordinates of a Hex-element with appropriate number of points
+    
+    ! Seed random initial coordinates 
+    call random_seed()
+    call random_number(pert)
+    x = ZERO + TENTH*pert
+    call random_seed()
+    call random_number(pert)
+    y = ZERO + TENTH*pert
+    call random_seed()
+    call random_number(pert)
+    z = ZERO + TENTH*pert
+    
+    ipt = 1
+    do k = 1,npt_1d
+        z_ref = -ONE + real(k-1,rk)*(TWO/(real(npt_1d,rk)-ONE))
+        do j = 1,npt_1d
+            y_ref = -ONE + real(j-1,rk)*(TWO/(real(npt_1d,rk)-ONE))
+            do i = 1,npt_1d
+                x_ref = -ONE + real(i-1,rk)*(TWO/(real(npt_1d,rk)-ONE))
+                
+                call pts_init(ipt)%set(x,y,z)
+                call pts_ref(ipt)%set(x_ref,y_ref,z_ref)
+                call random_seed()
+                call random_number(pert)
+                x     = x + real(i,rk)*TWO + TENTH*pert
+                ipt = ipt + 1     
+            end do
+            call random_seed()
+            call random_number(pert)
+            x     = ZERO + TENTH*pert
+            x_ref = -ONE
+            call random_seed()
+            call random_number(pert)
+            y     = y + real(j,rk)*TWO + TENTH*pert
+        end do
+        call random_seed()
+        call random_number(pert)
+        x     = ZERO + TENTH*pert
+        x_ref = -ONE
+        call random_seed()
+        call random_number(pert)
+        y     = ZERO + TENTH*pert
+        y_ref = -ONE
+        call random_seed()
+        call random_number(pert)
+        z     = z + real(k,rk)*TWO + TENTH*pert
+    end do
+    
+    ! Compute modal coordinates
+    coords%modes(:,1) = matmul(elem_map(2)%mat,pts_init(:)%x_)
+    coords%modes(:,2) = matmul(elem_map(2)%mat,pts_init(:)%y_)
+    coords%modes(:,3) = matmul(elem_map(2)%mat,pts_init(:)%z_)
+    
+    
+    ! Compute matrix of polynomial values for reverse calculation
+    do iterm = 1,27
+        do inode = 1,27
+            mat(inode,iterm) = polynomialVal(3,27,iterm,pts_ref(inode))
+        end do
+    end do
+    
+    ! Recompute coordinate point values from modes
+    pts_test(:)%x_ = matmul(mat,coords%modes(:,1))
+    pts_test(:)%y_ = matmul(mat,coords%modes(:,2))
+    pts_test(:)%z_ = matmul(mat,coords%modes(:,3))
+    
+    
+    ! Test that recomputed coordinates are equal to the original coordinate values
+    @assertEqual(pts_init(:)%x_,pts_test(:)%x_,tol)
+    @assertEqual(pts_init(:)%y_,pts_test(:)%y_,tol)
+    @assertEqual(pts_init(:)%z_,pts_test(:)%z_,tol)
+    
+    
+end subroutine
+
+
+
+
+
+
+!> Test to compute modal representation of coordinates with the element mapping and then
+!! to recover the original point representation back from the mapping - cubic
+@Test
+subroutine testElementMapping_reversability_cubic() 
+    use pfunit_mod
+    use mod_element_mapping,    only: compute_element_mappings, elem_map
+    use mod_kinds,              only: rk,ik
+    use mod_constants,          only: ZERO, ONE, TWO, THREE, FOUR, TENTH
+    use mod_polynomial,         only: polynomialVal
+    use type_point,             only: point_t
+    use type_expansion,         only: expansion_t
+
+    implicit none
+    type(expansion_t)   :: coords
+    type(point_t)       :: pts_init(64), pts_test(64), pts_ref(64)   !> Cubic Element
+    real(rk)            :: mat(64,64), tol
+    real(rk)            :: x, y, z, x_ref, y_ref, z_ref, pert
+    integer(ik)         :: ipt, iterm, inode, i, j, k, npt_1d
+    
+    tol = 1.e-13_rk
+    npt_1d = 4
+    
+    call compute_element_mappings()
+    
+    call coords%init(64,3)   !> 64 terms, 3 coordinates (x,y,z)
+    
+    ! Compute coordinates of a Hex-element with appropriate number of points
+    
+    ! Seed random initial coordinates 
+    call random_seed()
+    call random_number(pert)
+    x = ZERO + TENTH*pert
+    call random_seed()
+    call random_number(pert)
+    y = ZERO + TENTH*pert
+    call random_seed()
+    call random_number(pert)
+    z = ZERO + TENTH*pert
+    
+    ipt = 1
+    do k = 1,npt_1d
+        z_ref = -ONE + real(k-1,rk)*(TWO/(real(npt_1d,rk)-ONE))            !> -1:1
+        do j = 1,npt_1d
+            y_ref = -ONE + real(j-1,rk)*(TWO/(real(npt_1d,rk)-ONE))        !> -1:1
+            do i = 1,npt_1d
+                x_ref = -ONE + real(i-1,rk)*(TWO/(real(npt_1d,rk)-ONE))    !> -1:1
+                
+                call pts_init(ipt)%set(x,y,z)
+                call pts_ref(ipt)%set(x_ref,y_ref,z_ref)
+                call random_seed()
+                call random_number(pert)
+                x     = x + real(i,rk)*TWO + TENTH*pert
+                ipt = ipt + 1     
+            end do
+            call random_seed()
+            call random_number(pert)
+            x     = ZERO + TENTH*pert
+            x_ref = -ONE
+            call random_seed()
+            call random_number(pert)
+            y     = y + real(j,rk)*TWO + TENTH*pert
+        end do
+        call random_seed()
+        call random_number(pert)
+        x     = ZERO + TENTH*pert
+        x_ref = -ONE
+        call random_seed()
+        call random_number(pert)
+        y     = ZERO + TENTH*pert
+        y_ref = -ONE
+        call random_seed()
+        call random_number(pert)
+        z     = z + real(k,rk)*TWO + TENTH*pert
+    end do
+    
+    ! Compute modal coordinates
+    coords%modes(:,1) = matmul(elem_map(3)%mat,pts_init(:)%x_)
+    coords%modes(:,2) = matmul(elem_map(3)%mat,pts_init(:)%y_)
+    coords%modes(:,3) = matmul(elem_map(3)%mat,pts_init(:)%z_)
+    
+    
+    ! Compute matrix of polynomial values for reverse calculation
+    do iterm = 1,64
+        do inode = 1,64
+            mat(inode,iterm) = polynomialVal(3,64,iterm,pts_ref(inode))
+        end do
+    end do
+    
+    ! Recompute coordinate point values from modes
+    pts_test(:)%x_ = matmul(mat,coords%modes(:,1))
+    pts_test(:)%y_ = matmul(mat,coords%modes(:,2))
+    pts_test(:)%z_ = matmul(mat,coords%modes(:,3))
+    
+    
+    ! Test that recomputed coordinates are equal to the original coordinate values
+    @assertEqual(pts_init(:)%x_,pts_test(:)%x_,tol)
+    @assertEqual(pts_init(:)%y_,pts_test(:)%y_,tol)
+    @assertEqual(pts_init(:)%z_,pts_test(:)%z_,tol)
+    
+    
+end subroutine
+
+
+
+
+
+
+!> Test to compute modal representation of coordinates with the element mapping and then
+!! to recover the original point representation back from the mapping - quartic
+@Test
+subroutine testElementMapping_reversability_quartic() 
+    use pfunit_mod
+    use mod_element_mapping,    only: compute_element_mappings, elem_map
+    use mod_kinds,              only: rk,ik
+    use mod_constants,          only: ZERO, ONE, TWO, THREE, FOUR, TENTH
+    use mod_polynomial,         only: polynomialVal
+    use type_point,             only: point_t
+    use type_expansion,         only: expansion_t
+
+    implicit none
+    type(expansion_t)   :: coords
+    type(point_t)       :: pts_init(125), pts_test(125), pts_ref(125)   !> Quartic Element
+    real(rk)            :: mat(125,125), tol
+    real(rk)            :: x, y, z, x_ref, y_ref, z_ref, pert
+    integer(ik)         :: ipt, iterm, inode, i, j, k, npt_1d
+    
+    tol = 1.e-13_rk
+    npt_1d = 5
+    
+    call compute_element_mappings()
+    
+    call coords%init(125,3)   !> 125 terms, 3 coordinates (x,y,z)
+    
+    ! Compute coordinates of a Hex-element with appropriate number of points
+    
+    ! Seed random initial coordinates 
+    call random_seed()
+    call random_number(pert)
+    x = ZERO + TENTH*pert
+    call random_seed()
+    call random_number(pert)
+    y = ZERO + TENTH*pert
+    call random_seed()
+    call random_number(pert)
+    z = ZERO + TENTH*pert
+    
+    ipt = 1
+    do k = 1,npt_1d
+        z_ref = -ONE + real(k-1,rk)*(TWO/(real(npt_1d,rk)-ONE))            !> -1:1
+        do j = 1,npt_1d
+            y_ref = -ONE + real(j-1,rk)*(TWO/(real(npt_1d,rk)-ONE))        !> -1:1
+            do i = 1,npt_1d
+                x_ref = -ONE + real(i-1,rk)*(TWO/(real(npt_1d,rk)-ONE))    !> -1:1
+                
+                call pts_init(ipt)%set(x,y,z)
+                call pts_ref(ipt)%set(x_ref,y_ref,z_ref)
+                call random_seed()
+                call random_number(pert)
+                x     = x + real(i,rk)*TWO + TENTH*pert
+                ipt = ipt + 1     
+            end do
+            call random_seed()
+            call random_number(pert)
+            x     = ZERO + TENTH*pert
+            x_ref = -ONE
+            call random_seed()
+            call random_number(pert)
+            y     = y + real(j,rk)*TWO + TENTH*pert
+        end do
+        call random_seed()
+        call random_number(pert)
+        x     = ZERO + TENTH*pert
+        x_ref = -ONE
+        call random_seed()
+        call random_number(pert)
+        y     = ZERO + TENTH*pert
+        y_ref = -ONE
+        call random_seed()
+        call random_number(pert)
+        z     = z + real(k,rk)*TWO + TENTH*pert
+    end do
+    
+    ! Compute modal coordinates
+    coords%modes(:,1) = matmul(elem_map(4)%mat,pts_init(:)%x_)
+    coords%modes(:,2) = matmul(elem_map(4)%mat,pts_init(:)%y_)
+    coords%modes(:,3) = matmul(elem_map(4)%mat,pts_init(:)%z_)
+    
+    
+    ! Compute matrix of polynomial values for reverse calculation
+    do iterm = 1,125
+        do inode = 1,125
+            mat(inode,iterm) = polynomialVal(3,125,iterm,pts_ref(inode))
+        end do
+    end do
+    
+    ! Recompute coordinate point values from modes
+    pts_test(:)%x_ = matmul(mat,coords%modes(:,1))
+    pts_test(:)%y_ = matmul(mat,coords%modes(:,2))
+    pts_test(:)%z_ = matmul(mat,coords%modes(:,3))
+    
+    
+    ! Test that recomputed coordinates are equal to the original coordinate values
+    @assertEqual(pts_init(:)%x_,pts_test(:)%x_,tol)
+    @assertEqual(pts_init(:)%y_,pts_test(:)%y_,tol)
+    @assertEqual(pts_init(:)%z_,pts_test(:)%z_,tol)
+    
+    
+end subroutine
+
+
+
+
+
+
+
+

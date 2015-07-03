@@ -9,9 +9,9 @@ module type_point
     !! @author Nathan A. Wukie
     type, public :: point_t
 
-        real(kind=rk) :: x_ = ZERO, &
-                         y_ = ZERO, &
-                         z_ = ZERO
+        real(rk) :: x_ = ZERO, &
+                    y_ = ZERO, &
+                    z_ = ZERO
     contains
         procedure :: set
         procedure :: x
@@ -31,7 +31,7 @@ contains
     !! @param[in] z Third coordinate value
     subroutine set(self, x, y, z)
         class(point_t), intent(inout) :: self
-        real(kind=rk) :: x,y,z
+        real(rk) :: x,y,z
 
         self%x_ = x
         self%y_ = y
@@ -47,7 +47,7 @@ contains
         self%x_ = x_in
     end subroutine
 
-        !> type-bound procedure for setting first coordinate
+    !> type-bound procedure for setting first coordinate
     !! @param[in] x First coordinate value
     subroutine y(self,y_in)
         class(point_t), intent(inout) :: self
@@ -56,7 +56,7 @@ contains
         self%y_ = y_in
     end subroutine
 
-        !> type-bound procedure for setting first coordinate
+    !> type-bound procedure for setting first coordinate
     !! @param[in] x First coordinate value
     subroutine z(self,z_in)
         class(point_t), intent(inout) :: self

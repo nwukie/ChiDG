@@ -37,7 +37,7 @@ contains
         eta  = node%y_
         zeta = node%z_
 
-        dpolyval = DLegendreVal(space_dim,nterms,mode,xi,eta,zeta,dir)
+        dpolyval = DLegendreVal(space_dim,mode,xi,eta,zeta,dir)
 
     end function
 

@@ -5,7 +5,7 @@ add_subdirectory(tools)
 add_subdirectory(io)
 add_subdirectory(polynomial)
 add_subdirectory(quadrature)    
-#add_subdirectory(time_integrators)
+add_subdirectory(solvers)
 #add_subdirectory(utilities)
 #add_subdirectory(equations)
 

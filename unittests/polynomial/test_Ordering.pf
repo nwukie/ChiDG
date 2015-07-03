@@ -1,0 +1,94 @@
+!-------------------------------------------------
+!   Test Uniqueness of mode ordering
+!-------------------------------------------------
+
+@Test
+subroutine test_ordering_uniqueness_2d()
+    use pfunit_mod
+    use mod_kinds,      only: rk,ik
+    use mod_ordering,   only: xi_order_2d, eta_order_2d
+    
+    implicit none
+
+    integer(ik) :: xi_current, eta_current, xi_test, eta_test, i,j
+    logical     :: unique
+
+    
+    do i = 1,size(xi_order_2d)
+        xi_current  = xi_order_2d(i)
+        eta_current = eta_order_2d(i)
+        
+        do j = 1,size(xi_order_2d)
+            ! Initialize test as passing
+            unique = .true.
+            
+            ! Check-out mode orders to test
+            xi_test  = xi_order_2d(j)
+            eta_test = eta_order_2d(j)
+        
+            ! Don't test the current mode
+            if (i==j) then
+                cycle
+            end if
+        
+            ! Check if the current mode is repeated in the checked out mode
+            if ( xi_current == xi_test .and. eta_current == eta_test) then
+                unique = .false.
+            end if
+
+            ! Expecing unique to be true. Fail for unique == .false.            
+            @assertTrue(unique)
+        
+        end do
+    end do
+
+   
+end subroutine
+
+
+
+@Test
+subroutine test_ordering_uniqueness_3d()
+    use pfunit_mod
+    use mod_kinds,      only: rk,ik
+    use mod_ordering,   only: xi_order_3d, eta_order_3d, zeta_order_3d
+    
+    implicit none
+
+    integer(ik) :: xi_current, eta_current, zeta_current, xi_test, eta_test, zeta_test, i,j
+    logical     :: unique
+
+    
+    do i = 1,size(xi_order_3d)
+        xi_current   = xi_order_3d(i)
+        eta_current  = eta_order_3d(i)
+        zeta_current = zeta_order_3d(i)
+        
+        do j = 1,size(xi_order_3d)
+            ! Initialize test as passing
+            unique = .true.
+            
+            ! Check-out mode orders to test
+            xi_test   = xi_order_3d(j)
+            eta_test  = eta_order_3d(j)
+            zeta_test = zeta_order_3d(j)
+        
+            ! Don't test the current mode
+            if (i==j) then
+                cycle
+            end if
+        
+            ! Check if the current mode is repeated in the checked out mode
+            if ( xi_current == xi_test .and. eta_current == eta_test .and. zeta_current == zeta_test) then
+                ! Current mode and test mode are the same, flag as non-unique ordering
+                unique = .false.
+            end if
+
+            ! Expecing unique to be true. Fail for unique == .false.            
+            @assertTrue(unique)
+        
+        end do
+    end do
+
+   
+end subroutine

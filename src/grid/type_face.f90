@@ -1,79 +1,50 @@
 module type_face
-    use mod_types,              only: rk,ik
+    use mod_kinds,              only: rk,ik
     use mod_constants,          only: XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, &
                                       ZETA_MIN, ZETA_MAX, XI_DIR, ETA_DIR, ZETA_DIR, &
                                       SPACEDIM, NFACES
     use type_point,             only: point_t
     use type_element,           only: element_t
-    use type_elementQuadrature, only: elementQuadrature_t
-    use type_variables,         only: variables_t
-    use type_variablesVector,   only: variablesVector_t
+    use type_quadrature,        only: quadrature_t
+    use type_expansion,         only: expansion_t
 
     implicit none
 
-    ! Declare BLAS routines
-    EXTERNAL    dgemv
-
-
     !------------------------------
     type, public :: face_t
-        integer(kind=ik)                :: neqns
-        integer(kind=ik)                :: nterms_face
-        integer(kind=ik)                :: nterms_sol
+        integer(ik), pointer         :: neqns
+        integer(ik), pointer         :: nterms_s
+        integer(ik)                  :: ftype               !> interior (0) or boundary face (1)
+        integer(ik)                  :: iface               !> XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, etc
+        integer(ik)                  :: iparent             !> Pointer to block-local index of parent element
+        integer(ik)                  :: ineighbor           !> Pointer to block-lodal index of neighbor element
 
-        integer(kind=ik)                :: ftype           ! interior or boundary face
-        integer(kind=ik)                :: iface           ! XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, etc
-        type(point_t),    allocatable   :: mesh_pts(:)     ! points defining the face geometry
+        !> Geometry
+        type(point_t),  allocatable  :: quad_pts(:)         !> Cartesian coordinates of quadrature nodes
+        type(expansion_t), pointer   :: coords
 
-        type(variables_t), pointer      :: mesh_modes
+        !> Metric terms
+        real(rk),       allocatable  :: jinv(:)
+        real(rk),       allocatable  :: metric(:,:,:)
+        real(rk),       allocatable  :: norm(:,:)
 
-        ! cartesian coordinates at quadrature values,
-        ! mostly for boundary conditions
-        type(point_t),    allocatable   :: quad_pts(:)
-
-
-        real(kind=rk),    allocatable   :: jinv(:)
-        real(kind=rk),    allocatable   :: metric(:,:,:)
-        real(kind=rk),    allocatable   :: norm(:,:)
-
-        real(kind=rk),    allocatable   :: massfaceref(:,:)
-        real(kind=rk),    allocatable   :: massface(:,:,:)
-        real(kind=rk),    allocatable   :: diagmassface(:)
-
-        ! array containins lagrange polys and derivatives evaluated at the
-        ! quadrature points. Used to resontstruct the solution by multiplying
-        ! by the solution array
-        type(elementQuadrature_t),  pointer     :: gq
-        type(elementQuadrature_t),  pointer     :: gq_over
-        type(elementQuadrature_t),  pointer     :: gqmesh
-        type(elementQuadrature_t),  pointer     :: gqmesh_over
-
-        ! pointers to the correct locations in the rhs and q vectors
-        type(variables_t),          pointer     :: q
-        type(variables_t),          pointer     :: q_ref
-        type(variables_t),          pointer     :: q_next
-
-        type(variables_t),          pointer     :: rhs
-        type(variables_t),          pointer     :: rhs_ref
-
-        type(variablesVector_t),    pointer     :: lift_g
-        type(variablesVector_t),    pointer     :: lift_l(:)
+        !> Quadrature matrices
+        type(quadrature_t),  pointer :: gq
+        type(quadrature_t),  pointer :: gqmesh
 
 
-        real(kind=rk),              pointer        :: invmass(:,:)  ! For BR2 lifting modes
+        real(rk),            pointer :: invmass(:,:)        !> Pointer to element inverse mass matrix
+
+        !> Logical tests
+        logical :: isInitialized = .false.
     contains
-        procedure   :: init
-        procedure   :: compute_metrics
-        procedure   :: compute_face_mass_matrix
+        procedure           :: init                         !> Face initialization
+        procedure, public   :: integrate_flux               !> Integrate face flux
+        procedure, public   :: integrate_scalar             !> Integrate face scalar
 
-        ! Interpolation to quadrature nodes
-        procedure, public   :: compute_var
-
-        ! Integration procedures
-        procedure, public   :: integrate_flux
-        procedure, public   :: integrate_scalar
-
-
+        procedure           :: compute_quadrature_metrics   !> Compute metric terms at quadrature nodes
+        procedure           :: compute_quadrature_normals   !> Compute normals at quadrature nodes
+        procedure           :: compute_quadrature_coords    !> Compute cartesian coordinates at quadrature nodes
 
         final       :: destructor
     end type face_t
@@ -83,36 +54,38 @@ module type_face
 contains
 
 
-    subroutine init(self,element,nterms_face,nterms_sol)
-        class(face_t),    intent(inout)       :: self
-        type(element_t),  intent(in), target  :: element
-        integer(kind=ik), intent(in)          :: nterms_face,nterms_sol
 
 
+    !> Face initialization procedure
+    !!
+    !!  Sets integer members such as face type and face index and associates many face members with the
+    !!  parent element components. Call procedures to compute metrics, normals, and cartesian face coordinates.
+    !!
+    !!  @author Nathan A. Wukie
+    !!
+    !!  @param[in] iface        Element face integer (XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX)
+    !!  @param[in] ftype        Face type (0 - interior face, 1 - boundary face)
+    !!  @param[in] elem         Parent element which many face members point to
+    !!  @param[in] ineighbor    Index of neighbor element in the block
+    !---------------------------------------------------------------------
+    subroutine init(self,iface,ftype,elem,ineighbor)
+        class(face_t),      intent(inout)       :: self
+        integer(ik),        intent(in)          :: iface
+        integer(ik),        intent(in)          :: ftype
+        type(element_t),    intent(in), target  :: elem
+        integer(ik),        intent(in)          :: ineighbor
 
-        self%neqns       = element%neqns
-        self%nterms_face = nterms_face
-        self%nterms_sol  = nterms_sol
-        self%mesh_modes  => element%mesh_modes
+        self%iface      =  iface
+        self%ftype      =  ftype
+        self%neqns      => elem%neqns
+        self%nterms_s   => elem%nterms_s
+        self%iparent    =  elem%ielem
+        self%ineighbor  =  ineighbor
 
-        self%q           => element%q
-        self%q_ref       => element%q_ref
-        self%q_next      => element%q_next
-
-        self%rhs         => element%rhs
-        self%rhs_ref     => element%rhs_ref
-
-        self%lift_g      => element%lift_g
-        self%lift_l      => element%lift_l
-
-        self%invmass     => element%invmass
-
-!        self%gq          => element%gq_coll
-!        self%gqmesh      => element%gqmesh_coll
-        self%gq          => element%gq
-        self%gqmesh      => element%gqmesh
-        self%gq_over     => element%gq_over
-        self%gqmesh_over => element%gqmesh_over
+        self%coords     => elem%coords
+        self%gq         => elem%gq
+        self%gqmesh     => elem%gqmesh
+        self%invmass    => elem%invmass
 
         ! Allocate face storage
         allocate(self%quad_pts(self%gq%face%nnodes))
@@ -120,44 +93,46 @@ contains
         allocate(self%metric(SPACEDIM,SPACEDIM,self%gq%face%nnodes))
         allocate(self%norm(self%gq%face%nnodes,SPACEDIM))
 
-        allocate(self%massfaceref(nterms_sol,nterms_face))
-        allocate(self%massface(nterms_sol,nterms_face,SPACEDIM))
-        allocate(self%diagmassface(nterms_face))
+        call self%compute_quadrature_metrics()
+        call self%compute_quadrature_normals()
+        call self%compute_quadrature_coords()
 
-        call self%compute_metrics()
-        call self%compute_face_mass_matrix()
-
+        self%isInitialized  = .true.            !> Confirm face initialization
     end subroutine
 
 
 
-    subroutine compute_metrics(self)
+
+    !> Compute metric terms and cell jacobians at face quadrature nodes
+    !!
+    !!  @author Nathan A. Wukie
+    !------------------------------------------------------------------------
+    subroutine compute_quadrature_metrics(self)
         class(face_t),  intent(inout)   :: self
 
-        integer(kind=ik) :: inode, iface, nnodes
+        integer(ik) :: inode, iface
+        integer(ik) :: nnodes
 
-        real(kind=rk)    :: dxdxi(self%gq%face%nnodes), dxdeta(self%gq%face%nnodes), dxdzeta(self%gq%face%nnodes)
-        real(kind=rk)    :: dydxi(self%gq%face%nnodes), dydeta(self%gq%face%nnodes), dydzeta(self%gq%face%nnodes)
-        real(kind=rk)    :: dzdxi(self%gq%face%nnodes), dzdeta(self%gq%face%nnodes), dzdzeta(self%gq%face%nnodes)
-        real(kind=rk)    :: invjac(self%gq%face%nnodes)
-        real(kind=rk)    :: x(self%gq%face%nnodes),y(self%gq%face%nnodes),z(self%gq%face%nnodes)
+        real(rk)    :: dxdxi(self%gq%face%nnodes), dxdeta(self%gq%face%nnodes), dxdzeta(self%gq%face%nnodes)
+        real(rk)    :: dydxi(self%gq%face%nnodes), dydeta(self%gq%face%nnodes), dydzeta(self%gq%face%nnodes)
+        real(rk)    :: dzdxi(self%gq%face%nnodes), dzdeta(self%gq%face%nnodes), dzdzeta(self%gq%face%nnodes)
+        real(rk)    :: invjac(self%gq%face%nnodes)
 
-        iface = self%iface
+        iface  = self%iface
         nnodes = self%gq%face%nnodes
 
         associate (gq_f => self%gqmesh%face)
-            dxdxi   = matmul(gq_f%ddxi(:,:,iface),  self%mesh_modes%vals(:,1))
-            dxdeta  = matmul(gq_f%ddeta(:,:,iface), self%mesh_modes%vals(:,1))
-            dxdzeta = matmul(gq_f%ddzeta(:,:,iface),self%mesh_modes%vals(:,1))
+            dxdxi   = matmul(gq_f%ddxi(:,:,iface),  self%coords%var(1))
+            dxdeta  = matmul(gq_f%ddeta(:,:,iface), self%coords%var(1))
+            dxdzeta = matmul(gq_f%ddzeta(:,:,iface),self%coords%var(1))
 
-            dydxi   = matmul(gq_f%ddxi(:,:,iface),  self%mesh_modes%vals(:,2))
-            dydeta  = matmul(gq_f%ddeta(:,:,iface), self%mesh_modes%vals(:,2))
-            dydzeta = matmul(gq_f%ddzeta(:,:,iface),self%mesh_modes%vals(:,2))
+            dydxi   = matmul(gq_f%ddxi(:,:,iface),  self%coords%var(2))
+            dydeta  = matmul(gq_f%ddeta(:,:,iface), self%coords%var(2))
+            dydzeta = matmul(gq_f%ddzeta(:,:,iface),self%coords%var(2))
 
-            dzdxi   = matmul(gq_f%ddxi(:,:,iface),  self%mesh_modes%vals(:,3))
-            dzdeta  = matmul(gq_f%ddeta(:,:,iface), self%mesh_modes%vals(:,3))
-            dzdzeta = matmul(gq_f%ddzeta(:,:,iface),self%mesh_modes%vals(:,3))
-
+            dzdxi   = matmul(gq_f%ddxi(:,:,iface),  self%coords%var(3))
+            dzdeta  = matmul(gq_f%ddeta(:,:,iface), self%coords%var(3))
+            dzdzeta = matmul(gq_f%ddzeta(:,:,iface),self%coords%var(3))
         end associate
 
         do inode = 1,nnodes
@@ -178,24 +153,46 @@ contains
         invjac = dxdxi*dydeta*dzdzeta - dxdeta*dydxi*dzdzeta - &
                  dxdxi*dydzeta*dzdeta + dxdzeta*dydxi*dzdeta + &
                  dxdeta*dydzeta*dzdxi - dxdzeta*dydeta*dzdxi
-
         self%jinv = invjac
+    end subroutine
 
 
 
-        ! compute cartesian coordinates associated with quadrature points
-        associate(gq_f => self%gqmesh%face)
-            x = matmul(gq_f%val(:,:,iface),self%mesh_modes%vals(:,1))
-            y = matmul(gq_f%val(:,:,iface),self%mesh_modes%vals(:,2))
-            z = matmul(gq_f%val(:,:,iface),self%mesh_modes%vals(:,3))
+
+
+    !> Compute normal vector components at face quadrature nodes
+    !!
+    !!  NOTE: These are not unit normals
+    !!
+    !!  @author Nathan A. Wukie
+    !-------------------------------------------------------------------------
+    subroutine compute_quadrature_normals(self)
+        class(face_t),  intent(inout)   :: self
+        integer(ik)                     :: inode, iface, nnodes
+
+        real(rk)    :: dxdxi(self%gq%face%nnodes), dxdeta(self%gq%face%nnodes), dxdzeta(self%gq%face%nnodes)
+        real(rk)    :: dydxi(self%gq%face%nnodes), dydeta(self%gq%face%nnodes), dydzeta(self%gq%face%nnodes)
+        real(rk)    :: dzdxi(self%gq%face%nnodes), dzdeta(self%gq%face%nnodes), dzdzeta(self%gq%face%nnodes)
+        real(rk)    :: invjac(self%gq%face%nnodes)
+
+        iface = self%iface
+        nnodes = self%gq%face%nnodes
+
+        associate (gq_f => self%gqmesh%face)
+            dxdxi   = matmul(gq_f%ddxi(:,:,iface),  self%coords%var(1))
+            dxdeta  = matmul(gq_f%ddeta(:,:,iface), self%coords%var(1))
+            dxdzeta = matmul(gq_f%ddzeta(:,:,iface),self%coords%var(1))
+
+            dydxi   = matmul(gq_f%ddxi(:,:,iface),  self%coords%var(2))
+            dydeta  = matmul(gq_f%ddeta(:,:,iface), self%coords%var(2))
+            dydzeta = matmul(gq_f%ddzeta(:,:,iface),self%coords%var(2))
+
+            dzdxi   = matmul(gq_f%ddxi(:,:,iface),  self%coords%var(3))
+            dzdeta  = matmul(gq_f%ddeta(:,:,iface), self%coords%var(3))
+            dzdzeta = matmul(gq_f%ddzeta(:,:,iface),self%coords%var(3))
         end associate
 
-        do inode = 1,nnodes
-            call self%quad_pts(inode)%set_coord(x(inode),y(inode),z(inode))
-        end do
-
-        ! Compute normal vectors
-        select case (iface)
+        select case (self%iface)
             case (XI_MIN, XI_MAX)
 
                 do inode = 1,nnodes
@@ -225,7 +222,7 @@ contains
         end select
 
         ! Reverse normal vectors for faces XI_MIN,ETA_MIN,ZETA_MIN
-        if (iface == XI_MIN .or. iface == ETA_MIN .or. iface == ZETA_MIN) then
+        if (self%iface == XI_MIN .or. self%iface == ETA_MIN .or. self%iface == ZETA_MIN) then
             self%norm(:,XI_DIR)   = -self%norm(:,XI_DIR)
             self%norm(:,ETA_DIR)  = -self%norm(:,ETA_DIR)
             self%norm(:,ZETA_DIR) = -self%norm(:,ZETA_DIR)
@@ -235,151 +232,72 @@ contains
     end subroutine
 
 
-    !============================================================================
-    !
-    !
-    !   Compute face mass matrix
-    !
-    !
-    !============================================================================
-    subroutine compute_face_mass_matrix(self)
-        class(face_t), intent(inout)       :: self
 
-        type(elementQuadrature_t), pointer :: gq
 
-        integer(kind=ik)                   :: iterm,iface,i,j
-        real(kind=rk), dimension(self%nterms_sol,self%gq%face%nnodes) ::  &
-                            temp_xi, temp_eta, temp_zeta, temp_ref
 
-        real(kind=rk), dimension(self%nterms_face,self%gq%face%nnodes) :: temp
-
-        real(kind=rk), dimension(self%nterms_face,self%nterms_face) :: tempmass
+    !> Compute cartesian coordinates at face quadrature nodes
+    !!
+    !!  @author Nathan A. Wukie
+    !----------------------------------------------------------------------
+    subroutine compute_quadrature_coords(self)
+        class(face_t),  intent(inout)   :: self
+        integer(ik)                     :: iface, inode
+        real(rk)                        :: x(self%gq%face%nnodes),y(self%gq%face%nnodes),z(self%gq%face%nnodes)
 
         iface = self%iface
+        ! compute cartesian coordinates associated with quadrature points
+        associate(gq_f => self%gqmesh%face)
+            x = matmul(gq_f%val(:,:,iface),self%coords%var(1))
+            y = matmul(gq_f%val(:,:,iface),self%coords%var(2))
+            z = matmul(gq_f%val(:,:,iface),self%coords%var(3))
+        end associate
 
-        gq => self%gq
-
-
-!        temp      = transpose(gq%face%faceval(:,:,iface))
-!        temp_xi   = transpose(gq%face%faceval(:,:,iface))
-!        temp_eta  = transpose(gq%face%faceval(:,:,iface))
-!        temp_zeta = transpose(gq%face%faceval(:,:,iface))
-
-        temp      = transpose(gq%face%faceval(:,:,iface))
-
-        temp_xi   = transpose(gq%face%val(:,:,iface))
-        temp_eta  = transpose(gq%face%val(:,:,iface))
-        temp_zeta = transpose(gq%face%val(:,:,iface))
-        temp_ref  = transpose(gq%face%val(:,:,iface))
-
-
-        ! Multiply rows by quadrature weights and face jacobian/normals
-        do iterm = 1,self%nterms_sol
-            temp_ref(iterm,:)  = temp_ref(iterm,:)  * gq%face%weights(:,iface)
-            temp_xi(iterm,:)   = temp_xi(iterm,:)   * gq%face%weights(:,iface) * self%norm(:,1)
-            temp_eta(iterm,:)  = temp_eta(iterm,:)  * gq%face%weights(:,iface) * self%norm(:,2)
-            temp_zeta(iterm,:) = temp_zeta(iterm,:) * gq%face%weights(:,iface) * self%norm(:,3)
-        end do
-
-        do iterm = 1,self%nterms_face
-            temp(iterm,:)      = temp(iterm,:)      * gq%face%weights(:,iface)
-        end do
-        tempmass = matmul(temp,gq%face%faceval(:,:,iface))
-
-        ! Perform the matrix multiplication of the transpose of the face expansion
-        ! with the volume expansion at the face. This produces the face mass matrix.
-        self%massfaceref     = matmul(temp_ref, gq%face%faceval(:,:,iface))
-        self%massface(:,:,1) = matmul(temp_xi,  gq%face%faceval(:,:,iface))
-        self%massface(:,:,2) = matmul(temp_eta, gq%face%faceval(:,:,iface))
-        self%massface(:,:,3) = matmul(temp_zeta,gq%face%faceval(:,:,iface))
-
-        ! Store the diagonal of the mass matrix for projections
-        do j = 1,self%nterms_face
-            do i = 1,self%nterms_face
-
-                if (i==j) then
-                    self%diagmassface(i) = 1._rk/tempmass(i,j)
-                end if
-
-            end do
+        do inode = 1,self%gq%face%nnodes
+            call self%quad_pts(inode)%set(x(inode),y(inode),z(inode))
         end do
 
     end subroutine
+
+
+
+
 
     !=============================================================================
     !
     !   Integrate boundary flux.
     !
-    !   Multiplies volume fluxes by gradient of test functions and integrates.
+    !   Multiplies fluxes by test functions and integrates.
     !
     !=============================================================================
-    subroutine integrate_flux(self,fluxx,fluxy,fluxz,varindex)
-        class(face_t),      intent(inout)  :: self
-        real(kind=rk),      intent(inout)  :: fluxx(:), fluxy(:), fluxz(:)
-        integer(kind=ik),   intent(in)     :: varindex
+    subroutine integrate_flux(self,flux_x,flux_y,flux_z,ivar)
+        class(face_t), intent(inout)  :: self
+        real(rk),      intent(inout)  :: flux_x(:), flux_y(:), flux_z(:)
+        integer(ik),   intent(in)     :: ivar
 
-        real(kind=rk),  dimension(self%nterms_face)  :: &
-                          integral, modesx, modesy, modesz
-
-        integer(4)                            :: iface,numrows,numcols
-
+        real(rk),  dimension(self%nterms_s)  :: integral
+        integer(4) :: iface
 
         iface = self%iface
 
-        ! So, we have the numerical flux function at quadrature nodes. Now, need to
-        ! project that information to face polynomial expansion.
+        ! Multiply by quadrature weights
+        flux_x = flux_x * self%gq%face%weights(:,iface)
+        flux_y = flux_y * self%gq%face%weights(:,iface)
+        flux_z = flux_z * self%gq%face%weights(:,iface)
 
-        ! Multiply by quadrature weights on the face
-        fluxx = fluxx * self%gq%face%weights(:,iface)
-        fluxy = fluxy * self%gq%face%weights(:,iface)
-        fluxz = fluxz * self%gq%face%weights(:,iface)
+        ! Multiply by column of test functions, integrate, and add to RHS
+        integral = matmul(transpose(self%gq%face%val(:,:,iface)),flux_x)
+!        self%rhs%vals(:,ivar) = self%rhs%vals(:,varindex) - integral
 
-        ! Project by integrating the function multiplied by
-        ! given mode and divied by the integral of the mode squared.
-!        modesx = matmul(transpose(self%gq%face%faceval(:,:,iface)),fluxx) / self%diagmassface
-!        modesy = matmul(transpose(self%gq%face%faceval(:,:,iface)),fluxy) / self%diagmassface
-!        modesz = matmul(transpose(self%gq%face%faceval(:,:,iface)),fluxz) / self%diagmassface
+        integral = matmul(transpose(self%gq%face%val(:,:,iface)),flux_y)
+!        self%rhs%vals(:,ivar) = self%rhs%vals(:,varindex) - integral
 
-        modesx = matmul(transpose(self%gq%face%faceval(:,:,iface)),fluxx) * self%diagmassface
-        modesy = matmul(transpose(self%gq%face%faceval(:,:,iface)),fluxy) * self%diagmassface
-        modesz = matmul(transpose(self%gq%face%faceval(:,:,iface)),fluxz) * self%diagmassface
+        integral = matmul(transpose(self%gq%face%val(:,:,iface)),flux_z)
+!        self%rhs%vals(:,ivar) = self%rhs%vals(:,varindex) - integral
 
 
-        ! Contribute to rhs vector
-        self%rhs%vals(:,varindex) = self%rhs%vals(:,varindex) - &
-                                        matmul(self%massface(:,:,1),modesx) - &
-                                        matmul(self%massface(:,:,2),modesy) - &
-                                        matmul(self%massface(:,:,3),modesz)
-
-
-!        ! BELOW HERE IS PREVIOUS IMPLEMENTATION
-!
-!        iface = self%iface
-!
-!        numrows = size(self%gq%face%val(:,:,iface),1)
-!        numcols = size(self%gq%face%val(:,:,iface),2)
-!
-!
-!        ! Multiply by quadrature weights
-!        flux = flux  * self%gq%face%weights(:,iface)
-!
-!
-!        ! Multiply by column of test functions and integrate
-!        integral = matmul(transpose(self%gq%face%val(:,:,iface)),flux)
-!
-!!        call dgemv('T',numrows,numcols,1.0_rk,self%gq%face%val(:,:,iface),numrows,flux,1,0.0_rk,integral,1)
-!
-!
-!        ! Set face RHS
-!        self%rhs%vals(:,varindex) = self%rhs%vals(:,varindex) - integral
+        ! ADD SECTION FOR AD LINEARIZATION AND ADDING THAT TO THE SYSTEM JACOBIAN MATRIX
 
     end subroutine
-
-
-
-
-
-
 
 
     !=============================================================================
@@ -387,58 +305,23 @@ contains
     !   Integrate scalar flux.
     !
     !
-    !
     !=============================================================================
-    subroutine integrate_scalar(self,scalar,varindex)
+    subroutine integrate_scalar(self,scalar,ivar)
         class(face_t),      intent(inout)  :: self
-        real(kind=rk),      intent(inout)  :: scalar(:)
-        integer(kind=ik),   intent(in)     :: varindex
+        real(rk),           intent(inout)  :: scalar(:)
+        integer(ik),        intent(in)     :: ivar
 
-        real(kind=rk),  dimension(self%nterms_face)  :: modes
-
-        integer(4)                            :: iface,numrows,numcols
-
+        real(rk),       dimension(self%nterms_s)    :: integral
+        integer(4)                                  :: iface
 
         iface = self%iface
-        numrows = size(self%gq%face%faceval(:,:,iface),1)
-        numcols = size(self%gq%face%faceval(:,:,iface),2)
 
-        ! So, we have the numerical flux function at quadrature nodes. Now, need to
-        ! project that information to face polynomial expansion.
+        ! Multiply by quadrature weights
+        scalar = (scalar)  *  (self%gq%face%weights(:,iface))
 
-        ! Multiply by quadrature weights on the face
-        scalar = scalar * self%gq%face%weights(:,iface)
-
-        ! Project
-!        modes = matmul(transpose(self%gq%face%faceval(:,:,iface)),scalar) * self%diagmassface
-        call dgemv('T',numrows,numcols,self%diagmassface,self%gq%face%faceval(:,:,iface),numrows,scalar,1,0.0_rk,modes,1)
-
-
-        ! Contribute to rhs vector
-        self%rhs%vals(:,varindex) = self%rhs%vals(:,varindex) - &
-                                        matmul(self%massfaceref,modes)
-
-
-!        ! BELOW HERE IS PREVIOUS IMPLEMENTATION
-!
-!        iface = self%iface
-!
-!        numrows = size(self%gq%face%val(:,:,iface),1)
-!        numcols = size(self%gq%face%val(:,:,iface),2)
-!
-!
-!        ! Multiply by quadrature weights
-!        flux = flux  * self%gq%face%weights(:,iface)
-!
-!
-!        ! Multiply by column of test functions and integrate
-!        integral = matmul(transpose(self%gq%face%val(:,:,iface)),flux)
-!
-!!        call dgemv('T',numrows,numcols,1.0_rk,self%gq%face%val(:,:,iface),numrows,flux,1,0.0_rk,integral,1)
-!
-!
-!        ! Set face RHS
-!        self%rhs%vals(:,varindex) = self%rhs%vals(:,varindex) - integral
+        ! Multiply by column of test functions, integrate, and add to RHS
+        integral = matmul(transpose(self%gq%face%val(:,:,iface)),scalar)
+!        self%rhs%vals(:,ivar) = self%rhs%vals(:,ivar) - integral
 
     end subroutine
 
@@ -464,28 +347,20 @@ contains
     !
     !
     !=============================================================================
-    subroutine compute_var(self,varindex,vargq)
-        class(face_t),      intent(in)      :: self
-        integer(kind=ik),   intent(in)      :: varindex
-        real(kind=rk),      intent(inout)   :: vargq(:)
-
-        integer(kind=ik)                    :: iface
-        integer(4)                          :: numrows, numcols
-
-        iface = self%iface
-
-
-        ! Compute variables at volume GQ nodes
+!    subroutine compute_var(self,varindex,vargq)
+!        class(face_t),      intent(in)      :: self
+!        integer(kind=ik),   intent(in)      :: varindex
+!        real(kind=rk),      intent(inout)   :: vargq(:)
+!
+!        integer(kind=ik)                    :: iface
+!        integer(4)                          :: numrows, numcols
+!
+!        iface = self%iface
+!
+!        ! Compute variables at volume GQ nodes
 !        vargq = matmul(self%gq%face%val(:,:,iface),self%q%vals(:,varindex))
-
-
-
-        numrows = size(self%gq%face%val(:,:,iface),1)
-        numcols = size(self%gq%face%val(:,:,iface),2)
-        call dgemv('N',numrows,numcols,1.0_rk,self%gq%face%val(:,:,iface),numrows,self%q%vals(:,varindex),1,0.0_rk,vargq,1)
-
-
-    end subroutine
+!
+!    end subroutine
 
 
 
@@ -497,7 +372,12 @@ contains
 
 
     subroutine destructor(self)
-        type(face_t), intent(in) :: self
+        type(face_t), intent(inout) :: self
+
+        if (allocated(self%quad_pts))   deallocate(self%quad_pts)
+        if (allocated(self%jinv))       deallocate(self%jinv)
+        if (allocated(self%metric))     deallocate(self%metric)
+        if (allocated(self%norm))       deallocate(self%norm)
     end subroutine
 
 end module type_face

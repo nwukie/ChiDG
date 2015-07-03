@@ -1,1 +1,1 @@
-add_lib_sources(type_denseblock.f90)
+add_lib_sources(type_denseblock.f90 type_expansion.f90)

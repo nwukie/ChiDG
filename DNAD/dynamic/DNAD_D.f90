@@ -165,7 +165,7 @@ CONTAINS
         allocate(new_dual_num_s%xp_ad_(nd),stat=ierr)
         if (ierr /= 0) stop "Allocation error: DNAD_D - new_dual_num"
 
-!        new_dual_num%xp_ad_ = real(0.,DBL_AD)
+        new_dual_num_s%xp_ad_ = real(0.,DBL_AD)
     end function
 
     ! LONG INTEGER
@@ -176,7 +176,7 @@ CONTAINS
         allocate(new_dual_num_l%xp_ad_(nd),stat=ierr)
         if (ierr /= 0) stop "Allocation error: DNAD_D - new_dual_num"
 
-!        new_dual_num%xp_ad_ = real(0.,DBL_AD)
+        new_dual_num_l%xp_ad_ = real(0.,DBL_AD)
     end function
 
 

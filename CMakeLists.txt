@@ -37,11 +37,11 @@ elseif(Fortran_COMPILER_NAME MATCHES "gfortran.*")
 endif()
 
 
-set(CMAKE_Fortran_COMPILE_FLAGS ${CMAKE_Fortran_COMPILE_FLAGS_RELEASE})
-set(CMAKE_Fortran_LINK_FLAGS ${CMAKE_Fortran_LINK_FLAGS_RELEASE})
+#set(CMAKE_Fortran_COMPILE_FLAGS ${CMAKE_Fortran_COMPILE_FLAGS_RELEASE})
+#set(CMAKE_Fortran_LINK_FLAGS ${CMAKE_Fortran_LINK_FLAGS_RELEASE})
 
-#set(CMAKE_Fortran_COMPILE_FLAGS ${CMAKE_Fortran_COMPILE_FLAGS_DEBUG})
-#set(CMAKE_Fortran_LINK_FLAGS ${CMAKE_Fortran_LINK_FLAGS_DEBUG})
+set(CMAKE_Fortran_COMPILE_FLAGS ${CMAKE_Fortran_COMPILE_FLAGS_DEBUG})
+set(CMAKE_Fortran_LINK_FLAGS ${CMAKE_Fortran_LINK_FLAGS_DEBUG})
 
 
 
@@ -67,6 +67,11 @@ message(STATUS "HDF5_LIBRARIES: " ${HDF5_LIBRARIES})
 
 
 #------------------------------------------------------------------                                                                        
+#                        Find Lapack
+#------------------------------------------------------------------
+find_package(LAPACK REQUIRED)
+
+#------------------------------------------------------------------                                                                        
 #                        Add source tree
 #------------------------------------------------------------------
 add_subdirectory(DNAD)                                                                        
@@ -79,7 +84,7 @@ add_subdirectory(src)
 #              Add core library and driver targets
 #------------------------------------------------------------------                                                                        
 add_library(coredg STATIC ${LIB_SRCS})
-target_link_libraries(coredg ${HDF5_LIBRARIES})
+target_link_libraries(coredg ${HDF5_LIBRARIES} ${LAPACK_LIBRARIES})
 set_target_properties(coredg PROPERTIES 
                              COMPILE_FLAGS "${CMAKE_Fortran_COMPILE_FLAGS}"
                              LINK_FLAGS    "${CMAKE_Fortran_LINK_FLAGS}")

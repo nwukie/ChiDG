@@ -1,2 +1,2 @@
-set(test_files test_denseblock.pf) 
+set(test_files test_denseblock.pf test_expansion.pf) 
 add_test_target(containers ${test_files})

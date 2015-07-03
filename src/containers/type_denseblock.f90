@@ -26,7 +26,7 @@ module type_denseblock
 
         !> Block storage
         !! NOTE: Assumes square blocks, since this type is specifically
-        real(rk),  dimension(:,:), allocatable :: vals
+        real(rk),  dimension(:,:), allocatable :: mat
 
     contains
         !> Initializers
@@ -43,7 +43,7 @@ module type_denseblock
         !!  v
         !!
         !!  i
-        procedure :: parent    !> return parent element
+        procedure :: parent     !> return parent element
         procedure :: nentries   !> return number of matrix entries
         procedure :: idim       !> return i-dimension of matrix storage
         procedure :: jdim       !> return j-dimension of matrix storage
@@ -73,17 +73,17 @@ contains
 
         ! Allocate block storage
         ! Check if storage was already allocated and reallocate if necessary
-        if (allocated(self%vals)) then
-            deallocate(self%vals)
-            allocate(self%vals(idim,jdim),stat=ierr)
+        if (allocated(self%mat)) then
+            deallocate(self%mat)
+            allocate(self%mat(idim,jdim),stat=ierr)
 !            if (ierr /= 0) call warn(3,__file__,__line__,'Allocation error')
         else
-            allocate(self%vals(idim,jdim),stat=ierr)
+            allocate(self%mat(idim,jdim),stat=ierr)
 !            if (ierr /= 0) call warn(3,__file__,__line__,'Allocation error')
         end if
 
         ! Initialize to zero
-        self%vals = 0._rk
+        self%mat = 0._rk
     end subroutine
 
 
@@ -101,17 +101,17 @@ contains
 
         ! Allocate block storage
         ! Check if storage was already allocated and reallocate if necessary
-        if (allocated(self%vals)) then
-            deallocate(self%vals)
-            allocate(self%vals(bsize,bsize),stat=ierr)
+        if (allocated(self%mat)) then
+            deallocate(self%mat)
+            allocate(self%mat(bsize,bsize),stat=ierr)
 !            if (ierr /= 0) call warn(3,__file__,__line__,'Allocation error')
         else
-            allocate(self%vals(bsize,bsize),stat=ierr)
+            allocate(self%mat(bsize,bsize),stat=ierr)
 !            if (ierr /= 0) call warn(3,__file__,__line__,'Allocation error')
         end if
 
         ! Initialize to zero
-        self%vals = 0._rk
+        self%mat = 0._rk
     end subroutine
 
 
@@ -125,7 +125,7 @@ contains
         class(denseblock_t), intent(in)   :: self
         integer(ik)                       :: i
 
-        i = size(self%vals,1)
+        i = size(self%mat,1)
     end function
 
     !> return j-dimension of block storage
@@ -134,7 +134,7 @@ contains
         class(denseblock_t), intent(in)   :: self
         integer(ik)                       :: j
 
-        j = size(self%vals,2)
+        j = size(self%mat,2)
     end function
 
     !> return number of entries in block storage
@@ -143,7 +143,7 @@ contains
         class(denseblock_t), intent(in)   :: self
         integer(ik)                  :: n
 
-        n = size(self%vals,1) * size(self%vals,2)
+        n = size(self%mat,1) * size(self%mat,2)
     end function
 
     !> return index of block parent
@@ -167,12 +167,12 @@ contains
 
         ! Allocate block storage
         ! Check if storage was already allocated and reallocate if necessary
-        if (allocated(self%vals)) then
-            deallocate(self%vals)
-            allocate(self%vals(idim,jdim),stat=ierr)
+        if (allocated(self%mat)) then
+            deallocate(self%mat)
+            allocate(self%mat(idim,jdim),stat=ierr)
 !            if (ierr /= 0) call warn(3,__file__,__line__,'Allocation error')
         else
-            allocate(self%vals(idim,jdim),stat=ierr)
+            allocate(self%mat(idim,jdim),stat=ierr)
 !            if (ierr /= 0) call warn(3,__file__,__line__,'Allocation error')
         end if
 
@@ -191,7 +191,7 @@ contains
 
     subroutine destructor(self)
         type(denseblock_t), intent(inout) :: self
-        deallocate(self%vals)
+        if (allocated(self%mat))    deallocate(self%mat)
     end subroutine
 
 end module type_denseblock

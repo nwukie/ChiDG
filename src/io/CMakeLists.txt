@@ -1,4 +1,4 @@
-add_lib_sources(hdf5_dgtools.f90)
+add_lib_sources(hdf5_dgtools.f90 mod_io.f90)
 
 
 

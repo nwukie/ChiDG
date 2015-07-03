@@ -1,0 +1,32 @@
+! Test expansion_t
+@Test
+subroutine test_Expansion_init() 
+    use pfunit_mod
+    use mod_kinds, only: rk,ik
+    use type_expansion
+    
+    implicit none
+    type(expansion_t)   :: poly
+    integer(ik)         :: neqns, nterms
+    
+    real(rk)            :: mat_set(4,3)
+    real(rk)            :: vec_set(12)
+    
+    
+    nterms = 4
+    neqns  = 3
+    
+    call poly%init(nterms,neqns)
+    
+    mat_set(:,1)  = [1.0_rk, 2.0_rk,  3.0_rk,  4.0_rk]
+    mat_set(:,2)  = [5.0_rk, 6.0_rk,  7.0_rk,  8.0_rk]
+    mat_set(:,3)  = [9.0_rk, 10.0_rk, 11.0_rk, 12.0_rk]
+
+    poly%modes = mat_set
+
+    @assertEqual(mat_set,poly%modes)
+
+end subroutine
+
+
+

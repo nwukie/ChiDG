@@ -1,0 +1,218 @@
+module test_mesh_linear_mod
+    use pfunit_mod
+    use mod_kinds,      only: rk,ik
+    use mod_constants,  only: ZERO, ONE, TWO, THREE, FIVE, SIX, EIGHT, NINE, TEN, &
+                              XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX, NFACES
+    use type_point,     only: point_t
+    use type_mesh,      only: mesh_t
+    use type_element,   only: element_t
+    use type_face,      only: face_t
+    implicit none
+
+    public  :: test_mesh_linear
+
+@TestCase
+    type, extends(TestCase) ::  test_mesh_linear
+        type(mesh_t)    :: mesh
+    contains
+        procedure   ::  setUp
+        procedure   ::  tearDown
+    end type test_mesh_linear
+
+
+contains
+    !> NOTE: make sure to use 'this' instead of 'self' since these are over-writting a derived type 
+    !! procedure. The argument names have to match
+    subroutine setUp(this)
+        class(test_mesh_linear),    intent(inout)   :: this
+        
+        integer(ik), parameter      :: npt = 64
+        type(point_t)               :: pts(4,4,4)
+        integer(ik)                 :: ftype, ineighbor, mapping, ielem, &
+                                       ipt_xi, ipt_eta, ipt_zeta, ipt
+        integer(ik)                 :: neqns, nterms_s, nterms_c
+        real(rk), dimension(npt)    :: x,y,z
+        
+        !> elements (3x3x3) - linear
+        !!
+        !!            *-------*-------*-------*
+        !!           /       /       /       /|
+        !!          *-------*-------*-------* |
+        !!         /       /       /       /| *
+        !!        *-------*-------*-------* |/|
+        !!       /       /       /       /| * |
+        !!      *-------*-------*-------* |/| *
+        !!      |       |       |       | * |/|
+        !!      |       |       |       |/| * |
+        !!      *-------*-------*-------* |/| *
+        !!      |       |       |       | * |/
+        !!      |       |       |       |/| *
+        !!      *-------*-------*-------* |/
+        !!      |       |       |       | *
+        !!      |       |       |       |/
+        !!      *-------*-------*-------*
+        !!         
+        !!
+        x = [ZERO, ONE, TWO, THREE, ZERO, ONE, TWO, THREE, ZERO, ONE, TWO, THREE, ZERO, ONE, TWO, THREE, &
+             ZERO, ONE, TWO, THREE, ZERO, ONE, TWO, THREE, ZERO, ONE, TWO, THREE, ZERO, ONE, TWO, THREE, &
+             ZERO, ONE, TWO, THREE, ZERO, ONE, TWO, THREE, ZERO, ONE, TWO, THREE, ZERO, ONE, TWO, THREE, &
+             ZERO, ONE, TWO, THREE, ZERO, ONE, TWO, THREE, ZERO, ONE, TWO, THREE, ZERO, ONE, TWO, THREE]
+             
+        y = [ZERO, ZERO, ZERO, ZERO, ONE, ONE, ONE, ONE, TWO, TWO, TWO, TWO, THREE, THREE, THREE, THREE, &
+             ZERO, ZERO, ZERO, ZERO, ONE, ONE, ONE, ONE, TWO, TWO, TWO, TWO, THREE, THREE, THREE, THREE, &
+             ZERO, ZERO, ZERO, ZERO, ONE, ONE, ONE, ONE, TWO, TWO, TWO, TWO, THREE, THREE, THREE, THREE, &
+             ZERO, ZERO, ZERO, ZERO, ONE, ONE, ONE, ONE, TWO, TWO, TWO, TWO, THREE, THREE, THREE, THREE]
+             
+        z = [ZERO, ZERO, ZERO, ZERO, ZERO, ZERO, ZERO, ZERO, ZERO, ZERO, ZERO, ZERO, ZERO, ZERO, ZERO, ZERO, &
+             ONE, ONE, ONE, ONE, ONE, ONE, ONE, ONE, ONE, ONE, ONE, ONE, ONE, ONE, ONE, ONE, &
+             TWO, TWO, TWO, TWO, TWO, TWO, TWO, TWO, TWO, TWO, TWO, TWO, TWO, TWO, TWO, TWO, &
+             THREE, THREE, THREE, THREE, THREE, THREE, THREE, THREE, THREE, THREE, THREE, THREE, THREE, THREE, THREE, THREE]
+             
+        ipt = 1
+        do ipt_zeta = 1,4
+            do ipt_eta = 1,4
+                do ipt_xi = 1,4
+                    call pts(ipt_xi,ipt_eta,ipt_zeta)%set(x(ipt), y(ipt), z(ipt))
+                    ipt = ipt + 1
+                end do
+            end do      
+        end do
+
+
+        !> Initialize mesh
+        neqns = 1
+        nterms_s = 8
+        nterms_c = 8
+        call this%mesh%init(neqns,nterms_s,nterms_c,pts)
+
+    end subroutine
+    
+    subroutine tearDown(this)
+        class(test_mesh_linear),    intent(inout)   :: this
+    end subroutine
+
+
+
+
+@Test
+    subroutine testMesh_integers(self)
+        class(test_mesh_linear),    intent(inout)   :: self
+        integer(ik) :: neqns, nterms_s, nterms_c, nelem_xi, nelem_eta, nelem_zeta, nelem
+        
+        neqns       = 1
+        nterms_s    = 8
+        nterms_c    = 8
+        nelem_xi    = 3
+        nelem_eta   = 3
+        nelem_zeta  = 3
+        nelem       = 27
+
+        @assertEqual(neqns,self%mesh%neqns)
+        @assertEqual(nterms_s,self%mesh%nterms_s)
+        @assertEqual(nterms_c,self%mesh%nterms_c)
+        @assertEqual(nelem_xi,self%mesh%nelem_xi)
+        @assertEqual(nelem_eta,self%mesh%nelem_eta)
+        @assertEqual(nelem_zeta,self%mesh%nelem_zeta)
+        @assertEqual(nelem,self%mesh%nelem)
+
+    end subroutine
+    
+    
+    
+! Test to make sure all elements were initialized
+@Test
+    subroutine testMesh_elements_initialized(self)
+        class(test_mesh_linear),    intent(inout)   :: self
+        integer(ik) :: ielem
+        
+        do ielem = 1,self%mesh%nelem
+            @assertTrue(self%mesh%elems(ielem)%isInitialized)
+        end do
+        
+    end subroutine
+        
+        
+        
+! Test to make sure all faces were initialized
+@Test
+    subroutine testMesh_faces_initialized(self)
+        class(test_mesh_linear),    intent(inout)   :: self
+        integer(ik) :: ielem, iface
+        
+        do ielem = 1,self%mesh%nelem
+            do iface = 1,NFACES
+                @assertTrue(self%mesh%faces(ielem,iface)%isInitialized)
+            end do
+        end do
+    end subroutine
+        
+    
+    
+! Test to make sure the parent and neighbor element indices are correct for an interior element
+@Test
+    subroutine testMesh_indices_interior(self)
+        class(test_mesh_linear),    intent(inout)   :: self
+        
+        !> Test parent element
+        @assertEqual(14,self%mesh%faces(14,XI_MIN)%iparent)
+        @assertEqual(14,self%mesh%faces(14,XI_MAX)%iparent)
+        @assertEqual(14,self%mesh%faces(14,ETA_MIN)%iparent)
+        @assertEqual(14,self%mesh%faces(14,ETA_MAX)%iparent)
+        @assertEqual(14,self%mesh%faces(14,ZETA_MIN)%iparent)
+        @assertEqual(14,self%mesh%faces(14,ZETA_MAX)%iparent)        
+        
+        !> Test neighbor elements
+        @assertEqual(13,self%mesh%faces(14,XI_MIN)%ineighbor)
+        @assertEqual(15,self%mesh%faces(14,XI_MAX)%ineighbor)
+        @assertEqual(11,self%mesh%faces(14,ETA_MIN)%ineighbor)
+        @assertEqual(17,self%mesh%faces(14,ETA_MAX)%ineighbor)
+        @assertEqual(5,self%mesh%faces(14,ZETA_MIN)%ineighbor)
+        @assertEqual(23,self%mesh%faces(14,ZETA_MAX)%ineighbor)
+
+    end subroutine
+    
+    
+
+! Test to make sure the neighbor element indices are correct for a boundary element    
+@Test
+    subroutine testMesh_indices_boundary(self)
+        class(test_mesh_linear),    intent(inout)   :: self
+        
+        !> Test neighbor elements
+        @assertEqual(0,self%mesh%faces(1,XI_MIN)%ineighbor)
+        @assertEqual(2,self%mesh%faces(1,XI_MAX)%ineighbor)
+        @assertEqual(0,self%mesh%faces(1,ETA_MIN)%ineighbor)
+        @assertEqual(4,self%mesh%faces(1,ETA_MAX)%ineighbor)
+        @assertEqual(0,self%mesh%faces(1,ZETA_MIN)%ineighbor)
+        @assertEqual(10,self%mesh%faces(1,ZETA_MAX)%ineighbor)
+    
+    end subroutine
+    
+    
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+end module test_mesh_linear_mod

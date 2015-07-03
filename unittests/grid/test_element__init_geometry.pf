@@ -1,0 +1,571 @@
+subroutine generate_pts(npts_1d,ptsi,ptsr)
+    use mod_kinds,          only: rk,ik
+    use type_point,         only: point_t
+    use mod_constants,      only: ZERO, ONE, TWO, THREE, FOUR, TENTH 
+    implicit none
+    integer(ik),                    intent(in)      :: npts_1d
+    class(point_t), dimension(:),    intent(inout)   :: ptsi,ptsr
+    
+    integer(ik) :: i,j,k,ipt
+    real(rk)    :: x,y,z,x_ref,y_ref,z_ref,pert
+
+    ! Compute coordinates of a Hex-element with appropriate number of points
+    ! Seed random initial coordinates 
+    call random_seed()
+    call random_number(pert)
+    x = ZERO + TENTH*pert
+    call random_seed()
+    call random_number(pert)
+    y = ZERO + TENTH*pert
+    call random_seed()
+    call random_number(pert)
+    z = ZERO + TENTH*pert
+    
+    
+    ipt = 1
+    do k = 1,npts_1d
+        z_ref = -ONE + real(k-1,rk)*(TWO/(real(npts_1d,rk)-ONE))            !> -1:1
+        do j = 1,npts_1d
+            y_ref = -ONE + real(j-1,rk)*(TWO/(real(npts_1d,rk)-ONE))        !> -1:1
+            do i = 1,npts_1d
+                x_ref = -ONE + real(i-1,rk)*(TWO/(real(npts_1d,rk)-ONE))    !> -1:1
+                
+                call ptsi(ipt)%set(x,y,z)
+                call ptsr(ipt)%set(x_ref,y_ref,z_ref)
+                
+                
+                call random_seed()
+                call random_number(pert)
+                x     = x + real(i,rk)*TWO + TENTH*pert
+                ipt = ipt + 1     
+            end do
+            call random_seed()
+            call random_number(pert)
+            x     = ZERO + TENTH*pert
+            x_ref = -ONE
+            call random_seed()
+            call random_number(pert)
+            y     = y + real(j,rk)*TWO + TENTH*pert
+        end do
+        call random_seed()
+        call random_number(pert)
+        x     = ZERO + TENTH*pert
+        x_ref = -ONE
+        call random_seed()
+        call random_number(pert)
+        y     = ZERO + TENTH*pert
+        y_ref = -ONE
+        call random_seed()
+        call random_number(pert)
+        z     = z + real(k,rk)*TWO + TENTH*pert
+    end do
+
+
+end subroutine
+
+
+
+
+
+
+
+
+@Test
+subroutine testElement__init_geometry__pts_linear() 
+    use pfunit_mod
+    use mod_constants,          only: ZERO, ONE, TWO, TENTH
+    use type_point,             only: point_t
+    use type_element,           only: element_t
+    use mod_element_mapping,    only: compute_element_mappings
+    use mod_kinds,              only: rk,ik
+    
+    implicit none
+    integer(ik), parameter      :: npt = 8
+    type(point_t)               :: pts_init(npt), pts_ref(npt)
+    type(element_t)             :: elem
+    integer(ik)                 :: i, j, k, mapping, npts_1d, ipt, ielem
+    real(rk)                    :: x, y, z, x_ref, y_ref, z_ref
+    real(rk)                    :: tol, pert
+    
+    interface 
+        subroutine generate_pts(npts_1d,ptsi,ptsr)
+            use mod_kinds,  only: rk,ik
+            use type_point, only: point_t
+            integer(ik),                    intent(in)      :: npts_1d
+            class(point_t), dimension(:),    intent(inout)   :: ptsi,ptsr
+        end subroutine generate_pts
+    end interface
+    
+    
+    tol = 1.e-13_rk
+    npts_1d = 2
+    
+    ! Initialize reference element mappings
+    call compute_element_mappings()
+    
+    call generate_pts(npts_1d,pts_init,pts_ref)
+    
+    mapping = 1     !> Linear
+    ielem   = 1
+    
+    ! Call geometry initialization with point array
+    call elem%init_geometry(mapping,pts_init,ielem)
+    
+    !> Test nterms_c
+    @assertEqual(npt,elem%nterms_c)
+    
+    !> Test points array
+    @assertEqual(pts_init(:)%x_,elem%elem_pts(:)%x_)
+    @assertEqual(pts_init(:)%y_,elem%elem_pts(:)%y_)
+    @assertEqual(pts_init(:)%z_,elem%elem_pts(:)%z_)
+    
+end subroutine
+
+
+
+
+@Test
+subroutine testElement__init_geometry__pts_quadratic() 
+    use pfunit_mod
+    use mod_constants,          only: ZERO, ONE, TWO, TENTH
+    use type_point,             only: point_t
+    use type_element,           only: element_t
+    use mod_element_mapping,    only: compute_element_mappings
+    use mod_kinds,              only: rk,ik
+    
+    implicit none
+    integer(ik), parameter      :: npt = 27
+    type(point_t)               :: pts_init(npt), pts_ref(npt)
+    type(element_t)             :: elem
+    integer(ik)                 :: i, j, k, mapping, npts_1d, ipt, ielem
+    real(rk)                    :: x, y, z, x_ref, y_ref, z_ref
+    real(rk)                    :: tol, pert
+    
+    interface 
+        subroutine generate_pts(npts_1d,ptsi,ptsr)
+            use mod_kinds,  only: rk,ik
+            use type_point, only: point_t
+            integer(ik),                    intent(in)      :: npts_1d
+            class(point_t), dimension(:),    intent(inout)   :: ptsi,ptsr
+        end subroutine generate_pts
+    end interface
+    
+    
+    tol = 1.e-13_rk
+    npts_1d = 3
+    
+    ! Initialize reference element mappings
+    call compute_element_mappings()
+    
+    call generate_pts(npts_1d,pts_init,pts_ref)
+    
+    mapping = 2     !> Quadratic
+    ielem   = 1
+    
+    ! Call geometry initialization with point array
+    call elem%init_geometry(mapping,pts_init,ielem)
+    
+    !> Test nterms_c
+    @assertEqual(npt,elem%nterms_c)
+    
+    !> Test points array
+    @assertEqual(pts_init(:)%x_,elem%elem_pts(:)%x_)
+    @assertEqual(pts_init(:)%y_,elem%elem_pts(:)%y_)
+    @assertEqual(pts_init(:)%z_,elem%elem_pts(:)%z_)
+    
+end subroutine
+
+
+
+
+
+
+
+
+@Test
+subroutine testElement__init_geometry__pts_cubic() 
+    use pfunit_mod
+    use mod_constants,          only: ZERO, ONE, TWO, TENTH
+    use type_point,             only: point_t
+    use type_element,           only: element_t
+    use mod_element_mapping,    only: compute_element_mappings
+    use mod_kinds,              only: rk,ik
+    
+    implicit none
+    integer(ik), parameter      :: npt = 64
+    type(point_t)               :: pts_init(npt), pts_ref(npt)
+    type(element_t)             :: elem
+    integer(ik)                 :: i, j, k, mapping, npts_1d, ipt, ielem
+    real(rk)                    :: x, y, z, x_ref, y_ref, z_ref
+    real(rk)                    :: tol, pert
+    
+    interface 
+        subroutine generate_pts(npts_1d,ptsi,ptsr)
+            use mod_kinds,  only: rk,ik
+            use type_point, only: point_t
+            integer(ik),                    intent(in)      :: npts_1d
+            class(point_t), dimension(:),    intent(inout)   :: ptsi,ptsr
+        end subroutine generate_pts
+    end interface
+    
+    
+    tol = 1.e-13_rk
+    npts_1d = 4
+    
+    ! Initialize reference element mappings
+    call compute_element_mappings()
+    
+    call generate_pts(npts_1d,pts_init,pts_ref)
+    
+    mapping = 3     !> Cubic
+    ielem   = 1
+    
+    ! Call geometry initialization with point array
+    call elem%init_geometry(mapping,pts_init,ielem)
+    
+    !> Test nterms_c
+    @assertEqual(npt,elem%nterms_c)
+    
+    !> Test points array
+    @assertEqual(pts_init(:)%x_,elem%elem_pts(:)%x_)
+    @assertEqual(pts_init(:)%y_,elem%elem_pts(:)%y_)
+    @assertEqual(pts_init(:)%z_,elem%elem_pts(:)%z_)
+    
+end subroutine
+
+
+
+
+
+
+
+
+
+@Test
+subroutine testElement__init_geometry__pts_quartic() 
+    use pfunit_mod
+    use mod_constants,          only: ZERO, ONE, TWO, TENTH
+    use type_point,             only: point_t
+    use type_element,           only: element_t
+    use mod_element_mapping,    only: compute_element_mappings
+    use mod_kinds,              only: rk,ik
+    
+    implicit none
+    integer(ik), parameter      :: npt = 125
+    type(point_t)               :: pts_init(npt), pts_ref(npt)
+    type(element_t)             :: elem
+    integer(ik)                 :: i, j, k, mapping, npts_1d, ipt, ielem
+    real(rk)                    :: x, y, z, x_ref, y_ref, z_ref
+    real(rk)                    :: tol, pert
+    
+    interface 
+        subroutine generate_pts(npts_1d,ptsi,ptsr)
+            use mod_kinds,  only: rk,ik
+            use type_point, only: point_t
+            integer(ik),                    intent(in)      :: npts_1d
+            class(point_t), dimension(:),    intent(inout)   :: ptsi,ptsr
+        end subroutine generate_pts
+    end interface
+    
+    
+    tol = 1.e-13_rk
+    npts_1d = 5
+    
+    ! Initialize reference element mappings
+    call compute_element_mappings()
+    
+    call generate_pts(npts_1d,pts_init,pts_ref)
+    
+    mapping = 4     !> Quartic
+    ielem   = 1
+    
+    ! Call geometry initialization with point array
+    call elem%init_geometry(mapping,pts_init,ielem)
+    
+    !> Test nterms_c
+    @assertEqual(npt,elem%nterms_c)
+    
+    !> Test points array
+    @assertEqual(pts_init(:)%x_,elem%elem_pts(:)%x_)
+    @assertEqual(pts_init(:)%y_,elem%elem_pts(:)%y_)
+    @assertEqual(pts_init(:)%z_,elem%elem_pts(:)%z_)
+    
+end subroutine
+
+
+
+
+
+
+
+
+
+
+
+
+
+!> Test to compute modal representation of coordinates with the element mapping and then
+!! to recover the original point representation back from the mapping - linear
+@Test
+subroutine testElement__init_geometry__modes_linear() 
+    use pfunit_mod
+    use mod_element_mapping,    only: compute_element_mappings
+    use mod_kinds,              only: rk,ik
+    use mod_constants,          only: ZERO, ONE, TWO, TENTH
+    use mod_polynomial,         only: polynomialVal
+    use type_point,             only: point_t
+    use type_element,           only: element_t
+
+    implicit none
+    integer(ik), parameter  :: npt = 8
+    type(element_t)         :: elem
+    type(point_t)           :: pts_init(npt), pts_test(npt), pts_ref(npt)   !> Linear Element
+    real(rk)                :: mat(npt,npt), tol
+    real(rk)                :: x, y, z, x_ref, y_ref, z_ref, pert
+    integer(ik)             :: ipt, iterm, inode, i, j, k, mapping, npts_1d, ielem
+    
+    
+    interface 
+        subroutine generate_pts(npts_1d,ptsi,ptsr)
+            use mod_kinds,  only: rk,ik
+            use type_point, only: point_t
+            integer(ik),                    intent(in)      :: npts_1d
+            class(point_t), dimension(:),    intent(inout)   :: ptsi,ptsr
+        end subroutine generate_pts
+    end interface
+    
+    
+    tol = 1.e-13_rk
+    npts_1d = 2
+    call compute_element_mappings()             !> Compute reference element mappings
+    call generate_pts(npts_1d,pts_init,pts_ref) !> Generate pts for test element
+
+    mapping = 1    
+    ielem   = 1
+    call elem%init_geometry(mapping,pts_init,ielem)   !> Initialize test element
+    
+    ! Compute matrix of polynomial values for reverse calculation
+    do iterm = 1,npt
+        do inode = 1,npt
+            mat(inode,iterm) = polynomialVal(3,npt,iterm,pts_ref(inode))
+        end do
+    end do
+    
+    ! Recompute coordinate point values from modes
+    pts_test(:)%x_ = matmul(mat,elem%coords%modes(:,1))
+    pts_test(:)%y_ = matmul(mat,elem%coords%modes(:,2))
+    pts_test(:)%z_ = matmul(mat,elem%coords%modes(:,3))
+    
+    
+    ! Test that recomputed coordinates are equal to the original coordinate values
+    @assertEqual(pts_init(:)%x_,pts_test(:)%x_,tol)
+    @assertEqual(pts_init(:)%y_,pts_test(:)%y_,tol)
+    @assertEqual(pts_init(:)%z_,pts_test(:)%z_,tol)
+    
+end subroutine
+
+
+
+
+
+
+
+
+
+!> Test to compute modal representation of coordinates with the element mapping and then
+!! to recover the original point representation back from the mapping - linear
+@Test
+subroutine testElement__init_geometry__modes_quadratic() 
+    use pfunit_mod
+    use mod_element_mapping,    only: compute_element_mappings
+    use mod_kinds,              only: rk,ik
+    use mod_constants,          only: ZERO, ONE, TWO, TENTH
+    use mod_polynomial,         only: polynomialVal
+    use type_point,             only: point_t
+    use type_element,           only: element_t
+
+    implicit none
+    integer(ik), parameter  :: npt = 27
+    type(element_t)         :: elem
+    type(point_t)           :: pts_init(npt), pts_test(npt), pts_ref(npt)   !> Linear Element
+    real(rk)                :: mat(npt,npt), tol
+    real(rk)                :: x, y, z, x_ref, y_ref, z_ref, pert
+    integer(ik)             :: ipt, iterm, inode, i, j, k, mapping, npts_1d, ielem
+    
+    
+    interface 
+        subroutine generate_pts(npts_1d,ptsi,ptsr)
+            use mod_kinds,  only: rk,ik
+            use type_point, only: point_t
+            integer(ik),                    intent(in)      :: npts_1d
+            class(point_t), dimension(:),   intent(inout)   :: ptsi,ptsr
+        end subroutine generate_pts
+    end interface
+    
+    
+    tol = 1.e-13_rk
+    npts_1d = 3
+    call compute_element_mappings()             !> Compute reference element mappings
+    call generate_pts(npts_1d,pts_init,pts_ref) !> Generate pts for test element
+
+    mapping = 2
+    ielem   = 1
+    call elem%init_geometry(mapping,pts_init,ielem)   !> Initialize test element
+    
+    ! Compute matrix of polynomial values for reverse calculation
+    do iterm = 1,npt
+        do inode = 1,npt
+            mat(inode,iterm) = polynomialVal(3,npt,iterm,pts_ref(inode))
+        end do
+    end do
+    
+    ! Recompute coordinate point values from modes
+    pts_test(:)%x_ = matmul(mat,elem%coords%modes(:,1))
+    pts_test(:)%y_ = matmul(mat,elem%coords%modes(:,2))
+    pts_test(:)%z_ = matmul(mat,elem%coords%modes(:,3))
+    
+    
+    ! Test that recomputed coordinates are equal to the original coordinate values
+    @assertEqual(pts_init(:)%x_,pts_test(:)%x_,tol)
+    @assertEqual(pts_init(:)%y_,pts_test(:)%y_,tol)
+    @assertEqual(pts_init(:)%z_,pts_test(:)%z_,tol)
+    
+end subroutine
+
+
+
+
+
+
+
+!> Test to compute modal representation of coordinates with the element mapping and then
+!! to recover the original point representation back from the mapping - linear
+@Test
+subroutine testElement__init_geometry__modes_cubic() 
+    use pfunit_mod
+    use mod_element_mapping,    only: compute_element_mappings
+    use mod_kinds,              only: rk,ik
+    use mod_constants,          only: ZERO, ONE, TWO, TENTH
+    use mod_polynomial,         only: polynomialVal
+    use type_point,             only: point_t
+    use type_element,           only: element_t
+
+    implicit none
+    integer(ik), parameter  :: npt = 64
+    type(element_t)         :: elem
+    type(point_t)           :: pts_init(npt), pts_test(npt), pts_ref(npt)   !> Linear Element
+    real(rk)                :: mat(npt,npt), tol
+    real(rk)                :: x, y, z, x_ref, y_ref, z_ref, pert
+    integer(ik)             :: ipt, iterm, inode, i, j, k, mapping, npts_1d, ielem
+    
+    
+    interface 
+        subroutine generate_pts(npts_1d,ptsi,ptsr)
+            use mod_kinds,  only: rk,ik
+            use type_point, only: point_t
+            integer(ik),                    intent(in)      :: npts_1d
+            class(point_t), dimension(:),    intent(inout)   :: ptsi,ptsr
+        end subroutine generate_pts
+    end interface
+    
+    
+    tol = 1.e-13_rk
+    npts_1d = 4
+    call compute_element_mappings()             !> Compute reference element mappings
+    call generate_pts(npts_1d,pts_init,pts_ref) !> Generate pts for test element
+
+    mapping = 3    
+    ielem   = 1
+    call elem%init_geometry(mapping,pts_init,ielem)   !> Initialize test element
+    
+    ! Compute matrix of polynomial values for reverse calculation
+    do iterm = 1,npt
+        do inode = 1,npt
+            mat(inode,iterm) = polynomialVal(3,npt,iterm,pts_ref(inode))
+        end do
+    end do
+    
+    ! Recompute coordinate point values from modes
+    pts_test(:)%x_ = matmul(mat,elem%coords%modes(:,1))
+    pts_test(:)%y_ = matmul(mat,elem%coords%modes(:,2))
+    pts_test(:)%z_ = matmul(mat,elem%coords%modes(:,3))
+    
+    
+    ! Test that recomputed coordinates are equal to the original coordinate values
+    @assertEqual(pts_init(:)%x_,pts_test(:)%x_,tol)
+    @assertEqual(pts_init(:)%y_,pts_test(:)%y_,tol)
+    @assertEqual(pts_init(:)%z_,pts_test(:)%z_,tol)
+    
+end subroutine
+
+
+
+
+
+
+
+
+
+!> Test to compute modal representation of coordinates with the element mapping and then
+!! to recover the original point representation back from the mapping - linear
+@Test
+subroutine testElement__init_geometry__modes_quartic() 
+    use pfunit_mod
+    use mod_element_mapping,    only: compute_element_mappings
+    use mod_kinds,              only: rk,ik
+    use mod_constants,          only: ZERO, ONE, TWO, TENTH
+    use mod_polynomial,         only: polynomialVal
+    use type_point,             only: point_t
+    use type_element,           only: element_t
+
+    implicit none
+    integer(ik), parameter  :: npt = 125
+    type(element_t)         :: elem
+    type(point_t)           :: pts_init(npt), pts_test(npt), pts_ref(npt)   !> Linear Element
+    real(rk)                :: mat(npt,npt), tol
+    real(rk)                :: x, y, z, x_ref, y_ref, z_ref, pert
+    integer(ik)             :: ipt, iterm, inode, i, j, k, mapping, npts_1d, ielem
+    
+    
+    interface 
+        subroutine generate_pts(npts_1d,ptsi,ptsr)
+            use mod_kinds,  only: rk,ik
+            use type_point, only: point_t
+            integer(ik),                    intent(in)      :: npts_1d
+            class(point_t), dimension(:),    intent(inout)   :: ptsi,ptsr
+        end subroutine generate_pts
+    end interface
+    
+    
+    tol = 1.e-13_rk
+    npts_1d = 5
+    call compute_element_mappings()             !> Compute reference element mappings
+    call generate_pts(npts_1d,pts_init,pts_ref) !> Generate pts for test element
+
+    mapping = 4
+    ielem   = 1
+    call elem%init_geometry(mapping,pts_init,ielem)   !> Initialize test element
+    
+    ! Compute matrix of polynomial values for reverse calculation
+    do iterm = 1,npt
+        do inode = 1,npt
+            mat(inode,iterm) = polynomialVal(3,npt,iterm,pts_ref(inode))
+        end do
+    end do
+    
+    ! Recompute coordinate point values from modes
+    pts_test(:)%x_ = matmul(mat,elem%coords%modes(:,1))
+    pts_test(:)%y_ = matmul(mat,elem%coords%modes(:,2))
+    pts_test(:)%z_ = matmul(mat,elem%coords%modes(:,3))
+    
+    
+    ! Test that recomputed coordinates are equal to the original coordinate values
+    @assertEqual(pts_init(:)%x_,pts_test(:)%x_,tol)
+    @assertEqual(pts_init(:)%y_,pts_test(:)%y_,tol)
+    @assertEqual(pts_init(:)%z_,pts_test(:)%z_,tol)
+    
+end subroutine
+
+
+
+

@@ -29,45 +29,46 @@ module mod_constants
 
 
     !> Floating-point fractions
-    real(rk), parameter     :: HALF     = 1._rk/2._rk
+    real(rk), parameter     :: HALF     = 0.5_rk
     real(rk), parameter     :: THIRD    = 1._rk/3._rk
-    real(rk), parameter     :: FOURTH   = 1._rk/4._rk
+    real(rk), parameter     :: FOURTH   = 0.25_rk
     real(rk), parameter     :: FIFTH    = 1._rk/5._rk
-    real(rk), parameter     :: SIXTH    = 1._rk/6._rk
+    real(rk), parameter     :: SIXTH    = 0.2_rk
     real(rk), parameter     :: SEVENTH  = 1._rk/7._rk
     real(rk), parameter     :: EIGHTH   = 1._rk/8._rk
     real(rk), parameter     :: NINTH    = 1._rk/9._rk
+    real(rk), parameter     :: TENTH    = 0.1_rk
 
     real(rk), parameter     :: TWO_THR  = 2._rk/3._rk
     real(rk), parameter     :: THR_FIV  = 3._rk/5._rk
 
     !> Indexing for faces directions and jacobian blocks
-    integer(ishort), parameter :: XI_MIN    = 1
-    integer(ishort), parameter :: XI_MAX    = 2
-    integer(ishort), parameter :: ETA_MIN   = 3
-    integer(ishort), parameter :: ETA_MAX   = 4
-    integer(ishort), parameter :: ZETA_MIN  = 5
-    integer(ishort), parameter :: ZETA_MAX  = 6
-    integer(ishort), parameter :: DIAG      = 7
+    integer(ik), parameter :: XI_MIN    = 1
+    integer(ik), parameter :: XI_MAX    = 2
+    integer(ik), parameter :: ETA_MIN   = 3
+    integer(ik), parameter :: ETA_MAX   = 4
+    integer(ik), parameter :: ZETA_MIN  = 5
+    integer(ik), parameter :: ZETA_MAX  = 6
+    integer(ik), parameter :: DIAG      = 7
 
     !> Constants for spatial definition
-    integer(ishort), parameter :: SPACEDIM  = 3
-    integer(ishort), parameter :: NFACES    = 6
+    integer(ik), parameter :: SPACEDIM  = 3
+    integer(ik), parameter :: NFACES    = 6
 
     !> Spatial direction
-    integer(ishort), parameter :: XI_DIR    = 1
-    integer(ishort), parameter :: ETA_DIR   = 2
-    integer(ishort), parameter :: ZETA_DIR  = 3
+    integer(ik), parameter :: XI_DIR    = 1
+    integer(ik), parameter :: ETA_DIR   = 2
+    integer(ik), parameter :: ZETA_DIR  = 3
 
 
     ! QUADRATURE CONSTANTS
     ! specify number of quadrature orders to initialize
-    integer(ishort), parameter :: NGQ = 1
+    integer(ik), parameter :: NGQ = 1
 
     ! INPUT/OUTPUT CONSTANTS
-    integer(ishort), parameter :: RES_MESH_OUT = 5
-    integer(ishort), parameter :: RES_SOLN_OUT = 5
-    integer(ishort), parameter :: MAXBLOCKS    = 200
+    integer(ik), parameter :: RES_MESH_OUT = 5
+    integer(ik), parameter :: RES_SOLN_OUT = 5
+    integer(ik), parameter :: MAXBLOCKS    = 200
 
 
 

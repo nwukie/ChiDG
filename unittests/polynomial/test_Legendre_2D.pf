@@ -1,0 +1,524 @@
+!-------------------------------------------------
+!   Test LegendreVal - 2D - against analytical solutions
+!-------------------------------------------------
+
+@Test
+subroutine test_LegendreVal_2D_11()
+    use pfunit_mod
+    use mod_kinds,      only: rk,ik
+    use mod_constants,  only: ZERO
+    use mod_ordering,   only: xi_order_2d, eta_order_2d
+    use mod_legendre,   only: LegendreVal
+    
+    implicit none
+    real(rk), dimension(5)  :: polyval_known,polyval_test,x,y
+    integer(ik)             :: spacedim, mode, i
+    
+    ! Locations for testing
+    x = [-0.5_rk,  0.5_rk, -0.5_rk,  0.5_rk,  0.0_rk]
+    y = [-0.5_rk, -0.5_rk,  0.5_rk,  0.5_rk,  0.0_rk]
+    
+    spacedim      = 2
+    
+    ! Find mode that has xi_order = 1  ;; eta_order = 1
+    do i = 1,size(xi_order_2d)
+        if ( xi_order_2d(i) == 1  .and. eta_order_2d(i) == 1) then
+            mode = i
+            exit
+        end if
+    end do
+    
+
+    polyval_known = [1._rk, 1._rk, 1._rk, 1._rk, 1._rk]
+    polyval_test(1) = LegendreVal(spacedim,mode,x(1),y(1),ZERO)
+    polyval_test(2) = LegendreVal(spacedim,mode,x(2),y(2),ZERO)
+    polyval_test(3) = LegendreVal(spacedim,mode,x(3),y(3),ZERO)
+    polyval_test(4) = LegendreVal(spacedim,mode,x(4),y(4),ZERO)
+    polyval_test(5) = LegendreVal(spacedim,mode,x(5),y(5),ZERO)
+    
+    @assertEqual(polyval_known,polyval_test)
+    
+end subroutine
+
+
+
+
+
+
+@Test
+subroutine test_LegendreVal_2D_24()
+    use pfunit_mod
+    use mod_kinds,      only: rk,ik
+    use mod_constants,  only: ZERO
+    use mod_ordering,   only: xi_order_2d, eta_order_2d
+    use mod_legendre,   only: LegendreVal
+    
+    implicit none
+    real(rk), dimension(5)  :: polyval_known,polyval_test,x,y
+    integer(ik)             :: spacedim, mode, i
+    
+    ! Locations for testing
+    x = [-0.5_rk,  0.5_rk, -0.5_rk,  0.5_rk,  0.0_rk]
+    y = [-0.5_rk, -0.5_rk,  0.5_rk,  0.5_rk,  0.0_rk]
+    
+    spacedim      = 2
+    
+    ! Find mode that has xi_order = 2  ;; eta_order = 4
+    do i = 1,size(xi_order_2d)
+        if ( xi_order_2d(i) == 2  .and. eta_order_2d(i) == 4) then
+            mode = i
+            exit
+        end if
+    end do
+    
+
+    polyval_known = [-0.21875_rk, 0.21875_rk, 0.21875_rk, -0.21875_rk, 0.0_rk]
+    polyval_test(1) = LegendreVal(spacedim,mode,x(1),y(1),ZERO)
+    polyval_test(2) = LegendreVal(spacedim,mode,x(2),y(2),ZERO)
+    polyval_test(3) = LegendreVal(spacedim,mode,x(3),y(3),ZERO)
+    polyval_test(4) = LegendreVal(spacedim,mode,x(4),y(4),ZERO)
+    polyval_test(5) = LegendreVal(spacedim,mode,x(5),y(5),ZERO)
+    
+    @assertEqual(polyval_known,polyval_test)
+    
+end subroutine
+
+
+
+
+@Test
+subroutine test_LegendreVal_2D_33()
+    use pfunit_mod
+    use mod_kinds,      only: rk,ik
+    use mod_constants,  only: ZERO
+    use mod_ordering,   only: xi_order_2d, eta_order_2d
+    use mod_legendre,   only: LegendreVal
+    
+    implicit none
+    real(rk), dimension(5)  :: polyval_known,polyval_test,x,y
+    integer(ik)             :: spacedim, mode, i
+    
+    ! Locations for testing
+    x = [-0.5_rk,  0.5_rk, -0.5_rk,  0.5_rk,  0.0_rk]
+    y = [-0.5_rk, -0.5_rk,  0.5_rk,  0.5_rk,  0.0_rk]
+    
+    spacedim      = 2
+    
+    ! Find mode that has xi_order = 3  ;; eta_order = 3
+    do i = 1,size(xi_order_2d)
+        if ( xi_order_2d(i) == 3  .and. eta_order_2d(i) == 3) then
+            mode = i
+            exit
+        end if
+    end do
+    
+
+    polyval_known = [0.015625_rk, 0.015625_rk, 0.015625_rk, 0.015625_rk, 0.25_rk]
+    polyval_test(1) = LegendreVal(spacedim,mode,x(1),y(1),ZERO)
+    polyval_test(2) = LegendreVal(spacedim,mode,x(2),y(2),ZERO)
+    polyval_test(3) = LegendreVal(spacedim,mode,x(3),y(3),ZERO)
+    polyval_test(4) = LegendreVal(spacedim,mode,x(4),y(4),ZERO)
+    polyval_test(5) = LegendreVal(spacedim,mode,x(5),y(5),ZERO)
+    
+    @assertEqual(polyval_known,polyval_test)
+    
+end subroutine
+
+
+
+
+
+@Test
+subroutine test_LegendreVal_2D_44()
+    use pfunit_mod
+    use mod_kinds,      only: rk,ik
+    use mod_constants,  only: ZERO
+    use mod_ordering,   only: xi_order_2d, eta_order_2d
+    use mod_legendre,   only: LegendreVal
+    
+    implicit none
+    real(rk), dimension(5)  :: polyval_known,polyval_test,x,y
+    integer(ik)             :: spacedim, mode, i
+    
+    ! Locations for testing
+    x = [-0.5_rk,  0.5_rk, -0.5_rk,  0.5_rk,  0.0_rk]
+    y = [-0.5_rk, -0.5_rk,  0.5_rk,  0.5_rk,  0.0_rk]
+    
+    spacedim      = 2
+    
+    ! Find mode that has xi_order = 4  ;; eta_order = 4
+    do i = 1,size(xi_order_2d)
+        if ( xi_order_2d(i) == 4  .and. eta_order_2d(i) == 4) then
+            mode = i
+            exit
+        end if
+    end do
+    
+
+    polyval_known = [0.19140625_rk, -0.19140625_rk, -0.19140625_rk, 0.19140625_rk, 0.0_rk]
+    polyval_test(1) = LegendreVal(spacedim,mode,x(1),y(1),ZERO)
+    polyval_test(2) = LegendreVal(spacedim,mode,x(2),y(2),ZERO)
+    polyval_test(3) = LegendreVal(spacedim,mode,x(3),y(3),ZERO)
+    polyval_test(4) = LegendreVal(spacedim,mode,x(4),y(4),ZERO)
+    polyval_test(5) = LegendreVal(spacedim,mode,x(5),y(5),ZERO)
+    
+    @assertEqual(polyval_known,polyval_test)
+    
+end subroutine
+
+
+
+
+!-------------------------------------------------
+!   Test DLegendreVal - 2D - against analytical solutions
+!-------------------------------------------------
+
+
+@Test
+subroutine test_DLegendreVal_2D_11_DXI()
+    use pfunit_mod
+    use mod_kinds,      only: rk,ik
+    use mod_constants,  only: ZERO
+    use mod_ordering,   only: xi_order_2d, eta_order_2d
+    use mod_legendre,   only: DLegendreVal
+    
+    implicit none
+    real(rk), dimension(5)  :: polyval_known,polyval_test,x,y
+    integer(ik)             :: spacedim, partial_dir, mode, i
+    
+    ! Locations for testing
+    x = [-0.5_rk,  0.5_rk, -0.5_rk,  0.5_rk,  0.0_rk]
+    y = [-0.5_rk, -0.5_rk,  0.5_rk,  0.5_rk,  0.0_rk]
+    
+    spacedim      = 2
+    partial_dir   = 1
+    
+    ! Find mode that has xi_order = 1  ;; eta_order = 1
+    do i = 1,size(xi_order_2d)
+        if ( xi_order_2d(i) == 1  .and. eta_order_2d(i) == 1) then
+            mode = i
+            exit
+        end if
+    end do
+    
+
+    polyval_known = [0.0_rk, 0.0_rk, 0.0_rk, 0.0_rk, 0.0_rk]
+    polyval_test(1) = DLegendreVal(spacedim,mode,x(1),y(1),ZERO,partial_dir)
+    polyval_test(2) = DLegendreVal(spacedim,mode,x(2),y(2),ZERO,partial_dir)
+    polyval_test(3) = DLegendreVal(spacedim,mode,x(3),y(3),ZERO,partial_dir)
+    polyval_test(4) = DLegendreVal(spacedim,mode,x(4),y(4),ZERO,partial_dir)
+    polyval_test(5) = DLegendreVal(spacedim,mode,x(5),y(5),ZERO,partial_dir)
+    
+    @assertEqual(polyval_known,polyval_test)
+    
+end subroutine
+
+
+
+
+@Test
+subroutine test_DLegendreVal_2D_11_DETA()
+    use pfunit_mod
+    use mod_kinds,      only: rk,ik
+    use mod_constants,  only: ZERO
+    use mod_ordering,   only: xi_order_2d, eta_order_2d
+    use mod_legendre,   only: DLegendreVal
+    
+    implicit none
+    real(rk), dimension(5)  :: polyval_known,polyval_test,x,y
+    integer(ik)             :: spacedim, partial_dir, mode, i
+    
+    ! Locations for testing
+    x = [-0.5_rk,  0.5_rk, -0.5_rk,  0.5_rk,  0.0_rk]
+    y = [-0.5_rk, -0.5_rk,  0.5_rk,  0.5_rk,  0.0_rk]
+    
+    spacedim      = 2
+    partial_dir   = 2
+    
+    ! Find mode that has xi_order = 1  ;; eta_order = 1
+    do i = 1,size(xi_order_2d)
+        if ( xi_order_2d(i) == 1  .and. eta_order_2d(i) == 1) then
+            mode = i
+            exit
+        end if
+    end do
+    
+
+    polyval_known = [0.0_rk, 0.0_rk, 0.0_rk, 0.0_rk, 0.0_rk]
+    polyval_test(1) = DLegendreVal(spacedim,mode,x(1),y(1),ZERO,partial_dir)
+    polyval_test(2) = DLegendreVal(spacedim,mode,x(2),y(2),ZERO,partial_dir)
+    polyval_test(3) = DLegendreVal(spacedim,mode,x(3),y(3),ZERO,partial_dir)
+    polyval_test(4) = DLegendreVal(spacedim,mode,x(4),y(4),ZERO,partial_dir)
+    polyval_test(5) = DLegendreVal(spacedim,mode,x(5),y(5),ZERO,partial_dir)
+    
+    @assertEqual(polyval_known,polyval_test)
+    
+end subroutine
+
+
+
+
+
+
+
+
+@Test
+subroutine test_DLegendreVal_2D_24_DXI()
+    use pfunit_mod
+    use mod_kinds,      only: rk,ik
+    use mod_constants,  only: ZERO
+    use mod_ordering,   only: xi_order_2d, eta_order_2d
+    use mod_legendre,   only: DLegendreVal
+    
+    implicit none
+    real(rk), dimension(5)  :: polyval_known,polyval_test,x,y
+    integer(ik)             :: spacedim, partial_dir, mode, i
+    
+    ! Locations for testing
+    x = [-0.5_rk,  0.5_rk, -0.5_rk,  0.5_rk,  0.0_rk]
+    y = [-0.5_rk, -0.5_rk,  0.5_rk,  0.5_rk,  0.0_rk]
+    
+    spacedim      = 2
+    partial_dir   = 1
+    
+    ! Find mode that has xi_order = 2  ;; eta_order = 4
+    do i = 1,size(xi_order_2d)
+        if ( xi_order_2d(i) == 2  .and. eta_order_2d(i) == 4) then
+            mode = i
+            exit
+        end if
+    end do
+    
+
+    polyval_known = [0.4375_rk, 0.4375_rk, -0.4375_rk, -0.4375_rk, 0.0_rk]
+    polyval_test(1) = DLegendreVal(spacedim,mode,x(1),y(1),ZERO,partial_dir)
+    polyval_test(2) = DLegendreVal(spacedim,mode,x(2),y(2),ZERO,partial_dir)
+    polyval_test(3) = DLegendreVal(spacedim,mode,x(3),y(3),ZERO,partial_dir)
+    polyval_test(4) = DLegendreVal(spacedim,mode,x(4),y(4),ZERO,partial_dir)
+    polyval_test(5) = DLegendreVal(spacedim,mode,x(5),y(5),ZERO,partial_dir)
+    
+    @assertEqual(polyval_known,polyval_test)
+    
+end subroutine
+
+
+
+
+@Test
+subroutine test_DLegendreVal_2D_24_DETA()
+    use pfunit_mod
+    use mod_kinds,      only: rk,ik
+    use mod_constants,  only: ZERO
+    use mod_ordering,   only: xi_order_2d, eta_order_2d
+    use mod_legendre,   only: DLegendreVal
+    
+    implicit none
+    real(rk), dimension(5)  :: polyval_known,polyval_test,x,y
+    integer(ik)             :: spacedim, partial_dir, mode, i
+    
+    ! Locations for testing
+    x = [-0.5_rk,  0.5_rk, -0.5_rk,  0.5_rk,  0.0_rk]
+    y = [-0.5_rk, -0.5_rk,  0.5_rk,  0.5_rk,  0.0_rk]
+    
+    spacedim      = 2
+    partial_dir   = 2
+    
+    ! Find mode that has xi_order = 2  ;; eta_order = 4
+    do i = 1,size(xi_order_2d)
+        if ( xi_order_2d(i) == 2  .and. eta_order_2d(i) == 4) then
+            mode = i
+            exit
+        end if
+    end do
+    
+
+    polyval_known = [-0.1875_rk, 0.1875_rk, -0.1875_rk, 0.1875_rk, 0.0_rk]
+    polyval_test(1) = DLegendreVal(spacedim,mode,x(1),y(1),ZERO,partial_dir)
+    polyval_test(2) = DLegendreVal(spacedim,mode,x(2),y(2),ZERO,partial_dir)
+    polyval_test(3) = DLegendreVal(spacedim,mode,x(3),y(3),ZERO,partial_dir)
+    polyval_test(4) = DLegendreVal(spacedim,mode,x(4),y(4),ZERO,partial_dir)
+    polyval_test(5) = DLegendreVal(spacedim,mode,x(5),y(5),ZERO,partial_dir)
+    
+    @assertEqual(polyval_known,polyval_test)
+    
+end subroutine
+
+
+
+
+
+
+@Test
+subroutine test_DLegendreVal_2D_33_DXI()
+    use pfunit_mod
+    use mod_kinds,      only: rk,ik
+    use mod_constants,  only: ZERO
+    use mod_ordering,   only: xi_order_2d, eta_order_2d
+    use mod_legendre,   only: DLegendreVal
+    
+    implicit none
+    real(rk), dimension(5)  :: polyval_known,polyval_test,x,y
+    integer(ik)             :: spacedim, partial_dir, mode, i
+    
+    ! Locations for testing
+    x = [-0.5_rk,  0.5_rk, -0.5_rk,  0.5_rk,  0.0_rk]
+    y = [-0.5_rk, -0.5_rk,  0.5_rk,  0.5_rk,  0.0_rk]
+    
+    spacedim      = 2
+    partial_dir   = 1
+    
+    ! Find mode that has xi_order = 3  ;; eta_order = 3
+    do i = 1,size(xi_order_2d)
+        if ( xi_order_2d(i) == 3  .and. eta_order_2d(i) == 3) then
+            mode = i
+            exit
+        end if
+    end do
+    
+
+    polyval_known = [0.1875_rk, -0.1875_rk, 0.1875_rk, -0.1875_rk, 0.0_rk]
+    polyval_test(1) = DLegendreVal(spacedim,mode,x(1),y(1),ZERO,partial_dir)
+    polyval_test(2) = DLegendreVal(spacedim,mode,x(2),y(2),ZERO,partial_dir)
+    polyval_test(3) = DLegendreVal(spacedim,mode,x(3),y(3),ZERO,partial_dir)
+    polyval_test(4) = DLegendreVal(spacedim,mode,x(4),y(4),ZERO,partial_dir)
+    polyval_test(5) = DLegendreVal(spacedim,mode,x(5),y(5),ZERO,partial_dir)
+    
+    @assertEqual(polyval_known,polyval_test)
+    
+end subroutine
+
+
+
+
+@Test
+subroutine test_DLegendreVal_2D_33_DETA()
+    use pfunit_mod
+    use mod_kinds,      only: rk,ik
+    use mod_constants,  only: ZERO
+    use mod_ordering,   only: xi_order_2d, eta_order_2d
+    use mod_legendre,   only: DLegendreVal
+    
+    implicit none
+    real(rk), dimension(5)  :: polyval_known,polyval_test,x,y
+    integer(ik)             :: spacedim, partial_dir, mode, i
+    
+    ! Locations for testing
+    x = [-0.5_rk,  0.5_rk, -0.5_rk,  0.5_rk,  0.0_rk]
+    y = [-0.5_rk, -0.5_rk,  0.5_rk,  0.5_rk,  0.0_rk]
+    
+    spacedim      = 2
+    partial_dir   = 2
+    
+    ! Find mode that has xi_order = 3  ;; eta_order = 3
+    do i = 1,size(xi_order_2d)
+        if ( xi_order_2d(i) == 3  .and. eta_order_2d(i) == 3) then
+            mode = i
+            exit
+        end if
+    end do
+    
+
+    polyval_known = [0.1875_rk, 0.1875_rk, -0.1875_rk, -0.1875_rk, 0.0_rk]
+    polyval_test(1) = DLegendreVal(spacedim,mode,x(1),y(1),ZERO,partial_dir)
+    polyval_test(2) = DLegendreVal(spacedim,mode,x(2),y(2),ZERO,partial_dir)
+    polyval_test(3) = DLegendreVal(spacedim,mode,x(3),y(3),ZERO,partial_dir)
+    polyval_test(4) = DLegendreVal(spacedim,mode,x(4),y(4),ZERO,partial_dir)
+    polyval_test(5) = DLegendreVal(spacedim,mode,x(5),y(5),ZERO,partial_dir)
+    
+    @assertEqual(polyval_known,polyval_test)
+    
+end subroutine
+
+
+
+
+
+
+
+
+@Test
+subroutine test_DLegendreVal_2D_44_DXI()
+    use pfunit_mod
+    use mod_kinds,      only: rk,ik
+    use mod_constants,  only: ZERO
+    use mod_ordering,   only: xi_order_2d, eta_order_2d
+    use mod_legendre,   only: DLegendreVal
+    
+    implicit none
+    real(rk), dimension(5)  :: polyval_known,polyval_test,x,y
+    integer(ik)             :: spacedim, partial_dir, mode, i
+    
+    ! Locations for testing
+    x = [-0.5_rk,  0.5_rk, -0.5_rk,  0.5_rk,  0.0_rk]
+    y = [-0.5_rk, -0.5_rk,  0.5_rk,  0.5_rk,  0.0_rk]
+    
+    spacedim      = 2
+    partial_dir   = 1
+    
+    ! Find mode that has xi_order = 4  ;; eta_order = 4
+    do i = 1,size(xi_order_2d)
+        if ( xi_order_2d(i) == 4  .and. eta_order_2d(i) == 4) then
+            mode = i
+            exit
+        end if
+    end do
+    
+
+    polyval_known = [0.1640625_rk, 0.1640625_rk, -0.1640625_rk, -0.1640625_rk, 0.0_rk]
+    polyval_test(1) = DLegendreVal(spacedim,mode,x(1),y(1),ZERO,partial_dir)
+    polyval_test(2) = DLegendreVal(spacedim,mode,x(2),y(2),ZERO,partial_dir)
+    polyval_test(3) = DLegendreVal(spacedim,mode,x(3),y(3),ZERO,partial_dir)
+    polyval_test(4) = DLegendreVal(spacedim,mode,x(4),y(4),ZERO,partial_dir)
+    polyval_test(5) = DLegendreVal(spacedim,mode,x(5),y(5),ZERO,partial_dir)
+    
+    @assertEqual(polyval_known,polyval_test)
+    
+end subroutine
+
+
+
+
+
+
+
+@Test
+subroutine test_DLegendreVal_2D_44_DETA()
+    use pfunit_mod
+    use mod_kinds,      only: rk,ik
+    use mod_constants,  only: ZERO
+    use mod_ordering,   only: xi_order_2d, eta_order_2d
+    use mod_legendre,   only: DLegendreVal
+    
+    implicit none
+    real(rk), dimension(5)  :: polyval_known,polyval_test,x,y
+    integer(ik)             :: spacedim, partial_dir, mode, i
+    
+    ! Locations for testing
+    x = [-0.5_rk,  0.5_rk, -0.5_rk,  0.5_rk,  0.0_rk]
+    y = [-0.5_rk, -0.5_rk,  0.5_rk,  0.5_rk,  0.0_rk]
+    
+    spacedim      = 2
+    partial_dir   = 2
+    
+    ! Find mode that has xi_order = 4  ;; eta_order = 4
+    do i = 1,size(xi_order_2d)
+        if ( xi_order_2d(i) == 4  .and. eta_order_2d(i) == 4) then
+            mode = i
+            exit
+        end if
+    end do
+    
+
+    polyval_known = [0.1640625_rk, -0.1640625_rk, 0.1640625_rk, -0.1640625_rk, 0.0_rk]
+    polyval_test(1) = DLegendreVal(spacedim,mode,x(1),y(1),ZERO,partial_dir)
+    polyval_test(2) = DLegendreVal(spacedim,mode,x(2),y(2),ZERO,partial_dir)
+    polyval_test(3) = DLegendreVal(spacedim,mode,x(3),y(3),ZERO,partial_dir)
+    polyval_test(4) = DLegendreVal(spacedim,mode,x(4),y(4),ZERO,partial_dir)
+    polyval_test(5) = DLegendreVal(spacedim,mode,x(5),y(5),ZERO,partial_dir)
+    
+    @assertEqual(polyval_known,polyval_test)
+    
+end subroutine
+
+
+

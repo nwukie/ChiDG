@@ -1,0 +1,281 @@
+module test_element_linearB_mod
+    use pfunit_mod
+    use mod_kinds,      only: rk,ik
+    use mod_constants,  only: ZERO, ONE, TWO, THREE, FOUR, FIVE, SIX, EIGHT, NINE, TEN, &
+                              XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX 
+    use type_point,     only: point_t
+    use type_face,      only: face_t
+    use type_element,   only: element_t
+    implicit none
+
+    public  :: test_element_linearB
+
+@TestCase
+    type, extends(TestCase) ::  test_element_linearB
+        type(element_t) :: elem
+        type(face_t)    :: faces(6)
+    contains
+        procedure   ::  setUp
+        procedure   ::  tearDown
+    end type test_element_linearB
+
+
+contains
+    !> NOTE: make sure to use 'this' instead of 'self' since these are over-writting a derived type 
+    !! procedure. The argument names have to match
+    subroutine setUp(this)
+        class(test_element_linearB),    intent(inout)   :: this
+        
+        integer(ik), parameter  :: npt = 8
+        type(point_t)           :: pts(npt)
+        real(rk)                :: sqrt_two, inv_sqrt_two
+        integer(ik)             :: ftype, ineighbor, mapping, ielem 
+        
+        !> Cube unit element rotated at 45-degrees along the 0,0,0 z-axis
+        !!
+        !!              *  (0, sqrt(2), 0)
+        !!            /   \ 
+        !!          /       \
+        !!        /           \
+        !!       *             *  (1/sqrt(2), 1/sqrt(2), 0)
+        !!        \           /
+        !!          \       /
+        !!            \   /
+        !!              *
+        !!          (0,0,0)
+        !!
+        !!
+        sqrt_two        = sqrt(2._rk)
+        inv_sqrt_two    = 1._rk/sqrt_two
+        call pts(1)%set(0._rk, 0._rk, 0._rk)
+        call pts(2)%set(inv_sqrt_two,inv_sqrt_two, 0._rk)
+        call pts(3)%set(-inv_sqrt_two,inv_sqrt_two, 0._rk)
+        call pts(4)%set(0._rk, sqrt_two, 0._rk)
+        call pts(5)%set(0._rk, 0._rk, 1._rk)
+        call pts(6)%set(inv_sqrt_two,inv_sqrt_two, 1._rk)
+        call pts(7)%set(-inv_sqrt_two,inv_sqrt_two, 1._rk)
+        call pts(8)%set(0._rk, sqrt_two, 1._rk)
+        
+        !> Initialize Element geometry and Numerics
+        mapping = 1
+        ielem = 1
+        call this%elem%init_geometry(mapping,pts,ielem)
+        call this%elem%init_numerics(8,2)    !> 27 terms (3*3*3), 2 equations
+        
+        !> Initialize faces for element
+        ftype = 0
+        ineighbor = 0
+        call this%faces(XI_MIN)%init(XI_MIN,ftype,this%elem,ineighbor)
+        call this%faces(XI_MAX)%init(XI_MAX,ftype,this%elem,ineighbor)
+        call this%faces(ETA_MIN)%init(ETA_MIN,ftype,this%elem,ineighbor)
+        call this%faces(ETA_MAX)%init(ETA_MAX,ftype,this%elem,ineighbor)
+        call this%faces(ZETA_MIN)%init(ZETA_MIN,ftype,this%elem,ineighbor)
+        call this%faces(ZETA_MAX)%init(ZETA_MAX,ftype,this%elem,ineighbor)
+    end subroutine
+    
+    subroutine tearDown(this)
+        class(test_element_linearB),    intent(inout)   :: this
+    end subroutine
+
+
+
+
+
+
+@Test
+    subroutine testElement_metric(self)
+        class(test_element_linearB),    intent(inout)   :: self
+        real(rk)    :: test_metric(3,3,self%elem%gq%vol%nnodes)
+        real(rk)    :: sqrt_two, inv_sqrt_two, tol
+        
+        tol = 1.e-13_rk
+        sqrt_two = sqrt(2._rk)
+        inv_sqrt_two = 1._rk/sqrt_two
+        
+        test_metric(1,1,:) = inv_sqrt_two/4._rk
+        test_metric(2,1,:) = -inv_sqrt_two/4._rk
+        test_metric(3,1,:) = 0._rk
+        test_metric(1,2,:) = inv_sqrt_two/4._rk
+        test_metric(2,2,:) = inv_sqrt_two/4._rk
+        test_metric(3,2,:) = 0._rk
+        test_metric(1,3,:) = 0._rk
+        test_metric(2,3,:) = 0._rk
+        test_metric(3,3,:) = 0.25_rk
+        @assertEqual(test_metric,self%elem%metric,tol)
+        
+    end subroutine
+
+
+
+
+
+
+@Test
+    subroutine testElement_jinv(self)
+        class(test_element_linearB),    intent(inout)   :: self
+        real(rk)    :: test_jinv(self%elem%gq%vol%nnodes), tol
+        tol = 1.e-13_rk
+        
+        test_jinv = 1._rk/8._rk
+        @assertEqual(test_jinv,self%elem%jinv,tol)
+    end subroutine
+    
+    
+    
+@Test
+    subroutine testElement_mass(self)
+        class(test_element_linearB),    intent(inout)   :: self
+        real(rk)    :: test_mass(self%elem%nterms_s,self%elem%nterms_s)
+        real(rk)    :: tol
+        
+        tol = 1.e-15_rk
+        
+        test_mass = ZERO
+        test_mass(1,1) = EIGHT
+        test_mass(2,2) = EIGHT/THREE
+        test_mass(3,3) = EIGHT/THREE
+        test_mass(4,4) = EIGHT/THREE
+        test_mass(5,5) = EIGHT/NINE
+        test_mass(6,6) = EIGHT/NINE
+        test_mass(7,7) = EIGHT/NINE
+        test_mass(8,8) = EIGHT/27._rk
+        
+        test_mass = 1._rk/8._rk * test_mass
+        
+        @assertEqual(test_mass,self%elem%mass,tol)
+    end subroutine
+
+
+
+
+
+
+!------------------------------------------------------------------------------
+!>                                Face tests
+!------------------------------------------------------------------------------
+
+
+@Test
+    subroutine testElement_face_metrics(self)
+        class(test_element_linearB),    intent(inout)   :: self
+        real(rk)    :: test_metric(3,3,self%faces(XI_MAX)%gq%face%nnodes)
+        real(rk)    :: sqrt_two, inv_sqrt_two, tol
+        
+        tol = 1.e-15_rk
+        sqrt_two = sqrt(2._rk)
+        inv_sqrt_two = 1._rk/sqrt_two
+        
+        test_metric(1,1,:) = inv_sqrt_two/4._rk
+        test_metric(2,1,:) = -inv_sqrt_two/4._rk
+        test_metric(3,1,:) = 0._rk
+        test_metric(1,2,:) = inv_sqrt_two/4._rk
+        test_metric(2,2,:) = inv_sqrt_two/4._rk
+        test_metric(3,2,:) = 0._rk
+        test_metric(1,3,:) = 0._rk
+        test_metric(2,3,:) = 0._rk
+        test_metric(3,3,:) = 0.25_rk
+        
+        @assertEqual(test_metric,self%faces(XI_MIN)%metric,tol)
+        @assertEqual(test_metric,self%faces(XI_MAX)%metric,tol)
+        @assertEqual(test_metric,self%faces(ETA_MIN)%metric,tol)
+        @assertEqual(test_metric,self%faces(ETA_MAX)%metric,tol)
+        @assertEqual(test_metric,self%faces(ZETA_MIN)%metric,tol)
+        @assertEqual(test_metric,self%faces(ZETA_MAX)%metric,tol)
+    end subroutine
+
+
+@Test
+    subroutine testElement_face_normals(self)
+        class(test_element_linearB),    intent(inout)   :: self
+        real(rk), dimension(self%faces(XI_MAX)%gq%face%nnodes) :: test_norm_x, test_norm_y, test_norm_z
+        real(rk) :: inv_sqrt_two, tol
+        
+        tol = 1.e-15_rk
+        inv_sqrt_two = ONE/sqrt(TWO)
+        
+        ! XI_MIN
+        test_norm_x = -inv_sqrt_two/FOUR
+        test_norm_y = -inv_sqrt_two/FOUR
+        test_norm_z = ZERO
+        
+        @assertEqual(test_norm_x,self%faces(XI_MIN)%norm(:,1),tol)
+        @assertEqual(test_norm_y,self%faces(XI_MIN)%norm(:,2),tol)
+        @assertEqual(test_norm_z,self%faces(XI_MIN)%norm(:,3),tol)
+        
+        ! XI_MAX
+        test_norm_x = inv_sqrt_two/FOUR
+        test_norm_y = inv_sqrt_two/FOUR
+        test_norm_z = ZERO
+        
+        @assertEqual(test_norm_x,self%faces(XI_MAX)%norm(:,1),tol)
+        @assertEqual(test_norm_y,self%faces(XI_MAX)%norm(:,2),tol)
+        @assertEqual(test_norm_z,self%faces(XI_MAX)%norm(:,3),tol)
+        
+        ! ETA_MIN
+        test_norm_x = inv_sqrt_two/FOUR
+        test_norm_y = -inv_sqrt_two/FOUR
+        test_norm_z = ZERO
+        
+        @assertEqual(test_norm_x,self%faces(ETA_MIN)%norm(:,1),tol)
+        @assertEqual(test_norm_y,self%faces(ETA_MIN)%norm(:,2),tol)
+        @assertEqual(test_norm_z,self%faces(ETA_MIN)%norm(:,3),tol)      
+        
+        ! ETA_MAX
+        test_norm_x = -inv_sqrt_two/FOUR
+        test_norm_y = inv_sqrt_two/FOUR
+        test_norm_z = ZERO
+        
+        @assertEqual(test_norm_x,self%faces(ETA_MAX)%norm(:,1),tol)
+        @assertEqual(test_norm_y,self%faces(ETA_MAX)%norm(:,2),tol)
+        @assertEqual(test_norm_z,self%faces(ETA_MAX)%norm(:,3),tol)
+
+        ! ZETA_MIN
+        test_norm_x = ZERO
+        test_norm_y = ZERO
+        test_norm_z = -0.25_rk
+        
+        @assertEqual(test_norm_x,self%faces(ZETA_MIN)%norm(:,1),tol)
+        @assertEqual(test_norm_y,self%faces(ZETA_MIN)%norm(:,2),tol)
+        @assertEqual(test_norm_z,self%faces(ZETA_MIN)%norm(:,3),tol)
+        
+        ! ZETA_MAX
+        test_norm_x = ZERO
+        test_norm_y = ZERO
+        test_norm_z = 0.25_rk
+        
+        @assertEqual(test_norm_x,self%faces(ZETA_MAX)%norm(:,1),tol)
+        @assertEqual(test_norm_y,self%faces(ZETA_MAX)%norm(:,2),tol)
+        @assertEqual(test_norm_z,self%faces(ZETA_MAX)%norm(:,3),tol)
+       
+
+    end subroutine
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+end module test_element_linearB_mod
+
+
+
+
+

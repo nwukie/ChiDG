@@ -1,7 +1,7 @@
 module mod_legendre
     use mod_kinds,      only: rk,ik
     use mod_constants,  only: XI_DIR,ETA_DIR,ZETA_DIR, &
-                              ZERO, ONE, TWO
+                              ZERO, ONE, TWO, THREE, FOUR, FIVE, EIGHTH, HALF
 
     implicit none
 
@@ -38,10 +38,9 @@ contains
     !   legendre polynomial at the location pos
     !   between -1 and 1
     !   Edit list:  Nathan A. Wukie - 2/11/2015
-        integer(ik), intent(in)    :: nterm
-        real(rk), intent(in)       :: pos
-        real(rk)                   :: polyval
-        real(rk)                   :: polyval_nm1,polyval_nm2
+        integer(ik),    intent(in) :: nterm
+        real(rk),       intent(in) :: pos
+        real(rk)                   :: polyval, polyval_nm1, polyval_nm2
 
         select case (nterm)
             ! Start recursion terms
@@ -53,9 +52,28 @@ contains
                 ! Recursive definition for norder >= 2
                 polyval_nm1=LegendreVal1D(nterm-1,pos)
                 polyval_nm2=LegendreVal1D(nterm-2,pos)
-                polyval = ((TWO*real(nterm-1,rk)-ONE)/real(nterm-1,rk))*pos*polyval_nm1 - &
-                          ((real(nterm-1,rk)-ONE)/real(nterm-1,rk))*polyval_nm2
+                polyval = ((TWO*real(nterm-1,rk)-ONE)*pos*polyval_nm1 - &
+                          ((real(nterm-1,rk)-ONE))*polyval_nm2)/real(nterm-1,rk)
         end select
+
+!
+!        select case (nterm)
+!            case (1)
+!                polyval = ONE
+!            case (2)
+!                polyval = pos
+!            case (3)
+!                polyval = HALF*(THREE*pos*pos - ONE)
+!            case (4)
+!                polyval = HALF*(FIVE*pos*pos*pos - THREE*pos)
+!            case (5)
+!                polyval = EIGHTH*(35._rk*pos*pos*pos*pos - 30._rk*pos*pos + THREE)
+!            case (6)
+!                polyval = EIGHTH*(63._rk*pos*pos*pos*pos*pos - 70._rk*pos*pos*pos + 15._rk*pos)
+!            case default
+!                stop "Error: Legendre polynomial - 1D mode limit exceeded"
+!         end select
+
     end function
 
 
@@ -67,16 +85,15 @@ contains
     !   Edit list:  Nathan A. Wukie - 2/15/2015
         use mod_ordering,   only: xi_order_2d,eta_order_2d
 
-        integer(ik), intent(in)                :: currentmode
-        real(rk),    intent(in)                :: xi,eta
+        integer(ik), intent(in)   :: currentmode
+        real(rk),    intent(in)   :: xi,eta
 
-        real(rk)                               :: polyval,xi_polyval,eta_polyval
-        integer(ik)                            :: nterms1d,xi_mode,eta_mode
+        real(rk)                  :: polyval,xi_polyval,eta_polyval
+        integer(ik)               :: xi_mode,eta_mode
 
         ! compute current x/y-node indices of 1D tensor product polynomials
         ! Example: for a 2D lagrange polynomial L(x,y)=L(x)*L(y), compute the
         ! x and y indices
-!        print*, currentmode
         xi_mode  = xi_order_2d( currentmode)
         eta_mode = eta_order_2d(currentmode)
 
@@ -93,11 +110,11 @@ contains
     !   Edit list:  Nathan A. Wukie - 2/15/2015
         use mod_ordering,   only: xi_order_3d,eta_order_3d,zeta_order_3d
 
-        integer(ik), intent(in)                :: currentmode
-        real(rk),    intent(in)                :: xi,eta,zeta
+        integer(ik), intent(in)   :: currentmode
+        real(rk),    intent(in)   :: xi,eta,zeta
 
-        real(rk)                               :: polyval,xi_polyval,eta_polyval,zeta_polyval
-        integer(ik)                            :: nterms1d,xi_mode,eta_mode,zeta_mode
+        real(rk)                  :: polyval,xi_polyval,eta_polyval,zeta_polyval
+        integer(ik)               :: xi_mode,eta_mode,zeta_mode
 
         ! compute current x/y-node indices of 1D tensor product polynomials
         ! Example: for a 2D lagrange polynomial L(x,y)=L(x)*L(y), compute the
@@ -126,8 +143,8 @@ contains
     !       polynomial derivatives
     !------------------------------------------------------------------
 
-    function dlegendreVal(space_dim,nterms,currentmode,xi,eta,zeta,dir) result(dpolyval)
-        integer(ik),   intent(in)          :: space_dim,nterms,currentmode
+    function dlegendreVal(space_dim,currentmode,xi,eta,zeta,dir) result(dpolyval)
+        integer(ik),   intent(in)          :: space_dim,currentmode
         real(rk),      intent(in)          :: xi,eta,zeta
         integer(ik),   intent(in)          :: dir
 

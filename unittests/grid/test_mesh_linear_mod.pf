@@ -83,7 +83,8 @@ contains
         neqns = 1
         nterms_s = 8
         nterms_c = 8
-        call this%mesh%init(neqns,nterms_s,nterms_c,pts)
+        call this%mesh%init_geom(nterms_c,pts)
+        call this%mesh%init_sol(neqns,nterms_s)
 
     end subroutine
     

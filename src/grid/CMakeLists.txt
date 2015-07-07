@@ -1,1 +1,1 @@
-add_lib_sources(type_point.f90 type_element.f90 type_face.f90 type_mesh.f90 mod_element_mapping.f90 mod_interpolate.f90)
+add_lib_sources(type_point.f90 type_element.f90 type_face.f90 type_mesh.f90 type_domain.f90 mod_element_mapping.f90 mod_interpolate.f90)

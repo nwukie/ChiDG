@@ -59,18 +59,25 @@ contains
         !> Initialize Element geometry and Numerics
         mapping = 1
         ielem = 1
-        call this%elem%init_geometry(mapping,pts,ielem)
-        call this%elem%init_numerics(8,2)    !> 27 terms (3*3*3), 2 equations
+        call this%elem%init_geom(mapping,pts,ielem)
+        call this%elem%init_sol(2,8)    !> 2 equations, 8 terms (3*3*3)
         
         !> Initialize faces for element
         ftype = 0
         ineighbor = 0
-        call this%faces(XI_MIN)%init(XI_MIN,ftype,this%elem,ineighbor)
-        call this%faces(XI_MAX)%init(XI_MAX,ftype,this%elem,ineighbor)
-        call this%faces(ETA_MIN)%init(ETA_MIN,ftype,this%elem,ineighbor)
-        call this%faces(ETA_MAX)%init(ETA_MAX,ftype,this%elem,ineighbor)
-        call this%faces(ZETA_MIN)%init(ZETA_MIN,ftype,this%elem,ineighbor)
-        call this%faces(ZETA_MAX)%init(ZETA_MAX,ftype,this%elem,ineighbor)
+        call this%faces(XI_MIN)%init_geom(XI_MIN,ftype,this%elem,ineighbor)
+        call this%faces(XI_MAX)%init_geom(XI_MAX,ftype,this%elem,ineighbor)
+        call this%faces(ETA_MIN)%init_geom(ETA_MIN,ftype,this%elem,ineighbor)
+        call this%faces(ETA_MAX)%init_geom(ETA_MAX,ftype,this%elem,ineighbor)
+        call this%faces(ZETA_MIN)%init_geom(ZETA_MIN,ftype,this%elem,ineighbor)
+        call this%faces(ZETA_MAX)%init_geom(ZETA_MAX,ftype,this%elem,ineighbor)
+        
+        call this%faces(XI_MIN)%init_sol(this%elem)
+        call this%faces(XI_MAX)%init_sol(this%elem)
+        call this%faces(ETA_MIN)%init_sol(this%elem)
+        call this%faces(ETA_MAX)%init_sol(this%elem)
+        call this%faces(ZETA_MIN)%init_sol(this%elem)
+        call this%faces(ZETA_MAX)%init_sol(this%elem)
     end subroutine
     
     subroutine tearDown(this)

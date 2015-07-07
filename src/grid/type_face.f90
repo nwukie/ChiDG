@@ -38,7 +38,9 @@ module type_face
         !> Logical tests
         logical :: isInitialized = .false.
     contains
-        procedure           :: init                         !> Face initialization
+!        procedure           :: init                         !> Face initialization
+        procedure           :: init_geom
+        procedure           :: init_sol
         procedure, public   :: integrate_flux               !> Integrate face flux
         procedure, public   :: integrate_scalar             !> Integrate face scalar
 
@@ -55,6 +57,23 @@ contains
 
 
 
+    subroutine init_geom(self,iface,ftype,elem,ineighbor)
+        class(face_t),      intent(inout)       :: self
+        integer(ik),        intent(in)          :: iface
+        integer(ik),        intent(in)          :: ftype
+        type(element_t),    intent(in), target  :: elem
+        integer(ik),        intent(in)          :: ineighbor
+
+        self%iface      = iface
+        self%ftype      = ftype
+        self%iparent    = elem%ielem
+        self%ineighbor  = ineighbor
+
+        self%coords     => elem%coords
+
+    end subroutine
+
+
 
     !> Face initialization procedure
     !!
@@ -68,21 +87,12 @@ contains
     !!  @param[in] elem         Parent element which many face members point to
     !!  @param[in] ineighbor    Index of neighbor element in the block
     !---------------------------------------------------------------------
-    subroutine init(self,iface,ftype,elem,ineighbor)
+    subroutine init_sol(self,elem)
         class(face_t),      intent(inout)       :: self
-        integer(ik),        intent(in)          :: iface
-        integer(ik),        intent(in)          :: ftype
         type(element_t),    intent(in), target  :: elem
-        integer(ik),        intent(in)          :: ineighbor
 
-        self%iface      =  iface
-        self%ftype      =  ftype
         self%neqns      => elem%neqns
         self%nterms_s   => elem%nterms_s
-        self%iparent    =  elem%ielem
-        self%ineighbor  =  ineighbor
-
-        self%coords     => elem%coords
         self%gq         => elem%gq
         self%gqmesh     => elem%gqmesh
         self%invmass    => elem%invmass
@@ -99,7 +109,6 @@ contains
 
         self%isInitialized  = .true.            !> Confirm face initialization
     end subroutine
-
 
 
 

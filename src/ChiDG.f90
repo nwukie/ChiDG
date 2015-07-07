@@ -9,22 +9,27 @@
 
 
 program chidg
-    use mod_kinds,              only: ik,rk
-    use cgns
-    use hdf5_dgtools
+    use mod_kinds,          only: ik,rk
+    use mod_hdfio,              only: read_grid_hdf5
+    use type_domain,            only: domain_t
     use messenger
 
     !-----------------------------------------------------------
     !-----------------------------------------------------------
     ! Variable declarations
     implicit none
+    type(domain_t), allocatable :: domains(:)
 
     !======================================================
     !
     !   Initialization
     !
     !======================================================
-    call plot3d_to_hdf5()
+
+
+
+
+    call read_grid_hdf5('test',domains)
 
 
 

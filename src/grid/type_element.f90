@@ -52,8 +52,8 @@ module type_element
         logical :: isInitialized = .false.
     contains
         ! Initialization procedures
-        procedure, public   :: init_geometry
-        procedure, public   :: init_numerics
+        procedure, public   :: init_geom
+        procedure, public   :: init_sol
 !        procedure, public   :: project_solution
 
         ! Solution procedures
@@ -91,7 +91,7 @@ contains
     !!  @param[in] nterms_c     Number of terms in the modal representation of the cartesian coordinates
     !!  @param[in] points       Array of cartesian points defining the element
     !---------------------------------------------------------------------------------------
-    subroutine init_geometry(self,mapping,points,ielem)
+    subroutine init_geom(self,mapping,points,ielem)
         class(element_t),   intent(inout) :: self
         integer(ik),        intent(in)    :: mapping
         type(point_t),      intent(in)    :: points(:)
@@ -105,9 +105,9 @@ contains
             nterms_c        = size(elem_map(mapping)%mat,1) !> Get number of terms if coordinate expansion from size of mapping matrix
             self%nterms_c   = nterms_c                      !> Set number of terms in coordinate expansion
 
-            if (nterms_c /= size(points)) stop "Error: element%init_geometry -- mapping and points to not match"
+            if (nterms_c /= size(points)) stop "Error: element%init_geom -- mapping and points to not match"
         else
-            stop "Error: element%init_geometry - element mapping not initialized"
+            stop "Error: element%init_geom - element mapping not initialized"
         end if
 
         ! Allocate and compute mesh x,y,z modes
@@ -134,13 +134,14 @@ contains
     !!  @param[in]  nterms_s    Number of terms in the modal representation of the solution
     !!  @param[in]  neqns       Number of equations contained in the element solution
     !--------------------------------------------------------------------------------------
-    subroutine init_numerics(self,nterms_s,neqns)
+    subroutine init_sol(self,neqns,nterms_s)
         class(element_t),   intent(inout) :: self
-        integer(ik),        intent(in)    :: nterms_s
         integer(ik),        intent(in)    :: neqns
+        integer(ik),        intent(in)    :: nterms_s
 
         integer(ik) :: ierr
         integer(ik) :: nnodes,nnodes_face,nnodes_vol
+
 
         self%nterms_s    = nterms_s                 !> Set number of terms in modal expansion of solution
         self%neqns       = neqns                    !> Set number of equations being solved

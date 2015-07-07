@@ -8,7 +8,7 @@ program plot3d_to_hdf5
     use hdf5
     use h5lt
     implicit none
-    ! Version info
+    ! Attribute info
     integer, dimension(1), parameter  :: STORAGE_FORMAT_MAJOR = 0
     integer, dimension(1), parameter  :: STORAGE_FORMAT_MINOR = 1
 
@@ -25,7 +25,7 @@ program plot3d_to_hdf5
 
     ! plot3d vars
     integer(ik)                 :: i,j,k,imax,jmax,kmax,ext_loc
-    integer(ik)                 :: ierr,igrid,nelem,nblks
+    integer(ik)                 :: ierr,igrid,nelem,nblks,mapping
     integer(ik), allocatable    :: blkdims(:,:)
     real(rk),    allocatable    :: xcoords(:,:,:), ycoords(:,:,:), zcoords(:,:,:)
 
@@ -83,6 +83,10 @@ program plot3d_to_hdf5
     read(7) nblks
     print*, nblks," grid blocks"
 
+    ! Add number of grid domains as attribute
+    call h5ltset_attribute_int_f(file_id, "/", 'ndomains', [nblks], 1, ierr)
+
+
     ! Make space for storing dimensions of each block domain
     allocate(blkdims(3,nblks),stat=ierr)
     if (ierr /= 0) stop "Error: allocate blkdims"
@@ -94,6 +98,12 @@ program plot3d_to_hdf5
 
     ! Loop through grid domain and for each domain, create an HDF5 group (D_$BLOCKNAME)
     do igrid = 1,nblks
+        ! Read mapping from user
+        print*, "Enter mapping for block: ", igrid
+        print*,  "Key -- (1 = linear, 2 = quadratic, 3 = cubic, 4 = quartic)"
+        read*, mapping
+
+
         ! Dimensions for reading plot3d grid
         imax = blkdims(1,igrid)
         jmax = blkdims(2,igrid)
@@ -110,12 +120,14 @@ program plot3d_to_hdf5
                 ((( zcoords(i,j,k), i=1,imax), j=1,jmax), k=1,kmax)
 
 
-        ! Create a block-group for the current block domain
+        ! Create a domain-group for the current block domain
         write(blockname, '(I2.2)') igrid
-        blockgroup = "B_"//trim(blockname)
+        blockgroup = "D_"//trim(blockname)
         call h5gcreate_f(file_id, trim(blockgroup), Block_id, ierr)
         if (ierr /= 0) stop "Error: h5gcreate_f"
 
+        ! Write mapping attribute
+        call h5ltset_attribute_int_f(Block_id, "/", 'mapping', [mapping], 1, ierr)
 
 
         ! Create a grid-group within the current block domain

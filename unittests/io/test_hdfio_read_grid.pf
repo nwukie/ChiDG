@@ -1,0 +1,100 @@
+!> Test for reading an hdf grid. D1_E1_M1 = One Domain, One Element, Linear Mapping
+@Test
+subroutine testIO__read_grid_hdf__D1_E1_M1() 
+    use pfunit_mod
+    use mod_kinds,              only: rk,ik
+    use mod_constants,          only: ZERO, ONE
+    use type_domain,            only: domain_t
+    use mod_hdfio,              only: read_grid_hdf5
+    use mod_element_mapping,    only: compute_element_mappings
+    implicit none
+    
+    type(domain_t), allocatable :: domains(:)
+    character(100), parameter   :: filename = 'D1_E1_M1.h5'
+    integer,        parameter   :: ndomains = 1
+    integer,        parameter   :: nterms_c = 8
+    integer,        parameter   :: nelem    = 1
+    real(rk)                    :: x(8), y(8), z(8)
+    real(rk)                    :: tol
+    
+    tol = 1.e-14_rk
+    
+    ! Initialize element mapping
+    call compute_element_mappings()
+    
+    call read_grid_hdf5(filename,domains)
+    
+    !> Test number of allocated domains
+    @assertEqual(ndomains,size(domains))
+    
+    !> Test domain mapping
+    @assertEqual(nterms_c,domains(1)%mesh%nterms_c)
+    
+    !> Test points
+    x = [ZERO, ONE, ZERO, ONE, ZERO, ONE, ZERO, ONE]
+    y = [ZERO, ZERO, ONE, ONE, ZERO, ZERO, ONE, ONE]
+    z = [ZERO, ZERO, ZERO, ZERO, ONE, ONE, ONE, ONE]
+    @assertEqual(x,domains(1)%mesh%elems(1)%elem_pts(:)%x_,tol)
+    @assertEqual(y,domains(1)%mesh%elems(1)%elem_pts(:)%y_,tol)
+    @assertEqual(z,domains(1)%mesh%elems(1)%elem_pts(:)%z_,tol)
+    
+    !>  Test nelem
+    @assertEqual(nelem,domains(1)%mesh%nelem)
+    
+    
+end subroutine
+
+
+
+
+
+
+
+
+!> Test for reading an hdf grid. D1_E9_M1 = One Domain, Nine Elements, Linear Mapping
+@Test
+subroutine testIO__read_grid_hdf__D1_E27_M1() 
+    use pfunit_mod
+    use mod_kinds,              only: rk,ik
+    use mod_constants,          only: ZERO, THIRD
+    use type_domain,            only: domain_t
+    use mod_hdfio,              only: read_grid_hdf5
+    use mod_element_mapping,    only: compute_element_mappings
+    implicit none
+    
+    type(domain_t), allocatable :: domains(:)
+    character(100), parameter   :: filename = 'D1_E27_M1.h5'
+    integer,        parameter   :: ndomains = 1
+    integer,        parameter   :: nterms_c = 8
+    integer,        parameter   :: nelem    = 27
+    real(rk)                    :: x(8), y(8), z(8)
+    real(rk)                    :: tol
+    
+    tol = 1.e-14_rk
+    
+    ! Initialize element mapping
+    call compute_element_mappings()
+    
+    call read_grid_hdf5(filename,domains)
+    
+    !> Test number of allocated domains
+    @assertEqual(ndomains,size(domains))
+    
+    !> Test domain mapping
+    @assertEqual(nterms_c,domains(1)%mesh%nterms_c)
+    
+    !> Test points
+    x = [ZERO, THIRD, ZERO, THIRD, ZERO, THIRD, ZERO, THIRD]
+    y = [ZERO, ZERO, THIRD, THIRD, ZERO, ZERO, THIRD, THIRD]
+    z = [ZERO, ZERO, ZERO, ZERO, THIRD, THIRD, THIRD, THIRD]
+    @assertEqual(x,domains(1)%mesh%elems(1)%elem_pts(:)%x_,tol)
+    @assertEqual(y,domains(1)%mesh%elems(1)%elem_pts(:)%y_,tol)
+    @assertEqual(z,domains(1)%mesh%elems(1)%elem_pts(:)%z_,tol)
+    
+    !>  Test nelem
+    @assertEqual(nelem,domains(1)%mesh%nelem)
+    
+    
+end subroutine
+
+

@@ -109,7 +109,7 @@ subroutine testElement__init_geometry__pts_linear()
     ielem   = 1
     
     ! Call geometry initialization with point array
-    call elem%init_geometry(mapping,pts_init,ielem)
+    call elem%init_geom(mapping,pts_init,ielem)
     
     !> Test nterms_c
     @assertEqual(npt,elem%nterms_c)
@@ -163,7 +163,7 @@ subroutine testElement__init_geometry__pts_quadratic()
     ielem   = 1
     
     ! Call geometry initialization with point array
-    call elem%init_geometry(mapping,pts_init,ielem)
+    call elem%init_geom(mapping,pts_init,ielem)
     
     !> Test nterms_c
     @assertEqual(npt,elem%nterms_c)
@@ -221,7 +221,7 @@ subroutine testElement__init_geometry__pts_cubic()
     ielem   = 1
     
     ! Call geometry initialization with point array
-    call elem%init_geometry(mapping,pts_init,ielem)
+    call elem%init_geom(mapping,pts_init,ielem)
     
     !> Test nterms_c
     @assertEqual(npt,elem%nterms_c)
@@ -280,7 +280,7 @@ subroutine testElement__init_geometry__pts_quartic()
     ielem   = 1
     
     ! Call geometry initialization with point array
-    call elem%init_geometry(mapping,pts_init,ielem)
+    call elem%init_geom(mapping,pts_init,ielem)
     
     !> Test nterms_c
     @assertEqual(npt,elem%nterms_c)
@@ -342,7 +342,7 @@ subroutine testElement__init_geometry__modes_linear()
 
     mapping = 1    
     ielem   = 1
-    call elem%init_geometry(mapping,pts_init,ielem)   !> Initialize test element
+    call elem%init_geom(mapping,pts_init,ielem)   !> Initialize test element
     
     ! Compute matrix of polynomial values for reverse calculation
     do iterm = 1,npt
@@ -410,7 +410,7 @@ subroutine testElement__init_geometry__modes_quadratic()
 
     mapping = 2
     ielem   = 1
-    call elem%init_geometry(mapping,pts_init,ielem)   !> Initialize test element
+    call elem%init_geom(mapping,pts_init,ielem)   !> Initialize test element
     
     ! Compute matrix of polynomial values for reverse calculation
     do iterm = 1,npt
@@ -476,7 +476,7 @@ subroutine testElement__init_geometry__modes_cubic()
 
     mapping = 3    
     ielem   = 1
-    call elem%init_geometry(mapping,pts_init,ielem)   !> Initialize test element
+    call elem%init_geom(mapping,pts_init,ielem)   !> Initialize test element
     
     ! Compute matrix of polynomial values for reverse calculation
     do iterm = 1,npt
@@ -544,7 +544,7 @@ subroutine testElement__init_geometry__modes_quartic()
 
     mapping = 4
     ielem   = 1
-    call elem%init_geometry(mapping,pts_init,ielem)   !> Initialize test element
+    call elem%init_geom(mapping,pts_init,ielem)   !> Initialize test element
     
     ! Compute matrix of polynomial values for reverse calculation
     do iterm = 1,npt

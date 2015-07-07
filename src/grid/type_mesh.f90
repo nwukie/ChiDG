@@ -13,9 +13,9 @@ module type_mesh
     !> Data type for mesh information
     type, public :: mesh_t
         ! Integer parameters
-        integer(ik)         :: neqns        !> Number of equations being solved
-        integer(ik)         :: nterms_s     !> Number of terms in the solution expansion
-        integer(ik)         :: nterms_c     !> Number of terms in the grid coordinate expansion
+        integer(ik)         :: neqns    = 0     !> Number of equations being solved
+        integer(ik)         :: nterms_s = 0     !> Number of terms in the solution expansion
+        integer(ik)         :: nterms_c = 0     !> Number of terms in the grid coordinate expansion
         integer(ik)         :: nelem_xi, nelem_eta, nelem_zeta, nelem
 
         ! Grid data
@@ -23,41 +23,58 @@ module type_mesh
         type(face_t),     allocatable  :: faces(:,:)    !> Face storage    (1:nelem,1:nfaces)
 
     contains
-        procedure, public   :: init
-        procedure, private  :: init_elems
-        procedure, private  :: init_faces
+        procedure   :: init_geom
+        procedure   :: init_sol
+        procedure, private  :: init_elems_geom
+        procedure, private  :: init_elems_sol
+        procedure, private  :: init_faces_geom
+        procedure, private  :: init_faces_sol
 
         final :: destructor
     end type mesh_t
 
 contains
 
-
-    !> Mesh initialization procedure
+    !> Mesh geometry initialization procedure
     !!
-    !!  Sets integer values and calls sub-initialization routines for elements and faces
+    !!  Sets number of terms in coordinate expansion for the entire domain
+    !!  and calls sub-initialization routines for individual element and face geometry
     !!
     !!  @author Nathan A. Wukie
-    !!  @param[in] neqns        Number of equations being solved
-    !!  @param[in] nterms_s     Number of terms in the solution expansion
-    !!  @param[in] nterms_c     Number of terms in the coordinate expansion
-    !!  @param[in] points_g     Rank-3 matrix of coordinate points defining a block mesh
-    !-----------------------------------------------------------------------------------------
-    subroutine init(self,neqns,nterms_s,nterms_c,points_g)
-        class(mesh_t),  intent(inout)  :: self
-        integer(ik),    intent(in)     :: neqns
-        integer(ik),    intent(in)     :: nterms_s,nterms_c
-        type(point_t),  intent(in)     :: points_g(:,:,:)
-        integer(ik)                    :: nterms
+    !!  @param[in]  nterms_c    Number of terms in the coordinate expansion
+    !!  @param[in]  points_g    Rank-3 matrix of coordinate points defining a block mesh
+    !---------------------------------------------------------------------------------------
+    subroutine init_geom(self,nterms_c,points_g)
+        class(mesh_t),  intent(inout)   :: self
+        integer(ik),    intent(in)      :: nterms_c
+        type(point_t),  intent(in)      :: points_g(:,:,:)
 
-        self%neqns      = neqns
-        self%nterms_s   = nterms_s
-        self%nterms_c   = nterms_c
+        self%nterms_c = nterms_c
 
-        call self%init_elems(points_g)
-        call self%init_faces()
+        call self%init_elems_geom(points_g)
+        call self%init_faces_geom()
+    end subroutine
 
-!        print*, "Mesh initialization completed!"
+
+    !> Mesh numerics initialization procedure
+    !!
+    !!  Sets number of equations being solved, number of terms in the solution expansion and
+    !!  calls sub-initialization routines for individual element and face numerics
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @param[in]  neqns       Number of equations being solved in the current domain
+    !!  @param[in]  nterms_s    Number of terms in the solution expansion
+    !---------------------------------------------------------------------------------------
+    subroutine init_sol(self,neqns,nterms_s)
+        class(mesh_t),  intent(inout)   :: self
+        integer(ik),    intent(in)      :: neqns
+        integer(ik),    intent(in)      :: nterms_s
+
+        self%neqns    = neqns
+        self%nterms_s = nterms_s
+
+        call self%init_elems_sol(neqns,nterms_s)
+        call self%init_faces_sol()
     end subroutine
 
 
@@ -72,7 +89,7 @@ contains
     !!  @author Nathan A. Wukie
     !!  @param[in]  points_g    Rank-3 matrix of coordinate points defining a block mesh
     !-------------------------------------------------------------------------------------------
-    subroutine init_elems(self,points_g)
+    subroutine init_elems_geom(self,points_g)
         class(mesh_t),  intent(inout)   :: self
         type(point_t),  intent(in)      :: points_g(:,:,:)
         type(point_t),  allocatable     :: points_l(:)
@@ -151,7 +168,7 @@ contains
         self%nelem_zeta = nelem_zeta
         nelem           = nelem_xi * nelem_eta * nelem_zeta
         self%nelem      = nelem
-        mapping = (npts_1d - 1)     !> 1 - linear, 2 - quadratic, 3 - cubic, etc.
+        mapping         = (npts_1d - 1)     !> 1 - linear, 2 - quadratic, 3 - cubic, etc.
 
         ! Allocate element storage
         allocate(self%elems(nelem),stat=ierr)
@@ -179,8 +196,7 @@ contains
                         end do
                     end do
 
-                    call self%elems(ielem)%init_geometry(mapping,points_l,ielem)
-                    call self%elems(ielem)%init_numerics(self%nterms_s,self%neqns)
+                    call self%elems(ielem)%init_geom(mapping,points_l,ielem)
                     ielem = ielem + 1
                 end do
             end do
@@ -188,15 +204,29 @@ contains
     end subroutine
 
 
+
+
+    subroutine init_elems_sol(self,neqns,nterms_s)
+        class(mesh_t),  intent(inout)   :: self
+        integer(ik),    intent(in)      :: neqns
+        integer(ik),    intent(in)      :: nterms_s
+        integer(ik) :: ielem
+
+        self%neqns    = neqns
+        self%nterms_s = nterms_s
+
+        do ielem = 1,self%nelem
+            call self%elems(ielem)%init_sol(self%nterms_s,self%neqns)
+        end do
+    end subroutine
+
+
     !> Mesh - face initialization procedure
-    !!
-    !!  Computes boundary or interior face information and calls face initialization
-    !!  procedure on each individual face.
     !!
     !!  @author Nathan A. Wukie
     !!
     !-----------------------------------------------------------------------------------
-    subroutine init_faces(self)
+    subroutine init_faces_geom(self)
         class(mesh_t), intent(inout)  :: self
 
         integer(ik)              :: ixi,ieta,izeta,iface,ftype,ineighbor,ielem,ierr
@@ -243,7 +273,7 @@ contains
 
 
                         ! Call face initialization routine
-                        call self%faces(ielem,iface)%init(iface,ftype,self%elems(ielem),ineighbor)
+                        call self%faces(ielem,iface)%init_geom(iface,ftype,self%elems(ielem),ineighbor)
 
                     end do
 
@@ -252,6 +282,26 @@ contains
             end do ! ieta
         end do ! izeta
 
+    end subroutine
+
+
+
+
+    !> Mesh - face initialization procedure
+    !!
+    !!  @author Nathan A. Wukie
+    !!
+    !-----------------------------------------------------------------------------------
+    subroutine init_faces_sol(self)
+        class(mesh_t), intent(inout)  :: self
+
+        integer(ik) :: ielem, iface
+
+        do ielem = 1,self%nelem
+            do iface = 1,NFACES
+                call self%faces(ielem,iface)%init_sol(self%elems(ielem))
+            end do
+        end do
     end subroutine
 
 

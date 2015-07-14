@@ -115,9 +115,9 @@ subroutine testElement__init_geometry__pts_linear()
     @assertEqual(npt,elem%nterms_c)
     
     !> Test points array
-    @assertEqual(pts_init(:)%x_,elem%elem_pts(:)%x_)
-    @assertEqual(pts_init(:)%y_,elem%elem_pts(:)%y_)
-    @assertEqual(pts_init(:)%z_,elem%elem_pts(:)%z_)
+    @assertEqual(pts_init(:)%c1_,elem%elem_pts(:)%c1_)
+    @assertEqual(pts_init(:)%c2_,elem%elem_pts(:)%c2_)
+    @assertEqual(pts_init(:)%c3_,elem%elem_pts(:)%c3_)
     
 end subroutine
 
@@ -169,9 +169,9 @@ subroutine testElement__init_geometry__pts_quadratic()
     @assertEqual(npt,elem%nterms_c)
     
     !> Test points array
-    @assertEqual(pts_init(:)%x_,elem%elem_pts(:)%x_)
-    @assertEqual(pts_init(:)%y_,elem%elem_pts(:)%y_)
-    @assertEqual(pts_init(:)%z_,elem%elem_pts(:)%z_)
+    @assertEqual(pts_init(:)%c1_,elem%elem_pts(:)%c1_)
+    @assertEqual(pts_init(:)%c2_,elem%elem_pts(:)%c2_)
+    @assertEqual(pts_init(:)%c3_,elem%elem_pts(:)%c3_)
     
 end subroutine
 
@@ -227,9 +227,9 @@ subroutine testElement__init_geometry__pts_cubic()
     @assertEqual(npt,elem%nterms_c)
     
     !> Test points array
-    @assertEqual(pts_init(:)%x_,elem%elem_pts(:)%x_)
-    @assertEqual(pts_init(:)%y_,elem%elem_pts(:)%y_)
-    @assertEqual(pts_init(:)%z_,elem%elem_pts(:)%z_)
+    @assertEqual(pts_init(:)%c1_,elem%elem_pts(:)%c1_)
+    @assertEqual(pts_init(:)%c2_,elem%elem_pts(:)%c2_)
+    @assertEqual(pts_init(:)%c3_,elem%elem_pts(:)%c3_)
     
 end subroutine
 
@@ -286,9 +286,9 @@ subroutine testElement__init_geometry__pts_quartic()
     @assertEqual(npt,elem%nterms_c)
     
     !> Test points array
-    @assertEqual(pts_init(:)%x_,elem%elem_pts(:)%x_)
-    @assertEqual(pts_init(:)%y_,elem%elem_pts(:)%y_)
-    @assertEqual(pts_init(:)%z_,elem%elem_pts(:)%z_)
+    @assertEqual(pts_init(:)%c1_,elem%elem_pts(:)%c1_)
+    @assertEqual(pts_init(:)%c2_,elem%elem_pts(:)%c2_)
+    @assertEqual(pts_init(:)%c3_,elem%elem_pts(:)%c3_)
     
 end subroutine
 
@@ -352,15 +352,15 @@ subroutine testElement__init_geometry__modes_linear()
     end do
     
     ! Recompute coordinate point values from modes
-    pts_test(:)%x_ = matmul(mat,elem%coords%modes(:,1))
-    pts_test(:)%y_ = matmul(mat,elem%coords%modes(:,2))
-    pts_test(:)%z_ = matmul(mat,elem%coords%modes(:,3))
+    pts_test(:)%c1_ = matmul(mat,elem%coords%mat(:,1))
+    pts_test(:)%c2_ = matmul(mat,elem%coords%mat(:,2))
+    pts_test(:)%c3_ = matmul(mat,elem%coords%mat(:,3))
     
     
     ! Test that recomputed coordinates are equal to the original coordinate values
-    @assertEqual(pts_init(:)%x_,pts_test(:)%x_,tol)
-    @assertEqual(pts_init(:)%y_,pts_test(:)%y_,tol)
-    @assertEqual(pts_init(:)%z_,pts_test(:)%z_,tol)
+    @assertEqual(pts_init(:)%c1_,pts_test(:)%c1_,tol)
+    @assertEqual(pts_init(:)%c2_,pts_test(:)%c2_,tol)
+    @assertEqual(pts_init(:)%c3_,pts_test(:)%c3_,tol)
     
 end subroutine
 
@@ -420,15 +420,15 @@ subroutine testElement__init_geometry__modes_quadratic()
     end do
     
     ! Recompute coordinate point values from modes
-    pts_test(:)%x_ = matmul(mat,elem%coords%modes(:,1))
-    pts_test(:)%y_ = matmul(mat,elem%coords%modes(:,2))
-    pts_test(:)%z_ = matmul(mat,elem%coords%modes(:,3))
+    pts_test(:)%c1_ = matmul(mat,elem%coords%mat(:,1))
+    pts_test(:)%c2_ = matmul(mat,elem%coords%mat(:,2))
+    pts_test(:)%c3_ = matmul(mat,elem%coords%mat(:,3))
     
     
     ! Test that recomputed coordinates are equal to the original coordinate values
-    @assertEqual(pts_init(:)%x_,pts_test(:)%x_,tol)
-    @assertEqual(pts_init(:)%y_,pts_test(:)%y_,tol)
-    @assertEqual(pts_init(:)%z_,pts_test(:)%z_,tol)
+    @assertEqual(pts_init(:)%c1_,pts_test(:)%c1_,tol)
+    @assertEqual(pts_init(:)%c2_,pts_test(:)%c2_,tol)
+    @assertEqual(pts_init(:)%c3_,pts_test(:)%c3_,tol)
     
 end subroutine
 
@@ -486,15 +486,15 @@ subroutine testElement__init_geometry__modes_cubic()
     end do
     
     ! Recompute coordinate point values from modes
-    pts_test(:)%x_ = matmul(mat,elem%coords%modes(:,1))
-    pts_test(:)%y_ = matmul(mat,elem%coords%modes(:,2))
-    pts_test(:)%z_ = matmul(mat,elem%coords%modes(:,3))
+    pts_test(:)%c1_ = matmul(mat,elem%coords%mat(:,1))
+    pts_test(:)%c2_ = matmul(mat,elem%coords%mat(:,2))
+    pts_test(:)%c3_ = matmul(mat,elem%coords%mat(:,3))
     
     
     ! Test that recomputed coordinates are equal to the original coordinate values
-    @assertEqual(pts_init(:)%x_,pts_test(:)%x_,tol)
-    @assertEqual(pts_init(:)%y_,pts_test(:)%y_,tol)
-    @assertEqual(pts_init(:)%z_,pts_test(:)%z_,tol)
+    @assertEqual(pts_init(:)%c1_,pts_test(:)%c1_,tol)
+    @assertEqual(pts_init(:)%c2_,pts_test(:)%c2_,tol)
+    @assertEqual(pts_init(:)%c3_,pts_test(:)%c3_,tol)
     
 end subroutine
 
@@ -554,15 +554,15 @@ subroutine testElement__init_geometry__modes_quartic()
     end do
     
     ! Recompute coordinate point values from modes
-    pts_test(:)%x_ = matmul(mat,elem%coords%modes(:,1))
-    pts_test(:)%y_ = matmul(mat,elem%coords%modes(:,2))
-    pts_test(:)%z_ = matmul(mat,elem%coords%modes(:,3))
+    pts_test(:)%c1_ = matmul(mat,elem%coords%mat(:,1))
+    pts_test(:)%c2_ = matmul(mat,elem%coords%mat(:,2))
+    pts_test(:)%c3_ = matmul(mat,elem%coords%mat(:,3))
     
     
     ! Test that recomputed coordinates are equal to the original coordinate values
-    @assertEqual(pts_init(:)%x_,pts_test(:)%x_,tol)
-    @assertEqual(pts_init(:)%y_,pts_test(:)%y_,tol)
-    @assertEqual(pts_init(:)%z_,pts_test(:)%z_,tol)
+    @assertEqual(pts_init(:)%c1_,pts_test(:)%c1_,tol)
+    @assertEqual(pts_init(:)%c2_,pts_test(:)%c2_,tol)
+    @assertEqual(pts_init(:)%c3_,pts_test(:)%c3_,tol)
     
 end subroutine
 

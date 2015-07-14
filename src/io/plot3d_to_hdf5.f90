@@ -256,7 +256,7 @@ program plot3d_to_hdf5
     if (ierr /= 0) stop "Error: h5fclose_f"
 
     ! Close HDF5
-    call h5close_F(ierr)
+    call h5close_f(ierr)
     if (ierr /= 0) stop "Error: h5close_f"
 
 

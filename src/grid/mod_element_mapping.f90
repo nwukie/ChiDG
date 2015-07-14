@@ -47,9 +47,6 @@ contains
             do izeta = 1,npts_1d(imap)
                 do ieta = 1,npts_1d(imap)
                     do ixi = 1,npts_1d(imap)
-    !                    nodes(inode)%x = xi_vals(ixi)
-    !                    nodes(inode)%y = eta_vals(ieta)
-    !                    nodes(inode)%z = zeta_vals(izeta)
                         call nodes(inode)%set(xi(ixi), eta(ieta), zeta(izeta))
                         inode = inode + 1
                     end do

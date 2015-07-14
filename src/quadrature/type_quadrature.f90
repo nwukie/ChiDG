@@ -8,7 +8,8 @@ module type_quadrature
     private
 
     type, public :: quadrature_t
-        integer(ik) :: nnodes_vol
+        integer(ik) :: nnodes_v
+        integer(ik) :: nnodes_f
         integer(ik) :: nterms
 
         type(volumeQuadrature_t)    :: vol  !> Volume quadrature instance
@@ -29,8 +30,9 @@ contains
         integer(ik),         intent(in)    :: nnodes_vol
         integer(ik),         intent(in)    :: nterms
 
-        self%nnodes_vol = nnodes_vol
-        self%nterms     = nterms
+        self%nnodes_v = nnodes_vol
+        self%nnodes_f = nnodes_face
+        self%nterms   = nterms
 
         call self%vol%init(nnodes_vol,nterms)       !> Initialize volume quadrature
         call self%face%init(nnodes_face,nterms)     !> Initialize face quadrature

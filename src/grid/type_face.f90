@@ -36,9 +36,9 @@ module type_face
         real(rk),            pointer :: invmass(:,:)        !> Pointer to element inverse mass matrix
 
         !> Logical tests
-        logical :: isInitialized = .false.
+        logical :: geomInitialized = .false.
+        logical :: numInitialized  = .false.
     contains
-!        procedure           :: init                         !> Face initialization
         procedure           :: init_geom
         procedure           :: init_sol
         procedure, public   :: integrate_flux               !> Integrate face flux
@@ -71,6 +71,7 @@ contains
 
         self%coords     => elem%coords
 
+        self%geomInitialized = .true.       !> Confirm face grid
     end subroutine
 
 
@@ -107,7 +108,7 @@ contains
         call self%compute_quadrature_normals()
         call self%compute_quadrature_coords()
 
-        self%isInitialized  = .true.            !> Confirm face initialization
+        self%numInitialized  = .true.            !> Confirm face numerics were initialization
     end subroutine
 
 

@@ -17,9 +17,9 @@ contains
         real(rk)                     :: xi,eta,zeta
         real(rk)                     :: polyval
 
-        xi   = node%x_
-        eta  = node%y_
-        zeta = node%z_
+        xi   = node%c1_
+        eta  = node%c2_
+        zeta = node%c3_
 
         polyval = LegendreVal(space_dim,mode,xi,eta,zeta)
 
@@ -33,9 +33,9 @@ contains
         real(rk)                     :: xi,eta,zeta
         real(rk)                     :: dpolyval
 
-        xi   = node%x_
-        eta  = node%y_
-        zeta = node%z_
+        xi   = node%c1_
+        eta  = node%c2_
+        zeta = node%c3_
 
         dpolyval = DLegendreVal(space_dim,mode,xi,eta,zeta,dir)
 

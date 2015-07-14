@@ -118,9 +118,9 @@ subroutine testElementMapping_reversability_linear()
     end do
     
     ! Compute modal coordinates
-    coords%modes(:,1) = matmul(elem_map(1)%mat,pts_init(:)%x_)
-    coords%modes(:,2) = matmul(elem_map(1)%mat,pts_init(:)%y_)
-    coords%modes(:,3) = matmul(elem_map(1)%mat,pts_init(:)%z_)
+    coords%mat(:,1) = matmul(elem_map(1)%mat,pts_init(:)%c1_)
+    coords%mat(:,2) = matmul(elem_map(1)%mat,pts_init(:)%c2_)
+    coords%mat(:,3) = matmul(elem_map(1)%mat,pts_init(:)%c3_)
     
     
     ! Compute matrix of polynomial values for reverse calculation
@@ -131,15 +131,15 @@ subroutine testElementMapping_reversability_linear()
     end do
     
     ! Recompute coordinate point values from modes
-    pts_test(:)%x_ = matmul(mat,coords%modes(:,1))
-    pts_test(:)%y_ = matmul(mat,coords%modes(:,2))
-    pts_test(:)%z_ = matmul(mat,coords%modes(:,3))
+    pts_test(:)%c1_ = matmul(mat,coords%mat(:,1))
+    pts_test(:)%c2_ = matmul(mat,coords%mat(:,2))
+    pts_test(:)%c3_ = matmul(mat,coords%mat(:,3))
     
     
     ! Test that recomputed coordinates are equal to the original coordinate values
-    @assertEqual(pts_init(:)%x_,pts_test(:)%x_,tol)
-    @assertEqual(pts_init(:)%y_,pts_test(:)%y_,tol)
-    @assertEqual(pts_init(:)%z_,pts_test(:)%z_,tol)
+    @assertEqual(pts_init(:)%c1_,pts_test(:)%c1_,tol)
+    @assertEqual(pts_init(:)%c2_,pts_test(:)%c2_,tol)
+    @assertEqual(pts_init(:)%c3_,pts_test(:)%c3_,tol)
     
     
 end subroutine
@@ -226,9 +226,9 @@ subroutine testElementMapping_reversability_quadratic()
     end do
     
     ! Compute modal coordinates
-    coords%modes(:,1) = matmul(elem_map(2)%mat,pts_init(:)%x_)
-    coords%modes(:,2) = matmul(elem_map(2)%mat,pts_init(:)%y_)
-    coords%modes(:,3) = matmul(elem_map(2)%mat,pts_init(:)%z_)
+    coords%mat(:,1) = matmul(elem_map(2)%mat,pts_init(:)%c1_)
+    coords%mat(:,2) = matmul(elem_map(2)%mat,pts_init(:)%c2_)
+    coords%mat(:,3) = matmul(elem_map(2)%mat,pts_init(:)%c3_)
     
     
     ! Compute matrix of polynomial values for reverse calculation
@@ -239,15 +239,15 @@ subroutine testElementMapping_reversability_quadratic()
     end do
     
     ! Recompute coordinate point values from modes
-    pts_test(:)%x_ = matmul(mat,coords%modes(:,1))
-    pts_test(:)%y_ = matmul(mat,coords%modes(:,2))
-    pts_test(:)%z_ = matmul(mat,coords%modes(:,3))
+    pts_test(:)%c1_ = matmul(mat,coords%mat(:,1))
+    pts_test(:)%c2_ = matmul(mat,coords%mat(:,2))
+    pts_test(:)%c3_ = matmul(mat,coords%mat(:,3))
     
     
     ! Test that recomputed coordinates are equal to the original coordinate values
-    @assertEqual(pts_init(:)%x_,pts_test(:)%x_,tol)
-    @assertEqual(pts_init(:)%y_,pts_test(:)%y_,tol)
-    @assertEqual(pts_init(:)%z_,pts_test(:)%z_,tol)
+    @assertEqual(pts_init(:)%c1_,pts_test(:)%c1_,tol)
+    @assertEqual(pts_init(:)%c2_,pts_test(:)%c2_,tol)
+    @assertEqual(pts_init(:)%c3_,pts_test(:)%c3_,tol)
     
     
 end subroutine
@@ -333,9 +333,9 @@ subroutine testElementMapping_reversability_cubic()
     end do
     
     ! Compute modal coordinates
-    coords%modes(:,1) = matmul(elem_map(3)%mat,pts_init(:)%x_)
-    coords%modes(:,2) = matmul(elem_map(3)%mat,pts_init(:)%y_)
-    coords%modes(:,3) = matmul(elem_map(3)%mat,pts_init(:)%z_)
+    coords%mat(:,1) = matmul(elem_map(3)%mat,pts_init(:)%c1_)
+    coords%mat(:,2) = matmul(elem_map(3)%mat,pts_init(:)%c2_)
+    coords%mat(:,3) = matmul(elem_map(3)%mat,pts_init(:)%c3_)
     
     
     ! Compute matrix of polynomial values for reverse calculation
@@ -346,15 +346,15 @@ subroutine testElementMapping_reversability_cubic()
     end do
     
     ! Recompute coordinate point values from modes
-    pts_test(:)%x_ = matmul(mat,coords%modes(:,1))
-    pts_test(:)%y_ = matmul(mat,coords%modes(:,2))
-    pts_test(:)%z_ = matmul(mat,coords%modes(:,3))
+    pts_test(:)%c1_ = matmul(mat,coords%mat(:,1))
+    pts_test(:)%c2_ = matmul(mat,coords%mat(:,2))
+    pts_test(:)%c3_ = matmul(mat,coords%mat(:,3))
     
     
     ! Test that recomputed coordinates are equal to the original coordinate values
-    @assertEqual(pts_init(:)%x_,pts_test(:)%x_,tol)
-    @assertEqual(pts_init(:)%y_,pts_test(:)%y_,tol)
-    @assertEqual(pts_init(:)%z_,pts_test(:)%z_,tol)
+    @assertEqual(pts_init(:)%c1_,pts_test(:)%c1_,tol)
+    @assertEqual(pts_init(:)%c2_,pts_test(:)%c2_,tol)
+    @assertEqual(pts_init(:)%c3_,pts_test(:)%c3_,tol)
     
     
 end subroutine
@@ -440,9 +440,9 @@ subroutine testElementMapping_reversability_quartic()
     end do
     
     ! Compute modal coordinates
-    coords%modes(:,1) = matmul(elem_map(4)%mat,pts_init(:)%x_)
-    coords%modes(:,2) = matmul(elem_map(4)%mat,pts_init(:)%y_)
-    coords%modes(:,3) = matmul(elem_map(4)%mat,pts_init(:)%z_)
+    coords%mat(:,1) = matmul(elem_map(4)%mat,pts_init(:)%c1_)
+    coords%mat(:,2) = matmul(elem_map(4)%mat,pts_init(:)%c2_)
+    coords%mat(:,3) = matmul(elem_map(4)%mat,pts_init(:)%c3_)
     
     
     ! Compute matrix of polynomial values for reverse calculation
@@ -453,15 +453,15 @@ subroutine testElementMapping_reversability_quartic()
     end do
     
     ! Recompute coordinate point values from modes
-    pts_test(:)%x_ = matmul(mat,coords%modes(:,1))
-    pts_test(:)%y_ = matmul(mat,coords%modes(:,2))
-    pts_test(:)%z_ = matmul(mat,coords%modes(:,3))
+    pts_test(:)%c1_ = matmul(mat,coords%mat(:,1))
+    pts_test(:)%c2_ = matmul(mat,coords%mat(:,2))
+    pts_test(:)%c3_ = matmul(mat,coords%mat(:,3))
     
     
     ! Test that recomputed coordinates are equal to the original coordinate values
-    @assertEqual(pts_init(:)%x_,pts_test(:)%x_,tol)
-    @assertEqual(pts_init(:)%y_,pts_test(:)%y_,tol)
-    @assertEqual(pts_init(:)%z_,pts_test(:)%z_,tol)
+    @assertEqual(pts_init(:)%c1_,pts_test(:)%c1_,tol)
+    @assertEqual(pts_init(:)%c2_,pts_test(:)%c2_,tol)
+    @assertEqual(pts_init(:)%c3_,pts_test(:)%c3_,tol)
     
     
 end subroutine

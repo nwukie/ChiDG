@@ -20,16 +20,8 @@ program chidg
     implicit none
     type(domain_t), allocatable :: domains(:)
 
-    !======================================================
-    !
-    !   Initialization
-    !
-    !======================================================
+    !> Initialize coredg static data
 
-
-
-
-    call read_grid_hdf5('test',domains)
 
 
 

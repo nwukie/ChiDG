@@ -127,7 +127,8 @@ contains
         integer(ik) :: ielem
         
         do ielem = 1,self%mesh%nelem
-            @assertTrue(self%mesh%elems(ielem)%isInitialized)
+            @assertTrue(self%mesh%elems(ielem)%geomInitialized)
+            @assertTrue(self%mesh%elems(ielem)%numInitialized)
         end do
         
     end subroutine
@@ -142,7 +143,8 @@ contains
         
         do ielem = 1,self%mesh%nelem
             do iface = 1,NFACES
-                @assertTrue(self%mesh%faces(ielem,iface)%isInitialized)
+                @assertTrue(self%mesh%faces(ielem,iface)%geomInitialized)
+                @assertTrue(self%mesh%faces(ielem,iface)%numInitialized)
             end do
         end do
     end subroutine

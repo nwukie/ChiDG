@@ -34,9 +34,9 @@ subroutine testIO__read_grid_hdf__D1_E1_M1()
     x = [ZERO, ONE, ZERO, ONE, ZERO, ONE, ZERO, ONE]
     y = [ZERO, ZERO, ONE, ONE, ZERO, ZERO, ONE, ONE]
     z = [ZERO, ZERO, ZERO, ZERO, ONE, ONE, ONE, ONE]
-    @assertEqual(x,domains(1)%mesh%elems(1)%elem_pts(:)%x_,tol)
-    @assertEqual(y,domains(1)%mesh%elems(1)%elem_pts(:)%y_,tol)
-    @assertEqual(z,domains(1)%mesh%elems(1)%elem_pts(:)%z_,tol)
+    @assertEqual(x,domains(1)%mesh%elems(1)%elem_pts(:)%c1_,tol)
+    @assertEqual(y,domains(1)%mesh%elems(1)%elem_pts(:)%c2_,tol)
+    @assertEqual(z,domains(1)%mesh%elems(1)%elem_pts(:)%c3_,tol)
     
     !>  Test nelem
     @assertEqual(nelem,domains(1)%mesh%nelem)
@@ -51,12 +51,12 @@ end subroutine
 
 
 
-!> Test for reading an hdf grid. D1_E9_M1 = One Domain, Nine Elements, Linear Mapping
+!> Test for reading an hdf grid. D1_E27_M1 = One Domain, 27 Elements (3x3x3), Linear Mapping
 @Test
 subroutine testIO__read_grid_hdf__D1_E27_M1() 
     use pfunit_mod
     use mod_kinds,              only: rk,ik
-    use mod_constants,          only: ZERO, THIRD
+    use mod_constants,          only: ZERO, THIRD, NFACES
     use type_domain,            only: domain_t
     use mod_hdfio,              only: read_grid_hdf5
     use mod_element_mapping,    only: compute_element_mappings
@@ -69,6 +69,7 @@ subroutine testIO__read_grid_hdf__D1_E27_M1()
     integer,        parameter   :: nelem    = 27
     real(rk)                    :: x(8), y(8), z(8)
     real(rk)                    :: tol
+    integer(ik)                 :: ielem, iface
     
     tol = 1.e-14_rk
     
@@ -87,13 +88,22 @@ subroutine testIO__read_grid_hdf__D1_E27_M1()
     x = [ZERO, THIRD, ZERO, THIRD, ZERO, THIRD, ZERO, THIRD]
     y = [ZERO, ZERO, THIRD, THIRD, ZERO, ZERO, THIRD, THIRD]
     z = [ZERO, ZERO, ZERO, ZERO, THIRD, THIRD, THIRD, THIRD]
-    @assertEqual(x,domains(1)%mesh%elems(1)%elem_pts(:)%x_,tol)
-    @assertEqual(y,domains(1)%mesh%elems(1)%elem_pts(:)%y_,tol)
-    @assertEqual(z,domains(1)%mesh%elems(1)%elem_pts(:)%z_,tol)
+    @assertEqual(x,domains(1)%mesh%elems(1)%elem_pts(:)%c1_,tol)
+    @assertEqual(y,domains(1)%mesh%elems(1)%elem_pts(:)%c2_,tol)
+    @assertEqual(z,domains(1)%mesh%elems(1)%elem_pts(:)%c3_,tol)
     
     !>  Test nelem
     @assertEqual(nelem,domains(1)%mesh%nelem)
     
+    
+    !>  Test all elements have been initialized
+    do ielem = 1,domains(1)%mesh%nelem
+        @assertTrue(domains(1)%mesh%elems(ielem)%geomInitialized)
+        
+        do iface = 1,NFACES
+            @assertTrue(domains(1)%mesh%faces(ielem,iface)%geomInitialized)
+        end do
+    end do
     
 end subroutine
 

@@ -22,9 +22,9 @@ subroutine test_Expansion_init()
     mat_set(:,2)  = [5.0_rk, 6.0_rk,  7.0_rk,  8.0_rk]
     mat_set(:,3)  = [9.0_rk, 10.0_rk, 11.0_rk, 12.0_rk]
 
-    poly%modes = mat_set
+    poly%mat = mat_set
 
-    @assertEqual(mat_set,poly%modes)
+    @assertEqual(mat_set,poly%mat)
 
 end subroutine
 

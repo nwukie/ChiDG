@@ -6,9 +6,10 @@ module type_element
     use type_expansion,         only: expansion_t
     use type_quadrature,        only: quadrature_t
     use DNAD_D
-    use mod_quadrature,         only: GQ, GQMESH
+    use mod_quadrature,         only: GQ, get_quadrature
     use mod_element_mapping,    only: elem_map
     use mod_polynomial,         only: polynomialVal
+    use mod_grid,               only: compute_modal_coordinates
     use mod_inv,                only: inv
     implicit none
 
@@ -49,7 +50,8 @@ module type_element
         real(rk), allocatable   :: invmass(:,:)
 
         !> Logical tests
-        logical :: isInitialized = .false.
+        logical :: geomInitialized = .false.
+        logical :: numInitialized  = .false.
     contains
         ! Initialization procedures
         procedure, public   :: init_geom
@@ -100,6 +102,9 @@ contains
         integer(ik)                         :: ierr, nterms_c
         real(rk), dimension(:,:), pointer   :: imap => null()
 
+        if (self%geomInitialized) stop "Error: element%init_geom -- element already initialized"
+
+
         if (allocated(elem_map(mapping)%mat)) then
             imap            => elem_map(mapping)%mat
             nterms_c        = size(elem_map(mapping)%mat,1) !> Get number of terms if coordinate expansion from size of mapping matrix
@@ -115,10 +120,9 @@ contains
         call self%coords%init(nterms_c,SPACEDIM)
         self%ielem    = ielem
         self%elem_pts = points
-        self%coords%modes(:,1) = matmul(imap,points(:)%x_)  !> multiply inverse mapping by mesh x-coords
-        self%coords%modes(:,2) = matmul(imap,points(:)%y_)  !> multiply inverse mapping by mesh y-coords
-        self%coords%modes(:,3) = matmul(imap,points(:)%z_)  !> multiply inverse mapping by mesh z-coords
 
+        call compute_modal_coordinates(self%elem_pts,mapping,self%coords)
+        self%geomInitialized = .true.                       !> Confirm element grid was initialized
     end subroutine
 
 
@@ -141,6 +145,8 @@ contains
 
         integer(ik) :: ierr
         integer(ik) :: nnodes,nnodes_face,nnodes_vol
+
+        if (self%numInitialized) stop "Error: element%init_sol -- element already initialized"
 
 
         self%nterms_s    = nterms_s                 !> Set number of terms in modal expansion of solution
@@ -167,7 +173,7 @@ contains
         call self%compute_element_matrices()                    !> Compute mass matrices and derivative matrices
 !        call self%initialize_solution()
 
-        self%isInitialized = .true.                             !> Confirm element was initialized
+        self%numInitialized = .true.                            !> Confirm element numerics were initialized
     end subroutine
 
 
@@ -185,7 +191,7 @@ contains
         class(element_t),   intent(inout)   :: self
 
         integer(ik) :: nterms_s,nterms_c
-        integer(ik) :: nnodes_face, nnodes_vol, igq
+        integer(ik) :: nnodes_face, nnodes_vol, igq, igq_s, igq_f
         logical     :: has_correct_nodes_terms
 
         nterms_s = self%nterms_s
@@ -195,44 +201,14 @@ contains
 
         call compute_nnodes_gq(nterms_s,nterms_c,nnodes_face,nnodes_vol)    !> Get number of quadrature nodes
 
-        !> Search for existing solution quadrature instance with correct
-        !! number of terms and nodes. If none is found, then we initialize
-        !! a new instance
-        do igq = 1,size(GQ)
-            if (GQ(igq)%isInitialized) then
 
-                has_correct_nodes_terms = (GQ(igq)%vol%nnodes == nnodes_vol) .and. (GQ(igq)%vol%nterms == nterms_s)
-                if (has_correct_nodes_terms) then
-                    self%gq => GQ(igq)
-                    exit
-                end if
+        ! Get solution quadrature instance
+        call get_quadrature(nterms_s,nnodes_vol,nnodes_face,igq_s)
+        self%gq => GQ(igq_s)
 
-            else
-                call GQ(igq)%init(nnodes_face,nnodes_vol,nterms_s)
-                self%gq => GQ(igq)
-                exit
-            end if
-        end do
-
-
-        !> Search for existing coordinate quadrature instance with correct
-        !! number of terms and nodes. If none is found, then we initialize
-        !! a new instance
-        do igq = 1,size(GQMESH)
-
-            if (GQMESH(igq)%isInitialized) then
-
-                has_correct_nodes_terms = (GQMESH(igq)%vol%nnodes == nnodes_vol) .and. (GQMESH(igq)%vol%nterms == nterms_c)
-                if (has_correct_nodes_terms) then
-                    self%gqmesh => GQMESH(igq)
-                    exit
-                end if
-            else
-                call GQMESH(igq)%init(nnodes_face,nnodes_vol,nterms_c)
-                self%gqmesh => GQMESH(igq)
-                exit
-            end if
-        end do
+        ! Get coordinate quadrature instance
+        call get_quadrature(nterms_c,nnodes_vol,nnodes_face,igq_f)
+        self%gqmesh => GQ(igq_f)
 
 
     end subroutine
@@ -259,17 +235,17 @@ contains
 
         nnodes = self%gq%vol%nnodes
         ! compute element metric terms
-        dxdxi   = matmul(self%gqmesh%vol%ddxi,  self%coords%modes(:,1))
-        dxdeta  = matmul(self%gqmesh%vol%ddeta, self%coords%modes(:,1))
-        dxdzeta = matmul(self%gqmesh%vol%ddzeta,self%coords%modes(:,1))
+        dxdxi   = matmul(self%gqmesh%vol%ddxi,  self%coords%mat(:,1))
+        dxdeta  = matmul(self%gqmesh%vol%ddeta, self%coords%mat(:,1))
+        dxdzeta = matmul(self%gqmesh%vol%ddzeta,self%coords%mat(:,1))
 
-        dydxi   = matmul(self%gqmesh%vol%ddxi,  self%coords%modes(:,2))
-        dydeta  = matmul(self%gqmesh%vol%ddeta, self%coords%modes(:,2))
-        dydzeta = matmul(self%gqmesh%vol%ddzeta,self%coords%modes(:,2))
+        dydxi   = matmul(self%gqmesh%vol%ddxi,  self%coords%mat(:,2))
+        dydeta  = matmul(self%gqmesh%vol%ddeta, self%coords%mat(:,2))
+        dydzeta = matmul(self%gqmesh%vol%ddzeta,self%coords%mat(:,2))
 
-        dzdxi   = matmul(self%gqmesh%vol%ddxi,  self%coords%modes(:,3))
-        dzdeta  = matmul(self%gqmesh%vol%ddeta, self%coords%modes(:,3))
-        dzdzeta = matmul(self%gqmesh%vol%ddzeta,self%coords%modes(:,3))
+        dzdxi   = matmul(self%gqmesh%vol%ddxi,  self%coords%mat(:,3))
+        dzdeta  = matmul(self%gqmesh%vol%ddeta, self%coords%mat(:,3))
+        dzdzeta = matmul(self%gqmesh%vol%ddzeta,self%coords%mat(:,3))
 
         do inode = 1,nnodes
             self%metric(1,1,inode) = dydeta(inode)*dzdzeta(inode) - dydzeta(inode)*dzdeta(inode)
@@ -363,9 +339,9 @@ contains
 
         nnodes = self%gq%vol%nnodes
         !> compute cartesian coordinates associated with quadrature points
-        x = matmul(self%gqmesh%vol%val,self%coords%modes(:,1))
-        y = matmul(self%gqmesh%vol%val,self%coords%modes(:,2))
-        z = matmul(self%gqmesh%vol%val,self%coords%modes(:,3))
+        x = matmul(self%gqmesh%vol%val,self%coords%mat(:,1))
+        y = matmul(self%gqmesh%vol%val,self%coords%mat(:,2))
+        z = matmul(self%gqmesh%vol%val,self%coords%mat(:,3))
 
         !> Initialize each point with cartesian coordinates
         do inode = 1,nnodes
@@ -507,9 +483,7 @@ contains
         real(rk)                   :: polyvals(self%nterms_c)
         integer(ik)                :: iterm
 
-        node%x_ = xi
-        node%y_ = eta
-        node%z_ = zeta
+        call node%set(xi,eta,zeta)
 
         ! Evaluate polynomial modes at node location
         do iterm = 1,self%nterms_c
@@ -517,7 +491,7 @@ contains
         end do
 
         ! Evaluate x from dot product of modes and polynomial values
-        xval = dot_product(self%coords%modes(:,1),polyvals)
+        xval = dot_product(self%coords%mat(:,1),polyvals)
 
     end function
 
@@ -530,9 +504,7 @@ contains
         real(rk)                   :: polyvals(self%nterms_c)
         integer(ik)                :: iterm
 
-        node%x_ = xi
-        node%y_ = eta
-        node%z_ = zeta
+        call node%set(xi,eta,zeta)
 
         ! Evaluate polynomial modes at node location
         do iterm = 1,self%nterms_c
@@ -540,7 +512,7 @@ contains
         end do
 
         ! Evaluate x from dot product of modes and polynomial values
-        yval = dot_product(self%coords%modes(:,2),polyvals)
+        yval = dot_product(self%coords%mat(:,2),polyvals)
 
     end function
 
@@ -553,9 +525,7 @@ contains
         real(rk)                   :: polyvals(self%nterms_c)
         integer(ik)                :: iterm
 
-        node%x_ = xi
-        node%y_ = eta
-        node%z_ = zeta
+        call node%set(xi,eta,zeta)
 
         ! Evaluate polynomial modes at node location
         do iterm = 1,self%nterms_c
@@ -563,7 +533,7 @@ contains
         end do
 
         ! Evaluate x from dot product of modes and polynomial values
-        zval = dot_product(self%coords%modes(:,3),polyvals)
+        zval = dot_product(self%coords%mat(:,3),polyvals)
 
     end function
 

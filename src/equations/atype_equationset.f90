@@ -12,7 +12,8 @@ module atype_equationset
     private
 
     type, public, abstract :: equationset_t
-        integer(ik)               :: neqns
+        character(100)              :: name
+        integer(ik)                 :: neqns
 
         ! List equation variables with indices
         type(equation_t), allocatable  :: eqns(:)

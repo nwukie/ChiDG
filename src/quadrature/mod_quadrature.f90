@@ -9,35 +9,12 @@ module mod_quadrature
 
     ! Arrays of quadrature types, so an element can choose the order
     ! of the quadrature, based on it's polynomial approximation
-    integer(ik), parameter :: ngq = 5
+    integer(ik), parameter :: ngq = 100
 
     type(quadrature_t), target, save :: GQ(ngq)
-    type(quadrature_t), target, save :: GQMESH(ngq)
 
 
 contains
-
-!    subroutine initialize_quadrature()
-!        use mod_io,     only: nterms_sol1d, nterms_sol2d, nterms_sol3d, &
-!                              nterms_mesh1d,nterms_mesh2d,nterms_mesh3d
-!        integer(ik)    :: igq
-!        integer(ik)    :: nnodes_face, nnodes_vol
-!        integer(ik)    :: ierr
-!
-!        call compute_nnodes_integration(1,nterms_sol3d,nnodes_face,nnodes_vol)
-!
-!        do igq = 1,ngq
-!            call GQ(igq)%init(nnodes_face,nnodes_vol,nterms_sol3d)
-!            call GQMESH(igq)%init(nnodes_face,nnodes_vol,nterms_mesh3d)
-!        end do
-!
-!    end subroutine initialize_quadrature
-
-
-
-
-
-
 
     !>  Compute the number of quadrature nodes to use in order to accurately compute integrals
     !!  in the DG discretization. Based on solution and coordinate polynomial orders.
@@ -88,5 +65,60 @@ contains
 
 
     end subroutine
+
+
+
+
+
+
+    !>  Routine to find a quadrature instance or initialize a new one and return
+    !!  its location in the global quadrature array 'igq' in GQ(igq)
+    !!
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @param[in]      nterms  Number of terms in a polynomial expansion
+    !!  @param[in]      nn_v    Number of volume quadrature nodes required
+    !!  @param[in]      nn_f    Number of face quadrature nodes required
+    !!  @param[inout]   gqout   Integer index of the selected quadrature instance in
+    !!                          the global quadrature instance array, GQ
+    !-------------------------------------------------------------------------------------
+    subroutine get_quadrature(nterms,nn_v,nn_f,gqout)
+        integer(ik),    intent(in)       :: nterms, nn_v, nn_f
+        integer(ik),    intent(inout)    :: gqout
+
+        integer(ik) :: igq
+        logical     :: has_correct_nodes_terms
+
+        do igq = 1,size(GQ)
+
+            if (GQ(igq)%isInitialized) then
+                has_correct_nodes_terms = (GQ(igq)%nterms == nterms) .and. (GQ(igq)%nnodes_v == nn_v)
+
+                if (has_correct_nodes_terms) then
+                    gqout = igq
+                    exit
+                end if
+            else
+                ! If we are here, then no initialized GQ instance was found that met the requirements,
+                ! so, we initialize a new one.
+                call GQ(igq)%init(nn_f,nn_v,nterms)
+                gqout = igq
+                exit
+            end if
+
+        end do
+
+    end subroutine
+
+
+
+
+
+
+
+
+
+
+
 
 end module mod_quadrature

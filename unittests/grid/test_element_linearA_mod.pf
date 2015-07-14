@@ -157,9 +157,9 @@ contains
         test_y = [y1, y1, y2, y2, y1, y1, y2, y2]
         test_z = [z1, z1, z1, z1, z2, z2, z2, z2]
         
-        @assertEqual(test_x,self%elem%quad_pts(:)%x_)
-        @assertEqual(test_y,self%elem%quad_pts(:)%y_)
-        @assertEqual(test_z,self%elem%quad_pts(:)%z_)
+        @assertEqual(test_x,self%elem%quad_pts(:)%c1_)
+        @assertEqual(test_y,self%elem%quad_pts(:)%c2_)
+        @assertEqual(test_z,self%elem%quad_pts(:)%c3_)
     end subroutine
 
 

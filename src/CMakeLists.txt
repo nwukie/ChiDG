@@ -8,6 +8,7 @@ add_subdirectory(quadrature)
 add_subdirectory(solvers)
 add_subdirectory(equations)
 add_subdirectory(spatial)
+add_subdirectory(functions)
 
 # Propagate lib_srcs list to parent directory
 add_lib_sources() 

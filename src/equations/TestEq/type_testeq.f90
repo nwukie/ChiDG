@@ -14,8 +14,6 @@ module type_testeq
 
     type, extends(equationset_t), public :: testeq_t
 
-        ! Equation-set specific data
-!        type(fluid_t)   :: fluid
 
     contains
         ! Must define these procedures in the extended, concrete type
@@ -40,29 +38,14 @@ contains
     subroutine init(self)
         class(testeq_t), intent(inout) :: self
 !
-!        self%neqns   = 5
-!
-!        ! Allocate equations
-!        allocate(self%eqns(self%neqns))
-!
-!        ! Initialize equation parameters
-!        self%eqns(1)%name = "rho"
-!        self%eqns(1)%ind  = 1
-!
-!        self%eqns(2)%name = "rhou"
-!        self%eqns(2)%ind  = 2
-!
-!        self%eqns(3)%name = "rhov"
-!        self%eqns(3)%ind  = 3
-!
-!        self%eqns(4)%name = "rhow"
-!        self%eqns(4)%ind  = 4
-!
-!        self%eqns(5)%name = "rhoE"
-!        self%eqns(5)%ind  = 5
-!
-!        ! Initialize equation set parameters
-!        self%rgas = 287.058_rk        ! J/(kg*K)
+        self%neqns   = 1
+
+        ! Allocate equations
+        allocate(self%eqns(self%neqns))
+
+        ! Initialize equation parameters
+        self%eqns(1)%name = "u"
+        self%eqns(1)%ind  = 1
 
     end subroutine
 

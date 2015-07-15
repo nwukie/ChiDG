@@ -155,6 +155,7 @@ contains
         call self%assign_quadrature()               !> With nterms_s and nterms_c defined, we can assign a quadrature instance
         nnodes = self%gq%vol%nnodes                 !> With a quadrature instance assigned, we have the number of quadrature nodes
 
+
         allocate(self%jinv(nnodes),stat=ierr)
         allocate(self%metric(SPACEDIM,SPACEDIM,nnodes),stat=ierr)
         if (ierr /= 0) stop "Memory allocation error: element%init"

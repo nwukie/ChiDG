@@ -216,7 +216,7 @@ contains
         self%nterms_s = nterms_s
 
         do ielem = 1,self%nelem
-            call self%elems(ielem)%init_sol(self%nterms_s,self%neqns)
+            call self%elems(ielem)%init_sol(self%neqns,self%nterms_s)
         end do
     end subroutine
 

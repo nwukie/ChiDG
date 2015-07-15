@@ -20,6 +20,9 @@ contains
         if (eqn_string == 'testeq') then
             call testeq%init()
             allocate(eqnset, source=testeq)
+
+        else
+            stop "Error: AssignEquationSet -- Invalid equation string"
         end if
 
     end subroutine

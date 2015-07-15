@@ -26,6 +26,10 @@ module type_volumeQuadrature
         real(rk),       allocatable :: ddeta(:,:)
         real(rk),       allocatable :: ddzeta(:,:)
 
+        ! Reference mass matrix
+        real(rk),       allocatable :: mass(:,:)
+        real(rk),       allocatable :: dmass(:)
+
     contains
         procedure :: init
         final :: destructor
@@ -41,6 +45,7 @@ contains
         real(rk)                                    :: xi,eta,zeta
         real(rk), dimension(:), allocatable         :: xi_vals,eta_vals,zeta_vals
         real(rk), dimension(:), allocatable         :: xi_weights,eta_weights,zeta_weights
+        real(rk), dimension(nterms,nnodes)          :: temp
         type(point_t)                               :: node
 
         self%nnodes = nnodes
@@ -53,6 +58,8 @@ contains
         allocate(self%ddxi(  nnodes,nterms))
         allocate(self%ddeta( nnodes,nterms))
         allocate(self%ddzeta(nnodes,nterms))
+        allocate(self%mass(nterms,nterms))
+        allocate(self%dmass(nterms))
 
         !===========================================================================
         ! Initialize quadrature node coordinates for face sets
@@ -108,6 +115,25 @@ contains
         end do
 
 
+
+
+        !---------------------------------------------------------------------------
+        !   Initialize reference mass matrix
+        !---------------------------------------------------------------------------
+        temp = transpose(self%val)
+        do iterm = 1,nterms
+            temp(iterm,:) = temp(iterm,:)*(self%weights)
+        end do
+
+        self%mass = matmul(temp,self%val)
+
+        ! Set reference mass diagonal
+        do iterm = 1,nterms
+            self%dmass(iterm) = self%mass(iterm,iterm)
+        end do
+
+
+        !---------------------------------------------------------------------------
         deallocate(zeta_weights,eta_weights,xi_weights)
         deallocate(zeta_vals,eta_vals,xi_vals)
 

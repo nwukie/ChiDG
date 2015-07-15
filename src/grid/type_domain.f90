@@ -19,7 +19,6 @@ module type_domain
         type(mesh_t)                        :: mesh
         class(equationset_t),   allocatable :: eqnset
         type(expansion_t),    allocatable    :: q(:)
-!        type(solution_t),                   :: q
 
         logical                             :: geomInitialized = .false.
         logical                             :: numInitialized  = .false.
@@ -71,15 +70,15 @@ contains
         integer(ik) :: ielem
 
         ! Set domain equation set
-        call AssignEquationSet(eqnstring,self%eqnset)   ! Factory method for allocating an equation set
+        call AssignEquationSet(eqnstring,self%eqnset)               ! Factory method for allocating an equation set
 
         ! Initialize mesh solution data
         call self%mesh%init_sol(self%eqnset%neqns,nterms_s)
 
         ! Initialize solution
-        allocate(self%q(self%mesh%nelem))    !> Allocate an expansion type for each element
+        allocate(self%q(self%mesh%nelem))                           !> Allocate an expansion type for each element
         do ielem = 1,self%mesh%nelem
-            call self%q(ielem)%init(nterms_s,self%eqnset%neqns)    !> Initialize expansion for each element
+            call self%q(ielem)%init(nterms_s,self%eqnset%neqns)     !> Initialize expansion for each element
         end do
 
         self%numInitialized = .true.

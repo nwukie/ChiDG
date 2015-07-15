@@ -1,0 +1,368 @@
+module test__project_function_xyz__mod
+    use pfunit_mod
+    use mod_kinds,              only: rk,ik
+    use mod_constants,          only: ZERO, FIVE, THREE
+    use type_point,             only: point_t
+    use type_domain,            only: domain_t
+    use fcn_xsquared,           only: xsquared_f
+    use fcn_ysquared,           only: ysquared_f
+    use fcn_zsquared,           only: zsquared_f
+    use fcn_xyz,                only: xyz_f
+    use mod_project,            only: project_function_xyz
+    use mod_element_mapping,    only: compute_element_mappings
+    use mod_polynomial,         only: PolynomialVal
+    
+    implicit none
+
+    public  :: test_project_function_xyz
+
+@TestCase
+    type, extends(TestCase) ::  test_project_function_xyz
+        integer(ik)     :: nterms_s
+        type(domain_t)  :: dom
+    contains
+        procedure   ::  setUp
+        procedure   ::  tearDown
+    end type test_project_function_xyz
+
+
+contains
+    !> NOTE: make sure to use 'this' instead of 'self' since these are over-writting a derived type 
+    !! procedure. The argument names have to match
+    subroutine setUp(this)
+        class(test_project_function_xyz),    intent(inout)   :: this
+        
+        integer(ik), parameter  :: npt = 8
+        type(point_t)           :: pts(2,2,2)
+        integer(ik)             :: nterms_c, nterms_s
+        
+        !> (x = 0-5 :: y = 0-1 :: z = 0-1)
+        !!          *-------*
+        !!         /       /|
+        !!    x=5 /       / |
+        !!       /       /  *
+        !!      *-------*  /
+        !!      |       | /
+        !!  z=1 |       |/
+        !!      *-------*
+        !!         y=1
+        !!
+        call pts(1,1,1)%set(0._rk, 0._rk, 0._rk)
+        call pts(2,1,1)%set(5._rk, 0._rk, 0._rk)
+        call pts(1,2,1)%set(0._rk, 1._rk, 0._rk)
+        call pts(2,2,1)%set(5._rk, 1._rk, 0._rk)
+        call pts(1,1,2)%set(0._rk, 0._rk, 1._rk)
+        call pts(2,1,2)%set(5._rk, 0._rk, 1._rk)
+        call pts(1,2,2)%set(0._rk, 1._rk, 1._rk)
+        call pts(2,2,2)%set(5._rk, 1._rk, 1._rk)
+        
+        ! Initialize mapping
+        call compute_element_mappings()
+        
+        
+        ! Initialize domain
+        nterms_c = npt
+        call this%dom%init_geom(nterms_c,pts)
+        
+        this%nterms_s = 27
+        call this%dom%init_sol('testeq',this%nterms_s)
+        
+    end subroutine
+    
+    subroutine tearDown(this)
+        class(test_project_function_xyz),    intent(inout)   :: this
+    end subroutine
+
+
+
+
+
+!> Test projection of x^2
+@Test
+    subroutine test_project__x2(self)
+        class(test_project_function_xyz),    intent(inout)   :: self
+        real(rk)                                             :: fmodes(self%nterms_s)
+        type(xsquared_f)                                     :: x2
+        integer(ik), parameter      :: npt = 11
+        integer(ik)                 :: ipt, iterm
+        type(point_t)               :: pts(npt), rpts(npt)
+        
+        real(rk)                    :: x(npt), y(npt), z(npt), rvals(npt), fvals(npt)
+        real(rk)                    :: pvals(npt,self%nterms_s)
+        real(rk)                    :: ref_integral, fintegral, xi,tol
+
+        tol = 1.e-13_rk
+
+        associate (elem => self%dom%mesh%elems(1))
+        
+        ! Function evaluation points
+        x = [0._rk, 0.5_rk, 1.0_rk, 1.5_rk, 2.0_rk, 2.5_rk, 3.0_rk, 3.5_rk, 4.0_rk, 4.5_rk, 5.0_rk]
+        y = ZERO
+        z = ZERO
+        
+        do ipt = 1,npt
+            call pts(ipt)%set(x(ipt),y(ipt),z(ipt)) !> Cartesian points
+            xi = -1._rk + 2._rk * x(ipt)/(5._rk)
+            call rpts(ipt)%set(xi,ZERO,ZERO)        !> Reference element points
+        end do
+        
+        
+        ! Compute reference values for function
+        rvals = x2%calc(pts)
+
+        ! Compute projection of function onto polynonmial basis
+        call project_function_xyz(x2,self%nterms_s,elem%coords,fmodes)
+
+        ! Evaluation polynomial modes at evaluation points
+        do iterm = 1,size(fmodes)
+            do ipt = 1,npt
+                pvals(ipt,iterm) = PolynomialVal(3,size(fmodes),iterm,rpts(ipt))
+            end do
+        end do
+
+        ! Reconstruct projected function at evaluation points
+        fvals = matmul(pvals,fmodes)
+        
+
+        ! Compute integral of function
+        fintegral = sum(matmul(elem%gq%vol%val, fmodes)  *  elem%gq%vol%weights  *  elem%jinv)
+        
+        end associate
+
+
+        ! Analytically computed integral.  {int_0^1}{int_0^1}{int_0^5} [x^2] dxdydz
+        ref_integral = 41.66666666666666666_rk
+
+        ! Test that the integral of the projected function match the expected value
+        @assertEqual(ref_integral,fintegral,tol)
+        
+        ! Test that the discrete values of the projected function match the expected values
+        @assertEqual(rvals,fvals,tol)
+        
+        
+    end subroutine
+
+
+
+
+!> Test projection of y^2
+@Test
+    subroutine test_project__y2(self)
+        class(test_project_function_xyz),    intent(inout)   :: self
+        real(rk)                                             :: fmodes(self%nterms_s)
+        type(ysquared_f)                                     :: y2
+        integer(ik), parameter      :: npt = 11
+        integer(ik)                 :: ipt, iterm
+        type(point_t)               :: pts(npt), rpts(npt)
+        
+        real(rk)                    :: x(npt), y(npt), z(npt), rvals(npt), fvals(npt)
+        real(rk)                    :: pvals(npt,self%nterms_s)
+        real(rk)                    :: ref_integral, fintegral, eta, tol
+
+        tol = 1.e-13_rk
+
+        associate (elem => self%dom%mesh%elems(1))
+        
+        ! Function evaluation points
+        x = ZERO
+        y = [0._rk, 0.1_rk, 0.2_rk, 0.3_rk, 0.4_rk, 0.5_rk, 0.6_rk, 0.7_rk, 0.8_rk, 0.9_rk, 1.0_rk]
+        z = ZERO
+        
+        do ipt = 1,npt
+            call pts(ipt)%set(x(ipt),y(ipt),z(ipt)) !> Cartesian points
+            
+            eta = -1._rk + 2._rk * y(ipt)/(1._rk)
+            call rpts(ipt)%set(ZERO,eta,ZERO)        !> Reference element points
+        end do
+        
+        
+        ! Compute reference values for function
+        rvals = y2%calc(pts)
+
+        ! Compute projection of function onto polynonmial basis
+        call project_function_xyz(y2,self%nterms_s,elem%coords,fmodes)
+
+        ! Evaluation polynomial modes at evaluation points
+        do iterm = 1,size(fmodes)
+            do ipt = 1,npt
+                pvals(ipt,iterm) = PolynomialVal(3,size(fmodes),iterm,rpts(ipt))
+            end do
+        end do
+
+        ! Reconstruct projected function at evaluation points
+        fvals = matmul(pvals,fmodes)
+        
+
+        ! Compute integral of function
+        fintegral = sum(matmul(elem%gq%vol%val, fmodes)  *  elem%gq%vol%weights  *  elem%jinv)
+        
+        end associate
+
+
+        ! Analytically computed integral.  {int_0^1}{int_0^1}{int_0^5} [y^2] dxdydz
+        ref_integral = FIVE/THREE
+
+        ! Test that the integral of the projected function match the expected value
+        @assertEqual(ref_integral,fintegral,tol)
+        
+        ! Test that the discrete values of the projected function match the expected values
+        @assertEqual(rvals,fvals,tol)
+        
+        
+    end subroutine
+
+
+
+!> Test projection of z^2
+@Test
+    subroutine test_project__z2(self)
+        class(test_project_function_xyz),    intent(inout)   :: self
+        real(rk)                                             :: fmodes(self%nterms_s)
+        type(zsquared_f)                                     :: z2
+        integer(ik), parameter      :: npt = 11
+        integer(ik)                 :: ipt, iterm
+        type(point_t)               :: pts(npt), rpts(npt)
+        
+        real(rk)                    :: x(npt), y(npt), z(npt), rvals(npt), fvals(npt)
+        real(rk)                    :: pvals(npt,self%nterms_s)
+        real(rk)                    :: ref_integral, fintegral, zeta, tol
+
+        tol = 1.e-13_rk
+
+        associate (elem => self%dom%mesh%elems(1))
+        
+        ! Function evaluation points
+        x = ZERO
+        y = ZERO
+        z = [0._rk, 0.1_rk, 0.2_rk, 0.3_rk, 0.4_rk, 0.5_rk, 0.6_rk, 0.7_rk, 0.8_rk, 0.9_rk, 1.0_rk]
+        
+        do ipt = 1,npt
+            call pts(ipt)%set(x(ipt),y(ipt),z(ipt))     !> Cartesian points
+            
+            zeta = -1._rk + 2._rk * z(ipt)/(1._rk)
+            call rpts(ipt)%set(ZERO,ZERO,zeta)          !> Reference element points
+        end do
+        
+        
+        ! Compute reference values for function
+        rvals = z2%calc(pts)
+
+        ! Compute projection of function onto polynonmial basis
+        call project_function_xyz(z2,self%nterms_s,elem%coords,fmodes)
+
+        ! Evaluation polynomial modes at evaluation points
+        do iterm = 1,size(fmodes)
+            do ipt = 1,npt
+                pvals(ipt,iterm) = PolynomialVal(3,size(fmodes),iterm,rpts(ipt))
+            end do
+        end do
+
+        ! Reconstruct projected function at evaluation points
+        fvals = matmul(pvals,fmodes)
+        
+
+        ! Compute integral of function
+        fintegral = sum(matmul(elem%gq%vol%val, fmodes)  *  elem%gq%vol%weights  *  elem%jinv)
+        
+        end associate
+
+
+        ! Analytically computed integral.  {int_0^1}{int_0^1}{int_0^5} [z^2] dxdydz
+        ref_integral = FIVE/THREE
+
+        ! Test that the integral of the projected function match the expected value
+        @assertEqual(ref_integral,fintegral,tol)
+        
+        ! Test that the discrete values of the projected function match the expected values
+        @assertEqual(rvals,fvals,tol)
+        
+        
+    end subroutine
+
+
+
+
+
+!> Test projection of (x * y * z)
+@Test
+    subroutine test_project__xyz(self)
+        class(test_project_function_xyz),    intent(inout)   :: self
+        integer(ik), parameter                               :: npt = 27
+        real(rk)                                             :: fmodes(self%nterms_s)
+        type(xyz_f)                                          :: xyz
+        integer(ik)                 :: ipt, iterm
+        type(point_t)               :: pts(npt), rpts(npt)
+        
+        real(rk)                    :: x(npt), y(npt), z(npt), rvals(npt), fvals(npt)
+        real(rk)                    :: pvals(npt,self%nterms_s)
+        real(rk)                    :: ref_integral, fintegral, xi, eta, zeta, tol
+
+        tol = 1.e-13_rk
+
+        associate (elem => self%dom%mesh%elems(1))
+        
+        ! Function evaluation points
+        x = [0._rk, 2.5_rk, 5.0_rk, 0._rk, 2.5_rk, 5.0_rk, 0._rk, 2.5_rk, 5.0_rk, &
+             0._rk, 2.5_rk, 5.0_rk, 0._rk, 2.5_rk, 5.0_rk, 0._rk, 2.5_rk, 5.0_rk, &
+             0._rk, 2.5_rk, 5.0_rk, 0._rk, 2.5_rk, 5.0_rk, 0._rk, 2.5_rk, 5.0_rk]
+        y = [0._rk, 0.5_rk, 1.0_rk, 0._rk, 0.5_rk, 1.0_rk, 0._rk, 0.5_rk, 1.0_rk, &
+             0._rk, 0.5_rk, 1.0_rk, 0._rk, 0.5_rk, 1.0_rk, 0._rk, 0.5_rk, 1.0_rk, &
+             0._rk, 0.5_rk, 1.0_rk, 0._rk, 0.5_rk, 1.0_rk, 0._rk, 0.5_rk, 1.0_rk]
+        z = [0._rk, 0.5_rk, 1.0_rk, 0._rk, 0.5_rk, 1.0_rk, 0._rk, 0.5_rk, 1.0_rk, &
+             0._rk, 0.5_rk, 1.0_rk, 0._rk, 0.5_rk, 1.0_rk, 0._rk, 0.5_rk, 1.0_rk, &
+             0._rk, 0.5_rk, 1.0_rk, 0._rk, 0.5_rk, 1.0_rk, 0._rk, 0.5_rk, 1.0_rk]
+        
+        do ipt = 1,npt
+            call pts(ipt)%set(x(ipt),y(ipt),z(ipt))     !> Cartesian points
+            
+            xi   = -1._rk + 2._rk * x(ipt)/(5._rk)
+            eta  = -1._rk + 2._rk * y(ipt)/(1._rk)
+            zeta = -1._rk + 2._rk * z(ipt)/(1._rk)
+            call rpts(ipt)%set(xi,eta,zeta)          !> Reference element points
+        end do
+        
+        
+        ! Compute reference values for function
+        rvals = xyz%calc(pts)
+
+        ! Compute projection of function onto polynonmial basis
+        call project_function_xyz(xyz,self%nterms_s,elem%coords,fmodes)
+
+        ! Evaluation polynomial modes at evaluation points
+        do iterm = 1,size(fmodes)
+            do ipt = 1,npt
+                pvals(ipt,iterm) = PolynomialVal(3,size(fmodes),iterm,rpts(ipt))
+            end do
+        end do
+
+        ! Reconstruct projected function at evaluation points
+        fvals = matmul(pvals,fmodes)
+        
+
+        ! Compute integral of function
+        fintegral = sum(matmul(elem%gq%vol%val, fmodes)  *  elem%gq%vol%weights  *  elem%jinv)
+        
+        end associate
+
+
+        ! Analytically computed integral.  {int_0^1}{int_0^1}{int_0^5} (x * y * z) dxdydz
+        ref_integral = 25._rk / 8._rk
+
+        ! Test that the integral of the projected function match the expected value
+        @assertEqual(ref_integral,fintegral,tol)
+        
+        ! Test that the discrete values of the projected function match the expected values
+        @assertEqual(rvals,fvals,tol)
+        
+        
+    end subroutine
+
+
+
+
+
+
+
+
+
+end module test__project_function_xyz__mod

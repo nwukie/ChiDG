@@ -1,2 +1,3 @@
-add_lib_sources(atype_function.f90
-                mod_testfcn.f90)
+add_subdirectory(elementary)
+
+add_lib_sources(atype_function.f90)

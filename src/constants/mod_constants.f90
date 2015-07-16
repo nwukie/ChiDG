@@ -66,8 +66,7 @@ module mod_constants
     integer(ik), parameter :: NGQ = 1
 
     ! INPUT/OUTPUT CONSTANTS
-    integer(ik), parameter :: RES_MESH_OUT = 5
-    integer(ik), parameter :: RES_SOLN_OUT = 5
+    integer(ik), parameter :: IO_RES = 5
     integer(ik), parameter :: MAXBLOCKS    = 200
 
 

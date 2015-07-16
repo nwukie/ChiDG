@@ -8,6 +8,7 @@ project(ucdg Fortran)
 include(cmake/macros/add_exe_sources.txt)
 include(cmake/macros/add_lib_sources.txt)
 include(cmake/macros/add_test_target.txt)
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/modules/")
 
 get_filename_component (Fortran_COMPILER_NAME ${CMAKE_Fortran_COMPILER} NAME)
 
@@ -15,11 +16,11 @@ get_filename_component (Fortran_COMPILER_NAME ${CMAKE_Fortran_COMPILER} NAME)
 #                     Set compiler flags
 #------------------------------------------------------------------                                                                        
 if (Fortran_COMPILER_NAME MATCHES "ifort.*")
-    set (CMAKE_Fortran_COMPILE_FLAGS_DEBUG   "-O0 -debug -p -g -traceback -check all -check bounds -fp-stack-check -assume realloc_lhs")
+    set (CMAKE_Fortran_COMPILE_FLAGS_DEBUG   "-O0 -debug -fpp -p -g -traceback -check all -check bounds -fp-stack-check -assume realloc_lhs")
 #    set (CMAKE_Fortran_COMPILE_FLAGS_DEBUG   "-O3 -p -g")
 #    set (CMAKE_Fortran_COMPILE_FLAGS_RELEASE "-O3")
     #set (CMAKE_Fortran_COMPILE_FLAGS_RELEASE "-O3 -p -g -fpp")
-    set (CMAKE_Fortran_COMPILE_FLAGS_RELEASE "-O3 -p -g -assume realloc_lhs")
+    set (CMAKE_Fortran_COMPILE_FLAGS_RELEASE "-O3 -p -fpp -g -assume realloc_lhs")
     #set (CMAKE_Fortran_FLAGS_RELEASE "-O0 -g -traceback -check uninit -debug all")
     #set (CMAKE_Fortran_FLAGS_DEBUG "-p -g")
     set (CMAKE_Fortran_LINK_FLAGS_DEBUG "-g -traceback -check all -check bounds")
@@ -57,8 +58,8 @@ set(CMAKE_Fortran_MODULE_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 #                        Find HDF5
 #------------------------------------------------------------------
 # NOTE: export HDF5_ROOT path as shell environment variable such that 
-# $HDF5_ROOT/lib  $HDF5_ROOT/include are valid. The find_package
-# module looks first for $HDF5_ROOT
+#       $HDF5_ROOT/lib  $HDF5_ROOT/include are valid. The find_package
+#       module looks first for $HDF5_ROOT
 find_package(HDF5 COMPONENTS Fortran HL Fortran_HL)
 include_directories(${HDF5_INCLUDE_DIRS})
 
@@ -70,6 +71,22 @@ message(STATUS "HDF5_LIBRARIES: " ${HDF5_LIBRARIES})
 #                        Find Lapack
 #------------------------------------------------------------------
 find_package(LAPACK REQUIRED)
+
+
+
+#------------------------------------------------------------------
+#                        Find Tecplot
+#------------------------------------------------------------------
+# NOTE: export TEC_ROOT path as shell environment variables such that
+#       $TEC_ROOT/lib  $TEC_ROOT/include are valid.
+find_package(Tecplot REQUIRED)
+include_directories(${TECPLOT_INCLUDE_DIR})
+
+message(STATUS "TECPLOT_LIBRARIES: " ${TECPLOT_LIBRARIES})
+message(STATUS "TECPLOT_INCLUDE_DIR: " ${TECPLOT_INCLUDE_DIR})
+
+
+
 
 #------------------------------------------------------------------                                                                        
 #                        Add source tree
@@ -84,14 +101,14 @@ add_subdirectory(src)
 #              Add core library and driver targets
 #------------------------------------------------------------------                                                                        
 add_library(coredg STATIC ${LIB_SRCS})
-target_link_libraries(coredg ${HDF5_LIBRARIES} ${LAPACK_LIBRARIES})
+target_link_libraries(coredg ${HDF5_LIBRARIES} ${LAPACK_LIBRARIES} ${TECPLOT_LIBRARIES})
 set_target_properties(coredg PROPERTIES 
                              COMPILE_FLAGS "${CMAKE_Fortran_COMPILE_FLAGS}"
                              LINK_FLAGS    "${CMAKE_Fortran_LINK_FLAGS}")
 
 # Add driver program
 add_executable(chidg ${EXE_SRCS})
-target_link_libraries(chidg coredg ${HDF5_LIBRARIES})
+target_link_libraries(chidg coredg ${HDF5_LIBRARIES} ${TECPLOT_LIBRARIES})
 set_target_properties(chidg PROPERTIES 
                             COMPILE_FLAGS "${CMAKE_Fortran_COMPILE_FLAGS}"
                             LINK_FLAGS    "${CMAKE_Fortran_LINK_FLAGS} -lstdc++ -lgfortran")

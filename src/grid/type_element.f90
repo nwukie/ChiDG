@@ -9,7 +9,7 @@ module type_element
     use mod_quadrature,         only: GQ, get_quadrature
     use mod_element_mapping,    only: elem_map
     use mod_polynomial,         only: polynomialVal
-    use mod_grid,               only: compute_modal_coordinates
+    use mod_grid_tools,         only: compute_modal_coordinates
     use mod_inv,                only: inv
     implicit none
 
@@ -66,6 +66,7 @@ module type_element
         procedure, public   :: x
         procedure, public   :: y
         procedure, public   :: z
+!        procedure, public   :: mesh_point
 !        procedure, public   :: solution_point
 
         ! Private utility procedure
@@ -537,6 +538,32 @@ contains
         zval = dot_product(self%coords%mat(:,3),polyvals)
 
     end function
+
+
+!    function mesh_point(self,icoord,xi,eta,zeta) result(val)
+!        class(element_t),   intent(in)  :: self
+!        integer(ik),        intent(in)  :: icoord
+!        real(rk),           intent(in)  :: xi, eta, zeta
+!
+!        real(rk)        :: val
+!        type(point_t)   :: node
+!        real(rk)        :: polyvals(self%nterms_c)
+!        integer(ik)     :: iterm, ielem
+!
+!        call node%set(xi,eta,zeta)
+!
+!        ! Evaluate polynomial modes at node location
+!        do iterm = 1,self%nterms_c
+!            polyvals(iterm) = polynomialVal(3,self%nterms_c,iterm,node)
+!        end do
+!
+!        ! Evaluate mesh point from dot product of modes and polynomial values
+!        val = dot_product(self%coords%mat(:,icoord), polyvals)
+!
+!    end function
+
+
+
 
 !    function solution_point(self,ivar,xi,eta,zeta) result(val)
 !        class(element_t),   intent(in)  :: self

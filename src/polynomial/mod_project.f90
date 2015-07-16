@@ -1,9 +1,8 @@
 module mod_project
     use mod_kinds,      only: rk,ik
     use mod_quadrature, only: GQ, get_quadrature, compute_nnodes_gq
-    use mod_grid,       only: compute_discrete_coordinates
+    use mod_grid_tools, only: compute_discrete_coordinates
     use type_point,     only: point_t
-    use type_element,   only: element_t
     use type_expansion, only: expansion_t
     use atype_function, only: function_t
 

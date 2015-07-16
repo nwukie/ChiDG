@@ -1,4 +1,7 @@
-add_lib_sources(mod_io.f90 mod_hdfio.f90)
+add_lib_sources(mod_io.f90
+                mod_hdfio.f90
+                mod_tecio_interface.f90
+                mod_tecio.f90)
 
 
 

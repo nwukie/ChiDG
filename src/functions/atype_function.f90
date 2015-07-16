@@ -8,6 +8,7 @@ module atype_function
     contains
         procedure(order_interface), deferred :: order       !> Returns the order of the implemented function so the proper integration rule can be used later on
         procedure(calc_interface),  deferred :: calc        !> Elemental function definition
+
     end type function_t
 
 

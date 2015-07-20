@@ -1,12 +1,12 @@
 module mod_tecio
     use mod_kinds,              only: rk,ik,TEC
     use mod_constants,          only: IO_RES, ONE, HALF, TWO
-    use type_domain,            only: domain_t
-    use type_element,           only: element_t
-    use type_expansion,         only: expansion_t
     use mod_grid_operators,     only: mesh_point, solution_point
     use mod_tecio_interface,    only: init_tecio_file, init_tecio_zone, finalize_tecio
 
+    use type_element,           only: element_t
+    use type_domain,            only: domain_t
+    use type_expansion,         only: expansion_t
     implicit none
 
 #include "tecio.f90"
@@ -15,10 +15,10 @@ contains
 
 
 
-    subroutine write_tecio_variable(domain,filename,timeindex)
-        type(domain_t), intent(in), target  :: domain
-        character(*),   intent(in)          :: filename
-        integer(ik),    intent(in)          :: timeindex
+    subroutine write_tecio_variables(domain,filename,timeindex)
+        type(domain_t), intent(inout), target   :: domain
+        character(*),   intent(in)              :: filename
+        integer(ik),    intent(in)              :: timeindex
 
 
         integer(ik)        :: nelem_xi, nelem_eta, nelem_zeta
@@ -36,18 +36,40 @@ contains
         character(100)     :: varstring
         integer(ik)        :: ieq, ivar
 
-        type(element_t),    pointer :: elems(:,:,:)
+        type(element_t),    pointer :: elem(:,:,:)
+!        type(element_t), allocatable    :: elems(:,:,:)
         type(expansion_t),  pointer :: q(:,:,:)
+!        type(expansion_t), allocatable  :: q(:,:,:)
+
 
 
         ! Store element indices for current block
         nelem_xi   = domain%mesh%nelem_xi
         nelem_eta  = domain%mesh%nelem_eta
         nelem_zeta = domain%mesh%nelem_zeta
+!        allocate(elems(nelem_xi,nelem_eta,nelem_zeta))
+!        allocate(q(nelem_xi,nelem_eta,nelem_zeta))
 
         ! Remap elements array to block matrix
-        elems(1:nelem_xi,1:nelem_eta,1:nelem_zeta) => domain%mesh%elems
+!        elem = reshape(domain%mesh%elems, [nelem_xi, nelem_eta, nelem_zeta])
+!        q = reshape(domain%q, [nelem_xi, nelem_eta, nelem_zeta])
+!        elem(1:2,1:1,1:1) => domain%mesh%elems
+!        elem(lbound(domain%mesh%elems,1):ubound(domain%mesh%elems,1)) => domain%mesh%elems
+        elem(1:nelem_xi,1:nelem_eta,1:nelem_zeta)  => domain%mesh%elems
         q(1:nelem_xi,1:nelem_eta,1:nelem_zeta)     => domain%q
+
+!        print*, 'one'
+!        print*, elem(1,1,1)%ielem
+!        print*, 'two'
+!        print*, elem(2,1,1)%ielem
+
+        print*, 'orig'
+        print*, domain%mesh%elems(1)%ielem
+        print*, domain%mesh%elems(2)%ielem
+
+        print*, 'pointer'
+        print*, elem(1,1,1)%ielem
+        print*, elem(2,1,1)%ielem
 
         ! using (output_res+1) so that the skip number used in tecplot to
         ! correctly display the element surfaces is the same as the number
@@ -65,10 +87,14 @@ contains
         end do
 
 
-
         ! Initialize TECIO binary for solution file
         call init_tecio_file('solnfile',trim(varstring),filename,0)
-        call init_tecio_zone('solnzone',domain%mesh,0,timeindex)
+        call init_tecio_zone('solnzone',domain%mesh,1,timeindex)
+
+
+        print*, domain%mesh%elems(1)%ielem
+        print*, domain%mesh%elems(2)%ielem
+
 
 
         xilim   = npts
@@ -92,7 +118,10 @@ contains
                                     xi = (((real(ipt_xi,rk)-ONE)/(real(npts,rk)-ONE)) - HALF)*TWO
 
                                     ! Get coordinate value at point
-                                    val = mesh_point(elems(ielem_xi,ielem_eta,ielem_zeta),icoord,xi,eta,zeta)
+                                    val = mesh_point(elem(ielem_xi,ielem_eta,ielem_zeta),icoord,xi,eta,zeta)
+                                    if (icoord == 1) then
+!                                        print*, val
+                                    end if
                                     tecstat = TECDAT142(1,valeq,1)
 
                                 end do

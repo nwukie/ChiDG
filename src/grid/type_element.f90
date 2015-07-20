@@ -7,7 +7,7 @@ module type_element
     use type_quadrature,        only: quadrature_t
     use DNAD_D
     use mod_quadrature,         only: GQ, get_quadrature
-    use mod_element_mapping,    only: elem_map
+    use mod_grid,               only: ELEM_MAP
     use mod_polynomial,         only: polynomialVal
     use mod_grid_tools,         only: compute_modal_coordinates
     use mod_inv,                only: inv
@@ -123,6 +123,7 @@ contains
         self%elem_pts = points
 
         call compute_modal_coordinates(self%elem_pts,mapping,self%coords)
+
         self%geomInitialized = .true.                       !> Confirm element grid was initialized
     end subroutine
 

@@ -23,8 +23,9 @@ module type_mesh
         type(face_t),     allocatable  :: faces(:,:)    !> Face storage    (1:nelem,1:nfaces)
 
     contains
-        procedure   :: init_geom
-        procedure   :: init_sol
+        procedure           :: init_geom
+        procedure           :: init_sol
+
         procedure, private  :: init_elems_geom
         procedure, private  :: init_elems_sol
         procedure, private  :: init_faces_geom

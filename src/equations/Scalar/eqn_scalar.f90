@@ -1,4 +1,4 @@
-module type_testeq
+module eqn_scalar
     use mod_kinds,              only: rk,ik
     use mod_constants,          only: NFACES,ONE,TWO,HALF, &
                                       XI_MIN,XI_MAX,ETA_MIN,ETA_MAX,ZETA_MIN,ZETA_MAX
@@ -12,7 +12,7 @@ module type_testeq
 
     private
 
-    type, extends(equationset_t), public :: testeq_t
+    type, extends(equationset_t), public :: scalar_e
 
 
     contains
@@ -26,7 +26,7 @@ module type_testeq
 
 
 
-    end type testeq_t
+    end type scalar_e
 
 
 contains
@@ -36,8 +36,8 @@ contains
     !
     !===========================================================
     subroutine init(self)
-        class(testeq_t), intent(inout) :: self
-!
+        class(scalar_e), intent(inout) :: self
+
         self%neqns   = 1
 
         ! Allocate equations
@@ -58,7 +58,7 @@ contains
     !
     !===========================================================
     subroutine compute_boundary_average_flux(self,mesh,q,ielem,iface,iblk)
-        class(testeq_t),    intent(in)      :: self
+        class(scalar_e),    intent(in)      :: self
         class(mesh_t),      intent(in)      :: mesh
         class(expansion_t), intent(inout)   :: q(:)
         integer(ik),        intent(in)      :: ielem, iface, iblk
@@ -72,7 +72,7 @@ contains
     !
     !===========================================================
     subroutine compute_boundary_upwind_flux(self,mesh,q,ielem,iface,iblk)
-        class(testeq_t),    intent(in)      :: self
+        class(scalar_e),    intent(in)      :: self
         class(mesh_t),      intent(in)      :: mesh
         class(expansion_t), intent(inout)   :: q(:)
         integer(ik),        intent(in)      :: ielem, iface, iblk
@@ -88,7 +88,7 @@ contains
     !
     !===========================================================
     subroutine compute_volume_flux(self,mesh,q,ielem,iblk)
-        class(testeq_t),    intent(in)      :: self
+        class(scalar_e),    intent(in)      :: self
         class(mesh_t),      intent(in)      :: mesh
         class(expansion_t), intent(inout)   :: q(:)
         integer(ik),        intent(in)      :: ielem, iblk
@@ -102,7 +102,7 @@ contains
     !
     !===========================================================
     subroutine compute_volume_source(self,mesh,q,ielem,iblk)
-        class(testeq_t),    intent(in)      :: self
+        class(scalar_e),    intent(in)      :: self
         class(mesh_t),      intent(in)      :: mesh
         class(expansion_t), intent(inout)   :: q(:)
         integer(ik),        intent(in)      :: ielem, iblk
@@ -111,4 +111,4 @@ contains
 
 
 
-end module type_testeq
+end module eqn_scalar

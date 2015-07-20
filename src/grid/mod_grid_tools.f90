@@ -3,13 +3,24 @@ module mod_grid_tools
     use mod_quadrature,         only: GQ
     use type_point,             only: point_t
     use type_expansion,         only: expansion_t
-    use mod_element_mapping,    only: elem_map
+    use mod_grid,               only: elem_map
 
     implicit none
 
 
 
 contains
+
+
+!    subroutine initialize_solution(domain)
+!
+!
+!
+!
+!    end subroutine
+
+
+
 
 
     !>  Compute discrete coordinate values, given the modes of a coordinate expansion

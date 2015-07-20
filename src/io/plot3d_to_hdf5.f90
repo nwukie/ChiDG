@@ -21,7 +21,7 @@ program plot3d_to_hdf5
     integer(HID_T)              :: xspace_id, yspace_id, zspace_id
     integer(HID_T)              :: xset_id,   yset_id,   zset_id
     integer(HID_T)              :: ximin_id,  ximax_id,  etamin_id,  etamax_id,  zetamin_id,  zetamax_id
-    integer(HSIZE_T)            :: dims(3)
+    integer(HSIZE_T)            :: dims(3), adim
 
     ! plot3d vars
     integer(ik)                 :: i,j,k,imax,jmax,kmax,ext_loc
@@ -72,8 +72,9 @@ program plot3d_to_hdf5
     if (ierr /= 0) stop "Error: h5fcreate_f"
 
     ! Add file major.minor version numbers as attributes
-    call h5ltset_attribute_int_f(file_id, "/", 'FORMAT_MAJOR', STORAGE_FORMAT_MAJOR, 1, ierr)
-    call h5ltset_attribute_int_f(file_id, "/", 'FORMAT_MINOR', STORAGE_FORMAT_MINOR, 1, ierr)
+    adim = 1
+    call h5ltset_attribute_int_f(file_id, "/", 'FORMAT_MAJOR', STORAGE_FORMAT_MAJOR, adim, ierr)
+    call h5ltset_attribute_int_f(file_id, "/", 'FORMAT_MINOR', STORAGE_FORMAT_MINOR, adim, ierr)
 
 
 
@@ -84,7 +85,7 @@ program plot3d_to_hdf5
     print*, nblks," grid blocks"
 
     ! Add number of grid domains as attribute
-    call h5ltset_attribute_int_f(file_id, "/", 'ndomains', [nblks], 1, ierr)
+    call h5ltset_attribute_int_f(file_id, "/", 'ndomains', [nblks], adim, ierr)
 
 
     ! Make space for storing dimensions of each block domain
@@ -127,7 +128,7 @@ program plot3d_to_hdf5
         if (ierr /= 0) stop "Error: h5gcreate_f"
 
         ! Write mapping attribute
-        call h5ltset_attribute_int_f(Block_id, "/", 'mapping', [mapping], 1, ierr)
+        call h5ltset_attribute_int_f(Block_id, "/", 'mapping', [mapping], adim, ierr)
 
 
         ! Create a grid-group within the current block domain
@@ -207,12 +208,12 @@ program plot3d_to_hdf5
 
 
         ! Write boundary condition types as attributes for each boundary condition face group
-        call h5ltset_attribute_int_f(BC_id, "XI_MIN", 'BCTYPE', [ximin_bc], 1, ierr)
-        call h5ltset_attribute_int_f(BC_id, "XI_MAX", 'BCTYPE', [ximax_bc], 1, ierr)
-        call h5ltset_attribute_int_f(BC_id, "ETA_MIN", 'BCTYPE', [etamin_bc], 1, ierr)
-        call h5ltset_attribute_int_f(BC_id, "ETA_MAX", 'BCTYPE', [etamax_bc], 1, ierr)
-        call h5ltset_attribute_int_f(BC_id, "ZETA_MIN", 'BCTYPE', [zetamin_bc], 1, ierr)
-        call h5ltset_attribute_int_f(BC_id, "ZETA_MAX", 'BCTYPE', [zetamax_bc], 1, ierr)
+        call h5ltset_attribute_int_f(BC_id, "XI_MIN", 'BCTYPE', [ximin_bc], adim, ierr)
+        call h5ltset_attribute_int_f(BC_id, "XI_MAX", 'BCTYPE', [ximax_bc], adim, ierr)
+        call h5ltset_attribute_int_f(BC_id, "ETA_MIN", 'BCTYPE', [etamin_bc], adim, ierr)
+        call h5ltset_attribute_int_f(BC_id, "ETA_MAX", 'BCTYPE', [etamax_bc], adim, ierr)
+        call h5ltset_attribute_int_f(BC_id, "ZETA_MIN", 'BCTYPE', [zetamin_bc], adim, ierr)
+        call h5ltset_attribute_int_f(BC_id, "ZETA_MAX", 'BCTYPE', [zetamax_bc], adim, ierr)
 
 
 

@@ -1,7 +1,9 @@
 module test_hdfio_var_rw_mod
     use pfunit_mod
+    use type_chidg,     only: chidg_t
     use mod_kinds,      only: rk,ik
     use mod_hdfio,      only: read_grid_hdf5, read_var_hdf5, write_var_hdf5
+    use type_chidg,     only: chidg_t
     use type_point,     only: point_t
     use type_domain,    only: domain_t
     implicit none
@@ -11,6 +13,7 @@ module test_hdfio_var_rw_mod
 
 @TestCase
     type, extends(TestCase) ::  test_hdfio_var_rw
+        type(chidg_t)               :: chidg
         character(11)               :: filename = 'D1_E1_M1.h5'
         type(domain_t), allocatable :: domains(:)
     
@@ -29,10 +32,12 @@ contains
         class(test_hdfio_var_rw),    intent(inout)   :: this
         integer(ik)                                 :: nterms_s
 
+        call this%chidg%init()
+
         call read_grid_hdf5(this%filename, this%domains)
     
         nterms_s = 2*2*2
-        call this%domains(1)%init_sol('testeq',nterms_s)
+        call this%domains(1)%init_sol('scalar',nterms_s)
     end subroutine
     
     subroutine tearDown(this)

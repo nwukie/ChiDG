@@ -1,29 +1,51 @@
 module mod_equations
     use mod_kinds,                      only: rk,ik
     use atype_equationset,              only: equationset_t
-    use type_testeq,                    only: testeq_t
+
+    ! Import Equations
+    use eqn_scalar,                     only: scalar_e
     implicit none
+
+    ! Instantiate Equations
+    type(scalar_e)  :: scalar
+
+
+    logical :: uninitialized = .true.
 
 
 contains
 
 
-    subroutine AssignEquationSet(eqn_string,eqnset)
-        character(*),                      intent(in)      :: eqn_string
+    subroutine initialize_equations()
+
+
+        if (uninitialized) then
+            ! List of equations to initialize
+            call scalar%init()
+
+        end if
+
+        uninitialized = .false.
+    end subroutine
+
+
+
+
+
+
+    subroutine AssignEquationSet(eqnstring,eqnset)
+        character(*),                      intent(in)      :: eqnstring
         class(equationset_t), allocatable, intent(inout)   :: eqnset
 
-        type(testeq_t)  :: testeq
 
 
+        select case (trim(eqnstring))
+            case ('scalar')
+                allocate(eqnset, source=scalar)
 
-
-        if (eqn_string == 'testeq') then
-            call testeq%init()
-            allocate(eqnset, source=testeq)
-
-        else
-            stop "Error: AssignEquationSet -- Invalid equation string"
-        end if
+            case default
+                stop "Error: AssignEquationSet -- equation string not recognized"
+        end select
 
     end subroutine
 

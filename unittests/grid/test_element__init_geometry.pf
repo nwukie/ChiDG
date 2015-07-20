@@ -76,7 +76,7 @@ subroutine testElement__init_geometry__pts_linear()
     use mod_constants,          only: ZERO, ONE, TWO, TENTH
     use type_point,             only: point_t
     use type_element,           only: element_t
-    use mod_element_mapping,    only: compute_element_mappings
+    use mod_grid,               only: compute_element_mappings
     use mod_kinds,              only: rk,ik
     
     implicit none
@@ -130,7 +130,7 @@ subroutine testElement__init_geometry__pts_quadratic()
     use mod_constants,          only: ZERO, ONE, TWO, TENTH
     use type_point,             only: point_t
     use type_element,           only: element_t
-    use mod_element_mapping,    only: compute_element_mappings
+    use mod_grid,               only: compute_element_mappings
     use mod_kinds,              only: rk,ik
     
     implicit none
@@ -188,7 +188,7 @@ subroutine testElement__init_geometry__pts_cubic()
     use mod_constants,          only: ZERO, ONE, TWO, TENTH
     use type_point,             only: point_t
     use type_element,           only: element_t
-    use mod_element_mapping,    only: compute_element_mappings
+    use mod_grid,               only: compute_element_mappings
     use mod_kinds,              only: rk,ik
     
     implicit none
@@ -247,7 +247,7 @@ subroutine testElement__init_geometry__pts_quartic()
     use mod_constants,          only: ZERO, ONE, TWO, TENTH
     use type_point,             only: point_t
     use type_element,           only: element_t
-    use mod_element_mapping,    only: compute_element_mappings
+    use mod_grid,               only: compute_element_mappings
     use mod_kinds,              only: rk,ik
     
     implicit none
@@ -309,7 +309,7 @@ end subroutine
 @Test
 subroutine testElement__init_geometry__modes_linear() 
     use pfunit_mod
-    use mod_element_mapping,    only: compute_element_mappings
+    use mod_grid,               only: compute_element_mappings
     use mod_kinds,              only: rk,ik
     use mod_constants,          only: ZERO, ONE, TWO, TENTH
     use mod_polynomial,         only: polynomialVal
@@ -377,7 +377,7 @@ end subroutine
 @Test
 subroutine testElement__init_geometry__modes_quadratic() 
     use pfunit_mod
-    use mod_element_mapping,    only: compute_element_mappings
+    use mod_grid,               only: compute_element_mappings
     use mod_kinds,              only: rk,ik
     use mod_constants,          only: ZERO, ONE, TWO, TENTH
     use mod_polynomial,         only: polynomialVal
@@ -443,7 +443,7 @@ end subroutine
 @Test
 subroutine testElement__init_geometry__modes_cubic() 
     use pfunit_mod
-    use mod_element_mapping,    only: compute_element_mappings
+    use mod_grid,               only: compute_element_mappings
     use mod_kinds,              only: rk,ik
     use mod_constants,          only: ZERO, ONE, TWO, TENTH
     use mod_polynomial,         only: polynomialVal
@@ -511,7 +511,7 @@ end subroutine
 @Test
 subroutine testElement__init_geometry__modes_quartic() 
     use pfunit_mod
-    use mod_element_mapping,    only: compute_element_mappings
+    use mod_grid,               only: compute_element_mappings
     use mod_kinds,              only: rk,ik
     use mod_constants,          only: ZERO, ONE, TWO, TENTH
     use mod_polynomial,         only: polynomialVal

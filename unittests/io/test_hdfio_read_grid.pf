@@ -2,13 +2,15 @@
 @Test
 subroutine testIO__read_grid_hdf__D1_E1_M1() 
     use pfunit_mod
+    use type_chidg,             only: chidg_t
     use mod_kinds,              only: rk,ik
     use mod_constants,          only: ZERO, ONE
     use type_domain,            only: domain_t
     use mod_hdfio,              only: read_grid_hdf5
-    use mod_element_mapping,    only: compute_element_mappings
+    use mod_grid,               only: compute_element_mappings
     implicit none
     
+    type(chidg_t)               :: chidg
     type(domain_t), allocatable :: domains(:)
     character(100), parameter   :: filename = 'D1_E1_M1.h5'
     integer,        parameter   :: ndomains = 1
@@ -20,7 +22,7 @@ subroutine testIO__read_grid_hdf__D1_E1_M1()
     tol = 1.e-14_rk
     
     ! Initialize element mapping
-    call compute_element_mappings()
+    call chidg%init()
     
     call read_grid_hdf5(filename,domains)
     
@@ -55,13 +57,15 @@ end subroutine
 @Test
 subroutine testIO__read_grid_hdf__D1_E27_M1() 
     use pfunit_mod
+    use type_chidg,             only: chidg_t
     use mod_kinds,              only: rk,ik
     use mod_constants,          only: ZERO, THIRD, NFACES
     use type_domain,            only: domain_t
     use mod_hdfio,              only: read_grid_hdf5
-    use mod_element_mapping,    only: compute_element_mappings
+    use mod_grid,               only: compute_element_mappings
     implicit none
     
+    type(chidg_t)               :: chidg
     type(domain_t), allocatable :: domains(:)
     character(100), parameter   :: filename = 'D1_E27_M1.h5'
     integer,        parameter   :: ndomains = 1
@@ -74,7 +78,7 @@ subroutine testIO__read_grid_hdf__D1_E27_M1()
     tol = 1.e-14_rk
     
     ! Initialize element mapping
-    call compute_element_mappings()
+    call chidg%init()
     
     call read_grid_hdf5(filename,domains)
     

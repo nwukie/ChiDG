@@ -17,8 +17,8 @@ module type_domain
     type, public :: domain_t
         character(100)                      :: name
         type(mesh_t)                        :: mesh
-        class(equationset_t),   allocatable :: eqnset
-        type(expansion_t),    allocatable    :: q(:)
+        class(equationset_t), allocatable   :: eqnset
+        type(expansion_t),    allocatable   :: q(:)
 
         logical                             :: geomInitialized = .false.
         logical                             :: numInitialized  = .false.
@@ -53,6 +53,9 @@ contains
     end subroutine
 
 
+
+
+
     !>  Initialize domain numerics
     !!      -   call routine to initialize and assign equation set
     !!      -   call numerics initialization for mesh component
@@ -70,7 +73,7 @@ contains
         integer(ik) :: ielem
 
         ! Set domain equation set
-        call AssignEquationSet(eqnstring,self%eqnset)               ! Factory method for allocating an equation set
+        call AssignEquationSet(eqnstring,self%eqnset)               !> Factory method for allocating an equation set
 
         ! Initialize mesh solution data
         call self%mesh%init_sol(self%eqnset%neqns,nterms_s)
@@ -83,6 +86,8 @@ contains
 
         self%numInitialized = .true.
     end subroutine
+
+
 
 
 

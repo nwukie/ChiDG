@@ -2,7 +2,7 @@
 @Test
 subroutine testElementMapping_allocated() 
     use pfunit_mod
-    use mod_element_mapping,    only: compute_element_mappings, elem_map
+    use mod_grid,               only: compute_element_mappings, ELEM_MAP
     use mod_kinds,              only: rk,ik
     implicit none
     
@@ -22,7 +22,7 @@ end subroutine
 @Test
 subroutine testElementMapping_sizes() 
     use pfunit_mod
-    use mod_element_mapping,    only: compute_element_mappings, elem_map
+    use mod_grid,               only: compute_element_mappings, ELEM_MAP
     use mod_kinds,              only: rk,ik
     implicit none
     
@@ -48,7 +48,7 @@ end subroutine
 @Test
 subroutine testElementMapping_reversability_linear() 
     use pfunit_mod
-    use mod_element_mapping,    only: compute_element_mappings, elem_map
+    use mod_grid,               only: compute_element_mappings, ELEM_MAP
     use mod_kinds,              only: rk,ik
     use mod_constants,          only: ZERO, ONE, TWO, TENTH
     use mod_polynomial,         only: polynomialVal
@@ -155,7 +155,7 @@ end subroutine
 @Test
 subroutine testElementMapping_reversability_quadratic() 
     use pfunit_mod
-    use mod_element_mapping,    only: compute_element_mappings, elem_map
+    use mod_grid,               only: compute_element_mappings, ELEM_MAP
     use mod_kinds,              only: rk,ik
     use mod_constants,          only: ZERO, ONE, TWO, THREE, TENTH
     use mod_polynomial,         only: polynomialVal
@@ -262,7 +262,7 @@ end subroutine
 @Test
 subroutine testElementMapping_reversability_cubic() 
     use pfunit_mod
-    use mod_element_mapping,    only: compute_element_mappings, elem_map
+    use mod_grid,               only: compute_element_mappings, ELEM_MAP
     use mod_kinds,              only: rk,ik
     use mod_constants,          only: ZERO, ONE, TWO, THREE, FOUR, TENTH
     use mod_polynomial,         only: polynomialVal
@@ -369,7 +369,7 @@ end subroutine
 @Test
 subroutine testElementMapping_reversability_quartic() 
     use pfunit_mod
-    use mod_element_mapping,    only: compute_element_mappings, elem_map
+    use mod_grid,               only: compute_element_mappings, ELEM_MAP
     use mod_kinds,              only: rk,ik
     use mod_constants,          only: ZERO, ONE, TWO, THREE, FOUR, TENTH
     use mod_polynomial,         only: polynomialVal

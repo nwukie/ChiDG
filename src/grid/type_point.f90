@@ -95,7 +95,7 @@ contains
 
 
     !> Default destructor for point_t
-    subroutine destructor(self)
+    elemental subroutine destructor(self)
         type(point_t), intent(in) :: self
     end subroutine
 

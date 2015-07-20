@@ -1,6 +1,7 @@
 module fcn_zsquared
     use mod_kinds,      only: rk,ik
     use atype_function, only: function_t
+    use type_point,     only: point_t
     implicit none
     private
 

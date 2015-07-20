@@ -88,6 +88,7 @@ contains
 
         varindex = 123456789
 
+
         ! Search for character string in equation, if found set index
         do ieq = 1,self%neqns
             if (varstring == self%eqns(ieq)%name) then

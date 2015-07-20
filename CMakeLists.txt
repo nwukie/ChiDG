@@ -12,6 +12,8 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/modules/")
 
 get_filename_component (Fortran_COMPILER_NAME ${CMAKE_Fortran_COMPILER} NAME)
 
+
+set(CMAKE_BUILD_TYPE Debug)
 #------------------------------------------------------------------                                                                        
 #                     Set compiler flags
 #------------------------------------------------------------------                                                                        
@@ -31,19 +33,21 @@ elseif(Fortran_COMPILER_NAME MATCHES "gfortran.*")
 #if (Fortran_COMPILER_NAME MATCHES "gfortran.*")
     # -fcray-pointer for tecio output
     set (CMAKE_Fortran_COMPILE_FLAGS_RELEASE "-O3 -fcray-pointer -ffree-form -ffree-line-length-none -cpp")
-    #set (CMAKE_Fortran_FLAGS_RELEASE "-O0 -g -traceback -check uninit -debug all")
-    #set (CMAKE_Fortran_FLAGS_DEBUG "-p -g")
+    set (CMAKE_Fortran_COMPILE_FLAGS_DEBUG "-O0 -fbacktrace -fbounds-check -fcheck=all -p -g -cpp")
     set (CMAKE_Fortran_LINK_FLAGS_DEBUG "")
     set (CMAKE_Fortran_LINK_FLAGS_RELEASE "")
 endif()
 
 
-#set(CMAKE_Fortran_COMPILE_FLAGS ${CMAKE_Fortran_COMPILE_FLAGS_RELEASE})
-#set(CMAKE_Fortran_LINK_FLAGS ${CMAKE_Fortran_LINK_FLAGS_RELEASE})
-
-set(CMAKE_Fortran_COMPILE_FLAGS ${CMAKE_Fortran_COMPILE_FLAGS_DEBUG})
-set(CMAKE_Fortran_LINK_FLAGS ${CMAKE_Fortran_LINK_FLAGS_DEBUG})
-
+if (${CMAKE_BUILD_TYPE} MATCHES Release)
+    set(CMAKE_Fortran_COMPILE_FLAGS ${CMAKE_Fortran_COMPILE_FLAGS_RELEASE})
+    set(CMAKE_Fortran_LINK_FLAGS ${CMAKE_Fortran_LINK_FLAGS_RELEASE})
+    message(STATUS "Build type: " ${CMAKE_BUILD_TYPE})
+elseif(${CMAKE_BUILD_TYPE} MATCHES Debug)
+    set(CMAKE_Fortran_COMPILE_FLAGS ${CMAKE_Fortran_COMPILE_FLAGS_DEBUG})
+    set(CMAKE_Fortran_LINK_FLAGS ${CMAKE_Fortran_LINK_FLAGS_DEBUG})
+    message(STATUS "Build type: " ${CMAKE_BUILD_TYPE})
+endif()
 
 
 
@@ -124,7 +128,9 @@ set_target_properties(chidg PROPERTIES
 set(UNITTEST TRUE CACHE BOOL "Enable building unit tests")
 if (UNITTEST)
     enable_testing()
-    set(PFUNIT /Users/nathanwukie/Documents/pbus/pFUnit/install/gnu/serial)
+#    set(PFUNIT /Users/nathanwukie/Documents/pbus/pFUnit/install/gnu/serial)
+    set(PFUNIT /Users/nathanwukie/Documents/pbus/pFUnit/install/intel/serial)
+#    set(PFUNIT /Users/nathanwukie/Documents/pbus/pFUnit_gnu/install)
     set(PFU_LIB ${PFUNIT}/lib)
 
     # Add tests

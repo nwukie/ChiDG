@@ -111,11 +111,13 @@ contains
                 call h5dread_f(did_x, H5T_NATIVE_DOUBLE, xpts, dims, ierr)
                 if (ierr /= 0) stop "Error: read_grid_hdf5 -- h5dread_f"
 
-                allocate(ypts, source=xpts)
+!                allocate(ypts, mold=xpts)   ! bug in gcc
+                allocate(ypts(dims(1),dims(2),dims(3)))
                 call h5dread_f(did_y, H5T_NATIVE_DOUBLE, ypts, dims, ierr)
                 if (ierr /= 0) stop "Error: read_grid_hdf5 -- h5dread_f"
 
-                allocate(zpts, source=xpts)
+!                allocate(zpts, mold=xpts)   ! bug in gcc
+                allocate(zpts(dims(1),dims(2),dims(3)))
                 call h5dread_f(did_z, H5T_NATIVE_DOUBLE, zpts, dims, ierr)
                 if (ierr /= 0) stop "Error: read_grid_hdf5 -- h5dread_f"
 
@@ -261,7 +263,7 @@ contains
                 end if
 
                 !>  Open the Variable dataset
-                write(ctime, '(I0.3)') time         !> write time as character string
+                write(ctime, '(I0.3)') time                     !> write time as character string
                 varstring = trim(cvar)//'_'//trim(ctime)        !> compose variable name as 'var_time'
                 call h5dopen_f(gid, trim(varstring), vid, ierr, H5P_DEFAULT_F)
                 if (ierr /= 0) stop "Error: read_var_hdf5 -- variable does not exist or was not opened correctly"
@@ -336,9 +338,9 @@ contains
         type(domain_t), intent(inout)   :: domains(:)
 
 
-        integer(HID_T)   :: fid, gid, sid, did          !> Identifiers
-        integer(HSIZE_T) :: dims(2), maxdims(2)         !> Dataspace dimensions
-        type(H5O_INFO_T) :: info                        !> Object info type
+        integer(HID_T)   :: fid, gid, sid, did           !> Identifiers
+        integer(HSIZE_T) :: dims(2), maxdims(2), adim    !> Dataspace dimensions
+        type(H5O_INFO_T) :: info                         !> Object info type
 
         integer, dimension(1)           :: ibuf
         character(100)                  :: cbuf, eqnstring, varstring, var_grp, ctime
@@ -348,6 +350,7 @@ contains
                                            npts,        idom,   nterms_1d,  nterms_s,   order,  &
                                            ivar,        ielem
         logical                         :: FileExists, VariablesExists, DataExists, ElementsEqual
+        logical                         :: exists
 
 
 
@@ -397,16 +400,11 @@ contains
 
 
                 !> Check if 'Variables' group exists
-                call h5oget_info_by_name_f(fid, trim(gname)//"/Variables", info, ierr)
-                if (ierr == 0) then
-                    VariablesExists = .true.
-                else
-                    VariablesExists = .false.
-                end if
+                call h5lexists_f(fid, trim(gname)//"/Variables", exists, ierr)
 
 
                 !> Open the Domain/Variables group
-                if (VariablesExists) then
+                if (exists) then
                     ! If 'Variables' group exists then open the existing group
                     call h5gopen_f(fid, trim(gname)//"/Variables", gid, ierr, H5P_DEFAULT_F)
                     if (ierr /= 0) stop "Error: h5gopen_f -- Domain/Grid group did not open properly"
@@ -418,15 +416,11 @@ contains
 
 
                 !>  Set number of terms in solution expansion
+                adim = 1
                 ibuf = domains(idom)%mesh%nterms_s
-                call h5ltset_attribute_int_f(gid, "/", 'Order', ibuf, 1, ierr)
+                call h5ltset_attribute_int_f(gid, "/", 'Order', ibuf, adim, ierr)
                 if (ierr /= 0) stop "Error: write_var_hdf5 - h5ltset_attribute_int_f"
-!                nterms_1d = (order + 1)
-!                nterms_s = nterms_1d*nterms_1d*nterms_1d
-!
-!
-!                !> Call domain solution initialization
-!                call domains(idom)%init_sol(eqnstring,nterms_s)
+
 
                 !> Compose variable string
                 write(ctime, '(I0.3)') time                     !> write time as character string
@@ -440,16 +434,12 @@ contains
 
                 !>  Open the Variable dataset
                 ! Check if variable dataset already exists
-                call h5oget_info_by_name_f(gid, trim(varstring), info, ierr)
-                if (ierr == 0) then
-                    DataExists = .true.
-                else
-                    DataExists = .false.
-                end if
+                call h5lexists_f(gid, trim(varstring), exists, ierr)
+
 
 
                 !> Reset dataspace size if necessary
-                if (DataExists) then
+                if (exists) then
                     ! Open the existing dataset
                     call h5dopen_f(gid, trim(varstring), did, ierr, H5P_DEFAULT_F)
                     if (ierr /= 0) stop "Error: write_var_hdf5 -- variable does not exist or was not opened correctly"

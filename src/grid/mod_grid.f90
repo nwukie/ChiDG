@@ -1,4 +1,4 @@
-module mod_element_mapping
+module mod_grid
     use mod_kinds,          only: rk,ik
     use mod_constants,      only: ONE, TWO
     use mod_polynomial,     only: polynomialVal
@@ -8,10 +8,38 @@ module mod_element_mapping
 
     ! coordinate mapping matrices
     integer(ik),         parameter      :: nmap = 4
-    type(denseblock_t),  save,  target  :: elem_map(nmap)  !> array of matrices
+    type(denseblock_t),  save,  target  :: ELEM_MAP(nmap)  !> array of matrices
+
+    logical :: uninitialized = .true.
 
 contains
 
+    !>  Call grid initialization routines
+    !!
+    !!  @author Nathan A. Wukie
+    !----------------------------------------------------------------
+    subroutine initialize_grid()
+
+        if (uninitialized) then
+            call compute_element_mappings()
+        end if
+
+        uninitialized = .false.
+    end subroutine
+
+
+
+
+
+
+
+
+    !>  Compute matrix to convert element discrete coordinates to
+    !!  modal coordinates. Initializes the array of denseblock matrices
+    !!  in ELEM_MAP.
+    !!
+    !!  @author Nathan A. Wukie
+    !----------------------------------------------------------------
     subroutine compute_element_mappings()
         use type_point, only: point_t
 
@@ -56,13 +84,13 @@ contains
             ! Compute the values of each mapping term at each mesh point
             do iterm = 1,npts_3d(imap)
                 do inode = 1,npts_3d(imap)
-                    elem_map(imap)%mat(inode,iterm) = polynomialVal(3,npts_3d(imap),iterm,nodes(inode))
+                    ELEM_MAP(imap)%mat(inode,iterm) = polynomialVal(3,npts_3d(imap),iterm,nodes(inode))
                 end do
             end do
 
             ! Invert matrix so that it can multiply a vector of
             ! element points to compute the mode amplitudes of the x,y mappings
-            elem_map(imap)%mat = inv(elem_map(imap)%mat)
+            elem_map(imap)%mat = inv(ELEM_MAP(imap)%mat)
 
 
             deallocate(nodes, xi, eta, zeta, stat=ierr)
@@ -76,4 +104,4 @@ contains
 
 
 
-end module mod_element_mapping
+end module mod_grid

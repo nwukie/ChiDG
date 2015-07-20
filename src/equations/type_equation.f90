@@ -13,7 +13,7 @@ module type_equation
 
 contains
     
-    subroutine destructor(self)
+    elemental subroutine destructor(self)
         type(equation_t), intent(in) :: self
     end subroutine
 

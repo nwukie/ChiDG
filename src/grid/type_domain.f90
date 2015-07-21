@@ -13,12 +13,18 @@ module type_domain
 
     private
 
-    !====================================================
+
+    !> Domain data type
+    !   - contains mesh, solution, and equation set information
+    !
+    !   @author Nathan A. Wukie
+    !---------------------------------------------------------------------------------------
     type, public :: domain_t
-        character(100)                      :: name
-        type(mesh_t)                        :: mesh
-        class(equationset_t), allocatable   :: eqnset
-        type(expansion_t),    allocatable   :: q(:)
+        character(100)                      :: name         !> Domain name -- not currently used
+        type(mesh_t)                        :: mesh         !> Mesh storage
+        class(equationset_t), allocatable   :: eqnset       !> Equation set solved on this domain
+        type(expansion_t),    allocatable   :: q(:)         !> Array of solution expansions. One for each element.
+        type(expansion_t),    pointer       :: q_m(:,:,:)   !> Matrix view of solution expansions
 
         logical                             :: geomInitialized = .false.
         logical                             :: numInitialized  = .false.
@@ -29,7 +35,7 @@ module type_domain
         final           :: destructor
 
     end type domain_t
-    !=====================================================
+    !---------------------------------------------------------------------------------------
 
 
 contains
@@ -45,6 +51,8 @@ contains
         class(domain_t),    intent(inout)   :: self
         integer(ik),        intent(in)      :: nterms_c
         type(point_t),      intent(in)      :: points(:,:,:)
+
+        if (self%geomInitialized) stop "Error: domain%init_geom -- domain geometry already initialized"
 
         ! Initialize mesh geometry
         call self%mesh%init_geom(nterms_c,points)
@@ -66,11 +74,15 @@ contains
     !!  @param[in]  nterms_s    Number of terms in the modal representation of the solution
     !------------------------------------------------------------------
     subroutine init_sol(self,eqnstring,nterms_s)
-        class(domain_t),    intent(inout)   :: self
-        character(*),       intent(in)      :: eqnstring
-        integer(ik),        intent(in)      :: nterms_s
+        class(domain_t),    intent(inout), target :: self
+        character(*),       intent(in)            :: eqnstring
+        integer(ik),        intent(in)            :: nterms_s
+        type(expansion_t), pointer                :: temp(:)
 
         integer(ik) :: ielem
+
+        if (self%numInitialized) stop "Error: domain%init_sol -- domain numerics already initialized"
+
 
         ! Set domain equation set
         call AssignEquationSet(eqnstring,self%eqnset)               !> Factory method for allocating an equation set
@@ -83,6 +95,12 @@ contains
         do ielem = 1,self%mesh%nelem
             call self%q(ielem)%init(nterms_s,self%eqnset%neqns)     !> Initialize expansion for each element
         end do
+
+
+        ! Initialize solution matrix view
+        temp => self%q
+        self%q_m(1:self%mesh%nelem_xi, 1:self%mesh%nelem_eta, 1:self%mesh%nelem_zeta) => temp(1:self%mesh%nelem)
+
 
         self%numInitialized = .true.
     end subroutine

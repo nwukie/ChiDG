@@ -10,47 +10,6 @@ include(cmake/macros/add_lib_sources.txt)
 include(cmake/macros/add_test_target.txt)
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/modules/")
 
-get_filename_component (Fortran_COMPILER_NAME ${CMAKE_Fortran_COMPILER} NAME)
-
-
-set(CMAKE_BUILD_TYPE Debug)
-#------------------------------------------------------------------                                                                        
-#                     Set compiler flags
-#------------------------------------------------------------------                                                                        
-if (Fortran_COMPILER_NAME MATCHES "ifort.*")
-    set (CMAKE_Fortran_COMPILE_FLAGS_DEBUG   "-O0 -debug -fpp -p -g -traceback -check all -check bounds -fp-stack-check -assume realloc_lhs")
-#    set (CMAKE_Fortran_COMPILE_FLAGS_DEBUG   "-O3 -p -g")
-#    set (CMAKE_Fortran_COMPILE_FLAGS_RELEASE "-O3")
-    #set (CMAKE_Fortran_COMPILE_FLAGS_RELEASE "-O3 -p -g -fpp")
-    set (CMAKE_Fortran_COMPILE_FLAGS_RELEASE "-O3 -p -fpp -g -assume realloc_lhs")
-    #set (CMAKE_Fortran_FLAGS_RELEASE "-O0 -g -traceback -check uninit -debug all")
-    #set (CMAKE_Fortran_FLAGS_DEBUG "-p -g")
-    set (CMAKE_Fortran_LINK_FLAGS_DEBUG "-g -traceback -check all -check bounds")
-    set (CMAKE_Fortran_LINK_FLAGS_RELEASE "")
-
-elseif(Fortran_COMPILER_NAME MATCHES "gfortran.*")
-
-#if (Fortran_COMPILER_NAME MATCHES "gfortran.*")
-    # -fcray-pointer for tecio output
-    set (CMAKE_Fortran_COMPILE_FLAGS_RELEASE "-O3 -fcray-pointer -ffree-form -ffree-line-length-none -cpp")
-    set (CMAKE_Fortran_COMPILE_FLAGS_DEBUG "-O0 -fbacktrace -fbounds-check -fcheck=all -p -g -cpp")
-    set (CMAKE_Fortran_LINK_FLAGS_DEBUG "")
-    set (CMAKE_Fortran_LINK_FLAGS_RELEASE "")
-endif()
-
-
-if (${CMAKE_BUILD_TYPE} MATCHES Release)
-    set(CMAKE_Fortran_COMPILE_FLAGS ${CMAKE_Fortran_COMPILE_FLAGS_RELEASE})
-    set(CMAKE_Fortran_LINK_FLAGS ${CMAKE_Fortran_LINK_FLAGS_RELEASE})
-    message(STATUS "Build type: " ${CMAKE_BUILD_TYPE})
-elseif(${CMAKE_BUILD_TYPE} MATCHES Debug)
-    set(CMAKE_Fortran_COMPILE_FLAGS ${CMAKE_Fortran_COMPILE_FLAGS_DEBUG})
-    set(CMAKE_Fortran_LINK_FLAGS ${CMAKE_Fortran_LINK_FLAGS_DEBUG})
-    message(STATUS "Build type: " ${CMAKE_BUILD_TYPE})
-endif()
-
-
-
 # Set output directories
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
@@ -58,16 +17,74 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 set(CMAKE_Fortran_MODULE_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 
 
+
+
+#------------------------------------------------------------------
+#                    Get fortran compiler vendor
+#------------------------------------------------------------------
+get_filename_component (Fortran_COMPILER_NAME ${CMAKE_Fortran_COMPILER} NAME)
+if (Fortran_COMPILER_NAME MATCHES "ifort.*")
+    set (Fortran_VENDOR "INTEL")
+elseif (Fortran_COMPILER_NAME MATCHES "gfortran.*")
+    set (Fortran_VENDOR "GNU")
+else ()
+    message(SEND_ERROR "Fortran compiler not recognized")
+endif()
+
+
+#------------------------------------------------------------------                                                                        
+#                     Set compiler flags
+#------------------------------------------------------------------                                                                        
+if (${Fortran_VENDOR} MATCHES "INTEL")
+    set (USER_COMPILE_FLAGS_DEBUG   "-O0 -fpp -assume realloc_lhs -debug -p -g -traceback -check all -check bounds -fp-stack-check")
+    set (USER_COMPILE_FLAGS_RELEASE "-O3 -fpp -assume realloc_lhs")
+    set (CMAKE_Fortran_LINK_FLAGS_DEBUG "")
+    set (CMAKE_Fortran_LINK_FLAGS_RELEASE "")
+    
+elseif (${Fortran_VENDOR} MATCHES "GNU")
+    set (USER_COMPILE_FLAGS_DEBUG   "-O0 -cpp -fbacktrace -fbounds-check -fcheck=all -p -g")
+    set (USER_COMPILE_FLAGS_RELEASE "-O3 -cpp")
+#    set (USER_COMPILE_FLAGS_RELEASE "-O3 -cpp -fcray-pointer -ffree-form -ffree-line-length-none")
+    set (CMAKE_Fortran_LINK_FLAGS_DEBUG "")
+    set (CMAKE_Fortran_LINK_FLAGS_RELEASE "")
+    
+endif()
+
+# Append user flags to debug and release variables
+set (CMAKE_Fortran_FLAGS_DEBUG "${CMAKE_Fortran_FLAGS_DEBUG} ${USER_COMPILE_FLAGS_DEBUG}")
+set (CMAKE_Fortran_FLAGS_RELEASE "${CMAKE_Fortran_FLAGS_RELEASE} ${USER_COMPILE_FLAGS_RELEASE}")
+
+
+
+
+
+
 #------------------------------------------------------------------                                                                        
 #                        Find HDF5
 #------------------------------------------------------------------
 # NOTE: export HDF5_ROOT path as shell environment variable such that 
-#       $HDF5_ROOT/lib  $HDF5_ROOT/include are valid. The find_package
-#       module looks first for $HDF5_ROOT
-find_package(HDF5 COMPONENTS Fortran HL Fortran_HL)
-include_directories(${HDF5_INCLUDE_DIRS})
+#       $HDF5_ROOT/gnu or $HDF5_ROOT/intel are valid. Inside the 'gnu' or 'intel'
+#       folder one should find lib and include directories. The find_package
+#       module looks first for $HDF5_ROOT. Here we append the gnu or intel folder to 
+#       the environment variable based on what compiler we are using.
+if (${Fortran_VENDOR} MATCHES "INTEL")
+    message(STATUS "$ENV{HDF5_ROOT}")
+    set(ENV{HDF5_ROOT} $ENV{HDF5_ROOT}/intel)
+    message(STATUS "$ENV{HDF5_ROOT}")
+    find_package(HDF5 REQUIRED COMPONENTS Fortran HL Fortran_HL)
+#    find_package(HDF5 REQUIRED COMPONENTS Fortran HL Fortran_HL HINTS intel)
+    include_directories(${HDF5_INCLUDE_DIRS})
+elseif (${Fortran_VENDOR} MATCHES "GNU")
+        message(STATUS "$ENV{HDF5_ROOT}")
+    set(ENV{HDF5_ROOT} $ENV{HDF5_ROOT}/gnu)
+    message(STATUS "$ENV{HDF5_ROOT}")
+    find_package(HDF5 REQUIRED COMPONENTS Fortran HL Fortran_HL)
+    include_directories(${HDF5_INCLUDE_DIRS})
+endif()
 
-message(STATUS "HDF5_LIBRARIES: " ${HDF5_LIBRARIES})
+if (HDF5_FOUND)
+    message(STATUS "HDF5_LIBRARIES: " ${HDF5_LIBRARIES})
+endif()
 
 
 
@@ -107,19 +124,18 @@ add_subdirectory(src)
 add_library(coredg STATIC ${LIB_SRCS})
 target_link_libraries(coredg ${HDF5_LIBRARIES} ${LAPACK_LIBRARIES} ${TECPLOT_LIBRARIES})
 set_target_properties(coredg PROPERTIES 
-                             COMPILE_FLAGS "${CMAKE_Fortran_COMPILE_FLAGS}"
+                             COMPILE_FLAGS "${CMAKE_Fortran_FLAGS}"
                              LINK_FLAGS    "${CMAKE_Fortran_LINK_FLAGS}")
 
 # Add driver program
 add_executable(chidg ${EXE_SRCS})
 target_link_libraries(chidg coredg ${HDF5_LIBRARIES} ${TECPLOT_LIBRARIES})
 set_target_properties(chidg PROPERTIES 
-                            COMPILE_FLAGS "${CMAKE_Fortran_COMPILE_FLAGS}"
+                            COMPILE_FLAGS "${CMAKE_Fortran_FLAGS}"
                             LINK_FLAGS    "${CMAKE_Fortran_LINK_FLAGS} -lstdc++ -lgfortran")
                             # need to link lstdc++ here for tecio
                             # need to link to gfortran if compiling with ifort and 
                             # linking to atlas, which was compiled with gfortran
-
 
 
 #------------------------------------------------------------------                                                                    
@@ -128,9 +144,12 @@ set_target_properties(chidg PROPERTIES
 set(UNITTEST TRUE CACHE BOOL "Enable building unit tests")
 if (UNITTEST)
     enable_testing()
-#    set(PFUNIT /Users/nathanwukie/Documents/pbus/pFUnit/install/gnu/serial)
-    set(PFUNIT /Users/nathanwukie/Documents/pbus/pFUnit/install/intel/serial)
-#    set(PFUNIT /Users/nathanwukie/Documents/pbus/pFUnit_gnu/install)
+    if (${Fortran_VENDOR} MATCHES "INTEL")
+        set(PFUNIT /Users/nathanwukie/Documents/pbus/pfunit/pfunit_intel/install)
+    elseif (${Fortran_VENDOR} MATCHES "GNU")
+        #set(PFUNIT /Users/nathanwukie/Documents/pbus/pFUnit/install/gnu/serial)
+        set(PFUNIT /Users/nathanwukie/Documents/pbus/pfunit/pfunit_gnu/install)
+    endif()
     set(PFU_LIB ${PFUNIT}/lib)
 
     # Add tests

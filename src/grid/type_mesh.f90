@@ -19,8 +19,9 @@ module type_mesh
         integer(ik)         :: nelem_xi, nelem_eta, nelem_zeta, nelem
 
         ! Grid data
-        type(element_t),  allocatable  :: elems(:)      !> Element storage (1:nelem)
-        type(face_t),     allocatable  :: faces(:,:)    !> Face storage    (1:nelem,1:nfaces)
+        type(element_t),  allocatable  :: elems(:)                  !> Element storage (1:nelem)
+        type(element_t),  pointer      :: elems_m(:,:,:) => null()  !> Matrix view of element storage (1:nelem_xi, 1:nelem_eta, 1:nelem_zeta)
+        type(face_t),     allocatable  :: faces(:,:)                !> Face storage    (1:nelem,1:nfaces)
 
     contains
         procedure           :: init_geom
@@ -46,14 +47,19 @@ contains
     !!  @param[in]  points_g    Rank-3 matrix of coordinate points defining a block mesh
     !---------------------------------------------------------------------------------------
     subroutine init_geom(self,nterms_c,points_g)
-        class(mesh_t),  intent(inout)   :: self
-        integer(ik),    intent(in)      :: nterms_c
-        type(point_t),  intent(in)      :: points_g(:,:,:)
+        class(mesh_t),  intent(inout), target   :: self
+        integer(ik),    intent(in)              :: nterms_c
+        type(point_t),  intent(in)              :: points_g(:,:,:)
+        type(element_t), pointer                :: temp(:)
 
         self%nterms_c = nterms_c
 
         call self%init_elems_geom(points_g)
         call self%init_faces_geom()
+
+        ! Initialize element matrix view
+        temp => self%elems
+        self%elems_m(1:self%nelem_xi,1:self%nelem_eta,1:self%nelem_zeta) => temp(1:self%nelem)
     end subroutine
 
 
@@ -76,6 +82,7 @@ contains
 
         call self%init_elems_sol(neqns,nterms_s)
         call self%init_faces_sol()
+
     end subroutine
 
 

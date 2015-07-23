@@ -96,9 +96,6 @@ contains
 
                                     ! Get coordinate value at point
                                     val = mesh_point(elem(ielem_xi,ielem_eta,ielem_zeta),icoord,xi,eta,zeta)
-                                    if (icoord == 1) then
-!                                        print*, val
-                                    end if
                                     tecstat = TECDAT142(1,valeq,1)
 
                                 end do

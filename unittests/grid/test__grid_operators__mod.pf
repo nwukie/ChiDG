@@ -1,0 +1,167 @@
+module test__grid_operators__mod
+    use pfunit_mod
+    use mod_kinds,              only: rk,ik
+    use mod_constants,          only: ZERO, ONE, TWO, THREE, FIVE, SIX, EIGHT, NINE, TEN, &
+                                      XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX
+    use type_chidg,             only: chidg_t
+    use type_point,             only: point_t
+    use type_domain,            only: domain_t
+    use type_element,           only: element_t
+    use type_face,              only: face_t
+    use mod_grid_operators,     only: mesh_point, solution_point
+    implicit none
+
+    public  :: test__grid_operators
+
+@TestCase
+    type, extends(TestCase) ::  test__grid_operators
+        type(chidg_t)   :: chidg
+        type(domain_t)  :: dom
+
+    contains
+        procedure   ::  setUp
+        procedure   ::  tearDown
+    end type test__grid_operators
+
+
+contains
+    !> NOTE: make sure to use 'this' instead of 'self' since these are over-writting a derived type 
+    !! procedure. The argument names have to match
+    subroutine setUp(this)
+        class(test__grid_operators),    intent(inout)   :: this
+        
+        integer(ik),   parameter :: npt = 8
+        type(point_t), target    :: pts(npt)
+        type(point_t), pointer   :: pts_m(:,:,:)
+        integer(ik)              :: nterms_c, nterms_s
+        
+        
+        call this%chidg%init()
+        
+        
+        !> (x = 0-5 :: y = 0-1 :: z = 0-1)
+        !!          *-------*
+        !!         /       /|
+        !!    x=5 /       / |
+        !!       /       /  *
+        !!      *-------*  /
+        !!      |       | /
+        !!  z=1 |       |/
+        !!      *-------*
+        !!         y=1
+        !!
+        call pts(1)%set(0._rk, 0._rk, 0._rk)
+        call pts(2)%set(5._rk, 0._rk, 0._rk)
+        call pts(3)%set(0._rk, 1._rk, 0._rk)
+        call pts(4)%set(5._rk, 1._rk, 0._rk)
+        call pts(5)%set(0._rk, 0._rk, 1._rk)
+        call pts(6)%set(5._rk, 0._rk, 1._rk)
+        call pts(7)%set(0._rk, 1._rk, 1._rk)
+        call pts(8)%set(5._rk, 1._rk, 1._rk)
+        
+        pts_m(1:2,1:2,1:2) => pts   !> Remap to matrix for domain initialization
+        
+        
+        nterms_c = 8
+        nterms_s = 27
+        call this%dom%init_geom(nterms_c,pts_m)
+        call this%dom%init_sol('scalar',nterms_s)
+        
+        
+
+    end subroutine
+    
+    
+    !> Tear down and deallocate any necessary components
+    subroutine tearDown(this)
+        class(test__grid_operators),    intent(inout)   :: this
+        
+        
+    end subroutine
+
+
+
+!-----------------------------------------------------------------------------------
+!-----------------------------------------------------------------------------------
+
+!> Test mesh_point routine returns the correct x-coordinate value
+@Test
+    subroutine test__mesh_point__x(self)
+        class(test__grid_operators),    intent(inout)   :: self
+
+        real(rk), dimension(5)  :: ref_coords, check_coords, xi, eta, zeta
+        integer(ik)             :: icoord, ipt
+                        
+
+        xi = [-1.0_rk, -0.5_rk, 0.5_rk, 1.0_rk, 0.5_rk]
+        eta = [-ONE, -ONE, -ONE, -ONE, ZERO]
+        zeta = [-ONE, -ONE, -ONE, -ONE, ZERO] 
+
+        ref_coords = [ZERO, 1.25_rk, 3.75_rk, 5._rk, 3.75_rk]
+
+
+        icoord = 1 !> Check x-coordinates
+        do ipt = 1,5
+            check_coords(ipt) = mesh_point(self%dom%mesh%elems(1), icoord, xi(ipt), eta(ipt), zeta(ipt))
+        end do
+
+        @assertEqual(ref_coords,check_coords)
+
+    end subroutine
+    
+    
+!> Test mesh_point routine returns the correct y-coordinate value
+@Test
+    subroutine test__mesh_point__y(self)
+        class(test__grid_operators),    intent(inout)   :: self
+
+        real(rk), dimension(5)  :: ref_coords, check_coords, xi, eta, zeta
+        integer(ik)             :: icoord, ipt
+                        
+
+        xi   = [-ONE, -ONE, -ONE, -ONE, ZERO]
+        eta  = [-1.0_rk, -0.5_rk, 0.5_rk, 1.0_rk, 0.5_rk]
+        zeta = [-ONE, -ONE, -ONE, -ONE, ZERO] 
+
+        ref_coords = [ZERO, 0.25_rk, 0.75_rk, 1._rk, 0.75_rk]
+
+
+        icoord = 2 !> Check y-coordinates
+        do ipt = 1,5
+            check_coords(ipt) = mesh_point(self%dom%mesh%elems(1), icoord, xi(ipt), eta(ipt), zeta(ipt))
+        end do
+
+        @assertEqual(ref_coords,check_coords)
+
+    end subroutine
+
+
+!> Test mesh_point routine returns the correct z-coordinate value
+@Test
+    subroutine test__mesh_point__z(self)
+        class(test__grid_operators),    intent(inout)   :: self
+
+        real(rk), dimension(5)  :: ref_coords, check_coords, xi, eta, zeta
+        integer(ik)             :: icoord, ipt
+                        
+
+        xi   = [-ONE, -ONE, -ONE, -ONE, ZERO]
+        eta  = [-ONE, -ONE, -ONE, -ONE, ZERO] 
+        zeta = [-1.0_rk, -0.5_rk, 0.5_rk, 1.0_rk, 0.5_rk]
+
+        ref_coords = [ZERO, 0.25_rk, 0.75_rk, 1._rk, 0.75_rk]
+
+
+        icoord = 3 !> Check z-coordinates
+        do ipt = 1,5
+            check_coords(ipt) = mesh_point(self%dom%mesh%elems(1), icoord, xi(ipt), eta(ipt), zeta(ipt))
+        end do
+
+        @assertEqual(ref_coords,check_coords)
+
+    end subroutine
+
+
+
+
+end module test__grid_operators__mod

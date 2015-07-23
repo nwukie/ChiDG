@@ -35,18 +35,28 @@ program driver
 
 
 
+
+
+
+
+
+
+
+
+
+
     call read_grid_hdf5('D1_E27_M1.h5',dom)
     call dom(1)%init_sol('scalar',27)
 
 
 
-!    ! Initialize function
-!    call assign_function(fcn,'gaussian')
-!
-!    ! Initialize solution
-!    call initialize_variable(dom(1),1,fcn)
-!
-!    call write_tecio_variables(dom(1),'test.plt',1)
+    ! Initialize function
+    call assign_function(fcn,'gaussian')
+
+    ! Initialize solution
+    call initialize_variable(dom(1),1,fcn)
+
+    call write_tecio_variables(dom(1),'test.plt',1)
 
 
 

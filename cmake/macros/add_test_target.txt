@@ -13,7 +13,7 @@ macro (add_test_target target_subdirectory)
 	include_directories(${CMAKE_BINARY_DIR}/generated/${ARGV0})
 	
 	# Include access to pfunit module
-	include_directories(${PFUNIT}/mod)
+	include_directories(${PF_ROOT}/mod)
 	
 
 	######################################################################
@@ -28,7 +28,7 @@ macro (add_test_target target_subdirectory)
     	# Test preprocessor command
     	add_custom_command(
         	OUTPUT ${CMAKE_BINARY_DIR}/generated/${ARGV0}/${filename}.F90
-        	COMMAND ${PFUNIT}/bin/pFUnitParser.py ${CMAKE_SOURCE_DIR}/unittests/${ARGV0}/${filename}.pf ${CMAKE_BINARY_DIR}/generated/${ARGV0}/${filename}.F90
+        	COMMAND ${PF_ROOT}/bin/pFUnitParser.py ${CMAKE_SOURCE_DIR}/unittests/${ARGV0}/${filename}.pf ${CMAKE_BINARY_DIR}/generated/${ARGV0}/${filename}.F90
         	DEPENDS ${CMAKE_SOURCE_DIR}/unittests/${ARGV0}/${filename}.pf
         	)
         	
@@ -39,13 +39,13 @@ macro (add_test_target target_subdirectory)
      	file(APPEND ${CMAKE_BINARY_DIR}/generated/${ARGV0}/testSuites.inc "ADD_TEST_SUITE(${filename}_suite)\n")
 	endforeach()
 	
-	set_source_files_properties(${PFUNIT}/include/driver.F90 PROPERTIES GENERATED 1)
+	set_source_files_properties(${PF_ROOT}/include/driver.F90 PROPERTIES GENERATED 1)
 	
 	######################################################################
 	## define test target and link with pfunit and coredg libraries
 	######################################################################
-	add_executable(${target_name} ${PFUNIT}/include/driver.F90 ${_test_sources})
-	target_link_libraries(${target_name} ${PFUNIT}/lib/libpfunit.a coredg)
+	add_executable(${target_name} ${PF_ROOT}/include/driver.F90 ${_test_sources})
+	target_link_libraries(${target_name} ${PF_ROOT}/lib/libpfunit.a coredg)
 	
 	
 	######################################################################

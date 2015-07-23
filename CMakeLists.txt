@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.0)
+cmake_minimum_required(VERSION 3.1)
 enable_language(Fortran)
 project(ucdg Fortran)
 
@@ -132,7 +132,9 @@ add_executable(chidg ${EXE_SRCS})
 target_link_libraries(chidg coredg ${HDF5_LIBRARIES} ${TECPLOT_LIBRARIES})
 set_target_properties(chidg PROPERTIES 
                             COMPILE_FLAGS "${CMAKE_Fortran_FLAGS}"
-                            LINK_FLAGS    "${CMAKE_Fortran_LINK_FLAGS} -lstdc++ -lgfortran")
+                            LINK_FLAGS    "${CMAKE_Fortran_LINK_FLAGS} -lstdc++ -lpthread")
+                            
+                            #LINK_FLAGS    "${CMAKE_Fortran_LINK_FLAGS} -lstdc++ -lgfortran")
                             # need to link lstdc++ here for tecio
                             # need to link to gfortran if compiling with ifort and 
                             # linking to atlas, which was compiled with gfortran
@@ -145,12 +147,11 @@ set(UNITTEST TRUE CACHE BOOL "Enable building unit tests")
 if (UNITTEST)
     enable_testing()
     if (${Fortran_VENDOR} MATCHES "INTEL")
-        set(PFUNIT /Users/nathanwukie/Documents/pbus/pfunit/pfunit_intel/install)
+        set(PF_ROOT $ENV{PFUNIT}/intel)
     elseif (${Fortran_VENDOR} MATCHES "GNU")
-        #set(PFUNIT /Users/nathanwukie/Documents/pbus/pFUnit/install/gnu/serial)
-        set(PFUNIT /Users/nathanwukie/Documents/pbus/pfunit/pfunit_gnu/install)
+        set(PF_ROOT $ENV{PFUNIT}/gnu)
     endif()
-    set(PFU_LIB ${PFUNIT}/lib)
+    set(PFU_LIB ${PF_ROOT}/lib)
 
     # Add tests
     add_subdirectory(unittests)

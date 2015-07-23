@@ -1,5 +1,6 @@
 module test_element_linearC_mod
     use pfunit_mod
+    use type_chidg,     only: chidg_t
     use mod_kinds,      only: rk,ik
     use mod_constants,  only: ZERO, ONE, TWO, THREE, FOUR, FIVE, SIX, EIGHT, NINE, TEN, &
                               XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX  
@@ -12,6 +13,7 @@ module test_element_linearC_mod
 
 @TestCase
     type, extends(TestCase) ::  test_element_linearC
+        type(chidg_t)   :: chidg
         type(element_t) :: elem
         type(face_t)    :: faces(6)
     contains
@@ -31,6 +33,8 @@ contains
         real(rk)                :: sqrt_two, inv_sqrt_two
         integer(ik)             :: ftype, ineighbor, mapping, ielem
         
+        
+        call this%chidg%init()
         
         !> Cube element rotated at 45-degrees along the 0,0,0 y-axis
         !!

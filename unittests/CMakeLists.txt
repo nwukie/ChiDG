@@ -4,5 +4,6 @@ add_subdirectory(containers)
 add_subdirectory(quadrature)
 add_subdirectory(polynomial)
 add_subdirectory(io)
+add_subdirectory(functions)
 
 

@@ -320,8 +320,9 @@ contains
     subroutine destructor(self)
         type(mesh_t), intent(inout) :: self
 
-        if (allocated(self%elems)) deallocate(self%elems)
-        if (allocated(self%faces)) deallocate(self%faces)
+!> Shouldn't need to deallocate an 'allocatable'. The compiler is supposed to do that for you
+!        if (allocated(self%elems)) deallocate(self%elems)
+!        if (allocated(self%faces)) deallocate(self%faces)
     end subroutine
 
 end module type_mesh

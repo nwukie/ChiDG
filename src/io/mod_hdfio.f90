@@ -27,9 +27,11 @@ contains
         integer(HID_T)   :: fid, gid, sid, did_x, did_y, did_z      !> Identifiers
         integer(HSIZE_T) :: dims(3), maxdims(3)                     !> Dataspace dimensions
 
-        type(c_ptr)                             :: pts
-        type(point_t), allocatable              :: points(:,:,:)
-        real(rk), dimension(:,:,:), allocatable :: xpts, ypts, zpts
+        type(c_ptr)                                     :: pts
+        type(point_t), allocatable                      :: points(:,:,:)
+        real(rk), dimension(:,:,:), allocatable, target :: xpts, ypts, zpts
+        type(c_ptr)                                     :: cp_pts
+
         character(10)                           :: gname
         integer                                 :: nmembers, type, ierr, ndomains, igrp,    &
                                                    npts, izeta, ieta, ixi, idom, nterms_1d, &
@@ -108,17 +110,20 @@ contains
 
                 !>  Read x-points
                 allocate(xpts(dims(1),dims(2),dims(3)))
-                call h5dread_f(did_x, H5T_NATIVE_DOUBLE, xpts, dims, ierr)
+                cp_pts = c_loc(xpts(1,1,1))
+                call h5dread_f(did_x, H5T_NATIVE_DOUBLE, cp_pts, ierr)
                 if (ierr /= 0) stop "Error: read_grid_hdf5 -- h5dread_f"
 
 !                allocate(ypts, mold=xpts)   ! bug in gcc
                 allocate(ypts(dims(1),dims(2),dims(3)))
-                call h5dread_f(did_y, H5T_NATIVE_DOUBLE, ypts, dims, ierr)
+                cp_pts = c_loc(ypts(1,1,1))
+                call h5dread_f(did_y, H5T_NATIVE_DOUBLE, cp_pts, ierr)
                 if (ierr /= 0) stop "Error: read_grid_hdf5 -- h5dread_f"
 
 !                allocate(zpts, mold=xpts)   ! bug in gcc
                 allocate(zpts(dims(1),dims(2),dims(3)))
-                call h5dread_f(did_z, H5T_NATIVE_DOUBLE, zpts, dims, ierr)
+                cp_pts = c_loc(zpts(1,1,1))
+                call h5dread_f(did_z, H5T_NATIVE_DOUBLE, cp_pts, ierr)
                 if (ierr /= 0) stop "Error: read_grid_hdf5 -- h5dread_f"
 
 
@@ -184,6 +189,7 @@ contains
     !!  @param[inout]   domains     Array of domains. Already allocated
     !-----------------------------------------------------------------------------------------------------------
     subroutine read_var_hdf5(filename,cvar,time,domains)
+        use ISO_C_BINDING
         character(*),   intent(in)      :: filename
         character(*),   intent(in)      :: cvar
         integer(ik),    intent(in)      :: time
@@ -195,7 +201,11 @@ contains
 
         integer, dimension(1)           :: ibuf
         character(100)                  :: cbuf, eqnstring, varstring, var_grp, ctime
-        real(rk), allocatable           :: var(:,:)
+
+!        real(rk), allocatable           :: var(:,:)
+        real(rk), allocatable, target   :: var(:,:)
+        type(c_ptr)                     :: cp_var
+
         character(10)                   :: gname
         integer                         :: nmembers,    type,   ierr,       ndomains,   igrp,   &
                                            npts,        idom,   nterms_1d,  nterms_s,   order,  &
@@ -273,8 +283,9 @@ contains
                 call h5sget_simple_extent_dims_f(sid, dims, maxdims, ierr)
 
                 !>  Read 'variable' dataset
-                allocate(var(dims(1),dims(2)))
-                call h5dread_f(vid, H5T_NATIVE_DOUBLE, var, dims, ierr)
+                allocate(var(dims(1),dims(2)))                          !> Allocate variable buffer
+                cp_var = c_loc(var(1,1))                                !> Get C-address for buffer
+                call h5dread_f(vid, H5T_NATIVE_DOUBLE, cp_var, ierr)    !> Fortran 2003 interface
                 if (ierr /= 0) stop "Error: read_var_hdf5 -- h5dread_f"
 
 
@@ -342,9 +353,11 @@ contains
         integer(HSIZE_T) :: dims(2), maxdims(2), adim    !> Dataspace dimensions
         type(H5O_INFO_T) :: info                         !> Object info type
 
+        integer                         :: ndims
         integer, dimension(1)           :: ibuf
         character(100)                  :: cbuf, eqnstring, varstring, var_grp, ctime
-        real(rk), allocatable           :: var(:,:)
+        real(rk), allocatable, target   :: var(:,:)
+        type(c_ptr)                     :: cp_var
         character(10)                   :: gname
         integer(ik)                     :: nmembers,    type,   ierr,       ndomains,   igrp,   &
                                            npts,        idom,   nterms_1d,  nterms_s,   order,  &
@@ -427,6 +440,7 @@ contains
                 varstring = trim(cvar)//'_'//trim(ctime)        !> compose variable name as 'var_time'
 
                 !> Set dimensions of dataspace to write
+                ndims = 2
                 dims(1) = domains(idom)%mesh%nterms_s
                 dims(2) = domains(idom)%mesh%nelem
                 maxdims(1) = H5S_UNLIMITED_F
@@ -435,7 +449,6 @@ contains
                 !>  Open the Variable dataset
                 ! Check if variable dataset already exists
                 call h5lexists_f(gid, trim(varstring), exists, ierr)
-
 
 
                 !> Reset dataspace size if necessary
@@ -448,11 +461,11 @@ contains
                     call h5dget_space_f(did, sid, ierr)
 
                     ! Resize the existing dataspace
-                    call h5sset_extent_simple_f(sid,3,dims,maxdims,ierr)
+                    call h5sset_extent_simple_f(sid,ndims,dims,maxdims,ierr)
                     if (ierr /= 0) stop "Error: write_var_hdf5 -- dataspace resizing"
                 else
                     !> Create a new dataspace
-                    call h5screate_simple_f(3,dims, sid, ierr)
+                    call h5screate_simple_f(ndims,dims, sid, ierr)
                     if (ierr /= 0) stop "Error: write_var_hdf5 - h5screate_simple_f"
 
                     !> Create a new dataset
@@ -473,7 +486,9 @@ contains
 
 
                 !> Write variable buffer
-                call h5dwrite_f(did, H5T_NATIVE_DOUBLE, var, dims, ierr)
+!                call h5dwrite_f(did, H5T_NATIVE_DOUBLE, var, dims, ierr)
+                cp_var = c_loc(var(1,1))
+                call h5dwrite_f(did, H5T_NATIVE_DOUBLE, cp_var, ierr)
                 if (ierr /= 0) stop "Error: write_var_hdf5 - h5dwrite_f"
 
 

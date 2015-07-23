@@ -10,32 +10,46 @@ module type_face
 
     implicit none
 
+
+
+    !! Face data type
+    !!
+    !!  NOTE: could be dangerous to declare static arrays of elements using gfortran because
+    !!        the compiler doens't have complete finalization rules implemented. Useing allocatables
+    !!        seems to work fine.
+    !!
+    !!
     !------------------------------
     type, public :: face_t
-        integer(ik), pointer         :: neqns
-        integer(ik), pointer         :: nterms_s
+        integer(ik), pointer         :: neqns    => null()
+        integer(ik), pointer         :: nterms_s => null()
         integer(ik)                  :: ftype               !> interior (0) or boundary face (1)
         integer(ik)                  :: iface               !> XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, etc
         integer(ik)                  :: iparent             !> Pointer to block-local index of parent element
         integer(ik)                  :: ineighbor           !> Pointer to block-lodal index of neighbor element
 
         !> Geometry
+        !---------------------------------------------------------
         type(point_t),  allocatable  :: quad_pts(:)         !> Cartesian coordinates of quadrature nodes
-        type(expansion_t), pointer   :: coords
+        type(expansion_t), pointer   :: coords => null()
 
         !> Metric terms
+        !---------------------------------------------------------
         real(rk),       allocatable  :: jinv(:)
         real(rk),       allocatable  :: metric(:,:,:)
         real(rk),       allocatable  :: norm(:,:)
+        real(rk),       pointer      :: invmass(:,:) => null()       !> Pointer to element inverse mass matrix
+
 
         !> Quadrature matrices
-        type(quadrature_t),  pointer :: gq
-        type(quadrature_t),  pointer :: gqmesh
+        !---------------------------------------------------------
+        type(quadrature_t),  pointer :: gq     => null()
+        type(quadrature_t),  pointer :: gqmesh => null()
 
 
-        real(rk),            pointer :: invmass(:,:)        !> Pointer to element inverse mass matrix
 
         !> Logical tests
+        !---------------------------------------------------------
         logical :: geomInitialized = .false.
         logical :: numInitialized  = .false.
     contains
@@ -48,7 +62,7 @@ module type_face
         procedure           :: compute_quadrature_normals   !> Compute normals at quadrature nodes
         procedure           :: compute_quadrature_coords    !> Compute cartesian coordinates at quadrature nodes
 
-        final       :: destructor
+        final               :: destructor
     end type face_t
     !------------------------------
 
@@ -384,10 +398,12 @@ contains
     subroutine destructor(self)
         type(face_t), intent(inout) :: self
 
-        if (allocated(self%quad_pts))   deallocate(self%quad_pts)
-        if (allocated(self%jinv))       deallocate(self%jinv)
-        if (allocated(self%metric))     deallocate(self%metric)
-        if (allocated(self%norm))       deallocate(self%norm)
+
+!> Shouldn't need to deallocate an 'allocatable'. The compiler is supposed to do that for you
+!        if (allocated(self%quad_pts))   deallocate(self%quad_pts)
+!        if (allocated(self%jinv))       deallocate(self%jinv)
+!        if (allocated(self%metric))     deallocate(self%metric)
+!        if (allocated(self%norm))       deallocate(self%norm)
     end subroutine
 
 end module type_face

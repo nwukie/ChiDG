@@ -14,9 +14,9 @@ module test_element_linearA_mod
 
 @TestCase
     type, extends(TestCase) ::  test_element_linearA
-        type(chidg_t)   :: chidg
-        type(element_t) :: elem
-        type(face_t)    :: faces(6)
+        type(chidg_t)               :: chidg
+        type(element_t)             :: elem
+        type(face_t), allocatable   :: faces(:)
 
     contains
         procedure   ::  setUp
@@ -36,7 +36,7 @@ contains
         
         
         call this%chidg%init()
-        
+        allocate(this%faces(6))
         
         !> (x = 0-5 :: y = 0-1 :: z = 0-1)
         !!          *-------*

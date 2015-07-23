@@ -71,7 +71,8 @@ contains
             integer(TEC)   :: sharconnfrom             = 0
 
             integer(4)     :: tecstat
-            integer(TEC), dimension(:), pointer :: NullPtr => null()    ! Null pointer array
+            integer(TEC), pointer :: NullPtr(:) => null()    ! Null pointer array
+
 
             solutiontime = real(timeindex,rk)
             strandid = timeindex

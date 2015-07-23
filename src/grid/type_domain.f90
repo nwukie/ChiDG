@@ -20,11 +20,11 @@ module type_domain
     !   @author Nathan A. Wukie
     !---------------------------------------------------------------------------------------
     type, public :: domain_t
-        character(100)                      :: name         !> Domain name -- not currently used
-        type(mesh_t)                        :: mesh         !> Mesh storage
-        class(equationset_t), allocatable   :: eqnset       !> Equation set solved on this domain
-        type(expansion_t),    allocatable   :: q(:)         !> Array of solution expansions. One for each element.
-        type(expansion_t),    pointer       :: q_m(:,:,:)   !> Matrix view of solution expansions
+        character(100)                    :: name                   !> Domain name -- not currently used
+        type(mesh_t)                      :: mesh                   !> Mesh storage
+        class(equationset_t), allocatable :: eqnset                 !> Equation set solved on this domain
+        type(expansion_t),    allocatable :: q(:)                   !> Array of solution expansions. One for each element.
+        type(expansion_t),    pointer     :: q_m(:,:,:) => null()   !> Matrix view of solution expansions
 
         logical                             :: geomInitialized = .false.
         logical                             :: numInitialized  = .false.
@@ -118,8 +118,9 @@ contains
     subroutine destructor(self)
         type(domain_t), intent(inout) :: self
 
-        if (allocated(self%eqnset)) deallocate(self%eqnset)
-        if (allocated(self%q))      deallocate(self%q)
+!> Shouldn't need to deallocate an 'allocatable'. The compiler is supposed to do that for you
+!        if (allocated(self%eqnset)) deallocate(self%eqnset)
+!        if (allocated(self%q))      deallocate(self%q)
     end subroutine
 
 end module type_domain

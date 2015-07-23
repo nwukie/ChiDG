@@ -1,0 +1,114 @@
+module test_finalization_mod
+    use pfunit_mod
+    use mod_kinds,      only: rk,ik
+    use mod_constants,  only: ZERO, ONE, TWO, THREE, FIVE, SIX, EIGHT, NINE, TEN, &
+                              XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX
+    use type_chidg,     only: chidg_t
+    use type_point,     only: point_t
+    use type_element,   only: element_t
+    use type_face,      only: face_t
+    use type_test,      only: test_t
+    implicit none
+
+    public  :: test_finalization
+
+@TestCase
+    type, extends(TestCase) ::  test_finalization
+        type(chidg_t)   :: chidg
+        type(element_t), allocatable :: elem(:)
+        type(face_t),    allocatable :: faces(:)    !> gfortran doesn't seem to be finalizing static arrays of derived type variables correctly
+    contains
+        procedure   ::  setUp
+        procedure   ::  tearDown
+    end type test_finalization
+
+
+contains
+    !> NOTE: make sure to use 'this' instead of 'self' since these are over-writting a derived type 
+    !! procedure. The argument names have to match
+    subroutine setUp(this)
+        class(test_finalization),    intent(inout)   :: this
+        
+        integer(ik), parameter  :: npt = 8
+        type(point_t)           :: pts(npt)
+        integer(ik)             :: ftype, ineighbor, mapping, ielem
+        
+        
+        call this%chidg%init()
+        
+        allocate(this%elem(1))
+        allocate(this%faces(6))
+        !> (x = 0-5 :: y = 0-1 :: z = 0-1)
+        !!          *-------*
+        !!         /       /|
+        !!    x=5 /       / |
+        !!       /       /  *
+        !!      *-------*  /
+        !!      |       | /
+        !!  z=1 |       |/
+        !!      *-------*
+        !!         y=1
+        !!
+        call pts(1)%set(0._rk, 0._rk, 0._rk)
+        call pts(2)%set(5._rk, 0._rk, 0._rk)
+        call pts(3)%set(0._rk, 1._rk, 0._rk)
+        call pts(4)%set(5._rk, 1._rk, 0._rk)
+        call pts(5)%set(0._rk, 0._rk, 1._rk)
+        call pts(6)%set(5._rk, 0._rk, 1._rk)
+        call pts(7)%set(0._rk, 1._rk, 1._rk)
+        call pts(8)%set(5._rk, 1._rk, 1._rk)
+        
+        
+        !> Initialize Element geometry and Numerics
+        mapping = 1
+        ielem = 1
+        call this%elem(1)%init_geom(mapping,pts,ielem)
+        call this%elem(1)%init_sol(2,8)    !> 2 equations, 8 terms (3*3*3)
+        
+        
+        ftype = 0
+        ineighbor = 0
+        !> Initialize faces for element
+!        call this%faces(XI_MIN)%init_geom(XI_MIN,ftype,this%elem,ineighbor)
+!        call this%faces(XI_MAX)%init_geom(XI_MAX,ftype,this%elem,ineighbor)
+!        call this%faces(ETA_MIN)%init_geom(ETA_MIN,ftype,this%elem,ineighbor)
+!        call this%faces(ETA_MAX)%init_geom(ETA_MAX,ftype,this%elem,ineighbor)
+!        call this%faces(ZETA_MIN)%init_geom(ZETA_MIN,ftype,this%elem,ineighbor)
+!        call this%faces(ZETA_MAX)%init_geom(ZETA_MAX,ftype,this%elem,ineighbor)
+!        
+!        call this%faces(XI_MIN)%init_sol(this%elem)
+!        call this%faces(XI_MAX)%init_sol(this%elem)
+!        call this%faces(ETA_MIN)%init_sol(this%elem)
+!        call this%faces(ETA_MAX)%init_sol(this%elem)
+!        call this%faces(ZETA_MIN)%init_sol(this%elem)
+!        call this%faces(ZETA_MAX)%init_sol(this%elem)
+    end subroutine
+    
+    subroutine tearDown(this)
+        class(test_finalization),    intent(inout)   :: this
+        print*, 'FINALIZING'
+!        deallocate(this%faces)
+    end subroutine
+
+
+
+
+
+!> Test element metric entries at quadrature points
+@Test
+    subroutine test_final(self)
+        class(test_finalization),    intent(inout)   :: self
+
+        
+        print*, 'TESTING'
+    end subroutine
+
+
+
+
+
+
+
+
+
+end module test_finalization_mod

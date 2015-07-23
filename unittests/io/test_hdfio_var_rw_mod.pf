@@ -2,6 +2,7 @@ module test_hdfio_var_rw_mod
     use pfunit_mod
     use type_chidg,     only: chidg_t
     use mod_kinds,      only: rk,ik
+    use mod_constants,  only: ONE, TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT
     use mod_hdfio,      only: read_grid_hdf5, read_var_hdf5, write_var_hdf5
     use type_chidg,     only: chidg_t
     use type_point,     only: point_t
@@ -49,7 +50,9 @@ contains
 
 
 
-
+!-----------------------------------------------------------------------------
+!   TESTS
+!-----------------------------------------------------------------------------
 
 @Test
     subroutine test_hdfio_variable_write_read_D1_E1_M1(this)
@@ -59,14 +62,7 @@ contains
         tol = 1.e-14_rk
         
         !> Set solution values
-        ref(1) = 1._rk
-        ref(2) = 2._rk
-        ref(3) = 3._rk
-        ref(4) = 4._rk
-        ref(5) = 5._rk
-        ref(6) = 6._rk
-        ref(7) = 7._rk
-        ref(8) = 8._rk
+        ref = [ONE, TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT]
         
         
         !> Set reference solution

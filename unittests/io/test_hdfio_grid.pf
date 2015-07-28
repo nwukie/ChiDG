@@ -48,11 +48,6 @@ end subroutine
 
 
 
-
-
-
-
-
 !> Test for reading an hdf grid. D1_E27_M1 = One Domain, 27 Elements (3x3x3), Linear Mapping
 @Test
 subroutine testIO__read_grid_hdf__D1_E27_M1() 

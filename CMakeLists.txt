@@ -18,6 +18,19 @@ set(CMAKE_Fortran_MODULE_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 
 
 
+#------------------------------------------------------------------
+#                    Set 'Debug' and 'Release' options
+#------------------------------------------------------------------
+set(UNITTEST FALSE CACHE BOOL "Enable building unit tests")
+if (${CMAKE_BUILD_TYPE} MATCHES "Debug") 
+    set(UNITTEST TRUE)
+elseif (${CMAKE_BUILD_TYPE} MATCHES "Release")
+    set(UNITTEST FALSE)
+endif()
+
+
+
+
 
 #------------------------------------------------------------------
 #                    Get fortran compiler vendor
@@ -140,9 +153,8 @@ set_target_properties(chidg PROPERTIES
 
 
 #------------------------------------------------------------------                                                                    
-#                     Enable unit-testing                                   
+#                     Unit-testing                                   
 #------------------------------------------------------------------                                                                        
-set(UNITTEST TRUE CACHE BOOL "Enable building unit tests")
 if (UNITTEST)
     enable_testing()
     if (${Fortran_VENDOR} MATCHES "INTEL")

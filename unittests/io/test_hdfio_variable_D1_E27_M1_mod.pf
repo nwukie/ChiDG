@@ -1,4 +1,4 @@
-module test_hdfio_var_rw_mod
+module test_hdfio_variable_D1_E27_M1_mod
     use pfunit_mod
     use type_chidg,     only: chidg_t
     use mod_kinds,      only: rk,ik
@@ -10,18 +10,18 @@ module test_hdfio_var_rw_mod
     implicit none
 
 
-    public  :: test_hdfio_var_rw
+    public  :: test_hdfio_variable_D1_E27_M1
 
 @TestCase
-    type, extends(TestCase) ::  test_hdfio_var_rw
+    type, extends(TestCase) ::  test_hdfio_variable_D1_E27_M1
         type(chidg_t)               :: chidg
-        character(11)               :: filename = 'D1_E1_M1.h5'
+        character(12)               :: filename = 'D1_E27_M1.h5'
         type(domain_t), allocatable :: domains(:)
     
     contains
         procedure   ::  setUp
         procedure   ::  tearDown
-    end type test_hdfio_var_rw
+    end type test_hdfio_variable_D1_E27_M1
 
 
 
@@ -30,7 +30,7 @@ contains
     !> NOTE: make sure to use 'this' instead of 'self' since these are over-writting a derived type 
     !! procedure. The argument names have to match
     subroutine setUp(this)
-        class(test_hdfio_var_rw),    intent(inout)   :: this
+        class(test_hdfio_variable_D1_E27_M1),    intent(inout)   :: this
         integer(ik)                                 :: nterms_s
 
         call this%chidg%init()
@@ -42,7 +42,7 @@ contains
     end subroutine
     
     subroutine tearDown(this)
-        class(test_hdfio_var_rw),    intent(inout)   :: this
+        class(test_hdfio_variable_D1_E27_M1),    intent(inout)   :: this
         
         deallocate(this%domains)
     end subroutine
@@ -54,40 +54,49 @@ contains
 !   TESTS
 !-----------------------------------------------------------------------------
 
+
 @Test
-    subroutine test_hdfio_variable_write_read_D1_E1_M1(this)
-        class(test_hdfio_var_rw),     intent(inout)   :: this 
+    subroutine test_hdfio_variable_write_read_D1_E27_M1(this)
+        class(test_hdfio_variable_D1_E27_M1),     intent(inout)   :: this 
         real(rk)                    :: tol, ref(8)
+        integer(ik)                 :: ielem
         
         tol = 1.e-14_rk
         
-        !> Set solution values
+        !> Set reference solution values
         ref = [ONE, TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT]
         
         
-        !> Set reference solution
-        this%domains(1)%q(1)%vec = ref
+        !> Assign reference solution
+        do ielem = 1,this%domains(1)%mesh%nelem
+            this%domains(1)%q(ielem)%vec = ref
+        end do
         
-        !> Write solution values
+        !> Write variable
         call write_var_hdf5(this%filename,'u',1,this%domains)
         
-        !> Reset solution
-        this%domains(1)%q(1)%vec = 0._rk
+        !> Reset variable
+        do ielem = 1,this%domains(1)%mesh%nelem
+            this%domains(1)%q(ielem)%vec = -1._rk
+        end do
         
-        !> Read solution values
+        !> Read variable
         call read_var_hdf5(this%filename,'u',1,this%domains)
        
         !> Test that the read solution values equal the reference values
+        !! Testing elements 1-10, out of 27
         @assertEqual(ref,this%domains(1)%q(1)%vec, tol)
+        @assertEqual(ref,this%domains(1)%q(2)%vec, tol)
+        @assertEqual(ref,this%domains(1)%q(3)%vec, tol)
+        @assertEqual(ref,this%domains(1)%q(4)%vec, tol)
+        @assertEqual(ref,this%domains(1)%q(5)%vec, tol)
+        @assertEqual(ref,this%domains(1)%q(6)%vec, tol)
+        @assertEqual(ref,this%domains(1)%q(7)%vec, tol)
+        @assertEqual(ref,this%domains(1)%q(8)%vec, tol)
+        @assertEqual(ref,this%domains(1)%q(9)%vec, tol)
+        @assertEqual(ref,this%domains(1)%q(10)%vec, tol)        
         
     end subroutine
 
 
-
-
-
-
-
-
-
-end module test_hdfio_var_rw_mod
+end module test_hdfio_variable_D1_E27_M1_mod

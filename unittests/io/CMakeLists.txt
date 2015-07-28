@@ -1,5 +1,6 @@
-set(test_files  test_hdfio_read_grid.pf
-                test_hdfio_var_rw_mod.pf)
+set(test_files  test_hdfio_grid.pf
+                test_hdfio_variable_D1_E1_M1_mod.pf
+                test_hdfio_variable_D1_E27_M1_mod.pf)
                 
 add_test_target(io ${test_files})
 

@@ -1,0 +1,88 @@
+module test_hdfio_variable_D1_E1_M1_mod
+    use pfunit_mod
+    use type_chidg,     only: chidg_t
+    use mod_kinds,      only: rk,ik
+    use mod_constants,  only: ONE, TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT
+    use mod_hdfio,      only: read_grid_hdf5, read_var_hdf5, write_var_hdf5
+    use type_chidg,     only: chidg_t
+    use type_point,     only: point_t
+    use type_domain,    only: domain_t
+    implicit none
+
+
+    public  :: test_hdfio_variable_D1_E1_M1
+
+@TestCase
+    type, extends(TestCase) ::  test_hdfio_variable_D1_E1_M1
+        type(chidg_t)               :: chidg
+        character(11)               :: filename = 'D1_E1_M1.h5'
+        type(domain_t), allocatable :: domains(:)
+    
+    contains
+        procedure   ::  setUp
+        procedure   ::  tearDown
+    end type test_hdfio_variable_D1_E1_M1
+
+
+
+contains
+
+    !> NOTE: make sure to use 'this' instead of 'self' since these are over-writting a derived type 
+    !! procedure. The argument names have to match
+    subroutine setUp(this)
+        class(test_hdfio_variable_D1_E1_M1),    intent(inout)   :: this
+        integer(ik)                                 :: nterms_s
+
+        call this%chidg%init()
+
+        call read_grid_hdf5(this%filename, this%domains)
+    
+        nterms_s = 2*2*2
+        call this%domains(1)%init_sol('scalar',nterms_s)
+    end subroutine
+    
+    subroutine tearDown(this)
+        class(test_hdfio_variable_D1_E1_M1),    intent(inout)   :: this
+        
+        deallocate(this%domains)
+    end subroutine
+
+
+
+
+!-----------------------------------------------------------------------------
+!   TESTS
+!-----------------------------------------------------------------------------
+
+@Test
+    subroutine test_hdfio_variable_write_read_D1_E1_M1(this)
+        class(test_hdfio_variable_D1_E1_M1),     intent(inout)   :: this 
+        real(rk)                    :: tol, ref(8)
+        
+        tol = 1.e-14_rk
+        
+        !> Set reference solution values
+        ref = [ONE, TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT]
+        
+        
+        !> Assign reference solution
+        this%domains(1)%q(1)%vec = ref
+        
+        !> Write solution values
+        call write_var_hdf5(this%filename,'u',1,this%domains)
+        
+        !> Reset solution
+        this%domains(1)%q(1)%vec = 0._rk
+        
+        !> Read solution values
+        call read_var_hdf5(this%filename,'u',1,this%domains)
+       
+        !> Test that the read solution values equal the reference values
+        @assertEqual(ref,this%domains(1)%q(1)%vec, tol)
+        
+    end subroutine
+
+
+
+
+end module test_hdfio_variable_D1_E1_M1_mod

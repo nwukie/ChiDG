@@ -54,5 +54,17 @@ macro (add_test_target target_subdirectory)
 	add_test(NAME ${target_name}
 			 WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
 			 COMMAND $<TARGET_FILE:${target_name}>)
+			 
+			 
+	##################################################################################
+	##	Add test target to shell script used by Jenkins for executing individual tests
+	##################################################################################
+	if (EXISTS "${CMAKE_BINARY_DIR}/bin/unittest.sh")
+		file(APPEND ${CMAKE_BINARY_DIR}/bin/unittest.sh "./${target_name}\n")
+	else()
+		file(APPEND ${CMAKE_BINARY_DIR}/bin/unittest.sh "#!/bin/bash\n")
+		file(APPEND ${CMAKE_BINARY_DIR}/bin/unittest.sh "cd $WORKSPACE/build/bin\n")
+		file(APPEND ${CMAKE_BINARY_DIR}/bin/unittest.sh "./${target_name}\n")
+	endif()
 	
 endmacro()

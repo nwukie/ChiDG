@@ -30,3 +30,12 @@ end subroutine
 
 
 
+@Test
+subroutine test_fail()
+    use pfunit_mod
+    
+    
+    @assertTrue(.true.)
+end subroutine
+
+

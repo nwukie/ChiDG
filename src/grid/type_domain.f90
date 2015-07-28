@@ -24,7 +24,11 @@ module type_domain
         type(mesh_t)                      :: mesh                   !> Mesh storage
         class(equationset_t), allocatable :: eqnset                 !> Equation set solved on this domain
         type(expansion_t),    allocatable :: q(:)                   !> Array of solution expansions. One for each element.
+        type(expansion_t),    allocatable :: rhs(:)                 !> Array of rhs expansions. One for each element.
+
+        ! Matrix views of expansion storage
         type(expansion_t),    pointer     :: q_m(:,:,:) => null()   !> Matrix view of solution expansions
+        type(expansion_t),    pointer     :: rhs_m(:,:,:) => null() !> Matrix view of rhs expansion
 
         logical                             :: geomInitialized = .false.
         logical                             :: numInitialized  = .false.
@@ -92,14 +96,19 @@ contains
 
         ! Initialize solution
         allocate(self%q(self%mesh%nelem))                           !> Allocate an expansion type for each element
+        allocate(self%rhs(self%mesh%nelem))                         !> Allocate an expansion type for each element
         do ielem = 1,self%mesh%nelem
-            call self%q(ielem)%init(nterms_s,self%eqnset%neqns)     !> Initialize expansion for each element
+            call self%q(ielem)%init(nterms_s,self%eqnset%neqns)     !> Initialize solution expansion for each element
+            call self%rhs(ielem)%init(nterms_s,self%eqnset%neqns)    !> Initialize rhs expansion for each element
         end do
 
 
         ! Initialize solution matrix view
         temp => self%q
         self%q_m(1:self%mesh%nelem_xi, 1:self%mesh%nelem_eta, 1:self%mesh%nelem_zeta) => temp(1:self%mesh%nelem)
+
+        temp => self%rhs
+        self%rhs_m(1:self%mesh%nelem_xi, 1:self%mesh%nelem_eta, 1:self%mesh%nelem_zeta) => temp(1:self%mesh%nelem)
 
 
         self%numInitialized = .true.

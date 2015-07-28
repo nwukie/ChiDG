@@ -13,43 +13,46 @@ contains
 
         integer(ik) :: iblk, ielem, iface, nelem
 
-
-        nelem = domain%mesh%nelem
-
-        !> Loop through given element and neighbors and compute the corresponding linearization
-        !> XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX, DIAG
-        do iblk = 1,7
+        associate (mesh => domain%mesh, q => domain%q)
+            nelem = domain%mesh%nelem
 
 
 
-
-            !> Loop through elements in the domain
-            do ielem = 1,nelem
-
-
-
-                ! For the current element, compute the contributions from boundary integrals
-                do iface = 1,NFACES
-                    call domain%eqnset%compute_boundary_average_flux(domain%mesh,domain%q,ielem,iface,iblk)
-                    call domain%eqnset%compute_boundary_upwind_flux(domain%mesh,domain%q,ielem,iface,iblk)
-                end do !face
-
-
-
-                ! For the current element, compute the contributions from volume integrals
-                call domain%eqnset%compute_volume_flux(domain%mesh,domain%q,ielem,iblk)
-                call domain%eqnset%compute_volume_source(domain%mesh,domain%q,ielem,iblk)
-
-
-
-            end do !elem
+            !> Loop through given element and neighbors and compute the corresponding linearization
+            !> XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX, DIAG
+            do iblk = 1,7
 
 
 
 
-        end do !block
+                !> Loop through elements in the domain
+                do ielem = 1,nelem
 
 
+
+                    ! For the current element, compute the contributions from boundary integrals
+                    do iface = 1,NFACES
+                        call domain%eqnset%compute_boundary_average_flux(mesh,q,ielem,iface,iblk)
+                        call domain%eqnset%compute_boundary_upwind_flux(mesh,q,ielem,iface,iblk)
+                    end do !face
+
+
+
+                    ! For the current element, compute the contributions from volume integrals
+                    call domain%eqnset%compute_volume_flux(mesh,q,ielem,iblk)
+                    call domain%eqnset%compute_volume_source(mesh,q,ielem,iblk)
+
+
+
+                end do !elem
+
+
+
+
+            end do !block
+
+
+        end associate
     end subroutine
 
 

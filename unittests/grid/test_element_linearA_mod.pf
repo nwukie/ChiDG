@@ -7,7 +7,6 @@ module test_element_linearA_mod
     use type_point,     only: point_t
     use type_element,   only: element_t
     use type_face,      only: face_t
-    use type_test,      only: test_t
     implicit none
 
     public  :: test_element_linearA

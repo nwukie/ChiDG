@@ -82,7 +82,7 @@ contains
             ivar  = 1
 
             allocate(u_gq(elems(ielem)%gq%nnodes_v))
-            allocate(u_ref,mold=u_gq)
+            allocate(u_ref(elems(ielem)%gq%nnodes_v))
             
             
             !> PROCEDURE BEING TESTED

@@ -5,8 +5,6 @@ module atype_solver
     use type_expansion, only: expansion_t
     implicit none
 
-    type(expansion_t), allocatable :: q(:)
-
 
     !> solver abstract type definition
     !!

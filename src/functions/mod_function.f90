@@ -8,6 +8,7 @@ module mod_function
     use fcn_zsquared,   only: zsquared_f
     use fcn_xyz,        only: xyz_f
     use fcn_gaussian,   only: gaussian_f
+    use fcn_constant,   only: constant_f
     implicit none
 
     ! LIST OF FUNCTION OBJECTS
@@ -16,6 +17,7 @@ module mod_function
     type(zsquared_f)    :: zsquared
     type(xyz_f)         :: xyz
     type(gaussian_f)    :: gaussian
+    type(constant_f)    :: constant
 
 
 contains
@@ -41,6 +43,9 @@ contains
 
             case ('gaussian')
                 allocate(fcn,source=gaussian)
+
+            case ('constant')
+                allocate(fcn,source=constant)
 
             case default
                 stop "Error: assign_function -- function string not recognized"

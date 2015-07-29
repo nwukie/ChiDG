@@ -40,7 +40,7 @@ contains
 
 
         select case (trim(eqnstring))
-            case ('scalar')
+            case ('scalar','Scalar')
                 allocate(eqnset, source=scalar)
 
             case default

@@ -27,7 +27,7 @@ contains
         !> Initialize matrix pointer alias
         self%mat(1:nterms,1:neqns) => self%vec
 
-        ! Initialize to 0
+        !> Initialize to 0
         self%vec = 0._rk
     end subroutine
     

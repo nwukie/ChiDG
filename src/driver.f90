@@ -12,7 +12,7 @@ program driver
     use mod_kinds,              only: ik,rk
     use mod_constants,          only: ZERO, ONE, FIVE
     use mod_tecio,              only: write_tecio_variables
-    use mod_hdfio,              only: read_grid_hdf5
+    use mod_hdfio,              only: read_grid_hdf
     use type_chidg,             only: chidg_t
     use type_point,             only: point_t
     use type_domain,            only: domain_t
@@ -45,7 +45,7 @@ program driver
 
 
 
-    call read_grid_hdf5('D1_E27_M1.h5',dom)
+    call read_grid_hdf('D1_E27_M1.h5',dom)
     call dom(1)%init_sol('scalar',27)
 
 

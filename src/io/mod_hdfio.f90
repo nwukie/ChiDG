@@ -20,7 +20,7 @@ contains
     !!  @param[in]      filename    Character string of the file to be read
     !!  @param[inout]   domains     Allocatable array of domains. Allocated in this routine.
     !------------------------------------------------------------------------------------------
-    subroutine read_grid_hdf5(filename, domains)
+    subroutine read_grid_hdf(filename, domains)
         character(*),                   intent(in)    :: filename
         type(domain_t), allocatable,    intent(inout) :: domains(:)
 
@@ -188,7 +188,7 @@ contains
     !!  @param[in]      time        Integer of the time instance for the current variable to be read
     !!  @param[inout]   domains     Array of domains. Already allocated
     !-----------------------------------------------------------------------------------------------------------
-    subroutine read_var_hdf5(filename,cvar,time,domains)
+    subroutine read_var_hdf(filename,cvar,time,domains)
         use ISO_C_BINDING
         character(*),   intent(in)      :: filename
         character(*),   intent(in)      :: cvar
@@ -342,7 +342,7 @@ contains
     !!  @param[in]      time        Integer of the time instance for the current variable to be read
     !!  @param[inout]   domains     Array of domains. Already allocated
     !-----------------------------------------------------------------------------------------------------------
-    subroutine write_var_hdf5(filename,cvar,time,domains)
+    subroutine write_var_hdf(filename,cvar,time,domains)
         character(*),   intent(in)      :: filename
         character(*),   intent(in)      :: cvar
         integer(ik),    intent(in)      :: time

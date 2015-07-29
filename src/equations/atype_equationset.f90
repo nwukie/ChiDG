@@ -41,7 +41,7 @@ module atype_equationset
 
 
     abstract interface
-        subroutine boundary_interface(self,mesh,q,ielem,iface,iblk)
+        subroutine boundary_interface(self,mesh,q,rhs,ielem,iface,iblk)
             use mod_kinds,  only: ik
             import equationset_t
             import mesh_t
@@ -50,6 +50,7 @@ module atype_equationset
             class(equationset_t),   intent(in)          :: self
             class(mesh_t),          intent(in)          :: mesh
             class(expansion_t),     intent(inout)       :: q(:)
+            class(expansion_t),     intent(inout)       :: rhs(:)
             integer(ik),            intent(in)          :: ielem
             integer(ik),            intent(in)          :: iface
             integer(ik),            intent(in)          :: iblk
@@ -58,7 +59,7 @@ module atype_equationset
 
 
     abstract interface
-        subroutine volume_interface(self,mesh,q,ielem,iblk)
+        subroutine volume_interface(self,mesh,q,rhs,ielem,iblk)
             use mod_kinds,  only: ik
             import equationset_t
             import mesh_t
@@ -67,6 +68,7 @@ module atype_equationset
             class(equationset_t),   intent(in)          :: self
             class(mesh_t),          intent(in)          :: mesh
             class(expansion_t),     intent(inout)       :: q(:)
+            class(expansion_t),     intent(inout)       :: rhs(:)
             integer(ik),            intent(in)          :: ielem
             integer(ik),            intent(in)          :: iblk
         end subroutine

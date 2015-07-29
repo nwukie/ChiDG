@@ -6,6 +6,7 @@ module eqn_scalar
     use atype_equationset,      only: equationset_t
     use type_mesh,              only: mesh_t
     use type_expansion,         only: expansion_t
+    use DNAD_D,                 only: AD_D
 
 
     implicit none
@@ -57,11 +58,24 @@ contains
     !   Boundary Flux routine for Euler
     !
     !===========================================================
-    subroutine compute_boundary_average_flux(self,mesh,q,ielem,iface,iblk)
+    subroutine compute_boundary_average_flux(self,mesh,q,rhs,ielem,iface,iblk)
         class(scalar_e),    intent(in)      :: self
         class(mesh_t),      intent(in)      :: mesh
         class(expansion_t), intent(inout)   :: q(:)
+        class(expansion_t), intent(inout)   :: rhs(:)
+
         integer(ik),        intent(in)      :: ielem, iface, iblk
+
+        type(AD_D), allocatable  :: u(:)
+
+
+
+
+
+
+
+
+
 
     end subroutine
 
@@ -71,10 +85,11 @@ contains
     !   Boundary Flux routine for Euler
     !
     !===========================================================
-    subroutine compute_boundary_upwind_flux(self,mesh,q,ielem,iface,iblk)
+    subroutine compute_boundary_upwind_flux(self,mesh,q,rhs,ielem,iface,iblk)
         class(scalar_e),    intent(in)      :: self
         class(mesh_t),      intent(in)      :: mesh
         class(expansion_t), intent(inout)   :: q(:)
+        class(expansion_t), intent(inout)   :: rhs(:)
         integer(ik),        intent(in)      :: ielem, iface, iblk
 
 
@@ -87,11 +102,13 @@ contains
     !   Volume Flux routine for Euler
     !
     !===========================================================
-    subroutine compute_volume_flux(self,mesh,q,ielem,iblk)
+    subroutine compute_volume_flux(self,mesh,q,rhs,ielem,iblk)
         class(scalar_e),    intent(in)      :: self
         class(mesh_t),      intent(in)      :: mesh
         class(expansion_t), intent(inout)   :: q(:)
+        class(expansion_t), intent(inout)   :: rhs(:)
         integer(ik),        intent(in)      :: ielem, iblk
+
 
     end subroutine
 
@@ -101,11 +118,13 @@ contains
     !   Volume Source routine for Euler
     !
     !===========================================================
-    subroutine compute_volume_source(self,mesh,q,ielem,iblk)
+    subroutine compute_volume_source(self,mesh,q,rhs,ielem,iblk)
         class(scalar_e),    intent(in)      :: self
         class(mesh_t),      intent(in)      :: mesh
         class(expansion_t), intent(inout)   :: q(:)
+        class(expansion_t), intent(inout)   :: rhs(:)
         integer(ik),        intent(in)      :: ielem, iblk
+
 
     end subroutine
 

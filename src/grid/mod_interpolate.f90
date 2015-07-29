@@ -3,12 +3,13 @@ module mod_interpolate
     use DNAD_D
     use type_element,   only: element_t
     use type_face,      only: face_t
-    use atype_solver,   only: q
+    use type_expansion, only: expansion_t
 
     implicit none
 
     interface interpolate
-        module procedure    interpolate_autodiff, interpolate_standard
+        module procedure    interpolate_element_autodiff, interpolate_element_standard
+        module procedure    interpolate_face_autodiff,    interpolate_face_standard
     end interface
 
     contains
@@ -18,8 +19,9 @@ module mod_interpolate
     !!
     !!
     !----------------------------------------------------------------
-    subroutine interpolate_autodiff(elems,ielem,ivar,var_gq,ielem_seed)
-        class(element_t),   intent(in)      :: elems(:)
+    subroutine interpolate_element_autodiff(elems,q,ielem,ivar,var_gq,ielem_seed)
+        type(element_t),    intent(in)      :: elems(:)
+        type(expansion_t),  intent(inout)   :: q(:)
         integer(ik),        intent(in)      :: ielem
         integer(ik),        intent(in)      :: ivar
         type(AD_D),         intent(inout)   :: var_gq(:)
@@ -70,16 +72,84 @@ module mod_interpolate
 
 
 
+    !> Compute variable at quadrature nodes.
+    !!
+    !!
+    !----------------------------------------------------------------
+    subroutine interpolate_face_autodiff(faces,q,ielem,iface,ivar,var_gq,ielem_seed)
+        type(face_t),       intent(in)      :: faces(:)
+        type(expansion_t),  intent(inout)   :: q(:)
+        integer(ik),        intent(in)      :: ielem
+        integer(ik),        intent(in)      :: iface
+        integer(ik),        intent(in)      :: ivar
+        type(AD_D),         intent(inout)   :: var_gq(:)
+        integer(ik),        intent(in)      :: ielem_seed
 
-
-
-
-    subroutine interpolate_standard(elems)
-        class(element_t),   intent(inout)   :: elems(:)
 
     end subroutine
 
 
 
 
+
+
+    !> Compute variable at quadrature nodes.
+    !!
+    !!
+    !----------------------------------------------------------------
+    subroutine interpolate_element_standard(elems,q,ielem,ivar,var_gq)
+        type(element_t),    intent(in)      :: elems(:)
+        type(expansion_t),  intent(inout)   :: q(:)
+        integer(ik),        intent(in)      :: ielem
+        integer(ik),        intent(in)      :: ivar
+        real(rk),           intent(inout)   :: var_gq(:)
+
+        ! Use quadrature instance to compute variable at quadrature nodes.
+        ! This takes the form of a matrix multiplication of the quadrature matrix
+        ! with the array of modes for the given variable.
+        var_gq = matmul(elems(ielem)%gq%vol%val, q(ielem)%var(ivar))
+
+    end subroutine
+
+
+
+
+
+
+
+
+
+    !> Compute variable at quadrature nodes.
+    !!
+    !!
+    !----------------------------------------------------------------
+    subroutine interpolate_face_standard(faces,ielem,iface,ivar,var_gq)
+        class(face_t),    intent(in)    :: faces(:)
+        integer(ik),      intent(in)    :: ielem, iface, ivar
+        real(rk),         intent(inout) :: var_gq
+
+    end subroutine
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 end module mod_interpolate
+
+
+
+
+
+
+

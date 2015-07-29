@@ -3,7 +3,7 @@ module test_hdfio_variable_D1_E27_M1_mod
     use type_chidg,     only: chidg_t
     use mod_kinds,      only: rk,ik
     use mod_constants,  only: ONE, TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT
-    use mod_hdfio,      only: read_grid_hdf5, read_var_hdf5, write_var_hdf5
+    use mod_hdfio,      only: read_grid_hdf, read_var_hdf, write_var_hdf
     use type_chidg,     only: chidg_t
     use type_point,     only: point_t
     use type_domain,    only: domain_t
@@ -35,7 +35,7 @@ contains
 
         call this%chidg%init()
 
-        call read_grid_hdf5(this%filename, this%domains)
+        call read_grid_hdf(this%filename, this%domains)
     
         nterms_s = 2*2*2
         call this%domains(1)%init_sol('scalar',nterms_s)
@@ -73,7 +73,7 @@ contains
         end do
         
         !> Write variable
-        call write_var_hdf5(this%filename,'u',1,this%domains)
+        call write_var_hdf(this%filename,'u',1,this%domains)
         
         !> Reset variable
         do ielem = 1,this%domains(1)%mesh%nelem
@@ -81,7 +81,7 @@ contains
         end do
         
         !> Read variable
-        call read_var_hdf5(this%filename,'u',1,this%domains)
+        call read_var_hdf(this%filename,'u',1,this%domains)
        
         !> Test that the read solution values equal the reference values
         !! Testing elements 1-10, out of 27

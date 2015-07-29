@@ -6,7 +6,7 @@ subroutine testIO__read_grid_hdf__D1_E1_M1()
     use mod_kinds,              only: rk,ik
     use mod_constants,          only: ZERO, ONE
     use type_domain,            only: domain_t
-    use mod_hdfio,              only: read_grid_hdf5
+    use mod_hdfio,              only: read_grid_hdf
     use mod_grid,               only: compute_element_mappings
     implicit none
     
@@ -24,7 +24,7 @@ subroutine testIO__read_grid_hdf__D1_E1_M1()
     ! Initialize element mapping
     call chidg%init()
     
-    call read_grid_hdf5(filename,domains)
+    call read_grid_hdf(filename,domains)
     
     !> Test number of allocated domains
     @assertEqual(ndomains,size(domains))
@@ -56,7 +56,7 @@ subroutine testIO__read_grid_hdf__D1_E27_M1()
     use mod_kinds,              only: rk,ik
     use mod_constants,          only: ZERO, THIRD, NFACES
     use type_domain,            only: domain_t
-    use mod_hdfio,              only: read_grid_hdf5
+    use mod_hdfio,              only: read_grid_hdf
     use mod_grid,               only: compute_element_mappings
     implicit none
     
@@ -75,7 +75,7 @@ subroutine testIO__read_grid_hdf__D1_E27_M1()
     ! Initialize element mapping
     call chidg%init()
     
-    call read_grid_hdf5(filename,domains)
+    call read_grid_hdf(filename,domains)
     
     !> Test number of allocated domains
     @assertEqual(ndomains,size(domains))

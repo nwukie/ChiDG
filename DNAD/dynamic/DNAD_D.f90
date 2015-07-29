@@ -117,7 +117,7 @@
 !************************************************************************************************************
 
 MODULE DNAD_D
-    use mod_kinds,  only: rsingle,rdouble,ishort,ilong
+    use mod_kinds,  only: rsingle,rdouble,ishort,ilong,rk
 IMPLICIT NONE
 
 ! Dynamic allocation, so this is no longer used
@@ -205,7 +205,6 @@ CONTAINS
           u%x_ad_=n
           u%xp_ad_=0.0D0
 
-
     END SUBROUTINE ASSIGN_DR_D
 
     !** dual=single
@@ -218,6 +217,8 @@ CONTAINS
          u%xp_ad_=0.0D0
 
     END SUBROUTINE ASSIGN_DS_D
+
+
 
     !** integer=dual
     ! n=u%x_ad_

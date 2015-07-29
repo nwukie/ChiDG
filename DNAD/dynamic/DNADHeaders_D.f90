@@ -230,9 +230,9 @@
  
    PUBLIC MATMUL
    INTERFACE MATMUL
-        MODULE PROCEDURE MATMUL_DD_D ! matrix multiplies of two dual matrices
-        MODULE PROCEDURE MATMUL_DV_D ! matrix multiplies of a dual matrix with a dual vector
-        MODULE PROCEDURE MATMUL_VD_D ! matrix multiplies of a dual vector with a dual matrix
+        MODULE PROCEDURE MATMUL_DD_D     ! matrix multiplies of two dual matrices
+        MODULE PROCEDURE MATMUL_DV_D     ! matrix multiplies of a dual matrix with a dual vector
+        MODULE PROCEDURE MATMUL_VD_D     ! matrix multiplies of a dual vector with a dual matrix
         MODULE PROCEDURE MATMUL_MV_RD_D  ! matrix-vector :: real-dual
    END INTERFACE
    

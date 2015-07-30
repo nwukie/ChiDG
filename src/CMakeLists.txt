@@ -14,6 +14,10 @@ add_subdirectory(functions)
 # Propagate lib_srcs list to parent directory
 add_lib_sources() 
 
+
+# Need path for including message handler macro
+include_directories(tools)
+
 # Add main executable and propagate to parent
 add_exe_sources(driver.f90)    
     

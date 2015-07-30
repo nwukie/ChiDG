@@ -8,7 +8,9 @@
 !! @author Nathan A. Wukie
 
 
+
 program driver
+#include "messenger.inc"
     use mod_kinds,              only: ik,rk
     use mod_constants,          only: ZERO, ONE, FIVE
     use mod_tecio,              only: write_tecio_variables
@@ -20,12 +22,13 @@ program driver
     use atype_function,         only: function_t
     use mod_grid_operators,     only: initialize_variable
     use mod_function,           only: assign_function
-    use messenger
 
     !-----------------------------------------------------------
     ! Variable declarations
     !-----------------------------------------------------------
     implicit none
+
+
     type(chidg_t)                   :: chidg
     type(domain_t), allocatable     :: dom(:)
     class(function_t), allocatable  :: fcn
@@ -35,13 +38,13 @@ program driver
 
 
 
+!    call warn(1,"hi")
 
 
 
+    if (1==1) call signal(WARN,'hi')
 
-
-
-
+    call AllocationError
 
 
 

@@ -5,7 +5,6 @@ module type_denseblock
     use messenger
     implicit none
 
-
     type, public :: denseblock_t
         !> block associativity
         !! Domain-global index of the element, with which this block is associated.
@@ -67,6 +66,7 @@ contains
         integer(ik),         intent(in)     :: idim, jdim, parent
 
         integer(ik) :: ierr
+        integer :: test
 
         ! Block parents
         self%parent_ = parent
@@ -79,6 +79,7 @@ contains
 !            if (ierr /= 0) call warn(3,__file__,__line__,'Allocation error')
 !            print*, __line__
 !            call warn(3,'Allocation error',__file__,__line__)
+
         else
             allocate(self%mat(idim,jdim),stat=ierr)
 !            if (ierr /= 0) call warn(3,__file__,__line__,'Allocation error')

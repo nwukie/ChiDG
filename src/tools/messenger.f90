@@ -2,6 +2,7 @@ module messenger
     use mod_kinds,  only: rk,ik
     implicit none
 
+
 contains
 
     !> Message routine for handling warnings and errors.
@@ -11,17 +12,17 @@ contains
     !! - Warn            :: 1
     !! - Non-fatal error :: 2
     !! - Fatal error     :: 3
-    subroutine warn(level,filename,linenum,messg)
+    subroutine signal(level,msg,filename,linenum)
         integer(ik),  intent(in)    :: level
-        character(*), intent(in)    :: messg
+        character(*), intent(in)    :: msg
         character(*), intent(in)    :: filename
         integer(ik),  intent(in)    :: linenum
 
         character(100)   :: warnstr
         character(100)   :: errstr
         character(100)   :: killstr
-        character(100)  :: genstr
-        character(100)  :: starstr
+        character(100)   :: genstr
+        character(100)   :: starstr
         character(100)   :: linechar
 
         warnstr = '**************  Warning  **************'
@@ -38,7 +39,7 @@ contains
         if (level == 1) then
             print*, trim(warnstr)
             print*, trim(genstr)
-            print*, trim(messg)
+            print*, trim(msg)
             print*, starstr
 
 
@@ -46,7 +47,7 @@ contains
         else if (level == 2) then
             print*, trim(errstr)
             print*, trim(genstr)
-            print*, trim(messg)
+            print*, trim(msg)
             print*, starstr
 
         ! Kill message - stop code
@@ -54,7 +55,7 @@ contains
 !            print*, errstr, filename, trim(' at '), linenum, messg
             print*, trim(killstr)
             print*, trim(genstr)
-            print*, trim(messg)
+            print*, trim(msg)
             print*, starstr
             stop
 

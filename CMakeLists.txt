@@ -55,8 +55,8 @@ if (${Fortran_VENDOR} MATCHES "INTEL")
     set (CMAKE_Fortran_LINK_FLAGS_RELEASE "")
     
 elseif (${Fortran_VENDOR} MATCHES "GNU")
-    set (USER_COMPILE_FLAGS_DEBUG   "-O0 -cpp -S -ffree-form -ffree-line-length-none -fbacktrace -fcheck=bounds -p -g")    # Note: -fcheck=all has issues with passing null pointer in tecio_interface
-    set (USER_COMPILE_FLAGS_RELEASE "-O3 -cpp -S -ffree-form -ffree-line-length-none")
+    set (USER_COMPILE_FLAGS_DEBUG   "-O0 -cpp -ffree-form -ffree-line-length-none -fbacktrace -fcheck=bounds -p -g")    # Note: -fcheck=all has issues with passing null pointer in tecio_interface
+    set (USER_COMPILE_FLAGS_RELEASE "-O3 -cpp -ffree-form -ffree-line-length-none")
     set (CMAKE_Fortran_LINK_FLAGS_DEBUG "")
     set (CMAKE_Fortran_LINK_FLAGS_RELEASE "")
     

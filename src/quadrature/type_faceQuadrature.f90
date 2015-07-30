@@ -16,10 +16,10 @@ module type_faceQuadrature
         type(point_t),  dimension(:,:), allocatable :: nodes
         real(rk),       dimension(:,:), allocatable :: weights
 
-        real(rk), dimension(:,:,:), allocatable :: val
-        real(rk), dimension(:,:,:), allocatable :: ddxi
-        real(rk), dimension(:,:,:), allocatable :: ddeta
-        real(rk), dimension(:,:,:), allocatable :: ddzeta
+        real(rk), dimension(:,:,:), allocatable :: val      !> (:,:,iface)
+        real(rk), dimension(:,:,:), allocatable :: ddxi     !> ''
+        real(rk), dimension(:,:,:), allocatable :: ddeta    !> ''
+        real(rk), dimension(:,:,:), allocatable :: ddzeta   !> ''
 
     contains
         procedure :: init

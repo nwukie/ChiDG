@@ -10,7 +10,7 @@ module type_blockmatrix
     type, public :: blockmatrix_t
         !> localblocks (nelem x 7)
         !!
-        !!            diag   xi_min   xi_max   eta_min   eta_max   zeta_min    zeta_max
+        !!            xi_min   xi_max   eta_min   eta_max   zeta_min    zeta_max    diag
         !!
         !!  elem #1:
         !!  elem #2:
@@ -18,7 +18,7 @@ module type_blockmatrix
         !!    .
         !!    .
         type(denseblock_t), allocatable :: localblocks(:,:)
-        type(denseblock_t), allocatable :: chimerablocks(:,:)
+!        type(denseblock_t), allocatable :: chimerablocks(:,:)
 
 
     contains

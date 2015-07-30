@@ -392,23 +392,6 @@ contains
 
 
 
-!    !> Project solution discrete values to modal representation
-!    !!
-!    !!  @author Nathan A. Wukie
-!    !-----------------------------------------------------------
-!    subroutine project_solution(self)
-!        class(element_t),   intent(inout)   :: self
-!
-!        real(rk)   :: x,y,z
-!        real(rk)   :: xval,yval,zval
-!        real(rk), dimension(self%gq_coll%vol%nnodes)   :: &
-!                    avals, bvals, cvals, dvals, evals, init_vals
-!
-!        integer(ik)    :: inode
-!
-!    end subroutine
-
-
 
 
 

@@ -13,9 +13,9 @@ contains
     !! - Fatal error     :: 3
     subroutine warn(level,filename,linenum,messg)
         integer(ik),  intent(in)    :: level
+        character(*), intent(in)    :: messg
         character(*), intent(in)    :: filename
         integer(ik),  intent(in)    :: linenum
-        character(*), intent(in)    :: messg
 
         character(100)   :: warnstr
         character(100)   :: errstr

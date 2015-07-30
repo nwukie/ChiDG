@@ -77,6 +77,8 @@ contains
             deallocate(self%mat)
             allocate(self%mat(idim,jdim),stat=ierr)
 !            if (ierr /= 0) call warn(3,__file__,__line__,'Allocation error')
+!            print*, __line__
+!            call warn(3,'Allocation error',__file__,__line__)
         else
             allocate(self%mat(idim,jdim),stat=ierr)
 !            if (ierr /= 0) call warn(3,__file__,__line__,'Allocation error')

@@ -451,7 +451,7 @@ contains
             ivar  = self%domain(1)%eqnset%get_var('u')
 
             ngq = faces(ielem,iface)%gq%nnodes_f
-
+            
             !> Allocate number of AD variables for data at GQ nodes. Derivative arrays are not yet allocated
             allocate(u_gq(ngq))
             allocate(u_ref(ngq))

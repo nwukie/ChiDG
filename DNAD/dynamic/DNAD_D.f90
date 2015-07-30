@@ -1602,12 +1602,14 @@ CONTAINS
     FUNCTION MATMUL_MV_RD_D(u,v) RESULT(res)
         REAL(DBL_AD), intent(in)     :: u(:,:)
         TYPE(AD_D), intent(in) :: v(:)
-        TYPE(AD_D)             :: res(size(v))
+!        TYPE(AD_D)             :: res(size(v))
+        TYPE(AD_D)             :: res(size(u,1))
         REAL(DBL_AD)                 :: xp_ad_v(size(v)), &
                                         xp_ad(size(res))
         INTEGER:: i,j,k
 
-        do j = 1,size(v,1)
+!        do j = 1,size(v,1)
+        do j = 1,size(u,1)
                allocate(res(j)%xp_ad_(size(v(1)%xp_ad_)))
         end do
 

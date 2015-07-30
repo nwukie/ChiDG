@@ -86,10 +86,6 @@ module mod_interpolate
         type(AD_D),         intent(inout)   :: var_gq(:)
         integer(ik),        intent(in)      :: ielem_seed
 
-
-
-
-
         type(AD_D)  :: qdiff(faces(ielem,iface)%nterms_s)
         integer(ik) :: nderiv, set_deriv, iterm, igq, nterms_s
 
@@ -128,13 +124,13 @@ module mod_interpolate
                 qdiff(iterm)%xp_ad_(set_deriv) = 1.0_rk
             end do
 
-            var_gq = matmul(faces(ielem,iface)%gq%face%val(:,:,iface),qdiff)
+            var_gq = matmul(faces(ielem,iface)%gq%face%val(:,:,iface),  qdiff)
 
         else
             !> If the solution variable derivatives dont need initialized
             !! then just use the q(ielem) values and derivatives get
             !! initialized to zero
-            var_gq = matmul(faces(ielem,iface)%gq%face%val(:,:,iface),q(ielem)%var(ivar))
+            var_gq = matmul(faces(ielem,iface)%gq%face%val(:,:,iface),  q(ielem)%var(ivar))
         end if
 
 

@@ -1,9 +1,12 @@
 !> Data type for storing the matrix of dense blocks which hold the linearization for an algorithm
 !!  @author Nathan A. Wukie
 module type_blockmatrix
-    use messenger,          only: warn
+#include <messenger.h>
     use mod_kinds,          only: rk,ik
+    use mod_constants,      only: DIAG
+    use type_mesh,          only: mesh_t
     use type_denseblock,    only: denseblock_t
+    use DNAD_D
     implicit none
 
 
@@ -17,22 +20,19 @@ module type_blockmatrix
         !!  elem #3:
         !!    .
         !!    .
-        type(denseblock_t), allocatable :: localblocks(:,:)
-!        type(denseblock_t), allocatable :: chimerablocks(:,:)
+        type(denseblock_t), allocatable :: lblks(:,:)       !> Local domain blocks
+!        type(denseblock_t), allocatable :: cblks(:,:)      !> Chimera inter-domain blocks
 
 
     contains
         !> Initializers
-        generic,   public  :: init_local => init_local_general, init_local_linearization   !> Initialize local matrix
-        procedure, private :: init_local_general
-        procedure, private :: init_local_linearization
+        generic,   public  :: init => init_general, init_linearization   !> Initialize local matrix
+        procedure, private :: init_general
+        procedure, private :: init_linearization
 
-        procedure :: nblocks   !> return number of matrix entries
-        procedure :: idim       !> return i-dimension of matrix storage
-        procedure :: jdim       !> return j-dimension of matrix storage
 
         !> Setters
-        procedure :: resize     !> resize matrix storage
+        procedure :: store      !> Store linearization data
 
         final :: destructor
     end type blockmatrix_t
@@ -44,7 +44,7 @@ contains
 
     !> Subroutine for initializing local matrix size
     !-----------------------------------------------------------
-    subroutine init_local_general(self,nrow,ncol)
+    subroutine init_general(self,nrow,ncol)
         class(blockmatrix_t), intent(inout)  :: self
         integer(ik),          intent(in)     :: nrow,ncol
 
@@ -52,13 +52,13 @@ contains
 
 
         ! Allocate matrix size
-        if (allocated(self%localblocks) then
-            deallocate(self%localblocks)
-            allocate(self%localblocks(nrow,ncol,stat=ierr)
-            if (ierr /= 0) call warn(3,__file__,__line__,'Allocation error')
+        if (allocated(self%lblks)) then
+            deallocate(self%lblks)
+            allocate(self%lblks(nrow,ncol), stat=ierr)
+            if (ierr /= 0) call AllocationError
         else
-            allocate(self%localblocks(nrow,ncol,stat=ierr)
-            if (ierr /= 0) call warn(3,__file__,__line__,'Allocation error')
+            allocate(self%lblks(nrow,ncol), stat=ierr)
+            if (ierr /= 0) call AllocationError
         end if
 
     end subroutine
@@ -66,11 +66,11 @@ contains
 
     !> Subroutine for initializing local linearization matrix
     !-----------------------------------------------------------
-    subroutine init_local_linearization(self,mesh)
+    subroutine init_linearization(self,mesh)
         class(blockmatrix_t), intent(inout)  :: self
         class(mesh_t),        intent(in)     :: mesh
 
-        integer(ik) :: nelem,nblk,ierr
+        integer(ik) :: nelem, nblk, ierr, ielem, iblk, size1d, parent
         logical     :: new_elements
 
         nelem = mesh%nelem  !> Number of elements in the local block
@@ -80,34 +80,40 @@ contains
         !----------------------------------------------------
         ! If matrix was already allocated, deallocate and then reallocate matrix size
         ! Reallocation would take place if the number of elements were changed
-        if (allocated(self%localblocks) then
+        if (allocated(self%lblks)) then
             ! If the size is already allocated, check if the number of elements has changed.
             ! If so (new_elements), then reallocate matrix size.
             ! If not, do nothing
-            new_elements = (mesh%nelem /= size(self%localblocks,1))
+            new_elements = (mesh%nelem /= size(self%lblks,1))
             if (new_elements) then
-                deallocate(self%localblocks)
-                allocate(self%localblocks(nelem,nblk,stat=ierr)
-                if (ierr /= 0) call warn(3,__file__,__line__,'Allocation error')
+                deallocate(self%lblks)
+                allocate(self%lblks(nelem,nblk), stat=ierr)
+                if (ierr /= 0) call AllocationError
             end if
         else
-            allocate(self%localblocks(nelem,nblk,stat=ierr)
-            if (ierr /= 0) call warn(3,__file__,__line__,'Allocation error')
+            allocate(self%lblks(nelem,nblk), stat=ierr)
+            if (ierr /= 0) call AllocationError
         end if
 
 
-        ! Loop through elements and initialize dense blocks
-        do ielem_zeta
-            do ielem_eta
-                do ielem_xi
 
 
+        !> Loop through elements and call initialization for linearization denseblock matrices
+        do ielem = 1,mesh%nelem
+            do iblk = 1,7
+                size1d = mesh%elems(ielem)%neqns  *  mesh%elems(ielem)%nterms_s
 
+                !> Parent is the element with which the linearization was computed
+                if (iblk == DIAG) then
+                    parent = mesh%elems(ielem)%ielem
+                else
+                    parent = mesh%faces(ielem,iblk)%ineighbor
+                end if
 
-                end do  ! ielem_xi
-            end do  ! ielem_eta
-        end do  ! ielem_zeta
-
+                !> Call initialization procedure
+                call self%lblks(ielem,iblk)%init(size1d,parent)
+            end do
+        end do
 
 
 
@@ -115,93 +121,33 @@ contains
 
 
 
+    !>  Stores derivative data to the linearization matrix
+    !!
+    !!      -- Given the integral data computed from the spatial discretization,
+    !!         store the derivative values from the AD data types
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @param[in]  integral    Array of modes from the spatial scheme, with embedded partial derivatives for the linearization matrix
+    !!  @param[in]  ielem       Element for which the linearization was computed
+    !!  @param[in]  iblk        Index of a block for the linearization of the given element
+    !!  @param[in]  ivar        Index of the variable
+    !!
+    subroutine store(self,integral,ielem,iblk,ivar)
+        class(blockmatrix_t),   intent(inout)   :: self
+        type(AD_D),             intent(in)      :: integral(:)
+        integer(ik),            intent(in)      :: ielem, iblk, ivar
 
-
-
-
-    !> Subroutine for initializing dense-blocks
-    !------------------------------------------------------------
-    subroutine init_local_(self,mesh)
-        class(blockmatrix_t),   intent(inout)   :: self)
 
 
     end subroutine
 
 
 
-    !> return i-dimension of block storage
-    !------------------------------------------------------------
-    function idim(self) result(i)
-        class(denseblock_t), intent(in)   :: self
-        integer(ik)                       :: i
-
-        i = size(self%vals,1)
-    end function
-
-    !> return j-dimension of block storage
-    !------------------------------------------------------------
-    function jdim(self) result(j)
-        class(denseblock_t), intent(in)   :: self
-        integer(ik)                       :: j
-
-        j = size(self%vals,2)
-    end function
-
-    !> return number of entries in block storage
-    !------------------------------------------------------------
-    function nentries(self) result(n)
-        class(denseblock_t), intent(in)   :: self
-        integer(ik)                  :: n
-
-        n = size(self%vals,1) * size(self%vals,2)
-    end function
-
-    !> return index of block parent
-    !------------------------------------------------------------
-    function parent(self) result(par)
-        class(denseblock_t), intent(in) :: self
-        integer(ik)                     :: par
-
-        par = self%parent_
-    end function
-
-
-
-    !> Resize dense-block storage
-    !------------------------------------------------------------
-    subroutine resize(self,idim,jdim)
-        class(denseblock_t), intent(inout)  :: self
-        integer(ik),         intent(in)     :: idim,jdim
-
-        integer(ik) :: ierr
-
-        ! Allocate block storage
-        ! Check if storage was already allocated and reallocate if necessary
-        if (allocated(self%vals)) then
-            deallocate(self%vals)
-            allocate(self%vals(idim,jdim),stat=ierr)
-            if (ierr /= 0) call warn(3,__file__,__line__,'Allocation error')
-        else
-            allocate(self%vals(idim,jdim),stat=ierr)
-            if (ierr /= 0) call warn(3,__file__,__line__,'Allocation error')
-        end if
-
-    end subroutine
-
-
-    !> set index of parent
-    !------------------------------------------------------------
-    subroutine reparent(self,par)
-        class(denseblock_t), intent(inout)  :: self
-        integer(ik),         intent(in)     :: par
-
-        self%parent_ = par
-    end subroutine
 
 
     subroutine destructor(self)
-        type(denseblock_t), intent(inout) :: self
-        deallocate(self%vals)
+        type(blockmatrix_t), intent(inout) :: self
+
     end subroutine
 
 end module type_blockmatrix

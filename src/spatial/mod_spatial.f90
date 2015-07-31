@@ -13,10 +13,13 @@ contains
 
         integer(ik) :: iblk, ielem, iface, nelem
 
-        associate (mesh => domain%mesh, q => domain%q, rhs => domain%rhs)
+        associate (mesh => domain%mesh, q => domain%q, rhs => domain%rhs, lin => domain%lin)
             nelem = domain%mesh%nelem
 
 
+            !------------------------------------------------------------------------------------------
+            !                                      Interior Scheme
+            !------------------------------------------------------------------------------------------
 
             !> Loop through given element and neighbors and compute the corresponding linearization
             !> XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX, DIAG
@@ -50,6 +53,11 @@ contains
 
 
             end do !block
+
+
+            !-------------------------------------------------------------------------------------------
+            !                                     Boundary Scheme
+            !-------------------------------------------------------------------------------------------
 
 
         end associate

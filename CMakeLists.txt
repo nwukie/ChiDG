@@ -126,7 +126,7 @@ message(STATUS "TECPLOT_INCLUDE_DIR: " ${TECPLOT_INCLUDE_DIR})
 #------------------------------------------------------------------
 add_subdirectory(DNAD)                                                                        
 add_subdirectory(src)
-include_directories(src/tools)
+include_directories(src/tools)    # Need include here for macro-enhanced message handler message.h
 
 
 
@@ -147,12 +147,8 @@ target_link_libraries(chidg coredg ${HDF5_LIBRARIES} ${TECPLOT_LIBRARIES})
 set_target_properties(chidg PROPERTIES 
                             COMPILE_FLAGS "${CMAKE_Fortran_FLAGS}"
                             LINK_FLAGS    "${CMAKE_Fortran_LINK_FLAGS} -lstdc++ -lpthread")
-                            
-                            #LINK_FLAGS    "${CMAKE_Fortran_LINK_FLAGS} -lstdc++ -lgfortran")
                             # need to link lstdc++ here for tecio
-                            # need to link to gfortran if compiling with ifort and 
-                            # linking to atlas, which was compiled with gfortran
-
+                            
 
 #------------------------------------------------------------------                                                                    
 #                     Unit-testing                                   

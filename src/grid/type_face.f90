@@ -25,8 +25,8 @@ module type_face
         integer(ik), pointer         :: nterms_s => null()
         integer(ik)                  :: ftype               !> interior (0) or boundary face (1)
         integer(ik)                  :: iface               !> XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, etc
-        integer(ik)                  :: iparent             !> Pointer to block-local index of parent element
-        integer(ik)                  :: ineighbor           !> Pointer to block-lodal index of neighbor element
+        integer(ik)                  :: iparent             !> Block-local index of parent element
+        integer(ik)                  :: ineighbor           !> Block-local index of neighbor element
 
         !> Geometry
         !---------------------------------------------------------

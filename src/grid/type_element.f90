@@ -1,4 +1,5 @@
 module type_element
+#include <messenger.h>
     use mod_kinds,              only: rk,ik
     use mod_constants,          only: SPACEDIM,NFACES,XI_MIN,XI_MAX,ETA_MIN, &
                                       ETA_MAX,ZETA_MIN,ZETA_MAX,ONE,ZERO
@@ -106,7 +107,8 @@ contains
         integer(ik)                         :: ierr, nterms_c
         real(rk), dimension(:,:), pointer   :: imap => null()
 
-        if (self%geomInitialized) stop "Error: element%init_geom -- element already initialized"
+        if (self%geomInitialized) call signal(FATAL,'element%init_geom -- element already initialized')
+
 
 
         if (allocated(elem_map(mapping)%mat)) then
@@ -114,9 +116,10 @@ contains
             nterms_c        = size(elem_map(mapping)%mat,1) !> Get number of terms if coordinate expansion from size of mapping matrix
             self%nterms_c   = nterms_c                      !> Set number of terms in coordinate expansion
 
-            if (nterms_c /= size(points)) stop "Error: element%init_geom -- mapping and points to not match"
+
+            if (nterms_c /= size(points)) call signal(FATAL,'element%init_geom -- mapping and points do not match')
         else
-            stop "Error: element%init_geom - element mapping not initialized"
+            call signal(FATAL,'element%init_geom -- element mapping not initialized')
         end if
 
         ! Allocate and compute mesh x,y,z modes
@@ -151,7 +154,7 @@ contains
         integer(ik) :: ierr
         integer(ik) :: nnodes,nnodes_face,nnodes_vol
 
-        if (self%numInitialized) stop "Error: element%init_sol -- element already initialized"
+        if (self%numInitialized) call signal(FATAL,'element%init_sol -- element already initialized')
 
 
         self%nterms_s    = nterms_s                 !> Set number of terms in modal expansion of solution
@@ -163,21 +166,20 @@ contains
 
         allocate(self%jinv(nnodes),stat=ierr)
         allocate(self%metric(SPACEDIM,SPACEDIM,nnodes),stat=ierr)
-        if (ierr /= 0) stop "Memory allocation error: element%init"
+        if (ierr /= 0) call AllocationError
 
         allocate(self%quad_pts(nnodes))
         allocate(self%dtdx(nnodes,nterms_s))
         allocate(self%dtdy(nnodes,nterms_s))
         allocate(self%dtdz(nnodes,nterms_s),stat=ierr)
-        if (ierr /= 0) stop "Memory allocation error: element%init"
+        if (ierr /= 0) call AllocationError
 
         allocate(self%mass(nterms_s,nterms_s),stat=ierr)
         allocate(self%invmass(nterms_s,nterms_s),stat=ierr)
-        if (ierr /= 0) stop "Memory allocation error: element%init"
+        if (ierr /= 0) call AllocationError
 
         call self%compute_quadrature_metrics()                  !> Compute element metrics
         call self%compute_element_matrices()                    !> Compute mass matrices and derivative matrices
-!        call self%initialize_solution()
 
         self%numInitialized = .true.                            !> Confirm element numerics were initialized
     end subroutine
@@ -203,7 +205,7 @@ contains
         nterms_s = self%nterms_s
         nterms_c = self%nterms_c
 
-        if (nterms_c == 0) stop "Error: element%assign_quadrature -- coordinate expansion not defined"
+        if (nterms_c == 0) call signal(FATAL,'element%assign_quadrature -- coordinate expansion not defined')
 
         call compute_nnodes_gq(nterms_s,nterms_c,nnodes_face,nnodes_vol)    !> Get number of quadrature nodes
 

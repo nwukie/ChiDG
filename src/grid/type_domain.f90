@@ -7,6 +7,7 @@ module type_domain
     use type_mesh,          only: mesh_t
     use type_point,         only: point_t
     use type_expansion,     only: expansion_t
+    use type_blockmatrix,   only: blockmatrix_t
     use atype_equationset,  only: equationset_t
 
     implicit none
@@ -15,20 +16,22 @@ module type_domain
 
 
     !> Domain data type
-    !   - contains mesh, solution, and equation set information
-    !
-    !   @author Nathan A. Wukie
-    !---------------------------------------------------------------------------------------
+    !!      - contains mesh, solution, and equation set information
+    !!
+    !!   @author Nathan A. Wukie
+    !-------------------------------------------------------------------------------------------------
     type, public :: domain_t
-        character(100)                    :: name                   !> Domain name -- not currently used
-        type(mesh_t)                      :: mesh                   !> Mesh storage
-        class(equationset_t), allocatable :: eqnset                 !> Equation set solved on this domain
-        type(expansion_t),    allocatable :: q(:)                   !> Array of solution expansions. One for each element.
-        type(expansion_t),    allocatable :: rhs(:)                 !> Array of rhs expansions. One for each element.
+        character(100)                    :: name                       !> Domain name -- not currently used
+        type(mesh_t)                      :: mesh                       !> Mesh storage
+        class(equationset_t), allocatable :: eqnset                     !> Equation set solved on this domain
+        type(expansion_t),    allocatable :: q(:)                       !> Array of solution expansions. One for each element.
+        type(expansion_t),    allocatable :: rhs(:)                     !> Array of rhs expansions. One for each element. Ax=b
+        type(blockmatrix_t)               :: lin                        !> Block matrix for storing linearization.        Ax=b
+
 
         ! Matrix views of expansion storage
-        type(expansion_t),    pointer     :: q_m(:,:,:) => null()   !> Matrix view of solution expansions
-        type(expansion_t),    pointer     :: rhs_m(:,:,:) => null() !> Matrix view of rhs expansion
+        type(expansion_t),    pointer       :: q_m(:,:,:)   => null()   !> Matrix view of solution expansions
+        type(expansion_t),    pointer       :: rhs_m(:,:,:) => null()   !> Matrix view of rhs expansion
 
         logical                             :: geomInitialized = .false.
         logical                             :: numInitialized  = .false.
@@ -39,7 +42,7 @@ module type_domain
         final           :: destructor
 
     end type domain_t
-    !---------------------------------------------------------------------------------------
+    !-------------------------------------------------------------------------------------------------
 
 
 contains

@@ -1,2 +1,4 @@
 doc
 build
+build_gnu
+build_intel

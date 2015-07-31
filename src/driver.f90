@@ -10,7 +10,7 @@
 
 
 program driver
-#include "messenger.inc"
+#include <messenger.h>
     use mod_kinds,              only: ik,rk
     use mod_constants,          only: ZERO, ONE, FIVE
     use mod_tecio,              only: write_tecio_variables
@@ -30,8 +30,8 @@ program driver
 
 
     type(chidg_t)                   :: chidg
-    type(domain_t), allocatable     :: dom(:)
-    class(function_t), allocatable  :: fcn
+    type(domain_t),     allocatable :: dom(:)
+    class(function_t),  allocatable :: fcn
 
 
     call chidg%init()
@@ -42,7 +42,7 @@ program driver
 
 
 
-    if (1==1) call signal(WARN,'hi')
+!    call signal(WARN,'hi')
 
     call AllocationError
 

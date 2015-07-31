@@ -122,10 +122,12 @@ message(STATUS "TECPLOT_INCLUDE_DIR: " ${TECPLOT_INCLUDE_DIR})
 
 
 #------------------------------------------------------------------                                                                        
-#                        Add source tree
+#                        Add source tree and includes
 #------------------------------------------------------------------
 add_subdirectory(DNAD)                                                                        
 add_subdirectory(src)
+include_directories(src/tools)
+
 
 
 

@@ -21,14 +21,15 @@ module type_blockmatrix
         !!    .
         !!    .
         type(denseblock_t), allocatable :: lblks(:,:)       !> Local domain blocks
+        integer(ik),        allocatable :: ldata(:,:)       !> Local block data     (nvars, nterms)
+
 !        type(denseblock_t), allocatable :: cblks(:,:)      !> Chimera inter-domain blocks
 
 
     contains
         !> Initializers
-        generic,   public  :: init => init_general, init_linearization   !> Initialize local matrix
-        procedure, private :: init_general
-        procedure, private :: init_linearization
+        generic,   public  :: init => initialize_linearization   !> Initialize local matrix
+        procedure, private :: initialize_linearization
 
 
         !> Setters
@@ -42,31 +43,11 @@ module type_blockmatrix
     private
 contains
 
-    !> Subroutine for initializing local matrix size
-    !-----------------------------------------------------------
-    subroutine init_general(self,nrow,ncol)
-        class(blockmatrix_t), intent(inout)  :: self
-        integer(ik),          intent(in)     :: nrow,ncol
-
-        integer(ik) :: ierr
-
-
-        ! Allocate matrix size
-        if (allocated(self%lblks)) then
-            deallocate(self%lblks)
-            allocate(self%lblks(nrow,ncol), stat=ierr)
-            if (ierr /= 0) call AllocationError
-        else
-            allocate(self%lblks(nrow,ncol), stat=ierr)
-            if (ierr /= 0) call AllocationError
-        end if
-
-    end subroutine
 
 
     !> Subroutine for initializing local linearization matrix
     !-----------------------------------------------------------
-    subroutine init_linearization(self,mesh)
+    subroutine initialize_linearization(self,mesh)
         class(blockmatrix_t), intent(inout)  :: self
         class(mesh_t),        intent(in)     :: mesh
 
@@ -86,12 +67,12 @@ contains
             ! If not, do nothing
             new_elements = (mesh%nelem /= size(self%lblks,1))
             if (new_elements) then
-                deallocate(self%lblks)
-                allocate(self%lblks(nelem,nblk), stat=ierr)
+                deallocate(self%lblks, self%ldata)
+                allocate(self%lblks(nelem,nblk), self%ldata(nelem,2), stat=ierr)
                 if (ierr /= 0) call AllocationError
             end if
         else
-            allocate(self%lblks(nelem,nblk), stat=ierr)
+            allocate(self%lblks(nelem,nblk), self%ldata(nelem,2), stat=ierr)
             if (ierr /= 0) call AllocationError
         end if
 
@@ -110,8 +91,14 @@ contains
                     parent = mesh%faces(ielem,iblk)%ineighbor
                 end if
 
-                !> Call initialization procedure
-                call self%lblks(ielem,iblk)%init(size1d,parent)
+                !> Call initialization procedure if parent is not 0 (0 meaning there is no parent for that block, probably a boundary)
+                if (parent /= 0) then
+                    call self%lblks(ielem,iblk)%init(size1d,parent)
+
+                    ! Store data about number of equations and number of terms in solution expansion
+                    self%ldata(ielem,1) = mesh%elems(ielem)%neqns
+                    self%ldata(ielem,2) = mesh%elems(ielem)%nterms_s
+                end if
             end do
         end do
 
@@ -137,7 +124,21 @@ contains
         type(AD_D),             intent(in)      :: integral(:)
         integer(ik),            intent(in)      :: ielem, iblk, ivar
 
+        integer(ik) :: iarray, neqns, nterms, icol_start, icol
 
+
+        ! Get stored information for the block
+        neqns  = self%ldata(ielem,1)
+        nterms = self%ldata(ielem,2)
+
+        icol_start = ( (ivar - 1)  *  nterms)
+
+        ! If sizes match, store derivative arrays to local block
+        do iarray = 1,size(integral)
+            !> Do a += operation to add derivatives to any that are currently stored
+            icol = icol_start + iarray
+            self%lblks(ielem,iblk)%mat(:, icol) = self%lblks(ielem,iblk)%mat(:,icol) + integral(iarray)%xp_ad_
+        end do
 
     end subroutine
 

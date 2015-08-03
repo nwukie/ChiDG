@@ -2,12 +2,13 @@ module test_blockmatrix_mod
     use pfunit_mod
     use type_chidg,         only: chidg_t
     use mod_kinds,          only: rk,ik
-    use mod_constants,      only: ZERO, ONE, TWO, THREE, FIVE, SIX, EIGHT, NINE, TEN, &
+    use mod_constants,      only: ZERO, ONE, TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT, NINE, TEN, &
                                   XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX
     use mod_hdfio,          only: read_grid_hdf
     use mod_interpolate,    only: interpolate
     use mod_grid_operators, only: initialize_variable
     use type_domain,        only: domain_t
+    use type_blockmatrix,   only: blockmatrix_t
     use DNAD_D
     use fcn_constant,       only: constant_f
     implicit none
@@ -16,9 +17,10 @@ module test_blockmatrix_mod
 
 @TestCase
     type, extends(TestCase) ::  test_blockmatrix
-        type(chidg_t)                   :: chidg
-        type(domain_t), allocatable     :: domain(:)
-        type(constant_f)                :: fcn
+        type(chidg_t)                        :: chidg
+        type(domain_t),         allocatable  :: domain(:)
+        type(blockmatrix_t)                  :: bmat
+        type(constant_f)                     :: fcn
 
     contains
         procedure   ::  setUp
@@ -49,10 +51,9 @@ contains
             call this%domain(1)%init_sol('Scalar',nterms_s)
     
     
-            !> Initialized solution to constant values
-            ivar = this%domain(1)%eqnset%get_var('u')               !> Get variable index
-            call this%fcn%set(5._rk)                                !> Set constant function value
-            call initialize_variable(this%domain(1),ivar,this%fcn)  !> Initialize variable using constant function
+    
+            !> Initialize blockmatrix
+            call this%bmat%init(this%domain(1)%mesh)
     
     
         end associate        
@@ -67,39 +68,192 @@ contains
 !------------------------------------------------------------------------------------------------------
 
 
-!> Test interpolation of modes to volume quadrature nodes. No AD variables
+!> Test that number of rows equals number of elements
 @Test
-    subroutine test_blockmatrix__initialize_linearization(self)
+    subroutine test_blockmatrix__init_linearization__nrows(self)
         class(test_blockmatrix),    intent(inout)   :: self
         
-        integer(ik)                 :: ielem, ivar, ngq
-        real(rk), allocatable       :: u_gq(:), u_ref(:)
-        real(rk)                    :: tol
-        
-        associate ( elems => self%domain(1)%mesh%elems, q => self%domain(1)%q, rhs => self%domain(1)%rhs )        
-            tol   = 1.e-13_rk
-            ielem = 14
-            ivar  = 1
+        integer(ik)                 :: nelem
 
-            ngq = elems(ielem)%gq%nnodes_v
+        nelem = self%domain(1)%mesh%nelem
+        @assertEqual(nelem,size(self%bmat%lblks,1))  
 
-            allocate(u_gq(ngq))
-            allocate(u_ref(ngq))
-            
-            
-            !> PROCEDURE BEING TESTED
-            call interpolate(elems,q,ielem,ivar,u_gq)
-            
-            
-            !> Initialize reference
-            u_ref = self%fcn%value_ 
-            
-            !> Test that standard interpolation to quadrature 
-            !! on an element volume is producing expected results
-            @assertEqual(u_ref,u_gq,tol)
-            
-        end associate
     end subroutine
+    
+    
+    
+!> Test that number of columns equals number of neighbor elems plus one(diag)
+@Test
+    subroutine test_blockmatrix__init_linearization__ncols(self)
+        class(test_blockmatrix),    intent(inout)   :: self
+
+        @assertEqual(7,size(self%bmat%lblks,2))  
+
+        
+    end subroutine   
+    
+    
+    
+!>  Test that 
+@Test
+    subroutine test_blockmatrix__init_linearization__denseblocks(self)
+        class(test_blockmatrix),    intent(inout)   :: self
+        
+        integer(ik) :: nelem, ielem, size1d
+        
+        associate ( mesh => self%domain(1)%mesh, lblks => self%bmat%lblks)
+        
+            
+            nelem = mesh%nelem
+            
+            ! Test appropriate blocks are allocated or not allocated for the first element            
+            ielem = 1
+            @assertFalse(allocated(lblks(ielem,1)%mat))
+            @assertTrue(allocated(lblks(ielem,2)%mat))
+            @assertFalse(allocated(lblks(ielem,3)%mat))
+            @assertTrue(allocated(lblks(ielem,4)%mat))
+            @assertFalse(allocated(lblks(ielem,5)%mat))
+            @assertTrue(allocated(lblks(ielem,6)%mat))
+            @assertTrue(allocated(lblks(ielem,7)%mat))
+            
+            
+            !> Test first element, linearization block sizes
+            size1d = mesh%nterms_s  *  mesh%neqns
+            @assertEqual(size1d,size(lblks(ielem,2)%mat,1))
+            @assertEqual(size1d,size(lblks(ielem,2)%mat,2))
+            
+            @assertEqual(size1d,size(lblks(ielem,4)%mat,1))
+            @assertEqual(size1d,size(lblks(ielem,4)%mat,2))
+            
+            @assertEqual(size1d,size(lblks(ielem,6)%mat,1))
+            @assertEqual(size1d,size(lblks(ielem,6)%mat,2))
+            
+            @assertEqual(size1d,size(lblks(ielem,7)%mat,1))
+            @assertEqual(size1d,size(lblks(ielem,7)%mat,2))
+            
+            
+            
+            
+            ! Test appropriate blocks are allocated or not allocated for the middle element
+            !> All linearization blocks should be initialized            
+            ielem = 14
+            @assertTrue(allocated(lblks(ielem,1)%mat))
+            @assertTrue(allocated(lblks(ielem,2)%mat))
+            @assertTrue(allocated(lblks(ielem,3)%mat))
+            @assertTrue(allocated(lblks(ielem,4)%mat))
+            @assertTrue(allocated(lblks(ielem,5)%mat))
+            @assertTrue(allocated(lblks(ielem,6)%mat))
+            @assertTrue(allocated(lblks(ielem,7)%mat))
+            
+            
+            !> Test middle element, linearization block sizes
+            size1d = mesh%nterms_s  *  mesh%neqns
+            
+            @assertEqual(size1d,size(lblks(ielem,1)%mat,1))
+            @assertEqual(size1d,size(lblks(ielem,1)%mat,2))
+            
+            @assertEqual(size1d,size(lblks(ielem,2)%mat,1))
+            @assertEqual(size1d,size(lblks(ielem,2)%mat,2))
+            
+            @assertEqual(size1d,size(lblks(ielem,3)%mat,1))
+            @assertEqual(size1d,size(lblks(ielem,3)%mat,2))
+            
+            @assertEqual(size1d,size(lblks(ielem,4)%mat,1))
+            @assertEqual(size1d,size(lblks(ielem,4)%mat,2))
+            
+            @assertEqual(size1d,size(lblks(ielem,5)%mat,1))
+            @assertEqual(size1d,size(lblks(ielem,5)%mat,2))
+            
+            @assertEqual(size1d,size(lblks(ielem,6)%mat,1))
+            @assertEqual(size1d,size(lblks(ielem,6)%mat,2))
+            
+            @assertEqual(size1d,size(lblks(ielem,7)%mat,1))
+            @assertEqual(size1d,size(lblks(ielem,7)%mat,2))
+            
+    
+    
+        end associate   
+    
+    
+    end subroutine
+    
+    
+    
+    
+!--------------------------------------------------------------------------------
+
+@Test
+    subroutine test_blockmatrix__store(self)
+        class(test_blockmatrix),    intent(inout)   :: self
+        
+        type(AD_D)  :: integral(8)
+        integer(ik) :: ielem, iblk, ivar, nderiv, i
+        
+        associate (bmat => self%bmat)
+    
+            ielem  = 14
+            iblk   = 1
+            ivar   = 1
+            nderiv = 8
+        
+            !> Initialize AD variables with allocated derivative arrays
+            do i = 1,8
+                integral(i) = AD_D(nderiv)
+            end do
+        
+            integral = [ONE, TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT]
+            !> Set the first and last element of each derivative array
+            integral(1)%xp_ad_(1) = ONE
+            integral(1)%xp_ad_(8) = ONE
+            
+            integral(2)%xp_ad_(1) = TWO
+            integral(2)%xp_ad_(8) = TWO
+            
+            integral(3)%xp_ad_(1) = THREE
+            integral(3)%xp_ad_(8) = THREE
+            
+            integral(4)%xp_ad_(1) = FOUR
+            integral(4)%xp_ad_(8) = FOUR
+            
+            integral(5)%xp_ad_(1) = FIVE
+            integral(5)%xp_ad_(8) = FIVE
+            
+            integral(6)%xp_ad_(1) = SIX
+            integral(6)%xp_ad_(8) = SIX
+            
+            integral(7)%xp_ad_(1) = SEVEN
+            integral(7)%xp_ad_(8) = SEVEN
+            
+            integral(8)%xp_ad_(1) = EIGHT
+            integral(8)%xp_ad_(8) = EIGHT
+        
+        
+        
+            !> PROCEDURE BEING TESTED
+            call bmat%store(integral,ielem,iblk,ivar)
+        
+        
+        
+            !> Check that the derivatives were assigned to their correct locations in the block matrix
+            @assertEqual(integral(1)%xp_ad_,bmat%lblks(ielem,iblk)%mat(1:8,1))
+            @assertEqual(integral(2)%xp_ad_,bmat%lblks(ielem,iblk)%mat(1:8,2))
+            @assertEqual(integral(3)%xp_ad_,bmat%lblks(ielem,iblk)%mat(1:8,3))
+            @assertEqual(integral(4)%xp_ad_,bmat%lblks(ielem,iblk)%mat(1:8,4))
+            @assertEqual(integral(5)%xp_ad_,bmat%lblks(ielem,iblk)%mat(1:8,5))
+            @assertEqual(integral(6)%xp_ad_,bmat%lblks(ielem,iblk)%mat(1:8,6))
+            @assertEqual(integral(7)%xp_ad_,bmat%lblks(ielem,iblk)%mat(1:8,7))
+            @assertEqual(integral(8)%xp_ad_,bmat%lblks(ielem,iblk)%mat(1:8,8))
+        
+        
+        
+        
+        end associate
+    
+    
+    end subroutine
+    
+    
+    
     
     
     

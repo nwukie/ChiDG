@@ -161,22 +161,20 @@ contains
         self%neqns       = neqns                    !> Set number of equations being solved
 
         call self%assign_quadrature()               !> With nterms_s and nterms_c defined, we can assign a quadrature instance
-        nnodes = self%gq%vol%nnodes                 !> With a quadrature instance assigned, we have the number of quadrature nodes
+        nnodes           = self%gq%vol%nnodes       !> With a quadrature instance assigned, we have the number of quadrature nodes
 
 
-        allocate(self%jinv(nnodes),stat=ierr)
-        allocate(self%metric(SPACEDIM,SPACEDIM,nnodes),stat=ierr)
+        !> Allocate storage for element data structures
+        allocate(self%jinv(nnodes),                         &
+                 self%metric(SPACEDIM,SPACEDIM,nnodes),     &
+                 self%quad_pts(nnodes),                     &
+                 self%dtdx(nnodes,nterms_s),                &
+                 self%dtdy(nnodes,nterms_s),                &
+                 self%dtdz(nnodes,nterms_s),                &
+                 self%mass(nterms_s,nterms_s),              &
+                 self%invmass(nterms_s,nterms_s), stat = ierr)
         if (ierr /= 0) call AllocationError
 
-        allocate(self%quad_pts(nnodes))
-        allocate(self%dtdx(nnodes,nterms_s))
-        allocate(self%dtdy(nnodes,nterms_s))
-        allocate(self%dtdz(nnodes,nterms_s),stat=ierr)
-        if (ierr /= 0) call AllocationError
-
-        allocate(self%mass(nterms_s,nterms_s),stat=ierr)
-        allocate(self%invmass(nterms_s,nterms_s),stat=ierr)
-        if (ierr /= 0) call AllocationError
 
         call self%compute_quadrature_metrics()                  !> Compute element metrics
         call self%compute_element_matrices()                    !> Compute mass matrices and derivative matrices
@@ -540,16 +538,6 @@ contains
     subroutine destructor(self)
         type(element_t), intent(inout) :: self
 
-!> Shouldn't need to deallocate an 'allocatable'. The compiler is supposed to do that for you
-!        if (allocated(self%quad_pts))   deallocate(self%quad_pts)
-!        if (allocated(self%elem_pts))   deallocate(self%elem_pts)
-!        if (allocated(self%metric))     deallocate(self%metric)
-!        if (allocated(self%jinv))       deallocate(self%jinv)
-!        if (allocated(self%dtdx))       deallocate(self%dtdx)
-!        if (allocated(self%dtdy))       deallocate(self%dtdy)
-!        if (allocated(self%dtdz))       deallocate(self%dtdz)
-!        if (allocated(self%mass))       deallocate(self%mass)
-!        if (allocated(self%invmass))    deallocate(self%invmass)
 
     end subroutine
 

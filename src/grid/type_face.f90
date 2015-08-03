@@ -1,4 +1,5 @@
 module type_face
+#include  <messenger.h>
     use mod_kinds,              only: rk,ik
     use mod_constants,          only: XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, &
                                       ZETA_MIN, ZETA_MAX, XI_DIR, ETA_DIR, ZETA_DIR, &
@@ -70,7 +71,19 @@ module type_face
 contains
 
 
+    !> Face geometry initialization procedure
+    !!
+    !!  Set integer values for face index, face type, parent element index, neighbor element index and coordinates
+    !!
+    !!  @author Nathan A. Wukie
+    !!
+    !!  @param[in] iface        Element face integer (XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX)
+    !!  @param[in] ftype        Face type (0 - interior face, 1 - boundary face)
+    !!  @param[in] elem         Parent element which many face members point to
+    !!  @param[in] ineighbor    Index of neighbor element in the block
 
+    !!
+    !--------------------------------------------------------------------------
     subroutine init_geom(self,iface,ftype,elem,ineighbor)
         class(face_t),      intent(inout)       :: self
         integer(ik),        intent(in)          :: iface
@@ -92,19 +105,16 @@ contains
 
     !> Face initialization procedure
     !!
-    !!  Sets integer members such as face type and face index and associates many face members with the
-    !!  parent element components. Call procedures to compute metrics, normals, and cartesian face coordinates.
+    !!  Call procedures to compute metrics, normals, and cartesian face coordinates.
     !!
     !!  @author Nathan A. Wukie
-    !!
-    !!  @param[in] iface        Element face integer (XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX)
-    !!  @param[in] ftype        Face type (0 - interior face, 1 - boundary face)
-    !!  @param[in] elem         Parent element which many face members point to
-    !!  @param[in] ineighbor    Index of neighbor element in the block
+    !!  @param[in] elem     Parent element which many face members point to
     !---------------------------------------------------------------------
     subroutine init_sol(self,elem)
         class(face_t),      intent(inout)       :: self
         type(element_t),    intent(in), target  :: elem
+
+        integer(ik) :: ierr, nnodes
 
         self%neqns      => elem%neqns
         self%nterms_s   => elem%nterms_s
@@ -112,11 +122,15 @@ contains
         self%gqmesh     => elem%gqmesh
         self%invmass    => elem%invmass
 
-        ! Allocate face storage
-        allocate(self%quad_pts(self%gq%face%nnodes))
-        allocate(self%jinv(self%gq%face%nnodes))
-        allocate(self%metric(SPACEDIM,SPACEDIM,self%gq%face%nnodes))
-        allocate(self%norm(self%gq%face%nnodes,SPACEDIM))
+
+        nnodes = self%gq%face%nnodes
+
+        ! Allocate storage for face data structures
+        allocate(self%quad_pts(nnodes),                    &
+                 self%jinv(nnodes),                        &
+                 self%metric(SPACEDIM,SPACEDIM,nnodes),    &
+                 self%norm(nnodes,SPACEDIM), stat=ierr)
+        if (ierr /= 0) call AllocationError
 
         call self%compute_quadrature_metrics()
         call self%compute_quadrature_normals()

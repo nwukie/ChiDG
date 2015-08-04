@@ -3,6 +3,7 @@ module mod_integrate
     use type_element,       only: element_t
     use type_face,          only: face_t
     use type_expansion,     only: expansion_t
+    use atype_solver,       only: solver_t
     use type_blockmatrix,   only: blockmatrix_t
     use DNAD_D
 
@@ -30,12 +31,13 @@ contains
     !!  @param[inout]   flux_y  y-Flux and derivatives at quadrature points
     !!  @param[inout]   flux_z  z-Flux and derivatives at quadrature points
     !--------------------------------------------------------------------------------------------------------
-    subroutine integrate_volume_flux(elem,rhs,lin,iblk,ivar,flux_x,flux_y,flux_z)
+    subroutine integrate_volume_flux(elem,solver,ivar,iblk,flux_x,flux_y,flux_z)
         type(element_t),        intent(in)      :: elem
-        type(expansion_t),      intent(inout)   :: rhs(:)
-        type(blockmatrix_t),    intent(inout)   :: lin
-        integer(ik),            intent(in)      :: iblk
+        class(solver_t),        intent(inout)   :: solver
+!        type(expansion_t),      intent(inout)   :: rhs(:)
+!        type(blockmatrix_t),    intent(inout)   :: lin
         integer(ik),            intent(in)      :: ivar
+        integer(ik),            intent(in)      :: iblk
         type(AD_D),             intent(inout)   :: flux_x(:), flux_y(:), flux_z(:)
 
 
@@ -52,19 +54,19 @@ contains
         ! FLUX-X
         ! Multiply by column of test function gradients, integrate, add to RHS, add derivatives to linearization
         integral = matmul(transpose(elem%dtdx),flux_x)                          !> Integrate
-        call store_volume_integrals(integral,rhs,lin,ielem,ivar,iblk)           !> Store values and derivatives
+        call store_volume_integrals(integral,solver,ielem,ivar,iblk)            !> Store values and derivatives
 
 
         ! FLUX-Y
         ! Multiply by column of test function gradients, integrate, add to RHS, add derivatives to linearization
         integral = matmul(transpose(elem%dtdy),flux_y)                          !> Integrate
-        call store_volume_integrals(integral,rhs,lin,ielem,ivar,iblk)           !> Store values and derivatives
+        call store_volume_integrals(integral,solver,ielem,ivar,iblk)            !> Store values and derivatives
 
 
         ! FLUX-Z
         ! Multiply by column of test function gradients, integrate, add to RHS, add derivatives to linearization
         integral = matmul(transpose(elem%dtdz),flux_z)                          !> Integrate
-        call store_volume_integrals(integral,rhs,lin,ielem,ivar,iblk)           !> Store values and derivatives
+        call store_volume_integrals(integral,solver,ielem,ivar,iblk)            !> Store values and derivatives
 
 
     end subroutine
@@ -91,12 +93,13 @@ contains
     !!  @param[inout]   flux_y  y-Flux and derivatives at quadrature points
     !!  @param[inout]   flux_z  z-Flux and derivatives at quadrature points
     !--------------------------------------------------------------------------------------------------------
-    subroutine integrate_boundary_flux(face,rhs,lin,iblk,ivar,flux_x,flux_y,flux_z)
+    subroutine integrate_boundary_flux(face,solver,ivar,iblk,flux_x,flux_y,flux_z)
         type(face_t),           intent(in)      :: face
-        type(expansion_t),      intent(inout)   :: rhs(:)
-        type(blockmatrix_t),    intent(inout)   :: lin
-        integer(ik),            intent(in)      :: iblk
+        class(solver_t),        intent(inout)   :: solver
+!        type(expansion_t),      intent(inout)   :: rhs(:)
+!        type(blockmatrix_t),    intent(inout)   :: lin
         integer(ik),            intent(in)      :: ivar
+        integer(ik),            intent(in)      :: iblk
         type(AD_D),             intent(inout)   :: flux_x(:), flux_y(:), flux_z(:)
 
 
@@ -116,13 +119,13 @@ contains
 
 
             integral = matmul(transpose(val),flux_x)
-            call store_boundary_integrals(integral,rhs,lin,ielem,ivar,iblk)
+            call store_boundary_integrals(integral,solver,ielem,ivar,iblk)
 
             integral = matmul(transpose(val),flux_y)
-            call store_boundary_integrals(integral,rhs,lin,ielem,ivar,iblk)
+            call store_boundary_integrals(integral,solver,ielem,ivar,iblk)
 
             integral = matmul(transpose(val),flux_z)
-            call store_boundary_integrals(integral,rhs,lin,ielem,ivar,iblk)
+            call store_boundary_integrals(integral,solver,ielem,ivar,iblk)
 
         end associate
 
@@ -145,17 +148,22 @@ contains
     !!  @param[in]      iblk        Block index for the correct linearization block for the current element
     !!
     !--------------------------------------------------------------------------------------------------------
-    subroutine store_volume_integrals(integral,rhs,lin,ielem,ivar,iblk)
+    subroutine store_volume_integrals(integral,solver,ielem,ivar,iblk)
         type(AD_D),             intent(in)      :: integral(:)
-        type(expansion_t),      intent(inout)   :: rhs(:)
-        type(blockmatrix_t),    intent(inout)   :: lin
+        class(solver_t),        intent(inout)   :: solver
+!        type(expansion_t),      intent(inout)   :: rhs(:)
+!        type(blockmatrix_t),    intent(inout)   :: lin
         integer(ik),            intent(in)      :: ielem
         integer(ik),            intent(in)      :: ivar
         integer(ik),            intent(in)      :: iblk
 
-        rhs(ielem)%mat(:,ivar) = rhs(ielem)%mat(:,ivar) + integral(:)%x_ad_     !> Store values
-        call lin%store(integral,ielem,iblk,ivar)                                !> Store derivatives
 
+        associate ( rhs => solver%rhs, lin => solver%lin)
+
+            rhs(ielem)%mat(:,ivar) = rhs(ielem)%mat(:,ivar) + integral(:)%x_ad_     !> Store values
+            call lin%store(integral,ielem,iblk,ivar)                                !> Store derivatives
+
+        end associate
     end subroutine
 
 
@@ -173,16 +181,21 @@ contains
     !!  @param[in]      iblk        Block index for the correct linearization block for the current element
     !!
     !--------------------------------------------------------------------------------------------------------
-    subroutine store_boundary_integrals(integral,rhs,lin,ielem,ivar,iblk)
+    subroutine store_boundary_integrals(integral,solver,ielem,ivar,iblk)
         type(AD_D),             intent(in)      :: integral(:)
-        type(expansion_t),      intent(inout)   :: rhs(:)
-        type(blockmatrix_t),    intent(inout)   :: lin
+        class(solver_t),        intent(inout)   :: solver
+!        type(expansion_t),      intent(inout)   :: rhs(:)
+!        type(blockmatrix_t),    intent(inout)   :: lin
         integer(ik),            intent(in)      :: ielem
         integer(ik),            intent(in)      :: ivar
         integer(ik),            intent(in)      :: iblk
 
-        rhs(ielem)%mat(:,ivar) = rhs(ielem)%mat(:,ivar) - integral(:)%x_ad_     !> Store values
-        call lin%store(integral,ielem,iblk,ivar)                                !> Store derivatives
+        associate ( rhs => solver%rhs, lin => solver%lin)
+
+            rhs(ielem)%mat(:,ivar) = rhs(ielem)%mat(:,ivar) - integral(:)%x_ad_     !> Store values
+            call lin%store(integral,ielem,iblk,ivar)                                !> Store derivatives
+
+        end associate
 
     end subroutine
 

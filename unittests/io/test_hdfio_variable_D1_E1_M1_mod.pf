@@ -65,20 +65,23 @@ contains
         ref = [ONE, TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT]
         
         
-        !> Assign reference solution
-        this%domains(1)%q(1)%vec = ref
-        
-        !> Write solution values
-        call write_var_hdf(this%filename,'u',1,this%domains)
-        
-        !> Reset solution
-        this%domains(1)%q(1)%vec = 0._rk
-        
-        !> Read solution values
-        call read_var_hdf(this%filename,'u',1,this%domains)
-       
-        !> Test that the read solution values equal the reference values
-        @assertEqual(ref,this%domains(1)%q(1)%vec, tol)
+        associate (q => this%domains(1)%solver%q)
+            
+            !> Assign reference solution
+            q(1)%vec = ref
+            
+            !> Write solution values
+            call write_var_hdf(this%filename,'u',1,this%domains)
+            
+            !> Reset solution
+            q(1)%vec = 0._rk
+            
+            !> Read solution values
+            call read_var_hdf(this%filename,'u',1,this%domains)
+           
+            !> Test that the read solution values equal the reference values
+            @assertEqual(ref,q(1)%vec, tol)
+        end associate
         
     end subroutine
 

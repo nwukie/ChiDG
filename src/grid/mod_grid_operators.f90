@@ -32,20 +32,21 @@ contains
 
         ! Loop through elements in mesh and call function projection
         do ielem = 1,domain%mesh%nelem
-            associate (elem  =>  domain%mesh%elems(ielem))
+            associate (elem  =>  domain%mesh%elems(ielem), q => domain%solver%q(ielem))
 
                 ! Reallocate mode storage if necessary
-                if (size(fmodes) /= domain%q(ielem)%nterms) then
+                if (size(fmodes) /= q%nterms) then
                     if (allocated(fmodes)) deallocate(fmodes)
-                    allocate(fmodes(domain%q(ielem)%nterms))
+                    allocate(fmodes(q%nterms))
                 end if
 
                 ! Call function projection
                 call project_function_xyz(fcn,elem%nterms_s,elem%coords,fmodes)
-            end associate
 
-            ! Store the projected modes to the solution expansion
-            domain%q(ielem)%mat(:,ivar) = fmodes
+                ! Store the projected modes to the solution expansion
+                q%mat(:,ivar) = fmodes
+
+            end associate
 
         end do
 

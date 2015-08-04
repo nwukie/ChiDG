@@ -13,7 +13,7 @@ contains
 
         integer(ik) :: iblk, ielem, iface, nelem
 
-        associate (mesh => domain%mesh, q => domain%q, rhs => domain%rhs, lin => domain%lin)
+        associate (mesh => domain%mesh, solver => domain%solver)
             nelem = domain%mesh%nelem
 
 
@@ -35,15 +35,15 @@ contains
 
                     ! For the current element, compute the contributions from boundary integrals
                     do iface = 1,NFACES
-                        call domain%eqnset%compute_boundary_average_flux(mesh,q,rhs,ielem,iface,iblk)
-                        call domain%eqnset%compute_boundary_upwind_flux( mesh,q,rhs,ielem,iface,iblk)
+                        call domain%eqnset%compute_boundary_average_flux(mesh,solver,ielem,iface,iblk)
+                        call domain%eqnset%compute_boundary_upwind_flux( mesh,solver,ielem,iface,iblk)
                     end do !face
 
 
 
                     ! For the current element, compute the contributions from volume integrals
-                    call domain%eqnset%compute_volume_flux(  mesh,q,rhs,ielem,iblk)
-                    call domain%eqnset%compute_volume_source(mesh,q,rhs,ielem,iblk)
+                    call domain%eqnset%compute_volume_flux(  mesh,solver,ielem,iblk)
+                    call domain%eqnset%compute_volume_source(mesh,solver,ielem,iblk)
 
 
 

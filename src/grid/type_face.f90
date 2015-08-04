@@ -32,20 +32,20 @@ module type_face
         !> Geometry
         !---------------------------------------------------------
         type(point_t),  allocatable  :: quad_pts(:)         !> Cartesian coordinates of quadrature nodes
-        type(expansion_t), pointer   :: coords => null()
+        type(expansion_t), pointer   :: coords => null()    !> Pointer to element coordinates
 
         !> Metric terms
         !---------------------------------------------------------
-        real(rk),       allocatable  :: jinv(:)
-        real(rk),       allocatable  :: metric(:,:,:)
-        real(rk),       allocatable  :: norm(:,:)
-        real(rk),       pointer      :: invmass(:,:) => null()       !> Pointer to element inverse mass matrix
+        real(rk),       allocatable  :: jinv(:)                     !> array of inverse element jacobians on the face
+        real(rk),       allocatable  :: metric(:,:,:)               !> Face metric terms
+        real(rk),       allocatable  :: norm(:,:)                   !> Face normals
+        real(rk),       pointer      :: invmass(:,:) => null()      !> Pointer to element inverse mass matrix
 
 
         !> Quadrature matrices
         !---------------------------------------------------------
-        type(quadrature_t),  pointer :: gq     => null()
-        type(quadrature_t),  pointer :: gqmesh => null()
+        type(quadrature_t),  pointer :: gq     => null()            !> Pointer to solution quadrature instance
+        type(quadrature_t),  pointer :: gqmesh => null()            !> Pointer to mesh quadrature instance
 
 
 
@@ -98,7 +98,7 @@ contains
 
         self%coords     => elem%coords
 
-        self%geomInitialized = .true.       !> Confirm face grid
+        self%geomInitialized = .true.       !> Confirm face grid initialization
     end subroutine
 
 
@@ -136,7 +136,7 @@ contains
         call self%compute_quadrature_normals()
         call self%compute_quadrature_coords()
 
-        self%numInitialized  = .true.            !> Confirm face numerics were initialization
+        self%numInitialized  = .true.            !> Confirm face numerics were initialized
     end subroutine
 
 
@@ -160,17 +160,17 @@ contains
         nnodes = self%gq%face%nnodes
 
         associate (gq_f => self%gqmesh%face)
-            dxdxi   = matmul(gq_f%ddxi(:,:,iface),  self%coords%var(1))
-            dxdeta  = matmul(gq_f%ddeta(:,:,iface), self%coords%var(1))
-            dxdzeta = matmul(gq_f%ddzeta(:,:,iface),self%coords%var(1))
+            dxdxi   = matmul(gq_f%ddxi(  :,:,iface), self%coords%var(1))
+            dxdeta  = matmul(gq_f%ddeta( :,:,iface), self%coords%var(1))
+            dxdzeta = matmul(gq_f%ddzeta(:,:,iface), self%coords%var(1))
 
-            dydxi   = matmul(gq_f%ddxi(:,:,iface),  self%coords%var(2))
-            dydeta  = matmul(gq_f%ddeta(:,:,iface), self%coords%var(2))
-            dydzeta = matmul(gq_f%ddzeta(:,:,iface),self%coords%var(2))
+            dydxi   = matmul(gq_f%ddxi(  :,:,iface), self%coords%var(2))
+            dydeta  = matmul(gq_f%ddeta( :,:,iface), self%coords%var(2))
+            dydzeta = matmul(gq_f%ddzeta(:,:,iface), self%coords%var(2))
 
-            dzdxi   = matmul(gq_f%ddxi(:,:,iface),  self%coords%var(3))
-            dzdeta  = matmul(gq_f%ddeta(:,:,iface), self%coords%var(3))
-            dzdzeta = matmul(gq_f%ddzeta(:,:,iface),self%coords%var(3))
+            dzdxi   = matmul(gq_f%ddxi(  :,:,iface), self%coords%var(3))
+            dzdeta  = matmul(gq_f%ddeta( :,:,iface), self%coords%var(3))
+            dzdzeta = matmul(gq_f%ddzeta(:,:,iface), self%coords%var(3))
         end associate
 
         do inode = 1,nnodes

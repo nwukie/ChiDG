@@ -1,13 +1,12 @@
 module type_domain
+#include <messenger.h>
     use mod_kinds,          only: rk, ik
-    use mod_constants,      only: HALF, TWO, ONE, DIAG, NFACES, &
-                                  XI_MIN,XI_MAX,ETA_MIN,ETA_MAX,ZETA_MIN,ZETA_MAX
     use mod_equations,      only: AssignEquationSet
+    use mod_solver,         only: CreateSolver
 
     use type_mesh,          only: mesh_t
+    use atype_solver,       only: solver_t
     use type_point,         only: point_t
-    use type_expansion,     only: expansion_t
-    use type_blockmatrix,   only: blockmatrix_t
     use atype_equationset,  only: equationset_t
 
     implicit none
@@ -21,17 +20,10 @@ module type_domain
     !!   @author Nathan A. Wukie
     !-------------------------------------------------------------------------------------------------
     type, public :: domain_t
-        character(100)                    :: name                       !> Domain name -- not currently used
-        type(mesh_t)                      :: mesh                       !> Mesh storage
-        class(equationset_t), allocatable :: eqnset                     !> Equation set solved on this domain
-        type(expansion_t),    allocatable :: q(:)                       !> Array of solution expansions. One for each element.
-        type(expansion_t),    allocatable :: rhs(:)                     !> Array of rhs expansions. One for each element. Ax=b
-        type(blockmatrix_t)               :: lin                        !> Block matrix for storing linearization.        Ax=b
-
-
-        ! Matrix views of expansion storage
-        type(expansion_t),    pointer       :: q_m(:,:,:)   => null()   !> Matrix view of solution expansions
-        type(expansion_t),    pointer       :: rhs_m(:,:,:) => null()   !> Matrix view of rhs expansion
+        character(100)                      :: name                       !> Domain name -- not currently used
+        type(mesh_t)                        :: mesh                       !> Mesh storage
+        class(solver_t),      allocatable   :: solver                     !> Solver storage
+        class(equationset_t), allocatable   :: eqnset                     !> Equation set solved on this domain
 
         logical                             :: geomInitialized = .false.
         logical                             :: numInitialized  = .false.
@@ -84,37 +76,25 @@ contains
         class(domain_t),    intent(inout), target :: self
         character(*),       intent(in)            :: eqnstring
         integer(ik),        intent(in)            :: nterms_s
-        type(expansion_t), pointer                :: temp(:)
-
-        integer(ik) :: ielem
-
-        if (self%numInitialized) stop "Error: domain%init_sol -- domain numerics already initialized"
 
 
-        ! Set domain equation set
-        call AssignEquationSet(eqnstring,self%eqnset)               !> Factory method for allocating an equation set
+        associate ( mesh => self%mesh, solver => self%solver, eqnset => self%eqnset)
 
-        ! Initialize mesh solution data
-        call self%mesh%init_sol(self%eqnset%neqns,nterms_s)
+            if (self%numInitialized) call signal(FATAL,'domain%init_sol -- domain numerics already initialized')
 
-        ! Initialize solution
-        allocate(self%q(self%mesh%nelem))                           !> Allocate an expansion type for each element
-        allocate(self%rhs(self%mesh%nelem))                         !> Allocate an expansion type for each element
-        do ielem = 1,self%mesh%nelem
-            call self%q(ielem)%init(nterms_s,self%eqnset%neqns)     !> Initialize solution expansion for each element
-            call self%rhs(ielem)%init(nterms_s,self%eqnset%neqns)    !> Initialize rhs expansion for each element
-        end do
+            ! Call factory methods for equationset and solver
+            call AssignEquationSet(eqnstring,self%eqnset)          !> Factory method for allocating a equation set
+            call CreateSolver('default',self%solver)               !> Factory method for allocating a solver
 
+            ! Initialize mesh solution data
+            call self%mesh%init_sol(eqnset%neqns,nterms_s)
 
-        ! Initialize solution matrix view
-        temp => self%q
-        self%q_m(1:self%mesh%nelem_xi, 1:self%mesh%nelem_eta, 1:self%mesh%nelem_zeta) => temp(1:self%mesh%nelem)
+            !> Call initialization for solver and solver data
+            call solver%init(mesh)
 
-        temp => self%rhs
-        self%rhs_m(1:self%mesh%nelem_xi, 1:self%mesh%nelem_eta, 1:self%mesh%nelem_zeta) => temp(1:self%mesh%nelem)
+            self%numInitialized = .true.
 
-
-        self%numInitialized = .true.
+        end associate
     end subroutine
 
 
@@ -130,9 +110,7 @@ contains
     subroutine destructor(self)
         type(domain_t), intent(inout) :: self
 
-!> Shouldn't need to deallocate an 'allocatable'. The compiler is supposed to do that for you
-!        if (allocated(self%eqnset)) deallocate(self%eqnset)
-!        if (allocated(self%q))      deallocate(self%q)
+
     end subroutine
 
 end module type_domain

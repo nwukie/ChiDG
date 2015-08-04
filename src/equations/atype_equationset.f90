@@ -6,6 +6,7 @@ module atype_equationset
     use type_equation,  only: equation_t
     use type_mesh,      only: mesh_t
     use type_expansion, only: expansion_t
+    use atype_solver,   only: solver_t
 
 
     implicit none
@@ -41,37 +42,68 @@ module atype_equationset
 
 
     abstract interface
-        subroutine boundary_interface(self,mesh,q,rhs,ielem,iface,iblk)
+!        subroutine boundary_interface(self,mesh,q,rhs,ielem,iface,iblk)
+!            use mod_kinds,  only: ik
+!            import equationset_t
+!            import mesh_t
+!            import expansion_t
+!
+!            class(equationset_t),   intent(in)          :: self
+!            class(mesh_t),          intent(in)          :: mesh
+!            class(expansion_t),     intent(inout)       :: q(:)
+!            class(expansion_t),     intent(inout)       :: rhs(:)
+!            integer(ik),            intent(in)          :: ielem
+!            integer(ik),            intent(in)          :: iface
+!            integer(ik),            intent(in)          :: iblk
+!        end subroutine
+!
+!
+        subroutine boundary_interface(self,mesh,solver,ielem,iface,iblk)
             use mod_kinds,  only: ik
             import equationset_t
             import mesh_t
-            import expansion_t
+            import solver_t
 
             class(equationset_t),   intent(in)          :: self
             class(mesh_t),          intent(in)          :: mesh
-            class(expansion_t),     intent(inout)       :: q(:)
-            class(expansion_t),     intent(inout)       :: rhs(:)
+            class(solver_t),        intent(inout)       :: solver
             integer(ik),            intent(in)          :: ielem
             integer(ik),            intent(in)          :: iface
             integer(ik),            intent(in)          :: iblk
         end subroutine
+
     end interface
 
 
     abstract interface
-        subroutine volume_interface(self,mesh,q,rhs,ielem,iblk)
+!        subroutine volume_interface(self,mesh,q,rhs,ielem,iblk)
+!            use mod_kinds,  only: ik
+!            import equationset_t
+!            import mesh_t
+!            import expansion_t
+!
+!            class(equationset_t),   intent(in)          :: self
+!            class(mesh_t),          intent(in)          :: mesh
+!            class(expansion_t),     intent(inout)       :: q(:)
+!            class(expansion_t),     intent(inout)       :: rhs(:)
+!            integer(ik),            intent(in)          :: ielem
+!            integer(ik),            intent(in)          :: iblk
+!        end subroutine
+!
+        subroutine volume_interface(self,mesh,solver,ielem,iblk)
             use mod_kinds,  only: ik
             import equationset_t
             import mesh_t
-            import expansion_t
+            import solver_t
 
             class(equationset_t),   intent(in)          :: self
             class(mesh_t),          intent(in)          :: mesh
-            class(expansion_t),     intent(inout)       :: q(:)
-            class(expansion_t),     intent(inout)       :: rhs(:)
+            class(solver_t),        intent(inout)       :: solver
             integer(ik),            intent(in)          :: ielem
             integer(ik),            intent(in)          :: iblk
         end subroutine
+
+
     end interface
 
 contains

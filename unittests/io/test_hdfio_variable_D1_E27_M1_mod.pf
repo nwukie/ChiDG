@@ -63,39 +63,43 @@ contains
         
         tol = 1.e-14_rk
         
-        !> Set reference solution values
-        ref = [ONE, TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT]
         
-        
-        !> Assign reference solution
-        do ielem = 1,this%domains(1)%mesh%nelem
-            this%domains(1)%q(ielem)%vec = ref
-        end do
-        
-        !> Write variable
-        call write_var_hdf(this%filename,'u',1,this%domains)
-        
-        !> Reset variable
-        do ielem = 1,this%domains(1)%mesh%nelem
-            this%domains(1)%q(ielem)%vec = -1._rk
-        end do
-        
-        !> Read variable
-        call read_var_hdf(this%filename,'u',1,this%domains)
-       
-        !> Test that the read solution values equal the reference values
-        !! Testing elements 1-10, out of 27
-        @assertEqual(ref,this%domains(1)%q(1)%vec, tol)
-        @assertEqual(ref,this%domains(1)%q(2)%vec, tol)
-        @assertEqual(ref,this%domains(1)%q(3)%vec, tol)
-        @assertEqual(ref,this%domains(1)%q(4)%vec, tol)
-        @assertEqual(ref,this%domains(1)%q(5)%vec, tol)
-        @assertEqual(ref,this%domains(1)%q(6)%vec, tol)
-        @assertEqual(ref,this%domains(1)%q(7)%vec, tol)
-        @assertEqual(ref,this%domains(1)%q(8)%vec, tol)
-        @assertEqual(ref,this%domains(1)%q(9)%vec, tol)
-        @assertEqual(ref,this%domains(1)%q(10)%vec, tol)        
-        
+        associate ( q => this%domains(1)%solver%q )
+            
+            !> Set reference solution values
+            ref = [ONE, TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT]
+            
+            
+            !> Assign reference solution
+            do ielem = 1,this%domains(1)%mesh%nelem
+                q(ielem)%vec = ref
+            end do
+            
+            !> Write variable
+            call write_var_hdf(this%filename,'u',1,this%domains)
+            
+            !> Reset variable
+            do ielem = 1,this%domains(1)%mesh%nelem
+                q(ielem)%vec = -1._rk
+            end do
+            
+            !> Read variable
+            call read_var_hdf(this%filename,'u',1,this%domains)
+           
+            !> Test that the read solution values equal the reference values
+            !! Testing elements 1-10, out of 27
+            @assertEqual(ref,q(1)%vec, tol)
+            @assertEqual(ref,q(2)%vec, tol)
+            @assertEqual(ref,q(3)%vec, tol)
+            @assertEqual(ref,q(4)%vec, tol)
+            @assertEqual(ref,q(5)%vec, tol)
+            @assertEqual(ref,q(6)%vec, tol)
+            @assertEqual(ref,q(7)%vec, tol)
+            @assertEqual(ref,q(8)%vec, tol)
+            @assertEqual(ref,q(9)%vec, tol)
+            @assertEqual(ref,q(10)%vec, tol)        
+       end associate
+            
     end subroutine
 
 

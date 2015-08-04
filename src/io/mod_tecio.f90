@@ -48,7 +48,7 @@ contains
 
         ! Remap elements array to block matrix
         elem => domain%mesh%elems_m
-        q    => domain%q_m
+        q    => domain%solver%q_m
 
         ! using (output_res+1) so that the skip number used in tecplot to
         ! correctly display the element surfaces is the same as the number

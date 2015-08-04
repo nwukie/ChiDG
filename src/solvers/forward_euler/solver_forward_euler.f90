@@ -1,6 +1,7 @@
 module solver_forward_euler
     use mod_kinds,      only: rk,ik
     use atype_solver,   only: solver_t
+    use type_mesh,      only: mesh_t
     implicit none
     private
 
@@ -35,8 +36,6 @@ contains
     subroutine solve(self,mesh)
         class(forward_euler_s),     intent(inout)   :: self
         type(mesh_t),               intent(in)      :: mesh
-
-        print*, 'hi'
 
     end subroutine
 

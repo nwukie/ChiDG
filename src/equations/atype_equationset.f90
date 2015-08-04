@@ -1,11 +1,7 @@
 module atype_equationset
     use mod_kinds,      only: rk,ik
-    use mod_constants,  only: XI_MIN,XI_MAX,ETA_MIN,ETA_MAX, &
-                              ZETA_MIN,ZETA_MAX,NFACES
-
     use type_equation,  only: equation_t
     use type_mesh,      only: mesh_t
-    use type_expansion, only: expansion_t
     use atype_solver,   only: solver_t
 
 
@@ -33,6 +29,13 @@ module atype_equationset
 
     end type equationset_t
 
+
+
+
+
+
+
+    !> Interface definitions
     abstract interface
         subroutine self_interface(self)
             import equationset_t
@@ -42,22 +45,6 @@ module atype_equationset
 
 
     abstract interface
-!        subroutine boundary_interface(self,mesh,q,rhs,ielem,iface,iblk)
-!            use mod_kinds,  only: ik
-!            import equationset_t
-!            import mesh_t
-!            import expansion_t
-!
-!            class(equationset_t),   intent(in)          :: self
-!            class(mesh_t),          intent(in)          :: mesh
-!            class(expansion_t),     intent(inout)       :: q(:)
-!            class(expansion_t),     intent(inout)       :: rhs(:)
-!            integer(ik),            intent(in)          :: ielem
-!            integer(ik),            intent(in)          :: iface
-!            integer(ik),            intent(in)          :: iblk
-!        end subroutine
-!
-!
         subroutine boundary_interface(self,mesh,solver,ielem,iface,iblk)
             use mod_kinds,  only: ik
             import equationset_t
@@ -71,25 +58,10 @@ module atype_equationset
             integer(ik),            intent(in)          :: iface
             integer(ik),            intent(in)          :: iblk
         end subroutine
-
     end interface
 
 
     abstract interface
-!        subroutine volume_interface(self,mesh,q,rhs,ielem,iblk)
-!            use mod_kinds,  only: ik
-!            import equationset_t
-!            import mesh_t
-!            import expansion_t
-!
-!            class(equationset_t),   intent(in)          :: self
-!            class(mesh_t),          intent(in)          :: mesh
-!            class(expansion_t),     intent(inout)       :: q(:)
-!            class(expansion_t),     intent(inout)       :: rhs(:)
-!            integer(ik),            intent(in)          :: ielem
-!            integer(ik),            intent(in)          :: iblk
-!        end subroutine
-!
         subroutine volume_interface(self,mesh,solver,ielem,iblk)
             use mod_kinds,  only: ik
             import equationset_t
@@ -102,8 +74,6 @@ module atype_equationset
             integer(ik),            intent(in)          :: ielem
             integer(ik),            intent(in)          :: iblk
         end subroutine
-
-
     end interface
 
 contains
@@ -136,28 +106,6 @@ contains
 
     end function
 
-
-    !========================================================
-    !
-    !   Call the boundary flux calculation on each element face
-    !
-    !========================================================
-    subroutine compute_boundary_flux_all(self)
-        class(equationset_t),   intent(in)      :: self
-
-    end subroutine
-
-    !========================================================
-    !
-    !   Call the local lift calculation on each element face
-    !
-    !========================================================
-    subroutine compute_lift_all(self)
-        class(equationset_t),   intent(in)      :: self
-
-
-
-    end subroutine
 
 
 

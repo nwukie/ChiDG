@@ -1,4 +1,5 @@
 module mod_equations
+#include <messenger.h>
     use mod_kinds,                      only: rk,ik
     use atype_equationset,              only: equationset_t
 
@@ -32,8 +33,15 @@ contains
 
 
 
-
-    subroutine AssignEquationSet(eqnstring,eqnset)
+    !>  EquationSet Factory
+    !!      - procedure for allocating a concrete instance of an equationset_t
+    !!
+    !!  @author Nathan A. Wukie
+    !!
+    !!  @param[in] eqnstring    Character string for the equation set name
+    !!  @param[in] eqnset       Allocatable equationset_t class to be instantiated
+    !-------------------------------------------------------------------------------------
+    subroutine create_equationset(eqnstring,eqnset)
         character(*),                      intent(in)      :: eqnstring
         class(equationset_t), allocatable, intent(inout)   :: eqnset
 
@@ -44,7 +52,7 @@ contains
                 allocate(eqnset, source=scalar)
 
             case default
-                stop "Error: AssignEquationSet -- equation string not recognized"
+                call signal(FATAL,'create_equationset -- equation string not recognized')
         end select
 
     end subroutine

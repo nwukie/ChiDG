@@ -1,8 +1,8 @@
 module type_domain
 #include <messenger.h>
     use mod_kinds,          only: rk, ik
-    use mod_equations,      only: AssignEquationSet
-    use mod_solver,         only: CreateSolver
+    use mod_equations,      only: create_equationset
+    use mod_solver,         only: create_solver
 
     use type_mesh,          only: mesh_t
     use atype_solver,       only: solver_t
@@ -73,28 +73,23 @@ contains
     !!  @param[in]  nterms_s    Number of terms in the modal representation of the solution
     !------------------------------------------------------------------
     subroutine init_sol(self,eqnstring,nterms_s)
-        class(domain_t),    intent(inout), target :: self
-        character(*),       intent(in)            :: eqnstring
-        integer(ik),        intent(in)            :: nterms_s
+        class(domain_t),    intent(inout)   :: self
+        character(*),       intent(in)      :: eqnstring
+        integer(ik),        intent(in)      :: nterms_s
 
 
-        associate ( mesh => self%mesh, solver => self%solver, eqnset => self%eqnset)
+        if (self%numInitialized) call signal(FATAL,'domain%init_sol -- domain numerics already initialized')
 
-            if (self%numInitialized) call signal(FATAL,'domain%init_sol -- domain numerics already initialized')
+        ! Call factory methods for equationset and solver
+        call create_equationset(eqnstring,self%eqnset)      !> Factory method for allocating a equation set
+        call create_solver('fe',self%solver)                !> Factory method for allocating a solver
 
-            ! Call factory methods for equationset and solver
-            call AssignEquationSet(eqnstring,self%eqnset)          !> Factory method for allocating a equation set
-            call CreateSolver('default',self%solver)               !> Factory method for allocating a solver
 
-            ! Initialize mesh solution data
-            call self%mesh%init_sol(eqnset%neqns,nterms_s)
+        call self%mesh%init_sol(self%eqnset%neqns,nterms_s) !> Call initialization for mesh required in solution procedure
+        call self%solver%init(self%mesh)                    !> Call initialization for solver and solver data
+        self%numInitialized = .true.                        !> Confirm initialization
 
-            !> Call initialization for solver and solver data
-            call solver%init(mesh)
 
-            self%numInitialized = .true.
-
-        end associate
     end subroutine
 
 

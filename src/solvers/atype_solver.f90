@@ -31,8 +31,8 @@ module atype_solver
     contains
         ! Must define these procedures in the extended type
         procedure                               :: init_base    !> Initialize base required data structures. Should be called by specialized init procedures
-        procedure(mesh_interface),   deferred   :: init
-!        procedure(domain_interface), deferred  :: solve
+        procedure(data_interface),   deferred   :: init
+        procedure(data_interface),   deferred   :: solve
 
     end type solver_t
 
@@ -61,11 +61,11 @@ module atype_solver
 
 
     abstract interface
-        subroutine  mesh_interface(self,mesh)
+        subroutine data_interface(self,mesh)
             use type_mesh,  only: mesh_t
             import solver_t
             class(solver_t), intent(inout)    :: self
-            class(mesh_t),   intent(inout)    :: mesh
+            type(mesh_t),   intent(in)    :: mesh
         end subroutine
     end interface
 

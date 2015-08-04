@@ -5,13 +5,12 @@ module mod_solver
 
 
     ! Import solvers
-
+    use solver_forward_euler,   only: forward_euler_s
     implicit none
 
 
     ! Instantiate solvers
-
-
+    type(forward_euler_s)   :: FORWARD_EULER
     logical :: initialized = .false.
 
 
@@ -19,15 +18,20 @@ module mod_solver
 contains
 
 
-    subroutine CreateSolver(solverString,solver)
+
+
+    subroutine create_solver(solverString,solver)
         character(*),                       intent(in)      :: solverString
         class(solver_t),    allocatable,    intent(inout)   :: solver
 
 
 
         select case (trim(solverString))
+            case ('ForwardEuler','forwardeuler','Forward_Euler','forward_euler','FE','fe')
+                allocate(solver, source=FORWARD_EULER)
+
             case default
-                call signal(3,'CreateSolver -- equation string not recognized')
+                call signal(FATAL,'create_solver -- equation string not recognized')
         end select
 
 

@@ -65,7 +65,7 @@ contains
         ref = [ONE, TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT]
         
         
-        associate (q => this%domains(1)%solver%q)
+        associate (q => this%domains(1)%sdata%q)
             
             !> Assign reference solution
             q(1)%vec = ref

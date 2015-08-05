@@ -9,14 +9,14 @@ module mod_spatial
 contains
 
     subroutine update_space(domain)
-        class(domain_t), intent(inout)   :: domain
+        type(domain_t), intent(inout)   :: domain
 
         integer(ik) :: iblk, ielem, iface, nelem
 
-        associate (mesh => domain%mesh, solver => domain%solver)
-            nelem = domain%mesh%nelem
 
+        associate ( mesh => domain%mesh, sdata => domain%sdata)
 
+            nelem = mesh%nelem
             !------------------------------------------------------------------------------------------
             !                                      Interior Scheme
             !------------------------------------------------------------------------------------------
@@ -35,15 +35,15 @@ contains
 
                     ! For the current element, compute the contributions from boundary integrals
                     do iface = 1,NFACES
-                        call domain%eqnset%compute_boundary_average_flux(mesh,solver,ielem,iface,iblk)
-                        call domain%eqnset%compute_boundary_upwind_flux( mesh,solver,ielem,iface,iblk)
+                        call domain%eqnset%compute_boundary_average_flux(mesh,sdata,ielem,iface,iblk)
+                        call domain%eqnset%compute_boundary_upwind_flux( mesh,sdata,ielem,iface,iblk)
                     end do !face
 
 
 
                     ! For the current element, compute the contributions from volume integrals
-                    call domain%eqnset%compute_volume_flux(  mesh,solver,ielem,iblk)
-                    call domain%eqnset%compute_volume_source(mesh,solver,ielem,iblk)
+                    call domain%eqnset%compute_volume_flux(  mesh,sdata,ielem,iblk)
+                    call domain%eqnset%compute_volume_source(mesh,sdata,ielem,iblk)
 
 
 
@@ -61,6 +61,7 @@ contains
 
 
         end associate
+
     end subroutine
 
 

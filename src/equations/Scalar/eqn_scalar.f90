@@ -6,7 +6,7 @@ module eqn_scalar
 
     use atype_equationset,      only: equationset_t
     use type_mesh,              only: mesh_t
-    use atype_solver,           only: solver_t
+    use atype_solverdata,       only: solverdata_t
     use mod_interpolate,        only: interpolate
     use mod_integrate,          only: integrate_volume_flux, integrate_boundary_flux
     use DNAD_D
@@ -68,11 +68,11 @@ contains
     !   Boundary Flux routine for Scalar
     !
     !===========================================================
-    subroutine compute_boundary_average_flux(self,mesh,solver,ielem,iface,iblk)
-        class(scalar_e),    intent(in)      :: self
-        class(mesh_t),      intent(in)      :: mesh
-        class(solver_t),    intent(inout)   :: solver
-        integer(ik),        intent(in)      :: ielem, iface, iblk
+    subroutine compute_boundary_average_flux(self,mesh,sdata,ielem,iface,iblk)
+        class(scalar_e),        intent(in)      :: self
+        class(mesh_t),          intent(in)      :: mesh
+        class(solverdata_t),    intent(inout)   :: sdata
+        integer(ik),            intent(in)      :: ielem, iface, iblk
 
         type(AD_D), allocatable  :: u(:)
 
@@ -89,34 +89,34 @@ contains
     !   Boundary Flux routine for Scalar
     !
     !===========================================================
-    subroutine compute_boundary_upwind_flux(self,mesh,solver,ielem,iface,iblk)
-        class(scalar_e),    intent(in)      :: self
-        class(mesh_t),      intent(in)      :: mesh
-        class(solver_t),    intent(inout)   :: solver
-        integer(ik),        intent(in)      :: ielem, iface, iblk
+    subroutine compute_boundary_upwind_flux(self,mesh,sdata,ielem,iface,iblk)
+        class(scalar_e),        intent(in)      :: self
+        class(mesh_t),          intent(in)      :: mesh
+        class(solverdata_t),    intent(inout)   :: sdata
+        integer(ik),            intent(in)      :: ielem, iface, iblk
 
 
     end subroutine
 
 
 
-    !==========================================================
+    !===========================================================
     !
     !   Volume Flux routine for Scalar
     !
     !===========================================================
-    subroutine compute_volume_flux(self,mesh,solver,ielem,iblk)
-        class(scalar_e),    intent(in)      :: self
-        class(mesh_t),      intent(in)      :: mesh
-        class(solver_t),    intent(inout)   :: solver
-        integer(ik),        intent(in)      :: ielem, iblk
+    subroutine compute_volume_flux(self,mesh,sdata,ielem,iblk)
+        class(scalar_e),        intent(in)      :: self
+        class(mesh_t),          intent(in)      :: mesh
+        class(solverdata_t),    intent(inout)   :: sdata
+        integer(ik),            intent(in)      :: ielem, iblk
 
         type(AD_D), allocatable :: u(:), flux_x(:), flux_y(:), flux_z(:)
         integer(ik)             :: nnodes, ierr, iseed
         integer(ik)             :: ivar_u
 
 
-        associate (elem => mesh%elems(ielem), q => solver%q)
+        associate (elem => mesh%elems(ielem), q => sdata%q)
 
 
             ! Get variable index from equation set
@@ -144,23 +144,23 @@ contains
 
 
             ! Integrate volume flux
-            call integrate_volume_flux(elem,solver,ivar_u,iblk,flux_x,flux_y,flux_z)
+            call integrate_volume_flux(elem,sdata,ivar_u,iblk,flux_x,flux_y,flux_z)
 
         end associate
 
     end subroutine
 
 
-    !==========================================================
+    !===========================================================
     !
     !   Volume Source routine for Euler
     !
     !===========================================================
-    subroutine compute_volume_source(self,mesh,solver,ielem,iblk)
-        class(scalar_e),    intent(in)      :: self
-        class(mesh_t),      intent(in)      :: mesh
-        class(solver_t),    intent(inout)   :: solver
-        integer(ik),        intent(in)      :: ielem, iblk
+    subroutine compute_volume_source(self,mesh,sdata,ielem,iblk)
+        class(scalar_e),        intent(in)      :: self
+        class(mesh_t),          intent(in)      :: mesh
+        class(solverdata_t),    intent(inout)   :: sdata
+        integer(ik),            intent(in)      :: ielem, iblk
 
 
     end subroutine

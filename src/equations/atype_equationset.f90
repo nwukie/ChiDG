@@ -1,8 +1,8 @@
 module atype_equationset
-    use mod_kinds,      only: rk,ik
-    use type_equation,  only: equation_t
-    use type_mesh,      only: mesh_t
-    use atype_solver,   only: solver_t
+    use mod_kinds,          only: rk,ik
+    use type_equation,      only: equation_t
+    use type_mesh,          only: mesh_t
+    use atype_solverdata,   only: solverdata_t
 
 
     implicit none
@@ -45,15 +45,15 @@ module atype_equationset
 
 
     abstract interface
-        subroutine boundary_interface(self,mesh,solver,ielem,iface,iblk)
+        subroutine boundary_interface(self,mesh,sdata,ielem,iface,iblk)
             use mod_kinds,  only: ik
             import equationset_t
             import mesh_t
-            import solver_t
+            import solverdata_t
 
             class(equationset_t),   intent(in)          :: self
             class(mesh_t),          intent(in)          :: mesh
-            class(solver_t),        intent(inout)       :: solver
+            class(solverdata_t),    intent(inout)       :: sdata
             integer(ik),            intent(in)          :: ielem
             integer(ik),            intent(in)          :: iface
             integer(ik),            intent(in)          :: iblk
@@ -62,15 +62,15 @@ module atype_equationset
 
 
     abstract interface
-        subroutine volume_interface(self,mesh,solver,ielem,iblk)
+        subroutine volume_interface(self,mesh,sdata,ielem,iblk)
             use mod_kinds,  only: ik
             import equationset_t
             import mesh_t
-            import solver_t
+            import solverdata_t
 
             class(equationset_t),   intent(in)          :: self
             class(mesh_t),          intent(in)          :: mesh
-            class(solver_t),        intent(inout)       :: solver
+            class(solverdata_t),    intent(inout)       :: sdata
             integer(ik),            intent(in)          :: ielem
             integer(ik),            intent(in)          :: iblk
         end subroutine

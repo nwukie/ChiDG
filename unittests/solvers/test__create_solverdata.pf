@@ -1,0 +1,59 @@
+!> Test that solverdata_t was returned 'allocated'
+@Test
+subroutine test__create_solverdata__allocated()
+    use pfunit_mod
+    use mod_kinds,          only: rk,ik
+    use mod_solverdata,     only: create_solverdata
+    use atype_solverdata,   only: solverdata_t
+    
+    implicit none
+    class(solverdata_t),    allocatable :: sdata
+    
+    
+    !> PROCEDURE BEING TESTED
+    call create_solverdata('base',sdata)
+    
+    
+    !> Test allocated
+    @assertTrue(allocated(sdata))
+    
+end subroutine
+
+
+
+
+
+
+!> Test that allocated type is returned with expected type
+@Test
+subroutine test__create_solverdata__type()
+    use pfunit_mod
+    use mod_kinds,          only: rk,ik
+    use mod_solverdata,     only: create_solverdata
+    use atype_solverdata,   only: solverdata_t
+    use solverdata_base,    only: base_d
+    
+    implicit none
+    class(solverdata_t),    allocatable :: sdata
+    
+    
+    
+    
+    
+    !> PROCEDURE BEING TESTED
+    call create_solverdata('base',sdata)
+    
+    
+    select type(sdata)
+        type is (base_d)
+            !> correct type
+            @assertTrue(.true.) 
+        
+        class default
+            !> correct type was not detected, ERROR
+            @assertTrue(.false.) 
+    end select
+            
+    
+end subroutine
+

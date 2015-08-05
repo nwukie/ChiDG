@@ -64,7 +64,7 @@ contains
         tol = 1.e-14_rk
         
         
-        associate ( q => this%domains(1)%solver%q )
+        associate ( q => this%domains(1)%sdata%q )
             
             !> Set reference solution values
             ref = [ONE, TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT]

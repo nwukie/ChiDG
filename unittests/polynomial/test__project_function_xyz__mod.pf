@@ -5,7 +5,7 @@ module test__project_function_xyz__mod
     use type_point,             only: point_t
     use type_domain,            only: domain_t
     use atype_function,         only: function_t
-    use mod_function,           only: assign_function
+    use mod_function,           only: create_function
     use mod_project,            only: project_function_xyz
     use mod_grid,               only: compute_element_mappings
     use mod_polynomial,         only: PolynomialVal
@@ -91,7 +91,7 @@ contains
 
         tol = 1.e-13_rk
 
-        call assign_function(fcn,'xsquared')
+        call create_function(fcn,'xsquared')
         associate (elem => self%dom%mesh%elems(1))
         
         ! Function evaluation points
@@ -160,7 +160,7 @@ contains
 
         tol = 1.e-13_rk
 
-        call assign_function(fcn,'ysquared')
+        call create_function(fcn,'ysquared')
         
         associate (elem => self%dom%mesh%elems(1))
         
@@ -230,7 +230,7 @@ contains
 
         tol = 1.e-13_rk
 
-        call assign_function(fcn,'zsquared')
+        call create_function(fcn,'zsquared')
 
         associate (elem => self%dom%mesh%elems(1))
         
@@ -302,7 +302,7 @@ contains
 
         tol = 1.e-13_rk
 
-        call assign_function(fcn,'xyz')
+        call create_function(fcn,'xyz')
 
         associate (elem => self%dom%mesh%elems(1))
         

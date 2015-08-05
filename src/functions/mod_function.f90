@@ -23,7 +23,13 @@ module mod_function
 contains
 
 
-    subroutine assign_function(fcn,str)
+    !> Factory method for allocating concrete functions
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @param[inout]   fcn     Incoming function base class to be allocated
+    !!  @param[in]      str     Function string for selecting concrete type
+    !------------------------------------------------------------------
+    subroutine create_function(fcn,str)
         class(function_t), allocatable, intent(inout)   :: fcn
         character(*),                   intent(in)      :: str
 

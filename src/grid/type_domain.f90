@@ -2,11 +2,11 @@ module type_domain
 #include <messenger.h>
     use mod_kinds,          only: rk, ik
     use mod_equations,      only: create_equationset
-    use mod_solver,         only: create_solver
+    use mod_solverdata,     only: create_solverdata
 
-    use type_mesh,          only: mesh_t
-    use atype_solver,       only: solver_t
     use type_point,         only: point_t
+    use type_mesh,          only: mesh_t
+    use atype_solverdata,   only: solverdata_t
     use atype_equationset,  only: equationset_t
 
     implicit none
@@ -22,7 +22,7 @@ module type_domain
     type, public :: domain_t
         character(100)                      :: name                       !> Domain name -- not currently used
         type(mesh_t)                        :: mesh                       !> Mesh storage
-        class(solver_t),      allocatable   :: solver                     !> Solver storage
+        class(solverdata_t),  allocatable   :: sdata                      !> Solver data storage
         class(equationset_t), allocatable   :: eqnset                     !> Equation set solved on this domain
 
         logical                             :: geomInitialized = .false.
@@ -82,11 +82,11 @@ contains
 
         ! Call factory methods for equationset and solver
         call create_equationset(eqnstring,self%eqnset)      !> Factory method for allocating a equation set
-        call create_solver('fe',self%solver)                !> Factory method for allocating a solver
+        call create_solverdata('base',self%sdata)           !> Factory method for allocating solverdata. Allocate base data
 
 
         call self%mesh%init_sol(self%eqnset%neqns,nterms_s) !> Call initialization for mesh required in solution procedure
-        call self%solver%init(self%mesh)                    !> Call initialization for solver and solver data
+        call self%sdata%init(self%mesh)                     !> Call initialization for solver and solver data
         self%numInitialized = .true.                        !> Confirm initialization
 
 

@@ -76,7 +76,7 @@ contains
         real(rk), allocatable       :: u_gq(:), u_ref(:)
         real(rk)                    :: tol
         
-        associate ( elems => self%domain(1)%mesh%elems, q => self%domain(1)%solver%q, rhs => self%domain(1)%solver%rhs )        
+        associate ( elems => self%domain(1)%mesh%elems, q => self%domain(1)%sdata%q, rhs => self%domain(1)%sdata%rhs )        
             tol   = 1.e-13_rk
             ielem = 14
             ivar  = 1
@@ -115,7 +115,7 @@ contains
         
         
         
-        associate ( elems => self%domain(1)%mesh%elems, faces => self%domain(1)%mesh%faces, q => self%domain(1)%solver%q, rhs => self%domain(1)%solver%rhs )        
+        associate ( elems => self%domain(1)%mesh%elems, faces => self%domain(1)%mesh%faces, q => self%domain(1)%sdata%q, rhs => self%domain(1)%sdata%rhs )        
             tol   = 1.e-13_rk
             ielem = 14
             iface = 1
@@ -162,7 +162,7 @@ contains
         real(rk)                    :: tol
         
         
-        associate ( elems => self%domain(1)%mesh%elems, q => self%domain(1)%solver%q, rhs => self%domain(1)%solver%rhs )        
+        associate ( elems => self%domain(1)%mesh%elems, q => self%domain(1)%sdata%q, rhs => self%domain(1)%sdata%rhs )        
             ielem   = 14    !> given element
             ielem_s = 15    !> a seed element, so all derivative arrays should be seeded to zero
             tol   = 1.e-13_rk
@@ -204,7 +204,7 @@ contains
         real(rk)                    :: tol
         
         
-        associate ( elems => self%domain(1)%mesh%elems, q => self%domain(1)%solver%q, rhs => self%domain(1)%solver%rhs )
+        associate ( elems => self%domain(1)%mesh%elems, q => self%domain(1)%sdata%q, rhs => self%domain(1)%sdata%rhs )
             ielem   = 14    !> given element
             ielem_s = 15    !> a seed element, so all derivative arrays should be seeded to zero        
             tol   = 1.e-13_rk
@@ -252,7 +252,7 @@ contains
         real(rk)                    :: tol
         
         
-        associate ( elems => self%domain(1)%mesh%elems, q => self%domain(1)%solver%q, rhs => self%domain(1)%solver%rhs )
+        associate ( elems => self%domain(1)%mesh%elems, q => self%domain(1)%sdata%q, rhs => self%domain(1)%sdata%rhs )
             ielem   = 14    !> given element
             ielem_s = 14    !> a seed element, so all derivative arrays should be seeded to zero
             tol   = 1.e-13_rk
@@ -293,7 +293,7 @@ contains
         real(rk)                    :: tol
         
         
-        associate ( elems => self%domain(1)%mesh%elems, q => self%domain(1)%solver%q, rhs => self%domain(1)%solver%rhs )        
+        associate ( elems => self%domain(1)%mesh%elems, q => self%domain(1)%sdata%q, rhs => self%domain(1)%sdata%rhs )        
             ielem   = 14    !> given element
             ielem_s = 14    !> a seed element, so all derivative arrays should be seeded to zero
             tol   = 1.e-13_rk
@@ -354,7 +354,7 @@ contains
         real(rk)                    :: tol
         
         
-        associate ( elems => self%domain(1)%mesh%elems, faces => self%domain(1)%mesh%faces, q => self%domain(1)%solver%q)        
+        associate ( elems => self%domain(1)%mesh%elems, faces => self%domain(1)%mesh%faces, q => self%domain(1)%sdata%q)        
             ielem   = 14    !> given element
             iface   = 1     !> given face
             ielem_s = 15    !> a seed element, this is a neighbor for this test - so all derivative arrays should be seeded to zero
@@ -401,7 +401,7 @@ contains
         real(rk)                    :: tol
         
         
-        associate ( elems => self%domain(1)%mesh%elems, faces => self%domain(1)%mesh%faces, q => self%domain(1)%solver%q)        
+        associate ( elems => self%domain(1)%mesh%elems, faces => self%domain(1)%mesh%faces, q => self%domain(1)%sdata%q)        
             ielem   = 14    !> given element
             iface   = 1     !> given face
             ielem_s = 15    !> a seed element, this is a neighbor for this test - so all derivative arrays should be seeded to zero
@@ -443,7 +443,7 @@ contains
         real(rk)                    :: tol
         
         
-        associate ( elems => self%domain(1)%mesh%elems, faces => self%domain(1)%mesh%faces, q => self%domain(1)%solver%q)        
+        associate ( elems => self%domain(1)%mesh%elems, faces => self%domain(1)%mesh%faces, q => self%domain(1)%sdata%q)        
             ielem   = 14    !> given element
             iface   = 1     !> given face
             ielem_s = 14    !> a seed element, same as ielem - so all derivative arrays should include non-zeros
@@ -489,7 +489,7 @@ contains
         real(rk)                    :: tol
         
         
-        associate ( elems => self%domain(1)%mesh%elems, faces => self%domain(1)%mesh%faces, q => self%domain(1)%solver%q)        
+        associate ( elems => self%domain(1)%mesh%elems, faces => self%domain(1)%mesh%faces, q => self%domain(1)%sdata%q)        
             ielem   = 14    !> given element
             iface   = 1     !> given face
             ielem_s = 14    !> a seed element, same as ielem - so all derivative arrays should include non-zeros

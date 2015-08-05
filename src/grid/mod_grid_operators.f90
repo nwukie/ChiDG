@@ -32,7 +32,7 @@ contains
 
         ! Loop through elements in mesh and call function projection
         do ielem = 1,domain%mesh%nelem
-            associate (elem  =>  domain%mesh%elems(ielem), q => domain%solver%q(ielem))
+            associate (elem  =>  domain%mesh%elems(ielem), q => domain%sdata%q(ielem))
 
                 ! Reallocate mode storage if necessary
                 if (size(fmodes) /= q%nterms) then

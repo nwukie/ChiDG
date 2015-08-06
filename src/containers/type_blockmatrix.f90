@@ -84,7 +84,7 @@ contains
             do iblk = 1,7
                 size1d = mesh%elems(ielem)%neqns  *  mesh%elems(ielem)%nterms_s
 
-                !> Parent is the element with which the linearization was computed
+                !> Parent is the element with which the linearization is computed
                 if (iblk == DIAG) then
                     parent = mesh%elems(ielem)%ielem
                 else

@@ -1,4 +1,5 @@
-set(test_files test__create_solverdata.pf)
+set(test_files test__create_solver.pf
+               test__create_solverdata.pf)
                
                
                

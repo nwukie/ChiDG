@@ -1,5 +1,6 @@
 module solver_forward_euler
     use mod_kinds,      only: rk,ik
+    use mod_constants,  only: ZERO
     use atype_solver,   only: solver_t
     use type_domain,    only: domain_t
     use type_expansion
@@ -31,7 +32,7 @@ contains
         type(domain_t),             intent(inout)   :: domain
 
         !> Call any other specialized initialization requirements
-        self%dt = 0.00001_rk
+        self%dt = 0.001_rk
     end subroutine
 
 
@@ -42,27 +43,34 @@ contains
         type(domain_t),         intent(inout)   :: domain
 
         character(100)  :: filename
-        integer(ik)     :: itime, ntime
+        integer(ik)     :: itime, ntime, ielem
 
 
         ntime = 100
         associate ( q => domain%sdata%q, dq => domain%sdata%dq, rhs => domain%sdata%rhs, dt => self%dt)
 
-
+            print*, 'entering time'
             do itime = 1,ntime
 
 
-
+                call sleep(1)
+!                print*, 'updating space'
                 call update_space(domain)
 
-                dq = dt * rhs
-                q  = q + dq
 
-
-                filename = char(itime)//'.dat'
-                call write_tecio_variables(domain,trim(filename),itime)
-
-
+!                dq = dt * rhs
+!                q  = q + dq
+!
+!
+!                write(filename, "(I2,A4)") itime, '.plt'
+!                call write_tecio_variables(domain,trim(filename),itime+1)
+!
+!
+!
+!                !> Clear spatial residual
+!                do ielem = 1,domain%mesh%nelem
+!                    rhs(ielem)%vec = ZERO
+!                end do
 
             end do
 

@@ -8,7 +8,7 @@ module mod_equations
     implicit none
 
     ! Instantiate Equations
-    type(scalar_e)  :: scalar
+    type(scalar_e)  :: SCALAR
 
 
     logical :: uninitialized = .true.
@@ -22,7 +22,7 @@ contains
 
         if (uninitialized) then
             ! List of equations to initialize
-            call scalar%init()
+            call SCALAR%init()
 
         end if
 
@@ -49,7 +49,7 @@ contains
 
         select case (trim(eqnstring))
             case ('scalar','Scalar')
-                allocate(eqnset, source=scalar)
+                allocate(eqnset, source=SCALAR)
 
             case default
                 call signal(FATAL,'create_equationset -- equation string not recognized')

@@ -94,11 +94,16 @@ contains
 
         !> Initialize storage
         do ielem = 1,nelem
+            print*, 'q%init'
             call self%q(ielem)%init(nterms_s,neqns)     !> Initialize solution expansion for each element
+            print*, 'dq%init'
             call self%dq(ielem)%init(nterms_s,neqns)    !> Initialize delta solution expansion for each element
+            print*, 'rhs%init'
             call self%rhs(ielem)%init(nterms_s,neqns)   !> Initialize rhs expansion for each element
+            print*, 'lin%init'
         end do
 
+        call self%lin%init(mesh)
 
         !> Initialize solution matrix view
         temp => self%q

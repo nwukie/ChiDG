@@ -33,7 +33,12 @@ module mod_interpolate
 
         !> Get the number of degrees of freedom for the seed element
         !! and set this as the number of partial derivatives to track
-        nderiv = elems(ielem_seed)%neqns  *  elems(ielem_seed)%nterms_s
+        if (ielem_seed == 0) then
+            ! If ielem_seed == 0 then we aren't interested in tracking derivatives
+            nderiv = 1
+        else
+            nderiv = elems(ielem_seed)%neqns  *  elems(ielem_seed)%nterms_s
+        end if
 
         !> Allocate the derivative array for each autodiff variable
         !! MIGHT NOT NEED THIS IF IT GETS AUTOMATICALLY ALLOCATED ON ASSIGNMENT -- TEST
@@ -87,21 +92,31 @@ module mod_interpolate
         integer(ik),        intent(in)      :: ielem_seed
 
         type(AD_D)  :: qdiff(faces(ielem,iface)%nterms_s)
-        integer(ik) :: nderiv, set_deriv, iterm, igq, nterms_s
+        integer(ik) :: nderiv, set_deriv, iterm, igq, nterms_s, size_i, size_j, ipt, jpt
+        real(rk), allocatable    :: test(:,:)
 
+        size_i = size(faces(ielem,iface)%gq%face%val, 1)
+        size_j = size(faces(ielem,iface)%gq%face%val, 2)
+        allocate(test(size_i,size_j))
 
         nterms_s = faces(ielem,iface)%nterms_s
 
-
         !> Get the number of degrees of freedom for the seed element
         !! and set this as the number of partial derivatives to track
-        nderiv = faces(ielem_seed,1)%neqns  *  faces(ielem_seed,1)%nterms_s     !> using face 1 here, but faces 1-6 point
-                                                                                !> to the same element so it doesn't matter
+        if (ielem_seed == 0) then
+            ! If ielem_seed == 0 then we aren't interested in tracking derivatives
+            nderiv = 1
+        else
+            nderiv = faces(ielem_seed,1)%neqns  *  faces(ielem_seed,1)%nterms_s     !> using face 1 here, but faces 1-6 point
+        end if
+
+
 
         !> Allocate the derivative array for each autodiff variable
         !! MIGHT NOT NEED THIS IF IT GETS AUTOMATICALLY ALLOCATED ON ASSIGNMENT -- TEST
         do igq = 1,size(var_gq)
-            var_gq(igq) = AD_D(nderiv)
+            allocate(var_gq(igq)%xp_ad_(nderiv))
+!            var_gq(igq) = AD_D(nderiv)
         end do
 
         !> If the current element is being differentiated (ielem == ielem_seed)
@@ -110,7 +125,8 @@ module mod_interpolate
 
             !> Allocate derivative arrays for temporary solution variable
             do iterm = 1,nterms_s
-                qdiff(iterm) = AD_D(nderiv)
+                allocate(qdiff(iterm)%xp_ad_(nderiv))
+!                qdiff(iterm) = AD_D(nderiv)
             end do
 
             !> Copy the solution variables from 'q' to 'qdiff'
@@ -124,16 +140,19 @@ module mod_interpolate
                 qdiff(iterm)%xp_ad_(set_deriv) = 1.0_rk
             end do
 
-            var_gq = matmul(faces(ielem,iface)%gq%face%val(:,:,iface),  qdiff)
-
+            do jpt = 1,size_j
+                do ipt = 1,size_i
+                    test(ipt,jpt) = faces(ielem,iface)%gq%face%val(ipt,jpt,iface)
+                end do
+            end do
+!            var_gq = matmul(faces(ielem,iface)%gq%face%val(:,:,iface),  qdiff)
+            var_gq = matmul(test,  qdiff)
         else
             !> If the solution variable derivatives dont need initialized
             !! then just use the q(ielem) values and derivatives get
             !! initialized to zero
             var_gq = matmul(faces(ielem,iface)%gq%face%val(:,:,iface),  q(ielem)%var(ivar))
         end if
-
-
 
 
     end subroutine

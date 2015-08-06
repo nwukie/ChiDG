@@ -139,6 +139,10 @@ REAL(DBL_AD)      ::negative_one=-1.0d0
         REAL(DBL_AD)              :: x_ad_      ! functional value
         REAL(DBL_AD), allocatable :: xp_ad_(:)  ! derivative
 
+!    contains
+!        final   :: destructor
+
+
     END TYPE AD_D
 
 
@@ -564,16 +568,38 @@ CONTAINS
     ! real* dual 
     ! <n,0>*<u,up>=<u*n,up*n>
     !----------------------------------------
-    ELEMENTAL FUNCTION MULT_RD_D(n,u) RESULT(res)
-         TYPE (AD_D), INTENT(IN)::u
-         TYPE (AD_D)::res
-         REAL(DBL_AD),INTENT(IN)::n
+!    ELEMENTAL FUNCTION MULT_RD_D(n,u) RESULT(res)
+!         REAL(DBL_AD),  INTENT(IN)  ::n
+!         TYPE(AD_D),    INTENT(IN)  ::u
+!         TYPE(AD_D)                 ::res
+!!         allocate(res%xp_ad_(size(u%xp_ad_)))
+!
+!         res%x_ad_ = n*u%x_ad_
+!         res%xp_ad_= n*u%xp_ad_
+!
+!    END FUNCTION MULT_RD_D
+
+
+    FUNCTION MULT_RD_D(n,u) RESULT(res)
+         REAL(DBL_AD),  INTENT(IN)  ::n
+         TYPE(AD_D),    INTENT(IN)  ::u(:)
+         TYPE(AD_D), allocatable                 ::res(:)
+
+        integer :: i
+!         allocate(res(size(u)))
+         res = u
+         res = 0._DBL_AD
 !         allocate(res%xp_ad_(size(u%xp_ad_)))
-        
-            res%x_ad_ = n*u%x_ad_ 
-         res%xp_ad_= n*u%xp_ad_
-        
+
+         res%x_ad_ = n*u%x_ad_
+
+         do i = 1,size(res)
+            res(i)%xp_ad_= n*u(i)%xp_ad_
+        end do
+
     END FUNCTION MULT_RD_D
+
+
 
     !-----------------------------------------
     ! MULTIPLY a dual number with REAL number
@@ -1601,17 +1627,23 @@ CONTAINS
     !----------------------------------------
     FUNCTION MATMUL_MV_RD_D(u,v) RESULT(res)
         REAL(DBL_AD), intent(in)     :: u(:,:)
-        TYPE(AD_D), intent(in) :: v(:)
-!        TYPE(AD_D)             :: res(size(v))
-        TYPE(AD_D)             :: res(size(u,1))
-        REAL(DBL_AD)                 :: xp_ad_v(size(v)), &
-                                        xp_ad(size(res))
+        TYPE(AD_D), intent(in)       :: v(:)
+!        TYPE(AD_D)                      :: res(size(v))
+!        TYPE(AD_D)                      :: res(size(u,1))  !> Causes memory leak in ifort 15.0.3. Doesn't seem to be deallocating everything correctly
+        TYPE(AD_D), allocatable, dimension(:) :: res        !> Declaring as allocatable to fix memory leak
+        REAL(DBL_AD)                    :: xp_ad_v(size(v)), &
+                                           xp_ad(size(u,1))
+!                                           xp_ad(size(res))
         INTEGER:: i,j,k
 
-!        do j = 1,size(v,1)
-        do j = 1,size(u,1)
+
+
+        allocate(res(size(u,1)))
+        do j = 1,size(res)
                allocate(res(j)%xp_ad_(size(v(1)%xp_ad_)))
         end do
+
+
 
         res%x_ad_ = MATMUL(u,v%x_ad_)
         do i=1,size(v(1)%xp_ad_)
@@ -1629,9 +1661,6 @@ CONTAINS
 
        end do
 
-!         DO i=1,NDV_AD
-!            res%xp_ad_(i)= MATMUL(u%xp_ad_(i),v%x_ad_) + MATMUL(u%x_ad_,v%xp_ad_(i))
-!         ENDDO
     END FUNCTION MATMUL_MV_RD_D
 
 
@@ -1983,13 +2012,31 @@ CONTAINS
          ENDDO
     END FUNCTION SUM_D_D
 
-ELEMENTAL FUNCTION Set_NaN_D() RESULT(res)
+    ELEMENTAL FUNCTION Set_NaN_D() RESULT(res)
          REAL(DBL_AD)::res
 
          res=SQRT(negative_one) 
 
     END FUNCTION Set_NaN_D
  
+
+
+
+
+
+
+
+!    subroutine destructor(self)
+!        type(AD_D), intent(inout) :: self
+!
+!
+!    end subroutine
+
+
+
+
+
+
 
 
 END MODULE  DNAD_D

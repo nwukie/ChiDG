@@ -413,11 +413,6 @@ contains
         type(face_t), intent(inout) :: self
 
 
-!> Shouldn't need to deallocate an 'allocatable'. The compiler is supposed to do that for you
-!        if (allocated(self%quad_pts))   deallocate(self%quad_pts)
-!        if (allocated(self%jinv))       deallocate(self%jinv)
-!        if (allocated(self%metric))     deallocate(self%metric)
-!        if (allocated(self%norm))       deallocate(self%norm)
     end subroutine
 
 end module type_face

@@ -1,21 +1,21 @@
 !> Test that solverdata_t was returned 'allocated'
 @Test
-subroutine test__create_solverdata__allocated()
+subroutine test__create_solver__allocated()
     use pfunit_mod
     use mod_kinds,          only: rk,ik
-    use mod_solverdata,     only: create_solverdata
-    use atype_solverdata,   only: solverdata_t
+    use mod_solver,         only: create_solver
+    use atype_solver,       only: solver_t
     
     implicit none
-    class(solverdata_t),    allocatable :: sdata
+    class(solver_t),        allocatable :: solver
     
     
     !> PROCEDURE BEING TESTED
-    call create_solverdata('base',sdata)
+    call create_solver('fe',solver)
     
     
     !> Test allocated
-    @assertTrue(allocated(sdata))
+    @assertTrue(allocated(solver))
     
 end subroutine
 
@@ -26,25 +26,25 @@ end subroutine
 
 !> Test that allocated type is returned with expected type
 @Test
-subroutine test__create_solverdata__type()
+subroutine test__create_solver__type()
     use pfunit_mod
-    use mod_kinds,          only: rk,ik
-    use mod_solverdata,     only: create_solverdata
-    use atype_solverdata,   only: solverdata_t
-    use solverdata_base,    only: base_d
+    use mod_kinds,              only: rk,ik
+    use mod_solver,             only: create_solver
+    use atype_solver,           only: solver_t
+    use solver_forward_euler,   only: forward_euler_s
     
     implicit none
-    class(solverdata_t),    allocatable :: sdata
+    class(solver_t),    allocatable :: solver
     
     
         
     !> PROCEDURE BEING TESTED
-    call create_solverdata('base',sdata)
+    call create_solver('fe',solver)
     
     
     !> Test for correct type
-    select type(sdata)
-        type is (base_d)
+    select type(solver)
+        type is (forward_euler_s)
             !> correct type
             @assertTrue(.true.) 
         

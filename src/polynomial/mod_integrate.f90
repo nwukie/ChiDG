@@ -1,5 +1,6 @@
 module mod_integrate
     use mod_kinds,          only: rk,ik
+    use mod_constants,      only: DIAG
     use type_element,       only: element_t
     use type_face,          only: face_t
     use type_expansion,     only: expansion_t
@@ -51,19 +52,19 @@ contains
 
         ! FLUX-X
         ! Multiply by column of test function gradients, integrate, add to RHS, add derivatives to linearization
-        integral = matmul(transpose(elem%dtdx),flux_x)                          !> Integrate
+        integral = matmul(transpose(elem%dtdx),flux_x)                         !> Integrate
         call store_volume_integrals(integral,sdata,ielem,ivar,iblk)            !> Store values and derivatives
 
 
         ! FLUX-Y
         ! Multiply by column of test function gradients, integrate, add to RHS, add derivatives to linearization
-        integral = matmul(transpose(elem%dtdy),flux_y)                          !> Integrate
+        integral = matmul(transpose(elem%dtdy),flux_y)                         !> Integrate
         call store_volume_integrals(integral,sdata,ielem,ivar,iblk)            !> Store values and derivatives
 
 
         ! FLUX-Z
         ! Multiply by column of test function gradients, integrate, add to RHS, add derivatives to linearization
-        integral = matmul(transpose(elem%dtdz),flux_z)                          !> Integrate
+        integral = matmul(transpose(elem%dtdz),flux_z)                         !> Integrate
         call store_volume_integrals(integral,sdata,ielem,ivar,iblk)            !> Store values and derivatives
 
 
@@ -154,8 +155,13 @@ contains
 
         associate ( rhs => sdata%rhs, lin => sdata%lin)
 
-            rhs(ielem)%mat(:,ivar) = rhs(ielem)%mat(:,ivar) + integral(:)%x_ad_     !> Store values
-            call lin%store(integral,ielem,iblk,ivar)                                !> Store derivatives
+            !> Only store rhs once. if iblk == DIAG
+            if (iblk == DIAG) then
+                rhs(ielem)%mat(:,ivar) = rhs(ielem)%mat(:,ivar) + integral(:)%x_ad_     !> Store values
+            end if
+
+            !> Store linearization
+!            call lin%store(integral,ielem,iblk,ivar)                                    !> Store derivatives
 
         end associate
     end subroutine
@@ -184,8 +190,13 @@ contains
 
         associate ( rhs => sdata%rhs, lin => sdata%lin)
 
-            rhs(ielem)%mat(:,ivar) = rhs(ielem)%mat(:,ivar) - integral(:)%x_ad_     !> Store values
-            call lin%store(integral,ielem,iblk,ivar)                                !> Store derivatives
+            !> Only store rhs once. if iblk == DIAG
+            if (iblk == DIAG) then
+                rhs(ielem)%mat(:,ivar) = rhs(ielem)%mat(:,ivar) - integral(:)%x_ad_     !> Store values
+            end if
+
+            !> Store linearization
+!            call lin%store(integral,ielem,iblk,ivar)                                    !> Store derivatives
 
         end associate
 

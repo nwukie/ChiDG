@@ -9,6 +9,7 @@ module atype_solver
     !-----------------------------------------------------
     type, abstract, public  :: solver_t
 
+        real(rk)                        :: testing
         logical                         :: solverInitialized = .false.
 
 

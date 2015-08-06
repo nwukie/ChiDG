@@ -221,8 +221,134 @@ contains
 
 
 
+@Test
+    subroutine testMesh_E1_faces_ftype(self)
+        class(test_mesh_linear),    intent(inout)   :: self
+        
+        integer(ik) :: ielem
+        logical     :: isInterior
+        
+        
+        associate ( faces => self%mesh%faces )
+        
+        ielem = 1
+
+        !> XI_MIN
+        isInterior = (faces(ielem,XI_MIN)%ftype == 0)
+        @assertFalse(isInterior)
+        
+        !> XI_MAX
+        isInterior = (faces(ielem,XI_MAX)%ftype == 0)
+        @assertTrue(isInterior)
+        
+        !> ETA_MIN
+        isInterior = (faces(ielem,ETA_MIN)%ftype == 0)
+        @assertFalse(isInterior)
+        
+        !> ETA_MAX
+        isInterior = (faces(ielem,ETA_MAX)%ftype == 0)
+        @assertTrue(isInterior)
+        
+        !> ZETA_MIN
+        isInterior = (faces(ielem,ZETA_MIN)%ftype == 0)
+        @assertFalse(isInterior)
+        
+        !> ZETA_MAX
+        isInterior = (faces(ielem,ZETA_MAX)%ftype == 0)
+        @assertTrue(isInterior)
+        
+        
+        
+        end associate
+    end subroutine
 
 
+
+
+
+@Test
+    subroutine testMesh_E2_faces_ftype(self)
+        class(test_mesh_linear),    intent(inout)   :: self
+        
+        integer(ik) :: ielem
+        logical     :: isInterior
+        
+        
+        associate ( faces => self%mesh%faces )
+        
+        ielem = 2
+
+        !> XI_MIN
+        isInterior = (faces(ielem,XI_MIN)%ftype == 0)
+        @assertTrue(isInterior)
+        
+        !> XI_MAX
+        isInterior = (faces(ielem,XI_MAX)%ftype == 0)
+        @assertTrue(isInterior)
+        
+        !> ETA_MIN
+        isInterior = (faces(ielem,ETA_MIN)%ftype == 0)
+        @assertFalse(isInterior)
+        
+        !> ETA_MAX
+        isInterior = (faces(ielem,ETA_MAX)%ftype == 0)
+        @assertTrue(isInterior)
+        
+        !> ZETA_MIN
+        isInterior = (faces(ielem,ZETA_MIN)%ftype == 0)
+        @assertFalse(isInterior)
+        
+        !> ZETA_MAX
+        isInterior = (faces(ielem,ZETA_MAX)%ftype == 0)
+        @assertTrue(isInterior)
+        
+        
+        
+        end associate
+    end subroutine
+    
+    
+    
+@Test
+    subroutine testMesh_E14_faces_ftype(self)
+        class(test_mesh_linear),    intent(inout)   :: self
+        
+        integer(ik) :: ielem
+        logical     :: isInterior
+        
+        
+        associate ( faces => self%mesh%faces )
+        
+        ielem = 14
+
+        !> XI_MIN
+        isInterior = (faces(ielem,XI_MIN)%ftype == 0)
+        @assertTrue(isInterior)
+        
+        !> XI_MAX
+        isInterior = (faces(ielem,XI_MAX)%ftype == 0)
+        @assertTrue(isInterior)
+        
+        !> ETA_MIN
+        isInterior = (faces(ielem,ETA_MIN)%ftype == 0)
+        @assertTrue(isInterior)
+        
+        !> ETA_MAX
+        isInterior = (faces(ielem,ETA_MAX)%ftype == 0)
+        @assertTrue(isInterior)
+        
+        !> ZETA_MIN
+        isInterior = (faces(ielem,ZETA_MIN)%ftype == 0)
+        @assertTrue(isInterior)
+        
+        !> ZETA_MAX
+        isInterior = (faces(ielem,ZETA_MAX)%ftype == 0)
+        @assertTrue(isInterior)
+        
+        
+        
+        end associate
+    end subroutine
 
 
 

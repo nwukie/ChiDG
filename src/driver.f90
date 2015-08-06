@@ -10,6 +10,7 @@
 
 
 program driver
+    use mod_kinds,              only: rk, ik
     use type_chidg,             only: chidg_t
     use type_domain,            only: domain_t
     use atype_solver,           only: solver_t
@@ -28,25 +29,48 @@ program driver
     type(domain_t),     allocatable :: domains(:)
     class(solver_t),    allocatable :: solver
     class(function_t),  allocatable :: fcn
+    integer(ik)     :: ielem
 
 
     ! Initialize ChiDG environment
+    print*, 'calling chidg%init'
     call chidg%init()
 
     ! Allocate solver
+    print*, 'creating solver'
     call create_solver('fe',solver)
 
 
     ! Initialize grid and solution
-    call read_grid_hdf('9x9x9.h5',domains)
+    print*, 'reading grid'
+    call read_grid_hdf('4x4x4.h5',domains)
+
+    print*, 'initializing domain numerics'
     call domains(1)%init_sol('scalar',64)
 
 
+    print*, 'create_function'
     call create_function(fcn,'gaussian')
+
+    print*, 'initialize_variable'
     call initialize_variable(domains(1),1,fcn)
 
 
-    call write_tecio_variables(domains(1),'test.plt',1)
+    call write_tecio_variables(domains(1),'0.plt',1)
+
+
+
+
+
+
+
+
+
+
+    call solver%init(domains(1))
+
+    print*, 'solve'
+    call solver%solve(domains(1))
 
 
 

@@ -48,7 +48,7 @@ contains
                 nnodes1d = nterms1d
             case(2)
 !                nnodes1d = 3*nterms1d/2 + 1
-                nnodes1d = 3*nterms1d+1
+                nnodes1d = 3*nterms1d + 1
             case(3)
                 nnodes1d = 2*nterms1d + 1
             case default

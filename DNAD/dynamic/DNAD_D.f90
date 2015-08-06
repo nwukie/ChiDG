@@ -568,36 +568,36 @@ CONTAINS
     ! real* dual 
     ! <n,0>*<u,up>=<u*n,up*n>
     !----------------------------------------
-!    ELEMENTAL FUNCTION MULT_RD_D(n,u) RESULT(res)
-!         REAL(DBL_AD),  INTENT(IN)  ::n
-!         TYPE(AD_D),    INTENT(IN)  ::u
-!         TYPE(AD_D)                 ::res
-!!         allocate(res%xp_ad_(size(u%xp_ad_)))
-!
-!         res%x_ad_ = n*u%x_ad_
-!         res%xp_ad_= n*u%xp_ad_
-!
-!    END FUNCTION MULT_RD_D
-
-
-    FUNCTION MULT_RD_D(n,u) RESULT(res)
+    ELEMENTAL FUNCTION MULT_RD_D(n,u) RESULT(res)
          REAL(DBL_AD),  INTENT(IN)  ::n
-         TYPE(AD_D),    INTENT(IN)  ::u(:)
-         TYPE(AD_D), allocatable                 ::res(:)
-
-        integer :: i
-!         allocate(res(size(u)))
-         res = u
-         res = 0._DBL_AD
+         TYPE(AD_D),    INTENT(IN)  ::u
+         TYPE(AD_D)                 ::res
 !         allocate(res%xp_ad_(size(u%xp_ad_)))
 
          res%x_ad_ = n*u%x_ad_
-
-         do i = 1,size(res)
-            res(i)%xp_ad_= n*u(i)%xp_ad_
-        end do
+         res%xp_ad_= n*u%xp_ad_
 
     END FUNCTION MULT_RD_D
+
+
+!    FUNCTION MULT_RD_D(n,u) RESULT(res)
+!         REAL(DBL_AD),  INTENT(IN)  ::n
+!         TYPE(AD_D),    INTENT(IN)  ::u(:)
+!         TYPE(AD_D), allocatable                 ::res(:)
+!
+!        integer :: i
+!!         allocate(res(size(u)))
+!         res = u
+!         res = 0._DBL_AD
+!!         allocate(res%xp_ad_(size(u%xp_ad_)))
+!
+!         res%x_ad_ = n*u%x_ad_
+!
+!         do i = 1,size(res)
+!            res(i)%xp_ad_= n*u(i)%xp_ad_
+!        end do
+!
+!    END FUNCTION MULT_RD_D
 
 
 

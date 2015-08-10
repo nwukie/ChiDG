@@ -5,7 +5,7 @@ module type_blockmatrix
     use mod_kinds,          only: rk,ik
     use mod_constants,      only: DIAG
     use type_mesh,          only: mesh_t
-    use type_denseblock,    only: denseblock_t
+    use type_densematrix,   only: densematrix_t
     use DNAD_D
     implicit none
 
@@ -20,8 +20,8 @@ module type_blockmatrix
         !!  elem #3:
         !!    .
         !!    .
-        type(denseblock_t), allocatable :: lblks(:,:)       !> Local domain blocks
-        integer(ik),        allocatable :: ldata(:,:)       !> Local block data     (nvars, nterms)
+        type(densematrix_t), allocatable :: lblks(:,:)      !> Local domain blocks
+        integer(ik),         allocatable :: ldata(:,:)      !> Local block data     (nvars, nterms)
 
 !        type(denseblock_t), allocatable :: cblks(:,:)      !> Chimera inter-domain blocks
 

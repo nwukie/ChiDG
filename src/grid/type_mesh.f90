@@ -72,7 +72,7 @@ contains
 !        self%faces_m(1:self%nelem_xi,1:self%nelem_eta,1:self%nelem_zeta,NFACES) => ftemp(1:self%nelem,NFACES)
 
         !> Initialize boundary conditions after geometry is set up
-        call self%init_boundary_conditions()
+!        call self%init_boundary_conditions()
     end subroutine
 
 

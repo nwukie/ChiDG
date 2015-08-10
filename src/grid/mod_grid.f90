@@ -1,14 +1,15 @@
 module mod_grid
+#include <messenger.h>
     use mod_kinds,          only: rk,ik
     use mod_constants,      only: ONE, TWO
     use mod_polynomial,     only: polynomialVal
-    use type_denseblock,    only: denseblock_t
+    use type_densematrix,   only: densematrix_t
     use mod_inv
     implicit none
 
     ! coordinate mapping matrices
     integer(ik),         parameter      :: nmap = 4
-    type(denseblock_t),  save,  target  :: ELEM_MAP(nmap)  !> array of matrices
+    type(densematrix_t), save,  target  :: ELEM_MAP(nmap)  !> array of matrices
 
     logical :: uninitialized = .true.
 
@@ -59,9 +60,11 @@ contains
         do imap = 1,nmap
 
             call elem_map(imap)%init(npts_3d(imap),npts_3d(imap),0)
-            allocate(nodes(npts_3d(imap)), &
-                     xi(npts_1d(imap)), eta(npts_1d(imap)), zeta(npts_1d(imap)), stat=ierr)
-            if (ierr /= 0) stop "Memory error - compute_mapping_matrix"
+            allocate(nodes(npts_3d(imap)),  &
+                     xi(npts_1d(imap)),     &
+                     eta(npts_1d(imap)),    &
+                     zeta(npts_1d(imap)), stat=ierr)
+            if (ierr /= 0) call AllocationError
 
             ! Compute 1d point coordinates in each direction
             do ipt = 1,npts_1d(imap)

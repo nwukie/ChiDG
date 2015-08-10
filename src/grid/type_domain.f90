@@ -8,6 +8,7 @@ module type_domain
     use type_mesh,          only: mesh_t
     use atype_solverdata,   only: solverdata_t
     use atype_equationset,  only: equationset_t
+    use atype_bc,           only: bc_t
 
     implicit none
 
@@ -24,6 +25,7 @@ module type_domain
         type(mesh_t)                        :: mesh                       !> Mesh storage
         class(solverdata_t),  allocatable   :: sdata                      !> Solver data storage
         class(equationset_t), allocatable   :: eqnset                     !> Equation set solved on this domain
+        class(bc_t),          allocatable   :: bcs(:)                     !> Boundary condition array
 
         logical                             :: geomInitialized = .false.
         logical                             :: numInitialized  = .false.

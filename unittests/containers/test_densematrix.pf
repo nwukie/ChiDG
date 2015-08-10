@@ -3,10 +3,10 @@
 subroutine test_INIT_GEN() 
     use pfunit_mod
     use mod_kinds, only: rk,ik
-    use type_denseblock
+    use type_densematrix
     
     implicit none
-    type(denseblock_t)   :: blk
+    type(densematrix_t)  :: blk
     integer(ik)          :: idim,jdim,parent,nentries
     
     
@@ -45,10 +45,10 @@ end subroutine
 subroutine test_INIT_SQUARE()
     use pfunit_mod
     use mod_kinds, only: rk,ik
-    use type_denseblock
+    use type_densematrix
     
     implicit none
-    type(denseblock_t)   :: blk
+    type(densematrix_t)   :: blk
     integer(ik)          :: bsize,parent,nentries
     
     
@@ -86,10 +86,10 @@ end subroutine
 subroutine test_RESIZE()
     use pfunit_mod
     use mod_kinds, only: rk,ik
-    use type_denseblock
+    use type_densematrix
     
     implicit none
-    type(denseblock_t)   :: blk
+    type(densematrix_t)   :: blk
     integer(ik)          :: idim,jdim,parent,nentries
     
     
@@ -120,10 +120,10 @@ end subroutine
 subroutine test_REPARENT()
     use pfunit_mod
     use mod_kinds, only: rk,ik
-    use type_denseblock
+    use type_densematrix
     
     implicit none
-    type(denseblock_t)   :: blk
+    type(densematrix_t)   :: blk
     integer(ik)          :: idim,jdim,parent,nentries
     
     

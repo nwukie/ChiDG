@@ -1,11 +1,11 @@
 !> Data type for storing the dense block matrices for the linearization of each element
 !!  @author Nathan A. Wukie
-module type_denseblock
+module type_densematrix
+#include <messenger.h>
     use mod_kinds,  only: rk,ik
-    use messenger
     implicit none
 
-    type, public :: denseblock_t
+    type, public :: densematrix_t
         !> block associativity
         !! Domain-global index of the element, with which this block is associated.
         !! For example, a given element has linearization blocks xi_min,xi_max,eta_min, etc.
@@ -52,7 +52,7 @@ module type_denseblock
         procedure :: reparent   !> reassign parent
 
         final :: destructor
-    end type denseblock_t
+    end type densematrix_t
 
 
 
@@ -62,7 +62,7 @@ contains
     !> Subroutine for initializing general dense-block storage
     !-----------------------------------------------------------
     subroutine init_gen(self,idim,jdim,parent)
-        class(denseblock_t), intent(inout)  :: self
+        class(densematrix_t), intent(inout)  :: self
         integer(ik),         intent(in)     :: idim, jdim, parent
 
         integer(ik) :: ierr
@@ -76,14 +76,10 @@ contains
         if (allocated(self%mat)) then
             deallocate(self%mat)
             allocate(self%mat(idim,jdim),stat=ierr)
-!            if (ierr /= 0) call warn(3,__file__,__line__,'Allocation error')
-!            print*, __line__
-!            call warn(3,'Allocation error',__file__,__line__)
-
         else
             allocate(self%mat(idim,jdim),stat=ierr)
-!            if (ierr /= 0) call warn(3,__file__,__line__,'Allocation error')
         end if
+        if (ierr /= 0) call AllocationError
 
         ! Initialize to zero
         self%mat = 0._rk
@@ -94,7 +90,7 @@ contains
     !> Subroutine for initializing square dense-block storage
     !-----------------------------------------------------------
     subroutine init_square(self,bsize,parent)
-        class(denseblock_t), intent(inout)  :: self
+        class(densematrix_t), intent(inout)  :: self
         integer(ik),         intent(in)     :: bsize, parent
 
         integer(ik) :: ierr
@@ -107,11 +103,10 @@ contains
         if (allocated(self%mat)) then
             deallocate(self%mat)
             allocate(self%mat(bsize,bsize),stat=ierr)
-!            if (ierr /= 0) call warn(3,__file__,__line__,'Allocation error')
         else
             allocate(self%mat(bsize,bsize),stat=ierr)
-!            if (ierr /= 0) call warn(3,__file__,__line__,'Allocation error')
         end if
+        if (ierr /= 0) call AllocationError
 
         ! Initialize to zero
         self%mat = 0._rk
@@ -125,7 +120,7 @@ contains
     !> return i-dimension of block storage
     !------------------------------------------------------------
     function idim(self) result(i)
-        class(denseblock_t), intent(in)   :: self
+        class(densematrix_t), intent(in)   :: self
         integer(ik)                       :: i
 
         i = size(self%mat,1)
@@ -134,7 +129,7 @@ contains
     !> return j-dimension of block storage
     !------------------------------------------------------------
     function jdim(self) result(j)
-        class(denseblock_t), intent(in)   :: self
+        class(densematrix_t), intent(in)   :: self
         integer(ik)                       :: j
 
         j = size(self%mat,2)
@@ -143,7 +138,7 @@ contains
     !> return number of entries in block storage
     !------------------------------------------------------------
     function nentries(self) result(n)
-        class(denseblock_t), intent(in)   :: self
+        class(densematrix_t), intent(in)   :: self
         integer(ik)                  :: n
 
         n = size(self%mat,1) * size(self%mat,2)
@@ -152,7 +147,7 @@ contains
     !> return index of block parent
     !------------------------------------------------------------
     function parent(self) result(par)
-        class(denseblock_t), intent(in) :: self
+        class(densematrix_t), intent(in) :: self
         integer(ik)                     :: par
 
         par = self%parent_
@@ -163,7 +158,7 @@ contains
     !> Resize dense-block storage
     !------------------------------------------------------------
     subroutine resize(self,idim,jdim)
-        class(denseblock_t), intent(inout)  :: self
+        class(densematrix_t), intent(inout)  :: self
         integer(ik),         intent(in)     :: idim,jdim
 
         integer(ik) :: ierr
@@ -173,11 +168,10 @@ contains
         if (allocated(self%mat)) then
             deallocate(self%mat)
             allocate(self%mat(idim,jdim),stat=ierr)
-!            if (ierr /= 0) call warn(3,__file__,__line__,'Allocation error')
         else
             allocate(self%mat(idim,jdim),stat=ierr)
-!            if (ierr /= 0) call warn(3,__file__,__line__,'Allocation error')
         end if
+        if (ierr /= 0) call AllocationError
 
     end subroutine
 
@@ -185,7 +179,7 @@ contains
     !> set index of parent
     !------------------------------------------------------------
     subroutine reparent(self,par)
-        class(denseblock_t), intent(inout)  :: self
+        class(densematrix_t), intent(inout)  :: self
         integer(ik),         intent(in)     :: par
 
         self%parent_ = par
@@ -193,8 +187,8 @@ contains
 
 
     subroutine destructor(self)
-        type(denseblock_t), intent(inout) :: self
-        if (allocated(self%mat))    deallocate(self%mat)
+        type(densematrix_t), intent(inout) :: self
+!        if (allocated(self%mat))    deallocate(self%mat)
     end subroutine
 
-end module type_denseblock
+end module type_densematrix

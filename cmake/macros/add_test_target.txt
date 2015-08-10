@@ -45,7 +45,7 @@ macro (add_test_target target_subdirectory)
 	## define test target and link with pfunit and coredg libraries
 	######################################################################
 	add_executable(${target_name} ${PF_ROOT}/include/driver.F90 ${_test_sources})
-	target_link_libraries(${target_name} ${PF_ROOT}/lib/libpfunit.a coredg -lstdc++)
+	target_link_libraries(${target_name} ${PF_ROOT}/lib/libpfunit.a coredg -lstdc++ -lpthread)
 	
 	
 	######################################################################

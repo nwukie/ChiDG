@@ -1,4 +1,5 @@
 module atype_solverdata
+#include <messenger.h>
     use mod_kinds,          only: rk,ik
     use type_expansion,     only: expansion_t
     use type_blockmatrix,   only: blockmatrix_t
@@ -78,7 +79,7 @@ contains
         class(solverdata_t),    intent(inout), target   :: self
         type(mesh_t),           intent(in)              :: mesh
 
-        integer(ik)                                 :: nterms_s, ielem, nelem, neqns
+        integer(ik)                                 :: nterms_s, ielem, nelem, neqns, ierr
         type(expansion_t), pointer                  :: temp(:)
 
 
@@ -87,23 +88,22 @@ contains
         neqns    = mesh%neqns
 
         !> Allocate storage
-        allocate(self%q(nelem))                         !> Allocate an expansion type for each element
-        allocate(self%dq(nelem))                        !> Allocate an expansion type for each element
-        allocate(self%rhs(nelem))                       !> Allocate an expansion type for each element
+        allocate(self%q(nelem),     &                   !> Allocate an expansion type for each element
+                 self%dq(nelem),    &                   !> Allocate an expansion type for each element
+                 self%rhs(nelem), stat=ierr)            !> Allocate an expansion type for each element
+        if (ierr /= 0) call AllocationError
 
 
         !> Initialize storage
         do ielem = 1,nelem
-            print*, 'q%init'
             call self%q(ielem)%init(nterms_s,neqns)     !> Initialize solution expansion for each element
-            print*, 'dq%init'
             call self%dq(ielem)%init(nterms_s,neqns)    !> Initialize delta solution expansion for each element
-            print*, 'rhs%init'
             call self%rhs(ielem)%init(nterms_s,neqns)   !> Initialize rhs expansion for each element
-            print*, 'lin%init'
         end do
 
-        call self%lin%init(mesh)
+        call self%lin%init(mesh)                        !> Initialize storage for linearization
+
+
 
         !> Initialize solution matrix view
         temp => self%q

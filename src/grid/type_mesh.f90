@@ -23,6 +23,9 @@ module type_mesh
         type(element_t),  pointer      :: elems_m(:,:,:) => null()  !> Matrix view of element storage (1:nelem_xi, 1:nelem_eta, 1:nelem_zeta)
         type(face_t),     allocatable  :: faces(:,:)                !> Face storage    (1:nelem,1:nfaces)
 
+        ! TODO: Needs tested
+!        type(face_t),     pointer      :: faces_c(:,:,:,:) => null()    !> Matrix view of face storage
+
     contains
         procedure           :: init_geom
         procedure           :: init_sol
@@ -31,6 +34,8 @@ module type_mesh
         procedure, private  :: init_elems_sol
         procedure, private  :: init_faces_geom
         procedure, private  :: init_faces_sol
+
+        procedure, private  :: init_boundary_conditions
 
         final :: destructor
     end type mesh_t
@@ -51,6 +56,7 @@ contains
         integer(ik),    intent(in)              :: nterms_c
         type(point_t),  intent(in)              :: points_g(:,:,:)
         type(element_t), pointer                :: temp(:)
+!        type(face_t),    pointer                :: ftemp(:,:)
 
         self%nterms_c = nterms_c
 
@@ -60,6 +66,13 @@ contains
         ! Initialize element matrix view
         temp => self%elems
         self%elems_m(1:self%nelem_xi,1:self%nelem_eta,1:self%nelem_zeta) => temp(1:self%nelem)
+
+!        TODO: NEEDS TESTED
+!        ftemp => self%faces
+!        self%faces_m(1:self%nelem_xi,1:self%nelem_eta,1:self%nelem_zeta,NFACES) => ftemp(1:self%nelem,NFACES)
+
+        !> Initialize boundary conditions after geometry is set up
+        call self%init_boundary_conditions()
     end subroutine
 
 
@@ -311,6 +324,94 @@ contains
             end do
         end do
     end subroutine
+
+
+
+
+
+
+
+
+    !> Initialize boundary conditions
+    !!
+    !!
+    !!
+    !-------------------------------------------------------------------------------------
+    subroutine init_boundary_conditions(self)
+        class(mesh_t),  intent(inout)   :: self
+
+        integer(ik) :: ielem, ielem_p, ixi, ieta, izeta, ixi_p, ieta_p, izeta_p
+
+
+
+        ! Apply periodic XI
+        ixi = 1
+        ixi_p = self%nelem_xi
+        do izeta = 1,self%nelem_zeta
+            do ieta = 1,self%nelem_eta
+                ielem = self%elems_m(ixi,ieta,izeta)%ielem
+                ielem_p = self%elems_m(ixi_p,ieta,izeta)%ielem
+
+                self%faces(ielem,XI_MIN)%ftype = 0              !> Interior face
+                self%faces(ielem,XI_MIN)%ineighbor = ielem_p    !> Set neighbor face to be periodic
+
+                self%faces(ielem_p,XI_MAX)%ftype = 0
+                self%faces(ielem_p,XI_MAX)%ineighbor = ielem
+            end do
+        end do
+
+
+        ! Apply periodic ETA
+        ieta = 1
+        ieta_p = self%nelem_eta
+        do izeta = 1,self%nelem_zeta
+            do ixi = 1,self%nelem_xi
+                ielem = self%elems_m(ixi,ieta,izeta)%ielem
+                ielem_p = self%elems_m(ixi,ieta_p,izeta)%ielem
+
+                self%faces(ielem,ETA_MIN)%ftype = 0              !> Interior face
+                self%faces(ielem,ETA_MIN)%ineighbor = ielem_p    !> Set neighbor face to be periodic
+
+                self%faces(ielem_p,ETA_MAX)%ftype = 0
+                self%faces(ielem_p,ETA_MAX)%ineighbor = ielem
+            end do
+        end do
+
+
+        ! Apply periodic ZETA
+        izeta = 1
+        izeta_p = self%nelem_zeta
+        do ieta = 1,self%nelem_zeta
+            do ixi = 1,self%nelem_xi
+                ielem = self%elems_m(ixi,ieta,izeta)%ielem
+                ielem_p = self%elems_m(ixi,ieta,izeta_p)%ielem
+
+                self%faces(ielem,ZETA_MIN)%ftype = 0              !> Interior face
+                self%faces(ielem,ZETA_MIN)%ineighbor = ielem_p    !> Set neighbor face to be periodic
+
+                self%faces(ielem_p,ZETA_MAX)%ftype = 0
+                self%faces(ielem_p,ZETA_MAX)%ineighbor = ielem
+            end do
+        end do
+
+
+
+
+
+    end subroutine
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

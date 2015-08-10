@@ -64,9 +64,6 @@ module type_element
         procedure, public   :: init_geom
         procedure, public   :: init_sol
 
-        ! Solution procedures
-        procedure, public   :: integrate_volume_flux
-        procedure, public   :: integrate_volume_source
 
         ! Public utility procedures
         procedure, public   :: x
@@ -394,64 +391,6 @@ contains
 
 
 
-
-
-
-    !=============================================================================
-    !
-    !   Integrate volume flux.
-    !
-    !   Multiplies volume fluxes by gradient of test functions and integrates.
-    !
-    !=============================================================================
-    subroutine integrate_volume_flux(self,flux_x,flux_y,flux_z,varindex)
-        class(element_t),   intent(inout)  :: self
-        type(AD_D),         intent(inout)  :: flux_x(:), flux_y(:), flux_z(:)
-        integer(ik),        intent(in)     :: varindex
-
-        type(AD_D),  dimension(self%nterms_s) :: integral
-
-        ! Multiply each component by quadrature weights and jacobian
-        flux_x = (flux_x) * (self%gq%vol%weights) * (self%jinv)
-        flux_y = (flux_y) * (self%gq%vol%weights) * (self%jinv)
-        flux_z = (flux_z) * (self%gq%vol%weights) * (self%jinv)
-
-        ! Multiply by column of test function gradients, integrate, and add to RHS
-        integral = matmul(transpose(self%dtdx),flux_x)
-!        self%rhs%vals(:,varindex) = self%rhs%vals(:,varindex) + integral
-
-        integral = matmul(transpose(self%dtdy),flux_y)
-!        self%rhs%vals(:,varindex) = self%rhs%vals(:,varindex) + integral
-
-        integral = matmul(transpose(self%dtdz),flux_z)
-!        self%rhs%vals(:,varindex) = self%rhs%vals(:,varindex) + integral
-
-    end subroutine
-
-
-    !=============================================================================
-    !
-    !   Integrate volume source.
-    !
-    !   Multiplies volume source by test functions and integrates.
-    !
-    !=============================================================================
-    subroutine integrate_volume_source(self,source,varindex)
-        class(element_t),   intent(inout)  :: self
-        type(AD_D),         intent(inout)  :: source(:)
-        integer(ik),        intent(in)     :: varindex
-
-        type(AD_D),  dimension(self%nterms_s)  :: integral
-
-        ! Multiply by weights
-        source = (source) * (self%gq%vol%weights) * (self%jinv)
-
-        ! Multiply by column of test functions, integrate, and contribute to RHS
-        integral = matmul(transpose(self%gq%vol%val),source)
-!        self%rhs%vars(:,varindex) = self%rhs%vars(:,varindex) - integral
-
-
-    end subroutine
 
 
 

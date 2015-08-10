@@ -173,6 +173,102 @@ contains
 
 
 
+
+
+
+
+!> Test cartesian gradient matrices
+@Test
+   subroutine testElement_dtdx(self)
+       class(test_element_linearA),    intent(inout)   :: self
+       real(rk), dimension(self%elem%gq%vol%nnodes, 8) :: test
+       real(rk), dimension(self%elem%gq%vol%nnodes)    :: xi, eta, zeta
+       
+       xi   = self%elem%gq%vol%nodes(:)%c1_
+       eta  = self%elem%gq%vol%nodes(:)%c2_
+       zeta = self%elem%gq%vol%nodes(:)%c3_
+       
+       
+       
+       test(:,1) = ZERO                !> Mode 1
+       test(:,2) = ZERO                !> Mode 2
+       test(:,3) = ZERO                !> Mode 3
+       test(:,4) = 0.4_rk              !> Mode 4
+       test(:,5) = 0.4_rk * eta        !> Mode 5
+       test(:,6) = 0.4_rk * zeta       !> Mode 6
+       test(:,7) = ZERO                !> Mode 7
+       test(:,8) = 0.4_rk * eta * zeta !> Mode 8
+       @assertEqual(test,self%elem%dtdx)
+   end subroutine
+
+
+
+
+
+!> Test cartesian gradient matrices
+@Test
+   subroutine testElement_dtdy(self)
+       class(test_element_linearA),    intent(inout)   :: self
+       real(rk), dimension(self%elem%gq%vol%nnodes, 8) :: test
+       real(rk), dimension(self%elem%gq%vol%nnodes)    :: xi, eta, zeta
+       
+       xi   = self%elem%gq%vol%nodes(:)%c1_
+       eta  = self%elem%gq%vol%nodes(:)%c2_
+       zeta = self%elem%gq%vol%nodes(:)%c3_
+       
+       
+       
+       test(:,1) = ZERO                !> Mode 1
+       test(:,2) = TWO                 !> Mode 2
+       test(:,3) = ZERO                !> Mode 3
+       test(:,4) = ZERO                !> Mode 4
+       test(:,5) = TWO * xi            !> Mode 5
+       test(:,6) = ZERO                !> Mode 6
+       test(:,7) = TWO * zeta          !> Mode 7
+       test(:,8) = TWO * xi * zeta     !> Mode 8
+       @assertEqual(test,self%elem%dtdy)
+   end subroutine
+
+
+
+
+
+!> Test cartesian gradient matrices
+@Test
+   subroutine testElement_dtdz(self)
+       class(test_element_linearA),    intent(inout)   :: self
+       real(rk), dimension(self%elem%gq%vol%nnodes, 8) :: test
+       real(rk), dimension(self%elem%gq%vol%nnodes)    :: xi, eta, zeta
+       
+       xi   = self%elem%gq%vol%nodes(:)%c1_
+       eta  = self%elem%gq%vol%nodes(:)%c2_
+       zeta = self%elem%gq%vol%nodes(:)%c3_
+       
+       
+       
+       test(:,1) = ZERO                !> Mode 1
+       test(:,2) = ZERO                !> Mode 2
+       test(:,3) = TWO                 !> Mode 3
+       test(:,4) = ZERO                !> Mode 4
+       test(:,5) = ZERO                !> Mode 5
+       test(:,6) = TWO * xi            !> Mode 6
+       test(:,7) = TWO * eta           !> Mode 7
+       test(:,8) = TWO * xi * eta      !> Mode 8
+       @assertEqual(test,self%elem%dtdz)
+       
+   end subroutine
+
+
+
+
+
+
+
+
+
+
+
+
 !------------------------------------------------------------------------------
 !>                                Face tests
 !------------------------------------------------------------------------------

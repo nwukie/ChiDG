@@ -139,9 +139,6 @@ REAL(DBL_AD)      ::negative_one=-1.0d0
         REAL(DBL_AD)              :: x_ad_      ! functional value
         REAL(DBL_AD), allocatable :: xp_ad_(:)  ! derivative
 
-!    contains
-!        final   :: destructor
-
 
     END TYPE AD_D
 
@@ -569,9 +566,11 @@ CONTAINS
     ! <n,0>*<u,up>=<u*n,up*n>
     !----------------------------------------
     ELEMENTAL FUNCTION MULT_RD_D(n,u) RESULT(res)
+!    FUNCTION MULT_RD_D(n,u) RESULT(res)
          REAL(DBL_AD),  INTENT(IN)  ::n
          TYPE(AD_D),    INTENT(IN)  ::u
-         TYPE(AD_D)                 ::res
+         TYPE(AD_D) ::res
+
 !         allocate(res%xp_ad_(size(u%xp_ad_)))
 
          res%x_ad_ = n*u%x_ad_
@@ -580,6 +579,7 @@ CONTAINS
     END FUNCTION MULT_RD_D
 
 
+!
 !    FUNCTION MULT_RD_D(n,u) RESULT(res)
 !         REAL(DBL_AD),  INTENT(IN)  ::n
 !         TYPE(AD_D),    INTENT(IN)  ::u(:)

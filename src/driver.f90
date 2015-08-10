@@ -46,11 +46,12 @@ program driver
     call read_grid_hdf('4x4x4.h5',domains)
 
     print*, 'initializing domain numerics'
-    call domains(1)%init_sol('scalar',64)
+    call domains(1)%init_sol('scalar',8)
 
 
     print*, 'create_function'
     call create_function(fcn,'gaussian')
+
 
     print*, 'initialize_variable'
     call initialize_variable(domains(1),1,fcn)

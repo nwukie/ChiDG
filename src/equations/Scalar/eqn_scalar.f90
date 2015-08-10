@@ -124,14 +124,14 @@ contains
 
 
         !> Compute boundary average flux
-        flux_x = self%c(1)*u_l
-!        flux_x = ((self%c(1)*u_l + self%c(1)*u_r)/TWO )  *  mesh%faces(ielem,iface)%norm(:,1)
-!        flux_y = ((self%c(2)*u_l + self%c(2)*u_r)/TWO )  *  mesh%faces(ielem,iface)%norm(:,2)
-!        flux_z = ((self%c(3)*u_l + self%c(3)*u_r)/TWO )  *  mesh%faces(ielem,iface)%norm(:,3)
-!
-!
-!        !> Integrate flux
-!        call integrate_boundary_flux(mesh%faces(ielem,iface), sdata, u_i, iblk, flux_x, flux_y, flux_z)
+!        flux_x = self%c(1)*u_l
+        flux_x = ((self%c(1)*u_l + self%c(1)*u_r)/TWO )  *  mesh%faces(ielem,iface)%norm(:,1)
+        flux_y = ((self%c(2)*u_l + self%c(2)*u_r)/TWO )  *  mesh%faces(ielem,iface)%norm(:,2)
+        flux_z = ((self%c(3)*u_l + self%c(3)*u_r)/TWO )  *  mesh%faces(ielem,iface)%norm(:,3)
+
+
+        !> Integrate flux
+        call integrate_boundary_flux(mesh%faces(ielem,iface), sdata, u_i, iblk, flux_x, flux_y, flux_z)
 
     end subroutine
 
@@ -203,22 +203,6 @@ contains
         flux_z = (self%c(3) * (u_l - u_r)/TWO )  *  mesh%faces(ielem,iface)%norm(:,3)
 
 
-!        if (ielem == 22) then
-!            print*, 'u_modes'
-!            print*, sdata%q(ielem)%mat
-!
-!            print*, 'flux_x'
-!            print*, flux_x(:)%x_ad_
-!
-!            print*, 'flux_y'
-!            print*, flux_y(:)%x_ad_
-!
-!            print*, 'flux_z'
-!            print*, flux_z(:)%x_ad_
-!        end if
-
-
-
         !> Integrate flux
         call integrate_boundary_flux(mesh%faces(ielem,iface), sdata, u_i, iblk, flux_x, flux_y, flux_z)
 
@@ -280,27 +264,6 @@ contains
             flux_x = self%c(1)  *  u
             flux_y = self%c(2)  *  u
             flux_z = self%c(3)  *  u
-
-
-
-
-!            if (ielem == 22) then
-!                print*, 'u_modes'
-!                print*, sdata%q(ielem)%mat
-!
-!                print*, 'u'
-!                print*, u(:)%x_ad_
-!
-!                print*, 'flux_x'
-!                print*, flux_x(:)%x_ad_
-!
-!                print*, 'flux_y'
-!                print*, flux_y(:)%x_ad_
-!
-!                print*, 'flux_z'
-!                print*, flux_z(:)%x_ad_
-!            end if
-
 
 
             ! Integrate volume flux

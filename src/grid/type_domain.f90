@@ -81,15 +81,11 @@ contains
         if (self%numInitialized) call signal(FATAL,'domain%init_sol -- domain numerics already initialized')
 
         ! Call factory methods for equationset and solver
-        print*, 'creating eqnset'
         call create_equationset(eqnstring,self%eqnset)      !> Factory method for allocating a equation set
-        print*, 'creating solver data'
         call create_solverdata('base',self%sdata)           !> Factory method for allocating solverdata. Allocate base data
 
-        print*, 'initializing mesh numerics'
-        call self%mesh%init_sol(self%eqnset%neqns,nterms_s) !> Call initialization for mesh required in solution procedure
 
-        print*, 'domain%init_sol -- calling sdata init'
+        call self%mesh%init_sol(self%eqnset%neqns,nterms_s) !> Call initialization for mesh required in solution procedure
         call self%sdata%init(self%mesh)                     !> Call initialization for solver and solver data
         self%numInitialized = .true.                        !> Confirm initialization
 

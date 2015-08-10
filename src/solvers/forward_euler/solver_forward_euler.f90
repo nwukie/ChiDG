@@ -32,7 +32,7 @@ contains
         type(domain_t),             intent(inout)   :: domain
 
         !> Call any other specialized initialization requirements
-        self%dt = 0.001_rk
+        self%dt = 0.005_rk
     end subroutine
 
 
@@ -43,35 +43,44 @@ contains
         type(domain_t),         intent(inout)   :: domain
 
         character(100)  :: filename
-        integer(ik)     :: itime, ntime, ielem
+        integer(ik)     :: itime, ntime, ielem, wcount
 
 
-        ntime = 100
+        ntime = 20000
+        wcount = 1
         associate ( q => domain%sdata%q, dq => domain%sdata%dq, rhs => domain%sdata%rhs, dt => self%dt)
 
             print*, 'entering time'
             do itime = 1,ntime
+                print*, "Step: ", itime
 
-
-                call sleep(1)
+!                call sleep(1)
 !                print*, 'updating space'
                 call update_space(domain)
 
 
-!                dq = dt * rhs
-!                q  = q + dq
-!
-!
-!                write(filename, "(I2,A4)") itime, '.plt'
-!                call write_tecio_variables(domain,trim(filename),itime+1)
-!
-!
-!
-!                !> Clear spatial residual
-!                do ielem = 1,domain%mesh%nelem
-!                    rhs(ielem)%vec = ZERO
-!                end do
+                do ielem = 1,domain%mesh%nelem
+                    rhs(ielem)%vec = matmul(domain%mesh%elems(ielem)%invmass,rhs(ielem)%vec)
+                end do
 
+                dq = dt * rhs
+                q  = q + dq
+
+
+                if (wcount == 50) then
+                    write(filename, "(I7,A4)") 1000000+itime, '.plt'
+                    call write_tecio_variables(domain,trim(filename),itime+1)
+                    wcount = 0
+                end if
+
+
+
+                !> Clear spatial residual
+                do ielem = 1,domain%mesh%nelem
+                    rhs(ielem)%vec = ZERO
+                end do
+
+                wcount = wcount + 1
             end do
 
         end associate

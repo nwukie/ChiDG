@@ -50,7 +50,7 @@ endif()
 #------------------------------------------------------------------                                                                        
 if (${Fortran_VENDOR} MATCHES "INTEL")
 #    set (USER_COMPILE_FLAGS_DEBUG   "-O0 -fpp -assume realloc_lhs -debug -p -g -traceback -check all -check noarg_temp_created -check bounds -fp-stack-check")
-    set (USER_COMPILE_FLAGS_DEBUG   "-O0 -fpp -assume realloc_lhs -debug -p -g -traceback -check all -check bounds -fp-stack-check")
+    set (USER_COMPILE_FLAGS_DEBUG   "-O0 -fpp -assume realloc_lhs -debug -p -g -traceback -check all -check bounds -fp-stack-check -standard-semantics -assume nostd_mod_proc_name")
     set (USER_COMPILE_FLAGS_RELEASE "-O3 -fpp -assume realloc_lhs")
     set (CMAKE_Fortran_LINK_FLAGS_DEBUG "")
     set (CMAKE_Fortran_LINK_FLAGS_RELEASE "")

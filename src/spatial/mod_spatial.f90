@@ -49,15 +49,15 @@ contains
                             !> For interior faces, compute the boundary integrals
                             if (domain%mesh%faces(ielem,iface)%ftype == 0) then
                                 call domain%eqnset%compute_boundary_average_flux(mesh,sdata,ielem,iface,iblk)
-!                                call domain%eqnset%compute_boundary_upwind_flux( mesh,sdata,ielem,iface,iblk)
+                                call domain%eqnset%compute_boundary_upwind_flux( mesh,sdata,ielem,iface,iblk)
                             end if
                         end do !face
 
 
 
                         ! For the current element, compute the contributions from volume integrals
-!                        call domain%eqnset%compute_volume_flux(  mesh,sdata,ielem,iblk)
-!                        call domain%eqnset%compute_volume_source(mesh,sdata,ielem,iblk)
+                        call domain%eqnset%compute_volume_flux(  mesh,sdata,ielem,iblk)
+                        call domain%eqnset%compute_volume_source(mesh,sdata,ielem,iblk)
 
 !                    end if
 

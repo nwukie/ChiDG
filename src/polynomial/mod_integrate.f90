@@ -161,7 +161,7 @@ contains
             end if
 
             !> Store linearization
-!            call lin%store(integral,ielem,iblk,ivar)                                    !> Store derivatives
+            call lin%store(integral,ielem,iblk,ivar)                                    !> Store derivatives
 
         end associate
     end subroutine
@@ -196,7 +196,7 @@ contains
             end if
 
             !> Store linearization
-!            call lin%store(integral,ielem,iblk,ivar)                                    !> Store derivatives
+            call lin%store(integral,ielem,iblk,ivar)                                    !> Store derivatives
 
         end associate
 

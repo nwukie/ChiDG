@@ -1,21 +1,23 @@
 module fcn_gaussian
     use mod_kinds,      only: rk,ik
-    use mod_constants,  only: ZERO, ONE, TWO
+    use mod_constants,  only: ZERO, ONE, TWO, THREE
     use type_point,     only: point_t
     use atype_function, only: function_t
     implicit none
     private
 
     type, extends(function_t), public :: gaussian_f
+        private
 
 
         ! constants in the gaussian function
         !
         ! f(x) = a exp(- (x-b)**2 / 2c**2)
         !
+
         real(rk)    :: a = ONE
         real(rk)    :: b = ZERO
-        real(rk)    :: c = ONE
+        real(rk)    :: c = THREE
 
     contains
         procedure   :: order

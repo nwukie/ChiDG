@@ -53,9 +53,9 @@ contains
         self%eqns(1)%ind  = 1
 
 
-        self%c(1) = ZERO
+        self%c(1) = ONE
         self%c(2) = ZERO
-        self%c(3) = ONE
+        self%c(3) = ZERO
 
 
     end subroutine
@@ -74,7 +74,7 @@ contains
         class(solverdata_t),    intent(inout)   :: sdata
         integer(ik),            intent(in)      :: ielem, iface, iblk
 
-        integer(ik)              :: u_i, iseed, ierr, nnodes, ineighbor, iface_p
+        integer(ik)              :: u_i, iseed, ierr, nnodes, ineighbor, iface_p, i
         type(AD_D), allocatable  :: u_l(:), u_r(:), flux_x(:), flux_y(:), flux_z(:)
 
 
@@ -124,10 +124,11 @@ contains
 
 
         !> Compute boundary average flux
-!        flux_x = self%c(1)*u_l
         flux_x = ((self%c(1)*u_l + self%c(1)*u_r)/TWO )  *  mesh%faces(ielem,iface)%norm(:,1)
         flux_y = ((self%c(2)*u_l + self%c(2)*u_r)/TWO )  *  mesh%faces(ielem,iface)%norm(:,2)
         flux_z = ((self%c(3)*u_l + self%c(3)*u_r)/TWO )  *  mesh%faces(ielem,iface)%norm(:,3)
+
+
 
 
         !> Integrate flux
@@ -149,7 +150,7 @@ contains
 
 
 
-        integer(ik)              :: u_i, iseed, ierr, nnodes, ineighbor, iface_p
+        integer(ik)              :: u_i, iseed, ierr, nnodes, ineighbor, iface_p, i
         type(AD_D), allocatable  :: u_l(:), u_r(:), flux_x(:), flux_y(:), flux_z(:)
 
 
@@ -227,7 +228,7 @@ contains
 
         type(AD_D), allocatable :: u(:), flux_x(:), flux_y(:), flux_z(:)
         integer(ik)             :: nnodes, ierr, iseed
-        integer(ik)             :: ivar_u
+        integer(ik)             :: ivar_u, i
 
 
         associate (elem => mesh%elems(ielem), q => sdata%q)
@@ -259,11 +260,29 @@ contains
 !            iseed = 0   !> no derivative tracking
             call interpolate(mesh%elems,q,ielem,ivar_u,u,iseed)
 
+!            if (ielem == 22 .and. iblk == 7) then
+!                print*, 'before'
+!                do i = 1,size(flux_x)
+!                    print*, u(i)%xp_ad_
+!                end do
+!                read(*,*)
+!            end if
+
+
 
             ! Compute volume flux at quadrature nodes
             flux_x = self%c(1)  *  u
             flux_y = self%c(2)  *  u
             flux_z = self%c(3)  *  u
+
+!            if (ielem == 22 .and. iblk == 7) then
+!                print*, 'after'
+!                do i = 1,size(flux_x)
+!                    print*, flux_x(i)%xp_ad_
+!                end do
+!                read(*,*)
+!            end if
+
 
 
             ! Integrate volume flux

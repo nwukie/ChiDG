@@ -3,3 +3,5 @@ build
 build_gnu
 build_intel
 run
+media
+testrun

@@ -43,27 +43,32 @@ contains
         type(domain_t),         intent(inout)   :: domain
 
         character(100)  :: filename
-        integer(ik)     :: itime, ntime, ielem, wcount
+        integer(ik)     :: itime, ntime, ielem, wcount, iblk
 
 
         ntime = 20000
         wcount = 1
-        associate ( q => domain%sdata%q, dq => domain%sdata%dq, rhs => domain%sdata%rhs, dt => self%dt)
+        associate ( q => domain%sdata%q, dq => domain%sdata%dq, rhs => domain%sdata%rhs, lin => domain%sdata%lin, dt => self%dt)
 
             print*, 'entering time'
             do itime = 1,ntime
                 print*, "Step: ", itime
 
-!                call sleep(1)
-!                print*, 'updating space'
+
+                !> Update Spatial Residual and Linearization (rhs, lin)
                 call update_space(domain)
 
 
+                !> Multiply RHS by mass matrix for explicit time-integration
                 do ielem = 1,domain%mesh%nelem
-                    rhs(ielem)%vec = matmul(domain%mesh%elems(ielem)%invmass,rhs(ielem)%vec)
+                    rhs(ielem)%vec = matmul(domain%mesh%elems(ielem)%invmass, rhs(ielem)%vec)
                 end do
 
+
+                !> Compute update vector
                 dq = dt * rhs
+
+                !> Advance solution with update vector
                 q  = q + dq
 
 
@@ -78,6 +83,10 @@ contains
                 !> Clear spatial residual
                 do ielem = 1,domain%mesh%nelem
                     rhs(ielem)%vec = ZERO
+
+                    do iblk = 1,7
+                        lin%lblks(ielem,iblk)%mat = ZERO
+                    end do
                 end do
 
                 wcount = wcount + 1

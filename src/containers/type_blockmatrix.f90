@@ -3,7 +3,7 @@
 module type_blockmatrix
 #include <messenger.h>
     use mod_kinds,          only: rk,ik
-    use mod_constants,      only: DIAG
+    use mod_constants,      only: DIAG, ZERO
     use type_mesh,          only: mesh_t
     use type_densematrix,   only: densematrix_t
     use DNAD_D
@@ -34,6 +34,7 @@ module type_blockmatrix
 
         !> Setters
         procedure :: store      !> Store linearization data
+        procedure :: clear      !> Zero all data storage
 
         final :: destructor
     end type blockmatrix_t
@@ -133,11 +134,35 @@ contains
 
         icol_start = ( (ivar - 1)  *  nterms)
 
-        ! If sizes match, store derivative arrays to local block
+        ! If sizes match, store derivative arrays to local block. Loop through integral values, for each value store its derivatives.
+        ! The integral values here should be components of the RHS vector
         do iarray = 1,size(integral)
             !> Do a += operation to add derivatives to any that are currently stored
             icol = icol_start + iarray
-            self%lblks(ielem,iblk)%mat(:, icol) = self%lblks(ielem,iblk)%mat(:,icol) + integral(iarray)%xp_ad_
+!            self%lblks(ielem,iblk)%mat(:, icol) = self%lblks(ielem,iblk)%mat(:,icol) + integral(iarray)%xp_ad_
+            self%lblks(ielem,iblk)%mat(iarray,:) = self%lblks(ielem,iblk)%mat(iarray,:) + integral(iarray)%xp_ad_
+        end do
+
+    end subroutine
+
+
+
+
+
+
+    !>  Set all denseblock_t storage to zero
+    !!
+    !!  @author Nathan A. Wukie
+    !--------------------------------------------------------------
+    subroutine clear(self)
+        class(blockmatrix_t),   intent(inout)   :: self
+
+        integer(ik) :: ielem, iblk
+
+        do ielem = 1,size(self%lblks,1)
+            do iblk = 1,size(self%lblks,2)
+                self%lblks(ielem,iblk)%mat = ZERO
+            end do
         end do
 
     end subroutine

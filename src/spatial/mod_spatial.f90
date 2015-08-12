@@ -11,8 +11,9 @@ contains
     subroutine update_space(domain)
         type(domain_t), intent(inout)   :: domain
 
-        integer(ik) :: iblk, ielem, iface, nelem
+        integer(ik) :: iblk, ielem, iface, nelem, i
         real(rk)    :: istart, istop, elapsed
+        logical     :: skip = .false.
 
 
         associate ( mesh => domain%mesh, sdata => domain%sdata)
@@ -29,21 +30,24 @@ contains
             do iblk = 1,7
 
 
-!                print*, iblk
-
                 !> Loop through elements in the domain
                 do ielem = 1,nelem
 
 
-!                    print*, ielem
+                    if (iblk /= DIAG) then
+                        !> Check if there is an element to linearize against in the iblk direction. If not, cycle
+                        if (domain%mesh%faces(ielem,iblk)%ineighbor == 0) then
+                            skip = .true.
+                        else
+                            skip = .false.
+                        end if
+                    end if
 
-!                    !> Check if there is an element to linearize against in the iblk direction
-!                    if (iblk /= DIAG  .and.  domain%mesh%faces(ielem,iblk)%ineighbor == 0) then
-!                        continue
-!                    else
-!
-!
 
+
+
+
+                    if ( .not. skip) then
                         ! For the current element, compute the contributions from boundary integrals
                         do iface = 1,NFACES
                             !> For interior faces, compute the boundary integrals
@@ -58,15 +62,22 @@ contains
                         ! For the current element, compute the contributions from volume integrals
                         call domain%eqnset%compute_volume_flux(  mesh,sdata,ielem,iblk)
                         call domain%eqnset%compute_volume_source(mesh,sdata,ielem,iblk)
-
-!                    end if
+                    end if
 
                 end do !elem
 
 
-
-
             end do !block
+
+
+
+!            do i = 1,size(sdata%lin%lblks(22,1)%mat,1)
+!                print*, sdata%lin%lblks(22,1)%mat(i,:)
+!            end do
+!            read(*,*)
+
+
+
 
             call cpu_time(istop)
 

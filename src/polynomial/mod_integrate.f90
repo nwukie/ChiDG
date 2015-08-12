@@ -40,7 +40,7 @@ contains
         type(AD_D),             intent(inout)   :: flux_x(:), flux_y(:), flux_z(:)
 
 
-        integer(ik)                             :: ielem
+        integer(ik)                             :: ielem, i
         type(AD_D), dimension(elem%nterms_s)    :: integral
 
         ielem = elem%ielem  !> get element index
@@ -53,18 +53,20 @@ contains
         ! FLUX-X
         ! Multiply by column of test function gradients, integrate, add to RHS, add derivatives to linearization
         integral = matmul(transpose(elem%dtdx),flux_x)                         !> Integrate
+!        integral = matmul(elem%invmass,integral)                               !> Multiply by inverse mass matrix
         call store_volume_integrals(integral,sdata,ielem,ivar,iblk)            !> Store values and derivatives
-
 
         ! FLUX-Y
         ! Multiply by column of test function gradients, integrate, add to RHS, add derivatives to linearization
         integral = matmul(transpose(elem%dtdy),flux_y)                         !> Integrate
+!        integral = matmul(elem%invmass,integral)                               !> Multiply by inverse mass matrix
         call store_volume_integrals(integral,sdata,ielem,ivar,iblk)            !> Store values and derivatives
 
 
         ! FLUX-Z
         ! Multiply by column of test function gradients, integrate, add to RHS, add derivatives to linearization
         integral = matmul(transpose(elem%dtdz),flux_z)                         !> Integrate
+!        integral = matmul(elem%invmass,integral)                               !> Multiply by inverse mass matrix
         call store_volume_integrals(integral,sdata,ielem,ivar,iblk)            !> Store values and derivatives
 
 
@@ -116,12 +118,15 @@ contains
 
 
             integral = matmul(transpose(val),flux_x)
+!            integral = matmul(face%invmass,integral)
             call store_boundary_integrals(integral,sdata,ielem,ivar,iblk)
 
             integral = matmul(transpose(val),flux_y)
+!            integral = matmul(face%invmass,integral)
             call store_boundary_integrals(integral,sdata,ielem,ivar,iblk)
 
             integral = matmul(transpose(val),flux_z)
+!            integral = matmul(face%invmass,integral)
             call store_boundary_integrals(integral,sdata,ielem,ivar,iblk)
 
         end associate
@@ -152,6 +157,7 @@ contains
         integer(ik),            intent(in)      :: ivar
         integer(ik),            intent(in)      :: iblk
 
+        integer(ik) :: i
 
         associate ( rhs => sdata%rhs, lin => sdata%lin)
 
@@ -159,6 +165,7 @@ contains
             if (iblk == DIAG) then
                 rhs(ielem)%mat(:,ivar) = rhs(ielem)%mat(:,ivar) + integral(:)%x_ad_     !> Store values
             end if
+
 
             !> Store linearization
             call lin%store(integral,ielem,iblk,ivar)                                    !> Store derivatives
@@ -182,11 +189,13 @@ contains
     !!
     !--------------------------------------------------------------------------------------------------------
     subroutine store_boundary_integrals(integral,sdata,ielem,ivar,iblk)
-        type(AD_D),             intent(in)      :: integral(:)
+        type(AD_D),             intent(inout)   :: integral(:)
         class(solverdata_t),    intent(inout)   :: sdata
         integer(ik),            intent(in)      :: ielem
         integer(ik),            intent(in)      :: ivar
         integer(ik),            intent(in)      :: iblk
+
+        integer(ik) :: i
 
         associate ( rhs => sdata%rhs, lin => sdata%lin)
 
@@ -194,6 +203,13 @@ contains
             if (iblk == DIAG) then
                 rhs(ielem)%mat(:,ivar) = rhs(ielem)%mat(:,ivar) - integral(:)%x_ad_     !> Store values
             end if
+
+
+            !> Negate derivatives before adding to linearization
+            do i = 1,size(integral)
+                integral(i)%xp_ad_ = -integral(i)%xp_ad_
+            end do
+
 
             !> Store linearization
             call lin%store(integral,ielem,iblk,ivar)                                    !> Store derivatives

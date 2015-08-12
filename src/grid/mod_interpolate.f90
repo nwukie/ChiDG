@@ -28,7 +28,7 @@ module mod_interpolate
         integer(ik),        intent(in)      :: ielem_seed
 
         type(AD_D)  :: qdiff(elems(ielem)%nterms_s)
-        integer(ik) :: nderiv, set_deriv, iterm, igq
+        integer(ik) :: nderiv, set_deriv, iterm, igq, i
 
 
         !> Get the number of degrees of freedom for the seed element
@@ -66,7 +66,21 @@ module mod_interpolate
                 qdiff(iterm)%xp_ad_(set_deriv) = 1.0_rk
             end do
 
+
+!            print*, 'before'
+!            do i = 1,size(qdiff)
+!                print*, qdiff(i)%xp_ad_
+!            end do
+
+
             var_gq = matmul(elems(ielem)%gq%vol%val,qdiff)
+
+!            print*, 'after'
+!            do i = 1,size(var_gq)
+!                print*, var_gq(i)%xp_ad_
+!            end do
+!
+!            read(*,*)
 
         else
             !> If the solution variable derivatives dont need initialized
@@ -140,13 +154,8 @@ module mod_interpolate
                 qdiff(iterm)%xp_ad_(set_deriv) = 1.0_rk
             end do
 
-            do jpt = 1,size_j
-                do ipt = 1,size_i
-                    test(ipt,jpt) = faces(ielem,iface)%gq%face%val(ipt,jpt,iface)
-                end do
-            end do
-!            var_gq = matmul(faces(ielem,iface)%gq%face%val(:,:,iface),  qdiff)
-            var_gq = matmul(test,  qdiff)
+            var_gq = matmul(faces(ielem,iface)%gq%face%val(:,:,iface),  qdiff)
+
         else
             !> If the solution variable derivatives dont need initialized
             !! then just use the q(ielem) values and derivatives get

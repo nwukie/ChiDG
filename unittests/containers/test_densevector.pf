@@ -1,0 +1,103 @@
+! Test init_square procedure for initializing square matrix storage
+@Test
+subroutine test_densevector_INIT()
+    use pfunit_mod
+    use mod_kinds,          only: rk,ik
+    use type_densevector
+    
+    implicit none
+    type(densevector_t)  :: blk
+    integer(ik)          :: vsize,parent,nentries
+    
+    
+    ! Test initialization procedure
+    vsize   = 4
+    nentries = vsize
+    parent = 55
+    
+    call blk%init(vsize,parent)
+    
+    @assertEqual(vsize,blk%nentries())
+    @assertEqual(parent,blk%parent())
+    
+    
+    ! Test reinitialization procedure
+    vsize   = 12
+    nentries = vsize
+    parent = 22
+    
+    call blk%init(vsize,parent)
+    
+    @assertEqual(nentries,blk%nentries())
+    @assertEqual(parent,blk%parent())
+
+end subroutine
+
+
+
+! Test 'resize' procedure for resizing matrix storage
+@Test
+subroutine test_densevector_RESIZE()
+    use pfunit_mod
+    use mod_kinds, only: rk,ik
+    use type_densevector
+    
+    implicit none
+    type(densevector_t)     :: blk
+    integer(ik)             :: vsize,parent,nentries
+    
+    
+    ! Initialize block
+    vsize = 5
+    parent = 55
+    
+    call blk%init(vsize,parent)
+    
+    ! Test resize procedure
+    vsize = 12
+    nentries = vsize
+    
+    call blk%resize(vsize)
+    
+    @assertEqual(nentries,blk%nentries())
+    @assertEqual(parent,blk%parent())
+
+end subroutine
+
+
+! Test 'reparent' procedure for assigning new parent element index
+@Test
+subroutine test_densevector_REPARENT()
+    use pfunit_mod
+    use mod_kinds, only: rk,ik
+    use type_densevector
+    
+    implicit none
+    type(densevector_t)     :: blk
+    integer(ik)             :: vsize,parent,nentries
+    
+    
+    ! Initialize block
+    vsize = 5
+    nentries = vsize
+    parent = 55
+    
+    call blk%init(vsize,parent)
+    
+    ! Test resize procedure
+    parent = 21
+    
+    call blk%reparent(parent)
+    
+    @assertEqual(nentries,blk%nentries())
+    @assertEqual(parent,blk%parent())
+
+end subroutine
+
+
+
+
+
+
+
+

@@ -28,9 +28,25 @@ module type_expansion
     end interface
 
 
+    public operator (/)
+    interface operator (/)
+        module procedure div_real_exp    ! real / expansion, ELEMENTAL
+        module procedure div_exp_real    ! expansion / real, ELEMENTAL
+    end interface
+
+
+
+
+
     public operator (+)
     interface operator (+)
         module procedure add_exp_exp    ! expansion + expansion, ELEMENTAL
+    end interface
+
+
+    public operator (-)
+    interface operator (-)
+        module procedure sub_exp_exp    ! expansion - expansion, ELEMENTAL
     end interface
 
 
@@ -104,10 +120,48 @@ contains
         res%neqns   = left%neqns
         res%nterms  = left%nterms
 
-        res%vec = right * left%vec
+        res%vec = left%vec * right
         res%mat(1:res%nterms,1:res%neqns) => res%vec
 
     end function
+
+
+
+
+
+
+    elemental function div_real_exp(left,right) result(res)
+        real(rk),           intent(in)  :: left
+        type(expansion_t),  intent(in)  :: right
+        type(expansion_t), target   :: res
+
+        res%neqns   = right%neqns
+        res%nterms  = right%nterms
+
+        res%vec = left / right%vec
+        res%mat(1:res%nterms,1:res%neqns) => res%vec
+
+    end function
+
+    elemental function div_exp_real(left,right) result(res)
+        type(expansion_t),  intent(in)  :: left
+        real(rk),           intent(in)  :: right
+        type(expansion_t), target   :: res
+
+        res%neqns   = left%neqns
+        res%nterms  = left%nterms
+
+        res%vec = left%vec / right
+        res%mat(1:res%nterms,1:res%neqns) => res%vec
+
+    end function
+
+
+
+
+
+
+
 
 
 
@@ -122,6 +176,22 @@ contains
         res%nterms = left%nterms
 
         res%vec = left%vec + right%vec
+        res%mat(1:res%nterms,1:res%neqns) => res%vec
+    end function
+
+
+
+
+
+    elemental function sub_exp_exp(left,right) result(res)
+        type(expansion_t),  intent(in)  :: left
+        type(expansion_t),  intent(in)  :: right
+        type(expansion_t), target   :: res
+
+        res%neqns = left%neqns
+        res%nterms = left%nterms
+
+        res%vec = left%vec - right%vec
         res%mat(1:res%nterms,1:res%neqns) => res%vec
     end function
 

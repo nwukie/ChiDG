@@ -33,9 +33,9 @@ contains
 
     !> Subroutine for initializing square dense-vector storage
     !-----------------------------------------------------------
-    subroutine init_vector(self,bsize,parent)
+    subroutine init_vector(self,vsize,parent)
         class(densevector_t), intent(inout)  :: self
-        integer(ik),         intent(in)     :: bsize, parent
+        integer(ik),         intent(in)     :: vsize, parent
 
         integer(ik) :: ierr
 
@@ -46,9 +46,9 @@ contains
         ! Check if storage was already allocated and reallocate if necessary
         if (allocated(self%vec)) then
             deallocate(self%vec)
-            allocate(self%vec(bsize),stat=ierr)
+            allocate(self%vec(vsize),stat=ierr)
         else
-            allocate(self%vec(bsize),stat=ierr)
+            allocate(self%vec(vsize),stat=ierr)
         end if
         if (ierr /= 0) call AllocationError
 
@@ -78,12 +78,11 @@ contains
     end function
 
 
-
     !> Resize dense-block storage
     !------------------------------------------------------------
-    subroutine resize(self,ndim)
+    subroutine resize(self,vsize)
         class(densevector_t),   intent(inout)   :: self
-        integer(ik),            intent(in)      :: ndim
+        integer(ik),            intent(in)      :: vsize
 
         integer(ik) :: ierr
 
@@ -91,9 +90,9 @@ contains
         ! Check if storage was already allocated and reallocate if necessary
         if (allocated(self%vec)) then
             deallocate(self%vec)
-            allocate(self%vec(ndim),stat=ierr)
+            allocate(self%vec(vsize),stat=ierr)
         else
-            allocate(self%vec(ndim),stat=ierr)
+            allocate(self%vec(vsize),stat=ierr)
         end if
         if (ierr /= 0) call AllocationError
 

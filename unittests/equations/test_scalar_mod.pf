@@ -1,0 +1,371 @@
+module test_scalar_mod
+    use pfunit_mod
+    use mod_kinds,      only: rk,ik
+    use mod_constants,  only: ZERO, ONE, TWO, THREE, FIVE, SIX, EIGHT, NINE, TEN, &
+                              XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX, NFACES
+    use type_point,     only: point_t
+    use type_mesh,      only: mesh_t
+    use type_element,   only: element_t
+    use type_face,      only: face_t
+    implicit none
+
+    public  :: test_equation_scalar
+
+@TestCase
+    type, extends(TestCase) ::  test_equation_scalar
+        type(mesh_t)    :: mesh
+    contains
+        procedure   ::  setUp
+        procedure   ::  tearDown
+    end type test_mesh_linear
+
+
+contains
+    !> NOTE: make sure to use 'this' instead of 'self' since these are over-writting a derived type 
+    !! procedure. The argument names have to match
+    subroutine setUp(this)
+        class(test_mesh_linear),    intent(inout)   :: this
+        
+        integer(ik), parameter      :: npt = 64
+        type(point_t)               :: pts(4,4,4)
+        integer(ik)                 :: ftype, ineighbor, mapping, ielem, &
+                                       ipt_xi, ipt_eta, ipt_zeta, ipt
+        integer(ik)                 :: neqns, nterms_s, nterms_c
+        real(rk), dimension(npt)    :: x,y,z
+        
+        !> elements (3x3x3) - linear
+        !!
+        !!            *-------*-------*-------*
+        !!           /       /       /       /|
+        !!          *-------*-------*-------* |
+        !!         /       /       /       /| *
+        !!        *-------*-------*-------* |/|
+        !!       /       /       /       /| * |
+        !!      *-------*-------*-------* |/| *
+        !!      |       |       |       | * |/|
+        !!      |       |       |       |/| * |
+        !!      *-------*-------*-------* |/| *
+        !!      |       |       |       | * |/
+        !!      |       |       |       |/| *
+        !!      *-------*-------*-------* |/
+        !!      |       |       |       | *
+        !!      |       |       |       |/
+        !!      *-------*-------*-------*
+        !!         
+        !!
+        x = [ZERO, ONE, TWO, THREE, ZERO, ONE, TWO, THREE, ZERO, ONE, TWO, THREE, ZERO, ONE, TWO, THREE, &
+             ZERO, ONE, TWO, THREE, ZERO, ONE, TWO, THREE, ZERO, ONE, TWO, THREE, ZERO, ONE, TWO, THREE, &
+             ZERO, ONE, TWO, THREE, ZERO, ONE, TWO, THREE, ZERO, ONE, TWO, THREE, ZERO, ONE, TWO, THREE, &
+             ZERO, ONE, TWO, THREE, ZERO, ONE, TWO, THREE, ZERO, ONE, TWO, THREE, ZERO, ONE, TWO, THREE]
+             
+        y = [ZERO, ZERO, ZERO, ZERO, ONE, ONE, ONE, ONE, TWO, TWO, TWO, TWO, THREE, THREE, THREE, THREE, &
+             ZERO, ZERO, ZERO, ZERO, ONE, ONE, ONE, ONE, TWO, TWO, TWO, TWO, THREE, THREE, THREE, THREE, &
+             ZERO, ZERO, ZERO, ZERO, ONE, ONE, ONE, ONE, TWO, TWO, TWO, TWO, THREE, THREE, THREE, THREE, &
+             ZERO, ZERO, ZERO, ZERO, ONE, ONE, ONE, ONE, TWO, TWO, TWO, TWO, THREE, THREE, THREE, THREE]
+             
+        z = [ZERO, ZERO, ZERO, ZERO, ZERO, ZERO, ZERO, ZERO, ZERO, ZERO, ZERO, ZERO, ZERO, ZERO, ZERO, ZERO, &
+             ONE, ONE, ONE, ONE, ONE, ONE, ONE, ONE, ONE, ONE, ONE, ONE, ONE, ONE, ONE, ONE, &
+             TWO, TWO, TWO, TWO, TWO, TWO, TWO, TWO, TWO, TWO, TWO, TWO, TWO, TWO, TWO, TWO, &
+             THREE, THREE, THREE, THREE, THREE, THREE, THREE, THREE, THREE, THREE, THREE, THREE, THREE, THREE, THREE, THREE]
+             
+        ipt = 1
+        do ipt_zeta = 1,4
+            do ipt_eta = 1,4
+                do ipt_xi = 1,4
+                    call pts(ipt_xi,ipt_eta,ipt_zeta)%set(x(ipt), y(ipt), z(ipt))
+                    ipt = ipt + 1
+                end do
+            end do      
+        end do
+
+
+        !> Initialize mesh
+        neqns = 1
+        nterms_s = 8
+        nterms_c = 8
+        call this%mesh%init_geom(nterms_c,pts)
+        call this%mesh%init_sol(neqns,nterms_s)
+
+    end subroutine
+    
+    subroutine tearDown(this)
+        class(test_mesh_linear),    intent(inout)   :: this
+    end subroutine
+
+
+
+
+@Test
+    subroutine testMesh_integers(self)
+        class(test_mesh_linear),    intent(inout)   :: self
+        integer(ik) :: neqns, nterms_s, nterms_c, nelem_xi, nelem_eta, nelem_zeta, nelem
+        
+        neqns       = 1
+        nterms_s    = 8
+        nterms_c    = 8
+        nelem_xi    = 3
+        nelem_eta   = 3
+        nelem_zeta  = 3
+        nelem       = 27
+
+        @assertEqual(neqns,self%mesh%neqns)
+        @assertEqual(nterms_s,self%mesh%nterms_s)
+        @assertEqual(nterms_c,self%mesh%nterms_c)
+        @assertEqual(nelem_xi,self%mesh%nelem_xi)
+        @assertEqual(nelem_eta,self%mesh%nelem_eta)
+        @assertEqual(nelem_zeta,self%mesh%nelem_zeta)
+        @assertEqual(nelem,self%mesh%nelem)
+
+    end subroutine
+    
+    
+    
+! Test to make sure all elements were initialized
+@Test
+    subroutine testMesh_elements_initialized(self)
+        class(test_mesh_linear),    intent(inout)   :: self
+        integer(ik) :: ielem
+        
+        do ielem = 1,self%mesh%nelem
+            @assertTrue(self%mesh%elems(ielem)%geomInitialized)
+            @assertTrue(self%mesh%elems(ielem)%numInitialized)
+        end do
+        
+    end subroutine
+        
+        
+        
+! Test to make sure all faces were initialized
+@Test
+    subroutine testMesh_faces_initialized(self)
+        class(test_mesh_linear),    intent(inout)   :: self
+        integer(ik) :: ielem, iface
+        
+        do ielem = 1,self%mesh%nelem
+            do iface = 1,NFACES
+                @assertTrue(self%mesh%faces(ielem,iface)%geomInitialized)
+                @assertTrue(self%mesh%faces(ielem,iface)%numInitialized)
+            end do
+        end do
+    end subroutine
+        
+    
+    
+! Test to make sure the parent and neighbor element indices are correct for an interior element
+@Test
+    subroutine testMesh_indices_interior(self)
+        class(test_mesh_linear),    intent(inout)   :: self
+        
+        associate (faces => self%mesh%faces)
+            !> Test parent element
+            @assertEqual(14,faces(14,XI_MIN)%iparent)
+            @assertEqual(14,faces(14,XI_MAX)%iparent)
+            @assertEqual(14,faces(14,ETA_MIN)%iparent)
+            @assertEqual(14,faces(14,ETA_MAX)%iparent)
+            @assertEqual(14,faces(14,ZETA_MIN)%iparent)
+            @assertEqual(14,faces(14,ZETA_MAX)%iparent)        
+            
+            !> Test neighbor elements
+            @assertEqual(13,faces(14,XI_MIN)%ineighbor)
+            @assertEqual(15,faces(14,XI_MAX)%ineighbor)
+            @assertEqual(11,faces(14,ETA_MIN)%ineighbor)
+            @assertEqual(17,faces(14,ETA_MAX)%ineighbor)
+            @assertEqual(5,faces(14,ZETA_MIN)%ineighbor)
+            @assertEqual(23,faces(14,ZETA_MAX)%ineighbor)
+        end associate
+
+    end subroutine
+    
+    
+
+! Test to make sure the neighbor element indices are correct for a boundary element    
+@Test
+    subroutine testMesh_indices_boundary(self)
+        class(test_mesh_linear),    intent(inout)   :: self
+        
+        associate (faces => self%mesh%faces)
+            !> Test neighbor elements
+            @assertEqual(0,faces(1,XI_MIN)%ineighbor)
+            @assertEqual(2,faces(1,XI_MAX)%ineighbor)
+            @assertEqual(0,faces(1,ETA_MIN)%ineighbor)
+            @assertEqual(4,faces(1,ETA_MAX)%ineighbor)
+            @assertEqual(0,faces(1,ZETA_MIN)%ineighbor)
+            @assertEqual(10,faces(1,ZETA_MAX)%ineighbor)
+        end associate
+        
+    end subroutine
+    
+    
+    
+    
+! Test to make sure element matrix-view is set up correctly (had some problems with compilers on pointer bounds remapping)
+@Test
+    subroutine testMesh_elems_matrix_view(self)
+        class(test_mesh_linear),    intent(inout)   :: self
+        
+        associate (mesh => self%mesh)
+            !> Test 
+            @assertEqual(mesh%elems(1)%ielem,  mesh%elems_m(1,1,1)%ielem)
+            @assertEqual(mesh%elems(3)%ielem,  mesh%elems_m(3,1,1)%ielem)
+            @assertEqual(mesh%elems(7)%ielem,  mesh%elems_m(1,3,1)%ielem)
+            @assertEqual(mesh%elems(9)%ielem,  mesh%elems_m(3,3,1)%ielem)
+            @assertEqual(mesh%elems(19)%ielem, mesh%elems_m(1,1,3)%ielem)
+            @assertEqual(mesh%elems(21)%ielem, mesh%elems_m(3,1,3)%ielem)
+            @assertEqual(mesh%elems(25)%ielem, mesh%elems_m(1,3,3)%ielem)
+            @assertEqual(mesh%elems(27)%ielem, mesh%elems_m(3,3,3)%ielem)
+        end associate
+        
+    end subroutine
+    
+
+
+
+
+@Test
+    subroutine testMesh_E1_faces_ftype(self)
+        class(test_mesh_linear),    intent(inout)   :: self
+        
+        integer(ik) :: ielem
+        logical     :: isInterior
+        
+        
+        associate ( faces => self%mesh%faces )
+        
+        ielem = 1
+
+        !> XI_MIN
+        isInterior = (faces(ielem,XI_MIN)%ftype == 0)
+        @assertFalse(isInterior)
+        
+        !> XI_MAX
+        isInterior = (faces(ielem,XI_MAX)%ftype == 0)
+        @assertTrue(isInterior)
+        
+        !> ETA_MIN
+        isInterior = (faces(ielem,ETA_MIN)%ftype == 0)
+        @assertFalse(isInterior)
+        
+        !> ETA_MAX
+        isInterior = (faces(ielem,ETA_MAX)%ftype == 0)
+        @assertTrue(isInterior)
+        
+        !> ZETA_MIN
+        isInterior = (faces(ielem,ZETA_MIN)%ftype == 0)
+        @assertFalse(isInterior)
+        
+        !> ZETA_MAX
+        isInterior = (faces(ielem,ZETA_MAX)%ftype == 0)
+        @assertTrue(isInterior)
+        
+        
+        
+        end associate
+    end subroutine
+
+
+
+
+
+@Test
+    subroutine testMesh_E2_faces_ftype(self)
+        class(test_mesh_linear),    intent(inout)   :: self
+        
+        integer(ik) :: ielem
+        logical     :: isInterior
+        
+        
+        associate ( faces => self%mesh%faces )
+        
+        ielem = 2
+
+        !> XI_MIN
+        isInterior = (faces(ielem,XI_MIN)%ftype == 0)
+        @assertTrue(isInterior)
+        
+        !> XI_MAX
+        isInterior = (faces(ielem,XI_MAX)%ftype == 0)
+        @assertTrue(isInterior)
+        
+        !> ETA_MIN
+        isInterior = (faces(ielem,ETA_MIN)%ftype == 0)
+        @assertFalse(isInterior)
+        
+        !> ETA_MAX
+        isInterior = (faces(ielem,ETA_MAX)%ftype == 0)
+        @assertTrue(isInterior)
+        
+        !> ZETA_MIN
+        isInterior = (faces(ielem,ZETA_MIN)%ftype == 0)
+        @assertFalse(isInterior)
+        
+        !> ZETA_MAX
+        isInterior = (faces(ielem,ZETA_MAX)%ftype == 0)
+        @assertTrue(isInterior)
+        
+        
+        
+        end associate
+    end subroutine
+    
+    
+    
+@Test
+    subroutine testMesh_E14_faces_ftype(self)
+        class(test_mesh_linear),    intent(inout)   :: self
+        
+        integer(ik) :: ielem
+        logical     :: isInterior
+        
+        
+        associate ( faces => self%mesh%faces )
+        
+        ielem = 14
+
+        !> XI_MIN
+        isInterior = (faces(ielem,XI_MIN)%ftype == 0)
+        @assertTrue(isInterior)
+        
+        !> XI_MAX
+        isInterior = (faces(ielem,XI_MAX)%ftype == 0)
+        @assertTrue(isInterior)
+        
+        !> ETA_MIN
+        isInterior = (faces(ielem,ETA_MIN)%ftype == 0)
+        @assertTrue(isInterior)
+        
+        !> ETA_MAX
+        isInterior = (faces(ielem,ETA_MAX)%ftype == 0)
+        @assertTrue(isInterior)
+        
+        !> ZETA_MIN
+        isInterior = (faces(ielem,ZETA_MIN)%ftype == 0)
+        @assertTrue(isInterior)
+        
+        !> ZETA_MAX
+        isInterior = (faces(ielem,ZETA_MAX)%ftype == 0)
+        @assertTrue(isInterior)
+        
+        
+        
+        end associate
+    end subroutine
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+end module test_scalar_mod

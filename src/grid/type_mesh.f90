@@ -56,7 +56,6 @@ contains
         integer(ik),    intent(in)              :: nterms_c
         type(point_t),  intent(in)              :: points_g(:,:,:)
         type(element_t), pointer                :: temp(:)
-!        type(face_t),    pointer                :: ftemp(:,:)
 
         self%nterms_c = nterms_c
 

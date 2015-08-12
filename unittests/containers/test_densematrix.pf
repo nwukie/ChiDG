@@ -1,6 +1,6 @@
 ! Test init_gen procedure for initializing general matrix storage
 @Test
-subroutine test_INIT_GEN() 
+subroutine test_densematrix_INIT_GEN() 
     use pfunit_mod
     use mod_kinds, only: rk,ik
     use type_densematrix
@@ -42,7 +42,7 @@ end subroutine
 
 ! Test init_square procedure for initializing square matrix storage
 @Test
-subroutine test_INIT_SQUARE()
+subroutine test_densematrix_INIT_SQUARE()
     use pfunit_mod
     use mod_kinds, only: rk,ik
     use type_densematrix
@@ -83,7 +83,7 @@ end subroutine
 
 ! Test 'resize' procedure for resizing matrix storage
 @Test
-subroutine test_RESIZE()
+subroutine test_densematrix_RESIZE()
     use pfunit_mod
     use mod_kinds, only: rk,ik
     use type_densematrix
@@ -117,7 +117,7 @@ end subroutine
 
 ! Test 'reparent' procedure for assigning new parent element index
 @Test
-subroutine test_REPARENT()
+subroutine test_densematrix_REPARENT()
     use pfunit_mod
     use mod_kinds, only: rk,ik
     use type_densematrix

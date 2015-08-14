@@ -1,4 +1,4 @@
-module eqn_scalar
+module eqn_linearadvection
 #include <messenger.h>
     use mod_kinds,              only: rk,ik
     use mod_constants,          only: NFACES,ZERO,ONE,TWO,HALF, &
@@ -11,37 +11,33 @@ module eqn_scalar
     use mod_integrate,          only: integrate_volume_flux, integrate_boundary_flux
     use DNAD_D
 
-
     implicit none
 
     private
 
-    type, extends(equationset_t), public :: scalar_e
+    type, extends(equationset_t), public :: linearadvection_e
 
         real(rk)    :: c(3)     !> Advection velocities (cx, cy, cz)
 
     contains
-        ! Must define these procedures in the extended, concrete type
         procedure   :: init
         procedure   :: compute_boundary_average_flux
         procedure   :: compute_boundary_upwind_flux
         procedure   :: compute_volume_flux
         procedure   :: compute_volume_source
 
-
-
-
-    end type scalar_e
-
+    end type linearadvection_e
 
 contains
+
+
     !===========================================================
     !
     !   Equation set initialization
     !
     !===========================================================
     subroutine init(self)
-        class(scalar_e), intent(inout) :: self
+        class(linearadvection_e), intent(inout) :: self
 
         self%neqns   = 1
 
@@ -53,9 +49,9 @@ contains
         self%eqns(1)%ind  = 1
 
 
-        self%c(1) = ONE
+        self%c(1) = ZERO
         self%c(2) = ZERO
-        self%c(3) = ZERO
+        self%c(3) = ONE
 
 
     end subroutine
@@ -69,7 +65,7 @@ contains
     !
     !===========================================================
     subroutine compute_boundary_average_flux(self,mesh,sdata,ielem,iface,iblk)
-        class(scalar_e),        intent(in)      :: self
+        class(linearadvection_e),        intent(in)      :: self
         class(mesh_t),          intent(in)      :: mesh
         class(solverdata_t),    intent(inout)   :: sdata
         integer(ik),            intent(in)      :: ielem, iface, iblk
@@ -143,7 +139,7 @@ contains
     !
     !===========================================================
     subroutine compute_boundary_upwind_flux(self,mesh,sdata,ielem,iface,iblk)
-        class(scalar_e),        intent(in)      :: self
+        class(linearadvection_e),        intent(in)      :: self
         class(mesh_t),          intent(in)      :: mesh
         class(solverdata_t),    intent(inout)   :: sdata
         integer(ik),            intent(in)      :: ielem, iface, iblk
@@ -203,6 +199,10 @@ contains
         flux_y = (self%c(2) * (u_l - u_r)/TWO )  *  mesh%faces(ielem,iface)%norm(:,2)
         flux_z = (self%c(3) * (u_l - u_r)/TWO )  *  mesh%faces(ielem,iface)%norm(:,3)
 
+!        flux_x = -(self%c(1) * (u_l - u_r)/TWO )
+!        flux_y = -(self%c(2) * (u_l - u_r)/TWO )
+!        flux_z = -(self%c(3) * (u_l - u_r)/TWO )
+
 
         !> Integrate flux
         call integrate_boundary_flux(mesh%faces(ielem,iface), sdata, u_i, iblk, flux_x, flux_y, flux_z)
@@ -221,7 +221,7 @@ contains
     !
     !===========================================================
     subroutine compute_volume_flux(self,mesh,sdata,ielem,iblk)
-        class(scalar_e),        intent(in)      :: self
+        class(linearadvection_e),        intent(in)      :: self
         class(mesh_t),          intent(in)      :: mesh
         class(solverdata_t),    intent(inout)   :: sdata
         integer(ik),            intent(in)      :: ielem, iblk
@@ -281,7 +281,7 @@ contains
     !
     !===========================================================
     subroutine compute_volume_source(self,mesh,sdata,ielem,iblk)
-        class(scalar_e),        intent(in)      :: self
+        class(linearadvection_e),        intent(in)      :: self
         class(mesh_t),          intent(in)      :: mesh
         class(solverdata_t),    intent(inout)   :: sdata
         integer(ik),            intent(in)      :: ielem, iblk
@@ -291,4 +291,10 @@ contains
 
 
 
-end module eqn_scalar
+
+
+
+
+
+
+end module eqn_linearadvection

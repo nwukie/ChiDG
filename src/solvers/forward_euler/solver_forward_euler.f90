@@ -68,6 +68,12 @@ contains
                 !> Compute update vector
                 dq = dt * rhs
 
+
+!                do ielem = 1,domain%mesh%nelem
+!                    print*, rhs(ielem)%vec
+!                end do
+
+
                 !> Advance solution with update vector
                 q  = q + dq
 

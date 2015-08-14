@@ -5,10 +5,12 @@ module mod_equations
 
     ! Import Equations
     use eqn_scalar,                     only: scalar_e
+    use eqn_linearadvection,            only: linearadvection_e
     implicit none
 
     ! Instantiate Equations
-    type(scalar_e)  :: SCALAR
+    type(scalar_e)          :: SCALAR
+    type(linearadvection_e) :: LINEARADVECTION
 
 
     logical :: uninitialized = .true.
@@ -23,6 +25,7 @@ contains
         if (uninitialized) then
             ! List of equations to initialize
             call SCALAR%init()
+            call LINEARADVECTION%init()
 
         end if
 
@@ -50,6 +53,9 @@ contains
         select case (trim(eqnstring))
             case ('scalar','Scalar')
                 allocate(eqnset, source=SCALAR)
+
+            case ('linearadvection','LinearAdvection','la','LA')
+                allocate(eqnset, source=LINEARADVECTION)
 
             case default
                 call signal(FATAL,'create_equationset -- equation string not recognized')

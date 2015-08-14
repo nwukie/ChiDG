@@ -6,4 +6,5 @@ add_subdirectory(polynomial)
 add_subdirectory(io)
 add_subdirectory(functions)
 add_subdirectory(solvers)
+add_subdirectory(equations)
 

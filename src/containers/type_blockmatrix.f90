@@ -125,22 +125,22 @@ contains
         type(AD_D),             intent(in)      :: integral(:)
         integer(ik),            intent(in)      :: ielem, iblk, ivar
 
-        integer(ik) :: iarray, neqns, nterms, icol_start, icol
+        integer(ik) :: iarray, neqns, nterms, irow_start, irow
 
 
         ! Get stored information for the block
         neqns  = self%ldata(ielem,1)
         nterms = self%ldata(ielem,2)
 
-        icol_start = ( (ivar - 1)  *  nterms)
+        irow_start = ( (ivar - 1)  *  nterms)
 
-        ! If sizes match, store derivative arrays to local block. Loop through integral values, for each value store its derivatives.
-        ! The integral values here should be components of the RHS vector
+        !> If sizes match, store derivative arrays to local block. Loop through integral values, for each value store its derivatives.
+        !! The integral values here should be components of the RHS vector. An array of partial derivatives from an AD_D variable
+        !! should be stored as a row in the block matrix.
         do iarray = 1,size(integral)
             !> Do a += operation to add derivatives to any that are currently stored
-            icol = icol_start + iarray
-!            self%lblks(ielem,iblk)%mat(:, icol) = self%lblks(ielem,iblk)%mat(:,icol) + integral(iarray)%xp_ad_
-            self%lblks(ielem,iblk)%mat(iarray,:) = self%lblks(ielem,iblk)%mat(iarray,:) + integral(iarray)%xp_ad_
+            irow = irow_start + iarray
+            self%lblks(ielem,iblk)%mat(irow,:) = self%lblks(ielem,iblk)%mat(irow,:) + integral(iarray)%xp_ad_
         end do
 
     end subroutine

@@ -235,15 +235,16 @@ contains
         
         
         
-            !> Check that the derivatives were assigned to their correct locations in the block matrix
-            @assertEqual(integral(1)%xp_ad_, bmat%lblks(ielem,iblk)%mat(1:8,1) )
-            @assertEqual(integral(2)%xp_ad_, bmat%lblks(ielem,iblk)%mat(1:8,2) )
-            @assertEqual(integral(3)%xp_ad_, bmat%lblks(ielem,iblk)%mat(1:8,3) )
-            @assertEqual(integral(4)%xp_ad_, bmat%lblks(ielem,iblk)%mat(1:8,4) )
-            @assertEqual(integral(5)%xp_ad_, bmat%lblks(ielem,iblk)%mat(1:8,5) )
-            @assertEqual(integral(6)%xp_ad_, bmat%lblks(ielem,iblk)%mat(1:8,6) )
-            @assertEqual(integral(7)%xp_ad_, bmat%lblks(ielem,iblk)%mat(1:8,7) )
-            @assertEqual(integral(8)%xp_ad_, bmat%lblks(ielem,iblk)%mat(1:8,8) )
+            !> Check that the derivatives were assigned to their correct locations in the block matrix.
+            !! The xp_ad_ arrays should be stored as rows of the block matrix.
+            @assertEqual(integral(1)%xp_ad_, bmat%lblks(ielem,iblk)%mat(1,1:8) )
+            @assertEqual(integral(2)%xp_ad_, bmat%lblks(ielem,iblk)%mat(2,1:8) )
+            @assertEqual(integral(3)%xp_ad_, bmat%lblks(ielem,iblk)%mat(3,1:8) )
+            @assertEqual(integral(4)%xp_ad_, bmat%lblks(ielem,iblk)%mat(4,1:8) )
+            @assertEqual(integral(5)%xp_ad_, bmat%lblks(ielem,iblk)%mat(5,1:8) )
+            @assertEqual(integral(6)%xp_ad_, bmat%lblks(ielem,iblk)%mat(6,1:8) )
+            @assertEqual(integral(7)%xp_ad_, bmat%lblks(ielem,iblk)%mat(7,1:8) )
+            @assertEqual(integral(8)%xp_ad_, bmat%lblks(ielem,iblk)%mat(8,1:8) )
                 
                 
         end associate

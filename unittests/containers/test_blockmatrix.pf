@@ -1,0 +1,309 @@
+!--------------------------------------------------------------------------------
+!       Test STORE procedure for storing derivative information
+!--------------------------------------------------------------------------------
+!> Test storage of derivatives in blockmatrix when using one equation
+@Test
+subroutine test_blockmatrix__store_1eq_8terms()
+    use pfunit_mod
+    use mod_kinds,          only: rk,ik
+    use mod_constants,      only: ONE, TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT
+    use type_chidg,         only: chidg_t
+    use type_mesh,          only: mesh_t
+    use type_point,         only: point_t
+    use type_blockmatrix,   only: blockmatrix_t
+    use mod_testutils,      only: meshgen
+    use DNAD_D
+    
+    type(chidg_t)               :: chidg
+    type(mesh_t)                :: mesh
+    type(point_t), allocatable  :: pts(:,:,:)    
+    type(blockmatrix_t)         :: bmat
+    type(AD_D)                  :: integral(8)
+    integer(ik)                 :: ielem, iblk, ivar, nderiv, i, neqns, nterms
+    
+    call chidg%init()
+    
+    neqns  = 1
+    nterms = 8
+
+
+    !> Initialize 3x3x3 mesh
+    call meshgen('3x3x3',pts)
+    call mesh%init_geom(8,pts)
+    call mesh%init_sol(neqns,nterms)    !> Initialize numerics
+
+    !> Call initialization on block matrix
+    call bmat%init(mesh)
+
+
+    nderiv = neqns*nterms
+    !> Initialize AD variables with allocated derivative arrays
+    do i = 1,8
+        integral(i) = AD_D(nderiv)
+    end do
+
+    integral = [ONE, TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT]
+    !> Set the first and last element of each derivative array so they aren't just zeros
+    integral(1)%xp_ad_(1) = ONE
+    integral(1)%xp_ad_(8) = ONE
+    
+    integral(2)%xp_ad_(1) = TWO
+    integral(2)%xp_ad_(8) = TWO
+    
+    integral(3)%xp_ad_(1) = THREE
+    integral(3)%xp_ad_(8) = THREE
+    
+    integral(4)%xp_ad_(1) = FOUR
+    integral(4)%xp_ad_(8) = FOUR
+    
+    integral(5)%xp_ad_(1) = FIVE
+    integral(5)%xp_ad_(8) = FIVE
+    
+    integral(6)%xp_ad_(1) = SIX
+    integral(6)%xp_ad_(8) = SIX
+    
+    integral(7)%xp_ad_(1) = SEVEN
+    integral(7)%xp_ad_(8) = SEVEN
+    
+    integral(8)%xp_ad_(1) = EIGHT
+    integral(8)%xp_ad_(8) = EIGHT
+
+
+
+    !> PROCEDURE BEING TESTED
+    ielem  = 14
+    ivar   = 1
+    iblk   = 1
+    call bmat%store(integral,ielem,iblk,ivar)
+
+
+    !> Check that the derivatives were assigned to their correct locations in the block matrix.
+    !! The xp_ad_ arrays should be stored as rows of the block matrix.
+    @assertEqual(integral(1)%xp_ad_, bmat%lblks(ielem,iblk)%mat(1,:) )
+    @assertEqual(integral(2)%xp_ad_, bmat%lblks(ielem,iblk)%mat(2,:) )
+    @assertEqual(integral(3)%xp_ad_, bmat%lblks(ielem,iblk)%mat(3,:) )
+    @assertEqual(integral(4)%xp_ad_, bmat%lblks(ielem,iblk)%mat(4,:) )
+    @assertEqual(integral(5)%xp_ad_, bmat%lblks(ielem,iblk)%mat(5,:) )
+    @assertEqual(integral(6)%xp_ad_, bmat%lblks(ielem,iblk)%mat(6,:) )
+    @assertEqual(integral(7)%xp_ad_, bmat%lblks(ielem,iblk)%mat(7,:) )
+    @assertEqual(integral(8)%xp_ad_, bmat%lblks(ielem,iblk)%mat(8,:) )
+        
+    
+end subroutine
+
+
+
+
+
+
+
+
+!> Test storage of derivatives to blockmatrix when using 2 equations
+@Test
+subroutine test_blockmatrix__store_2eq_8terms()
+    use pfunit_mod
+    use mod_kinds,          only: rk,ik
+    use mod_constants,      only: ONE, TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT
+    use type_chidg,         only: chidg_t
+    use type_mesh,          only: mesh_t
+    use type_point,         only: point_t
+    use type_blockmatrix,   only: blockmatrix_t
+    use mod_testutils,      only: meshgen
+    use DNAD_D
+    
+    type(chidg_t)               :: chidg
+    type(mesh_t)                :: mesh    
+    type(point_t), allocatable  :: pts(:,:,:)
+    type(blockmatrix_t)         :: bmat
+    type(AD_D)                  :: integral(8)
+    integer(ik)                 :: ielem, iblk, ivar, nderiv, i, neqns, nterms
+    
+    call chidg%init()
+    
+    neqns   = 2
+    nterms = 8
+
+    !> Initialize 3x3x3 mesh
+    call meshgen('3x3x3',pts)               !> Generate points for 3x3x3 mesh
+    call mesh%init_geom(8,pts)              !> Initialize geometry
+    call mesh%init_sol(neqns,nterms)        !> Initialize numerics
+
+    !> Call initialization on block matrix
+    call bmat%init(mesh)
+
+
+    nderiv = neqns*nterms
+    !> Initialize AD variables with allocated derivative arrays
+    do i = 1,8
+        integral(i) = AD_D(nderiv)
+    end do
+
+    integral = [ONE, TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT]
+    !> Set the first and last element of each derivative array so they aren't just zeros
+    integral(1)%xp_ad_(1) = ONE
+    integral(1)%xp_ad_(8) = ONE
+    
+    integral(2)%xp_ad_(1) = TWO
+    integral(2)%xp_ad_(8) = TWO
+    
+    integral(3)%xp_ad_(1) = THREE
+    integral(3)%xp_ad_(8) = THREE
+    
+    integral(4)%xp_ad_(1) = FOUR
+    integral(4)%xp_ad_(8) = FOUR
+    
+    integral(5)%xp_ad_(1) = FIVE
+    integral(5)%xp_ad_(8) = FIVE
+    
+    integral(6)%xp_ad_(1) = SIX
+    integral(6)%xp_ad_(8) = SIX
+    
+    integral(7)%xp_ad_(1) = SEVEN
+    integral(7)%xp_ad_(8) = SEVEN
+    
+    integral(8)%xp_ad_(1) = EIGHT
+    integral(8)%xp_ad_(8) = EIGHT
+
+
+
+    !> PROCEDURE BEING TESTED
+    ielem  = 14
+    ivar   = 2
+    iblk   = 1
+    call bmat%store(integral,ielem,iblk,ivar)
+
+
+    !> Check that the derivatives were assigned to their correct locations in the block matrix.
+    !! The xp_ad_ arrays should be stored as rows of the block matrix.
+    @assertEqual(integral(1)%xp_ad_, bmat%lblks(ielem,iblk)%mat(9,:) )
+    @assertEqual(integral(2)%xp_ad_, bmat%lblks(ielem,iblk)%mat(10,:) )
+    @assertEqual(integral(3)%xp_ad_, bmat%lblks(ielem,iblk)%mat(11,:) )
+    @assertEqual(integral(4)%xp_ad_, bmat%lblks(ielem,iblk)%mat(12,:) )
+    @assertEqual(integral(5)%xp_ad_, bmat%lblks(ielem,iblk)%mat(13,:) )
+    @assertEqual(integral(6)%xp_ad_, bmat%lblks(ielem,iblk)%mat(14,:) )
+    @assertEqual(integral(7)%xp_ad_, bmat%lblks(ielem,iblk)%mat(15,:) )
+    @assertEqual(integral(8)%xp_ad_, bmat%lblks(ielem,iblk)%mat(16,:) )
+        
+    
+end subroutine
+
+
+
+
+
+
+
+
+
+
+!> Test that blockmatrix data is getting zeroed
+@Test
+subroutine test_blockmatrix__clear_1eq_8terms()
+    use pfunit_mod
+    use mod_kinds,          only: rk,ik
+    use mod_constants,      only: ONE, TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT
+    use type_chidg,         only: chidg_t
+    use type_mesh,          only: mesh_t
+    use type_point,         only: point_t
+    use type_blockmatrix,   only: blockmatrix_t
+    use mod_testutils,      only: meshgen
+    use DNAD_D
+    
+    type(chidg_t)               :: chidg
+    type(mesh_t)                :: mesh    
+    type(point_t), allocatable  :: pts(:,:,:)
+    type(blockmatrix_t)         :: bmat
+    type(AD_D)                  :: integral(8)
+    integer(ik)                 :: ielem, iblk, ivar, nderiv, i, neqns, nterms
+    
+    call chidg%init()
+    
+    neqns   = 1
+    nterms = 8
+
+
+    !> Initialize 3x3x3 mesh
+    call meshgen('3x3x3',pts)               !> Generate points for 3x3x3 mesh
+    call mesh%init_geom(8,pts)              !> Initialize geometry
+    call mesh%init_sol(neqns,nterms)        !> Initialize numerics
+
+    !> Call initialization on block matrix
+    call bmat%init(mesh)
+
+
+    nderiv = neqns*nterms
+    !> Initialize AD variables with allocated derivative arrays
+    do i = 1,8
+        integral(i) = AD_D(nderiv)
+    end do
+
+    integral = [ONE, TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT]
+    !> Set the first and last element of each derivative array so they aren't just zeros
+    integral(1)%xp_ad_(1) = ONE
+    integral(1)%xp_ad_(8) = ONE
+    
+    integral(2)%xp_ad_(1) = TWO
+    integral(2)%xp_ad_(8) = TWO
+    
+    integral(3)%xp_ad_(1) = THREE
+    integral(3)%xp_ad_(8) = THREE
+    
+    integral(4)%xp_ad_(1) = FOUR
+    integral(4)%xp_ad_(8) = FOUR
+    
+    integral(5)%xp_ad_(1) = FIVE
+    integral(5)%xp_ad_(8) = FIVE
+    
+    integral(6)%xp_ad_(1) = SIX
+    integral(6)%xp_ad_(8) = SIX
+    
+    integral(7)%xp_ad_(1) = SEVEN
+    integral(7)%xp_ad_(8) = SEVEN
+    
+    integral(8)%xp_ad_(1) = EIGHT
+    integral(8)%xp_ad_(8) = EIGHT
+
+
+
+    !> PROCEDURE BEING TESTED
+    ielem  = 14
+    ivar   = 1
+    iblk   = 1
+    call bmat%store(integral,ielem,iblk,ivar)
+
+
+    !> Check that the derivatives were assigned to their correct locations in the block matrix.
+    !! The xp_ad_ arrays should be stored as rows of the block matrix.
+    @assertEqual(integral(1)%xp_ad_, bmat%lblks(ielem,iblk)%mat(1,:) )
+    @assertEqual(integral(2)%xp_ad_, bmat%lblks(ielem,iblk)%mat(2,:) )
+    @assertEqual(integral(3)%xp_ad_, bmat%lblks(ielem,iblk)%mat(3,:) )
+    @assertEqual(integral(4)%xp_ad_, bmat%lblks(ielem,iblk)%mat(4,:) )
+    @assertEqual(integral(5)%xp_ad_, bmat%lblks(ielem,iblk)%mat(5,:) )
+    @assertEqual(integral(6)%xp_ad_, bmat%lblks(ielem,iblk)%mat(6,:) )
+    @assertEqual(integral(7)%xp_ad_, bmat%lblks(ielem,iblk)%mat(7,:) )
+    @assertEqual(integral(8)%xp_ad_, bmat%lblks(ielem,iblk)%mat(8,:) )
+        
+    
+end subroutine
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    

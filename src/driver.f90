@@ -20,7 +20,6 @@ program driver
     use atype_function,         only: function_t
     use mod_function,           only: create_function
     use mod_tecio,              only: write_tecio_variables
-!    use mod_jacobian_test,      only: check_jacobian_volume_flux
 
     !-----------------------------------------------------------
     ! Variable declarations
@@ -47,7 +46,7 @@ program driver
     call read_grid_hdf('4x4x4.h5',domains)
 
     print*, 'initializing domain numerics'
-    call domains(1)%init_sol('scalar',8)
+    call domains(1)%init_sol('LA',8)
 
 
     print*, 'create_function'
@@ -66,13 +65,13 @@ program driver
 
 !    call check_jacobian_volume_flux(domains(1),22,7)
 
-!
-!
-!
-!    call solver%init(domains(1))
-!
-!    print*, 'solve'
-!    call solver%solve(domains(1))
+
+
+
+    call solver%init(domains(1))
+
+    print*, 'solve'
+    call solver%solve(domains(1))
 
 
 

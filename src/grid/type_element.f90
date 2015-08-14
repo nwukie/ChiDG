@@ -116,7 +116,7 @@ contains
 
             if (nterms_c /= size(points)) call signal(FATAL,'element%init_geom -- mapping and points do not match')
         else
-            call signal(FATAL,'element%init_geom -- element mapping not initialized')
+            call signal(FATAL,"element%init_geom -- element mapping not initialized. Probably need to call 'init' on chidg environment")
         end if
 
         ! Allocate and compute mesh x,y,z modes

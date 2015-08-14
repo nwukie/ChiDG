@@ -41,6 +41,8 @@ contains
                         else
                             skip = .false.
                         end if
+                    else
+                        skip = .false.  !> Don't skip DIAG
                     end if
 
 
@@ -50,8 +52,11 @@ contains
                     if ( .not. skip) then
                         ! For the current element, compute the contributions from boundary integrals
                         do iface = 1,NFACES
-                            !> For interior faces, compute the boundary integrals
-                            if (domain%mesh%faces(ielem,iface)%ftype == 0) then
+                            !> Only call the following routines for interior faces -- ftype == 0
+                            !> Furthermore, only call the routines if we are computing derivatives for the neighbor of
+                            !! iface or for the current element(DIAG). This saves a lot of unnecessary compute_boundary calls.
+                            if (domain%mesh%faces(ielem,iface)%ftype == 0 .and. &
+                                (iblk == iface .or. iblk == DIAG)) then
                                 call domain%eqnset%compute_boundary_average_flux(mesh,sdata,ielem,iface,iblk)
                                 call domain%eqnset%compute_boundary_upwind_flux( mesh,sdata,ielem,iface,iblk)
                             end if
@@ -62,6 +67,7 @@ contains
                         ! For the current element, compute the contributions from volume integrals
                         call domain%eqnset%compute_volume_flux(  mesh,sdata,ielem,iblk)
                         call domain%eqnset%compute_volume_source(mesh,sdata,ielem,iblk)
+
                     end if
 
                 end do !elem
@@ -70,11 +76,6 @@ contains
             end do !block
 
 
-
-!            do i = 1,size(sdata%lin%lblks(22,1)%mat,1)
-!                print*, sdata%lin%lblks(22,1)%mat(i,:)
-!            end do
-!            read(*,*)
 
 
 

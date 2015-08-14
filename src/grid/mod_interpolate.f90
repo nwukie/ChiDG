@@ -67,20 +67,7 @@ module mod_interpolate
             end do
 
 
-!            print*, 'before'
-!            do i = 1,size(qdiff)
-!                print*, qdiff(i)%xp_ad_
-!            end do
-
-
             var_gq = matmul(elems(ielem)%gq%vol%val,qdiff)
-
-!            print*, 'after'
-!            do i = 1,size(var_gq)
-!                print*, var_gq(i)%xp_ad_
-!            end do
-!
-!            read(*,*)
 
         else
             !> If the solution variable derivatives dont need initialized
@@ -106,12 +93,8 @@ module mod_interpolate
         integer(ik),        intent(in)      :: ielem_seed
 
         type(AD_D)  :: qdiff(faces(ielem,iface)%nterms_s)
-        integer(ik) :: nderiv, set_deriv, iterm, igq, nterms_s, size_i, size_j, ipt, jpt
-        real(rk), allocatable    :: test(:,:)
+        integer(ik) :: nderiv, set_deriv, iterm, igq, nterms_s
 
-        size_i = size(faces(ielem,iface)%gq%face%val, 1)
-        size_j = size(faces(ielem,iface)%gq%face%val, 2)
-        allocate(test(size_i,size_j))
 
         nterms_s = faces(ielem,iface)%nterms_s
 

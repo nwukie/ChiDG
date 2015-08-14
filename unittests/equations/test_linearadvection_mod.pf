@@ -11,23 +11,43 @@ module test_linearadvection_mod
     use mod_check_jacobian
     implicit none
 
-    public  :: test_equation_linearadvection
+    public  :: test_eq_LA
 
-@TestCase
-    type, extends(TestCase) ::  test_equation_linearadvection
+
+    !> This parameter is used to test the linearization for different blocks.
+    !> iblk = [XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX, DIAG]
+    @TestParameter(constructor=newBlock)
+    type, extends (AbstractTestParameter) :: blockParam
+        integer(ik)         :: iblk
+    contains
+        procedure :: toString
+    end type blockParam
+    
+    
+    
+    @TestCase(constructor=newTest)
+    type, extends(ParameterizedTestCase) ::  test_eq_LA
         type(chidg_t)       :: chidg
         type(domain_t)      :: domain
+        integer(ik)         :: iblk
     contains
         procedure   ::  setUp
         procedure   ::  tearDown
-    end type test_equation_linearadvection
+    end type test_eq_LA
+
+
+
 
 
 contains
+    !------------------------
+    !> SET-UP  +  TEAR-DOWN
+    !------------------------
+
     !> NOTE: make sure to use 'this' instead of 'self' since these are over-writting a derived type 
     !! procedure. The argument names have to match
     subroutine setUp(this)
-        class(test_equation_linearadvection),    intent(inout)   :: this
+        class(test_eq_LA),    intent(inout)   :: this
         
         integer(ik), parameter      :: npt = 64
         type(point_t), allocatable  :: pts(:,:,:)
@@ -49,17 +69,49 @@ contains
     end subroutine
     
     subroutine tearDown(this)
-        class(test_equation_linearadvection),    intent(inout)   :: this
+        class(test_eq_LA),    intent(inout)   :: this
     end subroutine
 
 
+    !--------------------------
+    !> PARAMETER CONSTRUCTORS
+    !--------------------------
+    
+    !> Function for setting the correct parameter value in the constructor
+    function newBlock(iblk) result(param)
+        type(blockParam)        :: param
+        integer(ik), intent(in) :: iblk
+        
+        param%iblk = iblk
+    end function newBlock
+    
+    !> TestCase constructor for parameter specification
+    function newTest(param)
+        type(test_eq_LA) :: newTest
+        type(blockParam)                    :: param
+        
+        newTest%iblk = param%iblk
+    end function newTest
+
+    !> ToString - not sure what this is for yet
+    function toString(this) result(string)
+        class(blockParam), intent(in)   :: this
+        character(:), allocatable       :: string
+        character(len=3)                :: str
+         
+        write(str,'(i0)') this%iblk
+        string = str
+    end function toString
 
 
 
+!------------------------------------------------------------------------------------------
+!>                                        TESTS
+!------------------------------------------------------------------------------------------
 !> Test Volume Flux jacobian calclation
-@Test
-    subroutine test_LinearAdvection_jacobian_volume_flux(self)
-        class(test_equation_linearadvection),    intent(inout)   :: self
+@Test(cases = [1, 2, 3, 4, 5, 6, 7])
+    subroutine test_LA_jacobian_volume_flux(self)
+        class(test_eq_LA),    intent(inout)   :: self
         
         type(densematrix_t) :: blk_dnad, blk_fd
         integer(ik) :: ielem, ivar, iblk
@@ -70,7 +122,8 @@ contains
         ielem = 14
         ivar  = 1
         
-        iblk = 7    !> DIAG
+        !> Block Parameter from cases = []
+        iblk = self%iblk
         
         !> Compute Automatic and Finite Difference jacobians
         call check_jacobian_volume_flux(self%domain,ielem,ivar,iblk,blk_dnad,blk_fd)
@@ -78,17 +131,15 @@ contains
         
         @assertEqual(blk_fd%mat, blk_dnad%mat, tol)
         
-        
     end subroutine
     
     
 
 
 !> Test Boundary Average Flux jacobian calclation
-!@Test(cases = [1, 2, 3, 4, 5, 6, 7])
-@Test
-    subroutine test_LinearAdvection_jacobian_boundary_average_flux(self)
-        class(test_equation_linearadvection),    intent(inout)   :: self
+@Test(cases = [1, 2, 3, 4, 5, 6, 7])
+    subroutine test_LA_jacobian_boundary_average_flux(self)
+        class(test_eq_LA),    intent(inout)   :: self
         
         type(densematrix_t) :: blk_dnad, blk_fd
         integer(ik) :: ielem, iface, ivar, iblk
@@ -100,14 +151,14 @@ contains
         iface = 1
         ivar  = 1
         
-        iblk = 7    !> DIAG
+        !> Block Parameter from cases = []
+        iblk = self%iblk
         
         !> Compute Automatic and Finite Difference jacobians
-        call check_jacobian_boundary_average_flux(self%domain,ielem,iface,ivar,iblk,blk_dnad,blk_fd)
+        call check_jacobian_boundary_average_flux(self%domain,ielem,ivar,iblk,blk_dnad,blk_fd)
         
         
         @assertEqual(blk_fd%mat, blk_dnad%mat, tol)
-        
         
     end subroutine
     
@@ -117,9 +168,9 @@ contains
     
     
 !> Test Boundary Upwind Flux jacobian calclation
-@Test
-    subroutine test_LinearAdvection_jacobian_boundary_upwind_flux(self)
-        class(test_equation_linearadvection),    intent(inout)   :: self
+@Test(cases = [1, 2, 3, 4, 5, 6, 7])
+    subroutine test_LA_jacobian_boundary_upwind_flux(self)
+        class(test_eq_LA),    intent(inout)   :: self
         
         type(densematrix_t) :: blk_dnad, blk_fd
         integer(ik) :: ielem, iface, ivar, iblk
@@ -131,14 +182,14 @@ contains
         iface = 1
         ivar  = 1
         
-        iblk = 7    !> DIAG
+        !> Block Parameter from cases = []
+        iblk = self%iblk
         
         !> Compute Automatic and Finite Difference jacobians
-        call check_jacobian_boundary_upwind_flux(self%domain,ielem,iface,ivar,iblk,blk_dnad,blk_fd)
+        call check_jacobian_boundary_upwind_flux(self%domain,ielem,ivar,iblk,blk_dnad,blk_fd)
         
         
         @assertEqual(blk_fd%mat, blk_dnad%mat, tol)
-        
         
     end subroutine
     

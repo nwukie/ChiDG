@@ -199,10 +199,6 @@ contains
         flux_y = (self%c(2) * (u_l - u_r)/TWO )  *  mesh%faces(ielem,iface)%norm(:,2)
         flux_z = (self%c(3) * (u_l - u_r)/TWO )  *  mesh%faces(ielem,iface)%norm(:,3)
 
-!        flux_x = -(self%c(1) * (u_l - u_r)/TWO )
-!        flux_y = -(self%c(2) * (u_l - u_r)/TWO )
-!        flux_z = -(self%c(3) * (u_l - u_r)/TWO )
-
 
         !> Integrate flux
         call integrate_boundary_flux(mesh%faces(ielem,iface), sdata, u_i, iblk, flux_x, flux_y, flux_z)

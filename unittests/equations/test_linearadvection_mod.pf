@@ -127,78 +127,78 @@ contains
         
         !> Compute Automatic and Finite Difference jacobians
         call check_jacobian_volume_flux(self%domain,ielem,iblk,blk_dnad,blk_fd)
-!         
-!        
-!        @assertEqual(blk_fd%mat, blk_dnad%mat, tol)
-!        
+         
+        
+        @assertEqual(blk_fd%mat, blk_dnad%mat, tol)
+        
     end subroutine
     
-!    
-!    
-!     
-!
-!
-!!> Test Boundary Average Flux jacobian calclation
-!@Test(cases = [1, 2, 3, 4, 5, 6, 7])
-!    subroutine test_LA_jacobian_boundary_average_flux(self)
-!        class(test_eq_LA),    intent(inout)   :: self
-!        
-!        type(densematrix_t) :: blk_dnad, blk_fd
-!        integer(ik) :: ielem, iface, ivar, iblk
-!        real(rk)    :: tol
-!        
-!        tol = 1.0e-7_rk
-!        
-!        ielem = 14
-!        iface = 1
-!        ivar  = 1
-!        
-!        !> Block Parameter from cases = []
-!        iblk = self%iblk
-!        
-!        !> Compute Automatic and Finite Difference jacobians
-!        call check_jacobian_boundary_average_flux(self%domain,ielem,iblk,blk_dnad,blk_fd)
-!        
-!        
-!        @assertEqual(blk_fd%mat, blk_dnad%mat, tol)
-!        
-!    end subroutine
-!    
-!    
-!    
-!    
-!    
-!    
-!!> Test Boundary Upwind Flux jacobian calclation
-!@Test(cases = [1, 2, 3, 4, 5, 6, 7])
-!    subroutine test_LA_jacobian_boundary_upwind_flux(self)
-!        class(test_eq_LA),    intent(inout)   :: self
-!        
-!        type(densematrix_t) :: blk_dnad, blk_fd
-!        integer(ik) :: ielem, iface, ivar, iblk
-!        real(rk)    :: tol
-!        
-!        tol = 1.0e-7_rk
-!        
-!        ielem = 14
-!        iface = 1
-!        ivar  = 1
-!        
-!        !> Block Parameter from cases = []
-!        iblk = self%iblk
-!        
-!        !> Compute Automatic and Finite Difference jacobians
-!        call check_jacobian_boundary_upwind_flux(self%domain,ielem,iblk,blk_dnad,blk_fd)
-!        
-!        
-!        @assertEqual(blk_fd%mat, blk_dnad%mat, tol)
-!        
-!    end subroutine
-!    
-!    
-!    
-!    
-!
+    
+    
+     
+
+
+!> Test Boundary Average Flux jacobian calclation
+@Test(cases = [1, 2, 3, 4, 5, 6, 7])
+    subroutine test_LA_jacobian_boundary_average_flux(self)
+        class(test_eq_LA),    intent(inout)   :: self
+        
+        type(densematrix_t) :: blk_dnad, blk_fd
+        integer(ik) :: ielem, iface, ivar, iblk
+        real(rk)    :: tol
+        
+        tol = 1.0e-7_rk
+        
+        ielem = 14
+        iface = 1
+        ivar  = 1
+        
+        !> Block Parameter from cases = []
+        iblk = self%iblk
+        
+        !> Compute Automatic and Finite Difference jacobians
+        call check_jacobian_boundary_average_flux(self%domain,ielem,iblk,blk_dnad,blk_fd)
+        
+        
+        @assertEqual(blk_fd%mat, blk_dnad%mat, tol)
+        
+    end subroutine
+    
+    
+    
+    
+    
+    
+!> Test Boundary Upwind Flux jacobian calclation
+@Test(cases = [1, 2, 3, 4, 5, 6, 7])
+    subroutine test_LA_jacobian_boundary_upwind_flux(self)
+        class(test_eq_LA),    intent(inout)   :: self
+        
+        type(densematrix_t) :: blk_dnad, blk_fd
+        integer(ik) :: ielem, iface, ivar, iblk
+        real(rk)    :: tol
+        
+        tol = 1.0e-7_rk
+        
+        ielem = 14
+        iface = 1
+        ivar  = 1
+        
+        !> Block Parameter from cases = []
+        iblk = self%iblk
+        
+        !> Compute Automatic and Finite Difference jacobians
+        call check_jacobian_boundary_upwind_flux(self%domain,ielem,iblk,blk_dnad,blk_fd)
+        
+        
+        @assertEqual(blk_fd%mat, blk_dnad%mat, tol)
+        
+    end subroutine
+    
+    
+    
+    
+
 
 
 

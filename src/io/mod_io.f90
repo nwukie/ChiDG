@@ -9,7 +9,7 @@ module mod_io
     integer(kind=ik),   save    :: sol_poly_order = 2
     integer(kind=ik),   save    :: mesh_poly_order = 1
 
-    integer(kind=ik),   save    :: gq_rule = 1
+    integer(kind=ik),   save    :: gq_rule = 2          !> 1: Collocation, 2: Over-integration
     integer(kind=ik),   save    :: nterms_sol1d = 2
     integer(kind=ik),   save    :: nterms_sol2d = 2
     integer(kind=ik),   save    :: nterms_sol3d = 2

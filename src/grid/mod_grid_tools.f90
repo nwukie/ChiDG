@@ -11,18 +11,6 @@ module mod_grid_tools
 
 contains
 
-
-!    subroutine initialize_solution(domain)
-!
-!
-!
-!
-!    end subroutine
-
-
-
-
-
     !>  Compute discrete coordinate values, given the modes of a coordinate expansion
     !!
     !!  @author Nathan A. Wukie
@@ -68,8 +56,6 @@ contains
         cmodes%mat(:,3) = matmul(elem_map(imap)%mat,pts(:)%c3_)
 
     end subroutine
-
-
 
 
 

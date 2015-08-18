@@ -10,32 +10,31 @@ module mod_check_jacobian
 
 contains
 
-    subroutine check_jacobian_volume_flux(domain,ielem,ivar,iblk,blk_dnad,blk_fd)
+    subroutine check_jacobian_volume_flux(domain,ielem,iblk,blk_dnad,blk_fd)
         type(domain_t),      intent(inout)       :: domain
-        integer(ik),         intent(in)          :: ielem, ivar, iblk
+        integer(ik),         intent(in)          :: ielem, iblk
         type(densematrix_t), intent(inout)       :: blk_dnad, blk_fd
 
         type(expansion_t), allocatable  :: rhs_r(:), vec_fd(:)
         real(rk)    :: qhold, eps
-        integer(ik) :: nelem, i, iterm
+        integer(ik) :: nelem, i, iterm, icol, nterms, ivar
         integer(ik) :: ielem_p              !> ielem_p is the element in which the solution is being perturbed for the finite difference calculation.
-
 
 
         associate ( mesh => domain%mesh, sdata => domain%sdata)
 
+
             nelem = mesh%nelem
+            nterms = mesh%nterms_s
             !------------------------------------------------------------------------------------------
             !                                      Interior Scheme
             !------------------------------------------------------------------------------------------
-
             call sdata%lin%clear()          !> Ensure linearization is zero-ed
             do i=1,size(sdata%rhs)
                 sdata%rhs(i)%vec = ZERO     !> Ensure RHS vector is zero-ed
             end do
             rhs_r  = sdata%rhs              !> should result in sourced allocation
             vec_fd = sdata%rhs
-
 
             !> For the current element, compute the contributions from volume integrals
             call domain%eqnset%compute_volume_flux(mesh,sdata,ielem,iblk)
@@ -56,7 +55,6 @@ contains
                 sdata%rhs(i)%vec = ZERO
             end do
 
-
             !> Select in which element, the solution is being perturbed
             if (iblk == DIAG) then
                 ielem_p = ielem
@@ -68,36 +66,39 @@ contains
 
 
             !> Loop through terms, perturb term, compute rhs, compute finite difference jacobian, return term.
-            do iterm = 1,domain%mesh%nterms_s
+            do ivar = 1,domain%eqnset%neqns
+                do iterm = 1,domain%mesh%nterms_s
 
-                !> Perturb the iterm-th term in the solution expansion for variable ivar in element ielem.
-                eps   = 1.e-8_rk
-                qhold = sdata%q(ielem_p)%mat(iterm,ivar)
-                sdata%q(ielem_p)%mat(iterm,ivar) = sdata%q(ielem_p)%mat(iterm,ivar) + eps
-
-
-                !> For the current element, compute the contributions from volume integrals
-                call domain%eqnset%compute_volume_flux(mesh,sdata,ielem,iblk)
+                    !> Perturb the iterm-th term in the solution expansion for variable ivar in element ielem.
+                    eps   = 1.e-8_rk
+                    qhold = sdata%q(ielem_p)%mat(iterm,ivar)
+                    sdata%q(ielem_p)%mat(iterm,ivar) = sdata%q(ielem_p)%mat(iterm,ivar) + eps
 
 
-                sdata%q(ielem_p)%mat(iterm,ivar) = qhold  !> Return perturbed value to normal state
-
-                !> Compute finite difference jacobian
-                vec_fd = (sdata%rhs - rhs_r)/eps
+                    !> For the current element, compute the contributions from volume integrals
+                    call domain%eqnset%compute_volume_flux(mesh,sdata,ielem,iblk)
 
 
-                !> Store to column of blk_fd
-                blk_fd%mat(:,iterm) = vec_fd(ielem)%vec
+                    sdata%q(ielem_p)%mat(iterm,ivar) = qhold  !> Return perturbed value to normal state
+
+                    !> Compute finite difference jacobian
+                    vec_fd = (sdata%rhs - rhs_r)/eps
 
 
-                !> Reset sdata storage
-                call sdata%lin%clear()
-                do i=1,size(sdata%rhs)
-                    sdata%rhs(i)%vec = ZERO
+                    !> Store to column of blk_fd
+                    icol = (ivar-1)*nterms + iterm          !> Compute appropriate column for storing linearization
+                    blk_fd%mat(:,icol) = vec_fd(ielem)%vec !> Store finite difference linearization of the residual
+
+
+                    !> Reset sdata storage
+                    call sdata%lin%clear()
+                    do i=1,size(sdata%rhs)
+                        sdata%rhs(i)%vec = ZERO
+                    end do
+
                 end do
-
-
             end do
+
 
 
         end associate
@@ -109,14 +110,14 @@ contains
 
 
 
-    subroutine check_jacobian_boundary_average_flux(domain,ielem,ivar,iblk,blk_dnad,blk_fd)
+    subroutine check_jacobian_boundary_average_flux(domain,ielem,iblk,blk_dnad,blk_fd)
         type(domain_t),      intent(inout)       :: domain
-        integer(ik),         intent(in)          :: ielem, ivar, iblk
+        integer(ik),         intent(in)          :: ielem, iblk
         type(densematrix_t), intent(inout)       :: blk_dnad, blk_fd
 
         type(expansion_t), allocatable  :: rhs_r(:), vec_fd(:)
         real(rk)    :: qhold, eps
-        integer(ik) :: nelem, i, iterm, iface
+        integer(ik) :: nelem, i, iterm, iface, ivar, icol, nterms
         integer(ik) :: ielem_p              !> ielem_p is the element in which the solution is being perturbed for the finite difference calculation.
 
 
@@ -134,6 +135,7 @@ contains
         associate ( mesh => domain%mesh, sdata => domain%sdata)
 
             nelem = mesh%nelem
+            nterms = mesh%nterms_s
             !------------------------------------------------------------------------------------------
             !                                      Interior Scheme
             !------------------------------------------------------------------------------------------
@@ -182,35 +184,37 @@ contains
 
 
             !> Loop through terms, perturb term, compute rhs, compute finite difference jacobian, return term.
-            do iterm = 1,domain%mesh%nterms_s
+            do ivar = 1,domain%eqnset%neqns
+                do iterm = 1,domain%mesh%nterms_s
 
-                !> Perturb the iterm-th term in the solution expansion for variable ivar in element ielem.
-                eps   = 1.e-8_rk
-                qhold = sdata%q(ielem_p)%mat(iterm,ivar)
-                sdata%q(ielem_p)%mat(iterm,ivar) = sdata%q(ielem_p)%mat(iterm,ivar) + eps
-
-
-                !> For the current element, compute the contributions from volume integrals
-                call domain%eqnset%compute_boundary_average_flux(mesh,sdata,ielem,iface,DIAG)    !> Need to use DIAG to get rhs for finite difference calculation. This is because RHS is only stored for DIAG in the integrate procedure.
+                    !> Perturb the iterm-th term in the solution expansion for variable ivar in element ielem.
+                    eps   = 1.e-8_rk
+                    qhold = sdata%q(ielem_p)%mat(iterm,ivar)
+                    sdata%q(ielem_p)%mat(iterm,ivar) = sdata%q(ielem_p)%mat(iterm,ivar) + eps
 
 
-                sdata%q(ielem_p)%mat(iterm,ivar) = qhold  !> Return perturbed value to normal state
-
-                !> Compute finite difference jacobian
-                vec_fd = (sdata%rhs - rhs_r)/eps
+                    !> For the current element, compute the contributions from volume integrals
+                    call domain%eqnset%compute_boundary_average_flux(mesh,sdata,ielem,iface,DIAG)    !> Need to use DIAG to get rhs for finite difference calculation. This is because RHS is only stored for DIAG in the integrate procedure.
 
 
-                !> Store to column of blk_fd
-                blk_fd%mat(:,iterm) = vec_fd(ielem)%vec
+                    sdata%q(ielem_p)%mat(iterm,ivar) = qhold  !> Return perturbed value to normal state
+
+                    !> Compute finite difference jacobian
+                    vec_fd = (sdata%rhs - rhs_r)/eps
 
 
-                !> Reset sdata storage
-                call sdata%lin%clear()
-                do i=1,size(sdata%rhs)
-                    sdata%rhs(i)%vec = ZERO
+                    !> Store to column of blk_fd
+                    icol = (ivar-1)*nterms + iterm          !> Compute appropriate column for storing linearization
+                    blk_fd%mat(:,icol) = vec_fd(ielem)%vec
+
+
+                    !> Reset sdata storage
+                    call sdata%lin%clear()
+                    do i=1,size(sdata%rhs)
+                        sdata%rhs(i)%vec = ZERO
+                    end do
+
                 end do
-
-
             end do
 
 
@@ -221,14 +225,14 @@ contains
 
 
 
-   subroutine check_jacobian_boundary_upwind_flux(domain,ielem,ivar,iblk,blk_dnad,blk_fd)
+   subroutine check_jacobian_boundary_upwind_flux(domain,ielem,iblk,blk_dnad,blk_fd)
         type(domain_t),      intent(inout)       :: domain
-        integer(ik),         intent(in)          :: ielem, ivar, iblk
+        integer(ik),         intent(in)          :: ielem, iblk
         type(densematrix_t), intent(inout)       :: blk_dnad, blk_fd
 
         type(expansion_t), allocatable  :: rhs_r(:), vec_fd(:)
         real(rk)    :: qhold, eps
-        integer(ik) :: nelem, i, iterm, iface
+        integer(ik) :: nelem, i, iterm, iface, ivar, icol, nterms
         integer(ik) :: ielem_p              !> ielem_p is the element in which the solution is being perturbed for the finite difference calculation.
 
 
@@ -248,6 +252,7 @@ contains
         associate ( mesh => domain%mesh, sdata => domain%sdata)
 
             nelem = mesh%nelem
+            nterms = mesh%nterms_s
             !------------------------------------------------------------------------------------------
             !                                      Interior Scheme
             !------------------------------------------------------------------------------------------
@@ -297,35 +302,37 @@ contains
 
 
             !> Loop through terms, perturb term, compute rhs, compute finite difference jacobian, return term.
-            do iterm = 1,domain%mesh%nterms_s
+            do ivar = 1,domain%eqnset%neqns
+                do iterm = 1,domain%mesh%nterms_s
 
-                !> Perturb the iterm-th term in the solution expansion for variable ivar in element ielem.
-                eps   = 1.e-8_rk
-                qhold = sdata%q(ielem_p)%mat(iterm,ivar)
-                sdata%q(ielem_p)%mat(iterm,ivar) = sdata%q(ielem_p)%mat(iterm,ivar) + eps
-
-
-                !> For the current element, compute the contributions from volume integrals
-                call domain%eqnset%compute_boundary_average_flux(mesh,sdata,ielem,iface,DIAG)    !> Need to use DIAG to get rhs for finite difference calculation. This is because RHS is only stored for DIAG in the integrate procedure.
+                    !> Perturb the iterm-th term in the solution expansion for variable ivar in element ielem.
+                    eps   = 1.e-8_rk
+                    qhold = sdata%q(ielem_p)%mat(iterm,ivar)
+                    sdata%q(ielem_p)%mat(iterm,ivar) = sdata%q(ielem_p)%mat(iterm,ivar) + eps
 
 
-                sdata%q(ielem_p)%mat(iterm,ivar) = qhold  !> Return perturbed value to normal state
-
-                !> Compute finite difference jacobian
-                vec_fd = (sdata%rhs - rhs_r)/eps
+                    !> For the current element, compute the contributions from volume integrals
+                    call domain%eqnset%compute_boundary_upwind_flux(mesh,sdata,ielem,iface,DIAG)    !> Need to use DIAG to get rhs for finite difference calculation. This is because RHS is only stored for DIAG in the integrate procedure.
 
 
-                !> Store to column of blk_fd
-                blk_fd%mat(:,iterm) = vec_fd(ielem)%vec
+                    sdata%q(ielem_p)%mat(iterm,ivar) = qhold  !> Return perturbed value to normal state
+
+                    !> Compute finite difference jacobian
+                    vec_fd = (sdata%rhs - rhs_r)/eps
 
 
-                !> Reset sdata storage
-                call sdata%lin%clear()
-                do i=1,size(sdata%rhs)
-                    sdata%rhs(i)%vec = ZERO
+                    !> Store to column of blk_fd
+                    icol = (ivar-1)*nterms + iterm          !> Compute appropriate column for storing linearization
+                    blk_fd%mat(:,icol) = vec_fd(ielem)%vec
+
+
+                    !> Reset sdata storage
+                    call sdata%lin%clear()
+                    do i=1,size(sdata%rhs)
+                        sdata%rhs(i)%vec = ZERO
+                    end do
+
                 end do
-
-
             end do
 
 

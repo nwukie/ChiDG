@@ -1,4 +1,5 @@
 module mod_quadrature
+#include <messenger.h>
     use mod_kinds,          only: rk,ik
     use mod_constants,      only: PI
 
@@ -38,7 +39,7 @@ contains
         do while (nterms1d*nterms1d*nterms1d /= nterms_s)
             nterms1d = nterms1d + 1
         end do
-        if (nterms1d*nterms1d*nterms1d > nterms_s) stop "Error: compute_nnodes_integration in term count"
+        if (nterms1d*nterms1d*nterms1d > nterms_s) call signal(FATAL, "Incorrect number of terms counted when computing quadrature nodes")
 
 
         ! Compute number of 1D nodes, based on integration rule
@@ -47,13 +48,13 @@ contains
                 ! Collocation quadrature
                 nnodes1d = nterms1d
             case(2)
-!                nnodes1d = 3*nterms1d/2 + 1
-                nnodes1d = 3*nterms1d + 1
+                nnodes1d = ceiling(3._rk*real(nterms1d,rk)/2._rk)
+!                nnodes1d = 3*nterms1d + 1
             case(3)
                 nnodes1d = 2*nterms1d + 1
             case default
-                print*, "Error: compute_nnodes_integration - valid rules are (1,2,3)"
-                stop
+                call signal(FATAL, "compute_nnodes_integration: Value for gq_rule, specifying the rule for selecting number of quadrature points was not valid. Recognized values are gq_rule = (1, 2, 3)")
+
         end select
 
         ! Compute face and volume nodes

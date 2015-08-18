@@ -46,7 +46,7 @@ contains
         integer(ik)     :: itime, ntime, ielem, wcount, iblk
 
 
-        ntime = 20000
+        ntime = 2
         wcount = 1
         associate ( q => domain%sdata%q, dq => domain%sdata%dq, rhs => domain%sdata%rhs, lin => domain%sdata%lin, dt => self%dt)
 
@@ -67,12 +67,6 @@ contains
 
                 !> Compute update vector
                 dq = dt * rhs
-
-
-!                do ielem = 1,domain%mesh%nelem
-!                    print*, rhs(ielem)%vec
-!                end do
-
 
                 !> Advance solution with update vector
                 q  = q + dq

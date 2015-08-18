@@ -7,6 +7,7 @@ module test_element_linearA_mod
     use type_point,     only: point_t
     use type_element,   only: element_t
     use type_face,      only: face_t
+    use mod_io,         only: gq_rule
     implicit none
 
     public  :: test_element_linearA
@@ -32,6 +33,9 @@ contains
         integer(ik), parameter  :: npt = 8
         type(point_t)           :: pts(npt)
         integer(ik)             :: ftype, ineighbor, mapping, ielem
+        
+        
+        gq_rule = 1 !> Set collocation quadrature for testing coordinates at quadrature points
         
         
         call this%chidg%init()
@@ -130,7 +134,7 @@ contains
         real(rk)    :: test_mass(self%elem%nterms_s,self%elem%nterms_s)
         real(rk)    :: tol
         
-        tol = 1.e-15_rk
+        tol = 1.e-14_rk
         
         test_mass = ZERO
         test_mass(1,1) = EIGHT
@@ -184,6 +188,10 @@ contains
        real(rk), dimension(self%elem%gq%vol%nnodes, 8) :: test
        real(rk), dimension(self%elem%gq%vol%nnodes)    :: xi, eta, zeta
        
+       real(rk) :: tol
+       
+       tol = 1.e-14_rk
+       
        xi   = self%elem%gq%vol%nodes(:)%c1_
        eta  = self%elem%gq%vol%nodes(:)%c2_
        zeta = self%elem%gq%vol%nodes(:)%c3_
@@ -198,7 +206,7 @@ contains
        test(:,6) = 0.4_rk * zeta       !> Mode 6
        test(:,7) = ZERO                !> Mode 7
        test(:,8) = 0.4_rk * eta * zeta !> Mode 8
-       @assertEqual(test,self%elem%dtdx)
+       @assertEqual(test,self%elem%dtdx,tol)
    end subroutine
 
 
@@ -211,6 +219,10 @@ contains
        class(test_element_linearA),    intent(inout)   :: self
        real(rk), dimension(self%elem%gq%vol%nnodes, 8) :: test
        real(rk), dimension(self%elem%gq%vol%nnodes)    :: xi, eta, zeta
+       
+       real(rk) :: tol
+       
+       tol = 1.e-14_rk
        
        xi   = self%elem%gq%vol%nodes(:)%c1_
        eta  = self%elem%gq%vol%nodes(:)%c2_
@@ -226,7 +238,7 @@ contains
        test(:,6) = ZERO                !> Mode 6
        test(:,7) = TWO * zeta          !> Mode 7
        test(:,8) = TWO * xi * zeta     !> Mode 8
-       @assertEqual(test,self%elem%dtdy)
+       @assertEqual(test,self%elem%dtdy,tol)
    end subroutine
 
 
@@ -239,6 +251,10 @@ contains
        class(test_element_linearA),    intent(inout)   :: self
        real(rk), dimension(self%elem%gq%vol%nnodes, 8) :: test
        real(rk), dimension(self%elem%gq%vol%nnodes)    :: xi, eta, zeta
+       
+       real(rk) :: tol
+       
+       tol = 1.e-14_rk
        
        xi   = self%elem%gq%vol%nodes(:)%c1_
        eta  = self%elem%gq%vol%nodes(:)%c2_
@@ -254,7 +270,7 @@ contains
        test(:,6) = TWO * xi            !> Mode 6
        test(:,7) = TWO * eta           !> Mode 7
        test(:,8) = TWO * xi * eta      !> Mode 8
-       @assertEqual(test,self%elem%dtdz)
+       @assertEqual(test,self%elem%dtdz,tol)
        
    end subroutine
 

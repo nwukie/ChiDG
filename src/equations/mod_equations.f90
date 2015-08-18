@@ -6,12 +6,13 @@ module mod_equations
     ! Import Equations
     use eqn_scalar,                     only: scalar_e
     use eqn_linearadvection,            only: linearadvection_e
+    use eqn_euler,                      only: euler_e
     implicit none
 
     ! Instantiate Equations
     type(scalar_e)          :: SCALAR
     type(linearadvection_e) :: LINEARADVECTION
-
+    type(euler_e)           :: EULER
 
     logical :: uninitialized = .true.
 
@@ -26,6 +27,7 @@ contains
             ! List of equations to initialize
             call SCALAR%init()
             call LINEARADVECTION%init()
+            call EULER%init()
 
         end if
 
@@ -51,11 +53,14 @@ contains
 
 
         select case (trim(eqnstring))
-            case ('scalar','Scalar')
+            case ('scalar','Scalar','SCALAR')
                 allocate(eqnset, source=SCALAR)
 
             case ('linearadvection','LinearAdvection','la','LA')
                 allocate(eqnset, source=LINEARADVECTION)
+
+            case('euler','Euler','EULER')
+                allocate(eqnset, source=EULER)
 
             case default
                 call signal(FATAL,'create_equationset -- equation string not recognized')

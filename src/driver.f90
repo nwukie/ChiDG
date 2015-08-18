@@ -46,24 +46,25 @@ program driver
     call read_grid_hdf('4x4x4.h5',domains)
 
     print*, 'initializing domain numerics'
-    call domains(1)%init_sol('LA',8)
+    call domains(1)%init_sol('euler',27)
 
 
     print*, 'create_function'
-    call create_function(fcn,'gaussian')
+    call create_function(fcn,'constant')
+    call fcn%set(1.0_rk)
 
 
     print*, 'initialize_variable'
     call initialize_variable(domains(1),1,fcn)
+    call initialize_variable(domains(1),2,fcn)
+    call initialize_variable(domains(1),3,fcn)
+    call initialize_variable(domains(1),4,fcn)
+    call initialize_variable(domains(1),5,fcn)
 
 
     call write_tecio_variables(domains(1),'0.plt',1)
 
 
-
-
-
-!    call check_jacobian_volume_flux(domains(1),22,7)
 
 
 

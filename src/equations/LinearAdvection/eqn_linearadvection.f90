@@ -9,6 +9,7 @@ module eqn_linearadvection
     use atype_solverdata,       only: solverdata_t
     use mod_interpolate,        only: interpolate
     use mod_integrate,          only: integrate_volume_flux, integrate_boundary_flux
+    use mod_DNAD_tools,         only: compute_neighbor_face, compute_seed_element
     use DNAD_D
 
     implicit none
@@ -70,11 +71,11 @@ contains
         class(solverdata_t),    intent(inout)   :: sdata
         integer(ik),            intent(in)      :: ielem, iface, iblk
 
-        integer(ik)              :: u_i, iseed, ierr, nnodes, ineighbor, iface_p, i
+        integer(ik)              :: iu, iseed, ierr, nnodes, ineighbor, iface_p, i
         type(AD_D), allocatable  :: u_l(:), u_r(:), flux_x(:), flux_y(:), flux_z(:)
 
 
-        u_i       = self%get_var('u')
+        iu       = self%get_var('u')
         nnodes    = mesh%faces(ielem,iface)%gq%nnodes_f
         ineighbor = mesh%faces(ielem,iface)%ineighbor
 
@@ -89,34 +90,14 @@ contains
         if (ierr /= 0) call AllocationError
 
 
-        !> Get element for seeding derivatives
-        if ( iblk == DIAG ) then
-            iseed = ielem
-        else
-            iseed = mesh%faces(ielem,iblk)%ineighbor
-        end if
+        !> Get neighbor face and seed element for derivatives
+        iface_p = compute_neighbor_face(iface)
+        iseed   = compute_seed_element(mesh,ielem,iblk)
 
 
-        if (iface == XI_MIN) then
-            iface_p = XI_MAX
-        else if (iface == XI_MAX) then
-            iface_p = XI_MIN
-        else if (iface == ETA_MIN) then
-            iface_p = ETA_MAX
-        else if (iface == ETA_MAX) then
-            iface_p = ETA_MIN
-        else if (iface == ZETA_MIN) then
-            iface_p = ZETA_MAX
-        else if (iface == ZETA_MAX) then
-            iface_p = ZETA_MIN
-        end if
-
-
-
-        !> Interpolate to quadrature points
-        call interpolate(mesh%faces,sdata%q,ielem,    iface,  u_i,u_r,iseed)
-        call interpolate(mesh%faces,sdata%q,ineighbor,iface_p,u_i,u_l,iseed)
-
+        !> Interpolate solution to quadrature nodes
+        call interpolate(mesh%faces,sdata%q,ielem,    iface,  iu,u_r,iseed)
+        call interpolate(mesh%faces,sdata%q,ineighbor,iface_p,iu,u_l,iseed)
 
 
         !> Compute boundary average flux
@@ -125,10 +106,8 @@ contains
         flux_z = ((self%c(3)*u_l + self%c(3)*u_r)/TWO )  *  mesh%faces(ielem,iface)%norm(:,3)
 
 
-
-
         !> Integrate flux
-        call integrate_boundary_flux(mesh%faces(ielem,iface), sdata, u_i, iblk, flux_x, flux_y, flux_z)
+        call integrate_boundary_flux(mesh%faces(ielem,iface), sdata, iu, iblk, flux_x, flux_y, flux_z)
 
     end subroutine
 
@@ -146,11 +125,11 @@ contains
 
 
 
-        integer(ik)              :: u_i, iseed, ierr, nnodes, ineighbor, iface_p, i
+        integer(ik)              :: iu, iseed, ierr, nnodes, ineighbor, iface_p, i
         type(AD_D), allocatable  :: u_l(:), u_r(:), flux_x(:), flux_y(:), flux_z(:)
 
 
-        u_i       = self%get_var('u')
+        iu        = self%get_var('u')
         nnodes    = mesh%faces(ielem,iface)%gq%nnodes_f
         ineighbor = mesh%faces(ielem,iface)%ineighbor
 
@@ -164,48 +143,24 @@ contains
         if (ierr /= 0) call AllocationError
 
 
-        if (iface == XI_MIN) then
-            iface_p = XI_MAX
-        else if (iface == XI_MAX) then
-            iface_p = XI_MIN
-        else if (iface == ETA_MIN) then
-            iface_p = ETA_MAX
-        else if (iface == ETA_MAX) then
-            iface_p = ETA_MIN
-        else if (iface == ZETA_MIN) then
-            iface_p = ZETA_MAX
-        else if (iface == ZETA_MAX) then
-            iface_p = ZETA_MIN
-        end if
+        !> Get neighbor face and seed element for derivatives
+        iface_p = compute_neighbor_face(iface)
+        iseed   = compute_seed_element(mesh,ielem,iblk)
 
 
+        !> Interpolate solution to quadrature nodes
+        call interpolate(mesh%faces,sdata%q,ielem,    iface,  iu,u_r,iseed)
+        call interpolate(mesh%faces,sdata%q,ineighbor,iface_p,iu,u_l,iseed)
 
 
-
-        !> Get element for seeding derivatives
-        if ( iblk == DIAG ) then
-            iseed = ielem
-        else
-            iseed = mesh%faces(ielem,iblk)%ineighbor
-        end if
-
-        !> Interpolate to quadrature points
-        call interpolate(mesh%faces,sdata%q,ielem,    iface,  u_i,u_r,iseed)
-        call interpolate(mesh%faces,sdata%q,ineighbor,iface_p,u_i,u_l,iseed)
-
-
-        !> Compute boundary average flux
+        !> Compute boundary upwind flux
         flux_x = (self%c(1) * (u_l - u_r)/TWO )  *  mesh%faces(ielem,iface)%norm(:,1)
         flux_y = (self%c(2) * (u_l - u_r)/TWO )  *  mesh%faces(ielem,iface)%norm(:,2)
         flux_z = (self%c(3) * (u_l - u_r)/TWO )  *  mesh%faces(ielem,iface)%norm(:,3)
 
 
         !> Integrate flux
-        call integrate_boundary_flux(mesh%faces(ielem,iface), sdata, u_i, iblk, flux_x, flux_y, flux_z)
-
-
-
-
+        call integrate_boundary_flux(mesh%faces(ielem,iface), sdata, iu, iblk, flux_x, flux_y, flux_z)
 
     end subroutine
 
@@ -243,21 +198,15 @@ contains
             if (ierr /= 0) call AllocationError
 
 
+            !> Get seed element for derivatives
+            iseed   = compute_seed_element(mesh,ielem,iblk)
 
 
-            ! Interpolate modal varaiables to quadrature points
-            !> Get element for seeding derivatives
-            if ( iblk == DIAG ) then
-                iseed = ielem
-            else
-                iseed = mesh%faces(ielem,iblk)%ineighbor
-            end if
-
-!            iseed = 0   !> no derivative tracking
+            !> Interpolate solution to quadrature nodes
             call interpolate(mesh%elems,q,ielem,ivar_u,u,iseed)
 
 
-            ! Compute volume flux at quadrature nodes
+            !> Compute volume flux at quadrature nodes
             flux_x = self%c(1)  *  u
             flux_y = self%c(2)  *  u
             flux_z = self%c(3)  *  u

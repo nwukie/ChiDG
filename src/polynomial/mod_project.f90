@@ -22,14 +22,14 @@ contains
     !!  @param[out] fmodes  Modal coefficients of the projected function
     !------------------------------------------------------------------------------
     subroutine project_function_xyz(fcn,nterms,cmodes,fmodes)
-        class(function_t),  intent(in)  :: fcn
-        integer(ik),        intent(in)  :: nterms
-        type(expansion_t),  intent(in)  :: cmodes           ! Expansion contains x-modes, y-modes, and z-modes
-        real(rk),           intent(out) :: fmodes(nterms)
+        class(function_t),      intent(in)    :: fcn
+        integer(ik),            intent(in)    :: nterms
+        type(expansion_t),      intent(in)    :: cmodes           ! Expansion contains x-modes, y-modes, and z-modes
+        real(rk),               intent(inout) :: fmodes(:)
 
         type(point_t),  allocatable     :: pts(:)
         real(rk),       allocatable     :: fvals(:)
-        integer(ik)                     :: nterms_1d, nn_face, nn_vol, igq, ierr
+        integer(ik)                     :: nterms_1d, nn_face, nn_vol, igq, ierr, i
         integer(ik)                     :: gq_p, gq_c
         logical                         :: has_correct_nodes_terms
 
@@ -52,6 +52,7 @@ contains
 
         ! Call function for evaluation and multiply by quadrature weights
         fvals = fcn%calc(pts)  *  GQ(gq_p)%vol%weights
+
 
         ! Project
         fmodes = matmul(transpose(GQ(gq_p)%vol%val),fvals) / GQ(gq_p)%vol%dmass

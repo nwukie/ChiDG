@@ -3,7 +3,7 @@ module type_face
     use mod_kinds,              only: rk,ik
     use mod_constants,          only: XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, &
                                       ZETA_MIN, ZETA_MAX, XI_DIR, ETA_DIR, ZETA_DIR, &
-                                      SPACEDIM, NFACES
+                                      SPACEDIM, NFACES, TWO
     use type_point,             only: point_t
     use type_element,           only: element_t
     use type_quadrature,        only: quadrature_t
@@ -39,6 +39,7 @@ module type_face
         real(rk),       allocatable  :: jinv(:)                     !> array of inverse element jacobians on the face
         real(rk),       allocatable  :: metric(:,:,:)               !> Face metric terms
         real(rk),       allocatable  :: norm(:,:)                   !> Face normals
+        real(rk),       allocatable  :: unorm(:,:)                  !> Unit normals
         real(rk),       pointer      :: invmass(:,:) => null()      !> Pointer to element inverse mass matrix
 
 
@@ -129,7 +130,8 @@ contains
         allocate(self%quad_pts(nnodes),                    &
                  self%jinv(nnodes),                        &
                  self%metric(SPACEDIM,SPACEDIM,nnodes),    &
-                 self%norm(nnodes,SPACEDIM), stat=ierr)
+                 self%norm(nnodes,SPACEDIM),               &
+                 self%unorm(nnodes,SPACEDIM), stat=ierr)
         if (ierr /= 0) call AllocationError
 
         call self%compute_quadrature_metrics()
@@ -211,7 +213,7 @@ contains
         real(rk)    :: dxdxi(self%gq%face%nnodes), dxdeta(self%gq%face%nnodes), dxdzeta(self%gq%face%nnodes)
         real(rk)    :: dydxi(self%gq%face%nnodes), dydeta(self%gq%face%nnodes), dydzeta(self%gq%face%nnodes)
         real(rk)    :: dzdxi(self%gq%face%nnodes), dzdeta(self%gq%face%nnodes), dzdzeta(self%gq%face%nnodes)
-        real(rk)    :: invjac(self%gq%face%nnodes)
+        real(rk)    :: invjac(self%gq%face%nnodes), norm_mag(self%gq%face%nnodes)
 
         iface = self%iface
         nnodes = self%gq%face%nnodes
@@ -265,6 +267,14 @@ contains
             self%norm(:,ETA_DIR)  = -self%norm(:,ETA_DIR)
             self%norm(:,ZETA_DIR) = -self%norm(:,ZETA_DIR)
         end if
+
+
+
+        !> Compute unit normals
+        norm_mag = sqrt(self%norm(:,XI_DIR)**TWO + self%norm(:,ETA_DIR)**TWO + self%norm(:,ZETA_DIR)**TWO)
+        self%unorm(:,XI_DIR) = self%norm(:,XI_DIR)/norm_mag
+        self%unorm(:,ETA_DIR) = self%norm(:,ETA_DIR)/norm_mag
+        self%unorm(:,ZETA_DIR) = self%norm(:,ZETA_DIR)/norm_mag
 
 
     end subroutine

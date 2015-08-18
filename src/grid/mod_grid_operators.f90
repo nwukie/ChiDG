@@ -1,4 +1,5 @@
 module mod_grid_operators
+#include <messenger.h>
     use mod_kinds,          only: rk, ik
     use type_point,         only: point_t
     use type_element,       only: element_t
@@ -26,7 +27,7 @@ contains
         integer(ik),        intent(in)      :: ivar
         class(function_t),  intent(inout)   :: fcn
 
-        integer(ik)             :: ielem
+        integer(ik)             :: ielem, ierr
         real(rk), allocatable   :: fmodes(:)
 
 
@@ -34,11 +35,19 @@ contains
         do ielem = 1,domain%mesh%nelem
             associate (elem  =>  domain%mesh%elems(ielem), q => domain%sdata%q(ielem))
 
+                !> Initial array allocation
+                if (.not. allocated(fmodes)) allocate(fmodes(q%nterms))
+
+
                 ! Reallocate mode storage if necessary
                 if (size(fmodes) /= q%nterms) then
                     if (allocated(fmodes)) deallocate(fmodes)
-                    allocate(fmodes(q%nterms))
+                    allocate(fmodes(q%nterms), stat=ierr)
+                    if (ierr /= 0) call AllocationError
                 end if
+
+
+                if (.not. allocated(fmodes)) print*, "WARNING: fmodes not allocated"
 
                 ! Call function projection
                 call project_function_xyz(fcn,elem%nterms_s,elem%coords,fmodes)

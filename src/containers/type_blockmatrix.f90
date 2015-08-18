@@ -159,9 +159,17 @@ contains
 
         integer(ik) :: ielem, iblk
 
+        !> For each element
         do ielem = 1,size(self%lblks,1)
+            !> For each block linearization for the current element
             do iblk = 1,size(self%lblks,2)
-                self%lblks(ielem,iblk)%mat = ZERO
+
+                !> Check if the block storage is actually allocated
+                if (allocated(self%lblks(ielem,iblk)%mat)) then
+                    !> If so, set to ZERO
+                    self%lblks(ielem,iblk)%mat = ZERO
+                end if
+
             end do
         end do
 

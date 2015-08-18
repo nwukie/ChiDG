@@ -8,6 +8,7 @@ module atype_function
     contains
         procedure(order_interface), deferred :: order       !> Returns the order of the implemented function so the proper integration rule can be used later on
         procedure(calc_interface),  deferred :: calc        !> Elemental function definition
+        procedure                            :: set         !> Set function value
 
     end type function_t
 
@@ -39,6 +40,15 @@ module atype_function
     end interface
 
 contains
+
+
+
+    subroutine set(self,value)
+        class(function_t),  intent(inout)    :: self
+        real(rk),           intent(in)       :: value
+
+    end subroutine
+
 
 
 end module atype_function

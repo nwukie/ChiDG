@@ -1,4 +1,5 @@
 module type_volumeQuadrature
+#include <messenger.h>
     use mod_kinds,          only: rk,ik
     use mod_constants,      only: NFACES,XI_MIN,XI_MAX,ETA_MIN,ETA_MAX,ZETA_MIN,ZETA_MAX, &
                                   XI_DIR,ETA_DIR,ZETA_DIR,SPACEDIM
@@ -41,7 +42,7 @@ contains
     subroutine init(self,nnodes,nterms)
         class(volumeQuadrature_t),  intent(inout)   :: self
         integer(ik),                intent(in)      :: nnodes,nterms
-        integer(ik)                                 :: ixi,ieta,izeta,inode,iterm,nnodes1d
+        integer(ik)                                 :: ixi,ieta,izeta,inode,iterm,nnodes1d,ierr
         real(rk)                                    :: xi,eta,zeta
         real(rk), dimension(:), allocatable         :: xi_vals,eta_vals,zeta_vals
         real(rk), dimension(:), allocatable         :: xi_weights,eta_weights,zeta_weights
@@ -53,13 +54,17 @@ contains
         !===========================================================================
         ! allocate quadrature storage
         !===========================================================================
-        allocate(self%nodes(nnodes),self%weights(nnodes))
-        allocate(self%val(   nnodes,nterms))
-        allocate(self%ddxi(  nnodes,nterms))
-        allocate(self%ddeta( nnodes,nterms))
-        allocate(self%ddzeta(nnodes,nterms))
-        allocate(self%mass(nterms,nterms))
-        allocate(self%dmass(nterms))
+        allocate(self%nodes(nnodes),self%weights(nnodes),       &
+                 self%val(   nnodes,nterms),                    &
+                 self%ddxi(  nnodes,nterms),                    &
+                 self%ddeta( nnodes,nterms),                    &
+                 self%ddzeta(nnodes,nterms),                    &
+                 self%mass(nterms,nterms),                      &
+                 self%dmass(nterms), stat=ierr)
+        if (ierr /= 0) call AllocationError
+
+
+
 
         !===========================================================================
         ! Initialize quadrature node coordinates for face sets
@@ -138,11 +143,16 @@ contains
         deallocate(zeta_vals,eta_vals,xi_vals)
 
     end subroutine
+
+
+
+
     
     subroutine destructor(self)
         type(volumeQuadrature_t), intent(inout) :: self
-        deallocate(self%nodes,self%weights)
-        deallocate(self%val,self%ddxi,self%ddeta,self%ddzeta)
+
+
+
     end subroutine
 
 end module type_volumeQuadrature

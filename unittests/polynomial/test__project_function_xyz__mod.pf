@@ -89,43 +89,43 @@ contains
         real(rk)                    :: pvals(npt,self%nterms_s)
         real(rk)                    :: ref_integral, fintegral, xi,tol
 
-        tol = 1.e-13_rk
+        tol = 1.e-12_rk
 
         call create_function(fcn,'xsquared')
         associate (elem => self%dom%mesh%elems(1))
-        
-        ! Function evaluation points
-        x = [0._rk, 0.5_rk, 1.0_rk, 1.5_rk, 2.0_rk, 2.5_rk, 3.0_rk, 3.5_rk, 4.0_rk, 4.5_rk, 5.0_rk]
-        y = ZERO
-        z = ZERO
-        
-        do ipt = 1,npt
-            call pts(ipt)%set(x(ipt),y(ipt),z(ipt)) !> Cartesian points
-            xi = -1._rk + 2._rk * x(ipt)/(5._rk)
-            call rpts(ipt)%set(xi,ZERO,ZERO)        !> Reference element points
-        end do
-        
-        
-        ! Compute reference values for function
-        rvals = fcn%calc(pts)
-
-        ! Compute projection of function onto polynonmial basis
-        call project_function_xyz(fcn,self%nterms_s,elem%coords,fmodes)
-
-        ! Evaluation polynomial modes at evaluation points
-        do iterm = 1,size(fmodes)
+            
+            ! Function evaluation points
+            x = [0._rk, 0.5_rk, 1.0_rk, 1.5_rk, 2.0_rk, 2.5_rk, 3.0_rk, 3.5_rk, 4.0_rk, 4.5_rk, 5.0_rk]
+            y = ZERO
+            z = ZERO
+            
             do ipt = 1,npt
-                pvals(ipt,iterm) = PolynomialVal(3,size(fmodes),iterm,rpts(ipt))
+                call pts(ipt)%set(x(ipt),y(ipt),z(ipt)) !> Cartesian points
+                xi = -1._rk + 2._rk * x(ipt)/(5._rk)
+                call rpts(ipt)%set(xi,ZERO,ZERO)        !> Reference element points
             end do
-        end do
-
-        ! Reconstruct projected function at evaluation points
-        fvals = matmul(pvals,fmodes)
-        
-
-        ! Compute integral of function
-        fintegral = sum(matmul(elem%gq%vol%val, fmodes)  *  elem%gq%vol%weights  *  elem%jinv)
-        
+            
+            
+            ! Compute reference values for function
+            rvals = fcn%calc(pts)
+    
+            ! Compute projection of function onto polynonmial basis
+            call project_function_xyz(fcn,self%nterms_s,elem%coords,fmodes)
+    
+            ! Evaluation polynomial modes at evaluation points
+            do iterm = 1,size(fmodes)
+                do ipt = 1,npt
+                    pvals(ipt,iterm) = PolynomialVal(3,size(fmodes),iterm,rpts(ipt))
+                end do
+            end do
+    
+            ! Reconstruct projected function at evaluation points
+            fvals = matmul(pvals,fmodes)
+            
+    
+            ! Compute integral of function
+            fintegral = sum(matmul(elem%gq%vol%val, fmodes)  *  elem%gq%vol%weights  *  elem%jinv)
+            
         end associate
 
 

@@ -1374,7 +1374,11 @@ CONTAINS
             res%xp_ad_= -u%xp_ad_
          ELSE 
             res%x_ad_ = 0.0D0
-            res%xp_ad_= 0.0 !Set_NaN_D() ! Indicating an undefined derivative, however, for some codes it will cause problem.
+!            res%xp_ad_= 0.0 !Set_NaN_D() ! Indicating an undefined derivative, however, for some codes it will cause problem.
+
+            res%xp_ad_ = u%xp_ad_   !> NEED THIS TO ENFORCE ALLOCATION OF res%xp_ad_
+            res%xp_ad_ = 0.0D0      !> THEN, SET TO ZERO
+
          ENDIF
 
     END FUNCTION ABS_D_D
@@ -1835,7 +1839,6 @@ CONTAINS
         TYPE (AD_D), INTENT(IN)::val1, val2
         TYPE (AD_D), INTENT(IN),OPTIONAL:: val3, val4
         TYPE (AD_D)::res
-!        allocate(res%xp_ad_(size(val1%xp_ad_)))
    
         IF (val1%x_ad_ < val2%x_ad_) THEN
             res = val1
@@ -1851,14 +1854,13 @@ CONTAINS
 
     END FUNCTION MIN_DD_D
 
-!-----------------------------------------
+    !-----------------------------------------
     ! Obtain the min of a dual number and a single
     !----------------------------------------    
     ELEMENTAL FUNCTION MIN_DR_D(u, n) RESULT(res)
         TYPE (AD_D), INTENT(IN)::u
         REAL(DBL_AD),INTENT(IN)::n
         TYPE (AD_D)::res
-!        allocate(res%xp_ad_(size(u%xp_ad_)))
    
         IF (u%x_ad_ < n) THEN
             res = u
@@ -1875,8 +1877,7 @@ CONTAINS
         TYPE (AD_D), INTENT(IN)::u
         REAL(SNG_AD),INTENT(IN)::n
         TYPE (AD_D)::res
-!        allocate(res%xp_ad_(size(u%xp_ad_)))
-   
+
         IF (u%x_ad_ < n) THEN
             res = u
         ELSE 
@@ -1885,14 +1886,13 @@ CONTAINS
         
     END FUNCTION MIN_DS_D
 
-  !-----------------------------------------
+    !-----------------------------------------
     ! Obtain the min value of vector u
     !----------------------------------------    
     FUNCTION MINVAL_D_D(u) RESULT(res)
         TYPE (AD_D), INTENT(IN)::u(:)
         INTEGER::iloc(1)
         TYPE (AD_D)::res
-!        allocate(res%xp_ad_(size(u(1)%xp_ad_)))
 
         stop "MINVAL - might not work properly"
 
@@ -1921,7 +1921,7 @@ CONTAINS
     ELEMENTAL   FUNCTION SIGN_DD_D(val1, val2) RESULT(res)
         TYPE (AD_D), INTENT(IN) :: val1, val2
         TYPE (AD_D)::res
-!        allocate(res%xp_ad_(size(val1%xp_ad_)))
+
    
         IF (val2%x_ad_ < 0.D0) THEN
             res = -ABS(val1)

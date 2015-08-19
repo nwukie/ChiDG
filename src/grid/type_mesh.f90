@@ -20,7 +20,7 @@ module type_mesh
 
         ! Grid data
         type(element_t),  allocatable  :: elems(:)                  !> Element storage (1:nelem)
-        type(element_t),  pointer      :: elems_m(:,:,:) => null()  !> Matrix view of element storage (1:nelem_xi, 1:nelem_eta, 1:nelem_zeta)
+        type(element_t),  pointer, contiguous      :: elems_m(:,:,:) => null()  !> Matrix view of element storage (1:nelem_xi, 1:nelem_eta, 1:nelem_zeta)
         type(face_t),     allocatable  :: faces(:,:)                !> Face storage    (1:nelem,1:nfaces)
 
         ! TODO: Needs tested

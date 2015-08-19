@@ -11,12 +11,12 @@ contains
     subroutine update_space(domain)
         type(domain_t), intent(inout)   :: domain
 
-        integer(ik) :: iblk, ielem, iface, nelem, i
+        integer(ik) :: iblk, ielem, iface, nelem, i, ibc
         real(rk)    :: istart, istop, elapsed
         logical     :: skip = .false.
 
 
-        associate ( mesh => domain%mesh, sdata => domain%sdata)
+        associate ( mesh => domain%mesh, sdata => domain%sdata, eqnset => domain%eqnset)
 
             nelem = mesh%nelem
             !------------------------------------------------------------------------------------------
@@ -34,6 +34,9 @@ contains
                 do ielem = 1,nelem
 
 
+                    !> If the block direction is DIAG, then we want to compute all valid faces with neighbors.
+                    !! If the block direction is not DIAG, then we only want to compute faces in the block direction
+                    !! if it has a neighbor element.
                     if (iblk /= DIAG) then
                         !> Check if there is an element to linearize against in the iblk direction. If not, cycle
                         if (domain%mesh%faces(ielem,iblk)%ineighbor == 0) then
@@ -48,12 +51,12 @@ contains
 
 
 
-
+                    !-----------------------------------------------------------------------------------------
                     if ( .not. skip) then
                         ! For the current element, compute the contributions from boundary integrals
                         do iface = 1,NFACES
                             !> Only call the following routines for interior faces -- ftype == 0
-                            !> Furthermore, only call the routines if we are computing derivatives for the neighbor of
+                            !! Furthermore, only call the routines if we are computing derivatives for the neighbor of
                             !! iface or for the current element(DIAG). This saves a lot of unnecessary compute_boundary calls.
                             if (domain%mesh%faces(ielem,iface)%ftype == 0 .and. &
                                 (iblk == iface .or. iblk == DIAG)) then
@@ -69,11 +72,23 @@ contains
                         call domain%eqnset%compute_volume_source(mesh,sdata,ielem,iblk)
 
                     end if
+                    !-----------------------------------------------------------------------------------------
 
                 end do !elem
-
-
             end do !block
+
+
+
+
+            !------------------------------------------------------------------------------------------
+            !                                      Boundary Scheme
+            !------------------------------------------------------------------------------------------
+            !> For boundary conditions, the linearization only depends on Q-, which is the solution vector
+            !! for the interior element. So, we only need to compute derivatives for the interior element (DIAG)
+            iblk = 7    !> DIAG
+!            call domain%bcset%apply(eqnset,mesh,sdata,iblk)
+
+
 
 
 
@@ -84,10 +99,6 @@ contains
 
             elapsed = istop - istart
             print*, elapsed
-            !-------------------------------------------------------------------------------------------
-            !                                     Boundary Scheme
-            !-------------------------------------------------------------------------------------------
-
 
         end associate
 

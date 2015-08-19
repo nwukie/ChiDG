@@ -10,7 +10,6 @@ module eqn_euler
     use mod_DNAD_tools,         only: compute_neighbor_face, compute_seed_element
     use DNAD_D
 
-
     implicit none
 
     private
@@ -29,9 +28,14 @@ module eqn_euler
         procedure  :: compute_volume_source
 
 
-
-
     end type euler_e
+
+
+
+
+
+
+
 
 
 

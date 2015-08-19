@@ -8,7 +8,7 @@ module type_domain
     use type_mesh,          only: mesh_t
     use atype_solverdata,   only: solverdata_t
     use atype_equationset,  only: equationset_t
-    use atype_bc,           only: bc_t
+    use type_bcset,         only: bcset_t
 
     implicit none
 
@@ -25,7 +25,8 @@ module type_domain
         type(mesh_t)                        :: mesh                       !> Mesh storage
         class(solverdata_t),  allocatable   :: sdata                      !> Solver data storage
         class(equationset_t), allocatable   :: eqnset                     !> Equation set solved on this domain
-        class(bc_t),          allocatable   :: bcs(:)                     !> Boundary condition array
+!        class(bcset_t),       allocatable   :: bcset                      !> Boundary condition set
+!        class(bc_t),          allocatable   :: bcs(:)                     !> Boundary condition array
 
         logical                             :: geomInitialized = .false.
         logical                             :: numInitialized  = .false.
@@ -58,6 +59,10 @@ contains
         ! Initialize mesh geometry
         call self%mesh%init_geom(nterms_c,points)
 
+
+        ! Initialize boundary condition storage
+!        call self%bcset%init()
+
         self%geomInitialized = .true.
     end subroutine
 
@@ -89,9 +94,8 @@ contains
 
         call self%mesh%init_sol(self%eqnset%neqns,nterms_s) !> Call initialization for mesh required in solution procedure
         call self%sdata%init(self%mesh)                     !> Call initialization for solver and solver data
+
         self%numInitialized = .true.                        !> Confirm initialization
-
-
     end subroutine
 
 

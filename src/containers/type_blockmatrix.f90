@@ -179,6 +179,48 @@ contains
 
 
 
+
+    !>  Builds full matrix representation of block matrix
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @param[inout] fullmat   Storage for full matrix representation
+    !------------------------------------------------------------------
+    subroutine build(self,fullmat)
+        class(blockmatrix_t),       intent(inout)   :: self
+        real(rk),   allocatable,    intent(inout)   :: fullmat(:,:)
+
+
+
+
+
+
+
+
+    end subroutine
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     subroutine destructor(self)
         type(blockmatrix_t), intent(inout) :: self
 

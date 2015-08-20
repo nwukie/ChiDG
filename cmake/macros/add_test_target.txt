@@ -16,10 +16,10 @@ macro (add_test_target target_subdirectory)
 	include_directories(${PF_ROOT}/mod)
 	
 
-	######################################################################
+	#################################################################################
     # Loop through each test file, process with pFUnitParser and generate list of output files for compiler
     # DEPENDS option ensures that if the .pf file is changed, the parser will be called to reprocess the file
-    ######################################################################
+    #################################################################################
 	set(_test_sources)
     foreach (_test ${ARGN})
     	# Get filename without extension (NAME_WE)
@@ -41,16 +41,21 @@ macro (add_test_target target_subdirectory)
 	
 	set_source_files_properties(${PF_ROOT}/include/driver.F90 PROPERTIES GENERATED 1)
 	
-	######################################################################
+	##################################################################################
 	## define test target and link with pfunit and coredg libraries
-	######################################################################
+	##################################################################################
 	add_executable(${target_name} ${PF_ROOT}/include/driver.F90 ${_test_sources})
 	target_link_libraries(${target_name} ${PF_ROOT}/lib/libpfunit.a coredg -lstdc++ -lpthread)
 	
+	set_target_properties(${target_name} PROPERTIES 
+                             COMPILE_FLAGS ""
+                             LINK_FLAGS    "")
 	
-	######################################################################
+	                         # COMPILE_FLAGS "-prof-gen=srcpos" code coverage flags
+	
+	##################################################################################
 	##	Add test that can be run with 'make test' or 'ctest'
-	######################################################################
+	##################################################################################
 	add_test(NAME ${target_name}
 			 WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
 			 COMMAND $<TARGET_FILE:${target_name}>)

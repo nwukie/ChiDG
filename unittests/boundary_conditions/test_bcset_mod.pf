@@ -1,0 +1,70 @@
+module test_bcset_mod
+    use pfunit_mod
+    use mod_kinds,      only: rk,ik
+    use mod_constants,  only: ZERO, ONE, TWO, THREE, FIVE, SIX, EIGHT, NINE, TEN, &
+                              XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX
+    use type_chidg,     only: chidg_t
+    use type_point,     only: point_t
+    use type_domain,    only: domain_t
+    use mod_testutils,  only: meshgen
+    implicit none
+
+    public  :: test_bcset
+
+@TestCase
+    type, extends(TestCase) ::  test_bcset
+        type(chidg_t)          :: chidg
+        type(domain_t)         :: domain
+    contains
+        procedure   ::  setUp
+        procedure   ::  tearDown
+    end type test_bcset
+
+
+contains
+    !> NOTE: make sure to use 'this' instead of 'self' since these are over-writting a derived type 
+    !! procedure. The argument names have to match
+    subroutine setUp(this)
+        class(test_bcset),    intent(inout)   :: this
+        
+        integer(ik), parameter     :: npt = 27
+        type(point_t), allocatable :: pts(:,:,:)
+        integer(ik)                :: nterms_c, nterms_s
+        
+        !> Initialize chidg environment
+        call this%chidg%init()
+        
+        !> Generate points for a 2x2x2 element mesh
+        call meshgen('222',pts)
+        
+        !> Call domain initialization
+        nterms_c = 8
+        nterms_s = 8
+        call this%domain%init_geom(nterms_c,pts)
+        call this%domain%init_sol('euler',nterms_s)
+
+    end subroutine
+    
+    subroutine tearDown(this)
+        class(test_bcset),    intent(inout)   :: this
+    end subroutine
+
+
+
+
+
+!> Test boundary condition storage was allocated
+@Test
+    subroutine test_bcset_allocated(self)
+        class(test_bcset),    intent(inout)   :: self
+
+        @assertTrue(allocated(self%domain%bcset%bcs))
+        
+    end subroutine
+
+
+
+
+
+
+end module test_bcset_mod

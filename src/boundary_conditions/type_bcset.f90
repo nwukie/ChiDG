@@ -17,9 +17,9 @@ module type_bcset
     !!
     !-------------------------------------------------
     type, public :: bcset_t
-        private
+!        private
 
-        class(bcwrapper_t), allocatable    :: bcs(:)       !> Array of boundary conditions. Useing a wrapper here
+        class(bcwrapper_t), allocatable    :: bcs(:)       !> Array of boundary conditions. Using a wrapper here
                                                            !! because we can't allocate an array of polymorphic variables
                                                            !! without SOURCE or MOLD, for which we need a concrete type
 

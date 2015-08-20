@@ -19,6 +19,10 @@ contains
         select case (trim(string))
             case ('3x3x3','333')
                 call meshgen_3x3x3_linear(pts)
+
+            case ('2x2x2','222')
+                call meshgen_2x2x2_linear(pts)
+
             case default
                 call signal(FATAL,'String identifying mesh generation routine was not recognized')
         end select
@@ -31,13 +35,73 @@ contains
 
 
 
+    !> Generate a set of points defining a 2x2x2 element mesh
+    !!
+    !!  @author Nathan A. Wukie
+    !---------------------------------------------------------------------
+    subroutine meshgen_2x2x2_linear(pts)
+        type(point_t), allocatable, intent(inout)  :: pts(:,:,:)
 
+        integer(ik), parameter      :: npt = 27
+        integer(ik)                 :: ipt_xi, ipt_eta, ipt_zeta, ipt, ierr
+        real(rk), dimension(npt)    :: x,y,z
+
+        !> elements (2x2x2) - linear
+
+        !!          *-------*-------*
+        !!         /       /       /|
+        !!        *-------*-------* |
+        !!       /       /       /| *
+        !!      *-------*-------* |/|
+        !!      |       |       | * |
+        !!      |       |       |/| *
+        !!      *-------*-------* |/
+        !!      |       |       | *
+        !!      |       |       |/
+        !!      *-------*-------*
+        !!
+        !!
+        x = [ZERO, ONE, TWO, ZERO, ONE, TWO, ZERO, ONE, TWO, &
+             ZERO, ONE, TWO, ZERO, ONE, TWO, ZERO, ONE, TWO, &
+             ZERO, ONE, TWO, ZERO, ONE, TWO, ZERO, ONE, TWO]
+
+        y = [ZERO, ZERO, ZERO, ONE, ONE, ONE, TWO, TWO, TWO, &
+             ZERO, ZERO, ZERO, ONE, ONE, ONE, TWO, TWO, TWO, &
+             ZERO, ZERO, ZERO, ONE, ONE, ONE, TWO, TWO, TWO]
+
+        z = [ZERO, ZERO, ZERO, ZERO, ZERO, ZERO, ZERO, ZERO, ZERO, &
+             ONE, ONE, ONE, ONE, ONE, ONE, ONE, ONE, ONE, &
+             TWO, TWO, TWO, TWO, TWO, TWO, TWO, TWO, TWO]
+
+
+        !> Allocate point storage
+        allocate(pts(3,3,3), stat=ierr)
+        if (ierr /= 0) call AllocationError
+
+        ipt = 1
+        do ipt_zeta = 1,3
+            do ipt_eta = 1,3
+                do ipt_xi = 1,3
+                    call pts(ipt_xi,ipt_eta,ipt_zeta)%set(x(ipt), y(ipt), z(ipt))
+                    ipt = ipt + 1
+                end do
+            end do
+        end do
+
+    end subroutine
+
+
+
+
+    !> Generate a set of points defining a 3x3x3 element mesh
+    !!
+    !!  @author Nathan A. Wukie
+    !---------------------------------------------------------------------
     subroutine meshgen_3x3x3_linear(pts)
         type(point_t), allocatable, intent(inout)  :: pts(:,:,:)
 
         integer(ik), parameter      :: npt = 64
         integer(ik)                 :: ipt_xi, ipt_eta, ipt_zeta, ipt
-        integer(ik)                 :: neqns, nterms_s, nterms_c
         real(rk), dimension(npt)    :: x,y,z
 
         !> elements (3x3x3) - linear

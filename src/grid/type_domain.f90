@@ -23,10 +23,9 @@ module type_domain
     type, public :: domain_t
         character(100)                      :: name                       !> Domain name -- not currently used
         type(mesh_t)                        :: mesh                       !> Mesh storage
-        class(solverdata_t),  allocatable   :: sdata                      !> Solver data storage
+        type(bcset_t)                       :: bcset                      !> Boundary condition set
         class(equationset_t), allocatable   :: eqnset                     !> Equation set solved on this domain
-!        class(bcset_t),       allocatable   :: bcset                      !> Boundary condition set
-!        class(bc_t),          allocatable   :: bcs(:)                     !> Boundary condition array
+        class(solverdata_t),  allocatable   :: sdata                      !> Solver data storage
 
         logical                             :: geomInitialized = .false.
         logical                             :: numInitialized  = .false.
@@ -61,7 +60,7 @@ contains
 
 
         ! Initialize boundary condition storage
-!        call self%bcset%init()
+        call self%bcset%init()
 
         self%geomInitialized = .true.
     end subroutine

@@ -6,3 +6,4 @@ build_intel
 run
 media
 testrun
+*.swp

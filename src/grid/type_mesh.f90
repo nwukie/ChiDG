@@ -5,7 +5,6 @@ module type_mesh
     use type_element,       only: element_t
     use type_face,          only: face_t
     use type_point,         only: point_t
-
     implicit none
     private
 
@@ -78,7 +77,7 @@ contains
 !        ftemp => self%faces
 !        self%faces_m(1:self%nelem_xi,1:self%nelem_eta,1:self%nelem_zeta,NFACES) => ftemp(1:self%nelem,NFACES)
 
-    end subroutine
+    end subroutine init_geom
 
 
 
@@ -106,7 +105,7 @@ contains
         call self%init_faces_sol()                  ! Specialized solution initialization for faces
 !        call self%init_boundary_conditions()        ! Initialize boundary conditions
 
-    end subroutine
+    end subroutine init_sol
 
 
 
@@ -239,7 +238,7 @@ contains
                 end do
             end do
         end do
-    end subroutine
+    end subroutine init_elems_geom
 
 
 
@@ -265,7 +264,7 @@ contains
         do ielem = 1,self%nelem
             call self%elems(ielem)%init_sol(self%neqns,self%nterms_s)
         end do
-    end subroutine
+    end subroutine init_elems_sol
 
 
 
@@ -336,7 +335,7 @@ contains
             end do ! ieta
         end do ! izeta
 
-    end subroutine
+    end subroutine init_faces_geom
 
 
 
@@ -358,7 +357,7 @@ contains
                 call self%faces(ielem,iface)%init_sol(self%elems(ielem))
             end do
         end do
-    end subroutine
+    end subroutine init_faces_sol
 
 
 

@@ -1,29 +1,30 @@
+!> Dictionary container
+!!
+!!   The general structure for this type was crafted after
+!!   an example on fortranwiki.org, hash table example.
+!!   However, here we are just traversing a linked-list to find things,
+!!   and not hashing anything
+!!
+!------------------------------------------------------------------------
 module type_dict
-    !===========================================
-    !
-    !   The general structure for this type was crafted after
-    !   an example on fortranwiki.org, hash table example.
-    !   However, here we are just traversing a linked-list to find things,
-    !   and not hashing anything
-    !
-    !===========================================
     use mod_kinds,      only: rk,ik
     implicit none
     private
 
 
-    !===========================================
-    !
-    !   Linked-List container type - used by Dictionary
-    !       character-real pair
-    !===========================================
+    !> Linked-List container type - used by Dictionary
+    !!      - character:real pair
+    !!
+    !!  @author Nathan A. Wukie
+    !!
+    !---------------------------------------------------
     type :: llreal_t
         ! Node pointer
         type(llreal_t), pointer :: child => null()
 
         ! Character-Real value pair
         character(len=:), allocatable   :: key
-        real(kind=rk)                   :: val
+        real(rk)                        :: val
 
 
     contains
@@ -34,18 +35,22 @@ module type_dict
     end type llreal_t
 
 
-    !===========================================
-    !
-    !   Linked-List container type - used by Dictionary
-    !       character-real pair
-    !===========================================
+
+
+
+    !> Linked-List container type - used by Dictionary
+    !!      - character:integer pair
+    !!
+    !!  @author Nathan A. Wukie
+    !!
+    !------------------------------------------------------
     type :: llint_t
         ! Node pointer
         type(llint_t), pointer :: child => null()
 
         ! Character-Integer value pair
         character(len=:), allocatable   :: key
-        integer(kind=ik)                :: val
+        integer(ik)                     :: val
 
 
     contains
@@ -56,11 +61,15 @@ module type_dict
     end type llint_t
 
 
-    !===========================================
-    !
-    !   Dictionary for storing key-value pairs
-    !
-    !===========================================
+
+
+
+    !> Dictionary Type for storing key-value pairs
+    !!
+    !!  @author Nathan A. Wukie
+    !!
+    !!
+    !-------------------------------------------------
     type, public :: dict_t
 
         type(llreal_t)   :: llreal
@@ -85,11 +94,9 @@ module type_dict
 
 contains
 
-    !===============================================
     !
     !   Routines for Dictionary
     !
-    !===============================================
     subroutine get_real_dict(self,key,val)
         class(dict_t),    intent(inout) :: self
         character(len=*), intent(in)    :: key
@@ -226,6 +233,13 @@ contains
     !   Routines for character-integer linked list
     !
     !===============================================
+
+    !> Find the existing key and set val, or create a new node
+    !! and set the associated value.
+    !!
+    !!  @author Nathan A. Wukie
+    !!
+    !------------------------------------------------------------
     recursive subroutine set_llint(list,key,val)
         class(llint_t),      intent(inout) :: list
         character(len=*),    intent(in)    :: key
@@ -265,6 +279,12 @@ contains
     
 
 
+    !> Traverse the linked-list to find the 'key' and return the associated value
+    !!
+    !!
+    !!  @author Nathan A. Wukie
+    !!
+    !----------------------------------------------------------------------------
     recursive subroutine get_llint(list,key,val)
         class(llint_t),     intent(in)  :: list
         character(len=*),   intent(in)  :: key
@@ -292,6 +312,14 @@ contains
     end subroutine
 
 
+
+
+
+
+    !> Remove a node from the list
+    !!
+    !!
+    !----------------------------------------------------------------------------
     recursive subroutine free_llint(list)
         class(llint_t),    intent(inout)   :: list
 

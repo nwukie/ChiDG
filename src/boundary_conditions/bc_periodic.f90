@@ -5,7 +5,7 @@ module bc_periodic
     use atype_equationset,  only: equationset_t
     use atype_solverdata,   only: solverdata_t
     use type_mesh,          only: mesh_t
-
+    use type_dict,          only: dict_t
     type, extends(bc_t) :: periodic_bc
 
     contains
@@ -29,10 +29,11 @@ contains
     !!  @param[in]      iface   Face index to which the boundary condition is applied
     !!
     !-----------------------------------------------------------------------
-    subroutine init_spec(self,mesh,iface)
+    subroutine init_spec(self,mesh,iface,options)
         class(periodic_bc),     intent(inout)   :: self
         type(mesh_t),           intent(inout)   :: mesh
         integer(ik),            intent(in)      :: iface
+        type(dict_t), optional, intent(in)      :: options
 
         integer(ik) :: ielem, ielem_p, ixi, ieta, izeta, ixi_p, ieta_p, izeta_p
 

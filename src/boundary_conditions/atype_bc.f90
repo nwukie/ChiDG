@@ -6,6 +6,7 @@ module atype_bc
     use type_element,       only: element_t
     use atype_equationset,  only: equationset_t
     use atype_solverdata,   only: solverdata_t
+    use type_dict,          only: dict_t
     implicit none
     private
 
@@ -59,10 +60,12 @@ contains
     !!  @param[in]  iface   block face index to which the boundary condition is being applied
     !!
     !------------------------------------------------------------------------------------------
-    subroutine init(self,mesh,iface)
+    subroutine init(self,mesh,iface,options)
         class(bc_t),            intent(inout)       :: self
         type(mesh_t),           intent(inout)       :: mesh
         integer(ik),            intent(in)          :: iface 
+        type(dict_t), optional, intent(in)          :: options
+
         
         integer(ik)                 :: nelem_xi, nelem_eta, nelem_zeta, nelem_bc, ielem_bc, & 
                                        xi_begin, eta_begin, zeta_begin, xi_end, eta_end, zeta_end, & 
@@ -132,7 +135,7 @@ contains
         !
         ! Call user-specialized boundary condition initializatio        
         !
-        call self%init_spec(mesh,iface)
+        call self%init_spec(mesh,iface,options)
 
         self%isInitialized = .true. ! Set initialization confirmation
     end subroutine init
@@ -190,10 +193,11 @@ contains
     !!  @param[in]  mesh    mesh_t object containing elements and faces
     !!  @param[in]  iface   block face index to which the boundary condition is being applied
     !--------------------------------------------------------------------------------
-    subroutine init_spec(self,mesh,iface)
+    subroutine init_spec(self,mesh,iface,options)
         class(bc_t),            intent(inout)   :: self
         type(mesh_t),           intent(inout)   :: mesh
         integer(ik),            intent(in)      :: iface
+        type(dict_t), optional, intent(in)      :: options
 
 
 

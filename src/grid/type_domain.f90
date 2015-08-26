@@ -3,6 +3,7 @@ module type_domain
     use mod_kinds,          only: rk, ik
     use mod_equations,      only: create_equationset
     use mod_solverdata,     only: create_solverdata
+    use mod_bc,             only: create_bc
 
     use type_point,         only: point_t
     use type_mesh,          only: mesh_t
@@ -10,8 +11,7 @@ module type_domain
     use atype_equationset,  only: equationset_t
     use atype_bc,           only: bc_t
     use type_bcset,         only: bcset_t
-    use mod_bc,             only: create_bc
-
+    use type_dict,          only: dict_t
     implicit none
 
     private
@@ -87,14 +87,14 @@ contains
     !!
     !!
     !-----------------------------------------------------
-    subroutine init_bcs(self)
-        class(domain_t),    intent(inout)   :: self
+    subroutine init_bcs(self,bcstr,iface,options)
+        class(domain_t),            intent(inout)   :: self
+        character(*),               intent(in)      :: bcstr
+        integer(ik),                intent(in)      :: iface
+        type(dict_t), optional,     intent(in)      :: options
 
         class(bc_t), allocatable    :: bc
-        character(len=100)          :: bcstr
-
-
-        integer(ik) :: iface
+        integer(ik) :: ibc, nbc
 
 
         !
@@ -105,7 +105,7 @@ contains
         !
         ! Call initialization for boundary condition
         ! 
-        call bc%init(self%mesh,iface) 
+        call bc%init(self%mesh,iface,options)   ! It should be okay to pass the optional argument, as long as it is optional in bc%init
 
         !
         ! Add initialized boundary condition to bc-set

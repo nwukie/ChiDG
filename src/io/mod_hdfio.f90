@@ -70,7 +70,6 @@ contains
         !  Allocate number of domains
         if (ndomains == 0) then
             call signal(FATAL,'read_hdf5: No Domains were found in the file')
-            !stop "Error: read_hdf5 - no Domains found in file."
         else
             allocate(domains(ndomains), stat=ierr)
             if (ierr /= 0) call AllocationError
@@ -110,17 +109,20 @@ contains
                 call h5dget_space_f(did_x, sid, ierr)
                 call h5sget_simple_extent_dims_f(sid, dims, maxdims, ierr)
 
+
                 !  Read x-points
                 allocate(xpts(dims(1),dims(2),dims(3)))
                 cp_pts = c_loc(xpts(1,1,1))
                 call h5dread_f(did_x, H5T_NATIVE_DOUBLE, cp_pts, ierr)
                 if (ierr /= 0) stop "Error: read_grid_hdf5 -- h5dread_f"
 
+
 !                allocate(ypts, mold=xpts)   ! bug in gcc
                 allocate(ypts(dims(1),dims(2),dims(3)))
                 cp_pts = c_loc(ypts(1,1,1))
                 call h5dread_f(did_y, H5T_NATIVE_DOUBLE, cp_pts, ierr)
                 if (ierr /= 0) stop "Error: read_grid_hdf5 -- h5dread_f"
+
 
 !                allocate(zpts, mold=xpts)   ! bug in gcc
                 allocate(zpts(dims(1),dims(2),dims(3)))
@@ -145,7 +147,6 @@ contains
 
                 ! Call domain geometry initialization
                 call domains(idom)%init_geom(nterms_c,points)
-
 
 
                 ! Close the Coordinate datasets

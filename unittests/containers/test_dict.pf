@@ -1,0 +1,163 @@
+! Test Dictionary type for key-value pairs
+!       Test CHAR-REAL pairs
+!--------------------------------------------------------------------------------
+
+
+!> Test that a single character-real pair is set and retrieved correctly
+!!
+!!  @author Nathan A. Wukie
+!!
+!!--------------------------------------------------------------------
+@Test
+subroutine test_dict_set_one_real()
+    use pfunit_mod
+    use mod_kinds,      only: rk,ik
+    use type_dict,      only: dict_t
+    implicit none
+
+    type(dict_t)    :: dict
+    real(rk)        :: val_a_ref, val_b_ref, val_a, val_b
+    
+    val_a_ref = 5._rk
+    val_b_ref = 10._rk
+
+
+    ! Set key-value pair:   character-real
+    call dict%set('val_a',val_a_ref)
+
+
+    ! Get values from keys
+    call dict%get('val_a',val_a)
+
+
+    @assertEqual(val_a_ref,val_a)
+
+end subroutine test_dict_set_one_real
+
+
+
+
+
+
+!> Test that two character-real pairs are set and retrieved correctly
+!!
+!!  @author Nathan A. Wukie
+!!
+!-----------------------------------------------------------------
+@Test
+subroutine test_dict_set_two_real()
+    use pfunit_mod
+    use mod_kinds,      only: rk,ik
+    use type_dict,      only: dict_t
+    implicit none
+
+    type(dict_t)    :: dict
+    real(rk)        :: val_a_ref, val_b_ref, val_a, val_b
+    
+    val_a_ref = 5._rk
+    val_b_ref = 10._rk
+
+
+    ! Set key-value pair:   character-real
+    call dict%set('val_a',val_a_ref)
+    call dict%set('val_b',val_b_ref)
+
+
+    ! Get values from keys
+    call dict%get('val_a',val_a)
+    call dict%get('val_b',val_b)
+
+
+    @assertEqual(val_a_ref,val_a)
+    @assertEqual(val_b_ref,val_b)
+
+end subroutine test_dict_set_two_real
+
+
+
+
+
+
+!------------------------------------------------------------------------------
+!------------------------------------------------------------------------------
+!
+!           Test CHAR-INTEGER pairs
+!
+!------------------------------------------------------------------------------
+!------------------------------------------------------------------------------
+
+
+
+
+!> Test that a single character-integer pair is set and retrieved correctly
+!!
+!!  @author Nathan A. Wukie
+!!
+!!--------------------------------------------------------------------
+@Test
+subroutine test_dict_set_one_integer()
+    use pfunit_mod
+    use mod_kinds,      only: rk,ik
+    use type_dict,      only: dict_t
+    implicit none
+
+    type(dict_t)    :: dict
+    integer(ik)     :: val_a_ref, val_b_ref, val_a, val_b
+    
+    val_a_ref = 5
+    val_b_ref = 10
+
+
+    ! Set key-value pair:   character-integer
+    call dict%set('val_a',val_a_ref)
+
+
+    ! Get values from keys
+    call dict%get('val_a',val_a)
+
+
+    @assertEqual(val_a_ref,val_a)
+
+end subroutine test_dict_set_one_integer
+
+
+
+
+
+
+!> Test that two character-integer pairs are set and retrieved correctly
+!!
+!!  @author Nathan A. Wukie
+!!
+!-----------------------------------------------------------------
+@Test
+subroutine test_dict_set_two_integer()
+    use pfunit_mod
+    use mod_kinds,      only: rk,ik
+    use type_dict,      only: dict_t
+    implicit none
+
+    type(dict_t)    :: dict
+    integer(ik)     :: val_a_ref, val_b_ref, val_a, val_b
+    
+    val_a_ref = 5
+    val_b_ref = 10
+
+
+    ! Set key-value pair:   character-integer
+    call dict%set('val_a',val_a_ref)
+    call dict%set('val_b',val_b_ref)
+
+
+    ! Get values from keys
+    call dict%get('val_a',val_a)
+    call dict%get('val_b',val_b)
+
+
+    @assertEqual(val_a_ref,val_a)
+    @assertEqual(val_b_ref,val_b)
+
+end subroutine test_dict_set_two_integer
+
+
+

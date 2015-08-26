@@ -108,7 +108,7 @@ contains
             call bcset%add(bc)
     
             ! 'bc' should have been added to the first slot. All other slots should remain unallocated
-            @assertTrue(allocated(bcset%bcs(1)%bc))
+            @assertTrue( allocated(bcset%bcs(1)%bc))
             @assertFalse(allocated(bcset%bcs(2)%bc))
             @assertFalse(allocated(bcset%bcs(3)%bc))
             @assertFalse(allocated(bcset%bcs(4)%bc))

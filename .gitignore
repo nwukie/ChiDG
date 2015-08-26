@@ -1,4 +1,5 @@
-doc
+doc/html
+doc/latex
 build
 build_gnu
 build_intel

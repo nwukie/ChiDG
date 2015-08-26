@@ -12,35 +12,38 @@ module atype_bc
 
     !> Abstract base-type for boundary conditions
     !!
-    !!
+    !!  @author Nathan A. Wukie
     !!
     !-------------------------------------------------
     type, public, abstract :: bc_t
-        private
-        integer(ik), allocatable :: ielems(:)    !> Indices of elements associated with boundary condition
-        integer(ik), allocatable :: ifaces(:)    !> Indices of the boundary face for elements elems(ielems)
-
-
-        logical, public :: isInitialized = .false.
+        integer(ik), allocatable    :: ielems(:)                !> Indices of elements associated with boundary condition
+        integer(ik), allocatable    :: ifaces(:)                !> Indices of the boundary face for elements elems(ielems)
+        logical, public             :: isInitialized = .false.  !> Logical switch for indicating the boundary condition initializaiton status
 
     contains
-        procedure :: init               !> Boundary condition initialization
-        procedure :: init_spec          !> Call specialized initialization routine
-        procedure :: apply              !> Spatial application of the boundary condition
+        procedure :: init                                       !> Boundary condition initialization
+        procedure :: init_spec                                  !> Call specialized initialization routine
+        procedure :: apply                                      !> Spatial application of the boundary condition
+        procedure(compute_interface), deferred :: compute       !> Implements boundary condition calculation
 
-        procedure(compute_interface), deferred :: compute  !> Implements boundary condition calculation
     end type bc_t
 
 
 
     abstract interface
-        subroutine compute_interface(self,mesh,iface)
+        subroutine compute_interface(self,eqnset,mesh,sdata,ielem,iface,iblk)
             use mod_kinds,  only: ik
             import bc_t
+            import equationset_t
             import mesh_t
-            class(bc_t),    intent(inout)   :: self
-            type(mesh_t),   intent(in)      :: mesh
-            integer(ik),    intent(in)      :: iface
+            import solverdata_t
+            class(bc_t),            intent(inout)   :: self
+            class(equationset_t),   intent(in)      :: eqnset
+            type(mesh_t),           intent(in)      :: mesh
+            class(solverdata_t),    intent(inout)   :: sdata
+            integer(ik),            intent(in)      :: ielem
+            integer(ik),            intent(in)      :: iface
+            integer(ik),            intent(in)      :: iblk
         end subroutine
     end interface
 
@@ -51,20 +54,20 @@ contains
     !> Initialize boundary condition routine
     !!
     !!  @author Nathan A. Wukie
+    !!
     !!  @param[in]  mesh    mesh_t object containing elements and faces
     !!  @param[in]  iface   block face index to which the boundary condition is being applied
+    !!
     !------------------------------------------------------------------------------------------
     subroutine init(self,mesh,iface)
-        class(bc_t),    intent(inout)       :: self
-        type(mesh_t),   intent(in), target  :: mesh
-        integer(ik),    intent(in)          :: iface
-
-        type(element_t), pointer    :: elems_p(:,:)   !> Pointer to remap face elements to a plane
-        integer(ik)                 :: nelem_xi, nelem_eta, nelem_zeta, nelem_bc, ielem_bc, &
-                                       xi_begin,  eta_begin, zeta_begin, xi_end, eta_end, zeta_end, &
-                                       ixi, ieta, izeta, ierr
-
-
+        class(bc_t),            intent(inout)       :: self
+        type(mesh_t),           intent(inout)       :: mesh
+        integer(ik),            intent(in)          :: iface 
+        
+        integer(ik)                 :: nelem_xi, nelem_eta, nelem_zeta, nelem_bc, ielem_bc, & 
+                                       xi_begin, eta_begin, zeta_begin, xi_end, eta_end, zeta_end, & 
+                                       ixi, ieta, izeta, ierr 
+        
         nelem_xi   = mesh%nelem_xi
         nelem_eta  = mesh%nelem_eta
         nelem_zeta = mesh%nelem_zeta
@@ -78,37 +81,43 @@ contains
         zeta_end = nelem_zeta
 
 
-        !> Compute number of elements associated with the boundary condition
-        !! Constrain index ranges for a particular face on the block
+        ! Compute number of elements associated with the boundary condition
+        ! Constrain index ranges for a particular face on the block
         select case (iface)
-            case (XI_MIN)                           !> XI_MIN constant
+            case (XI_MIN)                           ! XI_MIN constant
                 nelem_bc = nelem_eta * nelem_zeta
                 xi_end = 1
-            case (XI_MAX)                           !> XI_MAX constant
+            case (XI_MAX)                           ! XI_MAX constant
                 nelem_bc = nelem_eta * nelem_zeta
                 xi_begin = nelem_xi
-            case (ETA_MIN)                          !> ETA_MIN constant
+            case (ETA_MIN)                          ! ETA_MIN constant
                 nelem_bc = nelem_xi * nelem_zeta
                 eta_end = 1
-            case (ETA_MAX)                          !> ETA_MAX constant
+            case (ETA_MAX)                          ! ETA_MAX constant
                 nelem_bc = nelem_xi * nelem_zeta
                 eta_begin = nelem_eta
-            case (ZETA_MIN)                         !> ZETA_MIN constant
+            case (ZETA_MIN)                         ! ZETA_MIN constant
                 nelem_bc = nelem_xi * nelem_eta
                 zeta_end = 1
-            case (ZETA_MAX)                         !> ZETA_MAX constant
+            case (ZETA_MAX)                         ! ZETA_MAX constant
                 nelem_bc = nelem_xi * nelem_eta
                 zeta_begin = nelem_zeta
             case default
                 call signal(FATAL,"bc%init: Invalid block face 'iface'. Valid face indices are iface = [1-6]")
         end select
 
-        !> Allocate storage for element and face indices
+
+        !
+        ! Allocate storage for element and face indices
+        !
         allocate(self%ielems(nelem_bc), self%ifaces(nelem_bc), stat=ierr)
         if (ierr /= 0) call AllocationError
 
+
         ielem_bc = 1
-        !> Loop over a face of the block and store element indices
+        !
+        ! Loop over a face of the block and store element indices
+        !
         do izeta = zeta_begin,zeta_end
             do ieta = eta_begin,eta_end
                 do ixi = xi_begin,xi_end
@@ -119,15 +128,32 @@ contains
             end do ! ieta
         end do ! izeta
 
-        call self%init_spec()
 
-        self%isInitialized = .true. !> Set initialization confirmation
-    end subroutine
+        !
+        ! Call user-specialized boundary condition initializatio        
+        !
+        call self%init_spec(mesh,iface)
+
+        self%isInitialized = .true. ! Set initialization confirmation
+    end subroutine init
     
 
 
 
-    !>
+
+    !>  Apply boundary condition to the mesh and solution
+    !!      - Loops through the associated elements(faces) and calls the specialized bc_t%compute
+    !!        procedure for computing the rhs and linearization.
+    !!
+    !!
+    !!  @author Nathan A. Wukie
+    !!
+    !!  @param[in]      eqnset  equationset_t specified for the current domain_t
+    !!  @param[in]      mesh    mesh_t defining elements and faces
+    !!  @param[inout]   sdata   solverdata_t containing solution, rhs, and linearization(lin) data
+    !!  @param[in]      iblk    Block of the linearization for the current element that is being computed (XI_MIN, XI_MAX, eta.)
+    !!
+    !--------------------------------------------------------------------
     subroutine apply(self,eqnset,mesh,sdata,iblk)
         class(bc_t),            intent(inout)   :: self
         class(equationset_t),   intent(in)      :: eqnset
@@ -135,16 +161,47 @@ contains
         class(solverdata_t),    intent(inout)   :: sdata
         integer(ik),            intent(in)      :: iblk
 
+        integer(ik) :: ielem_bc, ielem, iface
 
-    end subroutine
+        !
+        ! Loop through associated boundary condition elements and call compute routine for the boundary flux calculation
+        !
+        do ielem_bc = 1,size(self%ielems)
+            ielem = self%ielems(ielem_bc)   ! Get index of the element being operated on
+            iface = self%ifaces(ielem_bc)   ! Get face index of element 'ielem' that is being operated on
+
+            ! For the current boundary element(face), call specialized compute procedure
+            call self%compute(eqnset,mesh,sdata,ielem,iface,iblk)
+
+        end do
+
+
+    end subroutine apply
+
+
+
 
 
     !> Default specialized initialization procedure. This is called from the base bc%init procedure
     !! and can be overwritten by derived types to implement specialized initiailization details.
-    subroutine init_spec(self)
-        class(bc_t),    intent(inout)   :: self
+    !!
+    !!  @author Nathan A. Wukie
+    !!
+    !!  @param[in]  mesh    mesh_t object containing elements and faces
+    !!  @param[in]  iface   block face index to which the boundary condition is being applied
+    !--------------------------------------------------------------------------------
+    subroutine init_spec(self,mesh,iface)
+        class(bc_t),            intent(inout)   :: self
+        type(mesh_t),           intent(inout)   :: mesh
+        integer(ik),            intent(in)      :: iface
 
-    end subroutine
+
+
+
+    end subroutine init_spec
+
+
+
 
 
 

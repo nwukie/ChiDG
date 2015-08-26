@@ -34,7 +34,7 @@ contains
         integer(ik)             :: ftype, ineighbor, mapping, ielem
         
         
-        call this%chidg%init()
+        call this%chidg%init('env')
         allocate(this%faces(6))
         
         !> Cube element rotated at 45-degrees along the 0,0,0 y-axis

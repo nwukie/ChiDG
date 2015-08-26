@@ -8,7 +8,9 @@ module type_domain
     use type_mesh,          only: mesh_t
     use atype_solverdata,   only: solverdata_t
     use atype_equationset,  only: equationset_t
+    use atype_bc,           only: bc_t
     use type_bcset,         only: bcset_t
+    use mod_bc,             only: create_bc
 
     implicit none
 
@@ -16,16 +18,17 @@ module type_domain
 
 
     !> Domain data type
-    !!      - contains mesh, solution, and equation set information
+    !!      - contains mesh, solution, equation set, and boundary condition information
     !!
     !!   @author Nathan A. Wukie
+    !!
     !-------------------------------------------------------------------------------------------------
     type, public :: domain_t
-        character(100)                      :: name                       !> Domain name -- not currently used
-        type(mesh_t)                        :: mesh                       !> Mesh storage
-        type(bcset_t)                       :: bcset                      !> Boundary condition set
-        class(equationset_t), allocatable   :: eqnset                     !> Equation set solved on this domain
-        class(solverdata_t),  allocatable   :: sdata                      !> Solver data storage
+        character(100)                      :: name                       !< Domain name -- not currently used
+        type(mesh_t)                        :: mesh                       !< Mesh storage
+        type(bcset_t)                       :: bcset                      !< Boundary condition set
+        class(equationset_t), allocatable   :: eqnset                     !< Equation set solved on this domain
+        class(solverdata_t),  allocatable   :: sdata                      !< Solver data storage
 
         logical                             :: geomInitialized = .false.
         logical                             :: numInitialized  = .false.
@@ -33,6 +36,7 @@ module type_domain
     contains
         procedure       :: init_geom
         procedure       :: init_sol
+        procedure       :: init_bcs
         final           :: destructor
 
     end type domain_t
@@ -45,6 +49,7 @@ contains
     !!      - call geometry initialization for mesh component
     !!
     !!  @author Nathan A. Wukie
+    !!
     !!  @param[in]  nterms_c    Number of terms in the modal representation of the cartesian coordinates
     !!  @param[in]  points      Array of cartesian points defining the element
     !------------------------------------------------------------------
@@ -55,15 +60,62 @@ contains
 
         if (self%geomInitialized) stop "Error: domain%init_geom -- domain geometry already initialized"
 
-        ! Initialize mesh geometry
-        call self%mesh%init_geom(nterms_c,points)
 
+        call self%mesh%init_geom(nterms_c,points)   ! Initialize mesh geometry
+        call self%bcset%init()                      ! Initialize boundary condition storage
 
-        ! Initialize boundary condition storage
-        call self%bcset%init()
 
         self%geomInitialized = .true.
-    end subroutine
+        
+    end subroutine init_geom
+
+
+
+
+
+
+
+    !> Initialize domain boundary conditions
+    !!      - Allocate correct boundary condition instances
+    !!      - Call boundary condition initialization routines
+    !!      - Add boundary condition to self%bcset
+    !!
+    !!  @author Nathan A. Wukie
+    !!
+    !!
+    !!
+    !!
+    !!
+    !-----------------------------------------------------
+    subroutine init_bcs(self)
+        class(domain_t),    intent(inout)   :: self
+
+        class(bc_t), allocatable    :: bc
+        character(len=100)          :: bcstr
+
+
+        integer(ik) :: iface
+
+
+        !
+        ! Boundary condition factory for dynamic bc_t allocation
+        !
+        call create_bc(bcstr,bc)
+
+        !
+        ! Call initialization for boundary condition
+        ! 
+        call bc%init(self%mesh,iface) 
+
+        !
+        ! Add initialized boundary condition to bc-set
+        !
+        call self%bcset%add(bc)
+
+
+    end subroutine init_bcs
+
+
 
 
 
@@ -75,6 +127,7 @@ contains
     !!      -   allocate and initialize solution storage
     !!
     !!  @author Nathan A. Wukie
+    !!
     !!  @param[in]  eqnstring   Character string specifying the equation set being solved
     !!  @param[in]  nterms_s    Number of terms in the modal representation of the solution
     !------------------------------------------------------------------
@@ -86,23 +139,40 @@ contains
 
         if (self%numInitialized) call signal(FATAL,'domain%init_sol -- domain numerics already initialized')
 
-        ! Call factory methods for equationset and solver
-        call create_equationset(eqnstring,self%eqnset)      !> Factory method for allocating a equation set
-        call create_solverdata('base',self%sdata)           !> Factory method for allocating solverdata. Allocate base data
+
+        !
+        ! Call factory methods for equationset and solver       
+        !
+        call create_equationset(eqnstring,self%eqnset)      ! Factory method for allocating a equation set
+        call create_solverdata('base',self%sdata)           ! Factory method for allocating solverdata. Allocate base data
+
+        !
+        ! Initialize mesh numerics, solution data, and boundary conditions
+        !
+        call self%mesh%init_sol(self%eqnset%neqns,nterms_s) ! Call initialization for mesh required in solution procedure
+        call self%sdata%init(self%mesh)                     ! Call initialization for solver and solver data
+        !call self%init_bcs()
+        
+        
+        self%numInitialized = .true.                        ! Confirm initialization
+    end subroutine init_sol
 
 
-        call self%mesh%init_sol(self%eqnset%neqns,nterms_s) !> Call initialization for mesh required in solution procedure
-        call self%sdata%init(self%mesh)                     !> Call initialization for solver and solver data
 
-        self%numInitialized = .true.                        !> Confirm initialization
-    end subroutine
+
+
+
+
+
+
+
 
 
 
 
 
     !>  Destructor
-    !!      -   if allocatable components are allocated, call deallocation routine
+    !!      -   if data is allocated via pointers, call deallocation 
     !!
     !!  @author Nathan A. Wukie
     !!

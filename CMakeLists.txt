@@ -1,10 +1,10 @@
 cmake_minimum_required(VERSION 3.1)
 enable_language(Fortran)
-project(ucdg Fortran)
+project(chidg_v0.1 Fortran)
 
-#------------------------------------------------------------------                                                                        
+#------------------------------------------------------------------                             
 #              CMake macros for adding source files
-#------------------------------------------------------------------                                                                        
+#------------------------------------------------------------------                            
 include(cmake/macros/add_exe_sources.txt)
 include(cmake/macros/add_lib_sources.txt)
 include(cmake/macros/add_test_target.txt)
@@ -45,9 +45,9 @@ else ()
 endif()
 
 
-#------------------------------------------------------------------                                                                        
+#------------------------------------------------------------------  
 #                     Set compiler flags
-#------------------------------------------------------------------                                                                        
+#------------------------------------------------------------------ 
 if (${Fortran_VENDOR} MATCHES "INTEL")
 #    set (USER_COMPILE_FLAGS_DEBUG   "-O0 -fpp -assume realloc_lhs -debug -p -g -traceback -check all -check noarg_temp_created -check bounds -fp-stack-check")
     set (USER_COMPILE_FLAGS_DEBUG   "-O0 -fpp -assume realloc_lhs -debug -p -g -traceback -check all -check bounds -fp-stack-check -standard-semantics -assume nostd_mod_proc_name")

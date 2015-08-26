@@ -47,6 +47,11 @@ contains
 
 
     !> Subroutine for initializing local linearization matrix
+    !!
+    !!  @author Nathan A. Wukie
+    !!
+    !!  @param[in]  mesh    mesh_t containing arrays of elements and faces
+    !!
     !-----------------------------------------------------------
     subroutine initialize_linearization(self,mesh)
         class(blockmatrix_t), intent(inout)  :: self
@@ -58,10 +63,11 @@ contains
         nelem = mesh%nelem  !> Number of elements in the local block
         nblk  = 7           !> Number of blocks in the local linearization (1D => 3, 2D => 5, 3D => 7)
 
+        !
         ! ALLOCATE SIZE FOR 'localblocks'
-        !----------------------------------------------------
         ! If matrix was already allocated, deallocate and then reallocate matrix size
         ! Reallocation would take place if the number of elements were changed
+        !
         if (allocated(self%lblks)) then
             ! If the size is already allocated, check if the number of elements has changed.
             ! If so (new_elements), then reallocate matrix size.
@@ -79,20 +85,21 @@ contains
 
 
 
-
-        !> Loop through elements and call initialization for linearization denseblock matrices
+        !
+        ! Loop through elements and call initialization for linearization denseblock matrices
+        !
         do ielem = 1,mesh%nelem
             do iblk = 1,7
                 size1d = mesh%elems(ielem)%neqns  *  mesh%elems(ielem)%nterms_s
 
-                !> Parent is the element with which the linearization is computed
+                ! Parent is the element with respect to which the linearization is computed
                 if (iblk == DIAG) then
                     parent = mesh%elems(ielem)%ielem
                 else
                     parent = mesh%faces(ielem,iblk)%ineighbor
                 end if
 
-                !> Call initialization procedure if parent is not 0 (0 meaning there is no parent for that block, probably a boundary)
+                ! Call initialization procedure if parent is not 0 (0 meaning there is no parent for that block, probably a boundary)
                 if (parent /= 0) then
                     call self%lblks(ielem,iblk)%init(size1d,parent)
 
@@ -103,9 +110,12 @@ contains
             end do
         end do
 
+    end subroutine initialize_linearization
 
 
-    end subroutine
+
+
+
 
 
 
@@ -115,11 +125,13 @@ contains
     !!         store the derivative values from the AD data types
     !!
     !!  @author Nathan A. Wukie
+    !!
     !!  @param[in]  integral    Array of modes from the spatial scheme, with embedded partial derivatives for the linearization matrix
     !!  @param[in]  ielem       Element for which the linearization was computed
     !!  @param[in]  iblk        Index of a block for the linearization of the given element
     !!  @param[in]  ivar        Index of the variable
     !!
+    !------------------------------------------------------------------------------
     subroutine store(self,integral,ielem,iblk,ivar)
         class(blockmatrix_t),   intent(inout)   :: self
         type(AD_D),             intent(in)      :: integral(:)
@@ -143,7 +155,7 @@ contains
             self%lblks(ielem,iblk)%mat(irow,:) = self%lblks(ielem,iblk)%mat(irow,:) + integral(iarray)%xp_ad_
         end do
 
-    end subroutine
+    end subroutine store
 
 
 
@@ -157,23 +169,23 @@ contains
     subroutine clear(self)
         class(blockmatrix_t),   intent(inout)   :: self
 
-        integer(ik) :: ielem, iblk
+        integer(ik) :: ielem, iblk  ! do-loop counters
 
-        !> For each element
+        ! For each element
         do ielem = 1,size(self%lblks,1)
-            !> For each block linearization for the current element
+            ! For each block linearization for the current element
             do iblk = 1,size(self%lblks,2)
 
-                !> Check if the block storage is actually allocated
+                ! Check if the block storage is actually allocated
                 if (allocated(self%lblks(ielem,iblk)%mat)) then
-                    !> If so, set to ZERO
+                    ! If so, set to ZERO
                     self%lblks(ielem,iblk)%mat = ZERO
                 end if
 
-            end do
-        end do
+            end do  ! iblk
+        end do  ! ielem
 
-    end subroutine
+    end subroutine clear
 
 
 
@@ -183,6 +195,7 @@ contains
     !>  Builds full matrix representation of block matrix
     !!
     !!  @author Nathan A. Wukie
+    !!
     !!  @param[inout] fullmat   Storage for full matrix representation
     !------------------------------------------------------------------
     subroutine build(self,fullmat)
@@ -196,7 +209,7 @@ contains
 
 
 
-    end subroutine
+    end subroutine build
 
 
 

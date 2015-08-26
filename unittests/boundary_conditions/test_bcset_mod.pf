@@ -7,6 +7,8 @@ module test_bcset_mod
     use type_point,     only: point_t
     use type_domain,    only: domain_t
     use mod_testutils,  only: meshgen
+    use type_bcset,     only: bcset_t
+    use mock_bc,        only: bc_m
     implicit none
 
     public  :: test_bcset
@@ -22,6 +24,7 @@ module test_bcset_mod
 
 
 contains
+!-----------------------------------------------------------------------------------------------
     !> NOTE: make sure to use 'this' instead of 'self' since these are over-writting a derived type 
     !! procedure. The argument names have to match
     subroutine setUp(this)
@@ -32,7 +35,7 @@ contains
         integer(ik)                :: nterms_c, nterms_s
         
         !> Initialize chidg environment
-        call this%chidg%init()
+        call this%chidg%init('env')
         
         !> Generate points for a 2x2x2 element mesh
         call meshgen('222',pts)
@@ -51,16 +54,159 @@ contains
 
 
 
-
-
-!> Test boundary condition storage was allocated
-@Test
-    subroutine test_bcset_allocated(self)
+    !-----------------------------------------------------------------------------------------------
+    !                                       TESTS
+    !-----------------------------------------------------------------------------------------------
+    
+    
+    !> Test boundary condition storage was allocated in the domain initialization call
+    !-----------------------------------------------------
+    @Test
+    subroutine test_bcset_domainallocated(self)
         class(test_bcset),    intent(inout)   :: self
 
         @assertTrue(allocated(self%domain%bcset%bcs))
         
     end subroutine
+
+
+
+
+
+    ! Test boundary condition set initialization procedure. Test allocation
+    !-----------------------------------------------------
+    @Test
+    subroutine test_bcset_init(self)
+        class(test_bcset),      intent(inout)   :: self
+        
+        type(bcset_t)   :: bcset
+        
+        ! Call initialization procedure on bcset. This is what we are testing
+        call bcset%init()
+        
+        ! Ensure storage for boundary conditions was allocated
+        @assertTrue(allocated(bcset%bcs))
+    
+    end subroutine
+    
+
+    
+
+
+
+    ! Test bcset%add procedure for adding boundary conditions to a set. Test for allocation
+    !-----------------------------------------------------
+    @Test
+    subroutine test_bcset_add_allocated(self)
+        class(test_bcset),  intent(inout)   :: self
+        
+        type(bc_m)  :: bc
+
+        associate(bcset => self%domain%bcset)
+    
+            ! Add boundary condition to boundary condition set. This is what we are testing
+            call bcset%add(bc)
+    
+            ! 'bc' should have been added to the first slot. All other slots should remain unallocated
+            @assertTrue(allocated(bcset%bcs(1)%bc))
+            @assertFalse(allocated(bcset%bcs(2)%bc))
+            @assertFalse(allocated(bcset%bcs(3)%bc))
+            @assertFalse(allocated(bcset%bcs(4)%bc))
+            @assertFalse(allocated(bcset%bcs(5)%bc))
+            @assertFalse(allocated(bcset%bcs(6)%bc))
+
+        end associate
+
+    end subroutine
+    
+
+
+
+
+
+    ! Test bcset%add procedure for adding boundary conditions to a set. 
+    ! Test that data was added correctly to bcset for one boundary condition
+    !-----------------------------------------------------
+    @Test
+    subroutine test_bcset_add_one_datacopy(self)
+        class(test_bcset),  intent(inout)   :: self
+        
+        type(bc_m)  :: bc
+        integer(ik) :: iface
+        integer(ik) :: ielems_ref(4), ifaces_ref(4)
+
+        iface = XI_MIN
+        associate(bcset => self%domain%bcset, mesh => self%domain%mesh, sdata => self%domain%sdata)
+        
+            ! Initialize bc.
+            call bc%init(mesh,iface)
+            ielems_ref = [1,3,5,7]                      ! These elements should be associated with the boundary condition
+            ifaces_ref = [XI_MIN,XI_MIN,XI_MIN,XI_MIN]  ! These faces should be associated with the boundary condition
+        
+    
+            ! Add boundary condition to boundary condition set. This is what we are testing
+            call bcset%add(bc)
+    
+
+            ! Test to make sure that the initialized boundary condition data was copied over to bcset correctly
+            @assertEqual(ielems_ref,bcset%bcs(1)%bc%ielems)
+            @assertEqual(ifaces_ref,bcset%bcs(1)%bc%ifaces)
+
+
+        end associate
+
+    end subroutine
+
+
+
+
+
+
+    ! Test bcset%add procedure for adding boundary conditions to a set.
+    ! Test that data was added correctly to bcset for two boundary conditions
+    !-----------------------------------------------------
+    @Test
+    subroutine test_bcset_add_two_datacopy(self)
+        class(test_bcset),  intent(inout)   :: self
+        
+        type(bc_m)  :: bc_a, bc_b
+        integer(ik) :: iface_a, iface_b
+        integer(ik), dimension(4) :: ielems_ref_a, ielems_ref_b, ifaces_ref_a, ifaces_ref_b
+
+        iface_a = XI_MIN
+        iface_b = ETA_MIN
+        associate(bcset => self%domain%bcset, mesh => self%domain%mesh, sdata => self%domain%sdata)
+        
+            ! Initialize two boundary conditions
+            call bc_a%init(mesh,iface_a)
+            call bc_b%init(mesh,iface_b)
+            ielems_ref_a = [1,3,5,7]                            ! These elements should be associated with the boundary condition A
+            ielems_ref_b = [1,2,5,6]                            ! These elements should be associated with the boundary condition B
+            ifaces_ref_a = [XI_MIN,XI_MIN,XI_MIN,XI_MIN]        ! These faces should be associated with the boundary condition A
+            ifaces_ref_b = [ETA_MIN,ETA_MIN,ETA_MIN,ETA_MIN]    ! These faces should be associated with the boundary condition B
+        
+    
+            ! Add boundary conditions to boundary condition set. We want to test expected behavior with more than one bc added
+            call bcset%add(bc_a)
+            call bcset%add(bc_b)
+    
+
+            ! Test to make sure that the initialized boundary condition data was copied over to bcset correctly
+            @assertEqual(ielems_ref_a,bcset%bcs(1)%bc%ielems)
+            @assertEqual(ifaces_ref_a,bcset%bcs(1)%bc%ifaces)
+            
+            @assertEqual(ielems_ref_b,bcset%bcs(2)%bc%ielems)
+            @assertEqual(ifaces_ref_b,bcset%bcs(2)%bc%ifaces)
+
+
+        end associate
+
+    end subroutine
+
+
+
+
+
 
 
 

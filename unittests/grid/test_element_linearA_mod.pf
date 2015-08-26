@@ -38,7 +38,7 @@ contains
         gq_rule = 1 !> Set collocation quadrature for testing coordinates at quadrature points
         
         
-        call this%chidg%init()
+        call this%chidg%init('env')
         allocate(this%faces(6))
         
         !> (x = 0-5 :: y = 0-1 :: z = 0-1)

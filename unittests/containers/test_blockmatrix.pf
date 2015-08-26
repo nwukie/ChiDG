@@ -21,7 +21,7 @@ subroutine test_blockmatrix__store_1eq_8terms()
     type(AD_D)                  :: integral(8)
     integer(ik)                 :: ielem, iblk, ivar, nderiv, i, neqns, nterms
     
-    call chidg%init()
+    call chidg%init('env')
     
     neqns  = 1
     nterms = 8
@@ -118,7 +118,7 @@ subroutine test_blockmatrix__store_2eq_8terms()
     type(AD_D)                  :: integral(8)
     integer(ik)                 :: ielem, iblk, ivar, nderiv, i, neqns, nterms
     
-    call chidg%init()
+    call chidg%init('env')
     
     neqns   = 2
     nterms = 8
@@ -216,7 +216,7 @@ subroutine test_blockmatrix__clear_1eq_8terms()
     type(AD_D)                  :: integral(8)
     integer(ik)                 :: ielem, iblk, ivar, nderiv, i, neqns, nterms
     
-    call chidg%init()
+    call chidg%init('env')
     
     neqns   = 1
     nterms = 8

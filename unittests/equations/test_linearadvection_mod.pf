@@ -55,7 +55,7 @@ contains
         real(rk), dimension(npt)    :: x,y,z
         
         !> Initialize chidg environment
-        call this%chidg%init()
+        call this%chidg%init('env')
 
         !> Generate points array for 3x3x3 mesh
         call meshgen('3x3x3',pts)

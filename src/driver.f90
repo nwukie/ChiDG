@@ -20,7 +20,8 @@ program driver
     use atype_function,         only: function_t
     use mod_function,           only: create_function
     use mod_tecio,              only: write_tecio_variables
-
+    use mod_io
+    
     !-----------------------------------------------------------
     ! Variable declarations
     !-----------------------------------------------------------
@@ -29,32 +30,27 @@ program driver
     type(domain_t),     allocatable :: domains(:)
     class(solver_t),    allocatable :: solver
     class(function_t),  allocatable :: fcn
-    integer(ik)     :: ielem
 
-
+    !
     ! Initialize ChiDG environment
-    print*, 'calling chidg%init'
-    call chidg%init()
+    !
+    call chidg%init('full')
 
-    ! Allocate solver
-    print*, 'creating solver'
-    call create_solver('fe',solver)
+    !
+    ! Allocate time-advancement routine
+    !
+    call create_solver(temporal_scheme,solver)
 
 
+    !
     ! Initialize grid and solution
-    print*, 'reading grid'
-    call read_grid_hdf('4x4x4.h5',domains)
-
-    print*, 'initializing domain numerics'
-    call domains(1)%init_sol('euler',27)
+    !
+    call read_grid_hdf(gridfile,domains)
+    call domains(1)%init_sol(eqnset,nterms_s)
 
 
-    print*, 'create_function'
     call create_function(fcn,'constant')
     call fcn%set(1.0_rk)
-
-
-    print*, 'initialize_variable'
     call initialize_variable(domains(1),1,fcn)
     call initialize_variable(domains(1),2,fcn)
     call initialize_variable(domains(1),3,fcn)
@@ -68,10 +64,15 @@ program driver
 
 
 
-
+    !
+    ! Initialize solver
+    !
     call solver%init(domains(1))
 
-    print*, 'solve'
+
+    !
+    ! Execute solver routine
+    !
     call solver%solve(domains(1))
 
 

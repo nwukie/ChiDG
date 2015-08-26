@@ -11,20 +11,27 @@ module type_mesh
 
 
     !> Data type for mesh information
+    !!      - contains array of elements, array of faces for each element
+    !!      - calls initialization procedure for elements and faces
+    !!
+    !!  @author Nathan A. Wukie
+    !!
+    !!
+    !------------------------------------------------------------------------------
     type, public :: mesh_t
         ! Integer parameters
-        integer(ik)         :: neqns    = 0     !> Number of equations being solved
-        integer(ik)         :: nterms_s = 0     !> Number of terms in the solution expansion
-        integer(ik)         :: nterms_c = 0     !> Number of terms in the grid coordinate expansion
+        integer(ik)         :: neqns    = 0                         !< Number of equations being solved
+        integer(ik)         :: nterms_s = 0                         !< Number of terms in the solution expansion
+        integer(ik)         :: nterms_c = 0                         !< Number of terms in the grid coordinate expansion
         integer(ik)         :: nelem_xi, nelem_eta, nelem_zeta, nelem
 
         ! Grid data
-        type(element_t),  allocatable  :: elems(:)                  !> Element storage (1:nelem)
-        type(element_t),  pointer, contiguous      :: elems_m(:,:,:) => null()  !> Matrix view of element storage (1:nelem_xi, 1:nelem_eta, 1:nelem_zeta)
-        type(face_t),     allocatable  :: faces(:,:)                !> Face storage    (1:nelem,1:nfaces)
+        type(element_t),  allocatable :: elems(:)                   !< Element storage (1:nelem)
+        type(element_t),  pointer     :: elems_m(:,:,:) => null()   !< Matrix view of element storage (1:nelem_xi, 1:nelem_eta, 1:nelem_zeta)
+        type(face_t),     allocatable :: faces(:,:)                 !< Face storage    (1:nelem,1:nfaces)
 
         ! TODO: Needs tested
-!        type(face_t),     pointer      :: faces_c(:,:,:,:) => null()    !> Matrix view of face storage
+        ! type(face_t),     pointer      :: faces_c(:,:,:,:) => null()    !< Matrix view of face storage
 
     contains
         procedure           :: init_geom
@@ -39,6 +46,7 @@ module type_mesh
 
         final :: destructor
     end type mesh_t
+    !------------------------------------------------------------------------------
 
 contains
 
@@ -70,9 +78,10 @@ contains
 !        ftemp => self%faces
 !        self%faces_m(1:self%nelem_xi,1:self%nelem_eta,1:self%nelem_zeta,NFACES) => ftemp(1:self%nelem,NFACES)
 
-        !> Initialize boundary conditions after geometry is set up
-!        call self%init_boundary_conditions()
     end subroutine
+
+
+
 
 
     !> Mesh numerics initialization procedure
@@ -81,6 +90,7 @@ contains
     !!  calls sub-initialization routines for individual element and face numerics
     !!
     !!  @author Nathan A. Wukie
+    !!
     !!  @param[in]  neqns       Number of equations being solved in the current domain
     !!  @param[in]  nterms_s    Number of terms in the solution expansion
     !---------------------------------------------------------------------------------------
@@ -92,10 +102,13 @@ contains
         self%neqns    = neqns
         self%nterms_s = nterms_s
 
-        call self%init_elems_sol(neqns,nterms_s)
-        call self%init_faces_sol()
+        call self%init_elems_sol(neqns,nterms_s)    ! Specialized solution initialization for elements
+        call self%init_faces_sol()                  ! Specialized solution initialization for faces
+!        call self%init_boundary_conditions()        ! Initialize boundary conditions
 
     end subroutine
+
+
 
 
 
@@ -107,6 +120,7 @@ contains
     !!  calls the element initialization procedure on individual elements.
     !!
     !!  @author Nathan A. Wukie
+    !!
     !!  @param[in]  points_g    Rank-3 matrix of coordinate points defining a block mesh
     !-------------------------------------------------------------------------------------------
     subroutine init_elems_geom(self,points_g)
@@ -122,9 +136,9 @@ contains
                                         nelem_xi, nelem_eta, nelem_zeta, nelem, &
                                         neqns,    nterms_s,  nnodes, nterms_c, npts_1d, mapping
 
-        npts_xi   = size(points_g,1)    !> Number of points in the xi-direction
-        npts_eta  = size(points_g,2)    !> Number of points in the eta-direction
-        npts_zeta = size(points_g,3)    !> Number of points in the zeta-direction
+        npts_xi   = size(points_g,1)    ! Number of points in the xi-direction
+        npts_eta  = size(points_g,2)    ! Number of points in the eta-direction
+        npts_zeta = size(points_g,3)    ! Number of points in the zeta-direction
 
         ! Compute number of 1d points for a single element
         npts_1d = 0
@@ -190,10 +204,14 @@ contains
         self%nelem      = nelem
         mapping         = (npts_1d - 1)     !> 1 - linear, 2 - quadratic, 3 - cubic, etc.
 
+
+
         ! Allocate element storage
         allocate(self%elems(nelem),stat=ierr)
         allocate(points_l(self%nterms_c))
         if(ierr /= 0) stop "Memory allocation error: init_elements"
+
+
 
         ielem = 1
         ! Initialize elements
@@ -226,6 +244,15 @@ contains
 
 
 
+
+
+    !> Mesh - element solution data initialization
+    !!
+    !!  @author Nathan A. Wukie
+    !!
+    !!  @param[in]  neqns       Number of equations in the domain equation set
+    !!  @param[in]  nterms_s    Number of terms in the solution expansion
+    !-------------------------------------------------------
     subroutine init_elems_sol(self,neqns,nterms_s)
         class(mesh_t),  intent(inout)   :: self
         integer(ik),    intent(in)      :: neqns
@@ -239,6 +266,13 @@ contains
             call self%elems(ielem)%init_sol(self%neqns,self%nterms_s)
         end do
     end subroutine
+
+
+
+
+
+
+
 
 
     !> Mesh - face initialization procedure
@@ -307,6 +341,8 @@ contains
 
 
 
+
+
     !> Mesh - face initialization procedure
     !!
     !!  @author Nathan A. Wukie
@@ -351,8 +387,8 @@ contains
                 ielem = self%elems_m(ixi,ieta,izeta)%ielem
                 ielem_p = self%elems_m(ixi_p,ieta,izeta)%ielem
 
-                self%faces(ielem,XI_MIN)%ftype = 0              !> Interior face
-                self%faces(ielem,XI_MIN)%ineighbor = ielem_p    !> Set neighbor face to be periodic
+                self%faces(ielem,XI_MIN)%ftype = 0              ! Interior face
+                self%faces(ielem,XI_MIN)%ineighbor = ielem_p    ! Set neighbor face to be periodic
 
                 self%faces(ielem_p,XI_MAX)%ftype = 0
                 self%faces(ielem_p,XI_MAX)%ineighbor = ielem
@@ -368,8 +404,8 @@ contains
                 ielem = self%elems_m(ixi,ieta,izeta)%ielem
                 ielem_p = self%elems_m(ixi,ieta_p,izeta)%ielem
 
-                self%faces(ielem,ETA_MIN)%ftype = 0              !> Interior face
-                self%faces(ielem,ETA_MIN)%ineighbor = ielem_p    !> Set neighbor face to be periodic
+                self%faces(ielem,ETA_MIN)%ftype = 0              ! Interior face
+                self%faces(ielem,ETA_MIN)%ineighbor = ielem_p    ! Set neighbor face to be periodic
 
                 self%faces(ielem_p,ETA_MAX)%ftype = 0
                 self%faces(ielem_p,ETA_MAX)%ineighbor = ielem
@@ -385,8 +421,8 @@ contains
                 ielem = self%elems_m(ixi,ieta,izeta)%ielem
                 ielem_p = self%elems_m(ixi,ieta,izeta_p)%ielem
 
-                self%faces(ielem,ZETA_MIN)%ftype = 0              !> Interior face
-                self%faces(ielem,ZETA_MIN)%ineighbor = ielem_p    !> Set neighbor face to be periodic
+                self%faces(ielem,ZETA_MIN)%ftype = 0              ! Interior face
+                self%faces(ielem,ZETA_MIN)%ineighbor = ielem_p    ! Set neighbor face to be periodic
 
                 self%faces(ielem_p,ZETA_MAX)%ftype = 0
                 self%faces(ielem_p,ZETA_MAX)%ineighbor = ielem
@@ -406,23 +442,20 @@ contains
 
 
 
-
-
-
-
-
-
-
-
-
-
-
+    !> Mesh destructor
+    !!      - If any data is allocated via pointers, then it should be deallocated here
+    !!
+    !!  @author Nathan A. Wukie
+    !!
+    !-------------------------------------------
     subroutine destructor(self)
         type(mesh_t), intent(inout) :: self
 
-!> Shouldn't need to deallocate an 'allocatable'. The compiler is supposed to do that for you
-!        if (allocated(self%elems)) deallocate(self%elems)
-!        if (allocated(self%faces)) deallocate(self%faces)
+    
     end subroutine
 
 end module type_mesh
+
+
+
+

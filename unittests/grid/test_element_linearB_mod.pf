@@ -34,7 +34,7 @@ contains
         integer(ik)             :: ftype, ineighbor, mapping, ielem 
         
         
-        call this%chidg%init()
+        call this%chidg%init('env')
         allocate(this%faces(6))
         
         

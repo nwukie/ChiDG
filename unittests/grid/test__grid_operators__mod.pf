@@ -36,7 +36,7 @@ contains
         integer(ik)              :: nterms_c, nterms_s
         
         
-        call this%chidg%init()
+        call this%chidg%init('env')
         
         
         !> (x = 0-5 :: y = 0-1 :: z = 0-1)

@@ -33,7 +33,7 @@ contains
         class(test_hdfio_variable_D1_E27_M1),    intent(inout)   :: this
         integer(ik)                                 :: nterms_s
 
-        call this%chidg%init()
+        call this%chidg%init('env')
 
         call read_grid_hdf(this%filename, this%domains)
     

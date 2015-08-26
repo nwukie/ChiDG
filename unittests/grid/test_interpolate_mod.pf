@@ -37,7 +37,7 @@ contains
     
             
             !> Initialize ChiDG environment
-            call this%chidg%init()
+            call this%chidg%init('env')
     
     
             !> Read 3x3x3 element grid

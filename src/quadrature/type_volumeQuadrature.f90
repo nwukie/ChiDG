@@ -11,25 +11,31 @@ module type_volumeQuadrature
     implicit none
     private
 
-    ! Type defining volume quadrature
+    !> Type defining volume quadrature
+    !!      - Contains nodes, weights, and matrices for Gauss-quadrature. Used for
+    !!        integration and projection routines. An instance is defined for a specified
+    !!        number of quadrature nodes and specified number of terms in a polynomial expansion
+    !!
+    !!  @author Nathan A. Wukie
+    !----------------------------------------------------------------------
     type, public :: volumeQuadrature_t
         ! Number of volume quadrature nodes
-        integer(ik)                 :: nnodes
-        integer(ik)                 :: nterms
+        integer(ik)                 :: nnodes       !< Number of volume quadrature nodes
+        integer(ik)                 :: nterms       !< Number of terms in the polynomial expansion
 
         ! Array of points and weights for each node
-        type(point_t),  allocatable :: nodes(:)
-        real(rk),       allocatable :: weights(:)
+        type(point_t),  allocatable :: nodes(:)     !< Array of quadrature node points
+        real(rk),       allocatable :: weights(:)   !< Array of quadrature node weights
 
         ! Polynomial values and derivatives for each node
-        real(rk),       allocatable :: val(:,:)
-        real(rk),       allocatable :: ddxi(:,:)
-        real(rk),       allocatable :: ddeta(:,:)
-        real(rk),       allocatable :: ddzeta(:,:)
+        real(rk),       allocatable :: val(:,:)     !< Matrix used to interpolate an expansion to quadrature nodes
+        real(rk),       allocatable :: ddxi(:,:)    !< Matrix used to interpolate partial derivatives(ddxi) to quadrature nodes
+        real(rk),       allocatable :: ddeta(:,:)   !< Matrix used to interpolate partial derivatives(ddeta) to quadrature nodes
+        real(rk),       allocatable :: ddzeta(:,:)  !< Matrix used to interpolate partial derivatives(ddzeta) to quadrature nodes
 
         ! Reference mass matrix
-        real(rk),       allocatable :: mass(:,:)
-        real(rk),       allocatable :: dmass(:)
+        real(rk),       allocatable :: mass(:,:)    !< Mass matrix for the reference element
+        real(rk),       allocatable :: dmass(:)     !< Diagonal of the mass matrix for the reference element
 
     contains
         procedure :: init
@@ -38,10 +44,17 @@ module type_volumeQuadrature
 
 contains
 
-    ! Initialization routine for the structure
+    !> Initialization routine for volumeQuadrature_t instance.
+    !!      - Allocates storage for member data. Initializes ndoes, weights, and interpolation matrices.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @param[in]  nnodes  Number of nodes used for Gauss-quadrature
+    !!  @param[in]  nterms  Number of terms in the associated polynomial expansion
+    !------------------------------------------------------------------------------
     subroutine init(self,nnodes,nterms)
         class(volumeQuadrature_t),  intent(inout)   :: self
-        integer(ik),                intent(in)      :: nnodes,nterms
+        integer(ik),                intent(in)      :: nnodes
+        integer(ik),                intent(in)      :: nterms
         integer(ik)                                 :: ixi,ieta,izeta,inode,iterm,nnodes1d,ierr
         real(rk)                                    :: xi,eta,zeta
         real(rk), dimension(:), allocatable         :: xi_vals,eta_vals,zeta_vals
@@ -51,9 +64,9 @@ contains
 
         self%nnodes = nnodes
         self%nterms = nterms
-        !===========================================================================
+        !---------------------------------------------------------------------------
         ! allocate quadrature storage
-        !===========================================================================
+        !---------------------------------------------------------------------------
         allocate(self%nodes(nnodes),self%weights(nnodes),       &
                  self%val(   nnodes,nterms),                    &
                  self%ddxi(  nnodes,nterms),                    &
@@ -66,9 +79,9 @@ contains
 
 
 
-        !===========================================================================
+        !---------------------------------------------------------------------------
         ! Initialize quadrature node coordinates for face sets
-        !===========================================================================
+        !---------------------------------------------------------------------------
         ! find number nodes in 1D polynomial
         nnodes1d = 0
         do while (nnodes1d*nnodes1d*nnodes1d /= nnodes)
@@ -105,10 +118,10 @@ contains
         end do
 
 
-        !===========================================================================
+        !---------------------------------------------------------------------------
         ! Initialize values and partial derivatives of each modal
         ! polynomial at each volume quadrature node
-        !===========================================================================
+        !---------------------------------------------------------------------------
         do iterm = 1,nterms
             do inode = 1,nnodes
                     node = self%nodes(inode)
@@ -150,8 +163,6 @@ contains
     
     subroutine destructor(self)
         type(volumeQuadrature_t), intent(inout) :: self
-
-
 
     end subroutine
 

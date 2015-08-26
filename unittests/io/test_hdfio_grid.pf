@@ -22,7 +22,7 @@ subroutine testIO__read_grid_hdf__D1_E1_M1()
     tol = 1.e-14_rk
     
     ! Initialize element mapping
-    call chidg%init()
+    call chidg%init('env')
     
     call read_grid_hdf(filename,domains)
     
@@ -73,7 +73,7 @@ subroutine testIO__read_grid_hdf__D1_E27_M1()
     tol = 1.e-14_rk
     
     ! Initialize element mapping
-    call chidg%init()
+    call chidg%init('env')
     
     call read_grid_hdf(filename,domains)
     

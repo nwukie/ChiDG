@@ -32,6 +32,7 @@ contains
 
 
         ! Print message header
+        print*, 
         print*, '| '//trim(dashstr)
         print*, '| '
 

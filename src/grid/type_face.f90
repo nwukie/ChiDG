@@ -29,12 +29,12 @@ module type_face
         integer(ik)                  :: iparent             !> Block-local index of parent element
         integer(ik)                  :: ineighbor           !> Block-local index of neighbor element
 
-        !> Geometry
+        ! Geometry
         !---------------------------------------------------------
         type(point_t),  allocatable  :: quad_pts(:)         !> Cartesian coordinates of quadrature nodes
         type(expansion_t), pointer   :: coords => null()    !> Pointer to element coordinates
 
-        !> Metric terms
+        ! Metric terms
         !---------------------------------------------------------
         real(rk),       allocatable  :: jinv(:)                     !> array of inverse element jacobians on the face
         real(rk),       allocatable  :: metric(:,:,:)               !> Face metric terms
@@ -43,14 +43,14 @@ module type_face
         real(rk),       pointer      :: invmass(:,:) => null()      !> Pointer to element inverse mass matrix
 
 
-        !> Quadrature matrices
+        ! Quadrature matrices
         !---------------------------------------------------------
         type(quadrature_t),  pointer :: gq     => null()            !> Pointer to solution quadrature instance
         type(quadrature_t),  pointer :: gqmesh => null()            !> Pointer to mesh quadrature instance
 
 
 
-        !> Logical tests
+        ! Logical tests
         !---------------------------------------------------------
         logical :: geomInitialized = .false.
         logical :: numInitialized  = .false.
@@ -109,6 +109,7 @@ contains
     !!  Call procedures to compute metrics, normals, and cartesian face coordinates.
     !!
     !!  @author Nathan A. Wukie
+    !!
     !!  @param[in] elem     Parent element which many face members point to
     !---------------------------------------------------------------------
     subroutine init_sol(self,elem)
@@ -138,7 +139,7 @@ contains
         call self%compute_quadrature_normals()
         call self%compute_quadrature_coords()
 
-        self%numInitialized  = .true.            !> Confirm face numerics were initialized
+        self%numInitialized  = .true.            ! Confirm face numerics were initialized
     end subroutine
 
 
@@ -146,6 +147,8 @@ contains
     !> Compute metric terms and cell jacobians at face quadrature nodes
     !!
     !!  @author Nathan A. Wukie
+    !!
+    !!
     !------------------------------------------------------------------------
     subroutine compute_quadrature_metrics(self)
         class(face_t),  intent(inout)   :: self
@@ -202,9 +205,10 @@ contains
 
     !> Compute normal vector components at face quadrature nodes
     !!
-    !!  NOTE: These are not unit normals
+    !!  NOTE: be sure to differentiate between normals self%norm and unit-normals self%unorm
     !!
     !!  @author Nathan A. Wukie
+    !!
     !-------------------------------------------------------------------------
     subroutine compute_quadrature_normals(self)
         class(face_t),  intent(inout)   :: self
@@ -286,6 +290,8 @@ contains
     !> Compute cartesian coordinates at face quadrature nodes
     !!
     !!  @author Nathan A. Wukie
+    !!
+    !!
     !----------------------------------------------------------------------
     subroutine compute_quadrature_coords(self)
         class(face_t),  intent(inout)   :: self
@@ -378,37 +384,6 @@ contains
 
 
 
-
-
-
-
-
-
-
-
-
-
-    !=============================================================================
-    !
-    !
-    !   Compute variable at quadrature nodes.
-    !
-    !
-    !=============================================================================
-!    subroutine compute_var(self,varindex,vargq)
-!        class(face_t),      intent(in)      :: self
-!        integer(kind=ik),   intent(in)      :: varindex
-!        real(kind=rk),      intent(inout)   :: vargq(:)
-!
-!        integer(kind=ik)                    :: iface
-!        integer(4)                          :: numrows, numcols
-!
-!        iface = self%iface
-!
-!        ! Compute variables at volume GQ nodes
-!        vargq = matmul(self%gq%face%val(:,:,iface),self%q%vals(:,varindex))
-!
-!    end subroutine
 
 
 

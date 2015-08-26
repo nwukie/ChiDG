@@ -11,6 +11,14 @@ module mod_testutils
 
 contains
 
+
+    !>  Generate a set of points for a mesh. String input calls specialized
+    !!  procedure for generating the points
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @param[in]      string   Character string used to select a specialized meshgen call
+    !!  @param[inout]   pts      points_t array of rank-3 that gets allocated, filled, and returned
+    !--------------------------------------------------------------------
     subroutine meshgen(string,pts)
         character(*),               intent(in)      :: string
         type(point_t), allocatable, intent(inout)   :: pts(:,:,:)
@@ -38,6 +46,7 @@ contains
     !> Generate a set of points defining a 2x2x2 element mesh
     !!
     !!  @author Nathan A. Wukie
+    !!  @param[inout]   pts     points_t array of rank-3 that gets allocated, filled, and returned
     !---------------------------------------------------------------------
     subroutine meshgen_2x2x2_linear(pts)
         type(point_t), allocatable, intent(inout)  :: pts(:,:,:)
@@ -46,21 +55,21 @@ contains
         integer(ik)                 :: ipt_xi, ipt_eta, ipt_zeta, ipt, ierr
         real(rk), dimension(npt)    :: x,y,z
 
-        !> elements (2x2x2) - linear
-
-        !!          *-------*-------*
-        !!         /       /       /|
-        !!        *-------*-------* |
-        !!       /       /       /| *
-        !!      *-------*-------* |/|
-        !!      |       |       | * |
-        !!      |       |       |/| *
-        !!      *-------*-------* |/
-        !!      |       |       | *
-        !!      |       |       |/
-        !!      *-------*-------*
-        !!
-        !!
+        ! elements (2x2x2) - linear
+        !
+        !          *-------*-------*
+        !         /       /       /|
+        !        *-------*-------* |
+        !       /       /       /| *
+        !      *-------*-------* |/|
+        !      |       |       | * |
+        !      |       |       |/| *
+        !      *-------*-------* |/
+        !      |       |       | *
+        !      |       |       |/
+        !      *-------*-------*
+        !
+        !
         x = [ZERO, ONE, TWO, ZERO, ONE, TWO, ZERO, ONE, TWO, &
              ZERO, ONE, TWO, ZERO, ONE, TWO, ZERO, ONE, TWO, &
              ZERO, ONE, TWO, ZERO, ONE, TWO, ZERO, ONE, TWO]
@@ -74,7 +83,7 @@ contains
              TWO, TWO, TWO, TWO, TWO, TWO, TWO, TWO, TWO]
 
 
-        !> Allocate point storage
+        ! Allocate point storage
         allocate(pts(3,3,3), stat=ierr)
         if (ierr /= 0) call AllocationError
 
@@ -96,6 +105,7 @@ contains
     !> Generate a set of points defining a 3x3x3 element mesh
     !!
     !!  @author Nathan A. Wukie
+    !!  @param[inout]   pts     points_t array of rank-3 that gets allocated, filled, and returned
     !---------------------------------------------------------------------
     subroutine meshgen_3x3x3_linear(pts)
         type(point_t), allocatable, intent(inout)  :: pts(:,:,:)
@@ -104,26 +114,26 @@ contains
         integer(ik)                 :: ipt_xi, ipt_eta, ipt_zeta, ipt
         real(rk), dimension(npt)    :: x,y,z
 
-        !> elements (3x3x3) - linear
-        !!
-        !!            *-------*-------*-------*
-        !!           /       /       /       /|
-        !!          *-------*-------*-------* |
-        !!         /       /       /       /| *
-        !!        *-------*-------*-------* |/|
-        !!       /       /       /       /| * |
-        !!      *-------*-------*-------* |/| *
-        !!      |       |       |       | * |/|
-        !!      |       |       |       |/| * |
-        !!      *-------*-------*-------* |/| *
-        !!      |       |       |       | * |/
-        !!      |       |       |       |/| *
-        !!      *-------*-------*-------* |/
-        !!      |       |       |       | *
-        !!      |       |       |       |/
-        !!      *-------*-------*-------*
-        !!
-        !!
+        ! elements (3x3x3) - linear
+        !
+        !            *-------*-------*-------*
+        !           /       /       /       /|
+        !          *-------*-------*-------* |
+        !         /       /       /       /| *
+        !        *-------*-------*-------* |/|
+        !       /       /       /       /| * |
+        !      *-------*-------*-------* |/| *
+        !      |       |       |       | * |/|
+        !      |       |       |       |/| * |
+        !      *-------*-------*-------* |/| *
+        !      |       |       |       | * |/
+        !      |       |       |       |/| *
+        !      *-------*-------*-------* |/
+        !      |       |       |       | *
+        !      |       |       |       |/
+        !      *-------*-------*-------*
+        !
+        !
         x = [ZERO, ONE, TWO, THREE, ZERO, ONE, TWO, THREE, ZERO, ONE, TWO, THREE, ZERO, ONE, TWO, THREE, &
              ZERO, ONE, TWO, THREE, ZERO, ONE, TWO, THREE, ZERO, ONE, TWO, THREE, ZERO, ONE, TWO, THREE, &
              ZERO, ONE, TWO, THREE, ZERO, ONE, TWO, THREE, ZERO, ONE, TWO, THREE, ZERO, ONE, TWO, THREE, &
@@ -140,7 +150,7 @@ contains
              THREE, THREE, THREE, THREE, THREE, THREE, THREE, THREE, THREE, THREE, THREE, THREE, THREE, THREE, THREE, THREE]
 
 
-        !> Allocate point storage
+        ! Allocate point storage
         allocate(pts(4,4,4))
 
         ipt = 1

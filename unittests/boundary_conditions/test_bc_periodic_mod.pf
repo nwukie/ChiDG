@@ -1,0 +1,191 @@
+! Test periodic boundary conditions to ensure face type(ftype) is being set correctly and neighbor elements(ineighbor) are being set correctly
+module test_bc_periodic_mod
+    use pfunit_mod
+    use mod_kinds,      only: rk,ik
+    use mod_constants,  only: XI_MIN, ETA_MIN, ZETA_MIN, XI_MAX, ETA_MAX, ZETA_MAX
+    use type_chidg,     only: chidg_t
+    use type_domain,    only: domain_t
+    use type_point,     only: point_t
+    use mod_testutils,  only: meshgen
+
+
+
+    @TestCase
+    type, extends(TestCase) :: test_periodic_bc
+        type(chidg_t)   :: chidg
+        type(domain_t)  :: domain
+
+    contains
+        procedure   :: setUp
+        procedure   :: tearDown
+
+    end type test_periodic_bc
+
+
+contains
+
+
+
+    subroutine setUp(this)
+        class(test_periodic_bc),    intent(inout)   :: this
+
+        type(point_t), allocatable  :: pts(:,:,:)
+        integer(ik)                 :: nterms_c, nterms_s
+        
+        ! Initialize chidg enironment
+        call this%chidg%init('env') 
+
+        ! Generage points for a 2x2x2 element mesh
+        call meshgen('222',pts)
+
+
+        ! Call domain initialization
+        nterms_c = 8
+        nterms_s = 8
+        call this%domain%init_geom(nterms_c,pts)
+        !call this%domain%init_sol('scalar',nterms_s)       ! Don't think we need to initialize the solution here
+
+    end subroutine
+
+
+    subroutine tearDown(this)
+        class(test_periodic_bc), intent(inout)  :: this
+
+    end subroutine
+
+
+
+!---------------------------------------------------------------------------------
+!                               TESTS
+!---------------------------------------------------------------------------------
+
+    !
+    ! Test to ensure the periodic face types have been set to ftype=0 (interior)
+    !
+    @Test
+    subroutine test_periodic_bc_XI_MIN_ftype(self)
+        class(test_periodic_bc),    intent(inout)   :: self
+
+        integer(ik) :: finterior
+
+
+        finterior = 0       ! interior face = 0
+
+        call self%domain%init_bc('periodic',XI_MIN)
+
+
+        
+        ! Test that the XI_MIN and XI_MAX faces of the block have been set
+        ! to interior faces. ftype = 0 
+        associate ( faces => self%domain%mesh%faces )
+
+            ! Check all the XI_MIN faces
+            @assertEqual(finterior,faces(1,XI_MIN)%ftype)
+            @assertEqual(finterior,faces(3,XI_MIN)%ftype)
+            @assertEqual(finterior,faces(5,XI_MIN)%ftype)
+            @assertEqual(finterior,faces(7,XI_MIN)%ftype)
+
+            ! Check all the XI_MAX faces
+            @assertEqual(finterior,faces(2,XI_MAX)%ftype)
+            @assertEqual(finterior,faces(4,XI_MAX)%ftype)
+            @assertEqual(finterior,faces(6,XI_MAX)%ftype)
+            @assertEqual(finterior,faces(8,XI_MAX)%ftype)
+
+        end associate
+
+    end subroutine
+
+
+    !
+    ! Test to ensure the periodic face neighbor element indices were reset correctly
+    !
+    @Test
+    subroutine test_periodic_bc_XI_MIN_ineighbor(self)
+        class(test_periodic_bc),    intent(inout)   :: self
+
+        integer(ik) :: ielem, ineighbor
+
+        call self%domain%init_bc('periodic',XI_MIN)
+
+
+        ! Test that the XI_MIN faces have the XI_MAX face elements as their neighbors
+        associate ( faces => self%domain%mesh%faces )
+
+            !! CHECK ALL THE XI_MIN FACES
+            ielem     = 1
+            ineighbor = 2   ! XI_MIN for element 1 should have element 2 as its neighbor
+            @assertEqual(ineighbor,faces(ielem,XI_MIN)%ineighbor)
+
+            ielem     = 3
+            ineighbor = 4   ! XI_MIN for element 3 should have element 4 as its neighbor
+            @assertEqual(ineighbor,faces(ielem,XI_MIN)%ineighbor)
+
+            ielem     = 5
+            ineighbor = 6   ! XI_MIN for element 5 shoudl have element 6 as its neighbor
+            @assertEqual(ineighbor,faces(ielem,XI_MIN)%ineighbor)
+
+            ielem     = 7
+            ineighbor = 8   ! XI_MIN for element 7 should have element 8 as its neighbor
+            @assertEqual(ineighbor,faces(ielem,XI_MIN)%ineighbor)
+
+
+
+            !! CHECK ALL THE XI_MAX FACES
+            ielem     = 2
+            ineighbor = 1   ! XI_MAX for element 2 should have element 1 as its neighbor
+            @assertEqual(ineighbor,faces(ielem,XI_MAX)%ineighbor)
+
+            ielem     = 4
+            ineighbor = 3   ! XI_MAX for element 4 should have element 3 as its neighbor
+            @assertEqual(ineighbor,faces(ielem,XI_MAX)%ineighbor)
+
+            ielem     = 6
+            ineighbor = 5   ! XI_MAX for element 6 should have element 5 as its neighbor
+            @assertEqual(ineighbor,faces(ielem,XI_MAX)%ineighbor)
+            
+            ielem     = 8
+            ineighbor = 7
+            @assertEqual(ineighbor,faces(ielem,XI_MAX)%ineighbor)
+
+        end associate
+    end subroutine
+
+
+
+
+
+
+
+end module test_bc_periodic_mod
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

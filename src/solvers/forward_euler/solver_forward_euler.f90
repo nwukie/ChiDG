@@ -3,6 +3,7 @@ module solver_forward_euler
     use mod_constants,  only: ZERO
     use atype_solver,   only: solver_t
     use type_domain,    only: domain_t
+    use type_dict,      only: dict_t
     use type_expansion
 
     use mod_spatial,    only: update_space
@@ -12,9 +13,17 @@ module solver_forward_euler
     private
 
 
+
+    !>  Solution advancement via the forward-euler method
+    !!
+    !!  @author Nathan A. Wukie
+    !!
+    !------------------------------------------------------------
     type, extends(solver_t), public :: forward_euler_s
 
-        real(rk)        :: dt
+        real(rk)        :: dt = 0.001_rk    !< Time-step increment
+        integer(ik)     :: nsteps = 10000     !< Number of time steps to compute
+        integer(ik)     :: nwrite = 100      !< Write data every 'nwrite' steps
 
     contains
         procedure   :: init
@@ -22,36 +31,59 @@ module solver_forward_euler
 
         final :: destructor
     end type forward_euler_s
+    !-----------------------------------------------------------
 
 contains
 
 
     !> Solver initialization
-    subroutine  init(self,domain)
+    !!  - set solver member data
+    !!
+    !!  @author Nathan A. Wukie
+    !!
+    !-------------------------------------------------------------------------------------------------
+    subroutine  init(self,domain,options)
         class(forward_euler_s),     intent(inout)   :: self
         type(domain_t),             intent(inout)   :: domain
+        type(dict_t), optional,     intent(inout)   :: options
 
-        !> Call any other specialized initialization requirements
-        self%dt = 0.005_rk
-    end subroutine
+        ! If the options type is passed, use it to set the following data.
+        ! Else, the default values will be used.
+        if (present(options)) then
+            call options%get('dt',self%dt)
+            call options%get('nsteps',self%nsteps)
+            call options%get('nwrite',self%nwrite)
+        end if
+
+    end subroutine init
+
+
+
+
+
 
 
 
     !> Solve for update 'dq'
+    !!
+    !!
+    !!
+    !!
+    !!
+    !-------------------------------------------------------------------------------------------------
     subroutine solve(self,domain)
         class(forward_euler_s), intent(inout)   :: self
         type(domain_t),         intent(inout)   :: domain
 
         character(100)  :: filename
-        integer(ik)     :: itime, ntime, ielem, wcount, iblk
+        integer(ik)     :: itime, nsteps, ielem, wcount, iblk
 
 
-        ntime = 2
         wcount = 1
         associate ( q => domain%sdata%q, dq => domain%sdata%dq, rhs => domain%sdata%rhs, lin => domain%sdata%lin, dt => self%dt)
 
             print*, 'entering time'
-            do itime = 1,ntime
+            do itime = 1,self%nsteps
                 print*, "Step: ", itime
 
 
@@ -72,7 +104,7 @@ contains
                 q  = q + dq
 
 
-                if (wcount == 50) then
+                if (wcount == self%nwrite) then
                     write(filename, "(I7,A4)") 1000000+itime, '.plt'
                     call write_tecio_variables(domain,trim(filename),itime+1)
                     wcount = 0
@@ -94,13 +126,31 @@ contains
 
         end associate
 
-    end subroutine
+    end subroutine solve
+
+
+
+
 
 
 
     
     subroutine destructor(self)
         type(forward_euler_s),      intent(in) :: self
+
     end subroutine
 
+
+
+
 end module solver_forward_euler
+
+
+
+
+
+
+
+
+
+

@@ -94,7 +94,7 @@ contains
     
     
     
-!>  Test that 
+!>  Test that appropriate blocks are allocated. Test block dimensions
 @Test
     subroutine test_blockmatrix__init_linearization__denseblocks(self)
         class(test_blockmatrix),    intent(inout)   :: self

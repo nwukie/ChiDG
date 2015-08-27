@@ -6,12 +6,17 @@ module bc_periodic
     use atype_solverdata,   only: solverdata_t
     use type_mesh,          only: mesh_t
     use type_dict,          only: dict_t
-    type, extends(bc_t) :: periodic_bc
+
+
+
+
+
+    type, extends(bc_t) :: periodic_t
 
     contains
         procedure init_spec
         procedure compute
-    end type
+    end type periodic_t
 
 
 
@@ -30,7 +35,7 @@ contains
     !!
     !-----------------------------------------------------------------------
     subroutine init_spec(self,mesh,iface,options)
-        class(periodic_bc),     intent(inout)   :: self
+        class(periodic_t),     intent(inout)   :: self
         type(mesh_t),           intent(inout)   :: mesh
         integer(ik),            intent(in)      :: iface
         type(dict_t), optional, intent(in)      :: options
@@ -135,7 +140,7 @@ contains
     !!
     !------------------------------------------------------------------
     subroutine compute(self,eqnset,mesh,sdata,ielem,iface,iblk)
-        class(periodic_bc),     intent(inout)   :: self
+        class(periodic_t),     intent(inout)   :: self
         class(equationset_t),   intent(in)      :: eqnset
         type(mesh_t),           intent(in)      :: mesh
         class(solverdata_t),    intent(inout)   :: sdata

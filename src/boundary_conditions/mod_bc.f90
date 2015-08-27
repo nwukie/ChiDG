@@ -16,13 +16,14 @@ module mod_bc
     use atype_bc,       only: bc_t
 
     ! IMPORT BOUNDARY CONDITIONS
+    use bc_periodic,                      only: periodic_t
     use bc_linearadvection_extrapolate,   only: linearadvection_extrapolate_t
     implicit none
 
 
     ! Instantiate boundary conditions so they can be sourced by the factory
     type(linearadvection_extrapolate_t) :: LINEARADVECTION_EXTRAPOLATE
-
+    type(periodic_t)                    :: PERIODIC
 
 
 
@@ -44,8 +45,11 @@ contains
 
         integer(ik) :: ierr
 
-        select case (string)
-
+        select case (trim(string))
+            ! PERIODIC
+            case ('periodic','Periodic')
+                allocate(bc, source=PERIODIC, stat=ierr)
+                if (ierr /= 0) call AllocationError
 
             ! Linear Advection - extrapolation boundary condition
             case ('extrapolate_la','extrapolation_la','Extrapolate_la','Extrapolation_la')
@@ -58,6 +62,7 @@ contains
                 call signal(FATAL,"create_bc: Euler extrapolation boundary condition is not yet implemented")
 
 
+  
 
             ! DEFAULT - ERROR
             case default

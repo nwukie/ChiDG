@@ -31,6 +31,10 @@ contains
         real(rk), allocatable   :: fmodes(:)
 
 
+        ! Check that variable index 'ivar' is valid
+        if (ivar > domain%eqnset%neqns ) call signal(FATAL,'initialize_variable: variable index ivar exceeds the number of equations')
+
+
         ! Loop through elements in mesh and call function projection
         do ielem = 1,domain%mesh%nelem
             associate (elem  =>  domain%mesh%elems(ielem), q => domain%sdata%q(ielem))
@@ -39,7 +43,7 @@ contains
                 if (.not. allocated(fmodes)) allocate(fmodes(q%nterms))
 
 
-                ! Reallocate mode storage if necessary
+                ! Reallocate mode storage if necessary. For example, if the order of the expansion was changed
                 if (size(fmodes) /= q%nterms) then
                     if (allocated(fmodes)) deallocate(fmodes)
                     allocate(fmodes(q%nterms), stat=ierr)
@@ -56,8 +60,7 @@ contains
                 q%mat(:,ivar) = fmodes
 
             end associate
-
-        end do
+        end do ! ielem
 
     end subroutine
 

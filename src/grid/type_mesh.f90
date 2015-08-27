@@ -32,6 +32,8 @@ module type_mesh
         ! TODO: Needs tested
         ! type(face_t),     pointer      :: faces_c(:,:,:,:) => null()    !< Matrix view of face storage
 
+        logical     :: geomInitialized = .false.                    !< Status of geometry initialization
+        logical     :: solInitialized = .false.                     !< Status of numerics initialization
     contains
         procedure           :: init_geom
         procedure           :: init_sol
@@ -77,6 +79,7 @@ contains
 !        ftemp => self%faces
 !        self%faces_m(1:self%nelem_xi,1:self%nelem_eta,1:self%nelem_zeta,NFACES) => ftemp(1:self%nelem,NFACES)
 
+        self%geomInitialized = .true.
     end subroutine init_geom
 
 
@@ -105,6 +108,7 @@ contains
         call self%init_faces_sol()                  ! Specialized solution initialization for faces
 !        call self%init_boundary_conditions()        ! Initialize boundary conditions
 
+        self%solInitialized = .true.
     end subroutine init_sol
 
 

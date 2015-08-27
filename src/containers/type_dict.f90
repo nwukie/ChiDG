@@ -103,7 +103,7 @@ contains
         real(kind=rk),    intent(out)   :: val
 
         call self%llreal%get(key,val)
-    end subroutine
+    end subroutine 
 
     subroutine set_real_dict(self,key,val)
         class(dict_t),    intent(inout) :: self
@@ -123,7 +123,7 @@ contains
         integer(kind=ik),  intent(out)   :: val
 
         call self%llint%get(key,val)
-    end subroutine
+    end subroutine 
 
     subroutine set_int_dict(self,key,val)
         class(dict_t),      intent(inout) :: self

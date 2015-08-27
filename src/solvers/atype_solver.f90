@@ -6,6 +6,9 @@ module atype_solver
 
     !> solver abstract type definition
     !!
+    !!  @author Nathan A. Wukie
+    !!
+    !!
     !-----------------------------------------------------
     type, abstract, public  :: solver_t
 
@@ -15,17 +18,26 @@ module atype_solver
 
     contains
         ! Must define these procedures in the extended type
-        procedure(data_interface),   deferred   :: init
+        procedure(init_interface),   deferred   :: init
         procedure(data_interface),   deferred   :: solve
 
     end type solver_t
+
+
+
+
+
+
+
+
+
 
     !==================================================
     !
     !   solver deferred procedure interfaces
     !
     !==================================================
-
+    
     abstract interface
         subroutine self_interface(self)
             import solver_t
@@ -35,7 +47,23 @@ module atype_solver
 
 
 
+    abstract interface
+        subroutine init_interface(self,domain,options)
+            use type_domain,    only: domain_t
+            use type_dict,      only: dict_t
+            import solver_t
+            class(solver_t),        intent(inout)   :: self
+            type(domain_t),         intent(inout)   :: domain
+            type(dict_t), optional, intent(inout)   :: options
+        end subroutine
+    end interface
 
+
+
+
+
+
+    ! Interface for passing a domain_t type
     abstract interface
         subroutine data_interface(self,domain)
             use type_domain,  only: domain_t

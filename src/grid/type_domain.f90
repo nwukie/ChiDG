@@ -36,7 +36,7 @@ module type_domain
     contains
         procedure       :: init_geom
         procedure       :: init_sol
-        procedure       :: init_bcs
+        procedure       :: init_bc
         final           :: destructor
 
     end type domain_t
@@ -87,7 +87,7 @@ contains
     !!
     !!
     !-----------------------------------------------------
-    subroutine init_bcs(self,bcstr,iface,options)
+    subroutine init_bc(self,bcstr,iface,options)
         class(domain_t),            intent(inout)   :: self
         character(*),               intent(in)      :: bcstr
         integer(ik),                intent(in)      :: iface
@@ -113,7 +113,7 @@ contains
         call self%bcset%add(bc)
 
 
-    end subroutine init_bcs
+    end subroutine init_bc
 
 
 

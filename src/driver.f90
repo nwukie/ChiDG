@@ -11,6 +11,7 @@
 
 program driver
     use mod_kinds,              only: rk, ik
+    use mod_constants,          only: XI_MIN, ETA_MIN, ZETA_MIN
     use type_chidg,             only: chidg_t
     use type_domain,            only: domain_t
     use atype_solver,           only: solver_t
@@ -46,16 +47,22 @@ program driver
     ! Initialize grid and solution
     !
     call read_grid_hdf(gridfile,domains)
+
+    call domains(1)%init_bc('periodic',XI_MIN)
+    call domains(1)%init_bc('periodic',ETA_MIN)
+    call domains(1)%init_bc('periodic',ZETA_MIN)
+
     call domains(1)%init_sol(eqnset,nterms_s)
 
 
-    call create_function(fcn,'constant')
-    call fcn%set(1.0_rk)
+    !call create_function(fcn,'constant')
+    call create_function(fcn,'gaussian')
+    !call fcn%set(1.0_rk)
     call initialize_variable(domains(1),1,fcn)
-    call initialize_variable(domains(1),2,fcn)
-    call initialize_variable(domains(1),3,fcn)
-    call initialize_variable(domains(1),4,fcn)
-    call initialize_variable(domains(1),5,fcn)
+    !call initialize_variable(domains(1),2,fcn)
+    !call initialize_variable(domains(1),3,fcn)
+    !call initialize_variable(domains(1),4,fcn)
+    !call initialize_variable(domains(1),5,fcn)
 
 
     call write_tecio_variables(domains(1),'0.plt',1)

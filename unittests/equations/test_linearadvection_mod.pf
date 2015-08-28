@@ -130,23 +130,7 @@ contains
         
         !> Compute Automatic and Finite Difference jacobians
         call check_jacobian_volume_flux(self%domain,ielem,iblk,blk_dnad,blk_fd)
-         
         
-
-        if (iblk == 7) then
-            print*, 'blk_fd'
-            do irow = 1,size(blk_fd%mat,1)
-                print*, blk_fd%mat(irow,:)
-            end do
-
-            print*, 'blk_dnad'
-            do irow = 1,size(blk_dnad%mat,1)
-                print*, blk_dnad%mat(irow,:)
-            end do
-        end if
-
-
-
 
         @assertEqual(blk_fd%mat, blk_dnad%mat, tol)
         

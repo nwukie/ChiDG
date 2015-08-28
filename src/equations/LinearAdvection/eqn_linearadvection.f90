@@ -50,9 +50,9 @@ contains
         self%eqns(1)%ind  = 1
 
 
-        self%c(1) = ZERO
+        self%c(1) = ONE
         self%c(2) = ZERO
-        self%c(3) = ONE
+        self%c(3) = ZERO
 
 
     end subroutine
@@ -172,10 +172,12 @@ contains
     !
     !===========================================================
     subroutine compute_volume_flux(self,mesh,sdata,ielem,iblk)
-        class(linearadvection_e),        intent(in)      :: self
-        class(mesh_t),          intent(in)      :: mesh
-        class(solverdata_t),    intent(inout)   :: sdata
-        integer(ik),            intent(in)      :: ielem, iblk
+        class(linearadvection_e),       intent(in)      :: self
+        class(mesh_t),                  intent(in)      :: mesh
+        class(solverdata_t),            intent(inout)   :: sdata
+        integer(ik),                    intent(in)      :: ielem, iblk
+
+
 
         type(AD_D), allocatable :: u(:), flux_x(:), flux_y(:), flux_z(:)
         integer(ik)             :: nnodes, ierr, iseed

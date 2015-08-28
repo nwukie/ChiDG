@@ -28,7 +28,7 @@ module type_domain
         type(mesh_t)                        :: mesh                       !< Mesh storage
         type(bcset_t)                       :: bcset                      !< Boundary condition set
         class(equationset_t), allocatable   :: eqnset                     !< Equation set solved on this domain
-        class(solverdata_t),  allocatable   :: sdata                      !< Solver data storage
+        class(solverdata_t),  allocatable   :: sdata                      !< Solver data storage. q, rhs, lin, etc.
 
         logical                             :: geomInitialized = .false.
         logical                             :: numInitialized  = .false.

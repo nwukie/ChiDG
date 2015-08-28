@@ -44,7 +44,7 @@ program driver
 
 
     !
-    ! Initialize grid and solution
+    ! Initialize grid and numerics
     !
     call read_grid_hdf(gridfile,domains)
 
@@ -55,20 +55,20 @@ program driver
     call domains(1)%init_sol(eqnset,nterms_s)
 
 
-    !call create_function(fcn,'constant')
+
+    !
+    ! Initialize solution
+    !
     call create_function(fcn,'gaussian')
-    !call fcn%set(1.0_rk)
     call initialize_variable(domains(1),1,fcn)
-    !call initialize_variable(domains(1),2,fcn)
-    !call initialize_variable(domains(1),3,fcn)
-    !call initialize_variable(domains(1),4,fcn)
-    !call initialize_variable(domains(1),5,fcn)
 
 
+
+
+    !
+    ! Write initial solution
+    !
     call write_tecio_variables(domains(1),'0.plt',1)
-
-
-
 
 
     !

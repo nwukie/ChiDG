@@ -87,7 +87,7 @@ contains
 
                     !> Store to column of blk_fd
                     icol = (ivar-1)*nterms + iterm          !> Compute appropriate column for storing linearization
-                    blk_fd%mat(:,icol) = vec_fd(ielem)%vec !> Store finite difference linearization of the residual
+                    blk_fd%mat(:,icol) = vec_fd(ielem)%vec  !> Store finite difference linearization of the residual
 
 
                     !> Reset sdata storage

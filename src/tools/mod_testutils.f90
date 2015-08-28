@@ -1,7 +1,7 @@
 module mod_testutils
 #include <messenger.h>
     use mod_kinds,      only: rk,ik
-    use mod_constants,  only: ZERO, ONE, TWO, THREE
+    use mod_constants,  only: ZERO, ONE, TWO, THREE, FOUR, FIVE, SIX
     use type_point,     only: point_t
 
 
@@ -27,6 +27,9 @@ contains
         select case (trim(string))
             case ('3x3x3','333')
                 call meshgen_3x3x3_linear(pts)
+
+            case ('3x3x3_unit','333u')
+                call meshgen_3x3x3_unit_linear(pts)
 
             case ('2x2x2','222')
                 call meshgen_2x2x2_linear(pts)
@@ -247,6 +250,101 @@ contains
         end do
 
     end subroutine
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    !> Generate a set of points defining a 3x3x3 unit-element mesh
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @param[inout]   pts     points_t array of rank-3 that gets allocated, filled, and returned
+    !---------------------------------------------------------------------
+    subroutine meshgen_3x3x3_unit_linear(pts)
+        type(point_t), allocatable, intent(inout)  :: pts(:,:,:)
+
+        integer(ik), parameter      :: npt = 64
+        integer(ik)                 :: ipt_xi, ipt_eta, ipt_zeta, ipt
+        real(rk), dimension(npt)    :: x,y,z
+
+        ! elements (3x3x3) - unit linear
+        !
+        !            *-------*-------*-------*
+        !           /       /       /       /|
+        !          *-------*-------*-------* |
+        !         /       /       /       /| *
+        !        *-------*-------*-------* |/|
+        !       /       /       /       /| * |
+        !      *-------*-------*-------* |/| *
+        !      |       |       |       | * |/|
+        !      |       |       |       |/| * |
+        !      *-------*-------*-------* |/| *
+        !      |       |       |       | * |/
+        !      |       |       |       |/| *
+        !      *-------*-------*-------* |/
+        !      |       |       |       | *
+        !      |       |       |       |/
+        !      *-------*-------*-------*
+        !
+        !
+        x = [ZERO, TWO, FOUR, SIX, ZERO, TWO, FOUR, SIX, ZERO, TWO, FOUR, SIX, ZERO, TWO, FOUR, SIX, &
+             ZERO, TWO, FOUR, SIX, ZERO, TWO, FOUR, SIX, ZERO, TWO, FOUR, SIX, ZERO, TWO, FOUR, SIX, &
+             ZERO, TWO, FOUR, SIX, ZERO, TWO, FOUR, SIX, ZERO, TWO, FOUR, SIX, ZERO, TWO, FOUR, SIX, &
+             ZERO, TWO, FOUR, SIX, ZERO, TWO, FOUR, SIX, ZERO, TWO, FOUR, SIX, ZERO, TWO, FOUR, SIX]
+
+        y = [ZERO, ZERO, ZERO, ZERO, TWO, TWO, TWO, TWO, FOUR, FOUR, FOUR, FOUR, SIX, SIX, SIX, SIX, &
+             ZERO, ZERO, ZERO, ZERO, TWO, TWO, TWO, TWO, FOUR, FOUR, FOUR, FOUR, SIX, SIX, SIX, SIX, &
+             ZERO, ZERO, ZERO, ZERO, TWO, TWO, TWO, TWO, FOUR, FOUR, FOUR, FOUR, SIX, SIX, SIX, SIX, &
+             ZERO, ZERO, ZERO, ZERO, TWO, TWO, TWO, TWO, FOUR, FOUR, FOUR, FOUR, SIX, SIX, SIX, SIX]
+
+        z = [ZERO, ZERO, ZERO, ZERO, ZERO, ZERO, ZERO, ZERO, ZERO, ZERO, ZERO, ZERO, ZERO, ZERO, ZERO, ZERO, &
+             TWO, TWO, TWO, TWO, TWO, TWO, TWO, TWO, TWO, TWO, TWO, TWO, TWO, TWO, TWO, TWO, &
+             FOUR, FOUR, FOUR, FOUR, FOUR, FOUR, FOUR, FOUR, FOUR, FOUR, FOUR, FOUR, FOUR, FOUR, FOUR, FOUR, &
+             SIX, SIX, SIX, SIX, SIX, SIX, SIX, SIX, SIX, SIX, SIX, SIX, SIX, SIX, SIX, SIX]
+
+
+        ! Allocate point storage
+        allocate(pts(4,4,4))
+
+        ipt = 1
+        do ipt_zeta = 1,4
+            do ipt_eta = 1,4
+                do ipt_xi = 1,4
+                    call pts(ipt_xi,ipt_eta,ipt_zeta)%set(x(ipt), y(ipt), z(ipt))
+                    ipt = ipt + 1
+                end do
+            end do
+        end do
+
+    end subroutine
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

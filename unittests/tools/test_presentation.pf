@@ -1,0 +1,28 @@
+@Test
+subroutine passing_test()
+    use pfunit_mod
+
+    logical :: test_value
+
+    test_value = (1.0 == 1.0)
+    @assertTrue(test_value)
+
+end subroutine
+
+
+
+
+
+@Test
+subroutine failing_test()
+    use pfunit_mod
+
+    logical :: test_value
+
+    test_value = (1.0 == 2.0)
+    @assertTrue(test_value)
+end subroutine
+
+
+
+

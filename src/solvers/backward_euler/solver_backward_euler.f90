@@ -88,6 +88,11 @@ contains
                 print*, "Step: ", itime
 
 
+
+                do 
+
+
+
                 ! Update Spatial Residual and Linearization (rhs, lin)
                 call update_space(domain)
 
@@ -109,7 +114,7 @@ contains
 
 
                 ! We need to solve the matrix system Ax=b for the update vector dq
-                call m
+                call matrixsolver%solver(lin,dq,rhs)
 
 
 

@@ -573,74 +573,18 @@ contains
     !
     !================================================================
     subroutine compute_pressure(rho,rhou,rhov,rhow,rhoE,p)
-!        real(rk),  intent(in)     :: rho(:), rhou(:), rhov(:), rhow(:), rhoE(:)
         type(AD_D),  intent(in)     :: rho(:), rhou(:), rhov(:), rhow(:), rhoE(:)
         type(AD_D),  intent(inout)  :: p(:)
 
         real(rk)    :: gam
-!        real(rk), dimension(size(p))   :: gam
-!        call self%compute_gamma(rho,rhou,rhov,rhow,rhoE,gam)
 
         gam = 1.4_rk
 
 
-!        p = (gam-ONE)*(rhoE - HALF*rho*((rhou/rho)*(rhou/rho) + (rhov/rho)*(rhov/rho) + (rhow/rho)*(rhow/rho)))
         p = (gam-ONE)*(rhoE - HALF*rho*((rhou*rhou)/(rho*rho) + (rhov*rhov)/(rho*rho) + (rhow*rhow)/(rho*rho)))
 
     end subroutine
 
-
-!    !================================================================
-!    !
-!    !   Implements a routine for computing temperature
-!    !
-!    !================================================================
-!    subroutine compute_temperature(self,rho,rhou,rhov,rhow,rhoE,T)
-!        class(euler_e),  intent(in)            :: self
-!        real(rk),  intent(in)     :: rho(:), rhou(:), rhov(:), rhow(:), rhoE(:)
-!        real(rk),  intent(inout)  :: T(:)
-!
-!        real(rk), dimension(size(T))   :: gam,p
-!
-!
-!        call self%compute_gamma(rho,rhou,rhov,rhow,rhoE,gam)
-!        call self%compute_pressure(rho,rhou,rhov,rhow,rhoE,p)
-!
-!        T = p/(rho*self%rgas)
-!
-!    end subroutine
-
-
-
-!    !================================================================
-!    !
-!    !   Implements the computing gamma for a fluid
-!    !
-!    !================================================================
-!    subroutine compute_gamma(self,rho,rhou,rhov,rhow,rhoE,gam)
-!        class(euler_e),  intent(in)            :: self
-!        type(AD_D),  intent(in)     :: rho(:), rhou(:), rhov(:), rhow(:), rhoE(:)
-!        real(rk),    intent(inout)  :: gam(:)
-!
-!        gam = 1.4_rk
-!
-!    end subroutine
-
-
-
-!    !================================================================
-!    !
-!    !   Implements the computing cp (specific heat at constant pressure) for a fluid
-!    !
-!    !================================================================
-!    subroutine compute_cp(self,rho,rhou,rhov,rhow,rhoE,cp)
-!        class(euler_e),  intent(in)  :: self
-!        real(rk),  intent(in)          :: rho(:), rhou(:), rhov(:), rhow(:), rhoE(:)
-!        real(rk),  intent(inout)       :: cp(:)
-!
-!        cp = 1003.5_rk  ! J/(kg*K)
-!
-!    end subroutine
 
 
 

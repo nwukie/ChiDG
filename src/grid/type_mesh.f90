@@ -19,21 +19,21 @@ module type_mesh
     !------------------------------------------------------------------------------
     type, public :: mesh_t
         ! Integer parameters
-        integer(ik)         :: neqns    = 0                         !< Number of equations being solved
-        integer(ik)         :: nterms_s = 0                         !< Number of terms in the solution expansion
-        integer(ik)         :: nterms_c = 0                         !< Number of terms in the grid coordinate expansion
+        integer(ik)         :: neqns    = 0                             !< Number of equations being solved
+        integer(ik)         :: nterms_s = 0                             !< Number of terms in the solution expansion
+        integer(ik)         :: nterms_c = 0                             !< Number of terms in the grid coordinate expansion
         integer(ik)         :: nelem_xi, nelem_eta, nelem_zeta, nelem
 
         ! Grid data
-        type(element_t),  allocatable :: elems(:)                   !< Element storage (1:nelem)
-        type(element_t),  pointer     :: elems_m(:,:,:) => null()   !< Matrix view of element storage (1:nelem_xi, 1:nelem_eta, 1:nelem_zeta)
-        type(face_t),     allocatable :: faces(:,:)                 !< Face storage    (1:nelem,1:nfaces)
+        type(element_t),  allocatable :: elems(:)                       !< Element storage (1:nelem)
+        type(element_t),  pointer     :: elems_m(:,:,:) => null()       !< Matrix view of element storage (1:nelem_xi, 1:nelem_eta, 1:nelem_zeta)
+        type(face_t),     allocatable :: faces(:,:)                     !< Face storage    (1:nelem,1:nfaces)
 
         ! TODO: Needs tested
-        ! type(face_t),     pointer      :: faces_c(:,:,:,:) => null()    !< Matrix view of face storage
+        ! type(face_t),     pointer      :: faces_c(:,:,:,:) => null()  !< Matrix view of face storage
 
-        logical     :: geomInitialized = .false.                    !< Status of geometry initialization
-        logical     :: solInitialized = .false.                     !< Status of numerics initialization
+        logical     :: geomInitialized = .false.                        !< Status of geometry initialization
+        logical     :: solInitialized = .false.                         !< Status of numerics initialization
     contains
         procedure           :: init_geom
         procedure           :: init_sol
@@ -43,7 +43,6 @@ module type_mesh
         procedure, private  :: init_faces_geom
         procedure, private  :: init_faces_sol
 
-        procedure, private  :: init_boundary_conditions
 
         final :: destructor
     end type mesh_t
@@ -68,12 +67,21 @@ contains
 
         self%nterms_c = nterms_c
 
+
+        !
+        ! Call geometry initialization for elements and faces
+        !
         call self%init_elems_geom(points_g)
         call self%init_faces_geom()
 
+
+        !
         ! Initialize element matrix view
+        !
         temp => self%elems
         self%elems_m(1:self%nelem_xi,1:self%nelem_eta,1:self%nelem_zeta) => temp(1:self%nelem)
+
+
 
 !        TODO: NEEDS TESTED
 !        ftemp => self%faces
@@ -104,9 +112,11 @@ contains
         self%neqns    = neqns
         self%nterms_s = nterms_s
 
-        call self%init_elems_sol(neqns,nterms_s)    ! Specialized solution initialization for elements
-        call self%init_faces_sol()                  ! Specialized solution initialization for faces
-!        call self%init_boundary_conditions()        ! Initialize boundary conditions
+        !
+        ! Call numerics initialization for elements and faces
+        !
+        call self%init_elems_sol(neqns,nterms_s) 
+        call self%init_faces_sol()               
 
         self%solInitialized = .true.
     end subroutine init_sol
@@ -363,80 +373,6 @@ contains
         end do
     end subroutine init_faces_sol
 
-
-
-
-
-
-
-
-    !> Initialize boundary conditions
-    !!
-    !!
-    !!
-    !-------------------------------------------------------------------------------------
-    subroutine init_boundary_conditions(self)
-        class(mesh_t),  intent(inout)   :: self
-
-        integer(ik) :: ielem, ielem_p, ixi, ieta, izeta, ixi_p, ieta_p, izeta_p
-
-
-
-        ! Apply periodic XI
-        ixi = 1
-        ixi_p = self%nelem_xi
-        do izeta = 1,self%nelem_zeta
-            do ieta = 1,self%nelem_eta
-                ielem = self%elems_m(ixi,ieta,izeta)%ielem
-                ielem_p = self%elems_m(ixi_p,ieta,izeta)%ielem
-
-                self%faces(ielem,XI_MIN)%ftype = 0              ! Interior face
-                self%faces(ielem,XI_MIN)%ineighbor = ielem_p    ! Set neighbor face to be periodic
-
-                self%faces(ielem_p,XI_MAX)%ftype = 0
-                self%faces(ielem_p,XI_MAX)%ineighbor = ielem
-            end do
-        end do
-
-
-        ! Apply periodic ETA
-        ieta = 1
-        ieta_p = self%nelem_eta
-        do izeta = 1,self%nelem_zeta
-            do ixi = 1,self%nelem_xi
-                ielem = self%elems_m(ixi,ieta,izeta)%ielem
-                ielem_p = self%elems_m(ixi,ieta_p,izeta)%ielem
-
-                self%faces(ielem,ETA_MIN)%ftype = 0              ! Interior face
-                self%faces(ielem,ETA_MIN)%ineighbor = ielem_p    ! Set neighbor face to be periodic
-
-                self%faces(ielem_p,ETA_MAX)%ftype = 0
-                self%faces(ielem_p,ETA_MAX)%ineighbor = ielem
-            end do
-        end do
-
-
-        ! Apply periodic ZETA
-        izeta = 1
-        izeta_p = self%nelem_zeta
-        do ieta = 1,self%nelem_zeta
-            do ixi = 1,self%nelem_xi
-                ielem = self%elems_m(ixi,ieta,izeta)%ielem
-                ielem_p = self%elems_m(ixi,ieta,izeta_p)%ielem
-
-                self%faces(ielem,ZETA_MIN)%ftype = 0              ! Interior face
-                self%faces(ielem,ZETA_MIN)%ineighbor = ielem_p    ! Set neighbor face to be periodic
-
-                self%faces(ielem_p,ZETA_MAX)%ftype = 0
-                self%faces(ielem_p,ZETA_MAX)%ineighbor = ielem
-            end do
-        end do
-
-
-
-
-
-    end subroutine
 
 
 

@@ -24,32 +24,32 @@ module type_element
     !!
     !------------------------------------------------------------
     type, public :: element_t
-        integer(ik)      :: neqns            !> Number of equations being solved
-        integer(ik)      :: nterms_s         !> Number of terms in solution expansion.   (polynomial_order + 1) or (Ns + 1)
-        integer(ik)      :: nterms_c         !> Number of terms in coordinate expansion. (polynomial_order + 1) or (Nc + 1)
-        integer(ik)      :: ielem            !> Block-local element index
+        integer(ik)      :: neqns                           !< Number of equations being solved
+        integer(ik)      :: nterms_s                        !< Number of terms in solution expansion.  
+        integer(ik)      :: nterms_c                        !< Number of terms in coordinate expansion. 
+        integer(ik)      :: ielem                           !< Block-local element index
 
         !> Element quadrature points, mesh points and modes
         !---------------------------------------------------------
-        type(point_t), allocatable  :: quad_pts(:)  !> Cartesian coordinates of discrete quadrature points
-        type(point_t), allocatable  :: elem_pts(:)  !> Cartesian coordinates of discrete points defining element
-        type(expansion_t)           :: coords       !> Modal representation of cartesian coordinates (nterms_var,(x,y,z))
+        type(point_t), allocatable  :: quad_pts(:)          !< Cartesian coordinates of discrete quadrature points
+        type(point_t), allocatable  :: elem_pts(:)          !< Cartesian coordinates of discrete points defining element
+        type(expansion_t)           :: coords               !< Modal representation of cartesian coordinates (nterms_var,(x,y,z))
 
         !> Element metric terms
         !---------------------------------------------------------
-        real(rk), allocatable       :: metric(:,:,:)    !> metric matrix for each quadrature node    (mat_i,mat_j,quad_pt)
-        real(rk), allocatable       :: jinv(:)          !> jacobian terms at quadrature nodes
+        real(rk), allocatable       :: metric(:,:,:)        !< metric matrix for each quadrature node    (mat_i,mat_j,quad_pt)
+        real(rk), allocatable       :: jinv(:)              !< jacobian terms at quadrature nodes
 
         !> Matrices of cartesian gradients of basis/test functions
         !---------------------------------------------------------
-        real(rk), allocatable       :: dtdx(:,:)
-        real(rk), allocatable       :: dtdy(:,:)
-        real(rk), allocatable       :: dtdz(:,:)
+        real(rk), allocatable       :: dtdx(:,:)            !< Derivative of basis functions in the x-direction at quadrature nodes
+        real(rk), allocatable       :: dtdy(:,:)            !< Derivative of basis functions in the y-direction at quadrature nodes
+        real(rk), allocatable       :: dtdz(:,:)            !< Derivative of basis functions in the z-direction at quadrature nodes
 
         !> Quadrature matrices
         !---------------------------------------------------------
-        type(quadrature_t), pointer  :: gq     => null()
-        type(quadrature_t), pointer  :: gqmesh => null()
+        type(quadrature_t), pointer  :: gq     => null()    !< Pointer to quadrature instance for solution expansion
+        type(quadrature_t), pointer  :: gqmesh => null()    !< Pointer to quadrature instance for coordinate expansion
 
         !> Element-local mass matrices
         !---------------------------------------------------------

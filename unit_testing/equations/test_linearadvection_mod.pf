@@ -1,0 +1,217 @@
+module test_linearadvection_mod
+    use pfunit_mod
+    use mod_kinds,          only: rk,ik
+    use mod_constants,      only: ZERO, ONE, TWO, THREE, FIVE, SIX, EIGHT, NINE, TEN, &
+                                  XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX, NFACES
+    use type_chidg,         only: chidg_t
+    use type_point,         only: point_t
+    use type_domain,        only: domain_t
+    use type_densematrix,   only: densematrix_t
+    use mod_testutils,      only: meshgen
+    use mod_hdfio,            only: read_grid_hdf
+    use mod_check_jacobian
+    implicit none
+
+    public  :: test_eq_LA
+
+
+    !> This parameter is used to test the linearization for different blocks.
+    !> iblk = [XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX, DIAG]
+    @TestParameter(constructor=newBlock)
+    type, extends (AbstractTestParameter) :: blockParam
+        integer(ik)         :: iblk
+    contains
+        procedure :: toString
+    end type blockParam
+    
+    
+    
+    @TestCase(constructor=newTest)
+    type, extends(ParameterizedTestCase) ::  test_eq_LA
+        type(chidg_t)       :: chidg
+        !type(domain_t),allocatable      :: domain(:)
+        type(domain_t)      :: domain
+        integer(ik)         :: iblk
+    contains
+        procedure   ::  setUp
+        procedure   ::  tearDown
+    end type test_eq_LA
+
+
+
+
+
+contains
+    !------------------------
+    !> SET-UP  +  TEAR-DOWN
+    !------------------------
+
+    !> NOTE: make sure to use 'this' instead of 'self' since these are over-writting a derived type 
+    !! procedure. The argument names have to match
+    subroutine setUp(this)
+        class(test_eq_LA),    intent(inout)   :: this
+        
+        integer(ik), parameter      :: npt = 64
+        type(point_t), allocatable  :: pts(:,:,:)
+        integer(ik)                 :: neqns, nterms_s, nterms_c
+        real(rk), dimension(npt)    :: x,y,z
+        
+        !> Initialize chidg environment
+        call this%chidg%init('env')
+
+        !> Generate points array for 3x3x3 mesh
+        !call read_grid_hdf('4x4x4_unit.h5',this%domain)
+        call meshgen('3x3x3_unit',pts)
+
+        !> Initialize domain
+        nterms_s = 8
+        nterms_c = 8
+        call this%domain%init_geom(nterms_c,pts)
+        call this%domain%init_sol('LA',nterms_s)
+
+    end subroutine
+    
+    subroutine tearDown(this)
+        class(test_eq_LA),    intent(inout)   :: this
+    end subroutine
+
+
+    !--------------------------
+    !> PARAMETER CONSTRUCTORS
+    !--------------------------
+    
+    !> Function for setting the correct parameter value in the constructor
+    function newBlock(iblk) result(param)
+        type(blockParam)        :: param
+        integer(ik), intent(in) :: iblk
+        
+        param%iblk = iblk
+    end function newBlock
+    
+    !> TestCase constructor for parameter specification
+    function newTest(param)
+        type(test_eq_LA) :: newTest
+        type(blockParam)                    :: param
+        
+        newTest%iblk = param%iblk
+    end function newTest
+ 
+    !> ToString - not sure what this is for yet
+    function toString(this) result(string)
+        class(blockParam), intent(in)   :: this
+        character(:), allocatable       :: string
+        character(len=3)                :: str
+         
+        write(str,'(i0)') this%iblk
+        string = str
+    end function toString
+ 
+
+
+!------------------------------------------------------------------------------------------
+!>                                        TESTS
+!------------------------------------------------------------------------------------------
+!> Test Volume Flux jacobian calclation
+@Test(cases = [1, 2, 3, 4, 5, 6, 7])
+    subroutine test_LA_jacobian_volume_flux(self)
+        class(test_eq_LA),    intent(inout)   :: self
+        
+        type(densematrix_t) :: blk_dnad, blk_fd
+        integer(ik) :: ielem, ivar, iblk, irow
+        real(rk)    :: tol
+        
+        tol = 1.0e-7_rk
+        
+        ielem = 14
+        ivar  = 1
+        
+        !> Block Parameter from cases = []
+        iblk = self%iblk
+        
+        !> Compute Automatic and Finite Difference jacobians
+        call check_jacobian_volume_flux(self%domain,ielem,iblk,blk_dnad,blk_fd)
+        
+
+        @assertEqual(blk_fd%mat, blk_dnad%mat, tol)
+        
+    end subroutine
+    
+    
+    
+     
+
+
+!> Test Boundary Average Flux jacobian calclation
+@Test(cases = [1, 2, 3, 4, 5, 6, 7])
+    subroutine test_LA_jacobian_boundary_average_flux(self)
+        class(test_eq_LA),    intent(inout)   :: self
+        
+        type(densematrix_t) :: blk_dnad, blk_fd
+        integer(ik) :: ielem, iface, ivar, iblk
+        real(rk)    :: tol
+        
+        tol = 1.0e-7_rk
+        
+        ielem = 14
+        iface = 1
+        ivar  = 1
+        
+        !> Block Parameter from cases = []
+        iblk = self%iblk
+        
+        !> Compute Automatic and Finite Difference jacobians
+        call check_jacobian_boundary_average_flux(self%domain,ielem,iblk,blk_dnad,blk_fd)
+        
+        
+        @assertEqual(blk_fd%mat, blk_dnad%mat, tol)
+        
+    end subroutine
+    
+    
+    
+    
+    
+    
+!> Test Boundary Upwind Flux jacobian calclation
+@Test(cases = [1, 2, 3, 4, 5, 6, 7])
+    subroutine test_LA_jacobian_boundary_upwind_flux(self)
+        class(test_eq_LA),    intent(inout)   :: self
+        
+        type(densematrix_t) :: blk_dnad, blk_fd
+        integer(ik) :: ielem, iface, ivar, iblk
+        real(rk)    :: tol
+        
+        tol = 1.0e-7_rk
+        
+        ielem = 14
+        iface = 1
+        ivar  = 1
+        
+        !> Block Parameter from cases = []
+        iblk = self%iblk
+        
+        !> Compute Automatic and Finite Difference jacobians
+        call check_jacobian_boundary_upwind_flux(self%domain,ielem,iblk,blk_dnad,blk_fd)
+        
+        
+        @assertEqual(blk_fd%mat, blk_dnad%mat, tol)
+        
+    end subroutine
+    
+    
+    
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+end module test_linearadvection_mod

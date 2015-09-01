@@ -1,0 +1,363 @@
+module test_blockvector_mod
+    use pfunit_mod
+    use type_chidg,         only: chidg_t
+    use mod_kinds,          only: rk,ik
+    use mod_constants,      only: ZERO, ONE, TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT, NINE, TEN, &
+                                  XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX
+    use mod_hdfio,          only: read_grid_hdf
+    use mod_interpolate,    only: interpolate
+    use mod_grid_operators, only: initialize_variable
+    use type_domain,        only: domain_t
+    use type_blockvector,   only: blockvector_t
+    use DNAD_D
+    use fcn_constant,       only: constant_f
+    implicit none
+
+    public  :: test_blockvector
+
+@TestCase
+    type, extends(TestCase) ::  test_blockvector
+        type(chidg_t)                        :: chidg
+        type(domain_t),         allocatable  :: domain(:)
+        type(blockvector_t)                  :: bvec
+        type(constant_f)                     :: fcn
+
+    contains
+        procedure   ::  setUp
+        procedure   ::  tearDown
+    end type test_blockvector
+
+
+contains
+    !! NOTE: make sure to use 'this' instead of 'self' since these are over-writting a derived type 
+    !! procedure. The argument names have to match
+    subroutine setUp(this)
+        class(test_blockvector),    intent(inout)   :: this
+        integer(ik)                                 :: nterms_s, ivar
+        
+        associate (dom => this%domain)
+    
+            
+            ! Initialize ChiDG environment
+            call this%chidg%init('env')
+    
+    
+            ! Read 3x3x3 element grid
+            call read_grid_hdf('D1_E27_M1.h5', this%domain)
+    
+    
+            ! Initialize domain numerics
+            nterms_s = 8
+            call this%domain(1)%init_sol('Scalar',nterms_s)
+    
+    
+            ! Initialize blockvector
+            call this%bvec%init(this%domain(1)%mesh)
+    
+    
+        end associate        
+    end subroutine
+    
+    subroutine tearDown(this)
+        class(test_blockvector),    intent(inout)   :: this
+        
+    end subroutine
+
+
+
+
+
+!------------------------------------------------------------------------------------------------------
+!> Test that number of rows equals number of elements
+@Test
+    subroutine test_blockvector__init__nrows(self)
+        class(test_blockvector),    intent(inout)   :: self
+        
+        integer(ik)                 :: nelem
+
+        nelem = self%domain(1)%mesh%nelem
+        @assertEqual(nelem,size(self%bvec%lvecs,1))  
+
+    end subroutine
+    
+
+
+
+
+
+    
+    
+    
+    
+!>  Test that appropriate blocks are allocated. Test block dimensions
+@Test
+    subroutine test_blockvector__init__densevector_allocation(self)
+        class(test_blockvector),    intent(inout)   :: self
+        
+
+        associate ( lvecs => self%bvec%lvecs )
+
+            ! Test densevector storage is allocated for each element
+            @assertTrue(allocated(lvecs(1)%vec))
+            @assertTrue(allocated(lvecs(2)%vec))
+            @assertTrue(allocated(lvecs(3)%vec))
+            @assertTrue(allocated(lvecs(4)%vec))
+            @assertTrue(allocated(lvecs(5)%vec))
+            @assertTrue(allocated(lvecs(6)%vec))
+            @assertTrue(allocated(lvecs(7)%vec))
+            @assertTrue(allocated(lvecs(8)%vec))
+            @assertTrue(allocated(lvecs(9)%vec))
+            @assertTrue(allocated(lvecs(10)%vec))
+            @assertTrue(allocated(lvecs(11)%vec))
+            @assertTrue(allocated(lvecs(12)%vec))
+            @assertTrue(allocated(lvecs(13)%vec))
+            @assertTrue(allocated(lvecs(14)%vec))
+            @assertTrue(allocated(lvecs(15)%vec))
+            @assertTrue(allocated(lvecs(16)%vec))
+            @assertTrue(allocated(lvecs(17)%vec))
+            @assertTrue(allocated(lvecs(18)%vec))
+            @assertTrue(allocated(lvecs(19)%vec))
+            @assertTrue(allocated(lvecs(20)%vec))
+            @assertTrue(allocated(lvecs(21)%vec))
+            @assertTrue(allocated(lvecs(22)%vec))
+            @assertTrue(allocated(lvecs(23)%vec))
+            @assertTrue(allocated(lvecs(24)%vec))
+            @assertTrue(allocated(lvecs(25)%vec))
+            @assertTrue(allocated(lvecs(26)%vec))
+            @assertTrue(allocated(lvecs(27)%vec))
+            
+        end associate
+
+
+    end subroutine
+
+
+
+
+
+
+
+
+
+! Test that densevector components of blockvector are all initialized with correct storage sizes
+@Test
+    subroutine test_blockvector__init__densevector_sizes(self)
+        class(test_blockvector),    intent(inout)       :: self
+
+        integer(ik) :: size1d
+
+
+        associate ( mesh => self%domain(1)%mesh, lvecs => self%bvec%lvecs)
+
+
+            !> Test first element, linearization block sizes
+            size1d = mesh%nterms_s  *  mesh%neqns
+
+
+            @assertEqual(size1d,size(lvecs(1)%vec))
+            @assertEqual(size1d,size(lvecs(2)%vec))
+            @assertEqual(size1d,size(lvecs(3)%vec))
+            @assertEqual(size1d,size(lvecs(4)%vec))
+            @assertEqual(size1d,size(lvecs(5)%vec))
+            @assertEqual(size1d,size(lvecs(6)%vec))
+            @assertEqual(size1d,size(lvecs(7)%vec))
+            @assertEqual(size1d,size(lvecs(8)%vec))
+            @assertEqual(size1d,size(lvecs(9)%vec))
+            @assertEqual(size1d,size(lvecs(10)%vec))
+            @assertEqual(size1d,size(lvecs(11)%vec))
+            @assertEqual(size1d,size(lvecs(12)%vec))
+            @assertEqual(size1d,size(lvecs(13)%vec))
+            @assertEqual(size1d,size(lvecs(14)%vec))
+            @assertEqual(size1d,size(lvecs(15)%vec))
+            @assertEqual(size1d,size(lvecs(16)%vec))
+            @assertEqual(size1d,size(lvecs(17)%vec))
+            @assertEqual(size1d,size(lvecs(18)%vec))
+            @assertEqual(size1d,size(lvecs(19)%vec))
+            @assertEqual(size1d,size(lvecs(20)%vec))
+            @assertEqual(size1d,size(lvecs(21)%vec))
+            @assertEqual(size1d,size(lvecs(22)%vec))
+            @assertEqual(size1d,size(lvecs(23)%vec))
+            @assertEqual(size1d,size(lvecs(24)%vec))
+            @assertEqual(size1d,size(lvecs(25)%vec))
+            @assertEqual(size1d,size(lvecs(26)%vec))
+            @assertEqual(size1d,size(lvecs(27)%vec))
+            
+        end associate   
+    
+    
+    end subroutine
+    
+    
+
+
+
+
+
+
+
+
+
+! Test that blockvector%ldata component was initialized with correct data
+@Test
+    subroutine test_blockvector__init__ldata(self)
+        class(test_blockvector),    intent(inout)       :: self
+
+        integer(ik) :: ielem
+
+        do ielem = 1,self%domain(1)%mesh%nelem
+            @assertEqual(1,self%bvec%ldata(ielem,1))
+            @assertEqual(8,self%bvec%ldata(ielem,2))
+        end do
+
+
+    end subroutine
+
+
+
+
+
+
+
+
+
+! Test blockvector%lvecs_m matrix-view component of for accessing blockvector%lvecs 
+@Test
+    subroutine test_blockvector__init_lvecs_m(self)
+        class(test_blockvector),    intent(inout)       :: self
+
+        integer(ik) :: ielem, ielem_xi, ielem_eta, ielem_zeta, parent
+
+
+        ielem = 1
+        do ielem_zeta = 1,self%domain(1)%mesh%nelem_zeta
+            do ielem_eta = 1,self%domain(1)%mesh%nelem_eta
+                do ielem_xi = 1,self%domain(1)%mesh%nelem_xi
+
+                    parent = self%domain(1)%mesh%elems_m(ielem_xi,ielem_eta,ielem_zeta)%ielem
+
+
+                    @assertEqual(parent,self%bvec%lvecs(ielem)%parent())
+
+
+                    ielem = ielem + 1
+
+                end do
+            end do
+        end do
+
+
+    end subroutine
+
+
+
+
+! Test blockvector%norm procedure
+@Test
+    subroutine test_blockvector__norm(self)
+        class(test_blockvector),    intent(inout)   :: self
+
+        integer(ik) :: ielem
+        real(rk)    :: norm_ref, norm
+        real(rk)    :: ref_vec(8)
+
+        ! Zero values
+        do ielem = 1,size(self%bvec%lvecs)
+            self%bvec%lvecs(ielem)%vec = ZERO
+        end do
+
+
+        ref_vec= [ONE, TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT]
+        ! Initialize select values.
+        self%bvec%lvecs(1)%vec  = ref_vec   ! Element 1 Values
+        self%bvec%lvecs(27)%vec = ref_vec   ! Element 27 values
+
+        norm_ref = sqrt( sum( ref_vec**TWO + ref_vec**TWO) )    ! Twice since two elements were set
+
+        !
+        ! Compute norm. THIS IS WHAT WE ARE TESTING
+        !
+        norm = self%bvec%norm()
+
+
+        @assertEqual(norm_ref,norm)
+
+    end subroutine
+
+
+
+
+
+! Test blockvector%clear procedure
+@Test
+    subroutine test_blockvector__clear(self)
+        class(test_blockvector),    intent(inout)   :: self
+
+        integer(ik) :: ielem
+        real(rk)    :: ref_vec(8)
+
+
+        ref_vec = [ONE, TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT]
+
+
+        ! Initialize all componenets
+        do ielem = 1,size(self%bvec%lvecs)
+            self%bvec%lvecs(ielem)%vec = ref_vec
+        end do
+
+
+
+        !
+        ! Call blockvector%clear to ZERO vector storage. THIS IS WHAT WE ARE TESTING
+        !
+        call self%bvec%clear()
+
+
+        do ielem = 1,size(self%bvec%lvecs)
+            @assertEqual(ZERO,self%bvec%lvecs(ielem)%vec)
+        end do 
+
+
+    end subroutine
+
+
+
+! Test blockvector%nentries procedure
+@Test
+    subroutine test_blockvector__nentries(self)
+        class(test_blockvector),    intent(inout)   :: self
+
+        integer(ik) :: nentries_ref, nentries, nelems, nterms
+
+        nelems = 27
+        nterms = 8
+
+        nentries_ref = nelems * nterms
+
+
+        nentries = self%bvec%nentries()
+
+        @assertEqual(nentries_ref,nentries)
+
+    end subroutine
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    
+
+
+end module test_blockvector_mod

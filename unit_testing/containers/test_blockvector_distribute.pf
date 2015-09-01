@@ -1,0 +1,81 @@
+@Test
+subroutine test_blockvector_distribute()
+    use pfunit_mod
+    use mod_kinds,          only: rk,ik
+    use mod_constants,      only: ONE, TWO, THREE, FOUR
+    use type_blockvector,   only: blockvector_t
+    use mod_testutils,      only: meshgen
+    use type_chidg,         only: chidg_t
+    use type_domain,        only: domain_t
+    use type_point,         only: point_t
+
+
+    type(chidg_t)               :: chidg
+    type(blockvector_t)         :: bvec
+    type(point_t), allocatable  :: pts(:,:,:)
+    type(domain_t)              :: dom
+
+    real(rk), allocatable   :: fullvec(:)
+
+
+
+    ! Initialize chidg environment
+    call chidg%init('env')
+
+
+
+
+    ! Generate points for a 2x2x1 mesh
+    call meshgen('221',pts)
+
+
+
+
+    ! Call domain initialization
+    nterms_c = 8
+    nterms_s = 8
+    call dom%init_geom(nterms_c,pts)
+    call dom%init_sol('scalar',nterms_s)
+
+
+    ! Call initailization on blockvector
+    call bvec%init(dom%mesh)
+
+
+
+    allocate(fullvec(32))
+    fullvec = 0._rk
+
+
+
+    ! Assign reference blocks to the blockvector matrix
+    fullvec(1:8)   = ONE
+    fullvec(9:16)  = TWO
+    fullvec(17:24) = THREE
+    fullvec(25:32) = FOUR
+
+
+
+
+    !
+    !   THIS IS WHAT WE ARE TESTING
+    !
+    ! Call routine to build full-vector representation
+    call bvec%distribute(fullvec)
+
+
+
+
+
+    ! Test full-vector values against expected reference values
+    @assertEqual(ONE,bvec%lvecs(1)%vec)
+    @assertEqual(TWO,bvec%lvecs(2)%vec)
+    @assertEqual(THREE,bvec%lvecs(3)%vec)
+    @assertEqual(FOUR,bvec%lvecs(4)%vec)
+
+
+
+
+
+
+end subroutine

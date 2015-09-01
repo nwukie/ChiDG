@@ -50,7 +50,7 @@ endif()
 #------------------------------------------------------------------ 
 if (${Fortran_VENDOR} MATCHES "INTEL")
 #    set (USER_COMPILE_FLAGS_DEBUG   "-O0 -fpp -assume realloc_lhs -debug -p -g -traceback -check all -check noarg_temp_created -check bounds -fp-stack-check")
-    set (USER_COMPILE_FLAGS_DEBUG   "-O0 -fpp -assume realloc_lhs -debug -p -g -traceback -check all -check bounds -fp-stack-check -standard-semantics -assume nostd_mod_proc_name")
+    set (USER_COMPILE_FLAGS_DEBUG   "-O0 -fpp -assume realloc_lhs -debug -p -g -traceback -check all -check bounds -fp-stack-check -standard-semantics -assume nostd_mod_proc_name -heap-arrays 1600")
     set (USER_COMPILE_FLAGS_RELEASE "-O3 -fpp -assume realloc_lhs")
     set (CMAKE_Fortran_LINK_FLAGS_DEBUG "")
     set (CMAKE_Fortran_LINK_FLAGS_RELEASE "")
@@ -60,7 +60,7 @@ if (${Fortran_VENDOR} MATCHES "INTEL")
     
 elseif (${Fortran_VENDOR} MATCHES "GNU")
     #set (USER_COMPILE_FLAGS_DEBUG   "-O0 -cpp -ffree-form -ffree-line-length-none -fcheck=all -fbacktrace -fcheck=bounds -p -g")    # Note: -fcheck=all has issues with passing null pointer in tecio_interface
-    set (USER_COMPILE_FLAGS_DEBUG   "-O0 -cpp -ffree-form -ffree-line-length-none -fbacktrace -fcheck=bounds -p -g")    # Note: -fcheck=all has issues with passing null pointer in tecio_interface
+    set (USER_COMPILE_FLAGS_DEBUG   "-O0 -cpp -ffree-form -ffree-line-length-none -fbacktrace -fstack-protector -fcheck=bounds -fmax-stack-var-size=1600 -p -g")    # Note: -fcheck=all has issues with passing null pointer in tecio_interface
 #    set (USER_COMPILE_FLAGS_DEBUG "-O3 -cpp -ffree-form -ffree-line-length-none")
     set (USER_COMPILE_FLAGS_RELEASE "-O3 -cpp -ffree-form -ffree-line-length-none")
     set (CMAKE_Fortran_LINK_FLAGS_DEBUG "")
@@ -169,7 +169,7 @@ if (UNITTEST)
     set(PFU_LIB ${PF_ROOT}/lib)
 
     # Add tests
-    add_subdirectory(unittests)
+    add_subdirectory(unit_testing)
 endif()
 
 

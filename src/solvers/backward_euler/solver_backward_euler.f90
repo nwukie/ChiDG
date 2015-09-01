@@ -1,10 +1,11 @@
 module solver_backward_euler
     use mod_kinds,      only: rk,ik
-    use mod_constants,  only: ZERO
+    use mod_constants,  only: ZERO, ONE, TWO, DIAG
     use atype_solver,   only: solver_t
     use type_domain,    only: domain_t
     use type_dict,      only: dict_t
-    use type_expansion
+    use atype_matrixsolver, only: matrixsolver_t
+    use type_blockvector
 
     use mod_spatial,    only: update_space
 
@@ -21,9 +22,9 @@ module solver_backward_euler
     !------------------------------------------------------------
     type, extends(solver_t), public :: backward_euler_s
 
-        real(rk)        :: dt = 0.001_rk                    !< Time-step increment
+        real(rk)        :: dt = 0.1_rk                    !< Time-step increment
         integer(ik)     :: nsteps = 10000                   !< Number of time steps to compute
-        integer(ik)     :: nwrite = 100                     !< Write data every 'nwrite' steps
+        integer(ik)     :: nwrite = 1                     !< Write data every 'nwrite' steps
 
     contains
         procedure   :: init
@@ -32,6 +33,15 @@ module solver_backward_euler
         final :: destructor
     end type backward_euler_s
     !-----------------------------------------------------------
+
+
+
+
+
+
+
+
+
 
 contains
 
@@ -72,59 +82,113 @@ contains
     !!
     !-------------------------------------------------------------------------------------------------
     subroutine solve(self,domain,matrixsolver)
-        class(backward_euler_s),    intent(inout)   :: self
-        type(domain_t),             intent(inout)   :: domain
-        class(matrixsolver_t),      intent(inout)   :: matrixsolver
+        class(backward_euler_s),            intent(inout)   :: self
+        type(domain_t),                     intent(inout)   :: domain
+        class(matrixsolver_t), optional,    intent(inout)   :: matrixsolver
 
-        character(100)  :: filename
-        integer(ik)     :: itime, nsteps, ielem, wcount, iblk
+        character(100)      :: filename
+        integer(ik)         :: itime, nsteps, ielem, wcount, iblk, iindex, ninner, iinner
+        real(rk)            :: resid
+        type(blockvector_t) :: b, qn, qold, qnew, dtau
+      
 
 
         wcount = 1
+        ninner = 10
         associate ( q => domain%sdata%q, dq => domain%sdata%dq, rhs => domain%sdata%rhs, lin => domain%sdata%lin, dt => self%dt)
 
             print*, 'entering time'
+
+            !
+            ! TIME STEP LOOP
+            !
             do itime = 1,self%nsteps
                 print*, "Step: ", itime
 
 
-
-                do 
-
-
-
-                ! Update Spatial Residual and Linearization (rhs, lin)
-                call update_space(domain)
+                ! Store qn, since it will be operated on in the inner loop
+                qn = q
 
 
+                !
+                ! NONLINEAR CONVERGENCE INNER LOOP
+                !
+                resid  = ONE    ! Force inner loop entry
+                ninner = 1      ! Initialize inner loop counter
+                do while ( resid > 1.0e-8_rk )
+                    print*, "   ninner: ", ninner
 
 
-
-
-
-
-
-
-                ! Multiply RHS by mass matrix for explicit time-integration
-                !do ielem = 1,domain%mesh%nelem
-                !    rhs(ielem)%vec = matmul(domain%mesh%elems(ielem)%invmass, rhs(ielem)%vec)
-                !end do
+                    ! Store the value of the current inner iteration solution (k) for the solution update (n+1), q_(n+1)_k
+                    qold = q
 
 
 
 
-                ! We need to solve the matrix system Ax=b for the update vector dq
-                call matrixsolver%solver(lin,dq,rhs)
+                    ! Update Spatial Residual and Linearization (rhs, lin)
+                    call update_space(domain)
 
 
 
 
 
-                ! Compute update vector
-                dq = dt * rhs
+                    ! Add mass/dt to block diagonal in dR/dQ
+                    do ielem = 1,domain%mesh%nelem
+                        iblk = DIAG
+                       
+                        if (allocated(lin%lblks(ielem,iblk)%mat)) then
 
-                ! Advance solution with update vector
-                q  = q + dq
+                            ! Add mass matrix divided by dt to the block diagonal
+                            lin%lblks(ielem,iblk)%mat  =  lin%lblks(ielem,iblk)%mat  +  domain%mesh%elems(ielem)%mass/self%dt
+
+                        end if
+
+                    end do
+
+
+
+                    ! Divide pseudo-time derivative by dt and multiply by mass matrix
+                    dtau = (qold - qn)/self%dt
+                    do ielem = 1,domain%mesh%nelem
+                        dtau%lvecs(ielem)%vec = matmul(domain%mesh%elems(ielem)%mass,dtau%lvecs(ielem)%vec)
+                    end do
+
+
+
+                    ! Assign rhs to b, which should allocate storage
+                    !b = (rhs)  ! BEWARE: this causes an error. Parentheses operator not defined
+                    b = (-ONE)*dtau - rhs
+
+
+
+
+                    ! We need to solve the matrix system Ax=b for the update vector x (dq)
+                    call matrixsolver%solve(lin,dq,b)
+
+
+
+                    ! Advance solution with update vector
+                    qnew = qold + dq
+
+
+                    ! Compute residual of nonlinear iteration
+                    resid = dq%norm()
+
+
+                    ! Clear working storage
+                    call rhs%clear()
+                    call dq%clear()
+                    call lin%clear()
+
+
+
+                    ! Store updated solution vector (qnew) to working solution vector (q)
+                    q = qnew
+                    ninner = ninner + 1
+
+                    print*, "   DQ - Norm: ", resid
+                end do ! ninner
+
 
 
                 if (wcount == self%nwrite) then
@@ -135,20 +199,7 @@ contains
                 wcount = wcount + 1
 
 
-
-                ! Clear spatial residual
-                do ielem = 1,domain%mesh%nelem
-                    rhs(ielem)%vec = ZERO
-
-                    !do iblk = 1,7
-                    !    lin%lblks(ielem,iblk)%mat = ZERO
-                    !end do
-                end do
-
-                call lin%clear()    ! Clear block-sparse matrix containing linearization of the spatial scheme
-
-
-            end do
+            end do  ! itime
 
         end associate
 

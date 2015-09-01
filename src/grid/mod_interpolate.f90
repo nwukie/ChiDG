@@ -3,25 +3,36 @@ module mod_interpolate
     use DNAD_D
     use type_element,   only: element_t
     use type_face,      only: face_t
-    use type_expansion, only: expansion_t
+    !use type_expansion, only: expansion_t
+    use type_blockvector,   only: blockvector_t
 
     implicit none
+
+
+
 
     interface interpolate
         module procedure    interpolate_element_autodiff, interpolate_element_standard
         module procedure    interpolate_face_autodiff,    interpolate_face_standard
     end interface
 
-    contains
+
+
+
+
+contains
 
 
     !> Compute variable at quadrature nodes.
     !!
     !!
+    !!
+    !!
     !----------------------------------------------------------------
     subroutine interpolate_element_autodiff(elems,q,ielem,ivar,var_gq,ielem_seed)
         type(element_t),    intent(in)      :: elems(:)
-        type(expansion_t),  intent(inout)   :: q(:)
+        !type(expansion_t),  intent(inout)   :: q(:)
+        type(blockvector_t), intent(inout)   :: q
         integer(ik),        intent(in)      :: ielem
         integer(ik),        intent(in)      :: ivar
         type(AD_D),         intent(inout)   :: var_gq(:)
@@ -30,9 +41,10 @@ module mod_interpolate
         type(AD_D)  :: qdiff(elems(ielem)%nterms_s)
         integer(ik) :: nderiv, set_deriv, iterm, igq, i
 
-
-        !> Get the number of degrees of freedom for the seed element
-        !! and set this as the number of partial derivatives to track
+        !
+        ! Get the number of degrees of freedom for the seed element
+        ! and set this as the number of partial derivatives to track
+        !
         if (ielem_seed == 0) then
             ! If ielem_seed == 0 then we aren't interested in tracking derivatives
             nderiv = 1
@@ -40,26 +52,38 @@ module mod_interpolate
             nderiv = elems(ielem_seed)%neqns  *  elems(ielem_seed)%nterms_s
         end if
 
-        !> Allocate the derivative array for each autodiff variable
-        !! MIGHT NOT NEED THIS IF IT GETS AUTOMATICALLY ALLOCATED ON ASSIGNMENT -- TEST
+
+
+        !
+        ! Allocate the derivative array for each autodiff variable
+        ! MIGHT NOT NEED THIS IF IT GETS AUTOMATICALLY ALLOCATED ON ASSIGNMENT -- TEST
+        !
         do igq = 1,size(var_gq)
             var_gq(igq) = AD_D(nderiv)
         end do
 
-        !> If the current element is being differentiated (ielem == ielem_seed)
-        !! then copy the solution modes to local AD variable and seed derivatives
+
+
+        !
+        ! If the current element is being differentiated (ielem == ielem_seed)
+        ! then copy the solution modes to local AD variable and seed derivatives
+        !
         if (ielem == ielem_seed) then
 
-            !> Allocate derivative arrays for temporary solution variable
+            ! Allocate derivative arrays for temporary solution variable
             do iterm = 1,elems(ielem)%nterms_s
                 qdiff(iterm) = AD_D(nderiv)
             end do
 
-            !> Copy the solution variables from 'q' to 'qdiff'
-            qdiff = q(ielem)%var(ivar)
 
 
-            !> Loop through the terms in qdiff
+            ! Copy the solution variables from 'q' to 'qdiff'
+            !qdiff = q(ielem)%var(ivar)
+            qdiff = q%lvecs(ielem)%var(ivar)
+
+
+
+            ! Loop through the terms in qdiff
             do iterm = 1,size(qdiff)
                 !> For the given term, seed its appropriate derivative
                 set_deriv = (ivar - 1)*elems(ielem)%nterms_s + iterm
@@ -73,19 +97,30 @@ module mod_interpolate
             !> If the solution variable derivatives dont need initialized
             !! then just use the q(ielem) values and derivatives get
             !! initialized to zero
-            var_gq = matmul(elems(ielem)%gq%vol%val,q(ielem)%var(ivar))
+            !var_gq = matmul(elems(ielem)%gq%vol%val,q(ielem)%var(ivar))
+            var_gq = matmul(elems(ielem)%gq%vol%val,q%lvecs(ielem)%var(ivar))
         end if
     end subroutine
+
+
+
+
+
+
+
 
 
 
     !> Compute variable at quadrature nodes.
     !!
     !!
+    !!
+    !!
     !----------------------------------------------------------------
     subroutine interpolate_face_autodiff(faces,q,ielem,iface,ivar,var_gq,ielem_seed)
         type(face_t),       intent(in)      :: faces(:,:)
-        type(expansion_t),  intent(inout)   :: q(:)
+        !type(expansion_t),  intent(inout)   :: q(:)
+        type(blockvector_t),  intent(inout)   :: q
         integer(ik),        intent(in)      :: ielem
         integer(ik),        intent(in)      :: iface
         integer(ik),        intent(in)      :: ivar
@@ -127,7 +162,8 @@ module mod_interpolate
             end do
 
             !> Copy the solution variables from 'q' to 'qdiff'
-            qdiff = q(ielem)%var(ivar)
+            !qdiff = q(ielem)%var(ivar)
+            qdiff = q%lvecs(ielem)%var(ivar)
 
 
             !> Loop through the terms in qdiff
@@ -143,7 +179,8 @@ module mod_interpolate
             !> If the solution variable derivatives dont need initialized
             !! then just use the q(ielem) values and derivatives get
             !! initialized to zero
-            var_gq = matmul(faces(ielem,iface)%gq%face%val(:,:,iface),  q(ielem)%var(ivar))
+            !var_gq = matmul(faces(ielem,iface)%gq%face%val(:,:,iface),  q(ielem)%var(ivar))
+            var_gq = matmul(faces(ielem,iface)%gq%face%val(:,:,iface),  q%lvecs(ielem)%var(ivar))
         end if
 
 
@@ -154,13 +191,23 @@ module mod_interpolate
 
 
 
+
+
+
+
+
+
+
     !> Compute variable at quadrature nodes.
+    !!
+    !!
     !!
     !!
     !----------------------------------------------------------------
     subroutine interpolate_element_standard(elems,q,ielem,ivar,var_gq)
         type(element_t),    intent(in)      :: elems(:)
-        type(expansion_t),  intent(inout)   :: q(:)
+        !type(expansion_t),  intent(inout)   :: q(:)
+        type(blockvector_t),  intent(inout)   :: q
         integer(ik),        intent(in)      :: ielem
         integer(ik),        intent(in)      :: ivar
         real(rk),           intent(inout)   :: var_gq(:)
@@ -168,7 +215,8 @@ module mod_interpolate
         ! Use quadrature instance to compute variable at quadrature nodes.
         ! This takes the form of a matrix multiplication of the quadrature matrix
         ! with the array of modes for the given variable.
-        var_gq = matmul(elems(ielem)%gq%vol%val, q(ielem)%var(ivar))
+        !var_gq = matmul(elems(ielem)%gq%vol%val, q(ielem)%var(ivar))
+        var_gq = matmul(elems(ielem)%gq%vol%val, q%lvecs(ielem)%var(ivar))
 
     end subroutine
 
@@ -180,20 +228,32 @@ module mod_interpolate
 
 
 
+
+
+
+
     !> Compute variable at quadrature nodes.
+    !!
+    !!
     !!
     !!
     !----------------------------------------------------------------
     subroutine interpolate_face_standard(faces,q,ielem,iface,ivar,var_gq)
         type(face_t),       intent(in)      :: faces(:,:)
-        type(expansion_t),  intent(inout)   :: q(:)
+        !type(expansion_t),  intent(inout)   :: q(:)
+        type(blockvector_t),  intent(inout)   :: q
         integer(ik),        intent(in)      :: ielem, iface, ivar
         real(rk),           intent(inout)   :: var_gq(:)
+
+
 
         ! Use quadrature instance to compute variable at quadrature nodes.
         ! This takes the form of a matrix multiplication of the face quadrature matrix
         ! with the array of modes for the given variable
-        var_gq = matmul(faces(ielem,iface)%gq%face%val(:,:,iface), q(ielem)%var(ivar))
+        !var_gq = matmul(faces(ielem,iface)%gq%face%val(:,:,iface), q(ielem)%var(ivar))
+        var_gq = matmul(faces(ielem,iface)%gq%face%val(:,:,iface), q%lvecs(ielem)%var(ivar))
+
+
 
     end subroutine
 

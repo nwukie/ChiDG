@@ -6,7 +6,8 @@ module mod_tecio
 
     use type_element,           only: element_t
     use type_domain,            only: domain_t
-    use type_expansion,         only: expansion_t
+    !use type_expansion,         only: expansion_t
+    use type_blockvector,       only: blockvector_t
     implicit none
 
 #include "tecio.f90"
@@ -36,8 +37,8 @@ contains
         character(100)     :: varstring
         integer(ik)        :: ieq, ivar
 
-        type(element_t),    pointer :: elem(:,:,:)
-        type(expansion_t),  pointer :: q(:,:,:)
+        type(element_t),      pointer :: elem(:,:,:)
+        type(blockvector_t),  pointer :: q
 
 
         ! Store element indices for current block
@@ -48,7 +49,8 @@ contains
 
         ! Remap elements array to block matrix
         elem => domain%mesh%elems_m
-        q    => domain%sdata%q_m
+        !q    => domain%sdata%q_m
+        q    => domain%sdata%q
 
         ! using (output_res+1) so that the skip number used in tecplot to
         ! correctly display the element surfaces is the same as the number
@@ -126,7 +128,7 @@ contains
                                     xi = (((real(ipt_xi,rk)-ONE)/(real(npts,rk)-ONE)) - HALF)*TWO
 
                                     ! Get solution value at point
-                                    val = solution_point(q(ielem_xi,ielem_eta,ielem_zeta),ivar,xi,eta,zeta)
+                                    val = solution_point(q%lvecs_m(ielem_xi,ielem_eta,ielem_zeta),ivar,xi,eta,zeta)
                                     tecstat = TECDAT142(1,valeq,1)
 
                                 end do

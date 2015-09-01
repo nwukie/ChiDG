@@ -301,11 +301,11 @@ contains
 
                 !>  Test to make sure the number of elements in the variable group
                 !!  and the current domain are conforming
-                ElementsEqual = (size(domains(idom)%sdata%q) == size(var,2))
+                ElementsEqual = (size(domains(idom)%sdata%q%lvecs) == size(var,2))
                 if (ElementsEqual) then
                     !>  Loop through elements and assign 'variable' values
                     do ielem = 1,domains(idom)%mesh%nelem
-                        domains(idom)%sdata%q(ielem)%mat(:,ivar) = var(:,ielem)
+                        domains(idom)%sdata%q%lvecs(ielem)%mat(:,ivar) = var(:,ielem)
                     end do
                 else
                     stop "Error: read_var_hdf5 -- number of elements in file variable and domain do not match"
@@ -487,7 +487,7 @@ contains
                 !> Assemble variable buffer matrix
                 allocate(var(dims(1),dims(2)))
                 do ielem = 1,Domains(idom)%mesh%nelem
-                        var(:,ielem) = Domains(idom)%sdata%q(ielem)%var(ivar)
+                        var(:,ielem) = Domains(idom)%sdata%q%lvecs(ielem)%var(ivar)
                 end do
 
 

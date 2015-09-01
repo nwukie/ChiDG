@@ -57,7 +57,7 @@ module mod_io
    
     ! MATRIX SOLVER
     !--------------------------------------------------
-    character(len=100),  save    :: msolver
+    character(len=100),  save    :: msolver = 'direct'
     real(rk),            save    :: tol = 1.e-8
    
    

@@ -16,6 +16,8 @@ program driver
     use type_domain,            only: domain_t
     use atype_solver,           only: solver_t
     use mod_solver,             only: create_solver
+    use atype_matrixsolver,     only: matrixsolver_t
+    use mod_matrixsolver,       only: create_matrixsolver
     use mod_hdfio,              only: read_grid_hdf
     use mod_grid_operators,     only: initialize_variable
     use atype_function,         only: function_t
@@ -27,18 +29,21 @@ program driver
     ! Variable declarations
     !-----------------------------------------------------------
     implicit none
-    type(chidg_t)                   :: chidg
-    type(domain_t),     allocatable :: domains(:)
-    class(solver_t),    allocatable :: solver
-    class(function_t),  allocatable :: fcn
+    type(chidg_t)                       :: chidg
+    type(domain_t),         allocatable :: domains(:)
+    class(matrixsolver_t),  allocatable :: matrixsolver
+    class(solver_t),        allocatable :: solver
+    class(function_t),      allocatable :: fcn
+   
 
     !
     ! Initialize ChiDG environment
     !
     call chidg%init('full')
 
+
     !
-    ! Allocate time-advancement routine
+    ! Allocate solution-advancement routine
     !
     call create_solver(temporal_scheme,solver)
 
@@ -48,12 +53,14 @@ program driver
     !
     call read_grid_hdf(gridfile,domains)
 
+
+
+
     call domains(1)%init_bc('periodic',XI_MIN)
     call domains(1)%init_bc('periodic',ETA_MIN)
     call domains(1)%init_bc('periodic',ZETA_MIN)
 
     call domains(1)%init_sol(eqnset,nterms_s)
-
 
 
     !
@@ -64,11 +71,11 @@ program driver
 
 
 
-
     !
     ! Write initial solution
     !
-    call write_tecio_variables(domains(1),'0.plt',1)
+    !call write_tecio_variables(domains(1),'0.plt',1)
+
 
 
     !
@@ -77,10 +84,18 @@ program driver
     call solver%init(domains(1))
 
 
+
+    !
+    ! Create matrix solver
+    !
+    call create_matrixsolver(msolver,matrixsolver)
+
+
+
     !
     ! Execute solver routine
     !
-    call solver%solve(domains(1))
+    call solver%solve(domains(1),matrixsolver)
 
 
 

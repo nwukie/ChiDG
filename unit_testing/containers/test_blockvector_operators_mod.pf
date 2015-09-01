@@ -1,0 +1,376 @@
+module test_blockvector_operators_mod
+    use pfunit_mod
+    use type_chidg,         only: chidg_t
+    use mod_kinds,          only: rk,ik
+    use mod_constants,      only: ZERO, ONE, TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT, NINE, TEN, &
+                                  XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX
+    use type_domain,        only: domain_t
+    use type_point,         only: point_t
+    use type_blockvector
+    use mod_testutils,      only: meshgen
+    implicit none
+
+    public  :: test_blockvector_operators
+
+@TestCase
+    type, extends(TestCase) ::  test_blockvector_operators
+        type(chidg_t)                        :: chidg
+        type(domain_t)                       :: domain
+        type(blockvector_t)                  :: bv_a, bv_b, bv_res
+
+    contains
+        procedure   ::  setUp
+        procedure   ::  tearDown
+    end type test_blockvector_operators
+
+
+contains
+    !! NOTE: make sure to use 'this' instead of 'self' since these are over-writting a derived type 
+    !! procedure. The argument names have to match
+    subroutine setUp(this)
+        class(test_blockvector_operators),    intent(inout)   :: this
+        integer(ik)                                 :: nterms_s, ivar, nterms_c
+        type(point_t), allocatable                  :: pts(:,:,:)
+        
+        associate (dom => this%domain)
+    
+            
+            ! Initialize ChiDG environment
+            call this%chidg%init('env')
+    
+    
+            ! Read 2x2x1 element grid
+            call meshgen('221',pts)
+    
+            nterms_c = 8
+            call this%domain%init_geom(nterms_c,pts)
+    
+            ! Initialize domain numerics
+            nterms_s = 8
+            call this%domain%init_sol('Scalar',nterms_s)
+    
+    
+            ! Initialize blockvectors
+            call this%bv_a%init(this%domain%mesh)
+            call this%bv_b%init(this%domain%mesh)
+            call this%bv_res%init(this%domain%mesh)
+    
+
+            ! Initialize blockvector data for operators
+            this%bv_a%lvecs(1)%vec = ONE
+            this%bv_a%lvecs(2)%vec = TWO
+            this%bv_a%lvecs(3)%vec = THREE
+            this%bv_a%lvecs(4)%vec = FOUR
+
+
+            this%bv_b%lvecs(1)%vec = TWO
+            this%bv_b%lvecs(2)%vec = THREE
+            this%bv_b%lvecs(3)%vec = FOUR
+            this%bv_b%lvecs(4)%vec = FIVE
+
+    
+        end associate        
+    end subroutine
+    
+    subroutine tearDown(this)
+        class(test_blockvector_operators),    intent(inout)   :: this
+        
+    end subroutine
+
+
+
+
+
+!------------------------------------------------------------------------------------------------------
+!> Test:    real * blockvector
+@Test
+    subroutine test_blockvector_operators_mult_real_bv(self)
+        class(test_blockvector_operators),    intent(inout)   :: self
+        
+        integer(ik)                 :: nelem
+        real(rk)                    :: val
+
+        val = 0.1_rk
+
+        !
+        ! Multiply real * blockvector. TESTING THIS
+        !
+        self%bv_res = val * self%bv_a
+
+
+        !
+        ! Test values. blockvector%lvecs%vec
+        !
+        @assertEqual(val*ONE,   self%bv_res%lvecs(1)%vec)
+        @assertEqual(val*TWO,   self%bv_res%lvecs(2)%vec)
+        @assertEqual(val*THREE, self%bv_res%lvecs(3)%vec)
+        @assertEqual(val*FOUR,  self%bv_res%lvecs(4)%vec)
+
+
+        !
+        ! Test container data. blockvector%ldata
+        !
+        ! nvars
+        @assertEqual(1, self%bv_res%ldata(:,1))
+        ! nterms
+        @assertEqual(8, self%bv_res%ldata(:,2))
+
+
+
+    end subroutine
+    
+
+
+
+
+
+
+
+
+
+
+!> Test:    blockvector * real
+@Test
+    subroutine test_blockvector_operators_mult_bv_real(self)
+        class(test_blockvector_operators),    intent(inout)   :: self
+        
+        integer(ik)                 :: nelem
+        real(rk)                    :: val
+
+        val = 0.1_rk
+
+        !
+        ! Multiply real * blockvector. TESTING THIS
+        !
+        self%bv_res = self%bv_a * val
+
+
+        !
+        ! Test values. blockvector%lvecs%vec
+        !
+        @assertEqual(val*ONE,   self%bv_res%lvecs(1)%vec)
+        @assertEqual(val*TWO,   self%bv_res%lvecs(2)%vec)
+        @assertEqual(val*THREE, self%bv_res%lvecs(3)%vec)
+        @assertEqual(val*FOUR,  self%bv_res%lvecs(4)%vec)
+
+
+        !
+        ! Test container data. blockvector%ldata
+        !
+        ! nvars
+        @assertEqual(1, self%bv_res%ldata(:,1))
+        ! nterms
+        @assertEqual(8, self%bv_res%ldata(:,2))
+
+
+
+    end subroutine
+    
+
+
+
+
+
+
+
+
+!> Test:    real / blockvector
+@Test
+    subroutine test_blockvector_operators_div_real_bv(self)
+        class(test_blockvector_operators),    intent(inout)   :: self
+        
+        integer(ik)                 :: nelem
+        real(rk)                    :: val
+
+        val = 0.1_rk
+
+        !
+        ! Multiply real * blockvector. TESTING THIS
+        !
+        self%bv_res = val / self%bv_a
+
+
+        !
+        ! Test values. blockvector%lvecs%vec
+        !
+        @assertEqual(val/ONE,   self%bv_res%lvecs(1)%vec)
+        @assertEqual(val/TWO,   self%bv_res%lvecs(2)%vec)
+        @assertEqual(val/THREE, self%bv_res%lvecs(3)%vec)
+        @assertEqual(val/FOUR,  self%bv_res%lvecs(4)%vec)
+
+
+        !
+        ! Test container data. blockvector%ldata
+        !
+        ! nvars
+        @assertEqual(1, self%bv_res%ldata(:,1))
+        ! nterms
+        @assertEqual(8, self%bv_res%ldata(:,2))
+
+
+
+    end subroutine
+    
+
+
+
+
+
+
+
+
+
+
+!> Test:    blockvector / real
+@Test
+    subroutine test_blockvector_operators_div_bv_real(self)
+        class(test_blockvector_operators),    intent(inout)   :: self
+        
+        integer(ik)                 :: nelem
+        real(rk)                    :: val
+
+        val = 0.1_rk
+
+        !
+        ! Multiply real * blockvector. TESTING THIS
+        !
+        self%bv_res = self%bv_a / val
+
+
+        !
+        ! Test values. blockvector%lvecs%vec
+        !
+        @assertEqual(ONE/val,   self%bv_res%lvecs(1)%vec)
+        @assertEqual(TWO/val,   self%bv_res%lvecs(2)%vec)
+        @assertEqual(THREE/val, self%bv_res%lvecs(3)%vec)
+        @assertEqual(FOUR/val,  self%bv_res%lvecs(4)%vec)
+
+
+        !
+        ! Test container data. blockvector%ldata
+        !
+        ! nvars
+        @assertEqual(1, self%bv_res%ldata(:,1))
+        ! nterms
+        @assertEqual(8, self%bv_res%ldata(:,2))
+
+
+
+    end subroutine
+    
+
+
+
+
+    
+
+
+!> Test:    blockvector + blockvector
+@Test
+    subroutine test_blockvector_operators_add_bv_bv(self)
+        class(test_blockvector_operators),    intent(inout)   :: self
+        
+        integer(ik)                 :: nelem
+        real(rk)                    :: val
+
+        val = 0.1_rk
+
+        !
+        ! Multiply real * blockvector. TESTING THIS
+        !
+        self%bv_res = self%bv_a + self%bv_b
+
+
+        !
+        ! Test values. blockvector%lvecs%vec
+        !
+        @assertEqual(THREE, self%bv_res%lvecs(1)%vec)
+        @assertEqual(FIVE,  self%bv_res%lvecs(2)%vec)
+        @assertEqual(SEVEN, self%bv_res%lvecs(3)%vec)
+        @assertEqual(NINE,  self%bv_res%lvecs(4)%vec)
+
+
+        !
+        ! Test container data. blockvector%ldata
+        !
+        ! nvars
+        @assertEqual(1, self%bv_res%ldata(:,1))
+        ! nterms
+        @assertEqual(8, self%bv_res%ldata(:,2))
+
+
+
+    end subroutine
+    
+
+
+
+
+
+
+
+
+
+
+!> Test:    blockvector - blockvector
+@Test
+    subroutine test_blockvector_operators_sub_bv_bv(self)
+        class(test_blockvector_operators),    intent(inout)   :: self
+        
+        integer(ik)                 :: nelem
+        real(rk)                    :: val
+
+        val = 0.1_rk
+
+        !
+        ! Multiply real * blockvector. TESTING THIS
+        !
+        self%bv_res = self%bv_a - self%bv_b
+
+
+        !
+        ! Test values. blockvector%lvecs%vec
+        !
+        @assertEqual(-ONE, self%bv_res%lvecs(1)%vec)
+        @assertEqual(-ONE, self%bv_res%lvecs(2)%vec)
+        @assertEqual(-ONE, self%bv_res%lvecs(3)%vec)
+        @assertEqual(-ONE, self%bv_res%lvecs(4)%vec)
+
+
+        !
+        ! Test container data. blockvector%ldata
+        !
+        ! nvars
+        @assertEqual(1, self%bv_res%ldata(:,1))
+        ! nterms
+        @assertEqual(8, self%bv_res%ldata(:,2))
+
+
+
+    end subroutine
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+end module test_blockvector_operators_mod

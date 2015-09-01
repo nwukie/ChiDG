@@ -1,1 +1,1 @@
-add_lib_sources(atype_matrixsolver.f90)
+add_lib_sources(atype_matrixsolver.f90 mod_matrixsolver.f90 type_directsolver.f90)

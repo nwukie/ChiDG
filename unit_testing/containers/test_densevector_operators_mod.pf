@@ -1,0 +1,346 @@
+module test_densevector_operators_mod
+    use pfunit_mod
+    use mod_kinds,          only: rk,ik
+    use mod_constants,      only: ZERO, ONE, TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT, NINE, TEN, &
+                                  XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX
+    use type_densevector
+    implicit none
+
+    public  :: test_densevector_operators
+
+
+
+! Test container with reference densevector_t types
+@TestCase
+    type, extends(TestCase) ::  test_densevector_operators
+        type(densevector_t)                  :: dv_a, dv_b, dv_res
+
+    contains
+        procedure   ::  setUp
+        procedure   ::  tearDown
+    end type test_densevector_operators
+
+
+
+
+
+contains
+    !! NOTE: make sure to use 'this' instead of 'self' since these are over-writting a derived type 
+    !! procedure. The argument names have to match
+    subroutine setUp(this)
+        class(test_densevector_operators),    intent(inout)   :: this
+        integer(ik)                                 :: parent, nterms, nvars
+        
+            
+    
+            ! Initialization parameters
+            nterms = 8
+            nvars  = 1
+            parent = 9
+    
+    
+            ! Initialize densevectors
+            call this%dv_a%init(nterms,nvars,parent)
+            call this%dv_b%init(nterms,nvars,parent)
+    
+
+            ! Initialize blockvector data for operators
+            this%dv_a%vec = ONE
+            this%dv_b%vec = TWO
+
+
+
+    end subroutine
+    
+    subroutine tearDown(this)
+        class(test_densevector_operators),    intent(inout)   :: this
+        
+    end subroutine
+
+
+
+
+
+!------------------------------------------------------------------------------------------------------
+!> Test:    real * densevector
+@Test
+    subroutine test_densevector_operators_mult_real_bv(self)
+        class(test_densevector_operators),    intent(inout)   :: self
+        
+        integer(ik)                 :: nelem
+        real(rk)                    :: val
+
+        val = 0.1_rk
+
+        !
+        ! Multiply real * densevector. TESTING THIS
+        !
+        self%dv_res = val * self%dv_a
+
+
+        !
+        ! Test values. densevector%vec
+        !
+        @assertEqual(val*ONE, self%dv_res%vec)
+
+
+        !
+        ! Test container data. densevector%parent_/nterms_/nvars_
+        !
+        ! parent
+        @assertEqual(9, self%dv_res%parent())
+        ! nterms
+        @assertEqual(8, self%dv_res%nterms())
+        ! nvars
+        @assertEqual(1, self%dv_res%nvars())
+
+
+
+    end subroutine
+    
+
+
+
+
+
+
+
+
+
+
+!> Test:    densevector * real
+@Test
+    subroutine test_densevector_operators_mult_bv_real(self)
+        class(test_densevector_operators),    intent(inout)   :: self
+        
+        integer(ik)                 :: nelem
+        real(rk)                    :: val
+
+        val = 0.1_rk
+
+        !
+        ! Multiply real * densevector. TESTING THIS
+        !
+        self%dv_res = self%dv_a * val
+
+
+        !
+        ! Test values. densevector%lvecs%vec
+        !
+        @assertEqual(val*ONE, self%dv_res%vec)
+
+
+        !
+        ! Test container data. densevector%parent_/nterms_/nvars_
+        !
+        ! parent
+        @assertEqual(9, self%dv_res%parent())
+        ! nterms
+        @assertEqual(8, self%dv_res%nterms())
+        ! nvars
+        @assertEqual(1, self%dv_res%nvars())
+
+
+    end subroutine
+    
+
+
+
+
+
+
+
+
+!> Test:    real / densevector
+@Test
+    subroutine test_densevector_operators_div_real_bv(self)
+        class(test_densevector_operators),    intent(inout)   :: self
+        
+        integer(ik)                 :: nelem
+        real(rk)                    :: val
+
+        val = 0.1_rk
+
+        !
+        ! Multiply real * densevector. TESTING THIS
+        !
+        self%dv_res = val / self%dv_a
+
+
+        !
+        ! Test values. densevector%lvecs%vec
+        !
+        @assertEqual(val/ONE,   self%dv_res%vec)
+
+
+        !
+        ! Test container data. densevector%parent_/nterms_/nvars_
+        !
+        ! parent
+        @assertEqual(9, self%dv_res%parent())
+        ! nterms
+        @assertEqual(8, self%dv_res%nterms())
+        ! nvars
+        @assertEqual(1, self%dv_res%nvars())
+
+
+    end subroutine
+    
+
+
+
+
+
+
+
+
+
+
+!> Test:    densevector / real
+@Test
+    subroutine test_densevector_operators_div_bv_real(self)
+        class(test_densevector_operators),    intent(inout)   :: self
+        
+        integer(ik)                 :: nelem
+        real(rk)                    :: val
+
+        val = 0.1_rk
+
+        !
+        ! Multiply real * densevector. TESTING THIS
+        !
+        self%dv_res = self%dv_a / val
+
+
+        !
+        ! Test values. densevector%lvecs%vec
+        !
+        @assertEqual(ONE/val,   self%dv_res%vec)
+
+        !
+        ! Test container data. densevector%parent_/nterms_/nvars_
+        !
+        ! parent
+        @assertEqual(9, self%dv_res%parent())
+        ! nterms
+        @assertEqual(8, self%dv_res%nterms())
+        ! nvars
+        @assertEqual(1, self%dv_res%nvars())
+
+
+    end subroutine
+    
+
+
+
+
+    
+
+
+!> Test:    densevector + densevector
+@Test
+    subroutine test_densevector_operators_add_bv_bv(self)
+        class(test_densevector_operators),    intent(inout)   :: self
+        
+        integer(ik)                 :: nelem
+        real(rk)                    :: val
+
+        val = 0.1_rk
+
+        !
+        ! Multiply real * densevector. TESTING THIS
+        !
+        self%dv_res = self%dv_a + self%dv_b
+
+
+        !
+        ! Test values. densevector%lvecs%vec
+        !
+        @assertEqual(THREE, self%dv_res%vec)
+
+
+        !
+        ! Test container data. densevector%parent_/nterms_/nvars_
+        !
+        ! parent
+        @assertEqual(9, self%dv_res%parent())
+        ! nterms
+        @assertEqual(8, self%dv_res%nterms())
+        ! nvars
+        @assertEqual(1, self%dv_res%nvars())
+
+
+    end subroutine
+    
+
+
+
+
+
+
+
+
+
+
+!> Test:    densevector - densevector
+@Test
+    subroutine test_densevector_operators_sub_bv_bv(self)
+        class(test_densevector_operators),    intent(inout)   :: self
+        
+        integer(ik)                 :: nelem
+        real(rk)                    :: val
+
+        val = 0.1_rk
+
+        !
+        ! Multiply real * densevector. TESTING THIS
+        !
+        self%dv_res = self%dv_a - self%dv_b
+
+
+        !
+        ! Test values. densevector%lvecs%vec
+        !
+        @assertEqual(-ONE, self%dv_res%vec)
+
+
+
+        !
+        ! Test container data. densevector%parent_/nterms_/nvars_
+        !
+        ! parent
+        @assertEqual(9, self%dv_res%parent())
+        ! nterms
+        @assertEqual(8, self%dv_res%nterms())
+        ! nvars
+        @assertEqual(1, self%dv_res%nvars())
+
+
+
+    end subroutine
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+end module test_densevector_operators_mod

@@ -1,10 +1,12 @@
 module solver_forward_euler
-    use mod_kinds,      only: rk,ik
-    use mod_constants,  only: ZERO
-    use atype_solver,   only: solver_t
-    use type_domain,    only: domain_t
-    use type_dict,      only: dict_t
+    use mod_kinds,          only: rk,ik
+    use mod_constants,      only: ZERO
+    use atype_solver,       only: solver_t
+    use atype_matrixsolver, only: matrixsolver_t
+    use type_domain,        only: domain_t
+    use type_dict,          only: dict_t
     use type_expansion
+    use type_blockvector
 
     use mod_spatial,    only: update_space
 
@@ -16,7 +18,33 @@ module solver_forward_euler
 
     !>  Solution advancement via the forward-euler method
     !!
+    !! Given the system of partial differential equations consisting of the time-derivative
+    !! of the solution vector and a spatial residual as
+    !!
+    !! \f$ \frac{\partial Q}{\partial t} + R(Q) = 0 \f$
+    !!
+    !! the time derivative is discretized by a one-sided finite-difference approximation as
+    !!
+    !! \f$ \frac{Q^{n+1} - Q^{n}}{\Delta t} + R(Q^n) = 0 \f$
+    !!
+    !! The solution at the next time level is then computed as
+    !!
+    !! \f$ Q^{n+1} = Q^{n} - \Delta t R(Q^n) \f$
+    !!
+    !! or
+    !!
+    !! \f$ Q^{n+1} = Q^{n} + \Delta Q \f$
+    !!
+    !! where \f$ \Delta Q \f$ is defined as
+    !!
+    !! \f$ \Delta Q = -\Delta t R(Q) \f$
+    !!
+    !!
+    !! This routine computes \f$ \Delta Q \f$ and updates the solution as \f$ Q^{n+1} = Q^{n} + \Delta Q \f$
+    !!
+    !!
     !!  @author Nathan A. Wukie
+    !!
     !!
     !------------------------------------------------------------
     type, extends(solver_t), public :: forward_euler_s
@@ -66,14 +94,15 @@ contains
 
     !> Solve for update 'dq'
     !!
-    !!
+    !! \f$ \delta Q = - \delta t R(Q) \f$
     !!
     !!
     !!
     !-------------------------------------------------------------------------------------------------
-    subroutine solve(self,domain)
-        class(forward_euler_s), intent(inout)   :: self
-        type(domain_t),         intent(inout)   :: domain
+    subroutine solve(self,domain,matrixsolver)
+        class(forward_euler_s),             intent(inout)   :: self
+        type(domain_t),                     intent(inout)   :: domain
+        class(matrixsolver_t), optional,    intent(inout)   :: matrixsolver
 
         character(100)  :: filename
         integer(ik)     :: itime, nsteps, ielem, wcount, iblk
@@ -87,20 +116,20 @@ contains
                 print*, "Step: ", itime
 
 
-                !> Update Spatial Residual and Linearization (rhs, lin)
+                ! Update Spatial Residual and Linearization (rhs, lin)
                 call update_space(domain)
 
 
-                !> Multiply RHS by mass matrix for explicit time-integration
+                ! Multiply RHS by mass matrix 
                 do ielem = 1,domain%mesh%nelem
-                    rhs(ielem)%vec = matmul(domain%mesh%elems(ielem)%invmass, rhs(ielem)%vec)
+                    rhs%lvecs(ielem)%vec = matmul(domain%mesh%elems(ielem)%invmass, rhs%lvecs(ielem)%vec)
                 end do
 
 
-                !> Compute update vector
-                dq = dt * rhs
+                ! Compute update vector
+                dq = (-dt) * rhs
 
-                !> Advance solution with update vector
+                ! Advance solution with update vector
                 q  = q + dq
 
 
@@ -112,14 +141,9 @@ contains
 
 
 
-                !> Clear spatial residual
-                do ielem = 1,domain%mesh%nelem
-                    rhs(ielem)%vec = ZERO
-
-                    do iblk = 1,7
-                        lin%lblks(ielem,iblk)%mat = ZERO
-                    end do
-                end do
+                ! Clear residual and linearization storage
+                call rhs%clear()
+                call lin%clear()
 
                 wcount = wcount + 1
             end do

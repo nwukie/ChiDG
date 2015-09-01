@@ -2,7 +2,8 @@ module mod_check_jacobian
     use mod_kinds,          only: rk,ik
     use mod_constants,      only: NFACES, DIAG, ZERO
     use type_domain,        only: domain_t
-    use type_expansion
+    !use type_expansion
+    use type_blockvector
     use type_densematrix,   only: densematrix_t
 
     implicit none
@@ -15,7 +16,8 @@ contains
         integer(ik),         intent(in)          :: ielem, iblk
         type(densematrix_t), intent(inout)       :: blk_dnad, blk_fd
 
-        type(expansion_t), allocatable  :: rhs_r(:), vec_fd(:)
+        !type(expansion_t), allocatable  :: rhs_r(:), vec_fd(:)
+        type(blockvector_t), allocatable  :: rhs_r, vec_fd
         real(rk)    :: qhold, eps
         integer(ik) :: nelem, i, iterm, icol, nterms, ivar
         integer(ik) :: ielem_p              !> ielem_p is the element in which the solution is being perturbed for the finite difference calculation.
@@ -30,8 +32,8 @@ contains
             !                                      Interior Scheme
             !------------------------------------------------------------------------------------------
             call sdata%lin%clear()          !> Ensure linearization is zero-ed
-            do i=1,size(sdata%rhs)
-                sdata%rhs(i)%vec = ZERO     !> Ensure RHS vector is zero-ed
+            do i=1,size(sdata%rhs%lvecs)
+                sdata%rhs%lvecs(i)%vec = ZERO     !> Ensure RHS vector is zero-ed
             end do
             rhs_r  = sdata%rhs              !> should result in sourced allocation
             vec_fd = sdata%rhs
@@ -46,13 +48,13 @@ contains
 
 
             !> Store temporary rhs
-            rhs_r(ielem) = sdata%rhs(ielem)
+            rhs_r%lvecs(ielem) = sdata%rhs%lvecs(ielem)
 
 
             !> Reset sdata storage
             call sdata%lin%clear()
-            do i=1,size(sdata%rhs)
-                sdata%rhs(i)%vec = ZERO
+            do i=1,size(sdata%rhs%lvecs)
+                sdata%rhs%lvecs(i)%vec = ZERO
             end do
 
             !> Select in which element, the solution is being perturbed
@@ -71,15 +73,15 @@ contains
 
                     !> Perturb the iterm-th term in the solution expansion for variable ivar in element ielem.
                     eps   = 1.e-8_rk
-                    qhold = sdata%q(ielem_p)%mat(iterm,ivar)
-                    sdata%q(ielem_p)%mat(iterm,ivar) = sdata%q(ielem_p)%mat(iterm,ivar) + eps
+                    qhold = sdata%q%lvecs(ielem_p)%mat(iterm,ivar)
+                    sdata%q%lvecs(ielem_p)%mat(iterm,ivar) = sdata%q%lvecs(ielem_p)%mat(iterm,ivar) + eps
 
 
                     !> For the current element, compute the contributions from volume integrals
                     call domain%eqnset%compute_volume_flux(mesh,sdata,ielem,iblk)
 
 
-                    sdata%q(ielem_p)%mat(iterm,ivar) = qhold  !> Return perturbed value to normal state
+                    sdata%q%lvecs(ielem_p)%mat(iterm,ivar) = qhold  !> Return perturbed value to normal state
 
                     !> Compute finite difference jacobian
                     vec_fd = (sdata%rhs - rhs_r)/eps
@@ -87,13 +89,13 @@ contains
 
                     !> Store to column of blk_fd
                     icol = (ivar-1)*nterms + iterm          !> Compute appropriate column for storing linearization
-                    blk_fd%mat(:,icol) = vec_fd(ielem)%vec  !> Store finite difference linearization of the residual
+                    blk_fd%mat(:,icol) = vec_fd%lvecs(ielem)%vec  !> Store finite difference linearization of the residual
 
 
                     !> Reset sdata storage
                     call sdata%lin%clear()
-                    do i=1,size(sdata%rhs)
-                        sdata%rhs(i)%vec = ZERO
+                    do i=1,size(sdata%rhs%lvecs)
+                        sdata%rhs%lvecs(i)%vec = ZERO
                     end do
 
                 end do
@@ -115,7 +117,8 @@ contains
         integer(ik),         intent(in)          :: ielem, iblk
         type(densematrix_t), intent(inout)       :: blk_dnad, blk_fd
 
-        type(expansion_t), allocatable  :: rhs_r(:), vec_fd(:)
+        !type(expansion_t), allocatable  :: rhs_r(:), vec_fd(:)
+        type(blockvector_t)  :: rhs_r, vec_fd
         real(rk)    :: qhold, eps
         integer(ik) :: nelem, i, iterm, iface, ivar, icol, nterms
         integer(ik) :: ielem_p              !> ielem_p is the element in which the solution is being perturbed for the finite difference calculation.
@@ -141,8 +144,8 @@ contains
             !------------------------------------------------------------------------------------------
 
             call sdata%lin%clear()          !> Ensure linearization is zero-ed
-            do i=1,size(sdata%rhs)
-                sdata%rhs(i)%vec = ZERO     !> Ensure RHS vector is zero-ed
+            do i=1,size(sdata%rhs%lvecs)
+                sdata%rhs%lvecs(i)%vec = ZERO     !> Ensure RHS vector is zero-ed
             end do
             rhs_r  = sdata%rhs              !> should result in sourced allocation
             vec_fd = sdata%rhs
@@ -161,8 +164,8 @@ contains
 
             !> Reset sdata storage
             call sdata%lin%clear()
-            do i=1,size(sdata%rhs)
-                sdata%rhs(i)%vec = ZERO
+            do i=1,size(sdata%rhs%lvecs)
+                sdata%rhs%lvecs(i)%vec = ZERO
             end do
 
 
@@ -171,13 +174,13 @@ contains
             call domain%eqnset%compute_boundary_average_flux(mesh,sdata,ielem,iface,DIAG)       !> Need to use DIAG to get rhs for finite difference calculation. This is because RHS is only stored for DIAG in the integrate procedure.
 
             !> Store temporary rhs
-            rhs_r(ielem) = sdata%rhs(ielem)
+            rhs_r%lvecs(ielem) = sdata%rhs%lvecs(ielem)
 
 
             !> Reset sdata storage
             call sdata%lin%clear()
-            do i=1,size(sdata%rhs)
-                sdata%rhs(i)%vec = ZERO
+            do i=1,size(sdata%rhs%lvecs)
+                sdata%rhs%lvecs(i)%vec = ZERO
             end do
 
 
@@ -189,15 +192,15 @@ contains
 
                     !> Perturb the iterm-th term in the solution expansion for variable ivar in element ielem.
                     eps   = 1.e-8_rk
-                    qhold = sdata%q(ielem_p)%mat(iterm,ivar)
-                    sdata%q(ielem_p)%mat(iterm,ivar) = sdata%q(ielem_p)%mat(iterm,ivar) + eps
+                    qhold = sdata%q%lvecs(ielem_p)%mat(iterm,ivar)
+                    sdata%q%lvecs(ielem_p)%mat(iterm,ivar) = sdata%q%lvecs(ielem_p)%mat(iterm,ivar) + eps
 
 
                     !> For the current element, compute the contributions from volume integrals
                     call domain%eqnset%compute_boundary_average_flux(mesh,sdata,ielem,iface,DIAG)    !> Need to use DIAG to get rhs for finite difference calculation. This is because RHS is only stored for DIAG in the integrate procedure.
 
 
-                    sdata%q(ielem_p)%mat(iterm,ivar) = qhold  !> Return perturbed value to normal state
+                    sdata%q%lvecs(ielem_p)%mat(iterm,ivar) = qhold  !> Return perturbed value to normal state
 
                     !> Compute finite difference jacobian
                     vec_fd = (sdata%rhs - rhs_r)/eps
@@ -205,13 +208,13 @@ contains
 
                     !> Store to column of blk_fd
                     icol = (ivar-1)*nterms + iterm          !> Compute appropriate column for storing linearization
-                    blk_fd%mat(:,icol) = vec_fd(ielem)%vec
+                    blk_fd%mat(:,icol) = vec_fd%lvecs(ielem)%vec
 
 
                     !> Reset sdata storage
                     call sdata%lin%clear()
-                    do i=1,size(sdata%rhs)
-                        sdata%rhs(i)%vec = ZERO
+                    do i=1,size(sdata%rhs%lvecs)
+                        sdata%rhs%lvecs(i)%vec = ZERO
                     end do
 
                 end do
@@ -230,7 +233,8 @@ contains
         integer(ik),         intent(in)          :: ielem, iblk
         type(densematrix_t), intent(inout)       :: blk_dnad, blk_fd
 
-        type(expansion_t), allocatable  :: rhs_r(:), vec_fd(:)
+        !type(expansion_t), allocatable  :: rhs_r(:), vec_fd(:)
+        type(blockvector_t)     :: rhs_r, vec_fd
         real(rk)    :: qhold, eps
         integer(ik) :: nelem, i, iterm, iface, ivar, icol, nterms
         integer(ik) :: ielem_p              !> ielem_p is the element in which the solution is being perturbed for the finite difference calculation.
@@ -258,8 +262,8 @@ contains
             !------------------------------------------------------------------------------------------
 
             call sdata%lin%clear()          !> Ensure linearization is zero-ed
-            do i=1,size(sdata%rhs)
-                sdata%rhs(i)%vec = ZERO     !> Ensure RHS vector is zero-ed
+            do i=1,size(sdata%rhs%lvecs)
+                sdata%rhs%lvecs(i)%vec = ZERO     !> Ensure RHS vector is zero-ed
             end do
             rhs_r  = sdata%rhs              !> should result in sourced allocation
             vec_fd = sdata%rhs
@@ -277,8 +281,8 @@ contains
 
             !> Reset sdata storage
             call sdata%lin%clear()
-            do i=1,size(sdata%rhs)
-                sdata%rhs(i)%vec = ZERO
+            do i=1,size(sdata%rhs%lvecs)
+                sdata%rhs%lvecs(i)%vec = ZERO
             end do
 
 
@@ -289,13 +293,13 @@ contains
 
 
             !> Store temporary rhs
-            rhs_r(ielem) = sdata%rhs(ielem)
+            rhs_r%lvecs(ielem) = sdata%rhs%lvecs(ielem)
 
 
             !> Reset sdata storage
             call sdata%lin%clear()
-            do i=1,size(sdata%rhs)
-                sdata%rhs(i)%vec = ZERO
+            do i=1,size(sdata%rhs%lvecs)
+                sdata%rhs%lvecs(i)%vec = ZERO
             end do
 
 
@@ -307,15 +311,15 @@ contains
 
                     !> Perturb the iterm-th term in the solution expansion for variable ivar in element ielem.
                     eps   = 1.e-8_rk
-                    qhold = sdata%q(ielem_p)%mat(iterm,ivar)
-                    sdata%q(ielem_p)%mat(iterm,ivar) = sdata%q(ielem_p)%mat(iterm,ivar) + eps
+                    qhold = sdata%q%lvecs(ielem_p)%mat(iterm,ivar)
+                    sdata%q%lvecs(ielem_p)%mat(iterm,ivar) = sdata%q%lvecs(ielem_p)%mat(iterm,ivar) + eps
 
 
                     !> For the current element, compute the contributions from volume integrals
                     call domain%eqnset%compute_boundary_upwind_flux(mesh,sdata,ielem,iface,DIAG)    !> Need to use DIAG to get rhs for finite difference calculation. This is because RHS is only stored for DIAG in the integrate procedure.
 
 
-                    sdata%q(ielem_p)%mat(iterm,ivar) = qhold  !> Return perturbed value to normal state
+                    sdata%q%lvecs(ielem_p)%mat(iterm,ivar) = qhold  !> Return perturbed value to normal state
 
                     !> Compute finite difference jacobian
                     vec_fd = (sdata%rhs - rhs_r)/eps
@@ -323,13 +327,13 @@ contains
 
                     !> Store to column of blk_fd
                     icol = (ivar-1)*nterms + iterm          !> Compute appropriate column for storing linearization
-                    blk_fd%mat(:,icol) = vec_fd(ielem)%vec
+                    blk_fd%mat(:,icol) = vec_fd%lvecs(ielem)%vec
 
 
                     !> Reset sdata storage
                     call sdata%lin%clear()
-                    do i=1,size(sdata%rhs)
-                        sdata%rhs(i)%vec = ZERO
+                    do i=1,size(sdata%rhs%lvecs)
+                        sdata%rhs%lvecs(i)%vec = ZERO
                     end do
 
                 end do

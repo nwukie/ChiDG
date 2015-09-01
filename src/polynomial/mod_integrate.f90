@@ -142,6 +142,8 @@ contains
     !> Store volume integral values to RHS vector, and partial derivatives to LIN block matrix
     !!
     !!  @author Nathan A. Wukie
+    !!
+    !!
     !!  @param[in]      integral    Array of autodiff values containing integrals and partial derivatives for the RHS vector and LIN linearization matrix
     !!  @param[inout]   rhs         Right-hand side vector
     !!  @param[inout]   lin         Block matrix storing the linearization of the spatial scheme
@@ -151,7 +153,7 @@ contains
     !!
     !--------------------------------------------------------------------------------------------------------
     subroutine store_volume_integrals(integral,sdata,ielem,ivar,iblk)
-        type(AD_D),             intent(in)      :: integral(:)
+        type(AD_D),             intent(inout)   :: integral(:)
         class(solverdata_t),    intent(inout)   :: sdata
         integer(ik),            intent(in)      :: ielem
         integer(ik),            intent(in)      :: ivar
@@ -159,16 +161,26 @@ contains
 
         integer(ik) :: i
 
-        associate ( rhs => sdata%rhs, lin => sdata%lin)
+        associate ( rhs => sdata%rhs%lvecs, lin => sdata%lin)
 
-            !> Only store rhs once. if iblk == DIAG
+            !
+            ! Only store rhs once. if iblk == DIAG
+            !
             if (iblk == DIAG) then
-                rhs(ielem)%mat(:,ivar) = rhs(ielem)%mat(:,ivar) + integral(:)%x_ad_     !> Store values
+                rhs(ielem)%mat(:,ivar) = rhs(ielem)%mat(:,ivar) - integral(:)%x_ad_   
             end if
 
+            !
+            ! Negate derivatives before adding to linearization
+            !
+            do i = 1,size(integral)
+                integral(i)%xp_ad_ = -integral(i)%xp_ad_
+            end do
 
-            !> Store linearization
-            call lin%store(integral,ielem,iblk,ivar)                                    !> Store derivatives
+            !
+            ! Store linearization
+            !
+            call lin%store(integral,ielem,iblk,ivar)    
 
         end associate
     end subroutine
@@ -180,6 +192,8 @@ contains
     !> Store boundary integral values to RHS vector, and partial derivatives to LIN block matrix
     !!
     !!  @author Nathan A. Wukie
+    !!
+    !!
     !!  @param[in]      integral    Array of autodiff values containing integrals and partial derivatives for the RHS vector and LIN linearization matrix
     !!  @param[inout]   rhs         Right-hand side vector
     !!  @param[inout]   lin         Block matrix storing the linearization of the spatial scheme
@@ -197,22 +211,20 @@ contains
 
         integer(ik) :: i
 
-        associate ( rhs => sdata%rhs, lin => sdata%lin)
+        associate ( rhs => sdata%rhs%lvecs, lin => sdata%lin)
 
-            !> Only store rhs once. if iblk == DIAG
+            !
+            ! Only store rhs once. if iblk == DIAG
+            !
             if (iblk == DIAG) then
-                rhs(ielem)%mat(:,ivar) = rhs(ielem)%mat(:,ivar) - integral(:)%x_ad_     !> Store values
+                rhs(ielem)%mat(:,ivar) = rhs(ielem)%mat(:,ivar) + integral(:)%x_ad_
             end if
 
 
-            !> Negate derivatives before adding to linearization
-            do i = 1,size(integral)
-                integral(i)%xp_ad_ = -integral(i)%xp_ad_
-            end do
-
-
-            !> Store linearization
-            call lin%store(integral,ielem,iblk,ivar)                                    !> Store derivatives
+            !
+            ! Store linearization
+            !
+            call lin%store(integral,ielem,iblk,ivar)
 
         end associate
 

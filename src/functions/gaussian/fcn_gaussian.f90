@@ -1,6 +1,6 @@
 module fcn_gaussian
     use mod_kinds,      only: rk,ik
-    use mod_constants,  only: ZERO, ONE, TWO, THREE
+    use mod_constants,  only: ZERO, ONE, TWO, THREE, FIVE
     use type_point,     only: point_t
     use atype_function, only: function_t
     implicit none
@@ -16,8 +16,12 @@ module fcn_gaussian
         !
 
         real(rk)    :: a = ONE
-        real(rk)    :: b = ZERO
-        real(rk)    :: c = THREE
+        real(rk)    :: b_x = ZERO
+        real(rk)    :: b_y = ZERO
+        real(rk)    :: b_z = ZERO
+
+        !real(rk)    :: c = THREE
+        real(rk)    :: c = ONE
 
     contains
         procedure   :: order
@@ -30,8 +34,8 @@ contains
 
 
     function order(self)
-        class(gaussian_f), intent(in)  :: self
-        integer(ik)                 :: order
+        class(gaussian_f), intent(in)   :: self
+        integer(ik)                     :: order
 
         order = 3
 
@@ -51,9 +55,10 @@ contains
         y = pt%c2_
         z = pt%c3_
 
-        v_x = self%a * exp( - ((x - self%b)**TWO) / (TWO * self%c**TWO))
-        v_y = self%a * exp( - ((y - self%b)**TWO) / (TWO * self%c**TWO))
-        v_z = self%a * exp( - ((z - self%b)**TWO) / (TWO * self%c**TWO))
+        v_x = self%a * exp( - ((x - self%b_x)**TWO) / (TWO * self%c**TWO))
+        v_y = self%a * exp( - ((y - self%b_y)**TWO) / (TWO * self%c**TWO))
+        v_z = self%a * exp( - ((z - self%b_z)**TWO) / (TWO * self%c**TWO))
+
 
         calc = v_x * v_y * v_z
 

@@ -1,6 +1,14 @@
-macro (add_test_target target_subdirectory)
+macro (add_test_target target_subdirectory test_type)
 	# set target name
-	set(target_name unittest_${ARGV0})
+    if (${ARGV1} MATCHES "unit")
+	    set(target_name unittest_${ARGV0})
+        set(jenkins_file unittest.sh)
+    elseif ( ${ARGV1} MATCHES "reg")
+        set(target_name regtest_${ARGV0})
+        set(jenkins_file regtest.sh)
+    else()
+        message(SEND_ERROR "Invalid test type. Valid types are 'unit' and 'reg'")
+    endif()
 
 
 	# Create folder for parsed test files in the build directory
@@ -26,12 +34,28 @@ macro (add_test_target target_subdirectory)
     	get_filename_component(filename ${_test} NAME_WE)
     	
     	# Test preprocessor command
-    	add_custom_command(
-        	OUTPUT ${CMAKE_BINARY_DIR}/generated/${ARGV0}/${filename}.F90
-        	COMMAND ${PF_ROOT}/bin/pFUnitParser.py ${CMAKE_SOURCE_DIR}/unittests/${ARGV0}/${filename}.pf ${CMAKE_BINARY_DIR}/generated/${ARGV0}/${filename}.F90
-        	DEPENDS ${CMAKE_SOURCE_DIR}/unittests/${ARGV0}/${filename}.pf
-        	)
+        if (${ARGV1} MATCHES "unit")
+
+            add_custom_command(
+                OUTPUT ${CMAKE_BINARY_DIR}/generated/${ARGV0}/${filename}.F90
+                COMMAND ${PF_ROOT}/bin/pFUnitParser.py ${CMAKE_SOURCE_DIR}/unit_testing/${ARGV0}/${filename}.pf ${CMAKE_BINARY_DIR}/generated/${ARGV0}/${filename}.F90
+                DEPENDS ${CMAKE_SOURCE_DIR}/unit_testing/${ARGV0}/${filename}.pf
+                )
+
+        elseif (${ARGV1} MATHCES "reg")
+
+            add_custom_command(
+                OUTPUT ${CMAKE_BINARY_DIR}/generated/${ARGV0}/${filename}.F90
+                COMMAND ${PF_ROOT}/bin/pFUnitParser.py ${CMAKE_SOURCE_DIR}/reg_testing/${ARGV0}/${filename}.pf ${CMAKE_BINARY_DIR}/generated/${ARGV0}/${filename}.F90
+                DEPENDS ${CMAKE_SOURCE_DIR}/reg_testing/${ARGV0}/${filename}.pf
+                )
+        
+        endif()
         	
+
+
+
+
         # Accumulate list of test sources to define target
      	set(_test_sources ${_test_sources} ${CMAKE_BINARY_DIR}/generated/${ARGV0}/${filename}.F90)
      	
@@ -64,12 +88,12 @@ macro (add_test_target target_subdirectory)
 	##################################################################################
 	##	Add test target to shell script used by Jenkins for executing individual tests
 	##################################################################################
-	if (EXISTS "${CMAKE_BINARY_DIR}/bin/unittest.sh")
-		file(APPEND ${CMAKE_BINARY_DIR}/bin/unittest.sh "./${target_name} -xml ${target_name}.xml\n")
+	if (EXISTS "${CMAKE_BINARY_DIR}/bin/${jenkins_file}")
+		file(APPEND ${CMAKE_BINARY_DIR}/bin/${jenkins_file} "./${target_name} -xml ${target_name}.xml\n")
 	else()
-		file(APPEND ${CMAKE_BINARY_DIR}/bin/unittest.sh "#!/bin/bash\n")
-		file(APPEND ${CMAKE_BINARY_DIR}/bin/unittest.sh "cd $WORKSPACE/build/bin\n")
-		file(APPEND ${CMAKE_BINARY_DIR}/bin/unittest.sh "./${target_name} -xml ${target_name}.xml\n")
+		file(APPEND ${CMAKE_BINARY_DIR}/bin/${jenkins_file} "#!/bin/bash\n")
+		file(APPEND ${CMAKE_BINARY_DIR}/bin/${jenkins_file} "cd $WORKSPACE/build/bin\n")
+		file(APPEND ${CMAKE_BINARY_DIR}/bin/${jenkins_file} "./${target_name} -xml ${target_name}.xml\n")
 	endif()
 	
 endmacro()

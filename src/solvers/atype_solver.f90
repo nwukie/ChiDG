@@ -1,6 +1,7 @@
 module atype_solver
     use mod_kinds,          only: rk,ik
     use type_domain,        only: domain_t
+    use atype_matrixsolver, only: matrixsolver_t
     implicit none
 
 
@@ -65,11 +66,13 @@ module atype_solver
 
     ! Interface for passing a domain_t type
     abstract interface
-        subroutine data_interface(self,domain)
-            use type_domain,  only: domain_t
+        subroutine data_interface(self,domain,matrixsolver)
+            use type_domain,        only: domain_t
+            use atype_matrixsolver, only: matrixsolver_t
             import solver_t
-            class(solver_t),    intent(inout)   :: self
-            type(domain_t),     intent(inout)   :: domain
+            class(solver_t),                 intent(inout)   :: self
+            type(domain_t),                  intent(inout)   :: domain
+            class(matrixsolver_t), optional, intent(inout)   :: matrixsolver
         end subroutine
     end interface
 

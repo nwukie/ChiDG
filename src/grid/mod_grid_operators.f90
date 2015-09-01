@@ -4,7 +4,8 @@ module mod_grid_operators
     use type_point,         only: point_t
     use type_element,       only: element_t
     use type_domain,        only: domain_t
-    use type_expansion,     only: expansion_t
+    use type_blockvector,   only: blockvector_t
+    use type_densevector,   only: densevector_t
     use atype_function,     only: function_t
     use mod_polynomial,     only: PolynomialVal
     use mod_project,        only: project_function_xyz
@@ -35,28 +36,38 @@ contains
         if (ivar > domain%eqnset%neqns ) call signal(FATAL,'initialize_variable: variable index ivar exceeds the number of equations')
 
 
+        !
         ! Loop through elements in mesh and call function projection
+        !
         do ielem = 1,domain%mesh%nelem
-            associate (elem  =>  domain%mesh%elems(ielem), q => domain%sdata%q(ielem))
+            associate (elem  =>  domain%mesh%elems(ielem), q => domain%sdata%q%lvecs(ielem))
 
-                !> Initial array allocation
-                if (.not. allocated(fmodes)) allocate(fmodes(q%nterms))
+                ! Initial array allocation
+                if (.not. allocated(fmodes)) allocate(fmodes(q%nterms()))
 
 
                 ! Reallocate mode storage if necessary. For example, if the order of the expansion was changed
-                if (size(fmodes) /= q%nterms) then
+                if (size(fmodes) /= q%nterms()) then
                     if (allocated(fmodes)) deallocate(fmodes)
-                    allocate(fmodes(q%nterms), stat=ierr)
+                    allocate(fmodes(q%nterms()), stat=ierr)
                     if (ierr /= 0) call AllocationError
                 end if
 
 
-                if (.not. allocated(fmodes)) print*, "WARNING: fmodes not allocated"
+                if (.not. allocated(fmodes)) call signal(FATAL,"initialize_variable: fmodes not allocated")
 
+
+
+                !
                 ! Call function projection
+                !
                 call project_function_xyz(fcn,elem%nterms_s,elem%coords,fmodes)
 
+
+
+                !
                 ! Store the projected modes to the solution expansion
+                !
                 q%mat(:,ivar) = fmodes
 
             end associate
@@ -94,12 +105,20 @@ contains
 
         call node%set(xi,eta,zeta)
 
+
+        !
         ! Evaluate polynomial modes at node location
+        !
         do iterm = 1,elem%nterms_c
+
             polyvals(iterm) = polynomialVal(3,elem%nterms_c,iterm,node)
+
         end do
 
+
+        !
         ! Evaluate mesh point from dot product of modes and polynomial values
+        !
         val = dot_product(elem%coords%mat(:,icoord), polyvals)
 
     end function
@@ -119,25 +138,34 @@ contains
     !!  @param[in]  zeta    Real value for zeta-coordinate
     !-----------------------------------------------------------------------------------
     function solution_point(q,ivar,xi,eta,zeta) result(val)
-        class(expansion_t), intent(inout)  :: q
+        class(densevector_t), intent(inout)  :: q
         integer(ik),        intent(in)     :: ivar
         real(rk),           intent(in)     :: xi,eta,zeta
 
         real(rk)                   :: val
         type(point_t)              :: node
-        real(rk)                   :: polyvals(q%nterms)
+        real(rk)                   :: polyvals(q%nterms())
         integer(ik)                :: iterm, ielem
 
 
         call node%set(xi,eta,zeta)
 
+
+        !
         ! Evaluate polynomial modes at node location
-        do iterm = 1,q%nterms
-            polyvals(iterm)  = polynomialVal(3,q%nterms,iterm,node)
+        !
+        do iterm = 1,q%nterms()
+
+            polyvals(iterm)  = polynomialVal(3,q%nterms(),iterm,node)
+
         end do
 
+
+        !
         ! Evaluate x from dot product of modes and polynomial values
+        !
         val = dot_product(q%var(ivar),polyvals)
+
     end function
 
 

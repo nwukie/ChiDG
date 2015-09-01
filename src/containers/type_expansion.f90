@@ -6,8 +6,8 @@ module type_expansion
     type, public :: expansion_t
         integer(ik)                             :: neqns
         integer(ik)                             :: nterms
-        real(rk), dimension(:), allocatable     :: vec  !>  Vector of all modes
-        real(rk), dimension(:,:), pointer       :: mat  !>  Matrix alias of 'vec'
+        real(rk), dimension(:), allocatable     :: vec              !>  Vector of all modes
+        real(rk), dimension(:,:), pointer       :: mat => null()    !>  Matrix alias of 'vec'
     contains
         procedure, public   :: init
         procedure, public   :: var

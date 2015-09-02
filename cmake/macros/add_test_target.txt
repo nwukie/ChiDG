@@ -3,22 +3,25 @@ macro (add_test_target target_subdirectory test_type)
     if (${ARGV1} MATCHES "unit")
 	    set(target_name unittest_${ARGV0})
         set(jenkins_file unittest.sh)
-    elseif ( ${ARGV1} MATCHES "reg")
+        set(testing_dir unit_testing)
+    elseif (${ARGV1} MATCHES "reg")
         set(target_name regtest_${ARGV0})
         set(jenkins_file regtest.sh)
+        set(testing_dir reg_testing)
     else()
         message(SEND_ERROR "Invalid test type. Valid types are 'unit' and 'reg'")
     endif()
 
 
 	# Create folder for parsed test files in the build directory
-	file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/generated/${ARGV0})
+	file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/generated/${testing_dir})
+	file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/generated/${testing_dir}/${ARGV0})
 	
 	# Create input file for registering tests
-	file(REMOVE ${CMAKE_BINARY_DIR}/generated/${ARGV0}/testSuites.inc)
+	file(REMOVE ${CMAKE_BINARY_DIR}/generated/${testing_dir}/${ARGV0}/testSuites.inc)
 	
 	# Include directory created above so the .inc file is available
-	include_directories(${CMAKE_BINARY_DIR}/generated/${ARGV0})
+	include_directories(${CMAKE_BINARY_DIR}/generated/${testing_dir}/${ARGV0})
 	
 	# Include access to pfunit module
 	include_directories(${PF_ROOT}/mod)
@@ -33,34 +36,21 @@ macro (add_test_target target_subdirectory test_type)
     	# Get filename without extension (NAME_WE)
     	get_filename_component(filename ${_test} NAME_WE)
     	
+
     	# Test preprocessor command
-        if (${ARGV1} MATCHES "unit")
-
-            add_custom_command(
-                OUTPUT ${CMAKE_BINARY_DIR}/generated/${ARGV0}/${filename}.F90
-                COMMAND ${PF_ROOT}/bin/pFUnitParser.py ${CMAKE_SOURCE_DIR}/unit_testing/${ARGV0}/${filename}.pf ${CMAKE_BINARY_DIR}/generated/${ARGV0}/${filename}.F90
-                DEPENDS ${CMAKE_SOURCE_DIR}/unit_testing/${ARGV0}/${filename}.pf
-                )
-
-        elseif (${ARGV1} MATHCES "reg")
-
-            add_custom_command(
-                OUTPUT ${CMAKE_BINARY_DIR}/generated/${ARGV0}/${filename}.F90
-                COMMAND ${PF_ROOT}/bin/pFUnitParser.py ${CMAKE_SOURCE_DIR}/reg_testing/${ARGV0}/${filename}.pf ${CMAKE_BINARY_DIR}/generated/${ARGV0}/${filename}.F90
-                DEPENDS ${CMAKE_SOURCE_DIR}/reg_testing/${ARGV0}/${filename}.pf
-                )
-        
-        endif()
+        add_custom_command(
+            OUTPUT ${CMAKE_BINARY_DIR}/generated/${testing_dir}/${ARGV0}/${filename}.F90
+            COMMAND ${PF_ROOT}/bin/pFUnitParser.py ${CMAKE_SOURCE_DIR}/${testing_dir}/${ARGV0}/${filename}.pf ${CMAKE_BINARY_DIR}/generated/${testing_dir}/${ARGV0}/${filename}.F90
+            DEPENDS ${CMAKE_SOURCE_DIR}/${testing_dir}/${ARGV0}/${filename}.pf
+            )
         	
 
-
-
-
         # Accumulate list of test sources to define target
-     	set(_test_sources ${_test_sources} ${CMAKE_BINARY_DIR}/generated/${ARGV0}/${filename}.F90)
+     	set(_test_sources ${_test_sources} ${CMAKE_BINARY_DIR}/generated/${testing_dir}/${ARGV0}/${filename}.F90)
      	
+
      	# Register test in input .inc file for pftest
-     	file(APPEND ${CMAKE_BINARY_DIR}/generated/${ARGV0}/testSuites.inc "ADD_TEST_SUITE(${filename}_suite)\n")
+     	file(APPEND ${CMAKE_BINARY_DIR}/generated/${testing_dir}/${ARGV0}/testSuites.inc "ADD_TEST_SUITE(${filename}_suite)\n")
 	endforeach()
 	
 	set_source_files_properties(${PF_ROOT}/include/driver.F90 PROPERTIES GENERATED 1)

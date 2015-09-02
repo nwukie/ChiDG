@@ -8,6 +8,7 @@ add_subdirectory(functions)
 add_subdirectory(solvers)
 add_subdirectory(equations)
 add_subdirectory(boundary_conditions)
+add_subdirectory(matrix_solvers)
 
 
 

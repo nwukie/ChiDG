@@ -40,6 +40,9 @@ contains
             case ('3x3x1','331')
                 call meshgen_3x3x1_linear(pts)
 
+            case ('4x1x1','411')
+                call meshgen_4x1x1_linear(pts)
+
             case default
                 call signal(FATAL,'String identifying mesh generation routine was not recognized')
         end select
@@ -421,6 +424,66 @@ contains
 
 
 
+
+
+
+
+
+    !> Generate a set of points defining a 4x1x1 element mesh
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @param[inout]   pts     points_t array of rank-3 that gets allocated, filled, and returned
+    !---------------------------------------------------------------------
+    subroutine meshgen_4x1x1_linear(pts)
+        type(point_t), allocatable, intent(inout)  :: pts(:,:,:)
+
+        integer(ik), parameter      :: npt = 20
+        integer(ik)                 :: ipt_xi, ipt_eta, ipt_zeta, ipt, ierr
+        real(rk), dimension(npt)    :: x,y,z
+
+        ! elements (4x1x1) - linear
+        !
+        !      *------*------*------*------*
+        !      |      |      |      |      | 
+        !      |      |      |      |      | 
+        !      *------*------*------*------*
+        !
+
+
+
+        x = [ZERO, ONE, TWO, THREE, FOUR, &       
+             ZERO, ONE, TWO, THREE, FOUR, &       
+             ZERO, ONE, TWO, THREE, FOUR, &       
+             ZERO, ONE, TWO, THREE, FOUR]
+             
+
+        y = [ZERO, ZERO, ZERO, ZERO, ZERO, &
+             ONE, ONE, ONE, ONE, ONE, &
+             ZERO, ZERO, ZERO, ZERO, ZERO, &
+             ONE, ONE, ONE, ONE, ONE]
+
+        z = [ZERO, ZERO, ZERO, ZERO, ZERO, &
+             ZERO, ZERO, ZERO, ZERO, ZERO, &
+             ONE, ONE, ONE, ONE, ONE, &
+             ONE, ONE, ONE, ONE, ONE]
+
+
+
+        ! Allocate point storage
+        allocate(pts(5,2,2), stat=ierr)
+        if (ierr /= 0) call AllocationError
+
+        ipt = 1
+        do ipt_zeta = 1,2
+            do ipt_eta = 1,2
+                do ipt_xi = 1,5
+                    call pts(ipt_xi,ipt_eta,ipt_zeta)%set(x(ipt), y(ipt), z(ipt))
+                    ipt = ipt + 1
+                end do
+            end do
+        end do
+
+    end subroutine
 
 
 

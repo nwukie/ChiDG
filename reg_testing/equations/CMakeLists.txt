@@ -1,4 +1,4 @@
-set(test_files 
+set(test_files reg
                rtest_linearadvection_mod.pf
                )
-add_regtest_target(equations ${test_files})
+add_test_target(equations ${test_files})

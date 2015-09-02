@@ -24,8 +24,10 @@ set(CMAKE_Fortran_MODULE_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(UNITTEST FALSE CACHE BOOL "Enable building unit tests")
 if (${CMAKE_BUILD_TYPE} MATCHES "Debug") 
     set(UNITTEST TRUE)
+    set(REGTEST  TRUE)
 elseif (${CMAKE_BUILD_TYPE} MATCHES "Release")
     set(UNITTEST FALSE)
+    set(REGTEST  FALSE)
 endif()
 
 
@@ -168,10 +170,29 @@ if (UNITTEST)
     endif()
     set(PFU_LIB ${PF_ROOT}/lib)
 
-    # Add tests
+
+
+    # Add unit tests
     add_subdirectory(unit_testing)
+
+
 endif()
 
+
+
+if (REGTEST)
+    if (${Forgran_VENDOR} MATCHES "INTEL")
+        set(PF_ROOT $ENV{PFUNIT}/intel)
+    elseif (${Fortran_VENDOR} MATCHES "GNU")
+        set(PF_ROOT $ENV{PFUNIT}/gnu)
+    endif()
+    set(PFU_LIB ${PF_ROOT}/lib)
+
+
+    # Add regression tests
+    add_subdirectory(reg_testing)
+
+endif()
 
 #------------------------------------------------------------------                                                                        
 #                    Generate documentation

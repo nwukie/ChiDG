@@ -11,7 +11,7 @@ add_subdirectory(equations)
 add_subdirectory(spatial)
 add_subdirectory(functions)
 add_subdirectory(boundary_conditions)
-add_subdirectory(matrixsolvers)
+add_subdirectory(matrix_solvers)
 
 # Propagate lib_srcs list to parent directory
 add_lib_sources() 

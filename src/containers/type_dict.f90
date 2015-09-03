@@ -204,7 +204,8 @@ contains
         ! We searched the whole list and found no valid key.
         ! BAD!
         else
-            stop "Error: key not found"
+            print*, "Error dict_t: key ", key, "was not found."
+            stop
         end if
 
     end subroutine
@@ -306,7 +307,8 @@ contains
         ! We searched the whole list and found no valid key.
         ! BAD!
         else
-            stop "Error: key not found"
+            print*, "Error dict_t: key ", key, "was not found."
+            stop
         end if
 
     end subroutine

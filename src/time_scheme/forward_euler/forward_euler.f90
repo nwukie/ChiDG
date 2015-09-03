@@ -1,7 +1,7 @@
-module solver_forward_euler
+module forward_euler
     use mod_kinds,          only: rk,ik
     use mod_constants,      only: ZERO
-    use atype_solver,       only: solver_t
+    use atype_time_scheme,  only: time_scheme_t
     use atype_matrixsolver, only: matrixsolver_t
     use type_domain,        only: domain_t
     use type_dict,          only: dict_t
@@ -47,48 +47,17 @@ module solver_forward_euler
     !!
     !!
     !------------------------------------------------------------
-    type, extends(solver_t), public :: forward_euler_s
+    type, extends(time_scheme_t), public :: forward_euler_t
 
-        real(rk)        :: dt = 0.001_rk    !< Time-step increment
-        integer(ik)     :: nsteps = 10000     !< Number of time steps to compute
-        integer(ik)     :: nwrite = 100      !< Write data every 'nwrite' steps
 
     contains
-        procedure   :: init
         procedure   :: solve
 
         final :: destructor
-    end type forward_euler_s
+    end type forward_euler_t
     !-----------------------------------------------------------
 
 contains
-
-
-    !> Solver initialization
-    !!  - set solver member data
-    !!
-    !!  @author Nathan A. Wukie
-    !!
-    !-------------------------------------------------------------------------------------------------
-    subroutine  init(self,domain,options)
-        class(forward_euler_s),     intent(inout)   :: self
-        type(domain_t),             intent(inout)   :: domain
-        type(dict_t), optional,     intent(inout)   :: options
-
-        ! If the options type is passed, use it to set the following data.
-        ! Else, the default values will be used.
-        if (present(options)) then
-            call options%get('dt',self%dt)
-            call options%get('nsteps',self%nsteps)
-            call options%get('nwrite',self%nwrite)
-        end if
-
-    end subroutine init
-
-
-
-
-
 
 
 
@@ -100,7 +69,7 @@ contains
     !!
     !-------------------------------------------------------------------------------------------------
     subroutine solve(self,domain,matrixsolver)
-        class(forward_euler_s),             intent(inout)   :: self
+        class(forward_euler_t),             intent(inout)   :: self
         type(domain_t),                     intent(inout)   :: domain
         class(matrixsolver_t), optional,    intent(inout)   :: matrixsolver
 
@@ -160,14 +129,14 @@ contains
 
     
     subroutine destructor(self)
-        type(forward_euler_s),      intent(in) :: self
+        type(forward_euler_t),      intent(in) :: self
 
     end subroutine
 
 
 
 
-end module solver_forward_euler
+end module forward_euler
 
 
 

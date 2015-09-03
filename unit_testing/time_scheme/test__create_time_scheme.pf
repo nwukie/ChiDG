@@ -1,21 +1,21 @@
 !> Test that solverdata_t was returned 'allocated'
 @Test
-subroutine test__create_solver__allocated()
+subroutine test__create_time_scheme__allocated()
     use pfunit_mod
     use mod_kinds,          only: rk,ik
-    use mod_solver,         only: create_solver
-    use atype_solver,       only: solver_t
+    use mod_time_scheme,    only: create_time_scheme
+    use atype_time_scheme,  only: time_scheme_t
     
     implicit none
-    class(solver_t),        allocatable :: solver
+    class(time_scheme_t),    allocatable :: time
     
     
     !> PROCEDURE BEING TESTED
-    call create_solver('fe',solver)
+    call create_time_scheme('fe',time)
     
     
     !> Test allocated
-    @assertTrue(allocated(solver))
+    @assertTrue(allocated(time))
     
 end subroutine
 
@@ -26,25 +26,25 @@ end subroutine
 
 !> Test that allocated type is returned with expected type
 @Test
-subroutine test__create_solver__type()
+subroutine test__create_time_scheme__type()
     use pfunit_mod
     use mod_kinds,              only: rk,ik
-    use mod_solver,             only: create_solver
-    use atype_solver,           only: solver_t
-    use solver_forward_euler,   only: forward_euler_s
+    use mod_time_scheme,        only: create_time_scheme
+    use atype_time_scheme,      only: time_scheme_t
+    use forward_euler,          only: forward_euler_t
     
     implicit none
-    class(solver_t),    allocatable :: solver
+    class(time_scheme_t),    allocatable :: time
     
     
         
     !> PROCEDURE BEING TESTED
-    call create_solver('fe',solver)
+    call create_time_scheme('fe',time)
     
     
     !> Test for correct type
-    select type(solver)
-        type is (forward_euler_s)
+    select type(time)
+        type is (forward_euler_t)
             !> correct type
             @assertTrue(.true.) 
         

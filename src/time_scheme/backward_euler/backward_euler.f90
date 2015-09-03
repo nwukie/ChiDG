@@ -1,9 +1,8 @@
-module solver_backward_euler
-    use mod_kinds,      only: rk,ik
-    use mod_constants,  only: ZERO, ONE, TWO, DIAG
-    use atype_solver,   only: solver_t
-    use type_domain,    only: domain_t
-    use type_dict,      only: dict_t
+module backward_euler
+    use mod_kinds,          only: rk,ik
+    use mod_constants,      only: ZERO, ONE, TWO, DIAG
+    use atype_time_scheme,  only: time_scheme_t
+    use type_domain,        only: domain_t
     use atype_matrixsolver, only: matrixsolver_t
     use type_blockvector
 
@@ -20,18 +19,15 @@ module solver_backward_euler
     !!  @author Nathan A. Wukie
     !!
     !------------------------------------------------------------
-    type, extends(solver_t), public :: backward_euler_s
+    type, extends(time_scheme_t), public :: backward_euler_t
 
-        real(rk)        :: dt = 0.1_rk                    !< Time-step increment
-        integer(ik)     :: nsteps = 10000                   !< Number of time steps to compute
-        integer(ik)     :: nwrite = 1                     !< Write data every 'nwrite' steps
+
 
     contains
-        procedure   :: init
         procedure   :: solve
 
         final :: destructor
-    end type backward_euler_s
+    end type backward_euler_t
     !-----------------------------------------------------------
 
 
@@ -46,31 +42,6 @@ module solver_backward_euler
 contains
 
 
-    !> Solver initialization
-    !!  - set solver member data
-    !!
-    !!  @author Nathan A. Wukie
-    !!
-    !-------------------------------------------------------------------------------------------------
-    subroutine  init(self,domain,options)
-        class(backward_euler_s),     intent(inout)   :: self
-        type(domain_t),             intent(inout)   :: domain
-        type(dict_t), optional,     intent(inout)   :: options
-
-        ! If the options type is passed, use it to set the following data.
-        ! Else, the default values will be used.
-        if (present(options)) then
-            call options%get('dt',self%dt)
-            call options%get('nsteps',self%nsteps)
-            call options%get('nwrite',self%nwrite)
-        end if
-
-    end subroutine init
-
-
-
-
-
 
 
 
@@ -82,7 +53,7 @@ contains
     !!
     !-------------------------------------------------------------------------------------------------
     subroutine solve(self,domain,matrixsolver)
-        class(backward_euler_s),            intent(inout)   :: self
+        class(backward_euler_t),            intent(inout)   :: self
         type(domain_t),                     intent(inout)   :: domain
         class(matrixsolver_t), optional,    intent(inout)   :: matrixsolver
 
@@ -91,6 +62,7 @@ contains
         real(rk)            :: resid
         type(blockvector_t) :: b, qn, qold, qnew, dtau
       
+        integer(ik)         :: ninner_iterations(self%nsteps)    ! Record number of inner iterations for each step
 
 
         wcount = 1
@@ -114,8 +86,9 @@ contains
                 ! NONLINEAR CONVERGENCE INNER LOOP
                 !
                 resid  = ONE    ! Force inner loop entry
-                ninner = 1      ! Initialize inner loop counter
-                do while ( resid > 1.0e-8_rk )
+                ninner = 0      ! Initialize inner loop counter
+                do while ( resid > self%tol )
+                    ninner = ninner + 1
                     print*, "   ninner: ", ninner
 
 
@@ -184,11 +157,11 @@ contains
 
                     ! Store updated solution vector (qnew) to working solution vector (q)
                     q = qnew
-                    ninner = ninner + 1
 
                     print*, "   DQ - Norm: ", resid
                 end do ! ninner
 
+                ninner_iterations(itime) = ninner   ! Record number of inner iterations
 
 
                 if (wcount == self%nwrite) then
@@ -203,6 +176,11 @@ contains
 
         end associate
 
+
+
+        self%ninner_iterations = ninner_iterations  ! store inner iteration count to time-scheme object
+
+
     end subroutine solve
 
 
@@ -213,18 +191,14 @@ contains
 
     
     subroutine destructor(self)
-        type(backward_euler_s),      intent(in) :: self
+        type(backward_euler_t),      intent(in) :: self
 
     end subroutine
 
 
 
 
-end module solver_backward_euler
-
-
-
-
+end module backward_euler
 
 
 

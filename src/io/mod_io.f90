@@ -8,37 +8,33 @@ module mod_io
     implicit none
 
 
-    ! POLYNOMIAL
-    !--------------------------------------------------
-    character(len=100),  save    :: basis = 'legendre'
-
-
-    ! GRID  
+    ! FILES
     !--------------------------------------------------
     character(len=100),  save    :: gridfile
     character(len=100),  save    :: gridtype
+    character(len=100),  save    :: tecplot_prefix = 'tec'
+    character(len=100),  save    :: hdf_out        = 'solution.h5'
 
-
-    ! SOLUTION
-    !--------------------------------------------------
     character(len=100),  save    :: solutionfile
-    integer(ik),         save    :: solution_order  = 1
-    integer(ik),         save    :: nterms_sol1d    = 1
-    integer(ik),         save    :: nterms_s        = 1
-    integer(ik),         save    :: ntime_instances = 1
 
-    !integer(ik),         save    :: nterms_sol1d = 2
-    !integer(ik),         save    :: nterms_sol2d = 2
-    !integer(ik),         save    :: nterms_sol3d = 2
-    !integer(ik),         save    :: nterms_mesh1d = 1
-    !integer(ik),         save    :: nterms_mesh2d = 4
-    !integer(ik),         save    :: nterms_mesh3d = 8
+
+
+
+    ! SPACE
+    !--------------------------------------------------
+    character(len=100),  save    :: basis = 'legendre'
+    integer(ik),         save    :: solution_order  = 1
+
  
+
+
     
     ! QUADRATURE
     !--------------------------------------------------
     integer(ik),         save    :: gq_rule = 2          !> 1: Collocation, 2: Over-integration
    
+
+
    
     
     ! EQUATION SET 
@@ -46,30 +42,39 @@ module mod_io
     character(len=100),  save    :: eqnset
   
   
+
+
+
     
-    ! SOLUTION ADVANCEMENT 
+    ! TIME
     !--------------------------------------------------
-    character(len=100),  save    :: temporal_scheme
+    character(len=100),  save    :: timescheme
     real(rk),            save    :: dt = 0.001_rk
     integer(ik),         save    :: nsteps = 100
+    real(rk),            save    :: ttol = 1.e-8
+    integer(ik),         save    :: ntime_instances = 1
    
    
+
+
    
     ! MATRIX SOLVER
     !--------------------------------------------------
-    character(len=100),  save    :: msolver = 'direct'
-    real(rk),            save    :: tol = 1.e-8
+    character(len=100),  save    :: matrixsolver = 'direct'
+    real(rk),            save    :: mtol = 1.e-8
    
    
+
+
+
     ! IO
     !--------------------------------------------------
-    integer(ik),         save    :: output_res     = 5
     integer(ik),         save    :: nwrite         = 100
-    character(len=100),  save    :: tecplot_prefix = 'tec'
-    character(len=100),  save    :: hdf_out        = 'solution.h5'
+    integer(ik),         save    :: output_res     = 5
      
     
-       
+
+
     ! BOUNDARY CONDITIONS
     !--------------------------------------------------
     integer(ik),         save    :: bc_ximin(MAXBLOCKS),   bc_ximax(MAXBLOCKS)
@@ -78,9 +83,15 @@ module mod_io
     real(rk),            save    :: bcpar1(6), bcpar2(6), bcpar3(6), bcpar4(6)
 
 
+    !==================================================================================
+    !           These quantities are used globally, but computed during input.
+    !           So, they do not need explicitly initialized in the namelist file
+    !==================================================================================
+    integer(ik),         save    :: nterms_sol1d    = 1
+    integer(ik),         save    :: nterms_s        = 1
 
-    contains
-    !--------------------------------------------------
+contains
+!--------------------------------------------------
 
 
 
@@ -99,24 +110,28 @@ module mod_io
 
         logical :: file_exists
 
+        namelist /files/                    gridfile,              &
+                                            gridtype,              &
+                                            hdf_out,               &
+                                            tecplot_prefix
 
 
-        namelist /polynomial/               basis
-
-        namelist /grid/                     gridfile, gridtype
-
-        namelist /solution/                 solution_order, &
-                                            ntime_instances, &
-                                            tecplot_prefix,  &
-                                            hdf_out 
+        namelist /space/                    basis,                 &
+                                            solution_order
+                                            
 
         namelist /quadrature/               gq_rule
 
         namelist /equation_set/             eqnset
 
-        namelist /solution_advancement/     temporal_scheme, dt, nsteps
+        namelist /time/                     timescheme,            &
+                                            dt,                    &
+                                            nsteps,                &
+                                            ntime_instances,       &
+                                            ttol
 
-        namelist /matrix_solver/            msolver, tol
+        namelist /matrix_solver/            matrixsolver,          &
+                                            mtol
 
 !        namelist /grid/     gridfile,   gridtype,   &
 !                            bc_ximin,   bc_ximax,   &
@@ -130,19 +145,18 @@ module mod_io
         if (.not. file_exists) call signal(FATAL, "read_input: 'chidg.nml' input file was not found")
 
         open(unit=7,form='formatted',file="chidg.nml")
-        read(7,nml=grid)
-        read(7,nml=solution)
-        read(7,nml=polynomial)
+        read(7,nml=files)
+        read(7,nml=space)
         read(7,nml=quadrature)
         read(7,nml=equation_set)
-        read(7,nml=solution_advancement)
+        read(7,nml=time)
         read(7,nml=matrix_solver)
         read(7,nml=io)
 
 
 
         ! Compute number of terms in polynomial expansions
-        nterms_sol1d = (solution_order + 1)
+        nterms_sol1d = (solution_order)
         nterms_s = nterms_sol1d * nterms_sol1d * nterms_sol1d
 
 

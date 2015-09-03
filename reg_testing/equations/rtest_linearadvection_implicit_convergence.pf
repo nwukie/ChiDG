@@ -1,0 +1,137 @@
+!-----------------------------------------------------------------------------------------------------
+!!
+!!       REGRESSSION TEST
+!!  
+!!       Testing convergence of Linear Advection implicit system. The expectation is that the system 
+!!       converges in one Newton iteration, since the governing equations are linear. The test for this
+!!       is then to ensure that two inner iterations(Newton iterations) were executed for one step 
+!!       in the backward-euler time-scheme. The first Newton iteration should converge the system.
+!!       The second Newton iteration should then compute a residual of machine-zero and exit the loop.
+!!
+!!
+!!
+!------------------------------------------------------------------------------------------------------
+@Test
+subroutine rtest_linearadvection_implicit_convergence()
+    use pfunit_mod
+    use mod_kinds,          only: rk,ik
+    use mod_constants,      only: ZERO, XI_MIN, ETA_MIN, ZETA_MIN
+
+    use type_chidg,         only: chidg_t
+    use type_point,         only: point_t
+
+    use mod_grid_operators, only: initialize_variable
+    use atype_function,     only: function_t
+    use mod_function,       only: create_function
+    use mod_testutils,      only: meshgen
+    use type_dict,          only: dict_t
+    use mod_io
+    implicit none
+
+    type(chidg_t)                       :: chidg
+    type(point_t),          allocatable :: pts(:,:,:)
+    class(function_t),      allocatable :: fcn
+    type(dict_t)                        :: toptions
+    integer(ik)                         :: nterms_c, itime
+
+
+
+
+
+    !============================================================================
+    !
+    ! Define input data here that is normally read through the namelist input file
+    !
+    !
+    !============================================================================
+    basis          = 'legendre'
+    nterms_s       = 8
+    gq_rule        = 2
+    eqnset         = 'linearadvection'
+    timescheme     = 'backward_euler'
+    matrixsolver   = 'direct'
+
+
+    !============================================================================
+
+
+    ! Set time-scheme options to pass during initialization
+    call toptions%set('dt',0.1_rk)
+    call toptions%set('tol',1.e-15_rk)
+    call toptions%set('nsteps',1)
+    call toptions%set('nwrite',0)
+
+
+
+    !
+    ! Initialize ChiDG environment.
+    !
+    call chidg%init('env')   
+
+
+
+    !
+    ! Set ChiDG components
+    !
+    call chidg%set('time_scheme',timescheme,toptions)
+    call chidg%set('matrixsolver',matrixsolver)
+    call chidg%set('ndomains','')
+
+
+    !
+    ! Generate points for mesh
+    !
+    call meshgen('333',pts)
+
+
+
+
+    associate ( dom => chidg%domains(1) )
+        !
+        ! Initialize domain
+        !
+        nterms_c = 8
+        call dom%init_geom(nterms_c,pts)
+        call dom%init_bc('periodic',XI_MIN)
+        call dom%init_bc('periodic',ETA_MIN)
+        call dom%init_bc('periodic',ZETA_MIN)
+        call dom%init_sol(eqnset,nterms_s)
+
+
+        !
+        ! Initialize solution
+        !
+        call create_function(fcn,'gaussian')
+        call initialize_variable(dom,1,fcn)
+    end associate
+
+
+
+
+    !
+    ! Wrap-up initialization activities
+    !
+    call chidg%init('finalize')
+
+
+
+    !
+    ! Run ChiDG simulation
+    !
+    call chidg%run()
+
+
+
+
+    ! Test the number of inner, Newton iterations were required to converge the system.
+    ! Since the equation set is linear(Linear Advection), only one Newton iteration should be required
+    ! to converge the real time-step. The test here then, is for the first time-step (itime = 1), the recorded
+    ! number of inner iterations should be two. This is since the solver will execute a second iteration, which
+    ! should compute the residual of zero and indicate the system is converged.
+    itime = 1
+    @assertEqual(2,chidg%timescheme%ninner_iterations(itime))
+
+
+
+
+end subroutine

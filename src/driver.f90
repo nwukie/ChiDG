@@ -14,10 +14,6 @@ program driver
     use mod_constants,          only: XI_MIN, ETA_MIN, ZETA_MIN
     use type_chidg,             only: chidg_t
     use type_domain,            only: domain_t
-    use atype_solver,           only: solver_t
-    use mod_solver,             only: create_solver
-    use atype_matrixsolver,     only: matrixsolver_t
-    use mod_matrixsolver,       only: create_matrixsolver
     use mod_hdfio,              only: read_grid_hdf
     use mod_grid_operators,     only: initialize_variable
     use atype_function,         only: function_t
@@ -31,8 +27,6 @@ program driver
     implicit none
     type(chidg_t)                       :: chidg
     type(domain_t),         allocatable :: domains(:)
-    class(matrixsolver_t),  allocatable :: matrixsolver
-    class(solver_t),        allocatable :: solver
     class(function_t),      allocatable :: fcn
    
 
@@ -40,12 +34,6 @@ program driver
     ! Initialize ChiDG environment
     !
     call chidg%init('full')
-
-
-    !
-    ! Allocate solution-advancement routine
-    !
-    call create_solver(temporal_scheme,solver)
 
 
     !
@@ -77,25 +65,6 @@ program driver
     !call write_tecio_variables(domains(1),'0.plt',1)
 
 
-
-    !
-    ! Initialize solver
-    !
-    call solver%init(domains(1))
-
-
-
-    !
-    ! Create matrix solver
-    !
-    call create_matrixsolver(msolver,matrixsolver)
-
-
-
-    !
-    ! Execute solver routine
-    !
-    call solver%solve(domains(1),matrixsolver)
 
 
 

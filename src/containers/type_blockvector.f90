@@ -15,6 +15,8 @@ module type_blockvector
     !!
     !-----------------------------------------------------------------------------------------------
     type, public :: blockvector_t
+        integer(ik)                     :: nelem_xi, nelem_eta, nelem_zeta, nelem
+
         !> localblocks (nelem x 7)
         !!
         !!            densevector_t
@@ -24,24 +26,28 @@ module type_blockvector
         !!  elem #3:        vec #3
         !!    .
         !!    .
-        type(densevector_t), allocatable :: lvecs(:)                    !> Local element vectors
-        type(densevector_t), pointer     :: lvecs_m(:,:,:) => null()    !> Matrix view of element storage vectors
+        type(densevector_t), allocatable :: lvecs(:)                    !< Local element vectors
+!        type(densevector_t), pointer     :: lvecs_m(:,:,:) => null()    !< Matrix view of element storage vectors  NOTE: intel fortran has issues mapping this. Supposedly fixed in 16.0 but other problems prevent this from being checked
 
-        integer(ik),         allocatable :: ldata(:,:)                  !> Local block data     (nvars, nterms)
+        integer(ik),         allocatable :: ldata(:,:)                  !< Local block data     (nvars, nterms)
 
 
     contains
         !> Initializers
-        generic,   public   :: init => init_vector   !> Initialize local vector
+        generic,   public   :: init => init_vector      !< Initialize local vector
         procedure, private  :: init_vector
+        !procedure, private  :: map                      !< Map blockvector%lvecs_m to lvecs
 
-        procedure, public   :: distribute               !> Given a full-vector representation, distribute it to the denseblock format
-        procedure, public   :: build                    !> Assemble a full-vector representation of the blockvector_t format
-        procedure, public   :: clear                    !> Zero all vector storage elements
+        procedure, public   :: distribute               !< Given a full-vector representation, distribute it to the denseblock format
+        procedure, public   :: build                    !< Assemble a full-vector representation of the blockvector_t format
+        procedure, public   :: clear                    !< Zero all vector storage elements
         
         procedure, public   :: norm
         procedure, public   :: nentries
+        procedure, public   :: print
 
+!        procedure   :: assignVector
+!        generic     :: assignment(=) => assignVector
         final :: destructor
     end type blockvector_t
 
@@ -56,6 +62,8 @@ module type_blockvector
 
 
     !-----------------      OPERATORS       --------------------------
+
+
     public operator (*)
     interface operator (*)
         module procedure mult_real_bv   ! real * blockvector
@@ -115,6 +123,12 @@ contains
 
         nelem = mesh%nelem  ! Number of elements in the local block
 
+        self%nelem_xi   = mesh%nelem_xi
+        self%nelem_eta  = mesh%nelem_eta
+        self%nelem_zeta = mesh%nelem_zeta
+        self%nelem      = mesh%nelem
+
+
         !
         ! ALLOCATE SIZE FOR 'lvecs'
         ! If vector was already allocated, deallocate and then reallocate vector size
@@ -158,19 +172,33 @@ contains
         end do
 
 
-        !& DEBUG
-        !print*, self%ldata
 
 
         !
         ! Initialize matrix-view of densevector components
         !
-        temp => self%lvecs
-        self%lvecs_m(1:mesh%nelem_xi, 1:mesh%nelem_eta, 1:mesh%nelem_zeta) => temp(1:mesh%nelem)
+        !temp => self%lvecs
+        !self%lvecs_m(1:mesh%nelem_xi, 1:mesh%nelem_eta, 1:mesh%nelem_zeta) => temp(1:mesh%nelem)
 
 
 
     end subroutine
+
+
+
+
+
+!    subroutine map(self)
+!        class(blockvector_t),   intent(inout), target   :: self
+!
+!        type(densevector_t), pointer :: temp(:)
+!
+!
+!        temp => self%lvecs
+!        self%lvecs_m(1:self%nelem_xi,1:self%nelem_eta,1:self%nelem_zeta) => temp(1:self%nelem)
+!
+!    end subroutine
+!
 
 
 
@@ -199,8 +227,6 @@ contains
         ndof = 0
         do ielem = 1,size(self%lvecs)
 
-            !& DEBUG
-            !print*, self%ldata
 
             nvars  = self%ldata(ielem,1)
             nterms = self%ldata(ielem,2)
@@ -421,6 +447,18 @@ contains
 
 
 
+    subroutine print(self)
+        class(blockvector_t),   intent(in)  :: self
+        integer(ik) :: ielem, ientry
+
+        do ielem = 1,size(self%lvecs)
+            print*, ielem
+            do ientry = 1,size(self%lvecs(ielem)%vec)
+                print*, self%lvecs(ielem)%vec(ientry)
+            end do
+        end do
+
+    end subroutine
 
 
 
@@ -430,8 +468,9 @@ contains
 
 
 
-
+    !------------------------------------------------------------------------
     !-----------        OPERATOR IMPLEMENTATIONS        ---------------------
+    !------------------------------------------------------------------------
     function mult_real_bv(left,right) result(res)
         real(rk),               intent(in)  :: left
         type(blockvector_t),    intent(in)  :: right
@@ -439,12 +478,13 @@ contains
         type(blockvector_t), target     :: res
         integer(ik)                     :: nelem_xi, nelem_eta, nelem_zeta, nelem
 
-        type(densevector_t), pointer    :: temp(:)
+        !type(densevector_t), pointer    :: temp(:)
+        type(blockvector_t), pointer    :: temp
 
-        nelem_xi   = size(right%lvecs_m,1)
-        nelem_eta  = size(right%lvecs_m,2)
-        nelem_zeta = size(right%lvecs_m,3)
-        nelem = nelem_xi * nelem_eta * nelem_zeta
+        res%nelem_xi   = right%nelem_xi
+        res%nelem_eta  = right%nelem_eta
+        res%nelem_zeta = right%nelem_zeta
+        res%nelem      = right%nelem
 
 
         res%ldata = right%ldata
@@ -452,9 +492,13 @@ contains
         res%lvecs = left * right%lvecs
 
 
-        temp => res%lvecs
-        res%lvecs_m(1:nelem_xi, 1:nelem_eta, 1:nelem_zeta) => temp(1:nelem)
-        !res%lvecs_m(1:nelem_xi,1:nelem_eta,1:nelem_zeta) => res%lvecs(1:nelem)
+        !call res%map()
+        !temp => res%lvecs
+        !temp => res
+        !res%lvecs_m(1:nelem_xi, 1:nelem_eta, 1:nelem_zeta) => temp(1:nelem)
+        !res%lvecs_m(1:nelem_xi, 1:nelem_eta, 1:nelem_zeta) => temp
+        !res%lvecs_m(1:nelem_xi, 1:nelem_eta, 1:nelem_zeta) => temp%lvecs(1:nelem)
+        !res%lvecs_m(1:nelem_xi, 1:nelem_eta, 1:nelem_zeta) => res%lvecs(1:nelem)
     end function
 
 
@@ -471,18 +515,18 @@ contains
         type(densevector_t), pointer    :: temp(:)
 
 
-        nelem_xi   = size(left%lvecs_m,1)
-        nelem_eta  = size(left%lvecs_m,2)
-        nelem_zeta = size(left%lvecs_m,3)
-        nelem = nelem_xi * nelem_eta * nelem_zeta
+        res%nelem_xi   = left%nelem_xi
+        res%nelem_eta  = left%nelem_eta
+        res%nelem_zeta = left%nelem_zeta
+        res%nelem      = left%nelem
 
 
         res%ldata = left%ldata
 
         res%lvecs = left%lvecs * right
 
-        temp => res%lvecs
-        res%lvecs_m(1:nelem_xi, 1:nelem_eta, 1:nelem_zeta) => temp(1:nelem)
+        !temp => res%lvecs
+        !res%lvecs_m(1:nelem_xi, 1:nelem_eta, 1:nelem_zeta) => temp(1:nelem)
     end function
 
 
@@ -509,18 +553,18 @@ contains
         type(densevector_t), pointer    :: temp(:)
 
 
-        nelem_xi   = size(right%lvecs_m,1)
-        nelem_eta  = size(right%lvecs_m,2)
-        nelem_zeta = size(right%lvecs_m,3)
-        nelem = nelem_xi * nelem_eta * nelem_zeta
+        res%nelem_xi   = right%nelem_xi
+        res%nelem_eta  = right%nelem_eta
+        res%nelem_zeta = right%nelem_zeta
+        res%nelem      = right%nelem
 
 
         res%ldata = right%ldata
 
         res%lvecs = left / right%lvecs
 
-        temp => res%lvecs
-        res%lvecs_m(1:nelem_xi, 1:nelem_eta, 1:nelem_zeta) => temp(1:nelem)
+        !temp => res%lvecs
+        !res%lvecs_m(1:nelem_xi, 1:nelem_eta, 1:nelem_zeta) => temp(1:nelem)
     end function
 
 
@@ -537,18 +581,18 @@ contains
         type(densevector_t), pointer    :: temp(:)
 
 
-        nelem_xi   = size(left%lvecs_m,1)
-        nelem_eta  = size(left%lvecs_m,2)
-        nelem_zeta = size(left%lvecs_m,3)
-        nelem = nelem_xi * nelem_eta * nelem_zeta
+        res%nelem_xi   = left%nelem_xi
+        res%nelem_eta  = left%nelem_eta
+        res%nelem_zeta = left%nelem_zeta
+        res%nelem      = left%nelem
 
 
         res%ldata = left%ldata
 
         res%lvecs = left%lvecs / right
 
-        temp => res%lvecs
-        res%lvecs_m(1:nelem_xi, 1:nelem_eta, 1:nelem_zeta) => temp(1:nelem)
+        !temp => res%lvecs
+        !res%lvecs_m(1:nelem_xi, 1:nelem_eta, 1:nelem_zeta) => temp(1:nelem)
     end function
 
 
@@ -578,17 +622,17 @@ contains
         type(densevector_t), pointer    :: temp(:)
 
 
-        nelem_xi = size(right%lvecs_m,1)
-        nelem_eta = size(right%lvecs_m,2)
-        nelem_zeta = size(right%lvecs_m,3)
-        nelem = nelem_xi * nelem_eta * nelem_zeta
+        res%nelem_xi   = right%nelem_xi
+        res%nelem_eta  = right%nelem_eta
+        res%nelem_zeta = right%nelem_zeta
+        res%nelem      = right%nelem
 
         res%ldata = right%ldata
 
         res%lvecs = left%lvecs + right%lvecs
 
-        temp => res%lvecs
-        res%lvecs_m(1:nelem_xi, 1:nelem_eta, 1:nelem_zeta) => temp(1:nelem)
+        !temp => res%lvecs
+        !res%lvecs_m(1:nelem_xi, 1:nelem_eta, 1:nelem_zeta) => temp(1:nelem)
     end function
 
 
@@ -605,21 +649,27 @@ contains
         type(densevector_t), pointer    :: temp(:)
 
 
-        nelem_xi = size(right%lvecs_m,1)
-        nelem_eta = size(right%lvecs_m,2)
-        nelem_zeta = size(right%lvecs_m,3)
-        nelem = nelem_xi * nelem_eta * nelem_zeta
+        res%nelem_xi   = right%nelem_xi
+        res%nelem_eta  = right%nelem_eta
+        res%nelem_zeta = right%nelem_zeta
+        res%nelem      = right%nelem
 
         res%ldata = right%ldata
 
         res%lvecs = left%lvecs - right%lvecs
 
-        temp => res%lvecs
-        res%lvecs_m(1:nelem_xi, 1:nelem_eta, 1:nelem_zeta) => temp(1:nelem)
+        !temp => res%lvecs
+        !res%lvecs_m(1:nelem_xi, 1:nelem_eta, 1:nelem_zeta) => temp(1:nelem)
     end function
 
 
-
+!
+!    subroutine assignVector(left,right)
+!        type(blockvector_t),    intent(out) :: left
+!        type(blockvector_t),    intent(in)  :: right
+!
+!
+!    end subroutine
 
 
 

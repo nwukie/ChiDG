@@ -1,6 +1,6 @@
 !> Data type for storing the matrix of dense blocks which hold the linearization for an algorithm
 !!  @author Nathan A. Wukie
-module type_blockmatrix
+module type_testmatrix
 #include <messenger.h>
     use mod_kinds,          only: rk,ik
     use mod_constants,      only: DIAG, ZERO
@@ -10,7 +10,7 @@ module type_blockmatrix
     implicit none
 
 
-    type, public :: blockmatrix_t
+    type, public :: testmatrix_t
         !> localblocks (nelem x 7)
         !!
         !!            xi_min   xi_max   eta_min   eta_max   zeta_min    zeta_max    diag
@@ -40,7 +40,7 @@ module type_blockmatrix
         procedure :: build      !< Build full-matrix representation of the block-sparse matrix
 
         final :: destructor
-    end type blockmatrix_t
+    end type testmatrix_t
 
 
 
@@ -57,7 +57,7 @@ contains
     !!
     !-----------------------------------------------------------
     subroutine initialize_linearization(self,mesh)
-        class(blockmatrix_t), intent(inout)  :: self
+        class(testmatrix_t), intent(inout)  :: self
         class(mesh_t),        intent(in)     :: mesh
 
         integer(ik) :: nelem, nblk, ierr, ielem, iblk, size1d, parent
@@ -68,7 +68,7 @@ contains
 
 
         ! Check to make sure the mesh numerics were initialized
-        if (.not. mesh%solInitialized) call signal(FATAL,'blockmatrix_t%initialize_linearization: Incoming mesh_t was not initialized. Make sure to call mesh%init_sol')
+        if (.not. mesh%solInitialized) call signal(FATAL,'testmatrix_t%initialize_linearization: Incoming mesh_t was not initialized. Make sure to call mesh%init_sol')
 
 
         !
@@ -141,7 +141,7 @@ contains
     !!
     !------------------------------------------------------------------------------
     subroutine store(self,integral,ielem,iblk,ivar)
-        class(blockmatrix_t),   intent(inout)   :: self
+        class(testmatrix_t),   intent(inout)   :: self
         type(AD_D),             intent(in)      :: integral(:)
         integer(ik),            intent(in)      :: ielem, iblk, ivar
 
@@ -175,7 +175,7 @@ contains
     !!  @author Nathan A. Wukie
     !--------------------------------------------------------------
     subroutine clear(self)
-        class(blockmatrix_t),   intent(inout)   :: self
+        class(testmatrix_t),   intent(inout)   :: self
 
         integer(ik) :: ielem, iblk  ! do-loop counters
 
@@ -217,7 +217,7 @@ contains
     !!  @param[inout] fullmat   Storage for full matrix representation
     !------------------------------------------------------------------
     subroutine build(self,fullmat)
-        class(blockmatrix_t),       intent(inout)   :: self
+        class(testmatrix_t),       intent(inout)   :: self
         real(rk),   allocatable,    intent(inout)   :: fullmat(:,:)
 
         integer(ik) :: ierr, nterms, nvars
@@ -331,8 +331,8 @@ contains
 
 
     subroutine destructor(self)
-        type(blockmatrix_t), intent(inout) :: self
+        type(testmatrix_t), intent(inout) :: self
 
     end subroutine
 
-end module type_blockmatrix
+end module type_testmatrix

@@ -8,8 +8,9 @@ module mod_spatial
 
 contains
 
-    subroutine update_space(domain)
+    subroutine update_space(domain,info)
         type(domain_t), intent(inout)   :: domain
+        integer(ik), optional           :: info
 
         integer(ik) :: iblk, ielem, iface, nelem, i, ibc
         real(rk)    :: istart, istop, elapsed
@@ -28,7 +29,6 @@ contains
             call cpu_time(istart)
 
             do iblk = 1,7
-
 
                 !> Loop through elements in the domain
                 do ielem = 1,nelem
@@ -75,6 +75,7 @@ contains
                     !-----------------------------------------------------------------------------------------
 
                 end do !elem
+
             end do !block
 
 
@@ -98,7 +99,7 @@ contains
             call cpu_time(istop)
 
             elapsed = istop - istart
-            print*, elapsed
+            print*, 'Update space: ', elapsed
 
         end associate
 

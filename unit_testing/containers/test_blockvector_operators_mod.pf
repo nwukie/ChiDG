@@ -108,6 +108,24 @@ contains
 
 
         !
+        ! Test parent data
+        !
+        @assertEqual(1, self%bv_res%lvecs(1)%parent())
+        @assertEqual(2, self%bv_res%lvecs(2)%parent())
+        @assertEqual(3, self%bv_res%lvecs(3)%parent())
+        @assertEqual(4, self%bv_res%lvecs(4)%parent())
+
+
+        !
+        ! Test blockvector%lvec_m matrix alias.     NOTE: ifort having issues with mapping lvecs_m
+        !
+        !@assertEqual(1, self%bv_res%lvecs_m(1,1,1)%parent())
+        !@assertEqual(2, self%bv_res%lvecs_m(2,1,1)%parent())
+        !@assertEqual(3, self%bv_res%lvecs_m(1,2,1)%parent())
+        !@assertEqual(4, self%bv_res%lvecs_m(2,2,1)%parent())
+
+
+        !
         ! Test container data. blockvector%ldata
         !
         ! nvars
@@ -116,9 +134,11 @@ contains
         @assertEqual(8, self%bv_res%ldata(:,2))
 
 
-
     end subroutine
     
+
+
+
 
 
 
@@ -355,14 +375,22 @@ contains
 
 
 
-
-
-
-
-
-
-
-
+!
+!! Test:     blockvector = blockvector
+!@Test
+!    subroutine test_blockvector_operators_assignment(self)
+!        class(test_blockvector_operators),  intent(inout)   :: self
+!        
+!        type(blockvector_t) :: res
+!
+!
+!
+!
+!        !
+!        ! Assign blockvector.   TESTING THIS
+!        !
+!        res = self%bv_a
+!
 
 
 

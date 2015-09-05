@@ -204,9 +204,11 @@ contains
             iseed   = compute_seed_element(mesh,ielem,iblk)
 
 
+
             !> Interpolate solution to quadrature nodes
             call interpolate(mesh%elems,q,ielem,ivar_u,u,iseed)
 
+            
 
             !> Compute volume flux at quadrature nodes
             flux_x = self%c(1)  *  u

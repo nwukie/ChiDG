@@ -78,9 +78,7 @@ contains
 
 
             ! Copy the solution variables from 'q' to 'qdiff'
-            !qdiff = q(ielem)%var(ivar)
-            qdiff = q%lvecs(ielem)%var(ivar)
-
+            qdiff = q%lvecs(ielem)%getvar(ivar)
 
 
             ! Loop through the terms in qdiff
@@ -98,7 +96,7 @@ contains
             !! then just use the q(ielem) values and derivatives get
             !! initialized to zero
             !var_gq = matmul(elems(ielem)%gq%vol%val,q(ielem)%var(ivar))
-            var_gq = matmul(elems(ielem)%gq%vol%val,q%lvecs(ielem)%var(ivar))
+            var_gq = matmul(elems(ielem)%gq%vol%val,q%lvecs(ielem)%getvar(ivar))
         end if
     end subroutine
 
@@ -163,7 +161,7 @@ contains
 
             !> Copy the solution variables from 'q' to 'qdiff'
             !qdiff = q(ielem)%var(ivar)
-            qdiff = q%lvecs(ielem)%var(ivar)
+            qdiff = q%lvecs(ielem)%getvar(ivar)
 
 
             !> Loop through the terms in qdiff
@@ -180,7 +178,7 @@ contains
             !! then just use the q(ielem) values and derivatives get
             !! initialized to zero
             !var_gq = matmul(faces(ielem,iface)%gq%face%val(:,:,iface),  q(ielem)%var(ivar))
-            var_gq = matmul(faces(ielem,iface)%gq%face%val(:,:,iface),  q%lvecs(ielem)%var(ivar))
+            var_gq = matmul(faces(ielem,iface)%gq%face%val(:,:,iface),  q%lvecs(ielem)%getvar(ivar))
         end if
 
 
@@ -216,7 +214,7 @@ contains
         ! This takes the form of a matrix multiplication of the quadrature matrix
         ! with the array of modes for the given variable.
         !var_gq = matmul(elems(ielem)%gq%vol%val, q(ielem)%var(ivar))
-        var_gq = matmul(elems(ielem)%gq%vol%val, q%lvecs(ielem)%var(ivar))
+        var_gq = matmul(elems(ielem)%gq%vol%val, q%lvecs(ielem)%getvar(ivar))
 
     end subroutine
 
@@ -251,7 +249,7 @@ contains
         ! This takes the form of a matrix multiplication of the face quadrature matrix
         ! with the array of modes for the given variable
         !var_gq = matmul(faces(ielem,iface)%gq%face%val(:,:,iface), q(ielem)%var(ivar))
-        var_gq = matmul(faces(ielem,iface)%gq%face%val(:,:,iface), q%lvecs(ielem)%var(ivar))
+        var_gq = matmul(faces(ielem,iface)%gq%face%val(:,:,iface), q%lvecs(ielem)%getvar(ivar))
 
 
 

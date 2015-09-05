@@ -27,7 +27,7 @@ contains
         integer(ik)        :: npts_xi,  npts_eta,  npts_zeta
         integer(ik)        :: ipt_xi,   ipt_eta,   ipt_zeta
         integer(ik)        :: xilim,    etalim,    zetalim
-        integer(ik)        :: npts, icoord
+        integer(ik)        :: npts, icoord, ielem
         integer(4)         :: tecstat
 
         real(rk)           :: val(1)
@@ -115,6 +115,7 @@ contains
         ! For each variable in equation set, compute value pointwise and save
         do ivar = 1,domain%eqnset%neqns
 
+            ielem = 1
             do ielem_zeta = 1,nelem_zeta
                 do ipt_zeta = 1,zetalim
                     zeta = (((real(ipt_zeta,rk)-ONE)/(real(npts,rk)-ONE)) - HALF)*TWO
@@ -128,10 +129,12 @@ contains
                                     xi = (((real(ipt_xi,rk)-ONE)/(real(npts,rk)-ONE)) - HALF)*TWO
 
                                     ! Get solution value at point
-                                    val = solution_point(q%lvecs_m(ielem_xi,ielem_eta,ielem_zeta),ivar,xi,eta,zeta)
+                                    !val = solution_point(q%lvecs_m(ielem_xi,ielem_eta,ielem_zeta),ivar,xi,eta,zeta)
+                                    val = solution_point(q%lvecs(ielem),ivar,xi,eta,zeta)
                                     tecstat = TECDAT142(1,valeq,1)
-
+                                
                                 end do
+                                ielem = ielem + 1
                             end do
 
                         end do

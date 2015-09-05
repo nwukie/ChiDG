@@ -6,7 +6,7 @@
 subroutine test_blockmatrix__store_1eq_8terms()
     use pfunit_mod
     use mod_kinds,          only: rk,ik
-    use mod_constants,      only: ONE, TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT
+    use mod_constants,      only: ZERO, ONE, TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT
     use type_chidg,         only: chidg_t
     use type_mesh,          only: mesh_t
     use type_point,         only: point_t
@@ -201,7 +201,7 @@ end subroutine
 subroutine test_blockmatrix__clear_1eq_8terms()
     use pfunit_mod
     use mod_kinds,          only: rk,ik
-    use mod_constants,      only: ONE, TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT
+    use mod_constants,      only: ZERO, ONE, TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT
     use type_chidg,         only: chidg_t
     use type_mesh,          only: mesh_t
     use type_point,         only: point_t
@@ -215,6 +215,9 @@ subroutine test_blockmatrix__clear_1eq_8terms()
     type(blockmatrix_t)         :: bmat
     type(AD_D)                  :: integral(8)
     integer(ik)                 :: ielem, iblk, ivar, nderiv, i, neqns, nterms
+    real(rk)                    :: tol
+
+    tol = 1.e-16_rk
     
     call chidg%init('env')
     
@@ -265,14 +268,14 @@ subroutine test_blockmatrix__clear_1eq_8terms()
 
 
 
-    !> PROCEDURE BEING TESTED
+    ! Store Derivatives
     ielem  = 14
     ivar   = 1
     iblk   = 1
     call bmat%store(integral,ielem,iblk,ivar)
 
 
-    !> Check that the derivatives were assigned to their correct locations in the block matrix.
+    !! Check that the derivatives were assigned to their correct locations in the block matrix.
     !! The xp_ad_ arrays should be stored as rows of the block matrix.
     @assertEqual(integral(1)%xp_ad_, bmat%lblks(ielem,iblk)%mat(1,:) )
     @assertEqual(integral(2)%xp_ad_, bmat%lblks(ielem,iblk)%mat(2,:) )
@@ -283,6 +286,26 @@ subroutine test_blockmatrix__clear_1eq_8terms()
     @assertEqual(integral(7)%xp_ad_, bmat%lblks(ielem,iblk)%mat(7,:) )
     @assertEqual(integral(8)%xp_ad_, bmat%lblks(ielem,iblk)%mat(8,:) )
         
+
+
+
+    !
+    ! TESTING THIS
+    !
+    call bmat%clear()
+    
+
+    ! Loop through all blocks and assert ZERO
+    do ielem = 1,27
+        do iblk = 1,7
+            if (allocated(bmat%lblks(ielem,iblk)%mat)) then
+                @assertEqual(ZERO, bmat%lblks(ielem,iblk)%mat, tol)
+            end if
+        end do
+    end do
+
+
+
     
 end subroutine
 

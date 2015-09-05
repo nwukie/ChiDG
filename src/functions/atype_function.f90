@@ -1,14 +1,16 @@
 module atype_function
-    use mod_kinds,  only: rk,ik
+    use mod_kinds,  only: rk, ik
+    use type_dict,  only: dict_t
     implicit none
     private
 
     type, public, abstract :: function_t
 
+
     contains
-        procedure(order_interface), deferred :: order       !> Returns the order of the implemented function so the proper integration rule can be used later on
-        procedure(calc_interface),  deferred :: calc        !> Elemental function definition
-        procedure                            :: set         !> Set function value
+        procedure(order_interface), deferred :: order       !< Returns the order of the implemented function so the proper integration rule can be used later on
+        procedure(calc_interface),  deferred :: calc        !< Elemental function definition
+        procedure                            :: set         !< Set function value
 
     end type function_t
 
@@ -43,9 +45,11 @@ contains
 
 
 
-    subroutine set(self,value)
+    subroutine set(self,valstring,val)
         class(function_t),  intent(inout)    :: self
-        real(rk),           intent(in)       :: value
+        character(*),       intent(in)       :: valstring
+        real(rk),           intent(in)       :: val
+        
 
     end subroutine
 

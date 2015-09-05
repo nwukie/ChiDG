@@ -73,15 +73,18 @@ contains
 
                     !> Perturb the iterm-th term in the solution expansion for variable ivar in element ielem.
                     eps   = 1.e-8_rk
-                    qhold = sdata%q%lvecs(ielem_p)%mat(iterm,ivar)
-                    sdata%q%lvecs(ielem_p)%mat(iterm,ivar) = sdata%q%lvecs(ielem_p)%mat(iterm,ivar) + eps
+                    !qhold = sdata%q%lvecs(ielem_p)%mat(iterm,ivar)
+                    !sdata%q%lvecs(ielem_p)%mat(iterm,ivar) = sdata%q%lvecs(ielem_p)%mat(iterm,ivar) + eps
+                    qhold = sdata%q%lvecs(ielem_p)%getterm(ivar,iterm)
+                    call sdata%q%lvecs(ielem_p)%setterm(ivar,iterm,qhold + eps)
 
 
                     !> For the current element, compute the contributions from volume integrals
                     call domain%eqnset%compute_volume_flux(mesh,sdata,ielem,iblk)
 
 
-                    sdata%q%lvecs(ielem_p)%mat(iterm,ivar) = qhold  !> Return perturbed value to normal state
+                    !sdata%q%lvecs(ielem_p)%mat(iterm,ivar) = qhold  !> Return perturbed value to normal state
+                    call sdata%q%lvecs(ielem_p)%setterm(ivar,iterm,qhold)
 
                     !> Compute finite difference jacobian
                     vec_fd = (sdata%rhs - rhs_r)/eps
@@ -192,15 +195,19 @@ contains
 
                     !> Perturb the iterm-th term in the solution expansion for variable ivar in element ielem.
                     eps   = 1.e-8_rk
-                    qhold = sdata%q%lvecs(ielem_p)%mat(iterm,ivar)
-                    sdata%q%lvecs(ielem_p)%mat(iterm,ivar) = sdata%q%lvecs(ielem_p)%mat(iterm,ivar) + eps
+                    !qhold = sdata%q%lvecs(ielem_p)%mat(iterm,ivar)
+                    !sdata%q%lvecs(ielem_p)%mat(iterm,ivar) = sdata%q%lvecs(ielem_p)%mat(iterm,ivar) + eps
+                    qhold = sdata%q%lvecs(ielem_p)%getterm(ivar,iterm)
+                    call sdata%q%lvecs(ielem_p)%setterm(ivar,iterm,qhold + eps)
 
 
                     !> For the current element, compute the contributions from volume integrals
                     call domain%eqnset%compute_boundary_average_flux(mesh,sdata,ielem,iface,DIAG)    !> Need to use DIAG to get rhs for finite difference calculation. This is because RHS is only stored for DIAG in the integrate procedure.
 
 
-                    sdata%q%lvecs(ielem_p)%mat(iterm,ivar) = qhold  !> Return perturbed value to normal state
+                    !sdata%q%lvecs(ielem_p)%mat(iterm,ivar) = qhold  !> Return perturbed value to normal state
+                    call sdata%q%lvecs(ielem_p)%setterm(ivar,iterm,qhold)
+
 
                     !> Compute finite difference jacobian
                     vec_fd = (sdata%rhs - rhs_r)/eps
@@ -311,15 +318,18 @@ contains
 
                     !> Perturb the iterm-th term in the solution expansion for variable ivar in element ielem.
                     eps   = 1.e-8_rk
-                    qhold = sdata%q%lvecs(ielem_p)%mat(iterm,ivar)
-                    sdata%q%lvecs(ielem_p)%mat(iterm,ivar) = sdata%q%lvecs(ielem_p)%mat(iterm,ivar) + eps
+                    !qhold = sdata%q%lvecs(ielem_p)%mat(iterm,ivar)
+                    !sdata%q%lvecs(ielem_p)%mat(iterm,ivar) = sdata%q%lvecs(ielem_p)%mat(iterm,ivar) + eps
+                    qhold = sdata%q%lvecs(ielem_p)%getterm(ivar,iterm)
+                    call sdata%q%lvecs(ielem_p)%setterm(ivar,iterm,qhold + eps)
 
 
                     !> For the current element, compute the contributions from volume integrals
                     call domain%eqnset%compute_boundary_upwind_flux(mesh,sdata,ielem,iface,DIAG)    !> Need to use DIAG to get rhs for finite difference calculation. This is because RHS is only stored for DIAG in the integrate procedure.
 
 
-                    sdata%q%lvecs(ielem_p)%mat(iterm,ivar) = qhold  !> Return perturbed value to normal state
+                    !sdata%q%lvecs(ielem_p)%mat(iterm,ivar) = qhold  !> Return perturbed value to normal state
+                    call sdata%q%lvecs(ielem_p)%setterm(ivar,iterm,qhold)
 
                     !> Compute finite difference jacobian
                     vec_fd = (sdata%rhs - rhs_r)/eps

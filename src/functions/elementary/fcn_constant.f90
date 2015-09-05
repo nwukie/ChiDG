@@ -47,11 +47,15 @@ contains
 
 
     !> Function method to set constant value.
-    subroutine set(self,value)
-        class(constant_f),  intent(inout) :: self
-        real(rk),           intent(in)    :: value
+    subroutine set(self,valstring,val)
+        class(constant_f),  intent(inout)   :: self
+        character(*),       intent(in)      :: valstring
+        real(rk),           intent(in)      :: val
 
-        self%value_ = value
+        select case(valstring)
+            case ('val','const','constant')
+                self%value_ = val
+        end select
 
     end subroutine
 

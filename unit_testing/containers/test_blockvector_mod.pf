@@ -221,33 +221,33 @@ contains
 
 
 ! Test blockvector%lvecs_m matrix-view component of for accessing blockvector%lvecs 
-@Test
-    subroutine test_blockvector__init_lvecs_m(self)
-        class(test_blockvector),    intent(inout)       :: self
-
-        integer(ik) :: ielem, ielem_xi, ielem_eta, ielem_zeta, parent
-
-
-        ielem = 1
-        do ielem_zeta = 1,self%domain(1)%mesh%nelem_zeta
-            do ielem_eta = 1,self%domain(1)%mesh%nelem_eta
-                do ielem_xi = 1,self%domain(1)%mesh%nelem_xi
-
-                    parent = self%domain(1)%mesh%elems_m(ielem_xi,ielem_eta,ielem_zeta)%ielem
-
-
-                    @assertEqual(parent,self%bvec%lvecs(ielem)%parent())
-
-
-                    ielem = ielem + 1
-
-                end do
-            end do
-        end do
-
-
-    end subroutine
-
+!@Test
+!    subroutine test_blockvector__init_lvecs_m(self)
+!        class(test_blockvector),    intent(inout)       :: self
+!
+!        integer(ik) :: ielem, ielem_xi, ielem_eta, ielem_zeta, parent
+!
+!
+!        ielem = 1
+!        do ielem_zeta = 1,self%domain(1)%mesh%nelem_zeta
+!            do ielem_eta = 1,self%domain(1)%mesh%nelem_eta
+!                do ielem_xi = 1,self%domain(1)%mesh%nelem_xi
+!
+!                    parent = self%domain(1)%mesh%elems_m(ielem_xi,ielem_eta,ielem_zeta)%ielem
+!
+!
+!                    @assertEqual(parent,self%bvec%lvecs(ielem)%parent())
+!
+!
+!                    ielem = ielem + 1
+!
+!                end do
+!            end do
+!        end do
+!
+!
+!    end subroutine
+!
 
 
 
@@ -342,8 +342,42 @@ contains
 
 
 
-
-
+! Test blockvector%lvecs_m  matrixview
+!@Test
+!    subroutine test_blockvector__lvecs_m(self)
+!        class(test_blockvector),    intent(inout)   :: self
+!
+!        @assertEqual(1,self%bvec%lvecs_m(1,1,1)%parent())
+!        @assertEqual(2,self%bvec%lvecs_m(2,1,1)%parent())
+!        @assertEqual(3,self%bvec%lvecs_m(3,1,1)%parent())
+!        @assertEqual(4,self%bvec%lvecs_m(1,2,1)%parent())
+!        @assertEqual(5,self%bvec%lvecs_m(2,2,1)%parent())
+!        @assertEqual(6,self%bvec%lvecs_m(3,2,1)%parent())
+!        @assertEqual(7,self%bvec%lvecs_m(1,3,1)%parent())
+!        @assertEqual(8,self%bvec%lvecs_m(2,3,1)%parent())
+!        @assertEqual(9,self%bvec%lvecs_m(3,3,1)%parent())
+!        @assertEqual(10,self%bvec%lvecs_m(1,1,2)%parent())
+!        @assertEqual(11,self%bvec%lvecs_m(2,1,2)%parent())
+!        @assertEqual(12,self%bvec%lvecs_m(3,1,2)%parent())
+!        @assertEqual(13,self%bvec%lvecs_m(1,2,2)%parent())
+!        @assertEqual(14,self%bvec%lvecs_m(2,2,2)%parent())
+!        @assertEqual(15,self%bvec%lvecs_m(3,2,2)%parent())
+!        @assertEqual(16,self%bvec%lvecs_m(1,3,2)%parent())
+!        @assertEqual(17,self%bvec%lvecs_m(2,3,2)%parent())
+!        @assertEqual(18,self%bvec%lvecs_m(3,3,2)%parent())
+!        @assertEqual(19,self%bvec%lvecs_m(1,1,3)%parent())
+!        @assertEqual(20,self%bvec%lvecs_m(2,1,3)%parent())
+!        @assertEqual(21,self%bvec%lvecs_m(3,1,3)%parent())
+!        @assertEqual(22,self%bvec%lvecs_m(1,2,3)%parent())
+!        @assertEqual(23,self%bvec%lvecs_m(2,2,3)%parent())
+!        @assertEqual(24,self%bvec%lvecs_m(3,2,3)%parent())
+!        @assertEqual(25,self%bvec%lvecs_m(1,3,3)%parent())
+!        @assertEqual(26,self%bvec%lvecs_m(2,3,3)%parent())
+!        @assertEqual(27,self%bvec%lvecs_m(3,3,3)%parent())
+!
+!
+!    end subroutine
+!
 
 
 

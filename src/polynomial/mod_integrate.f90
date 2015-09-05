@@ -160,6 +160,7 @@ contains
         integer(ik),            intent(in)      :: iblk
 
         integer(ik) :: i
+        real(rk)    :: vals(size(integral))
 
         associate ( rhs => sdata%rhs%lvecs, lin => sdata%lin)
 
@@ -167,7 +168,9 @@ contains
             ! Only store rhs once. if iblk == DIAG
             !
             if (iblk == DIAG) then
-                rhs(ielem)%mat(:,ivar) = rhs(ielem)%mat(:,ivar) - integral(:)%x_ad_   
+                !rhs(ielem)%mat(:,ivar) = rhs(ielem)%mat(:,ivar) - integral(:)%x_ad_   
+                vals = rhs(ielem)%getvar(ivar) - integral(:)%x_ad_
+                call rhs(ielem)%setvar(ivar,vals)
             end if
 
             !
@@ -210,6 +213,7 @@ contains
         integer(ik),            intent(in)      :: iblk
 
         integer(ik) :: i
+        real(rk)    :: vals(size(integral))
 
         associate ( rhs => sdata%rhs%lvecs, lin => sdata%lin)
 
@@ -217,7 +221,9 @@ contains
             ! Only store rhs once. if iblk == DIAG
             !
             if (iblk == DIAG) then
-                rhs(ielem)%mat(:,ivar) = rhs(ielem)%mat(:,ivar) + integral(:)%x_ad_
+                !rhs(ielem)%mat(:,ivar) = rhs(ielem)%mat(:,ivar) + integral(:)%x_ad_
+                vals = rhs(ielem)%getvar(ivar) + integral(:)%x_ad_
+                call rhs(ielem)%setvar(ivar,vals)
             end if
 
 

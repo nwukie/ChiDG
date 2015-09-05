@@ -78,7 +78,7 @@ contains
                 print*, "Step: ", itime
 
 
-                ! Store qn, since it will be operated on in the inner loop
+                ! Store qn, since q will be operated on in the inner loop
                 qn = q
 
 
@@ -96,12 +96,10 @@ contains
                     qold = q
 
 
-
-
                     ! Update Spatial Residual and Linearization (rhs, lin)
-                    call update_space(domain)
+                    call update_space(domain,ninner)
 
-
+                    
 
 
 
@@ -153,12 +151,16 @@ contains
                     call dq%clear()
                     call lin%clear()
 
+                    
 
 
                     ! Store updated solution vector (qnew) to working solution vector (q)
                     q = qnew
 
+
                     print*, "   DQ - Norm: ", resid
+
+
                 end do ! ninner
 
                 ninner_iterations(itime) = ninner   ! Record number of inner iterations

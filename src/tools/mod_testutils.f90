@@ -3,9 +3,6 @@ module mod_testutils
     use mod_kinds,      only: rk,ik
     use mod_constants,  only: ZERO, ONE, TWO, THREE, FOUR, FIVE, SIX
     use type_point,     only: point_t
-
-
-
     implicit none
 
 

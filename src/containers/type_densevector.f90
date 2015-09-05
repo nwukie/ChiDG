@@ -23,7 +23,12 @@ module type_densevector
 
         ! Vector storage
         real(rk),  dimension(:), allocatable :: vec             !> Vector storage
-        real(rk),  dimension(:,:), pointer   :: mat => null()   !> Matrix-view alias of vec  (nterms, neq)
+
+        ! ifort is sometimes successfull at mapping this correctly. BUT, it doens't always get it right.
+        ! Very difficult to debug. Thoroughly test before reenabling. In the most recent case of a 3x3x3 element
+        ! case, all densevectors in blockvector were mapped correctly, except the last three elements, and seemingly
+        ! only after the second time step. Potentially, could be an assignment error, where the pointer doens't get copied correctly
+        !real(rk),  dimension(:,:), pointer   :: mat => null()   !> Matrix-view alias of vec  (nterms, neq)
 
 
 
@@ -41,12 +46,17 @@ module type_densevector
         procedure :: nvars      !> return nvars_
 
 
-        procedure, public   :: var
+        procedure, public   :: setvar
+        procedure, public   :: getvar
+
+        procedure, public   :: getterm
+        procedure, public   :: setterm
+
 
         procedure, public   :: clear
 
 
-        final :: destructor
+!        final :: destructor
     end type densevector_t
 
 
@@ -143,7 +153,7 @@ contains
 
 
         ! Initialize matrix pointer alias
-        self%mat(1:nterms,1:nvars) => self%vec
+        !self%mat(1:nterms,1:nvars) => self%vec
 
 
     end subroutine
@@ -159,22 +169,72 @@ contains
     !!  @author Nathan A. Wukie
     !!
     !--------------------------------------------------------------------------------
-    function var(self,ivar) result(modes_out)
+    function getvar(self,ivar) result(modes_out)
         class(densevector_t),   intent(inout)   :: self
         integer(ik),            intent(in)      :: ivar
 
         real(rk)                                :: modes_out(self%nterms_)
+        integer(ik)                             :: istart, iend
 
-        modes_out = self%mat(:,ivar)
+
+        istart = (ivar-1) * self%nterms_ + 1
+        iend   = istart + (self%nterms_-1)
+
+        modes_out = self%vec(istart:iend)
+
+        ! ifort has occasional and inconsistent trouble remapping vec to mat so this access is sometimes wrong.
+        ! Pretty difficult to diagnose. Should test as much as possible before reenabling the map
+        !modes_out = self%mat(:,ivar)
     end function
 
 
 
 
 
+    subroutine setvar(self,ivar,vals)
+        class(densevector_t),   intent(inout)   :: self
+        integer(ik),            intent(in)      :: ivar
+        real(rk),               intent(in)      :: vals(:)
+
+        integer(ik) :: istart, iend
+
+        istart = (ivar-1) * self%nterms_ + 1
+        iend   = istart + (self%nterms_-1)
+
+        self%vec(istart:iend) = vals
+
+
+    end subroutine
 
 
 
+    function getterm(self,ivar,iterm) result(mode_out)
+        class(densevector_t),   intent(inout)   :: self
+        integer(ik),            intent(in)      :: ivar, iterm
+
+        real(rk)    :: mode_out
+        integer(ik) :: istart, iterm_g
+
+        istart = (ivar-1) * self%nterms_ + 1
+        iterm_g = istart + (iterm-1)
+    
+        mode_out = self%vec(iterm_g)
+
+    end function
+
+    subroutine setterm(self,ivar,iterm,mode_in)
+        class(densevector_t),   intent(inout)   :: self
+        integer(ik),            intent(in)      :: ivar, iterm
+        real(rk),               intent(in)      :: mode_in
+
+        integer(ik) :: istart, iterm_g
+
+        istart = (ivar-1) * self%nterms_ + 1
+        iterm_g = istart + (iterm-1)
+
+        self%vec(iterm_g) = mode_in
+
+    end subroutine
 
 
 
@@ -362,8 +422,8 @@ contains
         res%vec     = left * right%vec
 
         
-        temp => res%vec
-        res%mat(1:res%nterms_,1:res%nvars_) => temp
+        !temp => res%vec
+        !res%mat(1:res%nterms_,1:res%nvars_) => temp
 
     end function
 
@@ -382,8 +442,8 @@ contains
         res%vec     = left%vec * right
 
 
-        temp => res%vec
-        res%mat(1:res%nterms_,1:res%nvars_) => temp
+        !temp => res%vec
+        !res%mat(1:res%nterms_,1:res%nvars_) => temp
     end function
 
 
@@ -406,8 +466,8 @@ contains
         
         res%vec     = left / right%vec
 
-        temp => res%vec
-        res%mat(1:res%nterms_,1:res%nvars_) => temp
+        !temp => res%vec
+        !res%mat(1:res%nterms_,1:res%nvars_) => temp
     end function
 
 
@@ -425,8 +485,8 @@ contains
         res%vec     = left%vec / right
 
 
-        temp => res%vec
-        res%mat(1:res%nterms_,1:res%nvars_) => temp
+        !temp => res%vec
+        !res%mat(1:res%nterms_,1:res%nvars_) => temp
     end function
 
 
@@ -450,8 +510,8 @@ contains
 
 
 
-        temp => res%vec
-        res%mat(1:res%nterms_,1:res%nvars_) => temp
+        !temp => res%vec
+        !res%mat(1:res%nterms_,1:res%nvars_) => temp
     end function
 
 
@@ -471,8 +531,8 @@ contains
         res%vec     = left%vec - right%vec
 
 
-        temp => res%vec
-        res%mat(1:res%nterms_,1:res%nvars_) => temp
+        !temp => res%vec
+        !res%mat(1:res%nterms_,1:res%nvars_) => temp
     end function
 
 
@@ -514,9 +574,9 @@ contains
 
 
 
-    subroutine destructor(self)
-        type(densevector_t),    intent(inout)   :: self
-
-    end subroutine
-
+!    subroutine destructor(self)
+!        type(densevector_t),    intent(inout)   :: self
+!
+!    end subroutine
+!
 end module type_densevector

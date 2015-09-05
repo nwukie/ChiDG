@@ -51,7 +51,7 @@ contains
     
             !> Initialized solution to constant values
             ivar = this%domain(1)%eqnset%get_var('u')               !> Get variable index
-            call this%fcn%set(5._rk)                                !> Set constant function value
+            call this%fcn%set('const',5._rk)                                !> Set constant function value
             call initialize_variable(this%domain(1),ivar,this%fcn)  !> Initialize variable using constant function
     
     

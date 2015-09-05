@@ -1,4 +1,5 @@
 module fcn_gaussian
+#include <messenger.h>
     use mod_kinds,      only: rk,ik
     use mod_constants,  only: ZERO, ONE, TWO, THREE, FIVE
     use type_point,     only: point_t
@@ -26,11 +27,36 @@ module fcn_gaussian
     contains
         procedure   :: order
         procedure   :: calc
+        procedure   :: set
     end type gaussian_f
 
 
 
 contains
+
+    subroutine set(self,valstring,val)
+        class(gaussian_f),  intent(inout)   :: self
+        character(*),       intent(in)      :: valstring
+        real(rk),           intent(in)      :: val
+
+
+        select case (valstring)
+            case('a','A')
+                self%a = val
+            case('b_x','bx','BX','B_X')
+                self%b_x = val
+            case('b_y','by','BY','B_Y')
+                self%b_y = val
+            case('b_z','bz','BZ','B_Z')
+                self%b_z = val
+            case('c','C')
+                self%c = val
+            case default
+                call signal(FATAL,'gaussian_f%set: Invalid option string')
+        end select
+
+
+    end subroutine
 
 
     function order(self)

@@ -45,7 +45,7 @@ subroutine rtest_linearadvection_implicit_convergence()
     !
     !============================================================================
     basis          = 'legendre'
-    nterms_s       = 8
+    nterms_s       = 27
     gq_rule        = 2
     eqnset         = 'linearadvection'
     timescheme     = 'backward_euler'
@@ -57,7 +57,7 @@ subroutine rtest_linearadvection_implicit_convergence()
 
     ! Set time-scheme options to pass during initialization
     call toptions%set('dt',0.1_rk)
-    call toptions%set('tol',1.e-15_rk)
+    call toptions%set('tol',3.e-15_rk)
     call toptions%set('nsteps',1)
     call toptions%set('nwrite',0)
 
@@ -102,6 +102,10 @@ subroutine rtest_linearadvection_implicit_convergence()
         ! Initialize solution
         !
         call create_function(fcn,'gaussian')
+        call fcn%set('bx',0._rk)
+        call fcn%set('by',1.5_rk)
+        call fcn%set('bz',1.5_rk)
+        call fcn%set('c',2.0_rk)
         call initialize_variable(dom,1,fcn)
     end associate
 

@@ -79,40 +79,40 @@ end subroutine
 
 
 ! Test matrix-view of vector data
-@Test
-subroutine test_densevector_matrix_view()
-    use pfunit_mod
-    use mod_kinds,      only: rk, ik
-    use mod_constants,  only: ONE, TWO
-    use type_densevector
-
-    implicit none
-    type(densevector_t)     :: vec
-    integer(ik)             :: nterms, neqns, vsize, parent, nentries
-    real(rk)                :: var_one(8), var_two(8)
-
-    ! Initialize vector
-    nterms = 8
-    neqns = 2
-    parent = 10
-    nentries = nterms * neqns
-
-    call vec%init(nterms,neqns,parent)
-    
-
-    ! Set vector data
-    vec%vec(1:8)  = ONE    ! var_one
-    vec%vec(9:16) = TWO    ! var_two
-
-
-    var_one = vec%mat(:,1)
-    var_two = vec%mat(:,2)
-
-    @assertEqual(ONE,var_one)
-    @assertEqual(TWO,var_two)
-
-end subroutine 
-
+!@Test
+!subroutine test_densevector_matrix_view()
+!    use pfunit_mod
+!    use mod_kinds,      only: rk, ik
+!    use mod_constants,  only: ONE, TWO
+!    use type_densevector
+!
+!    implicit none
+!    type(densevector_t)     :: vec
+!    integer(ik)             :: nterms, neqns, vsize, parent, nentries
+!    real(rk)                :: var_one(8), var_two(8)
+!
+!    ! Initialize vector
+!    nterms = 8
+!    neqns = 2
+!    parent = 10
+!    nentries = nterms * neqns
+!
+!    call vec%init(nterms,neqns,parent)
+!    
+!
+!    ! Set vector data
+!    vec%vec(1:8)  = ONE    ! var_one
+!    vec%vec(9:16) = TWO    ! var_two
+!
+!
+!    var_one = vec%mat(:,1)
+!    var_two = vec%mat(:,2)
+!
+!    @assertEqual(ONE,var_one)
+!    @assertEqual(TWO,var_two)
+!
+!end subroutine 
+!
 
 
 

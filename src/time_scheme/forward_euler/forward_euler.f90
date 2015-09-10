@@ -73,8 +73,9 @@ contains
         type(domain_t),                     intent(inout)   :: domain
         class(matrixsolver_t), optional,    intent(inout)   :: matrixsolver
 
-        character(100)  :: filename
-        integer(ik)     :: itime, nsteps, ielem, wcount, iblk
+        character(100)          :: filename
+        integer(ik)             :: itime, nsteps, ielem, wcount, iblk, ieqn
+        real(rk), allocatable   :: vals(:)
 
 
         wcount = 1
@@ -91,7 +92,10 @@ contains
 
                 ! Multiply RHS by mass matrix 
                 do ielem = 1,domain%mesh%nelem
-                    rhs%lvecs(ielem)%vec = matmul(domain%mesh%elems(ielem)%invmass, rhs%lvecs(ielem)%vec)
+                    do ieqn = 1,domain%eqnset%neqns
+                        !rhs%lvecs(ielem)%vec = matmul(domain%mesh%elems(ielem)%invmass, rhs%lvecs(ielem)%vec)
+                        vals = matmul(domain%mesh%elems(ielem)%invmass, rhs%lvecs(ielem)%getvar(ieqn))
+                    end do
                 end do
 
 

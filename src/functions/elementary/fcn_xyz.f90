@@ -28,9 +28,9 @@ contains
 
 
     elemental function calc(self,pt)
-        class(xyz_f),  intent(in)  :: self
-        type(point_t),      intent(in)  :: pt
-        real(rk)                        :: calc
+        class(xyz_f),   intent(in)  :: self
+        type(point_t),  intent(in)  :: pt
+        real(rk)                    :: calc
 
         ! f(x) = x * y * z
         calc = pt%c1_ * pt%c2_ * pt%c3_

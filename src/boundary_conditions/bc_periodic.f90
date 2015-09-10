@@ -96,14 +96,14 @@ contains
 
 
         !
-        ! Apply periodix ZETA
+        ! Apply periodic ZETA
         !
         if (iface == ZETA_MIN) then
             izeta = 1
             izeta_p = mesh%nelem_zeta
 
             ! Loop through ZETA-face elements
-            do ieta = 1,mesh%nelem_zeta
+            do ieta = 1,mesh%nelem_eta
                 do ixi = 1,mesh%nelem_xi
                     ! Get element indices
                     ielem = mesh%elems_m(ixi,ieta,izeta)%ielem

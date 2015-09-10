@@ -7,12 +7,16 @@ module mod_matrixsolver
 
     ! IMPORT MATRIX SOLVERS
     use type_directsolver,  only: directsolver_t
+    use type_blockjacobi,   only: blockjacobi_t
+    use type_gaussseidel,   only: gaussseidel_t
     
     
 
 
 
     type(directsolver_t)    :: DIRECT
+    type(blockjacobi_t)     :: BLOCKJACOBI
+    type(gaussseidel_t)     :: GAUSSSEIDEL
 
 
 
@@ -44,6 +48,17 @@ contains
             case ('direct','Direct')
                 allocate(msolver, source=DIRECT, stat=ierr)
                 if (ierr /= 0) call AllocationError
+
+            case ('blockjacobi','BlockJacobi')
+                allocate(msolver, source=BLOCKJACOBI, stat=ierr)
+                if (ierr /= 0) call AllocationError
+
+
+            case ('gaussseidel','GaussSeidel')
+                allocate(msolver, source=GAUSSSEIDEL, stat=ierr)
+                if (ierr /= 0) call AllocationError
+
+
 
             case default
                 call signal(FATAL,"create_matrixsolver: matrix solver string did not match any valid type")

@@ -22,10 +22,10 @@ contains
     !!  @param[out] fmodes  Modal coefficients of the projected function
     !------------------------------------------------------------------------------
     subroutine project_function_xyz(fcn,nterms,cmodes,fmodes)
-        class(function_t),      intent(in)    :: fcn
-        integer(ik),            intent(in)    :: nterms
-        type(expansion_t),      intent(in)    :: cmodes           ! Expansion contains x-modes, y-modes, and z-modes
-        real(rk),               intent(inout) :: fmodes(:)
+        class(function_t),      intent(in)      :: fcn
+        integer(ik),            intent(in)      :: nterms
+        type(expansion_t),      intent(in)      :: cmodes           ! Expansion contains x-modes, y-modes, and z-modes
+        real(rk),               intent(inout)   :: fmodes(:)
 
         type(point_t),  allocatable     :: pts(:)
         real(rk),       allocatable     :: fvals(:)

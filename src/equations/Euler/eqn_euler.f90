@@ -6,7 +6,7 @@ module eqn_euler
     use type_mesh,              only: mesh_t
     use atype_solverdata,       only: solverdata_t
     use mod_interpolate,        only: interpolate
-    use mod_integrate,          only: integrate_volume_flux, integrate_boundary_flux
+    use mod_integrate,          only: integrate_volume_flux, integrate_boundary_flux, integrate_boundary_scalar_flux
     use mod_DNAD_tools,         only: compute_neighbor_face, compute_seed_element
     use DNAD_D
 
@@ -131,6 +131,8 @@ contains
             ineighbor = mesh%faces(ielem,iface)%ineighbor
 
 
+
+
             !> Interpolate solution to quadrature nodes
             call interpolate(faces,q,ielem,    iface,  irho,rho_m,iseed)
             call interpolate(faces,q,ineighbor,iface_p,irho,rho_p,iseed)
@@ -167,12 +169,11 @@ contains
             flux_y_p = rhov_p
             flux_z_p = rhow_p
 
-            flux_x = (flux_x_m + flux_x_p)
-            flux_y = (flux_y_m + flux_y_p)
-            flux_z = (flux_z_m + flux_z_p)
+            flux_x = (flux_x_m + flux_x_p)*HALF*norms(:,1)
+            flux_y = (flux_y_m + flux_y_p)*HALF*norms(:,2)
+            flux_z = (flux_z_m + flux_z_p)*HALF*norms(:,3)
 
-            ! Dot product with normal vector
-            flux = HALF*(norms(:,1)*flux_x + norms(:,2)*flux_y + norms(:,3)*flux_z)
+
             call integrate_boundary_flux(mesh%faces(ielem,iface),sdata,irho,iblk,flux_x,flux_y,flux_z)
 
 
@@ -187,12 +188,10 @@ contains
             flux_y_p = (rhou_p*rhov_p)/rho_p
             flux_z_p = (rhou_p*rhow_p)/rho_p
 
-            flux_x = (flux_x_m + flux_x_p)
-            flux_y = (flux_y_m + flux_y_p)
-            flux_z = (flux_z_m + flux_z_p)
+            flux_x = (flux_x_m + flux_x_p)*HALF*norms(:,1)
+            flux_y = (flux_y_m + flux_y_p)*HALF*norms(:,2)
+            flux_z = (flux_z_m + flux_z_p)*HALF*norms(:,3)
 
-            ! Dot product with normal vector
-            flux = HALF*(norms(:,1)*flux_x + norms(:,2)*flux_y + norms(:,3)*flux_z)
             call integrate_boundary_flux(mesh%faces(ielem,iface),sdata,irhou,iblk,flux_x,flux_y,flux_z)
 
 
@@ -207,12 +206,10 @@ contains
             flux_y_p = (rhov_p*rhov_p)/rho_p + p_p
             flux_z_p = (rhov_p*rhow_p)/rho_p
 
-            flux_x = (flux_x_m + flux_x_p)
-            flux_y = (flux_y_m + flux_y_p)
-            flux_z = (flux_z_m + flux_z_p)
+            flux_x = (flux_x_m + flux_x_p)*HALF*norms(:,1)
+            flux_y = (flux_y_m + flux_y_p)*HALF*norms(:,2)
+            flux_z = (flux_z_m + flux_z_p)*HALF*norms(:,3)
 
-            ! Dot product with normal vector
-            flux = HALF*(norms(:,1)*flux_x + norms(:,2)*flux_y + norms(:,3)*flux_z)
             call integrate_boundary_flux(mesh%faces(ielem,iface),sdata,irhov,iblk,flux_x,flux_y,flux_z)
 
             !================================
@@ -226,12 +223,10 @@ contains
             flux_y_p = (rhow_p*rhov_p)/rho_p
             flux_z_p = (rhow_p*rhow_p)/rho_p + p_p
 
-            flux_x = (flux_x_m + flux_x_p)
-            flux_y = (flux_y_m + flux_y_p)
-            flux_z = (flux_z_m + flux_z_p)
+            flux_x = (flux_x_m + flux_x_p)*HALF*norms(:,1)
+            flux_y = (flux_y_m + flux_y_p)*HALF*norms(:,2)
+            flux_z = (flux_z_m + flux_z_p)*HALF*norms(:,3)
 
-            ! Dot product with normal vector
-            flux = HALF*(norms(:,1)*flux_x + norms(:,2)*flux_y + norms(:,3)*flux_z)
             call integrate_boundary_flux(mesh%faces(ielem,iface),sdata,irhow,iblk,flux_x,flux_y,flux_z)
 
             !================================
@@ -245,12 +240,12 @@ contains
             flux_y_p = rhov_p*H_p
             flux_z_p = rhow_p*H_p
 
-            flux_x = (flux_x_m + flux_x_p)
-            flux_y = (flux_y_m + flux_y_p)
-            flux_z = (flux_z_m + flux_z_p)
+            flux_x = (flux_x_m + flux_x_p)*HALF*norms(:,1)
+            flux_y = (flux_y_m + flux_y_p)*HALF*norms(:,2)
+            flux_z = (flux_z_m + flux_z_p)*HALF*norms(:,3)
 
-            ! Dot product with normal vector
-            flux = HALF*(norms(:,1)*flux_x + norms(:,2)*flux_y + norms(:,3)*flux_z)
+            !print*, flux_x%x_ad_
+            !stop
             call integrate_boundary_flux(mesh%faces(ielem,iface),sdata,irhoE,iblk,flux_x,flux_y,flux_z)
 
         end associate
@@ -294,7 +289,6 @@ contains
                         rhov_m,     rhov_p,                                 &
                         rhow_m,     rhow_p,                                 &
                         rhoe_m,     rhoe_p,                                 &
-                        flux_x,     flux_y,     flux_z,                     &
                         p_m,        p_p,                                    &
                         un_m,       un_p,                                   &
                         a_m,        a_p,                                    &
@@ -344,27 +338,19 @@ contains
             gam_m = 1.4_rk
             gam_p = 1.4_rk
             !--------------------------------------
-            !>  Compute wave speeds
+            !  Compute wave speeds
             !--------------------------------------
-            !> Compute normal velocities
+            ! Compute normal velocities: dot-product vector projection along unit-normal direction
             un_m = unorms(:,1)*(rhou_m/rho_m) + unorms(:,2)*(rhov_m/rho_m) + unorms(:,3)*(rhow_m/rho_m)
             un_p = -unorms(:,1)*(rhou_p/rho_p) - unorms(:,2)*(rhov_p/rho_p) - unorms(:,3)*(rhow_p/rho_p)
 
-            !> Compute speed of sound
+            ! Compute speed of sound
             a_m = sqrt(abs(gam_m * p_m / rho_m))
             a_p = sqrt(abs(gam_p * p_p / rho_p))
 
 
-            if (.not. allocated(un_m(1)%xp_ad_)) then
-                print*, 'UN not allocated'
-            end if
 
-            if (.not. allocated(a_m(1)%xp_ad_)) then
-                print*, 'a_m not allocated'
-            end if
-
-
-            !> Compute wave speeds
+            ! Compute wave speeds
             wave_m = abs(un_m) + a_m
             wave_p = abs(un_p) + a_p
             wave = max(wave_m,wave_p)
@@ -373,64 +359,54 @@ contains
             !================================
             !       MASS FLUX
             !================================
-            upwind = wave*(rho_p - rho_m)
+            upwind = -wave*(rho_p - rho_m)
 
-            flux_x = HALF*(norms(:,1) * upwind)
-            flux_y = HALF*(norms(:,2) * upwind)
-            flux_z = HALF*(norms(:,3) * upwind)
+            flux = HALF*(upwind)
 
             ! Dot product with normal vector
-            call integrate_boundary_flux(mesh%faces(ielem,iface),sdata,irho,iblk,flux_x,flux_y,flux_z)
+            call integrate_boundary_scalar_flux(mesh%faces(ielem,iface),sdata,irho,iblk,flux)
 
 
             !================================
             !       X-MOMENTUM FLUX
             !================================
-            upwind = wave*(rhou_p - rhou_m)
+            upwind = -wave*(rhou_p - rhou_m)
 
-            flux_x = HALF*(norms(:,1) * upwind)
-            flux_y = HALF*(norms(:,2) * upwind)
-            flux_z = HALF*(norms(:,3) * upwind)
+            flux = HALF*(upwind)
 
             ! Dot product with normal vector
-            call integrate_boundary_flux(mesh%faces(ielem,iface),sdata,irhou,iblk,flux_x,flux_y,flux_z)
+            call integrate_boundary_scalar_flux(mesh%faces(ielem,iface),sdata,irhou,iblk,flux)
 
 
             !================================
             !       Y-MOMENTUM FLUX
             !================================
-            upwind = wave*(rhov_p - rhov_m)
+            upwind = -wave*(rhov_p - rhov_m)
 
-            flux_x = HALF*(norms(:,1) * upwind)
-            flux_y = HALF*(norms(:,2) * upwind)
-            flux_z = HALF*(norms(:,3) * upwind)
+            flux = HALF*(upwind)
 
             ! Dot product with normal vector
-            call integrate_boundary_flux(mesh%faces(ielem,iface),sdata,irhov,iblk,flux_x,flux_y,flux_z)
+            call integrate_boundary_scalar_flux(mesh%faces(ielem,iface),sdata,irhov,iblk,flux)
 
             !================================
             !       Z-MOMENTUM FLUX
             !================================
-            upwind = wave*(rhow_p - rhow_m)
+            upwind = -wave*(rhow_p - rhow_m)
 
-            flux_x = HALF*(norms(:,1) * upwind)
-            flux_y = HALF*(norms(:,2) * upwind)
-            flux_z = HALF*(norms(:,3) * upwind)
+            flux = HALF*(upwind)
 
             ! Dot product with normal vector
-            call integrate_boundary_flux(mesh%faces(ielem,iface),sdata,irhow,iblk,flux_x,flux_y,flux_z)
+            call integrate_boundary_scalar_flux(mesh%faces(ielem,iface),sdata,irhow,iblk,flux)
 
             !================================
             !          ENERGY FLUX
             !================================
-            upwind = wave*(rhoE_p - rhoE_m)
+            upwind = -wave*(rhoE_p - rhoE_m)
 
-            flux_x = HALF*(norms(:,1) * upwind)
-            flux_y = HALF*(norms(:,2) * upwind)
-            flux_z = HALF*(norms(:,3) * upwind)
+            flux = HALF*(upwind)
 
             ! Dot product with normal vector
-            call integrate_boundary_flux(mesh%faces(ielem,iface),sdata,irhoE,iblk,flux_x,flux_y,flux_z)
+            call integrate_boundary_scalar_flux(mesh%faces(ielem,iface),sdata,irhoE,iblk,flux)
 
         end associate
 
@@ -581,7 +557,12 @@ contains
         gam = 1.4_rk
 
 
+
+
         p = (gam-ONE)*(rhoE - HALF*rho*((rhou*rhou)/(rho*rho) + (rhov*rhov)/(rho*rho) + (rhow*rhow)/(rho*rho)))
+
+
+
 
     end subroutine
 

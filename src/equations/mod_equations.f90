@@ -6,13 +6,15 @@ module mod_equations
     ! Import Equations
     use eqn_scalar,                     only: scalar_e
     use eqn_linearadvection,            only: linearadvection_e
+    use eqn_duallinearadvection,        only: duallinearadvection_e
     use eqn_euler,                      only: euler_e
     implicit none
 
     ! Instantiate Equations
-    type(scalar_e)          :: SCALAR
-    type(linearadvection_e) :: LINEARADVECTION
-    type(euler_e)           :: EULER
+    type(scalar_e)              :: SCALAR
+    type(linearadvection_e)     :: LINEARADVECTION
+    type(duallinearadvection_e) :: DUALLINEARADVECTION
+    type(euler_e)               :: EULER
 
     logical :: uninitialized = .true.
 
@@ -27,6 +29,7 @@ contains
             ! List of equations to initialize
             call SCALAR%init()
             call LINEARADVECTION%init()
+            call DUALLINEARADVECTION%init()
             call EULER%init()
 
         end if
@@ -58,6 +61,9 @@ contains
 
             case ('linearadvection','LinearAdvection','la','LA')
                 allocate(eqnset, source=LINEARADVECTION)
+
+            case ('duallinearadvection','DualLinearAdvection','dla','DLA')
+                allocate(eqnset, source=DUALLINEARADVECTION)
 
             case('euler','Euler','EULER')
                 allocate(eqnset, source=EULER)

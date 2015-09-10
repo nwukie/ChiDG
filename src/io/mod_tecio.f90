@@ -47,6 +47,7 @@ contains
         nelem_zeta = domain%mesh%nelem_zeta
 
 
+
         ! Remap elements array to block matrix
         elem => domain%mesh%elems_m
         !q    => domain%sdata%q_m
@@ -112,10 +113,12 @@ contains
         end do  ! coords
 
 
+
+
+
         ! For each variable in equation set, compute value pointwise and save
         do ivar = 1,domain%eqnset%neqns
 
-            ielem = 1
             do ielem_zeta = 1,nelem_zeta
                 do ipt_zeta = 1,zetalim
                     zeta = (((real(ipt_zeta,rk)-ONE)/(real(npts,rk)-ONE)) - HALF)*TWO
@@ -130,11 +133,13 @@ contains
 
                                     ! Get solution value at point
                                     !val = solution_point(q%lvecs_m(ielem_xi,ielem_eta,ielem_zeta),ivar,xi,eta,zeta)
+                                    ielem = ielem_xi + (nelem_xi)*(ielem_eta-1) + (nelem_xi * nelem_eta)*(ielem_zeta-1)
                                     val = solution_point(q%lvecs(ielem),ivar,xi,eta,zeta)
+
                                     tecstat = TECDAT142(1,valeq,1)
                                 
+                                
                                 end do
-                                ielem = ielem + 1
                             end do
 
                         end do
@@ -144,6 +149,7 @@ contains
             end do
 
         end do ! ivar
+
 
 
         call finalize_tecio()

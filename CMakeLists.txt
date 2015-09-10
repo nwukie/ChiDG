@@ -21,14 +21,8 @@ set(CMAKE_Fortran_MODULE_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 #------------------------------------------------------------------ 
 #                    Set 'Debug' and 'Release' options
 #------------------------------------------------------------------
-set(UNITTEST FALSE CACHE BOOL "Enable building unit tests")
-if (${CMAKE_BUILD_TYPE} MATCHES "Debug") 
-    set(UNITTEST TRUE)
-    set(REGTEST  TRUE)
-elseif (${CMAKE_BUILD_TYPE} MATCHES "Release")
-    set(UNITTEST FALSE)
-    set(REGTEST  FALSE)
-endif()
+set(UNITTEST FALSE CACHE BOOL "Enable building unit-tests")
+set(REGTEST  FALSE CACHE BOOL "Enable building regression-tests")
 
 
 

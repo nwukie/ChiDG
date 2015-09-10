@@ -53,16 +53,28 @@ contains
         real(rk),   allocatable                 :: bfull(:), xfull(:)
         integer(ik) :: ierr
 
+        integer(ik) :: i
+        real(rk)    :: err
+
+
 
         !
         ! Build full-matrix/vector representation of A and b.
         !
         call A%build(Afull)
 
+
+
+
+
+
         allocate(Ainv(size(Afull,1),size(Afull,2)), &
                  bfull(size(Afull,1)),           & 
                  xfull(size(Afull,1)), stat=ierr)
         if (ierr /= 0) call AllocationError
+
+
+
 
         ! Build full-vector representation of b
         call b%build(bfull)
@@ -81,10 +93,17 @@ contains
         xfull = matmul(Ainv,bfull)
 
 
+
+
+
         !
         ! Distribute full-vector representation xfull to blockvector representation x
         !
         call x%distribute(xfull)
+        
+
+        err = self%error(A,x,b)
+        print*, '    Matrix Solver Error: ', err
 
 
     end subroutine solve

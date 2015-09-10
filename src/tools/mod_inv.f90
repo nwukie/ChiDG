@@ -2,6 +2,9 @@ module mod_inv
     use mod_kinds,  only: rk,ik
 
     implicit none
+    ! External procedures defined in LAPACK
+    external DGETRI
+    external DGETRF
 
 contains
 
@@ -15,13 +18,14 @@ contains
       integer,  dimension(size(A,1)) :: ipiv    ! pivot indices
       integer :: n, info
 
-      ! External procedures defined in LAPACK
-      external DGETRF
-      external DGETRI
+
 
       ! Store A in Ainv to prevent it from being overwritten by LAPACK
       Ainv = A
       n = size(A,1)
+
+
+      
 
       ! DGETRF computes an LU factorization of a general M-by-N matrix A
       ! using partial pivoting with row interchanges.
@@ -30,6 +34,9 @@ contains
       if (info /= 0) then
          stop 'Matrix is numerically singular!'
       end if
+
+
+
 
       ! DGETRI computes the inverse of a matrix using the LU factorization
       ! computed by DGETRF.

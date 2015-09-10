@@ -8,16 +8,17 @@ module mod_time_scheme
 
 
     ! Import solverdata types
-    use forward_euler,   only: forward_euler_t
-    use backward_euler,  only: backward_euler_t
+    use forward_euler,                  only: forward_euler_t
+    use backward_euler,                 only: backward_euler_t
+    use backward_euler_subiteration,    only: backward_euler_subiteration_t
     implicit none
 
 
 
     ! Instantiate solver types for sourcing
-    type(forward_euler_t)   :: FORWARD_EULER_INSTANCE
-    type(backward_euler_t)  :: BACKWARD_EULER_INSTANCE
-
+    type(forward_euler_t)               :: FORWARD_EULER_INSTANCE
+    type(backward_euler_t)              :: BACKWARD_EULER_INSTANCE
+    type(backward_euler_subiteration_t) :: BACKWARD_EULER_SUBITERATION_INSTANCE
 
 
 
@@ -44,6 +45,8 @@ contains
             case ('BackwardEuler','backwardeuler','Backward_Euler','backward_euler','BE','be')
                 allocate(instance, source=BACKWARD_EULER_INSTANCE)
 
+            case ('BackwardEulerSub','backwardeulersub','Backward_Euler_Sub','backward_euler_sub','BES','bes')
+                allocate(instance, source=BACKWARD_EULER_SUBITERATION_INSTANCE)
 
 
             case default

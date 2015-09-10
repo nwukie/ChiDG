@@ -1,5 +1,6 @@
 set(test_files unit
                test_directsolver.pf
+               test_gaussseidel.pf
                )
 
 

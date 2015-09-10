@@ -17,15 +17,15 @@ module atype_bc
     !!
     !-------------------------------------------------
     type, public, abstract :: bc_t
-        integer(ik), allocatable    :: ielems(:)                !> Indices of elements associated with boundary condition
-        integer(ik), allocatable    :: ifaces(:)                !> Indices of the boundary face for elements elems(ielems)
-        logical, public             :: isInitialized = .false.  !> Logical switch for indicating the boundary condition initializaiton status
+        integer(ik), allocatable    :: ielems(:)                !< Indices of elements associated with boundary condition
+        integer(ik), allocatable    :: ifaces(:)                !< Indices of the boundary face for elements elems(ielems)
+        logical, public             :: isInitialized = .false.  !< Logical switch for indicating the boundary condition initializaiton status
 
     contains
-        procedure :: init                                       !> Boundary condition initialization
-        procedure :: init_spec                                  !> Call specialized initialization routine
-        procedure :: apply                                      !> Spatial application of the boundary condition
-        procedure(compute_interface), deferred :: compute       !> Implements boundary condition calculation
+        procedure :: init                                       !< Boundary condition initialization
+        procedure :: init_spec                                  !< Call specialized initialization routine
+        procedure :: apply                                      !< Spatial application of the boundary condition
+        procedure(compute_interface), deferred :: compute       !< Implements boundary condition calculation
 
     end type bc_t
 

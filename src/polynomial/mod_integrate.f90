@@ -50,6 +50,9 @@ contains
         flux_y = (flux_y) * (elem%gq%vol%weights) * (elem%jinv)
         flux_z = (flux_z) * (elem%gq%vol%weights) * (elem%jinv)
 
+
+
+
         ! FLUX-X
         ! Multiply by column of test function gradients, integrate, add to RHS, add derivatives to linearization
         integral = matmul(transpose(elem%dtdx),flux_x)                         !> Integrate
@@ -132,6 +135,69 @@ contains
         end associate
 
     end subroutine
+
+
+
+
+
+
+
+
+    !>  Compute the boundary integral of a flux scalar
+    !!
+    !!      - Adds value contribution to the rhs vector
+    !!      - Adds the derivative contribution to the linearization matrix
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @param[in]      face    Face being integrated over
+    !!  @param[inout]   rhs     Right-hand side vector storage
+    !!  @param[inout]   lin     Domain linearization matrix
+    !!  @param[in]      iblk    Selected block of the linearization being computed. lin(ielem,iblk), where iblk = (1-7)
+    !!  @param[in]      ivar    Index of the variable associated with the flux being integrated
+    !!  @param[inout]   flux_x  x-Flux and derivatives at quadrature points
+    !!  @param[inout]   flux_y  y-Flux and derivatives at quadrature points
+    !!  @param[inout]   flux_z  z-Flux and derivatives at quadrature points
+    !--------------------------------------------------------------------------------------------------------
+    subroutine integrate_boundary_scalar_flux(face,sdata,ivar,iblk,flux)
+        type(face_t),           intent(in)      :: face
+        class(solverdata_t),    intent(inout)   :: sdata
+        integer(ik),            intent(in)      :: ivar
+        integer(ik),            intent(in)      :: iblk
+        type(AD_D),             intent(inout)   :: flux(:)
+
+
+        integer(ik)                             :: ielem, iface
+        type(AD_D), dimension(face%nterms_s)    :: integral
+
+        iface = face%iface
+        ielem = face%iparent  !> get parent element index
+
+
+        associate ( weights => face%gq%face%weights(:,iface), jinv => face%jinv, val => face%gq%face%val(:,:,iface) )
+
+            ! Multiply each component by quadrature weights. The fluxes have already been multiplied by norm
+            flux = (flux) * (weights)
+
+
+            integral = matmul(transpose(val),flux)
+            call store_boundary_integrals(integral,sdata,ielem,ivar,iblk)
+
+
+        end associate
+
+    end subroutine
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

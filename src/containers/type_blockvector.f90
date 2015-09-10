@@ -44,7 +44,7 @@ module type_blockvector
         
         procedure, public   :: norm
         procedure, public   :: nentries
-        procedure, public   :: print
+        procedure, public   :: dump
 
 !        procedure   :: assignVector
 !        generic     :: assignment(=) => assignVector
@@ -447,7 +447,7 @@ contains
 
 
 
-    subroutine print(self)
+    subroutine dump(self)
         class(blockvector_t),   intent(in)  :: self
         integer(ik) :: ielem, ientry
 

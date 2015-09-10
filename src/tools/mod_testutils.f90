@@ -40,6 +40,18 @@ contains
             case ('4x1x1','411')
                 call meshgen_4x1x1_linear(pts)
 
+            case ('40x15x1')
+                call meshgen_40x15x1_linear(pts)
+
+            case ('15x15x1')
+                call meshgen_15x15x1_linear(pts)
+
+            case ('15x15x2')
+                call meshgen_15x15x2_linear(pts)
+
+            case ('15x15x3')
+                call meshgen_15x15x3_linear(pts)
+
             case default
                 call signal(FATAL,'String identifying mesh generation routine was not recognized')
         end select
@@ -425,7 +437,6 @@ contains
 
 
 
-
     !> Generate a set of points defining a 4x1x1 element mesh
     !!
     !!  @author Nathan A. Wukie
@@ -481,6 +492,277 @@ contains
         end do
 
     end subroutine
+
+
+
+
+
+
+
+
+
+
+
+
+
+    !> Generate a set of points defining a 4x1x1 element mesh
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @param[inout]   pts     points_t array of rank-3 that gets allocated, filled, and returned
+    !---------------------------------------------------------------------
+    subroutine meshgen_40x15x1_linear(pts)
+        type(point_t), allocatable, intent(inout)  :: pts(:,:,:)
+
+        integer(ik) :: ipt_xi, ipt_eta, ipt_zeta, ipt, ierr, npts_x, npts_y, npts_z
+        real(rk)    :: x,y,z, dx, dy, dz
+
+        ! elements (40x15x1) - linear
+
+        npts_x = 41
+        npts_y = 16
+        npts_z = 2
+
+        dx = 0.5_rk
+        dy = 0.5_rk
+        dz = 1._rk
+
+        ! Allocate point storage
+        allocate(pts(npts_x,npts_y,npts_z), stat=ierr)
+        if (ierr /= 0) call AllocationError
+
+        ipt = 1
+        z = ZERO
+        do ipt_zeta = 1,npts_z
+            y = ZERO
+
+            do ipt_eta = 1,npts_y
+                x = ZERO
+
+                do ipt_xi = 1,npts_x
+                    call pts(ipt_xi,ipt_eta,ipt_zeta)%set(x, y, z)
+                    ipt = ipt + 1
+                    x = x + dx
+                end do
+
+                y = y + dy
+            end do
+
+            z = z + dz
+        end do
+
+    end subroutine
+
+
+
+
+
+
+
+
+
+
+
+
+
+    !> Generate a set of points defining a 4x1x1 element mesh
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @param[inout]   pts     points_t array of rank-3 that gets allocated, filled, and returned
+    !---------------------------------------------------------------------
+    subroutine meshgen_15x15x1_linear(pts)
+        type(point_t), allocatable, intent(inout)  :: pts(:,:,:)
+
+        integer(ik) :: ipt_xi, ipt_eta, ipt_zeta, ipt, ierr, npts_x, npts_y, npts_z
+        real(rk)    :: x,y,z, dx, dy, dz
+
+        ! elements (15x15x1) - linear
+
+        npts_x = 16
+        npts_y = 16
+        npts_z = 2
+
+        dx = 0.5_rk
+        dy = 0.5_rk
+        dz = 1.0_rk
+
+        ! Allocate point storage
+        allocate(pts(npts_x,npts_y,npts_z), stat=ierr)
+        if (ierr /= 0) call AllocationError
+
+        ipt = 1
+        z = ZERO
+        do ipt_zeta = 1,npts_z
+            y = ZERO
+
+            do ipt_eta = 1,npts_y
+                x = ZERO
+
+                do ipt_xi = 1,npts_x
+                    call pts(ipt_xi,ipt_eta,ipt_zeta)%set(x, y, z)
+                    ipt = ipt + 1
+                    x = x + dx
+                end do
+
+                y = y + dy
+            end do
+
+            z = z + dz
+        end do
+
+    end subroutine
+
+
+
+
+
+
+
+
+
+
+
+
+    !> Generate a set of points defining a 15x15x2 element mesh
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @param[inout]   pts     points_t array of rank-3 that gets allocated, filled, and returned
+    !---------------------------------------------------------------------
+    subroutine meshgen_15x15x2_linear(pts)
+        type(point_t), allocatable, intent(inout)  :: pts(:,:,:)
+
+        integer(ik) :: ipt_xi, ipt_eta, ipt_zeta, ipt, ierr, npts_x, npts_y, npts_z
+        real(rk)    :: x,y,z, dx, dy, dz
+
+        ! elements (15x15x2) - linear
+
+        npts_x = 16
+        npts_y = 16
+        npts_z = 3
+
+        dx = 0.5_rk
+        dy = 0.5_rk
+        dz = 0.5_rk
+
+        ! Allocate point storage
+        allocate(pts(npts_x,npts_y,npts_z), stat=ierr)
+        if (ierr /= 0) call AllocationError
+
+        ipt = 1
+        z = ZERO
+        do ipt_zeta = 1,npts_z
+            y = ZERO
+
+            do ipt_eta = 1,npts_y
+                x = ZERO
+
+                do ipt_xi = 1,npts_x
+                    call pts(ipt_xi,ipt_eta,ipt_zeta)%set(x, y, z)
+                    ipt = ipt + 1
+                    x = x + dx
+                end do
+
+                y = y + dy
+            end do
+
+            z = z + dz
+        end do
+
+    end subroutine
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    !> Generate a set of points defining a 15x15x3 element mesh
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @param[inout]   pts     points_t array of rank-3 that gets allocated, filled, and returned
+    !---------------------------------------------------------------------
+    subroutine meshgen_15x15x3_linear(pts)
+        type(point_t), allocatable, intent(inout)  :: pts(:,:,:)
+
+        integer(ik) :: ipt_xi, ipt_eta, ipt_zeta, ipt, ierr, npts_x, npts_y, npts_z
+        real(rk)    :: x,y,z, dx, dy, dz
+
+        ! elements (15x15x3) - linear
+
+        npts_x = 16
+        npts_y = 16
+        npts_z = 4
+
+        dx = 0.5_rk
+        dy = 0.5_rk
+        dz = 0.5_rk
+
+        ! Allocate point storage
+        allocate(pts(npts_x,npts_y,npts_z), stat=ierr)
+        if (ierr /= 0) call AllocationError
+
+        ipt = 1
+        z = ZERO
+        do ipt_zeta = 1,npts_z
+            y = ZERO
+
+            do ipt_eta = 1,npts_y
+                x = ZERO
+
+                do ipt_xi = 1,npts_x
+                    call pts(ipt_xi,ipt_eta,ipt_zeta)%set(x, y, z)
+                    ipt = ipt + 1
+                    x = x + dx
+                end do
+
+                y = y + dy
+            end do
+
+            z = z + dz
+        end do
+
+    end subroutine
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

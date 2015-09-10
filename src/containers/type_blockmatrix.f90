@@ -163,6 +163,7 @@ contains
             self%lblks(ielem,iblk)%mat(irow,:) = self%lblks(ielem,iblk)%mat(irow,:) + integral(iarray)%xp_ad_
         end do
 
+
     end subroutine store
 
 
@@ -193,15 +194,6 @@ contains
             end do  ! iblk
         end do  ! ielem
 
-        !& DEBUG
-        !do ielem = 1,size(self%lblks,1)
-        !    do iblk = 1,size(self%lblks,2)
-!
-!!                if (allocated(self%lblks(ielem,iblk)%mat)) then
-!                    print*, self%lblks(ielem,iblk)%mat
-!!                end if
-!            end do
-!        end do
 
     end subroutine clear
 

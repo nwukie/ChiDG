@@ -211,7 +211,7 @@ contains
             
 
             !> Compute volume flux at quadrature nodes
-            flux_x = self%c(1)  *  u
+            flux_x = self%c(1)  *  u 
             flux_y = self%c(2)  *  u
             flux_z = self%c(3)  *  u
 

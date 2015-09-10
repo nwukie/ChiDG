@@ -16,6 +16,18 @@ module atype_equationset
         type(equation_t), allocatable  :: eqns(:)
 
 
+        ! Array of boundary flux functions
+        !type(boundary_flux_t),  allocatable   :: bnd_adv_flux(:)
+        !type(boundary_flux_t),  allocatable   :: bnd_diff_flux(:)
+
+        ! Array of volume flux functions
+        !type(volume_flux_t),    allocatable   :: vol_adv_flux(:)
+        !type(volume_flux_t),    allocatable   :: vol_diff_flux(:) 
+
+        ! Array of volume source functions
+        !type(source_t),         allocatable   :: v_source(:)
+
+
     contains
         ! Must define these procedures in the extended type
         procedure(self_interface),     deferred  :: init
@@ -26,6 +38,7 @@ module atype_equationset
 
 
         procedure   :: get_var
+        procedure   :: add
 
     end type equationset_t
 
@@ -105,6 +118,47 @@ contains
         if (varindex == 123456789) stop "Error: invalid equation string for get_var"
 
     end function
+
+
+
+
+
+
+
+    subroutine add(self,varstring,varindex)
+        class(equationset_t),   intent(inout)  :: self
+        character(*),           intent(in)     :: varstring
+        integer(ik),            intent(in)     :: varindex
+
+        type(equation_t), allocatable    :: temp(:)
+        integer(ik) :: ieq
+
+
+
+        if (allocated(self%eqns)) then
+            ! Get allocate temp eqn array with one extra slot for new eqn
+            allocate(temp(size(self%eqns) + 1))
+
+            ! Copy current eqns to first temp slots
+            do ieq = 1,size(self%eqns)
+                temp(ieq) = self%eqns(ieq)
+            end do
+
+            ! Add new eqn to last slot
+            temp(size(temp))%name = varstring
+            temp(size(temp))%ind  = varindex
+        else
+
+            allocate(self%eqns(1))
+            self%eqns(1)%name = varstring
+            self%eqns(1)%ind  = varindex
+
+        end if
+
+
+    end subroutine
+
+
 
 
 

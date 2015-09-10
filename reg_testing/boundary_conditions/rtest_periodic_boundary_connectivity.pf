@@ -12,10 +12,11 @@
 !!
 !------------------------------------------------------------------------------------------------------
 @Test
-subroutine rtest_linearadvection_implicit_convergence()
+subroutine rtest_periodic_boundary_connectivity()
     use pfunit_mod
     use mod_kinds,          only: rk,ik
-    use mod_constants,      only: ZERO, XI_MIN, ETA_MIN, ZETA_MIN
+    use mod_constants,      only: ZERO, XI_MIN, ETA_MIN, ZETA_MIN, XI_MAX, ETA_MAX, ZETA_MAX, &
+                                  ONE, TWO, THREE, FOUR, FIVE
 
     use type_chidg,         only: chidg_t
     use type_point,         only: point_t
@@ -32,7 +33,7 @@ subroutine rtest_linearadvection_implicit_convergence()
     type(point_t),          allocatable :: pts(:,:,:)
     class(function_t),      allocatable :: fcn
     type(dict_t)                        :: toptions
-    integer(ik)                         :: nterms_c, itime
+    integer(ik)                         :: nterms_c, itime, ielem
 
 
 
@@ -45,11 +46,11 @@ subroutine rtest_linearadvection_implicit_convergence()
     !
     !============================================================================
     basis          = 'legendre'
-    nterms_s       = 27
+    nterms_s       = 8
     gq_rule        = 2
-    eqnset         = 'linearadvection'
-    timescheme     = 'backward_euler_subiteration'
-    matrixsolver   = 'direct'
+    eqnset         = 'euler'
+    timescheme     = 'backward_euler'
+    matrixsolver   = 'gaussseidel'
 
 
     !============================================================================
@@ -57,8 +58,8 @@ subroutine rtest_linearadvection_implicit_convergence()
 
     ! Set time-scheme options to pass during initialization
     call toptions%set('dt',0.1_rk)
-    call toptions%set('tol',3.e-15_rk)
-    call toptions%set('nsteps',1)
+    call toptions%set('tol',1.e-13_rk)
+    call toptions%set('nsteps',100)
     call toptions%set('nwrite',0)
 
 
@@ -81,8 +82,8 @@ subroutine rtest_linearadvection_implicit_convergence()
     !
     ! Generate points for mesh
     !
-    call meshgen('333',pts)
-
+    call meshgen('15x15x3',pts)
+     
 
 
 
@@ -101,15 +102,25 @@ subroutine rtest_linearadvection_implicit_convergence()
         !
         ! Initialize solution
         !
-        call create_function(fcn,'gaussian')
-        call fcn%set('bx',0._rk)
-        call fcn%set('by',1.5_rk)
-        call fcn%set('bz',1.5_rk)
-        call fcn%set('c',2.0_rk)
+        call create_function(fcn,'isentropic_vortex')
+        call fcn%set('xo',3.5_rk)
+        call fcn%set('yo',3.5_rk)
+        call fcn%set('zo',0.5_rk)
+        call fcn%set('uinf',ZERO)
+        call fcn%set('vinf',ZERO)
+
+
+        call fcn%set('var',ONE)
         call initialize_variable(dom,1,fcn)
+        call fcn%set('var',TWO)
+        call initialize_variable(dom,2,fcn)
+        call fcn%set('var',THREE)
+        call initialize_variable(dom,3,fcn)
+        call fcn%set('var',FOUR)
+        call initialize_variable(dom,4,fcn)
+        call fcn%set('var',FIVE)
+        call initialize_variable(dom,5,fcn)
     end associate
-
-
 
 
     !
@@ -119,21 +130,39 @@ subroutine rtest_linearadvection_implicit_convergence()
 
 
 
-    !
-    ! Run ChiDG simulation
-    !
-    call chidg%run()
 
 
 
 
-    ! Test the number of inner, Newton iterations were required to converge the system.
-    ! Since the equation set is linear(Linear Advection), only one Newton iteration should be required
-    ! to converge the real time-step. The test here then, is for the first time-step (itime = 1), the recorded
-    ! number of inner iterations should be two. This is since the solver will execute a second iteration, which
-    ! should compute the residual of zero and indicate the system is converged.
-    itime = 1
-    @assertEqual(2,chidg%timescheme%ninner_iterations(itime))
+
+    ! Check connectivity of periodic boundaries for a few elements
+    ! Test element 1
+    ielem = 1
+    @assertEqual(15,chidg%domains(1)%mesh%faces(ielem,XI_MIN)%ineighbor)
+    @assertEqual(2,chidg%domains(1)%mesh%faces(ielem,XI_MAX)%ineighbor)
+    @assertEqual(211,chidg%domains(1)%mesh%faces(ielem,ETA_MIN)%ineighbor)
+    @assertEqual(16,chidg%domains(1)%mesh%faces(ielem,ETA_MAX)%ineighbor)
+    @assertEqual(451,chidg%domains(1)%mesh%faces(ielem,ZETA_MIN)%ineighbor)
+    @assertEqual(226,chidg%domains(1)%mesh%faces(ielem,ZETA_MAX)%ineighbor)
+
+
+
+
+    ! Test element 211
+    ielem = 211
+    @assertEqual(225,chidg%domains(1)%mesh%faces(ielem,XI_MIN)%ineighbor)
+    @assertEqual(212,chidg%domains(1)%mesh%faces(ielem,XI_MAX)%ineighbor)
+    @assertEqual(196,chidg%domains(1)%mesh%faces(ielem,ETA_MIN)%ineighbor)
+    @assertEqual(1,chidg%domains(1)%mesh%faces(ielem,ETA_MAX)%ineighbor)
+    @assertEqual(661,chidg%domains(1)%mesh%faces(ielem,ZETA_MIN)%ineighbor)
+    @assertEqual(436,chidg%domains(1)%mesh%faces(ielem,ZETA_MAX)%ineighbor)
+
+
+
+
+
+
+
 
 
 

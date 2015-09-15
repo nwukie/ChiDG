@@ -45,7 +45,7 @@ contains
             case ('BackwardEuler','backwardeuler','Backward_Euler','backward_euler','BE','be')
                 allocate(instance, source=BACKWARD_EULER_INSTANCE)
 
-            case ('BackwardEulerSub','backwardeulersub','Backward_Euler_Sub','backward_euler_sub','BES','bes')
+            case ('BackwardEulerSub','backwardeulersub','Backward_Euler_Sub','backward_euler_sub','backward_euler_subiteration','BES','bes')
                 allocate(instance, source=BACKWARD_EULER_SUBITERATION_INSTANCE)
 
 

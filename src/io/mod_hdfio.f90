@@ -296,7 +296,7 @@ contains
 
 
                 !>  Get variable index in EquationSet
-                ivar = domains(idom)%eqnset%get_var(trim(cvar))
+                ivar = domains(idom)%eqnset%prop%get_eqn_index(trim(cvar))
 
 
                 !>  Test to make sure the number of elements in the variable group
@@ -483,7 +483,7 @@ contains
 
 
                 !> Get variable integer index from variable character string
-                ivar = domains(idom)%eqnset%get_var(cvar)
+                ivar = domains(idom)%eqnset%prop%get_eqn_index(cvar)
 
                 !> Assemble variable buffer matrix
                 allocate(var(dims(1),dims(2)))

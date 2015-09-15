@@ -26,7 +26,7 @@ subroutine test_gaussseidel_solve()
     integer(ik) :: nterms_c, nterms_s
 
 
-    tol      = 1.e-13_rk
+    tol      = 1.e-9_rk
     nterms_c = 8
     nterms_s = 1
 

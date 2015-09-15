@@ -3,7 +3,7 @@ doc/latex
 build
 build_gnu
 build_intel
-run
+run*
 media
 testrun
 *.swp

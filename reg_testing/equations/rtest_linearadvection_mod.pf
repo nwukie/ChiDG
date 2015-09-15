@@ -126,7 +126,7 @@ contains
 !------------------------------------------------------------------------------------------
 !> Test Volume Flux jacobian calclation
 @Test(cases = [7])
-    subroutine rtest_LA_jacobian_volume_flux(self)
+    subroutine rtest_LA_jacobian_volume_advective_flux(self)
         class(rtest_eq_LA),    intent(inout)   :: self
         
         type(densematrix_t) :: blk_dnad, blk_fd
@@ -165,7 +165,7 @@ contains
         !
         ! The exact values in ref are used as verification values here. The finite difference
         ! data is not used.
-        call check_jacobian_volume_flux(self%domain,ielem,iblk,blk_dnad,blk_fd)
+        call check_jacobian_volume_advective_flux(self%domain,ielem,iblk,blk_dnad,blk_fd)
         
 
         @assertEqual(jref, blk_dnad%mat, tol)

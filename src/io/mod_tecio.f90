@@ -6,7 +6,6 @@ module mod_tecio
 
     use type_element,           only: element_t
     use type_domain,            only: domain_t
-    !use type_expansion,         only: expansion_t
     use type_blockvector,       only: blockvector_t
     implicit none
 
@@ -50,7 +49,6 @@ contains
 
         ! Remap elements array to block matrix
         elem => domain%mesh%elems_m
-        !q    => domain%sdata%q_m
         q    => domain%sdata%q
 
         ! using (output_res+1) so that the skip number used in tecplot to
@@ -64,7 +62,8 @@ contains
         ! Assemble variables string
         ieq = 1
         do while (ieq <= domain%eqnset%neqns)
-            varstring = trim(varstring)//" "//trim(domain%eqnset%eqns(ieq)%name)
+            !varstring = trim(varstring)//" "//trim(domain%eqnset%eqns(ieq)%name)
+            varstring = trim(varstring)//" "//trim(domain%eqnset%prop%eqns(ieq)%name)
             ieq = ieq + 1
         end do
 

@@ -1,44 +1,50 @@
 module atype_equationset
-    use mod_kinds,          only: rk,ik
-    use type_equation,      only: equation_t
-    use type_mesh,          only: mesh_t
-    use atype_solverdata,   only: solverdata_t
-
-
+#include <messenger.h>
+    use mod_kinds,                  only: rk,ik
+    use type_equation,              only: equation_t
+    use type_properties,            only: properties_t
+    use type_boundary_flux_wrapper, only: boundary_flux_wrapper_t
+    use type_volume_flux_wrapper,   only: volume_flux_wrapper_t
+    use atype_volume_flux,          only: volume_flux_t
+    use atype_boundary_flux,        only: boundary_flux_t
     implicit none
     private
 
+
+
+    ! Abstract equation-set type. Can be extended to implement a concrete equation set.
+    !   - Contains name and number of equations.
+    !   - Contains properties type with equations and material(ex. fluid) properties and definitions
+    !   - Contains arrays of flux components
+    !
+    !   @author Nathan A. Wukie
+    !
+    !------------------------------------------------------------------------------
     type, public, abstract :: equationset_t
         character(100)              :: name
         integer(ik)                 :: neqns
 
-        ! List equation variables with indices
-        type(equation_t), allocatable  :: eqns(:)
+        ! Equation set properties
+        class(properties_t), allocatable    :: prop
 
 
         ! Array of boundary flux functions
-        !type(boundary_flux_t),  allocatable   :: bnd_adv_flux(:)
-        !type(boundary_flux_t),  allocatable   :: bnd_diff_flux(:)
-
-        ! Array of volume flux functions
-        !type(volume_flux_t),    allocatable   :: vol_adv_flux(:)
-        !type(volume_flux_t),    allocatable   :: vol_diff_flux(:) 
+        type(boundary_flux_wrapper_t),  allocatable   :: boundary_advective_flux(:)
+        type(boundary_flux_wrapper_t),  allocatable   :: boundary_diffusive_flux(:)
+        type(volume_flux_wrapper_t),    allocatable   :: volume_advective_flux(:)
+        type(volume_flux_wrapper_t),    allocatable   :: volume_diffusive_flux(:) 
 
         ! Array of volume source functions
-        !type(source_t),         allocatable   :: v_source(:)
+        !type(source_wrapper_t),         allocatable   :: volume_source(:)
 
 
     contains
-        ! Must define these procedures in the extended type
         procedure(self_interface),     deferred  :: init
-        procedure(boundary_interface), deferred  :: compute_boundary_average_flux
-        procedure(boundary_interface), deferred  :: compute_boundary_upwind_flux
-        procedure(volume_interface),   deferred  :: compute_volume_flux
-        procedure(volume_interface),   deferred  :: compute_volume_source
 
 
-        procedure   :: get_var
-        procedure   :: add
+        procedure   :: add_equation
+        procedure   :: add_volume_advective_flux
+        procedure   :: add_boundary_advective_flux
 
     end type equationset_t
 
@@ -57,106 +63,255 @@ module atype_equationset
     end interface
 
 
-    abstract interface
-        subroutine boundary_interface(self,mesh,sdata,ielem,iface,iblk)
-            use mod_kinds,  only: ik
-            import equationset_t
-            import mesh_t
-            import solverdata_t
-
-            class(equationset_t),   intent(in)          :: self
-            class(mesh_t),          intent(in)          :: mesh
-            class(solverdata_t),    intent(inout)       :: sdata
-            integer(ik),            intent(in)          :: ielem
-            integer(ik),            intent(in)          :: iface
-            integer(ik),            intent(in)          :: iblk
-        end subroutine
-    end interface
-
-
-    abstract interface
-        subroutine volume_interface(self,mesh,sdata,ielem,iblk)
-            use mod_kinds,  only: ik
-            import equationset_t
-            import mesh_t
-            import solverdata_t
-
-            class(equationset_t),   intent(in)          :: self
-            class(mesh_t),          intent(in)          :: mesh
-            class(solverdata_t),    intent(inout)       :: sdata
-            integer(ik),            intent(in)          :: ielem
-            integer(ik),            intent(in)          :: iblk
-        end subroutine
-    end interface
-
 contains
 
-    !===================================================
+
+    ! Procedure to adding equations to the equation set properties
     !
-    !   Given a character string for the variable name,
-    !   returns the variable index
+    !   @author Nathan A. Wukie
     !
-    !===================================================
-    function get_var(self,varstring) result(varindex)
-        class(equationset_t),   intent(in)  :: self
-        character(*),           intent(in)  :: varstring
-
-        integer(ik)  :: varindex,ieq
-
-        varindex = 123456789
-
-
-        ! Search for character string in equation, if found set index
-        do ieq = 1,self%neqns
-            if (varstring == self%eqns(ieq)%name) then
-                varindex = self%eqns(ieq)%ind
-                exit
-            end if
-        end do
-
-        ! Check if index was found
-        if (varindex == 123456789) stop "Error: invalid equation string for get_var"
-
-    end function
-
-
-
-
-
-
-
-    subroutine add(self,varstring,varindex)
+    !   @param[in]  varstring   String defining the variable associated with the equation being added
+    !   @param[in]  varindex    The index of the equation in the given set. 
+    !--------------------------------------------------------------------------------------------
+    subroutine add_equation(self,varstring,varindex)
         class(equationset_t),   intent(inout)  :: self
         character(*),           intent(in)     :: varstring
         integer(ik),            intent(in)     :: varindex
 
         type(equation_t), allocatable    :: temp(:)
-        integer(ik) :: ieq
+        integer(ik) :: ieq, ierr
 
 
 
-        if (allocated(self%eqns)) then
-            ! Get allocate temp eqn array with one extra slot for new eqn
-            allocate(temp(size(self%eqns) + 1))
+        ! Check that properties storage has been allocated
+        if (.not. allocated(self%prop)) call signal(FATAL,"Properties storage has not yet been allocated in the Equation Set. This must be done before adding equations since they are stored in the properties component")
 
+
+
+
+        !
+        ! If there are already equations allocated, reallocate and add new equation
+        !
+        if (allocated(self%prop%eqns)) then
+            !
+            ! Allocate temp eqn array with one extra slot for new eqn
+            !
+            allocate(temp(size(self%prop%eqns) + 1), stat=ierr)
+            if (ierr /= 0) call AllocationError
+
+            !
             ! Copy current eqns to first temp slots
-            do ieq = 1,size(self%eqns)
-                temp(ieq) = self%eqns(ieq)
+            !
+            do ieq = 1,size(self%prop%eqns)
+                temp(ieq) = self%prop%eqns(ieq)
             end do
 
+
+            !
             ! Add new eqn to last slot
+            !
             temp(size(temp))%name = varstring
             temp(size(temp))%ind  = varindex
-        else
 
-            allocate(self%eqns(1))
-            self%eqns(1)%name = varstring
-            self%eqns(1)%ind  = varindex
+
+            !
+            ! Store temp equation array to equation properties
+            !
+            self%prop%eqns = temp
+
+        !
+        ! If there are no equations allocated, allocate one slot and set data
+        !
+        else
+            !
+            ! Allocate equation
+            !
+            allocate(self%prop%eqns(1), stat=ierr)
+            if (ierr /= 0) call AllocationError
+
+            self%prop%eqns(1)%name = varstring
+            self%prop%eqns(1)%ind  = varindex
 
         end if
 
 
+
+        !
+        ! Resize neqns
+        !
+        self%neqns = size(self%prop%eqns)
+
     end subroutine
+    !--------------------------------------------------------------------------------------------
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    ! Add components to volume_advective_flux array
+    !
+    !   @author Nathan A. Wukie
+    !
+    !   @param[in]  flux    Volume advective flux component to be added
+    !--------------------------------------------------------------------------------------------
+    subroutine add_volume_advective_flux(self,flux)
+        class(equationset_t),   intent(inout)   :: self
+        class(volume_flux_t),   intent(in)      :: flux
+    
+        class(volume_flux_wrapper_t), allocatable   :: temp(:)
+        integer(ik)     :: ierr, iflux
+
+        if (allocated(self%volume_advective_flux)) then
+            !
+            ! Allocate temporary flux array with one additional slot
+            !
+            allocate(temp(size(self%volume_advective_flux) + 1), stat=ierr)
+            if (ierr /= 0) call AllocationError
+
+            !
+            ! Copy current flux components to temp array
+            !
+            do iflux = 1,size(self%volume_advective_flux)
+                allocate(temp(iflux)%flux,source=self%volume_advective_flux(iflux)%flux, stat=ierr)
+                if (ierr /= 0) call AllocationError
+            end do
+
+
+            !
+            ! Add new flux to last slot
+            !
+            allocate(temp(size(temp))%flux, source=flux, stat=ierr)
+            if (ierr /= 0) call AllocationError
+
+            !
+            ! Copy temp array back to equationset
+            !
+            self%volume_advective_flux = temp
+
+        else
+            !
+            ! Allocate one slot
+            !
+            allocate(self%volume_advective_flux(1), stat=ierr)
+            if (ierr /= 0) call AllocationError
+
+            ! Allocate flux component from source
+            allocate(self%volume_advective_flux(1)%flux, source=flux, stat=ierr)
+            if (ierr /= 0) call AllocationError
+
+        end if
+
+
+
+    end subroutine add_volume_advective_flux
+    !--------------------------------------------------------------------------------------------
+
+
+
+
+
+
+
+
+
+
+
+
+
+    ! Add components to boundary_advective_flux array
+    !
+    !   @author Nathan A. Wukie
+    !
+    !   @param[in]  flux    Boundary advective flux type to be added
+    !--------------------------------------------------------------------------------------------
+    subroutine add_boundary_advective_flux(self,flux)
+        class(equationset_t),   intent(inout)   :: self
+        class(boundary_flux_t), intent(in)      :: flux
+    
+        class(boundary_flux_wrapper_t), allocatable   :: temp(:)
+        integer(ik)     :: ierr, iflux
+
+        if (allocated(self%boundary_advective_flux)) then
+            !
+            ! Allocate temporary flux array with one additional slot
+            !
+            allocate(temp(size(self%boundary_advective_flux) + 1), stat=ierr)
+            if (ierr /= 0) call AllocationError
+
+            !
+            ! Copy current flux components to temp array
+            !
+            do iflux = 1,size(self%boundary_advective_flux)
+                allocate(temp(iflux)%flux,source=self%boundary_advective_flux(iflux)%flux, stat=ierr)
+                if (ierr /= 0) call AllocationError
+            end do
+
+
+            !
+            ! Add new flux to last slot
+            !
+            allocate(temp(size(temp))%flux, source=flux, stat=ierr)
+            if (ierr /= 0) call AllocationError
+
+            !
+            ! Copy temp array back to equationset
+            !
+            self%boundary_advective_flux = temp
+
+        else
+            !
+            ! Allocate one slot
+            !
+            allocate(self%boundary_advective_flux(1), stat=ierr)
+            if (ierr /= 0) call AllocationError
+
+            allocate(self%boundary_advective_flux(1)%flux, source=flux, stat=ierr)
+            if (ierr /= 0) call AllocationError
+
+        end if
+
+
+
+    end subroutine add_boundary_advective_flux
+    !--------------------------------------------------------------------------------------------
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

@@ -129,7 +129,7 @@ contains
 !> Test Volume Flux jacobian calclation
 !@Test(cases = [1, 2, 3, 4, 5, 6, 7])
 @Test(cases = [7])
-    subroutine test_EULER_jacobian_volume_flux(self)
+    subroutine test_EULER_jacobian_volume_advective_flux(self)
         class(test_eq_euler),    intent(inout)   :: self
         
         type(densematrix_t) :: blk_dnad, blk_fd
@@ -144,7 +144,7 @@ contains
         iblk = self%iblk
         
         !> Compute Automatic and Finite Difference jacobians
-        call check_jacobian_volume_flux(self%domain,ielem,iblk,blk_dnad,blk_fd)
+        call check_jacobian_volume_advective_flux(self%domain,ielem,iblk,blk_dnad,blk_fd)
         
                 
         @assertEqual(blk_fd%mat, blk_dnad%mat, tol)
@@ -154,9 +154,9 @@ contains
     
 
 
-!> Test Boundary Average Flux jacobian calclation
+!> Test Boundary Advective Flux jacobian calclation
 @Test(cases = [1, 2, 3, 4, 5, 6, 7])
-    subroutine test_EULER_jacobian_boundary_average_flux(self)
+    subroutine test_EULER_jacobian_boundary_advective_flux(self)
         class(test_eq_euler),    intent(inout)   :: self
         
         type(densematrix_t) :: blk_dnad, blk_fd
@@ -171,7 +171,7 @@ contains
         iblk = self%iblk
         
         !> Compute Automatic and Finite Difference jacobians
-        call check_jacobian_boundary_average_flux(self%domain,ielem,iblk,blk_dnad,blk_fd)
+        call check_jacobian_boundary_advective_flux(self%domain,ielem,iblk,blk_dnad,blk_fd)
         
         
         @assertEqual(blk_fd%mat, blk_dnad%mat, tol)
@@ -181,41 +181,6 @@ contains
     
     
     
-    
-    
-!> Test Boundary Upwind Flux jacobian calclation
-@Test(cases = [1, 2, 3, 4, 5, 6, 7])
-    subroutine test_EULER_jacobian_boundary_upwind_flux(self)
-        class(test_eq_euler),    intent(inout)   :: self
-        
-        type(densematrix_t) :: blk_dnad, blk_fd
-        integer(ik) :: ielem, iface, ivar, iblk
-        real(rk)    :: tol
-        
-        tol = 1.0e-6_rk
-        
-        ielem = 14
-        
-        !> Block Parameter from cases = []
-        iblk = self%iblk
-        
-        !> Compute Automatic and Finite Difference jacobians
-        call check_jacobian_boundary_upwind_flux(self%domain,ielem,iblk,blk_dnad,blk_fd)
-        
-        
-        @assertEqual(blk_fd%mat, blk_dnad%mat, tol)
-        
-    end subroutine
-    
-    
-    
-    
-
-
-
-
-
-
 
 
 

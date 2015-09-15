@@ -1,0 +1,225 @@
+module EULER_boundary_average_advective_flux
+    use mod_kinds,              only: rk,ik
+    use mod_constants,          only: NFACES,ONE,TWO,HALF, &
+                                      XI_MIN,XI_MAX,ETA_MIN,ETA_MAX,ZETA_MIN,ZETA_MAX
+
+    use atype_boundary_flux,    only: boundary_flux_t
+    use atype_equationset,      only: equationset_t
+    use type_mesh,              only: mesh_t
+    use atype_solverdata,       only: solverdata_t
+    use mod_interpolate,        only: interpolate
+    use mod_integrate,          only: integrate_volume_flux, integrate_boundary_flux, integrate_boundary_scalar_flux
+    use mod_DNAD_tools,         only: compute_neighbor_face, compute_seed_element
+    use DNAD_D
+
+    use type_properties,        only: properties_t
+    use EULER_properties,       only: EULER_properties_t
+    implicit none
+
+    private
+
+    type, extends(boundary_flux_t), public :: EULER_boundary_average_advective_flux_t
+
+    contains
+        procedure  :: compute
+
+    end type EULER_boundary_average_advective_flux_t
+
+
+
+
+
+
+
+
+
+
+contains
+
+
+
+    !
+    !   Boundary Flux routine for Euler
+    !
+    !===========================================================
+    subroutine compute(self,mesh,sdata,ielem,iface,iblk,prop)
+        class(EULER_boundary_average_advective_flux_t), intent(in)      :: self
+        class(mesh_t),                                  intent(in)      :: mesh
+        class(solverdata_t),                            intent(inout)   :: sdata
+        integer(ik),                                    intent(in)      :: ielem, iface, iblk
+        class(properties_t),                            intent(inout)   :: prop
+
+        ! Equation indices
+        integer(ik)     :: irho
+        integer(ik)     :: irhou
+        integer(ik)     :: irhov
+        integer(ik)     :: irhow
+        integer(ik)     :: irhoe
+
+        integer(ik)     :: iseed, iface_p, ineighbor
+
+        ! Storage at quadrature nodes
+        type(AD_D), dimension(mesh%faces(ielem,iface)%gq%face%nnodes)    :: &
+                        rho_m,      rho_p,                                  &
+                        rhou_m,     rhou_p,                                 &
+                        rhov_m,     rhov_p,                                 &
+                        rhow_m,     rhow_p,                                 &
+                        rhoe_m,     rhoe_p,                                 &
+                        p_m,        p_p,                                    &
+                        H_m,        H_p,                                    &
+                        flux_x_m,   flux_y_m,   flux_z_m,                   &
+                        flux_x_p,   flux_y_p,   flux_z_p,                   &
+                        flux_x,     flux_y,     flux_z,                     &
+                        flux
+
+
+        !===========================================================================
+        ! NOTE: var_m signifies "minus" and would indicate a local element variable
+        !       var_p signifies "plus"  and would indicate a neighbor element variable
+        !===========================================================================
+        irho  = prop%get_eqn_index("rho")
+        irhou = prop%get_eqn_index("rhou")
+        irhov = prop%get_eqn_index("rhov")
+        irhow = prop%get_eqn_index("rhow")
+        irhoE = prop%get_eqn_index("rhoE")
+
+
+        associate (norms => mesh%faces(ielem,iface)%norm, faces => mesh%faces, q => sdata%q)
+
+            ! Get neighbor face and seed element for derivatives
+            iface_p   = compute_neighbor_face(iface)
+            iseed     = compute_seed_element(mesh,ielem,iblk)
+            ineighbor = mesh%faces(ielem,iface)%ineighbor
+
+
+
+
+            ! Interpolate solution to quadrature nodes
+            call interpolate(faces,q,ielem,    iface,  irho,rho_m,iseed)
+            call interpolate(faces,q,ineighbor,iface_p,irho,rho_p,iseed)
+
+            call interpolate(faces,q,ielem,    iface,  irhou,rhou_m,iseed)
+            call interpolate(faces,q,ineighbor,iface_p,irhou,rhou_p,iseed)
+
+            call interpolate(faces,q,ielem,    iface,  irhov,rhov_m,iseed)
+            call interpolate(faces,q,ineighbor,iface_p,irhov,rhov_p,iseed)
+
+            call interpolate(faces,q,ielem,    iface,  irhow,rhow_m,iseed)
+            call interpolate(faces,q,ineighbor,iface_p,irhow,rhow_p,iseed)
+
+            call interpolate(faces,q,ielem,    iface,  irhoE,rhoE_m,iseed)
+            call interpolate(faces,q,ineighbor,iface_p,irhoE,rhoE_p,iseed)
+
+
+
+            ! Compute pressure and total enthalpy
+            call prop%fluid%compute_pressure(rho_m,rhou_m,rhov_m,rhow_m,rhoE_m,p_m)
+            call prop%fluid%compute_pressure(rho_p,rhou_p,rhov_p,rhow_p,rhoE_p,p_p)
+
+            H_m = (rhoE_m + p_m)/rho_m
+            H_p = (rhoE_p + p_p)/rho_p
+
+            !================================
+            !       MASS FLUX
+            !================================
+            flux_x_m = rhou_m
+            flux_y_m = rhov_m
+            flux_z_m = rhow_m
+
+            flux_x_p = rhou_p
+            flux_y_p = rhov_p
+            flux_z_p = rhow_p
+
+            flux_x = (flux_x_m + flux_x_p)*HALF*norms(:,1)
+            flux_y = (flux_y_m + flux_y_p)*HALF*norms(:,2)
+            flux_z = (flux_z_m + flux_z_p)*HALF*norms(:,3)
+
+
+            call integrate_boundary_flux(mesh%faces(ielem,iface),sdata,irho,iblk,flux_x,flux_y,flux_z)
+
+
+            !================================
+            !       X-MOMENTUM FLUX
+            !================================
+            flux_x_m = (rhou_m*rhou_m)/rho_m + p_m
+            flux_y_m = (rhou_m*rhov_m)/rho_m
+            flux_z_m = (rhou_m*rhow_m)/rho_m
+
+            flux_x_p = (rhou_p*rhou_p)/rho_p + p_p
+            flux_y_p = (rhou_p*rhov_p)/rho_p
+            flux_z_p = (rhou_p*rhow_p)/rho_p
+
+            flux_x = (flux_x_m + flux_x_p)*HALF*norms(:,1)
+            flux_y = (flux_y_m + flux_y_p)*HALF*norms(:,2)
+            flux_z = (flux_z_m + flux_z_p)*HALF*norms(:,3)
+
+            call integrate_boundary_flux(mesh%faces(ielem,iface),sdata,irhou,iblk,flux_x,flux_y,flux_z)
+
+
+            !================================
+            !       Y-MOMENTUM FLUX
+            !================================
+            flux_x_m = (rhov_m*rhou_m)/rho_m
+            flux_y_m = (rhov_m*rhov_m)/rho_m + p_m
+            flux_z_m = (rhov_m*rhow_m)/rho_m
+
+            flux_x_p = (rhov_p*rhou_p)/rho_p
+            flux_y_p = (rhov_p*rhov_p)/rho_p + p_p
+            flux_z_p = (rhov_p*rhow_p)/rho_p
+
+            flux_x = (flux_x_m + flux_x_p)*HALF*norms(:,1)
+            flux_y = (flux_y_m + flux_y_p)*HALF*norms(:,2)
+            flux_z = (flux_z_m + flux_z_p)*HALF*norms(:,3)
+
+            call integrate_boundary_flux(mesh%faces(ielem,iface),sdata,irhov,iblk,flux_x,flux_y,flux_z)
+
+            !================================
+            !       Z-MOMENTUM FLUX
+            !================================
+            flux_x_m = (rhow_m*rhou_m)/rho_m
+            flux_y_m = (rhow_m*rhov_m)/rho_m
+            flux_z_m = (rhow_m*rhow_m)/rho_m + p_m
+
+            flux_x_p = (rhow_p*rhou_p)/rho_p
+            flux_y_p = (rhow_p*rhov_p)/rho_p
+            flux_z_p = (rhow_p*rhow_p)/rho_p + p_p
+
+            flux_x = (flux_x_m + flux_x_p)*HALF*norms(:,1)
+            flux_y = (flux_y_m + flux_y_p)*HALF*norms(:,2)
+            flux_z = (flux_z_m + flux_z_p)*HALF*norms(:,3)
+
+            call integrate_boundary_flux(mesh%faces(ielem,iface),sdata,irhow,iblk,flux_x,flux_y,flux_z)
+
+            !================================
+            !          ENERGY FLUX
+            !================================
+            flux_x_m = rhou_m*H_m
+            flux_y_m = rhov_m*H_m
+            flux_z_m = rhow_m*H_m
+
+            flux_x_p = rhou_p*H_p
+            flux_y_p = rhov_p*H_p
+            flux_z_p = rhow_p*H_p
+
+            flux_x = (flux_x_m + flux_x_p)*HALF*norms(:,1)
+            flux_y = (flux_y_m + flux_y_p)*HALF*norms(:,2)
+            flux_z = (flux_z_m + flux_z_p)*HALF*norms(:,3)
+
+            call integrate_boundary_flux(mesh%faces(ielem,iface),sdata,irhoE,iblk,flux_x,flux_y,flux_z)
+
+        end associate
+
+    end subroutine
+
+
+
+
+
+
+
+
+
+
+
+
+end module EULER_boundary_average_advective_flux

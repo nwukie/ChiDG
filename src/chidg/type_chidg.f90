@@ -63,6 +63,7 @@ contains
         if (.not. self%envInitialized ) then
             call initialize_equations()
             call initialize_grid()
+            self%envInitialized = .true.
         end if
 
 

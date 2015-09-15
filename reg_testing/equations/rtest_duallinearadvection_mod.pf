@@ -1,18 +1,20 @@
-module test_linearadvection_mod
+module rtest_duallinearadvection_mod
     use pfunit_mod
     use mod_kinds,          only: rk,ik
     use mod_constants,      only: ZERO, ONE, TWO, THREE, FIVE, SIX, EIGHT, NINE, TEN, &
                                   XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX, NFACES
     use type_chidg,         only: chidg_t
+    use atype_function,     only: function_t
+    use mod_function,       only: create_function
+    use mod_grid_operators, only: initialize_variable
     use type_point,         only: point_t
     use type_domain,        only: domain_t
     use type_densematrix,   only: densematrix_t
     use mod_testutils,      only: meshgen
-    use mod_hdfio,            only: read_grid_hdf
     use mod_check_jacobian
     implicit none
 
-    public  :: test_eq_LA
+    public  :: test_eq_duallinearadvection
 
 
     !> This parameter is used to test the linearization for different blocks.
@@ -27,15 +29,14 @@ module test_linearadvection_mod
     
     
     @TestCase(constructor=newTest)
-    type, extends(ParameterizedTestCase) ::  test_eq_LA
+    type, extends(ParameterizedTestCase) ::  test_eq_duallinearadvection
         type(chidg_t)       :: chidg
-        !type(domain_t),allocatable      :: domain(:)
         type(domain_t)      :: domain
         integer(ik)         :: iblk
     contains
         procedure   ::  setUp
         procedure   ::  tearDown
-    end type test_eq_LA
+    end type test_eq_duallinearadvection
 
 
 
@@ -49,30 +50,44 @@ contains
     !> NOTE: make sure to use 'this' instead of 'self' since these are over-writting a derived type 
     !! procedure. The argument names have to match
     subroutine setUp(this)
-        class(test_eq_LA),    intent(inout)   :: this
+        class(test_eq_duallinearadvection),    intent(inout)   :: this
         
-        integer(ik), parameter      :: npt = 64
-        type(point_t), allocatable  :: pts(:,:,:)
-        integer(ik)                 :: neqns, nterms_s, nterms_c
-        real(rk), dimension(npt)    :: x,y,z
+        integer(ik),        parameter       :: npt = 64
+        type(point_t),      allocatable     :: pts(:,:,:)
+        class(function_t),  allocatable     :: fcn
+        integer(ik)                         :: neqns, nterms_s, nterms_c
+        real(rk), dimension(npt)            :: x,y,z
         
         !> Initialize chidg environment
         call this%chidg%init('env')
 
         !> Generate points array for 3x3x3 mesh
-        !call read_grid_hdf('4x4x4_unit.h5',this%domain)
         call meshgen('3x3x3_unit',pts)
 
         !> Initialize domain
         nterms_s = 8
         nterms_c = 8
         call this%domain%init_geom(nterms_c,pts)
-        call this%domain%init_sol('LA',nterms_s)
 
+        call this%domain%init_bc('periodic',XI_MIN)
+        call this%domain%init_bc('periodic',ETA_MIN)
+        call this%domain%init_bc('periodic',ZETA_MIN)
+
+        call this%domain%init_sol('DualLinearAdvection',nterms_s)
+
+
+        !> Set rho, rhoE to non-zero values. Risk NaN's otherwise
+        call create_function(fcn,'constant')
+        
+        call fcn%set('const',1.0_rk)
+        call initialize_variable(this%domain,1,fcn)
+        call fcn%set('const',1.0_rk)
+        call initialize_variable(this%domain,2,fcn)
+            
     end subroutine
     
     subroutine tearDown(this)
-        class(test_eq_LA),    intent(inout)   :: this
+        class(test_eq_duallinearadvection),    intent(inout)   :: this
     end subroutine
 
 
@@ -90,12 +105,12 @@ contains
     
     !> TestCase constructor for parameter specification
     function newTest(param)
-        type(test_eq_LA) :: newTest
+        type(test_eq_duallinearadvection) :: newTest
         type(blockParam)                    :: param
         
         newTest%iblk = param%iblk
     end function newTest
- 
+
     !> ToString - not sure what this is for yet
     function toString(this) result(string)
         class(blockParam), intent(in)   :: this
@@ -105,73 +120,75 @@ contains
         write(str,'(i0)') this%iblk
         string = str
     end function toString
- 
+
 
 
 !------------------------------------------------------------------------------------------
 !>                                        TESTS
 !------------------------------------------------------------------------------------------
-!> Test Volume Flux jacobian calclation
+
+! Test Volume Flux jacobian calclation against exact solution
 @Test(cases = [1, 2, 3, 4, 5, 6, 7])
-    subroutine test_LA_jacobian_volume_advective_flux(self)
-        class(test_eq_LA),    intent(inout)   :: self
+    subroutine test_DLA_jacobian_volume_advective_flux_exact(self)
+        class(test_eq_duallinearadvection),    intent(inout)   :: self
         
         type(densematrix_t) :: blk_dnad, blk_fd
-        integer(ik) :: ielem, ivar, iblk, irow
+        real(rk)            :: blk_exact(8,8)
+        integer(ik) :: ielem, iblk, irow
         real(rk)    :: tol
         
-        tol = 1.0e-7_rk
+        tol = 1.0e-6_rk
         
-        ielem = 14
+        ielem = 1
         
-        ! Block Parameter from cases = []
+        !> Block Parameter from cases = []
         iblk = self%iblk
         
-        ! Compute Automatic and Finite Difference jacobians
+        !> Compute Automatic and Finite Difference jacobians
         call check_jacobian_volume_advective_flux(self%domain,ielem,iblk,blk_dnad,blk_fd)
+
         
 
-        @assertEqual(blk_fd%mat, blk_dnad%mat, tol)
-        
+        if ( iblk == 7 ) then
+            blk_exact      = ZERO ! zero all components
+            blk_exact(4,1) = EIGHT
+            blk_exact(5,2) = 2.6666666666666_rk
+            blk_exact(6,3) = 2.6666666666666_rk
+            blk_exact(8,7) = 0.8888888888888_rk
+
+            ! Test volume jacobian for each equation
+            @assertEqual(-blk_exact, blk_dnad%mat(1:8,1:8), tol)   
+            @assertEqual(-blk_exact, blk_dnad%mat(9:16,9:16), tol)
+
+        else
+            blk_exact = ZERO
+            @assertEqual(blk_exact, blk_dnad%mat(1:8,1:8), tol)
+            @assertEqual(blk_exact, blk_dnad%mat(9:16,9:16), tol)
+        end if
+
+
     end subroutine
-    
-    
-    
-     
 
 
-!> Test Boundary Average Flux jacobian calclation
-@Test(cases = [1, 2, 3, 4, 5, 6, 7])
-    subroutine test_LA_jacobian_boundary_advective_flux(self)
-        class(test_eq_LA),    intent(inout)   :: self
-        
-        type(densematrix_t) :: blk_dnad, blk_fd
-        integer(ik) :: ielem, iface, ivar, iblk, irow
-        real(rk)    :: tol
-        
-        tol = 1.0e-7_rk
-        
-        ielem = 14
-        iface = 1
-        ivar  = 1
-        
-        ! Block Parameter from cases = []
-        iblk = self%iblk
-        
-        ! Compute Automatic and Finite Difference jacobians
-        call check_jacobian_boundary_advective_flux(self%domain,ielem,iblk,blk_dnad,blk_fd)
-        
-        
-        @assertEqual(blk_fd%mat, blk_dnad%mat, tol)
-        
-    end subroutine
-    
-    
-    
-    
-    
-    
-    
-    
 
-end module test_linearadvection_mod
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+end module rtest_duallinearadvection_mod

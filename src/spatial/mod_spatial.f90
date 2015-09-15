@@ -12,12 +12,12 @@ contains
         type(domain_t), intent(inout)   :: domain
         integer(ik), optional           :: info
 
-        integer(ik) :: iblk, ielem, iface, nelem, i, ibc
+        integer(ik) :: iblk, ielem, iface, nelem, i, ibc, iflux, nflux
         real(rk)    :: istart, istop, elapsed
         logical     :: skip = .false.
 
 
-        associate ( mesh => domain%mesh, sdata => domain%sdata, eqnset => domain%eqnset)
+        associate ( mesh => domain%mesh, sdata => domain%sdata, eqnset => domain%eqnset, prop => domain%eqnset%prop)
 
             nelem = mesh%nelem
             !------------------------------------------------------------------------------------------
@@ -55,21 +55,73 @@ contains
                     if ( .not. skip) then
                         ! For the current element, compute the contributions from boundary integrals
                         do iface = 1,NFACES
-                            !> Only call the following routines for interior faces -- ftype == 0
-                            !! Furthermore, only call the routines if we are computing derivatives for the neighbor of
-                            !! iface or for the current element(DIAG). This saves a lot of unnecessary compute_boundary calls.
+                            !
+                            ! Only call the following routines for interior faces -- ftype == 0
+                            ! Furthermore, only call the routines if we are computing derivatives for the neighbor of
+                            ! iface or for the current element(DIAG). This saves a lot of unnecessary compute_boundary calls.
+                            !
                             if (domain%mesh%faces(ielem,iface)%ftype == 0 .and. &
                                 (iblk == iface .or. iblk == DIAG)) then
-                                call domain%eqnset%compute_boundary_average_flux(mesh,sdata,ielem,iface,iblk)
-                                call domain%eqnset%compute_boundary_upwind_flux( mesh,sdata,ielem,iface,iblk)
+                                !call domain%eqnset%compute_boundary_average_flux(mesh,sdata,ielem,iface,iblk)
+                                !call domain%eqnset%compute_boundary_upwind_flux( mesh,sdata,ielem,iface,iblk)
+
+
+
+                                !
+                                ! Call all boundary advective flux components
+                                !
+                                if (allocated(eqnset%boundary_advective_flux)) then
+                                    nflux = size(eqnset%boundary_advective_flux)
+                                    do iflux = 1,nflux
+                                        call eqnset%boundary_advective_flux(iflux)%flux%compute(mesh,sdata,ielem,iface,iblk,prop)
+                                    end do
+                                end if
+
+
+
+                                !
+                                ! Call all boundary diffusive flux components
+                                !
+                                if (allocated(eqnset%boundary_diffusive_flux)) then
+                                    nflux = size(eqnset%boundary_diffusive_flux)
+                                    do iflux = 1,nflux
+                                        call eqnset%boundary_diffusive_flux(iflux)%flux%compute(mesh,sdata,ielem,iface,iblk,prop)
+                                    end do
+                                end if
+
+
+
                             end if
-                        end do !face
+                        end do 
 
 
 
                         ! For the current element, compute the contributions from volume integrals
-                        call domain%eqnset%compute_volume_flux(  mesh,sdata,ielem,iblk)
-                        call domain%eqnset%compute_volume_source(mesh,sdata,ielem,iblk)
+                        !call domain%eqnset%compute_volume_flux(  mesh,sdata,ielem,iblk)
+                        !call domain%eqnset%compute_volume_source(mesh,sdata,ielem,iblk)
+
+
+                        !
+                        ! Call all volume advective flux components
+                        !
+                        if (allocated(eqnset%volume_advective_flux)) then
+                            nflux = size(eqnset%volume_advective_flux)
+                            do iflux = 1,nflux
+                                call eqnset%volume_advective_flux(iflux)%flux%compute(mesh,sdata,ielem,iblk,prop)
+                            end do
+                        end if
+
+
+                        !
+                        ! Call all volume diffusive flux components
+                        !
+                        if (allocated(eqnset%volume_diffusive_flux)) then
+                            nflux = size(eqnset%volume_diffusive_flux)
+                            do iflux = 1,nflux
+                                call eqnset%volume_diffusive_flux(iflux)%flux%compute(mesh,sdata,ielem,iblk,prop)
+                            end do
+                        end if
+
 
                     end if
                     !-----------------------------------------------------------------------------------------

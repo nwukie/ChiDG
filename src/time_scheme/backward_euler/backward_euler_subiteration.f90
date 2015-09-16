@@ -96,8 +96,8 @@ contains
                 !
                 resid  = ONE    ! Force inner loop entry
                 ninner = 0      ! Initialize inner loop counter
-                cfl    = 100000._rk
-                dtau   = 1._rk
+                cfl    = 1._rk
+                dtau   = 0.1_rk
                 do while ( resid > self%tol )
                     call cpu_time(tstart)
                     ninner = ninner + 1

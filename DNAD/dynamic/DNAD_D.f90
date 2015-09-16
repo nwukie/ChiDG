@@ -244,7 +244,7 @@ CONTAINS
     ELEMENTAL FUNCTION ADD_D_D(u) RESULT(res)
          TYPE (AD_D), INTENT(IN)::u
          TYPE (AD_D)::res
-!         allocate(res%xp_ad_(size(u%xp_ad_)))
+         allocate(res%xp_ad_(size(u%xp_ad_)))
 
          res=u ! It is faster than assigning component wise
       
@@ -256,7 +256,7 @@ CONTAINS
     ELEMENTAL FUNCTION ADD_DD_D(u,v) RESULT(res)
          TYPE (AD_D), INTENT(IN)::u,v
          TYPE (AD_D)::res
-!         allocate(res%xp_ad_(size(v%xp_ad_)))
+         allocate(res%xp_ad_(size(v%xp_ad_)))
          
          res%x_ad_  = u%x_ad_+v%x_ad_ 
          res%xp_ad_ = u%xp_ad_+v%xp_ad_
@@ -270,7 +270,7 @@ CONTAINS
          TYPE (AD_D), INTENT(IN)::v
          INTEGER,INTENT(IN)::n
          TYPE (AD_D)::res
-!         allocate(res%xp_ad_(size(v%xp_ad_)))
+         allocate(res%xp_ad_(size(v%xp_ad_)))
             
 
          res%x_ad_  = REAL(n,DBL_AD)+v%x_ad_ 
@@ -285,7 +285,7 @@ CONTAINS
          TYPE (AD_D), INTENT(IN)::v
          REAL(DBL_AD),INTENT(IN)::n
          TYPE (AD_D)::res
-!         allocate(res%xp_ad_(size(v%xp_ad_)))
+         allocate(res%xp_ad_(size(v%xp_ad_)))
          
          res%x_ad_  = n+v%x_ad_ 
          res%xp_ad_ = v%xp_ad_
@@ -300,7 +300,7 @@ CONTAINS
          TYPE (AD_D), INTENT(IN)::v
          REAL(SNG_AD),INTENT(IN)::n
          TYPE (AD_D)::res
-!         allocate(res%xp_ad_(size(v%xp_ad_)))
+         allocate(res%xp_ad_(size(v%xp_ad_)))
          
          res%x_ad_  = REAL(n,DBL_AD)+v%x_ad_ 
          res%xp_ad_ = v%xp_ad_
@@ -317,7 +317,7 @@ CONTAINS
          INTEGER,INTENT(IN)::n
          TYPE (AD_D), INTENT(IN)::v
          TYPE (AD_D)::res
-!         allocate(res%xp_ad_(size(v%xp_ad_)))
+         allocate(res%xp_ad_(size(v%xp_ad_)))
          
          res%x_ad_  = REAL(n,DBL_AD)+v%x_ad_ 
          res%xp_ad_ = v%xp_ad_
@@ -333,7 +333,7 @@ CONTAINS
          REAL(DBL_AD),INTENT(IN)::n
          TYPE (AD_D), INTENT(IN)::v
          TYPE (AD_D)::res
-!         allocate(res%xp_ad_(size(v%xp_ad_)))
+         allocate(res%xp_ad_(size(v%xp_ad_)))
          
          res%x_ad_  = n+v%x_ad_ 
          res%xp_ad_ = v%xp_ad_
@@ -347,7 +347,7 @@ CONTAINS
          REAL(SNG_AD),INTENT(IN)::n
          TYPE (AD_D), INTENT(IN)::v
          TYPE (AD_D)::res
-!         allocate(res%xp_ad_(size(v%xp_ad_)))
+         allocate(res%xp_ad_(size(v%xp_ad_)))
          
          res%x_ad_  = REAL(n,DBL_AD)+v%x_ad_ 
          res%xp_ad_ = v%xp_ad_
@@ -368,7 +368,7 @@ CONTAINS
     ELEMENTAL FUNCTION MINUS_D_D(u) RESULT(res)
          TYPE (AD_D), INTENT(IN)::u
          TYPE (AD_D)::res
-!         allocate(res%xp_ad_(size(u%xp_ad_)))
+         allocate(res%xp_ad_(size(u%xp_ad_)))
     
          res%x_ad_ = -u%x_ad_ 
          res%xp_ad_= -u%xp_ad_
@@ -381,7 +381,7 @@ CONTAINS
     ELEMENTAL FUNCTION MINUS_DD_D(u,v) RESULT(res)
          TYPE (AD_D), INTENT(IN)::u,v
          TYPE (AD_D)::res
-!         allocate(res%xp_ad_(size(u%xp_ad_)))
+         allocate(res%xp_ad_(size(u%xp_ad_)))
 
          res%x_ad_ = u%x_ad_-v%x_ad_ 
          res%xp_ad_= u%xp_ad_-v%xp_ad_
@@ -396,7 +396,7 @@ CONTAINS
          TYPE (AD_D), INTENT(IN)::u
          INTEGER,INTENT(IN)::n
          TYPE (AD_D)::res
-!         allocate(res%xp_ad_(size(u%xp_ad_)))
+         allocate(res%xp_ad_(size(u%xp_ad_)))
     
          res%x_ad_ = u%x_ad_-REAL(n,DBL_AD) 
          res%xp_ad_= u%xp_ad_
@@ -411,7 +411,7 @@ CONTAINS
          TYPE (AD_D), INTENT(IN)::u
          REAL(DBL_AD),INTENT(IN)::n
          TYPE (AD_D)::res
-!         allocate(res%xp_ad_(size(u%xp_ad_)))
+         allocate(res%xp_ad_(size(u%xp_ad_)))
     
          res%x_ad_ = u%x_ad_-n
          res%xp_ad_= u%xp_ad_
@@ -426,7 +426,7 @@ CONTAINS
          TYPE (AD_D), INTENT(IN)::u
          REAL(SNG_AD),INTENT(IN)::n
          TYPE (AD_D)::res
-!         allocate(res%xp_ad_(size(u%xp_ad_)))
+         allocate(res%xp_ad_(size(u%xp_ad_)))
     
          res%x_ad_ = u%x_ad_-REAL(n,DBL_AD) 
          res%xp_ad_= u%xp_ad_
@@ -441,7 +441,7 @@ CONTAINS
          TYPE (AD_D), INTENT(IN)::u
          INTEGER,INTENT(IN)::n
          TYPE (AD_D)::res
-!         allocate(res%xp_ad_(size(u%xp_ad_)))
+         allocate(res%xp_ad_(size(u%xp_ad_)))
     
          res%x_ad_ = REAL(n,DBL_AD)-u%x_ad_ 
          res%xp_ad_= -u%xp_ad_
@@ -455,7 +455,7 @@ CONTAINS
          TYPE (AD_D), INTENT(IN)::u
          REAL(DBL_AD),INTENT(IN)::n
          TYPE (AD_D)::res
-!         allocate(res%xp_ad_(size(u%xp_ad_)))
+         allocate(res%xp_ad_(size(u%xp_ad_)))
     
          res%x_ad_ = n-u%x_ad_ 
          res%xp_ad_= -u%xp_ad_
@@ -470,7 +470,7 @@ CONTAINS
          TYPE (AD_D), INTENT(IN)::u
          REAL(SNG_AD),INTENT(IN)::n
          TYPE (AD_D)::res
-!         allocate(res%xp_ad_(size(u%xp_ad_)))
+         allocate(res%xp_ad_(size(u%xp_ad_)))
     
          res%x_ad_ =REAL(n,DBL_AD) - u%x_ad_
          res%xp_ad_=- u%xp_ad_
@@ -490,7 +490,7 @@ CONTAINS
     ELEMENTAL FUNCTION MULT_DD_D(u,v) RESULT(res)
          TYPE (AD_D), INTENT(IN)::u,v
          TYPE (AD_D)::res
-!         allocate(res%xp_ad_(size(u%xp_ad_)))
+         allocate(res%xp_ad_(size(u%xp_ad_)))
 
          res%x_ad_ = u%x_ad_*v%x_ad_ 
          res%xp_ad_= u%xp_ad_*v%x_ad_ + u%x_ad_*v%xp_ad_
@@ -506,7 +506,7 @@ CONTAINS
          TYPE (AD_D), INTENT(IN)::u
          INTEGER,INTENT(IN)::n
          TYPE (AD_D)::res
-!         allocate(res%xp_ad_(size(u%xp_ad_)))
+         allocate(res%xp_ad_(size(u%xp_ad_)))
 
          res%x_ad_ = REAL(n,DBL_AD)*u%x_ad_ 
          res%xp_ad_= REAL(n,DBL_AD)*u%xp_ad_
@@ -521,7 +521,7 @@ CONTAINS
          TYPE (AD_D), INTENT(IN)::u
          REAL(DBL_AD),INTENT(IN)::n
          TYPE (AD_D)::res
-!         allocate(res%xp_ad_(size(u%xp_ad_)))
+         allocate(res%xp_ad_(size(u%xp_ad_)))
 
          res%x_ad_ = n*u%x_ad_ 
          res%xp_ad_= n*u%xp_ad_
@@ -537,7 +537,7 @@ CONTAINS
          TYPE (AD_D), INTENT(IN)::u
          REAL(SNG_AD),INTENT(IN)::n
          TYPE (AD_D)::res
-!         allocate(res%xp_ad_(size(u%xp_ad_)))
+         allocate(res%xp_ad_(size(u%xp_ad_)))
 
          res%x_ad_ = REAL(n,DBL_AD)*u%x_ad_ 
          res%xp_ad_= REAL(n,DBL_AD)*u%xp_ad_
@@ -553,7 +553,7 @@ CONTAINS
          TYPE (AD_D), INTENT(IN)::v
          INTEGER,INTENT(IN)::n
          TYPE (AD_D)::res
-!         allocate(res%xp_ad_(size(v%xp_ad_)))
+         allocate(res%xp_ad_(size(v%xp_ad_)))
 
   
          res%x_ad_ = REAL(n,DBL_AD)*v%x_ad_ 
@@ -571,7 +571,7 @@ CONTAINS
          TYPE(AD_D),    INTENT(IN)  ::u
          TYPE(AD_D) ::res
 
-!         allocate(res%xp_ad_(size(u%xp_ad_)))
+         allocate(res%xp_ad_(size(u%xp_ad_)))
 
          res%x_ad_ = n*u%x_ad_
          res%xp_ad_= n*u%xp_ad_
@@ -609,9 +609,9 @@ CONTAINS
          TYPE (AD_D), INTENT(IN)::u
          TYPE (AD_D)::res
          REAL(SNG_AD),INTENT(IN)::n
-!         allocate(res%xp_ad_(size(u%xp_ad_)))
+         allocate(res%xp_ad_(size(u%xp_ad_)))
         
-            res%x_ad_ = REAL(n,DBL_AD)*u%x_ad_ 
+         res%x_ad_ = REAL(n,DBL_AD)*u%x_ad_ 
          res%xp_ad_= REAL(n,DBL_AD)*u%xp_ad_
         
     END FUNCTION MULT_SD_D
@@ -632,7 +632,7 @@ CONTAINS
          REAL(DBL_AD)::tmp 
          TYPE (AD_D)::res
          INTEGER:: i
-!         allocate(res%xp_ad_(size(u%xp_ad_)))
+         allocate(res%xp_ad_(size(u%xp_ad_)))
 
          tmp=1.D0/v%x_ad_
          res%x_ad_ = u%x_ad_*tmp
@@ -648,7 +648,7 @@ CONTAINS
          INTEGER,INTENT(IN)::n
          REAL(DBL_AD)::tmp 
          TYPE (AD_D)::res
-!         allocate(res%xp_ad_(size(u%xp_ad_)))
+         allocate(res%xp_ad_(size(u%xp_ad_)))
 
          tmp=1.D0/REAL(n,DBL_AD)
          res%x_ad_ = u%x_ad_*tmp
@@ -665,7 +665,7 @@ CONTAINS
          REAL(DBL_AD),INTENT(IN)::n
          TYPE (AD_D):: res
          REAL(DBL_AD)::tmp 
-!         allocate(res%xp_ad_(size(u%xp_ad_)))
+         allocate(res%xp_ad_(size(u%xp_ad_)))
          
          tmp=1.0D0/n
          res%x_ad_ = u%x_ad_*tmp
@@ -683,7 +683,7 @@ CONTAINS
          REAL(SNG_AD),INTENT(IN)::n
          TYPE (AD_D):: res
          REAL(DBL_AD)::tmp 
-!         allocate(res%xp_ad_(size(u%xp_ad_)))
+         allocate(res%xp_ad_(size(u%xp_ad_)))
          
          tmp=1.0D0/REAL(n,DBL_AD)
          res%x_ad_ = u%x_ad_*tmp
@@ -700,7 +700,7 @@ CONTAINS
          TYPE (AD_D), INTENT(IN)::v
          REAL(DBL_AD)::tmp,tmp2 
          TYPE (AD_D)::res
-!         allocate(res%xp_ad_(size(v%xp_ad_)))
+         allocate(res%xp_ad_(size(v%xp_ad_)))
          
          tmp=1.D0/v%x_ad_
          res%x_ad_=REAL(n,DBL_AD)*tmp
@@ -718,7 +718,7 @@ CONTAINS
          TYPE (AD_D), INTENT(IN)::v
          REAL(DBL_AD)::tmp,tmp2 
          TYPE (AD_D)::res
-!         allocate(res%xp_ad_(size(v%xp_ad_)))
+         allocate(res%xp_ad_(size(v%xp_ad_)))
          
          tmp=1.D0/v%x_ad_
          res%x_ad_=n*tmp
@@ -735,7 +735,7 @@ CONTAINS
          TYPE (AD_D), INTENT(IN)::v
          REAL(DBL_AD)::tmp,tmp2 
          TYPE (AD_D)::res
-!         allocate(res%xp_ad_(size(v%xp_ad_)))
+         allocate(res%xp_ad_(size(v%xp_ad_)))
          
          tmp=1.D0/v%x_ad_
          res%x_ad_=REAL(n,DBL_AD)*tmp
@@ -759,7 +759,7 @@ CONTAINS
          INTEGER,INTENT(IN)::k
          REAL(DBL_AD)::tmp
          TYPE (AD_D)::res
-!         allocate(res%xp_ad_(size(u%xp_ad_)))
+         allocate(res%xp_ad_(size(u%xp_ad_)))
          
          tmp=u%x_ad_**(k-1)
          res%x_ad_ = u%x_ad_*tmp 
@@ -776,7 +776,7 @@ CONTAINS
          REAL(DBL_AD),INTENT(IN)::k
          REAL(DBL_AD)::tmp
          TYPE (AD_D)::res
-!         allocate(res%xp_ad_(size(u%xp_ad_)))
+         allocate(res%xp_ad_(size(u%xp_ad_)))
          
          tmp=u%x_ad_**(k-1)
          res%x_ad_ = u%x_ad_*tmp 
@@ -793,7 +793,7 @@ CONTAINS
          REAL(SNG_AD),INTENT(IN)::k
          REAL(DBL_AD)::tmp
          TYPE (AD_D)::res
-!         allocate(res%xp_ad_(size(u%xp_ad_)))
+         allocate(res%xp_ad_(size(u%xp_ad_)))
          
          tmp=u%x_ad_**(k-1)
          res%x_ad_ = u%x_ad_*tmp 
@@ -810,7 +810,7 @@ CONTAINS
          TYPE (AD_D), INTENT(IN)::v
          REAL(DBL_AD)::uf,vf
          TYPE (AD_D)::res
-!         allocate(res%xp_ad_(size(u%xp_ad_)))
+         allocate(res%xp_ad_(size(u%xp_ad_)))
          uf=u%x_ad_
          vf=v%x_ad_
          
@@ -1364,7 +1364,7 @@ CONTAINS
     ELEMENTAL FUNCTION ABS_D_D(u) RESULT(res)
          TYPE (AD_D), INTENT(IN)::u
          TYPE (AD_D)::res
-!         allocate(res%xp_ad_(size(u%xp_ad_)))
+         allocate(res%xp_ad_(size(u%xp_ad_)))
                    
          IF(u%x_ad_>0) THEN
             res%x_ad_ = u%x_ad_
@@ -1392,7 +1392,7 @@ CONTAINS
          TYPE (AD_D), INTENT(IN)::u
          TYPE (AD_D)::res
          REAL(DBL_AD)::tmp 
-!         allocate(res%xp_ad_(size(u%xp_ad_)))
+         allocate(res%xp_ad_(size(u%xp_ad_)))
 
          res%x_ad_ = ACOS(u%x_ad_)
          IF(u%x_ad_==1.0D0.OR.u%x_ad_==-1.0D0) THEN  
@@ -1412,7 +1412,7 @@ CONTAINS
          TYPE (AD_D), INTENT(IN)::u
          TYPE (AD_D)::res
          REAL (DBL_AD):: tmp
-!         allocate(res%xp_ad_(size(u%xp_ad_)))
+         allocate(res%xp_ad_(size(u%xp_ad_)))
 
          res%x_ad_ = ASIN(u%x_ad_) 
          IF(u%x_ad_==1.0D0.OR.u%x_ad_==-1.0D0) THEN  
@@ -1432,7 +1432,7 @@ CONTAINS
          TYPE (AD_D), INTENT(IN)::u
          TYPE (AD_D)::res
          REAL(DBL_AD):: tmp
-!         allocate(res%xp_ad_(size(u%xp_ad_)))
+         allocate(res%xp_ad_(size(u%xp_ad_)))
 
          res%x_ad_ = COS(u%x_ad_) 
          tmp=-SIN(u%x_ad_)
@@ -1470,7 +1470,7 @@ CONTAINS
          TYPE (AD_D), INTENT(IN)::u
          REAL(DBL_AD)::tmp
          TYPE (AD_D)::res
-!         allocate(res%xp_ad_(size(u%xp_ad_)))
+         allocate(res%xp_ad_(size(u%xp_ad_)))
 
          tmp=EXP(u%x_ad_)
          res%x_ad_ = tmp
@@ -1503,7 +1503,7 @@ CONTAINS
          TYPE (AD_D), INTENT(IN)::u
          TYPE (AD_D)::res
          REAL(DBL_AD)::tmp
-!         allocate(res%xp_ad_(size(u%xp_ad_)))
+         allocate(res%xp_ad_(size(u%xp_ad_)))
 
          res%x_ad_ = LOG(u%x_ad_)
          tmp=1.0d0/u%x_ad_
@@ -1521,7 +1521,7 @@ CONTAINS
          TYPE (AD_D), INTENT(IN)::u
          TYPE (AD_D)::res
          REAL(DBL_AD)::tmp
-!         allocate(res%xp_ad_(size(u%xp_ad_)))
+         allocate(res%xp_ad_(size(u%xp_ad_)))
 
          res%x_ad_ = LOG10(u%x_ad_)
          tmp=1.0d0/u%x_ad_/LOG(10.0D0)
@@ -1722,7 +1722,7 @@ CONTAINS
         TYPE (AD_D), INTENT(IN)::val1, val2
         TYPE (AD_D), INTENT(IN),OPTIONAL:: val3, val4,val5
         TYPE (AD_D)::res
-!        allocate(res%xp_ad_(size(val1%xp_ad_)))
+        allocate(res%xp_ad_(size(val1%xp_ad_)))
    
         IF (val1%x_ad_ > val2%x_ad_) THEN
             res = val1
@@ -1749,7 +1749,7 @@ CONTAINS
         TYPE (AD_D), INTENT(IN)::u
         INTEGER,INTENT(IN)::n
         TYPE (AD_D)::res
-!        allocate(res%xp_ad_(size(u%xp_ad_)))
+        allocate(res%xp_ad_(size(u%xp_ad_)))
    
         IF (u%x_ad_ > n) THEN
             res = u
@@ -1766,7 +1766,7 @@ CONTAINS
         TYPE (AD_D), INTENT(IN)::u
         REAL(DBL_AD),INTENT(IN)::n
         TYPE (AD_D)::res
-!        allocate(res%xp_ad_(size(u%xp_ad_)))
+        allocate(res%xp_ad_(size(u%xp_ad_)))
    
         IF (u%x_ad_ > n) THEN
             res = u
@@ -1784,7 +1784,7 @@ CONTAINS
         TYPE (AD_D), INTENT(IN)::u
         REAL(SNG_AD),INTENT(IN)::n
         TYPE (AD_D)::res
-!        allocate(res%xp_ad_(size(u%xp_ad_)))
+        allocate(res%xp_ad_(size(u%xp_ad_)))
    
         IF (u%x_ad_ > n) THEN
             res = u
@@ -1805,7 +1805,7 @@ CONTAINS
         REAL(DBL_AD),INTENT(IN)::r
         TYPE (AD_D), INTENT(IN)::u
         TYPE (AD_D)::res
-!        allocate(res%xp_ad_(size(u%xp_ad_)))
+        allocate(res%xp_ad_(size(u%xp_ad_)))
    
         IF (u%x_ad_ > r) THEN
             res = u
@@ -1822,7 +1822,7 @@ CONTAINS
         TYPE (AD_D), INTENT(IN)::u(:)
         INTEGER::iloc(1)
         TYPE (AD_D)::res
-!        allocate(res%xp_ad_(size(u(1)%xp_ad_)))
+        allocate(res%xp_ad_(size(u(1)%xp_ad_)))
 
         stop "MAXVAL - might not work properly"
 
@@ -1918,7 +1918,7 @@ CONTAINS
     ! SIGN(a,b) with two dual numbers as inputs, 
     ! the result will be |a| if b%x>=0, -|a| if b%x<0,ELEMENTAL
     !----------------------------------------------------------------
-    ELEMENTAL   FUNCTION SIGN_DD_D(val1, val2) RESULT(res)
+    ELEMENTAL FUNCTION SIGN_DD_D(val1, val2) RESULT(res)
         TYPE (AD_D), INTENT(IN) :: val1, val2
         TYPE (AD_D)::res
 
@@ -1940,7 +1940,7 @@ CONTAINS
         REAL(DBL_AD),INTENT(IN)::val1
         TYPE (AD_D), INTENT(IN) :: val2
         TYPE (AD_D)::res
-!        allocate(res%xp_ad_(size(val2%xp_ad_)))
+        allocate(res%xp_ad_(size(val2%xp_ad_)))
    
         IF (val2%x_ad_ < 0.D0) THEN
             res = -ABS(val1)
@@ -1959,7 +1959,7 @@ CONTAINS
          TYPE (AD_D), INTENT(IN)::u
          TYPE (AD_D)::res
          REAL (DBL_AD):: tmp
-!         allocate(res%xp_ad_(size(u%xp_ad_)))
+         allocate(res%xp_ad_(size(u%xp_ad_)))
 
          res%x_ad_ = SIN(u%x_ad_) 
          tmp=COS(u%x_ad_)
@@ -1972,20 +1972,23 @@ CONTAINS
     ! SQRT of dual numbers
     ! SQRT<u,up>=<SQRT(u),up/2/sqrt(u) >
     !----------------------------------------
+    !IMPURE ELEMENTAL FUNCTION SQRT_D_D(u) RESULT(res)
     ELEMENTAL FUNCTION SQRT_D_D(u) RESULT(res)
          TYPE (AD_D), INTENT(IN)::u
          REAL(DBL_AD):: tmp
          TYPE (AD_D)::res
-!         allocate(res%xp_ad_(size(u%xp_ad_)))
+         allocate(res%xp_ad_(size(u%xp_ad_)))
 
          tmp=SQRT(u%x_ad_) 
   
          res%x_ad_ = tmp
          IF(tmp==0.0d0) THEN
-            res%xp_ad_=Set_NaN_D()
+            !print*, 'hi'
+            res%xp_ad_ = Set_NaN_D()
+            !res%xp_ad_ = 0.0d0
          ELSE
             tmp= 0.5D0/tmp
-            res%xp_ad_= u%xp_ad_*tmp
+            res%xp_ad_ = u%xp_ad_*tmp
          ENDIF
     END FUNCTION SQRT_D_D
 

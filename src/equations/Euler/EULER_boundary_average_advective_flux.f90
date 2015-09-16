@@ -18,6 +18,16 @@ module EULER_boundary_average_advective_flux
 
     private
 
+
+
+    !> Implementation of the Euler boundary average flux
+    !!
+    !!  - At a boundary interface, the solution states Q- and Q+ exists on opposite 
+    !!    sides of the boundary. The average flux is computed as Favg = 1/2(F(Q-) + F(Q+))
+    !!
+    !!  @author Nathan A. Wukie
+    !!
+    !--------------------------------------------------------------------------------
     type, extends(boundary_flux_t), public :: EULER_boundary_average_advective_flux_t
 
     contains
@@ -41,7 +51,7 @@ contains
     !
     !   Boundary Flux routine for Euler
     !
-    !===========================================================
+    !----------------------------------------------------------------------------------------
     subroutine compute(self,mesh,sdata,ielem,iface,iblk,prop)
         class(EULER_boundary_average_advective_flux_t), intent(in)      :: self
         class(mesh_t),                                  intent(in)      :: mesh
@@ -86,15 +96,17 @@ contains
 
         associate (norms => mesh%faces(ielem,iface)%norm, faces => mesh%faces, q => sdata%q)
 
+            !
             ! Get neighbor face and seed element for derivatives
+            !
             iface_p   = compute_neighbor_face(iface)
             iseed     = compute_seed_element(mesh,ielem,iblk)
             ineighbor = mesh%faces(ielem,iface)%ineighbor
 
 
-
-
+            !
             ! Interpolate solution to quadrature nodes
+            !
             call interpolate(faces,q,ielem,    iface,  irho,rho_m,iseed)
             call interpolate(faces,q,ineighbor,iface_p,irho,rho_p,iseed)
 
@@ -112,12 +124,16 @@ contains
 
 
 
+            !
             ! Compute pressure and total enthalpy
+            !
             call prop%fluid%compute_pressure(rho_m,rhou_m,rhov_m,rhow_m,rhoE_m,p_m)
             call prop%fluid%compute_pressure(rho_p,rhou_p,rhov_p,rhow_p,rhoE_p,p_p)
 
             H_m = (rhoE_m + p_m)/rho_m
             H_p = (rhoE_p + p_p)/rho_p
+
+
 
             !================================
             !       MASS FLUX
@@ -130,12 +146,13 @@ contains
             flux_y_p = rhov_p
             flux_z_p = rhow_p
 
+            ! dot with normal vector
             flux_x = (flux_x_m + flux_x_p)*HALF*norms(:,1)
             flux_y = (flux_y_m + flux_y_p)*HALF*norms(:,2)
             flux_z = (flux_z_m + flux_z_p)*HALF*norms(:,3)
+            flux = flux_x + flux_y + flux_z
 
-
-            call integrate_boundary_flux(mesh%faces(ielem,iface),sdata,irho,iblk,flux_x,flux_y,flux_z)
+            call integrate_boundary_scalar_flux(mesh%faces(ielem,iface),sdata,irho,iblk,flux)
 
 
             !================================
@@ -149,11 +166,13 @@ contains
             flux_y_p = (rhou_p*rhov_p)/rho_p
             flux_z_p = (rhou_p*rhow_p)/rho_p
 
+            ! dot with normal vector
             flux_x = (flux_x_m + flux_x_p)*HALF*norms(:,1)
             flux_y = (flux_y_m + flux_y_p)*HALF*norms(:,2)
             flux_z = (flux_z_m + flux_z_p)*HALF*norms(:,3)
+            flux = flux_x + flux_y + flux_z
 
-            call integrate_boundary_flux(mesh%faces(ielem,iface),sdata,irhou,iblk,flux_x,flux_y,flux_z)
+            call integrate_boundary_scalar_flux(mesh%faces(ielem,iface),sdata,irhou,iblk,flux)
 
 
             !================================
@@ -167,11 +186,13 @@ contains
             flux_y_p = (rhov_p*rhov_p)/rho_p + p_p
             flux_z_p = (rhov_p*rhow_p)/rho_p
 
+            ! dot with normal vector
             flux_x = (flux_x_m + flux_x_p)*HALF*norms(:,1)
             flux_y = (flux_y_m + flux_y_p)*HALF*norms(:,2)
             flux_z = (flux_z_m + flux_z_p)*HALF*norms(:,3)
+            flux = flux_x + flux_y + flux_z
 
-            call integrate_boundary_flux(mesh%faces(ielem,iface),sdata,irhov,iblk,flux_x,flux_y,flux_z)
+            call integrate_boundary_scalar_flux(mesh%faces(ielem,iface),sdata,irhov,iblk,flux)
 
             !================================
             !       Z-MOMENTUM FLUX
@@ -184,11 +205,13 @@ contains
             flux_y_p = (rhow_p*rhov_p)/rho_p
             flux_z_p = (rhow_p*rhow_p)/rho_p + p_p
 
+            ! dot with normal vector
             flux_x = (flux_x_m + flux_x_p)*HALF*norms(:,1)
             flux_y = (flux_y_m + flux_y_p)*HALF*norms(:,2)
             flux_z = (flux_z_m + flux_z_p)*HALF*norms(:,3)
+            flux = flux_x + flux_y + flux_z
 
-            call integrate_boundary_flux(mesh%faces(ielem,iface),sdata,irhow,iblk,flux_x,flux_y,flux_z)
+            call integrate_boundary_scalar_flux(mesh%faces(ielem,iface),sdata,irhow,iblk,flux)
 
             !================================
             !          ENERGY FLUX
@@ -201,11 +224,13 @@ contains
             flux_y_p = rhov_p*H_p
             flux_z_p = rhow_p*H_p
 
+            ! dot with normal vector
             flux_x = (flux_x_m + flux_x_p)*HALF*norms(:,1)
             flux_y = (flux_y_m + flux_y_p)*HALF*norms(:,2)
             flux_z = (flux_z_m + flux_z_p)*HALF*norms(:,3)
+            flux = flux_x + flux_y + flux_z
 
-            call integrate_boundary_flux(mesh%faces(ielem,iface),sdata,irhoE,iblk,flux_x,flux_y,flux_z)
+            call integrate_boundary_scalar_flux(mesh%faces(ielem,iface),sdata,irhoE,iblk,flux)
 
         end associate
 

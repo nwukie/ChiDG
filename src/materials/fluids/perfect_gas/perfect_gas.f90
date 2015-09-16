@@ -1,6 +1,6 @@
 module perfect_gas
     use mod_kinds,      only: rk
-    use mod_constants,  only: ONE, HALF
+    use mod_constants,  only: ONE, HALF, ZERO
     use atype_fluid,    only: fluid_t
     use DNAD_D
 
@@ -13,6 +13,7 @@ module perfect_gas
 
     contains
         procedure :: compute_pressure
+        procedure :: compute_gamma
 
     end type perfect_gas_t
 
@@ -32,18 +33,54 @@ contains
     !   @param[in]      rhoE    Fluid Total Energy
     !   @param[inout]   p       Fluid pressure
     !------------------------------------------------------------------------
-    subroutine compute_pressure(self,rho,rhou,rhov,rhow,rhoE,p)
-        class(perfect_gas_t),   intent(in)  :: self
+    subroutine compute_pressure(self,rho,rhou,rhov,rhow,rhoE,vals)
+        class(perfect_gas_t),   intent(in)      :: self
         type(AD_D),             intent(in)      :: rho(:), rhou(:), rhov(:), rhow(:), rhoE(:)
-        type(AD_D),             intent(inout)   :: p(:)
+        type(AD_D),             intent(inout)   :: vals(:)
 
         real(rk)    :: gam
 
         gam = 1.4_rk
 
-        p = (gam-ONE)*(rhoE - HALF*rho*((rhou*rhou)/(rho*rho) + (rhov*rhov)/(rho*rho) + (rhow*rhow)/(rho*rho)))
+        vals = (gam-ONE)*(rhoE - HALF*rho*((rhou*rhou)/(rho*rho) + (rhov*rhov)/(rho*rho) + (rhow*rhow)/(rho*rho)))
 
     end subroutine
     !------------------------------------------------------------------------
+
+
+
+
+
+
+
+
+    ! Returns a constant gamma value
+    !
+    !
+    !
+    !
+    !
+    !------------------------------------------------------------------------
+    subroutine compute_gamma(self,rho,rhou,rhov,rhow,rhoE,vals)
+        class(perfect_gas_t),   intent(in)      :: self
+        type(AD_D),             intent(in)      :: rho(:), rhou(:), rhov(:), rhow(:), rhoE(:)
+        type(AD_D),             intent(inout)   :: vals(:)
+
+        ! Make sure vals derivatives are initialized
+        vals = ZERO*rho
+        vals = 1.4_rk
+
+    end subroutine
+
+
+
+
+
+
+
+
+
+
+
 
 end module

@@ -4,5 +4,6 @@ add_lib_sources(eqn_euler.f90
                 EULER_volume_advective_flux.f90
                 EULER_boundary_average_advective_flux.f90
                 EULER_LaxFriedrichs_flux.f90
+                EULER_Roe_flux.f90
                 EULER_properties.f90
                 )

@@ -11,12 +11,22 @@ module type_properties
 
 
 
+    !> Base properties type for storing equations, material definitions, 
+    !! and miscelaneous data pertaining to a particular equationset
+    !!
+    !!  @author Nathan A. Wukie
+    !!
+    !!
+    !!
+    !!
+    !-----------------------------------------------------------------
     type, public :: properties_t
         
         ! Equations
         type(equation_t), allocatable   :: eqns(:)
 
 
+        ! Materials
         class(fluid_t),   allocatable   :: fluid
         class(solid_t),   allocatable   :: solid
 
@@ -25,6 +35,7 @@ module type_properties
         procedure   :: get_eqn_index
 
     end type properties_t
+    !-----------------------------------------------------------------
 
 
 
@@ -33,15 +44,17 @@ module type_properties
 
 contains
 
-    !   Equation properties initialization
-    !
-    !
-    !
-    !
+    !>  Equation properties initialization
+    !!
+    !!  @author Nathan A. Wukie
+    !!
+    !!  @param[in]  fluid   fluid_t object to be assigned
+    !!  @param[in]  solid   solid_t object to be assigned
+    !!
     !------------------------------------------------------------------
     subroutine init(self,fluid,solid)
         class(properties_t),    intent(inout)            :: self
-        class(fluid_t),         intent(inout), optional  :: fluid
+        class(fluid_t),         intent(in),    optional  :: fluid
         class(solid_t),         intent(in),    optional  :: solid
 
         integer(ik) :: ierr
@@ -65,11 +78,15 @@ contains
 
 
 
-    ! Search for a variable string in the self%eqns list. If found, return equation index.
-    !
-    !   @author Nathan A. Wukie
-    !
-    !   @param[in]  varstring   Character string identifying the desired variable
+    !> Search for a equation string in the self%eqns list. If found, return equation index.
+    !! A set of equations could be stored in any order. So, when an equation is initialized, it
+    !! is initialized with an index indicating its location in the set. That index is used to 
+    !! access the correct solution data values.
+    !!
+    !!   @author Nathan A. Wukie
+    !!
+    !!   @param[in]  varstring   Character string identifying the desired variable
+    !!
     !-------------------------------------------------------------------------------------
     function get_eqn_index(self,varstring) result(varindex)
         class(properties_t),    intent(in)  :: self

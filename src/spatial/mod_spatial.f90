@@ -62,10 +62,6 @@ contains
                             !
                             if (domain%mesh%faces(ielem,iface)%ftype == 0 .and. &
                                 (iblk == iface .or. iblk == DIAG)) then
-                                !call domain%eqnset%compute_boundary_average_flux(mesh,sdata,ielem,iface,iblk)
-                                !call domain%eqnset%compute_boundary_upwind_flux( mesh,sdata,ielem,iface,iblk)
-
-
 
                                 !
                                 ! Call all boundary advective flux components
@@ -79,26 +75,21 @@ contains
 
 
 
-                                !
-                                ! Call all boundary diffusive flux components
-                                !
-                                if (allocated(eqnset%boundary_diffusive_flux)) then
-                                    nflux = size(eqnset%boundary_diffusive_flux)
-                                    do iflux = 1,nflux
-                                        call eqnset%boundary_diffusive_flux(iflux)%flux%compute(mesh,sdata,ielem,iface,iblk,prop)
-                                    end do
-                                end if
+!                                !
+!                                ! Call all boundary diffusive flux components
+!                                !
+!                                if (allocated(eqnset%boundary_diffusive_flux)) then
+!                                    nflux = size(eqnset%boundary_diffusive_flux)
+!                                    do iflux = 1,nflux
+!                                        call eqnset%boundary_diffusive_flux(iflux)%flux%compute(mesh,sdata,ielem,iface,iblk,prop)
+!                                    end do
+!                                end if
 
 
 
                             end if
                         end do 
 
-
-
-                        ! For the current element, compute the contributions from volume integrals
-                        !call domain%eqnset%compute_volume_flux(  mesh,sdata,ielem,iblk)
-                        !call domain%eqnset%compute_volume_source(mesh,sdata,ielem,iblk)
 
 
                         !
@@ -112,15 +103,15 @@ contains
                         end if
 
 
-                        !
-                        ! Call all volume diffusive flux components
-                        !
-                        if (allocated(eqnset%volume_diffusive_flux)) then
-                            nflux = size(eqnset%volume_diffusive_flux)
-                            do iflux = 1,nflux
-                                call eqnset%volume_diffusive_flux(iflux)%flux%compute(mesh,sdata,ielem,iblk,prop)
-                            end do
-                        end if
+!                        !
+!                        ! Call all volume diffusive flux components
+!                        !
+!                        if (allocated(eqnset%volume_diffusive_flux)) then
+!                            nflux = size(eqnset%volume_diffusive_flux)
+!                            do iflux = 1,nflux
+!                                call eqnset%volume_diffusive_flux(iflux)%flux%compute(mesh,sdata,ielem,iblk,prop)
+!                            end do
+!                        end if
 
 
                     end if
@@ -140,7 +131,7 @@ contains
             !> For boundary conditions, the linearization only depends on Q-, which is the solution vector
             !! for the interior element. So, we only need to compute derivatives for the interior element (DIAG)
             iblk = 7    !> DIAG
-!            call domain%bcset%apply(eqnset,mesh,sdata,iblk)
+            call domain%bcset%apply(mesh,sdata,iblk,prop)
 
 
 

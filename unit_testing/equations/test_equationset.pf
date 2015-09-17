@@ -1,0 +1,306 @@
+!
+! Test 'add_equation' routine. Add single equation, test number of equations, name, and index
+!
+@Test
+subroutine test_equationset__add_equation__one()
+    use pfunit_mod
+    
+    use mock_equationset,   only: mock_equationset_t
+    use SCA_properties,     only: SCA_properties_t
+
+
+    type(mock_equationset_t)    :: meq
+    type(SCA_properties_t)      :: SCA_prop
+
+
+    ! Allocate a concrete properties component in the equationset, which stores the equations
+    allocate(SCA_properties_t::meq%prop)
+
+    !
+    ! Add one equation. THIS IS BEING TESTED.
+    !
+    call meq%add_equation("a",1)
+
+    ! Test number of equations
+    @assertEqual(1,size(meq%prop%eqns))
+
+    ! Test equation name
+    @assertEqual("a",meq%prop%eqns(1)%name)
+
+    ! Test equation index
+    @assertEqual(1,meq%prop%eqns(1)%ind)
+
+end subroutine
+
+
+
+
+
+!
+! Test 'add_equation' routine. Add two equations. Test number of equations, names, and indices
+!
+@Test
+subroutine test_equationset__add_equation__two()
+    use pfunit_mod
+    
+    use mock_equationset,   only: mock_equationset_t
+    use SCA_properties,     only: SCA_properties_t
+
+
+    type(mock_equationset_t)    :: meq
+    type(SCA_properties_t)      :: SCA_prop
+
+
+    ! Allocate a concrete properties component in the equationset, which stores the equations
+    allocate(SCA_properties_t::meq%prop)
+
+    !
+    ! Add two equations. THIS IS BEING TESTED.
+    !
+    call meq%add_equation("a",1)
+    call meq%add_equation("b",2)
+
+    ! Test number of equations
+    @assertEqual(2,size(meq%prop%eqns))
+
+    ! Test equation name
+    @assertEqual("a",meq%prop%eqns(1)%name)
+    @assertEqual("b",meq%prop%eqns(2)%name)
+
+    ! Test equation index
+    @assertEqual(1,meq%prop%eqns(1)%ind)
+    @assertEqual(2,meq%prop%eqns(2)%ind)
+
+end subroutine
+
+
+
+
+
+!
+! Test 'add_volume_advective_flux'. Add single volume advective flux. 
+! Test number of flux components. Test flux type.
+!
+@Test
+subroutine test_equationset__add_volume_advective_flux__one()
+    use pfunit_mod
+    
+    use mock_equationset,           only: mock_equationset_t
+    use SCA_properties,             only: SCA_properties_t
+    use SCA_volume_advective_flux,  only: SCA_volume_advective_flux_t
+
+
+    type(mock_equationset_t)            :: meq
+    type(SCA_properties_t)              :: SCA_prop
+    type(SCA_volume_advective_flux_t)   :: flux
+
+    logical :: correct_type = .false.
+
+
+    !
+    ! Add one volume advective flux component. THIS IS BEING TESTED.
+    !
+    call meq%add_volume_advective_flux(flux)
+
+
+
+    ! Test number of flux components
+    @assertEqual(1,size(meq%volume_advective_flux))
+
+
+
+    ! Test flux type
+    select type (component_flux => meq%volume_advective_flux(1)%flux)
+        type is (SCA_volume_advective_flux_t)
+            correct_type = .true. 
+        class default
+            correct_type = .false.
+    end select
+    @assertTrue(correct_type)
+
+
+end subroutine
+
+
+
+
+
+
+
+!
+! Test 'add_volume_advective_flux'. Add two volume advective flux. 
+! Test number of flux components. Test flux type.
+!
+@Test
+subroutine test_equationset__add_volume_advective_flux__two()
+    use pfunit_mod
+    
+    use mock_equationset,           only: mock_equationset_t
+    use SCA_properties,             only: SCA_properties_t
+    use SCA_volume_advective_flux,  only: SCA_volume_advective_flux_t
+
+
+    type(mock_equationset_t)            :: meq
+    type(SCA_properties_t)              :: SCA_prop
+    type(SCA_volume_advective_flux_t)   :: flux_a
+    type(SCA_volume_advective_flux_t)   :: flux_b
+
+    logical :: correct_type = .false.
+
+
+    !
+    ! Add one volume advective flux component. THIS IS BEING TESTED.
+    !
+    call meq%add_volume_advective_flux(flux_a)
+    call meq%add_volume_advective_flux(flux_b)
+
+
+
+    ! Test number of flux components
+    @assertEqual(2,size(meq%volume_advective_flux))
+
+
+
+    ! Test first type
+    select type (component_flux => meq%volume_advective_flux(1)%flux)
+        type is (SCA_volume_advective_flux_t)
+            correct_type = .true. 
+        class default
+            correct_type = .false.
+    end select
+    @assertTrue(correct_type)
+
+
+
+    ! Test second type
+    select type (component_flux => meq%volume_advective_flux(1)%flux)
+        type is (SCA_volume_advective_flux_t)
+            correct_type = .true. 
+        class default
+            correct_type = .false.
+    end select
+    @assertTrue(correct_type)
+
+end subroutine
+
+
+
+
+
+
+
+
+
+!
+! Test 'add_boundary_advective_flux'. Add one boundary advective flux. 
+! Test number of flux components. Test flux type.
+!
+@Test
+subroutine test_equationset__add_boundary_advective_flux__one()
+    use pfunit_mod
+    
+    use mock_equationset,                       only: mock_equationset_t
+    use SCA_boundary_average_advective_flux,    only: SCA_boundary_average_advective_flux_t
+
+
+    type(mock_equationset_t)                    :: meq
+    type(SCA_boundary_average_advective_flux_t) :: average_flux
+
+    logical :: correct_type = .false.
+
+
+    !
+    ! Add one volume advective flux component. THIS IS BEING TESTED.
+    !
+    call meq%add_boundary_advective_flux(average_flux)
+
+
+
+    ! Test number of flux components
+    @assertEqual(1,size(meq%boundary_advective_flux))
+
+
+
+    ! Test first type
+    select type (component_flux => meq%boundary_advective_flux(1)%flux)
+        type is (SCA_boundary_average_advective_flux_t)
+            correct_type = .true. 
+        class default
+            correct_type = .false.
+    end select
+    @assertTrue(correct_type)
+
+end subroutine
+
+
+
+
+
+!
+! Test 'add_boundary_advective_flux'. Add one boundary advective flux. 
+! Test number of flux components. Test flux type.
+!
+@Test
+subroutine test_equationset__add_boundary_advective_flux__two()
+    use pfunit_mod
+    
+    use mock_equationset,                       only: mock_equationset_t
+    use SCA_boundary_average_advective_flux,    only: SCA_boundary_average_advective_flux_t
+    use SCA_LaxFriedrichs_flux,                 only: SCA_LaxFriedrichs_flux_t
+
+
+    type(mock_equationset_t)                    :: meq
+    type(SCA_boundary_average_advective_flux_t) :: average_flux
+    type(SCA_LaxFriedrichs_flux_t)              :: upwind_flux
+
+    logical :: correct_type = .false.
+
+
+    !
+    ! Add one volume advective flux component. THIS IS BEING TESTED.
+    !
+    call meq%add_boundary_advective_flux(average_flux)
+    call meq%add_boundary_advective_flux(upwind_flux)
+
+
+
+    ! Test number of flux components
+    @assertEqual(2,size(meq%boundary_advective_flux))
+
+
+
+    ! Test first type
+    select type (component_flux => meq%boundary_advective_flux(1)%flux)
+        type is (SCA_boundary_average_advective_flux_t)
+            correct_type = .true. 
+        class default
+            correct_type = .false.
+    end select
+    @assertTrue(correct_type)
+
+
+
+    ! Test second type
+    select type (component_flux => meq%boundary_advective_flux(2)%flux)
+        type is (SCA_LaxFriedrichs_flux_t)
+            correct_type = .true. 
+        class default
+            correct_type = .false.
+    end select
+    @assertTrue(correct_type)
+
+
+
+end subroutine
+
+
+
+
+
+
+
+
+
+
+
+

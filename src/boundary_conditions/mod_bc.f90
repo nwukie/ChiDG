@@ -16,14 +16,20 @@ module mod_bc
     use atype_bc,       only: bc_t
 
     ! IMPORT BOUNDARY CONDITIONS
-    use bc_periodic,                      only: periodic_t
-    use bc_linearadvection_extrapolate,   only: linearadvection_extrapolate_t
+    use bc_periodic,                    only: periodic_t
+    use bc_linearadvection_extrapolate, only: linearadvection_extrapolate_t
+    use bc_euler_wall,                  only: euler_wall_t
+    use bc_euler_totalinlet,            only: euler_totalinlet_t
+    use bc_euler_pressureoutlet,        only: euler_pressureoutlet_t
     implicit none
 
 
     ! Instantiate boundary conditions so they can be sourced by the factory
     type(linearadvection_extrapolate_t) :: LINEARADVECTION_EXTRAPOLATE
     type(periodic_t)                    :: PERIODIC
+    type(euler_wall_t)                  :: EULER_WALL
+    type(euler_totalinlet_t)            :: EULER_TOTALINLET
+    type(euler_pressureoutlet_t)        :: EULER_PRESSUREOUTLET
 
 
 
@@ -49,20 +55,27 @@ contains
             ! PERIODIC
             case ('periodic','Periodic')
                 allocate(bc, source=PERIODIC, stat=ierr)
-                if (ierr /= 0) call AllocationError
 
             ! Linear Advection - extrapolation boundary condition
             case ('extrapolate_la','extrapolation_la','Extrapolate_la','Extrapolation_la')
                 allocate(bc, source=LINEARADVECTION_EXTRAPOLATE, stat=ierr)
-                if (ierr /= 0) call AllocationError
 
 
             ! Euler - extrapolation boundary condition
             case ('extrapolate_euler','extrapolation_euler','Extrapolate_euler','Extrapolation_euler')
                 call signal(FATAL,"create_bc: Euler extrapolation boundary condition is not yet implemented")
 
+            ! Euler - slip wall
+            case ('euler_wall','slip_wall','Euler_Wall','Slip_Wall','SlipWall')
+                allocate(bc, source=EULER_WALL, stat=ierr)
 
-  
+            ! Euler - total inlet
+            case ('euler_totalinlet','Euler_TotalInlet')
+                allocate(bc, source=EULER_TOTALINLET, stat=ierr)
+
+            ! Euler - pressure oulet
+            case ('euler_pressureoutlet','Euler_PressureOutlet')
+                allocate(bc, source=EULER_PRESSUREOUTLET, stat=ierr)
 
             ! DEFAULT - ERROR
             case default
@@ -71,6 +84,13 @@ contains
 
 
         end select
+
+
+        !
+        ! Check allocation status
+        !
+        if (ierr /= 0) call AllocationError
+
 
     end subroutine
 

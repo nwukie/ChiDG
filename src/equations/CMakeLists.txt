@@ -13,5 +13,6 @@ add_lib_sources(type_equation.f90
                 type_boundary_flux_wrapper.f90
                 type_volume_flux_wrapper.f90
                 type_properties.f90
+                mock_equationset.f90
                 )
 

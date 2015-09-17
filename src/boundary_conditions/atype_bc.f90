@@ -7,11 +7,14 @@ module atype_bc
     use atype_equationset,  only: equationset_t
     use atype_solverdata,   only: solverdata_t
     use type_dict,          only: dict_t
+    use type_properties,    only: properties_t
     implicit none
     private
 
 
     !> Abstract base-type for boundary conditions
+    !!  - contains a list of associated element indices
+    !!  - contains a list of face indices
     !!
     !!  @author Nathan A. Wukie
     !!
@@ -32,19 +35,20 @@ module atype_bc
 
 
     abstract interface
-        subroutine compute_interface(self,eqnset,mesh,sdata,ielem,iface,iblk)
+        subroutine compute_interface(self,mesh,sdata,ielem,iface,iblk,prop)
             use mod_kinds,  only: ik
             import bc_t
-            import equationset_t
             import mesh_t
             import solverdata_t
+            import properties_t
+
             class(bc_t),            intent(inout)   :: self
-            class(equationset_t),   intent(in)      :: eqnset
             type(mesh_t),           intent(in)      :: mesh
             class(solverdata_t),    intent(inout)   :: sdata
             integer(ik),            intent(in)      :: ielem
             integer(ik),            intent(in)      :: iface
             integer(ik),            intent(in)      :: iblk
+            class(properties_t),    intent(inout)   :: prop
         end subroutine
     end interface
 
@@ -84,8 +88,10 @@ contains
         zeta_end = nelem_zeta
 
 
+        !
         ! Compute number of elements associated with the boundary condition
         ! Constrain index ranges for a particular face on the block
+        !
         select case (iface)
             case (XI_MIN)                           ! XI_MIN constant
                 nelem_bc = nelem_eta * nelem_zeta
@@ -144,6 +150,8 @@ contains
 
 
 
+
+
     !>  Apply boundary condition to the mesh and solution
     !!      - Loops through the associated elements(faces) and calls the specialized bc_t%compute
     !!        procedure for computing the rhs and linearization.
@@ -151,18 +159,18 @@ contains
     !!
     !!  @author Nathan A. Wukie
     !!
-    !!  @param[in]      eqnset  equationset_t specified for the current domain_t
     !!  @param[in]      mesh    mesh_t defining elements and faces
     !!  @param[inout]   sdata   solverdata_t containing solution, rhs, and linearization(lin) data
     !!  @param[in]      iblk    Block of the linearization for the current element that is being computed (XI_MIN, XI_MAX, eta.)
+    !!  @param[inout]   prop    properties_t object containing equationset properties and material_t objects
     !!
     !--------------------------------------------------------------------
-    subroutine apply(self,eqnset,mesh,sdata,iblk)
+    subroutine apply(self,mesh,sdata,iblk,prop)
         class(bc_t),            intent(inout)   :: self
-        class(equationset_t),   intent(in)      :: eqnset
         type(mesh_t),           intent(in)      :: mesh
         class(solverdata_t),    intent(inout)   :: sdata
         integer(ik),            intent(in)      :: iblk
+        class(properties_t),    intent(inout)   :: prop
 
         integer(ik) :: ielem_bc, ielem, iface
 
@@ -173,8 +181,10 @@ contains
             ielem = self%ielems(ielem_bc)   ! Get index of the element being operated on
             iface = self%ifaces(ielem_bc)   ! Get face index of element 'ielem' that is being operated on
 
+            !
             ! For the current boundary element(face), call specialized compute procedure
-            call self%compute(eqnset,mesh,sdata,ielem,iface,iblk)
+            !
+            call self%compute(mesh,sdata,ielem,iface,iblk,prop)
 
         end do
 
@@ -185,13 +195,17 @@ contains
 
 
 
+
+
     !> Default specialized initialization procedure. This is called from the base bc%init procedure
     !! and can be overwritten by derived types to implement specialized initiailization details.
     !!
     !!  @author Nathan A. Wukie
     !!
-    !!  @param[in]  mesh    mesh_t object containing elements and faces
-    !!  @param[in]  iface   block face index to which the boundary condition is being applied
+    !!  @param[inout]   mesh        mesh_t object containing elements and faces
+    !!  @param[in]      iface       block face index to which the boundary condition is being applied
+    !!  @param[in]      options     dictionary object containing boundary condition options
+    !!
     !--------------------------------------------------------------------------------
     subroutine init_spec(self,mesh,iface,options)
         class(bc_t),            intent(inout)   :: self

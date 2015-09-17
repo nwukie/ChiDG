@@ -1,5 +1,5 @@
 @Test
-subroutine test_gaussseidel_solve()
+subroutine test_sor_solve()
     use pfunit_mod
     use mod_kinds,          only: rk, ik
     use mod_constants,      only: ZERO, ONE, TWO, THREE, FOUR, DIAG, XI_MIN, XI_MAX
@@ -7,7 +7,7 @@ subroutine test_gaussseidel_solve()
     use type_domain,        only: domain_t
     use type_point,         only: point_t
 
-    use type_gaussseidel,   only: gaussseidel_t
+    use type_sor,           only: sor_t
     use type_blockmatrix,   only: blockmatrix_t
     use type_blockvector,   only: blockvector_t
 
@@ -20,7 +20,7 @@ subroutine test_gaussseidel_solve()
 
     type(blockmatrix_t)         :: A
     type(blockvector_t)         :: x, b
-    type(gaussseidel_t)         :: matrix_solver
+    type(sor_t)                 :: matrix_solver
     
     real(rk)    :: tol
     integer(ik) :: nterms_c, nterms_s
@@ -103,4 +103,4 @@ subroutine test_gaussseidel_solve()
 
 
 
-end subroutine test_gaussseidel_solve
+end subroutine test_sor_solve

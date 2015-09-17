@@ -8,6 +8,8 @@ module EULER_properties
 
     type, extends(properties_t), public :: EULER_properties_t
 
+        real(rk)    :: R = 287.15_rk
+
 
     end type EULER_properties_t
 

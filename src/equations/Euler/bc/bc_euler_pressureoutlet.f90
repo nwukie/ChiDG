@@ -1,4 +1,4 @@
-module bc_euler_totalinlet
+module bc_euler_pressureoutlet
     use mod_kinds,          only: rk,ik
     use mod_constants,      only: ONE, TWO, HALF
     use atype_bc,           only: bc_t
@@ -19,11 +19,11 @@ module bc_euler_totalinlet
     !!  @author Nathan A. Wukie
     !!
     !-------------------------------------------------------------------------------------------
-    type, public, extends(bc_t) :: euler_totalinlet_t
+    type, public, extends(bc_t) :: euler_pressureoutlet_t
 
     contains
         procedure :: compute    !> bc implementation
-    end type euler_totalinlet_t
+    end type euler_pressureoutlet_t
     !-------------------------------------------------------------------------------------------
 
 
@@ -43,7 +43,7 @@ contains
     !!  @param[inout]   prop    properties_t object containing equations and material_t objects
     !-------------------------------------------------------------------------------------------
     subroutine compute(self,mesh,sdata,ielem,iface,iblk,prop)
-        class(euler_totalinlet_t),      intent(inout)   :: self
+        class(euler_pressureoutlet_t),  intent(inout)   :: self
         type(mesh_t),                   intent(in)      :: mesh
         class(solverdata_t),            intent(inout)   :: sdata
         integer(ik),                    intent(in)      :: ielem
@@ -58,14 +58,12 @@ contains
 
         ! Storage at quadrature nodes
         type(AD_D), dimension(mesh%faces(ielem,iface)%gq%face%nnodes)   ::  &
-                        rho_m,  rhou_m, rhov_m, rhow_m, rhoE_m, p_m,        &
+                        rho_m,  rhou_m, rhov_m, rhow_m, rhoE_m,             &
                         flux_x, flux_y, flux_z, flux,                       &
                         u_m,    v_m,    w_m,                                &
-                        u_bc,   v_bc,   w_bc,                               &
-                        T_bc,   p_bc,   rho_bc, rhoE_bc,                    &
-                        vmag2_m, H_bc
+                        H_bc,   rhoE_bc
 
-        real(rk)    :: gam_m, cp_m, TT, PT, M
+        real(rk)    :: gam_m, p_bc
 
 
 
@@ -85,12 +83,11 @@ contains
 
 
         !
-        ! Set boundary condition Total Temperature and Total Pressure
+        ! Set back pressure
         !
-        !TT = 300._rk
-        !PT = 110000._rk
-        TT = 1.0276_rk
-        PT = 5.72102185_rk
+        !p_bc = 100000._rk
+        !p_bc = 5.20092_rk
+        p_bc = 5.00092_rk
 
 
 
@@ -105,6 +102,7 @@ contains
             call interpolate(faces,q,ielem,iface,irhow,rhow_m,iseed)
             call interpolate(faces,q,ielem,iface,irhoE,rhoE_m,iseed)
 
+
             !
             ! Compute velocity components
             !
@@ -112,58 +110,23 @@ contains
             v_m = rhov_m/rho_m
             w_m = rhow_m/rho_m
 
-            u_bc = -abs(u_m)*unorms(:,1)
-            v_bc = abs(v_m)*unorms(:,2)
-            w_bc = abs(w_m)*unorms(:,3)
 
-
-
-            !
-            ! Compute velocity magnitude squared from interior state
-            !
-            vmag2_m = (u_m*u_m) + (v_m*v_m) + (w_m*w_m)
-
-
-            !
-            ! Compute boundary condition temperature and pressure
-            !
-            !& HARDCODED GAMMA. HARDCODED CP
-            !gam_m = 1.4_rk
-            !cp_m  = 1000._rk
-            !T_bc = TT - (vmag2_m)/(TWO*cp_m)
-            !p_bc = PT*((T_bc/TT)**(gam_m/(gam_m-ONE)))
+            !& HARDCODED GAMMA
             gam_m = 1.4_rk
-            cp_m  = 1000._rk
-            M     = 0.37059_rk
-            T_bc = TT - (gam_m - ONE)*(M**TWO)*(vmag2_m)/(TWO)
-            p_bc = PT*((T_bc/TT)**(gam_m/(gam_m-ONE)))
 
 
             !
-            ! Compute boundary condition density from ideal gas law
+            ! Compute boundary condition energy and enthalpy
             !
-            select type(prop)
-                type is (EULER_properties_t)
-                    !rho_bc = p_bc/(T_bc*prop%R)
-                    rho_bc = gam_m*(M**TWO)*p_bc/(T_bc)
-            end select
-
-
-
-
-            !
-            ! Compute energy and enthalpy
-            !
-            rhoE_bc = p_bc/(gam_m - ONE) + (rho_bc/TWO)*( (u_bc*u_bc) + (v_bc*v_bc) + (w_bc*w_bc) )
-            H_bc    = (rhoE_bc + p_bc)/rho_bc
-
+            rhoE_bc = p_bc/(gam_m - ONE) + (rho_m/TWO)*(u_m*u_m + v_m*v_m + w_m*w_m)
+            H_bc = (rhoE_bc + p_bc)/rho_m
 
             !=================================================
             ! Mass flux
             !=================================================
-            flux_x = rho_bc * u_bc
-            flux_y = rho_bc * v_bc
-            flux_z = rho_bc * w_bc
+            flux_x = rhou_m
+            flux_y = rhov_m
+            flux_z = rhow_m
             flux = flux_x*norms(:,1) + flux_y*norms(:,2) + flux_z*norms(:,3)
 
             call integrate_boundary_scalar_flux(mesh%faces(ielem,iface),sdata,irho,iblk,flux)
@@ -171,9 +134,9 @@ contains
             !=================================================
             ! x-momentum flux
             !=================================================
-            flux_x = rho_bc*u_bc*u_bc + p_bc
-            flux_y = rho_bc*u_bc*v_bc
-            flux_z = rho_bc*u_bc*w_bc
+            flux_x = (rhou_m*rhou_m)/rho_m + p_bc
+            flux_y = (rhou_m*rhov_m)/rho_m
+            flux_z = (rhou_m*rhow_m)/rho_m
             flux = flux_x*norms(:,1) + flux_y*norms(:,2) + flux_z*norms(:,3)
 
             call integrate_boundary_scalar_flux(mesh%faces(ielem,iface),sdata,irhou,iblk,flux)
@@ -181,9 +144,9 @@ contains
             !=================================================
             ! y-momentum flux
             !=================================================
-            flux_x = rho_bc*v_bc*u_bc
-            flux_y = rho_bc*v_bc*v_bc + p_bc
-            flux_z = rho_bc*v_bc*w_bc
+            flux_x = (rhov_m*rhou_m)/rho_m
+            flux_y = (rhov_m*rhov_m)/rho_m + p_bc
+            flux_z = (rhov_m*rhow_m)/rho_m
             flux = flux_x*norms(:,1) + flux_y*norms(:,2) + flux_z*norms(:,3)
 
             call integrate_boundary_scalar_flux(mesh%faces(ielem,iface),sdata,irhov,iblk,flux)
@@ -191,9 +154,9 @@ contains
             !=================================================
             ! z-momentum flux
             !=================================================
-            flux_x = rho_bc*w_bc*u_bc
-            flux_y = rho_bc*w_bc*v_bc
-            flux_z = rho_bc*w_bc*w_bc + p_bc
+            flux_x = (rhow_m*rhou_m)/rho_m
+            flux_y = (rhow_m*rhov_m)/rho_m
+            flux_z = (rhow_m*rhow_m)/rho_m + p_bc
             flux = flux_x*norms(:,1) + flux_y*norms(:,2) + flux_z*norms(:,3)
 
             call integrate_boundary_scalar_flux(mesh%faces(ielem,iface),sdata,irhow,iblk,flux)
@@ -202,9 +165,9 @@ contains
             !=================================================
             ! Energy flux
             !=================================================
-            flux_x = rho_bc * u_bc * H_bc
-            flux_y = rho_bc * v_bc * H_bc
-            flux_z = rho_bc * w_bc * H_bc
+            flux_x = rho_m*u_m*H_bc
+            flux_y = rho_m*v_m*H_bc
+            flux_z = rho_m*w_m*H_bc
             flux = flux_x*norms(:,1) + flux_y*norms(:,2) + flux_z*norms(:,3)
 
             call integrate_boundary_scalar_flux(mesh%faces(ielem,iface),sdata,irhoE,iblk,flux)
@@ -219,4 +182,4 @@ contains
 
 
 
-end module bc_euler_totalinlet
+end module bc_euler_pressureoutlet

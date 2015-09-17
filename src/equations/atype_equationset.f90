@@ -29,12 +29,14 @@ module atype_equationset
 
 
         ! Array of boundary flux functions
+        ! TODO: Extend for diffusive fluxes
         type(boundary_flux_wrapper_t),  allocatable   :: boundary_advective_flux(:)
-        type(boundary_flux_wrapper_t),  allocatable   :: boundary_diffusive_flux(:)
+        !type(boundary_flux_wrapper_t),  allocatable   :: boundary_diffusive_flux(:)
         type(volume_flux_wrapper_t),    allocatable   :: volume_advective_flux(:)
-        type(volume_flux_wrapper_t),    allocatable   :: volume_diffusive_flux(:) 
+        !type(volume_flux_wrapper_t),    allocatable   :: volume_diffusive_flux(:) 
 
         ! Array of volume source functions
+        ! TODO: Extend for source functions
         !type(source_wrapper_t),         allocatable   :: volume_source(:)
 
 

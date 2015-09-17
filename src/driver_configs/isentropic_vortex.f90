@@ -11,7 +11,7 @@
 
 program driver
     use mod_kinds,              only: rk, ik
-    use mod_constants,          only: XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX, ONE, TWO, THREE, FOUR, FIVE, ZERO
+    use mod_constants,          only: XI_MIN, ETA_MIN, ZETA_MIN, ONE, TWO, THREE, FOUR, FIVE, ZERO
     use type_chidg,             only: chidg_t
     use type_point,             only: point_t
     use mod_hdfio,              only: read_grid_hdf
@@ -45,11 +45,11 @@ program driver
     !
     ! Initialize grid and numerics
     !
-    call read_grid_hdf(gridfile,chidg%domains)
-    !call meshgen('15x15x2',pts)
-    !call chidg%set('ndomains','')
-    !nterms_c = 8
-    !call chidg%domains(1)%init_geom(nterms_c,pts)
+    !call read_grid_hdf(gridfile,chidg%domains)
+    call meshgen('15x15x2',pts)
+    call chidg%set('ndomains','')
+    nterms_c = 8
+    call chidg%domains(1)%init_geom(nterms_c,pts)
 
 
     !
@@ -72,14 +72,9 @@ program driver
         !
         ! Initialize domain
         !
-        call dom%init_bc('euler_totalinlet',XI_MIN)
-        call dom%init_bc('euler_pressureoutlet',XI_MAX)
-        !call dom%init_bc('euler_wall',XI_MIN)
-        !call dom%init_bc('euler_wall',XI_MAX)
-        call dom%init_bc('euler_wall',ETA_MIN)
-        call dom%init_bc('euler_wall',ETA_MAX)
-        call dom%init_bc('euler_wall',ZETA_MIN)
-        call dom%init_bc('euler_wall',ZETA_MAX)
+        call dom%init_bc('periodic',XI_MIN)
+        call dom%init_bc('periodic',ETA_MIN)
+        call dom%init_bc('periodic',ZETA_MIN)
 
         call dom%init_sol(eqnset,nterms_s)
 
@@ -87,17 +82,25 @@ program driver
         ! Initialize solution
         !
         call create_function(constant,'constant')
+        call create_function(vortex,'isentropic_vortex')
         
-        call constant%set('val',1._rk)
-        call initialize_variable(dom,1,constant)
-        call constant%set('val',1._rk)
-        call initialize_variable(dom,2,constant)
-        call constant%set('val',ZERO)
-        call initialize_variable(dom,3,constant)
-        call constant%set('val',ZERO)
-        call initialize_variable(dom,4,constant)
-        call constant%set('val',13.5023_rk)
-        call initialize_variable(dom,5,constant)
+        call vortex%set('xo',3.5_rk)
+        call vortex%set('yo',3.5_rk)
+        call vortex%set('zo',0.5_rk)
+        call vortex%set('uinf',1._rk)
+        call vortex%set('vinf',ZERO)
+
+
+        call vortex%set('var',ONE)
+        call initialize_variable(dom,1,vortex)
+        call vortex%set('var',TWO)
+        call initialize_variable(dom,2,vortex)
+        call vortex%set('var',THREE)
+        call initialize_variable(dom,3,vortex)
+        call vortex%set('var',FOUR)
+        call initialize_variable(dom,4,vortex)
+        call vortex%set('var',FIVE)
+        call initialize_variable(dom,5,vortex)
 
     end associate
 

@@ -6,6 +6,7 @@ module bc_periodic
     use atype_solverdata,   only: solverdata_t
     use type_mesh,          only: mesh_t
     use type_dict,          only: dict_t
+    use type_properties,    only: properties_t
 
 
 
@@ -139,14 +140,14 @@ contains
     !!  @author Nathan A. Wukie
     !!
     !------------------------------------------------------------------
-    subroutine compute(self,eqnset,mesh,sdata,ielem,iface,iblk)
-        class(periodic_t),     intent(inout)   :: self
-        class(equationset_t),   intent(in)      :: eqnset
+    subroutine compute(self,mesh,sdata,ielem,iface,iblk,prop)
+        class(periodic_t),      intent(inout)   :: self
         type(mesh_t),           intent(in)      :: mesh
         class(solverdata_t),    intent(inout)   :: sdata
         integer(ik),            intent(in)      :: ielem
         integer(ik),            intent(in)      :: iface
         integer(ik),            intent(in)      :: iblk
+        class(properties_t),    intent(inout)   :: prop
 
         ! DO NOTHING IN PERIODIC BOUNDARY CONDITION
 

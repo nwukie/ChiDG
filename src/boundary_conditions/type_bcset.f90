@@ -7,6 +7,7 @@ module type_bcset
     use atype_solverdata,   only: solverdata_t
     use atype_bc,           only: bc_t
     use type_bcwrapper,     only: bcwrapper_t
+    use type_properties,    only: properties_t
     implicit none
     private
 
@@ -16,6 +17,7 @@ module type_bcset
     !!        can be added.
     !!
     !!  @author Nathan A. Wukie
+    !!
     !------------------------------------------------------------------------------------------
     type, public :: bcset_t
 
@@ -87,7 +89,9 @@ contains
         end do
 
 
-        ! Allocate concrete type and source from bc
+        !
+        ! Allocate concrete type, sourced from incoming bc
+        !
         allocate(self%bcs(ibc)%bc, source=bc)   ! I think this should source all of the data as well, like an assign.
 
     end subroutine
@@ -101,38 +105,41 @@ contains
     !!
     !!  @author Nathan A. Wukie
     !!
-    !!  @param[inout]   eqnset  Equation set that applies to the boundary condition
-    !!  @param[inout]   mesh    Mesh structure containint elements and faces
-    !!  @param[inout]   sdata   Solver data structure containing solution, rhs, and linearization
-    !!  @param[inout]   iblk    Block direction with respect to which we are computing the linearization
+    !!  @param[inout]   mesh    mesh_t containing elements and faces
+    !!  @param[inout]   sdata   solverdata_t object containing solution, rhs, and linearization
+    !!  @param[inout]   iblk    integer block direction with respect to which we are computing the linearization
+    !!  @param[inout]   prop    properties_t object with equationset properties, and material_t objects
     !----------------------------------------------------------------------------------------
-    subroutine apply(self,eqnset,mesh,sdata,iblk)
-        class(bcset_t),             intent(inout)   :: self
-        class(equationset_t),       intent(inout)   :: eqnset
-        type(mesh_t),               intent(inout)   :: mesh
-        class(solverdata_t),        intent(inout)   :: sdata
-        integer(ik),                intent(inout)   :: iblk
+    subroutine apply(self,mesh,sdata,iblk,prop)
+        class(bcset_t),         intent(inout)   :: self
+        type(mesh_t),           intent(inout)   :: mesh
+        class(solverdata_t),    intent(inout)   :: sdata
+        integer(ik),            intent(inout)   :: iblk
+        class(properties_t),    intent(inout)   :: prop
 
         integer(ik) :: ibc
 
-
+        !
         ! Loop through boundary condition array and call apply for each
+        !
         do ibc = 1,size(self%bcs)
 
+            !
             ! Only apply if there is an allocated boundary condition in the current slot
+            !
             if (allocated(self%bcs(ibc)%bc)) then
-                call self%bcs(ibc)%bc%apply(eqnset,mesh,sdata,iblk)
+                call self%bcs(ibc)%bc%apply(mesh,sdata,iblk,prop)
             end if
 
         end do
 
     end subroutine
+    !----------------------------------------------------------------------------------------
 
 
 
 
 
 
-    !------------------------------------------------------------------------------------------------
 
 end module type_bcset

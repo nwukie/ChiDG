@@ -87,7 +87,7 @@ contains
         !
         !p_bc = 100000._rk
         !p_bc = 5.20092_rk
-        p_bc = 5.00092_rk
+        p_bc = 2.8715_rk
 
 
 

@@ -49,9 +49,12 @@ contains
                 nnodes1d = nterms1d
             case(2)
                 nnodes1d = ceiling(3._rk*real(nterms1d,rk)/2._rk)
-!                nnodes1d = 3*nterms1d + 1
             case(3)
                 nnodes1d = 2*nterms1d + 1
+            case(4)
+                nnodes1d = 3*nterms1d + 1
+            case(5)
+                nnodes1d = 5*nterms1d + 1
             case default
                 call signal(FATAL, "compute_nnodes_integration: Value for gq_rule, specifying the rule for selecting number of quadrature points was not valid. Recognized values are gq_rule = (1, 2, 3)")
 

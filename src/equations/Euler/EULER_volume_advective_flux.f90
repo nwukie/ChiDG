@@ -72,11 +72,16 @@ contains
         irhow = prop%get_eqn_index("rhow")
         irhoE = prop%get_eqn_index("rhoE")
 
-        !> Get neighbor face and seed element for derivatives
+        !
+        ! Get neighbor face and seed element for derivatives
+        !
         iseed   = compute_seed_element(mesh,ielem,iblk)
 
 
-        !> Interpolate solution to quadrature nodes
+
+        !
+        ! Interpolate solution to quadrature nodes
+        !
         call interpolate(mesh%elems,sdata%q,ielem,irho, rho, iseed)
         call interpolate(mesh%elems,sdata%q,ielem,irhou,rhou,iseed)
         call interpolate(mesh%elems,sdata%q,ielem,irhov,rhov,iseed)
@@ -84,7 +89,9 @@ contains
         call interpolate(mesh%elems,sdata%q,ielem,irhoE,rhoE,iseed)
 
 
+        !
         ! Compute pressure and total enthalpy
+        !
         call prop%fluid%compute_pressure(rho,rhou,rhov,rhow,rhoE,p)
 
         H = (rhoE + p)/rho

@@ -86,6 +86,8 @@ contains
                 print*, "Step: ", itime
 
 
+                !call q%dump()
+
                 ! Update Spatial Residual and Linearization (rhs, lin)
                 call update_space(domain)
 
@@ -93,11 +95,14 @@ contains
                 ! Multiply RHS by mass matrix 
                 do ielem = 1,domain%mesh%nelem
                     do ieqn = 1,domain%eqnset%neqns
-                        !rhs%lvecs(ielem)%vec = matmul(domain%mesh%elems(ielem)%invmass, rhs%lvecs(ielem)%vec)
                         vals = matmul(domain%mesh%elems(ielem)%invmass, rhs%lvecs(ielem)%getvar(ieqn))
+                        call rhs%lvecs(ielem)%setvar(ieqn,vals)
                     end do
                 end do
 
+
+                !call rhs%dump()
+                !read(*,*)
 
                 ! Compute update vector
                 dq = (-dt) * rhs

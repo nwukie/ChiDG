@@ -62,7 +62,7 @@ contains
         print*, '           Matrix Solver: '
 
 
-        omega = 1.0_rk
+        omega = 1.2_rk
 
 
         ! Initialize D blocks

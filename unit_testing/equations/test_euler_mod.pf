@@ -77,11 +77,13 @@ contains
         
         call fcn%set('const',1.0_rk)
         call initialize_variable(this%domain,1,fcn)
-        call fcn%set('const',0.0_rk)
+        call fcn%set('const',1.1_rk)
         call initialize_variable(this%domain,2,fcn)
+        call fcn%set('const',1.2_rk)
         call initialize_variable(this%domain,3,fcn)
+        call fcn%set('const',1.3_rk)
         call initialize_variable(this%domain,4,fcn)
-        call fcn%set('const',1.0_rk)
+        call fcn%set('const',6.0_rk)
         call initialize_variable(this%domain,5,fcn)
             
     end subroutine
@@ -136,7 +138,7 @@ contains
         integer(ik) :: ielem, iblk
         real(rk)    :: tol
         
-        tol = 1.0e-6_rk
+        tol = 1.0e-5_rk
         
         ielem = 14
         
@@ -154,25 +156,36 @@ contains
     
 
 
-!> Test Boundary Advective Flux jacobian calclation
+!> Test Boundary Advective Flux jacobian calculation
 @Test(cases = [1, 2, 3, 4, 5, 6, 7])
     subroutine test_EULER_jacobian_boundary_advective_flux(self)
         class(test_eq_euler),    intent(inout)   :: self
         
         type(densematrix_t) :: blk_dnad, blk_fd
-        integer(ik) :: ielem, iface, ivar, iblk
+        integer(ik) :: ielem, iface, ivar, iblk, irow
         real(rk)    :: tol
         
-        tol = 1.0e-6_rk
+        tol = 1.0e-5_rk
         
         ielem = 14
+        !ielem = 1
         
-        !> Block Parameter from cases = []
+        ! Block Parameter from cases = []
         iblk = self%iblk
         
-        !> Compute Automatic and Finite Difference jacobians
+        ! Compute Automatic and Finite Difference jacobians
         call check_jacobian_boundary_advective_flux(self%domain,ielem,iblk,blk_dnad,blk_fd)
         
+        !print*, iblk
+        !print*, 'FD'
+        !do irow = 1,size(blk_fd%mat,1)
+        !    print*, blk_fd%mat(irow,:)
+        !end do
+
+        !print*, 'DNAD'
+        !do irow = 1,size(blk_dnad%mat,1)
+        !    print*, blk_dnad%mat(irow,:)
+        !end do
         
         @assertEqual(blk_fd%mat, blk_dnad%mat, tol)
         
@@ -180,8 +193,6 @@ contains
     
     
     
-    
-
 
 
 

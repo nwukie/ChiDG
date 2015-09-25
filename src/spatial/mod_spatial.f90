@@ -122,7 +122,7 @@ contains
             end do !block
 
 
-
+            !call sdata%rhs%dump()
 
 
             !------------------------------------------------------------------------------------------
@@ -131,10 +131,11 @@ contains
             !> For boundary conditions, the linearization only depends on Q-, which is the solution vector
             !! for the interior element. So, we only need to compute derivatives for the interior element (DIAG)
             iblk = 7    !> DIAG
+            !print*, 'DEBUG WARNING: BCs not applied'
             call domain%bcset%apply(mesh,sdata,iblk,prop)
 
 
-
+            !call sdata%rhs%dump()
 
 
 
@@ -148,6 +149,77 @@ contains
         end associate
 
     end subroutine
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+!    function loop_space(domain)
+!        type(domain_t), intent(inout)   :: domain
+!        
+!        integer(ik) :: ielem
+!
+!
+!
+!
+!        do ielem = 1,nelem
+!
+!            
+!
+!        end do
+!
+!
+!
+!
+!    end function
+!
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

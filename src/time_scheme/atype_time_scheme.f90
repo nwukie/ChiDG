@@ -24,7 +24,7 @@ module atype_time_scheme
 
         ! OPTIONS
         real(rk)    :: dt = 0.001_rk        !< Time-step increment
-        real(rk)    :: tol = 1.e-15_rk      !< Convergence tolerance
+        real(rk)    :: tol = 1.e-13_rk      !< Convergence tolerance
         integer(ik) :: nsteps = 100         !< Number of time steps to compute
         integer(ik) :: nwrite = 10          !< Write data every 'nwrite' steps
 

@@ -91,7 +91,7 @@ contains
             resid  = ONE    ! Force inner loop entry
             ninner = 0      ! Initialize inner loop counter
             cfl0    = 1._rk
-            amp    = 0.01_rk
+            amp    = 0.000000000001_rk
             dtau   = cfl * amp
 
             cfln = cfl0
@@ -104,7 +104,7 @@ contains
 
 
                 !dtau = dcfln/30._rk
-                dtau = dtau * 10._rk
+                dtau = dtau * 5._rk
 
 
 

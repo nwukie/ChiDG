@@ -165,7 +165,6 @@ contains
         !
         ! Evaluate x from dot product of modes and polynomial values
         !
-        !val = dot_product(q%var(ivar),polyvals)
         val = dot_product(q%getvar(ivar),polyvals)
 
     end function

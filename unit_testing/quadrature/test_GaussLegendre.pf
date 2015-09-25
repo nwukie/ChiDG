@@ -298,7 +298,6 @@ subroutine test_GaussLegendre_Integrate_P10()
     real(rk)                 :: tol
     
     tol           = 2.e-15_rk
-!    integralKnown = 1.515151515151515151_rk
     integralKnown = (2._rk/11._rk) + (4._rk/3._rk)                                     
 
     call gl_weights(nnodes,weights)

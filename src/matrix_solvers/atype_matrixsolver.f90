@@ -16,7 +16,7 @@ module atype_matrixsolver
     !-------------------------------------------------------------
     type, public, abstract :: matrixsolver_t
 
-        real(rk)    :: tol = 5.e-14_rk      !< Convergance tolerance for iterative solvers
+        real(rk)    :: tol = 5.e-10_rk      !< Convergance tolerance for iterative solvers
 
 
     contains

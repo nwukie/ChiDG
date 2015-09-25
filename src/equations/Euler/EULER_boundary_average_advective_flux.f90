@@ -1,7 +1,7 @@
 module EULER_boundary_average_advective_flux
     use mod_kinds,              only: rk,ik
     use mod_constants,          only: NFACES,ONE,TWO,HALF, &
-                                      XI_MIN,XI_MAX,ETA_MIN,ETA_MAX,ZETA_MIN,ZETA_MAX
+                                      XI_MIN,XI_MAX,ETA_MIN,ETA_MAX,ZETA_MIN,ZETA_MAX, ZERO
 
     use atype_boundary_flux,    only: boundary_flux_t
     use atype_equationset,      only: equationset_t
@@ -146,11 +146,15 @@ contains
             flux_y_p = rhov_p
             flux_z_p = rhow_p
 
+            flux_x = (flux_x_m + flux_x_p)
+            flux_y = (flux_y_m + flux_y_p)
+            flux_z = (flux_z_m + flux_z_p)
+
+
             ! dot with normal vector
-            flux_x = (flux_x_m + flux_x_p)*HALF*norms(:,1)
-            flux_y = (flux_y_m + flux_y_p)*HALF*norms(:,2)
-            flux_z = (flux_z_m + flux_z_p)*HALF*norms(:,3)
-            flux = flux_x + flux_y + flux_z
+            flux = HALF*(flux_x*norms(:,1) + flux_y*norms(:,2) + flux_z*norms(:,3))
+            !flux = (flux_x*norms(:,1) + flux_y*norms(:,2) + flux_z*norms(:,3))
+            !flux = ZERO
 
             call integrate_boundary_scalar_flux(mesh%faces(ielem,iface),sdata,irho,iblk,flux)
 
@@ -166,11 +170,15 @@ contains
             flux_y_p = (rhou_p*rhov_p)/rho_p
             flux_z_p = (rhou_p*rhow_p)/rho_p
 
+            flux_x = (flux_x_m + flux_x_p)
+            flux_y = (flux_y_m + flux_y_p)
+            flux_z = (flux_z_m + flux_z_p)
+
+
             ! dot with normal vector
-            flux_x = (flux_x_m + flux_x_p)*HALF*norms(:,1)
-            flux_y = (flux_y_m + flux_y_p)*HALF*norms(:,2)
-            flux_z = (flux_z_m + flux_z_p)*HALF*norms(:,3)
-            flux = flux_x + flux_y + flux_z
+            flux = HALF*(flux_x*norms(:,1) + flux_y*norms(:,2) + flux_z*norms(:,3))
+            !flux = (flux_x*norms(:,1) + flux_y*norms(:,2) + flux_z*norms(:,3))
+            !flux = ZERO
 
             call integrate_boundary_scalar_flux(mesh%faces(ielem,iface),sdata,irhou,iblk,flux)
 
@@ -186,11 +194,15 @@ contains
             flux_y_p = (rhov_p*rhov_p)/rho_p + p_p
             flux_z_p = (rhov_p*rhow_p)/rho_p
 
+            flux_x = (flux_x_m + flux_x_p)
+            flux_y = (flux_y_m + flux_y_p)
+            flux_z = (flux_z_m + flux_z_p)
+
+
             ! dot with normal vector
-            flux_x = (flux_x_m + flux_x_p)*HALF*norms(:,1)
-            flux_y = (flux_y_m + flux_y_p)*HALF*norms(:,2)
-            flux_z = (flux_z_m + flux_z_p)*HALF*norms(:,3)
-            flux = flux_x + flux_y + flux_z
+            flux = HALF*(flux_x*norms(:,1) + flux_y*norms(:,2) + flux_z*norms(:,3))
+            !flux = (flux_x*norms(:,1) + flux_y*norms(:,2) + flux_z*norms(:,3))
+            !flux = ZERO
 
             call integrate_boundary_scalar_flux(mesh%faces(ielem,iface),sdata,irhov,iblk,flux)
 
@@ -205,11 +217,15 @@ contains
             flux_y_p = (rhow_p*rhov_p)/rho_p
             flux_z_p = (rhow_p*rhow_p)/rho_p + p_p
 
+            flux_x = (flux_x_m + flux_x_p)
+            flux_y = (flux_y_m + flux_y_p)
+            flux_z = (flux_z_m + flux_z_p)
+
+
             ! dot with normal vector
-            flux_x = (flux_x_m + flux_x_p)*HALF*norms(:,1)
-            flux_y = (flux_y_m + flux_y_p)*HALF*norms(:,2)
-            flux_z = (flux_z_m + flux_z_p)*HALF*norms(:,3)
-            flux = flux_x + flux_y + flux_z
+            flux = HALF*(flux_x*norms(:,1) + flux_y*norms(:,2) + flux_z*norms(:,3))
+            !flux = (flux_x*norms(:,1) + flux_y*norms(:,2) + flux_z*norms(:,3))
+            !flux = ZERO
 
             call integrate_boundary_scalar_flux(mesh%faces(ielem,iface),sdata,irhow,iblk,flux)
 
@@ -224,11 +240,15 @@ contains
             flux_y_p = rhov_p*H_p
             flux_z_p = rhow_p*H_p
 
+            flux_x = (flux_x_m + flux_x_p)
+            flux_y = (flux_y_m + flux_y_p)
+            flux_z = (flux_z_m + flux_z_p)
+
+
             ! dot with normal vector
-            flux_x = (flux_x_m + flux_x_p)*HALF*norms(:,1)
-            flux_y = (flux_y_m + flux_y_p)*HALF*norms(:,2)
-            flux_z = (flux_z_m + flux_z_p)*HALF*norms(:,3)
-            flux = flux_x + flux_y + flux_z
+            flux = HALF*(flux_x*norms(:,1) + flux_y*norms(:,2) + flux_z*norms(:,3))
+            !flux = (flux_x*norms(:,1) + flux_y*norms(:,2) + flux_z*norms(:,3))
+            !flux = ZERO
 
             call integrate_boundary_scalar_flux(mesh%faces(ielem,iface),sdata,irhoE,iblk,flux)
 

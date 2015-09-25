@@ -1,7 +1,7 @@
 module EULER_Roe_flux
     use mod_kinds,              only: rk,ik
     use mod_constants,          only: NFACES,ONE,TWO,HALF, &
-                                      XI_MIN,XI_MAX,ETA_MIN,ETA_MAX,ZETA_MIN,ZETA_MAX
+                                      XI_MIN,XI_MAX,ETA_MIN,ETA_MAX,ZETA_MIN,ZETA_MAX,ZERO
 
     use atype_boundary_flux,    only: boundary_flux_t
     use atype_equationset,      only: equationset_t
@@ -157,7 +157,8 @@ contains
             u_p = rhou_p/rho_p
             v_p = rhov_p/rho_p
             w_p = rhow_p/rho_p
-            vmag_p = u_p*unorms(:,1) + v_p*unorms(:,2) + w_p*unorms(:,3)
+            !vmag_p = u_p*(-unorms(:,1)) + v_p*(-unorms(:,2)) + w_p*(-unorms(:,3))
+            vmag_p = u_p*(unorms(:,1)) + v_p*(unorms(:,2)) + w_p*(unorms(:,3))
 
             !
             ! Compute Roe-averaged variables
@@ -179,24 +180,36 @@ contains
             !
             ! Compute jump terms
             !
-            delr    = (rho_p - rho_m)
-            delu    = (u_p - u_m)
-            delv    = (v_p - v_m)
-            delw    = (w_p - w_m)
-            delvmag = (vmag_p - vmag_m)
-            delp    = (p_p - p_m)
+            delr    = (rho_m - rho_p)
+            delu    = (u_m - u_p)
+            delv    = (v_m - v_p)
+            delw    = (w_m - w_p)
+            delvmag = (vmag_m - vmag_p)
+            delp    = (p_m - p_p)
 
 
-            C1   = abs(vmagtil - ctil)*( delp - rtil*ctil*delvmag)/(TWO*ctil**TWO)
+            C1   = abs(vmagtil - ctil)*( delp - rtil*ctil*delvmag)/(TWO*(ctil**TWO))
             C2_a = abs(vmagtil)*(delr - delp/(ctil**TWO))
             C2_b = abs(vmagtil)*rtil
-            C3   = abs(vmagtil + ctil)*( delp + rtil*ctil*delvmag )/(TWO*ctil**TWO)
+            C3   = abs(vmagtil + ctil)*( delp + rtil*ctil*delvmag)/(TWO*(ctil**TWO))
+            !C1   = (vmagtil - ctil)*( delp - rtil*ctil*delvmag)/(TWO*(ctil**TWO))
+            !C2_a = (vmagtil)*(delr - delp/(ctil**TWO))
+            !C2_b = (vmagtil)*rtil
+            !C3   = (vmagtil + ctil)*( delp + rtil*ctil*delvmag)/(TWO*(ctil**TWO))
+
+
+            flux = delr
+            flux = ZERO
+
+
             !================================
             !       MASS FLUX
             !================================
             upwind = C1 + C2_a + C3
 
-            flux = -HALF*(upwind)
+            !flux = -HALF*(upwind*abs(norms(:,1)) + upwind*abs(norms(:,2)) + upwind*abs(norms(:,3)))
+            flux = HALF*(upwind*norms(:,1)*unorms(:,1) + upwind*norms(:,2)*unorms(:,2) + upwind*norms(:,3)*unorms(:,3))
+            !flux = ZERO
 
             call integrate_boundary_scalar_flux(mesh%faces(ielem,iface),sdata,irho,iblk,flux)
 
@@ -206,7 +219,9 @@ contains
             !================================
             upwind = C1*(util - ctil*unorms(:,1))  +  C2_a*util  +  C2_b*(delu - delvmag*unorms(:,1))  +  C3*(util + ctil*unorms(:,1))
 
-            flux = -HALF*(upwind)
+            !flux = -HALF*(upwind*norms(:,1) + upwind*norms(:,2) + upwind*norms(:,3))
+            flux = HALF*(upwind*norms(:,1)*unorms(:,1) + upwind*norms(:,2)*unorms(:,2) + upwind*norms(:,3)*unorms(:,3))
+            !flux = ZERO
 
             call integrate_boundary_scalar_flux(mesh%faces(ielem,iface),sdata,irhou,iblk,flux)
 
@@ -216,7 +231,9 @@ contains
             !================================
             upwind = C1*(vtil - ctil*unorms(:,2))  +  C2_a*vtil  +  C2_b*(delv - delvmag*unorms(:,2))  +  C3*(vtil + ctil*unorms(:,2))
 
-            flux = -HALF*(upwind)
+            !flux = -HALF*(upwind*norms(:,1) + upwind*norms(:,2) + upwind*norms(:,3))
+            flux = HALF*(upwind*norms(:,1)*unorms(:,1) + upwind*norms(:,2)*unorms(:,2) + upwind*norms(:,3)*unorms(:,3))
+            !flux = ZERO
 
             call integrate_boundary_scalar_flux(mesh%faces(ielem,iface),sdata,irhov,iblk,flux)
 
@@ -225,7 +242,9 @@ contains
             !================================
             upwind = C1*(wtil - ctil*unorms(:,3))  +  C2_a*wtil  +  C2_b*(delw - delvmag*unorms(:,3))  +  C3*(wtil + ctil*unorms(:,3))
 
-            flux = -HALF*(upwind)
+            !flux = -HALF*(upwind*norms(:,1) + upwind*norms(:,2) + upwind*norms(:,3))
+            flux = HALF*(upwind*norms(:,1)*unorms(:,1) + upwind*norms(:,2)*unorms(:,2) + upwind*norms(:,3)*unorms(:,3))
+            !flux = ZERO
 
             call integrate_boundary_scalar_flux(mesh%faces(ielem,iface),sdata,irhow,iblk,flux)
 
@@ -234,7 +253,9 @@ contains
             !================================
             upwind = C1*(Htil - ctil*vmagtil)  +  C2_a*(qtil2/TWO)  +  C2_b*(util*delu + vtil*delv + wtil*delw - vmagtil*delvmag)  +  C3*(Htil + ctil*vmagtil)
 
-            flux = -HALF*(upwind)
+            !flux = -HALF*(upwind*norms(:,1) + upwind*norms(:,2) + upwind*norms(:,3))
+            flux = HALF*(upwind*norms(:,1)*unorms(:,1) + upwind*norms(:,2)*unorms(:,2) + upwind*norms(:,3)*unorms(:,3))
+            !flux = ZERO
 
             call integrate_boundary_scalar_flux(mesh%faces(ielem,iface),sdata,irhoE,iblk,flux)
 

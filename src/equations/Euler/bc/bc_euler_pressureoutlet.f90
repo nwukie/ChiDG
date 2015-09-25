@@ -11,6 +11,7 @@ module bc_euler_pressureoutlet
     use DNAD_D
     
     use EULER_properties,   only: EULER_properties_t
+    implicit none
 
 
     !> Extrapolation boundary condition 
@@ -63,7 +64,9 @@ contains
                         u_m,    v_m,    w_m,                                &
                         H_bc,   rhoE_bc
 
-        real(rk)    :: gam_m, p_bc
+        real(rk)    :: gam_m
+
+        real(rk),   dimension(mesh%faces(ielem,iface)%gq%face%nnodes)   :: p_bc
 
 
 
@@ -85,13 +88,15 @@ contains
         !
         ! Set back pressure
         !
+        p_bc = 93000._rk
         !p_bc = 100000._rk
-        !p_bc = 5.20092_rk
-        p_bc = 2.8715_rk
+        !p_bc = 2.92205471_rk
+        !p_bc = 2.8715_rk
 
 
 
         associate (norms => mesh%faces(ielem,iface)%norm, unorms => mesh%faces(ielem,iface)%unorm, faces => mesh%faces, q => sdata%q)
+
 
             !
             ! Interpolate interior solution to quadrature nodes
@@ -124,9 +129,9 @@ contains
             !=================================================
             ! Mass flux
             !=================================================
-            flux_x = rhou_m
-            flux_y = rhov_m
-            flux_z = rhow_m
+            flux_x = (rho_m * u_m)
+            flux_y = (rho_m * v_m)
+            flux_z = (rho_m * w_m)
             flux = flux_x*norms(:,1) + flux_y*norms(:,2) + flux_z*norms(:,3)
 
             call integrate_boundary_scalar_flux(mesh%faces(ielem,iface),sdata,irho,iblk,flux)
@@ -134,9 +139,9 @@ contains
             !=================================================
             ! x-momentum flux
             !=================================================
-            flux_x = (rhou_m*rhou_m)/rho_m + p_bc
-            flux_y = (rhou_m*rhov_m)/rho_m
-            flux_z = (rhou_m*rhow_m)/rho_m
+            flux_x = (rho_m * u_m * u_m) + p_bc
+            flux_y = (rho_m * u_m * v_m)
+            flux_z = (rho_m * u_m * w_m)
             flux = flux_x*norms(:,1) + flux_y*norms(:,2) + flux_z*norms(:,3)
 
             call integrate_boundary_scalar_flux(mesh%faces(ielem,iface),sdata,irhou,iblk,flux)
@@ -144,9 +149,9 @@ contains
             !=================================================
             ! y-momentum flux
             !=================================================
-            flux_x = (rhov_m*rhou_m)/rho_m
-            flux_y = (rhov_m*rhov_m)/rho_m + p_bc
-            flux_z = (rhov_m*rhow_m)/rho_m
+            flux_x = (rho_m * v_m * u_m)
+            flux_y = (rho_m * v_m * v_m) + p_bc
+            flux_z = (rho_m * v_m * w_m)
             flux = flux_x*norms(:,1) + flux_y*norms(:,2) + flux_z*norms(:,3)
 
             call integrate_boundary_scalar_flux(mesh%faces(ielem,iface),sdata,irhov,iblk,flux)
@@ -154,9 +159,9 @@ contains
             !=================================================
             ! z-momentum flux
             !=================================================
-            flux_x = (rhow_m*rhou_m)/rho_m
-            flux_y = (rhow_m*rhov_m)/rho_m
-            flux_z = (rhow_m*rhow_m)/rho_m + p_bc
+            flux_x = (rho_m * w_m * u_m)
+            flux_y = (rho_m * w_m * v_m)
+            flux_z = (rho_m * w_m * w_m) + p_bc
             flux = flux_x*norms(:,1) + flux_y*norms(:,2) + flux_z*norms(:,3)
 
             call integrate_boundary_scalar_flux(mesh%faces(ielem,iface),sdata,irhow,iblk,flux)
@@ -165,9 +170,9 @@ contains
             !=================================================
             ! Energy flux
             !=================================================
-            flux_x = rho_m*u_m*H_bc
-            flux_y = rho_m*v_m*H_bc
-            flux_z = rho_m*w_m*H_bc
+            flux_x = (rho_m * u_m * H_bc)
+            flux_y = (rho_m * v_m * H_bc)
+            flux_z = (rho_m * w_m * H_bc)
             flux = flux_x*norms(:,1) + flux_y*norms(:,2) + flux_z*norms(:,3)
 
             call integrate_boundary_scalar_flux(mesh%faces(ielem,iface),sdata,irhoE,iblk,flux)

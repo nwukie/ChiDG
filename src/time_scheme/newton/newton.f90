@@ -9,6 +9,9 @@ module newton
     use mod_spatial,    only: update_space
 
     use mod_tecio,      only: write_tecio_variables
+
+
+    use mod_entropy,    only: compute_entropy_error
     implicit none
     private
 
@@ -67,6 +70,7 @@ contains
       
         integer(ik)             :: ninner_iterations(self%nsteps)    ! Record number of inner iterations for each step
 
+        real(rk)        :: entropy_error
 
 
 
@@ -90,22 +94,11 @@ contains
             !
             resid  = ONE    ! Force inner loop entry
             ninner = 0      ! Initialize inner loop counter
-            cfl0    = 1._rk
-            amp    = 0.01_rk
-            dtau   = cfl * amp
-
-            cfln = cfl0
 
             do while ( resid > self%tol )
                 call cpu_time(tstart)
                 ninner = ninner + 1
                 print*, "   ninner: ", ninner
-
-
-
-                !dtau = dcfln/30._rk
-                dtau = dtau * 10._rk
-
 
 
                 ! Store the value of the current inner iteration solution (k) for the solution update (n+1), q_(n+1)_k
@@ -134,17 +127,6 @@ contains
                 qnew = qold + dq
 
 
-!                ! Compute residual of nonlinear iteration
-!                resid = dq%norm()
-!
-!                ! Store residual norm for first iteration
-!                if (ninner == 1) then
-!                    rnorm_0 = dq%norm()
-!                end if
-!
-!                ! Store current residual norm
-!                rnorm_n = dq%norm()
-!                cfln = cfl0*(rnorm_0/rnorm_n)*10._rk
 
                 ! Clear working storage
                 call rhs%clear()
@@ -179,6 +161,9 @@ contains
             ninner_iterations(1) = ninner   ! Record number of inner iterations
 
 
+            ! Write final solution
+            write(filename, "(I7,A4)") 1000000+ninner, '.plt'
+            call write_tecio_variables(domain,trim(filename),ninner+1)
 
 
 
@@ -189,6 +174,8 @@ contains
         self%ninner_iterations = ninner_iterations  ! store inner iteration count to time-scheme object
 
 
+        entropy_error = compute_entropy_error(domain) 
+        print*, 'Entropy error: ', entropy_error
     end subroutine solve
 
 

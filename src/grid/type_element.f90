@@ -355,12 +355,12 @@ contains
         integer(ik)                         :: inode
 
         nnodes = self%gq%vol%nnodes
-        !> compute cartesian coordinates associated with quadrature points
+        ! compute cartesian coordinates associated with quadrature points
         x = matmul(self%gqmesh%vol%val,self%coords%mat(:,1))
         y = matmul(self%gqmesh%vol%val,self%coords%mat(:,2))
         z = matmul(self%gqmesh%vol%val,self%coords%mat(:,3))
 
-        !> Initialize each point with cartesian coordinates
+        ! Initialize each point with cartesian coordinates
         do inode = 1,nnodes
             call self%quad_pts(inode)%set(x(inode),y(inode),z(inode))
         end do

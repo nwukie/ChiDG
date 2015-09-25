@@ -51,6 +51,8 @@ module type_densematrix
         procedure :: resize     !> resize matrix storage
         procedure :: reparent   !> reassign parent
 
+        procedure :: dump       !> print out matrix contents
+
         final :: destructor
     end type densematrix_t
 
@@ -184,6 +186,41 @@ contains
 
         self%parent_ = par
     end subroutine
+
+
+
+
+
+
+
+
+
+
+
+    subroutine dump(self)
+        class(densematrix_t), intent(inout) :: self
+
+
+        integer(ik) :: irow
+
+        print*, self%parent_
+
+        do irow = 1,size(self%mat,1)
+            print*, self%mat(irow,:)
+        end do
+
+
+    end subroutine
+
+
+
+
+
+
+
+
+
+
 
 
     subroutine destructor(self)

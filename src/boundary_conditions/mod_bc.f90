@@ -20,7 +20,10 @@ module mod_bc
     use bc_linearadvection_extrapolate, only: linearadvection_extrapolate_t
     use bc_euler_wall,                  only: euler_wall_t
     use bc_euler_totalinlet,            only: euler_totalinlet_t
+    use bc_euler_totalinlet_old,        only: euler_totalinlet_old_t
     use bc_euler_pressureoutlet,        only: euler_pressureoutlet_t
+    use bc_euler_pressureoutlet_old,    only: euler_pressureoutlet_old_t
+    use bc_euler_extrapolate,           only: euler_extrapolate_t
     implicit none
 
 
@@ -29,7 +32,10 @@ module mod_bc
     type(periodic_t)                    :: PERIODIC
     type(euler_wall_t)                  :: EULER_WALL
     type(euler_totalinlet_t)            :: EULER_TOTALINLET
+    type(euler_totalinlet_old_t)        :: EULER_TOTALINLET_OLD
     type(euler_pressureoutlet_t)        :: EULER_PRESSUREOUTLET
+    type(euler_pressureoutlet_old_t)    :: EULER_PRESSUREOUTLET_OLD
+    type(euler_extrapolate_t)           :: EULER_EXTRAPOLATE
 
 
 
@@ -73,9 +79,26 @@ contains
             case ('euler_totalinlet','Euler_TotalInlet')
                 allocate(bc, source=EULER_TOTALINLET, stat=ierr)
 
+
+            ! Euler - total inlet old
+            case ('euler_totalinlet_old','Euler_TotalInlet_Old')
+                allocate(bc, source=EULER_TOTALINLET_OLD, stat=ierr)
+
+
+
             ! Euler - pressure oulet
             case ('euler_pressureoutlet','Euler_PressureOutlet')
                 allocate(bc, source=EULER_PRESSUREOUTLET, stat=ierr)
+
+
+            ! Euler - pressure oulet old
+            case ('euler_pressureoutlet_old','Euler_PressureOutlet_Old')
+                allocate(bc, source=EULER_PRESSUREOUTLET_OLD, stat=ierr)
+
+            ! Euler - extrapolate
+            case ('euler_extrapolate','Euler_Extrapolate')
+                allocate(bc, source=EULER_EXTRAPOLATE, stat=ierr)
+
 
             ! DEFAULT - ERROR
             case default

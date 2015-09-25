@@ -51,26 +51,28 @@ contains
         flux_z = (flux_z) * (elem%gq%vol%weights) * (elem%jinv)
 
 
-
-
         ! FLUX-X
         ! Multiply by column of test function gradients, integrate, add to RHS, add derivatives to linearization
-        integral = matmul(transpose(elem%dtdx),flux_x)                         !> Integrate
-!        integral = matmul(elem%invmass,integral)                               !> Multiply by inverse mass matrix
-        call store_volume_integrals(integral,sdata,ielem,ivar,iblk)            !> Store values and derivatives
+        integral = matmul(transpose(elem%dtdx),flux_x)                         ! Integrate
+        call store_volume_integrals(integral,sdata,ielem,ivar,iblk)            ! Store values and derivatives
+
+
+
+
 
         ! FLUX-Y
         ! Multiply by column of test function gradients, integrate, add to RHS, add derivatives to linearization
-        integral = matmul(transpose(elem%dtdy),flux_y)                         !> Integrate
-!        integral = matmul(elem%invmass,integral)                               !> Multiply by inverse mass matrix
-        call store_volume_integrals(integral,sdata,ielem,ivar,iblk)            !> Store values and derivatives
+        integral = matmul(transpose(elem%dtdy),flux_y)                         ! Integrate
+        call store_volume_integrals(integral,sdata,ielem,ivar,iblk)            ! Store values and derivatives
+
+
+
 
 
         ! FLUX-Z
         ! Multiply by column of test function gradients, integrate, add to RHS, add derivatives to linearization
-        integral = matmul(transpose(elem%dtdz),flux_z)                         !> Integrate
-!        integral = matmul(elem%invmass,integral)                               !> Multiply by inverse mass matrix
-        call store_volume_integrals(integral,sdata,ielem,ivar,iblk)            !> Store values and derivatives
+        integral = matmul(transpose(elem%dtdz),flux_z)                         ! Integrate
+        call store_volume_integrals(integral,sdata,ielem,ivar,iblk)            ! Store values and derivatives
 
 
     end subroutine
@@ -121,15 +123,12 @@ contains
 
 
             integral = matmul(transpose(val),flux_x)
-!            integral = matmul(face%invmass,integral)
             call store_boundary_integrals(integral,sdata,ielem,ivar,iblk)
 
             integral = matmul(transpose(val),flux_y)
-!            integral = matmul(face%invmass,integral)
             call store_boundary_integrals(integral,sdata,ielem,ivar,iblk)
 
             integral = matmul(transpose(val),flux_z)
-!            integral = matmul(face%invmass,integral)
             call store_boundary_integrals(integral,sdata,ielem,ivar,iblk)
 
         end associate
@@ -176,11 +175,35 @@ contains
         associate ( weights => face%gq%face%weights(:,iface), jinv => face%jinv, val => face%gq%face%val(:,:,iface) )
 
             ! Multiply each component by quadrature weights. The fluxes have already been multiplied by norm
+            !flux = (flux) * (weights) * (face%jinv)
+            !flux = (flux) * (weights) * (1/face%jinv)
             flux = (flux) * (weights)
 
 
             integral = matmul(transpose(val),flux)
+
+            !& DEBUG PRINT
+            !if ( (ielem == 6) .and. (iface == 2) ) then
+            !    print*, 'BOUNDARY CONTRIBUTION'
+            !    print*, integral%x_ad_
+            !end if
+
+            !& DEBUG PRINT
+            !if ((ielem == 6) .and. (iface ==2)) then
+            !    print*, 'RHS BEFORE'
+            !    print*, sdata%rhs%lvecs(ielem)%getvar(ivar)
+            !end if
+
+
             call store_boundary_integrals(integral,sdata,ielem,ivar,iblk)
+
+
+
+            !& DEBUG PRINT
+            !if ((ielem == 6) .and. (iface ==2)) then
+            !    print*, 'RHS AFTER'
+            !    print*, sdata%rhs%lvecs(ielem)%getvar(ivar)
+            !end if
 
 
         end associate
@@ -234,7 +257,6 @@ contains
             ! Only store rhs once. if iblk == DIAG
             !
             if (iblk == DIAG) then
-                !rhs(ielem)%mat(:,ivar) = rhs(ielem)%mat(:,ivar) - integral(:)%x_ad_   
                 vals = rhs(ielem)%getvar(ivar) - integral(:)%x_ad_
                 call rhs(ielem)%setvar(ivar,vals)
             end if
@@ -287,9 +309,10 @@ contains
             ! Only store rhs once. if iblk == DIAG
             !
             if (iblk == DIAG) then
-                !rhs(ielem)%mat(:,ivar) = rhs(ielem)%mat(:,ivar) + integral(:)%x_ad_
+
                 vals = rhs(ielem)%getvar(ivar) + integral(:)%x_ad_
                 call rhs(ielem)%setvar(ivar,vals)
+
             end if
 
 
@@ -301,6 +324,43 @@ contains
         end associate
 
     end subroutine
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+!    !> Integrate scalar over element volume
+!    !!
+!    !!
+!    !!
+!    !!
+!    !!
+!    !!
+!    !!
+!    !!
+!    !-------------------------------------------------------------------------
+!    function integrate_volume_scalar(elem,scalar)
+!        type(element_t),        intent(in)      :: elem
+!        real(rk),               intent(in)      :: scalar
+!        type(AD_D),             intent(inout)   :: flux_x(:), flux_y(:), flux_z(:)
+
+
+
+
+
+
+
 
 
 

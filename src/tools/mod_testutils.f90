@@ -22,6 +22,12 @@ contains
 
 
         select case (trim(string))
+            case ('1x1x1','111')
+                call meshgen_1x1x1_linear(pts)
+
+            case ('1x1x1_unit','111u')
+                call meshgen_1x1x1_unit_linear(pts)
+
             case ('3x3x3','333')
                 call meshgen_3x3x3_linear(pts)
 
@@ -61,6 +67,129 @@ contains
 
 
     end subroutine
+
+
+
+
+
+
+
+
+
+
+
+    !> Generate a set of points defining a 1x1x1 element mesh
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @param[inout]   pts     points_t array of rank-3 that gets allocated, filled, and returned
+    !---------------------------------------------------------------------
+    subroutine meshgen_1x1x1_linear(pts)
+        type(point_t), allocatable, intent(inout)  :: pts(:,:,:)
+
+        integer(ik) :: ipt_xi, ipt_eta, ipt_zeta, ipt, ierr, npts_x, npts_y, npts_z
+        real(rk)    :: x,y,z, dx, dy, dz
+
+        ! elements (1x1x1) - linear
+
+        npts_x = 2
+        npts_y = 2
+        npts_z = 2
+
+        dx = 1._rk
+        dy = 1._rk
+        dz = 1._rk
+
+        ! Allocate point storage
+        allocate(pts(npts_x,npts_y,npts_z), stat=ierr)
+        if (ierr /= 0) call AllocationError
+
+        ipt = 1
+        z = ZERO
+        do ipt_zeta = 1,npts_z
+            y = ZERO
+
+            do ipt_eta = 1,npts_y
+                x = ZERO
+
+                do ipt_xi = 1,npts_x
+                    call pts(ipt_xi,ipt_eta,ipt_zeta)%set(x, y, z)
+                    ipt = ipt + 1
+                    x = x + dx
+                end do
+
+                y = y + dy
+            end do
+
+            z = z + dz
+        end do
+
+    end subroutine
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    !> Generate a set of points defining a 1x1x1 element mesh
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @param[inout]   pts     points_t array of rank-3 that gets allocated, filled, and returned
+    !---------------------------------------------------------------------
+    subroutine meshgen_1x1x1_unit_linear(pts)
+        type(point_t), allocatable, intent(inout)  :: pts(:,:,:)
+
+        integer(ik) :: ipt_xi, ipt_eta, ipt_zeta, ipt, ierr, npts_x, npts_y, npts_z
+        real(rk)    :: x,y,z, dx, dy, dz
+
+        ! elements (1x1x1) - linear
+
+        npts_x = 2
+        npts_y = 2
+        npts_z = 2
+
+        dx = 2._rk
+        dy = 2._rk
+        dz = 2._rk
+
+        ! Allocate point storage
+        allocate(pts(npts_x,npts_y,npts_z), stat=ierr)
+        if (ierr /= 0) call AllocationError
+
+        ipt = 1
+        z = -ONE
+        do ipt_zeta = 1,npts_z
+            y = -ONE
+
+            do ipt_eta = 1,npts_y
+                x = -ONE
+
+                do ipt_xi = 1,npts_x
+                    call pts(ipt_xi,ipt_eta,ipt_zeta)%set(x, y, z)
+                    ipt = ipt + 1
+                    x = x + dx
+                end do
+
+                y = y + dy
+            end do
+
+            z = z + dz
+        end do
+
+    end subroutine
+
+
+
+
+
+
 
 
 

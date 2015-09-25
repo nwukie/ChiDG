@@ -1,6 +1,6 @@
 module bc_euler_totalinlet
     use mod_kinds,          only: rk,ik
-    use mod_constants,      only: ONE, TWO, HALF
+    use mod_constants,      only: ONE, TWO, HALF, ZERO
     use atype_bc,           only: bc_t
     use atype_solverdata,   only: solverdata_t
     use type_mesh,          only: mesh_t
@@ -11,6 +11,7 @@ module bc_euler_totalinlet
     use DNAD_D
     
     use EULER_properties,   only: EULER_properties_t
+    implicit none
 
 
     !> Extrapolation boundary condition 
@@ -63,10 +64,10 @@ contains
                         u_m,    v_m,    w_m,                                &
                         u_bc,   v_bc,   w_bc,                               &
                         T_bc,   p_bc,   rho_bc, rhoE_bc,                    &
-                        vmag2_m, H_bc
+                        vmag2_m, vmag, H_bc
 
         real(rk)    :: gam_m, cp_m, TT, PT, M
-
+        real(rk)    :: norm_bc(3)
 
 
         !
@@ -87,10 +88,11 @@ contains
         !
         ! Set boundary condition Total Temperature and Total Pressure
         !
-        !TT = 300._rk
-        !PT = 110000._rk
-        TT = 1.05_rk
-        PT = 3.40620959_rk
+        TT = 300._rk
+        PT = 110000._rk
+        norm_bc = [ONE, ZERO, ZERO]
+        !TT = 1.0_rk
+        !PT = 3.45619374_rk
 
 
 
@@ -112,31 +114,42 @@ contains
             v_m = rhov_m/rho_m
             w_m = rhow_m/rho_m
 
-            u_bc = -abs(u_m)*unorms(:,1)
-            v_bc = abs(v_m)*unorms(:,2)
-            w_bc = abs(w_m)*unorms(:,3)
-
-
-
             !
             ! Compute velocity magnitude squared from interior state
             !
             vmag2_m = (u_m*u_m) + (v_m*v_m) + (w_m*w_m)
+            vmag = sqrt(vmag2_m)
+
+
+            !
+            ! Compute boundary condition velocity components from imposed direction
+            !
+            u_bc = vmag*norm_bc(1)
+            v_bc = vmag*norm_bc(2)
+            w_bc = vmag*norm_bc(3)
+
+
 
 
             !
             ! Compute boundary condition temperature and pressure
             !
             !& HARDCODED GAMMA. HARDCODED CP
+            gam_m = 1.4_rk
+
+            select type(prop)
+                type is (EULER_properties_t)
+                    cp_m  = (prop%R)*(gam_m/(gam_m-ONE))
+            end select
+
+            T_bc = TT - (vmag2_m)/(TWO*cp_m)
+            p_bc = PT*((T_bc/TT)**(gam_m/(gam_m-ONE)))
+
             !gam_m = 1.4_rk
             !cp_m  = 1000._rk
-            !T_bc = TT - (vmag2_m)/(TWO*cp_m)
+            !M     = 0.4944152_rk
+            !T_bc = TT - (gam_m - ONE)*(M**TWO)*(vmag2_m)/(TWO)
             !p_bc = PT*((T_bc/TT)**(gam_m/(gam_m-ONE)))
-            gam_m = 1.4_rk
-            cp_m  = 1000._rk
-            M     = 0.37059_rk
-            T_bc = TT - (gam_m - ONE)*(M**TWO)*(vmag2_m)/(TWO)
-            p_bc = PT*((T_bc/TT)**(gam_m/(gam_m-ONE)))
 
 
             !
@@ -144,8 +157,8 @@ contains
             !
             select type(prop)
                 type is (EULER_properties_t)
-                    !rho_bc = p_bc/(T_bc*prop%R)
-                    rho_bc = gam_m*(M**TWO)*p_bc/(T_bc)
+                    rho_bc = p_bc/(T_bc*prop%R)
+                    !rho_bc = gam_m*(M**TWO)*p_bc/(T_bc)
             end select
 
 
@@ -158,12 +171,13 @@ contains
             H_bc    = (rhoE_bc + p_bc)/rho_bc
 
 
+
             !=================================================
             ! Mass flux
             !=================================================
-            flux_x = rho_bc * u_bc
-            flux_y = rho_bc * v_bc
-            flux_z = rho_bc * w_bc
+            flux_x = (rho_bc * u_bc)
+            flux_y = (rho_bc * v_bc)
+            flux_z = (rho_bc * w_bc)
             flux = flux_x*norms(:,1) + flux_y*norms(:,2) + flux_z*norms(:,3)
 
             call integrate_boundary_scalar_flux(mesh%faces(ielem,iface),sdata,irho,iblk,flux)
@@ -171,9 +185,9 @@ contains
             !=================================================
             ! x-momentum flux
             !=================================================
-            flux_x = rho_bc*u_bc*u_bc + p_bc
-            flux_y = rho_bc*u_bc*v_bc
-            flux_z = rho_bc*u_bc*w_bc
+            flux_x = (rho_bc * u_bc * u_bc) + p_bc
+            flux_y = (rho_bc * u_bc * v_bc)
+            flux_z = (rho_bc * u_bc * w_bc)
             flux = flux_x*norms(:,1) + flux_y*norms(:,2) + flux_z*norms(:,3)
 
             call integrate_boundary_scalar_flux(mesh%faces(ielem,iface),sdata,irhou,iblk,flux)
@@ -181,9 +195,9 @@ contains
             !=================================================
             ! y-momentum flux
             !=================================================
-            flux_x = rho_bc*v_bc*u_bc
-            flux_y = rho_bc*v_bc*v_bc + p_bc
-            flux_z = rho_bc*v_bc*w_bc
+            flux_x = (rho_bc * v_bc * u_bc)
+            flux_y = (rho_bc * v_bc * v_bc) + p_bc
+            flux_z = (rho_bc * v_bc * w_bc)
             flux = flux_x*norms(:,1) + flux_y*norms(:,2) + flux_z*norms(:,3)
 
             call integrate_boundary_scalar_flux(mesh%faces(ielem,iface),sdata,irhov,iblk,flux)
@@ -191,9 +205,9 @@ contains
             !=================================================
             ! z-momentum flux
             !=================================================
-            flux_x = rho_bc*w_bc*u_bc
-            flux_y = rho_bc*w_bc*v_bc
-            flux_z = rho_bc*w_bc*w_bc + p_bc
+            flux_x = (rho_bc * w_bc * u_bc)
+            flux_y = (rho_bc * w_bc * v_bc)
+            flux_z = (rho_bc * w_bc * w_bc) + p_bc
             flux = flux_x*norms(:,1) + flux_y*norms(:,2) + flux_z*norms(:,3)
 
             call integrate_boundary_scalar_flux(mesh%faces(ielem,iface),sdata,irhow,iblk,flux)
@@ -202,9 +216,9 @@ contains
             !=================================================
             ! Energy flux
             !=================================================
-            flux_x = rho_bc * u_bc * H_bc
-            flux_y = rho_bc * v_bc * H_bc
-            flux_z = rho_bc * w_bc * H_bc
+            flux_x = (rho_bc * u_bc * H_bc)
+            flux_y = (rho_bc * v_bc * H_bc)
+            flux_z = (rho_bc * w_bc * H_bc)
             flux = flux_x*norms(:,1) + flux_y*norms(:,2) + flux_z*norms(:,3)
 
             call integrate_boundary_scalar_flux(mesh%faces(ielem,iface),sdata,irhoE,iblk,flux)

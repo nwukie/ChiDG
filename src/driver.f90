@@ -29,7 +29,7 @@ program driver
     implicit none
     type(chidg_t)                       :: chidg
     type(point_t),          allocatable :: pts(:,:,:)
-    class(function_t),      allocatable :: constant, vortex
+    class(function_t),      allocatable :: constant, vortex, sod, roe
     type(dict_t)                        :: toptions
     integer(ik)                         :: nterms_c 
 
@@ -46,7 +46,7 @@ program driver
     ! Initialize grid and numerics
     !
     call read_grid_hdf(gridfile,chidg%domains)
-    !call meshgen('15x15x2',pts)
+    !call meshgen('333',pts)
     !call chidg%set('ndomains','')
     !nterms_c = 8
     !call chidg%domains(1)%init_geom(nterms_c,pts)
@@ -72,14 +72,26 @@ program driver
         !
         ! Initialize domain
         !
+        !call dom%init_bc('euler_totalinlet_old',XI_MIN)
         call dom%init_bc('euler_totalinlet',XI_MIN)
+        !call dom%init_bc('euler_pressureoutlet_old',XI_MAX)
         call dom%init_bc('euler_pressureoutlet',XI_MAX)
         !call dom%init_bc('euler_wall',XI_MIN)
         !call dom%init_bc('euler_wall',XI_MAX)
+        !call dom%init_bc('euler_totalinlet',ETA_MIN)
+        !call dom%init_bc('euler_pressureoutlet',ETA_MAX)
         call dom%init_bc('euler_wall',ETA_MIN)
         call dom%init_bc('euler_wall',ETA_MAX)
         call dom%init_bc('euler_wall',ZETA_MIN)
         call dom%init_bc('euler_wall',ZETA_MAX)
+        !call dom%init_bc('euler_totalinlet',ZETA_MIN)
+        !call dom%init_bc('euler_pressureoutlet',ZETA_MAX)
+        !call dom%init_bc('euler_extrapolate',XI_MIN)
+        !call dom%init_bc('euler_extrapolate',XI_MAX)
+        !call dom%init_bc('euler_extrapolate',ETA_MIN)
+        !call dom%init_bc('euler_extrapolate',ETA_MAX)
+        !call dom%init_bc('euler_extrapolate',ZETA_MIN)
+        !call dom%init_bc('euler_extrapolate',ZETA_MAX)
 
         call dom%init_sol(eqnset,nterms_s)
 
@@ -87,17 +99,59 @@ program driver
         ! Initialize solution
         !
         call create_function(constant,'constant')
-        
-        call constant%set('val',1._rk)
+        call create_function(sod,'sod')
+        call create_function(roe,'roe_check') 
+
+    
+        ! rho
+        call constant%set('val',1.13262_rk)
         call initialize_variable(dom,1,constant)
-        call constant%set('val',1._rk)
+
+        ! rho_u
+        call constant%set('val',190.339029_rk)
         call initialize_variable(dom,2,constant)
+
+        ! rho_v
         call constant%set('val',ZERO)
         call initialize_variable(dom,3,constant)
+
+        ! rho_w
         call constant%set('val',ZERO)
         call initialize_variable(dom,4,constant)
-        call constant%set('val',13.5023_rk)
+
+        ! rho_E
+        call constant%set('val',248493.425_rk)
         call initialize_variable(dom,5,constant)
+
+
+
+!        ! rho
+!        call roe%set('var',ONE)
+!        call initialize_variable(dom,1,roe)
+!
+!        ! rho_u
+!        call roe%set('var',TWO)
+!        call initialize_variable(dom,2,roe)
+!
+!        ! rho_v
+!        call roe%set('var',THREE)
+!        call initialize_variable(dom,3,roe)
+!
+!        ! rho_w
+!        call roe%set('var',FOUR)
+!        call initialize_variable(dom,4,roe)
+!
+!        ! rho_E
+!        call roe%set('var',FIVE)
+!        call initialize_variable(dom,5,roe)
+!
+
+
+
+
+
+
+
 
     end associate
 

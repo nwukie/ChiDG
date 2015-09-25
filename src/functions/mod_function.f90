@@ -10,6 +10,8 @@ module mod_function
     use fcn_gaussian,           only: gaussian_f
     use fcn_constant,           only: constant_f
     use fcn_isentropic_vortex,  only: isentropic_vortex_f
+    use fcn_sod_shock_tube,     only: sod_shock_tube_f
+    use fcn_roe_check,          only: roe_check_f
     implicit none
 
     ! LIST OF FUNCTION OBJECTS
@@ -20,6 +22,8 @@ module mod_function
     type(gaussian_f)            :: gaussian
     type(constant_f)            :: constant
     type(isentropic_vortex_f)   :: isentropic_vortex
+    type(sod_shock_tube_f)      :: sod_shock_tube
+    type(roe_check_f)           :: roe_check
 
 
 contains
@@ -57,6 +61,12 @@ contains
 
             case ('isentropic_vortex','isentropic vortex')
                 allocate(fcn,source=isentropic_vortex)
+
+            case ('sod','sod_shock_tube')
+                allocate(fcn,source=sod_shock_tube)
+
+            case ('roe_check')
+                allocate(fcn,source=roe_check)
 
             case default
                 stop "Error: assign_function -- function string not recognized"

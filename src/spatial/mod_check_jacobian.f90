@@ -362,8 +362,4 @@ contains
 
 
 
-
-
-
-
 end module mod_check_jacobian

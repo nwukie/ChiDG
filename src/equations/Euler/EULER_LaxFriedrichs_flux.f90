@@ -143,8 +143,8 @@ contains
             upwind = -wave*(rho_p - rho_m)
 
             flux = HALF*(upwind)
+            !flux = HALF*(upwind)*norms(:,1) + HALF*(upwind)*norms(:,2) + HALF*(upwind)*norms(:,3)
 
-            ! Dot product with normal vector
             call integrate_boundary_scalar_flux(mesh%faces(ielem,iface),sdata,irho,iblk,flux)
 
 
@@ -154,8 +154,8 @@ contains
             upwind = -wave*(rhou_p - rhou_m)
 
             flux = HALF*(upwind)
+            !flux = HALF*(upwind)*norms(:,1) + HALF*(upwind)*norms(:,2) + HALF*(upwind)*norms(:,3)
 
-            ! Dot product with normal vector
             call integrate_boundary_scalar_flux(mesh%faces(ielem,iface),sdata,irhou,iblk,flux)
 
 
@@ -165,8 +165,8 @@ contains
             upwind = -wave*(rhov_p - rhov_m)
 
             flux = HALF*(upwind)
+            !flux = HALF*(upwind)*norms(:,1) + HALF*(upwind)*norms(:,2) + HALF*(upwind)*norms(:,3)
 
-            ! Dot product with normal vector
             call integrate_boundary_scalar_flux(mesh%faces(ielem,iface),sdata,irhov,iblk,flux)
 
             !================================
@@ -175,8 +175,8 @@ contains
             upwind = -wave*(rhow_p - rhow_m)
 
             flux = HALF*(upwind)
+            !flux = HALF*(upwind)*norms(:,1) + HALF*(upwind)*norms(:,2) + HALF*(upwind)*norms(:,3)
 
-            ! Dot product with normal vector
             call integrate_boundary_scalar_flux(mesh%faces(ielem,iface),sdata,irhow,iblk,flux)
 
             !================================
@@ -185,8 +185,8 @@ contains
             upwind = -wave*(rhoE_p - rhoE_m)
 
             flux = HALF*(upwind)
+            !flux = HALF*(upwind)*norms(:,1) + HALF*(upwind)*norms(:,2) + HALF*(upwind)*norms(:,3)
 
-            ! Dot product with normal vector
             call integrate_boundary_scalar_flux(mesh%faces(ielem,iface),sdata,irhoE,iblk,flux)
 
         end associate

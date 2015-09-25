@@ -40,6 +40,7 @@ contains
 
         real(rk)    :: gam
 
+        !& DEBUG, HARDCODED GAMMA
         gam = 1.4_rk
 
         vals = (gam-ONE)*(rhoE - HALF*rho*((rhou*rhou)/(rho*rho) + (rhov*rhov)/(rho*rho) + (rhow*rhow)/(rho*rho)))

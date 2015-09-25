@@ -89,8 +89,8 @@ contains
         ! Allocate flux components to specific types for the equation set
         !
         call self%add_boundary_advective_flux(average_flux)
-        !call self%add_boundary_advective_flux(roe)
-        call self%add_boundary_advective_flux(lax)
+        call self%add_boundary_advective_flux(roe)
+        !call self%add_boundary_advective_flux(lax)
         call self%add_volume_advective_flux(volume_flux)
 
 

@@ -33,8 +33,9 @@ endif()
 
 
 
-add_executable(plot3d_to_hdf5 plot3d_to_hdf5.f90 ../constants/mod_kinds.f90)
-target_link_libraries(plot3d_to_hdf5 ${HDF5_LIBRARIES})
+#add_executable(plot3d_to_hdf5 plot3d_to_hdf5.f90 ../constants/mod_kinds.f90)
+add_executable(plot3d_to_hdf5 plot3d_to_hdf5.f90)
+target_link_libraries(plot3d_to_hdf5 coredg ${HDF5_LIBRARIES})
 set_target_properties(plot3d_to_hdf5 PROPERTIES 
                             COMPILE_FLAGS "${COMPILE_FLAGS_plot3dtohdf5_RELEASE}"
                             LINK_FLAGS    "${LINK_FLAGS_plot3dtohdf5_RELEASE}")

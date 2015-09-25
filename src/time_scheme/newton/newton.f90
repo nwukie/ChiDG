@@ -70,7 +70,7 @@ contains
       
         integer(ik)             :: ninner_iterations(self%nsteps)    ! Record number of inner iterations for each step
 
-        real(rk)        :: entropy_error
+        real(rk)        :: entropy_error, start_time, stop_time, elapsed_time
 
 
 
@@ -90,10 +90,12 @@ contains
 
 
             !
-            ! NONLINEAR CONVERGENCE INNER LOOP
+            ! NONLINEAR CONVERGENCE LOOP
             !
             resid  = ONE    ! Force inner loop entry
             ninner = 0      ! Initialize inner loop counter
+
+            call cpu_time(start_time)
 
             do while ( resid > self%tol )
                 call cpu_time(tstart)
@@ -157,6 +159,11 @@ contains
 
 
             end do ! ninner
+
+
+            call cpu_time(stop_time)
+            elapsed_time = stop_time - start_time
+            print*, 'EXECUTION TIME: ', elapsed_time
 
             ninner_iterations(1) = ninner   ! Record number of inner iterations
 

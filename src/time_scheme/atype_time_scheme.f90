@@ -3,6 +3,7 @@ module atype_time_scheme
     use type_domain,        only: domain_t
     use atype_matrixsolver, only: matrixsolver_t
     use type_dict,          only: dict_t
+    use type_timer,         only: timer_t
     implicit none
 
 
@@ -27,6 +28,9 @@ module atype_time_scheme
         real(rk)    :: tol = 1.e-13_rk      !< Convergence tolerance
         integer(ik) :: nsteps = 100         !< Number of time steps to compute
         integer(ik) :: nwrite = 10          !< Write data every 'nwrite' steps
+
+
+        type(timer_t)                   :: timer
 
 
     contains

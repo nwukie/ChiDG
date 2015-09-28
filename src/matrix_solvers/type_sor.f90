@@ -110,10 +110,16 @@ contains
 
             !xnew = (ONE-omega)*xold + omega*x
 
+
+            !
+            ! Compute residual
+            !
             diff = x - xold
-            !diff = xnew - xold
             res = diff%norm()/x%norm()
-            print*, res
+            
+            if (self%report) then
+                print*, res
+            end if
 
             xold = x
             !xold = xnew    ! store old solution

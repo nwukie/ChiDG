@@ -6,9 +6,11 @@ module quasi_newton
     use atype_matrixsolver, only: matrixsolver_t
     use type_blockvector
 
-    use mod_spatial,    only: update_space
+    use mod_spatial,        only: update_space
 
-    use mod_tecio,      only: write_tecio_variables
+    use mod_tecio,          only: write_tecio_variables
+
+    use mod_entropy,        only: compute_entropy_error
     implicit none
     private
 
@@ -60,8 +62,7 @@ contains
         character(100)          :: filename
         integer(ik)             :: itime, nsteps, ielem, wcount, iblk, iindex, ninner, iinner, ieqn
         integer(ik)             :: rstart, rend, cstart, cend, nterms
-        real(rk)                :: resid, rnorm_0, rnorm_n, dtau, amp, cfl, cfl0, cfln
-        real                    :: tstart, tstop, telapsed
+        real(rk)                :: resid, rnorm_0, rnorm_n, dtau, amp, cfl, cfl0, cfln, entropy_error
         real(rk), allocatable   :: vals(:)
         type(blockvector_t)     :: b, qn, qold, qnew, dqdtau
       
@@ -70,15 +71,17 @@ contains
 
 
 
-        tstart = 0.
-        tstop = 0.
-        telapsed = 0.
 
         wcount = 1
         ninner = 10
         associate ( q => domain%sdata%q, dq => domain%sdata%dq, rhs => domain%sdata%rhs, lin => domain%sdata%lin, dt => self%dt)
 
             print*, 'entering time'
+            !
+            ! start timer
+            !
+            call self%timer%reset()
+            call self%timer%start()
 
 
             ! Store qn, since q will be operated on in the inner loop
@@ -96,8 +99,9 @@ contains
 
             cfln = cfl0
 
+
+
             do while ( resid > self%tol )
-                call cpu_time(tstart)
                 ninner = ninner + 1
                 print*, "   ninner: ", ninner
 
@@ -112,13 +116,16 @@ contains
                 qold = q
 
 
+                !
                 ! Update Spatial Residual and Linearization (rhs, lin)
+                !
                 call update_space(domain)
 
 
 
-
+                !
                 ! Add mass/dt to sub-block diagonal in dR/dQ
+                !
                 do ielem = 1,domain%mesh%nelem
                     nterms = domain%mesh%nterms_s
                     do ieqn = 1,domain%eqnset%neqns
@@ -139,19 +146,25 @@ contains
                 end do
 
 
+                !
                 ! Assign rhs to b, which should allocate storage
+                !
                 !b = (rhs)  ! BEWARE: this causes an error. Parentheses operator not defined
                 b = (-ONE)*rhs
 
 
 
 
+                !
                 ! We need to solve the matrix system Ax=b for the update vector x (dq)
+                !
                 call matrixsolver%solve(lin,dq,b)
 
 
 
+                !
                 ! Advance solution with update vector
+                !
                 qnew = qold + dq
 
 
@@ -179,9 +192,6 @@ contains
                 q = qnew
 
 
-                call cpu_time(tstop)
-                telapsed = tstop - tstart
-                print*, "   Iteration time (s): ", telapsed
                 print*, "   DQ - Norm: ", resid
                 print*, "   dtau (ps): ", dtau
 
@@ -198,8 +208,16 @@ contains
 
             ninner_iterations(1) = ninner   ! Record number of inner iterations
 
+            !
+            ! stop timer
+            !
+            call self%timer%stop()
+            call self%timer%report('Solver Elapsed Time:')
 
 
+            ! Write Final Solution
+            write(filename, "(I7,A4)") 1000000+ninner, '.plt'
+            call write_tecio_variables(domain,trim(filename),ninner+1)
 
 
         end associate
@@ -208,6 +226,10 @@ contains
 
         self%ninner_iterations = ninner_iterations  ! store inner iteration count to time-scheme object
 
+
+
+        entropy_error = compute_entropy_error(domain)
+        print*, 'Entropy error: ', entropy_error
 
     end subroutine solve
 

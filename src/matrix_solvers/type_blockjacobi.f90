@@ -99,7 +99,10 @@ contains
 
             diff = x - xold
             res = diff%norm()
-            print*, res
+
+            if (self%report) then 
+                print*, res
+            end if
 
             xold = x    ! update solution
         end do ! res > self%tol

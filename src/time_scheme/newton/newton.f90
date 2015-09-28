@@ -17,7 +17,11 @@ module newton
 
 
 
-    !>  Solution advancement via the backward-euler method
+    !>  Solution advancement via the newton's method
+    !!
+    !!
+    !!
+    !!
     !!
     !!  @author Nathan A. Wukie
     !!
@@ -56,7 +60,7 @@ contains
     !!
     !-------------------------------------------------------------------------------------------------
     subroutine solve(self,domain,matrixsolver)
-        class(newton_t),              intent(inout)   :: self
+        class(newton_t),                    intent(inout)   :: self
         type(domain_t),                     intent(inout)   :: domain
         class(matrixsolver_t), optional,    intent(inout)   :: matrixsolver
 
@@ -64,25 +68,25 @@ contains
         integer(ik)             :: itime, nsteps, ielem, wcount, iblk, iindex, ninner, iinner, ieqn
         integer(ik)             :: rstart, rend, cstart, cend, nterms
         real(rk)                :: resid, rnorm_0, rnorm_n, dtau, amp, cfl, cfl0, cfln
-        real                    :: tstart, tstop, telapsed
         real(rk), allocatable   :: vals(:)
         type(blockvector_t)     :: b, qn, qold, qnew, dqdtau
       
         integer(ik)             :: ninner_iterations(self%nsteps)    ! Record number of inner iterations for each step
 
-        real(rk)        :: entropy_error, start_time, stop_time, elapsed_time
+        real(rk)                :: entropy_error
 
 
 
-        tstart = 0.
-        tstop = 0.
-        telapsed = 0.
 
         wcount = 1
         ninner = 10
         associate ( q => domain%sdata%q, dq => domain%sdata%dq, rhs => domain%sdata%rhs, lin => domain%sdata%lin, dt => self%dt)
 
             print*, 'entering time'
+            !
+            ! start timer
+            !
+            call self%timer%start()
 
 
             ! Store qn, since q will be operated on in the inner loop
@@ -95,42 +99,52 @@ contains
             resid  = ONE    ! Force inner loop entry
             ninner = 0      ! Initialize inner loop counter
 
-            call cpu_time(start_time)
 
             do while ( resid > self%tol )
-                call cpu_time(tstart)
                 ninner = ninner + 1
                 print*, "   ninner: ", ninner
 
 
+                !
                 ! Store the value of the current inner iteration solution (k) for the solution update (n+1), q_(n+1)_k
+                !
                 qold = q
 
 
+                !
                 ! Update Spatial Residual and Linearization (rhs, lin)
+                !
                 call update_space(domain)
 
                 resid = rhs%norm()
 
 
+                !
                 ! Assign rhs to b, which should allocate storage
+                !
                 !b = (rhs)  ! BEWARE: this causes an error. Parentheses operator not defined
                 b = (-ONE)*rhs
 
 
 
 
+                !
                 ! We need to solve the matrix system Ax=b for the update vector x (dq)
+                !
                 call matrixsolver%solve(lin,dq,b)
 
 
 
+                !
                 ! Advance solution with update vector
+                !
                 qnew = qold + dq
 
 
 
+                !
                 ! Clear working storage
+                !
                 call rhs%clear()
                 call dq%clear()
                 call lin%clear()
@@ -138,18 +152,26 @@ contains
                 
 
 
+                !
                 ! Store updated solution vector (qnew) to working solution vector (q)
+                !
                 q = qnew
 
 
-                call cpu_time(tstop)
-                telapsed = tstop - tstart
-                print*, "   Iteration time (s): ", telapsed
+
+                !
+                ! Print diagnostics
+                !
 !                print*, "   DQ - Norm: ", resid
                 print*, "   R(Q) - Norm: ", resid
                 print*, "   dtau (ps): ", dtau
 
 
+
+    
+                !
+                ! Write incremental solution
+                !
                 if (wcount == self%nwrite) then
                     write(filename, "(I7,A4)") 1000000+ninner, '.plt'
                     call write_tecio_variables(domain,trim(filename),ninner+1)
@@ -161,14 +183,20 @@ contains
             end do ! ninner
 
 
-            call cpu_time(stop_time)
-            elapsed_time = stop_time - start_time
-            print*, 'EXECUTION TIME: ', elapsed_time
+            !
+            ! stop timer
+            !
+            call self%timer%stop()
+            call self%timer%report('Solver Elapsed Time:')
 
             ninner_iterations(1) = ninner   ! Record number of inner iterations
 
 
+
+
+            !
             ! Write final solution
+            !
             write(filename, "(I7,A4)") 1000000+ninner, '.plt'
             call write_tecio_variables(domain,trim(filename),ninner+1)
 

@@ -87,6 +87,8 @@ subroutine test_gaussseidel_solve()
     !
     ! Solve matrix system. Ax=b. TESTING
     !
+    matrix_solver%report = .false.  
+    matrix_solver%tol    = 1.e-13_rk
     call matrix_solver%solve(A,x,b)
 
 

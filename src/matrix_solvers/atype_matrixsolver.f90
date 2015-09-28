@@ -3,6 +3,8 @@ module atype_matrixsolver
     use type_dict,          only: dict_t
     use type_blockmatrix,   only: blockmatrix_t
     use type_blockvector
+    use type_timer,         only: timer_t
+    
 
 
 
@@ -16,8 +18,11 @@ module atype_matrixsolver
     !-------------------------------------------------------------
     type, public, abstract :: matrixsolver_t
 
-        real(rk)    :: tol = 5.e-10_rk      !< Convergance tolerance for iterative solvers
+        real(rk)        :: tol = 5.e-10_rk      !< Convergance tolerance for iterative solvers
 
+        type(timer_t)   :: timer                !< Timer for linear system solve
+
+        logical         :: report = .true.      !< Flag to enable/disable matrix residual reporting
 
     contains
     

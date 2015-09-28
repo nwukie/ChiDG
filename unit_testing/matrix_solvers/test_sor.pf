@@ -87,6 +87,8 @@ subroutine test_sor_solve()
     !
     ! Solve matrix system. Ax=b. TESTING
     !
+    matrix_solver%tol    = 1.e-13_rk
+    matrix_solver%report = .false.
     call matrix_solver%solve(A,x,b)
 
 

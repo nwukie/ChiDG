@@ -2,6 +2,7 @@ module mod_spatial
     use mod_kinds,      only: rk,ik
     use mod_constants,  only: NFACES, DIAG
     use type_domain,    only: domain_t
+    use type_timer,     only: timer_t
 
     implicit none
 
@@ -12,10 +13,15 @@ contains
         type(domain_t), intent(inout)   :: domain
         integer(ik), optional           :: info
 
-        integer(ik) :: iblk, ielem, iface, nelem, i, ibc, iflux, nflux
-        real(rk)    :: istart, istop, elapsed
-        logical     :: skip = .false.
+        type(timer_t)               :: timer
+        integer(ik)                 :: iblk, ielem, iface, nelem, i, ibc, iflux, nflux
+        logical                     :: skip = .false.
 
+
+        !
+        ! Start timer on spatial discretization update
+        !
+        call timer%start()
 
         associate ( mesh => domain%mesh, sdata => domain%sdata, eqnset => domain%eqnset, prop => domain%eqnset%prop)
 
@@ -26,7 +32,6 @@ contains
 
             !> Loop through given element and neighbors and compute the corresponding linearization
             !> XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX, DIAG
-            call cpu_time(istart)
 
             do iblk = 1,7
 
@@ -140,11 +145,9 @@ contains
 
 
 
+            call timer%stop()
+            call timer%report('Spatial Discretization Time')
 
-            call cpu_time(istop)
-
-            elapsed = istop - istart
-            print*, 'Update space: ', elapsed
 
         end associate
 

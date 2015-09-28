@@ -58,17 +58,26 @@ contains
 
         integer(ik) :: i
 
+        !
+        ! Start timer
+        !
+        call self%timer%reset()
+        call self%timer%start()
 
         print*, '           Matrix Solver: '
 
 
+        !
         ! Initialize D blocks
+        !
         do ielem = 1,size(A%lblks,1)
             D(ielem) = A%lblks(ielem,DIAG)
         end do
 
 
+        !
         ! Replace the block diagonal D with inverse of D
+        !
         do ielem = 1,size(A%lblks,1)
             D(ielem)%mat = inv(D(ielem)%mat)
         end do
@@ -84,7 +93,9 @@ contains
             
             
 
+            !
             ! form b - Ax, except for diagonal
+            !
             r = b
             do ielem = 1,size(A%lblks,1)
                 do iblk = 1,6   ! don't multiply diagonal
@@ -98,14 +109,24 @@ contains
                     end if
 
                 end do
+
+                !
                 ! Multiply by inverse block diagonal
+                !
                 x%lvecs(ielem)%vec = matmul(D(ielem)%mat,r%lvecs(ielem)%vec)
             end do
 
 
+
+            !
+            ! Compute residual
+            !
             diff = x - xold
             res = diff%norm()/x%norm()
-            print*, res
+
+            if (self%report) then
+                print*, res
+            end if
 
             xold = x    ! store old solution
 
@@ -120,7 +141,11 @@ contains
 
 
 
-
+        !
+        ! Report timings
+        !
+        call self%timer%stop()
+        call self%timer%report('Matrix solver compute time:')
 
 
 

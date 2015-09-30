@@ -2,6 +2,8 @@ set(test_files unit
                test_directsolver.pf
                test_gaussseidel.pf
                test_sor.pf
+               test_gmres.pf
+               test_gmres_ref.pf
                )
 
 

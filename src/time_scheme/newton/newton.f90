@@ -10,7 +10,6 @@ module newton
 
     use mod_tecio,      only: write_tecio_variables
 
-
     use mod_entropy,    only: compute_entropy_error
     implicit none
     private

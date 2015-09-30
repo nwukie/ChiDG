@@ -4,6 +4,9 @@ module atype_matrixsolver
     use type_blockmatrix,   only: blockmatrix_t
     use type_blockvector
     use type_timer,         only: timer_t
+    use operator_mv
+
+    implicit none
     
 
 
@@ -18,7 +21,7 @@ module atype_matrixsolver
     !-------------------------------------------------------------
     type, public, abstract :: matrixsolver_t
 
-        real(rk)        :: tol = 5.e-10_rk      !< Convergance tolerance for iterative solvers
+        real(rk)        :: tol = 1.e-7_rk      !< Convergance tolerance for iterative solvers
 
         type(timer_t)   :: timer                !< Timer for linear system solve
 
@@ -28,7 +31,10 @@ module atype_matrixsolver
     
         procedure   :: init
         procedure   :: set
+
         procedure(solve_interface), deferred :: solve
+
+        procedure   :: residual
         procedure   :: error
 
     end type matrixsolver_t
@@ -106,18 +112,102 @@ contains
 
 
 
-    !> Compute the error in the system 
+
+
+    
+
+    !> Compute the system residual
+    !!
+    !! Given the system: 
+    !!      Ax = b
+    !!
+    !!
+    !! The following should be true:
+    !!      b - Ax = 0
+    !!
+    !!
+    !! So a residual is defined as:
+    !!      R = b - Ax
+    !!
+    !!
+    !!
+    !-----------------------------------------------------------
+    function residual(self,A,x,b) result(r)
+        class(matrixsolver_t),  intent(inout)   :: self
+        type(blockmatrix_t),    intent(inout)   :: A
+        type(blockvector_t),    intent(inout)   :: x
+        type(blockvector_t),    intent(inout)   :: b
+
+
+        type(blockvector_t) :: r
+        real(rk)            :: err
+        integer(ik)         :: iparent, ielem, iblk
+
+
+        r = x
+        call r%clear()
+
+
+        !
+        ! Compute Ax
+        !
+        !do ielem = 1,size(A%lblks,1)
+        !    do iblk = 1,size(A%lblks,2)
+!
+!                if (allocated(A%lblks(ielem,iblk)%mat)) then
+!                    iparent = A%lblks(ielem,iblk)%parent()
+!                    r%lvecs(ielem)%vec = r%lvecs(ielem)%vec + matmul(A%lblks(ielem,iblk)%mat,x%lvecs(iparent)%vec)
+!                end if
+!
+!            end do ! iblk
+!        end do ! ielem
+
+
+
+        !
+        ! Compute r = b - Ax
+        !
+        !err_vec = err_vec - b
+        r = b - A*x
+
+
+    end function
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    !> Compute the residual norm
     !!
     !! Given the system: 
     !!      Ax = b
     !!
     !! The following should be true:
-    !!      Ax - b = 0
+    !!      b - Ax = 0
     !!
     !! So a residual is defined as:
-    !!      R = Ax - b
+    !!      R = b - Ax
     !!
-    !! Which is the error metric computed by this function
+    !! The error metric computed by this function is the L2 norm of the residual:
+    !!
+    !!  error = ||R||_2
     !!
     !!
     !-----------------------------------------------------------
@@ -128,30 +218,28 @@ contains
         type(blockvector_t),    intent(inout)   :: b
 
 
-        type(blockvector_t) :: err_vec
+        type(blockvector_t) :: r
         real(rk)            :: err
-        integer(ik)         :: iparent, ielem, iblk
 
 
-        err_vec = x
-        call err_vec%clear()
+        !
+        ! Allocate residual vector and clear
+        !
+        !r = x
+        !call r%clear()
 
 
-        do ielem = 1,size(A%lblks,1)
-            do iblk = 1,size(A%lblks,2)
 
-                if (allocated(A%lblks(ielem,iblk)%mat)) then
-                    iparent = A%lblks(ielem,iblk)%parent()
-                    err_vec%lvecs(ielem)%vec = err_vec%lvecs(ielem)%vec + matmul(A%lblks(ielem,iblk)%mat,x%lvecs(iparent)%vec)
-                end if
-
-            end do ! iblk
-        end do ! ielem
-
-        err_vec = err_vec - b
-
+        !
+        ! Compute residual
+        !
+        r = self%residual(A,x,b)
     
-        err = err_vec%norm()
+
+        !
+        ! Compute norm
+        !
+        err = r%norm()
 
 
     end function

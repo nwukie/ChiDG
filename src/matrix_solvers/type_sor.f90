@@ -7,6 +7,8 @@ module type_sor
     use type_blockmatrix,   only: blockmatrix_t
     use type_densematrix,   only: densematrix_t
     use type_blockvector
+
+    implicit none
         
 
 
@@ -53,7 +55,7 @@ contains
 
         type(blockvector_t)                     :: r, diff, xold, xnew, gs
         type(densematrix_t)                     :: D(size(x%lvecs))
-        integer(ik) :: iparent, ierr
+        integer(ik) :: iparent, ierr, iblk, ielem
         real(rk)    :: res, err, omega
 
         integer(ik) :: i

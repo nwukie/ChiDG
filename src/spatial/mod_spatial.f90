@@ -68,6 +68,8 @@ contains
                             if (domain%mesh%faces(ielem,iface)%ftype == 0 .and. &
                                 (iblk == iface .or. iblk == DIAG)) then
 
+
+
                                 !
                                 ! Call all boundary advective flux components
                                 !
@@ -127,7 +129,8 @@ contains
             end do !block
 
 
-            !call sdata%rhs%dump()
+
+
 
 
             !------------------------------------------------------------------------------------------
@@ -136,11 +139,9 @@ contains
             !> For boundary conditions, the linearization only depends on Q-, which is the solution vector
             !! for the interior element. So, we only need to compute derivatives for the interior element (DIAG)
             iblk = 7    !> DIAG
-            !print*, 'DEBUG WARNING: BCs not applied'
             call domain%bcset%apply(mesh,sdata,iblk,prop)
 
 
-            !call sdata%rhs%dump()
 
 
 

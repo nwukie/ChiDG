@@ -7,6 +7,8 @@ module type_gaussseidel
     use type_blockmatrix,   only: blockmatrix_t
     use type_densematrix,   only: densematrix_t
     use type_blockvector
+
+    implicit none
         
 
 
@@ -53,10 +55,10 @@ contains
 
         type(blockvector_t)                     :: r, diff, xold
         type(densematrix_t)                     :: D(size(x%lvecs))
-        integer(ik) :: iparent, ierr
+
+        integer(ik) :: iparent, ierr, iblk, ielem, i
         real(rk)    :: res, err
 
-        integer(ik) :: i
 
         !
         ! Start timer
@@ -123,6 +125,7 @@ contains
             !
             diff = x - xold
             res = diff%norm()/x%norm()
+            !res = self%error(A,x,b)
 
             if (self%report) then
                 print*, res

@@ -49,6 +49,9 @@ contains
             case ('3x1x1','311')
                 call meshgen_3x1x1_linear(pts)
 
+            case ('2x1x1','211')
+                call meshgen_2x1x1_linear(pts)
+
             case ('40x15x1')
                 call meshgen_40x15x1_linear(pts)
 
@@ -624,6 +627,83 @@ contains
         end do
 
     end subroutine
+
+
+
+
+
+
+
+
+
+
+
+
+    !> Generate a set of points defining a 2x1x1 element mesh
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @param[inout]   pts     points_t array of rank-3 that gets allocated, filled, and returned
+    !---------------------------------------------------------------------
+    subroutine meshgen_2x1x1_linear(pts)
+        type(point_t), allocatable, intent(inout)  :: pts(:,:,:)
+
+        integer(ik), parameter      :: npt = 12
+        integer(ik)                 :: ipt_xi, ipt_eta, ipt_zeta, ipt, ierr
+        real(rk), dimension(npt)    :: x,y,z
+
+        ! elements (3x1x1) - linear
+        !
+        !      *------*------*
+        !      |      |      | 
+        !      |      |      | 
+        !      *------*------*
+        !
+
+
+
+        x = [ZERO, ONE, TWO, &       
+             ZERO, ONE, TWO, &       
+             ZERO, ONE, TWO, &       
+             ZERO, ONE, TWO]
+             
+
+        y = [ZERO, ZERO, ZERO, &
+             ONE, ONE, ONE, &
+             ZERO, ZERO, ZERO, &
+             ONE, ONE, ONE]
+
+        z = [ZERO, ZERO, ZERO, &
+             ZERO, ZERO, ZERO, &
+             ONE, ONE, ONE, &
+             ONE, ONE, ONE]
+
+
+
+        ! Allocate point storage
+        allocate(pts(3,2,2), stat=ierr)
+        if (ierr /= 0) call AllocationError
+
+        ipt = 1
+        do ipt_zeta = 1,2
+            do ipt_eta = 1,2
+                do ipt_xi = 1,3
+                    call pts(ipt_xi,ipt_eta,ipt_zeta)%set(x(ipt), y(ipt), z(ipt))
+                    ipt = ipt + 1
+                end do
+            end do
+        end do
+
+    end subroutine
+
+
+
+
+
+
+
+
+
+
 
 
 

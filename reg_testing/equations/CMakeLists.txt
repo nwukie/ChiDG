@@ -1,3 +1,10 @@
+#add_subdirectory(linear_advection)
+#add_subdirectory(euler)
+
+
+
+
+
 set(test_files reg
                rtest_linearadvection_mod.pf
                rtest_linearadvection_implicit_convergence.pf

@@ -92,10 +92,10 @@ contains
     function elapsed(self) result(elapsed_time)
         class(timer_t), intent(inout)  :: self
 
-        real    :: elapsed_time
+        real(rk)    :: elapsed_time
         
         if (self%stopped) then
-            elapsed_time = self%stop_time - self%start_time
+            elapsed_time = real(self%stop_time - self%start_time,rk)
         else
             call signal(WARN,'type_timer: Timer was not stopped')
             elapsed_time = 123456789._rk

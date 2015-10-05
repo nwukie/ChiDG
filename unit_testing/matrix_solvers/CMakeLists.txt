@@ -4,6 +4,8 @@ set(test_files unit
                test_sor.pf
                test_gmres.pf
                test_gmres_ref.pf
+               test_fgmres.pf
+               test_fgmres_ref.pf
                )
 
 

@@ -1,0 +1,169 @@
+module type_datawrapper
+    implicit none
+
+    type, public :: datawrapper_t
+        class(*), allocatable :: elem
+    end type datawrapper_t
+
+end module type_datawrapper
+
+
+
+module type_vector
+    use mod_kinds,          only: rk, ik
+    use type_datawrapper,   only: datawrapper_t
+    implicit none
+
+
+
+
+    type, public :: vector_t
+        integer(ik)                         :: size_ = 0
+        integer(ik)                         :: capacity_ = 0
+
+
+
+
+        type(datawrapper_t),   allocatable :: components(:)
+
+    contains
+        procedure, public   :: size
+        procedure, public   :: capacity
+
+
+        !< Data modifiers
+        !generic, public   :: push_back => push_back_real, push_back_int
+        generic, public   :: push_back => push_back_real
+
+
+        !< Data access
+
+        procedure, private :: add
+
+    end type vector_t
+
+
+
+contains
+
+
+
+    !> This function returns the number of elements stored in the container
+    !!
+    !!  @author Nathan A. Wukie
+    !!
+    !!
+    !-------------------------------------------------------------------------
+    function size(self) result(res)
+        class(vector_t),    intent(in)  :: self
+
+        integer(ik) :: res
+
+        res = self%size_
+    end function
+
+
+
+    !> This function returns the total capacity of the container to store elements
+    !!
+    !!  @author Nathan A. Wukie
+    !!
+    !!
+    !-------------------------------------------------------------------------
+    function capacity(self) result(res)
+        class(vector_t),    intent(in)  :: self
+
+        integer(ik) :: res
+
+        res = self%capacity_
+    end function
+
+
+
+
+
+
+
+    subroutine push_back_real(self,relement)
+        class(vector_t), intent(inout)   :: self
+        real(rk),        intent(in)      :: relement
+        
+        type(datawrapper_t)    :: wrapper
+        logical                 :: capacity_reached
+
+        
+        !
+        ! Allocate wrapper component and store data
+        !
+        allocate(real(rk)::wrapper%elem)
+        wrapper%elem = relement
+
+
+        !
+        ! Test if container has storage available. If not, then increase capacity
+        !
+        capacity_reached = (self%size() == self%capacity())
+        if (capacity_reached) then
+            call self%increase_capacity()
+        end if
+
+
+        !
+        ! Call element storage
+        !
+        call self%add(elem)
+
+    end subroutine push_back
+
+
+
+
+    subroutine push_back_store(self,element)
+        class(vector_t),        intent(inout)   :: self
+        type(datawrapper_t),    intent(in)      :: element
+
+        logical     :: capacity_reached
+
+
+        !
+        ! Test if container has storage available. If not, then increase capacity
+        !
+        capacity_reached = (self%size() == self%capacity())
+        if (capacity_reached) then
+            call self%increase_capacity()
+        end if
+
+
+        !
+        ! Add element to end of vector
+        !
+        self%components(size + size_increment)
+
+
+    end subroutine
+
+
+
+    subroutine add(this,element)
+        class(vector_t),        intent(inout)  :: this
+        type(datawrapper_t),    intent(in)     :: element
+
+    end subroutine
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+end module type_vector

@@ -1,0 +1,138 @@
+@Test
+subroutine test_rvector__push_back__onevalue()
+    use pfunit_mod
+    use mod_kinds,      only: rk, ik
+    use mod_constants,  only: ONE, TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT, NINE, TEN
+    use type_rvector,   only: rvector_t
+    implicit none
+
+    type(rvector_t)          :: vec
+    real(rk)                :: stored_value, ref_value
+
+
+    !
+    ! Store value. THIS IS BEING TESTED
+    !
+    call vec%push_back(ONE)
+
+
+
+
+    ! Test value
+    @assertEqual(ONE,vec%at(1))
+
+    ! Test size
+    @assertEqual(1,vec%size())
+
+    ! Test capacity
+    @assertEqual(20,vec%capacity())
+
+end subroutine
+
+
+
+
+
+
+
+
+
+
+@Test
+subroutine test_rvector__push_back__twovalues()
+    use pfunit_mod
+    use mod_kinds,      only: rk, ik
+    use mod_constants,  only: ONE, TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT, NINE, TEN
+    use type_rvector,   only: rvector_t
+    implicit none
+
+    type(rvector_t)          :: vec
+    real(rk)                :: stored_value, ref_value
+
+
+    !
+    ! Store value. THIS IS BEING TESTED
+    !
+    call vec%push_back(ONE)
+    call vec%push_back(TWO)
+
+
+
+
+    ! Test value
+    @assertEqual(ONE,vec%at(1))
+    @assertEqual(TWO,vec%at(2))
+
+    ! Test size
+    @assertEqual(2,vec%size())
+
+    ! Test capacity
+    @assertEqual(20,vec%capacity())
+
+end subroutine
+
+
+
+
+
+
+
+
+
+
+
+
+
+@Test
+subroutine test_rvector__push_back__thirtyvalues()
+    use pfunit_mod
+    use mod_kinds,      only: rk, ik
+    use mod_constants,  only: ONE, TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT, NINE, TEN
+    use type_rvector,   only: rvector_t
+    implicit none
+
+    type(rvector_t)         :: vec
+    real(rk)                :: stored_value, ref_value, val
+    integer(ik)             :: i
+
+
+    !
+    ! Store value. THIS IS BEING TESTED
+    !
+    val = ONE
+    do i = 1,30
+        call vec%push_back(val)
+        val = val + ONE
+    end do
+
+
+
+
+
+    ! Test values
+    val = ONE
+    do i = 1,30
+        @assertEqual(val,vec%at(i))
+        val = val + ONE
+    end do
+
+    ! Test size
+    @assertEqual(30,vec%size())
+
+    ! Test capacity
+    @assertEqual(40,vec%capacity())
+
+end subroutine
+
+
+
+
+
+
+
+
+
+
+
+
+

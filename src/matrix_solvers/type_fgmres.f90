@@ -25,7 +25,7 @@ module type_fgmres
     !-------------------------------------------
     type, public, extends(matrixsolver_t) :: fgmres_t
 
-        integer(ik) :: m = 1000
+        integer(ik) :: m = 200
 
 
     contains
@@ -154,180 +154,230 @@ contains
         call x%clear()
 
 
+        res = 1._rk
+        do while (res > self%tol)
+            do ivec = 1,size(v)
+                call v(ivec)%clear()
+                call z(ivec)%clear()
+            end do
+            p = ZERO
+            y = ZERO
+            c = ZERO
+            s = ZERO
+            h = ZERO
 
-        !
-        ! Compute initial residual r0, residual norm, and normalized r0
-        !
-        r0      = self%residual(A,x,b)
-        v(1)    = r0/r0%norm()
-
-
-
-
-        p(1) = r0%norm()
-        !
-        ! Outer GMRES Loop
-        !
-        nvecs = 0
-        do j = 1,self%m
-            nvecs = nvecs + 1
-       
 
 
             !
-            ! Apply preconditioner
+            ! Compute initial residual r0, residual norm, and normalized r0
             !
-            !z(j) = Minv * v(j)
-            do ielem = 1,size(D)
-                z(j)%lvecs(ielem)%vec = matmul(D(ielem)%mat,v(j)%lvecs(ielem)%vec)
+            r0      = self%residual(A,x0,b)
+            v(1)    = r0/r0%norm()
+
+
+
+
+            p(1) = r0%norm()
+            !
+            ! Outer GMRES Loop
+            !
+            nvecs = 0
+            do j = 1,self%m
+                nvecs = nvecs + 1
+           
+
+
+                !
+                ! Apply preconditioner
+                !
+                !z(j) = Minv * v(j)
+                do ielem = 1,size(D)
+                    z(j)%lvecs(ielem)%vec = matmul(D(ielem)%mat,v(j)%lvecs(ielem)%vec)
+                end do
+
+
+                !
+                ! Compute w = Av for the current iteration
+                !
+                w = A*z(j)
+
+
+                !
+                ! Orthogonalization loop
+                !
+                do i = 1,j
+
+                    h(i,j) = dot(w,v(i))
+                    
+                    w  = w - h(i,j)*v(i)
+
+
+                end do  ! Inner GMRES Loop - i
+
+
+                h(j+1,j) = w%norm()
+
+
+
+
+
+
+                !
+                ! Compute next Krylov vector
+                !
+                v(j+1) = w/h(j+1,j)
+
+
+
+
+
+
+
+
+
+
+                !
+                ! Previous Givens rotations on h
+                !
+                if (j /= 1) then
+                    do i = 1,j-1
+                        ! Need temp values here so we don't directly overwrite the h(i,j) and h(i+1,j) values 
+                        h_ij     = c(i)*h(i,j)  +  s(i)*h(i+1,j)
+                        h_ipj    = -s(i)*h(i,j)  +  c(i)*h(i+1,j)
+
+
+                        h(i,j)    = h_ij
+                        h(i+1,j)  = h_ipj
+                    end do
+                end if
+
+
+
+                !
+                ! Compute next rotation
+                !
+                gam  = sqrt( h(j,j)*h(j,j)  +  h(j+1,j)*h(j+1,j) )
+                c(j) = h(j,j)/gam
+                s(j) = h(j+1,j)/gam
+
+
+
+                !
+                ! Givens rotation on h
+                !
+                h(j,j)   = gam
+                h(j+1,j) = ZERO
+
+
+                !
+                ! Givens rotation on p. Need temp values here so we aren't directly overwriting the p(j) value until we want to
+                !
+                pj = c(j)*p(j)
+                pjp = -s(j)*p(j)
+
+
+                p(j)     = pj
+                p(j+1)   = pjp
+
+
+
+                
+
+
+
+                !
+                ! Test exit conditions
+                !
+                res = abs(p(j+1))
+                print*, res
+                converged = (res < self%tol)
+                
+                if ( converged ) then
+                    exit
+                end if
+
+
+
+
+            end do  ! Outer GMRES Loop - m
+
+
+
+
+
+
+
+
+            !
+            ! Solve upper-triangular system y = hinv * p
+            !
+            if (allocated(h_square)) then
+                deallocate(h_square,p_dim,y_dim)
+            end if
+            
+            allocate(h_square(nvecs,nvecs), &
+                    p_dim(nvecs),      &
+                    y_dim(nvecs), stat=ierr)
+            if (ierr /= 0) call AllocationError
+
+
+
+
+            ! Store h and p values to appropriately sized matrices
+            do l=1,nvecs
+                do k=1,nvecs
+                    h_square(k,l) = h(k,l)
+                end do
+                p_dim(l) = p(l)
             end do
 
 
+
+
+            ! Solve the system
+            h_square = inv(h_square)
+            y_dim = matmul(h_square,p_dim)
+
+
+
             !
-            ! Compute w = Av for the current iteration
+            ! Reconstruct solution
             !
-            w = A*z(j)
-
-
-            !
-            ! Orthogonalization loop
-            !
-            do i = 1,j
-
-                h(i,j) = dot(w,v(i))
-                
-                w  = w - h(i,j)*v(i)
-
-
-            end do  ! Inner GMRES Loop - i
-
-
-            h(j+1,j) = w%norm()
-
+            x = x0
+            do isol = 1,nvecs
+                x = x + y_dim(isol)*z(isol)
+            end do
 
 
 
 
 
             !
-            ! Compute next Krylov vector
+            ! Test exit condition
             !
-            v(j+1) = w/h(j+1,j)
-
-
-
-
-
-
-
-
-
-
-            !
-            ! Previous Givens rotations on h
-            !
-            if (j /= 1) then
-                do i = 1,j-1
-                    ! Need temp values here so we don't directly overwrite the h(i,j) and h(i+1,j) values 
-                    h_ij     = c(i)*h(i,j)  +  s(i)*h(i+1,j)
-                    h_ipj    = -s(i)*h(i,j)  +  c(i)*h(i+1,j)
-
-
-                    h(i,j)    = h_ij
-                    h(i+1,j)  = h_ipj
-                end do
-            end if
-
-
-
-            !
-            ! Compute next rotation
-            !
-            gam  = sqrt( h(j,j)*h(j,j)  +  h(j+1,j)*h(j+1,j) )
-            c(j) = h(j,j)/gam
-            s(j) = h(j+1,j)/gam
-
-
-
-            !
-            ! Givens rotation on h
-            !
-            h(j,j)   = gam
-            h(j+1,j) = ZERO
-
-
-            !
-            ! Givens rotation on p. Need temp values here so we aren't directly overwriting the p(j) value until we want to
-            !
-            pj = c(j)*p(j)
-            pjp = -s(j)*p(j)
-
-
-            p(j)     = pj
-            p(j+1)   = pjp
-
-
-
-            
-
-
-
-            !
-            ! Test exit conditions
-            !
-            print*, 'resid'
-            print*, abs(p(j+1))
-            converged = (abs(p(j+1)) < self%tol)
-            
             if ( converged ) then
                 exit
+            else
+                x0 = x
             end if
 
 
 
-
-        end do  ! Outer GMRES Loop - j
-
+            
 
 
 
 
-
-
-        !
-        ! Solve upper-triangular system y = hinv * p
-        !
-        allocate(h_square(nvecs,nvecs), &
-                 p_dim(nvecs),      &
-                 y_dim(nvecs), stat=ierr)
-        if (ierr /= 0) call AllocationError
+        end do   ! while
 
 
 
 
-        ! Store h and p values to appropriately sized matrices
-        do l=1,nvecs
-            do k=1,nvecs
-                h_square(k,l) = h(k,l)
-            end do
-            p_dim(l) = p(l)
-        end do
-
-       
-        ! Solve the system
-        h_square = inv(h_square)
-        y_dim = matmul(h_square,p_dim)
 
 
 
 
-        !
-        ! Reconstruct solution
-        !
-        x = x0
-        do isol = 1,nvecs
-            x = x + y_dim(isol)*z(isol)
-        end do
+
 
 
 

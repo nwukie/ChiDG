@@ -124,8 +124,8 @@ contains
             ! Compute residual
             !
             diff = x - xold
-            res = diff%norm()/x%norm()
-            !res = self%error(A,x,b)
+            !res = diff%norm()/x%norm()
+            res = self%error(A,x,b)
 
             if (self%report) then
                 print*, res

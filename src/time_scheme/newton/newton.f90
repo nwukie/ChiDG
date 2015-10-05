@@ -64,13 +64,12 @@ contains
         class(matrixsolver_t), optional,    intent(inout)   :: matrixsolver
 
         character(100)          :: filename
-        integer(ik)             :: itime, nsteps, ielem, wcount, iblk, iindex, ninner, iinner, ieqn
+        integer(ik)             :: itime, nsteps, ielem, wcount, iblk, iindex, niter, iinner, ieqn
         integer(ik)             :: rstart, rend, cstart, cend, nterms
-        real(rk)                :: resid, rnorm_0, rnorm_n, dtau, amp, cfl, cfl0, cfln
+        real(rk)                :: resid
         real(rk), allocatable   :: vals(:)
-        type(blockvector_t)     :: b, qn, qold, qnew, dqdtau
+        type(blockvector_t)     :: b, qn, qold, qnew
       
-        integer(ik)             :: ninner_iterations(self%nsteps)    ! Record number of inner iterations for each step
 
         real(rk)                :: entropy_error
 
@@ -78,7 +77,6 @@ contains
 
 
         wcount = 1
-        ninner = 10
         associate ( q => domain%sdata%q, dq => domain%sdata%dq, rhs => domain%sdata%rhs, lin => domain%sdata%lin, dt => self%dt)
 
             print*, 'entering time'
@@ -96,12 +94,12 @@ contains
             ! NONLINEAR CONVERGENCE LOOP
             !
             resid  = ONE    ! Force inner loop entry
-            ninner = 0      ! Initialize inner loop counter
+            niter = 0       ! Initialize inner loop counter
 
 
             do while ( resid > self%tol )
-                ninner = ninner + 1
-                print*, "   ninner: ", ninner
+                niter = niter + 1
+                print*, "   niter: ", niter
 
 
                 !
@@ -116,6 +114,17 @@ contains
                 call update_space(domain)
 
                 resid = rhs%norm()
+
+
+
+
+                !
+                ! Print diagnostics
+                !
+                print*, "   R(Q) - Norm: ", resid
+                call self%residual_L2norm%push_back(resid)
+
+
 
 
                 !
@@ -158,13 +167,6 @@ contains
 
 
 
-                !
-                ! Print diagnostics
-                !
-!                print*, "   DQ - Norm: ", resid
-                print*, "   R(Q) - Norm: ", resid
-                print*, "   dtau (ps): ", dtau
-
 
 
     
@@ -172,14 +174,14 @@ contains
                 ! Write incremental solution
                 !
                 if (wcount == self%nwrite) then
-                    write(filename, "(I7,A4)") 1000000+ninner, '.plt'
-                    call write_tecio_variables(domain,trim(filename),ninner+1)
+                    write(filename, "(I7,A4)") 1000000+niter, '.plt'
+                    call write_tecio_variables(domain,trim(filename),niter+1)
                     wcount = 0
                 end if
                 wcount = wcount + 1
 
 
-            end do ! ninner
+            end do ! niter
 
 
             !
@@ -187,17 +189,15 @@ contains
             !
             call self%timer%stop()
             call self%timer%report('Solver Elapsed Time:')
-
-            ninner_iterations(1) = ninner   ! Record number of inner iterations
-
+            call self%iteration_time%push_back(self%timer%elapsed())
 
 
 
             !
             ! Write final solution
             !
-            write(filename, "(I7,A4)") 1000000+ninner, '.plt'
-            call write_tecio_variables(domain,trim(filename),ninner+1)
+            write(filename, "(I7,A4)") 1000000+niter, '.plt'
+            call write_tecio_variables(domain,trim(filename),niter+1)
 
 
 
@@ -205,7 +205,10 @@ contains
 
 
 
-        self%ninner_iterations = ninner_iterations  ! store inner iteration count to time-scheme object
+        !
+        ! Store newton iteration count
+        !
+        call self%nnewton_iterations%push_back(niter)
 
 
         entropy_error = compute_entropy_error(domain) 

@@ -4,6 +4,8 @@ module atype_time_scheme
     use atype_matrixsolver, only: matrixsolver_t
     use type_dict,          only: dict_t
     use type_timer,         only: timer_t
+    use type_rvector,       only: rvector_t
+    use type_ivector,       only: ivector_t
     implicit none
 
 
@@ -12,25 +14,28 @@ module atype_time_scheme
     !!  @author Nathan A. Wukie
     !!
     !!
-    !-----------------------------------------------------
+    !-------------------------------------------------------------------------------
     type, abstract, public  :: time_scheme_t
 
         real(rk)                        :: testing
         logical                         :: solverInitialized = .false.
 
-        real(rk), allocatable           :: iteration_time(:)
-        real(rk), allocatable           :: norms(:,:)
-        integer(ik), allocatable        :: ninner_iterations(:)
 
 
         ! OPTIONS
-        real(rk)    :: dt = 0.001_rk        !< Time-step increment
-        real(rk)    :: tol = 1.e-13_rk      !< Convergence tolerance
-        integer(ik) :: nsteps = 100         !< Number of time steps to compute
-        integer(ik) :: nwrite = 10          !< Write data every 'nwrite' steps
+        real(rk)        :: dt = 0.001_rk        !< Time-step increment
+        real(rk)        :: tol = 1.e-13_rk      !< Convergence tolerance
+        integer(ik)     :: nsteps = 100         !< Number of time steps to compute
+        integer(ik)     :: nwrite = 10          !< Write data every 'nwrite' steps
 
 
-        type(timer_t)                   :: timer
+        type(timer_t)   :: timer                !< Timer data-type
+
+
+        ! Data logs
+        type(rvector_t)                 :: residual_L2norm
+        type(ivector_t)                 :: nnewton_iterations
+        type(rvector_t)                 :: iteration_time
 
 
     contains
@@ -42,7 +47,7 @@ module atype_time_scheme
 
         procedure   :: set
     end type time_scheme_t
-
+    !------------------------------------------------------------------------------
 
 
 

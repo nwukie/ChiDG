@@ -65,9 +65,6 @@ contains
         real(rk), allocatable   :: vals(:)
         type(blockvector_t)     :: b, qn, qold, qnew, dtau
       
-        integer(ik)             :: ninner_iterations(self%nsteps)    ! Record number of inner iterations for each step
-
-
 
 
 
@@ -187,7 +184,6 @@ contains
 
 
 
-        self%ninner_iterations = ninner_iterations  ! store inner iteration count to time-scheme object
 
 
     end subroutine solve

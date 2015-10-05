@@ -1,0 +1,132 @@
+@Test
+subroutine test_ivector__push_back__onevalue()
+    use pfunit_mod
+    use mod_kinds,      only: rk, ik
+    use type_ivector,   only: ivector_t
+    implicit none
+
+    type(ivector_t)         :: vec
+
+
+    !
+    ! Store value. THIS IS BEING TESTED
+    !
+    call vec%push_back(1_ik)
+
+
+
+
+    ! Test value
+    @assertEqual(1_ik,vec%at(1))
+
+    ! Test size
+    @assertEqual(1,vec%size())
+
+    ! Test capacity
+    @assertEqual(20,vec%capacity())
+
+end subroutine
+
+
+
+
+
+
+
+
+
+
+@Test
+subroutine test_ivector__push_back__twovalues()
+    use pfunit_mod
+    use mod_kinds,      only: rk, ik
+    use type_ivector,   only: ivector_t
+    implicit none
+
+    type(ivector_t)         :: vec
+
+
+    !
+    ! Store value. THIS IS BEING TESTED
+    !
+    call vec%push_back(1_ik)
+    call vec%push_back(2_ik)
+
+
+
+
+    ! Test value
+    @assertEqual(1_ik,vec%at(1))
+    @assertEqual(2_ik,vec%at(2))
+
+    ! Test size
+    @assertEqual(2,vec%size())
+
+    ! Test capacity
+    @assertEqual(20,vec%capacity())
+
+end subroutine
+
+
+
+
+
+
+
+
+
+
+
+
+
+@Test
+subroutine test_ivector__push_back__thirtyvalues()
+    use pfunit_mod
+    use mod_kinds,      only: rk, ik
+    use type_ivector,   only: ivector_t
+    implicit none
+
+    type(ivector_t)         :: vec
+    integer(ik)             :: i, val
+
+
+    !
+    ! Store value. THIS IS BEING TESTED
+    !
+    val = 1_ik
+    do i = 1,30
+        call vec%push_back(val)
+        val = val + 1_ik
+    end do
+
+
+
+
+
+    ! Test values
+    val = 1_ik
+    do i = 1,30
+        @assertEqual(val,vec%at(i))
+        val = val + 1_ik
+    end do
+
+    ! Test size
+    @assertEqual(30,vec%size())
+
+    ! Test capacity
+    @assertEqual(40,vec%capacity())
+
+end subroutine
+
+
+
+
+
+
+
+
+
+
+
+
+

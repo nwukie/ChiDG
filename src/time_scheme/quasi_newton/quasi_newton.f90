@@ -66,8 +66,6 @@ contains
         real(rk), allocatable   :: vals(:)
         type(blockvector_t)     :: b, qn, qold, qnew, dqdtau
       
-        integer(ik)             :: ninner_iterations(self%nsteps)    ! Record number of inner iterations for each step
-
 
 
 
@@ -206,13 +204,13 @@ contains
 
             end do ! ninner
 
-            ninner_iterations(1) = ninner   ! Record number of inner iterations
 
             !
             ! stop timer
             !
             call self%timer%stop()
             call self%timer%report('Solver Elapsed Time:')
+            call self%iteration_time%push_back(self%timer%elapsed())
 
 
             ! Write Final Solution
@@ -224,7 +222,7 @@ contains
 
 
 
-        self%ninner_iterations = ninner_iterations  ! store inner iteration count to time-scheme object
+        call self%nnewton_iterations%push_back(ninner)
 
 
 

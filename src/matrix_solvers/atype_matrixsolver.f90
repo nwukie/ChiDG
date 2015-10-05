@@ -21,7 +21,7 @@ module atype_matrixsolver
     !-------------------------------------------------------------
     type, public, abstract :: matrixsolver_t
 
-        real(rk)        :: tol = 1.e-7_rk      !< Convergance tolerance for iterative solvers
+        real(rk)        :: tol = 1.e-7_rk       !< Convergance tolerance for iterative solvers
 
         type(timer_t)   :: timer                !< Timer for linear system solve
 

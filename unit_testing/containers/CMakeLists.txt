@@ -1,4 +1,4 @@
-set(test_files  unit
+set(test_files
                 test_expansion.pf 
                 test_densematrix.pf 
                 test_densevector.pf 
@@ -11,9 +11,13 @@ set(test_files  unit
                 test_blockmatrix_build.pf
                 test_blockmatrix_mod.pf
                 test_dict.pf
+                test_operator_dot.pf
+                test_operator_mv.pf
+                test_rvector.pf
+                test_ivector.pf
                 )
                
-add_test_target(containers ${test_files})
+add_test_target(containers unit ${test_files})
 
 
 

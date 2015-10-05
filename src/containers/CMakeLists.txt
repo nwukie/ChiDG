@@ -7,4 +7,6 @@ add_lib_sources(
                 type_dict.f90
                 operator_mv.f90
                 operator_dot.f90
+                type_rvector.f90
+                type_ivector.f90
                 )

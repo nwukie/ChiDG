@@ -206,7 +206,7 @@ contains
                     print*, "   dtau (ps): ", dtau
                 end do ! ninner
 
-                ninner_iterations(itime) = ninner   ! Record number of inner iterations
+                call self%nnewton_iterations%push_back(ninner)
 
 
                 if (wcount == self%nwrite) then
@@ -221,9 +221,6 @@ contains
 
         end associate
 
-
-
-        self%ninner_iterations = ninner_iterations  ! store inner iteration count to time-scheme object
 
 
     end subroutine solve

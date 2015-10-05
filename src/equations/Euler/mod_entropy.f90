@@ -6,6 +6,8 @@ module mod_entropy
     use mod_interpolate,    only: interpolate
     use DNAD_D
 
+    implicit none
+
 
 
 
@@ -25,7 +27,7 @@ contains
 
         integer(ik) :: irho, irhou, irhov, irhow, irhoE
         integer(ik) :: ielem, iface, nelem, iseed
-        real(rk)    :: pinf, rhoinf, gam, entropy_ref, error_sum, vol, error
+        real(rk)    :: pinf, tinf, rhoinf, gam, entropy_ref, error_sum, vol, error, entropy_error, vol_sum
 
 
         pinf   = 110000._rk
@@ -63,6 +65,7 @@ contains
             entropy_error = ZERO
             error_sum     = ZERO
             vol           = ZERO
+            vol_sum       = ZERO
 
 
 
@@ -94,7 +97,7 @@ contains
                 ! Compute entropy and entropy rise.
                 !
                 entropy = p/(rho**gam)
-                entropy_rise = ((entropy%x_ad_ - entropy_ref)/entropy_ref)**TWO
+                entropy_rise = ((entropy(:)%x_ad_ - entropy_ref)/entropy_ref)**TWO
 
 
 
@@ -109,16 +112,14 @@ contains
                 !
                 ! Compute element volume
                 !
-                !vol = vol + sum(mesh%elems(ielem)%jinv * mesh%elems(ielem)%gq%vol%weights)
-                vol = sum(mesh%elems(ielem)%jinv * mesh%elems(ielem)%gq%vol%weights)
+                vol = abs(sum(mesh%elems(ielem)%jinv * mesh%elems(ielem)%gq%vol%weights))
 
 
-                print*, 'Entropy', error
+!                print*, 'Entropy', error
+!                print*, 'Volume', vol
 
-                print*, 'Volume', vol
-
-                !error_sum = error_sum + error
-                error_sum = error_sum + (error/vol)
+                error_sum = error_sum + error
+                vol_sum   = vol_sum + vol
 
 
 
@@ -128,8 +129,7 @@ contains
         end associate
 
 
-        error_sum = sqrt(error_sum)
-        print*, error_sum
+        error_sum = sqrt(error_sum/vol_sum)
 
 
 

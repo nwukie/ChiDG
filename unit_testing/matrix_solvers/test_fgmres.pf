@@ -1,0 +1,108 @@
+@Test
+subroutine test_fgmres_solve()
+    use pfunit_mod
+    use mod_kinds,          only: rk, ik
+    use mod_constants,      only: ZERO, ONE, TWO, THREE, FOUR, DIAG, XI_MIN, XI_MAX
+    use type_chidg,         only: chidg_t
+    use type_domain,        only: domain_t
+    use type_point,         only: point_t
+
+    use type_fgmres,        only: fgmres_t
+    use type_blockmatrix,   only: blockmatrix_t
+    use type_blockvector,   only: blockvector_t
+
+    use mod_testutils,      only: meshgen
+    implicit none
+
+    type(chidg_t)               :: chidg
+    type(domain_t)              :: dom
+    type(point_t), allocatable  :: pts(:,:,:)
+
+    type(blockmatrix_t)         :: A
+    type(blockvector_t)         :: x, b
+    type(fgmres_t)              :: matrix_solver
+    
+    real(rk)    :: tol
+    integer(ik) :: nterms_c, nterms_s
+
+
+    tol      = 1.e-9_rk
+    nterms_c = 8
+    nterms_s = 1
+
+
+    ! Initialize ChiDG
+    call chidg%init('env')
+
+
+    ! Get grid points
+    call meshgen('311',pts)
+
+
+    ! Initialize domain
+    call dom%init_geom(nterms_c,pts)
+    call dom%init_sol('Scalar',nterms_s)
+
+
+    ! Initialize data containers
+    call A%init(dom%mesh)
+    call x%init(dom%mesh)
+    call b%init(dom%mesh)
+
+
+
+
+
+    ! Initialize blockmatrix data (A)
+    !
+    ! [4  3  0]
+    ! [3  4 -1]
+    ! [0 -1  4]
+    !
+    A%lblks(1,DIAG)%mat   = 4._rk
+    A%lblks(1,XI_MAX)%mat = THREE
+
+    A%lblks(2,XI_MIN)%mat = THREE
+    A%lblks(2,DIAG)%mat   = 4._rk
+    A%lblks(2,XI_MAX)%mat = -ONE
+
+    A%lblks(3,XI_MIN)%mat = -ONE
+    A%lblks(3,DIAG)%mat   = 4._rk
+
+
+
+
+    ! Initialize blockvector data (b)
+    !
+    ! [ 24]
+    ! [ 30]
+    ! [-24]
+    !
+    b%lvecs(1)%vec = 24._rk
+    b%lvecs(2)%vec = 30._rk
+    b%lvecs(3)%vec = -24._rk
+
+
+
+    !
+    ! Solve matrix system. Ax=b. TESTING
+    !
+    matrix_solver%report = .false.  
+    matrix_solver%tol    = 1.e-13_rk
+    call matrix_solver%solve(A,x,b)
+
+
+
+    ! Expecting solution
+    !
+    !     [ 3]
+    ! x = [ 4]
+    !     [-5]
+    !
+    @assertEqual(3._rk,x%lvecs(1)%vec,tol)
+    @assertEqual(4._rk,x%lvecs(2)%vec,tol)
+    @assertEqual(-5._rk,x%lvecs(3)%vec,tol)
+
+
+
+end subroutine test_fgmres_solve

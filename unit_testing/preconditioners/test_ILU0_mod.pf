@@ -166,12 +166,12 @@ end subroutine
 !!
 !!  Expecting
 !!
-!!          [ 1          ]
-!!      L = [ 2   -1     ]
-!!          [ 0   -2  14 ]
+!!          [ 1          ]                                      [ 1/1              ]
+!!      L = [ 2   -1     ]    inverted diagonal =>          L = [ 2    1/-1        ]
+!!          [ 0   -2  14 ]                                      [ 0     -2    1/14 ]
 !!
 !!  The diagonal values in L should actually be apart of the diagonal of U, but we just store 
-!!  them in L for convenience.
+!!  them in L for convenience. We also store them inverted.
 !!
 !!  The U factorization is identical to the upper-triangular components of matrix A, so they 
 !!  are not computed or stored
@@ -212,7 +212,7 @@ subroutine test_ILU0_update(self)
 
 
     @assertEqual(-TWO,self%ILU0%LD%lblks(3,XI_MIN)%mat(1,1))
-    @assertEqual(14._rk,self%ILU0%LD%lblks(3,DIAG)%mat(1,1))
+    @assertEqual((ONE/14._rk),self%ILU0%LD%lblks(3,DIAG)%mat(1,1))
 
 
 end subroutine

@@ -91,7 +91,6 @@ contains
         !
         ! Update preconditioner
         !
-        !call self%precon%update(A,b)
         call M%update(A,b)
 
 
@@ -190,7 +189,6 @@ contains
                 !
                 ! Apply preconditioner:  z(j) = Minv * v(j)
                 !
-                !z(j) = self%precon%apply(A,v(j))
                 z(j) = M%apply(A,v(j))
 
 

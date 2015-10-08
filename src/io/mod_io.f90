@@ -68,7 +68,7 @@ module mod_io
 
     ! PRECONDITIONER
     !--------------------------------------------------
-    character(len=100),  save    :: preconditioner = 'none'
+    character(len=100),  save    :: preconditioner = 'identity'
    
    
 
@@ -132,6 +132,7 @@ contains
         namelist /equation_set/             eqnset
 
         namelist /time/                     timescheme,            &
+                                            cfl0,                  &
                                             dt,                    &
                                             nsteps,                &
                                             ntime_instances,       &

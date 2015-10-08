@@ -61,6 +61,7 @@ program driver
     call toptions%set('tol',ttol)
     call toptions%set('nsteps',nsteps)
     call toptions%set('nwrite',nwrite)
+    call toptions%set('cfl0',cfl0)
 
     !
     ! Set ChiDG components

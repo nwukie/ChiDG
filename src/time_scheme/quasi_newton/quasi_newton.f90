@@ -94,7 +94,7 @@ contains
             !
             rnorm  = ONE    ! Force inner loop entry
             ninner = 0      ! Initialize inner loop counter
-            cfl0   = 2._rk
+            !cfl0   = 2._rk
 
 
 
@@ -102,11 +102,6 @@ contains
             do while ( rnorm > self%tol )
                 ninner = ninner + 1
                 print*, "   ninner: ", ninner
-
-
-
-                !dtau = dcfln/30._rk
-                !dtau = dtau * 5._rk
 
 
 
@@ -147,7 +142,7 @@ contains
                 !
                 ! Compute new cfl for pseudo-timestep
                 !
-                cfln = cfl0*(rnorm0/rnorm)
+                cfln = self%cfl0*(rnorm0/rnorm)
 
 
 

@@ -23,6 +23,7 @@ module atype_time_scheme
 
 
         ! OPTIONS
+        real(rk)        :: cfl0     = 1.0_rk        !< Initial CFL number
         real(rk)        :: dt       = 0.001_rk      !< Time-step increment
         real(rk)        :: tol      = 1.e-13_rk     !< Convergence tolerance
         integer(ik)     :: nsteps   = 100           !< Number of time steps to compute
@@ -155,6 +156,7 @@ contains
         call options%get('tol',self%tol)
         call options%get('nsteps',self%nsteps)
         call options%get('nwrite',self%nwrite)
+        call options%get('cfl0',self%cfl0)
     end subroutine
 
 

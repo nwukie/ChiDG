@@ -82,7 +82,8 @@ contains
         ! Select signal action
         select case (signal)
             case (3)    ! Fatal Error -- Code terminates
-                stop
+                !stop
+                error stop
 
             case default
 

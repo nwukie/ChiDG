@@ -6,6 +6,7 @@ module precon_ILU0
     use type_preconditioner,    only: preconditioner_t
     use type_blockmatrix,       only: blockmatrix_t
     use type_blockvector,       only: blockvector_t
+    use type_densematrix,       only: densematrix_t
 
     use mod_inv,    only: inv
     implicit none
@@ -20,6 +21,7 @@ module precon_ILU0
     type, extends(preconditioner_t) :: precon_ILU0_t
 
         type(blockmatrix_t)                 :: LD       !< Lower-Diagonal, sparse-block matrix representation
+        type(densematrix_t), allocatable    :: Dinv(:) !< inverse of preconditioner diagonal
 
     contains
         procedure   :: init
@@ -95,6 +97,11 @@ contains
             self%LD%lblks(ielem,DIAG)%mat = A%lblks(ielem,DIAG)%mat
         end do
 
+        !
+        ! Invert first diagonal
+        !
+        self%LD%lblks(1,DIAG)%mat = inv(self%LD%lblks(1,DIAG)%mat)
+
 
 
 
@@ -114,13 +121,11 @@ contains
                 if (allocated(self%LD%lblks(irow,lower_blocks(iblk))%mat)) then
 
 
-                    ! Invert parent diagonal from the preconditioner
+                    ! Get parent index
                     iparent = self%LD%lblks(irow,lower_blocks(iblk))%parent()
-                    pdiag = inv(self%LD%lblks(iparent,DIAG)%mat)
 
                     ! Compute and store the contribution to the lower-triangular part of LD
-                    self%LD%lblks(irow,lower_blocks(iblk))%mat = matmul(A%lblks(irow,lower_blocks(iblk))%mat,pdiag)
-
+                    self%LD%lblks(irow,lower_blocks(iblk))%mat = matmul(A%lblks(irow,lower_blocks(iblk))%mat,self%LD%lblks(iparent,DIAG)%mat)
 
                     ! Modify the current diagonal by this lower-triangular part multiplied by opposite upper-triangular part. (The component in the transposed position)
                     self%LD%lblks(irow,DIAG)%mat = self%LD%lblks(irow,DIAG)%mat  -  matmul(self%LD%lblks(irow,lower_blocks(iblk))%mat,  A%lblks(iparent,upper_blocks(iblk))%mat)
@@ -129,12 +134,13 @@ contains
             end do
 
 
+            !
+            ! Pre-Invert current diagonal block and store
+            !
+            self%LD%lblks(irow,DIAG)%mat = inv(self%LD%lblks(irow,DIAG)%mat)
+
 
         end do
-
-
-
-
 
 
 
@@ -232,8 +238,8 @@ contains
             !
             ! Diagonal block
             !
-
-            z%lvecs(irow)%vec = matmul(inv(self%LD%lblks(irow,DIAG)%mat), z%lvecs(irow)%vec)
+            !z%lvecs(irow)%vec = matmul(inv(self%LD%lblks(irow,DIAG)%mat), z%lvecs(irow)%vec)
+            z%lvecs(irow)%vec = matmul(self%LD%lblks(irow,DIAG)%mat, z%lvecs(irow)%vec)
 
         end do
 

@@ -9,9 +9,11 @@ module mod_spatial
 
 contains
 
-    subroutine update_space(domain,info)
+    subroutine update_space(domain,timing,info)
+        implicit none
         type(domain_t), intent(inout)   :: domain
-        integer(ik), optional           :: info
+        real(rk),       optional        :: timing
+        integer(ik),    optional        :: info
 
         type(timer_t)               :: timer
         integer(ik)                 :: iblk, ielem, iface, nelem, i, ibc, iflux, nflux
@@ -148,7 +150,9 @@ contains
 
             call timer%stop()
             call timer%report('Spatial Discretization Time')
-
+            if (present(timing)) then
+                timing = timer%elapsed()
+            end if
 
         end associate
 
@@ -166,37 +170,19 @@ contains
 
 
 
-
-!    function loop_space(domain)
-!        type(domain_t), intent(inout)   :: domain
-!        
-!        integer(ik) :: ielem
-!
-!
-!
-!
-!        do ielem = 1,nelem
-!
-!            
-!
-!        end do
-!
-!
-!
-!
-!    end function
-!
-
-
-
-
-
-
-
-
-
-
-
+    !> Visit each element and compute generic function
+    !!
+    !!  @author Nathan A. Wukie
+    !!
+    !!
+    !---------------------------------------------------------------------------------------------
+    !subroutine loop_space(domain,fcn)
+    !    type(domain_t),     intent(in)  :: domain
+    !    type(function_t),   intent(in)  :: fcn
+    !
+    !
+    !
+    !end subroutine
 
 
 

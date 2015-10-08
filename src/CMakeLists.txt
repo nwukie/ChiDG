@@ -12,6 +12,7 @@ add_subdirectory(spatial)
 add_subdirectory(functions)
 add_subdirectory(boundary_conditions)
 add_subdirectory(matrix_solvers)
+add_subdirectory(preconditioners)
 add_subdirectory(materials)
 
 # Propagate lib_srcs list to parent directory

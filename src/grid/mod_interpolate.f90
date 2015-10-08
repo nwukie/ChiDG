@@ -3,7 +3,6 @@ module mod_interpolate
     use DNAD_D
     use type_element,   only: element_t
     use type_face,      only: face_t
-    !use type_expansion, only: expansion_t
     use type_blockvector,   only: blockvector_t
 
     implicit none
@@ -204,7 +203,6 @@ contains
     !----------------------------------------------------------------
     subroutine interpolate_element_standard(elems,q,ielem,ivar,var_gq)
         type(element_t),    intent(in)      :: elems(:)
-        !type(expansion_t),  intent(inout)   :: q(:)
         type(blockvector_t),  intent(inout)   :: q
         integer(ik),        intent(in)      :: ielem
         integer(ik),        intent(in)      :: ivar

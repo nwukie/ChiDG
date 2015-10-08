@@ -12,8 +12,15 @@ module perfect_gas
     type, extends(fluid_t), public :: perfect_gas_t
 
     contains
-        procedure :: compute_pressure
-        procedure :: compute_gamma
+        procedure   :: compute_pressure_ad
+        procedure   :: compute_pressure_real
+        procedure   :: compute_gamma
+
+
+
+
+        !procedure :: compute_pressure
+        !procedure :: compute_gamma
 
     end type perfect_gas_t
 
@@ -22,18 +29,18 @@ contains
 
 
 
-    !   Compute pressure of the fluid, under the perfect gas assumption
-    !
-    !   @author Nathan A. Wukie
-    !
-    !   @param[in]      rho     Fluid density
-    !   @param[in]      rhou    Fluid x-momentum
-    !   @param[in]      rhov    Fluid y-momentum
-    !   @param[in]      rhow    Fluid z-momentum
-    !   @param[in]      rhoE    Fluid Total Energy
-    !   @param[inout]   p       Fluid pressure
+    !>   Compute pressure of the fluid, under the perfect gas assumption
+    !!
+    !!   @author Nathan A. Wukie
+    !!
+    !!   @param[in]      rho     Fluid density
+    !!   @param[in]      rhou    Fluid x-momentum
+    !!   @param[in]      rhov    Fluid y-momentum
+    !!   @param[in]      rhow    Fluid z-momentum
+    !!   @param[in]      rhoE    Fluid Total Energy
+    !!   @param[inout]   p       Fluid pressure
     !------------------------------------------------------------------------
-    subroutine compute_pressure(self,rho,rhou,rhov,rhow,rhoE,vals)
+    subroutine compute_pressure_ad(self,rho,rhou,rhov,rhow,rhoE,vals)
         class(perfect_gas_t),   intent(in)      :: self
         type(AD_D),             intent(in)      :: rho(:), rhou(:), rhov(:), rhow(:), rhoE(:)
         type(AD_D),             intent(inout)   :: vals(:)
@@ -47,6 +54,48 @@ contains
 
     end subroutine
     !------------------------------------------------------------------------
+
+
+
+
+
+
+
+    !>   Compute pressure of the fluid, under the perfect gas assumption
+    !!
+    !!   @author Nathan A. Wukie
+    !!
+    !!   @param[in]      rho     Fluid density
+    !!   @param[in]      rhou    Fluid x-momentum
+    !!   @param[in]      rhov    Fluid y-momentum
+    !!   @param[in]      rhow    Fluid z-momentum
+    !!   @param[in]      rhoE    Fluid Total Energy
+    !!   @param[inout]   p       Fluid pressure
+    !------------------------------------------------------------------------
+    subroutine compute_pressure_real(self,rho,rhou,rhov,rhow,rhoE,vals)
+        class(perfect_gas_t),   intent(in)      :: self
+        real(rk),               intent(in)      :: rho(:), rhou(:), rhov(:), rhow(:), rhoE(:)
+        real(rk),               intent(inout)   :: vals(:)
+
+        real(rk)    :: gam
+
+        !& DEBUG, HARDCODED GAMMA
+        gam = 1.4_rk
+
+        vals = (gam-ONE)*(rhoE - HALF*rho*((rhou*rhou)/(rho*rho) + (rhov*rhov)/(rho*rho) + (rhow*rhow)/(rho*rho)))
+
+    end subroutine
+    !------------------------------------------------------------------------
+
+
+
+
+
+
+
+
+
+
 
 
 

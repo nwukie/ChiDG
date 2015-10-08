@@ -3,7 +3,7 @@
 module type_blockmatrix
 #include <messenger.h>
     use mod_kinds,          only: rk,ik
-    use mod_constants,      only: DIAG, ZERO
+    use mod_constants,      only: DIAG, ZERO, XI_MIN, ETA_MIN, ZETA_MIN, XI_MAX, ETA_MAX, ZETA_MAX
     use type_mesh,          only: mesh_t
     use type_densematrix,   only: densematrix_t
     use DNAD_D
@@ -28,7 +28,7 @@ module type_blockmatrix
 
     contains
         !> Initializers
-        generic,   public  :: init => initialize_linearization   !< Initialize local matrix
+        generic,   public  :: init => initialize_linearization              !< Initialize full linearization matrix
         procedure, private :: initialize_linearization
 
 
@@ -54,17 +54,47 @@ contains
     !!  @author Nathan A. Wukie
     !!
     !!  @param[in]  mesh    mesh_t containing arrays of elements and faces
+    !!  @param[in]  mtype   character string indicating the type of matrix to be initialized (ie. Full, Lower-Diagonal, Upper-Diagonal
     !!
     !-----------------------------------------------------------
-    subroutine initialize_linearization(self,mesh)
-        class(blockmatrix_t), intent(inout)  :: self
-        class(mesh_t),        intent(in)     :: mesh
+    subroutine initialize_linearization(self,mesh,mtype)
+        class(blockmatrix_t),   intent(inout)   :: self
+        class(mesh_t),          intent(in)      :: mesh
+        character(*),           intent(in)      :: mtype
 
-        integer(ik) :: nelem, nblk, ierr, ielem, iblk, size1d, parent
-        logical     :: new_elements
+        integer(ik), allocatable    :: blocks(:)
+        integer(ik)                 :: nelem, nblk, ierr, ielem, iblk, size1d, parent, block_index
+        logical                     :: new_elements
+
+
+        !
+        ! Select matrix blocks to initialize 
+        !
+        select case (trim(mtype))
+            case ('full','Full','FULL')
+                blocks = [XI_MIN,XI_MAX,ETA_MIN,ETA_MAX,ZETA_MIN,ZETA_MAX,DIAG]
+
+            case ('L','l','Lower','lower')
+                blocks = [XI_MIN,ETA_MIN,ZETA_MIN]
+
+            case ('U','u','Upper','upper')
+                blocks = [XI_MAX,ETA_MAX,ZETA_MAX]
+
+            case ('LD','ld','LowerDiagonal','lowerdiagonal')
+                blocks = [XI_MIN,ETA_MIN,ZETA_MIN,DIAG]
+                
+            case ('UD','ud','UpperDiagonal','upperdiagonal')
+                blocks = [XI_MAX,ETA_MAX,ZETA_MAX,DIAG]
+
+            case default
+                call signal(FATAL,'blockmatrix%init: unrecognized matrix type')
+
+        end select
+
+
 
         nelem = mesh%nelem  !> Number of elements in the local block
-        nblk  = 7           !> Number of blocks in the local linearization (1D => 3, 2D => 5, 3D => 7)
+        nblk  = 7           !> Number of potential blocks in the linearization for a given element (1D => 3, 2D => 5, 3D => 7)
 
 
         ! Check to make sure the mesh numerics were initialized
@@ -97,17 +127,26 @@ contains
         ! Loop through elements and call initialization for linearization denseblock matrices
         !
         do ielem = 1,mesh%nelem
-            do iblk = 1,7
+
+            !
+            ! Loop through 'blocks' and call initialization
+            !
+            do block_index = 1,size(blocks)
+                iblk = blocks(block_index)
                 size1d = mesh%elems(ielem)%neqns  *  mesh%elems(ielem)%nterms_s
 
+                !
                 ! Parent is the element with respect to which the linearization is computed
+                !
                 if (iblk == DIAG) then
                     parent = mesh%elems(ielem)%ielem
                 else
                     parent = mesh%faces(ielem,iblk)%ineighbor
                 end if
 
+                !
                 ! Call initialization procedure if parent is not 0 (0 meaning there is no parent for that block, probably a boundary)
+                !
                 if (parent /= 0) then
                     call self%lblks(ielem,iblk)%init(size1d,parent)
 
@@ -119,6 +158,13 @@ contains
         end do
 
     end subroutine initialize_linearization
+
+
+
+
+
+
+
 
 
 
@@ -230,33 +276,43 @@ contains
 
 
 
-
+        !
         ! Allocate full-matrix storage and zero values
+        !
         allocate(fullmat(ndof,ndof), stat=ierr)
         if (ierr /= 0) call AllocationError
         fullmat = 0._rk
 
 
 
-
+        !
         ! Loop through each block-row of the sparse block matrix
+        !
         do ielem = 1,size(self%lblks,1)
             
+            !
             ! Loop through each block of the current row
+            !
             do iblock = 1,size(self%lblks,2)    
 
 
-
+                !
                 ! If the current block is not allocated, then cycle to the next block
+                !
                 if (.not. allocated(self%lblks(ielem,iblock)%mat)) then
                     cycle
                 end if
             
+
+                !
                 ! Get the index of the parent for the current block
+                !
                 iparent = self%lblks(ielem,iblock)%parent()
                 
-                 
+                
+                ! 
                 ! Get the number of rows and columns in the current block
+                !
                 nrows_c = self%lblks(ielem,iblock)%idim()
                 ncols_c = self%lblks(ielem,iblock)%jdim()
 
@@ -272,22 +328,26 @@ contains
                     nrows = self%lblks(ielem_prev,DIAG)%idim()
                     row_start = row_start + nrows
                 end do
-                row_start = row_start + 1           ! Increment by 1 for the correct index to insert in the full matrix
+                row_start = row_start + 1               ! Increment by 1 for the correct index to insert in the full matrix
                 row_end   = row_start + (nrows_c-1)     ! Increment by number of rows in the current block
 
                 
+                !
                 ! For finding the starting column, loop through and accumulate the columns
                 ! of all the elements up to but not including the parent element of the current block (iparent), then add 1
+                !
                 col_start = 0
                 do ielem_prev = 1,(iparent-1)
                     ncols = self%lblks(ielem_prev,DIAG)%jdim()
                     col_start = col_start + ncols
                 end do
-                col_start = col_start + 1           ! Increment by 1 for the correct index to insert in the full matrix
+                col_start = col_start + 1               ! Increment by 1 for the correct index to insert in the full matrix
                 col_end   = col_start + (ncols_c-1)     ! Increment by number of cols in the current block
 
 
+                !
                 ! Now copy the dense block to the full matrix
+                !
                 fullmat(row_start:row_end,col_start:col_end) = self%lblks(ielem,iblock)%mat
 
 

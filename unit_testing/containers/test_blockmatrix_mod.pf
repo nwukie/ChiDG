@@ -52,7 +52,7 @@ contains
     
     
             ! Initialize blockmatrix
-            call this%bmat%init(this%domain(1)%mesh)
+            call this%bmat%init(this%domain(1)%mesh,'full')
     
     
         end associate        

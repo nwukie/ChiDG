@@ -1,16 +1,18 @@
 module type_chidg
 #include <messenger.h>
-    use mod_equations,      only: initialize_equations
-    use mod_grid,           only: initialize_grid
-    use mod_io,             only: read_input
+    use mod_equations,          only: initialize_equations
+    use mod_grid,               only: initialize_grid
+    use mod_io,                 only: read_input
 
-    use type_domain,        only: domain_t
-    use atype_time_scheme,  only: time_scheme_t
-    use atype_matrixsolver, only: matrixsolver_t
-    use type_dict,          only: dict_t
+    use type_domain,            only: domain_t
+    use atype_time_scheme,      only: time_scheme_t
+    use atype_matrixsolver,     only: matrixsolver_t
+    use type_preconditioner,    only: preconditioner_t
+    use type_dict,              only: dict_t
 
-    use mod_time_scheme,    only: create_time_scheme
-    use mod_matrixsolver,   only: create_matrixsolver
+    use mod_time_scheme,        only: create_time_scheme
+    use mod_matrixsolver,       only: create_matrixsolver
+    use mod_preconditioner,     only: create_preconditioner
 
     implicit none
 
@@ -20,22 +22,24 @@ module type_chidg
 
     !>  The ChiDG Environment container
     !!
-    !!      - Contains an array of domains, a time advancement scheme, and a matrix solver
+    !!      - Contains an array of domains, a time advancement scheme, a matrix solver, and a preconditioner
     !!
     !!  @author Nathan A. Wukie
     !!
     !-----------------------------------------------------------------
     type, public    :: chidg_t
 
-        type(domain_t),         allocatable     :: domains(:)
-        class(time_scheme_t),   allocatable     :: timescheme
-        class(matrixsolver_t),  allocatable     :: matrixsolver
+        type(domain_t),             allocatable     :: domains(:)
+        class(time_scheme_t),       allocatable     :: timescheme
+        class(matrixsolver_t),      allocatable     :: matrixsolver
+        class(preconditioner_t),    allocatable     :: preconditioner
 
         logical :: envInitialized = .false.
     contains
         procedure   :: init
         procedure   :: set
         procedure   :: run
+        procedure   :: report
     end type
 
 
@@ -47,8 +51,8 @@ contains
     !!
     !!  @author Nathan A. Wukie
     !!
-    !!  @param[in]  level   Initialization level specification. 'env' or 'full'
-    !---------------------------------------------------------------
+    !!  @param[in]  level   Initialization level specification. 'env', 'io', or 'finalize'
+    !--------------------------------------------------------------------------------------------
     subroutine init(self,level)
         class(chidg_t),  intent(inout)   :: self
         character(*),    intent(in)      :: level
@@ -96,6 +100,7 @@ contains
             !
             case ('finalize')
                 call self%timescheme%init(self%domains(1))
+                call self%preconditioner%init(self%domains(1))
 
 
 
@@ -107,6 +112,19 @@ contains
 
 
     end subroutine
+    !------------------------------------------------------------------------------------------
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -117,6 +135,7 @@ contains
     !!
     !!      -   Set time-scheme
     !!      -   Set matrix solver
+    !!      -   Set preconditioner
     !!      -   Set number of allocated domains (default=1)
     !!
     !!  @author Nathan A. Wukie
@@ -162,6 +181,17 @@ contains
 
 
             !
+            ! Allocation for preconditioner
+            !
+            case ('preconditioner','Preconditioner')
+                if (allocated(self%preconditioner)) deallocate(self%preconditioner)
+
+                call create_preconditioner(selection,self%preconditioner)
+
+
+
+
+            !
             ! Allocation for number of domains
             !
             case ('ndomains','domains')
@@ -171,6 +201,9 @@ contains
                     allocate(self%domains(1), stat=ierr)
                     if (ierr /= 0) call AllocationError
                 end if
+
+
+
 
 
 
@@ -190,28 +223,50 @@ contains
 
 
 
-    !>  Run ChiDG simultion
+    !>  Run ChiDG simulation
     !!
     !!      - This routine passes the domain and matrixsolver components to the
     !!        time scheme for iteration
     !!
     !!  @author Nathan A. Wukie
     !!
-    !------------------------------------------------------------------------
+    !----------------------------------------------------------------------------
     subroutine run(self)
         class(chidg_t),     intent(inout)   :: self
 
 
-        call self%timescheme%solve(self%domains(1),self%matrixsolver)
+        call self%timescheme%solve(self%domains(1),self%matrixsolver,self%preconditioner)
 
 
-    end subroutine
-
-
-
+    end subroutine run
 
 
 
+
+
+
+
+
+
+
+    !> Report on ChiDG simulation
+    !!
+    !!  @author Nathan A. Wukie
+    !!
+    !!
+    !!
+    !!
+    !!
+    !----------------------------------------------------------------------------
+    subroutine report(self)
+        class(chidg_t), intent(inout)   :: self
+
+
+        call self%timescheme%report()
+        !call self%preconditioner%report()
+
+
+    end subroutine report
 
 
 

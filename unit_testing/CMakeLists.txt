@@ -10,6 +10,7 @@ add_subdirectory(equations)
 add_subdirectory(boundary_conditions)
 add_subdirectory(matrix_solvers)
 add_subdirectory(materials)
+add_subdirectory(preconditioners)
 
 
 

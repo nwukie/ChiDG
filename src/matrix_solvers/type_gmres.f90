@@ -1,14 +1,15 @@
 module type_gmres
 #include <messenger.h>
-    use mod_kinds,          only: rk, ik
-    use mod_constants,      only: DIAG, ZERO, TWO
-    use mod_inv,            only: inv
-    use atype_matrixsolver, only: matrixsolver_t 
-    use type_blockmatrix,   only: blockmatrix_t
-    use type_densematrix,   only: densematrix_t
+    use mod_kinds,              only: rk, ik
+    use mod_constants,          only: DIAG, ZERO, TWO
+    use mod_inv,                only: inv
+    use atype_matrixsolver,     only: matrixsolver_t 
+    use type_preconditioner,    only: preconditioner_t
+    use type_blockmatrix,       only: blockmatrix_t
+    use type_densematrix,       only: densematrix_t
     use type_blockvector
     use operator_mv
-    use operator_dot,       only: dot
+    use operator_dot,           only: dot
     
     implicit none
         
@@ -47,11 +48,12 @@ contains
     !!
     !!
     !--------------------------------------------------------------
-    subroutine solve(self,A,x,b)
-        class(gmres_t),         intent(inout)   :: self
-        type(blockmatrix_t),    intent(inout)   :: A
-        type(blockvector_t),    intent(inout)   :: x
-        type(blockvector_t),    intent(inout)   :: b
+    subroutine solve(self,A,x,b,M)
+        class(gmres_t),             intent(inout)               :: self
+        type(blockmatrix_t),        intent(inout)               :: A
+        type(blockvector_t),        intent(inout)               :: x
+        type(blockvector_t),        intent(inout)               :: b
+        class(preconditioner_t),    intent(inout), optional     :: M
 
 
 

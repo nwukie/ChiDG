@@ -1,9 +1,10 @@
 module type_blockjacobi
 #include <messenger.h>
-    use mod_kinds,          only: rk, ik
-    use mod_inv,            only: inv
-    use atype_matrixsolver, only: matrixsolver_t 
-    use type_blockmatrix,   only: blockmatrix_t
+    use mod_kinds,              only: rk, ik
+    use mod_inv,                only: inv
+    use atype_matrixsolver,     only: matrixsolver_t 
+    use type_preconditioner,    only: preconditioner_t
+    use type_blockmatrix,       only: blockmatrix_t
     use type_blockvector
         
 
@@ -41,11 +42,12 @@ contains
     !!
     !!
     !--------------------------------------------------------------
-    subroutine solve(self,A,x,b)
-        class(blockjacobi_t),   intent(inout)   :: self
-        type(blockmatrix_t),    intent(inout)   :: A
-        type(blockvector_t),    intent(inout)   :: x
-        type(blockvector_t),    intent(inout)   :: b
+    subroutine solve(self,A,x,b,M)
+        class(blockjacobi_t),       intent(inout)           :: self
+        type(blockmatrix_t),        intent(inout)           :: A
+        type(blockvector_t),        intent(inout)           :: x
+        type(blockvector_t),        intent(inout)           :: b
+        class(preconditioner_t),    intent(inout), optional :: M
 
 
 
@@ -70,6 +72,8 @@ contains
         call xold%clear()
 
 
+
+        self%niter = 0
         res = 1._rk
         do while (res > self%tol)
             
@@ -105,6 +109,13 @@ contains
             end if
 
             xold = x    ! update solution
+
+
+            !
+            ! Update iteration counter
+            !
+            self%niter = self%niter + 1
+
         end do ! res > self%tol
 
 

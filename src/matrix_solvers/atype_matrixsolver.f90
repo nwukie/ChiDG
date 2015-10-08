@@ -21,7 +21,8 @@ module atype_matrixsolver
     !-------------------------------------------------------------
     type, public, abstract :: matrixsolver_t
 
-        real(rk)        :: tol = 1.e-7_rk       !< Convergance tolerance for iterative solvers
+        real(rk)        :: tol   = 1.e-7_rk     !< Convergance tolerance for iterative solvers
+        integer(ik)     :: niter = 0
 
         type(timer_t)   :: timer                !< Timer for linear system solve
 
@@ -48,15 +49,17 @@ module atype_matrixsolver
 
 
     abstract interface
-        subroutine solve_interface(self,A,x,b)
-            use type_blockmatrix,   only: blockmatrix_t
-            use type_blockvector,   only: blockvector_t
+        subroutine solve_interface(self,A,x,b,M)
+            use type_blockmatrix,       only: blockmatrix_t
+            use type_blockvector,       only: blockvector_t
+            use type_preconditioner,    only: preconditioner_t
             import matrixsolver_t
 
-            class(matrixsolver_t),  intent(inout)   :: self
-            type(blockmatrix_t),    intent(inout)   :: A
-            type(blockvector_t),    intent(inout)   :: x
-            type(blockvector_t),    intent(inout)   :: b
+            class(matrixsolver_t),      intent(inout)           :: self
+            type(blockmatrix_t),        intent(inout)           :: A
+            type(blockvector_t),        intent(inout)           :: x
+            type(blockvector_t),        intent(inout)           :: b
+            class(preconditioner_t),    intent(inout), optional :: M
         end subroutine
     end interface
 

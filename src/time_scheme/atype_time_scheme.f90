@@ -17,25 +17,28 @@ module atype_time_scheme
     !-------------------------------------------------------------------------------
     type, abstract, public  :: time_scheme_t
 
-        real(rk)                        :: testing
-        logical                         :: solverInitialized = .false.
+        real(rk)        :: testing
+        logical         :: solverInitialized = .false.
 
 
 
         ! OPTIONS
-        real(rk)        :: dt = 0.001_rk        !< Time-step increment
-        real(rk)        :: tol = 1.e-13_rk      !< Convergence tolerance
-        integer(ik)     :: nsteps = 100         !< Number of time steps to compute
-        integer(ik)     :: nwrite = 10          !< Write data every 'nwrite' steps
+        real(rk)        :: dt       = 0.001_rk      !< Time-step increment
+        real(rk)        :: tol      = 1.e-13_rk     !< Convergence tolerance
+        integer(ik)     :: nsteps   = 100           !< Number of time steps to compute
+        integer(ik)     :: nwrite   = 10            !< Write data every 'nwrite' steps
 
 
-        type(timer_t)   :: timer                !< Timer data-type
+        type(timer_t)   :: timer                    !< Timer data-type
 
 
         ! Data logs
-        type(rvector_t)                 :: residual_L2norm
-        type(ivector_t)                 :: nnewton_iterations
-        type(rvector_t)                 :: iteration_time
+        type(rvector_t) :: residual_norm
+        type(rvector_t) :: residual_time
+        type(ivector_t) :: matrix_iterations
+        type(rvector_t) :: matrix_time
+        type(ivector_t) :: newton_iterations
+        type(rvector_t) :: total_time
 
 
     contains
@@ -46,6 +49,7 @@ module atype_time_scheme
         procedure(data_interface),   deferred   :: solve
 
         procedure   :: set
+        procedure   :: report
     end type time_scheme_t
     !------------------------------------------------------------------------------
 
@@ -89,13 +93,15 @@ module atype_time_scheme
 
     ! Interface for passing a domain_t type
     abstract interface
-        subroutine data_interface(self,domain,matrixsolver)
-            use type_domain,        only: domain_t
-            use atype_matrixsolver, only: matrixsolver_t
+        subroutine data_interface(self,domain,matrixsolver,preconditioner)
+            use type_domain,            only: domain_t
+            use atype_matrixsolver,     only: matrixsolver_t
+            use type_preconditioner,    only: preconditioner_t
             import time_scheme_t
-            class(time_scheme_t),                 intent(inout)   :: self
-            type(domain_t),                  intent(inout)   :: domain
-            class(matrixsolver_t), optional, intent(inout)   :: matrixsolver
+            class(time_scheme_t),                   intent(inout)   :: self
+            type(domain_t),                         intent(inout)   :: domain
+            class(matrixsolver_t),      optional,   intent(inout)   :: matrixsolver
+            class(preconditioner_t),    optional,   intent(inout)   :: preconditioner
         end subroutine
     end interface
 
@@ -163,7 +169,7 @@ contains
     !!
     !!  @author Nathan A. Wukie
     !!
-    !--------------------------------------------------------------------
+    !-----------------------------------------------------------------------
     subroutine init_spec(self,domain,options)
         class(time_scheme_t),   intent(inout)   :: self
         type(domain_t),         intent(inout)   :: domain
@@ -178,6 +184,51 @@ contains
 
 
 
+
+
+
+
+    !>
+    !!
+    !!
+    !!
+    !!
+    !!
+    !!
+    !------------------------------------------------------------------------
+    subroutine report(self)
+        class(time_scheme_t),   intent(in)  :: self
+
+        integer(ik) :: i
+
+        real(rk)    :: residual_time, residual_norm, matrix_time
+        integer(ik) :: matrix_iterations
+
+
+
+        print*, '-------------------   Time Scheme Report  --------------------'
+        print*, 'Newton iterations: ', self%newton_iterations%at(1)
+        print*, 'Total time: ', self%total_time%at(1)
+
+        print*, ''
+        print*, '--------------------------------------------------------------'
+
+
+        print*, 'Residual compute time', '             Norm[R]', '                 Matrix solve time', '     Matrix iterations'
+        do i = 1,self%residual_time%size()
+            residual_time = self%residual_time%at(i)
+            residual_norm = self%residual_norm%at(i)
+            matrix_time   = self%matrix_time%at(i)
+            matrix_iterations = self%matrix_iterations%at(i)
+            
+            
+            print*, residual_time, residual_norm, matrix_time, matrix_iterations
+        end do
+
+        print*, '--------------------------------------------------------------'
+
+
+    end subroutine report
 
 
 

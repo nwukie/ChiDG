@@ -1,9 +1,10 @@
 module newton
-    use mod_kinds,          only: rk,ik
-    use mod_constants,      only: ZERO, ONE, TWO, DIAG
-    use atype_time_scheme,  only: time_scheme_t
-    use type_domain,        only: domain_t
-    use atype_matrixsolver, only: matrixsolver_t
+    use mod_kinds,              only: rk,ik
+    use mod_constants,          only: ZERO, ONE, TWO, DIAG
+    use atype_time_scheme,      only: time_scheme_t
+    use type_domain,            only: domain_t
+    use atype_matrixsolver,     only: matrixsolver_t
+    use type_preconditioner,    only: preconditioner_t
     use type_blockvector
 
     use mod_spatial,    only: update_space
@@ -58,15 +59,16 @@ contains
     !!
     !!
     !-------------------------------------------------------------------------------------------------
-    subroutine solve(self,domain,matrixsolver)
+    subroutine solve(self,domain,matrixsolver,preconditioner)
         class(newton_t),                    intent(inout)   :: self
         type(domain_t),                     intent(inout)   :: domain
-        class(matrixsolver_t), optional,    intent(inout)   :: matrixsolver
+        class(matrixsolver_t),   optional,  intent(inout)   :: matrixsolver
+        class(preconditioner_t), optional,  intent(inout)   :: preconditioner
 
         character(100)          :: filename
         integer(ik)             :: itime, nsteps, ielem, wcount, iblk, iindex, niter, iinner, ieqn
         integer(ik)             :: rstart, rend, cstart, cend, nterms
-        real(rk)                :: resid
+        real(rk)                :: resid, timing
         real(rk), allocatable   :: vals(:)
         type(blockvector_t)     :: b, qn, qold, qnew
       
@@ -79,7 +81,7 @@ contains
         wcount = 1
         associate ( q => domain%sdata%q, dq => domain%sdata%dq, rhs => domain%sdata%rhs, lin => domain%sdata%lin, dt => self%dt)
 
-            print*, 'entering time'
+            print*, 'Entering time'
             !
             ! start timer
             !
@@ -111,18 +113,17 @@ contains
                 !
                 ! Update Spatial Residual and Linearization (rhs, lin)
                 !
-                call update_space(domain)
+                call update_space(domain,timing)
+                call self%residual_time%push_back(timing)   ! non-essential record-keeping
 
                 resid = rhs%norm()
-
-
 
 
                 !
                 ! Print diagnostics
                 !
                 print*, "   R(Q) - Norm: ", resid
-                call self%residual_L2norm%push_back(resid)
+                call self%residual_norm%push_back(resid)
 
 
 
@@ -139,7 +140,9 @@ contains
                 !
                 ! We need to solve the matrix system Ax=b for the update vector x (dq)
                 !
-                call matrixsolver%solve(lin,dq,b)
+                call matrixsolver%solve(lin,dq,b,preconditioner)
+                call self%matrix_iterations%push_back(matrixsolver%niter)       ! non-essential record-keeping
+                call self%matrix_time%push_back(matrixsolver%timer%elapsed())   ! non-essential record-keeping
 
 
 
@@ -185,11 +188,12 @@ contains
 
 
             !
-            ! stop timer
+            ! stop timer. Record timings
             !
             call self%timer%stop()
             call self%timer%report('Solver Elapsed Time:')
-            call self%iteration_time%push_back(self%timer%elapsed())
+            call self%total_time%push_back(self%timer%elapsed())
+
 
 
 
@@ -208,7 +212,7 @@ contains
         !
         ! Store newton iteration count
         !
-        call self%nnewton_iterations%push_back(niter)
+        call self%newton_iterations%push_back(niter)
 
 
         entropy_error = compute_entropy_error(domain) 

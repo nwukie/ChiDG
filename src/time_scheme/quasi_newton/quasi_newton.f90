@@ -1,16 +1,18 @@
 module quasi_newton
-    use mod_kinds,          only: rk,ik
-    use mod_constants,      only: ZERO, ONE, TWO, DIAG
-    use atype_time_scheme,  only: time_scheme_t
-    use type_domain,        only: domain_t
-    use atype_matrixsolver, only: matrixsolver_t
+    use mod_kinds,              only: rk,ik
+    use mod_constants,          only: ZERO, ONE, TWO, DIAG
+    use atype_time_scheme,      only: time_scheme_t
+    use type_domain,            only: domain_t
+    use atype_matrixsolver,     only: matrixsolver_t
+    use type_preconditioner,    only: preconditioner_t
     use type_blockvector
 
-    use mod_spatial,        only: update_space
+    use mod_spatial,            only: update_space
 
-    use mod_tecio,          only: write_tecio_variables
+    use mod_tecio,              only: write_tecio_variables
 
-    use mod_entropy,        only: compute_entropy_error
+    use mod_entropy,            only: compute_entropy_error
+    use mod_timestep,           only: compute_timestep
     implicit none
     private
 
@@ -54,15 +56,16 @@ contains
     !!
     !!
     !-------------------------------------------------------------------------------------------------
-    subroutine solve(self,domain,matrixsolver)
-        class(quasi_newton_t),              intent(inout)   :: self
-        type(domain_t),                     intent(inout)   :: domain
-        class(matrixsolver_t), optional,    intent(inout)   :: matrixsolver
+    subroutine solve(self,domain,matrixsolver,preconditioner)
+        class(quasi_newton_t),                  intent(inout)   :: self
+        type(domain_t),                         intent(inout)   :: domain
+        class(matrixsolver_t),      optional,   intent(inout)   :: matrixsolver
+        class(preconditioner_t),    optional,   intent(inout)   :: preconditioner
 
         character(100)          :: filename
         integer(ik)             :: itime, nsteps, ielem, wcount, iblk, iindex, ninner, iinner, ieqn
         integer(ik)             :: rstart, rend, cstart, cend, nterms
-        real(rk)                :: resid, rnorm_0, rnorm_n, dtau, amp, cfl, cfl0, cfln, entropy_error
+        real(rk)                :: rnorm0, rnorm, dtau, amp, cfl, cfl0, cfln, entropy_error, timing
         real(rk), allocatable   :: vals(:)
         type(blockvector_t)     :: b, qn, qold, qnew, dqdtau
       
@@ -89,35 +92,69 @@ contains
             !
             ! NONLINEAR CONVERGENCE INNER LOOP
             !
-            resid  = ONE    ! Force inner loop entry
+            rnorm  = ONE    ! Force inner loop entry
             ninner = 0      ! Initialize inner loop counter
-            cfl0    = 1._rk
-            amp    = 0.000000000001_rk
-            dtau   = cfl * amp
-
-            cfln = cfl0
+            cfl0   = 2._rk
 
 
 
-            do while ( resid > self%tol )
+
+            do while ( rnorm > self%tol )
                 ninner = ninner + 1
                 print*, "   ninner: ", ninner
 
 
 
                 !dtau = dcfln/30._rk
-                dtau = dtau * 5._rk
+                !dtau = dtau * 5._rk
 
 
 
+                !
                 ! Store the value of the current inner iteration solution (k) for the solution update (n+1), q_(n+1)_k
+                !
                 qold = q
 
 
                 !
                 ! Update Spatial Residual and Linearization (rhs, lin)
                 !
-                call update_space(domain)
+                call update_space(domain,timing)
+                call self%residual_time%push_back(timing)
+
+
+
+
+                !
+                ! Compute and store residual norm
+                !
+                ! Store residual norm for first iteration
+                if (ninner == 1) then
+                    rnorm0 = rhs%norm()
+                end if
+                rnorm = rhs%norm()
+
+
+
+                !
+                ! Print and store residual
+                !
+                print*, "   R - Norm: ", rnorm
+                call self%residual_norm%push_back(rnorm)
+
+
+
+                !
+                ! Compute new cfl for pseudo-timestep
+                !
+                cfln = cfl0*(rnorm0/rnorm)
+
+
+
+                !
+                ! Compute element-local pseudo-timestep
+                !
+                call compute_timestep(domain,cfln)
 
 
 
@@ -125,7 +162,12 @@ contains
                 ! Add mass/dt to sub-block diagonal in dR/dQ
                 !
                 do ielem = 1,domain%mesh%nelem
-                    nterms = domain%mesh%nterms_s
+                    nterms = domain%mesh%nterms_s   ! get number of solution terms
+                    dtau   = domain%sdata%dt(ielem) ! get element-local timestep
+
+                    !
+                    ! Loop through equations and add mass matrix
+                    !
                     do ieqn = 1,domain%eqnset%neqns
                         iblk = DIAG
                         ! Need to compute row and column extends in diagonal so we can
@@ -156,7 +198,9 @@ contains
                 !
                 ! We need to solve the matrix system Ax=b for the update vector x (dq)
                 !
-                call matrixsolver%solve(lin,dq,b)
+                call matrixsolver%solve(lin,dq,b,preconditioner)
+                call self%matrix_iterations%push_back(matrixsolver%niter)
+                call self%matrix_time%push_back(matrixsolver%timer%elapsed())
 
 
 
@@ -166,32 +210,21 @@ contains
                 qnew = qold + dq
 
 
-                ! Compute residual of nonlinear iteration
-                resid = dq%norm()
 
-                ! Store residual norm for first iteration
-                if (ninner == 1) then
-                    rnorm_0 = dq%norm()
-                end if
-
-                ! Store current residual norm
-                rnorm_n = dq%norm()
-                cfln = cfl0*(rnorm_0/rnorm_n)*10._rk
-
+                !
                 ! Clear working storage
+                !
                 call rhs%clear()
                 call dq%clear()
                 call lin%clear()
 
                 
 
-
+                !
                 ! Store updated solution vector (qnew) to working solution vector (q)
+                !
                 q = qnew
 
-
-                print*, "   DQ - Norm: ", resid
-                print*, "   dtau (ps): ", dtau
 
 
                 if (wcount == self%nwrite) then
@@ -210,7 +243,7 @@ contains
             !
             call self%timer%stop()
             call self%timer%report('Solver Elapsed Time:')
-            call self%iteration_time%push_back(self%timer%elapsed())
+            call self%total_time%push_back(self%timer%elapsed())
 
 
             ! Write Final Solution
@@ -222,7 +255,7 @@ contains
 
 
 
-        call self%nnewton_iterations%push_back(ninner)
+        call self%newton_iterations%push_back(ninner)
 
 
 

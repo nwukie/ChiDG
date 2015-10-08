@@ -45,7 +45,7 @@ subroutine test_fgmres_solve()
 
 
     ! Initialize data containers
-    call A%init(dom%mesh)
+    call A%init(dom%mesh,'full')
     call x%init(dom%mesh)
     call b%init(dom%mesh)
 

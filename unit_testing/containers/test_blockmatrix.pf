@@ -33,7 +33,7 @@ subroutine test_blockmatrix__store_1eq_8terms()
     call mesh%init_sol(neqns,nterms)    !> Initialize numerics
 
     !> Call initialization on block matrix
-    call bmat%init(mesh)
+    call bmat%init(mesh,'full')
 
 
     nderiv = neqns*nterms
@@ -129,7 +129,7 @@ subroutine test_blockmatrix__store_2eq_8terms()
     call mesh%init_sol(neqns,nterms)        !> Initialize numerics
 
     !> Call initialization on block matrix
-    call bmat%init(mesh)
+    call bmat%init(mesh,'full')
 
 
     nderiv = neqns*nterms
@@ -231,7 +231,7 @@ subroutine test_blockmatrix__clear_1eq_8terms()
     call mesh%init_sol(neqns,nterms)        !> Initialize numerics
 
     !> Call initialization on block matrix
-    call bmat%init(mesh)
+    call bmat%init(mesh,'full')
 
 
     nderiv = neqns*nterms

@@ -133,7 +133,7 @@ subroutine rtest_linearadvection_implicit_convergence()
     ! number of inner iterations should be two. This is since the solver will execute a second iteration, which
     ! should compute the residual of zero and indicate the system is converged.
     itime = 1
-    @assertEqual(2,chidg%timescheme%nnewton_iterations%at(itime))
+    @assertEqual(2,chidg%timescheme%newton_iterations%at(itime))
 
 
 

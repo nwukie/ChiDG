@@ -1,10 +1,10 @@
 module atype_solverdata
 #include <messenger.h>
-    use mod_kinds,          only: rk,ik
-    use type_expansion,     only: expansion_t
-    use type_blockmatrix,   only: blockmatrix_t
-    use type_blockvector,   only: blockvector_t
-    use type_mesh,          only: mesh_t
+    use mod_kinds,              only: rk,ik
+    !use type_expansion,         only: expansion_t
+    use type_blockmatrix,       only: blockmatrix_t
+    use type_blockvector,       only: blockvector_t
+    use type_mesh,              only: mesh_t
     implicit none
 
 
@@ -12,22 +12,21 @@ module atype_solverdata
     !!
     !-----------------------------------------------------
     type, abstract, public  :: solverdata_t
-        !  Base solver data
-!        type(expansion_t),  allocatable :: q(:)     !> Solution vector
-!        type(expansion_t),  allocatable :: dq(:)    !> Change in solution vector
-!        type(expansion_t),  allocatable :: rhs(:)   !> Spatial residual vector
 
-        type(blockvector_t)             :: q                        !> Solution vector
-        type(blockvector_t)             :: dq                       !> Change in solution vector
-        type(blockvector_t)             :: rhs                      !> Spatial residual vector
-        type(blockmatrix_t)             :: lin                      !> Linearization of the spatial scheme
+        !>  Base solver data
+        type(blockvector_t)             :: q                        !< Solution vector
+        type(blockvector_t)             :: dq                       !< Change in solution vector
+        type(blockvector_t)             :: rhs                      !< Spatial residual vector
+        type(blockmatrix_t)             :: lin                      !< Linearization of the spatial scheme
+
+        real(rk), allocatable           :: dt(:)                    !< Element-local time step
 
 
 
         ! Matrix views of expansion storage
-        type(expansion_t),  pointer     :: q_m(:,:,:)   => null()   !> Matrix view of solution expansions
-        type(expansion_t),  pointer     :: dq_m(:,:,:)  => null()   !> Matrix view of change in solution expansions
-        type(expansion_t),  pointer     :: rhs_m(:,:,:) => null()   !> Matrix view of rhs expansion
+        !type(expansion_t),  pointer     :: q_m(:,:,:)   => null()   !< Matrix view of solution expansions
+        !type(expansion_t),  pointer     :: dq_m(:,:,:)  => null()   !< Matrix view of change in solution expansions
+        !type(expansion_t),  pointer     :: rhs_m(:,:,:) => null()   !< Matrix view of rhs expansion
 
 
 
@@ -38,7 +37,6 @@ module atype_solverdata
         ! Must define these procedures in the extended type
         procedure                               :: init_base    !> Initialize base required data structures. Should be called by specialized init procedures
         procedure(data_interface),   deferred   :: init
-!        procedure(data_interface),   deferred   :: solve
 
     end type solverdata_t
 
@@ -85,35 +83,29 @@ contains
         type(mesh_t),           intent(in)              :: mesh
 
         integer(ik)                                 :: nterms_s, ielem, nelem, neqns, ierr
-        type(expansion_t), pointer                  :: temp(:)
+        !type(expansion_t), pointer                  :: temp(:)
 
 
         nterms_s = mesh%nterms_s
         nelem    = mesh%nelem
         neqns    = mesh%neqns
 
-        !> Allocate storage
-        !allocate(self%q(nelem),     &                   !> Allocate an expansion type for each element
-        !         self%dq(nelem),    &                   !> Allocate an expansion type for each element
-        !         self%rhs(nelem), stat=ierr)            !> Allocate an expansion type for each element
-        !if (ierr /= 0) call AllocationError
 
-
-        !> Initialize storage
-        !do ielem = 1,nelem
-        !    call self%q(ielem)%init(nterms_s,neqns)     !> Initialize solution expansion for each element
-        !    call self%dq(ielem)%init(nterms_s,neqns)    !> Initialize delta solution expansion for each element
-        !    call self%rhs(ielem)%init(nterms_s,neqns)   !> Initialize rhs expansion for each element
-        !end do
-
+        !
+        ! Initialize and allocate storage
+        !
         call self%q%init(  mesh)
         call self%dq%init( mesh)
         call self%rhs%init(mesh)
-        call self%lin%init(mesh)                            !> Initialize storage for linearization
+        call self%lin%init(mesh,'full')
+
+        allocate(self%dt(nelem),stat=ierr)
+        if (ierr /= 0) call AllocationError
 
 
-
-        !> Initialize solution matrix view
+        !
+        ! Initialize solution matrix view
+        !
 !        temp => self%q
 !        self%q_m(1:mesh%nelem_xi, 1:mesh%nelem_eta, 1:mesh%nelem_zeta) => temp(1:mesh%nelem)
 !
@@ -124,7 +116,9 @@ contains
 !        self%rhs_m(1:mesh%nelem_xi, 1:mesh%nelem_eta, 1:mesh%nelem_zeta) => temp(1:mesh%nelem)
 
 
-        !> Confirm solver initialization
+        !
+        ! Confirm solver initialization
+        !
         self%solverInitialized = .true.
 
     end subroutine

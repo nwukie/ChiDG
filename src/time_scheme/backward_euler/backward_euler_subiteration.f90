@@ -1,14 +1,15 @@
 module backward_euler_subiteration
-    use mod_kinds,          only: rk,ik
-    use mod_constants,      only: ZERO, ONE, TWO, DIAG
-    use atype_time_scheme,  only: time_scheme_t
-    use type_domain,        only: domain_t
-    use atype_matrixsolver, only: matrixsolver_t
+    use mod_kinds,              only: rk,ik
+    use mod_constants,          only: ZERO, ONE, TWO, DIAG
+    use atype_time_scheme,      only: time_scheme_t
+    use type_domain,            only: domain_t
+    use atype_matrixsolver,     only: matrixsolver_t
+    use type_preconditioner,    only: preconditioner_t
     use type_blockvector
 
-    use mod_spatial,    only: update_space
+    use mod_spatial,            only: update_space
 
-    use mod_tecio,      only: write_tecio_variables
+    use mod_tecio,              only: write_tecio_variables
     implicit none
     private
 
@@ -52,10 +53,11 @@ contains
     !!
     !!
     !-------------------------------------------------------------------------------------------------
-    subroutine solve(self,domain,matrixsolver)
-        class(backward_euler_subiteration_t),            intent(inout)   :: self
-        type(domain_t),                     intent(inout)   :: domain
-        class(matrixsolver_t), optional,    intent(inout)   :: matrixsolver
+    subroutine solve(self,domain,matrixsolver,preconditioner)
+        class(backward_euler_subiteration_t),   intent(inout)   :: self
+        type(domain_t),                         intent(inout)   :: domain
+        class(matrixsolver_t),      optional,   intent(inout)   :: matrixsolver
+        class(preconditioner_t),    optional,   intent(inout)   :: preconditioner
 
         character(100)          :: filename
         integer(ik)             :: itime, nsteps, ielem, wcount, iblk, iindex, ninner, iinner, ieqn
@@ -112,7 +114,10 @@ contains
                     qold = q
 
 
+
+                    !
                     ! Update Spatial Residual and Linearization (rhs, lin)
+                    !
                     call update_space(domain)
 
 
@@ -142,7 +147,9 @@ contains
 
 
 
+                    !
                     ! Divide pseudo-time derivative by dt and multiply by mass matrix
+                    !
                     dqdtau = (qold - qn)/self%dt
                     do ielem = 1,domain%mesh%nelem
                         do ieqn = 1,domain%eqnset%neqns
@@ -152,23 +159,27 @@ contains
                     end do
 
 
+                    !
                     ! Assign rhs to b, which should allocate storage
+                    !
                     !b = (rhs)  ! BEWARE: this causes an error. Parentheses operator not defined
                     b = (-ONE)*dqdtau - rhs
 
 
 
 
-
-
+                    !
                     ! We need to solve the matrix system Ax=b for the update vector x (dq)
-                    call matrixsolver%solve(lin,dq,b)
+                    !
+                    call matrixsolver%solve(lin,dq,b,preconditioner)
 
 
 
-
+                    !
                     ! Advance solution with update vector
+                    !
                     qnew = qold + dq
+
 
 
                     ! Compute residual of nonlinear iteration
@@ -190,8 +201,9 @@ contains
 
                     
 
-
+                    !
                     ! Store updated solution vector (qnew) to working solution vector (q)
+                    !
                     q = qnew
 
 
@@ -206,7 +218,7 @@ contains
                     print*, "   dtau (ps): ", dtau
                 end do ! ninner
 
-                call self%nnewton_iterations%push_back(ninner)
+                call self%newton_iterations%push_back(ninner)
 
 
                 if (wcount == self%nwrite) then

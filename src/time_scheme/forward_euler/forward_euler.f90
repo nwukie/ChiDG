@@ -1,16 +1,17 @@
 module forward_euler
-    use mod_kinds,          only: rk,ik
-    use mod_constants,      only: ZERO
-    use atype_time_scheme,  only: time_scheme_t
-    use atype_matrixsolver, only: matrixsolver_t
-    use type_domain,        only: domain_t
-    use type_dict,          only: dict_t
-    use type_expansion
+    use mod_kinds,              only: rk,ik
+    use mod_constants,          only: ZERO
+    use atype_time_scheme,      only: time_scheme_t
+    use atype_matrixsolver,     only: matrixsolver_t
+    use type_preconditioner,    only: preconditioner_t
+    use type_domain,            only: domain_t
+    use type_dict,              only: dict_t
+    !use type_expansion
     use type_blockvector
 
-    use mod_spatial,    only: update_space
+    use mod_spatial,            only: update_space
 
-    use mod_tecio,      only: write_tecio_variables
+    use mod_tecio,              only: write_tecio_variables
     implicit none
     private
 
@@ -68,10 +69,11 @@ contains
     !!
     !!
     !-------------------------------------------------------------------------------------------------
-    subroutine solve(self,domain,matrixsolver)
+    subroutine solve(self,domain,matrixsolver,preconditioner)
         class(forward_euler_t),             intent(inout)   :: self
         type(domain_t),                     intent(inout)   :: domain
-        class(matrixsolver_t), optional,    intent(inout)   :: matrixsolver
+        class(matrixsolver_t),   optional,  intent(inout)   :: matrixsolver
+        class(preconditioner_t), optional,  intent(inout)   :: preconditioner
 
         character(100)          :: filename
         integer(ik)             :: itime, nsteps, ielem, wcount, iblk, ieqn

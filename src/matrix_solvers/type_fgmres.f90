@@ -1,14 +1,17 @@
 module type_fgmres
 #include <messenger.h>
-    use mod_kinds,          only: rk, ik
-    use mod_constants,      only: DIAG, ZERO, TWO
-    use mod_inv,            only: inv
-    use atype_matrixsolver, only: matrixsolver_t 
-    use type_blockmatrix,   only: blockmatrix_t
-    use type_densematrix,   only: densematrix_t
+    use mod_kinds,              only: rk, ik
+    use mod_constants,          only: DIAG, ZERO, TWO
+    use mod_inv,                only: inv
+    use atype_matrixsolver,     only: matrixsolver_t 
+    use type_preconditioner,    only: preconditioner_t
+    use type_blockmatrix,       only: blockmatrix_t
+    use type_densematrix,       only: densematrix_t
     use type_blockvector
     use operator_mv
     use operator_dot,       only: dot
+
+    use precon_jacobi,      only: precon_jacobi_t
     
     implicit none
         
@@ -25,8 +28,9 @@ module type_fgmres
     !-------------------------------------------
     type, public, extends(matrixsolver_t) :: fgmres_t
 
-        integer(ik) :: m = 200
+        integer(ik) :: m = 100
 
+        type(precon_jacobi_t)       :: precon
 
     contains
 
@@ -47,11 +51,12 @@ contains
     !!
     !!
     !--------------------------------------------------------------
-    subroutine solve(self,A,x,b)
-        class(fgmres_t),         intent(inout)   :: self
-        type(blockmatrix_t),    intent(inout)   :: A
-        type(blockvector_t),    intent(inout)   :: x
-        type(blockvector_t),    intent(inout)   :: b
+    subroutine solve(self,A,x,b,M)
+        class(fgmres_t),            intent(inout)               :: self
+        type(blockmatrix_t),        intent(inout)               :: A
+        type(blockvector_t),        intent(inout)               :: x
+        type(blockvector_t),        intent(inout)               :: b
+        class(preconditioner_t),    intent(inout), optional     :: M
 
 
 
@@ -70,6 +75,7 @@ contains
         logical     :: max_iter  = .false.
 
 
+
         !
         ! Start timer
         !
@@ -83,23 +89,10 @@ contains
 
 
         !
-        ! Initialize D blocks for preconditioner
+        ! Update preconditioner
         !
-        do ielem = 1,size(A%lblks,1)
-            D(ielem) = A%lblks(ielem,DIAG)
-        end do
-
-        !
-        ! Replace the block diagonal D with inverse of D
-        !
-        do ielem = 1,size(A%lblks,1)
-            D(ielem)%mat = inv(D(ielem)%mat)
-        end do
-
-
-
-
-
+        !call self%precon%update(A,b)
+        call M%update(A,b)
 
 
 
@@ -154,8 +147,15 @@ contains
         call x%clear()
 
 
+        self%niter = 0
+
+
         res = 1._rk
         do while (res > self%tol)
+
+            !
+            ! Clear working variables
+            !
             do ivec = 1,size(v)
                 call v(ivec)%clear()
                 call z(ivec)%clear()
@@ -188,18 +188,18 @@ contains
 
 
                 !
-                ! Apply preconditioner
+                ! Apply preconditioner:  z(j) = Minv * v(j)
                 !
-                !z(j) = Minv * v(j)
-                do ielem = 1,size(D)
-                    z(j)%lvecs(ielem)%vec = matmul(D(ielem)%mat,v(j)%lvecs(ielem)%vec)
-                end do
+                !z(j) = self%precon%apply(A,v(j))
+                z(j) = M%apply(A,v(j))
+
 
 
                 !
                 ! Compute w = Av for the current iteration
                 !
                 w = A*z(j)
+
 
 
                 !
@@ -211,13 +211,9 @@ contains
                     
                     w  = w - h(i,j)*v(i)
 
-
-                end do  ! Inner GMRES Loop - i
-
+                end do
 
                 h(j+1,j) = w%norm()
-
-
 
 
 
@@ -226,12 +222,6 @@ contains
                 ! Compute next Krylov vector
                 !
                 v(j+1) = w/h(j+1,j)
-
-
-
-
-
-
 
 
 
@@ -282,6 +272,10 @@ contains
 
 
                 
+                !
+                ! Update iteration counter
+                !
+                self%niter = self%niter + 1_ik
 
 
 
@@ -323,7 +317,9 @@ contains
 
 
 
+            !
             ! Store h and p values to appropriately sized matrices
+            !
             do l=1,nvecs
                 do k=1,nvecs
                     h_square(k,l) = h(k,l)
@@ -334,7 +330,9 @@ contains
 
 
 
+            !
             ! Solve the system
+            !
             h_square = inv(h_square)
             y_dim = matmul(h_square,p_dim)
 
@@ -350,8 +348,6 @@ contains
 
 
 
-
-
             !
             ! Test exit condition
             !
@@ -360,11 +356,6 @@ contains
             else
                 x0 = x
             end if
-
-
-
-            
-
 
 
 
@@ -378,20 +369,12 @@ contains
 
 
 
-
-
-
-
-
+        !
+        ! Report
+        !
         err = self%error(A,x,b)
         print*, '   Matrix Solver Error: ', err
 
-
-
-
-        !
-        ! Report timings
-        !
         call self%timer%stop()
         call self%timer%report('Matrix solver compute time: ')
 

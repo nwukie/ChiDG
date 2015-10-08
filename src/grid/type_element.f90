@@ -56,6 +56,9 @@ module type_element
         real(rk), allocatable   :: mass(:,:)
         real(rk), allocatable   :: invmass(:,:)
 
+        !> Element volume
+        real(rk)                :: vol
+
         !> Logical tests
         logical :: geomInitialized = .false.
         logical :: numInitialized  = .false.
@@ -109,6 +112,10 @@ contains
 
 
 
+        !
+        ! Check if the element mappings are initialized. If so, then get a pointer to the correct mapping 
+        ! and set number of coordinate expansion terms
+        !
         if (allocated(elem_map(mapping)%mat)) then
             imap            => elem_map(mapping)%mat
             nterms_c        = size(elem_map(mapping)%mat,1) ! Get number of terms if coordinate expansion from size of mapping matrix
@@ -120,7 +127,11 @@ contains
             call signal(FATAL,"element%init_geom -- element mapping not initialized. Probably need to call 'init' on chidg environment")
         end if
 
+
+
+        !
         ! Allocate and compute mesh x,y,z modes
+        !
         allocate(self%elem_pts(nterms_c),stat=ierr)
         call self%coords%init(nterms_c,SPACEDIM)
         self%ielem    = ielem
@@ -128,7 +139,11 @@ contains
 
         call compute_modal_coordinates(self%elem_pts,mapping,self%coords)
 
-        self%geomInitialized = .true.                       ! Confirm element grid was initialized
+
+        !
+        ! Confirm element geometry was initialized
+        !
+        self%geomInitialized = .true.   
     end subroutine
 
 
@@ -163,7 +178,9 @@ contains
         nnodes           = self%gq%vol%nnodes       ! With a quadrature instance assigned, we have the number of quadrature nodes
 
 
+        !
         ! Allocate storage for element data structures
+        !
         allocate(self%jinv(nnodes),                         &
                  self%metric(SPACEDIM,SPACEDIM,nnodes),     &
                  self%quad_pts(nnodes),                     &
@@ -175,10 +192,17 @@ contains
         if (ierr /= 0) call AllocationError
 
 
+        !
+        ! Call element metric and matrix calculation routines
+        !
         call self%compute_quadrature_metrics()                  ! Compute element metrics
         call self%compute_element_matrices()                    ! Compute mass matrices and derivative matrices
 
-        self%numInitialized = .true.                            ! Confirm element numerics were initialized
+
+        !
+        ! Confirm element numerics were initialized
+        !
+        self%numInitialized = .true.    
     end subroutine
 
 
@@ -206,14 +230,22 @@ contains
 
         if (nterms_c == 0) call signal(FATAL,'element%assign_quadrature -- coordinate expansion not defined')
 
-        call compute_nnodes_gq(nterms_s,nterms_c,nnodes_face,nnodes_vol)    !> Get number of quadrature nodes
+        !
+        ! Get number of quadrature nodes
+        !
+        call compute_nnodes_gq(nterms_s,nterms_c,nnodes_face,nnodes_vol)
 
 
+        !
         ! Get solution quadrature instance
+        !
         call get_quadrature(nterms_s,nnodes_vol,nnodes_face,igq_s)
         self%gq => GQ(igq_s)
 
+
+        !
         ! Get coordinate quadrature instance
+        !
         call get_quadrature(nterms_c,nnodes_vol,nnodes_face,igq_f)
         self%gqmesh => GQ(igq_f)
 
@@ -243,7 +275,9 @@ contains
         real(rk)    :: dzdxi(self%gq%vol%nnodes), dzdeta(self%gq%vol%nnodes), dzdzeta(self%gq%vol%nnodes)
 
         nnodes = self%gq%vol%nnodes
+        !
         ! Compute element metric terms
+        !
         dxdxi   = matmul(self%gqmesh%vol%ddxi,  self%coords%mat(:,1))
         dxdeta  = matmul(self%gqmesh%vol%ddeta, self%coords%mat(:,1))
         dxdzeta = matmul(self%gqmesh%vol%ddzeta,self%coords%mat(:,1))
@@ -257,7 +291,9 @@ contains
         dzdzeta = matmul(self%gqmesh%vol%ddzeta,self%coords%mat(:,3))
 
 
+        !
         ! Loop through quadrature nodes and compute metric terms
+        !
         do inode = 1,nnodes
             self%metric(1,1,inode) = dydeta(inode)*dzdzeta(inode) - dydzeta(inode)*dzdeta(inode)
             self%metric(2,1,inode) = dydzeta(inode)*dzdxi(inode)  - dydxi(inode)*dzdzeta(inode)
@@ -273,10 +309,19 @@ contains
         end do
 
 
+        !
         ! Compute inverse cell mapping jacobian
+        !
         self%jinv = dxdxi*dydeta*dzdzeta - dxdeta*dydxi*dzdzeta - &
                     dxdxi*dydzeta*dzdeta + dxdzeta*dydxi*dzdeta + &
                     dxdeta*dydzeta*dzdxi - dxdzeta*dydeta*dzdxi
+
+
+        !
+        ! Compute element volume
+        !
+        self%vol = abs(sum(self%jinv * self%gq%vol%weights))
+
     end subroutine
 
 

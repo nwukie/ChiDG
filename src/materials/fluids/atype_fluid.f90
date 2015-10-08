@@ -1,4 +1,5 @@
 module atype_fluid
+    use mod_kinds,  only: rk
     use DNAD_D
     implicit none
     private
@@ -12,8 +13,10 @@ module atype_fluid
 
 
     contains
-        procedure(compute), deferred :: compute_pressure
-        procedure(compute), deferred :: compute_gamma
+        generic, public                     :: compute_pressure => compute_pressure_ad, compute_pressure_real
+        procedure(compute_ad),   deferred   :: compute_pressure_ad
+        procedure(compute_real), deferred   :: compute_pressure_real
+        procedure(compute_ad),   deferred   :: compute_gamma
     end type fluid_t
     !---------------------------------------------------------------
 
@@ -21,7 +24,7 @@ module atype_fluid
 
 
     abstract interface
-        subroutine compute(self,rho,rhou,rhov,rhow,rhoE,vals)
+        subroutine compute_ad(self,rho,rhou,rhov,rhow,rhoE,vals)
             import fluid_t
             import AD_D
 
@@ -32,6 +35,17 @@ module atype_fluid
     end interface
 
 
+
+    abstract interface
+        subroutine compute_real(self,rho,rhou,rhov,rhow,rhoE,vals)
+            use mod_kinds,  only: rk
+            import fluid_t
+
+            class(fluid_t), intent(in)      :: self
+            real(rk),       intent(in)      :: rho(:), rhou(:), rhov(:), rhow(:), rhoE(:)
+            real(rk),       intent(inout)   :: vals(:)
+        end subroutine
+    end interface
 
 
 end module atype_fluid

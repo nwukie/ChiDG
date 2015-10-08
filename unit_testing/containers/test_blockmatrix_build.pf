@@ -54,7 +54,7 @@ subroutine test_blockmatrix_build()
 
 
     ! Call initialization on sparse block-matrix
-    call bmat%init(dom%mesh)
+    call bmat%init(dom%mesh,'full')
 
 
 

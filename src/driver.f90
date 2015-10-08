@@ -6,6 +6,8 @@
 !! represent the simulation domain.
 !!
 !! @author Nathan A. Wukie
+!!
+!!
 
 
 
@@ -23,9 +25,9 @@ program driver
     use mod_testutils,          only: meshgen
     use mod_io
     
-    !-----------------------------------------------------------
+    !
     ! Variable declarations
-    !-----------------------------------------------------------
+    !
     implicit none
     type(chidg_t)                       :: chidg
     type(point_t),          allocatable :: pts(:,:,:)
@@ -65,6 +67,7 @@ program driver
     !
     call chidg%set('time_scheme',timescheme,toptions)
     call chidg%set('matrixsolver',matrixsolver)
+    call chidg%set('preconditioner',preconditioner)
 
 
 
@@ -72,26 +75,12 @@ program driver
         !
         ! Initialize domain
         !
-        !call dom%init_bc('euler_totalinlet_old',XI_MIN)
         call dom%init_bc('euler_totalinlet',XI_MIN)
-        !call dom%init_bc('euler_pressureoutlet_old',XI_MAX)
         call dom%init_bc('euler_pressureoutlet',XI_MAX)
-        !call dom%init_bc('euler_wall',XI_MIN)
-        !call dom%init_bc('euler_wall',XI_MAX)
-        !call dom%init_bc('euler_totalinlet',ETA_MIN)
-        !call dom%init_bc('euler_pressureoutlet',ETA_MAX)
         call dom%init_bc('euler_wall',ETA_MIN)
         call dom%init_bc('euler_wall',ETA_MAX)
         call dom%init_bc('euler_wall',ZETA_MIN)
         call dom%init_bc('euler_wall',ZETA_MAX)
-        !call dom%init_bc('euler_totalinlet',ZETA_MIN)
-        !call dom%init_bc('euler_pressureoutlet',ZETA_MAX)
-        !call dom%init_bc('euler_extrapolate',XI_MIN)
-        !call dom%init_bc('euler_extrapolate',XI_MAX)
-        !call dom%init_bc('euler_extrapolate',ETA_MIN)
-        !call dom%init_bc('euler_extrapolate',ETA_MAX)
-        !call dom%init_bc('euler_extrapolate',ZETA_MIN)
-        !call dom%init_bc('euler_extrapolate',ZETA_MAX)
 
         call dom%init_sol(eqnset,nterms_s)
 
@@ -125,34 +114,6 @@ program driver
 
 
 
-!        ! rho
-!        call roe%set('var',ONE)
-!        call initialize_variable(dom,1,roe)
-!
-!        ! rho_u
-!        call roe%set('var',TWO)
-!        call initialize_variable(dom,2,roe)
-!
-!        ! rho_v
-!        call roe%set('var',THREE)
-!        call initialize_variable(dom,3,roe)
-!
-!        ! rho_w
-!        call roe%set('var',FOUR)
-!        call initialize_variable(dom,4,roe)
-!
-!        ! rho_E
-!        call roe%set('var',FIVE)
-!        call initialize_variable(dom,5,roe)
-!
-
-
-
-
-
-
-
-
     end associate
 
     !
@@ -163,6 +124,7 @@ program driver
 
 
     
+
     !
     ! Wrap-up initialization activities
     !
@@ -179,6 +141,12 @@ program driver
 
 
 
+
+
+    !
+    ! Reporting
+    !
+    call chidg%report()
 
 
 

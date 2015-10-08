@@ -50,6 +50,7 @@ module mod_io
     !--------------------------------------------------
     character(len=100),  save    :: timescheme
     real(rk),            save    :: dt = 0.001_rk
+    real(rk),            save    :: cfl0 = 1._rk
     integer(ik),         save    :: nsteps = 100
     real(rk),            save    :: ttol = 1.e-8
     integer(ik),         save    :: ntime_instances = 1
@@ -62,6 +63,12 @@ module mod_io
     !--------------------------------------------------
     character(len=100),  save    :: matrixsolver = 'direct'
     real(rk),            save    :: mtol = 1.e-8
+
+
+
+    ! PRECONDITIONER
+    !--------------------------------------------------
+    character(len=100),  save    :: preconditioner = 'none'
    
    
 
@@ -131,7 +138,8 @@ contains
                                             ttol
 
         namelist /matrix_solver/            matrixsolver,          &
-                                            mtol
+                                            mtol,                  &
+                                            preconditioner
 
 !        namelist /grid/     gridfile,   gridtype,   &
 !                            bc_ximin,   bc_ximax,   &

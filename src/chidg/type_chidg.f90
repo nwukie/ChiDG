@@ -159,7 +159,7 @@ contains
             !
             ! Allocation for time scheme
             !
-            case ('Time','time','time_scheme','Time_Scheme')
+            case ('Time','time','time_scheme','Time_Scheme','timescheme','TimeScheme')
                 if (allocated(self%timescheme)) then
                     deallocate(self%timescheme)
                     call create_time_scheme(selection,self%timescheme,options)

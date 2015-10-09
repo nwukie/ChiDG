@@ -19,11 +19,6 @@ subroutine test_fgmres_solve()
     type(domain_t)              :: dom
     type(point_t), allocatable  :: pts(:,:,:)
 
-    type(blockmatrix_t)         :: A
-    type(blockvector_t)         :: x, b
-    type(precon_identity_t)     :: M
-    type(fgmres_t)              :: matrix_solver
-    
     real(rk)    :: tol
     integer(ik) :: nterms_c, nterms_s
 
@@ -37,78 +32,82 @@ subroutine test_fgmres_solve()
     call chidg%init('env')
 
 
+    ! Set ChiDG components
+    call chidg%set('timescheme',    'newton')
+    call chidg%set('matrixsolver',  'fgmres')
+    call chidg%set('precondiitoner','identity')
+
+
     ! Get grid points
     call meshgen('311',pts)
 
-
     ! Initialize domain
-    call dom%init_geom(nterms_c,pts)
-    call dom%init_sol('Scalar',nterms_s)
-
-
-    ! Initialize data containers
-    call A%init(dom%mesh,'full')
-    call x%init(dom%mesh)
-    call b%init(dom%mesh)
-
-    ! Initialize preconditioner
-    call M%init(dom)
+    call chidg%set('ndomains','')
+    call chidg%domains(1)%init_geom(nterms_c,pts)
+    call chidg%domains(1)%init_sol('Scalar',nterms_s)
 
 
 
 
 
+    associate ( A => chidg%domains(1)%sdata%lin, b => chidg%domains(1)%sdata%rhs, x => chidg%domains(1)%sdata%dq, M => chidg%preconditioner )
+        ! Initialize blockmatrix data (A)
+        !
+        ! [4  3  0]
+        ! [3  4 -1]
+        ! [0 -1  4]
+        !
+        A%lblks(1,DIAG)%mat   = 4._rk
+        A%lblks(1,XI_MAX)%mat = THREE
 
-    ! Initialize blockmatrix data (A)
-    !
-    ! [4  3  0]
-    ! [3  4 -1]
-    ! [0 -1  4]
-    !
-    A%lblks(1,DIAG)%mat   = 4._rk
-    A%lblks(1,XI_MAX)%mat = THREE
+        A%lblks(2,XI_MIN)%mat = THREE
+        A%lblks(2,DIAG)%mat   = 4._rk
+        A%lblks(2,XI_MAX)%mat = -ONE
 
-    A%lblks(2,XI_MIN)%mat = THREE
-    A%lblks(2,DIAG)%mat   = 4._rk
-    A%lblks(2,XI_MAX)%mat = -ONE
-
-    A%lblks(3,XI_MIN)%mat = -ONE
-    A%lblks(3,DIAG)%mat   = 4._rk
-
-
-
-
-    ! Initialize blockvector data (b)
-    !
-    ! [ 24]
-    ! [ 30]
-    ! [-24]
-    !
-    b%lvecs(1)%vec = 24._rk
-    b%lvecs(2)%vec = 30._rk
-    b%lvecs(3)%vec = -24._rk
+        A%lblks(3,XI_MIN)%mat = -ONE
+        A%lblks(3,DIAG)%mat   = 4._rk
 
 
 
-    !
-    ! Solve matrix system. Ax=b. TESTING
-    !
-    matrix_solver%report = .false.  
-    matrix_solver%tol    = 1.e-13_rk
-    call matrix_solver%solve(A,x,b,M)
+
+        ! Initialize blockvector data (b)
+        !
+        ! [ 24]
+        ! [ 30]
+        ! [-24]
+        !
+        b%lvecs(1)%vec = 24._rk
+        b%lvecs(2)%vec = 30._rk
+        b%lvecs(3)%vec = -24._rk
+
+        
+
+        !
+        ! Finalize ChiDG initialization
+        !
+        call chidg%init('finalize')
+
+
+        !
+        ! Solve matrix system. Ax=b. TESTING
+        !
+        chidg%matrixsolver%report = .false.  
+        chidg%matrixsolver%tol    = 1.e-13_rk
+        call chidg%matrixsolver%solve(A,x,b,M)
 
 
 
-    ! Expecting solution
-    !
-    !     [ 3]
-    ! x = [ 4]
-    !     [-5]
-    !
-    @assertEqual(3._rk,x%lvecs(1)%vec,tol)
-    @assertEqual(4._rk,x%lvecs(2)%vec,tol)
-    @assertEqual(-5._rk,x%lvecs(3)%vec,tol)
+        ! Expecting solution
+        !
+        !     [ 3]
+        ! x = [ 4]
+        !     [-5]
+        !
+        @assertEqual(3._rk,x%lvecs(1)%vec,tol)
+        @assertEqual(4._rk,x%lvecs(2)%vec,tol)
+        @assertEqual(-5._rk,x%lvecs(3)%vec,tol)
 
+    end associate
 
 
 end subroutine test_fgmres_solve

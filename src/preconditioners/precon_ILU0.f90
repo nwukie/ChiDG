@@ -6,7 +6,6 @@ module precon_ILU0
     use type_preconditioner,    only: preconditioner_t
     use type_blockmatrix,       only: blockmatrix_t
     use type_blockvector,       only: blockvector_t
-    use type_densematrix,       only: densematrix_t
 
     use mod_inv,    only: inv
     implicit none
@@ -21,7 +20,6 @@ module precon_ILU0
     type, extends(preconditioner_t) :: precon_ILU0_t
 
         type(blockmatrix_t)                 :: LD       !< Lower-Diagonal, sparse-block matrix representation
-        type(densematrix_t), allocatable    :: Dinv(:) !< inverse of preconditioner diagonal
 
     contains
         procedure   :: init

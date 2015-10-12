@@ -203,7 +203,7 @@ contains
 
         integer(ik) :: i
 
-        real(rk)    :: residual_time, residual_norm, matrix_time
+        real(rk)    :: residual_time, residual_norm, matrix_time, total_residual, total_matrix
         integer(ik) :: matrix_iterations
 
 
@@ -216,6 +216,9 @@ contains
         print*, '--------------------------------------------------------------'
 
 
+        !
+        ! Print per-iteration report
+        !
         print*, 'Residual compute time', '             Norm[R]', '                 Matrix solve time', '     Matrix iterations'
         do i = 1,self%residual_time%size()
             residual_time = self%residual_time%at(i)
@@ -223,9 +226,22 @@ contains
             matrix_time   = self%matrix_time%at(i)
             matrix_iterations = self%matrix_iterations%at(i)
             
-            
             print*, residual_time, residual_norm, matrix_time, matrix_iterations
         end do
+
+
+        !
+        ! Accumulate residual and matrix solver compute times
+        !
+        do i = 1,self%residual_time%size()
+            total_residual = total_residual + self%residual_time%at(i)
+            total_matrix   = total_matrix   + self%matrix_time%at(i)
+        end do
+
+        print*, 'Total residual compute time: ', total_residual
+        print*, 'Total matrix solver time: ', total_matrix
+
+
 
         print*, '--------------------------------------------------------------'
 

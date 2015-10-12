@@ -99,6 +99,14 @@ contains
             ! Allocate components, based on input or default input data
             !
             case ('finalize')
+
+                ! Test chidg necessary components have been allocated
+                if (.not. allocated(self%timescheme))     call signal(FATAL,"chidg%timescheme component was not allocated")
+                if (.not. allocated(self%matrixsolver))   call signal(FATAL,"chidg%matrixsolver component was not allocated")
+                if (.not. allocated(self%preconditioner)) call signal(FATAL,"chidg%preconditioner component was not allocated")
+
+
+
                 call self%timescheme%init(self%domains(1))
                 call self%preconditioner%init(self%domains(1))
 
@@ -190,13 +198,12 @@ contains
 
 
 
-
             !
             ! Allocation for number of domains
             !
             case ('ndomains','domains')
                 if (allocated(self%domains)) then
-                    call signal(WARN,"chidg: Domains already allocated")
+                    call signal(WARN,"chidg%set: Domains already allocated")
                 else
                     allocate(self%domains(1), stat=ierr)
                     if (ierr /= 0) call AllocationError
@@ -204,8 +211,8 @@ contains
 
 
 
-
-
+            case default
+                call signal(FATAL,"chidg%set: component string was not recognized. Check spelling and that the component was registered as an option in the chidg%set routine")
 
 
         end select
@@ -233,6 +240,8 @@ contains
     !----------------------------------------------------------------------------
     subroutine run(self)
         class(chidg_t),     intent(inout)   :: self
+
+
 
 
         call self%timescheme%solve(self%domains(1),self%matrixsolver,self%preconditioner)

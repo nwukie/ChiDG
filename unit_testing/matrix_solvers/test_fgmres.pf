@@ -35,7 +35,7 @@ subroutine test_fgmres_solve()
     ! Set ChiDG components
     call chidg%set('timescheme',    'newton')
     call chidg%set('matrixsolver',  'fgmres')
-    call chidg%set('precondiitoner','identity')
+    call chidg%set('preconditioner','identity')
 
 
     ! Get grid points

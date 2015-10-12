@@ -50,6 +50,7 @@ subroutine rtest_linearadvection_implicit_convergence()
     eqnset         = 'linearadvection'
     timescheme     = 'backward_euler_subiteration'
     matrixsolver   = 'direct'
+    preconditioner = 'identity'
 
 
     !============================================================================
@@ -60,6 +61,7 @@ subroutine rtest_linearadvection_implicit_convergence()
     call toptions%set('tol',3.e-15_rk)
     call toptions%set('nsteps',1)
     call toptions%set('nwrite',0)
+    call toptions%set('cfl0',1.0_rk)
 
 
 
@@ -75,6 +77,7 @@ subroutine rtest_linearadvection_implicit_convergence()
     !
     call chidg%set('time_scheme',timescheme,toptions)
     call chidg%set('matrixsolver',matrixsolver)
+    call chidg%set('preconditioner',preconditioner)
     call chidg%set('ndomains','')
 
 

@@ -92,7 +92,8 @@ contains
                         u_m, v_m, w_m,                                      &
                         u_p, v_p, w_p,                                      &
                         vmag_p, vmag_m,                                     &
-                        delr,   delp,   delvmag, delu, delv, delw
+                        delr,   delp,   delvmag, delu, delv, delw,          &
+                        sqrt_rhom, sqrt_rhop, sqrt_rhom_plus_rhop, ctil2
 
 
         !===========================================================================
@@ -131,7 +132,6 @@ contains
             call interpolate(faces,q,ineighbor,iface_p,irhoE,rhoE_p,iseed)
 
 
-
             !
             ! Compute pressure and gamma
             !
@@ -163,17 +163,21 @@ contains
             !
             ! Compute Roe-averaged variables
             !
+            sqrt_rhom = sqrt(rho_m)
+            sqrt_rhop = sqrt(rho_p)
+            sqrt_rhom_plus_rhop = sqrt_rhom + sqrt_rhop
             rtil =  sqrt(rho_p * rho_m)                                                 ! Roe-averaged density
-            util = (sqrt(rho_m)*u_m + sqrt(rho_p)*u_p) / (sqrt(rho_m) + sqrt(rho_p))    ! Roe-averaged u-velocity
-            vtil = (sqrt(rho_m)*v_m + sqrt(rho_p)*v_p) / (sqrt(rho_m) + sqrt(rho_p))    ! Roe-averaged v-velocity
-            wtil = (sqrt(rho_m)*w_m + sqrt(rho_p)*w_p) / (sqrt(rho_m) + sqrt(rho_p))    ! Roe-averaged w-velocity
-            Htil = (sqrt(rho_m)*H_m + sqrt(rho_p)*H_p) / (sqrt(rho_m) + sqrt(rho_p))    ! Roe-averaged Enthalpy
+            util = (sqrt_rhom*u_m + sqrt_rhop*u_p) / (sqrt_rhom_plus_rhop)    ! Roe-averaged u-velocity
+            vtil = (sqrt_rhom*v_m + sqrt_rhop*v_p) / (sqrt_rhom_plus_rhop)    ! Roe-averaged v-velocity
+            wtil = (sqrt_rhom*w_m + sqrt_rhop*w_p) / (sqrt_rhom_plus_rhop)    ! Roe-averaged w-velocity
+            Htil = (sqrt_rhom*H_m + sqrt_rhop*H_p) / (sqrt_rhom_plus_rhop)    ! Roe-averaged Enthalpy
 
             vmagtil = util*unorms(:,1) + vtil*unorms(:,2) + wtil*unorms(:,3)            ! Magnitude of Roe-averaged velocity in the face normal direction
             qtil2   = util**TWO + vtil**TWO + wtil**TWO
 
             !& HARDCODED GAMMA
             ctil = sqrt((1.4_rk - ONE)*(Htil - HALF*qtil2))                             ! Roe-averaged speed of sound
+            ctil2 = ctil**TWO
 
 
 
@@ -188,10 +192,10 @@ contains
             delp    = (p_m - p_p)
 
 
-            C1   = abs(vmagtil - ctil)*( delp - rtil*ctil*delvmag)/(TWO*(ctil**TWO))
-            C2_a = abs(vmagtil)*(delr - delp/(ctil**TWO))
+            C1   = abs(vmagtil - ctil)*( delp - rtil*ctil*delvmag)/(TWO*(ctil2))
+            C2_a = abs(vmagtil)*(delr - delp/(ctil2))
             C2_b = abs(vmagtil)*rtil
-            C3   = abs(vmagtil + ctil)*( delp + rtil*ctil*delvmag)/(TWO*(ctil**TWO))
+            C3   = abs(vmagtil + ctil)*( delp + rtil*ctil*delvmag)/(TWO*(ctil2))
             !C1   = (vmagtil - ctil)*( delp - rtil*ctil*delvmag)/(TWO*(ctil**TWO))
             !C2_a = (vmagtil)*(delr - delp/(ctil**TWO))
             !C2_b = (vmagtil)*rtil

@@ -41,7 +41,8 @@ contains
 
 
         integer(ik)                             :: ielem, i
-        type(AD_D), dimension(elem%nterms_s)    :: integral
+        !type(AD_D), dimension(elem%nterms_s)    :: integral
+        type(AD_D), dimension(elem%nterms_s)    :: integral, integral_x, integral_y, integral_z
 
         ielem = elem%ielem  !> get element index
 
@@ -53,8 +54,8 @@ contains
 
         ! FLUX-X
         ! Multiply by column of test function gradients, integrate, add to RHS, add derivatives to linearization
-        integral = matmul(transpose(elem%dtdx),flux_x)                         ! Integrate
-        call store_volume_integrals(integral,sdata,ielem,ivar,iblk)            ! Store values and derivatives
+        integral_x = matmul(transpose(elem%dtdx),flux_x)                         ! Integrate
+        !call store_volume_integrals(integral,sdata,ielem,ivar,iblk)            ! Store values and derivatives
 
 
 
@@ -62,8 +63,8 @@ contains
 
         ! FLUX-Y
         ! Multiply by column of test function gradients, integrate, add to RHS, add derivatives to linearization
-        integral = matmul(transpose(elem%dtdy),flux_y)                         ! Integrate
-        call store_volume_integrals(integral,sdata,ielem,ivar,iblk)            ! Store values and derivatives
+        integral_y = matmul(transpose(elem%dtdy),flux_y)                         ! Integrate
+        !call store_volume_integrals(integral,sdata,ielem,ivar,iblk)            ! Store values and derivatives
 
 
 
@@ -71,7 +72,10 @@ contains
 
         ! FLUX-Z
         ! Multiply by column of test function gradients, integrate, add to RHS, add derivatives to linearization
-        integral = matmul(transpose(elem%dtdz),flux_z)                         ! Integrate
+        integral_z = matmul(transpose(elem%dtdz),flux_z)                         ! Integrate
+        !call store_volume_integrals(integral,sdata,ielem,ivar,iblk)            ! Store values and derivatives
+
+        integral = integral_x + integral_y + integral_z
         call store_volume_integrals(integral,sdata,ielem,ivar,iblk)            ! Store values and derivatives
 
 

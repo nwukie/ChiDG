@@ -241,9 +241,11 @@ contains
             call self%total_time%push_back(self%timer%elapsed())
 
 
+            !
             ! Write Final Solution
-            write(filename, "(I7,A4)") 1000000+ninner, '.plt'
-            call write_tecio_variables(domain,trim(filename),ninner+1)
+            !
+            !write(filename, "(I7,A4)") 1000000+ninner, '.plt'
+            !call write_tecio_variables(domain,trim(filename),ninner+1)
 
 
         end associate

@@ -24,11 +24,15 @@ module type_domain
     !!
     !-------------------------------------------------------------------------------------------------
     type, public :: domain_t
-        character(100)                      :: name                       !< Domain name -- not currently used
-        type(mesh_t)                        :: mesh                       !< Mesh storage
-        type(bcset_t)                       :: bcset                      !< Boundary condition set
-        class(equationset_t), allocatable   :: eqnset                     !< Equation set solved on this domain
-        class(solverdata_t),  allocatable   :: sdata                      !< Solver data storage. q, rhs, lin, etc.
+        character(100)                      :: name                     !< Domain name -- not currently used
+        type(mesh_t)                        :: mesh                     !< Mesh storage
+        type(bcset_t)                       :: bcset                    !< Boundary condition set
+        class(equationset_t), allocatable   :: eqnset                   !< Equation set solved on this domain
+        class(solverdata_t),  allocatable   :: sdata                    !< Solver data storage. q, rhs, lin, etc.
+
+        type(dict_t)                        :: info                     !< Dictionary for storing general paired information
+                                                                        !! (ex. error values)
+
 
         logical                             :: geomInitialized = .false.
         logical                             :: numInitialized  = .false.

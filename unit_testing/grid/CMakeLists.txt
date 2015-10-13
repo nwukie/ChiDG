@@ -1,4 +1,4 @@
-set(test_files  unit
+add_test_sources(grid
                 test_point.pf
                 test_compute_element_mappings.pf 
                 test_element__init_geometry.pf
@@ -10,4 +10,11 @@ set(test_files  unit
                 test_interpolate_mod.pf
                 )
                 
-add_test_target(grid ${test_files})
+add_test_target(grid unit ${grid_sources})
+
+
+
+
+
+
+

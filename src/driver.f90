@@ -124,7 +124,9 @@ program driver
     !
     ! Write initial solution
     !
-    call write_tecio_variables(chidg%domains(1),'0.plt',1)
+    if (initial_write) then
+        call write_tecio_variables(chidg%domains(1),'0.plt',1)
+    end if
 
 
 
@@ -153,6 +155,14 @@ program driver
     !
     call chidg%report()
 
+
+
+    !
+    ! Write final solution
+    !
+    if (final_write) then
+        call write_tecio_variables(chidg%domains(1),'9999999.plt',1)
+    end if
 
 
 end program driver

@@ -1,0 +1,310 @@
+!--------------------------------------------------------------------------------
+!
+!                Euler equation set entropy-error regression test
+!
+!   This test suite runs a series of tests solving the euler equations on a quartic
+!   smoothbump grid of varying resolution for varying orders of solution accuracy.
+!   At the end of each case, the entropy error is computed for the domain. The flow
+!   phenomena that are present for the smoothbump case should be isentropic. The 
+!   error metric then, is to compute the entropy generated from the numerical scheme.
+!
+!   This suite runs the smoothbump case with 6x2x2, 12x4x2, and 24x8x2 grids with
+!   quartic elements. Each grid is run from 1st to 4th order accuracy.
+!
+!
+!--------------------------------------------------------------------------------
+module rtest_entropy_errorrate_mod
+    use pfunit_mod
+    use mod_kinds,              only: rk, ik
+    use type_chidg,             only: chidg_t
+    implicit none
+
+    public  :: rtest_equations_euler_entropyerror
+
+
+    !
+    ! This parameter is used to test...
+    !
+    @TestParameter
+    type, extends(AbstractTestParameter) :: case_grid_order
+        character(100)  :: gridfile
+        integer(ik)     :: order
+        real(rk)        :: entropy_ref
+    contains
+        procedure   :: toString
+    end type case_grid_order
+
+
+
+
+    !
+    ! Main testing fixture with data containers
+    !
+    @TestCase(testParameters={getParameters()}, constructor=newTest)
+    type, extends(ParameterizedTestCase) :: rtest_equations_euler_entropyerror
+        character(100)  :: gridfile
+        integer(ik)     :: order
+        real(rk)        :: entropy_ref
+    contains
+        procedure   :: setUp
+        procedure   :: tearDown
+    end type rtest_equations_euler_entropyerror
+
+
+
+
+
+
+contains
+
+    !
+    ! Set up
+    !
+    subroutine setUp(this)
+        class(rtest_equations_euler_entropyerror),  intent(inout)   :: this
+
+
+    end subroutine
+
+
+
+    !
+    ! Tear down
+    !
+    subroutine tearDown(this)
+        class(rtest_equations_euler_entropyerror),  intent(inout)   :: this
+    end subroutine
+
+
+
+    !
+    ! Parameter constructors
+    !
+    function newTest(test_parameter) result(test)
+        type(case_grid_order),  intent(in)          :: test_parameter
+        type(rtest_equations_euler_entropyerror)    :: test
+
+        test%gridfile = test_parameter%gridfile
+        test%order    = test_parameter%order
+        test%entropy_ref = test_parameter%entropy_ref
+
+    end function newTest
+
+
+    !
+    ! Parameter initialization
+    !
+    function getParameters() result(params)
+        type(case_grid_order), allocatable :: params(:)
+    
+        ! case_grid_order('grid',order,reference_entropy)
+        params = [  case_grid_order('6x2x2.h5',  1, 2.761019163e-3_rk), &
+                    case_grid_order('6x2x2.h5',  2, 3.618440627e-3_rk), &
+                    case_grid_order('6x2x2.h5',  3, 1.116431012e-3_rk), &
+                    case_grid_order('6x2x2.h5',  4, 6.731678976e-3_rk), &
+                    case_grid_order('12x4x2.h5', 1, 3.807878665e-3_rk), &
+                    case_grid_order('12x4x2.h5', 2, 1.323352387e-3_rk), &
+                    case_grid_order('12x4x2.h5', 3, 3.940896088e-4_rk), &
+                    case_grid_order('12x4x2.h5', 4, 8.433932228e-5_rk), &
+                    case_grid_order('24x8x2.h5', 1, 4.038806838e-3_rk), &
+                    case_grid_order('24x8x2.h5', 2, 5.554687475e-4_rk), &
+                    case_grid_order('24x8x2.h5', 3, 5.367783209e-5_rk), &
+                    case_grid_order('24x8x2.h5', 4, 7.223333943e-6_rk) &
+                    ]
+
+    end function getParameters
+
+
+
+    !
+    ! Reporting in the case of a failed test
+    !
+    function toString(this) result(string)
+        class (case_grid_order),    intent(in)  :: this
+        character(:), allocatable   :: string
+
+        character(len=200) :: buffer
+
+        write(buffer,'( "(gridfile, order)=","(", A10,",", I2, ")" )') this%gridfile, this%order
+        !write(buffer,'(A10,I2)') this%gridfile, this%order
+
+
+        string = trim(buffer)
+    end function
+
+
+
+
+
+
+
+
+
+    !----------------------------------------------------------------------------------------
+    !
+    !
+    ! Test routine
+    !
+    !
+    !----------------------------------------------------------------------------------------
+    @Test
+    subroutine rtest_entropy_error_rate(self)
+        use mod_kinds,          only: rk, ik
+        use mod_constants,      only: ZERO, THREE, XI_MIN, ETA_MIN, ZETA_MIN, XI_MAX, ETA_MAX, ZETA_MAX
+        use type_chidg,         only: chidg_t
+        use atype_function,     only: function_t
+        use type_dict,          only: dict_t
+        use mod_function,       only: create_function
+        use mod_grid_operators, only: initialize_variable
+        use mod_hdfio,          only: read_grid_hdf
+        use mod_io
+        use mod_entropy,        only: compute_entropy_error
+        class(rtest_equations_euler_entropyerror),  intent(inout)   :: self
+
+
+
+        type(chidg_t)                   :: chidg
+        class(function_t),  allocatable :: fcn
+        type(dict_t)                    :: toptions
+        integer(ik)                     :: nterms_c, itime
+        real(rk)                        :: tol, entropy_error
+
+        
+        tol = 1.e-8_rk
+
+        !------------------------------------------------------------------------------
+        !
+        ! Define input data here that is normally read through the namelist input file
+        !
+        !------------------------------------------------------------------------------
+        basis           = 'legendre'
+        nterms_s        = self%order**THREE
+        gq_rule         = 2
+        eqnset          = 'euler'
+        timescheme      = 'quasi_newton'
+        matrixsolver    = 'fgmres'
+        preconditioner  = 'ILU0'
+        
+        !------------------------------------------------------------------------------
+
+
+
+
+        ! Set time-scheme options to pass during initialization
+        call toptions%set('dt', 0.1_rk) ! means nothing here
+        call toptions%set('tol',3.e-5_rk)
+        call toptions%set('nsteps',100)
+        call toptions%set('nwrite',0)
+        call toptions%set('cfl0',2.0_rk)
+
+
+        !
+        ! Initialize ChiDG environment
+        !
+        call chidg%init('env')
+
+
+        !
+        ! Initialize geometry
+        !
+        call read_grid_hdf(self%gridfile,chidg%domains)
+
+
+
+        !
+        ! Set ChiDG components
+        !
+        call chidg%set('time_scheme',timescheme,toptions)
+        call chidg%set('matrixsolver',matrixsolver)
+        call chidg%set('preconditioner',preconditioner)
+
+
+        associate (dom => chidg%domains(1) )
+            !
+            ! Initialize boundary conditions and solution numerics
+            ! 
+            call dom%init_bc('euler_totalinlet',XI_MIN)
+            call dom%init_bc('euler_pressureoutlet',XI_MAX)
+            call dom%init_bc('euler_wall',ETA_MIN)
+            call dom%init_bc('euler_wall',ETA_MAX)
+            call dom%init_bc('euler_wall',ZETA_MIN)
+            call dom%init_bc('euler_wall',ZETA_MAX)
+
+            call dom%init_sol(eqnset,nterms_s)
+
+
+            !
+            ! Initialize solution
+            !
+            call create_function(fcn,'constant')
+
+
+            ! rho
+            call fcn%set('val',1.13262_rk)
+            call initialize_variable(dom,1,fcn)
+
+            ! rho_u
+            call fcn%set('val',190.339029_rk)
+            call initialize_variable(dom,2,fcn)
+
+            ! rho_v
+            call fcn%set('val',ZERO)
+            call initialize_variable(dom,3,fcn)
+
+            ! rho_w
+            call fcn%set('val',ZERO)
+            call initialize_variable(dom,4,fcn)
+
+            ! rho_E
+            call fcn%set('val',248493.425_rk)
+            call initialize_variable(dom,5,fcn)
+
+        end associate
+
+        
+
+        !
+        ! Wrap-up initialization activities
+        !
+        call chidg%init('finalize')
+
+
+        !
+        ! Run ChiDG simulation
+        !
+        call chidg%run()
+
+
+
+        !
+        ! Compute entropy error
+        !
+        entropy_error = compute_entropy_error(chidg%domains(1))
+
+
+
+        !
+        ! Test that computed entropy error is the expected value
+        !
+        @assertEqual(self%entropy_ref,entropy_error,tol)
+
+
+    end subroutine
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+end module rtest_entropy_errorrate_mod
+
+
+

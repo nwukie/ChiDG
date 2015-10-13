@@ -1,0 +1,15 @@
+macro (add_test_sources test_prefix)
+    file (RELATIVE_PATH _relPath "${CMAKE_SOURCE_DIR}" "${CMAKE_CURRENT_SOURCE_DIR}")
+    foreach (_src ${ARGN})
+        if (_relPath)
+            list (APPEND ${test_prefix}_sources "${_relPath}/${_src}")
+        else()
+            list (APPEND ${test_prefix}_sources "${_src}")
+        endif()
+    endforeach()
+
+    if (_relPath)
+        # propagate TEST_SRCS to parent directory
+        set (${test_prefix}_sources ${${test_prefix}_sources} PARENT_SCOPE)
+    endif()
+endmacro()

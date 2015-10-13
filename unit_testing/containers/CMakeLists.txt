@@ -1,4 +1,4 @@
-set(test_files
+add_test_sources(containers
                 test_expansion.pf 
                 test_densematrix.pf 
                 test_densevector.pf 
@@ -17,7 +17,7 @@ set(test_files
                 test_ivector.pf
                 )
                
-add_test_target(containers unit ${test_files})
+add_test_target(containers unit ${containers_sources})
 
 
 

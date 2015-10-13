@@ -8,6 +8,7 @@ project(chidg_v0.1 Fortran)
 include(cmake/macros/add_exe_sources.txt)
 include(cmake/macros/add_lib_sources.txt)
 include(cmake/macros/add_test_target.txt)
+include(cmake/macros/add_test_sources.txt)
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/modules/")
 
 # Set output directories

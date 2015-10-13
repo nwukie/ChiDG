@@ -77,6 +77,8 @@ module mod_io
     ! IO
     !--------------------------------------------------
     integer(ik),         save    :: nwrite         = 100
+    logical,             save    :: initial_write  = .true.
+    logical,             save    :: final_write    = .true.
     integer(ik),         save    :: output_res     = 5
      
     
@@ -148,7 +150,7 @@ contains
 !                            bc_zetamin, bc_zetamax, &
 !                            bcpar1, bcpar2, bcpar3, bcpar4
 
-        namelist /io/       nwrite, output_res
+        namelist /io/       nwrite, output_res, initial_write, final_write
 
         inquire(file='chidg.nml', exist=file_exists)
         if (.not. file_exists) call signal(FATAL, "read_input: 'chidg.nml' input file was not found")

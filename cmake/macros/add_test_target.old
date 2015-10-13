@@ -35,16 +35,13 @@ macro (add_test_target target_subdirectory test_type)
     foreach (_test ${ARGN})
     	# Get filename without extension (NAME_WE)
     	get_filename_component(filename ${_test} NAME_WE)
-
-        # Get directory associated with filename
-        get_filename_component(filedir ${_test} DIRECTORY)
     	
 
     	# Test preprocessor command
         add_custom_command(
             OUTPUT ${CMAKE_BINARY_DIR}/generated/${testing_dir}/${ARGV0}/${filename}.F90
-            COMMAND ${PF_ROOT}/bin/pFUnitParser.py ${CMAKE_SOURCE_DIR}/${filedir}/${filename}.pf ${CMAKE_BINARY_DIR}/generated/${testing_dir}/${ARGV0}/${filename}.F90
-            DEPENDS ${CMAKE_SOURCE_DIR}/${filedir}/${filename}.pf
+            COMMAND ${PF_ROOT}/bin/pFUnitParser.py ${CMAKE_SOURCE_DIR}/${testing_dir}/${ARGV0}/${filename}.pf ${CMAKE_BINARY_DIR}/generated/${testing_dir}/${ARGV0}/${filename}.F90
+            DEPENDS ${CMAKE_SOURCE_DIR}/${testing_dir}/${ARGV0}/${filename}.pf
             )
         	
 

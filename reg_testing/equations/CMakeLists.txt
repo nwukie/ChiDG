@@ -1,13 +1,15 @@
 #add_subdirectory(linear_advection)
-#add_subdirectory(euler)
+add_subdirectory(euler)
+
+
+add_test_sources(equations 
+                 rtest_linearadvection_mod.pf
+                 rtest_linearadvection_implicit_convergence.pf
+                 rtest_duallinearadvection_mod.pf
+                 )
+
+add_test_target(equations reg ${equations_sources} ${test_files})
 
 
 
 
-
-set(test_files reg
-               rtest_linearadvection_mod.pf
-               rtest_linearadvection_implicit_convergence.pf
-               rtest_duallinearadvection_mod.pf
-               )
-add_test_target(equations ${test_files})

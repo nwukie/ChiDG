@@ -92,14 +92,11 @@ contains
                 call prop%fluid%compute_pressure(rho,rhou,rhov,rhow,rhoE,p)
 
 
-
                 !
                 ! Compute entropy and entropy rise.
                 !
                 entropy = p/(rho**gam)
                 entropy_rise = ((entropy(:)%x_ad_ - entropy_ref)/entropy_ref)**TWO
-
-
 
 
                 !
@@ -108,19 +105,14 @@ contains
                 error = sum(entropy_rise * mesh%elems(ielem)%jinv * mesh%elems(ielem)%gq%vol%weights)
 
 
-
                 !
                 ! Compute element volume
                 !
                 vol = abs(sum(mesh%elems(ielem)%jinv * mesh%elems(ielem)%gq%vol%weights))
 
 
-!                print*, 'Entropy', error
-!                print*, 'Volume', vol
-
                 error_sum = error_sum + error
                 vol_sum   = vol_sum + vol
-
 
 
             end do

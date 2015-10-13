@@ -1,6 +1,5 @@
-set(test_files  unit
-                test_constants.pf
-                )
+add_test_sources(constants
+                 test_constants.pf
+                 )
 
-
-add_test_target(constants ${test_files})
+add_test_target(constants unit ${constants_sources})

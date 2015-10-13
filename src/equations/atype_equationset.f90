@@ -310,17 +310,4 @@ contains
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
 end module atype_equationset

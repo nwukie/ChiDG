@@ -101,7 +101,7 @@ contains
         params = [  case_grid_order('6x2x2.h5',  1, 2.761019163e-3_rk), &
                     case_grid_order('6x2x2.h5',  2, 3.618440627e-3_rk), &
                     case_grid_order('6x2x2.h5',  3, 1.116431012e-3_rk), &
-                    case_grid_order('6x2x2.h5',  4, 6.731678976e-3_rk), &
+                    case_grid_order('6x2x2.h5',  4, 6.731678976e-4_rk), &
                     case_grid_order('12x4x2.h5', 1, 3.807878665e-3_rk), &
                     case_grid_order('12x4x2.h5', 2, 1.323352387e-3_rk), &
                     case_grid_order('12x4x2.h5', 3, 3.940896088e-4_rk), &

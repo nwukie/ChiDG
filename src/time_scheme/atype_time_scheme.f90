@@ -233,6 +233,8 @@ contains
         !
         ! Accumulate residual and matrix solver compute times
         !
+        total_residual = 0._rk
+        total_matrix   = 0._rk
         do i = 1,self%residual_time%size()
             total_residual = total_residual + self%residual_time%at(i)
             total_matrix   = total_matrix   + self%matrix_time%at(i)

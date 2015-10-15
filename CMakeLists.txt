@@ -160,9 +160,9 @@ set_target_properties(chidg PROPERTIES
 if (UNITTEST)
     enable_testing()
     if (${Fortran_VENDOR} MATCHES "INTEL")
-        set(PF_ROOT $ENV{PFUNIT}/intel)
+        set(PF_ROOT $ENV{PFUNIT}/intel/serial)
     elseif (${Fortran_VENDOR} MATCHES "GNU")
-        set(PF_ROOT $ENV{PFUNIT}/gnu)
+        set(PF_ROOT $ENV{PFUNIT}/gnu/serial)
     endif()
     set(PFU_LIB ${PF_ROOT}/lib)
 
@@ -178,9 +178,9 @@ endif()
 
 if (REGTEST)
     if (${Forgran_VENDOR} MATCHES "INTEL")
-        set(PF_ROOT $ENV{PFUNIT}/intel)
+        set(PF_ROOT $ENV{PFUNIT}/intel/serial)
     elseif (${Fortran_VENDOR} MATCHES "GNU")
-        set(PF_ROOT $ENV{PFUNIT}/gnu)
+        set(PF_ROOT $ENV{PFUNIT}/gnu/serial)
     endif()
     set(PFU_LIB ${PF_ROOT}/lib)
 

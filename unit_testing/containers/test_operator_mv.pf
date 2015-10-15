@@ -23,7 +23,7 @@ subroutine test_operator_mv()
     type(blockvector_t)         :: x, b
 
     real(rk)                    :: tol
-    integer(ik)                 :: nterms_c, nterms_s
+    integer(ik)                 :: nterms_c, nterms_s, idomain
     real(rk), dimension(8,8)    :: diag_1, diag_2, diag_3, ximax_1, ximin_2, ximax_2, ximin_3
     real(rk), dimension(8)      :: x_1, x_2, x_3
     real(rk), dimension(8)      :: b_ref_1, b_ref_2, b_ref_3
@@ -31,6 +31,7 @@ subroutine test_operator_mv()
 
 
     tol         = 1.e-13_rk
+    idomain     = 1
     nterms_c    = 8
     nterms_s    = 8
 
@@ -44,7 +45,7 @@ subroutine test_operator_mv()
 
 
     ! Initialize domain
-    call dom%init_geom(nterms_c,pts)
+    call dom%init_geom(idomain,nterms_c,pts)
     call dom%init_sol('Scalar',nterms_s)
 
 

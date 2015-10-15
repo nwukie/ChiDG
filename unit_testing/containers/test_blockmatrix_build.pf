@@ -20,12 +20,14 @@ subroutine test_blockmatrix_build()
     use type_point,         only: point_t
     use mod_testutils,      only: meshgen
 
+    implicit none
     type(chidg_t)               :: chidg
     type(domain_t)              :: dom
     type(blockmatrix_t)         :: bmat
     type(point_t), allocatable  :: pts(:,:,:)
     real(rk),      allocatable  :: fullmat(:,:)
     real(rk), dimension(8,8)    :: one, two, three, four, five, six, seven, eight, nine
+    integer(ik)                 :: idomain, nterms_c, nterms_s
 
     ! set reference matrices
     one    = 1._rk
@@ -47,9 +49,10 @@ subroutine test_blockmatrix_build()
 
 
     ! Call domain initialization
+    idomain  = 1
     nterms_c = 8
     nterms_s = 8
-    call dom%init_geom(nterms_c,pts)
+    call dom%init_geom(idomain,nterms_c,pts)
     call dom%init_sol('scalar',nterms_s)
 
 

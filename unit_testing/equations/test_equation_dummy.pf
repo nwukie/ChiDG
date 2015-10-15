@@ -1,0 +1,7 @@
+@Test
+subroutine test_equation_dummy()
+    use pFUnit_mod
+
+    @assertTrue(.true.)
+
+end subroutine

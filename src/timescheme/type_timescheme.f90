@@ -1,4 +1,4 @@
-module atype_time_scheme
+module type_timescheme
     use mod_kinds,          only: rk,ik
     use type_domain,        only: domain_t
     use atype_matrixsolver, only: matrixsolver_t
@@ -6,6 +6,7 @@ module atype_time_scheme
     use type_timer,         only: timer_t
     use type_rvector,       only: rvector_t
     use type_ivector,       only: ivector_t
+    use type_chidgData,     only: chidgData_t
     implicit none
 
 
@@ -15,7 +16,7 @@ module atype_time_scheme
     !!
     !!
     !-------------------------------------------------------------------------------
-    type, abstract, public  :: time_scheme_t
+    type, abstract, public  :: timescheme_t
 
         real(rk)        :: testing
         logical         :: solverInitialized = .false.
@@ -51,7 +52,7 @@ module atype_time_scheme
 
         procedure   :: set
         procedure   :: report
-    end type time_scheme_t
+    end type timescheme_t
     !------------------------------------------------------------------------------
 
 
@@ -70,20 +71,22 @@ module atype_time_scheme
     
     abstract interface
         subroutine self_interface(self)
-            import time_scheme_t
-            class(time_scheme_t),   intent(inout)   :: self
+            import timescheme_t
+            class(timescheme_t),   intent(inout)   :: self
         end subroutine
     end interface
 
 
 
     abstract interface
-        subroutine init_interface(self,domain,options)
-            use type_domain,    only: domain_t
+        subroutine init_interface(self,data,options)
+            !use type_domain,    only: domain_t
+            use type_chidgData, only: chidgData_t
             use type_dict,      only: dict_t
-            import time_scheme_t
-            class(time_scheme_t),   intent(inout)   :: self
-            type(domain_t),         intent(inout)   :: domain
+            import timescheme_t
+            class(timescheme_t),    intent(inout)   :: self
+            !type(domain_t),         intent(inout)   :: domains(:)
+            type(chidgData_t),      intent(inout)   :: data
             type(dict_t), optional, intent(inout)   :: options
         end subroutine
     end interface
@@ -94,13 +97,16 @@ module atype_time_scheme
 
     ! Interface for passing a domain_t type
     abstract interface
-        subroutine data_interface(self,domain,matrixsolver,preconditioner)
-            use type_domain,            only: domain_t
+        !subroutine data_interface(self,domains,matrixsolver,preconditioner)
+        subroutine data_interface(self,data,matrixsolver,preconditioner)
+            !use type_domain,            only: domain_t
+            use type_chidgData,         only: chidgData_t
             use atype_matrixsolver,     only: matrixsolver_t
             use type_preconditioner,    only: preconditioner_t
-            import time_scheme_t
-            class(time_scheme_t),                   intent(inout)   :: self
-            type(domain_t),                         intent(inout)   :: domain
+            import timescheme_t
+            class(timescheme_t),                    intent(inout)   :: self
+            !type(domain_t),                         intent(inout)   :: domains(:)
+            type(chidgData_t),                      intent(inout)   :: data
             class(matrixsolver_t),      optional,   intent(inout)   :: matrixsolver
             class(preconditioner_t),    optional,   intent(inout)   :: preconditioner
         end subroutine
@@ -117,18 +123,19 @@ contains
     !!
     !!  @author Nathan A. Wukie
     !!
-    !!  @param[inout]   domain      Domain type
+    !!  @param[inout]   domains     Array of domains
     !!  @param[inout]   options     Dictionary containing options
     !----------------------------------------------------------
-    subroutine init(self,domain)
-        class(time_scheme_t),   intent(inout)   :: self
-        type(domain_t),         intent(inout)   :: domain
+    subroutine init(self,data)
+        class(timescheme_t),    intent(inout)   :: self
+        type(chidgData_t),      intent(inout)   :: data
+        !type(domain_t),         intent(inout)   :: domains(:)
 
 
         !
         ! Call user-specified initialization
         !
-        call self%init_spec(domain)
+        call self%init_spec(data)
 
 
 
@@ -148,7 +155,7 @@ contains
     !!
     !-----------------------------------------------------------
     subroutine set(self,options)
-        class(time_scheme_t),   intent(inout)   :: self
+        class(timescheme_t),    intent(inout)   :: self
         type(dict_t),           intent(inout)   :: options
 
 
@@ -172,9 +179,10 @@ contains
     !!  @author Nathan A. Wukie
     !!
     !-----------------------------------------------------------------------
-    subroutine init_spec(self,domain,options)
-        class(time_scheme_t),   intent(inout)   :: self
-        type(domain_t),         intent(inout)   :: domain
+    subroutine init_spec(self,data,options)
+        class(timescheme_t),    intent(inout)   :: self
+        !type(domain_t),         intent(inout)   :: domains(:)
+        type(chidgData_t),      intent(inout)   :: data
         type(dict_t), optional, intent(inout)   :: options
 
 
@@ -199,7 +207,7 @@ contains
     !!
     !------------------------------------------------------------------------
     subroutine report(self)
-        class(time_scheme_t),   intent(in)  :: self
+        class(timescheme_t),   intent(in)  :: self
 
         integer(ik) :: i
 
@@ -257,4 +265,4 @@ contains
 
 
 
-end module atype_time_scheme
+end module type_timescheme

@@ -4,6 +4,7 @@ module mod_check_jacobian
     use mod_constants,      only: NFACES, DIAG, ZERO
 
     use type_domain,        only: domain_t
+    use type_solverdata,    only: solverdata_t
     use type_blockvector
     use type_densematrix,   only: densematrix_t
 
@@ -28,32 +29,36 @@ contains
     !   @param[inout]   blk_fd      Densematrix for storing the Finite Difference jacobian
     !
     !----------------------------------------------------------------------------------
-    subroutine check_jacobian_volume_advective_flux(domain,ielem,iblk,blk_dnad,blk_fd)
-        type(domain_t),      intent(inout)       :: domain
+    subroutine check_jacobian_volume_advective_flux(domains,sdata,ielem,iblk,blk_dnad,blk_fd)
+        type(domain_t),      intent(inout)       :: domains(:)
+        type(solverdata_t),  intent(inout)       :: sdata
         integer(ik),         intent(in)          :: ielem, iblk
         type(densematrix_t), intent(inout)       :: blk_dnad, blk_fd
 
         type(blockvector_t), allocatable    :: rhs_r, vec_fd
         real(rk)                            :: qhold, eps
-        integer(ik)                         :: nelem, i, iterm, icol, nterms, ivar, iflux, nflux
+        integer(ik)                         :: nelem, i, iterm, icol, nterms, ivar, iflux, nflux, idom
         integer(ik)                         :: ielem_p              ! element in which the solution is being perturbed for the FD calculation.
 
 
-        associate ( mesh => domain%mesh, sdata => domain%sdata, prop => domain%eqnset%prop)
+        ! ASSUME ONLY ONE DOMAIN IS PRESENT
+        idom = 1
+
+        associate ( domain => domains(1), mesh => domains(:)%mesh, q => sdata%q%dom(1), rhs => sdata%rhs%dom(1), lhs => sdata%lhs%dom(1), prop => domains(1)%eqnset%prop )
 
 
-            nelem = mesh%nelem
-            nterms = mesh%nterms_s
+            nelem = mesh(1)%nelem
+            nterms = mesh(1)%nterms_s
             !------------------------------------------------------------------------------------------
             !                                      Interior Scheme
             !------------------------------------------------------------------------------------------
             !
             ! Clear all working data
             !
-            call sdata%lin%clear()
+            call sdata%lhs%clear()
             call sdata%rhs%clear()
-            rhs_r  = sdata%rhs      ! Alloate supporing storage
-            vec_fd = sdata%rhs
+            rhs_r  = rhs      ! Alloate supporting storage
+            vec_fd = rhs
 
             !
             ! For the current element, compute the contributions from volume integrals
@@ -62,7 +67,7 @@ contains
             if (allocated(domain%eqnset%volume_advective_flux)) then
                 nflux = size(domain%eqnset%volume_advective_flux)
                 do iflux = 1,nflux
-                    call domain%eqnset%volume_advective_flux(iflux)%flux%compute(mesh,sdata,ielem,iblk,prop)
+                    call domain%eqnset%volume_advective_flux(iflux)%flux%compute(mesh,sdata,prop,idom,ielem,iblk)
                 end do
 
             else
@@ -74,7 +79,8 @@ contains
             !
             ! Store linearization from DNAD. This is what we want to check against the FD calculation.
             !
-            blk_dnad = sdata%lin%lblks(ielem,iblk)
+            !blk_dnad = sdata%lhs%dom(idom)%lblks(ielem,iblk)
+            blk_dnad = lhs%lblks(ielem,iblk)
             blk_fd = blk_dnad                       ! Sourced allocation
             blk_fd%mat = ZERO                       ! Zero storage
 
@@ -82,12 +88,12 @@ contains
             !
             ! Store temporary rhs
             !
-            rhs_r%lvecs(ielem) = sdata%rhs%lvecs(ielem)
+            rhs_r%lvecs(ielem) = rhs%lvecs(ielem)
 
 
             ! Reset sdata storage
-            call sdata%lin%clear()
-            call sdata%rhs%clear()
+            call lhs%clear()
+            call rhs%clear()
 
 
             !
@@ -110,8 +116,8 @@ contains
                     !
                     ! Perturb the iterm-th term in the solution expansion for variable ivar in element ielem.
                     !
-                    qhold = sdata%q%lvecs(ielem_p)%getterm(ivar,iterm)
-                    call sdata%q%lvecs(ielem_p)%setterm(ivar,iterm,qhold + eps)
+                    qhold = q%lvecs(ielem_p)%getterm(ivar,iterm)
+                    call q%lvecs(ielem_p)%setterm(ivar,iterm,qhold + eps)
 
 
                     !
@@ -121,7 +127,7 @@ contains
                     if (allocated(domain%eqnset%volume_advective_flux)) then
                         nflux = size(domain%eqnset%volume_advective_flux)
                         do iflux = 1,nflux
-                            call domain%eqnset%volume_advective_flux(iflux)%flux%compute(mesh,sdata,ielem,iblk,prop)
+                            call domain%eqnset%volume_advective_flux(iflux)%flux%compute(mesh,sdata,prop,idom,ielem,iblk)
                         end do
 
                     else
@@ -135,13 +141,13 @@ contains
                     !
                     ! Return perturbed value to normal state
                     !
-                    call sdata%q%lvecs(ielem_p)%setterm(ivar,iterm,qhold)
+                    call q%lvecs(ielem_p)%setterm(ivar,iterm,qhold)
 
 
                     !
                     ! Compute finite difference jacobian
                     !
-                    vec_fd = (sdata%rhs - rhs_r)/eps
+                    vec_fd = (rhs - rhs_r)/eps
 
 
                     !
@@ -152,7 +158,7 @@ contains
 
 
                     ! Reset sdata storage
-                    call sdata%lin%clear()
+                    call sdata%lhs%clear()
                     call sdata%rhs%clear()
 
                 end do
@@ -180,16 +186,21 @@ contains
     !   @param[inout]   blk_fd      densematrix for storing the finite difference jacobian
     !
     !----------------------------------------------------------------------------------
-    subroutine check_jacobian_boundary_advective_flux(domain,ielem,iblk,blk_dnad,blk_fd)
-        type(domain_t),      intent(inout)       :: domain
-        integer(ik),         intent(in)          :: ielem, iblk
-        type(densematrix_t), intent(inout)       :: blk_dnad, blk_fd
+    subroutine check_jacobian_boundary_advective_flux(domains,sdata,ielem,iblk,blk_dnad,blk_fd)
+        type(domain_t),         intent(inout)   :: domains(:)
+        type(solverdata_t),     intent(inout)   :: sdata
+        integer(ik),            intent(in)      :: ielem, iblk
+        type(densematrix_t),    intent(inout)   :: blk_dnad, blk_fd
 
         type(blockvector_t)  :: rhs_r, vec_fd
         real(rk)    :: qhold, eps
-        integer(ik) :: nelem, i, iterm, iface, ivar, icol, nterms, iflux, nflux
+        integer(ik) :: nelem, i, iterm, iface, ivar, icol, nterms, iflux, nflux, idom, idonor
         integer(ik) :: ielem_p              !> ielem_p is the element in which the solution is being perturbed for the finite difference calculation.
 
+
+        ! ASSUMING THERE IS ONLY ONE DOMAIN
+        idom   = 1
+        idonor = 1
 
         !
         ! Select in which element, the solution is being perturbed
@@ -199,15 +210,16 @@ contains
             ielem_p = ielem
             iface   = 1
         else
-            ielem_p = domain%mesh%faces(ielem,iblk)%ineighbor
+            ielem_p = domains(1)%mesh%faces(ielem,iblk)%ineighbor
             iface   = iblk
         end if
 
 
-        associate ( mesh => domain%mesh, sdata => domain%sdata, prop => domain%eqnset%prop) 
+        !associate ( mesh => domain%mesh, sdata => domain%sdata, prop => domain%eqnset%prop) 
+        associate ( domain => domains(1), mesh => domains(:)%mesh, q => sdata%q%dom(1), rhs => sdata%rhs%dom(1), lhs => sdata%lhs%dom(1), prop => domains(1)%eqnset%prop )
 
-            nelem = mesh%nelem
-            nterms = mesh%nterms_s
+            nelem = mesh(1)%nelem
+            nterms = mesh(1)%nterms_s
             !------------------------------------------------------------------------------------------
             !                                      Interior Scheme
             !------------------------------------------------------------------------------------------
@@ -215,10 +227,10 @@ contains
             !
             ! Zero data storage
             !
-            call sdata%lin%clear()      
-            call sdata%rhs%clear()
-            rhs_r  = sdata%rhs          ! Allocate supporing storage containers
-            vec_fd = sdata%rhs
+            call lhs%clear()      
+            call lhs%clear()
+            rhs_r  = rhs          ! Allocate supporing storage containers
+            vec_fd = rhs
 
 
             !
@@ -228,7 +240,7 @@ contains
             if (allocated(domain%eqnset%boundary_advective_flux)) then
                 nflux = size(domain%eqnset%boundary_advective_flux)
                 do iflux = 1,nflux
-                    call domain%eqnset%boundary_advective_flux(iflux)%flux%compute(mesh,sdata,ielem,iface,iblk,prop)
+                    call domain%eqnset%boundary_advective_flux(iflux)%flux%compute(mesh,sdata,prop,idom,ielem,iface,iblk,idonor)
                 end do
 
             else
@@ -240,15 +252,15 @@ contains
             !
             ! Store linearization computed from DNAD
             !
-            blk_dnad = sdata%lin%lblks(ielem,iblk)
+            blk_dnad = lhs%lblks(ielem,iblk)
             blk_fd = blk_dnad   ! Sourced allocation
             blk_fd%mat = ZERO   ! Zero storage
 
 
 
             ! Reset sdata storage
-            call sdata%lin%clear()
-            call sdata%rhs%clear()
+            call lhs%clear()
+            call rhs%clear()
 
 
 
@@ -261,7 +273,7 @@ contains
             if (allocated(domain%eqnset%boundary_advective_flux)) then
                 nflux = size(domain%eqnset%boundary_advective_flux)
                 do iflux = 1,nflux
-                    call domain%eqnset%boundary_advective_flux(iflux)%flux%compute(mesh,sdata,ielem,iface,DIAG,prop)
+                    call domain%eqnset%boundary_advective_flux(iflux)%flux%compute(mesh,sdata,prop,idom,ielem,iface,DIAG,idonor)
                 end do
 
             else
@@ -278,12 +290,12 @@ contains
 
 
             ! Store temporary rhs
-            rhs_r%lvecs(ielem) = sdata%rhs%lvecs(ielem)
+            rhs_r%lvecs(ielem) = rhs%lvecs(ielem)
 
 
             ! Reset sdata storage
-            call sdata%lin%clear()
-            call sdata%rhs%clear()
+            call lhs%clear()
+            call rhs%clear()
 
 
 
@@ -296,8 +308,8 @@ contains
                     !
                     ! Perturb the iterm-th term in the solution expansion for variable ivar in element ielem.
                     !
-                    qhold = sdata%q%lvecs(ielem_p)%getterm(ivar,iterm)
-                    call sdata%q%lvecs(ielem_p)%setterm(ivar,iterm,qhold + eps)
+                    qhold = q%lvecs(ielem_p)%getterm(ivar,iterm)
+                    call q%lvecs(ielem_p)%setterm(ivar,iterm,qhold + eps)
 
 
                     !
@@ -309,7 +321,7 @@ contains
                     if (allocated(domain%eqnset%boundary_advective_flux)) then
                         nflux = size(domain%eqnset%boundary_advective_flux)
                         do iflux = 1,nflux
-                            call domain%eqnset%boundary_advective_flux(iflux)%flux%compute(mesh,sdata,ielem,iface,DIAG,prop)
+                            call domain%eqnset%boundary_advective_flux(iflux)%flux%compute(mesh,sdata,prop,idom,ielem,iface,DIAG,idonor)
                         end do
 
                     else
@@ -325,13 +337,13 @@ contains
                     !
                     ! Return perturbed value to normal state
                     !
-                    call sdata%q%lvecs(ielem_p)%setterm(ivar,iterm,qhold)
+                    call q%lvecs(ielem_p)%setterm(ivar,iterm,qhold)
 
 
                     !
                     ! Compute finite difference jacobian
                     !
-                    vec_fd = (sdata%rhs - rhs_r)/eps
+                    vec_fd = (rhs - rhs_r)/eps
 
 
                     !
@@ -344,8 +356,8 @@ contains
                     !
                     ! Reset sdata storage
                     !
-                    call sdata%lin%clear()
-                    call sdata%rhs%clear()
+                    call lhs%clear()
+                    call rhs%clear()
 
                 end do
             end do

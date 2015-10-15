@@ -5,7 +5,6 @@ module test_bcset_mod
                               XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX
     use type_chidg,     only: chidg_t
     use type_point,     only: point_t
-    use type_domain,    only: domain_t
     use mod_testutils,  only: meshgen
     use type_bcset,     only: bcset_t
     use mock_bc,        only: bc_m
@@ -16,7 +15,6 @@ module test_bcset_mod
 @TestCase
     type, extends(TestCase) ::  test_bcset
         type(chidg_t)          :: chidg
-        type(domain_t)         :: domain
     contains
         procedure   ::  setUp
         procedure   ::  tearDown
@@ -32,19 +30,20 @@ contains
         
         integer(ik), parameter     :: npt = 27
         type(point_t), allocatable :: pts(:,:,:)
-        integer(ik)                :: nterms_c, nterms_s
+        integer(ik)                :: nterms_c, nterms_s, idomain
         
-        !> Initialize chidg environment
+        ! Initialize chidg environment
         call this%chidg%init('env')
         
-        !> Generate points for a 2x2x2 element mesh
+        ! Generate points for a 2x2x2 element mesh
         call meshgen('222',pts)
         
-        !> Call domain initialization
+        ! Call domain initialization
+        idomain  = 1
         nterms_c = 8
         nterms_s = 8
-        call this%domain%init_geom(nterms_c,pts)
-        call this%domain%init_sol('euler',nterms_s)
+        call this%chidg%data%domains(1)%init_geom(idomain,nterms_c,pts)
+        call this%chidg%data%domains(1)%init_sol('euler',nterms_s)
 
     end subroutine
     
@@ -65,7 +64,7 @@ contains
     subroutine test_bcset_domainallocated(self)
         class(test_bcset),    intent(inout)   :: self
 
-        @assertTrue(allocated(self%domain%bcset%bcs))
+        @assertTrue(allocated(self%chidg%data%domains(1)%bcset%bcs))
         
     end subroutine
 
@@ -102,7 +101,7 @@ contains
         
         type(bc_m)  :: bc
 
-        associate(bcset => self%domain%bcset)
+        associate(bcset => self%chidg%data%domains(1)%bcset)
     
             ! Add boundary condition to boundary condition set. This is what we are testing
             call bcset%add(bc)
@@ -136,7 +135,7 @@ contains
         integer(ik) :: ielems_ref(4), ifaces_ref(4)
 
         iface = XI_MIN
-        associate(bcset => self%domain%bcset, mesh => self%domain%mesh, sdata => self%domain%sdata)
+        associate(bcset => self%chidg%data%domains(1)%bcset, mesh => self%chidg%data%domains(1)%mesh )
         
             ! Initialize bc.
             call bc%init(mesh,iface)
@@ -175,7 +174,7 @@ contains
 
         iface_a = XI_MIN
         iface_b = ETA_MIN
-        associate(bcset => self%domain%bcset, mesh => self%domain%mesh, sdata => self%domain%sdata)
+        associate(bcset => self%chidg%data%domains(1)%bcset, mesh => self%chidg%data%domains(1)%mesh)
         
             ! Initialize two boundary conditions
             call bc_a%init(mesh,iface_a)

@@ -5,7 +5,7 @@ module test_bc_mod
                               XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX
     use type_chidg,     only: chidg_t
     use type_point,     only: point_t
-    use type_domain,    only: domain_t
+    !use type_domain,    only: domain_t
     use mod_testutils,  only: meshgen
     use mock_bc,        only: bc_m
     implicit none
@@ -15,7 +15,7 @@ module test_bc_mod
 @TestCase
     type, extends(TestCase) ::  test_bc
         type(chidg_t)          :: chidg
-        type(domain_t)         :: domain
+        !type(domain_t)         :: domain
     contains
         procedure   ::  setUp
         procedure   ::  tearDown
@@ -31,19 +31,20 @@ contains
         
         integer(ik), parameter     :: npt = 27
         type(point_t), allocatable :: pts(:,:,:)
-        integer(ik)                :: nterms_c, nterms_s
+        integer(ik)                :: nterms_c, nterms_s, idomain
         
-        !> Initialize chidg environment
+        ! Initialize chidg environment
         call this%chidg%init('env')
         
-        !> Generate points for a 2x2x2 element mesh
+        ! Generate points for a 2x2x2 element mesh
         call meshgen('222',pts)
         
-        !> Call domain initialization
+        ! Call domain initialization
+        idomain  = 1
         nterms_c = 8
         nterms_s = 8
-        call this%domain%init_geom(nterms_c,pts)
-        call this%domain%init_sol('euler',nterms_s)
+        call this%chidg%data%domains(1)%init_geom(idomain,nterms_c,pts)
+        call this%chidg%data%domains(1)%init_sol('euler',nterms_s)
 
     end subroutine
     
@@ -66,7 +67,7 @@ contains
         type(bc_m)  :: bc
         integer(ik) :: iface
         
-        associate (mesh => self%domain%mesh, sdata => self%domain%sdata)
+        associate (mesh => self%chidg%data%domains(1)%mesh, sdata => self%chidg%data%sdata)
             
             ! Block face for the boundary condition to be applied
             iface = XI_MIN
@@ -94,7 +95,7 @@ contains
         integer(ik) :: iface
         integer(ik) :: ielems_ref(4)
         
-        associate (mesh => self%domain%mesh, sdata => self%domain%sdata)
+        associate (mesh => self%chidg%data%domains(1)%mesh, sdata => self%chidg%data%sdata)
         
             
             ! Block face for the boundary condition to be applied
@@ -124,7 +125,7 @@ contains
         integer(ik) :: iface
         integer(ik) :: ifaces_ref(4)
         
-        associate (mesh => self%domain%mesh, sdata => self%domain%sdata)
+        associate (mesh => self%chidg%data%domains(1)%mesh, sdata => self%chidg%data%sdata)
         
             
             ! Block face for the boundary condition to be applied

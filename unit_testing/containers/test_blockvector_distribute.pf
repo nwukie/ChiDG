@@ -9,13 +9,13 @@ subroutine test_blockvector_distribute()
     use type_domain,        only: domain_t
     use type_point,         only: point_t
 
-
+    implicit none
     type(chidg_t)               :: chidg
     type(blockvector_t)         :: bvec
     type(point_t), allocatable  :: pts(:,:,:)
     type(domain_t)              :: dom
-
-    real(rk), allocatable   :: fullvec(:)
+    real(rk), allocatable       :: fullvec(:)
+    integer(ik)                 :: idomain, nterms_c, nterms_s
 
 
 
@@ -32,9 +32,10 @@ subroutine test_blockvector_distribute()
 
 
     ! Call domain initialization
+    idomain  = 1
     nterms_c = 8
     nterms_s = 8
-    call dom%init_geom(nterms_c,pts)
+    call dom%init_geom(idomain,nterms_c,pts)
     call dom%init_sol('scalar',nterms_s)
 
 

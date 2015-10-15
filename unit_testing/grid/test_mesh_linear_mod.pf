@@ -30,7 +30,7 @@ contains
         type(point_t)               :: pts(4,4,4)
         integer(ik)                 :: ftype, ineighbor, mapping, ielem, &
                                        ipt_xi, ipt_eta, ipt_zeta, ipt
-        integer(ik)                 :: neqns, nterms_s, nterms_c
+        integer(ik)                 :: neqns, nterms_s, nterms_c, idomain
         real(rk), dimension(npt)    :: x,y,z
         
         !> elements (3x3x3) - linear
@@ -80,10 +80,11 @@ contains
 
 
         !> Initialize mesh
+        idomain  = 1
+        nterms_c = 8
         neqns = 1
         nterms_s = 8
-        nterms_c = 8
-        call this%mesh%init_geom(nterms_c,pts)
+        call this%mesh%init_geom(idomain,nterms_c,pts)
         call this%mesh%init_sol(neqns,nterms_s)
 
     end subroutine

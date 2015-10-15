@@ -3,6 +3,7 @@ module type_preconditioner
     use type_domain,        only: domain_t
     use type_blockmatrix,   only: blockmatrix_t
     use type_blockvector,   only: blockvector_t
+    use type_chidgData,     only: chidgData_t
 
     implicit none
 
@@ -41,9 +42,9 @@ contains
     !!
     !!
     !--------------------------------------------------------------------------------------
-    subroutine init(self,domain)
+    subroutine init(self,data)
         class(preconditioner_t),    intent(inout)   :: self
-        type(domain_t),             intent(inout)   :: domain
+        type(chidgData_t),          intent(inout)   :: data
 
 
 

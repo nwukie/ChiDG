@@ -7,16 +7,16 @@ module mod_preconditioner
 
     ! Import preconditioner types
     use precon_identity,            only: precon_identity_t
-    use precon_jacobi,              only: precon_jacobi_t
-    use precon_ILU0,                only: precon_ILU0_t
+!    use precon_jacobi,              only: precon_jacobi_t
+!    use precon_ILU0,                only: precon_ILU0_t
     implicit none
 
 
 
     ! Instantiate preconditioner types for sourcing
     type(precon_identity_t)             :: IDENTITY
-    type(precon_jacobi_t)               :: BLOCKJACOBI
-    type(precon_ILU0_t)                 :: ILU0
+!    type(precon_jacobi_t)               :: BLOCKJACOBI
+!    type(precon_ILU0_t)                 :: ILU0
 
 
 
@@ -31,12 +31,12 @@ contains
             case ('identity','Identity','IDENTITY')
                 allocate(instance, source=IDENTITY)
 
-
-            case ('jacobi','Jacobi','blockjacobi','BlockJacobi')
-                allocate(instance, source=BLOCKJACOBI)
-
-            case('ilu0','ILU0')
-                allocate(instance, source=ILU0)
+!
+!            case ('jacobi','Jacobi','blockjacobi','BlockJacobi')
+!                allocate(instance, source=BLOCKJACOBI)
+!
+!            case('ilu0','ILU0')
+!                allocate(instance, source=ILU0)
 
             case default
                 call signal(FATAL,'create_preconditioner -- preconditioner string not recognized')

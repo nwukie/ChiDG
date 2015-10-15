@@ -27,6 +27,7 @@ module type_element
         integer(ik)      :: neqns                           !< Number of equations being solved
         integer(ik)      :: nterms_s                        !< Number of terms in solution expansion.  
         integer(ik)      :: nterms_c                        !< Number of terms in coordinate expansion. 
+        integer(ik)      :: idomain                         !< Processor-local domain index
         integer(ik)      :: ielem                           !< Block-local element index
 
         !> Element quadrature points, mesh points and modes
@@ -99,10 +100,11 @@ contains
     !!  @param[in] nterms_c     Number of terms in the modal representation of the cartesian coordinates
     !!  @param[in] points       Array of cartesian points defining the element
     !---------------------------------------------------------------------------------------
-    subroutine init_geom(self,mapping,points,ielem)
+    subroutine init_geom(self,mapping,points,idomain,ielem)
         class(element_t),   intent(inout) :: self
         integer(ik),        intent(in)    :: mapping
         type(point_t),      intent(in)    :: points(:)
+        integer(ik),        intent(in)    :: idomain
         integer(ik),        intent(in)    :: ielem
 
         integer(ik)                         :: ierr, nterms_c
@@ -134,6 +136,7 @@ contains
         !
         allocate(self%elem_pts(nterms_c),stat=ierr)
         call self%coords%init(nterms_c,SPACEDIM)
+        self%idomain  = idomain
         self%ielem    = ielem
         self%elem_pts = points
 

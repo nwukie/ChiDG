@@ -10,11 +10,11 @@ subroutine test__create_solverdata__allocated()
     class(solverdata_t),    allocatable :: sdata
     
     
-    !> PROCEDURE BEING TESTED
+    ! PROCEDURE BEING TESTED
     call create_solverdata('base',sdata)
     
     
-    !> Test allocated
+    ! Test allocated
     @assertTrue(allocated(sdata))
     
 end subroutine
@@ -38,18 +38,18 @@ subroutine test__create_solverdata__type()
     
     
         
-    !> PROCEDURE BEING TESTED
+    ! PROCEDURE BEING TESTED
     call create_solverdata('base',sdata)
     
     
-    !> Test for correct type
+    ! Test for correct type
     select type(sdata)
         type is (base_d)
-            !> correct type
+            ! correct type
             @assertTrue(.true.) 
         
         class default
-            !> correct type was not detected, ERROR
+            ! correct type was not detected, ERROR
             @assertTrue(.false.) 
     end select
             

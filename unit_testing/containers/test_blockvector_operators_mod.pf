@@ -4,7 +4,7 @@ module test_blockvector_operators_mod
     use mod_kinds,          only: rk,ik
     use mod_constants,      only: ZERO, ONE, TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT, NINE, TEN, &
                                   XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX
-    use type_domain,        only: domain_t
+    !use type_domain,        only: domain_t
     use type_point,         only: point_t
     use type_blockvector
     use mod_testutils,      only: meshgen
@@ -15,7 +15,7 @@ module test_blockvector_operators_mod
 @TestCase
     type, extends(TestCase) ::  test_blockvector_operators
         type(chidg_t)                        :: chidg
-        type(domain_t)                       :: domain
+        !type(domain_t)                       :: domain
         type(blockvector_t)                  :: bv_a, bv_b, bv_res
 
     contains
@@ -29,47 +29,46 @@ contains
     !! procedure. The argument names have to match
     subroutine setUp(this)
         class(test_blockvector_operators),    intent(inout)   :: this
-        integer(ik)                                 :: nterms_s, ivar, nterms_c
+        integer(ik)                                 :: nterms_s, ivar, nterms_c, idomain
         type(point_t), allocatable                  :: pts(:,:,:)
         
-        associate (dom => this%domain)
-    
-            
-            ! Initialize ChiDG environment
-            call this%chidg%init('env')
-    
-    
-            ! Read 2x2x1 element grid
-            call meshgen('221',pts)
-    
-            nterms_c = 8
-            call this%domain%init_geom(nterms_c,pts)
-    
-            ! Initialize domain numerics
-            nterms_s = 8
-            call this%domain%init_sol('Scalar',nterms_s)
-    
-    
-            ! Initialize blockvectors
-            call this%bv_a%init(this%domain%mesh)
-            call this%bv_b%init(this%domain%mesh)
-            call this%bv_res%init(this%domain%mesh)
-    
-
-            ! Initialize blockvector data for operators
-            this%bv_a%lvecs(1)%vec = ONE
-            this%bv_a%lvecs(2)%vec = TWO
-            this%bv_a%lvecs(3)%vec = THREE
-            this%bv_a%lvecs(4)%vec = FOUR
+        
+        ! Initialize ChiDG environment
+        call this%chidg%init('env')
 
 
-            this%bv_b%lvecs(1)%vec = TWO
-            this%bv_b%lvecs(2)%vec = THREE
-            this%bv_b%lvecs(3)%vec = FOUR
-            this%bv_b%lvecs(4)%vec = FIVE
+        ! Read 2x2x1 element grid
+        call meshgen('221',pts)
 
-    
-        end associate        
+        idomain  = 1
+        nterms_c = 8
+        allocate(this%chidg%data%domains(1))
+        call this%chidg%data%domains(1)%init_geom(idomain,nterms_c,pts)
+
+        ! Initialize domain numerics
+        nterms_s = 8
+        call this%chidg%data%domains(1)%init_sol('Scalar',nterms_s)
+
+
+        ! Initialize blockvectors
+        call this%bv_a%init(this%chidg%data%domains(1)%mesh)
+        call this%bv_b%init(this%chidg%data%domains(1)%mesh)
+        call this%bv_res%init(this%chidg%data%domains(1)%mesh)
+
+
+        ! Initialize blockvector data for operators
+        this%bv_a%lvecs(1)%vec = ONE
+        this%bv_a%lvecs(2)%vec = TWO
+        this%bv_a%lvecs(3)%vec = THREE
+        this%bv_a%lvecs(4)%vec = FOUR
+
+
+        this%bv_b%lvecs(1)%vec = TWO
+        this%bv_b%lvecs(2)%vec = THREE
+        this%bv_b%lvecs(3)%vec = FOUR
+        this%bv_b%lvecs(4)%vec = FIVE
+
+
     end subroutine
     
     subroutine tearDown(this)
@@ -115,14 +114,6 @@ contains
         @assertEqual(3, self%bv_res%lvecs(3)%parent())
         @assertEqual(4, self%bv_res%lvecs(4)%parent())
 
-
-        !
-        ! Test blockvector%lvec_m matrix alias.     NOTE: ifort having issues with mapping lvecs_m
-        !
-        !@assertEqual(1, self%bv_res%lvecs_m(1,1,1)%parent())
-        !@assertEqual(2, self%bv_res%lvecs_m(2,1,1)%parent())
-        !@assertEqual(3, self%bv_res%lvecs_m(1,2,1)%parent())
-        !@assertEqual(4, self%bv_res%lvecs_m(2,2,1)%parent())
 
 
         !

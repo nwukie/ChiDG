@@ -6,7 +6,7 @@ module test_hdfio_variable_D1_E1_M1_mod
     use mod_hdfio,      only: read_grid_hdf, read_var_hdf, write_var_hdf
     use type_chidg,     only: chidg_t
     use type_point,     only: point_t
-    use type_domain,    only: domain_t
+    !use type_domain,    only: domain_t
     implicit none
 
 
@@ -16,7 +16,7 @@ module test_hdfio_variable_D1_E1_M1_mod
     type, extends(TestCase) ::  test_hdfio_variable_D1_E1_M1
         type(chidg_t)               :: chidg
         character(11)               :: filename = 'D1_E1_M1.h5'
-        type(domain_t), allocatable :: domains(:)
+        !type(domain_t), allocatable :: domains(:)
     
     contains
         procedure   ::  setUp
@@ -35,16 +35,16 @@ contains
 
         call this%chidg%init('env')
 
-        call read_grid_hdf(this%filename, this%domains)
+        call read_grid_hdf(this%filename, this%chidg%data)
     
         nterms_s = 2*2*2
-        call this%domains(1)%init_sol('scalar',nterms_s)
+        call this%chidg%data%domains(1)%init_sol('scalar',nterms_s)
     end subroutine
     
     subroutine tearDown(this)
         class(test_hdfio_variable_D1_E1_M1),    intent(inout)   :: this
         
-        deallocate(this%domains)
+        !deallocate(this%domains)
     end subroutine
 
 
@@ -61,25 +61,25 @@ contains
         
         tol = 1.e-14_rk
         
-        !> Set reference solution values
+        ! Set reference solution values
         ref = [ONE, TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT]
         
         
-        associate (q => this%domains(1)%sdata%q)
+        associate (q => this%chidg%data%sdata%q%dom(1))
             
-            !> Assign reference solution
+            ! Assign reference solution
             q%lvecs(1)%vec = ref
             
-            !> Write solution values
-            call write_var_hdf(this%filename,'u',1,this%domains)
+            ! Write solution values
+            call write_var_hdf(this%filename,'u',1,this%chidg%data)
             
-            !> Reset solution
+            ! Reset solution
             q%lvecs(1)%vec = 0._rk
             
-            !> Read solution values
-            call read_var_hdf(this%filename,'u',1,this%domains)
+            ! Read solution values
+            call read_var_hdf(this%filename,'u',1,this%chidg%data)
            
-            !> Test that the read solution values equal the reference values
+            ! Test that the read solution values equal the reference values
             @assertEqual(ref,q%lvecs(1)%vec, tol)
         end associate
         

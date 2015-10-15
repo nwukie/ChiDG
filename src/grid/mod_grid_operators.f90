@@ -6,6 +6,7 @@ module mod_grid_operators
     use type_domain,        only: domain_t
     use type_blockvector,   only: blockvector_t
     use type_densevector,   only: densevector_t
+    use type_solverdata,    only: solverdata_t
     use atype_function,     only: function_t
     use mod_polynomial,     only: PolynomialVal
     use mod_project,        only: project_function_xyz
@@ -23,56 +24,61 @@ contains
     !!  @param[in]  ivar    Integer index of the variable being initialized
     !!  @param[in]  fcn     Function being projected to the solution
     !---------------------------------------------------------------------------------
-    subroutine initialize_variable(domain,ivar,fcn)
-        type(domain_t),     intent(inout)   :: domain
-        integer(ik),        intent(in)      :: ivar
-        class(function_t),  intent(inout)   :: fcn
+    subroutine initialize_variable(domains,sdata,ivar,fcn)
+        type(domain_t),         intent(inout)   :: domains(:)
+        class(solverdata_t),    intent(inout)   :: sdata
+        integer(ik),            intent(in)      :: ivar
+        class(function_t),      intent(inout)   :: fcn
 
-        integer(ik)             :: ielem, ierr
+        integer(ik)             :: ielem, ierr, idom
         real(rk), allocatable   :: fmodes(:)
 
 
         ! Check that variable index 'ivar' is valid
-        if (ivar > domain%eqnset%neqns ) call signal(FATAL,'initialize_variable: variable index ivar exceeds the number of equations')
+        !& DEBUG - DOMAIN - Hardcoded domain index
+        if (ivar > domains(1)%eqnset%neqns ) call signal(FATAL,'initialize_variable: variable index ivar exceeds the number of equations')
 
 
         !
         ! Loop through elements in mesh and call function projection
         !
-        do ielem = 1,domain%mesh%nelem
-            associate (elem  =>  domain%mesh%elems(ielem), q => domain%sdata%q%lvecs(ielem))
+        do idom = 1,size(domains)
 
-                ! Initial array allocation
-                if (.not. allocated(fmodes)) allocate(fmodes(q%nterms()))
+            do ielem = 1,domains(idom)%mesh%nelem
+                associate (elem => domains(idom)%mesh%elems(ielem), q => sdata%q%dom(idom)%lvecs(ielem))
 
-
-                ! Reallocate mode storage if necessary. For example, if the order of the expansion was changed
-                if (size(fmodes) /= q%nterms()) then
-                    if (allocated(fmodes)) deallocate(fmodes)
-                    allocate(fmodes(q%nterms()), stat=ierr)
-                    if (ierr /= 0) call AllocationError
-                end if
+                    ! Initial array allocation
+                    if (.not. allocated(fmodes)) allocate(fmodes(q%nterms()))
 
 
-                if (.not. allocated(fmodes)) call signal(FATAL,"initialize_variable: fmodes not allocated")
+                    ! Reallocate mode storage if necessary. For example, if the order of the expansion was changed
+                    if (size(fmodes) /= q%nterms()) then
+                        if (allocated(fmodes)) deallocate(fmodes)
+                        allocate(fmodes(q%nterms()), stat=ierr)
+                        if (ierr /= 0) call AllocationError
+                    end if
 
 
-
-                !
-                ! Call function projection
-                !
-                call project_function_xyz(fcn,elem%nterms_s,elem%coords,fmodes)
+                    if (.not. allocated(fmodes)) call signal(FATAL,"initialize_variable: fmodes not allocated")
 
 
 
-                !
-                ! Store the projected modes to the solution expansion
-                !
-                !q%mat(:,ivar) = fmodes
-                call q%setvar(ivar,fmodes)
+                    !
+                    ! Call function projection
+                    !
+                    call project_function_xyz(fcn,elem%nterms_s,elem%coords,fmodes)
 
-            end associate
-        end do ! ielem
+
+
+                    !
+                    ! Store the projected modes to the solution expansion
+                    !
+                    call q%setvar(ivar,fmodes)
+
+                end associate
+            end do ! ielem
+
+        end do ! idomain
 
     end subroutine
 

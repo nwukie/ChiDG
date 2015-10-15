@@ -11,8 +11,6 @@ module type_fgmres
     use operator_mv
     use operator_dot,       only: dot
 
-    use precon_jacobi,      only: precon_jacobi_t
-    
     implicit none
         
 
@@ -29,8 +27,6 @@ module type_fgmres
     type, public, extends(matrixsolver_t) :: fgmres_t
 
         integer(ik) :: m = 100
-
-        type(precon_jacobi_t)       :: precon
 
     contains
 

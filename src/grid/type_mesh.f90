@@ -5,6 +5,8 @@ module type_mesh
     use type_element,       only: element_t
     use type_face,          only: face_t
     use type_point,         only: point_t
+
+    use type_chimera,       only: chimera_t
     implicit none
     private
 
@@ -22,12 +24,16 @@ module type_mesh
         integer(ik)         :: neqns    = 0                             !< Number of equations being solved
         integer(ik)         :: nterms_s = 0                             !< Number of terms in the solution expansion
         integer(ik)         :: nterms_c = 0                             !< Number of terms in the grid coordinate expansion
-        integer(ik)         :: nelem_xi, nelem_eta, nelem_zeta, nelem
 
         ! Grid data
         type(element_t),  allocatable :: elems(:)                       !< Element storage (1:nelem)
         type(element_t),  pointer     :: elems_m(:,:,:) => null()       !< Matrix view of element storage (1:nelem_xi, 1:nelem_eta, 1:nelem_zeta)
         type(face_t),     allocatable :: faces(:,:)                     !< Face storage    (1:nelem,1:nfaces)
+        type(chimera_t)               :: chimera
+
+        integer(ik)         :: idomain
+        integer(ik)         :: nelem_xi, nelem_eta, nelem_zeta, nelem
+
 
         ! TODO: Needs tested
         ! type(face_t),     pointer      :: faces_c(:,:,:,:) => null()  !< Matrix view of face storage
@@ -59,13 +65,15 @@ contains
     !!  @param[in]  nterms_c    Number of terms in the coordinate expansion
     !!  @param[in]  points_g    Rank-3 matrix of coordinate points defining a block mesh
     !---------------------------------------------------------------------------------------
-    subroutine init_geom(self,nterms_c,points_g)
+    subroutine init_geom(self,idomain,nterms_c,points_g)
         class(mesh_t),  intent(inout), target   :: self
+        integer(ik),    intent(in)              :: idomain
         integer(ik),    intent(in)              :: nterms_c
         type(point_t),  intent(in)              :: points_g(:,:,:)
         type(element_t), pointer                :: temp(:)
 
         self%nterms_c = nterms_c
+        self%idomain  = idomain
 
 
         !
@@ -147,7 +155,8 @@ contains
                                         npts_xi,  npts_eta,  npts_zeta,         &
                                         xi_start, eta_start, zeta_start,        &
                                         nelem_xi, nelem_eta, nelem_zeta, nelem, &
-                                        neqns,    nterms_s,  nnodes, nterms_c, npts_1d, mapping
+                                        neqns,    nterms_s,  nnodes, nterms_c,  &
+                                        npts_1d, mapping, idomain
 
         npts_xi   = size(points_g,1)    ! Number of points in the xi-direction
         npts_eta  = size(points_g,2)    ! Number of points in the eta-direction
@@ -226,6 +235,7 @@ contains
 
 
 
+        idomain = self%idomain
         ielem = 1
         ! Initialize elements
         do izeta = 1,nelem_zeta
@@ -247,7 +257,7 @@ contains
                         end do
                     end do
 
-                    call self%elems(ielem)%init_geom(mapping,points_l,ielem)
+                    call self%elems(ielem)%init_geom(mapping,points_l,idomain,ielem)
                     ielem = ielem + 1
                 end do
             end do
@@ -316,8 +326,12 @@ contains
                              (ieta == self%nelem_eta   .and. iface == ETA_MAX)  .or. &
                              (izeta == 1               .and. iface == ZETA_MIN) .or. &
                              (izeta == self%nelem_zeta .and. iface == ZETA_MAX) ) then
-                            ftype = 1       ! boundary face
+
+                            !ftype = 1       ! boundary face
+                            ftype = -1       ! orphan face. This should be processed later; either by a boundary condition(ftype=1), or a chimera boundary(ftype=2)
                             ineighbor = 0   ! No neighbor
+
+
                         else
                             ftype = 0  ! interior face
 

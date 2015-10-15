@@ -6,7 +6,7 @@ module SCA_boundary_average_advective_flux
 
     use atype_boundary_flux,        only: boundary_flux_t
     use type_mesh,                  only: mesh_t
-    use atype_solverdata,           only: solverdata_t
+    use type_solverdata,            only: solverdata_t
     use type_properties,            only: properties_t
     use mod_interpolate,            only: interpolate
     use mod_integrate,              only: integrate_volume_flux, integrate_boundary_flux
@@ -34,26 +34,33 @@ contains
     !
     !   @param[in]      mesh    Mesh data
     !   @param[inout]   sdata   Solver data. Solution, RHS, Linearization etc.
+    !   @param[in]      idom    Domain index
     !   @param[in]      ielem   Element index
     !   @param[in]      iface   Face index
     !   @param[in]      iblk    Block index indicating the linearization direction
     !
     !---------------------------------------------------------------------
-    subroutine compute(self,mesh,sdata,ielem,iface,iblk,prop)
-        class(SCA_boundary_average_advective_flux_t),    intent(in)      :: self
-        class(mesh_t),                                  intent(in)      :: mesh
+    subroutine compute(self,mesh,sdata,idom,ielem,iface,iblk,prop)
+        class(SCA_boundary_average_advective_flux_t),   intent(in)      :: self
+        class(mesh_t),                                  intent(in)      :: mesh(:)
         class(solverdata_t),                            intent(inout)   :: sdata
-        integer(ik),                                    intent(in)      :: ielem, iface, iblk
+        integer(ik),                                    intent(in)      :: idom, ielem, iface, iblk
         class(properties_t),                            intent(inout)   :: prop
 
         real(rk)                    :: cx, cy, cz
         integer(ik)                 :: iu, iseed, ierr, nnodes, ineighbor, iface_p, i
+        integer(ik)                 :: idom_n   ! neighbor domain index
+        integer(ik)                 :: ielem_n  ! neighbor element index
         type(AD_D), allocatable     :: u_l(:), u_r(:), flux_x(:), flux_y(:), flux_z(:)
 
 
+        !& DEBUG NOT FINISHED FIXING YET
+
         iu        = prop%get_eqn_index('u')
-        nnodes    = mesh%faces(ielem,iface)%gq%nnodes_f
-        ineighbor = mesh%faces(ielem,iface)%ineighbor
+        nnodes    = mesh(idom)%faces(ielem,iface)%gq%nnodes_f
+        !ielem_n   = mesh(idom)%faces(ielem,iface)%ineighbor
+        idom_n    = mesh(idom)%faces(ielem,iface)%idom_n
+        ielem_n   = mesh(idom)%faces(ielem,iface)%ielem_n
 
 
         !
@@ -87,14 +94,14 @@ contains
         ! Get neighbor face and seed element for derivatives
         !
         iface_p = compute_neighbor_face(iface)
-        iseed   = compute_seed_element(mesh,ielem,iblk)
+        iseed   = compute_seed_element(mesh,idom,ielem,iblk)
 
 
         !
         ! Interpolate solution to quadrature nodes
         !
-        call interpolate(mesh%faces,sdata%q,ielem,    iface,  iu,u_r,iseed)
-        call interpolate(mesh%faces,sdata%q,ineighbor,iface_p,iu,u_l,iseed)
+        call interpolate(mesh%faces,sdata%q,idom,   ielem,   iface,   iu, u_r, iseed)
+        call interpolate(mesh%faces,sdata%q,idom_n, ielem_n, iface_p, iu, u_l, iseed)
 
 
         !
@@ -108,7 +115,7 @@ contains
         !
         ! Integrate flux
         !
-        call integrate_boundary_flux(mesh%faces(ielem,iface), sdata, iu, iblk, flux_x, flux_y, flux_z)
+        call integrate_boundary_flux(mesh%faces(ielem,iface), sdata, idom, iu, iblk, flux_x, flux_y, flux_z)
 
     end subroutine
 

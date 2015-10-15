@@ -27,8 +27,6 @@ module type_blockvector
         !!    .
         !!    .
         type(densevector_t), allocatable :: lvecs(:)                    !< Local element vectors
-!        type(densevector_t), pointer     :: lvecs_m(:,:,:) => null()    !< Matrix view of element storage vectors  NOTE: intel fortran has issues mapping this. Supposedly fixed in 16.0 but other problems prevent this from being checked
-
         integer(ik),         allocatable :: ldata(:,:)                  !< Local block data     (nvars, nterms)
 
 
@@ -46,8 +44,6 @@ module type_blockvector
         procedure, public   :: nentries
         procedure, public   :: dump
 
-!        procedure   :: assignVector
-!        generic     :: assignment(=) => assignVector
         final :: destructor
     end type blockvector_t
 

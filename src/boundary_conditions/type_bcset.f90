@@ -4,7 +4,7 @@ module type_bcset
     use mod_constants,      only: XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX
     use type_mesh,          only: mesh_t
     use atype_equationset,  only: equationset_t
-    use atype_solverdata,   only: solverdata_t
+    use type_solverdata,    only: solverdata_t
     use atype_bc,           only: bc_t
     use type_bcwrapper,     only: bcwrapper_t
     use type_properties,    only: properties_t
@@ -110,11 +110,12 @@ contains
     !!  @param[inout]   iblk    integer block direction with respect to which we are computing the linearization
     !!  @param[inout]   prop    properties_t object with equationset properties, and material_t objects
     !----------------------------------------------------------------------------------------
-    subroutine apply(self,mesh,sdata,iblk,prop)
+    subroutine apply(self,mesh,sdata,idom,iblk,prop)
         class(bcset_t),         intent(inout)   :: self
-        type(mesh_t),           intent(inout)   :: mesh
+        type(mesh_t),           intent(inout)   :: mesh(:)
         class(solverdata_t),    intent(inout)   :: sdata
-        integer(ik),            intent(inout)   :: iblk
+        integer(ik),            intent(in)      :: idom
+        integer(ik),            intent(in)      :: iblk
         class(properties_t),    intent(inout)   :: prop
 
         integer(ik) :: ibc
@@ -128,7 +129,7 @@ contains
             ! Only apply if there is an allocated boundary condition in the current slot
             !
             if (allocated(self%bcs(ibc)%bc)) then
-                call self%bcs(ibc)%bc%apply(mesh,sdata,iblk,prop)
+                call self%bcs(ibc)%bc%apply(mesh,sdata,idom,iblk,prop)
             end if
 
         end do

@@ -4,7 +4,6 @@ subroutine test_fgmres_solve()
     use mod_kinds,          only: rk, ik
     use mod_constants,      only: ZERO, ONE, TWO, THREE, FOUR, DIAG, XI_MIN, XI_MAX
     use type_chidg,         only: chidg_t
-    use type_domain,        only: domain_t
     use type_point,         only: point_t
 
     use type_fgmres,        only: fgmres_t
@@ -16,14 +15,14 @@ subroutine test_fgmres_solve()
     implicit none
 
     type(chidg_t)               :: chidg
-    type(domain_t)              :: dom
     type(point_t), allocatable  :: pts(:,:,:)
 
     real(rk)    :: tol
-    integer(ik) :: nterms_c, nterms_s
+    integer(ik) :: nterms_c, nterms_s, idomain
 
 
     tol      = 1.e-9_rk
+    idomain  = 1
     nterms_c = 8
     nterms_s = 1
 
@@ -42,15 +41,15 @@ subroutine test_fgmres_solve()
     call meshgen('311',pts)
 
     ! Initialize domain
-    call chidg%set('ndomains','')
-    call chidg%domains(1)%init_geom(nterms_c,pts)
-    call chidg%domains(1)%init_sol('Scalar',nterms_s)
+    allocate(chidg%data%domains(1))
+    call chidg%data%domains(1)%init_geom(idomain,nterms_c,pts)
+    call chidg%data%domains(1)%init_sol('Scalar',nterms_s)
 
 
 
 
 
-    associate ( A => chidg%domains(1)%sdata%lin, b => chidg%domains(1)%sdata%rhs, x => chidg%domains(1)%sdata%dq, M => chidg%preconditioner )
+    associate ( A => chidg%data%sdata%lhs%dom(1), b => chidg%data%sdata%rhs%dom(1), x => chidg%data%sdata%dq%dom(1), M => chidg%preconditioner )
         ! Initialize blockmatrix data (A)
         !
         ! [4  3  0]

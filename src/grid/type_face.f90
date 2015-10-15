@@ -24,10 +24,15 @@ module type_face
     type, public :: face_t
         integer(ik), pointer         :: neqns    => null()
         integer(ik), pointer         :: nterms_s => null()
-        integer(ik)                  :: ftype               !> interior (0) or boundary face (1)
+        integer(ik)                  :: ftype               !> interior (0), or boundary condition (1), or Chimera interface (2)
         integer(ik)                  :: iface               !> XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, etc
-        integer(ik)                  :: iparent             !> Block-local index of parent element
+
+        integer(ik)                  :: idomain             !> Domain index of parent element
+        integer(ik)                  :: iparent             !> Element index of parent element
         integer(ik)                  :: ineighbor           !> Block-local index of neighbor element
+
+        !integer(ik)                  :: idomain_n           !> Processor-local domain index of neighbor element
+        !integer(ik)                  :: iparent_n           !> Processor-local element index of neighbor element in idomain_n
 
         ! Geometry
         !---------------------------------------------------------
@@ -82,7 +87,6 @@ contains
     !!  @param[in] ftype        Face type (0 - interior face, 1 - boundary face)
     !!  @param[in] elem         Parent element which many face members point to
     !!  @param[in] ineighbor    Index of neighbor element in the block
-
     !!
     !--------------------------------------------------------------------------
     subroutine init_geom(self,iface,ftype,elem,ineighbor)
@@ -94,6 +98,7 @@ contains
 
         self%iface      = iface
         self%ftype      = ftype
+        self%idomain    = elem%idomain
         self%iparent    = elem%ielem
         self%ineighbor  = ineighbor
 

@@ -34,10 +34,14 @@ subroutine test_integrate_boundary_unit_constant()
     !
     call meshgen('111u',pts)
     call chidg%set('ndomains','')
+    idomain  = 1
     nterms_c = 8
     nterms_s = 1
-    call chidg%domains(1)%init_geom(nterms_c,pts)
-    call chidg%domains(1)%init_sol('scalar',nterms_s)
+
+
+
+    call chidg%data%domains(1)%init_geom(idomain,nterms_c,pts)
+    call chidg%data%domains(1)%init_sol('scalar',nterms_s)
 
 
 
@@ -46,13 +50,13 @@ subroutine test_integrate_boundary_unit_constant()
     !
     call create_function(constant,'constant')
     call constant%set('val',1._rk)
-    call initialize_variable(chidg%domains(1),1,constant)
+    call initialize_variable(chidg%data%domains,chidg%data%sdata,1,constant)
 
     
     !
     ! Allocate flux array
     !
-    associate ( faces => chidg%domains(1)%mesh%faces, sdata => chidg%domains(1)%sdata )
+    associate ( faces => chidg%data%domains(1)%mesh%faces, sdata => chidg%data%sdata )
     ngq = faces(1,1)%gq%face%nnodes
     allocate(flux(ngq))
     
@@ -73,10 +77,10 @@ subroutine test_integrate_boundary_unit_constant()
     !
     ! Integrate boundary. THIS IS BEING TESTED
     !
-    call integrate_boundary_scalar_flux(faces(1,1),sdata,ivar,iblk,flux)
+    call integrate_boundary_scalar_flux(faces(1,1),sdata,idomain,ivar,iblk,flux)
 
 
-    integral = sdata%rhs%lvecs(1)%vec(1)
+    integral = sdata%rhs%dom(1)%lvecs(1)%vec(1)
 
     end associate
 
@@ -115,7 +119,7 @@ subroutine test_integrate_boundary_nonunit_constant()
 
     type(point_t),      allocatable     :: pts(:,:,:)
     type(chidg_t)                       :: chidg
-    integer(ik)                         :: nterms_c, nterms_s
+    integer(ik)                         :: nterms_c, nterms_s, idomain
     type(AD_D),         allocatable     :: flux(:)
     class(function_t),  allocatable     :: constant
     real(rk)                            :: integral, ref_integral
@@ -133,10 +137,11 @@ subroutine test_integrate_boundary_nonunit_constant()
     !
     call meshgen('111',pts)
     call chidg%set('ndomains','')
+    idomain  = 1
     nterms_c = 8
     nterms_s = 1
-    call chidg%domains(1)%init_geom(nterms_c,pts)
-    call chidg%domains(1)%init_sol('scalar',nterms_s)
+    call chidg%data%domains(1)%init_geom(idomain,nterms_c,pts)
+    call chidg%data%domains(1)%init_sol('scalar',nterms_s)
 
 
 
@@ -145,13 +150,13 @@ subroutine test_integrate_boundary_nonunit_constant()
     !
     call create_function(constant,'constant')
     call constant%set('val',1._rk)
-    call initialize_variable(chidg%domains(1),1,constant)
+    call initialize_variable(chidg%data%domains,chidg%data%sdata,1,constant)
 
     
     !
     ! Allocate flux array
     !
-    associate ( faces => chidg%domains(1)%mesh%faces, sdata => chidg%domains(1)%sdata )
+    associate ( faces => chidg%data%domains(1)%mesh%faces, sdata => chidg%data%sdata )
     ngq = faces(1,1)%gq%face%nnodes
     allocate(flux(ngq))
     
@@ -175,10 +180,10 @@ subroutine test_integrate_boundary_nonunit_constant()
     !
     ! Integrate boundary. THIS IS BEING TESTED
     !
-    call integrate_boundary_scalar_flux(faces(1,XI_MIN),sdata,ivar,iblk,flux)
+    call integrate_boundary_scalar_flux(faces(1,XI_MIN),sdata,idomain,ivar,iblk,flux)
 
 
-    integral = sdata%rhs%lvecs(1)%vec(1)
+    integral = sdata%rhs%dom(1)%lvecs(1)%vec(1)
 
 
     ref_integral = -1._rk
@@ -194,10 +199,10 @@ subroutine test_integrate_boundary_nonunit_constant()
     ! Integrate boundary. THIS IS BEING TESTED
     !
     flux = ONE*faces(1,XI_MAX)%norm(:,1)
-    call integrate_boundary_scalar_flux(faces(1,XI_MAX),sdata,ivar,iblk,flux)
+    call integrate_boundary_scalar_flux(faces(1,XI_MAX),sdata,idomain,ivar,iblk,flux)
 
 
-    integral = sdata%rhs%lvecs(1)%vec(1)
+    integral = sdata%rhs%dom(1)%lvecs(1)%vec(1)
 
 
     ref_integral = 1._rk
@@ -215,10 +220,10 @@ subroutine test_integrate_boundary_nonunit_constant()
     ! Integrate boundary. THIS IS BEING TESTED
     !
     flux = ONE*faces(1,ETA_MIN)%norm(:,2)
-    call integrate_boundary_scalar_flux(faces(1,ETA_MIN),sdata,ivar,iblk,flux)
+    call integrate_boundary_scalar_flux(faces(1,ETA_MIN),sdata,idomain,ivar,iblk,flux)
 
 
-    integral = sdata%rhs%lvecs(1)%vec(1)
+    integral = sdata%rhs%dom(1)%lvecs(1)%vec(1)
 
 
     ref_integral = -1._rk
@@ -238,10 +243,10 @@ subroutine test_integrate_boundary_nonunit_constant()
     ! Integrate boundary. THIS IS BEING TESTED
     !
     flux = ONE*faces(1,ETA_MAX)%norm(:,2)
-    call integrate_boundary_scalar_flux(faces(1,ETA_MAX),sdata,ivar,iblk,flux)
+    call integrate_boundary_scalar_flux(faces(1,ETA_MAX),sdata,idomain,ivar,iblk,flux)
 
 
-    integral = sdata%rhs%lvecs(1)%vec(1)
+    integral = sdata%rhs%dom(1)%lvecs(1)%vec(1)
 
 
     ref_integral = 1._rk
@@ -260,10 +265,10 @@ subroutine test_integrate_boundary_nonunit_constant()
     ! Integrate boundary. THIS IS BEING TESTED
     !
     flux = ONE*faces(1,ZETA_MIN)%norm(:,3)
-    call integrate_boundary_scalar_flux(faces(1,ZETA_MIN),sdata,ivar,iblk,flux)
+    call integrate_boundary_scalar_flux(faces(1,ZETA_MIN),sdata,idomain,ivar,iblk,flux)
 
 
-    integral = sdata%rhs%lvecs(1)%vec(1)
+    integral = sdata%rhs%dom(1)%lvecs(1)%vec(1)
 
 
     ref_integral = -1._rk
@@ -282,10 +287,10 @@ subroutine test_integrate_boundary_nonunit_constant()
     ! Integrate boundary. THIS IS BEING TESTED
     !
     flux = ONE*faces(1,ZETA_MAX)%norm(:,3)
-    call integrate_boundary_scalar_flux(faces(1,ZETA_MAX),sdata,ivar,iblk,flux)
+    call integrate_boundary_scalar_flux(faces(1,ZETA_MAX),sdata,idomain,ivar,iblk,flux)
 
 
-    integral = sdata%rhs%lvecs(1)%vec(1)
+    integral = sdata%rhs%dom(1)%lvecs(1)%vec(1)
 
 
     ref_integral = 1._rk

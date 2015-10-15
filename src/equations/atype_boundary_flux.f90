@@ -2,8 +2,9 @@ module atype_boundary_flux
     use mod_kinds,          only: rk, ik
     use atype_flux,         only: flux_t
     use type_mesh,          only: mesh_t
-    use atype_solverdata,   only: solverdata_t
+    use type_solverdata,    only: solverdata_t
     use type_properties,    only: properties_t
+    implicit none
 
 
 
@@ -17,7 +18,8 @@ module atype_boundary_flux
 
 
     abstract interface
-        subroutine compute_interface(self,mesh,sdata,ielem,iface,iblk,prop)
+        !subroutine compute_interface(self,mesh,sdata,ielem,iface,iblk,prop)
+        subroutine compute_interface(self,mesh,sdata,prop,idom,ielem,iface,iblk,idonor)
             use mod_kinds,  only: ik
             import boundary_flux_t
             import mesh_t
@@ -25,10 +27,14 @@ module atype_boundary_flux
             import properties_t
 
             class(boundary_flux_t), intent(in)      :: self
-            class(mesh_t),          intent(in)      :: mesh
+            class(mesh_t),          intent(in)      :: mesh(:)
             class(solverdata_t),    intent(inout)   :: sdata
-            integer(ik),            intent(in)      :: ielem, iface, iblk
             class(properties_t),    intent(inout)   :: prop
+            integer(ik),            intent(in)      :: idom
+            integer(ik),            intent(in)      :: ielem
+            integer(ik),            intent(in)      :: iface
+            integer(ik),            intent(in)      :: iblk
+            integer(ik),            intent(in)      :: idonor
         end subroutine
     end interface
 

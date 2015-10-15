@@ -7,6 +7,7 @@ module mod_tecio
     use type_element,           only: element_t
     use type_domain,            only: domain_t
     use type_blockvector,       only: blockvector_t
+    use type_solverdata,        only: solverdata_t
     implicit none
 
 #include "tecio.f90"
@@ -15,10 +16,11 @@ contains
 
 
 
-    subroutine write_tecio_variables(domain,filename,timeindex)
-        type(domain_t), intent(inout), target   :: domain
-        character(*),   intent(in)              :: filename
-        integer(ik),    intent(in)              :: timeindex
+    subroutine write_tecio_variables(domains,sdata,filename,timeindex)
+        type(domain_t),         intent(inout), target   :: domains(:)
+        class(solverdata_t),    intent(inout), target   :: sdata
+        character(*),           intent(in)              :: filename
+        integer(ik),            intent(in)              :: timeindex
 
 
         integer(ik)        :: nelem_xi, nelem_eta, nelem_zeta
@@ -34,124 +36,153 @@ contains
         equivalence           (valeq(1), val(1))
         real(rk)           :: xi,eta,zeta
         character(100)     :: varstring
-        integer(ik)        :: ieq, ivar
+        integer(ik)        :: ieq, ivar, idom
 
         type(element_t),      pointer :: elem(:,:,:)
         type(blockvector_t),  pointer :: q
 
-
-        ! Store element indices for current block
-        nelem_xi   = domain%mesh%nelem_xi
-        nelem_eta  = domain%mesh%nelem_eta
-        nelem_zeta = domain%mesh%nelem_zeta
-
-
-
-        ! Remap elements array to block matrix
-        elem => domain%mesh%elems_m
-        q    => domain%sdata%q
 
         ! using (output_res+1) so that the skip number used in tecplot to
         ! correctly display the element surfaces is the same as the number
         ! specified in the input file
         npts = IO_RES+1
 
-        ! Initialize variables string with mesh coordinates
-        varstring = "X Y Z"
 
+
+        !
         ! Assemble variables string
+        !
+        varstring = "X Y Z"     ! Initialize variables string with mesh coordinates
         ieq = 1
-        do while (ieq <= domain%eqnset%neqns)
+        !& DEBUG - DOMAINS - Assumes same equation set in all domains
+        do while (ieq <= domains(1)%eqnset%neqns)
             !varstring = trim(varstring)//" "//trim(domain%eqnset%eqns(ieq)%name)
-            varstring = trim(varstring)//" "//trim(domain%eqnset%prop%eqns(ieq)%name)
+            varstring = trim(varstring)//" "//trim(domains(1)%eqnset%prop%eqns(ieq)%name)
             ieq = ieq + 1
         end do
 
 
-        ! Initialize TECIO binary for solution file
+        !
+        ! Open and initialize TecIO file
+        !
         call init_tecio_file('solnfile',trim(varstring),filename,0)
-        call init_tecio_zone('solnzone',domain%mesh,1,timeindex)
 
 
 
+        do idom = 1,size(domains)
+        associate (domain => domains(idom))
+
+            !
+            ! Store element indices for current block
+            !
+            nelem_xi   = domain%mesh%nelem_xi
+            nelem_eta  = domain%mesh%nelem_eta
+            nelem_zeta = domain%mesh%nelem_zeta
 
 
-        xilim   = npts
-        etalim  = npts
-        zetalim = npts
+            !
+            ! Remap elements array to block matrix
+            !
+            elem => domains(idom)%mesh%elems_m
+            q    => sdata%q%dom(idom)
 
-        ! For each coordinate, compute it's value pointwise and save
-        do icoord = 1,3
 
-           ! Loop through elements and get structured points
-            do ielem_zeta = 1,nelem_zeta
-                do ipt_zeta = 1,zetalim
-                    zeta = (((real(ipt_zeta,rk)-ONE)/(real(npts,rk)-ONE)) - HALF)*TWO
+            !
+            ! Initialize new zone in the TecIO file for the current domain
+            !
+            call init_tecio_zone('solnzone',domain%mesh,1,timeindex)
 
-                    do ielem_eta = 1,nelem_eta
-                        do ipt_eta = 1,etalim
-                            eta = (((real(ipt_eta,rk)-ONE)/(real(npts,rk)-ONE)) - HALF)*TWO
 
-                            do ielem_xi = 1,nelem_xi
-                                do ipt_xi = 1,xilim
-                                    xi = (((real(ipt_xi,rk)-ONE)/(real(npts,rk)-ONE)) - HALF)*TWO
 
-                                    ! Get coordinate value at point
-                                    val = mesh_point(elem(ielem_xi,ielem_eta,ielem_zeta),icoord,xi,eta,zeta)
-                                    tecstat = TECDAT142(1,valeq,1)
+            xilim   = npts
+            etalim  = npts
+            zetalim = npts
 
+            ! For each coordinate, compute it's value pointwise and save
+            do icoord = 1,3
+
+               ! Loop through elements and get structured points
+                do ielem_zeta = 1,nelem_zeta
+                    do ipt_zeta = 1,zetalim
+                        zeta = (((real(ipt_zeta,rk)-ONE)/(real(npts,rk)-ONE)) - HALF)*TWO
+
+                        do ielem_eta = 1,nelem_eta
+                            do ipt_eta = 1,etalim
+                                eta = (((real(ipt_eta,rk)-ONE)/(real(npts,rk)-ONE)) - HALF)*TWO
+
+                                do ielem_xi = 1,nelem_xi
+                                    do ipt_xi = 1,xilim
+                                        xi = (((real(ipt_xi,rk)-ONE)/(real(npts,rk)-ONE)) - HALF)*TWO
+
+                                        ! Get coordinate value at point
+                                        val = mesh_point(elem(ielem_xi,ielem_eta,ielem_zeta),icoord,xi,eta,zeta)
+                                        tecstat = TECDAT142(1,valeq,1)
+
+                                    end do
                                 end do
+
                             end do
-
                         end do
+
                     end do
-
                 end do
-            end do
 
-        end do  ! coords
-
+            end do  ! coords
 
 
 
 
-        ! For each variable in equation set, compute value pointwise and save
-        do ivar = 1,domain%eqnset%neqns
 
-            do ielem_zeta = 1,nelem_zeta
-                do ipt_zeta = 1,zetalim
-                    zeta = (((real(ipt_zeta,rk)-ONE)/(real(npts,rk)-ONE)) - HALF)*TWO
+            ! For each variable in equation set, compute value pointwise and save
+            do ivar = 1,domain%eqnset%neqns
 
-                    do ielem_eta = 1,nelem_eta
-                        do ipt_eta = 1,etalim
-                            eta = (((real(ipt_eta,rk)-ONE)/(real(npts,rk)-ONE)) - HALF)*TWO
+                do ielem_zeta = 1,nelem_zeta
+                    do ipt_zeta = 1,zetalim
+                        zeta = (((real(ipt_zeta,rk)-ONE)/(real(npts,rk)-ONE)) - HALF)*TWO
 
-                            do ielem_xi = 1,nelem_xi
-                                do ipt_xi = 1,xilim
-                                    xi = (((real(ipt_xi,rk)-ONE)/(real(npts,rk)-ONE)) - HALF)*TWO
+                        do ielem_eta = 1,nelem_eta
+                            do ipt_eta = 1,etalim
+                                eta = (((real(ipt_eta,rk)-ONE)/(real(npts,rk)-ONE)) - HALF)*TWO
 
-                                    ! Get solution value at point
-                                    !val = solution_point(q%lvecs_m(ielem_xi,ielem_eta,ielem_zeta),ivar,xi,eta,zeta)
-                                    ielem = ielem_xi + (nelem_xi)*(ielem_eta-1) + (nelem_xi * nelem_eta)*(ielem_zeta-1)
-                                    val = solution_point(q%lvecs(ielem),ivar,xi,eta,zeta)
+                                do ielem_xi = 1,nelem_xi
+                                    do ipt_xi = 1,xilim
+                                        xi = (((real(ipt_xi,rk)-ONE)/(real(npts,rk)-ONE)) - HALF)*TWO
 
-                                    tecstat = TECDAT142(1,valeq,1)
-                                
-                                
+                                        ! Get solution value at point
+                                        !val = solution_point(q%lvecs_m(ielem_xi,ielem_eta,ielem_zeta),ivar,xi,eta,zeta)
+                                        ielem = ielem_xi + (nelem_xi)*(ielem_eta-1) + (nelem_xi * nelem_eta)*(ielem_zeta-1)
+                                        val = solution_point(q%lvecs(ielem),ivar,xi,eta,zeta)
+
+                                        tecstat = TECDAT142(1,valeq,1)
+                                    
+                                    
+                                    end do
                                 end do
+
                             end do
-
                         end do
+
                     end do
-
                 end do
-            end do
 
-        end do ! ivar
-
+            end do ! ivar
 
 
+
+
+
+        end associate
+        end do ! idom
+
+
+
+
+        !
+        ! Close the current TecIO file context
+        !
         call finalize_tecio()
+
+
 
 
     end subroutine

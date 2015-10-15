@@ -6,7 +6,7 @@ add_subdirectory(tools)
 add_subdirectory(io)
 add_subdirectory(polynomial)
 add_subdirectory(quadrature)    
-add_subdirectory(time_scheme)
+add_subdirectory(timescheme)
 add_subdirectory(equations)
 add_subdirectory(spatial)
 add_subdirectory(functions)
@@ -21,5 +21,7 @@ add_lib_sources()
 
 # Add main executable and propagate to parent
 add_exe_sources(driver.f90)    
+#add_exe_sources(dummy_driver.f90)    
+
     
 

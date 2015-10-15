@@ -5,13 +5,13 @@ subroutine testIO__read_grid_hdf__D1_E1_M1()
     use type_chidg,             only: chidg_t
     use mod_kinds,              only: rk,ik
     use mod_constants,          only: ZERO, ONE
-    use type_domain,            only: domain_t
+    !use type_domain,            only: domain_t
     use mod_hdfio,              only: read_grid_hdf
     use mod_grid,               only: compute_element_mappings
     implicit none
     
     type(chidg_t)               :: chidg
-    type(domain_t), allocatable :: domains(:)
+    !type(domain_t), allocatable :: domains(:)
     character(100), parameter   :: filename = 'D1_E1_M1.h5'
     integer,        parameter   :: ndomains = 1
     integer,        parameter   :: nterms_c = 8
@@ -24,27 +24,36 @@ subroutine testIO__read_grid_hdf__D1_E1_M1()
     ! Initialize element mapping
     call chidg%init('env')
     
-    call read_grid_hdf(filename,domains)
+    call read_grid_hdf(filename,chidg%data)
     
-    !> Test number of allocated domains
-    @assertEqual(ndomains,size(domains))
+    ! Test number of allocated domains
+    @assertEqual(ndomains,size(chidg%data%domains))
     
-    !> Test domain mapping
-    @assertEqual(nterms_c,domains(1)%mesh%nterms_c)
+    ! Test domain mapping
+    @assertEqual(nterms_c,chidg%data%domains(1)%mesh%nterms_c)
     
-    !> Test points
+    ! Test points
     x = [ZERO, ONE, ZERO, ONE, ZERO, ONE, ZERO, ONE]
     y = [ZERO, ZERO, ONE, ONE, ZERO, ZERO, ONE, ONE]
     z = [ZERO, ZERO, ZERO, ZERO, ONE, ONE, ONE, ONE]
-    @assertEqual(x,domains(1)%mesh%elems(1)%elem_pts(:)%c1_,tol)
-    @assertEqual(y,domains(1)%mesh%elems(1)%elem_pts(:)%c2_,tol)
-    @assertEqual(z,domains(1)%mesh%elems(1)%elem_pts(:)%c3_,tol)
+    @assertEqual(x,chidg%data%domains(1)%mesh%elems(1)%elem_pts(:)%c1_,tol)
+    @assertEqual(y,chidg%data%domains(1)%mesh%elems(1)%elem_pts(:)%c2_,tol)
+    @assertEqual(z,chidg%data%domains(1)%mesh%elems(1)%elem_pts(:)%c3_,tol)
     
-    !>  Test nelem
-    @assertEqual(nelem,domains(1)%mesh%nelem)
+    !  Test nelem
+    @assertEqual(nelem,chidg%data%domains(1)%mesh%nelem)
     
     
 end subroutine
+
+
+
+
+
+
+
+
+
 
 
 
@@ -55,13 +64,13 @@ subroutine testIO__read_grid_hdf__D1_E27_M1()
     use type_chidg,             only: chidg_t
     use mod_kinds,              only: rk,ik
     use mod_constants,          only: ZERO, THIRD, NFACES
-    use type_domain,            only: domain_t
+    !use type_domain,            only: domain_t
     use mod_hdfio,              only: read_grid_hdf
     use mod_grid,               only: compute_element_mappings
     implicit none
     
     type(chidg_t)               :: chidg
-    type(domain_t), allocatable :: domains(:)
+    !type(domain_t), allocatable :: domains(:)
     character(100), parameter   :: filename = 'D1_E27_M1.h5'
     integer,        parameter   :: ndomains = 1
     integer,        parameter   :: nterms_c = 8
@@ -75,32 +84,32 @@ subroutine testIO__read_grid_hdf__D1_E27_M1()
     ! Initialize element mapping
     call chidg%init('env')
     
-    call read_grid_hdf(filename,domains)
+    call read_grid_hdf(filename,chidg%data)
     
-    !> Test number of allocated domains
-    @assertEqual(ndomains,size(domains))
+    ! Test number of allocated domains
+    @assertEqual(ndomains,size(chidg%data%domains))
     
-    !> Test domain mapping
-    @assertEqual(nterms_c,domains(1)%mesh%nterms_c)
+    ! Test domain mapping
+    @assertEqual(nterms_c,chidg%data%domains(1)%mesh%nterms_c)
     
-    !> Test points
+    ! Test points
     x = [ZERO, THIRD, ZERO, THIRD, ZERO, THIRD, ZERO, THIRD]
     y = [ZERO, ZERO, THIRD, THIRD, ZERO, ZERO, THIRD, THIRD]
     z = [ZERO, ZERO, ZERO, ZERO, THIRD, THIRD, THIRD, THIRD]
-    @assertEqual(x,domains(1)%mesh%elems(1)%elem_pts(:)%c1_,tol)
-    @assertEqual(y,domains(1)%mesh%elems(1)%elem_pts(:)%c2_,tol)
-    @assertEqual(z,domains(1)%mesh%elems(1)%elem_pts(:)%c3_,tol)
+    @assertEqual(x,chidg%data%domains(1)%mesh%elems(1)%elem_pts(:)%c1_,tol)
+    @assertEqual(y,chidg%data%domains(1)%mesh%elems(1)%elem_pts(:)%c2_,tol)
+    @assertEqual(z,chidg%data%domains(1)%mesh%elems(1)%elem_pts(:)%c3_,tol)
     
-    !>  Test nelem
-    @assertEqual(nelem,domains(1)%mesh%nelem)
+    !  Test nelem
+    @assertEqual(nelem,chidg%data%domains(1)%mesh%nelem)
     
     
-    !>  Test all elements have been initialized
-    do ielem = 1,domains(1)%mesh%nelem
-        @assertTrue(domains(1)%mesh%elems(ielem)%geomInitialized)
+    !  Test all elements have been initialized
+    do ielem = 1,chidg%data%domains(1)%mesh%nelem
+        @assertTrue(chidg%data%domains(1)%mesh%elems(ielem)%geomInitialized)
         
         do iface = 1,NFACES
-            @assertTrue(domains(1)%mesh%faces(ielem,iface)%geomInitialized)
+            @assertTrue(chidg%data%domains(1)%mesh%faces(ielem,iface)%geomInitialized)
         end do
     end do
     

@@ -9,44 +9,50 @@ subroutine test_blockvector_build()
     use type_domain,        only: domain_t
     use type_point,         only: point_t
 
-
+    implicit none
     type(chidg_t)               :: chidg
     type(blockvector_t)         :: bvec
     type(point_t), allocatable  :: pts(:,:,:)
     type(domain_t)              :: dom
 
     real(rk), allocatable   :: fullvec(:)
+    integer(ik)             :: idomain, nterms_c, nterms_s
 
 
 
+    !
     ! Initialize chidg environment
+    !
     call chidg%init('env')
 
-
-
-
+    !
     ! Generate points for a 2x2x1 mesh
+    !
     call meshgen('221',pts)
 
 
-
-
+    !
     ! Call domain initialization
+    !
+    idomain  = 1
     nterms_c = 8
     nterms_s = 8
-    call dom%init_geom(nterms_c,pts)
+    call dom%init_geom(idomain,nterms_c,pts)
     call dom%init_sol('scalar',nterms_s)
 
 
+    !
     ! Call initailization on blockvector
+    !
     call bvec%init(dom%mesh)
 
 
 
 
 
-
+    !
     ! Assign reference blocks to the blockvector matrix
+    !
     bvec%lvecs(1)%vec = ONE
     bvec%lvecs(2)%vec = TWO
     bvec%lvecs(3)%vec = THREE

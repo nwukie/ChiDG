@@ -3,7 +3,7 @@ module bc_periodic
     use mod_constants,      only: XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX
     use atype_bc,           only: bc_t
     use atype_equationset,  only: equationset_t
-    use atype_solverdata,   only: solverdata_t
+    use type_solverdata,    only: solverdata_t
     use type_mesh,          only: mesh_t
     use type_dict,          only: dict_t
     use type_properties,    only: properties_t
@@ -140,10 +140,11 @@ contains
     !!  @author Nathan A. Wukie
     !!
     !------------------------------------------------------------------
-    subroutine compute(self,mesh,sdata,ielem,iface,iblk,prop)
+    subroutine compute(self,mesh,sdata,idom,ielem,iface,iblk,prop)
         class(periodic_t),      intent(inout)   :: self
-        type(mesh_t),           intent(in)      :: mesh
+        type(mesh_t),           intent(in)      :: mesh(:)
         class(solverdata_t),    intent(inout)   :: sdata
+        integer(ik),            intent(in)      :: idom
         integer(ik),            intent(in)      :: ielem
         integer(ik),            intent(in)      :: iface
         integer(ik),            intent(in)      :: iblk

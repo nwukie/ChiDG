@@ -5,7 +5,7 @@ module atype_bc
     use type_mesh,          only: mesh_t
     use type_element,       only: element_t
     use atype_equationset,  only: equationset_t
-    use atype_solverdata,   only: solverdata_t
+    use type_solverdata,    only: solverdata_t
     use type_dict,          only: dict_t
     use type_properties,    only: properties_t
     implicit none
@@ -35,7 +35,7 @@ module atype_bc
 
 
     abstract interface
-        subroutine compute_interface(self,mesh,sdata,ielem,iface,iblk,prop)
+        subroutine compute_interface(self,mesh,sdata,idom,ielem,iface,iblk,prop)
             use mod_kinds,  only: ik
             import bc_t
             import mesh_t
@@ -43,8 +43,9 @@ module atype_bc
             import properties_t
 
             class(bc_t),            intent(inout)   :: self
-            type(mesh_t),           intent(in)      :: mesh
+            type(mesh_t),           intent(in)      :: mesh(:)
             class(solverdata_t),    intent(inout)   :: sdata
+            integer(ik),            intent(in)      :: idom
             integer(ik),            intent(in)      :: ielem
             integer(ik),            intent(in)      :: iface
             integer(ik),            intent(in)      :: iblk
@@ -73,7 +74,7 @@ contains
         
         integer(ik)                 :: nelem_xi, nelem_eta, nelem_zeta, nelem_bc, ielem_bc, & 
                                        xi_begin, eta_begin, zeta_begin, xi_end, eta_end, zeta_end, & 
-                                       ixi, ieta, izeta, ierr 
+                                       ixi, ieta, izeta, ierr, ielem
         
         nelem_xi   = mesh%nelem_xi
         nelem_eta  = mesh%nelem_eta
@@ -130,9 +131,16 @@ contains
         do izeta = zeta_begin,zeta_end
             do ieta = eta_begin,eta_end
                 do ixi = xi_begin,xi_end
-                    self%ielems(ielem_bc) = mesh%elems_m(ixi,ieta,izeta)%ielem
+                    ielem = mesh%elems_m(ixi,ieta,izeta)%ielem
+                    self%ielems(ielem_bc) = ielem
                     self%ifaces(ielem_bc) = iface
                     ielem_bc = ielem_bc + 1
+
+
+                    !
+                    ! Set face to boundary condition face
+                    !
+                    mesh%faces(ielem,iface)%ftype = 1
                 end do ! ixi
             end do ! ieta
         end do ! izeta
@@ -165,10 +173,11 @@ contains
     !!  @param[inout]   prop    properties_t object containing equationset properties and material_t objects
     !!
     !--------------------------------------------------------------------
-    subroutine apply(self,mesh,sdata,iblk,prop)
+    subroutine apply(self,mesh,sdata,idom,iblk,prop)
         class(bc_t),            intent(inout)   :: self
-        type(mesh_t),           intent(in)      :: mesh
+        type(mesh_t),           intent(in)      :: mesh(:)
         class(solverdata_t),    intent(inout)   :: sdata
+        integer(ik),            intent(in)      :: idom
         integer(ik),            intent(in)      :: iblk
         class(properties_t),    intent(inout)   :: prop
 
@@ -184,7 +193,7 @@ contains
             !
             ! For the current boundary element(face), call specialized compute procedure
             !
-            call self%compute(mesh,sdata,ielem,iface,iblk,prop)
+            call self%compute(mesh,sdata,idom,ielem,iface,iblk,prop)
 
         end do
 

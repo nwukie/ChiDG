@@ -4,32 +4,29 @@ subroutine test_fgmres_ref_solve()
     use mod_kinds,          only: rk, ik
     use mod_constants,      only: ZERO, ONE, TWO, THREE, FOUR, DIAG, XI_MIN, XI_MAX
     use type_chidg,         only: chidg_t
-    use type_domain,        only: domain_t
     use type_point,         only: point_t
 
     use type_fgmres,        only: fgmres_t
 
     use type_blockmatrix,   only: blockmatrix_t
     use type_blockvector,   only: blockvector_t
-    use precon_identity,    only: precon_identity_t
 
     use mod_testutils,      only: meshgen
     implicit none
 
     type(chidg_t)               :: chidg
-    type(domain_t)              :: dom
     type(point_t), allocatable  :: pts(:,:,:)
 
     type(blockmatrix_t)         :: A
     type(blockvector_t)         :: x, b
-    type(precon_identity_t)     :: M
     type(fgmres_t)              :: matrix_solver
     
     real(rk)    :: tol
-    integer(ik) :: nterms_c, nterms_s
+    integer(ik) :: nterms_c, nterms_s, idomain
 
 
     tol      = 1.e-9_rk
+    idomain  = 1
     nterms_c = 8
     nterms_s = 1
 
@@ -37,23 +34,27 @@ subroutine test_fgmres_ref_solve()
     ! Initialize ChiDG
     call chidg%init('env')
 
+    ! Set ChiDG components
+    call chidg%set('timescheme',    'newton')
+    call chidg%set('matrixsolver',  'fgmres')
+    call chidg%set('preconditioner','identity')
+
 
     ! Get grid points
     call meshgen('211',pts)
 
 
     ! Initialize domain
-    call dom%init_geom(nterms_c,pts)
-    call dom%init_sol('Scalar',nterms_s)
+    allocate(chidg%data%domains(1))
+    call chidg%data%domains(1)%init_geom(idomain,nterms_c,pts)
+    call chidg%data%domains(1)%init_sol('Scalar',nterms_s)
 
 
     ! Initialize data containers
-    call A%init(dom%mesh,'full')
-    call x%init(dom%mesh)
-    call b%init(dom%mesh)
+    call A%init(chidg%data%domains(1)%mesh,'full')
+    call x%init(chidg%data%domains(1)%mesh)
+    call b%init(chidg%data%domains(1)%mesh)
 
-    ! Initialize preconditioner
-    call M%init(dom)
 
 
 
@@ -86,9 +87,11 @@ subroutine test_fgmres_ref_solve()
     !
     ! Solve matrix system. Ax=b. TESTING
     !
+    associate ( M => chidg%preconditioner )
     matrix_solver%report = .false.  
     matrix_solver%tol    = 1.e-13_rk
     call matrix_solver%solve(A,x,b,M)
+    end associate
 
 
 

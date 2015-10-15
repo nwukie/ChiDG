@@ -10,6 +10,13 @@ module type_blockmatrix
     implicit none
 
 
+    !>
+    !!
+    !!
+    !!
+    !!
+    !!
+    !---------------------------------------------------------------------------------------------------------------
     type, public :: blockmatrix_t
         !> localblocks (nelem x 7)
         !!
@@ -41,6 +48,7 @@ module type_blockmatrix
 
         final :: destructor
     end type blockmatrix_t
+    !-------------------------------------------------------------------------------------------------------------
 
 
 
@@ -141,7 +149,7 @@ contains
                 if (iblk == DIAG) then
                     parent = mesh%elems(ielem)%ielem
                 else
-                    parent = mesh%faces(ielem,iblk)%ineighbor
+                    parent = mesh%faces(ielem,iblk)%iparent
                 end if
 
                 !

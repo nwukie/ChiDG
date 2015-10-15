@@ -2,12 +2,10 @@ module type_domain
 #include <messenger.h>
     use mod_kinds,          only: rk, ik
     use mod_equations,      only: create_equationset
-    use mod_solverdata,     only: create_solverdata
     use mod_bc,             only: create_bc
 
     use type_point,         only: point_t
     use type_mesh,          only: mesh_t
-    use atype_solverdata,   only: solverdata_t
     use atype_equationset,  only: equationset_t
     use atype_bc,           only: bc_t
     use type_bcset,         only: bcset_t
@@ -22,13 +20,15 @@ module type_domain
     !!
     !!   @author Nathan A. Wukie
     !!
-    !-------------------------------------------------------------------------------------------------
+    !----------------------------------------------------------------------------------------------------------------------
     type, public :: domain_t
         character(100)                      :: name                     !< Domain name -- not currently used
+        integer(ik)                         :: idomain                  !< Processor-local domain index
+
         type(mesh_t)                        :: mesh                     !< Mesh storage
         type(bcset_t)                       :: bcset                    !< Boundary condition set
         class(equationset_t), allocatable   :: eqnset                   !< Equation set solved on this domain
-        class(solverdata_t),  allocatable   :: sdata                    !< Solver data storage. q, rhs, lin, etc.
+        !class(solverdata_t),  allocatable   :: sdata                    !< Solver data storage. q, rhs, lin, etc.
 
         type(dict_t)                        :: info                     !< Dictionary for storing general paired information
                                                                         !! (ex. error values)
@@ -44,7 +44,7 @@ module type_domain
         final           :: destructor
 
     end type domain_t
-    !-------------------------------------------------------------------------------------------------
+    !----------------------------------------------------------------------------------------------------------------------
 
 
 contains
@@ -56,22 +56,32 @@ contains
     !!
     !!  @param[in]  nterms_c    Number of terms in the modal representation of the cartesian coordinates
     !!  @param[in]  points      Array of cartesian points defining the element
-    !------------------------------------------------------------------
-    subroutine init_geom(self,nterms_c,points)
+    !----------------------------------------------------------------------------------------------------------------------
+    subroutine init_geom(self,idomain,nterms_c,points)
         class(domain_t),    intent(inout)   :: self
+        integer(ik),        intent(in)      :: idomain
         integer(ik),        intent(in)      :: nterms_c
         type(point_t),      intent(in)      :: points(:,:,:)
 
         if (self%geomInitialized) stop "Error: domain%init_geom -- domain geometry already initialized"
 
+        !
+        ! Set domain index
+        !
+        self%idomain = idomain
 
-        call self%mesh%init_geom(nterms_c,points)   ! Initialize mesh geometry
-        call self%bcset%init()                      ! Initialize boundary condition storage
+
+        !
+        ! Call mesh and boundary condition initialization
+        !
+        call self%mesh%init_geom(idomain,nterms_c,points)   ! Initialize mesh geometry
+        call self%bcset%init()                              ! Initialize boundary condition storage
 
 
         self%geomInitialized = .true.
         
     end subroutine init_geom
+    !----------------------------------------------------------------------------------------------------------------------
 
 
 
@@ -90,7 +100,7 @@ contains
     !!
     !!
     !!
-    !-----------------------------------------------------
+    !----------------------------------------------------------------------------------------------------------------------
     subroutine init_bc(self,bcstr,iface,options)
         class(domain_t),            intent(inout)   :: self
         character(*),               intent(in)      :: bcstr
@@ -118,6 +128,7 @@ contains
 
 
     end subroutine init_bc
+    !----------------------------------------------------------------------------------------------------------------------
 
 
 
@@ -134,7 +145,7 @@ contains
     !!
     !!  @param[in]  eqnstring   Character string specifying the equation set being solved
     !!  @param[in]  nterms_s    Number of terms in the modal representation of the solution
-    !------------------------------------------------------------------
+    !----------------------------------------------------------------------------------------------------------------------
     subroutine init_sol(self,eqnstring,nterms_s)
         class(domain_t),    intent(inout)   :: self
         character(*),       intent(in)      :: eqnstring
@@ -148,18 +159,19 @@ contains
         ! Call factory methods for equationset and solver       
         !
         call create_equationset(eqnstring,self%eqnset)      ! Factory method for allocating a equation set
-        call create_solverdata('base',self%sdata)           ! Factory method for allocating solverdata. Allocate base data
+        !call create_solverdata('base',self%sdata)           ! Factory method for allocating solverdata. Allocate base data
 
         !
         ! Initialize mesh numerics, solution data, and boundary conditions
         !
         call self%mesh%init_sol(self%eqnset%neqns,nterms_s) ! Call initialization for mesh required in solution procedure
-        call self%sdata%init(self%mesh)                     ! Call initialization for solver and solver data
+        !call self%sdata%init(self%mesh)                     ! Call initialization for solver and solver data
         !call self%init_bcs()
         
         
         self%numInitialized = .true.                        ! Confirm initialization
     end subroutine init_sol
+    !----------------------------------------------------------------------------------------------------------------------
 
 
 

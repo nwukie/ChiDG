@@ -4,13 +4,13 @@ module type_chidg
     use mod_grid,               only: initialize_grid
     use mod_io,                 only: read_input
 
-    use type_domain,            only: domain_t
-    use atype_time_scheme,      only: time_scheme_t
+    use type_chidgData,         only: chidgData_t
+    use type_timescheme,        only: timescheme_t
     use atype_matrixsolver,     only: matrixsolver_t
     use type_preconditioner,    only: preconditioner_t
     use type_dict,              only: dict_t
 
-    use mod_time_scheme,        only: create_time_scheme
+    use mod_timescheme,         only: create_timescheme
     use mod_matrixsolver,       only: create_matrixsolver
     use mod_preconditioner,     only: create_preconditioner
 
@@ -29,8 +29,8 @@ module type_chidg
     !-----------------------------------------------------------------
     type, public    :: chidg_t
 
-        type(domain_t),             allocatable     :: domains(:)
-        class(time_scheme_t),       allocatable     :: timescheme
+        type(chidgData_t)                           :: data
+        class(timescheme_t),        allocatable     :: timescheme
         class(matrixsolver_t),      allocatable     :: matrixsolver
         class(preconditioner_t),    allocatable     :: preconditioner
 
@@ -106,10 +106,8 @@ contains
                 if (.not. allocated(self%preconditioner)) call signal(FATAL,"chidg%preconditioner component was not allocated")
 
 
-
-                call self%timescheme%init(self%domains(1))
-                call self%preconditioner%init(self%domains(1))
-
+                call self%timescheme%init(self%data)
+                call self%preconditioner%init(self%data)
 
 
 
@@ -170,9 +168,9 @@ contains
             case ('Time','time','time_scheme','Time_Scheme','timescheme','TimeScheme')
                 if (allocated(self%timescheme)) then
                     deallocate(self%timescheme)
-                    call create_time_scheme(selection,self%timescheme,options)
+                    call create_timescheme(selection,self%timescheme,options)
                 else
-                    call create_time_scheme(selection,self%timescheme,options)
+                    call create_timescheme(selection,self%timescheme,options)
                 end if
 
 
@@ -201,13 +199,13 @@ contains
             !
             ! Allocation for number of domains
             !
-            case ('ndomains','domains')
-                if (allocated(self%domains)) then
-                    call signal(WARN,"chidg%set: Domains already allocated")
-                else
-                    allocate(self%domains(1), stat=ierr)
-                    if (ierr /= 0) call AllocationError
-                end if
+            !case ('ndomains','domains')
+            !    if (allocated(self%domains)) then
+            !        call signal(WARN,"chidg%set: Domains already allocated")
+            !    else
+            !        allocate(self%domains(1), stat=ierr)
+            !        if (ierr /= 0) call AllocationError
+            !    end if
 
 
 
@@ -241,11 +239,7 @@ contains
     subroutine run(self)
         class(chidg_t),     intent(inout)   :: self
 
-
-
-
-        call self%timescheme%solve(self%domains(1),self%matrixsolver,self%preconditioner)
-
+        call self%timescheme%solve(self%data,self%matrixsolver,self%preconditioner)
 
     end subroutine run
 

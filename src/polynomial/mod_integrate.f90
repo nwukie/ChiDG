@@ -4,7 +4,7 @@ module mod_integrate
     use type_element,       only: element_t
     use type_face,          only: face_t
     use type_expansion,     only: expansion_t
-    use atype_solverdata,   only: solverdata_t
+    use type_solverdata,    only: solverdata_t
     use type_blockmatrix,   only: blockmatrix_t
     use DNAD_D
 
@@ -32,16 +32,16 @@ contains
     !!  @param[inout]   flux_y  y-Flux and derivatives at quadrature points
     !!  @param[inout]   flux_z  z-Flux and derivatives at quadrature points
     !--------------------------------------------------------------------------------------------------------
-    subroutine integrate_volume_flux(elem,sdata,ivar,iblk,flux_x,flux_y,flux_z)
+    subroutine integrate_volume_flux(elem,sdata,idom,ivar,iblk,flux_x,flux_y,flux_z)
         type(element_t),        intent(in)      :: elem
         class(solverdata_t),    intent(inout)   :: sdata
+        integer(ik),            intent(in)      :: idom
         integer(ik),            intent(in)      :: ivar
         integer(ik),            intent(in)      :: iblk
         type(AD_D),             intent(inout)   :: flux_x(:), flux_y(:), flux_z(:)
 
 
         integer(ik)                             :: ielem, i
-        !type(AD_D), dimension(elem%nterms_s)    :: integral
         type(AD_D), dimension(elem%nterms_s)    :: integral, integral_x, integral_y, integral_z
 
         ielem = elem%ielem  !> get element index
@@ -55,28 +55,23 @@ contains
         ! FLUX-X
         ! Multiply by column of test function gradients, integrate, add to RHS, add derivatives to linearization
         integral_x = matmul(transpose(elem%dtdx),flux_x)                         ! Integrate
-        !call store_volume_integrals(integral,sdata,ielem,ivar,iblk)            ! Store values and derivatives
-
-
 
 
 
         ! FLUX-Y
         ! Multiply by column of test function gradients, integrate, add to RHS, add derivatives to linearization
         integral_y = matmul(transpose(elem%dtdy),flux_y)                         ! Integrate
-        !call store_volume_integrals(integral,sdata,ielem,ivar,iblk)            ! Store values and derivatives
-
-
 
 
 
         ! FLUX-Z
         ! Multiply by column of test function gradients, integrate, add to RHS, add derivatives to linearization
         integral_z = matmul(transpose(elem%dtdz),flux_z)                         ! Integrate
-        !call store_volume_integrals(integral,sdata,ielem,ivar,iblk)            ! Store values and derivatives
+
+
 
         integral = integral_x + integral_y + integral_z
-        call store_volume_integrals(integral,sdata,ielem,ivar,iblk)            ! Store values and derivatives
+        call store_volume_integrals(integral,sdata,idom,ielem,ivar,iblk)            ! Store values and derivatives
 
 
     end subroutine
@@ -103,9 +98,10 @@ contains
     !!  @param[inout]   flux_y  y-Flux and derivatives at quadrature points
     !!  @param[inout]   flux_z  z-Flux and derivatives at quadrature points
     !--------------------------------------------------------------------------------------------------------
-    subroutine integrate_boundary_flux(face,sdata,ivar,iblk,flux_x,flux_y,flux_z)
+    subroutine integrate_boundary_flux(face,sdata,idom,ivar,iblk,flux_x,flux_y,flux_z)
         type(face_t),           intent(in)      :: face
         class(solverdata_t),    intent(inout)   :: sdata
+        integer(ik),            intent(in)      :: idom
         integer(ik),            intent(in)      :: ivar
         integer(ik),            intent(in)      :: iblk
         type(AD_D),             intent(inout)   :: flux_x(:), flux_y(:), flux_z(:)
@@ -127,13 +123,13 @@ contains
 
 
             integral = matmul(transpose(val),flux_x)
-            call store_boundary_integrals(integral,sdata,ielem,ivar,iblk)
+            call store_boundary_integrals(integral,sdata,idom,ielem,ivar,iblk)
 
             integral = matmul(transpose(val),flux_y)
-            call store_boundary_integrals(integral,sdata,ielem,ivar,iblk)
+            call store_boundary_integrals(integral,sdata,idom,ielem,ivar,iblk)
 
             integral = matmul(transpose(val),flux_z)
-            call store_boundary_integrals(integral,sdata,ielem,ivar,iblk)
+            call store_boundary_integrals(integral,sdata,idom,ielem,ivar,iblk)
 
         end associate
 
@@ -161,9 +157,10 @@ contains
     !!  @param[inout]   flux_y  y-Flux and derivatives at quadrature points
     !!  @param[inout]   flux_z  z-Flux and derivatives at quadrature points
     !--------------------------------------------------------------------------------------------------------
-    subroutine integrate_boundary_scalar_flux(face,sdata,ivar,iblk,flux)
+    subroutine integrate_boundary_scalar_flux(face,sdata,idom,ivar,iblk,flux)
         type(face_t),           intent(in)      :: face
         class(solverdata_t),    intent(inout)   :: sdata
+        integer(ik),            intent(in)      :: idom
         integer(ik),            intent(in)      :: ivar
         integer(ik),            intent(in)      :: iblk
         type(AD_D),             intent(inout)   :: flux(:)
@@ -179,35 +176,12 @@ contains
         associate ( weights => face%gq%face%weights(:,iface), jinv => face%jinv, val => face%gq%face%val(:,:,iface) )
 
             ! Multiply each component by quadrature weights. The fluxes have already been multiplied by norm
-            !flux = (flux) * (weights) * (face%jinv)
-            !flux = (flux) * (weights) * (1/face%jinv)
             flux = (flux) * (weights)
 
 
             integral = matmul(transpose(val),flux)
 
-            !& DEBUG PRINT
-            !if ( (ielem == 6) .and. (iface == 2) ) then
-            !    print*, 'BOUNDARY CONTRIBUTION'
-            !    print*, integral%x_ad_
-            !end if
-
-            !& DEBUG PRINT
-            !if ((ielem == 6) .and. (iface ==2)) then
-            !    print*, 'RHS BEFORE'
-            !    print*, sdata%rhs%lvecs(ielem)%getvar(ivar)
-            !end if
-
-
-            call store_boundary_integrals(integral,sdata,ielem,ivar,iblk)
-
-
-
-            !& DEBUG PRINT
-            !if ((ielem == 6) .and. (iface ==2)) then
-            !    print*, 'RHS AFTER'
-            !    print*, sdata%rhs%lvecs(ielem)%getvar(ivar)
-            !end if
+            call store_boundary_integrals(integral,sdata,idom,ielem,ivar,iblk)
 
 
         end associate
@@ -245,9 +219,10 @@ contains
     !!  @param[in]      iblk        Block index for the correct linearization block for the current element
     !!
     !--------------------------------------------------------------------------------------------------------
-    subroutine store_volume_integrals(integral,sdata,ielem,ivar,iblk)
+    subroutine store_volume_integrals(integral,sdata,idom,ielem,ivar,iblk)
         type(AD_D),             intent(inout)   :: integral(:)
         class(solverdata_t),    intent(inout)   :: sdata
+        integer(ik),            intent(in)      :: idom
         integer(ik),            intent(in)      :: ielem
         integer(ik),            intent(in)      :: ivar
         integer(ik),            intent(in)      :: iblk
@@ -255,7 +230,7 @@ contains
         integer(ik) :: i
         real(rk)    :: vals(size(integral))
 
-        associate ( rhs => sdata%rhs%lvecs, lin => sdata%lin)
+        associate ( rhs => sdata%rhs%dom(idom)%lvecs, lhs => sdata%lhs)
 
             !
             ! Only store rhs once. if iblk == DIAG
@@ -275,7 +250,7 @@ contains
             !
             ! Store linearization
             !
-            call lin%store(integral,ielem,iblk,ivar)    
+            call lhs%store(integral,idom,ielem,iblk,ivar)    
 
         end associate
     end subroutine
@@ -297,9 +272,10 @@ contains
     !!  @param[in]      iblk        Block index for the correct linearization block for the current element
     !!
     !--------------------------------------------------------------------------------------------------------
-    subroutine store_boundary_integrals(integral,sdata,ielem,ivar,iblk)
+    subroutine store_boundary_integrals(integral,sdata,idom,ielem,ivar,iblk)
         type(AD_D),             intent(inout)   :: integral(:)
         class(solverdata_t),    intent(inout)   :: sdata
+        integer(ik),            intent(in)      :: idom
         integer(ik),            intent(in)      :: ielem
         integer(ik),            intent(in)      :: ivar
         integer(ik),            intent(in)      :: iblk
@@ -307,7 +283,7 @@ contains
         integer(ik) :: i
         real(rk)    :: vals(size(integral))
 
-        associate ( rhs => sdata%rhs%lvecs, lin => sdata%lin)
+        associate ( rhs => sdata%rhs%dom(idom)%lvecs, lhs => sdata%lhs%dom(idom))
 
             !
             ! Only store rhs once. if iblk == DIAG
@@ -323,7 +299,7 @@ contains
             !
             ! Store linearization
             !
-            call lin%store(integral,ielem,iblk,ivar)
+            call lhs%store(integral,ielem,iblk,ivar)
 
         end associate
 

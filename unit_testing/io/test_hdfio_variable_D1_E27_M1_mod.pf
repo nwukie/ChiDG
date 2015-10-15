@@ -6,7 +6,7 @@ module test_hdfio_variable_D1_E27_M1_mod
     use mod_hdfio,      only: read_grid_hdf, read_var_hdf, write_var_hdf
     use type_chidg,     only: chidg_t
     use type_point,     only: point_t
-    use type_domain,    only: domain_t
+    !use type_domain,    only: domain_t
     implicit none
 
 
@@ -16,7 +16,7 @@ module test_hdfio_variable_D1_E27_M1_mod
     type, extends(TestCase) ::  test_hdfio_variable_D1_E27_M1
         type(chidg_t)               :: chidg
         character(12)               :: filename = 'D1_E27_M1.h5'
-        type(domain_t), allocatable :: domains(:)
+        !type(domain_t), allocatable :: domains(:)
     
     contains
         procedure   ::  setUp
@@ -35,16 +35,16 @@ contains
 
         call this%chidg%init('env')
 
-        call read_grid_hdf(this%filename, this%domains)
+        call read_grid_hdf(this%filename, this%chidg%data)
     
         nterms_s = 2*2*2
-        call this%domains(1)%init_sol('scalar',nterms_s)
+        call this%chidg%data%domains(1)%init_sol('scalar',nterms_s)
     end subroutine
     
     subroutine tearDown(this)
         class(test_hdfio_variable_D1_E27_M1),    intent(inout)   :: this
         
-        deallocate(this%domains)
+        !deallocate(this%domains)
     end subroutine
 
 
@@ -64,30 +64,38 @@ contains
         tol = 1.e-14_rk
         
         
-        associate ( q => this%domains(1)%sdata%q%lvecs )
+        associate ( q => this%chidg%data%sdata%q%dom(1)%lvecs )
             
-            !> Set reference solution values
+            ! Set reference solution values
             ref = [ONE, TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT]
             
             
-            !> Assign reference solution
-            do ielem = 1,this%domains(1)%mesh%nelem
+            ! Assign reference solution
+            do ielem = 1,this%chidg%data%domains(1)%mesh%nelem
                 q(ielem)%vec = ref
             end do
             
-            !> Write variable
-            call write_var_hdf(this%filename,'u',1,this%domains)
+            !
+            ! Write variable
+            !
+            call write_var_hdf(this%filename,'u',1,this%chidg%data)
             
-            !> Reset variable
-            do ielem = 1,this%domains(1)%mesh%nelem
+
+            ! Reset variable
+            do ielem = 1,this%chidg%data%domains(1)%mesh%nelem
                 q(ielem)%vec = -1._rk
             end do
             
-            !> Read variable
-            call read_var_hdf(this%filename,'u',1,this%domains)
+
+            !
+            ! Read variable
+            !
+            call read_var_hdf(this%filename,'u',1,this%chidg%data)
            
-            !> Test that the read solution values equal the reference values
-            !! Testing elements 1-10, out of 27
+
+
+            ! Test that the read solution values equal the reference values
+            ! Testing elements 1-10, out of 27
             @assertEqual(ref,q(1)%vec, tol)
             @assertEqual(ref,q(2)%vec, tol)
             @assertEqual(ref,q(3)%vec, tol)

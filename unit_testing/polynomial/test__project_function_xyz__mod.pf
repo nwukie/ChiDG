@@ -32,7 +32,7 @@ contains
         
         integer(ik), parameter  :: npt = 8
         type(point_t)           :: pts(2,2,2)
-        integer(ik)             :: nterms_c, nterms_s
+        integer(ik)             :: nterms_c, nterms_s, idomain
         
         !> (x = 0-5 :: y = 0-1 :: z = 0-1)
         !!          *-------*
@@ -59,8 +59,9 @@ contains
         
         
         ! Initialize domain
+        idomain  = 1
         nterms_c = npt
-        call this%dom%init_geom(nterms_c,pts)
+        call this%dom%init_geom(idomain,nterms_c,pts)
         
         this%nterms_s = 27
         call this%dom%init_sol('scalar',this%nterms_s)

@@ -1,0 +1,58 @@
+!> Test that solverdata_t was returned 'allocated'
+@Test
+subroutine test__create_timescheme__allocated()
+    use pfunit_mod
+    use mod_kinds,          only: rk,ik
+    use mod_timescheme,     only: create_timescheme
+    use type_timescheme,    only: timescheme_t
+    
+    implicit none
+    class(timescheme_t),    allocatable :: time
+    
+    
+    ! PROCEDURE BEING TESTED
+    call create_timescheme('newton',time)
+    
+    
+    ! Test allocated
+    @assertTrue(allocated(time))
+    
+end subroutine
+
+
+
+
+
+
+!> Test that allocated type is returned with expected type
+@Test
+subroutine test__create_timescheme__type()
+    use pfunit_mod
+    use mod_kinds,              only: rk,ik
+    use mod_timescheme,         only: create_timescheme
+    use type_timescheme,        only: timescheme_t
+    use newton,                 only: newton_t
+    
+    implicit none
+    class(timescheme_t),     allocatable :: time
+    
+    
+        
+    ! PROCEDURE BEING TESTED
+    call create_timescheme('newton',time)
+    
+    
+    ! Test for correct type
+    select type(time)
+        type is (newton_t)
+            ! correct type
+            @assertTrue(.true.) 
+        
+        class default
+            ! correct type was not detected, ERROR
+            @assertTrue(.false.) 
+    end select
+            
+    
+end subroutine
+

@@ -8,6 +8,7 @@
 !! @author Nathan A. Wukie
 !!
 !!
+!---------------------------------------------------------------------------------------------
 
 
 
@@ -33,7 +34,7 @@ program driver
     type(point_t),          allocatable :: pts(:,:,:)
     class(function_t),      allocatable :: constant, vortex, sod, roe
     type(dict_t)                        :: toptions
-    integer(ik)                         :: nterms_c 
+    integer(ik)                         :: nterms_c, idom
 
 
 
@@ -47,7 +48,7 @@ program driver
     !
     ! Initialize grid and numerics
     !
-    call read_grid_hdf(gridfile,chidg%domains)
+    call read_grid_hdf(gridfile,chidg%data)
     !call meshgen('333',pts)
     !call chidg%set('ndomains','')
     !nterms_c = 8
@@ -72,7 +73,8 @@ program driver
 
 
 
-    associate ( dom => chidg%domains(1) )
+    do idom = 1,size(chidg%data%domains)
+    associate ( dom => chidg%data%domains(idom) )
         !
         ! Initialize domain
         !
@@ -95,37 +97,32 @@ program driver
     
         ! rho
         call constant%set('val',1.13262_rk)
-        call initialize_variable(dom,1,constant)
+        call initialize_variable(chidg%data%domains,chidg%data%sdata,1,constant)
 
         ! rho_u
         call constant%set('val',190.339029_rk)
-        call initialize_variable(dom,2,constant)
+        call initialize_variable(chidg%data%domains,chidg%data%sdata,2,constant)
 
         ! rho_v
         call constant%set('val',ZERO)
-        call initialize_variable(dom,3,constant)
+        call initialize_variable(chidg%data%domains,chidg%data%sdata,3,constant)
 
         ! rho_w
         call constant%set('val',ZERO)
-        call initialize_variable(dom,4,constant)
+        call initialize_variable(chidg%data%domains,chidg%data%sdata,4,constant)
 
         ! rho_E
         call constant%set('val',248493.425_rk)
-        call initialize_variable(dom,5,constant)
-
-
-
-
-
-
+        call initialize_variable(chidg%data%domains,chidg%data%sdata,5,constant)
 
     end associate
+    end do 
 
     !
     ! Write initial solution
     !
     if (initial_write) then
-        call write_tecio_variables(chidg%domains(1),'0.plt',1)
+        call write_tecio_variables(chidg%data%domains,chidg%data%sdata,'0.plt',1)
     end if
 
 
@@ -161,7 +158,7 @@ program driver
     ! Write final solution
     !
     if (final_write) then
-        call write_tecio_variables(chidg%domains(1),'9999999.plt',1)
+        call write_tecio_variables(chidg%data%domains,chidg%data%sdata,'9999999.plt',1)
     end if
 
 

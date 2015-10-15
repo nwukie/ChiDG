@@ -33,7 +33,7 @@ contains
         integer(ik),   parameter :: npt = 8
         type(point_t), target    :: pts(npt)
         type(point_t), pointer   :: pts_m(:,:,:)
-        integer(ik)              :: nterms_c, nterms_s
+        integer(ik)              :: nterms_c, nterms_s, idomain
         
         
         call this%chidg%init('env')
@@ -61,10 +61,10 @@ contains
         
         pts_m(1:2,1:2,1:2) => pts   !> Remap to matrix for domain initialization
         
-        
+        idomain  = 1 
         nterms_c = 8
         nterms_s = 27
-        call this%dom%init_geom(nterms_c,pts_m)
+        call this%dom%init_geom(idomain,nterms_c,pts_m)
         call this%dom%init_sol('scalar',nterms_s)
         
         

@@ -4,7 +4,6 @@ subroutine test_sor_solve()
     use mod_kinds,          only: rk, ik
     use mod_constants,      only: ZERO, ONE, TWO, THREE, FOUR, DIAG, XI_MIN, XI_MAX
     use type_chidg,         only: chidg_t
-    use type_domain,        only: domain_t
     use type_point,         only: point_t
 
     use type_sor,           only: sor_t
@@ -15,7 +14,6 @@ subroutine test_sor_solve()
     implicit none
 
     type(chidg_t)               :: chidg
-    type(domain_t)              :: dom
     type(point_t), allocatable  :: pts(:,:,:)
 
     type(blockmatrix_t)         :: A
@@ -23,10 +21,11 @@ subroutine test_sor_solve()
     type(sor_t)                 :: matrix_solver
     
     real(rk)    :: tol
-    integer(ik) :: nterms_c, nterms_s
+    integer(ik) :: nterms_c, nterms_s, idomain
 
 
     tol      = 1.e-9_rk
+    idomain  = 1
     nterms_c = 8
     nterms_s = 1
 
@@ -40,14 +39,15 @@ subroutine test_sor_solve()
 
 
     ! Initialize domain
-    call dom%init_geom(nterms_c,pts)
-    call dom%init_sol('Scalar',nterms_s)
+    allocate(chidg%data%domains(1))
+    call chidg%data%domains(1)%init_geom(idomain,nterms_c,pts)
+    call chidg%data%domains(1)%init_sol('Scalar',nterms_s)
 
 
     ! Initialize data containers
-    call A%init(dom%mesh,'full')
-    call x%init(dom%mesh)
-    call b%init(dom%mesh)
+    call A%init(chidg%data%domains(1)%mesh,'full')
+    call x%init(chidg%data%domains(1)%mesh)
+    call b%init(chidg%data%domains(1)%mesh)
 
 
 

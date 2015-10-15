@@ -1,17 +1,17 @@
 module mod_solverdata
 #include <messenger.h>
-    use mod_kinds,          only: rk,ik
-    use atype_solverdata,   only: solverdata_t
+    use mod_kinds,                  only: rk,ik
+    use type_solverdata,            only: solverdata_t
 
 
 
     ! Import solverdata types
-    use solverdata_base,        only: base_d
+    use type_chidgData_base,        only: chidgData_base_t
     implicit none
 
 
     ! Instantiate solver data structures for sourcing
-    type(base_d) :: BASE_DATA
+    type(chidgData_base_t) :: BASE_DATA
 
 
 
@@ -29,15 +29,15 @@ contains
     !!  @param[in]      dataString      String containing the name of the solverdata type to be sourced
     !!  @param[inout]   sdata           Allocatable solverdata_t to be source-allocated
     !-----------------------------------------------------------------------------
-    subroutine create_solverdata(dataString,sdata)
+    subroutine create_chidgData(dataString,data)
         character(*),                       intent(in)      :: dataString
-        class(solverdata_t), allocatable,   intent(inout)   :: sdata
+        class(chidgData_t),  allocatable,   intent(inout)   :: data
 
 
 
         select case (trim(dataString))
             case ('base')
-                allocate(sdata, source=BASE_DATA)
+                allocate(data, source=BASE_DATA)
 
             case default
                 call signal(FATAL,'create_solverdata -- equation string not recognized')
@@ -53,4 +53,4 @@ contains
 
 
 
-end module mod_solverdata
+end module mod_chidgData

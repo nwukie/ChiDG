@@ -42,6 +42,7 @@ contains
         idomain  = 1
         nterms_c = 8
         nterms_s = 8
+        allocate(this%chidg%data%domains(1))
         call this%chidg%data%domains(1)%init_geom(idomain,nterms_c,pts)
         call this%chidg%data%domains(1)%init_sol('euler',nterms_s)
 

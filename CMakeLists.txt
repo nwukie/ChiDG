@@ -104,10 +104,40 @@ endif()
 
 
 
-#------------------------------------------------------------------                                                                        
+#------------------------------------------------------------------         
 #                        Find Lapack
 #------------------------------------------------------------------
 find_package(LAPACK REQUIRED)
+
+
+
+
+
+
+#------------------------------------------------------------------         
+#                          Find MPI
+#------------------------------------------------------------------         
+set(MPIROOT "/usr/local/mpich")
+
+if (${Fortran_VENDOR} MATCHES "INTEL")
+    set(MPI_Fortran_COMPILER "${MPIROOT}/intel/bin/mpifort")
+    set(MPI_Fortran_INCLUDE_PATH "${MPIROOT}/intel/include")
+
+elseif (${Fortran_VENDOR} MATCHES "GNU")
+    set(MPI_Fortran_COMPILER "${MPIROOT}/gnu/bin/mpifort")
+    set(MPI_Fortran_INCLUDE_PATH "${MPIROOT}/gnu/include")
+
+endif()
+
+find_package(MPI REQUIRED)
+
+include_directories(${MPI_Fortran_INCLUDE_PATH})
+
+
+
+
+
+
 
 
 
@@ -140,17 +170,17 @@ include_directories(src/tools)    # Need include here for macro-enhanced message
 #              Add core library and driver targets
 #------------------------------------------------------------------                                                                        
 add_library(coredg STATIC ${LIB_SRCS})
-target_link_libraries(coredg ${HDF5_LIBRARIES} ${LAPACK_LIBRARIES} ${TECPLOT_LIBRARIES})
+target_link_libraries(coredg ${HDF5_LIBRARIES} ${LAPACK_LIBRARIES} ${TECPLOT_LIBRARIES} ${MPI_Fortran_LIBRARIES})
 set_target_properties(coredg PROPERTIES 
-                             COMPILE_FLAGS "${CMAKE_Fortran_FLAGS}"
-                             LINK_FLAGS    "${CMAKE_Fortran_LINK_FLAGS}")
+                             COMPILE_FLAGS "${CMAKE_Fortran_FLAGS} ${MPI_Fortran_COMPILE_FLAGS}"
+                             LINK_FLAGS    "${CMAKE_Fortran_LINK_FLAGS} ${MPI_Fortran_LINK_FLAGS}")
 
 # Add driver program
 add_executable(chidg ${EXE_SRCS})
-target_link_libraries(chidg coredg ${HDF5_LIBRARIES} ${TECPLOT_LIBRARIES})
+target_link_libraries(chidg coredg ${HDF5_LIBRARIES} ${TECPLOT_LIBRARIES} ${MPI_Fortran_LIBRARIES})
 set_target_properties(chidg PROPERTIES 
-                            COMPILE_FLAGS "${CMAKE_Fortran_FLAGS}"
-                            LINK_FLAGS    "${CMAKE_Fortran_LINK_FLAGS} -lstdc++ -lpthread")
+                            COMPILE_FLAGS "${CMAKE_Fortran_FLAGS} ${MPI_Fortran_COMPILE_FLAGS}"
+                            LINK_FLAGS    "${CMAKE_Fortran_LINK_FLAGS} ${MPI_Fortran_LINK_FLAGS} -lstdc++ -lpthread")
                             # need to link lstdc++ here for tecio
                             
 

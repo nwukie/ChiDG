@@ -7,7 +7,6 @@ module test_interpolate_mod
     use mod_hdfio,          only: read_grid_hdf
     use mod_interpolate,    only: interpolate_face, interpolate_element
     use mod_grid_operators, only: initialize_variable
-    !use type_domain,        only: domain_t
     use DNAD_D
     use fcn_constant,       only: constant_f
     implicit none
@@ -17,7 +16,6 @@ module test_interpolate_mod
 @TestCase
     type, extends(TestCase) ::  test_interpolate
         type(chidg_t)                   :: chidg
-        !type(domain_t), allocatable     :: domain(:)
         type(constant_f)                :: fcn
 
     contains
@@ -76,32 +74,37 @@ contains
         real(rk), allocatable       :: u_gq(:), u_ref(:)
         real(rk)                    :: tol
         
-        associate ( mesh => self%chidg%data%domains(:)%mesh, elems => self%chidg%data%domains(1)%mesh%elems, q => self%chidg%data%sdata%q, rhs => self%chidg%data%sdata%rhs )        
-            tol   = 1.e-13_rk
-            idomain = 1
-            ielem   = 14
-            ivar    = 1
 
-            ngq = elems(ielem)%gq%nnodes_v
+        tol     = 1.e-13_rk
+        idomain = 1
+        ielem   = 14
+        ivar    = 1
 
-            allocate(u_gq(ngq))
-            allocate(u_ref(ngq))
-            
-            
+        associate ( domains => self%chidg%data%domains, elems => self%chidg%data%domains(1)%mesh%elems, q => self%chidg%data%sdata%q )
+
+            ngq = self%chidg%data%domains(1)%mesh%elems(ielem)%gq%nnodes_v
+
+
+            allocate(u_gq(ngq), &
+                     u_ref(ngq))
+
+
             !
             ! PROCEDURE BEING TESTED
             !
-            call interpolate_element(mesh,q,idomain,ielem,ivar,u_gq)
-            
-            
+            call interpolate_element(domains(:)%mesh, q, idomain, ielem, ivar, u_gq)
+
+
+
             ! Initialize reference
-            u_ref = self%fcn%value_ 
-            
-            ! Test that standard interpolation to quadrature 
-            ! on an element volume is producing expected results
-            @assertEqual(u_ref,u_gq,tol)
-            
+            u_ref = self%fcn%value_
+
         end associate
+
+        ! Test that standard interpolation to quadrature 
+        ! on an element volume is producing expected results
+        @assertEqual(u_ref,u_gq,tol)
+
     end subroutine
     
     
@@ -118,7 +121,8 @@ contains
         
         
         
-        associate ( mesh => self%chidg%data%domains(:)%mesh, elems => self%chidg%data%domains(1)%mesh%elems, faces => self%chidg%data%domains(1)%mesh%faces, q => self%chidg%data%sdata%q, rhs => self%chidg%data%sdata%rhs )        
+        associate ( faces => self%chidg%data%domains(1)%mesh%faces, q => self%chidg%data%sdata%q, rhs => self%chidg%data%sdata%rhs, domains => self%chidg%data%domains )
+
             tol   = 1.e-13_rk
             idomain = 1
             ielem   = 14
@@ -134,7 +138,7 @@ contains
             !
             ! PROCEDURE BEING TESTED
             !
-            call interpolate_face(mesh,q,idomain,ielem,iface,ivar,u_gq)
+            call interpolate_face(domains(:)%mesh,q,idomain,ielem,iface,ivar,u_gq)
             
             
             ! Initialize reference
@@ -168,12 +172,13 @@ contains
         real(rk)                    :: tol
         
         
-        associate ( mesh => self%chidg%data%domains(:)%mesh, elems => self%chidg%data%domains(1)%mesh%elems, q => self%chidg%data%sdata%q, rhs => self%chidg%data%sdata%rhs )        
+        associate ( domains => self%chidg%data%domains, elems => self%chidg%data%domains(1)%mesh%elems, q => self%chidg%data%sdata%q, rhs => self%chidg%data%sdata%rhs )        
+
             idomain = 1
             ielem   = 14    ! given element
             ielem_s = 15    ! a seed element, so all derivative arrays should be seeded to zero
             tol   = 1.e-13_rk
-            ivar  = self%chidg%data%domains(1)%eqnset%prop%get_eqn_index('u')
+            ivar  = domains(1)%eqnset%prop%get_eqn_index('u')
 
             ngq = elems(ielem)%gq%nnodes_v
 
@@ -185,7 +190,7 @@ contains
             !
             ! PROCEDURE BEING TESTED
             !
-            call interpolate_element(mesh,q,idomain,ielem,ivar,u_gq,ielem_s)
+            call interpolate_element(domains(:)%mesh,q,idomain,ielem,ivar,u_gq,ielem_s)
             
             
             ! Initialize reference
@@ -213,14 +218,15 @@ contains
         real(rk)                    :: tol
         
         
-        associate ( mesh => self%chidg%data%domains(:)%mesh, elems => self%chidg%data%domains(1)%mesh%elems, q => self%chidg%data%sdata%q, rhs => self%chidg%data%sdata%rhs )
+        associate ( domains => self%chidg%data%domains, elems => self%chidg%data%domains(1)%mesh%elems, q => self%chidg%data%sdata%q, rhs => self%chidg%data%sdata%rhs )
+
             idomain = 1     ! domain index
             ielem   = 14    ! given element index
             ielem_s = 15    ! a seed element, so all derivative arrays should be seeded to zero        
             tol   = 1.e-13_rk
-            ivar  = self%chidg%data%domains(1)%eqnset%prop%get_eqn_index('u')
+            ivar  = domains(1)%eqnset%prop%get_eqn_index('u')
 
-            ngq = elems(ielem)%gq%nnodes_v
+            ngq    = elems(ielem)%gq%nnodes_v
             nderiv = elems(ielem)%neqns  *  elems(ielem)%nterms_s
 
             ! Allocate number of AD variables for data at GQ nodes. Derivative arrays are not yet allocated
@@ -231,7 +237,7 @@ contains
             !
             ! PROCEDURE BEING TESTED
             !
-            call interpolate_element(mesh,q,idomain,ielem,ivar,u_gq,ielem_s)
+            call interpolate_element(domains(:)%mesh,q,idomain,ielem,ivar,u_gq,ielem_s)
             
             
             ! Initialize reference
@@ -264,12 +270,12 @@ contains
         real(rk)                    :: tol
         
         
-        associate ( mesh => self%chidg%data%domains(:)%mesh, elems => self%chidg%data%domains(1)%mesh%elems, q => self%chidg%data%sdata%q, rhs => self%chidg%data%sdata%rhs )
+        associate ( domains => self%chidg%data%domains, elems => self%chidg%data%domains(1)%mesh%elems, q => self%chidg%data%sdata%q, rhs => self%chidg%data%sdata%rhs )
             idomain = 1     ! domain index
             ielem   = 14    ! given element
             ielem_s = 14    ! a seed element, so all derivative arrays should be seeded to zero
             tol   = 1.e-13_rk
-            ivar  = self%chidg%data%domains(1)%eqnset%prop%get_eqn_index('u')
+            ivar  = domains(1)%eqnset%prop%get_eqn_index('u')
             
             ngq = elems(ielem)%gq%nnodes_v  !> Number of quadrature nodes
             
@@ -281,7 +287,7 @@ contains
             !
             ! PROCEDURE BEING TESTED
             !
-            call interpolate_element(mesh,q,idomain,ielem,ivar,u_gq,ielem_s)
+            call interpolate_element(domains(:)%mesh,q,idomain,ielem,ivar,u_gq,ielem_s)
             
             
             ! Initialize reference
@@ -308,12 +314,12 @@ contains
         real(rk)                    :: tol
         
         
-        associate ( mesh => self%chidg%data%domains(:)%mesh, elems => self%chidg%data%domains(1)%mesh%elems, q => self%chidg%data%sdata%q, rhs => self%chidg%data%sdata%rhs )        
+        associate ( domains => self%chidg%data%domains, elems => self%chidg%data%domains(1)%mesh%elems, q => self%chidg%data%sdata%q, rhs => self%chidg%data%sdata%rhs )        
             idomain = 1     ! domain index
             ielem   = 14    ! given element
             ielem_s = 14    ! a seed element, so all derivative arrays should be seeded to zero
             tol   = 1.e-13_rk
-            ivar  = self%chidg%data%domains(1)%eqnset%prop%get_eqn_index('u')
+            ivar  = domains(1)%eqnset%prop%get_eqn_index('u')
 
             ngq = elems(ielem)%gq%nnodes_v      !> Number of quadrature nodes
             nderiv = elems(ielem)%neqns  *  elems(ielem)%nterms_s
@@ -326,7 +332,7 @@ contains
             !
             ! PROCEDURE BEING TESTED
             !
-            call interpolate_element(mesh,q,idomain,ielem,ivar,u_gq,ielem_s)
+            call interpolate_element(domains(:)%mesh,q,idomain,ielem,ivar,u_gq,ielem_s)
             
             
             ! Initialize reference
@@ -372,13 +378,13 @@ contains
         real(rk)                    :: tol
         
         
-        associate ( mesh => self%chidg%data%domains(:)%mesh, elems => self%chidg%data%domains(1)%mesh%elems, faces => self%chidg%data%domains(1)%mesh%faces, q => self%chidg%data%sdata%q)        
+        associate ( domains => self%chidg%data%domains, elems => self%chidg%data%domains(1)%mesh%elems, faces => self%chidg%data%domains(1)%mesh%faces, q => self%chidg%data%sdata%q)        
             idomain = 1     ! domain index
             ielem   = 14    ! given element
             iface   = 1     ! given face
             ielem_s = 15    ! a seed element, this is a neighbor for this test - so all derivative arrays should be seeded to zero
             tol   = 1.e-13_rk
-            ivar  = self%chidg%data%domains(1)%eqnset%prop%get_eqn_index('u')
+            ivar  = domains(1)%eqnset%prop%get_eqn_index('u')
 
             ngq = faces(ielem,iface)%gq%nnodes_f
 
@@ -390,7 +396,7 @@ contains
             !
             ! PROCEDURE BEING TESTED
             !
-            call interpolate_face(mesh,q,idomain,ielem,iface,ivar,u_gq,ielem_s)
+            call interpolate_face(domains(:)%mesh,q,idomain,ielem,iface,ivar,u_gq,ielem_s)
             
             
             ! Initialize reference
@@ -422,26 +428,26 @@ contains
         real(rk)                    :: tol
         
         
-        associate ( mesh => self%chidg%data%domains(:)%mesh, elems => self%chidg%data%domains(1)%mesh%elems, faces => self%chidg%data%domains(1)%mesh%faces, q => self%chidg%data%sdata%q)        
+        associate ( domains => self%chidg%data%domains, elems => self%chidg%data%domains(1)%mesh%elems, faces => self%chidg%data%domains(1)%mesh%faces, q => self%chidg%data%sdata%q)        
             idomain = 1     ! domain index
             ielem   = 14    ! given element
             iface   = 1     ! given face
             ielem_s = 15    ! a seed element, this is a neighbor for this test - so all derivative arrays should be seeded to zero
             tol   = 1.e-13_rk
-            ivar  = self%chidg%data%domains(1)%eqnset%prop%get_eqn_index('u')
+            ivar  = domains(1)%eqnset%prop%get_eqn_index('u')
 
             ngq = faces(ielem,iface)%gq%nnodes_f
             nderiv = faces(ielem,iface)%neqns  *  faces(ielem,iface)%nterms_s
 
             ! Allocate number of AD variables for data at GQ nodes. Derivative arrays are not yet allocated
-            allocate(u_gq(ngq))             !> AD
-            allocate(deriv_ref(nderiv))     !> Real
+            allocate(u_gq(ngq))             ! AD
+            allocate(deriv_ref(nderiv))     ! Real
             
             
             !
             ! PROCEDURE BEING TESTED
             !
-            call interpolate_face(mesh,q,idomain,ielem,iface,ivar,u_gq,ielem_s)
+            call interpolate_face(domains(:)%mesh,q,idomain,ielem,iface,ivar,u_gq,ielem_s)
             
             deriv_ref = ZERO
             
@@ -467,13 +473,13 @@ contains
         real(rk)                    :: tol
         
         
-        associate ( mesh => self%chidg%data%domains(:)%mesh, elems => self%chidg%data%domains(1)%mesh%elems, faces => self%chidg%data%domains(1)%mesh%faces, q => self%chidg%data%sdata%q)        
+        associate ( domains => self%chidg%data%domains, elems => self%chidg%data%domains(1)%mesh%elems, faces => self%chidg%data%domains(1)%mesh%faces, q => self%chidg%data%sdata%q)        
             idomain = 1     ! domain index
             ielem   = 14    ! given element
             iface   = 1     ! given face
             ielem_s = 14    ! a seed element, same as ielem - so all derivative arrays should include non-zeros
             tol   = 1.e-13_rk
-            ivar  = self%chidg%data%domains(1)%eqnset%prop%get_eqn_index('u')
+            ivar  = domains(1)%eqnset%prop%get_eqn_index('u')
 
             ngq = faces(ielem,iface)%gq%nnodes_f
             
@@ -485,7 +491,7 @@ contains
             !
             ! PROCEDURE BEING TESTED
             !
-            call interpolate_face(mesh,q,idomain,ielem,iface,ivar,u_gq,ielem_s)
+            call interpolate_face(domains(:)%mesh,q,idomain,ielem,iface,ivar,u_gq,ielem_s)
             
             
             !
@@ -518,15 +524,15 @@ contains
         real(rk)                    :: tol
         
         
-        associate ( mesh => self%chidg%data%domains(:)%mesh, elems => self%chidg%data%domains(1)%mesh%elems, faces => self%chidg%data%domains(1)%mesh%faces, q => self%chidg%data%sdata%q)        
+        associate ( domains => self%chidg%data%domains, elems => self%chidg%data%domains(1)%mesh%elems, faces => self%chidg%data%domains(1)%mesh%faces, q => self%chidg%data%sdata%q)        
             idomain = 1     ! domain index
             ielem   = 14    ! given element
             iface   = 1     ! given face
             ielem_s = 14    ! a seed element, same as ielem - so all derivative arrays should include non-zeros
             tol   = 1.e-13_rk
-            ivar  = self%chidg%data%domains(1)%eqnset%prop%get_eqn_index('u')
+            ivar  = domains(1)%eqnset%prop%get_eqn_index('u')
 
-            ngq = faces(ielem,iface)%gq%nnodes_f
+            ngq    = faces(ielem,iface)%gq%nnodes_f
             nderiv = faces(ielem,iface)%neqns  *  faces(ielem,iface)%nterms_s
 
             ! Allocate number of AD variables for data at GQ nodes. Derivative arrays are not yet allocated
@@ -537,7 +543,7 @@ contains
             !
             ! PROCEDURE BEING TESTED
             !
-            call interpolate_face(mesh,q,idomain,ielem,iface,ivar,u_gq,ielem_s)
+            call interpolate_face(domains(:)%mesh,q,idomain,ielem,iface,ivar,u_gq,ielem_s)
               
             
             

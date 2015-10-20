@@ -11,8 +11,8 @@ add_test_sources(containers
                 test_blockmatrix_build.pf
                 test_blockmatrix_mod.pf
                 test_dict.pf
-                test_operator_dot.pf
-                test_operator_mv.pf
+                test_operator_block_dot.pf
+                test_operator_block_mv.pf
                 test_rvector.pf
                 test_ivector.pf
                 )

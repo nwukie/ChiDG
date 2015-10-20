@@ -8,8 +8,11 @@ module type_fgmres
     use type_blockmatrix,       only: blockmatrix_t
     use type_densematrix,       only: densematrix_t
     use type_blockvector
-    use operator_mv
-    use operator_dot,       only: dot
+
+    !use operator_mv
+    !use operator_dot,       only: dot
+    use operator_chidg_mv
+    use operator_chidg_dot,     only: dot
 
     implicit none
         

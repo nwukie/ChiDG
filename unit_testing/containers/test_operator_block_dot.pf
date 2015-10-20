@@ -1,5 +1,5 @@
 @Test
-subroutine test_operator_dot()
+subroutine test_operator_block_dot()
     use pfunit_mod
 
     use mod_kinds,          only: rk, ik
@@ -10,7 +10,7 @@ subroutine test_operator_dot()
 
     use mod_testutils,      only: meshgen
 
-    use operator_dot
+    use operator_block_dot
     implicit none
 
 
@@ -87,12 +87,12 @@ subroutine test_operator_dot()
     !
     ! Compute dot product implementation. THIS IS BEING TESTED
     !
-    dot_test = dot(a,b)
+    dot_test = block_dot(a,b)
 
 
 
     @assertEqual(dot_ref,dot_test,tol)
 
-end subroutine test_operator_dot
+end subroutine test_operator_block_dot
 
 

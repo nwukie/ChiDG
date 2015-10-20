@@ -6,11 +6,11 @@ module mod_matrixsolver
 
 
     ! IMPORT MATRIX SOLVERS
-    use type_directsolver,  only: directsolver_t
-    use type_blockjacobi,   only: blockjacobi_t
-    use type_gaussseidel,   only: gaussseidel_t
-    use type_sor,           only: sor_t
-    use type_gmres,         only: gmres_t
+!    use type_directsolver,  only: directsolver_t
+!    use type_blockjacobi,   only: blockjacobi_t
+!    use type_gaussseidel,   only: gaussseidel_t
+!    use type_sor,           only: sor_t
+!    use type_gmres,         only: gmres_t
     use type_fgmres,        only: fgmres_t
     
 
@@ -18,11 +18,11 @@ module mod_matrixsolver
 
 
 
-    type(directsolver_t)    :: DIRECT
-    type(blockjacobi_t)     :: BLOCKJACOBI
-    type(gaussseidel_t)     :: GAUSSSEIDEL
-    type(sor_t)             :: SOR
-    type(gmres_t)           :: GMRES
+!    type(directsolver_t)    :: DIRECT
+!    type(blockjacobi_t)     :: BLOCKJACOBI
+!    type(gaussseidel_t)     :: GAUSSSEIDEL
+!    type(sor_t)             :: SOR
+!    type(gmres_t)           :: GMRES
     type(fgmres_t)          :: FGMRES
 
 
@@ -52,21 +52,21 @@ contains
 
 
         select case (trim(mstring))
-            case ('direct','Direct')
-                allocate(msolver, source=DIRECT, stat=ierr)
-
-            case ('blockjacobi','BlockJacobi')
-                allocate(msolver, source=BLOCKJACOBI, stat=ierr)
-
-            case ('gaussseidel','GaussSeidel')
-                allocate(msolver, source=GAUSSSEIDEL, stat=ierr)
-
-            case ('sor','SOR')
-                allocate(msolver, source=SOR, stat=ierr)
-
-            case ('gmres','GMRES')
-                allocate(msolver, source=GMRES, stat=ierr)
-
+!            case ('direct','Direct')
+!                allocate(msolver, source=DIRECT, stat=ierr)
+!
+!            case ('blockjacobi','BlockJacobi')
+!                allocate(msolver, source=BLOCKJACOBI, stat=ierr)
+!
+!            case ('gaussseidel','GaussSeidel')
+!                allocate(msolver, source=GAUSSSEIDEL, stat=ierr)
+!
+!            case ('sor','SOR')
+!                allocate(msolver, source=SOR, stat=ierr)
+!
+!            case ('gmres','GMRES')
+!                allocate(msolver, source=GMRES, stat=ierr)
+!
             case ('fgmres','FGMRES')
                 allocate(msolver, source=FGMRES, stat=ierr)
 

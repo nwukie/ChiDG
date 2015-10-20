@@ -1,8 +1,10 @@
 module atype_matrixsolver
     use mod_kinds,          only: rk,ik
     use type_dict,          only: dict_t
-    use type_blockmatrix,   only: blockmatrix_t
-    use type_blockvector
+   ! use type_blockmatrix,   only: blockmatrix_t
+   ! use type_blockvector
+    use type_chidgMatrix,   only: chidgMatrix_t
+    use type_chidgVector,   only: chidgVector_t
     use type_timer,         only: timer_t
     use operator_mv
 
@@ -50,15 +52,17 @@ module atype_matrixsolver
 
     abstract interface
         subroutine solve_interface(self,A,x,b,M)
-            use type_blockmatrix,       only: blockmatrix_t
-            use type_blockvector,       only: blockvector_t
+            !use type_blockmatrix,       only: blockmatrix_t
+            !use type_blockvector,       only: blockvector_t
+            use type_chidgMatrix,       only: chidgMatrix_t
+            use type_chidgVector,       only: chidgVector_t
             use type_preconditioner,    only: preconditioner_t
             import matrixsolver_t
 
             class(matrixsolver_t),      intent(inout)           :: self
-            type(blockmatrix_t),        intent(inout)           :: A
-            type(blockvector_t),        intent(inout)           :: x
-            type(blockvector_t),        intent(inout)           :: b
+            type(chidgMatrix_t),        intent(inout)           :: A
+            type(chidgVector_t),        intent(inout)           :: x
+            type(chidgVector_t),        intent(inout)           :: b
             class(preconditioner_t),    intent(inout), optional :: M
         end subroutine
     end interface
@@ -137,34 +141,21 @@ contains
     !-----------------------------------------------------------
     function residual(self,A,x,b) result(r)
         class(matrixsolver_t),  intent(inout)   :: self
-        type(blockmatrix_t),    intent(inout)   :: A
-        type(blockvector_t),    intent(inout)   :: x
-        type(blockvector_t),    intent(inout)   :: b
+        !type(blockmatrix_t),    intent(inout)   :: A
+        !type(blockvector_t),    intent(inout)   :: x
+        !type(blockvector_t),    intent(inout)   :: b
+        type(chidgMatrix_t),    intent(inout)   :: A
+        type(chidgVector_t),    intent(inout)   :: x
+        type(chidgVector_t),    intent(inout)   :: b
 
 
-        type(blockvector_t) :: r
+        type(chidgVector_t) :: r
         real(rk)            :: err
         integer(ik)         :: iparent, ielem, iblk
 
 
         r = x
         call r%clear()
-
-
-        !
-        ! Compute Ax
-        !
-        !do ielem = 1,size(A%lblks,1)
-        !    do iblk = 1,size(A%lblks,2)
-!
-!                if (allocated(A%lblks(ielem,iblk)%mat)) then
-!                    iparent = A%lblks(ielem,iblk)%parent()
-!                    r%lvecs(ielem)%vec = r%lvecs(ielem)%vec + matmul(A%lblks(ielem,iblk)%mat,x%lvecs(iparent)%vec)
-!                end if
-!
-!            end do ! iblk
-!        end do ! ielem
-
 
 
         !
@@ -216,20 +207,13 @@ contains
     !-----------------------------------------------------------
     function error(self,A,x,b) result(err)
         class(matrixsolver_t),  intent(inout)   :: self
-        type(blockmatrix_t),    intent(inout)   :: A
-        type(blockvector_t),    intent(inout)   :: x
-        type(blockvector_t),    intent(inout)   :: b
+        type(chidgMatrix_t),    intent(inout)   :: A
+        type(chidgVector_t),    intent(inout)   :: x
+        type(chidgVector_t),    intent(inout)   :: b
 
 
         type(blockvector_t) :: r
         real(rk)            :: err
-
-
-        !
-        ! Allocate residual vector and clear
-        !
-        !r = x
-        !call r%clear()
 
 
 

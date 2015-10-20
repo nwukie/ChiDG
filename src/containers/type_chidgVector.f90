@@ -45,6 +45,50 @@ module type_chidgVector
 
 
 
+
+
+
+    !------------------------       OPERATORS       --------------------------------------
+
+    public operator (*)
+    interface operator(*)
+        module procedure mult_real_chidgVector          ! real * chidgVector
+        module procedure mult_chidgVector_real          ! chidgVector * real
+    end interface
+
+
+    public operator (/)
+    interface operator (/)
+        module procedure div_real_chidgVector           ! real / chidgVector
+        module procedure div_chidgVector_real           ! chidgVector / real
+    end interface
+
+
+    public operator (-)
+    interface operator (-)
+        module procedure sub_chidgVector_chidgVector    ! chidgVector - chidgVector
+    end interface
+
+    public operator (+)
+    interface operator (+)
+        module procedure add_chidgVector_chidgVector    ! chidgVector + chidgVector
+    end interface
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 contains
 
 

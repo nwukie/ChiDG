@@ -1,5 +1,5 @@
 @Test
-subroutine test_operator_mv()
+subroutine test_operator_block_mv()
     use pfunit_mod
 
     use mod_kinds,          only: rk, ik
@@ -12,7 +12,7 @@ subroutine test_operator_mv()
 
     use mod_testutils,      only: meshgen
 
-    use operator_mv
+    use operator_block_mv
     implicit none
 
     type(chidg_t)               :: chidg
@@ -121,4 +121,4 @@ subroutine test_operator_mv()
 
 
 
-end subroutine test_operator_mv
+end subroutine test_operator_block_mv

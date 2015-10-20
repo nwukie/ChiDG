@@ -1,4 +1,4 @@
-module operator_mv
+module operator_block_mv
     use mod_kinds,          only: rk, ik
     use type_blockmatrix,   only: blockmatrix_t
     use type_blockvector,   only: blockvector_t
@@ -66,4 +66,4 @@ contains
 
 
 
-end module operator_mv
+end module operator_block_mv

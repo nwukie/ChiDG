@@ -1,7 +1,9 @@
 module type_preconditioner
     use mod_kinds,          only: rk, ik
-    use type_blockmatrix,   only: blockmatrix_t
-    use type_blockvector,   only: blockvector_t
+    !use type_blockmatrix,   only: blockmatrix_t
+    !use type_blockvector,   only: blockvector_t
+    use type_chidgMatrix,   only: chidgMatrix_t
+    use type_chidgVector,   only: chidgVector_t
     use type_chidg_data,    only: chidg_data_t
 
     implicit none
@@ -67,9 +69,10 @@ contains
     !------------------------------------------------------------------------------------
     subroutine update(self,A,b)
         class(preconditioner_t),    intent(inout)   :: self
-        type(blockmatrix_t),        intent(in)      :: A
-        type(blockvector_t),        intent(in)      :: b
-
+        !type(blockmatrix_t),        intent(in)      :: A
+        !type(blockvector_t),        intent(in)      :: b
+        type(chidgMatrix_t),        intent(in)      :: A
+        type(chidgVector_t),        intent(in)      :: b
 
     end subroutine update
 
@@ -88,10 +91,13 @@ contains
     !------------------------------------------------------------------------------------
     function apply(self,A,v) result(z)
         class(preconditioner_t),    intent(inout)   :: self
-        type(blockmatrix_t),        intent(in)      :: A
-        type(blockvector_t),        intent(in)      :: v
+        !type(blockmatrix_t),        intent(in)      :: A
+        !type(blockvector_t),        intent(in)      :: v
+        type(chidgMatrix_t),        intent(in)      :: A
+        type(chidgVector_t),        intent(in)      :: v
 
-        type(blockvector_t)     :: z
+        !type(blockvector_t)     :: z
+        type(chidgVector_t)     :: z
 
 
         !

@@ -1,4 +1,4 @@
-module operator_dot
+module operator_block_dot
     use mod_kinds,          only: rk, ik
     use mod_constants,      only: ZERO
     use type_blockvector,   only: blockvector_t
@@ -23,7 +23,7 @@ contains
     !!
     !!
     !-----------------------------------------------------------------------------
-    function dot(a,b) result(res)
+    function block_dot(a,b) result(res)
         type(blockvector_t),    intent(in)  :: a
         type(blockvector_t),    intent(in)  :: b
 
@@ -54,5 +54,5 @@ contains
 
 
 
-end module operator_dot
+end module operator_block_dot
 

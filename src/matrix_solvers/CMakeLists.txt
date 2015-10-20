@@ -1,9 +1,9 @@
 add_lib_sources(atype_matrixsolver.f90 
                 mod_matrixsolver.f90 
-                type_directsolver.f90 
-                type_blockjacobi.f90 
-                type_gaussseidel.f90
-                type_sor.f90
-                type_gmres.f90
+#                type_directsolver.f90 
+#                type_blockjacobi.f90 
+#                type_gaussseidel.f90
+#                type_sor.f90
+#                type_gmres.f90
                 type_fgmres.f90
                 )

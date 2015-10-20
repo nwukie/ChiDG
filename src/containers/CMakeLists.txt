@@ -5,12 +5,14 @@ add_lib_sources(
                 type_blockvector.f90 
                 type_expansion.f90 
                 type_dict.f90
-                operator_mv.f90
-                operator_dot.f90
+                operator_block_mv.f90
+                operator_block_dot.f90
                 type_rvector.f90
                 type_ivector.f90
                 type_chidgMatrix.f90
                 type_chidgVector.f90
+                operator_chidg_dot.f90
+                operator_chidg_mv.f90
                 type_solverdata.f90
                 #mod_solverdata.f90
                 )

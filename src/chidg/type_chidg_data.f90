@@ -29,14 +29,7 @@ module type_chidg_data
     !---------------------------------------------------------------------------------------
     type, public  :: chidg_data_t
 
-        !> Base solver data
-        !type(domain_t),         allocatable    :: domains(:)         !< Domain storage
-        !type(solverdata_t)                     :: sdata              !< Storage for matrix/vector data
-
-
-
         integer(ik)                         :: ndomains = 0
-
         type(dict_t)                        :: domain_info      !< Dictionary of (domain_index, domain_name) pairs
 
 
@@ -46,11 +39,6 @@ module type_chidg_data
 
 
         type(solverdata_t)                          :: sdata
-
-
-
-
-
 
 
         logical                         :: solverInitialized = .false.
@@ -204,10 +192,12 @@ contains
         integer(ik)                 :: idom
         class(bc_t), allocatable    :: bc_instance
 
+
         !
         ! Get domain index from domain string
         !
         call self%domain_info%get(domain,idom)
+
 
 
         !

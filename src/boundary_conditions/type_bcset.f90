@@ -21,7 +21,7 @@ module type_bcset
     !------------------------------------------------------------------------------------------
     type, public :: bcset_t
 
-        integer(ik)                     :: nbcs
+        integer(ik)                     :: nbcs = 0
 
         class(bcwrapper_t), allocatable :: bcs(:)       !< Array of boundary conditions. Using a wrapper here
                                                         !! because we can't allocate an array of polymorphic variables
@@ -95,7 +95,9 @@ contains
         !
         ! Copy any previously allocated boundary conditions to new array
         !
-        temp_bcs(1:size(self%bcs)) = self%bcs
+        if ( self%nbcs > 1) then
+            temp_bcs(1:size(self%bcs)) = self%bcs(1:size(self%bcs))
+        end if
 
 
         !

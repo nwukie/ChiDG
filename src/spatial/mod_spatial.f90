@@ -44,7 +44,6 @@ contains
             do iblk = 0,7           ! (0 = linearization of chimera blocks, 1-6 = linearization of interior neighbor blocks, 7 = linearization of Q- block
 
                 do idom = 1,data%ndomains
-!                    associate ( domain => data%domains(idom), mesh => data%domains(idom)%mesh, sdata => data%sdata, eqnset => data%domains(idom)%eqnset, prop => data%domains(idom)%eqnset%prop, chimera => data%domains(idom)%mesh%chimera )
                     associate ( mesh => data%mesh(idom), sdata => data%sdata, eqnset => data%eqnset(idom)%item, prop => data%eqnset(idom)%item%prop, chimera => data%mesh(idom)%chimera)
 
                     nelem = mesh%nelem
@@ -58,7 +57,7 @@ contains
                         ! If the block direction is not DIAG, then we only want to compute faces in the block direction
                         ! if it has a neighbor element.
                         !
-                        if (iblk /= DIAG) then
+                        if (iblk /= DIAG  .and. iblk /= 0) then
                             ! Check if there is an element to linearize against in the iblk direction. If not, cycle
                             if (mesh%faces(ielem,iblk)%ineighbor == 0) then
                                 skip = .true.
@@ -66,7 +65,7 @@ contains
                                 skip = .false.
                             end if
                         else
-                            skip = .false.  ! Don't skip DIAG
+                            skip = .false.  ! Don't skip DIAG, or Chimera blocks(iblk = 0)
                         end if
 
 
@@ -96,30 +95,29 @@ contains
 
 
                                     !
+                                    ! If Chimera face, how many donor elements are there that need the linearization computed
+                                    !
+                                    !if ( chimera_face ) then
+                                    !    ichimera_recv = face%ichimera_recv
+                                    !    ndonors       = chimera%recv(ichimera_recv)
+                                    !else
+                                        ndonors = 1
+                                    !end if
+
+
+                                    !
+                                    ! Test ndonors > 0
+                                    !
+                                    if (ndonors == 0) call signal(FATAL,'update_residual: no available donors for boundary calculation')
+
+
+
+                                    !
                                     ! Call all boundary advective flux components
                                     !
                                     if (allocated(eqnset%boundary_advective_flux)) then
                                         nflux = size(eqnset%boundary_advective_flux)
                                         do iflux = 1,nflux
-
-
-
-                                            !
-                                            ! If Chimera face, how many donor elements are there that need the linearization computed
-                                            !
-                                            !if ( chimera_face ) then
-                                            !    ichimera_recv = face%ichimera_recv
-                                            !    ndonors       = chimera%recv(ichimera_recv)
-                                            !else
-                                                ndonors = 1
-                                            !end if
-
-
-                                            !
-                                            ! Test ndonors > 0
-                                            !
-                                            if (ndonors == 0) call signal(FATAL,'update_residual: no available donors for boundary calculation')
-
 
                                             !
                                             ! Compute boundary flux once for each donor. For interior faces ndonors == 1. For Chimera faces ndonors is potentially > 1.
@@ -127,9 +125,6 @@ contains
                                             do idonor = 1,ndonors
                                                 call eqnset%boundary_advective_flux(iflux)%flux%compute(data%mesh,data%sdata,prop,idom,ielem,iface,iblk,idonor)
                                             end do
-
-
-
 
                                         end do
                                     end if
@@ -148,17 +143,22 @@ contains
                             !
                             ! Call all volume advective flux components
                             !
-                            if (allocated(eqnset%volume_advective_flux)) then
-                                nflux = size(eqnset%volume_advective_flux)
-                                do iflux = 1,nflux
-                                    call eqnset%volume_advective_flux(iflux)%flux%compute(data%mesh,data%sdata,prop,idom,ielem,iblk)
-                                end do
+
+                            ! only need to compute volume_advective_flux for linearization of interior block
+                            if (iblk == DIAG) then
+                                if (allocated(eqnset%volume_advective_flux)) then
+                                    nflux = size(eqnset%volume_advective_flux)
+                                    do iflux = 1,nflux
+
+                                        call eqnset%volume_advective_flux(iflux)%flux%compute(data%mesh,data%sdata,prop,idom,ielem,iblk)
+
+                                    end do
+                                end if
                             end if
 
 
 
-
-                        end if
+                        end if ! skip
                         !-----------------------------------------------------------------------------------------
 
                     end do  ! ielem

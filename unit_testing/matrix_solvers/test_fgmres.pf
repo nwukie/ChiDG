@@ -7,9 +7,10 @@ subroutine test_fgmres_solve()
     use type_point,         only: point_t
 
     use type_fgmres,        only: fgmres_t
-    use type_blockmatrix,   only: blockmatrix_t
-    use type_blockvector,   only: blockvector_t
     use precon_identity,    only: precon_identity_t
+
+    use type_chidgMatrix
+    use type_chidgVector
 
     use mod_testutils,      only: meshgen
     implicit none
@@ -41,33 +42,28 @@ subroutine test_fgmres_solve()
     call meshgen('311',pts)
 
     ! Initialize domain
-!    allocate(chidg%data%domains(1))
-!    call chidg%data%domains(1)%init_geom(idomain,nterms_c,pts)
-!    call chidg%data%domains(1)%init_sol('Scalar',nterms_s)
-
     call chidg%data%add_domain('D_01',pts,nterms_c,'Scalar',nterms_s)
-
     call chidg%data%init_sdata()
 
 
 
 
-    associate ( A => chidg%data%sdata%lhs%dom(1), b => chidg%data%sdata%rhs%dom(1), x => chidg%data%sdata%dq%dom(1), M => chidg%preconditioner )
+    associate ( A => chidg%data%sdata%lhs, b => chidg%data%sdata%rhs, x => chidg%data%sdata%dq, M => chidg%preconditioner )
         ! Initialize blockmatrix data (A)
         !
         ! [4  3  0]
         ! [3  4 -1]
         ! [0 -1  4]
         !
-        A%lblks(1,DIAG)%mat   = 4._rk
-        A%lblks(1,XI_MAX)%mat = THREE
+        A%dom(1)%lblks(1,DIAG)%mat   = 4._rk
+        A%dom(1)%lblks(1,XI_MAX)%mat = THREE
 
-        A%lblks(2,XI_MIN)%mat = THREE
-        A%lblks(2,DIAG)%mat   = 4._rk
-        A%lblks(2,XI_MAX)%mat = -ONE
+        A%dom(1)%lblks(2,XI_MIN)%mat = THREE
+        A%dom(1)%lblks(2,DIAG)%mat   = 4._rk
+        A%dom(1)%lblks(2,XI_MAX)%mat = -ONE
 
-        A%lblks(3,XI_MIN)%mat = -ONE
-        A%lblks(3,DIAG)%mat   = 4._rk
+        A%dom(1)%lblks(3,XI_MIN)%mat = -ONE
+        A%dom(1)%lblks(3,DIAG)%mat   = 4._rk
 
 
 
@@ -78,9 +74,9 @@ subroutine test_fgmres_solve()
         ! [ 30]
         ! [-24]
         !
-        b%lvecs(1)%vec = 24._rk
-        b%lvecs(2)%vec = 30._rk
-        b%lvecs(3)%vec = -24._rk
+        b%dom(1)%lvecs(1)%vec = 24._rk
+        b%dom(1)%lvecs(2)%vec = 30._rk
+        b%dom(1)%lvecs(3)%vec = -24._rk
 
         
 
@@ -105,9 +101,9 @@ subroutine test_fgmres_solve()
         ! x = [ 4]
         !     [-5]
         !
-        @assertEqual(3._rk,x%lvecs(1)%vec,tol)
-        @assertEqual(4._rk,x%lvecs(2)%vec,tol)
-        @assertEqual(-5._rk,x%lvecs(3)%vec,tol)
+        @assertEqual(3._rk,x%dom(1)%lvecs(1)%vec,tol)
+        @assertEqual(4._rk,x%dom(1)%lvecs(2)%vec,tol)
+        @assertEqual(-5._rk,x%dom(1)%lvecs(3)%vec,tol)
 
     end associate
 

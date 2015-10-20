@@ -37,26 +37,29 @@ contains
         type(point_t),  allocatable :: pts(:,:,:)
         
         
+        !
         ! Initialize ChiDG environment
+        !
         call this%chidg%init('env')
 
 
-        ! Read 3x3x3 element grid
-        !call read_grid_hdf('D1_E27_M1.h5', this%chidg%data)
+        !
+        ! Generate points for 3x3x3 element mesh
+        !
         call meshgen('333',pts)
 
 
-        ! Initialize domain numerics
-        !nterms_s = 8
-        !call this%chidg%data%domains(1)%init_sol('Scalar',nterms_s)
-
+        !
+        ! Add domain to ChiDG
+        !
         nterms_c = 8
         nterms_s = 8
         call this%chidg%data%add_domain('D_01',pts,nterms_c,'Scalar',nterms_s)
 
 
-
+        !
         ! Initialize blockvector
+        !
         call this%bvec%init(this%chidg%data%mesh(1))
     
     
@@ -221,37 +224,6 @@ contains
 
 
 
-
-
-
-! Test blockvector%lvecs_m matrix-view component of for accessing blockvector%lvecs 
-!@Test
-!    subroutine test_blockvector__init_lvecs_m(self)
-!        class(test_blockvector),    intent(inout)       :: self
-!
-!        integer(ik) :: ielem, ielem_xi, ielem_eta, ielem_zeta, parent
-!
-!
-!        ielem = 1
-!        do ielem_zeta = 1,self%domain(1)%mesh%nelem_zeta
-!            do ielem_eta = 1,self%domain(1)%mesh%nelem_eta
-!                do ielem_xi = 1,self%domain(1)%mesh%nelem_xi
-!
-!                    parent = self%domain(1)%mesh%elems_m(ielem_xi,ielem_eta,ielem_zeta)%ielem
-!
-!
-!                    @assertEqual(parent,self%bvec%lvecs(ielem)%parent())
-!
-!
-!                    ielem = ielem + 1
-!
-!                end do
-!            end do
-!        end do
-!
-!
-!    end subroutine
-!
 
 
 

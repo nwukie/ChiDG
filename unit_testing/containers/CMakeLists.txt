@@ -15,6 +15,7 @@ add_test_sources(containers
                 test_operator_block_mv.pf
                 test_rvector.pf
                 test_ivector.pf
+                test_chidgVector_operators_mod.pf
                 )
                
 add_test_target(containers unit ${containers_sources})

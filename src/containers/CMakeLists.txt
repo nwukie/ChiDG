@@ -14,5 +14,4 @@ add_lib_sources(
                 operator_chidg_dot.f90
                 operator_chidg_mv.f90
                 type_solverdata.f90
-                #mod_solverdata.f90
                 )

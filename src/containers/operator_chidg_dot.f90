@@ -1,5 +1,6 @@
 module operator_chidg_dot
     use mod_kinds,          only: rk, ik
+    use mod_constants,      only: ZERO
     
     use type_chidgVector,   only: chidgVector_t
     use operator_block_dot, only: block_dot
@@ -29,7 +30,7 @@ contains
         !
         ! Compute vector dot-product
         !
-        do idom = 1,size(self%dom)
+        do idom = 1,size(a%dom)
             
             res = res + block_dot(a%dom(idom),b%dom(idom))
 

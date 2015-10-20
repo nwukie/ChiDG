@@ -5,9 +5,8 @@ module type_fgmres
     use mod_inv,                only: inv
     use atype_matrixsolver,     only: matrixsolver_t 
     use type_preconditioner,    only: preconditioner_t
-    use type_blockmatrix,       only: blockmatrix_t
-    use type_densematrix,       only: densematrix_t
-    use type_blockvector
+    use type_chidgVector
+    use type_chidgMatrix
 
     !use operator_mv
     !use operator_dot,       only: dot
@@ -52,16 +51,15 @@ contains
     !--------------------------------------------------------------
     subroutine solve(self,A,x,b,M)
         class(fgmres_t),            intent(inout)               :: self
-        type(blockmatrix_t),        intent(inout)               :: A
-        type(blockvector_t),        intent(inout)               :: x
-        type(blockvector_t),        intent(inout)               :: b
+        type(chidgMatrix_t),        intent(inout)               :: A
+        type(chidgVector_t),        intent(inout)               :: x
+        type(chidgVector_t),        intent(inout)               :: b
         class(preconditioner_t),    intent(inout), optional     :: M
 
 
 
-        type(blockvector_t)                     :: r, r0, diff, xold, w, x0
-        type(blockvector_t), allocatable        :: v(:), z(:)
-        type(densematrix_t)                     :: D(size(x%lvecs))
+        type(chidgVector_t)                     :: r, r0, diff, xold, w, x0
+        type(chidgVector_t), allocatable        :: v(:), z(:)
         real(rk),            allocatable        :: h(:,:), h_square(:,:)
         real(rk),            allocatable        :: p(:), y(:), c(:), s(:), p_dim(:), y_dim(:)
         real(rk)                                :: pj, pjp, h_ij, h_ipj

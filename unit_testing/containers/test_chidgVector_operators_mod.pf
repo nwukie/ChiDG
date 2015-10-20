@@ -1,0 +1,136 @@
+module test_chidgVector_operators_mod
+    use pfunit_mod
+    use mod_kinds,          only: rk, ik
+    use mod_constants,      only: ONE, TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT
+    use type_chidg,         only: chidg_t
+    use type_point,         only: point_t
+    use mod_testutils,      only: meshgen
+
+    use type_chidgVector
+
+    implicit none
+
+    public :: test_chidgVector
+
+
+    @TestCase
+    type, extends(TestCase) :: test_chidgVector
+        type(chidg_t)       :: chidg
+
+        type(chidgVector_t) :: vec_a
+        type(chidgVector_t) :: vec_b
+
+    contains
+        procedure   :: setUp
+        procedure   :: tearDown
+    end type test_chidgVector
+
+
+contains
+
+
+    subroutine setUp(this)
+        class(test_chidgVector),    intent(inout)   :: this
+
+        type(point_t),  allocatable :: pts(:,:,:)
+        integer(ik)                 :: nterms_c, nterms_s
+
+
+        !
+        ! Initialize ChiDG environment
+        !
+        call this%chidg%init('env')
+
+
+        !
+        ! Generate points for 2x2x2 element mesh
+        !
+        call meshgen('222',pts)
+
+
+        !
+        ! Add domain to ChiDG
+        !
+        nterms_c = 8
+        nterms_s = 8
+        call this%chidg%data%add_domain('D_01',pts,nterms_c,'Scalar',nterms_s)
+
+
+        !
+        ! Initialize solution data containers
+        !
+        call this%vec_a%init(this%chidg%data%mesh)
+        call this%vec_b%init(this%chidg%data%mesh)
+
+
+
+        !
+        ! Set vector values
+        !
+        this%vec_a%dom(1)%lvecs(1)%vec = ONE
+        this%vec_a%dom(1)%lvecs(2)%vec = TWO
+        this%vec_a%dom(1)%lvecs(3)%vec = THREE
+        this%vec_a%dom(1)%lvecs(4)%vec = FOUR
+        this%vec_a%dom(1)%lvecs(5)%vec = FIVE
+        this%vec_a%dom(1)%lvecs(6)%vec = SIX
+        this%vec_a%dom(1)%lvecs(7)%vec = SEVEN
+        this%vec_a%dom(1)%lvecs(8)%vec = EIGHT
+
+
+        this%vec_b%dom(1)%lvecs(1)%vec = ONE
+        this%vec_b%dom(1)%lvecs(2)%vec = TWO
+        this%vec_b%dom(1)%lvecs(3)%vec = THREE
+        this%vec_b%dom(1)%lvecs(4)%vec = FOUR
+        this%vec_b%dom(1)%lvecs(5)%vec = FIVE
+        this%vec_b%dom(1)%lvecs(6)%vec = SIX
+        this%vec_b%dom(1)%lvecs(7)%vec = SEVEN
+        this%vec_b%dom(1)%lvecs(8)%vec = EIGHT
+
+
+    end subroutine
+
+
+
+    subroutine tearDown(this)
+        class(test_chidgVector),    intent(inout)   :: this
+
+    end subroutine
+
+
+
+
+
+    @Test
+    subroutine test_chidgVector__add(self)
+        class(test_chidgVector),    intent(inout)   :: self
+
+        type(chidgVector_t) :: res
+        
+
+        res = self%vec_a + self%vec_b
+
+        @assertEqual(TWO, res%dom(1)%lvecs(1)%vec)
+        @assertEqual(FOUR, res%dom(1)%lvecs(2)%vec)
+        @assertEqual(SIX, res%dom(1)%lvecs(3)%vec)
+        @assertEqual(EIGHT, res%dom(1)%lvecs(4)%vec)
+        @assertEqual(10._rk, res%dom(1)%lvecs(5)%vec)
+        @assertEqual(12._rk, res%dom(1)%lvecs(6)%vec)
+        @assertEqual(14._rk, res%dom(1)%lvecs(7)%vec)
+        @assertEqual(16._rk, res%dom(1)%lvecs(8)%vec)
+
+    end subroutine
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+end module test_chidgVector_operators_mod

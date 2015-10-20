@@ -5,7 +5,6 @@ module mod_tecio
     use mod_tecio_interface,    only: init_tecio_file, init_tecio_zone, finalize_tecio
 
     use type_element,           only: element_t
-    use type_domain,            only: domain_t
     use type_blockvector,       only: blockvector_t
     use type_solverdata,        only: solverdata_t
     use type_chidg_data,        only: chidg_data_t

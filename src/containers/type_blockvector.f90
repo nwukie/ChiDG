@@ -184,17 +184,6 @@ contains
 
 
 
-!    subroutine map(self)
-!        class(blockvector_t),   intent(inout), target   :: self
-!
-!        type(densevector_t), pointer :: temp(:)
-!
-!
-!        temp => self%lvecs
-!        self%lvecs_m(1:self%nelem_xi,1:self%nelem_eta,1:self%nelem_zeta) => temp(1:self%nelem)
-!
-!    end subroutine
-!
 
 
 
@@ -465,17 +454,23 @@ contains
 
 
     !------------------------------------------------------------------------
-    !-----------        OPERATOR IMPLEMENTATIONS        ---------------------
+    !
+    !                       OPERATOR IMPLEMENTATIONS
+    !
+    !------------------------------------------------------------------------
+
+
+    !> Multiply real * blockvector
+    !!
     !------------------------------------------------------------------------
     function mult_real_bv(left,right) result(res)
         real(rk),               intent(in)  :: left
         type(blockvector_t),    intent(in)  :: right
 
         type(blockvector_t), target     :: res
-        integer(ik)                     :: nelem_xi, nelem_eta, nelem_zeta, nelem
+        !integer(ik)                     :: nelem_xi, nelem_eta, nelem_zeta, nelem
 
-        !type(densevector_t), pointer    :: temp(:)
-        type(blockvector_t), pointer    :: temp
+        !type(blockvector_t), pointer    :: temp
 
         res%nelem_xi   = right%nelem_xi
         res%nelem_eta  = right%nelem_eta
@@ -487,28 +482,23 @@ contains
 
         res%lvecs = left * right%lvecs
 
-
-        !call res%map()
-        !temp => res%lvecs
-        !temp => res
-        !res%lvecs_m(1:nelem_xi, 1:nelem_eta, 1:nelem_zeta) => temp(1:nelem)
-        !res%lvecs_m(1:nelem_xi, 1:nelem_eta, 1:nelem_zeta) => temp
-        !res%lvecs_m(1:nelem_xi, 1:nelem_eta, 1:nelem_zeta) => temp%lvecs(1:nelem)
-        !res%lvecs_m(1:nelem_xi, 1:nelem_eta, 1:nelem_zeta) => res%lvecs(1:nelem)
     end function
 
 
 
 
+    !> Multiply blockvector * real
+    !!
+    !------------------------------------------------------------------------
     function mult_bv_real(left,right) result(res)
         type(blockvector_t),    intent(in)  :: left
         real(rk),               intent(in)  :: right
 
         type(blockvector_t), target     :: res
-        integer(ik)                     :: nelem_xi, nelem_eta, nelem_zeta, nelem
+        !integer(ik)                     :: nelem_xi, nelem_eta, nelem_zeta, nelem
 
 
-        type(densevector_t), pointer    :: temp(:)
+        !type(densevector_t), pointer    :: temp(:)
 
 
         res%nelem_xi   = left%nelem_xi
@@ -521,32 +511,24 @@ contains
 
         res%lvecs = left%lvecs * right
 
-        !temp => res%lvecs
-        !res%lvecs_m(1:nelem_xi, 1:nelem_eta, 1:nelem_zeta) => temp(1:nelem)
     end function
 
 
 
 
 
-
-
-
-
-
-
-
-
-
+    !> Divide real / blockvector
+    !!
+    !------------------------------------------------------------------------
     function div_real_bv(left,right) result(res)
         real(rk),               intent(in)  :: left
         type(blockvector_t),    intent(in)  :: right
 
         type(blockvector_t), target     :: res
-        integer(ik)                     :: nelem_xi, nelem_eta, nelem_zeta, nelem
+        !integer(ik)                     :: nelem_xi, nelem_eta, nelem_zeta, nelem
 
 
-        type(densevector_t), pointer    :: temp(:)
+        !type(densevector_t), pointer    :: temp(:)
 
 
         res%nelem_xi   = right%nelem_xi
@@ -559,22 +541,23 @@ contains
 
         res%lvecs = left / right%lvecs
 
-        !temp => res%lvecs
-        !res%lvecs_m(1:nelem_xi, 1:nelem_eta, 1:nelem_zeta) => temp(1:nelem)
     end function
 
 
 
 
+    !> Divide blockvector / real
+    !!
+    !------------------------------------------------------------------------
     function div_bv_real(left,right) result(res)
         type(blockvector_t),    intent(in)  :: left
         real(rk),               intent(in)  :: right
 
         type(blockvector_t), target     :: res
-        integer(ik)                     :: nelem_xi, nelem_eta, nelem_zeta, nelem
+        !integer(ik)                     :: nelem_xi, nelem_eta, nelem_zeta, nelem
 
 
-        type(densevector_t), pointer    :: temp(:)
+        !type(densevector_t), pointer    :: temp(:)
 
 
         res%nelem_xi   = left%nelem_xi
@@ -587,8 +570,6 @@ contains
 
         res%lvecs = left%lvecs / right
 
-        !temp => res%lvecs
-        !res%lvecs_m(1:nelem_xi, 1:nelem_eta, 1:nelem_zeta) => temp(1:nelem)
     end function
 
 
@@ -596,26 +577,18 @@ contains
 
 
 
-
-
-
-
-
-
-
-
-
-
-
+    !> Add blockvector + blockvector
+    !!
+    !------------------------------------------------------------------------
     function add_bv_bv(left,right) result(res)
         type(blockvector_t),  intent(in)  :: left
         type(blockvector_t),  intent(in)  :: right
 
         type(blockvector_t), target     :: res
-        integer(ik)                     :: nelem_xi, nelem_eta, nelem_zeta, nelem
+        !integer(ik)                     :: nelem_xi, nelem_eta, nelem_zeta, nelem
 
 
-        type(densevector_t), pointer    :: temp(:)
+        !type(densevector_t), pointer    :: temp(:)
 
 
         res%nelem_xi   = right%nelem_xi
@@ -627,22 +600,24 @@ contains
 
         res%lvecs = left%lvecs + right%lvecs
 
-        !temp => res%lvecs
-        !res%lvecs_m(1:nelem_xi, 1:nelem_eta, 1:nelem_zeta) => temp(1:nelem)
     end function
 
 
 
 
+
+    !> Add blockvector - blockvector
+    !!
+    !------------------------------------------------------------------------
     function sub_bv_bv(left,right) result(res)
         type(blockvector_t),  intent(in)  :: left
         type(blockvector_t),  intent(in)  :: right
 
         type(blockvector_t), target     :: res
-        integer(ik)                     :: nelem_xi, nelem_eta, nelem_zeta, nelem
+        !integer(ik)                     :: nelem_xi, nelem_eta, nelem_zeta, nelem
 
 
-        type(densevector_t), pointer    :: temp(:)
+        !type(densevector_t), pointer    :: temp(:)
 
 
         res%nelem_xi   = right%nelem_xi
@@ -654,20 +629,7 @@ contains
 
         res%lvecs = left%lvecs - right%lvecs
 
-        !temp => res%lvecs
-        !res%lvecs_m(1:nelem_xi, 1:nelem_eta, 1:nelem_zeta) => temp(1:nelem)
     end function
-
-
-!
-!    subroutine assignVector(left,right)
-!        type(blockvector_t),    intent(out) :: left
-!        type(blockvector_t),    intent(in)  :: right
-!
-!
-!    end subroutine
-
-
 
 
 

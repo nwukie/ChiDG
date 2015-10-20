@@ -4,9 +4,10 @@ module atype_matrixsolver
    ! use type_blockmatrix,   only: blockmatrix_t
    ! use type_blockvector
     use type_chidgMatrix,   only: chidgMatrix_t
-    use type_chidgVector,   only: chidgVector_t
+    use type_chidgVector
     use type_timer,         only: timer_t
-    use operator_mv
+    !use operator_mv
+    use operator_chidg_mv
 
     implicit none
     
@@ -212,7 +213,7 @@ contains
         type(chidgVector_t),    intent(inout)   :: b
 
 
-        type(blockvector_t) :: r
+        type(chidgVector_t) :: r
         real(rk)            :: err
 
 

@@ -25,15 +25,14 @@ if (Fortran_COMPILER_NAME MATCHES "ifort.*")
 
 elseif(Fortran_COMPILER_NAME MATCHES "gfortran.*")
 
-    set (COMPILE_FLAGS_plot3dtohdf5_DEBUG "-O3 -fcray-pointer -ffree-form -ffree-line-length-none -cpp")
-    set (COMPILE_FLAGS_plot3dtohdf5_RELEASE "")
+    set (COMPILE_FLAGS_plot3dtohdf5_DEBUG "-O0 -fcray-pointer -ffree-form -ffree-line-length-none -cpp")
+    set (COMPILE_FLAGS_plot3dtohdf5_RELEASE "-O3 -fcray-pointer -ffree-form -ffree-line-length-none -cpp")
     set (LINK_FLAGS_plot3dtohdf5_DEBUG "")
     set (LINK_FLAGS_plot3dtohdf5_RELEASE "")
 endif()
 
 
 
-#add_executable(plot3d_to_hdf5 plot3d_to_hdf5.f90 ../constants/mod_kinds.f90)
 add_executable(plot3d_to_hdf5 plot3d_to_hdf5.f90)
 target_link_libraries(plot3d_to_hdf5 coredg ${HDF5_LIBRARIES})
 set_target_properties(plot3d_to_hdf5 PROPERTIES 

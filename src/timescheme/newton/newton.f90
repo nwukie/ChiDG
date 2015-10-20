@@ -5,7 +5,8 @@ module newton
     use type_chidg_data,        only: chidg_data_t
     use atype_matrixsolver,     only: matrixsolver_t
     use type_preconditioner,    only: preconditioner_t
-    use type_blockvector
+    !use type_blockvector
+    use type_chidgVector
 
     use mod_spatial,    only: update_space
 
@@ -59,7 +60,6 @@ contains
     !!
     !!
     !-------------------------------------------------------------------------------------------------
-    !subroutine solve(self,domains,matrixsolver,preconditioner)
     subroutine solve(self,data,matrixsolver,preconditioner)
         class(newton_t),                    intent(inout)   :: self
         type(chidg_data_t),                 intent(inout)   :: data
@@ -71,7 +71,7 @@ contains
         integer(ik)             :: rstart, rend, cstart, cend, nterms
         real(rk)                :: resid, timing
         real(rk), allocatable   :: vals(:)
-        type(blockvector_t)     :: b, qn, qold, qnew
+        type(chidgVector_t)     :: b, qn, qold, qnew
       
 
         real(rk)                :: entropy_error
@@ -80,7 +80,7 @@ contains
 
 
         wcount = 1
-        associate ( q => domain%sdata%q, dq => domain%sdata%dq, rhs => domain%sdata%rhs, lhs => domain%sdata%lhs)
+        associate ( q => data%sdata%q, dq => data%sdata%dq, rhs => data%sdata%rhs, lhs => data%sdata%lhs)
 
             print*, 'Entering time'
             !
@@ -114,7 +114,7 @@ contains
                 !
                 ! Update Spatial Residual and Linearization (rhs, lin)
                 !
-                call update_space(domain,timing)
+                call update_space(data,timing)
                 call self%residual_time%push_back(timing)   ! non-essential record-keeping
 
                 resid = rhs%norm()
@@ -143,7 +143,7 @@ contains
                 !
                 !call matrixsolver%solve(lin,dq,b,preconditioner)
 
-                call matrixsolver%solve(domains,preconditioner)
+                call matrixsolver%solve(lhs,dq,b,preconditioner)
 
                 call self%matrix_iterations%push_back(matrixsolver%niter)       ! non-essential record-keeping
                 call self%matrix_time%push_back(matrixsolver%timer%elapsed())   ! non-essential record-keeping
@@ -182,7 +182,7 @@ contains
                 !
                 if (wcount == self%nwrite) then
                     write(filename, "(I7,A4)") 1000000+niter, '.plt'
-                    call write_tecio_variables(domain,trim(filename),niter+1)
+                    call write_tecio_variables(data,trim(filename),niter+1)
                     wcount = 0
                 end if
                 wcount = wcount + 1
@@ -200,15 +200,6 @@ contains
 
 
 
-
-            !
-            ! Write final solution
-            !
-            !write(filename, "(I7,A4)") 1000000+niter, '.plt'
-            !call write_tecio_variables(domain,trim(filename),niter+1)
-
-
-
         end associate
 
 
@@ -219,8 +210,8 @@ contains
         call self%newton_iterations%push_back(niter)
 
 
-        entropy_error = compute_entropy_error(domain) 
-        print*, 'Entropy error: ', entropy_error
+        !entropy_error = compute_entropy_error(domain) 
+        !print*, 'Entropy error: ', entropy_error
     end subroutine solve
 
 

@@ -1,7 +1,7 @@
 module operator_chidg_mv
     use mod_kinds,          only: rk, ik
     use type_chidgMatrix,   only: chidgMatrix_t
-    use type_chidgVector,   only: chidgVector_t
+    use type_chidgVector
     implicit none
 
 
@@ -23,7 +23,7 @@ contains
     !!
     !!
     !------------------------------------------------------------------------------------
-    function MULT_chidgMatrix_chidgVector(A,x) results(res)
+    function MULT_chidgMatrix_chidgVector(A,x) result(res)
         type(chidgMatrix_t),    intent(in)  :: A
         type(chidgVector_t),    intent(in)  :: x
 

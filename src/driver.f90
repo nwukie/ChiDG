@@ -43,14 +43,12 @@ program driver
     call chidg%init('env')
     call chidg%init('io')
 
-    print*, 'driver - 1'
 
     !
     ! Read grid data from file
     !
     call read_grid_hdf(gridfile,meshdata)
 
-    print*, 'driver - 2'
 
     !
     ! Add domains to ChiDG
@@ -59,7 +57,6 @@ program driver
     do idom = 1,ndomains
         call chidg%data%add_domain(trim(meshdata(idom)%name),meshdata(idom)%points,meshdata(idom)%nterms_c,eqnset,nterms_s)
     end do
-    print*, 'driver - 3'
 
     !
     ! Initialize solution data storage
@@ -67,7 +64,6 @@ program driver
     call chidg%data%init_sdata()
 
 
-    print*, 'driver - 4'
     !
     ! Set time-scheme options
     !
@@ -77,7 +73,6 @@ program driver
     call toptions%set('nwrite',nwrite)
     call toptions%set('cfl0',cfl0)
 
-    print*, 'driver - 5'
     !
     ! Set ChiDG components
     !
@@ -85,7 +80,6 @@ program driver
     call chidg%set('matrixsolver',matrixsolver)
     call chidg%set('preconditioner',preconditioner)
 
-    print*, 'driver - 6'
 
 
     do idom = 1,chidg%data%ndomains
@@ -100,7 +94,6 @@ program driver
         call data%add_bc('D_01','euler_wall',ZETA_MIN)
         call data%add_bc('D_01','euler_wall',ZETA_MAX)
 
-    print*, 'driver - 7'
 
         !
         ! Initialize solution
@@ -110,7 +103,6 @@ program driver
         call create_function(roe,'roe_check') 
 
     
-    print*, 'driver - 8'
         ! rho
         call constant%set('val',1.13262_rk)
         call initialize_variable(chidg%data,1,constant)
@@ -130,12 +122,10 @@ program driver
         ! rho_E
         call constant%set('val',248493.425_rk)
         call initialize_variable(chidg%data,5,constant)
-    print*, 'driver - 9'
 
     end associate
     end do 
 
-    print*, 'driver - 10'
     !
     ! Write initial solution
     !
@@ -145,7 +135,6 @@ program driver
 
 
 
-    print*, 'driver - 11'
     
 
     !
@@ -153,7 +142,6 @@ program driver
     !
     call chidg%init('finalize')
 
-    print*, 'driver - 12'
 
 
 
@@ -164,7 +152,6 @@ program driver
     call chidg%run()
 
 
-    print*, 'driver - 13'
 
 
 
@@ -174,7 +161,6 @@ program driver
     call chidg%report()
 
 
-    print*, 'driver - 14'
 
     !
     ! Write final solution

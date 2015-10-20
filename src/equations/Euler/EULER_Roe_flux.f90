@@ -4,15 +4,15 @@ module EULER_Roe_flux
                                       XI_MIN,XI_MAX,ETA_MIN,ETA_MAX,ZETA_MIN,ZETA_MAX,ZERO
 
     use atype_boundary_flux,    only: boundary_flux_t
-    use atype_equationset,      only: equationset_t
     use type_mesh,              only: mesh_t
-    use atype_solverdata,       only: solverdata_t
-    use mod_interpolate,        only: interpolate
-    use mod_integrate,          only: integrate_volume_flux, integrate_boundary_flux, integrate_boundary_scalar_flux
+    use type_solverdata,        only: solverdata_t
+    use type_properties,        only: properties_t
+
+    use mod_interpolate,        only: interpolate_face
+    use mod_integrate,          only: integrate_boundary_scalar_flux
     use mod_DNAD_tools,         only: compute_neighbor_face, compute_seed_element
     use DNAD_D
 
-    use type_properties,        only: properties_t
     use EULER_properties,       only: EULER_properties_t
     implicit none
 
@@ -57,12 +57,13 @@ contains
     !   @author Nathan A. Wukie
     !
     !---------------------------------------------------------------------------
-    subroutine compute(self,mesh,sdata,ielem,iface,iblk,prop)
-        class(EULER_Roe_flux_t),  intent(in)      :: self
-        class(mesh_t),                      intent(in)      :: mesh
-        class(solverdata_t),                intent(inout)   :: sdata
-        integer(ik),                        intent(in)      :: ielem, iface, iblk
+    subroutine compute(self,mesh,sdata,prop,idom,ielem,iface,iblk,idonor)
+        class(EULER_Roe_flux_t),            intent(in)      :: self
+        type(mesh_t),                       intent(in)      :: mesh(:)
+        type(solverdata_t),                 intent(inout)   :: sdata
         class(properties_t),                intent(inout)   :: prop
+        integer(ik),                        intent(in)      :: idom, ielem, iface, iblk
+        integer(ik),                        intent(in)      :: idonor
 
         ! Equation indices
         integer(ik)     :: irho
@@ -71,11 +72,11 @@ contains
         integer(ik)     :: irhow
         integer(ik)     :: irhoe
 
-        integer(ik)     :: iseed, iface_p, ineighbor, i
+        integer(ik)     :: iseed, iface_p, ineighbor, idom_n
         real(rk)        :: eps
 
         ! Storage at quadrature nodes
-        type(AD_D), dimension(mesh%faces(ielem,iface)%gq%face%nnodes)    :: &
+        type(AD_D), dimension(mesh(idom)%faces(ielem,iface)%gq%face%nnodes)    :: &
                         rho_m,      rho_p,                                  &
                         rhou_m,     rhou_p,                                 &
                         rhov_m,     rhov_p,                                 &
@@ -108,28 +109,29 @@ contains
 
         ! Get neighbor face and seed element for derivatives
         iface_p   = compute_neighbor_face(iface)
-        iseed     = compute_seed_element(mesh,ielem,iblk)
-        ineighbor = mesh%faces(ielem,iface)%ineighbor
+        iseed     = compute_seed_element(mesh,idom,ielem,iblk)
+        ineighbor = mesh(idom)%faces(ielem,iface)%ineighbor
+        idom_n    = idom
 
-        associate (norms => mesh%faces(ielem,iface)%norm, unorms=> mesh%faces(ielem,iface)%unorm, faces => mesh%faces, q => sdata%q)
+        associate (norms => mesh(idom)%faces(ielem,iface)%norm, unorms=> mesh(idom)%faces(ielem,iface)%unorm, faces => mesh(idom)%faces, q => sdata%q)
 
             !
             ! Interpolate solution to quadrature nodes
             !
-            call interpolate(faces,q,ielem,    iface,  irho,rho_m,iseed)
-            call interpolate(faces,q,ineighbor,iface_p,irho,rho_p,iseed)
+            call interpolate_face(mesh,q,idom,   ielem,    iface,  irho,rho_m,iseed)
+            call interpolate_face(mesh,q,idom_n, ineighbor,iface_p,irho,rho_p,iseed)
 
-            call interpolate(faces,q,ielem,    iface,  irhou,rhou_m,iseed)
-            call interpolate(faces,q,ineighbor,iface_p,irhou,rhou_p,iseed)
+            call interpolate_face(mesh,q,idom,   ielem,    iface,  irhou,rhou_m,iseed)
+            call interpolate_face(mesh,q,idom_n, ineighbor,iface_p,irhou,rhou_p,iseed)
 
-            call interpolate(faces,q,ielem,    iface,  irhov,rhov_m,iseed)
-            call interpolate(faces,q,ineighbor,iface_p,irhov,rhov_p,iseed)
+            call interpolate_face(mesh,q,idom,   ielem,    iface,  irhov,rhov_m,iseed)
+            call interpolate_face(mesh,q,idom_n, ineighbor,iface_p,irhov,rhov_p,iseed)
 
-            call interpolate(faces,q,ielem,    iface,  irhow,rhow_m,iseed)
-            call interpolate(faces,q,ineighbor,iface_p,irhow,rhow_p,iseed)
+            call interpolate_face(mesh,q,idom,   ielem,    iface,  irhow,rhow_m,iseed)
+            call interpolate_face(mesh,q,idom_n, ineighbor,iface_p,irhow,rhow_p,iseed)
 
-            call interpolate(faces,q,ielem,    iface,  irhoE,rhoE_m,iseed)
-            call interpolate(faces,q,ineighbor,iface_p,irhoE,rhoE_p,iseed)
+            call interpolate_face(mesh,q,idom,   ielem,    iface,  irhoE,rhoE_m,iseed)
+            call interpolate_face(mesh,q,idom_n, ineighbor,iface_p,irhoE,rhoE_p,iseed)
 
 
             !
@@ -157,7 +159,6 @@ contains
             u_p = rhou_p/rho_p
             v_p = rhov_p/rho_p
             w_p = rhow_p/rho_p
-            !vmag_p = u_p*(-unorms(:,1)) + v_p*(-unorms(:,2)) + w_p*(-unorms(:,3))
             vmag_p = u_p*(unorms(:,1)) + v_p*(unorms(:,2)) + w_p*(unorms(:,3))
 
             !
@@ -196,10 +197,6 @@ contains
             C2_a = abs(vmagtil)*(delr - delp/(ctil2))
             C2_b = abs(vmagtil)*rtil
             C3   = abs(vmagtil + ctil)*( delp + rtil*ctil*delvmag)/(TWO*(ctil2))
-            !C1   = (vmagtil - ctil)*( delp - rtil*ctil*delvmag)/(TWO*(ctil**TWO))
-            !C2_a = (vmagtil)*(delr - delp/(ctil**TWO))
-            !C2_b = (vmagtil)*rtil
-            !C3   = (vmagtil + ctil)*( delp + rtil*ctil*delvmag)/(TWO*(ctil**TWO))
 
 
             flux = delr
@@ -211,11 +208,9 @@ contains
             !================================
             upwind = C1 + C2_a + C3
 
-            !flux = -HALF*(upwind*abs(norms(:,1)) + upwind*abs(norms(:,2)) + upwind*abs(norms(:,3)))
             flux = HALF*(upwind*norms(:,1)*unorms(:,1) + upwind*norms(:,2)*unorms(:,2) + upwind*norms(:,3)*unorms(:,3))
-            !flux = ZERO
 
-            call integrate_boundary_scalar_flux(mesh%faces(ielem,iface),sdata,irho,iblk,flux)
+            call integrate_boundary_scalar_flux(mesh(idom)%faces(ielem,iface),sdata,idom,irho,iblk,flux)
 
 
             !================================
@@ -223,11 +218,9 @@ contains
             !================================
             upwind = C1*(util - ctil*unorms(:,1))  +  C2_a*util  +  C2_b*(delu - delvmag*unorms(:,1))  +  C3*(util + ctil*unorms(:,1))
 
-            !flux = -HALF*(upwind*norms(:,1) + upwind*norms(:,2) + upwind*norms(:,3))
             flux = HALF*(upwind*norms(:,1)*unorms(:,1) + upwind*norms(:,2)*unorms(:,2) + upwind*norms(:,3)*unorms(:,3))
-            !flux = ZERO
 
-            call integrate_boundary_scalar_flux(mesh%faces(ielem,iface),sdata,irhou,iblk,flux)
+            call integrate_boundary_scalar_flux(mesh(idom)%faces(ielem,iface),sdata,idom,irhou,iblk,flux)
 
 
             !================================
@@ -235,33 +228,27 @@ contains
             !================================
             upwind = C1*(vtil - ctil*unorms(:,2))  +  C2_a*vtil  +  C2_b*(delv - delvmag*unorms(:,2))  +  C3*(vtil + ctil*unorms(:,2))
 
-            !flux = -HALF*(upwind*norms(:,1) + upwind*norms(:,2) + upwind*norms(:,3))
             flux = HALF*(upwind*norms(:,1)*unorms(:,1) + upwind*norms(:,2)*unorms(:,2) + upwind*norms(:,3)*unorms(:,3))
-            !flux = ZERO
 
-            call integrate_boundary_scalar_flux(mesh%faces(ielem,iface),sdata,irhov,iblk,flux)
+            call integrate_boundary_scalar_flux(mesh(idom)%faces(ielem,iface),sdata,idom,irhov,iblk,flux)
 
             !================================
             !       Z-MOMENTUM FLUX
             !================================
             upwind = C1*(wtil - ctil*unorms(:,3))  +  C2_a*wtil  +  C2_b*(delw - delvmag*unorms(:,3))  +  C3*(wtil + ctil*unorms(:,3))
 
-            !flux = -HALF*(upwind*norms(:,1) + upwind*norms(:,2) + upwind*norms(:,3))
             flux = HALF*(upwind*norms(:,1)*unorms(:,1) + upwind*norms(:,2)*unorms(:,2) + upwind*norms(:,3)*unorms(:,3))
-            !flux = ZERO
 
-            call integrate_boundary_scalar_flux(mesh%faces(ielem,iface),sdata,irhow,iblk,flux)
+            call integrate_boundary_scalar_flux(mesh(idom)%faces(ielem,iface),sdata,idom,irhow,iblk,flux)
 
             !================================
             !          ENERGY FLUX
             !================================
             upwind = C1*(Htil - ctil*vmagtil)  +  C2_a*(qtil2/TWO)  +  C2_b*(util*delu + vtil*delv + wtil*delw - vmagtil*delvmag)  +  C3*(Htil + ctil*vmagtil)
 
-            !flux = -HALF*(upwind*norms(:,1) + upwind*norms(:,2) + upwind*norms(:,3))
             flux = HALF*(upwind*norms(:,1)*unorms(:,1) + upwind*norms(:,2)*unorms(:,2) + upwind*norms(:,3)*unorms(:,3))
-            !flux = ZERO
 
-            call integrate_boundary_scalar_flux(mesh%faces(ielem,iface),sdata,irhoE,iblk,flux)
+            call integrate_boundary_scalar_flux(mesh(idom)%faces(ielem,iface),sdata,idom,irhoE,iblk,flux)
 
         end associate
 

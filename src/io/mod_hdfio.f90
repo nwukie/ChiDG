@@ -1,10 +1,11 @@
 module mod_hdfio
 #include <messenger.h>
-    use mod_kinds,      only: rk,ik
-    use type_point,     only: point_t
-    use type_chidgData, only: chidgData_t
+    use mod_kinds,          only: rk,ik
+    use type_meshdata,      only: meshdata_t
+    use type_chidg_data,    only: chidg_data_t
     use hdf5
     use h5lt
+    use mod_io, only: nterms_s, eqnset
     implicit none
 
 
@@ -22,22 +23,22 @@ contains
     !!  @param[in]      filename    Character string of the file to be read
     !!  @param[inout]   domains     Allocatable array of domains. Allocated in this routine.
     !------------------------------------------------------------------------------------------
-    subroutine read_grid_hdf(filename, data)
-        character(*),                   intent(in)    :: filename
-        type(chidgData_t),              intent(inout) :: data
+    subroutine read_grid_hdf(filename, meshdata)
+        use mod_io, only: nterms_s
+        character(*),                   intent(in)      :: filename
+        type(meshdata_t), allocatable,  intent(inout)   :: meshdata(:)
 
         integer(HID_T)   :: fid, gid, sid, did_x, did_y, did_z      ! Identifiers
         integer(HSIZE_T) :: dims(3), maxdims(3)                     ! Dataspace dimensions
 
         type(c_ptr)                                     :: pts
-        type(point_t), allocatable                      :: points(:,:,:)
         real(rk), dimension(:,:,:), allocatable, target :: xpts, ypts, zpts
         type(c_ptr)                                     :: cp_pts
 
         character(10)                           :: gname
         integer                                 :: nmembers, type, ierr, ndomains, igrp,    &
                                                    npts, izeta, ieta, ixi, idom, nterms_1d, &
-                                                   nterms_c, mapping
+                                                   mapping, nterms_c
         integer, dimension(1)                   :: buf
         logical                                 :: FileExists
 
@@ -70,12 +71,9 @@ contains
 
 
         !  Allocate number of domains
-        if (ndomains == 0) then
-            call signal(FATAL,'read_hdf5: No Domains were found in the file')
-        else
-            allocate(data%domains(ndomains), stat=ierr)
-            if (ierr /= 0) call AllocationError
-        end if
+        if (ndomains == 0) call signal(FATAL,'read_hdf5: No Domains were found in the file')
+        allocate(meshdata(ndomains), stat=ierr)
+        if (ierr /= 0) call AllocationError
 
 
 
@@ -96,12 +94,15 @@ contains
                 if (ierr /= 0) stop "Error: read_grid_hdf5 -- h5gopen_f: Domain/Grid group did not open properly"
 
 
-                !  Get number of terms
+                !  Get number of terms in coordinate expansion
                 call h5ltget_attribute_int_f(fid, "/", 'mapping', buf, ierr)
                 mapping = buf(1)
                 if (ierr /= 0) stop "Error: read_grid_hdf5 - h5ltget_attribute_int_f"
                 nterms_1d = (mapping + 1)
                 nterms_c = nterms_1d * nterms_1d * nterms_1d
+
+                meshdata(idom)%nterms_c = nterms_c
+                meshdata(idom)%name     = gname
 
 
                 !  Open the Coordinate datasets
@@ -138,20 +139,23 @@ contains
 
                 !  Accumulate pts into a single points_t matrix to initialize domain
                 npts = dims(1)*dims(2)*dims(3)
-                allocate(points(dims(1),dims(2),dims(3)), stat=ierr)
+                allocate(meshdata(idom)%points(dims(1),dims(2),dims(3)), stat=ierr)
                 if (ierr /= 0) call AllocationError
                     
                 do izeta = 1,dims(3)
                     do ieta = 1,dims(2)
                         do ixi = 1,dims(1)
-                            call points(ixi,ieta,izeta)%set(xpts(ixi,ieta,izeta),ypts(ixi,ieta,izeta),zpts(ixi,ieta,izeta))
+                            call meshdata(idom)%points(ixi,ieta,izeta)%set(xpts(ixi,ieta,izeta),ypts(ixi,ieta,izeta),zpts(ixi,ieta,izeta))
                         end do
                     end do
                 end do
 
 
-                ! Call domain geometry initialization
-                call data%domains(idom)%init_geom(idom,nterms_c,points)
+                ! Read equation set attribute
+!                call h5ltget_attribute_string_f(fid,trim(gname),'EquationSet',eqnset,ierr)
+!                if (ierr /= 0) stop "Error: read_grid_hdf5: h5ltget_attribute_string_f -- EquationSet"
+
+
 
 
                 ! Close the Coordinate datasets
@@ -168,7 +172,7 @@ contains
                 call h5gclose_f(gid,ierr)
 
                 ! Deallocate points for the current domain
-                deallocate(zpts,ypts,xpts,points)
+                deallocate(zpts,ypts,xpts)
                 idom = idom + 1
             end if
         end do
@@ -202,10 +206,10 @@ contains
     !-----------------------------------------------------------------------------------------------------------
     subroutine read_var_hdf(filename,cvar,time,data)
         use ISO_C_BINDING
-        character(*),   intent(in)      :: filename
-        character(*),   intent(in)      :: cvar
-        integer(ik),    intent(in)      :: time
-        type(chidgData_t), intent(inout)   :: data
+        character(*),       intent(in)      :: filename
+        character(*),       intent(in)      :: cvar
+        integer(ik),        intent(in)      :: time
+        type(chidg_data_t), intent(inout)   :: data
 
 
         integer(HID_T)   :: fid, gid, sid, vid          !> Identifiers
@@ -256,7 +260,7 @@ contains
         call h5ltget_attribute_int_f(fid, "/", 'ndomains', ibuf, ierr)
         ndomains = ibuf(1)
         if (ierr /= 0) stop "Error: read_var_hdf5 - h5ltget_attribute_int_f"
-        if (ndomains /= size(data%domains)) stop "Error: read_var_hdf5 - number of domains in file and passed domain list to not match"
+        if (ndomains /= data%ndomains) stop "Error: read_var_hdf5 - number of domains in file and passed domain list to not match"
 
         !
         !  Get number of groups in the file root
@@ -301,9 +305,9 @@ contains
                 !
                 ! Initialize numerics if they are NOT already initialized
                 !
-                if (.not. data%domains(idom)%numInitialized) then
-                    call data%domains(idom)%init_sol(eqnstring,nterms_s)
-                end if
+                !if (.not. data%domains(idom)%numInitialized) then
+                !    call data%domains(idom)%init_sol(eqnstring,nterms_s)
+                !end if
 
                 
                 !
@@ -333,18 +337,17 @@ contains
                 !
                 !  Get variable index in EquationSet
                 !
-                ivar = data%domains(idom)%eqnset%prop%get_eqn_index(trim(cvar))
+                ivar = data%eqnset(idom)%item%prop%get_eqn_index(trim(cvar))
 
 
                 !
                 !  Test to make sure the number of elements in the variable group
                 !  and the current domain are conforming
                 !
-                !ElementsEqual = (size(domains(idom)%sdata%q%lvecs) == size(var,2))
                 ElementsEqual = (size(data%sdata%q%dom(idom)%lvecs) == size(var,2))
                 if (ElementsEqual) then
                     !  Loop through elements and assign 'variable' values
-                    do ielem = 1,data%domains(idom)%mesh%nelem
+                    do ielem = 1,data%mesh(idom)%nelem
                         call data%sdata%q%dom(idom)%lvecs(ielem)%setvar(ivar,var(:,ielem))
                     end do
                 else
@@ -393,12 +396,12 @@ contains
         character(*),       intent(in)      :: filename
         character(*),       intent(in)      :: cvar
         integer(ik),        intent(in)      :: time
-        type(chidgData_t),  intent(inout)   :: data
+        type(chidg_data_t), intent(inout)   :: data
 
 
-        integer(HID_T)   :: fid, gid, sid, did           !> Identifiers
-        integer(HSIZE_T) :: dims(2), maxdims(2), adim    !> Dataspace dimensions
-        type(H5O_INFO_T) :: info                         !> Object info type
+        integer(HID_T)   :: fid, gid, sid, did           ! Identifiers
+        integer(HSIZE_T) :: dims(2), maxdims(2), adim    ! Dataspace dimensions
+        type(H5O_INFO_T) :: info                         ! Object info type
 
         integer                         :: ndims
         integer, dimension(1)           :: ibuf
@@ -445,7 +448,7 @@ contains
         call h5ltget_attribute_int_f(fid, "/", 'ndomains', ibuf, ierr)
         ndomains = ibuf(1)
         if (ierr /= 0) stop "Error: write_var_hdf5 - h5ltget_attribute_int_f"
-        if (ndomains /= size(data%domains)) stop "Error: write_var_hdf5 - number of domains in file and passed domain list to not match"
+        if (ndomains /= data%ndomains) stop "Error: write_var_hdf5 - number of domains in file and passed domain list to not match"
 
 
         !
@@ -466,7 +469,7 @@ contains
                 !
                 ! Get EquationSet
                 !
-                cbuf = data%domains(idom)%eqnset%name
+                cbuf = data%eqnset(idom)%item%name
                 call h5ltset_attribute_string_f(fid, trim(gname), 'EquationSet', cbuf, ierr)
                 if (ierr /= 0) stop "Error: write_var_hdf5 - h5ltset_attribute_string_f"
 
@@ -494,7 +497,7 @@ contains
                 ! Set number of terms in solution expansion
                 !
                 adim = 1
-                ibuf = data%domains(idom)%mesh%nterms_s
+                ibuf = data%mesh(idom)%nterms_s
                 call h5ltset_attribute_int_f(gid, "/", 'Order', ibuf, adim, ierr)
                 if (ierr /= 0) stop "Error: write_var_hdf5 - h5ltset_attribute_int_f"
 
@@ -510,8 +513,8 @@ contains
                 ! Set dimensions of dataspace to write
                 !
                 ndims = 2
-                dims(1) = data%domains(idom)%mesh%nterms_s
-                dims(2) = data%domains(idom)%mesh%nelem
+                dims(1) = data%mesh(idom)%nterms_s
+                dims(2) = data%mesh(idom)%nelem
                 maxdims(1) = H5S_UNLIMITED_F
                 maxdims(2) = H5S_UNLIMITED_F
 
@@ -549,15 +552,13 @@ contains
                 !
                 ! Get variable integer index from variable character string
                 !
-                ivar = data%domains(idom)%eqnset%prop%get_eqn_index(cvar)
+                ivar = data%eqnset(idom)%item%prop%get_eqn_index(cvar)
 
                 !
                 ! Assemble variable buffer matrix
                 !
                 allocate(var(dims(1),dims(2)))
-                do ielem = 1,data%domains(idom)%mesh%nelem
-                        !var(:,ielem) = Domains(idom)%sdata%q%lvecs(ielem)%var(ivar)
-                        !var(:,ielem) = Domains(idom)%sdata%q%lvecs(ielem)%getvar(ivar)
+                do ielem = 1,data%mesh(idom)%nelem
                         var(:,ielem) = data%sdata%q%dom(idom)%lvecs(ielem)%getvar(ivar)
                 end do
 

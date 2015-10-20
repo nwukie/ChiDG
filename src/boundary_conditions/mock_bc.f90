@@ -1,6 +1,6 @@
 module mock_bc
     use mod_kinds,          only: rk, ik
-    use atype_bc,           only: bc_t
+    use type_bc,            only: bc_t
     use type_mesh,          only: mesh_t
     use type_solverdata,    only: solverdata_t
     use type_properties,    only: properties_t
@@ -20,16 +20,16 @@ module mock_bc
 
 contains
 
-    !> Specialized boundary condition compute procedure.
-    subroutine compute(self,mesh,sdata,idom,ielem,iface,iblk,prop)
+    ! Specialized boundary condition compute procedure.
+    subroutine compute(self,mesh,sdata,prop,idom,ielem,iface,iblk)
             class(bc_m),            intent(inout)   :: self
             type(mesh_t),           intent(in)      :: mesh(:)
-            class(solverdata_t),    intent(inout)   :: sdata
+            type(solverdata_t),     intent(inout)   :: sdata
+            class(properties_t),    intent(inout)   :: prop
             integer(ik),            intent(in)      :: idom
             integer(ik),            intent(in)      :: ielem
             integer(ik),            intent(in)      :: iface
             integer(ik),            intent(in)      :: iblk
-            class(properties_t),    intent(inout)   :: prop
 
     end subroutine
     

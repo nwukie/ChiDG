@@ -52,7 +52,7 @@ contains
     !----------------------------------------------------------------------------------------------------------
     subroutine init_base(self,mesh)
         class(solverdata_t),     intent(inout), target   :: self
-        type(mesh_t),            intent(inout)           :: mesh(:)
+        type(mesh_t),            intent(in)              :: mesh(:)
 
         integer(ik)   :: nterms_s, ielem, nelem, neqns, ierr
 

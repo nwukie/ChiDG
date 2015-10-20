@@ -1,7 +1,7 @@
 module eqn_euler
     use mod_kinds,                              only: rk,ik
 
-    use atype_equationset,                      only: equationset_t
+    use type_equationset,                       only: equationset_t
     use perfect_gas,                            only: perfect_gas_t
 
     use EULER_boundary_average_advective_flux,  only: EULER_boundary_average_advective_flux_t

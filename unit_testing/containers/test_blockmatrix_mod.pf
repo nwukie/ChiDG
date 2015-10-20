@@ -1,11 +1,13 @@
 module test_blockmatrix_mod
     use pfunit_mod
     use type_chidg,         only: chidg_t
+    use type_point,         only: point_t
     use mod_kinds,          only: rk,ik
     use mod_constants,      only: ZERO, ONE, TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT, NINE, TEN, &
                                   XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX
     use mod_hdfio,          only: read_grid_hdf
     use mod_grid_operators, only: initialize_variable
+    use mod_testutils,      only: meshgen
     use type_blockmatrix,   only: blockmatrix_t
     use DNAD_D
     use fcn_constant,       only: constant_f
@@ -16,7 +18,6 @@ module test_blockmatrix_mod
 @TestCase
     type, extends(TestCase) ::  test_blockmatrix
         type(chidg_t)                        :: chidg
-        !type(domain_t),         allocatable  :: domain(:)
         type(blockmatrix_t)                  :: bmat
         type(constant_f)                     :: fcn
 
@@ -31,24 +32,25 @@ contains
     !! procedure. The argument names have to match
     subroutine setUp(this)
         class(test_blockmatrix),    intent(inout)   :: this
-        integer(ik)                                 :: nterms_s, ivar
+
+        integer(ik)                                 :: nterms_c, nterms_s, ivar, ielem, iblk
+        type(point_t),  allocatable                 :: pts(:,:,:)
         
             
         ! Initialize ChiDG environment
         call this%chidg%init('env')
 
 
-        ! Read 3x3x3 element grid
-        call read_grid_hdf('D1_E27_M1.h5', this%chidg%data)
+        ! Create 3x3x3 element grid
+        call meshgen('333',pts)
 
-
-        ! Initialize domain numerics
+        nterms_c = 8
         nterms_s = 8
-        call this%chidg%data%domains(1)%init_sol('Scalar',nterms_s)
+        call this%chidg%data%add_domain('D_01',pts,nterms_c,'Scalar',nterms_s)
 
 
         ! Initialize blockmatrix
-        call this%bmat%init(this%chidg%data%domains(1)%mesh,'full')
+        call this%bmat%init(this%chidg%data%mesh(1),'full')
 
     
     end subroutine
@@ -69,7 +71,7 @@ contains
         
         integer(ik)                 :: nelem
 
-        nelem = self%chidg%data%domains(1)%mesh%nelem
+        nelem = self%chidg%data%mesh(1)%nelem
         @assertEqual(nelem,size(self%bmat%lblks,1))  
 
     end subroutine
@@ -95,14 +97,14 @@ contains
         
         integer(ik) :: nelem, ielem, size1d
         
-        associate ( mesh => self%chidg%data%domains(1)%mesh, lblks => self%bmat%lblks)
+        associate ( mesh => self%chidg%data%mesh(1), lblks => self%bmat%lblks)
         
             
             nelem = mesh%nelem
             
             ! Test appropriate blocks are allocated or not allocated for the first element            
             ielem = 1
-            @assertFalse(allocated(lblks(ielem,1)%mat))
+            @assertFalse(allocated(self%bmat%lblks(ielem,1)%mat))
             @assertTrue(allocated(lblks(ielem,2)%mat))
             @assertFalse(allocated(lblks(ielem,3)%mat))
             @assertTrue(allocated(lblks(ielem,4)%mat))
@@ -111,7 +113,7 @@ contains
             @assertTrue(allocated(lblks(ielem,7)%mat))
             
             
-            !> Test first element, linearization block sizes
+            ! Test first element, linearization block sizes
             size1d = mesh%nterms_s  *  mesh%neqns
             @assertEqual(size1d,size(lblks(ielem,2)%mat,1))
             @assertEqual(size1d,size(lblks(ielem,2)%mat,2))
@@ -129,7 +131,7 @@ contains
             
             
             ! Test appropriate blocks are allocated or not allocated for the middle element
-            !> All linearization blocks should be initialized            
+            ! All linearization blocks should be initialized            
             ielem = 14
             @assertTrue(allocated(lblks(ielem,1)%mat))
             @assertTrue(allocated(lblks(ielem,2)%mat))

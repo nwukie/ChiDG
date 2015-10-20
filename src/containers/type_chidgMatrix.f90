@@ -58,10 +58,10 @@ contains
     !-----------------------------------------------------------------------------------------------------------
     subroutine initialize(self,mesh,mtype)
         class(chidgMatrix_t),   intent(inout)   :: self
-        type(mesh_t),           intent(inout)   :: mesh(:)
+        type(mesh_t),           intent(in)      :: mesh(:)
         character(*),           intent(in)      :: mtype
 
-        integer(ik) :: ierr, ndomains, imesh, nmesh
+        integer(ik) :: ierr, ndomains, idom
 
 
         !
@@ -76,8 +76,8 @@ contains
         !
         ! Call initialization procedure for each blockmatrix_t
         !
-        do imesh = 1,nmesh
-            call self%dom(imesh)%init(mesh(imesh),mtype)
+        do idom = 1,ndomains
+            call self%dom(idom)%init(mesh(idom),mtype)
         end do
 
 

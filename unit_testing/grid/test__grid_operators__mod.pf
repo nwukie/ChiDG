@@ -5,7 +5,6 @@ module test__grid_operators__mod
                                       XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX
     use type_chidg,             only: chidg_t
     use type_point,             only: point_t
-    use type_domain,            only: domain_t
     use type_element,           only: element_t
     use type_face,              only: face_t
     use mod_grid_operators,     only: mesh_point, solution_point
@@ -16,7 +15,6 @@ module test__grid_operators__mod
 @TestCase
     type, extends(TestCase) ::  test__grid_operators
         type(chidg_t)   :: chidg
-        type(domain_t)  :: dom
 
     contains
         procedure   ::  setUp
@@ -64,8 +62,11 @@ contains
         idomain  = 1 
         nterms_c = 8
         nterms_s = 27
-        call this%dom%init_geom(idomain,nterms_c,pts_m)
-        call this%dom%init_sol('scalar',nterms_s)
+!        call this%dom%init_geom(idomain,nterms_c,pts_m)
+!        call this%dom%init_sol('scalar',nterms_s)
+
+        call this%chidg%data%add_domain('D_01',pts_m,nterms_c,'scalar',nterms_s)
+        call this%chidg%data%init_sdata()
         
         
 
@@ -102,7 +103,7 @@ contains
 
         icoord = 1 !> Check x-coordinates
         do ipt = 1,5
-            check_coords(ipt) = mesh_point(self%dom%mesh%elems(1), icoord, xi(ipt), eta(ipt), zeta(ipt))
+            check_coords(ipt) = mesh_point(self%chidg%data%mesh(1)%elems(1), icoord, xi(ipt), eta(ipt), zeta(ipt))
         end do
 
         @assertEqual(ref_coords,check_coords)
@@ -128,7 +129,7 @@ contains
 
         icoord = 2 !> Check y-coordinates
         do ipt = 1,5
-            check_coords(ipt) = mesh_point(self%dom%mesh%elems(1), icoord, xi(ipt), eta(ipt), zeta(ipt))
+            check_coords(ipt) = mesh_point(self%chidg%data%mesh(1)%elems(1), icoord, xi(ipt), eta(ipt), zeta(ipt))
         end do
 
         @assertEqual(ref_coords,check_coords)
@@ -154,7 +155,7 @@ contains
 
         icoord = 3 !> Check z-coordinates
         do ipt = 1,5
-            check_coords(ipt) = mesh_point(self%dom%mesh%elems(1), icoord, xi(ipt), eta(ipt), zeta(ipt))
+            check_coords(ipt) = mesh_point(self%chidg%data%mesh(1)%elems(1), icoord, xi(ipt), eta(ipt), zeta(ipt))
         end do
 
         @assertEqual(ref_coords,check_coords)

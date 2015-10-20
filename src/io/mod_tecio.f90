@@ -8,6 +8,7 @@ module mod_tecio
     use type_domain,            only: domain_t
     use type_blockvector,       only: blockvector_t
     use type_solverdata,        only: solverdata_t
+    use type_chidg_data,        only: chidg_data_t
     implicit none
 
 #include "tecio.f90"
@@ -16,9 +17,8 @@ contains
 
 
 
-    subroutine write_tecio_variables(domains,sdata,filename,timeindex)
-        type(domain_t),         intent(inout), target   :: domains(:)
-        class(solverdata_t),    intent(inout), target   :: sdata
+    subroutine write_tecio_variables(data,filename,timeindex)
+        type(chidg_data_t),     intent(inout), target   :: data
         character(*),           intent(in)              :: filename
         integer(ik),            intent(in)              :: timeindex
 
@@ -55,9 +55,9 @@ contains
         varstring = "X Y Z"     ! Initialize variables string with mesh coordinates
         ieq = 1
         !& DEBUG - DOMAINS - Assumes same equation set in all domains
-        do while (ieq <= domains(1)%eqnset%neqns)
+        do while (ieq <= data%eqnset(1)%item%neqns)
             !varstring = trim(varstring)//" "//trim(domain%eqnset%eqns(ieq)%name)
-            varstring = trim(varstring)//" "//trim(domains(1)%eqnset%prop%eqns(ieq)%name)
+            varstring = trim(varstring)//" "//trim(data%eqnset(1)%item%prop%eqns(ieq)%name)
             ieq = ieq + 1
         end do
 
@@ -69,28 +69,28 @@ contains
 
 
 
-        do idom = 1,size(domains)
-        associate (domain => domains(idom))
+        do idom = 1,data%ndomains
+        associate (mesh => data%mesh(idom), eqnset => data%eqnset(idom)%item, sdata => data%sdata)
 
             !
             ! Store element indices for current block
             !
-            nelem_xi   = domain%mesh%nelem_xi
-            nelem_eta  = domain%mesh%nelem_eta
-            nelem_zeta = domain%mesh%nelem_zeta
+            nelem_xi   = mesh%nelem_xi
+            nelem_eta  = mesh%nelem_eta
+            nelem_zeta = mesh%nelem_zeta
 
 
             !
             ! Remap elements array to block matrix
             !
-            elem => domains(idom)%mesh%elems_m
+            elem => mesh%elems_m
             q    => sdata%q%dom(idom)
 
 
             !
             ! Initialize new zone in the TecIO file for the current domain
             !
-            call init_tecio_zone('solnzone',domain%mesh,1,timeindex)
+            call init_tecio_zone('solnzone',mesh,1,timeindex)
 
 
 
@@ -134,7 +134,7 @@ contains
 
 
             ! For each variable in equation set, compute value pointwise and save
-            do ivar = 1,domain%eqnset%neqns
+            do ivar = 1,eqnset%neqns
 
                 do ielem_zeta = 1,nelem_zeta
                     do ipt_zeta = 1,zetalim

@@ -1,5 +1,5 @@
 module mock_equationset
-    use atype_equationset,  only: equationset_t
+    use type_equationset,  only: equationset_t
     
     type, extends(equationset_t) :: mock_equationset_t
 

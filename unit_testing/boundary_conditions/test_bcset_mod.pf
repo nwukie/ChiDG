@@ -30,7 +30,7 @@ contains
         
         integer(ik), parameter     :: npt = 27
         type(point_t), allocatable :: pts(:,:,:)
-        integer(ik)                :: nterms_c, nterms_s, idomain
+        integer(ik)                :: nterms_c, nterms_s
         
         ! Initialize chidg environment
         call this%chidg%init('env')
@@ -39,12 +39,11 @@ contains
         call meshgen('222',pts)
         
         ! Call domain initialization
-        idomain  = 1
         nterms_c = 8
         nterms_s = 8
-        allocate(this%chidg%data%domains(1))
-        call this%chidg%data%domains(1)%init_geom(idomain,nterms_c,pts)
-        call this%chidg%data%domains(1)%init_sol('euler',nterms_s)
+
+        !call this%chidg%data%add_domain('D_01',pts,nterms_c,'euler',nterms_c)
+        call this%chidg%data%add_domain('D_01',pts,nterms_c,'scalar',nterms_c)
 
     end subroutine
     
@@ -58,41 +57,6 @@ contains
     !                                       TESTS
     !-----------------------------------------------------------------------------------------------
     
-    
-    !> Test boundary condition storage was allocated in the domain initialization call
-    !-----------------------------------------------------
-    @Test
-    subroutine test_bcset_domainallocated(self)
-        class(test_bcset),    intent(inout)   :: self
-
-        @assertTrue(allocated(self%chidg%data%domains(1)%bcset%bcs))
-        
-    end subroutine
-
-
-
-
-
-    ! Test boundary condition set initialization procedure. Test allocation
-    !-----------------------------------------------------
-    @Test
-    subroutine test_bcset_init(self)
-        class(test_bcset),      intent(inout)   :: self
-        
-        type(bcset_t)   :: bcset
-        
-        ! Call initialization procedure on bcset. This is what we are testing
-        call bcset%init()
-        
-        ! Ensure storage for boundary conditions was allocated
-        @assertTrue(allocated(bcset%bcs))
-    
-    end subroutine
-    
-
-    
-
-
 
     ! Test bcset%add procedure for adding boundary conditions to a set. Test for allocation
     !-----------------------------------------------------
@@ -102,18 +66,17 @@ contains
         
         type(bc_m)  :: bc
 
-        associate(bcset => self%chidg%data%domains(1)%bcset)
+        associate(bcset => self%chidg%data%bcset(1))
     
             ! Add boundary condition to boundary condition set. This is what we are testing
             call bcset%add(bc)
     
-            ! 'bc' should have been added to the first slot. All other slots should remain unallocated
+
+            ! Test size of bcset%bcs. Should be '1'
+            @assertEqual(1, size(bcset%bcs))
+
+            ! 'bc' should be allocated
             @assertTrue( allocated(bcset%bcs(1)%bc))
-            @assertFalse(allocated(bcset%bcs(2)%bc))
-            @assertFalse(allocated(bcset%bcs(3)%bc))
-            @assertFalse(allocated(bcset%bcs(4)%bc))
-            @assertFalse(allocated(bcset%bcs(5)%bc))
-            @assertFalse(allocated(bcset%bcs(6)%bc))
 
         end associate
 
@@ -136,7 +99,7 @@ contains
         integer(ik) :: ielems_ref(4), ifaces_ref(4)
 
         iface = XI_MIN
-        associate(bcset => self%chidg%data%domains(1)%bcset, mesh => self%chidg%data%domains(1)%mesh )
+        associate(bcset => self%chidg%data%bcset(1), mesh => self%chidg%data%mesh(1) )
         
             ! Initialize bc.
             call bc%init(mesh,iface)
@@ -175,7 +138,7 @@ contains
 
         iface_a = XI_MIN
         iface_b = ETA_MIN
-        associate(bcset => self%chidg%data%domains(1)%bcset, mesh => self%chidg%data%domains(1)%mesh)
+        associate(bcset => self%chidg%data%bcset(1), mesh => self%chidg%data%mesh(1))
         
             ! Initialize two boundary conditions
             call bc_a%init(mesh,iface_a)

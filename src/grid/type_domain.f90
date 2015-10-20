@@ -6,8 +6,8 @@ module type_domain
 
     use type_point,         only: point_t
     use type_mesh,          only: mesh_t
-    use atype_equationset,  only: equationset_t
-    use atype_bc,           only: bc_t
+    use type_equationset,   only: equationset_t
+    use type_bc,            only: bc_t
     use type_bcset,         only: bcset_t
     use type_dict,          only: dict_t
     implicit none
@@ -75,7 +75,7 @@ contains
         ! Call mesh and boundary condition initialization
         !
         call self%mesh%init_geom(idomain,nterms_c,points)   ! Initialize mesh geometry
-        call self%bcset%init()                              ! Initialize boundary condition storage
+        !call self%bcset%init()                              ! Initialize boundary condition storage
 
 
         self%geomInitialized = .true.

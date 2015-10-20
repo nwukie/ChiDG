@@ -1,12 +1,11 @@
 module type_timescheme
     use mod_kinds,          only: rk,ik
-    use type_domain,        only: domain_t
     use atype_matrixsolver, only: matrixsolver_t
     use type_dict,          only: dict_t
     use type_timer,         only: timer_t
     use type_rvector,       only: rvector_t
     use type_ivector,       only: ivector_t
-    use type_chidgData,     only: chidgData_t
+    use type_chidg_data,    only: chidg_data_t
     implicit none
 
 
@@ -80,13 +79,11 @@ module type_timescheme
 
     abstract interface
         subroutine init_interface(self,data,options)
-            !use type_domain,    only: domain_t
-            use type_chidgData, only: chidgData_t
-            use type_dict,      only: dict_t
+            use type_chidg_data, only: chidg_data_t
+            use type_dict,       only: dict_t
             import timescheme_t
             class(timescheme_t),    intent(inout)   :: self
-            !type(domain_t),         intent(inout)   :: domains(:)
-            type(chidgData_t),      intent(inout)   :: data
+            type(chidg_data_t),     intent(inout)   :: data
             type(dict_t), optional, intent(inout)   :: options
         end subroutine
     end interface
@@ -97,16 +94,13 @@ module type_timescheme
 
     ! Interface for passing a domain_t type
     abstract interface
-        !subroutine data_interface(self,domains,matrixsolver,preconditioner)
         subroutine data_interface(self,data,matrixsolver,preconditioner)
-            !use type_domain,            only: domain_t
-            use type_chidgData,         only: chidgData_t
+            use type_chidg_data,        only: chidg_data_t
             use atype_matrixsolver,     only: matrixsolver_t
             use type_preconditioner,    only: preconditioner_t
             import timescheme_t
             class(timescheme_t),                    intent(inout)   :: self
-            !type(domain_t),                         intent(inout)   :: domains(:)
-            type(chidgData_t),                      intent(inout)   :: data
+            type(chidg_data_t),                     intent(inout)   :: data
             class(matrixsolver_t),      optional,   intent(inout)   :: matrixsolver
             class(preconditioner_t),    optional,   intent(inout)   :: preconditioner
         end subroutine
@@ -128,8 +122,7 @@ contains
     !----------------------------------------------------------
     subroutine init(self,data)
         class(timescheme_t),    intent(inout)   :: self
-        type(chidgData_t),      intent(inout)   :: data
-        !type(domain_t),         intent(inout)   :: domains(:)
+        type(chidg_data_t),     intent(inout)   :: data
 
 
         !
@@ -181,8 +174,7 @@ contains
     !-----------------------------------------------------------------------
     subroutine init_spec(self,data,options)
         class(timescheme_t),    intent(inout)   :: self
-        !type(domain_t),         intent(inout)   :: domains(:)
-        type(chidgData_t),      intent(inout)   :: data
+        type(chidg_data_t),     intent(inout)   :: data
         type(dict_t), optional, intent(inout)   :: options
 
 

@@ -26,8 +26,8 @@ module atype_volume_flux
             import properties_t
 
             class(volume_flux_t),   intent(in)      :: self
-            class(mesh_t),          intent(in)      :: mesh(:)
-            class(solverdata_t),    intent(inout)   :: sdata
+            type(mesh_t),           intent(in)      :: mesh(:)
+            type(solverdata_t),     intent(inout)   :: sdata
             class(properties_t),    intent(inout)   :: prop
             integer(ik),            intent(in)      :: idom
             integer(ik),            intent(in)      :: ielem

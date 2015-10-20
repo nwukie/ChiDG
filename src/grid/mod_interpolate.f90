@@ -34,10 +34,7 @@ contains
     !!
     !----------------------------------------------------------------
     subroutine interpolate_element_autodiff(mesh,q,idom,ielem,ivar,var_gq,ielem_seed)
-        !type(element_t),     intent(in)      :: elems(:)
         type(mesh_t),        intent(in)      :: mesh(:)
-        !type(expansion_t),  intent(inout)   :: q(:)
-        !type(blockvector_t), intent(inout)   :: q
         type(chidgVector_t), intent(inout)   :: q
         integer(ik),         intent(in)      :: idom
         integer(ik),         intent(in)      :: ielem
@@ -138,10 +135,7 @@ contains
     !!
     !----------------------------------------------------------------
     subroutine interpolate_face_autodiff(mesh,q,idom,ielem,iface,ivar,var_gq,ielem_seed)
-        !type(face_t),       intent(in)      :: faces(:,:)
         type(mesh_t),           intent(in)      :: mesh(:)
-        !type(expansion_t),  intent(inout)   :: q(:)
-        !type(blockvector_t),  intent(inout)   :: q
         type(chidgVector_t),    intent(inout)   :: q
         integer(ik),            intent(in)      :: idom
         integer(ik),            intent(in)      :: ielem
@@ -242,9 +236,7 @@ contains
     !!
     !----------------------------------------------------------------
     subroutine interpolate_element_standard(mesh,q,idom,ielem,ivar,var_gq)
-        !type(element_t),    intent(in)      :: elems(:)
         type(mesh_t),           intent(in)      :: mesh(:)
-        !type(blockvector_t),  intent(inout)   :: q
         type(chidgVector_t),    intent(inout)   :: q
         integer(ik),            intent(inout)   :: idom
         integer(ik),            intent(in)      :: ielem
@@ -279,9 +271,7 @@ contains
     !!
     !----------------------------------------------------------------
     subroutine interpolate_face_standard(mesh,q,idom,ielem,iface,ivar,var_gq)
-        !type(face_t),       intent(in)      :: faces(:,:)
         type(mesh_t),           intent(in)      :: mesh(:)
-        !type(blockvector_t),  intent(inout)   :: q
         type(chidgVector_t),    intent(inout)   :: q
         integer(ik),            intent(in)      :: idom, ielem, iface, ivar
         real(rk),               intent(inout)   :: var_gq(:)

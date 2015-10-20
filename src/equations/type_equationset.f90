@@ -1,4 +1,4 @@
-module atype_equationset
+module type_equationset
 #include <messenger.h>
     use mod_kinds,                  only: rk,ik
     use type_equation,              only: equation_t
@@ -310,4 +310,4 @@ contains
 
 
 
-end module atype_equationset
+end module type_equationset

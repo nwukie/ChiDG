@@ -5,7 +5,6 @@ module test_bc_mod
                               XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX
     use type_chidg,     only: chidg_t
     use type_point,     only: point_t
-    !use type_domain,    only: domain_t
     use mod_testutils,  only: meshgen
     use mock_bc,        only: bc_m
     implicit none
@@ -43,8 +42,8 @@ contains
         idomain  = 1
         nterms_c = 8
         nterms_s = 8
-        call this%chidg%data%domains(1)%init_geom(idomain,nterms_c,pts)
-        call this%chidg%data%domains(1)%init_sol('euler',nterms_s)
+
+        call this%chidg%data%add_domain('D_01',pts,nterms_c,'scalar',nterms_c)
 
     end subroutine
     
@@ -67,7 +66,7 @@ contains
         type(bc_m)  :: bc
         integer(ik) :: iface
         
-        associate (mesh => self%chidg%data%domains(1)%mesh, sdata => self%chidg%data%sdata)
+        associate (mesh => self%chidg%data%mesh(1), sdata => self%chidg%data%sdata)
             
             ! Block face for the boundary condition to be applied
             iface = XI_MIN
@@ -95,7 +94,7 @@ contains
         integer(ik) :: iface
         integer(ik) :: ielems_ref(4)
         
-        associate (mesh => self%chidg%data%domains(1)%mesh, sdata => self%chidg%data%sdata)
+        associate (mesh => self%chidg%data%mesh(1), sdata => self%chidg%data%sdata)
         
             
             ! Block face for the boundary condition to be applied
@@ -125,7 +124,7 @@ contains
         integer(ik) :: iface
         integer(ik) :: ifaces_ref(4)
         
-        associate (mesh => self%chidg%data%domains(1)%mesh, sdata => self%chidg%data%sdata)
+        associate (mesh => self%chidg%data%mesh(1), sdata => self%chidg%data%sdata)
         
             
             ! Block face for the boundary condition to be applied

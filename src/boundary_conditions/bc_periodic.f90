@@ -1,8 +1,7 @@
 module bc_periodic
     use mod_kinds,          only: rk, ik
     use mod_constants,      only: XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX
-    use atype_bc,           only: bc_t
-    use atype_equationset,  only: equationset_t
+    use type_bc,            only: bc_t
     use type_solverdata,    only: solverdata_t
     use type_mesh,          only: mesh_t
     use type_dict,          only: dict_t
@@ -140,15 +139,15 @@ contains
     !!  @author Nathan A. Wukie
     !!
     !------------------------------------------------------------------
-    subroutine compute(self,mesh,sdata,idom,ielem,iface,iblk,prop)
+    subroutine compute(self,mesh,sdata,prop,idom,ielem,iface,iblk)
         class(periodic_t),      intent(inout)   :: self
         type(mesh_t),           intent(in)      :: mesh(:)
-        class(solverdata_t),    intent(inout)   :: sdata
+        type(solverdata_t),     intent(inout)   :: sdata
+        class(properties_t),    intent(inout)   :: prop
         integer(ik),            intent(in)      :: idom
         integer(ik),            intent(in)      :: ielem
         integer(ik),            intent(in)      :: iface
         integer(ik),            intent(in)      :: iblk
-        class(properties_t),    intent(inout)   :: prop
 
         ! DO NOTHING IN PERIODIC BOUNDARY CONDITION
 

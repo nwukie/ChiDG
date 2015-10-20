@@ -6,9 +6,10 @@ module LA_volume_advective_flux
 
     use type_mesh,              only: mesh_t
     use atype_volume_flux,      only: volume_flux_t
-    use atype_solverdata,       only: solverdata_t
+    use type_solverdata,        only: solverdata_t
     use type_properties,        only: properties_t
-    use mod_interpolate,        only: interpolate
+
+    use mod_interpolate,        only: interpolate_element
     use mod_integrate,          only: integrate_volume_flux
     use mod_DNAD_tools,         only: compute_neighbor_face, compute_seed_element
     use DNAD_D
@@ -36,12 +37,12 @@ contains
     !
     !
     !---------------------------------------------------------------
-    subroutine compute(self,mesh,sdata,ielem,iblk,prop)
+    subroutine compute(self,mesh,sdata,prop,idom,ielem,iblk)
         class(LA_volume_advective_flux_t),  intent(in)      :: self
-        class(mesh_t),                      intent(in)      :: mesh
-        class(solverdata_t),                intent(inout)   :: sdata
-        integer(ik),                        intent(in)      :: ielem, iblk
+        type(mesh_t),                       intent(in)      :: mesh(:)
+        type(solverdata_t),                 intent(inout)   :: sdata
         class(properties_t),                intent(inout)   :: prop
+        integer(ik),                        intent(in)      :: idom, ielem, iblk
 
 
 
@@ -51,63 +52,62 @@ contains
         integer(ik)             :: ivar_u, i
 
 
-        associate (elem => mesh%elems(ielem), q => sdata%q)
+        !
+        ! Get variable index from equation set
+        !
+        ivar_u = prop%get_eqn_index('u')
 
 
-            !
-            ! Get variable index from equation set
-            !
-            ivar_u = prop%get_eqn_index('u')
+        !
+        ! Get equation set properties
+        !
+        select type(prop)
+            type is (LA_properties_t)
+                cx = prop%c(1)
+                cy = prop%c(2)
+                cz = prop%c(3)
+        end select
 
 
-            !
-            ! Get equation set properties
-            !
-            select type(prop)
-                type is (LA_properties_t)
-                    cx = prop%c(1)
-                    cy = prop%c(2)
-                    cz = prop%c(3)
-            end select
+        !
+        ! Allocate storage for variable values at quadrature points
+        !
+        nnodes = mesh(idom)%elems(ielem)%gq%nnodes_v
+
+        
+        allocate(u(nnodes),         &
+                 flux_x(nnodes),    &
+                 flux_y(nnodes),    &
+                 flux_z(nnodes),    stat = ierr)
+        if (ierr /= 0) call AllocationError
 
 
-            !
-            ! Allocate storage for variable values at quadrature points
-            !
-            nnodes = elem%gq%nnodes_v
-            allocate(u(nnodes),         &
-                     flux_x(nnodes),    &
-                     flux_y(nnodes),    &
-                     flux_z(nnodes),    stat = ierr)
-            if (ierr /= 0) call AllocationError
+        !
+        ! Get seed element for derivatives
+        !
+        iseed   = compute_seed_element(mesh,idom,ielem,iblk)
 
 
-            !
-            ! Get seed element for derivatives
-            !
-            iseed   = compute_seed_element(mesh,ielem,iblk)
+        !
+        ! Interpolate solution to quadrature nodes
+        !
+        call interpolate_element(mesh,sdata%q,idom,ielem,ivar_u,u,iseed)
 
 
-            !
-            ! Interpolate solution to quadrature nodes
-            !
-            call interpolate(mesh%elems,q,ielem,ivar_u,u,iseed)
+        !
+        ! Compute volume flux at quadrature nodes
+        !
+        flux_x = cx  *  u 
+        flux_y = cy  *  u
+        flux_z = cz  *  u
 
 
-            !
-            ! Compute volume flux at quadrature nodes
-            !
-            flux_x = cx  *  u 
-            flux_y = cy  *  u
-            flux_z = cz  *  u
+        !
+        ! Integrate volume flux
+        !
+        call integrate_volume_flux(mesh(idom)%elems(ielem),sdata,idom,ivar_u,iblk,flux_x,flux_y,flux_z)
 
 
-            !
-            ! Integrate volume flux
-            !
-            call integrate_volume_flux(elem,sdata,ivar_u,iblk,flux_x,flux_y,flux_z)
-
-        end associate
 
     end subroutine
 

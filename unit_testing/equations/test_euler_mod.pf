@@ -3,12 +3,12 @@ module test_euler_mod
     use mod_kinds,          only: rk,ik
     use mod_constants,      only: ZERO, ONE, TWO, THREE, FIVE, SIX, EIGHT, NINE, TEN, &
                                   XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX, NFACES
+
     use type_chidg,         only: chidg_t
     use atype_function,     only: function_t
     use mod_function,       only: create_function
     use mod_grid_operators, only: initialize_variable
     use type_point,         only: point_t
-    use type_domain,        only: domain_t
     use type_densematrix,   only: densematrix_t
     use mod_testutils,      only: meshgen
     use mod_check_jacobian
@@ -17,8 +17,8 @@ module test_euler_mod
     public  :: test_eq_euler
 
 
-    !> This parameter is used to test the linearization for different blocks.
-    !> iblk = [XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX, DIAG]
+    ! This parameter is used to test the linearization for different blocks.
+    ! iblk = [XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX, DIAG]
     @TestParameter(constructor=newBlock)
     type, extends (AbstractTestParameter) :: blockParam
         integer(ik)         :: iblk
@@ -31,7 +31,6 @@ module test_euler_mod
     @TestCase(constructor=newTest)
     type, extends(ParameterizedTestCase) ::  test_eq_euler
         type(chidg_t)       :: chidg
-        type(domain_t)      :: domain
         integer(ik)         :: iblk
     contains
         procedure   ::  setUp
@@ -58,33 +57,37 @@ contains
         integer(ik)                         :: neqns, nterms_s, nterms_c
         real(rk), dimension(npt)            :: x,y,z
         
-        !> Initialize chidg environment
+        !
+        ! Initialize chidg environment
+        !
         call this%chidg%init('env')
 
-        !> Generate points array for 3x3x3 mesh
+        ! Generate points array for 3x3x3 mesh
         call meshgen('3x3x3',pts)
 
-        !> Initialize domain
+        !
+        ! Add domain to ChiDG
+        !
         nterms_s = 8
         nterms_c = 8
-        call this%domain%init_geom(nterms_c,pts)
-        call this%domain%init_sol('EULER',nterms_s)
+        call this%chidg%data%add_domain('D_01',pts,nterms_c,'euler',nterms_s)
+        call this%chidg%data%init_sdata()
 
 
 
-        !> Set rho, rhoE to non-zero values. Risk NaN's otherwise
+        ! Set rho, rhoE to non-zero values. Risk NaN's otherwise
         call create_function(fcn,'constant')
         
         call fcn%set('const',1.0_rk)
-        call initialize_variable(this%domain,1,fcn)
+        call initialize_variable(this%chidg%data,1,fcn)
         call fcn%set('const',1.1_rk)
-        call initialize_variable(this%domain,2,fcn)
+        call initialize_variable(this%chidg%data,2,fcn)
         call fcn%set('const',1.2_rk)
-        call initialize_variable(this%domain,3,fcn)
+        call initialize_variable(this%chidg%data,3,fcn)
         call fcn%set('const',1.3_rk)
-        call initialize_variable(this%domain,4,fcn)
+        call initialize_variable(this%chidg%data,4,fcn)
         call fcn%set('const',6.0_rk)
-        call initialize_variable(this%domain,5,fcn)
+        call initialize_variable(this%chidg%data,5,fcn)
             
     end subroutine
     
@@ -94,10 +97,10 @@ contains
 
 
     !--------------------------
-    !> PARAMETER CONSTRUCTORS
+    ! PARAMETER CONSTRUCTORS
     !--------------------------
     
-    !> Function for setting the correct parameter value in the constructor
+    ! Function for setting the correct parameter value in the constructor
     function newBlock(iblk) result(param)
         type(blockParam)        :: param
         integer(ik), intent(in) :: iblk
@@ -105,7 +108,7 @@ contains
         param%iblk = iblk
     end function newBlock
     
-    !> TestCase constructor for parameter specification
+    ! TestCase constructor for parameter specification
     function newTest(param)
         type(test_eq_euler) :: newTest
         type(blockParam)                    :: param
@@ -113,7 +116,7 @@ contains
         newTest%iblk = param%iblk
     end function newTest
 
-    !> ToString - not sure what this is for yet
+    ! ToString - not sure what this is for yet
     function toString(this) result(string)
         class(blockParam), intent(in)   :: this
         character(:), allocatable       :: string
@@ -142,11 +145,11 @@ contains
         
         ielem = 14
         
-        !> Block Parameter from cases = []
+        ! Block Parameter from cases = []
         iblk = self%iblk
         
-        !> Compute Automatic and Finite Difference jacobians
-        call check_jacobian_volume_advective_flux(self%domain,ielem,iblk,blk_dnad,blk_fd)
+        ! Compute Automatic and Finite Difference jacobians
+        call check_jacobian_volume_advective_flux(self%chidg%data,ielem,iblk,blk_dnad,blk_fd)
         
                 
         @assertEqual(blk_fd%mat, blk_dnad%mat, tol)
@@ -174,18 +177,8 @@ contains
         iblk = self%iblk
         
         ! Compute Automatic and Finite Difference jacobians
-        call check_jacobian_boundary_advective_flux(self%domain,ielem,iblk,blk_dnad,blk_fd)
+        call check_jacobian_boundary_advective_flux(self%chidg%data,ielem,iblk,blk_dnad,blk_fd)
         
-        !print*, iblk
-        !print*, 'FD'
-        !do irow = 1,size(blk_fd%mat,1)
-        !    print*, blk_fd%mat(irow,:)
-        !end do
-
-        !print*, 'DNAD'
-        !do irow = 1,size(blk_dnad%mat,1)
-        !    print*, blk_dnad%mat(irow,:)
-        !end do
         
         @assertEqual(blk_fd%mat, blk_dnad%mat, tol)
         

@@ -1,4 +1,5 @@
 module mod_DNAD_tools
+#include <messenger.h>
     use mod_kinds,              only: rk,ik
     use mod_constants,          only: XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX, DIAG
     use type_mesh,              only: mesh_t
@@ -51,19 +52,32 @@ contains
     !!  @param[in]  iblk    Index of the block linearization we wish to compute
     !!  @param[out] iseed   Index of the element in which we wish to seed derivatives
     !------------------------------------------------------------------------------
-    function compute_seed_element(mesh,ielem,iblk) result(iseed)
-        type(mesh_t),   intent(in)  :: mesh
+    function compute_seed_element(mesh,idom,ielem,iblk) result(iseed)
+        type(mesh_t),   intent(in)  :: mesh(:)
+        integer(ik),    intent(in)  :: idom
         integer(ik),    intent(in)  :: ielem
         integer(ik),    intent(in)  :: iblk
 
         integer(ik) :: iseed
 
+        !
+        ! Interior Faces
+        !
+        if (iblk > 0) then
 
-        !> Get element for seeding derivatives
-        if ( iblk == DIAG ) then
-            iseed = ielem
-        else
-            iseed = mesh%faces(ielem,iblk)%ineighbor
+            ! Get element for seeding derivatives
+            if ( iblk == DIAG ) then
+                iseed = ielem
+            else
+                iseed = mesh(idom)%faces(ielem,iblk)%ineighbor
+            end if
+
+
+        !
+        ! Chimera Faces
+        !
+        elseif (iblk == 0) then
+            call signal(FATAL,"compute_seed_element: derivative seeding has not been implemented for Chimera interfaces yet")
         end if
 
     end function

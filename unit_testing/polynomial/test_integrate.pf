@@ -11,12 +11,13 @@ subroutine test_integrate_boundary_unit_constant()
     use mod_testutils,      only: meshgen
     use mod_grid_operators, only: initialize_variable
     use DNAD_D
+    implicit none
 
 
 
     type(point_t),      allocatable     :: pts(:,:,:)
     type(chidg_t)                       :: chidg
-    integer(ik)                         :: nterms_c, nterms_s
+    integer(ik)                         :: nterms_c, nterms_s, iblk, ivar, idomain, igq, ngq
     type(AD_D),         allocatable     :: flux(:)
     class(function_t),  allocatable     :: constant
     real(rk)                            :: integral, ref_integral
@@ -33,30 +34,33 @@ subroutine test_integrate_boundary_unit_constant()
     ! Initialize mesh and scalar equation set
     !
     call meshgen('111u',pts)
-    call chidg%set('ndomains','')
     idomain  = 1
     nterms_c = 8
     nterms_s = 1
 
 
 
-    call chidg%data%domains(1)%init_geom(idomain,nterms_c,pts)
-    call chidg%data%domains(1)%init_sol('scalar',nterms_s)
+    !allocate(chidg%data%domains(1))
+    !call chidg%data%domains(1)%init_geom(idomain,nterms_c,pts)
+    !call chidg%data%domains(1)%init_sol('scalar',nterms_s)
 
 
+    call chidg%data%add_domain('D_01',pts,nterms_c,'Scalar',nterms_s)
+
+    call chidg%data%init_sdata()
 
     !
     ! Initialize solution to constant value
     !
     call create_function(constant,'constant')
     call constant%set('val',1._rk)
-    call initialize_variable(chidg%data%domains,chidg%data%sdata,1,constant)
+    call initialize_variable(chidg%data,1,constant)
 
     
     !
     ! Allocate flux array
     !
-    associate ( faces => chidg%data%domains(1)%mesh%faces, sdata => chidg%data%sdata )
+    associate ( faces => chidg%data%mesh(1)%faces, sdata => chidg%data%sdata )
     ngq = faces(1,1)%gq%face%nnodes
     allocate(flux(ngq))
     
@@ -72,8 +76,8 @@ subroutine test_integrate_boundary_unit_constant()
 
     
 
-    ivar = 1
-    iblk = 7
+    ivar    = 1
+    iblk    = 7
     !
     ! Integrate boundary. THIS IS BEING TESTED
     !
@@ -114,12 +118,13 @@ subroutine test_integrate_boundary_nonunit_constant()
     use mod_testutils,      only: meshgen
     use mod_grid_operators, only: initialize_variable
     use DNAD_D
+    implicit none
 
 
 
     type(point_t),      allocatable     :: pts(:,:,:)
     type(chidg_t)                       :: chidg
-    integer(ik)                         :: nterms_c, nterms_s, idomain
+    integer(ik)                         :: nterms_c, nterms_s, igq, ngq, ivar, iblk, idomain
     type(AD_D),         allocatable     :: flux(:)
     class(function_t),  allocatable     :: constant
     real(rk)                            :: integral, ref_integral
@@ -136,27 +141,25 @@ subroutine test_integrate_boundary_nonunit_constant()
     ! Initialize mesh and scalar equation set
     !
     call meshgen('111',pts)
-    call chidg%set('ndomains','')
-    idomain  = 1
     nterms_c = 8
     nterms_s = 1
-    call chidg%data%domains(1)%init_geom(idomain,nterms_c,pts)
-    call chidg%data%domains(1)%init_sol('scalar',nterms_s)
 
 
+    call chidg%data%add_domain('D_01',pts,nterms_c,'scalar',nterms_s)
+    call chidg%data%init_sdata()
 
     !
     ! Initialize solution to constant value
     !
     call create_function(constant,'constant')
     call constant%set('val',1._rk)
-    call initialize_variable(chidg%data%domains,chidg%data%sdata,1,constant)
+    call initialize_variable(chidg%data,1,constant)
 
     
     !
     ! Allocate flux array
     !
-    associate ( faces => chidg%data%domains(1)%mesh%faces, sdata => chidg%data%sdata )
+    associate ( faces => chidg%data%mesh(1)%faces, sdata => chidg%data%sdata )
     ngq = faces(1,1)%gq%face%nnodes
     allocate(flux(ngq))
     
@@ -172,6 +175,7 @@ subroutine test_integrate_boundary_nonunit_constant()
 
     
 
+    idomain  = 1
     ivar = 1
     iblk = 7
     !!!!!!!!!!!!!!!!!!!!!!!

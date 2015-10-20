@@ -1,9 +1,8 @@
 module type_preconditioner
     use mod_kinds,          only: rk, ik
-    use type_domain,        only: domain_t
     use type_blockmatrix,   only: blockmatrix_t
     use type_blockvector,   only: blockvector_t
-    use type_chidgData,     only: chidgData_t
+    use type_chidg_data,    only: chidg_data_t
 
     implicit none
 
@@ -18,7 +17,6 @@ module type_preconditioner
     !!
     !-------------------------------------------------------------------
     type, public, abstract :: preconditioner_t
-
 
         logical  :: initialized = .false.
 
@@ -44,7 +42,7 @@ contains
     !--------------------------------------------------------------------------------------
     subroutine init(self,data)
         class(preconditioner_t),    intent(inout)   :: self
-        type(chidgData_t),          intent(inout)   :: data
+        type(chidg_data_t),         intent(inout)   :: data
 
 
 

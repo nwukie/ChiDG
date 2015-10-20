@@ -149,7 +149,7 @@ contains
                 if (iblk == DIAG) then
                     parent = mesh%elems(ielem)%ielem
                 else
-                    parent = mesh%faces(ielem,iblk)%iparent
+                    parent = mesh%faces(ielem,iblk)%ineighbor
                 end if
 
                 !
@@ -206,13 +206,14 @@ contains
         neqns  = self%ldata(ielem,1)
         nterms = self%ldata(ielem,2)
 
+
         irow_start = ( (ivar - 1)  *  nterms)
 
-        !> If sizes match, store derivative arrays to local block. Loop through integral values, for each value store its derivatives.
-        !! The integral values here should be components of the RHS vector. An array of partial derivatives from an AD_D variable
-        !! should be stored as a row in the block matrix.
+        ! If sizes match, store derivative arrays to local block. Loop through integral values, for each value store its derivatives.
+        ! The integral values here should be components of the RHS vector. An array of partial derivatives from an AD_D variable
+        ! should be stored as a row in the block matrix.
         do iarray = 1,size(integral)
-            !> Do a += operation to add derivatives to any that are currently stored
+            ! Do a += operation to add derivatives to any that are currently stored
             irow = irow_start + iarray
             self%lblks(ielem,iblk)%mat(irow,:) = self%lblks(ielem,iblk)%mat(irow,:) + integral(iarray)%xp_ad_
         end do

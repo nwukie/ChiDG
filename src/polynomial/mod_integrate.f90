@@ -34,7 +34,7 @@ contains
     !--------------------------------------------------------------------------------------------------------
     subroutine integrate_volume_flux(elem,sdata,idom,ivar,iblk,flux_x,flux_y,flux_z)
         type(element_t),        intent(in)      :: elem
-        class(solverdata_t),    intent(inout)   :: sdata
+        type(solverdata_t),     intent(inout)   :: sdata
         integer(ik),            intent(in)      :: idom
         integer(ik),            intent(in)      :: ivar
         integer(ik),            intent(in)      :: iblk
@@ -50,6 +50,7 @@ contains
         flux_x = (flux_x) * (elem%gq%vol%weights) * (elem%jinv)
         flux_y = (flux_y) * (elem%gq%vol%weights) * (elem%jinv)
         flux_z = (flux_z) * (elem%gq%vol%weights) * (elem%jinv)
+
 
 
         ! FLUX-X
@@ -100,7 +101,7 @@ contains
     !--------------------------------------------------------------------------------------------------------
     subroutine integrate_boundary_flux(face,sdata,idom,ivar,iblk,flux_x,flux_y,flux_z)
         type(face_t),           intent(in)      :: face
-        class(solverdata_t),    intent(inout)   :: sdata
+        type(solverdata_t),     intent(inout)   :: sdata
         integer(ik),            intent(in)      :: idom
         integer(ik),            intent(in)      :: ivar
         integer(ik),            intent(in)      :: iblk
@@ -159,7 +160,7 @@ contains
     !--------------------------------------------------------------------------------------------------------
     subroutine integrate_boundary_scalar_flux(face,sdata,idom,ivar,iblk,flux)
         type(face_t),           intent(in)      :: face
-        class(solverdata_t),    intent(inout)   :: sdata
+        type(solverdata_t),     intent(inout)   :: sdata
         integer(ik),            intent(in)      :: idom
         integer(ik),            intent(in)      :: ivar
         integer(ik),            intent(in)      :: iblk
@@ -221,7 +222,7 @@ contains
     !--------------------------------------------------------------------------------------------------------
     subroutine store_volume_integrals(integral,sdata,idom,ielem,ivar,iblk)
         type(AD_D),             intent(inout)   :: integral(:)
-        class(solverdata_t),    intent(inout)   :: sdata
+        type(solverdata_t),     intent(inout)   :: sdata
         integer(ik),            intent(in)      :: idom
         integer(ik),            intent(in)      :: ielem
         integer(ik),            intent(in)      :: ivar
@@ -274,7 +275,7 @@ contains
     !--------------------------------------------------------------------------------------------------------
     subroutine store_boundary_integrals(integral,sdata,idom,ielem,ivar,iblk)
         type(AD_D),             intent(inout)   :: integral(:)
-        class(solverdata_t),    intent(inout)   :: sdata
+        type(solverdata_t),     intent(inout)   :: sdata
         integer(ik),            intent(in)      :: idom
         integer(ik),            intent(in)      :: ielem
         integer(ik),            intent(in)      :: ivar
@@ -283,7 +284,8 @@ contains
         integer(ik) :: i
         real(rk)    :: vals(size(integral))
 
-        associate ( rhs => sdata%rhs%dom(idom)%lvecs, lhs => sdata%lhs%dom(idom))
+        !associate ( rhs => sdata%rhs%dom(idom)%lvecs, lhs => sdata%lhs%dom(idom))
+        associate ( rhs => sdata%rhs%dom(idom)%lvecs, lhs => sdata%lhs)
 
             !
             ! Only store rhs once. if iblk == DIAG
@@ -299,7 +301,7 @@ contains
             !
             ! Store linearization
             !
-            call lhs%store(integral,ielem,iblk,ivar)
+            call lhs%store(integral,idom,ielem,iblk,ivar)
 
         end associate
 
@@ -315,25 +317,6 @@ contains
 
 
 
-
-
-
-
-
-!    !> Integrate scalar over element volume
-!    !!
-!    !!
-!    !!
-!    !!
-!    !!
-!    !!
-!    !!
-!    !!
-!    !-------------------------------------------------------------------------
-!    function integrate_volume_scalar(elem,scalar)
-!        type(element_t),        intent(in)      :: elem
-!        real(rk),               intent(in)      :: scalar
-!        type(AD_D),             intent(inout)   :: flux_x(:), flux_y(:), flux_z(:)
 
 
 

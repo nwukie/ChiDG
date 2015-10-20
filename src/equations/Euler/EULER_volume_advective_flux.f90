@@ -3,16 +3,16 @@ module EULER_volume_advective_flux
     use mod_constants,          only: NFACES,ONE,TWO,HALF, &
                                       XI_MIN,XI_MAX,ETA_MIN,ETA_MAX,ZETA_MIN,ZETA_MAX
 
-    use atype_volume_flux,      only: volume_flux_t
-    use atype_equationset,      only: equationset_t
     use type_mesh,              only: mesh_t
-    use atype_solverdata,       only: solverdata_t
-    use mod_interpolate,        only: interpolate
+    use atype_volume_flux,      only: volume_flux_t
+    use type_solverdata,        only: solverdata_t
+    use type_properties,        only: properties_t
+    
+    use mod_interpolate,        only: interpolate_element
     use mod_integrate,          only: integrate_volume_flux
     use mod_DNAD_tools,         only: compute_neighbor_face, compute_seed_element
     use DNAD_D
 
-    use type_properties,        only: properties_t
     use EULER_properties,       only: EULER_properties_t
     implicit none
 
@@ -43,12 +43,12 @@ contains
     !   Volume Flux routine for Euler
     !
     !===========================================================
-    subroutine compute(self,mesh,sdata,ielem,iblk,prop)
+    subroutine compute(self,mesh,sdata,prop,idom,ielem,iblk)
         class(EULER_volume_advective_flux_t),   intent(in)      :: self
-        class(mesh_t),                          intent(in)      :: mesh
-        class(solverdata_t),                    intent(inout)   :: sdata
-        integer(ik),                            intent(in)      :: ielem, iblk
+        type(mesh_t),                           intent(in)      :: mesh(:)
+        type(solverdata_t),                     intent(inout)   :: sdata
         class(properties_t),                    intent(inout)   :: prop
+        integer(ik),                            intent(in)      :: idom, ielem, iblk
 
         ! Equation indices
         !------------------------------------------------------------
@@ -61,8 +61,8 @@ contains
 
         integer(ik)    :: iseed, i
 
-        type(AD_D), dimension(mesh%elems(ielem)%gq%vol%nnodes)      ::  &
-                    rho, rhou, rhov, rhow, rhoE, p, H,                  &
+        type(AD_D), dimension(mesh(idom)%elems(ielem)%gq%vol%nnodes)      ::  &
+                    rho, rhou, rhov, rhow, rhoE, p, H,                        &
                     flux_x, flux_y, flux_z
 
         !-------------------------------------------------------------
@@ -75,18 +75,18 @@ contains
         !
         ! Get neighbor face and seed element for derivatives
         !
-        iseed   = compute_seed_element(mesh,ielem,iblk)
+        iseed   = compute_seed_element(mesh,idom,ielem,iblk)
 
 
 
         !
         ! Interpolate solution to quadrature nodes
         !
-        call interpolate(mesh%elems,sdata%q,ielem,irho, rho, iseed)
-        call interpolate(mesh%elems,sdata%q,ielem,irhou,rhou,iseed)
-        call interpolate(mesh%elems,sdata%q,ielem,irhov,rhov,iseed)
-        call interpolate(mesh%elems,sdata%q,ielem,irhow,rhow,iseed)
-        call interpolate(mesh%elems,sdata%q,ielem,irhoE,rhoE,iseed)
+        call interpolate_element(mesh,sdata%q,idom,ielem,irho, rho, iseed)
+        call interpolate_element(mesh,sdata%q,idom,ielem,irhou,rhou,iseed)
+        call interpolate_element(mesh,sdata%q,idom,ielem,irhov,rhov,iseed)
+        call interpolate_element(mesh,sdata%q,idom,ielem,irhow,rhow,iseed)
+        call interpolate_element(mesh,sdata%q,idom,ielem,irhoE,rhoE,iseed)
 
 
         !
@@ -103,7 +103,7 @@ contains
         flux_y = rhov
         flux_z = rhow
 
-        call integrate_volume_flux(mesh%elems(ielem),sdata,irho,iblk,flux_x,flux_y,flux_z)
+        call integrate_volume_flux(mesh(idom)%elems(ielem),sdata,idom,irho,iblk,flux_x,flux_y,flux_z)
 
 
         !===========================
@@ -113,7 +113,7 @@ contains
         flux_y = (rhou*rhov)/rho
         flux_z = (rhou*rhow)/rho
 
-        call integrate_volume_flux(mesh%elems(ielem),sdata,irhou,iblk,flux_x,flux_y,flux_z)
+        call integrate_volume_flux(mesh(idom)%elems(ielem),sdata,idom,irhou,iblk,flux_x,flux_y,flux_z)
 
 
         !============================
@@ -123,7 +123,7 @@ contains
         flux_y = (rhov*rhov)/rho  +  p
         flux_z = (rhov*rhow)/rho
 
-        call integrate_volume_flux(mesh%elems(ielem),sdata,irhov,iblk,flux_x,flux_y,flux_z)
+        call integrate_volume_flux(mesh(idom)%elems(ielem),sdata,idom,irhov,iblk,flux_x,flux_y,flux_z)
 
         !============================
         !     Z-MOMENTUM FLUX
@@ -132,7 +132,7 @@ contains
         flux_y = (rhow*rhov)/rho
         flux_z = (rhow*rhow)/rho  +  p
 
-        call integrate_volume_flux(mesh%elems(ielem),sdata,irhow,iblk,flux_x,flux_y,flux_z)
+        call integrate_volume_flux(mesh(idom)%elems(ielem),sdata,idom,irhow,iblk,flux_x,flux_y,flux_z)
 
         !============================
         !       ENERGY FLUX
@@ -141,7 +141,7 @@ contains
         flux_y = rhov*H
         flux_z = rhow*H
 
-        call integrate_volume_flux(mesh%elems(ielem),sdata,irhoE,iblk,flux_x,flux_y,flux_z)
+        call integrate_volume_flux(mesh(idom)%elems(ielem),sdata,idom,irhoE,iblk,flux_x,flux_y,flux_z)
 
     end subroutine
 

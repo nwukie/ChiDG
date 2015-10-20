@@ -99,9 +99,10 @@ contains
 @Test
     subroutine testMesh_integers(self)
         class(test_mesh_linear),    intent(inout)   :: self
-        integer(ik) :: neqns, nterms_s, nterms_c, nelem_xi, nelem_eta, nelem_zeta, nelem
+        integer(ik) :: neqns, nterms_s, nterms_c, nelem_xi, nelem_eta, nelem_zeta, nelem, idomain
         
         neqns       = 1
+        idomain     = 1
         nterms_s    = 8
         nterms_c    = 8
         nelem_xi    = 3
@@ -116,6 +117,7 @@ contains
         @assertEqual(nelem_eta,self%mesh%nelem_eta)
         @assertEqual(nelem_zeta,self%mesh%nelem_zeta)
         @assertEqual(nelem,self%mesh%nelem)
+        @assertEqual(idomain,self%mesh%idomain)
 
     end subroutine
     
@@ -158,7 +160,7 @@ contains
         class(test_mesh_linear),    intent(inout)   :: self
         
         associate (faces => self%mesh%faces)
-            !> Test parent element
+            ! Test parent element
             @assertEqual(14,faces(14,XI_MIN)%iparent)
             @assertEqual(14,faces(14,XI_MAX)%iparent)
             @assertEqual(14,faces(14,ETA_MIN)%iparent)
@@ -166,7 +168,7 @@ contains
             @assertEqual(14,faces(14,ZETA_MIN)%iparent)
             @assertEqual(14,faces(14,ZETA_MAX)%iparent)        
             
-            !> Test neighbor elements
+            ! Test neighbor elements
             @assertEqual(13,faces(14,XI_MIN)%ineighbor)
             @assertEqual(15,faces(14,XI_MAX)%ineighbor)
             @assertEqual(11,faces(14,ETA_MIN)%ineighbor)

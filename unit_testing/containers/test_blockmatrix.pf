@@ -14,12 +14,13 @@ subroutine test_blockmatrix__store_1eq_8terms()
     use mod_testutils,      only: meshgen
     use DNAD_D
     
+    implicit none
     type(chidg_t)               :: chidg
     type(mesh_t)                :: mesh
     type(point_t), allocatable  :: pts(:,:,:)    
     type(blockmatrix_t)         :: bmat
     type(AD_D)                  :: integral(8)
-    integer(ik)                 :: ielem, iblk, ivar, nderiv, i, neqnss, nterms_c, idomain
+    integer(ik)                 :: ielem, iblk, ivar, nderiv, i, neqns, nterms_c, nterms_s, idomain
     
     call chidg%init('env')
     
@@ -34,15 +35,25 @@ subroutine test_blockmatrix__store_1eq_8terms()
     call mesh%init_geom(idomain,nterms_c,pts)
     call mesh%init_sol(neqns,nterms_s)    !> Initialize numerics
 
+
+
+
+
     ! Call initialization on block matrix
     call bmat%init(mesh,'full')
 
 
-    nderiv = neqns*nterms
+
+    nderiv = neqns*nterms_s
     ! Initialize AD variables with allocated derivative arrays
     do i = 1,8
         integral(i) = AD_D(nderiv)
     end do
+
+
+    
+
+
 
     integral = [ONE, TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT]
     ! Set the first and last element of each derivative array so they aren't just zeros
@@ -69,6 +80,7 @@ subroutine test_blockmatrix__store_1eq_8terms()
     
     integral(8)%xp_ad_(1) = EIGHT
     integral(8)%xp_ad_(8) = EIGHT
+
 
 
 
@@ -113,6 +125,7 @@ subroutine test_blockmatrix__store_2eq_8terms()
     use mod_testutils,      only: meshgen
     use DNAD_D
     
+    implicit none
     type(chidg_t)               :: chidg
     type(mesh_t)                :: mesh    
     type(point_t), allocatable  :: pts(:,:,:)
@@ -136,7 +149,7 @@ subroutine test_blockmatrix__store_2eq_8terms()
     call bmat%init(mesh,'full')
 
 
-    nderiv = neqns*nterms
+    nderiv = neqns*nterms_s
     ! Initialize AD variables with allocated derivative arrays
     do i = 1,8
         integral(i) = AD_D(nderiv)
@@ -215,6 +228,7 @@ subroutine test_blockmatrix__clear_1eq_8terms()
     use mod_testutils,      only: meshgen
     use DNAD_D
     
+    implicit none
     type(chidg_t)               :: chidg
     type(mesh_t)                :: mesh    
     type(point_t), allocatable  :: pts(:,:,:)
@@ -242,7 +256,7 @@ subroutine test_blockmatrix__clear_1eq_8terms()
     call bmat%init(mesh,'full')
 
 
-    nderiv = neqns*nterms
+    nderiv = neqns*nterms_s
     ! Initialize AD variables with allocated derivative arrays
     do i = 1,8
         integral(i) = AD_D(nderiv)

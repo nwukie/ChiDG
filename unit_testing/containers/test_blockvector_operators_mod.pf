@@ -4,7 +4,6 @@ module test_blockvector_operators_mod
     use mod_kinds,          only: rk,ik
     use mod_constants,      only: ZERO, ONE, TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT, NINE, TEN, &
                                   XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX
-    !use type_domain,        only: domain_t
     use type_point,         only: point_t
     use type_blockvector
     use mod_testutils,      only: meshgen
@@ -29,7 +28,7 @@ contains
     !! procedure. The argument names have to match
     subroutine setUp(this)
         class(test_blockvector_operators),    intent(inout)   :: this
-        integer(ik)                                 :: nterms_s, ivar, nterms_c, idomain
+        integer(ik)                                 :: nterms_s, ivar, nterms_c
         type(point_t), allocatable                  :: pts(:,:,:)
         
         
@@ -40,20 +39,15 @@ contains
         ! Read 2x2x1 element grid
         call meshgen('221',pts)
 
-        idomain  = 1
         nterms_c = 8
-        allocate(this%chidg%data%domains(1))
-        call this%chidg%data%domains(1)%init_geom(idomain,nterms_c,pts)
-
-        ! Initialize domain numerics
         nterms_s = 8
-        call this%chidg%data%domains(1)%init_sol('Scalar',nterms_s)
+        call this%chidg%data%add_domain('D_01',pts,nterms_c,'Scalar',nterms_s)
 
 
         ! Initialize blockvectors
-        call this%bv_a%init(this%chidg%data%domains(1)%mesh)
-        call this%bv_b%init(this%chidg%data%domains(1)%mesh)
-        call this%bv_res%init(this%chidg%data%domains(1)%mesh)
+        call this%bv_a%init(this%chidg%data%mesh(1))
+        call this%bv_b%init(this%chidg%data%mesh(1))
+        call this%bv_res%init(this%chidg%data%mesh(1))
 
 
         ! Initialize blockvector data for operators

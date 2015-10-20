@@ -2,7 +2,7 @@ module newton
     use mod_kinds,              only: rk,ik
     use mod_constants,          only: ZERO, ONE, TWO, DIAG
     use type_timescheme,        only: timescheme_t
-    use type_chidgData,         only: chidgData_t
+    use type_chidg_data,        only: chidg_data_t
     use atype_matrixsolver,     only: matrixsolver_t
     use type_preconditioner,    only: preconditioner_t
     use type_blockvector
@@ -62,8 +62,7 @@ contains
     !subroutine solve(self,domains,matrixsolver,preconditioner)
     subroutine solve(self,data,matrixsolver,preconditioner)
         class(newton_t),                    intent(inout)   :: self
-        !type(domain_t),                     intent(inout)   :: domains(:)
-        type(chidgData_t),                  intent(inout)   :: data
+        type(chidg_data_t),                 intent(inout)   :: data
         class(matrixsolver_t),   optional,  intent(inout)   :: matrixsolver
         class(preconditioner_t), optional,  intent(inout)   :: preconditioner
 

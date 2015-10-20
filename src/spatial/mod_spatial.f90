@@ -1,9 +1,9 @@
 module mod_spatial
 #include <messenger.h>
-    use mod_kinds,      only: rk,ik
-    use mod_constants,  only: NFACES, DIAG
-    use type_chidgData, only: chidgData_t
-    use type_timer,     only: timer_t
+    use mod_kinds,          only: rk,ik
+    use mod_constants,      only: NFACES, DIAG
+    use type_chidg_data,    only: chidg_data_t
+    use type_timer,         only: timer_t
 
     implicit none
 
@@ -12,9 +12,9 @@ contains
 
     subroutine update_space(data,timing,info)
         implicit none
-        type(chidgData_t), intent(inout)   :: data
-        real(rk),          optional        :: timing
-        integer(ik),       optional        :: info
+        type(chidg_data_t), intent(inout)   :: data
+        real(rk),           optional        :: timing
+        integer(ik),        optional        :: info
 
         type(timer_t)               :: timer
         integer(ik)                 :: nelem, nflux, ndonors
@@ -43,10 +43,11 @@ contains
             !
             do iblk = 0,7           ! (0 = linearization of chimera blocks, 1-6 = linearization of interior neighbor blocks, 7 = linearization of Q- block
 
-                do idom = 1,size(data%domains)
-                    associate ( domain => data%domains(idom), mesh => data%domains(idom)%mesh, sdata => data%sdata, eqnset => data%domains(idom)%eqnset, prop => data%domains(idom)%eqnset%prop, chimera => data%domains(idom)%mesh%chimera )
+                do idom = 1,data%ndomains
+!                    associate ( domain => data%domains(idom), mesh => data%domains(idom)%mesh, sdata => data%sdata, eqnset => data%domains(idom)%eqnset, prop => data%domains(idom)%eqnset%prop, chimera => data%domains(idom)%mesh%chimera )
+                    associate ( mesh => data%mesh(idom), sdata => data%sdata, eqnset => data%eqnset(idom)%item, prop => data%eqnset(idom)%item%prop, chimera => data%mesh(idom)%chimera)
 
-                    nelem = data%domains(idom)%mesh%nelem
+                    nelem = mesh%nelem
 
                     ! Loop through elements in the domain
                     do ielem = 1,nelem
@@ -59,7 +60,7 @@ contains
                         !
                         if (iblk /= DIAG) then
                             ! Check if there is an element to linearize against in the iblk direction. If not, cycle
-                            if (domain%mesh%faces(ielem,iblk)%ineighbor == 0) then
+                            if (mesh%faces(ielem,iblk)%ineighbor == 0) then
                                 skip = .true.
                             else
                                 skip = .false.
@@ -78,15 +79,15 @@ contains
                             !
                             do iface = 1,NFACES
 
-                                associate ( face => data%domains(idom)%mesh%faces(ielem,iface) )
+                                associate ( face => mesh%faces(ielem,iface) )
 
                                 !
                                 ! Only call the following routines for interior faces -- ftype == 0
                                 ! Furthermore, only call the routines if we are computing derivatives for the neighbor of
                                 ! iface or for the current element(DIAG). This saves a lot of unnecessary compute_boundary calls.
                                 !
-                                interior_face = ( domain%mesh%faces(ielem,iface)%ftype == 0 )
-                                chimera_face  = ( domain%mesh%faces(ielem,iface)%ftype == 2 )
+                                interior_face = ( mesh%faces(ielem,iface)%ftype == 0 )
+                                chimera_face  = ( mesh%faces(ielem,iface)%ftype == 2 )
                                 compute_face_interior = ( interior_face .and. (iblk == iface .or. iblk == DIAG) )
                                 compute_face_chimera  = ( chimera_face  .and. (iblk == 0     .or. iblk == DIAG) )
 
@@ -124,7 +125,7 @@ contains
                                             ! Compute boundary flux once for each donor. For interior faces ndonors == 1. For Chimera faces ndonors is potentially > 1.
                                             !
                                             do idonor = 1,ndonors
-                                                call eqnset%boundary_advective_flux(iflux)%flux%compute(data%domains(:)%mesh,sdata,prop,idom,ielem,iface,iblk,idonor)
+                                                call eqnset%boundary_advective_flux(iflux)%flux%compute(data%mesh,data%sdata,prop,idom,ielem,iface,iblk,idonor)
                                             end do
 
 
@@ -150,7 +151,7 @@ contains
                             if (allocated(eqnset%volume_advective_flux)) then
                                 nflux = size(eqnset%volume_advective_flux)
                                 do iflux = 1,nflux
-                                    call eqnset%volume_advective_flux(iflux)%flux%compute(data%domains(:)%mesh,sdata,prop,idom,ielem,iblk)
+                                    call eqnset%volume_advective_flux(iflux)%flux%compute(data%mesh,data%sdata,prop,idom,ielem,iblk)
                                 end do
                             end if
 
@@ -182,8 +183,8 @@ contains
             !> For boundary conditions, the linearization only depends on Q-, which is the solution vector
             !! for the interior element. So, we only need to compute derivatives for the interior element (DIAG)
             iblk = 7    !> DIAG
-            do idom = 1,size(data%domains)
-                call data%domains(idom)%bcset%apply(data%domains(:)%mesh,data%sdata,idom,iblk,data%domains(idom)%eqnset%prop)
+            do idom = 1,data%ndomains
+                call data%bcset(idom)%apply(data%mesh,data%sdata,data%eqnset(idom)%item%prop,idom,iblk)
             end do
 
 

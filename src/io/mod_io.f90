@@ -39,7 +39,7 @@ module mod_io
     
     ! EQUATION SET 
     !--------------------------------------------------
-    character(len=100),  save    :: eqnset
+    character(len=100),  save    :: eqnset = 'scalar'
   
   
 

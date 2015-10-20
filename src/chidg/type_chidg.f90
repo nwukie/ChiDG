@@ -4,7 +4,7 @@ module type_chidg
     use mod_grid,               only: initialize_grid
     use mod_io,                 only: read_input
 
-    use type_chidgData,         only: chidgData_t
+    use type_chidg_data,        only: chidg_data_t
     use type_timescheme,        only: timescheme_t
     use atype_matrixsolver,     only: matrixsolver_t
     use type_preconditioner,    only: preconditioner_t
@@ -29,7 +29,7 @@ module type_chidg
     !-----------------------------------------------------------------
     type, public    :: chidg_t
 
-        type(chidgData_t)                           :: data
+        type(chidg_data_t)                          :: data
         class(timescheme_t),        allocatable     :: timescheme
         class(matrixsolver_t),      allocatable     :: matrixsolver
         class(preconditioner_t),    allocatable     :: preconditioner

@@ -1,5 +1,5 @@
 module type_bcwrapper
-    use atype_bc,   only: bc_t
+    use type_bc,   only: bc_t
     implicit none
     private
 

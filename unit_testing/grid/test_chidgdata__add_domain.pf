@@ -1,0 +1,50 @@
+@Test
+subroutine test_chidgdata__add_domain__onedomain()
+    use pfunit_mod
+    use mod_kinds,      only: ik, rk
+    use type_chidg,     only: chidg_t
+    use type_point,     only: point_t
+    use mod_testutils,  only: meshgen
+    implicit none
+
+
+    type(chidg_t)               :: chidg
+    type(point_t),  allocatable :: pts(:,:,:)
+    integer(ik)                 :: nterms_c, nterms_s
+    
+
+    !
+    ! Initialize ChiDG environment
+    !
+    call chidg%init('env')
+
+
+    !
+    ! Generate mesh points
+    !
+    call meshgen('333',pts)
+
+
+    !
+    ! Set expansion terms
+    !
+    nterms_c = 8
+    nterms_s = 8
+
+    
+    !
+    ! call chidg%data%add_domain. THIS IS BEING TESTED
+    !
+    call chidg%data%add_domain('D_01',pts,nterms_c,'scalar',nterms_s)
+
+
+
+    ! test chidg%data%ndomains
+    @assertEqual(1,chidg%data%ndomains)
+    @assertEqual(1,size(chidg%data%mesh))
+    @assertEqual(1,size(chidg%data%bcset))
+    @assertEqual(1,size(chidg%data%eqnset))
+
+
+
+end subroutine

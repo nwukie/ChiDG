@@ -6,7 +6,6 @@ subroutine test_operator_dot()
     use mod_constants,      only: ZERO, ONE, TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT, NINE, TEN
     use type_blockvector,   only: blockvector_t
     use type_chidg,         only: chidg_t
-    use type_domain,        only: domain_t
     use type_point,         only: point_t
 
     use mod_testutils,      only: meshgen
@@ -16,7 +15,6 @@ subroutine test_operator_dot()
 
 
     type(chidg_t)               :: chidg
-    type(domain_t)              :: dom
     type(point_t),  allocatable :: pts(:,:,:)
     type(blockvector_t)         :: a, b
 
@@ -42,16 +40,17 @@ subroutine test_operator_dot()
 
     
     ! Initialize domain
-    call dom%init_geom(idomain,nterms_c,pts)
-    call dom%init_sol('Scalar',nterms_s)
+    !call dom%init_geom(idomain,nterms_c,pts)
+    !call dom%init_sol('Scalar',nterms_s)
+    call chidg%data%add_domain('D_01',pts,nterms_c,'scalar',nterms_s)
 
 
 
     !
     ! Initialize data containers
     !
-    call a%init(dom%mesh)
-    call b%init(dom%mesh)
+    call a%init(chidg%data%mesh(1))
+    call b%init(chidg%data%mesh(1))
 
 
     !

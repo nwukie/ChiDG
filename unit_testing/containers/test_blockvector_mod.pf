@@ -1,15 +1,16 @@
 module test_blockvector_mod
     use pfunit_mod
     use type_chidg,         only: chidg_t
+    use type_point,         only: point_t
     use mod_kinds,          only: rk,ik
     use mod_constants,      only: ZERO, ONE, TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT, NINE, TEN, &
                                   XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX
     use mod_hdfio,          only: read_grid_hdf
     use mod_grid_operators, only: initialize_variable
-    !use type_domain,        only: domain_t
     use type_blockvector,   only: blockvector_t
     use DNAD_D
     use fcn_constant,       only: constant_f
+    use mod_testutils,      only: meshgen
     implicit none
 
     public  :: test_blockvector
@@ -17,7 +18,6 @@ module test_blockvector_mod
 @TestCase
     type, extends(TestCase) ::  test_blockvector
         type(chidg_t)                        :: chidg
-        !type(domain_t),         allocatable  :: domain(:)
         type(blockvector_t)                  :: bvec
         type(constant_f)                     :: fcn
 
@@ -32,7 +32,9 @@ contains
     !! procedure. The argument names have to match
     subroutine setUp(this)
         class(test_blockvector),    intent(inout)   :: this
-        integer(ik)                                 :: nterms_s, ivar
+
+        integer(ik)                 :: nterms_c, nterms_s, ivar
+        type(point_t),  allocatable :: pts(:,:,:)
         
         
         ! Initialize ChiDG environment
@@ -40,16 +42,22 @@ contains
 
 
         ! Read 3x3x3 element grid
-        call read_grid_hdf('D1_E27_M1.h5', this%chidg%data)
+        !call read_grid_hdf('D1_E27_M1.h5', this%chidg%data)
+        call meshgen('333',pts)
 
 
         ! Initialize domain numerics
+        !nterms_s = 8
+        !call this%chidg%data%domains(1)%init_sol('Scalar',nterms_s)
+
+        nterms_c = 8
         nterms_s = 8
-        call this%chidg%data%domains(1)%init_sol('Scalar',nterms_s)
+        call this%chidg%data%add_domain('D_01',pts,nterms_c,'Scalar',nterms_s)
+
 
 
         ! Initialize blockvector
-        call this%bvec%init(this%chidg%data%domains(1)%mesh)
+        call this%bvec%init(this%chidg%data%mesh(1))
     
     
     end subroutine
@@ -71,7 +79,7 @@ contains
         
         integer(ik)                 :: nelem
 
-        nelem = self%chidg%data%domains(1)%mesh%nelem
+        nelem = self%chidg%data%mesh(1)%nelem
         @assertEqual(nelem,size(self%bvec%lvecs,1))  
 
     end subroutine
@@ -143,7 +151,7 @@ contains
         integer(ik) :: size1d
 
 
-        associate ( mesh => self%chidg%data%domains(1)%mesh, lvecs => self%bvec%lvecs)
+        associate ( mesh => self%chidg%data%mesh(1), lvecs => self%bvec%lvecs)
 
 
             !> Test first element, linearization block sizes
@@ -200,7 +208,7 @@ contains
 
         integer(ik) :: ielem
 
-        do ielem = 1,self%chidg%data%domains(1)%mesh%nelem
+        do ielem = 1,self%chidg%data%mesh(1)%nelem
             @assertEqual(1,self%bvec%ldata(ielem,1))
             @assertEqual(8,self%bvec%ldata(ielem,2))
         end do

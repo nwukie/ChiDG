@@ -16,13 +16,11 @@ subroutine test_blockmatrix_build()
     use mod_kinds,          only: rk,ik
     use type_chidg,         only: chidg_t
     use type_blockmatrix,   only: blockmatrix_t
-    use type_domain,        only: domain_t
     use type_point,         only: point_t
     use mod_testutils,      only: meshgen
 
     implicit none
     type(chidg_t)               :: chidg
-    type(domain_t)              :: dom
     type(blockmatrix_t)         :: bmat
     type(point_t), allocatable  :: pts(:,:,:)
     real(rk),      allocatable  :: fullmat(:,:)
@@ -52,12 +50,14 @@ subroutine test_blockmatrix_build()
     idomain  = 1
     nterms_c = 8
     nterms_s = 8
-    call dom%init_geom(idomain,nterms_c,pts)
-    call dom%init_sol('scalar',nterms_s)
+!    call dom%init_geom(idomain,nterms_c,pts)
+!    call dom%init_sol('scalar',nterms_s)
+
+    call chidg%data%add_domain('D_01',pts,nterms_c,'scalar',nterms_s)
 
 
     ! Call initialization on sparse block-matrix
-    call bmat%init(dom%mesh,'full')
+    call bmat%init(chidg%data%mesh(1),'full')
 
 
 
@@ -79,6 +79,8 @@ subroutine test_blockmatrix_build()
     ! Call routine to build full-matrix.
     call bmat%build(fullmat)
 
+
+    !print*, fullmat
 
 
 

@@ -5,10 +5,9 @@ module DLA_volume_advective_flux
                                       XI_MIN,XI_MAX,ETA_MIN,ETA_MAX,ZETA_MIN,ZETA_MAX,DIAG
 
     use atype_volume_flux,      only: volume_flux_t
-    use atype_equationset,      only: equationset_t
     use type_mesh,              only: mesh_t
-    use atype_solverdata,       only: solverdata_t
-    use mod_interpolate,        only: interpolate
+    use type_solverdata,        only: solverdata_t
+    use mod_interpolate,        only: interpolate_element
     use mod_integrate,          only: integrate_volume_flux
     use mod_DNAD_tools,         only: compute_neighbor_face, compute_seed_element
     use DNAD_D
@@ -44,12 +43,12 @@ contains
     !   Volume Flux routine for Scalar
     !
     !===========================================================
-    subroutine compute(self,mesh,sdata,ielem,iblk,prop)
+    subroutine compute(self,mesh,sdata,prop,idom,ielem,iblk)
         class(DLA_volume_advective_flux_t),     intent(in)      :: self
-        class(mesh_t),                          intent(in)      :: mesh
-        class(solverdata_t),                    intent(inout)   :: sdata
-        integer(ik),                            intent(in)      :: ielem, iblk
+        type(mesh_t),                           intent(in)      :: mesh(:)
+        type(solverdata_t),                     intent(inout)   :: sdata
         class(properties_t),                    intent(inout)   :: prop
+        integer(ik),                            intent(in)      :: idom, ielem, iblk
 
 
 
@@ -59,7 +58,7 @@ contains
         integer(ik)             :: iu_a, iu_b, i
 
 
-        associate (elem => mesh%elems(ielem), q => sdata%q)
+        associate (elem => mesh(idom)%elems(ielem), q => sdata%q)
 
 
             !
@@ -96,15 +95,15 @@ contains
             !
             ! Get seed element for derivatives
             !
-            iseed   = compute_seed_element(mesh,ielem,iblk)
+            iseed   = compute_seed_element(mesh,idom,ielem,iblk)
 
 
 
             !
             ! Interpolate solution to quadrature nodes
             !
-            call interpolate(mesh%elems,q,ielem,iu_a,ua,iseed)
-            call interpolate(mesh%elems,q,ielem,iu_b,ub,iseed)
+            call interpolate_element(mesh,q,idom,ielem,iu_a,ua,iseed)
+            call interpolate_element(mesh,q,idom,ielem,iu_b,ub,iseed)
 
             
 
@@ -115,7 +114,7 @@ contains
             flux_y = cy  *  ua
             flux_z = cz  *  ua
 
-            call integrate_volume_flux(elem,sdata,iu_a,iblk,flux_x,flux_y,flux_z)
+            call integrate_volume_flux(elem,sdata,idom,iu_a,iblk,flux_x,flux_y,flux_z)
 
 
 
@@ -124,7 +123,7 @@ contains
             flux_y = cy  *  ub
             flux_z = cz  *  ub
 
-            call integrate_volume_flux(elem,sdata,iu_b,iblk,flux_x,flux_y,flux_z)
+            call integrate_volume_flux(elem,sdata,idom,iu_b,iblk,flux_x,flux_y,flux_z)
 
 
 

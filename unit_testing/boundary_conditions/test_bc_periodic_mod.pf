@@ -4,7 +4,6 @@ module test_bc_periodic_mod
     use mod_kinds,      only: rk,ik
     use mod_constants,  only: XI_MIN, ETA_MIN, ZETA_MIN, XI_MAX, ETA_MAX, ZETA_MAX
     use type_chidg,     only: chidg_t
-    !use type_domain,    only: domain_t
     use type_point,     only: point_t
     use mod_testutils,  only: meshgen
 
@@ -13,7 +12,6 @@ module test_bc_periodic_mod
     @TestCase
     type, extends(TestCase) :: test_periodic_bc
         type(chidg_t)   :: chidg
-        !type(domain_t)  :: domain
 
     contains
         procedure   :: setUp
@@ -43,7 +41,11 @@ contains
         idomain  = 1
         nterms_c = 8
         nterms_s = 8
-        call this%chidg%data%domains(1)%init_geom(idomain,nterms_c,pts)
+
+
+!        call this%chidg%data%domains(1)%init_geom(idomain,nterms_c,pts)
+
+        call this%chidg%data%add_domain('D_01',pts,nterms_c,'scalar',nterms_s)
 
     end subroutine
 
@@ -71,13 +73,14 @@ contains
 
         finterior = 0       ! interior face = 0
 
-        call self%chidg%data%domains(1)%init_bc('periodic',XI_MIN)
+        !call self%chidg%data%domains(1)%init_bc('periodic',XI_MIN)
+        call self%chidg%data%add_bc('D_01','periodic',XI_MIN)
 
 
         
         ! Test that the XI_MIN and XI_MAX faces of the block have been set
         ! to interior faces. ftype = 0 
-        associate ( faces => self%chidg%data%domains(1)%mesh%faces )
+        associate ( faces => self%chidg%data%mesh(1)%faces )
 
             ! Check all the XI_MIN faces
             @assertEqual(finterior,faces(1,XI_MIN)%ftype)
@@ -105,11 +108,12 @@ contains
 
         integer(ik) :: ielem, ineighbor
 
-        call self%chidg%data%domains(1)%init_bc('periodic',XI_MIN)
+        !call self%chidg%data%domains(1)%init_bc('periodic',XI_MIN)
+        call self%chidg%data%add_bc('D_01','periodic',XI_MIN)
 
 
         ! Test that the XI_MIN faces have the XI_MAX face elements as their neighbors
-        associate ( faces => self%chidg%data%domains(1)%mesh%faces )
+        associate ( faces => self%chidg%data%mesh(1)%faces )
 
             !! CHECK ALL THE XI_MIN FACES
             ielem     = 1

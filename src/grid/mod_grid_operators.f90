@@ -3,10 +3,10 @@ module mod_grid_operators
     use mod_kinds,          only: rk, ik
     use type_point,         only: point_t
     use type_element,       only: element_t
-    use type_domain,        only: domain_t
     use type_blockvector,   only: blockvector_t
     use type_densevector,   only: densevector_t
     use type_solverdata,    only: solverdata_t
+    use type_chidg_data,    only: chidg_data_t
     use atype_function,     only: function_t
     use mod_polynomial,     only: PolynomialVal
     use mod_project,        only: project_function_xyz
@@ -24,9 +24,8 @@ contains
     !!  @param[in]  ivar    Integer index of the variable being initialized
     !!  @param[in]  fcn     Function being projected to the solution
     !---------------------------------------------------------------------------------
-    subroutine initialize_variable(domains,sdata,ivar,fcn)
-        type(domain_t),         intent(inout)   :: domains(:)
-        class(solverdata_t),    intent(inout)   :: sdata
+    subroutine initialize_variable(data,ivar,fcn)
+        type(chidg_data_t),     intent(inout)   :: data
         integer(ik),            intent(in)      :: ivar
         class(function_t),      intent(inout)   :: fcn
 
@@ -34,18 +33,15 @@ contains
         real(rk), allocatable   :: fmodes(:)
 
 
-        ! Check that variable index 'ivar' is valid
-        !& DEBUG - DOMAIN - Hardcoded domain index
-        if (ivar > domains(1)%eqnset%neqns ) call signal(FATAL,'initialize_variable: variable index ivar exceeds the number of equations')
-
-
         !
         ! Loop through elements in mesh and call function projection
         !
-        do idom = 1,size(domains)
+        do idom = 1,data%ndomains
+            ! Check that variable index 'ivar' is valid
+            if (ivar > data%eqnset(idom)%item%neqns ) call signal(FATAL,'initialize_variable: variable index ivar exceeds the number of equations')
 
-            do ielem = 1,domains(idom)%mesh%nelem
-                associate (elem => domains(idom)%mesh%elems(ielem), q => sdata%q%dom(idom)%lvecs(ielem))
+            do ielem = 1,data%mesh(idom)%nelem
+                associate (elem => data%mesh(idom)%elems(ielem), q => data%sdata%q%dom(idom)%lvecs(ielem))
 
                     ! Initial array allocation
                     if (.not. allocated(fmodes)) allocate(fmodes(q%nterms()))

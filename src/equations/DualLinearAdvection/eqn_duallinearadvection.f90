@@ -4,13 +4,9 @@ module eqn_duallinearadvection
     use mod_constants,          only: NFACES,ZERO,ONE,TWO,HALF, &
                                       XI_MIN,XI_MAX,ETA_MIN,ETA_MAX,ZETA_MIN,ZETA_MAX,DIAG
 
-    use atype_equationset,      only: equationset_t
+    use type_equationset,       only: equationset_t
     use type_mesh,              only: mesh_t
-    use atype_solverdata,       only: solverdata_t
-    use mod_interpolate,        only: interpolate
-    use mod_integrate,          only: integrate_volume_flux, integrate_boundary_flux
-    use mod_DNAD_tools,         only: compute_neighbor_face, compute_seed_element
-    use DNAD_D
+    use type_solverdata,        only: solverdata_t
 
     use DLA_boundary_average_advective_flux,    only: DLA_boundary_average_advective_flux_t
     use DLA_LaxFriedrichs_flux,                 only: DLA_LaxFriedrichs_flux_t

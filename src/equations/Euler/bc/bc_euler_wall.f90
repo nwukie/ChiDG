@@ -1,13 +1,15 @@
 module bc_euler_wall
     use mod_kinds,          only: rk,ik
     use mod_constants,      only: TWO, HALF, ZERO
-    use atype_bc,           only: bc_t
-    use atype_solverdata,   only: solverdata_t
+
+    use type_bc,            only: bc_t
+    use type_solverdata,    only: solverdata_t
     use type_mesh,          only: mesh_t
     use type_properties,    only: properties_t
+
     use mod_DNAD_tools,     only: compute_seed_element
     use mod_integrate,      only: integrate_boundary_scalar_flux
-    use mod_interpolate,    only: interpolate
+    use mod_interpolate,    only: interpolate_face
     use DNAD_D
     implicit none
     
@@ -42,14 +44,15 @@ contains
     !!  @param[in]      iblk    Index of the linearization block being computed
     !!  @param[inout]   prop    properties_t object containing equations and material_t objects
     !-------------------------------------------------------------------------------------------
-    subroutine compute(self,mesh,sdata,ielem,iface,iblk,prop)
-        class(euler_wall_t),     intent(inout)   :: self
-        type(mesh_t),                   intent(in)      :: mesh
-        class(solverdata_t),            intent(inout)   :: sdata
+    subroutine compute(self,mesh,sdata,prop,idom,ielem,iface,iblk)
+        class(euler_wall_t),            intent(inout)   :: self
+        type(mesh_t),                   intent(in)      :: mesh(:)
+        type(solverdata_t),             intent(inout)   :: sdata
+        class(properties_t),            intent(inout)   :: prop
+        integer(ik),                    intent(in)      :: idom
         integer(ik),                    intent(in)      :: ielem
         integer(ik),                    intent(in)      :: iface
         integer(ik),                    intent(in)      :: iblk
-        class(properties_t),            intent(inout)   :: prop
 
         ! Equation indices
         integer(ik) :: irho, irhou, irhov, irhow, irhoE
@@ -57,7 +60,7 @@ contains
         integer(ik) :: iseed, iface_p, ineighbor
 
         ! Storage at quadrature nodes
-        type(AD_D), dimension(mesh%faces(ielem,iface)%gq%face%nnodes)   ::  &
+        type(AD_D), dimension(mesh(idom)%faces(ielem,iface)%gq%face%nnodes)   ::  &
                         rho_m,  rhou_m, rhov_m, rhow_m, rhoE_m, p_m, flux, flux_x, flux_y, flux_z,  &
                         rhou_bc, rhov_bc, rhow_bc, rhoE_bc, u_bc, v_bc, w_bc, u_m, v_m, w_m, p_bc
 
@@ -75,29 +78,28 @@ contains
         !
         ! Get seed element for derivatives
         !
-        iseed = compute_seed_element(mesh,ielem,iblk)
+        iseed = compute_seed_element(mesh,idom,ielem,iblk)
 
 
 
-        associate (norms => mesh%faces(ielem,iface)%norm, unorms => mesh%faces(ielem,iface)%unorm, faces => mesh%faces, q => sdata%q)
+        associate (norms => mesh(idom)%faces(ielem,iface)%norm, unorms => mesh(idom)%faces(ielem,iface)%unorm, faces => mesh(idom)%faces, q => sdata%q)
 
 
 
             !
             ! Interpolate interior solution to quadrature nodes
             !
-            call interpolate(faces,q,ielem,iface,irho, rho_m, iseed)
-            call interpolate(faces,q,ielem,iface,irhou,rhou_m,iseed)
-            call interpolate(faces,q,ielem,iface,irhov,rhov_m,iseed)
-            call interpolate(faces,q,ielem,iface,irhow,rhow_m,iseed)
-            call interpolate(faces,q,ielem,iface,irhoE,rhoE_m,iseed)
+            call interpolate_face(mesh,q,idom,ielem,iface,irho, rho_m, iseed)
+            call interpolate_face(mesh,q,idom,ielem,iface,irhou,rhou_m,iseed)
+            call interpolate_face(mesh,q,idom,ielem,iface,irhov,rhov_m,iseed)
+            call interpolate_face(mesh,q,idom,ielem,iface,irhow,rhow_m,iseed)
+            call interpolate_face(mesh,q,idom,ielem,iface,irhoE,rhoE_m,iseed)
 
 
             !
             ! Compute interior pressure
             !
             call prop%fluid%compute_pressure(rho_m,rhou_m,rhov_m,rhow_m,rhoE_m,p_m)
-            !call prop%fluid%compute_pressure(rho_m,rhou_bc,rhov_bc,rhow_bc,rhoE_bc,p_bc)
             p_bc = p_m
 
 
@@ -122,7 +124,7 @@ contains
             flux_z = ZERO
             flux = flux_x*norms(:,1) + flux_y*norms(:,2) + flux_z*norms(:,3)
 
-            call integrate_boundary_scalar_flux(mesh%faces(ielem,iface),sdata,irho,iblk,flux)
+            call integrate_boundary_scalar_flux(mesh(idom)%faces(ielem,iface),sdata,idom,irho,iblk,flux)
 
 
             !
@@ -133,7 +135,7 @@ contains
             flux_z = ZERO
             flux = flux_x*norms(:,1) + flux_y*norms(:,2) + flux_z*norms(:,3)
 
-            call integrate_boundary_scalar_flux(mesh%faces(ielem,iface),sdata,irhou,iblk,flux)
+            call integrate_boundary_scalar_flux(mesh(idom)%faces(ielem,iface),sdata,idom,irhou,iblk,flux)
 
 
 
@@ -146,7 +148,7 @@ contains
 
             flux = flux_x*norms(:,1) + flux_y*norms(:,2) + flux_z*norms(:,3)
 
-            call integrate_boundary_scalar_flux(mesh%faces(ielem,iface),sdata,irhov,iblk,flux)
+            call integrate_boundary_scalar_flux(mesh(idom)%faces(ielem,iface),sdata,idom,irhov,iblk,flux)
 
 
 
@@ -159,7 +161,7 @@ contains
 
             flux = flux_x*norms(:,1) + flux_y*norms(:,2) + flux_z*norms(:,3)
 
-            call integrate_boundary_scalar_flux(mesh%faces(ielem,iface),sdata,irhow,iblk,flux)
+            call integrate_boundary_scalar_flux(mesh(idom)%faces(ielem,iface),sdata,idom,irhow,iblk,flux)
 
 
             !
@@ -171,7 +173,7 @@ contains
 
             flux = flux_x*norms(:,1) + flux_y*norms(:,2) + flux_z*norms(:,3)
 
-            call integrate_boundary_scalar_flux(mesh%faces(ielem,iface),sdata,irhoE,iblk,flux)
+            call integrate_boundary_scalar_flux(mesh(idom)%faces(ielem,iface),sdata,idom,irhoE,iblk,flux)
 
         end associate
 

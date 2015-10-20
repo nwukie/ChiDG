@@ -5,11 +5,13 @@ module test_linearadvection_mod
                                   XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX, NFACES
     use type_chidg,         only: chidg_t
     use type_point,         only: point_t
-    use type_domain,        only: domain_t
+    use atype_function,     only: function_t
+    use mod_function,       only: create_function
     use type_densematrix,   only: densematrix_t
     use mod_testutils,      only: meshgen
     use mod_hdfio,            only: read_grid_hdf
     use mod_check_jacobian
+    use mod_grid_operators, only: initialize_variable
     implicit none
 
     public  :: test_eq_LA
@@ -29,8 +31,6 @@ module test_linearadvection_mod
     @TestCase(constructor=newTest)
     type, extends(ParameterizedTestCase) ::  test_eq_LA
         type(chidg_t)       :: chidg
-        !type(domain_t),allocatable      :: domain(:)
-        type(domain_t)      :: domain
         integer(ik)         :: iblk
     contains
         procedure   ::  setUp
@@ -53,21 +53,33 @@ contains
         
         integer(ik), parameter      :: npt = 64
         type(point_t), allocatable  :: pts(:,:,:)
-        integer(ik)                 :: neqns, nterms_s, nterms_c
+        integer(ik)                 :: neqns, nterms_s, nterms_c, idomain
         real(rk), dimension(npt)    :: x,y,z
+        class(function_t), allocatable  :: fcn
         
-        !> Initialize chidg environment
+        !
+        ! Initialize chidg environment
+        !
         call this%chidg%init('env')
 
-        !> Generate points array for 3x3x3 mesh
-        !call read_grid_hdf('4x4x4_unit.h5',this%domain)
+        !
+        ! Generate points array for 3x3x3 mesh
+        !
         call meshgen('3x3x3_unit',pts)
 
-        !> Initialize domain
+        !
+        ! Initialize domain
+        !
+        idomain  = 1
         nterms_s = 8
         nterms_c = 8
-        call this%domain%init_geom(nterms_c,pts)
-        call this%domain%init_sol('LA',nterms_s)
+        call this%chidg%data%add_domain('D_01',pts,nterms_c,'LA',nterms_s)
+        call this%chidg%data%init_sdata()
+
+
+        call create_function(fcn,'constant')
+        call fcn%set('const',1.0_rk)
+        call initialize_variable(this%chidg%data,1,fcn)
 
     end subroutine
     
@@ -77,10 +89,10 @@ contains
 
 
     !--------------------------
-    !> PARAMETER CONSTRUCTORS
+    ! PARAMETER CONSTRUCTORS
     !--------------------------
     
-    !> Function for setting the correct parameter value in the constructor
+    ! Function for setting the correct parameter value in the constructor
     function newBlock(iblk) result(param)
         type(blockParam)        :: param
         integer(ik), intent(in) :: iblk
@@ -109,9 +121,9 @@ contains
 
 
 !------------------------------------------------------------------------------------------
-!>                                        TESTS
+!                                        TESTS
 !------------------------------------------------------------------------------------------
-!> Test Volume Flux jacobian calclation
+! Test Volume Flux jacobian calclation
 @Test(cases = [1, 2, 3, 4, 5, 6, 7])
     subroutine test_LA_jacobian_volume_advective_flux(self)
         class(test_eq_LA),    intent(inout)   :: self
@@ -120,7 +132,7 @@ contains
         integer(ik) :: ielem, ivar, iblk, irow
         real(rk)    :: tol
         
-        tol = 1.0e-7_rk
+        tol = 1.0e-6_rk
         
         ielem = 14
         
@@ -128,7 +140,7 @@ contains
         iblk = self%iblk
         
         ! Compute Automatic and Finite Difference jacobians
-        call check_jacobian_volume_advective_flux(self%domain,ielem,iblk,blk_dnad,blk_fd)
+        call check_jacobian_volume_advective_flux(self%chidg%data,ielem,iblk,blk_dnad,blk_fd)
         
 
         @assertEqual(blk_fd%mat, blk_dnad%mat, tol)
@@ -149,7 +161,7 @@ contains
         integer(ik) :: ielem, iface, ivar, iblk, irow
         real(rk)    :: tol
         
-        tol = 1.0e-7_rk
+        tol = 1.0e-6_rk
         
         ielem = 14
         iface = 1
@@ -159,7 +171,7 @@ contains
         iblk = self%iblk
         
         ! Compute Automatic and Finite Difference jacobians
-        call check_jacobian_boundary_advective_flux(self%domain,ielem,iblk,blk_dnad,blk_fd)
+        call check_jacobian_boundary_advective_flux(self%chidg%data,ielem,iblk,blk_dnad,blk_fd)
         
         
         @assertEqual(blk_fd%mat, blk_dnad%mat, tol)

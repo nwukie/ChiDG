@@ -2,8 +2,8 @@ module test__project_function_xyz__mod
     use pfunit_mod
     use mod_kinds,              only: rk,ik
     use mod_constants,          only: ZERO, FIVE, THREE
+    use type_chidg,             only: chidg_t
     use type_point,             only: point_t
-    use type_domain,            only: domain_t
     use atype_function,         only: function_t
     use mod_function,           only: create_function
     use mod_project,            only: project_function_xyz
@@ -16,8 +16,9 @@ module test__project_function_xyz__mod
 
 @TestCase
     type, extends(TestCase) ::  test_project_function_xyz
+        type(chidg_t)   :: chidg
         integer(ik)     :: nterms_s
-        type(domain_t)  :: dom
+        !type(domain_t)  :: dom
     contains
         procedure   ::  setUp
         procedure   ::  tearDown
@@ -54,17 +55,26 @@ contains
         call pts(1,2,2)%set(0._rk, 1._rk, 1._rk)
         call pts(2,2,2)%set(5._rk, 1._rk, 1._rk)
         
+
+        ! Initialize ChiDG environment
+        call this%chidg%init('env')
+
         ! Initialize mapping
-        call compute_element_mappings()
+        !call compute_element_mappings()
         
         
         ! Initialize domain
-        idomain  = 1
+!        idomain  = 1
         nterms_c = npt
-        call this%dom%init_geom(idomain,nterms_c,pts)
+!        call this%dom%init_geom(idomain,nterms_c,pts)
+
+
         
         this%nterms_s = 27
-        call this%dom%init_sol('scalar',this%nterms_s)
+!        call this%dom%init_sol('scalar',this%nterms_s)
+
+        call this%chidg%data%add_domain('D_01',pts,nterms_c,'scalar',this%nterms_s)
+
         
     end subroutine
     
@@ -93,7 +103,7 @@ contains
         tol = 1.e-12_rk
 
         call create_function(fcn,'xsquared')
-        associate (elem => self%dom%mesh%elems(1))
+        associate (elem => self%chidg%data%mesh(1)%elems(1))
             
             ! Function evaluation points
             x = [0._rk, 0.5_rk, 1.0_rk, 1.5_rk, 2.0_rk, 2.5_rk, 3.0_rk, 3.5_rk, 4.0_rk, 4.5_rk, 5.0_rk]
@@ -163,7 +173,7 @@ contains
 
         call create_function(fcn,'ysquared')
         
-        associate (elem => self%dom%mesh%elems(1))
+        associate (elem => self%chidg%data%mesh(1)%elems(1))
         
         ! Function evaluation points
         x = ZERO
@@ -233,7 +243,7 @@ contains
 
         call create_function(fcn,'zsquared')
 
-        associate (elem => self%dom%mesh%elems(1))
+        associate (elem => self%chidg%data%mesh(1)%elems(1))
         
         ! Function evaluation points
         x = ZERO
@@ -305,7 +315,7 @@ contains
 
         call create_function(fcn,'xyz')
 
-        associate (elem => self%dom%mesh%elems(1))
+        associate (elem => self%chidg%data%mesh(1)%elems(1))
         
         ! Function evaluation points
         x = [0._rk, 2.5_rk, 5.0_rk, 0._rk, 2.5_rk, 5.0_rk, 0._rk, 2.5_rk, 5.0_rk, &

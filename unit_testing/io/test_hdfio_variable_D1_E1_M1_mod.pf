@@ -1,12 +1,12 @@
 module test_hdfio_variable_D1_E1_M1_mod
     use pfunit_mod
     use type_chidg,     only: chidg_t
+    !use type_point,     only: point_t
+    use type_meshdata,  only: meshdata_t
     use mod_kinds,      only: rk,ik
     use mod_constants,  only: ONE, TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT
     use mod_hdfio,      only: read_grid_hdf, read_var_hdf, write_var_hdf
-    use type_chidg,     only: chidg_t
-    use type_point,     only: point_t
-    !use type_domain,    only: domain_t
+    use mod_testutils,  only: meshgen
     implicit none
 
 
@@ -16,7 +16,6 @@ module test_hdfio_variable_D1_E1_M1_mod
     type, extends(TestCase) ::  test_hdfio_variable_D1_E1_M1
         type(chidg_t)               :: chidg
         character(11)               :: filename = 'D1_E1_M1.h5'
-        !type(domain_t), allocatable :: domains(:)
     
     contains
         procedure   ::  setUp
@@ -31,20 +30,34 @@ contains
     !! procedure. The argument names have to match
     subroutine setUp(this)
         class(test_hdfio_variable_D1_E1_M1),    intent(inout)   :: this
-        integer(ik)                                 :: nterms_s
 
+        integer(ik)                                 :: nterms_s, nterms_c
+        type(meshdata_t),   allocatable             :: meshdata(:)
+
+        !
+        ! Initialize ChiDG environment
+        !
         call this%chidg%init('env')
 
-        call read_grid_hdf(this%filename, this%chidg%data)
-    
-        nterms_s = 2*2*2
-        call this%chidg%data%domains(1)%init_sol('scalar',nterms_s)
+
+        !
+        ! Read grid data from file
+        !
+        call read_grid_hdf(this%filename, meshdata)
+
+
+        !
+        ! Add domain to ChiDG 
+        !
+        nterms_s = 8
+        call this%chidg%data%add_domain(meshdata(1)%name,meshdata(1)%points,meshdata(1)%nterms_c,'scalar',nterms_s)
+        call this%chidg%data%init_sdata()
+
     end subroutine
     
     subroutine tearDown(this)
         class(test_hdfio_variable_D1_E1_M1),    intent(inout)   :: this
         
-        !deallocate(this%domains)
     end subroutine
 
 
@@ -80,7 +93,7 @@ contains
             call read_var_hdf(this%filename,'u',1,this%chidg%data)
            
             ! Test that the read solution values equal the reference values
-            @assertEqual(ref,q%lvecs(1)%vec, tol)
+            @assertEqual(ref,this%chidg%data%sdata%q%dom(1)%lvecs(1)%vec, tol)
         end associate
         
     end subroutine

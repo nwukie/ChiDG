@@ -29,8 +29,12 @@ program plot3d_to_hdf5
     integer(ik), allocatable    :: blkdims(:,:)
     real(rk),    allocatable    :: xcoords(:,:,:), ycoords(:,:,:), zcoords(:,:,:)
 
+    ! equation set string
+    character(len=100)          :: eqnset_string
+
     ! boundary condition types
     integer(ik)                 :: ximin_bc, ximax_bc, etamin_bc, etamax_bc, zetamin_bc, zetamax_bc
+
 
 
     ! Get file name from command-line argument
@@ -164,6 +168,23 @@ program plot3d_to_hdf5
         if (ierr /= 0) stop "Error: h5dwrite_f"
         call h5dwrite_f(zset_id, H5T_NATIVE_DOUBLE, zcoords, dims, ierr)
         if (ierr /= 0) stop "Error: h5dwrite_f"
+
+
+
+
+        ! Read equationset from user
+        print*, "Setting equation set for domain ", igrid
+        print*, "Enter equation set: "
+        read*, eqnset_string
+
+
+!        ! Write equationset attribute
+!        call h5ltset_attribute_string_f(Block_id, "/", 'EquationSet', trim(eqnset_string), ierr)
+
+
+
+
+
 
 
 

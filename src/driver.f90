@@ -16,14 +16,13 @@ program driver
     use mod_kinds,              only: rk, ik
     use mod_constants,          only: XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX, ONE, TWO, THREE, FOUR, FIVE, ZERO
     use type_chidg,             only: chidg_t
-    use type_point,             only: point_t
+    use type_meshdata,          only: meshdata_t
     use mod_hdfio,              only: read_grid_hdf
     use mod_grid_operators,     only: initialize_variable
     use atype_function,         only: function_t
     use type_dict,              only: dict_t
     use mod_function,           only: create_function
     use mod_tecio,              only: write_tecio_variables
-    use mod_testutils,          only: meshgen
     use mod_io
     
     !
@@ -31,10 +30,10 @@ program driver
     !
     implicit none
     type(chidg_t)                       :: chidg
-    type(point_t),          allocatable :: pts(:,:,:)
+    type(meshdata_t),       allocatable :: meshdata(:)
     class(function_t),      allocatable :: constant, vortex, sod, roe
     type(dict_t)                        :: toptions
-    integer(ik)                         :: nterms_c, idom
+    integer(ik)                         :: nterms_c, idom, ndomains
 
 
 
@@ -46,13 +45,23 @@ program driver
 
 
     !
-    ! Initialize grid and numerics
+    ! Read grid data from file
     !
-    call read_grid_hdf(gridfile,chidg%data)
-    !call meshgen('333',pts)
-    !call chidg%set('ndomains','')
-    !nterms_c = 8
-    !call chidg%domains(1)%init_geom(nterms_c,pts)
+    call read_grid_hdf(gridfile,meshdata)
+
+
+    !
+    ! Add domains to ChiDG
+    !
+    ndomains = size(meshdata)
+    do idom = 1,ndomains
+        call chidg%data%add_domain(trim(meshdata(idom)%name),meshdata(idom)%points,meshdata(idom)%nterms_c,eqnset,nterms_s)
+    end do
+
+    !
+    ! Initialize solution data storage
+    !
+    call chidg%data%init_sdata()
 
 
     !
@@ -73,19 +82,18 @@ program driver
 
 
 
-    do idom = 1,size(chidg%data%domains)
-    associate ( dom => chidg%data%domains(idom) )
+    do idom = 1,chidg%data%ndomains
+    associate ( data => chidg%data )
         !
         ! Initialize domain
         !
-        call dom%init_bc('euler_totalinlet',XI_MIN)
-        call dom%init_bc('euler_pressureoutlet',XI_MAX)
-        call dom%init_bc('euler_wall',ETA_MIN)
-        call dom%init_bc('euler_wall',ETA_MAX)
-        call dom%init_bc('euler_wall',ZETA_MIN)
-        call dom%init_bc('euler_wall',ZETA_MAX)
+        call data%add_bc('D_01','euler_totalinlet',XI_MIN)
+        call data%add_bc('D_01','euler_pressureoutlet',XI_MAX)
+        call data%add_bc('D_01','euler_wall',ETA_MIN)
+        call data%add_bc('D_01','euler_wall',ETA_MAX)
+        call data%add_bc('D_01','euler_wall',ZETA_MIN)
+        call data%add_bc('D_01','euler_wall',ZETA_MAX)
 
-        call dom%init_sol(eqnset,nterms_s)
 
         !
         ! Initialize solution
@@ -97,23 +105,23 @@ program driver
     
         ! rho
         call constant%set('val',1.13262_rk)
-        call initialize_variable(chidg%data%domains,chidg%data%sdata,1,constant)
+        call initialize_variable(chidg%data,1,constant)
 
         ! rho_u
         call constant%set('val',190.339029_rk)
-        call initialize_variable(chidg%data%domains,chidg%data%sdata,2,constant)
+        call initialize_variable(chidg%data,2,constant)
 
         ! rho_v
         call constant%set('val',ZERO)
-        call initialize_variable(chidg%data%domains,chidg%data%sdata,3,constant)
+        call initialize_variable(chidg%data,3,constant)
 
         ! rho_w
         call constant%set('val',ZERO)
-        call initialize_variable(chidg%data%domains,chidg%data%sdata,4,constant)
+        call initialize_variable(chidg%data,4,constant)
 
         ! rho_E
         call constant%set('val',248493.425_rk)
-        call initialize_variable(chidg%data%domains,chidg%data%sdata,5,constant)
+        call initialize_variable(chidg%data,5,constant)
 
     end associate
     end do 
@@ -122,7 +130,7 @@ program driver
     ! Write initial solution
     !
     if (initial_write) then
-        call write_tecio_variables(chidg%data%domains,chidg%data%sdata,'0.plt',1)
+        call write_tecio_variables(chidg%data,'0.plt',1)
     end if
 
 
@@ -158,7 +166,7 @@ program driver
     ! Write final solution
     !
     if (final_write) then
-        call write_tecio_variables(chidg%data%domains,chidg%data%sdata,'9999999.plt',1)
+        call write_tecio_variables(chidg%data,'9999999.plt',1)
     end if
 
 

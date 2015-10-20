@@ -1,9 +1,8 @@
 module bc_linearadvection_extrapolate
     use mod_kinds,          only: rk,ik
-    use atype_bc,           only: bc_t
-    use atype_solverdata,   only: solverdata_t
+    use type_bc,            only: bc_t
+    use type_solverdata,    only: solverdata_t
     use type_mesh,          only: mesh_t
-    use atype_equationset,  only: equationset_t
     use type_properties,    only: properties_t
 
 
@@ -36,14 +35,15 @@ contains
     !!  @param[in]      iface   Index of the face being computed
     !!  @param[in]      iblk    Index of the linearization block being computed
     !----------------------------------------------------------
-    subroutine compute(self,mesh,sdata,ielem,iface,iblk,prop)
+    subroutine compute(self,mesh,sdata,prop,idom,ielem,iface,iblk)
         class(linearadvection_extrapolate_t),   intent(inout)   :: self
-        type(mesh_t),                           intent(in)      :: mesh
-        class(solverdata_t),                    intent(inout)   :: sdata
+        type(mesh_t),                           intent(in)      :: mesh(:)
+        type(solverdata_t),                     intent(inout)   :: sdata
+        class(properties_t),                    intent(inout)   :: prop
+        integer(ik),                            intent(in)      :: idom
         integer(ik),                            intent(in)      :: ielem
         integer(ik),                            intent(in)      :: iface
         integer(ik),                            intent(in)      :: iblk
-        class(properties_t),                    intent(inout)   :: prop
 
 
 

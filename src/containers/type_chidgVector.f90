@@ -60,15 +60,15 @@ contains
     !--------------------------------------------------------------------------------------
     subroutine initialize(self,mesh)
         class(chidgVector_t),   intent(inout)   :: self
-        type(mesh_t),           intent(inout)   :: mesh(:)
+        type(mesh_t),           intent(in)      :: mesh(:)
 
-        integer(ik) :: ierr, ndomains, imesh, nmesh
+        integer(ik) :: ierr, ndomains, idom
 
 
         !
         ! Allocate blockvector_t for each mesh
         !
-        nmesh = size(mesh)
+        ndomains = size(mesh)
         allocate(self%dom(ndomains), stat=ierr)
         if (ierr /= 0) call AllocationError
 
@@ -77,8 +77,8 @@ contains
         !
         ! Call initialization procedure for each blockvector_t
         !
-        do imesh = 1,nmesh
-            call self%dom(imesh)%init(mesh(imesh))
+        do idom = 1,ndomains
+            call self%dom(idom)%init(mesh(idom))
         end do
 
 

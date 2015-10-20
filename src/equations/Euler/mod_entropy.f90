@@ -1,9 +1,10 @@
 module mod_entropy
     use mod_kinds,          only: rk,ik
     use mod_constants,      only: TWO, ZERO, THREE
-    use type_domain,        only: domain_t
 
-    use mod_interpolate,    only: interpolate
+    use type_chidg_data,    only: chidg_data_t
+
+    use mod_interpolate,    only: interpolate_element
     use DNAD_D
 
     implicit none
@@ -15,18 +16,20 @@ contains
 
 
 
-    function compute_entropy_error(domain) result(error_sum)
-        type(domain_t), intent(inout)   :: domain
+    !function compute_entropy_error(domain) result(error_sum)
+    function compute_entropy_error(data) result(error_sum)
+        !type(domain_t), intent(inout)   :: domain
+        type(chidg_data_t), intent(inout)   :: data
 
 
         !& DEBUG HARDCODED NUMBER OF NODES
-        type(AD_D), dimension(domain%mesh%elems(1)%gq%vol%nnodes)  :: &
+        type(AD_D), dimension(data%mesh(1)%elems(1)%gq%vol%nnodes)  :: &
             rho, rhou, rhov, rhow, rhoE, p, entropy
 
-        real(rk), dimension(domain%mesh%elems(1)%gq%vol%nnodes)    :: entropy_rise
+        real(rk), dimension(data%mesh(1)%elems(1)%gq%vol%nnodes)    :: entropy_rise
 
         integer(ik) :: irho, irhou, irhov, irhow, irhoE
-        integer(ik) :: ielem, iface, nelem, iseed
+        integer(ik) :: ielem, iface, nelem, iseed, idom
         real(rk)    :: pinf, tinf, rhoinf, gam, entropy_ref, error_sum, vol, error, entropy_error, vol_sum
 
 
@@ -40,7 +43,8 @@ contains
         entropy_ref = pinf/(rhoinf**gam)
 
 
-        associate (mesh => domain%mesh, sdata => domain%sdata, eqnset => domain%eqnset, prop => domain%eqnset%prop)
+        !& DEBUG - HARDCODED EQUATION SET
+        associate (mesh => data%mesh, sdata => data%sdata, eqnset => data%eqnset, prop => data%eqnset(1)%item%prop)
 
 
             ! Get equation indices
@@ -73,49 +77,53 @@ contains
             !
             ! Loop over elements and accumulate entropy error
             !
-            nelem = mesh%nelem
-            do ielem = 1,nelem
+            do idom = 1,data%ndomains
 
-                !
-                ! Interpolate variables to GQ nodes
-                !
-                call interpolate(mesh%elems,sdata%q,ielem,irho,  rho,  iseed)
-                call interpolate(mesh%elems,sdata%q,ielem,irhou, rhou, iseed)
-                call interpolate(mesh%elems,sdata%q,ielem,irhov, rhov, iseed)
-                call interpolate(mesh%elems,sdata%q,ielem,irhow, rhow, iseed)
-                call interpolate(mesh%elems,sdata%q,ielem,irhoE, rhoE, iseed)
+                nelem = data%mesh(idom)%nelem
+                do ielem = 1,nelem
 
-
-                !
-                ! Compute pressure
-                !
-                call prop%fluid%compute_pressure(rho,rhou,rhov,rhow,rhoE,p)
+                    !
+                    ! Interpolate variables to GQ nodes
+                    !
+                    call interpolate_element(mesh,sdata%q,idom,ielem,irho,  rho,  iseed)
+                    call interpolate_element(mesh,sdata%q,idom,ielem,irhou, rhou, iseed)
+                    call interpolate_element(mesh,sdata%q,idom,ielem,irhov, rhov, iseed)
+                    call interpolate_element(mesh,sdata%q,idom,ielem,irhow, rhow, iseed)
+                    call interpolate_element(mesh,sdata%q,idom,ielem,irhoE, rhoE, iseed)
 
 
-                !
-                ! Compute entropy and entropy rise.
-                !
-                entropy = p/(rho**gam)
-                entropy_rise = ((entropy(:)%x_ad_ - entropy_ref)/entropy_ref)**TWO
+                    !
+                    ! Compute pressure
+                    !
+                    call prop%fluid%compute_pressure(rho,rhou,rhov,rhow,rhoE,p)
 
 
-                !
-                ! Integrate entropy error
-                !
-                error = sum(entropy_rise * mesh%elems(ielem)%jinv * mesh%elems(ielem)%gq%vol%weights)
+                    !
+                    ! Compute entropy and entropy rise.
+                    !
+                    entropy = p/(rho**gam)
+                    entropy_rise = ((entropy(:)%x_ad_ - entropy_ref)/entropy_ref)**TWO
 
 
-                !
-                ! Compute element volume
-                !
-                vol = abs(sum(mesh%elems(ielem)%jinv * mesh%elems(ielem)%gq%vol%weights))
+                    !
+                    ! Integrate entropy error
+                    !
+                    error = sum(entropy_rise * mesh(idom)%elems(ielem)%jinv * mesh(idom)%elems(ielem)%gq%vol%weights)
 
 
-                error_sum = error_sum + error
-                vol_sum   = vol_sum + vol
+                    !
+                    ! Compute element volume
+                    !
+                    vol = abs(sum(mesh(idom)%elems(ielem)%jinv * mesh(idom)%elems(ielem)%gq%vol%weights))
 
 
-            end do
+                    error_sum = error_sum + error
+                    vol_sum   = vol_sum + vol
+
+
+                end do ! ielem
+
+            end do ! idom
 
 
         end associate

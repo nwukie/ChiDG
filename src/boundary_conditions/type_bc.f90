@@ -1,10 +1,10 @@
-module atype_bc
+module type_bc
 #include <messenger.h>
     use mod_kinds,          only: rk, ik
     use mod_constants,      only: XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX
     use type_mesh,          only: mesh_t
     use type_element,       only: element_t
-    use atype_equationset,  only: equationset_t
+    use type_equationset,   only: equationset_t
     use type_solverdata,    only: solverdata_t
     use type_dict,          only: dict_t
     use type_properties,    only: properties_t
@@ -35,7 +35,7 @@ module atype_bc
 
 
     abstract interface
-        subroutine compute_interface(self,mesh,sdata,idom,ielem,iface,iblk,prop)
+        subroutine compute_interface(self,mesh,sdata,prop,idom,ielem,iface,iblk)
             use mod_kinds,  only: ik
             import bc_t
             import mesh_t
@@ -44,12 +44,12 @@ module atype_bc
 
             class(bc_t),            intent(inout)   :: self
             type(mesh_t),           intent(in)      :: mesh(:)
-            class(solverdata_t),    intent(inout)   :: sdata
+            type(solverdata_t),     intent(inout)   :: sdata
+            class(properties_t),    intent(inout)   :: prop
             integer(ik),            intent(in)      :: idom
             integer(ik),            intent(in)      :: ielem
             integer(ik),            intent(in)      :: iface
             integer(ik),            intent(in)      :: iblk
-            class(properties_t),    intent(inout)   :: prop
         end subroutine
     end interface
 
@@ -173,13 +173,13 @@ contains
     !!  @param[inout]   prop    properties_t object containing equationset properties and material_t objects
     !!
     !--------------------------------------------------------------------
-    subroutine apply(self,mesh,sdata,idom,iblk,prop)
+    subroutine apply(self,mesh,sdata,prop,idom,iblk)
         class(bc_t),            intent(inout)   :: self
         type(mesh_t),           intent(in)      :: mesh(:)
         class(solverdata_t),    intent(inout)   :: sdata
+        class(properties_t),    intent(inout)   :: prop
         integer(ik),            intent(in)      :: idom
         integer(ik),            intent(in)      :: iblk
-        class(properties_t),    intent(inout)   :: prop
 
         integer(ik) :: ielem_bc, ielem, iface
 
@@ -193,7 +193,7 @@ contains
             !
             ! For the current boundary element(face), call specialized compute procedure
             !
-            call self%compute(mesh,sdata,idom,ielem,iface,iblk,prop)
+            call self%compute(mesh,sdata,prop,idom,ielem,iface,iblk)
 
         end do
 
@@ -232,4 +232,4 @@ contains
 
 
 
-end module atype_bc
+end module type_bc

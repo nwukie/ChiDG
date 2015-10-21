@@ -88,6 +88,8 @@ contains
         ! NOTE: var_m signifies "minus" and would indicate a local element variable
         !       var_p signifies "plus"  and would indicate a neighbor element variable
         !===========================================================================
+
+
         irho  = prop%get_eqn_index("rho")
         irhou = prop%get_eqn_index("rhou")
         irhov = prop%get_eqn_index("rhov")

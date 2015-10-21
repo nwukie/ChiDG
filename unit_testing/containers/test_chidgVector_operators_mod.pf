@@ -1,7 +1,7 @@
 module test_chidgVector_operators_mod
     use pfunit_mod
     use mod_kinds,          only: rk, ik
-    use mod_constants,      only: ONE, TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT
+    use mod_constants,      only: ZERO, HALF, ONE, TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT
     use type_chidg,         only: chidg_t
     use type_point,         only: point_t
     use mod_testutils,      only: meshgen
@@ -122,6 +122,122 @@ contains
     
 
 
+
+    @Test
+    subroutine test_chidgVector__sub(self)
+        class(test_chidgVector),    intent(inout)   :: self
+
+        type(chidgVector_t) :: res
+        
+
+        res = self%vec_a - self%vec_b
+
+        @assertEqual(ZERO, res%dom(1)%lvecs(1)%vec)
+        @assertEqual(ZERO, res%dom(1)%lvecs(2)%vec)
+        @assertEqual(ZERO, res%dom(1)%lvecs(3)%vec)
+        @assertEqual(ZERO, res%dom(1)%lvecs(4)%vec)
+        @assertEqual(ZERO, res%dom(1)%lvecs(5)%vec)
+        @assertEqual(ZERO, res%dom(1)%lvecs(6)%vec)
+        @assertEqual(ZERO, res%dom(1)%lvecs(7)%vec)
+        @assertEqual(ZERO, res%dom(1)%lvecs(8)%vec)
+
+    end subroutine
+    
+
+
+
+    @Test
+    subroutine test_chidgVector__mult_rv(self)
+        class(test_chidgVector),    intent(inout)   :: self
+
+        type(chidgVector_t) :: res
+        
+
+        res = 2._rk * self%vec_b
+
+        @assertEqual(TWO, res%dom(1)%lvecs(1)%vec)
+        @assertEqual(FOUR, res%dom(1)%lvecs(2)%vec)
+        @assertEqual(SIX, res%dom(1)%lvecs(3)%vec)
+        @assertEqual(EIGHT, res%dom(1)%lvecs(4)%vec)
+        @assertEqual(10._rk, res%dom(1)%lvecs(5)%vec)
+        @assertEqual(12._rk, res%dom(1)%lvecs(6)%vec)
+        @assertEqual(14._rk, res%dom(1)%lvecs(7)%vec)
+        @assertEqual(16._rk, res%dom(1)%lvecs(8)%vec)
+
+    end subroutine
+    
+
+
+
+
+
+
+    @Test
+    subroutine test_chidgVector__mult_vr(self)
+        class(test_chidgVector),    intent(inout)   :: self
+
+        type(chidgVector_t) :: res
+        
+
+        res = self%vec_b * 2._rk
+
+        @assertEqual(TWO, res%dom(1)%lvecs(1)%vec)
+        @assertEqual(FOUR, res%dom(1)%lvecs(2)%vec)
+        @assertEqual(SIX, res%dom(1)%lvecs(3)%vec)
+        @assertEqual(EIGHT, res%dom(1)%lvecs(4)%vec)
+        @assertEqual(10._rk, res%dom(1)%lvecs(5)%vec)
+        @assertEqual(12._rk, res%dom(1)%lvecs(6)%vec)
+        @assertEqual(14._rk, res%dom(1)%lvecs(7)%vec)
+        @assertEqual(16._rk, res%dom(1)%lvecs(8)%vec)
+
+    end subroutine
+
+
+
+
+
+
+    @Test
+    subroutine test_chidgVector__div_rv(self)
+        class(test_chidgVector),    intent(inout)   :: self
+
+        type(chidgVector_t) :: res
+        
+
+        res = 2._rk / self%vec_b
+
+        @assertEqual(TWO, res%dom(1)%lvecs(1)%vec)
+        @assertEqual(ONE, res%dom(1)%lvecs(2)%vec)
+        @assertEqual(2._rk/3._rk, res%dom(1)%lvecs(3)%vec)
+        @assertEqual(2._rk/4._rk, res%dom(1)%lvecs(4)%vec)
+        @assertEqual(2._rk/5._rk, res%dom(1)%lvecs(5)%vec)
+        @assertEqual(2._rk/6._rk, res%dom(1)%lvecs(6)%vec)
+        @assertEqual(2._rk/7._rk, res%dom(1)%lvecs(7)%vec)
+        @assertEqual(2._rk/8._rk, res%dom(1)%lvecs(8)%vec)
+
+    end subroutine
+
+
+
+    @Test
+    subroutine test_chidgVector__div_vr(self)
+        class(test_chidgVector),    intent(inout)   :: self
+
+        type(chidgVector_t) :: res
+        
+
+        res = self%vec_b / 2._rk
+
+        @assertEqual(HALF, res%dom(1)%lvecs(1)%vec)
+        @assertEqual(ONE, res%dom(1)%lvecs(2)%vec)
+        @assertEqual(1.5_rk, res%dom(1)%lvecs(3)%vec)
+        @assertEqual(TWO, res%dom(1)%lvecs(4)%vec)
+        @assertEqual(2.5_rk, res%dom(1)%lvecs(5)%vec)
+        @assertEqual(THREE, res%dom(1)%lvecs(6)%vec)
+        @assertEqual(3.5_rk, res%dom(1)%lvecs(7)%vec)
+        @assertEqual(FOUR, res%dom(1)%lvecs(8)%vec)
+
+    end subroutine
 
 
 

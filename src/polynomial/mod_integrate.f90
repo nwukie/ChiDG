@@ -3,7 +3,6 @@ module mod_integrate
     use mod_constants,      only: DIAG
     use type_element,       only: element_t
     use type_face,          only: face_t
-    use type_expansion,     only: expansion_t
     use type_solverdata,    only: solverdata_t
     use type_blockmatrix,   only: blockmatrix_t
     use DNAD_D

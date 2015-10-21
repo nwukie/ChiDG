@@ -29,7 +29,7 @@ contains
         integer(ik),            intent(in)      :: ivar
         class(function_t),      intent(inout)   :: fcn
 
-        integer(ik)             :: ielem, ierr, idom
+        integer(ik)             :: ielem, ierr, idom, nterms
         real(rk), allocatable   :: fmodes(:)
 
 
@@ -41,16 +41,17 @@ contains
             if (ivar > data%eqnset(idom)%item%neqns ) call signal(FATAL,'initialize_variable: variable index ivar exceeds the number of equations')
 
             do ielem = 1,data%mesh(idom)%nelem
-                associate (elem => data%mesh(idom)%elems(ielem), q => data%sdata%q%dom(idom)%lvecs(ielem))
+                !associate (elem => data%mesh(idom)%elems(ielem), q => data%sdata%q%dom(idom)%lvecs(ielem))
 
                     ! Initial array allocation
-                    if (.not. allocated(fmodes)) allocate(fmodes(q%nterms()))
+                    nterms = data%sdata%q%dom(idom)%lvecs(ielem)%nterms()
+                    if (.not. allocated(fmodes)) allocate(fmodes(nterms))
 
 
                     ! Reallocate mode storage if necessary. For example, if the order of the expansion was changed
-                    if (size(fmodes) /= q%nterms()) then
+                    if (size(fmodes) /= nterms) then
                         if (allocated(fmodes)) deallocate(fmodes)
-                        allocate(fmodes(q%nterms()), stat=ierr)
+                        allocate(fmodes(nterms), stat=ierr)
                         if (ierr /= 0) call AllocationError
                     end if
 
@@ -62,16 +63,18 @@ contains
                     !
                     ! Call function projection
                     !
-                    call project_function_xyz(fcn,elem%nterms_s,elem%coords,fmodes)
+                    !call project_function_xyz(fcn,elem%nterms_s,elem%coords,fmodes)
+                    call project_function_xyz(fcn,data%mesh(idom)%elems(ielem)%nterms_s,data%mesh(idom)%elems(ielem)%coords,fmodes)
 
 
 
                     !
                     ! Store the projected modes to the solution expansion
                     !
-                    call q%setvar(ivar,fmodes)
+                    !call q%setvar(ivar,fmodes)
+                    call data%sdata%q%dom(idom)%lvecs(ielem)%setvar(ivar,fmodes)
 
-                end associate
+                !end associate
             end do ! ielem
 
         end do ! idomain
@@ -122,7 +125,8 @@ contains
         !
         ! Evaluate mesh point from dot product of modes and polynomial values
         !
-        val = dot_product(elem%coords%mat(:,icoord), polyvals)
+        !val = dot_product(elem%coords%mat(:,icoord), polyvals)
+        val = dot_product(elem%coords%getvar(icoord), polyvals)
 
     end function
 

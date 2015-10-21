@@ -33,7 +33,7 @@ program driver
     type(meshdata_t),       allocatable :: meshdata(:)
     class(function_t),      allocatable :: constant, vortex, sod, roe
     type(dict_t)                        :: toptions
-    integer(ik)                         :: nterms_c, idom, ndomains
+    integer(ik)                         :: nterms_c, idom, ndomains, i,j,k, ielem, izeta, ieta, ixi
 
 
 
@@ -58,10 +58,26 @@ program driver
         call chidg%data%add_domain(trim(meshdata(idom)%name),meshdata(idom)%points,meshdata(idom)%nterms_c,eqnset,nterms_s)
     end do
 
+
+
     !
     ! Initialize solution data storage
     !
     call chidg%data%init_sdata()
+
+
+
+
+    !
+    ! Write initial solution
+    !
+    if (initial_write) then
+        call write_tecio_variables(chidg%data,'1.plt',1)
+    end if
+
+
+
+
 
 
     !
@@ -82,49 +98,58 @@ program driver
 
 
 
-    do idom = 1,chidg%data%ndomains
-    associate ( data => chidg%data )
-        !
-        ! Initialize domain
-        !
-        call data%add_bc('D_01','euler_totalinlet',XI_MIN)
-        call data%add_bc('D_01','euler_pressureoutlet',XI_MAX)
-        call data%add_bc('D_01','euler_wall',ETA_MIN)
-        call data%add_bc('D_01','euler_wall',ETA_MAX)
-        call data%add_bc('D_01','euler_wall',ZETA_MIN)
-        call data%add_bc('D_01','euler_wall',ZETA_MAX)
+
+    !
+    ! Add boundary conditions
+    !
+    call chidg%data%add_bc('D_01','euler_totalinlet',XI_MIN)
+    call chidg%data%add_bc('D_01','euler_pressureoutlet',XI_MAX)
+    call chidg%data%add_bc('D_01','euler_wall',ETA_MIN)
+    call chidg%data%add_bc('D_01','euler_wall',ETA_MAX)
+    call chidg%data%add_bc('D_01','euler_wall',ZETA_MIN)
+    call chidg%data%add_bc('D_01','euler_wall',ZETA_MAX)
 
 
-        !
-        ! Initialize solution
-        !
-        call create_function(constant,'constant')
-        call create_function(sod,'sod')
-        call create_function(roe,'roe_check') 
+    call chidg%data%add_bc('D_02','euler_totalinlet',XI_MIN)
+    call chidg%data%add_bc('D_02','euler_pressureoutlet',XI_MAX)
+    call chidg%data%add_bc('D_02','euler_wall',ETA_MIN)
+    call chidg%data%add_bc('D_02','euler_wall',ETA_MAX)
+    call chidg%data%add_bc('D_02','euler_wall',ZETA_MIN)
+    call chidg%data%add_bc('D_02','euler_wall',ZETA_MAX)
 
-    
-        ! rho
-        call constant%set('val',1.13262_rk)
-        call initialize_variable(chidg%data,1,constant)
 
-        ! rho_u
-        call constant%set('val',190.339029_rk)
-        call initialize_variable(chidg%data,2,constant)
 
-        ! rho_v
-        call constant%set('val',ZERO)
-        call initialize_variable(chidg%data,3,constant)
 
-        ! rho_w
-        call constant%set('val',ZERO)
-        call initialize_variable(chidg%data,4,constant)
+    !
+    ! Initialize solution
+    !
+    call create_function(constant,'constant')
+    call create_function(sod,'sod')
+    call create_function(roe,'roe_check') 
 
-        ! rho_E
-        call constant%set('val',248493.425_rk)
-        call initialize_variable(chidg%data,5,constant)
 
-    end associate
-    end do 
+    ! rho
+    call constant%set('val',1.13262_rk)
+    call initialize_variable(chidg%data,1,constant)
+
+    ! rho_u
+    call constant%set('val',190.339029_rk)
+    call initialize_variable(chidg%data,2,constant)
+
+    ! rho_v
+    call constant%set('val',ZERO)
+    call initialize_variable(chidg%data,3,constant)
+
+    ! rho_w
+    call constant%set('val',ZERO)
+    call initialize_variable(chidg%data,4,constant)
+
+    ! rho_E
+    call constant%set('val',248493.425_rk)
+    call initialize_variable(chidg%data,5,constant)
+
+
+
 
     !
     ! Write initial solution

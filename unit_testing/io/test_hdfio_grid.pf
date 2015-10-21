@@ -133,3 +133,187 @@ subroutine testIO__read_grid_hdf__D1_E27_M1()
 end subroutine
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+! Test for reading an hdf grid. D2_E1_M1 = Two Domains, One Element, Linear Mapping
+@Test
+subroutine testIO__read_grid_hdf__D2_E1_M1() 
+    use pfunit_mod
+    use type_chidg,             only: chidg_t
+    use type_meshdata,          only: meshdata_t
+    use mod_kinds,              only: rk,ik
+    use mod_constants,          only: ZERO, ONE
+    use mod_hdfio,              only: read_grid_hdf
+    use mod_grid,               only: compute_element_mappings
+    implicit none
+    
+    type(chidg_t)                   :: chidg
+    type(meshdata_t), allocatable   :: meshdata(:)
+    character(100), parameter       :: filename = 'D2_E1_M1.h5'
+    integer,        parameter       :: ndomains = 2
+    integer(ik),    parameter       :: nterms_c = 8
+    integer(ik),    parameter       :: nterms_s = 8
+    integer,        parameter       :: nelem    = 1
+    integer(ik)                     :: idom
+    real(rk)                        :: x(8), y(8), z(8)
+    real(rk)                        :: tol
+    
+    tol = 1.e-14_rk
+    
+    ! Initialize element mapping
+    call chidg%init('env')
+    
+
+    !
+    ! Read grid and add domain to chidg
+    !
+    call read_grid_hdf(filename, meshdata)
+
+    do idom = 1,size(meshdata)
+        call chidg%data%add_domain(meshdata(idom)%name,meshdata(idom)%points,meshdata(idom)%nterms_c,'scalar',nterms_s)
+    end do
+
+
+
+    ! Test number of allocated domains
+    @assertEqual(ndomains,chidg%data%ndomains)
+
+    
+    ! Test domain mapping
+    @assertEqual(nterms_c,chidg%data%mesh(1)%nterms_c)
+    @assertEqual(nterms_c,chidg%data%mesh(2)%nterms_c)
+
+
+    ! Test number of elements
+    @assertEqual(nelem,chidg%data%mesh(1)%nelem)
+    @assertEqual(nelem,chidg%data%mesh(2)%nelem)
+
+
+    ! Test points
+    x = [ZERO, ONE, ZERO, ONE, ZERO, ONE, ZERO, ONE]
+    y = [ZERO, ZERO, ONE, ONE, ZERO, ZERO, ONE, ONE]
+    z = [ZERO, ZERO, ZERO, ZERO, ONE, ONE, ONE, ONE]
+    @assertEqual(x,chidg%data%mesh(1)%elems(1)%elem_pts(:)%c1_,tol)
+    @assertEqual(y,chidg%data%mesh(1)%elems(1)%elem_pts(:)%c2_,tol)
+    @assertEqual(z,chidg%data%mesh(1)%elems(1)%elem_pts(:)%c3_,tol)
+    
+    
+    x = x + 2._8
+    y = [ZERO, ZERO, ONE, ONE, ZERO, ZERO, ONE, ONE]
+    z = [ZERO, ZERO, ZERO, ZERO, ONE, ONE, ONE, ONE]
+    @assertEqual(x,chidg%data%mesh(2)%elems(1)%elem_pts(:)%c1_,tol)
+    @assertEqual(y,chidg%data%mesh(2)%elems(1)%elem_pts(:)%c2_,tol)
+    @assertEqual(z,chidg%data%mesh(2)%elems(1)%elem_pts(:)%c3_,tol)
+    
+end subroutine
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+! Test for reading an hdf grid. D2_E27_M1 = Two Domains, One Element, Linear Mapping
+@Test
+subroutine testIO__read_grid_hdf__D2_E27_M1() 
+    use pfunit_mod
+    use type_chidg,             only: chidg_t
+    use type_meshdata,          only: meshdata_t
+    use mod_kinds,              only: rk,ik
+    use mod_constants,          only: ZERO, ONE, THIRD
+    use mod_hdfio,              only: read_grid_hdf
+    use mod_grid,               only: compute_element_mappings
+    implicit none
+    
+    type(chidg_t)                   :: chidg
+    type(meshdata_t), allocatable   :: meshdata(:)
+    character(100), parameter       :: filename = 'D2_E27_M1.h5'
+    integer,        parameter       :: ndomains = 2
+    integer(ik),    parameter       :: nterms_c = 8
+    integer(ik),    parameter       :: nterms_s = 8
+    integer,        parameter       :: nelem    = 27
+    integer(ik)                     :: idom
+    real(rk)                        :: x(8), y(8), z(8)
+    real(rk)                        :: tol
+    
+    tol = 1.e-14_rk
+    
+    ! Initialize element mapping
+    call chidg%init('env')
+    
+
+    !
+    ! Read grid and add domain to chidg
+    !
+    call read_grid_hdf(filename, meshdata)
+
+    do idom = 1,size(meshdata)
+        call chidg%data%add_domain(meshdata(idom)%name,meshdata(idom)%points,meshdata(idom)%nterms_c,'scalar',nterms_s)
+    end do
+
+
+
+    ! Test number of allocated domains
+    @assertEqual(ndomains,chidg%data%ndomains)
+
+    
+    ! Test domain mapping
+    @assertEqual(nterms_c,chidg%data%mesh(1)%nterms_c)
+    @assertEqual(nterms_c,chidg%data%mesh(2)%nterms_c)
+
+
+    ! Test number of elements
+    @assertEqual(nelem,chidg%data%mesh(1)%nelem)
+    @assertEqual(nelem,chidg%data%mesh(2)%nelem)
+
+
+    ! Test points
+    x = [ZERO, THIRD, ZERO, THIRD, ZERO, THIRD, ZERO, THIRD]
+    y = [ZERO, ZERO, THIRD, THIRD, ZERO, ZERO, THIRD, THIRD]
+    z = [ZERO, ZERO, ZERO, ZERO, THIRD, THIRD, THIRD, THIRD]
+    @assertEqual(x,chidg%data%mesh(1)%elems(1)%elem_pts(:)%c1_,tol)
+    @assertEqual(y,chidg%data%mesh(1)%elems(1)%elem_pts(:)%c2_,tol)
+    @assertEqual(z,chidg%data%mesh(1)%elems(1)%elem_pts(:)%c3_,tol)
+    
+    
+    x = x + 2._8
+    y = [ZERO, ZERO, THIRD, THIRD, ZERO, ZERO, THIRD, THIRD]
+    z = [ZERO, ZERO, ZERO, ZERO, THIRD, THIRD, THIRD, THIRD]
+    @assertEqual(x,chidg%data%mesh(2)%elems(1)%elem_pts(:)%c1_,tol)
+    @assertEqual(y,chidg%data%mesh(2)%elems(1)%elem_pts(:)%c2_,tol)
+    @assertEqual(z,chidg%data%mesh(2)%elems(1)%elem_pts(:)%c3_,tol)
+    
+end subroutine
+
+
+
+
+
+
+
+
+
+
+
+
+
+

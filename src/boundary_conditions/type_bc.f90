@@ -74,7 +74,7 @@ contains
         
         integer(ik)                 :: nelem_xi, nelem_eta, nelem_zeta, nelem_bc, ielem_bc, & 
                                        xi_begin, eta_begin, zeta_begin, xi_end, eta_end, zeta_end, & 
-                                       ixi, ieta, izeta, ierr, ielem
+                                       ixi, ieta, izeta, ierr, ielem, ielem_test
         
         nelem_xi   = mesh%nelem_xi
         nelem_eta  = mesh%nelem_eta
@@ -131,7 +131,8 @@ contains
         do izeta = zeta_begin,zeta_end
             do ieta = eta_begin,eta_end
                 do ixi = xi_begin,xi_end
-                    ielem = mesh%elems_m(ixi,ieta,izeta)%ielem
+                    ielem = ixi + nelem_xi*(ieta-1) + nelem_xi*nelem_eta*(izeta-1)
+
                     self%ielems(ielem_bc) = ielem
                     self%ifaces(ielem_bc) = iface
                     ielem_bc = ielem_bc + 1

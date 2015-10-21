@@ -18,7 +18,6 @@ module test__project_function_xyz__mod
     type, extends(TestCase) ::  test_project_function_xyz
         type(chidg_t)   :: chidg
         integer(ik)     :: nterms_s
-        !type(domain_t)  :: dom
     contains
         procedure   ::  setUp
         procedure   ::  tearDown
@@ -59,19 +58,10 @@ contains
         ! Initialize ChiDG environment
         call this%chidg%init('env')
 
-        ! Initialize mapping
-        !call compute_element_mappings()
-        
         
         ! Initialize domain
-!        idomain  = 1
         nterms_c = npt
-!        call this%dom%init_geom(idomain,nterms_c,pts)
-
-
-        
         this%nterms_s = 27
-!        call this%dom%init_sol('scalar',this%nterms_s)
 
         call this%chidg%data%add_domain('D_01',pts,nterms_c,'scalar',this%nterms_s)
 

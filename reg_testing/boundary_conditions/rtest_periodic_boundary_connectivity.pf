@@ -21,9 +21,6 @@ subroutine rtest_periodic_boundary_connectivity()
     use type_chidg,         only: chidg_t
     use type_point,         only: point_t
 
-    use mod_grid_operators, only: initialize_variable
-    use atype_function,     only: function_t
-    use mod_function,       only: create_function
     use mod_testutils,      only: meshgen
     use type_dict,          only: dict_t
     use mod_io
@@ -31,7 +28,6 @@ subroutine rtest_periodic_boundary_connectivity()
 
     type(chidg_t)                       :: chidg
     type(point_t),          allocatable :: pts(:,:,:)
-    class(function_t),      allocatable :: fcn
     type(dict_t)                        :: toptions
     integer(ik)                         :: nterms_c, itime, ielem
 
@@ -49,8 +45,10 @@ subroutine rtest_periodic_boundary_connectivity()
     nterms_s       = 8
     gq_rule        = 2
     eqnset         = 'euler'
-    timescheme     = 'backward_euler'
-    matrixsolver   = 'gaussseidel'
+    !timescheme     = 'backward_euler'
+    timescheme     = 'newton'
+    !matrixsolver   = 'gaussseidel'
+    matrixsolver   = 'fgmres'
     preconditioner = 'identity'
 
 
@@ -79,7 +77,6 @@ subroutine rtest_periodic_boundary_connectivity()
     call chidg%set('time_scheme',timescheme,toptions)
     call chidg%set('matrixsolver',matrixsolver)
     call chidg%set('preconditioner',preconditioner)
-    call chidg%set('ndomains','')
 
 
     !
@@ -88,43 +85,23 @@ subroutine rtest_periodic_boundary_connectivity()
     call meshgen('15x15x3',pts)
      
 
+    !
+    ! Add domain to ChiDG
+    !
+    nterms_c = 8
+    call chidg%data%add_domain('D_01',pts,nterms_c,eqnset,nterms_s)
 
 
-    associate ( dom => chidg%domains(1) )
-        !
-        ! Initialize domain
-        !
-        nterms_c = 8
-        call dom%init_geom(nterms_c,pts)
-        call dom%init_bc('periodic',XI_MIN)
-        call dom%init_bc('periodic',ETA_MIN)
-        call dom%init_bc('periodic',ZETA_MIN)
-        call dom%init_sol(eqnset,nterms_s)
+
+    !
+    ! Initialize domain
+    !
+    call chidg%data%add_bc('D_01','periodic',XI_MIN)
+    call chidg%data%add_bc('D_01','periodic',ETA_MIN)
+    call chidg%data%add_bc('D_01','periodic',ZETA_MIN)
 
 
-        !
-        ! Initialize solution
-        !
-        call create_function(fcn,'isentropic_vortex')
-        call fcn%set('xo',3.5_rk)
-        call fcn%set('yo',3.5_rk)
-        call fcn%set('zo',0.5_rk)
-        call fcn%set('uinf',ZERO)
-        call fcn%set('vinf',ZERO)
-
-
-        call fcn%set('var',ONE)
-        call initialize_variable(dom,1,fcn)
-        call fcn%set('var',TWO)
-        call initialize_variable(dom,2,fcn)
-        call fcn%set('var',THREE)
-        call initialize_variable(dom,3,fcn)
-        call fcn%set('var',FOUR)
-        call initialize_variable(dom,4,fcn)
-        call fcn%set('var',FIVE)
-        call initialize_variable(dom,5,fcn)
-    end associate
-
+    call chidg%data%init_sdata()
 
     !
     ! Wrap-up initialization activities
@@ -141,24 +118,24 @@ subroutine rtest_periodic_boundary_connectivity()
     ! Check connectivity of periodic boundaries for a few elements
     ! Test element 1
     ielem = 1
-    @assertEqual(15,chidg%domains(1)%mesh%faces(ielem,XI_MIN)%ineighbor)
-    @assertEqual(2,chidg%domains(1)%mesh%faces(ielem,XI_MAX)%ineighbor)
-    @assertEqual(211,chidg%domains(1)%mesh%faces(ielem,ETA_MIN)%ineighbor)
-    @assertEqual(16,chidg%domains(1)%mesh%faces(ielem,ETA_MAX)%ineighbor)
-    @assertEqual(451,chidg%domains(1)%mesh%faces(ielem,ZETA_MIN)%ineighbor)
-    @assertEqual(226,chidg%domains(1)%mesh%faces(ielem,ZETA_MAX)%ineighbor)
+    @assertEqual(15,chidg%data%mesh(1)%faces(ielem,XI_MIN)%ineighbor)
+    @assertEqual(2,chidg%data%mesh(1)%faces(ielem,XI_MAX)%ineighbor)
+    @assertEqual(211,chidg%data%mesh(1)%faces(ielem,ETA_MIN)%ineighbor)
+    @assertEqual(16,chidg%data%mesh(1)%faces(ielem,ETA_MAX)%ineighbor)
+    @assertEqual(451,chidg%data%mesh(1)%faces(ielem,ZETA_MIN)%ineighbor)
+    @assertEqual(226,chidg%data%mesh(1)%faces(ielem,ZETA_MAX)%ineighbor)
 
 
 
 
     ! Test element 211
     ielem = 211
-    @assertEqual(225,chidg%domains(1)%mesh%faces(ielem,XI_MIN)%ineighbor)
-    @assertEqual(212,chidg%domains(1)%mesh%faces(ielem,XI_MAX)%ineighbor)
-    @assertEqual(196,chidg%domains(1)%mesh%faces(ielem,ETA_MIN)%ineighbor)
-    @assertEqual(1,chidg%domains(1)%mesh%faces(ielem,ETA_MAX)%ineighbor)
-    @assertEqual(661,chidg%domains(1)%mesh%faces(ielem,ZETA_MIN)%ineighbor)
-    @assertEqual(436,chidg%domains(1)%mesh%faces(ielem,ZETA_MAX)%ineighbor)
+    @assertEqual(225,chidg%data%mesh(1)%faces(ielem,XI_MIN)%ineighbor)
+    @assertEqual(212,chidg%data%mesh(1)%faces(ielem,XI_MAX)%ineighbor)
+    @assertEqual(196,chidg%data%mesh(1)%faces(ielem,ETA_MIN)%ineighbor)
+    @assertEqual(1,chidg%data%mesh(1)%faces(ielem,ETA_MAX)%ineighbor)
+    @assertEqual(661,chidg%data%mesh(1)%faces(ielem,ZETA_MIN)%ineighbor)
+    @assertEqual(436,chidg%data%mesh(1)%faces(ielem,ZETA_MAX)%ineighbor)
 
 
 

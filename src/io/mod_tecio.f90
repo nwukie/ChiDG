@@ -17,7 +17,7 @@ contains
 
 
     subroutine write_tecio_variables(data,filename,timeindex)
-        type(chidg_data_t),     intent(inout), target   :: data
+        type(chidg_data_t),     intent(inout)           :: data
         character(*),           intent(in)              :: filename
         integer(ik),            intent(in)              :: timeindex
 
@@ -37,8 +37,8 @@ contains
         character(100)     :: varstring
         integer(ik)        :: ieq, ivar, idom
 
-        type(element_t),      pointer :: elem(:,:,:)
-        type(blockvector_t),  pointer :: q
+        !type(element_t),      pointer :: elem(:,:,:)
+        !type(blockvector_t),  pointer :: q
 
 
         ! using (output_res+1) so that the skip number used in tecplot to
@@ -69,27 +69,27 @@ contains
 
 
         do idom = 1,data%ndomains
-        associate (mesh => data%mesh(idom), eqnset => data%eqnset(idom)%item, sdata => data%sdata)
+        !associate (mesh => data%mesh(idom), eqnset => data%eqnset(idom)%item, sdata => data%sdata)
 
             !
             ! Store element indices for current block
             !
-            nelem_xi   = mesh%nelem_xi
-            nelem_eta  = mesh%nelem_eta
-            nelem_zeta = mesh%nelem_zeta
+            nelem_xi   = data%mesh(idom)%nelem_xi
+            nelem_eta  = data%mesh(idom)%nelem_eta
+            nelem_zeta = data%mesh(idom)%nelem_zeta
 
 
             !
             ! Remap elements array to block matrix
             !
-            elem => mesh%elems_m
-            q    => sdata%q%dom(idom)
+            !elem => mesh%elems_m
+            !q    => sdata%q%dom(idom)
 
 
             !
             ! Initialize new zone in the TecIO file for the current domain
             !
-            call init_tecio_zone('solnzone',mesh,1,timeindex)
+            call init_tecio_zone('solnzone',data%mesh(idom),1,timeindex)
 
 
 
@@ -114,7 +114,10 @@ contains
                                         xi = (((real(ipt_xi,rk)-ONE)/(real(npts,rk)-ONE)) - HALF)*TWO
 
                                         ! Get coordinate value at point
-                                        val = mesh_point(elem(ielem_xi,ielem_eta,ielem_zeta),icoord,xi,eta,zeta)
+                                        !val = mesh_point(elem(ielem_xi,ielem_eta,ielem_zeta),icoord,xi,eta,zeta)
+                                        !val = mesh_point(data%mesh(idom)%elems_m(ielem_xi,ielem_eta,ielem_zeta),icoord,xi,eta,zeta)
+                                        ielem = ielem_xi + (nelem_xi)*(ielem_eta-1) + (nelem_xi * nelem_eta)*(ielem_zeta-1)
+                                        val = mesh_point(data%mesh(idom)%elems(ielem),icoord,xi,eta,zeta)
                                         tecstat = TECDAT142(1,valeq,1)
 
                                     end do
@@ -133,7 +136,7 @@ contains
 
 
             ! For each variable in equation set, compute value pointwise and save
-            do ivar = 1,eqnset%neqns
+            do ivar = 1,data%eqnset(idom)%item%neqns
 
                 do ielem_zeta = 1,nelem_zeta
                     do ipt_zeta = 1,zetalim
@@ -150,7 +153,8 @@ contains
                                         ! Get solution value at point
                                         !val = solution_point(q%lvecs_m(ielem_xi,ielem_eta,ielem_zeta),ivar,xi,eta,zeta)
                                         ielem = ielem_xi + (nelem_xi)*(ielem_eta-1) + (nelem_xi * nelem_eta)*(ielem_zeta-1)
-                                        val = solution_point(q%lvecs(ielem),ivar,xi,eta,zeta)
+                                        !val = solution_point(q%lvecs(ielem),ivar,xi,eta,zeta)
+                                        val = solution_point(data%sdata%q%dom(idom)%lvecs(ielem),ivar,xi,eta,zeta)
 
                                         tecstat = TECDAT142(1,valeq,1)
                                     
@@ -170,7 +174,7 @@ contains
 
 
 
-        end associate
+        !end associate
         end do ! idom
 
 

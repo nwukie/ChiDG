@@ -361,9 +361,9 @@ subroutine testElement__init_geometry__modes_linear()
     end do
     
     ! Recompute coordinate point values from modes
-    pts_test(:)%c1_ = matmul(mat,elem%coords%mat(:,1))
-    pts_test(:)%c2_ = matmul(mat,elem%coords%mat(:,2))
-    pts_test(:)%c3_ = matmul(mat,elem%coords%mat(:,3))
+    pts_test(:)%c1_ = matmul(mat,elem%coords%getvar(1))
+    pts_test(:)%c2_ = matmul(mat,elem%coords%getvar(2))
+    pts_test(:)%c3_ = matmul(mat,elem%coords%getvar(3))
     
     
     ! Test that recomputed coordinates are equal to the original coordinate values
@@ -431,9 +431,9 @@ subroutine testElement__init_geometry__modes_quadratic()
     end do
     
     ! Recompute coordinate point values from modes
-    pts_test(:)%c1_ = matmul(mat,elem%coords%mat(:,1))
-    pts_test(:)%c2_ = matmul(mat,elem%coords%mat(:,2))
-    pts_test(:)%c3_ = matmul(mat,elem%coords%mat(:,3))
+    pts_test(:)%c1_ = matmul(mat,elem%coords%getvar(1))
+    pts_test(:)%c2_ = matmul(mat,elem%coords%getvar(2))
+    pts_test(:)%c3_ = matmul(mat,elem%coords%getvar(3))
     
     
     ! Test that recomputed coordinates are equal to the original coordinate values
@@ -498,9 +498,9 @@ subroutine testElement__init_geometry__modes_cubic()
     end do
     
     ! Recompute coordinate point values from modes
-    pts_test(:)%c1_ = matmul(mat,elem%coords%mat(:,1))
-    pts_test(:)%c2_ = matmul(mat,elem%coords%mat(:,2))
-    pts_test(:)%c3_ = matmul(mat,elem%coords%mat(:,3))
+    pts_test(:)%c1_ = matmul(mat,elem%coords%getvar(1))
+    pts_test(:)%c2_ = matmul(mat,elem%coords%getvar(2))
+    pts_test(:)%c3_ = matmul(mat,elem%coords%getvar(3))
     
     
     ! Test that recomputed coordinates are equal to the original coordinate values
@@ -567,9 +567,9 @@ subroutine testElement__init_geometry__modes_quartic()
     end do
     
     ! Recompute coordinate point values from modes
-    pts_test(:)%c1_ = matmul(mat,elem%coords%mat(:,1))
-    pts_test(:)%c2_ = matmul(mat,elem%coords%mat(:,2))
-    pts_test(:)%c3_ = matmul(mat,elem%coords%mat(:,3))
+    pts_test(:)%c1_ = matmul(mat,elem%coords%getvar(1))
+    pts_test(:)%c2_ = matmul(mat,elem%coords%getvar(2))
+    pts_test(:)%c3_ = matmul(mat,elem%coords%getvar(3))
     
     
     ! Test that recomputed coordinates are equal to the original coordinate values

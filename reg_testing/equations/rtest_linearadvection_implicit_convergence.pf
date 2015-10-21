@@ -85,21 +85,25 @@ subroutine rtest_linearadvection_implicit_convergence()
     ! Generate points for mesh
     !
     call meshgen('333',pts)
+    nterms_c = 8
+
+
+    !
+    ! Add domain to ChiDG
+    !
+    call chidg%data%add_domain('D_01',pts,nterms_c,eqnset,nterms_s)
 
 
 
-
-    associate ( dom => chidg%domains(1) )
+    associate ( data => chidg%data )
         !
         ! Initialize domain
         !
-        nterms_c = 8
-        call dom%init_geom(nterms_c,pts)
-        call dom%init_bc('periodic',XI_MIN)
-        call dom%init_bc('periodic',ETA_MIN)
-        call dom%init_bc('periodic',ZETA_MIN)
-        call dom%init_sol(eqnset,nterms_s)
+        call data%add_bc('D_01','periodic',XI_MIN)
+        call data%add_bc('D_01','periodic',ETA_MIN)
+        call data%add_bc('D_01','periodic',ZETA_MIN)
 
+        call data%init_sdata()
 
         !
         ! Initialize solution
@@ -109,10 +113,8 @@ subroutine rtest_linearadvection_implicit_convergence()
         call fcn%set('by',1.5_rk)
         call fcn%set('bz',1.5_rk)
         call fcn%set('c',2.0_rk)
-        call initialize_variable(dom,1,fcn)
+        call initialize_variable(data,1,fcn)
     end associate
-
-
 
 
     !

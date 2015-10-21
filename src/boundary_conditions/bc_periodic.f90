@@ -1,4 +1,5 @@
 module bc_periodic
+#include <messenger.h>
     use mod_kinds,          only: rk, ik
     use mod_constants,      only: XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX
     use type_bc,            only: bc_t
@@ -42,6 +43,7 @@ contains
 
         integer(ik) :: ielem, ielem_p, ixi, ieta, izeta, ixi_p, ieta_p, izeta_p
 
+        call signal(FATAL,'bc_periodic: broken due to discontinued use of mesh%elem_m matrix-view')
 
         !
         ! Apply periodic XI
@@ -54,8 +56,8 @@ contains
             do izeta = 1,mesh%nelem_zeta
                 do ieta = 1,mesh%nelem_eta
                     ! Get element indices
-                    ielem = mesh%elems_m(ixi,ieta,izeta)%ielem
-                    ielem_p = mesh%elems_m(ixi_p,ieta,izeta)%ielem
+                    !ielem = mesh%elems_m(ixi,ieta,izeta)%ielem
+                    !ielem_p = mesh%elems_m(ixi_p,ieta,izeta)%ielem
 
                     ! Reset face-type to interior and neighbor to matching periodic element on opposite face
                     mesh%faces(ielem,XI_MIN)%ftype = 0              ! Interior face
@@ -80,8 +82,8 @@ contains
             do izeta = 1,mesh%nelem_zeta
                 do ixi = 1,mesh%nelem_xi
                     ! Get element indices
-                    ielem = mesh%elems_m(ixi,ieta,izeta)%ielem
-                    ielem_p = mesh%elems_m(ixi,ieta_p,izeta)%ielem
+                    !ielem = mesh%elems_m(ixi,ieta,izeta)%ielem
+                    !ielem_p = mesh%elems_m(ixi,ieta_p,izeta)%ielem
 
                     ! Reset face-type to interior and neighbor to matching periodic element on opposite face
                     mesh%faces(ielem,ETA_MIN)%ftype = 0             ! Interior face
@@ -106,8 +108,8 @@ contains
             do ieta = 1,mesh%nelem_eta
                 do ixi = 1,mesh%nelem_xi
                     ! Get element indices
-                    ielem = mesh%elems_m(ixi,ieta,izeta)%ielem
-                    ielem_p = mesh%elems_m(ixi,ieta,izeta_p)%ielem
+                    !ielem = mesh%elems_m(ixi,ieta,izeta)%ielem
+                    !ielem_p = mesh%elems_m(ixi,ieta,izeta_p)%ielem
 
                     ! Reset face-type to interior and neighbor to matching periodic element on opposite face
                     mesh%faces(ielem,ZETA_MIN)%ftype = 0            ! Interior face

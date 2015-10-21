@@ -27,7 +27,7 @@ module type_mesh
 
         ! Grid data
         type(element_t),  allocatable :: elems(:)                       !< Element storage (1:nelem)
-        type(element_t),  pointer     :: elems_m(:,:,:) => null()       !< Matrix view of element storage (1:nelem_xi, 1:nelem_eta, 1:nelem_zeta)
+!        type(element_t),  pointer     :: elems_m(:,:,:) => null()       !< Matrix view of element storage (1:nelem_xi, 1:nelem_eta, 1:nelem_zeta)
         type(face_t),     allocatable :: faces(:,:)                     !< Face storage    (1:nelem,1:nfaces)
         type(chimera_t)               :: chimera
 
@@ -86,8 +86,8 @@ contains
         !
         ! Initialize element matrix view
         !
-        temp => self%elems
-        self%elems_m(1:self%nelem_xi,1:self%nelem_eta,1:self%nelem_zeta) => temp(1:self%nelem)
+!        temp => self%elems
+!        self%elems_m(1:self%nelem_xi,1:self%nelem_eta,1:self%nelem_zeta) => temp(1:self%nelem)
 
 
 

@@ -170,7 +170,8 @@ contains
     !!
     !--------------------------------------------------------------------------------
     function getvar(self,ivar) result(modes_out)
-        class(densevector_t),   intent(inout)   :: self
+        !class(densevector_t),   intent(inout)   :: self
+        class(densevector_t),   intent(in)      :: self
         integer(ik),            intent(in)      :: ivar
 
         real(rk)                                :: modes_out(self%nterms_)

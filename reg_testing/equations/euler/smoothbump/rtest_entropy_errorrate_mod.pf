@@ -152,6 +152,7 @@ contains
         use mod_kinds,          only: rk, ik
         use mod_constants,      only: ZERO, THREE, XI_MIN, ETA_MIN, ZETA_MIN, XI_MAX, ETA_MAX, ZETA_MAX
         use type_chidg,         only: chidg_t
+        use type_meshdata,      only: meshdata_t
         use atype_function,     only: function_t
         use type_dict,          only: dict_t
         use mod_function,       only: create_function
@@ -164,9 +165,10 @@ contains
 
 
         type(chidg_t)                   :: chidg
+        type(meshdata_t), allocatable   :: meshdata(:)
         class(function_t),  allocatable :: fcn
         type(dict_t)                    :: toptions
-        integer(ik)                     :: nterms_c, itime
+        integer(ik)                     :: nterms_c, itime, idom
         real(rk)                        :: tol, entropy_error
 
         
@@ -181,9 +183,11 @@ contains
         nterms_s        = self%order**THREE
         gq_rule         = 2
         eqnset          = 'euler'
-        timescheme      = 'quasi_newton'
+        !timescheme      = 'quasi_newton'
+        timescheme      = 'newton'
         matrixsolver    = 'fgmres'
-        preconditioner  = 'ILU0'
+        !preconditioner  = 'ILU0'
+        preconditioner  = 'identity'
         
         !------------------------------------------------------------------------------
 
@@ -207,8 +211,13 @@ contains
         !
         ! Initialize geometry
         !
-        call read_grid_hdf(self%gridfile,chidg%domains)
+        !call read_grid_hdf(self%gridfile,chidg%domains)
+        call read_grid_hdf(self%gridfile,meshdata)
 
+
+        do idom = 1,size(meshdata)
+            call chidg%data%add_domain(meshdata(idom)%name, meshdata(idom)%points, meshdata(idom)%nterms_c, eqnset, nterms_s)
+        end do
 
 
         !
@@ -219,19 +228,19 @@ contains
         call chidg%set('preconditioner',preconditioner)
 
 
-        associate (dom => chidg%domains(1) )
+        associate (data => chidg%data )
             !
             ! Initialize boundary conditions and solution numerics
             ! 
-            call dom%init_bc('euler_totalinlet',XI_MIN)
-            call dom%init_bc('euler_pressureoutlet',XI_MAX)
-            call dom%init_bc('euler_wall',ETA_MIN)
-            call dom%init_bc('euler_wall',ETA_MAX)
-            call dom%init_bc('euler_wall',ZETA_MIN)
-            call dom%init_bc('euler_wall',ZETA_MAX)
+            call data%add_bc('D_01','euler_totalinlet',XI_MIN)
+            call data%add_bc('D_01','euler_pressureoutlet',XI_MAX)
+            call data%add_bc('D_01','euler_wall',ETA_MIN)
+            call data%add_bc('D_01','euler_wall',ETA_MAX)
+            call data%add_bc('D_01','euler_wall',ZETA_MIN)
+            call data%add_bc('D_01','euler_wall',ZETA_MAX)
 
-            call dom%init_sol(eqnset,nterms_s)
 
+            call data%init_sdata()
 
             !
             ! Initialize solution
@@ -241,23 +250,23 @@ contains
 
             ! rho
             call fcn%set('val',1.13262_rk)
-            call initialize_variable(dom,1,fcn)
+            call initialize_variable(data,1,fcn)
 
             ! rho_u
             call fcn%set('val',190.339029_rk)
-            call initialize_variable(dom,2,fcn)
+            call initialize_variable(data,2,fcn)
 
             ! rho_v
             call fcn%set('val',ZERO)
-            call initialize_variable(dom,3,fcn)
+            call initialize_variable(data,3,fcn)
 
             ! rho_w
             call fcn%set('val',ZERO)
-            call initialize_variable(dom,4,fcn)
+            call initialize_variable(data,4,fcn)
 
             ! rho_E
             call fcn%set('val',248493.425_rk)
-            call initialize_variable(dom,5,fcn)
+            call initialize_variable(data,5,fcn)
 
         end associate
 
@@ -279,7 +288,7 @@ contains
         !
         ! Compute entropy error
         !
-        entropy_error = compute_entropy_error(chidg%domains(1))
+        entropy_error = compute_entropy_error(chidg%data)
 
 
 

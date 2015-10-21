@@ -3,11 +3,13 @@
 subroutine test_Function() 
     use pfunit_mod
     use mod_kinds, only: rk,ik
-    use type_expansion
+!    use type_expansion
+    use type_densevector,   only: densevector_t
     
     implicit none
-    type(expansion_t)   :: poly
-    integer(ik)         :: neqns, nterms
+    !type(expansion_t)   :: poly
+    type(densevector_t)   :: poly
+    integer(ik)         :: neqns, nterms, ielem
     
     real(rk)            :: mat_set(4,3)
     real(rk)            :: vec_set(12)
@@ -15,16 +17,22 @@ subroutine test_Function()
     
     nterms = 4
     neqns  = 3
+    ielem  = 1
     
-    call poly%init(nterms,neqns)
+    call poly%init(nterms,neqns,ielem)
     
     mat_set(:,1)  = [1.0_rk, 2.0_rk,  3.0_rk,  4.0_rk]
     mat_set(:,2)  = [5.0_rk, 6.0_rk,  7.0_rk,  8.0_rk]
     mat_set(:,3)  = [9.0_rk, 10.0_rk, 11.0_rk, 12.0_rk]
 
-    poly%mat = mat_set
+    !poly%mat = mat_set
+    call poly%setvar(1,mat_set(:,1))
+    call poly%setvar(2,mat_set(:,2))
+    call poly%setvar(3,mat_set(:,3))
 
-    @assertEqual(mat_set,poly%mat)
+    @assertEqual(mat_set(:,1),poly%getvar(1))
+    @assertEqual(mat_set(:,2),poly%getvar(2))
+    @assertEqual(mat_set(:,3),poly%getvar(3))
 
 end subroutine
 

@@ -4,7 +4,7 @@ module type_element
     use mod_constants,          only: SPACEDIM,NFACES,XI_MIN,XI_MAX,ETA_MIN, &
                                       ETA_MAX,ZETA_MIN,ZETA_MAX,ONE,ZERO
     use type_point,             only: point_t
-    use type_expansion,         only: expansion_t
+    use type_densevector,       only: densevector_t
     use type_quadrature,        only: quadrature_t
     use DNAD_D
     use mod_quadrature,         only: GQ, get_quadrature
@@ -34,7 +34,8 @@ module type_element
         !---------------------------------------------------------
         type(point_t), allocatable  :: quad_pts(:)          !< Cartesian coordinates of discrete quadrature points
         type(point_t), allocatable  :: elem_pts(:)          !< Cartesian coordinates of discrete points defining element
-        type(expansion_t)           :: coords               !< Modal representation of cartesian coordinates (nterms_var,(x,y,z))
+        !type(expansion_t)           :: coords               !< Modal representation of cartesian coordinates (nterms_var,(x,y,z))
+        type(densevector_t)         :: coords               !< Modal representation of cartesian coordinates (nterms_var,(x,y,z))
 
         !> Element metric terms
         !---------------------------------------------------------
@@ -135,7 +136,7 @@ contains
         ! Allocate and compute mesh x,y,z modes
         !
         allocate(self%elem_pts(nterms_c),stat=ierr)
-        call self%coords%init(nterms_c,SPACEDIM)
+        call self%coords%init(nterms_c,SPACEDIM,ielem)
         self%idomain  = idomain
         self%ielem    = ielem
         self%elem_pts = points
@@ -281,17 +282,17 @@ contains
         !
         ! Compute element metric terms
         !
-        dxdxi   = matmul(self%gqmesh%vol%ddxi,  self%coords%mat(:,1))
-        dxdeta  = matmul(self%gqmesh%vol%ddeta, self%coords%mat(:,1))
-        dxdzeta = matmul(self%gqmesh%vol%ddzeta,self%coords%mat(:,1))
+        dxdxi   = matmul(self%gqmesh%vol%ddxi,  self%coords%getvar(1))
+        dxdeta  = matmul(self%gqmesh%vol%ddeta, self%coords%getvar(1))
+        dxdzeta = matmul(self%gqmesh%vol%ddzeta,self%coords%getvar(1))
 
-        dydxi   = matmul(self%gqmesh%vol%ddxi,  self%coords%mat(:,2))
-        dydeta  = matmul(self%gqmesh%vol%ddeta, self%coords%mat(:,2))
-        dydzeta = matmul(self%gqmesh%vol%ddzeta,self%coords%mat(:,2))
+        dydxi   = matmul(self%gqmesh%vol%ddxi,  self%coords%getvar(2))
+        dydeta  = matmul(self%gqmesh%vol%ddeta, self%coords%getvar(2))
+        dydzeta = matmul(self%gqmesh%vol%ddzeta,self%coords%getvar(2))
 
-        dzdxi   = matmul(self%gqmesh%vol%ddxi,  self%coords%mat(:,3))
-        dzdeta  = matmul(self%gqmesh%vol%ddeta, self%coords%mat(:,3))
-        dzdzeta = matmul(self%gqmesh%vol%ddzeta,self%coords%mat(:,3))
+        dzdxi   = matmul(self%gqmesh%vol%ddxi,  self%coords%getvar(3))
+        dzdeta  = matmul(self%gqmesh%vol%ddeta, self%coords%getvar(3))
+        dzdzeta = matmul(self%gqmesh%vol%ddzeta,self%coords%getvar(3))
 
 
         !
@@ -404,9 +405,9 @@ contains
 
         nnodes = self%gq%vol%nnodes
         ! compute cartesian coordinates associated with quadrature points
-        x = matmul(self%gqmesh%vol%val,self%coords%mat(:,1))
-        y = matmul(self%gqmesh%vol%val,self%coords%mat(:,2))
-        z = matmul(self%gqmesh%vol%val,self%coords%mat(:,3))
+        x = matmul(self%gqmesh%vol%val,self%coords%getvar(1))
+        y = matmul(self%gqmesh%vol%val,self%coords%getvar(2))
+        z = matmul(self%gqmesh%vol%val,self%coords%getvar(3))
 
         ! Initialize each point with cartesian coordinates
         do inode = 1,nnodes
@@ -486,7 +487,7 @@ contains
         end do
 
         ! Evaluate x from dot product of modes and polynomial values
-        xval = dot_product(self%coords%mat(:,1),polyvals)
+        xval = dot_product(self%coords%getvar(1),polyvals)
 
     end function
 
@@ -507,7 +508,7 @@ contains
         end do
 
         ! Evaluate x from dot product of modes and polynomial values
-        yval = dot_product(self%coords%mat(:,2),polyvals)
+        yval = dot_product(self%coords%getvar(2),polyvals)
 
     end function
 
@@ -528,7 +529,7 @@ contains
         end do
 
         ! Evaluate x from dot product of modes and polynomial values
-        zval = dot_product(self%coords%mat(:,3),polyvals)
+        zval = dot_product(self%coords%getvar(3),polyvals)
 
     end function
     !-----------------------------------------------------------------------

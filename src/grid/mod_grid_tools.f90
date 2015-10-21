@@ -2,7 +2,7 @@ module mod_grid_tools
     use mod_kinds,              only: rk,ik
     use mod_quadrature,         only: GQ
     use type_point,             only: point_t
-    use type_expansion,         only: expansion_t
+    use type_densevector,       only: densevector_t
     use mod_grid,               only: elem_map
 
     implicit none
@@ -20,15 +20,14 @@ contains
     !!  @param[in]  pts     Array of computed coordinate points
     !-------------------------------------------------------------------------
     subroutine compute_discrete_coordinates(cmodes,igq,pts)
-        type(expansion_t),              intent(in)      :: cmodes
+        type(densevector_t),            intent(in)      :: cmodes
         integer(ik),                    intent(in)      :: igq
         type(point_t),  dimension(:),   intent(inout)   :: pts
 
 
-        pts(:)%c1_ = matmul(GQ(igq)%vol%val,cmodes%mat(:,1))
-        pts(:)%c2_ = matmul(GQ(igq)%vol%val,cmodes%mat(:,2))
-        pts(:)%c3_ = matmul(GQ(igq)%vol%val,cmodes%mat(:,3))
-
+        pts(:)%c1_ = matmul(GQ(igq)%vol%val,cmodes%getvar(1))
+        pts(:)%c2_ = matmul(GQ(igq)%vol%val,cmodes%getvar(2))
+        pts(:)%c3_ = matmul(GQ(igq)%vol%val,cmodes%getvar(3))
     end subroutine
 
 
@@ -47,14 +46,20 @@ contains
     subroutine compute_modal_coordinates(pts,imap,cmodes)
         type(point_t),  dimension(:),   intent(in)    :: pts
         integer(ik),                    intent(in)    :: imap
-        type(expansion_t),              intent(inout) :: cmodes
+        type(densevector_t),            intent(inout) :: cmodes
+
+        real(rk), dimension(size(pts))  :: xmodes, ymodes, zmodes
 
         if (size(elem_map(imap)%mat,1) /= size(pts)) stop "Error: compute_modal_coordinates -- mapping and point sizes do not match"
 
-        cmodes%mat(:,1) = matmul(elem_map(imap)%mat,pts(:)%c1_)
-        cmodes%mat(:,2) = matmul(elem_map(imap)%mat,pts(:)%c2_)
-        cmodes%mat(:,3) = matmul(elem_map(imap)%mat,pts(:)%c3_)
 
+        xmodes = matmul(elem_map(imap)%mat,pts(:)%c1_)
+        ymodes = matmul(elem_map(imap)%mat,pts(:)%c2_)
+        zmodes = matmul(elem_map(imap)%mat,pts(:)%c3_)
+
+        call cmodes%setvar(1,xmodes)
+        call cmodes%setvar(2,ymodes)
+        call cmodes%setvar(3,zmodes)
     end subroutine
 
 

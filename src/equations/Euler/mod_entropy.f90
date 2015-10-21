@@ -18,7 +18,6 @@ contains
 
     !function compute_entropy_error(domain) result(error_sum)
     function compute_entropy_error(data) result(error_sum)
-        !type(domain_t), intent(inout)   :: domain
         type(chidg_data_t), intent(inout)   :: data
 
 

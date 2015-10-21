@@ -5,7 +5,6 @@ module rtest_linearadvection_mod
                                   XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX, NFACES
     use type_chidg,         only: chidg_t
     use type_point,         only: point_t
-    use type_domain,        only: domain_t
     use type_densematrix,   only: densematrix_t
     use mod_testutils,      only: meshgen
     use mod_check_jacobian
@@ -34,7 +33,6 @@ module rtest_linearadvection_mod
     @TestCase(constructor=newTest)
     type, extends(ParameterizedTestCase) ::  rtest_eq_LA
         type(chidg_t)       :: chidg
-        type(domain_t)      :: domain
         integer(ik)         :: iblk
     contains
         procedure   ::  setUp
@@ -60,17 +58,23 @@ contains
         integer(ik)                 :: neqns, nterms_s, nterms_c
         real(rk), dimension(npt)    :: x,y,z
         
-        !> Initialize chidg environment
+        !
+        ! Initialize chidg environment
+        !
         call this%chidg%init('env')
 
-        !> Generate points array for 3x3x3 mesh
+        !
+        ! Generate points array for 3x3x3 mesh
+        !
         call meshgen('3x3x3_unit',pts)
 
-        !> Initialize domain
+        !
+        ! Initialize domain
+        !
         nterms_s = 8
         nterms_c = 8
-        call this%domain%init_geom(nterms_c,pts)
-        call this%domain%init_sol('LA',nterms_s)
+        call this%chidg%data%add_domain('D_01',pts,nterms_c,'LA',nterms_s)
+        call this%chidg%data%init_sdata()
 
     end subroutine
     
@@ -85,7 +89,7 @@ contains
     
 
 
-    !> Function for setting the correct parameter value in the constructor
+    ! Function for setting the correct parameter value in the constructor
     function newBlock(iblk) result(param)
         type(blockParam)        :: param
         integer(ik), intent(in) :: iblk
@@ -96,7 +100,7 @@ contains
 
 
     
-    !> TestCase constructor for parameter specification
+    ! TestCase constructor for parameter specification
     function newTest(param)
         type(rtest_eq_LA)        :: newTest
         type(blockParam)        :: param
@@ -107,8 +111,8 @@ contains
 
 
  
-    !> ToString - I think this is used to report the particular parameter value
-    !! in case of an error.
+    ! ToString - I think this is used to report the particular parameter value
+    ! in case of an error.
     function toString(this) result(string)
         class(blockParam), intent(in)   :: this
         character(:), allocatable       :: string
@@ -124,7 +128,7 @@ contains
 !------------------------------------------------------------------------------------------
 !>                                        TESTS
 !------------------------------------------------------------------------------------------
-!> Test Volume Flux jacobian calclation
+! Test Volume Flux jacobian calclation
 @Test(cases = [7])
     subroutine rtest_LA_jacobian_volume_advective_flux(self)
         class(rtest_eq_LA),    intent(inout)   :: self
@@ -165,7 +169,7 @@ contains
         !
         ! The exact values in ref are used as verification values here. The finite difference
         ! data is not used.
-        call check_jacobian_volume_advective_flux(self%domain,ielem,iblk,blk_dnad,blk_fd)
+        call check_jacobian_volume_advective_flux(self%chidg%data,ielem,iblk,blk_dnad,blk_fd)
         
 
         @assertEqual(jref, blk_dnad%mat, tol)

@@ -32,7 +32,7 @@ module type_chidg_data
         integer(ik)                         :: ndomains = 0
         type(dict_t)                        :: domain_info      !< Dictionary of (domain_index, domain_name) pairs
 
-
+        
         type(mesh_t),                   allocatable :: mesh(:)
         type(bcset_t),                  allocatable :: bcset(:)
         type(equationset_wrapper_t),    allocatable :: eqnset(:)
@@ -197,7 +197,6 @@ contains
         ! Get domain index from domain string
         !
         call self%domain_info%get(domain,idom)
-
 
 
         !

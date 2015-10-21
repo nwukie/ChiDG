@@ -53,10 +53,10 @@ subroutine testElementMapping_reversability_linear()
     use mod_constants,          only: ZERO, ONE, TWO, TENTH
     use mod_polynomial,         only: polynomialVal
     use type_point,             only: point_t
-    use type_expansion,         only: expansion_t
+    use type_densevector,       only: densevector_t
 
     implicit none
-    type(expansion_t)   :: coords
+    type(densevector_t) :: coords
     type(point_t)       :: pts_init(8), pts_test(8), pts_ref(8)   !> Linear Element
     real(rk)            :: mat(8,8), tol
     real(rk)            :: x, y, z, x_ref, y_ref, z_ref, pert
@@ -67,7 +67,7 @@ subroutine testElementMapping_reversability_linear()
     
     call compute_element_mappings()
     
-    call coords%init(8,3)   !> 8 terms, 3 coordinates (x,y,z)
+    call coords%init(8,3,1)   !> 8 terms, 3 coordinates (x,y,z), ielem = 1
     
     ! Compute coordinates of a Hex-element with appropriate number of points
     call random_seed()
@@ -118,9 +118,9 @@ subroutine testElementMapping_reversability_linear()
     end do
     
     ! Compute modal coordinates
-    coords%mat(:,1) = matmul(elem_map(1)%mat,pts_init(:)%c1_)
-    coords%mat(:,2) = matmul(elem_map(1)%mat,pts_init(:)%c2_)
-    coords%mat(:,3) = matmul(elem_map(1)%mat,pts_init(:)%c3_)
+    call coords%setvar(1,matmul(elem_map(1)%mat,pts_init(:)%c1_))
+    call coords%setvar(2,matmul(elem_map(1)%mat,pts_init(:)%c2_))
+    call coords%setvar(3,matmul(elem_map(1)%mat,pts_init(:)%c3_))
     
     
     ! Compute matrix of polynomial values for reverse calculation
@@ -131,9 +131,9 @@ subroutine testElementMapping_reversability_linear()
     end do
     
     ! Recompute coordinate point values from modes
-    pts_test(:)%c1_ = matmul(mat,coords%mat(:,1))
-    pts_test(:)%c2_ = matmul(mat,coords%mat(:,2))
-    pts_test(:)%c3_ = matmul(mat,coords%mat(:,3))
+    pts_test(:)%c1_ = matmul(mat,coords%getvar(1))
+    pts_test(:)%c2_ = matmul(mat,coords%getvar(2))
+    pts_test(:)%c3_ = matmul(mat,coords%getvar(3))
     
     
     ! Test that recomputed coordinates are equal to the original coordinate values
@@ -160,10 +160,10 @@ subroutine testElementMapping_reversability_quadratic()
     use mod_constants,          only: ZERO, ONE, TWO, THREE, TENTH
     use mod_polynomial,         only: polynomialVal
     use type_point,             only: point_t
-    use type_expansion,         only: expansion_t
+    use type_densevector,       only: densevector_t
 
     implicit none
-    type(expansion_t)   :: coords
+    type(densevector_t) :: coords
     type(point_t)       :: pts_init(27), pts_test(27), pts_ref(27)   !> Quadratic Element
     real(rk)            :: mat(27,27), tol
     real(rk)            :: x, y, z, x_ref, y_ref, z_ref, pert
@@ -174,7 +174,7 @@ subroutine testElementMapping_reversability_quadratic()
     
     call compute_element_mappings()
     
-    call coords%init(27,3)   !> 27 terms, 3 coordinates (x,y,z)
+    call coords%init(27,3,1)   !> 27 terms, 3 coordinates (x,y,z), ielem = 1
     
     ! Compute coordinates of a Hex-element with appropriate number of points
     
@@ -226,9 +226,9 @@ subroutine testElementMapping_reversability_quadratic()
     end do
     
     ! Compute modal coordinates
-    coords%mat(:,1) = matmul(elem_map(2)%mat,pts_init(:)%c1_)
-    coords%mat(:,2) = matmul(elem_map(2)%mat,pts_init(:)%c2_)
-    coords%mat(:,3) = matmul(elem_map(2)%mat,pts_init(:)%c3_)
+    call coords%setvar(1,matmul(elem_map(2)%mat,pts_init(:)%c1_))
+    call coords%setvar(2,matmul(elem_map(2)%mat,pts_init(:)%c2_))
+    call coords%setvar(3,matmul(elem_map(2)%mat,pts_init(:)%c3_))
     
     
     ! Compute matrix of polynomial values for reverse calculation
@@ -239,9 +239,9 @@ subroutine testElementMapping_reversability_quadratic()
     end do
     
     ! Recompute coordinate point values from modes
-    pts_test(:)%c1_ = matmul(mat,coords%mat(:,1))
-    pts_test(:)%c2_ = matmul(mat,coords%mat(:,2))
-    pts_test(:)%c3_ = matmul(mat,coords%mat(:,3))
+    pts_test(:)%c1_ = matmul(mat,coords%getvar(1))
+    pts_test(:)%c2_ = matmul(mat,coords%getvar(2))
+    pts_test(:)%c3_ = matmul(mat,coords%getvar(3))
     
     
     ! Test that recomputed coordinates are equal to the original coordinate values
@@ -267,10 +267,10 @@ subroutine testElementMapping_reversability_cubic()
     use mod_constants,          only: ZERO, ONE, TWO, THREE, FOUR, TENTH
     use mod_polynomial,         only: polynomialVal
     use type_point,             only: point_t
-    use type_expansion,         only: expansion_t
+    use type_densevector,       only: densevector_t
 
     implicit none
-    type(expansion_t)   :: coords
+    type(densevector_t) :: coords
     type(point_t)       :: pts_init(64), pts_test(64), pts_ref(64)   !> Cubic Element
     real(rk)            :: mat(64,64), tol
     real(rk)            :: x, y, z, x_ref, y_ref, z_ref, pert
@@ -281,7 +281,7 @@ subroutine testElementMapping_reversability_cubic()
     
     call compute_element_mappings()
     
-    call coords%init(64,3)   !> 64 terms, 3 coordinates (x,y,z)
+    call coords%init(64,3,1)   ! 64 terms, 3 coordinates (x,y,z), ielem = 1
     
     ! Compute coordinates of a Hex-element with appropriate number of points
     
@@ -333,9 +333,9 @@ subroutine testElementMapping_reversability_cubic()
     end do
     
     ! Compute modal coordinates
-    coords%mat(:,1) = matmul(elem_map(3)%mat,pts_init(:)%c1_)
-    coords%mat(:,2) = matmul(elem_map(3)%mat,pts_init(:)%c2_)
-    coords%mat(:,3) = matmul(elem_map(3)%mat,pts_init(:)%c3_)
+    call coords%setvar(1,matmul(elem_map(3)%mat,pts_init(:)%c1_))
+    call coords%setvar(2,matmul(elem_map(3)%mat,pts_init(:)%c2_))
+    call coords%setvar(3,matmul(elem_map(3)%mat,pts_init(:)%c3_))
     
     
     ! Compute matrix of polynomial values for reverse calculation
@@ -346,9 +346,9 @@ subroutine testElementMapping_reversability_cubic()
     end do
     
     ! Recompute coordinate point values from modes
-    pts_test(:)%c1_ = matmul(mat,coords%mat(:,1))
-    pts_test(:)%c2_ = matmul(mat,coords%mat(:,2))
-    pts_test(:)%c3_ = matmul(mat,coords%mat(:,3))
+    pts_test(:)%c1_ = matmul(mat,coords%getvar(1))
+    pts_test(:)%c2_ = matmul(mat,coords%getvar(2))
+    pts_test(:)%c3_ = matmul(mat,coords%getvar(3))
     
     
     ! Test that recomputed coordinates are equal to the original coordinate values
@@ -374,10 +374,10 @@ subroutine testElementMapping_reversability_quartic()
     use mod_constants,          only: ZERO, ONE, TWO, THREE, FOUR, TENTH
     use mod_polynomial,         only: polynomialVal
     use type_point,             only: point_t
-    use type_expansion,         only: expansion_t
+    use type_densevector,       only: densevector_t
 
     implicit none
-    type(expansion_t)   :: coords
+    type(densevector_t) :: coords
     type(point_t)       :: pts_init(125), pts_test(125), pts_ref(125)   !> Quartic Element
     real(rk)            :: mat(125,125), tol
     real(rk)            :: x, y, z, x_ref, y_ref, z_ref, pert
@@ -388,7 +388,7 @@ subroutine testElementMapping_reversability_quartic()
     
     call compute_element_mappings()
     
-    call coords%init(125,3)   !> 125 terms, 3 coordinates (x,y,z)
+    call coords%init(125,3,1)   ! 125 terms, 3 coordinates (x,y,z)
     
     ! Compute coordinates of a Hex-element with appropriate number of points
     
@@ -440,9 +440,9 @@ subroutine testElementMapping_reversability_quartic()
     end do
     
     ! Compute modal coordinates
-    coords%mat(:,1) = matmul(elem_map(4)%mat,pts_init(:)%c1_)
-    coords%mat(:,2) = matmul(elem_map(4)%mat,pts_init(:)%c2_)
-    coords%mat(:,3) = matmul(elem_map(4)%mat,pts_init(:)%c3_)
+    call coords%setvar(1,matmul(elem_map(4)%mat,pts_init(:)%c1_))
+    call coords%setvar(2,matmul(elem_map(4)%mat,pts_init(:)%c2_))
+    call coords%setvar(3,matmul(elem_map(4)%mat,pts_init(:)%c3_))
     
     
     ! Compute matrix of polynomial values for reverse calculation
@@ -453,9 +453,9 @@ subroutine testElementMapping_reversability_quartic()
     end do
     
     ! Recompute coordinate point values from modes
-    pts_test(:)%c1_ = matmul(mat,coords%mat(:,1))
-    pts_test(:)%c2_ = matmul(mat,coords%mat(:,2))
-    pts_test(:)%c3_ = matmul(mat,coords%mat(:,3))
+    pts_test(:)%c1_ = matmul(mat,coords%getvar(1))
+    pts_test(:)%c2_ = matmul(mat,coords%getvar(2))
+    pts_test(:)%c3_ = matmul(mat,coords%getvar(3))
     
     
     ! Test that recomputed coordinates are equal to the original coordinate values

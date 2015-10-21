@@ -1,10 +1,8 @@
 module mod_interpolate
+#include <messenger.h>
     use mod_kinds,      only: rk,ik
     use DNAD_D
     use type_mesh,      only: mesh_t
-    !use type_element,   only: element_t
-    !use type_face,      only: face_t
-    !use type_blockvector,   only: blockvector_t
     use type_chidgVector,   only: chidgVector_t
 
     implicit none
@@ -144,14 +142,21 @@ contains
         type(AD_D),             intent(inout)   :: var_gq(:)
         integer(ik),            intent(in)      :: ielem_seed
 
-        type(AD_D)  :: qdiff(mesh(idom)%faces(ielem,iface)%nterms_s)
-        integer(ik) :: nderiv, set_deriv, iterm, igq, nterms_s
+        !type(AD_D)  :: qdiff(mesh(idom)%faces(ielem,iface)%nterms_s)
+        type(AD_D), allocatable  :: qdiff(:)
+        integer(ik) :: nderiv, set_deriv, iterm, igq, nterms_s, ierr
+
+        
 
 
-        associate ( faces => mesh(idom)%faces )
+!        associate ( faces => mesh(idom)%faces )
 
 
-            nterms_s = faces(ielem,iface)%nterms_s
+            nterms_s = mesh(idom)%faces(ielem,iface)%nterms_s
+
+            allocate(qdiff(nterms_s), stat=ierr)
+            if (ierr /= 0) call AllocationError
+
 
             !
             ! Get the number of degrees of freedom for the seed element
@@ -161,7 +166,7 @@ contains
                 ! If ielem_seed == 0 then we aren't interested in tracking derivatives
                 nderiv = 1
             else
-                nderiv = faces(ielem_seed,1)%neqns  *  faces(ielem_seed,1)%nterms_s     ! using face 1 here, but faces 1-6 point
+                nderiv = mesh(idom)%faces(ielem_seed,1)%neqns  *  mesh(idom)%faces(ielem_seed,1)%nterms_s     ! using face 1 here, but faces 1-6 point
             end if
 
 
@@ -173,6 +178,7 @@ contains
             do igq = 1,size(var_gq)
                 allocate(var_gq(igq)%xp_ad_(nderiv))
             end do
+
 
             !
             ! If the current element is being differentiated (ielem == ielem_seed)
@@ -202,18 +208,19 @@ contains
                     qdiff(iterm)%xp_ad_(set_deriv) = 1.0_rk
                 end do
 
-                var_gq = matmul(faces(ielem,iface)%gq%face%val(:,:,iface),  qdiff)
+                var_gq = matmul(mesh(idom)%faces(ielem,iface)%gq%face%val(:,:,iface),  qdiff)
 
             else
+
                 !
                 ! If the solution variable derivatives dont need initialized
                 ! then just use the q(ielem) values and derivatives get
                 ! initialized to zero
                 !
-                var_gq = matmul(faces(ielem,iface)%gq%face%val(:,:,iface),  q%dom(idom)%lvecs(ielem)%getvar(ivar))
+                var_gq = matmul(mesh(idom)%faces(ielem,iface)%gq%face%val(:,:,iface),  q%dom(idom)%lvecs(ielem)%getvar(ivar))
             end if
 
-        end associate
+        !end associate
 
     end subroutine
 

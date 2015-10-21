@@ -196,19 +196,6 @@ contains
 
 
 
-            !
-            ! Allocation for number of domains
-            !
-            !case ('ndomains','domains')
-            !    if (allocated(self%domains)) then
-            !        call signal(WARN,"chidg%set: Domains already allocated")
-            !    else
-            !        allocate(self%domains(1), stat=ierr)
-            !        if (ierr /= 0) call AllocationError
-            !    end if
-
-
-
             case default
                 call signal(FATAL,"chidg%set: component string was not recognized. Check spelling and that the component was registered as an option in the chidg%set routine")
 

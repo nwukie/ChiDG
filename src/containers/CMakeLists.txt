@@ -3,7 +3,7 @@ add_lib_sources(
                 type_densevector.f90 
                 type_blockmatrix.f90 
                 type_blockvector.f90 
-                type_expansion.f90 
+#                type_expansion.f90 
                 type_dict.f90
                 operator_block_mv.f90
                 operator_block_dot.f90

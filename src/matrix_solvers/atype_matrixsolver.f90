@@ -1,12 +1,9 @@
 module atype_matrixsolver
     use mod_kinds,          only: rk,ik
     use type_dict,          only: dict_t
-   ! use type_blockmatrix,   only: blockmatrix_t
-   ! use type_blockvector
     use type_chidgMatrix,   only: chidgMatrix_t
     use type_chidgVector
     use type_timer,         only: timer_t
-    !use operator_mv
     use operator_chidg_mv
 
     implicit none
@@ -53,8 +50,6 @@ module atype_matrixsolver
 
     abstract interface
         subroutine solve_interface(self,A,x,b,M)
-            !use type_blockmatrix,       only: blockmatrix_t
-            !use type_blockvector,       only: blockvector_t
             use type_chidgMatrix,       only: chidgMatrix_t
             use type_chidgVector,       only: chidgVector_t
             use type_preconditioner,    only: preconditioner_t
@@ -142,9 +137,6 @@ contains
     !-----------------------------------------------------------
     function residual(self,A,x,b) result(r)
         class(matrixsolver_t),  intent(inout)   :: self
-        !type(blockmatrix_t),    intent(inout)   :: A
-        !type(blockvector_t),    intent(inout)   :: x
-        !type(blockvector_t),    intent(inout)   :: b
         type(chidgMatrix_t),    intent(inout)   :: A
         type(chidgVector_t),    intent(inout)   :: x
         type(chidgVector_t),    intent(inout)   :: b

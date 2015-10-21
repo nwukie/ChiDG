@@ -5,14 +5,13 @@ module newton
     use type_chidg_data,        only: chidg_data_t
     use atype_matrixsolver,     only: matrixsolver_t
     use type_preconditioner,    only: preconditioner_t
-    !use type_blockvector
     use type_chidgVector
 
     use mod_spatial,    only: update_space
 
     use mod_tecio,      only: write_tecio_variables
 
-    !use mod_entropy,    only: compute_entropy_error
+    use mod_entropy,    only: compute_entropy_error
     implicit none
     private
 
@@ -141,8 +140,6 @@ contains
                 !
                 ! We need to solve the matrix system Ax=b for the update vector x (dq)
                 !
-                !call matrixsolver%solve(lin,dq,b,preconditioner)
-
                 call matrixsolver%solve(lhs,dq,b,preconditioner)
 
                 call self%matrix_iterations%push_back(matrixsolver%niter)       ! non-essential record-keeping
@@ -174,9 +171,6 @@ contains
 
 
 
-
-
-    
                 !
                 ! Write incremental solution
                 !
@@ -210,8 +204,8 @@ contains
         call self%newton_iterations%push_back(niter)
 
 
-        !entropy_error = compute_entropy_error(domain) 
-        !print*, 'Entropy error: ', entropy_error
+        entropy_error = compute_entropy_error(data)
+        print*, 'Entropy error: ', entropy_error
     end subroutine solve
 
 

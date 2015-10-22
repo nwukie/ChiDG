@@ -14,6 +14,7 @@ add_subdirectory(boundary_conditions)
 add_subdirectory(matrix_solvers)
 add_subdirectory(preconditioners)
 add_subdirectory(materials)
+add_subdirectory(chimera)
 
 # Propagate lib_srcs list to parent directory
 add_lib_sources() 

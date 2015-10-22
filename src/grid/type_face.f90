@@ -27,36 +27,36 @@ module type_face
         !integer(ik), pointer         :: nterms_s => null()
         integer(ik)                  :: neqns
         integer(ik)                  :: nterms_s
-        integer(ik)                  :: ftype               !> interior (0), or boundary condition (1), or Chimera interface (2)
-        integer(ik)                  :: iface               !> XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, etc
+        integer(ik)                  :: ftype               !< interior (0), or boundary condition (1), or Chimera interface (2)
+        integer(ik)                  :: iface               !< XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, etc
 
-        integer(ik)                  :: idomain             !> Domain index of parent element
-        integer(ik)                  :: iparent             !> Element index of parent element
-        integer(ik)                  :: ineighbor           !> Block-local index of neighbor element
+        integer(ik)                  :: idomain             !< Domain index of parent element
+        integer(ik)                  :: iparent             !< Element index of parent element
+        integer(ik)                  :: ineighbor           !< Block-local index of neighbor element
 
-        !integer(ik)                  :: idomain_n           !> Processor-local domain index of neighbor element
-        !integer(ik)                  :: iparent_n           !> Processor-local element index of neighbor element in idomain_n
+        !integer(ik)                  :: idomain_n           !< Processor-local domain index of neighbor element
+        !integer(ik)                  :: iparent_n           !< Processor-local element index of neighbor element in idomain_n
 
         ! Geometry
         !---------------------------------------------------------
-        type(point_t),  allocatable  :: quad_pts(:)         !> Cartesian coordinates of quadrature nodes
-        !type(densevector_t), pointer   :: coords => null()    !> Pointer to element coordinates
-        type(densevector_t)             :: coords           !> Pointer to element coordinates
+        type(point_t),  allocatable  :: quad_pts(:)         !< Cartesian coordinates of quadrature nodes
+        !type(densevector_t), pointer   :: coords => null()    !< Pointer to element coordinates
+        type(densevector_t)             :: coords           !< Element coordinates
 
         ! Metric terms
         !---------------------------------------------------------
-        real(rk),       allocatable  :: jinv(:)                     !> array of inverse element jacobians on the face
-        real(rk),       allocatable  :: metric(:,:,:)               !> Face metric terms
-        real(rk),       allocatable  :: norm(:,:)                   !> Face normals
-        real(rk),       allocatable  :: unorm(:,:)                  !> Unit normals
-        !real(rk),       pointer      :: invmass(:,:) => null()      !> Pointer to element inverse mass matrix
-        real(rk), allocatable        :: invmass(:,:)                 !> Pointer to element inverse mass matrix
+        real(rk),       allocatable  :: jinv(:)                     !< array of inverse element jacobians on the face
+        real(rk),       allocatable  :: metric(:,:,:)               !< Face metric terms
+        real(rk),       allocatable  :: norm(:,:)                   !< Face normals
+        real(rk),       allocatable  :: unorm(:,:)                  !< Unit normals
+        !real(rk),       pointer      :: invmass(:,:) => null()      !< Pointer to element inverse mass matrix
+        !real(rk), allocatable        :: invmass(:,:)                 !< Pointer to element inverse mass matrix
 
 
         ! Quadrature matrices
         !---------------------------------------------------------
-        type(quadrature_t),  pointer :: gq     => null()            !> Pointer to solution quadrature instance
-        type(quadrature_t),  pointer :: gqmesh => null()            !> Pointer to mesh quadrature instance
+        type(quadrature_t),  pointer :: gq     => null()            !< Pointer to solution quadrature instance
+        type(quadrature_t),  pointer :: gqmesh => null()            !< Pointer to mesh quadrature instance
 
 
 
@@ -67,12 +67,10 @@ module type_face
     contains
         procedure           :: init_geom
         procedure           :: init_sol
-!        procedure, public   :: integrate_flux               !> Integrate face flux
-!        procedure, public   :: integrate_scalar             !> Integrate face scalar
 
-        procedure           :: compute_quadrature_metrics   !> Compute metric terms at quadrature nodes
-        procedure           :: compute_quadrature_normals   !> Compute normals at quadrature nodes
-        procedure           :: compute_quadrature_coords    !> Compute cartesian coordinates at quadrature nodes
+        procedure           :: compute_quadrature_metrics   !< Compute metric terms at quadrature nodes
+        procedure           :: compute_quadrature_normals   !< Compute normals at quadrature nodes
+        procedure           :: compute_quadrature_coords    !< Compute cartesian coordinates at quadrature nodes
 
         final               :: destructor
     end type face_t
@@ -136,7 +134,7 @@ contains
         self%gq         => elem%gq
         self%gqmesh     => elem%gqmesh
         !self%invmass    => elem%invmass
-        self%invmass    = elem%invmass
+        !self%invmass    = elem%invmass
 
 
         nnodes = self%gq%face%nnodes
@@ -288,7 +286,7 @@ contains
 
 
 
-        !> Compute unit normals
+        ! Compute unit normals
         norm_mag = sqrt(self%norm(:,XI_DIR)**TWO + self%norm(:,ETA_DIR)**TWO + self%norm(:,ZETA_DIR)**TWO)
         self%unorm(:,XI_DIR) = self%norm(:,XI_DIR)/norm_mag
         self%unorm(:,ETA_DIR) = self%norm(:,ETA_DIR)/norm_mag
@@ -325,80 +323,6 @@ contains
         end do
 
     end subroutine
-
-
-
-
-!
-!    !=============================================================================
-!    !
-!    !   Integrate boundary flux.
-!    !
-!    !   Multiplies fluxes by test functions and integrates.
-!    !
-!    !=============================================================================
-!    subroutine integrate_flux(self,flux_x,flux_y,flux_z,ivar)
-!        class(face_t), intent(inout)  :: self
-!        real(rk),      intent(inout)  :: flux_x(:), flux_y(:), flux_z(:)
-!        integer(ik),   intent(in)     :: ivar
-!
-!        real(rk),  dimension(self%nterms_s)  :: integral
-!        integer(4) :: iface
-!
-!        iface = self%iface
-!
-!        ! Multiply by quadrature weights
-!        flux_x = flux_x * self%gq%face%weights(:,iface)
-!        flux_y = flux_y * self%gq%face%weights(:,iface)
-!        flux_z = flux_z * self%gq%face%weights(:,iface)
-!
-!        ! Multiply by column of test functions, integrate, and add to RHS
-!        integral = matmul(transpose(self%gq%face%val(:,:,iface)),flux_x)
-!!        self%rhs%vals(:,ivar) = self%rhs%vals(:,varindex) - integral
-!
-!        integral = matmul(transpose(self%gq%face%val(:,:,iface)),flux_y)
-!!        self%rhs%vals(:,ivar) = self%rhs%vals(:,varindex) - integral
-!
-!        integral = matmul(transpose(self%gq%face%val(:,:,iface)),flux_z)
-!!        self%rhs%vals(:,ivar) = self%rhs%vals(:,varindex) - integral
-!
-!
-!        ! ADD SECTION FOR AD LINEARIZATION AND ADDING THAT TO THE SYSTEM JACOBIAN MATRIX
-!
-!    end subroutine
-!
-!
-!    !=============================================================================
-!    !
-!    !   Integrate scalar flux.
-!    !
-!    !
-!    !=============================================================================
-!    subroutine integrate_scalar(self,scalar,ivar)
-!        class(face_t),      intent(inout)  :: self
-!        real(rk),           intent(inout)  :: scalar(:)
-!        integer(ik),        intent(in)     :: ivar
-!
-!        real(rk),       dimension(self%nterms_s)    :: integral
-!        integer(4)                                  :: iface
-!
-!        iface = self%iface
-!
-!        ! Multiply by quadrature weights
-!        scalar = (scalar)  *  (self%gq%face%weights(:,iface))
-!
-!        ! Multiply by column of test functions, integrate, and add to RHS
-!        integral = matmul(transpose(self%gq%face%val(:,:,iface)),scalar)
-!!        self%rhs%vals(:,ivar) = self%rhs%vals(:,ivar) - integral
-!
-!    end subroutine
-!
-!
-
-
-
-
-
 
 
 

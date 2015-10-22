@@ -1,7 +1,7 @@
 module type_bc
 #include <messenger.h>
     use mod_kinds,          only: rk, ik
-    use mod_constants,      only: XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX
+    use mod_constants,      only: XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX, BOUNDARY
     use type_mesh,          only: mesh_t
     use type_element,       only: element_t
     use type_equationset,   only: equationset_t
@@ -141,7 +141,7 @@ contains
                     !
                     ! Set face to boundary condition face
                     !
-                    mesh%faces(ielem,iface)%ftype = 1
+                    mesh%faces(ielem,iface)%ftype = BOUNDARY
                 end do ! ixi
             end do ! ieta
         end do ! izeta

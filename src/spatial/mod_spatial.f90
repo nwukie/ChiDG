@@ -39,16 +39,22 @@ contains
             !
             ! Loop through given element and neighbors and compute the corresponding linearization
             !
-            ! XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX, DIAG
+            ! CHIMERA, XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX, DIAG
             !
             do iblk = 0,7           ! (0 = linearization of chimera blocks, 1-6 = linearization of interior neighbor blocks, 7 = linearization of Q- block
 
+
+                !
+                ! Loop through local domains
+                !
                 do idom = 1,data%ndomains
                     associate ( mesh => data%mesh(idom), sdata => data%sdata, eqnset => data%eqnset(idom)%item, prop => data%eqnset(idom)%item%prop, chimera => data%mesh(idom)%chimera)
 
                     nelem = mesh%nelem
 
-                    ! Loop through elements in the domain
+                    !
+                    ! Loop through elements in the current domain
+                    !
                     do ielem = 1,nelem
 
 
@@ -180,8 +186,8 @@ contains
             !
             ! Boundary conditions
             !
-            !> For boundary conditions, the linearization only depends on Q-, which is the solution vector
-            !! for the interior element. So, we only need to compute derivatives for the interior element (DIAG)
+            ! For boundary conditions, the linearization only depends on Q-, which is the solution vector
+            ! for the interior element. So, we only need to compute derivatives for the interior element (DIAG)
             iblk = 7    !> DIAG
             do idom = 1,data%ndomains
                 call data%bcset(idom)%apply(data%mesh,data%sdata,data%eqnset(idom)%item%prop,idom,iblk)
@@ -202,34 +208,6 @@ contains
 
 
     end subroutine
-
-
-
-
-
-
-
-
-
-
-
-
-
-    !> Visit each element and compute generic function
-    !!
-    !!  @author Nathan A. Wukie
-    !!
-    !!
-    !---------------------------------------------------------------------------------------------
-    !subroutine loop_space(domain,fcn)
-    !    type(domain_t),     intent(in)  :: domain
-    !    type(function_t),   intent(in)  :: fcn
-    !
-    !
-    !
-    !end subroutine
-
-
 
 
 

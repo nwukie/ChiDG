@@ -9,6 +9,7 @@ module type_chidg_data
     use type_bcset,                 only: bcset_t
     use type_equationset_wrapper,   only: equationset_wrapper_t
     use type_solverdata,            only: solverdata_t
+!    use type_chimera,               only: chimera_t
 
     ! Factory methods
     use mod_equations,              only: create_equationset
@@ -20,34 +21,40 @@ module type_chidg_data
     implicit none
 
 
-    !> solver abstract type definition
+    !> Container for ChiDG data.
     !!
+    !!  The format here is to have arrays of mesh_t, bcset_t, and eqnset_t components. The 
+    !!  index of those arrays corresponds to a domain in the local ChiDG environment. A 
+    !!  solverdata_t component holds chidgVector_t and chidgMatrix_t components that are
+    !!  initialized from the domain components and are informed of the number of domains
+    !!  in addition to their dependencies on each other.
     !!
+    !!  @author Nathan A. Wukie
     !!
-    !!
-    !!
-    !---------------------------------------------------------------------------------------
+    !--------------------------------------------------------------------------------------
     type, public  :: chidg_data_t
 
-        integer(ik)                         :: ndomains = 0
-        type(dict_t)                        :: domain_info      !< Dictionary of (domain_index, domain_name) pairs
+        integer(ik)                                 :: ndomains = 0
+        type(dict_t)                                :: domain_info  !< Dictionary of (domain_index, domain_name) pairs
 
         
-        type(mesh_t),                   allocatable :: mesh(:)
-        type(bcset_t),                  allocatable :: bcset(:)
-        type(equationset_wrapper_t),    allocatable :: eqnset(:)
+        type(mesh_t),                   allocatable :: mesh(:)      !< Array of mesh instances. One for each domain.
+        type(bcset_t),                  allocatable :: bcset(:)     !< Array of boundary condition set instances. One for each domain.
+        type(equationset_wrapper_t),    allocatable :: eqnset(:)    !< Array of equation set instances. One for each domain.
+!        type(chimera_t),                allocatable :: chimera(:)   !< Array of Chimera data instances. One for each domain.
 
 
-        type(solverdata_t)                          :: sdata
+        type(solverdata_t)                          :: sdata        !< Solver data container for solution vectors and matrices
 
 
-        logical                         :: solverInitialized = .false.
+        logical                                     :: solverInitialized = .false.
 
 
     contains
-
+        !> Initialization procedure for solution data. Execute after all domains are added.
         procedure   :: init_sdata
 
+        !> Modifiers for adding domains and boundary conditions
         procedure   :: add_domain
         procedure   :: add_bc
 
@@ -62,7 +69,11 @@ module type_chidg_data
 contains
 
 
-    !> Initialize solution data storage structures
+    !> Initialize solution data storage structures. Needs to be called before accessing any 
+    !! solution storage containers so they are allocated and initialized. 
+    !!
+    !! All domains must be added before calling this procedure, since the array of mesh 
+    !! structures are used for the initialization routine.
     !!
     !!  @author Nathan A. Wukie
     !!
@@ -133,15 +144,15 @@ contains
         ! Allocate new storage arrays
         allocate(temp_mesh(self%ndomains),   &
                  temp_bcset(self%ndomains),  &
-                 temp_eqnset(self%ndomains), stat=ierr) 
+                 temp_eqnset(self%ndomains), stat=ierr)
         if (ierr /= 0) call AllocationError
 
 
-        ! Copy previously initialized instances to new array
+        ! Copy previously initialized instances to new array. Be careful about pointers components here!
         if (self%ndomains > 1) then
-            temp_mesh(  1:size(self%mesh))   = self%mesh
-            temp_bcset( 1:size(self%bcset))  = self%bcset
-            temp_eqnset(1:size(self%eqnset)) = self%eqnset
+            temp_mesh(   1:size(self%mesh))    = self%mesh
+            temp_bcset(  1:size(self%bcset))   = self%bcset
+            temp_eqnset( 1:size(self%eqnset))  = self%eqnset
         end if
 
 
@@ -164,7 +175,7 @@ contains
 
 
         !
-        ! Move rezied temp allocation back to chidg_data container
+        ! Move rezied temp allocation back to chidg_data container. Be careful about pointer components here!
         !
         call move_alloc(temp_mesh,self%mesh)
         call move_alloc(temp_bcset,self%bcset)
@@ -182,6 +193,18 @@ contains
 
 
 
+
+
+    !> Add a boundary condition to a ChiDG domain
+    !!
+    !!  @author Nathan A. Wukie
+    !!
+    !!  @param[in]  domain      Character string of the selected domain
+    !!  @param[in]  bc          Character string indicating the boundary condition to add
+    !!  @param[in]  face        Integer of the block face to which the boundary condition will be applied
+    !!  @param[in]  options     Boundary condition options dictionary
+    !!
+    !----------------------------------------------------------------------------
     subroutine add_bc(self,domain,bc,face,options)
         class(chidg_data_t),    intent(inout)   :: self
         character(*),           intent(in)      :: domain
@@ -200,7 +223,7 @@ contains
 
 
         !
-        ! Create boundary condition, specified in incoming string
+        ! Create boundary condition, specified by incoming string
         !
         call create_bc(bc,bc_instance)
 

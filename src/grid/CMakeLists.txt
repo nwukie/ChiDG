@@ -4,13 +4,9 @@ add_lib_sources(
                 type_face.f90 
                 type_mesh.f90 
                 type_meshdata.f90
-#                type_domain.f90 
                 mod_interpolate.f90
                 mod_grid.f90 
                 mod_grid_tools.f90
                 mod_grid_operators.f90
                 mod_DNAD_tools.f90
-                type_chimera.f90
-                type_chimera_receiver.f90
-                type_chimera_donor.f90
                 )

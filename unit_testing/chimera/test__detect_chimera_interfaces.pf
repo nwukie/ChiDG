@@ -1,0 +1,143 @@
+!
+!
+!   Overlapping cubes. Each cube is 2x2x2 elements. Only one element of overlap
+!
+!    |--------|-|---------|
+!    |        | |         |
+!    |        | |         |
+!    |        | |         |
+!    |--------|-|---------|
+!
+!
+!
+@Test
+subroutine test__detect_chimera_interfaces()
+    use pfunit_mod
+    use mod_kinds,      only: rk, ik
+    use mod_constants,  only: XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX, &
+                              INTERIOR, BOUNDARY, CHIMERA
+
+    use type_chidg,     only: chidg_t
+    use type_meshdata,  only: meshdata_t
+
+    use mod_hdfio,      only: read_grid_hdf
+    use mod_chimera
+    implicit none
+
+
+    type(chidg_t)                   :: chidg
+    type(meshdata_t), allocatable   :: meshdata(:)
+    character(len=100)              :: filename = 'D2_E8_M1.h5'
+    integer(ik)                     :: nterms_s, idom, ndom, ielem
+
+
+    nterms_s = 8
+
+
+    !
+    ! Initialize ChiDG environment
+    !
+    call chidg%init('env')
+
+
+
+    !
+    ! Read 2-Domain overlapping grid
+    !
+    call read_grid_hdf(filename,meshdata)
+
+
+
+    !
+    ! Add domains to ChiDG
+    !
+    ndom = size(meshdata)
+    do idom = 1,ndom
+        call chidg%data%add_domain(trim(meshdata(idom)%name),meshdata(idom)%points,meshdata(idom)%nterms_c,'linearadvection',nterms_s)
+    end do
+
+
+
+    !
+    ! Add boundary conditions
+    !
+    call chidg%data%add_bc('D_01','extrapolate_la',XI_MIN)
+    !call chidg%data%add_bc('D_01','extrapolate_la',XI_MAX)     ! Skip XI_MAX face for Chimera interface
+    call chidg%data%add_bc('D_01','extrapolate_la',ETA_MIN)
+    call chidg%data%add_bc('D_01','extrapolate_la',ETA_MAX)
+    call chidg%data%add_bc('D_01','extrapolate_la',ZETA_MIN)
+    call chidg%data%add_bc('D_01','extrapolate_la',ZETA_MAX)
+
+    !call chidg%data%add_bc('D_02','extrapolate_la',XI_MIN)     ! Skip XI_MIN face for Chimera interface
+    call chidg%data%add_bc('D_02','extrapolate_la',XI_MAX)
+    call chidg%data%add_bc('D_02','extrapolate_la',ETA_MIN)
+    call chidg%data%add_bc('D_02','extrapolate_la',ETA_MAX)
+    call chidg%data%add_bc('D_02','extrapolate_la',ZETA_MIN)
+    call chidg%data%add_bc('D_02','extrapolate_la',ZETA_MAX)
+
+
+
+    !
+    ! Detect Chimera faces. THIS IS BEING TESTED
+    !
+    call detect_chimera_interfaces(chidg%data%mesh)
+
+
+
+
+    !
+    ! Test detection and assignment of Chimera faces
+    !
+    associate (mesh => chidg%data%mesh)
+    ! XI_MAX faces of domain-1 should be chimera faces
+    @assertEqual(CHIMERA, mesh(1)%faces(2,XI_MAX)%ftype)
+    @assertEqual(CHIMERA, mesh(1)%faces(4,XI_MAX)%ftype)
+    @assertEqual(CHIMERA, mesh(1)%faces(6,XI_MAX)%ftype)
+    @assertEqual(CHIMERA, mesh(1)%faces(8,XI_MAX)%ftype)
+
+    ! XI_MIN faces of domain-2 should be chimera faces
+    @assertEqual(CHIMERA, mesh(2)%faces(1,XI_MIN)%ftype)
+    @assertEqual(CHIMERA, mesh(2)%faces(3,XI_MIN)%ftype)
+    @assertEqual(CHIMERA, mesh(2)%faces(5,XI_MIN)%ftype)
+    @assertEqual(CHIMERA, mesh(2)%faces(7,XI_MIN)%ftype)
+
+
+
+    ! THESE SHOULD BE BOUNDARY FACES
+    @assertEqual(INTERIOR, mesh(1)%faces(2,XI_MIN)%ftype)
+    @assertEqual(INTERIOR, mesh(1)%faces(4,XI_MIN)%ftype)
+    @assertEqual(INTERIOR, mesh(1)%faces(6,XI_MIN)%ftype)
+    @assertEqual(INTERIOR, mesh(1)%faces(8,XI_MIN)%ftype)
+
+    @assertEqual(INTERIOR, mesh(2)%faces(1,XI_MAX)%ftype)
+    @assertEqual(INTERIOR, mesh(2)%faces(3,XI_MAX)%ftype)
+    @assertEqual(INTERIOR, mesh(2)%faces(5,XI_MAX)%ftype)
+    @assertEqual(INTERIOR, mesh(2)%faces(7,XI_MAX)%ftype)
+
+
+    end associate
+
+
+
+
+
+end subroutine
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

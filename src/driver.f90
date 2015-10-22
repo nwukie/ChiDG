@@ -51,7 +51,7 @@ program driver
 
 
     !
-    ! Add domains to ChiDG
+    ! Add domains from meshdata to ChiDG
     !
     ndomains = size(meshdata)
     do idom = 1,ndomains
@@ -64,18 +64,6 @@ program driver
     ! Initialize solution data storage
     !
     call chidg%data%init_sdata()
-
-
-
-
-    !
-    ! Write initial solution
-    !
-    if (initial_write) then
-        call write_tecio_variables(chidg%data,'1.plt',1)
-    end if
-
-
 
 
 
@@ -124,8 +112,6 @@ program driver
     ! Initialize solution
     !
     call create_function(constant,'constant')
-    call create_function(sod,'sod')
-    call create_function(roe,'roe_check') 
 
 
     ! rho

@@ -13,6 +13,7 @@ module type_chidg
     use mod_timescheme,         only: create_timescheme
     use mod_matrixsolver,       only: create_matrixsolver
     use mod_preconditioner,     only: create_preconditioner
+    use mod_chimera,            only: detect_chimera_interfaces
 
     implicit none
 
@@ -36,8 +37,11 @@ module type_chidg
 
         logical :: envInitialized = .false.
     contains
+
+
         procedure   :: init
         procedure   :: set
+
         procedure   :: run
         procedure   :: report
     end type
@@ -93,6 +97,8 @@ contains
                 call read_input()
 
 
+            case ('chimera')
+                call detect_chimera_interfaces(self%data%mesh)
 
 
             !

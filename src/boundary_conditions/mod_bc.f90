@@ -20,9 +20,7 @@ module mod_bc
     use bc_linearadvection_extrapolate, only: linearadvection_extrapolate_t
     use bc_euler_wall,                  only: euler_wall_t
     use bc_euler_totalinlet,            only: euler_totalinlet_t
-!    use bc_euler_totalinlet_old,        only: euler_totalinlet_old_t
     use bc_euler_pressureoutlet,        only: euler_pressureoutlet_t
-!    use bc_euler_pressureoutlet_old,    only: euler_pressureoutlet_old_t
     use bc_euler_extrapolate,           only: euler_extrapolate_t
     implicit none
 
@@ -32,9 +30,7 @@ module mod_bc
     type(linearadvection_extrapolate_t) :: LINEARADVECTION_EXTRAPOLATE
     type(euler_wall_t)                  :: EULER_WALL
     type(euler_totalinlet_t)            :: EULER_TOTALINLET
-!    type(euler_totalinlet_old_t)        :: EULER_TOTALINLET_OLD
     type(euler_pressureoutlet_t)        :: EULER_PRESSUREOUTLET
-!    type(euler_pressureoutlet_old_t)    :: EULER_PRESSUREOUTLET_OLD
     type(euler_extrapolate_t)           :: EULER_EXTRAPOLATE
 
 

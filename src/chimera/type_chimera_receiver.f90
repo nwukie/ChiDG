@@ -1,8 +1,12 @@
 module type_chimera_receiver
+    use mod_kinds,      only: rk, ik
 
 
 
     type, public :: chimera_receiver_t
+
+        integer(ik),    allocatable     :: elems(:)
+        
 
     
     contains

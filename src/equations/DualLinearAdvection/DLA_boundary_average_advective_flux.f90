@@ -2,7 +2,8 @@ module DLA_boundary_average_advective_flux
 #include <messenger.h>
     use mod_kinds,              only: rk,ik
     use mod_constants,          only: NFACES,ZERO,ONE,TWO,HALF, &
-                                      XI_MIN,XI_MAX,ETA_MIN,ETA_MAX,ZETA_MIN,ZETA_MAX,DIAG
+                                      XI_MIN,XI_MAX,ETA_MIN,ETA_MAX,ZETA_MIN,ZETA_MAX,DIAG, &
+                                      LOCAL, NEIGHBOR
 
     use atype_boundary_flux,    only: boundary_flux_t
     use type_mesh,              only: mesh_t
@@ -54,7 +55,7 @@ contains
         integer(ik),                                    intent(in)      :: idonor
 
         real(rk)                 :: cx, cy, cz
-        integer(ik)              :: iu_a, iu_b, iseed, ierr, nnodes, ineighbor, iface_p, i, idom_n
+        integer(ik)              :: iu_a, iu_b, iseed, ierr, nnodes
         type(seed_t)             :: seed
         type(AD_D), allocatable  :: ua_l(:), ua_r(:), ub_l(:), ub_r(:), flux_x(:), flux_y(:), flux_z(:)
 
@@ -64,9 +65,17 @@ contains
         !
         iu_a      = prop%get_eqn_index('u_a')
         iu_b      = prop%get_eqn_index('u_b')
+
+        !
+        ! Get quadrature node count
+        !
         nnodes    = mesh(idom)%faces(ielem,iface)%gq%nnodes_f
-        ineighbor = mesh(idom)%faces(ielem,iface)%ineighbor
-        idom_n    = idom
+
+        !
+        ! Get neighbor location
+        !
+        !ineighbor = mesh(idom)%faces(ielem,iface)%ineighbor
+        !idom_n    = idom
 
         !
         ! Get equation set properties
@@ -95,7 +104,7 @@ contains
         !
         ! Get neighbor face and seed element for derivatives
         !
-        iface_p = compute_neighbor_face(mesh,idom,ielem,iface,idonor)
+        !iface_p = compute_neighbor_face(mesh,idom,ielem,iface,idonor)
 
 
         !
@@ -107,11 +116,11 @@ contains
         !
         ! Interpolate solution to quadrature nodes
         !
-        call interpolate_face(mesh,sdata%q,idom,   ielem,    iface,  iu_a,ua_r,seed)
-        call interpolate_face(mesh,sdata%q,idom_n, ineighbor,iface_p,iu_a,ua_l,seed)
+        call interpolate_face(mesh,sdata%q,idom,ielem,iface, iu_a, ua_r, seed, LOCAL)
+        call interpolate_face(mesh,sdata%q,idom,ielem,iface, iu_a, ua_l, seed, NEIGHBOR)
 
-        call interpolate_face(mesh,sdata%q,idom,   ielem,    iface,  iu_b,ub_r,seed)
-        call interpolate_face(mesh,sdata%q,idom_n, ineighbor,iface_p,iu_b,ub_l,seed)
+        call interpolate_face(mesh,sdata%q,idom,ielem,iface, iu_b, ub_r, seed, LOCAL)
+        call interpolate_face(mesh,sdata%q,idom,ielem,iface, iu_b, ub_l, seed, NEIGHBOR)
 
 
 

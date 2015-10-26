@@ -1,6 +1,6 @@
 module bc_euler_wall
     use mod_kinds,          only: rk,ik
-    use mod_constants,      only: TWO, HALF, ZERO
+    use mod_constants,      only: TWO, HALF, ZERO, LOCAL
 
     use type_bc,            only: bc_t
     use type_solverdata,    only: solverdata_t
@@ -95,11 +95,11 @@ contains
             !
             ! Interpolate interior solution to quadrature nodes
             !
-            call interpolate_face(mesh,q,idom,ielem,iface,irho, rho_m, seed)
-            call interpolate_face(mesh,q,idom,ielem,iface,irhou,rhou_m,seed)
-            call interpolate_face(mesh,q,idom,ielem,iface,irhov,rhov_m,seed)
-            call interpolate_face(mesh,q,idom,ielem,iface,irhow,rhow_m,seed)
-            call interpolate_face(mesh,q,idom,ielem,iface,irhoE,rhoE_m,seed)
+            call interpolate_face(mesh,q,idom,ielem,iface,irho, rho_m, seed, LOCAL)
+            call interpolate_face(mesh,q,idom,ielem,iface,irhou,rhou_m,seed, LOCAL)
+            call interpolate_face(mesh,q,idom,ielem,iface,irhov,rhov_m,seed, LOCAL)
+            call interpolate_face(mesh,q,idom,ielem,iface,irhow,rhow_m,seed, LOCAL)
+            call interpolate_face(mesh,q,idom,ielem,iface,irhoE,rhoE_m,seed, LOCAL)
 
 
             !

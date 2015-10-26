@@ -2,7 +2,8 @@ module LA_boundary_average_advective_flux
 #include <messenger.h>
     use mod_kinds,                  only: rk,ik
     use mod_constants,              only: NFACES,ZERO,ONE,TWO,HALF, &
-                                          XI_MIN,XI_MAX,ETA_MIN,ETA_MAX,ZETA_MIN,ZETA_MAX,DIAG
+                                          XI_MIN,XI_MAX,ETA_MIN,ETA_MAX,ZETA_MIN,ZETA_MAX,DIAG, &
+                                          LOCAL, NEIGHBOR
 
     use atype_boundary_flux,        only: boundary_flux_t
     use type_mesh,                  only: mesh_t
@@ -52,22 +53,23 @@ contains
 
         real(rk)                    :: cx, cy, cz
         integer(ik)                 :: iu, ierr, nnodes, i
-        integer(ik)                 :: idom_n, ielem_n, iface_n
         type(seed_t)                :: seed
         type(AD_D), dimension(mesh(idom)%faces(ielem,iface)%gq%face%nnodes)    :: u_l, u_r, flux_x, flux_y, flux_z
 
 
+        !
+        ! Get variable index
+        !
         iu        = prop%get_eqn_index('u')
 
 
 
-        !nnodes    = mesh(idom)%faces(ielem,iface)%gq%nnodes_f
-        !ineighbor = mesh(idom)%faces(ielem,iface)%ineighbor
-        !idom_n    = idom
-
-        idom_n  = compute_neighbor_domain( mesh,idom,ielem,iface,idonor)
-        ielem_n = compute_neighbor_element(mesh,idom,ielem,iface,idonor)
-        iface_n = compute_neighbor_face(   mesh,idom,ielem,iface,idonor)
+        !
+        ! Get neighbor location
+        !
+        !idom_n  = compute_neighbor_domain( mesh,idom,ielem,iface,idonor)
+        !ielem_n = compute_neighbor_element(mesh,idom,ielem,iface,idonor)
+        !iface_n = compute_neighbor_face(   mesh,idom,ielem,iface,idonor)
 
 
         !
@@ -81,21 +83,18 @@ contains
         end select
 
 
-
-
         
         !
         ! Compute element for linearization
         !
         seed = compute_seed(mesh,idom,ielem,iface,idonor,iblk)
-        !iseed   = compute_seed_element(mesh,idom,ielem,iface,iblk,idonor)
 
 
         !
         ! Interpolate solution to quadrature nodes
         !
-        call interpolate_face(mesh,sdata%q,idom,   ielem,   iface,   iu, u_r, seed)
-        call interpolate_face(mesh,sdata%q,idom_n, ielem_n, iface_n, iu, u_l, seed)
+        call interpolate_face(mesh,sdata%q,idom,ielem,iface, iu, u_r, seed, LOCAL)
+        call interpolate_face(mesh,sdata%q,idom,ielem,iface, iu, u_l, seed, NEIGHBOR)
 
 
         !

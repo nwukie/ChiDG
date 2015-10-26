@@ -43,7 +43,23 @@ module mod_constants
     real(rk), parameter     :: TWO_THR  = 2._rk/3._rk
     real(rk), parameter     :: THR_FIV  = 3._rk/5._rk
 
-    !> Indexing for faces directions and jacobian blocks
+    !
+    ! Constants for spatial definition
+    !
+    integer(ik), parameter :: SPACEDIM  = 3
+    integer(ik), parameter :: NFACES    = 6
+
+    !
+    ! Spatial direction
+    !
+    integer(ik), parameter :: XI_DIR    = 1
+    integer(ik), parameter :: ETA_DIR   = 2
+    integer(ik), parameter :: ZETA_DIR  = 3
+
+
+    !
+    ! Indexing for faces directions and jacobian blocks
+    !
     integer(ik), parameter :: XI_MIN    = 1
     integer(ik), parameter :: XI_MAX    = 2
     integer(ik), parameter :: ETA_MIN   = 3
@@ -52,30 +68,39 @@ module mod_constants
     integer(ik), parameter :: ZETA_MAX  = 6
     integer(ik), parameter :: DIAG      = 7
 
-    !> Constants for spatial definition
-    integer(ik), parameter :: SPACEDIM  = 3
-    integer(ik), parameter :: NFACES    = 6
-
-    !> Spatial direction
-    integer(ik), parameter :: XI_DIR    = 1
-    integer(ik), parameter :: ETA_DIR   = 2
-    integer(ik), parameter :: ZETA_DIR  = 3
 
 
+    !
+    ! Face types. These should be distinct from the above 'face directions'
+    !
+    !integer(ik), parameter :: ORPHAN    = -2     ! orphan face - has no home and will not be operated on. 
+    !integer(ik), parameter :: INTERIOR  =  0     ! interior face
+    !integer(ik), parameter :: BOUNDARY  =  1     ! boundary condition type
+    !integer(ik), parameter :: CHIMERA   = -1     ! Chimera face
 
-    !> Face types
-    integer(ik), parameter :: ORPHAN    = -2     ! orphan face - has no home and will not be operated on. 
     integer(ik), parameter :: INTERIOR  =  0     ! interior face
-    integer(ik), parameter :: BOUNDARY  =  1     ! boundary condition type
-    integer(ik), parameter :: CHIMERA   = -1     ! Chimera face
+    integer(ik), parameter :: BOUNDARY  = -1     ! boundary condition type
+    integer(ik), parameter :: CHIMERA   = -2     ! Chimera face
+    integer(ik), parameter :: ORPHAN    = -3     ! orphan face - has no home and will not be operated on. 
+
+
+    !
+    ! Interpolation type
+    !
+    integer(ik), parameter :: LOCAL     = 0         ! Interpolate from current element
+    integer(ik), parameter :: NEIGHBOR  = 1         ! Interpolate from neighbor element
 
 
 
-    ! QUADRATURE CONSTANTS
-    ! specify number of quadrature orders to initialize
+    !
+    ! QUADRATURE CONSTANTS: specify number of quadrature orders to initialize
+    !
     integer(ik), parameter :: NGQ = 1
 
-    ! INPUT/OUTPUT CONSTANTS
+
+    !
+    ! IO constants
+    !
     integer(ik), parameter :: IO_RES = 10
     integer(ik), parameter :: MAXBLOCKS    = 200
 

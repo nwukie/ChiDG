@@ -2,7 +2,8 @@ module SCA_boundary_average_advective_flux
 #include <messenger.h>
     use mod_kinds,                  only: rk,ik
     use mod_constants,              only: NFACES,ZERO,ONE,TWO,HALF, &
-                                          XI_MIN,XI_MAX,ETA_MIN,ETA_MAX,ZETA_MIN,ZETA_MAX,DIAG
+                                          XI_MIN,XI_MAX,ETA_MIN,ETA_MAX,ZETA_MIN,ZETA_MAX,DIAG, &
+                                          LOCAL, NEIGHBOR
 
     use atype_boundary_flux,        only: boundary_flux_t
     use type_mesh,                  only: mesh_t
@@ -53,10 +54,7 @@ contains
         integer(ik),                                    intent(in)      :: idonor   ! 1 for interior faces, potentially > 1 for Chimera faces
 
         real(rk)                    :: cx, cy, cz
-        integer(ik)                 :: iu, ierr, nnodes, ineighbor, i
-        integer(ik)                 :: idom_n   ! neighbor domain index
-        integer(ik)                 :: ielem_n  ! neighbor element index
-        integer(ik)                 :: iface_n  ! neighbor face index
+        integer(ik)                 :: iu, ierr, nnodes
         type(seed_t)                :: seed
 
         type(AD_D), allocatable     :: u_l(:), u_r(:), flux_x(:), flux_y(:), flux_z(:)
@@ -78,17 +76,15 @@ contains
         !
         ! Get Neighbor indices
         !
-        idom_n  = compute_neighbor_domain( mesh,idom,ielem,iface,idonor)
-        ielem_n = compute_neighbor_element(mesh,idom,ielem,iface,idonor)
-        iface_n = compute_neighbor_face(   mesh,idom,ielem,iface,idonor)
+        !idom_n  = compute_neighbor_domain( mesh,idom,ielem,iface,idonor)
+        !ielem_n = compute_neighbor_element(mesh,idom,ielem,iface,idonor)
+        !iface_n = compute_neighbor_face(   mesh,idom,ielem,iface,idonor)
 
 
         !
         ! Compute element for linearization
         !
         seed = compute_seed(mesh,idom,ielem,iface,idonor,iblk)
-        !idomain_seed = compute_seed_domain( mesh,idom,ielem,iface,iblk,idonor)
-        !ielem_seed   = compute_seed_element(mesh,idom,ielem,iface,iblk,idonor)
 
 
 
@@ -119,8 +115,8 @@ contains
         !
         ! Interpolate solution to quadrature nodes
         !
-        call interpolate_face(mesh,sdata%q,idom,   ielem,   iface,   iu, u_r, seed)
-        call interpolate_face(mesh,sdata%q,idom_n, ielem_n, iface_n, iu, u_l, seed)
+        call interpolate_face(mesh,sdata%q,idom,ielem,iface, iu, u_r, seed, LOCAL)
+        call interpolate_face(mesh,sdata%q,idom,ielem,iface, iu, u_l, seed, NEIGHBOR)
 
 
         !

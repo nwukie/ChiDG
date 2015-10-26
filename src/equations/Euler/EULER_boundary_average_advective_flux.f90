@@ -1,7 +1,8 @@
 module EULER_boundary_average_advective_flux
     use mod_kinds,              only: rk,ik
-    use mod_constants,          only: NFACES,ONE,TWO,HALF, &
-                                      XI_MIN,XI_MAX,ETA_MIN,ETA_MAX,ZETA_MIN,ZETA_MAX, ZERO
+    use mod_constants,          only: NFACES, ZERO, ONE, TWO, HALF, &
+                                      XI_MIN,XI_MAX,ETA_MIN,ETA_MAX,ZETA_MIN,ZETA_MAX, &
+                                      LOCAL, NEIGHBOR
 
     use atype_boundary_flux,    only: boundary_flux_t
     use type_mesh,              only: mesh_t
@@ -68,11 +69,7 @@ contains
         integer(ik)     :: irhow
         integer(ik)     :: irhoe
 
-        !integer(ik)     :: iseed
         type(seed_t)    :: seed
-        integer(ik)     :: idom_n
-        integer(ik)     :: ielem_n
-        integer(ik)     :: iface_n
 
         ! Storage at quadrature nodes
         type(AD_D), dimension(mesh(idom)%faces(ielem,iface)%gq%face%nnodes)    :: &
@@ -105,19 +102,8 @@ contains
         associate (norms => mesh(idom)%faces(ielem,iface)%norm, faces => mesh(idom)%faces, q => sdata%q)
 
             !
-            ! Get neighbor face and seed element for derivatives
-            !
-            idom_n    = compute_neighbor_domain( mesh,idom,ielem,iface,idonor)
-            ielem_n   = compute_neighbor_element(mesh,idom,ielem,iface,idonor)
-            iface_n   = compute_neighbor_face(   mesh,idom,ielem,iface,idonor)
-
-
-            !
             ! Compute element for linearization
             !
-            !iseed     = compute_seed_element(mesh,idom,ielem,iface,iblk,idonor)
-            !iseed_domain  = compute_seed_domain(mesh,idom,ielem,iface,idonor)
-            !iseed_element = compute_seed_element(mesh,idom,ielem,iface,idonor)
             seed = compute_seed(mesh,idom,ielem,iface,idonor,iblk)
 
 
@@ -125,44 +111,29 @@ contains
             !
             ! Interpolate solution to quadrature nodes
             !
-            !call interpolate_face(mesh,q,idom,   ielem,   iface,  irho,rho_m,iseed)
-            !call interpolate_face(mesh,q,idom_n, ielem_n, iface_n,irho,rho_p,iseed)
+            call interpolate_face(mesh,q,idom,ielem,iface, irho,  rho_m,  seed, LOCAL)
+            call interpolate_face(mesh,q,idom,ielem,iface, irho,  rho_p,  seed, NEIGHBOR)
+
+            call interpolate_face(mesh,q,idom,ielem,iface, irhou, rhou_m, seed, LOCAL)
+            call interpolate_face(mesh,q,idom,ielem,iface, irhou, rhou_p, seed, NEIGHBOR)
+
+            call interpolate_face(mesh,q,idom,ielem,iface, irhov, rhov_m, seed, LOCAL)
+            call interpolate_face(mesh,q,idom,ielem,iface, irhov, rhov_p, seed, NEIGHBOR)
+
+            call interpolate_face(mesh,q,idom,ielem,iface, irhow, rhow_m, seed, LOCAL)
+            call interpolate_face(mesh,q,idom,ielem,iface, irhow, rhow_p, seed, NEIGHBOR)
+
+            call interpolate_face(mesh,q,idom,ielem,iface, irhoE, rhoE_m, seed, LOCAL)
+            call interpolate_face(mesh,q,idom,ielem,iface, irhoE, rhoE_p, seed, NEIGHBOR)
 
 
-            call interpolate_face(mesh,q,idom,   ielem,   iface,  irho,rho_m,seed)
-            call interpolate_face(mesh,q,idom_n, ielem_n, iface_n,irho,rho_p,seed)
 
 
-            !call interpolate_face(mesh,q,idom,   ielem,   iface,  irhou,rhou_m,iseed)
-            !call interpolate_face(mesh,q,idom_n, ielem_n, iface_n,irhou,rhou_p,iseed)
 
 
-            call interpolate_face(mesh,q,idom,   ielem,   iface,  irhou,rhou_m,seed)
-            call interpolate_face(mesh,q,idom_n, ielem_n, iface_n,irhou,rhou_p,seed)
 
 
-            !call interpolate_face(mesh,q,idom,   ielem,   iface,  irhov,rhov_m,iseed)
-            !call interpolate_face(mesh,q,idom_n, ielem_n, iface_n,irhov,rhov_p,iseed)
 
-
-            call interpolate_face(mesh,q,idom,   ielem,   iface,  irhov,rhov_m,seed)
-            call interpolate_face(mesh,q,idom_n, ielem_n, iface_n,irhov,rhov_p,seed)
-
-
-            !call interpolate_face(mesh,q,idom,   ielem,   iface,  irhow,rhow_m,iseed)
-            !call interpolate_face(mesh,q,idom_n, ielem_n, iface_n,irhow,rhow_p,iseed)
-
-
-            call interpolate_face(mesh,q,idom,   ielem,   iface,  irhow,rhow_m,seed)
-            call interpolate_face(mesh,q,idom_n, ielem_n, iface_n,irhow,rhow_p,seed)
-
-
-            !call interpolate_face(mesh,q,idom,   ielem,   iface,  irhoE,rhoE_m,iseed)
-            !call interpolate_face(mesh,q,idom_n, ielem_n, iface_n,irhoE,rhoE_p,iseed)
-
-
-            call interpolate_face(mesh,q,idom,   ielem,   iface,  irhoE,rhoE_m,seed)
-            call interpolate_face(mesh,q,idom_n, ielem_n, iface_n,irhoE,rhoE_p,seed)
 
 
 

@@ -1,7 +1,8 @@
 module EULER_LaxFriedrichs_flux
     use mod_kinds,              only: rk,ik
     use mod_constants,          only: NFACES,ONE,TWO,HALF, &
-                                      XI_MIN,XI_MAX,ETA_MIN,ETA_MAX,ZETA_MIN,ZETA_MAX
+                                      XI_MIN,XI_MAX,ETA_MIN,ETA_MAX,ZETA_MIN,ZETA_MAX, &
+                                      LOCAL, NEIGHBOR
 
     use atype_boundary_flux,    only: boundary_flux_t
     use type_mesh,              only: mesh_t
@@ -63,9 +64,6 @@ contains
 
         !integer(ik)     :: iseed
         type(seed_t)    :: seed
-        integer(ik)     :: idom_n
-        integer(ik)     :: ielem_n
-        integer(ik)     :: iface_n
 
         real(rk)        :: gam_m, gam_p
 
@@ -97,36 +95,35 @@ contains
         !
         ! Get neighbor face and seed element for derivatives
         !
-        idom_n    = compute_neighbor_domain( mesh,idom,ielem,iface,idonor)
-        ielem_n   = compute_neighbor_element(mesh,idom,ielem,iface,idonor)
-        iface_n   = compute_neighbor_face(   mesh,idom,ielem,iface,idonor)
+        !idom_n    = compute_neighbor_domain( mesh,idom,ielem,iface,idonor)
+        !ielem_n   = compute_neighbor_element(mesh,idom,ielem,iface,idonor)
+        !iface_n   = compute_neighbor_face(   mesh,idom,ielem,iface,idonor)
         
 
         !
         ! Compute element for linearization
         !
         seed = compute_seed(mesh,idom,ielem,iface,idonor,iblk)
-        !iseed = compute_seed_element(mesh,idom,ielem,iface,iblk,idonor)
 
         associate (norms => mesh(idom)%faces(ielem,iface)%norm, unorms=> mesh(idom)%faces(ielem,iface)%unorm, faces => mesh(idom)%faces, q => sdata%q)
 
             !
             ! Interpolate solution to quadrature nodes
             !
-            call interpolate_face(mesh,sdata%q,idom,   ielem,   iface,  irho,rho_m,seed)
-            call interpolate_face(mesh,sdata%q,idom_n, ielem_n, iface_n,irho,rho_p,seed)
+            call interpolate_face(mesh,sdata%q,idom,ielem,iface, irho,  rho_m,  seed, LOCAL)
+            call interpolate_face(mesh,sdata%q,idom,ielem,iface, irho,  rho_p,  seed, NEIGHBOR)
 
-            call interpolate_face(mesh,sdata%q,idom,   ielem,   iface,  irhou,rhou_m,seed)
-            call interpolate_face(mesh,sdata%q,idom_n, ielem_n, iface_n,irhou,rhou_p,seed)
+            call interpolate_face(mesh,sdata%q,idom,ielem,iface, irhou, rhou_m, seed, LOCAL)
+            call interpolate_face(mesh,sdata%q,idom,ielem,iface, irhou, rhou_p, seed, NEIGHBOR)
 
-            call interpolate_face(mesh,sdata%q,idom,   ielem,   iface,  irhov,rhov_m,seed)
-            call interpolate_face(mesh,sdata%q,idom_n, ielem_n, iface_n,irhov,rhov_p,seed)
+            call interpolate_face(mesh,sdata%q,idom,ielem,iface, irhov, rhov_m, seed, LOCAL)
+            call interpolate_face(mesh,sdata%q,idom,ielem,iface, irhov, rhov_p, seed, NEIGHBOR)
 
-            call interpolate_face(mesh,sdata%q,idom,   ielem,   iface,  irhow,rhow_m,seed)
-            call interpolate_face(mesh,sdata%q,idom_n, ielem_n, iface_n,irhow,rhow_p,seed)
+            call interpolate_face(mesh,sdata%q,idom,ielem,iface, irhow, rhow_m, seed, LOCAL)
+            call interpolate_face(mesh,sdata%q,idom,ielem,iface, irhow, rhow_p, seed, NEIGHBOR)
 
-            call interpolate_face(mesh,sdata%q,idom,   ielem,   iface,  irhoE,rhoE_m,seed)
-            call interpolate_face(mesh,sdata%q,idom_n, ielem_n, iface_n,irhoE,rhoE_p,seed)
+            call interpolate_face(mesh,sdata%q,idom,ielem,iface, irhoE, rhoE_m, seed, LOCAL)
+            call interpolate_face(mesh,sdata%q,idom,ielem,iface, irhoE, rhoE_p, seed, NEIGHBOR)
 
 
 

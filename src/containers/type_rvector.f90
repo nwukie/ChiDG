@@ -14,7 +14,7 @@ module type_rvector
 
 
 
-        real(rk),   allocatable :: data(:)
+        real(rk),   allocatable :: data_(:)
 
     contains
         procedure, public   :: size
@@ -28,6 +28,7 @@ module type_rvector
 
         !< Data accessors
         procedure, public   :: at
+        procedure, public   :: data
     end type rvector_t
 
 
@@ -101,7 +102,7 @@ contains
         ! Add element to end of vector
         !
         size = self%size()
-        self%data(size + 1) = element
+        self%data_(size + 1) = element
 
 
         !
@@ -145,7 +146,7 @@ contains
         !
         ! Allocate result
         !
-        res = self%data(index)
+        res = self%data_(index)
 
     end function
 
@@ -154,6 +155,31 @@ contains
 
 
 
+
+
+    !> Access entire data vector
+    !!
+    !!  @author Nathan A. Wukie
+    !!
+    !!
+    !----------------------------------------------------------------------------------------
+    function data(self) result(res)
+        class(rvector_t),   intent(in)  :: self
+
+        real(rk), allocatable   :: res(:)
+        integer(ik)             :: size
+
+        !
+        ! Get number of stored elements
+        !
+        size = self%size()
+
+        !
+        ! Allocate/store result
+        !
+        res = self%data_(1:size)
+
+    end function
 
 
 
@@ -183,7 +209,12 @@ contains
         !
         ! Allocate temporary vector of current size plus a buffer
         !
-        newsize = ubound(self%data,1) + self%buffer_
+        if ( allocated(self%data_) ) then
+            newsize = ubound(self%data_,1) + self%buffer_
+        else
+            newsize = self%buffer_
+        end if
+
         allocate(temp(newsize),stat=ierr)
         if (ierr /= 0) call AllocationError
 
@@ -191,15 +222,15 @@ contains
         !
         ! Copy any current data to temporary vector
         !
-        if (allocated(self%data)) then
-            temp(lbound(self%data,1):ubound(self%data,1))  =  self%data
+        if (allocated(self%data_)) then
+            temp(lbound(self%data_,1):ubound(self%data_,1))  =  self%data_
         end if
 
 
         !
         ! Move alloc to move data back to self%data and deallocate temp
         !
-        call move_alloc(FROM=temp,TO=self%data)
+        call move_alloc(FROM=temp,TO=self%data_)
 
 
         !

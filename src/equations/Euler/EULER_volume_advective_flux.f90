@@ -59,7 +59,7 @@ contains
         integer(ik)    :: irhoe
 
 
-        integer(ik)    :: iseed, i, idonor, iface
+        integer(ik)    :: iseed, i, idonor
         type(seed_t)   :: seed
 
         type(AD_D), dimension(mesh(idom)%elems(ielem)%gq%vol%nnodes)      ::  &
@@ -68,7 +68,6 @@ contains
 
 
         idonor = 0
-        iface  = DIAG
 
 
         !-------------------------------------------------------------
@@ -82,7 +81,6 @@ contains
         ! Get neighbor face and seed element for derivatives
         !
         seed = compute_seed(mesh,idom,ielem,iblk,idonor,iblk)
-        !iseed   = compute_seed_element(mesh,idom,ielem,iface,iblk,idonor)
 
 
 

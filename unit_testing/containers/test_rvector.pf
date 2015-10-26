@@ -130,6 +130,40 @@ end subroutine
 
 
 
+@Test
+subroutine tset_rvector__data()
+    use pfunit_mod
+    use mod_kinds,      only: rk, ik
+    use type_rvector,   only: rvector_t
+    implicit none
+
+    type(rvector_t)         :: vec
+    real(rk), allocatable   :: res_vec(:)
+
+
+    !
+    ! Store values
+    !
+    call vec%push_back(1._rk)
+    call vec%push_back(2._rk)
+    call vec%push_back(3._rk)
+
+
+    !
+    ! Get stored data. THIS IS BEING TESTED
+    !
+    res_vec = vec%data()
+
+
+    !
+    ! Test values
+    !
+    @assertEqual(1._rk,res_vec(1))
+    @assertEqual(2._rk,res_vec(2))
+    @assertEqual(3._rk,res_vec(3))
+
+end subroutine
+
 
 
 

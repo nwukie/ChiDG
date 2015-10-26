@@ -1,12 +1,28 @@
-module type_ivector
+module type_mvector
 #include <messenger.h>
     use mod_kinds,          only: rk, ik
     implicit none
 
 
+    !> Wrapper type for holding individual allocatable matrices
+    !!
+    !!  @author Nathan A. Wukie
+    !!
+    !!
+    !----------------------------------------------------------
+    type, private :: mvector_wrapper_t
+
+        real(rk),   allocatable :: mat(:,:)
+
+    end type mvector_wrapper_t
 
 
-    type, public :: ivector_t
+
+
+
+
+
+    type, public :: mvector_t
         integer(ik)             :: size_        = 0
         integer(ik)             :: capacity_    = 0
         integer(ik)             :: buffer_      = 20
@@ -14,7 +30,7 @@ module type_ivector
 
 
 
-        integer(ik),   allocatable :: data_(:)
+        type(mvector_wrapper_t), allocatable :: data(:)
 
     contains
         procedure, public   :: size
@@ -27,9 +43,8 @@ module type_ivector
 
 
         !< Data accessors
-        procedure, public   :: at       !< return data from element ivector%at(ielem)
-        procedure, public   :: data     !< return full data vector
-    end type ivector_t
+        procedure, public   :: at
+    end type mvector_t
 
 
 
@@ -44,7 +59,7 @@ contains
     !!
     !-------------------------------------------------------------------------
     function size(self) result(res)
-        class(ivector_t),   intent(in)  :: self
+        class(mvector_t),   intent(in)  :: self
 
         integer(ik) :: res
 
@@ -60,7 +75,7 @@ contains
     !!
     !-------------------------------------------------------------------------
     function capacity(self) result(res)
-        class(ivector_t),   intent(in)  :: self
+        class(mvector_t),   intent(in)  :: self
 
         integer(ik) :: res
 
@@ -82,8 +97,8 @@ contains
     !!
     !-------------------------------------------------------------------------------------------
     subroutine push_back(self,element)
-        class(ivector_t),   intent(inout)   :: self
-        integer(ik),        intent(in)      :: element
+        class(mvector_t),   intent(inout)   :: self
+        real(rk),           intent(in)      :: element(:,:)
 
         logical     :: capacity_reached
         integer(ik) :: size
@@ -102,7 +117,7 @@ contains
         ! Add element to end of vector
         !
         size = self%size()
-        self%data_(size + 1) = element
+        self%data(size + 1)%mat = element
 
 
         !
@@ -128,10 +143,10 @@ contains
     !!
     !----------------------------------------------------------------------------------------
     function at(self,index) result(res)
-        class(ivector_t),   intent(in)  :: self
+        class(mvector_t),   intent(in)  :: self
         integer(ik),        intent(in)  :: index
 
-        integer(ik) :: res
+        real(rk), allocatable :: res(:,:)
         logical     :: out_of_bounds
 
         !
@@ -146,7 +161,7 @@ contains
         !
         ! Allocate result
         !
-        res = self%data_(index)
+        res = self%data(index)%mat
 
     end function
 
@@ -154,30 +169,7 @@ contains
 
 
 
-    !> Access entire data vector
-    !!
-    !!  @author Nathan A. Wukie
-    !!
-    !!
-    !-----------------------------------------------------------------------------------------
-    function data(self) result(res)
-        class(ivector_t),   intent(in)  :: self
-        
-        integer(ik), allocatable    :: res(:)
-        integer(ik)                 :: size
-        
-        !
-        ! Get number of stored elements
-        !
-        size = self%size()
 
-        !
-        ! Allocate result
-        !
-        res = self%data_(1:size)
-
-
-    end function
 
 
 
@@ -198,17 +190,17 @@ contains
     !!
     !------------------------------------------------------------------------------------------
     subroutine increase_capacity(self)
-        class(ivector_t),   intent(inout)   :: self
+        class(mvector_t),   intent(inout)   :: self
 
-        integer(ik), allocatable    :: temp(:)
-        integer(ik)                 :: newsize, ierr
+        type(mvector_wrapper_t), allocatable   :: temp(:)
+        integer(ik)             :: newsize, ierr
 
 
         !
         ! Allocate temporary vector of current size plus a buffer
         !
-        if ( allocated(self%data_) ) then
-            newsize = ubound(self%data_,1) + self%buffer_
+        if ( allocated(self%data) ) then
+            newsize = ubound(self%data,1) + self%buffer_
         else
             newsize = self%buffer_
         end if
@@ -220,15 +212,15 @@ contains
         !
         ! Copy any current data to temporary vector
         !
-        if (allocated(self%data_)) then
-            temp(lbound(self%data_,1):ubound(self%data_,1))  =  self%data_
+        if (allocated(self%data)) then
+            temp(lbound(self%data,1):ubound(self%data,1))  =  self%data
         end if
 
 
         !
         ! Move alloc to move data back to self%data and deallocate temp
         !
-        call move_alloc(FROM=temp,TO=self%data_)
+        call move_alloc(FROM=temp,TO=self%data)
 
 
         !
@@ -254,4 +246,4 @@ contains
 
 
 
-end module type_ivector
+end module type_mvector

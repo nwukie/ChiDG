@@ -1,0 +1,153 @@
+@Test
+subroutine test_mvector__push_back__onevalue()
+    use pfunit_mod
+    use mod_kinds,      only: rk, ik
+    use type_mvector,   only: mvector_t
+    implicit none
+
+    type(mvector_t)         :: vec
+
+    real(rk)                :: mat(5,5)
+
+    mat = 1._rk
+
+    !
+    ! Store value. THIS IS BEING TESTED
+    !
+    call vec%push_back(mat)
+
+
+
+
+    ! Test value
+    @assertEqual(1._rk,vec%at(1))
+
+    ! Test size
+    @assertEqual(1,vec%size())
+
+    ! Test capacity
+    @assertEqual(20,vec%capacity())
+
+end subroutine
+
+
+
+
+
+
+
+
+
+
+@Test
+subroutine test_mvector__push_back__twovalues()
+    use pfunit_mod
+    use mod_kinds,      only: rk, ik
+    use type_mvector,   only: mvector_t
+    implicit none
+
+    type(mvector_t)         :: vec
+
+    real(rk)                :: mat_a(5,4), mat_b(3,2)
+
+
+    mat_a = 1._rk
+    mat_b = 2._rk
+
+    !
+    ! Store value. THIS IS BEING TESTED
+    !
+    call vec%push_back(mat_a)
+    call vec%push_back(mat_b)
+
+
+
+
+    ! Test matrix value
+    @assertEqual(1._rk,vec%at(1))
+    @assertEqual(2._rk,vec%at(2))
+
+    ! Test matrix shape
+    @assertEqual(5,size(vec%at(1),1))
+    @assertEqual(4,size(vec%at(1),2))
+
+    @assertEqual(3,size(vec%at(2),1))
+    @assertEqual(2,size(vec%at(2),2))
+
+
+    ! Test container size
+    @assertEqual(2,vec%size())
+
+    ! Test container capacity
+    @assertEqual(20,vec%capacity())
+
+
+
+
+end subroutine
+
+
+
+
+
+
+
+
+
+
+
+
+
+@Test
+subroutine test_mvector__push_back__thirtyvalues()
+    use pfunit_mod
+    use mod_kinds,      only: rk, ik
+    use type_mvector,   only: mvector_t
+    implicit none
+
+    type(mvector_t)         :: vec
+    integer(ik)             :: i
+
+    real(rk)    :: mat(4,4)
+
+
+    !
+    ! Store value. THIS IS BEING TESTED
+    !
+    mat = 1._rk
+    do i = 1,30
+        call vec%push_back(mat)
+        mat = mat + 1._rk
+    end do
+
+
+
+
+
+    ! Test values
+    mat = 1._rk
+    do i = 1,30
+        @assertEqual(mat,vec%at(i))
+        mat = mat + 1._rk
+    end do
+
+    ! Test size
+    @assertEqual(30,vec%size())
+
+    ! Test capacity
+    @assertEqual(40,vec%capacity())
+
+end subroutine
+
+
+
+
+
+
+
+
+
+
+
+
+

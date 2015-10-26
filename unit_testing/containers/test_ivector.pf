@@ -121,9 +121,36 @@ end subroutine
 
 
 
+@Test
+subroutine test_ivector__data()
+    use pfunit_mod
+    use mod_kinds,      only: rk, ik
+    use type_ivector,   only: ivector_t
+    implicit none
+
+    type(ivector_t)             :: vec
+    integer(ik)                 :: i, val
+    integer(ik), allocatable    :: res_vec(:)
+
+    !
+    ! Store values
+    !
+    call vec%push_back(1_ik)
+    call vec%push_back(2_ik)
+    call vec%push_back(3_ik)
 
 
 
+    !
+    ! Get array of stored values
+    !
+    res_vec = vec%data()
+
+    @assertEqual(1_ik,res_vec(1))
+    @assertEqual(2_ik,res_vec(2))
+    @assertEqual(3_ik,res_vec(3))
+
+end subroutine
 
 
 

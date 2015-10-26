@@ -7,12 +7,14 @@ module test_interpolate_mod
 
     use mod_kinds,          only: rk,ik
     use mod_constants,      only: ZERO, ONE, TWO, THREE, FIVE, SIX, EIGHT, NINE, TEN, &
-                                  XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX
+                                  XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX, &
+                                  LOCAL, NEIGHBOR
     use mod_hdfio,          only: read_grid_hdf
     use mod_interpolate,    only: interpolate_face, interpolate_element
     use mod_grid_operators, only: initialize_variable
     use mod_testutils,      only: meshgen
     use DNAD_D
+    use mod_DNAD_tools,     only: compute_neighbor_element, compute_neighbor_face
     use fcn_constant,       only: constant_f
     implicit none
 
@@ -39,29 +41,38 @@ contains
         type(point_t),  allocatable                 :: pts(:,:,:)
         
     
-        
+        !        
         ! Initialize ChiDG environment
+        !
         call this%chidg%init('env')
 
-
+        !
         ! Read 3x3x3 element grid
-        !call read_grid_hdf('D1_E27_M1.h5', this%chidg%data)
+        !
         call meshgen('333',pts)
 
+        !
+        ! Add domain to ChiDG
+        !
         nterms_c = 8
         nterms_s = 8
         call this%chidg%data%add_domain('D_01',pts,nterms_c,'Scalar',nterms_s)
 
 
+        !
         ! Initialize chidg solution data storage
+        !
         call this%chidg%data%init_sdata()
 
-
+        !
         ! Initialized solution to constant values
+        !
         ivar = this%chidg%data%eqnset(1)%item%prop%get_eqn_index('u')    ! Get variable index
 
 
-
+        !
+        ! Initialize variable
+        !
         call this%fcn%set('const',5._rk)                                    ! Set constant function value
         call initialize_variable(this%chidg%data,ivar,this%fcn)              ! Initialize variable using constant function
 
@@ -408,10 +419,10 @@ contains
     
     
     
-!> Interpolation of modes to surface quadrature nodes. Seeding neighbor element. Testing fuction values. 
+!> Interpolation of modes to surface quadrature nodes. Seeding neighbor element. source=LOCAL. Testing fuction values. 
 !-------------------------------------------------------------------------------------------------------------
 @Test
-    subroutine test__interpolate_face_autodiff__values__neighbor(self)
+    subroutine test__interpolate_face_autodiff__values__idA(self)
         class(test_interpolate),    intent(inout)   :: self
         
         integer(ik)                 :: ielem, iface, ivar, ngq, idomain
@@ -446,7 +457,7 @@ contains
             !
             ! PROCEDURE BEING TESTED
             !
-            call interpolate_face(self%chidg%data%mesh,q,idomain,ielem,iface,ivar,u_gq,seed)
+            call interpolate_face(self%chidg%data%mesh,q,idomain,ielem,iface,ivar,u_gq,seed, LOCAL)
             
             
             ! Initialize reference
@@ -466,10 +477,10 @@ contains
     
     
         
-!> Interpolation of modes to surface quadrature nodes. Seeding neighbor element. Testing fuction values. 
+!> Interpolation of modes to surface quadrature nodes. Seeding neighbor element. source=LOCAL. Testing fuction values. 
 !-------------------------------------------------------------------------------------------------------------
 @Test
-    subroutine test__interpolate_face_autodiff__derivatives__neighbor(self)
+    subroutine test__interpolate_face_autodiff__derivatives__idB(self)
         class(test_interpolate),    intent(inout)   :: self
         
         integer(ik)                 :: ielem, iface, ivar, ngq, igq, nderiv, idomain
@@ -507,7 +518,7 @@ contains
             !
             ! PROCEDURE BEING TESTED
             !
-            call interpolate_face(self%chidg%data%mesh,q,idomain,ielem,iface,ivar,u_gq,seed)
+            call interpolate_face(self%chidg%data%mesh,q,idomain,ielem,iface,ivar,u_gq,seed, LOCAL)
             
             deriv_ref = ZERO
             
@@ -521,10 +532,10 @@ contains
     
     
     
-!> Interpolation of modes to surface quadrature nodes. Seeding current element. Testing fuction values. 
+!> Interpolation of modes to surface quadrature nodes. Seeding current element. source=LOCAL. Testing fuction values. 
 !-------------------------------------------------------------------------------------------------------------
 @Test
-    subroutine test__interpolate_face_autodiff__values__current(self)
+    subroutine test__interpolate_face_autodiff__values__idC(self)
         class(test_interpolate),    intent(inout)   :: self
         
         integer(ik)                 :: ielem, iface, ivar, ngq, idomain
@@ -560,7 +571,7 @@ contains
             !
             ! PROCEDURE BEING TESTED
             !
-            call interpolate_face(self%chidg%data%mesh,q,idomain,ielem,iface,ivar,u_gq,seed)
+            call interpolate_face(self%chidg%data%mesh,q,idomain,ielem,iface,ivar,u_gq,seed, LOCAL)
             
             
             !
@@ -581,10 +592,10 @@ contains
     
     
     
-!> Interpolation of modes to surface quadrature nodes. Seeding current element. Testing fuction values. 
+!> Interpolation of modes to surface quadrature nodes. Seeding current element. source=LOCAL. Testing fuction values. 
 !-------------------------------------------------------------------------------------------------------------
 @Test
-    subroutine test__interpolate_face_autodiff__derivatives__current(self)
+    subroutine test__interpolate_face_autodiff__derivatives__idD(self)
         class(test_interpolate),    intent(inout)   :: self
         
         integer(ik)                 :: ielem, iface, ivar, igq, ngq, nderiv, idomain
@@ -620,7 +631,7 @@ contains
             !
             ! PROCEDURE BEING TESTED
             !
-            call interpolate_face(self%chidg%data%mesh,q,idomain,ielem,iface,ivar,u_gq,seed)
+            call interpolate_face(self%chidg%data%mesh,q,idomain,ielem,iface,ivar,u_gq,seed, LOCAL)
               
             
             
@@ -636,6 +647,295 @@ contains
         end associate
         
     end subroutine
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    
+!> Interpolation of modes to surface quadrature nodes. Seeding neighbor element. source=NEIGHBOR. Testing fuction values. 
+!-------------------------------------------------------------------------------------------------------------
+@Test
+    subroutine test__interpolate_face_autodiff__values__idE(self)
+        class(test_interpolate),    intent(inout)   :: self
+        
+        integer(ik)                 :: ielem, iface, ivar, ngq, idomain
+        type(seed_t)                :: seed
+        type(AD_D), allocatable     :: u_gq(:)
+        real(rk),   allocatable     :: u_ref(:)
+        real(rk)                    :: tol
+        
+        
+        associate ( elems => self%chidg%data%mesh(1)%elems, faces => self%chidg%data%mesh(1)%faces, q => self%chidg%data%sdata%q)        
+            idomain = 1     ! domain index
+            ielem   = 14    ! given element
+            iface   = 1     ! given face
+
+            !
+            ! A seed element, this is a neighbor for this test - so all derivative arrays should be seeded to zero
+            !
+            seed%idom  = 1
+            seed%ielem = 15
+
+
+            tol   = 1.e-13_rk
+            ivar  = self%chidg%data%eqnset(1)%item%prop%get_eqn_index('u')
+
+            ngq = faces(ielem,iface)%gq%nnodes_f
+
+            ! Allocate number of AD variables for data at GQ nodes. Derivative arrays are not yet allocated
+            allocate(u_gq(ngq))
+            allocate(u_ref(ngq))
+            
+            
+            !
+            ! PROCEDURE BEING TESTED
+            !
+            call interpolate_face(self%chidg%data%mesh,q,idomain,ielem,iface,ivar,u_gq,seed, NEIGHBOR)
+            
+            
+            ! Initialize reference
+            u_ref = self%fcn%value_ 
+            
+            
+            ! Test that interpolation to quadrature nodes from modes to autodiff variables 
+            ! on an element volume is producing expected results
+            @assertEqual(u_ref,u_gq(:)%x_ad_,tol)
+            
+        end associate
+        
+    end subroutine
+    
+    
+    
+    
+    
+        
+!> Interpolation of modes to surface quadrature nodes. Seeding neighbor element. source=NEIGHBOR. Testing fuction values. 
+!-------------------------------------------------------------------------------------------------------------
+@Test
+    subroutine test__interpolate_face_autodiff__derivatives__idF(self)
+        class(test_interpolate),    intent(inout)   :: self
+        
+        integer(ik)                 :: ielem, iface, ivar, ngq, igq, nderiv, idomain
+        type(seed_t)                :: seed
+        type(AD_D), allocatable     :: u_gq(:)
+        real(rk),   allocatable     :: deriv_ref(:)
+        real(rk)                    :: tol
+        
+        
+        associate ( elems => self%chidg%data%mesh(1)%elems, faces => self%chidg%data%mesh(1)%faces, q => self%chidg%data%sdata%q)        
+            idomain = 1     ! domain index
+            ielem   = 14    ! given element
+            iface   = 1     ! given face
+
+
+            !
+            ! A seed element, this is a neihgbor for this test - so all derivative arrays should be seeded to zero
+            !
+            seed%idom  = 1
+            seed%ielem = 15
+
+
+
+            tol   = 1.e-13_rk
+            ivar  = self%chidg%data%eqnset(1)%item%prop%get_eqn_index('u')
+
+            ngq = faces(ielem,iface)%gq%nnodes_f
+            nderiv = faces(ielem,iface)%neqns  *  faces(ielem,iface)%nterms_s
+
+            ! Allocate number of AD variables for data at GQ nodes. Derivative arrays are not yet allocated
+            allocate(u_gq(ngq))             ! AD
+            allocate(deriv_ref(nderiv))     ! Real
+            
+            
+            !
+            ! PROCEDURE BEING TESTED
+            !
+            call interpolate_face(self%chidg%data%mesh,q,idomain,ielem,iface,ivar,u_gq,seed, NEIGHBOR)
+            
+            deriv_ref = ZERO
+            
+            ! Test that the derivatives for each gq variable are zero, since we seeded with a neighbor element
+            do igq = 1,ngq
+                @assertEqual(deriv_ref,u_gq(igq)%xp_ad_,tol)
+            end do
+        end associate
+        
+    end subroutine
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    
+    
+!> Interpolation of modes to surface quadrature nodes. Seeding current element. source=NEIGHBOR. Testing fuction values. 
+!-------------------------------------------------------------------------------------------------------------
+@Test
+    subroutine test__interpolate_face_autodiff__values__idG(self)
+        class(test_interpolate),    intent(inout)   :: self
+        
+        integer(ik)                 :: ielem, iface, ivar, ngq, idomain
+        type(seed_t)                :: seed
+        type(AD_D), allocatable     :: u_gq(:)
+        real(rk),   allocatable     :: u_ref(:)
+        real(rk)                    :: tol
+        
+        
+        associate ( elems => self%chidg%data%mesh(1)%elems, faces => self%chidg%data%mesh(1)%faces, q => self%chidg%data%sdata%q )
+            idomain = 1     ! domain index
+            ielem   = 14    ! given element
+            iface   = 1     ! given face
+
+            !
+            ! A seed element, same as ielem - so all derivative arrays should include non-zeros
+            !
+            seed%idom  = 1
+            seed%ielem = 13     ! neighbor to element 14 about face 1
+
+
+
+            tol   = 1.e-13_rk
+            ivar  = self%chidg%data%eqnset(1)%item%prop%get_eqn_index('u')
+
+            ngq = faces(ielem,iface)%gq%nnodes_f
+            
+            ! Allocate number of AD variables for data at GQ nodes. Derivative arrays are not yet allocated
+            allocate(u_gq(ngq))
+            allocate(u_ref(ngq))
+            
+            
+            !
+            ! PROCEDURE BEING TESTED
+            !
+            call interpolate_face(self%chidg%data%mesh,q,idomain,ielem,iface,ivar,u_gq,seed, NEIGHBOR)
+            
+            
+            !
+            ! Initialize reference
+            !
+            u_ref = self%fcn%value_ 
+            
+            
+            ! Test that interpolation to quadrature nodes from modes to autodiff variables 
+            ! on an element volume is producing expected results
+            @assertEqual(u_ref,u_gq(:)%x_ad_,tol)
+            
+        end associate
+        
+    end subroutine
+    
+    
+    
+    
+    
+!> Interpolation of modes to surface quadrature nodes. Seeding current element. source=NEIGHBOR. Testing fuction derivatives. 
+!-------------------------------------------------------------------------------------------------------------
+@Test
+    subroutine test__interpolate_face_autodiff__derivatives__idH(self)
+        class(test_interpolate),    intent(inout)   :: self
+        
+        integer(ik)                 :: ielem, iface, ivar, igq, ngq, nderiv, idomain
+        type(seed_t)                :: seed
+        type(AD_D), allocatable     :: u_gq(:)
+        real(rk),   allocatable     :: deriv_ref(:)
+        real(rk)                    :: tol
+
+        integer(ik)                 :: ielem_n, iface_n, idonor
+        
+        
+        associate ( elems => self%chidg%data%mesh(1)%elems, faces => self%chidg%data%mesh(1)%faces, q => self%chidg%data%sdata%q)        
+            idomain = 1     ! domain index
+            ielem   = 14    ! given element
+            iface   = 1     ! given face
+            idonor  = 1
+
+            !
+            ! A seed element, same as ielem - so all derivative arrays should include non-zeros
+            !
+            seed%idom  = 1
+            seed%ielem = 13     ! neighbor to element 14 about face 1
+
+            
+            tol   = 1.e-13_rk
+            ivar  = self%chidg%data%eqnset(1)%item%prop%get_eqn_index('u')
+
+            ngq    = faces(ielem,iface)%gq%nnodes_f
+            nderiv = faces(ielem,iface)%neqns  *  faces(ielem,iface)%nterms_s
+
+            ! Allocate number of AD variables for data at GQ nodes. Derivative arrays are not yet allocated
+            allocate(u_gq(ngq))
+            allocate(deriv_ref(nderiv))
+            
+            
+            !
+            ! PROCEDURE BEING TESTED
+            !
+            call interpolate_face(self%chidg%data%mesh,q,idomain,ielem,iface,ivar,u_gq,seed, NEIGHBOR)
+              
+            
+            
+            ! Test that interpolation to quadrature nodes from modes to autodiff variables 
+            ! on an element volume is producing expected results
+            ielem_n = compute_neighbor_element(self%chidg%data%mesh,idomain,ielem,iface,idonor)
+            iface_n = compute_neighbor_face(   self%chidg%data%mesh,idomain,ielem,iface,idonor)
+
+
+            do igq = 1,ngq
+                deriv_ref = faces(ielem_n,iface_n)%gq%face%val(igq,:,iface_n)     !> Set expected derivatives
+                
+                @assertEqual(deriv_ref,u_gq(igq)%xp_ad_,tol)
+                
+                deriv_ref = ZERO                                            !> Reset to zero
+            end do
+        end associate
+        
+    end subroutine
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

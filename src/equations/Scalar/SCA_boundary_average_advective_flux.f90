@@ -8,9 +8,13 @@ module SCA_boundary_average_advective_flux
     use type_mesh,                  only: mesh_t
     use type_solverdata,            only: solverdata_t
     use type_properties,            only: properties_t
+    use type_seed,                  only: seed_t
+
+
+
     use mod_interpolate,            only: interpolate_face
     use mod_integrate,              only: integrate_volume_flux, integrate_boundary_flux
-    use mod_DNAD_tools,             only: compute_neighbor_face, compute_seed_element
+    use mod_DNAD_tools
     use DNAD_D
 
     use SCA_properties,              only: SCA_properties_t
@@ -49,17 +53,43 @@ contains
         integer(ik),                                    intent(in)      :: idonor   ! 1 for interior faces, potentially > 1 for Chimera faces
 
         real(rk)                    :: cx, cy, cz
-        integer(ik)                 :: iu, iseed, ierr, nnodes, ineighbor, iface_p, i
+        integer(ik)                 :: iu, ierr, nnodes, ineighbor, i
         integer(ik)                 :: idom_n   ! neighbor domain index
         integer(ik)                 :: ielem_n  ! neighbor element index
+        integer(ik)                 :: iface_n  ! neighbor face index
+        type(seed_t)                :: seed
+
         type(AD_D), allocatable     :: u_l(:), u_r(:), flux_x(:), flux_y(:), flux_z(:)
 
 
 
+        !
+        ! Get variable index
+        !
         iu        = prop%get_eqn_index('u')
+
+
+        !
+        ! Get nGQ nodes
+        !
         nnodes    = mesh(idom)%faces(ielem,iface)%gq%nnodes_f
-        ielem_n   = mesh(idom)%faces(ielem,iface)%ineighbor
-        idom_n    = idom        ! This is the case, except for Chimera boundaries
+
+
+        !
+        ! Get Neighbor indices
+        !
+        idom_n  = compute_neighbor_domain( mesh,idom,ielem,iface,idonor)
+        ielem_n = compute_neighbor_element(mesh,idom,ielem,iface,idonor)
+        iface_n = compute_neighbor_face(   mesh,idom,ielem,iface,idonor)
+
+
+        !
+        ! Compute element for linearization
+        !
+        seed = compute_seed(mesh,idom,ielem,iface,idonor,iblk)
+        !idomain_seed = compute_seed_domain( mesh,idom,ielem,iface,iblk,idonor)
+        !ielem_seed   = compute_seed_element(mesh,idom,ielem,iface,iblk,idonor)
+
 
 
         !
@@ -86,21 +116,11 @@ contains
         if (ierr /= 0) call AllocationError
 
 
-
-
-
-        !
-        ! Get neighbor face and seed element for derivatives
-        !
-        iface_p = compute_neighbor_face(iface)
-        iseed   = compute_seed_element(mesh,idom,ielem,iblk)
-
-
         !
         ! Interpolate solution to quadrature nodes
         !
-        call interpolate_face(mesh,sdata%q,idom,   ielem,   iface,   iu, u_r, iseed)
-        call interpolate_face(mesh,sdata%q,idom_n, ielem_n, iface_p, iu, u_l, iseed)
+        call interpolate_face(mesh,sdata%q,idom,   ielem,   iface,   iu, u_r, seed)
+        call interpolate_face(mesh,sdata%q,idom_n, ielem_n, iface_n, iu, u_l, seed)
 
 
         !

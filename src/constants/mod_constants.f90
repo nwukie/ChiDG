@@ -64,10 +64,10 @@ module mod_constants
 
 
     !> Face types
-    integer(ik), parameter :: ORPHAN    = -1    ! orphan face - has no home and will not be operated on. 
-    integer(ik), parameter :: INTERIOR  = 0     ! interior face
-    integer(ik), parameter :: BOUNDARY  = 1     ! boundary condition type
-    integer(ik), parameter :: CHIMERA   = 2     ! Chimera face
+    integer(ik), parameter :: ORPHAN    = -2     ! orphan face - has no home and will not be operated on. 
+    integer(ik), parameter :: INTERIOR  =  0     ! interior face
+    integer(ik), parameter :: BOUNDARY  =  1     ! boundary condition type
+    integer(ik), parameter :: CHIMERA   = -1     ! Chimera face
 
 
 

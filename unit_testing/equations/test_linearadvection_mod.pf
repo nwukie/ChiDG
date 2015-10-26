@@ -53,7 +53,7 @@ contains
         
         integer(ik), parameter      :: npt = 64
         type(point_t), allocatable  :: pts(:,:,:)
-        integer(ik)                 :: neqns, nterms_s, nterms_c, idomain
+        integer(ik)                 :: neqns, nterms_s, nterms_c
         real(rk), dimension(npt)    :: x,y,z
         class(function_t), allocatable  :: fcn
         
@@ -70,7 +70,6 @@ contains
         !
         ! Initialize domain
         !
-        idomain  = 1
         nterms_s = 8
         nterms_c = 8
         call this%chidg%data%add_domain('D_01',pts,nterms_c,'LA',nterms_s)

@@ -13,14 +13,11 @@ module type_chimera
     !------------------------------------------------------------------------------------------
     type, public :: chimera_t
     
-        type(chimera_receiver_t),   allocatable :: recv(:)
-        type(chimera_donor_t),      allocatable :: send(:)
-
+        type(chimera_receiver_t)    :: recv
+        type(chimera_donor_t)       :: send
 
     contains
 
-        !> Set up Chimera data
-        procedure   :: init
 
     end type chimera_t
 
@@ -31,15 +28,6 @@ contains
 
 
 
-
-
-    subroutine init(self)
-        class(chimera_t),   intent(inout)   :: self
-
-
-
-
-    end subroutine
 
 
 

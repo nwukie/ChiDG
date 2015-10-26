@@ -1,8 +1,9 @@
 module mod_interpolate
 #include <messenger.h>
-    use mod_kinds,      only: rk,ik
+    use mod_kinds,          only: rk,ik
     use DNAD_D
-    use type_mesh,      only: mesh_t
+    use type_mesh,          only: mesh_t
+    use type_seed,          only: seed_t
     use type_chidgVector,   only: chidgVector_t
 
     implicit none
@@ -31,89 +32,97 @@ contains
     !!
     !!
     !----------------------------------------------------------------
-    subroutine interpolate_element_autodiff(mesh,q,idom,ielem,ivar,var_gq,ielem_seed)
+    !subroutine interpolate_element_autodiff(mesh,q,idom,ielem,ivar,var_gq,ielem_seed)
+    subroutine interpolate_element_autodiff(mesh,q,idom,ielem,ivar,var_gq,seed)
         type(mesh_t),        intent(in)      :: mesh(:)
-        type(chidgVector_t), intent(inout)   :: q
+        type(chidgVector_t), intent(in)      :: q
         integer(ik),         intent(in)      :: idom
         integer(ik),         intent(in)      :: ielem
         integer(ik),         intent(in)      :: ivar
         type(AD_D),          intent(inout)   :: var_gq(:)
-        integer(ik),         intent(in)      :: ielem_seed
+        type(seed_t),        intent(in)      :: seed
+        !integer(ik),         intent(in)      :: ielem_seed
 
         type(AD_D)  :: qdiff(mesh(idom)%elems(ielem)%nterms_s)
-        integer(ik) :: nderiv, set_deriv, iterm, igq, i
+        integer(ik) :: nderiv, set_deriv, iterm, igq, i, neqns_seed, nterms_s_seed
+        integer(ik) :: idom_seed, ielem_seed
+        logical     :: linearize_me
+
+        idom_seed  = seed%idom
+        ielem_seed = seed%ielem
 
 
-        associate ( elems => mesh(idom)%elems )
 
+        !
+        ! Get the number of degrees of freedom for the seed element
+        ! and set this as the number of partial derivatives to track
+        !
+        if (ielem_seed == 0) then
+            ! If ielem_seed == 0 then we aren't interested in tracking derivatives
+            nderiv = 1
+        else
+            neqns_seed    = mesh(idom_seed)%elems(ielem_seed)%neqns
+            nterms_s_seed = mesh(idom_seed)%elems(ielem_seed)%nterms_s
+            nderiv = neqns_seed * nterms_s_seed
+        end if
+
+
+
+        !
+        ! Allocate the derivative array for each autodiff variable
+        ! MIGHT NOT NEED THIS IF IT GETS AUTOMATICALLY ALLOCATED ON ASSIGNMENT -- TEST
+        !
+        do igq = 1,size(var_gq)
+            var_gq(igq) = AD_D(nderiv)
+        end do
+
+
+
+        !
+        ! If the current element is being differentiated (ielem == ielem_seed)
+        ! then copy the solution modes to local AD variable and seed derivatives
+        !
+        linearize_me = ( (idom == idom_seed) .and. (ielem == ielem_seed) )
+
+        if (linearize_me) then
 
             !
-            ! Get the number of degrees of freedom for the seed element
-            ! and set this as the number of partial derivatives to track
+            ! Allocate derivative arrays for temporary solution variable
             !
-            if (ielem_seed == 0) then
-                ! If ielem_seed == 0 then we aren't interested in tracking derivatives
-                nderiv = 1
-            else
-                nderiv = elems(ielem_seed)%neqns  *  elems(ielem_seed)%nterms_s
-            end if
-
-
-
-            !
-            ! Allocate the derivative array for each autodiff variable
-            ! MIGHT NOT NEED THIS IF IT GETS AUTOMATICALLY ALLOCATED ON ASSIGNMENT -- TEST
-            !
-            do igq = 1,size(var_gq)
-                var_gq(igq) = AD_D(nderiv)
+            do iterm = 1,mesh(idom)%elems(ielem)%nterms_s
+                qdiff(iterm) = AD_D(nderiv)
             end do
 
 
+            !
+            ! Copy the solution variables from 'q' to 'qdiff'
+            !
+            qdiff = q%dom(idom)%lvecs(ielem)%getvar(ivar)
+
 
             !
-            ! If the current element is being differentiated (ielem == ielem_seed)
-            ! then copy the solution modes to local AD variable and seed derivatives
+            ! Loop through the terms in qdiff
             !
-            if (ielem == ielem_seed) then
-
+            do iterm = 1,size(qdiff)
                 !
-                ! Allocate derivative arrays for temporary solution variable
+                ! For the given term, seed its appropriate derivative
                 !
-                do iterm = 1,elems(ielem)%nterms_s
-                    qdiff(iterm) = AD_D(nderiv)
-                end do
+                set_deriv = (ivar - 1)*mesh(idom)%elems(ielem)%nterms_s + iterm
+                qdiff(iterm)%xp_ad_(set_deriv) = 1.0_rk
+            end do
 
 
-                !
-                ! Copy the solution variables from 'q' to 'qdiff'
-                !
-                qdiff = q%dom(idom)%lvecs(ielem)%getvar(ivar)
+            var_gq = matmul(mesh(idom)%elems(ielem)%gq%vol%val,qdiff)
 
+        else
+            !
+            ! If the solution variable derivatives dont need initialized
+            ! then just use the q(ielem) values and derivatives get
+            ! initialized to zero
+            !
+            var_gq = matmul(mesh(idom)%elems(ielem)%gq%vol%val,q%dom(idom)%lvecs(ielem)%getvar(ivar))
+        end if
 
-                !
-                ! Loop through the terms in qdiff
-                !
-                do iterm = 1,size(qdiff)
-                    !
-                    ! For the given term, seed its appropriate derivative
-                    !
-                    set_deriv = (ivar - 1)*elems(ielem)%nterms_s + iterm
-                    qdiff(iterm)%xp_ad_(set_deriv) = 1.0_rk
-                end do
-
-
-                var_gq = matmul(elems(ielem)%gq%vol%val,qdiff)
-
-            else
-                !
-                ! If the solution variable derivatives dont need initialized
-                ! then just use the q(ielem) values and derivatives get
-                ! initialized to zero
-                !
-                var_gq = matmul(elems(ielem)%gq%vol%val,q%dom(idom)%lvecs(ielem)%getvar(ivar))
-            end if
-
-        end associate
 
     end subroutine
 
@@ -132,95 +141,114 @@ contains
     !!
     !!
     !----------------------------------------------------------------
-    subroutine interpolate_face_autodiff(mesh,q,idom,ielem,iface,ivar,var_gq,ielem_seed)
+    !subroutine interpolate_face_autodiff(mesh,q,idom,ielem,iface,ivar,var_gq,ielem_seed)
+    subroutine interpolate_face_autodiff(mesh,q,idom,ielem,iface,ivar,var_gq,seed)
         type(mesh_t),           intent(in)      :: mesh(:)
-        type(chidgVector_t),    intent(inout)   :: q
+        type(chidgVector_t),    intent(in)      :: q
         integer(ik),            intent(in)      :: idom
         integer(ik),            intent(in)      :: ielem
         integer(ik),            intent(in)      :: iface
         integer(ik),            intent(in)      :: ivar
         type(AD_D),             intent(inout)   :: var_gq(:)
-        integer(ik),            intent(in)      :: ielem_seed
+        type(seed_t),           intent(in)      :: seed
+        !integer(ik),            intent(in)      :: ielem_seed
 
         !type(AD_D)  :: qdiff(mesh(idom)%faces(ielem,iface)%nterms_s)
         type(AD_D), allocatable  :: qdiff(:)
-        integer(ik) :: nderiv, set_deriv, iterm, igq, nterms_s, ierr
+        integer(ik) :: nderiv, set_deriv, iterm, igq, nterms_s, ierr, neqns_seed, nterms_s_seed
+        integer(ik) :: idom_seed, ielem_seed
+        logical     :: linearize_me
 
+
+        idom_seed  = seed%idom
+        ielem_seed = seed%ielem
         
 
 
-!        associate ( faces => mesh(idom)%faces )
 
 
-            nterms_s = mesh(idom)%faces(ielem,iface)%nterms_s
+        !
+        ! Allocate AD array to store a copy of the solution which starts the differentiation
+        !
+        nterms_s = mesh(idom)%faces(ielem,iface)%nterms_s
+        allocate(qdiff(nterms_s), stat=ierr)
+        if (ierr /= 0) call AllocationError
 
-            allocate(qdiff(nterms_s), stat=ierr)
-            if (ierr /= 0) call AllocationError
 
+
+        !
+        ! Get the number of degrees of freedom for the seed element
+        ! and set this as the number of partial derivatives to track
+        !
+        if (ielem_seed == 0) then
+            ! If ielem_seed == 0 then we aren't interested in tracking derivatives
+            nderiv = 1
+        else
+            !
+            ! Get number of equations and terms in solution expansions
+            !
+            neqns_seed    = mesh(idom_seed)%elems(ielem_seed)%neqns
+            nterms_s_seed = mesh(idom_seed)%elems(ielem_seed)%nterms_s
+            !nderiv = mesh(idom)%faces(ielem_seed,1)%neqns  *  mesh(idom)%faces(ielem_seed,1)%nterms_s     ! using face 1 here, but faces 1-6 point
+            nderiv = neqns_seed  *  nterms_s_seed
+        end if
+
+
+
+        !
+        ! Allocate the derivative array for each autodiff variable
+        ! MIGHT NOT NEED THIS IF IT GETS AUTOMATICALLY ALLOCATED ON ASSIGNMENT -- TEST
+        !
+        do igq = 1,size(var_gq)
+            allocate(var_gq(igq)%xp_ad_(nderiv))
+        end do
+
+
+
+        !
+        ! If the current element is being differentiated (ielem == ielem_seed)
+        ! then copy the solution modes to local AD variable and seed derivatives
+        !
+        linearize_me = ( (idom == idom_seed) .and. (ielem == ielem_seed) )
+
+
+        !if (ielem == ielem_seed) then
+        if ( linearize_me ) then
 
             !
-            ! Get the number of degrees of freedom for the seed element
-            ! and set this as the number of partial derivatives to track
+            ! Allocate derivative arrays for temporary solution variable
             !
-            if (ielem_seed == 0) then
-                ! If ielem_seed == 0 then we aren't interested in tracking derivatives
-                nderiv = 1
-            else
-                nderiv = mesh(idom)%faces(ielem_seed,1)%neqns  *  mesh(idom)%faces(ielem_seed,1)%nterms_s     ! using face 1 here, but faces 1-6 point
-            end if
-
-
-
-            !
-            ! Allocate the derivative array for each autodiff variable
-            ! MIGHT NOT NEED THIS IF IT GETS AUTOMATICALLY ALLOCATED ON ASSIGNMENT -- TEST
-            !
-            do igq = 1,size(var_gq)
-                allocate(var_gq(igq)%xp_ad_(nderiv))
+            do iterm = 1,nterms_s
+                allocate(qdiff(iterm)%xp_ad_(nderiv))
             end do
 
+            !
+            ! Copy the solution variables from 'q' to 'qdiff'
+            !
+            qdiff = q%dom(idom)%lvecs(ielem)%getvar(ivar)
+
 
             !
-            ! If the current element is being differentiated (ielem == ielem_seed)
-            ! then copy the solution modes to local AD variable and seed derivatives
+            ! Loop through the terms in qdiff
             !
-            if (ielem == ielem_seed) then
+            do iterm = 1,size(qdiff)
+                ! For the given term, seed its appropriate derivative
+                set_deriv = (ivar - 1)*nterms_s + iterm
+                qdiff(iterm)%xp_ad_(set_deriv) = 1.0_rk
+            end do
 
-                !
-                ! Allocate derivative arrays for temporary solution variable
-                !
-                do iterm = 1,nterms_s
-                    allocate(qdiff(iterm)%xp_ad_(nderiv))
-                end do
+            var_gq = matmul(mesh(idom)%faces(ielem,iface)%gq%face%val(:,:,iface),  qdiff)
 
-                !
-                ! Copy the solution variables from 'q' to 'qdiff'
-                !
-                qdiff = q%dom(idom)%lvecs(ielem)%getvar(ivar)
+        else
 
+            !
+            ! If the solution variable derivatives dont need initialized
+            ! then just use the q(ielem) values and derivatives get
+            ! initialized to zero
+            !
+            var_gq = matmul(mesh(idom)%faces(ielem,iface)%gq%face%val(:,:,iface),  q%dom(idom)%lvecs(ielem)%getvar(ivar))
+        end if
 
-                !
-                ! Loop through the terms in qdiff
-                !
-                do iterm = 1,size(qdiff)
-                    ! For the given term, seed its appropriate derivative
-                    set_deriv = (ivar - 1)*nterms_s + iterm
-                    qdiff(iterm)%xp_ad_(set_deriv) = 1.0_rk
-                end do
-
-                var_gq = matmul(mesh(idom)%faces(ielem,iface)%gq%face%val(:,:,iface),  qdiff)
-
-            else
-
-                !
-                ! If the solution variable derivatives dont need initialized
-                ! then just use the q(ielem) values and derivatives get
-                ! initialized to zero
-                !
-                var_gq = matmul(mesh(idom)%faces(ielem,iface)%gq%face%val(:,:,iface),  q%dom(idom)%lvecs(ielem)%getvar(ivar))
-            end if
-
-        !end associate
 
     end subroutine
 
@@ -244,8 +272,8 @@ contains
     !----------------------------------------------------------------
     subroutine interpolate_element_standard(mesh,q,idom,ielem,ivar,var_gq)
         type(mesh_t),           intent(in)      :: mesh(:)
-        type(chidgVector_t),    intent(inout)   :: q
-        integer(ik),            intent(inout)   :: idom
+        type(chidgVector_t),    intent(in)      :: q
+        integer(ik),            intent(in)      :: idom
         integer(ik),            intent(in)      :: ielem
         integer(ik),            intent(in)      :: ivar
         real(rk),               intent(inout)   :: var_gq(:)

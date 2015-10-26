@@ -8,9 +8,12 @@ module LA_boundary_average_advective_flux
     use type_mesh,                  only: mesh_t
     use type_solverdata,            only: solverdata_t
     use type_properties,            only: properties_t
+    use type_seed,                  only: seed_t
+
+
     use mod_interpolate,            only: interpolate_face
     use mod_integrate,              only: integrate_boundary_flux
-    use mod_DNAD_tools,             only: compute_neighbor_face, compute_seed_element
+    use mod_DNAD_tools
     use DNAD_D
 
     use LA_properties,              only: LA_properties_t
@@ -48,14 +51,23 @@ contains
         integer(ik),                                    intent(in)      :: idonor
 
         real(rk)                    :: cx, cy, cz
-        integer(ik)                 :: iu, iseed, ierr, nnodes, ineighbor, iface_p, i, idom_n
-        type(AD_D), allocatable     :: u_l(:), u_r(:), flux_x(:), flux_y(:), flux_z(:)
+        integer(ik)                 :: iu, ierr, nnodes, i
+        integer(ik)                 :: idom_n, ielem_n, iface_n
+        type(seed_t)                :: seed
+        type(AD_D), dimension(mesh(idom)%faces(ielem,iface)%gq%face%nnodes)    :: u_l, u_r, flux_x, flux_y, flux_z
 
 
         iu        = prop%get_eqn_index('u')
-        nnodes    = mesh(idom)%faces(ielem,iface)%gq%nnodes_f
-        ineighbor = mesh(idom)%faces(ielem,iface)%ineighbor
-        idom_n    = idom
+
+
+
+        !nnodes    = mesh(idom)%faces(ielem,iface)%gq%nnodes_f
+        !ineighbor = mesh(idom)%faces(ielem,iface)%ineighbor
+        !idom_n    = idom
+
+        idom_n  = compute_neighbor_domain( mesh,idom,ielem,iface,idonor)
+        ielem_n = compute_neighbor_element(mesh,idom,ielem,iface,idonor)
+        iface_n = compute_neighbor_face(   mesh,idom,ielem,iface,idonor)
 
 
         !
@@ -71,32 +83,19 @@ contains
 
 
 
+        
         !
-        ! Allocate arrays for data at quadrature points
+        ! Compute element for linearization
         !
-        allocate(u_l(nnodes),       &
-                 u_r(nnodes),       &
-                 flux_x(nnodes),    &
-                 flux_y(nnodes),    &
-                 flux_z(nnodes), stat=ierr)
-        if (ierr /= 0) call AllocationError
-
-
-
-
-
-        !
-        ! Get neighbor face and seed element for derivatives
-        !
-        iface_p = compute_neighbor_face(iface)
-        iseed   = compute_seed_element(mesh,idom,ielem,iblk)
+        seed = compute_seed(mesh,idom,ielem,iface,idonor,iblk)
+        !iseed   = compute_seed_element(mesh,idom,ielem,iface,iblk,idonor)
 
 
         !
         ! Interpolate solution to quadrature nodes
         !
-        call interpolate_face(mesh,sdata%q,idom,   ielem,    iface,  iu,u_r,iseed)
-        call interpolate_face(mesh,sdata%q,idom_n, ineighbor,iface_p,iu,u_l,iseed)
+        call interpolate_face(mesh,sdata%q,idom,   ielem,   iface,   iu, u_r, seed)
+        call interpolate_face(mesh,sdata%q,idom_n, ielem_n, iface_n, iu, u_l, seed)
 
 
         !

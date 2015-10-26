@@ -22,8 +22,9 @@ contains
         logical                     :: skip = .false.
         logical                     :: interior_face         = .false.
         logical                     :: chimera_face          = .false.
-        logical                     :: compute_face_interior = .false.
-        logical                     :: compute_face_chimera  = .false.
+        logical                     :: compute_face          = .false.
+        !logical                     :: compute_face_interior = .false.
+        !logical                     :: compute_face_chimera  = .false.
 
 
         !
@@ -41,7 +42,8 @@ contains
             !
             ! CHIMERA, XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX, DIAG
             !
-            do iblk = 0,7           ! (0 = linearization of chimera blocks, 1-6 = linearization of interior neighbor blocks, 7 = linearization of Q- block
+            !do iblk = 0,7           ! (0 = linearization of chimera blocks, 1-6 = linearization of interior neighbor blocks, 7 = linearization of Q- block
+            do iblk = 1,7           ! (0 = linearization of chimera blocks, 1-6 = linearization of interior neighbor blocks, 7 = linearization of Q- block
 
 
                 !
@@ -63,9 +65,10 @@ contains
                         ! If the block direction is not DIAG, then we only want to compute faces in the block direction
                         ! if it has a neighbor element.
                         !
-                        if (iblk /= DIAG  .and. iblk /= 0) then
+                        !if (iblk /= DIAG  .and. iblk /= 0) then
+                        if ( iblk /= DIAG ) then
                             ! Check if there is an element to linearize against in the iblk direction. If not, cycle
-                            if (mesh%faces(ielem,iblk)%ineighbor == 0) then
+                            if ( data%mesh(idom)%faces(ielem,iblk)%ineighbor == 0) then
                                 skip = .true.
                             else
                                 skip = .false.
@@ -93,10 +96,13 @@ contains
                                 !
                                 interior_face = ( mesh%faces(ielem,iface)%ftype == 0 )
                                 chimera_face  = ( mesh%faces(ielem,iface)%ftype == 2 )
-                                compute_face_interior = ( interior_face .and. (iblk == iface .or. iblk == DIAG) )
-                                compute_face_chimera  = ( chimera_face  .and. (iblk == 0     .or. iblk == DIAG) )
+                                !compute_face_interior = ( interior_face .and. (iblk == iface .or. iblk == DIAG) )
+                                !compute_face_chimera  = ( chimera_face  .and. (iblk == 0     .or. iblk == DIAG) )
 
-                                if ( compute_face_interior .or. compute_face_chimera ) then
+                                compute_face = (interior_face .or. chimera_face) .and. ( (iblk == iface) .or. (iblk == DIAG) )
+
+                                !if ( compute_face_interior .or. compute_face_chimera ) then
+                                if ( compute_face ) then
 
 
 
@@ -188,6 +194,9 @@ contains
             !
             ! For boundary conditions, the linearization only depends on Q-, which is the solution vector
             ! for the interior element. So, we only need to compute derivatives for the interior element (DIAG)
+
+            print*, 'boundary conditions'
+
             iblk = 7    !> DIAG
             do idom = 1,data%ndomains
                 call data%bcset(idom)%apply(data%mesh,data%sdata,data%eqnset(idom)%item%prop,idom,iblk)

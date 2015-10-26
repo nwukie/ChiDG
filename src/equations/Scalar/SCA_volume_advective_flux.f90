@@ -8,9 +8,12 @@ module SCA_volume_advective_flux
     use atype_volume_flux,      only: volume_flux_t
     use type_solverdata,        only: solverdata_t
     use type_properties,        only: properties_t
+    use type_seed,              only: seed_t
+
+
     use mod_interpolate,        only: interpolate_element
     use mod_integrate,          only: integrate_volume_flux
-    use mod_DNAD_tools,         only: compute_neighbor_face, compute_seed_element
+    use mod_DNAD_tools
     use DNAD_D
 
     use SCA_properties,          only: SCA_properties_t
@@ -47,9 +50,15 @@ contains
 
         type(AD_D), allocatable :: u(:), flux_x(:), flux_y(:), flux_z(:)
         real(rk)                :: cx, cy, cz
-        integer(ik)             :: nnodes, ierr, iseed
+        integer(ik)             :: nnodes, ierr
+        type(seed_t)            :: seed
         integer(ik)             :: ivar_u, i
+        integer(ik)             :: idonor, iface
 
+
+
+        idonor = 0
+        iface  = iblk
 
         associate (elem => mesh(idom)%elems(ielem), q => sdata%q)
 
@@ -85,13 +94,14 @@ contains
             !
             ! Get seed element for derivatives
             !
-            iseed   = compute_seed_element(mesh,idom,ielem,iblk)
+            seed = compute_seed(mesh,idom,ielem,iface,idonor,iblk)
+            !iseed   = compute_seed_element(mesh,idom,ielem,iface,iblk,idonor)
 
 
             !
             ! Interpolate solution to quadrature nodes
             !
-            call interpolate_element(mesh,q,idom,ielem,ivar_u,u,iseed)
+            call interpolate_element(mesh,q,idom,ielem,ivar_u,u,seed)
 
 
             !

@@ -7,10 +7,11 @@ module EULER_Roe_flux
     use type_mesh,              only: mesh_t
     use type_solverdata,        only: solverdata_t
     use type_properties,        only: properties_t
+    use type_seed,              only: seed_t
 
     use mod_interpolate,        only: interpolate_face
     use mod_integrate,          only: integrate_boundary_scalar_flux
-    use mod_DNAD_tools,         only: compute_neighbor_face, compute_seed_element
+    use mod_DNAD_tools
     use DNAD_D
 
     use EULER_properties,       only: EULER_properties_t
@@ -72,8 +73,11 @@ contains
         integer(ik)     :: irhow
         integer(ik)     :: irhoe
 
-        integer(ik)     :: iseed, iface_p, ineighbor, idom_n
-        real(rk)        :: eps
+        !integer(ik)     :: iseed
+        type(seed_t)    :: seed
+        integer(ik)     :: idom_n
+        integer(ik)     :: ielem_n
+        integer(ik)     :: iface_n
 
         ! Storage at quadrature nodes
         type(AD_D), dimension(mesh(idom)%faces(ielem,iface)%gq%face%nnodes)    :: &
@@ -107,31 +111,42 @@ contains
         irhow = prop%get_eqn_index("rhow")
         irhoE = prop%get_eqn_index("rhoE")
 
+        !
         ! Get neighbor face and seed element for derivatives
-        iface_p   = compute_neighbor_face(iface)
-        iseed     = compute_seed_element(mesh,idom,ielem,iblk)
-        ineighbor = mesh(idom)%faces(ielem,iface)%ineighbor
-        idom_n    = idom
+        !
+        idom_n    = compute_neighbor_domain( mesh,idom,ielem,iface,idonor)
+        ielem_n   = compute_neighbor_element(mesh,idom,ielem,iface,idonor)
+        iface_n   = compute_neighbor_face(   mesh,idom,ielem,iface,idonor)
+
+
+        !
+        ! Compute element for linearization
+        !
+        seed = compute_seed(mesh,idom,ielem,iface,idonor,iblk)
+        !iseed = compute_seed_element(mesh,idom,ielem,iface,iblk,idonor)
+
+
+
 
         associate (norms => mesh(idom)%faces(ielem,iface)%norm, unorms=> mesh(idom)%faces(ielem,iface)%unorm, faces => mesh(idom)%faces, q => sdata%q)
 
             !
             ! Interpolate solution to quadrature nodes
             !
-            call interpolate_face(mesh,q,idom,   ielem,    iface,  irho,rho_m,iseed)
-            call interpolate_face(mesh,q,idom_n, ineighbor,iface_p,irho,rho_p,iseed)
+            call interpolate_face(mesh,q,idom,   ielem,   iface,  irho,rho_m,seed)
+            call interpolate_face(mesh,q,idom_n, ielem_n, iface_n,irho,rho_p,seed)
 
-            call interpolate_face(mesh,q,idom,   ielem,    iface,  irhou,rhou_m,iseed)
-            call interpolate_face(mesh,q,idom_n, ineighbor,iface_p,irhou,rhou_p,iseed)
+            call interpolate_face(mesh,q,idom,   ielem,   iface,  irhou,rhou_m,seed)
+            call interpolate_face(mesh,q,idom_n, ielem_n, iface_n,irhou,rhou_p,seed)
 
-            call interpolate_face(mesh,q,idom,   ielem,    iface,  irhov,rhov_m,iseed)
-            call interpolate_face(mesh,q,idom_n, ineighbor,iface_p,irhov,rhov_p,iseed)
+            call interpolate_face(mesh,q,idom,   ielem,   iface,  irhov,rhov_m,seed)
+            call interpolate_face(mesh,q,idom_n, ielem_n, iface_n,irhov,rhov_p,seed)
 
-            call interpolate_face(mesh,q,idom,   ielem,    iface,  irhow,rhow_m,iseed)
-            call interpolate_face(mesh,q,idom_n, ineighbor,iface_p,irhow,rhow_p,iseed)
+            call interpolate_face(mesh,q,idom,   ielem,   iface,  irhow,rhow_m,seed)
+            call interpolate_face(mesh,q,idom_n, ielem_n, iface_n,irhow,rhow_p,seed)
 
-            call interpolate_face(mesh,q,idom,   ielem,    iface,  irhoE,rhoE_m,iseed)
-            call interpolate_face(mesh,q,idom_n, ineighbor,iface_p,irhoE,rhoE_p,iseed)
+            call interpolate_face(mesh,q,idom,   ielem,   iface,  irhoE,rhoE_m,seed)
+            call interpolate_face(mesh,q,idom_n, ielem_n, iface_n,irhoE,rhoE_p,seed)
 
 
             !
@@ -167,7 +182,7 @@ contains
             sqrt_rhom = sqrt(rho_m)
             sqrt_rhop = sqrt(rho_p)
             sqrt_rhom_plus_rhop = sqrt_rhom + sqrt_rhop
-            rtil =  sqrt(rho_p * rho_m)                                                 ! Roe-averaged density
+            rtil =  sqrt(rho_p * rho_m)                                       ! Roe-averaged density
             util = (sqrt_rhom*u_m + sqrt_rhop*u_p) / (sqrt_rhom_plus_rhop)    ! Roe-averaged u-velocity
             vtil = (sqrt_rhom*v_m + sqrt_rhop*v_p) / (sqrt_rhom_plus_rhop)    ! Roe-averaged v-velocity
             wtil = (sqrt_rhom*w_m + sqrt_rhop*w_p) / (sqrt_rhom_plus_rhop)    ! Roe-averaged w-velocity

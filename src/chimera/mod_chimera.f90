@@ -36,7 +36,7 @@ contains
     subroutine detect_chimera_interfaces(mesh)
         type(mesh_t),   intent(inout)   :: mesh(:)
 
-        integer(ik) :: idom, ndom, ielem, iface
+        integer(ik) :: idom, ndom, ielem, iface, nchimera_faces
         logical     :: orphan_face = .false.
 
         !
@@ -50,6 +50,8 @@ contains
         !
         do idom = 1,ndom
 
+
+            nchimera_faces = 0
             !
             ! Loop through each element
             !
@@ -71,7 +73,18 @@ contains
                     !
                     if (orphan_face) then
 
+
+
+                        ! Increment domain-local chimera face count
+                        nchimera_faces = nchimera_faces + 1
+
+                        ! Set face-type to CHIMERA
                         mesh(idom)%faces(ielem,iface)%ftype = CHIMERA
+
+                        ! Set domain-local Chimera identifier. Really, just the index order which they were detected in, starting from 1.
+                        mesh(idom)%faces(ielem,iface)%ChiID = nchimera_faces
+
+
 
                     end if
 
@@ -80,10 +93,69 @@ contains
 
             end do ! ielem
 
+            ! Set total number of Chimera faces detected for domain - idom
+            mesh(idom)%chimera%recv%nfaces = nchimera_faces
+
         end do ! idom
 
 
     end subroutine
+
+
+
+
+
+
+
+
+
+
+
+
+
+    subroutine accumulate_chimera_interfaces(mesh)
+        type(mesh_t),   intent(inout)   :: mesh(:)
+
+
+
+
+
+
+    end subroutine
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

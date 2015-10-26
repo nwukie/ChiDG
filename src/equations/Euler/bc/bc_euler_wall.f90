@@ -6,8 +6,9 @@ module bc_euler_wall
     use type_solverdata,    only: solverdata_t
     use type_mesh,          only: mesh_t
     use type_properties,    only: properties_t
+    use type_seed,          only: seed_t
 
-    use mod_DNAD_tools,     only: compute_seed_element
+    use mod_DNAD_tools,     only: compute_seed
     use mod_integrate,      only: integrate_boundary_scalar_flux
     use mod_interpolate,    only: interpolate_face
     use DNAD_D
@@ -55,9 +56,10 @@ contains
         integer(ik),                    intent(in)      :: iblk
 
         ! Equation indices
-        integer(ik) :: irho, irhou, irhov, irhow, irhoE
+        integer(ik)     :: irho, irhou, irhov, irhow, irhoE
 
-        integer(ik) :: iseed, iface_p, ineighbor
+        integer(ik)     :: iface_p, ineighbor, idonor
+        type(seed_t)    :: seed
 
         ! Storage at quadrature nodes
         type(AD_D), dimension(mesh(idom)%faces(ielem,iface)%gq%face%nnodes)   ::  &
@@ -65,6 +67,10 @@ contains
                         rhou_bc, rhov_bc, rhow_bc, rhoE_bc, u_bc, v_bc, w_bc, u_m, v_m, w_m, p_bc
 
         real(rk)    :: gam_m
+
+
+        idonor = 0
+
 
         !
         ! Get equation indices
@@ -78,7 +84,7 @@ contains
         !
         ! Get seed element for derivatives
         !
-        iseed = compute_seed_element(mesh,idom,ielem,iblk)
+        seed = compute_seed(mesh,idom,ielem,iface,idonor,iblk)
 
 
 
@@ -89,11 +95,11 @@ contains
             !
             ! Interpolate interior solution to quadrature nodes
             !
-            call interpolate_face(mesh,q,idom,ielem,iface,irho, rho_m, iseed)
-            call interpolate_face(mesh,q,idom,ielem,iface,irhou,rhou_m,iseed)
-            call interpolate_face(mesh,q,idom,ielem,iface,irhov,rhov_m,iseed)
-            call interpolate_face(mesh,q,idom,ielem,iface,irhow,rhow_m,iseed)
-            call interpolate_face(mesh,q,idom,ielem,iface,irhoE,rhoE_m,iseed)
+            call interpolate_face(mesh,q,idom,ielem,iface,irho, rho_m, seed)
+            call interpolate_face(mesh,q,idom,ielem,iface,irhou,rhou_m,seed)
+            call interpolate_face(mesh,q,idom,ielem,iface,irhov,rhov_m,seed)
+            call interpolate_face(mesh,q,idom,ielem,iface,irhow,rhow_m,seed)
+            call interpolate_face(mesh,q,idom,ielem,iface,irhoE,rhoE_m,seed)
 
 
             !

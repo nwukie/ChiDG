@@ -22,7 +22,7 @@ contains
 
 
         !& DEBUG HARDCODED NUMBER OF NODES
-        type(AD_D), dimension(data%mesh(1)%elems(1)%gq%vol%nnodes)  :: &
+        real(rk), dimension(data%mesh(1)%elems(1)%gq%vol%nnodes)  :: &
             rho, rhou, rhov, rhow, rhoE, p, entropy
 
         real(rk), dimension(data%mesh(1)%elems(1)%gq%vol%nnodes)    :: entropy_rise
@@ -84,11 +84,11 @@ contains
                     !
                     ! Interpolate variables to GQ nodes
                     !
-                    call interpolate_element(mesh,sdata%q,idom,ielem,irho,  rho,  iseed)
-                    call interpolate_element(mesh,sdata%q,idom,ielem,irhou, rhou, iseed)
-                    call interpolate_element(mesh,sdata%q,idom,ielem,irhov, rhov, iseed)
-                    call interpolate_element(mesh,sdata%q,idom,ielem,irhow, rhow, iseed)
-                    call interpolate_element(mesh,sdata%q,idom,ielem,irhoE, rhoE, iseed)
+                    call interpolate_element(mesh,sdata%q,idom,ielem,irho,  rho)
+                    call interpolate_element(mesh,sdata%q,idom,ielem,irhou, rhou)
+                    call interpolate_element(mesh,sdata%q,idom,ielem,irhov, rhov)
+                    call interpolate_element(mesh,sdata%q,idom,ielem,irhow, rhow)
+                    call interpolate_element(mesh,sdata%q,idom,ielem,irhoE, rhoE)
 
 
                     !
@@ -101,7 +101,8 @@ contains
                     ! Compute entropy and entropy rise.
                     !
                     entropy = p/(rho**gam)
-                    entropy_rise = ((entropy(:)%x_ad_ - entropy_ref)/entropy_ref)**TWO
+                    !entropy_rise = ((entropy(:)%x_ad_ - entropy_ref)/entropy_ref)**TWO
+                    entropy_rise = ((entropy - entropy_ref)/entropy_ref)**TWO
 
 
                     !

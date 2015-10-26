@@ -39,7 +39,7 @@ module type_mesh
 
         ! Initialization flags
         logical             :: geomInitialized = .false.                !< Status of geometry initialization
-        logical             :: solInitialized = .false.                 !< Status of numerics initialization
+        logical             :: solInitialized  = .false.                !< Status of numerics initialization
     contains
         procedure           :: init_geom
         procedure           :: init_sol

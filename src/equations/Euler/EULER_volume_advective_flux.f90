@@ -1,7 +1,7 @@
 module EULER_volume_advective_flux
     use mod_kinds,              only: rk,ik
     use mod_constants,          only: NFACES,ONE,TWO,HALF, &
-                                      XI_MIN,XI_MAX,ETA_MIN,ETA_MAX,ZETA_MIN,ZETA_MAX
+                                      XI_MIN,XI_MAX,ETA_MIN,ETA_MAX,ZETA_MIN,ZETA_MAX,DIAG
 
     use type_mesh,              only: mesh_t
     use atype_volume_flux,      only: volume_flux_t
@@ -10,7 +10,7 @@ module EULER_volume_advective_flux
     
     use mod_interpolate,        only: interpolate_element
     use mod_integrate,          only: integrate_volume_flux
-    use mod_DNAD_tools,         only: compute_neighbor_face, compute_seed_element
+    use mod_DNAD_tools
     use DNAD_D
 
     use EULER_properties,       only: EULER_properties_t
@@ -59,11 +59,17 @@ contains
         integer(ik)    :: irhoe
 
 
-        integer(ik)    :: iseed, i
+        integer(ik)    :: iseed, i, idonor, iface
+        type(seed_t)   :: seed
 
         type(AD_D), dimension(mesh(idom)%elems(ielem)%gq%vol%nnodes)      ::  &
                     rho, rhou, rhov, rhow, rhoE, p, H,                        &
                     flux_x, flux_y, flux_z
+
+
+        idonor = 0
+        iface  = DIAG
+
 
         !-------------------------------------------------------------
         irho  = prop%get_eqn_index("rho")
@@ -75,18 +81,20 @@ contains
         !
         ! Get neighbor face and seed element for derivatives
         !
-        iseed   = compute_seed_element(mesh,idom,ielem,iblk)
+        seed = compute_seed(mesh,idom,ielem,iblk,idonor,iblk)
+        !iseed   = compute_seed_element(mesh,idom,ielem,iface,iblk,idonor)
+
 
 
 
         !
         ! Interpolate solution to quadrature nodes
         !
-        call interpolate_element(mesh,sdata%q,idom,ielem,irho, rho, iseed)
-        call interpolate_element(mesh,sdata%q,idom,ielem,irhou,rhou,iseed)
-        call interpolate_element(mesh,sdata%q,idom,ielem,irhov,rhov,iseed)
-        call interpolate_element(mesh,sdata%q,idom,ielem,irhow,rhow,iseed)
-        call interpolate_element(mesh,sdata%q,idom,ielem,irhoE,rhoE,iseed)
+        call interpolate_element(mesh,sdata%q,idom,ielem,irho, rho, seed)
+        call interpolate_element(mesh,sdata%q,idom,ielem,irhou,rhou,seed)
+        call interpolate_element(mesh,sdata%q,idom,ielem,irhov,rhov,seed)
+        call interpolate_element(mesh,sdata%q,idom,ielem,irhow,rhow,seed)
+        call interpolate_element(mesh,sdata%q,idom,ielem,irhoE,rhoE,seed)
 
 
         !

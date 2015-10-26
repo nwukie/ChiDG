@@ -7,9 +7,12 @@ module DLA_LaxFriedrichs_flux
     use atype_boundary_flux,    only: boundary_flux_t
     use type_mesh,              only: mesh_t
     use type_solverdata,        only: solverdata_t
+    use type_seed,              only: seed_t
+
+
     use mod_interpolate,        only: interpolate_face
     use mod_integrate,          only: integrate_boundary_flux
-    use mod_DNAD_tools,         only: compute_neighbor_face, compute_seed_element
+    use mod_DNAD_tools,         only: compute_neighbor_face, compute_seed
     use DNAD_D
 
     use type_properties,        only: properties_t
@@ -53,7 +56,8 @@ contains
 
 
         real(rk)                 :: cx, cy, cz
-        integer(ik)              :: iu_a, iu_b, iseed, ierr, nnodes, ineighbor, iface_p, i, idom_n
+        integer(ik)              :: iu_a, iu_b, ierr, nnodes, ineighbor, iface_p, i, idom_n
+        type(seed_t)             :: seed
         type(AD_D), allocatable  :: ua_l(:), ua_r(:), ub_l(:), ub_r(:), flux_x(:), flux_y(:), flux_z(:)
 
 
@@ -94,18 +98,24 @@ contains
         !
         ! Get neighbor face and seed element for derivatives
         !
-        iface_p = compute_neighbor_face(iface)
-        iseed   = compute_seed_element(mesh,idom,ielem,iblk)
+        iface_p = compute_neighbor_face(mesh,idom,ielem,iface,idonor)
+
+
+        !
+        ! Compute element for linearization
+        !
+        seed = compute_seed(mesh,idom,ielem,iface,idonor,iblk)
+        !iseed   = compute_seed_element(mesh,idom,ielem,iface,iblk,idonor)
 
 
         !
         ! Interpolate solution to quadrature nodes
         !
-        call interpolate_face(mesh,sdata%q,idom,   ielem,    iface,  iu_a,ua_r,iseed)
-        call interpolate_face(mesh,sdata%q,idom_n, ineighbor,iface_p,iu_a,ua_l,iseed)
+        call interpolate_face(mesh,sdata%q,idom,   ielem,    iface,  iu_a,ua_r,seed)
+        call interpolate_face(mesh,sdata%q,idom_n, ineighbor,iface_p,iu_a,ua_l,seed)
 
-        call interpolate_face(mesh,sdata%q,idom,   ielem,    iface,  iu_b,ub_r,iseed)
-        call interpolate_face(mesh,sdata%q,idom_n, ineighbor,iface_p,iu_b,ub_l,iseed)
+        call interpolate_face(mesh,sdata%q,idom,   ielem,    iface,  iu_b,ub_r,seed)
+        call interpolate_face(mesh,sdata%q,idom_n, ineighbor,iface_p,iu_b,ub_l,seed)
 
 
 

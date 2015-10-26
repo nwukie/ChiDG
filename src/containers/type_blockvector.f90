@@ -15,7 +15,7 @@ module type_blockvector
     !!
     !-----------------------------------------------------------------------------------------------
     type, public :: blockvector_t
-        integer(ik)                     :: nelem_xi, nelem_eta, nelem_zeta, nelem
+        !integer(ik)                     :: nelem_xi, nelem_eta, nelem_zeta, nelem
 
         !> localblocks (nelem x 7)
         !!
@@ -34,7 +34,6 @@ module type_blockvector
         !> Initializers
         generic,   public   :: init => init_vector      !< Initialize local vector
         procedure, private  :: init_vector
-        !procedure, private  :: map                      !< Map blockvector%lvecs_m to lvecs
 
         procedure, public   :: distribute               !< Given a full-vector representation, distribute it to the denseblock format
         procedure, public   :: build                    !< Assemble a full-vector representation of the blockvector_t format
@@ -119,10 +118,10 @@ contains
 
         nelem = mesh%nelem  ! Number of elements in the local block
 
-        self%nelem_xi   = mesh%nelem_xi
-        self%nelem_eta  = mesh%nelem_eta
-        self%nelem_zeta = mesh%nelem_zeta
-        self%nelem      = mesh%nelem
+        !self%nelem_xi   = mesh%nelem_xi
+        !self%nelem_eta  = mesh%nelem_eta
+        !self%nelem_zeta = mesh%nelem_zeta
+        !self%nelem      = mesh%nelem
 
 
         !
@@ -167,14 +166,6 @@ contains
             self%ldata(ielem,2) = mesh%elems(ielem)%nterms_s
         end do
 
-
-
-
-        !
-        ! Initialize matrix-view of densevector components
-        !
-        !temp => self%lvecs
-        !self%lvecs_m(1:mesh%nelem_xi, 1:mesh%nelem_eta, 1:mesh%nelem_zeta) => temp(1:mesh%nelem)
 
 
 
@@ -468,14 +459,11 @@ contains
         type(blockvector_t),    intent(in)  :: right
 
         type(blockvector_t), target     :: res
-        !integer(ik)                     :: nelem_xi, nelem_eta, nelem_zeta, nelem
 
-        !type(blockvector_t), pointer    :: temp
-
-        res%nelem_xi   = right%nelem_xi
-        res%nelem_eta  = right%nelem_eta
-        res%nelem_zeta = right%nelem_zeta
-        res%nelem      = right%nelem
+        !res%nelem_xi   = right%nelem_xi
+        !res%nelem_eta  = right%nelem_eta
+        !res%nelem_zeta = right%nelem_zeta
+        !res%nelem      = right%nelem
 
 
         res%ldata = right%ldata
@@ -495,16 +483,12 @@ contains
         real(rk),               intent(in)  :: right
 
         type(blockvector_t), target     :: res
-        !integer(ik)                     :: nelem_xi, nelem_eta, nelem_zeta, nelem
 
 
-        !type(densevector_t), pointer    :: temp(:)
-
-
-        res%nelem_xi   = left%nelem_xi
-        res%nelem_eta  = left%nelem_eta
-        res%nelem_zeta = left%nelem_zeta
-        res%nelem      = left%nelem
+        !res%nelem_xi   = left%nelem_xi
+        !res%nelem_eta  = left%nelem_eta
+        !res%nelem_zeta = left%nelem_zeta
+        !res%nelem      = left%nelem
 
 
         res%ldata = left%ldata
@@ -525,16 +509,12 @@ contains
         type(blockvector_t),    intent(in)  :: right
 
         type(blockvector_t), target     :: res
-        !integer(ik)                     :: nelem_xi, nelem_eta, nelem_zeta, nelem
 
 
-        !type(densevector_t), pointer    :: temp(:)
-
-
-        res%nelem_xi   = right%nelem_xi
-        res%nelem_eta  = right%nelem_eta
-        res%nelem_zeta = right%nelem_zeta
-        res%nelem      = right%nelem
+        !res%nelem_xi   = right%nelem_xi
+        !res%nelem_eta  = right%nelem_eta
+        !res%nelem_zeta = right%nelem_zeta
+        !res%nelem      = right%nelem
 
 
         res%ldata = right%ldata
@@ -554,16 +534,12 @@ contains
         real(rk),               intent(in)  :: right
 
         type(blockvector_t), target     :: res
-        !integer(ik)                     :: nelem_xi, nelem_eta, nelem_zeta, nelem
 
 
-        !type(densevector_t), pointer    :: temp(:)
-
-
-        res%nelem_xi   = left%nelem_xi
-        res%nelem_eta  = left%nelem_eta
-        res%nelem_zeta = left%nelem_zeta
-        res%nelem      = left%nelem
+        !res%nelem_xi   = left%nelem_xi
+        !res%nelem_eta  = left%nelem_eta
+        !res%nelem_zeta = left%nelem_zeta
+        !res%nelem      = left%nelem
 
 
         res%ldata = left%ldata
@@ -585,17 +561,13 @@ contains
         type(blockvector_t),  intent(in)  :: right
 
         type(blockvector_t), target     :: res
-        !integer(ik)                     :: nelem_xi, nelem_eta, nelem_zeta, nelem
 
 
-        !type(densevector_t), pointer    :: temp(:)
-
-
-        res%nelem_xi   = right%nelem_xi
-        res%nelem_eta  = right%nelem_eta
-        res%nelem_zeta = right%nelem_zeta
-        res%nelem      = right%nelem
-
+        !res%nelem_xi   = right%nelem_xi
+        !res%nelem_eta  = right%nelem_eta
+        !res%nelem_zeta = right%nelem_zeta
+        !res%nelem      = right%nelem
+!
         res%ldata = right%ldata
 
         res%lvecs = left%lvecs + right%lvecs
@@ -614,16 +586,12 @@ contains
         type(blockvector_t),  intent(in)  :: right
 
         type(blockvector_t), target     :: res
-        !integer(ik)                     :: nelem_xi, nelem_eta, nelem_zeta, nelem
 
 
-        !type(densevector_t), pointer    :: temp(:)
-
-
-        res%nelem_xi   = right%nelem_xi
-        res%nelem_eta  = right%nelem_eta
-        res%nelem_zeta = right%nelem_zeta
-        res%nelem      = right%nelem
+        !res%nelem_xi   = right%nelem_xi
+        !res%nelem_eta  = right%nelem_eta
+        !res%nelem_zeta = right%nelem_zeta
+        !res%nelem      = right%nelem
 
         res%ldata = right%ldata
 

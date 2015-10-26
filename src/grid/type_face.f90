@@ -34,29 +34,30 @@ module type_face
         integer(ik)                  :: iparent             !< Element index of parent element
         integer(ik)                  :: ineighbor           !< Block-local index of neighbor element
 
-        !integer(ik)                  :: idomain_n           !< Processor-local domain index of neighbor element
-        !integer(ik)                  :: iparent_n           !< Processor-local element index of neighbor element in idomain_n
+
+
+        ! Chimera identifiers
+        integer(ik)                     :: ChiID = 0        !< Identifier for domain-local Chimera interfaces
+
+
 
         ! Geometry
         !---------------------------------------------------------
-        type(point_t),  allocatable  :: quad_pts(:)         !< Cartesian coordinates of quadrature nodes
-        !type(densevector_t), pointer   :: coords => null()    !< Pointer to element coordinates
+        type(point_t),      allocatable :: quad_pts(:)      !< Cartesian coordinates of quadrature nodes
         type(densevector_t)             :: coords           !< Element coordinates
 
         ! Metric terms
         !---------------------------------------------------------
-        real(rk),       allocatable  :: jinv(:)                     !< array of inverse element jacobians on the face
-        real(rk),       allocatable  :: metric(:,:,:)               !< Face metric terms
-        real(rk),       allocatable  :: norm(:,:)                   !< Face normals
-        real(rk),       allocatable  :: unorm(:,:)                  !< Unit normals
-        !real(rk),       pointer      :: invmass(:,:) => null()      !< Pointer to element inverse mass matrix
-        !real(rk), allocatable        :: invmass(:,:)                 !< Pointer to element inverse mass matrix
+        real(rk),           allocatable :: jinv(:)          !< array of inverse element jacobians on the face
+        real(rk),           allocatable :: metric(:,:,:)    !< Face metric terms
+        real(rk),           allocatable :: norm(:,:)        !< Face normals
+        real(rk),           allocatable :: unorm(:,:)       !< Unit normals
 
 
         ! Quadrature matrices
         !---------------------------------------------------------
-        type(quadrature_t),  pointer :: gq     => null()            !< Pointer to solution quadrature instance
-        type(quadrature_t),  pointer :: gqmesh => null()            !< Pointer to mesh quadrature instance
+        type(quadrature_t),  pointer :: gq     => null()    !< Pointer to solution quadrature instance
+        type(quadrature_t),  pointer :: gqmesh => null()    !< Pointer to mesh quadrature instance
 
 
 

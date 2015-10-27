@@ -16,6 +16,7 @@ add_test_sources(containers
                 test_rvector.pf
                 test_ivector.pf
                 test_mvector.pf
+                test_pvector.pf
                 test_chidgVector_operators_mod.pf
                 )
                

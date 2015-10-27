@@ -13,7 +13,7 @@ module type_chidg
     use mod_timescheme,         only: create_timescheme
     use mod_matrixsolver,       only: create_matrixsolver
     use mod_preconditioner,     only: create_preconditioner
-    use mod_chimera,            only: detect_chimera_interfaces
+    use mod_chimera,            only: detect_chimera_faces
 
     implicit none
 
@@ -98,7 +98,7 @@ contains
 
 
             case ('chimera')
-                call detect_chimera_interfaces(self%data%mesh)
+                call detect_chimera_faces(self%data%mesh)
 
 
             !

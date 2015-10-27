@@ -1,0 +1,165 @@
+@Test
+subroutine test_pvector__push_back__onevalue()
+    use pfunit_mod
+    use mod_kinds,      only: rk, ik
+    use type_pvector,   only: pvector_t
+    use type_point,     only: point_t
+    implicit none
+
+    type(pvector_t)         :: vec
+
+    type(point_t)           :: pnt, pnt_out
+
+    call pnt%set(1._rk, 2._rk, 3._rk)
+
+    !
+    ! Store value. THIS IS BEING TESTED
+    !
+    call vec%push_back(pnt)
+
+
+
+
+    ! Test value
+    pnt_out = vec%at(1)
+    @assertEqual(pnt%c1_,pnt_out%c1_)
+    @assertEqual(pnt%c2_,pnt_out%c2_)
+    @assertEqual(pnt%c3_,pnt_out%c3_)
+
+    ! Test size
+    @assertEqual(1,vec%size())
+
+    ! Test capacity
+    @assertEqual(20,vec%capacity())
+
+end subroutine
+
+
+
+
+
+
+
+
+
+
+@Test
+subroutine test_pvector__push_back__twovalues()
+    use pfunit_mod
+    use mod_kinds,      only: rk, ik
+    use type_point,     only: point_t
+    use type_pvector,   only: pvector_t
+    implicit none
+
+    type(pvector_t)         :: vec
+
+    type(point_t)           :: pnt_a, pnt_b, pnt_out
+
+    call pnt_a%set(1._rk, 2._rk, 3._rk)
+    call pnt_b%set(4._rk, 5._rk, 6._rk)
+
+
+    !
+    ! Store value. THIS IS BEING TESTED
+    !
+    call vec%push_back(pnt_a)
+    call vec%push_back(pnt_b)
+
+
+
+
+    ! Test matrix value
+    pnt_out = vec%at(1)
+    @assertEqual(1._rk,pnt_out%c1_)
+    @assertEqual(2._rk,pnt_out%c2_)
+    @assertEqual(3._rk,pnt_out%c3_)
+
+
+    pnt_out = vec%at(2)
+    @assertEqual(4._rk,pnt_out%c1_)
+    @assertEqual(5._rk,pnt_out%c2_)
+    @assertEqual(6._rk,pnt_out%c3_)
+
+
+
+    ! Test container size
+    @assertEqual(2,vec%size())
+
+    ! Test container capacity
+    @assertEqual(20,vec%capacity())
+
+
+
+
+end subroutine
+
+
+
+
+
+
+
+
+
+
+
+
+
+@Test
+subroutine test_pvector__push_back__thirtyvalues()
+    use pfunit_mod
+    use mod_kinds,      only: rk, ik
+    use type_point,     only: point_t
+    use type_pvector,   only: pvector_t
+    implicit none
+
+    type(pvector_t)         :: vec
+    integer(ik)             :: i
+
+    real(rk)                :: val
+    type(point_t)           :: pnt_a, pnt_b, pnt_out
+
+
+    !
+    ! Store value. THIS IS BEING TESTED
+    !
+    call pnt_a%set(1._rk, 1._rk, 1._rk)
+    do i = 1,30
+        call vec%push_back(pnt_a)
+        pnt_a%c1_ = pnt_a%c1_ + 1._rk
+    end do
+
+
+
+
+
+    ! Test values
+    val = 1._rk
+    do i = 1,30
+        pnt_out = vec%at(i)
+        @assertEqual(val,pnt_out%c1_)
+        @assertEqual(1._rk,pnt_out%c2_)
+        @assertEqual(1._rk,pnt_out%c3_)
+        val = val + 1._rk
+    end do
+
+    ! Test size
+    @assertEqual(30,vec%size())
+
+    ! Test capacity
+    @assertEqual(40,vec%capacity())
+
+end subroutine
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -1,28 +1,14 @@
-module type_mvector
+module type_pvector
 #include <messenger.h>
     use mod_kinds,          only: rk, ik
+    use type_point,         only: point_t
     implicit none
 
 
-    !> Wrapper type for holding individual allocatable matrices
-    !!
-    !!  @author Nathan A. Wukie
-    !!
-    !!
-    !----------------------------------------------------------
-    type, private :: mvector_wrapper_t
-
-        real(rk),   allocatable :: mat(:,:)
-
-    end type mvector_wrapper_t
 
 
 
-
-
-
-
-    type, public :: mvector_t
+    type, public :: pvector_t
         integer(ik)             :: size_        = 0
         integer(ik)             :: capacity_    = 0
         integer(ik)             :: buffer_      = 20
@@ -30,7 +16,7 @@ module type_mvector
 
 
 
-        type(mvector_wrapper_t), allocatable :: data(:)
+        type(point_t), allocatable :: data(:)
 
     contains
         procedure, public   :: size
@@ -45,7 +31,7 @@ module type_mvector
 
         !< Data accessors
         procedure, public   :: at
-    end type mvector_t
+    end type pvector_t
 
 
 
@@ -60,7 +46,7 @@ contains
     !!
     !-------------------------------------------------------------------------
     function size(self) result(res)
-        class(mvector_t),   intent(in)  :: self
+        class(pvector_t),   intent(in)  :: self
 
         integer(ik) :: res
 
@@ -76,7 +62,7 @@ contains
     !!
     !-------------------------------------------------------------------------
     function capacity(self) result(res)
-        class(mvector_t),   intent(in)  :: self
+        class(pvector_t),   intent(in)  :: self
 
         integer(ik) :: res
 
@@ -98,8 +84,8 @@ contains
     !!
     !-------------------------------------------------------------------------------------------
     subroutine push_back(self,element)
-        class(mvector_t),   intent(inout)   :: self
-        real(rk),           intent(in)      :: element(:,:)
+        class(pvector_t),   intent(inout)   :: self
+        type(point_t),      intent(in)      :: element
 
         logical     :: capacity_reached
         integer(ik) :: size
@@ -118,7 +104,7 @@ contains
         ! Add element to end of vector
         !
         size = self%size()
-        self%data(size + 1)%mat = element
+        self%data(size + 1) = element
 
 
         !
@@ -134,6 +120,10 @@ contains
 
 
 
+
+
+
+
     !> Clear container contents
     !!
     !!  @author Nathan A. Wukie
@@ -141,14 +131,17 @@ contains
     !!
     !---------------------------------------------------------------------------------------
     subroutine clear(self)
-        class(mvector_t),   intent(inout)   :: self
+        class(pvector_t),   intent(inout)   :: self
 
         self%size_      = 0
         self%capacity_  = 0
 
         deallocate(self%data)
 
+
     end subroutine clear
+
+
 
 
 
@@ -164,11 +157,11 @@ contains
     !!
     !----------------------------------------------------------------------------------------
     function at(self,index) result(res)
-        class(mvector_t),   intent(in)  :: self
+        class(pvector_t),   intent(in)  :: self
         integer(ik),        intent(in)  :: index
 
-        real(rk), allocatable :: res(:,:)
-        logical     :: out_of_bounds
+        type(point_t)   :: res
+        logical         :: out_of_bounds
 
         !
         ! Check vector bounds
@@ -182,7 +175,7 @@ contains
         !
         ! Allocate result
         !
-        res = self%data(index)%mat
+        res = self%data(index)
 
     end function
 
@@ -211,9 +204,9 @@ contains
     !!
     !------------------------------------------------------------------------------------------
     subroutine increase_capacity(self)
-        class(mvector_t),   intent(inout)   :: self
+        class(pvector_t),   intent(inout)   :: self
 
-        type(mvector_wrapper_t), allocatable   :: temp(:)
+        type(point_t),  allocatable :: temp(:)
         integer(ik)             :: newsize, ierr
 
 
@@ -267,4 +260,4 @@ contains
 
 
 
-end module type_mvector
+end module type_pvector

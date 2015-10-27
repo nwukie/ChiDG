@@ -1,0 +1,412 @@
+module test_interpolate_chimera_mod
+    use pfunit_mod
+    use type_chidg,         only: chidg_t
+    use type_point,         only: point_t
+    use type_seed,          only: seed_t
+    use type_meshdata,      only: meshdata_t
+
+
+    use mod_kinds,          only: rk,ik
+    use mod_constants,      only: ZERO, ONE, TWO, THREE, FIVE, SIX, EIGHT, NINE, TEN, &
+                                  XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX, &
+                                  LOCAL, NEIGHBOR
+
+    use mod_hdfio,          only: read_grid_hdf
+    use mod_interpolate,    only: interpolate_face, interpolate_element
+    use mod_grid_operators, only: initialize_variable
+    use mod_testutils,      only: meshgen
+    use mod_chimera
+
+
+    use DNAD_D
+    use mod_DNAD_tools,     only: compute_neighbor_element, compute_neighbor_face
+
+    use fcn_constant,       only: constant_f
+    implicit none
+
+    public  :: test_interpolate_chimera
+
+@TestCase
+    type, extends(TestCase) ::  test_interpolate_chimera
+        type(chidg_t)                   :: chidg
+        type(constant_f)                :: fcn
+
+    contains
+        procedure   ::  setUp
+        procedure   ::  tearDown
+    end type test_interpolate_chimera
+
+
+contains
+    !> NOTE: make sure to use 'this' instead of 'self' since these are over-writting a derived type 
+    !! procedure. The argument names have to match
+    subroutine setUp(this)
+        class(test_interpolate_chimera),    intent(inout)   :: this
+
+        integer(ik)                     :: nterms_s, ivar, idom
+        type(meshdata_t), allocatable   :: meshdata(:) 
+        
+    
+        !        
+        ! Initialize ChiDG environment
+        !
+        call this%chidg%init('env')
+
+        !
+        ! Read D2_E8_M1. Two domains, 2x2x2 elements in each domain, linear mapping
+        !
+        call read_grid_hdf('D2_E8_M1.h5',meshdata)
+
+        !
+        ! Add domain to ChiDG
+        !
+        nterms_s = 8
+        do idom = 1,size(meshdata)
+            call this%chidg%data%add_domain(trim(meshdata(idom)%name),meshdata(idom)%points,meshdata(idom)%nterms_c,'linearadvection',nterms_s)
+        end do
+
+
+        !
+        ! Set boundary conditions
+        !
+        call this%chidg%data%add_bc('D_01','extrapolate_la',XI_MIN)
+        !call this%chidg%data%add_bc('D_01','extrapolate_la',XI_MAX)
+        call this%chidg%data%add_bc('D_01','extrapolate_la',ETA_MIN)
+        call this%chidg%data%add_bc('D_01','extrapolate_la',ETA_MAX)
+        call this%chidg%data%add_bc('D_01','extrapolate_la',ZETA_MIN)
+        call this%chidg%data%add_bc('D_01','extrapolate_la',ZETA_MAX)
+
+        !call this%chidg%data%add_bc('D_02','extrapolate_la',XI_MIN)
+        call this%chidg%data%add_bc('D_02','extrapolate_la',XI_MAX)
+        call this%chidg%data%add_bc('D_02','extrapolate_la',ETA_MIN)
+        call this%chidg%data%add_bc('D_02','extrapolate_la',ETA_MAX)
+        call this%chidg%data%add_bc('D_02','extrapolate_la',ZETA_MIN)
+        call this%chidg%data%add_bc('D_02','extrapolate_la',ZETA_MAX)
+
+
+
+
+        !
+        ! Initialize Chimera interfaces
+        !
+        call detect_chimera_faces(this%chidg%data%mesh)
+        call detect_chimera_donors(this%chidg%data%mesh)
+        call compute_chimera_interpolators(this%chidg%data%mesh)
+
+
+        !
+        ! Initialize chidg solution data storage
+        !
+        call this%chidg%data%init_sdata()
+
+        !
+        ! Initialized solution to constant values
+        !
+        ivar = this%chidg%data%eqnset(1)%item%prop%get_eqn_index('u')    ! Get variable index
+
+
+        !
+        ! Initialize variable
+        !
+        call this%fcn%set('const',5._rk)                                 ! Set constant function value
+        call initialize_variable(this%chidg%data,ivar,this%fcn)          ! Initialize variable using constant function
+
+    
+    end subroutine
+    
+    subroutine tearDown(this)
+        class(test_interpolate_chimera),    intent(inout)   :: this
+        
+    end subroutine
+
+
+!------------------------------------------------------------------------------------------------------
+
+    
+    
+    
+!-----------------------------------------------------------------------------------------------------
+!                               Face - surface interpolation - Autodiff
+!-----------------------------------------------------------------------------------------------------
+    
+    
+    
+!> Interpolation of modes to surface quadrature nodes. Seeding neighbor element. source=NEIGHBOR. Testing fuction values. 
+!-------------------------------------------------------------------------------------------------------------
+@Test
+    subroutine test__interpolate_face_chimera_AD__values__idE(self)
+        class(test_interpolate_chimera),    intent(inout)   :: self
+        
+        integer(ik)                 :: ielem, iface, ivar, ngq, idomain
+        type(seed_t)                :: seed
+        type(AD_D), allocatable     :: u_gq(:)
+        real(rk),   allocatable     :: u_ref(:)
+        real(rk)                    :: tol
+        
+        
+        associate ( elems => self%chidg%data%mesh(1)%elems, faces => self%chidg%data%mesh(1)%faces, q => self%chidg%data%sdata%q)        
+            idomain = 1         ! domain index
+            ielem   = 2         ! given element
+            iface   = XI_MAX    ! given face
+
+            !
+            ! A seed element, this is a neighbor for this test - so all derivative arrays should be seeded to zero
+            !
+            seed%idom  = 1
+            seed%ielem = 2
+
+
+            tol   = 1.e-13_rk
+            ivar  = self%chidg%data%eqnset(1)%item%prop%get_eqn_index('u')
+
+            ngq = faces(ielem,iface)%gq%nnodes_f
+
+            ! Allocate number of AD variables for data at GQ nodes. Derivative arrays are not yet allocated
+            allocate(u_gq(ngq))
+            allocate(u_ref(ngq))
+            
+            
+            !
+            ! PROCEDURE BEING TESTED
+            !
+            call interpolate_face(self%chidg%data%mesh,q,idomain,ielem,iface,ivar,u_gq,seed, NEIGHBOR)
+            
+            
+            ! Initialize reference
+            u_ref = self%fcn%value_ 
+            
+            
+            ! Test that interpolation to quadrature nodes from modes to autodiff variables 
+            ! on an element volume is producing expected results
+            @assertEqual(u_ref,u_gq(:)%x_ad_,tol)
+            
+        end associate
+        
+    end subroutine
+    
+    
+    
+    
+    
+!        
+!!> Interpolation of modes to surface quadrature nodes. Seeding neighbor element. source=NEIGHBOR. Testing fuction values. 
+!!-------------------------------------------------------------------------------------------------------------
+!@Test
+!    subroutine test__interpolate_face_chimera_AD__derivatives__idF(self)
+!        class(test_interpolate_chimera),    intent(inout)   :: self
+!        
+!        integer(ik)                 :: ielem, iface, ivar, ngq, igq, nderiv, idomain
+!        type(seed_t)                :: seed
+!        type(AD_D), allocatable     :: u_gq(:)
+!        real(rk),   allocatable     :: deriv_ref(:)
+!        real(rk)                    :: tol
+!        
+!        
+!        associate ( elems => self%chidg%data%mesh(1)%elems, faces => self%chidg%data%mesh(1)%faces, q => self%chidg%data%sdata%q)        
+!            idomain = 1     ! domain index
+!            ielem   = 14    ! given element
+!            iface   = 1     ! given face
+!
+!
+!            !
+!            ! A seed element, this is a neihgbor for this test - so all derivative arrays should be seeded to zero
+!            !
+!            seed%idom  = 1
+!            seed%ielem = 15
+!
+!
+!
+!            tol   = 1.e-13_rk
+!            ivar  = self%chidg%data%eqnset(1)%item%prop%get_eqn_index('u')
+!
+!            ngq = faces(ielem,iface)%gq%nnodes_f
+!            nderiv = faces(ielem,iface)%neqns  *  faces(ielem,iface)%nterms_s
+!
+!            ! Allocate number of AD variables for data at GQ nodes. Derivative arrays are not yet allocated
+!            allocate(u_gq(ngq))             ! AD
+!            allocate(deriv_ref(nderiv))     ! Real
+!            
+!            
+!            !
+!            ! PROCEDURE BEING TESTED
+!            !
+!            call interpolate_face(self%chidg%data%mesh,q,idomain,ielem,iface,ivar,u_gq,seed, NEIGHBOR)
+!            
+!            deriv_ref = ZERO
+!            
+!            ! Test that the derivatives for each gq variable are zero, since we seeded with a neighbor element
+!            do igq = 1,ngq
+!                @assertEqual(deriv_ref,u_gq(igq)%xp_ad_,tol)
+!            end do
+!        end associate
+!        
+!    end subroutine
+!    
+!
+!
+!
+!
+!
+!
+!
+!
+!
+!
+!
+!
+!
+!
+!
+!    
+!    
+!!> Interpolation of modes to surface quadrature nodes. Seeding current element. source=NEIGHBOR. Testing fuction values. 
+!!-------------------------------------------------------------------------------------------------------------
+!@Test
+!    subroutine test__interpolate_face_chimera_AD__values__idG(self)
+!        class(test_interpolate_chimera),    intent(inout)   :: self
+!        
+!        integer(ik)                 :: ielem, iface, ivar, ngq, idomain
+!        type(seed_t)                :: seed
+!        type(AD_D), allocatable     :: u_gq(:)
+!        real(rk),   allocatable     :: u_ref(:)
+!        real(rk)                    :: tol
+!        
+!        
+!        associate ( elems => self%chidg%data%mesh(1)%elems, faces => self%chidg%data%mesh(1)%faces, q => self%chidg%data%sdata%q )
+!            idomain = 1     ! domain index
+!            ielem   = 14    ! given element
+!            iface   = 1     ! given face
+!
+!            !
+!            ! A seed element, same as ielem - so all derivative arrays should include non-zeros
+!            !
+!            seed%idom  = 1
+!            seed%ielem = 13     ! neighbor to element 14 about face 1
+!
+!
+!
+!            tol   = 1.e-13_rk
+!            ivar  = self%chidg%data%eqnset(1)%item%prop%get_eqn_index('u')
+!
+!            ngq = faces(ielem,iface)%gq%nnodes_f
+!            
+!            ! Allocate number of AD variables for data at GQ nodes. Derivative arrays are not yet allocated
+!            allocate(u_gq(ngq))
+!            allocate(u_ref(ngq))
+!            
+!            
+!            !
+!            ! PROCEDURE BEING TESTED
+!            !
+!            call interpolate_face(self%chidg%data%mesh,q,idomain,ielem,iface,ivar,u_gq,seed, NEIGHBOR)
+!            
+!            
+!            !
+!            ! Initialize reference
+!            !
+!            u_ref = self%fcn%value_ 
+!            
+!            
+!            ! Test that interpolation to quadrature nodes from modes to autodiff variables 
+!            ! on an element volume is producing expected results
+!            @assertEqual(u_ref,u_gq(:)%x_ad_,tol)
+!            
+!        end associate
+!        
+!    end subroutine
+!    
+!    
+!    
+!    
+!    
+!!> Interpolation of modes to surface quadrature nodes. Seeding current element. source=NEIGHBOR. Testing fuction derivatives. 
+!!-------------------------------------------------------------------------------------------------------------
+!@Test
+!    subroutine test__interpolate_face_chimera_AD__derivatives__idH(self)
+!        class(test_interpolate_chimera),    intent(inout)   :: self
+!        
+!        integer(ik)                 :: ielem, iface, ivar, igq, ngq, nderiv, idomain
+!        type(seed_t)                :: seed
+!        type(AD_D), allocatable     :: u_gq(:)
+!        real(rk),   allocatable     :: deriv_ref(:)
+!        real(rk)                    :: tol
+!
+!        integer(ik)                 :: ielem_n, iface_n, idonor
+!        
+!        
+!        associate ( elems => self%chidg%data%mesh(1)%elems, faces => self%chidg%data%mesh(1)%faces, q => self%chidg%data%sdata%q)        
+!            idomain = 1     ! domain index
+!            ielem   = 14    ! given element
+!            iface   = 1     ! given face
+!            idonor  = 1
+!
+!            !
+!            ! A seed element, same as ielem - so all derivative arrays should include non-zeros
+!            !
+!            seed%idom  = 1
+!            seed%ielem = 13     ! neighbor to element 14 about face 1
+!
+!            
+!            tol   = 1.e-13_rk
+!            ivar  = self%chidg%data%eqnset(1)%item%prop%get_eqn_index('u')
+!
+!            ngq    = faces(ielem,iface)%gq%nnodes_f
+!            nderiv = faces(ielem,iface)%neqns  *  faces(ielem,iface)%nterms_s
+!
+!            ! Allocate number of AD variables for data at GQ nodes. Derivative arrays are not yet allocated
+!            allocate(u_gq(ngq))
+!            allocate(deriv_ref(nderiv))
+!            
+!            
+!            !
+!            ! PROCEDURE BEING TESTED
+!            !
+!            call interpolate_face(self%chidg%data%mesh,q,idomain,ielem,iface,ivar,u_gq,seed, NEIGHBOR)
+!              
+!            
+!            
+!            ! Test that interpolation to quadrature nodes from modes to autodiff variables 
+!            ! on an element volume is producing expected results
+!            ielem_n = compute_neighbor_element(self%chidg%data%mesh,idomain,ielem,iface,idonor)
+!            iface_n = compute_neighbor_face(   self%chidg%data%mesh,idomain,ielem,iface,idonor)
+!
+!
+!            do igq = 1,ngq
+!                deriv_ref = faces(ielem_n,iface_n)%gq%face%val(igq,:,iface_n)     !> Set expected derivatives
+!                
+!                @assertEqual(deriv_ref,u_gq(igq)%xp_ad_,tol)
+!                
+!                deriv_ref = ZERO                                            !> Reset to zero
+!            end do
+!        end associate
+!        
+!    end subroutine
+!
+!
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+end module test_interpolate_chimera_mod

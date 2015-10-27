@@ -1,5 +1,8 @@
 add_test_sources(chimera
-                test__detect_chimera_interfaces.pf
+                test__detect_chimera_faces.pf
+                test__compute_gq_donor__mod.pf
+                test__detect_chimera_donors.pf
+                test__compute_chimera_interpolators.pf
                 )
                 
 

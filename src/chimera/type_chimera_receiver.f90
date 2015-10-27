@@ -15,8 +15,6 @@ module type_chimera_receiver
         type(chimera_receiver_data_t),  allocatable :: data(:)
 
 
-!        integer(ik),            allocatable     :: map(:,:)     !< element index map.   'element index in donor domain => local chimera_receiver_t index in q(:)'
-!        type(blockvector_t)                     :: q            !< blockvector_t for holding incoming solution data from external domains
 
 
     contains

@@ -8,7 +8,7 @@ module mod_grid_operators
     use type_solverdata,    only: solverdata_t
     use type_chidg_data,    only: chidg_data_t
     use atype_function,     only: function_t
-    use mod_polynomial,     only: PolynomialVal
+    use mod_polynomial,     only: PolynomialVal, DPolynomialVal
     use mod_project,        only: project_function_xyz
     implicit none
 
@@ -107,7 +107,7 @@ contains
         real(rk)        :: polyvals(elem%nterms_c)
         integer(ik)     :: iterm, ielem
 
-        if (icoord > 3) stop "Error: mesh_point -- icoord exceeded 3 physical coordinates"
+        if (icoord > 3) call signal(FATAL,"Error: mesh_point -- icoord exceeded 3 physical coordinates")
 
         call node%set(xi,eta,zeta)
 
@@ -125,7 +125,6 @@ contains
         !
         ! Evaluate mesh point from dot product of modes and polynomial values
         !
-        !val = dot_product(elem%coords%mat(:,icoord), polyvals)
         val = dot_product(elem%coords%getvar(icoord), polyvals)
 
     end function
@@ -145,9 +144,9 @@ contains
     !!  @param[in]  zeta    Real value for zeta-coordinate
     !-----------------------------------------------------------------------------------
     function solution_point(q,ivar,xi,eta,zeta) result(val)
-        class(densevector_t), intent(inout)  :: q
-        integer(ik),        intent(in)     :: ivar
-        real(rk),           intent(in)     :: xi,eta,zeta
+        class(densevector_t),   intent(in)     :: q
+        integer(ik),            intent(in)     :: ivar
+        real(rk),               intent(in)     :: xi,eta,zeta
 
         real(rk)                   :: val
         type(point_t)              :: node
@@ -174,6 +173,70 @@ contains
         val = dot_product(q%getvar(ivar),polyvals)
 
     end function
+
+
+
+
+
+
+
+
+
+    !> Compute coordinate metric term at a given point in computational space
+    !!
+    !!  @author Nathan A. Wukie
+    !!
+    !!  @param[in]  elem        element_t containing the geometry definition and data
+    !!  @param[in]  cart_dir    Cartesian coordinate being differentiated
+    !!  @param[in]  comp_dir    Computational coordinate being differentiated with respect to
+    !!  @param[in]  xi          Computational coordinate - xi
+    !!  @param[in]  eta         Computational coordinate - eta
+    !!  @param[in]  zeta        Computational coordinate - zeta
+    !!
+    !-------------------------------------------------------------------
+    function metric_point(elem,cart_dir,comp_dir,xi,eta,zeta) result(val)
+        class(element_t),   intent(in)  :: elem
+        integer(ik),        intent(in)  :: cart_dir
+        integer(ik),        intent(in)  :: comp_dir
+        real(rk),           intent(in)  :: xi, eta, zeta
+        
+
+
+        real(rk)        :: val
+        type(point_t)   :: node
+        real(rk)        :: polyvals(elem%nterms_c)
+        integer(ik)     :: iterm, ielem
+
+        if (cart_dir > 3) call signal(FATAL,"Error: mesh_point -- card_dir exceeded 3 physical coordinates")
+        if (comp_dir > 3) call signal(FATAL,"Error: mesh_point -- comp_dir exceeded 3 physical coordinates")
+
+        call node%set(xi,eta,zeta)
+
+
+        !
+        ! Evaluate polynomial modes at node location
+        !
+        do iterm = 1,elem%nterms_c
+
+            polyvals(iterm) = dpolynomialVal(3,elem%nterms_c,iterm,node,comp_dir)
+
+        end do
+
+
+        !
+        ! Evaluate mesh point from dot product of modes and polynomial values
+        !
+        val = dot_product(elem%coords%getvar(cart_dir), polyvals)
+
+
+
+    end function
+
+
+
+
+
+
 
 
 

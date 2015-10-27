@@ -38,9 +38,10 @@ contains
         type(point_t)                          :: node
 
         self%nnodes = nnodes_face
-        !===========================================================================
+
+        !
         ! allocate quadrature storage
-        !===========================================================================
+        !
         allocate(self%nodes(nnodes_face,NFACES),self%weights(nnodes_face,NFACES))
         allocate(self%val(   nnodes_face,nterms,NFACES))
         allocate(self%ddxi(  nnodes_face,nterms,NFACES))
@@ -48,8 +49,9 @@ contains
         allocate(self%ddzeta(nnodes_face,nterms,NFACES))
 
 
-
+        !
         ! Find number of terms in 1D variable
+        !
         nterms1d = 0
         do while (nterms1d*nterms1d*nterms1d /= nterms)
             nterms1d = nterms1d + 1
@@ -57,9 +59,9 @@ contains
         if (nterms1d*nterms1d*nterms1d > nterms) stop "Error in face quadrature term count"
 
 
-        !===========================================================================
+        !
         ! Initialize quadrature node coordinates for face sets
-        !===========================================================================
+        !
         ! find number nodes in 1D polynomial
         nnodes1d = 0
         do while (nnodes1d*nnodes1d /= nnodes_face)
@@ -77,7 +79,9 @@ contains
         call gl_weights(nnodes1d,eta_weights)
         call gl_weights(nnodes1d,zeta_weights)
 
+        !
         ! xi_min face coordinates
+        !
         inode = 1
         do izeta = 1,nnodes1d
             do ieta = 1,nnodes1d
@@ -91,7 +95,10 @@ contains
             end do
         end do
 
+
+        !
         ! xi_max face coordinates
+        !
         inode = 1
         do izeta = 1,nnodes1d
             do ieta = 1,nnodes1d
@@ -105,7 +112,10 @@ contains
             end do
         end do
 
+        
+        !
         ! eta_min face coordinates
+        !
         inode = 1
         do izeta = 1,nnodes1d
             do ixi = 1,nnodes1d
@@ -119,7 +129,10 @@ contains
             end do
         end do
 
+        
+        !
         ! eta_max face coordinates
+        !
         inode = 1
         do izeta = 1,nnodes1d
             do ixi = 1,nnodes1d
@@ -133,7 +146,10 @@ contains
             end do
         end do
 
+
+        !
         ! zeta_min face coordinates
+        !
         inode = 1
         do ieta = 1,nnodes1d
             do ixi = 1,nnodes1d
@@ -147,7 +163,10 @@ contains
             end do
         end do
 
+
+        !
         ! zeta_max face coordinates
+        !
         inode = 1
         do ieta = 1,nnodes1d
             do ixi = 1,nnodes1d

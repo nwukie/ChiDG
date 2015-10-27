@@ -23,6 +23,7 @@ module type_rvector
 
         !< Data modifiers
         procedure, public   :: push_back
+        procedure, public   :: clear
         procedure, private  :: increase_capacity
 
 
@@ -112,6 +113,33 @@ contains
 
 
     end subroutine push_back
+
+
+
+
+
+
+
+
+
+    !> Clear container contents
+    !!
+    !!  @author Nathan A. Wukie
+    !!
+    !!
+    !------------------------------------------------------------------------------------------
+    subroutine clear(self)
+        class(rvector_t),   intent(inout)   :: self
+
+
+        self%size_     = 0
+        self%capacity_ = 0
+
+        deallocate(self%data_)
+
+    end subroutine
+
+
 
 
 

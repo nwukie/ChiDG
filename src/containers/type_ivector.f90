@@ -17,18 +17,21 @@ module type_ivector
         integer(ik),   allocatable :: data_(:)
 
     contains
-        procedure, public   :: size
-        procedure, public   :: capacity
+        procedure, public   :: size     ! return the number of stored elements
+        procedure, public   :: capacity ! return the current allocated capacity
+        procedure, public   :: loc      ! return the location of a stored value
 
 
         !< Data modifiers
         procedure, public   :: push_back
+        procedure, public   :: clear
         procedure, private  :: increase_capacity
 
 
         !< Data accessors
         procedure, public   :: at       !< return data from element ivector%at(ielem)
         procedure, public   :: data     !< return full data vector
+
     end type ivector_t
 
 
@@ -75,6 +78,40 @@ contains
 
 
 
+
+
+
+
+
+
+
+    !> This function returns the location of a given value. If not found, returns 0
+    !!
+    !!  @author Nathan A. Wukie
+    !!
+    !--------------------------------------------------------------------------
+    function loc(self,val) result(res)
+        class(ivector_t),   intent(in)  :: self
+        integer(ik),        intent(in)  :: val
+
+        integer(ik) :: res, ival
+
+        res = 0
+        do ival = 1,self%size()
+
+            if ( self%at(ival) == val ) then
+                res = ival
+                exit
+            end if
+
+        end do
+
+    end function
+
+
+
+
+
     !> Store element at end of vector
     !!
     !!  @author Nathan A. Wukie
@@ -112,6 +149,31 @@ contains
 
 
     end subroutine push_back
+
+
+
+
+
+
+
+
+
+    !> Clear container contents
+    !!
+    !!  @author Nathan A. Wukie
+    !!
+    !!
+    !-------------------------------------------------------------------------
+    subroutine clear(self)
+        class(ivector_t),   intent(inout)   :: self
+
+        self%size_     = 0
+        self%capacity_ = 0
+
+        deallocate(self%data_)
+
+    end subroutine clear
+
 
 
 

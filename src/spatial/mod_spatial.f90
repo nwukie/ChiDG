@@ -96,12 +96,9 @@ contains
                                 !
                                 interior_face = ( mesh%faces(ielem,iface)%ftype == 0 )
                                 chimera_face  = ( mesh%faces(ielem,iface)%ftype == 2 )
-                                !compute_face_interior = ( interior_face .and. (iblk == iface .or. iblk == DIAG) )
-                                !compute_face_chimera  = ( chimera_face  .and. (iblk == 0     .or. iblk == DIAG) )
 
                                 compute_face = (interior_face .or. chimera_face) .and. ( (iblk == iface) .or. (iblk == DIAG) )
 
-                                !if ( compute_face_interior .or. compute_face_chimera ) then
                                 if ( compute_face ) then
 
 

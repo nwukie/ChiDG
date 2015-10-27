@@ -34,7 +34,6 @@ module type_element
         !---------------------------------------------------------
         type(point_t), allocatable  :: quad_pts(:)          !< Cartesian coordinates of discrete quadrature points
         type(point_t), allocatable  :: elem_pts(:)          !< Cartesian coordinates of discrete points defining element
-        !type(expansion_t)           :: coords               !< Modal representation of cartesian coordinates (nterms_var,(x,y,z))
         type(densevector_t)         :: coords               !< Modal representation of cartesian coordinates (nterms_var,(x,y,z))
 
         !> Element metric terms
@@ -343,13 +342,19 @@ contains
     subroutine compute_element_matrices(self)
         class(element_t),   intent(inout)   :: self
 
-        !> Call to compute matrices of cartesian gradients at each quadrature node
+        !
+        ! Call to compute matrices of cartesian gradients at each quadrature node
+        !
         call self%compute_gradients_cartesian()
 
-        !> Call to compute mass matrix
+        !
+        ! Call to compute mass matrix
+        !
         call self%compute_mass_matrix()
 
-        !> Call to compute cartesian coordinates at each quadrature node
+        !
+        ! Call to compute cartesian coordinates at each quadrature node
+        !
         call self%compute_quadrature_coords()
     end subroutine
 

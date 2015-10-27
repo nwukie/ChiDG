@@ -1,0 +1,270 @@
+module test__compute_gq_donor__mod
+    use pfunit_mod
+    use mod_kinds,              only: rk, ik
+    use mod_constants,          only: XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX, &
+                                      INTERIOR, BOUNDARY, CHIMERA
+
+    use type_chidg,             only: chidg_t
+    use type_meshdata,          only: meshdata_t
+    use type_point,             only: point_t
+    use type_element_location,  only: element_location_t
+    use type_face_location,     only: face_location_t
+
+    use mod_hdfio,              only: read_grid_hdf
+    use mod_testutils,          only: meshgen
+    use mod_chimera
+    implicit none
+
+    public  :: test__compute_gq_donor
+
+
+
+
+    @TestParameter
+    type, extends(AbstractTestParameter) :: node_donor_coord
+        integer(ik)                 :: testNumber   ! Test index
+        type(point_t)               :: gqnode       ! input
+        type(element_location_t)    :: donor        ! expected output
+        type(point_t)               :: donor_coord  ! expected output
+    contains
+        procedure   :: toString
+    end type 
+
+
+
+
+
+
+
+
+    @TestCase(testParameters={getParameters()}, constructor=newTest)
+    type, extends(ParameterizedTestCase) :: test__compute_gq_donor
+        type(chidg_t)   :: chidg
+
+        type(point_t)            :: gqnode
+        type(element_location_t) :: donor
+        type(point_t)            :: donor_coord
+    contains
+        procedure   :: setUp
+        procedure   :: tearDown
+    end type test__compute_gq_donor
+
+
+
+
+
+
+
+
+
+
+
+
+
+contains
+
+
+
+    subroutine setUp(this)
+        class(test__compute_gq_donor),  intent(inout)   :: this
+
+
+        type(meshdata_t)                :: meshdata
+        character(len=100)              :: filename = 'D2_E8_M1.h5'
+        integer(ik)                     :: nterms_s, nterms_c
+
+
+
+        nterms_c = 8
+        nterms_s = 8
+
+
+        !
+        ! Initialize ChiDG environment
+        !
+        call this%chidg%init('env')
+
+
+
+        !
+        ! Read 2-Domain overlapping grid
+        !
+        call meshgen('2x2x2',meshdata%points)
+
+
+
+        !
+        ! Add domain to ChiDG
+        !
+        call this%chidg%data%add_domain('D_01',meshdata%points,nterms_c,'linearadvection',nterms_s)
+
+
+    end subroutine
+
+
+
+    subroutine tearDown(this)
+        class(test__compute_gq_donor),  intent(inout)   :: this
+
+    end subroutine
+
+
+
+
+
+    !
+    ! Parameter constructors
+    !
+    function newTest(test_parameter) result(test)
+        type(node_donor_coord), intent(in)  :: test_parameter
+
+        type(test__compute_gq_donor)    :: test
+
+        test%gqnode      = test_parameter%gqnode
+        test%donor       = test_parameter%donor
+        test%donor_coord = test_parameter%donor_coord
+
+    end function newTest
+
+
+
+    !
+    ! Parameter initialization
+    !
+    function getParameters() result(params)
+        type(node_donor_coord), allocatable :: params(:)
+
+        integer(ik), parameter      :: ntests = 5
+        type(point_t)               :: gqnode(ntests)
+        type(element_location_t)    :: donor(ntests)
+        type(point_t)               :: donor_coords(ntests)
+
+
+        ! Test 1
+        call gqnode(1)%set(0.25_rk,0.25_rk,0.25_rk)
+        donor(1)%idomain  = 1
+        donor(1)%ielement = 1
+        call donor_coords(1)%set(-0.5_rk,-0.5_rk,-0.5_rk)
+
+        ! Test 2
+        call gqnode(2)%set(1.25_rk,0.25_rk,0.25_rk)
+        donor(2)%idomain  = 1
+        donor(2)%ielement = 2
+        call donor_coords(2)%set(-0.5_rk,-0.5_rk,-0.5_rk)
+
+        ! Test 3
+        call gqnode(3)%set(1.25_rk,1.25_rk,1.25_rk)
+        donor(3)%idomain  = 1
+        donor(3)%ielement = 8
+        call donor_coords(3)%set(-0.5_rk,-0.5_rk,-0.5_rk)
+
+        ! Test 4
+        call gqnode(4)%set(0.25_rk,0.25_rk,1.25_rk)
+        donor(4)%idomain  = 1
+        donor(4)%ielement = 5
+        call donor_coords(4)%set(-0.5_rk,-0.5_rk,-0.5_rk)
+
+        ! Test 5
+        call gqnode(5)%set(0.75_rk, 0.75_rk, 0.75_rk)
+        donor(5)%idomain  = 1
+        donor(5)%ielement = 1
+        call donor_coords(5)%set(0.5_rk,0.5_rk,0.5_rk)
+
+
+
+
+
+        ! node_donor_coord
+        params = [ node_donor_coord(1,gqnode(1),donor(1),donor_coords(1)), &
+                   node_donor_coord(2,gqnode(2),donor(2),donor_coords(2)), &
+                   node_donor_coord(3,gqnode(3),donor(3),donor_coords(3)), &
+                   node_donor_coord(4,gqnode(4),donor(4),donor_coords(4)), &
+                   node_donor_coord(5,gqnode(5),donor(5),donor_coords(5))  &
+                   ]
+
+
+
+    end function getParameters
+
+
+
+
+    !
+    ! Reporting in the case of a failed test
+    !
+    function toString(this) result(string)
+        class(node_donor_coord),    intent(in)  :: this
+        character(:),   allocatable :: string
+        character(len=200) :: buffer
+
+        write(buffer,'( "(testNumber)=", I2 )') this%testNumber
+
+        string = trim(buffer)
+    end function
+
+
+
+
+
+    !
+    ! Tests
+    !
+
+
+
+    @Test
+    subroutine test__compute_gq_donor__point(self)
+        class(test__compute_gq_donor),  intent(inout)   :: self
+
+        type(point_t)                   :: gq_node, donor_coord
+        type(element_location_t)        :: donor
+        type(face_location_t)           :: receiver
+
+
+        receiver%idomain  = 0
+        receiver%ielement = 0
+        receiver%iface    = 0
+
+        !call gq_node%set(0.25_rk,0.25_rk,0.25_rk)
+
+        !
+        ! Detect Chimera faces. THIS IS BEING TESTED
+        !
+        call compute_gq_donor(self%chidg%data%mesh,self%gqnode,receiver,donor,donor_coord)
+
+
+        !
+        ! Check that the correct donor element was found
+        !
+        @assertEqual(self%donor%idomain, donor%idomain)
+        @assertEqual(self%donor%ielement,donor%ielement)
+
+
+        !
+        ! Check that the local coordinates in the donor element are correct
+        !
+        @assertEqual(self%donor_coord%c1_, donor_coord%c1_)
+        @assertEqual(self%donor_coord%c2_, donor_coord%c2_)
+        @assertEqual(self%donor_coord%c3_, donor_coord%c3_)
+
+
+    end subroutine
+
+
+
+
+
+
+end module test__compute_gq_donor__mod
+
+
+
+
+
+
+
+
+
+
+
+

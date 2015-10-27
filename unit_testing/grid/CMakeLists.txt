@@ -9,6 +9,7 @@ add_test_sources(grid
                 test_chidgdata__add_domain.pf
                 test__grid_operators__mod.pf
                 test_interpolate_mod.pf
+                test_interpolate_chimera_mod.pf
                 )
                 
 add_test_target(grid unit ${grid_sources})

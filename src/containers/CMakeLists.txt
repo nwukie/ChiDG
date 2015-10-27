@@ -9,9 +9,12 @@ add_lib_sources(
                 type_rvector.f90
                 type_ivector.f90
                 type_mvector.f90
+                type_pvector.f90
                 type_chidgMatrix.f90
                 type_chidgVector.f90
                 operator_chidg_dot.f90
                 operator_chidg_mv.f90
                 type_solverdata.f90
+                type_element_location.f90
+                type_face_location.f90
                 )

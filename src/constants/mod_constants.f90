@@ -52,6 +52,10 @@ module mod_constants
     !
     ! Spatial direction
     !
+    integer(ik), parameter :: X_DIR     = 1
+    integer(ik), parameter :: y_DIR     = 2
+    integer(ik), parameter :: Z_DIR     = 3
+
     integer(ik), parameter :: XI_DIR    = 1
     integer(ik), parameter :: ETA_DIR   = 2
     integer(ik), parameter :: ZETA_DIR  = 3

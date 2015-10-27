@@ -157,3 +157,42 @@ end subroutine
 
 
 
+
+@Test
+subroutine test_ivector__loc()
+    use pfunit_mod
+    use mod_kinds,      only: rk, ik
+    use type_ivector,   only: ivector_t
+    implicit none
+
+    type(ivector_t)             :: vec
+    integer(ik)                 :: i, loc
+    integer(ik), allocatable    :: res_vec(:)
+
+    !
+    ! Store values
+    !
+    call vec%push_back(1_ik)
+    call vec%push_back(2_ik)
+    call vec%push_back(3_ik)
+    call vec%push_back(4_ik)
+    call vec%push_back(5_ik)
+    call vec%push_back(6_ik)
+
+
+
+    !
+    ! Get array of stored values
+    !
+    loc = vec%loc(5_ik)
+    @assertEqual(5,loc)
+
+
+
+    loc = vec%loc(10_ik)
+    @assertEqual(0,loc)
+
+
+end subroutine
+
+

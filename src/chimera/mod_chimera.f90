@@ -282,6 +282,7 @@ contains
                 !
                 ! Allocate chimera donor coordinate and quadrature index arrays. One list for each donor
                 !
+                mesh(idom)%chimera%recv%data(ichimera_face)%ndonors = ndonors
                 allocate( mesh(idom)%chimera%recv%data(ichimera_face)%donor_coords(ndonors), &
                           mesh(idom)%chimera%recv%data(ichimera_face)%donor_gq_indices(ndonors), stat=ierr)
                 if (ierr /= 0) call AllocationError
@@ -660,6 +661,12 @@ contains
                             interpolator(ipt,iterm) = polynomialVal(3,nterms,iterm,node)
                         end do ! ipt
                     end do ! iterm
+
+
+                    !
+                    ! Store interpolator
+                    !
+                    call mesh(idom)%chimera%recv%data(iChiID)%donor_interpolator%push_back(interpolator)
 
 
                 end do  ! idonor

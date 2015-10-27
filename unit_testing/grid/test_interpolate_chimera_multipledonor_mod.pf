@@ -1,4 +1,4 @@
-module test_interpolate_chimera_mod
+module test_interpolate_chimera_multipledonor_mod
     use pfunit_mod
     use type_chidg,         only: chidg_t
     use type_point,         only: point_t
@@ -24,24 +24,24 @@ module test_interpolate_chimera_mod
     use fcn_constant,       only: constant_f
     implicit none
 
-    public  :: test_interpolate_chimera
+    public  :: test_interpolate_chimera_multipledonor
 
 @TestCase
-    type, extends(TestCase) ::  test_interpolate_chimera
+    type, extends(TestCase) ::  test_interpolate_chimera_multipledonor
         type(chidg_t)                   :: chidg
         type(constant_f)                :: fcn
 
     contains
         procedure   ::  setUp
         procedure   ::  tearDown
-    end type test_interpolate_chimera
+    end type test_interpolate_chimera_multipledonor
 
 
 contains
     !> NOTE: make sure to use 'this' instead of 'self' since these are over-writting a derived type 
     !! procedure. The argument names have to match
     subroutine setUp(this)
-        class(test_interpolate_chimera),    intent(inout)   :: this
+        class(test_interpolate_chimera_multipledonor),    intent(inout)   :: this
 
         integer(ik)                     :: nterms_s, ivar, idom
         type(meshdata_t), allocatable   :: meshdata(:) 
@@ -55,7 +55,7 @@ contains
         !
         ! Read D2_E8_M1. Two domains, 2x2x2 elements in each domain, linear mapping
         !
-        call read_grid_hdf('D2_E8_M1.h5',meshdata)
+        call read_grid_hdf('D2_E8_M1_overlapping_multipledonor.h5',meshdata)
 
         !
         ! Add domain to ChiDG
@@ -115,7 +115,7 @@ contains
     end subroutine
     
     subroutine tearDown(this)
-        class(test_interpolate_chimera),    intent(inout)   :: this
+        class(test_interpolate_chimera_multipledonor),    intent(inout)   :: this
         
     end subroutine
 
@@ -134,8 +134,8 @@ contains
 !> Interpolation of modes to surface quadrature nodes. Seeding neighbor element. source=NEIGHBOR. Testing fuction values. 
 !-------------------------------------------------------------------------------------------------------------
 @Test
-    subroutine test__interpolate_face_chimera_AD__values__idE(self)
-        class(test_interpolate_chimera),    intent(inout)   :: self
+    subroutine test__interpolate_face_chimera_AD_MD__values__idE(self)
+        class(test_interpolate_chimera_multipledonor),    intent(inout)   :: self
         
         integer(ik)                 :: ielem, iface, ivar, ngq, idomain
         type(seed_t)                :: seed
@@ -192,8 +192,8 @@ contains
 !> Interpolation of modes to surface quadrature nodes. Seeding neighbor element. source=NEIGHBOR. Testing fuction values. 
 !-------------------------------------------------------------------------------------------------------------
 @Test
-    subroutine test__interpolate_face_chimera_AD__derivatives__idF(self)
-        class(test_interpolate_chimera),    intent(inout)   :: self
+    subroutine test__interpolate_face_chimera_AD_MD__derivatives__idF(self)
+        class(test_interpolate_chimera_multipledonor),    intent(inout)   :: self
         
         integer(ik)                 :: ielem, iface, ivar, ngq, igq, nderiv, idomain
         type(seed_t)                :: seed
@@ -262,8 +262,8 @@ contains
 !> Interpolation of modes to surface quadrature nodes. Seeding current element. source=NEIGHBOR. Testing fuction values. 
 !-------------------------------------------------------------------------------------------------------------
 @Test
-    subroutine test__interpolate_face_chimera_AD__values__idG(self)
-        class(test_interpolate_chimera),    intent(inout)   :: self
+    subroutine test__interpolate_face_chimera_AD_MD__values__idG(self)
+        class(test_interpolate_chimera_multipledonor),    intent(inout)   :: self
         
         integer(ik)                 :: ielem, iface, ivar, ngq, idomain
         type(seed_t)                :: seed
@@ -322,8 +322,8 @@ contains
 !> Interpolation of modes to surface quadrature nodes. Seeding current element. source=NEIGHBOR. Testing fuction derivatives. 
 !-------------------------------------------------------------------------------------------------------------
 @Test
-    subroutine test__interpolate_face_chimera_AD__derivatives__idH(self)
-        class(test_interpolate_chimera),    intent(inout)   :: self
+    subroutine test__interpolate_face_chimera_AD_MD__derivatives__idH(self)
+        class(test_interpolate_chimera_multipledonor),    intent(inout)   :: self
         
         integer(ik)                 :: ielem, iface, ivar, igq, ngq, nderiv, idomain
         type(seed_t)                :: seed
@@ -332,7 +332,7 @@ contains
         real(rk)                    :: tol
         real(rk),   allocatable     :: mat(:,:)
 
-        integer(ik)                 :: ielem_n, iface_n, idonor, ChiID, ndonor_nodes
+        integer(ik)                 :: idonor, ChiID, ndonor_nodes, node_index
         
         
         associate ( elems => self%chidg%data%mesh(1)%elems, faces => self%chidg%data%mesh(1)%faces, q => self%chidg%data%sdata%q)        
@@ -368,23 +368,46 @@ contains
               
             
             
-            ! Test that interpolation to quadrature nodes from modes to autodiff variables 
-            ! on an element volume is producing expected results
-            ielem_n = compute_neighbor_element(self%chidg%data%mesh,idomain,ielem,iface,idonor)
-            iface_n = compute_neighbor_face(   self%chidg%data%mesh,idomain,ielem,iface,idonor)
 
 
+            !
+            ! Test derivatives from first donor
+            !
             mat = self%chidg%data%mesh(idomain)%chimera%recv%data(ChiID)%donor_interpolator%at(idonor)
             ndonor_nodes = self%chidg%data%mesh(idomain)%chimera%recv%data(ChiID)%donor_gq_indices(idonor)%size()
 
             do igq = 1,ndonor_nodes
+                node_index = self%chidg%data%mesh(idomain)%chimera%recv%data(ChiID)%donor_gq_indices(idonor)%at(igq)
 
-                deriv_ref = mat(igq,:)     !> Set expected derivatives
+                deriv_ref = mat(igq,:)     ! Set expected derivatives
                 
-                @assertEqual(deriv_ref,u_gq(igq)%xp_ad_,tol)
+                @assertEqual(deriv_ref,u_gq(node_index)%xp_ad_,tol)
                 
-                deriv_ref = ZERO                                            !> Reset to zero
+                deriv_ref = ZERO                                            ! Reset to zero
             end do
+
+
+
+
+            !
+            ! Test derivatives from second donor
+            !
+            idonor = 2
+            mat = self%chidg%data%mesh(idomain)%chimera%recv%data(ChiID)%donor_interpolator%at(idonor)
+            ndonor_nodes = self%chidg%data%mesh(idomain)%chimera%recv%data(ChiID)%donor_gq_indices(idonor)%size()
+
+            do igq = 1,ndonor_nodes
+                node_index = self%chidg%data%mesh(idomain)%chimera%recv%data(ChiID)%donor_gq_indices(idonor)%at(igq)
+
+                deriv_ref = mat(igq,:)     ! Set expected derivatives
+                deriv_ref = ZERO           ! should be zero since donor 1 was being differentiated and this is donor two
+                
+                @assertEqual(deriv_ref,u_gq(node_index)%xp_ad_,tol)
+                
+                deriv_ref = ZERO                                            ! Reset to zero
+            end do
+
+
         end associate
         
     end subroutine
@@ -416,4 +439,4 @@ contains
 
 
 
-end module test_interpolate_chimera_mod
+end module test_interpolate_chimera_multipledonor_mod

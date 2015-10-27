@@ -44,7 +44,10 @@ contains
 
 
         if ( chimera_face ) then
-            print*, 'compute_neighbor_domain: CHIMERA face'
+
+            ChiID  = mesh(idom)%faces(ielem,iface)%ChiID
+            idom_n = mesh(idom)%chimera%recv%data(ChiID)%donor_domain%at(idonor)
+
         else
             idom_n = idom
         end if
@@ -84,7 +87,6 @@ contains
         
         if ( chimera_face ) then
 
-            print*, 'compute_neighbor_element: CHIMERA face'
             ChiID   = mesh(idom)%faces(ielem,iface)%ChiID
             ielem_n = mesh(idom)%chimera%recv%data(ChiID)%donor_element%at(idonor)
 
@@ -125,7 +127,6 @@ contains
         chimera_face = ( mesh(idom)%faces(ielem,iface)%ftype == CHIMERA )
 
         if ( chimera_face ) then
-            print*, 'compute_neighbor_face: CHIMERA face'
             iface_n = CHIMERA
         else
 

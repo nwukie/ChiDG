@@ -10,6 +10,7 @@ add_test_sources(grid
                 test__grid_operators__mod.pf
                 test_interpolate_mod.pf
                 test_interpolate_chimera_mod.pf
+                test_interpolate_chimera_multipledonor_mod.pf
                 )
                 
 add_test_target(grid unit ${grid_sources})

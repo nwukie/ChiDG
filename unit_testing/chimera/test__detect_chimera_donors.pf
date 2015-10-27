@@ -32,6 +32,7 @@ subroutine test__detect_chimera_donors()
     character(len=100)              :: filename = 'D2_E8_M1.h5'
     real(rk)                        :: tol
     integer(ik)                     :: nterms_s, ndom, ChiID, ddomain, delement, ndonors, ngq
+    integer(ik)                     :: ndonors_component, ndonors_size
     integer(ik)                     :: idom, ielem, igq, idonor, iface
 
 
@@ -97,7 +98,8 @@ subroutine test__detect_chimera_donors()
     !
     idom  = 1
     ChiID = 1
-    ndonors = chidg%data%mesh(idom)%chimera%recv%data(ChiID)%donor_domain%size()
+    ndonors_component = chidg%data%mesh(idom)%chimera%recv%data(ChiID)%ndonors
+    ndonors_size      = chidg%data%mesh(idom)%chimera%recv%data(ChiID)%donor_domain%size()
     idonor   = 1
     ddomain  = 2
     delement = 1
@@ -106,7 +108,8 @@ subroutine test__detect_chimera_donors()
     iface    = chidg%data%mesh(idom)%chimera%recv%data(ChiID)%receiver_face
     ngq      = chiDG%data%mesh(idom)%faces(ielem,iface)%gq%face%nnodes
 
-    @assertEqual(1, ndonors)
+    @assertEqual(1, ndonors_component)
+    @assertEqual(1, ndonors_size)
     @assertEqual(ddomain,  chidg%data%mesh(idom)%chimera%recv%data(ChiID)%donor_domain%at(1))
     @assertEqual(delement, chidg%data%mesh(idom)%chimera%recv%data(ChiID)%donor_element%at(1))
     @assertEqual(ngq,      chidg%data%mesh(idom)%chimera%recv%data(ChiID)%donor_coords(idonor)%size())
@@ -126,7 +129,8 @@ subroutine test__detect_chimera_donors()
     !
     idom  = 1
     ChiID = 2
-    ndonors = chidg%data%mesh(idom)%chimera%recv%data(ChiID)%donor_domain%size()
+    ndonors_component = chidg%data%mesh(idom)%chimera%recv%data(ChiID)%ndonors
+    ndonors_size      = chidg%data%mesh(idom)%chimera%recv%data(ChiID)%donor_domain%size()
     idonor   = 1
     ddomain  = 2
     delement = 3
@@ -135,7 +139,8 @@ subroutine test__detect_chimera_donors()
     iface    = chidg%data%mesh(idom)%chimera%recv%data(ChiID)%receiver_face
     ngq      = chiDG%data%mesh(idom)%faces(ielem,iface)%gq%face%nnodes
 
-    @assertEqual(1, ndonors)
+    @assertEqual(1, ndonors_component)
+    @assertEqual(1, ndonors_size)
     @assertEqual(ddomain,  chidg%data%mesh(idom)%chimera%recv%data(ChiID)%donor_domain%at(1))
     @assertEqual(delement, chidg%data%mesh(idom)%chimera%recv%data(ChiID)%donor_element%at(1))
     @assertEqual(ngq,      chidg%data%mesh(idom)%chimera%recv%data(ChiID)%donor_coords(idonor)%size())
@@ -156,7 +161,8 @@ subroutine test__detect_chimera_donors()
     !
     idom  = 2
     ChiID = 1
-    ndonors = chidg%data%mesh(idom)%chimera%recv%data(ChiID)%donor_domain%size()
+    ndonors_component = chidg%data%mesh(idom)%chimera%recv%data(ChiID)%ndonors
+    ndonors_size      = chidg%data%mesh(idom)%chimera%recv%data(ChiID)%donor_domain%size()
     idonor   = 1
     ddomain  = 1
     delement = 2
@@ -165,7 +171,8 @@ subroutine test__detect_chimera_donors()
     iface    = chidg%data%mesh(idom)%chimera%recv%data(ChiID)%receiver_face
     ngq      = chiDG%data%mesh(idom)%faces(ielem,iface)%gq%face%nnodes
 
-    @assertEqual(1, ndonors)
+    @assertEqual(1, ndonors_component)
+    @assertEqual(1, ndonors_size)
     @assertEqual(ddomain,  chidg%data%mesh(idom)%chimera%recv%data(ChiID)%donor_domain%at(1))
     @assertEqual(delement, chidg%data%mesh(idom)%chimera%recv%data(ChiID)%donor_element%at(1))
     @assertEqual(ngq,      chidg%data%mesh(idom)%chimera%recv%data(ChiID)%donor_coords(idonor)%size())
@@ -186,7 +193,8 @@ subroutine test__detect_chimera_donors()
     !
     idom  = 2
     ChiID = 2
-    ndonors = chidg%data%mesh(idom)%chimera%recv%data(ChiID)%donor_domain%size()
+    ndonors_component = chidg%data%mesh(idom)%chimera%recv%data(ChiID)%ndonors
+    ndonors_size      = chidg%data%mesh(idom)%chimera%recv%data(ChiID)%donor_domain%size()
     idonor   = 1
     ddomain  = 1
     delement = 4
@@ -195,7 +203,8 @@ subroutine test__detect_chimera_donors()
     iface    = chidg%data%mesh(idom)%chimera%recv%data(ChiID)%receiver_face
     ngq      = chiDG%data%mesh(idom)%faces(ielem,iface)%gq%face%nnodes
 
-    @assertEqual(1, ndonors)
+    @assertEqual(1, ndonors_component)
+    @assertEqual(1, ndonors_size)
     @assertEqual(ddomain,  chidg%data%mesh(idom)%chimera%recv%data(ChiID)%donor_domain%at(1))
     @assertEqual(delement, chidg%data%mesh(idom)%chimera%recv%data(ChiID)%donor_element%at(1))
     @assertEqual(ngq,      chidg%data%mesh(idom)%chimera%recv%data(ChiID)%donor_coords(idonor)%size())

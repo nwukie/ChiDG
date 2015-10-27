@@ -223,6 +223,7 @@ contains
                 ChiID   = mesh(idom)%faces(ielem,iface)%ChiID
                 ndonors = mesh(idom)%chimera%recv%data(ChiID)%ndonors
 
+
             else
                 call signal(FATAL,"interpolate_face: invalid value for 'face%ftype'")
             end if
@@ -379,14 +380,41 @@ contains
                     qdiff(iterm)%xp_ad_(set_deriv) = 1.0_rk
                 end do
 
+
+
+
                 !
                 ! Interpolate solution to GQ nodes via matrix-vector multiplication
                 !
                 if ( conforming_interpolation ) then
                     var_gq = matmul(interpolator,  qdiff)
                 elseif ( chimera_interpolation ) then
-                    var_gq_chimera = matmul(interpolator, qdiff)
+
+                    !
+                    ! Allocate var_gq_chimera size to conform with interpolator
+                    !
+                    if (allocated(var_gq_chimera)) deallocate(var_gq_chimera)
+                    allocate(var_gq_chimera(size(interpolator,1)))
+
+
+                    !
+                    ! Allocate the derivative array for each var_gq_chimera element
+                    !
+                    do igq = 1,size(var_gq_chimera)
+                        allocate(var_gq_chimera(igq)%xp_ad_(nderiv))
+                    end do
+
+
+                    !
+                    ! Perform interpolation
+                    !
+                    var_gq_chimera = matmul(interpolator,  qdiff)
+
+                    !
+                    ! Scatter chimera nodes to appropriate location in var_gq
+                    !
                     var_gq = unpack(var_gq_chimera,mask,var_gq)
+
                 else
                     call signal(FATAL,"interpolate_face: face interpolation type error")
                 end if
@@ -401,8 +429,32 @@ contains
                 if ( conforming_interpolation ) then
                     var_gq = matmul(interpolator,  q%dom(idom_interp)%lvecs(ielem_interp)%getvar(ivar))
                 elseif ( chimera_interpolation ) then
+
+                    !
+                    ! Allocate var_gq_chimera size to conform with interpolator
+                    !
+                    if (allocated(var_gq_chimera)) deallocate(var_gq_chimera)
+                    allocate(var_gq_chimera(size(interpolator,1)))
+
+
+                    !
+                    ! Allocate the derivative array for each var_gq_chimera element
+                    !
+                    do igq = 1,size(var_gq_chimera)
+                        allocate(var_gq_chimera(igq)%xp_ad_(nderiv))
+                    end do
+
+
+                    !
+                    ! Perform interpolation
+                    !
                     var_gq_chimera = matmul(interpolator,  q%dom(idom_interp)%lvecs(ielem_interp)%getvar(ivar))
+
+                    !
+                    ! Scatter chimera nodes to appropriate location in var_gq
+                    !
                     var_gq = unpack(var_gq_chimera,mask,var_gq)
+
                 else
                     call signal(FATAL,"interpolate_face: face interpolation type error")
                 end if

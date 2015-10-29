@@ -85,6 +85,7 @@ contains
         logical                     :: more_donors
         logical                     :: donor_already_called
         logical                     :: contains_chimera_face
+        logical                     :: init_chimera = .false.
 
 
         !
@@ -93,18 +94,23 @@ contains
         select case (trim(mtype))
             case ('full','Full','FULL')
                 blocks = [XI_MIN,XI_MAX,ETA_MIN,ETA_MAX,ZETA_MIN,ZETA_MAX,DIAG]
+                init_chimera = .true.
 
             case ('L','l','Lower','lower')
                 blocks = [XI_MIN,ETA_MIN,ZETA_MIN]
+                init_chimera = .false.
 
             case ('U','u','Upper','upper')
                 blocks = [XI_MAX,ETA_MAX,ZETA_MAX]
+                init_chimera = .false.
 
             case ('LD','ld','LowerDiagonal','lowerdiagonal')
                 blocks = [XI_MIN,ETA_MIN,ZETA_MIN,DIAG]
+                init_chimera = .false.
                 
             case ('UD','ud','UpperDiagonal','upperdiagonal')
                 blocks = [XI_MAX,ETA_MAX,ZETA_MAX,DIAG]
+                init_chimera = .false.
 
             case default
                 call signal(FATAL,'blockmatrix%init: unrecognized matrix type')
@@ -199,10 +205,12 @@ contains
         !
         ! Allocate Chimera blocks
         !
-        if (maxdonors > 0) then
-            !allocate(self%chiblks(nchimera_elements, maxdonors), stat=ierr)
-            allocate(self%chiblks(nelem, maxdonors), stat=ierr)
-            if (ierr /= 0) call AllocationError
+        if (init_chimera) then
+            if (maxdonors > 0) then
+                !allocate(self%chiblks(nchimera_elements, maxdonors), stat=ierr)
+                allocate(self%chiblks(nelem, maxdonors), stat=ierr)
+                if (ierr /= 0) call AllocationError
+            end if
         end if
 
 
@@ -254,65 +262,68 @@ contains
             !
             ! Call initialization for Chimera blocks
             !
-            do iface = 1,NFACES
-
-                !
-                ! If facetype is CHIMERA
-                !
-                chimera_face = ( mesh%faces(ielem,iface)%ftype == CHIMERA )
-                if (chimera_face) then
-                    !
-                    ! Get ChiID and number of donor elements
-                    !
-                    ChiID = mesh%faces(ielem,iface)%ChiID
-                    ndonors = mesh%chimera%recv%data(ChiID)%ndonors
+            if (init_chimera) then
+                do iface = 1,NFACES
 
                     !
-                    ! Call block initialization for each Chimera donor
+                    ! If facetype is CHIMERA
                     !
-                    do idonor = 1,ndonors
-                        neqns    = mesh%chimera%recv%data(ChiID)%donor_neqns%at(idonor)
-                        nterms_s = mesh%chimera%recv%data(ChiID)%donor_nterms_s%at(idonor)
-                        dparent  = mesh%chimera%recv%data(ChiID)%donor_domain%at(idonor)
-                        eparent  = mesh%chimera%recv%data(ChiID)%donor_element%at(idonor)
+                    chimera_face = ( mesh%faces(ielem,iface)%ftype == CHIMERA )
+                    if (chimera_face) then
+                        !
+                        ! Get ChiID and number of donor elements
+                        !
+                        ChiID = mesh%faces(ielem,iface)%ChiID
+                        ndonors = mesh%chimera%recv%data(ChiID)%ndonors
 
-                        size1d = neqns * nterms_s
+                        !
+                        ! Call block initialization for each Chimera donor
+                        !
+                        do idonor = 1,ndonors
+                            neqns    = mesh%chimera%recv%data(ChiID)%donor_neqns%at(idonor)
+                            nterms_s = mesh%chimera%recv%data(ChiID)%donor_nterms_s%at(idonor)
+                            dparent  = mesh%chimera%recv%data(ChiID)%donor_domain%at(idonor)
+                            eparent  = mesh%chimera%recv%data(ChiID)%donor_element%at(idonor)
 
-                        !
-                        ! Check if block initialization was already called for current donor
-                        !
-                        do iblk = 1,maxdonors
-                            donor_already_called = ( dparent == self%chiblks(ielem,iblk)%dparent() .and. &
-                                                     eparent == self%chiblks(ielem,iblk)%eparent() )
-                            if (donor_already_called) exit
-                        end do
+                            size1d = neqns * nterms_s
 
-                    
-                        !
-                        ! If a block for the donor element hasn't yet been initialized, call initialization procedure
-                        !
-                        if (.not. donor_already_called) then
                             !
-                            ! Find next open block to initialize for the current element
+                            ! Check if block initialization was already called for current donor
                             !
                             do iblk = 1,maxdonors
-                                if (.not. allocated(self%chiblks(ielem,iblk)%mat) ) then
-                                    iopen = iblk
-                                    exit
-                                end if
+                                donor_already_called = ( dparent == self%chiblks(ielem,iblk)%dparent() .and. &
+                                                         eparent == self%chiblks(ielem,iblk)%eparent() )
+                                if (donor_already_called) exit
                             end do
 
+                        
                             !
-                            ! Call block initialization
+                            ! If a block for the donor element hasn't yet been initialized, call initialization procedure
                             !
-                            call self%chiblks(ielem,iopen)%init(size1d,dparent,eparent)
-                        end if
+                            if (.not. donor_already_called) then
+                                !
+                                ! Find next open block to initialize for the current element
+                                !
+                                do iblk = 1,maxdonors
+                                    if (.not. allocated(self%chiblks(ielem,iblk)%mat) ) then
+                                        iopen = iblk
+                                        exit
+                                    end if
+                                end do
 
-                    end do ! idonor
+                                !
+                                ! Call block initialization
+                                !
+                                call self%chiblks(ielem,iopen)%init(size1d,dparent,eparent)
+                            end if
 
-                end if
+                        end do ! idonor
 
-            end do ! iface
+                    end if
+
+                end do ! iface
+
+            end if  ! init_chimera
 
 
 

@@ -1,4 +1,4 @@
-module test__compute_gq_donor__mod
+module test__compute_gq_donor_mod
     use pfunit_mod
     use mod_kinds,              only: rk, ik
     use mod_constants,          only: XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX, &
@@ -15,7 +15,7 @@ module test__compute_gq_donor__mod
     use mod_chimera
     implicit none
 
-    public  :: test__compute_gq_donor
+    public  :: test_compute_gq_donor
 
 
 
@@ -28,7 +28,7 @@ module test__compute_gq_donor__mod
         type(point_t)               :: donor_coord  ! expected output
     contains
         procedure   :: toString
-    end type 
+    end type node_donor_coord
 
 
 
@@ -38,7 +38,7 @@ module test__compute_gq_donor__mod
 
 
     @TestCase(testParameters={getParameters()}, constructor=newTest)
-    type, extends(ParameterizedTestCase) :: test__compute_gq_donor
+    type, extends(ParameterizedTestCase) :: test_compute_gq_donor
         type(chidg_t)   :: chidg
 
         type(point_t)            :: gqnode
@@ -47,7 +47,7 @@ module test__compute_gq_donor__mod
     contains
         procedure   :: setUp
         procedure   :: tearDown
-    end type test__compute_gq_donor
+    end type test_compute_gq_donor
 
 
 
@@ -66,13 +66,12 @@ contains
 
 
     subroutine setUp(this)
-        class(test__compute_gq_donor),  intent(inout)   :: this
+        class(test_compute_gq_donor),  intent(inout)   :: this
 
 
         type(meshdata_t)                :: meshdata
         character(len=100)              :: filename = 'D2_E8_M1.h5'
         integer(ik)                     :: nterms_s, nterms_c
-
 
 
         nterms_c = 8
@@ -104,7 +103,7 @@ contains
 
 
     subroutine tearDown(this)
-        class(test__compute_gq_donor),  intent(inout)   :: this
+        class(test_compute_gq_donor),  intent(inout)   :: this
 
     end subroutine
 
@@ -115,14 +114,14 @@ contains
     !
     ! Parameter constructors
     !
-    function newTest(test_parameter) result(test)
-        type(node_donor_coord), intent(in)  :: test_parameter
+    function newTest(testParameter) result(test)
+        type(node_donor_coord), intent(in)  :: testParameter
 
-        type(test__compute_gq_donor)    :: test
+        type(test_compute_gq_donor)    :: test
 
-        test%gqnode      = test_parameter%gqnode
-        test%donor       = test_parameter%donor
-        test%donor_coord = test_parameter%donor_coord
+        test%gqnode      = testParameter%gqnode
+        test%donor       = testParameter%donor
+        test%donor_coord = testParameter%donor_coord
 
     end function newTest
 
@@ -200,21 +199,16 @@ contains
         write(buffer,'( "(testNumber)=", I2 )') this%testNumber
 
         string = trim(buffer)
-    end function
+    end function toString
 
 
 
-
-
-    !
-    ! Tests
-    !
 
 
 
     @Test
     subroutine test__compute_gq_donor__point(self)
-        class(test__compute_gq_donor),  intent(inout)   :: self
+        class(test_compute_gq_donor),  intent(inout)   :: self
 
         type(point_t)                   :: gq_node, donor_coord
         type(element_location_t)        :: donor
@@ -225,7 +219,6 @@ contains
         receiver%ielement = 0
         receiver%iface    = 0
 
-        !call gq_node%set(0.25_rk,0.25_rk,0.25_rk)
 
         !
         ! Detect Chimera faces. THIS IS BEING TESTED
@@ -255,7 +248,7 @@ contains
 
 
 
-end module test__compute_gq_donor__mod
+end module test__compute_gq_donor_mod
 
 
 

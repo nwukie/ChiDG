@@ -1,11 +1,11 @@
 module quasi_newton
     use mod_kinds,              only: rk,ik
     use mod_constants,          only: ZERO, ONE, TWO, DIAG
-    use atype_time_scheme,      only: time_scheme_t
-    use type_domain,            only: domain_t
+    use type_timescheme,        only: timescheme_t
+    use type_chidg_data,        only: chidg_data_t
     use atype_matrixsolver,     only: matrixsolver_t
     use type_preconditioner,    only: preconditioner_t
-    use type_blockvector
+    use type_chidgVector
 
     use mod_spatial,            only: update_space
 
@@ -23,7 +23,7 @@ module quasi_newton
     !!  @author Nathan A. Wukie
     !!
     !------------------------------------------------------------
-    type, extends(time_scheme_t), public :: quasi_newton_t
+    type, extends(timescheme_t), public :: quasi_newton_t
 
 
 
@@ -56,26 +56,26 @@ contains
     !!
     !!
     !-------------------------------------------------------------------------------------------------
-    subroutine solve(self,domain,matrixsolver,preconditioner)
+    subroutine solve(self,data,matrixsolver,preconditioner)
         class(quasi_newton_t),                  intent(inout)   :: self
-        type(domain_t),                         intent(inout)   :: domain
+        type(chidg_data_t),                     intent(inout)   :: data
         class(matrixsolver_t),      optional,   intent(inout)   :: matrixsolver
         class(preconditioner_t),    optional,   intent(inout)   :: preconditioner
 
         character(100)          :: filename
-        integer(ik)             :: itime, nsteps, ielem, wcount, iblk, iindex, ninner, iinner, ieqn
+        integer(ik)             :: itime, nsteps, ielem, wcount, iblk, iindex, niter, ieqn, idom
         integer(ik)             :: rstart, rend, cstart, cend, nterms
-        real(rk)                :: rnorm0, rnorm, dtau, amp, cfl, cfl0, cfln, entropy_error, timing
+        real(rk)                :: dtau, amp, cfl, cfln, entropy_error, timing
+        real(rk)                :: rnorm0, rnorm, resid
         real(rk), allocatable   :: vals(:)
-        type(blockvector_t)     :: b, qn, qold, qnew, dqdtau
+        type(chidgVector_t)     :: b, qn, qold, qnew, dqdtau
       
 
 
 
 
         wcount = 1
-        ninner = 10
-        associate ( q => domain%sdata%q, dq => domain%sdata%dq, rhs => domain%sdata%rhs, lin => domain%sdata%lin, dt => self%dt)
+        associate ( q => data%sdata%q, dq => data%sdata%dq, rhs => data%sdata%rhs, lhs => data%sdata%lhs, dt => self%dt)
 
             print*, 'entering time'
             !
@@ -92,16 +92,16 @@ contains
             !
             ! NONLINEAR CONVERGENCE INNER LOOP
             !
-            rnorm  = ONE    ! Force inner loop entry
-            ninner = 0      ! Initialize inner loop counter
+            rnorm = ONE    ! Force inner loop entry
+            niter = 0      ! Initialize inner loop counter
             !cfl0   = 2._rk
 
 
 
 
             do while ( rnorm > self%tol )
-                ninner = ninner + 1
-                print*, "   ninner: ", ninner
+                niter = niter + 1
+                print*, "   niter: ", niter
 
 
 
@@ -114,28 +114,28 @@ contains
                 !
                 ! Update Spatial Residual and Linearization (rhs, lin)
                 !
-                call update_space(domain,timing)
+                call update_space(data,timing)
                 call self%residual_time%push_back(timing)
 
+                resid = rhs%norm()
 
+
+                !
+                ! Print diagnostics
+                !
+                print*, "   R(Q) - Norm: ", resid
+                call self%residual_norm%push_back(resid)
 
 
                 !
                 ! Compute and store residual norm
                 !
                 ! Store residual norm for first iteration
-                if (ninner == 1) then
+                if (niter == 1) then
                     rnorm0 = rhs%norm()
                 end if
                 rnorm = rhs%norm()
 
-
-
-                !
-                ! Print and store residual
-                !
-                print*, "   R - Norm: ", rnorm
-                call self%residual_norm%push_back(rnorm)
 
 
 
@@ -149,34 +149,36 @@ contains
                 !
                 ! Compute element-local pseudo-timestep
                 !
-                call compute_timestep(domain,cfln)
+                call compute_timestep(data,cfln)
 
 
 
                 !
                 ! Add mass/dt to sub-block diagonal in dR/dQ
                 !
-                do ielem = 1,domain%mesh%nelem
-                    nterms = domain%mesh%nterms_s   ! get number of solution terms
-                    dtau   = domain%sdata%dt(ielem) ! get element-local timestep
+                do idom = 1,data%ndomains
+                    do ielem = 1,data%mesh(idom)%nelem
+                        nterms = data%mesh(idom)%nterms_s   ! get number of solution terms
+                        dtau   = data%sdata%dt(idom,ielem)  ! get element-local timestep
 
-                    !
-                    ! Loop through equations and add mass matrix
-                    !
-                    do ieqn = 1,domain%eqnset%neqns
-                        iblk = DIAG
-                        ! Need to compute row and column extends in diagonal so we can
-                        ! selectively apply the mass matrix to the sub-block diagonal
-                        rstart = 1 + (ieqn-1) * nterms
-                        rend   = (rstart-1) + nterms
-                        cstart = rstart                 ! since it is square
-                        cend   = rend                   ! since it is square
-                   
-                        if (allocated(lin%lblks(ielem,iblk)%mat)) then
-                            ! Add mass matrix divided by dt to the block diagonal
-                            lin%lblks(ielem,iblk)%mat(rstart:rend,cstart:cend)  =  lin%lblks(ielem,iblk)%mat(rstart:rend,cstart:cend)  +  domain%mesh%elems(ielem)%mass*(ONE/dtau)
-                        end if
+                        !
+                        ! Loop through equations and add mass matrix
+                        !
+                        do ieqn = 1,data%eqnset(idom)%item%neqns
+                            iblk = DIAG
+                            ! Need to compute row and column extends in diagonal so we can
+                            ! selectively apply the mass matrix to the sub-block diagonal
+                            rstart = 1 + (ieqn-1) * nterms
+                            rend   = (rstart-1) + nterms
+                            cstart = rstart                 ! since it is square
+                            cend   = rend                   ! since it is square
+                       
+                            if (allocated(lhs%dom(idom)%lblks(ielem,iblk)%mat)) then
+                                ! Add mass matrix divided by dt to the block diagonal
+                                lhs%dom(idom)%lblks(ielem,iblk)%mat(rstart:rend,cstart:cend)  =  lhs%dom(idom)%lblks(ielem,iblk)%mat(rstart:rend,cstart:cend)  +  data%mesh(idom)%elems(ielem)%mass*(ONE/dtau)
+                            end if
 
+                        end do
                     end do
                 end do
 
@@ -193,7 +195,7 @@ contains
                 !
                 ! We need to solve the matrix system Ax=b for the update vector x (dq)
                 !
-                call matrixsolver%solve(lin,dq,b,preconditioner)
+                call matrixsolver%solve(lhs,dq,b,preconditioner)
                 call self%matrix_iterations%push_back(matrixsolver%niter)
                 call self%matrix_time%push_back(matrixsolver%timer%elapsed())
 
@@ -211,7 +213,7 @@ contains
                 !
                 call rhs%clear()
                 call dq%clear()
-                call lin%clear()
+                call lhs%clear()
 
                 
 
@@ -223,14 +225,14 @@ contains
 
 
                 if (wcount == self%nwrite) then
-                    write(filename, "(I7,A4)") 1000000+ninner, '.plt'
-                    call write_tecio_variables(domain,trim(filename),ninner+1)
+                    write(filename, "(I7,A4)") 1000000+niter, '.plt'
+                    call write_tecio_variables(data,trim(filename),niter+1)
                     wcount = 0
                 end if
                 wcount = wcount + 1
 
 
-            end do ! ninner
+            end do ! niter
 
 
             !
@@ -241,22 +243,16 @@ contains
             call self%total_time%push_back(self%timer%elapsed())
 
 
-            !
-            ! Write Final Solution
-            !
-            !write(filename, "(I7,A4)") 1000000+ninner, '.plt'
-            !call write_tecio_variables(domain,trim(filename),ninner+1)
-
 
         end associate
 
 
 
-        call self%newton_iterations%push_back(ninner)
+        call self%newton_iterations%push_back(niter)
 
 
 
-        entropy_error = compute_entropy_error(domain)
+        entropy_error = compute_entropy_error(data)
         print*, 'Entropy error: ', entropy_error
 
     end subroutine solve

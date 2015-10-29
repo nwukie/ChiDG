@@ -1,6 +1,6 @@
 #add_subdirectory(forward_euler)                
 #add_subdirectory(backward_euler)
-#add_subdirectory(quasi_newton)
+add_subdirectory(quasi_newton)
 add_subdirectory(newton)
 
 

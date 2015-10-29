@@ -21,7 +21,7 @@ module type_solverdata
         type(chidgVector_t)             :: rhs                      !< Residual of the spatial scheme
         type(chidgMatrix_t)             :: lhs                      !< Linearization of the spatial scheme
 
-        !real(rk), allocatable           :: dt(:)                    !< Element-local time step
+        real(rk), allocatable           :: dt(:,:)                  !< Element-local time step, (ndomains,maxelems)
 
         logical                         :: solverInitialized = .false.
 
@@ -54,7 +54,8 @@ contains
         class(solverdata_t),     intent(inout), target   :: self
         type(mesh_t),            intent(in)              :: mesh(:)
 
-        integer(ik)   :: nterms_s, ielem, nelem, neqns, ierr
+        integer(ik) :: nterms_s, ielem, nelem, neqns, ierr, ndom, maxelems, idom
+        logical     :: increase_maxelems = .false.
 
 
         !
@@ -64,6 +65,30 @@ contains
         call self%dq%init( mesh)
         call self%rhs%init(mesh)
         call self%lhs%init(mesh,'full')
+
+
+    
+        !
+        ! Find maximum number of elements in any domain
+        !
+        ndom = size(mesh)
+        maxelems = 0
+        do idom = 1,ndom
+
+            increase_maxelems = ( mesh(idom)%nelem > maxelems )
+
+            if (increase_maxelems) then
+                maxelems = mesh(idom)%nelem
+            end if
+
+        end do
+
+
+        !
+        ! Allocate timestep storage
+        !
+        allocate(self%dt(ndom,maxelems),stat=ierr)
+        if (ierr /= 0) call AllocationError
 
         
         !

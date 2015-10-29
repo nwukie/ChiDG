@@ -13,13 +13,13 @@
 !
 !
 !--------------------------------------------------------------------------------
-module rtest_entropy_errorrate_mod
+module rtest_smoothbump_rotations_mod
     use pfunit_mod
     use mod_kinds,              only: rk, ik
     use type_chidg,             only: chidg_t
     implicit none
 
-    public  :: rtest_equations_euler_entropyerror
+    public  :: rtest_smoothbump_rotations
 
 
     !
@@ -30,6 +30,9 @@ module rtest_entropy_errorrate_mod
         character(100)  :: gridfile
         integer(ik)     :: order
         real(rk)        :: entropy_ref
+        real(rk)        :: umom
+        real(rk)        :: vmom
+        real(rk)        :: wmom
     contains
         procedure   :: toString
     end type case_grid_order
@@ -41,14 +44,17 @@ module rtest_entropy_errorrate_mod
     ! Main testing fixture with data containers
     !
     @TestCase(testParameters={getParameters()}, constructor=newTest)
-    type, extends(ParameterizedTestCase) :: rtest_equations_euler_entropyerror
+    type, extends(ParameterizedTestCase) :: rtest_smoothbump_rotations
         character(100)  :: gridfile
         integer(ik)     :: order
         real(rk)        :: entropy_ref
+        real(rk)        :: umom
+        real(rk)        :: vmom
+        real(rk)        :: wmom
     contains
         procedure   :: setUp
         procedure   :: tearDown
-    end type rtest_equations_euler_entropyerror
+    end type rtest_smoothbump_rotations
 
 
 
@@ -61,7 +67,7 @@ contains
     ! Set up
     !
     subroutine setUp(this)
-        class(rtest_equations_euler_entropyerror),  intent(inout)   :: this
+        class(rtest_smoothbump_rotations),  intent(inout)   :: this
 
 
     end subroutine
@@ -72,7 +78,7 @@ contains
     ! Tear down
     !
     subroutine tearDown(this)
-        class(rtest_equations_euler_entropyerror),  intent(inout)   :: this
+        class(rtest_smoothbump_rotations),  intent(inout)   :: this
     end subroutine
 
 
@@ -82,11 +88,14 @@ contains
     !
     function newTest(test_parameter) result(test)
         type(case_grid_order),  intent(in)          :: test_parameter
-        type(rtest_equations_euler_entropyerror)    :: test
+        type(rtest_smoothbump_rotations)    :: test
 
-        test%gridfile = test_parameter%gridfile
-        test%order    = test_parameter%order
+        test%gridfile    = test_parameter%gridfile
+        test%order       = test_parameter%order
         test%entropy_ref = test_parameter%entropy_ref
+        test%umom        = test_parameter%umom
+        test%vmom        = test_parameter%vmom
+        test%wmom        = test_parameter%wmom
 
     end function newTest
 
@@ -97,19 +106,9 @@ contains
     function getParameters() result(params)
         type(case_grid_order), allocatable :: params(:)
     
-        ! case_grid_order('grid',order,reference_entropy)
-        params = [  case_grid_order('6x2x2.h5',  1, 2.761019163e-3_rk), &
-                    case_grid_order('6x2x2.h5',  2, 3.618440627e-3_rk), &
-                    case_grid_order('6x2x2.h5',  3, 1.116431012e-3_rk), &
-!                    case_grid_order('6x2x2.h5',  4, 6.731678976e-4_rk), &
-                    case_grid_order('12x4x2.h5', 1, 3.807878665e-3_rk), &
-                    case_grid_order('12x4x2.h5', 2, 1.323352387e-3_rk), &
-                    case_grid_order('12x4x2.h5', 3, 3.940896088e-4_rk) &
-!                    case_grid_order('12x4x2.h5', 4, 8.433932228e-5_rk), &
-!                    case_grid_order('24x8x2.h5', 1, 4.038806838e-3_rk), &
-!                    case_grid_order('24x8x2.h5', 2, 5.554687475e-4_rk), &
-!                    case_grid_order('24x8x2.h5', 3, 5.367783209e-5_rk), &
-!                    case_grid_order('24x8x2.h5', 4, 7.223333943e-6_rk) &
+        ! case_grid_order('grid',order,reference_entropy,umom,vmom,wmom)
+        params = [  case_grid_order('smoothbump_6x2x2_90.h5',   2, 3.618440627e-3_rk, 0._rk, 190._rk, 0._rk), &
+                    case_grid_order('smoothbump_6x2x2_180.h5',  2, 3.618440627e-3_rk, -190._rk, 0._rk, 0._rk)  &
                     ]
 
     end function getParameters
@@ -148,7 +147,7 @@ contains
     !
     !----------------------------------------------------------------------------------------
     @Test
-    subroutine rtest_entropy_error_rate(self)
+    subroutine rtest_smoothbump_rotations_entropy(self)
         use mod_kinds,          only: rk, ik
         use mod_constants,      only: ZERO, THREE, XI_MIN, ETA_MIN, ZETA_MIN, XI_MAX, ETA_MAX, ZETA_MAX
         use type_chidg,         only: chidg_t
@@ -160,7 +159,7 @@ contains
         use mod_hdfio,          only: read_grid_hdf
         use mod_io
         use mod_entropy,        only: compute_entropy_error
-        class(rtest_equations_euler_entropyerror),  intent(inout)   :: self
+        class(rtest_smoothbump_rotations),  intent(inout)   :: self
 
 
 
@@ -253,15 +252,15 @@ contains
             call initialize_variable(data,1,fcn)
 
             ! rho_u
-            call fcn%set('val',190.339029_rk)
+            call fcn%set('val',self%umom)
             call initialize_variable(data,2,fcn)
 
             ! rho_v
-            call fcn%set('val',ZERO)
+            call fcn%set('val',self%vmom)
             call initialize_variable(data,3,fcn)
 
             ! rho_w
-            call fcn%set('val',ZERO)
+            call fcn%set('val',self%wmom)
             call initialize_variable(data,4,fcn)
 
             ! rho_E
@@ -313,7 +312,7 @@ contains
 
 
 
-end module rtest_entropy_errorrate_mod
+end module rtest_smoothbump_rotations_mod
 
 
 

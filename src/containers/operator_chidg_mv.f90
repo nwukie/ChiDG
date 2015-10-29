@@ -1,4 +1,5 @@
 module operator_chidg_mv
+#include <messenger.h>
     use mod_kinds,          only: rk, ik
     use type_chidgMatrix,   only: chidgMatrix_t
     use type_chidgVector
@@ -28,7 +29,9 @@ contains
         type(chidgVector_t),    intent(in)  :: x
 
         type(chidgVector_t) :: res
-        integer(ik)         :: idom, ielem, iblk, iparent
+        integer(ik)         :: idom, ielem, iblk
+        integer(ik)         :: eparent, dparent
+        logical             :: nonconforming = .false.
 
 
         !
@@ -41,7 +44,7 @@ contains
 
 
         !
-        ! Compute A*x for local blocks
+        ! Compute A*x for global matrix-vector product
         !
         do idom = 1,size(A%dom)
 
@@ -52,14 +55,13 @@ contains
                 do iblk = 1,size(A%dom(idom)%lblks,2)
                     
                     if (allocated(A%dom(idom)%lblks(ielem,iblk)%mat)) then
-                        iparent = A%dom(idom)%lblks(ielem,iblk)%parent()
+                        eparent = A%dom(idom)%lblks(ielem,iblk)%eparent()
 
                         associate ( resvec => res%dom(idom)%lvecs(ielem)%vec, &
-                                    xvec => x%dom(idom)%lvecs(iparent)%vec,   &
+                                    xvec => x%dom(idom)%lvecs(eparent)%vec,   &
                                     Amat => A%dom(idom)%lblks(ielem,iblk)%mat)
 
-                        !res%dom(idom)%lvecs(ielem)%vec = res%dom(idom)%lvecs(ielem)%vec + matmul(A%dom(idom)%lblks(ielem,iblk)%mat,x%dom(idom)%lvecs(iparent)%vec)
-                        resvec = resvec + matmul(Amat,xvec)
+                            resvec = resvec + matmul(Amat,xvec)
 
                         end associate
                     end if
@@ -68,10 +70,36 @@ contains
             end do
 
             !
-            ! TODO: implement routine for off-diagonal, chimera blocks
+            ! Routine for off-diagonal, chimera blocks
             !
+            if (allocated(A%dom(idom)%chiblks)) then
+                do ielem = 1,size(A%dom(idom)%chiblks,1)
+                    do iblk = 1,size(A%dom(idom)%chiblks,2)
 
-        end do
+                        if (allocated(A%dom(idom)%chiblks(ielem,iblk)%mat)) then
+                            dparent = A%dom(idom)%chiblks(ielem,iblk)%dparent()
+                            eparent = A%dom(idom)%chiblks(ielem,iblk)%eparent()
+
+                            associate ( resvec => res%dom(idom)%lvecs(ielem)%vec, &
+                                        xvec => x%dom(dparent)%lvecs(eparent)%vec, &
+                                        Amat => A%dom(idom)%chiblks(ielem,iblk)%mat) 
+
+                                !
+                                ! Test matrix vector sizes
+                                !
+                                nonconforming = ( size(Amat,2) /= size(xvec) )
+                                if (nonconforming) call signal(FATAL,"operator_chidg_mv: nonconforming Chimera m-v operation")
+
+                                resvec = resvec + matmul(Amat,xvec)
+
+                            end associate
+                        end if
+
+                    end do ! iblk
+                end do ! ielem
+            end if
+
+        end do ! idom
 
 
 

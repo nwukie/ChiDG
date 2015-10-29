@@ -60,12 +60,6 @@ program driver
 
 
 
-    !
-    ! Initialize solution data storage
-    !
-    call chidg%data%init_sdata()
-
-
 
 
     !
@@ -90,20 +84,47 @@ program driver
     !
     ! Add boundary conditions
     !
-    call chidg%data%add_bc('D_01','euler_totalinlet',XI_MIN)
-    call chidg%data%add_bc('D_01','euler_pressureoutlet',XI_MAX)
+    !call chidg%data%add_bc('D_01','euler_totalinlet',XI_MIN)
+    !call chidg%data%add_bc('D_01','euler_pressureoutlet',XI_MAX)
     call chidg%data%add_bc('D_01','euler_wall',ETA_MIN)
     call chidg%data%add_bc('D_01','euler_wall',ETA_MAX)
     call chidg%data%add_bc('D_01','euler_wall',ZETA_MIN)
     call chidg%data%add_bc('D_01','euler_wall',ZETA_MAX)
 
 
-    call chidg%data%add_bc('D_02','euler_totalinlet',XI_MIN)
-    call chidg%data%add_bc('D_02','euler_pressureoutlet',XI_MAX)
-    call chidg%data%add_bc('D_02','euler_wall',ETA_MIN)
+    !call chidg%data%add_bc('D_02','euler_totalinlet',XI_MIN)
+    !call chidg%data%add_bc('D_02','euler_pressureoutlet',XI_MAX)
+    call chidg%data%add_bc('D_02','euler_pressureoutlet',ETA_MIN)
     call chidg%data%add_bc('D_02','euler_wall',ETA_MAX)
     call chidg%data%add_bc('D_02','euler_wall',ZETA_MIN)
     call chidg%data%add_bc('D_02','euler_wall',ZETA_MAX)
+
+
+
+   !call chidg%data%add_bc('D_03','euler_totalinlet',XI_MIN)
+   !call chidg%data%add_bc('D_03','euler_pressureoutlet',XI_MAX)
+   call chidg%data%add_bc('D_03','euler_wall',ETA_MIN)
+   call chidg%data%add_bc('D_03','euler_wall',ETA_MAX)
+   call chidg%data%add_bc('D_03','euler_wall',ZETA_MIN)
+   call chidg%data%add_bc('D_03','euler_wall',ZETA_MAX)
+
+
+   !call chidg%data%add_bc('D_04','euler_totalinlet',XI_MIN)
+   !call chidg%data%add_bc('D_04','euler_pressureoutlet',XI_MAX)
+   call chidg%data%add_bc('D_04','euler_totalinlet',ETA_MIN)
+   call chidg%data%add_bc('D_04','euler_wall',ETA_MAX)
+   call chidg%data%add_bc('D_04','euler_wall',ZETA_MIN)
+   call chidg%data%add_bc('D_04','euler_wall',ZETA_MAX)
+
+
+
+
+
+    !
+    ! Initialize solution data storage
+    !
+    call chidg%init('chimera')
+    call chidg%data%init_sdata()
 
 
 
@@ -115,11 +136,11 @@ program driver
 
 
     ! rho
-    call constant%set('val',1.13262_rk)
+    call constant%set('val',1.25_rk)
     call initialize_variable(chidg%data,1,constant)
 
     ! rho_u
-    call constant%set('val',190.339029_rk)
+    call constant%set('val',80._rk)
     call initialize_variable(chidg%data,2,constant)
 
     ! rho_v
@@ -131,7 +152,7 @@ program driver
     call initialize_variable(chidg%data,4,constant)
 
     ! rho_E
-    call constant%set('val',248493.425_rk)
+    call constant%set('val',270000._rk)
     call initialize_variable(chidg%data,5,constant)
 
 

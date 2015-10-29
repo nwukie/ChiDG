@@ -82,6 +82,11 @@ subroutine test_fgmres_ref_solve()
     b%dom(1)%lvecs(2)%vec = ONE
 
 
+    !
+    ! Finalize ChiDG initialization
+    !
+    call chidg%init('finalize')
+
 
     !
     ! Solve matrix system. Ax=b. TESTING

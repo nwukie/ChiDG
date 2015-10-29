@@ -10,6 +10,7 @@ module SCA_LaxFriedrichs_flux
     use type_solverdata,        only: solverdata_t
     use type_properties,        only: properties_t
     use type_seed,              only: seed_t
+    use type_face_location,     only: face_location_t
 
     use mod_interpolate,        only: interpolate_face
     use mod_integrate,          only: integrate_boundary_flux
@@ -57,6 +58,7 @@ contains
         real(rk)                    :: cx, cy, cz
         integer(ik)                 :: iu, ierr, nnodes
         type(seed_t)                :: seed
+        type(face_location_t)       :: face
 
         type(AD_D), allocatable     :: u_l(:), u_r(:), flux_x(:), flux_y(:), flux_z(:)
 
@@ -67,18 +69,18 @@ contains
         iu        = prop%get_eqn_index('u')
 
         
+        face%idomain  = idom
+        face%ielement = ielem
+        face%iface    = iface
+
+
+
         !
         ! Get nGQ nodes
         !
         nnodes    = mesh(idom)%faces(ielem,iface)%gq%nnodes_f
 
 
-        !
-        ! Get neighbor indices
-        !
-        !idom_n    = compute_neighbor_domain( mesh,idom,ielem,iface,idonor)
-        !ielem_n   = compute_neighbor_element(mesh,idom,ielem,iface,idonor)
-        !iface_n   = compute_neighbor_face(   mesh,idom,ielem,iface,idonor)
 
 
         !
@@ -127,7 +129,8 @@ contains
         !
         ! Integrate flux
         !
-        call integrate_boundary_flux(mesh(idom)%faces(ielem,iface), sdata, idom, iu, iblk, flux_x, flux_y, flux_z)
+        !call integrate_boundary_flux(mesh(idom)%faces(ielem,iface), sdata, idom, iu, iblk, flux_x, flux_y, flux_z)
+        call integrate_boundary_flux(mesh,sdata,face,iu,iblk,idonor,seed,flux_x,flux_y,flux_z)
 
     end subroutine
 

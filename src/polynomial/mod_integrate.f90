@@ -1,13 +1,16 @@
 module mod_integrate
-    use mod_kinds,          only: rk,ik
-    use mod_constants,      only: DIAG
-    use type_element,       only: element_t
-    use type_face,          only: face_t
-    use type_solverdata,    only: solverdata_t
-    use type_blockmatrix,   only: blockmatrix_t
+#include <messenger.h>
+    use mod_kinds,              only: rk,ik
+    use mod_constants,          only: DIAG, CHIMERA
+    use type_mesh,              only: mesh_t
+    use type_element,           only: element_t
+    use type_face,              only: face_t
+    use type_face_location,     only: face_location_t
+    use type_element_location,  only: element_location_t
+    use type_solverdata,        only: solverdata_t
+    use type_blockmatrix,       only: blockmatrix_t
+    use type_seed,              only: seed_t
     use DNAD_D
-
-
     implicit none
 
 
@@ -98,23 +101,39 @@ contains
     !!  @param[inout]   flux_y  y-Flux and derivatives at quadrature points
     !!  @param[inout]   flux_z  z-Flux and derivatives at quadrature points
     !--------------------------------------------------------------------------------------------------------
-    subroutine integrate_boundary_flux(face,sdata,idom,ivar,iblk,flux_x,flux_y,flux_z)
-        type(face_t),           intent(in)      :: face
+    !subroutine integrate_boundary_flux(face,sdata,idom,ivar,iblk,flux_x,flux_y,flux_z)
+    subroutine integrate_boundary_flux(mesh,sdata,face,ivar,iblk,idonor,seed,flux_x,flux_y,flux_z)
+        type(mesh_t),           intent(in)      :: mesh(:)
         type(solverdata_t),     intent(inout)   :: sdata
-        integer(ik),            intent(in)      :: idom
+        type(face_location_t),  intent(in)      :: face
         integer(ik),            intent(in)      :: ivar
         integer(ik),            intent(in)      :: iblk
+        integer(ik),            intent(in)      :: idonor
+        type(seed_t),           intent(in)      :: seed
         type(AD_D),             intent(inout)   :: flux_x(:), flux_y(:), flux_z(:)
 
 
-        integer(ik)                             :: ielem, iface
-        type(AD_D), dimension(face%nterms_s)    :: integral
+        integer(ik)                             :: idom, ielem, iface, ierr, nterms_s
+        type(AD_D), allocatable                 :: integral(:)
 
+        idom  = face%idomain
+        ielem = face%ielement
         iface = face%iface
-        ielem = face%iparent  !> get parent element index
+
+        nterms_s = mesh(idom)%faces(ielem,iface)%nterms_s
+
+        !
+        ! Allocate integral array. MIGHT NOT NEED THIS. TEST.
+        !
+        allocate(integral(nterms_s), stat=ierr)
+        if (ierr /= 0) call AllocationError
 
 
-        associate ( weights => face%gq%face%weights(:,iface), jinv => face%jinv, val => face%gq%face%val(:,:,iface) )
+
+
+        associate ( weights => mesh(idom)%faces(ielem,iface)%gq%face%weights(:,iface), &
+                    jinv    => mesh(idom)%faces(ielem,iface)%jinv,                     &
+                    val     => mesh(idom)%faces(ielem,iface)%gq%face%val(:,:,iface) )
 
             ! Multiply each component by quadrature weights. The fluxes have already been multiplied by norm
             flux_x = (flux_x) * (weights)
@@ -123,13 +142,16 @@ contains
 
 
             integral = matmul(transpose(val),flux_x)
-            call store_boundary_integrals(integral,sdata,idom,ielem,ivar,iblk)
+            !call store_boundary_integrals(integral,sdata,idom,ielem,ivar,iblk)
+            call store_boundary_integrals(mesh,sdata,face,ivar,iblk,idonor,seed,integral)
 
             integral = matmul(transpose(val),flux_y)
-            call store_boundary_integrals(integral,sdata,idom,ielem,ivar,iblk)
+            !call store_boundary_integrals(integral,sdata,idom,ielem,ivar,iblk)
+            call store_boundary_integrals(mesh,sdata,face,ivar,iblk,idonor,seed,integral)
 
             integral = matmul(transpose(val),flux_z)
-            call store_boundary_integrals(integral,sdata,idom,ielem,ivar,iblk)
+            !call store_boundary_integrals(integral,sdata,idom,ielem,ivar,iblk)
+            call store_boundary_integrals(mesh,sdata,face,ivar,iblk,idonor,seed,integral)
 
         end associate
 
@@ -157,31 +179,51 @@ contains
     !!  @param[inout]   flux_y  y-Flux and derivatives at quadrature points
     !!  @param[inout]   flux_z  z-Flux and derivatives at quadrature points
     !--------------------------------------------------------------------------------------------------------
-    subroutine integrate_boundary_scalar_flux(face,sdata,idom,ivar,iblk,flux)
-        type(face_t),           intent(in)      :: face
+    !subroutine integrate_boundary_scalar_flux(face,sdata,idom,ivar,iblk,flux)
+    subroutine integrate_boundary_scalar_flux(mesh,sdata,face,ivar,iblk,idonor,seed,flux)
+        type(mesh_t),           intent(in)      :: mesh(:)
         type(solverdata_t),     intent(inout)   :: sdata
-        integer(ik),            intent(in)      :: idom
+        type(face_location_t),  intent(in)      :: face
         integer(ik),            intent(in)      :: ivar
         integer(ik),            intent(in)      :: iblk
+        integer(ik),            intent(in)      :: idonor
+        type(seed_t),           intent(in)      :: seed
         type(AD_D),             intent(inout)   :: flux(:)
 
 
-        integer(ik)                             :: ielem, iface
-        type(AD_D), dimension(face%nterms_s)    :: integral
+        integer(ik)                             :: idom, ielem, iface, nterms_s, ierr
+        !type(AD_D), dimension(face%nterms_s)    :: integral
+        type(AD_D), allocatable                 :: integral(:)
 
+        idom  = face%idomain
+        ielem = face%ielement
         iface = face%iface
-        ielem = face%iparent  !> get parent element index
+
+        nterms_s = mesh(idom)%faces(ielem,iface)%nterms_s
 
 
-        associate ( weights => face%gq%face%weights(:,iface), jinv => face%jinv, val => face%gq%face%val(:,:,iface) )
+        !
+        ! Allocate integral array. MIGHT NOT NEED THIS. TEST.
+        !
+        allocate(integral(nterms_s), stat=ierr)
+        if (ierr /= 0) call AllocationError
 
+
+
+        associate ( weights => mesh(idom)%faces(ielem,iface)%gq%face%weights(:,iface), &
+                    jinv => mesh(idom)%faces(ielem,iface)%jinv, &
+                    val => mesh(idom)%faces(ielem,iface)%gq%face%val(:,:,iface) )
+
+            !
             ! Multiply each component by quadrature weights. The fluxes have already been multiplied by norm
+            !
             flux = (flux) * (weights)
 
 
             integral = matmul(transpose(val),flux)
 
-            call store_boundary_integrals(integral,sdata,idom,ielem,ivar,iblk)
+            !call store_boundary_integrals(integral,sdata,idom,ielem,ivar,iblk)
+            call store_boundary_integrals(mesh,sdata,face,ivar,iblk,idonor,seed,integral)
 
 
         end associate
@@ -272,19 +314,29 @@ contains
     !!  @param[in]      iblk        Block index for the correct linearization block for the current element
     !!
     !--------------------------------------------------------------------------------------------------------
-    subroutine store_boundary_integrals(integral,sdata,idom,ielem,ivar,iblk)
-        type(AD_D),             intent(inout)   :: integral(:)
+    subroutine store_boundary_integrals(mesh,sdata,face,ivar,iblk,idonor,seed,integral)
+        type(mesh_t),           intent(in)      :: mesh(:)
         type(solverdata_t),     intent(inout)   :: sdata
-        integer(ik),            intent(in)      :: idom
-        integer(ik),            intent(in)      :: ielem
+        type(face_location_t),  intent(in)      :: face
         integer(ik),            intent(in)      :: ivar
         integer(ik),            intent(in)      :: iblk
+        integer(ik),            intent(in)      :: idonor
+        type(seed_t),           intent(in)      :: seed
+        type(AD_D),             intent(inout)   :: integral(:)
 
-        integer(ik) :: i
-        real(rk)    :: vals(size(integral))
+        integer(ik)                 :: i, idom, ielem, iface, ftype, ChiID
+        real(rk)                    :: vals(size(integral))
+        type(element_location_t)    :: donor
 
-        !associate ( rhs => sdata%rhs%dom(idom)%lvecs, lhs => sdata%lhs%dom(idom))
-        associate ( rhs => sdata%rhs%dom(idom)%lvecs, lhs => sdata%lhs)
+
+        idom  = face%idomain
+        ielem = face%ielement
+        iface = face%iface
+
+        ftype = mesh(idom)%faces(ielem,iface)%ftype
+
+
+        associate ( rhs => sdata%rhs%dom(idom)%lvecs, lhs => sdata%lhs )
 
             !
             ! Only store rhs once. if iblk == DIAG
@@ -300,7 +352,13 @@ contains
             !
             ! Store linearization
             !
-            call lhs%store(integral,idom,ielem,iblk,ivar)
+            if ( (ftype == CHIMERA) .and. (iblk /= DIAG)) then
+
+                call lhs%store_chimera(integral,face,seed,ivar)
+
+            else
+                call lhs%store(integral,idom,ielem,iblk,ivar)
+            end if
 
         end associate
 

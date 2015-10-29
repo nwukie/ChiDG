@@ -3,6 +3,9 @@ module type_chidgMatrix
     use mod_kinds,              only: rk, ik
     use type_blockmatrix,       only: blockmatrix_t
     use type_mesh,              only: mesh_t
+    use type_face_location,     only: face_location_t
+    use type_element_location,  only: element_location_t
+    use type_seed,              only: seed_t
     use DNAD_D
     implicit none
 
@@ -29,7 +32,8 @@ module type_chidgMatrix
         procedure,  private :: initialize           !< ChiDGMatrix initialization
 
         !> Setters
-        procedure   :: store                        !< Store linearization data
+        procedure   :: store                        !< Store linearization data for local blocks
+        procedure   :: store_chimera                !< Store linearization data for chimera blocks
         procedure   :: clear                        !< Zero matrix-values
 
 
@@ -120,6 +124,29 @@ contains
 
 
 
+
+
+
+
+
+
+    subroutine store_chimera(self,integral,face,seed,ivar)
+        class(chidgMatrix_t),       intent(inout)   :: self
+        type(AD_D),                 intent(in)      :: integral(:)
+        type(face_location_t),      intent(in)      :: face
+        type(seed_t),               intent(in)      :: seed
+        integer(ik),                intent(in)      :: ivar 
+
+        integer(ik) :: idom
+
+        idom = face%idomain
+
+        !
+        ! Store linearization in associated domain blockmatrix_t
+        !
+        call self%dom(idom)%store_chimera(integral,face,seed,ivar)
+
+    end subroutine store_chimera
 
 
 

@@ -21,7 +21,8 @@ module type_densematrix
         !! - blk_ximax = 7
         !!
         !! ZERO VALUE INDICATES UNASSIGNED
-        integer(ik), private    :: parent_ = 0 !> parent element
+        integer(ik), private    :: dparent_ = 0 !> parent domain    For chimera reference accross domains
+        integer(ik), private    :: eparent_ = 0  !> parent element
 
         !> Block storage
         !! NOTE: Assumes square blocks, since this type is specifically
@@ -42,7 +43,8 @@ module type_densematrix
         !!  v
         !!
         !!  i
-        procedure :: parent     !> return parent element
+        procedure :: dparent    !> return parent domain
+        procedure :: eparent    !> return parent element
         procedure :: nentries   !> return number of matrix entries
         procedure :: idim       !> return i-dimension of matrix storage
         procedure :: jdim       !> return j-dimension of matrix storage
@@ -63,15 +65,16 @@ contains
 
     !> Subroutine for initializing general dense-block storage
     !-----------------------------------------------------------
-    subroutine init_gen(self,idim,jdim,parent)
+    subroutine init_gen(self,idim,jdim,dparent,eparent)
         class(densematrix_t), intent(inout)  :: self
-        integer(ik),         intent(in)     :: idim, jdim, parent
+        integer(ik),         intent(in)     :: idim, jdim, dparent, eparent
 
         integer(ik) :: ierr
         integer :: test
 
         ! Block parents
-        self%parent_ = parent
+        self%dparent_ = dparent
+        self%eparent_ = eparent
 
         ! Allocate block storage
         ! Check if storage was already allocated and reallocate if necessary
@@ -91,14 +94,15 @@ contains
 
     !> Subroutine for initializing square dense-block storage
     !-----------------------------------------------------------
-    subroutine init_square(self,bsize,parent)
+    subroutine init_square(self,bsize,dparent,eparent)
         class(densematrix_t), intent(inout)  :: self
-        integer(ik),         intent(in)     :: bsize, parent
+        integer(ik),         intent(in)     :: bsize, dparent, eparent
 
         integer(ik) :: ierr
 
         ! Block parents
-        self%parent_ = parent
+        self%dparent_ = dparent
+        self%eparent_ = eparent
 
         ! Allocate block storage
         ! Check if storage was already allocated and reallocate if necessary
@@ -146,13 +150,26 @@ contains
         n = size(self%mat,1) * size(self%mat,2)
     end function
 
-    !> return index of block parent
+
+
+    !> return index of parent domain
     !------------------------------------------------------------
-    function parent(self) result(par)
+    function dparent(self) result(par)
+        class(densematrix_t),   intent(in)  :: self
+        integer(ik)                         :: par
+
+        par = self%dparent_
+    end function
+
+
+
+    !> return index of parent element
+    !------------------------------------------------------------
+    function eparent(self) result(par)
         class(densematrix_t), intent(in) :: self
         integer(ik)                     :: par
 
-        par = self%parent_
+        par = self%eparent_
     end function
 
 
@@ -184,7 +201,7 @@ contains
         class(densematrix_t), intent(inout)  :: self
         integer(ik),         intent(in)     :: par
 
-        self%parent_ = par
+        self%eparent_ = par
     end subroutine
 
 
@@ -203,7 +220,8 @@ contains
 
         integer(ik) :: irow
 
-        print*, self%parent_
+        print*, self%dparent_
+        print*, self%eparent_
 
         do irow = 1,size(self%mat,1)
             print*, self%mat(irow,:)
@@ -225,7 +243,7 @@ contains
 
     subroutine destructor(self)
         type(densematrix_t), intent(inout) :: self
-!        if (allocated(self%mat))    deallocate(self%mat)
+
     end subroutine
 
 end module type_densematrix

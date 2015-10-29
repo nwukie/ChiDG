@@ -9,6 +9,7 @@ module EULER_Roe_flux
     use type_solverdata,        only: solverdata_t
     use type_properties,        only: properties_t
     use type_seed,              only: seed_t
+    use type_face_location,     only: face_location_t
 
     use mod_interpolate,        only: interpolate_face
     use mod_integrate,          only: integrate_boundary_scalar_flux
@@ -74,7 +75,8 @@ contains
         integer(ik)     :: irhow
         integer(ik)     :: irhoe
 
-        type(seed_t)    :: seed
+        type(seed_t)            :: seed
+        type(face_location_t)   :: face
 
         ! Storage at quadrature nodes
         type(AD_D), dimension(mesh(idom)%faces(ielem,iface)%gq%face%nnodes)    :: &
@@ -108,6 +110,10 @@ contains
         irhow = prop%get_eqn_index("rhow")
         irhoE = prop%get_eqn_index("rhoE")
 
+        
+        face%idomain  = idom
+        face%ielement = ielem
+        face%iface    = iface
 
 
         !
@@ -215,7 +221,7 @@ contains
 
             flux = HALF*(upwind*norms(:,1)*unorms(:,1) + upwind*norms(:,2)*unorms(:,2) + upwind*norms(:,3)*unorms(:,3))
 
-            call integrate_boundary_scalar_flux(mesh(idom)%faces(ielem,iface),sdata,idom,irho,iblk,flux)
+            call integrate_boundary_scalar_flux(mesh,sdata,face,irho,iblk,idonor,seed,flux)
 
 
             !================================
@@ -225,7 +231,7 @@ contains
 
             flux = HALF*(upwind*norms(:,1)*unorms(:,1) + upwind*norms(:,2)*unorms(:,2) + upwind*norms(:,3)*unorms(:,3))
 
-            call integrate_boundary_scalar_flux(mesh(idom)%faces(ielem,iface),sdata,idom,irhou,iblk,flux)
+            call integrate_boundary_scalar_flux(mesh,sdata,face,irhou,iblk,idonor,seed,flux)
 
 
             !================================
@@ -235,7 +241,7 @@ contains
 
             flux = HALF*(upwind*norms(:,1)*unorms(:,1) + upwind*norms(:,2)*unorms(:,2) + upwind*norms(:,3)*unorms(:,3))
 
-            call integrate_boundary_scalar_flux(mesh(idom)%faces(ielem,iface),sdata,idom,irhov,iblk,flux)
+            call integrate_boundary_scalar_flux(mesh,sdata,face,irhov,iblk,idonor,seed,flux)
 
             !================================
             !       Z-MOMENTUM FLUX
@@ -244,7 +250,7 @@ contains
 
             flux = HALF*(upwind*norms(:,1)*unorms(:,1) + upwind*norms(:,2)*unorms(:,2) + upwind*norms(:,3)*unorms(:,3))
 
-            call integrate_boundary_scalar_flux(mesh(idom)%faces(ielem,iface),sdata,idom,irhow,iblk,flux)
+            call integrate_boundary_scalar_flux(mesh,sdata,face,irhow,iblk,idonor,seed,flux)
 
             !================================
             !          ENERGY FLUX
@@ -253,7 +259,7 @@ contains
 
             flux = HALF*(upwind*norms(:,1)*unorms(:,1) + upwind*norms(:,2)*unorms(:,2) + upwind*norms(:,3)*unorms(:,3))
 
-            call integrate_boundary_scalar_flux(mesh(idom)%faces(ielem,iface),sdata,idom,irhoE,iblk,flux)
+            call integrate_boundary_scalar_flux(mesh,sdata,face,irhoE,iblk,idonor,seed,flux)
 
         end associate
 

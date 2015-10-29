@@ -142,8 +142,8 @@ contains
                 !
                 call matrixsolver%solve(lhs,dq,b,preconditioner)
 
-                call self%matrix_iterations%push_back(matrixsolver%niter)       ! non-essential record-keeping
-                call self%matrix_time%push_back(matrixsolver%timer%elapsed())   ! non-essential record-keeping
+                call self%matrix_iterations%push_back(matrixsolver%niter)
+                call self%matrix_time%push_back(matrixsolver%timer%elapsed())
 
 
 

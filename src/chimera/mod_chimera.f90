@@ -18,6 +18,7 @@ module mod_chimera
     use type_element_location,  only: element_location_t
     use type_face_location,     only: face_location_t
     use type_ivector,           only: ivector_t
+    use type_rvector,           only: rvector_t
     use type_pvector,           only: pvector_t
 
     use mod_polynomial,         only: polynomialVal
@@ -189,7 +190,7 @@ contains
         type(mesh_t),   intent(inout)   :: mesh(:)
 
         integer(ik) :: idom, igq, ichimera_face, idonor, ierr
-        integer(ik) :: ndonors
+        integer(ik) :: ndonors, neqns, nterms_s
         integer(ik) :: idonor_domain, idonor_element
         integer(ik) :: idomain_list, ielement_list
 
@@ -210,16 +211,22 @@ contains
         !
         do idom = 1,size(mesh)
 
+            print*, 'Detecting chimera donors for domain: ', idom
+
 
             !
             ! Loop over faces and process Chimera-type faces
             !
             do ichimera_face = 1,mesh(idom)%chimera%recv%nfaces
 
+                !
+                ! Get location of the face receiving Chimera data
+                !
                 receiver%idomain  = idom
                 receiver%ielement = mesh(idom)%chimera%recv%data(ichimera_face)%receiver_element
                 receiver%iface    = mesh(idom)%chimera%recv%data(ichimera_face)%receiver_face
 
+                print*, '   Face ', ichimera_face,' of ',mesh(idom)%chimera%recv%nfaces
 
                 !
                 ! Loop through quadrature nodes on Chimera face and find donors
@@ -270,6 +277,11 @@ contains
                     ! If the current domain/element pair was not found in the chimera donor data, then add it
                     !
                     if (.not. already_added) then
+                        neqns    = mesh(idomain_list)%elems(ielement_list)%neqns
+                        nterms_s = mesh(idomain_list)%elems(ielement_list)%nterms_s
+
+                        call mesh(idom)%chimera%recv%data(ichimera_face)%donor_neqns%push_back(neqns)
+                        call mesh(idom)%chimera%recv%data(ichimera_face)%donor_nterms_s%push_back(nterms_s)
                         call mesh(idom)%chimera%recv%data(ichimera_face)%donor_domain%push_back(idomain_list)
                         call mesh(idom)%chimera%recv%data(ichimera_face)%donor_element%push_back(ielement_list)
                         ndonors = ndonors + 1
@@ -378,6 +390,7 @@ contains
         type(ivector_t)         :: candidate_domains
         type(ivector_t)         :: candidate_elements
         type(ivector_t)         :: donors
+        type(rvector_t)         :: donors_xi, donors_eta, donors_zeta
         logical                 :: contained = .false.
         logical                 :: receiver  = .false.
 
@@ -386,7 +399,7 @@ contains
         real(rk)    :: dcoord(3)
         real(rk)    :: res
 
-        tol = 1.e-12_rk
+        tol = 1.e-14_rk
 
         xgq = gq_node%c1_
         ygq = gq_node%c2_
@@ -416,6 +429,18 @@ contains
 
                 zmin = minval(mesh(idom)%elems(ielem)%elem_pts(:)%c3_)
                 zmax = maxval(mesh(idom)%elems(ielem)%elem_pts(:)%c3_)
+
+
+                !
+                ! Grow bounding box by 10%
+                !
+                xmin = xmin - (0.1*abs(xmin))
+                xmax = xmax + (0.1*abs(xmax))
+                ymin = ymin - (0.1*abs(ymin))
+                ymax = ymax + (0.1*abs(ymax))
+                zmin = zmin - (0.1*abs(zmin))
+                zmax = zmax + (0.1*abs(zmax))
+
 
                 !
                 ! Test if gq_node is contained within the bounding coordinates
@@ -533,6 +558,9 @@ contains
                 if ( res < tol ) then
                     ndonors = ndonors + 1
                     call donors%push_back(icandidate)
+                    call donors_xi%push_back(xi)
+                    call donors_eta%push_back(eta)
+                    call donors_zeta%push_back(zeta)
                     exit
                 end if
 
@@ -561,6 +589,10 @@ contains
         ! Sanity check on donors and set donor_element location
         !
         if (ndonors == 0) then
+            print*, ncandidates
+
+            print*, xgq, ygq, zgq
+
             call signal(FATAL,"compute_gq_donor: No donor found for gq_node")
 
         elseif (ndonors > 1) then
@@ -572,6 +604,9 @@ contains
             donor_element%idomain  = candidate_domains%at(idonor)
             donor_element%ielement = candidate_elements%at(idonor)
 
+            xi   = donors_xi%at(1)
+            eta  = donors_eta%at(1)
+            zeta = donors_zeta%at(1)
             call donor_coordinate%set(xi,eta,zeta)
 
 

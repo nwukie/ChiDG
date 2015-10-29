@@ -2,6 +2,7 @@ module mod_timestep
     use mod_kinds,          only: rk, ik
     use mod_constants,      only: THIRD
     use type_chidg_data,    only: chidg_data_t
+    use type_seed,          only: seed_t
 
     use mod_interpolate,    only: interpolate_element
 
@@ -19,13 +20,13 @@ contains
     !!  @param[inout]   domain      domain_t instance containing mesh and solution data
     !!
     !-----------------------------------------------------------------------------------
-    subroutine compute_timestep(domain,cfl)
-        !type(domain_t),     intent(inout)   :: domain
+    subroutine compute_timestep(data,cfl)
         type(chidg_data_t), intent(inout)   :: data
         real(rk),           intent(in)      :: cfl
 
 
-        integer(ik) :: ielem, nelem, idom
+        integer(ik)     :: ielem, nelem, idom
+        type(seed_t)    :: seed
 
         integer(ik) :: irho, irhou, irhov, irhow, irhoE
 
@@ -40,7 +41,7 @@ contains
                         lam     !< characteristic speed
 
         
-        associate ( elems => domain%mesh%elems, q => domain%sdata%q )
+        !associate ( elems => domain%mesh%elems, q => domain%sdata%q )
         !
         ! Loop through elements and compute time-step function
         !
@@ -64,6 +65,8 @@ contains
                 !
                 ! Interpolate variables
                 !
+                seed%idom  = 0
+                seed%ielem = 0
                 call interpolate_element(data%mesh,data%sdata%q,idom,ielem,irho,  rho)
                 call interpolate_element(data%mesh,data%sdata%q,idom,ielem,irhou, rhou)
                 call interpolate_element(data%mesh,data%sdata%q,idom,ielem,irhov, rhov)
@@ -74,7 +77,7 @@ contains
                 !
                 ! Compute pressure
                 !
-                call domain%eqnset%prop%fluid%compute_pressure(rho,rhou,rhov,rhow,rhoE,p)
+                call data%eqnset(idom)%item%prop%fluid%compute_pressure(rho,rhou,rhov,rhow,rhoE,p)
             
 
                 !
@@ -101,21 +104,21 @@ contains
                 !
                 ! Compute element spacing parameter
                 !
-                h = elems(ielem)%vol**(THIRD)
+                h = data%mesh(idom)%elems(ielem)%vol**(THIRD)
 
 
                 !
                 ! Compute elemen-local timestep
                 !
                 !domain%sdata%dt(ielem) = (cfl*h)/lam
-                data%sdata%dt(ielem) = (cfl*h)/lam
+                data%sdata%dt(idom,ielem) = (cfl*h)/lam
 
 
 
             end do  ! ielem
         end do  ! idom
 
-        end associate
+        !end associate
 
 
     end subroutine

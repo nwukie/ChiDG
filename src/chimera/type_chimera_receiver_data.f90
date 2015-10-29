@@ -25,6 +25,8 @@ module type_chimera_receiver_data
 
 
         ! Access via data%donor_domain%at(idonor)
+        type(ivector_t)                 :: donor_neqns
+        type(ivector_t)                 :: donor_nterms_s
         type(ivector_t)                 :: donor_domain         !< Vector of domain indices
         type(ivector_t)                 :: donor_element        !< Vector of element indices for the location in the corresponding domain
         type(mvector_t)                 :: donor_interpolator   !< Vector of matrices defining the Chimera interpolation

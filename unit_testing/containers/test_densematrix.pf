@@ -7,35 +7,39 @@ subroutine test_densematrix_INIT_GEN()
     
     implicit none
     type(densematrix_t)  :: blk
-    integer(ik)          :: idim,jdim,parent,nentries
+    integer(ik)          :: idim,jdim,dparent,eparent,nentries
     
     
     ! Test initialization procedure
     idim   = 4
     jdim   = 10
     nentries = idim*jdim
-    parent = 55
+    dparent = 1
+    eparent = 55
     
-    call blk%init(idim,jdim,parent)
+    call blk%init(idim,jdim,dparent,eparent)
     
     @assertEqual(idim,blk%idim())
     @assertEqual(jdim,blk%jdim())
     @assertEqual(nentries,blk%nentries())
-    @assertEqual(parent,blk%parent())
+    @assertEqual(dparent,blk%dparent())
+    @assertEqual(eparent,blk%eparent())
     
     
     ! Test reinitialization procedure
     idim   = 6
     jdim   = 12
     nentries = idim*jdim
-    parent = 12
+    dparent = 1
+    eparent = 12
     
-    call blk%init(idim,jdim,parent)
+    call blk%init(idim,jdim,dparent,eparent)
     
     @assertEqual(idim,blk%idim())
     @assertEqual(jdim,blk%jdim())
     @assertEqual(nentries,blk%nentries())
-    @assertEqual(parent,blk%parent())
+    @assertEqual(dparent,blk%dparent())
+    @assertEqual(eparent,blk%eparent())
     
 end subroutine
 
@@ -49,33 +53,37 @@ subroutine test_densematrix_INIT_SQUARE()
     
     implicit none
     type(densematrix_t)   :: blk
-    integer(ik)          :: bsize,parent,nentries
+    integer(ik)          :: bsize,dparent,eparent,nentries
     
     
     ! Test initialization procedure
     bsize   = 4
     nentries = bsize*bsize
-    parent = 55
+    dparent = 1
+    eparent = 55
     
-    call blk%init(bsize,parent)
+    call blk%init(bsize,dparent,eparent)
     
     @assertEqual(bsize,blk%idim())
     @assertEqual(bsize,blk%jdim())
     @assertEqual(nentries,blk%nentries())
-    @assertEqual(parent,blk%parent())
+    @assertEqual(dparent,blk%dparent())
+    @assertEqual(eparent,blk%eparent())
     
     
     ! Test reinitialization procedure
     bsize   = 12
     nentries = bsize*bsize
-    parent = 22
+    dparent = 1
+    eparent = 22
     
-    call blk%init(bsize,parent)
+    call blk%init(bsize,dparent,eparent)
     
     @assertEqual(bsize,blk%idim())
     @assertEqual(bsize,blk%jdim())
     @assertEqual(nentries,blk%nentries())
-    @assertEqual(parent,blk%parent())
+    @assertEqual(dparent,blk%dparent())
+    @assertEqual(eparent,blk%eparent())
 
 end subroutine
 
@@ -90,15 +98,16 @@ subroutine test_densematrix_RESIZE()
     
     implicit none
     type(densematrix_t)   :: blk
-    integer(ik)          :: idim,jdim,parent,nentries
+    integer(ik)          :: idim,jdim,dparent,eparent,nentries
     
     
     ! Initialize block
     idim   = 4
     jdim   = 7
-    parent = 55
+    dparent = 1
+    eparent = 55
     
-    call blk%init(idim,jdim,parent)
+    call blk%init(idim,jdim,dparent,eparent)
     
     ! Test resize procedure
     idim   = 12
@@ -110,7 +119,8 @@ subroutine test_densematrix_RESIZE()
     @assertEqual(idim,blk%idim())
     @assertEqual(jdim,blk%jdim())
     @assertEqual(nentries,blk%nentries())
-    @assertEqual(parent,blk%parent())
+    @assertEqual(dparent,blk%dparent())
+    @assertEqual(eparent,blk%eparent())
 
 end subroutine
 
@@ -124,16 +134,17 @@ subroutine test_densematrix_REPARENT()
     
     implicit none
     type(densematrix_t)   :: blk
-    integer(ik)          :: idim,jdim,parent,nentries
+    integer(ik)          :: idim,jdim,dparent,eparent,parent,nentries
     
     
     ! Initialize block
     idim   = 4
     jdim   = 7
     nentries = idim*jdim
-    parent = 55
+    dparent = 1
+    eparent = 55
     
-    call blk%init(idim,jdim,parent)
+    call blk%init(idim,jdim,dparent,eparent)
     
     ! Test resize procedure
     parent = 21
@@ -143,7 +154,8 @@ subroutine test_densematrix_REPARENT()
     @assertEqual(idim,blk%idim())
     @assertEqual(jdim,blk%jdim())
     @assertEqual(nentries,blk%nentries())
-    @assertEqual(parent,blk%parent())
+    @assertEqual(dparent,blk%dparent())
+    @assertEqual(parent,blk%eparent())
 
 end subroutine
 

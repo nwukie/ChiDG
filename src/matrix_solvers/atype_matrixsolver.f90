@@ -154,7 +154,6 @@ contains
         !
         ! Compute r = b - Ax
         !
-        !err_vec = err_vec - b
         r = b - A*x
 
 

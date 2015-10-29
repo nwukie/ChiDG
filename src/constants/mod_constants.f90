@@ -77,11 +77,6 @@ module mod_constants
     !
     ! Face types. These should be distinct from the above 'face directions'
     !
-    !integer(ik), parameter :: ORPHAN    = -2     ! orphan face - has no home and will not be operated on. 
-    !integer(ik), parameter :: INTERIOR  =  0     ! interior face
-    !integer(ik), parameter :: BOUNDARY  =  1     ! boundary condition type
-    !integer(ik), parameter :: CHIMERA   = -1     ! Chimera face
-
     integer(ik), parameter :: INTERIOR  =  0     ! interior face
     integer(ik), parameter :: BOUNDARY  = -1     ! boundary condition type
     integer(ik), parameter :: CHIMERA   = -2     ! Chimera face

@@ -28,7 +28,7 @@ module type_fgmres
     !-------------------------------------------
     type, public, extends(matrixsolver_t) :: fgmres_t
 
-        integer(ik) :: m = 100
+        integer(ik) :: m = 400
 
     contains
 
@@ -156,6 +156,8 @@ contains
                 call v(ivec)%clear()
                 call z(ivec)%clear()
             end do
+
+
             p = ZERO
             y = ZERO
             c = ZERO
@@ -167,7 +169,10 @@ contains
             !
             ! Compute initial residual r0, residual norm, and normalized r0
             !
+
             r0      = self%residual(A,x0,b)
+
+            
             v(1)    = r0/r0%norm()
 
 

@@ -9,6 +9,7 @@ module EULER_LaxFriedrichs_flux
     use type_solverdata,        only: solverdata_t
     use type_properties,        only: properties_t
     use type_seed,              only: seed_t
+    use type_face_location,     only: face_location_t
 
     use mod_interpolate,        only: interpolate_face
     use mod_integrate,          only: integrate_boundary_scalar_flux
@@ -62,8 +63,8 @@ contains
         integer(ik)     :: irhow
         integer(ik)     :: irhoe
 
-        !integer(ik)     :: iseed
-        type(seed_t)    :: seed
+        type(seed_t)            :: seed
+        type(face_location_t)   :: face
 
         real(rk)        :: gam_m, gam_p
 
@@ -92,13 +93,10 @@ contains
         irhoE = prop%get_eqn_index("rhoE")
 
 
-        !
-        ! Get neighbor face and seed element for derivatives
-        !
-        !idom_n    = compute_neighbor_domain( mesh,idom,ielem,iface,idonor)
-        !ielem_n   = compute_neighbor_element(mesh,idom,ielem,iface,idonor)
-        !iface_n   = compute_neighbor_face(   mesh,idom,ielem,iface,idonor)
-        
+        face%idomain  = idom
+        face%ielement = ielem
+        face%iface    = iface
+
 
         !
         ! Compute element for linearization
@@ -160,7 +158,8 @@ contains
             flux = HALF*(upwind)
             !flux = HALF*(upwind)*norms(:,1) + HALF*(upwind)*norms(:,2) + HALF*(upwind)*norms(:,3)
 
-            call integrate_boundary_scalar_flux(mesh(idom)%faces(ielem,iface),sdata,idom,irho,iblk,flux)
+            !call integrate_boundary_scalar_flux(mesh(idom)%faces(ielem,iface),sdata,idom,irho,iblk,flux)
+            call integrate_boundary_scalar_flux(mesh,sdata,face,irho,iblk,idonor,seed,flux)
 
 
             !================================
@@ -171,7 +170,8 @@ contains
             flux = HALF*(upwind)
             !flux = HALF*(upwind)*norms(:,1) + HALF*(upwind)*norms(:,2) + HALF*(upwind)*norms(:,3)
 
-            call integrate_boundary_scalar_flux(mesh(idom)%faces(ielem,iface),sdata,idom,irhou,iblk,flux)
+            !call integrate_boundary_scalar_flux(mesh(idom)%faces(ielem,iface),sdata,idom,irhou,iblk,flux)
+            call integrate_boundary_scalar_flux(mesh,sdata,face,irhou,iblk,idonor,seed,flux)
 
 
             !================================
@@ -182,7 +182,8 @@ contains
             flux = HALF*(upwind)
             !flux = HALF*(upwind)*norms(:,1) + HALF*(upwind)*norms(:,2) + HALF*(upwind)*norms(:,3)
 
-            call integrate_boundary_scalar_flux(mesh(idom)%faces(ielem,iface),sdata,idom,irhov,iblk,flux)
+            !call integrate_boundary_scalar_flux(mesh(idom)%faces(ielem,iface),sdata,idom,irhov,iblk,flux)
+            call integrate_boundary_scalar_flux(mesh,sdata,face,irhov,iblk,idonor,seed,flux)
 
             !================================
             !       Z-MOMENTUM FLUX
@@ -192,7 +193,8 @@ contains
             flux = HALF*(upwind)
             !flux = HALF*(upwind)*norms(:,1) + HALF*(upwind)*norms(:,2) + HALF*(upwind)*norms(:,3)
 
-            call integrate_boundary_scalar_flux(mesh(idom)%faces(ielem,iface),sdata,idom,irhow,iblk,flux)
+            !call integrate_boundary_scalar_flux(mesh(idom)%faces(ielem,iface),sdata,idom,irhow,iblk,flux)
+            call integrate_boundary_scalar_flux(mesh,sdata,face,irhow,iblk,idonor,seed,flux)
 
             !================================
             !          ENERGY FLUX
@@ -202,7 +204,8 @@ contains
             flux = HALF*(upwind)
             !flux = HALF*(upwind)*norms(:,1) + HALF*(upwind)*norms(:,2) + HALF*(upwind)*norms(:,3)
 
-            call integrate_boundary_scalar_flux(mesh(idom)%faces(ielem,iface),sdata,idom,irhoE,iblk,flux)
+            !call integrate_boundary_scalar_flux(mesh(idom)%faces(ielem,iface),sdata,idom,irhoE,iblk,flux)
+            call integrate_boundary_scalar_flux(mesh,sdata,face,irhoE,iblk,idonor,seed,flux)
 
         end associate
 

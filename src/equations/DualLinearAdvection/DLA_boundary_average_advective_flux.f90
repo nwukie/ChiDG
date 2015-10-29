@@ -9,6 +9,7 @@ module DLA_boundary_average_advective_flux
     use type_mesh,              only: mesh_t
     use type_solverdata,        only: solverdata_t
     use type_seed,              only: seed_t
+    use type_face_location,     only: face_location_t
 
 
     use mod_interpolate,        only: interpolate_face
@@ -57,6 +58,7 @@ contains
         real(rk)                 :: cx, cy, cz
         integer(ik)              :: iu_a, iu_b, iseed, ierr, nnodes
         type(seed_t)             :: seed
+        type(face_location_t)    :: face
         type(AD_D), allocatable  :: ua_l(:), ua_r(:), ub_l(:), ub_r(:), flux_x(:), flux_y(:), flux_z(:)
 
 
@@ -66,16 +68,16 @@ contains
         iu_a      = prop%get_eqn_index('u_a')
         iu_b      = prop%get_eqn_index('u_b')
 
+
+        face%idomain  = idom
+        face%ielement = ielem
+        face%iface    = iface
+
         !
         ! Get quadrature node count
         !
         nnodes    = mesh(idom)%faces(ielem,iface)%gq%nnodes_f
 
-        !
-        ! Get neighbor location
-        !
-        !ineighbor = mesh(idom)%faces(ielem,iface)%ineighbor
-        !idom_n    = idom
 
         !
         ! Get equation set properties
@@ -101,10 +103,6 @@ contains
         if (ierr /= 0) call AllocationError
 
 
-        !
-        ! Get neighbor face and seed element for derivatives
-        !
-        !iface_p = compute_neighbor_face(mesh,idom,ielem,iface,idonor)
 
 
         !
@@ -131,7 +129,8 @@ contains
         flux_y = ((cy*ua_l + cy*ua_r)/TWO )  *  mesh(idom)%faces(ielem,iface)%norm(:,2)
         flux_z = ((cz*ua_l + cz*ua_r)/TWO )  *  mesh(idom)%faces(ielem,iface)%norm(:,3)
 
-        call integrate_boundary_flux(mesh(idom)%faces(ielem,iface), sdata, idom, iu_a, iblk, flux_x, flux_y, flux_z)
+        !call integrate_boundary_flux(mesh(idom)%faces(ielem,iface), sdata, idom, iu_a, iblk, flux_x, flux_y, flux_z)
+        call integrate_boundary_flux(mesh,sdata,face,iu_a,iblk,idonor,seed,flux_x,flux_y,flux_z)
 
 
 
@@ -140,7 +139,8 @@ contains
         flux_y = ((cy*ub_l + cy*ub_r)/TWO )  *  mesh(idom)%faces(ielem,iface)%norm(:,2)
         flux_z = ((cz*ub_l + cz*ub_r)/TWO )  *  mesh(idom)%faces(ielem,iface)%norm(:,3)
 
-        call integrate_boundary_flux(mesh(idom)%faces(ielem,iface), sdata, idom, iu_b, iblk, flux_x, flux_y, flux_z)
+        !call integrate_boundary_flux(mesh(idom)%faces(ielem,iface), sdata, idom, iu_b, iblk, flux_x, flux_y, flux_z)
+        call integrate_boundary_flux(mesh,sdata,face,iu_b,iblk,idonor,seed,flux_x,flux_y,flux_z)
 
 
 

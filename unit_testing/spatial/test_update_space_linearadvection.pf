@@ -1,0 +1,254 @@
+@Test
+subroutine test_update_space_linearadvection()
+    use pfunit_mod
+
+    use mod_kinds,          only: rk, ik
+    use mod_constants,      only: XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX, DIAG
+
+    use type_chidg,         only: chidg_t
+    use type_meshdata,      only: meshdata_t
+    use atype_function,     only: function_t
+
+
+    use mod_grid_operators, only: initialize_variable
+    use mod_function,       only: create_function
+    use mod_hdfio,          only: read_grid_hdf
+    use mod_spatial,        only: update_space
+
+    use operator_chidg_mv
+    implicit none
+
+
+    type(chidg_t)                   :: chidgA, chidgB
+    type(meshdata_t), allocatable   :: meshdataA(:), meshdataB(:)
+    class(function_t), allocatable  :: constant, gaussian
+    integer(ik)     :: idom, nterms_s
+    real(rk)        :: tol
+
+
+    tol      = 1.e-15_rk
+    nterms_s = 8
+
+
+    !
+    ! Initialize ChiDG
+    !
+    call chidgA%init('env')
+
+
+
+    !
+    ! Read grid
+    !
+    call read_grid_hdf('D1_E16_M1.h5',meshdataA)
+    call read_grid_hdf('D2_E8_M1_abutting.h5',meshdataB)
+
+
+
+    !
+    ! Add domains
+    !
+    do idom = 1,size(meshdataA)
+        call chidgA%data%add_domain(trim(meshdataA(idom)%name),meshdataA(idom)%points,meshdataA(idom)%nterms_c,'linearadvection',nterms_s)
+    end do
+
+    do idom = 1,size(meshdataB)
+        call chidgB%data%add_domain(trim(meshdataB(idom)%name),meshdataB(idom)%points,meshdataB(idom)%nterms_c,'linearadvection',nterms_s)
+    end do
+
+
+
+
+    !
+    ! Add boundary conditions ChiDG - A
+    !
+    call chidgA%data%add_bc('D_01','extrapolate_la',XI_MIN)
+    call chidgA%data%add_bc('D_01','extrapolate_la',XI_MAX)
+    call chidgA%data%add_bc('D_01','extrapolate_la',ETA_MIN)
+    call chidgA%data%add_bc('D_01','extrapolate_la',ETA_MAX)
+    call chidgA%data%add_bc('D_01','extrapolate_la',ZETA_MIN)
+    call chidgA%data%add_bc('D_01','extrapolate_la',ZETA_MAX)
+
+    !
+    ! Add boundary conditions to ChiDG - B
+    !
+    call chidgB%data%add_bc('D_01','extrapolate_la',XI_MIN)
+    !call chidgB%data%add_bc('D_01','extrapolate_la',XI_MAX)
+    call chidgB%data%add_bc('D_01','extrapolate_la',ETA_MIN)
+    call chidgB%data%add_bc('D_01','extrapolate_la',ETA_MAX)
+    call chidgB%data%add_bc('D_01','extrapolate_la',ZETA_MIN)
+    call chidgB%data%add_bc('D_01','extrapolate_la',ZETA_MAX)
+
+
+    !call chidgB%data%add_bc('D_02','extrapolate_la',XI_MIN)
+    call chidgB%data%add_bc('D_02','extrapolate_la',XI_MAX)
+    call chidgB%data%add_bc('D_02','extrapolate_la',ETA_MIN)
+    call chidgB%data%add_bc('D_02','extrapolate_la',ETA_MAX)
+    call chidgB%data%add_bc('D_02','extrapolate_la',ZETA_MIN)
+    call chidgB%data%add_bc('D_02','extrapolate_la',ZETA_MAX)
+
+
+
+
+    !
+    ! Initialize solution data storage
+    !
+    call chidgA%init('chimera')
+    call chidgA%data%init_sdata()
+
+    call chidgB%init('chimera')
+    call chidgB%data%init_sdata()
+
+
+
+
+    !
+    ! Initialize solution
+    !
+    call create_function(gaussian,'gaussian')
+
+    call initialize_variable(chidgA%data,1,gaussian)
+    call initialize_variable(chidgB%data,1,gaussian)
+
+
+
+    !
+    ! Call update_space
+    !
+    print*, 'ChiDG - A: Updating Space'
+    call update_space(chidgA%data)
+    print*, 'ChiDG - B: Updating Space'
+    call update_space(chidgB%data)
+
+
+
+
+    !
+    ! Compare residual vector entries
+    !
+    @assertEqual(chidgA%data%sdata%rhs%dom(1)%lvecs(1)%vec, chidgB%data%sdata%rhs%dom(1)%lvecs(1)%vec )
+    @assertEqual(chidgA%data%sdata%rhs%dom(1)%lvecs(2)%vec, chidgB%data%sdata%rhs%dom(1)%lvecs(2)%vec )
+    @assertEqual(chidgA%data%sdata%rhs%dom(1)%lvecs(3)%vec, chidgB%data%sdata%rhs%dom(2)%lvecs(1)%vec )
+    @assertEqual(chidgA%data%sdata%rhs%dom(1)%lvecs(4)%vec, chidgB%data%sdata%rhs%dom(2)%lvecs(2)%vec )
+    @assertEqual(chidgA%data%sdata%rhs%dom(1)%lvecs(5)%vec, chidgB%data%sdata%rhs%dom(1)%lvecs(3)%vec )
+    @assertEqual(chidgA%data%sdata%rhs%dom(1)%lvecs(6)%vec, chidgB%data%sdata%rhs%dom(1)%lvecs(4)%vec )
+    @assertEqual(chidgA%data%sdata%rhs%dom(1)%lvecs(7)%vec, chidgB%data%sdata%rhs%dom(2)%lvecs(3)%vec )
+    @assertEqual(chidgA%data%sdata%rhs%dom(1)%lvecs(8)%vec, chidgB%data%sdata%rhs%dom(2)%lvecs(4)%vec )
+    @assertEqual(chidgA%data%sdata%rhs%dom(1)%lvecs(9)%vec, chidgB%data%sdata%rhs%dom(1)%lvecs(5)%vec )
+    @assertEqual(chidgA%data%sdata%rhs%dom(1)%lvecs(10)%vec, chidgB%data%sdata%rhs%dom(1)%lvecs(6)%vec )
+    @assertEqual(chidgA%data%sdata%rhs%dom(1)%lvecs(11)%vec, chidgB%data%sdata%rhs%dom(2)%lvecs(5)%vec )
+    @assertEqual(chidgA%data%sdata%rhs%dom(1)%lvecs(12)%vec, chidgB%data%sdata%rhs%dom(2)%lvecs(6)%vec )
+    @assertEqual(chidgA%data%sdata%rhs%dom(1)%lvecs(13)%vec, chidgB%data%sdata%rhs%dom(1)%lvecs(7)%vec )
+    @assertEqual(chidgA%data%sdata%rhs%dom(1)%lvecs(14)%vec, chidgB%data%sdata%rhs%dom(1)%lvecs(8)%vec )
+    @assertEqual(chidgA%data%sdata%rhs%dom(1)%lvecs(15)%vec, chidgB%data%sdata%rhs%dom(2)%lvecs(7)%vec )
+    @assertEqual(chidgA%data%sdata%rhs%dom(1)%lvecs(16)%vec, chidgB%data%sdata%rhs%dom(2)%lvecs(8)%vec )
+
+
+
+    !
+    ! Compare jacobian matrix entries
+    !
+    ! Comparing the Single-Domain 16 element block jacobians to the Two-Domain, 8-element block Chimera jacobians
+
+    !
+    ! Domain 1 Chimera Blocks
+    !
+    @assertEqual(chidgA%data%sdata%lhs%dom(1)%lblks(2,XI_MIN)%mat,   chidgB%data%sdata%lhs%dom(1)%lblks(2,XI_MIN)%mat)
+    @assertEqual(chidgA%data%sdata%lhs%dom(1)%lblks(2,XI_MAX)%mat,   chidgB%data%sdata%lhs%dom(1)%chiblks(2,1)%mat)
+    @assertEqual(chidgA%data%sdata%lhs%dom(1)%lblks(2,ETA_MAX)%mat,  chidgB%data%sdata%lhs%dom(1)%lblks(2,ETA_MAX)%mat)
+    @assertEqual(chidgA%data%sdata%lhs%dom(1)%lblks(2,ZETA_MAX)%mat, chidgB%data%sdata%lhs%dom(1)%lblks(2,ZETA_MAX)%mat)
+
+
+    @assertEqual(chidgA%data%sdata%lhs%dom(1)%lblks(6,XI_MIN)%mat,   chidgB%data%sdata%lhs%dom(1)%lblks(4,XI_MIN)%mat)
+    @assertEqual(chidgA%data%sdata%lhs%dom(1)%lblks(6,XI_MAX)%mat,   chidgB%data%sdata%lhs%dom(1)%chiblks(4,1)%mat)
+    @assertEqual(chidgA%data%sdata%lhs%dom(1)%lblks(6,ETA_MIN)%mat,  chidgB%data%sdata%lhs%dom(1)%lblks(4,ETA_MIN)%mat)
+    @assertEqual(chidgA%data%sdata%lhs%dom(1)%lblks(6,ZETA_MAX)%mat, chidgB%data%sdata%lhs%dom(1)%lblks(4,ZETA_MAX)%mat)
+
+
+    @assertEqual(chidgA%data%sdata%lhs%dom(1)%lblks(10,XI_MIN)%mat,   chidgB%data%sdata%lhs%dom(1)%lblks(6,XI_MIN)%mat)
+    @assertEqual(chidgA%data%sdata%lhs%dom(1)%lblks(10,XI_MAX)%mat,   chidgB%data%sdata%lhs%dom(1)%chiblks(6,1)%mat)
+    @assertEqual(chidgA%data%sdata%lhs%dom(1)%lblks(10,ETA_MAX)%mat,  chidgB%data%sdata%lhs%dom(1)%lblks(6,ETA_MAX)%mat)
+    @assertEqual(chidgA%data%sdata%lhs%dom(1)%lblks(10,ZETA_MIN)%mat, chidgB%data%sdata%lhs%dom(1)%lblks(6,ZETA_MIN)%mat)
+
+
+    @assertEqual(chidgA%data%sdata%lhs%dom(1)%lblks(14,XI_MIN)%mat,   chidgB%data%sdata%lhs%dom(1)%lblks(8,XI_MIN)%mat)
+    @assertEqual(chidgA%data%sdata%lhs%dom(1)%lblks(14,XI_MAX)%mat,   chidgB%data%sdata%lhs%dom(1)%chiblks(8,1)%mat)
+    @assertEqual(chidgA%data%sdata%lhs%dom(1)%lblks(14,ETA_MIN)%mat,  chidgB%data%sdata%lhs%dom(1)%lblks(8,ETA_MIN)%mat)
+    @assertEqual(chidgA%data%sdata%lhs%dom(1)%lblks(14,ZETA_MIN)%mat, chidgB%data%sdata%lhs%dom(1)%lblks(8,ZETA_MIN)%mat)
+
+
+    !
+    ! Domain 2 Chimera Blocks
+    !
+    @assertEqual(chidgA%data%sdata%lhs%dom(1)%lblks(3,XI_MIN)%mat,   chidgB%data%sdata%lhs%dom(2)%chiblks(1,1)%mat)
+    @assertEqual(chidgA%data%sdata%lhs%dom(1)%lblks(3,XI_MAX)%mat,   chidgB%data%sdata%lhs%dom(2)%lblks(1,XI_MAX)%mat)
+    @assertEqual(chidgA%data%sdata%lhs%dom(1)%lblks(3,ETA_MAX)%mat,  chidgB%data%sdata%lhs%dom(2)%lblks(1,ETA_MAX)%mat)
+    @assertEqual(chidgA%data%sdata%lhs%dom(1)%lblks(3,ZETA_MAX)%mat, chidgB%data%sdata%lhs%dom(2)%lblks(1,ZETA_MAX)%mat)
+
+
+    @assertEqual(chidgA%data%sdata%lhs%dom(1)%lblks(7,XI_MIN)%mat,   chidgB%data%sdata%lhs%dom(2)%chiblks(3,1)%mat)
+    @assertEqual(chidgA%data%sdata%lhs%dom(1)%lblks(7,XI_MAX)%mat,   chidgB%data%sdata%lhs%dom(2)%lblks(3,XI_MAX)%mat)
+    @assertEqual(chidgA%data%sdata%lhs%dom(1)%lblks(7,ETA_MIN)%mat,  chidgB%data%sdata%lhs%dom(2)%lblks(3,ETA_MIN)%mat)
+    @assertEqual(chidgA%data%sdata%lhs%dom(1)%lblks(7,ZETA_MAX)%mat, chidgB%data%sdata%lhs%dom(2)%lblks(3,ZETA_MAX)%mat)
+
+
+    @assertEqual(chidgA%data%sdata%lhs%dom(1)%lblks(11,XI_MIN)%mat,   chidgB%data%sdata%lhs%dom(2)%chiblks(5,1)%mat)
+    @assertEqual(chidgA%data%sdata%lhs%dom(1)%lblks(11,XI_MAX)%mat,   chidgB%data%sdata%lhs%dom(2)%lblks(5,XI_MAX)%mat)
+    @assertEqual(chidgA%data%sdata%lhs%dom(1)%lblks(11,ETA_MAX)%mat,  chidgB%data%sdata%lhs%dom(2)%lblks(5,ETA_MAX)%mat)
+    @assertEqual(chidgA%data%sdata%lhs%dom(1)%lblks(11,ZETA_MIN)%mat, chidgB%data%sdata%lhs%dom(2)%lblks(5,ZETA_MIN)%mat)
+
+
+    @assertEqual(chidgA%data%sdata%lhs%dom(1)%lblks(15,XI_MIN)%mat,   chidgB%data%sdata%lhs%dom(2)%chiblks(7,1)%mat)
+    @assertEqual(chidgA%data%sdata%lhs%dom(1)%lblks(15,XI_MAX)%mat,   chidgB%data%sdata%lhs%dom(2)%lblks(7,XI_MAX)%mat)
+    @assertEqual(chidgA%data%sdata%lhs%dom(1)%lblks(15,ETA_MIN)%mat,  chidgB%data%sdata%lhs%dom(2)%lblks(7,ETA_MIN)%mat)
+    @assertEqual(chidgA%data%sdata%lhs%dom(1)%lblks(15,ZETA_MIN)%mat, chidgB%data%sdata%lhs%dom(2)%lblks(7,ZETA_MIN)%mat)
+
+
+
+
+
+
+
+
+    !
+    ! Compare matrix vector product
+    !
+    chidgA%data%sdata%rhs = chidgA%data%sdata%lhs * chidgA%data%sdata%q
+    chidgB%data%sdata%rhs = chidgB%data%sdata%lhs * chidgB%data%sdata%q
+
+
+
+
+    !
+    ! Test
+    !
+    @assertEqual(chidgA%data%sdata%rhs%dom(1)%lvecs(1)%vec, chidgB%data%sdata%rhs%dom(1)%lvecs(1)%vec,tol)
+    @assertEqual(chidgA%data%sdata%rhs%dom(1)%lvecs(2)%vec, chidgB%data%sdata%rhs%dom(1)%lvecs(2)%vec,tol)
+    @assertEqual(chidgA%data%sdata%rhs%dom(1)%lvecs(3)%vec, chidgB%data%sdata%rhs%dom(2)%lvecs(1)%vec,tol)
+    @assertEqual(chidgA%data%sdata%rhs%dom(1)%lvecs(4)%vec, chidgB%data%sdata%rhs%dom(2)%lvecs(2)%vec,tol)
+    @assertEqual(chidgA%data%sdata%rhs%dom(1)%lvecs(5)%vec, chidgB%data%sdata%rhs%dom(1)%lvecs(3)%vec,tol)
+    @assertEqual(chidgA%data%sdata%rhs%dom(1)%lvecs(6)%vec, chidgB%data%sdata%rhs%dom(1)%lvecs(4)%vec,tol)
+    @assertEqual(chidgA%data%sdata%rhs%dom(1)%lvecs(7)%vec, chidgB%data%sdata%rhs%dom(2)%lvecs(3)%vec,tol)
+    @assertEqual(chidgA%data%sdata%rhs%dom(1)%lvecs(8)%vec, chidgB%data%sdata%rhs%dom(2)%lvecs(4)%vec,tol)
+    @assertEqual(chidgA%data%sdata%rhs%dom(1)%lvecs(9)%vec, chidgB%data%sdata%rhs%dom(1)%lvecs(5)%vec,tol)
+    @assertEqual(chidgA%data%sdata%rhs%dom(1)%lvecs(10)%vec, chidgB%data%sdata%rhs%dom(1)%lvecs(6)%vec,tol)
+    @assertEqual(chidgA%data%sdata%rhs%dom(1)%lvecs(11)%vec, chidgB%data%sdata%rhs%dom(2)%lvecs(5)%vec,tol)
+    @assertEqual(chidgA%data%sdata%rhs%dom(1)%lvecs(12)%vec, chidgB%data%sdata%rhs%dom(2)%lvecs(6)%vec,tol)
+    @assertEqual(chidgA%data%sdata%rhs%dom(1)%lvecs(13)%vec, chidgB%data%sdata%rhs%dom(1)%lvecs(7)%vec,tol)
+    @assertEqual(chidgA%data%sdata%rhs%dom(1)%lvecs(14)%vec, chidgB%data%sdata%rhs%dom(1)%lvecs(8)%vec,tol)
+    @assertEqual(chidgA%data%sdata%rhs%dom(1)%lvecs(15)%vec, chidgB%data%sdata%rhs%dom(2)%lvecs(7)%vec,tol)
+    @assertEqual(chidgA%data%sdata%rhs%dom(1)%lvecs(16)%vec, chidgB%data%sdata%rhs%dom(2)%lvecs(8)%vec,tol)
+
+
+
+
+
+
+
+
+
+
+
+
+
+end subroutine test_update_space_linearadvection

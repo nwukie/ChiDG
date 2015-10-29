@@ -1,0 +1,152 @@
+@Test
+subroutine test_chidgMatrix_operator_mv()
+    use pfunit_mod
+
+    use mod_kinds,          only: rk, ik
+    use mod_constants,      only: ZERO, ONE, TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT, &
+                                  NINE, TEN, DIAG, XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX
+
+    use type_chidg,         only: chidg_t
+    use type_chidgMatrix,   only: chidgMatrix_t
+    use type_chidgVector,   only: chidgVector_t
+    use type_meshdata,      only: meshdata_t
+
+    use mod_hdfio,          only: read_grid_hdf
+
+    use operator_chidg_mv
+    implicit none
+
+
+    type(chidg_t)                   :: chidg
+    type(meshdata_t), allocatable   :: meshdata(:)
+    integer(ik)                     :: nterms_s, idom
+    real(rk), dimension(8)          :: bref_1, bref_2
+    real(rk)                        :: tol
+
+    type(chidgMatrix_t)             :: A
+    type(chidgVector_t)             :: x, b
+
+    tol      = 1.e-13_rk
+    nterms_s = 8
+
+    !
+    ! Initialize ChiDG
+    !
+    call chidg%init('env')
+
+
+    !
+    ! Get grid points
+    !
+    call read_grid_hdf("D2_E8_M1_overlapping_multipledonor.h5",meshdata)
+
+
+    !
+    ! Initialize domains
+    !
+    do idom = 1,size(meshdata)
+        call chidg%data%add_domain(trim(meshdata(idom)%name), meshdata(idom)%points, meshdata(idom)%nterms_c, 'linearadvection', nterms_s)
+    end do
+
+
+
+    !
+    ! Set boundary conditions
+    !
+    call chidg%data%add_bc('D_01','extrapolate_la',XI_MIN)
+    !call chidg%data%add_bc('D_01','extrapolate_la',XI_MAX)
+    call chidg%data%add_bc('D_01','extrapolate_la',ETA_MIN)
+    call chidg%data%add_bc('D_01','extrapolate_la',ETA_MAX)
+    call chidg%data%add_bc('D_01','extrapolate_la',ZETA_MIN)
+    call chidg%data%add_bc('D_01','extrapolate_la',ZETA_MAX)
+
+
+    !call chidg%data%add_bc('D_02','extrapolate_la',XI_MIN)
+    call chidg%data%add_bc('D_02','extrapolate_la',XI_MAX)
+    call chidg%data%add_bc('D_02','extrapolate_la',ETA_MIN)
+    call chidg%data%add_bc('D_02','extrapolate_la',ETA_MAX)
+    call chidg%data%add_bc('D_02','extrapolate_la',ZETA_MIN)
+    call chidg%data%add_bc('D_02','extrapolate_la',ZETA_MAX)
+
+    !
+    ! Initialize ChiDG Chimera Interfaces
+    !
+    call chidg%init('chimera')
+
+
+
+    !
+    ! Initialize data containers
+    !
+    call A%init(chidg%data%mesh,'full')
+    call x%init(chidg%data%mesh)
+    call b%init(chidg%data%mesh)
+
+
+
+    !
+    ! Initialize chidgMatrix data -- domain 1
+    !
+    A%dom(1)%lblks(1,DIAG)%mat  = ONE
+
+
+    A%dom(1)%chiblks(2,1)%mat = TWO
+    A%dom(1)%chiblks(2,2)%mat = THREE
+
+
+    A%dom(2)%chiblks(1,1)%mat = FOUR
+
+
+
+    !
+    ! Initialize chidgMatrix data
+    !
+    x%dom(1)%lvecs(2)%vec = 0.1_rk
+
+    x%dom(2)%lvecs(1)%vec = 0.2_rk
+    x%dom(2)%lvecs(3)%vec = 0.3_rk
+
+
+
+
+
+
+
+    !
+    ! Perform matrix-vector multiplication. THIS IS BEING TESTED
+    !
+    b = A*x
+
+
+
+
+    !
+    ! Compute reference values
+    !
+    bref_1 = (2._rk * 0.2_rk)*nterms_s + (THREE * 0.3_rk)*nterms_s
+    bref_2 = (FOUR * 0.1_rk)*nterms_s
+
+
+
+
+
+
+
+    !
+    ! Test MV operation
+    !
+    @assertEqual(bref_1,b%dom(1)%lvecs(2)%vec,tol)
+    @assertEqual(bref_2,b%dom(2)%lvecs(1)%vec,tol)
+
+
+
+    !
+    ! Test max donors
+    !
+    @assertEqual(2,size(A%dom(1)%chiblks,2))
+    @assertEqual(2,size(A%dom(2)%chiblks,2))
+
+
+
+
+end subroutine

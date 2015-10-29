@@ -3,8 +3,9 @@ module precon_jacobi
     use mod_kinds,              only: rk, ik
     use mod_constants,          only: DIAG
     use type_preconditioner,    only: preconditioner_t
-    use type_blockmatrix,       only: blockmatrix_t
-    use type_blockvector,       only: blockvector_t
+    use type_chidgMatrix,       only: chidgMatrix_t
+    use type_chidgVector,       only: chidgVector_t
+    use type_chidg_data,        only: chidg_data_t
     use type_densematrix,       only: densematrix_t
 
     use mod_inv,    only: inv
@@ -18,9 +19,10 @@ module precon_jacobi
     !----------------------------------------------------------------------
     type, extends(preconditioner_t) :: precon_jacobi_t
 
-        type(densematrix_t), allocatable    :: D(:)     !< inverse of block diagonal
+        type(densematrix_t), allocatable    :: D(:,:)     !< inverse of block diagonal, (ndom,maxelems)
 
     contains
+        procedure   :: init
         procedure   :: update
         procedure   :: apply
 
@@ -32,6 +34,63 @@ module precon_jacobi
 contains
 
 
+    !> Initialize preconditioner storage
+    !!
+    !!
+    !!
+    !!
+    !!
+    !-----------------------------------------------------------------------------
+    subroutine init(self,data)
+        class(precon_jacobi_t), intent(inout)   :: self
+        type(chidg_data_t),     intent(in)      :: data
+
+        integer(ik) :: ndom
+        logical     :: increase_maxelems = .false.
+
+
+        ndom = data%ndomains
+
+
+        !
+        ! Get maximum number of elements
+        !
+        maxelems = 0
+        do idom = 1,ndom
+
+            increase_maxelems = ( data%mesh(idom)%nelem > maxelems )
+
+            if (increase_maxelems) then
+                maxelems = data%mesh(idom)%nelem
+            end if
+        
+        end do ! idom
+
+
+        !
+        ! Allocate storage
+        !
+        if (allocated(self%D)) deallocate(self%D)
+        allocate(self%D(ndom,maxelems), stat=ierr)
+        if (ierr /= 0) call AllocationError
+
+
+
+
+
+
+    end subroutine init
+
+
+
+
+
+
+
+
+
+
+
     !> Compute the block diagonal inversion and store so it can be applied.
     !!
     !!  @author Nathan A. Wukie
@@ -40,42 +99,31 @@ contains
     !---------------------------------------------------------------------
     subroutine update(self,A,b)
         class(precon_jacobi_t), intent(inout)   :: self
-        type(blockmatrix_t),    intent(in)      :: A
-        type(blockvector_t),    intent(in)      :: b
+        type(chidgMatrix_t),    intent(in)      :: A
+        type(chidgVector_t),    intent(in)      :: b
 
 
-        integer(ik) :: ielem
+        integer(ik) :: ielem, ndom
         logical     :: reallocate   !< logical test for reallocating preconditioner storage
 
-        
-        !
-        ! Allocate storage for the block-diagonal preconditioner
-        !
-        reallocate = ( size(A%lblks,1) /= size(self%D) ) 
-
-        if (reallocate) then
-            ! Deallocate if already allocated
-            if (allocated(self%D)) deallocate(self%D)
-
-            ! Allocate a denseblock for each element
-            allocate(self%D(size(A%lblks,1)),stat=ierr)
-            if (ierr /= 0) call AllocationError
-
-        end if
-
+        ndom = size(A%dom)
 
         !
         ! Copy the block diagonal from A to the preconditioner storage
         !
-        do ielem = 1,size(A%lblks,1)
-            self%D(ielem) = A%lblks(ielem,DIAG)
+        do idom = 1,ndom
+            do ielem = 1,size(A%dom(idom)%lblks,1)
+                self%D(idom,ielem) = A%dom(idom)%lblks(ielem,DIAG)
+            end do
         end do
 
         !
         ! Replace the block diagonal D with Dinv
         !
-        do ielem = 1,size(A%lblks,1)
-            self%D(ielem)%mat = inv(self%D(ielem)%mat)
+        do idom = 1,ndom
+            do ielem = 1,size(A%dom(idom)%lblks,1)
+                self%D(idom,ielem)%mat = inv(self%D(idom,ielem)%mat)
+            end do
         end do
 
 
@@ -97,12 +145,14 @@ contains
     !-------------------------------------------------------------------------
     function apply(self,A,v) result(z)
         class(precon_jacobi_t), intent(inout)   :: self
-        type(blockmatrix_t),    intent(in)      :: A
-        type(blockvector_t),    intent(in)      :: v
+        type(chidgMatrix_t),    intent(in)      :: A
+        type(chidgVector_t),    intent(in)      :: v
 
-        type(blockvector_t) :: z
-        integer(ik)         :: ielem
+        type(chidgVector_t) :: z
+        integer(ik)         :: ielem, idom, ndom
 
+
+        ndom = size(A%dom)
 
         !
         ! Allocate 'z'
@@ -111,8 +161,13 @@ contains
         call z%clear()
 
 
-        do ielem = 1,size(self%D)
-            z%lvecs(ielem)%vec = matmul(self%D(ielem)%mat,v%lvecs(ielem)%vec)
+        !
+        ! Apply Block-Diagonal preconditioner
+        !
+        do idom = 1,ndom
+            do ielem = 1,size(A%dom(idom)%lblks,1)
+                z%dom(idom)%lvecs(ielem)%vec = matmul(self%D(idom,ielem)%mat,v%dom(idom)%lvecs(ielem)%vec)
+            end do
         end do
 
 

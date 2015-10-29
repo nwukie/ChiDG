@@ -1,7 +1,7 @@
 module mod_spatial
 #include <messenger.h>
     use mod_kinds,          only: rk,ik
-    use mod_constants,      only: NFACES, DIAG
+    use mod_constants,      only: NFACES, DIAG, CHIMERA, INTERIOR
     use type_chidg_data,    only: chidg_data_t
     use type_timer,         only: timer_t
 
@@ -18,13 +18,11 @@ contains
 
         type(timer_t)               :: timer
         integer(ik)                 :: nelem, nflux, ndonors
-        integer(ik)                 :: idom, ielem, iface, iblk, idonor, iflux, i, ibc
+        integer(ik)                 :: idom, ielem, iface, iblk, idonor, iflux, i, ibc, ChiID
         logical                     :: skip = .false.
         logical                     :: interior_face         = .false.
         logical                     :: chimera_face          = .false.
         logical                     :: compute_face          = .false.
-        !logical                     :: compute_face_interior = .false.
-        !logical                     :: compute_face_chimera  = .false.
 
 
         !
@@ -50,7 +48,7 @@ contains
                 ! Loop through local domains
                 !
                 do idom = 1,data%ndomains
-                    associate ( mesh => data%mesh(idom), sdata => data%sdata, eqnset => data%eqnset(idom)%item, prop => data%eqnset(idom)%item%prop, chimera => data%mesh(idom)%chimera)
+                    associate ( mesh => data%mesh(idom), sdata => data%sdata, eqnset => data%eqnset(idom)%item, prop => data%eqnset(idom)%item%prop)
 
                     nelem = mesh%nelem
 
@@ -65,17 +63,16 @@ contains
                         ! If the block direction is not DIAG, then we only want to compute faces in the block direction
                         ! if it has a neighbor element.
                         !
-                        !if (iblk /= DIAG  .and. iblk /= 0) then
-                        if ( iblk /= DIAG ) then
-                            ! Check if there is an element to linearize against in the iblk direction. If not, cycle
-                            if ( data%mesh(idom)%faces(ielem,iblk)%ineighbor == 0) then
-                                skip = .true.
-                            else
-                                skip = .false.
-                            end if
-                        else
-                            skip = .false.  ! Don't skip DIAG, or Chimera blocks(iblk = 0)
-                        end if
+                        !if ( iblk /= DIAG ) then
+                        !    ! Check if there is an element to linearize against in the iblk direction. If not, cycle
+                        !    if ( data%mesh(idom)%faces(ielem,iblk)%ineighbor == 0) then
+                        !        skip = .true.
+                        !    else
+                        !        skip = .false.
+                        !    end if
+                        !else
+                        !    skip = .false.  ! Don't skip DIAG, or Chimera blocks(iblk = 0)
+                        !end if
 
 
 
@@ -94,8 +91,8 @@ contains
                                 ! Furthermore, only call the routines if we are computing derivatives for the neighbor of
                                 ! iface or for the current element(DIAG). This saves a lot of unnecessary compute_boundary calls.
                                 !
-                                interior_face = ( mesh%faces(ielem,iface)%ftype == 0 )
-                                chimera_face  = ( mesh%faces(ielem,iface)%ftype == 2 )
+                                interior_face = ( mesh%faces(ielem,iface)%ftype == INTERIOR )
+                                chimera_face  = ( mesh%faces(ielem,iface)%ftype == CHIMERA )
 
                                 compute_face = (interior_face .or. chimera_face) .and. ( (iblk == iface) .or. (iblk == DIAG) )
 
@@ -106,12 +103,12 @@ contains
                                     !
                                     ! If Chimera face, how many donor elements are there that need the linearization computed
                                     !
-                                    !if ( chimera_face ) then
-                                    !    ichimera_recv = face%ichimera_recv
-                                    !    ndonors       = chimera%recv(ichimera_recv)
-                                    !else
+                                    if ( chimera_face ) then
+                                        ChiID  = mesh%faces(ielem,iface)%ChiID
+                                        ndonors = mesh%chimera%recv%data(ChiID)%ndonors
+                                    else
                                         ndonors = 1
-                                    !end if
+                                    end if
 
 
                                     !
@@ -191,8 +188,6 @@ contains
             !
             ! For boundary conditions, the linearization only depends on Q-, which is the solution vector
             ! for the interior element. So, we only need to compute derivatives for the interior element (DIAG)
-
-            print*, 'boundary conditions'
 
             iblk = 7    !> DIAG
             do idom = 1,data%ndomains

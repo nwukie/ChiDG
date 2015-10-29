@@ -191,12 +191,15 @@ contains
 
         mask = .false.
 
+
         !
         ! Test if interpolating from local element
         !
         if ( source == LOCAL ) then
             conforming_interpolation = ( (mesh(idom)%faces(ielem,iface)%ftype == INTERIOR) .or. &
-                                         (mesh(idom)%faces(ielem,iface)%ftype == BOUNDARY) )
+                                         (mesh(idom)%faces(ielem,iface)%ftype == BOUNDARY) .or. &
+                                         (mesh(idom)%faces(ielem,iface)%ftype == CHIMERA) )         ! including chimera here because in the LOCAL case, it doesn't matter
+
             ndonors = 1
 
         !

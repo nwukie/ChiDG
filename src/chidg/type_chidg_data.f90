@@ -41,7 +41,6 @@ module type_chidg_data
         type(mesh_t),                   allocatable :: mesh(:)      !< Array of mesh instances. One for each domain.
         type(bcset_t),                  allocatable :: bcset(:)     !< Array of boundary condition set instances. One for each domain.
         type(equationset_wrapper_t),    allocatable :: eqnset(:)    !< Array of equation set instances. One for each domain.
-!        type(chimera_t),                allocatable :: chimera(:)   !< Array of Chimera data instances. One for each domain.
 
 
         type(solverdata_t)                          :: sdata        !< Solver data container for solution vectors and matrices

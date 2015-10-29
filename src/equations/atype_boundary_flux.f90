@@ -4,6 +4,7 @@ module atype_boundary_flux
     use type_mesh,          only: mesh_t
     use type_solverdata,    only: solverdata_t
     use type_properties,    only: properties_t
+    use type_face_location, only: face_location_t
     implicit none
 
 
@@ -19,11 +20,13 @@ module atype_boundary_flux
 
     abstract interface
         subroutine compute_interface(self,mesh,sdata,prop,idom,ielem,iface,iblk,idonor)
+        !subroutine compute_interface(self,mesh,sdata,prop,face,iblk,idonor)
             use mod_kinds,  only: ik
             import boundary_flux_t
             import mesh_t
             import solverdata_t
             import properties_t
+            import face_location_t
 
             class(boundary_flux_t), intent(in)      :: self
             type(mesh_t),           intent(in)      :: mesh(:)

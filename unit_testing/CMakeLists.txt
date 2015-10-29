@@ -12,6 +12,7 @@ add_subdirectory(matrix_solvers)
 add_subdirectory(materials)
 add_subdirectory(preconditioners)
 add_subdirectory(chimera)
+add_subdirectory(spatial)
 
 
 

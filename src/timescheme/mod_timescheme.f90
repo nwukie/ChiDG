@@ -11,7 +11,7 @@ module mod_timescheme
 !    use forward_euler,                  only: forward_euler_t
 !    use backward_euler,                 only: backward_euler_t
 !    use backward_euler_subiteration,    only: backward_euler_subiteration_t
-!    use quasi_newton,                   only: quasi_newton_t
+    use quasi_newton,                   only: quasi_newton_t
     use newton,                         only: newton_t
     implicit none
 
@@ -21,7 +21,7 @@ module mod_timescheme
 !    type(forward_euler_t)               :: FORWARD_EULER_INSTANCE
 !    type(backward_euler_t)              :: BACKWARD_EULER_INSTANCE
 !    type(backward_euler_subiteration_t) :: BACKWARD_EULER_SUBITERATION_INSTANCE
-!    type(quasi_newton_t)                :: QUASI_NEWTON_INSTANCE
+    type(quasi_newton_t)                :: QUASI_NEWTON_INSTANCE
     type(newton_t)                      :: NEWTON_INSTANCE
 
 
@@ -52,9 +52,9 @@ contains
 !            case ('BackwardEulerSub','backwardeulersub','Backward_Euler_Sub','backward_euler_sub','backward_euler_subiteration','BES','bes')
 !                allocate(instance, source=BACKWARD_EULER_SUBITERATION_INSTANCE)
 !
-!            case ('quasi_newton','Quasi_Newton','quasinewton','QuasiNewton')
-!                allocate(instance, source=QUASI_NEWTON_INSTANCE)
-!
+            case ('quasi_newton','Quasi_Newton','quasinewton','QuasiNewton')
+                allocate(instance, source=QUASI_NEWTON_INSTANCE)
+
             case ('newton','Newton')
                 allocate(instance, source=NEWTON_INSTANCE)
 

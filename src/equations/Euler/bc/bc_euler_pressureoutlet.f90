@@ -6,6 +6,7 @@ module bc_euler_pressureoutlet
     use type_mesh,          only: mesh_t
     use type_properties,    only: properties_t
     use type_seed,          only: seed_t
+    use type_face_location, only: face_location_t
 
     use mod_DNAD_tools,     only: compute_seed
     use mod_integrate,      only: integrate_boundary_scalar_flux
@@ -58,8 +59,8 @@ contains
         ! Equation indices
         integer(ik)     :: irho, irhou, irhov, irhow, irhoE
 
-        integer(ik)     :: iface_p, ineighbor
-        type(seed_t)    :: seed
+        type(seed_t)            :: seed
+        type(face_location_t)   :: face
 
         ! Storage at quadrature nodes
         type(AD_D), dimension(mesh(idom)%faces(ielem,iface)%gq%face%nnodes)   ::  &
@@ -86,6 +87,11 @@ contains
         irhoE = prop%get_eqn_index("rhoE")
 
 
+
+        face%idomain  = idom
+        face%ielement = ielem
+        face%iface    = iface
+
         !
         ! Get seed element for derivatives
         !
@@ -95,10 +101,8 @@ contains
         !
         ! Set back pressure
         !
-        p_bc = 93000._rk
-        !p_bc = 100000._rk
-        !p_bc = 2.92205471_rk
-        !p_bc = 2.8715_rk
+        !p_bc = 93000._rk
+        p_bc = 107000._rk
 
 
 
@@ -142,7 +146,8 @@ contains
 
             flux = flux_x*norms(:,1) + flux_y*norms(:,2) + flux_z*norms(:,3)
 
-            call integrate_boundary_scalar_flux(mesh(idom)%faces(ielem,iface),sdata,idom,irho,iblk,flux)
+            !call integrate_boundary_scalar_flux(mesh(idom)%faces(ielem,iface),sdata,idom,irho,iblk,flux)
+            call integrate_boundary_scalar_flux(mesh,sdata,face,irho,iblk,idonor,seed,flux)
 
             !=================================================
             ! x-momentum flux
@@ -153,7 +158,8 @@ contains
 
             flux = flux_x*norms(:,1) + flux_y*norms(:,2) + flux_z*norms(:,3)
 
-            call integrate_boundary_scalar_flux(mesh(idom)%faces(ielem,iface),sdata,idom,irhou,iblk,flux)
+            !call integrate_boundary_scalar_flux(mesh(idom)%faces(ielem,iface),sdata,idom,irhou,iblk,flux)
+            call integrate_boundary_scalar_flux(mesh,sdata,face,irhou,iblk,idonor,seed,flux)
 
             !=================================================
             ! y-momentum flux
@@ -164,7 +170,8 @@ contains
 
             flux = flux_x*norms(:,1) + flux_y*norms(:,2) + flux_z*norms(:,3)
 
-            call integrate_boundary_scalar_flux(mesh(idom)%faces(ielem,iface),sdata,idom,irhov,iblk,flux)
+            !call integrate_boundary_scalar_flux(mesh(idom)%faces(ielem,iface),sdata,idom,irhov,iblk,flux)
+            call integrate_boundary_scalar_flux(mesh,sdata,face,irhov,iblk,idonor,seed,flux)
 
             !=================================================
             ! z-momentum flux
@@ -175,7 +182,8 @@ contains
 
             flux = flux_x*norms(:,1) + flux_y*norms(:,2) + flux_z*norms(:,3)
 
-            call integrate_boundary_scalar_flux(mesh(idom)%faces(ielem,iface),sdata,idom,irhow,iblk,flux)
+            !call integrate_boundary_scalar_flux(mesh(idom)%faces(ielem,iface),sdata,idom,irhow,iblk,flux)
+            call integrate_boundary_scalar_flux(mesh,sdata,face,irhow,iblk,idonor,seed,flux)
 
 
             !=================================================
@@ -187,7 +195,8 @@ contains
 
             flux = flux_x*norms(:,1) + flux_y*norms(:,2) + flux_z*norms(:,3)
 
-            call integrate_boundary_scalar_flux(mesh(idom)%faces(ielem,iface),sdata,idom,irhoE,iblk,flux)
+            !call integrate_boundary_scalar_flux(mesh(idom)%faces(ielem,iface),sdata,idom,irhoE,iblk,flux)
+            call integrate_boundary_scalar_flux(mesh,sdata,face,irhoE,iblk,idonor,seed,flux)
 
 
         end associate

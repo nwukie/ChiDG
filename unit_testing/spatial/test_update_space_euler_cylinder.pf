@@ -8,7 +8,6 @@ subroutine test_update_space_euler_cylinder()
     use type_chidg,         only: chidg_t
     use type_meshdata,      only: meshdata_t
     use atype_function,     only: function_t
-    use type_point,         only: point_t
 
 
     use mod_grid_operators, only: initialize_variable
@@ -20,17 +19,15 @@ subroutine test_update_space_euler_cylinder()
     implicit none
 
 
-    type(chidg_t)                   :: chidgA
-    type(meshdata_t), allocatable   :: meshdataA(:)
+    type(chidg_t)                   :: chidgA, chidgB
+    type(meshdata_t), allocatable   :: meshdataA(:), meshdataB(:)
     class(function_t), allocatable  :: constant, gaussian
-    real(rk), allocatable           :: density_residual_D4_E31(:), density_residual_D4_E36(:)
-    integer(ik)                     :: idom, ielem, ChiID, idom_d, ielem_d, iface, nterms_s, ndonors, gq_index, igq, ngq
-    real(rk)                        :: chi_xi, chi_eta, chi_zeta, ref_xi, ref_eta, ref_zeta
-    type(point_t)                   :: chimera_node
-    real(rk)                        :: tol
+    integer(ik)     :: idom, nterms_s
+    real(rk), allocatable   :: refvec_a(:), refvec_b(:)
+    real(rk)        :: tol
 
 
-    tol      = 1.e-12_rk
+    tol      = 1.e-7_rk
     nterms_s = 8
 
 
@@ -44,7 +41,8 @@ subroutine test_update_space_euler_cylinder()
     !
     ! Read grid
     !
-    call read_grid_hdf('cylinder_chimera.h5',meshdataA)
+    call read_grid_hdf('cylinder_chimera_overlapping_singledonor.h5',meshdataA)
+    call read_grid_hdf('cylinder_chimera_overlapping_multipledonor.h5',meshdataB)
 
 
 
@@ -54,6 +52,11 @@ subroutine test_update_space_euler_cylinder()
     do idom = 1,size(meshdataA)
         call chidgA%data%add_domain(trim(meshdataA(idom)%name),meshdataA(idom)%points,meshdataA(idom)%nterms_c,'euler',nterms_s)
     end do
+
+    do idom = 1,size(meshdataB)
+        call chidgB%data%add_domain(trim(meshdataB(idom)%name),meshdataB(idom)%points,meshdataB(idom)%nterms_c,'euler',nterms_s)
+    end do
+
 
 
 
@@ -67,7 +70,6 @@ subroutine test_update_space_euler_cylinder()
     call chidgA%data%add_bc('D_01','euler_wall',ZETA_MIN)
     call chidgA%data%add_bc('D_01','euler_wall',ZETA_MAX)
 
-
     !call chidgA%data%add_bc('D_02','euler_totalinlet',XI_MIN)
     !call chidgA%data%add_bc('D_02','euler_pressureoutlet',XI_MAX)
     call chidgA%data%add_bc('D_02','euler_pressureoutlet',ETA_MIN)
@@ -76,8 +78,8 @@ subroutine test_update_space_euler_cylinder()
     call chidgA%data%add_bc('D_02','euler_wall',ZETA_MAX)
 
 
-    !call chidgA%data%add_bc('D_03','euler_totalinlet',XI_MIN)
-    !call chidgA%data%add_bc('D_03','euler_pressureoutlet',XI_MAX)
+    !call chidgA%data%add_bc('D_02','euler_totalinlet',XI_MIN)
+    !call chidgA%data%add_bc('D_02','euler_pressureoutlet',XI_MAX)
     call chidgA%data%add_bc('D_03','euler_wall',ETA_MIN)
     call chidgA%data%add_bc('D_03','euler_wall',ETA_MAX)
     call chidgA%data%add_bc('D_03','euler_wall',ZETA_MIN)
@@ -97,10 +99,56 @@ subroutine test_update_space_euler_cylinder()
 
 
     !
+    ! Add boundary conditions to ChiDG - B
+    !
+    !call chidgB%data%add_bc('D_01','euler_totalinlet',XI_MIN)
+    !call chidgB%data%add_bc('D_01','euler_pressureoutlet',XI_MAX)
+    call chidgB%data%add_bc('D_01','euler_wall',ETA_MIN)
+    call chidgB%data%add_bc('D_01','euler_wall',ETA_MAX)
+    call chidgB%data%add_bc('D_01','euler_wall',ZETA_MIN)
+    call chidgB%data%add_bc('D_01','euler_wall',ZETA_MAX)
+
+
+    !call chidgB%data%add_bc('D_02','euler_totalinlet',XI_MIN)
+    !call chidgB%data%add_bc('D_02','euler_pressureoutlet',XI_MAX)
+    call chidgB%data%add_bc('D_02','euler_pressureoutlet',ETA_MIN)
+    call chidgB%data%add_bc('D_02','euler_wall',ETA_MAX)
+    call chidgB%data%add_bc('D_02','euler_wall',ZETA_MIN)
+    call chidgB%data%add_bc('D_02','euler_wall',ZETA_MAX)
+
+
+    !call chidgB%data%add_bc('D_03','euler_totalinlet',XI_MIN)
+    !call chidgB%data%add_bc('D_03','euler_pressureoutlet',XI_MAX)
+    call chidgB%data%add_bc('D_03','euler_wall',ETA_MIN)
+    call chidgB%data%add_bc('D_03','euler_wall',ETA_MAX)
+    call chidgB%data%add_bc('D_03','euler_wall',ZETA_MIN)
+    call chidgB%data%add_bc('D_03','euler_wall',ZETA_MAX)
+
+
+    !call chidgB%data%add_bc('D_04','euler_totalinlet',XI_MIN)
+    !call chidgB%data%add_bc('D_04','euler_pressureoutlet',XI_MAX)
+    call chidgB%data%add_bc('D_04','euler_totalinlet',ETA_MIN)
+    call chidgB%data%add_bc('D_04','euler_wall',ETA_MAX)
+    call chidgB%data%add_bc('D_04','euler_wall',ZETA_MIN)
+    call chidgB%data%add_bc('D_04','euler_wall',ZETA_MAX)
+
+
+
+
+
+
+
+
+
+    !
     ! Initialize solution data storage
     !
     call chidgA%init('chimera')
     call chidgA%data%init_sdata()
+
+    call chidgB%init('chimera')
+    call chidgB%data%init_sdata()
+
 
 
 
@@ -111,18 +159,24 @@ subroutine test_update_space_euler_cylinder()
 
     call constant%set('val',1.13_rk)
     call initialize_variable(chidgA%data,1,constant)
+    call initialize_variable(chidgB%data,1,constant)
 
     call constant%set('val',190.0_rk)
     call initialize_variable(chidgA%data,2,constant)
+    call initialize_variable(chidgB%data,2,constant)
 
     call constant%set('val',ZERO)
     call initialize_variable(chidgA%data,3,constant)
+    call initialize_variable(chidgB%data,3,constant)
 
     call constant%set('val',ZERO)
     call initialize_variable(chidgA%data,4,constant)
+    call initialize_variable(chidgB%data,4,constant)
 
-    call constant%set('val',248000._rk)
+    call constant%set('val',248000.0_rk)
     call initialize_variable(chidgA%data,5,constant)
+    call initialize_variable(chidgB%data,5,constant)
+
 
 
 
@@ -131,83 +185,38 @@ subroutine test_update_space_euler_cylinder()
     !
     print*, 'ChiDG - A: Updating Space'
     call update_space(chidgA%data)
+    print*, 'ChiDG - B: Updating Space'
+    call update_space(chidgB%data)
 
 
-
-
-    !
-    ! Compare residual vector entries
-    !
-!    density_residual_D4_E31 = chidgA%data%sdata%rhs%dom(1)%lvecs(32)%getvar(1)
-!    density_residual_D4_E36 = chidgA%data%sdata%rhs%dom(3)%lvecs(35)%getvar(1)
-!    !density_residual_D4_E31 = chidgA%data%sdata%rhs%dom(4)%lvecs(25)%getvar(1)
-!    !density_residual_D4_E36 = chidgA%data%sdata%rhs%dom(4)%lvecs(30)%getvar(1)
-!
-!    print*, 'density_residual_D4_E31'
-!    print*, density_residual_D4_E31
-!
-!    print*, 'density_residual_D4_E36'
-!    print*, density_residual_D4_E36
-!
-!    @assertEqual(density_residual_D4_E31, density_residual_D4_E36, tol)
-!
-!
-
-    !
-    ! Test Chimera connectivity
-    !
-    idom  = 4
-    ielem = 25
-    iface = XI_MIN
-
-    ChiID = chidgA%data%mesh(4)%faces(ielem,iface)%ChiID
-    ndonors = chidgA%data%mesh(4)%chimera%recv%data(ChiID)%ndonors
-    idom_d = chidgA%data%mesh(4)%chimera%recv%data(ChiID)%donor_domain%at(1)
-    ielem_d = chidgA%data%mesh(4)%chimera%recv%data(ChiID)%donor_element%at(1)
-
-
-    @assertEqual(1,ndonors)
-    @assertEqual(3,idom_d)
-    @assertEqual(30,ielem_d)
-
-
-
-    !
-    ! Print interpolators
-    !
-!    print*, 'Chimera interpolator'
-!    print*, chidgA%data%mesh(4)%chimera%recv%data(ChiID)%donor_interpolator%at(1)
-!    print*, ''
-!    print*, 'Original interpolator'
-!    print*, chidgA%data%mesh(idom_d)%faces(ielem_d,XI_MAX)%gq%face%val(:,:,XI_MIN)
 
 
 
 
     !
-    ! Test computational coordinates
+    ! Compare matrix vector product
     !
-    ngq = chidgA%data%mesh(idom)%chimera%recv%data(ChiID)%donor_gq_indices(1)%size()
-
-    do igq = 1,ngq
-
-        gq_index = chidgA%data%mesh(idom)%chimera%recv%data(ChiID)%donor_gq_indices(1)%at(igq)
-        chimera_node  = chidgA%data%mesh(idom)%chimera%recv%data(ChiID)%donor_coords(1)%at(igq)
-        chi_xi   = chimera_node%c1_
-        chi_eta  = chimera_node%c2_
-        chi_zeta = chimera_node%c3_
-
-        ref_xi   = chidgA%data%mesh(idom_d)%faces(ielem_d,XI_MAX)%gq%face%nodes(gq_index,XI_MAX)%c1_
-        ref_eta  = chidgA%data%mesh(idom_d)%faces(ielem_d,XI_MAX)%gq%face%nodes(gq_index,XI_MAX)%c2_
-        ref_zeta = chidgA%data%mesh(idom_d)%faces(ielem_d,XI_MAX)%gq%face%nodes(gq_index,XI_MAX)%c3_
+    chidgA%data%sdata%rhs = chidgA%data%sdata%lhs * chidgA%data%sdata%q
+    chidgB%data%sdata%rhs = chidgB%data%sdata%lhs * chidgB%data%sdata%q
 
 
+    !
+    ! Make sure q vector is the same
+    !
+    @assertEqual(chidgA%data%sdata%q%dom(4)%lvecs(19)%vec, chidgB%data%sdata%q%dom(4)%lvecs(19)%vec )
 
-        @assertEqual(ref_xi,chi_xi,tol)
-        @assertEqual(ref_eta,chi_eta,tol)
-        @assertEqual(ref_zeta,chi_zeta,tol)
-        
-    end do
+
+    !
+    ! Test
+    !
+    @assertEqual(chidgA%data%sdata%rhs%dom(4)%lvecs(18)%vec,  chidgB%data%sdata%rhs%dom(4)%lvecs(18)%vec,tol)
+    @assertEqual(chidgA%data%sdata%rhs%dom(4)%lvecs(19)%vec,  chidgB%data%sdata%rhs%dom(4)%lvecs(19)%vec,tol)
+    @assertEqual(chidgA%data%sdata%rhs%dom(4)%lvecs(24)%vec,  chidgB%data%sdata%rhs%dom(4)%lvecs(24)%vec,tol)
+    @assertEqual(chidgA%data%sdata%rhs%dom(4)%lvecs(25)%vec,  chidgB%data%sdata%rhs%dom(4)%lvecs(25)%vec,tol)
+    @assertEqual(chidgA%data%sdata%rhs%dom(4)%lvecs(30)%vec,  chidgB%data%sdata%rhs%dom(4)%lvecs(30)%vec,tol)
+    @assertEqual(chidgA%data%sdata%rhs%dom(4)%lvecs(31)%vec,  chidgB%data%sdata%rhs%dom(4)%lvecs(31)%vec,tol)
+    @assertEqual(chidgA%data%sdata%rhs%dom(4)%lvecs(36)%vec,  chidgB%data%sdata%rhs%dom(4)%lvecs(36)%vec,tol)
+
 
 
 

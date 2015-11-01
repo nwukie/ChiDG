@@ -1,0 +1,221 @@
+@Test
+subroutine test_compute_gq_donor_cylinder_overlapping()
+    use pfunit_mod
+
+    use mod_kinds,          only: rk, ik
+    use mod_constants,      only: XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX, DIAG, NEIGHBOR
+
+    use type_chidg,         only: chidg_t
+    use type_meshdata,      only: meshdata_t
+    use atype_function,     only: function_t
+    use type_point,         only: point_t
+    use type_seed,          only: seed_t
+    use type_face_location, only: face_location_t
+
+
+    use mod_grid_operators, only: initialize_variable
+    use mod_function,       only: create_function
+    use mod_hdfio,          only: read_grid_hdf
+    use mod_spatial,        only: update_space
+    use mod_interpolate,    only: interpolate_face
+    use mod_integrate,      only: integrate_boundary_scalar_flux
+
+    use operator_chidg_mv
+    use DNAD_D
+    implicit none
+
+
+    type(chidg_t)                   :: chidgA
+    type(meshdata_t), allocatable   :: meshdataA(:)
+    class(function_t), allocatable  :: constant, gaussian, xsquared
+    real(rk), allocatable           :: density_residual_D4_E31(:), density_residual_D4_E36(:)
+    integer(ik)                     :: idom, ielem, ChiID, idom_d, ielem_d, iface, nterms_s, ndonors, gq_index, igq, ngq
+    integer(ik)                     :: nnodes
+    real(rk)                        :: chi_xi, chi_eta, chi_zeta, ref_xi, ref_eta, ref_zeta
+    type(point_t)                   :: chimera_node
+    real(rk)                        :: tol
+
+    type(AD_D), allocatable         :: rho_p(:)
+    type(seed_t)                    :: seed
+    type(face_location_t)           :: face
+
+
+    tol      = 1.e-12_rk
+    nterms_s = 8
+
+
+    !
+    ! Initialize ChiDG
+    !
+    call chidgA%init('env')
+
+
+
+    !
+    ! Read grid
+    !
+    call read_grid_hdf('cylinder_chimera_overlapping.h5',meshdataA)
+
+
+
+    !
+    ! Add domains
+    !
+    do idom = 1,size(meshdataA)
+        call chidgA%data%add_domain(trim(meshdataA(idom)%name),meshdataA(idom)%points,meshdataA(idom)%nterms_c,'euler',nterms_s)
+    end do
+
+
+
+    !
+    ! Add boundary conditions ChiDG - A
+    !
+    !call chidgA%data%add_bc('D_01','euler_totalinlet',XI_MIN)
+    !call chidgA%data%add_bc('D_01','euler_pressureoutlet',XI_MAX)
+    call chidgA%data%add_bc('D_01','euler_wall',ETA_MIN)
+    call chidgA%data%add_bc('D_01','euler_wall',ETA_MAX)
+    call chidgA%data%add_bc('D_01','euler_wall',ZETA_MIN)
+    call chidgA%data%add_bc('D_01','euler_wall',ZETA_MAX)
+
+
+    !call chidgA%data%add_bc('D_02','euler_totalinlet',XI_MIN)
+    !call chidgA%data%add_bc('D_02','euler_pressureoutlet',XI_MAX)
+    call chidgA%data%add_bc('D_02','euler_pressureoutlet',ETA_MIN)
+    call chidgA%data%add_bc('D_02','euler_wall',ETA_MAX)
+    call chidgA%data%add_bc('D_02','euler_wall',ZETA_MIN)
+    call chidgA%data%add_bc('D_02','euler_wall',ZETA_MAX)
+
+
+    !call chidgA%data%add_bc('D_03','euler_totalinlet',XI_MIN)
+    !call chidgA%data%add_bc('D_03','euler_pressureoutlet',XI_MAX)
+    call chidgA%data%add_bc('D_03','euler_wall',ETA_MIN)
+    call chidgA%data%add_bc('D_03','euler_wall',ETA_MAX)
+    call chidgA%data%add_bc('D_03','euler_wall',ZETA_MIN)
+    call chidgA%data%add_bc('D_03','euler_wall',ZETA_MAX)
+
+
+    !call chidgA%data%add_bc('D_04','euler_totalinlet',XI_MIN)
+    !call chidgA%data%add_bc('D_04','euler_pressureoutlet',XI_MAX)
+    call chidgA%data%add_bc('D_04','euler_totalinlet',ETA_MIN)
+    call chidgA%data%add_bc('D_04','euler_wall',ETA_MAX)
+    call chidgA%data%add_bc('D_04','euler_wall',ZETA_MIN)
+    call chidgA%data%add_bc('D_04','euler_wall',ZETA_MAX)
+
+
+
+
+
+
+    !
+    ! Initialize solution data storage
+    !
+    call chidgA%init('chimera')
+    call chidgA%data%init_sdata()
+
+
+
+    !
+    ! Initialize solution
+    !
+    call create_function(constant,'constant')
+    call create_function(xsquared,'xsquared')
+
+    call initialize_variable(chidgA%data,1,xsquared)
+
+    call constant%set('val',190.0_rk)
+    call initialize_variable(chidgA%data,2,constant)
+
+    call constant%set('val',ZERO)
+    call initialize_variable(chidgA%data,3,constant)
+
+    call constant%set('val',ZERO)
+    call initialize_variable(chidgA%data,4,constant)
+
+    call constant%set('val',248000._rk)
+    call initialize_variable(chidgA%data,5,constant)
+
+
+
+    !
+    ! Test computational coordinates
+    !
+
+    idom = 4
+    ielem = 19
+    iface = XI_MIN
+
+    face%idomain = idom
+    face%ielement = ielem
+    face%iface    = iface
+
+
+
+    ChiID = chidgA%data%mesh(4)%faces(ielem,iface)%ChiID
+    idom_d = chidgA%data%mesh(4)%chimera%recv%data(ChiID)%donor_domain%at(1)
+    ielem_d = chidgA%data%mesh(4)%chimera%recv%data(ChiID)%donor_element%at(1)
+    ngq = chidgA%data%mesh(idom)%chimera%recv%data(ChiID)%donor_gq_indices(1)%size()
+
+
+
+    
+
+
+    !
+    ! Allocate AD variable
+    !
+    nnodes = chidgA%data%mesh(idom)%faces(ielem,iface)%gq%face%nnodes
+    allocate(rho_p(nnodes))
+
+
+
+
+    seed%idom  = 3
+    seed%ielem = 18
+
+    call interpolate_face(chidgA%data%mesh,chidgA%data%sdata%q,idom,ielem,iface, 1, rho_p, seed, NEIGHBOR)
+
+
+    !print*, rho_p(:)%x_ad_
+
+
+    call integrate_boundary_scalar_flux(chidgA%data%mesh, chidgA%data%sdata, face, 1, XI_MIN, 1, seed, rho_p)
+
+
+
+    print*, chidgA%data%sdata%lhs%dom(idom)%chiblks(ielem,1)%mat
+    !print*, chidgA%data%sdata%lhs%dom(idom)%chiblks(ielem,2)%mat
+
+
+    print*, chidgA%data%sdata%lhs%dom(idom)%chiblks(ielem,1)%dparent(), &
+            chidgA%data%sdata%lhs%dom(idom)%chiblks(ielem,1)%eparent(), &
+            chidgA%data%sdata%lhs%dom(idom)%chiblks(ielem,2)%dparent(), &
+            chidgA%data%sdata%lhs%dom(idom)%chiblks(ielem,2)%eparent()
+
+
+!    do igq = 1,ngq
+!
+!        gq_index = chidgA%data%mesh(idom)%chimera%recv%data(ChiID)%donor_gq_indices(1)%at(igq)
+!        chimera_node  = chidgA%data%mesh(idom)%chimera%recv%data(ChiID)%donor_coords(1)%at(igq)
+!        chi_xi   = chimera_node%c1_
+!        chi_eta  = chimera_node%c2_
+!        chi_zeta = chimera_node%c3_
+!
+!        ref_xi   = chidgA%data%mesh(idom_d)%faces(ielem_d,XI_MAX)%gq%face%nodes(gq_index,XI_MAX)%c1_
+!        ref_eta  = chidgA%data%mesh(idom_d)%faces(ielem_d,XI_MAX)%gq%face%nodes(gq_index,XI_MAX)%c2_
+!        ref_zeta = chidgA%data%mesh(idom_d)%faces(ielem_d,XI_MAX)%gq%face%nodes(gq_index,XI_MAX)%c3_
+!
+!
+!
+!        @assertEqual(ref_xi,chi_xi,tol)
+!        @assertEqual(ref_eta,chi_eta,tol)
+!        @assertEqual(ref_zeta,chi_zeta,tol)
+!        
+!    end do
+
+
+
+
+
+
+
+end subroutine test_compute_gq_donor_cylinder_overlapping

@@ -142,15 +142,12 @@ contains
 
 
             integral = matmul(transpose(val),flux_x)
-            !call store_boundary_integrals(integral,sdata,idom,ielem,ivar,iblk)
             call store_boundary_integrals(mesh,sdata,face,ivar,iblk,idonor,seed,integral)
 
             integral = matmul(transpose(val),flux_y)
-            !call store_boundary_integrals(integral,sdata,idom,ielem,ivar,iblk)
             call store_boundary_integrals(mesh,sdata,face,ivar,iblk,idonor,seed,integral)
 
             integral = matmul(transpose(val),flux_z)
-            !call store_boundary_integrals(integral,sdata,idom,ielem,ivar,iblk)
             call store_boundary_integrals(mesh,sdata,face,ivar,iblk,idonor,seed,integral)
 
         end associate
@@ -222,7 +219,6 @@ contains
 
             integral = matmul(transpose(val),flux)
 
-            !call store_boundary_integrals(integral,sdata,idom,ielem,ivar,iblk)
             call store_boundary_integrals(mesh,sdata,face,ivar,iblk,idonor,seed,integral)
 
 
@@ -339,12 +335,21 @@ contains
         associate ( rhs => sdata%rhs%dom(idom)%lvecs, lhs => sdata%lhs )
 
             !
-            ! Only store rhs once. if iblk == DIAG
+            ! Only store rhs once. if iblk == DIAG. Also, since the integral could be computed more than once for chimera faces, only store for the first donor.
+            ! The integral should be the same for any value of idonor. Only the derivatives will change
             !
-            if (iblk == DIAG) then
+            if (ftype == CHIMERA .and. iblk == DIAG) then
+                if (idonor == 1) then
+                    vals = rhs(ielem)%getvar(ivar) + integral(:)%x_ad_
+                    call rhs(ielem)%setvar(ivar,vals)
+                end if
 
-                vals = rhs(ielem)%getvar(ivar) + integral(:)%x_ad_
-                call rhs(ielem)%setvar(ivar,vals)
+            else 
+                if (iblk == DIAG) then
+
+                    vals = rhs(ielem)%getvar(ivar) + integral(:)%x_ad_
+                    call rhs(ielem)%setvar(ivar,vals)
+                end if
 
             end if
 
@@ -355,6 +360,14 @@ contains
             if ( (ftype == CHIMERA) .and. (iblk /= DIAG)) then
 
                 call lhs%store_chimera(integral,face,seed,ivar)
+
+            !
+            ! There should only be one contribution to the linearization of the Chimera face wrt the interior variables
+            !
+            elseif ( (ftype == CHIMERA) .and. (iblk == DIAG) ) then
+                if (idonor == 1) then
+                    call lhs%store(integral,idom,ielem,iblk,ivar)
+                end if
 
             else
                 call lhs%store(integral,idom,ielem,iblk,ivar)

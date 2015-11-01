@@ -383,9 +383,12 @@ contains
         !
         irow_start = ( (ivar - 1)  *  nterms)
 
-        ! If sizes match, store derivative arrays to local block. Loop through integral values, for each value store its derivatives.
+
+        !
+        ! Loop through integral values, for each value store its derivatives.
         ! The integral values here should be components of the RHS vector. An array of partial derivatives from an AD_D variable
         ! should be stored as a row in the block matrix.
+        !
         do iarray = 1,size(integral)
             ! Do a += operation to add derivatives to any that are currently stored
             irow = irow_start + iarray
@@ -409,7 +412,8 @@ contains
         integer(ik) :: idom, idom_d, ielem, ielem_d, iblk, iarray
         integer(ik) :: irow, irow_start, donorblk, i
         integer(ik) :: neqns, nterms
-        logical     :: block_match = .false.
+        logical     :: block_match    = .false.
+        logical     :: no_donor_block = .false.
 
         idom  = face%idomain
         ielem = face%ielement
@@ -433,6 +437,7 @@ contains
         !
         ! Find donor block location 
         !
+        donorblk = 0
         do iblk = 1,size(self%chiblks,2)
             block_match = ( (idom_d  == self%chiblks(ielem,iblk)%dparent()) .and. &
                             (ielem_d == self%chiblks(ielem,iblk)%eparent()) )
@@ -443,6 +448,8 @@ contains
             end if
         end do
 
+        no_donor_block = (donorblk == 0)
+        if (no_donor_block) call signal(MSG,'blockmatrix%store_chimera: no donor block found to store derivative')
 
 
 

@@ -69,12 +69,15 @@ contains
                 end do
             end do
 
+
+
             !
             ! Routine for off-diagonal, chimera blocks
             !
             if (allocated(A%dom(idom)%chiblks)) then
                 do ielem = 1,size(A%dom(idom)%chiblks,1)
                     do iblk = 1,size(A%dom(idom)%chiblks,2)
+
 
                         if (allocated(A%dom(idom)%chiblks(ielem,iblk)%mat)) then
                             dparent = A%dom(idom)%chiblks(ielem,iblk)%dparent()

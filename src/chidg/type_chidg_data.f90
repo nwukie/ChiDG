@@ -9,7 +9,6 @@ module type_chidg_data
     use type_bcset,                 only: bcset_t
     use type_equationset_wrapper,   only: equationset_wrapper_t
     use type_solverdata,            only: solverdata_t
-!    use type_chimera,               only: chimera_t
 
     ! Factory methods
     use mod_equations,              only: create_equationset
@@ -149,9 +148,12 @@ contains
 
         ! Copy previously initialized instances to new array. Be careful about pointers components here!
         if (self%ndomains > 1) then
-            temp_mesh(   1:size(self%mesh))    = self%mesh
-            temp_bcset(  1:size(self%bcset))   = self%bcset
-            temp_eqnset( 1:size(self%eqnset))  = self%eqnset
+            !temp_mesh(   1:size(self%mesh))    = self%mesh     ! ifort segfaults on this for cases with sevaral domains
+            !temp_bcset(  1:size(self%bcset))   = self%bcset
+            !temp_eqnset( 1:size(self%eqnset))  = self%eqnset
+            temp_mesh(   1:size(self%mesh))    = self%mesh(1:size(self%mesh))
+            temp_bcset(  1:size(self%bcset))   = self%bcset(1:size(self%mesh))
+            temp_eqnset( 1:size(self%eqnset))  = self%eqnset(1:size(self%mesh))
         end if
 
 

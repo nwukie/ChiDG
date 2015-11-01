@@ -199,6 +199,7 @@ contains
         type(element_location_t)    :: donor
         type(point_t)               :: donor_coord
         type(point_t)               :: gq_node
+        type(point_t)               :: dummy_coord
         logical                     :: new_donor     = .false.
         logical                     :: already_added = .false.
         logical                     :: donor_match   = .false.
@@ -333,6 +334,13 @@ contains
                     end do
                     
                 end do
+
+
+
+
+
+
+
 
 
 

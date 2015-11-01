@@ -8,8 +8,6 @@ module type_fgmres
     use type_chidgVector
     use type_chidgMatrix
 
-    !use operator_mv
-    !use operator_dot,       only: dot
     use operator_chidg_mv
     use operator_chidg_dot,     only: dot
 
@@ -28,7 +26,7 @@ module type_fgmres
     !-------------------------------------------
     type, public, extends(matrixsolver_t) :: fgmres_t
 
-        integer(ik) :: m = 400
+        integer(ik) :: m = 200
 
     contains
 

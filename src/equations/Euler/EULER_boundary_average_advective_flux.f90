@@ -19,6 +19,9 @@ module EULER_boundary_average_advective_flux
     use EULER_properties,       only: EULER_properties_t
     implicit none
 
+
+    integer :: counter = 0
+
     private
 
 
@@ -70,6 +73,12 @@ contains
         integer(ik)     :: irhow
         integer(ik)     :: irhoe
 
+
+
+        integer(ik) :: igq
+
+
+
         type(seed_t)            :: seed
         type(face_location_t)   :: face
 
@@ -108,7 +117,6 @@ contains
 
 
 
-
         associate (norms => mesh(idom)%faces(ielem,iface)%norm, faces => mesh(idom)%faces, q => sdata%q)
 
             !
@@ -139,11 +147,12 @@ contains
 
 
 
-
-
-
-
-
+            !if (idom == 4 .and. ielem == 19 .and. iface == 1) then
+            !if (idom == 4 .and. ielem == 17 .and. iface == 1) then
+            !    do igq = 1,size(rho_p)
+            !        print*, rho_p(igq)%xp_ad_
+            !    end do
+            !end if
 
 
 
@@ -178,7 +187,6 @@ contains
             ! dot with normal vector
             flux = HALF*(flux_x*norms(:,1) + flux_y*norms(:,2) + flux_z*norms(:,3))
 
-            !call integrate_boundary_scalar_flux(mesh(idom)%faces(ielem,iface),sdata,idom,irho,iblk,flux)
             call integrate_boundary_scalar_flux(mesh,sdata,face,irho,iblk,idonor,seed,flux)
 
 
@@ -201,7 +209,6 @@ contains
             ! dot with normal vector
             flux = HALF*(flux_x*norms(:,1) + flux_y*norms(:,2) + flux_z*norms(:,3))
 
-            !call integrate_boundary_scalar_flux(mesh(idom)%faces(ielem,iface),sdata,idom,irhou,iblk,flux)
             call integrate_boundary_scalar_flux(mesh,sdata,face,irhou,iblk,idonor,seed,flux)
 
 
@@ -224,7 +231,6 @@ contains
             ! dot with normal vector
             flux = HALF*(flux_x*norms(:,1) + flux_y*norms(:,2) + flux_z*norms(:,3))
 
-            !call integrate_boundary_scalar_flux(mesh(idom)%faces(ielem,iface),sdata,idom,irhov,iblk,flux)
             call integrate_boundary_scalar_flux(mesh,sdata,face,irhov,iblk,idonor,seed,flux)
 
             !================================
@@ -246,7 +252,6 @@ contains
             ! dot with normal vector
             flux = HALF*(flux_x*norms(:,1) + flux_y*norms(:,2) + flux_z*norms(:,3))
 
-            !call integrate_boundary_scalar_flux(mesh(idom)%faces(ielem,iface),sdata,idom,irhow,iblk,flux)
             call integrate_boundary_scalar_flux(mesh,sdata,face,irhow,iblk,idonor,seed,flux)
 
             !================================
@@ -268,7 +273,6 @@ contains
             ! dot with normal vector
             flux = HALF*(flux_x*norms(:,1) + flux_y*norms(:,2) + flux_z*norms(:,3))
 
-            !call integrate_boundary_scalar_flux(mesh(idom)%faces(ielem,iface),sdata,idom,irhoE,iblk,flux)
             call integrate_boundary_scalar_flux(mesh,sdata,face,irhoE,iblk,idonor,seed,flux)
 
         end associate

@@ -401,6 +401,7 @@ contains
         type(rvector_t)         :: donors_xi, donors_eta, donors_zeta
         logical                 :: contained = .false.
         logical                 :: receiver  = .false.
+        logical                 :: donor_found = .false.
 
         real(rk)    :: mat(3,3), minv(3,3)
         real(rk)    :: R(3)
@@ -490,6 +491,7 @@ contains
         ! Test gq_node on candidate element volume using Newton's method to map to donor local coordinates
         !
         ndonors = 0
+        donor_found = .false.
         do icandidate = 1,ncandidates
 
             idom  = candidate_domains%at(icandidate)
@@ -569,6 +571,7 @@ contains
                     call donors_xi%push_back(xi)
                     call donors_eta%push_back(eta)
                     call donors_zeta%push_back(zeta)
+                    donor_found = .true.
                     exit
                 end if
 
@@ -584,6 +587,10 @@ contains
                 if ( zeta < -ONE ) zeta = -ONE
 
             end do ! inewton
+
+            if (donor_found) then
+                exit
+            end if
 
         end do ! icandidate
 

@@ -84,37 +84,38 @@ program driver
     !
     ! Add boundary conditions
     !
+    !call chidg%data%add_bc('D_01','euler_totalinlet',XI_MIN)
+    !call chidg%data%add_bc('D_01','euler_pressureoutlet',XI_MAX)
     call chidg%data%add_bc('D_01','euler_wall',ETA_MIN)
+    call chidg%data%add_bc('D_01','euler_wall',ETA_MAX)
     call chidg%data%add_bc('D_01','euler_wall',ZETA_MIN)
     call chidg%data%add_bc('D_01','euler_wall',ZETA_MAX)
 
-    call chidg%data%add_bc('D_02','euler_wall',ETA_MIN)
+
+    !call chidg%data%add_bc('D_02','euler_totalinlet',XI_MIN)
+    !call chidg%data%add_bc('D_02','euler_pressureoutlet',XI_MAX)
+    call chidg%data%add_bc('D_02','euler_pressureoutlet',ETA_MIN)
+    call chidg%data%add_bc('D_02','euler_wall',ETA_MAX)
     call chidg%data%add_bc('D_02','euler_wall',ZETA_MIN)
     call chidg%data%add_bc('D_02','euler_wall',ZETA_MAX)
 
 
 
-    call chidg%data%add_bc('D_03','euler_pressureoutlet',XI_MAX)
-    call chidg%data%add_bc('D_03','euler_wall',ZETA_MIN)
-    call chidg%data%add_bc('D_03','euler_wall',ZETA_MAX)
+   !call chidg%data%add_bc('D_03','euler_totalinlet',XI_MIN)
+   !call chidg%data%add_bc('D_03','euler_pressureoutlet',XI_MAX)
+   call chidg%data%add_bc('D_03','euler_wall',ETA_MIN)
+   call chidg%data%add_bc('D_03','euler_wall',ETA_MAX)
+   call chidg%data%add_bc('D_03','euler_wall',ZETA_MIN)
+   call chidg%data%add_bc('D_03','euler_wall',ZETA_MAX)
 
 
-    call chidg%data%add_bc('D_04','euler_totalinlet',XI_MIN)
-    call chidg%data%add_bc('D_04','euler_pressureoutlet',XI_MAX)
-    call chidg%data%add_bc('D_04','euler_wall',ETA_MAX)
-    call chidg%data%add_bc('D_04','euler_wall',ZETA_MIN)
-    call chidg%data%add_bc('D_04','euler_wall',ZETA_MAX)
+   !call chidg%data%add_bc('D_04','euler_totalinlet',XI_MIN)
+   !call chidg%data%add_bc('D_04','euler_pressureoutlet',XI_MAX)
+   call chidg%data%add_bc('D_04','euler_totalinlet',ETA_MIN)
+   call chidg%data%add_bc('D_04','euler_wall',ETA_MAX)
+   call chidg%data%add_bc('D_04','euler_wall',ZETA_MIN)
+   call chidg%data%add_bc('D_04','euler_wall',ZETA_MAX)
 
-    call chidg%data%add_bc('D_05','euler_totalinlet',XI_MIN)
-    call chidg%data%add_bc('D_05','euler_pressureoutlet',XI_MAX)
-    call chidg%data%add_bc('D_05','euler_wall',ETA_MIN)
-    call chidg%data%add_bc('D_05','euler_wall',ZETA_MIN)
-    call chidg%data%add_bc('D_05','euler_wall',ZETA_MAX)
-
-
-   call chidg%data%add_bc('D_06','euler_totalinlet',XI_MIN)
-   call chidg%data%add_bc('D_06','euler_wall',ZETA_MIN)
-   call chidg%data%add_bc('D_06','euler_wall',ZETA_MAX)
 
 
 

@@ -86,6 +86,79 @@ contains
 
 
 
+
+
+
+
+    !>  Compute the volume integral of a flux vector
+    !!
+    !!      - Adds value contribution to the rhs vector
+    !!      - Adds the derivative contribution to the linearization matrix
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @param[in]      elem    Element being integrated over
+    !!  @param[inout]   rhs     Right-hand side vector storage
+    !!  @param[inout]   lin     Domain linearization matrix
+    !!  @param[in]      iblk    Selected block of the linearization being computed. lin(ielem,iblk), where iblk = (1-7)
+    !!  @param[in]      ivar    Index of the variable associated with the flux being integrated
+    !!  @param[inout]   flux_x  x-Flux and derivatives at quadrature points
+    !!  @param[inout]   flux_y  y-Flux and derivatives at quadrature points
+    !!  @param[inout]   flux_z  z-Flux and derivatives at quadrature points
+    !--------------------------------------------------------------------------------------------------------
+    subroutine integrate_volume_source(elem,sdata,idom,ivar,iblk,source)
+        type(element_t),        intent(in)      :: elem
+        type(solverdata_t),     intent(inout)   :: sdata
+        integer(ik),            intent(in)      :: idom
+        integer(ik),            intent(in)      :: ivar
+        integer(ik),            intent(in)      :: iblk
+        type(AD_D),             intent(inout)   :: source(:)
+
+
+        integer(ik)                             :: ielem, i
+        type(AD_D), dimension(elem%nterms_s)    :: integral, integral_x, integral_y, integral_z
+
+        ielem = elem%ielem  !> get element index
+
+        ! Multiply each component by quadrature weights and element jacobians
+        source = (source) * (elem%gq%vol%weights) * (elem%jinv)
+
+
+
+        ! Multiply by column of test function gradients, integrate, add to RHS, add derivatives to linearization
+        integral = matmul(transpose(elem%gq%vol%val),source)                        ! Integrate
+
+
+
+        call store_volume_integrals(integral,sdata,idom,ielem,ivar,iblk)            ! Store values and derivatives
+
+
+    end subroutine
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     !>  Compute the volume integral of a flux vector
     !!
     !!      - Adds value contribution to the rhs vector

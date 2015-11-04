@@ -1,6 +1,6 @@
-module EULER_LaxFriedrichs_flux
+module LINEULER_LaxFriedrichs_flux_real
     use mod_kinds,              only: rk,ik
-    use mod_constants,          only: NFACES,ONE,TWO,HALF, &
+    use mod_constants,          only: NFACES,ONE,TWO,HALF,ZERO, &
                                       XI_MIN,XI_MAX,ETA_MIN,ETA_MAX,ZETA_MIN,ZETA_MAX, &
                                       LOCAL, NEIGHBOR
 
@@ -16,16 +16,16 @@ module EULER_LaxFriedrichs_flux
     use mod_DNAD_tools
     use DNAD_D
 
-    use EULER_properties,       only: EULER_properties_t
+    use LINEULER_properties,    only: LINEULER_properties_t
     implicit none
 
     private
 
-    type, extends(boundary_flux_t), public :: EULER_LaxFriedrichs_flux_t
+    type, extends(boundary_flux_t), public :: LINEULER_LaxFriedrichs_flux_real_t
 
     contains
         procedure  :: compute
-    end type EULER_LaxFriedrichs_flux_t
+    end type LINEULER_LaxFriedrichs_flux_real_t
 
 
 
@@ -49,7 +49,7 @@ contains
     !
     !===========================================================
     subroutine compute(self,mesh,sdata,prop,idom,ielem,iface,iblk,idonor)
-        class(EULER_LaxFriedrichs_flux_t),  intent(in)      :: self
+        class(LINEULER_LaxFriedrichs_flux_real_t),  intent(in)      :: self
         type(mesh_t),                       intent(in)      :: mesh(:)
         type(solverdata_t),                 intent(inout)   :: sdata
         class(properties_t),                intent(inout)   :: prop
@@ -67,6 +67,10 @@ contains
         type(face_location_t)   :: face
 
         real(rk)        :: gam_m, gam_p
+
+        real(rk)    :: rho_c, rhou_c, rhov_c, rhow_c, rhoE_c
+        real(rk)    :: pbar, ubar, vbar, wbar, Hbar, gam, umag, a_c, wave_c
+
 
         ! Storage at quadrature nodes
         type(AD_D), dimension(mesh(idom)%faces(ielem,iface)%gq%face%nnodes)    :: &
@@ -86,16 +90,44 @@ contains
         ! NOTE: var_m signifies "minus" and would indicate a local element variable
         !       var_p signifies "plus"  and would indicate a neighbor element variable
         !===========================================================================
-        irho  = prop%get_eqn_index("rho")
-        irhou = prop%get_eqn_index("rhou")
-        irhov = prop%get_eqn_index("rhov")
-        irhow = prop%get_eqn_index("rhow")
-        irhoE = prop%get_eqn_index("rhoE")
+        irho  = prop%get_eqn_index("rho_r")
+        irhou = prop%get_eqn_index("rhou_r")
+        irhov = prop%get_eqn_index("rhov_r")
+        irhow = prop%get_eqn_index("rhow_r")
+        irhoE = prop%get_eqn_index("rhoE_r")
 
 
         face%idomain  = idom
         face%ielement = ielem
         face%iface    = iface
+
+
+        !
+        ! Gamma
+        !
+        gam = 1.4_rk
+
+        !
+        ! Mean flow constants
+        !
+        rho_c = 1.2351838930023_rk
+        rhou_c = 110.21484155975_rk
+        rhov_c = ZERO
+        rhow_c = ZERO
+        rhoE_c = 267417.20761939_rk
+
+        !
+        ! Mean velocities
+        !
+        ubar = rhou_c / rho_c
+        vbar = rhov_c / rho_c
+        wbar = rhow_c / rho_c
+        umag = sqrt( ubar**TWO + vbar**TWO + wbar**TWO )
+
+        !
+        ! Mean pressure
+        !
+        pbar = (gam - ONE) * (rhoE_c - HALF*( (rhou_c*rhou_c) + (rhov_c*rhov_c) + (rhow_c*rhow_c) )/rho_c )
 
 
         !
@@ -131,23 +163,20 @@ contains
 
             gam_m = 1.4_rk
             gam_p = 1.4_rk
+
             !--------------------------------------
             !  Compute wave speeds
             !--------------------------------------
-            ! Compute normal velocities: dot-product vector projection along unit-normal direction
-            un_m = unorms(:,1)*(rhou_m/rho_m) + unorms(:,2)*(rhov_m/rho_m) + unorms(:,3)*(rhow_m/rho_m)
-            un_p = -unorms(:,1)*(rhou_p/rho_p) - unorms(:,2)*(rhov_p/rho_p) - unorms(:,3)*(rhow_p/rho_p)
 
             ! Compute speed of sound
-            a_m = sqrt(abs(gam_m * p_m / rho_m))
-            a_p = sqrt(abs(gam_p * p_p / rho_p))
+            a_c = sqrt(abs(gam * pbar / rho_c))
 
 
 
             ! Compute wave speeds
-            wave_m = abs(un_m) + a_m
-            wave_p = abs(un_p) + a_p
-            wave = max(wave_m,wave_p)
+            wave_c = abs(umag) + a_c
+
+            wave = wave_c
 
 
             !================================
@@ -213,4 +242,4 @@ contains
 
 
 
-end module EULER_LaxFriedrichs_flux
+end module LINEULER_LaxFriedrichs_flux_real

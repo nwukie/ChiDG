@@ -6,6 +6,8 @@ add_test_sources(matrix_solvers
 #                 test_gmres_ref.pf
                  test_fgmres.pf
                  test_fgmres_ref.pf
+                 test_gaussseidel_standard.pf
+                 test_fgmres_standard.pf
                  )
 
 

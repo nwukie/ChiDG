@@ -1,4 +1,4 @@
-module bc_lineuler_extrapolate
+module bc_lineuler_inlet
     use mod_kinds,          only: rk,ik
     use mod_constants,      only: ONE, TWO, HALF, ZERO, LOCAL
     use type_bc,            only: bc_t
@@ -24,11 +24,11 @@ module bc_lineuler_extrapolate
     !!  @author Nathan A. Wukie
     !!
     !-------------------------------------------------------------------------------------------
-    type, public, extends(bc_t) :: lineuler_extrapolate_t
+    type, public, extends(bc_t) :: lineuler_inlet_t
 
     contains
         procedure :: compute    !> bc implementation
-    end type lineuler_extrapolate_t
+    end type lineuler_inlet_t
     !-------------------------------------------------------------------------------------------
 
 
@@ -48,7 +48,7 @@ contains
     !!  @param[inout]   prop    properties_t object containing equations and material_t objects
     !-------------------------------------------------------------------------------------------
     subroutine compute(self,mesh,sdata,prop,idom,ielem,iface,iblk)
-        class(lineuler_extrapolate_t),     intent(inout)   :: self
+        class(lineuler_inlet_t),     intent(inout)   :: self
         type(mesh_t),                   intent(in)      :: mesh(:)
         type(solverdata_t),             intent(inout)   :: sdata
         class(properties_t),            intent(inout)   :: prop
@@ -126,11 +126,25 @@ contains
             call interpolate_face(mesh,q,idom,ielem,iface,irhoE_i,rhoE_i,seed, LOCAL)
 
 
+            rho_r  = ZERO
+            rhou_r = ZERO
+            rhov_r = ZERO
+            rhow_r = ZERO
+            rhoE_r = ZERO
 
 
+            rho_i  = ZERO
+            rhou_i = ZERO
+            rhov_i = ZERO
+            rhow_i = ZERO
+            rhoE_i = ZERO
 
 
-
+            rho_r  = -4.2602822704736e-6_rk
+            rhou_r = -5.2125010830968e-9_rk
+            rhov_r = ZERO
+            rhow_r = ZERO
+            rhoE_r = 1.25_rk
 
 
 
@@ -327,4 +341,4 @@ contains
 
 
 
-end module bc_lineuler_extrapolate
+end module bc_lineuler_inlet

@@ -95,7 +95,10 @@ contains
 
 
                 !  Get number of terms in coordinate expansion
-                call h5ltget_attribute_int_f(fid, "/", 'mapping', buf, ierr)
+                !call h5ltget_attribute_int_f(fid, "/", 'mapping', buf, ierr)
+                call h5ltget_attribute_int_f(fid, trim(gname), 'mapping', buf, ierr)
+
+
                 mapping = buf(1)
                 if (ierr /= 0) stop "Error: read_grid_hdf5 - h5ltget_attribute_int_f"
                 nterms_1d = (mapping + 1)

@@ -17,6 +17,7 @@ module LINEULER_LaxFriedrichs_flux_imag
     use DNAD_D
 
     use LINEULER_properties,    only: LINEULER_properties_t
+    use mod_linearized_euler
     implicit none
 
     private
@@ -63,13 +64,13 @@ contains
         integer(ik)     :: irhow
         integer(ik)     :: irhoe
 
+        integer(ik)             :: igq
         type(seed_t)            :: seed
         type(face_location_t)   :: face
 
         real(rk)        :: gam_m, gam_p
 
-        real(rk)    :: rho_c, rhou_c, rhov_c, rhow_c, rhoE_c
-        real(rk)    :: pbar, ubar, vbar, wbar, Hbar, gam, umag, a_c, wave_c
+        real(rk)    :: umag, a_c, wave_c
 
 
         ! Storage at quadrature nodes
@@ -79,10 +80,6 @@ contains
                         rhov_m,     rhov_p,                                       &
                         rhow_m,     rhow_p,                                       &
                         rhoe_m,     rhoe_p,                                       &
-                        p_m,        p_p,                                          &
-                        un_m,       un_p,                                         &
-                        a_m,        a_p,                                          &
-                        wave_m,     wave_p,                                       &
                         flux,       upwind,     wave, test_a, test_b
 
 
@@ -101,33 +98,6 @@ contains
         face%ielement = ielem
         face%iface    = iface
 
-
-        !
-        ! Gamma
-        !
-        gam = 1.4_rk
-
-        !
-        ! Mean flow constants
-        !
-        rho_c = 1.2351838930023_rk
-        rhou_c = 110.21484155975_rk
-        rhov_c = ZERO
-        rhow_c = ZERO
-        rhoE_c = 267417.20761939_rk
-
-        !
-        ! Mean velocities
-        !
-        ubar = rhou_c / rho_c
-        vbar = rhov_c / rho_c
-        wbar = rhow_c / rho_c
-        umag = sqrt( ubar**TWO + vbar**TWO + wbar**TWO )
-
-        !
-        ! Mean pressure
-        !
-        pbar = (gam - ONE) * (rhoE_c - HALF*( (rhou_c*rhou_c) + (rhov_c*rhov_c) + (rhow_c*rhow_c) )/rho_c )
 
 
         !
@@ -157,12 +127,13 @@ contains
 
 
 
-            ! Compute pressure and total enthalpy
-            call prop%fluid%compute_pressure(rho_m,rhou_m,rhov_m,rhow_m,rhoE_m,p_m)
-            call prop%fluid%compute_pressure(rho_p,rhou_p,rhov_p,rhow_p,rhoE_p,p_p)
+            wave = rho_m
+            do igq = 1,size(wave)
+                wave(igq)%x_ad_  = ZERO
+                wave(igq)%xp_ad_ = ZERO
+            end do
 
-            gam_m = 1.4_rk
-            gam_p = 1.4_rk
+
 
             !--------------------------------------
             !  Compute wave speeds
@@ -182,7 +153,7 @@ contains
             !================================
             !       MASS FLUX
             !================================
-            upwind = -wave*(rho_p - rho_m)
+            upwind = wave*(rho_m - rho_p)
 
             flux = HALF*(upwind*norms(:,1)*unorms(:,1)  +  upwind*norms(:,2)*unorms(:,2)  +  upwind*norms(:,3)*unorms(:,3) )
 
@@ -192,7 +163,7 @@ contains
             !================================
             !       X-MOMENTUM FLUX
             !================================
-            upwind = -wave*(rhou_p - rhou_m)
+            upwind = wave*(rhou_m - rhou_p)
 
             flux = HALF*( upwind*norms(:,1)*unorms(:,1)  +  upwind*norms(:,2)*unorms(:,2)  +  upwind*norms(:,3)*unorms(:,3) )
 
@@ -202,7 +173,7 @@ contains
             !================================
             !       Y-MOMENTUM FLUX
             !================================
-            upwind = -wave*(rhov_p - rhov_m)
+            upwind = wave*(rhov_m - rhov_p)
 
             flux = HALF*( upwind*norms(:,1)*unorms(:,1)  +  upwind*norms(:,2)*unorms(:,2)  +  upwind*norms(:,3)*unorms(:,3) )
 
@@ -211,7 +182,7 @@ contains
             !================================
             !       Z-MOMENTUM FLUX
             !================================
-            upwind = -wave*(rhow_p - rhow_m)
+            upwind = wave*(rhow_m - rhow_p)
 
             flux = HALF*( upwind*norms(:,1)*unorms(:,1) +  upwind*norms(:,2)*unorms(:,2)  +  upwind*norms(:,3)*unorms(:,3) )
 
@@ -220,7 +191,7 @@ contains
             !================================
             !          ENERGY FLUX
             !================================
-            upwind = -wave*(rhoE_p - rhoE_m)
+            upwind = wave*(rhoE_m - rhoE_p)
 
             flux = HALF*( upwind*norms(:,1)*unorms(:,1) + upwind*norms(:,2)*unorms(:,2) + upwind*norms(:,3)*unorms(:,3) )
 

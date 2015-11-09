@@ -32,6 +32,8 @@ module type_bcset
         procedure :: add     !< Call for adding a boundary condition
         procedure :: apply   !< Spatial application of the boundary condition
 
+
+        final :: destructor
     end type bcset_t
 
 
@@ -179,6 +181,10 @@ contains
 
 
 
+    subroutine destructor(self)
+        type(bcset_t),  intent(inout) :: self
+
+    end subroutine
 
 
 end module type_bcset

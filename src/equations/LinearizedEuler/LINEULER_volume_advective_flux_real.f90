@@ -14,6 +14,7 @@ module LINEULER_volume_advective_flux_real
     use DNAD_D
 
     use LINEULER_properties,    only: LINEULER_properties_t
+    use mod_linearized_euler
     implicit none
 
     private
@@ -62,15 +63,11 @@ contains
         integer(ik)    :: iseed, i, idonor
         type(seed_t)   :: seed
 
-        real(rk)    :: rho_c, rhou_c, rhov_c, rhow_c, rhoE_c
-        real(rk)    :: dp_drho, dp_drhou, dp_drhov, dp_drhow, dp_drhoE
-        real(rk)    :: ubar, vbar, wbar, Hbar, pbar
-        real(rk)    :: gam
 
 
 
         type(AD_D), dimension(mesh(idom)%elems(ielem)%gq%vol%nnodes)      ::  &
-                    rho, rhou, rhov, rhow, rhoE, p, H,                        &
+                    rho, rhou, rhov, rhow, rhoE,                        &
                     flux_x, flux_y, flux_z
 
 
@@ -83,54 +80,6 @@ contains
         irhov = prop%get_eqn_index("rhov_r")
         irhow = prop%get_eqn_index("rhow_r")
         irhoE = prop%get_eqn_index("rhoE_r")
-
-
-        !
-        ! Gamma
-        !
-        gam = 1.4_rk
-
-
-        !
-        ! Mean flow constants
-        !
-        rho_c  = 1.2351838930023_rk
-        rhou_c = 110.21484155975_rk
-        rhov_c = ZERO
-        rhow_c = ZERO
-        rhoE_c = 267417.20761939_rk
-
-
-        !
-        ! Mean velocities
-        !
-        ubar = rhou_c / rho_c
-        vbar = rhov_c / rho_c
-        wbar = rhow_c / rho_c
-
-        !
-        ! Mean pressure
-        !
-        pbar = (gam - ONE) * (rhoE_c - HALF*( (rhou_c*rhou_c) + (rhov_c*rhov_c) + (rhow_c*rhow_c))/rho_c )
-
-        !
-        ! Mean enthalpy
-        !
-        Hbar = (rhoE_c + pbar) / rho_c
-        
-
-        !
-        ! Pressure jacobians
-        !
-        dp_drho  = ((gam-ONE)/TWO) * (ubar**TWO + vbar**TWO)
-        dp_drhou = -(gam - ONE)*ubar
-        dp_drhov = -(gam - ONE)*vbar
-        dp_drhow = -(gam - ONE)*wbar
-        dp_drhoE = (gam - ONE)
-
-
-
-
 
 
 
@@ -154,18 +103,18 @@ contains
         call interpolate_element(mesh,sdata%q,idom,ielem,irhoE,rhoE,seed)
 
 
-        !
-        ! Compute pressure and total enthalpy
-        !
-        call prop%fluid%compute_pressure(rho,rhou,rhov,rhow,rhoE,p)
-
-        H = (rhoE + p)/rho
 
         !===========================
         !        MASS FLUX
         !===========================
-        flux_x = rhou
-        flux_y = rhov
+        flux_x = rho_x_rho  * rho  + &
+                 rho_x_rhou * rhou + &
+                 rho_x_rhov * rhov + &
+                 rho_x_rhoE * rhoE
+        flux_y = rho_y_rho  * rho  + &
+                 rho_y_rhou * rhou + &
+                 rho_y_rhov * rhov + &
+                 rho_y_rhoE * rhoE
         flux_z = rhow
 
         call integrate_volume_flux(mesh(idom)%elems(ielem),sdata,idom,irho,iblk,flux_x,flux_y,flux_z)
@@ -174,14 +123,14 @@ contains
         !===========================
         !     X-MOMENTUM FLUX
         !===========================
-        flux_x = (-ubar**TWO + dp_drho) * rho  + &
-                 (TWO*ubar + dp_drhou)  * rhou + &
-                 (dp_drhov)             * rhov + &
-                 (dp_drhoE)             * rhoE
-        flux_y = (-ubar * vbar)         * rho  + &
-                 (vbar)                 * rhou + &
-                 (ubar)                 * rhov + &
-                 ZERO                   * rhoE
+        flux_x = rhou_x_rho  * rho  + &
+                 rhou_x_rhou * rhou + &
+                 rhou_x_rhov * rhov + &
+                 rhou_x_rhoE * rhoE
+        flux_y = rhou_y_rho  * rho  + &
+                 rhou_y_rhou * rhou + &
+                 rhou_y_rhov * rhov + &
+                 rhou_y_rhoE * rhoE
         flux_z = ZERO
 
         call integrate_volume_flux(mesh(idom)%elems(ielem),sdata,idom,irhou,iblk,flux_x,flux_y,flux_z)
@@ -190,14 +139,14 @@ contains
         !============================
         !     Y-MOMENTUM FLUX
         !============================
-        flux_x = (-ubar * vbar)         * rho  + &
-                 (vbar)                 * rhou + &
-                 (ubar)                 * rhov + &
-                 ZERO                   * rhoE
-        flux_y = (-vbar**TWO + dp_drho) * rho  + &
-                 (dp_drhou)             * rhou + &
-                 (TWO*vbar + dp_drhov)  * rhov + &
-                 (dp_drhoE)             * rhoE
+        flux_x = rhov_x_rho  * rho  + &
+                 rhov_x_rhou * rhou + &
+                 rhov_x_rhov * rhov + &
+                 rhov_x_rhoE * rhoE
+        flux_y = rhov_y_rho  * rho  + &
+                 rhov_y_rhou * rhou + &
+                 rhov_y_rhov * rhov + &
+                 rhov_y_rhoE * rhoE
         flux_z = ZERO
 
         call integrate_volume_flux(mesh(idom)%elems(ielem),sdata,idom,irhov,iblk,flux_x,flux_y,flux_z)
@@ -214,14 +163,14 @@ contains
         !============================
         !       ENERGY FLUX
         !============================
-        flux_x = (ubar * (dp_drho - Hbar))  * rho  + &
-                 (Hbar + ubar*dp_drhou)     * rhou + &
-                 (ubar * dp_drhov)          * rhov + &
-                 (ubar * (ONE + dp_drhoE))  * rhoE
-        flux_y = (vbar * (dp_drho - Hbar))  * rho  + &
-                 (vbar * dp_drhou)          * rhou + &
-                 (Hbar + vbar*dp_drhov)     * rhov + &
-                 (vbar * (ONE + dp_drhoE))  * rhoE
+        flux_x = rhoE_x_rho  * rho  + &
+                 rhoE_x_rhou * rhou + &
+                 rhoE_x_rhov * rhov + &
+                 rhoE_x_rhoE * rhoE
+        flux_y = rhoE_y_rho  * rho  + &
+                 rhoE_y_rhou * rhou + &
+                 rhoE_y_rhov * rhov + &
+                 rhoE_y_rhoE * rhoE
         flux_z = ZERO
 
         call integrate_volume_flux(mesh(idom)%elems(ielem),sdata,idom,irhoE,iblk,flux_x,flux_y,flux_z)

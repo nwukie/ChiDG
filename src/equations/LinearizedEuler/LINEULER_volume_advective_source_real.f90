@@ -59,19 +59,16 @@ contains
         integer(ik)    :: irhoE_r, irhoE_i
 
 
-        integer(ik)    :: iseed, i, idonor
+        integer(ik)    :: iseed, idonor
         type(seed_t)   :: seed
 
-        real(rk)    :: rho_c, rhou_c, rhov_c, rhow_c, rhoE_c
-        real(rk)    :: dp_drho, dp_drhou, dp_drhov, dp_drhow, dp_drhoE
-        real(rk)    :: ubar, vbar, wbar, Hbar, pbar
         real(rk)    :: gam, omega
 
 
 
         type(AD_D), dimension(mesh(idom)%elems(ielem)%gq%vol%nnodes)      ::  &
                     rho, rhou, rhov, rhow, rhoE, p, H,                        &
-                    flux_x, flux_y, flux_z
+                    flux
 
 
         idonor = 0
@@ -96,48 +93,8 @@ contains
         ! Gamma
         !
         gam = 1.4_rk
-        omega = 100._rk
-
-
-        !
-        ! Mean flow constants
-        !
-        rho_c  = 1.2351838930023_rk
-        rhou_c = 110.21484155975_rk
-        rhov_c = ZERO
-        rhow_c = ZERO
-        rhoE_c = 267417.20761939_rk
-
-
-        !
-        ! Mean velocities
-        !
-        ubar = rhou_c / rho_c
-        vbar = rhov_c / rho_c
-        wbar = rhow_c / rho_c
-
-        !
-        ! Mean pressure
-        !
-        pbar = (gam - ONE) * (rhoE_c - HALF*( (rhou_c*rhou_c) + (rhov_c*rhov_c) + (rhow_c*rhow_c))/rho_c )
-
-        !
-        ! Mean enthalpy
-        !
-        Hbar = (rhoE_c + pbar) / rho_c
-        
-
-        !
-        ! Pressure jacobians
-        !
-        dp_drho  = ((gam-ONE)/TWO) * (ubar**TWO + vbar**TWO)
-        dp_drhou = -(gam - ONE)*ubar
-        dp_drhov = -(gam - ONE)*vbar
-        dp_drhow = -(gam - ONE)*wbar
-        dp_drhoE = (gam - ONE)
-
-
-
+        !omega = 1._rk
+        omega = 0.1_rk
 
 
 
@@ -162,35 +119,29 @@ contains
         call interpolate_element(mesh,sdata%q,idom,ielem,irhoE_i,rhoE,seed)
 
 
-        !
-        ! Compute pressure and total enthalpy
-        !
-        call prop%fluid%compute_pressure(rho,rhou,rhov,rhow,rhoE,p)
-
-        H = (rhoE + p)/rho
 
         !===========================
         !        MASS FLUX
         !===========================
-        flux_x = -omega * rho
+        flux = omega * rho
 
-        call integrate_volume_source(mesh(idom)%elems(ielem),sdata,idom,irho_r,iblk,flux_x)
+        call integrate_volume_source(mesh(idom)%elems(ielem),sdata,idom,irho_r,iblk,flux)
 
 
         !===========================
         !     X-MOMENTUM FLUX
         !===========================
-        flux_x = -omega * rhou
+        flux = omega * rhou
 
-        call integrate_volume_source(mesh(idom)%elems(ielem),sdata,idom,irhou_r,iblk,flux_x)
+        call integrate_volume_source(mesh(idom)%elems(ielem),sdata,idom,irhou_r,iblk,flux)
 
 
         !============================
         !     Y-MOMENTUM FLUX
         !============================
-        flux_x = -omega * rhov
+        flux = omega * rhov
 
-        call integrate_volume_source(mesh(idom)%elems(ielem),sdata,idom,irhov_r,iblk,flux_x)
+        call integrate_volume_source(mesh(idom)%elems(ielem),sdata,idom,irhov_r,iblk,flux)
 
 !        !============================
 !        !     Z-MOMENTUM FLUX
@@ -204,9 +155,9 @@ contains
         !============================
         !       ENERGY FLUX
         !============================
-        flux_x = -omega * rhoE
+        flux = omega * rhoE
 
-        call integrate_volume_source(mesh(idom)%elems(ielem),sdata,idom,irhoE_r,iblk,flux_x)
+        call integrate_volume_source(mesh(idom)%elems(ielem),sdata,idom,irhoE_r,iblk,flux)
 
     end subroutine
 

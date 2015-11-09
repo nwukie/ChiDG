@@ -17,6 +17,7 @@ module LINEULER_boundary_average_advective_flux_real
     use DNAD_D
 
     use LINEULER_properties,    only: LINEULER_properties_t
+    use mod_linearized_euler
     implicit none
 
 
@@ -77,10 +78,6 @@ contains
 
         integer(ik) :: igq
 
-        real(rk)    :: rho_c, rhou_c, rhov_c, rhow_c, rhoE_c
-        real(rk)    :: dp_drho, dp_drhou, dp_drhov, dp_drhow, dp_drhoE
-        real(rk)    :: ubar, vbar, wbar, Hbar, pbar
-        real(rk)    :: gam
 
 
 
@@ -94,8 +91,6 @@ contains
                         rhov_m,     rhov_p,                                 &
                         rhow_m,     rhow_p,                                 &
                         rhoe_m,     rhoe_p,                                 &
-                        p_m,        p_p,                                    &
-                        H_m,        H_p,                                    &
                         flux_x_m,   flux_y_m,   flux_z_m,                   &
                         flux_x_p,   flux_y_p,   flux_z_p,                   &
                         flux_x,     flux_y,     flux_z,                     &
@@ -118,49 +113,6 @@ contains
         face%idomain  = idom
         face%ielement = ielem
         face%iface    = iface
-
-        !
-        ! Gamma
-        !
-        gam = 1.4_rk
-
-
-        !
-        ! Mean flow constants
-        !
-        rho_c  = 1.2351838930023_rk
-        rhou_c = 110.21484155975_rk
-        rhov_c = ZERO
-        rhow_c = ZERO
-        rhoE_c = 267417.20761939_rk
-
-        !
-        ! Mean velocities
-        !
-        ubar = rhou_c / rho_c
-        vbar = rhov_c / rho_c
-        wbar = rhow_c / rho_c
-
-        !
-        ! Mean Pressure
-        !
-        pbar = (gam - ONE) * (rhoE_c - HALF*( (rhou_c*rhou_c) + (rhov_c*rhov_C) + (rhow_c*rhow_c))/rho_c )
-
-        !
-        ! Mean enthalpy
-        !
-        Hbar = (rhoE_c + pbar) / rho_c
-
-
-        !
-        ! Pressure jacobians
-        !
-        dp_drho = ((gam - ONE)/TWO) * ( ubar**TWO + vbar**TWO)
-        dp_drhou = -(gam - ONE)*ubar
-        dp_drhov = -(gam - ONE)*vbar
-        dp_drhow = -(gam - ONE)*wbar
-        dp_drhoE = (gam - ONE)
-
 
 
 
@@ -202,12 +154,24 @@ contains
             !================================
             !       MASS FLUX
             !================================
-            flux_x_m = rhou_m
-            flux_y_m = rhov_m
+            flux_x_m = rho_x_rho  * rho_m  + &
+                       rho_x_rhou * rhou_m + &
+                       rho_x_rhov * rhov_m + &
+                       rho_x_rhoE * rhoE_m
+            flux_y_m = rho_y_rho  * rho_m  + &
+                       rho_y_rhou * rhou_m + &
+                       rho_y_rhov * rhov_m + &
+                       rho_y_rhoE * rhoE_m 
             flux_z_m = rhow_m
 
-            flux_x_p = rhou_p
-            flux_y_p = rhov_p
+            flux_x_p = rho_x_rho  * rho_p  + &
+                       rho_x_rhou * rhou_p + &
+                       rho_x_rhov * rhov_p + &
+                       rho_x_rhoE * rhoE_p
+            flux_y_p = rho_y_rho  * rho_p  + &
+                       rho_y_rhou * rhou_p + &
+                       rho_y_rhov * rhov_p + &
+                       rho_y_rhoE * rhoE_p 
             flux_z_p = rhow_p
 
             flux_x = (flux_x_m + flux_x_p)
@@ -224,25 +188,25 @@ contains
             !================================
             !       X-MOMENTUM FLUX
             !================================
-            flux_x_m = (-ubar**TWO  + dp_drho) * rho_m  + &
-                       (TWO*ubar + dp_drhou)   * rhou_m + &
-                       (dp_drhov)              * rhov_m + &
-                       (dp_drhoE)              * rhoE_m
-            flux_y_m = (-ubar * vbar)          * rho_m  + &
-                       (vbar)                  * rhou_m + &
-                       (ubar)                  * rhov_m + &
-                       ZERO                    * rhoE_m
+            flux_x_m = rhou_x_rho  * rho_m  + &
+                       rhou_x_rhou * rhou_m + &
+                       rhou_x_rhov * rhov_m + &
+                       rhou_x_rhoE * rhoE_m
+            flux_y_m = rhou_y_rho  * rho_m  + &
+                       rhou_y_rhou * rhou_m + &
+                       rhou_y_rhov * rhov_m + &
+                       rhou_y_rhoE * rhoE_m 
             flux_z_m = ZERO
 
 
-            flux_x_p = (-ubar**TWO  + dp_drho) * rho_p  + &
-                       (TWO*ubar + dp_drhou)   * rhou_p + &
-                       (dp_drhov)              * rhov_p + &
-                       (dp_drhoE)              * rhoE_p
-            flux_y_p = (-ubar * vbar)          * rho_p  + &
-                       (vbar)                  * rhou_p + &
-                       (ubar)                  * rhov_p + &
-                       ZERO                    * rhoE_p
+            flux_x_p = rhou_x_rho  * rho_p  + &
+                       rhou_x_rhou * rhou_p + &
+                       rhou_x_rhov * rhov_p + &
+                       rhou_x_rhoE * rhoE_p
+            flux_y_p = rhou_y_rho  * rho_p  + &
+                       rhou_y_rhou * rhou_p + &
+                       rhou_y_rhov * rhov_p + &
+                       rhou_y_rhoE * rhoE_p 
             flux_z_p = ZERO
 
 
@@ -263,26 +227,26 @@ contains
             !================================
             !       Y-MOMENTUM FLUX
             !================================
-            flux_x_m = (-ubar * vbar)         * rho_m  + &
-                       (vbar)                 * rhou_m + &
-                       (ubar)                 * rhov_m + &
-                       ZERO                   * rhoE_m
-            flux_y_m = (-vbar**TWO + dp_drho) * rho_m  + &
-                       (dp_drhou)             * rhou_m + &
-                       (TWO*vbar + dp_drhov)  * rhov_m + &
-                       (dp_drhoE)             * rhoE_m
+            flux_x_m = rhov_x_rho  * rho_m  + &
+                       rhov_x_rhou * rhou_m + &
+                       rhov_x_rhov * rhov_m + &
+                       rhov_x_rhoE * rhoE_m
+            flux_y_m = rhov_y_rho  * rho_m  + &
+                       rhov_y_rhou * rhou_m + &
+                       rhov_y_rhov * rhov_m + &
+                       rhov_y_rhoE * rhoE_m 
             flux_z_m = ZERO
 
 
 
-            flux_x_p = (-ubar * vbar)         * rho_p  + &
-                       (vbar)                 * rhou_p + &
-                       (ubar)                 * rhov_p + &
-                       ZERO                   * rhoE_p
-            flux_y_p = (-vbar**TWO + dp_drho) * rho_p  + &
-                       (dp_drhou)             * rhou_p + &
-                       (TWO*vbar + dp_drhov)  * rhov_p + &
-                       (dp_drhoE)             * rhoE_p
+            flux_x_p = rhov_x_rho  * rho_p  + &
+                       rhov_x_rhou * rhou_p + &
+                       rhov_x_rhov * rhov_p + &
+                       rhov_x_rhoE * rhoE_p
+            flux_y_p = rhov_y_rho  * rho_p  + &
+                       rhov_y_rhou * rhou_p + &
+                       rhov_y_rhov * rhov_p + &
+                       rhov_y_rhoE * rhoE_p 
             flux_z_p = ZERO
 
 
@@ -323,25 +287,25 @@ contains
             !================================
             !          ENERGY FLUX
             !================================
-            flux_x_m = (ubar * (dp_drho - Hbar))  * rho_m  + &
-                       (Hbar + ubar*dp_drhou)     * rhou_m + &
-                       (ubar * dp_drhov)          * rhov_m + &
-                       (ubar * (ONE + dp_drhoE))  * rhoE_m
-            flux_y_m = (vbar * (dp_drho - Hbar))  * rho_m  + &
-                       (vbar * dp_drhou)          * rhou_m + &
-                       (Hbar + vbar*dp_drhov)     * rhov_m + &
-                       (vbar * (ONE + dp_drhoE))  * rhoE_m
+            flux_x_m = rhoE_x_rho  * rho_m  + &
+                       rhoE_x_rhou * rhou_m + &
+                       rhoE_x_rhov * rhov_m + &
+                       rhoE_x_rhoE * rhoE_m
+            flux_y_m = rhoE_y_rho  * rho_m  + &
+                       rhoE_y_rhou * rhou_m + &
+                       rhoE_y_rhov * rhov_m + &
+                       rhoE_y_rhoE * rhoE_m 
             flux_z_m = ZERO
 
 
-            flux_x_p = (ubar * (dp_drho - Hbar))  * rho_p  + &
-                       (Hbar + ubar*dp_drhou)     * rhou_p + &
-                       (ubar * dp_drhov)          * rhov_p + &
-                       (ubar * (ONE + dp_drhoE))  * rhoE_p
-            flux_y_p = (vbar * (dp_drho - Hbar))  * rho_p  + &
-                       (vbar * dp_drhou)          * rhou_p + &
-                       (Hbar + vbar*dp_drhov)     * rhov_p + &
-                       (vbar * (ONE + dp_drhoE))  * rhoE_p
+            flux_x_p = rhoE_x_rho  * rho_p  + &
+                       rhoE_x_rhou * rhou_p + &
+                       rhoE_x_rhov * rhov_p + &
+                       rhoE_x_rhoE * rhoE_p
+            flux_y_p = rhoE_y_rho  * rho_p  + &
+                       rhoE_y_rhou * rhou_p + &
+                       rhoE_y_rhov * rhov_p + &
+                       rhoE_y_rhoE * rhoE_p 
             flux_z_p = ZERO
 
 

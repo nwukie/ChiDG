@@ -1,4 +1,4 @@
-module LINEULER_volume_advective_source_imag
+module LINEULER_volume_advective_sourceterms_real
     use mod_kinds,              only: rk,ik
     use mod_constants,          only: NFACES,ONE,TWO,HALF,ZERO, &
                                       XI_MIN,XI_MAX,ETA_MIN,ETA_MAX,ZETA_MIN,ZETA_MAX,DIAG
@@ -18,12 +18,12 @@ module LINEULER_volume_advective_source_imag
 
     private
 
-    type, extends(volume_flux_t), public :: LINEULER_volume_advective_source_imag_t
+    type, extends(volume_flux_t), public :: LINEULER_volume_advective_sourceterms_real_t
 
 
     contains
         procedure  :: compute
-    end type LINEULER_volume_advective_source_imag_t
+    end type LINEULER_volume_advective_sourceterms_real_t
 
 
 
@@ -44,7 +44,7 @@ contains
     !
     !===========================================================
     subroutine compute(self,mesh,sdata,prop,idom,ielem,iblk)
-        class(LINEULER_volume_advective_source_imag_t),   intent(in)      :: self
+        class(LINEULER_volume_advective_sourceterms_real_t),   intent(in)      :: self
         type(mesh_t),                           intent(in)      :: mesh(:)
         type(solverdata_t),                     intent(inout)   :: sdata
         class(properties_t),                    intent(inout)   :: prop
@@ -59,16 +59,18 @@ contains
         integer(ik)    :: irhoE_r, irhoE_i
 
 
-        integer(ik)    :: iseed, i, idonor
+        integer(ik)    :: iseed, i, idonor, igq
         type(seed_t)   :: seed
 
-        real(rk)    :: gam, omega
+        real(rk)    :: gam, omega, alpha, eps
+        real(rk)    :: x, y
 
 
 
         type(AD_D), dimension(mesh(idom)%elems(ielem)%gq%vol%nnodes)      ::  &
                     rho, rhou, rhov, rhow, rhoE, p, H,                        &
                     flux
+
 
 
         idonor = 0
@@ -86,18 +88,6 @@ contains
         irhov_i = prop%get_eqn_index("rhov_i")
         irhow_i = prop%get_eqn_index("rhow_i")
         irhoE_i = prop%get_eqn_index("rhoE_i")
-
-
-
-        !
-        ! Gamma
-        !
-        gam = 1.4_rk
-        !omega = 1._rk
-        omega = 0.1_rk
-
-
-
 
 
 
@@ -121,28 +111,58 @@ contains
 
 
 
+        ! Initialize flux derivative storage
+        flux = rho
+        flux = ZERO
+
+        alpha = 0.1_rk
+        !alpha = 0.3_rk
         !===========================
         !        MASS FLUX
         !===========================
-        flux = -omega * rho
+        eps = 0.5_rk
+        do igq = 1,size(rho)
+            x = mesh(idom)%elems(ielem)%quad_pts(igq)%c1_
+            y = mesh(idom)%elems(ielem)%quad_pts(igq)%c2_
 
-        call integrate_volume_source(mesh(idom)%elems(ielem),sdata,idom,irho_i,iblk,flux)
+            flux(igq) = eps * exp(-alpha * (x**TWO + y**TWO) )
+
+        end do
+        !flux = ZERO
+
+        call integrate_volume_source(mesh(idom)%elems(ielem),sdata,idom,irho_r,iblk,flux)
 
 
         !===========================
         !     X-MOMENTUM FLUX
         !===========================
-        flux = -omega * rhou
+        eps = ZERO
+        do igq = 1,size(rho)
+            x = mesh(idom)%elems(ielem)%quad_pts(igq)%c1_
+            y = mesh(idom)%elems(ielem)%quad_pts(igq)%c2_
 
-        call integrate_volume_source(mesh(idom)%elems(ielem),sdata,idom,irhou_i,iblk,flux)
+            flux(igq) = eps * exp(-alpha * (x**TWO + y**TWO) )
+
+        end do
+        !flux = ZERO
+
+        call integrate_volume_source(mesh(idom)%elems(ielem),sdata,idom,irhou_r,iblk,flux)
 
 
         !============================
         !     Y-MOMENTUM FLUX
         !============================
-        flux = -omega * rhov
+        eps = ZERO
+        do igq = 1,size(rho)
+            x = mesh(idom)%elems(ielem)%quad_pts(igq)%c1_
+            y = mesh(idom)%elems(ielem)%quad_pts(igq)%c2_
 
-        call integrate_volume_source(mesh(idom)%elems(ielem),sdata,idom,irhov_i,iblk,flux)
+            flux(igq) = eps * exp(-alpha * (x**TWO + y**TWO) )
+
+        end do
+        !flux = ZERO
+
+        call integrate_volume_source(mesh(idom)%elems(ielem),sdata,idom,irhov_r,iblk,flux)
 
 !        !============================
 !        !     Z-MOMENTUM FLUX
@@ -156,9 +176,17 @@ contains
         !============================
         !       ENERGY FLUX
         !============================
-        flux = -omega * rhoE
+        eps = 0.5_rk
+        do igq = 1,size(rho)
+            x = mesh(idom)%elems(ielem)%quad_pts(igq)%c1_
+            y = mesh(idom)%elems(ielem)%quad_pts(igq)%c2_
 
-        call integrate_volume_source(mesh(idom)%elems(ielem),sdata,idom,irhoE_i,iblk,flux)
+            flux(igq) = eps * exp(-alpha * (x**TWO + y**TWO) )
+
+        end do
+        !flux = ZERO
+
+        call integrate_volume_source(mesh(idom)%elems(ielem),sdata,idom,irhoE_r,iblk,flux)
 
     end subroutine
 
@@ -167,4 +195,4 @@ contains
 
 
 
-end module LINEULER_volume_advective_source_imag
+end module LINEULER_volume_advective_sourceterms_real

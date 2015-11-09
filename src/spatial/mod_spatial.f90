@@ -1,7 +1,7 @@
 module mod_spatial
 #include <messenger.h>
     use mod_kinds,          only: rk,ik
-    use mod_constants,      only: NFACES, DIAG, CHIMERA, INTERIOR
+    use mod_constants,      only: NFACES, DIAG, CHIMERA, INTERIOR, XI_MAX
     use type_chidg_data,    only: chidg_data_t
     use type_timer,         only: timer_t
 
@@ -23,6 +23,8 @@ contains
         logical                     :: chimera_face          = .false.
         logical                     :: compute_face          = .false.
 
+        integer(ik) :: irow
+
 
         !
         ! Start timer on spatial discretization update
@@ -33,6 +35,9 @@ contains
             !------------------------------------------------------------------------------------------
             !                                      Interior Scheme
             !------------------------------------------------------------------------------------------
+
+
+
 
             !
             ! Loop through given element and neighbors and compute the corresponding linearization
@@ -78,6 +83,8 @@ contains
 
 
 
+
+
                                     !
                                     ! If Chimera face, how many donor elements are there that need the linearization computed
                                     !
@@ -97,6 +104,8 @@ contains
                                     ! Test ndonors > 0
                                     !
                                     if (ndonors == 0) call signal(FATAL,'update_residual: no available donors for boundary calculation')
+
+
 
 
 
@@ -163,6 +172,10 @@ contains
             !                                      Boundary Scheme
             !------------------------------------------------------------------------------------------
 
+
+
+
+
             !
             ! Boundary conditions
             !
@@ -179,6 +192,17 @@ contains
 
 
 
+
+!            do irow = 1,5 
+!                print*, data%sdata%rhs%dom(1)%lvecs(41)%vec%getvar(5)
+!            end do
+!
+!            do irow = 6,10
+!                print*, data%sdata%lhs%dom(1)%lblks(1,XI_MAX)%mat(irow,1:5)
+!            end do
+!
+!            print*, data%sdata%rhs%dom(1)%lvecs(41)%getvar(5)
+!            stop
 
 
             call timer%stop()

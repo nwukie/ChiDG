@@ -406,9 +406,10 @@ contains
         real(rk)    :: mat(3,3), minv(3,3)
         real(rk)    :: R(3)
         real(rk)    :: dcoord(3)
-        real(rk)    :: res
+        real(rk)    :: res, dx, dy, dz
 
-        tol = 1.e-14_rk
+        !tol = 1.e-14_rk
+        tol = 1.e-12_rk
 
         xgq = gq_node%c1_
         ygq = gq_node%c2_
@@ -441,15 +442,24 @@ contains
 
 
                 !
-                ! Grow bounding box by 10%
+                ! Grow bounding box by 10%. Use delta x,y,z instead of scaling xmin etc. in-case xmin is 0
                 !
-                xmin = xmin - (0.1*abs(xmin))
-                xmax = xmax + (0.1*abs(xmax))
-                ymin = ymin - (0.1*abs(ymin))
-                ymax = ymax + (0.1*abs(ymax))
-                zmin = zmin - (0.1*abs(zmin))
-                zmax = zmax + (0.1*abs(zmax))
+                dx = abs(xmax - xmin)  
+                dy = abs(ymax - ymin)
+                dz = abs(zmax - zmin)
+                !xmin = xmin - (0.2*abs(xmin))
+                !xmax = xmax + (0.2*abs(xmax))
+                !ymin = ymin - (0.2*abs(ymin))
+                !ymax = ymax + (0.2*abs(ymax))
+                !zmin = zmin - (0.2*abs(zmin))
+                !zmax = zmax + (0.2*abs(zmax))
 
+                xmin = xmin - 0.1*dx
+                xmax = xmax + 0.1*dx
+                ymin = ymin - 0.1*dy
+                ymax = ymax + 0.1*dy
+                zmin = zmin - 0.1*dz
+                zmax = zmax + 0.1*dz
 
                 !
                 ! Test if gq_node is contained within the bounding coordinates
@@ -457,6 +467,18 @@ contains
                 contained = ( (xmin < xgq) .and. (xgq < xmax ) .and. &
                               (ymin < ygq) .and. (ygq < ymax ) .and. &
                               (zmin < zgq) .and. (zgq < zmax ) )
+
+                if ( receiver_face%idomain == 1 .and. receiver_face%ielement == 5 .and. receiver_face%iface == 3 ) then
+                    if (idom == 4 .and. ielem == 36) then
+                        print*, 'min'
+                        print*, xmin, ymin, zmin
+                        print*, 'max'
+                        print*, xmax, ymax, zmax
+                        print*, 'gq'
+                        print*, xgq, ygq, zgq
+                    end if
+                end if
+
 
 
                 !
@@ -604,8 +626,13 @@ contains
         ! Sanity check on donors and set donor_element location
         !
         if (ndonors == 0) then
+            print*, 'Receiver: domain, element, face'
+            print*, receiver_face%idomain, receiver_face%ielement, receiver_face%iface
+
+            print*, 'N-candidates'
             print*, ncandidates
 
+            print*, 'GQ location'
             print*, xgq, ygq, zgq
 
             call signal(FATAL,"compute_gq_donor: No donor found for gq_node")

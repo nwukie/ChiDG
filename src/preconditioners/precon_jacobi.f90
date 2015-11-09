@@ -9,6 +9,8 @@ module precon_jacobi
     use type_densematrix,       only: densematrix_t
 
     use mod_inv,    only: inv
+    !use mod_gaussseidel_standard,   only: gaussseidel_standard
+    use mod_fgmres_standard,   only: fgmres_standard
 
 
     !> Block-Jacobi preconditioner
@@ -105,6 +107,7 @@ contains
 
         integer(ik) :: ielem, ndom
         logical     :: reallocate   !< logical test for reallocating preconditioner storage
+        type(densematrix_t) :: junk
 
         ndom = size(A%dom)
 
@@ -118,13 +121,26 @@ contains
         end do
 
         !
+        ! Junk call to compute condition numbers
+        !
+        !do idom = 1,ndom
+        !    do ielem = 1,size(A%dom(idom)%lblks,1)
+        !        print*, 'Invert, display condition number for element: ', ielem
+        !        junk%mat = inv(A%dom(idom)%lblks(ielem,DIAG)%mat)
+        !    end do
+        !end do
+
+
+
+
+        !
         ! Replace the block diagonal D with Dinv
         !
-        do idom = 1,ndom
-            do ielem = 1,size(A%dom(idom)%lblks,1)
-                self%D(idom,ielem)%mat = inv(self%D(idom,ielem)%mat)
-            end do
-        end do
+        !do idom = 1,ndom
+        !    do ielem = 1,size(A%dom(idom)%lblks,1)
+        !        self%D(idom,ielem)%mat = inv(self%D(idom,ielem)%mat)
+        !    end do
+        !end do
 
 
     end subroutine update
@@ -166,7 +182,8 @@ contains
         !
         do idom = 1,ndom
             do ielem = 1,size(A%dom(idom)%lblks,1)
-                z%dom(idom)%lvecs(ielem)%vec = matmul(self%D(idom,ielem)%mat,v%dom(idom)%lvecs(ielem)%vec)
+                call fgmres_standard(self%D(idom,ielem)%mat, z%dom(idom)%lvecs(ielem)%vec, v%dom(idom)%lvecs(ielem)%vec)
+                !z%dom(idom)%lvecs(ielem)%vec = matmul(self%D(idom,ielem)%mat,v%dom(idom)%lvecs(ielem)%vec)
             end do
         end do
 

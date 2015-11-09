@@ -32,6 +32,7 @@ module type_chidgVector
 
         !> Interogators
         procedure, public   :: norm
+        procedure, public   :: dump
         !procedure, public   :: nentries
         !procedure, public   :: ndomains
 
@@ -205,6 +206,33 @@ contains
 
 
 
+
+    !> Dump contents of the vector
+    !!
+    !!  @author Nathan A. Wukie
+    !!
+    !!
+    !!
+    !--------------------------------------------------------------------------------------------
+    subroutine dump(self)
+        class(chidgVector_t),   intent(in)   :: self
+
+        integer(ik) :: idom
+
+
+
+        !
+        ! Loop through domain vectors and compute contribution to vecotr L2-Norm
+        !
+        do idom = 1,size(self%dom)
+            
+            call self%dom(idom)%dump()
+
+        end do ! idom
+
+
+
+    end subroutine dump
 
 
 

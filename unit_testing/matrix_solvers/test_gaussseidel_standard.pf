@@ -1,0 +1,82 @@
+@Test
+subroutine test_gaussseidel_standard_solve()
+    use pfunit_mod
+    use mod_kinds,          only: rk, ik
+    use mod_constants,      only: ZERO, ONE, TWO, THREE, FOUR, DIAG, XI_MIN, XI_MAX
+
+    use mod_gaussseidel_standard,   only: gaussseidel_standard
+
+    implicit none
+
+
+    real(rk), dimension(3,3)       :: A
+    real(rk), dimension(3)         :: x, b
+    
+    real(rk)    :: tol
+    integer(ik) :: nterms_c, nterms_s, idomain
+
+
+    tol      = 1.e-9_rk
+    idomain  = 1
+    nterms_c = 8
+    nterms_s = 1
+
+
+    ! Initialize blockmatrix data (A)
+    !
+    ! [4  3  0]
+    ! [3  4 -1]
+    ! [0 -1  4]
+    !
+    A(1,1) = 4._rk
+    A(1,2) = THREE
+    A(1,3) = ZERO
+
+    A(2,1) = THREE
+    A(2,2) = 4._rk
+    A(2,3) = -ONE
+
+    A(3,1) = ZERO
+    A(3,2) = -ONE
+    A(3,3) = 4._rk
+
+
+
+
+
+
+
+
+
+    ! Initialize blockvector data (b)
+    !
+    ! [ 24]
+    ! [ 30]
+    ! [-24]
+    !
+    b(1) = 24._rk
+    b(2) = 30._rk
+    b(3) = -24._rk
+
+
+
+    !
+    ! Solve matrix system. Ax=b. TESTING
+    !
+    call gaussseidel_standard(A,x,b)
+
+
+
+    ! Expecting solution
+    !
+    !     [ 3]
+    ! x = [ 4]
+    !     [-5]
+    !
+    @assertEqual(3._rk,x(1),tol)
+    @assertEqual(4._rk,x(2),tol)
+    @assertEqual(-5._rk,x(3),tol)
+
+
+
+end subroutine test_gaussseidel_standard_solve

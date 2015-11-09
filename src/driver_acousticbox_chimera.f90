@@ -55,8 +55,6 @@ program driver
     !
     ndomains = size(meshdata)
     do idom = 1,ndomains
-        print*, 'Adding domain: ', idom
-        print*, meshdata(idom)%nterms_c
         call chidg%data%add_domain(trim(meshdata(idom)%name),meshdata(idom)%points,meshdata(idom)%nterms_c,eqnset,nterms_s)
     end do
 
@@ -96,36 +94,36 @@ program driver
 
 
     !call chidg%data%add_bc('D_02','lineuler_extrapolate',XI_MIN)
-    !call chidg%data%add_bc('D_02','lineuler_extrapolate',XI_MAX)
+    call chidg%data%add_bc('D_02','lineuler_extrapolate',XI_MAX)
     !call chidg%data%add_bc('D_02','lineuler_extrapolate',ETA_MIN)
-    call chidg%data%add_bc('D_02','lineuler_extrapolate',ETA_MAX)
+    !call chidg%data%add_bc('D_02','lineuler_extrapolate',ETA_MAX)
     call chidg%data%add_bc('D_02','lineuler_extrapolate',ZETA_MIN)
     call chidg%data%add_bc('D_02','lineuler_extrapolate',ZETA_MAX)
 
 
-    !call chidg%data%add_bc('D_03','lineuler_extrapolate',XI_MIN)
+    call chidg%data%add_bc('D_03','lineuler_extrapolate',XI_MIN)
     !call chidg%data%add_bc('D_03','lineuler_extrapolate',XI_MAX)
     !call chidg%data%add_bc('D_03','lineuler_extrapolate',ETA_MIN)
-    call chidg%data%add_bc('D_03','lineuler_extrapolate',ETA_MAX)
+    !call chidg%data%add_bc('D_03','lineuler_extrapolate',ETA_MAX)
     call chidg%data%add_bc('D_03','lineuler_extrapolate',ZETA_MIN)
     call chidg%data%add_bc('D_03','lineuler_extrapolate',ZETA_MAX)
 
 
 
-    !call chidg%data%add_bc('D_04','lineuler_extrapolate',XI_MIN)
-    !call chidg%data%add_bc('D_04','lineuler_extrapolate',XI_MAX)
-    !call chidg%data%add_bc('D_04','lineuler_extrapolate',ETA_MIN)
+    call chidg%data%add_bc('D_04','lineuler_extrapolate',XI_MIN)
+    call chidg%data%add_bc('D_04','lineuler_extrapolate',XI_MAX)
+    call chidg%data%add_bc('D_04','lineuler_extrapolate',ETA_MIN)
     !call chidg%data%add_bc('D_04','lineuler_extrapolate',ETA_MAX)
-    !call chidg%data%add_bc('D_04','lineuler_extrapolate',ZETA_MIN)
-    !call chidg%data%add_bc('D_04','lineuler_extrapolate',ZETA_MAX)
+    call chidg%data%add_bc('D_04','lineuler_extrapolate',ZETA_MIN)
+    call chidg%data%add_bc('D_04','lineuler_extrapolate',ZETA_MAX)
 
 
-    !call chidg%data%add_bc('D_05','lineuler_extrapolate',XI_MIN)
-    !call chidg%data%add_bc('D_05','lineuler_extrapolate',XI_MAX)
+    call chidg%data%add_bc('D_05','lineuler_extrapolate',XI_MIN)
+    call chidg%data%add_bc('D_05','lineuler_extrapolate',XI_MAX)
     !call chidg%data%add_bc('D_05','lineuler_extrapolate',ETA_MIN)
-    !call chidg%data%add_bc('D_05','lineuler_extrapolate',ETA_MAX)
-    !call chidg%data%add_bc('D_05','lineuler_extrapolate',ZETA_MIN)
-    !call chidg%data%add_bc('D_05','lineuler_extrapolate',ZETA_MAX)
+    call chidg%data%add_bc('D_05','lineuler_extrapolate',ETA_MAX)
+    call chidg%data%add_bc('D_05','lineuler_extrapolate',ZETA_MIN)
+    call chidg%data%add_bc('D_05','lineuler_extrapolate',ZETA_MAX)
 
 
 

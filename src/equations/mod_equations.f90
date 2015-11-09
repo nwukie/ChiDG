@@ -8,7 +8,7 @@ module mod_equations
     use eqn_linearadvection,            only: linearadvection_e
     use eqn_duallinearadvection,        only: duallinearadvection_e
     use eqn_euler,                      only: euler_e
-!    use eqn_linearized_euler,           only: linearized_euler_e
+    use eqn_linearized_euler,           only: linearized_euler_e
     implicit none
 
     ! Instantiate Equations
@@ -16,7 +16,7 @@ module mod_equations
     type(linearadvection_e)     :: LINEARADVECTION
     type(duallinearadvection_e) :: DUALLINEARADVECTION
     type(euler_e)               :: EULER
-!    type(linearized_euler_e)    :: LINEULER
+    type(linearized_euler_e)    :: LINEULER
 
     logical :: uninitialized = .true.
 
@@ -33,7 +33,7 @@ contains
             call LINEARADVECTION%init()
             call DUALLINEARADVECTION%init()
             call EULER%init()
-!            call LINEULER%init()
+            call LINEULER%init()
 
         end if
 
@@ -71,8 +71,8 @@ contains
             case('euler','Euler','EULER')
                 allocate(eqnset, source=EULER)
 
-!            case('linearizedeuler','linearized_euler','LinearizedEuler','Linearized_Euler')
-!                allocate(eqnset, source=LINEULER)
+            case('linearizedeuler','linearized_euler','LinearizedEuler','Linearized_Euler')
+                allocate(eqnset, source=LINEULER)
 
             case default
                 call signal(FATAL,'create_equationset -- equation string not recognized')

@@ -46,7 +46,7 @@ contains
         integer(ik)                             :: ielem, i
         type(AD_D), dimension(elem%nterms_s)    :: integral, integral_x, integral_y, integral_z
 
-        ielem = elem%ielem  !> get element index
+        ielem = elem%ielem  ! get element index
 
         ! Multiply each component by quadrature weights and element jacobians
         flux_x = (flux_x) * (elem%gq%vol%weights) * (elem%jinv)
@@ -117,7 +117,7 @@ contains
         integer(ik)                             :: ielem, i
         type(AD_D), dimension(elem%nterms_s)    :: integral, integral_x, integral_y, integral_z
 
-        ielem = elem%ielem  !> get element index
+        ielem = elem%ielem  ! get element index
 
         ! Multiply each component by quadrature weights and element jacobians
         source = (source) * (elem%gq%vol%weights) * (elem%jinv)
@@ -174,7 +174,6 @@ contains
     !!  @param[inout]   flux_y  y-Flux and derivatives at quadrature points
     !!  @param[inout]   flux_z  z-Flux and derivatives at quadrature points
     !--------------------------------------------------------------------------------------------------------
-    !subroutine integrate_boundary_flux(face,sdata,idom,ivar,iblk,flux_x,flux_y,flux_z)
     subroutine integrate_boundary_flux(mesh,sdata,face,ivar,iblk,idonor,seed,flux_x,flux_y,flux_z)
         type(mesh_t),           intent(in)      :: mesh(:)
         type(solverdata_t),     intent(inout)   :: sdata
@@ -249,7 +248,6 @@ contains
     !!  @param[inout]   flux_y  y-Flux and derivatives at quadrature points
     !!  @param[inout]   flux_z  z-Flux and derivatives at quadrature points
     !--------------------------------------------------------------------------------------------------------
-    !subroutine integrate_boundary_scalar_flux(face,sdata,idom,ivar,iblk,flux)
     subroutine integrate_boundary_scalar_flux(mesh,sdata,face,ivar,iblk,idonor,seed,flux)
         type(mesh_t),           intent(in)      :: mesh(:)
         type(solverdata_t),     intent(inout)   :: sdata

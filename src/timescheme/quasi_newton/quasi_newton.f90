@@ -94,8 +94,8 @@ contains
             !
             rnorm = ONE    ! Force inner loop entry
             niter = 0      ! Initialize inner loop counter
-            !cfl0   = 2._rk
 
+            dtau = 1._rk
 
 
 
@@ -159,6 +159,10 @@ contains
                 do idom = 1,data%ndomains
                     do ielem = 1,data%mesh(idom)%nelem
                         nterms = data%mesh(idom)%nterms_s   ! get number of solution terms
+
+
+                        !dtau = dtau * cfln
+                        !dtau = dtau * 10._rk
                         dtau   = data%sdata%dt(idom,ielem)  ! get element-local timestep
 
                         !

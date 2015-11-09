@@ -132,7 +132,8 @@ program plot3d_to_hdf5
         if (ierr /= 0) stop "Error: h5gcreate_f"
 
         ! Write mapping attribute
-        call h5ltset_attribute_int_f(Block_id, "/", 'mapping', [mapping], adim, ierr)
+        !call h5ltset_attribute_int_f(Block_id, "/", 'mapping', [mapping], adim, ierr)
+        call h5ltset_attribute_int_f(file_id, trim(blockgroup), 'mapping', [mapping], adim, ierr)
 
 
         ! Create a grid-group within the current block domain

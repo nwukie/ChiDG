@@ -12,6 +12,8 @@ module eqn_linearized_euler
     use LINEULER_LaxFriedrichs_flux_imag,               only: LINEULER_LaxFriedrichs_flux_imag_t
     use LINEULER_volume_advective_source_real,          only: LINEULER_volume_advective_source_real_t
     use LINEULER_volume_advective_source_imag,          only: LINEULER_volume_advective_source_imag_t
+    use LINEULER_volume_advective_sourceterms_real,     only: LINEULER_volume_advective_sourceterms_real_t
+
     use LINEULER_properties,                            only: LINEULER_properties_t
     implicit none
     private
@@ -65,6 +67,7 @@ contains
         type(LINEULER_LaxFriedrichs_flux_imag_t)                :: lax_imag
         type(LINEULER_volume_advective_source_real_t)           :: volume_source_real
         type(LINEULER_volume_advective_source_imag_t)           :: volume_source_imag
+        type(LINEULER_volume_advective_sourceterms_real_t)      :: volume_sourceterms_real
 
 
         self%name    = 'Linearized Euler'
@@ -109,6 +112,7 @@ contains
         call self%add_volume_advective_flux(volume_flux_imag)
         call self%add_volume_advective_flux(volume_source_real)
         call self%add_volume_advective_flux(volume_source_imag)
+        call self%add_volume_advective_flux(volume_sourceterms_real)
 
 
     end subroutine

@@ -10,4 +10,6 @@ add_lib_sources(eqn_linearized_euler.f90
                 LINEULER_volume_advective_source_real.f90
                 LINEULER_volume_advective_source_imag.f90
                 LINEULER_properties.f90
+                mod_linearized_euler.f90
+                LINEULER_volume_advective_sourceterms_real.f90
                 )

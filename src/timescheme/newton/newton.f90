@@ -119,9 +119,6 @@ contains
 
 
 
-!                call data%sdata%rhs%dump()
-
-
 
 
                 call self%residual_time%push_back(timing)   ! non-essential record-keeping
@@ -214,8 +211,8 @@ contains
         call self%newton_iterations%push_back(niter)
 
 
-        !entropy_error = compute_entropy_error(data)
-        !print*, 'Entropy error: ', entropy_error
+        entropy_error = compute_entropy_error(data)
+        print*, 'Entropy error: ', entropy_error
     end subroutine solve
 
 

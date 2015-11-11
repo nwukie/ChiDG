@@ -4,7 +4,7 @@ module test_ILU0_mod
     use mod_constants,      only: DIAG, XI_MIN, XI_MAX, ONE, TWO, THREE, FIVE, TEN
     use type_chidg,         only: chidg_t
     use type_point,         only: point_t
-    use type_blockvector,   only: blockvector_t
+    use type_chidgVector,   only: chidgVector_t
     use precon_ILU0,        only: precon_ILU0_t
 
     use mod_testutils,      only: meshgen
@@ -48,44 +48,48 @@ contains
         !
         call this%chidg%init('env')
 
+
         !
         ! Initialize a 3-element geometry
         !
         call meshgen('311',pts)
-        call this%chidg%set('ndomains','')
+
+
+        !
+        ! Add domain
+        !
         nterms_c = 8
-
-        call this%chidg%domains(1)%init_geom(nterms_c,pts)
-
-
-        !
-        ! Initialize numerics
-        !
         nterms_s = 1
-        call this%chidg%domains(1)%init_sol('scalar',nterms_s)
+        call this%chidg%data%add_domain('D_01',pts,nterms_c,'scalar',nterms_s)
+
+
+        !
+        ! Call sdata initialization
+        !
+        call this%chidg%data%init_sdata()
 
 
 
         !
         ! Initialize linearization matrix with some reference values
         !
-        this%chidg%domains(1)%sdata%lin%lblks(1,DIAG)%mat   = ONE
-        this%chidg%domains(1)%sdata%lin%lblks(1,XI_MAX)%mat = -TWO
+        this%chidg%data%sdata%lhs%dom(1)%lblks(1,DIAG)%mat   = ONE
+        this%chidg%data%sdata%lhs%dom(1)%lblks(1,XI_MAX)%mat = -TWO
 
-        this%chidg%domains(1)%sdata%lin%lblks(2,XI_MIN)%mat = TWO
-        this%chidg%domains(1)%sdata%lin%lblks(2,DIAG)%mat   = -FIVE
-        this%chidg%domains(1)%sdata%lin%lblks(2,XI_MAX)%mat = 12._rk
+        this%chidg%data%sdata%lhs%dom(1)%lblks(2,XI_MIN)%mat = TWO
+        this%chidg%data%sdata%lhs%dom(1)%lblks(2,DIAG)%mat   = -FIVE
+        this%chidg%data%sdata%lhs%dom(1)%lblks(2,XI_MAX)%mat = 12._rk
 
-        this%chidg%domains(1)%sdata%lin%lblks(3,XI_MIN)%mat = TWO
-        this%chidg%domains(1)%sdata%lin%lblks(3,DIAG)%mat   = -TEN
+        this%chidg%data%sdata%lhs%dom(1)%lblks(3,XI_MIN)%mat = TWO
+        this%chidg%data%sdata%lhs%dom(1)%lblks(3,DIAG)%mat   = -TEN
 
 
         !
         ! Initialize RHS vector with some reference values
         !
-        this%chidg%domains(1)%sdata%rhs%lvecs(1)%vec = ONE
-        this%chidg%domains(1)%sdata%rhs%lvecs(2)%vec = TWO
-        this%chidg%domains(1)%sdata%rhs%lvecs(3)%vec = THREE
+        this%chidg%data%sdata%rhs%dom(1)%lvecs(1)%vec = ONE
+        this%chidg%data%sdata%rhs%dom(1)%lvecs(2)%vec = TWO
+        this%chidg%data%sdata%rhs%dom(1)%lvecs(3)%vec = THREE
 
 
     end subroutine
@@ -129,20 +133,20 @@ subroutine test_ILU0_init(self)
     !
     ! Initialize preconditioner. THIS IS BEING TESTED
     !
-    call self%ILU0%init(self%chidg%domains(1))
+    call self%ILU0%init(self%chidg%data)
 
 
 
     !
     ! Test that only lower-triangular and diagonal components are allocated
     !
-    @assertTrue(allocated(self%ILU0%LD%lblks(1,DIAG)%mat))
+    @assertTrue(allocated(self%ILU0%LD(1)%lblks(1,DIAG)%mat))
 
-    @assertTrue(allocated(self%ILU0%LD%lblks(2,XI_MIN)%mat))
-    @assertTrue(allocated(self%ILU0%LD%lblks(2,DIAG)%mat))
+    @assertTrue(allocated(self%ILU0%LD(1)%lblks(2,XI_MIN)%mat))
+    @assertTrue(allocated(self%ILU0%LD(1)%lblks(2,DIAG)%mat))
 
-    @assertTrue(allocated(self%ILU0%LD%lblks(3,XI_MIN)%mat))
-    @assertTrue(allocated(self%ILU0%LD%lblks(3,DIAG)%mat))
+    @assertTrue(allocated(self%ILU0%LD(1)%lblks(3,XI_MIN)%mat))
+    @assertTrue(allocated(self%ILU0%LD(1)%lblks(3,DIAG)%mat))
 
 
 end subroutine
@@ -184,13 +188,13 @@ subroutine test_ILU0_update(self)
     !
     ! Initialize preconditioner
     !
-    call self%ILU0%init(self%chidg%domains(1))
+    call self%ILU0%init(self%chidg%data)
 
 
     !
     ! Call ILU0 update procedure. THIS IS BEING TESTED
     !
-    associate ( A => self%chidg%domains(1)%sdata%lin, b => self%chidg%domains(1)%sdata%rhs )
+    associate ( A => self%chidg%data%sdata%lhs, b => self%chidg%data%sdata%rhs )
     
         call self%ILU0%update(A,b)
 
@@ -204,15 +208,15 @@ subroutine test_ILU0_update(self)
     !
     ! Test ILU0 preconditioner matrix factorization values
     !
-    @assertEqual(ONE,self%ILU0%LD%lblks(1,DIAG)%mat(1,1))
+    @assertEqual(ONE,self%ILU0%LD(1)%lblks(1,DIAG)%mat(1,1))
 
 
-    @assertEqual(TWO,self%ILU0%LD%lblks(2,XI_MIN)%mat(1,1))
-    @assertEqual(-ONE,self%ILU0%LD%lblks(2,DIAG)%mat(1,1))
+    @assertEqual(TWO,self%ILU0%LD(1)%lblks(2,XI_MIN)%mat(1,1))
+    @assertEqual(-ONE,self%ILU0%LD(1)%lblks(2,DIAG)%mat(1,1))
 
 
-    @assertEqual(-TWO,self%ILU0%LD%lblks(3,XI_MIN)%mat(1,1))
-    @assertEqual((ONE/14._rk),self%ILU0%LD%lblks(3,DIAG)%mat(1,1))
+    @assertEqual(-TWO,self%ILU0%LD(1)%lblks(3,XI_MIN)%mat(1,1))
+    @assertEqual((ONE/14._rk),self%ILU0%LD(1)%lblks(3,DIAG)%mat(1,1))
 
 
 end subroutine
@@ -231,7 +235,7 @@ end subroutine
 subroutine test_ILU0_apply(self)
     class(test_preconditioner_ILU0),    intent(inout)   :: self
 
-    type(blockvector_t) :: z
+    type(chidgVector_t) :: z
     real(rk)            :: tol
 
     tol = 1.e-5_rk
@@ -239,13 +243,13 @@ subroutine test_ILU0_apply(self)
     !
     ! Initialize preconditioner
     !
-    call self%ILU0%init(self%chidg%domains(1))
+    call self%ILU0%init(self%chidg%data)
 
 
     !
     ! Call ILU0 update procedure
     !
-    associate ( A => self%chidg%domains(1)%sdata%lin, b => self%chidg%domains(1)%sdata%rhs )
+    associate ( A => self%chidg%data%sdata%lhs, b => self%chidg%data%sdata%rhs )
         call self%ILU0%update(A,b)
     end associate
 
@@ -253,7 +257,7 @@ subroutine test_ILU0_apply(self)
     !
     ! Apply preconditioner. THIS IS BEING TESTED
     !  
-    associate ( A => self%chidg%domains(1)%sdata%lin, b => self%chidg%domains(1)%sdata%rhs )
+    associate ( A => self%chidg%data%sdata%lhs, b => self%chidg%data%sdata%rhs )
         z = self%ILU0%apply(A,b)
     end associate
 
@@ -261,9 +265,9 @@ subroutine test_ILU0_apply(self)
 
 
 
-    @assertEqual(6.142857143_rk ,z%lvecs(1)%vec(1),tol)
-    @assertEqual(2.57142857_rk  ,z%lvecs(2)%vec(1),tol)
-    @assertEqual(0.2142857143_rk,z%lvecs(3)%vec(1),tol)
+    @assertEqual(6.142857143_rk ,z%dom(1)%lvecs(1)%vec(1),tol)
+    @assertEqual(2.57142857_rk  ,z%dom(1)%lvecs(2)%vec(1),tol)
+    @assertEqual(0.2142857143_rk,z%dom(1)%lvecs(3)%vec(1),tol)
 
 
 end subroutine

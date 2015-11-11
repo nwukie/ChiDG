@@ -1,7 +1,6 @@
 add_test_sources(spatial
                 test_update_space_linearadvection.pf
                 test_update_space_euler.pf
-                test_update_space_euler_cylinder.pf
                 )
                 
 add_test_target(spatial unit ${spatial_sources})

@@ -183,11 +183,11 @@ contains
         nterms_s        = self%order**THREE
         gq_rule         = 2
         eqnset          = 'euler'
-        !timescheme      = 'quasi_newton'
-        timescheme      = 'newton'
+        timescheme      = 'quasi_newton'
+        !timescheme      = 'newton'
         matrixsolver    = 'fgmres'
-        !preconditioner  = 'ILU0'
-        preconditioner  = 'jacobi'
+        preconditioner  = 'ILU0'
+        !preconditioner  = 'jacobi'
         
         !------------------------------------------------------------------------------
 

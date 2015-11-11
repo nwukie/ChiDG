@@ -55,8 +55,6 @@ program driver
     !
     ndomains = size(meshdata)
     do idom = 1,ndomains
-        print*, 'Adding domain: ', idom
-        print*, meshdata(idom)%nterms_c
         call chidg%data%add_domain(trim(meshdata(idom)%name),meshdata(idom)%points,meshdata(idom)%nterms_c,eqnset,nterms_s)
     end do
 
@@ -86,46 +84,12 @@ program driver
     !
     ! Add boundary conditions
     !
-    !call chidg%data%add_bc('D_01','lineuler_inlet',XI_MIN)
-    !call chidg%data%add_bc('D_01','lineuler_extrapolate',XI_MIN)
-    !call chidg%data%add_bc('D_01','lineuler_extrapolate',XI_MAX)
-    !call chidg%data%add_bc('D_01','lineuler_extrapolate',ETA_MIN)
-    !call chidg%data%add_bc('D_01','lineuler_extrapolate',ETA_MAX)
-    call chidg%data%add_bc('D_01','lineuler_extrapolate',ZETA_MIN)
-    call chidg%data%add_bc('D_01','lineuler_extrapolate',ZETA_MAX)
-
-
-    !call chidg%data%add_bc('D_02','lineuler_extrapolate',XI_MIN)
-    !call chidg%data%add_bc('D_02','lineuler_extrapolate',XI_MAX)
-    !call chidg%data%add_bc('D_02','lineuler_extrapolate',ETA_MIN)
-    call chidg%data%add_bc('D_02','lineuler_extrapolate',ETA_MAX)
-    call chidg%data%add_bc('D_02','lineuler_extrapolate',ZETA_MIN)
-    call chidg%data%add_bc('D_02','lineuler_extrapolate',ZETA_MAX)
-
-
-    !call chidg%data%add_bc('D_03','lineuler_extrapolate',XI_MIN)
-    !call chidg%data%add_bc('D_03','lineuler_extrapolate',XI_MAX)
-    !call chidg%data%add_bc('D_03','lineuler_extrapolate',ETA_MIN)
-    call chidg%data%add_bc('D_03','lineuler_extrapolate',ETA_MAX)
-    call chidg%data%add_bc('D_03','lineuler_extrapolate',ZETA_MIN)
-    call chidg%data%add_bc('D_03','lineuler_extrapolate',ZETA_MAX)
-
-
-
-    !call chidg%data%add_bc('D_04','lineuler_extrapolate',XI_MIN)
-    !call chidg%data%add_bc('D_04','lineuler_extrapolate',XI_MAX)
-    !call chidg%data%add_bc('D_04','lineuler_extrapolate',ETA_MIN)
-    !call chidg%data%add_bc('D_04','lineuler_extrapolate',ETA_MAX)
-    !call chidg%data%add_bc('D_04','lineuler_extrapolate',ZETA_MIN)
-    !call chidg%data%add_bc('D_04','lineuler_extrapolate',ZETA_MAX)
-
-
-    !call chidg%data%add_bc('D_05','lineuler_extrapolate',XI_MIN)
-    !call chidg%data%add_bc('D_05','lineuler_extrapolate',XI_MAX)
-    !call chidg%data%add_bc('D_05','lineuler_extrapolate',ETA_MIN)
-    !call chidg%data%add_bc('D_05','lineuler_extrapolate',ETA_MAX)
-    !call chidg%data%add_bc('D_05','lineuler_extrapolate',ZETA_MIN)
-    !call chidg%data%add_bc('D_05','lineuler_extrapolate',ZETA_MAX)
+    call chidg%data%add_bc('D_01','euler_totalinlet',XI_MIN)
+    call chidg%data%add_bc('D_01','euler_pressureoutlet',XI_MAX)
+    call chidg%data%add_bc('D_01','euler_wall',ETA_MIN)
+    call chidg%data%add_bc('D_01','euler_wall',ETA_MAX)
+    call chidg%data%add_bc('D_01','euler_wall',ZETA_MIN)
+    call chidg%data%add_bc('D_01','euler_wall',ZETA_MAX)
 
 
 
@@ -147,11 +111,11 @@ program driver
 
 
     ! rho
-    call constant%set('val',1.e-10_rk)
+    call constant%set('val',1.25_rk)
     call initialize_variable(chidg%data,1,constant)
 
     ! rho_u
-    call constant%set('val',1.e-10_rk)
+    call constant%set('val',80._rk)
     call initialize_variable(chidg%data,2,constant)
 
     ! rho_v
@@ -163,40 +127,8 @@ program driver
     call initialize_variable(chidg%data,4,constant)
 
     ! rho_E
-    call constant%set('val',1.e-10_rk)
+    call constant%set('val',270000._rk)
     call initialize_variable(chidg%data,5,constant)
-
-
-
-
-
-    ! rho
-    call constant%set('val',1.e-10_rk)
-    call initialize_variable(chidg%data,6,constant)
-
-    ! rho_u
-    call constant%set('val',1.e-10_rk)
-    call initialize_variable(chidg%data,7,constant)
-
-    ! rho_v
-    call constant%set('val',ZERO)
-    call initialize_variable(chidg%data,8,constant)
-
-    ! rho_w
-    call constant%set('val',ZERO)
-    call initialize_variable(chidg%data,9,constant)
-
-    ! rho_E
-    call constant%set('val',1.e-10_rk)
-    call initialize_variable(chidg%data,10,constant)
-
-
-
-
-
-
-
-
 
 
 

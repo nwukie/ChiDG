@@ -115,12 +115,13 @@ contains
         flux = rho
         flux = ZERO
 
+        !alpha = 0.05_rk
         alpha = 0.1_rk
         !alpha = 0.3_rk
         !===========================
         !        MASS FLUX
         !===========================
-        eps = 0.5_rk
+        eps = ZERO
         do igq = 1,size(rho)
             x = mesh(idom)%elems(ielem)%quad_pts(igq)%c1_
             y = mesh(idom)%elems(ielem)%quad_pts(igq)%c2_
@@ -176,7 +177,7 @@ contains
         !============================
         !       ENERGY FLUX
         !============================
-        eps = 0.5_rk
+        eps = 1._rk
         do igq = 1,size(rho)
             x = mesh(idom)%elems(ielem)%quad_pts(igq)%c1_
             y = mesh(idom)%elems(ielem)%quad_pts(igq)%c2_

@@ -161,8 +161,6 @@ contains
                         nterms = data%mesh(idom)%nterms_s   ! get number of solution terms
 
 
-                        !dtau = dtau * cfln
-                        !dtau = dtau * 10._rk
                         dtau   = data%sdata%dt(idom,ielem)  ! get element-local timestep
 
                         !

@@ -19,7 +19,12 @@
 					<folderInfo id="photran.managedbuild.config.gnu.fortran.macosx.exe.debug.1023978246." name="/" resourcePath="">
 						<toolChain id="photran.managedbuild.toolchain.gnu.fortran.macosx.exe.debug.758837110" name="GCC Fortran" superClass="photran.managedbuild.toolchain.gnu.fortran.macosx.exe.debug">
 							<targetPlatform archList="all" binaryParser="org.eclipse.cdt.core.MachO64" id="photran.managedbuild.target.gnu.platform.macosx.exe.debug.777339169" name="Debug Platform" osList="macosx" superClass="photran.managedbuild.target.gnu.platform.macosx.exe.debug"/>
-							<builder buildPath="${workspace_loc:/UCDG}" command="make" id="photran.managedbuild.target.gnu.builder.macosx.exe.debug.1704723680" keepEnvironmentInBuildfile="false" managedBuildOn="false" name="Gnu Make Builder" superClass="photran.managedbuild.target.gnu.builder.macosx.exe.debug"/>
+							<builder buildPath="${workspace_loc:/UCDG}" command="make" id="photran.managedbuild.target.gnu.builder.macosx.exe.debug.1704723680" keepEnvironmentInBuildfile="false" managedBuildOn="false" name="Gnu Make Builder" superClass="photran.managedbuild.target.gnu.builder.macosx.exe.debug">
+								<outputEntries>
+									<entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="outputPath" name=""/>
+									<entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="outputPath" name="Release"/>
+								</outputEntries>
+							</builder>
 							<tool id="photran.managedbuild.tool.gnu.c.compiler.macosx.exe.debug.1167902610" name="GCC C Compiler" superClass="photran.managedbuild.tool.gnu.c.compiler.macosx.exe.debug">
 								<inputType id="cdt.managedbuild.tool.gnu.c.compiler.input.1852779594" superClass="cdt.managedbuild.tool.gnu.c.compiler.input"/>
 							</tool>
@@ -38,7 +43,7 @@
 						</toolChain>
 					</folderInfo>
 					<sourceEntries>
-						<entry excluding="src" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
+						<entry excluding="forward_euler|src" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
 						<entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="src"/>
 					</sourceEntries>
 				</configuration>
@@ -82,8 +87,9 @@
 						</toolChain>
 					</folderInfo>
 					<sourceEntries>
-						<entry excluding="src" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
-						<entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="src"/>
+						<entry excluding="forward_euler|src" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
+						<entry excluding="solvers/forward_euler" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="src"/>
+						<entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="src/solvers/forward_euler"/>
 					</sourceEntries>
 				</configuration>
 			</storageModule>
@@ -92,9 +98,6 @@
 	</storageModule>
 	<storageModule moduleId="cdtBuildSystem" version="4.0.0">
 		<project id="UCDG.photran.managedbuild.target.gnu.fortran.macosx.exe.780337080" name="Executable (Gnu Fortran on MacOS X)" projectType="photran.managedbuild.target.gnu.fortran.macosx.exe"/>
-	</storageModule>
-	<storageModule moduleId="scannerConfiguration">
-		<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId=""/>
 	</storageModule>
 	<storageModule moduleId="org.eclipse.cdt.core.LanguageSettingsProviders"/>
 	<storageModule moduleId="refreshScope" versionNumber="2">
@@ -107,9 +110,9 @@
 	</storageModule>
 	<storageModule moduleId="org.eclipse.cdt.make.core.buildtargets">
 		<buildTargets>
-			<target name="clean_build_dir" path="" targetID="org.eclipse.cdt.build.MakeTargetBuilder">
+			<target name="clean_build_dir_intel" path="" targetID="org.eclipse.cdt.build.MakeTargetBuilder">
 				<buildCommand>rm</buildCommand>
-				<buildArguments>-rf build</buildArguments>
+				<buildArguments>-rf build_intel</buildArguments>
 				<buildTarget/>
 				<stopOnError>true</stopOnError>
 				<useDefaultCommand>false</useDefaultCommand>
@@ -118,43 +121,83 @@
 			<target name="clean_tests" path="" targetID="org.eclipse.cdt.build.MakeTargetBuilder">
 				<buildCommand>rm</buildCommand>
 				<buildArguments>-rf build/generated</buildArguments>
-				<buildTarget/>
 				<stopOnError>true</stopOnError>
 				<useDefaultCommand>false</useDefaultCommand>
 				<runAllBuilders>false</runAllBuilders>
 			</target>
 			<target name="cmake_config_gfortran" path="" targetID="org.eclipse.cdt.build.MakeTargetBuilder">
 				<buildCommand>cmake</buildCommand>
-				<buildArguments>-E chdir build/ cmake -G "Unix Makefiles" ../ -DCMAKE_Fortran_COMPILER=gfortran</buildArguments>
+				<buildArguments>-E chdir build_gnu/ cmake -G "Unix Makefiles" ../ -DCMAKE_Fortran_COMPILER=gfortran-5 -DCMAKE_BUILD_TYPE=Debug</buildArguments>
 				<buildTarget/>
 				<stopOnError>true</stopOnError>
 				<useDefaultCommand>false</useDefaultCommand>
-				<runAllBuilders>true</runAllBuilders>
+				<runAllBuilders>false</runAllBuilders>
 			</target>
 			<target name="cmake_config_ifort" path="" targetID="org.eclipse.cdt.build.MakeTargetBuilder">
 				<buildCommand>cmake</buildCommand>
-				<buildArguments>-E chdir build/ cmake -G "Unix Makefiles" ../ -DCMAKE_Fortran_COMPILER=ifort</buildArguments>
+				<buildArguments>-E chdir build_intel/ cmake -G "Unix Makefiles" ../ -DCMAKE_Fortran_COMPILER=ifort -DCMAKE_BUILD_TYPE=Debug</buildArguments>
 				<buildTarget/>
 				<stopOnError>true</stopOnError>
 				<useDefaultCommand>false</useDefaultCommand>
 				<runAllBuilders>true</runAllBuilders>
 			</target>
-			<target name="create_build_dir" path="" targetID="org.eclipse.cdt.build.MakeTargetBuilder">
+			<target name="create_build_dir_gnu" path="" targetID="org.eclipse.cdt.build.MakeTargetBuilder">
 				<buildCommand>mkdir</buildCommand>
-				<buildArguments>build</buildArguments>
+				<buildArguments>build_gnu</buildArguments>
+				<buildTarget/>
+				<stopOnError>true</stopOnError>
+				<useDefaultCommand>false</useDefaultCommand>
+				<runAllBuilders>false</runAllBuilders>
+			</target>
+			<target name="make_intel" path="" targetID="org.eclipse.cdt.build.MakeTargetBuilder">
+				<buildCommand>make</buildCommand>
+				<buildArguments>-C build_intel/</buildArguments>
 				<buildTarget/>
 				<stopOnError>true</stopOnError>
 				<useDefaultCommand>false</useDefaultCommand>
 				<runAllBuilders>true</runAllBuilders>
 			</target>
-			<target name="make" path="" targetID="org.eclipse.cdt.build.MakeTargetBuilder">
+			<target name="test" path="" targetID="org.eclipse.cdt.build.MakeTargetBuilder">
 				<buildCommand>make</buildCommand>
 				<buildArguments>-C build/</buildArguments>
+				<buildTarget>test</buildTarget>
+				<stopOnError>true</stopOnError>
+				<useDefaultCommand>false</useDefaultCommand>
+				<runAllBuilders>true</runAllBuilders>
+			</target>
+			<target name="make_gnu" path="" targetID="org.eclipse.cdt.build.MakeTargetBuilder">
+				<buildCommand>make</buildCommand>
+				<buildArguments>-C build_gnu/</buildArguments>
 				<buildTarget/>
 				<stopOnError>true</stopOnError>
 				<useDefaultCommand>false</useDefaultCommand>
 				<runAllBuilders>true</runAllBuilders>
 			</target>
+			<target name="create_build_dir_intel" path="" targetID="org.eclipse.cdt.build.MakeTargetBuilder">
+				<buildCommand>mkdir</buildCommand>
+				<buildArguments>build_intel</buildArguments>
+				<buildTarget/>
+				<stopOnError>true</stopOnError>
+				<useDefaultCommand>false</useDefaultCommand>
+				<runAllBuilders>false</runAllBuilders>
+			</target>
+			<target name="clean_build_dir_gnu" path="" targetID="org.eclipse.cdt.build.MakeTargetBuilder">
+				<buildCommand>rm</buildCommand>
+				<buildArguments>-rf build_gnu</buildArguments>
+				<buildTarget/>
+				<stopOnError>true</stopOnError>
+				<useDefaultCommand>false</useDefaultCommand>
+				<runAllBuilders>false</runAllBuilders>
+			</target>
 		</buildTargets>
+	</storageModule>
+	<storageModule moduleId="scannerConfiguration">
+		<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId=""/>
+		<scannerConfigBuildInfo instanceId="photran.managedbuild.config.gnu.fortran.macosx.exe.debug.1023978246;photran.managedbuild.config.gnu.fortran.macosx.exe.debug.1023978246.">
+			<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId="org.eclipse.cdt.managedbuilder.core.GCCManagedMakePerProjectProfile"/>
+		</scannerConfigBuildInfo>
+		<scannerConfigBuildInfo instanceId="photran.managedbuild.config.gnu.fortran.macosx.exe.debug.1023978246;photran.managedbuild.config.gnu.fortran.macosx.exe.debug.1023978246.;photran.managedbuild.tool.gnu.c.compiler.macosx.exe.debug.1167902610;cdt.managedbuild.tool.gnu.c.compiler.input.1852779594">
+			<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId="org.eclipse.cdt.managedbuilder.core.GCCManagedMakePerProjectProfileC"/>
+		</scannerConfigBuildInfo>
 	</storageModule>
 </cproject>

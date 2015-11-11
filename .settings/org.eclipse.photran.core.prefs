@@ -1,0 +1,7 @@
+EnableContentAssist=true
+EnableDeclView=true
+EnableHoverTip=true
+EnableVPG=true
+FortranIncludePaths=/ChiDG\n
+FortranModulePaths=/ChiDG\n
+eclipse.preferences.version=1

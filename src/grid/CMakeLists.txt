@@ -5,6 +5,7 @@ add_lib_sources(
                 type_mesh.f90 
                 type_meshdata.f90
                 type_seed.f90
+                type_domaininfo.f90
                 mod_interpolate.f90
                 mod_grid.f90 
                 mod_grid_tools.f90

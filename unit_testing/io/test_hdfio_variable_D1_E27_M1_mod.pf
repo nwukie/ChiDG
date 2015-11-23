@@ -3,7 +3,7 @@ module test_hdfio_variable_D1_E27_M1_mod
     use type_chidg,     only: chidg_t
     use mod_kinds,      only: rk,ik
     use mod_constants,  only: ONE, TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT
-    use mod_hdfio,      only: read_grid_hdf, read_var_hdf, write_var_hdf
+    use mod_hdfio,      only: read_grid_hdf, read_variable_hdf, write_variable_hdf
     use type_chidg,     only: chidg_t
     use type_meshdata,  only: meshdata_t
     implicit none
@@ -72,11 +72,13 @@ contains
 @Test
     subroutine test_hdfio_variable_write_read_D1_E27_M1(this)
         class(test_hdfio_variable_D1_E27_M1),     intent(inout)   :: this 
+
         real(rk)                    :: tol, ref(8)
-        integer(ik)                 :: ielem
+        integer(ik)                 :: ielem, idom
         
         tol = 1.e-14_rk
         
+        idom = 1
         
         associate ( q => this%chidg%data%sdata%q%dom(1)%lvecs )
             
@@ -92,7 +94,7 @@ contains
             !
             ! Write variable
             !
-            call write_var_hdf(this%filename,'u',1,this%chidg%data)
+            call write_variable_hdf(this%filename,'u',1,idom,this%chidg%data)
             
 
             ! Reset variable
@@ -104,7 +106,7 @@ contains
             !
             ! Read variable
             !
-            call read_var_hdf(this%filename,'u',1,this%chidg%data)
+            call read_variable_hdf(this%filename,'u',1,idom,this%chidg%data)
            
 
 

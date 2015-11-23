@@ -1,11 +1,10 @@
 module test_hdfio_variable_D1_E1_M1_mod
     use pfunit_mod
     use type_chidg,     only: chidg_t
-    !use type_point,     only: point_t
     use type_meshdata,  only: meshdata_t
     use mod_kinds,      only: rk,ik
     use mod_constants,  only: ONE, TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT
-    use mod_hdfio,      only: read_grid_hdf, read_var_hdf, write_var_hdf
+    use mod_hdfio,      only: read_grid_hdf, read_variable_hdf, write_variable_hdf
     use mod_testutils,  only: meshgen
     implicit none
 
@@ -70,6 +69,8 @@ contains
 @Test
     subroutine test_hdfio_variable_write_read_D1_E1_M1(this)
         class(test_hdfio_variable_D1_E1_M1),     intent(inout)   :: this 
+
+        integer(ik)                 :: idom
         real(rk)                    :: tol, ref(8)
         
         tol = 1.e-14_rk
@@ -77,6 +78,7 @@ contains
         ! Set reference solution values
         ref = [ONE, TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT]
         
+        idom = 1
         
         associate (q => this%chidg%data%sdata%q%dom(1))
             
@@ -84,13 +86,13 @@ contains
             q%lvecs(1)%vec = ref
             
             ! Write solution values
-            call write_var_hdf(this%filename,'u',1,this%chidg%data)
+            call write_variable_hdf(this%filename,'u',1,idom,this%chidg%data)
             
             ! Reset solution
             q%lvecs(1)%vec = 0._rk
             
             ! Read solution values
-            call read_var_hdf(this%filename,'u',1,this%chidg%data)
+            call read_variable_hdf(this%filename,'u',1,idom,this%chidg%data)
            
             ! Test that the read solution values equal the reference values
             @assertEqual(ref,this%chidg%data%sdata%q%dom(1)%lvecs(1)%vec, tol)

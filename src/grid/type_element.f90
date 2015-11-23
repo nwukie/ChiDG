@@ -21,14 +21,19 @@ module type_element
     !!        the compiler doens't have complete finalization rules implemented. Useing allocatables
     !!        seems to work fine.
     !!
+    !!  @author Nathan A. Wukie
     !!
-    !------------------------------------------------------------
+    !------------------------------------------------------------------------------------------------------------
     type, public :: element_t
         integer(ik)      :: neqns                           !< Number of equations being solved
         integer(ik)      :: nterms_s                        !< Number of terms in solution expansion.  
         integer(ik)      :: nterms_c                        !< Number of terms in coordinate expansion. 
         integer(ik)      :: idomain                         !< Processor-local domain index
-        integer(ik)      :: ielem                           !< Block-local element index
+        integer(ik)      :: ielem                           !< Block-local element index. Consider that the block could have been split
+                                                            !< for parallelization.
+
+        integer(ik)      :: ielem_bg                        !< Block-global element index. This is the index an element would have if
+                                                            !< if was rejoined into one block after being pslit for parallelization.
 
         !> Element quadrature points, mesh points and modes
         !---------------------------------------------------------
@@ -84,8 +89,12 @@ module type_element
 
         final               :: destructor
     end type element_t
-    !-----------------------
+    !----------------------------------------------------------------------------------------------------------------
     private
+
+
+
+
 contains
     
 

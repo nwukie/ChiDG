@@ -81,7 +81,10 @@ subroutine test_ordering_uniqueness_3d()
             ! Check if the current mode is repeated in the checked out mode
             if ( xi_current == xi_test .and. eta_current == eta_test .and. zeta_current == zeta_test) then
                 ! Current mode and test mode are the same, flag as non-unique ordering
+
                 unique = .false.
+
+                print*, xi_test, eta_test, zeta_test
             end if
 
             ! Expecing unique to be true. Fail for unique == .false.            

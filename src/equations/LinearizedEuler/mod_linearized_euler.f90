@@ -10,8 +10,8 @@ module mod_linearized_euler
     real(rk), parameter :: rho_c  = 1._rk
     !real(rk), parameter :: rhou_c = 151.826008671035_rk
     !real(rk), parameter :: rhou_c = 50._rk
-    !real(rk), parameter :: rhou_c = 0.2_rk
-    real(rk), parameter :: rhou_c = 0.001_rk
+    real(rk), parameter :: rhou_c = 0.2_rk
+    !real(rk), parameter :: rhou_c = 0.001_rk
     real(rk), parameter :: rhov_c = 0._rk
     real(rk), parameter :: rhow_c = 0._rk
     !real(rk), parameter :: rhoE_c = 259661.975866153_rk

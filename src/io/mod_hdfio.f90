@@ -161,17 +161,23 @@ contains
 
 
 
+                !
                 ! Close the Coordinate datasets
+                !
                 call h5dclose_f(did_x,ierr)
                 call h5dclose_f(did_y,ierr)
                 call h5dclose_f(did_z,ierr)
 
 
+                !
                 ! Close the dataspace id
+                !
                 call h5sclose_f(sid,ierr)
 
 
+                !
                 ! Close the Domain/Grid group
+                !
                 call h5gclose_f(gid,ierr)
 
                 ! Deallocate points for the current domain
@@ -194,6 +200,17 @@ contains
 
 
 
+
+
+
+
+
+
+
+
+
+
+
     !> Read HDF5 variable
     !!
     !!  Opens a given hdf5 file. Loads the EquationSet and solution order and calls solution initialization
@@ -205,30 +222,34 @@ contains
     !!  @param[in]      filename    Character string of the file to be read
     !!  @param[in]      cvar        Character string of the variable name to be read
     !!  @param[in]      time        Integer of the time instance for the current variable to be read
-    !!  @param[inout]   domains     Array of domains. Already allocated
+    !!  @param[inout]   data        ChiDG data containing domains. Already allocated
     !-----------------------------------------------------------------------------------------------------------
-    subroutine read_var_hdf(filename,cvar,time,data)
+    subroutine read_variable_hdf(filename,cvar,time,idom,data)
         use ISO_C_BINDING
         character(*),       intent(in)      :: filename
         character(*),       intent(in)      :: cvar
         integer(ik),        intent(in)      :: time
+        integer(ik),        intent(in)      :: idom
         type(chidg_data_t), intent(inout)   :: data
 
 
-        integer(HID_T)   :: fid, gid, sid, vid          !> Identifiers
-        integer(HSIZE_T) :: dims(2), maxdims(2)         !> Dataspace dimensions
+        integer(HID_T)   :: fid, gid, sid, vid          ! Identifiers
+        integer(HSIZE_T) :: dims(2), maxdims(2)         ! Dataspace dimensions
 
         integer, dimension(1)           :: ibuf
-        character(100)                  :: cbuf, eqnstring, varstring, var_grp, ctime
 
-!        real(rk), allocatable           :: var(:,:)
+        character(100)                  :: cbuf
+        character(100)                  :: varstring
+        character(100)                  :: var_gqp
+        character(100)                  :: ctime
+
         real(rk), allocatable, target   :: var(:,:)
         type(c_ptr)                     :: cp_var
+        character(len=:), allocatable   :: dname
 
-        character(10)                   :: gname
-        integer                         :: nmembers,    type,   ierr,       ndomains,   igrp,   &
-                                           npts,        idom,   nterms_1d,  nterms_s,   order,  &
-                                           ivar,        ielem
+        integer                         :: type,    ierr,       igrp,   &
+                                           npts,    nterms_1d,  nterms_s,   order,  &
+                                           ivar,    ielem
         logical                         :: FileExists, ElementsEqual
 
 
@@ -238,7 +259,7 @@ contains
         !
         inquire(file=filename, exist=FileExists)
         if (.not. FileExists) then
-            print*, "Error: read_grid_hdf5 - file not found: ", filename
+            print*, "Error: read_variable_hdf5 - file not found: ", filename
             stop
         end if
 
@@ -247,138 +268,120 @@ contains
         ! Initialize Fortran interface.
         !
         call h5open_f(ierr)
-        if (ierr /= 0) stop "Error: read_var_hdf5 - h5open_f"
+        if (ierr /= 0) call signal(FATAL,"read_variable_hdf5 - h5open_f")
 
 
         !
         ! Open input file using default properties.
         !
         call h5fopen_f(filename, H5F_ACC_RDWR_F, fid, ierr)
-        if (ierr /= 0) stop "Error: read_var_hdf5 - h5fopen_f"
+        if (ierr /= 0) call signal(FATAL,"read_variable_hdf5 - h5fopen_f")
 
-
-        !
-        ! Get number of domains from attribute 'ndomains' in file root
-        !
-        call h5ltget_attribute_int_f(fid, "/", 'ndomains', ibuf, ierr)
-        ndomains = ibuf(1)
-        if (ierr /= 0) stop "Error: read_var_hdf5 - h5ltget_attribute_int_f"
-        if (ndomains /= data%ndomains) stop "Error: read_var_hdf5 - number of domains in file and passed domain list to not match"
-
-        !
-        !  Get number of groups in the file root
-        !
-        call h5gn_members_f(fid, "/", nmembers, ierr)
 
 
         !
-        !  Loop through groups and read domains
+        ! Get name of current domain
         !
-        idom = 1
-        do igrp = 0,nmembers-1
-            call h5gget_obj_info_idx_f(fid,"/", igrp, gname, type, ierr)
-
-            if (gname(1:2) == 'D_') then
-
-                !
-                !  Get EquationSet
-                !
-                call h5ltget_attribute_string_f(fid, trim(gname), 'EquationSet', cbuf, ierr)
-                eqnstring = cbuf
-                if (ierr /= 0) stop "Error: read_var_hdf5 - h5ltget_attribute_string_f"
+        dname = data%info(idom)%name
 
 
-                !
-                ! Open the Domain/Variables group
-                !
-                call h5gopen_f(fid, trim(gname)//"/Variables", gid, ierr, H5P_DEFAULT_F)
-                if (ierr /= 0) stop "Error: h5gopen_f -- Domain/Grid group did not open properly"
+
+        !
+        ! Open the Domain/Variables group
+        !
+        call h5gopen_f(fid, trim(dname)//"/Variables", gid, ierr, H5P_DEFAULT_F)
+        if (ierr /= 0) call signal(FATAL,"h5gopen_f -- Domain/Grid group did not open properly")
 
 
-                !
-                ! Get number of terms in solution expansion
-                !
-                call h5ltget_attribute_int_f(gid, "/", 'Order', ibuf, ierr)
-                order = ibuf(1)
-                if (ierr /= 0) stop "Error: read_var_hdf5 - h5ltget_attribute_int_f"
-                nterms_1d = (order + 1)
-                nterms_s = nterms_1d*nterms_1d*nterms_1d
+        !
+        ! Get number of terms in solution expansion
+        !
+        call h5ltget_attribute_int_f(gid, "/", 'Order', ibuf, ierr)
+        order = ibuf(1)
+        if (ierr /= 0) call signal(FATAL,"read_variable_hdf5 - h5ltget_attribute_int_f")
+        nterms_1d = (order + 1)
+        nterms_s = nterms_1d*nterms_1d*nterms_1d
 
 
-                !
-                ! Initialize numerics if they are NOT already initialized
-                !
-                !if (.not. data%domains(idom)%numInitialized) then
-                !    call data%domains(idom)%init_sol(eqnstring,nterms_s)
-                !end if
-
-                
-                !
-                ! Open the Variable dataset
-                !
-                write(ctime, '(I0.3)') time                     ! write time as character string
-                varstring = trim(cvar)//'_'//trim(ctime)        ! compose variable name as 'var_time'
-                call h5dopen_f(gid, trim(varstring), vid, ierr, H5P_DEFAULT_F)
-                if (ierr /= 0) stop "Error: read_var_hdf5 -- variable does not exist or was not opened correctly"
-
-                !
-                ! Get the dataspace id and dimensions
-                !
-                call h5dget_space_f(vid, sid, ierr)
-                call h5sget_simple_extent_dims_f(sid, dims, maxdims, ierr)
+        
+        !
+        ! Open the Variable dataset
+        !
+        write(ctime, '(I0.3)') time                     ! write time as character string
+        varstring = trim(cvar)//'_'//trim(ctime)        ! compose variable name as 'var_time'
+        call h5dopen_f(gid, trim(varstring), vid, ierr, H5P_DEFAULT_F)
+        if (ierr /= 0) call signal(FATAL,"read_variable_hdf5 -- variable does not exist or was not opened correctly")
 
 
-                !
-                ! Read 'variable' dataset
-                !
-                allocate(var(dims(1),dims(2)))                          ! Allocate variable buffer
-                cp_var = c_loc(var(1,1))                                ! Get C-address for buffer
-                call h5dread_f(vid, H5T_NATIVE_DOUBLE, cp_var, ierr)    ! Fortran 2003 interface
-                if (ierr /= 0) stop "Error: read_var_hdf5 -- h5dread_f"
+        !
+        ! Get the dataspace id and dimensions
+        !
+        call h5dget_space_f(vid, sid, ierr)
+        call h5sget_simple_extent_dims_f(sid, dims, maxdims, ierr)
 
 
-                !
-                !  Get variable index in EquationSet
-                !
-                ivar = data%eqnset(idom)%item%prop%get_eqn_index(trim(cvar))
+        !
+        ! Read 'variable' dataset
+        !
+        allocate(var(dims(1),dims(2)))                          ! Allocate variable buffer
+        cp_var = c_loc(var(1,1))                                ! Get C-address for buffer
+        call h5dread_f(vid, H5T_NATIVE_DOUBLE, cp_var, ierr)    ! Fortran 2003 interface
+        if (ierr /= 0) call signal(FATAL,"read_variable_hdf5 -- h5dread_f")
 
 
-                !
-                !  Test to make sure the number of elements in the variable group
-                !  and the current domain are conforming
-                !
-                ElementsEqual = (size(data%sdata%q%dom(idom)%lvecs) == size(var,2))
-                if (ElementsEqual) then
-                    !  Loop through elements and assign 'variable' values
-                    do ielem = 1,data%mesh(idom)%nelem
-                        call data%sdata%q%dom(idom)%lvecs(ielem)%setvar(ivar,var(:,ielem))
-                    end do
-                else
-                    stop "Error: read_var_hdf5 -- number of elements in file variable and domain do not match"
-                end if
+        !
+        !  Get variable index in EquationSet
+        !
+        ivar = data%eqnset(idom)%item%prop%get_eqn_index(trim(cvar))
 
 
-                ! Close the Variable datasets
-                call h5dclose_f(vid,ierr)
+        !
+        !  Test to make sure the number of elements in the variable group
+        !  and the current domain are conforming
+        !
+        ElementsEqual = (size(data%sdata%q%dom(idom)%lvecs) == size(var,2))
+        if (ElementsEqual) then
+            !
+            !  Loop through elements and set 'variable' values
+            !
+            do ielem = 1,data%mesh(idom)%nelem
+                call data%sdata%q%dom(idom)%lvecs(ielem)%setvar(ivar,var(:,ielem))
+            end do
+
+        else
+            call signal(FATAL,"read_variable_hdf5 -- number of elements in file variable and domain do not match")
+        end if
 
 
-                ! Close the Domain/Variable group
-                call h5gclose_f(gid,ierr)
-
-                ! Deallocate variable buffer storage for the current domain
-                deallocate(var)
-                idom = idom + 1
-            end if
-        end do
 
 
-        !  Close file
-        call h5fclose_f(fid, ierr)
+        call h5dclose_f(vid,ierr)       ! Close the variable dataset
+        call h5gclose_f(gid,ierr)       ! Close the Domain/Variable group
+        call h5fclose_f(fid, ierr)      ! Close the HDF5 file
+        call h5close_f(ierr)            ! Close the HDF5 Fortran interface
 
-        !  Close Fortran interface
-        call h5close_f(ierr)
+    end subroutine read_variable_hdf
+    !-----------------------------------------------------------------------------------------------------------
 
-    end subroutine
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -395,10 +398,11 @@ contains
     !!  @param[in]      time        Integer of the time instance for the current variable to be read
     !!  @param[inout]   domains     Array of domains. Already allocated
     !-----------------------------------------------------------------------------------------------------------
-    subroutine write_var_hdf(filename,cvar,time,data)
+    subroutine write_variable_hdf(filename,cvar,time,idom,data)
         character(*),       intent(in)      :: filename
         character(*),       intent(in)      :: cvar
         integer(ik),        intent(in)      :: time
+        integer(ik),        intent(in)      :: idom
         type(chidg_data_t), intent(inout)   :: data
 
 
@@ -408,16 +412,21 @@ contains
 
         integer                         :: ndims
         integer, dimension(1)           :: ibuf
-        character(100)                  :: cbuf, eqnstring, varstring, var_grp, ctime
+        character(100)                  :: cbuf
+        !character(100)                  :: eqnstring
+        character(100)                  :: varstring
+        character(100)                  :: var_grp
+        character(100)                  :: ctime
+
         real(rk), allocatable, target   :: var(:,:)
         type(c_ptr)                     :: cp_var
-        character(10)                   :: gname
+        character(len=:), allocatable   :: dname
+
         integer(ik)                     :: nmembers,    type,   ierr,       ndomains,   igrp,   &
-                                           npts,        idom,   nterms_1d,  nterms_s,   order,  &
+                                           npts,        nterms_1d,  nterms_s,   order,  &
                                            ivar,        ielem
         logical                         :: FileExists, VariablesExists, DataExists, ElementsEqual
         logical                         :: exists
-
 
 
 
@@ -426,7 +435,7 @@ contains
         !
         inquire(file=filename, exist=FileExists)
         if (.not. FileExists) then
-            print*, "Error: read_grid_hdf5 - file not found: ", filename
+            print*, "Error: write_variable_hdf5 - file not found: ", filename
             stop
         end if
 
@@ -435,167 +444,257 @@ contains
         ! Initialize Fortran interface.
         !
         call h5open_f(ierr)
-        if (ierr /= 0) stop "Error: write_var_hdf5 - h5open_f"
+        if (ierr /= 0) call signal(FATAL,"write_variable_hdf5 - h5open_f")
 
         
         !
         ! Open input file using default properties.
         !
         call h5fopen_f(filename, H5F_ACC_RDWR_F, fid, ierr)
-        if (ierr /= 0) stop "Error: write_var_hdf5 - h5fopen_f"
+        if (ierr /= 0) call signal(FATAL,"write_variable_hdf5 - h5fopen_f")
 
         
-        !
-        ! Get number of domains from attribute 'ndomains' in file root
-        !
-        call h5ltget_attribute_int_f(fid, "/", 'ndomains', ibuf, ierr)
-        ndomains = ibuf(1)
-        if (ierr /= 0) stop "Error: write_var_hdf5 - h5ltget_attribute_int_f"
-        if (ndomains /= data%ndomains) stop "Error: write_var_hdf5 - number of domains in file and passed domain list to not match"
-
 
         !
-        ! Get number of groups in the file root
+        ! Get name of current domain
         !
-        call h5gn_members_f(fid, "/", nmembers, ierr)
+        dname = data%info(idom)%name
+
 
 
         !
-        ! Loop through groups and read domains
+        ! Check if 'Variables' group exists
         !
-        idom = 1
-        do igrp = 0,nmembers-1
-            call h5gget_obj_info_idx_f(fid,"/", igrp, gname, type, ierr)
-
-            if (gname(1:2) == 'D_') then
-
-                !
-                ! Get EquationSet
-                !
-                cbuf = data%eqnset(idom)%item%name
-                call h5ltset_attribute_string_f(fid, trim(gname), 'EquationSet', cbuf, ierr)
-                if (ierr /= 0) stop "Error: write_var_hdf5 - h5ltset_attribute_string_f"
-
-
-                !
-                ! Check if 'Variables' group exists
-                !
-                call h5lexists_f(fid, trim(gname)//"/Variables", exists, ierr)
-
-
-                !
-                ! Open the Domain/Variables group
-                !
-                if (exists) then
-                    ! If 'Variables' group exists then open the existing group
-                    call h5gopen_f(fid, trim(gname)//"/Variables", gid, ierr, H5P_DEFAULT_F)
-                    if (ierr /= 0) stop "Error: h5gopen_f -- Domain/Grid group did not open properly"
-                else
-                    ! If 'Variables group does not exist, then create one.
-                    call h5gcreate_f(fid, trim(gname)//"/Variables", gid, ierr)
-                end if
-
-
-                !
-                ! Set number of terms in solution expansion
-                !
-                adim = 1
-                ibuf = data%mesh(idom)%nterms_s
-                call h5ltset_attribute_int_f(gid, "/", 'Order', ibuf, adim, ierr)
-                if (ierr /= 0) stop "Error: write_var_hdf5 - h5ltset_attribute_int_f"
-
-
-                !
-                ! Compose variable string
-                !
-                write(ctime, '(I0.3)') time                     !> write time as character string
-                varstring = trim(cvar)//'_'//trim(ctime)        !> compose variable name as 'var_time'
-
-
-                !
-                ! Set dimensions of dataspace to write
-                !
-                ndims = 2
-                dims(1) = data%mesh(idom)%nterms_s
-                dims(2) = data%mesh(idom)%nelem
-                maxdims(1) = H5S_UNLIMITED_F
-                maxdims(2) = H5S_UNLIMITED_F
-
-                !
-                ! Open the Variable dataset, check if Variable dataset already exists
-                !
-                call h5lexists_f(gid, trim(varstring), exists, ierr)
-
-
-                !
-                ! Reset dataspace size if necessary
-                !
-                if (exists) then
-                    ! Open the existing dataset
-                    call h5dopen_f(gid, trim(varstring), did, ierr, H5P_DEFAULT_F)
-                    if (ierr /= 0) stop "Error: write_var_hdf5 -- variable does not exist or was not opened correctly"
-
-                    ! Get the existing dataspace id
-                    call h5dget_space_f(did, sid, ierr)
-
-                    ! Resize the existing dataspace
-                    call h5sset_extent_simple_f(sid,ndims,dims,maxdims,ierr)
-                    if (ierr /= 0) stop "Error: write_var_hdf5 -- dataspace resizing"
-                else
-                    ! Create a new dataspace
-                    call h5screate_simple_f(ndims,dims, sid, ierr)
-                    if (ierr /= 0) stop "Error: write_var_hdf5 - h5screate_simple_f"
-
-                    ! Create a new dataset
-                    call h5dcreate_f(gid, trim(varstring), H5T_NATIVE_DOUBLE, sid, did, ierr)
-                    if (ierr /= 0) stop "Error: write_var_hdf5 - h5dcreate_f"
-                end if
-
-
-                !
-                ! Get variable integer index from variable character string
-                !
-                ivar = data%eqnset(idom)%item%prop%get_eqn_index(cvar)
-
-                !
-                ! Assemble variable buffer matrix
-                !
-                allocate(var(dims(1),dims(2)))
-                do ielem = 1,data%mesh(idom)%nelem
-                        var(:,ielem) = data%sdata%q%dom(idom)%lvecs(ielem)%getvar(ivar)
-                end do
-
-
-                !
-                ! Write variable buffer
-                !
-                cp_var = c_loc(var(1,1))
-                call h5dwrite_f(did, H5T_NATIVE_DOUBLE, cp_var, ierr)
-                if (ierr /= 0) stop "Error: write_var_hdf5 - h5dwrite_f"
+        call h5lexists_f(fid, trim(dname)//"/Variables", exists, ierr)
 
 
 
-                call h5dclose_f(did,ierr)       ! Close Variable datasets
-                call h5sclose_f(sid,ierr)       ! Close Variable dataspaces
-                call h5gclose_f(gid,ierr)       ! Close Domain/Variable group
+        !
+        ! Open the Domain/Variables group
+        !
+        if (exists) then
 
-                ! Deallocate variable buffer storage for the current domain
-                deallocate(var)
+            ! If 'Variables' group exists then open the existing group
+            call h5gopen_f(fid, trim(dname)//"/Variables", gid, ierr, H5P_DEFAULT_F)
+            if (ierr /= 0) call signal(FATAL,"h5gopen_f -- Domain/Grid group did not open properly")
+        else
+            ! If 'Variables group does not exist, then create one.
+            call h5gcreate_f(fid, trim(dname)//"/Variables", gid, ierr)
+        end if
 
-                idom = idom + 1
-            end if
+
+
+        !
+        ! Set number of terms in solution expansion
+        !
+        adim = 1
+        ibuf = data%mesh(idom)%nterms_s
+        call h5ltset_attribute_int_f(gid, "/", 'Order', ibuf, adim, ierr)
+        if (ierr /= 0) call signal(FATAL,"write_variable_hdf5 - h5ltset_attribute_int_f")
+
+
+
+        !
+        ! Compose variable string
+        !
+        write(ctime, '(I0.3)') time                     !> write time as character string
+        varstring = trim(cvar)//'_'//trim(ctime)        !> compose variable name as 'var_time'
+
+
+
+        !
+        ! Set dimensions of dataspace to write
+        !
+        ndims = 2
+        dims(1) = data%mesh(idom)%nterms_s
+        dims(2) = data%mesh(idom)%nelem
+        maxdims(1) = H5S_UNLIMITED_F
+        maxdims(2) = H5S_UNLIMITED_F
+
+
+
+        !
+        ! Open the Variable dataset, check if Variable dataset already exists
+        !
+        call h5lexists_f(gid, trim(varstring), exists, ierr)
+
+
+        !
+        ! Reset dataspace size if necessary
+        !
+        if (exists) then
+            ! Open the existing dataset
+            call h5dopen_f(gid, trim(varstring), did, ierr, H5P_DEFAULT_F)
+            if (ierr /= 0) call signal(FATAL,"Error: write_variable_hdf5 -- variable does not exist or was not opened correctly")
+
+            ! Get the existing dataspace id
+            call h5dget_space_f(did, sid, ierr)
+
+            ! Resize the existing dataspace
+            call h5sset_extent_simple_f(sid,ndims,dims,maxdims,ierr)
+            if (ierr /= 0) call signal(FATAL,"Error: write_variable_hdf5 -- dataspace resizing")
+        else
+            ! Create a new dataspace
+            call h5screate_simple_f(ndims,dims, sid, ierr)
+            if (ierr /= 0) call signal(FATAL,"Error: write_variable_hdf5 - h5screate_simple_f")
+
+            ! Create a new dataset
+            call h5dcreate_f(gid, trim(varstring), H5T_NATIVE_DOUBLE, sid, did, ierr)
+            if (ierr /= 0) call signal(FATAL,"write_variable_hdf5 - h5dcreate_f")
+        end if
+
+
+        !
+        ! Get variable integer index from variable character string
+        !
+        ivar = data%eqnset(idom)%item%prop%get_eqn_index(cvar)
+
+
+        !
+        ! Assemble variable buffer matrix that gets written to file
+        !
+        allocate(var(dims(1),dims(2)))
+        do ielem = 1,data%mesh(idom)%nelem
+                var(:,ielem) = data%sdata%q%dom(idom)%lvecs(ielem)%getvar(ivar)
         end do
 
 
-        !  Close file
-        call h5fclose_f(fid, ierr)
+        !
+        ! Write variable buffer
+        !
+        cp_var = c_loc(var(1,1))
+        call h5dwrite_f(did, H5T_NATIVE_DOUBLE, cp_var, ierr)
+        if (ierr /= 0) call signal(FATAL,"write_variable_hdf5 - h5dwrite_f")
 
-        !  Close Fortran interface
-        call h5close_f(ierr)
 
 
 
-    end subroutine
+        call h5dclose_f(did,ierr)       ! Close Variable datasets
+        call h5sclose_f(sid,ierr)       ! Close Variable dataspaces
+        call h5gclose_f(gid,ierr)       ! Close Domain/Variable group
+        call h5fclose_f(fid, ierr)      ! Close HDF5 File
+        call h5close_f(ierr)            ! Close HDF5 Fortran interface
+
+
+
+    end subroutine write_variable_hdf
+    !-----------------------------------------------------------------------------------------------------------
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    !> Read solution from HDF file
+    !!
+    !!
+    !!
+    !!
+    !!
+    !!
+    !!
+    !!
+    !!
+    !!
+    !------------------------------------------------------------------------------------
+    subroutine read_solution_hdf(filename,time,data)
+        use ISO_C_BINDING
+        character(*),       intent(in)      :: filename
+        integer(ik),        intent(in)      :: time
+        type(chidg_data_t), intent(inout)   :: data
+
+
+        integer(ik)                     :: ndomains, idom, neqns, ieqn
+        character(len=:),   allocatable :: cvar
+        !character(:),   allocatable :: cvar
+
+
+        !
+        ! Get number of domains contained in the ChiDG data instance
+        !
+        ndomains = data%ndomains
+
+
+        !
+        ! Read solution for each domain
+        !
+        do idom = 1,ndomains
+
+            
+            !
+            ! Get number of equations for the current domain
+            !
+            neqns = data%eqnset(idom)%item%neqns
+
+
+
+            !
+            ! For each equation specified for the domain
+            ! 
+            do ieqn = 1,neqns
+
+                !
+                ! Get variable character string
+                !
+                cvar = trim(data%eqnset(idom)%item%prop%eqns(ieqn)%name)
+
+                !
+                ! Read variable
+                !
+                call read_variable_hdf(filename,cvar,time,idom,data)
+
+            end do ! ieqn
+
+
+        end do ! idom
+
+    end subroutine read_solution_hdf
+    !------------------------------------------------------------------------------------
+
+
+
+
 
 
 

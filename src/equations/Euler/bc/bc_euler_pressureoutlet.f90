@@ -146,7 +146,6 @@ contains
 
             flux = flux_x*norms(:,1) + flux_y*norms(:,2) + flux_z*norms(:,3)
 
-            !call integrate_boundary_scalar_flux(mesh(idom)%faces(ielem,iface),sdata,idom,irho,iblk,flux)
             call integrate_boundary_scalar_flux(mesh,sdata,face,irho,iblk,idonor,seed,flux)
 
             !=================================================
@@ -158,7 +157,6 @@ contains
 
             flux = flux_x*norms(:,1) + flux_y*norms(:,2) + flux_z*norms(:,3)
 
-            !call integrate_boundary_scalar_flux(mesh(idom)%faces(ielem,iface),sdata,idom,irhou,iblk,flux)
             call integrate_boundary_scalar_flux(mesh,sdata,face,irhou,iblk,idonor,seed,flux)
 
             !=================================================
@@ -170,7 +168,6 @@ contains
 
             flux = flux_x*norms(:,1) + flux_y*norms(:,2) + flux_z*norms(:,3)
 
-            !call integrate_boundary_scalar_flux(mesh(idom)%faces(ielem,iface),sdata,idom,irhov,iblk,flux)
             call integrate_boundary_scalar_flux(mesh,sdata,face,irhov,iblk,idonor,seed,flux)
 
             !=================================================
@@ -182,7 +179,6 @@ contains
 
             flux = flux_x*norms(:,1) + flux_y*norms(:,2) + flux_z*norms(:,3)
 
-            !call integrate_boundary_scalar_flux(mesh(idom)%faces(ielem,iface),sdata,idom,irhow,iblk,flux)
             call integrate_boundary_scalar_flux(mesh,sdata,face,irhow,iblk,idonor,seed,flux)
 
 
@@ -195,7 +191,6 @@ contains
 
             flux = flux_x*norms(:,1) + flux_y*norms(:,2) + flux_z*norms(:,3)
 
-            !call integrate_boundary_scalar_flux(mesh(idom)%faces(ielem,iface),sdata,idom,irhoE,iblk,flux)
             call integrate_boundary_scalar_flux(mesh,sdata,face,irhoE,iblk,idonor,seed,flux)
 
 

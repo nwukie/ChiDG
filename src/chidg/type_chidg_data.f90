@@ -5,6 +5,7 @@ module type_chidg_data
     use type_dict,                  only: dict_t
 
     ! Primary chidg_data_t components
+    use type_domaininfo,            only: domaininfo_t
     use type_mesh,                  only: mesh_t
     use type_bcset,                 only: bcset_t
     use type_equationset_wrapper,   only: equationset_wrapper_t
@@ -34,7 +35,8 @@ module type_chidg_data
     type, public  :: chidg_data_t
 
         integer(ik)                                 :: ndomains = 0
-        type(dict_t)                                :: domain_info  !< Dictionary of (domain_index, domain_name) pairs
+        !type(dict_t)                                :: domain_info  !< Dictionary of (domain_index, domain_name) pairs
+        type(domaininfo_t),             allocatable :: info(:)      !< General container for domain information
 
         
         type(mesh_t),                   allocatable :: mesh(:)      !< Array of mesh instances. One for each domain.
@@ -56,6 +58,8 @@ module type_chidg_data
         procedure   :: add_domain
         procedure   :: add_bc
 
+        !> Accessors
+        procedure   :: get_domain_index
         
 
     end type chidg_data_t
@@ -117,6 +121,7 @@ contains
         integer(ik) :: idom, ierr
 
 
+        type(domaininfo_t),             allocatable :: temp_info(:)
         type(mesh_t),                   allocatable :: temp_mesh(:)
         type(bcset_t),                  allocatable :: temp_bcset(:)
         type(equationset_wrapper_t),    allocatable :: temp_eqnset(:)
@@ -132,7 +137,7 @@ contains
         !
         ! Add (name,index) pair to domain_info dictionary
         !
-        call self%domain_info%set(name,idom)
+        !call self%domain_info%set(name,idom)
 
 
         !
@@ -140,7 +145,8 @@ contains
         !
 
         ! Allocate new storage arrays
-        allocate(temp_mesh(self%ndomains),   &
+        allocate(temp_info(self%ndomains),   &
+                 temp_mesh(self%ndomains),   &
                  temp_bcset(self%ndomains),  &
                  temp_eqnset(self%ndomains), stat=ierr)
         if (ierr /= 0) call AllocationError
@@ -151,10 +157,17 @@ contains
             !temp_mesh(   1:size(self%mesh))    = self%mesh     ! ifort segfaults on this for cases with sevaral domains
             !temp_bcset(  1:size(self%bcset))   = self%bcset
             !temp_eqnset( 1:size(self%eqnset))  = self%eqnset
+            temp_info(   1:size(self%info))    = self%info(1:size(self%mesh))
             temp_mesh(   1:size(self%mesh))    = self%mesh(1:size(self%mesh))
             temp_bcset(  1:size(self%bcset))   = self%bcset(1:size(self%mesh))
             temp_eqnset( 1:size(self%eqnset))  = self%eqnset(1:size(self%mesh))
         end if
+
+
+        !
+        ! Set domain info
+        !
+        temp_info(idom)%name = name
 
 
         !
@@ -176,8 +189,10 @@ contains
 
 
         !
-        ! Move rezied temp allocation back to chidg_data container. Be careful about pointer components here!
+        ! Move rezied temp allocation back to chidg_data container. 
+        ! Be careful about pointer components here! Their location in memory has changed.
         !
+        call move_alloc(temp_info,self%info)
         call move_alloc(temp_mesh,self%mesh)
         call move_alloc(temp_bcset,self%bcset)
         call move_alloc(temp_eqnset,self%eqnset)
@@ -220,7 +235,8 @@ contains
         !
         ! Get domain index from domain string
         !
-        call self%domain_info%get(domain,idom)
+        !call self%domain_info%get(domain,idom)
+        idom = self%get_domain_index(domain)
 
 
         !
@@ -242,6 +258,56 @@ contains
 
 
     end subroutine add_bc
+
+
+
+
+
+
+
+
+
+
+
+    !> Given a character string corresponding to the name of a given domain,
+    !! find and return the index of that domain in the ChiDG_data instance.
+    !!
+    !!  @author Nathan A. Wukie
+    !!
+    !!
+    !!  @param[in]  domain
+    !!
+    !------------------------------------------------------------------------
+    function get_domain_index(self,dname) result(domain_index)
+        class(chidg_data_t),    intent(in)      :: self
+        character(*),           intent(in)      :: dname
+
+        integer(ik)  :: idom
+        integer(ik)  :: domain_index
+        
+        domain_index = 0
+
+        do idom = 1,self%ndomains
+
+            !
+            ! Test name
+            !
+            if ( trim(dname) == trim(self%info(idom)%name) ) then
+                domain_index = idom
+                exit
+            end if
+
+        end do
+
+
+        if (domain_index == 0) call signal(FATAL,"chidg_data%get_domain_index :: no domain found matching given name")
+
+    end function get_domain_index
+    !------------------------------------------------------------------------
+
+
+
+
 
 
 

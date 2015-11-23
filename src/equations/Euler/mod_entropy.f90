@@ -101,7 +101,6 @@ contains
                     ! Compute entropy and entropy rise.
                     !
                     entropy = p/(rho**gam)
-                    !entropy_rise = ((entropy(:)%x_ad_ - entropy_ref)/entropy_ref)**TWO
                     entropy_rise = ((entropy - entropy_ref)/entropy_ref)**TWO
 
 

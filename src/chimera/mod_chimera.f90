@@ -442,7 +442,7 @@ contains
 
 
                 !
-                ! Grow bounding box by 10%. Use delta x,y,z instead of scaling xmin etc. in-case xmin is 0
+                ! Grow bounding box by 10%. Use delta x,y,z instead of scaling xmin etc. in case xmin is 0
                 !
                 dx = abs(xmax - xmin)  
                 dy = abs(ymax - ymin)
@@ -467,17 +467,6 @@ contains
                 contained = ( (xmin < xgq) .and. (xgq < xmax ) .and. &
                               (ymin < ygq) .and. (ygq < ymax ) .and. &
                               (zmin < zgq) .and. (zgq < zmax ) )
-
-                if ( receiver_face%idomain == 1 .and. receiver_face%ielement == 5 .and. receiver_face%iface == 3 ) then
-                    if (idom == 4 .and. ielem == 36) then
-                        print*, 'min'
-                        print*, xmin, ymin, zmin
-                        print*, 'max'
-                        print*, xmax, ymax, zmax
-                        print*, 'gq'
-                        print*, xgq, ygq, zgq
-                    end if
-                end if
 
 
 

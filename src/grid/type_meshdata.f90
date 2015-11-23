@@ -13,9 +13,10 @@ module type_meshdata
     !----------------------------------------------------------------------
     type, public :: meshdata_t
 
-        character(len=100)          :: name
-        type(point_t), allocatable  :: points(:,:,:)    !< Rank-3 array containing mesh points
-        integer(ik)                 :: nterms_c         !< Integer specifying the number of terms in the coordinate expansion
+        character(len=:),   allocatable :: name             !< Name of the current block
+        type(point_t),      allocatable :: points(:,:,:)    !< Rank-3 array containing mesh points
+        integer(ik)                     :: nterms_c         !< Integer specifying the number of terms in the coordinate expansion
+        integer(ik)                     :: proc             !< Integer specifying the processor assignment
 
     end type meshdata_t
 

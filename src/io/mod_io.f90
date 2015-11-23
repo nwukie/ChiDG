@@ -150,7 +150,10 @@ contains
 !                            bc_zetamin, bc_zetamax, &
 !                            bcpar1, bcpar2, bcpar3, bcpar4
 
-        namelist /io/       nwrite, output_res, initial_write, final_write
+        namelist /io/                       nwrite,                &
+                                            output_res,            &
+                                            initial_write,         &
+                                            final_write
 
         inquire(file='chidg.nml', exist=file_exists)
         if (.not. file_exists) call signal(FATAL, "read_input: 'chidg.nml' input file was not found")

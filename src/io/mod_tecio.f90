@@ -1,6 +1,6 @@
 module mod_tecio
     use mod_kinds,              only: rk,ik,TEC
-    use mod_constants,          only: IO_RES, ONE, HALF, TWO
+    use mod_constants,          only: ONE, HALF, TWO
     use mod_grid_operators,     only: mesh_point, solution_point
     use mod_tecio_interface,    only: init_tecio_file, init_tecio_zone, finalize_tecio
 
@@ -8,6 +8,8 @@ module mod_tecio
     use type_blockvector,       only: blockvector_t
     use type_solverdata,        only: solverdata_t
     use type_chidg_data,        only: chidg_data_t
+
+    use mod_io,                 only: OUTPUT_RES
     implicit none
 
 #include "tecio.f90"
@@ -44,7 +46,7 @@ contains
         ! using (output_res+1) so that the skip number used in tecplot to
         ! correctly display the element surfaces is the same as the number
         ! specified in the input file
-        npts = IO_RES+1
+        npts = OUTPUT_RES+1
 
 
 

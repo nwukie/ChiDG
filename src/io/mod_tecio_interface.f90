@@ -1,7 +1,8 @@
 module mod_tecio_interface
     use iso_c_binding
     use mod_kinds,      only: rk,ik,TEC
-    use mod_constants,  only: IO_RES
+    !use mod_constants,  only: IO_RES
+    use mod_io,         only: OUTPUT_RES
     use type_mesh,      only: mesh_t
 
 
@@ -81,13 +82,13 @@ contains
             ! resolution, output_res, that the continuous modal polynomials are
             ! sampled at
             if (writetype == 0) then        !Write mesh
-                imax = (IO_RES)*mesh%nelem_xi   + 1
-                jmax = (IO_RES)*mesh%nelem_eta  + 1
-                kmax = (IO_RES)*mesh%nelem_zeta + 1
+                imax = (OUTPUT_RES)*mesh%nelem_xi   + 1
+                jmax = (OUTPUT_RES)*mesh%nelem_eta  + 1
+                kmax = (OUTPUT_RES)*mesh%nelem_zeta + 1
             elseif (writetype == 1) then    ! Write solution
-                imax = (IO_RES+1)*mesh%nelem_xi
-                jmax = (IO_RES+1)*mesh%nelem_eta
-                kmax = (IO_RES+1)*mesh%nelem_zeta
+                imax = (OUTPUT_RES+1)*mesh%nelem_xi
+                jmax = (OUTPUT_RES+1)*mesh%nelem_eta
+                kmax = (OUTPUT_RES+1)*mesh%nelem_zeta
             else
                 stop "Error: invalid writetype for init_tecio_zone"
             end if

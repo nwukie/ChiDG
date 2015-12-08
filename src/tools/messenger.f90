@@ -8,17 +8,22 @@ module messenger
     character(len=2), parameter     :: default_delimiter = ''   ! Delimiter of line parameters
     character(len=:), allocatable   :: current_delimiter        ! Delimiter of line parameters
     integer                         :: unit                     ! Unit of log file
-    integer                         :: max_msg_length = 300     ! Maximum width of message line
+    integer                         :: max_msg_length = 90      ! Maximum width of message line
 
 
 
 contains
 
+
+
     !> Log initialization
+    !!
+    !!  Gets new available file unit and opens log file. 'unit' is a module 
+    !!  variable that can be used throughout the module to access the log file.
     !!
     !!  @author Nathan A. Wukie
     !!
-    !!--------------------------------------------------------------------
+    !!------------------------------------------------------------------------------------------------------------
     subroutine log_init()
 
         !
@@ -28,7 +33,9 @@ contains
 
 
     end subroutine
-    !---------------------------------------------------------------------
+    !#############################################################################################################
+
+
 
 
 
@@ -37,7 +44,7 @@ contains
     !!
     !!  @author Nathan A. Wukie
     !!
-    !!--------------------------------------------------------------------
+    !!------------------------------------------------------------------------------------------------------------
     subroutine log_finalize()
 
         !
@@ -46,7 +53,7 @@ contains
         close(unit)
 
     end subroutine
-    !---------------------------------------------------------------------
+    !#############################################################################################################
 
 
 
@@ -54,8 +61,9 @@ contains
 
 
 
-    !> Message routine for handling warnings and errors.
-    !! Reports file name, line number, and warn/error message
+    !> Message routine for handling warnings and errors. Reports file name, line number,
+    !! and warn/error message. This would usually not be called directly. Rather, use
+    !! the macro defined in message.h that automatically inserts filename and linenumber.
     !!
     !! 'level' controls the action.
     !! - Warn            :: 1
@@ -64,13 +72,19 @@ contains
     !!
     !!  @author Nathan A. Wukie
     !!
+    !!  @param[in]  pathname    Path and name of the file that the message is coming from.
+    !!  @param[in]  linenum     Line number in the file that 'message' was called from.
+    !!  @param[in]  sig         Signal level of the message. Defined above.
+    !!  @param[in]  msg         Accompanying message to print.
+    !!  @param[in]  info_one    Optional auxiliary information to be reported.
+    !!  @param[in]  info_two    Optional auxiliary information to be reported.
     !!
-    !--------------------------------------------------------------------------------
-    subroutine message(pathname,linenum,sig,msg,info_one, info_two)
-        character(*), intent(in)            :: pathname
-        integer(ik),  intent(in)            :: linenum
-        integer(ik),  intent(in)            :: sig
-        character(*), intent(in)            :: msg
+    !-------------------------------------------------------------------------------------------------------------
+    subroutine message(pathname, linenum, sig, msg, info_one, info_two)
+        character(*), intent(in)                    :: pathname
+        integer(ik),  intent(in)                    :: linenum
+        integer(ik),  intent(in)                    :: sig
+        character(*), intent(in)                    :: msg
         class(*),     intent(in), target, optional  :: info_one
         class(*),     intent(in), target, optional  :: info_two
 
@@ -82,11 +96,11 @@ contains
         logical                         :: print_info_two = .false.
 
 
-        warnstr =  '*********************************  Warning  *********************************'
-        errstr  =  '*****************************  Non-fatal error  *****************************'
-        killstr =  '*******************************  Fatal error  *******************************'
-        starstr =  '*****************************************************************************'
-        dashstr =  '-----------------------------------------------------------------------------'
+        warnstr =  '***************************************  Warning  ***************************************'
+        errstr  =  '***********************************  Non-fatal error  ***********************************'
+        killstr =  '*************************************  Fatal error  *************************************'
+        starstr =  '*****************************************************************************************'
+        dashstr =  '-----------------------------------------------------------------------------------------'
         blankstr = '               '
 
 
@@ -99,7 +113,7 @@ contains
 
 
         !
-        ! Assemble general file and line number string
+        ! Assemble string including file name and line number
         !
         write(linechar, '(i10)') linenum
         genstr = trim(subpath) // ' at ' // adjustl(trim(linechar))
@@ -188,7 +202,7 @@ contains
 
 
             !
-            ! Disassociate pointer
+            ! Disassociate pointer so it doesn't try to print the same thing twice in some cases.
             !
             auxdata => null()
 
@@ -219,7 +233,7 @@ contains
 
 
     end subroutine message
-    !----------------------------------------------------------------------------------------------------------
+    !##########################################################################################################
 
 
 
@@ -227,12 +241,16 @@ contains
 
 
 
-    !> This subroutine handles line-by-line IO and it's target. For example, whether it is written 
-    !! to stdio or to a file.
+    !> This subroutine writes a line to IO that is composed of 8 optional incoming variables.
+    !! This is accomplished by first passing each component to the 'add_to_line' subroutine, which
+    !! assembles the data into the 'line' module-global variable. Then, the 'send_line' subroutine is called
+    !! to handle the destination of the line to either the screen, a file, or both.
+    !!
     !!
     !!  @author Nathan A. Wukie
     !!
-    !!
+    !!  @param[in]  a-h         Optional polymorphic variables that can be used to compose a line sent to IO.
+    !!  @param[in]  delimiter   Optional delimiter that is used to separate line components. Default is set to ' '
     !!
     !----------------------------------------------------------------------------------------------------------
     subroutine write_line(a,b,c,d,e,f,g,h,delimiter)
@@ -308,7 +326,7 @@ contains
 
 
     end subroutine write_line
-    !-----------------------------------------------------------------------------------------------------------
+    !#############################################################################################################
 
 
 
@@ -317,20 +335,22 @@ contains
 
 
 
-    !> Adds data to the module 'line' character string
+    !> Adds data to the module-global 'line' character string
     !!
     !!  @author Nathan A. Wukie
     !!
     !!
+    !!  @param[in]  linedata    Polymorphic data component that gets converted to a string and added to the IO line
+    !!  @param[in]  delimiter   Optional delimiter that is used to separate line components. Default is set to ' '
     !!
-    !!
-    !---------------------------------------------------------------------------------------
+    !--------------------------------------------------------------------------------------------------------------
     subroutine add_to_line(linedata,delimiter)
         class(*),       intent(in)              :: linedata
         character(*),   intent(in), optional    :: delimiter
 
         character(100)                  :: temp
         character(len=:), allocatable   :: delim_str
+
 
         !
         ! Initialize temp
@@ -350,7 +370,8 @@ contains
 
         !
         ! Add to line. Since variable is polymorphic, we have to test for each type and handle
-        ! appropriately.
+        ! appropriately. Numeric data gets first written to a string variable and then concatatenated to 
+        ! the module-global 'line' variable.
         !
         select type(linedata)
 
@@ -388,7 +409,7 @@ contains
 
 
     end subroutine
-    !---------------------------------------------------------------------------------------
+    !#############################################################################################################
 
 
 
@@ -398,14 +419,14 @@ contains
 
 
 
-    !> Handles action for the current line
+    !> Handles sending module-global 'line' string to a destination of either the screen, a file, or both.
+    !! Is is determined by the IO_DESTINATION variable from mod_constants.
+    !!
+    !! Line wrapping is also handled, set by the module parameter 'max_msg_length'.
     !!
     !!  @author Nathan A. Wukie
     !!
-    !!
-    !!
-    !!
-    !----------------------------------------------------------------------------------------
+    !-------------------------------------------------------------------------------------------------------------
     subroutine send_line()
         integer :: delimiter_size
         integer :: line_size
@@ -442,7 +463,7 @@ contains
 
 
         !
-        ! Handle line IO
+        ! Handle line IO. Writes the line in chunks for line-wrapping until the entire line has been processed.
         !
         writeline = line
         section = 1
@@ -487,7 +508,12 @@ contains
 
             end if
 
+
+            !
+            ! Next line chunk to write
+            !
             section = section + 1
+
         end do ! len(line) > max_msg_length
 
 
@@ -499,25 +525,7 @@ contains
 
 
     end subroutine send_line
-    !----------------------------------------------------------------------------------------
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    !################################################################################################################
 
 
 

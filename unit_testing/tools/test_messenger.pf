@@ -79,6 +79,26 @@ end subroutine
 
 
 
+@Test 
+subroutine test_messenger__long_message()
+#include <messenger.h>
+    use pfunit_mod
+    use messenger
+
+    character(len=:), allocatable   :: string
+
+    call log_init()
+
+    
+    string = 'this is going to be a very long message that we will try to get to wrap around to &
+              test the line wrapping functionality of the message handler'
+    call chidg_signal(MSG,string)
+
+    call log_finalize()
+
+end subroutine
+
+
 
 
 

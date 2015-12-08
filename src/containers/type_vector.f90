@@ -34,9 +34,8 @@ module type_vector
 
 
         !< Data modifiers
-        !generic, public   :: push_back => push_back_real, push_back_int
-        generic,   public   :: push_back => push_back_real
-        procedure, private  :: push_back_real
+        procedure,  public  :: push_back
+        procedure,  public  :: clear
         procedure           :: push_back_store
         procedure           :: increase_capacity
 
@@ -95,48 +94,20 @@ contains
     !!
     !!
     !--------------------------------------------------------------------------------------------
-    subroutine push_back_real(self,relement)
+    subroutine push_back(self,relement)
         class(vector_t), intent(inout)   :: self
         real(rk),        intent(in)      :: relement
         
         type(datawrapper_t)     :: wrapper
         logical                 :: capacity_reached
+        integer                 :: ierr, size
 
         
         !
         ! Allocate wrapper component and store data
         !
-        !allocate(real(rk)::wrapper%elem, source=relement)
-        !wrapper%elem = relement
-        allocate(wrapper%elem, source=relement)
-
-
-
-        !
-        ! Call storage for push_back
-        !
-        call self%push_back_store(wrapper)
-
-    end subroutine push_back_real
-
-
-
-
-
-
-
-    !> Generic storage method for push_back
-    !!
-    !!  @author Nathan A. Wukie
-    !!
-    !!
-    !-------------------------------------------------------------------------------------------
-    subroutine push_back_store(self,element)
-        class(vector_t),        intent(inout)   :: self
-        type(datawrapper_t),    intent(in)      :: element
-
-        logical     :: capacity_reached
-        integer(ik) :: size
+        allocate(wrapper%elem, source=relement, stat=ierr)
+        if (ierr /= 0) AllocationError
 
 
         !
@@ -161,7 +132,34 @@ contains
         self%size_ = self%size_ + 1
 
 
-    end subroutine push_back_store
+    end subroutine push_back
+
+
+
+
+
+
+
+
+
+    !> Clear container contents
+    !!
+    !!  @author Nathan A. Wukie
+    !!
+    !!
+    !-------------------------------------------------------------------------
+    subroutine clear(self)
+        class(vector_t),   intent(inout)   :: self
+
+        self%size_     = 0
+        self%capacity_ = 0
+
+        deallocate(self%data_)
+
+    end subroutine clear
+
+
+
 
 
 
@@ -191,13 +189,14 @@ contains
         !
         out_of_bounds = (index > self%size())
         if (out_of_bounds) then
-            call signal(FATAL,'vector_t%at: out of bounds access')
+            call chidg_signal(FATAL,'vector_t%at: out of bounds access')
         end if
 
 
         !
         ! Allocate result
         !
+
         allocate(res, source=self%data(index)%elem)
 
 

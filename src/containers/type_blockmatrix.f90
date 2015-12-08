@@ -113,7 +113,7 @@ contains
                 init_chimera = .false.
 
             case default
-                call signal(FATAL,'blockmatrix%init: unrecognized matrix type')
+                call chidg_signal(FATAL,'blockmatrix%init: unrecognized matrix type')
 
         end select
 
@@ -124,7 +124,7 @@ contains
 
 
         ! Check to make sure the mesh numerics were initialized
-        if (.not. mesh%solInitialized) call signal(FATAL,'blockmatrix_t%initialize_linearization: Incoming mesh_t was not initialized. Make sure to call mesh%init_sol')
+        if (.not. mesh%solInitialized) call chidg_signal(FATAL,'blockmatrix_t%initialize_linearization: Incoming mesh_t was not initialized. Make sure to call mesh%init_sol')
 
 
         !
@@ -449,7 +449,7 @@ contains
         end do
 
         no_donor_block = (donorblk == 0)
-        if (no_donor_block) call signal(MSG,'blockmatrix%store_chimera: no donor block found to store derivative')
+        if (no_donor_block) call chidg_signal(MSG,'blockmatrix%store_chimera: no donor block found to store derivative')
 
 
 

@@ -1,4 +1,5 @@
 module type_timescheme
+    use messenger,          only: write_line
     use mod_kinds,          only: rk,ik
     use atype_matrixsolver, only: matrixsolver_t
     use type_dict,          only: dict_t
@@ -207,31 +208,36 @@ contains
         integer(ik) :: matrix_iterations
 
 
+        !
+        ! Time scheme header
+        !
+        call write_line('-------------------   Time Scheme Report  --------------------')
+        call write_line('Newton iterations: ', self%newton_iterations%at(1))
+        call write_line('Total time: ', self%total_time%at(1))
 
-        print*, '-------------------   Time Scheme Report  --------------------'
-        print*, 'Newton iterations: ', self%newton_iterations%at(1)
-        print*, 'Total time: ', self%total_time%at(1)
+        call write_line('')
+        call write_line('------------------------------------------------------------')
 
-        print*, ''
-        print*, '--------------------------------------------------------------'
 
 
         !
         ! Print per-iteration report
         !
-        print*, 'Residual compute time', '             Norm[R]', '                 Matrix solve time', '     Matrix iterations'
+        call write_line('        Residual time', '              Norm[R]', '             Matrix time', '      Matrix iterations')
+
+        ! Loop through stored data and print for each newton iteration
         do i = 1,self%residual_time%size()
             residual_time = self%residual_time%at(i)
             residual_norm = self%residual_norm%at(i)
             matrix_time   = self%matrix_time%at(i)
             matrix_iterations = self%matrix_iterations%at(i)
             
-            print*, residual_time, residual_norm, matrix_time, matrix_iterations
+            call write_line(residual_time, residual_norm, matrix_time, matrix_iterations, delimiter=', ')
         end do
 
 
         !
-        ! Accumulate residual and matrix solver compute times
+        ! Accumulate total residual and matrix solver compute times
         !
         total_residual = 0._rk
         total_matrix   = 0._rk
@@ -240,12 +246,12 @@ contains
             total_matrix   = total_matrix   + self%matrix_time%at(i)
         end do
 
-        print*, 'Total residual compute time: ', total_residual
-        print*, 'Total matrix solver time: ', total_matrix
+        call write_line('Total residual time: ', total_residual)
+        call write_line('Total matrix time  : ', total_matrix)
 
 
 
-        print*, '--------------------------------------------------------------'
+        call write_line('--------------------------------------------------------------')
 
 
     end subroutine report

@@ -38,7 +38,7 @@ contains
         !
         do idom = 1,data%ndomains
             ! Check that variable index 'ivar' is valid
-            if (ivar > data%eqnset(idom)%item%neqns ) call signal(FATAL,'initialize_variable: variable index ivar exceeds the number of equations')
+            if (ivar > data%eqnset(idom)%item%neqns ) call chidg_signal(FATAL,'initialize_variable: variable index ivar exceeds the number of equations')
 
             do ielem = 1,data%mesh(idom)%nelem
                 !associate (elem => data%mesh(idom)%elems(ielem), q => data%sdata%q%dom(idom)%lvecs(ielem))
@@ -56,7 +56,7 @@ contains
                     end if
 
 
-                    if (.not. allocated(fmodes)) call signal(FATAL,"initialize_variable: fmodes not allocated")
+                    if (.not. allocated(fmodes)) call chidg_signal(FATAL,"initialize_variable: fmodes not allocated")
 
 
 
@@ -107,7 +107,7 @@ contains
         real(rk)        :: polyvals(elem%nterms_c)
         integer(ik)     :: iterm, ielem
 
-        if (icoord > 3) call signal(FATAL,"Error: mesh_point -- icoord exceeded 3 physical coordinates")
+        if (icoord > 3) call chidg_signal(FATAL,"Error: mesh_point -- icoord exceeded 3 physical coordinates")
 
         call node%set(xi,eta,zeta)
 
@@ -207,8 +207,8 @@ contains
         real(rk)        :: polyvals(elem%nterms_c)
         integer(ik)     :: iterm, ielem
 
-        if (cart_dir > 3) call signal(FATAL,"Error: mesh_point -- card_dir exceeded 3 physical coordinates")
-        if (comp_dir > 3) call signal(FATAL,"Error: mesh_point -- comp_dir exceeded 3 physical coordinates")
+        if (cart_dir > 3) call chidg_signal(FATAL,"Error: mesh_point -- card_dir exceeded 3 physical coordinates")
+        if (comp_dir > 3) call chidg_signal(FATAL,"Error: mesh_point -- comp_dir exceeded 3 physical coordinates")
 
         call node%set(xi,eta,zeta)
 

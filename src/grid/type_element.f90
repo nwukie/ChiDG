@@ -119,7 +119,7 @@ contains
         integer(ik)                         :: ierr, nterms_c
         real(rk), dimension(:,:), pointer   :: imap => null()
 
-        if (self%geomInitialized) call signal(FATAL,'element%init_geom -- element already initialized')
+        if (self%geomInitialized) call chidg_signal(FATAL,'element%init_geom -- element already initialized')
 
 
 
@@ -133,9 +133,9 @@ contains
             self%nterms_c   = nterms_c                      ! Set number of terms in coordinate expansion
 
 
-            if (nterms_c /= size(points)) call signal(FATAL,'element%init_geom -- mapping and points do not match')
+            if (nterms_c /= size(points)) call chidg_signal(FATAL,'element%init_geom -- mapping and points do not match')
         else
-            call signal(FATAL,"element%init_geom -- element mapping not initialized. Probably need to call 'init' on chidg environment")
+            call chidg_signal(FATAL,"element%init_geom -- element mapping not initialized. Probably need to call 'init' on chidg environment")
         end if
 
 
@@ -180,7 +180,7 @@ contains
         integer(ik) :: ierr
         integer(ik) :: nnodes,nnodes_face,nnodes_vol
 
-        if (self%numInitialized) call signal(FATAL,'element%init_sol -- element already initialized')
+        if (self%numInitialized) call chidg_signal(FATAL,'element%init_sol -- element already initialized')
 
 
         self%nterms_s    = nterms_s                 ! Set number of terms in modal expansion of solution
@@ -240,7 +240,7 @@ contains
         nterms_s = self%nterms_s
         nterms_c = self%nterms_c
 
-        if (nterms_c == 0) call signal(FATAL,'element%assign_quadrature -- coordinate expansion not defined')
+        if (nterms_c == 0) call chidg_signal(FATAL,'element%assign_quadrature -- coordinate expansion not defined')
 
         !
         ! Get number of quadrature nodes

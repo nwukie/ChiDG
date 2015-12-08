@@ -13,6 +13,7 @@ add_subdirectory(materials)
 add_subdirectory(preconditioners)
 add_subdirectory(chimera)
 add_subdirectory(spatial)
+add_subdirectory(tools)
 
 
 

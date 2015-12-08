@@ -1,0 +1,86 @@
+@Test
+subroutine test_messenger_noaux()
+#include <messenger.h>
+    use pfunit_mod
+
+    call log_init()
+
+    call chidg_signal(WARN,"Testing no auxiliary data")
+
+    call log_finalize()
+
+end subroutine
+
+
+
+
+
+@Test
+subroutine test_messenger_oneaux()
+#include <messenger.h>
+    use pfunit_mod
+
+    call log_init()
+
+    call chidg_signal_one(WARN,"Testing one auxiliary data",1)
+
+    call log_finalize()
+
+end subroutine
+
+
+
+
+
+
+
+
+
+@Test
+subroutine test_messenger_twoaux()
+#include <messenger.h>
+    use pfunit_mod
+
+    real(8) :: a, b
+
+    a = 5._8
+    b = 6._8
+
+    call log_init()
+
+    call chidg_signal_two(WARN,"Testing two auxiliary data",a, b)
+
+    call log_finalize()
+
+end subroutine
+
+
+
+
+
+
+
+
+@Test 
+subroutine test_messenger__handle_line()
+    use pfunit_mod
+    use messenger
+
+    call log_init()
+
+    call write_line('testing', 1._8, 10000._8, 'hi')
+
+    call log_finalize()
+
+end subroutine
+
+
+
+
+
+
+
+
+
+
+

@@ -100,8 +100,8 @@ module mod_constants
     !
     ! IO constants
     !
-    !integer(ik), parameter :: IO_RES = 10
-    integer(ik), parameter :: MAXBLOCKS    = 200
+    integer(ik),   parameter :: MAXBLOCKS      = 200
+    character(4),  parameter :: IO_DESTINATION = 'both'
 
 
 

@@ -91,7 +91,7 @@ contains
                                 ! Test matrix vector sizes
                                 !
                                 nonconforming = ( size(Amat,2) /= size(xvec) )
-                                if (nonconforming) call signal(FATAL,"operator_chidg_mv: nonconforming Chimera m-v operation")
+                                if (nonconforming) call chidg_signal(FATAL,"operator_chidg_mv: nonconforming Chimera m-v operation")
 
                                 resvec = resvec + matmul(Amat,xvec)
 

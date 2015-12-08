@@ -6,5 +6,14 @@ use messenger
 #define MSG 0
 
 
-#define  signal(ierr,msg)  message(ierr,msg,__FILE__,__LINE__)
-#define  AllocationError   message(FATAL,'Memory allocation error.',__FILE__,__LINE__)
+
+
+
+#define chidg_signal(isig, imsg)                          message(__FILE__, __LINE__, isig, imsg)
+#define chidg_signal_one(isig, imsg, info_one)            message(__FILE__, __LINE__, isig, imsg, info_one)
+#define chidg_signal_two(isig, imsg, info_one, info_two)  message(__FILE__, __LINE__, isig, imsg, info_one, info_two)
+
+
+#define AllocationError  message(__FILE__, __LINE__, FATAL, "Memory allocation error.")
+
+

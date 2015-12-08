@@ -77,7 +77,8 @@ contains
         wcount = 1
         associate ( q => data%sdata%q, dq => data%sdata%dq, rhs => data%sdata%rhs, lhs => data%sdata%lhs, dt => self%dt)
 
-            print*, 'entering time'
+            call write_line('Entering time')
+
             !
             ! start timer
             !
@@ -101,7 +102,8 @@ contains
 
             do while ( rnorm > self%tol )
                 niter = niter + 1
-                print*, "   niter: ", niter
+                call write_line("   niter: ", niter, delimiter='')
+                !print*, "   niter: ", niter
 
 
 
@@ -123,7 +125,8 @@ contains
                 !
                 ! Print diagnostics
                 !
-                print*, "   R(Q) - Norm: ", resid
+                call write_line("   R(Q) - Norm: ", resid, delimiter='')
+                !print*, "   R(Q) - Norm: ", resid
                 call self%residual_norm%push_back(resid)
 
 
@@ -255,7 +258,8 @@ contains
 
 
         entropy_error = compute_entropy_error(data)
-        print*, 'Entropy error: ', entropy_error
+        call write_line('Entropy error: ', entropy_error, delimiter='')
+        !print*, 'Entropy error: ', entropy_error
 
     end subroutine solve
 

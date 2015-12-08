@@ -60,7 +60,7 @@ contains
 
 
             case default
-                call signal(FATAL,'create_time_scheme -- solver string not recognized')
+                call chidg_signal(FATAL,'create_time_scheme -- solver string not recognized')
         end select
 
 
@@ -79,7 +79,7 @@ contains
         !
         ! Make sure the solver was allocated
         !
-        if (.not. allocated(instance)) call signal(FATAL,"create_time_scheme: solver was not allocated. Check that the desired solver was registered and instantiated in the mod_time_scheme module")
+        if (.not. allocated(instance)) call chidg_signal(FATAL,"create_time_scheme: solver was not allocated. Check that the desired solver was registered and instantiated in the mod_time_scheme module")
 
 
     end subroutine

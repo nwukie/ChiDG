@@ -65,7 +65,7 @@ contains
                 call meshgen_15x15x3_linear(pts)
 
             case default
-                call signal(FATAL,'String identifying mesh generation routine was not recognized')
+                call chidg_signal(FATAL,'String identifying mesh generation routine was not recognized')
         end select
 
 

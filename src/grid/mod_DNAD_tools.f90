@@ -254,7 +254,7 @@ contains
             ! Invalid Case
             !
             else
-                call signal(FATAL,"compute_seed_domain: invalid face type - face(ielem,iface)%ftype")
+                call chidg_signal(FATAL,"compute_seed_domain: invalid face type - face(ielem,iface)%ftype")
             end if
 
 
@@ -262,7 +262,7 @@ contains
         ! Invalid value for iface
         !
         else
-            call signal(FATAL,"compute_seed_domain: invalid value for iface")
+            call chidg_signal(FATAL,"compute_seed_domain: invalid value for iface")
 
         end if
 

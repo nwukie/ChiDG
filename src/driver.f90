@@ -55,7 +55,13 @@ program driver
     !
     ndomains = size(meshdata)
     do idom = 1,ndomains
-        call chidg%data%add_domain(trim(meshdata(idom)%name),meshdata(idom)%points,meshdata(idom)%nterms_c,eqnset,nterms_s)
+        call chidg%data%add_domain(                           &
+                                   trim(meshdata(idom)%name), &
+                                   meshdata(idom)%points,     &
+                                   meshdata(idom)%nterms_c,   &
+                                   eqnset,                    &
+                                   nterms_s                   &
+                                   )
     end do
 
 
@@ -176,5 +182,11 @@ program driver
         call write_tecio_variables(chidg%data,'9999999.plt',1)
     end if
 
+
+
+    !
+    ! Close ChiDG
+    !
+    call chidg%close()
 
 end program driver

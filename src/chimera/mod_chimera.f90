@@ -212,7 +212,7 @@ contains
         !
         do idom = 1,size(mesh)
 
-            print*, 'Detecting chimera donors for domain: ', idom
+            call write_line('Detecting chimera donors for domain: ', idom, delimiter='')
 
 
             !
@@ -227,7 +227,7 @@ contains
                 receiver%ielement = mesh(idom)%chimera%recv%data(ichimera_face)%receiver_element
                 receiver%iface    = mesh(idom)%chimera%recv%data(ichimera_face)%receiver_face
 
-                print*, '   Face ', ichimera_face,' of ',mesh(idom)%chimera%recv%nfaces
+                call write_line('   Face ', ichimera_face,' of ',mesh(idom)%chimera%recv%nfaces, delimiter='')
 
                 !
                 ! Loop through quadrature nodes on Chimera face and find donors
@@ -624,10 +624,10 @@ contains
             print*, 'GQ location'
             print*, xgq, ygq, zgq
 
-            call signal(FATAL,"compute_gq_donor: No donor found for gq_node")
+            call chidg_signal(FATAL,"compute_gq_donor: No donor found for gq_node")
 
         elseif (ndonors > 1) then
-            call signal(FATAL,"compute_gq_donor: Multiple donors found for the same gq_node")
+            call chidg_signal(FATAL,"compute_gq_donor: Multiple donors found for the same gq_node")
 
         elseif (ndonors == 1) then
             idonor = donors%at(1)   ! donor index from candidates
@@ -642,7 +642,7 @@ contains
 
 
         else
-            call signal(FATAL,"compute_gq_donor: invalid number of donors")
+            call chidg_signal(FATAL,"compute_gq_donor: invalid number of donors")
         end if
 
 

@@ -43,7 +43,7 @@ contains
 
         integer(ik) :: ielem, ielem_p, ixi, ieta, izeta, ixi_p, ieta_p, izeta_p
 
-        call signal(FATAL,'bc_periodic: broken due to discontinued use of mesh%elem_m matrix-view')
+        call chidg_signal(FATAL,'bc_periodic: broken due to discontinued use of mesh%elem_m matrix-view')
 
         !
         ! Apply periodic XI

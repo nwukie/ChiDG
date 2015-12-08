@@ -86,7 +86,7 @@ contains
 
 
         ! Check that properties storage has been allocated
-        if (.not. allocated(self%prop)) call signal(FATAL,"Properties storage has not yet been allocated in the Equation Set. This must be done before adding equations since they are stored in the properties component")
+        if (.not. allocated(self%prop)) call chidg_signal(FATAL,"Properties storage has not yet been allocated in the Equation Set. This must be done before adding equations since they are stored in the properties component")
 
 
 

@@ -79,7 +79,7 @@ contains
 
             else
                 print*, eqnset(1)%item%name
-                call signal(WARN,"No volume advective flux was found")
+                call chidg_signal(WARN,"No volume advective flux was found")
             end if
 
 
@@ -138,7 +138,7 @@ contains
 
                    else
                        print*, eqnset(1)%item%name
-                       call signal(WARN,"No volume advective flux was found")
+                       call chidg_signal(WARN,"No volume advective flux was found")
                    end if
 
 
@@ -253,7 +253,7 @@ contains
 
             else
                 print*, data%eqnset(1)%item%name
-                call signal(WARN,"No boundary advective flux was found")
+                call chidg_signal(WARN,"No boundary advective flux was found")
             end if
 
 
@@ -286,7 +286,7 @@ contains
 
             else
                 print*, data%eqnset(1)%item%name
-                call signal(WARN,"No boundary advective flux was found")
+                call chidg_signal(WARN,"No boundary advective flux was found")
             end if
 
 
@@ -334,7 +334,7 @@ contains
 
                     else
                         print*, data%eqnset(1)%item%name
-                        call signal(WARN,"No boundary advective flux was found")
+                        call chidg_signal(WARN,"No boundary advective flux was found")
                     end if
 
 

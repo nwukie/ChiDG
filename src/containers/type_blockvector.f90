@@ -280,7 +280,7 @@ contains
         !
         ! Test that the number of dof's match between the full and block format's
         !
-        if (ndof /= size(fullvec) ) call signal(FATAL,"blockvector_t%distribute: Storage sizes of full-vector and block-vector are not equal.")
+        if (ndof /= size(fullvec) ) call chidg_signal(FATAL,"blockvector_t%distribute: Storage sizes of full-vector and block-vector are not equal.")
 
 
 
@@ -298,7 +298,7 @@ contains
 
 
             !& DEBUG
-            if (fend > size(fullvec) ) call signal(FATAL,"blockvector%distribute: array bounds exceeded")
+            if (fend > size(fullvec) ) call chidg_signal(FATAL,"blockvector%distribute: array bounds exceeded")
 
 
             self%lvecs(ielem)%vec = fullvec(fstart:fend)

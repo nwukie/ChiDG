@@ -300,7 +300,7 @@ contains
         end do
 
 
-        if (domain_index == 0) call signal(FATAL,"chidg_data%get_domain_index :: no domain found matching given name")
+        if (domain_index == 0) call chidg_signal(FATAL,"chidg_data%get_domain_index :: no domain found matching given name")
 
     end function get_domain_index
     !------------------------------------------------------------------------

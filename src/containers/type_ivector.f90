@@ -201,7 +201,7 @@ contains
         !
         out_of_bounds = (index > self%size())
         if (out_of_bounds) then
-            call signal(FATAL,'vector_t%at: out of bounds access')
+            call chidg_signal(FATAL,"vector_t%at: out of bounds access")
         end if
 
 

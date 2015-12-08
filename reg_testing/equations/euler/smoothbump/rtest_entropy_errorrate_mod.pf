@@ -209,14 +209,22 @@ contains
 
 
         !
-        ! Initialize geometry
+        ! Read grid
         !
-        !call read_grid_hdf(self%gridfile,chidg%domains)
         call read_grid_hdf(self%gridfile,meshdata)
 
 
+        !
+        ! Initialize domains
+        !
         do idom = 1,size(meshdata)
-            call chidg%data%add_domain(meshdata(idom)%name, meshdata(idom)%points, meshdata(idom)%nterms_c, eqnset, nterms_s)
+            call chidg%data%add_domain(                         &
+                                       meshdata(idom)%name,     &
+                                       meshdata(idom)%points,   &
+                                       meshdata(idom)%nterms_c, &
+                                       eqnset,                  &
+                                       nterms_s                 &
+                                       )
         end do
 
 

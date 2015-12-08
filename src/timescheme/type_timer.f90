@@ -49,7 +49,7 @@ contains
         if (.not. self%started) then
             call cpu_time(self%start_time)
         else
-            call signal(WARN,'type_timer: Timer was already started')
+            call chidg_signal(WARN,'type_timer: Timer was already started')
         end if
 
         self%started = .true.
@@ -72,7 +72,7 @@ contains
         if (self%started) then
             call cpu_time(self%stop_time)
         else
-            call signal(WARN,'type_timer: Timer was never started')
+            call chidg_signal(WARN,'type_timer: Timer was never started')
         end if
 
         self%stopped = .true.
@@ -97,7 +97,7 @@ contains
         if (self%stopped) then
             elapsed_time = real(self%stop_time - self%start_time,rk)
         else
-            call signal(WARN,'type_timer: Timer was not stopped')
+            call chidg_signal(WARN,'type_timer: Timer was not stopped')
             elapsed_time = 123456789._rk
         end if
 
@@ -132,9 +132,11 @@ contains
         ! If a message was included, print and append timing. Else, just print the timing
         !
         if (present(messg)) then
-            print*, messg, ' ', elapsed
+            call write_line(messg, ' ', elapsed, delimiter='')
+            !print*, messg, ' ', elapsed
         else
-            print*, elapsed
+            call write_line(elapsed)
+            !print*, elapsed
         end if
 
 

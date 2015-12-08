@@ -39,7 +39,7 @@ contains
         do while (nterms1d*nterms1d*nterms1d /= nterms_s)
             nterms1d = nterms1d + 1
         end do
-        if (nterms1d*nterms1d*nterms1d > nterms_s) call signal(FATAL, "Incorrect number of terms counted when computing quadrature nodes")
+        if (nterms1d*nterms1d*nterms1d > nterms_s) call chidg_signal(FATAL, "Incorrect number of terms counted when computing quadrature nodes")
 
 
         ! Compute number of 1D nodes, based on integration rule
@@ -56,7 +56,7 @@ contains
             case(5)
                 nnodes1d = 5*nterms1d + 1
             case default
-                call signal(FATAL, "compute_nnodes_integration: Value for gq_rule, specifying the rule for selecting number of quadrature points was not valid. Recognized values are gq_rule = (1, 2, 3)")
+                call chidg_signal(FATAL, "compute_nnodes_integration: Value for gq_rule, specifying the rule for selecting number of quadrature points was not valid. Recognized values are gq_rule = (1, 2, 3)")
 
         end select
 

@@ -72,7 +72,7 @@ contains
 
 
             case default
-                call signal(FATAL,"create_matrixsolver: matrix solver string did not match any valid type")
+                call chidg_signal(FATAL,"create_matrixsolver: matrix solver string did not match any valid type")
 
         end select
         if (ierr /= 0) call AllocationError
@@ -93,7 +93,7 @@ contains
         !
         ! Make sure the solver was allocated
         !
-        if (.not. allocated(msolver)) call signal(FATAL,"create_matrixsolver: solver was not allocated. Check that the desired solver was registered and instantiated in the mod_matrixsolver module")
+        if (.not. allocated(msolver)) call chidg_signal(FATAL,"create_matrixsolver: solver was not allocated. Check that the desired solver was registered and instantiated in the mod_matrixsolver module")
 
 
 

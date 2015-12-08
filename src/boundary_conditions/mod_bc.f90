@@ -69,7 +69,7 @@ contains
 
             ! Euler - extrapolation boundary condition
             case ('extrapolate_euler','extrapolation_euler','Extrapolate_euler','Extrapolation_euler')
-                call signal(FATAL,"create_bc: Euler extrapolation boundary condition is not yet implemented")
+                call chidg_signal(FATAL,"create_bc: Euler extrapolation boundary condition is not yet implemented")
 
             ! Euler - slip wall
             case ('euler_wall','slip_wall','Euler_Wall','Slip_Wall','SlipWall')
@@ -107,7 +107,7 @@ contains
 
             ! DEFAULT - ERROR
             case default
-                call signal(FATAL,"create_bc: Boundary condition string was not recognized. Check that the boundary condition is registered in create_bc and that spelling is correct.")            
+                call chidg_signal(FATAL,"create_bc: Boundary condition string was not recognized. Check that the boundary condition is registered in create_bc and that spelling is correct.")            
 
 
 

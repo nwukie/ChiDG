@@ -228,12 +228,12 @@ contains
 
 
             else
-                call signal(FATAL,"interpolate_face: invalid value for 'face%ftype'")
+                call chidg_signal(FATAL,"interpolate_face: invalid value for 'face%ftype'")
             end if
 
 
         else
-            call signal(FATAL,"interpolate_face: invalid value for incoming parameter 'source'")
+            call chidg_signal(FATAL,"interpolate_face: invalid value for incoming parameter 'source'")
         end if
 
 
@@ -337,7 +337,7 @@ contains
                 ! Error case
                 !
                 else
-                    call signal(FATAL,"interpolate_face: neighbor conforming_interpolation nor chimera_interpolation were detected")
+                    call chidg_signal(FATAL,"interpolate_face: neighbor conforming_interpolation nor chimera_interpolation were detected")
                 end if
             end if
 
@@ -419,7 +419,7 @@ contains
                     var_gq = unpack(var_gq_chimera,mask,var_gq)
 
                 else
-                    call signal(FATAL,"interpolate_face: face interpolation type error")
+                    call chidg_signal(FATAL,"interpolate_face: face interpolation type error")
                 end if
 
             else
@@ -459,7 +459,7 @@ contains
                     var_gq = unpack(var_gq_chimera,mask,var_gq)
 
                 else
-                    call signal(FATAL,"interpolate_face: face interpolation type error")
+                    call chidg_signal(FATAL,"interpolate_face: face interpolation type error")
                 end if
 
             end if

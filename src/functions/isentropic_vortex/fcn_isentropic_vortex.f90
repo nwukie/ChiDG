@@ -76,7 +76,7 @@ contains
 
 
             case default
-                call signal(FATAL,'gaussian_f%set: Invalid option string')
+                call chidg_signal(FATAL,'gaussian_f%set: Invalid option string')
         end select
 
 

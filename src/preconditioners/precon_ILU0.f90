@@ -20,7 +20,6 @@ module precon_ILU0
     !------------------------------------------------------------------------------------------------------------------
     type, extends(preconditioner_t) :: precon_ILU0_t
 
-        !type(blockmatrix_t)                 :: LD       !< Lower-Diagonal, sparse-block matrix representation
         type(blockmatrix_t), allocatable     :: LD(:)       !< Lower-Diagonal, sparse-block matrix representation
 
     contains
@@ -97,12 +96,12 @@ contains
         real(rk), allocatable   :: pdiag(:,:)
 
 
-        print*, ' Computing ILU0 factorization'
+        call write_line(' Computing ILU0 factorization')
 
         !
         ! Test preconditioner initialization
         !
-        if ( .not. self%initialized ) call signal(FATAL,'preconditioner::ILU0%update - preconditioner has not yet been initialized')
+        if ( .not. self%initialized ) call chidg_signal(FATAL,'preconditioner::ILU0%update - preconditioner has not yet been initialized')
 
 
         !
@@ -279,6 +278,7 @@ contains
 
 
     end function apply
+    !-----------------------------------------------------------------------------------------
 
 
 

@@ -111,7 +111,7 @@ contains
         !
         ! Check if index was found
         !
-        if (.not. found) call signal(FATAL,"Equation string not found in equation set properties")
+        if (.not. found) call chidg_signal(FATAL,"Equation string not found in equation set properties")
 
     end function
 

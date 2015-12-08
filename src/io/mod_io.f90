@@ -100,7 +100,6 @@ module mod_io
     integer(ik),         save    :: nterms_s        = 1
 
 contains
-!--------------------------------------------------
 
 
 
@@ -113,7 +112,7 @@ contains
     !!
     !!  @author Nathan A. Wukie
     !!
-    !--------------------------------------------------------
+    !------------------------------------------------------------------------------------------------
     subroutine read_input()
         use mod_ordering,   only: MAX_POLY_ORDER
 
@@ -124,10 +123,8 @@ contains
                                             hdf_out,               &
                                             tecplot_prefix
 
-
         namelist /space/                    basis,                 &
                                             solution_order
-                                            
 
         namelist /quadrature/               gq_rule
 
@@ -144,19 +141,16 @@ contains
                                             mtol,                  &
                                             preconditioner
 
-!        namelist /grid/     gridfile,   gridtype,   &
-!                            bc_ximin,   bc_ximax,   &
-!                            bc_etamin,  bc_etamax,  &
-!                            bc_zetamin, bc_zetamax, &
-!                            bcpar1, bcpar2, bcpar3, bcpar4
 
         namelist /io/                       nwrite,                &
                                             output_res,            &
                                             initial_write,         &
                                             final_write
 
+
         inquire(file='chidg.nml', exist=file_exists)
-        if (.not. file_exists) call signal(FATAL, "read_input: 'chidg.nml' input file was not found")
+        if (.not. file_exists) call chidg_signal(FATAL, "read_input: 'chidg.nml' input file was not found")
+
 
         open(unit=7,form='formatted',file="chidg.nml")
         read(7,nml=files)
@@ -175,6 +169,7 @@ contains
 
 
     end subroutine read_input
+    !-------------------------------------------------------------------------------------------------
 
 
 

@@ -39,7 +39,7 @@ contains
                 allocate(instance, source=ILU0)
 
             case default
-                call signal(FATAL,'create_preconditioner -- preconditioner string not recognized')
+                call chidg_signal(FATAL,'create_preconditioner -- preconditioner string not recognized')
 
         end select
 
@@ -49,7 +49,7 @@ contains
         !
         ! Make sure the preconditioner was allocated
         !
-        if (.not. allocated(instance)) call signal(FATAL,"create_preconditioner: preconditioner was not allocated. Check that the desired solver was registered and instantiated in the mod_preconditioner module")
+        if (.not. allocated(instance)) call chidg_signal(FATAL,"create_preconditioner: preconditioner was not allocated. Check that the desired solver was registered and instantiated in the mod_preconditioner module")
 
 
 

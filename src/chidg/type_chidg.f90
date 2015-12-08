@@ -42,6 +42,7 @@ module type_chidg
 
 
         procedure   :: init
+        procedure   :: close
         procedure   :: set
 
         procedure   :: run
@@ -73,6 +74,7 @@ contains
         if (.not. self%envInitialized ) then
             call initialize_equations()
             call initialize_grid()
+            call log_init()
             self%envInitialized = .true.
         end if
 
@@ -111,9 +113,9 @@ contains
             case ('finalize')
 
                 ! Test chidg necessary components have been allocated
-                if (.not. allocated(self%timescheme))     call signal(FATAL,"chidg%timescheme component was not allocated")
-                if (.not. allocated(self%matrixsolver))   call signal(FATAL,"chidg%matrixsolver component was not allocated")
-                if (.not. allocated(self%preconditioner)) call signal(FATAL,"chidg%preconditioner component was not allocated")
+                if (.not. allocated(self%timescheme))     call chidg_signal(FATAL,"chidg%timescheme component was not allocated")
+                if (.not. allocated(self%matrixsolver))   call chidg_signal(FATAL,"chidg%matrixsolver component was not allocated")
+                if (.not. allocated(self%preconditioner)) call chidg_signal(FATAL,"chidg%preconditioner component was not allocated")
 
 
                 call self%timescheme%init(self%data)
@@ -122,7 +124,7 @@ contains
 
 
             case default
-                call signal(WARN,'chidg_t: Invalid initialization string')
+                call chidg_signal(WARN,'chidg_t: Invalid initialization string')
 
         end select
 
@@ -207,7 +209,9 @@ contains
 
 
             case default
-                call signal(FATAL,"chidg%set: component string was not recognized. Check spelling and that the component was registered as an option in the chidg%set routine")
+                call chidg_signal(FATAL,"chidg%set: component string was not recognized.      &
+                                         Check spelling and that the component was registered &
+                                         as an option in the chidg%set routine")
 
 
         end select
@@ -227,8 +231,8 @@ contains
 
     !>  Run ChiDG simulation
     !!
-    !!      - This routine passes the domain and matrixsolver components to the
-    !!        time scheme for iteration
+    !!      - This routine passes the domain data, matrixsolver, and preconditioner
+    !!        components to the time scheme for iteration
     !!
     !!  @author Nathan A. Wukie
     !!
@@ -239,6 +243,7 @@ contains
         call self%timescheme%solve(self%data,self%matrixsolver,self%preconditioner)
 
     end subroutine run
+    !-----------------------------------------------------------------------------
 
 
 
@@ -257,7 +262,7 @@ contains
     !!
     !!
     !!
-    !----------------------------------------------------------------------------
+    !-----------------------------------------------------------------------------
     subroutine report(self)
         class(chidg_t), intent(inout)   :: self
 
@@ -267,6 +272,35 @@ contains
 
 
     end subroutine report
+    !#############################################################################
+
+
+
+
+
+
+
+
+
+    !> Any activities that need performed before the program completely terminates.
+    !!
+    !!  @author Nathan A. Wukie
+    !!
+    !!
+    !!
+    !------------------------------------------------------------------------------
+    subroutine close(self)
+        class(chidg_t), intent(inout)   :: self
+
+        call log_finalize()
+
+    end subroutine
+    !##############################################################################
+
+
+
+
+
 
 
 

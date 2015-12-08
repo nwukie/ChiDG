@@ -75,7 +75,7 @@ contains
                 allocate(eqnset, source=LINEULER)
 
             case default
-                call signal(FATAL,'create_equationset -- equation string not recognized')
+                call chidg_signal(FATAL,'create_equationset -- equation string not recognized')
         end select
 
     end subroutine

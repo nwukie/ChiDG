@@ -113,7 +113,7 @@ contains
                 nelem_bc = nelem_xi * nelem_eta
                 zeta_begin = nelem_zeta
             case default
-                call signal(FATAL,"bc%init: Invalid block face 'iface'. Valid face indices are iface = [1-6]")
+                call chidg_signal(FATAL,"bc%init: Invalid block face 'iface'. Valid face indices are iface = [1-6]")
         end select
 
 

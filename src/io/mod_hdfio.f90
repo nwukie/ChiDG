@@ -48,30 +48,30 @@ contains
         !  Check file exists
         inquire(file=filename, exist=FileExists)
         if (.not. FileExists) then
-            call signal(FATAL,'read_grid_hdf5: Could not find grid file')
+            call chidg_signal(FATAL,'read_grid_hdf5: Could not find grid file')
         end if
 
 
         !  Initialize Fortran interface.
         call h5open_f(ierr)
-        if (ierr /= 0) call signal(FATAL,'read_grid_hdf5 - h5open_f: HDF5 Fortran interface had an error during initialization')
+        if (ierr /= 0) call chidg_signal(FATAL,'read_grid_hdf5 - h5open_f: HDF5 Fortran interface had an error during initialization')
 
 
 
         !  Open input file using default properties.
         call h5fopen_f(filename, H5F_ACC_RDONLY_F, fid, ierr)
-        if (ierr /= 0) call signal(FATAL,'read_grid_hdf5 - h5fopen_f: There was an error opening the grid file.')
+        if (ierr /= 0) call chidg_signal(FATAL,'read_grid_hdf5 - h5fopen_f: There was an error opening the grid file.')
 
 
 
         !  Get number of domains from attribute 'ndomains' in file root
         call h5ltget_attribute_int_f(fid, "/", 'ndomains', buf, ierr)
         ndomains = buf(1)
-        if (ierr /= 0) call signal(FATAL,'read_grid_hdf5: h5ltget_attribute_int_f had a problem getting the number of domains')
+        if (ierr /= 0) call chidg_signal(FATAL,'read_grid_hdf5: h5ltget_attribute_int_f had a problem getting the number of domains')
 
 
         !  Allocate number of domains
-        if (ndomains == 0) call signal(FATAL,'read_hdf5: No Domains were found in the file')
+        if (ndomains == 0) call chidg_signal(FATAL,'read_hdf5: No Domains were found in the file')
         allocate(meshdata(ndomains), stat=ierr)
         if (ierr /= 0) call AllocationError
 
@@ -268,14 +268,14 @@ contains
         ! Initialize Fortran interface.
         !
         call h5open_f(ierr)
-        if (ierr /= 0) call signal(FATAL,"read_variable_hdf5 - h5open_f")
+        if (ierr /= 0) call chidg_signal(FATAL,"read_variable_hdf5 - h5open_f")
 
 
         !
         ! Open input file using default properties.
         !
         call h5fopen_f(filename, H5F_ACC_RDWR_F, fid, ierr)
-        if (ierr /= 0) call signal(FATAL,"read_variable_hdf5 - h5fopen_f")
+        if (ierr /= 0) call chidg_signal(FATAL,"read_variable_hdf5 - h5fopen_f")
 
 
 
@@ -290,7 +290,7 @@ contains
         ! Open the Domain/Variables group
         !
         call h5gopen_f(fid, trim(dname)//"/Variables", gid, ierr, H5P_DEFAULT_F)
-        if (ierr /= 0) call signal(FATAL,"h5gopen_f -- Domain/Grid group did not open properly")
+        if (ierr /= 0) call chidg_signal(FATAL,"h5gopen_f -- Domain/Grid group did not open properly")
 
 
         !
@@ -298,7 +298,7 @@ contains
         !
         call h5ltget_attribute_int_f(gid, "/", 'Order', ibuf, ierr)
         order = ibuf(1)
-        if (ierr /= 0) call signal(FATAL,"read_variable_hdf5 - h5ltget_attribute_int_f")
+        if (ierr /= 0) call chidg_signal(FATAL,"read_variable_hdf5 - h5ltget_attribute_int_f")
         nterms_1d = (order + 1)
         nterms_s = nterms_1d*nterms_1d*nterms_1d
 
@@ -310,7 +310,7 @@ contains
         write(ctime, '(I0.3)') time                     ! write time as character string
         varstring = trim(cvar)//'_'//trim(ctime)        ! compose variable name as 'var_time'
         call h5dopen_f(gid, trim(varstring), vid, ierr, H5P_DEFAULT_F)
-        if (ierr /= 0) call signal(FATAL,"read_variable_hdf5 -- variable does not exist or was not opened correctly")
+        if (ierr /= 0) call chidg_signal(FATAL,"read_variable_hdf5 -- variable does not exist or was not opened correctly")
 
 
         !
@@ -326,7 +326,7 @@ contains
         allocate(var(dims(1),dims(2)))                          ! Allocate variable buffer
         cp_var = c_loc(var(1,1))                                ! Get C-address for buffer
         call h5dread_f(vid, H5T_NATIVE_DOUBLE, cp_var, ierr)    ! Fortran 2003 interface
-        if (ierr /= 0) call signal(FATAL,"read_variable_hdf5 -- h5dread_f")
+        if (ierr /= 0) call chidg_signal(FATAL,"read_variable_hdf5 -- h5dread_f")
 
 
         !
@@ -349,7 +349,7 @@ contains
             end do
 
         else
-            call signal(FATAL,"read_variable_hdf5 -- number of elements in file variable and domain do not match")
+            call chidg_signal(FATAL,"read_variable_hdf5 -- number of elements in file variable and domain do not match")
         end if
 
 
@@ -444,14 +444,14 @@ contains
         ! Initialize Fortran interface.
         !
         call h5open_f(ierr)
-        if (ierr /= 0) call signal(FATAL,"write_variable_hdf5 - h5open_f")
+        if (ierr /= 0) call chidg_signal(FATAL,"write_variable_hdf5 - h5open_f")
 
         
         !
         ! Open input file using default properties.
         !
         call h5fopen_f(filename, H5F_ACC_RDWR_F, fid, ierr)
-        if (ierr /= 0) call signal(FATAL,"write_variable_hdf5 - h5fopen_f")
+        if (ierr /= 0) call chidg_signal(FATAL,"write_variable_hdf5 - h5fopen_f")
 
         
 
@@ -476,7 +476,7 @@ contains
 
             ! If 'Variables' group exists then open the existing group
             call h5gopen_f(fid, trim(dname)//"/Variables", gid, ierr, H5P_DEFAULT_F)
-            if (ierr /= 0) call signal(FATAL,"h5gopen_f -- Domain/Grid group did not open properly")
+            if (ierr /= 0) call chidg_signal(FATAL,"h5gopen_f -- Domain/Grid group did not open properly")
         else
             ! If 'Variables group does not exist, then create one.
             call h5gcreate_f(fid, trim(dname)//"/Variables", gid, ierr)
@@ -490,7 +490,7 @@ contains
         adim = 1
         ibuf = data%mesh(idom)%nterms_s
         call h5ltset_attribute_int_f(gid, "/", 'Order', ibuf, adim, ierr)
-        if (ierr /= 0) call signal(FATAL,"write_variable_hdf5 - h5ltset_attribute_int_f")
+        if (ierr /= 0) call chidg_signal(FATAL,"write_variable_hdf5 - h5ltset_attribute_int_f")
 
 
 
@@ -525,22 +525,22 @@ contains
         if (exists) then
             ! Open the existing dataset
             call h5dopen_f(gid, trim(varstring), did, ierr, H5P_DEFAULT_F)
-            if (ierr /= 0) call signal(FATAL,"Error: write_variable_hdf5 -- variable does not exist or was not opened correctly")
+            if (ierr /= 0) call chidg_signal(FATAL,"Error: write_variable_hdf5 -- variable does not exist or was not opened correctly")
 
             ! Get the existing dataspace id
             call h5dget_space_f(did, sid, ierr)
 
             ! Resize the existing dataspace
             call h5sset_extent_simple_f(sid,ndims,dims,maxdims,ierr)
-            if (ierr /= 0) call signal(FATAL,"Error: write_variable_hdf5 -- dataspace resizing")
+            if (ierr /= 0) call chidg_signal(FATAL,"Error: write_variable_hdf5 -- dataspace resizing")
         else
             ! Create a new dataspace
             call h5screate_simple_f(ndims,dims, sid, ierr)
-            if (ierr /= 0) call signal(FATAL,"Error: write_variable_hdf5 - h5screate_simple_f")
+            if (ierr /= 0) call chidg_signal(FATAL,"Error: write_variable_hdf5 - h5screate_simple_f")
 
             ! Create a new dataset
             call h5dcreate_f(gid, trim(varstring), H5T_NATIVE_DOUBLE, sid, did, ierr)
-            if (ierr /= 0) call signal(FATAL,"write_variable_hdf5 - h5dcreate_f")
+            if (ierr /= 0) call chidg_signal(FATAL,"write_variable_hdf5 - h5dcreate_f")
         end if
 
 
@@ -564,7 +564,7 @@ contains
         !
         cp_var = c_loc(var(1,1))
         call h5dwrite_f(did, H5T_NATIVE_DOUBLE, cp_var, ierr)
-        if (ierr /= 0) call signal(FATAL,"write_variable_hdf5 - h5dwrite_f")
+        if (ierr /= 0) call chidg_signal(FATAL,"write_variable_hdf5 - h5dwrite_f")
 
 
 

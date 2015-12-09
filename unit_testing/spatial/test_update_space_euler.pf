@@ -203,5 +203,10 @@ subroutine test_update_space_euler()
 
 
 
+    !
+    ! Close ChiDG interface
+    !
+    call chidgA%close()
+    call chidgB%close()
 
 end subroutine test_update_space_euler

@@ -108,4 +108,8 @@ subroutine test_fgmres_solve()
     end associate
 
 
+    !
+    ! Close ChiDG interface
+    !
+    call chidg%close()
 end subroutine test_fgmres_solve

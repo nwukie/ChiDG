@@ -150,5 +150,9 @@ subroutine test_chidgMatrix_operator_mv()
 
 
 
+    !
+    ! Close ChiDG interface
+    !
+    call chidg%close()
 
 end subroutine

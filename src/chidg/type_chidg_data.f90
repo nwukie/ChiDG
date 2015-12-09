@@ -34,8 +34,7 @@ module type_chidg_data
     !--------------------------------------------------------------------------------------
     type, public  :: chidg_data_t
 
-        integer(ik)                                 :: ndomains = 0
-        !type(dict_t)                                :: domain_info  !< Dictionary of (domain_index, domain_name) pairs
+        integer(ik),        private                 :: ndomains_ = 0
         type(domaininfo_t),             allocatable :: info(:)      !< General container for domain information
 
         
@@ -59,7 +58,8 @@ module type_chidg_data
         procedure   :: add_bc
 
         !> Accessors
-        procedure   :: get_domain_index
+        procedure   :: get_domain_index     !< Given a domain name, return domain index
+        procedure   :: ndomains             !< Return number of domains in chidg instance
         
 
     end type chidg_data_t
@@ -130,14 +130,8 @@ contains
         !
         ! Increment number of domains by one
         !
-        self%ndomains = self%ndomains + 1
-        idom = self%ndomains
-
-
-        !
-        ! Add (name,index) pair to domain_info dictionary
-        !
-        !call self%domain_info%set(name,idom)
+        self%ndomains_ = self%ndomains_ + 1
+        idom = self%ndomains_
 
 
         !
@@ -145,15 +139,15 @@ contains
         !
 
         ! Allocate new storage arrays
-        allocate(temp_info(self%ndomains),   &
-                 temp_mesh(self%ndomains),   &
-                 temp_bcset(self%ndomains),  &
-                 temp_eqnset(self%ndomains), stat=ierr)
+        allocate(temp_info(self%ndomains_),   &
+                 temp_mesh(self%ndomains_),   &
+                 temp_bcset(self%ndomains_),  &
+                 temp_eqnset(self%ndomains_), stat=ierr)
         if (ierr /= 0) call AllocationError
 
 
         ! Copy previously initialized instances to new array. Be careful about pointers components here!
-        if (self%ndomains > 1) then
+        if (self%ndomains_ > 1) then
             !temp_mesh(   1:size(self%mesh))    = self%mesh     ! ifort segfaults on this for cases with sevaral domains
             !temp_bcset(  1:size(self%bcset))   = self%bcset
             !temp_eqnset( 1:size(self%eqnset))  = self%eqnset
@@ -235,7 +229,6 @@ contains
         !
         ! Get domain index from domain string
         !
-        !call self%domain_info%get(domain,idom)
         idom = self%get_domain_index(domain)
 
 
@@ -287,7 +280,7 @@ contains
         
         domain_index = 0
 
-        do idom = 1,self%ndomains
+        do idom = 1,self%ndomains_
 
             !
             ! Test name
@@ -310,6 +303,23 @@ contains
 
 
 
+
+
+    !> Return the number of domains in the chidg_data_t instance.
+    !!
+    !!  @author Nathan A. Wukie
+    !!
+    !!
+    !-----------------------------------------------------------------------------------------
+    function ndomains(self) result(ndom)
+        class(chidg_data_t),    intent(in)      :: self
+
+        integer :: ndom
+
+        ndom = self%ndomains_
+
+    end function ndomains
+    !##########################################################################################
 
 
 

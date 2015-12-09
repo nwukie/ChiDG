@@ -103,6 +103,10 @@ subroutine test_blockmatrix__store_1eq_8terms()
     @assertEqual(integral(8)%xp_ad_, bmat%lblks(ielem,iblk)%mat(8,:) )
         
     
+    !
+    ! Close ChiDG interface
+    !
+    call chidg%close()
 end subroutine
 
 
@@ -204,6 +208,10 @@ subroutine test_blockmatrix__store_2eq_8terms()
     @assertEqual(integral(8)%xp_ad_, bmat%lblks(ielem,iblk)%mat(16,:) )
         
     
+    !
+    ! Close ChiDG interface
+    !
+    call chidg%close()
 end subroutine
 
 
@@ -328,6 +336,10 @@ subroutine test_blockmatrix__clear_1eq_8terms()
 
 
 
+    !
+    ! Close ChiDG interface
+    !
+    call chidg%close()
     
 end subroutine
 

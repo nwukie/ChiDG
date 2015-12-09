@@ -244,6 +244,11 @@ subroutine test_update_space_linearadvection()
 
 
 
+    !
+    ! Close ChiDG interface
+    !
+    call chidgA%close()
+    call chidgB%close()
 
 
 

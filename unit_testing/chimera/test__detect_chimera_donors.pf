@@ -221,6 +221,10 @@ subroutine test__detect_chimera_donors()
 
 
 
+    !
+    ! Close ChiDG interface
+    !
+    call chidg%close()
 
 
 

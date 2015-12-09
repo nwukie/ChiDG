@@ -14,10 +14,8 @@
 
 program driver
     use mod_kinds,              only: rk, ik
-    use mod_constants,          only: XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX, ONE, TWO, THREE, FOUR, FIVE, ZERO
+    use mod_constants,          only: XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX, ZERO
     use type_chidg,             only: chidg_t
-    use type_meshdata,          only: meshdata_t
-    use mod_hdfio,              only: read_grid_hdf
     use mod_grid_operators,     only: initialize_variable
     use atype_function,         only: function_t
     use type_dict,              only: dict_t
@@ -30,10 +28,8 @@ program driver
     !
     implicit none
     type(chidg_t)                       :: chidg
-    type(meshdata_t),       allocatable :: meshdata(:)
-    class(function_t),      allocatable :: constant, vortex, sod, roe
+    class(function_t),  allocatable     :: constant, vortex, sod, roe
     type(dict_t)                        :: toptions
-    integer(ik)                         :: nterms_c, idom, ndomains, i,j,k, ielem, izeta, ieta, ixi
 
 
 
@@ -44,25 +40,14 @@ program driver
     call chidg%init('io')
 
 
+
+
+
+
     !
     ! Read grid data from file
     !
-    call read_grid_hdf(gridfile,meshdata)
-
-
-    !
-    ! Add domains from meshdata to ChiDG
-    !
-    ndomains = size(meshdata)
-    do idom = 1,ndomains
-        call chidg%data%add_domain(                           &
-                                   trim(meshdata(idom)%name), &
-                                   meshdata(idom)%points,     &
-                                   meshdata(idom)%nterms_c,   &
-                                   eqnset,                    &
-                                   nterms_s                   &
-                                   )
-    end do
+    call chidg%read_grid(gridfile)
 
 
 
@@ -76,6 +61,7 @@ program driver
     call toptions%set('nsteps',nsteps)
     call toptions%set('nwrite',nwrite)
     call toptions%set('cfl0',cfl0)
+
 
     !
     ! Set ChiDG components
@@ -113,37 +99,50 @@ program driver
     !
     ! Initialize solution
     !
-    call create_function(constant,'constant')
+    if (solutionfile_in == 'none') then
+        call create_function(constant,'constant')
 
 
-    ! rho
-    call constant%set('val',1.13_rk)
-    call initialize_variable(chidg%data,1,constant)
+        ! rho
+        call constant%set('val',1.13_rk)
+        call initialize_variable(chidg%data,1,constant)
 
-    ! rho_u
-    call constant%set('val',190._rk)
-    call initialize_variable(chidg%data,2,constant)
+        ! rho_u
+        call constant%set('val',190._rk)
+        call initialize_variable(chidg%data,2,constant)
 
-    ! rho_v
-    call constant%set('val',ZERO)
-    call initialize_variable(chidg%data,3,constant)
+        ! rho_v
+        call constant%set('val',ZERO)
+        call initialize_variable(chidg%data,3,constant)
 
-    ! rho_w
-    call constant%set('val',ZERO)
-    call initialize_variable(chidg%data,4,constant)
+        ! rho_w
+        call constant%set('val',ZERO)
+        call initialize_variable(chidg%data,4,constant)
 
-    ! rho_E
-    call constant%set('val',248000._rk)
-    call initialize_variable(chidg%data,5,constant)
+        ! rho_E
+        call constant%set('val',248000._rk)
+        call initialize_variable(chidg%data,5,constant)
 
+    else
 
+        call chidg%read_solution(solutionfile_in)
+
+    end if
 
 
     !
     ! Write initial solution
     !
     if (initial_write) then
-        call write_tecio_variables(chidg%data,'0.plt',1)
+        !
+        ! Current call
+        !
+        !call write_tecio_variables(chidg%data,'0.plt',1)
+
+
+        call chidg%write_solution(solutionfile_out)
+
+
     end if
 
 
@@ -175,11 +174,16 @@ program driver
 
 
 
+
+
+
+
     !
     ! Write final solution
     !
     if (final_write) then
-        call write_tecio_variables(chidg%data,'9999999.plt',1)
+        !call write_tecio_variables(chidg%data,'9999999.plt',1)
+        call chidg%write_solution(solutionfile_out)
     end if
 
 
@@ -188,5 +192,9 @@ program driver
     ! Close ChiDG
     !
     call chidg%close()
+
+
+
+
 
 end program driver

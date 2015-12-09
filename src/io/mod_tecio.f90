@@ -70,7 +70,7 @@ contains
 
 
 
-        do idom = 1,data%ndomains
+        do idom = 1,data%ndomains()
         !associate (mesh => data%mesh(idom), eqnset => data%eqnset(idom)%item, sdata => data%sdata)
 
             !

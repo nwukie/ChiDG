@@ -35,7 +35,7 @@ subroutine testIO__read_grid_hdf__D1_E1_M1()
 
 
     ! Test number of allocated domains
-    @assertEqual(ndomains,chidg%data%ndomains)
+    @assertEqual(ndomains,chidg%data%ndomains())
 
     
     ! Test domain mapping
@@ -53,6 +53,7 @@ subroutine testIO__read_grid_hdf__D1_E1_M1()
     @assertEqual(nelem,chidg%data%mesh(1)%nelem)
     
     
+    call chidg%close()
 end subroutine
 
 
@@ -103,7 +104,7 @@ subroutine testIO__read_grid_hdf__D1_E27_M1()
 
     
     ! Test number of allocated domains
-    @assertEqual(ndomains,chidg%data%ndomains)
+    @assertEqual(ndomains,chidg%data%ndomains())
 
     
     ! Test domain mapping
@@ -130,6 +131,7 @@ subroutine testIO__read_grid_hdf__D1_E27_M1()
         end do
     end do
     
+    call chidg%close()
 end subroutine
 
 
@@ -186,7 +188,7 @@ subroutine testIO__read_grid_hdf__D2_E1_M1()
 
 
     ! Test number of allocated domains
-    @assertEqual(ndomains,chidg%data%ndomains)
+    @assertEqual(ndomains,chidg%data%ndomains())
 
     
     ! Test domain mapping
@@ -215,6 +217,7 @@ subroutine testIO__read_grid_hdf__D2_E1_M1()
     @assertEqual(y,chidg%data%mesh(2)%elems(1)%elem_pts(:)%c2_,tol)
     @assertEqual(z,chidg%data%mesh(2)%elems(1)%elem_pts(:)%c3_,tol)
     
+    call chidg%close()
 end subroutine
 
 
@@ -273,7 +276,7 @@ subroutine testIO__read_grid_hdf__D2_E27_M1()
 
 
     ! Test number of allocated domains
-    @assertEqual(ndomains,chidg%data%ndomains)
+    @assertEqual(ndomains,chidg%data%ndomains())
 
     
     ! Test domain mapping
@@ -302,6 +305,7 @@ subroutine testIO__read_grid_hdf__D2_E27_M1()
     @assertEqual(y,chidg%data%mesh(2)%elems(1)%elem_pts(:)%c2_,tol)
     @assertEqual(z,chidg%data%mesh(2)%elems(1)%elem_pts(:)%c3_,tol)
     
+    call chidg%close()
 end subroutine
 
 

@@ -159,7 +159,7 @@ contains
                 !
                 ! Add mass/dt to sub-block diagonal in dR/dQ
                 !
-                do idom = 1,data%ndomains
+                do idom = 1,data%ndomains()
                     do ielem = 1,data%mesh(idom)%nelem
                         nterms = data%mesh(idom)%nterms_s   ! get number of solution terms
 

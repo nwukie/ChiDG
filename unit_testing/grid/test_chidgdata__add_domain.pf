@@ -40,11 +40,15 @@ subroutine test_chidgdata__add_domain__onedomain()
 
 
     ! test chidg%data%ndomains
-    @assertEqual(1,chidg%data%ndomains)
+    @assertEqual(1,chidg%data%ndomains())
     @assertEqual(1,size(chidg%data%mesh))
     @assertEqual(1,size(chidg%data%bcset))
     @assertEqual(1,size(chidg%data%eqnset))
 
 
 
+    !
+    ! Close ChiDG interface
+    !
+    call chidg%close()
 end subroutine

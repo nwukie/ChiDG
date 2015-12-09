@@ -50,7 +50,7 @@ contains
 
         integer(ik) :: idom, ndom, ierr
 
-        ndom = data%ndomains
+        ndom = data%ndomains()
 
         !
         ! Allocate a Lower-Diagonal block matrix for each domain

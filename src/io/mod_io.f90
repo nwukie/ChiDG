@@ -12,10 +12,11 @@ module mod_io
     !--------------------------------------------------
     character(len=100),  save    :: gridfile
     character(len=100),  save    :: gridtype
-    character(len=100),  save    :: tecplot_prefix = 'tec'
-    character(len=100),  save    :: hdf_out        = 'solution.h5'
+    character(len=100),  save    :: tecplot_prefix      = 'tec'
+    character(len=100),  save    :: hdf_out             = 'solution.h5'
 
-    character(len=100),  save    :: solutionfile
+    character(len=100),  save    :: solutionfile_in     = 'none'
+    character(len=100),  save    :: solutionfile_out    = 'none'
 
 
 
@@ -121,7 +122,9 @@ contains
         namelist /files/                    gridfile,              &
                                             gridtype,              &
                                             hdf_out,               &
-                                            tecplot_prefix
+                                            tecplot_prefix,        &
+                                            solutionfile_in,       &
+                                            solutionfile_out
 
         namelist /space/                    basis,                 &
                                             solution_order

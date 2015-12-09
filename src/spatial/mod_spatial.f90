@@ -51,7 +51,7 @@ contains
                 !
                 ! Loop through local domains
                 !
-                do idom = 1,data%ndomains
+                do idom = 1,data%ndomains()
                     associate ( mesh => data%mesh(idom), sdata => data%sdata, eqnset => data%eqnset(idom)%item, prop => data%eqnset(idom)%item%prop)
 
                     nelem = mesh%nelem
@@ -183,7 +183,7 @@ contains
             ! for the interior element. So, we only need to compute derivatives for the interior element (DIAG)
 
             iblk = 7    !> DIAG
-            do idom = 1,data%ndomains
+            do idom = 1,data%ndomains()
                 call data%bcset(idom)%apply(data%mesh,data%sdata,data%eqnset(idom)%item%prop,idom,iblk)
             end do
 

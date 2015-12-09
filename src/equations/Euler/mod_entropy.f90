@@ -76,7 +76,7 @@ contains
             !
             ! Loop over elements and accumulate entropy error
             !
-            do idom = 1,data%ndomains
+            do idom = 1,data%ndomains()
 
                 nelem = data%mesh(idom)%nelem
                 do ielem = 1,nelem

@@ -8,7 +8,7 @@ module messenger
     character(len=2), parameter     :: default_delimiter = ''   ! Delimiter of line parameters
     character(len=:), allocatable   :: current_delimiter        ! Delimiter of line parameters
     integer                         :: unit                     ! Unit of log file
-    integer                         :: max_msg_length = 90      ! Maximum width of message line
+    integer                         :: max_msg_length = 160     ! Maximum width of message line
 
 
 
@@ -26,10 +26,16 @@ contains
     !!------------------------------------------------------------------------------------------------------------
     subroutine log_init()
 
+        logical :: file_opened = .false.
+
         !
         ! Open file
         !
-        open(newunit=unit, file='chidg.log')
+        inquire(file='chidg.log', opened=file_opened)
+
+        if ( .not. file_opened ) then
+            open(newunit=unit, file='chidg.log')
+        end if
 
 
     end subroutine
@@ -47,10 +53,16 @@ contains
     !!------------------------------------------------------------------------------------------------------------
     subroutine log_finalize()
 
+        logical :: file_opened = .false.
+
         !
         ! Close file
         !
-        close(unit)
+        inquire(file='chidg.log', opened=file_opened)
+
+        if ( file_opened ) then
+            close(unit)
+        end if
 
     end subroutine
     !#############################################################################################################
@@ -109,7 +121,11 @@ contains
         !
         temppath = pathname
         pathstart = index(temppath, '/ChiDG/')
-        subpath = temppath(pathstart:len(pathname))
+        if (pathstart == 0) then
+            subpath = temppath      ! The intel compiler provides just the file name, without the path. So here, we just take the file name and don't chop anything
+        else
+            subpath = temppath(pathstart:len(pathname))
+        end if
 
 
         !

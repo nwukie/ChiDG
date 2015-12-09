@@ -76,6 +76,10 @@ subroutine test_blockvector_distribute()
 
 
 
+    !
+    ! Close ChiDG interface
+    !
+    call chidg%close()
 
 
 end subroutine

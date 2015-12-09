@@ -172,6 +172,7 @@ subroutine test_compute_gq_donor_cylinder_abutting()
 
 
 
+    call chidgA%close()
 
 
 end subroutine test_compute_gq_donor_cylinder_abutting

@@ -84,6 +84,12 @@ contains
     
     subroutine tearDown(this)
         class(test_eq_LA),    intent(inout)   :: this
+
+
+        !
+        ! Close ChiDG interface
+        !
+        call this%chidg%close()
     end subroutine
 
 

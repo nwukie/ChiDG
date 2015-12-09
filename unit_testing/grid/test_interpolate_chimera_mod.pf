@@ -117,6 +117,13 @@ contains
     subroutine tearDown(this)
         class(test_interpolate_chimera),    intent(inout)   :: this
         
+
+        !
+        ! Close ChiDG interface
+        !
+        call this%chidg%close()
+
+        
     end subroutine
 
 

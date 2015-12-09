@@ -2,12 +2,14 @@ module type_chidg
 #include <messenger.h>
     use mod_equations,          only: initialize_equations
     use mod_grid,               only: initialize_grid
-    use mod_io,                 only: read_input
+    use mod_io,                 only: read_input, nterms_s, eqnset
+    use mod_string_utils,       only: get_file_extension
 
     use type_chidg_data,        only: chidg_data_t
     use type_timescheme,        only: timescheme_t
     use atype_matrixsolver,     only: matrixsolver_t
     use type_preconditioner,    only: preconditioner_t
+    use type_meshdata,          only: meshdata_t
     use type_dict,              only: dict_t
 
     use mod_timescheme,         only: create_timescheme
@@ -16,6 +18,8 @@ module type_chidg
     use mod_chimera,            only: detect_chimera_faces,  &
                                       detect_chimera_donors, &
                                       compute_chimera_interpolators
+
+    use mod_hdfio,              only: read_grid_hdf, read_solution_hdf, write_solution_hdf
 
     implicit none
 
@@ -47,6 +51,11 @@ module type_chidg
 
         procedure   :: run
         procedure   :: report
+
+        ! IO procedures
+        procedure   :: read_grid
+        procedure   :: read_solution
+        procedure   :: write_solution
     end type
 
 
@@ -77,8 +86,6 @@ contains
             call log_init()
             self%envInitialized = .true.
         end if
-
-
 
 
 
@@ -226,6 +233,154 @@ contains
 
 
 
+    !>
+    !!
+    !!
+    !!
+    !!
+    !!
+    !----------------------------------------------------------------------------------------------
+    subroutine read_grid(self,gridfile)
+        class(chidg_t),     intent(inout)   :: self
+        character(*),       intent(in)      :: gridfile
+
+        character(len=5),   dimension(1)    :: extensions
+        character(len=:),   allocatable     :: extension
+        type(meshdata_t),   allocatable     :: meshdata(:)
+        integer                             :: iext, extloc, idom, ndomains
+
+
+
+
+        !
+        ! Get filename extension
+        !
+        extensions = ['.h5']
+        extension = get_file_extension(gridfile, extensions)
+
+
+
+
+        !
+        ! Call grid reader based on file extension
+        !
+        if ( extension == '.h5' ) then
+            call read_grid_hdf(gridfile,meshdata)
+        else
+            call chidg_signal(FATAL,"chidg%read_grid: grid file extension not recognized")
+        end if
+
+
+
+
+        !
+        ! Add domains to ChiDG%data
+        !
+        ndomains = size(meshdata)
+        do idom = 1,ndomains
+            call self%data%add_domain(                              &
+                                      trim(meshdata(idom)%name),    &
+                                      meshdata(idom)%points,        &
+                                      meshdata(idom)%nterms_c,      &
+                                      eqnset,                       &
+                                      nterms_s                      &
+                                      )
+        end do
+
+
+
+
+    end subroutine read_grid
+    !##############################################################################################
+
+
+
+
+
+    !>
+    !!
+    !!
+    !!
+    !!
+    !!
+    !----------------------------------------------------------------------------------------------
+    subroutine read_solution(self,solutionfile)
+        class(chidg_t),     intent(inout)   :: self
+        character(*),       intent(in)      :: solutionfile
+
+        character(len=5),   dimension(1)    :: extensions
+        character(len=:),   allocatable     :: extension
+        type(meshdata_t),   allocatable     :: solutiondata(:)
+        integer                             :: iext, extloc, idom, ndomains
+
+
+        !
+        ! Get filename extension
+        !
+        extensions = ['.h5']
+        extension = get_file_extension(solutionfile, extensions)
+
+
+        !
+        ! Call grid reader based on file extension
+        !
+        if ( extension == '.h5' ) then
+            call read_solution_hdf(solutionfile,self%data)
+        else
+            call chidg_signal(FATAL,"chidg%read_solution: grid file extension not recognized")
+        end if
+
+
+    end subroutine read_solution
+    !##############################################################################################
+
+
+
+
+
+
+    !>
+    !!
+    !!
+    !!
+    !!
+    !!
+    !----------------------------------------------------------------------------------------------
+    subroutine write_solution(self,solutionfile)
+        class(chidg_t),     intent(inout)   :: self
+        character(*),       intent(in)      :: solutionfile
+
+        character(len=5),   dimension(1)    :: extensions
+        character(len=:),   allocatable     :: extension
+        type(meshdata_t),   allocatable     :: solutiondata(:)
+        integer                             :: iext, extloc, idom, ndomains
+
+
+        !
+        ! Get filename extension
+        !
+        extensions = ['.h5']
+        extension = get_file_extension(solutionfile, extensions)
+
+
+        !
+        ! Call grid reader based on file extension
+        !
+        if ( extension == '.h5' ) then
+            call write_solution_hdf(solutionfile,self%data)
+        else
+            call chidg_signal(FATAL,"chidg%write_solution: grid file extension not recognized")
+        end if
+
+
+    end subroutine write_solution
+    !##############################################################################################
+
+
+
+
+
+
 
 
 
@@ -236,14 +391,16 @@ contains
     !!
     !!  @author Nathan A. Wukie
     !!
-    !----------------------------------------------------------------------------
+    !---------------------------------------------------------------------------------------------
     subroutine run(self)
         class(chidg_t),     intent(inout)   :: self
 
+
         call self%timescheme%solve(self%data,self%matrixsolver,self%preconditioner)
 
+
     end subroutine run
-    !-----------------------------------------------------------------------------
+    !##############################################################################################
 
 
 
@@ -262,7 +419,7 @@ contains
     !!
     !!
     !!
-    !-----------------------------------------------------------------------------
+    !-----------------------------------------------------------------------------------------------
     subroutine report(self)
         class(chidg_t), intent(inout)   :: self
 
@@ -272,7 +429,7 @@ contains
 
 
     end subroutine report
-    !#############################################################################
+    !################################################################################################
 
 
 
@@ -288,14 +445,16 @@ contains
     !!
     !!
     !!
-    !------------------------------------------------------------------------------
+    !-------------------------------------------------------------------------------------------------
     subroutine close(self)
         class(chidg_t), intent(inout)   :: self
 
+
         call log_finalize()
 
+
     end subroutine
-    !##############################################################################
+    !##################################################################################################
 
 
 

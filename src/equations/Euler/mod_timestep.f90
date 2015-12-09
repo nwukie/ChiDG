@@ -45,7 +45,7 @@ contains
         !
         ! Loop through elements and compute time-step function
         !
-        do idom = 1,data%ndomains
+        do idom = 1,data%ndomains()
 
         !
         ! Get variable indices

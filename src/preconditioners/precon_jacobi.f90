@@ -51,7 +51,7 @@ contains
         logical     :: increase_maxelems = .false.
 
 
-        ndom = data%ndomains
+        ndom = data%ndomains()
 
 
         !

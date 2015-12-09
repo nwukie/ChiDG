@@ -99,8 +99,10 @@ subroutine test__compute_chimera_interpolators()
 
 
 
-
-
+    !
+    ! Close ChiDG interface
+    !
+    call chidg%close()
 
 
 

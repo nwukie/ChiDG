@@ -77,6 +77,10 @@ contains
     subroutine tearDown(this)
         class(test__grid_operators),    intent(inout)   :: this
         
+        !
+        ! Close ChiDG interface
+        !
+        call this%chidg%close()
         
     end subroutine
 

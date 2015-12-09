@@ -90,6 +90,13 @@ contains
     
     subroutine tearDown(this)
         class(test_element_linearA),    intent(inout)   :: this
+
+
+        !
+        ! Close ChiDG interface
+        !
+        call this%chidg%close()
+
     end subroutine
 
 

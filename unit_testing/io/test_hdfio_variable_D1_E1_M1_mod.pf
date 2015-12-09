@@ -57,6 +57,7 @@ contains
     subroutine tearDown(this)
         class(test_hdfio_variable_D1_E1_M1),    intent(inout)   :: this
         
+        call this%chidg%close()
     end subroutine
 
 

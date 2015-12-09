@@ -83,6 +83,13 @@ contains
     
     subroutine tearDown(this)
         class(test_eq_duallinearadvection),    intent(inout)   :: this
+
+
+        !
+        ! Close ChiDG interface
+        !
+        call this%chidg%close()
+
     end subroutine
 
 

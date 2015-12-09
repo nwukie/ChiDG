@@ -88,12 +88,13 @@ contains
             
             ! Assign reference solution
             do ielem = 1,this%chidg%data%mesh(1)%nelem
-                q(ielem)%vec = ref
+                q(ielem)%vec = ref + real(ielem,rk)
             end do
             
             !
             ! Write variable
             !
+            print*, 'Writing variable'
             call write_variable_hdf(this%filename,'u',1,idom,this%chidg%data)
             
 
@@ -106,22 +107,40 @@ contains
             !
             ! Read variable
             !
+            print*, 'Reading variable'
             call read_variable_hdf(this%filename,'u',1,idom,this%chidg%data)
            
 
 
             ! Test that the read solution values equal the reference values
             ! Testing elements 1-10, out of 27
-            @assertEqual(ref,q(1)%vec, tol)
-            @assertEqual(ref,q(2)%vec, tol)
-            @assertEqual(ref,q(3)%vec, tol)
-            @assertEqual(ref,q(4)%vec, tol)
-            @assertEqual(ref,q(5)%vec, tol)
-            @assertEqual(ref,q(6)%vec, tol)
-            @assertEqual(ref,q(7)%vec, tol)
-            @assertEqual(ref,q(8)%vec, tol)
-            @assertEqual(ref,q(9)%vec, tol)
-            @assertEqual(ref,q(10)%vec, tol)        
+            @assertEqual(ref+1._rk, q(1)%vec,  tol)
+            @assertEqual(ref+2._rk, q(2)%vec,  tol)
+            @assertEqual(ref+3._rk, q(3)%vec,  tol)
+            @assertEqual(ref+4._rk, q(4)%vec,  tol)
+            @assertEqual(ref+5._rk, q(5)%vec,  tol)
+            @assertEqual(ref+6._rk, q(6)%vec,  tol)
+            @assertEqual(ref+7._rk, q(7)%vec,  tol)
+            @assertEqual(ref+8._rk, q(8)%vec,  tol)
+            @assertEqual(ref+9._rk, q(9)%vec,  tol)
+            @assertEqual(ref+10._rk,q(10)%vec, tol)        
+            @assertEqual(ref+11._rk,q(11)%vec, tol)        
+            @assertEqual(ref+12._rk,q(12)%vec, tol)        
+            @assertEqual(ref+13._rk,q(13)%vec, tol)        
+            @assertEqual(ref+14._rk,q(14)%vec, tol)        
+            @assertEqual(ref+15._rk,q(15)%vec, tol)        
+            @assertEqual(ref+16._rk,q(16)%vec, tol)        
+            @assertEqual(ref+17._rk,q(17)%vec, tol)        
+            @assertEqual(ref+18._rk,q(18)%vec, tol)        
+            @assertEqual(ref+19._rk,q(19)%vec, tol)        
+            @assertEqual(ref+20._rk,q(20)%vec, tol)        
+            @assertEqual(ref+21._rk,q(21)%vec, tol)        
+            @assertEqual(ref+22._rk,q(22)%vec, tol)        
+            @assertEqual(ref+23._rk,q(23)%vec, tol)        
+            @assertEqual(ref+24._rk,q(24)%vec, tol)        
+            @assertEqual(ref+25._rk,q(25)%vec, tol)        
+            @assertEqual(ref+26._rk,q(26)%vec, tol)        
+            @assertEqual(ref+27._rk,q(27)%vec, tol)        
        end associate
             
     end subroutine

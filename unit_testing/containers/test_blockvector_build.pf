@@ -79,6 +79,10 @@ subroutine test_blockvector_build()
 
 
 
+    !
+    ! Close ChiDG interface
+    !
+    call chidg%close()
 
 
 end subroutine

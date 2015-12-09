@@ -36,7 +36,7 @@ contains
         !
         ! Loop through elements in mesh and call function projection
         !
-        do idom = 1,data%ndomains
+        do idom = 1,data%ndomains()
             ! Check that variable index 'ivar' is valid
             if (ivar > data%eqnset(idom)%item%neqns ) call chidg_signal(FATAL,'initialize_variable: variable index ivar exceeds the number of equations')
 

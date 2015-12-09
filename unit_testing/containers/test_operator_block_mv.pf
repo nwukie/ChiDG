@@ -118,6 +118,10 @@ subroutine test_operator_block_mv()
 
 
 
+    !
+    ! Close ChiDG interface
+    !
+    call chidg%close()
 
 
 

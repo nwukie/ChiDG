@@ -105,6 +105,11 @@ contains
     subroutine tearDown(this)
         class(test_compute_gq_donor),  intent(inout)   :: this
 
+        !
+        ! Close ChiDG interface
+        !
+        call this%chidg%close()
+
     end subroutine
 
 

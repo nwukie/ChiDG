@@ -93,6 +93,18 @@ subroutine test_operator_block_dot()
 
     @assertEqual(dot_ref,dot_test,tol)
 
+
+
+
+
+
+
+    !
+    ! Close ChiDG interface
+    !
+    call chidg%close()
+
+
 end subroutine test_operator_block_dot
 
 

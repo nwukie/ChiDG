@@ -110,6 +110,16 @@ subroutine test_integrate_boundary_unit_constant()
     ref_integral = -4._rk
     @assertEqual(ref_integral,integral)
 
+
+
+    !
+    ! Close ChiDG interface
+    !
+    call chidg%close()
+
+
+
+
 end subroutine
 
 
@@ -350,6 +360,20 @@ subroutine test_integrate_boundary_nonunit_constant()
 
 
     end associate
+
+
+
+
+
+
+    !
+    ! Close ChiDG interface
+    !
+    call chidg%close()
+
+
+
+
 end subroutine
 
 

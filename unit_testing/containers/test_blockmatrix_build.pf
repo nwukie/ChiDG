@@ -98,6 +98,10 @@ subroutine test_blockmatrix_build()
     @assertEqual(eight,fullmat(25:32,17:24))
 
 
+    !
+    ! Close ChiDG interface
+    !
+    call chidg%close()
 
 end subroutine
 

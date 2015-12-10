@@ -9,14 +9,15 @@
 !!
 !!
 !---------------------------------------------------------------------------------------------
-
-
-
-program driver
+program H5toTEC
+#include <messenger.h>
     use mod_kinds,              only: rk, ik
     use type_chidg,             only: chidg_t
     use type_dict,              only: dict_t
     use mod_tecio,              only: write_tecio_variables
+    use type_file_properties,   only: file_properties_t
+    use mod_file_utilities,     only: get_file_properties
+    use mod_io,                 only: nterms_s, eqnset
     
     !
     ! Variable declarations
@@ -24,15 +25,16 @@ program driver
     implicit none
     type(chidg_t)                       :: chidg
 
-    character(len=:), allocatable       :: gridfile, solutionfile
+    character(len=1024)                 :: gridfile, solutionfile
     integer                             :: nargs
+
+    type(file_properties_t)             :: file_props
 
 
 
     !
     ! Initialize ChiDG environment
     !
-    print*, 'chidg init'
     call chidg%init('env')
     !call chidg%init('io')
 
@@ -45,18 +47,13 @@ program driver
 
 
 
-    print*, 'hi  - 2'
     !
     ! Check if a filename was provided to the program
     !
-    if ( nargs < 2) then
-        print*, "Usage: H5toTEC 'gridfile' 'solutionfile'"
-        stop
-    end if
+    if ( nargs < 2) call chidg_signal(FATAL,"Usage: H5toTEC 'gridfile' 'solutionfile'")
 
 
 
-    print*, 'hi  - 3'
     !
     ! Get file name from command-line argument
     !
@@ -67,16 +64,16 @@ program driver
 
 
 
-    print*, 'hi  - 4'
 
 
     !
-    ! Get nterms_s and eqnset
+    ! Get nterms_s and eqnset. TODO: Read directly from file
     !
-    solution_properties = get_file_properties(solutionfile)
+    file_props = get_file_properties(solutionfile)
 
-    nterms_s    = solution_properties%nterms_s
-    equationset = solution_properties%equationset
+    nterms_s    = file_props%nterms_s(1)    ! Global variable from mod_io
+    eqnset      = file_props%eqnset(1)      ! Global variable from mod_io
+
 
 
     !
@@ -87,19 +84,15 @@ program driver
 
 
 
-
-
-    print*, 'hi  - 5'
     !
     ! Initialize solution data storage
     !
-    call chidg%init('chimera')
+!    call chidg%init('chimera')
     call chidg%data%init_sdata()
 
 
 
 
-    print*, 'hi  - 6'
     !
     ! Read solution modes from HDF5
     !
@@ -108,7 +101,6 @@ program driver
 
 
 
-    print*, 'hi  - 7'
     !
     ! Write solution in TecIO format
     !
@@ -123,7 +115,9 @@ program driver
     call chidg%close()
 
 
+    
 
 
 
-end program driver
+
+end program H5toTEC

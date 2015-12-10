@@ -3,7 +3,7 @@ module type_chidg
     use mod_equations,          only: initialize_equations
     use mod_grid,               only: initialize_grid
     use mod_io,                 only: read_input, nterms_s, eqnset
-    use mod_string_utils,       only: get_file_extension
+    use mod_string_utilities,   only: get_file_extension
 
     use type_chidg_data,        only: chidg_data_t
     use type_timescheme,        only: timescheme_t

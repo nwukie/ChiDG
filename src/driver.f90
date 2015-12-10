@@ -130,20 +130,6 @@ program driver
     end if
 
 
-    !
-    ! Write initial solution
-    !
-    if (initial_write) then
-        !
-        ! Current call
-        !
-        !call write_tecio_variables(chidg%data,'0.plt',1)
-
-
-        call chidg%write_solution(solutionfile_out)
-
-
-    end if
 
 
 
@@ -156,6 +142,10 @@ program driver
 
 
 
+    !
+    ! Write initial solution
+    !
+    if (initial_write) call chidg%write_solution(solutionfile_out)
 
 
     !
@@ -164,6 +154,10 @@ program driver
     call chidg%run()
 
 
+    !
+    ! Write final solution
+    !
+    if (final_write) call chidg%write_solution(solutionfile_out)
 
 
 
@@ -176,15 +170,6 @@ program driver
 
 
 
-
-
-    !
-    ! Write final solution
-    !
-    if (final_write) then
-        !call write_tecio_variables(chidg%data,'9999999.plt',1)
-        call chidg%write_solution(solutionfile_out)
-    end if
 
 
 

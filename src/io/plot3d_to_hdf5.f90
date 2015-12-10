@@ -88,8 +88,26 @@ program plot3d_to_hdf5
     read(7) nblks
     print*, nblks," grid blocks"
 
+
+
+    !
+    ! Add grid/solution attributes. Indicating the file contains a grid, and no solution.
+    !
+    call h5ltset_attribute_string_f(file_id, "/", 'contains_grid', 'Yes', ierr)
+    call h5ltset_attribute_string_f(file_id, "/", 'contains_solution', 'No', ierr)
+
+
+
+    !
     ! Add number of grid domains as attribute
+    !
     call h5ltset_attribute_int_f(file_id, "/", 'ndomains', [nblks], adim, ierr)
+
+
+
+
+
+
 
 
     ! Make space for storing dimensions of each block domain

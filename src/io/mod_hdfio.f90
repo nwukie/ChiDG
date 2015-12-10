@@ -4,6 +4,7 @@ module mod_hdfio
     use mod_constants,      only: ZERO
     use type_meshdata,      only: meshdata_t
     use type_chidg_data,    only: chidg_data_t
+    use mod_hdf_utilities,  only: get_ndomains_hdf
     use hdf5
     use h5lt
     use mod_io, only: nterms_s, eqnset
@@ -26,6 +27,7 @@ contains
     !!
     !!  @param[in]      filename    Character string of the file to be read
     !!  @param[inout]   domains     Allocatable array of domains. Allocated in this routine.
+    !!
     !-----------------------------------------------------------------------------------------------------------------------------------
     subroutine read_grid_hdf(filename, meshdata)
         use mod_io, only: nterms_s
@@ -48,33 +50,43 @@ contains
 
 
 
-
+        !
         !  Check file exists
+        !
         inquire(file=filename, exist=FileExists)
         if (.not. FileExists) then
             call chidg_signal(FATAL,'read_grid_hdf5: Could not find grid file')
         end if
 
 
+        !
         !  Initialize Fortran interface.
+        !
         call h5open_f(ierr)
         if (ierr /= 0) call chidg_signal(FATAL,'read_grid_hdf5 - h5open_f: HDF5 Fortran interface had an error during initialization')
 
 
 
+        !
         !  Open input file using default properties.
+        !
         call h5fopen_f(filename, H5F_ACC_RDONLY_F, fid, ierr)
         if (ierr /= 0) call chidg_signal(FATAL,'read_grid_hdf5 - h5fopen_f: There was an error opening the grid file.')
 
 
 
+        !
         !  Get number of domains from attribute 'ndomains' in file root
-        call h5ltget_attribute_int_f(fid, "/", 'ndomains', buf, ierr)
-        ndomains = buf(1)
-        if (ierr /= 0) call chidg_signal(FATAL,'read_grid_hdf5: h5ltget_attribute_int_f had a problem getting the number of domains')
+        !
+        ndomains = get_ndomains_hdf(fid)
+        !call h5ltget_attribute_int_f(fid, "/", 'ndomains', buf, ierr)
+        !ndomains = buf(1)
+        !if (ierr /= 0) call chidg_signal(FATAL,'read_grid_hdf5: h5ltget_attribute_int_f had a problem getting the number of domains')
 
 
+        !
         !  Allocate number of domains
+        !
         if (ndomains == 0) call chidg_signal(FATAL,'read_hdf5: No Domains were found in the file')
         allocate(meshdata(ndomains), stat=ierr)
         if (ierr /= 0) call AllocationError
@@ -99,7 +111,6 @@ contains
 
 
                 !  Get number of terms in coordinate expansion
-                !call h5ltget_attribute_int_f(fid, "/", 'mapping', buf, ierr)
                 call h5ltget_attribute_int_f(fid, trim(gname), 'mapping', buf, ierr)
 
 
@@ -191,13 +202,13 @@ contains
         end do
 
 
-        !  Close file
+        !
+        !  Close file and Fortran interface
+        !
         call h5fclose_f(fid, ierr)
-
-        !  Close Fortran interface
         call h5close_f(ierr)
 
-    end subroutine
+    end subroutine read_grid_hdf
     !#########################################################################################################################################
 
 
@@ -308,11 +319,12 @@ contains
         !
         ! Get number of terms in solution expansion
         !
-        call h5ltget_attribute_int_f(gid, "/", 'Order', ibuf, ierr)
+        call h5ltget_attribute_int_f(fid, trim(dname), 'order_solution', ibuf, ierr)
+
         order = ibuf(1)
         if (ierr /= 0) call chidg_signal(FATAL,"read_variable_hdf5 - h5ltget_attribute_int_f")
-        !nterms_1d = (order + 1)
-        nterms_1d = order
+        nterms_1d = (order + 1) ! To be consistent with the definition of (Order = 'Order of the polynomial')
+        !nterms_1d = order
         nterms_s = nterms_1d*nterms_1d*nterms_1d
 
 
@@ -443,15 +455,17 @@ contains
     !!  @param[in]      time        Integer of the time instance for the current variable to be read
     !!  @param[inout]   domains     Array of domains. Already allocated
     !-----------------------------------------------------------------------------------------------------------------------------------------
-    subroutine write_variable_hdf(filename,cvar,time,idom,data)
-        character(*),       intent(in)      :: filename
+!    subroutine write_variable_hdf(filename,cvar,time,idom,data)
+    subroutine write_variable_hdf(fid,cvar,time,dname,data)
+        !character(*),       intent(in)      :: filename
+        integer(HID_T),     intent(in)      :: fid
         character(*),       intent(in)      :: cvar
         integer(ik),        intent(in)      :: time
-        integer(ik),        intent(in)      :: idom
+        character(*),       intent(in)      :: dname
         type(chidg_data_t), intent(inout)   :: data
 
 
-        integer(HID_T)   :: fid, gid, sid, did, crp_list, memspace ! Identifiers
+        integer(HID_T)   :: gid, sid, did, crp_list      ! Identifiers
         integer(HSIZE_T) :: dims(2), maxdims(2), adim    ! Dataspace dimensions
         integer(HSIZE_T) :: dimsc(2)                     ! Chunk size for extendible data sets
         integer(HSIZE_T) :: offset(2)                    ! Data slab offset
@@ -460,52 +474,20 @@ contains
         integer                         :: ndims
         integer, dimension(1)           :: ibuf
         character(100)                  :: cbuf
-        !character(100)                  :: eqnstring
         character(100)                  :: varstring
         character(100)                  :: var_grp
         character(100)                  :: ctime
 
         real(rk), allocatable, target   :: var(:,:)
         type(c_ptr)                     :: cp_var
-        character(len=:), allocatable   :: dname
+        !character(len=:), allocatable   :: dname
 
         integer(ik)                     :: nmembers,    type,   ierr,       ndomains,   igrp,   &
                                            npts,        nterms_1d,  nterms_s,   order,  &
-                                           ivar,        ielem
+                                           ivar,        ielem,      idom
         logical                         :: FileExists, VariablesExists, DataExists, ElementsEqual
         logical                         :: exists
 
-
-
-        !
-        ! Check file exists
-        !
-        inquire(file=filename, exist=FileExists)
-        if (.not. FileExists) then
-            print*, "Error: write_variable_hdf5 - file not found: ", filename
-            stop
-        end if
-
-
-        !
-        ! Initialize Fortran interface.
-        !
-        call h5open_f(ierr)
-        if (ierr /= 0) call chidg_signal(FATAL,"write_variable_hdf5 - h5open_f")
-
-        
-        !
-        ! Open input file using default properties.
-        !
-        call h5fopen_f(filename, H5F_ACC_RDWR_F, fid, ierr)
-        if (ierr /= 0) call chidg_signal(FATAL,"write_variable_hdf5 - h5fopen_f")
-
-        
-
-        !
-        ! Get name of current domain
-        !
-        dname = data%info(idom)%name
 
 
 
@@ -531,19 +513,6 @@ contains
 
 
 
-        !
-        ! Set solution order ( 1st, 2nd, 3rd, etc. )
-        !
-        adim = 1
-        ibuf = 0
-        do while ( ibuf(1)*ibuf(1)*ibuf(1) /= data%mesh(idom)%nterms_s )
-           ibuf = ibuf + 1 
-        end do
-        !ibuf = data%mesh(idom)%nterms_s
-        call h5ltset_attribute_int_f(gid, "/", 'Order', ibuf, adim, ierr)
-        if (ierr /= 0) call chidg_signal(FATAL,"write_variable_hdf5 - h5ltset_attribute_int_f")
-
-
 
         !
         ! Compose variable string
@@ -556,6 +525,7 @@ contains
         !
         ! Set dimensions of dataspace to write
         !
+        idom = data%get_domain_index(dname)
         ndims = 2
         dims(1) = data%mesh(idom)%nterms_s
         dims(2) = data%mesh(idom)%nelem
@@ -640,14 +610,16 @@ contains
         if (ierr /= 0) call chidg_signal(FATAL,"write_variable_hdf5 - h5dwrite_f")
 
 
+        !
+        ! Update 'contains_solution' attribute
+        !
+        call h5ltset_attribute_string_f(fid, "/", 'contains_solution', 'Yes', ierr)
 
 
         call h5pclose_f(crp_list, ierr) ! Close dataset creation property
         call h5dclose_f(did,ierr)       ! Close Variable datasets
         call h5sclose_f(sid,ierr)       ! Close Variable dataspaces
         call h5gclose_f(gid,ierr)       ! Close Domain/Variable group
-        call h5fclose_f(fid, ierr)      ! Close HDF5 File
-        call h5close_f(ierr)            ! Close HDF5 Fortran interface
 
 
 
@@ -783,10 +755,15 @@ contains
         type(chidg_data_t), intent(inout)   :: data
 
 
+        integer(HID_T)                  :: fid
+        integer(HSIZE_T)                :: adim
         integer(ik)                     :: idom, ndomains
         integer(ik)                     :: ieqn, neqns
         integer(ik)                     :: time
         character(len=:),   allocatable :: cvar
+        character(len=:),   allocatable :: dname
+        integer                         :: ierr, order_s
+        logical                         :: fileexists
 
 
         !
@@ -802,9 +779,55 @@ contains
 
 
         !
+        ! Check file exists
+        !
+        inquire(file=filename, exist=fileexists)
+        if (.not. fileexists) call chidg_signal_one(FATAL, "Error: write_solution_hdf - file not found: ", filename)
+
+
+        !
+        ! Initialize Fortran interface.
+        !
+        call h5open_f(ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"write_solution_hdf - h5open_f")
+
+        
+        !
+        ! Open input file using default properties.
+        !
+        call h5fopen_f(filename, H5F_ACC_RDWR_F, fid, ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"write_solution_hdf - h5fopen_f")
+
+        
+
+
+
+        !
         ! Read solution for each domain
         !
         do idom = 1,ndomains
+            !
+            ! Get name of current domain
+            !
+            dname = data%info(idom)%name
+            
+
+            !
+            ! Write domain attributes: solution order, equation set
+            !
+            adim = 1
+            order_s = 0
+            do while ( order_s*order_s*order_s /= data%mesh(idom)%nterms_s )
+               order_s = order_s + 1 
+            end do
+            order_s = order_s - 1 ! to be consistent with he definition of 'Order of the polynomial'
+
+            call h5ltset_attribute_int_f(fid, trim(dname), 'order_solution', [order_s], adim, ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,"write_variable_hdf5 - h5ltset_attribute_int_f")
+
+            call h5ltset_attribute_string_f(fid, trim(dname), 'eqnset', trim(data%eqnset(idom)%item%name), ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,"write_variable_hdf5 - h5ltset_attribute_int_f")
+
 
             !
             ! Get number of equations for the current domain
@@ -822,12 +845,20 @@ contains
                 cvar = trim(data%eqnset(idom)%item%prop%eqns(ieqn)%name)
 
                 !
-                ! Read variable
+                ! Write variable
                 !
-                call write_variable_hdf(filename,cvar,time,idom,data)
+                call write_variable_hdf(fid,cvar,time,dname,data)
             end do ! ieqn
 
         end do ! idom
+
+
+
+        !
+        ! Close HDF5 file and Fortran interface
+        !
+        call h5fclose_f(fid, ierr)      ! Close HDF5 File
+        call h5close_f(ierr)            ! Close HDF5 Fortran interface
 
     end subroutine write_solution_hdf
     !##################################################################################################

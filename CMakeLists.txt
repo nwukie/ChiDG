@@ -161,7 +161,16 @@ message(STATUS "TECPLOT_INCLUDE_DIR: " ${TECPLOT_INCLUDE_DIR})
 #------------------------------------------------------------------
 add_subdirectory(DNAD)                                                                        
 add_subdirectory(src)
-include_directories(src/tools)    # Need include here for macro-enhanced message handler message.h
+#include_directories(src/tools)    # Need include here for macro-enhanced message handler message.h
+include_directories(${CMAKE_SOURCE_DIR}/src/tools)    # Need include here for macro-enhanced message handler messenger.h
+
+
+
+get_property(dirs DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY INCLUDE_DIRECTORIES)
+foreach(dir ${dirs})
+    message(STATUS "dir='${dir}'")
+endforeach()
+
 
 
 

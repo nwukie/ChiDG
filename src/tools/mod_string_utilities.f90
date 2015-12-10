@@ -1,4 +1,4 @@
-module mod_string_utils
+module mod_string_utilities
 
 
 
@@ -60,4 +60,4 @@ contains
 
 
 
-end module mod_string_utils
+end module mod_string_utilities

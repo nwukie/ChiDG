@@ -1,0 +1,135 @@
+! This test a function to copy a file
+!
+!   Testing:    copy_file
+!
+!---------------------------------------------------------------------
+@Test
+subroutine test_file_utilties_copy()
+    use pfunit_mod
+
+    use mod_file_utilities, only: copy_file, delete_file
+    implicit none
+
+    character(len=11)   :: fileorig = 'D1_E1_M1.h5'
+    character(len=16)   :: filecopy = 'test_copy.h5'
+
+    integer :: origsize, copysize
+
+    !
+    ! Copy file. THIS IS BEING TESTED.
+    !
+    call copy_file(fileorig,filecopy)
+
+
+    !
+    ! Set non-equal values so if they aren't changed, then test fails.
+    !
+    origsize = -1
+    copysize = 1
+
+
+    !
+    ! Get file size of original and copied files.
+    !
+    inquire(file=fileorig, size=origsize)
+    inquire(file=filecopy, size=copysize)
+
+
+    !
+    ! Test that sizes of original and copied files are equal.
+    !
+    @assertEqual(origsize,copysize)
+
+
+
+    !
+    ! Clean up by deleting file that was copied.
+    !
+    call delete_file(filecopy)
+
+end subroutine test_file_utilties_copy
+!#####################################################################
+
+
+
+
+
+
+
+! This tests a function to delete a file.
+!
+!   Testing:    delete_file
+!
+!--------------------------------------------------------------------
+@Test
+subroutine test_file_utilties_delete()
+    use pfunit_mod
+
+    use mod_file_utilities, only: copy_file, delete_file
+    implicit none
+
+    character(len=11)   :: fileorig = 'D1_E1_M1.h5'
+    character(len=16)   :: filecopy = 'test_delete.h5'
+
+    integer :: origsize, copysize
+    logical :: fileexists = .false.
+
+
+    
+    !
+    ! First, create a copy of a file.
+    !
+    call copy_file(fileorig,filecopy)
+
+
+
+    !
+    ! Delete copied file. THIS IS BEING TESTED
+    !
+    call delete_file(filecopy)
+
+
+
+    !
+    ! Inquire the existence of the file
+    !
+    inquire(file=filecopy, exist=fileexists)
+
+
+    !
+    ! Test that file does not exist.
+    !
+    @assertFalse(fileexists)
+
+
+end subroutine test_file_utilties_delete
+!####################################################################
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

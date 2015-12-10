@@ -1,7 +1,8 @@
 add_test_sources(io
                 test_hdfio_grid.pf
-                test_hdfio_variable_D1_E1_M1_mod.pf
-                test_hdfio_variable_D1_E27_M1_mod.pf)
+                test_hdfio_solution_mod.pf
+                test_file_utilities.pf
+                )
                 
 add_test_target(io unit ${io_sources})
 

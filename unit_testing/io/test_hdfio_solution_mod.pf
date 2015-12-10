@@ -1,0 +1,426 @@
+module test_hdfio_solution_mod
+    use pfunit_mod
+    use type_chidg,         only: chidg_t
+    use mod_kinds,          only: rk,ik
+    use mod_constants,      only: ONE, TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT, ZERO
+    use mod_hdfio,          only: read_grid_hdf, read_variable_hdf, write_variable_hdf
+    use type_chidg,         only: chidg_t
+    use type_meshdata,      only: meshdata_t
+    use mod_file_utilities, only: copy_file, delete_file
+    implicit none
+
+
+    public  :: test_hdfio_solution
+
+
+
+    !----------------------------------------------------------------
+    @TestCase
+    type, extends(TestCase) ::  test_hdfio_solution
+
+        type(chidg_t)               :: chidgO1
+        type(chidg_t)               :: chidgO2
+        character(12)               :: fileorig   = 'D1_E27_M1.h5'
+        character(15)               :: fileO1     = 'D1_E27_M1_O1.h5'
+        character(15)               :: fileO2     = 'D1_E27_M1_O2.h5'
+    
+    contains
+        procedure   ::  setUp
+        procedure   ::  tearDown
+    end type test_hdfio_solution
+    !#################################################################
+
+
+
+
+
+contains
+
+    !
+    ! NOTE: make sure to use 'this' instead of 'self' since these are over-writting a derived type 
+    ! procedure. The argument names have to match
+    !
+    !---------------------------------------------------------------------------------------------------------------
+    subroutine setUp(this)
+        class(test_hdfio_solution),    intent(inout)   :: this
+
+        integer(ik)                     :: nterms_s, nterms_c
+        type(meshdata_t), allocatable   :: meshdata(:)
+
+        !
+        ! Initialize ChiDG environment
+        !
+        call this%chidgO1%init('env')
+
+
+        !
+        ! Read grid data from file 
+        !
+        call read_grid_hdf(this%fileorig, meshdata)
+    
+
+        !
+        ! Initialize chidg domain
+        !
+        nterms_s = 1
+        call this%chidgO1%data%add_domain(meshdata(1)%name,meshdata(1)%points,meshdata(1)%nterms_c,'scalar',nterms_s)
+        call this%chidgO1%data%init_sdata()
+
+        nterms_s = 8
+        call this%chidgO2%data%add_domain(meshdata(1)%name,meshdata(1)%points,meshdata(1)%nterms_c,'scalar',nterms_s)
+        call this%chidgO2%data%init_sdata()
+
+
+        !
+        ! Copy 'D1_E27_M1.h5' to 'D1_E27_M1_O1.h5' and 'D1_E27_M1_O2.h5'
+        !
+        call copy_file(this%fileorig, this%fileO1)
+        call copy_file(this%fileorig, this%fileO2)
+        
+    end subroutine
+    !###############################################################################################################
+
+    
+
+    !---------------------------------------------------------------------------------------------------------------
+    subroutine tearDown(this)
+        class(test_hdfio_solution),    intent(inout)   :: this
+        
+        !
+        ! Delete files that were generated
+        !
+        call delete_file(this%fileO1)
+        call delete_file(this%fileO2)
+
+
+        !
+        ! Close ChiDG instances
+        !
+        call this%chidgO1%close()
+        call this%chidgO2%close()
+
+    end subroutine
+    !###############################################################################################################
+
+
+
+
+!-----------------------------------------------------------------------------
+!   TESTS
+!-----------------------------------------------------------------------------
+
+
+
+
+    ! This tests writing a first-order solution and reading the first-order solution
+    ! back from file.
+    !
+    !   Testing:    write_solution (O1), read_solution (O1)
+    !
+    !---------------------------------------------------------------------------------
+    @Test
+    subroutine test_hdfio_soluiton_writeO1_read_O1(this)
+        class(test_hdfio_solution),     intent(inout)   :: this 
+
+        real(rk)                    :: tol, ref(1)
+        integer(ik)                 :: ielem, idom
+
+        tol = 1.e-14_rk
+
+        idom = 1
+
+        associate ( q => this%chidgO1%data%sdata%q%dom(1)%lvecs )
+
+            !
+            ! Set reference solution values
+            !
+            ref = [ONE]
+
+
+            !
+            ! Assign reference solution
+            !
+            do ielem = 1,this%chidgO1%data%mesh(1)%nelem
+                q(ielem)%vec = ref + real(ielem,rk)
+            end do
+
+
+            !
+            ! Write variable
+            !
+            call this%chidgO1%write_solution(this%fileO1)
+
+
+            !
+            ! Reset variable
+            !
+            do ielem = 1,this%chidgO1%data%mesh(1)%nelem
+                q(ielem)%vec = -1._rk
+            end do
+
+
+            !
+            ! Read variable
+            !
+            call this%chidgO1%read_solution(this%fileO1)
+
+
+            !
+            ! Test that the read solution values equal the reference values
+            !
+            do ielem = 1,this%chidgO1%data%mesh(1)%nelem
+                @assertEqual(ref+real(ielem,rk), q(ielem)%vec,  tol)
+            end do
+
+        end associate
+
+    end subroutine test_hdfio_soluiton_writeO1_read_O1
+    !#################################################################################
+
+
+
+
+
+
+
+
+
+    ! This tests writing a second-order solution and reading the second-order solution
+    ! back from file.
+    !
+    !   Testing:    write_solution, read_solution
+    !
+    !---------------------------------------------------------------------------------
+    @Test
+    subroutine test_hdfio_soluiton_writeO2_read_O2(this)
+        class(test_hdfio_solution),     intent(inout)   :: this 
+
+        real(rk)                    :: tol, ref(8)
+        integer(ik)                 :: ielem, idom
+        
+        tol = 1.e-14_rk
+        
+        idom = 1
+        
+        associate ( q => this%chidgO2%data%sdata%q%dom(1)%lvecs )
+            
+            !
+            ! Set reference solution values
+            !
+            ref = [ONE, TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT]
+            
+            
+            !
+            ! Assign reference solution
+            !
+            do ielem = 1,this%chidgO2%data%mesh(1)%nelem
+                q(ielem)%vec = ref + real(ielem,rk)
+            end do
+            
+
+            !
+            ! Write variable
+            !
+            call this%chidgO2%write_solution(this%fileO2)
+            
+
+            !
+            ! Reset variable
+            !
+            do ielem = 1,this%chidgO2%data%mesh(1)%nelem
+                q(ielem)%vec = -1._rk
+            end do
+            
+
+            !
+            ! Read variable
+            !
+            call this%chidgO2%read_solution(this%fileO2)
+           
+
+            !
+            ! Test that the read solution values equal the reference values
+            !
+            do ielem = 1,this%chidgO2%data%mesh(1)%nelem
+                @assertEqual(ref+real(ielem,rk), q(ielem)%vec,  tol)
+            end do
+
+       end associate
+            
+    end subroutine test_hdfio_soluiton_writeO2_read_O2
+    !#################################################################################
+
+
+
+
+
+
+
+
+
+
+
+
+
+    ! This tests writing a first-order solution and reading it back into a second-order
+    ! solution.
+    !
+    !   Testing:    write_solution, read_solution
+    !
+    !---------------------------------------------------------------------------------
+    @Test
+    subroutine test_hdfio_soluiton_writeO1_read_O2(this)
+        class(test_hdfio_solution),     intent(inout)   :: this 
+
+        real(rk)                    :: tol, ref_q1(1), ref_q2(8)
+        integer(ik)                 :: ielem, idom
+        
+        tol = 1.e-14_rk
+        
+        idom = 1
+        
+        associate ( q1 => this%chidgO1%data%sdata%q%dom(1)%lvecs, &
+                    q2 => this%chidgO2%data%sdata%q%dom(1)%lvecs )
+            
+            !
+            ! Set q1 reference solution values
+            !
+            ref_q1 = [ONE]
+            
+            
+            !
+            ! Assign reference solution
+            !
+            do ielem = 1,this%chidgO1%data%mesh(1)%nelem
+                q1(ielem)%vec = ref_q1 + real(ielem,rk)
+            end do
+            
+
+            !
+            ! Write variable
+            !
+            call this%chidgO1%write_solution(this%fileO1)
+            
+
+            !
+            ! Reset O2 variable
+            !
+            do ielem = 1,this%chidgO2%data%mesh(1)%nelem
+                q2(ielem)%vec = -1._rk
+            end do
+            
+
+            !
+            ! Read O1 solution to O2 instance.
+            !
+            call this%chidgO2%read_solution(this%fileO1)
+           
+            !
+            ! Set new expected values
+            !
+            ref_q2 = [ONE, ZERO, ZERO, ZERO, ZERO, ZERO, ZERO, ZERO]
+
+            !
+            ! Test that the read solution values equal the expected values
+            !
+            do ielem = 1,this%chidgO2%data%mesh(1)%nelem
+                @assertEqual(ref_q2(1)+real(ielem,rk), q2(ielem)%vec(1),  tol)
+                @assertEqual(ZERO, q2(ielem)%vec(2:),  tol)
+            end do
+
+       end associate
+            
+    end subroutine test_hdfio_soluiton_writeO1_read_O2
+    !#################################################################################
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    ! This tests writing a first-order solution and reading it back into a second-order
+    ! solution.
+    !
+    !   Testing:    write_solution, read_solution
+    !
+    !---------------------------------------------------------------------------------
+    @Test
+    subroutine test_hdfio_soluiton_writeO2_read_O1(this)
+        class(test_hdfio_solution),     intent(inout)   :: this 
+
+        real(rk)                    :: tol, ref_q1(1), ref_q2(8)
+        integer(ik)                 :: ielem, idom
+        
+        tol = 1.e-14_rk
+        
+        idom = 1
+        
+        associate ( q1 => this%chidgO1%data%sdata%q%dom(1)%lvecs, &
+                    q2 => this%chidgO2%data%sdata%q%dom(1)%lvecs )
+            
+            !
+            ! Set q2 reference solution values
+            !
+            ref_q2 = [ONE, TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT]
+            
+            
+            !
+            ! Assign reference solution
+            !
+            do ielem = 1,this%chidgO2%data%mesh(1)%nelem
+                q2(ielem)%vec = ref_q2 + real(ielem,rk)
+            end do
+            
+
+            !
+            ! Write variable
+            !
+            call this%chidgO2%write_solution(this%fileO2)
+            
+
+            !
+            ! Reset O1 variable
+            !
+            do ielem = 1,this%chidgO1%data%mesh(1)%nelem
+                q1(ielem)%vec = -1._rk
+            end do
+            
+
+            !
+            ! Read O2 solution to O1 instance.
+            !
+            call this%chidgO1%read_solution(this%fileO2)
+           
+            !
+            ! Set new expected values
+            !
+            ref_q1 = [ONE]
+
+            !
+            ! Test that the read solution values equal the expected values
+            !
+            do ielem = 1,this%chidgO1%data%mesh(1)%nelem
+                @assertEqual(ref_q1(1)+real(ielem,rk), q1(ielem)%vec(1),  tol)
+            end do
+
+       end associate
+            
+    end subroutine test_hdfio_soluiton_writeO2_read_O1
+    !#################################################################################
+
+
+
+
+
+
+
+
+end module test_hdfio_solution_mod

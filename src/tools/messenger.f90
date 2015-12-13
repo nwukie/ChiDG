@@ -281,9 +281,8 @@ contains
         character(len=*),   intent(in),         optional        :: delimiter
 
         class(*), pointer               :: auxdata => null()
-        character(len=:), allocatable   :: delim_str
 
-        integer :: iaux, ielem
+        integer :: iaux
         logical :: print_info_one, print_info_two, print_info_three, print_info_four, print_info_five
         logical :: print_info_six, print_info_seven, print_info_eight
 
@@ -365,7 +364,6 @@ contains
         character(*),   intent(in), optional    :: delimiter
 
         character(100)                  :: temp
-        character(len=:), allocatable   :: delim_str
 
 
         !

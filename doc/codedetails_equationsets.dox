@@ -1,0 +1,108 @@
+/*!
+
+
+\page subpage_equationsets Equation sets
+
+
+
+\section s_equationset_background   Mathematical background
+
+
+\f$
+\frac{\partial Q}{\partial t} + \nabla \cdot \vec{F}(Q,\nabla Q) +
+S(Q,\nabla Q) = 0
+\f$
+
+The solution variables are expressed as an expansion in basis
+polynomials constructed as a tensor product of 1D Legendre polynomials as
+
+\f$
+Q(t,x,y,z) = \sum_{i=0}^N \sum_{j=0}^N \sum_{k=0}^N Q_{ijk}(t) \psi_i(x)
+\psi_j(y) \psi_k(z)
+\f$
+
+Multiplying by a column of test functions $\bm{\psi}$ and applying
+Gauss' Divergence Theorem gives our working form of the discontinuous
+Galerkin method as
+
+\f$
+\int_{\Omega_e} \bm{\psi} \frac{\partial Q}{\partial t} d\Omega +
+\int_{\Gamma_e} \bm{\psi} \vec{F} \cdot \vec{n} d\Gamma - 
+\int_{\Omega_e} \nabla \bm{\psi} \cdot \vec{F} d\Omega + 
+\int_{\Omega_e} \bm{\psi} \vec{S} d\Omega = 0
+\f$
+
+Two important terms in the above equation are the boundary flux integral and the volume flux
+integral, respectively:
+
+\f$
+    \int_{\Gamma_e} \bm{\psi} \vec{F} \cdot \vec{n} d\Gamma
+\f$
+
+\f$
+    \int_{\Omega_e} \nabla \bm{\psi} \cdot \vec{F} d\Omega
+\f$
+
+
+
+
+
+
+
+
+
+
+
+\section s_equationset_chidg ChiDG equation set
+
+
+Equation sets in ChiDG are extended from the abstract base class, `equationset_t`. This is
+used inside of a wrapper, `equationset_wrapper_t`. This allows one to have an array of 
+`equationset_t` instances, each of a potentially different concrete type. For example, a 
+`chidg_t` instance with multiple domains has an `equationset_t` for each domain, but the 
+equation set for domain1 could be the Euler equations, while the equationset for domain2 could
+be the equations for heat conduction in a solid.
+
+
+
+\image html d__equationset.png
+
+
+
+\snippet doc/examples/type_equationset.f90 equationset_t
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+\section s_equationset Defining a new equation set
+To define an equation set in ChiDG, declare a new concrete type that is derived from the `equationset_t` abstract class.
+
+\snippet doc/examples/eqn_euler.f90 euler_e
+
+Each equation set is required to implement the `init` routine, which is used to define the equation properties, equations, and 
+flux components. The activities that one must implement here are
+    - Set the equation set name
+    - Set a properties type for the equation set
+    - Add equations
+    - Add flux components
+
+This is demonstrated here:
+
+\snippet doc/examples/eqn_euler.f90 euler_e init
+
+
+
+
+
+*/

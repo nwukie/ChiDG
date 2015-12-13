@@ -11,39 +11,39 @@ module type_densevector
 
 
 
+    !>
+    !!
+    !!
+    !!
+    !!
+    !!
+    !!
+    !--------------------------------------------------------------------------------------------
     type, public :: densevector_t
         ! Element Associativity
-        integer(ik), private    :: parent_ = 0                  !> Associated parent element
+        integer(ik), private    :: parent_ = 0                  !< Associated parent element
 
 
         ! Storage size and equation information
-        integer(ik), private    :: nterms_                      !> Number of terms in an expansion
-        integer(ik), private    :: nvars_                       !> Number of equations included
+        integer(ik), private    :: nterms_                      !< Number of terms in an expansion
+        integer(ik), private    :: nvars_                       !< Number of equations included
     
 
         ! Vector storage
-        real(rk),  dimension(:), allocatable :: vec             !> Vector storage
-
-        ! ifort is sometimes successfull at mapping this correctly. BUT, it doens't always get it right.
-        ! Very difficult to debug. Thoroughly test before reenabling. In the most recent case of a 3x3x3 element
-        ! case, all densevectors in blockvector were mapped correctly, except the last three elements, and seemingly
-        ! only after the second time step. Potentially, could be an assignment error, where the pointer doens't get copied correctly
-        !real(rk),  dimension(:,:), pointer   :: mat => null()   !> Matrix-view alias of vec  (nterms, neq)
-
-
+        real(rk),  dimension(:), allocatable :: vec             !< Vector storage
 
 
     contains
         ! Initializers
         generic, public :: init => init_vector
-        procedure, private :: init_vector       !> Initialize vector storage
+        procedure, private :: init_vector       !< Initialize vector storage
 
-        procedure :: parent     !> return parent element
-        procedure :: nentries   !> return number of vector entries
-        !procedure :: resize     !> resize vector storage
-        procedure :: reparent   !> reassign parent
-        procedure :: nterms     !> return nterms_
-        procedure :: nvars      !> return nvars_
+        procedure :: parent     !< return parent element
+        procedure :: nentries   !< return number of vector entries
+        !procedure :: resize     !< resize vector storage
+        procedure :: reparent   !< reassign parent
+        procedure :: nterms     !< return nterms_
+        procedure :: nvars      !< return nvars_
 
 
         procedure, public   :: setvar
@@ -58,6 +58,7 @@ module type_densevector
 
 !        final :: destructor
     end type densevector_t
+    !#####################################################################################################
 
 
 
@@ -118,7 +119,8 @@ contains
     !!  @param[in]  nterms  Number of terms in an expansion
     !!  @param[in]  nvars   Number of equations being represented
     !!  @param[in]  parent  Index of associated parent element
-    !-----------------------------------------------------------
+    !!
+    !-----------------------------------------------------------------------------------
     subroutine init_vector(self,nterms,nvars,parent)
         class(densevector_t),   intent(inout), target   :: self
         integer(ik),            intent(in)              :: nterms
@@ -127,18 +129,24 @@ contains
 
         integer(ik) :: ierr, vsize
 
+        !
         ! Set dense-vector integer data
+        !
         self%parent_ = parent
         self%nterms_ = nterms
         self%nvars_  = nvars
 
 
+        !
         ! Compute total number of elements for densevector storage
+        !
         vsize = nterms * nvars
 
 
+        !
         ! Allocate block storage
         ! Check if storage was already allocated and reallocate if necessary
+        !
         if (allocated(self%vec)) then
             deallocate(self%vec)
             allocate(self%vec(vsize), stat=ierr)
@@ -148,15 +156,13 @@ contains
         if (ierr /= 0) call AllocationError
 
 
+        !
         ! Initialize to zero
+        !
         self%vec = 0._rk
 
-
-        ! Initialize matrix pointer alias
-        !self%mat(1:nterms,1:nvars) => self%vec
-
-
     end subroutine
+    !####################################################################################
 
 
 
@@ -168,7 +174,7 @@ contains
     !!
     !!  @author Nathan A. Wukie
     !!
-    !--------------------------------------------------------------------------------
+    !------------------------------------------------------------------------------------
     function getvar(self,ivar) result(modes_out)
         !class(densevector_t),   intent(inout)   :: self
         class(densevector_t),   intent(in)      :: self
@@ -178,20 +184,33 @@ contains
         integer(ik)                             :: istart, iend
 
 
+        !
+        ! Compute start and end indices for accessing modes of a variable
+        !
         istart = (ivar-1) * self%nterms_ + 1
         iend   = istart + (self%nterms_-1)
 
+
+        !
+        ! Return modes
+        !
         modes_out = self%vec(istart:iend)
 
         ! ifort has occasional and inconsistent trouble remapping vec to mat so this access is sometimes wrong.
         ! Pretty difficult to diagnose. Should test as much as possible before reenabling the map
         !modes_out = self%mat(:,ivar)
     end function
+    !#####################################################################################
 
 
 
 
 
+    !>
+    !!
+    !!
+    !!
+    !------------------------------------------------------------------------------------
     subroutine setvar(self,ivar,vals)
         class(densevector_t),   intent(inout)   :: self
         integer(ik),            intent(in)      :: ivar
@@ -199,16 +218,33 @@ contains
 
         integer(ik) :: istart, iend
 
+        !
+        ! Compute start and end indices for accessing modes of a variable
+        !
         istart = (ivar-1) * self%nterms_ + 1
         iend   = istart + (self%nterms_-1)
 
+
+        !
+        ! Set modes
+        !
         self%vec(istart:iend) = vals
 
 
     end subroutine
+    !####################################################################################
 
 
 
+
+
+
+
+    !>
+    !!
+    !!
+    !!
+    !------------------------------------------------------------------------------------
     function getterm(self,ivar,iterm) result(mode_out)
         class(densevector_t),   intent(inout)   :: self
         integer(ik),            intent(in)      :: ivar, iterm
@@ -216,13 +252,33 @@ contains
         real(rk)    :: mode_out
         integer(ik) :: istart, iterm_g
 
+        !
+        ! Compute start and end indices for accessing modes of a variable
+        !
         istart = (ivar-1) * self%nterms_ + 1
         iterm_g = istart + (iterm-1)
     
+
+        !
+        ! Get mode
+        !
         mode_out = self%vec(iterm_g)
 
     end function
+    !####################################################################################
 
+
+
+
+
+
+
+
+    !>
+    !!
+    !!
+    !!
+    !------------------------------------------------------------------------------------
     subroutine setterm(self,ivar,iterm,mode_in)
         class(densevector_t),   intent(inout)   :: self
         integer(ik),            intent(in)      :: ivar, iterm
@@ -230,12 +286,26 @@ contains
 
         integer(ik) :: istart, iterm_g
 
+        !
+        ! Compute start and end indices for accessing modes of a variable
+        !
         istart = (ivar-1) * self%nterms_ + 1
         iterm_g = istart + (iterm-1)
 
+
+        !
+        ! Set mode
+        !
         self%vec(iterm_g) = mode_in
 
     end subroutine
+    !#####################################################################################
+
+
+
+
+
+
 
 
 
@@ -244,13 +314,16 @@ contains
     !> Function that returns number of entries in block storage
     !!
     !!  @author Nathan A. Wukie
-    !------------------------------------------------------------
+    !!
+    !------------------------------------------------------------------------------------
     function nentries(self) result(n)
         class(densevector_t),   intent(in)      :: self
         integer(ik)                             :: n
 
         n = size(self%vec)
+
     end function
+    !#####################################################################################
 
 
 
@@ -265,14 +338,17 @@ contains
 
     !> Function that returns nterms_ private component
     !!
+    !!  @author Nathan A. Wukie
     !!
-    !-----------------------------------------------------------
+    !------------------------------------------------------------------------------------
     pure function nterms(self) result(nterms_out)
         class(densevector_t),   intent(in)  :: self
         integer(ik)                         :: nterms_out
 
         nterms_out = self%nterms_
+
     end function
+    !#####################################################################################
 
 
 
@@ -285,15 +361,17 @@ contains
 
     !> Function that returns nvars_ private component
     !!
+    !!  @author Nathan A. Wukie
     !!
-    !-----------------------------------------------------------
+    !------------------------------------------------------------------------------------
     pure function nvars(self) result(nvars_out)
         class(densevector_t),   intent(in)  :: self
         integer(ik)                         :: nvars_out
 
         nvars_out = self%nvars_
-    end function
 
+    end function
+    !#####################################################################################
 
 
 
@@ -311,13 +389,16 @@ contains
     !> Function that returns index of block parent
     !!
     !!  @author Nathan A. Wukie
-    !------------------------------------------------------------
+    !!
+    !------------------------------------------------------------------------------------
     function parent(self) result(par)
         class(densevector_t),   intent(in)      :: self
         integer(ik)                             :: par
 
         par = self%parent_
+
     end function
+    !#####################################################################################
 
 
 
@@ -358,13 +439,15 @@ contains
     !!  @author Nathan A. Wukie
     !!
     !!  @param[in]  par     Index of new parent element
-    !------------------------------------------------------------
+    !------------------------------------------------------------------------------------
     subroutine reparent(self,par)
         class(densevector_t),   intent(inout)   :: self
         integer(ik),            intent(in)      :: par
 
         self%parent_ = par
+
     end subroutine
+    !#####################################################################################
 
 
 
@@ -382,7 +465,7 @@ contains
     !!  @author Nathan A. Wukie
     !!
     !!
-    !-----------------------------------------------------------
+    !------------------------------------------------------------------------------------
     subroutine clear(self)
         class(densevector_t),   intent(inout)   :: self
 
@@ -390,6 +473,7 @@ contains
         self%vec = ZERO
 
     end subroutine clear
+    !#####################################################################################
 
 
 
@@ -414,7 +498,6 @@ contains
         real(rk),               intent(in)  :: left
         type(densevector_t),    intent(in)  :: right
         type(densevector_t), target :: res
-        real(rk), pointer :: temp(:)
 
         res%parent_ = right%parent_
         res%nvars_  = right%nvars_
@@ -423,8 +506,6 @@ contains
         res%vec     = left * right%vec
 
         
-        !temp => res%vec
-        !res%mat(1:res%nterms_,1:res%nvars_) => temp
 
     end function
 
@@ -433,7 +514,6 @@ contains
         type(densevector_t),    intent(in)  :: left
         real(rk),               intent(in)  :: right
         type(densevector_t), target :: res
-        real(rk), pointer :: temp(:)
 
 
         res%parent_ = left%parent_
@@ -443,8 +523,6 @@ contains
         res%vec     = left%vec * right
 
 
-        !temp => res%vec
-        !res%mat(1:res%nterms_,1:res%nvars_) => temp
     end function
 
 
@@ -458,7 +536,6 @@ contains
         real(rk),               intent(in)  :: left
         type(densevector_t),    intent(in)  :: right
         type(densevector_t), target :: res
-        real(rk), pointer :: temp(:)
 
 
         res%parent_ = right%parent_
@@ -467,8 +544,6 @@ contains
         
         res%vec     = left / right%vec
 
-        !temp => res%vec
-        !res%mat(1:res%nterms_,1:res%nvars_) => temp
     end function
 
 
@@ -476,7 +551,6 @@ contains
         type(densevector_t),        intent(in)  :: left
         real(rk),                   intent(in)  :: right
         type(densevector_t), target :: res
-        real(rk), pointer :: temp(:)
 
 
         res%parent_ = left%parent_
@@ -486,8 +560,6 @@ contains
         res%vec     = left%vec / right
 
 
-        !temp => res%vec
-        !res%mat(1:res%nterms_,1:res%nvars_) => temp
     end function
 
 
@@ -500,7 +572,6 @@ contains
         type(densevector_t),    intent(in)  :: left
         type(densevector_t),    intent(in)  :: right
         type(densevector_t), target :: res
-        real(rk), pointer :: temp(:)
 
 
         res%parent_ = left%parent_
@@ -509,10 +580,6 @@ contains
 
         res%vec     = left%vec + right%vec
 
-
-
-        !temp => res%vec
-        !res%mat(1:res%nterms_,1:res%nvars_) => temp
     end function
 
 
@@ -522,7 +589,6 @@ contains
         type(densevector_t),    intent(in)  :: left
         type(densevector_t),    intent(in)  :: right
         type(densevector_t), target :: res
-        real(rk), pointer :: temp(:)
 
 
         res%parent_ = left%parent_
@@ -531,43 +597,10 @@ contains
 
         res%vec     = left%vec - right%vec
 
-
-        !temp => res%vec
-        !res%mat(1:res%nterms_,1:res%nvars_) => temp
     end function
 
 
     
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -580,4 +613,10 @@ contains
 !
 !    end subroutine
 !
+
+
+
+
+
+
 end module type_densevector

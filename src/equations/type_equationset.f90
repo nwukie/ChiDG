@@ -12,16 +12,17 @@ module type_equationset
 
 
 
-    ! Abstract equation-set type. Can be extended to implement a concrete equation set.
-    !   - Contains name and number of equations.
-    !   - Contains properties type with equations and material(ex. fluid) properties and definitions
-    !   - Contains arrays of flux components
-    !
-    !   @author Nathan A. Wukie
-    !
+    !> Abstract equation-set type. Can be extended to implement a concrete equation set.
+    !!   - Contains name and number of equations.
+    !!   - Contains properties type with equations and material(ex. fluid) properties and definitions
+    !!   - Contains arrays of flux components
+    !!
+    !!   @author Nathan A. Wukie
+    !!
     !------------------------------------------------------------------------------
+    !> [equationset_t]
     type, public, abstract :: equationset_t
-        character(100)              :: name
+        character(100)              :: name     ! TODO: change this to allocatable
         integer(ik)                 :: neqns
 
         ! Equation set properties
@@ -49,6 +50,7 @@ module type_equationset
         procedure   :: add_boundary_advective_flux
 
     end type equationset_t
+    !> [equationset_t]
 
 
 
@@ -68,12 +70,13 @@ module type_equationset
 contains
 
 
-    ! Procedure to adding equations to the equation set properties
-    !
-    !   @author Nathan A. Wukie
-    !
-    !   @param[in]  varstring   String defining the variable associated with the equation being added
-    !   @param[in]  varindex    The index of the equation in the given set. 
+    !> Procedure to adding equations to the equation set properties
+    !!
+    !!   @author Nathan A. Wukie
+    !!
+    !!   @param[in]  varstring   String defining the variable associated with the equation being added
+    !!   @param[in]  varindex    The index of the equation in the given set. 
+    !!
     !--------------------------------------------------------------------------------------------
     subroutine add_equation(self,varstring,varindex)
         class(equationset_t),   intent(inout)  :: self
@@ -160,11 +163,12 @@ contains
 
 
 
-    ! Add components to volume_advective_flux array
-    !
-    !   @author Nathan A. Wukie
-    !
-    !   @param[in]  flux    Volume advective flux component to be added
+    !> Add components to volume_advective_flux array
+    !!
+    !!   @author Nathan A. Wukie
+    !!
+    !!   @param[in]  flux    Volume advective flux component to be added
+    !!
     !--------------------------------------------------------------------------------------------
     subroutine add_volume_advective_flux(self,flux)
         class(equationset_t),   intent(inout)   :: self
@@ -230,11 +234,12 @@ contains
 
 
 
-    ! Add components to boundary_advective_flux array
-    !
-    !   @author Nathan A. Wukie
-    !
-    !   @param[in]  flux    Boundary advective flux type to be added
+    !> Add components to boundary_advective_flux array
+    !!
+    !!   @author Nathan A. Wukie
+    !!
+    !!   @param[in]  flux    Boundary advective flux type to be added
+    !!
     !--------------------------------------------------------------------------------------------
     subroutine add_boundary_advective_flux(self,flux)
         class(equationset_t),   intent(inout)   :: self

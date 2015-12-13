@@ -168,7 +168,7 @@ contains
         real(kind=rk),    intent(in)            :: xi
 
         real(kind=rk), dimension(nterms1d)      :: nodes
-        integer(kind=ik)                        :: i,j,k
+        integer(kind=ik)                        :: j,k
         real(kind=rk)                           :: dpolyval
         real(kind=rk)                           :: prod,xi_i,xi_j,xk
 

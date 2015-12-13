@@ -187,7 +187,6 @@ contains
         class(llreal_t),    intent(in)  :: list
         character(len=*),   intent(in)  :: key
         real(kind=rk),      intent(out) :: val
-        integer(kind=ik)                :: vallen
 
         ! If the current node contains an initialized key-value pair
         ! and it happens to be the key we are looking for
@@ -290,7 +289,6 @@ contains
         class(llint_t),     intent(in)  :: list
         character(len=*),   intent(in)  :: key
         integer(kind=ik),   intent(out) :: val
-        integer(kind=ik)                :: vallen
 
         ! If the current node contains an initialized key-value pair
         ! and it happens to be the key we are looking for

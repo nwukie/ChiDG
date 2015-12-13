@@ -172,7 +172,6 @@ contains
         integer(ik), intent(in)    :: nterm
         real(rk),    intent(in)    :: pos
         real(rk)                   :: dpolyval
-        real(rk)                   :: polyval_n,polyval_nm1
 
         select case (nterm)
             ! Trivial evaluations
@@ -203,7 +202,7 @@ contains
         real(rk),    intent(in)            :: xi,eta
         integer(ik), intent(in)            :: dir
 
-        integer(ik)                        :: nterms1d,xi_mode,eta_mode
+        integer(ik)                        :: xi_mode,eta_mode
         real(rk)                           :: dpolyval
         real(rk)                           :: xi_val,eta_val,dxi_val,deta_val
 
@@ -241,7 +240,7 @@ contains
         real(rk),    intent(in)            :: xi,eta,zeta
         integer(ik), intent(in)            :: dir
 
-        integer(ik)                        :: nterms1d,xi_mode,eta_mode,zeta_mode
+        integer(ik)                        :: xi_mode,eta_mode,zeta_mode
         real(rk)                           :: dpolyval
         real(rk)                           :: xi_val,eta_val,zeta_val,dxi_val,deta_val,dzeta_val
 

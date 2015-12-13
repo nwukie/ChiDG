@@ -23,14 +23,14 @@ module type_chidgVector
         type(blockvector_t), allocatable    :: dom(:)
 
     contains
-        !> Initializers
+        ! Initializers
         generic, public     :: init => initialize
         procedure, private  :: initialize
 
-        !> Modifiers
+        ! Modifiers
         procedure, public   :: clear
 
-        !> Interogators
+        ! Interogators
         procedure, public   :: norm
         procedure, public   :: dump
         !procedure, public   :: nentries

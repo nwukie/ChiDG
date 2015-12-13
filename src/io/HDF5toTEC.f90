@@ -1,15 +1,18 @@
-!> Chimera-based, discontinuous Galerkin equation solver
+!> ChiDG HDF5 to Tecplot TecIO conversion utility.
 !!
-!! This program is designed to solve partial differential equations,
-!! and systems of partial differential equations, using the discontinuous
-!! Galerkin method for spatial discretization using Chimera, overset grids to
-!! represent the simulation domain.
+!!  Given HDF5 files containing ChiDG formatted grid and solution data, H5toTEC will produce
+!!  a tecplot file for visualizing the solution by sampling the solution and coordinate polynomials.
+!!
+!!  The tecplot file produced cannot be used in any way other than for visualization purposes.
 !!
 !! @author Nathan A. Wukie
 !!
 !!
+!! Usage:   H5toTEC 'gridfile' 'solutionfile'
+!!
+!!
 !---------------------------------------------------------------------------------------------
-program H5toTEC
+program HDF5toTEC
 #include <messenger.h>
     use mod_kinds,              only: rk, ik
     use type_chidg,             only: chidg_t
@@ -40,6 +43,7 @@ program H5toTEC
 
 
 
+
     !
     ! Get number of arguments
     !
@@ -47,10 +51,12 @@ program H5toTEC
 
 
 
+
     !
     ! Check if a filename was provided to the program
     !
     if ( nargs < 2) call chidg_signal(FATAL,"Usage: H5toTEC 'gridfile' 'solutionfile'")
+
 
 
 
@@ -64,8 +70,6 @@ program H5toTEC
 
 
 
-
-
     !
     ! Get nterms_s and eqnset. TODO: Read directly from file
     !
@@ -73,6 +77,7 @@ program H5toTEC
 
     nterms_s    = file_props%nterms_s(1)    ! Global variable from mod_io
     eqnset      = file_props%eqnset(1)      ! Global variable from mod_io
+
 
 
 
@@ -119,5 +124,4 @@ program H5toTEC
 
 
 
-
-end program H5toTEC
+end program HDF5toTEC

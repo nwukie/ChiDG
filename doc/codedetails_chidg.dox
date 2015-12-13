@@ -1,0 +1,67 @@
+/*!
+
+
+\page subpage_chidg ChiDG Instance
+
+\code{.f90} type(chidg_t)   chidg   \endcode
+
+The chidg_t data type is the top-level interface for ChiDG. A chidg_t instance contains
+four primary components. These are:
+    \code{.f90} 
+                type(chidg_data_t)        data            
+                type(matrixsolver_t)      matrixsolver
+                type(preconditioner_t)    preconditioner  
+                type(timscheme_t)         timescheme
+    \endcode
+
+
+\image html d__chidg.png
+
+
+
+
+
+\section s_chidg_functionality  Functionality
+
+\subsection s_chidg_required   Required calls
+\code{.f90} call chidg%init('env')          \endcode
+\code{.f90} call chidg%init('finalize')     \endcode
+\code{.f90} call chidg%init('chimera')      \endcode
+\code{.f90} call chidg%close()              \endcode
+
+
+\subsection s_chidg_io  IO
+\code{.f90} call chidg%read_grid(gridfile)          \endcode
+\code{.f90} call chidg%read_solution(solutionfile)  \endcode
+
+\subsection s_chidg_execution   Execution
+\code{.f90} call chidg%run()    \endcode
+
+
+\section s_chidg_components Components
+
+
+\subsection s_chidg_data   Data
+
+\code{.f90} type(chidg_data_t)  data    \endcode
+
+The chidg_data_t data type contains all of the working information to run a chidg calculation.
+This includes:
+    \code{.f90}   
+                type(mesh_t)                  mesh(:)
+                type(bcset_t)                 bcset(:)
+                type(equationset_wrapper_t)   eqnset(:)
+                type(solverdata_t)            sdata       
+    \endcode
+
+\image html d__chidg_data__more_detailed.png
+
+See related: \subpage subpage_mesh, \subpage subpage_solution, \subpage subpage_equationsets
+
+
+
+
+
+
+
+*/

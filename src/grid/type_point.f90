@@ -20,7 +20,7 @@ module type_point
         procedure :: xi
         procedure :: eta
         procedure :: zeta
-        final :: destructor
+!        final :: destructor
     end type point_t
 
 contains
@@ -94,9 +94,9 @@ contains
     end subroutine
 
 
-    !> Default destructor for point_t
-    elemental subroutine destructor(self)
-        type(point_t), intent(in) :: self
-    end subroutine
+!    !> Default destructor for point_t
+!    elemental subroutine destructor(self)
+!        type(point_t), intent(in) :: self
+!    end subroutine
 
 end module type_point

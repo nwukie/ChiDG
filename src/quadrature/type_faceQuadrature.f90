@@ -11,6 +11,15 @@ module type_faceQuadrature
     implicit none
     private
 
+
+
+    !>  
+    !!
+    !!  @author Nathan A. Wukie
+    !!
+    !!
+    !!
+    !----------------------------------------------------------------------------------
     type, public :: faceQuadrature_t
         integer(ik)                                 :: nnodes
         type(point_t),  dimension(:,:), allocatable :: nodes
@@ -22,12 +31,23 @@ module type_faceQuadrature
         real(rk), dimension(:,:,:), allocatable :: ddzeta   !> ''
 
     contains
+
         procedure :: init
-        final :: destructor
+!        final :: destructor
+
     end type faceQuadrature_t
+    !####################################################################################
 
 contains
 
+
+
+    !>
+    !!
+    !!  @author Nathan A. Wukie
+    !!
+    !!
+    !------------------------------------------------------------------------------------
     subroutine init(self,nnodes_face,nterms)
         class(faceQuadrature_t), intent(inout) :: self
         integer(ik),             intent(in)    :: nnodes_face,nterms
@@ -235,11 +255,15 @@ contains
         deallocate(zeta_vals,eta_vals,xi_vals)
 
     end subroutine
+    !#########################################################################################
     
-    subroutine destructor(self)
-        type(faceQuadrature_t), intent(inout) :: self
-        deallocate(self%nodes,self%weights)
-        deallocate(self%val,self%ddxi,self%ddeta,self%ddzeta)
-    end subroutine
+
+
+
+!    subroutine destructor(self)
+!        type(faceQuadrature_t), intent(inout) :: self
+!        deallocate(self%nodes,self%weights)
+!        deallocate(self%val,self%ddxi,self%ddeta,self%ddzeta)
+!    end subroutine
 
 end module type_faceQuadrature

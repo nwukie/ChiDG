@@ -17,7 +17,7 @@ module type_volumeQuadrature
     !!        number of quadrature nodes and specified number of terms in a polynomial expansion
     !!
     !!  @author Nathan A. Wukie
-    !----------------------------------------------------------------------
+    !----------------------------------------------------------------------------------------------
     type, public :: volumeQuadrature_t
         ! Number of volume quadrature nodes
         integer(ik)                 :: nnodes       !< Number of volume quadrature nodes
@@ -38,11 +38,20 @@ module type_volumeQuadrature
         real(rk),       allocatable :: dmass(:)     !< Diagonal of the mass matrix for the reference element
 
     contains
+
         procedure :: init
-        final :: destructor
+!        final :: destructor
+
     end type volumeQuadrature_t
+    !###############################################################################################
+
+
+
+
 
 contains
+
+
 
     !> Initialization routine for volumeQuadrature_t instance.
     !!      - Allocates storage for member data. Initializes ndoes, weights, and interpolation matrices.
@@ -50,7 +59,7 @@ contains
     !!  @author Nathan A. Wukie
     !!  @param[in]  nnodes  Number of nodes used for Gauss-quadrature
     !!  @param[in]  nterms  Number of terms in the associated polynomial expansion
-    !------------------------------------------------------------------------------
+    !-----------------------------------------------------------------------------------------------
     subroutine init(self,nnodes,nterms)
         class(volumeQuadrature_t),  intent(inout)   :: self
         integer(ik),                intent(in)      :: nnodes
@@ -64,9 +73,11 @@ contains
 
         self%nnodes = nnodes
         self%nterms = nterms
-        !---------------------------------------------------------------------------
+
+
+        !
         ! allocate quadrature storage
-        !---------------------------------------------------------------------------
+        !
         allocate(self%nodes(nnodes),self%weights(nnodes),       &
                  self%val(   nnodes,nterms),                    &
                  self%ddxi(  nnodes,nterms),                    &
@@ -78,10 +89,9 @@ contains
 
 
 
-
-        !---------------------------------------------------------------------------
+        !
         ! Initialize quadrature node coordinates for face sets
-        !---------------------------------------------------------------------------
+        !
         ! find number nodes in 1D polynomial
         nnodes1d = 0
         do while (nnodes1d*nnodes1d*nnodes1d /= nnodes)
@@ -100,7 +110,9 @@ contains
         call gl_weights(nnodes1d,zeta_weights)
 
 
+        !
         ! Volume node coordinates and weights
+        !
         inode = 1
         do izeta = 1,nnodes1d
             do ieta = 1,nnodes1d
@@ -118,10 +130,10 @@ contains
         end do
 
 
-        !---------------------------------------------------------------------------
+        !
         ! Initialize values and partial derivatives of each modal
         ! polynomial at each volume quadrature node
-        !---------------------------------------------------------------------------
+        !
         do iterm = 1,nterms
             do inode = 1,nnodes
                     node = self%nodes(inode)
@@ -135,9 +147,9 @@ contains
 
 
 
-        !---------------------------------------------------------------------------
+        !
         !   Initialize reference mass matrix
-        !---------------------------------------------------------------------------
+        !
         temp = transpose(self%val)
         do iterm = 1,nterms
             temp(iterm,:) = temp(iterm,:)*(self%weights)
@@ -145,25 +157,32 @@ contains
 
         self%mass = matmul(temp,self%val)
 
+
+
+        !
         ! Set reference mass diagonal
+        !
         do iterm = 1,nterms
             self%dmass(iterm) = self%mass(iterm,iterm)
         end do
 
 
-        !---------------------------------------------------------------------------
+        !
+        ! Don't think this is necessary
+        !
         deallocate(zeta_weights,eta_weights,xi_weights)
         deallocate(zeta_vals,eta_vals,xi_vals)
 
     end subroutine
+    !##############################################################################################
 
 
 
 
     
-    subroutine destructor(self)
-        type(volumeQuadrature_t), intent(inout) :: self
-
-    end subroutine
+!    subroutine destructor(self)
+!        type(volumeQuadrature_t), intent(inout) :: self
+!
+!    end subroutine
 
 end module type_volumeQuadrature

@@ -62,7 +62,7 @@ contains
         self%name    = 'Euler'
 
         !
-        ! Allocate equation set properties
+        ! Allocate equation set properties. TODO: Delegate this to type-bound procedure of equationset_t. 'add_properties(prop)'
         !
         if (allocated(self%prop)) deallocate(self%prop)
         allocate(EULER_properties_t::self%prop)

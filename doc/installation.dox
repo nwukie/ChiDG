@@ -1,8 +1,9 @@
 /*!
 
 \page page_installation Installation
-This page details the information required to successfully build the ChiDG project. One should be sure to first address the required
-dependencies of the project, which are detailed below. Also, a recent compiler version should be used. Tested compilers are listed below.
+This page details the information required to successfully build the ChiDG project. One should be sure 
+to first address the required dependencies of the project, which are detailed below. Also, a recent 
+compiler version should be used. Tested compilers are listed below.
 
 
 
@@ -11,10 +12,27 @@ dependencies of the project, which are detailed below. Also, a recent compiler v
 \section s_dependencies Dependencies
 ChiDG depends on several libraries that enable IO and parallelization activities. These components are required to build ChiDG.
 
+
+
+
 \subsection s_dep_hdf5 HDF5
 HDF5 is used as a container for the ChiDG grid/solution files and is a required depencency of ChiDG.
 
 <a href="https://www.hdfgroup.org">HDF5 Website</a>
+
+
+
+
+\subsection s_dep_mpich MPICH
+
+
+
+
+\subsection s_dep_cmake CMake
+CMake is required to generate the 'make' configuration. Version 3.4.0 has been tested.
+
+
+
 
 
 
@@ -27,14 +45,6 @@ from the Tecplot website.
 <a href="http://www.tecplot.com/downloads/tecio-library">TecIO Libraries</a>
 
 
-
-\subsection s_dep_mpich MPICH
-
-
-
-
-\subsection s_dep_cmake CMake
-CMake is required to generate the 'make' configuration. Version 3.4.0 has been tested.
 
 
 

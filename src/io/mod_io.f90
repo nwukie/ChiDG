@@ -85,13 +85,6 @@ module mod_io
     
 
 
-    ! BOUNDARY CONDITIONS
-    !--------------------------------------------------
-    integer(ik),         save    :: bc_ximin(MAXBLOCKS),   bc_ximax(MAXBLOCKS)
-    integer(ik),         save    :: bc_etamin(MAXBLOCKS),  bc_etamax(MAXBLOCKS)
-    integer(ik),         save    :: bc_zetamin(MAXBLOCKS), bc_zetamax(MAXBLOCKS)
-    real(rk),            save    :: bcpar1(6), bcpar2(6), bcpar3(6), bcpar4(6)
-
 
     !==================================================================================
     !           These quantities are used globally, but computed during input.
@@ -151,10 +144,17 @@ contains
                                             final_write
 
 
+        !
+        ! Check that input file exists
+        !
         inquire(file='chidg.nml', exist=file_exists)
         if (.not. file_exists) call chidg_signal(FATAL, "read_input: 'chidg.nml' input file was not found")
 
 
+
+        !
+        ! Read namelist input for parameter initialization
+        !
         open(unit=7,form='formatted',file="chidg.nml")
         read(7,nml=files)
         read(7,nml=space)
@@ -166,13 +166,15 @@ contains
 
 
 
+        !
         ! Compute number of terms in polynomial expansions
+        !
         nterms_sol1d = (solution_order)
         nterms_s = nterms_sol1d * nterms_sol1d * nterms_sol1d
 
 
     end subroutine read_input
-    !-------------------------------------------------------------------------------------------------
+    !#######################################################################################################
 
 
 

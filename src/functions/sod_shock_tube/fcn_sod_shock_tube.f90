@@ -99,8 +99,8 @@ contains
         real(rk)                                 :: calc
 
         real(rk)    :: x,   y,   z, &
-                       du, dv, u, v, w, &
-                       gam, beta, r, T, rho, p
+                       u, v, w, &
+                       gam, beta, rho, p
 
         x = pt%c1_
         y = pt%c2_

@@ -27,7 +27,9 @@ contains
     !!  @author Nathan A. Wukie
     !!
     !!
+    !!  @param[in]  filename    Character string containing a filename for a file that gets interrogated
     !!
+    !!  @result     prop        file_properties_t instance that gets returned with file information
     !!
     !----------------------------------------------------------------------------------------------
     function get_properties_hdf(filename) result(prop)
@@ -35,9 +37,8 @@ contains
 
 
         integer(HID_T)              :: fid
-        integer(ik)                 :: ndomains, ierr
+        integer(ik)                 :: ierr
         integer(ik), allocatable    :: nterms_1d(:)
-        integer, dimension(1)       :: buf
         logical                     :: fileexists = .false.
 
         type(file_properties_t)     :: prop
@@ -210,7 +211,7 @@ contains
 
 
 
-    !> Test if the file contains a Grid.
+    !> Test if the file contains a Solution.
     !!
     !!  @author Nathan A. Wukie
     !!

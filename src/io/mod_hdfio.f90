@@ -389,8 +389,6 @@ contains
                 !
                 ! Check for reading lower, higher, or same-order solution
                 !
-
-
                 if ( nterms_s < nterms_ielem ) then
                     bufferterms(1:nterms_s) = var(1:nterms_s,ielem)             ! Reading a lower order solution
                 else if ( nterms_s > nterms_ielem ) then
@@ -401,7 +399,6 @@ contains
 
 
 
-                !call data%sdata%q%dom(idom)%lvecs(ielem)%setvar(ivar,var(:,ielem))
                 call data%sdata%q%dom(idom)%lvecs(ielem)%setvar(ivar,bufferterms)
             end do
 
@@ -450,14 +447,12 @@ contains
     !!
     !!
     !!  @author Nathan A. Wukie
-    !!  @param[in]      filename    Character string of the file to be read
-    !!  @param[in]      cvar        Character string of the variable name to be read
-    !!  @param[in]      time        Integer of the time instance for the current variable to be read
-    !!  @param[inout]   domains     Array of domains. Already allocated
+    !!  @param[in]      fid         HDF5 file identifier.
+    !!  @param[in]      cvar        Character string of the variable name to be read.
+    !!  @param[in]      time        Integer of the time instance for the current variable to be read.
+    !!  @param[inout]   data        chidg_data_t instance containing grid and solution.
     !-----------------------------------------------------------------------------------------------------------------------------------------
-!    subroutine write_variable_hdf(filename,cvar,time,idom,data)
     subroutine write_variable_hdf(fid,cvar,time,dname,data)
-        !character(*),       intent(in)      :: filename
         integer(HID_T),     intent(in)      :: fid
         character(*),       intent(in)      :: cvar
         integer(ik),        intent(in)      :: time

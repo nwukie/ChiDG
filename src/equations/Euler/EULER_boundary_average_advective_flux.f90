@@ -147,16 +147,6 @@ contains
 
 
 
-            !if (idom == 4 .and. ielem == 19 .and. iface == 1) then
-            !if (idom == 4 .and. ielem == 17 .and. iface == 1) then
-            !    do igq = 1,size(rho_p)
-            !        print*, rho_p(igq)%xp_ad_
-            !    end do
-            !end if
-
-
-
-
             !
             ! Compute pressure and total enthalpy
             !

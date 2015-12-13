@@ -227,7 +227,9 @@ CONTAINS
          TYPE (AD_D), INTENT(IN)::u
          INTEGER, INTENT(OUT)::n
 
-         n=u%x_ad_
+         ! Wukie
+         n=int(u%x_ad_)
+         !n=u%x_ad_
 
     END SUBROUTINE ASSIGN_ID_D
 
@@ -631,7 +633,6 @@ CONTAINS
          TYPE (AD_D), INTENT(IN)::u,v
          REAL(DBL_AD)::tmp 
          TYPE (AD_D)::res
-         INTEGER:: i
          allocate(res%xp_ad_(size(u%xp_ad_)))
 
          tmp=1.D0/v%x_ad_
@@ -698,7 +699,7 @@ CONTAINS
     ELEMENTAL FUNCTION DIV_ID_D(n,v) RESULT(res)
          INTEGER,INTENT(IN)::n
          TYPE (AD_D), INTENT(IN)::v
-         REAL(DBL_AD)::tmp,tmp2 
+         REAL(DBL_AD)::tmp
          TYPE (AD_D)::res
          allocate(res%xp_ad_(size(v%xp_ad_)))
          
@@ -716,7 +717,7 @@ CONTAINS
     ELEMENTAL FUNCTION DIV_RD_D(n,v) RESULT(res)
          REAL(DBL_AD),INTENT(IN)::n
          TYPE (AD_D), INTENT(IN)::v
-         REAL(DBL_AD)::tmp,tmp2 
+         REAL(DBL_AD)::tmp
          TYPE (AD_D)::res
          allocate(res%xp_ad_(size(v%xp_ad_)))
          
@@ -733,7 +734,7 @@ CONTAINS
     ELEMENTAL FUNCTION DIV_SD_D(n,v) RESULT(res)
          REAL(SNG_AD),INTENT(IN)::n
          TYPE (AD_D), INTENT(IN)::v
-         REAL(DBL_AD)::tmp,tmp2 
+         REAL(DBL_AD)::tmp
          TYPE (AD_D)::res
          allocate(res%xp_ad_(size(v%xp_ad_)))
          
@@ -1447,8 +1448,8 @@ CONTAINS
     FUNCTION DOT_PRODUCT_DD_D(u,v) RESULT(res)
          TYPE (AD_D), INTENT(IN)::u(:),v(:)
          TYPE (AD_D)::res
-         INTEGER:: i
-
+!         INTEGER:: i
+!
          stop "DOT_PRODUCT not implemented"
 !         res = AD_D(size(u(1)%xp_ad_))
 !         res = 0.
@@ -1635,11 +1636,11 @@ CONTAINS
 !        TYPE(AD_D)                      :: res(size(v))
 !        TYPE(AD_D)                      :: res(size(u,1))  !> Causes memory leak in ifort 15.0.3. Doesn't seem to be deallocating everything correctly
         TYPE(AD_D), allocatable, dimension(:) :: res        !> Declaring as allocatable to fix memory leak
-        REAL(DBL_AD)                    :: xp_ad_v(size(v)), &
-                                           xp_ad(size(u,1))
+!        REAL(DBL_AD)                    :: xp_ad_v(size(v)), &
+!                                           xp_ad(size(u,1))
         REAL(DBL_AD), dimension(size(v),size(v(1)%xp_ad_))      :: xp_ad_vm
         REAL(DBL_AD), dimension(size(u,1),size(v(1)%xp_ad_))    :: res_xp_m
-        INTEGER:: i,j,k
+        INTEGER:: i,j
 
 
 

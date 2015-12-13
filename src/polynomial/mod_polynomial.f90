@@ -10,6 +10,13 @@ module mod_polynomial
 
 contains
 
+    !>
+    !!
+    !!
+    !!
+    !!
+    !!
+    !------------------------------------------------------------------------------
     function PolynomialVal(space_dim,nterms,mode,node) result(polyval)
         integer(ik),    intent(in)   :: space_dim,nterms,mode
         type(point_t),  intent(in)   :: node
@@ -24,7 +31,19 @@ contains
         polyval = LegendreVal(space_dim,mode,xi,eta,zeta)
 
     end function
+    !###############################################################################
 
+
+
+
+    !>
+    !!
+    !!
+    !!
+    !!
+    !!
+    !!
+    !-------------------------------------------------------------------------------
     function DPolynomialVal(space_dim,nterms,mode,node,dir) result(dpolyval)
         integer(ik),    intent(in)   :: space_dim,nterms,mode
         type(point_t),  intent(in)   :: node
@@ -40,5 +59,10 @@ contains
         dpolyval = DLegendreVal(space_dim,mode,xi,eta,zeta,dir)
 
     end function
+    !###############################################################################
+
+
+
+
 
 end module mod_polynomial

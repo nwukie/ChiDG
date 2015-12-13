@@ -7,7 +7,7 @@ module type_solverdata
     implicit none
 
 
-    !> solver abstract type definition
+    !> solver type definition
     !!
     !!
     !!
@@ -15,7 +15,7 @@ module type_solverdata
     !!
     !-------------------------------------------------------------------------------------------------------
     type, public  :: solverdata_t
-        !> Base solver data
+        ! Base solver data
         type(chidgVector_t)             :: q                        !< Solution vector
         type(chidgVector_t)             :: dq                       !< Change in solution vector
         type(chidgVector_t)             :: rhs                      !< Residual of the spatial scheme
@@ -28,9 +28,9 @@ module type_solverdata
 
 
 
-        !! NOTE: if one wanted to add specialized data, instead of deriving from chidgData, you could add a
-        !!       chidgExtension class that could be specialized further which could contain non-standard data 
-        !!  class(chidgExtension_t)
+        ! NOTE: if one wanted to add specialized data, instead of deriving from chidgData, you could add a
+        !       chidgExtension class that could be specialized further which could contain non-standard data 
+        !  class(chidgExtension_t)
 
     contains
         generic, public       :: init => init_base

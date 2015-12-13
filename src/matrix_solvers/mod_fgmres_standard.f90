@@ -31,18 +31,17 @@ contains
 
 
 
-        real(rk), dimension(:), allocatable     :: r, r0, diff, xold, w, x0
+        real(rk), dimension(:), allocatable     :: r0, w, x0
         real(rk), allocatable                   :: v(:,:), z(:,:)
         real(rk),            allocatable        :: h(:,:), h_square(:,:)
         real(rk),            allocatable        :: p(:), y(:), c(:), s(:), p_dim(:), y_dim(:)
         real(rk)                                :: pj, pjp, h_ij, h_ipj
 
-        integer(ik) :: iparent, ierr, ivec, isol, nvecs, ielem, mrestart
-        integer(ik) :: i, j, k, l                 ! Loop counters
-        real(rk)    :: res, err, r0norm, gam, tol
+        integer(ik) :: ierr, isol, nvecs, mrestart
+        integer(ik) :: i, j, k, l
+        real(rk)    :: res, gam, tol
 
         logical     :: converged = .false.
-        logical     :: max_iter  = .false.
 
 
         tol = 1.e-11_rk

@@ -3,7 +3,7 @@
 !!
 !! @author Nathan A. Wukie
 !!
-program plot3d_to_hdf5
+program plot3dtohdf5
     use mod_kinds,   only: rk,ik
     use hdf5
     use h5lt
@@ -304,4 +304,4 @@ program plot3d_to_hdf5
 
     print*, "Saved ", trim(file_prefix)//'.h5'
 
-end program plot3d_to_hdf5
+end program plot3dtohdf5

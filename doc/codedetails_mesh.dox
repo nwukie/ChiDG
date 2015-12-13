@@ -1,0 +1,137 @@
+/*!
+
+
+\page subpage_mesh Mesh data structures
+The mesh_t data structure contains an entire geometry description for a single mesh domain. 
+This exists as an array of element_t types, an array of face_t types, and a chimera_t instance. 
+An element_t exists for every element in the mesh_t domain. For a given element_t, a face_t 
+instance exists for each face.
+
+
+
+\image html d_mesh_exploded.png
+
+\image html d_mesh_arrays.png
+
+
+
+
+
+
+
+\section s_element Elements
+An element_t instance contains information needed by the framework and also general
+information that could be useful to developers. This includes:
+    \verbatim     
+        elem_pts(:)   An array of points defining element in real space(cartesian, cylindrical, etc.)
+        quad_pts(:)   An array of points defining the location of each volume quadrature node in real space.
+        metric(3,3,:) An array, defining for each quadrature point, a matrix of element metric values.
+        jinv(:)       An array of inverse element jacobian values at each volume quadrature node.
+        dtdx(:,:)     An array of derivatives of the basis functions with respect to real coordinates at volume quadrature nodes.
+    \endverbatim
+
+\image html d__element.png
+
+
+\subsection s_element_metrics Metric terms
+The metric terms are defined at each quadrature point in the `metric(:,:,:)` component of
+a given `element_t`. To access the matrix of metric components for a given quadrature node `igq`, 
+the component can be used as
+
+\verbatim
+    metric(:,:,igq) 
+\endverbatim
+
+This returns the metric components at the quadrature node in a 3x3 matrix as:
+
+\f$ 
+    \begin{pmatrix}
+      \xi_x   \quad \xi_y   \quad   \xi_z \\
+      \eta_x  \quad \eta_y  \quad   \eta_z \\
+      \zeta_x \quad \zeta_y \quad   \zeta_z
+    \end{pmatrix} 
+\f$
+
+Alternatively, a given metric term can be accessed for the set of quadrature nodes as 
+
+\verbatim
+    metric(1,1,:)
+\endverbatim
+
+which would return a 1D array of values for \f$ \xi_x \f$ corresponding to each volume quadrature node.
+
+
+The inverse element jacobian terms `jinv(:)` are defined at each quadrature node as
+
+\f$
+  J^{-1} = ( x_\xi \xi_x + x_\eta \eta_x + x_\zeta \zeta_x )
+\f$
+
+
+\subsection s_element_derivatives Derivatives
+
+The derivatives of basis functions with respect to the computational coordinates on a reference element
+are already defined in a quadrature instance associated with an element in the component `element_t`%`gq`%`vol`. 
+For example, the component `element_t`%`gq`%`vol`%`ddxi` gives:
+
+\f$
+    \frac{\partial \psi_{igq, imode}}{\partial \xi} =
+        \begin{pmatrix}
+            \frac{\partial \psi_{1,1}}{\partial \xi} &  \frac{\partial \psi_{1,2}}{\partial \xi}  & \cdots  & \frac{\partial \psi_{1,N}}{\partial \xi} \\
+            \frac{\partial \psi_{2,1}}{\partial \xi}  & \frac{\partial \psi_{2,2}}{\partial \xi}  & \cdots  & \frac{\partial \psi_{2,N}}{\partial \xi} \\
+            \vdots & \vdots & \vdots & \vdots \\
+            \frac{\partial \psi_{{ngq},1}}{\partial \xi} & \frac{\partial \psi_{{ngq},2}}{\partial \xi} &  \cdots &  \frac{\partial \psi_{{ngq},N}}{\partial \xi} \\
+        \end{pmatrix}
+\f$
+
+
+Derivatives in real space coordinates in an `element_t` can be computed using `dtdx(:,:)` components. 
+The derivatives of basis functions with respect to real coordinates( \f$(x,y,z)\f$, \f$(r,\theta,z)\f$ ) are specific to each `element_t` and these
+derivatives can be accessed in the `dtdx`, `dtdy`, `dtdz` components. The `element_t`%`dtdx` component for example gives
+
+\f$
+    \frac{\partial \psi_{igq, imode}}{\partial x} =
+        \begin{pmatrix}
+            \frac{\partial \psi_{1,1}}{\partial x} &  \frac{\partial \psi_{1,2}}{\partial x}  & \cdots  & \frac{\partial \psi_{1,N}}{\partial x} \\
+            \frac{\partial \psi_{2,1}}{\partial x}  & \frac{\partial \psi_{2,2}}{\partial x}  & \cdots  & \frac{\partial \psi_{2,N}}{\partial x} \\
+            \vdots & \vdots & \vdots & \vdots \\
+            \frac{\partial \psi_{{ngq},1}}{\partial x} & \frac{\partial \psi_{{ngq},2}}{\partial x} &  \cdots &  \frac{\partial \psi_{{ngq},N}}{\partial x} \\
+        \end{pmatrix}
+\f$
+
+
+
+
+
+
+
+\subsection s_element_quadrature Quadrature
+Each `element_t` has quadrature instances associated with it that depend on the number of modes in the polynomial expansion being integrated,
+and also the number of quadrature points being used to perform the integration of a given mode. These rules are defined on a reference element
+so a given `element_t` contains pointers `gq` and `gqmesh` to quadrature instances that correspond to the solution and coordinate polynomial
+expansions respectively.
+
+See \subpage subpage_quadrature
+
+
+
+
+
+
+
+
+
+
+
+
+\section s_face Faces
+
+
+
+
+\section s_chimera Chimera Interfaces
+
+
+
+
+*/

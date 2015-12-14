@@ -21,22 +21,6 @@ four primary components. These are:
 
 
 
-\section s_chidg_functionality  Functionality
-
-\subsection s_chidg_required   Required calls
-\code{.f90} call chidg%init('env')          \endcode
-\code{.f90} call chidg%init('finalize')     \endcode
-\code{.f90} call chidg%init('chimera')      \endcode
-\code{.f90} call chidg%close()              \endcode
-
-
-\subsection s_chidg_io  IO
-\code{.f90} call chidg%read_grid(gridfile)          \endcode
-\code{.f90} call chidg%read_solution(solutionfile)  \endcode
-
-\subsection s_chidg_execution   Execution
-\code{.f90} call chidg%run()    \endcode
-
 
 \section s_chidg_components Components
 
@@ -59,6 +43,27 @@ This includes:
 See related: \subpage subpage_mesh, \subpage subpage_solution, \subpage subpage_equationsets
 
 
+
+
+
+
+\section s_chidg_functionality  Functionality
+
+\subsection s_chidg_required   Required calls
+\code{.f90} call chidg%init('env')          \endcode
+\code{.f90} call chidg%init('chimera')      \endcode
+\code{.f90} call chidg%init('finalize')     \endcode
+\code{.f90} call chidg%close()              \endcode
+
+
+\subsection s_chidg_io  IO
+\code{.f90} call chidg%read_grid(gridfile)          \endcode
+\code{.f90} call chidg%read_solution(solutionfile)  \endcode
+
+\subsection s_chidg_execution   Execution
+\code{.f90} call chidg%run()    \endcode
+
+\image html d__chidg_run.png
 
 
 

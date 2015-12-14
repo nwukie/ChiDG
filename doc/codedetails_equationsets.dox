@@ -8,40 +8,40 @@
 \section s_equationset_background   Mathematical background
 
 
-\f$
+\f[
 \frac{\partial Q}{\partial t} + \nabla \cdot \vec{F}(Q,\nabla Q) +
 S(Q,\nabla Q) = 0
-\f$
+\f]
 
 The solution variables are expressed as an expansion in basis
 polynomials constructed as a tensor product of 1D Legendre polynomials as
 
-\f$
+\f[
 Q(t,x,y,z) = \sum_{i=0}^N \sum_{j=0}^N \sum_{k=0}^N Q_{ijk}(t) \psi_i(x)
 \psi_j(y) \psi_k(z)
-\f$
+\f]
 
-Multiplying by a column of test functions $\bm{\psi}$ and applying
+Multiplying by a column of test functions \f$ \boldsymbol{\psi} \f$ and applying
 Gauss' Divergence Theorem gives our working form of the discontinuous
 Galerkin method as
 
-\f$
-\int_{\Omega_e} \bm{\psi} \frac{\partial Q}{\partial t} d\Omega +
-\int_{\Gamma_e} \bm{\psi} \vec{F} \cdot \vec{n} d\Gamma - 
-\int_{\Omega_e} \nabla \bm{\psi} \cdot \vec{F} d\Omega + 
-\int_{\Omega_e} \bm{\psi} \vec{S} d\Omega = 0
-\f$
+\f[
+\int_{\Omega_e} \boldsymbol{\psi} \frac{\partial Q}{\partial t} d\Omega +
+\int_{\Gamma_e} \boldsymbol{\psi} \vec{F} \cdot \vec{n} d\Gamma - 
+\int_{\Omega_e} \nabla \boldsymbol{\psi} \cdot \vec{F} d\Omega + 
+\int_{\Omega_e} \boldsymbol{\psi} \vec{S} d\Omega = 0
+\f]
 
 Two important terms in the above equation are the boundary flux integral and the volume flux
 integral, respectively:
 
-\f$
-    \int_{\Gamma_e} \bm{\psi} \vec{F} \cdot \vec{n} d\Gamma
-\f$
+\f[
+    \int_{\Gamma_e} \boldsymbol{\psi} \vec{F} \cdot \vec{n} d\Gamma
+\f]
 
-\f$
-    \int_{\Omega_e} \nabla \bm{\psi} \cdot \vec{F} d\Omega
-\f$
+\f[
+    \int_{\Omega_e} \nabla \boldsymbol{\psi} \cdot \vec{F} d\Omega
+\f]
 
 
 

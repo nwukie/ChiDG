@@ -5,8 +5,6 @@
 
 \subpage subpage_chidg
 
-\subpage subpage_io
-
 \subpage subpage_mesh
 
 \subpage subpage_solution
@@ -15,6 +13,7 @@
 
 \subpage subpage_quadrature
 
+\subpage subpage_io
 
 
 

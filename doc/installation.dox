@@ -8,9 +8,18 @@ compiler version should be used. Tested compilers are listed below.
 
 
 
+\section s_obtaining Obtaining ChiDG
+ChiDG is hosted in a git repository on <a href="https://www.gitlab.com">www.gitlab.com</a> and may be cloned using either 
+`ssh` or `https` protocols as 
+
+
+\code  git clone git@gitlab.com:nwukie/ChiDG.git ChiDG         \endcode
+
+\code  git clone https://gitlab.com/nwukie/ChiDG.git ChiDG     \endcode
 
 \section s_dependencies Dependencies
-ChiDG depends on several libraries that enable IO and parallelization activities. These components are required to build ChiDG.
+ChiDG depends on several libraries that enable IO and parallelization activities. 
+These components are required to build ChiDG.
 
 
 
@@ -59,15 +68,15 @@ Successfully tested compiler versions:
 
 ChiDG uses the CMake build system. Out-of-source builds, as described here, are the only supported build method.
         - Change to the ChiDG root directory.   
-                \code{.sh}  cd ChiDG/       \endcode
+                \code  cd ChiDG/       \endcode
         - Create a new build directory.         
-                \code{.sh}  mkdir build    \endcode
+                \code  mkdir build    \endcode
         - Change to the build directory.        
-                \code{.sh}  cd build        \endcode
+                \code  cd build        \endcode
         - Execute the CMake command with options to configure the build
-                \code{.sh}  cmake -DCMAKE_Fortran_COMPILER=gfortran-5.2 -DCMAKE_BUILD_TYPE=Release ..   \endcode 
+                \code  cmake -DCMAKE_Fortran_COMPILER=gfortran-5.2 -DCMAKE_BUILD_TYPE=Release ..   \endcode 
         - Run make to build the ChiDG executable
-                \code{.sh}  make            \endcode
+                \code  make            \endcode
 
 
 

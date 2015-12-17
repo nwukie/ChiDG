@@ -1,66 +1,105 @@
 macro (add_test_target target_subdirectory test_type)
+    #
 	# set target name
+    #
     if (${ARGV1} MATCHES "unit")
 	    set(target_name unittest_${ARGV0})
         set(jenkins_file unittest.sh)
         set(testing_dir unit_testing)
+
     elseif (${ARGV1} MATCHES "reg")
         set(target_name regtest_${ARGV0})
         set(jenkins_file regtest.sh)
         set(testing_dir reg_testing)
+
     else()
         message(SEND_ERROR "Invalid test type. Valid types are 'unit' and 'reg'")
     endif()
 
 
+    #
 	# Create folder for parsed test files in the build directory
-	file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/generated/${testing_dir})
-	file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/generated/${testing_dir}/${ARGV0})
+    #
+    file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/generated/test)
+	file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/generated/test/${testing_dir})
+	file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/generated/test/${testing_dir}/${ARGV0})
 	
+
+    #
 	# Create input file for registering tests
-	file(REMOVE ${CMAKE_BINARY_DIR}/generated/${testing_dir}/${ARGV0}/testSuites.inc)
+    #
+	file(REMOVE ${CMAKE_BINARY_DIR}/generated/test/${testing_dir}/${ARGV0}/testSuites.inc)
 	
+
+    #
 	# Include directory created above so the .inc file is available
-	include_directories(${CMAKE_BINARY_DIR}/generated/${testing_dir}/${ARGV0})
+    #
+	include_directories(${CMAKE_BINARY_DIR}/generated/test/${testing_dir}/${ARGV0})
 	
+
+    #
 	# Include access to pfunit module
+    #
 	include_directories(${PF_ROOT}/mod)
 	
 
-	#################################################################################
-    # Loop through each test file, process with pFUnitParser and generate list of output files for compiler
-    # DEPENDS option ensures that if the .pf file is changed, the parser will be called to reprocess the file
-    #################################################################################
+
+
+	#-----------------------------------------------------------------------------------------------------------
+    #
+    #   Loop through each test file, process with pFUnitParser and generate list of output files for compiler
+    #   DEPENDS option ensures that if the .pf file is changed, the parser will be called to reprocess the file
+    #
+    #-----------------------------------------------------------------------------------------------------------
 	set(_test_sources)
     foreach (_test ${ARGN})
+        #
     	# Get filename without extension (NAME_WE)
+        #
     	get_filename_component(filename ${_test} NAME_WE)
 
+
+        #
         # Get directory associated with filename
+        #
         get_filename_component(filedir ${_test} DIRECTORY)
     	
 
+        # 
     	# Test preprocessor command
+        #
         add_custom_command(
-            OUTPUT ${CMAKE_BINARY_DIR}/generated/${testing_dir}/${ARGV0}/${filename}.F90
-            COMMAND ${PF_ROOT}/bin/pFUnitParser.py ${CMAKE_SOURCE_DIR}/${filedir}/${filename}.pf ${CMAKE_BINARY_DIR}/generated/${testing_dir}/${ARGV0}/${filename}.F90
+            OUTPUT ${CMAKE_BINARY_DIR}/generated/test/${testing_dir}/${ARGV0}/${filename}.F90
+            COMMAND ${PF_ROOT}/bin/pFUnitParser.py ${CMAKE_SOURCE_DIR}/${filedir}/${filename}.pf ${CMAKE_BINARY_DIR}/generated/test/${testing_dir}/${ARGV0}/${filename}.F90
             DEPENDS ${CMAKE_SOURCE_DIR}/${filedir}/${filename}.pf
             )
         	
 
+        #
         # Accumulate list of test sources to define target
-     	set(_test_sources ${_test_sources} ${CMAKE_BINARY_DIR}/generated/${testing_dir}/${ARGV0}/${filename}.F90)
+        #
+     	set(_test_sources ${_test_sources} ${CMAKE_BINARY_DIR}/generated/test/${testing_dir}/${ARGV0}/${filename}.F90)
      	
 
+        #
      	# Register test in input .inc file for pftest
-     	file(APPEND ${CMAKE_BINARY_DIR}/generated/${testing_dir}/${ARGV0}/testSuites.inc "ADD_TEST_SUITE(${filename}_suite)\n")
+        #
+     	file(APPEND ${CMAKE_BINARY_DIR}/generated/test/${testing_dir}/${ARGV0}/testSuites.inc "ADD_TEST_SUITE(${filename}_suite)\n")
+
 	endforeach()
 	
 	set_source_files_properties(${PF_ROOT}/include/driver.F90 PROPERTIES GENERATED 1)
 	
-	##################################################################################
-	## define test target and link with pfunit and coredg libraries
-	##################################################################################
+
+
+
+
+
+	#-------------------------------------------------------------------------------------------------------
+    #
+	#   Define test target and link with pfunit and coredg libraries
+    #
+	#-------------------------------------------------------------------------------------------------------
 	add_executable(${target_name} ${PF_ROOT}/include/driver.F90 ${_test_sources})
 	target_link_libraries(${target_name} ${PF_ROOT}/lib/libpfunit.a coredg -lstdc++ -lpthread ${MPI_Fortran_LIBRARIES})
 	
@@ -69,19 +108,29 @@ macro (add_test_target target_subdirectory test_type)
                              COMPILE_FLAGS "-DBUILD_ROBUST=True ${MPI_Fortran_COMPILE_FLAGS}"
                              LINK_FLAGS    "${MPI_Fortran_LINK_FLAGS}")
 	
-	                         # COMPILE_FLAGS "-prof-gen=srcpos" code coverage flags
 	
-	##################################################################################
-	##	Add test that can be run with 'make test' or 'ctest'
-	##################################################################################
+
+
+
+	#-------------------------------------------------------------------------------------------------------
+    #
+	#	Add test that can be run with 'make test' or 'ctest'
+	#
+    #-------------------------------------------------------------------------------------------------------
 	add_test(NAME ${target_name}
 			 WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
 			 COMMAND $<TARGET_FILE:${target_name}>)
 			 
 			 
-	##################################################################################
-	##	Add test target to shell script used by Jenkins for executing individual tests
-	##################################################################################
+
+
+
+
+	#-------------------------------------------------------------------------------------------------------
+    #
+	#	Add test target to shell script used by Jenkins for executing individual tests
+    #
+	#-------------------------------------------------------------------------------------------------------
 	if (EXISTS "${CMAKE_BINARY_DIR}/bin/${jenkins_file}")
 		file(APPEND ${CMAKE_BINARY_DIR}/bin/${jenkins_file} "./${target_name} -xml ${target_name}.xml\n")
 	else()
@@ -90,4 +139,10 @@ macro (add_test_target target_subdirectory test_type)
 		file(APPEND ${CMAKE_BINARY_DIR}/bin/${jenkins_file} "./${target_name} -xml ${target_name}.xml\n")
 	endif()
 	
+
+
+
+
+
+
 endmacro()

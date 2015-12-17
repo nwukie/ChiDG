@@ -22,8 +22,8 @@ set(CMAKE_Fortran_MODULE_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 #------------------------------------------------------------------ 
 #                    Set 'Unit-Testing' and 'Regression-Testing' options
 #------------------------------------------------------------------
-set(UNITTEST FALSE CACHE BOOL "Enable building unit-tests")
-set(REGTEST  FALSE CACHE BOOL "Enable building regression-tests")
+set(TESTING FALSE CACHE BOOL "Enable building unit/regression testing")
+#set(REGTEST  FALSE CACHE BOOL "Enable building regression-tests")
 
 
 
@@ -58,10 +58,12 @@ if (${Fortran_VENDOR} MATCHES "INTEL")
     
 elseif (${Fortran_VENDOR} MATCHES "GNU")
     #set (USER_COMPILE_FLAGS_DEBUG   "-O0 -cpp -ffree-form -ffree-line-length-none -fcheck=all -fbacktrace -fcheck=bounds -p -g")    # Note: -fcheck=all has issues with passing null pointer in tecio_interface
-    set (USER_COMPILE_FLAGS_DEBUG   "-O0 -Wall -cpp -ffree-form -ffree-line-length-none -fbacktrace -fstack-protector -fcheck=bounds -fmax-stack-var-size=1600 -p -g")    # Note: -fcheck=all has issues with passing null pointer in tecio_interface
+    #set (USER_COMPILE_FLAGS_DEBUG   "-O0 -cpp -fprofile-arcs -ftest-coverage -ffree-form -ffree-line-length-none -fbacktrace -fstack-protector -fcheck=bounds -fmax-stack-var-size=1600 -p -g")    # Note: -fcheck=all has issues with passing null pointer in tecio_interface
+    set (USER_COMPILE_FLAGS_DEBUG   "-O0 -cpp --coverage -ffree-form -ffree-line-length-none -fbacktrace -fstack-protector -fcheck=bounds -fmax-stack-var-size=1600 -p -g")    # Note: -fcheck=all has issues with passing null pointer in tecio_interface
     set (USER_COMPILE_FLAGS_RELEASE "-O3 -cpp -ffree-form -ffree-line-length-none")
     #set (USER_COMPILE_FLAGS_RELEASE "-O3 -cpp -ffree-form -ffree-line-length-none")
-    set (CMAKE_Fortran_LINK_FLAGS_DEBUG "")
+    #set (CMAKE_Fortran_LINK_FLAGS_DEBUG "-fprofile-arcs")
+    set (CMAKE_Fortran_LINK_FLAGS_DEBUG "--coverage")
     #set (CMAKE_Fortran_LINK_FLAGS_RELEASE "-flto")
     set (CMAKE_Fortran_LINK_FLAGS_RELEASE "")
     
@@ -203,7 +205,7 @@ set_target_properties(chidg PROPERTIES
 #------------------------------------------------------------------
 #                            Testing
 #------------------------------------------------------------------
-if (UNITTEST)
+if (TESTING)
     enable_testing()
     if (${Fortran_VENDOR} MATCHES "INTEL")
         set(PF_ROOT $ENV{PFUNIT}/intel/mpi)
@@ -215,28 +217,29 @@ if (UNITTEST)
 
 
     # Add unit tests
-    add_subdirectory(unit_testing)
+    #add_subdirectory(test/unit_testing)
+    add_subdirectory(test)
 
 
 endif()
 
 
 
-if (REGTEST)
-    if (${Forgran_VENDOR} MATCHES "INTEL")
-        set(PF_ROOT $ENV{PFUNIT}/intel/mpi)
-    elseif (${Fortran_VENDOR} MATCHES "GNU")
-        set(PF_ROOT $ENV{PFUNIT}/gnu/mpi)
-    endif()
-
-    set(PFU_LIB ${PF_ROOT}/lib)
-
-
-    # Add regression tests
-    add_subdirectory(reg_testing)
-
-endif()
-
+#if (REGTEST)
+#    if (${Forgran_VENDOR} MATCHES "INTEL")
+#        set(PF_ROOT $ENV{PFUNIT}/intel/mpi)
+#    elseif (${Fortran_VENDOR} MATCHES "GNU")
+#        set(PF_ROOT $ENV{PFUNIT}/gnu/mpi)
+#    endif()
+#
+#    set(PFU_LIB ${PF_ROOT}/lib)
+#
+#
+#    # Add regression tests
+#    add_subdirectory(test/reg_testing)
+#
+#endif()
+#
 
 
 

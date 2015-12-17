@@ -27,6 +27,7 @@ subroutine test_blockmatrix_build()
     real(rk), dimension(8,8)    :: one, two, three, four, five, six, seven, eight, nine
     integer(ik)                 :: idomain, nterms_c, nterms_s
 
+    !
     ! set reference matrices
     one    = 1._rk
     two    = 2._rk
@@ -39,29 +40,38 @@ subroutine test_blockmatrix_build()
     nine   = 9._rk
 
 
+    !
     ! Initialize chidg environment
+    !
     call chidg%init('env')
 
+
+    !
     ! Generate points for a 2x2x1 mesh
+    !
     call meshgen('221',pts)
 
 
+
+    !
     ! Call domain initialization
+    !
     idomain  = 1
     nterms_c = 8
     nterms_s = 8
-!    call dom%init_geom(idomain,nterms_c,pts)
-!    call dom%init_sol('scalar',nterms_s)
-
     call chidg%data%add_domain('D_01',pts,nterms_c,'scalar',nterms_s)
 
 
+    !
     ! Call initialization on sparse block-matrix
+    !
     call bmat%init(chidg%data%mesh(1),'full')
 
 
 
+    !
     ! Assign reference blocks to the block-sparse matrix
+    !
     bmat%lblks(1,7)%mat = one
     bmat%lblks(2,7)%mat = two
     bmat%lblks(3,7)%mat = three
@@ -73,6 +83,8 @@ subroutine test_blockmatrix_build()
     bmat%lblks(4,1)%mat = eight
 
 
+
+
     !
     ! THIS IS WHAT WE ARE TESTING
     !
@@ -80,18 +92,21 @@ subroutine test_blockmatrix_build()
     call bmat%build(fullmat)
 
 
-    !print*, fullmat
 
 
 
+    !
     ! Test Diagonal Blocks
+    !
     @assertEqual(one,fullmat(1:8,1:8))
     @assertEqual(two,fullmat(9:16,9:16))
     @assertEqual(three,fullmat(17:24,17:24))
     @assertEqual(four,fullmat(25:32,25:32))
 
 
+    !
     ! Test off-diagonal blocks
+    !
     @assertEqual(five,fullmat(1:8,9:16))
     @assertEqual(six,fullmat(9:16,1:8))
     @assertEqual(seven,fullmat(17:24,25:32))

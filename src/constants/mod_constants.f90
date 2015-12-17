@@ -11,10 +11,16 @@ module mod_constants
     use mod_kinds, only: rk,ik,ishort
     implicit none
 
-    !> Floating-point mathematical constants
-    real(rk), parameter     :: PI       = 3.14159265358979323846_rk
 
-    !> Floating-point numbers
+    !
+    ! Floating-point mathematical constants
+    !
+    real(rk), parameter     :: PI       = 3.14159265358979323846_rk     !< Mathematical constant pi
+
+
+    !
+    ! Floating-point numbers
+    !
     real(rk), parameter     :: ZERO     = 0._rk
     real(rk), parameter     :: ONE      = 1._rk
     real(rk), parameter     :: TWO      = 2._rk
@@ -29,7 +35,9 @@ module mod_constants
 
 
 
-    !> Floating-point fractions
+    !
+    ! Floating-point fractions
+    !
     real(rk), parameter     :: HALF     = 0.5_rk
     real(rk), parameter     :: THIRD    = 1._rk/3._rk
     real(rk), parameter     :: FOURTH   = 0.25_rk
@@ -43,11 +51,15 @@ module mod_constants
     real(rk), parameter     :: TWO_THR  = 2._rk/3._rk
     real(rk), parameter     :: THR_FIV  = 3._rk/5._rk
 
+
+
     !
     ! Constants for spatial definition
     !
     integer(ik), parameter :: SPACEDIM  = 3
     integer(ik), parameter :: NFACES    = 6
+
+
 
     !
     ! Spatial direction
@@ -59,6 +71,8 @@ module mod_constants
     integer(ik), parameter :: XI_DIR    = 1
     integer(ik), parameter :: ETA_DIR   = 2
     integer(ik), parameter :: ZETA_DIR  = 3
+
+
 
 
     !
@@ -74,13 +88,16 @@ module mod_constants
 
 
 
+
     !
     ! Face types. These should be distinct from the above 'face directions'
     !
     integer(ik), parameter :: INTERIOR  =  0     ! interior face
     integer(ik), parameter :: BOUNDARY  = -1     ! boundary condition type
     integer(ik), parameter :: CHIMERA   = -2     ! Chimera face
-    integer(ik), parameter :: ORPHAN    = -3     ! orphan face - has no home and will not be operated on. 
+    integer(ik), parameter :: ORPHAN    = -3     ! orphan face - has no identity. Every face needs an identity.
+
+
 
 
     !
@@ -91,10 +108,15 @@ module mod_constants
 
 
 
+
+
     !
     ! QUADRATURE CONSTANTS: specify number of quadrature orders to initialize
     !
     integer(ik), parameter :: NGQ = 1
+
+
+
 
 
     !

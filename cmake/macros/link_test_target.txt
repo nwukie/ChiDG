@@ -1,9 +1,0 @@
-macro (link_test_target target_subdirectory)
-	# set target name
-	set(target_name pftest_${ARGV0})
-
-	foreach (_lib ${ARGN})
-		target_link_libraries(${target_name} ${_lib})
-	endforeach()
-	
-endmacro()

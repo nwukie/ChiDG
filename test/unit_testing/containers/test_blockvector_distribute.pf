@@ -17,28 +17,32 @@ subroutine test_blockvector_distribute()
 
 
 
+    !
     ! Initialize chidg environment
+    !
     call chidg%init('env')
 
 
 
-
+    !
     ! Generate points for a 2x2x1 mesh
+    !
     call meshgen('221',pts)
 
 
 
-
+    !
     ! Call domain initialization
+    !
     idomain  = 1
     nterms_c = 8
     nterms_s = 8
-!    call dom%init_geom(idomain,nterms_c,pts)
-!    call dom%init_sol('scalar',nterms_s)
     call chidg%data%add_domain('D_01',pts,nterms_c,'scalar',nterms_s)
 
 
+    !
     ! Call initailization on blockvector
+    !
     call bvec%init(chidg%data%mesh(1))
 
 
@@ -48,12 +52,13 @@ subroutine test_blockvector_distribute()
 
 
 
+    !
     ! Assign reference blocks to the blockvector matrix
+    !
     fullvec(1:8)   = ONE
     fullvec(9:16)  = TWO
     fullvec(17:24) = THREE
     fullvec(25:32) = FOUR
-
 
 
 
@@ -66,8 +71,9 @@ subroutine test_blockvector_distribute()
 
 
 
-
+    !
     ! Test full-vector values against expected reference values
+    !
     @assertEqual(ONE,bvec%lvecs(1)%vec)
     @assertEqual(TWO,bvec%lvecs(2)%vec)
     @assertEqual(THREE,bvec%lvecs(3)%vec)

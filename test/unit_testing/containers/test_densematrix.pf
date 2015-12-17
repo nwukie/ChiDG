@@ -1,4 +1,6 @@
+!
 ! Test init_gen procedure for initializing general matrix storage
+!
 @Test
 subroutine test_densematrix_INIT_GEN() 
     use pfunit_mod
@@ -9,14 +11,18 @@ subroutine test_densematrix_INIT_GEN()
     type(densematrix_t)  :: blk
     integer(ik)          :: idim,jdim,dparent,eparent,nentries
     
-    
+    !    
     ! Test initialization procedure
+    !
     idim   = 4
     jdim   = 10
     nentries = idim*jdim
     dparent = 1
     eparent = 55
     
+    !
+    ! Call initialization procedure. THIS IS BEING TESTED.
+    !
     call blk%init(idim,jdim,dparent,eparent)
     
     @assertEqual(idim,blk%idim())
@@ -26,7 +32,9 @@ subroutine test_densematrix_INIT_GEN()
     @assertEqual(eparent,blk%eparent())
     
     
-    ! Test reinitialization procedure
+    !
+    ! Test reinitialization procedure. THIS IS BEING TESTED.
+    !
     idim   = 6
     jdim   = 12
     nentries = idim*jdim
@@ -44,7 +52,17 @@ subroutine test_densematrix_INIT_GEN()
 end subroutine
 
 
+
+
+
+
+
+
+
+
+!
 ! Test init_square procedure for initializing square matrix storage
+!
 @Test
 subroutine test_densematrix_INIT_SQUARE()
     use pfunit_mod
@@ -56,12 +74,19 @@ subroutine test_densematrix_INIT_SQUARE()
     integer(ik)          :: bsize,dparent,eparent,nentries
     
     
+    !
     ! Test initialization procedure
+    !
     bsize   = 4
     nentries = bsize*bsize
     dparent = 1
     eparent = 55
     
+
+
+    !
+    ! Call initialization procedure. THIS IS BEING TESTED.
+    !
     call blk%init(bsize,dparent,eparent)
     
     @assertEqual(bsize,blk%idim())
@@ -71,12 +96,19 @@ subroutine test_densematrix_INIT_SQUARE()
     @assertEqual(eparent,blk%eparent())
     
     
+
+    !
     ! Test reinitialization procedure
+    !
     bsize   = 12
     nentries = bsize*bsize
     dparent = 1
     eparent = 22
     
+
+    !
+    ! Call reinitialization. THIS IS BEING TESTED.
+    !
     call blk%init(bsize,dparent,eparent)
     
     @assertEqual(bsize,blk%idim())
@@ -89,7 +121,19 @@ end subroutine
 
 
 
+
+
+
+
+
+
+
+
+
+
+!
 ! Test 'resize' procedure for resizing matrix storage
+!
 @Test
 subroutine test_densematrix_RESIZE()
     use pfunit_mod

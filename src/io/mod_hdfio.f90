@@ -244,68 +244,46 @@ contains
     !!
     !!  @author Nathan A. Wukie
     !!
-    !!  @param[in]      filename    Character string of the file to be read
-    !!  @param[in]      cvar        Character string of the variable name to be read
-    !!  @param[in]      time        Integer of the time instance for the current variable to be read
-    !!  @param[inout]   data        ChiDG data containing domains. Already allocated
+    !!  @param[in]      fid         HDF5 file identifier.
+    !!  @param[in]      varstring   Character string of the variable name to be read.
+    !!  @param[in]      itime       Integer of the time instance for the current variable to be read.
+    !!  @param[in]      dname       Character string of the domain to be read from.
+    !!  @param[inout]   data        ChiDG data containing domains. Already allocated.
     !--------------------------------------------------------------------------------------------------------------------------------------
-    subroutine read_variable_hdf(filename,cvar,time,idom,data)
+    subroutine read_variable_hdf(fid,varstring,itime,dname,data)
         use ISO_C_BINDING
-        character(*),       intent(in)      :: filename
-        character(*),       intent(in)      :: cvar
-        integer(ik),        intent(in)      :: time
-        integer(ik),        intent(in)      :: idom
+        integer(HID_T),     intent(in)      :: fid
+        character(*),       intent(in)      :: varstring
+        integer(ik),        intent(in)      :: itime
+        character(*),       intent(in)      :: dname
         type(chidg_data_t), intent(inout)   :: data
 
 
-        integer(HID_T)   :: fid, gid, sid, vid          ! Identifiers
-        integer(HSIZE_T) :: dims(2), maxdims(2)         ! Dataspace dimensions
+        integer(HID_T)   :: gid, sid, vid           ! Identifiers
+        integer(HSIZE_T) :: maxdims(2)              ! Dataspace dimensions
+        integer(HSIZE_T) :: dims(3)
 
         integer, dimension(1)           :: ibuf
 
         character(100)                  :: cbuf
-        character(100)                  :: varstring
         character(100)                  :: var_gqp
-        character(100)                  :: ctime
 
-        real(rk), allocatable, target   :: var(:,:)
+        real(rk), allocatable, target   :: var(:,:,:)
         real(rk), allocatable           :: bufferterms(:)
         type(c_ptr)                     :: cp_var
-        character(len=:), allocatable   :: dname
 
-        integer                         :: type,    ierr,       igrp,   &
+        integer                         :: type,    ierr,       igrp,               &
                                            npts,    nterms_1d,  nterms_s,   order,  &
-                                           ivar,    ielem,      nterms_ielem
-        logical                         :: FileExists, ElementsEqual
+                                           ivar,    ielem,      nterms_ielem,   idom
+        logical                         :: ElementsEqual
 
-
-
-        !
-        ! Check file exists
-        !
-        inquire(file=filename, exist=FileExists)
-        if (.not. FileExists) call chidg_signal_one(FATAL,"Error: read_variable_hdf5 - file not found: ", filename)
-
-
-        !
-        ! Initialize Fortran interface.
-        !
-        call h5open_f(ierr)
-        if (ierr /= 0) call chidg_signal(FATAL,"read_variable_hdf5 - h5open_f")
-
-
-        !
-        ! Open input file using default properties.
-        !
-        call h5fopen_f(filename, H5F_ACC_RDWR_F, fid, ierr)
-        if (ierr /= 0) call chidg_signal(FATAL,"read_variable_hdf5 - h5fopen_f")
 
 
 
         !
         ! Get name of current domain
         !
-        dname = data%info(idom)%name
+        idom = data%get_domain_index(dname)
 
 
 
@@ -324,7 +302,6 @@ contains
         order = ibuf(1)
         if (ierr /= 0) call chidg_signal(FATAL,"read_variable_hdf5 - h5ltget_attribute_int_f")
         nterms_1d = (order + 1) ! To be consistent with the definition of (Order = 'Order of the polynomial')
-        !nterms_1d = order
         nterms_s = nterms_1d*nterms_1d*nterms_1d
 
 
@@ -332,8 +309,6 @@ contains
         !
         ! Open the Variable dataset
         !
-        write(ctime, '(I0.3)') time                     ! write time as character string
-        varstring = trim(cvar)//'_'//trim(ctime)        ! compose variable name as 'var_time'
         call h5dopen_f(gid, trim(varstring), vid, ierr, H5P_DEFAULT_F)
         if (ierr /= 0) call chidg_signal(FATAL,"read_variable_hdf5 -- variable does not exist or was not opened correctly")
 
@@ -348,17 +323,19 @@ contains
         !
         ! Read 'variable' dataset
         !
-        allocate(var(dims(1),dims(2)), stat=ierr)               ! Allocate variable buffer
+        allocate(var(dims(1),dims(2),dims(3)), stat=ierr)               ! Allocate variable buffer
         if ( ierr /= 0 ) call AllocationError
-        cp_var = c_loc(var(1,1))                                ! Get C-address for buffer
-        call h5dread_f(vid, H5T_NATIVE_DOUBLE, cp_var, ierr)    ! Fortran 2003 interface
+
+        cp_var = c_loc(var(1,1,1))                                      ! Get C-address for buffer
+
+        call h5dread_f(vid, H5T_NATIVE_DOUBLE, cp_var, ierr)            ! Fortran 2003 interface
         if (ierr /= 0) call chidg_signal(FATAL,"read_variable_hdf5 -- h5dread_f")
 
 
         !
         !  Get variable index in EquationSet
         !
-        ivar = data%eqnset(idom)%item%prop%get_eqn_index(trim(cvar))
+        ivar = data%eqnset(idom)%item%prop%get_eqn_index(trim(varstring))
 
 
         !
@@ -390,11 +367,11 @@ contains
                 ! Check for reading lower, higher, or same-order solution
                 !
                 if ( nterms_s < nterms_ielem ) then
-                    bufferterms(1:nterms_s) = var(1:nterms_s,ielem)             ! Reading a lower order solution
+                    bufferterms(1:nterms_s) = var(1:nterms_s, ielem, itime)             ! Reading a lower order solution
                 else if ( nterms_s > nterms_ielem ) then
-                    bufferterms(1:nterms_ielem) = var(1:nterms_ielem, ielem)    ! Reading a higher-order solution
+                    bufferterms(1:nterms_ielem) = var(1:nterms_ielem, ielem, itime)     ! Reading a higher-order solution
                 else
-                    bufferterms(1:nterms_ielem) = var(1:nterms_ielem,ielem)     ! Reading a solution of same order
+                    bufferterms(1:nterms_ielem) = var(1:nterms_ielem, ielem, itime)     ! Reading a solution of same order
                 end if
 
 
@@ -411,8 +388,6 @@ contains
 
         call h5dclose_f(vid,ierr)       ! Close the variable dataset
         call h5gclose_f(gid,ierr)       ! Close the Domain/Variable group
-        call h5fclose_f(fid, ierr)      ! Close the HDF5 file
-        call h5close_f(ierr)            ! Close the HDF5 Fortran interface
 
     end subroutine read_variable_hdf
     !#######################################################################################################################################
@@ -448,34 +423,33 @@ contains
     !!
     !!  @author Nathan A. Wukie
     !!  @param[in]      fid         HDF5 file identifier.
-    !!  @param[in]      cvar        Character string of the variable name to be read.
-    !!  @param[in]      time        Integer of the time instance for the current variable to be read.
+    !!  @param[in]      varstring   Character string of the variable name to be read.
+    !!  @param[in]      itime       Integer of the time instance for the current variable to be read.
+    !!  @param[in]      dname       Character string of the domain name to be read from.
     !!  @param[inout]   data        chidg_data_t instance containing grid and solution.
     !-----------------------------------------------------------------------------------------------------------------------------------------
-    subroutine write_variable_hdf(fid,cvar,time,dname,data)
+    subroutine write_variable_hdf(fid,varstring,itime,dname,data)
         integer(HID_T),     intent(in)      :: fid
-        character(*),       intent(in)      :: cvar
-        integer(ik),        intent(in)      :: time
+        character(*),       intent(in)      :: varstring
+        integer(ik),        intent(in)      :: itime
         character(*),       intent(in)      :: dname
         type(chidg_data_t), intent(inout)   :: data
 
 
-        integer(HID_T)   :: gid, sid, did, crp_list      ! Identifiers
-        integer(HSIZE_T) :: dims(2), maxdims(2), adim    ! Dataspace dimensions
-        integer(HSIZE_T) :: dimsc(2)                     ! Chunk size for extendible data sets
-        integer(HSIZE_T) :: offset(2)                    ! Data slab offset
-        type(H5O_INFO_T) :: info                         ! Object info type
+        integer(HID_T)   :: gid, sid, did, crp_list         ! Identifiers
+        integer(HSIZE_T) :: maxdims(2), adim                ! Dataspace dimensions
+        integer(HSIZE_T) :: dims(3)                         ! Dataspace dimensions
+        integer(HSIZE_T) :: dimsc(3)                        ! Chunk size for extendible data sets
+        type(H5O_INFO_T) :: info                            ! Object info type
 
         integer                         :: ndims
         integer, dimension(1)           :: ibuf
         character(100)                  :: cbuf
-        character(100)                  :: varstring
         character(100)                  :: var_grp
         character(100)                  :: ctime
 
-        real(rk), allocatable, target   :: var(:,:)
+        real(rk), allocatable, target   :: var(:,:,:)
         type(c_ptr)                     :: cp_var
-        !character(len=:), allocatable   :: dname
 
         integer(ik)                     :: nmembers,    type,   ierr,       ndomains,   igrp,   &
                                            npts,        nterms_1d,  nterms_s,   order,  &
@@ -510,21 +484,16 @@ contains
 
 
         !
-        ! Compose variable string
-        !
-        write(ctime, '(I0.3)') time                     ! write time as character string
-        varstring = trim(cvar)//'_'//trim(ctime)        ! compose variable name as 'var_time'
-
-
-
-        !
         ! Set dimensions of dataspace to write
         !
         idom = data%get_domain_index(dname)
-        ndims = 2
+        ndims = 3
+
         dims(1) = data%mesh(idom)%nterms_s
         dims(2) = data%mesh(idom)%nelem
+        dims(3) = itime                     ! TODO: Should probably better inform the dataspace dimension here. Probably set mesh_t%ntime
         maxdims(1) = H5S_UNLIMITED_F
+        maxdims(2) = H5S_UNLIMITED_F
         maxdims(2) = H5S_UNLIMITED_F
 
 
@@ -540,7 +509,8 @@ contains
         !
         ! Modify dataset creation properties, i.e. enable chunking in order to append dataspace, if needed.
         !
-        dimsc = [1, data%mesh(idom)%nelem]  ! Chunk size
+        dimsc = [1, data%mesh(idom)%nelem, 1]  ! Chunk size
+
         call h5pcreate_f(H5P_DATASET_CREATE_F, crp_list, ierr)
         if (ierr /= 0) call chidg_signal(FATAL, "Error: write_variable_hdf5 -- h5pcreate_f error enabling chunking")
 
@@ -583,16 +553,18 @@ contains
         !
         ! Get variable integer index from variable character string
         !
-        ivar = data%eqnset(idom)%item%prop%get_eqn_index(cvar)
+        !ivar = data%eqnset(idom)%item%prop%get_eqn_index(cvar)
+        ivar = data%eqnset(idom)%item%prop%get_eqn_index(varstring)
 
 
 
         !
         ! Assemble variable buffer matrix that gets written to file
         !
-        allocate(var(dims(1),dims(2)))
+        allocate(var(dims(1),dims(2),dims(3)))
+
         do ielem = 1,data%mesh(idom)%nelem
-                var(:,ielem) = data%sdata%q%dom(idom)%lvecs(ielem)%getvar(ivar)
+                var(:,ielem,itime) = data%sdata%q%dom(idom)%lvecs(ielem)%getvar(ivar)
         end do
 
 
@@ -600,7 +572,8 @@ contains
         !
         ! Write variable buffer
         !
-        cp_var = c_loc(var(1,1))
+        cp_var = c_loc(var(1,1,1))
+
         call h5dwrite_f(did, H5T_NATIVE_DOUBLE, cp_var, ierr)
         if (ierr /= 0) call chidg_signal(FATAL,"write_variable_hdf5 - h5dwrite_f")
 
@@ -665,11 +638,15 @@ contains
         character(*),       intent(in)      :: filename
         type(chidg_data_t), intent(inout)   :: data
 
+        integer(HID_T)                  :: fid
+        integer                         :: ierr
+        character(:),       allocatable :: dname
 
         integer(ik)                     :: idom, ndomains
         integer(ik)                     :: ieqn, neqns
         integer(ik)                     :: time
         character(len=:),   allocatable :: cvar
+        logical                         :: fileexists = .false.
 
 
         !
@@ -684,10 +661,51 @@ contains
         time = 1
 
 
+
+
+        !
+        ! Check file exists
+        !
+        inquire(file=filename, exist=fileexists)
+        if (.not. fileexists) call chidg_signal_one(FATAL,"Error: read_solution_hdf5 - file not found: ", filename)
+
+
+        !
+        ! Initialize Fortran interface.
+        !
+        call h5open_f(ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"read_solution_hdf5 - h5open_f")
+
+
+        !
+        ! Open input file using default properties.
+        !
+        call h5fopen_f(filename, H5F_ACC_RDWR_F, fid, ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"read_solution_hdf5 - h5fopen_f")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
         !
         ! Read solution for each domain
         !
         do idom = 1,ndomains
+            !
+            ! Get name of current domain
+            !
+            dname = data%info(idom)%name
+            
+
             !
             ! Get number of equations for the current domain
             !
@@ -707,12 +725,22 @@ contains
                 !
                 ! Read variable
                 !
-                call read_variable_hdf(filename,cvar,time,idom,data)
+                !call read_variable_hdf(filename,cvar,time,idom,data)
+                call read_variable_hdf(fid,cvar,time,trim(dname),data)
             end do ! ieqn
 
 
 
         end do ! idom
+
+
+
+
+        !
+        ! Close HDF5 file and Fortran interface
+        !
+        call h5fclose_f(fid, ierr)      ! Close the HDF5 file
+        call h5close_f(ierr)            ! Close the HDF5 Fortran interface
 
     end subroutine read_solution_hdf
     !################################################################################################

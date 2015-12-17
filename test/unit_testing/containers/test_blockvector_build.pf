@@ -23,10 +23,13 @@ subroutine test_blockvector_build()
     !
     call chidg%init('env')
 
+
+
     !
     ! Generate points for a 2x2x1 mesh
     !
     call meshgen('221',pts)
+
 
 
     !
@@ -35,17 +38,20 @@ subroutine test_blockvector_build()
     idomain  = 1
     nterms_c = 8
     nterms_s = 8
-!    call dom%init_geom(idomain,nterms_c,pts)
-!    call dom%init_sol('scalar',nterms_s)
 
+
+    !
+    ! Initialize domain
+    !
     call chidg%data%add_domain('D_01',pts,nterms_c,'scalar',nterms_s)
+
+
 
 
     !
     ! Call initailization on blockvector
     !
     call bvec%init(chidg%data%mesh(1))
-
 
 
 
@@ -69,8 +75,9 @@ subroutine test_blockvector_build()
 
 
 
-
+    !
     ! Test full-vector values against expected reference values
+    !
     @assertEqual(ONE,fullvec(1:8))
     @assertEqual(TWO,fullvec(9:16))
     @assertEqual(THREE,fullvec(17:24))

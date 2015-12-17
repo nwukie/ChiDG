@@ -37,24 +37,38 @@ contains
         type(point_t),  allocatable                 :: pts(:,:,:)
         
             
+        !
         ! Initialize ChiDG environment
+        !
         call this%chidg%init('env')
 
 
+        !
         ! Create 3x3x3 element grid
+        !
         call meshgen('333',pts)
 
+
+        !
+        ! Initialize domains
+        !
         nterms_c = 8
         nterms_s = 8
         call this%chidg%data%add_domain('D_01',pts,nterms_c,'Scalar',nterms_s)
 
 
+        !
         ! Initialize blockmatrix
+        !
         call this%bmat%init(this%chidg%data%mesh(1),'full')
 
     
     end subroutine
     
+
+
+
+
     subroutine tearDown(this)
         class(test_blockmatrix),    intent(inout)   :: this
         
@@ -66,9 +80,14 @@ contains
 
 
 !------------------------------------------------------------------------------------------------------
+!------------------------------------------------------------------------------------------------------
+!------------------------------------------------------------------------------------------------------
+!------------------------------------------------------------------------------------------------------
 
 
-!> Test that number of rows equals number of elements
+!
+! Test that number of rows equals number of elements
+!
 @Test
     subroutine test_blockmatrix__init_linearization__nrows(self)
         class(test_blockmatrix),    intent(inout)   :: self
@@ -82,7 +101,11 @@ contains
     
     
     
-!> Test that number of columns equals number of neighbor elems plus one(diag)
+
+
+!
+! Test that number of columns equals number of neighbor elems plus one(diag)
+!
 @Test
     subroutine test_blockmatrix__init_linearization__ncols(self)
         class(test_blockmatrix),    intent(inout)   :: self
@@ -94,7 +117,12 @@ contains
     
     
     
-!>  Test that appropriate blocks are allocated. Test block dimensions
+
+
+
+!
+!  Test that appropriate blocks are allocated. Test block dimensions
+!
 @Test
     subroutine test_blockmatrix__init_linearization__denseblocks(self)
         class(test_blockmatrix),    intent(inout)   :: self
@@ -106,7 +134,9 @@ contains
             
             nelem = mesh%nelem
             
+            !
             ! Test appropriate blocks are allocated or not allocated for the first element            
+            !
             ielem = 1
             @assertFalse(allocated(self%bmat%lblks(ielem,1)%mat))
             @assertTrue(allocated(lblks(ielem,2)%mat))
@@ -117,7 +147,9 @@ contains
             @assertTrue(allocated(lblks(ielem,7)%mat))
             
             
+            !
             ! Test first element, linearization block sizes
+            !
             size1d = mesh%nterms_s  *  mesh%neqns
             @assertEqual(size1d,size(lblks(ielem,2)%mat,1))
             @assertEqual(size1d,size(lblks(ielem,2)%mat,2))
@@ -134,8 +166,10 @@ contains
             
             
             
+            !
             ! Test appropriate blocks are allocated or not allocated for the middle element
             ! All linearization blocks should be initialized            
+            !
             ielem = 14
             @assertTrue(allocated(lblks(ielem,1)%mat))
             @assertTrue(allocated(lblks(ielem,2)%mat))
@@ -146,7 +180,9 @@ contains
             @assertTrue(allocated(lblks(ielem,7)%mat))
             
             
-            !> Test middle element, linearization block sizes
+            !
+            ! Test middle element, linearization block sizes
+            !
             size1d = mesh%nterms_s  *  mesh%neqns
             
             @assertEqual(size1d,size(lblks(ielem,1)%mat,1))
@@ -179,10 +215,14 @@ contains
     
     
     
-    
-!--------------------------------------------------------------------------------
-!       Test STORE procedure for storing derivative information
 
+
+
+
+    
+!
+!       Test STORE procedure for storing derivative information
+!
 @Test
     subroutine test_blockmatrix__store(self)
         class(test_blockmatrix),    intent(inout)   :: self
@@ -197,13 +237,18 @@ contains
             ivar   = 1
             nderiv = 8
         
-            !> Initialize AD variables with allocated derivative arrays
+            !
+            ! Initialize AD variables with allocated derivative arrays
+            !
             do i = 1,8
                 integral(i) = AD_D(nderiv)
             end do
         
+            !
+            ! Set the first and last element of each derivative array so they aren't just zeros
+            !
             integral = [ONE, TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT]
-            !> Set the first and last element of each derivative array so they aren't just zeros
+
             integral(1)%xp_ad_(1) = ONE
             integral(1)%xp_ad_(8) = ONE
             
@@ -230,13 +275,17 @@ contains
         
         
         
-            !> PROCEDURE BEING TESTED
+            !
+            ! STORE integral data. THIS IS BEING TESTED
+            !
             call bmat%store(integral,ielem,iblk,ivar)
         
         
         
-            !> Check that the derivatives were assigned to their correct locations in the block matrix.
-            !! The xp_ad_ arrays should be stored as rows of the block matrix.
+            !
+            ! Check that the derivatives were assigned to their correct locations in the block matrix.
+            ! The xp_ad_ arrays should be stored as rows of the block matrix.
+            !
             @assertEqual(integral(1)%xp_ad_, bmat%lblks(ielem,iblk)%mat(1,1:8) )
             @assertEqual(integral(2)%xp_ad_, bmat%lblks(ielem,iblk)%mat(2,1:8) )
             @assertEqual(integral(3)%xp_ad_, bmat%lblks(ielem,iblk)%mat(3,1:8) )

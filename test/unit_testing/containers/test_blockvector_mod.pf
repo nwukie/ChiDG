@@ -79,7 +79,15 @@ contains
 
 
 !------------------------------------------------------------------------------------------------------
-!> Test that number of rows equals number of elements
+!------------------------------------------------------------------------------------------------------
+!------------------------------------------------------------------------------------------------------
+!------------------------------------------------------------------------------------------------------
+
+
+
+!
+! Test that number of rows equals number of elements
+!
 @Test
     subroutine test_blockvector__init__nrows(self)
         class(test_blockvector),    intent(inout)   :: self
@@ -100,7 +108,9 @@ contains
     
     
     
-!>  Test that appropriate blocks are allocated. Test block dimensions
+!
+!  Test that appropriate blocks are allocated. Test block dimensions
+!
 @Test
     subroutine test_blockvector__init__densevector_allocation(self)
         class(test_blockvector),    intent(inout)   :: self
@@ -108,7 +118,9 @@ contains
 
         associate ( lvecs => self%bvec%lvecs )
 
+            !
             ! Test densevector storage is allocated for each element
+            !
             @assertTrue(allocated(lvecs(1)%vec))
             @assertTrue(allocated(lvecs(2)%vec))
             @assertTrue(allocated(lvecs(3)%vec))
@@ -149,8 +161,9 @@ contains
 
 
 
-
+!
 ! Test that densevector components of blockvector are all initialized with correct storage sizes
+!
 @Test
     subroutine test_blockvector__init__densevector_sizes(self)
         class(test_blockvector),    intent(inout)       :: self
@@ -161,7 +174,9 @@ contains
         associate ( mesh => self%chidg%data%mesh(1), lvecs => self%bvec%lvecs)
 
 
-            !> Test first element, linearization block sizes
+            !
+            ! Test first element, linearization block sizes
+            !
             size1d = mesh%nterms_s  *  mesh%neqns
 
 
@@ -207,8 +222,9 @@ contains
 
 
 
-
+!
 ! Test that blockvector%ldata component was initialized with correct data
+!
 @Test
     subroutine test_blockvector__init__ldata(self)
         class(test_blockvector),    intent(inout)       :: self
@@ -231,7 +247,9 @@ contains
 
 
 
+!
 ! Test blockvector%norm procedure
+!
 @Test
     subroutine test_blockvector__norm(self)
         class(test_blockvector),    intent(inout)   :: self
@@ -247,11 +265,15 @@ contains
 
 
         ref_vec= [ONE, TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT]
+        !
         ! Initialize select values.
+        !
         self%bvec%lvecs(1)%vec  = ref_vec   ! Element 1 Values
         self%bvec%lvecs(27)%vec = ref_vec   ! Element 27 values
 
         norm_ref = sqrt( sum( ref_vec**TWO + ref_vec**TWO) )    ! Twice since two elements were set
+
+
 
         !
         ! Compute norm. THIS IS WHAT WE ARE TESTING
@@ -267,7 +289,10 @@ contains
 
 
 
+
+!
 ! Test blockvector%clear procedure
+!
 @Test
     subroutine test_blockvector__clear(self)
         class(test_blockvector),    intent(inout)   :: self
@@ -287,7 +312,7 @@ contains
 
 
         !
-        ! Call blockvector%clear to ZERO vector storage. THIS IS WHAT WE ARE TESTING
+        ! Call blockvector%clear to ZERO vector storage. THIS IS BEING TESTED.
         !
         call self%bvec%clear()
 
@@ -301,7 +326,11 @@ contains
 
 
 
+
+
+!
 ! Test blockvector%nentries procedure
+!
 @Test
     subroutine test_blockvector__nentries(self)
         class(test_blockvector),    intent(inout)   :: self
@@ -314,6 +343,9 @@ contains
         nentries_ref = nelems * nterms
 
 
+        !
+        ! Call blockvector%nentrios to return number of values store in the vector. THIS IS BEING TESTED.
+        !
         nentries = self%bvec%nentries()
 
         @assertEqual(nentries_ref,nentries)

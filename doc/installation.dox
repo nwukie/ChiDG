@@ -34,6 +34,25 @@ HDF5 is used as a container for the ChiDG grid/solution files and is a required 
 
 \subsection s_dep_mpich MPICH
 
+\subsubsection s_dep_mpich_configuration Compile
+When compiling `mpich`, the following procedure is used to set the relevant compilers and
+configure mpich to be built.
+
+The following configuration command is used in the root `mpich` directory to set up the build:
+\code   ./configure --prefix=/usr/local/mpich/gnu --enable-fortran=all CC=gcc CXX=g++ F77=gfortran FC=gfortran 2>&1 | tee c.txt   \endcode
+The `CC`, `CXX`, `F77`, and `FC` variables set in the configure line are used to set the C, C++, and Fortran compilers.
+
+
+
+Compile `mpich` with:
+\code   make 2>&1 | tee m.txt   \endcode
+
+
+Install `mpich` with:
+\code   make install 2>&1 | tee mi.txt  \endcode
+
+
+\subsubsection s_dep_mpich_variables Set environment variables
 
 
 

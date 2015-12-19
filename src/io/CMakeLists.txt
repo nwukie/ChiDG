@@ -77,7 +77,7 @@ add_executable(HDF5toTEC HDF5toTEC.f90)
 target_link_libraries(HDF5toTEC coredg ${HDF5_LIBRARIES} ${TECPLOT_LIBRARIES})
 set_target_properties(HDF5toTEC PROPERTIES 
                             COMPILE_FLAGS "${COMPILE_FLAGS_HDF5toTEC_RELEASE}"
-                            LINK_FLAGS    "${LINK_FLAGS_HDF5toTEC_RELEASE} -lstdc++")
+                            LINK_FLAGS    "${LINK_FLAGS_HDF5toTEC_RELEASE} -lstdc++ -pthread")
 
 
 

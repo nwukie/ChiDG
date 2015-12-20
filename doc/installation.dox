@@ -33,6 +33,9 @@ HDF5 is used as a container for the ChiDG grid/solution files and is a required 
 
 
 \subsection s_dep_mpich MPICH
+The `mpich` source or precompiled packages can be downloaded from the MPICH website.
+
+<a href="https://www.mpich.org">MPICH Website</a>
 
 \subsubsection s_dep_mpich_configuration Compile
 When compiling `mpich`, the following procedure is used to set the relevant compilers and

@@ -1,0 +1,38 @@
+/*!
+
+\page page_develop Develop
+Dev info
+
+
+
+
+\section s_testing Testing
+
+
+\code 
+    export F90_VENDOR=GNU 
+    export F90=gfortran
+    export MPIF90=mpifort
+    export MPIRUN=mpiexec
+\endcode
+
+
+\code
+    make tests MPI=YES
+\endcode
+
+
+
+\code
+    make install INSTALL_DIR=/usr/local/pfunit 
+\endcode
+
+
+Be sure to set the environment variable for `pfunit`
+\code   export PFUNIT=/usr/local/pfunit     \endcode
+
+*/
+
+
+
+

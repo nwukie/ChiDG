@@ -9,9 +9,10 @@ A Chimera-based, discontinuous Galerkin solver
 
 ## Dependencies
 
-HDF5
-TecIO
-MPICH
+HDF5: ChiDG-formatted IO
+TecIO: Visualization IO
+MPICH: Parallelization
+CMake: Build system
 
 
 

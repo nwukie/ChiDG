@@ -132,11 +132,11 @@ macro (add_test_target target_subdirectory test_type)
     #
 	#-------------------------------------------------------------------------------------------------------
 	if (EXISTS "${CMAKE_BINARY_DIR}/bin/${jenkins_file}")
-		file(APPEND ${CMAKE_BINARY_DIR}/bin/${jenkins_file} "./${target_name} -xml ${target_name}.xml\n")
+		file(APPEND ${CMAKE_BINARY_DIR}/bin/${jenkins_file} "./${target_name} -name ${target_name} -xml ${target_name}.xml\n")
 	else()
 		file(APPEND ${CMAKE_BINARY_DIR}/bin/${jenkins_file} "#!/bin/bash\n")
 		file(APPEND ${CMAKE_BINARY_DIR}/bin/${jenkins_file} "cd $WORKSPACE/build/bin\n")
-		file(APPEND ${CMAKE_BINARY_DIR}/bin/${jenkins_file} "./${target_name} -xml ${target_name}.xml\n")
+		file(APPEND ${CMAKE_BINARY_DIR}/bin/${jenkins_file} "./${target_name} -name ${target_name} -xml ${target_name}.xml\n")
 	endif()
 	
 

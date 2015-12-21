@@ -1,5 +1,6 @@
 @Test
 subroutine test_update_space_linearadvection()
+#include <messenger.h>
     use pfunit_mod
 
     use mod_kinds,          only: rk, ik
@@ -115,9 +116,10 @@ subroutine test_update_space_linearadvection()
     !
     ! Call update_space
     !
-    print*, 'ChiDG - A: Updating Space'
+    call write_line("ChiDG - A: Updating Space")
     call update_space(chidgA%data)
-    print*, 'ChiDG - B: Updating Space'
+
+    call write_line("ChiDG - B: Updating Space")
     call update_space(chidgB%data)
 
 

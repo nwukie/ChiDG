@@ -9,7 +9,7 @@ module test_interpolate_chimera_mod
     use mod_kinds,          only: rk,ik
     use mod_constants,      only: ZERO, ONE, TWO, THREE, FIVE, SIX, EIGHT, NINE, TEN, &
                                   XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX, &
-                                  LOCAL, NEIGHBOR
+                                  LOCAL, NEIGHBOR, IO_DESTINATION
 
     use mod_hdfio,          only: read_grid_hdf
     use mod_interpolate,    only: interpolate_face, interpolate_element
@@ -26,6 +26,10 @@ module test_interpolate_chimera_mod
 
     public  :: test_interpolate_chimera
 
+
+
+
+
 @TestCase
     type, extends(TestCase) ::  test_interpolate_chimera
         type(chidg_t)                   :: chidg
@@ -37,25 +41,38 @@ module test_interpolate_chimera_mod
     end type test_interpolate_chimera
 
 
+
+
+
+
 contains
-    !> NOTE: make sure to use 'this' instead of 'self' since these are over-writting a derived type 
-    !! procedure. The argument names have to match
+    !-----------------------------------------------------------------------------------------------
+    ! NOTE: make sure to use 'this' instead of 'self' since these are over-writting a derived type 
+    ! procedure. The argument names have to match
+    !-----------------------------------------------------------------------------------------------
     subroutine setUp(this)
         class(test_interpolate_chimera),    intent(inout)   :: this
 
         integer(ik)                     :: nterms_s, ivar, idom
         type(meshdata_t), allocatable   :: meshdata(:) 
         
+        !
+        ! Send log to file
+        !
+        IO_DESTINATION = 'file'
     
+
         !        
         ! Initialize ChiDG environment
         !
         call this%chidg%init('env')
 
+
         !
         ! Read D2_E8_M1. Two domains, 2x2x2 elements in each domain, linear mapping
         !
         call read_grid_hdf('D2_E8_M1.h5',meshdata)
+
 
         !
         ! Add domain to ChiDG

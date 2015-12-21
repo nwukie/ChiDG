@@ -3,6 +3,8 @@ module test_mesh_linear_mod
     use mod_kinds,      only: rk,ik
     use mod_constants,  only: ZERO, ONE, TWO, THREE, FIVE, SIX, EIGHT, NINE, TEN, &
                               XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX, NFACES
+
+    use type_chidg,     only: chidg_t
     use type_point,     only: point_t
     use type_mesh,      only: mesh_t
     use type_element,   only: element_t
@@ -13,7 +15,10 @@ module test_mesh_linear_mod
 
 @TestCase
     type, extends(TestCase) ::  test_mesh_linear
+
+        type(chidg_t)   :: chidg
         type(mesh_t)    :: mesh
+
     contains
         procedure   ::  setUp
         procedure   ::  tearDown
@@ -32,27 +37,34 @@ contains
                                        ipt_xi, ipt_eta, ipt_zeta, ipt
         integer(ik)                 :: neqns, nterms_s, nterms_c, idomain
         real(rk), dimension(npt)    :: x,y,z
+
+        !
+        ! Initialize ChiDG environment
+        !
+        call this%chidg%init('env')
         
-        !> elements (3x3x3) - linear
-        !!
-        !!            *-------*-------*-------*
-        !!           /       /       /       /|
-        !!          *-------*-------*-------* |
-        !!         /       /       /       /| *
-        !!        *-------*-------*-------* |/|
-        !!       /       /       /       /| * |
-        !!      *-------*-------*-------* |/| *
-        !!      |       |       |       | * |/|
-        !!      |       |       |       |/| * |
-        !!      *-------*-------*-------* |/| *
-        !!      |       |       |       | * |/
-        !!      |       |       |       |/| *
-        !!      *-------*-------*-------* |/
-        !!      |       |       |       | *
-        !!      |       |       |       |/
-        !!      *-------*-------*-------*
-        !!         
-        !!
+
+
+        ! elements (3x3x3) - linear
+        !
+        !            *-------*-------*-------*
+        !           /       /       /       /|
+        !          *-------*-------*-------* |
+        !         /       /       /       /| *
+        !        *-------*-------*-------* |/|
+        !       /       /       /       /| * |
+        !      *-------*-------*-------* |/| *
+        !      |       |       |       | * |/|
+        !      |       |       |       |/| * |
+        !      *-------*-------*-------* |/| *
+        !      |       |       |       | * |/
+        !      |       |       |       |/| *
+        !      *-------*-------*-------* |/
+        !      |       |       |       | *
+        !      |       |       |       |/
+        !      *-------*-------*-------*
+        !         
+        !
         x = [ZERO, ONE, TWO, THREE, ZERO, ONE, TWO, THREE, ZERO, ONE, TWO, THREE, ZERO, ONE, TWO, THREE, &
              ZERO, ONE, TWO, THREE, ZERO, ONE, TWO, THREE, ZERO, ONE, TWO, THREE, ZERO, ONE, TWO, THREE, &
              ZERO, ONE, TWO, THREE, ZERO, ONE, TWO, THREE, ZERO, ONE, TWO, THREE, ZERO, ONE, TWO, THREE, &
@@ -79,7 +91,9 @@ contains
         end do
 
 
-        !> Initialize mesh
+        !
+        ! Initialize mesh
+        !
         idomain  = 1
         nterms_c = 8
         neqns = 1
@@ -89,10 +103,17 @@ contains
 
     end subroutine
     
+
+
     subroutine tearDown(this)
         class(test_mesh_linear),    intent(inout)   :: this
     end subroutine
 
+!---------------------------------------------------------------------------------------------------------
+!---------------------------------------------------------------------------------------------------------
+!---------------------------------------------------------------------------------------------------------
+!---------------------------------------------------------------------------------------------------------
+!---------------------------------------------------------------------------------------------------------
 
 
 

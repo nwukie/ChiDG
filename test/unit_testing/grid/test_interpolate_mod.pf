@@ -8,7 +8,7 @@ module test_interpolate_mod
     use mod_kinds,          only: rk,ik
     use mod_constants,      only: ZERO, ONE, TWO, THREE, FIVE, SIX, EIGHT, NINE, TEN, &
                                   XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX, &
-                                  LOCAL, NEIGHBOR
+                                  LOCAL, NEIGHBOR, IO_DESTINATION
     use mod_hdfio,          only: read_grid_hdf
     use mod_interpolate,    only: interpolate_face, interpolate_element
     use mod_grid_operators, only: initialize_variable
@@ -20,8 +20,13 @@ module test_interpolate_mod
 
     public  :: test_interpolate
 
+
+
+
+
 @TestCase
     type, extends(TestCase) ::  test_interpolate
+
         type(chidg_t)                   :: chidg
         type(constant_f)                :: fcn
 
@@ -31,25 +36,38 @@ module test_interpolate_mod
     end type test_interpolate
 
 
+
+
+
+
 contains
-    !> NOTE: make sure to use 'this' instead of 'self' since these are over-writting a derived type 
-    !! procedure. The argument names have to match
+    !---------------------------------------------------------------------------------------------
+    ! NOTE: make sure to use 'this' instead of 'self' since these are over-writting a derived type 
+    ! procedure. The argument names have to match
+    !---------------------------------------------------------------------------------------------
     subroutine setUp(this)
         class(test_interpolate),    intent(inout)   :: this
         integer(ik)                                 :: nterms_c, nterms_s, ivar
 
         type(point_t),  allocatable                 :: pts(:,:,:)
         
+        !
+        ! Send log to file
+        !
+        IO_DESTINATION = 'file'
     
+
         !        
         ! Initialize ChiDG environment
         !
         call this%chidg%init('env')
 
+
         !
         ! Read 3x3x3 element grid
         !
         call meshgen('333',pts)
+
 
         !
         ! Add domain to ChiDG
@@ -63,6 +81,7 @@ contains
         ! Initialize chidg solution data storage
         !
         call this%chidg%data%init_sdata()
+
 
         !
         ! Initialized solution to constant values

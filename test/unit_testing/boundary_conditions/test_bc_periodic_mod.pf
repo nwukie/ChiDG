@@ -2,7 +2,7 @@
 module test_bc_periodic_mod
     use pfunit_mod
     use mod_kinds,      only: rk,ik
-    use mod_constants,  only: XI_MIN, ETA_MIN, ZETA_MIN, XI_MAX, ETA_MAX, ZETA_MAX
+    use mod_constants,  only: XI_MIN, ETA_MIN, ZETA_MIN, XI_MAX, ETA_MAX, ZETA_MAX, IO_DESTINATION
     use type_chidg,     only: chidg_t
     use type_point,     only: point_t
     use mod_testutils,  only: meshgen
@@ -30,20 +30,31 @@ contains
         type(point_t), allocatable  :: pts(:,:,:)
         integer(ik)                 :: nterms_c, nterms_s
         
+        !
+        ! Send log to file
+        !
+        IO_DESTINATION = 'file'
+
+
+        !
         ! Initialize chidg enironment
+        !
         call this%chidg%init('env') 
 
+
+        !
         ! Generage points for a 2x2x2 element mesh
+        !
         call meshgen('222',pts)
 
 
+        !
         ! Call domain initialization
+        !
         idomain  = 1
         nterms_c = 8
         nterms_s = 8
 
-
-!        call this%chidg%data%domains(1)%init_geom(idomain,nterms_c,pts)
 
         call this%chidg%data%add_domain('D_01',pts,nterms_c,'scalar',nterms_s)
 

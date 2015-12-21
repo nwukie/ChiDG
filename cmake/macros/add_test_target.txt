@@ -6,11 +6,13 @@ macro (add_test_target target_subdirectory test_type)
 	    set(target_name unittest_${ARGV0})
         set(jenkins_file unittest.sh)
         set(testing_dir unit_testing)
+        set(max_time 10)
 
     elseif (${ARGV1} MATCHES "reg")
         set(target_name regtest_${ARGV0})
         set(jenkins_file regtest.sh)
         set(testing_dir reg_testing)
+        set(max_time 1000)
 
     else()
         message(SEND_ERROR "Invalid test type. Valid types are 'unit' and 'reg'")
@@ -132,11 +134,11 @@ macro (add_test_target target_subdirectory test_type)
     #
 	#-------------------------------------------------------------------------------------------------------
 	if (EXISTS "${CMAKE_BINARY_DIR}/bin/${jenkins_file}")
-		file(APPEND ${CMAKE_BINARY_DIR}/bin/${jenkins_file} "./${target_name} -name ${target_name} -xml ${target_name}.xml -robust\n")
+		file(APPEND ${CMAKE_BINARY_DIR}/bin/${jenkins_file} "./${target_name} -name ${target_name} -xml ${target_name}.xml -max-timeout-duration ${max_time} -robust\n")
 	else()
 		file(APPEND ${CMAKE_BINARY_DIR}/bin/${jenkins_file} "#!/bin/bash\n")
 		file(APPEND ${CMAKE_BINARY_DIR}/bin/${jenkins_file} "cd $WORKSPACE/build/bin\n")
-		file(APPEND ${CMAKE_BINARY_DIR}/bin/${jenkins_file} "./${target_name} -name ${target_name} -xml ${target_name}.xml -robust\n")
+		file(APPEND ${CMAKE_BINARY_DIR}/bin/${jenkins_file} "./${target_name} -name ${target_name} -xml ${target_name}.xml -max-timeout-duration ${max_time} -robust\n")
 	endif()
 	
 

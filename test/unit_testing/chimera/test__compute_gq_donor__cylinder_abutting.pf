@@ -1,9 +1,11 @@
 @Test
 subroutine test_compute_gq_donor_cylinder_abutting()
+#include <messenger.h>
     use pfunit_mod
 
     use mod_kinds,          only: rk, ik
-    use mod_constants,      only: XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX, DIAG
+    use mod_constants,      only: XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX, DIAG, &
+                                  IO_DESTINATION
 
     use type_chidg,         only: chidg_t
     use type_meshdata,      only: meshdata_t
@@ -30,8 +32,9 @@ subroutine test_compute_gq_donor_cylinder_abutting()
     real(rk)                        :: tol
 
 
-    tol      = 1.e-12_rk
-    nterms_s = 8
+    tol            = 1.e-12_rk
+    nterms_s       = 8
+    IO_DESTINATION = 'file'
 
 
     !
@@ -129,7 +132,7 @@ subroutine test_compute_gq_donor_cylinder_abutting()
     !
     ! Call update_space
     !
-    print*, 'ChiDG - A: Updating Space'
+    call write_line("ChiDG - A: Updating Space")
     call update_space(chidgA%data)
 
 

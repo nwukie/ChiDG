@@ -1,7 +1,7 @@
 module test_ILU0_mod
     use pfunit_mod
     use mod_kinds,          only: rk, ik
-    use mod_constants,      only: DIAG, XI_MIN, XI_MAX, ONE, TWO, THREE, FIVE, TEN
+    use mod_constants,      only: DIAG, XI_MIN, XI_MAX, ONE, TWO, THREE, FIVE, TEN, IO_DESTINATION
     use type_chidg,         only: chidg_t
     use type_point,         only: point_t
     use type_chidgVector,   only: chidgVector_t
@@ -15,6 +15,7 @@ module test_ILU0_mod
 
     @TestCase
     type, extends(TestCase) :: test_preconditioner_ILU0
+
         type(chidg_t)       :: chidg
         type(precon_ILU0_t) :: ILU0
 
@@ -41,6 +42,11 @@ contains
         type(point_t),  allocatable :: pts(:,:,:)
         integer(ik)                 :: nterms_c, nterms_s
 
+        
+        !
+        ! Send log to file
+        !
+        IO_DESTINATION = 'file'
 
 
         !

@@ -2,6 +2,12 @@
 subroutine test_messenger_noaux()
 #include <messenger.h>
     use pfunit_mod
+    use mod_constants,  only: IO_DESTINATION
+
+    !
+    ! Send log to file
+    !
+    IO_DESTINATION = 'file'
 
     call log_init()
 
@@ -19,6 +25,13 @@ end subroutine
 subroutine test_messenger_oneaux()
 #include <messenger.h>
     use pfunit_mod
+    use mod_constants,  only: IO_DESTINATION
+
+
+    !
+    ! Send log to file
+    !
+    IO_DESTINATION = 'file'
 
     call log_init()
 
@@ -40,8 +53,15 @@ end subroutine
 subroutine test_messenger_twoaux()
 #include <messenger.h>
     use pfunit_mod
+    use mod_constants,  only: IO_DESTINATION
 
     real(8) :: a, b
+
+
+    !
+    ! Send log to file
+    !
+    IO_DESTINATION = 'file'
 
     a = 5._8
     b = 6._8
@@ -65,6 +85,13 @@ end subroutine
 subroutine test_messenger__handle_line()
     use pfunit_mod
     use messenger
+    use mod_constants,  only: IO_DESTINATION
+
+
+    !
+    ! Send log to file
+    !
+    IO_DESTINATION = 'file'
 
     call log_init()
 
@@ -84,8 +111,15 @@ subroutine test_messenger__long_message()
 #include <messenger.h>
     use pfunit_mod
     use messenger
+    use mod_constants,  only: IO_DESTINATION
 
     character(len=:), allocatable   :: string
+
+
+    !
+    ! Send log to file
+    !
+    IO_DESTINATION = 'file'
 
     call log_init()
 

@@ -2,7 +2,9 @@
 subroutine test_fgmres_ref_solve()
     use pfunit_mod
     use mod_kinds,          only: rk, ik
-    use mod_constants,      only: ZERO, ONE, TWO, THREE, FOUR, DIAG, XI_MIN, XI_MAX
+    use mod_constants,      only: ZERO, ONE, TWO, THREE, FOUR, DIAG, XI_MIN, XI_MAX, &
+                                  IO_DESTINATION
+
     use type_chidg,         only: chidg_t
     use type_point,         only: point_t
 
@@ -25,31 +27,43 @@ subroutine test_fgmres_ref_solve()
     integer(ik) :: nterms_c, nterms_s, idomain
 
 
-    tol      = 1.e-9_rk
-    idomain  = 1
-    nterms_c = 8
-    nterms_s = 1
+    tol             = 1.e-9_rk
+    idomain         = 1
+    nterms_c        = 8
+    nterms_s        = 1
+    IO_DESTINATION  = 'file'
 
 
+    !
     ! Initialize ChiDG
+    !
     call chidg%init('env')
 
+
+    !
     ! Set ChiDG components
+    !
     call chidg%set('timescheme',    'newton')
     call chidg%set('matrixsolver',  'fgmres')
     call chidg%set('preconditioner','identity')
 
 
+    !
     ! Get grid points
+    !
     call meshgen('211',pts)
 
 
+    !
     ! Initialize domain
+    !
     call chidg%data%add_domain('D_01',pts,nterms_c,'Scalar',nterms_s)
     call chidg%data%init_sdata()
 
 
+    !
     ! Initialize data containers
+    !
     call A%init(chidg%data%mesh,'full')
     call x%init(chidg%data%mesh)
     call b%init(chidg%data%mesh)

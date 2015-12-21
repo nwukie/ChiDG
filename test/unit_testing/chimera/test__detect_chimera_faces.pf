@@ -15,7 +15,7 @@ subroutine test__detect_chimera_faces()
     use pfunit_mod
     use mod_kinds,      only: rk, ik
     use mod_constants,  only: XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX, &
-                              INTERIOR, BOUNDARY, CHIMERA
+                              INTERIOR, BOUNDARY, CHIMERA, IO_DESTINATION
 
     use type_chidg,     only: chidg_t
     use type_meshdata,  only: meshdata_t
@@ -31,7 +31,8 @@ subroutine test__detect_chimera_faces()
     integer(ik)                     :: nterms_s, idom, ndom, ielem
 
 
-    nterms_s = 8
+    nterms_s        = 8
+    IO_DESTINATION  = 'file'
 
 
     !

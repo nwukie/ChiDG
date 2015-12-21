@@ -2,7 +2,8 @@ module test_bc_mod
     use pfunit_mod
     use mod_kinds,      only: rk,ik
     use mod_constants,  only: ZERO, ONE, TWO, THREE, FIVE, SIX, EIGHT, NINE, TEN, &
-                              XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX
+                              XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX, &
+                              IO_DESTINATION
     use type_chidg,     only: chidg_t
     use type_point,     only: point_t
     use mod_testutils,  only: meshgen
@@ -13,8 +14,9 @@ module test_bc_mod
 
 @TestCase
     type, extends(TestCase) ::  test_bc
+
         type(chidg_t)          :: chidg
-        !type(domain_t)         :: domain
+
     contains
         procedure   ::  setUp
         procedure   ::  tearDown
@@ -23,22 +25,37 @@ module test_bc_mod
 
 contains
     !-----------------------------------------------------------------------------------------------
-    !> NOTE: make sure to use 'this' instead of 'self' since these are over-writting a derived type 
-    !! procedure. The argument names have to match
+    ! NOTE: make sure to use 'this' instead of 'self' since these are over-writting a derived type 
+    ! procedure. The argument names have to match
+    !-----------------------------------------------------------------------------------------------
     subroutine setUp(this)
         class(test_bc),    intent(inout)   :: this
         
         integer(ik), parameter     :: npt = 27
         type(point_t), allocatable :: pts(:,:,:)
         integer(ik)                :: nterms_c, nterms_s, idomain
+
+        !
+        ! Send log to file
+        !
+        IO_DESTINATION = 'file'
         
+
+        !
         ! Initialize chidg environment
+        !
         call this%chidg%init('env')
         
+
+        !
         ! Generate points for a 2x2x2 element mesh
+        !
         call meshgen('222',pts)
         
+
+        !
         ! Call domain initialization
+        !
         idomain  = 1
         nterms_c = 8
         nterms_s = 8

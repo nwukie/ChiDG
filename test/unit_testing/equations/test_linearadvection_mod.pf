@@ -2,7 +2,9 @@ module test_linearadvection_mod
     use pfunit_mod
     use mod_kinds,          only: rk,ik
     use mod_constants,      only: ZERO, ONE, TWO, THREE, FIVE, SIX, EIGHT, NINE, TEN, &
-                                  XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX, NFACES
+                                  XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX, NFACES, &
+                                  IO_DESTINATION
+
     use type_chidg,         only: chidg_t
     use type_point,         only: point_t
     use atype_function,     only: function_t
@@ -17,16 +19,23 @@ module test_linearadvection_mod
     public  :: test_eq_LA
 
 
-    !> This parameter is used to test the linearization for different blocks.
-    !> iblk = [XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX, DIAG]
+
+
+    ! This parameter is used to test the linearization for different blocks.
+    ! iblk = [XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX, DIAG]
     @TestParameter(constructor=newBlock)
     type, extends (AbstractTestParameter) :: blockParam
+
         integer(ik)         :: iblk
+
     contains
         procedure :: toString
     end type blockParam
     
     
+
+
+
     
     @TestCase(constructor=newTest)
     type, extends(ParameterizedTestCase) ::  test_eq_LA
@@ -41,13 +50,15 @@ module test_linearadvection_mod
 
 
 
-contains
-    !------------------------
-    !> SET-UP  +  TEAR-DOWN
-    !------------------------
 
-    !> NOTE: make sure to use 'this' instead of 'self' since these are over-writting a derived type 
-    !! procedure. The argument names have to match
+
+
+contains
+    !----------------------------------------------------------------------------------------------
+    !                                    SET-UP  +  TEAR-DOWN
+    !----------------------------------------------------------------------------------------------
+    ! NOTE: make sure to use 'this' instead of 'self' since these are over-writting a derived type 
+    ! procedure. The argument names have to match
     subroutine setUp(this)
         class(test_eq_LA),    intent(inout)   :: this
         
@@ -56,16 +67,24 @@ contains
         integer(ik)                 :: neqns, nterms_s, nterms_c
         real(rk), dimension(npt)    :: x,y,z
         class(function_t), allocatable  :: fcn
+
+        !
+        ! Send log to file
+        !
+        IO_DESTINATION = 'file'
         
+
         !
         ! Initialize chidg environment
         !
         call this%chidg%init('env')
 
+
         !
         ! Generate points array for 3x3x3 mesh
         !
         call meshgen('3x3x3_unit',pts)
+
 
         !
         ! Initialize domain
@@ -105,7 +124,7 @@ contains
         param%iblk = iblk
     end function newBlock
     
-    !> TestCase constructor for parameter specification
+    ! TestCase constructor for parameter specification
     function newTest(param)
         type(test_eq_LA) :: newTest
         type(blockParam)                    :: param
@@ -113,7 +132,7 @@ contains
         newTest%iblk = param%iblk
     end function newTest
  
-    !> ToString - not sure what this is for yet
+    ! ToString
     function toString(this) result(string)
         class(blockParam), intent(in)   :: this
         character(:), allocatable       :: string

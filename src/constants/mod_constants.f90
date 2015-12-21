@@ -123,7 +123,7 @@ module mod_constants
     ! IO constants
     !
     integer(ik),   parameter :: MAXBLOCKS      = 200
-    character(4),  parameter :: IO_DESTINATION = 'both'
+    character(4)             :: IO_DESTINATION = 'both'
 
 
 

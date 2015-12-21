@@ -9,7 +9,7 @@ module test_interpolate_chimera_multipledonor_mod
     use mod_kinds,          only: rk,ik
     use mod_constants,      only: ZERO, ONE, TWO, THREE, FIVE, SIX, EIGHT, NINE, TEN, &
                                   XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX, &
-                                  LOCAL, NEIGHBOR
+                                  LOCAL, NEIGHBOR, IO_DESTINATION
 
     use mod_hdfio,          only: read_grid_hdf
     use mod_interpolate,    only: interpolate_face, interpolate_element
@@ -38,14 +38,21 @@ module test_interpolate_chimera_multipledonor_mod
 
 
 contains
-    !> NOTE: make sure to use 'this' instead of 'self' since these are over-writting a derived type 
-    !! procedure. The argument names have to match
+
+    !
+    ! NOTE: make sure to use 'this' instead of 'self' since these are over-writting a derived type 
+    ! procedure. The argument names have to match
+    !
     subroutine setUp(this)
         class(test_interpolate_chimera_multipledonor),    intent(inout)   :: this
 
         integer(ik)                     :: nterms_s, ivar, idom
         type(meshdata_t), allocatable   :: meshdata(:) 
         
+        !
+        ! Send log to file
+        !
+        IO_DESTINATION = 'file'
     
         !        
         ! Initialize ChiDG environment

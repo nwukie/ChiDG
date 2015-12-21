@@ -1,5 +1,6 @@
 @Test
 subroutine test_update_space_euler()
+#include <messenger.h>
     use pfunit_mod
 
     use mod_kinds,          only: rk, ik
@@ -8,7 +9,6 @@ subroutine test_update_space_euler()
     use type_chidg,         only: chidg_t
     use type_meshdata,      only: meshdata_t
     use atype_function,     only: function_t
-
 
     use mod_grid_operators, only: initialize_variable
     use mod_function,       only: create_function
@@ -133,9 +133,10 @@ subroutine test_update_space_euler()
     !
     ! Call update_space
     !
-    print*, 'ChiDG - A: Updating Space'
+    call write_line("ChiDG - A: Updating Space")
     call update_space(chidgA%data)
-    print*, 'ChiDG - B: Updating Space'
+    
+    call write_line("ChiDG - B: Updating Space")
     call update_space(chidgB%data)
 
 

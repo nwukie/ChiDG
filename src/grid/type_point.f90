@@ -1,18 +1,28 @@
 module type_point
     use mod_kinds,      only: ik,rk
     use mod_constants,  only: ZERO
-
     implicit none
+
     private
 
+
+
+
     !> Point data type, containing three spatial coordinates
+    !!
     !! @author Nathan A. Wukie
+    !!
+    !!
+    !!
+    !-------------------------------------------------------------------------------------------------------------
     type, public :: point_t
 
         real(rk) :: c1_ = ZERO, &
                     c2_ = ZERO, &
                     c3_ = ZERO
+
     contains
+
         procedure :: set
         procedure :: x
         procedure :: y
@@ -20,15 +30,29 @@ module type_point
         procedure :: xi
         procedure :: eta
         procedure :: zeta
-!        final :: destructor
+
     end type point_t
+    !*************************************************************************************************************
+
+
+
+
+
 
 contains
 
-    !> type-bound procedure for setting coordinates
-    !! @param[in] x First coordinate value
-    !! @param[in] y Second coordinate value
-    !! @param[in] z Third coordinate value
+
+
+
+    !> Set coordinates for point
+    !!
+    !!  @author Nathan A. Wukie
+    !!
+    !!  @param[in] x First coordinate value
+    !!  @param[in] y Second coordinate value
+    !!  @param[in] z Third coordinate value
+    !!
+    !-------------------------------------------------------------------------------------------------------------
     subroutine set(self, c1, c2, c3)
         class(point_t), intent(inout) :: self
         real(rk) :: c1,c2,c3
@@ -36,34 +60,77 @@ contains
         self%c1_ = c1
         self%c2_ = c2
         self%c3_ = c3
-    end subroutine
+
+    end subroutine set
+    !*************************************************************************************************************
     
-    !> type-bound procedure for setting first coordinate
-    !! @param[in] x First coordinate value
+
+
+
+
+
+    !> Set first coordinate.
+    !!
+    !!  @author Nathan A. Wukie
+    !!
+    !!  @param[in] x_in     First coordinate value
+    !!
+    !-------------------------------------------------------------------------------------------------------------
     subroutine x(self,x_in)
         class(point_t), intent(inout) :: self
         real(rk) :: x_in
 
         self%c1_ = x_in
-    end subroutine
 
-    !> type-bound procedure for setting first coordinate
-    !! @param[in] x First coordinate value
+    end subroutine x
+    !*************************************************************************************************************
+
+
+
+
+
+
+
+    !> Set second coordinate.
+    !!
+    !!  @author Nathan A. Wukie
+    !!
+    !!  @param[in] y_in     Second coordinate value
+    !!
+    !-------------------------------------------------------------------------------------------------------------
     subroutine y(self,y_in)
         class(point_t), intent(inout) :: self
         real(rk) :: y_in
 
         self%c2_ = y_in
-    end subroutine
 
-    !> type-bound procedure for setting first coordinate
-    !! @param[in] x First coordinate value
+    end subroutine y
+    !*************************************************************************************************************
+
+
+
+
+
+
+
+    !> Set third coordinate
+    !!
+    !!  @author Nathan A. Wukie
+    !!
+    !!  @param[in] z_in     Third coordinate value
+    !!
+    !-------------------------------------------------------------------------------------------------------------
     subroutine z(self,z_in)
         class(point_t), intent(inout) :: self
         real(rk) :: z_in
 
         self%c3_ = z_in
-    end subroutine
+
+    end subroutine z
+    !*************************************************************************************************************
+
+
+
 
 
     !> type-bound procedure for setting first coordinate
@@ -94,9 +161,8 @@ contains
     end subroutine
 
 
-!    !> Default destructor for point_t
-!    elemental subroutine destructor(self)
-!        type(point_t), intent(in) :: self
-!    end subroutine
+
+
+
 
 end module type_point

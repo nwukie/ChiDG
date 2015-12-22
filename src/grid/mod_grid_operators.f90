@@ -23,7 +23,8 @@ contains
     !!  @param[in]  domain  Domain upon which the solution is projected
     !!  @param[in]  ivar    Integer index of the variable being initialized
     !!  @param[in]  fcn     Function being projected to the solution
-    !---------------------------------------------------------------------------------
+    !!
+    !--------------------------------------------------------------------------------------------------------
     subroutine initialize_variable(data,ivar,fcn)
         type(chidg_data_t),     intent(inout)   :: data
         integer(ik),            intent(in)      :: ivar
@@ -41,14 +42,17 @@ contains
             if (ivar > data%eqnset(idom)%item%neqns ) call chidg_signal(FATAL,'initialize_variable: variable index ivar exceeds the number of equations')
 
             do ielem = 1,data%mesh(idom)%nelem
-                !associate (elem => data%mesh(idom)%elems(ielem), q => data%sdata%q%dom(idom)%lvecs(ielem))
 
+                    !
                     ! Initial array allocation
+                    !
                     nterms = data%sdata%q%dom(idom)%lvecs(ielem)%nterms()
                     if (.not. allocated(fmodes)) allocate(fmodes(nterms))
 
 
+                    !
                     ! Reallocate mode storage if necessary. For example, if the order of the expansion was changed
+                    !
                     if (size(fmodes) /= nterms) then
                         if (allocated(fmodes)) deallocate(fmodes)
                         allocate(fmodes(nterms), stat=ierr)
@@ -59,27 +63,23 @@ contains
                     if (.not. allocated(fmodes)) call chidg_signal(FATAL,"initialize_variable: fmodes not allocated")
 
 
-
                     !
                     ! Call function projection
                     !
-                    !call project_function_xyz(fcn,elem%nterms_s,elem%coords,fmodes)
                     call project_function_xyz(fcn,data%mesh(idom)%elems(ielem)%nterms_s,data%mesh(idom)%elems(ielem)%coords,fmodes)
-
 
 
                     !
                     ! Store the projected modes to the solution expansion
                     !
-                    !call q%setvar(ivar,fmodes)
                     call data%sdata%q%dom(idom)%lvecs(ielem)%setvar(ivar,fmodes)
 
-                !end associate
             end do ! ielem
 
         end do ! idomain
 
-    end subroutine
+    end subroutine initialize_variable
+    !**************************************************************************************************************
 
 
 
@@ -96,7 +96,8 @@ contains
     !!  @param[in]  xi      Real value for xi-coordinate
     !!  @param[in]  eta     Real value for eta-coordinate
     !!  @param[in]  zeta    Real value for zeta-coordinate
-    !----------------------------------------------------------------------------------
+    !!
+    !--------------------------------------------------------------------------------------------------------------
     function mesh_point(elem,icoord,xi,eta,zeta) result(val)
         class(element_t),   intent(in)  :: elem
         integer(ik),        intent(in)  :: icoord
@@ -127,7 +128,11 @@ contains
         !
         val = dot_product(elem%coords%getvar(icoord), polyvals)
 
-    end function
+    end function mesh_point
+    !****************************************************************************************************************
+
+
+
 
 
 
@@ -142,7 +147,8 @@ contains
     !!  @param[in]  xi      Real value for xi-coordinate
     !!  @param[in]  eta     Real value for eta-coordinate
     !!  @param[in]  zeta    Real value for zeta-coordinate
-    !-----------------------------------------------------------------------------------
+    !!
+    !----------------------------------------------------------------------------------------------------------------
     function solution_point(q,ivar,xi,eta,zeta) result(val)
         class(densevector_t),   intent(in)     :: q
         integer(ik),            intent(in)     :: ivar
@@ -172,7 +178,8 @@ contains
         !
         val = dot_product(q%getvar(ivar),polyvals)
 
-    end function
+    end function solution_point
+    !****************************************************************************************************************
 
 
 
@@ -193,19 +200,18 @@ contains
     !!  @param[in]  eta         Computational coordinate - eta
     !!  @param[in]  zeta        Computational coordinate - zeta
     !!
-    !-------------------------------------------------------------------
+    !----------------------------------------------------------------------------------------------------------------
     function metric_point(elem,cart_dir,comp_dir,xi,eta,zeta) result(val)
         class(element_t),   intent(in)  :: elem
         integer(ik),        intent(in)  :: cart_dir
         integer(ik),        intent(in)  :: comp_dir
         real(rk),           intent(in)  :: xi, eta, zeta
         
-
-
         real(rk)        :: val
         type(point_t)   :: node
         real(rk)        :: polyvals(elem%nterms_c)
         integer(ik)     :: iterm, ielem
+
 
         if (cart_dir > 3) call chidg_signal(FATAL,"Error: mesh_point -- card_dir exceeded 3 physical coordinates")
         if (comp_dir > 3) call chidg_signal(FATAL,"Error: mesh_point -- comp_dir exceeded 3 physical coordinates")
@@ -230,7 +236,8 @@ contains
 
 
 
-    end function
+    end function metric_point
+    !****************************************************************************************************************
 
 
 

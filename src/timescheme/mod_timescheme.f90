@@ -35,7 +35,16 @@ contains
 
 
 
-
+    !> Create a concrete timescheme
+    !!
+    !!  @author Nathan A. Wukie
+    !!
+    !!
+    !!
+    !!
+    !!
+    !!
+    !--------------------------------------------------------------------------------------------------------------------------
     subroutine create_timescheme(time_string,instance,options)
         character(*),                       intent(in)      :: time_string
         class(timescheme_t), allocatable,   intent(inout)   :: instance
@@ -49,7 +58,7 @@ contains
 !            case ('BackwardEuler','backwardeuler','Backward_Euler','backward_euler','BE','be')
 !                allocate(instance, source=BACKWARD_EULER_INSTANCE)
 !
-!            case ('BackwardEulerSub','backwardeulersub','Backward_Euler_Sub','backward_euler_sub','backward_euler_subiteration','BES','bes')
+!            case ('BackwardEulerSub','backwardeulersub','backward_euler_sub','backward_euler_subiteration','BES','bes')
 !                allocate(instance, source=BACKWARD_EULER_SUBITERATION_INSTANCE)
 !
             case ('quasi_newton','Quasi_Newton','quasinewton','QuasiNewton')
@@ -82,7 +91,8 @@ contains
         if (.not. allocated(instance)) call chidg_signal(FATAL,"create_time_scheme: solver was not allocated. Check that the desired solver was registered and instantiated in the mod_time_scheme module")
 
 
-    end subroutine
+    end subroutine create_timescheme
+    !***********************************************************************************************************************
 
 
 

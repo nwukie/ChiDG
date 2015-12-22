@@ -29,46 +29,48 @@ module type_element
         integer(ik)      :: nterms_s                        !< Number of terms in solution expansion.  
         integer(ik)      :: nterms_c                        !< Number of terms in coordinate expansion. 
         integer(ik)      :: idomain                         !< Processor-local domain index
-        integer(ik)      :: ielem                           !< Block-local element index. Consider that the block could have been split
+        integer(ik)      :: ielem                           !< Block-local element index. Consider the block could have been split
                                                             !< for parallelization.
 
-        integer(ik)      :: ielem_bg                        !< Block-global element index. This is the index an element would have if
-                                                            !< if was rejoined into one block after being pslit for parallelization.
+        integer(ik)      :: ielem_bg                        !< Block-global element index. The index an element would have if
+                                                            !< rejoined into one block after being split for parallelization.
 
-        !> Element quadrature points, mesh points and modes
+        ! Element quadrature points, mesh points and modes
         !---------------------------------------------------------
         type(point_t), allocatable  :: quad_pts(:)          !< Cartesian coordinates of discrete quadrature points
         type(point_t), allocatable  :: elem_pts(:)          !< Cartesian coordinates of discrete points defining element
         type(densevector_t)         :: coords               !< Modal representation of cartesian coordinates (nterms_var,(x,y,z))
 
-        !> Element metric terms
+        ! Element metric terms
         !---------------------------------------------------------
         real(rk), allocatable       :: metric(:,:,:)        !< metric matrix for each quadrature node    (mat_i,mat_j,quad_pt)
         real(rk), allocatable       :: jinv(:)              !< jacobian terms at quadrature nodes
 
-        !> Matrices of cartesian gradients of basis/test functions
+        ! Matrices of cartesian gradients of basis/test functions
         !---------------------------------------------------------
-        real(rk), allocatable       :: dtdx(:,:)            !< Derivative of basis functions in the x-direction at quadrature nodes
-        real(rk), allocatable       :: dtdy(:,:)            !< Derivative of basis functions in the y-direction at quadrature nodes
-        real(rk), allocatable       :: dtdz(:,:)            !< Derivative of basis functions in the z-direction at quadrature nodes
+        real(rk), allocatable       :: dtdx(:,:)            !< Derivative of basis functions in x-direction at quadrature nodes
+        real(rk), allocatable       :: dtdy(:,:)            !< Derivative of basis functions in y-direction at quadrature nodes
+        real(rk), allocatable       :: dtdz(:,:)            !< Derivative of basis functions in z-direction at quadrature nodes
 
-        !> Quadrature matrices
+        ! Quadrature matrices
         !---------------------------------------------------------
         type(quadrature_t), pointer  :: gq     => null()    !< Pointer to quadrature instance for solution expansion
         type(quadrature_t), pointer  :: gqmesh => null()    !< Pointer to quadrature instance for coordinate expansion
 
-        !> Element-local mass matrices
+        ! Element-local mass matrices
         !---------------------------------------------------------
         real(rk), allocatable   :: mass(:,:)
         real(rk), allocatable   :: invmass(:,:)
 
-        !> Element volume
+        ! Element volume
         real(rk)                :: vol
 
-        !> Logical tests
+        ! Logical tests
         logical :: geomInitialized = .false.
         logical :: numInitialized  = .false.
+
     contains
+
         ! Initialization procedures
         procedure, public   :: init_geom
         procedure, public   :: init_sol
@@ -88,8 +90,10 @@ module type_element
         procedure           :: assign_quadrature
 
         final               :: destructor
+
     end type element_t
-    !----------------------------------------------------------------------------------------------------------------
+    !****************************************************************************************************************
+
     private
 
 
@@ -97,6 +101,9 @@ module type_element
 
 contains
     
+
+
+
 
 
     !>  Initialize element geometry
@@ -108,6 +115,7 @@ contains
     !!
     !!  @param[in] nterms_c     Number of terms in the modal representation of the cartesian coordinates
     !!  @param[in] points       Array of cartesian points defining the element
+    !!
     !---------------------------------------------------------------------------------------
     subroutine init_geom(self,mapping,points,idomain,ielem)
         class(element_t),   intent(inout) :: self
@@ -129,7 +137,7 @@ contains
         !
         if (allocated(elem_map(mapping)%mat)) then
             imap            => elem_map(mapping)%mat
-            nterms_c        = size(elem_map(mapping)%mat,1) ! Get number of terms if coordinate expansion from size of mapping matrix
+            nterms_c        = size(elem_map(mapping)%mat,1) ! Get nterms of coordinate expansion from size of mapping matrix
             self%nterms_c   = nterms_c                      ! Set number of terms in coordinate expansion
 
 
@@ -141,7 +149,7 @@ contains
 
 
         !
-        ! Allocate and compute mesh x,y,z modes
+        ! Allocate storage
         !
         allocate(self%elem_pts(nterms_c),stat=ierr)
         call self%coords%init(nterms_c,SPACEDIM,ielem)
@@ -149,6 +157,10 @@ contains
         self%ielem    = ielem
         self%elem_pts = points
 
+        
+        !
+        ! Compute mesh x,y,z modes
+        !
         call compute_modal_coordinates(self%elem_pts,mapping,self%coords)
 
 
@@ -156,7 +168,12 @@ contains
         ! Confirm element geometry was initialized
         !
         self%geomInitialized = .true.   
-    end subroutine
+
+    end subroutine init_geom
+    !***********************************************************************************************************
+
+
+
 
 
 
@@ -171,7 +188,8 @@ contains
     !!
     !!  @param[in]  nterms_s    Number of terms in the modal representation of the solution
     !!  @param[in]  neqns       Number of equations contained in the element solution
-    !--------------------------------------------------------------------------------------
+    !!
+    !-----------------------------------------------------------------------------------------------------------
     subroutine init_sol(self,neqns,nterms_s)
         class(element_t),   intent(inout) :: self
         integer(ik),        intent(in)    :: neqns
@@ -215,7 +233,9 @@ contains
         ! Confirm element numerics were initialized
         !
         self%numInitialized = .true.    
-    end subroutine
+
+    end subroutine init_sol
+    !*************************************************************************************************************
 
 
 
@@ -228,7 +248,7 @@ contains
     !!  @author Nathan A. Wukie
     !!
     !!
-    !---------------------------------------
+    !-------------------------------------------------------------------------------------------------------------
     subroutine assign_quadrature(self)
         use mod_quadrature,     only: compute_nnodes_gq
         class(element_t),   intent(inout)   :: self
@@ -262,7 +282,12 @@ contains
         self%gqmesh => GQ(igq_f)
 
 
-    end subroutine
+    end subroutine assign_quadrature
+    !**************************************************************************************************************
+
+
+
+
 
 
 
@@ -275,7 +300,7 @@ contains
     !!  @author Nathan A. Wukie
     !!
     !!
-    !-------------------------------------------------------------------------
+    !--------------------------------------------------------------------------------------------------------------
     subroutine compute_quadrature_metrics(self)
         class(element_t),    intent(inout)   :: self
 
@@ -286,7 +311,9 @@ contains
         real(rk)    :: dydxi(self%gq%vol%nnodes), dydeta(self%gq%vol%nnodes), dydzeta(self%gq%vol%nnodes)
         real(rk)    :: dzdxi(self%gq%vol%nnodes), dzdeta(self%gq%vol%nnodes), dzdzeta(self%gq%vol%nnodes)
 
+
         nnodes = self%gq%vol%nnodes
+
         !
         ! Compute element metric terms
         !
@@ -334,7 +361,14 @@ contains
         !
         self%vol = abs(sum(self%jinv * self%gq%vol%weights))
 
-    end subroutine
+    end subroutine compute_quadrature_metrics
+    !********************************************************************************************************
+
+
+
+
+
+
 
 
 
@@ -347,7 +381,7 @@ contains
     !!
     !! @author Nathan A. Wukie
     !!
-    !---------------------------------------------------------------------
+    !--------------------------------------------------------------------------------------------------------
     subroutine compute_element_matrices(self)
         class(element_t),   intent(inout)   :: self
 
@@ -365,7 +399,14 @@ contains
         ! Call to compute cartesian coordinates at each quadrature node
         !
         call self%compute_quadrature_coords()
-    end subroutine
+
+    end subroutine compute_element_matrices
+    !********************************************************************************************************
+
+
+
+
+
 
 
 
@@ -377,7 +418,12 @@ contains
     !!
     !! @author Nathan A. Wukie
     !!
-    !-----------------------------------------------------------------------------------
+    !!
+    !!
+    !!
+    !!
+    !!
+    !--------------------------------------------------------------------------------------------------------
     subroutine compute_gradients_cartesian(self)
         class(element_t),   intent(inout)   :: self
         integer(ik)                         :: iterm,inode
@@ -398,7 +444,13 @@ contains
             end do
         end do
 
-    end subroutine
+    end subroutine compute_gradients_cartesian
+    !*********************************************************************************************************
+
+
+
+
+
 
 
 
@@ -410,7 +462,12 @@ contains
     !! @author Nathan A. Wukie
     !!
     !!
-    !-----------------------------------------------------------------------
+    !!
+    !!
+    !!
+    !!
+    !!
+    !---------------------------------------------------------------------------------------------------------------
     subroutine compute_quadrature_coords(self)
         class(element_t),   intent(inout)   :: self
         integer(ik)                         :: nnodes
@@ -418,16 +475,31 @@ contains
         integer(ik)                         :: inode
 
         nnodes = self%gq%vol%nnodes
+
+        !
         ! compute cartesian coordinates associated with quadrature points
+        !
         x = matmul(self%gqmesh%vol%val,self%coords%getvar(1))
         y = matmul(self%gqmesh%vol%val,self%coords%getvar(2))
         z = matmul(self%gqmesh%vol%val,self%coords%getvar(3))
 
+
+        !
         ! Initialize each point with cartesian coordinates
+        !
         do inode = 1,nnodes
             call self%quad_pts(inode)%set(x(inode),y(inode),z(inode))
         end do
-    end subroutine
+
+    end subroutine compute_quadrature_coords
+    !**************************************************************************************************************
+
+
+
+
+
+
+
 
 
 
@@ -439,7 +511,10 @@ contains
     !!  @author Nathan A. Wukie
     !!
     !!
-    !---------------------------------------------------------------------
+    !!
+    !!
+    !!
+    !-------------------------------------------------------------------------------------------------------------
     subroutine compute_mass_matrix(self)
         class(element_t), intent(inout) :: self
         integer(ik)  :: iterm,i,j
@@ -449,19 +524,28 @@ contains
         self%mass = 0._rk
         temp = transpose(self%gq%vol%val)
 
+        !
         ! Multiply rows by quadrature weights and cell jacobians
+        !
         do iterm = 1,self%nterms_s
             temp(iterm,:) = temp(iterm,:)*(self%gq%vol%weights)*(self%jinv)
         end do
 
+
+        !
         ! Perform the matrix multiplication of the transpose val matrix by
         ! the standard matrix. This produces the mass matrix. I think...
+        !
         self%mass = matmul(temp,self%gq%vol%val)
 
+
+        !
         ! Compute and store the inverted mass matrix
+        !
         self%invmass = inv(self%mass)
 
-    end subroutine ! compute_mass_matrix
+    end subroutine compute_mass_matrix
+    !**************************************************************************************************************
 
 
 
@@ -483,7 +567,10 @@ contains
     !!  @author Nathan A. Wukie
     !!
     !!
-    !-------------------------------------------------------------------------
+    !!
+    !!
+    !!
+    !--------------------------------------------------------------------------------------------------------------
     function x(self,xi,eta,zeta) result(xval)
         class(element_t),   intent(in)  :: self
         real(rk),      intent(in)  :: xi,eta,zeta
@@ -495,16 +582,35 @@ contains
 
         call node%set(xi,eta,zeta)
 
+        !
         ! Evaluate polynomial modes at node location
+        !
         do iterm = 1,self%nterms_c
             polyvals(iterm)  = polynomialVal(3,self%nterms_c,iterm,node)
         end do
 
+        
+        !
         ! Evaluate x from dot product of modes and polynomial values
+        !
         xval = dot_product(self%coords%getvar(1),polyvals)
 
-    end function
+    end function x
+    !***************************************************************************************************************
 
+
+
+
+
+    !> Convert local(xi,eta,zeta) coordinates to global coordinates(x,y,z)
+    !!
+    !!  @author Nathan A. Wukie
+    !!
+    !!
+    !!
+    !!
+    !!
+    !--------------------------------------------------------------------------------------------------------------
     function y(self,xi,eta,zeta) result(yval)
         class(element_t),   intent(in)  :: self
         real(rk),           intent(in)  :: xi,eta,zeta
@@ -516,16 +622,34 @@ contains
 
         call node%set(xi,eta,zeta)
 
+        !
         ! Evaluate polynomial modes at node location
+        !
         do iterm = 1,self%nterms_c
             polyvals(iterm)  = polynomialVal(3,self%nterms_c,iterm,node)
         end do
 
+
+        !
         ! Evaluate x from dot product of modes and polynomial values
+        !
         yval = dot_product(self%coords%getvar(2),polyvals)
 
-    end function
+    end function y
+    !***************************************************************************************************************
 
+
+
+
+    !> Convert local(xi,eta,zeta) coordinates to global coordinates(x,y,z)
+    !!
+    !!  @author Nathan A. Wukie
+    !!
+    !!
+    !!
+    !!
+    !!
+    !--------------------------------------------------------------------------------------------------------------
     function z(self,xi,eta,zeta) result(zval)
         class(element_t),   intent(in)  :: self
         real(rk),           intent(in)  :: xi,eta,zeta
@@ -537,16 +661,21 @@ contains
 
         call node%set(xi,eta,zeta)
 
+        !
         ! Evaluate polynomial modes at node location
+        !
         do iterm = 1,self%nterms_c
             polyvals(iterm)  = polynomialVal(3,self%nterms_c,iterm,node)
         end do
 
+
+        !
         ! Evaluate x from dot product of modes and polynomial values
+        !
         zval = dot_product(self%coords%getvar(3),polyvals)
 
-    end function
-    !-----------------------------------------------------------------------
+    end function z
+    !***************************************************************************************************************
 
 
 

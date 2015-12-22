@@ -143,6 +143,10 @@ contains
 
                     chimera_face = ( mesh(idom)%faces(ielem,iface)%ftype == CHIMERA )
                     if ( chimera_face ) then
+
+                        !
+                        ! Set receiver information for Chimera face
+                        !
                         ChiID = mesh(idom)%faces(ielem,iface)%ChiID
                         mesh(idom)%chimera%recv%data(ChiID)%receiver_domain  = idom
                         mesh(idom)%chimera%recv%data(ChiID)%receiver_element = ielem
@@ -157,15 +161,11 @@ contains
 
 
 
-
-
-
-
-
-
-
     end subroutine detect_chimera_faces
-    !--------------------------------------------------------------------------------------------------------------------
+    !*********************************************************************************************************************
+
+
+
 
 
 
@@ -359,7 +359,7 @@ contains
 
 
     end subroutine detect_chimera_donors
-    !-----------------------------------------------------------------------------------------------
+    !***********************************************************************************************************************
 
 
 
@@ -379,7 +379,7 @@ contains
     !!  @param[inout]   donor_element   Location of the donor element that was found
     !!  @param[inout]   donor_coord     Point defining the location of the GQ point in the donor coordinate system
     !!
-    !------------------------------------------------------------------------------------------------
+    !-----------------------------------------------------------------------------------------------------------------------
     subroutine compute_gq_donor(mesh,gq_node,receiver_face,donor_element,donor_coordinate)
         type(mesh_t),               intent(in)      :: mesh(:)
         type(point_t),              intent(in)      :: gq_node
@@ -408,7 +408,7 @@ contains
         real(rk)    :: dcoord(3)
         real(rk)    :: res, dx, dy, dz
 
-        !tol = 1.e-14_rk
+
         tol = 1.e-12_rk
 
         xgq = gq_node%c1_
@@ -447,12 +447,7 @@ contains
                 dx = abs(xmax - xmin)  
                 dy = abs(ymax - ymin)
                 dz = abs(zmax - zmin)
-                !xmin = xmin - (0.2*abs(xmin))
-                !xmax = xmax + (0.2*abs(xmax))
-                !ymin = ymin - (0.2*abs(ymin))
-                !ymax = ymax + (0.2*abs(ymax))
-                !zmin = zmin - (0.2*abs(zmin))
-                !zmax = zmax + (0.2*abs(zmax))
+
 
                 xmin = xmin - 0.1*dx
                 xmax = xmax + 0.1*dx
@@ -588,7 +583,7 @@ contains
 
 
                 !
-                ! Limit computational coordinates
+                ! Limit computational coordinates, in case they go out of bounds.
                 !
                 if ( xi   >  ONE ) xi   =  ONE
                 if ( xi   < -ONE ) xi   = -ONE
@@ -608,25 +603,16 @@ contains
 
 
 
-
-
-
         !
         ! Sanity check on donors and set donor_element location
         !
         if (ndonors == 0) then
-            print*, 'Receiver: domain, element, face'
-            print*, receiver_face%idomain, receiver_face%ielement, receiver_face%iface
-
-            print*, 'N-candidates'
-            print*, ncandidates
-
-            print*, 'GQ location'
-            print*, xgq, ygq, zgq
-
             call chidg_signal(FATAL,"compute_gq_donor: No donor found for gq_node")
 
         elseif (ndonors > 1) then
+            !TODO: Account for case of multiple overlapping donors.
+            !      Maybe, just choose one. Maybe, average contribution from all potential donors.
+            !
             call chidg_signal(FATAL,"compute_gq_donor: Multiple donors found for the same gq_node")
 
         elseif (ndonors == 1) then
@@ -649,7 +635,9 @@ contains
 
 
     end subroutine compute_gq_donor
-    !------------------------------------------------------------------------------
+    !****************************************************************************************************************
+
+
 
 
 
@@ -670,7 +658,7 @@ contains
     !!
     !!  @author Nathan A. Wukie
     !!
-    !------------------------------------------------------------------------------
+    !-----------------------------------------------------------------------------------------------------------------
     subroutine compute_chimera_interpolators(mesh)
         type(mesh_t),   intent(inout)   :: mesh(:)
 
@@ -743,7 +731,8 @@ contains
         end do  ! idom
 
 
-    end subroutine
+    end subroutine compute_chimera_interpolators
+    !******************************************************************************************************************
 
 
 

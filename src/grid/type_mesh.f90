@@ -19,7 +19,7 @@ module type_mesh
     !!  @author Nathan A. Wukie
     !!
     !!
-    !------------------------------------------------------------------------------
+    !------------------------------------------------------------------------------------------------------------
     type, public :: mesh_t
         ! Integer parameters
         integer(ik)         :: neqns      = 0                           !< Number of equations being solved
@@ -41,6 +41,7 @@ module type_mesh
         logical             :: geomInitialized = .false.                !< Status of geometry initialization
         logical             :: solInitialized  = .false.                !< Status of numerics initialization
     contains
+
         procedure           :: init_geom
         procedure           :: init_sol
 
@@ -49,12 +50,21 @@ module type_mesh
         procedure, private  :: init_faces_geom
         procedure, private  :: init_faces_sol
 
+        final               :: destructor
 
-        final :: destructor
     end type mesh_t
-    !------------------------------------------------------------------------------
+    !************************************************************************************************************
+
+
+
+
 
 contains
+
+
+
+
+
 
     !> Mesh geometry initialization procedure
     !!
@@ -64,7 +74,8 @@ contains
     !!  @author Nathan A. Wukie
     !!  @param[in]  nterms_c    Number of terms in the coordinate expansion
     !!  @param[in]  points_g    Rank-3 matrix of coordinate points defining a block mesh
-    !---------------------------------------------------------------------------------------
+    !!
+    !------------------------------------------------------------------------------------------------------------
     subroutine init_geom(self,idomain,nterms_c,points_g)
         class(mesh_t),  intent(inout), target   :: self
         integer(ik),    intent(in)              :: idomain
@@ -94,6 +105,11 @@ contains
 
 
     end subroutine init_geom
+    !************************************************************************************************************
+
+
+
+
 
 
 
@@ -108,7 +124,8 @@ contains
     !!
     !!  @param[in]  neqns       Number of equations being solved in the current domain
     !!  @param[in]  nterms_s    Number of terms in the solution expansion
-    !---------------------------------------------------------------------------------------
+    !!
+    !------------------------------------------------------------------------------------------------------------
     subroutine init_sol(self,neqns,nterms_s)
         class(mesh_t),  intent(inout)   :: self
         integer(ik),    intent(in)      :: neqns
@@ -136,6 +153,7 @@ contains
 
 
     end subroutine init_sol
+    !************************************************************************************************************
 
 
 
@@ -151,7 +169,8 @@ contains
     !!  @author Nathan A. Wukie
     !!
     !!  @param[in]  points_g    Rank-3 matrix of coordinate points defining a block mesh
-    !-------------------------------------------------------------------------------------------
+    !!
+    !------------------------------------------------------------------------------------------------------------
     subroutine init_elems_geom(self,points_g)
         class(mesh_t),  intent(inout)   :: self
         type(point_t),  intent(in)      :: points_g(:,:,:)
@@ -166,12 +185,14 @@ contains
                                         neqns,    nterms_s,  nnodes, nterms_c,  &
                                         npts_1d, mapping, idomain
 
+
         !
         ! Get number of points in each direction
         !
         npts_xi   = size(points_g,1)    ! Number of points in the xi-direction
         npts_eta  = size(points_g,2)    ! Number of points in the eta-direction
         npts_zeta = size(points_g,3)    ! Number of points in the zeta-direction
+
 
         !
         ! Compute number of 1d points for a single element
@@ -211,27 +232,6 @@ contains
         if (ipt > npts_zeta) stop "Mesh does not conform to agglomeration routine in zeta"
 
 
-!        ! Print mesh characteristics
-!        print*, "       ... npts_xi, npts_eta, npts_zeta"
-!        print*, npts_xi, npts_eta, npts_zeta
-!
-!        print*, "       ... mesh mapping"
-!        select case (npts_1d-1)
-!            case (1)
-!                print*, 'Linear'
-!            case (2)
-!                print*, 'Quadratic'
-!            case (3)
-!                print*, 'Cubic'
-!            case (4)
-!                print*, 'Quartic'
-!            case default
-!                stop "Error: mesh%init - Invalid element mapping"
-!        end select
-!
-!        print*, "       ... nelem_xi, nelem_eta, nelem_zeta"
-!        print*, nelem_xi, nelem_eta, nelem_zeta
-
 
         !
         ! Store number of elements in each direction along with total number of elements
@@ -266,6 +266,7 @@ contains
                     xi_start   = 1 + (ixi  -1)*(npts_1d-1)
                     eta_start  = 1 + (ieta -1)*(npts_1d-1)
                     zeta_start = 1 + (izeta-1)*(npts_1d-1)
+
                     !
                     ! For this element, collect the necessary points from the global points
                     ! array into a local points array for initializing an individual element
@@ -289,7 +290,12 @@ contains
                 end do
             end do
         end do
+
     end subroutine init_elems_geom
+    !**************************************************************************************************************
+
+
+
 
 
 
@@ -302,7 +308,8 @@ contains
     !!
     !!  @param[in]  neqns       Number of equations in the domain equation set
     !!  @param[in]  nterms_s    Number of terms in the solution expansion
-    !-------------------------------------------------------
+    !!
+    !--------------------------------------------------------------------------------------------------------------
     subroutine init_elems_sol(self,neqns,nterms_s)
         class(mesh_t),  intent(inout)   :: self
         integer(ik),    intent(in)      :: neqns
@@ -326,6 +333,10 @@ contains
 
 
     end subroutine init_elems_sol
+    !***************************************************************************************************************
+
+
+
 
 
 
@@ -339,7 +350,11 @@ contains
     !!
     !!  @author Nathan A. Wukie
     !!
-    !-----------------------------------------------------------------------------------
+    !!
+    !!
+    !!
+    !!
+    !---------------------------------------------------------------------------------------------------------------
     subroutine init_faces_geom(self)
         class(mesh_t), intent(inout)  :: self
 
@@ -425,6 +440,7 @@ contains
         end do ! izeta
 
     end subroutine init_faces_geom
+    !**************************************************************************************************************
 
 
 
@@ -435,7 +451,10 @@ contains
     !!
     !!  @author Nathan A. Wukie
     !!
-    !-----------------------------------------------------------------------------------
+    !!
+    !!
+    !!
+    !---------------------------------------------------------------------------------------------------------------
     subroutine init_faces_sol(self)
         class(mesh_t), intent(inout)  :: self
 
@@ -458,6 +477,7 @@ contains
         end do ! ielem
 
     end subroutine init_faces_sol
+    !***************************************************************************************************************
 
 
 
@@ -467,20 +487,13 @@ contains
 
 
 
-    !> Mesh destructor
-    !!      - If any data is allocated via pointers, then it should be deallocated here
-    !!
-    !!  @author Nathan A. Wukie
-    !!
-    !-------------------------------------------
     subroutine destructor(self)
         type(mesh_t), intent(inout) :: self
 
     
     end subroutine
 
+
+
+
 end module type_mesh
-
-
-
-

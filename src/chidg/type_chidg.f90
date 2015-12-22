@@ -33,7 +33,7 @@ module type_chidg
     !!
     !!  @author Nathan A. Wukie
     !!
-    !-----------------------------------------------------------------
+    !--------------------------------------------------------------------------------------------------------
     type, public    :: chidg_t
 
         type(chidg_data_t)                          :: data
@@ -42,6 +42,7 @@ module type_chidg
         class(preconditioner_t),    allocatable     :: preconditioner
 
         logical :: envInitialized = .false.
+
     contains
 
 
@@ -56,11 +57,15 @@ module type_chidg
         procedure   :: read_grid
         procedure   :: read_solution
         procedure   :: write_solution
-    end type
+
+    end type chidg_t
+    !*********************************************************************************************************
 
 
 
 contains
+
+
 
     !> ChiDG environment initialization routine
     !!      - Call initiailization procedures for equations, grid data, reading input
@@ -68,6 +73,7 @@ contains
     !!  @author Nathan A. Wukie
     !!
     !!  @param[in]  level   Initialization level specification. 'env', 'io', or 'finalize'
+    !!
     !--------------------------------------------------------------------------------------------
     subroutine init(self,level)
         class(chidg_t),  intent(inout)   :: self
@@ -99,8 +105,6 @@ contains
             case ('env')
 
 
-
-
             !
             ! Read Namelist input file
             !
@@ -108,6 +112,9 @@ contains
                 call read_input()
 
 
+            !
+            ! Initialize chimera
+            !
             case ('chimera')
                 call detect_chimera_faces(self%data%mesh)
                 call detect_chimera_donors(self%data%mesh)
@@ -119,7 +126,9 @@ contains
             !
             case ('finalize')
 
+                !
                 ! Test chidg necessary components have been allocated
+                !
                 if (.not. allocated(self%timescheme))     call chidg_signal(FATAL,"chidg%timescheme component was not allocated")
                 if (.not. allocated(self%matrixsolver))   call chidg_signal(FATAL,"chidg%matrixsolver component was not allocated")
                 if (.not. allocated(self%preconditioner)) call chidg_signal(FATAL,"chidg%preconditioner component was not allocated")
@@ -136,12 +145,8 @@ contains
         end select
 
 
-    end subroutine
-    !------------------------------------------------------------------------------------------
-
-
-
-
+    end subroutine init
+    !**********************************************************************************************************
 
 
 
@@ -169,7 +174,7 @@ contains
     !!  @param[in]      selection   Character string for specializing the component being initialized
     !!  @param[inout]   options     Dictionary for initialization options
     !!
-    !-----------------------------------------------------------------------
+    !--------------------------------------------------------------------------------------------------------
     subroutine set(self,selector,selection,options)
         class(chidg_t),         intent(inout)   :: self
         character(*),           intent(in)      :: selector
@@ -224,7 +229,8 @@ contains
         end select
 
 
-    end subroutine
+    end subroutine set
+    !********************************************************************************************************
 
 
 
@@ -291,7 +297,14 @@ contains
 
 
     end subroutine read_grid
-    !##############################################################################################
+    !*************************************************************************************************************
+
+
+
+
+
+
+
 
 
 
@@ -303,7 +316,7 @@ contains
     !!
     !!
     !!
-    !----------------------------------------------------------------------------------------------
+    !------------------------------------------------------------------------------------------------------------
     subroutine read_solution(self,solutionfile)
         class(chidg_t),     intent(inout)   :: self
         character(*),       intent(in)      :: solutionfile
@@ -332,7 +345,15 @@ contains
 
 
     end subroutine read_solution
-    !##############################################################################################
+    !************************************************************************************************************
+
+
+
+
+
+
+
+
 
 
 
@@ -345,7 +366,7 @@ contains
     !!
     !!
     !!
-    !----------------------------------------------------------------------------------------------
+    !------------------------------------------------------------------------------------------------------------
     subroutine write_solution(self,solutionfile)
         class(chidg_t),     intent(inout)   :: self
         character(*),       intent(in)      :: solutionfile
@@ -374,7 +395,12 @@ contains
 
 
     end subroutine write_solution
-    !##############################################################################################
+    !************************************************************************************************************
+
+
+
+
+
 
 
 
@@ -391,7 +417,7 @@ contains
     !!
     !!  @author Nathan A. Wukie
     !!
-    !---------------------------------------------------------------------------------------------
+    !------------------------------------------------------------------------------------------------------------
     subroutine run(self)
         class(chidg_t),     intent(inout)   :: self
 
@@ -400,7 +426,7 @@ contains
 
 
     end subroutine run
-    !##############################################################################################
+    !************************************************************************************************************
 
 
 
@@ -419,7 +445,7 @@ contains
     !!
     !!
     !!
-    !-----------------------------------------------------------------------------------------------
+    !------------------------------------------------------------------------------------------------------------
     subroutine report(self)
         class(chidg_t), intent(inout)   :: self
 
@@ -429,7 +455,7 @@ contains
 
 
     end subroutine report
-    !################################################################################################
+    !************************************************************************************************************
 
 
 
@@ -445,7 +471,7 @@ contains
     !!
     !!
     !!
-    !-------------------------------------------------------------------------------------------------
+    !------------------------------------------------------------------------------------------------------------
     subroutine close(self)
         class(chidg_t), intent(inout)   :: self
 
@@ -453,8 +479,8 @@ contains
         call log_finalize()
 
 
-    end subroutine
-    !##################################################################################################
+    end subroutine close
+    !************************************************************************************************************
 
 
 

@@ -33,6 +33,7 @@ contains
     !!  @param[inout]   flux_x  x-Flux and derivatives at quadrature points
     !!  @param[inout]   flux_y  y-Flux and derivatives at quadrature points
     !!  @param[inout]   flux_z  z-Flux and derivatives at quadrature points
+    !!
     !--------------------------------------------------------------------------------------------------------
     subroutine integrate_volume_flux(elem,sdata,idom,ivar,iblk,flux_x,flux_y,flux_z)
         type(element_t),        intent(in)      :: elem
@@ -48,28 +49,35 @@ contains
 
         ielem = elem%ielem  ! get element index
 
+        !
         ! Multiply each component by quadrature weights and element jacobians
+        !
         flux_x = (flux_x) * (elem%gq%vol%weights) * (elem%jinv)
         flux_y = (flux_y) * (elem%gq%vol%weights) * (elem%jinv)
         flux_z = (flux_z) * (elem%gq%vol%weights) * (elem%jinv)
 
 
 
+        !
         ! FLUX-X
         ! Multiply by column of test function gradients, integrate, add to RHS, add derivatives to linearization
-        integral_x = matmul(transpose(elem%dtdx),flux_x)                         ! Integrate
+        !
+        integral_x = matmul(transpose(elem%dtdx),flux_x)                            ! Integrate
 
 
-
+        !
         ! FLUX-Y
         ! Multiply by column of test function gradients, integrate, add to RHS, add derivatives to linearization
-        integral_y = matmul(transpose(elem%dtdy),flux_y)                         ! Integrate
+        !
+        integral_y = matmul(transpose(elem%dtdy),flux_y)                            ! Integrate
 
 
 
+        !
         ! FLUX-Z
         ! Multiply by column of test function gradients, integrate, add to RHS, add derivatives to linearization
-        integral_z = matmul(transpose(elem%dtdz),flux_z)                         ! Integrate
+        !
+        integral_z = matmul(transpose(elem%dtdz),flux_z)                            ! Integrate
 
 
 
@@ -77,7 +85,8 @@ contains
         call store_volume_integrals(integral,sdata,idom,ielem,ivar,iblk)            ! Store values and derivatives
 
 
-    end subroutine
+    end subroutine integrate_volume_flux
+    !*********************************************************************************************************
 
 
 
@@ -104,6 +113,7 @@ contains
     !!  @param[inout]   flux_x  x-Flux and derivatives at quadrature points
     !!  @param[inout]   flux_y  y-Flux and derivatives at quadrature points
     !!  @param[inout]   flux_z  z-Flux and derivatives at quadrature points
+    !!
     !--------------------------------------------------------------------------------------------------------
     subroutine integrate_volume_source(elem,sdata,idom,ivar,iblk,source)
         type(element_t),        intent(in)      :: elem
@@ -119,12 +129,16 @@ contains
 
         ielem = elem%ielem  ! get element index
 
+        !
         ! Multiply each component by quadrature weights and element jacobians
+        !
         source = (source) * (elem%gq%vol%weights) * (elem%jinv)
 
 
 
+        !
         ! Multiply by column of test function gradients, integrate, add to RHS, add derivatives to linearization
+        !
         integral = matmul(transpose(elem%gq%vol%val),source)                        ! Integrate
 
 
@@ -132,17 +146,8 @@ contains
         call store_volume_integrals(integral,sdata,idom,ielem,ivar,iblk)            ! Store values and derivatives
 
 
-    end subroutine
-
-
-
-
-
-
-
-
-
-
+    end subroutine integrate_volume_source
+    !********************************************************************************************************
 
 
 
@@ -173,6 +178,7 @@ contains
     !!  @param[inout]   flux_x  x-Flux and derivatives at quadrature points
     !!  @param[inout]   flux_y  y-Flux and derivatives at quadrature points
     !!  @param[inout]   flux_z  z-Flux and derivatives at quadrature points
+    !!
     !--------------------------------------------------------------------------------------------------------
     subroutine integrate_boundary_flux(mesh,sdata,face,ivar,iblk,idonor,seed,flux_x,flux_y,flux_z)
         type(mesh_t),           intent(in)      :: mesh(:)
@@ -194,6 +200,7 @@ contains
 
         nterms_s = mesh(idom)%faces(ielem,iface)%nterms_s
 
+
         !
         ! Allocate integral array. MIGHT NOT NEED THIS. TEST.
         !
@@ -202,17 +209,19 @@ contains
 
 
 
-
         associate ( weights => mesh(idom)%faces(ielem,iface)%gq%face%weights(:,iface), &
                     jinv    => mesh(idom)%faces(ielem,iface)%jinv,                     &
                     val     => mesh(idom)%faces(ielem,iface)%gq%face%val(:,:,iface) )
 
+            !
             ! Multiply each component by quadrature weights. The fluxes have already been multiplied by norm
+            !
             flux_x = (flux_x) * (weights)
             flux_y = (flux_y) * (weights)
             flux_z = (flux_z) * (weights)
 
 
+            
             integral = matmul(transpose(val),flux_x)
             call store_boundary_integrals(mesh,sdata,face,ivar,iblk,idonor,seed,integral)
 
@@ -222,9 +231,12 @@ contains
             integral = matmul(transpose(val),flux_z)
             call store_boundary_integrals(mesh,sdata,face,ivar,iblk,idonor,seed,integral)
 
+
         end associate
 
-    end subroutine
+
+    end subroutine integrate_boundary_flux
+    !**********************************************************************************************************
 
 
 
@@ -247,6 +259,7 @@ contains
     !!  @param[inout]   flux_x  x-Flux and derivatives at quadrature points
     !!  @param[inout]   flux_y  y-Flux and derivatives at quadrature points
     !!  @param[inout]   flux_z  z-Flux and derivatives at quadrature points
+    !!
     !--------------------------------------------------------------------------------------------------------
     subroutine integrate_boundary_scalar_flux(mesh,sdata,face,ivar,iblk,idonor,seed,flux)
         type(mesh_t),           intent(in)      :: mesh(:)
@@ -260,7 +273,6 @@ contains
 
 
         integer(ik)                             :: idom, ielem, iface, nterms_s, ierr
-        !type(AD_D), dimension(face%nterms_s)    :: integral
         type(AD_D), allocatable                 :: integral(:)
 
         idom  = face%idomain
@@ -295,7 +307,8 @@ contains
 
         end associate
 
-    end subroutine
+    end subroutine integrate_boundary_scalar_flux
+    !********************************************************************************************************
 
 
 
@@ -327,7 +340,7 @@ contains
     !!  @param[in]      ivar        Variable index
     !!  @param[in]      iblk        Block index for the correct linearization block for the current element
     !!
-    !--------------------------------------------------------------------------------------------------------
+    !---------------------------------------------------------------------------------------------------------
     subroutine store_volume_integrals(integral,sdata,idom,ielem,ivar,iblk)
         type(AD_D),             intent(inout)   :: integral(:)
         type(solverdata_t),     intent(inout)   :: sdata
@@ -362,7 +375,14 @@ contains
             call lhs%store(integral,idom,ielem,iblk,ivar)    
 
         end associate
-    end subroutine
+
+    end subroutine store_volume_integrals
+    !*********************************************************************************************************
+
+
+
+
+
 
 
 
@@ -399,7 +419,6 @@ contains
         idom  = face%idomain
         ielem = face%ielement
         iface = face%iface
-
         ftype = mesh(idom)%faces(ielem,iface)%ftype
 
 
@@ -432,10 +451,10 @@ contains
 
                 call lhs%store_chimera(integral,face,seed,ivar)
 
-            !
-            ! There should only be one contribution to the linearization of the Chimera face wrt the interior variables
-            !
             elseif ( (ftype == CHIMERA) .and. (iblk == DIAG) ) then
+                !
+                ! There should only be one contribution to the linearization of the Chimera face wrt the interior variables
+                !
                 if (idonor == 1) then
                     call lhs%store(integral,idom,ielem,iblk,ivar)
                 end if
@@ -446,19 +465,8 @@ contains
 
         end associate
 
-    end subroutine
-
-
-
-
-
-
-
-
-
-
-
-
+    end subroutine store_boundary_integrals
+    !***********************************************************************************************************
 
 
 

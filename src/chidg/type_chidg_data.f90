@@ -31,7 +31,7 @@ module type_chidg_data
     !!
     !!  @author Nathan A. Wukie
     !!
-    !--------------------------------------------------------------------------------------
+    !--------------------------------------------------------------------------------------------------------------
     type, public  :: chidg_data_t
 
         integer(ik),        private                 :: ndomains_ = 0
@@ -50,20 +50,20 @@ module type_chidg_data
 
 
     contains
-        !> Initialization procedure for solution data. Execute after all domains are added.
+        ! Initialization procedure for solution data. Execute after all domains are added.
         procedure   :: init_sdata
 
-        !> Modifiers for adding domains and boundary conditions
+        ! Modifiers for adding domains and boundary conditions
         procedure   :: add_domain
         procedure   :: add_bc
 
-        !> Accessors
+        ! Accessors
         procedure   :: get_domain_index     !< Given a domain name, return domain index
         procedure   :: ndomains             !< Return number of domains in chidg instance
         
 
     end type chidg_data_t
-    !---------------------------------------------------------------------------------------
+    !***************************************************************************************************************
 
 
 
@@ -81,7 +81,7 @@ contains
     !!
     !!
     !!
-    !---------------------------------------------------------------------------------------
+    !---------------------------------------------------------------------------------------------------------------
     subroutine init_sdata(self)
         class(chidg_data_t),     intent(inout)   :: self
 
@@ -89,7 +89,8 @@ contains
         call self%sdata%init(self%mesh)
 
 
-    end subroutine
+    end subroutine init_sdata
+    !***************************************************************************************************************
 
 
 
@@ -109,7 +110,7 @@ contains
     !!  @param[in]  eqnset      Character string defining the equationset_t for the domain
     !!  @param[in]  nterms_s    Integer defining the number of terms in the solution expansion
     !!
-    !---------------------------------------------------------------------------------------
+    !---------------------------------------------------------------------------------------------------------------
     subroutine add_domain(self,name,points,nterms_c,eqnset,nterms_s)
         class(chidg_data_t),    intent(inout)   :: self
         character(*),           intent(in)      :: name
@@ -137,7 +138,6 @@ contains
         !
         ! Resize array storage
         !
-
         ! Allocate new storage arrays
         allocate(temp_info(self%ndomains_),   &
                  temp_mesh(self%ndomains_),   &
@@ -147,6 +147,7 @@ contains
 
 
         ! Copy previously initialized instances to new array. Be careful about pointers components here!
+        ! For example, a pointer from a face to an element would no longer be valid in the new array.
         if (self%ndomains_ > 1) then
             !temp_mesh(   1:size(self%mesh))    = self%mesh     ! ifort segfaults on this for cases with sevaral domains
             !temp_bcset(  1:size(self%bcset))   = self%bcset
@@ -192,6 +193,7 @@ contains
         call move_alloc(temp_eqnset,self%eqnset)
 
     end subroutine add_domain
+    !***************************************************************************************************************
 
 
 
@@ -214,7 +216,7 @@ contains
     !!  @param[in]  face        Integer of the block face to which the boundary condition will be applied
     !!  @param[in]  options     Boundary condition options dictionary
     !!
-    !----------------------------------------------------------------------------
+    !---------------------------------------------------------------------------------------------------------------
     subroutine add_bc(self,domain,bc,face,options)
         class(chidg_data_t),    intent(inout)   :: self
         character(*),           intent(in)      :: domain
@@ -251,6 +253,7 @@ contains
 
 
     end subroutine add_bc
+    !**********************************************************************************************************
 
 
 
@@ -270,7 +273,7 @@ contains
     !!
     !!  @param[in]  domain
     !!
-    !------------------------------------------------------------------------
+    !----------------------------------------------------------------------------------------------------------
     function get_domain_index(self,dname) result(domain_index)
         class(chidg_data_t),    intent(in)      :: self
         character(*),           intent(in)      :: dname
@@ -296,7 +299,9 @@ contains
         if (domain_index == 0) call chidg_signal(FATAL,"chidg_data%get_domain_index :: no domain found matching given name")
 
     end function get_domain_index
-    !------------------------------------------------------------------------
+    !**********************************************************************************************************
+
+
 
 
 
@@ -310,7 +315,7 @@ contains
     !!  @author Nathan A. Wukie
     !!
     !!
-    !-----------------------------------------------------------------------------------------
+    !----------------------------------------------------------------------------------------------------------
     function ndomains(self) result(ndom)
         class(chidg_data_t),    intent(in)      :: self
 
@@ -319,7 +324,7 @@ contains
         ndom = self%ndomains_
 
     end function ndomains
-    !##########################################################################################
+    !**********************************************************************************************************
 
 
 

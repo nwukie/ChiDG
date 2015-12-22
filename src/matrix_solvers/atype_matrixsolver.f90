@@ -18,7 +18,7 @@ module atype_matrixsolver
     !!  @author Nathan A. Wukie
     !!
     !!
-    !-------------------------------------------------------------
+    !-----------------------------------------------------------------------------------------------------
     type, public, abstract :: matrixsolver_t
 
         real(rk)        :: tol   = 1.e-7_rk     !< Convergance tolerance for iterative solvers
@@ -39,7 +39,7 @@ module atype_matrixsolver
         procedure   :: error
 
     end type matrixsolver_t
-    !-------------------------------------------------------------
+    !******************************************************************************************************
 
 
 
@@ -77,12 +77,13 @@ contains
     !!  @author Nathan A. Wukie
     !!
     !!
-    !--------------------------------------------------------
+    !---------------------------------------------------------------------------------------------------
     subroutine init(self)
         class(matrixsolver_t),  intent(inout)   :: self
 
 
-    end subroutine
+    end subroutine init
+    !***************************************************************************************************
 
 
 
@@ -98,7 +99,7 @@ contains
     !!
     !!  @param[in]  options     Dictionary containing base matrixsovler options
     !!
-    !---------------------------------------------------------
+    !--------------------------------------------------------------------------------------------------
     subroutine set(self,options)
         class(matrixsolver_t),  intent(inout)   :: self
         type(dict_t),           intent(inout)   :: options
@@ -108,7 +109,8 @@ contains
         call options%get('tol',self%tol)
 
 
-    end subroutine
+    end subroutine set
+    !***************************************************************************************************
 
 
 
@@ -134,7 +136,7 @@ contains
     !!
     !!
     !!
-    !-----------------------------------------------------------
+    !--------------------------------------------------------------------------------------------------------
     function residual(self,A,x,b) result(r)
         class(matrixsolver_t),  intent(inout)   :: self
         type(chidgMatrix_t),    intent(inout)   :: A
@@ -157,7 +159,8 @@ contains
         r = b - A*x
 
 
-    end function
+    end function residual
+    !********************************************************************************************************
 
 
 
@@ -171,16 +174,7 @@ contains
 
 
 
-
-
-
-
-
-
-
-
-
-    !> Compute the residual norm
+    !> Compute the L2-norm of the residual vector for the system.
     !!
     !! Given the system: 
     !!      Ax = b
@@ -196,7 +190,7 @@ contains
     !!  error = ||R||_2
     !!
     !!
-    !-----------------------------------------------------------
+    !-------------------------------------------------------------------------------------------------
     function error(self,A,x,b) result(err)
         class(matrixsolver_t),  intent(inout)   :: self
         type(chidgMatrix_t),    intent(inout)   :: A
@@ -221,7 +215,8 @@ contains
         err = r%norm()
 
 
-    end function
+    end function error
+    !*************************************************************************************************
 
 
 

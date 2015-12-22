@@ -8,7 +8,6 @@ module mod_interpolate
     use type_seed,          only: seed_t
     use type_chidgVector,   only: chidgVector_t
     use mod_DNAD_tools,     only: compute_neighbor_domain, compute_neighbor_element, compute_neighbor_face
-
     implicit none
 
 
@@ -31,7 +30,7 @@ contains
 
     !> Compute variable at quadrature nodes.
     !!
-    !!
+    !!  @author Nathan A. Wukie
     !!
     !!
     !----------------------------------------------------------------
@@ -146,7 +145,8 @@ contains
         end if
 
 
-    end subroutine
+    end subroutine interpolate_element_autodiff
+    !***********************************************************************************************************
 
 
 
@@ -159,10 +159,10 @@ contains
 
     !> Compute variable at quadrature nodes.
     !!
+    !!  @author Nathan A. Wukie
     !!
     !!
-    !!
-    !----------------------------------------------------------------
+    !-----------------------------------------------------------------------------------------------------------
     subroutine interpolate_face_autodiff(mesh,q,idom,ielem,iface,ivar,var_gq,seed,source)
         type(mesh_t),           intent(in)              :: mesh(:)
         type(chidgVector_t),    intent(in)              :: q
@@ -184,7 +184,7 @@ contains
         logical     :: conforming_interpolation = .false.
 
         ! Chimera data
-        logical                     :: mask(size(var_gq))    !< node mask for Chimera quadrature points
+        logical                     :: mask(size(var_gq))    ! node mask for Chimera quadrature points
         type(AD_D),  allocatable    :: var_gq_chimera(:)
         integer(ik), allocatable    :: gq_node_indices(:)
         integer(ik)                 :: inode
@@ -228,12 +228,16 @@ contains
 
 
             else
+
                 call chidg_signal(FATAL,"interpolate_face: invalid value for 'face%ftype'")
+
             end if
 
 
         else
+
             call chidg_signal(FATAL,"interpolate_face: invalid value for incoming parameter 'source'")
+
         end if
 
 
@@ -470,7 +474,8 @@ contains
         end do ! idonor
 
 
-    end subroutine
+    end subroutine interpolate_face_autodiff
+    !*************************************************************************************************************
 
 
 
@@ -486,10 +491,10 @@ contains
 
     !> Compute variable at quadrature nodes.
     !!
+    !!  @author Nathan A. Wukie
     !!
     !!
-    !!
-    !----------------------------------------------------------------
+    !-------------------------------------------------------------------------------------------------------------
     subroutine interpolate_element_standard(mesh,q,idom,ielem,ivar,var_gq)
         type(mesh_t),           intent(in)      :: mesh(:)
         type(chidgVector_t),    intent(in)      :: q
@@ -505,7 +510,8 @@ contains
         !
         var_gq = matmul(mesh(idom)%elems(ielem)%gq%vol%val, q%dom(idom)%lvecs(ielem)%getvar(ivar))
 
-    end subroutine
+    end subroutine interpolate_element_standard
+    !*************************************************************************************************************
 
 
 
@@ -521,10 +527,10 @@ contains
 
     !> Compute variable at quadrature nodes.
     !!
+    !!  @author Nathan A. Wukie
     !!
     !!
-    !!
-    !----------------------------------------------------------------
+    !-------------------------------------------------------------------------------------------------------------
     subroutine interpolate_face_standard(mesh,q,idom,ielem,iface,ivar,var_gq)
         type(mesh_t),           intent(in)      :: mesh(:)
         type(chidgVector_t),    intent(in)      :: q
@@ -541,7 +547,8 @@ contains
 
 
 
-    end subroutine
+    end subroutine interpolate_face_standard
+    !*************************************************************************************************************
 
 
 

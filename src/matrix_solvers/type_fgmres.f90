@@ -1,7 +1,7 @@
 module type_fgmres
 #include <messenger.h>
     use mod_kinds,              only: rk, ik
-    use mod_constants,          only: DIAG, ZERO, TWO
+    use mod_constants,          only: ZERO
     use mod_inv,                only: inv
     use atype_matrixsolver,     only: matrixsolver_t 
     use type_preconditioner,    only: preconditioner_t
@@ -11,9 +11,6 @@ module type_fgmres
     use operator_chidg_mv
     use operator_chidg_dot,     only: dot
     use mod_inv,                only: inv
-
-
-    use precon_jacobi,  only: precon_jacobi_t
     implicit none
         
 
@@ -26,7 +23,7 @@ module type_fgmres
     !!
     !!  @author Nathan A. Wukie
     !!
-    !-------------------------------------------
+    !---------------------------------------------------------------------------------------------
     type, public, extends(matrixsolver_t) :: fgmres_t
 
         integer(ik) :: m = 200
@@ -34,7 +31,9 @@ module type_fgmres
     contains
 
         procedure   :: solve
+
     end type fgmres_t
+    !*********************************************************************************************
 
 
 
@@ -49,7 +48,7 @@ contains
     !!
     !!
     !!
-    !--------------------------------------------------------------
+    !---------------------------------------------------------------------------------------------
     subroutine solve(self,A,x,b,M)
         class(fgmres_t),            intent(inout)               :: self
         type(chidgMatrix_t),        intent(inout)               :: A
@@ -74,8 +73,6 @@ contains
 
         logical :: equal = .false.
 
-        real(rk), allocatable    :: Dref(:,:), Dp(:,:)
-
 
         !
         ! Start timer
@@ -83,10 +80,6 @@ contains
         call self%timer%reset()
         call self%timer%start()
         call write_line('           Matrix Solver: ')
-!        print*, '           Matrix Solver: '
-
-
-
 
 
 
@@ -94,9 +87,6 @@ contains
         ! Update preconditioner
         !
         call M%update(A,b)
-
-
-
 
 
 
@@ -116,14 +106,12 @@ contains
 
 
 
-
         !
         ! Allocate hessenberg matrix to store orthogonalization
         !
         allocate(h(self%m + 1, self%m), stat=ierr)
         if (ierr /= 0) call AllocationError
         h = ZERO
-
 
 
 
@@ -176,16 +164,12 @@ contains
             !
             ! Compute initial residual r0, residual norm, and normalized r0
             !
-
             r0      = self%residual(A,x0,b)
-
-            
             v(1)    = r0/r0%norm()
+            p(1)    = r0%norm()
 
 
 
-
-            p(1) = r0%norm()
             !
             ! Outer GMRES Loop
             !
@@ -193,20 +177,16 @@ contains
             do j = 1,self%m
                 nvecs = nvecs + 1
            
-
-
                 !
                 ! Apply preconditioner:  z(j) = Minv * v(j)
                 !
                 z(j) = M%apply(A,v(j))
 
 
-
                 !
                 ! Compute w = Av for the current iteration
                 !
                 w = A*z(j)
-
 
 
                 !
@@ -224,12 +204,10 @@ contains
 
 
 
-
                 !
                 ! Compute next Krylov vector
                 !
                 v(j+1) = w/h(j+1,j)
-
 
 
 
@@ -258,7 +236,6 @@ contains
                 s(j) = h(j+1,j)/gam
 
 
-
                 !
                 ! Givens rotation on h
                 !
@@ -272,10 +249,8 @@ contains
                 pj = c(j)*p(j)
                 pjp = -s(j)*p(j)
 
-
                 p(j)     = pj
                 p(j+1)   = pjp
-
 
 
                 
@@ -291,20 +266,13 @@ contains
                 !
                 res = abs(p(j+1))
                 call write_line(res)
-!                print*, res
                 converged = (res < self%tol)
                 
                 if ( converged ) then
                     exit
                 end if
 
-
-
-
             end do  ! Outer GMRES Loop - m
-
-
-
 
 
 
@@ -334,7 +302,6 @@ contains
                 end do
                 p_dim(l) = p(l)
             end do
-
 
 
 
@@ -375,14 +342,11 @@ contains
 
 
 
-
-
         !
         ! Report
         !
         err = self%error(A,x,b)
-        call write_line('   Matrix Solver Error: ', err,delimiter='')
-!        print*, '   Matrix Solver Error: ', err
+        call write_line('   Matrix Solver Error: ', err, delimiter='')
 
         call self%timer%stop()
         call self%timer%report('Matrix solver compute time: ')
@@ -390,6 +354,7 @@ contains
 
 
     end subroutine solve
+    !************************************************************************************************************
 
 
 

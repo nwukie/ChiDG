@@ -4,12 +4,11 @@ module type_face
     use mod_constants,          only: XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, &
                                       ZETA_MIN, ZETA_MAX, XI_DIR, ETA_DIR, ZETA_DIR, &
                                       SPACEDIM, NFACES, TWO
+
     use type_point,             only: point_t
     use type_element,           only: element_t
     use type_quadrature,        only: quadrature_t
-    !use type_expansion,         only: expansion_t
     use type_densevector,       only: densevector_t
-
     implicit none
 
 
@@ -20,11 +19,11 @@ module type_face
     !!        the compiler doens't have complete finalization rules implemented. Useing allocatables
     !!        seems to work fine.
     !!
+    !!  @author Nathan A. Wukie
     !!
-    !------------------------------
+    !!
+    !-------------------------------------------------------------------------------------------------------------
     type, public :: face_t
-        !integer(ik), pointer         :: neqns    => null()
-        !integer(ik), pointer         :: nterms_s => null()
         integer(ik)                  :: neqns
         integer(ik)                  :: nterms_s
         integer(ik)                  :: ftype               !< interior (0), or boundary condition (1), or Chimera interface (2)
@@ -35,10 +34,8 @@ module type_face
         integer(ik)                  :: ineighbor           !< Block-local index of neighbor element
 
 
-
         ! Chimera identifiers
         integer(ik)                     :: ChiID = 0        !< Identifier for domain-local Chimera interfaces
-
 
 
         ! Geometry
@@ -65,7 +62,9 @@ module type_face
         !---------------------------------------------------------
         logical :: geomInitialized = .false.
         logical :: numInitialized  = .false.
+
     contains
+
         procedure           :: init_geom
         procedure           :: init_sol
 
@@ -74,11 +73,20 @@ module type_face
         procedure           :: compute_quadrature_coords    !< Compute cartesian coordinates at quadrature nodes
 
         final               :: destructor
+
     end type face_t
-    !------------------------------
+    !********************************************************************************************************
 
     private
+
+
+
+
+
 contains
+
+
+
 
 
     !> Face geometry initialization procedure
@@ -92,7 +100,7 @@ contains
     !!  @param[in] elem         Parent element which many face members point to
     !!  @param[in] ineighbor    Index of neighbor element in the block
     !!
-    !--------------------------------------------------------------------------
+    !----------------------------------------------------------------------------------------------------------
     subroutine init_geom(self,iface,ftype,elem,ineighbor)
         class(face_t),      intent(inout)       :: self
         integer(ik),        intent(in)          :: iface
@@ -100,17 +108,33 @@ contains
         type(element_t),    intent(in), target  :: elem
         integer(ik),        intent(in)          :: ineighbor
 
+        !
+        ! Set indices
+        !
         self%iface      = iface
         self%ftype      = ftype
         self%idomain    = elem%idomain
         self%iparent    = elem%ielem
         self%ineighbor  = ineighbor
 
-        !self%coords     => elem%coords
+        
+        !
+        ! Set coordinates
+        !
         self%coords     = elem%coords
 
-        self%geomInitialized = .true.       !> Confirm face grid initialization
-    end subroutine
+
+        !
+        ! Confirm face grid initialization
+        !
+        self%geomInitialized = .true.
+
+    end subroutine init_geom
+    !**********************************************************************************************************
+
+
+
+
 
 
 
@@ -121,26 +145,27 @@ contains
     !!  @author Nathan A. Wukie
     !!
     !!  @param[in] elem     Parent element which many face members point to
-    !---------------------------------------------------------------------
+    !----------------------------------------------------------------------------------------------------------
     subroutine init_sol(self,elem)
         class(face_t),      intent(inout)       :: self
         type(element_t),    intent(in), target  :: elem
 
         integer(ik) :: ierr, nnodes
 
-        !self%neqns      => elem%neqns
-        !self%nterms_s   => elem%nterms_s
+        !
+        ! Set indices and associate quadrature instances.
+        !
         self%neqns      = elem%neqns
         self%nterms_s   = elem%nterms_s
         self%gq         => elem%gq
         self%gqmesh     => elem%gqmesh
-        !self%invmass    => elem%invmass
-        !self%invmass    = elem%invmass
-
 
         nnodes = self%gq%face%nnodes
 
-        ! Allocate storage for face data structures
+
+        !
+        ! Allocate storage for face data structures.
+        !
         allocate(self%quad_pts(nnodes),                    &
                  self%jinv(nnodes),                        &
                  self%metric(SPACEDIM,SPACEDIM,nnodes),    &
@@ -148,12 +173,30 @@ contains
                  self%unorm(nnodes,SPACEDIM), stat=ierr)
         if (ierr /= 0) call AllocationError
 
+        
+        !
+        ! Compute metrics, normals, node coordinates
+        !
         call self%compute_quadrature_metrics()
         call self%compute_quadrature_normals()
         call self%compute_quadrature_coords()
 
-        self%numInitialized  = .true.            ! Confirm face numerics were initialized
-    end subroutine
+
+        !
+        ! Confirm face numerics were initialized
+        !
+        self%numInitialized  = .true.
+
+    end subroutine init_sol
+    !**********************************************************************************************************
+
+
+
+
+
+
+
+
 
 
 
@@ -162,7 +205,10 @@ contains
     !!  @author Nathan A. Wukie
     !!
     !!
-    !------------------------------------------------------------------------
+    !!
+    !!
+    !!
+    !---------------------------------------------------------------------------------------------------------
     subroutine compute_quadrature_metrics(self)
         class(face_t),  intent(inout)   :: self
 
@@ -177,6 +223,9 @@ contains
         iface  = self%iface
         nnodes = self%gq%face%nnodes
 
+        !
+        ! Evaluate directional derivatives of coordinates at quadrature nodes.
+        !
         associate (gq_f => self%gqmesh%face)
             dxdxi   = matmul(gq_f%ddxi(  :,:,iface), self%coords%getvar(1))
             dxdeta  = matmul(gq_f%ddeta( :,:,iface), self%coords%getvar(1))
@@ -191,6 +240,10 @@ contains
             dzdzeta = matmul(gq_f%ddzeta(:,:,iface), self%coords%getvar(3))
         end associate
 
+        
+        !
+        ! At each quadrature node, compute metric terms.
+        !
         do inode = 1,nnodes
             self%metric(1,1,inode) = dydeta(inode)*dzdzeta(inode) - dydzeta(inode)*dzdeta(inode)
             self%metric(2,1,inode) = dydzeta(inode)*dzdxi(inode)  - dydxi(inode)*dzdzeta(inode)
@@ -205,12 +258,25 @@ contains
             self%metric(3,3,inode) = dxdxi(inode)*dydeta(inode)   - dxdeta(inode)*dydxi(inode)
         end do
 
+        
+        !
         ! compute inverse cell mapping jacobian terms
+        !
         invjac = dxdxi*dydeta*dzdzeta - dxdeta*dydxi*dzdzeta - &
                  dxdxi*dydzeta*dzdeta + dxdzeta*dydxi*dzdeta + &
                  dxdeta*dydzeta*dzdxi - dxdzeta*dydeta*dzdxi
+
         self%jinv = invjac
-    end subroutine
+
+    end subroutine compute_quadrature_metrics
+    !*****************************************************************************************************
+
+
+
+
+
+
+
 
 
 
@@ -222,7 +288,7 @@ contains
     !!
     !!  @author Nathan A. Wukie
     !!
-    !-------------------------------------------------------------------------
+    !------------------------------------------------------------------------------------------------------
     subroutine compute_quadrature_normals(self)
         class(face_t),  intent(inout)   :: self
         integer(ik)                     :: inode, iface, nnodes
@@ -235,6 +301,10 @@ contains
         iface = self%iface
         nnodes = self%gq%face%nnodes
 
+        
+        !
+        ! Evaluate directional derivatives of coordinates at quadrature nodes.
+        !
         associate (gq_f => self%gqmesh%face)
             dxdxi   = matmul(gq_f%ddxi(:,:,iface),  self%coords%getvar(1))
             dxdeta  = matmul(gq_f%ddeta(:,:,iface), self%coords%getvar(1))
@@ -249,6 +319,11 @@ contains
             dzdzeta = matmul(gq_f%ddzeta(:,:,iface),self%coords%getvar(3))
         end associate
 
+
+
+        !
+        ! Compute normal vectors for each face
+        !
         select case (self%iface)
             case (XI_MIN, XI_MAX)
 
@@ -278,7 +353,10 @@ contains
                 stop "Error: invalid face index in face initialization"
         end select
 
+        
+        !
         ! Reverse normal vectors for faces XI_MIN,ETA_MIN,ZETA_MIN
+        !
         if (self%iface == XI_MIN .or. self%iface == ETA_MIN .or. self%iface == ZETA_MIN) then
             self%norm(:,XI_DIR)   = -self%norm(:,XI_DIR)
             self%norm(:,ETA_DIR)  = -self%norm(:,ETA_DIR)
@@ -287,14 +365,21 @@ contains
 
 
 
+        !
         ! Compute unit normals
+        !
         norm_mag = sqrt(self%norm(:,XI_DIR)**TWO + self%norm(:,ETA_DIR)**TWO + self%norm(:,ZETA_DIR)**TWO)
         self%unorm(:,XI_DIR) = self%norm(:,XI_DIR)/norm_mag
         self%unorm(:,ETA_DIR) = self%norm(:,ETA_DIR)/norm_mag
         self%unorm(:,ZETA_DIR) = self%norm(:,ZETA_DIR)/norm_mag
 
 
-    end subroutine
+    end subroutine compute_quadrature_normals
+    !************************************************************************************************************
+
+
+
+
 
 
 
@@ -305,25 +390,36 @@ contains
     !!  @author Nathan A. Wukie
     !!
     !!
-    !----------------------------------------------------------------------
+    !!
+    !!
+    !!
+    !------------------------------------------------------------------------------------------------------------
     subroutine compute_quadrature_coords(self)
         class(face_t),  intent(inout)   :: self
         integer(ik)                     :: iface, inode
         real(rk)                        :: x(self%gq%face%nnodes),y(self%gq%face%nnodes),z(self%gq%face%nnodes)
 
         iface = self%iface
-        ! compute cartesian coordinates associated with quadrature points
+
+        !
+        ! compute real coordinates associated with quadrature points
+        !
         associate(gq_f => self%gqmesh%face)
             x = matmul(gq_f%val(:,:,iface),self%coords%getvar(1))
             y = matmul(gq_f%val(:,:,iface),self%coords%getvar(2))
             z = matmul(gq_f%val(:,:,iface),self%coords%getvar(3))
         end associate
 
+        
+        !
+        ! For each quadrature node, store real coordinates
+        !
         do inode = 1,self%gq%face%nnodes
             call self%quad_pts(inode)%set(x(inode),y(inode),z(inode))
         end do
 
-    end subroutine
+    end subroutine compute_quadrature_coords
+    !***********************************************************************************************************
 
 
 
@@ -338,5 +434,8 @@ contains
 
 
     end subroutine
+
+
+
 
 end module type_face

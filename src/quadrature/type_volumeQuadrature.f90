@@ -17,7 +17,7 @@ module type_volumeQuadrature
     !!        number of quadrature nodes and specified number of terms in a polynomial expansion
     !!
     !!  @author Nathan A. Wukie
-    !----------------------------------------------------------------------------------------------
+    !-----------------------------------------------------------------------------------------------------------
     type, public :: volumeQuadrature_t
         ! Number of volume quadrature nodes
         integer(ik)                 :: nnodes       !< Number of volume quadrature nodes
@@ -40,10 +40,9 @@ module type_volumeQuadrature
     contains
 
         procedure :: init
-!        final :: destructor
 
     end type volumeQuadrature_t
-    !###############################################################################################
+    !***********************************************************************************************************
 
 
 
@@ -59,7 +58,8 @@ contains
     !!  @author Nathan A. Wukie
     !!  @param[in]  nnodes  Number of nodes used for Gauss-quadrature
     !!  @param[in]  nterms  Number of terms in the associated polynomial expansion
-    !-----------------------------------------------------------------------------------------------
+    !!
+    !-----------------------------------------------------------------------------------------------------------
     subroutine init(self,nnodes,nterms)
         class(volumeQuadrature_t),  intent(inout)   :: self
         integer(ik),                intent(in)      :: nnodes
@@ -167,22 +167,13 @@ contains
         end do
 
 
-        !
-        ! Don't think this is necessary
-        !
-        deallocate(zeta_weights,eta_weights,xi_weights)
-        deallocate(zeta_vals,eta_vals,xi_vals)
 
-    end subroutine
-    !##############################################################################################
+    end subroutine init
+    !***********************************************************************************************************
 
 
 
 
     
-!    subroutine destructor(self)
-!        type(volumeQuadrature_t), intent(inout) :: self
-!
-!    end subroutine
 
 end module type_volumeQuadrature

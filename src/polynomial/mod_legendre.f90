@@ -8,10 +8,14 @@ module mod_legendre
 contains
 
 
-    !------------------------------------------------------------------
-    !       polynomial values
-    !------------------------------------------------------------------
-
+    !> Compute value of hierarchical Legendre polynomial expansion.
+    !!
+    !!  @author Nathan A. Wukie
+    !!
+    !!
+    !!
+    !!
+    !----------------------------------------------------------------------------------------------------
     function LegendreVal(space_dim,currentmode,xpos,ypos,zpos) result(polyval)
         integer(kind=ik), intent(in)        :: space_dim,currentmode
         real(kind=rk),    intent(in)        :: xpos,ypos,zpos
@@ -28,11 +32,25 @@ contains
                 print*, "Error - LegendreVal: valid space dimensions are (1,2,3)"
                 stop
         end select
-    end function
+    end function LegendreVal
+    !*****************************************************************************************************
 
 
 
 
+    
+
+
+
+    !>
+    !!
+    !!
+    !!
+    !!
+    !!
+    !!
+    !!
+    !------------------------------------------------------------------------------------------------------
     recursive function LegendreVal1D(nterm,pos) result(polyval)
     !   Compute the value of the nterm
     !   legendre polynomial at the location pos
@@ -56,33 +74,23 @@ contains
                           ((real(nterm-1,rk)-ONE))*polyval_nm2)/real(nterm-1,rk)
         end select
 
-!
-!        select case (nterm)
-!            case (1)
-!                polyval = ONE
-!            case (2)
-!                polyval = pos
-!            case (3)
-!                polyval = HALF*(THREE*pos*pos - ONE)
-!            case (4)
-!                polyval = HALF*(FIVE*pos*pos*pos - THREE*pos)
-!            case (5)
-!                polyval = EIGHTH*(35._rk*pos*pos*pos*pos - 30._rk*pos*pos + THREE)
-!            case (6)
-!                polyval = EIGHTH*(63._rk*pos*pos*pos*pos*pos - 70._rk*pos*pos*pos + 15._rk*pos)
-!            case default
-!                stop "Error: Legendre polynomial - 1D mode limit exceeded"
-!         end select
-
-    end function
+    end function LegendreVal1D
+    !***************************************************************************************************
 
 
 
+
+
+    !>  A set of 2D, Lagrange polynomials is associated with the coordinates
+    !!  in 'nodes'. This function computes the value of the Lagrange polynomial
+    !!  associated with the 'currentnode' at the coordinate '(xpos,ypos)'.
+    !!  
+    !!  @author Nathan A. Wukie
+    !!
+    !!
+    !!
+    !---------------------------------------------------------------------------------------------------
     function LegendreVal2D(currentmode,xi,eta) result(polyval)
-    !   A set of 2D, Lagrange polynomials is associated with the coordinates
-    !   in 'nodes'. This function computes the value of the Lagrange polynomial
-    !   associated with the 'currentnode' at the coordinate '(xpos,ypos)'.
-    !   Edit list:  Nathan A. Wukie - 2/15/2015
         use mod_ordering,   only: xi_order_2d,eta_order_2d
 
         integer(ik), intent(in)   :: currentmode
@@ -101,13 +109,28 @@ contains
         eta_polyval = LegendreVal1D(eta_mode,eta)
 
         polyval = xi_polyval*eta_polyval
-    end function
+    end function LegendreVal2D
+    !****************************************************************************************************
 
+
+
+
+
+
+
+
+
+
+    !>  A set of 3D, Lagrange polynomials is associated with the coordinates
+    !!  in 'nodes'. This function computes the value of the Lagrange polynomial
+    !!  associated with the 'currentnode' at the coordinate '(xpos,ypos,zpos)'.
+    !!  
+    !!  @author Nathan A. Wukie
+    !!
+    !!
+    !!
+    !----------------------------------------------------------------------------------------------------
     function LegendreVal3D(currentmode,xi,eta,zeta) result(polyval)
-    !   A set of 3D, Lagrange polynomials is associated with the coordinates
-    !   in 'nodes'. This function computes the value of the Lagrange polynomial
-    !   associated with the 'currentnode' at the coordinate '(xpos,ypos,zpos)'.
-    !   Edit list:  Nathan A. Wukie - 2/15/2015
         use mod_ordering,   only: xi_order_3d,eta_order_3d,zeta_order_3d
 
         integer(ik), intent(in)   :: currentmode
@@ -128,7 +151,9 @@ contains
         zeta_polyval = LegendreVal1D(zeta_mode,zeta)
 
         polyval = xi_polyval*eta_polyval*zeta_polyval
-    end function
+
+    end function LegendreVal3D
+    !******************************************************************************************************
 
 
 
@@ -139,10 +164,14 @@ contains
 
 
 
-    !------------------------------------------------------------------
-    !       polynomial derivatives
-    !------------------------------------------------------------------
-
+    !> Compute directional derivative of legendre polynomial.
+    !!
+    !!  @author Nathan A. Wukie
+    !!
+    !!
+    !!
+    !!
+    !-------------------------------------------------------------------------------------------------------
     function dlegendreVal(space_dim,currentmode,xi,eta,zeta,dir) result(dpolyval)
         integer(ik),   intent(in)          :: space_dim,currentmode
         real(rk),      intent(in)          :: xi,eta,zeta
@@ -161,14 +190,25 @@ contains
                 print*, "Error - DLegendreVal: Valid space dimensions are (1,2,3)"
                 stop
         end select
-    end function
+
+    end function dlegendreVal
+    !********************************************************************************************************
 
 
+
+
+
+
+
+
+
+    !>  Compute the first derivative of the nterm Legendre polynomial at the location 'pos' between -1 and 1.
+    !!
+    !!  @author Nathan A. Wukie
+    !!
+    !!
+    !--------------------------------------------------------------------------------------------------------
     recursive function DLegendreVal1D(nterm,pos) result(dpolyval)
-    !   Compute the first derivative of the nterm
-    !   Legendre polynomial at the location pos
-    !   between -1 and 1
-    !   Edit list:  Nathan A. Wukie - 2/11/2015
         integer(ik), intent(in)    :: nterm
         real(rk),    intent(in)    :: pos
         real(rk)                   :: dpolyval
@@ -184,18 +224,26 @@ contains
                 dpolyval = real(nterm-1,rk)*LegendreVal1D(nterm-1,pos) + pos*DLegendreVal1D(nterm-1,pos)
 
         end select
-    end function
+
+    end function DLegendreVal1D
+    !*******************************************************************************************************
 
 
 
 
 
 
-        function DLegendreVal2D(currentmode,xi,eta,dir) result(dpolyval)
-    !   A set of 1D-Lagrange polynomials is associated with the coordinates
-    !   in 'nodes'. This function compute the derivative of the Lagrange polynomial
-    !   associated with the 'currentnode' at the location 'pos'.
-    !   Edit list:  Nathan A. Wukie - 2/21/2015
+
+
+
+    !>  A set of 1D-Lagrange polynomials is associated with the coordinates
+    !!  in 'nodes'. This function compute the derivative of the Lagrange polynomial
+    !!  associated with the 'currentnode' at the location 'pos'.
+    !!
+    !!  @author Nathan A. Wukie
+    !!
+    !-------------------------------------------------------------------------------------------------------
+    function DLegendreVal2D(currentmode,xi,eta,dir) result(dpolyval)
         use mod_ordering,   only: xi_order_2d,eta_order_2d
 
         integer(ik), intent(in)            :: currentmode
@@ -225,15 +273,24 @@ contains
                 print*, "valid derivative directions are - 'xi', 'eta'"
                 stop
         end select
-    end function
+
+    end function DLegendreVal2D
+    !*******************************************************************************************************
 
 
+
+
+
+
+    !>  A set of 3D-Lagrange polynomials is associated with the coordinates
+    !!  in 'nodes'. This function computes the derivative of the Lagrange polynomial
+    !!  associated with the 'currentnode' at the location 'pos' my multiplying the
+    !!  1D derivatives, since the 3D modes are constructed from a tensor product of 1D modes
+    !!
+    !!  @author Nathan A. Wukie
+    !!
+    !-------------------------------------------------------------------------------------------------------
     function DLegendreVal3D(currentmode,xi,eta,zeta,dir) result(dpolyval)
-    !   A set of 3D-Lagrange polynomials is associated with the coordinates
-    !   in 'nodes'. This function computes the derivative of the Lagrange polynomial
-    !   associated with the 'currentnode' at the location 'pos' my multiplying the
-    !   1D derivatives, since the 3D modes are constructed from a tensor product of 1D modes
-    !   Edit list:  Nathan A. Wukie - 4/13/2015
         use mod_ordering,   only: xi_order_3d,eta_order_3d,zeta_order_3d
 
         integer(ik), intent(in)            :: currentmode
@@ -273,7 +330,9 @@ contains
                 print*, "valid derivative directions are - 'xi', 'eta', 'zeta'"
                 stop
         end select
-    end function
+
+    end function DLegendreVal3D
+    !*******************************************************************************************************
 
 
 

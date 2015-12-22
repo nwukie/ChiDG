@@ -22,7 +22,7 @@ module quasi_newton
     !!
     !!  @author Nathan A. Wukie
     !!
-    !------------------------------------------------------------
+    !---------------------------------------------------------------------------------------------
     type, extends(timescheme_t), public :: quasi_newton_t
 
 
@@ -31,8 +31,9 @@ module quasi_newton
         procedure   :: solve
 
         final :: destructor
+
     end type quasi_newton_t
-    !-----------------------------------------------------------
+    !**********************************************************************************************
 
 
 
@@ -103,7 +104,6 @@ contains
             do while ( rnorm > self%tol )
                 niter = niter + 1
                 call write_line("   niter: ", niter, delimiter='')
-                !print*, "   niter: ", niter
 
 
 
@@ -126,7 +126,6 @@ contains
                 ! Print diagnostics
                 !
                 call write_line("   R(Q) - Norm: ", resid, delimiter='')
-                !print*, "   R(Q) - Norm: ", resid
                 call self%residual_norm%push_back(resid)
 
 
@@ -259,7 +258,6 @@ contains
 
         entropy_error = compute_entropy_error(data)
         call write_line('Entropy error: ', entropy_error, delimiter='')
-        !print*, 'Entropy error: ', entropy_error
 
     end subroutine solve
 

@@ -26,17 +26,19 @@ module newton
     !!
     !!  @author Nathan A. Wukie
     !!
-    !------------------------------------------------------------
+    !----------------------------------------------------------------------------------------
     type, extends(timescheme_t), public :: newton_t
 
 
 
     contains
+
         procedure   :: solve
 
         final :: destructor
+
     end type newton_t
-    !-----------------------------------------------------------
+    !****************************************************************************************
 
 
 
@@ -73,7 +75,6 @@ contains
         real(rk), allocatable   :: vals(:)
         type(chidgVector_t)     :: b, qn, qold, qnew
       
-
         real(rk)                :: entropy_error
 
 
@@ -117,11 +118,6 @@ contains
                 ! Update Spatial Residual and Linearization (rhs, lin)
                 !
                 call update_space(data,timing)
-
-
-
-
-
 
 
                 call self%residual_time%push_back(timing)   ! non-essential record-keeping

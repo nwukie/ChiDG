@@ -19,8 +19,7 @@ module type_equationset
     !!
     !!   @author Nathan A. Wukie
     !!
-    !------------------------------------------------------------------------------
-    !> [equationset_t]
+    !-------------------------------------------------------------------------------------------------
     type, public, abstract :: equationset_t
         character(100)              :: name     ! TODO: change this to allocatable
         integer(ik)                 :: neqns
@@ -45,12 +44,13 @@ module type_equationset
         procedure(self_interface),     deferred  :: init
 
 
+        procedure   :: add_properties
         procedure   :: add_equation
         procedure   :: add_volume_advective_flux
         procedure   :: add_boundary_advective_flux
 
     end type equationset_t
-    !> [equationset_t]
+    !**************************************************************************************************
 
 
 
@@ -70,6 +70,61 @@ module type_equationset
 contains
 
 
+
+
+    !> Add equationset%properties component
+    !!
+    !!   @author Nathan A. Wukie
+    !!
+    !!   @param[in]  prop    properties_t class to be added
+    !!
+    !---------------------------------------------------------------------------------------------------------------------------
+    subroutine add_properties(self,prop)
+        class(equationset_t),   intent(inout)   :: self
+        class(properties_t),    intent(in)      :: prop
+    
+        integer(ik)     :: ierr
+
+        if (allocated(self%prop)) then
+            !
+            ! If self%prop is already allocated, that is strange since only one is allowed per eqnset. Warn it is being replaced.
+            !
+            call chidg_signal(WARN,"equationset%add_properties: properties component was already allocated. Replacing current definition with incoming component.")
+
+            !
+            ! Deallocate current component.
+            !
+            deallocate(self%prop)
+
+        end if
+
+
+        !
+        ! Allocate properties component
+        !
+        allocate(self%prop, source=prop, stat=ierr)
+        if (ierr /= 0) call AllocationError
+
+
+    end subroutine add_properties
+    !*****************************************************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     !> Procedure to adding equations to the equation set properties
     !!
     !!   @author Nathan A. Wukie
@@ -77,7 +132,7 @@ contains
     !!   @param[in]  varstring   String defining the variable associated with the equation being added
     !!   @param[in]  varindex    The index of the equation in the given set. 
     !!
-    !--------------------------------------------------------------------------------------------
+    !-----------------------------------------------------------------------------------------------------------------------------
     subroutine add_equation(self,varstring,varindex)
         class(equationset_t),   intent(inout)  :: self
         character(*),           intent(in)     :: varstring
@@ -147,7 +202,7 @@ contains
         self%neqns = size(self%prop%eqns)
 
     end subroutine
-    !--------------------------------------------------------------------------------------------
+    !*****************************************************************************************************************************
 
 
 
@@ -169,7 +224,7 @@ contains
     !!
     !!   @param[in]  flux    Volume advective flux component to be added
     !!
-    !--------------------------------------------------------------------------------------------
+    !-----------------------------------------------------------------------------------------------------------------------------
     subroutine add_volume_advective_flux(self,flux)
         class(equationset_t),   intent(inout)   :: self
         class(volume_flux_t),   intent(in)      :: flux
@@ -178,6 +233,7 @@ contains
         integer(ik)     :: ierr, iflux
 
         if (allocated(self%volume_advective_flux)) then
+
             !
             ! Allocate temporary flux array with one additional slot
             !
@@ -211,7 +267,9 @@ contains
             allocate(self%volume_advective_flux(1), stat=ierr)
             if (ierr /= 0) call AllocationError
 
+            !
             ! Allocate flux component from source
+            !
             allocate(self%volume_advective_flux(1)%flux, source=flux, stat=ierr)
             if (ierr /= 0) call AllocationError
 
@@ -220,7 +278,7 @@ contains
 
 
     end subroutine add_volume_advective_flux
-    !--------------------------------------------------------------------------------------------
+    !*****************************************************************************************************************************
 
 
 
@@ -240,7 +298,7 @@ contains
     !!
     !!   @param[in]  flux    Boundary advective flux type to be added
     !!
-    !--------------------------------------------------------------------------------------------
+    !-----------------------------------------------------------------------------------------------------------------------------
     subroutine add_boundary_advective_flux(self,flux)
         class(equationset_t),   intent(inout)   :: self
         class(boundary_flux_t), intent(in)      :: flux
@@ -249,11 +307,13 @@ contains
         integer(ik)     :: ierr, iflux
 
         if (allocated(self%boundary_advective_flux)) then
+
             !
             ! Allocate temporary flux array with one additional slot
             !
             allocate(temp(size(self%boundary_advective_flux) + 1), stat=ierr)
             if (ierr /= 0) call AllocationError
+
 
             !
             ! Copy current flux components to temp array
@@ -276,12 +336,17 @@ contains
             self%boundary_advective_flux = temp
 
         else
+
             !
-            ! Allocate one slot
+            ! Allocate new slot
             !
             allocate(self%boundary_advective_flux(1), stat=ierr)
             if (ierr /= 0) call AllocationError
 
+
+            !
+            ! Allocate flux in new wrapper slot
+            !
             allocate(self%boundary_advective_flux(1)%flux, source=flux, stat=ierr)
             if (ierr /= 0) call AllocationError
 
@@ -290,7 +355,7 @@ contains
 
 
     end subroutine add_boundary_advective_flux
-    !--------------------------------------------------------------------------------------------
+    !*****************************************************************************************************************************
 
 
 

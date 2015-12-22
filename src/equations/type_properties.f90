@@ -19,7 +19,7 @@ module type_properties
     !!
     !!
     !!
-    !-----------------------------------------------------------------
+    !---------------------------------------------------------------------------------------------
     type, public :: properties_t
         
         ! Equations
@@ -34,8 +34,11 @@ module type_properties
         procedure   :: init
         procedure   :: get_eqn_index
 
+        procedure   :: add_fluid
+        !procedure   :: add_solid
+
     end type properties_t
-    !-----------------------------------------------------------------
+    !*********************************************************************************************
 
 
 
@@ -44,6 +47,11 @@ module type_properties
 
 contains
 
+
+
+
+
+
     !>  Equation properties initialization
     !!
     !!  @author Nathan A. Wukie
@@ -51,7 +59,7 @@ contains
     !!  @param[in]  fluid   fluid_t object to be assigned
     !!  @param[in]  solid   solid_t object to be assigned
     !!
-    !------------------------------------------------------------------
+    !---------------------------------------------------------------------------------------------------
     subroutine init(self,fluid,solid)
         class(properties_t),    intent(inout)            :: self
         class(fluid_t),         intent(in),    optional  :: fluid
@@ -70,6 +78,9 @@ contains
         end if
 
     end subroutine
+    !***************************************************************************************************
+
+
 
 
 
@@ -87,7 +98,7 @@ contains
     !!
     !!   @param[in]  varstring   Character string identifying the desired variable
     !!
-    !-------------------------------------------------------------------------------------
+    !---------------------------------------------------------------------------------------------------
     function get_eqn_index(self,varstring) result(varindex)
         class(properties_t),    intent(in)  :: self
         character(*),           intent(in)  :: varstring
@@ -96,6 +107,7 @@ contains
         logical     :: found = .false.
 
         varindex = 123456789
+
 
         !
         ! Search for character string in self%eqns array. If found set index
@@ -108,12 +120,83 @@ contains
             end if
         end do
 
+
+
         !
         ! Check if index was found
         !
         if (.not. found) call chidg_signal(FATAL,"Equation string not found in equation set properties")
 
     end function
+    !***************************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+    !> Add a fluid definition to the properties type
+    !!
+    !!  @author Nathan A. Wukie
+    !!
+    !!
+    !!
+    !---------------------------------------------------------------------------------------------------
+    subroutine add_fluid(self,fluid)
+        class(properties_t),    intent(inout)   :: self
+        class(fluid_t),         intent(in)      :: fluid
+
+        integer(ik) :: ierr
+
+
+        if (allocated(self%fluid)) then
+            !
+            ! If self%fluid is already allocated, that is strange since only one is allowed per properties_t. Warn it is being replaced.
+            !
+            call chidg_signal(WARN,"properties%add_fluid: fluid component was already allocated. Replacing current definition with new definition")
+
+
+            !
+            ! Deallocate current fluid definition
+            !
+            deallocate(self%fluid)
+
+        end if
+
+
+        !
+        ! Allocate new fluid definition
+        !
+        allocate(self%fluid, source=fluid, stat=ierr)
+        if (ierr /= 0) call AllocationError
+
+    end subroutine add_fluid
+    !***************************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

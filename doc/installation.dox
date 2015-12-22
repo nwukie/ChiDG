@@ -3,10 +3,16 @@
 \page page_installation Installation
 This page details the information required to successfully build the ChiDG project. One should be sure 
 to first address the required dependencies of the project, which are detailed below. Also, a recent 
-compiler version should be used. Tested compilers are listed below.
+compiler version should be used. The following steps outline the process for successfully building ChiDG.
+
+Installing ChiDG:
+    1. \ref s_obtaining
+    2. \ref s_dependencies
+    3. \ref s_compile
 
 
-
+\n
+<HR>
 
 \section s_obtaining Obtaining ChiDG
 ChiDG is hosted in a git repository on <a href="https://www.gitlab.com">www.gitlab.com</a> and may be cloned using either 
@@ -17,9 +23,28 @@ ChiDG is hosted in a git repository on <a href="https://www.gitlab.com">www.gitl
 
 \code  git clone https://gitlab.com/nwukie/ChiDG.git ChiDG     \endcode
 
-\section s_dependencies Dependencies
+
+ChiDG is currently in a pre-release state. As such, public read-access to the above repository is restricted.
+
+\n
+\n
+
+
+
+<HR>
+
+\section s_dependencies ChiDG Dependencies
 ChiDG depends on several libraries that enable IO and parallelization activities. 
 These components are required to build ChiDG.
+
+
+<li> \ref s_dep_hdf5    </li>\n
+<li> \ref s_dep_mpich   </li>\n
+<li> \ref s_dep_cmake   </li>\n
+<li> \ref s_dep_tecio (distributed with ChiDG) </li>\n
+
+
+\n
 
 
 
@@ -31,13 +56,18 @@ HDF5 is used as a container for the ChiDG grid/solution files and is a required 
 
 
 
+\n
+\n
+
+
+
 
 \subsection s_dep_mpich MPICH
 The `mpich` source or precompiled packages can be downloaded from the MPICH website.
 
 <a href="https://www.mpich.org">MPICH Website</a>
 
-\subsubsection s_dep_mpich_configuration Compile
+\subsubsection s_dep_mpich_configuration Compile MPICH
 When compiling `mpich`, the following procedure is used to set the relevant compilers and
 configure mpich to be built.
 
@@ -55,15 +85,35 @@ Install `mpich` with:
 \code   make install 2>&1 | tee mi.txt  \endcode
 
 
-\subsubsection s_dep_mpich_variables Set environment variables
+\subsubsection s_dep_mpich_variables Set environment variables for MPICH
+The `cmake` build script requires the `MPI_ROOT` environment variable to be set.
 
+\code   export MPI_ROOT=/usr/local/mpich    \endcode
+
+This must be set such that `${MPI_ROOT}/gnu` or `${MPI_ROOT}/intel` are valid; allowing
+the `cmake` script to select the correct installation based on the compiler vendor being used.
+
+
+
+
+
+
+
+\n
+\n
 
 
 \subsection s_dep_cmake CMake
-CMake is required to generate the 'make' configuration. Version 3.4.0 has been tested.
+ChiDG uses the CMake build-system to generate the 'make' configuration files for the project.
+
+<a href="https://cmake.org">CMake Website</a>
 
 
 
+
+
+\n
+\n
 
 
 
@@ -77,12 +127,14 @@ from the Tecplot website.
 
 
 
+\n
+\n
 
+<HR>
 
+\section s_compile Compiling ChiDG
 
-\section s_compile Compile
-
-NOTE: ChiDG uses features of the most recent Fortran standard (F2008). Updated versions of Fortran compilers are required.
+NOTE: ChiDG uses features of the most recent Fortran standard (F2008). Up-to-date Fortran compilers are required.
 
 Successfully tested compiler versions:
         - gfortran 5.2
@@ -104,7 +156,8 @@ ChiDG uses the CMake build system. Out-of-source builds, as described here, are 
 
 
 
-
+\n
+\n
 */
 
 

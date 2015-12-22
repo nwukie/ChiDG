@@ -1,14 +1,30 @@
 /*!
 
 \page page_develop Develop
-Dev info
+Information on developing ChiDG.
+
+Development tasks:
+    1. \ref s_testing
+    2. \ref s_contributing
 
 
 
+<HR>
+<HR>
 
-\section s_testing Testing
+\section s_testing Testing with pFUnit
+ChiDG uses the Fortran unit-testing framework `pFUnit`.
+
+<a href="pfunit.sourceforge.net">pFUnit Website</a>
 
 
+\n
+<HR>
+\subsection s_testing_compile Compile pFUnit
+Refer to the `pFUnit` documentation for a more complete guide to compiling the code.
+An abreviated description is provided here:
+
+First, set environment variables that are used by the `pFUnit` configuration file:
 \code 
     export F90_VENDOR=GNU 
     export F90=gfortran
@@ -17,19 +33,96 @@ Dev info
 \endcode
 
 
+Compile `pFUnit` with `MPI=YES` to enable a parallel version of the testing framework:
 \code
     make tests MPI=YES
 \endcode
 
 
 
+Once the build is complete, install `pFUnit` into a preferred directory:
 \code
-    make install INSTALL_DIR=/usr/local/pfunit 
+    make install INSTALL_DIR=/usr/local/pfunit/gnu
 \endcode
 
 
+\subsection s_testing_environment Set environment variables for pFUnit
 Be sure to set the environment variable for `pfunit`
 \code   export PFUNIT=/usr/local/pfunit     \endcode
+
+
+
+
+
+
+\n
+<HR>
+\subsection s_testing_creating Creating tests
+Two `cmake` macros have been written that facilitate adding tests and test targets to the system.
+
+\code
+    add_test_sources()
+    add_test_target()
+\endcode
+\n
+
+
+
+
+\subsubsection s_testing_add_sources Adding test sources
+First, the macro `add_test_sources` accepts a target name(`target_name`) and a list of source files(`test_source_list`). 
+This defines a `cmake` variable, `${target_name_sources}`, that is a list of the test source files with their relative file path. The path
+is needed because the files need to be processed by the pFUnit preprocessor.
+
+\code   add_test_sources(target_name test_source_list)   \endcode
+
+\b Example:
+\code   
+    add_test_sources(containers
+                     source_1.pf
+                     source_2.pf
+                     source_3.pf     
+                     )
+\endcode
+\n
+
+
+\subsubsection s_testing_add_target Adding test target
+Second, the macro `add_test_target` accepts a target name(`target_name`), and the `cmake` variable corresponding for the sources
+list(`${target_name_source}`) that should have already been defined by the `add_test_sources` macro.
+
+\code   add_test_target(target_name target_type ${target_name_sources})    \endcode
+Here, `target_type` is either `unit` or `reg`, designating either a unit-test or a regression-test, respectively.
+
+
+\b Example:
+\code   add_test_target(containers unit ${containers_sources})  \endcode
+
+
+\n
+\n
+<HR>
+<HR>
+
+\section s_contributing Contributing to ChiDG
+Information on how to contribute to ChiDG.
+
+
+
+
+
+\n
+\n
+
+
+
+
+
+
+
+
+
+
 
 */
 

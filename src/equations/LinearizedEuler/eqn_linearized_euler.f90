@@ -1,8 +1,8 @@
 module eqn_linearized_euler
-    use mod_kinds,                              only: rk,ik
+    use mod_kinds,                                      only: rk,ik
 
-    use type_equationset,                       only: equationset_t
-    use perfect_gas,                            only: perfect_gas_t
+    use type_equationset,                               only: equationset_t
+    use perfect_gas,                                    only: perfect_gas_t
 
     use LINEULER_boundary_average_advective_flux_real,  only: LINEULER_boundary_average_advective_flux_real_t
     use LINEULER_boundary_average_advective_flux_imag,  only: LINEULER_boundary_average_advective_flux_imag_t
@@ -13,10 +13,12 @@ module eqn_linearized_euler
     use LINEULER_volume_advective_source_real,          only: LINEULER_volume_advective_source_real_t
     use LINEULER_volume_advective_source_imag,          only: LINEULER_volume_advective_source_imag_t
     use LINEULER_volume_advective_sourceterms_real,     only: LINEULER_volume_advective_sourceterms_real_t
-
     use LINEULER_properties,                            only: LINEULER_properties_t
     implicit none
+
     private
+
+
 
 
 
@@ -25,16 +27,16 @@ module eqn_linearized_euler
     !!
     !!   @author Nathan A. Wukie
     !!
-    !----------------------------------------------------------------------------
+    !------------------------------------------------------------------------------------------------------
     type, extends(equationset_t), public :: linearized_euler_e
 
 
     contains
+
         procedure   :: init
 
     end type linearized_euler_e
-    !----------------------------------------------------------------------------
-
+    !******************************************************************************************************
 
 
 
@@ -46,6 +48,10 @@ module eqn_linearized_euler
 contains
 
 
+
+
+
+
     !> Initialize the Euler equations
     !!
     !!   - initialize properties
@@ -54,7 +60,7 @@ contains
     !!
     !!   @author Nathan A. Wukie
     !!
-    !----------------------------------------------------------------------------
+    !------------------------------------------------------------------------------------------------------
     subroutine init(self)
         class(linearized_euler_e), intent(inout) :: self
 
@@ -68,21 +74,26 @@ contains
         type(LINEULER_volume_advective_source_real_t)           :: volume_source_real
         type(LINEULER_volume_advective_source_imag_t)           :: volume_source_imag
         type(LINEULER_volume_advective_sourceterms_real_t)      :: volume_sourceterms_real
+        type(LINEULER_properties_t)                             :: prop
 
+        type(perfect_gas_t)                                     :: perfect_gas
 
+        !
+        ! Set equationset name.
+        !
         self%name    = 'Linearized Euler'
+
+
+        !
+        ! Set up properties
+        !
+        call prop%add_fluid(perfect_gas)
+
 
         !
         ! Allocate equation set properties
         !
-        if (allocated(self%prop)) deallocate(self%prop)
-        allocate(LINEULER_properties_t::self%prop)
-
-        select type (prop => self%prop)
-            type is (LINEULER_properties_t) 
-                allocate(perfect_gas_t::prop%fluid)
-        end select
-
+        call self%add_properties(prop)
 
 
         !
@@ -115,8 +126,8 @@ contains
         call self%add_volume_advective_flux(volume_sourceterms_real)
 
 
-    end subroutine
-    !----------------------------------------------------------------------------
+    end subroutine init
+    !*****************************************************************************************************
 
 
 

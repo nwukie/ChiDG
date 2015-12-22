@@ -28,9 +28,10 @@ module quasi_newton
 
 
     contains
+    
         procedure   :: solve
 
-        final :: destructor
+        final       :: destructor
 
     end type quasi_newton_t
     !**********************************************************************************************

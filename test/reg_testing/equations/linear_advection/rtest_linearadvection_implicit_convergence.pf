@@ -15,7 +15,8 @@
 subroutine rtest_linearadvection_implicit_convergence()
     use pfunit_mod
     use mod_kinds,          only: rk,ik
-    use mod_constants,      only: ZERO, XI_MIN, ETA_MIN, ZETA_MIN
+    use mod_constants,      only: ZERO, XI_MIN, ETA_MIN, ZETA_MIN, XI_MAX, ETA_MAX, ZETA_MAX, &
+                                  IO_DESTINATION
 
     use type_chidg,         only: chidg_t
     use type_point,         only: point_t
@@ -31,7 +32,7 @@ subroutine rtest_linearadvection_implicit_convergence()
     type(chidg_t)                       :: chidg
     type(point_t),          allocatable :: pts(:,:,:)
     class(function_t),      allocatable :: fcn
-    type(dict_t)                        :: toptions
+    type(dict_t)                        :: toptions, moptions
     integer(ik)                         :: nterms_c, itime
 
 
@@ -49,20 +50,31 @@ subroutine rtest_linearadvection_implicit_convergence()
     gq_rule        = 2
     eqnset         = 'linearadvection'
     timescheme     = 'backward_euler_subiteration'
-    matrixsolver   = 'direct'
+    matrixsolver   = 'fgmres'
     preconditioner = 'identity'
-
-
     !============================================================================
 
 
-    ! Set time-scheme options to pass during initialization
+    !
+    ! Send log to file
+    !
+    IO_DESTINATION = 'file'
+
+
+    !
+    ! Set timescheme options to pass during initialization
+    !
     call toptions%set('dt',0.1_rk)
     call toptions%set('tol',3.e-15_rk)
     call toptions%set('nsteps',1)
     call toptions%set('nwrite',0)
     call toptions%set('cfl0',1.0_rk)
 
+
+    !
+    ! Set matrixsolver options to pass during initialization
+    !
+    call moptions%set('tol',  1.e-15_rk)
 
 
     !
@@ -75,10 +87,9 @@ subroutine rtest_linearadvection_implicit_convergence()
     !
     ! Set ChiDG components
     !
-    call chidg%set('time_scheme',timescheme,toptions)
-    call chidg%set('matrixsolver',matrixsolver)
+    call chidg%set('timescheme',timescheme,toptions)
+    call chidg%set('matrixsolver',matrixsolver,moptions)
     call chidg%set('preconditioner',preconditioner)
-    call chidg%set('ndomains','')
 
 
     !
@@ -95,26 +106,34 @@ subroutine rtest_linearadvection_implicit_convergence()
 
 
 
-    associate ( data => chidg%data )
-        !
-        ! Initialize domain
-        !
-        call data%add_bc('D_01','periodic',XI_MIN)
-        call data%add_bc('D_01','periodic',ETA_MIN)
-        call data%add_bc('D_01','periodic',ZETA_MIN)
+    !
+    ! Set boundary conditions
+    !
+    call chidg%data%add_bc('D_01','extrapolation_la',XI_MIN)
+    call chidg%data%add_bc('D_01','extrapolation_la',XI_MAX)
+    call chidg%data%add_bc('D_01','extrapolation_la',ETA_MIN)
+    call chidg%data%add_bc('D_01','extrapolation_la',ETA_MAX)
+    call chidg%data%add_bc('D_01','extrapolation_la',ZETA_MIN)
+    call chidg%data%add_bc('D_01','extrapolation_la',ZETA_MAX)
 
-        call data%init_sdata()
 
-        !
-        ! Initialize solution
-        !
-        call create_function(fcn,'gaussian')
-        call fcn%set('bx',0._rk)
-        call fcn%set('by',1.5_rk)
-        call fcn%set('bz',1.5_rk)
-        call fcn%set('c',2.0_rk)
-        call initialize_variable(data,1,fcn)
-    end associate
+    !
+    ! Initialize solution storage
+    !
+    call chidg%data%init_sdata()
+
+
+
+    !
+    ! Set initial solution
+    !
+    call create_function(fcn,'gaussian')
+    call fcn%set('bx',0._rk)
+    call fcn%set('by',1.5_rk)
+    call fcn%set('bz',1.5_rk)
+    call fcn%set('c',2.0_rk)
+    call initialize_variable(chidg%data,1,fcn)
+
 
 
     !
@@ -141,6 +160,10 @@ subroutine rtest_linearadvection_implicit_convergence()
     @assertEqual(2,chidg%timescheme%newton_iterations%at(itime))
 
 
+    !
+    ! Close ChiDG
+    !
+    call chidg%close()
 
 
 end subroutine

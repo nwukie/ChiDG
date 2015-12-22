@@ -10,7 +10,7 @@ module mod_timescheme
     ! Import solverdata types
 !    use forward_euler,                  only: forward_euler_t
 !    use backward_euler,                 only: backward_euler_t
-!    use backward_euler_subiteration,    only: backward_euler_subiteration_t
+    use backward_euler_subiteration,    only: backward_euler_subiteration_t
     use quasi_newton,                   only: quasi_newton_t
     use newton,                         only: newton_t
     implicit none
@@ -20,7 +20,7 @@ module mod_timescheme
     ! Instantiate solver types for sourcing
 !    type(forward_euler_t)               :: FORWARD_EULER_INSTANCE
 !    type(backward_euler_t)              :: BACKWARD_EULER_INSTANCE
-!    type(backward_euler_subiteration_t) :: BACKWARD_EULER_SUBITERATION_INSTANCE
+    type(backward_euler_subiteration_t) :: BACKWARD_EULER_SUBITERATION_INSTANCE
     type(quasi_newton_t)                :: QUASI_NEWTON_INSTANCE
     type(newton_t)                      :: NEWTON_INSTANCE
 
@@ -58,9 +58,9 @@ contains
 !            case ('BackwardEuler','backwardeuler','Backward_Euler','backward_euler','BE','be')
 !                allocate(instance, source=BACKWARD_EULER_INSTANCE)
 !
-!            case ('BackwardEulerSub','backwardeulersub','backward_euler_sub','backward_euler_subiteration','BES','bes')
-!                allocate(instance, source=BACKWARD_EULER_SUBITERATION_INSTANCE)
-!
+            case ('BackwardEulerSub','backwardeulersub','backward_euler_sub','backward_euler_subiteration','BES','bes')
+                allocate(instance, source=BACKWARD_EULER_SUBITERATION_INSTANCE)
+
             case ('quasi_newton','Quasi_Newton','quasinewton','QuasiNewton')
                 allocate(instance, source=QUASI_NEWTON_INSTANCE)
 

@@ -61,6 +61,10 @@ contains
 
         type(perfect_gas_t)                             :: perfect_gas
 
+
+        !
+        ! Set equationset name
+        !
         self%name    = 'Euler'
 
 

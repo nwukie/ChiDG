@@ -1,14 +1,10 @@
 module mod_hdf_utilities
 #include <messenger.h>
     use mod_kinds,              only: rk, ik
-
     use type_file_properties,   only: file_properties_t
-
     use hdf5
     use h5lt
     implicit none
-
-
 
 
 
@@ -28,13 +24,11 @@ contains
     !!
     !!
     !!  @param[in]  filename    Character string containing a filename for a file that gets interrogated
-    !!
     !!  @result     prop        file_properties_t instance that gets returned with file information
     !!
-    !----------------------------------------------------------------------------------------------
+    !-----------------------------------------------------------------------------------------------------------
     function get_properties_hdf(filename) result(prop)
         character(*),   intent(in)  :: filename
-
 
         integer(HID_T)              :: fid
         integer(ik)                 :: ierr
@@ -42,6 +36,7 @@ contains
         logical                     :: fileexists = .false.
 
         type(file_properties_t)     :: prop
+
 
         ! 
         !  Check file exists
@@ -88,7 +83,6 @@ contains
 
 
 
-
         !
         ! Get order of coordinate and solution expansions
         !
@@ -126,7 +120,11 @@ contains
         call h5fclose_f(fid,ierr)
 
     end function get_properties_hdf
-    !###############################################################################################
+    !**************************************************************************************************************
+
+
+
+
 
 
 
@@ -139,9 +137,9 @@ contains
     !!
     !!  @author Nathan A. Wukie
     !!
+    !!  @param[in]  fid     HDF file identifier
     !!
-    !!
-    !------------------------------------------------------------------------------------------------
+    !--------------------------------------------------------------------------------------------------------------
     function get_ndomains_hdf(fid) result(ndomains)
         integer(HID_T), intent(in)  :: fid
 
@@ -159,7 +157,10 @@ contains
 
 
     end function get_ndomains_hdf
-    !###############################################################################################
+    !**************************************************************************************************************
+
+
+
 
 
 
@@ -174,7 +175,7 @@ contains
     !!  @author Nathan A. Wukie
     !!
     !!
-    !-------------------------------------------------------------------------------------------------
+    !--------------------------------------------------------------------------------------------------------------
     function check_contains_grid_hdf(fid) result(grid_status)
         integer(HID_T), intent(in)  :: fid
 
@@ -202,7 +203,13 @@ contains
 
 
     end function check_contains_grid_hdf
-    !##################################################################################################
+    !**************************************************************************************************************
+
+
+
+
+
+
 
 
 
@@ -216,7 +223,7 @@ contains
     !!  @author Nathan A. Wukie
     !!
     !!
-    !-------------------------------------------------------------------------------------------------
+    !---------------------------------------------------------------------------------------------------------------
     function check_contains_solution_hdf(fid) result(solution_status)
         integer(HID_T), intent(in)  :: fid
 
@@ -244,7 +251,11 @@ contains
 
 
     end function check_contains_solution_hdf
-    !##################################################################################################
+    !***************************************************************************************************************
+
+
+
+
 
 
 
@@ -258,7 +269,10 @@ contains
     !!  @author Nathan A. Wukie
     !!
     !!
-    !-------------------------------------------------------------------------------------------------
+    !!
+    !!  @param[in]  fid     HDF file identifier
+    !!
+    !---------------------------------------------------------------------------------------------------------------
     function get_domain_names_hdf(fid) result(names)
         integer(HID_T),     intent(in)  :: fid
 
@@ -312,20 +326,29 @@ contains
 
 
     end function get_domain_names_hdf
-    !##################################################################################################
+    !*************************************************************************************************************
 
 
 
 
 
 
-    !> Returns an array of integer that specifies the order of the coordinate expansion for every domain.
+
+
+
+
+
+
+
+    !> Returns an array of integers that specifies the order of the coordinate expansion for every domain.
     !!
     !!  @author Nathan A. Wukie
     !!
     !!
+    !!  @param[in]  fid         HDF file identifier.
+    !!  @param[in]  dnames(:)   List of domain names to be interrogated. 
     !!
-    !--------------------------------------------------------------------------------------------------
+    !-------------------------------------------------------------------------------------------------------------
     function get_order_coordinate_hdf(fid, dnames) result(orders)
         integer(HID_T),         intent(in)  :: fid
         character(len=1024),    intent(in)  :: dnames(:)
@@ -363,7 +386,7 @@ contains
         end do
 
     end function get_order_coordinate_hdf
-    !########################################################################################################
+    !*************************************************************************************************************
 
 
 
@@ -375,9 +398,10 @@ contains
     !!
     !!  @author Nathan A. Wukie
     !!
+    !!  @param[in]  fid     HDF file identifier.
+    !!  @param[in]  dnames  List of domain names to be interrogated.
     !!
-    !!
-    !--------------------------------------------------------------------------------------------------
+    !-------------------------------------------------------------------------------------------------------------
     function get_order_solution_hdf(fid, dnames) result(orders)
         integer(HID_T),         intent(in)  :: fid
         character(len=1024),    intent(in)  :: dnames(:)
@@ -416,7 +440,9 @@ contains
         end do
 
     end function get_order_solution_hdf
-    !########################################################################################################
+    !*************************************************************************************************************
+
+
 
 
 
@@ -432,8 +458,10 @@ contains
     !!  @author Nathan A. Wukie
     !!
     !!
+    !!  @param[in]  fid     HDF file identifier.
+    !!  @param[in]  dnames  List of domain names to be interrogated.
     !!
-    !--------------------------------------------------------------------------------------------------
+    !------------------------------------------------------------------------------------------------------------
     function get_eqnset_hdf(fid, dnames) result(eqnsets)
         integer(HID_T),         intent(in)  :: fid
         character(len=1024),    intent(in)  :: dnames(:)
@@ -464,7 +492,7 @@ contains
         end do
 
     end function get_eqnset_hdf
-    !########################################################################################################
+    !***********************************************************************************************************
 
 
 

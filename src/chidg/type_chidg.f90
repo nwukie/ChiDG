@@ -221,9 +221,7 @@ contains
 
 
             case default
-                call chidg_signal(FATAL,"chidg%set: component string was not recognized.      &
-                                         Check spelling and that the component was registered &
-                                         as an option in the chidg%set routine")
+                call chidg_signal_one(FATAL,"chidg%set: component string was not recognized. Check spelling and that the component was registered as an option in the chidg%set routine",selector)
 
 
         end select

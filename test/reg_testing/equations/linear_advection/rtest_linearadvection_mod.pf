@@ -2,7 +2,8 @@ module rtest_linearadvection_mod
     use pfunit_mod
     use mod_kinds,          only: rk,ik
     use mod_constants,      only: ZERO, ONE, TWO, THREE, FIVE, SIX, EIGHT, NINE, TEN, &
-                                  XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX, NFACES
+                                  XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX, NFACES, &
+                                  IO_DESTINATION
     use type_chidg,         only: chidg_t
     use type_point,         only: point_t
     use type_densematrix,   only: densematrix_t
@@ -59,6 +60,11 @@ contains
         real(rk), dimension(npt)    :: x,y,z
         
         !
+        ! Send log to file
+        !
+        IO_DESTINATION = 'file'
+
+        !
         ! Initialize chidg environment
         !
         call this%chidg%init('env')
@@ -80,6 +86,12 @@ contains
     
     subroutine tearDown(this)
         class(rtest_eq_LA),    intent(inout)   :: this
+
+        !
+        ! Close ChiDG
+        !
+        call this%chidg%close()
+
     end subroutine
 
 

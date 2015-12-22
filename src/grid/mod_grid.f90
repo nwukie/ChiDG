@@ -78,14 +78,10 @@ contains
             call elem_map(imap)%init(npts_3d(imap),npts_3d(imap),0)
 
 
-            !
-            ! (Re)Allocate nodes and coordinates.
-            !
-            if ( allocated(nodes) ) deallocate(nodes)
-            if ( allocated(xi) )    deallocate(xi)
-            if ( allocated(eta) )   deallocate(eta)
-            if ( allocated(zeta) )  deallocate(zeta)
 
+            !
+            ! Allocate storage for nodes and coordinates.
+            !
             allocate(nodes(npts_3d(imap)),  &
                      xi(npts_1d(imap)),     &
                      eta(npts_1d(imap)),    &
@@ -132,6 +128,12 @@ contains
             ! element points to compute the mode amplitudes of the x,y mappings
             !
             elem_map(imap)%mat = inv(ELEM_MAP(imap)%mat)
+
+
+            !
+            ! Dellocate variables for next iteration in loop
+            !
+            deallocate(nodes, xi, eta, zeta)
 
         end do
 

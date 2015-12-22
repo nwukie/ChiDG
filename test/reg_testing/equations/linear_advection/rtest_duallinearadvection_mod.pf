@@ -2,7 +2,8 @@ module rtest_duallinearadvection_mod
     use pfunit_mod
     use mod_kinds,          only: rk,ik
     use mod_constants,      only: ZERO, ONE, TWO, THREE, FIVE, SIX, EIGHT, NINE, TEN, &
-                                  XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX, NFACES
+                                  XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX, NFACES, &
+                                  IO_DESTINATION
     use type_chidg,         only: chidg_t
     use atype_function,     only: function_t
     use mod_function,       only: create_function
@@ -56,25 +57,42 @@ contains
         integer(ik)                         :: neqns, nterms_s, nterms_c
         real(rk), dimension(npt)            :: x,y,z
         
+        !
+        ! Send log to file
+        !
+        IO_DESTINATION = 'file'
+
+        !
         ! Initialize chidg environment
+        !
         call this%chidg%init('env')
 
+        !
         ! Generate points array for 3x3x3 mesh
+        !
         call meshgen('3x3x3_unit',pts)
 
+
+        !
         ! Initialize domain
+        !
         nterms_s = 8
         nterms_c = 8
         call this%chidg%data%add_domain('D_01',pts,nterms_c,'DualLinearAdvection',nterms_s)
 
-        call this%chidg%data%add_bc('D_01','periodic',XI_MIN)
-        call this%chidg%data%add_bc('D_01','periodic',ETA_MIN)
-        call this%chidg%data%add_bc('D_01','periodic',ZETA_MIN)
+        !call this%chidg%data%add_bc('D_01','periodic',XI_MIN)
+        !call this%chidg%data%add_bc('D_01','periodic',ETA_MIN)
+        !call this%chidg%data%add_bc('D_01','periodic',ZETA_MIN)
 
+        !
+        ! Initialize solution storage
+        !
         call this%chidg%data%init_sdata()
 
 
-        !> Set rho, rhoE to non-zero values. Risk NaN's otherwise
+        !
+        ! Set initial solution to non-zero values. Risk NaN's otherwise
+        !
         call create_function(fcn,'constant')
         
         call fcn%set('const',1.0_rk)
@@ -84,8 +102,16 @@ contains
             
     end subroutine
     
+
     subroutine tearDown(this)
         class(test_eq_duallinearadvection),    intent(inout)   :: this
+
+        !
+        ! Close ChiDG
+        !
+        call this%chidg%close()
+
+
     end subroutine
 
 
@@ -137,12 +163,16 @@ contains
         
         tol = 1.0e-6_rk
         
-        ielem = 1
+        ielem = 14
         
+        !
         ! Block Parameter from cases = []
+        !
         iblk = self%iblk
         
+        !
         ! Compute Automatic and Finite Difference jacobians
+        !
         call check_jacobian_volume_advective_flux(self%chidg%data,ielem,iblk,blk_dnad,blk_fd)
 
         

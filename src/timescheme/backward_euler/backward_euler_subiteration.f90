@@ -1,11 +1,11 @@
 module backward_euler_subiteration
     use mod_kinds,              only: rk,ik
     use mod_constants,          only: ZERO, ONE, TWO, DIAG
-    use atype_time_scheme,      only: time_scheme_t
-    use type_domain,            only: domain_t
+    use type_timescheme,        only: timescheme_t
+    use type_chidg_data,        only: chidg_data_t
     use atype_matrixsolver,     only: matrixsolver_t
     use type_preconditioner,    only: preconditioner_t
-    use type_blockvector
+    use type_chidgVector
 
     use mod_spatial,            only: update_space
 
@@ -15,23 +15,26 @@ module backward_euler_subiteration
 
 
 
+
+
+
     !>  Solution advancement via the backward-euler method
     !!
     !!  @author Nathan A. Wukie
     !!
-    !------------------------------------------------------------
-    type, extends(time_scheme_t), public :: backward_euler_subiteration_t
+    !----------------------------------------------------------------------------------------------------
+    type, extends(timescheme_t), public :: backward_euler_subiteration_t
 
 
 
     contains
+
         procedure   :: solve
 
-        final :: destructor
+        final       :: destructor
+
     end type backward_euler_subiteration_t
-    !-----------------------------------------------------------
-
-
+    !*****************************************************************************************************
 
 
 
@@ -53,19 +56,19 @@ contains
     !!
     !!
     !-------------------------------------------------------------------------------------------------
-    subroutine solve(self,domain,matrixsolver,preconditioner)
+    subroutine solve(self,data,matrixsolver,preconditioner)
         class(backward_euler_subiteration_t),   intent(inout)   :: self
-        type(domain_t),                         intent(inout)   :: domain
+        type(chidg_data_t),                     intent(inout)   :: data
         class(matrixsolver_t),      optional,   intent(inout)   :: matrixsolver
         class(preconditioner_t),    optional,   intent(inout)   :: preconditioner
 
         character(100)          :: filename
         integer(ik)             :: itime, nsteps, ielem, wcount, iblk, iindex, ninner, iinner, ieqn
-        integer(ik)             :: rstart, rend, cstart, cend, nterms
+        integer(ik)             :: rstart, rend, cstart, cend, nterms, idom
         real(rk)                :: resid, rnorm_0, rnorm_n, dtau, amp, cfl
         real                    :: tstart, tstop, telapsed
         real(rk), allocatable   :: vals(:)
-        type(blockvector_t)     :: b, qn, qold, qnew, dqdtau
+        type(chidgVector_t)     :: b, qn, qold, qnew, dqdtau
       
         integer(ik)             :: ninner_iterations(self%nsteps)    ! Record number of inner iterations for each step
 
@@ -78,15 +81,15 @@ contains
 
         wcount = 1
         ninner = 10
-        associate ( q => domain%sdata%q, dq => domain%sdata%dq, rhs => domain%sdata%rhs, lin => domain%sdata%lin, dt => self%dt)
+        associate ( q => data%sdata%q, dq => data%sdata%dq, rhs => data%sdata%rhs, lhs => data%sdata%lhs, dt => self%dt)
 
-            print*, 'entering time'
+            call write_line('Entering time')
 
             !
             ! TIME STEP LOOP
             !
             do itime = 1,self%nsteps
-                print*, "Step: ", itime
+                call write_line("Step: ", itime, delimiter='')
 
 
                 ! Store qn, since q will be operated on in the inner loop
@@ -103,7 +106,7 @@ contains
                 do while ( resid > self%tol )
                     call cpu_time(tstart)
                     ninner = ninner + 1
-                    print*, "   ninner: ", ninner
+                    call write_line("   ninner: ", ninner)
 
 
 
@@ -116,34 +119,37 @@ contains
 
 
                     !
-                    ! Update Spatial Residual and Linearization (rhs, lin)
+                    ! Update Spatial Residual and Linearization (rhs, lhs)
                     !
-                    call update_space(domain)
+                    call update_space(data)
 
 
 
 
                     ! Add mass/dt to sub-block diagonal in dR/dQ
-                    do ielem = 1,domain%mesh%nelem
-                        nterms = domain%mesh%nterms_s
-                        do ieqn = 1,domain%eqnset%neqns
-                            iblk = DIAG
-                            ! Need to compute row and column extends in diagonal so we can
-                            ! selectively apply the mass matrix to the sub-block diagonal
-                            rstart = 1 + (ieqn-1) * nterms
-                            rend   = (rstart-1) + nterms
-                            cstart = rstart                 ! since it is square
-                            cend   = rend                   ! since it is square
-                       
-                            if (allocated(lin%lblks(ielem,iblk)%mat)) then
-                                ! Add mass matrix divided by dt to the block diagonal
-                                !lin%lblks(ielem,iblk)%mat(rstart:rend,cstart:cend)  =  lin%lblks(ielem,iblk)%mat(rstart:rend,cstart:cend)  +  domain%mesh%elems(ielem)%mass/self%dt
-                                !lin%lblks(ielem,iblk)%mat(rstart:rend,cstart:cend)  =  lin%lblks(ielem,iblk)%mat(rstart:rend,cstart:cend)  +  domain%mesh%elems(ielem)%mass*(ONE/dtau + ONE/self%dt)
-                                lin%lblks(ielem,iblk)%mat(rstart:rend,cstart:cend)  =  lin%lblks(ielem,iblk)%mat(rstart:rend,cstart:cend)  +  domain%mesh%elems(ielem)%mass*(ONE/self%dt)
-                            end if
+                    do idom = 1,data%ndomains()
+                        do ielem = 1,data%mesh(idom)%nelem
+                            nterms = data%mesh(idom)%nterms_s
 
-                        end do
-                    end do
+                            do ieqn = 1,data%eqnset(idom)%item%neqns
+
+                                iblk = DIAG
+                                ! Need to compute row and column extends in diagonal so we can
+                                ! selectively apply the mass matrix to the sub-block diagonal
+                                rstart = 1 + (ieqn-1) * nterms
+                                rend   = (rstart-1) + nterms
+                                cstart = rstart                 ! since it is square
+                                cend   = rend                   ! since it is square
+                           
+                                if (allocated(lhs%dom(idom)%lblks(ielem,iblk)%mat)) then
+                                    ! Add mass matrix divided by dt to the block diagonal
+                                    lhs%dom(idom)%lblks(ielem,iblk)%mat(rstart:rend,cstart:cend)  =  lhs%dom(idom)%lblks(ielem,iblk)%mat(rstart:rend,cstart:cend)  +  data%mesh(idom)%elems(ielem)%mass*(ONE/self%dt)
+                                end if
+
+                            end do ! ieqn
+
+                        end do ! ielem
+                    end do ! idom
 
 
 
@@ -151,10 +157,14 @@ contains
                     ! Divide pseudo-time derivative by dt and multiply by mass matrix
                     !
                     dqdtau = (qold - qn)/self%dt
-                    do ielem = 1,domain%mesh%nelem
-                        do ieqn = 1,domain%eqnset%neqns
-                            vals = matmul(domain%mesh%elems(ielem)%mass,dqdtau%lvecs(ielem)%getvar(ieqn))
-                            call dqdtau%lvecs(ielem)%setvar(ieqn,vals)
+                    do idom = 1,data%ndomains()
+                        do ielem = 1,data%mesh(idom)%nelem
+                            do ieqn = 1,data%eqnset(idom)%item%neqns
+
+                                vals = matmul(data%mesh(idom)%elems(ielem)%mass,dqdtau%dom(idom)%lvecs(ielem)%getvar(ieqn))
+                                call dqdtau%dom(idom)%lvecs(ielem)%setvar(ieqn,vals)
+
+                            end do
                         end do
                     end do
 
@@ -171,7 +181,7 @@ contains
                     !
                     ! We need to solve the matrix system Ax=b for the update vector x (dq)
                     !
-                    call matrixsolver%solve(lin,dq,b,preconditioner)
+                    call matrixsolver%solve(lhs,dq,b,preconditioner)
 
 
 
@@ -197,7 +207,7 @@ contains
                     ! Clear working storage
                     call rhs%clear()
                     call dq%clear()
-                    call lin%clear()
+                    call lhs%clear()
 
                     
 
@@ -209,13 +219,11 @@ contains
 
                     call cpu_time(tstop)
                     telapsed = tstop - tstart
-                    print*, "   Iteration time (s): ", telapsed
-                    print*, "   DQ - Norm: ", resid
+                    call write_line("   Iteration time (s): ", telapsed, delimiter='')
+                    call write_line("   DQ - Norm: ", resid, delimiter='')
 
 
 
-                    dtau = cfl * amp
-                    print*, "   dtau (ps): ", dtau
                 end do ! ninner
 
                 call self%newton_iterations%push_back(ninner)
@@ -223,7 +231,7 @@ contains
 
                 if (wcount == self%nwrite) then
                     write(filename, "(I7,A4)") 1000000+itime, '.plt'
-                    call write_tecio_variables(domain,trim(filename),itime+1)
+                    call write_tecio_variables(data,trim(filename),itime+1)
                     wcount = 0
                 end if
                 wcount = wcount + 1

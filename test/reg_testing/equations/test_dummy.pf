@@ -1,8 +1,0 @@
-@Test
-subroutine test_dummy()
-    use pfunit_mod
-
-    @assertTrue(.true.)
-
-
-end subroutine test_dummy

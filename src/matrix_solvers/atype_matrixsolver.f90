@@ -21,11 +21,12 @@ module atype_matrixsolver
     !-----------------------------------------------------------------------------------------------------
     type, public, abstract :: matrixsolver_t
 
-        real(rk)        :: tol   = 1.e-7_rk     !< Convergance tolerance for iterative solvers
+        ! OPTIONS
+        real(rk)        :: tol   = 1.e-8_rk     !< Convergance tolerance for iterative solvers
         integer(ik)     :: niter = 0
 
-        type(timer_t)   :: timer                !< Timer for linear system solve
 
+        type(timer_t)   :: timer                !< Timer for linear system solve
         logical         :: report = .true.      !< Flag to enable/disable matrix residual reporting
 
     contains
@@ -104,10 +105,8 @@ contains
         class(matrixsolver_t),  intent(inout)   :: self
         type(dict_t),           intent(inout)   :: options
 
-
-
-        call options%get('tol',self%tol)
-
+        call options%get('tol',     self%tol)
+        !call options%get('niter',   self%niter)
 
     end subroutine set
     !***************************************************************************************************

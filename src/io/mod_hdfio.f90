@@ -28,7 +28,7 @@ contains
     !!  @param[in]      filename    Character string of the file to be read
     !!  @param[inout]   domains     Allocatable array of domains. Allocated in this routine.
     !!
-    !-----------------------------------------------------------------------------------------------------------------------------------
+    !---------------------------------------------------------------------------------------------------------------------
     subroutine read_grid_hdf(filename, meshdata)
         use mod_io, only: nterms_s
         character(*),                   intent(in)      :: filename
@@ -79,9 +79,6 @@ contains
         !  Get number of domains from attribute 'ndomains' in file root
         !
         ndomains = get_ndomains_hdf(fid)
-        !call h5ltget_attribute_int_f(fid, "/", 'ndomains', buf, ierr)
-        !ndomains = buf(1)
-        !if (ierr /= 0) call chidg_signal(FATAL,'read_grid_hdf5: h5ltget_attribute_int_f had a problem getting the number of domains')
 
 
         !
@@ -105,12 +102,16 @@ contains
 
             if (gname(1:2) == 'D_') then
 
+                !
                 ! Open the Domain/Grid group
+                !
                 call h5gopen_f(fid, trim(gname)//"/Grid", gid, ierr, H5P_DEFAULT_F)
                 if (ierr /= 0) stop "Error: read_grid_hdf5 -- h5gopen_f: Domain/Grid group did not open properly"
 
 
+                !
                 !  Get number of terms in coordinate expansion
+                !
                 call h5ltget_attribute_int_f(fid, trim(gname), 'mapping', buf, ierr)
 
 
@@ -123,18 +124,24 @@ contains
                 meshdata(idom)%name     = gname
 
 
+                !
                 !  Open the Coordinate datasets
+                !
                 call h5dopen_f(gid, "CoordinateX", did_x, ierr, H5P_DEFAULT_F)
                 call h5dopen_f(gid, "CoordinateY", did_y, ierr, H5P_DEFAULT_F)
                 call h5dopen_f(gid, "CoordinateZ", did_z, ierr, H5P_DEFAULT_F)
 
 
+                !
                 !  Get the dataspace id and dimensions
+                !
                 call h5dget_space_f(did_x, sid, ierr)
                 call h5sget_simple_extent_dims_f(sid, dims, maxdims, ierr)
 
 
+                !
                 !  Read x-points
+                !
                 allocate(xpts(dims(1),dims(2),dims(3)))
                 cp_pts = c_loc(xpts(1,1,1))
                 call h5dread_f(did_x, H5T_NATIVE_DOUBLE, cp_pts, ierr)
@@ -155,7 +162,9 @@ contains
                 if (ierr /= 0) stop "Error: read_grid_hdf5 -- h5dread_f"
 
 
+                !
                 !  Accumulate pts into a single points_t matrix to initialize domain
+                !
                 npts = dims(1)*dims(2)*dims(3)
                 allocate(meshdata(idom)%points(dims(1),dims(2),dims(3)), stat=ierr)
                 if (ierr /= 0) call AllocationError
@@ -198,8 +207,10 @@ contains
                 ! Deallocate points for the current domain
                 deallocate(zpts,ypts,xpts)
                 idom = idom + 1
+
             end if
-        end do
+
+        end do  ! igrp
 
 
         !
@@ -209,17 +220,7 @@ contains
         call h5close_f(ierr)
 
     end subroutine read_grid_hdf
-    !#########################################################################################################################################
-
-
-
-
-
-
-
-
-
-
+    !***************************************************************************************************************
 
 
 
@@ -249,7 +250,8 @@ contains
     !!  @param[in]      itime       Integer of the time instance for the current variable to be read.
     !!  @param[in]      dname       Character string of the domain to be read from.
     !!  @param[inout]   data        ChiDG data containing domains. Already allocated.
-    !--------------------------------------------------------------------------------------------------------------------------------------
+    !!
+    !------------------------------------------------------------------------------------------------------------------
     subroutine read_variable_hdf(fid,varstring,itime,dname,data)
         use ISO_C_BINDING
         integer(HID_T),     intent(in)      :: fid
@@ -386,18 +388,15 @@ contains
 
 
 
+        !
+        ! Close variable dataset, domain/variable group.
+        !
         call h5dclose_f(vid,ierr)       ! Close the variable dataset
         call h5gclose_f(gid,ierr)       ! Close the Domain/Variable group
 
+
     end subroutine read_variable_hdf
-    !#######################################################################################################################################
-
-
-
-
-
-
-
+    !*****************************************************************************************************************
 
 
 
@@ -427,7 +426,8 @@ contains
     !!  @param[in]      itime       Integer of the time instance for the current variable to be read.
     !!  @param[in]      dname       Character string of the domain name to be read from.
     !!  @param[inout]   data        chidg_data_t instance containing grid and solution.
-    !-----------------------------------------------------------------------------------------------------------------------------------------
+    !!
+    !-----------------------------------------------------------------------------------------------------------------
     subroutine write_variable_hdf(fid,varstring,itime,dname,data)
         integer(HID_T),     intent(in)      :: fid
         character(*),       intent(in)      :: varstring
@@ -459,7 +459,6 @@ contains
 
 
 
-
         !
         ! Check if 'Variables' group exists
         !
@@ -479,7 +478,6 @@ contains
             ! If 'Variables group does not exist, then create one.
             call h5gcreate_f(fid, trim(dname)//"/Variables", gid, ierr)
         end if
-
 
 
 
@@ -592,20 +590,7 @@ contains
 
 
     end subroutine write_variable_hdf
-    !####################################################################################################################################
-
-
-
-
-
-
-
-
-
-
-
-
-
+    !************************************************************************************************************
 
 
 
@@ -632,7 +617,7 @@ contains
     !!  @param[in]      filename    Character string of the file to be read from
     !!  @param[inout]   data        chidg_data_t that will accept the solution modes
     !!
-    !---------------------------------------------------------------------------------------------------
+    !-------------------------------------------------------------------------------------------------------------
     subroutine read_solution_hdf(filename,data)
         use ISO_C_BINDING
         character(*),       intent(in)      :: filename
@@ -687,15 +672,6 @@ contains
 
 
 
-
-
-
-
-
-
-
-
-
         !
         ! Read solution for each domain
         !
@@ -729,10 +705,7 @@ contains
                 call read_variable_hdf(fid,cvar,time,trim(dname),data)
             end do ! ieqn
 
-
-
         end do ! idom
-
 
 
 
@@ -743,10 +716,7 @@ contains
         call h5close_f(ierr)            ! Close the HDF5 Fortran interface
 
     end subroutine read_solution_hdf
-    !################################################################################################
-
-
-
+    !*************************************************************************************************************
 
 
 
@@ -770,8 +740,7 @@ contains
     !!  @param[in]      filename    Character string of the file to be written to
     !!  @param[inout]   data        chidg_data_t containing solution to be written
     !!
-    !!
-    !-----------------------------------------------------------------------------------------------
+    !-------------------------------------------------------------------------------------------------------
     subroutine write_solution_hdf(filename,data)
         use ISO_C_BINDING
         character(*),       intent(in)      :: filename
@@ -884,7 +853,7 @@ contains
         call h5close_f(ierr)            ! Close HDF5 Fortran interface
 
     end subroutine write_solution_hdf
-    !##################################################################################################
+    !*********************************************************************************************************
 
 
 

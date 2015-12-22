@@ -16,69 +16,88 @@ module eqn_scalar
 
 
 
-    !   General scalar equation. Mostly used for unit/regression tests
-    !   that need an initialized domain, so the scalar equation set can be used.
-    !
-    !   @author Nathan A. Wukie
-    !
-    !-----------------------------------------------------------
+
+
+    !>  General scalar equation. Mostly used for unit/regression tests
+    !!  that need an initialized domain, so the scalar equation set can be used.
+    !!
+    !!  @author Nathan A. Wukie
+    !!
+    !!
+    !----------------------------------------------------------------------------------------------------
     type, extends(equationset_t), public :: scalar_e
 
 
     contains
+
         procedure   :: init
 
     end type scalar_e
-    !-----------------------------------------------------------
+    !****************************************************************************************************
+
+
+
+
 
 contains
 
 
-    !===========================================================
-    !
-    !   Equation set initialization
-    !
-    !===========================================================
+
+
+
+    !> Initialize scalar equation set.
+    !!
+    !!  @author Nathan A. Wukie
+    !!
+    !!
+    !!
+    !!
+    !----------------------------------------------------------------------------------------------------
     subroutine init(self)
         class(scalar_e), intent(inout) :: self
-
 
         type(SCA_volume_advective_flux_t)           :: volume_flux
         type(SCA_boundary_average_advective_flux_t) :: average_flux
         type(SCA_LaxFriedrichs_flux_t)              :: upwind_flux
+        type(SCA_properties_t)                      :: prop
 
 
+        !
+        ! Set equationset name.
+        !
         self%name = 'Scalar'
 
-        !
-        ! Allocate equation set properties
-        !
-        if (allocated(self%prop)) deallocate(self%prop)
-        allocate(SCA_properties_t::self%prop)
 
-        select type (prop => self%prop)
-            type is (SCA_properties_t)
-                prop%c(1) = ONE
-                prop%c(2) = ZERO
-                prop%c(3) = ZERO
-        end select
-
+        !
+        ! Set up properties.
+        !
+        prop%c(1) = ONE
+        prop%c(2) = ZERO
+        prop%c(3) = ZERO
 
 
         !
-        ! Allocate and initialize equations
+        ! Allocate equation set properties.
+        !
+        call self%add_properties(prop)
+
+
+        !
+        ! Allocate and initialize equations.
         !
         call self%add_equation("u",1)     
 
 
         !
-        ! Add flux components
+        ! Add flux components.
         !
         call self%add_volume_advective_flux(volume_flux)
         call self%add_boundary_advective_flux(average_flux)
         call self%add_boundary_advective_flux(upwind_flux)
 
-    end subroutine
+
+    end subroutine init
+    !****************************************************************************************************
 
 
 

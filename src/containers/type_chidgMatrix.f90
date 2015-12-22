@@ -22,27 +22,25 @@ module type_chidgMatrix
     !-----------------------------------------------------------------------------------------------------------
     type, public :: chidgMatrix_t
 
-        type(blockmatrix_t), allocatable    :: dom(:)          !< Array of block-matrices. One for each domain
+        type(blockmatrix_t), allocatable    :: dom(:)       !< Array of block-matrices. One for each domain
 
 
 
     contains
-        !> Initializers
+        ! Initializers
         generic,    public  :: init => initialize
-        procedure,  private :: initialize           !< ChiDGMatrix initialization
+        procedure,  private :: initialize                   !< ChiDGMatrix initialization
 
-        !> Setters
-        procedure   :: store                        !< Store linearization data for local blocks
-        procedure   :: store_chimera                !< Store linearization data for chimera blocks
-        procedure   :: clear                        !< Zero matrix-values
+        ! Setters
+        procedure   :: store                                !< Store linearization data for local blocks
+        procedure   :: store_chimera                        !< Store linearization data for chimera blocks
+        procedure   :: clear                                !< Zero matrix-values
 
-
-        !procedure   :: build                       !< Build full-matrix representation of the block-sparse matrix
 
         final       :: destructor
 
     end type chidgMatrix_t
-    !-----------------------------------------------------------------------------------------------------------
+    !***********************************************************************************************************
 
 
 
@@ -87,7 +85,7 @@ contains
 
 
     end subroutine
-    !-----------------------------------------------------------------------------------------------------------
+    !***********************************************************************************************************
 
 
 
@@ -120,16 +118,27 @@ contains
         call self%dom(idom)%store(integral,ielem,iblk,ivar)
 
     end subroutine
+    !***********************************************************************************************************
+
+
+
+
+
+
+
+
+
+    !> Procedure for stiring linearization information for Chimera faces
+    !!
+    !!  @author Nathan A. Wukie
+    !!
+    !!
+    !!  @param[in]  integral    Array of modes from the spatial scheme, with embedded partial derivatives for the linearization matrix
+    !!  @param[in]  face        face_location_t containing the indices defining the Chimera face
+    !!  @param[in]  seed        seed_t containing the indices defining the element against which the Chimera face was linearized
+    !!  @param[in]  ivar        Index of the variable, for which the linearization was computed
+    !!
     !-----------------------------------------------------------------------------------------------------------
-
-
-
-
-
-
-
-
-
     subroutine store_chimera(self,integral,face,seed,ivar)
         class(chidgMatrix_t),       intent(inout)   :: self
         type(AD_D),                 intent(in)      :: integral(:)
@@ -147,6 +156,7 @@ contains
         call self%dom(idom)%store_chimera(integral,face,seed,ivar)
 
     end subroutine store_chimera
+    !***********************************************************************************************************
 
 
 
@@ -177,7 +187,7 @@ contains
     
     
     end subroutine 
-    !-----------------------------------------------------------------------------------------------------------
+    !***********************************************************************************************************
 
 
 
@@ -199,7 +209,7 @@ contains
         type(chidgMatrix_t),    intent(inout)   :: self
 
     end subroutine
-    !-----------------------------------------------------------------------------------------------------------
+    !***********************************************************************************************************
 
 
 

@@ -17,7 +17,7 @@ module type_chidgVector
     !!
     !!
     !!
-    !-------------------------------------------------------------------------------------
+    !----------------------------------------------------------------------------------------------------
     type, public :: chidgVector_t
 
         type(blockvector_t), allocatable    :: dom(:)
@@ -39,7 +39,7 @@ module type_chidgVector
         !final               :: destructor
 
     end type chidgVector_t
-    !-------------------------------------------------------------------------------------
+    !****************************************************************************************************
 
 
 
@@ -102,8 +102,9 @@ contains
     !!  @author Nathan A. Wukie
     !!
     !!
+    !!  @param[in]  mesh    Array of mesh_t instances used to initialize each blockvector_t subcomponent.
     !!
-    !--------------------------------------------------------------------------------------
+    !----------------------------------------------------------------------------------------------------
     subroutine initialize(self,mesh)
         class(chidgVector_t),   intent(inout)   :: self
         type(mesh_t),           intent(in)      :: mesh(:)
@@ -130,6 +131,7 @@ contains
 
 
     end subroutine initialize
+    !****************************************************************************************************
 
 
 
@@ -141,25 +143,29 @@ contains
 
 
 
-    !>
+    !> Set all floating-point vector entries to zero.
+    !!
+    !!  @author Nathan A. Wukie
     !!
     !!
     !!
-    !!
-    !!
-    !--------------------------------------------------------------------------------------
+    !----------------------------------------------------------------------------------------------------
     subroutine clear(self)
         class(chidgVector_t),   intent(inout)   :: self
 
         integer :: idom
 
 
+        !
+        ! Call clear procedure for each blockvector_t
+        !
         do idom = 1,size(self%dom)
             call self%dom(idom)%clear()
         end do
 
 
     end subroutine clear
+    !*****************************************************************************************************
 
 
 
@@ -171,9 +177,9 @@ contains
     !!
     !!  @author Nathan A. Wukie
     !!
+    !!  @return res L2-norm of the vector
     !!
-    !!
-    !--------------------------------------------------------------------------------------------
+    !-----------------------------------------------------------------------------------------------------
     function norm(self) result(res)
         class(chidgVector_t),   intent(in)   :: self
 
@@ -201,6 +207,13 @@ contains
         res = sqrt(res)
 
     end function norm
+    !*****************************************************************************************************
+
+
+
+
+
+
 
 
 
@@ -213,7 +226,7 @@ contains
     !!
     !!
     !!
-    !--------------------------------------------------------------------------------------------
+    !-----------------------------------------------------------------------------------------------------
     subroutine dump(self)
         class(chidgVector_t),   intent(in)   :: self
 
@@ -233,6 +246,14 @@ contains
 
 
     end subroutine dump
+    !*****************************************************************************************************
+
+
+
+
+
+
+
 
 
 
@@ -346,6 +367,9 @@ contains
         end do
 
     end function
+
+
+
 
 
     function sub_chidgVector_chidgVector(left,right) result(res)

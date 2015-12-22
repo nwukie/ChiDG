@@ -8,14 +8,14 @@ module type_densematrix
 
 
 
-    !>
+    !> Storage for full dense/full matrices.
+    !!
+    !!  @author Nathan A. Wukie
     !!
     !!
     !!
     !!
-    !!
-    !!
-    !-------------------------------------------------------------------------------------------
+    !--------------------------------------------------------------------------------------------------------
     type, public :: densematrix_t
         ! block associativity
         ! Domain-global index of the element, with which this block is associated.
@@ -36,14 +36,14 @@ module type_densematrix
         integer(ik), private    :: eparent_ = 0     !< parent element
 
         ! Block storage
-        ! NOTE: Assumes square blocks, since this type is specifically
+        ! NOTE: Assumes square blocks. TODO: extend for variable element solution expansion.
         real(rk),  dimension(:,:), allocatable :: mat
 
     contains
         ! Initializers
         generic, public :: init => init_gen, init_square
-        procedure, private :: init_gen      !< Initialize block with general-sized matrix storage
-        procedure, private :: init_square   !< Initialize block with square-sized matrix storage
+        procedure, private :: init_gen              !< Initialize block with general-sized matrix storage
+        procedure, private :: init_square           !< Initialize block with square-sized matrix storage
 
         ! Getters
         ! Block dimensions
@@ -54,21 +54,20 @@ module type_densematrix
         !  v
         !
         !  i
-        procedure :: dparent    !< return parent domain
-        procedure :: eparent    !< return parent element
-        procedure :: nentries   !< return number of matrix entries
-        procedure :: idim       !< return i-dimension of matrix storage
-        procedure :: jdim       !< return j-dimension of matrix storage
+        procedure :: dparent                        !< return parent domain
+        procedure :: eparent                        !< return parent element
+        procedure :: nentries                       !< return number of matrix entries
+        procedure :: idim                           !< return i-dimension of matrix storage
+        procedure :: jdim                           !< return j-dimension of matrix storage
 
         ! Setters
-        procedure :: resize     !< resize matrix storage
-        procedure :: reparent   !< reassign parent
+        procedure :: resize                         !< resize matrix storage
+        procedure :: reparent                       !< reassign parent
 
-        procedure :: dump       !< print out matrix contents
+        procedure :: dump                           !< print out matrix contents
 
-!        final :: destructor
     end type densematrix_t
-    !#################################################################################################
+    !*************************************************************************************************************
 
 
 
@@ -94,7 +93,7 @@ contains
     !!  @param[in]  dparent     Integer index of parent domain
     !!  @param[in]  eparent     Integer index of parent element
     !!
-    !-------------------------------------------------------------------------------------
+    !------------------------------------------------------------------------------------------------------------------
     subroutine init_gen(self,idim,jdim,dparent,eparent)
         class(densematrix_t), intent(inout)  :: self
         integer(ik),         intent(in)     :: idim, jdim, dparent, eparent
@@ -128,7 +127,7 @@ contains
         self%mat = 0._rk
 
     end subroutine
-    !#####################################################################################
+    !******************************************************************************************************************
 
 
 
@@ -148,7 +147,7 @@ contains
     !!  @param[in]  dparent     Integer index of parent domain
     !!  @param[in]  eparent     Integer index of parent element
     !!
-    !-------------------------------------------------------------------------------------
+    !--------------------------------------------------------------------------------------------------------------------
     subroutine init_square(self,bsize,dparent,eparent)
         class(densematrix_t), intent(inout)  :: self
         integer(ik),         intent(in)     :: bsize, dparent, eparent
@@ -185,7 +184,7 @@ contains
         self%mat = 0._rk
 
     end subroutine
-    !#####################################################################################
+    !*******************************************************************************************************************
 
 
 
@@ -204,7 +203,7 @@ contains
     !!  
     !!  @return i   Integer of the column-dimension of the stored matrix
     !!
-    !------------------------------------------------------------
+    !-------------------------------------------------------------------------------------------------------------------
     function idim(self) result(i)
         class(densematrix_t), intent(in)    :: self
         integer(ik)                         :: i
@@ -212,7 +211,16 @@ contains
         i = size(self%mat,1)
 
     end function
-    !############################################################
+    !*******************************************************************************************************************
+
+
+
+
+
+
+
+
+
 
 
 
@@ -223,7 +231,7 @@ contains
     !!
     !!  @return j   Integer of the row-dimension of the stored matrix
     !!
-    !------------------------------------------------------------
+    !-------------------------------------------------------------------------------------------------------------------
     function jdim(self) result(j)
         class(densematrix_t), intent(in)    :: self
         integer(ik)                         :: j
@@ -231,7 +239,15 @@ contains
         j = size(self%mat,2)
 
     end function
-    !############################################################
+    !*******************************************************************************************************************
+
+
+
+
+
+
+
+
 
 
 
@@ -243,6 +259,7 @@ contains
     !!
     !!  @return     nentries    Integer of the total number of matrix entries stored
     !!
+    !-------------------------------------------------------------------------------------------------------------------
     function nentries(self) result(n)
         class(densematrix_t), intent(in)    :: self
         integer(ik)                         :: n
@@ -250,7 +267,13 @@ contains
         n = size(self%mat,1) * size(self%mat,2)
 
     end function
-    !############################################################
+    !*******************************************************************************************************************
+
+
+
+
+
+
 
 
 
@@ -263,6 +286,7 @@ contains
     !!
     !!  @return     par     Integer index of the parent domain.
     !!
+    !-------------------------------------------------------------------------------------------------------------------
     function dparent(self) result(par)
         class(densematrix_t),   intent(in)  :: self
         integer(ik)                         :: par
@@ -270,7 +294,12 @@ contains
         par = self%dparent_
 
     end function
-    !############################################################
+    !*******************************************************************************************************************
+
+
+
+
+
 
 
 
@@ -283,13 +312,22 @@ contains
     !!
     !!  @return     par     Integer index of the parent element.
     !!
+    !-------------------------------------------------------------------------------------------------------------------
     function eparent(self) result(par)
         class(densematrix_t), intent(in) :: self
         integer(ik)                     :: par
 
         par = self%eparent_
     end function
-    !############################################################
+    !*******************************************************************************************************************
+
+
+
+
+
+
+
+
 
 
 
@@ -300,7 +338,7 @@ contains
     !!
     !! @author Nathan A. Wukie
     !!
-    !------------------------------------------------------------
+    !-------------------------------------------------------------------------------------------------------------------
     subroutine resize(self,idim,jdim)
         class(densematrix_t), intent(inout)  :: self
         integer(ik),         intent(in)     :: idim,jdim
@@ -320,7 +358,7 @@ contains
         if (ierr /= 0) call AllocationError
 
     end subroutine
-    !#############################################################
+    !*******************************************************************************************************************
 
 
 
@@ -332,14 +370,15 @@ contains
     !!
     !!  @author Nathan A. Wukie
     !!
-    !------------------------------------------------------------
+    !-------------------------------------------------------------------------------------------------------------------
     subroutine reparent(self,par)
         class(densematrix_t), intent(inout)  :: self
         integer(ik),         intent(in)     :: par
 
         self%eparent_ = par
+
     end subroutine
-    !#############################################################
+    !*******************************************************************************************************************
 
 
 
@@ -377,10 +416,5 @@ contains
 
 
 
-
-!    subroutine destructor(self)
-!        type(densematrix_t), intent(inout) :: self
-!
-!    end subroutine
 
 end module type_densematrix

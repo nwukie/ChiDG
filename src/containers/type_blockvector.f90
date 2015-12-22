@@ -1,7 +1,7 @@
 module type_blockvector
 #include <messenger.h>
     use mod_kinds,          only: rk,ik
-    use mod_constants,      only: DIAG, ZERO, TWO
+    use mod_constants,      only: ZERO, TWO
     use type_mesh,          only: mesh_t
     use type_densevector
     use DNAD_D
@@ -13,38 +13,29 @@ module type_blockvector
     !!  @author Nathan A. Wukie
     !!
     !!
-    !-----------------------------------------------------------------------------------------------
+    !------------------------------------------------------------------------------------------------------------------------
     type, public :: blockvector_t
-        !integer(ik)                     :: nelem_xi, nelem_eta, nelem_zeta, nelem
 
-        !> localblocks (nelem x 7)
-        !!
-        !!            densevector_t
-        !!
-        !!  elem #1:        vec #1
-        !!  elem #2:        vec #2
-        !!  elem #3:        vec #3
-        !!    .
-        !!    .
-        type(densevector_t), allocatable :: lvecs(:)                    !< Local element vectors
-        integer(ik),         allocatable :: ldata(:,:)                  !< Local block data     (nvars, nterms)
+        type(densevector_t), allocatable :: lvecs(:)        !< Local element vectors
+        integer(ik),         allocatable :: ldata(:,:)      !< Local block data     (nvars, nterms)
 
 
     contains
-        !> Initializers
-        generic,   public   :: init => init_vector      !< Initialize local vector
+        ! Initializers
+        generic,   public   :: init => init_vector          !< Initialize local vector
         procedure, private  :: init_vector
 
-        procedure, public   :: distribute               !< Given a full-vector representation, distribute it to the denseblock format
-        procedure, public   :: build                    !< Assemble a full-vector representation of the blockvector_t format
-        procedure, public   :: clear                    !< Zero all vector storage elements
+        procedure, public   :: distribute                   !< Given a full-vector representation, distribute it to the denseblock format
+        procedure, public   :: clear                        !< Zero all vector storage elements
         
         procedure, public   :: norm
         procedure, public   :: nentries
         procedure, public   :: dump
 
         final :: destructor
+
     end type blockvector_t
+    !*************************************************************************************************************************
 
 
 
@@ -107,7 +98,7 @@ contains
     !!
     !!  @param[in]  mesh    mesh_t instance containing initialized elements and faces
     !!
-    !-----------------------------------------------------------
+    !---------------------------------------------------------------------------------------------------------------
     subroutine init_vector(self,mesh)
         class(blockvector_t), intent(inout), target  :: self
         class(mesh_t),        intent(in)             :: mesh
@@ -117,11 +108,6 @@ contains
         type(densevector_t), pointer    :: temp(:)
 
         nelem = mesh%nelem  ! Number of elements in the local block
-
-        !self%nelem_xi   = mesh%nelem_xi
-        !self%nelem_eta  = mesh%nelem_eta
-        !self%nelem_zeta = mesh%nelem_zeta
-        !self%nelem      = mesh%nelem
 
 
         !
@@ -142,6 +128,7 @@ contains
             end if
 
         else
+
             allocate(self%lvecs(nelem), self%ldata(nelem,2), stat=ierr)
 
         end if
@@ -170,76 +157,8 @@ contains
 
 
     end subroutine
+    !*******************************************************************************************************************
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-    !> Build a full-vector representation of the blockvector format
-    !!
-    !!  @author Nathan A. Wukie
-    !!
-    !!  @param[inout]   fullvec     Allocatable array for building the full-vector representation
-    !-----------------------------------------------------------------------
-    subroutine build(self,fullvec)
-        class(blockvector_t),   intent(inout)   :: self
-        real(rk), allocatable,  intent(inout)   :: fullvec(:)
-
-        integer(ik) :: fpos, ndof, nvars, nterms, ielem, fstart, fend, ierr, ndof_l
-
-
-        !
-        ! Compute total entries in the vector
-        !
-        ndof = 0
-        do ielem = 1,size(self%lvecs)
-
-
-            nvars  = self%ldata(ielem,1)
-            nterms = self%ldata(ielem,2)
-
-            ndof = ndof + nvars*nterms
-        end do
-
-
-        !
-        ! Allocate full-vector storage
-        !
-        if (allocated(fullvec)) then
-            deallocate(fullvec)
-            allocate(fullvec(ndof), stat=ierr)
-        else
-            allocate(fullvec(ndof), stat=ierr)
-        end if
-        if (ierr /= 0) call AllocationError
-
-
-
-
-        fstart = 1    ! position in the full-vector
-        do ielem = 1,size(self%lvecs)
-            nvars = self%ldata(ielem,1)
-            nterms = self%ldata(ielem,2)
-            ndof_l = nvars * nterms     ! element local number of dof's
-
-            fend = fstart + (ndof_l-1)
-
-            ! Copy block vector to full-vector
-            fullvec(fstart:fend) = self%lvecs(ielem)%vec 
-
-            fstart = fend + 1
-        end do
-
-    end subroutine build
 
 
 
@@ -259,7 +178,8 @@ contains
     !!  @author Nathan A. Wukie
     !!
     !!  @param[in]  fullvec     Full-vector
-    !------------------------------------------------------------------------
+    !!
+    !--------------------------------------------------------------------------------------------------------------------
     subroutine distribute(self,fullvec)
         class(blockvector_t),    intent(inout)   :: self
         real(rk),                intent(in)      :: fullvec(:) 
@@ -310,6 +230,14 @@ contains
 
 
     end subroutine distribute
+    !***************************************************************************************************************************************
+
+
+
+
+
+
+
 
 
 
@@ -322,19 +250,23 @@ contains
     !!  @author Nathan A. Wukie
     !!
     !!
-    !----------------------------------------------------------
+    !----------------------------------------------------------------------------------------------------------------------------------------
     subroutine clear(self)
         class(blockvector_t),   intent(inout)   :: self
 
         integer(ik) :: iblk
 
 
+        !
+        ! Call clear for each densevector component
+        !
         do iblk = 1,size(self%lvecs)
             call self%lvecs(iblk)%clear()
         end do
 
 
     end subroutine clear
+    !****************************************************************************************************************************************
 
 
 
@@ -354,7 +286,7 @@ contains
     !!  @author Nathan A. Wukie
     !!
     !!
-    !----------------------------------------------------------------------
+    !----------------------------------------------------------------------------------------------------------------------------------------
     function norm(self) result(res)
         class(blockvector_t),   intent(inout)   :: self
 
@@ -364,13 +296,16 @@ contains
 
 
         res = ZERO
+
         !
         ! Loop through block vectors and compute contribution to vector L2-Norm
         !
         do ielem = 1,size(self%lvecs)
 
 
+            !
             ! Square vector values and sum
+            !
             res = res + sum( self%lvecs(ielem)%vec ** TWO )
 
         end do
@@ -382,6 +317,7 @@ contains
         res = sqrt(res)
 
     end function
+    !*****************************************************************************************************************************************
 
 
 
@@ -399,7 +335,7 @@ contains
     !!  @author Nathan A. Wukie
     !!
     !!
-    !---------------------------------------------------------------------
+    !----------------------------------------------------------------------------------------------------------------------------------
     function nentries(self) result(res)
         class(blockvector_t),   intent(in)  :: self
 
@@ -416,6 +352,7 @@ contains
         end do
 
     end function nentries
+    !**********************************************************************************************************************************
 
 
 
@@ -423,6 +360,10 @@ contains
 
 
 
+    !>
+    !!
+    !!
+    !------------------------------------------------
     subroutine dump(self)
         class(blockvector_t),   intent(in)  :: self
         integer(ik) :: ielem, ientry
@@ -434,7 +375,9 @@ contains
             end do
         end do
 
+
     end subroutine
+    !************************************************
 
 
 
@@ -460,10 +403,6 @@ contains
 
         type(blockvector_t), target     :: res
 
-        !res%nelem_xi   = right%nelem_xi
-        !res%nelem_eta  = right%nelem_eta
-        !res%nelem_zeta = right%nelem_zeta
-        !res%nelem      = right%nelem
 
 
         res%ldata = right%ldata
@@ -485,10 +424,6 @@ contains
         type(blockvector_t), target     :: res
 
 
-        !res%nelem_xi   = left%nelem_xi
-        !res%nelem_eta  = left%nelem_eta
-        !res%nelem_zeta = left%nelem_zeta
-        !res%nelem      = left%nelem
 
 
         res%ldata = left%ldata
@@ -511,10 +446,6 @@ contains
         type(blockvector_t), target     :: res
 
 
-        !res%nelem_xi   = right%nelem_xi
-        !res%nelem_eta  = right%nelem_eta
-        !res%nelem_zeta = right%nelem_zeta
-        !res%nelem      = right%nelem
 
 
         res%ldata = right%ldata
@@ -536,10 +467,6 @@ contains
         type(blockvector_t), target     :: res
 
 
-        !res%nelem_xi   = left%nelem_xi
-        !res%nelem_eta  = left%nelem_eta
-        !res%nelem_zeta = left%nelem_zeta
-        !res%nelem      = left%nelem
 
 
         res%ldata = left%ldata
@@ -563,11 +490,6 @@ contains
         type(blockvector_t), target     :: res
 
 
-        !res%nelem_xi   = right%nelem_xi
-        !res%nelem_eta  = right%nelem_eta
-        !res%nelem_zeta = right%nelem_zeta
-        !res%nelem      = right%nelem
-!
         res%ldata = right%ldata
 
         res%lvecs = left%lvecs + right%lvecs
@@ -588,10 +510,6 @@ contains
         type(blockvector_t), target     :: res
 
 
-        !res%nelem_xi   = right%nelem_xi
-        !res%nelem_eta  = right%nelem_eta
-        !res%nelem_zeta = right%nelem_zeta
-        !res%nelem      = right%nelem
 
         res%ldata = right%ldata
 

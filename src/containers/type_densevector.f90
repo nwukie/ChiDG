@@ -11,14 +11,14 @@ module type_densevector
 
 
 
-    !>
+    !> Container for dense floating-point vector storage.
+    !!
+    !!  @author Nathan A. Wukie
     !!
     !!
     !!
     !!
-    !!
-    !!
-    !--------------------------------------------------------------------------------------------
+    !-------------------------------------------------------------------------------------------------------------
     type, public :: densevector_t
         ! Element Associativity
         integer(ik), private    :: parent_ = 0                  !< Associated parent element
@@ -36,14 +36,13 @@ module type_densevector
     contains
         ! Initializers
         generic, public :: init => init_vector
-        procedure, private :: init_vector       !< Initialize vector storage
+        procedure, private :: init_vector                       !< Initialize vector storage
 
-        procedure :: parent     !< return parent element
-        procedure :: nentries   !< return number of vector entries
-        !procedure :: resize     !< resize vector storage
-        procedure :: reparent   !< reassign parent
-        procedure :: nterms     !< return nterms_
-        procedure :: nvars      !< return nvars_
+        procedure :: parent                                     !< return parent element
+        procedure :: nentries                                   !< return number of vector entries
+        procedure :: reparent                                   !< reassign parent
+        procedure :: nterms                                     !< return nterms_
+        procedure :: nvars                                      !< return nvars_
 
 
         procedure, public   :: setvar
@@ -56,9 +55,8 @@ module type_densevector
         procedure, public   :: clear
 
 
-!        final :: destructor
     end type densevector_t
-    !#####################################################################################################
+    !*************************************************************************************************************
 
 
 
@@ -112,6 +110,9 @@ module type_densevector
     private
 contains
 
+
+
+
     !> Subroutine for initializing dense-vector storage
     !!
     !!  @author Nathan A. Wukie
@@ -120,7 +121,7 @@ contains
     !!  @param[in]  nvars   Number of equations being represented
     !!  @param[in]  parent  Index of associated parent element
     !!
-    !-----------------------------------------------------------------------------------
+    !-------------------------------------------------------------------------------------------------------
     subroutine init_vector(self,nterms,nvars,parent)
         class(densevector_t),   intent(inout), target   :: self
         integer(ik),            intent(in)              :: nterms
@@ -162,7 +163,12 @@ contains
         self%vec = 0._rk
 
     end subroutine
-    !####################################################################################
+    !******************************************************************************************************
+
+
+
+
+
 
 
 
@@ -174,9 +180,10 @@ contains
     !!
     !!  @author Nathan A. Wukie
     !!
-    !------------------------------------------------------------------------------------
+    !!
+    !!
+    !-------------------------------------------------------------------------------------------------------
     function getvar(self,ivar) result(modes_out)
-        !class(densevector_t),   intent(inout)   :: self
         class(densevector_t),   intent(in)      :: self
         integer(ik),            intent(in)      :: ivar
 
@@ -200,7 +207,16 @@ contains
         ! Pretty difficult to diagnose. Should test as much as possible before reenabling the map
         !modes_out = self%mat(:,ivar)
     end function
-    !#####################################################################################
+    !******************************************************************************************************
+
+
+
+
+
+
+
+
+
 
 
 
@@ -210,7 +226,7 @@ contains
     !!
     !!
     !!
-    !------------------------------------------------------------------------------------
+    !-------------------------------------------------------------------------------------------------------
     subroutine setvar(self,ivar,vals)
         class(densevector_t),   intent(inout)   :: self
         integer(ik),            intent(in)      :: ivar
@@ -232,7 +248,7 @@ contains
 
 
     end subroutine
-    !####################################################################################
+    !******************************************************************************************************
 
 
 
@@ -244,7 +260,7 @@ contains
     !!
     !!
     !!
-    !------------------------------------------------------------------------------------
+    !-------------------------------------------------------------------------------------------------------
     function getterm(self,ivar,iterm) result(mode_out)
         class(densevector_t),   intent(inout)   :: self
         integer(ik),            intent(in)      :: ivar, iterm
@@ -265,7 +281,7 @@ contains
         mode_out = self%vec(iterm_g)
 
     end function
-    !####################################################################################
+    !******************************************************************************************************
 
 
 
@@ -278,7 +294,7 @@ contains
     !!
     !!
     !!
-    !------------------------------------------------------------------------------------
+    !-------------------------------------------------------------------------------------------------------
     subroutine setterm(self,ivar,iterm,mode_in)
         class(densevector_t),   intent(inout)   :: self
         integer(ik),            intent(in)      :: ivar, iterm
@@ -299,7 +315,7 @@ contains
         self%vec(iterm_g) = mode_in
 
     end subroutine
-    !#####################################################################################
+    !******************************************************************************************************
 
 
 
@@ -315,7 +331,7 @@ contains
     !!
     !!  @author Nathan A. Wukie
     !!
-    !------------------------------------------------------------------------------------
+    !-------------------------------------------------------------------------------------------------------
     function nentries(self) result(n)
         class(densevector_t),   intent(in)      :: self
         integer(ik)                             :: n
@@ -323,7 +339,7 @@ contains
         n = size(self%vec)
 
     end function
-    !#####################################################################################
+    !******************************************************************************************************
 
 
 
@@ -340,7 +356,7 @@ contains
     !!
     !!  @author Nathan A. Wukie
     !!
-    !------------------------------------------------------------------------------------
+    !-------------------------------------------------------------------------------------------------------
     pure function nterms(self) result(nterms_out)
         class(densevector_t),   intent(in)  :: self
         integer(ik)                         :: nterms_out
@@ -348,7 +364,7 @@ contains
         nterms_out = self%nterms_
 
     end function
-    !#####################################################################################
+    !******************************************************************************************************
 
 
 
@@ -363,7 +379,7 @@ contains
     !!
     !!  @author Nathan A. Wukie
     !!
-    !------------------------------------------------------------------------------------
+    !-------------------------------------------------------------------------------------------------------
     pure function nvars(self) result(nvars_out)
         class(densevector_t),   intent(in)  :: self
         integer(ik)                         :: nvars_out
@@ -371,7 +387,7 @@ contains
         nvars_out = self%nvars_
 
     end function
-    !#####################################################################################
+    !******************************************************************************************************
 
 
 
@@ -390,7 +406,7 @@ contains
     !!
     !!  @author Nathan A. Wukie
     !!
-    !------------------------------------------------------------------------------------
+    !-------------------------------------------------------------------------------------------------------
     function parent(self) result(par)
         class(densevector_t),   intent(in)      :: self
         integer(ik)                             :: par
@@ -398,36 +414,13 @@ contains
         par = self%parent_
 
     end function
-    !#####################################################################################
+    !******************************************************************************************************
 
 
 
 
 
 
-    !> Resize dense-block storage
-    !!
-    !!  @author Nathan A. Wukie
-    !!
-    !!  @param[in]  vsize   Size of new vector storage array
-    !------------------------------------------------------------
-    !subroutine resize(self,vsize)
-    !    class(densevector_t),   intent(inout)   :: self
-    !    integer(ik),            intent(in)      :: vsize
-!
-!        integer(ik) :: ierr
-!
-!        ! Allocate block storage
-!        ! Check if storage was already allocated and reallocate if necessary
-!        if (allocated(self%vec)) then
-!            deallocate(self%vec)
-!            allocate(self%vec(vsize),stat=ierr)
-!        else
-!            allocate(self%vec(vsize),stat=ierr)
-!        end if
-!        if (ierr /= 0) call AllocationError
-!
-!    end subroutine
 
 
 
@@ -439,15 +432,19 @@ contains
     !!  @author Nathan A. Wukie
     !!
     !!  @param[in]  par     Index of new parent element
-    !------------------------------------------------------------------------------------
+    !-------------------------------------------------------------------------------------------------------
     subroutine reparent(self,par)
         class(densevector_t),   intent(inout)   :: self
         integer(ik),            intent(in)      :: par
 
+
+        !
+        ! Set element parent index
+        !
         self%parent_ = par
 
     end subroutine
-    !#####################################################################################
+    !******************************************************************************************************
 
 
 
@@ -465,7 +462,7 @@ contains
     !!  @author Nathan A. Wukie
     !!
     !!
-    !------------------------------------------------------------------------------------
+    !-------------------------------------------------------------------------------------------------------
     subroutine clear(self)
         class(densevector_t),   intent(inout)   :: self
 
@@ -473,7 +470,7 @@ contains
         self%vec = ZERO
 
     end subroutine clear
-    !#####################################################################################
+    !******************************************************************************************************
 
 
 
@@ -607,12 +604,6 @@ contains
 
 
 
-
-!    subroutine destructor(self)
-!        type(densevector_t),    intent(inout)   :: self
-!
-!    end subroutine
-!
 
 
 

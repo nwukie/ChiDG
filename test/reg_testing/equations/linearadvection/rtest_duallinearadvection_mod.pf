@@ -60,7 +60,7 @@ contains
         !
         ! Send log to file
         !
-        IO_DESTINATION = 'file'
+        IO_DESTINATION = 'both'
 
         !
         ! Initialize chidg environment
@@ -80,9 +80,6 @@ contains
         nterms_c = 8
         call this%chidg%data%add_domain('D_01',pts,nterms_c,'DualLinearAdvection',nterms_s)
 
-        !call this%chidg%data%add_bc('D_01','periodic',XI_MIN)
-        !call this%chidg%data%add_bc('D_01','periodic',ETA_MIN)
-        !call this%chidg%data%add_bc('D_01','periodic',ZETA_MIN)
 
         !
         ! Initialize solution storage
@@ -90,16 +87,6 @@ contains
         call this%chidg%data%init_sdata()
 
 
-        !
-        ! Set initial solution to non-zero values. Risk NaN's otherwise
-        !
-        call create_function(fcn,'constant')
-        
-        call fcn%set('const',1.0_rk)
-        call initialize_variable(this%chidg%data,1,fcn)
-        call fcn%set('const',1.0_rk)
-        call initialize_variable(this%chidg%data,2,fcn)
-            
     end subroutine
     
 
@@ -116,10 +103,10 @@ contains
 
 
     !--------------------------
-    !> PARAMETER CONSTRUCTORS
+    ! PARAMETER CONSTRUCTORS
     !--------------------------
     
-    !> Function for setting the correct parameter value in the constructor
+    ! Function for setting the correct parameter value in the constructor
     function newBlock(iblk) result(param)
         type(blockParam)        :: param
         integer(ik), intent(in) :: iblk
@@ -127,7 +114,7 @@ contains
         param%iblk = iblk
     end function newBlock
     
-    !> TestCase constructor for parameter specification
+    ! TestCase constructor for parameter specification
     function newTest(param)
         type(test_eq_duallinearadvection) :: newTest
         type(blockParam)                    :: param
@@ -135,7 +122,7 @@ contains
         newTest%iblk = param%iblk
     end function newTest
 
-    !> ToString - not sure what this is for yet
+    ! ToString - not sure what this is for yet
     function toString(this) result(string)
         class(blockParam), intent(in)   :: this
         character(:), allocatable       :: string
@@ -148,7 +135,7 @@ contains
 
 
 !------------------------------------------------------------------------------------------
-!>                                        TESTS
+!                                        TESTS
 !------------------------------------------------------------------------------------------
 
 ! Test Volume Flux jacobian calclation against exact solution
@@ -169,11 +156,14 @@ contains
         ! Block Parameter from cases = []
         !
         iblk = self%iblk
+
         
         !
         ! Compute Automatic and Finite Difference jacobians
         !
         call check_jacobian_volume_advective_flux(self%chidg%data,ielem,iblk,blk_dnad,blk_fd)
+
+
 
         
 
@@ -184,9 +174,12 @@ contains
             blk_exact(6,3) = 2.6666666666666_rk
             blk_exact(8,7) = 0.8888888888888_rk
 
+
+
             ! Test volume jacobian for each equation
             @assertEqual(-blk_exact, blk_dnad%mat(1:8,1:8), tol)   
             @assertEqual(-blk_exact, blk_dnad%mat(9:16,9:16), tol)
+
 
         else
             blk_exact = ZERO
@@ -194,6 +187,7 @@ contains
             @assertEqual(blk_exact, blk_dnad%mat(9:16,9:16), tol)
         end if
 
+    
 
     end subroutine
 

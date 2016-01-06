@@ -1,4 +1,4 @@
-module atype_matrixsolver
+module type_matrixsolver
     use mod_kinds,          only: rk,ik
     use type_dict,          only: dict_t
     use type_chidgMatrix,   only: chidgMatrix_t
@@ -226,4 +226,4 @@ contains
 
 
 
-end module atype_matrixsolver
+end module type_matrixsolver

@@ -112,7 +112,7 @@ contains
             call interpolate_element(mesh,q,idom,ielem,iu_a,ua,seed)
             call interpolate_element(mesh,q,idom,ielem,iu_b,ub,seed)
 
-            
+
 
             !
             ! Compute volume flux at quadrature nodes
@@ -125,7 +125,7 @@ contains
 
 
 
-            !> Compute volume flux at quadrature nodes
+            ! Compute volume flux at quadrature nodes
             flux_x = cx  *  ub
             flux_y = cy  *  ub
             flux_z = cz  *  ub

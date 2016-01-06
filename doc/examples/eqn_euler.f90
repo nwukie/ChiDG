@@ -36,21 +36,22 @@ contains
         type(EULER_volume_advective_flux_t)             :: volume_flux
         type(EULER_boundary_average_advective_flux_t)   :: average_flux
         type(EULER_Roe_flux_t)                          :: roe
+        type(EULER_properties_t)                        :: prop
+
+        type(perfect_gas_t)                             :: perfect_gas
 
 
+        !
+        ! Set equation set name
+        !
         self%name    = 'Euler'
 
-        !
-        ! Allocate equation set properties.
-        !
-        if (allocated(self%prop)) deallocate(self%prop)
-        allocate(EULER_properties_t::self%prop)
 
-        select type (prop => self%prop)
-            type is (EULER_properties_t) 
-                allocate(perfect_gas_t::prop%fluid)
-        end select
-
+        !
+        ! Equation set properties
+        !
+        call prop%add_fluid(perfect_gas)    ! set up properties
+        call self%add_properties(prop)      ! add to equation set
 
 
         !

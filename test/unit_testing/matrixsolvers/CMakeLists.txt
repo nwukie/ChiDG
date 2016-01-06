@@ -1,4 +1,4 @@
-add_test_sources(matrix_solvers
+add_test_sources(matrixsolvers
 #                 test_directsolver.pf
 #                 test_gaussseidel.pf
 #                 test_sor.pf
@@ -11,4 +11,4 @@ add_test_sources(matrix_solvers
                  )
 
 
-add_test_target(matrix_solvers unit ${matrix_solvers_sources})
+add_test_target(matrixsolvers unit ${matrixsolvers_sources})

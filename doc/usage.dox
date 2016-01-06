@@ -4,13 +4,21 @@
 
 
 
-\section s_commandline Command Line
+\section s_setup Set-up
+`chidg` reads a namelist file for input parameters.
+
+
+\n
+\n
+<HR>
+\section s_commandline Command line
 
 \code{.sh}  chidg       \endcode
 
 
 
-
+\n
+\n
 
 
 

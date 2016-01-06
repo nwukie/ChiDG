@@ -740,6 +740,8 @@ contains
     !!  @param[in]      filename    Character string of the file to be written to
     !!  @param[inout]   data        chidg_data_t containing solution to be written
     !!
+    !!  @TODO   Allow for creation of a new solution file. Currently, incoming filename needs to exist already.
+    !!
     !-------------------------------------------------------------------------------------------------------
     subroutine write_solution_hdf(filename,data)
         use ISO_C_BINDING

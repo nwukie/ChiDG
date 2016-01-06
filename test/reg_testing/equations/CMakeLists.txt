@@ -1,4 +1,4 @@
-add_subdirectory(linear_advection)
+add_subdirectory(linearadvection)
 add_subdirectory(euler)
 
 

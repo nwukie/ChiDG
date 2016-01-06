@@ -69,6 +69,13 @@ contains
         !
         self%name = 'DualLinearAdvection'
 
+        
+        !
+        ! Set properties
+        !
+        prop%c(1) = ONE
+        prop%c(2) = ZERO
+        prop%c(3) = ZERO
 
         !
         ! Allocate equation set properties

@@ -13,6 +13,7 @@ Installing ChiDG:
 
 \n
 <HR>
+<HR>
 
 \section s_obtaining Obtaining ChiDG
 ChiDG is hosted in a git repository on <a href="https://www.gitlab.com">www.gitlab.com</a> and may be cloned using either 
@@ -24,13 +25,16 @@ ChiDG is hosted in a git repository on <a href="https://www.gitlab.com">www.gitl
 \code  git clone https://gitlab.com/nwukie/ChiDG.git ChiDG     \endcode
 
 
-ChiDG is currently in a pre-release state. As such, public read-access to the above repository is restricted.
+<B>
+NOTE: ChiDG is currently in pre-release. As such, public read-access to the above repository is restricted.
+</B>
 
 \n
 \n
 
 
 
+<HR>
 <HR>
 
 \section s_dependencies ChiDG Dependencies
@@ -49,6 +53,7 @@ These components are required to build ChiDG.
 
 
 
+<HR>
 \subsection s_dep_hdf5 HDF5
 HDF5 is used as a container for the ChiDG grid/solution files and is a required depencency of ChiDG.
 
@@ -62,6 +67,7 @@ HDF5 is used as a container for the ChiDG grid/solution files and is a required 
 
 
 
+<HR>
 \subsection s_dep_mpich MPICH
 The `mpich` source or precompiled packages can be downloaded from the MPICH website.
 
@@ -103,6 +109,7 @@ the `cmake` script to select the correct installation based on the compiler vend
 \n
 
 
+<HR>
 \subsection s_dep_cmake CMake
 ChiDG uses the CMake build-system to generate the 'make' configuration files for the project.
 
@@ -117,6 +124,7 @@ ChiDG uses the CMake build-system to generate the 'make' configuration files for
 
 
 
+<HR>
 \subsection s_dep_tecio TecIO
 Tecplot 360 is the primary visualization tool currently used for ChiDG. The TecIO libraries are distributed
 with the ChiDG project for multiple systems and should be linked accordingly without user intervention. If,
@@ -131,10 +139,11 @@ from the Tecplot website.
 \n
 
 <HR>
+<HR>
 
 \section s_compile Compiling ChiDG
 
-NOTE: ChiDG uses features of the most recent Fortran standard (F2008). Up-to-date Fortran compilers are required.
+NOTE: ChiDG uses features of the most recent Fortran standard (F2008). Up-to-date Fortran compilers are \b required.
 
 Successfully tested compiler versions:
         - gfortran 5.2

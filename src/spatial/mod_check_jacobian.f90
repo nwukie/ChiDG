@@ -69,7 +69,6 @@ contains
             !
             ! For the current element, compute the contributions from volume integrals
             !
-            !call domain%eqnset%compute_volume_flux(mesh,sdata,ielem,iblk)
             idom = 1
             if (allocated(eqnset(1)%item%volume_advective_flux)) then
                 nflux = size(eqnset(1)%item%volume_advective_flux)
@@ -86,7 +85,6 @@ contains
            !
            ! Store linearization from DNAD. This is what we want to check against the FD calculation.
            !
-           !blk_dnad = sdata%lhs%dom(idom)%lblks(ielem,iblk)
            blk_dnad = lhs%lblks(ielem,iblk)
            blk_fd = blk_dnad                       ! Sourced allocation
            blk_fd%mat = ZERO                       ! Zero storage

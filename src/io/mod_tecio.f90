@@ -38,6 +38,7 @@ contains
         real(rk)           :: xi,eta,zeta
         character(100)     :: varstring
         integer(ik)        :: ieq, ivar, idom
+        character(len=:), allocatable   :: zonestring
 
         !type(element_t),      pointer :: elem(:,:,:)
         !type(blockvector_t),  pointer :: q
@@ -82,17 +83,10 @@ contains
 
 
             !
-            ! Remap elements array to block matrix
-            !
-            !elem => mesh%elems_m
-            !q    => sdata%q%dom(idom)
-
-
-            !
             ! Initialize new zone in the TecIO file for the current domain
             !
-            call init_tecio_zone('solnzone',data%mesh(idom),1,timeindex)
-
+            zonestring = 'solnzone_'//data%info(idom)%name
+            call init_tecio_zone(zonestring,data%mesh(idom),1,timeindex)
 
 
             xilim   = npts

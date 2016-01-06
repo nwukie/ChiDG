@@ -3,7 +3,7 @@ module type_fgmres
     use mod_kinds,              only: rk, ik
     use mod_constants,          only: ZERO
     use mod_inv,                only: inv
-    use atype_matrixsolver,     only: matrixsolver_t 
+    use type_matrixsolver,      only: matrixsolver_t 
     use type_preconditioner,    only: preconditioner_t
     use type_chidgVector
     use type_chidgMatrix
@@ -26,7 +26,7 @@ module type_fgmres
     !---------------------------------------------------------------------------------------------
     type, public, extends(matrixsolver_t) :: fgmres_t
 
-        integer(ik) :: m = 200
+        integer(ik) :: m = 800
 
     contains
 

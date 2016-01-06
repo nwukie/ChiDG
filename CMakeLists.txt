@@ -122,11 +122,13 @@ find_package(LAPACK REQUIRED)
 
 # Select vendor installation
 if (${Fortran_VENDOR} MATCHES "INTEL")
-    set(MPI_VENDOR_ROOT} $ENV{MPI_ROOT}/intel)
+    set(MPI_VENDOR_ROOT $ENV{MPI_ROOT}/intel)
 elseif (${Fortran_VENDOR} MATCHES "GNU")
     set(MPI_VENDOR_ROOT $ENV{MPI_ROOT}/gnu)
 endif()
 
+message(STATUS "Fortran_VENDOR: ${Fortran_VENDOR}")
+message(STATUS "MPI_VENDOR_ROOT: ${MPI_VENDOR_ROOT}")
 
 set(MPI_Fortran_COMPILER "${MPI_VENDOR_ROOT}/bin/mpifort")
 set(MPI_Fortran_INCLUDE_PATH "${MPI_VENDOR_ROOT}/include")

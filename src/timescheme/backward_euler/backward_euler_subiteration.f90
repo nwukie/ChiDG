@@ -3,7 +3,7 @@ module backward_euler_subiteration
     use mod_constants,          only: ZERO, ONE, TWO, DIAG
     use type_timescheme,        only: timescheme_t
     use type_chidg_data,        only: chidg_data_t
-    use atype_matrixsolver,     only: matrixsolver_t
+    use type_matrixsolver,      only: matrixsolver_t
     use type_preconditioner,    only: preconditioner_t
     use type_chidgVector
 

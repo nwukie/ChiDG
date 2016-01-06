@@ -7,7 +7,7 @@ module type_chidg
 
     use type_chidg_data,        only: chidg_data_t
     use type_timescheme,        only: timescheme_t
-    use atype_matrixsolver,     only: matrixsolver_t
+    use type_matrixsolver,      only: matrixsolver_t
     use type_preconditioner,    only: preconditioner_t
     use type_meshdata,          only: meshdata_t
     use type_dict,              only: dict_t

@@ -29,7 +29,7 @@ program driver
     implicit none
     type(chidg_t)                       :: chidg
     class(function_t),  allocatable     :: constant, vortex, sod, roe
-    type(dict_t)                        :: toptions
+    type(dict_t)                        :: toptions, moptions
 
 
 
@@ -64,10 +64,17 @@ program driver
 
 
     !
+    ! Set matrix solver options
+    !
+    call moptions%set('tol',mtol)
+
+
+
+    !
     ! Set ChiDG components
     !
     call chidg%set('time_scheme',timescheme,toptions)
-    call chidg%set('matrixsolver',matrixsolver)
+    call chidg%set('matrixsolver',matrixsolver,moptions)
     call chidg%set('preconditioner',preconditioner)
 
 
@@ -82,7 +89,6 @@ program driver
     call chidg%data%add_bc('D_01','euler_wall',ETA_MAX)
     call chidg%data%add_bc('D_01','euler_wall',ZETA_MIN)
     call chidg%data%add_bc('D_01','euler_wall',ZETA_MAX)
-
 
 
 

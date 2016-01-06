@@ -210,6 +210,9 @@ contains
                     type is(real(8))
                         call write_line(auxdata)
 
+                    type is(character(*))
+                        call write_line(auxdata)
+
                     class default
                         print*, '', "Data type not implemented for I/O in messege.f90"
                 end select

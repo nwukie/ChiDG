@@ -1,7 +1,7 @@
 module mod_matrixsolver
 #include <messenger.h>
     use mod_kinds,          only: rk, ik
-    use atype_matrixsolver, only: matrixsolver_t
+    use type_matrixsolver,  only: matrixsolver_t
     use type_dict,          only: dict_t
 
 

@@ -1,7 +1,7 @@
 module type_timescheme
     use messenger,          only: write_line
     use mod_kinds,          only: rk,ik
-    use atype_matrixsolver, only: matrixsolver_t
+    use type_matrixsolver,  only: matrixsolver_t
     use type_dict,          only: dict_t
     use type_timer,         only: timer_t
     use type_rvector,       only: rvector_t
@@ -99,7 +99,7 @@ module type_timescheme
     abstract interface
         subroutine data_interface(self,data,matrixsolver,preconditioner)
             use type_chidg_data,        only: chidg_data_t
-            use atype_matrixsolver,     only: matrixsolver_t
+            use type_matrixsolver,      only: matrixsolver_t
             use type_preconditioner,    only: preconditioner_t
             import timescheme_t
             class(timescheme_t),                    intent(inout)   :: self

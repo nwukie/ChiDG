@@ -492,7 +492,7 @@ contains
         dims(3) = itime                     ! TODO: Should probably better inform the dataspace dimension here. Probably set mesh_t%ntime
         maxdims(1) = H5S_UNLIMITED_F
         maxdims(2) = H5S_UNLIMITED_F
-        maxdims(2) = H5S_UNLIMITED_F
+        maxdims(3) = H5S_UNLIMITED_F
 
 
 

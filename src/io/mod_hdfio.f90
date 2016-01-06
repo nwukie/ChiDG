@@ -262,7 +262,7 @@ contains
 
 
         integer(HID_T)   :: gid, sid, vid           ! Identifiers
-        integer(HSIZE_T) :: maxdims(2)              ! Dataspace dimensions
+        integer(HSIZE_T) :: maxdims(3)              ! Dataspace dimensions
         integer(HSIZE_T) :: dims(3)
 
         integer, dimension(1)           :: ibuf
@@ -437,7 +437,7 @@ contains
 
 
         integer(HID_T)   :: gid, sid, did, crp_list         ! Identifiers
-        integer(HSIZE_T) :: maxdims(2), adim                ! Dataspace dimensions
+        integer(HSIZE_T) :: maxdims(3), adim                ! Dataspace dimensions
         integer(HSIZE_T) :: dims(3)                         ! Dataspace dimensions
         integer(HSIZE_T) :: dimsc(3)                        ! Chunk size for extendible data sets
         type(H5O_INFO_T) :: info                            ! Object info type

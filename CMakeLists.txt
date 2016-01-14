@@ -59,10 +59,11 @@ if (${Fortran_VENDOR} MATCHES "INTEL")
 elseif (${Fortran_VENDOR} MATCHES "GNU")
     # Note: -fcheck=all has issues with passing null pointer in tecio_interface
     set (USER_COMPILE_FLAGS_DEBUG   "-O0 -cpp --coverage -ffree-form -ffree-line-length-none -fbacktrace -fstack-protector -fcheck=bounds -fmax-stack-var-size=1600 -p -g")    # Note: -fcheck=all has issues with passing null pointer in tecio_interface
-    set (USER_COMPILE_FLAGS_RELEASE "-O3 -cpp -ffree-form -ffree-line-length-none")
+    #set (USER_COMPILE_FLAGS_RELEASE "-O3 -cpp -ffree-form -ffree-line-length-none")
+    set (USER_COMPILE_FLAGS_RELEASE "-O3 -cpp -ffree-form -ffree-line-length-none -fexternal-blas -fdump-ipa-inline")
     set (CMAKE_Fortran_LINK_FLAGS_DEBUG "--coverage")
-    #set (CMAKE_Fortran_LINK_FLAGS_RELEASE "-flto")
     set (CMAKE_Fortran_LINK_FLAGS_RELEASE "")
+    #set (CMAKE_Fortran_LINK_FLAGS_RELEASE "")
     
 endif()
 
@@ -107,6 +108,7 @@ endif()
 #----------------------------------------------------------------------------------- 
 find_package(LAPACK REQUIRED)
 
+message(STATUS "LAPACK_LIBRARIES: " ${LAPACK_LIBRARIES})
 
 
 
@@ -200,6 +202,7 @@ set_target_properties(coredg PROPERTIES
 # Add driver executable linked to coredg library
 add_executable(chidg ${EXE_SRCS})
 target_link_libraries(chidg coredg ${HDF5_LIBRARIES} ${TECPLOT_LIBRARIES} ${MPI_Fortran_LIBRARIES})
+target_link_libraries(chidg ${HDF5_LIBRARIES} ${TECPLOT_LIBRARIES} ${MPI_Fortran_LIBRARIES})
 set_target_properties(chidg PROPERTIES 
                             COMPILE_FLAGS "${CMAKE_Fortran_FLAGS} ${MPI_Fortran_COMPILE_FLAGS}"
                             LINK_FLAGS    "${CMAKE_Fortran_LINK_FLAGS} ${MPI_Fortran_LINK_FLAGS} -lstdc++ -lpthread")

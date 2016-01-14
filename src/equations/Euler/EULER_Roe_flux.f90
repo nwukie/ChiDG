@@ -32,12 +32,15 @@ module EULER_Roe_flux
     !
     !
     !
-    !---------------------------------------------------------------------
+    !------------------------------------------------------------------------------
     type, extends(boundary_flux_t), public :: EULER_Roe_flux_t
 
     contains
+
         procedure  :: compute
+
     end type EULER_Roe_flux_t
+    !*******************************************************************************
 
 
 
@@ -55,11 +58,11 @@ contains
 
 
 
-    ! Compute Roe approximate Riemann upwind flux
-    ! 
-    !   @author Nathan A. Wukie
-    !
-    !---------------------------------------------------------------------------
+    !> Compute Roe approximate Riemann upwind flux
+    !! 
+    !!   @author Nathan A. Wukie
+    !!
+    !!---------------------------------------------------------------------------
     subroutine compute(self,mesh,sdata,prop,idom,ielem,iface,iblk,idonor)
         class(EULER_Roe_flux_t),            intent(in)      :: self
         type(mesh_t),                       intent(in)      :: mesh(:)
@@ -153,11 +156,13 @@ contains
             call prop%fluid%compute_gamma(rho_m,rhou_m,rhov_m,rhow_m,rhoE_m,gam_m)
             call prop%fluid%compute_gamma(rho_p,rhou_p,rhov_p,rhow_p,rhoE_p,gam_p)
 
+
             !
             ! Compute enthalpy
             !
             H_m = (rhoE_m + p_m)/rho_m
             H_p = (rhoE_p + p_p)/rho_p
+
 
             !
             ! Compute velocity components
@@ -171,6 +176,7 @@ contains
             v_p = rhov_p/rho_p
             w_p = rhow_p/rho_p
             vmag_p = u_p*(unorms(:,1)) + v_p*(unorms(:,2)) + w_p*(unorms(:,3))
+
 
             !
             ! Compute Roe-averaged variables
@@ -264,6 +270,7 @@ contains
         end associate
 
     end subroutine
+    !**********************************************************************************************
 
 
 

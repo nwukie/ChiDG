@@ -16,7 +16,12 @@ contains
 
 
 
-    !function compute_entropy_error(domain) result(error_sum)
+    !>
+    !!
+    !!
+    !!
+    !!
+    !------------------------------------------------------------------------------------
     function compute_entropy_error(data) result(error_sum)
         type(chidg_data_t), intent(inout)   :: data
 
@@ -131,8 +136,8 @@ contains
         error_sum = sqrt(error_sum/vol_sum)
 
 
-
     end function
+    !**********************************************************************************************
 
 
 

@@ -54,10 +54,10 @@ contains
 
 
 
-    !
-    !   Boundary Flux routine for Euler
-    !
-    !----------------------------------------------------------------------------------------
+    !>   Boundary Flux routine for Euler
+    !!
+    !!
+    !!-------------------------------------------------------------------------------------
     subroutine compute(self,mesh,sdata,prop,idom,ielem,iface,iblk,idonor)
         class(EULER_boundary_average_advective_flux_t), intent(in)      :: self
         type(mesh_t),                                   intent(in)      :: mesh(:)

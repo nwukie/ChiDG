@@ -18,12 +18,22 @@ module EULER_volume_advective_flux
 
     private
 
+    
+    !> Volume advective flux for Euler equations.
+    !!
+    !!  @author Nathan A. Wukie
+    !!
+    !!
+    !------------------------------------------------------------------------------
     type, extends(volume_flux_t), public :: EULER_volume_advective_flux_t
 
 
     contains
+
         procedure  :: compute
+
     end type EULER_volume_advective_flux_t
+    !******************************************************************************
 
 
 
@@ -38,11 +48,11 @@ contains
 
 
 
-    !==========================================================
-    !
-    !   Volume Flux routine for Euler
-    !
-    !===========================================================
+    !> Volume flux routine for Euler equations.
+    !!
+    !!  
+    !!
+    !!------------------------------------------------------------------------------
     subroutine compute(self,mesh,sdata,prop,idom,ielem,iblk)
         class(EULER_volume_advective_flux_t),   intent(in)      :: self
         type(mesh_t),                           intent(in)      :: mesh(:)
@@ -51,7 +61,6 @@ contains
         integer(ik),                            intent(in)      :: idom, ielem, iblk
 
         ! Equation indices
-        !------------------------------------------------------------
         integer(ik)    :: irho
         integer(ik)    :: irhou
         integer(ik)    :: irhov
@@ -70,19 +79,20 @@ contains
         idonor = 0
 
 
-        !-------------------------------------------------------------
+        !
+        ! Get equation indices
+        !
         irho  = prop%get_eqn_index("rho")
         irhou = prop%get_eqn_index("rhou")
         irhov = prop%get_eqn_index("rhov")
         irhow = prop%get_eqn_index("rhow")
         irhoE = prop%get_eqn_index("rhoE")
 
+
         !
         ! Get neighbor face and seed element for derivatives
         !
         seed = compute_seed(mesh,idom,ielem,iblk,idonor,iblk)
-
-
 
 
         !

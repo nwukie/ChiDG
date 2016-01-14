@@ -52,6 +52,8 @@ if (${Fortran_VENDOR} MATCHES "INTEL")
     set (USER_COMPILE_FLAGS_RELEASE "-O3 -fpp -assume realloc_lhs")
     set (CMAKE_Fortran_LINK_FLAGS_DEBUG "")
     set (CMAKE_Fortran_LINK_FLAGS_RELEASE "")
+
+    set (PROFILE_FLAGS "")
     
     #set (CMAKE_AR xiar)        # for -ipo
     #set (CMAKE_LINKER xild)    # for -ipo
@@ -64,13 +66,20 @@ elseif (${Fortran_VENDOR} MATCHES "GNU")
     set (CMAKE_Fortran_LINK_FLAGS_DEBUG "-O0 --coverage")
     set (CMAKE_Fortran_LINK_FLAGS_RELEASE "-O3")
     
+    set (PROFILE_FLAGS "-p -g")
+
+
 endif()
 
 # Append user flags to debug and release variables
 set (CMAKE_Fortran_FLAGS_DEBUG "${CMAKE_Fortran_FLAGS_DEBUG} ${USER_COMPILE_FLAGS_DEBUG}")
 set (CMAKE_Fortran_FLAGS_RELEASE "${CMAKE_Fortran_FLAGS_RELEASE} ${USER_COMPILE_FLAGS_RELEASE}")
 
-
+# Append profile flags
+if (PROFILE)
+    set (CMAKE_Fortran_FLAGS_DEBUG "${CMAKE_Fortran_FLAGS_DEBUG} ${PROFILE_FLAGS}")
+    set (CMAKE_Fortran_FLAGS_RELEASE "${CMAKE_Fortran_FLAGS_RELEASE} ${PROFILE_FLAGS}")
+endif()
 
 
 

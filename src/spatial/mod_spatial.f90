@@ -79,11 +79,9 @@ contains
 
                                 compute_face = (interior_face .or. chimera_face) .and. ( (iblk == iface) .or. (iblk == DIAG) )
 
+
+
                                 if ( compute_face ) then
-
-
-
-
 
                                     !
                                     ! If Chimera face, how many donor elements are there that need the linearization computed
@@ -106,9 +104,6 @@ contains
                                     if (ndonors == 0) call chidg_signal(FATAL,'update_residual: no available donors for boundary calculation')
 
 
-
-
-
                                     !
                                     ! Call all boundary advective flux components
                                     !
@@ -126,7 +121,7 @@ contains
                                         end do
                                     end if
 
-                                end if
+                                end if ! compute_face
 
 
 

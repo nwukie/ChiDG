@@ -3,7 +3,7 @@ module type_face
     use mod_kinds,              only: rk,ik
     use mod_constants,          only: XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, &
                                       ZETA_MIN, ZETA_MAX, XI_DIR, ETA_DIR, ZETA_DIR, &
-                                      SPACEDIM, NFACES, TWO
+                                      SPACEDIM, NFACES, TWO, NO_INTERIOR_NEIGHBOR
 
     use type_point,             only: point_t
     use type_element,           only: element_t
@@ -31,6 +31,7 @@ module type_face
 
         integer(ik)                  :: idomain             !< Domain index of parent element
         integer(ik)                  :: iparent             !< Element index of parent element
+
         integer(ik)                  :: ineighbor           !< Block-local index of neighbor element
 
 
@@ -63,6 +64,12 @@ module type_face
         logical :: geomInitialized = .false.
         logical :: numInitialized  = .false.
 
+
+        ! Test flux linearization
+        logical, dimension(2,7)   :: flux_linearized
+
+
+
     contains
 
         procedure           :: init_geom
@@ -71,6 +78,9 @@ module type_face
         procedure           :: compute_quadrature_metrics   !< Compute metric terms at quadrature nodes
         procedure           :: compute_quadrature_normals   !< Compute normals at quadrature nodes
         procedure           :: compute_quadrature_coords    !< Compute cartesian coordinates at quadrature nodes
+
+        procedure           :: get_neighbor_element         !< Return neighbor element index
+        procedure           :: get_neighbor_face            !< Return neighbor face index
 
         final               :: destructor
 
@@ -181,6 +191,11 @@ contains
         call self%compute_quadrature_normals()
         call self%compute_quadrature_coords()
 
+
+        !
+        ! Set flux linearization logicals to false
+        !
+        self%flux_linearized = .false.
 
         !
         ! Confirm face numerics were initialized
@@ -420,6 +435,94 @@ contains
 
     end subroutine compute_quadrature_coords
     !***********************************************************************************************************
+
+
+
+
+
+
+
+    !> Return neighbor element index
+    !!
+    !!  @author Nathan A. Wukie
+    !!
+    !!
+    !!
+    !!
+    !-----------------------------------------------------------------------------------------------------------
+    function get_neighbor_element(self) result(neighbor_e)
+        class(face_t),  intent(in)   ::  self
+
+        integer(ik) :: neighbor_e
+
+
+        neighbor_e = self%ineighbor
+
+
+    end function get_neighbor_element
+    !***********************************************************************************************************
+
+
+
+
+
+    !> Return neighbor face index
+    !!
+    !!  @author Nathan A. Wukie
+    !!
+    !!
+    !!
+    !!
+    !-----------------------------------------------------------------------------------------------------------
+    function get_neighbor_face(self) result(neighbor_f)
+        class(face_t),  intent(in)   ::  self
+
+        integer(ik) :: neighbor_e
+        integer(ik) :: neighbor_f
+
+
+
+        neighbor_e = self%get_neighbor_element()
+
+
+
+        if ( neighbor_e == NO_INTERIOR_NEIGHBOR ) then
+            
+            neighbor_f = NO_INTERIOR_NEIGHBOR
+
+        else
+
+            !& ASSUMPTION: BLOCK-STRUCTURED
+            if ( self%iface == XI_MIN ) then
+                neighbor_f = XI_MAX
+            else if ( self%iface == XI_MAX ) then
+                neighbor_f = XI_MIN
+            else if ( self%iface == ETA_MIN ) then
+                neighbor_f = ETA_MAX
+            else if ( self%iface == ETA_MAX ) then
+                neighbor_f = ETA_MIN
+            else if ( self%iface == ZETA_MIN ) then
+                neighbor_f = ZETA_MAX
+            else if ( self%iface == ZETA_MAX ) then
+                neighbor_f = ZETA_MIN
+            end if
+
+        end if
+
+
+    end function get_neighbor_face
+    !***********************************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
 
 
 

@@ -16,26 +16,26 @@ module mod_bc
     use type_bc,        only: bc_t
 
     ! IMPORT BOUNDARY CONDITIONS
-    use bc_periodic,                    only: periodic_t
-    use bc_linearadvection_extrapolate, only: linearadvection_extrapolate_t
+!    use bc_periodic,                    only: periodic_t
+!    use bc_linearadvection_extrapolate, only: linearadvection_extrapolate_t
     use bc_euler_wall,                  only: euler_wall_t
     use bc_euler_totalinlet,            only: euler_totalinlet_t
     use bc_euler_pressureoutlet,        only: euler_pressureoutlet_t
     use bc_euler_extrapolate,           only: euler_extrapolate_t
-    use bc_lineuler_extrapolate,        only: lineuler_extrapolate_t
-    use bc_lineuler_inlet,              only: lineuler_inlet_t
+!    use bc_lineuler_extrapolate,        only: lineuler_extrapolate_t
+!    use bc_lineuler_inlet,              only: lineuler_inlet_t
     implicit none
 
 
     ! Instantiate boundary conditions so they can be sourced by the factory
-    type(periodic_t)                    :: PERIODIC
-    type(linearadvection_extrapolate_t) :: LINEARADVECTION_EXTRAPOLATE
+!    type(periodic_t)                    :: PERIODIC
+!    type(linearadvection_extrapolate_t) :: LINEARADVECTION_EXTRAPOLATE
     type(euler_wall_t)                  :: EULER_WALL
     type(euler_totalinlet_t)            :: EULER_TOTALINLET
     type(euler_pressureoutlet_t)        :: EULER_PRESSUREOUTLET
     type(euler_extrapolate_t)           :: EULER_EXTRAPOLATE
-    type(lineuler_extrapolate_t)        :: LINEULER_EXTRAPOLATE
-    type(lineuler_inlet_t)              :: LINEULER_INLET
+!    type(lineuler_extrapolate_t)        :: LINEULER_EXTRAPOLATE
+!    type(lineuler_inlet_t)              :: LINEULER_INLET
 
 
 
@@ -58,18 +58,15 @@ contains
         integer(ik) :: ierr
 
         select case (trim(string))
-            ! PERIODIC
-            case ('periodic','Periodic')
-                allocate(bc, source=PERIODIC, stat=ierr)
-
-            ! Linear Advection - extrapolation boundary condition
-            case ('extrapolate_la','extrapolation_la','Extrapolate_la','Extrapolation_la')
-                allocate(bc, source=LINEARADVECTION_EXTRAPOLATE, stat=ierr)
-
-
-            ! Euler - extrapolation boundary condition
-            case ('extrapolate_euler','extrapolation_euler','Extrapolate_euler','Extrapolation_euler')
-                call chidg_signal(FATAL,"create_bc: Euler extrapolation boundary condition is not yet implemented")
+!            ! PERIODIC
+!            case ('periodic','Periodic')
+!                allocate(bc, source=PERIODIC, stat=ierr)
+!
+!            ! Linear Advection - extrapolation boundary condition
+!            case ('extrapolate_la','extrapolation_la','Extrapolate_la','Extrapolation_la')
+!                allocate(bc, source=LINEARADVECTION_EXTRAPOLATE, stat=ierr)
+!
+!
 
             ! Euler - slip wall
             case ('euler_wall','slip_wall','Euler_Wall','Slip_Wall','SlipWall')
@@ -93,13 +90,13 @@ contains
 
 
 
-            ! Linearized Euler
-            case ('lineuler_extrapolate')
-                allocate(bc, source=LINEULER_EXTRAPOLATE, stat=ierr)
-
-
-            case ('lineuler_inlet')
-                allocate(bc, source=LINEULER_INLET, stat=ierr)
+!            ! Linearized Euler
+!            case ('lineuler_extrapolate')
+!                allocate(bc, source=LINEULER_EXTRAPOLATE, stat=ierr)
+!
+!
+!            case ('lineuler_inlet')
+!                allocate(bc, source=LINEULER_INLET, stat=ierr)
 
 
 

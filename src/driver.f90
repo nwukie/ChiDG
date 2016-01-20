@@ -41,14 +41,10 @@ program driver
 
 
 
-
-
-
     !
     ! Read grid data from file
     !
     call chidg%read_grid(gridfile)
-
 
 
 

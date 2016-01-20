@@ -69,6 +69,7 @@ module type_element
         logical :: geomInitialized = .false.
         logical :: numInitialized  = .false.
 
+
     contains
 
         ! Initialization procedures
@@ -227,6 +228,7 @@ contains
         !
         call self%compute_quadrature_metrics()                  ! Compute element metrics
         call self%compute_element_matrices()                    ! Compute mass matrices and derivative matrices
+
 
 
         !

@@ -7,7 +7,8 @@ module bc_euler_totalinlet
     use type_mesh,          only: mesh_t
     use type_properties,    only: properties_t
     use type_seed,          only: seed_t
-    use type_face_location, only: face_location_t
+    use type_face_indices,  only: face_indices_t
+    use type_flux_indices,  only: flux_indices_t
 
 
     use mod_DNAD_tools,     only: compute_seed
@@ -48,27 +49,33 @@ contains
     !!  @param[in]      iblk    Index of the linearization block being computed
     !!  @param[inout]   prop    properties_t object containing equations and material_t objects
     !-------------------------------------------------------------------------------------------
-    subroutine compute(self,mesh,sdata,prop,idom,ielem,iface,iblk)
+    !subroutine compute(self,mesh,sdata,prop,idom,ielem,iface,iblk)
+    subroutine compute(self,mesh,sdata,prop,face,flux)
         class(euler_totalinlet_t),      intent(inout)   :: self
         type(mesh_t),                   intent(in)      :: mesh(:)
         type(solverdata_t),             intent(inout)   :: sdata
         class(properties_t),            intent(inout)   :: prop
-        integer(ik),                    intent(in)      :: idom
-        integer(ik),                    intent(in)      :: ielem
-        integer(ik),                    intent(in)      :: iface
-        integer(ik),                    intent(in)      :: iblk
+        type(face_indices_t),           intent(in)      :: face
+        type(flux_indices_t),           intent(in)      :: flux
+
+
+!        integer(ik),                    intent(in)      :: idom
+!        integer(ik),                    intent(in)      :: ielem
+!        integer(ik),                    intent(in)      :: iface
+!        integer(ik),                    intent(in)      :: iblk
 
         ! Equation indices
         integer(ik)     :: irho, irhou, irhov, irhow, irhoE
 
         integer(ik)             :: iface_p, ineighbor, idonor
+        integer(ik)             :: idom, ielem, iface, iblk
         type(seed_t)            :: seed
-        type(face_location_t)   :: face
+!        type(face_indices_t)    :: face
 
         ! Storage at quadrature nodes
-        type(AD_D), dimension(mesh(idom)%faces(ielem,iface)%gq%face%nnodes)   ::  &
+        type(AD_D), dimension(mesh(face%idomain)%faces(face%ielement,face%iface)%gq%face%nnodes)   ::  &
                         rho_m,  rhou_m, rhov_m, rhow_m, rhoE_m, p_m,        &
-                        flux_x, flux_y, flux_z, flux,                       &
+                        flux_x, flux_y, flux_z, integrand,                  &
                         u_m,    v_m,    w_m,                                &
                         u_bc,   v_bc,   w_bc,                               &
                         T_bc,   p_bc,   rho_bc, rhoE_bc,                    &
@@ -92,10 +99,15 @@ contains
 
 
 
-        face%idomain  = idom
-        face%ielement = ielem
-        face%iface    = iface
+!        face%idomain  = idom
+!        face%ielement = ielem
+!        face%iface    = iface
 
+        idom  = face%idomain
+        ielem = face%ielement
+        iface = face%iface
+
+        iblk   = flux%iblk
 
 
         !
@@ -120,11 +132,19 @@ contains
             !
             ! Interpolate interior solution to quadrature nodes
             !
-            call interpolate_face(mesh,q,idom,ielem,iface,irho, rho_m, seed, LOCAL)
-            call interpolate_face(mesh,q,idom,ielem,iface,irhou,rhou_m,seed, LOCAL)
-            call interpolate_face(mesh,q,idom,ielem,iface,irhov,rhov_m,seed, LOCAL)
-            call interpolate_face(mesh,q,idom,ielem,iface,irhow,rhow_m,seed, LOCAL)
-            call interpolate_face(mesh,q,idom,ielem,iface,irhoE,rhoE_m,seed, LOCAL)
+!            call interpolate_face(mesh,q,idom,ielem,iface,irho, rho_m, seed, LOCAL)
+!            call interpolate_face(mesh,q,idom,ielem,iface,irhou,rhou_m,seed, LOCAL)
+!            call interpolate_face(mesh,q,idom,ielem,iface,irhov,rhov_m,seed, LOCAL)
+!            call interpolate_face(mesh,q,idom,ielem,iface,irhow,rhow_m,seed, LOCAL)
+!            call interpolate_face(mesh,q,idom,ielem,iface,irhoE,rhoE_m,seed, LOCAL)
+!
+            call interpolate_face(mesh,face,q,irho, rho_m, LOCAL)
+            call interpolate_face(mesh,face,q,irhou,rhou_m,LOCAL)
+            call interpolate_face(mesh,face,q,irhov,rhov_m,LOCAL)
+            call interpolate_face(mesh,face,q,irhow,rhow_m,LOCAL)
+            call interpolate_face(mesh,face,q,irhoE,rhoE_m,LOCAL)
+
+
 
             !
             ! Compute velocity components
@@ -198,10 +218,11 @@ contains
             flux_y = (rho_bc * v_bc)
             flux_z = (rho_bc * w_bc)
 
-            flux = flux_x*norms(:,1) + flux_y*norms(:,2) + flux_z*norms(:,3)
+            integrand = flux_x*norms(:,1) + flux_y*norms(:,2) + flux_z*norms(:,3)
 
             !call integrate_boundary_scalar_flux(mesh(idom)%faces(ielem,iface),sdata,idom,irho,iblk,flux)
-            call integrate_boundary_scalar_flux(mesh,sdata,face,irho,iblk,idonor,seed,flux)
+            !call integrate_boundary_scalar_flux(mesh,sdata,face,irho,iblk,idonor,seed,flux)
+            call integrate_boundary_scalar_flux(mesh,sdata,face,flux,irho,integrand)
 
             !=================================================
             ! x-momentum flux
@@ -210,10 +231,11 @@ contains
             flux_y = (rho_bc * u_bc * v_bc)
             flux_z = (rho_bc * u_bc * w_bc)
 
-            flux = flux_x*norms(:,1) + flux_y*norms(:,2) + flux_z*norms(:,3)
+            integrand = flux_x*norms(:,1) + flux_y*norms(:,2) + flux_z*norms(:,3)
 
             !call integrate_boundary_scalar_flux(mesh(idom)%faces(ielem,iface),sdata,idom,irhou,iblk,flux)
-            call integrate_boundary_scalar_flux(mesh,sdata,face,irhou,iblk,idonor,seed,flux)
+            !call integrate_boundary_scalar_flux(mesh,sdata,face,irhou,iblk,idonor,seed,flux)
+            call integrate_boundary_scalar_flux(mesh,sdata,face,flux,irhou,integrand)
 
             !=================================================
             ! y-momentum flux
@@ -222,10 +244,11 @@ contains
             flux_y = (rho_bc * v_bc * v_bc) + p_bc
             flux_z = (rho_bc * v_bc * w_bc)
 
-            flux = flux_x*norms(:,1) + flux_y*norms(:,2) + flux_z*norms(:,3)
+            integrand = flux_x*norms(:,1) + flux_y*norms(:,2) + flux_z*norms(:,3)
 
             !call integrate_boundary_scalar_flux(mesh(idom)%faces(ielem,iface),sdata,idom,irhov,iblk,flux)
-            call integrate_boundary_scalar_flux(mesh,sdata,face,irhov,iblk,idonor,seed,flux)
+            !call integrate_boundary_scalar_flux(mesh,sdata,face,irhov,iblk,idonor,seed,flux)
+            call integrate_boundary_scalar_flux(mesh,sdata,face,flux,irhov,integrand)
 
             !=================================================
             ! z-momentum flux
@@ -234,10 +257,11 @@ contains
             flux_y = (rho_bc * w_bc * v_bc)
             flux_z = (rho_bc * w_bc * w_bc) + p_bc
 
-            flux = flux_x*norms(:,1) + flux_y*norms(:,2) + flux_z*norms(:,3)
+            integrand = flux_x*norms(:,1) + flux_y*norms(:,2) + flux_z*norms(:,3)
 
             !call integrate_boundary_scalar_flux(mesh(idom)%faces(ielem,iface),sdata,idom,irhow,iblk,flux)
-            call integrate_boundary_scalar_flux(mesh,sdata,face,irhow,iblk,idonor,seed,flux)
+            !call integrate_boundary_scalar_flux(mesh,sdata,face,irhow,iblk,idonor,seed,flux)
+            call integrate_boundary_scalar_flux(mesh,sdata,face,flux,irhow,integrand)
 
 
             !=================================================
@@ -247,10 +271,11 @@ contains
             flux_y = (rho_bc * v_bc * H_bc)
             flux_z = (rho_bc * w_bc * H_bc)
 
-            flux = flux_x*norms(:,1) + flux_y*norms(:,2) + flux_z*norms(:,3)
+            integrand = flux_x*norms(:,1) + flux_y*norms(:,2) + flux_z*norms(:,3)
 
             !call integrate_boundary_scalar_flux(mesh(idom)%faces(ielem,iface),sdata,idom,irhoE,iblk,flux)
-            call integrate_boundary_scalar_flux(mesh,sdata,face,irhoE,iblk,idonor,seed,flux)
+            !call integrate_boundary_scalar_flux(mesh,sdata,face,irhoE,iblk,idonor,seed,flux)
+            call integrate_boundary_scalar_flux(mesh,sdata,face,flux,irhoE,integrand)
 
 
         end associate

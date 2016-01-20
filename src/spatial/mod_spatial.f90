@@ -5,6 +5,11 @@ module mod_spatial
     use type_chidg_data,    only: chidg_data_t
     use type_timer,         only: timer_t
 
+    use type_face_indices,  only: face_indices_t
+    use type_flux_indices,  only: flux_indices_t
+
+    use mod_DNAD_tools
+
     implicit none
 
 
@@ -23,7 +28,16 @@ contains
         logical                     :: chimera_face          = .false.
         logical                     :: compute_face          = .false.
 
-        integer(ik) :: irow
+        logical                     :: flux_needs_computed   = .false.
+        logical                     :: flux_needs_linearized = .false.
+
+
+        type(face_indices_t)        :: face_indices
+        type(flux_indices_t)        :: flux_indices
+
+
+        integer(ik) :: irow, ientry
+        real(rk)    :: res
 
 
         !
@@ -31,10 +45,21 @@ contains
         !
         call timer%start()
 
+        
 
             !------------------------------------------------------------------------------------------
             !                                      Interior Scheme
             !------------------------------------------------------------------------------------------
+
+            !
+            ! Set flux linearization logicals to false
+            !
+            data%sdata%flux_computed    = .false.
+            data%sdata%flux_linearized  = .false.
+
+
+
+
 
 
 
@@ -42,10 +67,10 @@ contains
             !
             ! Loop through given element and neighbors and compute the corresponding linearization
             !
-            ! CHIMERA, XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX, DIAG
+            ! XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX, DIAG
             !
-            !do iblk = 0,7           ! (0 = linearization of chimera blocks, 1-6 = linearization of interior neighbor blocks, 7 = linearization of Q- block
-            do iblk = 1,7           ! (0 = linearization of chimera blocks, 1-6 = linearization of interior neighbor blocks, 7 = linearization of Q- block
+            do iblk = 1,7           ! (1-6 = linearization of neighbor blocks, 7 = linearization of Q- block)
+
 
 
                 !
@@ -55,6 +80,7 @@ contains
                     associate ( mesh => data%mesh(idom), sdata => data%sdata, eqnset => data%eqnset(idom)%item, prop => data%eqnset(idom)%item%prop)
 
                     nelem = mesh%nelem
+
 
                     !
                     ! Loop through elements in the current domain
@@ -66,6 +92,15 @@ contains
                             ! Faces loop. For the current element, compute the contributions from boundary integrals
                             !
                             do iface = 1,NFACES
+
+                                !
+                                ! Define face indices
+                                !
+                                face_indices%idomain  = idom
+                                face_indices%ielement = ielem
+                                face_indices%iface    = iface
+
+
 
                                 associate ( face => mesh%faces(ielem,iface) )
 
@@ -104,24 +139,63 @@ contains
                                     if (ndonors == 0) call chidg_signal(FATAL,'update_residual: no available donors for boundary calculation')
 
 
+
+
                                     !
                                     ! Call all boundary advective flux components
                                     !
                                     if (allocated(eqnset%boundary_advective_flux)) then
+
                                         nflux = size(eqnset%boundary_advective_flux)
+
+
                                         do iflux = 1,nflux
 
-                                            !
-                                            ! Compute boundary flux once for each donor. For interior faces ndonors == 1. For Chimera faces ndonors is potentially > 1.
-                                            !
-                                            do idonor = 1,ndonors
-                                                call eqnset%boundary_advective_flux(iflux)%flux%compute(data%mesh,data%sdata,prop,idom,ielem,iface,iblk,idonor)
-                                            end do
 
-                                        end do
-                                    end if
+
+                                            if ( data%sdata%flux_computed(idom,ielem,iface,iflux,1) .eqv. .false. ) then
+                                                flux_needs_computed = .true.
+                                            else
+                                                flux_needs_computed = .false.
+                                            end if
+                                            if ( data%sdata%flux_linearized(idom,ielem,iface,iflux,1,iblk) .eqv. .false. ) then
+                                                flux_needs_linearized = .true.
+                                            else
+                                                flux_needs_linearized = .false.
+                                            end if
+
+
+
+                                            if ( flux_needs_computed .or. flux_needs_linearized ) then
+
+                                                !
+                                                ! Compute boundary flux once for each donor. For interior faces ndonors == 1. For Chimera faces ndonors is potentially > 1.
+                                                !
+                                                do idonor = 1,ndonors
+
+
+                                                    face_indices%seed   = compute_seed(data%mesh,idom,ielem,iface,idonor,iblk)
+
+                                                    flux_indices%iflux  = iflux
+                                                    flux_indices%idonor = idonor
+                                                    flux_indices%iblk   = iblk
+
+                                                    call  eqnset%boundary_advective_flux(iflux)%flux%compute(data%mesh,data%sdata,prop,face_indices,flux_indices)
+                                                end do
+
+                                            end if
+
+
+
+                                        end do ! iflux
+
+                                    end if ! boundary_advective_flux loop
+
+
+
 
                                 end if ! compute_face
+
 
 
 
@@ -135,7 +209,6 @@ contains
                             !
                             ! Call all volume advective flux components
                             !
-
                             ! only need to compute volume_advective_flux for linearization of interior block
                             if (iblk == DIAG) then
                                 if (allocated(eqnset%volume_advective_flux)) then
@@ -156,7 +229,10 @@ contains
                     end associate
                 end do  ! idom
 
+
+
             end do  ! iblk
+
 
 
 
@@ -166,11 +242,6 @@ contains
             !------------------------------------------------------------------------------------------
             !                                      Boundary Scheme
             !------------------------------------------------------------------------------------------
-
-
-
-
-
             !
             ! Boundary conditions
             !
@@ -187,9 +258,6 @@ contains
 
 
 
-
-
-
             call timer%stop()
             call timer%report('Spatial Discretization Time')
             if (present(timing)) then
@@ -197,7 +265,8 @@ contains
             end if
 
 
-    end subroutine
+    end subroutine update_space
+    !******************************************************************************************************************
 
 
 

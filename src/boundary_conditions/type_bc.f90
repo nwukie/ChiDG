@@ -8,6 +8,10 @@ module type_bc
     use type_solverdata,    only: solverdata_t
     use type_dict,          only: dict_t
     use type_properties,    only: properties_t
+    use type_face_indices,  only: face_indices_t
+    use type_flux_indices,  only: flux_indices_t
+
+    use mod_DNAD_tools,     only: compute_seed
     implicit none
     private
 
@@ -35,21 +39,22 @@ module type_bc
 
 
     abstract interface
-        subroutine compute_interface(self,mesh,sdata,prop,idom,ielem,iface,iblk)
+        !subroutine compute_interface(self,mesh,sdata,prop,idom,ielem,iface,iblk)
+        subroutine compute_interface(self,mesh,sdata,prop,face,flux)
             use mod_kinds,  only: ik
             import bc_t
             import mesh_t
             import solverdata_t
             import properties_t
+            import face_indices_t
+            import flux_indices_t
 
             class(bc_t),            intent(inout)   :: self
             type(mesh_t),           intent(in)      :: mesh(:)
             type(solverdata_t),     intent(inout)   :: sdata
             class(properties_t),    intent(inout)   :: prop
-            integer(ik),            intent(in)      :: idom
-            integer(ik),            intent(in)      :: ielem
-            integer(ik),            intent(in)      :: iface
-            integer(ik),            intent(in)      :: iblk
+            type(face_indices_t),   intent(in)      :: face
+            type(flux_indices_t),   intent(in)      :: flux
         end subroutine
     end interface
 
@@ -182,19 +187,37 @@ contains
         integer(ik),            intent(in)      :: idom
         integer(ik),            intent(in)      :: iblk
 
-        integer(ik) :: ielem_bc, ielem, iface
+        integer(ik) :: ielem_bc, ielem, iface, idonor, iflux
+
+        type(face_indices_t)    :: face
+        type(flux_indices_t)    :: flux
 
         !
         ! Loop through associated boundary condition elements and call compute routine for the boundary flux calculation
         !
         do ielem_bc = 1,size(self%ielems)
-            ielem = self%ielems(ielem_bc)   ! Get index of the element being operated on
-            iface = self%ifaces(ielem_bc)   ! Get face index of element 'ielem' that is being operated on
+            ielem  = self%ielems(ielem_bc)   ! Get index of the element being operated on
+            iface  = self%ifaces(ielem_bc)   ! Get face index of element 'ielem' that is being operated on
+            iflux  = 0
+            idonor = 0
+
+
+            face%idomain  = idom
+            face%ielement = ielem
+            face%iface    = iface
+            face%seed     = compute_seed(mesh,idom,ielem,iface,idonor,iblk)
+
+
+            flux%iflux    = iflux
+            flux%idonor   = idonor
+            flux%iblk     = iblk
+
 
             !
             ! For the current boundary element(face), call specialized compute procedure
             !
-            call self%compute(mesh,sdata,prop,idom,ielem,iface,iblk)
+            !call self%compute(mesh,sdata,prop,idom,ielem,iface,iblk)
+            call self%compute(mesh,sdata,prop,face,flux)
 
         end do
 

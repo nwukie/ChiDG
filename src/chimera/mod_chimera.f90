@@ -16,7 +16,7 @@ module mod_chimera
     use type_mesh,              only: mesh_t
     use type_point,             only: point_t
     use type_element_location,  only: element_location_t
-    use type_face_location,     only: face_location_t
+    use type_face_indices,      only: face_indices_t
     use type_ivector,           only: ivector_t
     use type_rvector,           only: rvector_t
     use type_pvector,           only: pvector_t
@@ -195,7 +195,7 @@ contains
         integer(ik) :: idomain_list, ielement_list
 
 
-        type(face_location_t)       :: receiver
+        type(face_indices_t)       :: receiver
         type(element_location_t)    :: donor
         type(point_t)               :: donor_coord
         type(point_t)               :: gq_node
@@ -383,7 +383,7 @@ contains
     subroutine compute_gq_donor(mesh,gq_node,receiver_face,donor_element,donor_coordinate)
         type(mesh_t),               intent(in)      :: mesh(:)
         type(point_t),              intent(in)      :: gq_node
-        type(face_location_t),      intent(in)      :: receiver_face
+        type(face_indices_t),      intent(in)      :: receiver_face
         type(element_location_t),   intent(inout)   :: donor_element
         type(point_t),              intent(inout)   :: donor_coordinate
 

@@ -16,5 +16,6 @@ add_lib_sources(
                 operator_chidg_mv.f90
                 type_solverdata.f90
                 type_element_location.f90
-                type_face_location.f90
+                type_face_indices.f90
+                type_flux_indices.f90
                 )

@@ -6,7 +6,7 @@ module eqn_euler
 
     use EULER_boundary_average_advective_flux,  only: EULER_boundary_average_advective_flux_t
     use EULER_volume_advective_flux,            only: EULER_volume_advective_flux_t
-    use EULER_LaxFriedrichs_flux,               only: EULER_LaxFriedrichs_flux_t
+!    use EULER_LaxFriedrichs_flux,               only: EULER_LaxFriedrichs_flux_t
     use EULER_Roe_flux,                         only: EULER_Roe_flux_t
     use EULER_properties,                       only: EULER_properties_t
     implicit none

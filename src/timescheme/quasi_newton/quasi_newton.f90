@@ -68,7 +68,7 @@ contains
         integer(ik)             :: itime, nsteps, ielem, wcount, iblk, iindex, niter, ieqn, idom
         integer(ik)             :: rstart, rend, cstart, cend, nterms
         real(rk)                :: dtau, amp, cfl, cfln, entropy_error, timing
-        real(rk)                :: rnorm0, rnorm, resid
+        real(rk)                :: rnorm0, rnorm, resid, resid_new
         real(rk), allocatable   :: vals(:)
         type(chidgVector_t)     :: b, qn, qold, qnew, dqdtau
       

@@ -6,6 +6,7 @@ module mod_interpolate
     use DNAD_D
     use type_mesh,          only: mesh_t
     use type_seed,          only: seed_t
+    use type_face_indices,  only: face_indices_t
     use type_chidgVector,   only: chidgVector_t
     use mod_DNAD_tools,     only: compute_neighbor_domain, compute_neighbor_element, compute_neighbor_face
     implicit none
@@ -163,19 +164,21 @@ contains
     !!
     !!
     !-----------------------------------------------------------------------------------------------------------
-    subroutine interpolate_face_autodiff(mesh,q,idom,ielem,iface,ivar,var_gq,seed,source)
+    !subroutine interpolate_face_autodiff(mesh,q,idom,ielem,iface,ivar,var_gq,seed,source)
+    subroutine interpolate_face_autodiff(mesh,face,q,ivar,var_gq,source)
         type(mesh_t),           intent(in)              :: mesh(:)
+        type(face_indices_t),   intent(in)              :: face
         type(chidgVector_t),    intent(in)              :: q
-        integer(ik),            intent(in)              :: idom
-        integer(ik),            intent(in)              :: ielem
-        integer(ik),            intent(in)              :: iface
         integer(ik),            intent(in)              :: ivar
         type(AD_D),             intent(inout)           :: var_gq(:)
-        type(seed_t),           intent(in)              :: seed
         integer(ik),            intent(in)              :: source
+
+        integer(ik)     :: idom, ielem, iface
+        type(seed_t)    :: seed
 
         type(AD_D), allocatable  :: qdiff(:)
         real(rk),   allocatable  :: interpolator(:,:)
+
         integer(ik) :: nderiv, set_deriv, iterm, igq, nterms_s, ierr, neqns_seed, nterms_s_seed
         integer(ik) :: idom_seed, ielem_seed, ndonors, idonor, idom_interp, ielem_interp, iface_interp
         integer(ik) :: ChiID
@@ -183,14 +186,20 @@ contains
         logical     :: chimera_interpolation    = .false.
         logical     :: conforming_interpolation = .false.
 
+
         ! Chimera data
         logical                     :: mask(size(var_gq))    ! node mask for Chimera quadrature points
         type(AD_D),  allocatable    :: var_gq_chimera(:)
         integer(ik), allocatable    :: gq_node_indices(:)
         integer(ik)                 :: inode
 
+
         mask = .false.
 
+        idom  = face%idomain
+        ielem = face%ielement
+        iface = face%iface
+        seed  = face%seed
 
         !
         ! Test if interpolating from local element

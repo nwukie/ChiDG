@@ -85,8 +85,27 @@ contains
     subroutine init_sdata(self)
         class(chidg_data_t),     intent(inout)   :: self
 
+        integer(ik) :: idom, ndom, maxflux
+        logical     :: increase_maxflux = .false.
 
-        call self%sdata%init(self%mesh)
+        !
+        ! Find maximum number of fluxes in any domain
+        !
+        ndom = size(self%mesh)
+        maxflux = 0
+        do idom = 1,ndom
+
+            increase_maxflux = ( size(self%eqnset(idom)%item%boundary_advective_flux) > maxflux )
+
+            if (increase_maxflux) then
+                maxflux = size(self%eqnset(idom)%item%boundary_advective_flux)
+            end if
+
+        end do
+
+
+
+        call self%sdata%init(self%mesh, maxflux)
 
 
     end subroutine init_sdata

@@ -3,7 +3,7 @@ module type_chidgMatrix
     use mod_kinds,              only: rk, ik
     use type_blockmatrix,       only: blockmatrix_t
     use type_mesh,              only: mesh_t
-    use type_face_location,     only: face_location_t
+    use type_face_indices,      only: face_indices_t
     use type_element_location,  only: element_location_t
     use type_seed,              only: seed_t
     use DNAD_D
@@ -134,7 +134,7 @@ contains
     !!
     !!
     !!  @param[in]  integral    Array of modes from the spatial scheme, with embedded partial derivatives for the linearization matrix
-    !!  @param[in]  face        face_location_t containing the indices defining the Chimera face
+    !!  @param[in]  face        face_indices_t containing the indices defining the Chimera face
     !!  @param[in]  seed        seed_t containing the indices defining the element against which the Chimera face was linearized
     !!  @param[in]  ivar        Index of the variable, for which the linearization was computed
     !!
@@ -142,7 +142,7 @@ contains
     subroutine store_chimera(self,integral,face,seed,ivar)
         class(chidgMatrix_t),       intent(inout)   :: self
         type(AD_D),                 intent(in)      :: integral(:)
-        type(face_location_t),      intent(in)      :: face
+        type(face_indices_t),       intent(in)      :: face
         type(seed_t),               intent(in)      :: seed
         integer(ik),                intent(in)      :: ivar 
 

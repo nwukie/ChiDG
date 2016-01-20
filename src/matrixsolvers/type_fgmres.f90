@@ -62,16 +62,17 @@ contains
         type(chidgVector_t), allocatable        :: v(:), z(:)
         real(rk),            allocatable        :: h(:,:), h_square(:,:)
         real(rk),            allocatable        :: p(:), y(:), c(:), s(:), p_dim(:), y_dim(:)
-        real(rk)                                :: pj, pjp, h_ij, h_ipj
+        real(rk)                                :: pj, pjp, h_ij, h_ipj, htmp
 
         integer(ik) :: iparent, ierr, ivec, isol, nvecs, ielem
-        integer(ik) :: i, j, k, l                 ! Loop counters
-        real(rk)    :: res, err, r0norm, gam
+        integer(ik) :: i, j, k, l, ii                 ! Loop counters
+        real(rk)    :: res, err, r0norm, gam, delta, norm_before, norm_after, crit
 
         logical     :: converged = .false.
         logical     :: max_iter  = .false.
 
         logical :: equal = .false.
+        logical :: reorthogonalize = .false.
 
 
         !
@@ -187,20 +188,55 @@ contains
                 ! Compute w = Av for the current iteration
                 !
                 w = A*z(j)
-
+                norm_before = w%norm()
 
                 !
-                ! Orthogonalization loop
+                ! Orthogonalization loop. Modified Gram-Schmidt (MGS)
                 !
                 do i = 1,j
 
                     h(i,j) = dot(w,v(i))
                     
-                    w  = w - h(i,j)*v(i)
+                    w = w - h(i,j)*v(i)
 
                 end do
 
                 h(j+1,j) = w%norm()
+                norm_after = h(j+1,j)
+
+
+
+                !
+                ! Reorthogonalize if necessary.
+                !
+                ! Reorthogonalization criteria based on:
+                !
+                ! Giraud and Langou 
+                ! "A robust criterion for the modified Gram-Schmidt algorithm with selective reorthogonalization"
+                ! SIAM J. of Sci. Comp.     Vol. 25, No. 2, pp. 417-441
+                !
+                ! They recommend L<1 for robustness, but it seems for these problems L can be increased.
+                !
+                L = 5.5_rk
+                crit = sum(abs(h(1:j,j)))/norm_before
+                
+                if ( crit <  L ) reorthogonalize = .false.
+                if ( crit >= L ) reorthogonalize = .true.
+                
+
+                if ( reorthogonalize ) then
+                    call write_line('GMRES: Reorthogonalizing...')
+
+                    do i = 1,j
+
+                        htmp   = dot(w,v(i))
+                        h(i,j) = h(i,j) + htmp
+
+                        w = w - htmp*v(i)
+                    end do
+
+                    h(j+1,j) = w%norm()
+                end if
 
 
 
@@ -272,7 +308,7 @@ contains
                     exit
                 end if
 
-            end do  ! Outer GMRES Loop - m
+            end do  ! Outer GMRES Loop - restarts after m iterations
 
 
 

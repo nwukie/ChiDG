@@ -86,6 +86,8 @@ module mod_constants
     integer(ik), parameter :: ZETA_MAX  = 6
     integer(ik), parameter :: DIAG      = 7
 
+    !integer(ik), parameter, dimension(7) :: lin_indices = [XI_MIN XI_MAX ETA_MIN ETA_MAX ZETA_MIN ZETA_MAX DIAG]
+
 
 
 
@@ -98,6 +100,10 @@ module mod_constants
     integer(ik), parameter :: ORPHAN    = -3     ! orphan face - has no identity. Every face needs an identity.
 
 
+    !
+    ! NEIGHBOR STATUS
+    !
+    integer(ik), parameter :: NO_INTERIOR_NEIGHBOR = 0       ! Face does not have an interior neighbor
 
 
     !

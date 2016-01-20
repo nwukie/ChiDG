@@ -1,9 +1,10 @@
 module type_solverdata
 #include <messenger.h>
-    use mod_kinds,              only: rk,ik
-    use type_chidgVector,       only: chidgVector_t
-    use type_chidgMatrix,       only: chidgMatrix_t
-    use type_mesh,              only: mesh_t
+    use mod_kinds,                  only: rk,ik
+    use mod_constants,              only: NFACES
+    use type_chidgVector,           only: chidgVector_t
+    use type_chidgMatrix,           only: chidgMatrix_t
+    use type_mesh,                  only: mesh_t
     implicit none
 
 
@@ -21,14 +22,17 @@ module type_solverdata
         type(chidgVector_t)             :: rhs                      !< Residual of the spatial scheme
         type(chidgMatrix_t)             :: lhs                      !< Linearization of the spatial scheme
 
-        real(rk), allocatable           :: dt(:,:)                  !< Element-local time step, (ndomains,maxelems)
+        real(rk),   allocatable         :: dt(:,:)                  !< Element-local time step, (ndomains,maxelems)
+
+        logical,    allocatable         :: flux_computed(:,:,:,:,:)     !< (idom, ielem, iface, iflux, ivar)
+        logical,    allocatable         :: flux_linearized(:,:,:,:,:,:) !< (idom, ielem, iface, iflux, ivar, iblk)
 
         logical                         :: solverInitialized = .false.
 
 
 
 
-        ! NOTE: if one wanted to add specialized data, instead of deriving from chidgData, you could add a
+        ! NOTE: if one wanted to add specialized data, instead of deriving from chidgData, maybe you could add a
         !       chidgExtension class that could be specialized further which could contain non-standard data 
         !  class(chidgExtension_t)
 
@@ -50,9 +54,11 @@ contains
     !!  @author Nathan A. Wukie
     !!  @param[in]  mesh    Mesh definition which defines storage requirements
     !----------------------------------------------------------------------------------------------------------
-    subroutine init_base(self,mesh)
-        class(solverdata_t),     intent(inout), target   :: self
-        type(mesh_t),            intent(in)              :: mesh(:)
+    subroutine init_base(self,mesh,maxflux)
+        class(solverdata_t),            intent(inout), target   :: self
+        type(mesh_t),                   intent(in)              :: mesh(:)
+        integer(ik),                    intent(in)              :: maxflux
+        
 
         integer(ik) :: nterms_s, ielem, nelem, neqns, ierr, ndom, maxelems, idom
         logical     :: increase_maxelems = .false.
@@ -89,6 +95,17 @@ contains
         !
         allocate(self%dt(ndom,maxelems),stat=ierr)
         if (ierr /= 0) call AllocationError
+
+
+
+        !
+        ! Allocate checks on flux and linearization contributions
+        !
+        !& ASSUMPTION: SEVEN INTERNAL LINEARIZATION BLOCKS
+        allocate(self%flux_computed(ndom, maxelems, NFACES, maxflux, 5))
+        allocate(self%flux_linearized(ndom, maxelems, NFACES, maxflux, 5, 7))
+
+
 
         
         !

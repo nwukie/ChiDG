@@ -246,7 +246,7 @@ contains
             if (allocated(data%eqnset(1)%item%boundary_advective_flux)) then
                 nflux = size(data%eqnset(1)%item%boundary_advective_flux)
                 do iflux = 1,nflux
-                    call data%eqnset(1)%item%boundary_advective_flux(iflux)%flux%compute(data%mesh,data%sdata,prop,idom,ielem,iface,iblk,idonor)
+                    call data%eqnset(1)%item%boundary_advective_flux(iflux)%flux%compute(data%mesh,data%sdata,prop,idom,ielem,iface,iblk,idonor,iflux)
                 end do
 
             else
@@ -279,7 +279,7 @@ contains
             if (allocated(data%eqnset(1)%item%boundary_advective_flux)) then
                 nflux = size(data%eqnset(1)%item%boundary_advective_flux)
                 do iflux = 1,nflux
-                    call data%eqnset(1)%item%boundary_advective_flux(iflux)%flux%compute(data%mesh,data%sdata,prop,idom,ielem,iface,DIAG,idonor)
+                    call data%eqnset(1)%item%boundary_advective_flux(iflux)%flux%compute(data%mesh,data%sdata,prop,idom,ielem,iface,DIAG,idonor,iflux)
                 end do
 
             else
@@ -327,7 +327,7 @@ contains
                     if (allocated(data%eqnset(1)%item%boundary_advective_flux)) then
                         nflux = size(data%eqnset(1)%item%boundary_advective_flux)
                         do iflux = 1,nflux
-                            call data%eqnset(1)%item%boundary_advective_flux(iflux)%flux%compute(data%mesh,data%sdata,prop,idom,ielem,iface,DIAG,idonor)
+                            call data%eqnset(1)%item%boundary_advective_flux(iflux)%flux%compute(data%mesh,data%sdata,prop,idom,ielem,iface,DIAG,idonor,iflux)
                         end do
 
                     else

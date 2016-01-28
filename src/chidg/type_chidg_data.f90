@@ -1,24 +1,27 @@
 module type_chidg_data
 #include <messenger.h>
-    use mod_kinds,                  only: rk,ik
-    use type_point,                 only: point_t
-    use type_dict,                  only: dict_t
+    use mod_kinds,                      only: rk,ik
+    use type_point,                     only: point_t
+    use type_dict,                      only: dict_t
 
     ! Primary chidg_data_t components
-    use type_domaininfo,            only: domaininfo_t
-    use type_mesh,                  only: mesh_t
-    use type_bcset,                 only: bcset_t
-    use type_equationset_wrapper,   only: equationset_wrapper_t
-    use type_solverdata,            only: solverdata_t
+    use type_domaininfo,                only: domaininfo_t
+    use type_mesh,                      only: mesh_t
+    use type_bcset,                     only: bcset_t
+    use type_equationset_wrapper,       only: equationset_wrapper_t
+    use type_solverdata,                only: solverdata_t
+    use type_equationset_function_data,         only: equationset_function_data_t
 
     ! Factory methods
-    use mod_equations,              only: create_equationset
-    use mod_bc,                     only: create_bc
+    use mod_equations,                  only: create_equationset
+    use mod_bc,                         only: create_bc
 
     ! Classes
-    use type_bc,                    only: bc_t
+    use type_bc,                        only: bc_t
 
     implicit none
+
+
 
 
     !> Container for ChiDG data.
@@ -41,8 +44,6 @@ module type_chidg_data
         type(mesh_t),                   allocatable :: mesh(:)      !< Array of mesh instances. One for each domain.
         type(bcset_t),                  allocatable :: bcset(:)     !< Array of boundary condition set instances. One for each domain.
         type(equationset_wrapper_t),    allocatable :: eqnset(:)    !< Array of equation set instances. One for each domain.
-
-
         type(solverdata_t)                          :: sdata        !< Solver data container for solution vectors and matrices
 
 
@@ -63,7 +64,7 @@ module type_chidg_data
         
 
     end type chidg_data_t
-    !***************************************************************************************************************
+    !*************************************************************************************************************
 
 
 
@@ -81,35 +82,39 @@ contains
     !!
     !!
     !!
-    !---------------------------------------------------------------------------------------------------------------
+    !-------------------------------------------------------------------------------------------------------------
+    ! subroutine initialize_solver_data
     subroutine init_sdata(self)
         class(chidg_data_t),     intent(inout)   :: self
 
-        integer(ik) :: idom, ndom, maxflux
+        integer(ik) :: idom, ndom, maxflux, ierr
         logical     :: increase_maxflux = .false.
 
+        type(equationset_function_data_t), allocatable :: function_data(:)
+
+
         !
-        ! Find maximum number of fluxes in any domain
+        ! Assemble array of function_data from the eqnset array to pass to the solver data structure for 
+        ! initialization
         !
-        ndom = size(self%mesh)
-        maxflux = 0
-        do idom = 1,ndom
+        ndom = self%ndomains()
+        allocate(function_data(ndom), stat=ierr)
+        if ( ierr /= 0 ) call AllocationError
 
-            increase_maxflux = ( size(self%eqnset(idom)%item%boundary_advective_flux) > maxflux )
-
-            if (increase_maxflux) then
-                maxflux = size(self%eqnset(idom)%item%boundary_advective_flux)
-            end if
-
+        do idom = 1,self%ndomains()
+            function_data(idom) = self%eqnset(idom)%item%function_data
         end do
 
 
 
-        call self%sdata%init(self%mesh, maxflux)
 
+        !
+        ! Initialize solver data 
+        !
+        call self%sdata%init(self%mesh, function_data)
 
     end subroutine init_sdata
-    !***************************************************************************************************************
+    !*************************************************************************************************************
 
 
 

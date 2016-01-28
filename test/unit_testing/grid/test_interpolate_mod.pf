@@ -3,6 +3,7 @@ module test_interpolate_mod
     use type_chidg,         only: chidg_t
     use type_point,         only: point_t
     use type_seed,          only: seed_t
+    use type_face_indices,  only: face_indices_t
 
 
     use mod_kinds,          only: rk,ik
@@ -183,6 +184,7 @@ contains
         !
         ! PROCEDURE BEING TESTED
         !
+        !call interpolate_face(self%chidg%data%mesh,self%chidg%data%sdata%q,idomain,ielem,iface,ivar,u_gq)
         call interpolate_face(self%chidg%data%mesh,self%chidg%data%sdata%q,idomain,ielem,iface,ivar,u_gq)
         
         
@@ -456,6 +458,7 @@ contains
         type(AD_D), allocatable     :: u_gq(:)
         real(rk),   allocatable     :: u_ref(:)
         real(rk)                    :: tol
+        type(face_indices_t)        :: face
         
         
         associate ( elems => self%chidg%data%mesh(1)%elems, faces => self%chidg%data%mesh(1)%faces, q => self%chidg%data%sdata%q)        
@@ -468,6 +471,15 @@ contains
             !
             seed%idom  = 1
             seed%ielem = 15
+
+
+            !
+            ! Set face
+            !
+            face%idomain = idomain
+            face%ielement = ielem
+            face%iface    = iface
+            face%seed     = seed
 
 
             tol   = 1.e-13_rk
@@ -483,7 +495,8 @@ contains
             !
             ! PROCEDURE BEING TESTED
             !
-            call interpolate_face(self%chidg%data%mesh,q,idomain,ielem,iface,ivar,u_gq,seed, LOCAL)
+            !call interpolate_face(self%chidg%data%mesh,q,idomain,ielem,iface,ivar,u_gq,seed, LOCAL)
+            call interpolate_face(self%chidg%data%mesh,face,q,ivar,u_gq,LOCAL)
             
             
             ! Initialize reference
@@ -514,6 +527,7 @@ contains
         type(AD_D), allocatable     :: u_gq(:)
         real(rk),   allocatable     :: deriv_ref(:)
         real(rk)                    :: tol
+        type(face_indices_t)        :: face
         
         
         associate ( elems => self%chidg%data%mesh(1)%elems, faces => self%chidg%data%mesh(1)%faces, q => self%chidg%data%sdata%q)        
@@ -527,6 +541,17 @@ contains
             !
             seed%idom  = 1
             seed%ielem = 15
+
+
+
+            !
+            ! Set face
+            !
+            face%idomain = idomain
+            face%ielement = ielem
+            face%iface    = iface
+            face%seed     = seed
+
 
 
 
@@ -544,7 +569,8 @@ contains
             !
             ! PROCEDURE BEING TESTED
             !
-            call interpolate_face(self%chidg%data%mesh,q,idomain,ielem,iface,ivar,u_gq,seed, LOCAL)
+            !call interpolate_face(self%chidg%data%mesh,q,idomain,ielem,iface,ivar,u_gq,seed, LOCAL)
+            call interpolate_face(self%chidg%data%mesh,face,q,ivar,u_gq,LOCAL)
             
             deriv_ref = ZERO
             
@@ -569,6 +595,7 @@ contains
         type(AD_D), allocatable     :: u_gq(:)
         real(rk),   allocatable     :: u_ref(:)
         real(rk)                    :: tol
+        type(face_indices_t)        :: face
         
         
         associate ( elems => self%chidg%data%mesh(1)%elems, faces => self%chidg%data%mesh(1)%faces, q => self%chidg%data%sdata%q )
@@ -581,6 +608,17 @@ contains
             !
             seed%idom  = 1
             seed%ielem = 14
+
+
+            !
+            ! Set face
+            !
+            face%idomain = idomain
+            face%ielement = ielem
+            face%iface    = iface
+            face%seed     = seed
+
+
 
 
 
@@ -597,7 +635,8 @@ contains
             !
             ! PROCEDURE BEING TESTED
             !
-            call interpolate_face(self%chidg%data%mesh,q,idomain,ielem,iface,ivar,u_gq,seed, LOCAL)
+            !call interpolate_face(self%chidg%data%mesh,q,idomain,ielem,iface,ivar,u_gq,seed, LOCAL)
+            call interpolate_face(self%chidg%data%mesh,face,q,ivar,u_gq,LOCAL)
             
             
             !
@@ -629,6 +668,7 @@ contains
         type(AD_D), allocatable     :: u_gq(:)
         real(rk),   allocatable     :: deriv_ref(:)
         real(rk)                    :: tol
+        type(face_indices_t)        :: face
         
         
         associate ( elems => self%chidg%data%mesh(1)%elems, faces => self%chidg%data%mesh(1)%faces, q => self%chidg%data%sdata%q)        
@@ -641,6 +681,17 @@ contains
             !
             seed%idom  = 1
             seed%ielem = 14
+
+
+            !
+            ! Set face
+            !
+            face%idomain = idomain
+            face%ielement = ielem
+            face%iface    = iface
+            face%seed     = seed
+
+
 
             
             tol   = 1.e-13_rk
@@ -657,7 +708,8 @@ contains
             !
             ! PROCEDURE BEING TESTED
             !
-            call interpolate_face(self%chidg%data%mesh,q,idomain,ielem,iface,ivar,u_gq,seed, LOCAL)
+            !call interpolate_face(self%chidg%data%mesh,q,idomain,ielem,iface,ivar,u_gq,seed, LOCAL)
+            call interpolate_face(self%chidg%data%mesh,face,q,ivar,u_gq,LOCAL)
               
             
             
@@ -699,6 +751,7 @@ contains
         type(AD_D), allocatable     :: u_gq(:)
         real(rk),   allocatable     :: u_ref(:)
         real(rk)                    :: tol
+        type(face_indices_t)        :: face
         
         
         associate ( elems => self%chidg%data%mesh(1)%elems, faces => self%chidg%data%mesh(1)%faces, q => self%chidg%data%sdata%q)        
@@ -711,6 +764,17 @@ contains
             !
             seed%idom  = 1
             seed%ielem = 15
+
+
+            !
+            ! Set face
+            !
+            face%idomain = idomain
+            face%ielement = ielem
+            face%iface    = iface
+            face%seed     = seed
+
+
 
 
             tol   = 1.e-13_rk
@@ -726,7 +790,8 @@ contains
             !
             ! PROCEDURE BEING TESTED
             !
-            call interpolate_face(self%chidg%data%mesh,q,idomain,ielem,iface,ivar,u_gq,seed, NEIGHBOR)
+            !call interpolate_face(self%chidg%data%mesh,q,idomain,ielem,iface,ivar,u_gq,seed, NEIGHBOR)
+            call interpolate_face(self%chidg%data%mesh,face,q,ivar,u_gq,NEIGHBOR)
             
             
             ! Initialize reference
@@ -757,6 +822,7 @@ contains
         type(AD_D), allocatable     :: u_gq(:)
         real(rk),   allocatable     :: deriv_ref(:)
         real(rk)                    :: tol
+        type(face_indices_t)        :: face
         
         
         associate ( elems => self%chidg%data%mesh(1)%elems, faces => self%chidg%data%mesh(1)%faces, q => self%chidg%data%sdata%q)        
@@ -770,6 +836,16 @@ contains
             !
             seed%idom  = 1
             seed%ielem = 15
+
+            !
+            ! Set face
+            !
+            face%idomain = idomain
+            face%ielement = ielem
+            face%iface    = iface
+            face%seed     = seed
+
+
 
 
 
@@ -787,7 +863,8 @@ contains
             !
             ! PROCEDURE BEING TESTED
             !
-            call interpolate_face(self%chidg%data%mesh,q,idomain,ielem,iface,ivar,u_gq,seed, NEIGHBOR)
+            !call interpolate_face(self%chidg%data%mesh,q,idomain,ielem,iface,ivar,u_gq,seed, NEIGHBOR)
+            call interpolate_face(self%chidg%data%mesh,face,q,ivar,u_gq,NEIGHBOR)
             
             deriv_ref = ZERO
             
@@ -827,6 +904,7 @@ contains
         type(AD_D), allocatable     :: u_gq(:)
         real(rk),   allocatable     :: u_ref(:)
         real(rk)                    :: tol
+        type(face_indices_t)        :: face
         
         
         associate ( elems => self%chidg%data%mesh(1)%elems, faces => self%chidg%data%mesh(1)%faces, q => self%chidg%data%sdata%q )
@@ -839,6 +917,16 @@ contains
             !
             seed%idom  = 1
             seed%ielem = 13     ! neighbor to element 14 about face 1
+
+
+            !
+            ! Set face
+            !
+            face%idomain = idomain
+            face%ielement = ielem
+            face%iface    = iface
+            face%seed     = seed
+
 
 
 
@@ -855,7 +943,8 @@ contains
             !
             ! PROCEDURE BEING TESTED
             !
-            call interpolate_face(self%chidg%data%mesh,q,idomain,ielem,iface,ivar,u_gq,seed, NEIGHBOR)
+            !call interpolate_face(self%chidg%data%mesh,q,idomain,ielem,iface,ivar,u_gq,seed, NEIGHBOR)
+            call interpolate_face(self%chidg%data%mesh,face,q,ivar,u_gq,NEIGHBOR)
             
             
             !
@@ -887,6 +976,7 @@ contains
         type(AD_D), allocatable     :: u_gq(:)
         real(rk),   allocatable     :: deriv_ref(:)
         real(rk)                    :: tol
+        type(face_indices_t)        :: face
 
         integer(ik)                 :: ielem_n, iface_n, idonor
         
@@ -903,6 +993,16 @@ contains
             seed%idom  = 1
             seed%ielem = 13     ! neighbor to element 14 about face 1
 
+
+            !
+            ! Set face
+            !
+            face%idomain = idomain
+            face%ielement = ielem
+            face%iface    = iface
+            face%seed     = seed
+
+
             
             tol   = 1.e-13_rk
             ivar  = self%chidg%data%eqnset(1)%item%prop%get_eqn_index('u')
@@ -918,7 +1018,8 @@ contains
             !
             ! PROCEDURE BEING TESTED
             !
-            call interpolate_face(self%chidg%data%mesh,q,idomain,ielem,iface,ivar,u_gq,seed, NEIGHBOR)
+            !call interpolate_face(self%chidg%data%mesh,q,idomain,ielem,iface,ivar,u_gq,seed, NEIGHBOR)
+            call interpolate_face(self%chidg%data%mesh,face,q,ivar,u_gq,NEIGHBOR)
               
             
             

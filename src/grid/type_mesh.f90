@@ -36,10 +36,11 @@ module type_mesh
         type(face_t),     allocatable   :: faces(:,:)                   !< Face storage    (1:nelem,1:nfaces)
         type(chimera_t)                 :: chimera                      !< Chimera interface data
 
-
         ! Initialization flags
         logical             :: geomInitialized = .false.                !< Status of geometry initialization
         logical             :: solInitialized  = .false.                !< Status of numerics initialization
+
+
     contains
 
         procedure           :: init_geom

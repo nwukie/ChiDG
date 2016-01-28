@@ -7,8 +7,7 @@ module type_blockmatrix
                                       NFACES, CHIMERA
     use type_mesh,              only: mesh_t
     use type_densematrix,       only: densematrix_t
-    use type_face_indices,      only: face_indices_t
-    use type_element_location,  only: element_location_t
+    use type_face_info,         only: face_info_t
     use type_seed,              only: seed_t
     use DNAD_D
     implicit none
@@ -430,7 +429,7 @@ contains
     !!  @author Nathan A. Wukie
     !!
     !!  @param[in]  integral    Array of modes from the spatial scheme, with embedded partial derivatives for the linearization matrix
-    !!  @param[in]  face        face_indices_t containing indices for the location of the face being linearized.
+    !!  @param[in]  face        face_info_t containing indices for the location of the face being linearized.
     !!  @param[in]  seed        seed_t containing indices of the element against which the linearization was computed.
     !!  @param[in]  ivar        Index of the variable
     !!
@@ -438,7 +437,7 @@ contains
     subroutine store_chimera(self,integral,face,seed,ivar)
         class(blockmatrix_t),       intent(inout)   :: self
         type(AD_D),                 intent(in)      :: integral(:)
-        type(face_indices_t),       intent(in)      :: face
+        type(face_info_t),          intent(in)      :: face
         type(seed_t),               intent(in)      :: seed
         integer(ik),                intent(in)      :: ivar
 

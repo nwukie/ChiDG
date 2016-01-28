@@ -8,8 +8,8 @@ module type_bc
     use type_solverdata,    only: solverdata_t
     use type_dict,          only: dict_t
     use type_properties,    only: properties_t
-    use type_face_indices,  only: face_indices_t
-    use type_flux_indices,  only: flux_indices_t
+    use type_face_info,     only: face_info_t
+    use type_function_info, only: function_info_t
 
     use mod_DNAD_tools,     only: compute_seed
     implicit none
@@ -46,15 +46,15 @@ module type_bc
             import mesh_t
             import solverdata_t
             import properties_t
-            import face_indices_t
-            import flux_indices_t
+            import face_info_t
+            import function_info_t
 
             class(bc_t),            intent(inout)   :: self
             type(mesh_t),           intent(in)      :: mesh(:)
             type(solverdata_t),     intent(inout)   :: sdata
             class(properties_t),    intent(inout)   :: prop
-            type(face_indices_t),   intent(in)      :: face
-            type(flux_indices_t),   intent(in)      :: flux
+            type(face_info_t),      intent(in)      :: face
+            type(function_info_t),  intent(in)      :: flux
         end subroutine
     end interface
 
@@ -189,8 +189,8 @@ contains
 
         integer(ik) :: ielem_bc, ielem, iface, idonor, iflux
 
-        type(face_indices_t)    :: face
-        type(flux_indices_t)    :: flux
+        type(face_info_t)       :: face
+        type(function_info_t)   :: flux
 
         !
         ! Loop through associated boundary condition elements and call compute routine for the boundary flux calculation
@@ -208,7 +208,7 @@ contains
             face%seed     = compute_seed(mesh,idom,ielem,iface,idonor,iblk)
 
 
-            flux%iflux    = iflux
+            flux%ifcn     = iflux
             flux%idonor   = idonor
             flux%iblk     = iblk
 

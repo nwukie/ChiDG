@@ -15,8 +15,8 @@ module mod_chimera
 
     use type_mesh,              only: mesh_t
     use type_point,             only: point_t
-    use type_element_location,  only: element_location_t
-    use type_face_indices,      only: face_indices_t
+    use type_element_indices,   only: element_indices_t
+    use type_face_info,         only: face_info_t
     use type_ivector,           only: ivector_t
     use type_rvector,           only: rvector_t
     use type_pvector,           only: pvector_t
@@ -61,15 +61,11 @@ contains
 
         
         !
-        ! Loop through each domain
+        ! Loop through each element of each domain
         !
         do idom = 1,ndom
-
-
             nchimera_faces = 0
-            !
-            ! Loop through each element
-            !
+
             do ielem = 1,mesh(idom)%nelem
 
 
@@ -87,9 +83,6 @@ contains
                     ! If orphan_face, set as Chimera face so it can search for donors in other domains
                     !
                     if (orphan_face) then
-
-
-
                         ! Increment domain-local chimera face count
                         nchimera_faces = nchimera_faces + 1
 
@@ -99,9 +92,6 @@ contains
                         ! Set domain-local Chimera identifier. Really, just the index order which they were detected in, starting from 1.
                         ! The n-th chimera face
                         mesh(idom)%faces(ielem,iface)%ChiID = nchimera_faces
-
-
-
                     end if
 
 
@@ -115,7 +105,6 @@ contains
             ! Set total number of Chimera faces detected for domain - idom
             !
             mesh(idom)%chimera%recv%nfaces = nchimera_faces
-
 
 
             !
@@ -137,7 +126,7 @@ contains
 
 
                 !
-                ! Loop through each face
+                ! Loop through each face of current element
                 !
                 do iface = 1,NFACES
 
@@ -195,17 +184,17 @@ contains
         integer(ik) :: idomain_list, ielement_list
 
 
-        type(face_indices_t)       :: receiver
-        type(element_location_t)    :: donor
-        type(point_t)               :: donor_coord
-        type(point_t)               :: gq_node
-        type(point_t)               :: dummy_coord
-        logical                     :: new_donor     = .false.
-        logical                     :: already_added = .false.
-        logical                     :: donor_match   = .false.
+        type(face_info_t)       :: receiver
+        type(element_indices_t)    :: donor
+        type(point_t)              :: donor_coord
+        type(point_t)              :: gq_node
+        type(point_t)              :: dummy_coord
+        logical                    :: new_donor     = .false.
+        logical                    :: already_added = .false.
+        logical                    :: donor_match   = .false.
 
-        type(ivector_t)             :: ddomain, delement
-        type(pvector_t)             :: dcoordinate
+        type(ivector_t)            :: ddomain, delement
+        type(pvector_t)            :: dcoordinate
 
         !
         ! Loop over domains
@@ -235,6 +224,7 @@ contains
                 do igq = 1,mesh(receiver%idomain)%faces(receiver%ielement,receiver%iface)%gq%face%nnodes
 
                     gq_node = mesh(receiver%idomain)%faces(receiver%ielement,receiver%iface)%quad_pts(igq)
+                    ! Call routine to find gq donor for current node
                     call compute_gq_donor(mesh,gq_node, receiver, donor, donor_coord)
 
 
@@ -252,7 +242,8 @@ contains
 
 
                 !
-                ! Count number of unique donors and add to chimera donor data 
+                ! Count number of unique donors to the current face and 
+                ! add to chimera donor data 
                 !
                 ndonors = 0
                 do igq = 1,ddomain%size()
@@ -383,8 +374,8 @@ contains
     subroutine compute_gq_donor(mesh,gq_node,receiver_face,donor_element,donor_coordinate)
         type(mesh_t),               intent(in)      :: mesh(:)
         type(point_t),              intent(in)      :: gq_node
-        type(face_indices_t),      intent(in)      :: receiver_face
-        type(element_location_t),   intent(inout)   :: donor_element
+        type(face_info_t),      intent(in)      :: receiver_face
+        type(element_indices_t),   intent(inout)   :: donor_element
         type(point_t),              intent(inout)   :: donor_coordinate
 
 
@@ -610,7 +601,7 @@ contains
             call chidg_signal(FATAL,"compute_gq_donor: No donor found for gq_node")
 
         elseif (ndonors > 1) then
-            !TODO: Account for case of multiple overlapping donors.
+            !TODO: Account for case of multiple overlapping donors. When a gq node could be filled by two or more elements.
             !      Maybe, just choose one. Maybe, average contribution from all potential donors.
             !
             call chidg_signal(FATAL,"compute_gq_donor: Multiple donors found for the same gq_node")

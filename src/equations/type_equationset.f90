@@ -1,12 +1,13 @@
 module type_equationset
 #include <messenger.h>
-    use mod_kinds,                  only: rk,ik
-    use type_equation,              only: equation_t
-    use type_properties,            only: properties_t
-    use type_boundary_flux_wrapper, only: boundary_flux_wrapper_t
-    use type_volume_flux_wrapper,   only: volume_flux_wrapper_t
-    use atype_volume_flux,          only: volume_flux_t
-    use atype_boundary_flux,        only: boundary_flux_t
+    use mod_kinds,                      only: rk,ik
+    use type_equation,                  only: equation_t
+    use type_properties,                only: properties_t
+    use type_boundary_flux_wrapper,     only: boundary_flux_wrapper_t
+    use type_volume_flux_wrapper,       only: volume_flux_wrapper_t
+    use atype_volume_flux,              only: volume_flux_t
+    use atype_boundary_flux,            only: boundary_flux_t
+    use type_equationset_function_data, only: equationset_function_data_t
     implicit none
     private
 
@@ -38,6 +39,12 @@ module type_equationset
         ! Array of volume source functions
         ! TODO: Extend for source functions
         !type(source_wrapper_t),         allocatable   :: volume_source(:)
+
+
+        ! Data for the flux and source functions. Ex how many.
+        ! This gets passed to a container in sdata that keeps track of whether these
+        ! have been executed or not.
+        type(equationset_function_data_t)               :: function_data
 
 
     contains
@@ -276,6 +283,10 @@ contains
         end if
 
 
+        !
+        ! Update function data
+        !
+        self%function_data%nvolume_advective_flux = size(self%volume_advective_flux)
 
     end subroutine add_volume_advective_flux
     !*****************************************************************************************************************************
@@ -352,6 +363,12 @@ contains
 
         end if
 
+
+
+        !
+        ! Update function data
+        !
+        self%function_data%nboundary_advective_flux = size(self%boundary_advective_flux)
 
 
     end subroutine add_boundary_advective_flux

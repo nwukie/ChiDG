@@ -15,7 +15,9 @@ add_lib_sources(
                 operator_chidg_dot.f90
                 operator_chidg_mv.f90
                 type_solverdata.f90
-                type_element_location.f90
-                type_face_indices.f90
-                type_flux_indices.f90
+                type_element_indices.f90
+                type_face_info.f90
+                type_function_info.f90
+                type_function_status.f90
+                type_function_status_data.f90
                 )

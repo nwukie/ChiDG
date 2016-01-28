@@ -6,8 +6,8 @@ module bc_euler_extrapolate
     use type_mesh,          only: mesh_t
     use type_properties,    only: properties_t
     use type_seed,          only: seed_t
-    use type_face_indices,  only: face_indices_t
-    use type_flux_indices,  only: flux_indices_t
+    use type_face_info,     only: face_info_t
+    use type_function_info, only: function_info_t
 
     use mod_DNAD_tools,     only: compute_seed
     use mod_integrate,      only: integrate_boundary_scalar_flux
@@ -53,8 +53,8 @@ contains
         type(mesh_t),                   intent(in)      :: mesh(:)
         type(solverdata_t),             intent(inout)   :: sdata
         class(properties_t),            intent(inout)   :: prop
-        type(face_indices_t),           intent(in)      :: face
-        type(flux_indices_t),           intent(in)      :: flux
+        type(face_info_t),              intent(in)      :: face
+        type(function_info_t),          intent(in)      :: flux
 
 !        integer(ik),                    intent(in)      :: idom
 !        integer(ik),                    intent(in)      :: ielem

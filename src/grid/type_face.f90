@@ -36,7 +36,7 @@ module type_face
 
 
         ! Chimera identifiers
-        integer(ik)                     :: ChiID = 0        !< Identifier for domain-local Chimera interfaces
+        integer(ik)                  :: ChiID = 0           !< Identifier for domain-local Chimera interfaces
 
 
         ! Geometry
@@ -63,10 +63,6 @@ module type_face
         !---------------------------------------------------------
         logical :: geomInitialized = .false.
         logical :: numInitialized  = .false.
-
-
-        ! Test flux linearization
-        logical, dimension(2,7)   :: flux_linearized
 
 
 
@@ -191,11 +187,6 @@ contains
         call self%compute_quadrature_normals()
         call self%compute_quadrature_coords()
 
-
-        !
-        ! Set flux linearization logicals to false
-        !
-        self%flux_linearized = .false.
 
         !
         ! Confirm face numerics were initialized

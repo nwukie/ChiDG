@@ -1,16 +1,18 @@
 module type_solverdata
 #include <messenger.h>
-    use mod_kinds,                  only: rk,ik
-    use mod_constants,              only: NFACES
-    use type_chidgVector,           only: chidgVector_t
-    use type_chidgMatrix,           only: chidgMatrix_t
-    use type_mesh,                  only: mesh_t
+    use mod_kinds,                      only: rk,ik
+    use mod_constants,                  only: NFACES
+    use type_chidgVector,               only: chidgVector_t
+    use type_chidgMatrix,               only: chidgMatrix_t
+    use type_mesh,                      only: mesh_t
+    use type_function_status,           only: function_status_t
+    use type_equationset_function_data, only: equationset_function_data_t
     implicit none
 
 
-    !> solver type definition
+    !> Container for solver data.
     !!
-    !!
+    !!  @author Nathan A. Wukie 
     !!
     !!
     !!
@@ -24,8 +26,9 @@ module type_solverdata
 
         real(rk),   allocatable         :: dt(:,:)                  !< Element-local time step, (ndomains,maxelems)
 
-        logical,    allocatable         :: flux_computed(:,:,:,:,:)     !< (idom, ielem, iface, iflux, ivar)
-        logical,    allocatable         :: flux_linearized(:,:,:,:,:,:) !< (idom, ielem, iface, iflux, ivar, iblk)
+
+        type(function_status_t)         :: function_status          !< Class for the status of a function residual and linearization
+
 
         logical                         :: solverInitialized = .false.
 
@@ -37,6 +40,7 @@ module type_solverdata
         !  class(chidgExtension_t)
 
     contains
+
         generic, public       :: init => init_base
         procedure, private    :: init_base
 
@@ -44,7 +48,17 @@ module type_solverdata
     !-------------------------------------------------------------------------------------------------------
 
 
+
+
+
+
+
 contains
+
+
+
+
+
 
 
     !>  Initialize solver base data structures
@@ -52,15 +66,18 @@ contains
     !!      - Should be called by specialized 'init' procedure for derived solvers.
     !!
     !!  @author Nathan A. Wukie
-    !!  @param[in]  mesh    Mesh definition which defines storage requirements
+    !!
+    !!  @param[in]  mesh                Array of mesh_t instances which define storage requirements.
+    !!  @param[in]  function_data       Array of containers that hold information on number of each function in eqnset.
+    !!
     !----------------------------------------------------------------------------------------------------------
-    subroutine init_base(self,mesh,maxflux)
-        class(solverdata_t),            intent(inout), target   :: self
-        type(mesh_t),                   intent(in)              :: mesh(:)
-        integer(ik),                    intent(in)              :: maxflux
+    subroutine init_base(self,mesh,function_data)
+        class(solverdata_t),                intent(inout), target   :: self
+        type(mesh_t),                       intent(in)              :: mesh(:)
+        type(equationset_function_data_t),  intent(in)              :: function_data(:)
         
 
-        integer(ik) :: nterms_s, ielem, nelem, neqns, ierr, ndom, maxelems, idom
+        integer(ik) :: ierr, ndom, maxelems, idom
         logical     :: increase_maxelems = .false.
 
 
@@ -90,6 +107,7 @@ contains
         end do
 
 
+
         !
         ! Allocate timestep storage
         !
@@ -99,21 +117,19 @@ contains
 
 
         !
-        ! Allocate checks on flux and linearization contributions
+        ! Initialize storage on flux and linearization registration
         !
-        !& ASSUMPTION: SEVEN INTERNAL LINEARIZATION BLOCKS
-        allocate(self%flux_computed(ndom, maxelems, NFACES, maxflux, 5))
-        allocate(self%flux_linearized(ndom, maxelems, NFACES, maxflux, 5, 7))
-
-
+        call self%function_status%init( mesh, function_data)
 
         
+
         !
         ! Confirm solver initialization
         !
         self%solverInitialized = .true.
 
-    end subroutine
+    end subroutine init_base
+    !************************************************************************************************************
 
 
 

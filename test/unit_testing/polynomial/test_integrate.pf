@@ -7,7 +7,8 @@ subroutine test_integrate_boundary_unit_constant()
 
     use type_chidg,         only: chidg_t
     use type_point,         only: point_t
-    use type_face_location, only: face_location_t
+    use type_face_indices,  only: face_indices_t
+    use type_flux_indices,  only: flux_indices_t
     use type_seed,          only: seed_t
 
 
@@ -24,10 +25,11 @@ subroutine test_integrate_boundary_unit_constant()
     type(chidg_t)                       :: chidg
     integer(ik)                         :: nterms_c, nterms_s, iblk, idom, ngq, ielem, iface
     integer(ik)                         :: idonor, ivar, igq
-    type(AD_D),         allocatable     :: flux(:)
+    type(AD_D),         allocatable     :: integrand(:)
     class(function_t),  allocatable     :: constant
     real(rk)                            :: integral, ref_integral
-    type(face_location_t)               :: face
+    type(face_indices_t)                :: face
+    type(flux_indices_t)                :: flux
     type(seed_t)                        :: seed
 
 
@@ -71,10 +73,11 @@ subroutine test_integrate_boundary_unit_constant()
     !
     associate ( faces => chidg%data%mesh(idom)%faces, sdata => chidg%data%sdata )
     ngq = faces(ielem,iface)%gq%face%nnodes
-    allocate(flux(ngq))
+    allocate(integrand(ngq))
     
-    do igq = 1,size(flux)
-        allocate(flux(igq)%xp_ad_(1))
+    do igq = 1,size(integrand)
+        !allocate(flux(igq)%xp_ad_(1))
+        allocate(integrand(igq)%xp_ad_(1))
     end do
 
 
@@ -88,19 +91,24 @@ subroutine test_integrate_boundary_unit_constant()
     face%ielement = ielem
     face%iface    = iface
 
-    
-
-    ivar    = 1
     iblk    = 7
     idonor  = 1
 
     seed%ielem = 1   ! doesn't matter what this is. Only checking the values here
     seed%idom  = 1
+    
+
+    flux%iflux  = iflux
+    flux%idonor = idonor
+    flux%iblk   = iblk
+
+
     !
     ! Integrate boundary. THIS IS BEING TESTED
     !
-    !call integrate_boundary_scalar_flux(faces(1,1),sdata,idomain,ivar,iblk,flux)
-    call integrate_boundary_scalar_flux(chidg%data%mesh,sdata,face,ivar,iblk,idonor,seed,flux)
+    ivar    = 1
+    !call integrate_boundary_scalar_flux(chidg%data%mesh,sdata,face,ivar,iblk,idonor,seed,flux)
+    call integrate_boundary_scalar_flux(chidg%data%mesh,sdata,face,flux,ivar,integrand)
 
 
     integral = sdata%rhs%dom(1)%lvecs(1)%vec(1)
@@ -143,7 +151,7 @@ subroutine test_integrate_boundary_nonunit_constant()
 
     use type_chidg,         only: chidg_t
     use type_point,         only: point_t
-    use type_face_location, only: face_location_t
+    use type_face_indices,  only: face_indices_t
     use type_seed,          only: seed_t
 
     use atype_function,     only: function_t
@@ -162,7 +170,7 @@ subroutine test_integrate_boundary_nonunit_constant()
     type(AD_D),         allocatable     :: flux(:)
     class(function_t),  allocatable     :: constant
     real(rk)                            :: integral, ref_integral
-    type(face_location_t)               :: face
+    type(face_indices_t)                :: face
     type(seed_t)                        :: seed
 
 

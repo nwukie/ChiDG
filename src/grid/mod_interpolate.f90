@@ -6,7 +6,7 @@ module mod_interpolate
     use DNAD_D
     use type_mesh,          only: mesh_t
     use type_seed,          only: seed_t
-    use type_face_indices,  only: face_indices_t
+    use type_face_info,     only: face_info_t
     use type_chidgVector,   only: chidgVector_t
     use mod_DNAD_tools,     only: compute_neighbor_domain, compute_neighbor_element, compute_neighbor_face
     implicit none
@@ -35,12 +35,12 @@ contains
     !!
     !!
     !----------------------------------------------------------------
-    subroutine interpolate_element_autodiff(mesh,q,idom,ielem,ivar,var_gq,seed)
+    subroutine interpolate_element_autodiff(mesh,q,idom,ielem,ieqn,var_gq,seed)
         type(mesh_t),        intent(in)      :: mesh(:)
         type(chidgVector_t), intent(in)      :: q
         integer(ik),         intent(in)      :: idom
         integer(ik),         intent(in)      :: ielem
-        integer(ik),         intent(in)      :: ivar
+        integer(ik),         intent(in)      :: ieqn
         type(AD_D),          intent(inout)   :: var_gq(:)
         type(seed_t),        intent(in)      :: seed
 
@@ -116,7 +116,7 @@ contains
             !
             ! Copy the solution variables from 'q' to 'qdiff'
             !
-            qdiff = q%dom(idom)%lvecs(ielem)%getvar(ivar)
+            qdiff = q%dom(idom)%lvecs(ielem)%getvar(ieqn)
 
 
             !
@@ -126,7 +126,7 @@ contains
                 !
                 ! For the given term, seed its appropriate derivative
                 !
-                set_deriv = (ivar - 1)*mesh(idom)%elems(ielem)%nterms_s + iterm
+                set_deriv = (ieqn - 1)*mesh(idom)%elems(ielem)%nterms_s + iterm
                 qdiff(iterm)%xp_ad_(set_deriv) = 1.0_rk
             end do
 
@@ -142,7 +142,7 @@ contains
             ! then just use the q(ielem) values and derivatives get
             ! initialized to zero
             !
-            var_gq = matmul(mesh(idom)%elems(ielem)%gq%vol%val,q%dom(idom)%lvecs(ielem)%getvar(ivar))
+            var_gq = matmul(mesh(idom)%elems(ielem)%gq%vol%val,q%dom(idom)%lvecs(ielem)%getvar(ieqn))
         end if
 
 
@@ -158,18 +158,29 @@ contains
 
 
 
-    !> Compute variable at quadrature nodes.
+    !> Interpolate variable from polynomial expansion to explicit values at quadrature nodes. The automatic
+    !! differentiation process really starts here, when the polynomial expansion is evaluated.
+    !!
+    !! The interpolation process occurs through a matrix-vector multiplication. That is an interpolation matrix
+    !! multiplied by a vector of modes from the polynomial expansion. To start the automatic differentiation, 
+    !! the derivative arrays of the values for the polynomial modes must be initialized before any computation. 
+    !! So, before the matrix-vector multiplication.
     !!
     !!  @author Nathan A. Wukie
     !!
+    !!  @param[in]      mesh        Array of mesh instances.
+    !!  @param[in]      face        Face info, such as indices for locating the face in the mesh.
+    !!  @param[in]      q           Solution vector
+    !!  @param[in]      ieqn        Index of the equation variable being interpolated
+    !!  @param[inout]   var_gq      Array of auto-diff values of the equation evaluated at gq points that is passed back
+    !!  @param[in]      source      LOCAL/NEIGHBOR indicating which element to interpolate from
     !!
     !-----------------------------------------------------------------------------------------------------------
-    !subroutine interpolate_face_autodiff(mesh,q,idom,ielem,iface,ivar,var_gq,seed,source)
-    subroutine interpolate_face_autodiff(mesh,face,q,ivar,var_gq,source)
+    subroutine interpolate_face_autodiff(mesh,face,q,ieqn,var_gq,source)
         type(mesh_t),           intent(in)              :: mesh(:)
-        type(face_indices_t),   intent(in)              :: face
+        type(face_info_t),      intent(in)              :: face
         type(chidgVector_t),    intent(in)              :: q
-        integer(ik),            intent(in)              :: ivar
+        integer(ik),            intent(in)              :: ieqn
         type(AD_D),             intent(inout)           :: var_gq(:)
         integer(ik),            intent(in)              :: source
 
@@ -384,7 +395,7 @@ contains
                 !
                 ! Copy the solution variables from 'q' to 'qdiff'
                 !
-                qdiff = q%dom(idom_interp)%lvecs(ielem_interp)%getvar(ivar)
+                qdiff = q%dom(idom_interp)%lvecs(ielem_interp)%getvar(ieqn)
 
 
                 !
@@ -392,7 +403,7 @@ contains
                 !
                 do iterm = 1,size(qdiff)
                     ! For the given term, seed its appropriate derivative
-                    set_deriv = (ivar - 1)*nterms_s + iterm
+                    set_deriv = (ieqn - 1)*nterms_s + iterm
                     qdiff(iterm)%xp_ad_(set_deriv) = 1.0_rk
                 end do
 
@@ -443,7 +454,7 @@ contains
                 ! initialized to zero
                 !
                 if ( conforming_interpolation ) then
-                    var_gq = matmul(interpolator,  q%dom(idom_interp)%lvecs(ielem_interp)%getvar(ivar))
+                    var_gq = matmul(interpolator,  q%dom(idom_interp)%lvecs(ielem_interp)%getvar(ieqn))
                 elseif ( chimera_interpolation ) then
 
                     !
@@ -464,7 +475,7 @@ contains
                     !
                     ! Perform interpolation
                     !
-                    var_gq_chimera = matmul(interpolator,  q%dom(idom_interp)%lvecs(ielem_interp)%getvar(ivar))
+                    var_gq_chimera = matmul(interpolator,  q%dom(idom_interp)%lvecs(ielem_interp)%getvar(ieqn))
 
                     !
                     ! Scatter chimera nodes to appropriate location in var_gq
@@ -504,12 +515,12 @@ contains
     !!
     !!
     !-------------------------------------------------------------------------------------------------------------
-    subroutine interpolate_element_standard(mesh,q,idom,ielem,ivar,var_gq)
+    subroutine interpolate_element_standard(mesh,q,idom,ielem,ieqn,var_gq)
         type(mesh_t),           intent(in)      :: mesh(:)
         type(chidgVector_t),    intent(in)      :: q
         integer(ik),            intent(in)      :: idom
         integer(ik),            intent(in)      :: ielem
-        integer(ik),            intent(in)      :: ivar
+        integer(ik),            intent(in)      :: ieqn
         real(rk),               intent(inout)   :: var_gq(:)
 
         !
@@ -517,7 +528,7 @@ contains
         ! This takes the form of a matrix multiplication of the quadrature matrix
         ! with the array of modes for the given variable.
         !
-        var_gq = matmul(mesh(idom)%elems(ielem)%gq%vol%val, q%dom(idom)%lvecs(ielem)%getvar(ivar))
+        var_gq = matmul(mesh(idom)%elems(ielem)%gq%vol%val, q%dom(idom)%lvecs(ielem)%getvar(ieqn))
 
     end subroutine interpolate_element_standard
     !*************************************************************************************************************
@@ -540,10 +551,10 @@ contains
     !!
     !!
     !-------------------------------------------------------------------------------------------------------------
-    subroutine interpolate_face_standard(mesh,q,idom,ielem,iface,ivar,var_gq)
+    subroutine interpolate_face_standard(mesh,q,idom,ielem,iface,ieqn,var_gq)
         type(mesh_t),           intent(in)      :: mesh(:)
         type(chidgVector_t),    intent(in)      :: q
-        integer(ik),            intent(in)      :: idom, ielem, iface, ivar
+        integer(ik),            intent(in)      :: idom, ielem, iface, ieqn
         real(rk),               intent(inout)   :: var_gq(:)
 
 
@@ -552,7 +563,7 @@ contains
         ! This takes the form of a matrix multiplication of the face quadrature matrix
         ! with the array of modes for the given variable
         !
-        var_gq = matmul(mesh(idom)%faces(ielem,iface)%gq%face%val(:,:,iface), q%dom(idom)%lvecs(ielem)%getvar(ivar))
+        var_gq = matmul(mesh(idom)%faces(ielem,iface)%gq%face%val(:,:,iface), q%dom(idom)%lvecs(ielem)%getvar(ieqn))
 
 
 

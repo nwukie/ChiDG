@@ -85,6 +85,7 @@ module mod_constants
     integer(ik), parameter :: ZETA_MIN  = 5
     integer(ik), parameter :: ZETA_MAX  = 6
     integer(ik), parameter :: DIAG      = 7
+    integer(ik), parameter :: NBLK      = 7     !< 6 neighbors, 1 self
 
     !integer(ik), parameter, dimension(7) :: lin_indices = [XI_MIN XI_MAX ETA_MIN ETA_MAX ZETA_MIN ZETA_MAX DIAG]
 
@@ -98,6 +99,20 @@ module mod_constants
     integer(ik), parameter :: BOUNDARY  = -1     ! boundary condition type
     integer(ik), parameter :: CHIMERA   = -2     ! Chimera face
     integer(ik), parameter :: ORPHAN    = -3     ! orphan face - has no identity. Every face needs an identity.
+
+
+
+    !
+    ! Function types.
+    !
+    integer(ik), parameter :: BOUNDARY_ADVECTIVE_FLUX = 1
+    integer(ik), parameter :: BOUNDARY_DIFFUSIVE_FLUX = 2
+    integer(ik), parameter :: VOLUME_ADVECTIVE_FLUX   = 3
+    integer(ik), parameter :: VOLUME_DIFFUSIVE_FLUX   = 4
+    integer(ik), parameter :: VOLUME_ADVECTIVE_SOURCE = 5
+    integer(ik), parameter :: VOLUME_DIFFUSIVE_SOURCE = 6
+    integer(ik), parameter :: NFUNCTION_TYPES = 6
+
 
 
     !

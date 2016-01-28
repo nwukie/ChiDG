@@ -18,12 +18,14 @@ module type_equationset
     !!   - Contains properties type with equations and material(ex. fluid) properties and definitions
     !!   - Contains arrays of flux components
     !!
-    !!   @author Nathan A. Wukie
+    !!  @author Nathan A. Wukie
+    !!  @date   1/28/2016
     !!
     !-------------------------------------------------------------------------------------------------
     type, public, abstract :: equationset_t
-        character(100)              :: name     ! TODO: change this to allocatable
-        integer(ik)                 :: neqns
+        !character(100)              :: name     ! TODO: change this to allocatable
+        character(len=:), allocatable       :: name     ! TODO: change this to allocatable
+        integer(ik)                         :: neqns
 
         ! Equation set properties
         class(properties_t), allocatable    :: prop
@@ -50,6 +52,7 @@ module type_equationset
     contains
         procedure(self_interface),     deferred  :: init
 
+        procedure   :: set_name
 
         procedure   :: add_properties
         procedure   :: add_equation
@@ -78,14 +81,36 @@ contains
 
 
 
+    !> Set name of the equation set
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   1/28/2016
+    !!
+    !!  @param[in]  name_string     Character string indicating the name of the equation set
+    !!
+    !---------------------------------------------------------------------------------------------------------
+    subroutine set_name(self,name_string)
+        class(equationset_t),   intent(inout)   :: self
+        character(len=*),       intent(in)      :: name_string
+
+        self%name = name_string
+
+    end subroutine set_name
+    !*********************************************************************************************************
+
+
+
+
+
 
     !> Add equationset%properties component
     !!
-    !!   @author Nathan A. Wukie
+    !!  @author Nathan A. Wukie
+    !!  @date   1/28/2016
     !!
-    !!   @param[in]  prop    properties_t class to be added
+    !!  @param[in]  prop    properties_t class to be added
     !!
-    !---------------------------------------------------------------------------------------------------------------------------
+    !---------------------------------------------------------------------------------------------------------
     subroutine add_properties(self,prop)
         class(equationset_t),   intent(inout)   :: self
         class(properties_t),    intent(in)      :: prop
@@ -114,7 +139,7 @@ contains
 
 
     end subroutine add_properties
-    !*****************************************************************************************************************************
+    !*********************************************************************************************************
 
 
 
@@ -134,12 +159,13 @@ contains
 
     !> Procedure to adding equations to the equation set properties
     !!
-    !!   @author Nathan A. Wukie
+    !!  @author Nathan A. Wukie
+    !!  @date   1/28/2016
     !!
-    !!   @param[in]  varstring   String defining the variable associated with the equation being added
-    !!   @param[in]  varindex    The index of the equation in the given set. 
+    !!  @param[in]  varstring   String defining the variable associated with the equation being added
+    !!  @param[in]  varindex    The index of the equation in the given set. 
     !!
-    !-----------------------------------------------------------------------------------------------------------------------------
+    !---------------------------------------------------------------------------------------------------------
     subroutine add_equation(self,varstring,varindex)
         class(equationset_t),   intent(inout)  :: self
         character(*),           intent(in)     :: varstring
@@ -209,7 +235,7 @@ contains
         self%neqns = size(self%prop%eqns)
 
     end subroutine
-    !*****************************************************************************************************************************
+    !***************************************************************************************************************
 
 
 
@@ -227,9 +253,10 @@ contains
 
     !> Add components to volume_advective_flux array
     !!
-    !!   @author Nathan A. Wukie
+    !!  @author Nathan A. Wukie
+    !!  @date   1/28/2016
     !!
-    !!   @param[in]  flux    Volume advective flux component to be added
+    !!  @param[in]  flux    Volume advective flux component to be added
     !!
     !-----------------------------------------------------------------------------------------------------------------------------
     subroutine add_volume_advective_flux(self,flux)
@@ -305,9 +332,10 @@ contains
 
     !> Add components to boundary_advective_flux array
     !!
-    !!   @author Nathan A. Wukie
+    !!  @author Nathan A. Wukie
+    !!  @date   1/28/2016
     !!
-    !!   @param[in]  flux    Boundary advective flux type to be added
+    !!  @param[in]  flux    Boundary advective flux type to be added
     !!
     !-----------------------------------------------------------------------------------------------------------------------------
     subroutine add_boundary_advective_flux(self,flux)

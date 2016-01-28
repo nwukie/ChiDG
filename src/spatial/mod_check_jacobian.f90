@@ -22,17 +22,18 @@ contains
 
 
 
-    ! Compute both the Finite Difference representation and DNAD representation of
-    ! the volume advective flux jacobian.
-    !
-    !   @author Nathan A. Wukie
-    !
-    !   @param[inout]   domain      Domain structure containing grid, eqnset, etc
-    !   @param[in]      ielem       Element index for computing the jacobian
-    !   @param[in]      iblk        Block index of the linearization
-    !   @param[inout]   blk_dnad    Densematrix for storing the DNAD jacobian
-    !   @param[inout]   blk_fd      Densematrix for storing the Finite Difference jacobian
-    !
+    !> Compute both the Finite Difference representation and DNAD representation of
+    !! the volume advective flux jacobian.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   1/28/2016
+    !!
+    !!  @param[inout]   domain      Domain structure containing grid, eqnset, etc
+    !!  @param[in]      ielem       Element index for computing the jacobian
+    !!  @param[in]      iblk        Block index of the linearization
+    !!  @param[inout]   blk_dnad    Densematrix for storing the DNAD jacobian
+    !!  @param[inout]   blk_fd      Densematrix for storing the Finite Difference jacobian
+    !!
     !----------------------------------------------------------------------------------
     subroutine check_jacobian_volume_advective_flux(data,ielem,iblk,blk_dnad,blk_fd)
         type(chidg_data_t),  intent(inout)       :: data
@@ -67,8 +68,12 @@ contains
             !
             call sdata%lhs%clear()
             call sdata%rhs%clear()
+            call sdata%function_status%clear()
+
             rhs_r  = sdata%rhs%dom(1)      ! Alloate supporting storage
             vec_fd = sdata%rhs%dom(1)
+
+
 
             !
             ! For the current element, compute the contributions from volume integrals
@@ -84,7 +89,7 @@ contains
                 print*, eqnset(1)%item%name
                 call chidg_signal(WARN,"No volume advective flux was found")
             end if
-
+            
 
            !
            ! Store linearization from DNAD. This is what we want to check against the FD calculation.
@@ -100,9 +105,12 @@ contains
            rhs_r%lvecs(ielem) = rhs%lvecs(ielem)
 
 
+           !
            ! Reset sdata storage
+           !
            call lhs%clear()
            call rhs%clear()
+           call sdata%function_status%clear()
 
 
            !
@@ -117,8 +125,11 @@ contains
 
 
 
-           eps   = 1.e-8_rk
+           eps   = 1.e-8_rk ! finite-difference perturbation
+
+           !
            ! Loop through terms, perturb term, compute rhs, compute finite difference jacobian, return term.
+           !
            do ivar = 1,eqnset(1)%item%neqns
                do iterm = 1,mesh(1)%nterms_s
 
@@ -144,8 +155,6 @@ contains
                    end if
 
 
-
-
                    !
                    ! Return perturbed value to normal state
                    !
@@ -161,43 +170,48 @@ contains
                    !
                    ! Store to column of blk_fd
                    !
-                   icol = (ivar-1)*nterms + iterm                  !> Compute appropriate column for storing linearization
-                   blk_fd%mat(:,icol) = vec_fd%lvecs(ielem)%vec    !> Store finite difference linearization of the residual
+                   icol = (ivar-1)*nterms + iterm                  ! Compute appropriate column for storing linearization
+                   blk_fd%mat(:,icol) = vec_fd%lvecs(ielem)%vec    ! Store finite difference linearization of the residual
 
 
+                   !
                    ! Reset sdata storage
+                   !
                    call sdata%lhs%clear()
                    call sdata%rhs%clear()
+                   call sdata%function_status%clear()
 
 
-
-
-               end do
-           end do
+               end do   ! iterm
+           end do   ! ivar
 
 
 
         end associate
 
-    end subroutine
+    end subroutine check_jacobian_volume_advective_flux
+    !********************************************************************************************
 
 
 
 
 
-    ! compute both the finite difference representation and dnad representation of
-    ! the boundary advective flux jacobian.
-    !
-    !   @author Nathan A. Wukie
-    !   @date   1/27/2016
-    !
-    !   @param[inout]   domain      domain structure containing grid, eqnset, etc
-    !   @param[in]      ielem       element index for computing the jacobian
-    !   @param[in]      iblk        block index of the linearization
-    !   @param[inout]   blk_dnad    densematrix for storing the dnad jacobian
-    !   @param[inout]   blk_fd      densematrix for storing the finite difference jacobian
-    !
-    !----------------------------------------------------------------------------------
+
+
+
+    !> compute both the finite difference representation and dnad representation of
+    !! the boundary advective flux jacobian.
+    !!
+    !!   @author Nathan A. Wukie
+    !!   @date   1/28/2016
+    !!
+    !!   @param[inout]   domain      domain structure containing grid, eqnset, etc
+    !!   @param[in]      ielem       element index for computing the jacobian
+    !!   @param[in]      iblk        block index of the linearization
+    !!   @param[inout]   blk_dnad    densematrix for storing the dnad jacobian
+    !!   @param[inout]   blk_fd      densematrix for storing the finite difference jacobian
+    !!
+    !--------------------------------------------------------------------------------------------
     subroutine check_jacobian_boundary_advective_flux(data,ielem,iblk,blk_dnad,blk_fd)
         type(chidg_data_t),     intent(inout)   :: data
         integer(ik),            intent(in)      :: ielem, iblk
@@ -245,6 +259,9 @@ contains
             !
             call lhs%clear()      
             call lhs%clear()
+            call data%sdata%function_status%clear()
+
+
             rhs_r  = rhs          ! Allocate supporing storage containers
             vec_fd = rhs
 
@@ -258,7 +275,6 @@ contains
             !
             ! For the current element, compute the contributions from boundary integrals
             !
-            !call domain%eqnset%compute_boundary_average_flux(mesh,sdata,ielem,iface,iblk)
             if (allocated(data%eqnset(1)%item%boundary_advective_flux)) then
                 nflux = size(data%eqnset(1)%item%boundary_advective_flux)
                 do iflux = 1,nflux
@@ -269,8 +285,6 @@ contains
                     function_info%idonor = idonor
 
 
-
-                    !call data%eqnset(1)%item%boundary_advective_flux(iflux)%flux%compute(data%mesh,data%sdata,prop,idom,ielem,iface,iblk,idonor,iflux)
                     call data%eqnset(1)%item%boundary_advective_flux(iflux)%flux%compute(data%mesh,data%sdata,prop,face_info, function_info)
                 end do
 
@@ -292,6 +306,7 @@ contains
             ! Reset sdata storage
             call lhs%clear()
             call rhs%clear()
+            call data%sdata%function_status%clear()
 
 
 
@@ -300,7 +315,6 @@ contains
             !
             ! Need to use DIAG to get rhs for finite difference calculation. 
             ! This is because RHS is only stored for DIAG in the integrate procedure.
-            !call domain%eqnset%compute_boundary_average_flux(mesh,sdata,ielem,iface,DIAG)       
             if (allocated(data%eqnset(1)%item%boundary_advective_flux)) then
                 nflux = size(data%eqnset(1)%item%boundary_advective_flux)
                 do iflux = 1,nflux
@@ -312,8 +326,6 @@ contains
                     function_info%idonor = idonor
 
 
-
-                    !call data%eqnset(1)%item%boundary_advective_flux(iflux)%flux%compute(data%mesh,data%sdata,prop,idom,ielem,iface,DIAG,idonor,iflux)
                     call data%eqnset(1)%item%boundary_advective_flux(iflux)%flux%compute(data%mesh,data%sdata,prop,face_info,function_info)
                 end do
 
@@ -321,12 +333,6 @@ contains
                 print*, data%eqnset(1)%item%name
                 call chidg_signal(WARN,"No boundary advective flux was found")
             end if
-
-
-
-
-
-
 
 
             !
@@ -340,12 +346,16 @@ contains
             !
             call lhs%clear()
             call rhs%clear()
+            call data%sdata%function_status%clear()
 
 
 
 
-            eps   = 1.e-8_rk
+            eps   = 1.e-8_rk    ! finite-difference perturbation
+
+            !
             ! Loop through terms, perturb term, compute rhs, compute finite difference jacobian, return term.
+            !
             do ivar = 1,data%eqnset(1)%item%neqns
                 do iterm = 1,data%mesh(1)%nterms_s
 
@@ -361,7 +371,6 @@ contains
                     !
                     ! Need to use DIAG to get rhs for finite difference calculation. 
                     ! This is because RHS is only stored for DIAG in the integrate procedure.
-                    !call domain%eqnset%compute_boundary_average_flux(mesh,sdata,ielem,iface,DIAG)    
                     if (allocated(data%eqnset(1)%item%boundary_advective_flux)) then
                         nflux = size(data%eqnset(1)%item%boundary_advective_flux)
                         do iflux = 1,nflux
@@ -371,8 +380,6 @@ contains
                             function_info%iblk   = DIAG
                             function_info%idonor = idonor
 
-
-                            !call data%eqnset(1)%item%boundary_advective_flux(iflux)%flux%compute(data%mesh,data%sdata,prop,idom,ielem,iface,DIAG,idonor,iflux)
                             call data%eqnset(1)%item%boundary_advective_flux(iflux)%flux%compute(data%mesh,data%sdata,prop,face_info,function_info)
                         end do
 
@@ -410,14 +417,16 @@ contains
                     !
                     call lhs%clear()
                     call rhs%clear()
+                    call data%sdata%function_status%clear()
 
-                end do
-            end do
+                end do  ! iterm
+            end do  ! ivar
 
 
         end associate
 
-    end subroutine
+    end subroutine check_jacobian_boundary_advective_flux
+    !***************************************************************************************
 
 
 

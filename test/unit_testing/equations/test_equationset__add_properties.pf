@@ -1,0 +1,40 @@
+!
+! Test 'add_equation' routine. Add single equation, test number of equations, name, and index
+!
+@Test
+subroutine test_equationset__add_properties()
+    use pfunit_mod
+    
+    use mock_equationset,   only: mock_equationset_t
+    use SCA_properties,     only: SCA_properties_t
+
+
+    type(mock_equationset_t)    :: meq
+    type(SCA_properties_t)      :: SCA_prop
+    logical                     :: correct_type
+
+
+    !
+    ! Add equation set properties. THIS IS BEING TESTED.
+    !
+    call meq%add_properties(SCA_prop)
+
+
+
+    !
+    ! Test properties type
+    !
+    select type ( prop => meq%prop )
+        type is (SCA_properties_t)
+            correct_type = .true. 
+        class default
+            correct_type = .false.
+    end select
+    @assertTrue(correct_type)
+
+
+end subroutine test_equationset__add_properties
+
+
+
+

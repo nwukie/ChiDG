@@ -1,0 +1,82 @@
+!
+! Test 'add_equation' routine. Add single equation, test number of equations, name, and index
+!
+@Test
+subroutine test_equationset__add_equation__one()
+    use pfunit_mod
+    
+    use mock_equationset,   only: mock_equationset_t
+    use SCA_properties,     only: SCA_properties_t
+
+
+    type(mock_equationset_t)    :: meq
+    type(SCA_properties_t)      :: SCA_prop
+
+
+    ! Allocate a concrete properties component in the equationset, which stores the equations
+    allocate(SCA_properties_t::meq%prop)
+
+    !
+    ! Add one equation. THIS IS BEING TESTED.
+    !
+    call meq%add_equation("a",1)
+
+
+
+
+    ! Test number of equations
+    @assertEqual(1,size(meq%prop%eqns))
+
+    ! Test equation name
+    @assertEqual("a",meq%prop%eqns(1)%name)
+
+    ! Test equation index
+    @assertEqual(1,meq%prop%eqns(1)%ind)
+
+end subroutine
+
+
+
+
+
+!
+! Test 'add_equation' routine. Add two equations. Test number of equations, names, and indices
+!
+@Test
+subroutine test_equationset__add_equation__two()
+    use pfunit_mod
+    
+    use mock_equationset,   only: mock_equationset_t
+    use SCA_properties,     only: SCA_properties_t
+
+
+    type(mock_equationset_t)    :: meq
+    type(SCA_properties_t)      :: SCA_prop
+
+
+    ! Allocate a concrete properties component in the equationset, which stores the equations
+    allocate(SCA_properties_t::meq%prop)
+
+    !
+    ! Add two equations. THIS IS BEING TESTED.
+    !
+    call meq%add_equation("a",1)
+    call meq%add_equation("b",2)
+
+    ! Test number of equations
+    @assertEqual(2,size(meq%prop%eqns))
+
+    ! Test equation name
+    @assertEqual("a",meq%prop%eqns(1)%name)
+    @assertEqual("b",meq%prop%eqns(2)%name)
+
+    ! Test equation index
+    @assertEqual(1,meq%prop%eqns(1)%ind)
+    @assertEqual(2,meq%prop%eqns(2)%ind)
+
+end subroutine
+
+
+
+
+

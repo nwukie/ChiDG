@@ -8,13 +8,12 @@ module DLA_boundary_average_advective_flux
     use atype_boundary_flux,    only: boundary_flux_t
     use type_mesh,              only: mesh_t
     use type_solverdata,        only: solverdata_t
-    use type_seed,              only: seed_t
-    use type_face_location,     only: face_location_t
+    use type_face_info,         only: face_info_t
+    use type_function_info,     only: function_info_t
 
 
     use mod_interpolate,        only: interpolate_face
-    use mod_integrate,          only: integrate_boundary_flux
-    use mod_DNAD_tools,         only: compute_neighbor_face, compute_seed
+    use mod_integrate,          only: integrate_boundary_scalar_flux
     use DNAD_D
 
     use type_properties,        only: properties_t
@@ -47,37 +46,40 @@ contains
     !   Boundary Flux routine for Scalar
     !
     !===========================================================
-    subroutine compute(self,mesh,sdata,prop,idom,ielem,iface,iblk,idonor)
+    !subroutine compute(self,mesh,sdata,prop,idom,ielem,iface,iblk,idonor)
+    subroutine compute(self,mesh,sdata,prop,face_info,function_info)
         class(DLA_boundary_average_advective_flux_t),   intent(in)      :: self
         type(mesh_t),                                   intent(in)      :: mesh(:)
         type(solverdata_t),                             intent(inout)   :: sdata
         class(properties_t),                            intent(inout)   :: prop
-        integer(ik),                                    intent(in)      :: idom, ielem, iface, iblk
-        integer(ik),                                    intent(in)      :: idonor
+        type(face_info_t),                              intent(in)      :: face_info
+        type(function_info_t),                          intent(in)      :: function_info
+
+        !integer(ik),                                    intent(in)      :: idom, ielem, iface, iblk
+        !integer(ik),                                    intent(in)      :: idonor
+
+        integer(ik)             :: idom, ielem, iface
+        integer(ik)             :: ifcn, idonor, iblk
 
         real(rk)                 :: cx, cy, cz
-        integer(ik)              :: iu_a, iu_b, iseed, ierr, nnodes
-        type(seed_t)             :: seed
-        type(face_location_t)    :: face
-        type(AD_D), allocatable  :: ua_l(:), ua_r(:), ub_l(:), ub_r(:), flux_x(:), flux_y(:), flux_z(:)
+        integer(ik)              :: iu_a, iu_b
+        type(AD_D), dimension(mesh(face_info%idomain)%faces(face_info%ielement,face_info%iface)%gq%face%nnodes) :: &
+                        ua_l, ua_r, ub_l, ub_r, flux_x, flux_y, flux_z, integrand
 
 
         !
         ! Get integer data
         !
-        iu_a      = prop%get_eqn_index('u_a')
-        iu_b      = prop%get_eqn_index('u_b')
+        iu_a = prop%get_eqn_index("u_a")
+        iu_b = prop%get_eqn_index("u_b")
 
 
-        face%idomain  = idom
-        face%ielement = ielem
-        face%iface    = iface
+        idom  = face_info%idomain
+        ielem = face_info%ielement
+        iface = face_info%iface
 
-        !
-        ! Get quadrature node count
-        !
-        nnodes    = mesh(idom)%faces(ielem,iface)%gq%nnodes_f
 
+        associate ( norms => mesh(idom)%faces(ielem,iface)%norm, unorms => mesh(idom)%faces(ielem,iface)%unorm )
 
         !
         ! Get equation set properties
@@ -90,35 +92,15 @@ contains
         end select
 
 
-        !
-        ! Allocate arrays for data at quadrature points
-        !
-        allocate(ua_l(nnodes),       &
-                 ua_r(nnodes),       &
-                 ub_l(nnodes),       &
-                 ub_r(nnodes),       &
-                 flux_x(nnodes),    &
-                 flux_y(nnodes),    &
-                 flux_z(nnodes), stat=ierr)
-        if (ierr /= 0) call AllocationError
-
-
-
-
-        !
-        ! Compute element for linearization
-        !
-        seed   = compute_seed(mesh,idom,ielem,iface,idonor,iblk)
-
 
         !
         ! Interpolate solution to quadrature nodes
         !
-        call interpolate_face(mesh,sdata%q,idom,ielem,iface, iu_a, ua_r, seed, LOCAL)
-        call interpolate_face(mesh,sdata%q,idom,ielem,iface, iu_a, ua_l, seed, NEIGHBOR)
+        call interpolate_face(mesh,face_info,sdata%q,iu_a, ua_r, LOCAL)
+        call interpolate_face(mesh,face_info,sdata%q,iu_a, ua_l, NEIGHBOR)
 
-        call interpolate_face(mesh,sdata%q,idom,ielem,iface, iu_b, ub_r, seed, LOCAL)
-        call interpolate_face(mesh,sdata%q,idom,ielem,iface, iu_b, ub_l, seed, NEIGHBOR)
+        call interpolate_face(mesh,face_info,sdata%q,iu_b, ub_r, LOCAL)
+        call interpolate_face(mesh,face_info,sdata%q,iu_b, ub_l, NEIGHBOR)
 
 
 
@@ -129,23 +111,26 @@ contains
         flux_y = ((cy*ua_l + cy*ua_r)/TWO )  *  mesh(idom)%faces(ielem,iface)%norm(:,2)
         flux_z = ((cz*ua_l + cz*ua_r)/TWO )  *  mesh(idom)%faces(ielem,iface)%norm(:,3)
 
-        !call integrate_boundary_flux(mesh(idom)%faces(ielem,iface), sdata, idom, iu_a, iblk, flux_x, flux_y, flux_z)
-        call integrate_boundary_flux(mesh,sdata,face,iu_a,iblk,idonor,seed,flux_x,flux_y,flux_z)
+        integrand = flux_x + flux_y + flux_z
+        call integrate_boundary_scalar_flux(mesh,sdata,face_info,function_info,iu_a,integrand)
 
 
 
-        !> Compute boundary average flux for u_b
-        flux_x = ((cx*ub_l + cx*ub_r)/TWO )  *  mesh(idom)%faces(ielem,iface)%norm(:,1)
-        flux_y = ((cy*ub_l + cy*ub_r)/TWO )  *  mesh(idom)%faces(ielem,iface)%norm(:,2)
-        flux_z = ((cz*ub_l + cz*ub_r)/TWO )  *  mesh(idom)%faces(ielem,iface)%norm(:,3)
+        !
+        ! Compute boundary average flux for u_b
+        !
+        flux_x = ((cx*ub_l + cx*ub_r)/TWO )  *  norms(:,1)
+        flux_y = ((cy*ub_l + cy*ub_r)/TWO )  *  norms(:,2)
+        flux_z = ((cz*ub_l + cz*ub_r)/TWO )  *  norms(:,3)
 
-        !call integrate_boundary_flux(mesh(idom)%faces(ielem,iface), sdata, idom, iu_b, iblk, flux_x, flux_y, flux_z)
-        call integrate_boundary_flux(mesh,sdata,face,iu_b,iblk,idonor,seed,flux_x,flux_y,flux_z)
+        integrand = flux_x + flux_y + flux_z
+        call integrate_boundary_scalar_flux(mesh,sdata,face_info,function_info,iu_b,integrand)
 
 
 
-
-    end subroutine
+        end associate
+    end subroutine compute
+    !************************************************************************************
 
 
 

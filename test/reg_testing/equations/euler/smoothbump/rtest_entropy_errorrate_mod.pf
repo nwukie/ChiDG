@@ -101,15 +101,15 @@ contains
         params = [  case_grid_order('6x2x2.h5',  1, 2.761019163e-3_rk), &
                     case_grid_order('6x2x2.h5',  2, 3.618440627e-3_rk), &
                     case_grid_order('6x2x2.h5',  3, 1.116431012e-3_rk), &
-!                    case_grid_order('6x2x2.h5',  4, 6.731678976e-4_rk), &
+                    case_grid_order('6x2x2.h5',  4, 6.731678976e-4_rk), &
                     case_grid_order('12x4x2.h5', 1, 3.807878665e-3_rk), &
                     case_grid_order('12x4x2.h5', 2, 1.323352387e-3_rk), &
-                    case_grid_order('12x4x2.h5', 3, 3.940896088e-4_rk) &
-!                    case_grid_order('12x4x2.h5', 4, 8.433932228e-5_rk), &
-!                    case_grid_order('24x8x2.h5', 1, 4.038806838e-3_rk), &
-!                    case_grid_order('24x8x2.h5', 2, 5.554687475e-4_rk), &
-!                    case_grid_order('24x8x2.h5', 3, 5.367783209e-5_rk), &
-!                    case_grid_order('24x8x2.h5', 4, 7.223333943e-6_rk) &
+                    case_grid_order('12x4x2.h5', 3, 3.940896088e-4_rk), &
+                    case_grid_order('12x4x2.h5', 4, 8.433932228e-5_rk), &
+                    case_grid_order('24x8x2.h5', 1, 4.038806838e-3_rk), &
+                    case_grid_order('24x8x2.h5', 2, 5.554687475e-4_rk), &
+                    case_grid_order('24x8x2.h5', 3, 5.367783209e-5_rk), &
+                    case_grid_order('24x8x2.h5', 4, 7.223333943e-6_rk) &
                     ]
 
     end function getParameters
@@ -172,7 +172,7 @@ contains
         real(rk)                        :: tol, entropy_error
 
         
-        tol = 1.e-8_rk
+        tol = 1.e-6_rk
 
         !------------------------------------------------------------------------------
         !
@@ -184,7 +184,6 @@ contains
         gq_rule         = 2
         eqnset          = 'euler'
         timescheme      = 'quasi_newton'
-        !timescheme      = 'newton'
         matrixsolver    = 'fgmres'
         preconditioner  = 'ILU0'
         !------------------------------------------------------------------------------
@@ -303,9 +302,15 @@ contains
 
 
 
+        
+
         !
         ! Test that computed entropy error is the expected value
         !
+        
+        ! Set tolerance two orders-of-madnitude below entropy_ref
+        tol = self%entropy_ref/100_rk
+
         @assertEqual(self%entropy_ref,entropy_error,tol)
 
 

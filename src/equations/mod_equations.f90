@@ -4,17 +4,17 @@ module mod_equations
     use type_equationset,               only: equationset_t
 
     ! Import Equations
-!    use eqn_scalar,                     only: scalar_e
-!    use eqn_linearadvection,            only: linearadvection_e
-!    use eqn_duallinearadvection,        only: duallinearadvection_e
+    use eqn_scalar,                     only: scalar_e
+    use eqn_linearadvection,            only: linearadvection_e
+    use eqn_duallinearadvection,        only: duallinearadvection_e
     use eqn_euler,                      only: euler_e
 !    use eqn_linearized_euler,           only: linearized_euler_e
     implicit none
 
     ! Instantiate Equations
-!    type(scalar_e)              :: SCALAR
-!    type(linearadvection_e)     :: LINEARADVECTION
-!    type(duallinearadvection_e) :: DUALLINEARADVECTION
+    type(scalar_e)              :: SCALAR
+    type(linearadvection_e)     :: LINEARADVECTION
+    type(duallinearadvection_e) :: DUALLINEARADVECTION
     type(euler_e)               :: EULER
 !    type(linearized_euler_e)    :: LINEULER
 
@@ -29,9 +29,9 @@ contains
 
         if (uninitialized) then
             ! List of equations to initialize
-!            call SCALAR%init()
-!            call LINEARADVECTION%init()
-!            call DUALLINEARADVECTION%init()
+            call SCALAR%init()
+            call LINEARADVECTION%init()
+            call DUALLINEARADVECTION%init()
             call EULER%init()
 !            call LINEULER%init()
 
@@ -59,15 +59,15 @@ contains
 
 
         select case (trim(eqnstring))
-!            case ('scalar','Scalar','SCALAR')
-!                allocate(eqnset, source=SCALAR)
-!
-!            case ('linearadvection','LinearAdvection','la','LA')
-!                allocate(eqnset, source=LINEARADVECTION)
-!
-!            case ('duallinearadvection','DualLinearAdvection','dla','DLA')
-!                allocate(eqnset, source=DUALLINEARADVECTION)
-!
+            case ('scalar','Scalar','SCALAR')
+                allocate(eqnset, source=SCALAR)
+
+            case ('linearadvection','LinearAdvection','la','LA')
+                allocate(eqnset, source=LINEARADVECTION)
+
+            case ('duallinearadvection','DualLinearAdvection','dla','DLA')
+                allocate(eqnset, source=DUALLINEARADVECTION)
+
             case('euler','Euler','EULER')
                 allocate(eqnset, source=EULER)
 
@@ -75,10 +75,11 @@ contains
 !                allocate(eqnset, source=LINEULER)
 !
             case default
-                call chidg_signal(FATAL,'create_equationset -- equation string not recognized')
+                call chidg_signal_one(FATAL,'create_equationset -- equation string not recognized',trim(eqnstring))
         end select
 
     end subroutine
+    !*************************************************************************************
 
 
 

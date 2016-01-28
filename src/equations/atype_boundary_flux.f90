@@ -21,7 +21,7 @@ module atype_boundary_flux
 
     abstract interface
         !subroutine compute_interface(self,mesh,sdata,prop,idom,ielem,iface,iblk,idonor,iflux)
-        subroutine compute_interface(self,mesh,sdata,prop,face,fcn_info)
+        subroutine compute_interface(self,mesh,sdata,prop,face_info,function_info)
             use mod_kinds,  only: ik
             import boundary_flux_t
             import mesh_t
@@ -34,8 +34,8 @@ module atype_boundary_flux
             type(mesh_t),           intent(in)      :: mesh(:)
             type(solverdata_t),     intent(inout)   :: sdata
             class(properties_t),    intent(inout)   :: prop
-            type(face_info_t),      intent(in)      :: face
-            type(function_info_t),  intent(in)      :: fcn_info
+            type(face_info_t),      intent(in)      :: face_info
+            type(function_info_t),  intent(in)      :: function_info
         end subroutine
     end interface
 

@@ -1,7 +1,7 @@
 module mod_check_jacobian
 #include <messenger.h>
     use mod_kinds,          only: rk,ik
-    use mod_constants,      only: NFACES, DIAG, ZERO
+    use mod_constants,      only: NFACES, DIAG, ZERO, BOUNDARY_ADVECTIVE_FLUX
 
     use type_mesh,          only: mesh_t
     use type_solverdata,    only: solverdata_t
@@ -9,6 +9,10 @@ module mod_check_jacobian
     use type_densematrix,   only: densematrix_t
     use type_chidg_data,    only: chidg_data_t
 
+    use type_face_info,     only: face_info_t
+    use type_function_info, only: function_info_t
+
+    use mod_DNAD_tools,     only: compute_seed
     implicit none
 
 
@@ -184,7 +188,8 @@ contains
     ! compute both the finite difference representation and dnad representation of
     ! the boundary advective flux jacobian.
     !
-    !   @author nathan a. wukie
+    !   @author Nathan A. Wukie
+    !   @date   1/27/2016
     !
     !   @param[inout]   domain      domain structure containing grid, eqnset, etc
     !   @param[in]      ielem       element index for computing the jacobian
@@ -201,10 +206,15 @@ contains
         type(blockvector_t)  :: rhs_r, vec_fd
         real(rk)    :: qhold, eps
         integer(ik) :: nelem, i, iterm, iface, ivar, icol, nterms, iflux, nflux, idom, idonor
-        integer(ik) :: ielem_p              !> ielem_p is the element in which the solution is being perturbed for the finite difference calculation.
+        integer(ik) :: ielem_p              ! ielem_p is the element in which the solution is being perturbed for the finite difference calculation.
+
+        type(face_info_t)       :: face_info
+        type(function_info_t)   :: function_info
 
 
+        !
         ! ASSUMING THERE IS ONLY ONE DOMAIN
+        !
         idom   = 1
         idonor = 1
 
@@ -221,7 +231,7 @@ contains
         end if
 
 
-        !associate ( mesh => domain%mesh, sdata => domain%sdata, prop => domain%eqnset%prop) 
+
         associate ( mesh => data%mesh, q => data%sdata%q%dom(1), rhs => data%sdata%rhs%dom(1), lhs => data%sdata%lhs%dom(1), prop => data%eqnset(1)%item%prop )
 
             nelem = mesh(1)%nelem
@@ -239,6 +249,12 @@ contains
             vec_fd = rhs
 
 
+            face_info%idomain  = idom
+            face_info%ielement = ielem
+            face_info%iface    = iface
+            face_info%seed     = compute_seed(data%mesh,idom,ielem,iface,idonor,iblk)
+
+
             !
             ! For the current element, compute the contributions from boundary integrals
             !
@@ -246,7 +262,16 @@ contains
             if (allocated(data%eqnset(1)%item%boundary_advective_flux)) then
                 nflux = size(data%eqnset(1)%item%boundary_advective_flux)
                 do iflux = 1,nflux
-                    call data%eqnset(1)%item%boundary_advective_flux(iflux)%flux%compute(data%mesh,data%sdata,prop,idom,ielem,iface,iblk,idonor,iflux)
+
+                    function_info%type   = BOUNDARY_ADVECTIVE_FLUX
+                    function_info%ifcn   = iflux
+                    function_info%iblk   = iblk
+                    function_info%idonor = idonor
+
+
+
+                    !call data%eqnset(1)%item%boundary_advective_flux(iflux)%flux%compute(data%mesh,data%sdata,prop,idom,ielem,iface,iblk,idonor,iflux)
+                    call data%eqnset(1)%item%boundary_advective_flux(iflux)%flux%compute(data%mesh,data%sdata,prop,face_info, function_info)
                 end do
 
             else
@@ -279,7 +304,17 @@ contains
             if (allocated(data%eqnset(1)%item%boundary_advective_flux)) then
                 nflux = size(data%eqnset(1)%item%boundary_advective_flux)
                 do iflux = 1,nflux
-                    call data%eqnset(1)%item%boundary_advective_flux(iflux)%flux%compute(data%mesh,data%sdata,prop,idom,ielem,iface,DIAG,idonor,iflux)
+
+
+                    function_info%type   = BOUNDARY_ADVECTIVE_FLUX
+                    function_info%ifcn   = iflux
+                    function_info%iblk   = DIAG
+                    function_info%idonor = idonor
+
+
+
+                    !call data%eqnset(1)%item%boundary_advective_flux(iflux)%flux%compute(data%mesh,data%sdata,prop,idom,ielem,iface,DIAG,idonor,iflux)
+                    call data%eqnset(1)%item%boundary_advective_flux(iflux)%flux%compute(data%mesh,data%sdata,prop,face_info,function_info)
                 end do
 
             else
@@ -294,12 +329,15 @@ contains
 
 
 
-
+            !
             ! Store temporary rhs
+            !
             rhs_r%lvecs(ielem) = rhs%lvecs(ielem)
 
 
+            !
             ! Reset sdata storage
+            !
             call lhs%clear()
             call rhs%clear()
 
@@ -327,7 +365,15 @@ contains
                     if (allocated(data%eqnset(1)%item%boundary_advective_flux)) then
                         nflux = size(data%eqnset(1)%item%boundary_advective_flux)
                         do iflux = 1,nflux
-                            call data%eqnset(1)%item%boundary_advective_flux(iflux)%flux%compute(data%mesh,data%sdata,prop,idom,ielem,iface,DIAG,idonor,iflux)
+
+                            function_info%type   = BOUNDARY_ADVECTIVE_FLUX
+                            function_info%ifcn   = iflux
+                            function_info%iblk   = DIAG
+                            function_info%idonor = idonor
+
+
+                            !call data%eqnset(1)%item%boundary_advective_flux(iflux)%flux%compute(data%mesh,data%sdata,prop,idom,ielem,iface,DIAG,idonor,iflux)
+                            call data%eqnset(1)%item%boundary_advective_flux(iflux)%flux%compute(data%mesh,data%sdata,prop,face_info,function_info)
                         end do
 
                     else

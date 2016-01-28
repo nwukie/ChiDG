@@ -4,7 +4,7 @@ module test_interpolate_chimera_multipledonor_mod
     use type_point,         only: point_t
     use type_seed,          only: seed_t
     use type_meshdata,      only: meshdata_t
-    use type_face_indices,  only: face_indices_t
+    use type_face_info,     only: face_info_t
 
 
     use mod_kinds,          only: rk,ik
@@ -157,7 +157,7 @@ contains
         type(AD_D), allocatable     :: u_gq(:)
         real(rk),   allocatable     :: u_ref(:)
         real(rk)                    :: tol
-        type(face_indices_t)        :: face
+        type(face_info_t)           :: face
         
         
         associate ( elems => self%chidg%data%mesh(1)%elems, faces => self%chidg%data%mesh(1)%faces, q => self%chidg%data%sdata%q)        
@@ -225,7 +225,7 @@ contains
         type(AD_D), allocatable     :: u_gq(:)
         real(rk),   allocatable     :: deriv_ref(:)
         real(rk)                    :: tol
-        type(face_indices_t)        :: face
+        type(face_info_t)           :: face
         
         
         associate ( elems => self%chidg%data%mesh(1)%elems, faces => self%chidg%data%mesh(1)%faces, q => self%chidg%data%sdata%q)        
@@ -304,7 +304,7 @@ contains
         type(AD_D), allocatable     :: u_gq(:)
         real(rk),   allocatable     :: u_ref(:)
         real(rk)                    :: tol
-        type(face_indices_t)        :: face
+        type(face_info_t)           :: face
         
         
         associate ( elems => self%chidg%data%mesh(1)%elems, faces => self%chidg%data%mesh(1)%faces, q => self%chidg%data%sdata%q )
@@ -374,7 +374,7 @@ contains
         real(rk),   allocatable     :: deriv_ref(:)
         real(rk)                    :: tol
         real(rk),   allocatable     :: mat(:,:)
-        type(face_indices_t)        :: face
+        type(face_info_t)           :: face
 
         integer(ik)                 :: idonor, ChiID, ndonor_nodes, node_index
         

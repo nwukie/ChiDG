@@ -163,96 +163,6 @@ contains
 
 
 
-
-
-!
-!    !>  Compute the volume integral of a flux vector
-!    !!
-!    !!      - Adds value contribution to the rhs vector
-!    !!      - Adds the derivative contribution to the linearization matrix
-!    !!
-!    !!  @author Nathan A. Wukie
-!    !!  @param[in]      face    Face being integrated over
-!    !!  @param[inout]   rhs     Right-hand side vector storage
-!    !!  @param[inout]   lin     Domain linearization matrix
-!    !!  @param[in]      iblk    Selected block of the linearization being computed. lin(ielem,iblk), where iblk = (1-7)
-!    !!  @param[in]      ieqn    Index of the variable associated with the flux being integrated
-!    !!  @param[inout]   flux_x  x-Flux and derivatives at quadrature points
-!    !!  @param[inout]   flux_y  y-Flux and derivatives at quadrature points
-!    !!  @param[inout]   flux_z  z-Flux and derivatives at quadrature points
-!    !!
-!    !--------------------------------------------------------------------------------------------------------
-!    subroutine integrate_boundary_flux(mesh,sdata,face,ieqn,iblk,idonor,seed,flux_x,flux_y,flux_z,iflux)
-!        type(mesh_t),           intent(in)      :: mesh(:)
-!        type(solverdata_t),     intent(inout)   :: sdata
-!        type(face_location_t),  intent(in)      :: face
-!        integer(ik),            intent(in)      :: ieqn
-!        integer(ik),            intent(in)      :: iblk
-!        integer(ik),            intent(in)      :: idonor
-!        type(seed_t),           intent(in)      :: seed
-!        type(AD_D),             intent(inout)   :: flux_x(:), flux_y(:), flux_z(:)
-!        integer(ik),            intent(in), optional      :: iflux
-!
-!
-!        integer(ik)                             :: idom, ielem, iface, ierr, nterms_s
-!        type(AD_D), allocatable                 :: integral(:)
-!
-!        idom  = face%idomain
-!        ielem = face%ielement
-!        iface = face%iface
-!
-!        nterms_s = mesh(idom)%faces(ielem,iface)%nterms_s
-!
-!
-!        print*, 'HI ************************************************'
-!
-!        !
-!        ! Allocate integral array. MIGHT NOT NEED THIS. TEST.
-!        !
-!        allocate(integral(nterms_s), stat=ierr)
-!        if (ierr /= 0) call AllocationError
-!
-!
-!
-!        associate ( weights => mesh(idom)%faces(ielem,iface)%gq%face%weights(:,iface), &
-!                    jinv    => mesh(idom)%faces(ielem,iface)%jinv,                     &
-!                    val     => mesh(idom)%faces(ielem,iface)%gq%face%val(:,:,iface) )
-!
-!            !
-!            ! Multiply each component by quadrature weights. The fluxes have already been multiplied by norm
-!            !
-!            flux_x = (flux_x) * (weights)
-!            flux_y = (flux_y) * (weights)
-!            flux_z = (flux_z) * (weights)
-!
-!
-!            
-!            integral = matmul(transpose(val),flux_x)
-!            call store_boundary_integral_residual(mesh,sdata,face,ieqn,iblk,idonor,seed,integral,iflux)
-!            call store_boundary_integral_linearization(mesh,sdata,face,ieqn,iblk,idonor,seed,integral,iflux)
-!
-!            integral = matmul(transpose(val),flux_y)
-!            call store_boundary_integral_residual(mesh,sdata,face,ieqn,iblk,idonor,seed,integral,iflux)
-!            call store_boundary_integral_linearization(mesh,sdata,face,ieqn,iblk,idonor,seed,integral,iflux)
-!
-!            integral = matmul(transpose(val),flux_z)
-!            call store_boundary_integral_residual(mesh,sdata,face,ieqn,iblk,idonor,seed,integral,iflux)
-!            call store_boundary_integral_linearization(mesh,sdata,face,ieqn,iblk,idonor,seed,integral,iflux)
-!
-!
-!        end associate
-!
-!
-!    end subroutine integrate_boundary_flux
-!    !**********************************************************************************************************
-!
-
-
-
-
-
-
-
     !>  Compute the boundary integral of a flux scalar
     !!
     !!      - Adds value contribution to the rhs vector
@@ -330,6 +240,7 @@ contains
             integrand = (integrand) * (weights)
 
             integral = matmul(transpose(val),integrand)
+
 
             call store_boundary_integral_residual(     mesh,sdata,face_info,function_info,ieqn,integral)
             call store_boundary_integral_linearization(mesh,sdata,face_info,function_info,ieqn,integral)
@@ -511,6 +422,7 @@ contains
 
             associate ( rhs => sdata%rhs%dom(idom)%lvecs, lhs => sdata%lhs)
 
+
                 !
                 ! Only store rhs once. if iblk == DIAG. Also, since the integral could be computed more than once for chimera faces, only store for the first donor.
                 ! The integral should be the same for any value of idonor. Only the derivatives will change
@@ -550,6 +462,7 @@ contains
                         !
                         vals = rhs(ielem)%getvar(ieqn) + integral(:)%x_ad_
                         call rhs(ielem)%setvar(ieqn,vals)
+
 
                         !
                         ! Register flux was stored

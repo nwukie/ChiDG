@@ -7,8 +7,8 @@ module test__compute_gq_donor_mod
     use type_chidg,             only: chidg_t
     use type_meshdata,          only: meshdata_t
     use type_point,             only: point_t
-    use type_element_location,  only: element_location_t
-    use type_face_location,     only: face_location_t
+    use type_element_indices,   only: element_indices_t
+    use type_face_info,         only: face_info_t
 
     use mod_hdfio,              only: read_grid_hdf
     use mod_testutils,          only: meshgen
@@ -24,7 +24,7 @@ module test__compute_gq_donor_mod
     type, extends(AbstractTestParameter) :: node_donor_coord
         integer(ik)                 :: testNumber   ! Test index
         type(point_t)               :: gqnode       ! input
-        type(element_location_t)    :: donor        ! expected output
+        type(element_indices_t)     :: donor        ! expected output
         type(point_t)               :: donor_coord  ! expected output
     contains
         procedure   :: toString
@@ -42,7 +42,7 @@ module test__compute_gq_donor_mod
         type(chidg_t)   :: chidg
 
         type(point_t)            :: gqnode
-        type(element_location_t) :: donor
+        type(element_indices_t)  :: donor
         type(point_t)            :: donor_coord
     contains
         procedure   :: setUp
@@ -141,7 +141,7 @@ contains
 
         integer(ik), parameter      :: ntests = 5
         type(point_t)               :: gqnode(ntests)
-        type(element_location_t)    :: donor(ntests)
+        type(element_indices_t)     :: donor(ntests)
         type(point_t)               :: donor_coords(ntests)
 
 
@@ -217,8 +217,8 @@ contains
         class(test_compute_gq_donor),  intent(inout)   :: self
 
         type(point_t)                   :: gq_node, donor_coord
-        type(element_location_t)        :: donor
-        type(face_location_t)           :: receiver
+        type(element_indices_t)         :: donor
+        type(face_info_t)               :: receiver
 
 
         receiver%idomain  = 0

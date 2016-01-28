@@ -1,0 +1,119 @@
+!***************************************************************************************
+!!
+!!   ChiDG
+!!
+!!
+!!   A list of items that need addressed or capabilities that would be good to add:
+!!
+!!   Please format as:
+!!   @detail
+!!   @author
+!!   @date
+!!
+!***************************************************************************************
+
+
+
+
+Preconditioners
+!---------------------------------------------------------------------
+@detail Include effect of Chimera interfaces in preconditioner
+@author Nathan A. Wukie
+@date   1/28/2016
+
+
+@detail Investigate polynomial preconditioning for improved generality and parallelism
+@author Nathan A. Wukie
+@date   1/28/2016
+
+
+@detail Implement multigrid as a preconditioner
+@author Nathan A. Wukie
+@date   1/28/2016
+
+
+
+
+Boundary Conditions
+!---------------------------------------------------------------------
+@detail Relocate boundary condition specification to grid file
+@author Nathan A. Wukie
+@date   1/28/2016
+
+
+@detail Implement capability for boundary condition coupled across the entire face. Extra blocks in the linearization
+@author Nathan A. Wukie
+@date   1/28/2016
+
+
+@detail Implement implicit giles-type boundary condition
+@author Nathan A. Wukie
+@date   1/28/2016
+
+
+
+
+
+Chimera
+!---------------------------------------------------------------------
+@detail Add functionality for hole-cutting. iblank, etc.
+@author Nathan A. Wukie
+@date   1/28/2016
+
+
+@detail Add hole-cutter
+@author Nathan A. Wukie
+@date   1/28/2016
+
+
+
+
+
+
+Time
+!----------------------------------------------------------------------
+@detail Implement harmonic balance
+@author Nathan A. Wukie
+@date   1/28/2016
+
+
+@detail Make better abstractions for consistency of linearized euler and harmonic balance methods
+@author Nathan A. Wukie
+@date   1/28/2016
+
+
+
+
+
+
+Nonlinear Solver
+!----------------------------------------------------------------------
+@detail Add physicality check in applying the solution update
+@author Nathan A. Wukie
+@date   1/28/2016
+
+
+@detail Add line search algorithm 
+@author Nathan A. Wukie
+@date   1/28/2016
+
+
+
+
+PDE
+!----------------------------------------------------------------------
+@detail Add blockage terms to Euler equations
+@author Nathan A. Wukie
+@date   1/28/2016
+
+
+
+
+
+
+
+
+
+
+
+

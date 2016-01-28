@@ -59,13 +59,14 @@ subroutine rtest_linearadvection_implicit_convergence()
     ! Send log to file
     !
     IO_DESTINATION = 'file'
+    !IO_DESTINATION = 'both'
 
 
     !
     ! Set timescheme options to pass during initialization
     !
     call toptions%set('dt',0.1_rk)
-    call toptions%set('tol',3.e-15_rk)
+    call toptions%set('tol',1.e-14_rk)
     call toptions%set('nsteps',1)
     call toptions%set('nwrite',0)
     call toptions%set('cfl0',1.0_rk)
@@ -74,7 +75,7 @@ subroutine rtest_linearadvection_implicit_convergence()
     !
     ! Set matrixsolver options to pass during initialization
     !
-    call moptions%set('tol',  1.e-15_rk)
+    call moptions%set('tol',  1.e-14_rk)
 
 
     !
@@ -157,6 +158,8 @@ subroutine rtest_linearadvection_implicit_convergence()
     ! number of inner iterations should be two. This is since the solver will execute a second iteration, which
     ! should compute the residual of zero and indicate the system is converged.
     itime = 1
+    print*, 'implicit convergence'
+    print*, chidg%timescheme%newton_iterations%at(itime)
     @assertEqual(2,chidg%timescheme%newton_iterations%at(itime))
 
 

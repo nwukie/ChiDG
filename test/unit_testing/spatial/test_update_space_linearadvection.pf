@@ -24,8 +24,10 @@ subroutine test_update_space_linearadvection()
     type(chidg_t)                   :: chidgA, chidgB
     type(meshdata_t), allocatable   :: meshdataA(:), meshdataB(:)
     class(function_t), allocatable  :: constant, gaussian
-    integer(ik)     :: idom, nterms_s
+    integer(ik)     :: idom, nterms_s, ChiID
     real(rk)        :: tol
+
+
 
 
     tol             = 1.e-15_rk
@@ -115,6 +117,48 @@ subroutine test_update_space_linearadvection()
 
 
 
+
+    !
+    ! Compare initial solution
+    !
+    @assertEqual(chidgA%data%sdata%q%dom(1)%lvecs(1)%vec, chidgB%data%sdata%q%dom(1)%lvecs(1)%vec )
+    @assertEqual(chidgA%data%sdata%q%dom(1)%lvecs(2)%vec, chidgB%data%sdata%q%dom(1)%lvecs(2)%vec )
+    @assertEqual(chidgA%data%sdata%q%dom(1)%lvecs(3)%vec, chidgB%data%sdata%q%dom(2)%lvecs(1)%vec )
+    @assertEqual(chidgA%data%sdata%q%dom(1)%lvecs(4)%vec, chidgB%data%sdata%q%dom(2)%lvecs(2)%vec )
+    @assertEqual(chidgA%data%sdata%q%dom(1)%lvecs(5)%vec, chidgB%data%sdata%q%dom(1)%lvecs(3)%vec )
+    @assertEqual(chidgA%data%sdata%q%dom(1)%lvecs(6)%vec, chidgB%data%sdata%q%dom(1)%lvecs(4)%vec )
+    @assertEqual(chidgA%data%sdata%q%dom(1)%lvecs(7)%vec, chidgB%data%sdata%q%dom(2)%lvecs(3)%vec )
+    @assertEqual(chidgA%data%sdata%q%dom(1)%lvecs(8)%vec, chidgB%data%sdata%q%dom(2)%lvecs(4)%vec )
+    @assertEqual(chidgA%data%sdata%q%dom(1)%lvecs(9)%vec, chidgB%data%sdata%q%dom(1)%lvecs(5)%vec )
+    @assertEqual(chidgA%data%sdata%q%dom(1)%lvecs(10)%vec, chidgB%data%sdata%q%dom(1)%lvecs(6)%vec )
+    @assertEqual(chidgA%data%sdata%q%dom(1)%lvecs(11)%vec, chidgB%data%sdata%q%dom(2)%lvecs(5)%vec )
+    @assertEqual(chidgA%data%sdata%q%dom(1)%lvecs(12)%vec, chidgB%data%sdata%q%dom(2)%lvecs(6)%vec )
+    @assertEqual(chidgA%data%sdata%q%dom(1)%lvecs(13)%vec, chidgB%data%sdata%q%dom(1)%lvecs(7)%vec )
+    @assertEqual(chidgA%data%sdata%q%dom(1)%lvecs(14)%vec, chidgB%data%sdata%q%dom(1)%lvecs(8)%vec )
+    @assertEqual(chidgA%data%sdata%q%dom(1)%lvecs(15)%vec, chidgB%data%sdata%q%dom(2)%lvecs(7)%vec )
+    @assertEqual(chidgA%data%sdata%q%dom(1)%lvecs(16)%vec, chidgB%data%sdata%q%dom(2)%lvecs(8)%vec )
+
+
+
+
+
+
+    !
+    ! Compare interpolation matrices between standard interior and the chimera faces
+    !
+    ChiID = chidgB%data%mesh(2)%faces(1,XI_MIN)%ChiID
+    @assertEqual(chidgA%data%mesh(1)%faces(2,XI_MAX)%gq%face%val(:,:,XI_MAX), chidgB%data%mesh(2)%chimera%recv%data(ChiID)%donor_interpolator%at(1))
+
+    ChiID = chidgB%data%mesh(2)%faces(3,XI_MIN)%ChiID
+    @assertEqual(chidgA%data%mesh(1)%faces(6,XI_MAX)%gq%face%val(:,:,XI_MAX), chidgB%data%mesh(2)%chimera%recv%data(ChiID)%donor_interpolator%at(1))
+
+    ChiID = chidgB%data%mesh(1)%faces(2,XI_MAX)%ChiID
+    @assertEqual(chidgA%data%mesh(1)%faces(3,XI_MIN)%gq%face%val(:,:,XI_MIN), chidgB%data%mesh(1)%chimera%recv%data(ChiID)%donor_interpolator%at(1))
+
+    ChiID = chidgB%data%mesh(1)%faces(4,XI_MAX)%ChiID
+    @assertEqual(chidgA%data%mesh(1)%faces(7,XI_MIN)%gq%face%val(:,:,XI_MIN), chidgB%data%mesh(1)%chimera%recv%data(ChiID)%donor_interpolator%at(1))
+
+
     !
     ! Call update_space
     !
@@ -127,25 +171,44 @@ subroutine test_update_space_linearadvection()
 
 
 
+
+    !
+    ! Compare geometry
+    !
+    @assertEqual(chidgA%data%mesh(1)%elems(1)%coords%vec, chidgB%data%mesh(1)%elems(1)%coords%vec )
+    @assertEqual(chidgA%data%mesh(1)%elems(2)%coords%vec, chidgB%data%mesh(1)%elems(2)%coords%vec )
+    @assertEqual(chidgA%data%mesh(1)%elems(3)%coords%vec, chidgB%data%mesh(2)%elems(1)%coords%vec )
+    @assertEqual(chidgA%data%mesh(1)%elems(4)%coords%vec, chidgB%data%mesh(2)%elems(2)%coords%vec )
+    @assertEqual(chidgA%data%mesh(1)%elems(5)%coords%vec, chidgB%data%mesh(1)%elems(3)%coords%vec )
+    @assertEqual(chidgA%data%mesh(1)%elems(6)%coords%vec, chidgB%data%mesh(1)%elems(4)%coords%vec )
+    @assertEqual(chidgA%data%mesh(1)%elems(7)%coords%vec, chidgB%data%mesh(2)%elems(3)%coords%vec )
+    @assertEqual(chidgA%data%mesh(1)%elems(8)%coords%vec, chidgB%data%mesh(2)%elems(4)%coords%vec )
+
+
+
+
+
+
+
     !
     ! Compare residual vector entries
     !
-    @assertEqual(chidgA%data%sdata%rhs%dom(1)%lvecs(1)%vec, chidgB%data%sdata%rhs%dom(1)%lvecs(1)%vec )
-    @assertEqual(chidgA%data%sdata%rhs%dom(1)%lvecs(2)%vec, chidgB%data%sdata%rhs%dom(1)%lvecs(2)%vec )
-    @assertEqual(chidgA%data%sdata%rhs%dom(1)%lvecs(3)%vec, chidgB%data%sdata%rhs%dom(2)%lvecs(1)%vec )
-    @assertEqual(chidgA%data%sdata%rhs%dom(1)%lvecs(4)%vec, chidgB%data%sdata%rhs%dom(2)%lvecs(2)%vec )
-    @assertEqual(chidgA%data%sdata%rhs%dom(1)%lvecs(5)%vec, chidgB%data%sdata%rhs%dom(1)%lvecs(3)%vec )
-    @assertEqual(chidgA%data%sdata%rhs%dom(1)%lvecs(6)%vec, chidgB%data%sdata%rhs%dom(1)%lvecs(4)%vec )
-    @assertEqual(chidgA%data%sdata%rhs%dom(1)%lvecs(7)%vec, chidgB%data%sdata%rhs%dom(2)%lvecs(3)%vec )
-    @assertEqual(chidgA%data%sdata%rhs%dom(1)%lvecs(8)%vec, chidgB%data%sdata%rhs%dom(2)%lvecs(4)%vec )
-    @assertEqual(chidgA%data%sdata%rhs%dom(1)%lvecs(9)%vec, chidgB%data%sdata%rhs%dom(1)%lvecs(5)%vec )
-    @assertEqual(chidgA%data%sdata%rhs%dom(1)%lvecs(10)%vec, chidgB%data%sdata%rhs%dom(1)%lvecs(6)%vec )
-    @assertEqual(chidgA%data%sdata%rhs%dom(1)%lvecs(11)%vec, chidgB%data%sdata%rhs%dom(2)%lvecs(5)%vec )
-    @assertEqual(chidgA%data%sdata%rhs%dom(1)%lvecs(12)%vec, chidgB%data%sdata%rhs%dom(2)%lvecs(6)%vec )
-    @assertEqual(chidgA%data%sdata%rhs%dom(1)%lvecs(13)%vec, chidgB%data%sdata%rhs%dom(1)%lvecs(7)%vec )
-    @assertEqual(chidgA%data%sdata%rhs%dom(1)%lvecs(14)%vec, chidgB%data%sdata%rhs%dom(1)%lvecs(8)%vec )
-    @assertEqual(chidgA%data%sdata%rhs%dom(1)%lvecs(15)%vec, chidgB%data%sdata%rhs%dom(2)%lvecs(7)%vec )
-    @assertEqual(chidgA%data%sdata%rhs%dom(1)%lvecs(16)%vec, chidgB%data%sdata%rhs%dom(2)%lvecs(8)%vec )
+    @assertEqual(chidgA%data%sdata%rhs%dom(1)%lvecs(1)%vec, chidgB%data%sdata%rhs%dom(1)%lvecs(1)%vec, tol )
+    @assertEqual(chidgA%data%sdata%rhs%dom(1)%lvecs(2)%vec, chidgB%data%sdata%rhs%dom(1)%lvecs(2)%vec, tol )
+    @assertEqual(chidgA%data%sdata%rhs%dom(1)%lvecs(3)%vec, chidgB%data%sdata%rhs%dom(2)%lvecs(1)%vec, tol )
+    @assertEqual(chidgA%data%sdata%rhs%dom(1)%lvecs(4)%vec, chidgB%data%sdata%rhs%dom(2)%lvecs(2)%vec, tol )
+    @assertEqual(chidgA%data%sdata%rhs%dom(1)%lvecs(5)%vec, chidgB%data%sdata%rhs%dom(1)%lvecs(3)%vec, tol )
+    @assertEqual(chidgA%data%sdata%rhs%dom(1)%lvecs(6)%vec, chidgB%data%sdata%rhs%dom(1)%lvecs(4)%vec, tol )
+    @assertEqual(chidgA%data%sdata%rhs%dom(1)%lvecs(7)%vec, chidgB%data%sdata%rhs%dom(2)%lvecs(3)%vec, tol )
+    @assertEqual(chidgA%data%sdata%rhs%dom(1)%lvecs(8)%vec, chidgB%data%sdata%rhs%dom(2)%lvecs(4)%vec, tol )
+    @assertEqual(chidgA%data%sdata%rhs%dom(1)%lvecs(9)%vec, chidgB%data%sdata%rhs%dom(1)%lvecs(5)%vec, tol )
+    @assertEqual(chidgA%data%sdata%rhs%dom(1)%lvecs(10)%vec, chidgB%data%sdata%rhs%dom(1)%lvecs(6)%vec, tol )
+    @assertEqual(chidgA%data%sdata%rhs%dom(1)%lvecs(11)%vec, chidgB%data%sdata%rhs%dom(2)%lvecs(5)%vec, tol )
+    @assertEqual(chidgA%data%sdata%rhs%dom(1)%lvecs(12)%vec, chidgB%data%sdata%rhs%dom(2)%lvecs(6)%vec, tol )
+    @assertEqual(chidgA%data%sdata%rhs%dom(1)%lvecs(13)%vec, chidgB%data%sdata%rhs%dom(1)%lvecs(7)%vec, tol )
+    @assertEqual(chidgA%data%sdata%rhs%dom(1)%lvecs(14)%vec, chidgB%data%sdata%rhs%dom(1)%lvecs(8)%vec, tol )
+    @assertEqual(chidgA%data%sdata%rhs%dom(1)%lvecs(15)%vec, chidgB%data%sdata%rhs%dom(2)%lvecs(7)%vec, tol )
+    @assertEqual(chidgA%data%sdata%rhs%dom(1)%lvecs(16)%vec, chidgB%data%sdata%rhs%dom(2)%lvecs(8)%vec, tol )
 
 
 

@@ -5,6 +5,8 @@ module bc_linearadvection_extrapolate
     use type_mesh,          only: mesh_t
     use type_properties,    only: properties_t
 
+    use type_face_info,     only: face_info_t
+    use type_function_info, only: function_info_t
 
     !> Extrapolation boundary condition 
     !!      - Extrapolate interior variables to be used for calculating the boundary flux.
@@ -35,15 +37,13 @@ contains
     !!  @param[in]      iface   Index of the face being computed
     !!  @param[in]      iblk    Index of the linearization block being computed
     !----------------------------------------------------------
-    subroutine compute(self,mesh,sdata,prop,idom,ielem,iface,iblk)
+    subroutine compute(self,mesh,sdata,prop,face,flux)
         class(linearadvection_extrapolate_t),   intent(inout)   :: self
         type(mesh_t),                           intent(in)      :: mesh(:)
         type(solverdata_t),                     intent(inout)   :: sdata
         class(properties_t),                    intent(inout)   :: prop
-        integer(ik),                            intent(in)      :: idom
-        integer(ik),                            intent(in)      :: ielem
-        integer(ik),                            intent(in)      :: iface
-        integer(ik),                            intent(in)      :: iblk
+        type(face_info_t),                      intent(in)      :: face
+        type(function_info_t),                  intent(in)      :: flux
 
 
 

@@ -17,7 +17,7 @@ module mod_bc
 
     ! IMPORT BOUNDARY CONDITIONS
 !    use bc_periodic,                    only: periodic_t
-!    use bc_linearadvection_extrapolate, only: linearadvection_extrapolate_t
+    use bc_linearadvection_extrapolate, only: linearadvection_extrapolate_t
     use bc_euler_wall,                  only: euler_wall_t
     use bc_euler_totalinlet,            only: euler_totalinlet_t
     use bc_euler_pressureoutlet,        only: euler_pressureoutlet_t
@@ -29,7 +29,7 @@ module mod_bc
 
     ! Instantiate boundary conditions so they can be sourced by the factory
 !    type(periodic_t)                    :: PERIODIC
-!    type(linearadvection_extrapolate_t) :: LINEARADVECTION_EXTRAPOLATE
+    type(linearadvection_extrapolate_t) :: LINEARADVECTION_EXTRAPOLATE
     type(euler_wall_t)                  :: EULER_WALL
     type(euler_totalinlet_t)            :: EULER_TOTALINLET
     type(euler_pressureoutlet_t)        :: EULER_PRESSUREOUTLET
@@ -62,11 +62,11 @@ contains
 !            case ('periodic','Periodic')
 !                allocate(bc, source=PERIODIC, stat=ierr)
 !
-!            ! Linear Advection - extrapolation boundary condition
-!            case ('extrapolate_la','extrapolation_la','Extrapolate_la','Extrapolation_la')
-!                allocate(bc, source=LINEARADVECTION_EXTRAPOLATE, stat=ierr)
-!
-!
+            ! Linear Advection - extrapolation boundary condition
+            case ('extrapolate_la','extrapolation_la','Extrapolate_la','Extrapolation_la')
+                allocate(bc, source=LINEARADVECTION_EXTRAPOLATE, stat=ierr)
+
+
 
             ! Euler - slip wall
             case ('euler_wall','slip_wall','Euler_Wall','Slip_Wall','SlipWall')

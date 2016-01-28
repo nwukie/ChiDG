@@ -147,14 +147,14 @@ subroutine test_update_space_euler()
     !
     ! Compare residual vector entries
     !
-    @assertEqual(chidgA%data%sdata%rhs%dom(1)%lvecs(6)%vec,  chidgB%data%sdata%rhs%dom(1)%lvecs(6)%vec )
-    @assertEqual(chidgA%data%sdata%rhs%dom(1)%lvecs(7)%vec,  chidgB%data%sdata%rhs%dom(2)%lvecs(1)%vec )
-    @assertEqual(chidgA%data%sdata%rhs%dom(1)%lvecs(18)%vec, chidgB%data%sdata%rhs%dom(1)%lvecs(12)%vec )
-    @assertEqual(chidgA%data%sdata%rhs%dom(1)%lvecs(19)%vec, chidgB%data%sdata%rhs%dom(2)%lvecs(7)%vec )
-    @assertEqual(chidgA%data%sdata%rhs%dom(1)%lvecs(30)%vec, chidgB%data%sdata%rhs%dom(1)%lvecs(18)%vec )
-    @assertEqual(chidgA%data%sdata%rhs%dom(1)%lvecs(31)%vec, chidgB%data%sdata%rhs%dom(2)%lvecs(13)%vec )
-    @assertEqual(chidgA%data%sdata%rhs%dom(1)%lvecs(42)%vec, chidgB%data%sdata%rhs%dom(1)%lvecs(24)%vec )
-    @assertEqual(chidgA%data%sdata%rhs%dom(1)%lvecs(43)%vec, chidgB%data%sdata%rhs%dom(2)%lvecs(19)%vec )
+    @assertEqual(chidgA%data%sdata%rhs%dom(1)%lvecs(6)%vec,  chidgB%data%sdata%rhs%dom(1)%lvecs(6)%vec, tol )
+    @assertEqual(chidgA%data%sdata%rhs%dom(1)%lvecs(7)%vec,  chidgB%data%sdata%rhs%dom(2)%lvecs(1)%vec, tol )
+    @assertEqual(chidgA%data%sdata%rhs%dom(1)%lvecs(18)%vec, chidgB%data%sdata%rhs%dom(1)%lvecs(12)%vec, tol )
+    @assertEqual(chidgA%data%sdata%rhs%dom(1)%lvecs(19)%vec, chidgB%data%sdata%rhs%dom(2)%lvecs(7)%vec, tol )
+    @assertEqual(chidgA%data%sdata%rhs%dom(1)%lvecs(30)%vec, chidgB%data%sdata%rhs%dom(1)%lvecs(18)%vec, tol )
+    @assertEqual(chidgA%data%sdata%rhs%dom(1)%lvecs(31)%vec, chidgB%data%sdata%rhs%dom(2)%lvecs(13)%vec, tol )
+    @assertEqual(chidgA%data%sdata%rhs%dom(1)%lvecs(42)%vec, chidgB%data%sdata%rhs%dom(1)%lvecs(24)%vec, tol )
+    @assertEqual(chidgA%data%sdata%rhs%dom(1)%lvecs(43)%vec, chidgB%data%sdata%rhs%dom(2)%lvecs(19)%vec, tol )
 
 
     !

@@ -60,7 +60,7 @@ contains
         !
         ! Send log to file
         !
-        IO_DESTINATION = 'both'
+        IO_DESTINATION = 'file'
 
         !
         ! Initialize chidg environment

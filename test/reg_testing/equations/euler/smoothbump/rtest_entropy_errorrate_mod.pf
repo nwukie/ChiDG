@@ -150,7 +150,8 @@ contains
     @Test
     subroutine rtest_entropy_error_rate(self)
         use mod_kinds,          only: rk, ik
-        use mod_constants,      only: ZERO, THREE, XI_MIN, ETA_MIN, ZETA_MIN, XI_MAX, ETA_MAX, ZETA_MAX
+        use mod_constants,      only: ZERO, THREE, XI_MIN, ETA_MIN, ZETA_MIN, XI_MAX, ETA_MAX, ZETA_MAX, &
+                                      IO_DESTINATION
         use type_chidg,         only: chidg_t
         use type_meshdata,      only: meshdata_t
         use atype_function,     only: function_t
@@ -186,6 +187,7 @@ contains
         timescheme      = 'quasi_newton'
         matrixsolver    = 'fgmres'
         preconditioner  = 'ILU0'
+        IO_DESTINATION  = 'file'
         !------------------------------------------------------------------------------
 
 

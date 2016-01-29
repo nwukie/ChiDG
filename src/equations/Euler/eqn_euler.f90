@@ -47,7 +47,8 @@ contains
     !!   - add equations
     !!   - assign flux components
     !!
-    !!   @author Nathan A. Wukie
+    !!  @author Nathan A. Wukie
+    !!  @date   1/28/2016
     !!
     !--------------------------------------------------------------------------------------------
     subroutine init(self)
@@ -65,7 +66,7 @@ contains
         !
         ! Set equationset name
         !
-        self%name    = 'Euler'
+        call self%set_name("Euler")
 
 
         !
@@ -99,7 +100,7 @@ contains
         call self%add_volume_advective_flux(volume_flux)
 
 
-    end subroutine
+    end subroutine init
     !*********************************************************************************************
 
 

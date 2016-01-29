@@ -33,6 +33,7 @@ module EULER_boundary_average_advective_flux
     !!    sides of the boundary. The average flux is computed as Favg = 1/2(F(Q-) + F(Q+))
     !!
     !!  @author Nathan A. Wukie
+    !!  @date   1/28/2016
     !!
     !--------------------------------------------------------------------------------
     type, extends(boundary_flux_t), public :: EULER_boundary_average_advective_flux_t
@@ -59,6 +60,8 @@ contains
 
     !>   Boundary Flux routine for Euler
     !!
+    !!  @author Nathan A. Wukie
+    !!  @date   1/28/2016
     !!
     !!-------------------------------------------------------------------------------------
     subroutine compute(self,mesh,sdata,prop,face_info,function_info)

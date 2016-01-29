@@ -65,7 +65,7 @@ contains
         !
         ! Set equationset name.
         !
-        self%name = 'Scalar'
+        call self%set_name("Scalar")
 
 
         !

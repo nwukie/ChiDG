@@ -3,9 +3,7 @@ module mod_timestep
     use mod_constants,      only: THIRD
     use type_chidg_data,    only: chidg_data_t
     use type_seed,          only: seed_t
-
     use mod_interpolate,    only: interpolate_element
-
     implicit none
 
 
@@ -16,6 +14,7 @@ contains
     !> Routine to compute the local time-step in each element
     !!
     !!  @author Nathan A. Wukie
+    !!  @date   1/28/2016
     !!
     !!  @param[inout]   domain      domain_t instance containing mesh and solution data
     !!
@@ -121,7 +120,8 @@ contains
         !end associate
 
 
-    end subroutine
+    end subroutine compute_timestep
+    !*************************************************************************************************
 
 
 

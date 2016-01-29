@@ -67,7 +67,7 @@ contains
         !
         ! Set equationset name.
         !
-        self%name = 'DualLinearAdvection'
+        call self%set_name("DualLinearAdvection")
 
         
         !

@@ -16,9 +16,11 @@ contains
 
 
 
-    !>
+    !> Function to compute the entropy error in a domain. Assuming the Euler equations
+    !! and isentropic flow.
     !!
-    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   1/28/2016
     !!
     !!
     !------------------------------------------------------------------------------------
@@ -136,7 +138,7 @@ contains
         error_sum = sqrt(error_sum/vol_sum)
 
 
-    end function
+    end function compute_entropy_error
     !**********************************************************************************************
 
 

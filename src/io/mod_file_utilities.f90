@@ -14,7 +14,8 @@ contains
 
     !>
     !!
-    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   1/28/2016
     !!
     !!
     !!
@@ -68,6 +69,7 @@ contains
     !> Copy source file to target file.
     !!
     !!  @author Nathan A. Wukie
+    !!  @date   1/28/2016
     !!
     !!
     !!
@@ -77,35 +79,51 @@ contains
         character(*),   intent(in)  :: sourcefile
         character(*),   intent(in)  :: targetfile
 
-        integer     :: unit_src, unit_tar, ierr, irec
-        character   :: char
+        integer             :: unit_src, unit_tar, ierr, irec
+        character(len=1)    :: c
 
         
         !
         ! Open files for source and target.
         !
-        open(newunit=unit_src, file=sourcefile, access='direct', status='old', action='read', iostat=ierr, recl=1)
-        open(newunit=unit_tar, file=targetfile, access='direct', status='replace', action='write', iostat=ierr, recl=1)
+        open(newunit=unit_tar, file=targetfile, access='stream', action='write', iostat=ierr)
+        if ( ierr /= 0 ) call chidg_signal(FATAL,"copy_file: error opening target file.")
 
-        
-        !
-        ! Copy file by reading from source, character-by-character and writing to target.
-        !
-        irec=1
-        do
-            read(unit=unit_src, rec=irec, iostat=ierr) char
-            if (ierr /= 0) exit
+        open(newunit=unit_src, file=sourcefile, access='stream', action='read',  iostat=ierr)
+        if ( ierr /= 0 ) call chidg_signal(FATAL,"copy_file: error opening source file.")
 
-            write(unit=unit_tar, rec=irec) char
-            irec = irec + 1
+
+
+        !
+        ! While there is a character coming from the source file, get character write to target file
+        !
+        ierr = 0
+        do while ( ierr == 0 )
+
+            !
+            ! Get from source file
+            !
+            read(unit=unit_src, iostat=ierr) c
+
+            !
+            ! Write to target file
+            !
+            if ( ierr == 0 ) then
+                write(unit_tar) c
+            end if
+
         end do
 
 
+
+
         !
-        ! Close files.
+        ! Close files
         !
         close(unit_src)
         close(unit_tar)
+
+
 
     end subroutine copy_file
     !*************************************************************************************************************
@@ -126,6 +144,7 @@ contains
     !> Delete file.
     !!
     !!  @author Nathan A. Wukie
+    !!  @date   1/28/2016
     !!
     !!
     !!

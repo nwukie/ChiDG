@@ -101,8 +101,8 @@ contains
         !
         ! Set back pressure
         !
-        p_bc = 93000._rk
-        !p_bc = 107000._rk
+        !p_bc = 93000._rk
+        p_bc = 107000._rk
 
 
 

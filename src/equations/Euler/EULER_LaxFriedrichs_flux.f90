@@ -21,11 +21,22 @@ module EULER_LaxFriedrichs_flux
 
     private
 
+
+    !>
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   1/28/2016
+    !!
+    !!
+    !----------------------------------------------------------------------------------
     type, extends(boundary_flux_t), public :: EULER_LaxFriedrichs_flux_t
 
     contains
+
         procedure  :: compute
+
     end type EULER_LaxFriedrichs_flux_t
+    !**********************************************************************************
 
 
 
@@ -46,6 +57,8 @@ contains
     !==========================================================
     !
     !   Boundary Flux routine for Euler
+    !
+    !   TODO: Update with modern interface
     !
     !===========================================================
     subroutine compute(self,mesh,sdata,prop,idom,ielem,iface,iblk,idonor)

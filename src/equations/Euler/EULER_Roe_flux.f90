@@ -25,14 +25,14 @@ module EULER_Roe_flux
 
 
     
-    ! Implementation of Roe's approximate Riemann solver.
-    !
-    ! The formulation used here is from the reference:
-    !   J. Blazek,"Computational Fluid Dynamics: Principles and Applications"
-    !
-    !
-    !
-    !
+    !> Implementation of Roe's approximate Riemann solver.
+    !!
+    !! The formulation used here is from the reference:
+    !!   J. Blazek,"Computational Fluid Dynamics: Principles and Applications"
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   1/28/2016
+    !!
     !------------------------------------------------------------------------------
     type, extends(boundary_flux_t), public :: EULER_Roe_flux_t
 
@@ -61,7 +61,8 @@ contains
 
     !> Compute Roe approximate Riemann upwind flux
     !! 
-    !!   @author Nathan A. Wukie
+    !!  @author Nathan A. Wukie
+    !!  @date   1/28/2016
     !!
     !!---------------------------------------------------------------------------
     subroutine compute(self,mesh,sdata,prop,face_info,function_info)

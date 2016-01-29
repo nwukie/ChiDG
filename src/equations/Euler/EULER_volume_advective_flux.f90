@@ -22,6 +22,7 @@ module EULER_volume_advective_flux
     !> Volume advective flux for Euler equations.
     !!
     !!  @author Nathan A. Wukie
+    !!  @date   1/28/2016
     !!
     !!
     !------------------------------------------------------------------------------
@@ -50,6 +51,8 @@ contains
 
     !> Volume flux routine for Euler equations.
     !!
+    !!  @author Nathan A. Wukie
+    !!  @date   1/28/2016
     !!  
     !!
     !!------------------------------------------------------------------------------
@@ -159,7 +162,8 @@ contains
 
         call integrate_volume_flux(mesh(idom)%elems(ielem),sdata,idom,irhoE,iblk,flux_x,flux_y,flux_z)
 
-    end subroutine
+    end subroutine compute
+    !*********************************************************************************************************
 
 
 

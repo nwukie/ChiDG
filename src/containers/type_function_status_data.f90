@@ -71,23 +71,29 @@ contains
         !
         ! Allocate boundary advective flux status storage
         !
-        nfcn = function_data%nboundary_advective_flux
+        !nfcn = function_data%nboundary_advective_flux
+        nfcn = max(function_data%nboundary_advective_flux, &
+                   function_data%nboundary_diffusive_flux, &
+                   function_data%nvolume_advective_flux,   &
+                   function_data%nvolume_diffusive_flux,   &
+                   function_data%nvolume_advective_source, &
+                   function_data%nvolume_diffusive_source)
+
 
 
 
         ! Allocate
-        allocate(self%function_computed(NFUNCTION_TYPES,nelem,NFACES,nfcn), stat=ierr)
+        allocate(self%function_computed(            NFUNCTION_TYPES,nelem,NFACES,nfcn), stat=ierr)
         if (ierr /= 0) call AllocationError
             
-        allocate(self%function_equation_computed(NFUNCTION_TYPES,nelem,NFACES,nfcn,neqn), stat=ierr)
+        allocate(self%function_equation_computed(   NFUNCTION_TYPES,nelem,NFACES,nfcn,neqn), stat=ierr)
         if (ierr /= 0) call AllocationError
 
-        allocate(self%function_linearized(NFUNCTION_TYPES,nelem,NFACES,nfcn,NBLK), stat=ierr)
+        allocate(self%function_linearized(          NFUNCTION_TYPES,nelem,NFACES,nfcn,NBLK), stat=ierr)
         if (ierr /= 0) call AllocationError
 
-        allocate(self%function_equation_linearized(NFUNCTION_TYPES,nelem,NFACES,nfcn,NBLK,neqn), stat=ierr)
+        allocate(self%function_equation_linearized( NFUNCTION_TYPES,nelem,NFACES,nfcn,NBLK,neqn), stat=ierr)
         if (ierr /= 0) call AllocationError
-
 
 
         ! Initialize

@@ -111,7 +111,7 @@ contains
 
 
         associate(idom => face_info%idomain,  ielem => face_info%ielement, iface => face_info%iface, &
-                  type => function_info%type, ifcn => function_info%ifcn,  iblk => function_info%iblk )
+                  type => function_info%type, ifcn => function_info%ifcn )
 
 
         function_already_computed = self%dom(idom)%function_computed(type,ielem,iface,ifcn)

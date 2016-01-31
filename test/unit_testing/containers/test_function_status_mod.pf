@@ -1,0 +1,504 @@
+module test_function_status_mod
+    use pfunit_mod
+    use mod_kinds,                      only: ik, rk
+    use mod_constants,                  only: XI_MIN, XI_MAX, ETA_MIN, &
+                                              ETA_MAX, ZETA_MIN, ZETA_MAX, &
+                                              NFUNCTION_TYPES, NFACES, NBLK
+    use type_chidg,                     only: chidg_t
+    use type_point,                     only: point_t
+    use type_equationset_function_data, only: equationset_function_data_t
+    use mod_testutils,                  only: meshgen
+
+    use type_face_info,                 only: face_info_t
+    use type_function_info,             only: function_info_t
+    implicit none
+
+
+    !> Setup for testing function_status_t 
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   1/29/2016
+    !!
+    !!
+    !----------------------------------------------------------------------------------
+    @TestCase
+    type, extends(TestCase) :: test_function_status
+
+        type(chidg_t)               :: chidg
+
+    contains
+
+        procedure   :: setUp
+        procedure   :: tearDown
+
+    end type test_function_status
+    !**********************************************************************************
+
+
+
+
+
+
+contains
+
+    !> Set up the test case
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   1/29/2016
+    !!
+    !----------------------------------------------------------------------------------
+    subroutine setUp(this)
+        class(test_function_status),    intent(inout)   :: this
+
+        type(point_t),  allocatable                     ::  pts(:,:,:)
+        integer(ik)                                     ::  nterms_c, nterms_s
+
+        !
+        ! Initialize ChiDG environment
+        !
+        call this%chidg%init('env')
+
+
+        !
+        ! Generate some mesh data. 3x3x3 element block.
+        !
+        call meshgen('333',pts)
+
+
+        !
+        ! Add domain to ChiDG
+        !
+        nterms_c = 8
+        nterms_s = 8
+        call this%chidg%data%add_domain('D_01',pts,nterms_c,'duallinearadvection',nterms_s)
+
+
+        !
+        ! Add boundary conditions to the domain
+        !
+        call this%chidg%data%add_bc('D_01','extrapolate_la',XI_MIN)
+        call this%chidg%data%add_bc('D_01','extrapolate_la',XI_MAX)
+        call this%chidg%data%add_bc('D_01','extrapolate_la',ETA_MIN)
+        call this%chidg%data%add_bc('D_01','extrapolate_la',ETA_MAX)
+        call this%chidg%data%add_bc('D_01','extrapolate_la',ZETA_MIN)
+        call this%chidg%data%add_bc('D_01','extrapolate_la',ZETA_MAX)
+
+    end subroutine setUp
+    !**********************************************************************************
+
+
+
+    !> Tear down the test case
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   1/29/2016
+    !!
+    !----------------------------------------------------------------------------------
+    subroutine tearDown(this)
+        class(test_function_status),    intent(inout)   :: this
+
+        !
+        ! Close ChiDG
+        !
+        call this%chidg%close()
+
+    end subroutine tearDown
+    !**********************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+!>--------------------------------------------------------------------------------
+!!
+!!  @detail The function_status%init procedure is being tested. The test executes the 
+!!          procedure and checks that the contained data structures were all allocated
+!!          and allocated to the correct sizes.
+!!
+!!  @author Nathan A. Wukie
+!!  @date   1/29/2016
+!!
+!--------------------------------------------------------------------------------
+@Test
+subroutine test_function_status__init(this)
+    class(test_function_status),    intent(inout)   :: this
+
+    type(equationset_function_data_t),  allocatable :: function_data(:)
+    integer(ik)                                     :: ndom, nelem, maxfcn, neqn
+
+    !
+    ! Assemble function_data from eqnset instances.
+    !
+    ndom = this%chidg%data%ndomains()
+    allocate(function_data(ndom))
+    function_data(1) = this%chidg%data%eqnset(1)%item%function_data
+
+
+    !
+    ! Initialize the function_status container. THIS IS BEING TESTED.
+    !
+    call this%chidg%data%sdata%function_status%init(this%chidg%data%mesh, function_data)
+
+    nelem  = 3*3*3  ! 3x3x3 elements
+    maxfcn = 2      ! two boundary advective flux components in 'duallinearadvection'
+    neqn   = 2      ! two equations in linear_advection
+
+
+
+
+    ! Test number of domains allocated
+    @assertEqual(ndom,size(this%chidg%data%sdata%function_status%dom))
+
+
+    ! Test 'function_computed(:,:,:,:)' array size
+    @assertEqual(NFUNCTION_TYPES, size(this%chidg%data%sdata%function_status%dom(1)%function_computed,1))
+    @assertEqual(nelem,           size(this%chidg%data%sdata%function_status%dom(1)%function_computed,2))
+    @assertEqual(NFACES,          size(this%chidg%data%sdata%function_status%dom(1)%function_computed,3))
+    @assertEqual(maxfcn,          size(this%chidg%data%sdata%function_status%dom(1)%function_computed,4))
+
+
+    ! Test 'function_equation_computed(:,:,:,:,:)' array size
+    @assertEqual(NFUNCTION_TYPES, size(this%chidg%data%sdata%function_status%dom(1)%function_equation_computed,1))
+    @assertEqual(nelem,           size(this%chidg%data%sdata%function_status%dom(1)%function_equation_computed,2))
+    @assertEqual(NFACES,          size(this%chidg%data%sdata%function_status%dom(1)%function_equation_computed,3))
+    @assertEqual(maxfcn,          size(this%chidg%data%sdata%function_status%dom(1)%function_equation_computed,4))
+    @assertEqual(neqn,            size(this%chidg%data%sdata%function_status%dom(1)%function_equation_computed,5))
+
+
+
+    ! Test 'function_linearized(:,:,:,:,:)' array size
+    @assertEqual(NFUNCTION_TYPES, size(this%chidg%data%sdata%function_status%dom(1)%function_linearized,1))
+    @assertEqual(nelem,           size(this%chidg%data%sdata%function_status%dom(1)%function_linearized,2))
+    @assertEqual(NFACES,          size(this%chidg%data%sdata%function_status%dom(1)%function_linearized,3))
+    @assertEqual(maxfcn,          size(this%chidg%data%sdata%function_status%dom(1)%function_linearized,4))
+    @assertEqual(NBLK,            size(this%chidg%data%sdata%function_status%dom(1)%function_linearized,5))
+
+
+    ! Test 'function_equation_linearized(:,:,:,:,:)' array size
+    @assertEqual(NFUNCTION_TYPES, size(this%chidg%data%sdata%function_status%dom(1)%function_equation_linearized,1))
+    @assertEqual(nelem,           size(this%chidg%data%sdata%function_status%dom(1)%function_equation_linearized,2))
+    @assertEqual(NFACES,          size(this%chidg%data%sdata%function_status%dom(1)%function_equation_linearized,3))
+    @assertEqual(maxfcn,          size(this%chidg%data%sdata%function_status%dom(1)%function_equation_linearized,4))
+    @assertEqual(NBLK,            size(this%chidg%data%sdata%function_status%dom(1)%function_equation_linearized,5))
+    @assertEqual(neqn,            size(this%chidg%data%sdata%function_status%dom(1)%function_equation_linearized,6))
+
+end subroutine test_function_status__init
+!*******************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+!>--------------------------------------------------------------------------------
+!!
+!!  @detail The function_status%clear procedure is being tested. The test initializes 
+!!          the storage in the container to all true values, executes clear, and then
+!!          checks that the storage in the container is all false values.
+!!
+!!  @author Nathan A. Wukie
+!!  @date   1/31/2016
+!!
+!--------------------------------------------------------------------------------
+@Test
+subroutine test_function_status__clear(this)
+    class(test_function_status),    intent(inout)   :: this
+
+
+    type(equationset_function_data_t),  allocatable :: function_data(:)
+    integer(ik)                                     :: ndom 
+
+    !
+    ! Assemble function_data from eqnset instances.
+    !
+    ndom = this%chidg%data%ndomains()
+    allocate(function_data(ndom))
+    function_data(1) = this%chidg%data%eqnset(1)%item%function_data
+
+
+    !
+    ! Initialize the function_status container. 
+    !
+    call this%chidg%data%sdata%function_status%init(this%chidg%data%mesh, function_data)
+
+
+    !
+    ! Set storage to true
+    !
+    this%chidg%data%sdata%function_status%dom(1)%function_computed             = .true.
+    this%chidg%data%sdata%function_status%dom(1)%function_equation_computed    = .true.
+    this%chidg%data%sdata%function_status%dom(1)%function_linearized           = .true.
+    this%chidg%data%sdata%function_status%dom(1)%function_equation_linearized  = .true.
+
+
+    !
+    ! Check that all entries are true
+    !
+    @assertTrue( all(this%chidg%data%sdata%function_status%dom(1)%function_computed) )
+    @assertTrue( all(this%chidg%data%sdata%function_status%dom(1)%function_equation_computed) )
+    @assertTrue( all(this%chidg%data%sdata%function_status%dom(1)%function_linearized) )
+    @assertTrue( all(this%chidg%data%sdata%function_status%dom(1)%function_equation_linearized) )
+
+
+
+    !
+    ! Clear function_status data. THIS IS BEING TESTED.
+    !
+    call this%chidg%data%sdata%function_status%clear()
+
+
+
+    !
+    ! Check that all entries are false.
+    !
+    @assertFalse( any(this%chidg%data%sdata%function_status%dom(1)%function_computed) )
+    @assertFalse( any(this%chidg%data%sdata%function_status%dom(1)%function_equation_computed) )
+    @assertFalse( any(this%chidg%data%sdata%function_status%dom(1)%function_linearized) )
+    @assertFalse( any(this%chidg%data%sdata%function_status%dom(1)%function_equation_linearized) )
+
+
+
+end subroutine test_function_status__clear
+!*******************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+
+!>--------------------------------------------------------------------------------
+!!
+!!  @detail Registed a function computed with function_status%register_function_computed.
+!!          Then, test that the status of the function is returned correctly from 
+!!          function_status%compute_function and function_status%compute_function_equation.
+!!
+!!  @author Nathan A. Wukie
+!!  @date   1/31/2016
+!!
+!--------------------------------------------------------------------------------
+@Test
+subroutine test_function_status__compute(this)
+    class(test_function_status),    intent(inout)   :: this
+
+
+    type(equationset_function_data_t),  allocatable :: function_data(:)
+    integer(ik)                                     :: ndom, ieqn
+
+    logical :: compute_function, compute_function_equation_1, compute_function_equation_2
+
+    type(face_info_t)       :: face_info
+    type(function_info_t)   :: function_info
+
+
+    !
+    ! Assemble function_data from eqnset instances.
+    !
+    ndom = this%chidg%data%ndomains()
+    allocate(function_data(ndom))
+    function_data(1) = this%chidg%data%eqnset(1)%item%function_data
+
+
+    !
+    ! Initialize the function_status container. 
+    !
+    call this%chidg%data%sdata%function_status%init(this%chidg%data%mesh, function_data)
+    call this%chidg%data%sdata%function_status%clear()
+
+
+    !
+    ! Initialize face_info and function_info containers to pass to function_status%compute_function
+    !
+    face_info%idomain  = 1
+    face_info%ielement = 2
+    face_info%iface    = 2
+
+    function_info%type = 1
+    function_info%ifcn = 1
+    function_info%iblk = 5
+
+    ieqn = 2
+
+    !
+    ! Register function as computed.
+    !
+    call this%chidg%data%sdata%function_status%register_function_computed(face_info,function_info,ieqn)
+
+
+    !
+    ! Get status of function. THIS IS BEING TESTED.
+    !
+    compute_function            = this%chidg%data%sdata%function_status%compute_function(face_info,function_info)
+    compute_function_equation_1 = this%chidg%data%sdata%function_status%compute_function_equation(face_info,function_info,1)
+    compute_function_equation_2 = this%chidg%data%sdata%function_status%compute_function_equation(face_info,function_info,2)
+
+
+    
+    !
+    ! Test that compute_function is false, because we set that the function in general had been executed at some point.
+    !
+    @assertFalse(compute_function)
+
+
+    !
+    ! Test that compute_function_equation_1 is true, becuase only ieqn=2 was registered as computed. So if requested, ieqn=1 
+    ! should be computed => compute_function_equation_1 = .true.
+    !
+    @assertTrue(compute_function_equation_1)
+
+
+    !
+    ! Test that compute_function_eqaution_2 is false, because it was registered as computed.
+    !
+    @assertFalse(compute_function_equation_2)
+
+
+end subroutine test_function_status__compute
+!*******************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+!>--------------------------------------------------------------------------------
+!!
+!!  @detail Registed a function computed with function_status%register_function_linearized.
+!!          Then, test that the status of the function is returned correctly from 
+!!          function_status%linearize_function and function_status%linearize_function_equation.
+!!
+!!  @author Nathan A. Wukie
+!!  @date   1/31/2016
+!!
+!--------------------------------------------------------------------------------
+@Test
+subroutine test_function_status__linearize(this)
+    class(test_function_status),    intent(inout)   :: this
+
+
+    type(equationset_function_data_t),  allocatable :: function_data(:)
+    integer(ik)                                     :: ndom, ieqn
+
+    logical :: linearize_function, linearize_function_equation_1, linearize_function_equation_2
+
+    type(face_info_t)       :: face_info
+    type(function_info_t)   :: function_info
+
+
+    !
+    ! Assemble function_data from eqnset instances.
+    !
+    ndom = this%chidg%data%ndomains()
+    allocate(function_data(ndom))
+    function_data(1) = this%chidg%data%eqnset(1)%item%function_data
+
+
+    !
+    ! Initialize the function_status container. 
+    !
+    call this%chidg%data%sdata%function_status%init(this%chidg%data%mesh, function_data)
+    call this%chidg%data%sdata%function_status%clear()
+
+
+    !
+    ! Initialize face_info and function_info containers to pass to function_status%compute_function
+    !
+    face_info%idomain  = 1
+    face_info%ielement = 2
+    face_info%iface    = 2
+
+    function_info%type = 1
+    function_info%ifcn = 1
+    function_info%iblk = 5
+
+    ieqn = 2
+
+    !
+    ! Register function as computed.
+    !
+    call this%chidg%data%sdata%function_status%register_function_linearized(face_info,function_info,ieqn)
+
+
+    !
+    ! Get status of function. THIS IS BEING TESTED.
+    !
+    linearize_function            = this%chidg%data%sdata%function_status%linearize_function(face_info,function_info)
+    linearize_function_equation_1 = this%chidg%data%sdata%function_status%linearize_function_equation(face_info,function_info,1)
+    linearize_function_equation_2 = this%chidg%data%sdata%function_status%linearize_function_equation(face_info,function_info,2)
+
+
+    
+    !
+    ! Test that compute_function is false, because we set that the function in general had been executed at some point.
+    !
+    @assertFalse(linearize_function)
+
+
+    !
+    ! Test that compute_function_equation_1 is true, becuase only ieqn=2 was registered as computed. So if requested, ieqn=1 
+    ! should be computed => compute_function_equation_1 = .true.
+    !
+    @assertTrue(linearize_function_equation_1)
+
+
+    !
+    ! Test that compute_function_eqaution_2 is false, because it was registered as computed.
+    !
+    @assertFalse(linearize_function_equation_2)
+
+
+end subroutine test_function_status__linearize
+!*******************************************************************************
+
+
+
+
+
+
+
+
+
+end module test_function_status_mod

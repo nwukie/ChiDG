@@ -62,7 +62,7 @@ contains
             case ('scalar','Scalar','SCALAR')
                 allocate(eqnset, source=SCALAR)
 
-            case ('linearadvection','LinearAdvection','la','LA')
+            case ('linear_advection','linearadvection','LinearAdvection','la','LA')
                 allocate(eqnset, source=LINEARADVECTION)
 
             case ('duallinearadvection','DualLinearAdvection','dla','DLA')

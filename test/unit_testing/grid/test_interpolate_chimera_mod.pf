@@ -15,7 +15,6 @@ module test_interpolate_chimera_mod
     use mod_hdfio,          only: read_grid_hdf
     use mod_interpolate,    only: interpolate_face, interpolate_element
     use mod_grid_operators, only: initialize_variable
-    use mod_testutils,      only: meshgen
     use mod_chimera
 
 

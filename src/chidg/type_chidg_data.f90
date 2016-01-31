@@ -159,6 +159,7 @@ contains
         idom = self%ndomains_
 
 
+
         !
         ! Resize array storage
         !

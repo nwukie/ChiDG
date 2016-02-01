@@ -20,23 +20,49 @@ module bc_euler_pressureoutlet
     !!      - Extrapolate interior variables to be used for calculating the boundary flux.
     !!  
     !!  @author Nathan A. Wukie
+    !!  @date   1/31/2016
     !!
-    !-------------------------------------------------------------------------------------------
+    !----------------------------------------------------------------------------------------
     type, public, extends(bc_t) :: euler_pressureoutlet_t
 
     contains
-        procedure :: compute    !> bc implementation
+
+        procedure   :: init_spec    !< user-specialized boundary condition initialization
+        procedure   :: compute      !< boundary condition function implementation
+
     end type euler_pressureoutlet_t
-    !-------------------------------------------------------------------------------------------
+    !****************************************************************************************
 
 
 
 
 contains
 
+    !> Specialized initialization for the boundary condition.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   1/31/2016
+    !!
+    !!
+    !!
+    !------------------------------------------------------------------------------------------
+    subroutine init_spec()
+
+
+
+    end subroutine init_spec
+    !*******************************************************************************************
+
+
+
+
+
+
+
     !> Specialized compute routine for Extrapolation Boundary Condition
     !!
     !!  @author Nathan A. Wukie
+    !!  @date   1/31/2016
     !!
     !!  @param[in]      mesh    Mesh data containing elements and faces for the domain
     !!  @param[inout]   sdata   Solver data containing solution vector, rhs, linearization, etc.
@@ -44,6 +70,7 @@ contains
     !!  @param[in]      iface   Index of the face being computed
     !!  @param[in]      iblk    Index of the linearization block being computed
     !!  @param[inout]   prop    properties_t object containing equations and material_t objects
+    !!
     !-------------------------------------------------------------------------------------------
     subroutine compute(self,mesh,sdata,prop,face,flux)
         class(euler_pressureoutlet_t),  intent(inout)   :: self
@@ -101,8 +128,8 @@ contains
         !
         ! Set back pressure
         !
-        !p_bc = 93000._rk
-        p_bc = 107000._rk
+        p_bc = 93000._rk
+        !p_bc = 107000._rk
 
 
 
@@ -195,7 +222,8 @@ contains
 
         end associate
 
-    end subroutine
+    end subroutine compute
+    !**********************************************************************************************
 
 
 

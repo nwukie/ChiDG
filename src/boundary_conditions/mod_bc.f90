@@ -47,9 +47,11 @@ contains
     !!      - Allocate the appropriate boundary condition based on the incoming string specification
     !!
     !!  @author Nathan A. Wukie
+    !!  @date   1/31/2016
     !!
     !!  @param[in]      string  Character string used to select the appropriate boundary condition
     !!  @param[inout]   bc      Allocatable boundary condition
+    !!
     !--------------------------------------------------------------
     subroutine create_bc(string,bc)
         character(*),                   intent(in)      :: string
@@ -117,7 +119,8 @@ contains
         if (ierr /= 0) call AllocationError
 
 
-    end subroutine
+    end subroutine create_bc
+    !*************************************************************************************
 
 
 

@@ -8,10 +8,15 @@ module type_bcwrapper
     !!        of polymorphic entities
     !!
     !!  @author Nathan A. Wukie
-    !---------------------------------------------------
+    !!  @date   1/31/2016
+    !!
+    !-------------------------------------------------------------
     type, public :: bcwrapper_t
+
         class(bc_t), allocatable    :: bc
+
     end type bcwrapper_t
+    !*************************************************************
 
 
 end module type_bcwrapper

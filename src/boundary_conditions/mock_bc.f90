@@ -10,17 +10,25 @@ module mock_bc
     !> Mock boundary condition for testing abstract boundary condition
     !!
     !!  @author Nathan A. Wukie
-    !--------------------------------------------------------
+    !!  @date   1/31/2016
+    !!
+    !----------------------------------------------------------------------
     type, extends(bc_t), public :: bc_m
 
     contains
         procedure   :: compute
         final       :: destructor
     end type bc_m
+    !**********************************************************************
 
 contains
 
-    ! Specialized boundary condition compute procedure.
+    !> Specialized boundary condition compute procedure.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   1/31/2016
+    !!
+    !----------------------------------------------------------------------
     subroutine compute(self,mesh,sdata,prop,idom,ielem,iface,iblk)
             class(bc_m),            intent(inout)   :: self
             type(mesh_t),           intent(in)      :: mesh(:)
@@ -31,10 +39,16 @@ contains
             integer(ik),            intent(in)      :: iface
             integer(ik),            intent(in)      :: iblk
 
-    end subroutine
+    end subroutine compute
+    !**********************************************************************
     
+
+
+
     subroutine destructor(self)
         type(bc_m), intent(in) :: self
     end subroutine
+
+
 
 end module mock_bc

@@ -12,12 +12,21 @@ module bc_periodic
 
 
 
+    !> Periodic boundary condition
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   1/31/2016
+    !!
+    !--------------------------------------------------------------------------------
     type, extends(bc_t) :: periodic_t
 
     contains
+
         procedure init_spec
         procedure compute
+
     end type periodic_t
+    !********************************************************************************
 
 
 
@@ -29,6 +38,7 @@ contains
     !!      - Reset ineighbor to periodic element
     !!
     !!  @author Nathan A. Wukie
+    !!  @date   1/31/2016
     !!
     !!  @param[inout]   mesh    mesh_t containing elements and faces
     !!  @param[inout]   sdata   solverdata_t containing solution(q), rhs, linearization(lin), etc.
@@ -125,6 +135,7 @@ contains
 
 
     end subroutine init_spec
+    !**********************************************************************************
 
 
 
@@ -139,8 +150,9 @@ contains
     !!
     !!
     !!  @author Nathan A. Wukie
+    !!  @date   1/31/2016
     !!
-    !------------------------------------------------------------------
+    !-----------------------------------------------------------------------------------
     subroutine compute(self,mesh,sdata,prop,idom,ielem,iface,iblk)
         class(periodic_t),      intent(inout)   :: self
         type(mesh_t),           intent(in)      :: mesh(:)
@@ -154,6 +166,7 @@ contains
         ! DO NOTHING IN PERIODIC BOUNDARY CONDITION
 
     end subroutine compute
+    !***********************************************************************************
 
 
 
@@ -167,4 +180,4 @@ contains
 
 
 
-end module
+end module bc_periodic

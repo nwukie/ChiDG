@@ -21,12 +21,17 @@ module type_bc
     !!  - contains a list of face indices
     !!
     !!  @author Nathan A. Wukie
+    !!  @date   1/31/2016
     !!
     !-------------------------------------------------
     type, public, abstract :: bc_t
+
+        ! integer(ik), allocatable  :: idom(:)                  !< Indices of domains
         integer(ik), allocatable    :: ielems(:)                !< Indices of elements associated with boundary condition
         integer(ik), allocatable    :: ifaces(:)                !< Indices of the boundary face for elements elems(ielems)
         logical, public             :: isInitialized = .false.  !< Logical switch for indicating the boundary condition initializaiton status
+
+        type(dict_t)                :: options
 
     contains
         procedure :: init                                       !< Boundary condition initialization
@@ -39,7 +44,6 @@ module type_bc
 
 
     abstract interface
-        !subroutine compute_interface(self,mesh,sdata,prop,idom,ielem,iface,iblk)
         subroutine compute_interface(self,mesh,sdata,prop,face,flux)
             use mod_kinds,  only: ik
             import bc_t
@@ -65,11 +69,18 @@ contains
     !> Initialize boundary condition routine
     !!
     !!  @author Nathan A. Wukie
+    !!  @date   1/31/2016
     !!
     !!  @param[in]  mesh    mesh_t object containing elements and faces
     !!  @param[in]  iface   block face index to which the boundary condition is being applied
     !!
     !------------------------------------------------------------------------------------------
+    !
+    ! Proposed new interface:   
+    !   subroutine init(self,mesh,elems,faces,options)
+    !
+    !
+    !
     subroutine init(self,mesh,iface,options)
         class(bc_t),            intent(inout)       :: self
         type(mesh_t),           intent(inout)       :: mesh
@@ -153,12 +164,16 @@ contains
 
 
         !
-        ! Call user-specialized boundary condition initializatio        
+        ! Call user-specialized boundary condition initialization
         !
         call self%init_spec(mesh,iface,options)
 
+
+
         self%isInitialized = .true. ! Set initialization confirmation
+
     end subroutine init
+    !**********************************************************************************************
     
 
 
@@ -172,13 +187,14 @@ contains
     !!
     !!
     !!  @author Nathan A. Wukie
+    !!  @date   1/31/2016
     !!
     !!  @param[in]      mesh    mesh_t defining elements and faces
     !!  @param[inout]   sdata   solverdata_t containing solution, rhs, and linearization(lin) data
     !!  @param[in]      iblk    Block of the linearization for the current element that is being computed (XI_MIN, XI_MAX, eta.)
     !!  @param[inout]   prop    properties_t object containing equationset properties and material_t objects
     !!
-    !--------------------------------------------------------------------
+    !---------------------------------------------------------------------------------------------
     subroutine apply(self,mesh,sdata,prop,idom,iblk)
         class(bc_t),            intent(inout)   :: self
         type(mesh_t),           intent(in)      :: mesh(:)
@@ -216,13 +232,13 @@ contains
             !
             ! For the current boundary element(face), call specialized compute procedure
             !
-            !call self%compute(mesh,sdata,prop,idom,ielem,iface,iblk)
             call self%compute(mesh,sdata,prop,face,flux)
 
         end do
 
 
     end subroutine apply
+    !********************************************************************************************
 
 
 
@@ -234,12 +250,13 @@ contains
     !! and can be overwritten by derived types to implement specialized initiailization details.
     !!
     !!  @author Nathan A. Wukie
+    !!  @date   1/31/2016
     !!
     !!  @param[inout]   mesh        mesh_t object containing elements and faces
     !!  @param[in]      iface       block face index to which the boundary condition is being applied
     !!  @param[in]      options     dictionary object containing boundary condition options
     !!
-    !--------------------------------------------------------------------------------
+    !--------------------------------------------------------------------------------------------
     subroutine init_spec(self,mesh,iface,options)
         class(bc_t),            intent(inout)   :: self
         type(mesh_t),           intent(inout)   :: mesh
@@ -250,6 +267,7 @@ contains
 
 
     end subroutine init_spec
+    !********************************************************************************************
 
 
 

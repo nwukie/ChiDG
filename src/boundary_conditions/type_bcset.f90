@@ -17,6 +17,7 @@ module type_bcset
     !!        can be added.
     !!
     !!  @author Nathan A. Wukie
+    !!  @date   1/31/2016
     !!
     !------------------------------------------------------------------------------------------
     type, public :: bcset_t
@@ -28,7 +29,6 @@ module type_bcset
                                                         !! without SOURCE or MOLD, for which we need a concrete type
 
     contains
-        !procedure :: init    !< Call for initializing storage for boundary conditions
         procedure :: add     !< Call for adding a boundary condition
         procedure :: apply   !< Spatial application of the boundary condition
 
@@ -41,36 +41,14 @@ module type_bcset
 
 contains
 
-    !> Initialize boundary condition routine
-    !!      - Allocate default storage length for boundary condition slots
-    !!
-    !!  @author Nathan A. Wukie
-    !!
-    !------------------------------------------------------------------------------------------
-!    subroutine init(self)
-!        class(bcset_t),     intent(inout)       :: self
-!
-!        integer(ik) :: nbc, ierr
-!
-!        nbc = 6 ! Default number of bc's. Six sides to a block
-!
-!        ! Allocate default number of boundary conditions
-!        allocate(self%bcs(nbc), stat=ierr)
-!        if (ierr /= 0) call AllocationError
-!
-!    end subroutine
-    
-
-
-
-
-
 
     !> Add boundary condition to the boundary condition array
     !!
     !!  @author Nathan A. Wukie
+    !!  @date   1/31/2016
     !!
     !!  @param[in]  bc  Boundary condition that is being added to the list
+    !!  
     !------------------------------------------------------------------------------------------
     subroutine add(self,bc)
         class(bcset_t),     intent(inout)   :: self
@@ -114,27 +92,8 @@ contains
         call move_alloc(temp_bcs,self%bcs)
 
 
-!        !
-!        ! Look for open boundary condition slot
-!        ! If the current bc is allocated then we go to the next one to look for an open slot
-!        !
-!        ibc = 1
-!        do while (allocated(self%bcs(ibc)%bc))
-!            ibc = ibc + 1
-!
-!            ! Make sure we don't go over the bound of allocated slots
-!            if (ibc > size(self%bcs)) then
-!                call signal(FATAL,"bcset%add: Number of boundary conditions exceeds allocated slots")
-!            end if
-!        end do
-!
-!
-!        !
-!        ! Allocate concrete type, sourced from incoming bc
-!        !
-!        allocate(self%bcs(ibc)%bc, source=bc)   ! I think this should source all of the data as well, like an assign.
-
-    end subroutine
+    end subroutine add
+    !******************************************************************************************
 
 
 
@@ -144,11 +103,13 @@ contains
     !>  Call bc_t%apply for each boundary condition in the set
     !!
     !!  @author Nathan A. Wukie
+    !!  @date   1/31/2016
     !!
     !!  @param[inout]   mesh    mesh_t containing elements and faces
     !!  @param[inout]   sdata   solverdata_t object containing solution, rhs, and linearization
     !!  @param[inout]   iblk    integer block direction with respect to which we are computing the linearization
     !!  @param[inout]   prop    properties_t object with equationset properties, and material_t objects
+    !!
     !----------------------------------------------------------------------------------------
     subroutine apply(self,mesh,sdata,prop,idom,iblk)
         class(bcset_t),         intent(inout)   :: self
@@ -174,8 +135,8 @@ contains
 
         end do
 
-    end subroutine
-    !----------------------------------------------------------------------------------------
+    end subroutine apply
+    !******************************************************************************************
 
 
 

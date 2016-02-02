@@ -14,7 +14,7 @@ module fcn_isentropic_vortex
 
 
 
-    !>
+    !>  @TODO NEEDS FIXED
     !!
     !!  @author Nathan A. Wukie
     !!  @date   2/1/2016
@@ -43,9 +43,8 @@ module fcn_isentropic_vortex
 
     contains
 
-        procedure   :: order
-        procedure   :: calc
-        procedure   :: set
+        procedure   :: init
+        procedure   :: compute
 
     end type isentropic_vortex_f
     !********************************************************************************
@@ -54,70 +53,66 @@ module fcn_isentropic_vortex
 
 contains
 
-    subroutine set(self,valstring,val)
-        class(isentropic_vortex_f), intent(inout)   :: self
-        character(*),               intent(in)      :: valstring
-        real(rk),                   intent(in)      :: val
-
-
-        select case (valstring)
-
-            ! Function settings
-            case('uinf','Uinf')
-                self%uinf = val
-            case('vinf','Vinf')
-                self%vinf = val
-            case('winf','Winf')
-                self%winf = val
-            case('beta','Beta')
-                self%beta = val
-
-            
-            case('xo','XO')
-                self%xo = val
-            case('yo','YO')
-                self%yo = val
-            case('zo','ZO')
-                self%zo = val
 
 
 
+    !>
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   2/2/2016
+    !!
+    !-------------------------------------------------------------------------
+    subroutine init(self)
+        class(isentropic_vortex_f),  intent(inout)  :: self
 
-            ! Variables available
-            case('var','Var','variable','Variable')
-                self%ivar = NINT(val)
-
-
-            case default
-                call chidg_signal(FATAL,'gaussian_f%set: Invalid option string')
-        end select
-
-
-    end subroutine
-
-
-    function order(self)
-        class(isentropic_vortex_f), intent(in)   :: self
-        integer(ik)                     :: order
-
-        order = 3
-
-    end function
+        !
+        ! Set function name
+        !
+        self%name = "isentropic vortex  ::  weeeee!"
 
 
+        !
+        ! Set function options to default settings
+        !
+        call self%dict%set('uinf',1._rk)
+        call self%dict%set('vinf',0._rk)
+        call self%dict%set('winf',0._rk)
+        call self%dict%set('beta',0._rk)
+        call self%dict%set('xo',1._rk)
+        call self%dict%set('yo',1._rk)
+        call self%dict%set('zo',1._rk)
 
-    elemental function calc(self,pt)
-        class(isentropic_vortex_f),  intent(in)  :: self
-        type(point_t),               intent(in)  :: pt
-        real(rk)                                 :: calc
+
+    end subroutine init
+    !*************************************************************************
+
+
+
+
+
+
+
+    !>
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   2/2/2016
+    !!
+    !!
+    !-----------------------------------------------------------------------------------------
+    elemental function compute(self,time,coord) result(val)
+        class(isentropic_vortex_f),     intent(in)  :: self
+        real(rk),                       intent(in)  :: time
+        type(point_t),                  intent(in)  :: coord
+
+        real(rk)                                    :: val
 
         real(rk)    :: x,   y,   z, &
                        du, dv, u, v, w, &
                        gam, beta, r, T, rho, p
 
-        x = pt%c1_
-        y = pt%c2_
-        z = pt%c3_
+        x = coord%c1_
+        y = coord%c2_
+        z = coord%c3_
 
         gam = self%gam
         beta = self%beta
@@ -140,27 +135,28 @@ contains
         select case (self%ivar)
             ! RHO
             case (1)
-                calc = rho
+                val = rho
 
             ! RHO-U
             case (2)
-                calc = rho*u
+                val = rho*u
 
             ! RHO-V
             case (3)
-                calc = rho*v
+                val = rho*v
 
             ! RHO-W
             case (4)
-                calc = rho*w
+                val = rho*w
 
             ! RHO-E
             case (5)
-                calc = p/(gam-ONE)  +  HALF*rho*(u*u + v*v + w*w)
+                val = p/(gam-ONE)  +  HALF*rho*(u*u + v*v + w*w)
 
         end select
 
-    end function
+    end function compute
+    !**********************************************************************************
 
 
 end module fcn_isentropic_vortex

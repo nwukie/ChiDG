@@ -1,5 +1,7 @@
-module type_bc_function
+module type_bcfunction
 #include <messenger.h>
+    use mod_kinds,      only: rk, ik
+    use type_function,  only: function_t
     implicit none
     private
 
@@ -11,20 +13,20 @@ module type_bc_function
     !!  @date   2/1/2016
     !!
     !----------------------------------------------------------------------------------------
-    type, public :: bc_function_t
+    type, public :: bcfunction_t
 
         character(len=:),   allocatable :: name_    !< Name of the property the function is applied to. Ex. Static Pressure.
         character(len=:),   allocatable :: type_    !< Property type.  'Required' or 'Optional'
-        character(len=:),   allocatable :: status_  !< Property status. 'Set', 'Empty'
 
-        class(function_t),  allocatable :: fcn
+        class(function_t),  allocatable :: fcn      !< function
 
     contains
 
         procedure   :: set
         procedure   :: get
+        procedure   :: status   !< Indicates if self%fcn component has been allocated
 
-    end type bc_function_t
+    end type bcfunction_t
     !***************************************************************************************
 
 
@@ -36,7 +38,7 @@ contains
 
 
 
-    !>
+    !>  Set boundary condition function information
     !!
     !!  @author Nathan A. Wukie
     !!  @date   2/1/2016
@@ -44,7 +46,7 @@ contains
     !!
     !---------------------------------------------------------------------------------------
     subroutine set(self,comp_str,comp_val)
-        class(bc_function_t),   intent(inout)   :: self
+        class(bcfunction_t),   intent(inout)   :: self
         character(*),           intent(in)      :: comp_str
         character(*),           intent(in)      :: comp_val
 
@@ -57,11 +59,11 @@ contains
             case ('Type','type')
                 self%type_   = comp_val
 
-            case ('Status','status')
-                self%status_ = comp_val
+            case ('Function','function','fcn')
+                call create_function(comp_val,self%fcn)
 
             case default
-                call chidg_signal_one(FATAL,"bc_function%set: Unrecognized component string.",comp_str)
+                call chidg_signal_one(FATAL,"bcfunction%set: Unrecognized component string.",comp_str)
 
         end select
 
@@ -87,7 +89,7 @@ contains
     !!
     !----------------------------------------------------------------------------------------
     function get(self,comp_str) result(comp_val)
-        class(bc_function_t),   intent(inout)   :: self
+        class(bcfunction_t),   intent(inout)   :: self
         character(*),           intent(in)      :: comp_str
 
         character(len=:), allocatable   :: comp_val
@@ -97,14 +99,24 @@ contains
             case ('Name','name')
                 comp_val = self%name_
 
+
+
             case ('Type','type')
                 comp_val = self%type_
 
-            case ('Status','status')
-                comp_val = self%status_
+
+
+            case ('Function','function')
+                if ( allocated(self%fcn) ) then
+                    comp_val = self%fcn%name
+                else
+                    call chidg_signal_one(WARN,"bcfunction%get: component not allocated.",comp_str)
+                end if
+
+
 
             case default
-                call chidg_signal_one(FATAL,"bc_function%set: Unrecognized component string.",comp_str)
+                call chidg_signal_one(FATAL,"bcfunction%get: Unrecognized component string.",comp_str)
 
         end select
 
@@ -120,7 +132,26 @@ contains
 
 
 
+    !> Returns the status of the allocatable function component.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   2/2/2016
+    !!
+    !----------------------------------------------------------------------------------------
+    function status(self) result(fcn_allocated)
+        class(bcfunction_t),    intent(in)  :: self
+
+        logical :: fcn_allocated
+        
+
+        fcn_allocated = allocated(self%fcn)
+    
+
+    end function status
+    !****************************************************************************************
 
 
 
-end module type_bc_function
+
+
+end module type_bcfunction

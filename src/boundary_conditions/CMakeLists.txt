@@ -5,4 +5,6 @@ add_lib_sources(
                 #mock_bc.f90 
                 mod_bc.f90 
                 #bc_periodic.f90
+                type_bcfunction.f90
+                type_bcfunction_set.f90
                 )

@@ -17,6 +17,7 @@ subroutine test_dict_set_one_real()
 
     type(dict_t)    :: dict
     real(rk)        :: val_a_ref, val_b_ref, val_a, val_b
+    logical         :: vala_contained, valb_contained
     
     val_a_ref = 5._rk
     val_b_ref = 10._rk
@@ -29,8 +30,15 @@ subroutine test_dict_set_one_real()
     ! Get values from keys
     call dict%get('val_a',val_a)
 
+    
+    ! Check dict%contains
+    vala_contained = dict%contains('val_a')
+    valb_contained = dict%contains('val_b')
 
     @assertEqual(val_a_ref,val_a)
+
+    @assertTrue(vala_contained)
+    @assertFalse(valb_contained)
 
 end subroutine test_dict_set_one_real
 
@@ -53,6 +61,7 @@ subroutine test_dict_set_two_real()
 
     type(dict_t)    :: dict
     real(rk)        :: val_a_ref, val_b_ref, val_a, val_b
+    logical         :: vala_contained, valb_contained, valc_contained
     
     val_a_ref = 5._rk
     val_b_ref = 10._rk
@@ -68,8 +77,19 @@ subroutine test_dict_set_two_real()
     call dict%get('val_b',val_b)
 
 
+    ! Check dict%contains
+    vala_contained = dict%contains('val_a')
+    valb_contained = dict%contains('val_b')
+    valc_contained = dict%contains('val_c')
+
+
     @assertEqual(val_a_ref,val_a)
     @assertEqual(val_b_ref,val_b)
+
+
+    @assertTrue(vala_contained)
+    @assertTrue(valb_contained)
+    @assertFalse(valc_contained)
 
 end subroutine test_dict_set_two_real
 
@@ -103,6 +123,7 @@ subroutine test_dict_set_one_integer()
 
     type(dict_t)    :: dict
     integer(ik)     :: val_a_ref, val_b_ref, val_a, val_b
+    logical         :: vala_contained, valb_contained
     
     val_a_ref = 5
     val_b_ref = 10
@@ -116,7 +137,17 @@ subroutine test_dict_set_one_integer()
     call dict%get('val_a',val_a)
 
 
+    ! Check dict%contains
+    vala_contained = dict%contains('val_a')
+    valb_contained = dict%contains('val_b')
+
+
+
     @assertEqual(val_a_ref,val_a)
+
+    @assertTrue(vala_contained)
+    @assertFalse(valb_contained)
+
 
 end subroutine test_dict_set_one_integer
 
@@ -139,6 +170,7 @@ subroutine test_dict_set_two_integer()
 
     type(dict_t)    :: dict
     integer(ik)     :: val_a_ref, val_b_ref, val_a, val_b
+    logical         :: vala_contained, valb_contained, valc_contained
     
     val_a_ref = 5
     val_b_ref = 10
@@ -154,8 +186,21 @@ subroutine test_dict_set_two_integer()
     call dict%get('val_b',val_b)
 
 
+    ! Check dict%contains
+    vala_contained = dict%contains('val_a')
+    valb_contained = dict%contains('val_b')
+    valc_contained = dict%contains('val_c')
+
+
     @assertEqual(val_a_ref,val_a)
     @assertEqual(val_b_ref,val_b)
+
+
+    @assertTrue(vala_contained)
+    @assertTrue(valb_contained)
+    @assertFalse(valc_contained)
+
+
 
 end subroutine test_dict_set_two_integer
 

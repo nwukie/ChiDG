@@ -22,20 +22,31 @@ module test_interpolate_chimera_multipledonor_mod
     use DNAD_D
     use mod_DNAD_tools,     only: compute_neighbor_element, compute_neighbor_face
 
-    use fcn_constant,       only: constant_f
+    use type_function,      only: function_t
+    use mod_function,       only: create_function
     implicit none
 
     public  :: test_interpolate_chimera_multipledonor
 
-@TestCase
+    
+    !>
+    !!  @author Nathan A. Wukie
+    !!  @date   2/2/2016
+    !!
+    !-----------------------------------------------------------------------------
+    @TestCase
     type, extends(TestCase) ::  test_interpolate_chimera_multipledonor
+
         type(chidg_t)                   :: chidg
-        type(constant_f)                :: fcn
+        class(function_t),  allocatable :: fcn
 
     contains
+
         procedure   ::  setUp
         procedure   ::  tearDown
+
     end type test_interpolate_chimera_multipledonor
+    !******************************************************************************
 
 
 contains
@@ -110,14 +121,15 @@ contains
         !
         ! Initialized solution to constant values
         !
-        ivar = this%chidg%data%eqnset(1)%item%prop%get_eqn_index('u')    ! Get variable index
+        ivar = this%chidg%data%eqnset(1)%item%prop%get_eqn_index('u')   ! Get variable index
 
 
         !
         ! Initialize variable
         !
-        call this%fcn%set('const',5._rk)                                 ! Set constant function value
-        call initialize_variable(this%chidg%data,ivar,this%fcn)          ! Initialize variable using constant function
+        call create_function(this%fcn,'constant')                       ! Allocate constant function
+        call this%fcn%set('val',5._rk)                                  ! Set constant function value
+        call initialize_variable(this%chidg%data,ivar,this%fcn)         ! Initialize variable using constant function
 
     
     end subroutine
@@ -133,9 +145,9 @@ contains
 
 
     end subroutine
-
-
 !------------------------------------------------------------------------------------------------------
+
+
 
     
     
@@ -146,9 +158,9 @@ contains
     
     
     
-!> Interpolation of modes to surface quadrature nodes. Seeding neighbor element. source=NEIGHBOR. Testing fuction values. 
-!-------------------------------------------------------------------------------------------------------------
-@Test
+    !> Interpolation of modes to surface quadrature nodes. Seeding neighbor element. source=NEIGHBOR. Testing fuction values. 
+    !-------------------------------------------------------------------------------------------------------------
+    @Test
     subroutine test__interpolate_face_chimera_AD_MD__values__idE(self)
         class(test_interpolate_chimera_multipledonor),    intent(inout)   :: self
         
@@ -156,7 +168,7 @@ contains
         type(seed_t)                :: seed
         type(AD_D), allocatable     :: u_gq(:)
         real(rk),   allocatable     :: u_ref(:)
-        real(rk)                    :: tol
+        real(rk)                    :: tol, val
         type(face_info_t)           :: face
         
         
@@ -198,7 +210,8 @@ contains
             
             
             ! Initialize reference
-            u_ref = self%fcn%value_ 
+            call self%fcn%dict%get('val',val)
+            u_ref = val
             
             
             ! Test that interpolation to quadrature nodes from modes to autodiff variables 
@@ -207,16 +220,17 @@ contains
             
         end associate
         
-    end subroutine
+    end subroutine test__interpolate_face_chimera_AD_MD__values__idE
+    !*************************************************************************************************************
     
     
     
     
     
         
-!> Interpolation of modes to surface quadrature nodes. Seeding neighbor element. source=NEIGHBOR. Testing fuction values. 
-!-------------------------------------------------------------------------------------------------------------
-@Test
+    !> Interpolation of modes to surface quadrature nodes. Seeding neighbor element. source=NEIGHBOR. Testing fuction values. 
+    !-------------------------------------------------------------------------------------------------------------
+    @Test
     subroutine test__interpolate_face_chimera_AD_MD__derivatives__idF(self)
         class(test_interpolate_chimera_multipledonor),    intent(inout)   :: self
         
@@ -274,10 +288,8 @@ contains
             end do
         end associate
         
-    end subroutine
-    
-
-
+    end subroutine test__interpolate_face_chimera_AD_MD__derivatives__idF
+    !*************************************************************************************************************
 
 
 
@@ -293,9 +305,9 @@ contains
 
     
     
-!> Interpolation of modes to surface quadrature nodes. Seeding current element. source=NEIGHBOR. Testing fuction values. 
-!-------------------------------------------------------------------------------------------------------------
-@Test
+    !> Interpolation of modes to surface quadrature nodes. Seeding current element. source=NEIGHBOR. Testing fuction values. 
+    !-------------------------------------------------------------------------------------------------------------
+    @Test
     subroutine test__interpolate_face_chimera_AD_MD__values__idG(self)
         class(test_interpolate_chimera_multipledonor),    intent(inout)   :: self
         
@@ -303,7 +315,7 @@ contains
         type(seed_t)                :: seed
         type(AD_D), allocatable     :: u_gq(:)
         real(rk),   allocatable     :: u_ref(:)
-        real(rk)                    :: tol
+        real(rk)                    :: tol, val
         type(face_info_t)           :: face
         
         
@@ -347,7 +359,8 @@ contains
             !
             ! Initialize reference
             !
-            u_ref = self%fcn%value_ 
+            call self%fcn%dict%get('val',val)
+            u_ref = val
             
             
             ! Test that interpolation to quadrature nodes from modes to autodiff variables 
@@ -356,15 +369,16 @@ contains
             
         end associate
         
-    end subroutine
+    end subroutine test__interpolate_face_chimera_AD_MD__values__idG
+    !*********************************************************************************************************
     
     
     
     
     
-!> Interpolation of modes to surface quadrature nodes. Seeding current element. source=NEIGHBOR. Testing fuction derivatives. 
-!-------------------------------------------------------------------------------------------------------------
-@Test
+    !> Interpolation of modes to surface quadrature nodes. Seeding current element. source=NEIGHBOR. Testing fuction derivatives. 
+    !-------------------------------------------------------------------------------------------------------------
+    @Test
     subroutine test__interpolate_face_chimera_AD_MD__derivatives__idH(self)
         class(test_interpolate_chimera_multipledonor),    intent(inout)   :: self
         
@@ -466,22 +480,8 @@ contains
 
         end associate
         
-    end subroutine
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    end subroutine test__interpolate_face_chimera_AD_MD__derivatives__idH
+    !************************************************************************************************************
 
 
 

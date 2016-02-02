@@ -21,8 +21,8 @@ module fcn_xyz
 
     contains
 
-        procedure   :: order
-        procedure   :: calc
+        procedure   :: init
+        procedure   :: compute
 
     end type xyz_f
     !**********************************************************************************
@@ -32,25 +32,57 @@ module fcn_xyz
 contains
 
 
-    function order(self)
-        class(xyz_f), intent(in)  :: self
-        integer(ik)               :: order
 
-        order = 3
+    !>
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   2/2/2016
+    !!
+    !-------------------------------------------------------------------------
+    subroutine init(self)
+        class(xyz_f),  intent(inout)    :: self
 
-    end function
+        !
+        ! Set function name
+        !
+        self%name = "xyz"
+
+
+        !
+        ! Set function options to default settings
+        !
+
+
+    end subroutine init
+    !*************************************************************************
 
 
 
-    elemental function calc(self,pt)
-        class(xyz_f),   intent(in)  :: self
-        type(point_t),  intent(in)  :: pt
-        real(rk)                    :: calc
+
+
+
+
+
+
+    !>
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   2/2/2016
+    !!
+    !!
+    !---------------------------------------------------------------------------------
+    impure elemental function compute(self,time,coord) result(val)
+        class(xyz_f),   intent(inout)  :: self
+        real(rk),       intent(in)  :: time
+        type(point_t),  intent(in)  :: coord
+
+        real(rk)                    :: val
 
         ! f(x) = x * y * z
-        calc = pt%c1_ * pt%c2_ * pt%c3_
+        val = coord%c1_ * coord%c2_ * coord%c3_
 
-    end function
+    end function compute
+    !**********************************************************************************
 
 
 

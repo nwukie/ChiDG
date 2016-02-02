@@ -1,17 +1,18 @@
 module type_bc
 #include <messenger.h>
-    use mod_kinds,          only: rk, ik
-    use mod_constants,      only: XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX, BOUNDARY
-    use type_mesh,          only: mesh_t
-    use type_element,       only: element_t
-    use type_equationset,   only: equationset_t
-    use type_solverdata,    only: solverdata_t
-    use type_dict,          only: dict_t
-    use type_properties,    only: properties_t
-    use type_face_info,     only: face_info_t
-    use type_function_info, only: function_info_t
+    use mod_kinds,              only: rk, ik
+    use mod_constants,          only: XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX, BOUNDARY
+    use type_mesh,              only: mesh_t
+    use type_element,           only: element_t
+    use type_equationset,       only: equationset_t
+    use type_solverdata,        only: solverdata_t
+    use type_dict,              only: dict_t
+    use type_properties,        only: properties_t
+    use type_face_info,         only: face_info_t
+    use type_function_info,     only: function_info_t
+    use type_bcfunction_set,    only: bcfunction_set_t
 
-    use mod_DNAD_tools,     only: compute_seed
+    use mod_DNAD_tools,         only: compute_seed
     implicit none
     private
 
@@ -34,9 +35,14 @@ module type_bc
         logical, public             :: isInitialized = .false.  !< Logical switch for indicating the boundary condition initializaiton status
 
 
-        !type(bc_function_t), allocatable  :: bc_fcn(:)
+        !
+        ! Boundary condition options
+        !
+        !type(bcparameter_set_t),    allocatable :: bcparameters
+        type(bcfunction_set_t),     allocatable :: bcfunctions
 
     contains
+
         procedure :: init                                       !< Boundary condition initialization
         procedure :: init_spec                                  !< Call specialized initialization routine
         procedure :: apply                                      !< Spatial application of the boundary condition

@@ -5,7 +5,6 @@ module fcn_gaussian
     use type_point,     only: point_t
     use type_function,  only: function_t
     implicit none
-    private
 
 
 
@@ -32,27 +31,12 @@ module fcn_gaussian
     !!
     !-------------------------------------------------------------------------------------
     type, extends(function_t), public :: gaussian_f
-        private
 
-
-        ! constants in the gaussian function
-        !
-        ! f(x) = a exp(- (x-b)**2 / 2c**2)
-        !
-
-        real(rk)    :: a = ONE
-        real(rk)    :: b_x = ZERO
-        real(rk)    :: b_y = ZERO
-        real(rk)    :: b_z = ZERO
-
-        !real(rk)    :: c = THREE
-        real(rk)    :: c = ONE
 
     contains
 
-        procedure   :: order
-        procedure   :: calc
-        procedure   :: set
+        procedure   :: init
+        procedure   :: compute
 
     end type gaussian_f
     !*************************************************************************************
@@ -61,61 +45,85 @@ module fcn_gaussian
 
 contains
 
-    subroutine set(self,valstring,val)
+
+
+    !>
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   2/2/2016
+    !!
+    !-------------------------------------------------------------------------
+    subroutine init(self)
         class(gaussian_f),  intent(inout)   :: self
-        character(*),       intent(in)      :: valstring
-        real(rk),           intent(in)      :: val
+
+        !
+        ! Set function name
+        !
+        self%name = "gaussian"
 
 
-        select case (valstring)
-            case('a','A')
-                self%a = val
-            case('b_x','bx','BX','B_X')
-                self%b_x = val
-            case('b_y','by','BY','B_Y')
-                self%b_y = val
-            case('b_z','bz','BZ','B_Z')
-                self%b_z = val
-            case('c','C')
-                self%c = val
-            case default
-                call chidg_signal(FATAL,'gaussian_f%set: Invalid option string')
-        end select
+        !
+        ! Set function options to default settings
+        !
+        call self%dict%set('a',1._rk)
+        call self%dict%set('b_x',0._rk)
+        call self%dict%set('b_y',0._rk)
+        call self%dict%set('b_z',0._rk)
+        call self%dict%set('c',1._rk)
 
 
-    end subroutine
-
-
-    function order(self)
-        class(gaussian_f), intent(in)   :: self
-        integer(ik)                     :: order
-
-        order = 3
-
-    end function
+    end subroutine init
+    !*************************************************************************
 
 
 
-    elemental function calc(self,pt)
-        class(gaussian_f),  intent(in)  :: self
-        type(point_t),      intent(in)  :: pt
-        real(rk)                        :: calc
+
+
+
+
+    !>
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   2/2/2016
+    !!
+    !----------------------------------------------------------------------------------
+    impure elemental function compute(self,time,coord) result(val)
+        class(gaussian_f),  intent(inout)  :: self
+        real(rk),           intent(in)  :: time
+        type(point_t),      intent(in)  :: coord
+
+        real(rk)                        :: val
 
         real(rk)    :: x,   y,   z, &
+                       a,   b_x, b_y, b_z, c, &
                        v_x, v_y, v_z
 
-        x = pt%c1_
-        y = pt%c2_
-        z = pt%c3_
+        !
+        ! Get inputs and function parameters
+        !
+        x = coord%c1_
+        y = coord%c2_
+        z = coord%c3_
 
-        v_x = self%a * exp( - ((x - self%b_x)**TWO) / (TWO * self%c**TWO))
-        v_y = self%a * exp( - ((y - self%b_y)**TWO) / (TWO * self%c**TWO))
-        v_z = self%a * exp( - ((z - self%b_z)**TWO) / (TWO * self%c**TWO))
+        call self%dict%get('a',a)
+        !call self%dict%get('b_x',b_x)
+        !call self%dict%get('b_y',b_y)
+        !call self%dict%get('b_z',b_z)
+        !call self%dict%get('c',c)
 
 
-        calc = v_x * v_y * v_z
+        !
+        ! Compute function
+        !
+        v_x = a * exp( - ((x - b_x)**TWO) / (TWO * c**TWO))
+        v_y = a * exp( - ((y - b_y)**TWO) / (TWO * c**TWO))
+        v_z = a * exp( - ((z - b_z)**TWO) / (TWO * c**TWO))
 
-    end function
+
+        val = v_x * v_y * v_z
+
+    end function compute
+    !***********************************************************************************
 
 
 end module fcn_gaussian

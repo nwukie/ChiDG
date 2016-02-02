@@ -9,9 +9,9 @@ module mod_function
     use fcn_xyz,                only: xyz_f
     use fcn_gaussian,           only: gaussian_f
     use fcn_constant,           only: constant_f
-    use fcn_isentropic_vortex,  only: isentropic_vortex_f
-    use fcn_sod_shock_tube,     only: sod_shock_tube_f
-    use fcn_roe_check,          only: roe_check_f
+!    use fcn_isentropic_vortex,  only: isentropic_vortex_f
+!    use fcn_sod_shock_tube,     only: sod_shock_tube_f
+!    use fcn_roe_check,          only: roe_check_f
     implicit none
 
     ! LIST OF FUNCTION OBJECTS
@@ -21,9 +21,9 @@ module mod_function
     type(xyz_f)                 :: xyz
     type(gaussian_f)            :: gaussian
     type(constant_f)            :: constant
-    type(isentropic_vortex_f)   :: isentropic_vortex
-    type(sod_shock_tube_f)      :: sod_shock_tube
-    type(roe_check_f)           :: roe_check
+!    type(isentropic_vortex_f)   :: isentropic_vortex
+!    type(sod_shock_tube_f)      :: sod_shock_tube
+!    type(roe_check_f)           :: roe_check
 
 
 contains
@@ -32,14 +32,20 @@ contains
     !> Factory method for allocating concrete functions
     !!
     !!  @author Nathan A. Wukie
+    !!  @date   2/2/2016
+    !!
     !!  @param[inout]   fcn     Incoming function base class to be allocated
     !!  @param[in]      str     Function string for selecting concrete type
-    !------------------------------------------------------------------
+    !!
+    !-------------------------------------------------------------------------------------
     subroutine create_function(fcn,str)
         class(function_t), allocatable, intent(inout)   :: fcn
         character(*),                   intent(in)      :: str
 
 
+        !
+        ! Allocate function to concrete type
+        !
         select case (trim(str))
             case ('xsquared')
                 allocate(fcn,source=xsquared)
@@ -59,14 +65,14 @@ contains
             case ('constant')
                 allocate(fcn,source=constant)
 
-            case ('isentropic_vortex','isentropic vortex')
-                allocate(fcn,source=isentropic_vortex)
-
-            case ('sod','sod_shock_tube')
-                allocate(fcn,source=sod_shock_tube)
-
-            case ('roe_check')
-                allocate(fcn,source=roe_check)
+!            case ('isentropic_vortex','isentropic vortex')
+!                allocate(fcn,source=isentropic_vortex)
+!
+!            case ('sod','sod_shock_tube')
+!                allocate(fcn,source=sod_shock_tube)
+!
+!            case ('roe_check')
+!                allocate(fcn,source=roe_check)
 
             case default
                 stop "Error: assign_function -- function string not recognized"
@@ -74,9 +80,14 @@ contains
         end select
 
 
+        !
+        ! Call function initialization for options
+        !
+        call fcn%init()
 
 
-    end subroutine
+    end subroutine create_function
+    !**************************************************************************************
 
 
 

@@ -10,6 +10,7 @@
 !!
 !------------------------------------------------------------------------
 module type_dict
+#include <messenger.h>
     use mod_kinds,      only: rk,ik
     implicit none
     private
@@ -84,36 +85,218 @@ module type_dict
     !-------------------------------------------------
     type, public :: dict_t
 
-        type(llreal_t)   :: llreal
+        type(llreal_t)  :: llreal
         type(llint_t)   :: llint
 
     contains
-        generic :: set => set_real, set_int
-        generic :: get => get_real, get_int
+        procedure           :: print
+        procedure           :: contains
 
-        procedure, private   :: set_real => set_real_dict
-        procedure, private   :: get_real => get_real_dict
+        generic             :: set => set_real, set_int
+        generic             :: get => get_real, get_int
 
-        procedure, private   :: set_int  => set_int_dict
-        procedure, private   :: get_int  => get_int_dict
+        procedure, private  :: set_real => set_real_dict
+        procedure, private  :: get_real => get_real_dict
+
+        procedure, private  :: set_int  => set_int_dict
+        procedure, private  :: get_int  => get_int_dict
+
 
     end type dict_t
     !*************************************************
 
-!    interface set
-!        module procedure set_real, set_int
-!    end interface
 
 
 contains
+    
+
+    !>  Print dictionary contents
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   2/2/2016
+    !!
+    !-------------------------------------------------------------------------------
+    subroutine print(self)
+        class(dict_t),  intent(in), target  :: self
+
+        type(llint_t),  pointer  :: llint  => null()
+        type(llreal_t), pointer  :: llreal => null()
+
+
+    
+        llint  => self%llint
+        llreal => self%llreal
+
+        !
+        ! If the current node contains an initialized key-value pair
+        ! and it happens to be the key we are looking for
+        !
+        do while ( associated(llint) ) 
+
+            !
+            ! Print current node if allocated.
+            !
+            if ( allocated(llint%key) ) then
+                call write_line(llint%key,llint%val)
+            end if
+
+            !
+            ! Move to next node, if it exists.
+            !
+            if ( associated(llint%child) ) then
+                llint => llint%child
+            else
+                llint => null()
+            end if
+
+        end do
+
+
+
+
+
+        !
+        ! If the current node contains an initialized key-value pair
+        ! and it happens to be the key we are looking for
+        !
+        do while ( associated(llreal) ) 
+
+            !
+            ! Print current node if allocated.
+            !
+            if ( allocated(llreal%key) ) then
+                call write_line(llreal%key,llreal%val)
+            end if
+
+            !
+            ! Move to next node, if it exists.
+            !
+            if ( associated(llreal%child) ) then
+                llreal => llreal%child
+            else
+                llreal => null()
+            end if
+
+        end do
+
+
+
+    end subroutine print
+    !********************************************************************************
+
+
+
+
+
+
+
+    !>  Return logical indicating if a key is registered in the dictionary.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   2/2/2016
+    !!
+    !---------------------------------------------------------------------------------
+    function contains(self,key) result(key_status)
+        class(dict_t),  intent(in), target  :: self
+        character(*),   intent(in)          :: key
+
+        type(llint_t),  pointer  :: llint  => null()
+        type(llreal_t), pointer  :: llreal => null()
+
+        logical :: key_status, key_found
+
+
+        llint  => self%llint
+        llreal => self%llreal
+
+
+        key_status = .false.    ! initialize to fail unless key is found
+
+        !
+        ! Traverse nodes in linked-list
+        !
+        do while ( associated(llint) )
+
+            key_found  = .false.
+
+            !
+            ! Check if key matches current node%key
+            ! 
+            if ( allocated(llint%key) ) then
+                key_found = ( key == llint%key )
+            end if
+
+
+
+            if ( key_found ) then
+                ! Key found, exit with .true.
+                key_status = .true.
+                exit
+            else
+                ! Key not yet found, move to next node
+                llint => llint%child
+            end if
+
+        end do
+
+
+
+        !
+        ! Traverse nodes in linked-list
+        !
+        do while ( associated(llreal) )
+
+            key_found  = .false.
+
+            !
+            ! Check if key matches current node%key
+            ! 
+            if ( allocated(llreal%key) ) then
+                key_found = ( key == llreal%key )
+            end if
+
+
+
+            if ( key_found ) then
+                ! Key found, exit with .true.
+                key_status = .true.
+                exit
+            else
+                ! Key not yet found, move to next node
+                llreal => llreal%child
+            end if
+
+        end do
+
+
+
+    end function contains
+    !*********************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
     !
     !   Routines for Dictionary
     !
     subroutine get_real_dict(self,key,val)
-        class(dict_t),    intent(inout) :: self
+        class(dict_t),    intent(in)    :: self
         character(len=*), intent(in)    :: key
-        real(kind=rk),    intent(out)   :: val
+        real(kind=rk),    intent(inout) :: val
 
         call self%llreal%get(key,val)
     end subroutine 
@@ -131,9 +314,9 @@ contains
 
 
     subroutine get_int_dict(self,key,val)
-        class(dict_t),     intent(inout) :: self
+        class(dict_t),     intent(in)    :: self
         character(len=*),  intent(in)    :: key
-        integer(kind=ik),  intent(out)   :: val
+        integer(kind=ik),  intent(inout) :: val
 
         call self%llint%get(key,val)
     end subroutine 
@@ -151,48 +334,59 @@ contains
 
 
 
-    !===============================================
-    !
-    !   Routines for character-real linked list
-    !
-    !===============================================
+    !>  Set key/value pair for real
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   2/2/2016
+    !!
+    !---------------------------------------------------------------------------------------------
     recursive subroutine set_llreal(list,key,val)
-        class(llreal_t),     intent(inout) :: list
-        character(len=*),    intent(in)    :: key
-        real(kind=rk),       intent(in)    :: val
-
-        integer(kind=ik)                :: keylen
+        class(llreal_t),    intent(inout) :: list
+        character(*),       intent(in)    :: key
+        real(rk),           intent(in)    :: val
 
 
-        keylen = len(key)
-
+        !
         ! Check if the current node is an allocated pair
-        if (allocated(list%key)) then
-            ! If it is, check if the key matches what we are looking to set
-            if (list%key /= key) then
-                ! The key does not match what we are looking for,
-                ! so check if there is another node
-                if (.not. associated(list%child)) then
-                    ! There was not another node, so we need to create one
-                    ! in order to set the value
-                    allocate(list%child)
+        !
+        if ( allocated(list%key) ) then
+
+
+            !
+            !check if the key matches what we are looking to set
+            !
+            if ( list%key == key ) then
+                list%val = val
+
+
+            else
+                !
+                ! The key does not match what we are looking for. Check for child node
+                !
+                if ( .not. associated(list%child) ) then
+                    allocate(list%child)    ! Create node for new key/val pair
                 end if
 
+                !
                 ! Now that we have allocated an empty node we can set it's properties
+                !
                 call set_llreal(list%child,key,val)
 
             end if
+
+
         else
-            if (.not. allocated(list%key)) then
-                allocate (character(len=keylen) :: list%key)
-            end if
-        ! So, the current node exists, but the key-value pair hasn't bet allocated
-!            allocate(character(len=keylen) :: list%key)
+            !
+            ! So, the current node exists, but the key-value pair needs set
+            !
             list%key = key
             list%val = val
+
+
         end if
 
-    end subroutine
+    end subroutine set_llreal
+    !************************************************************************************************
 
 
 
@@ -216,8 +410,9 @@ contains
         ! We searched the whole list and found no valid key.
         ! BAD!
         else
-            print*, "Error dict_t: key ", key, "was not found."
-            stop
+            call chidg_signal_one(FATAL,"dict%get: key was not found",key)
+            !print*, "Error dict_t: key ", key, "was not found."
+            !stop
         end if
 
     end subroutine
@@ -318,8 +513,9 @@ contains
         ! We searched the whole list and found no valid key.
         ! BAD!
         else
-            print*, "Error dict_t: key ", key, "was not found."
-            stop
+            call chidg_signal_one(FATAL,"dict%get: key was not found",key)
+            !print*, "Error dict_t: key ", key, "was not found."
+            !stop
         end if
 
     end subroutine

@@ -21,7 +21,8 @@ module test_interpolate_chimera_mod
     use DNAD_D
     use mod_DNAD_tools,     only: compute_neighbor_element, compute_neighbor_face
 
-    use fcn_constant,       only: constant_f
+    use type_function,      only: function_t
+    use mod_function,       only: create_function
     implicit none
 
     public  :: test_interpolate_chimera
@@ -33,7 +34,7 @@ module test_interpolate_chimera_mod
 @TestCase
     type, extends(TestCase) ::  test_interpolate_chimera
         type(chidg_t)                   :: chidg
-        type(constant_f)                :: fcn
+        class(function_t),  allocatable :: fcn
 
     contains
         procedure   ::  setUp
@@ -125,8 +126,9 @@ contains
         !
         ! Initialize variable
         !
-        call this%fcn%set('const',5._rk)                                 ! Set constant function value
-        call initialize_variable(this%chidg%data,ivar,this%fcn)          ! Initialize variable using constant function
+        call create_function(this%fcn,'constant')                       ! Allocate constant function
+        call this%fcn%set('val',5._rk)                                  ! Set constant function value
+        call initialize_variable(this%chidg%data,ivar,this%fcn)         ! Initialize variable using constant function
 
     
     end subroutine
@@ -165,7 +167,7 @@ contains
         type(seed_t)                :: seed
         type(AD_D), allocatable     :: u_gq(:)
         real(rk),   allocatable     :: u_ref(:)
-        real(rk)                    :: tol
+        real(rk)                    :: tol, val
         type(face_info_t)           :: face
         
 
@@ -210,7 +212,8 @@ contains
             
             
             ! Initialize reference
-            u_ref = self%fcn%value_ 
+            call self%fcn%dict%get('val',val)
+            u_ref = val
             
             
             ! Test that interpolation to quadrature nodes from modes to autodiff variables 
@@ -320,7 +323,7 @@ contains
         type(seed_t)                :: seed
         type(AD_D), allocatable     :: u_gq(:)
         real(rk),   allocatable     :: u_ref(:)
-        real(rk)                    :: tol
+        real(rk)                    :: tol, val
         type(face_info_t)           :: face
         
         
@@ -370,7 +373,8 @@ contains
             !
             ! Initialize reference
             !
-            u_ref = self%fcn%value_ 
+            call self%fcn%dict%get('val',val)
+            u_ref = val
             
             
             ! Test that interpolation to quadrature nodes from modes to autodiff variables 

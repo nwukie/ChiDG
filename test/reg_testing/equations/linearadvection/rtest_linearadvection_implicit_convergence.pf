@@ -58,8 +58,8 @@ subroutine rtest_linearadvection_implicit_convergence()
     !
     ! Send log to file
     !
-    IO_DESTINATION = 'file'
-    !IO_DESTINATION = 'both'
+    !IO_DESTINATION = 'file'
+    IO_DESTINATION = 'both'
 
 
     !
@@ -129,9 +129,9 @@ subroutine rtest_linearadvection_implicit_convergence()
     ! Set initial solution
     !
     call create_function(fcn,'gaussian')
-    call fcn%set('bx',0._rk)
-    call fcn%set('by',1.5_rk)
-    call fcn%set('bz',1.5_rk)
+    call fcn%set('b_x',0._rk)
+    call fcn%set('b_y',1.5_rk)
+    call fcn%set('b_z',1.5_rk)
     call fcn%set('c',2.0_rk)
     call initialize_variable(chidg%data,1,fcn)
 

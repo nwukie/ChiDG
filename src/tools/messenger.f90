@@ -4,12 +4,18 @@ module messenger
     implicit none
 
 
-    character(len=:), allocatable   :: line                     ! Line that gets assembled and written
-    character(len=2), parameter     :: default_delimiter = ''   ! Delimiter of line parameters
-    character(len=:), allocatable   :: current_delimiter        ! Delimiter of line parameters
-    integer                         :: unit                     ! Unit of log file
-    integer                         :: max_msg_length = 160     ! Maximum width of message line
+    character(len=:), allocatable   :: line                         ! Line that gets assembled and written
+    character(len=2), parameter     :: default_delimiter = ''       ! Delimiter of line parameters
+    character(len=:), allocatable   :: current_delimiter            ! Delimiter of line parameters
+    integer                         :: unit                         ! Unit of log file
+    integer                         :: max_msg_length = 160         ! Maximum width of message line
+    logical                         :: log_initialized = .false.    ! Status of log file
 
+!    interface
+!        function msg_proc_int()
+!
+!        end function
+!    end interface
 
 
 contains
@@ -22,6 +28,7 @@ contains
     !!  variable that can be used throughout the module to access the log file.
     !!
     !!  @author Nathan A. Wukie
+    !!  @date   2/2/2016
     !!
     !!------------------------------------------------------------------------------------------------------------
     subroutine log_init()
@@ -37,9 +44,10 @@ contains
             open(newunit=unit, file='chidg.log')
         end if
 
+        log_initialized = .true.
 
-    end subroutine
-    !#############################################################################################################
+    end subroutine log_init
+    !*************************************************************************************************************
 
 
 
@@ -49,6 +57,7 @@ contains
     !> Log finalization
     !!
     !!  @author Nathan A. Wukie
+    !!  @date   2/2/2016
     !!
     !!------------------------------------------------------------------------------------------------------------
     subroutine log_finalize()
@@ -64,8 +73,8 @@ contains
             close(unit)
         end if
 
-    end subroutine
-    !#############################################################################################################
+    end subroutine log_finalize
+    !*************************************************************************************************************
 
 
 
@@ -83,6 +92,7 @@ contains
     !! - Fatal error     :: 3
     !!
     !!  @author Nathan A. Wukie
+    !!  @date   2/2/2016
     !!
     !!  @param[in]  pathname    Path and name of the file that the message is coming from.
     !!  @param[in]  linenum     Line number in the file that 'message' was called from.
@@ -92,15 +102,18 @@ contains
     !!  @param[in]  info_two    Optional auxiliary information to be reported.
     !!
     !-------------------------------------------------------------------------------------------------------------
+    !subroutine message(pathname, linenum, sig, msg, info_one, info_two, msg_proc)
     subroutine message(pathname, linenum, sig, msg, info_one, info_two)
-        character(*), intent(in)                    :: pathname
-        integer(ik),  intent(in)                    :: linenum
-        integer(ik),  intent(in)                    :: sig
-        character(*), intent(in)                    :: msg
-        class(*),     intent(in), target, optional  :: info_one
-        class(*),     intent(in), target, optional  :: info_two
+        character(*), intent(in)                        :: pathname
+        integer(ik),  intent(in)                        :: linenum
+        integer(ik),  intent(in)                        :: sig
+        character(*), intent(in)                        :: msg
+        class(*),     intent(in), target,   optional    :: info_one
+        class(*),     intent(in), target,   optional    :: info_two
+        !procedure(msg_proc_int),  optional    :: msg_proc
 
         integer                         :: iaux, pathstart
+        integer(ik)                     :: ierr
         character(len=:), allocatable   :: subpath, temppath
         class(*), pointer               :: auxdata => null()
         character(100)                  :: warnstr, errstr, killstr, genstr, starstr, linechar, dashstr, blankstr
@@ -229,6 +242,17 @@ contains
 
 
 
+!        !
+!        ! If msg procedure is present, call that.
+!        !
+!        if ( present(msg_proc) ) then
+!            !call msg_proc()
+!            ierr = msg_proc()
+!        end if
+!
+
+
+
         !
         ! Print message footer
         !
@@ -252,7 +276,7 @@ contains
 
 
     end subroutine message
-    !##########################################################################################################
+    !**********************************************************************************************************
 
 
 
@@ -267,6 +291,7 @@ contains
     !!
     !!
     !!  @author Nathan A. Wukie
+    !!  @date   2/2/2016
     !!
     !!  @param[in]  a-h         Optional polymorphic variables that can be used to compose a line sent to IO.
     !!  @param[in]  delimiter   Optional delimiter that is used to separate line components. Default is set to ' '
@@ -344,7 +369,7 @@ contains
 
 
     end subroutine write_line
-    !#############################################################################################################
+    !************************************************************************************************************
 
 
 
@@ -356,7 +381,7 @@ contains
     !> Adds data to the module-global 'line' character string
     !!
     !!  @author Nathan A. Wukie
-    !!
+    !!  @date   2/2/2016
     !!
     !!  @param[in]  linedata    Polymorphic data component that gets converted to a string and added to the IO line
     !!  @param[in]  delimiter   Optional delimiter that is used to separate line components. Default is set to ' '
@@ -409,7 +434,7 @@ contains
                 else
                     write(temp, '(E24.14)') linedata
                 end if
-                line = line//trim(temp)//current_delimiter
+                line = line//trim(adjustl(temp))//current_delimiter
 
             type is(real(8))
                 if (linedata > 0.1) then
@@ -417,7 +442,7 @@ contains
                 else
                     write(temp, '(E24.14)') linedata
                 end if
-                line = line//trim(temp)//current_delimiter
+                line = line//trim(adjustl(temp))//current_delimiter
 
             class default
                 print*, 'Error: no IO rule for provided data in add_to_line'
@@ -425,8 +450,8 @@ contains
         end select
 
 
-    end subroutine
-    !#############################################################################################################
+    end subroutine add_to_line
+    !********************************************************************************************************
 
 
 
@@ -513,12 +538,25 @@ contains
             if ( IO_DESTINATION == 'screen' ) then
                 print*, writeline
 
+
             else if ( IO_DESTINATION == 'file' ) then
-                write(unit,*) writeline
+                if (log_initialized) then
+                    write(unit,*) writeline
+                else
+                    call message(__FILE__, __LINE__, 3, "send_line: log file not initialized.")
+                end if
+
+
 
             else if ( IO_DESTINATION == 'both' ) then
-                print*, writeline
-                write(unit,*) writeline
+                if (log_initialized) then
+                    print*, writeline
+                    write(unit,*) writeline
+                else
+                    call message(__FILE__, __LINE__, 3, "send_line: log file not initialized.")
+                end if
+
+
 
             else
                 print*, "Error: value for IO_DESTINATION is invalid. Valid selections are 'screen', 'file', 'both'."
@@ -542,15 +580,7 @@ contains
 
 
     end subroutine send_line
-    !################################################################################################################
-
-
-
-
-
-
-
-
+    !**************************************************************************************************************
 
 
 

@@ -41,19 +41,35 @@ contains
 
 
 
-!    !>
-!    !!
-!    !!
-!    !!
-!    !!
-!    !------------------------------------------------------------------------------------------
-!    
-!
-!
-!
-!
-!
-!
+    !>
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   2/2/2016
+    !!
+    !------------------------------------------------------------------------------------------
+    subroutine add_options(self)    
+        class(euler_pressureoutlet_t),  intent(inout)   :: self
+
+
+        !
+        ! Add functions
+        !
+        call self%bcfunctions%add('Static Pressure','Required')
+
+
+        !
+        ! Add parameters
+        !
+
+
+    end subroutine add_options
+    !******************************************************************************************
+
+
+
+
+
+
 !    !> Report the available options for the boundary condition
 !    !!
 !    !!  @author Nathan A. Wukie
@@ -139,13 +155,12 @@ contains
                         H_bc,   rhoE_bc, gam_m
 
         real(rk),   dimension(mesh(face%idomain)%faces(face%ielement,face%iface)%gq%face%nnodes)   :: p_bc
-        !real(rk)    :: gam_m
 
 
         associate ( idom => face%idomain, ielem => face%ielement, iface => face%iface )
 
             associate ( norms  => mesh(idom)%faces(ielem,iface)%norm,        unorms => mesh(idom)%faces(ielem,iface)%unorm, &
-                        coords => mesh(idom)%faces(ielem,iface)%quad_pts,    q => sdata%q, time => sdata%t )
+                        coords => mesh(idom)%faces(ielem,iface)%quad_pts,    q => sdata%q,      time => sdata%t )
 
 
                 !
@@ -163,8 +178,8 @@ contains
                 !
                 ! Get back pressure
                 !
-                p_bc = self%bc_functions%compute("Static Pressure",time,coords)
-                !p_bc = 93000._rk
+                !p_bc = self%bc_functions%compute("Static Pressure",time,coords)
+                p_bc = 93000._rk
                 !p_bc = 107000._rk
 
 

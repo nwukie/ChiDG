@@ -93,15 +93,15 @@ contains
         !
         call create_function(fcn,'constant')
         
-        call fcn%set('const',1.0_rk)
+        call fcn%set('val',1.0_rk)
         call initialize_variable(this%chidg%data,1,fcn)
-        call fcn%set('const',1.1_rk)
+        call fcn%set('val',1.1_rk)
         call initialize_variable(this%chidg%data,2,fcn)
-        call fcn%set('const',1.2_rk)
+        call fcn%set('val',1.2_rk)
         call initialize_variable(this%chidg%data,3,fcn)
-        call fcn%set('const',1.3_rk)
+        call fcn%set('val',1.3_rk)
         call initialize_variable(this%chidg%data,4,fcn)
-        call fcn%set('const',6.0_rk)
+        call fcn%set('val',6.0_rk)
         call initialize_variable(this%chidg%data,5,fcn)
             
     end subroutine

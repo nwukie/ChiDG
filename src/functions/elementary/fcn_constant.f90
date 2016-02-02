@@ -20,9 +20,8 @@ module fcn_constant
 
     contains
 
-        procedure   :: order
-        procedure   :: calc
-        procedure   :: set
+        procedure   :: init
+        procedure   :: compute
 
     end type constant_f
     !********************************************************************
@@ -32,21 +31,33 @@ module fcn_constant
 contains
 
 
-    !> Set the order of the function. Should eventually be used to help
-    !! determine integration rules.
+
+    !>
     !!
     !!  @author Nathan A. Wukie
-    !!  @date   2/1/2016
+    !!  @date   2/2/2016
     !!
-    !---------------------------------------------------------------------
-    function order(self)
-        class(constant_f), intent(in)  :: self
-        integer(ik)                 :: order
+    !-------------------------------------------------------------------------
+    subroutine init(self)
+        class(constant_f),  intent(inout)   :: self
 
-        order = 3
+        !
+        ! Set function name
+        !
+        self%name = "constant"
 
-    end function
-    !*********************************************************************
+
+        !
+        ! Set function options to default settings
+        !
+        call self%dict%set('val',1._rk)
+
+
+    end subroutine init
+    !*************************************************************************
+
+
+
 
 
 
@@ -58,40 +69,25 @@ contains
     !!  @date   2/1/2016
     !!
     !--------------------------------------------------------------------
-    elemental function calc(self,pt)
-        class(constant_f),  intent(in)  :: self
-        type(point_t),      intent(in)  :: pt
-        real(rk)                        :: calc
+    impure elemental function compute(self,time,coord) result(val)
+        class(constant_f),  intent(inout)  :: self
+        real(rk),           intent(in)  :: time
+        type(point_t),      intent(in)  :: coord
+
+        real(rk)                        :: val
 
         ! f(x,y,z) = const
-        calc = self%value_
+        !val = self%value_
 
-    end function calc
+        call self%dict%get('val',val)
+
+
+    end function compute
     !********************************************************************
 
 
 
 
-
-    !> Function method to set constant value.
-    !!
-    !!  @author Nathan A. Wukie
-    !!  @date   2/1/2016
-    !!
-    !!
-    !-------------------------------------------------------------------
-    subroutine set(self,valstring,val)
-        class(constant_f),  intent(inout)   :: self
-        character(*),       intent(in)      :: valstring
-        real(rk),           intent(in)      :: val
-
-        select case(valstring)
-            case ('val','const','constant')
-                self%value_ = val
-        end select
-
-    end subroutine set
-    !*******************************************************************
 
 
 end module fcn_constant

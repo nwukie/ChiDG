@@ -19,8 +19,8 @@ module fcn_xsquared
 
     contains
 
-        procedure   :: order
-        procedure   :: calc
+        procedure   :: init
+        procedure   :: compute
 
     end type xsquared_f
     !**************************************************************************
@@ -30,25 +30,50 @@ module fcn_xsquared
 contains
 
 
-    function order(self)
-        class(xsquared_f), intent(in)  :: self
-        integer(ik)                 :: order
+    !>
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   2/2/2016
+    !!
+    !-------------------------------------------------------------------------
+    subroutine init(self)
+        class(xsquared_f),  intent(inout)   :: self
 
-        order = 3
+        !
+        ! Set function name
+        !
+        self%name = "x_squared"
 
-    end function
+
+        !
+        ! Set function options to default settings
+        !
+
+
+    end subroutine init
+    !*************************************************************************
 
 
 
-    elemental function calc(self,pt)
-        class(xsquared_f),  intent(in)  :: self
-        type(point_t),      intent(in)  :: pt
-        real(rk)                        :: calc
+
+    !>
+    !!  @author Nathan A. Wukie
+    !!  @date   2/2/2016
+    !!
+    !!
+    !--------------------------------------------------------------------------
+    impure elemental function compute(self,time,coord) result(val)
+        class(xsquared_f),  intent(inout)  :: self
+        real(rk),           intent(in)  :: time
+        type(point_t),      intent(in)  :: coord
+
+        real(rk)                        :: val
 
         ! f(x) = x**2
-        calc = pt%c1_  *  pt%c1_
+        val = coord%c1_  *  coord%c1_
 
-    end function
+    end function compute
+    !**************************************************************************
 
 
 end module fcn_xsquared

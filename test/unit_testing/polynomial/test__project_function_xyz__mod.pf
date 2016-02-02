@@ -14,19 +14,35 @@ module test__project_function_xyz__mod
 
     public  :: test_project_function_xyz
 
-@TestCase
+
+
+    !>  Test fixture for setting up an environment to test the function projection routine.
+    !!  
+    !!  @author Nathan A. Wukie
+    !!  @date   2/2/2016
+    !!
+    !-----------------------------------------------------------------------------------------
+    @TestCase
     type, extends(TestCase) ::  test_project_function_xyz
+
         type(chidg_t)   :: chidg
         integer(ik)     :: nterms_s
+
     contains
+
         procedure   ::  setUp
         procedure   ::  tearDown
+
     end type test_project_function_xyz
+    !*****************************************************************************************
 
 
 contains
+
+
     !> NOTE: make sure to use 'this' instead of 'self' since these are over-writting a derived type 
     !! procedure. The argument names have to match
+    !------------------------------------------------------------------------------------------
     subroutine setUp(this)
         class(test_project_function_xyz),    intent(inout)   :: this
         
@@ -66,8 +82,11 @@ contains
         call this%chidg%data%add_domain('D_01',pts,nterms_c,'scalar',this%nterms_s)
 
         
-    end subroutine
+    end subroutine setUp
+    !***************************************************************************
+
     
+    !---------------------------------------------------------------------------
     subroutine tearDown(this)
         class(test_project_function_xyz),    intent(inout)   :: this
 
@@ -79,14 +98,21 @@ contains
         call this%chidg%close()
 
 
-    end subroutine
+    end subroutine tearDown
+    !***************************************************************************
 
 
 
 
 
-!> Test projection of x^2
-@Test
+    !> Test projection of the function f(t,x,y,z) = x^2
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   2/2/2016
+    !!
+    !!
+    !--------------------------------------------------------------------------------------------
+    @Test
     subroutine test_project__x2(self)
         class(test_project_function_xyz),    intent(inout)   :: self
         real(rk)                                             :: fmodes(self%nterms_s)
@@ -97,7 +123,7 @@ contains
         
         real(rk)                    :: x(npt), y(npt), z(npt), rvals(npt), fvals(npt)
         real(rk)                    :: pvals(npt,self%nterms_s)
-        real(rk)                    :: ref_integral, fintegral, xi,tol
+        real(rk)                    :: ref_integral, fintegral, xi, tol, time
 
         tol = 1.e-12_rk
 
@@ -109,31 +135,47 @@ contains
             y = ZERO
             z = ZERO
             
+
+
             do ipt = 1,npt
-                call pts(ipt)%set(x(ipt),y(ipt),z(ipt)) !> Cartesian points
+                call pts(ipt)%set(x(ipt),y(ipt),z(ipt)) ! Cartesian points
                 xi = -1._rk + 2._rk * x(ipt)/(5._rk)
-                call rpts(ipt)%set(xi,ZERO,ZERO)        !> Reference element points
+                call rpts(ipt)%set(xi,ZERO,ZERO)        ! Reference element points
             end do
             
             
+            !
             ! Compute reference values for function
-            rvals = fcn%calc(pts)
+            !
+            time  = 0._rk
+            rvals = fcn%compute(time,pts)
     
+            
+            !
             ! Compute projection of function onto polynonmial basis
+            !
             call project_function_xyz(fcn,self%nterms_s,elem%coords,fmodes)
     
+
+            !
             ! Evaluation polynomial modes at evaluation points
+            !
             do iterm = 1,size(fmodes)
                 do ipt = 1,npt
                     pvals(ipt,iterm) = PolynomialVal(3,size(fmodes),iterm,rpts(ipt))
                 end do
             end do
     
+
+            !
             ! Reconstruct projected function at evaluation points
+            !
             fvals = matmul(pvals,fmodes)
             
     
+            !
             ! Compute integral of function
+            !
             fintegral = sum(matmul(elem%gq%vol%val, fmodes)  *  elem%gq%vol%weights  *  elem%jinv)
             
         end associate
@@ -149,13 +191,20 @@ contains
         @assertEqual(rvals,fvals,tol)
         
         
-    end subroutine
+    end subroutine test_project__x2
+    !*******************************************************************************************
 
 
 
 
-!> Test projection of y^2
-@Test
+    !> Test projection of the function f(t,x,y,z) = y^2
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   2/2/2016
+    !!
+    !!
+    !--------------------------------------------------------------------------------------------
+    @Test
     subroutine test_project__y2(self)
         class(test_project_function_xyz),    intent(inout)   :: self
         real(rk)                                             :: fmodes(self%nterms_s)
@@ -166,7 +215,7 @@ contains
         
         real(rk)                    :: x(npt), y(npt), z(npt), rvals(npt), fvals(npt)
         real(rk)                    :: pvals(npt,self%nterms_s)
-        real(rk)                    :: ref_integral, fintegral, eta, tol
+        real(rk)                    :: ref_integral, fintegral, eta, tol, time
 
         tol = 1.e-13_rk
 
@@ -187,24 +236,38 @@ contains
         end do
         
         
+        !
         ! Compute reference values for function
-        rvals = fcn%calc(pts)
+        !
+        time  = 0._rk
+        rvals = fcn%compute(time,pts)
 
+
+        !
         ! Compute projection of function onto polynonmial basis
+        !
         call project_function_xyz(fcn,self%nterms_s,elem%coords,fmodes)
 
+
+        !
         ! Evaluation polynomial modes at evaluation points
+        !
         do iterm = 1,size(fmodes)
             do ipt = 1,npt
                 pvals(ipt,iterm) = PolynomialVal(3,size(fmodes),iterm,rpts(ipt))
             end do
         end do
 
+
+        !
         ! Reconstruct projected function at evaluation points
+        !
         fvals = matmul(pvals,fmodes)
         
 
+        !
         ! Compute integral of function
+        !
         fintegral = sum(matmul(elem%gq%vol%val, fmodes)  *  elem%gq%vol%weights  *  elem%jinv)
         
         end associate
@@ -220,12 +283,19 @@ contains
         @assertEqual(rvals,fvals,tol)
         
         
-    end subroutine
+    end subroutine test_project__y2
+    !*****************************************************************************************
 
 
 
-!> Test projection of z^2
-@Test
+    !> Test projection of the function f(t,x,y,z) = z^2
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   2/2/2016
+    !!
+    !!
+    !--------------------------------------------------------------------------------------------
+    @Test
     subroutine test_project__z2(self)
         class(test_project_function_xyz),    intent(inout)   :: self
         real(rk)                                             :: fmodes(self%nterms_s)
@@ -236,7 +306,7 @@ contains
         
         real(rk)                    :: x(npt), y(npt), z(npt), rvals(npt), fvals(npt)
         real(rk)                    :: pvals(npt,self%nterms_s)
-        real(rk)                    :: ref_integral, fintegral, zeta, tol
+        real(rk)                    :: ref_integral, fintegral, zeta, tol, time
 
         tol = 1.e-13_rk
 
@@ -257,24 +327,38 @@ contains
         end do
         
         
+        !
         ! Compute reference values for function
-        rvals = fcn%calc(pts)
+        !
+        time  = 0._rk
+        rvals = fcn%compute(time,pts)
 
+
+        !
         ! Compute projection of function onto polynonmial basis
+        !
         call project_function_xyz(fcn,self%nterms_s,elem%coords,fmodes)
 
+
+        !
         ! Evaluation polynomial modes at evaluation points
+        !
         do iterm = 1,size(fmodes)
             do ipt = 1,npt
                 pvals(ipt,iterm) = PolynomialVal(3,size(fmodes),iterm,rpts(ipt))
             end do
         end do
 
+
+        !
         ! Reconstruct projected function at evaluation points
+        !
         fvals = matmul(pvals,fmodes)
         
 
+        !
         ! Compute integral of function
+        !
         fintegral = sum(matmul(elem%gq%vol%val, fmodes)  *  elem%gq%vol%weights  *  elem%jinv)
         
         end associate
@@ -290,14 +374,21 @@ contains
         @assertEqual(rvals,fvals,tol)
         
         
-    end subroutine
+    end subroutine test_project__z2
+    !****************************************************************************************
 
 
 
 
 
-!> Test projection of (x * y * z)
-@Test
+    !> Test projection of the function f(t,x,y,z) = x * y * z
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   2/2/2016
+    !!
+    !!
+    !--------------------------------------------------------------------------------------------
+    @Test
     subroutine test_project__xyz(self)
         class(test_project_function_xyz),    intent(inout)   :: self
         integer(ik), parameter                               :: npt = 27
@@ -308,7 +399,7 @@ contains
         
         real(rk)                    :: x(npt), y(npt), z(npt), rvals(npt), fvals(npt)
         real(rk)                    :: pvals(npt,self%nterms_s)
-        real(rk)                    :: ref_integral, fintegral, xi, eta, zeta, tol
+        real(rk)                    :: ref_integral, fintegral, xi, eta, zeta, tol, time
 
         tol = 1.e-13_rk
 
@@ -328,33 +419,47 @@ contains
              0._rk, 0.5_rk, 1.0_rk, 0._rk, 0.5_rk, 1.0_rk, 0._rk, 0.5_rk, 1.0_rk]
         
         do ipt = 1,npt
-            call pts(ipt)%set(x(ipt),y(ipt),z(ipt))     !> Cartesian points
+            call pts(ipt)%set(x(ipt),y(ipt),z(ipt))     ! Cartesian points
             
             xi   = -1._rk + 2._rk * x(ipt)/(5._rk)
             eta  = -1._rk + 2._rk * y(ipt)/(1._rk)
             zeta = -1._rk + 2._rk * z(ipt)/(1._rk)
-            call rpts(ipt)%set(xi,eta,zeta)          !> Reference element points
+            call rpts(ipt)%set(xi,eta,zeta)             ! Reference element points
         end do
         
         
+        !
         ! Compute reference values for function
-        rvals = fcn%calc(pts)
+        !
+        time  = 0._rk
+        rvals = fcn%compute(time,pts)
 
+
+        !
         ! Compute projection of function onto polynonmial basis
+        !
         call project_function_xyz(fcn,self%nterms_s,elem%coords,fmodes)
 
+
+        !
         ! Evaluation polynomial modes at evaluation points
+        !
         do iterm = 1,size(fmodes)
             do ipt = 1,npt
                 pvals(ipt,iterm) = PolynomialVal(3,size(fmodes),iterm,rpts(ipt))
             end do
         end do
 
+
+        !
         ! Reconstruct projected function at evaluation points
+        !
         fvals = matmul(pvals,fmodes)
         
 
+        !
         ! Compute integral of function
+        !
         fintegral = sum(matmul(elem%gq%vol%val, fmodes)  *  elem%gq%vol%weights  *  elem%jinv)
         
         end associate
@@ -370,7 +475,8 @@ contains
         @assertEqual(rvals,fvals,tol)
         
         
-    end subroutine
+    end subroutine test_project__xyz
+    !*********************************************************************************************
 
 
 

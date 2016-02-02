@@ -99,9 +99,9 @@ contains
         !
         call create_function(fcn,'constant')
         
-        call fcn%set('const',1.0_rk)
+        call fcn%set('val',1.0_rk)
         call initialize_variable(this%chidg%data,1,fcn)
-        call fcn%set('const',1.0_rk)
+        call fcn%set('val',1.0_rk)
         call initialize_variable(this%chidg%data,2,fcn)
             
     end subroutine

@@ -3,7 +3,7 @@ module fcn_sod_shock_tube
     use mod_kinds,      only: rk,ik
     use mod_constants,  only: ZERO, HALF, ONE, TWO, THREE, FIVE, EIGHT, PI
     use type_point,     only: point_t
-    use atype_function, only: function_t
+    use type_function,  only: function_t
     implicit none
     private
 

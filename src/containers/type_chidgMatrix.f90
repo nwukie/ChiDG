@@ -15,15 +15,13 @@ module type_chidgMatrix
     !!
     !!
     !!  @author Nathan A. Wukie
-    !!
+    !!  @date   2/1/2016
     !!
     !!
     !-----------------------------------------------------------------------------------------------------------
     type, public :: chidgMatrix_t
 
         type(blockmatrix_t), allocatable    :: dom(:)       !< Array of block-matrices. One for each domain
-
-
 
     contains
         ! Initializers
@@ -52,6 +50,7 @@ contains
     !> Subroutine for initializing chidgMatrix_t
     !!
     !!  @author Nathan A. Wukie
+    !!  @date   2/1/2016
     !!
     !!  @param[in]  domains     Array of domain_t instances
     !!  
@@ -83,7 +82,7 @@ contains
 
 
 
-    end subroutine
+    end subroutine initialize
     !***********************************************************************************************************
 
 
@@ -96,7 +95,7 @@ contains
     !> Procedure for storing linearization information
     !!
     !!  @author Nathan A. Wukie
-    !!
+    !!  @date   2/1/2016
     !!
     !!
     !!  @param[in]  integral    Array of modes from the spatial scheme, with embedded partial derivatives for the linearization matrix
@@ -116,7 +115,7 @@ contains
         !
         call self%dom(idom)%store(integral,ielem,iblk,ivar)
 
-    end subroutine
+    end subroutine store
     !***********************************************************************************************************
 
 
@@ -130,6 +129,7 @@ contains
     !> Procedure for stiring linearization information for Chimera faces
     !!
     !!  @author Nathan A. Wukie
+    !!  @date   2/1/2016
     !!
     !!
     !!  @param[in]  integral    Array of modes from the spatial scheme, with embedded partial derivatives for the linearization matrix
@@ -167,7 +167,7 @@ contains
     !> Set all ChiDGMatrix matrix-values to zero
     !!
     !!  @author Nathan A. Wukie
-    !! 
+    !!  @date   2/1/2016
     !! 
     !! 
     !----------------------------------------------------------------------------------------------------------
@@ -185,7 +185,7 @@ contains
         end do
     
     
-    end subroutine 
+    end subroutine clear
     !***********************************************************************************************************
 
 
@@ -201,6 +201,7 @@ contains
     !> ChiDGMatrix destructor.
     !!
     !!  @author Nathan A. Wukie
+    !!  @date   2/1/2016
     !!
     !!
     !-----------------------------------------------------------------------------------------------------------

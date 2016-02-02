@@ -14,6 +14,7 @@ module type_densevector
     !> Container for dense floating-point vector storage.
     !!
     !!  @author Nathan A. Wukie
+    !!  @date   2/1/2016
     !!
     !!
     !!
@@ -116,6 +117,7 @@ contains
     !> Subroutine for initializing dense-vector storage
     !!
     !!  @author Nathan A. Wukie
+    !!  @date   2/1/2016
     !!
     !!  @param[in]  nterms  Number of terms in an expansion
     !!  @param[in]  nvars   Number of equations being represented
@@ -179,8 +181,10 @@ contains
     !> Function returns the stored vector data associated with variable index ivar
     !!
     !!  @author Nathan A. Wukie
+    !!  @date   2/1/2016
     !!
-    !!
+    !!  @param[in]  ivar        Integer index of the variable, for which modes will be returned
+    !!  @result     modes_out   Array of modes from the variable, ivar
     !!
     !-------------------------------------------------------------------------------------------------------
     function getvar(self,ivar) result(modes_out)
@@ -206,7 +210,7 @@ contains
         ! ifort has occasional and inconsistent trouble remapping vec to mat so this access is sometimes wrong.
         ! Pretty difficult to diagnose. Should test as much as possible before reenabling the map
         !modes_out = self%mat(:,ivar)
-    end function
+    end function getvar
     !******************************************************************************************************
 
 
@@ -222,9 +226,13 @@ contains
 
 
 
-    !>
+    !>  Set the modes for a particular variable
     !!
+    !!  @author Nathan A. Wukie
+    !!  @date   2/1/2016
     !!
+    !!  @param[in]  ivar    Integer index of the variable being set
+    !!  @param[in]  vals    Array of mode values that will be set
     !!
     !-------------------------------------------------------------------------------------------------------
     subroutine setvar(self,ivar,vals)
@@ -247,7 +255,7 @@ contains
         self%vec(istart:iend) = vals
 
 
-    end subroutine
+    end subroutine setvar
     !******************************************************************************************************
 
 
@@ -256,9 +264,13 @@ contains
 
 
 
-    !>
+    !>  Return an individual mode from the polynomial expansion of a variable
     !!
+    !!  @author Nathan A. Wukie
+    !!  @date   2/1/2016
     !!
+    !!  @param[in]  ivar    Integer index of the variable
+    !!  @param[in]  iterm   Integer index of the mode in the expansion to be returned
     !!
     !-------------------------------------------------------------------------------------------------------
     function getterm(self,ivar,iterm) result(mode_out)
@@ -280,7 +292,7 @@ contains
         !
         mode_out = self%vec(iterm_g)
 
-    end function
+    end function getterm
     !******************************************************************************************************
 
 
@@ -290,9 +302,14 @@ contains
 
 
 
-    !>
+    !>  Set an individual mode in the polynomial expansion of a variable
     !!
+    !!  @author Nathan A. Wukie
+    !!  @date   2/1/2016
     !!
+    !!  @param[in]  ivar        Integer index of the variable
+    !!  @param[in]  iterm       Integer index of the mode in the expansion to be set
+    !!  @param[in]  mode_in     Floating point value, which is the mode amplitude to be set
     !!
     !-------------------------------------------------------------------------------------------------------
     subroutine setterm(self,ivar,iterm,mode_in)
@@ -314,7 +331,7 @@ contains
         !
         self%vec(iterm_g) = mode_in
 
-    end subroutine
+    end subroutine setterm
     !******************************************************************************************************
 
 
@@ -330,6 +347,7 @@ contains
     !> Function that returns number of entries in block storage
     !!
     !!  @author Nathan A. Wukie
+    !!  @date   2/1/2016
     !!
     !-------------------------------------------------------------------------------------------------------
     function nentries(self) result(n)
@@ -338,7 +356,7 @@ contains
 
         n = size(self%vec)
 
-    end function
+    end function nentries
     !******************************************************************************************************
 
 
@@ -355,6 +373,7 @@ contains
     !> Function that returns nterms_ private component
     !!
     !!  @author Nathan A. Wukie
+    !!  @date   2/1/2016
     !!
     !-------------------------------------------------------------------------------------------------------
     pure function nterms(self) result(nterms_out)
@@ -363,7 +382,7 @@ contains
 
         nterms_out = self%nterms_
 
-    end function
+    end function nterms
     !******************************************************************************************************
 
 
@@ -378,6 +397,7 @@ contains
     !> Function that returns nvars_ private component
     !!
     !!  @author Nathan A. Wukie
+    !!  @date   2/1/2016
     !!
     !-------------------------------------------------------------------------------------------------------
     pure function nvars(self) result(nvars_out)
@@ -386,7 +406,7 @@ contains
 
         nvars_out = self%nvars_
 
-    end function
+    end function nvars
     !******************************************************************************************************
 
 
@@ -405,6 +425,7 @@ contains
     !> Function that returns index of block parent
     !!
     !!  @author Nathan A. Wukie
+    !!  @date   2/1/2016
     !!
     !-------------------------------------------------------------------------------------------------------
     function parent(self) result(par)
@@ -413,7 +434,7 @@ contains
 
         par = self%parent_
 
-    end function
+    end function parent
     !******************************************************************************************************
 
 
@@ -430,8 +451,10 @@ contains
     !> reset index of parent
     !!
     !!  @author Nathan A. Wukie
+    !!  @date   2/1/2016
     !!
     !!  @param[in]  par     Index of new parent element
+    !!
     !-------------------------------------------------------------------------------------------------------
     subroutine reparent(self,par)
         class(densevector_t),   intent(inout)   :: self
@@ -443,7 +466,7 @@ contains
         !
         self%parent_ = par
 
-    end subroutine
+    end subroutine reparent
     !******************************************************************************************************
 
 
@@ -460,7 +483,7 @@ contains
     !> Zero vector storage, self%vec
     !!
     !!  @author Nathan A. Wukie
-    !!
+    !!  @date   2/1/2016
     !!
     !-------------------------------------------------------------------------------------------------------
     subroutine clear(self)

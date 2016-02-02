@@ -22,13 +22,14 @@ contains
     !! operation Ax
     !!
     !!  @author Nathan A. Wukie
+    !!  @date   2/1/2016
     !!
     !!
     !!
     !!
     !!
     !!
-    !--------------------------------------------------------------
+    !----------------------------------------------------------------------------------------------
     function MULT_blockmatrix_blockvector(A,x) result(res)
         type(blockmatrix_t), intent(in) :: A
         type(blockvector_t), intent(in) :: x 
@@ -58,6 +59,7 @@ contains
 
 
     end function MULT_blockmatrix_blockvector
+    !**********************************************************************************************
 
 
 

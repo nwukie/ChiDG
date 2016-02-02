@@ -13,13 +13,14 @@ module type_face
 
 
 
-    !! Face data type
+    !> Face data type
     !!
     !!  NOTE: could be dangerous to declare static arrays of elements using gfortran because
     !!        the compiler doens't have complete finalization rules implemented. Useing allocatables
     !!        seems to work fine.
     !!
     !!  @author Nathan A. Wukie
+    !!  @date   2/1/2016
     !!
     !!
     !-------------------------------------------------------------------------------------------------------------
@@ -100,6 +101,7 @@ contains
     !!  Set integer values for face index, face type, parent element index, neighbor element index and coordinates
     !!
     !!  @author Nathan A. Wukie
+    !!  @date   2/1/2016
     !!
     !!  @param[in] iface        Element face integer (XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX)
     !!  @param[in] ftype        Face type (0 - interior face, 1 - boundary face)
@@ -149,8 +151,10 @@ contains
     !!  Call procedures to compute metrics, normals, and cartesian face coordinates.
     !!
     !!  @author Nathan A. Wukie
+    !!  @date   2/1/2016
     !!
     !!  @param[in] elem     Parent element which many face members point to
+    !!
     !----------------------------------------------------------------------------------------------------------
     subroutine init_sol(self,elem)
         class(face_t),      intent(inout)       :: self
@@ -209,9 +213,7 @@ contains
     !> Compute metric terms and cell jacobians at face quadrature nodes
     !!
     !!  @author Nathan A. Wukie
-    !!
-    !!
-    !!
+    !!  @date   2/1/2016
     !!
     !!
     !---------------------------------------------------------------------------------------------------------
@@ -293,6 +295,7 @@ contains
     !!  NOTE: be sure to differentiate between normals self%norm and unit-normals self%unorm
     !!
     !!  @author Nathan A. Wukie
+    !!  @date   2/1/2016
     !!
     !------------------------------------------------------------------------------------------------------
     subroutine compute_quadrature_normals(self)
@@ -394,8 +397,7 @@ contains
     !> Compute cartesian coordinates at face quadrature nodes
     !!
     !!  @author Nathan A. Wukie
-    !!
-    !!
+    !!  @date   2/1/2016
     !!
     !!
     !!
@@ -436,7 +438,7 @@ contains
     !> Return neighbor element index
     !!
     !!  @author Nathan A. Wukie
-    !!
+    !!  @date   2/1/2016
     !!
     !!
     !!
@@ -460,8 +462,7 @@ contains
     !> Return neighbor face index
     !!
     !!  @author Nathan A. Wukie
-    !!
-    !!
+    !!  @date   2/1/2016
     !!
     !!
     !-----------------------------------------------------------------------------------------------------------

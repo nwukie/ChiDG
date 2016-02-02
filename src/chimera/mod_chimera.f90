@@ -2,6 +2,7 @@
 !! interfaces.
 !!
 !!  @author Nathan A. Wukie
+!!  @date   2/1/2016
 !!
 !!
 !---------------------------------------------------------------
@@ -43,6 +44,7 @@ contains
     !! face and it has not been assigned a boundary condition.
     !!
     !!  @author Nathan A. Wukie
+    !!  @date   2/1/2016
     !!
     !!  @param[inout]   mesh    Array of mesh types. One for each domain.
     !!
@@ -171,6 +173,7 @@ contains
     !! and donor_element indices.
     !!
     !!  @author Nathan A. Wukie
+    !!  @date   2/1/2016
     !!
     !!  @parma[in]  mesh    Array of mesh_t instances
     !!
@@ -363,6 +366,7 @@ contains
     !> compute the donor domain and element for a given quadrature node.
     !!
     !!  @author Nathan A. Wukie
+    !!  @date   2/1/2016
     !!
     !!  @param[in]      mesh            Array of mesh_t instances
     !!  @param[in]      gq_node         GQ point that needs to find a donor
@@ -648,6 +652,7 @@ contains
     !! These matrices get stored in mesh(idom)%chimera%recv%data(ChiID)%donor_interpolator
     !!
     !!  @author Nathan A. Wukie
+    !!  @date   2/1/2016
     !!
     !-----------------------------------------------------------------------------------------------------------------
     subroutine compute_chimera_interpolators(mesh)

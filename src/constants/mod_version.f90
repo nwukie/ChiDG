@@ -1,5 +1,9 @@
 !> Module containing version information for solvers, formats, etc.
-
+!!
+!!  @author Nathan A. Wukie
+!!  @date   2/1/2016
+!!
+!---------------------------------------------------------------------
 module mod_version
     implicit none
 

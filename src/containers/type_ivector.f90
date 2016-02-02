@@ -6,33 +6,38 @@ module type_ivector
 
 
 
+    !>  Vector container for storing dynamically sized arrays of integers.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   2/1/2016
+    !!
+    !!
+    !-----------------------------------------------------------------------------------------
     type, public :: ivector_t
-        integer(ik)             :: size_        = 0
-        integer(ik)             :: capacity_    = 0
-        integer(ik)             :: buffer_      = 20
 
-
-
-
-        integer(ik),   allocatable :: data_(:)
+        integer(ik)                 :: size_        = 0
+        integer(ik)                 :: capacity_    = 0
+        integer(ik)                 :: buffer_      = 20
+        integer(ik),   allocatable  :: data_(:)
 
     contains
-        procedure, public   :: size     ! return the number of stored elements
-        procedure, public   :: capacity ! return the current allocated capacity
-        procedure, public   :: loc      ! return the location of a stored value
+        procedure, public   :: size     !< return the number of stored elements
+        procedure, public   :: capacity !< return the current allocated capacity
+        procedure, public   :: loc      !< return the location of a stored value
 
 
-        !< Data modifiers
+        ! Data modifiers
         procedure, public   :: push_back
         procedure, public   :: clear
         procedure, private  :: increase_capacity
 
 
-        !< Data accessors
+        ! Data accessors
         procedure, public   :: at       !< return data from element ivector%at(ielem)
         procedure, public   :: data     !< return full data vector
 
     end type ivector_t
+    !*****************************************************************************************
 
 
 
@@ -43,32 +48,39 @@ contains
     !> This function returns the number of elements stored in the container
     !!
     !!  @author Nathan A. Wukie
+    !!  @date   2/1/2016
     !!
     !!
-    !-------------------------------------------------------------------------
+    !-----------------------------------------------------------------------------------------
     function size(self) result(res)
         class(ivector_t),   intent(in)  :: self
 
         integer(ik) :: res
 
         res = self%size_
-    end function
+    end function size
+    !*****************************************************************************************
+
+
+
 
 
 
     !> This function returns the total capacity of the container to store elements
     !!
     !!  @author Nathan A. Wukie
+    !!  @date   2/1/2016
     !!
     !!
-    !-------------------------------------------------------------------------
+    !----------------------------------------------------------------------------------------
     function capacity(self) result(res)
         class(ivector_t),   intent(in)  :: self
 
         integer(ik) :: res
 
         res = self%capacity_
-    end function
+    end function capacity
+    !*****************************************************************************************
 
 
 
@@ -88,8 +100,9 @@ contains
     !> This function returns the location of a given value. If not found, returns 0
     !!
     !!  @author Nathan A. Wukie
+    !!  @date   2/1/2016
     !!
-    !--------------------------------------------------------------------------
+    !-------------------------------------------------------------------------------------------
     function loc(self,val) result(res)
         class(ivector_t),   intent(in)  :: self
         integer(ik),        intent(in)  :: val
@@ -106,7 +119,8 @@ contains
 
         end do
 
-    end function
+    end function loc
+    !*******************************************************************************************
 
 
 
@@ -115,6 +129,7 @@ contains
     !> Store element at end of vector
     !!
     !!  @author Nathan A. Wukie
+    !!  @date   2/1/2016
     !!
     !!
     !-------------------------------------------------------------------------------------------
@@ -149,6 +164,7 @@ contains
 
 
     end subroutine push_back
+    !********************************************************************************************
 
 
 
@@ -161,9 +177,10 @@ contains
     !> Clear container contents
     !!
     !!  @author Nathan A. Wukie
+    !!  @date   2/1/2016
     !!
     !!
-    !-------------------------------------------------------------------------
+    !--------------------------------------------------------------------------------------------
     subroutine clear(self)
         class(ivector_t),   intent(inout)   :: self
 
@@ -173,6 +190,8 @@ contains
         deallocate(self%data_)
 
     end subroutine clear
+    !*********************************************************************************************
+
 
 
 
@@ -186,6 +205,7 @@ contains
     !> Access element at index location
     !!
     !!  @author Nathan A. Wukie
+    !!  @date   2/1/2016
     !!
     !!
     !----------------------------------------------------------------------------------------
@@ -210,7 +230,8 @@ contains
         !
         res = self%data_(index)
 
-    end function
+    end function at
+    !****************************************************************************************
 
 
 
@@ -219,6 +240,7 @@ contains
     !> Access entire data vector
     !!
     !!  @author Nathan A. Wukie
+    !!  @date   2/1/2016
     !!
     !!
     !-----------------------------------------------------------------------------------------
@@ -239,7 +261,8 @@ contains
         res = self%data_(1:size)
 
 
-    end function
+    end function data
+    !*****************************************************************************************
 
 
 
@@ -256,6 +279,7 @@ contains
     !> Increase the storage capacity of the vector by a buffer size predefined in the container
     !!
     !!  @author Nathan A. Wukie
+    !!  @date   2/1/2016
     !!
     !!
     !------------------------------------------------------------------------------------------
@@ -300,6 +324,7 @@ contains
 
 
     end subroutine increase_capacity
+    !*****************************************************************************************
 
 
 

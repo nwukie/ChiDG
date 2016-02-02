@@ -14,9 +14,14 @@ module atype_fluid
 
     contains
         generic, public                     :: compute_pressure => compute_pressure_ad, compute_pressure_real
+        generic, public                     :: compute_gamma    => compute_gamma_ad,    compute_gamma_real
+
         procedure(compute_ad),   deferred   :: compute_pressure_ad
         procedure(compute_real), deferred   :: compute_pressure_real
-        procedure(compute_ad),   deferred   :: compute_gamma
+
+        procedure(compute_ad),   deferred   :: compute_gamma_ad
+        procedure(compute_real), deferred   :: compute_gamma_real
+
     end type fluid_t
     !---------------------------------------------------------------
 

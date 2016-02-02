@@ -15,7 +15,7 @@ program driver
     use mod_constants,          only: XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX, ZERO
     use type_chidg,             only: chidg_t
     use mod_grid_operators,     only: initialize_variable
-    use atype_function,         only: function_t
+    use type_function,          only: function_t
     use type_dict,              only: dict_t
     use mod_function,           only: create_function
     use mod_tecio,              only: write_tecio_variables

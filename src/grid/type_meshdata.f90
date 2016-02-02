@@ -7,10 +7,10 @@ module type_meshdata
     !> Data type for returning mesh-data from a file-read routine
     !!
     !!  @author Nathan A. Wukie
+    !!  @date   2/1/2016
     !!
     !!
-    !!
-    !----------------------------------------------------------------------
+    !-----------------------------------------------------------------------------------------
     type, public :: meshdata_t
 
         character(len=:),   allocatable :: name             !< Name of the current block
@@ -19,6 +19,7 @@ module type_meshdata
         integer(ik)                     :: proc             !< Integer specifying the processor assignment
 
     end type meshdata_t
+    !*****************************************************************************************
 
 
 

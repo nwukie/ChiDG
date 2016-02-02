@@ -9,6 +9,7 @@ module type_chimera
     !! Holds chimera send/receive sets which are used to facilitate inter-domain communication
     !!
     !!  @author Nathan A. Wukie
+    !!  @date   2/1/2016
     !!
     !------------------------------------------------------------------------------------------------
     type, public :: chimera_t

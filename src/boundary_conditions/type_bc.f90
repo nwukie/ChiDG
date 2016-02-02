@@ -16,6 +16,8 @@ module type_bc
     private
 
 
+
+
     !> Abstract base-type for boundary conditions
     !!  - contains a list of associated element indices
     !!  - contains a list of face indices
@@ -23,15 +25,16 @@ module type_bc
     !!  @author Nathan A. Wukie
     !!  @date   1/31/2016
     !!
-    !-------------------------------------------------
+    !--------------------------------------------------------------------------------------------
     type, public, abstract :: bc_t
 
-        ! integer(ik), allocatable  :: idom(:)                  !< Indices of domains
-        integer(ik), allocatable    :: ielems(:)                !< Indices of elements associated with boundary condition
-        integer(ik), allocatable    :: ifaces(:)                !< Indices of the boundary face for elements elems(ielems)
+        integer(ik),    allocatable :: dom(:)                   !< Indices of domains
+        integer(ik),    allocatable :: elems(:)                 !< Indices of elements associated with boundary condition
+        integer(ik),    allocatable :: faces(:)                 !< Indices of the boundary face for elements elems(ielems)
         logical, public             :: isInitialized = .false.  !< Logical switch for indicating the boundary condition initializaiton status
 
-        type(dict_t)                :: options
+
+        !type(bc_function_t), allocatable  :: bc_fcn(:)
 
     contains
         procedure :: init                                       !< Boundary condition initialization
@@ -40,6 +43,7 @@ module type_bc
         procedure(compute_interface), deferred :: compute       !< Implements boundary condition calculation
 
     end type bc_t
+    !*********************************************************************************************
 
 
 
@@ -136,7 +140,7 @@ contains
         !
         ! Allocate storage for element and face indices
         !
-        allocate(self%ielems(nelem_bc), self%ifaces(nelem_bc), stat=ierr)
+        allocate(self%elems(nelem_bc), self%faces(nelem_bc), stat=ierr)
         if (ierr /= 0) call AllocationError
 
 
@@ -149,8 +153,8 @@ contains
                 do ixi = xi_begin,xi_end
                     ielem = ixi + nelem_xi*(ieta-1) + nelem_xi*nelem_eta*(izeta-1)
 
-                    self%ielems(ielem_bc) = ielem
-                    self%ifaces(ielem_bc) = iface
+                    self%elems(ielem_bc) = ielem
+                    self%faces(ielem_bc) = iface
                     ielem_bc = ielem_bc + 1
 
 
@@ -211,9 +215,9 @@ contains
         !
         ! Loop through associated boundary condition elements and call compute routine for the boundary flux calculation
         !
-        do ielem_bc = 1,size(self%ielems)
-            ielem  = self%ielems(ielem_bc)   ! Get index of the element being operated on
-            iface  = self%ifaces(ielem_bc)   ! Get face index of element 'ielem' that is being operated on
+        do ielem_bc = 1,size(self%elems)
+            ielem  = self%elems(ielem_bc)   ! Get index of the element being operated on
+            iface  = self%faces(ielem_bc)   ! Get face index of element 'ielem' that is being operated on
             iflux  = 0
             idonor = 0
 

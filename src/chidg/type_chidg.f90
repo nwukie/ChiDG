@@ -32,6 +32,7 @@ module type_chidg
     !!      - Contains an array of domains, a time advancement scheme, a matrix solver, and a preconditioner
     !!
     !!  @author Nathan A. Wukie
+    !!  @date   2/1/2016
     !!
     !--------------------------------------------------------------------------------------------------------
     type, public    :: chidg_t
@@ -71,6 +72,7 @@ contains
     !!      - Call initiailization procedures for equations, grid data, reading input
     !!
     !!  @author Nathan A. Wukie
+    !!  @date   2/1/2016
     !!
     !!  @param[in]  level   Initialization level specification. 'env', 'io', or 'finalize'
     !!
@@ -169,6 +171,7 @@ contains
     !!      -   Set number of allocated domains (default=1)
     !!
     !!  @author Nathan A. Wukie
+    !!  @date   2/1/2016
     !!
     !!  @param[in]      selector    Character string for selecting the chidg component for initialization
     !!  @param[in]      selection   Character string for specializing the component being initialized
@@ -237,11 +240,12 @@ contains
 
 
 
-    !>
+    !> Read grid file
     !!
+    !!  @author Nathan A. Wukie
+    !!  @date   2/1/2016
     !!
-    !!
-    !!
+    !!  @param[in]  gridfile    String containing a grid file name, including extension.
     !!
     !----------------------------------------------------------------------------------------------
     subroutine read_grid(self,gridfile)
@@ -308,11 +312,12 @@ contains
 
 
 
-    !>
+    !> Read solution.
     !!
+    !!  @author Nathan A. Wukie
+    !!  @date   2/1/2016
     !!
-    !!
-    !!
+    !!  @param[in]  solutionfile    String containing a solution file name, including extension.
     !!
     !------------------------------------------------------------------------------------------------------------
     subroutine read_solution(self,solutionfile)
@@ -358,11 +363,12 @@ contains
 
 
 
-    !>
+    !> Write solution to file.
     !!
+    !!  @author Nathan A. Wukie
+    !!  @date   2/1/2016
     !!
-    !!
-    !!
+    !!  @param[in]  solutionfile    String containing a solution file name, including extension.
     !!
     !------------------------------------------------------------------------------------------------------------
     subroutine write_solution(self,solutionfile)
@@ -414,6 +420,7 @@ contains
     !!        components to the time scheme for iteration
     !!
     !!  @author Nathan A. Wukie
+    !!  @date   2/1/2016
     !!
     !------------------------------------------------------------------------------------------------------------
     subroutine run(self)
@@ -438,8 +445,7 @@ contains
     !> Report on ChiDG simulation
     !!
     !!  @author Nathan A. Wukie
-    !!
-    !!
+    !!  @date   2/1/2016
     !!
     !!
     !!
@@ -466,7 +472,7 @@ contains
     !> Any activities that need performed before the program completely terminates.
     !!
     !!  @author Nathan A. Wukie
-    !!
+    !!  @date   2/1/2016
     !!
     !!
     !------------------------------------------------------------------------------------------------------------

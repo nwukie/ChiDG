@@ -18,6 +18,7 @@ contains
     !>  Compute discrete coordinate values, given the modes of a coordinate expansion
     !!
     !!  @author Nathan A. Wukie
+    !!  @date   2/1/2016
     !!
     !!  @param[in]  cmodes  Modal values for the coordinate expansion
     !!  @param[in]  igq     Integer for selecting the appropriate quadrature instance
@@ -49,6 +50,7 @@ contains
     !!  and an element mapping
     !!
     !!  @author Nathan A. Wukie
+    !!  @date   2/1/2016
     !!
     !!  @param[in]      pts     Array of points
     !!  @param[in]      imap    Integer for selecting the appropriate element mapping from 'elem_map'

@@ -17,12 +17,15 @@ module mod_grid
 
 contains
 
+
+
     !>  Call grid initialization routines. This is called by chidg%init('env'). So, should
     !!  not need to call this explicity.
     !!
     !!      - calls computes_element_mappings
     !!
     !!  @author Nathan A. Wukie
+    !!  @date   2/1/2016
     !!
     !!
     !----------------------------------------------------------------------------------------------------
@@ -48,6 +51,7 @@ contains
     !!  array of denseblock matrices in ELEM_MAP.
     !!
     !!  @author Nathan A. Wukie
+    !!  @date   2/1/2016
     !!
     !---------------------------------------------------------------------------------------------------
     subroutine compute_element_mappings()

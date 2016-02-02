@@ -11,7 +11,7 @@ module type_densematrix
     !> Storage for full dense/full matrices.
     !!
     !!  @author Nathan A. Wukie
-    !!
+    !!  @date   2/1/2016
     !!
     !!
     !!
@@ -86,6 +86,7 @@ contains
     !> Subroutine for initializing general dense-block storage
     !!
     !!  @author Nathan A. Wukie
+    !!  @date   2/1/2016
     !!
     !!
     !!  @param[in]  idim        Column-dimension of dense matrix to be initialized
@@ -141,6 +142,7 @@ contains
     !> Subroutine for initializing square dense-block storage
     !!
     !!  @author Nathan A. Wukie
+    !!  @date   2/1/2016
     !!
     !!
     !!  @param[in]  bsize       Row and column dimension for square matrix to be initialized
@@ -200,6 +202,7 @@ contains
     !> return i-dimension of block storage
     !!
     !!  @author Nathan A. Wukie
+    !!  @date   2/1/2016
     !!  
     !!  @return i   Integer of the column-dimension of the stored matrix
     !!
@@ -228,6 +231,7 @@ contains
     !> return j-dimension of block storage
     !!
     !!  @author Nathan A. Wukie
+    !!  @date   2/1/2016
     !!
     !!  @return j   Integer of the row-dimension of the stored matrix
     !!
@@ -256,6 +260,7 @@ contains
     !> return number of entries in block storage
     !!
     !!  @author Nathan A. Wukie
+    !!  @date   2/1/2016
     !!
     !!  @return     nentries    Integer of the total number of matrix entries stored
     !!
@@ -283,6 +288,7 @@ contains
     !> return index of parent domain
     !!
     !!  @author Nathan A. Wukie
+    !!  @date   2/1/2016
     !!
     !!  @return     par     Integer index of the parent domain.
     !!
@@ -309,6 +315,7 @@ contains
     !> return index of parent element
     !!
     !!  @author Nathan A. Wukie
+    !!  @date   2/1/2016
     !!
     !!  @return     par     Integer index of the parent element.
     !!
@@ -337,6 +344,7 @@ contains
     !> Resize dense-block storage
     !!
     !! @author Nathan A. Wukie
+    !!  @date   2/1/2016
     !!
     !-------------------------------------------------------------------------------------------------------------------
     subroutine resize(self,idim,jdim)
@@ -369,6 +377,7 @@ contains
     !> set index of parent
     !!
     !!  @author Nathan A. Wukie
+    !!  @date   2/1/2016
     !!
     !-------------------------------------------------------------------------------------------------------------------
     subroutine reparent(self,par)
@@ -389,7 +398,9 @@ contains
 
 
 
-
+    !>  @author Nathan A. Wukie
+    !!  @date   2/1/2016
+    !-------------------------------------------------
     subroutine dump(self)
         class(densematrix_t), intent(inout) :: self
 
@@ -404,7 +415,8 @@ contains
         end do
 
 
-    end subroutine
+    end subroutine dump
+    !*************************************************
 
 
 

@@ -17,6 +17,7 @@ module type_function_status_data
     !! information as arrays of logicals.
     !!
     !!  @author Nathan A. Wukie
+    !!  @date   2/1/2016
     !!
     !!
     !----------------------------------------------------------------------------------------
@@ -54,6 +55,7 @@ contains
     !> Initialize storage arrays.
     !!
     !!  @author Nathan A. Wukie
+    !!  @date   2/1/2016
     !!
     !!
     !----------------------------------------------------------------------------------------
@@ -124,6 +126,7 @@ contains
     !! right-hand side.
     !!
     !!  @author Nathan A. Wukie
+    !!  @date   2/1/2016
     !!
     !!
     !---------------------------------------------------------------------------------------

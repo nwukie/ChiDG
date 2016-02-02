@@ -4,7 +4,7 @@ module mod_project
     use mod_grid_tools,     only: compute_discrete_coordinates
     use type_point,         only: point_t
     use type_densevector,   only: densevector_t
-    use atype_function,     only: function_t
+    use type_function,      only: function_t
 
     implicit none
 

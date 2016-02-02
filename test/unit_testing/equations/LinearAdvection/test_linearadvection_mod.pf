@@ -7,7 +7,7 @@ module test_linearadvection_mod
 
     use type_chidg,         only: chidg_t
     use type_point,         only: point_t
-    use atype_function,     only: function_t
+    use type_function,      only: function_t
     use mod_function,       only: create_function
     use type_densematrix,   only: densematrix_t
     use mod_testutils,      only: meshgen

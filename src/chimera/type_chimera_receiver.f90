@@ -4,9 +4,10 @@ module type_chimera_receiver
 
 
 
-    !> A receiver for Chimera interface data.
+    !>  A receiver for Chimera interface data.
     !!
     !!  @author Nathan A. Wukie
+    !!  @date   2/1/2016
     !!
     !------------------------------------------------------------------------------------------------
     type, public :: chimera_receiver_t
@@ -21,7 +22,7 @@ module type_chimera_receiver
 
 
     end type chimera_receiver_t
-    !------------------------------------------------------------------------------------------------
+    !************************************************************************************************
 
 
 

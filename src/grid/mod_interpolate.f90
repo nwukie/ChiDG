@@ -32,6 +32,7 @@ contains
     !> Compute variable at quadrature nodes.
     !!
     !!  @author Nathan A. Wukie
+    !!  @date   2/1/2016
     !!
     !!
     !----------------------------------------------------------------
@@ -167,6 +168,7 @@ contains
     !! So, before the matrix-vector multiplication.
     !!
     !!  @author Nathan A. Wukie
+    !!  @date   2/1/2016
     !!
     !!  @param[in]      mesh        Array of mesh instances.
     !!  @param[in]      face        Face info, such as indices for locating the face in the mesh.
@@ -512,6 +514,7 @@ contains
     !> Compute variable at quadrature nodes.
     !!
     !!  @author Nathan A. Wukie
+    !!  @date   2/1/2016
     !!
     !!
     !-------------------------------------------------------------------------------------------------------------
@@ -548,6 +551,7 @@ contains
     !> Compute variable at quadrature nodes.
     !!
     !!  @author Nathan A. Wukie
+    !!  @date   2/1/2016
     !!
     !!
     !-------------------------------------------------------------------------------------------------------------

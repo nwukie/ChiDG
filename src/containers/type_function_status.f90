@@ -20,6 +20,7 @@ module type_function_status
     !! information as arrays of logicals.
     !!
     !!  @author Nathan A. Wukie
+    !!  @date   2/1/2016
     !!
     !!
     !-----------------------------------------------------------------------------------------
@@ -56,6 +57,7 @@ contains
     !> Initialize class storage.
     !!
     !!  @author Nathan A. Wukie
+    !!  @date   2/1/2016
     !!
     !!  @param[in]  mesh            Array of mesh_t instances.
     !!  @param[in]  function_data   Contains the number of each function type for every domain
@@ -94,6 +96,7 @@ contains
     !> Call to determine if a function needs computed for a given face, element.
     !!
     !!  @author Nathan A. Wukie
+    !!  @date   2/1/2016
     !!
     !!  @param[in]  face_info   Container for face information. Location in mesh, type, etc.
     !!  @param[in]  flux_info   Container for function information. iblk, idonor, iflux, type
@@ -144,6 +147,7 @@ contains
     !> Call to determine if a particular equation has been contributed to from a given function.
     !!
     !!  @author Nathan A. Wukie
+    !!  @date   2/1/2016
     !!
     !!  @param[in]  face_info   Container for face information. Location in mesh, type, etc.
     !!  @param[in]  flux_info   Container for function information. iblk, idonor, iflux, type
@@ -194,6 +198,7 @@ contains
     !> Call to determine if a function needs linearized for a given face, element, seed.
     !!
     !!  @author Nathan A. Wukie
+    !!  @date   2/1/2016
     !!
     !!  @param[in]  face_info   Container for face information. Location in mesh, type, etc.
     !!  @param[in]  flux_info   Container for function information. iblk, idonor, iflux, type
@@ -242,6 +247,7 @@ contains
     !> Call to determine if a particular equation has been linearized from a given function.
     !!
     !!  @author Nathan A. Wukie
+    !!  @date   2/1/2016
     !!
     !!  @param[in]  face_info   Container for face information. Location in mesh, type, etc.
     !!  @param[in]  flux_info   Container for function information. iblk, idonor, iflux, type
@@ -297,6 +303,7 @@ contains
     !!  will get set multiple times. Once for every equation. That is okay. 
     !!
     !!  @author Nathan A. Wukie
+    !!  @date   2/1/2016
     !!
     !!  @param[in]  face_info       Contains face indices
     !!  @param[in]  function_info   Contains function indices, type, linearization index
@@ -341,6 +348,7 @@ contains
     !!  will get set multiple times. Once for every equation. That is okay. 
     !!
     !!  @author Nathan A. Wukie
+    !!  @date   2/1/2016
     !!
     !!  @param[in]  face_info       Contains face indices
     !!  @param[in]  function_info   Contains function indices, type, linearization index
@@ -380,6 +388,7 @@ contains
     !! evaluation of the right-hand side.
     !!
     !!  @author Nathan A. Wukie
+    !!  @date   2/1/2016
     !!
     !!
     !----------------------------------------------------------------------------------------

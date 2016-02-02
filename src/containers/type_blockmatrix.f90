@@ -15,8 +15,8 @@ module type_blockmatrix
 
     !> Container for storing denseblock linearizations that make up a blockmatrix
     !!
-    !!
-    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   2/1/2016
     !!
     !!
     !! localblocks (nelem x 7)
@@ -64,6 +64,7 @@ contains
     !> Subroutine for initializing local linearization matrix
     !!
     !!  @author Nathan A. Wukie
+    !!  @date   2/1/2016
     !!
     !!  @param[in]  mesh    mesh_t containing arrays of elements and faces
     !!  @param[in]  mtype   character string indicating the type of matrix to be initialized (ie. Full, Lower-Diagonal, Upper-Diagonal
@@ -365,6 +366,7 @@ contains
     !!         store the derivative values from the AD data types
     !!
     !!  @author Nathan A. Wukie
+    !!  @date   2/1/2016
     !!
     !!  @param[in]  integral    Array of modes from the spatial scheme, with embedded partial derivatives for the linearization matrix
     !!  @param[in]  ielem       Element for which the linearization was computed
@@ -427,6 +429,7 @@ contains
     !>  Stores derivative data from Chimera faces to the linearization matrix
     !!
     !!  @author Nathan A. Wukie
+    !!  @date   2/1/2016
     !!
     !!  @param[in]  integral    Array of modes from the spatial scheme, with embedded partial derivatives for the linearization matrix
     !!  @param[in]  face        face_info_t containing indices for the location of the face being linearized.
@@ -513,6 +516,7 @@ contains
     !>  Set all denseblock_t storage to zero
     !!
     !!  @author Nathan A. Wukie
+    !!  @date   2/1/2016
     !!
     !--------------------------------------------------------------------------------------------------------------------------------
     subroutine clear(self)

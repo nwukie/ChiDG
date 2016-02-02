@@ -33,6 +33,7 @@ module type_chidg_data
     !!  in addition to their dependencies on each other.
     !!
     !!  @author Nathan A. Wukie
+    !!  @date   2/1/2016
     !!
     !--------------------------------------------------------------------------------------------------------------
     type, public  :: chidg_data_t
@@ -79,6 +80,7 @@ contains
     !! structures are used for the initialization routine.
     !!
     !!  @author Nathan A. Wukie
+    !!  @date   2/1/2016
     !!
     !!
     !!
@@ -128,6 +130,7 @@ contains
     !! polynomial expansions.
     !!
     !!  @author Nathan A. Wukie
+    !!  @date   2/1/2016
     !!
     !!  @param[in]  points      point_t matrix defining the mesh
     !!  @param[in]  nterms_c    Integer defining the number of terms in the element coordinate expansion
@@ -235,6 +238,7 @@ contains
     !> Add a boundary condition to a ChiDG domain
     !!
     !!  @author Nathan A. Wukie
+    !!  @date   2/1/2016
     !!
     !!  @param[in]  domain      Character string of the selected domain
     !!  @param[in]  bc          Character string indicating the boundary condition to add
@@ -294,9 +298,11 @@ contains
     !! find and return the index of that domain in the ChiDG_data instance.
     !!
     !!  @author Nathan A. Wukie
+    !!  @date   2/1/2016
     !!
     !!
-    !!  @param[in]  domain
+    !!  @param[in]  dname           String associated with a given domain
+    !!  @return     domain_index    Integer index of the associated domain
     !!
     !----------------------------------------------------------------------------------------------------------
     function get_domain_index(self,dname) result(domain_index)
@@ -338,6 +344,7 @@ contains
     !> Return the number of domains in the chidg_data_t instance.
     !!
     !!  @author Nathan A. Wukie
+    !!  @date   2/1/2016
     !!
     !!
     !----------------------------------------------------------------------------------------------------------

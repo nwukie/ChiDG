@@ -22,6 +22,7 @@ contains
     !> Computes the domain index of the neighbor domain
     !!
     !!  @author Nathan A. Wukie
+    !!  @date   2/1/2016
     !!
     !!  @param[in]  mesh    Array of mesh_t instances
     !!  @param[in]  idom    Domain index of the current element
@@ -52,7 +53,8 @@ contains
             idom_n = idom
         end if
 
-    end function
+    end function compute_neighbor_domain
+    !************************************************************************************************
 
 
 
@@ -65,6 +67,7 @@ contains
     !> Computes the element index of the neighbor element
     !!
     !!  @author Nathan A. Wukie
+    !!  @date   2/1/2016
     !!
     !!  @param[in]  mesh    Array of mesh_t instances
     !!  @param[in]  idom    Domain index of the current element
@@ -95,7 +98,8 @@ contains
         end if
 
 
-    end function
+    end function compute_neighbor_element
+    !************************************************************************************************
 
 
 
@@ -105,7 +109,7 @@ contains
     !> Computes the face index of matching face in neighboring element
     !!
     !!  @author Nathan A. Wukie
-    !!
+    !!  @date   2/1/2016
     !!
     !!  @param[in]  mesh    Array of mesh_t instances
     !!  @param[in]  idom    Domain index of the current element
@@ -146,7 +150,8 @@ contains
 
         end if
 
-    end function
+    end function compute_neighbor_face
+    !**********************************************************************************************************
 
 
 
@@ -167,6 +172,7 @@ contains
     !! element is desired. That is handled with iblk == DIAG.
     !!
     !!  @author Nathan A. Wukie
+    !!  @date   2/1/2016
     !!
     !!  @param[in]  mesh    Array of mesh_t instances
     !!  @param[in]  idom    Domain index of the current element
@@ -271,6 +277,7 @@ contains
 
 
     end function compute_seed
+    !************************************************************************************************************
 
 
 

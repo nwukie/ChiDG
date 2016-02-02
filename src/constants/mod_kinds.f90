@@ -1,3 +1,9 @@
+!> Contains lengths of different data types. Short, long, etc.
+!!
+!!  @author Nathan A. Wukie
+!!  @date   2/1/2016
+!!
+!-------------------------------------------------------------------
 module mod_kinds
     implicit none
 

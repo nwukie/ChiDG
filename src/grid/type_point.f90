@@ -8,9 +8,10 @@ module type_point
 
 
 
-    !> Point data type, containing three spatial coordinates
+    !>  Point data type, containing three spatial coordinates
     !!
-    !! @author Nathan A. Wukie
+    !!  @author Nathan A. Wukie
+    !!  @date   2/1/2016
     !!
     !!
     !!
@@ -47,6 +48,7 @@ contains
     !> Set coordinates for point
     !!
     !!  @author Nathan A. Wukie
+    !!  @date   2/1/2016
     !!
     !!  @param[in] x First coordinate value
     !!  @param[in] y Second coordinate value
@@ -72,6 +74,7 @@ contains
     !> Set first coordinate.
     !!
     !!  @author Nathan A. Wukie
+    !!  @date   2/1/2016
     !!
     !!  @param[in] x_in     First coordinate value
     !!
@@ -94,6 +97,7 @@ contains
     !> Set second coordinate.
     !!
     !!  @author Nathan A. Wukie
+    !!  @date   2/1/2016
     !!
     !!  @param[in] y_in     Second coordinate value
     !!
@@ -116,6 +120,7 @@ contains
     !> Set third coordinate
     !!
     !!  @author Nathan A. Wukie
+    !!  @date   2/1/2016
     !!
     !!  @param[in] z_in     Third coordinate value
     !!
@@ -134,31 +139,60 @@ contains
 
 
     !> type-bound procedure for setting first coordinate
-    !! @param[in] xi First coordinate value
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   2/1/2016
+    !!
+    !!  @param[in] xi First coordinate value
+    !!
+    !---------------------------------------------------------------------------------------------------------
     subroutine xi(self,xi_in)
         class(point_t), intent(inout) :: self
         real(rk) :: xi_in
 
         self%c1_ = xi_in
     end subroutine
+    !*********************************************************************************************************
+
+
+
+
 
     !> type-bound procedure for setting second computational coordinate
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   2/1/2016
+    !!
     !! @param[in] eta Second coordinate value
+    !!
+    !---------------------------------------------------------------------------------------------------------
     subroutine eta(self,eta_in)
         class(point_t), intent(inout) :: self
         real(rk) :: eta_in
 
         self%c2_ = eta_in
     end subroutine
+    !*********************************************************************************************************
+
+
+
+
 
     !> type-bound procedure for setting third computational coordinate
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   2/1/2016
+    !!
     !! @param[in] zeta Third coordinate value
+    !!
+    !---------------------------------------------------------------------------------------------------------
     subroutine zeta(self,zeta_in)
         class(point_t), intent(inout) :: self
         real(rk) :: zeta_in
 
         self%c3_ = zeta_in
     end subroutine
+    !*********************************************************************************************************
 
 
 

@@ -13,7 +13,7 @@ module type_solverdata
     !> Container for solver data.
     !!
     !!  @author Nathan A. Wukie 
-    !!
+    !!  @date   2/1/2016
     !!
     !!
     !-------------------------------------------------------------------------------------------------------
@@ -24,7 +24,8 @@ module type_solverdata
         type(chidgVector_t)             :: rhs                      !< Residual of the spatial scheme
         type(chidgMatrix_t)             :: lhs                      !< Linearization of the spatial scheme
 
-        real(rk),   allocatable         :: dt(:,:)                  !< Element-local time step, (ndomains,maxelems)
+        real(rk)                        :: t                        !< Global time-step
+        real(rk),   allocatable         :: dt(:,:)                  !< Element-local time-step, (ndomains,maxelems)
 
 
         type(function_status_t)         :: function_status          !< Class for the status of a function residual and linearization
@@ -45,7 +46,7 @@ module type_solverdata
         procedure, private    :: init_base
 
     end type solverdata_t
-    !-------------------------------------------------------------------------------------------------------
+    !*******************************************************************************************************
 
 
 
@@ -66,6 +67,7 @@ contains
     !!      - Should be called by specialized 'init' procedure for derived solvers.
     !!
     !!  @author Nathan A. Wukie
+    !!  @date   2/1/2016
     !!
     !!  @param[in]  mesh                Array of mesh_t instances which define storage requirements.
     !!  @param[in]  function_data       Array of containers that hold information on number of each function in eqnset.

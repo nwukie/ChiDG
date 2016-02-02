@@ -7,7 +7,7 @@ module mod_grid_operators
     use type_densevector,   only: densevector_t
     use type_solverdata,    only: solverdata_t
     use type_chidg_data,    only: chidg_data_t
-    use atype_function,     only: function_t
+    use type_function,      only: function_t
     use mod_polynomial,     only: PolynomialVal, DPolynomialVal
     use mod_project,        only: project_function_xyz
     implicit none
@@ -19,6 +19,7 @@ contains
     !>  Project functions to element solution variables
     !!
     !!  @author Nathan A. Wukie
+    !!  @date   2/1/2016
     !!
     !!  @param[in]  domain  Domain upon which the solution is projected
     !!  @param[in]  ivar    Integer index of the variable being initialized
@@ -90,6 +91,7 @@ contains
     !>  Compute a coordinate value, based on the location in reference space (xi, eta, zeta)
     !!
     !!  @author Nathan A. Wukie
+    !!  @date   2/1/2016
     !!
     !!  @param[in]  elem    Element containing coordinate expansion
     !!  @param[in]  icoord  Integer corresponding to coordinate index 1(x), 2(y), 3(z)
@@ -141,6 +143,7 @@ contains
     !>  Compute a variable value, based on the location in reference space (xi, eta, zeta)
     !!
     !!  @author Nathan A. Wukie
+    !!  @date   2/1/2016
     !!
     !!  @param[in]  q       Solution expansion for a given element
     !!  @param[in]  ivar    Integer corresponding to variable index
@@ -192,6 +195,7 @@ contains
     !> Compute coordinate metric term at a given point in computational space
     !!
     !!  @author Nathan A. Wukie
+    !!  @date   2/1/2016
     !!
     !!  @param[in]  elem        element_t containing the geometry definition and data
     !!  @param[in]  cart_dir    Cartesian coordinate being differentiated

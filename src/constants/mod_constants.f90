@@ -1,12 +1,16 @@
-!> Module containing general constants that can be used consistently
-!! throughout the program.
+!>  Module containing general constants that can be used consistently
+!!  throughout the program.
 !!
-!! These include:
+!!  @author Nathan A. Wukie
+!!  @date   2/1/2016
+!!
+!!  These include:
 !!      - Mathematical constants (pi, e, etc.)
 !!      - Floating-point values for numbers and fractions
 !!          (to ensure the correct floating point precision is used consistently)
 !!      - Integers for consistent indexing
-
+!!
+!-----------------------------------------------------------------------------------------
 module mod_constants
     use mod_kinds, only: rk,ik,ishort
     implicit none

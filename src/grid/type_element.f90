@@ -22,6 +22,7 @@ module type_element
     !!        seems to work fine.
     !!
     !!  @author Nathan A. Wukie
+    !!  @date   2/1/2016
     !!
     !------------------------------------------------------------------------------------------------------------
     type, public :: element_t
@@ -113,6 +114,7 @@ contains
     !!      - Compute element metric terms
     !!
     !!  @author Nathan A. Wukie
+    !!  @date   2/1/2016
     !!
     !!  @param[in] nterms_c     Number of terms in the modal representation of the cartesian coordinates
     !!  @param[in] points       Array of cartesian points defining the element
@@ -186,6 +188,7 @@ contains
     !!      - Compute element-local matrices (cartesian gradients, mass matrices)
     !!
     !!  @author Nathan A. Wukie
+    !!  @date   2/1/2016
     !!
     !!  @param[in]  nterms_s    Number of terms in the modal representation of the solution
     !!  @param[in]  neqns       Number of equations contained in the element solution
@@ -248,6 +251,7 @@ contains
     !>  Assign quadrature instances for solution modes (GQ) and mesh modes (GQMESH)
     !!
     !!  @author Nathan A. Wukie
+    !!  @date   2/1/2016
     !!
     !!
     !-------------------------------------------------------------------------------------------------------------
@@ -300,6 +304,7 @@ contains
     !> Compute element metric and jacobian terms
     !!
     !!  @author Nathan A. Wukie
+    !!  @date   2/1/2016
     !!
     !!
     !--------------------------------------------------------------------------------------------------------------
@@ -376,12 +381,13 @@ contains
 
 
 
-    !> Subroutine computes element-specific matrices
+    !>  Subroutine computes element-specific matrices
     !!      - Mass matrix   (mass, invmass)
     !!      - Matrices of cartesian gradients of basis/test functions (dtdx, dtdy, dtdz)
     !!      - Cartesian coordinates of quadrature points (quad_pts)
     !!
-    !! @author Nathan A. Wukie
+    !!  @author Nathan A. Wukie
+    !!  @date   2/1/2016
     !!
     !--------------------------------------------------------------------------------------------------------
     subroutine compute_element_matrices(self)
@@ -415,14 +421,11 @@ contains
 
 
 
-    !> Compute matrices containing cartesian gradients of basis/test function
-    !! at each quadrature node.
+    !>  Compute matrices containing cartesian gradients of basis/test function
+    !!  at each quadrature node.
     !!
-    !! @author Nathan A. Wukie
-    !!
-    !!
-    !!
-    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   2/1/2016
     !!
     !!
     !--------------------------------------------------------------------------------------------------------
@@ -459,12 +462,10 @@ contains
 
 
 
-    !> Compute cartesian coordinates at each quadrature point
+    !>  Compute cartesian coordinates at each quadrature point
     !!
-    !! @author Nathan A. Wukie
-    !!
-    !!
-    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   2/1/2016
     !!
     !!
     !!
@@ -511,9 +512,7 @@ contains
     !>  Compute element-local mass matrix
     !!
     !!  @author Nathan A. Wukie
-    !!
-    !!
-    !!
+    !!  @date   2/1/2016
     !!
     !!
     !-------------------------------------------------------------------------------------------------------------
@@ -567,8 +566,7 @@ contains
     !> Convert local(xi,eta,zeta) coordinates to global coordinates(x,y,z)
     !!
     !!  @author Nathan A. Wukie
-    !!
-    !!
+    !!  @date   2/1/2016
     !!
     !!
     !!
@@ -607,8 +605,7 @@ contains
     !> Convert local(xi,eta,zeta) coordinates to global coordinates(x,y,z)
     !!
     !!  @author Nathan A. Wukie
-    !!
-    !!
+    !!  @date   2/1/2016
     !!
     !!
     !!
@@ -646,8 +643,7 @@ contains
     !> Convert local(xi,eta,zeta) coordinates to global coordinates(x,y,z)
     !!
     !!  @author Nathan A. Wukie
-    !!
-    !!
+    !!  @date   2/1/2016
     !!
     !!
     !!

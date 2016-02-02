@@ -1,5 +1,8 @@
 !> Dictionary container
 !!
+!!  @author Nathan A. Wukie
+!!  @date   2/1/2016
+!!
 !!   The general structure for this type was crafted after
 !!   an example on fortranwiki.org, hash table example.
 !!   However, here we are just traversing a linked-list to find things,
@@ -12,10 +15,15 @@ module type_dict
     private
 
 
+
+
+
+
     !> Linked-List container type - used by Dictionary
     !!      - character:real pair
     !!
     !!  @author Nathan A. Wukie
+    !!  @date   2/1/2016
     !!
     !---------------------------------------------------
     type :: llreal_t
@@ -33,6 +41,7 @@ module type_dict
         procedure   :: free => free_llreal
 
     end type llreal_t
+    !***************************************************
 
 
 
@@ -42,6 +51,7 @@ module type_dict
     !!      - character:integer pair
     !!
     !!  @author Nathan A. Wukie
+    !!  @date   2/1/2016
     !!
     !------------------------------------------------------
     type :: llint_t
@@ -59,6 +69,7 @@ module type_dict
         procedure   :: free => free_llint
 
     end type llint_t
+    !*****************************************************
 
 
 
@@ -67,6 +78,7 @@ module type_dict
     !> Dictionary Type for storing key-value pairs
     !!
     !!  @author Nathan A. Wukie
+    !!  @date   2/1/2016
     !!
     !!
     !-------------------------------------------------
@@ -86,6 +98,7 @@ module type_dict
         procedure, private   :: get_int  => get_int_dict
 
     end type dict_t
+    !*************************************************
 
 !    interface set
 !        module procedure set_real, set_int

@@ -8,7 +8,7 @@ subroutine test_chidgMatrix_operator_chimera_mv()
 
     use type_chidg,         only: chidg_t
     use type_meshdata,      only: meshdata_t
-    use atype_function,     only: function_t
+    use type_function,      only: function_t
     use type_point,         only: point_t
 
 

@@ -11,6 +11,7 @@ module type_blockvector
     !> Data type for storing the matrix of dense blocks which hold the linearization for an algorithm
     !!
     !!  @author Nathan A. Wukie
+    !!  @date   2/1/2016
     !!
     !!
     !------------------------------------------------------------------------------------------------------------------------
@@ -95,6 +96,7 @@ contains
     !> Subroutine for initializing blockvector storage
     !!
     !!  @author Nathan A. Wukie
+    !!  @date   2/1/2016
     !!
     !!  @param[in]  mesh    mesh_t instance containing initialized elements and faces
     !!
@@ -156,7 +158,7 @@ contains
 
 
 
-    end subroutine
+    end subroutine init_vector
     !*******************************************************************************************************************
 
 
@@ -176,6 +178,7 @@ contains
     !! assuming contiguously stored data for each element.
     !!
     !!  @author Nathan A. Wukie
+    !!  @date   2/1/2016
     !!
     !!  @param[in]  fullvec     Full-vector
     !!
@@ -248,6 +251,7 @@ contains
     !> Zero all vector storage elements in blockvector%lvecs
     !!
     !!  @author Nathan A. Wukie
+    !!  @date   2/1/2016
     !!
     !!
     !----------------------------------------------------------------------------------------------------------------------------------------
@@ -284,6 +288,7 @@ contains
     !> Compute the L2-norm of the vector
     !!
     !!  @author Nathan A. Wukie
+    !!  @date   2/1/2016
     !!
     !!
     !----------------------------------------------------------------------------------------------------------------------------------------
@@ -333,6 +338,7 @@ contains
     !> Compute number of entries in the block vector
     !!
     !!  @author Nathan A. Wukie
+    !!  @date   2/1/2016
     !!
     !!
     !----------------------------------------------------------------------------------------------------------------------------------
@@ -361,7 +367,8 @@ contains
 
 
     !>
-    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   2/1/2016
     !!
     !------------------------------------------------
     subroutine dump(self)
@@ -396,6 +403,9 @@ contains
 
     !> Multiply real * blockvector
     !!
+    !!  @author Nathan A. Wukie
+    !!  @date   2/1/2016
+    !!
     !------------------------------------------------------------------------
     function mult_real_bv(left,right) result(res)
         real(rk),               intent(in)  :: left
@@ -409,12 +419,16 @@ contains
 
         res%lvecs = left * right%lvecs
 
-    end function
+    end function mult_real_bv
+    !************************************************************************
 
 
 
 
     !> Multiply blockvector * real
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   2/1/2016
     !!
     !------------------------------------------------------------------------
     function mult_bv_real(left,right) result(res)
@@ -430,13 +444,17 @@ contains
 
         res%lvecs = left%lvecs * right
 
-    end function
+    end function mult_bv_real
+    !************************************************************************
 
 
 
 
 
     !> Divide real / blockvector
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   2/1/2016
     !!
     !------------------------------------------------------------------------
     function div_real_bv(left,right) result(res)
@@ -452,12 +470,16 @@ contains
 
         res%lvecs = left / right%lvecs
 
-    end function
+    end function div_real_bv
+    !************************************************************************
 
 
 
 
     !> Divide blockvector / real
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   2/1/2016
     !!
     !------------------------------------------------------------------------
     function div_bv_real(left,right) result(res)
@@ -473,7 +495,8 @@ contains
 
         res%lvecs = left%lvecs / right
 
-    end function
+    end function div_bv_real
+    !*************************************************************************
 
 
 
@@ -481,6 +504,9 @@ contains
 
 
     !> Add blockvector + blockvector
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   2/1/2016
     !!
     !------------------------------------------------------------------------
     function add_bv_bv(left,right) result(res)
@@ -494,13 +520,17 @@ contains
 
         res%lvecs = left%lvecs + right%lvecs
 
-    end function
+    end function add_bv_bv
+    !*************************************************************************
 
 
 
 
 
     !> Add blockvector - blockvector
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   2/1/2016
     !!
     !------------------------------------------------------------------------
     function sub_bv_bv(left,right) result(res)
@@ -515,7 +545,8 @@ contains
 
         res%lvecs = left%lvecs - right%lvecs
 
-    end function
+    end function sub_bv_bv
+    !*************************************************************************
 
 
 

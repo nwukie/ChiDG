@@ -22,7 +22,7 @@ subroutine rtest_linearadvection_implicit_convergence()
     use type_point,         only: point_t
 
     use mod_grid_operators, only: initialize_variable
-    use atype_function,     only: function_t
+    use type_function,      only: function_t
     use mod_function,       only: create_function
     use mod_testutils,      only: meshgen
     use type_dict,          only: dict_t

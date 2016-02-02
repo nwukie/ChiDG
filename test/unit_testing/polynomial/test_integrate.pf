@@ -13,7 +13,7 @@ subroutine test_integrate_boundary_unit_constant()
     use type_seed,          only: seed_t
 
 
-    use atype_function,     only: function_t
+    use type_function,      only: function_t
     use mod_function,       only: create_function
     use mod_testutils,      only: meshgen
     use mod_grid_operators, only: initialize_variable
@@ -180,7 +180,7 @@ subroutine test_integrate_boundary_nonunit_constant()
     use type_function_info, only: function_info_t
     use type_seed,          only: seed_t
 
-    use atype_function,     only: function_t
+    use type_function,      only: function_t
     use mod_function,       only: create_function
     use mod_testutils,      only: meshgen
     use mod_grid_operators, only: initialize_variable

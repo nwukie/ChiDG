@@ -3,18 +3,28 @@ module fcn_isentropic_vortex
     use mod_kinds,      only: rk,ik
     use mod_constants,  only: ZERO, HALF, ONE, TWO, THREE, FIVE, EIGHT, PI
     use type_point,     only: point_t
-    use atype_function, only: function_t
+    use type_function,  only: function_t
     implicit none
     private
 
+
+
+
+
+
+
+
+    !>
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   2/1/2016
+    !!
+    !!
+    !-------------------------------------------------------------------------------
     type, extends(function_t), public :: isentropic_vortex_f
         private
 
 
-        ! constants in the gaussian function
-        !
-        ! f(x) = a exp(- (x-b)**2 / 2c**2)
-        !
         real(rk)    :: rho = ONE
         real(rk)    :: p   = ONE
 
@@ -32,10 +42,13 @@ module fcn_isentropic_vortex
         integer(ik) :: ivar
 
     contains
+
         procedure   :: order
         procedure   :: calc
         procedure   :: set
+
     end type isentropic_vortex_f
+    !********************************************************************************
 
 
 

@@ -20,6 +20,7 @@ contains
     !! type containers.
     !!
     !!  @author Nathan A. Wukie
+    !!  @date   2/1/2016
     !!
     !!
     !!
@@ -109,7 +110,8 @@ contains
 
 
 
-    end function
+    end function MULT_chidgMatrix_chidgVector
+    !****************************************************************************************
 
 
 end module operator_chidg_mv

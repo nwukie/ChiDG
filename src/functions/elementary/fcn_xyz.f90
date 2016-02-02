@@ -1,16 +1,31 @@
 module fcn_xyz
     use mod_kinds,      only: rk,ik
-    use atype_function, only: function_t
+    use type_function,  only: function_t
     use type_point,     only: point_t
     implicit none
     private
 
+
+
+
+
+    !> xyz function
+    !!
+    !!  \f$     f(t,\vec{x}) = xyz      \f$
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   2/1/2016
+    !!
+    !---------------------------------------------------------------------------------
     type, extends(function_t), public :: xyz_f
 
     contains
+
         procedure   :: order
         procedure   :: calc
+
     end type xyz_f
+    !**********************************************************************************
 
 
 

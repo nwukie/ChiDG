@@ -1,6 +1,6 @@
 module mod_function
     use mod_kinds,      only: rk, ik
-    use atype_function, only: function_t
+    use type_function,  only: function_t
 
     ! IMPORT FUNCTIONS
     use fcn_xsquared,           only: xsquared_f

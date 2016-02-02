@@ -17,8 +17,7 @@ contains
     !> Compute vector-vector dot product from two blockvector_t types.
     !!
     !!  @author Nathan A. Wukie
-    !!
-    !!
+    !!  @date   2/1/2016
     !!
     !!
     !!
@@ -43,7 +42,8 @@ contains
         
 
 
-    end function
+    end function block_dot
+    !*****************************************************************************
 
 
 

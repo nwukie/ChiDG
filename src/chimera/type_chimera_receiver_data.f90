@@ -12,8 +12,9 @@ module type_chimera_receiver_data
     !! location in the donor domain.
     !!
     !!  @author Nathan A. Wukie
+    !!  @date   2/1/2016
     !!
-    !-----------------------------------------------------------------------------
+    !----------------------------------------------------------------------------------------------
     type, public :: chimera_receiver_data_t
 
         integer(ik)                     :: ndonors = 0
@@ -21,7 +22,6 @@ module type_chimera_receiver_data
         integer(ik)                     :: receiver_domain      !< Domain index of receiver
         integer(ik)                     :: receiver_element     !< Element index of receiver
         integer(ik)                     :: receiver_face        !< Face index of receiver
-
 
 
         ! Access via data%donor_domain%at(idonor)
@@ -35,9 +35,11 @@ module type_chimera_receiver_data
         ! Access via data%donor_gq_indices(idonor)%data()
         type(ivector_t), allocatable    :: donor_gq_indices(:)  !< Array of integer vectors defining the GQ node indices associated with a given donor
         type(pvector_t), allocatable    :: donor_coords(:)      !< Array of points definind the local coordinates of the GQ nodes
+
     contains
 
     end type chimera_receiver_data_t
+    !***********************************************************************************************
 
 
 

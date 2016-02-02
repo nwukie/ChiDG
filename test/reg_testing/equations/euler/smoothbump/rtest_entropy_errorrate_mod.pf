@@ -154,7 +154,7 @@ contains
                                       IO_DESTINATION
         use type_chidg,         only: chidg_t
         use type_meshdata,      only: meshdata_t
-        use atype_function,     only: function_t
+        use type_function,      only: function_t
         use type_dict,          only: dict_t
         use mod_function,       only: create_function
         use mod_grid_operators, only: initialize_variable

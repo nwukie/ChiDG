@@ -140,7 +140,6 @@ contains
             !
             ref = [ONE]
 
-            print*, 'hi - 1'
 
             !
             ! Assign reference solution
@@ -149,14 +148,12 @@ contains
                 q(ielem)%vec = ref + real(ielem,rk)
             end do
 
-            print*, 'hi - 2'
 
             !
             ! Write variable
             !
             call this%chidgO1%write_solution(this%fileO1)
 
-            print*, 'hi - 3'
 
             !
             ! Reset variable
@@ -165,14 +162,12 @@ contains
                 q(ielem)%vec = -1._rk
             end do
 
-            print*, 'hi - 4'
 
             !
             ! Read variable
             !
             call this%chidgO1%read_solution(this%fileO1)
 
-            print*, 'hi - 5'
 
             !
             ! Test that the read solution values equal the reference values
@@ -182,7 +177,6 @@ contains
             end do
 
 
-            print*, 'hi - 6'
 
         end associate
 

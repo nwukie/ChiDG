@@ -17,6 +17,7 @@ module type_mesh
     !!      - calls initialization procedure for elements and faces
     !!
     !!  @author Nathan A. Wukie
+    !!  @date   2/1/2016
     !!
     !!
     !------------------------------------------------------------------------------------------------------------
@@ -73,6 +74,8 @@ contains
     !!  and calls sub-initialization routines for individual element and face geometry
     !!
     !!  @author Nathan A. Wukie
+    !!  @date   2/1/2016
+    !!
     !!  @param[in]  nterms_c    Number of terms in the coordinate expansion
     !!  @param[in]  points_g    Rank-3 matrix of coordinate points defining a block mesh
     !!
@@ -122,6 +125,7 @@ contains
     !!  calls sub-initialization routines for individual element and face numerics
     !!
     !!  @author Nathan A. Wukie
+    !!  @date   2/1/2016
     !!
     !!  @param[in]  neqns       Number of equations being solved in the current domain
     !!  @param[in]  nterms_s    Number of terms in the solution expansion
@@ -168,6 +172,7 @@ contains
     !!  calls the element initialization procedure on individual elements.
     !!
     !!  @author Nathan A. Wukie
+    !!  @date   2/1/2016
     !!
     !!  @param[in]  points_g    Rank-3 matrix of coordinate points defining a block mesh
     !!
@@ -306,6 +311,7 @@ contains
     !> Mesh - element solution data initialization
     !!
     !!  @author Nathan A. Wukie
+    !!  @date   2/1/2016
     !!
     !!  @param[in]  neqns       Number of equations in the domain equation set
     !!  @param[in]  nterms_s    Number of terms in the solution expansion
@@ -350,9 +356,7 @@ contains
     !> Mesh - face initialization procedure
     !!
     !!  @author Nathan A. Wukie
-    !!
-    !!
-    !!
+    !!  @date   2/1/2016
     !!
     !!
     !---------------------------------------------------------------------------------------------------------------
@@ -451,6 +455,7 @@ contains
     !> Mesh - face initialization procedure
     !!
     !!  @author Nathan A. Wukie
+    !!  @date   2/1/2016
     !!
     !!
     !!

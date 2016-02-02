@@ -13,6 +13,7 @@ module type_chidgVector
     !> Container stores a blockvector_t for each domain_t
     !!
     !!  @author Nathan A. Wukie
+    !!  @date   2/1/2016
     !!
     !!
     !!
@@ -100,7 +101,7 @@ contains
     !> Subroutine for initializing chidgVector_t
     !!
     !!  @author Nathan A. Wukie
-    !!
+    !!  @date   2/1/2016
     !!
     !!  @param[in]  mesh    Array of mesh_t instances used to initialize each blockvector_t subcomponent.
     !!
@@ -146,7 +147,7 @@ contains
     !> Set all floating-point vector entries to zero.
     !!
     !!  @author Nathan A. Wukie
-    !!
+    !!  @date   2/1/2016
     !!
     !!
     !----------------------------------------------------------------------------------------------------
@@ -176,6 +177,7 @@ contains
     !> Compute the L2-Norm of the vector
     !!
     !!  @author Nathan A. Wukie
+    !!  @date   2/1/2016
     !!
     !!  @return res L2-norm of the vector
     !!
@@ -223,6 +225,7 @@ contains
     !> Dump contents of the vector
     !!
     !!  @author Nathan A. Wukie
+    !!  @date   2/1/2016
     !!
     !!
     !!
@@ -269,6 +272,11 @@ contains
 
 
 
+    !>
+    !!  @author Nathan A. Wukie
+    !!  @date   2/1/2016
+    !!
+    !------------------------------------------------------------------------
     function mult_real_chidgVector(left,right) result(res)
         real(rk),               intent(in)  :: left
         type(chidgVector_t),    intent(in)  :: right
@@ -284,11 +292,18 @@ contains
             res%dom(idom) = left * right%dom(idom)
         end do
 
-    end function
+    end function mult_real_chidgVector
+    !************************************************************************
 
 
 
 
+    !>
+    !!  @author Nathan A. Wukie
+    !!  @date   2/1/2016
+    !!
+    !!
+    !------------------------------------------------------------------------
     function mult_chidgVector_real(left,right) result(res)
         type(chidgVector_t),    intent(in)  :: left
         real(rk),               intent(in)  :: right
@@ -304,12 +319,19 @@ contains
             res%dom(idom) = left%dom(idom) * right
         end do
 
-    end function
+    end function mult_chidgVector_real
+    !************************************************************************
 
 
 
 
 
+    !>
+    !!  @author Nathan A. Wukie
+    !!  @date   2/1/2016
+    !!
+    !!
+    !------------------------------------------------------------------------
     function div_real_chidgVector(left,right) result(res)
         real(rk),               intent(in)  :: left
         type(chidgVector_t),    intent(in)  :: right
@@ -325,11 +347,18 @@ contains
             res%dom(idom) = left / right%dom(idom)
         end do
 
-    end function
+    end function div_real_chidgVector
+    !************************************************************************
 
 
 
 
+    !>
+    !!  @author Nathan A. Wukie
+    !!  @date   2/1/2016
+    !!
+    !!
+    !------------------------------------------------------------------------
     function div_chidgVector_real(left,right) result(res)
         type(chidgVector_t),    intent(in)  :: left
         real(rk),               intent(in)  :: right
@@ -345,12 +374,19 @@ contains
             res%dom(idom) = left%dom(idom) / right
         end do
 
-    end function
+    end function div_chidgVector_real
+    !*************************************************************************
 
 
 
 
 
+    !>
+    !!  @author Nathan A. Wukie
+    !!  @date   2/1/2016
+    !!
+    !!
+    !------------------------------------------------------------------------
     function add_chidgVector_chidgVector(left,right) result(res)
         type(chidgVector_t),    intent(in)  :: left
         type(chidgVector_t),    intent(in)  :: right
@@ -366,12 +402,19 @@ contains
             res%dom(idom) = left%dom(idom) + right%dom(idom)
         end do
 
-    end function
+    end function add_chidgVector_chidgVector
+    !*************************************************************************
 
 
 
 
 
+    !>
+    !!  @author Nathan A. Wukie
+    !!  @date   2/1/2016
+    !!
+    !!
+    !------------------------------------------------------------------------
     function sub_chidgVector_chidgVector(left,right) result(res)
         type(chidgVector_t),    intent(in)  :: left
         type(chidgVector_t),    intent(in)  :: right
@@ -389,52 +432,8 @@ contains
         end do
 
 
-    end function
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    end function sub_chidgVector_chidgVector
+    !*************************************************************************
 
 
 

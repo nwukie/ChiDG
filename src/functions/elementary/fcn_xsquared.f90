@@ -1,16 +1,29 @@
 module fcn_xsquared
     use mod_kinds,      only: rk,ik
-    use atype_function, only: function_t
+    use type_function,  only: function_t
     use type_point,     only: point_t
     implicit none
     private
 
+
+
+    !>  x-squared function.
+    !!
+    !!  \f$     f(t,\vec{x}) = x^2  \f$
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   2/1/2016
+    !!
+    !-------------------------------------------------------------------------
     type, extends(function_t), public :: xsquared_f
 
     contains
+
         procedure   :: order
         procedure   :: calc
+
     end type xsquared_f
+    !**************************************************************************
 
 
 

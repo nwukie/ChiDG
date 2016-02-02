@@ -3,10 +3,34 @@ module fcn_gaussian
     use mod_kinds,      only: rk,ik
     use mod_constants,  only: ZERO, ONE, TWO, THREE, FIVE
     use type_point,     only: point_t
-    use atype_function, only: function_t
+    use type_function,  only: function_t
     implicit none
     private
 
+
+
+
+
+    !>  Gaussian function.
+    !!
+    !!  Three 1D Gaussian functions are computed; one for each dimension. They are multiplied
+    !!  together to create a 3D version of the function.
+    !!
+    !!  \f$  f_x(t,\vec{x}) = a e^{- \frac{(x-b_x)^2}{2c^2} }    \\
+    !!       f_y(t,\vec{x}) = a e^{- \frac{(y-b_y)^2}{2c^2} }    \\
+    !!       f_z(t,\vec{x}) = a e^{- \frac{(z-b_z)^2}{2c^2} }    \\
+    !!       f(t,\vec{x}) = f_x * f_y * f_z                      \f$
+    !!
+    !!  Function parameters:
+    !!
+    !!  \f$ a   -   \text{Amplitude of the distribution}   \\
+    !!      b_i -   \text{Offset in coordinate 'i'}        \\
+    !!      c   -   \text{Width of the distribution}   \f$
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   2/1/2016
+    !!
+    !-------------------------------------------------------------------------------------
     type, extends(function_t), public :: gaussian_f
         private
 
@@ -25,10 +49,13 @@ module fcn_gaussian
         real(rk)    :: c = ONE
 
     contains
+
         procedure   :: order
         procedure   :: calc
         procedure   :: set
+
     end type gaussian_f
+    !*************************************************************************************
 
 
 

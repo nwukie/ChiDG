@@ -119,6 +119,12 @@ contains
         if (ierr /= 0) call AllocationError
 
 
+        !
+        ! Initialize boundary condition options
+        !
+        call bc%set_options()
+
+
     end subroutine create_bc
     !*************************************************************************************
 

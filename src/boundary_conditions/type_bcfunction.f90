@@ -1,7 +1,9 @@
 module type_bcfunction
 #include <messenger.h>
     use mod_kinds,      only: rk, ik
+    use mod_constants,  only: REQUIRED, OPTIONAL
     use type_function,  only: function_t
+    use mod_function,   only: create_function
     implicit none
     private
 
@@ -43,28 +45,29 @@ contains
     !!  @author Nathan A. Wukie
     !!  @date   2/1/2016
     !!
+    !!  @param[in]  comp    String indicating the component to set
+    !!  @param[in]  str     String indicating the value to be set, or used to set.
     !!
     !---------------------------------------------------------------------------------------
-    subroutine set(self,comp_str,comp_val)
+    subroutine set(self,comp,str)
         class(bcfunction_t),   intent(inout)   :: self
-        character(*),           intent(in)      :: comp_str
-        character(*),           intent(in)      :: comp_val
+        character(*),           intent(in)     :: comp
+        character(*),           intent(in)     :: str
 
 
 
-        select case (trim(comp_str))
+        select case (trim(comp))
             case ('Name','name')
-                self%name_   = comp_val
+                self%name_   = str
 
             case ('Type','type')
-                self%type_   = comp_val
+                self%type_   = str
 
             case ('Function','function','fcn')
-                call create_function(comp_val,self%fcn)
+                call create_function(self%fcn,str)
 
             case default
-                call chidg_signal_one(FATAL,"bcfunction%set: Unrecognized component string.",comp_str)
-
+                call chidg_signal_one(FATAL,"bcfunction%set: Unrecognized component string.",comp)
         end select
 
 
@@ -100,10 +103,8 @@ contains
                 comp_val = self%name_
 
 
-
             case ('Type','type')
                 comp_val = self%type_
-
 
 
             case ('Function','function')
@@ -112,7 +113,6 @@ contains
                 else
                     call chidg_signal_one(WARN,"bcfunction%get: component not allocated.",comp_str)
                 end if
-
 
 
             case default

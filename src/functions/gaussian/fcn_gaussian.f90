@@ -106,10 +106,10 @@ contains
         z = coord%c3_
 
         call self%dict%get('a',a)
-        !call self%dict%get('b_x',b_x)
-        !call self%dict%get('b_y',b_y)
-        !call self%dict%get('b_z',b_z)
-        !call self%dict%get('c',c)
+        call self%dict%get('b_x',b_x)
+        call self%dict%get('b_y',b_y)
+        call self%dict%get('b_z',b_z)
+        call self%dict%get('c',c)
 
 
         !

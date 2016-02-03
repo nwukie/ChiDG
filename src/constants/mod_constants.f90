@@ -134,6 +134,13 @@ module mod_constants
 
 
 
+    !
+    ! Boundary condition parameters
+    !
+    character(len=8),   parameter   :: REQUIRED = 'required'
+    character(len=8),   parameter   :: OPTIONAL = 'optional'
+
+
 
     !
     ! QUADRATURE CONSTANTS: specify number of quadrature orders to initialize

@@ -27,7 +27,7 @@ module bc_euler_pressureoutlet
 
     contains
 
-!        procedure   :: init_spec    !< user-specialized boundary condition initialization
+        procedure   :: set_options  !< Set boundary condition options
         procedure   :: compute      !< boundary condition function implementation
 
     end type euler_pressureoutlet_t
@@ -39,15 +39,13 @@ module bc_euler_pressureoutlet
 contains
 
 
-
-
-    !>
+    !>  Procedure for registering boundary condition options. Needs executed upon allocation.
     !!
     !!  @author Nathan A. Wukie
     !!  @date   2/2/2016
     !!
     !------------------------------------------------------------------------------------------
-    subroutine add_options(self)    
+    subroutine set_options(self)    
         class(euler_pressureoutlet_t),  intent(inout)   :: self
 
 
@@ -57,12 +55,18 @@ contains
         call self%bcfunctions%add('Static Pressure','Required')
 
 
+        !& DEBUG. This should be removed in general
+        call self%bcfunctions%set_fcn(       'Static Pressure', 'constant')
+        call self%bcfunctions%set_fcn_option('Static Pressure','val',93000._rk)
+
+
+
         !
         ! Add parameters
         !
 
 
-    end subroutine add_options
+    end subroutine set_options
     !******************************************************************************************
 
 
@@ -70,62 +74,12 @@ contains
 
 
 
-!    !> Report the available options for the boundary condition
-!    !!
-!    !!  @author Nathan A. Wukie
-!    !!  @date   2/1/2016
-!    !!
-!    !!
-!    !-------------------------------------------------------------------------------------------
-!    subroutine list_options(self)
-!        class(bc_t),                intent(in)  :: self
-!
-!
-!        self%bc_description(name, type, status)
-!
-!
-!    end subroutine list_options
-!    !*******************************************************************************************
-!
-!
-!
-!
-!
-!    !> Specialized initialization for the boundary condition.
-!    !!
-!    !!  @author Nathan A. Wukie
-!    !!  @date   1/31/2016
-!    !!
-!    !!
-!    !!
-!    !-------------------------------------------------------------------------------------------
-!    subroutine init_spec(self,mesh,iface,bc_parameters,bc_functions)
-!        class(bc_t),                intent(inout)   :: self
-!        type(mesh_t),               intent(inout)   :: mesh
-!        integer(ik),                intent(in)      :: iface
-!        type(dict_t),   optional,   intent(in)      :: bc_parameters
-!        type(dict_t),   optional,   intent(in)      :: bc_functions
-!
-!
-!
-!
-!
-!
-!
-!
-!
-!    end subroutine init_spec
-!    !********************************************************************************************
-!
-!
-!
-
 
 
     !> Specialized compute routine for Extrapolation Boundary Condition
     !!
     !!  @author Nathan A. Wukie
-    !!  @date   1/31/2016
+    !!  @date   2/3/2016
     !!
     !!  @param[in]      mesh    Mesh data containing elements and faces for the domain
     !!  @param[inout]   sdata   Solver data containing solution vector, rhs, linearization, etc.
@@ -176,10 +130,10 @@ contains
 
 
                 !
-                ! Get back pressure
+                ! Get back pressure from function.
                 !
-                !p_bc = self%bc_functions%compute("Static Pressure",time,coords)
-                p_bc = 93000._rk
+                p_bc = self%bcfunctions%compute("Static Pressure",time,coords)
+                !p_bc = 93000._rk
                 !p_bc = 107000._rk
 
 

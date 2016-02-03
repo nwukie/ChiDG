@@ -58,8 +58,8 @@ subroutine rtest_linearadvection_implicit_convergence()
     !
     ! Send log to file
     !
-    !IO_DESTINATION = 'file'
-    IO_DESTINATION = 'both'
+    IO_DESTINATION = 'file'
+    !IO_DESTINATION = 'both'
 
 
     !

@@ -38,15 +38,16 @@ module type_bc
         !
         ! Boundary condition options
         !
-        !type(bcparameter_set_t),    allocatable :: bcparameters
-        type(bcfunction_set_t),     allocatable :: bcfunctions
+        !type(bcparameter_set_t)    :: bcparameters
+        type(bcfunction_set_t)      :: bcfunctions
 
     contains
 
-        procedure :: init                                       !< Boundary condition initialization
-        procedure :: init_spec                                  !< Call specialized initialization routine
-        procedure :: apply                                      !< Spatial application of the boundary condition
-        procedure(compute_interface), deferred :: compute       !< Implements boundary condition calculation
+        procedure   :: set_options                          !< 
+        procedure   :: init                                 !< Boundary condition initialization
+        procedure   :: init_spec                            !< Call specialized initialization routine
+        procedure   :: apply                                !< Spatial application of the boundary condition
+        procedure(compute_interface), deferred :: compute   !< Implements boundary condition calculation
 
     end type bc_t
     !*********************************************************************************************
@@ -278,6 +279,31 @@ contains
 
     end subroutine init_spec
     !********************************************************************************************
+
+
+
+
+
+
+
+    !> Default options initialization procedure. This is called at the creation of a boundary condition
+    !! in create_bc to set the options of a concrete bc_t. This function can be overwritten by a concrete
+    !! bc_t to set case-specific options; parameters and functions.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   2/3/2016
+    !!
+    !!
+    !--------------------------------------------------------------------------------------------
+    subroutine set_options(self)
+        class(bc_t),            intent(inout)   :: self
+
+
+
+
+    end subroutine set_options
+    !********************************************************************************************
+
 
 
 

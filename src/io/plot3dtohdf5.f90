@@ -1,8 +1,13 @@
-!> Utility to convert a plot3d grid to an hdf5 file
-!! which is read by the FlexDG code
+!>  Utility to convert a plot3d grid to an hdf5 file
+!!  which is read by the FlexDG code
 !!
-!! @author Nathan A. Wukie
+!!  @author Nathan A. Wukie
+!!  @date   2/3/2016
 !!
+!!
+!!
+!!
+!--------------------------------------------------------------------------------------------
 program plot3dtohdf5
     use mod_kinds,   only: rk,ik
     use hdf5
@@ -37,13 +42,16 @@ program plot3dtohdf5
 
 
 
+    !
     ! Get file name from command-line argument
-    !-------------------------------------------------
+    !
     call get_command_argument(1, arg_file)
 
 
+
+    !
     ! Check if a filename was provided to the program
-    !-------------------------------------------------
+    !
     if (len_trim(arg_file) == 0) then
         print*, "Usage: plot3d_to_hdf5 'plot3dfile'"
         stop
@@ -51,8 +59,9 @@ program plot3dtohdf5
 
 
 
+    !
     ! Check if input file exists
-    !-------------------------------------------------
+    !
     inquire(file=arg_file, exist=file_exists)
     if (file_exists) then
         print*, "Found ", trim(arg_file)
@@ -65,8 +74,9 @@ program plot3dtohdf5
 
 
 
+    !
     ! Initialize HDF5
-    !-------------------------------------------------
+    !
     ! HDF5 interface
     call h5open_f(ierr)
     if (ierr /= 0) stop "Error: h5open_f"
@@ -82,8 +92,10 @@ program plot3dtohdf5
 
 
 
+
+    !
     ! Read plot3d grid
-    !-------------------------------------------------
+    !
     open(unit=7, file=trim(arg_file), form='unformatted')
     read(7) nblks
     print*, nblks," grid blocks"

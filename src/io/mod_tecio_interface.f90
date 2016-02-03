@@ -11,8 +11,16 @@ module mod_tecio_interface
 
 contains
 
-    ! This opens a new tecplot binary file for writing
-    ! and initializes the type, and number of data fields to accept
+
+
+    !>  This opens a new tecplot binary file for writing
+    !!  and initializes the type, and number of data fields to accept
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   2/3/2016
+    !!
+    !!
+    !------------------------------------------------------------------------------------------------------------
     subroutine init_tecio_file(title,variables,filename,filetype)
         character(*)    :: title
         character(*)    :: variables
@@ -36,13 +44,25 @@ contains
                             isdouble)
         ! Test file initialization
         if (tecstat /= 0) stop "Error: Initializing TECINI142"
-    end subroutine
+    end subroutine init_tecio_file
+    !***********************************************************************************************************
 
 
-    ! This begins a new zone in the current opened file. Must be called
-    ! after init_tecplot_file, because it needs an open binary file.
-    ! If multiple files are open, you can switch between them with the
-    ! TECFIL142 call, as long as the they can be identified by integer values
+
+
+
+
+
+
+    !>  This begins a new zone in the current opened file. Must be called
+    !!  after init_tecplot_file, because it needs an open binary file.
+    !!  If multiple files are open, you can switch between them with the
+    !!  TECFIL142 call, as long as the they can be identified by integer values
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   2/3/2016
+    !!
+    !-----------------------------------------------------------------------------------------------------------
     subroutine init_tecio_zone(zonetitle,mesh,writetype,timeindex)
             type(mesh_t) , intent(in)        :: mesh
             integer(ik)  , intent(in)        :: writetype  ! tells us if we are writing a mesh or solution file
@@ -116,16 +136,33 @@ contains
                                 sharconnfrom)
             if(tecstat /= 0) stop "Error in TECZNE initialization"
 
-    end subroutine
+    end subroutine init_tecio_zone
+    !********************************************************************************************************
 
 
+
+
+
+
+
+
+
+    !>
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   2/3/2016
+    !!
+    !!
+    !!
+    !--------------------------------------------------------------------------------------------------------
     subroutine finalize_tecio()
         integer(kind=TEC) :: tecstat
 
         tecstat = TECEND142()
         if (tecstat /= 0) stop "Error: TECIO finalization error"
 
-    end subroutine
+    end subroutine finalize_tecio
+    !********************************************************************************************************
 
 
 

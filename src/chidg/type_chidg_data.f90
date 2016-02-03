@@ -246,15 +246,14 @@ contains
     !!  @param[in]  options     Boundary condition options dictionary
     !!
     !---------------------------------------------------------------------------------------------------------------
-    subroutine add_bc(self,domain,bc,face,options)
+    subroutine add_bc(self,domain,bc,face)
         class(chidg_data_t),    intent(inout)   :: self
         character(*),           intent(in)      :: domain
-        character(*),           intent(in)      :: bc
+        class(bc_t),            intent(inout)      :: bc
         integer(ik),            intent(in)      :: face
-        type(dict_t), optional, intent(in)      :: options
 
-        integer(ik)                 :: idom
-        class(bc_t), allocatable    :: bc_instance
+        integer(ik)                 :: idom, ierr
+        class(bc_t), allocatable    :: bc_copy
 
 
         !
@@ -264,21 +263,22 @@ contains
 
 
         !
-        ! Create boundary condition, specified by incoming string
+        ! Create a copy of the incoming boundary condition. The copy can then be initialized with a domain geometry
         !
-        call create_bc(bc,bc_instance)
+        allocate(bc_copy, source=bc, stat=ierr)
+        if ( ierr /= 0 ) call AllocationError
 
 
         !
         ! Initialize new boundary condition from mesh data and face index
         !
-        call bc_instance%init(self%mesh(idom),face,options)
+        call bc_copy%init(self%mesh(idom),face)
 
 
         !
         ! Add initialized boundary condition to bcset_t for domain 'idom'
         !
-        call self%bcset(idom)%add(bc_instance)
+        call self%bcset(idom)%add(bc_copy)
 
 
     end subroutine add_bc

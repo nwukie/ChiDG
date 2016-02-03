@@ -27,7 +27,7 @@ module bc_euler_pressureoutlet
 
     contains
 
-        procedure   :: set_options  !< Set boundary condition options
+        procedure   :: add_options  !< Set boundary condition options
         procedure   :: compute      !< boundary condition function implementation
 
     end type euler_pressureoutlet_t
@@ -45,7 +45,7 @@ contains
     !!  @date   2/2/2016
     !!
     !------------------------------------------------------------------------------------------
-    subroutine set_options(self)    
+    subroutine add_options(self)    
         class(euler_pressureoutlet_t),  intent(inout)   :: self
 
 
@@ -55,18 +55,12 @@ contains
         call self%bcfunctions%add('Static Pressure','Required')
 
 
-        !& DEBUG. This should be removed in general
-        call self%bcfunctions%set_fcn(       'Static Pressure', 'constant')
-        call self%bcfunctions%set_fcn_option('Static Pressure','val',93000._rk)
-
-
-
         !
         ! Add parameters
         !
 
 
-    end subroutine set_options
+    end subroutine add_options
     !******************************************************************************************
 
 
@@ -133,8 +127,6 @@ contains
                 ! Get back pressure from function.
                 !
                 p_bc = self%bcfunctions%compute("Static Pressure",time,coords)
-                !p_bc = 93000._rk
-                !p_bc = 107000._rk
 
 
 

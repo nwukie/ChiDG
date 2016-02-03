@@ -18,6 +18,14 @@ contains
 
 
 
+    !>
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   2/3/2016
+    !!
+    !!
+    !!
+    !-------------------------------------------------------------------------------------------
     subroutine write_tecio_variables(data,filename,timeindex)
         type(chidg_data_t),     intent(inout)           :: data
         character(*),           intent(in)              :: filename
@@ -184,7 +192,8 @@ contains
 
 
 
-    end subroutine
+    end subroutine write_tecio_variables
+    !**************************************************************************************************************
 
 
 

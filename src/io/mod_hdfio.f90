@@ -24,6 +24,7 @@ contains
     !!  points read from the hdf5 file for initialization.
     !!
     !!  @author Nathan A. Wukie
+    !!  @date   2/3/2016
     !!
     !!  @param[in]      filename    Character string of the file to be read
     !!  @param[inout]   domains     Allocatable array of domains. Allocated in this routine.
@@ -244,6 +245,7 @@ contains
     !!
     !!
     !!  @author Nathan A. Wukie
+    !!  @date   2/3/2016
     !!
     !!  @param[in]      fid         HDF5 file identifier.
     !!  @param[in]      varstring   Character string of the variable name to be read.
@@ -421,6 +423,8 @@ contains
     !!
     !!
     !!  @author Nathan A. Wukie
+    !!  @date   2/3/2016
+    !!
     !!  @param[in]      fid         HDF5 file identifier.
     !!  @param[in]      varstring   Character string of the variable name to be read.
     !!  @param[in]      itime       Integer of the time instance for the current variable to be read.
@@ -613,6 +617,7 @@ contains
     !> Read solution modes from HDF file.
     !!
     !!  @author Nathan A. Wukie
+    !!  @date   2/3/2016
     !!
     !!  @param[in]      filename    Character string of the file to be read from
     !!  @param[inout]   data        chidg_data_t that will accept the solution modes
@@ -735,7 +740,7 @@ contains
     !> Write solution modes to HDF file.
     !!
     !!  @author Nathan A. Wukie
-    !!
+    !!  @date   2/3/2016
     !!
     !!  @param[in]      filename    Character string of the file to be written to
     !!  @param[inout]   data        chidg_data_t containing solution to be written

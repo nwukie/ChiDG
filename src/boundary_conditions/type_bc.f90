@@ -3,10 +3,7 @@ module type_bc
     use mod_kinds,              only: rk, ik
     use mod_constants,          only: XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX, BOUNDARY
     use type_mesh,              only: mesh_t
-    use type_element,           only: element_t
-    use type_equationset,       only: equationset_t
     use type_solverdata,        only: solverdata_t
-    use type_dict,              only: dict_t
     use type_properties,        only: properties_t
     use type_face_info,         only: face_info_t
     use type_function_info,     only: function_info_t
@@ -24,7 +21,7 @@ module type_bc
     !!  - contains a list of face indices
     !!
     !!  @author Nathan A. Wukie
-    !!  @date   1/31/2016
+    !!  @date   2/3/2016
     !!
     !--------------------------------------------------------------------------------------------
     type, public, abstract :: bc_t
@@ -43,12 +40,23 @@ module type_bc
 
     contains
 
-        procedure   :: set_options                          !< 
+
+
         procedure   :: init                                 !< Boundary condition initialization
         procedure   :: init_spec                            !< Call specialized initialization routine
         procedure   :: apply                                !< Spatial application of the boundary condition
         procedure(compute_interface), deferred :: compute   !< Implements boundary condition calculation
 
+
+        procedure   :: add_options                          !< Specialized by each bc_t implementation. Adds options available
+
+
+        procedure   :: set_fcn                              !< Set a particular function definition for a specified bcfunction_t
+        procedure   :: set_fcn_option                       !< Set function-specific options for a specified bcfunction_t
+
+!        procedure   :: list_fcns                            !< List available bcfunction_t's
+!        procedure   :: list_fcn_options                     !< List available function_t options for a given bcfunction_t
+        
     end type bc_t
     !*********************************************************************************************
 
@@ -92,11 +100,11 @@ contains
     !
     !
     !
-    subroutine init(self,mesh,iface,options)
+    !subroutine init(self,mesh,iface,options)
+    subroutine init(self,mesh,iface)
         class(bc_t),            intent(inout)       :: self
         type(mesh_t),           intent(inout)       :: mesh
         integer(ik),            intent(in)          :: iface 
-        type(dict_t), optional, intent(in)          :: options
 
         
         integer(ik)                 :: nelem_xi, nelem_eta, nelem_zeta, nelem_bc, ielem_bc, & 
@@ -177,7 +185,8 @@ contains
         !
         ! Call user-specialized boundary condition initialization
         !
-        call self%init_spec(mesh,iface,options)
+        !call self%init_spec(mesh,iface,options)
+        call self%init_spec(mesh,iface)
 
 
 
@@ -265,14 +274,12 @@ contains
     !!
     !!  @param[inout]   mesh        mesh_t object containing elements and faces
     !!  @param[in]      iface       block face index to which the boundary condition is being applied
-    !!  @param[in]      options     dictionary object containing boundary condition options
     !!
     !--------------------------------------------------------------------------------------------
-    subroutine init_spec(self,mesh,iface,options)
+    subroutine init_spec(self,mesh,iface)
         class(bc_t),            intent(inout)   :: self
         type(mesh_t),           intent(inout)   :: mesh
         integer(ik),            intent(in)      :: iface
-        type(dict_t), optional, intent(in)      :: options
 
 
 
@@ -290,19 +297,142 @@ contains
     !! in create_bc to set the options of a concrete bc_t. This function can be overwritten by a concrete
     !! bc_t to set case-specific options; parameters and functions.
     !!
+    !!      - add entries to self%bcfunctions
+    !!      - add entries to self%bcparameters
+    !!
     !!  @author Nathan A. Wukie
     !!  @date   2/3/2016
     !!
     !!
     !--------------------------------------------------------------------------------------------
-    subroutine set_options(self)
+    subroutine add_options(self)
         class(bc_t),            intent(inout)   :: self
 
 
 
 
-    end subroutine set_options
+    end subroutine add_options
     !********************************************************************************************
+
+
+
+
+
+
+
+
+
+
+    !>
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   2/3/2016
+    !!
+    !!
+    !!
+    !--------------------------------------------------------------------------------------------
+    subroutine set_fcn(self,bcfcn,fcn)
+        class(bc_t),            intent(inout)   :: self
+        character(*),           intent(in)      :: bcfcn
+        character(*),           intent(in)      :: fcn
+
+
+        call self%bcfunctions%set_fcn(bcfcn,fcn)
+
+
+    end subroutine set_fcn
+    !*********************************************************************************************
+
+
+
+
+
+
+
+
+
+    !>
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   2/3/2016
+    !!
+    !!
+    !!
+    !-----------------------------------------------------------------------------------------------
+    subroutine set_fcn_option(self,bcfcn,option,val)
+        class(bc_t),            intent(inout)   :: self
+        character(*),           intent(in)      :: bcfcn
+        character(*),           intent(in)      :: option
+        real(rk),               intent(in)      :: val
+
+        call self%bcfunctions%set_fcn_option(bcfcn,option,val)
+
+    end subroutine set_fcn_option
+    !************************************************************************************************
+
+
+
+
+
+
+
+
+
+    !>
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   2/3/2016
+    !!
+    !!
+    !!
+    !-------------------------------------------------------------------------------------------------
+    function get_fcns(self) result(str)
+        class(bc_t),    intent(in)  :: self
+
+        character(len=:),   allocatable :: str
+
+
+
+    end function get_fcns
+    !*************************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+    !>
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   2/3/2016
+    !!
+    !!
+    !!
+    !-------------------------------------------------------------------------------------------------
+    function get_fcn_options(self,bcfcn) result(str)
+        class(bc_t),    intent(in)  :: self
+        character(*),   intent(in)  :: bcfcn
+
+        integer(ik)                     :: ifcn
+        character(len=:),   allocatable :: str
+
+
+        ifcn = self%bcfunctions%get_bcfcn_index(bcfcn)
+
+
+
+    end function get_fcn_options
+    !**************************************************************************************************
+
+
+
+
+
 
 
 

@@ -5,7 +5,8 @@
 !!
 !!  The tecplot file produced cannot be used in any way other than for visualization purposes.
 !!
-!! @author Nathan A. Wukie
+!!  @author Nathan A. Wukie
+!!  @date   2/3/2016
 !!
 !!
 !! Usage:   H5toTEC 'gridfile' 'solutionfile'

@@ -120,9 +120,9 @@ contains
 
 
         !
-        ! Initialize boundary condition options
+        ! Add specialized boundary condition options from the concrete type definition.
         !
-        call bc%set_options()
+        call bc%add_options()
 
 
     end subroutine create_bc

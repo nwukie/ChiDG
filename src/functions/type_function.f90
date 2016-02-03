@@ -73,6 +73,9 @@ contains
     !!  @author Nathan A. Wukie
     !!  @date   2/2/2016
     !!
+    !!  @param[in]  key     String indicating a dictionary entry to set
+    !!  @parma[in]  val     Real value to be associated with the key
+    !!
     !--------------------------------------------------------------------------------------------
     subroutine set(self,key,val)
         class(function_t),  intent(inout)    :: self

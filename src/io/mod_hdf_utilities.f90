@@ -21,6 +21,7 @@ contains
     !> Return a properties instance containing information about an hdf file
     !!
     !!  @author Nathan A. Wukie
+    !!  @date   2/3/2016
     !!
     !!
     !!  @param[in]  filename    Character string containing a filename for a file that gets interrogated
@@ -136,6 +137,7 @@ contains
     !> Given a file identifier, return the number of domains in an hdf5 file.
     !!
     !!  @author Nathan A. Wukie
+    !!  @date   2/3/2016
     !!
     !!  @param[in]  fid     HDF file identifier
     !!
@@ -173,6 +175,7 @@ contains
     !> Test if the file contains a Grid.
     !!
     !!  @author Nathan A. Wukie
+    !!  @date   2/3/2016
     !!
     !!
     !--------------------------------------------------------------------------------------------------------------
@@ -221,6 +224,7 @@ contains
     !> Test if the file contains a Solution.
     !!
     !!  @author Nathan A. Wukie
+    !!  @date   2/3/2016
     !!
     !!
     !---------------------------------------------------------------------------------------------------------------
@@ -267,8 +271,7 @@ contains
     !> Return a list of domain names from an HDF5 file identifier.
     !!
     !!  @author Nathan A. Wukie
-    !!
-    !!
+    !!  @date   2/3/2016
     !!
     !!  @param[in]  fid     HDF file identifier
     !!
@@ -343,7 +346,7 @@ contains
     !> Returns an array of integers that specifies the order of the coordinate expansion for every domain.
     !!
     !!  @author Nathan A. Wukie
-    !!
+    !!  @date   2/3/2016
     !!
     !!  @param[in]  fid         HDF file identifier.
     !!  @param[in]  dnames(:)   List of domain names to be interrogated. 
@@ -397,6 +400,7 @@ contains
     !> Returns an array of integer that specifies the order of the solution expansion for every domain.
     !!
     !!  @author Nathan A. Wukie
+    !!  @date   2/3/2016
     !!
     !!  @param[in]  fid     HDF file identifier.
     !!  @param[in]  dnames  List of domain names to be interrogated.
@@ -456,7 +460,7 @@ contains
     !> Returns an array of integer that specifies the order of the solution expansion for every domain.
     !!
     !!  @author Nathan A. Wukie
-    !!
+    !!  @date   2/3/2016
     !!
     !!  @param[in]  fid     HDF file identifier.
     !!  @param[in]  dnames  List of domain names to be interrogated.

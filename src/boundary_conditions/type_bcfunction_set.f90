@@ -48,13 +48,13 @@ contains
     !!  @author Nathan A. Wukie
     !!  @date   2/2/2016
     !!
-    !!  @param[in]  fname   String specifying the name of the bcfunction_t. Ex: 'Static Pressure'
+    !!  @param[in]  bcfcn   String specifying the name of the bcfunction_t. Ex: 'Static Pressure'
     !!  @param[in]  ftype   Character string specifying the requirement type. 'Required' or 'Optional'
     !!
     !--------------------------------------------------------------------------------
-    subroutine add(self,fname,ftype)
+    subroutine add(self,bcfcn,ftype)
         class(bcfunction_set_t),    intent(inout)   :: self
-        character(*),               intent(in)      :: fname
+        character(*),               intent(in)      :: bcfcn
         character(*),               intent(in)      :: ftype
 
         type(bcfunction_t), allocatable :: temp_bcfcn(:)
@@ -85,7 +85,7 @@ contains
         !
         ! Initialize new bcfunction
         !
-        temp_bcfcn(ifcn)%name_  = fname
+        temp_bcfcn(ifcn)%name_  = bcfcn
         temp_bcfcn(ifcn)%type_  = ftype
 
 
@@ -109,28 +109,28 @@ contains
     !!  @author Nathan A. Wukie
     !!  @date   2/2/2016
     !!
-    !!  @param[in]  fname   String containing the name of the bcfunction_t to be modified.
-    !!  @param[in]  fstr    String indicating the type of function to be set in the bcfunction_t
+    !!  @param[in]  bcfcn   String containing the name of the bcfunction_t to be modified.
+    !!  @param[in]  fcn     String indicating the type of function to be set in the bcfunction_t
     !!
     !-----------------------------------------------------------------------------------
-    subroutine set_fcn(self,fname,fstr)
+    subroutine set_fcn(self,bcfcn,fcn)
         class(bcfunction_set_t),    intent(inout)   :: self
-        character(*),               intent(in)      :: fname
-        character(*),               intent(in)      :: fstr
+        character(*),               intent(in)      :: bcfcn
+        character(*),               intent(in)      :: fcn
 
         integer(ik)     :: ind
         
 
         !
-        ! Get index of fname in self%bcfcn(:)
+        ! Get index of bcfcn in self%bcfcn(:)
         !
-        ind = self%get_bcfcn_index(fname)
+        ind = self%get_bcfcn_index(bcfcn)
 
 
         !
         ! Set concrete function
         !
-        call self%bcfcn(ind)%set('function',fstr)
+        call self%bcfcn(ind)%set('function',fcn)
 
 
     end subroutine set_fcn
@@ -147,28 +147,29 @@ contains
     !!  @author Nathan A. Wukie
     !!  @date   2/3/2016
     !!
-    !!  @param[in]
-    !!
+    !!  @param[in]  bcfcn   String containing the name of the bcfunction_t to be modified.
+    !!  @param[in]  option  String indicating the option to be set.
+    !!  @param[in]  val     Real value to be set for the specified option.
     !!
     !-------------------------------------------------------------------------------------
-    subroutine set_fcn_option(self,fname,foption,val)
+    subroutine set_fcn_option(self,bcfcn,option,val)
         class(bcfunction_set_t),    intent(inout)   :: self
-        character(*),               intent(in)      :: fname
-        character(*),               intent(in)      :: foption
+        character(*),               intent(in)      :: bcfcn
+        character(*),               intent(in)      :: option
         real(rk),                   intent(in)      :: val
 
         integer(ik) :: ifcn
 
         !
-        ! Get index of fname in self%bcfcn(:)
+        ! Get index of bcfcn in self%bcfcn(:)
         !
-        ifcn = self%get_bcfcn_index(fname)
+        ifcn = self%get_bcfcn_index(bcfcn)
 
 
         !
         ! Set function option
         !
-        call self%bcfcn(ifcn)%fcn%set(foption,val)
+        call self%bcfcn(ifcn)%fcn%set(option,val)
 
 
 
@@ -193,13 +194,13 @@ contains
     !!  @author Nathan A. Wukie
     !!  @date   2/2/2016
     !!
-    !!  @param[in]  fname   String specifying the name of a particular bcfunction_t
+    !!  @param[in]  bcfcn   String specifying the name of a particular bcfunction_t
     !!  @result     ind     Index of the given bcfunction_t in self%bcfcn(:)
     !!
     !------------------------------------------------------------------------------------
-    function get_bcfcn_index(self,fname) result(ind)
+    function get_bcfcn_index(self,bcfcn) result(ind)
         class(bcfunction_set_t),    intent(in)  :: self
-        character(*),               intent(in)  :: fname
+        character(*),               intent(in)  :: bcfcn
 
         integer(ik) :: ind, ifcn
         logical     :: name_matches
@@ -220,7 +221,7 @@ contains
             !
             ! Check for matching name
             !
-            name_matches = ( trim(fname) == trim(self%bcfcn(ifcn)%name_) )
+            name_matches = ( trim(bcfcn) == trim(self%bcfcn(ifcn)%name_) )
 
 
             if ( name_matches ) then
@@ -234,7 +235,7 @@ contains
         !
         ! Check that 'ind' has been set.
         !
-        if ( ind == 0 ) call chidg_signal_one(FATAL,"bcfunction_set%get_fcn_index: function key not found",fname)
+        if ( ind == 0 ) call chidg_signal_one(FATAL,"bcfunction_set%get_fcn_index: function key not found",bcfcn)
 
 
     end function get_bcfcn_index
@@ -257,9 +258,9 @@ contains
     !!
     !!
     !---------------------------------------------------------------------------------------
-    impure elemental function compute(self,fname,time,coord) result(val)
+    impure elemental function compute(self,bcfcn,time,coord) result(val)
         class(bcfunction_set_t),    intent(inout)   :: self
-        character(*),               intent(in)      :: fname
+        character(*),               intent(in)      :: bcfcn
         real(rk),                   intent(in)      :: time
         type(point_t),              intent(in)      :: coord
 
@@ -268,9 +269,9 @@ contains
         logical     :: fcn_set
 
         !
-        ! Get index of bcfunction_t specified by fname in self%bcfcn(:)
+        ! Get index of bcfunction_t specified by bcfcn in self%bcfcn(:)
         !
-        ifcn = self%get_bcfcn_index(fname) 
+        ifcn = self%get_bcfcn_index(bcfcn) 
 
 
         !

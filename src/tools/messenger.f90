@@ -5,18 +5,14 @@ module messenger
 
 
     character(len=:), allocatable   :: line                         ! Line that gets assembled and written
-    character(len=2), parameter     :: default_delimiter = ''       ! Delimiter of line parameters
+    character(len=2), parameter     :: default_delimiter = '  '     ! Delimiter of line parameters
     character(len=:), allocatable   :: current_delimiter            ! Delimiter of line parameters
     integer                         :: unit                         ! Unit of log file
     integer                         :: max_msg_length = 160         ! Maximum width of message line
     logical                         :: log_initialized = .false.    ! Status of log file
 
-!    interface
-!        function msg_proc_int()
-!
-!        end function
-!    end interface
-
+    character(len=:), allocatable   :: color_begin
+    character(len=:), allocatable   :: color_end
 
 contains
 
@@ -102,7 +98,6 @@ contains
     !!  @param[in]  info_two    Optional auxiliary information to be reported.
     !!
     !-------------------------------------------------------------------------------------------------------------
-    !subroutine message(pathname, linenum, sig, msg, info_one, info_two, msg_proc)
     subroutine message(pathname, linenum, sig, msg, info_one, info_two)
         character(*), intent(in)                        :: pathname
         integer(ik),  intent(in)                        :: linenum
@@ -110,7 +105,6 @@ contains
         character(*), intent(in)                        :: msg
         class(*),     intent(in), target,   optional    :: info_one
         class(*),     intent(in), target,   optional    :: info_two
-        !procedure(msg_proc_int),  optional    :: msg_proc
 
         integer                         :: iaux, pathstart
         integer(ik)                     :: ierr
@@ -293,11 +287,13 @@ contains
     !!  @author Nathan A. Wukie
     !!  @date   2/2/2016
     !!
-    !!  @param[in]  a-h         Optional polymorphic variables that can be used to compose a line sent to IO.
-    !!  @param[in]  delimiter   Optional delimiter that is used to separate line components. Default is set to ' '
+    !!  @param[in]  a-h             Optional polymorphic variables that can be used to compose a line sent to IO.
+    !!  @param[in]  delimiter       Optional delimiter that is used to separate line components. Default is set to ' '
+    !!  @param[in]  columns         Logical optional to indicate if incoming arguments should be aligned in columns.
+    !!  @param[in]  column_width    Optional integer indicating the column width if columns was indicated.
     !!
     !----------------------------------------------------------------------------------------------------------
-    subroutine write_line(a,b,c,d,e,f,g,h,delimiter)
+    subroutine write_line(a,b,c,d,e,f,g,h,delimiter,columns,column_width,color)
         class(*),           intent(in), target, optional        :: a
         class(*),           intent(in), target, optional        :: b
         class(*),           intent(in), target, optional        :: c
@@ -307,6 +303,10 @@ contains
         class(*),           intent(in), target, optional        :: g
         class(*),           intent(in), target, optional        :: h
         character(len=*),   intent(in),         optional        :: delimiter
+        logical,            intent(in),         optional        :: columns
+        integer(ik),        intent(in),         optional        :: column_width
+        character(*),       intent(in),         optional        :: color
+        
 
         class(*), pointer               :: auxdata => null()
 
@@ -345,7 +345,7 @@ contains
                     !
                     ! Add data to line
                     !
-                    call add_to_line(auxdata,delimiter)
+                    call add_to_line(auxdata,delimiter,columns,column_width)
 
             end if
 
@@ -361,8 +361,21 @@ contains
 
 
 
+
         !
-        ! Write line
+        ! Set color
+        !
+        if ( present(color) ) then
+            call set_color(color)
+        else
+            call set_color('black')
+        end if
+        
+
+
+
+        !
+        ! Send line to output
         !
         call send_line()
 
@@ -383,15 +396,22 @@ contains
     !!  @author Nathan A. Wukie
     !!  @date   2/2/2016
     !!
-    !!  @param[in]  linedata    Polymorphic data component that gets converted to a string and added to the IO line
-    !!  @param[in]  delimiter   Optional delimiter that is used to separate line components. Default is set to ' '
+    !!  @param[in]  linedata        Polymorphic data component that gets converted to a string and added to the IO line
+    !!  @param[in]  delimiter       Optional delimiter that is used to separate line components. Default is set to ' '
+    !!  @param[in]  columns         Logical optional to indicate if incoming arguments should be aligned in columns.
+    !!  @param[in]  column_width    Optional integer indicating the column width if columns was indicated.
     !!
     !--------------------------------------------------------------------------------------------------------------
-    subroutine add_to_line(linedata,delimiter)
+    subroutine add_to_line(linedata,delimiter,columns,column_width)
         class(*),       intent(in)              :: linedata
         character(*),   intent(in), optional    :: delimiter
+        logical,        intent(in), optional    :: columns
+        integer(ik),    intent(in), optional    :: column_width
 
         character(100)                  :: temp
+        character(len=:),   allocatable :: temp_a, temp_b
+        integer(ik)                     :: current_width, ispace, extra_space, test_blank
+        logical                         :: blank_line
 
 
         !
@@ -418,15 +438,16 @@ contains
         select type(linedata)
 
             type is(character(len=*))
-                line = line//linedata//current_delimiter
+                temp = linedata
+                !line = line//linedata//current_delimiter
+
 
             type is(integer)
                 write(temp, '(I10.0)') linedata
-                line = line//trim(temp)//current_delimiter
 
             type is(integer(8))
                 write(temp, '(I10.0)') linedata
-                line = line//trim(temp)//current_delimiter
+!                line = line//trim(temp)//current_delimiter
 
             type is(real)
                 if (linedata > 0.1) then
@@ -434,7 +455,7 @@ contains
                 else
                     write(temp, '(E24.14)') linedata
                 end if
-                line = line//trim(adjustl(temp))//current_delimiter
+!                line = line//trim(adjustl(temp))//current_delimiter
 
             type is(real(8))
                 if (linedata > 0.1) then
@@ -442,12 +463,66 @@ contains
                 else
                     write(temp, '(E24.14)') linedata
                 end if
-                line = line//trim(adjustl(temp))//current_delimiter
+!                line = line//trim(adjustl(temp))//current_delimiter
 
             class default
                 print*, 'Error: no IO rule for provided data in add_to_line'
                 stop
         end select
+
+
+        !
+        ! Test for blank line
+        !
+        test_blank = verify(temp, set=' ')
+        if ( test_blank == 0 ) then
+            blank_line = .true.
+        else
+            blank_line = .false.
+        end if
+
+
+        !
+        ! Neaten up the string
+        !
+        if ( blank_line ) then
+            temp_a = temp
+        else
+            temp_a = trim(adjustl(temp))
+        end if
+
+
+        !
+        ! Append spaces for column alignment
+        !
+        if ( present(columns) ) then
+            if (columns) then
+                current_width = len_trim(temp_a)  ! length without trailing blanks
+                extra_space = column_width - current_width
+
+                !
+                ! Add spaces on front and back. Could cause misalignment with dividing integer by 2.
+                !
+                do while ( len(temp_a) < column_width )
+                    temp_a = ' '//temp_a//' '
+                end do
+
+                !
+                ! Make sure we are at exactly column_width. Could have gone over the the step above.
+                !
+                temp_b = temp_a(1:column_width)
+                 
+            end if
+        else
+            
+            temp_b = temp_a
+
+        end if
+
+
+
+        line = line//temp_b
+        line = line//current_delimiter
 
 
     end subroutine add_to_line
@@ -467,6 +542,7 @@ contains
     !! Line wrapping is also handled, set by the module parameter 'max_msg_length'.
     !!
     !!  @author Nathan A. Wukie
+    !!  @date   2/3/2016
     !!
     !-------------------------------------------------------------------------------------------------------------
     subroutine send_line()
@@ -532,18 +608,30 @@ contains
             writeline = line(lstart:lend)
 
 
+
+            !
+            ! Colorize output
+            !
+            writeline = achar(27)//color_begin//writeline//achar(27)//color_end
+
+
+
+
+
+
             !
             ! Write to destination
             !
             if ( IO_DESTINATION == 'screen' ) then
                 print*, writeline
+                !print*, achar(27)//'[95m pink '//achar(27)//'[0m.'//writeline
 
 
             else if ( IO_DESTINATION == 'file' ) then
                 if (log_initialized) then
                     write(unit,*) writeline
                 else
-                    call message(__FILE__, __LINE__, 3, "send_line: log file not initialized.")
+                    stop "Trying to write a line, but log file not inititlized. Call chidg%init('io')"
                 end if
 
 
@@ -553,7 +641,7 @@ contains
                     print*, writeline
                     write(unit,*) writeline
                 else
-                    call message(__FILE__, __LINE__, 3, "send_line: log file not initialized.")
+                    stop "Trying to write a line, but log file not inititlized. Call chidg%init('io')"
                 end if
 
 
@@ -581,6 +669,60 @@ contains
 
     end subroutine send_line
     !**************************************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+    !>  Set line color.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   2/3/2016
+    !!
+    !!  @param[in]  color   String indicating the color to set
+    !!
+    !-------------------------------------------------------------------------------------------
+    subroutine set_color(color)
+        character(*),   intent(in)  :: color
+
+
+        select case (color)
+            case ('black')
+                color_begin = '[30m'
+
+            case ('red')
+                color_begin = '[31m'
+
+            case ('green')
+                color_begin = '[32m'
+
+            case ('yellow')
+                color_begin = '[33m'
+
+            case ('blue')
+                color_begin = '[34m'
+
+            case ('purple')
+                color_begin = '[35m'
+
+            case ('aqua')
+                color_begin = '[36m'
+
+            case default
+                color_begin = '[30m'
+                call message(__FILE__,__LINE__,1, "set_color: unrecognized color string.",color) ! send warning
+
+        end select
+
+    end subroutine set_color
+    !******************************************************************************************
+
 
 
 

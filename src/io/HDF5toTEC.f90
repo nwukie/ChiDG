@@ -56,7 +56,7 @@ program HDF5toTEC
     !
     ! Check if a filename was provided to the program
     !
-    if ( nargs < 2) call chidg_signal(FATAL,"Usage: H5toTEC 'gridfile' 'solutionfile'")
+    if ( nargs < 2 ) call chidg_signal(FATAL,"Usage: H5toTEC 'gridfile' 'solutionfile'")
 
 
 
@@ -73,6 +73,8 @@ program HDF5toTEC
 
     !
     ! Get nterms_s and eqnset. TODO: Read directly from file
+    !
+    ! TODO: Also, I feel like this isn't used any more. Check into removing it.
     !
     file_props = get_file_properties(solutionfile)
 

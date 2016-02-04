@@ -16,8 +16,6 @@ contains
 
 
 
-
-
     !> Return a properties instance containing information about an hdf file
     !!
     !!  @author Nathan A. Wukie

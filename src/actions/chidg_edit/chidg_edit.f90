@@ -16,6 +16,7 @@ module mod_chidg_edit
     use mod_chidg_edit_boundaryconditions,  only: chidg_edit_boundaryconditions
     use mod_chidg_edit_matrixsolver,        only: chidg_edit_matrixsolver
     use mod_chidg_edit_timescheme,          only: chidg_edit_timescheme
+    use mod_chidg_edit_printoverview,       only: print_overview
     implicit none
 
 
@@ -62,6 +63,11 @@ contains
         integer(HID_T)     :: fid
 
 
+        !
+        ! Send ChiDG output to screen
+        !
+        IO_DESTINATION = 'screen'
+
 
         !call check_extension(file,'.h5')
 
@@ -70,6 +76,9 @@ contains
         ! TODO: portability check
         !
         call execute_command_line("clear")
+
+
+
 
 
         !
@@ -101,6 +110,7 @@ contains
 
 
 
+
         command_options = "1 - boundary conditions, 2 - time scheme, 3 - matrix solver, 0 - exit"
 
         !
@@ -109,18 +119,30 @@ contains
         run = .true.
         do while ( run )
 
-
+            !
+            ! Refresh display with overview of file contents
+            !
+            call execute_command_line("clear")
             call print_overview(fid)
 
 
+            !
+            ! Print command options, accept user selection.
+            !
+            call write_line(' ')
+            call write_line("Select command: ")
+            call write_line("1:boundary conditions","2:time scheme","3:matrix solver","0:exit", columns=.True., column_width=25, color='blue')
 
-            print*, command_options
             ierr = 1
             do while ( ierr /= 0 )
-                read(*,'(I3)', iostat=ierr) int_input
+                read(*,'(I8)', iostat=ierr) int_input
                 if ( (ierr/=0) .or. (abs(int_input)>3) ) print*, "Invalid input: expecting 0, 1, 2, or 3."
             end do
 
+            
+            !
+            ! Sub-menu functions. Enter based on user-selection.
+            !
             select case (int_input)
                 case (0)
                     exit
@@ -151,63 +173,13 @@ contains
 
 
 
-
-
-
-
+        !
+        ! Reset terminal color to black by writing a black line.
+        !
+        call write_line(' ')
 
     end subroutine chidg_edit
     !********************************************************************************************
-
-
-
-
-
-
-    
-
-
-
-
-    !>
-    !!
-    !!  @author Nathan A. Wukie
-    !!  @date   2/3/2016
-    !!
-    !!
-    !!
-    !!
-    !----------------------------------------------------------------------------------------------
-    subroutine print_overview(fid)
-        integer(HID_T),    intent(in)  :: fid
-
-
-    end subroutine print_overview
-    !**********************************************************************************************
-
-    
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 

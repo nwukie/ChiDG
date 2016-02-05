@@ -410,8 +410,8 @@ contains
         integer(ik),    intent(in), optional    :: column_width
         logical,        intent(in), optional    :: ltrim
 
-        character(100)                  :: temp
-        character(len=:),   allocatable :: temp_a, temp_b
+        character(100)                  :: write_internal
+        character(len=:),   allocatable :: temp, temp_a, temp_b
         integer(ik)                     :: current_width, ispace, extra_space, test_blank
         logical                         :: blank_line
 
@@ -443,24 +443,27 @@ contains
                 temp = linedata
 
             type is(integer)
-                write(temp, '(I10.0)') linedata
-
+                write(write_internal, '(I10.0)') linedata
+                temp = write_internal
             type is(integer(8))
-                write(temp, '(I10.0)') linedata
+                write(write_internal, '(I10.0)') linedata
+                temp = write_internal
 
             type is(real)
                 if (linedata > 0.1) then
-                    write(temp, '(F24.14)') linedata
+                    write(write_internal, '(F24.14)') linedata
                 else
-                    write(temp, '(E24.14)') linedata
+                    write(write_internal, '(E24.14)') linedata
                 end if
+                temp = write_internal
 
             type is(real(8))
                 if (linedata > 0.1) then
-                    write(temp, '(F24.14)') linedata
+                    write(write_internal, '(F24.14)') linedata
                 else
-                    write(temp, '(E24.14)') linedata
+                    write(write_internal, '(E24.14)') linedata
                 end if
+                temp = write_internal
 
             class default
                 print*, 'Error: no IO rule for provided data in add_to_line'

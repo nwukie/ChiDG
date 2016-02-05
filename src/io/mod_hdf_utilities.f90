@@ -680,7 +680,7 @@ contains
 
 
 
-    !>
+    !>  Return 
     !!
     !!  @author Nathan A. Wukie
     !!  @date   2/3/2016
@@ -695,7 +695,6 @@ contains
 
         integer(HID_T)                      :: bc_id, bcface_id
         integer(ik)                         :: ndom, ierr, idom, iface
-        character(len=1024), allocatable    :: dnames(:)
         character(len=1024), allocatable    :: bcnames(:)
         character(len=10)                   :: faces(NFACES)
         logical                             :: exists, bcname_exists
@@ -706,7 +705,6 @@ contains
         ! Get file information
         !
         ndom   = get_ndomains_hdf(fid)
-        dnames = get_domain_names_hdf(fid)
 
         allocate(bcnames(NFACES), stat=ierr)
         if (ierr /= 0) call AllocationError
@@ -794,13 +792,12 @@ contains
 
 
 
-    !>
+    !>  Delete all the attributes attached to a specified group identifier.
     !!
     !!  @author Nathan A. Wukie
     !!  @date   2/4/2016
     !!
-    !!
-    !!
+    !!  @param[in]  gid     HDF5 group identifier.
     !!
     !----------------------------------------------------------------------------------------------------------
     subroutine delete_group_attributes(gid)
@@ -808,129 +805,41 @@ contains
 
         integer(ik)                             :: nattr, ierr
         integer(HSIZE_T)                        :: iattr, idx
-        character(len=1024),    allocatable     :: anames(:)
-        character(len=1024)                     :: name_buffer
-        type(h5o_info_t), target                 :: h5_info
+        type(h5o_info_t), target                :: h5_info
 
 
-        print*, 'deleting attributes'
 
         !
         ! Get number of attributes attached to the group id
         !
-!        call h5aget_num_attrs_f(gid, nattr, ierr)
-!        if (ierr /= 0) call chidg_signal(FATAL,"delete_group_attributes: error getting current number of attributes.")
         call h5oget_info_f(gid, h5_info, ierr)
         nattr = h5_info%num_attrs
         if (ierr /= 0) call chidg_signal(FATAL,"delete_group_attributes: error getting current number of attributes.")
 
-        print*, 'number of attributes', nattr
 
         !
         ! Delete any existing attributes
         !
         if ( nattr > 0 ) then
 
-            !
-            ! Allocate storage for attribute names
-            !
-            allocate(anames(nattr), stat=ierr)
-            if (ierr /= 0) call AllocationError
-
 
             !
-            ! Delete by index
+            ! Delete by index. h5adelete_by_idx_f returns idx with the next index so it doesn't need manually updated.
             !
             idx = 0
             do iattr = 1,nattr
-                print*, 'deleting attribute ', iattr
-                !idx = iattr - 1
                 call h5adelete_by_idx_f(gid, ".", H5_INDEX_CRT_ORDER_F, H5_ITER_NATIVE_F, idx, ierr)
                 if (ierr /= 0) call chidg_signal(FATAL,"delete_group_attributes: error deleting attribute")
             end do
 
 
-!
-!            !
-!            ! Get names of current attributes. NOTE: i don't think you can pass loop variables to HDF5.
-!            !
-!            idx = 0
-!            do iattr = 1,nattr
-!                idx = iattr - 1
-!                call h5aget_name_by_idx_f(gid, ".", H5_INDEX_CRT_ORDER_F, H5_ITER_NATIVE_F, idx, anames(iattr), ierr)
-!                if (ierr /= 0) call chidg_signal(FATAL,"delete_group_attributes: error getting attribute name")
-!
-!                !anames(iattr) = name_buffer
-!            end do
-!
-!
-!            !
-!            ! Loop through and delete current attributes
-!            !
-!            do iattr = 1,nattr
-!                print*, 'deleting attribute ', trim(anames(iattr))
-!                call h5adelete_by_name_f(gid, ".", trim(adjustl(anames(iattr))), ierr)
-!                if (ierr /= 0) call chidg_signal(FATAL,"delete_group_attributes: error deleting attribute")
-!            end do
 
         end if ! nattr
 
 
-        print*, 'attributes deleted'
 
     end subroutine delete_group_attributes
     !**********************************************************************************************************
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 

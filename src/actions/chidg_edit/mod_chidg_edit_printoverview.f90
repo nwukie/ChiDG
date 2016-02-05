@@ -129,13 +129,16 @@ contains
     !------------------------------------------------------------------------------------------------------
     subroutine print_chidg_edit_header()
 
-        call write_line("!---------------------------------------------------------------------------------------", color='blue')
-        call write_line("!", color='blue')
-        call write_line("!", color='blue')
-        call write_line("!","ChiDG Action: edit", color='blue')
-        call write_line("!", color='blue')
-        call write_line("!", color='blue')
-        call write_line("****************************************************************************************", color='blue')
+
+        call write_line(" ____________________________________________________________________________________________________________________", color='blue', ltrim=.false.)
+        call write_line("        ______               ____     _____                                                                          ", color='blue', ltrim=.false.)
+        call write_line("       |        |           |    \   |     |                                                                         ", color='blue', ltrim=.false.)
+        call write_line("       |        |        .  |     |  |                                                                               ", color='blue', ltrim=.false.)
+        call write_line("       |        |_____      |     |  |   __                              chidg edit                                  ", color='blue', ltrim=.false.)
+        call write_line("       |        |     |  |  |     |  |     |                                                                         ", color='blue', ltrim=.false.)
+        call write_line("       |        |     |  |  |     |  |     |                                                                         ", color='blue', ltrim=.false.)
+        call write_line("       |______  |     |  |  |____/   |_____|                                                                         ", color='blue', ltrim=.false.)
+        call write_line(" ____________________________________________________________________________________________________________________", color='blue', ltrim=.false.)
         call write_line(" ")
 
 

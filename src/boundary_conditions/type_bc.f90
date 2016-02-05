@@ -7,7 +7,8 @@ module type_bc
     use type_properties,        only: properties_t
     use type_face_info,         only: face_info_t
     use type_function_info,     only: function_info_t
-    use type_bcfunction_set,    only: bcfunction_set_t
+    use type_bcproperty_set,    only: bcproperty_set_t
+    use type_function,          only: function_t
 
     use mod_DNAD_tools,         only: compute_seed
     implicit none
@@ -36,7 +37,7 @@ module type_bc
         ! Boundary condition options
         !
         !type(bcparameter_set_t)    :: bcparameters
-        type(bcfunction_set_t)      :: bcfunctions
+        type(bcproperty_set_t)      :: bcproperties
 
     contains
 
@@ -54,6 +55,18 @@ module type_bc
         procedure   :: set_fcn                              !< Set a particular function definition for a specified bcfunction_t
         procedure   :: set_fcn_option                       !< Set function-specific options for a specified bcfunction_t
 
+
+        procedure   :: get_property_name
+!        procedure   :: get_property_function
+        procedure   :: get_nproperties
+
+        procedure   :: get_noptions
+        procedure   :: get_option_key
+        procedure   :: get_option_value
+
+
+!        procedure   :: get_function_name                    !< Return the name of a function given an index
+!        procedure   :: nfunctions                           !< Return the number of functions in the boundary condition
 !        procedure   :: list_fcns                            !< List available bcfunction_t's
 !        procedure   :: list_fcn_options                     !< List available function_t options for a given bcfunction_t
         
@@ -337,7 +350,7 @@ contains
         character(*),           intent(in)      :: fcn
 
 
-        call self%bcfunctions%set_fcn(bcfcn,fcn)
+        call self%bcproperties%set_fcn(bcfcn,fcn)
 
 
     end subroutine set_fcn
@@ -365,7 +378,7 @@ contains
         character(*),           intent(in)      :: option
         real(rk),               intent(in)      :: val
 
-        call self%bcfunctions%set_fcn_option(bcfcn,option,val)
+        call self%bcproperties%set_fcn_option(bcfcn,option,val)
 
     end subroutine set_fcn_option
     !************************************************************************************************
@@ -377,27 +390,82 @@ contains
 
 
 
+!
+!    !>
+!    !!
+!    !!  @author Nathan A. Wukie
+!    !!  @date   2/3/2016
+!    !!
+!    !!
+!    !!
+!    !-------------------------------------------------------------------------------------------------
+!    function get_fcns(self) result(str)
+!        class(bc_t),    intent(in)  :: self
+!
+!        character(len=:),   allocatable :: str
+!
+!
+!
+!    end function get_fcns
+!    !*************************************************************************************************
+!
+!
+!
+
+
+
+
+
+
+
+!
+!    !>
+!    !!
+!    !!  @author Nathan A. Wukie
+!    !!  @date   2/3/2016
+!    !!
+!    !!
+!    !!
+!    !-------------------------------------------------------------------------------------------------
+!    function get_fcn_options(self,bcfcn) result(str)
+!        class(bc_t),    intent(in)  :: self
+!        character(*),   intent(in)  :: bcfcn
+!
+!        integer(ik)                     :: ifcn
+!        character(len=:),   allocatable :: str
+!
+!
+!        ifcn = self%bcfunctions%get_bcfcn_index(bcfcn)
+!
+!
+!
+!    end function get_fcn_options
+!    !**************************************************************************************************
+!
+!
+
+
+    
+
 
     !>
     !!
     !!  @author Nathan A. Wukie
-    !!  @date   2/3/2016
+    !!  @date   2/4/2016
     !!
     !!
     !!
-    !-------------------------------------------------------------------------------------------------
-    function get_fcns(self) result(str)
+    !---------------------------------------------------------------------------------------------------
+    function get_property_name(self,iprop) result(pname)
         class(bc_t),    intent(in)  :: self
+        integer(ik),    intent(in)  :: iprop
 
-        character(len=:),   allocatable :: str
+        character(len=:),   allocatable :: pname
 
+        pname = self%bcproperties%get_property_name(iprop) 
 
-
-    end function get_fcns
-    !*************************************************************************************************
-
-
-
+    end function get_property_name
+    !***************************************************************************************************
 
 
 
@@ -406,28 +474,155 @@ contains
 
 
 
-    !>
+
+
+!    !>
+!    !!
+!    !!  @author Nathan A. Wukie
+!    !!  @date   2/4/2016
+!    !!
+!    !!
+!    !!
+!    !----------------------------------------------------------------------------------------------------
+!    function get_property_function(self,iprop) result(fcn)
+!        class(bc_t),    intent(in)  :: self
+!        integer(ik),    intent(in)  :: iprop
+!
+!        class(function_t),  allocatable :: fcn
+!
+!
+!        allocate(fcn, source=self%bcproperties%get_property_function(iprop) )
+!        !fcn = self%bcproperties%get_property_function(iprop)
+!
+!
+!    end function get_property_function
+!    !****************************************************************************************************
+!
+
+
+
+    !>  Return number of properties in the boundary condition.
     !!
     !!  @author Nathan A. Wukie
-    !!  @date   2/3/2016
+    !!  @date   2/4/2016
     !!
     !!
     !!
-    !-------------------------------------------------------------------------------------------------
-    function get_fcn_options(self,bcfcn) result(str)
+    !---------------------------------------------------------------------------------------------------
+    function get_nproperties(self) result(nprop)
         class(bc_t),    intent(in)  :: self
-        character(*),   intent(in)  :: bcfcn
 
-        integer(ik)                     :: ifcn
-        character(len=:),   allocatable :: str
+        integer(ik) :: nprop
+
+        nprop = self%bcproperties%get_nproperties()
+
+    end function get_nproperties
+    !***************************************************************************************************
 
 
-        ifcn = self%bcfunctions%get_bcfcn_index(bcfcn)
 
 
 
-    end function get_fcn_options
-    !**************************************************************************************************
+
+
+
+
+
+    !>  Return an option key, given a property index and option index.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   2/4/2016
+    !!
+    !!
+    !!
+    !!
+    !----------------------------------------------------------------------------------------------------
+    function get_option_key(self,iprop,ioption) result(key)
+        class(bc_t),    intent(inout)  :: self
+        integer(ik),    intent(in)  :: iprop
+        integer(ik),    intent(in)  :: ioption
+
+        character(len=:),   allocatable :: key
+
+        key = self%bcproperties%bcprop(iprop)%get_option_key(ioption)
+
+    end function get_option_key
+    !****************************************************************************************************
+
+
+
+
+
+
+
+
+
+
+    !>  Return an option value, given a property index and option key.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   2/4/2016
+    !!
+    !!
+    !!
+    !!
+    !----------------------------------------------------------------------------------------------------
+    function get_option_value(self,iprop,key) result(val)
+        class(bc_t),    intent(inout)  :: self
+        integer(ik),    intent(in)  :: iprop
+        character(*),   intent(in)  :: key
+
+        real(rk)        :: val
+
+        val = self%bcproperties%bcprop(iprop)%get_option_value(key)
+
+    end function get_option_value
+    !****************************************************************************************************
+
+
+
+
+
+
+
+
+
+    !>   Return the number of available options, given a property index.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   2/4/2016
+    !!
+    !!
+    !!
+    !---------------------------------------------------------------------------------------------------
+    function get_noptions(self,iprop) result(noptions)
+        class(bc_t),    intent(inout)  :: self
+        integer(ik),    intent(in)  :: iprop
+
+        integer(ik)     :: noptions
+
+        print*, 'getting options from bc_t'
+        noptions = self%bcproperties%bcprop(iprop)%get_noptions()
+
+
+    end function get_noptions
+    !***************************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

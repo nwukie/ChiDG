@@ -16,7 +16,6 @@ module fcn_constant
     !-------------------------------------------------------------------
     type, extends(function_t), public :: constant_f
 
-        real(rk)    :: value_   !> Constant function value
 
     contains
 
@@ -32,7 +31,7 @@ contains
 
 
 
-    !>
+    !>  Add function name and options
     !!
     !!  @author Nathan A. Wukie
     !!  @date   2/2/2016
@@ -44,14 +43,17 @@ contains
         !
         ! Set function name
         !
-        self%name = "constant"
+        print*, 'function constant - adding a name'
+        call self%add_name("constant")
 
 
         !
         ! Set function options to default settings
         !
-        call self%dict%set('val',1._rk)
+        print*, 'function constant - adding an option'
+        call self%add_option('val',1._rk)
 
+        print*, 'everything added'
 
     end subroutine init
     !*************************************************************************
@@ -77,9 +79,7 @@ contains
         real(rk)                        :: val
 
         ! f(x,y,z) = const
-        !val = self%value_
-
-        call self%dict%get('val',val)
+        val = self%get_option_value('val')
 
 
     end function compute

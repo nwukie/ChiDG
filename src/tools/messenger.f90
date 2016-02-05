@@ -293,7 +293,7 @@ contains
     !!  @param[in]  column_width    Optional integer indicating the column width if columns was indicated.
     !!
     !----------------------------------------------------------------------------------------------------------
-    subroutine write_line(a,b,c,d,e,f,g,h,delimiter,columns,column_width,color)
+    subroutine write_line(a,b,c,d,e,f,g,h,delimiter,columns,column_width,color,ltrim)
         class(*),           intent(in), target, optional        :: a
         class(*),           intent(in), target, optional        :: b
         class(*),           intent(in), target, optional        :: c
@@ -306,6 +306,7 @@ contains
         logical,            intent(in),         optional        :: columns
         integer(ik),        intent(in),         optional        :: column_width
         character(*),       intent(in),         optional        :: color
+        logical,            intent(in),         optional        :: ltrim
         
 
         class(*), pointer               :: auxdata => null()
@@ -345,7 +346,7 @@ contains
                     !
                     ! Add data to line
                     !
-                    call add_to_line(auxdata,delimiter,columns,column_width)
+                    call add_to_line(auxdata,delimiter,columns,column_width,ltrim)
 
             end if
 
@@ -402,11 +403,12 @@ contains
     !!  @param[in]  column_width    Optional integer indicating the column width if columns was indicated.
     !!
     !--------------------------------------------------------------------------------------------------------------
-    subroutine add_to_line(linedata,delimiter,columns,column_width)
+    subroutine add_to_line(linedata,delimiter,columns,column_width,ltrim)
         class(*),       intent(in)              :: linedata
         character(*),   intent(in), optional    :: delimiter
         logical,        intent(in), optional    :: columns
         integer(ik),    intent(in), optional    :: column_width
+        logical,        intent(in), optional    :: ltrim
 
         character(100)                  :: temp
         character(len=:),   allocatable :: temp_a, temp_b
@@ -439,15 +441,12 @@ contains
 
             type is(character(len=*))
                 temp = linedata
-                !line = line//linedata//current_delimiter
-
 
             type is(integer)
                 write(temp, '(I10.0)') linedata
 
             type is(integer(8))
                 write(temp, '(I10.0)') linedata
-!                line = line//trim(temp)//current_delimiter
 
             type is(real)
                 if (linedata > 0.1) then
@@ -455,7 +454,6 @@ contains
                 else
                     write(temp, '(E24.14)') linedata
                 end if
-!                line = line//trim(adjustl(temp))//current_delimiter
 
             type is(real(8))
                 if (linedata > 0.1) then
@@ -463,7 +461,6 @@ contains
                 else
                     write(temp, '(E24.14)') linedata
                 end if
-!                line = line//trim(adjustl(temp))//current_delimiter
 
             class default
                 print*, 'Error: no IO rule for provided data in add_to_line'
@@ -483,13 +480,22 @@ contains
 
 
         !
-        ! Neaten up the string
+        ! Rules for neatening up the string. Check blank string. Check ltrim.
         !
         if ( blank_line ) then
-            temp_a = temp
+            temp_a = temp   ! blank line, done do any modification.
+
+        else if ( present(ltrim) ) then
+            if ( ltrim ) then
+                temp_a = trim(adjustl(temp))    ! trim line if explicitly requested.
+            else 
+                temp_a = temp                   ! explicitly requested to not trim line.
+            end if
+
         else
-            temp_a = trim(adjustl(temp))
+            temp_a = trim(adjustl(temp))        ! default, trim the line.
         end if
+
 
 
         !
@@ -691,6 +697,7 @@ contains
     subroutine set_color(color)
         character(*),   intent(in)  :: color
 
+        color_end = '[m'
 
         select case (color)
             case ('black')
@@ -713,6 +720,9 @@ contains
 
             case ('aqua')
                 color_begin = '[36m'
+
+            case ('pink')
+                color_begin = '[95m'
 
             case default
                 color_begin = '[30m'

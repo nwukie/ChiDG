@@ -59,17 +59,17 @@ contains
         !
         ! Set function name
         !
-        self%name = "gaussian"
+        call self%add_name("gaussian")
 
 
         !
         ! Set function options to default settings
         !
-        call self%dict%set('a',1._rk)
-        call self%dict%set('b_x',0._rk)
-        call self%dict%set('b_y',0._rk)
-        call self%dict%set('b_z',0._rk)
-        call self%dict%set('c',1._rk)
+        call self%add_option('a',1._rk)
+        call self%add_option('b_x',0._rk)
+        call self%add_option('b_y',0._rk)
+        call self%add_option('b_z',0._rk)
+        call self%add_option('c',1._rk)
 
 
     end subroutine init
@@ -105,11 +105,11 @@ contains
         y = coord%c2_
         z = coord%c3_
 
-        call self%dict%get('a',a)
-        call self%dict%get('b_x',b_x)
-        call self%dict%get('b_y',b_y)
-        call self%dict%get('b_z',b_z)
-        call self%dict%get('c',c)
+        a   = self%get_option_value('a')
+        b_x = self%get_option_value('b_x')
+        b_y = self%get_option_value('b_y')
+        b_x = self%get_option_value('b_z')
+        c   = self%get_option_value('c')
 
 
         !

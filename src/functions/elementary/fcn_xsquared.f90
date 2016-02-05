@@ -42,7 +42,7 @@ contains
         !
         ! Set function name
         !
-        self%name = "x_squared"
+        call self%add_name("x_squared")
 
 
         !

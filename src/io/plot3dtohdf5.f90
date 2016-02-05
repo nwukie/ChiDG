@@ -15,7 +15,7 @@ program plot3dtohdf5
     implicit none
     ! Attribute info
     integer, dimension(1), parameter  :: STORAGE_FORMAT_MAJOR = 0
-    integer, dimension(1), parameter  :: STORAGE_FORMAT_MINOR = 1
+    integer, dimension(1), parameter  :: STORAGE_FORMAT_MINOR = 2
 
     ! File, group vars
     character(1024)             :: arg_file, file_prefix, hdf_file, blockgroup, blockname
@@ -161,8 +161,8 @@ program plot3dtohdf5
         call h5gcreate_f(file_id, trim(blockgroup), Block_id, ierr)
         if (ierr /= 0) stop "Error: h5gcreate_f"
 
-        ! Write mapping attribute
-        !call h5ltset_attribute_int_f(Block_id, "/", 'mapping', [mapping], adim, ierr)
+        ! Write domain attributes
+        call h5ltset_attribute_int_f(file_id, trim(blockgroup), 'idomain', [igrid],   adim, ierr)
         call h5ltset_attribute_int_f(file_id, trim(blockgroup), 'mapping', [mapping], adim, ierr)
 
 
@@ -266,6 +266,11 @@ program plot3dtohdf5
         call h5ltset_attribute_int_f(BC_id, "ETA_MAX", 'BCTYPE', [etamax_bc], adim, ierr)
         call h5ltset_attribute_int_f(BC_id, "ZETA_MIN", 'BCTYPE', [zetamin_bc], adim, ierr)
         call h5ltset_attribute_int_f(BC_id, "ZETA_MAX", 'BCTYPE', [zetamax_bc], adim, ierr)
+
+
+
+
+        ! TODO: may need to close boundary condition attribute groups.
 
 
 

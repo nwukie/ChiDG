@@ -1,8 +1,9 @@
-module type_bcfunction_set
+module type_bcproperty_set
 #include <messenger.h>
     use mod_kinds,          only: rk, ik
-    use type_bcfunction,    only: bcfunction_t
+    use type_bcproperty,    only: bcproperty_t
     use type_point,         only: point_t
+    use type_function,      only: function_t
     implicit none
 
 
@@ -17,16 +18,25 @@ module type_bcfunction_set
     !!  @date   2/2/2016
     !!
     !--------------------------------------------------------------------------------
-    type, public :: bcfunction_set_t
+    type, public :: bcproperty_set_t
 
-        integer(ik)                         :: nfunctions_ = 0  !< Number of functions
-        type(bcfunction_t),     allocatable :: bcfcn(:)         !< Bounday function list
+        integer(ik)                         :: nproperties_ = 0 !< Number of functions
+        type(bcproperty_t),     allocatable :: bcprop(:)        !< boundary property list
 
     contains
 
         ! bcfcn procedures
         procedure   :: add              !< Procedure for adding bcfunction_t's to the list
-        procedure   :: get_bcfcn_index  !< Procedure for returning the index of a particular bcfunction_t in bcfun(:)
+
+!        procedure   :: get_bcfcn_index  !< Return the index of a bcfunction_t, given a name.
+!        procedure   :: get_bcfcn_name   !< Return the name of a bcfunction_t, given an index
+!        procedure   :: nfunctions       !< Return the number of bcfunction_t's in the set
+
+
+        procedure   :: get_property_index
+        procedure   :: get_property_name
+        procedure   :: get_property_function
+        procedure   :: get_nproperties
 
         ! bcfunction%fcn procedures
         procedure   :: set_fcn          !< Procedure for setting the particular function associated with bcfunction_t
@@ -35,7 +45,7 @@ module type_bcfunction_set
         ! compute bcfunction%fcn
         procedure   :: compute          !< Compute values from a bcfunction_t definition.
 
-    end type bcfunction_set_t
+    end type bcproperty_set_t
     !********************************************************************************
 
 
@@ -52,47 +62,47 @@ contains
     !!  @param[in]  ftype   Character string specifying the requirement type. 'Required' or 'Optional'
     !!
     !--------------------------------------------------------------------------------
-    subroutine add(self,bcfcn,ftype)
-        class(bcfunction_set_t),    intent(inout)   :: self
-        character(*),               intent(in)      :: bcfcn
+    subroutine add(self,bcprop,ftype)
+        class(bcproperty_set_t),    intent(inout)   :: self
+        character(*),               intent(in)      :: bcprop
         character(*),               intent(in)      :: ftype
 
-        type(bcfunction_t), allocatable :: temp_bcfcn(:)
+        type(bcproperty_t), allocatable :: temp_bcprop(:)
         integer(ik)                     :: ierr, ifcn
 
         !
         ! Increment nfunctions
         !
-        self%nfunctions_ = self%nfunctions_ + 1
-        ifcn = self%nfunctions_
+        self%nproperties_ = self%nproperties_ + 1
+        ifcn = self%nproperties_
 
 
         !
         ! Resize array storage
         !
-        allocate(temp_bcfcn(self%nfunctions_), stat=ierr)
+        allocate(temp_bcprop(self%nproperties_), stat=ierr)
         if (ierr /= 0) call AllocationError
 
 
         !
         ! Copy previously initialized instances to new array.
         !
-        if (self%nfunctions_ > 1) then
-            temp_bcfcn(1:size(self%bcfcn)) = self%bcfcn(1:size(self%bcfcn))
+        if (self%nproperties_ > 1) then
+            temp_bcprop(1:size(self%bcprop)) = self%bcprop(1:size(self%bcprop))
         end if
 
 
         !
         ! Initialize new bcfunction
         !
-        temp_bcfcn(ifcn)%name_  = bcfcn
-        temp_bcfcn(ifcn)%type_  = ftype
+        temp_bcprop(ifcn)%name_  = bcprop
+        temp_bcprop(ifcn)%type_  = ftype
 
 
         !
-        ! Move resized temp allocation back to self%bcfcn(:)
+        ! Move resized temp allocation back to self%bcprop(:)
         !
-        call move_alloc(temp_bcfcn,self%bcfcn)
+        call move_alloc(temp_bcprop,self%bcprop)
 
 
     end subroutine add
@@ -113,9 +123,9 @@ contains
     !!  @param[in]  fcn     String indicating the type of function to be set in the bcfunction_t
     !!
     !-----------------------------------------------------------------------------------
-    subroutine set_fcn(self,bcfcn,fcn)
-        class(bcfunction_set_t),    intent(inout)   :: self
-        character(*),               intent(in)      :: bcfcn
+    subroutine set_fcn(self,bcprop,fcn)
+        class(bcproperty_set_t),    intent(inout)   :: self
+        character(*),               intent(in)      :: bcprop
         character(*),               intent(in)      :: fcn
 
         integer(ik)     :: ind
@@ -124,14 +134,18 @@ contains
         !
         ! Get index of bcfcn in self%bcfcn(:)
         !
-        ind = self%get_bcfcn_index(bcfcn)
+        print*, 'getting property index'
+
+        ind = self%get_property_index(bcprop)
 
 
         !
         ! Set concrete function
         !
-        call self%bcfcn(ind)%set('function',fcn)
+        print*, 'setting a concrete function'
+        call self%bcprop(ind)%set('function',fcn)
 
+        print*, 'concrete function was set'
 
     end subroutine set_fcn
     !************************************************************************************
@@ -152,10 +166,10 @@ contains
     !!  @param[in]  val     Real value to be set for the specified option.
     !!
     !-------------------------------------------------------------------------------------
-    subroutine set_fcn_option(self,bcfcn,option,val)
-        class(bcfunction_set_t),    intent(inout)   :: self
-        character(*),               intent(in)      :: bcfcn
-        character(*),               intent(in)      :: option
+    subroutine set_fcn_option(self,bcprop,key,val)
+        class(bcproperty_set_t),    intent(inout)   :: self
+        character(*),               intent(in)      :: bcprop
+        character(*),               intent(in)      :: key
         real(rk),                   intent(in)      :: val
 
         integer(ik) :: ifcn
@@ -163,13 +177,13 @@ contains
         !
         ! Get index of bcfcn in self%bcfcn(:)
         !
-        ifcn = self%get_bcfcn_index(bcfcn)
+        ifcn = self%get_property_index(bcprop)
 
 
         !
         ! Set function option
         !
-        call self%bcfcn(ifcn)%fcn%set(option,val)
+        call self%bcprop(ifcn)%fcn%set_option(key,val)
 
 
 
@@ -198,9 +212,9 @@ contains
     !!  @result     ind     Index of the given bcfunction_t in self%bcfcn(:)
     !!
     !------------------------------------------------------------------------------------
-    function get_bcfcn_index(self,bcfcn) result(ind)
-        class(bcfunction_set_t),    intent(in)  :: self
-        character(*),               intent(in)  :: bcfcn
+    function get_property_index(self,bcprop) result(ind)
+        class(bcproperty_set_t),    intent(in)  :: self
+        character(*),               intent(in)  :: bcprop
 
         integer(ik) :: ind, ifcn
         logical     :: name_matches
@@ -215,13 +229,13 @@ contains
         !
         ! Search through functions
         !
-        do ifcn = 1,size(self%bcfcn)
+        do ifcn = 1,size(self%bcprop)
 
         
             !
             ! Check for matching name
             !
-            name_matches = ( trim(bcfcn) == trim(self%bcfcn(ifcn)%name_) )
+            name_matches = ( trim(bcprop) == trim(self%bcprop(ifcn)%get_name()) )
 
 
             if ( name_matches ) then
@@ -235,11 +249,109 @@ contains
         !
         ! Check that 'ind' has been set.
         !
-        if ( ind == 0 ) call chidg_signal_one(FATAL,"bcfunction_set%get_fcn_index: function key not found",bcfcn)
+        if ( ind == 0 ) call chidg_signal_one(FATAL,"bcfunction_set%get_fcn_index: function key not found",bcprop)
 
 
-    end function get_bcfcn_index
+    end function get_property_index
     !*************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+
+    !>
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   2/4/2016
+    !!
+    !!
+    !!
+    !-------------------------------------------------------------------------------------
+    function get_property_name(self,iprop) result(pname)
+        class(bcproperty_set_t),    intent(in)  :: self
+        integer(ik),                intent(in)  :: iprop
+
+        character(len=:),   allocatable :: pname
+
+
+        pname = self%bcprop(iprop)%get_name()
+
+
+    end function get_property_name
+    !*************************************************************************************
+
+
+
+
+
+
+
+
+
+
+    !>
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   2/4/2016
+    !!
+    !!
+    !!
+    !-----------------------------------------------------------------------------------------
+    function get_property_function(self,iprop) result(fcn)
+        class(bcproperty_set_t),    intent(in)  :: self
+        integer(ik),                intent(in)  :: iprop
+
+        class(function_t),  allocatable :: fcn
+
+
+        allocate(fcn, source=self%bcprop(iprop)%fcn)
+        !fcn = self%bcprop(iprop)%fcn
+
+
+    end function get_property_function
+    !******************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    !>  Return the number of functions in the set.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   2/4/2016
+    !!
+    !!
+    !---------------------------------------------------------------------------------------
+    function get_nproperties(self) result(nprop)
+        class(bcproperty_set_t),    intent(in)  :: self
+
+        integer(ik) :: nprop
+
+        nprop = self%nproperties_
+
+    end function get_nproperties
+    !****************************************************************************************
 
 
 
@@ -258,9 +370,9 @@ contains
     !!
     !!
     !---------------------------------------------------------------------------------------
-    impure elemental function compute(self,bcfcn,time,coord) result(val)
-        class(bcfunction_set_t),    intent(inout)   :: self
-        character(*),               intent(in)      :: bcfcn
+    impure elemental function compute(self,bcprop,time,coord) result(val)
+        class(bcproperty_set_t),    intent(inout)   :: self
+        character(*),               intent(in)      :: bcprop
         real(rk),                   intent(in)      :: time
         type(point_t),              intent(in)      :: coord
 
@@ -271,20 +383,20 @@ contains
         !
         ! Get index of bcfunction_t specified by bcfcn in self%bcfcn(:)
         !
-        ifcn = self%get_bcfcn_index(bcfcn) 
+        ifcn = self%get_property_index(bcprop)
 
 
         !
         ! Check function status
         !
-        fcn_set = self%bcfcn(ifcn)%status()
+        fcn_set = self%bcprop(ifcn)%status()
 
 
         !
         ! Compute function
         !
         if (fcn_set) then
-            val = self%bcfcn(ifcn)%fcn%compute(time,coord)
+            val = self%bcprop(ifcn)%fcn%compute(time,coord)
         else
             call chidg_signal(FATAL,"bcfunction_set%compute: bcfcn%fcn not allocated")
         end if
@@ -300,4 +412,12 @@ contains
 
 
 
-end module type_bcfunction_set
+
+
+
+
+
+
+
+
+end module type_bcproperty_set

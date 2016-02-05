@@ -44,7 +44,7 @@ contains
         !
         ! Set function name
         !
-        self%name = "z_squared"
+        call self%add_name("z_squared")
 
 
         !

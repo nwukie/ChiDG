@@ -13,6 +13,7 @@ module mod_chidg_edit
     use hdf5
     use h5lt
 
+    use mod_chidg_edit_domaininfo,          only: chidg_edit_domaininfo
     use mod_chidg_edit_boundaryconditions,  only: chidg_edit_boundaryconditions
     use mod_chidg_edit_matrixsolver,        only: chidg_edit_matrixsolver
     use mod_chidg_edit_timescheme,          only: chidg_edit_timescheme
@@ -111,7 +112,6 @@ contains
 
 
 
-        command_options = "1 - boundary conditions, 2 - time scheme, 3 - matrix solver, 0 - exit"
 
         !
         ! Edit loop
@@ -131,7 +131,7 @@ contains
             !
             call write_line(' ')
             call write_line("Select command: ")
-            call write_line("1:boundary conditions","2:time scheme","3:matrix solver","0:exit", columns=.True., column_width=25, color='blue')
+            call write_line("1:domain info","2:boundary conditions","3:time scheme","4:matrix solver","0:exit", columns=.True., column_width=25, color='blue')
 
             ierr = 1
             do while ( ierr /= 0 )
@@ -147,10 +147,12 @@ contains
                 case (0)
                     exit
                 case (1)
-                    call chidg_edit_boundaryconditions(fid)
+                    call chidg_edit_domaininfo(fid)
                 case (2)
-                    call chidg_edit_timescheme(fid)
+                    call chidg_edit_boundaryconditions(fid)
                 case (3)
+                    call chidg_edit_timescheme(fid)
+                case (4)
                     call chidg_edit_matrixsolver(fid)
                 case default
 
@@ -174,9 +176,9 @@ contains
 
 
         !
-        ! Reset terminal color to black by writing a black line.
+        ! Clear terminal upon exit
         !
-        call write_line(' ')
+        call execute_command_line("clear")
 
     end subroutine chidg_edit
     !********************************************************************************************

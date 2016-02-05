@@ -177,26 +177,26 @@ program driver
 
 
             ! rho
-            !call constant%set('val',1.13_rk)
-            call constant%set('val',1.25_rk)
+            !call constant%set_option('val',1.13_rk)
+            call constant%set_option('val',1.25_rk)
             call initialize_variable(chidg%data,1,constant)
 
             ! rho_u
-            !call constant%set('val',190._rk)
-            call constant%set('val',80._rk)
+            !call constant%set_option('val',190._rk)
+            call constant%set_option('val',80._rk)
             call initialize_variable(chidg%data,2,constant)
 
             ! rho_v
-            call constant%set('val',ZERO)
+            call constant%set_option('val',ZERO)
             call initialize_variable(chidg%data,3,constant)
 
             ! rho_w
-            call constant%set('val',ZERO)
+            call constant%set_option('val',ZERO)
             call initialize_variable(chidg%data,4,constant)
 
             ! rho_E
-            !call constant%set('val',248000._rk)
-            call constant%set('val',270000._rk)
+            !call constant%set_option('val',248000._rk)
+            call constant%set_option('val',270000._rk)
             call initialize_variable(chidg%data,5,constant)
 
         else

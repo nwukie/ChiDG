@@ -1,7 +1,9 @@
-cmake_minimum_required(VERSION 3.1)
-enable_language(Fortran)
 project(chidg_v0.1 Fortran)
- 
+cmake_minimum_required(VERSION 3.4) 
+
+
+
+
 #-----------------------------------------------------------------------------------
 #                       CMake macros for adding source files
 #-----------------------------------------------------------------------------------
@@ -215,6 +217,29 @@ set_target_properties(chidg PROPERTIES
                             LINK_FLAGS    "${CMAKE_Fortran_LINK_FLAGS} ${MPI_Fortran_LINK_FLAGS} -lstdc++ -lpthread")
                             # need to link stdc++ here for tecio
                             
+
+
+
+
+
+
+#-----------------------------------------------------------------------------------
+#       Install targets
+#----------------------------------------------------------------------------------- 
+install(TARGETS chidg coredg
+        RUNTIME DESTINATION /usr/local/chidg/bin
+        LIBRARY DESTINATION /usr/local/chidg/lib
+        ARCHIVE DESTINATION /usr/local/chidg/lib)
+
+
+
+
+
+
+
+
+
+
 
 
 

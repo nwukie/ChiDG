@@ -52,7 +52,12 @@ contains
         !
         ! Add functions
         !
-        call self%bcfunctions%add('Static Pressure','Required')
+        print*, 'euler_pressureoutlet - adding static pressure property'
+        call self%bcproperties%add('Static Pressure','Required')
+
+        print*, 'euler_pressureoutlet - adding static pressure function - constant'
+        call self%bcproperties%set_fcn('Static Pressure','constant')
+        print*, ' did that'
 
 
         !
@@ -126,7 +131,7 @@ contains
                 !
                 ! Get back pressure from function.
                 !
-                p_bc = self%bcfunctions%compute("Static Pressure",time,coords)
+                p_bc = self%bcproperties%compute("Static Pressure",time,coords)
 
 
 

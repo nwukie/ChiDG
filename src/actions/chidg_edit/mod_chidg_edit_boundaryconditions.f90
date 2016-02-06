@@ -4,6 +4,8 @@ module mod_chidg_edit_boundaryconditions
     use mod_constants,  only: NFACES, XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX
     use type_bc,        only: bc_t
     use mod_bc,         only: create_bc
+    use type_function,  only: function_t
+    use mod_function,   only: create_function
     use hdf5
     use h5lt
 
@@ -42,9 +44,6 @@ contains
         ndom = get_ndomains_hdf(fid)
 
 
-
-
-
         run_bc_edit = .true.
         do while ( run_bc_edit )
 
@@ -53,7 +52,7 @@ contains
             !
             call execute_command_line("clear")
             call print_overview(fid)
-            call print_overview_boundaryconditions(fid)
+            call print_boundaryconditions_overview(fid)
 
 
 
@@ -92,22 +91,12 @@ contains
 
 
 
-
-
-
-
-
         end do  ! run_bc_edit
-
-
 
 
 
     end subroutine chidg_edit_boundaryconditions
     !************************************************************************************************
-
-
-
 
 
 
@@ -128,7 +117,7 @@ contains
     !!
     !!
     !-----------------------------------------------------------------------------------------------
-    subroutine print_overview_boundaryconditions(fid,active_domain)
+    subroutine print_boundaryconditions_overview(fid,active_domain)
         integer(HID_T),     intent(in)              :: fid
         integer(ik),        intent(in), optional    :: active_domain
 
@@ -142,22 +131,16 @@ contains
         ! Write boundary condition overview header
         !
         call write_line(" ")
-        !call write_line("---------------------------------------------------------------------------------")
         call write_line(":Boundary Conditions")
         call write_line("______________________________________________________________________________________________________")
         call write_line(" ")
         call write_line(" ")
-        !call write_line("---------------------------------------------------------------------------------")
-
-
 
 
         !
         ! Get boundary condition information
         !
         ndom   = get_ndomains_hdf(fid)
-
-
 
 
         !
@@ -173,9 +156,6 @@ contains
             dname = get_domain_name_hdf(fid,idom_hdf)
             bcs   = get_bcnames_hdf(fid,dname)
             
-
-            call write_line(' ')
-
 
             if (present(active_domain)) then
             
@@ -198,13 +178,66 @@ contains
         end do
 
 
-
-
-    end subroutine print_overview_boundaryconditions
+    end subroutine print_boundaryconditions_overview
     !************************************************************************************************
 
 
 
+
+
+
+
+
+
+
+
+    !>
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   2/5/2016
+    !!
+    !!
+    !!
+    !!
+    !-------------------------------------------------------------------------------------------------
+    subroutine print_boundaryconditions_domain(dname)
+        character(*),   intent(in)      :: dname
+
+        call write_line(" ")
+        call write_line("::Domain",dname)
+        call write_line("______________________________________________________________________________________________________")
+        call write_line(" ")
+        call write_line(" ")
+
+    end subroutine print_boundaryconditions_domain
+    !*************************************************************************************************
+
+
+
+
+
+    !>
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   2/5/2016
+    !!
+    !!
+    !!
+    !-------------------------------------------------------------------------------------------------
+    subroutine print_boundaryconditions_domain_face(dname,fname)
+        character(*),   intent(in)      :: dname
+        character(*),   intent(in)      :: fname
+
+
+        call write_line(" ")
+        call write_line("::Domain",dname,"     :::Face", fname)
+        call write_line("______________________________________________________________________________________________________")
+        call write_line(" ")
+        call write_line(" ")
+
+
+    end subroutine print_boundaryconditions_domain_face
+    !*************************************************************************************************
 
 
 
@@ -235,12 +268,10 @@ contains
         logical                             :: run_edit_bc_domain
 
 
-
         !
         ! Get domain name associated with idom_hdf, the domain index as represented in the hdf file.
         !
         dname = get_domain_name_hdf(fid,idom_hdf)
-
 
 
         !
@@ -248,8 +279,6 @@ contains
         !
         call h5gopen_f(fid, "/"//trim(adjustl(dname))//"/BoundaryConditions", bcgroup, ierr)
         if (ierr /= 0) call chidg_signal(FATAL,"get_bcnames_hdf: h5gopen - BoundaryConditions")
-
-
 
 
         !
@@ -263,21 +292,10 @@ contains
             !
             call execute_command_line("clear")
             call print_overview(fid,idom_hdf)
-            call print_overview_boundaryconditions(fid,idom_hdf)
+            call print_boundaryconditions_overview(fid,idom_hdf)
 
-
-            !
-            ! Write boundary condition domain overview header
-            !
             dname_trim = trim(adjustl(dname)) 
-            call write_line(" ")
-            !call write_line("---------------------------------------------------------------------------------")
-            call write_line("::Domain",dname_trim(3:))
-            call write_line("______________________________________________________________________________________________________")
-            call write_line(" ")
-            call write_line(" ")
-            !call write_line("---------------------------------------------------------------------------------")
-            
+            call print_boundaryconditions_domain(dname_trim(3:))
 
 
             !
@@ -313,9 +331,7 @@ contains
             end select
 
 
-
         end do  ! run_bc_edit
-
 
 
         !
@@ -360,7 +376,7 @@ contains
         character(len=1024)                 :: dname
         character(len=:),       allocatable :: command, dname_trim
         character(len=1024)                 :: bc_string, pname
-        logical                             :: run_edit_bc_face
+        logical                             :: run_edit_bc_face, get_property, property_exists
 
 
         faces = ["  XI_MIN","  XI_MAX"," ETA_MIN"," ETA_MAX","ZETA_MIN","ZETA_MAX"]
@@ -374,7 +390,6 @@ contains
         !
         call h5gopen_f(bcgroup, trim(adjustl(faces(iface))), bcface, ierr)
         if (ierr /= 0) call chidg_signal(FATAL,"chidg_edit_boundarycondition_face: error opening group for boundary condition face")
-
 
 
         !
@@ -394,16 +409,9 @@ contains
             !
             call execute_command_line("clear")
             call print_overview(fid,idom_hdf)
-            call print_overview_boundaryconditions(fid,idom_hdf)
-
+            call print_boundaryconditions_overview(fid,idom_hdf)
             dname_trim = trim(adjustl(dname)) 
-            call write_line(" ")
-            call write_line("::Domain",dname_trim(3:),"     :::Face", iface)
-            call write_line("______________________________________________________________________________________________________")
-            call write_line(" ")
-            call write_line(" ")
-            
-
+            call print_boundaryconditions_domain_face(dname_trim(3:), trim(adjustl(faces(iface))))
 
 
             !
@@ -414,7 +422,6 @@ contains
             else
                 call print_boundarycondition_properties(bcface)
             end if
-
 
 
 
@@ -442,20 +449,19 @@ contains
                     run_edit_bc_face = .false.
 
 
+                !
+                ! Set boundary condition case
+                !
                 case (1)
                     !
                     ! Refresh display
                     !
                     call execute_command_line("clear")
                     call print_overview(fid,idom_hdf)
-                    call print_overview_boundaryconditions(fid,idom_hdf)
-
+                    call print_boundaryconditions_overview(fid,idom_hdf)
                     dname_trim = trim(adjustl(dname)) 
-                    call write_line(" ")
-                    call write_line("::Domain",dname_trim(3:),"     :::Face", iface)
-                    call write_line("______________________________________________________________________________________________________")
-                    call write_line(" ")
-                    call write_line(" ")
+                    call print_boundaryconditions_domain_face(dname_trim(3:), trim(adjustl(faces(iface))))
+
 
                     !
                     ! Get boundary condition string from user
@@ -473,29 +479,42 @@ contains
 
 
 
+                !
+                ! Edit property case
+                !
                 case (2)
-                    !
-                    ! Refresh display
-                    !
-                    call execute_command_line("clear")
-                    call print_overview(fid,idom_hdf)
-                    call print_overview_boundaryconditions(fid,idom_hdf)
 
-                    dname_trim = trim(adjustl(dname)) 
-                    call write_line(" ")
-                    call write_line("::Domain",dname_trim(3:),"     :::Face", iface)
-                    call write_line("______________________________________________________________________________________________________")
-                    call write_line(" ")
-                    call write_line(" ")
+                    get_property = .true.
+                    do while ( get_property )
+                        !
+                        ! Refresh display
+                        !
+                        call execute_command_line("clear")
+                        call print_overview(fid,idom_hdf)
+                        call print_boundaryconditions_overview(fid,idom_hdf)
+                        dname_trim = trim(adjustl(dname)) 
+                        call print_boundaryconditions_domain_face(dname_trim(3:), trim(adjustl(faces(iface))))
+                        call print_boundarycondition_properties(bcface)
 
-                    !
-                    ! Call edit option
-                    !
-                    command = "Enter boundary condition property: "
-                    call write_line(command,color='blue')
-                    read(*,*) pname
+                        !
+                        ! Call edit option
+                        !
+                        command = "Enter boundary condition property: "
+                        call write_line(command,color='blue')
+                        read(*,*) pname
 
-                    !call select_boundarycondition_property(bcface,pname)
+                        !
+                        ! Check property exists
+                        !
+                        property_exists = check_property_exists(bcface,pname)
+
+                        if ( property_exists ) get_property = .false.
+
+                    end do 
+
+
+
+                    call edit_property(bcface,pname)
 
 
 
@@ -528,8 +547,6 @@ contains
 
 
 
-
-
     !>
     !!
     !!  @author Nathan A. Wukie
@@ -548,21 +565,17 @@ contains
         !
         ! Delete current boundary condition and settings
         !
-        print*, 'deleting current boundary condition information'
         call delete_boundarycondition_hdf(bcgroup,bcface)
-
 
 
         !
         ! Add new boundary condition and settings
         !
-        print*, 'adding new boundary condition'
         call add_boundarycondition_hdf(bcgroup,bcface,bcstring)
 
 
     end subroutine set_boundarycondition_face
     !***************************************************************************************************
-
 
 
 
@@ -590,7 +603,6 @@ contains
         class(bc_t),    allocatable :: bc
         integer(ik)                 :: nfcns, ifcn, ierr
 
-        print*, 'adding bc_name'
         !
         ! Set boundary condition name attribute: bc_name
         !
@@ -598,18 +610,23 @@ contains
         if (ierr /= 0) call chidg_signal(FATAL,"get_bcnames_hdf: h5ltset_attribute_string")
 
 
-        print*, 'creating boundary condition'
-        !
-        ! Create an instance of the specified boundary condition to query its options
-        !
-        call create_bc(bcstring,bc)
-    
+        if ( trim(bcstring) == 'empty' ) then
+            !
+            ! If 'empty' do not allocate new bc
+            !
+            
+        else
+            !
+            ! Create an instance of the specified boundary condition to query its options
+            !
+            call create_bc(bcstring,bc)
+        
 
-        print*, 'adding bcproperties'
-        !
-        ! Add boundary condition functions
-        !
-        call add_bcproperties_hdf(bcface,bc)
+            !
+            ! Add boundary condition functions
+            !
+            call add_bcproperties_hdf(bcface,bc)
+        end if
 
 
     end subroutine add_boundarycondition_hdf
@@ -672,8 +689,6 @@ contains
             ! Print property function attribute
             !
             fcn_name = bc%bcproperties%bcprop(iprop)%fcn%get_name()
-            print*, fcn_name
-            read*,
             call h5ltset_attribute_string_f(prop_id, ".", "function", fcn_name, ierr)
             if (ierr /= 0) call chidg_signal(FATAL,"add_bcproperties_hdf: error setting function attribute")
 
@@ -733,21 +748,19 @@ contains
         integer(HID_T),     intent(in)  :: bcgroup
         integer(HID_T),     intent(in)  :: bcface
 
-        integer(HSIZE_T)                        :: iattr
+        integer(HSIZE_T)                        :: iattr, idx
         integer(ik)                             :: nattr
-        integer                                 :: nmembers, igrp, type, ierr
+        integer                                 :: nmembers, igrp, type, ierr, iter, iprop, nprop
         character(len=10)                       :: faces(NFACES)
-        character(len=1024),    allocatable     :: anames(:)
+        character(len=1024),    allocatable     :: anames(:), pnames(:)
         character(len=1024)                     :: gname
-
+        type(h5o_info_t), target                :: h5_info
 
 
         !
         ! Delete overall boundary condition face attributes
         !
-        print*, "deleting boundary condition face attributes"
         call delete_group_attributes(bcface)
-
 
 
         !
@@ -761,6 +774,10 @@ contains
         !
         if ( nmembers > 0 ) then
 
+            !
+            ! First get number of properties. This could be different than number of groups.
+            !
+            nprop = 0
             do igrp = 0,nmembers-1
                 !
                 ! Get group name
@@ -772,11 +789,50 @@ contains
                 !
                 if (gname(1:4) == 'BCP_') then
 
-                    call delete_bcproperty_hdf(bcface,gname)
+                    ! increment nprop
+                    nprop = nprop + 1
 
                 end if
 
             end do  ! igrp
+
+
+            !
+            ! Second, get all property names
+            !
+            allocate(pnames(nprop), stat=ierr)
+            if (ierr /= 0) call AllocationError
+            iprop = 1
+            do igrp = 0,nmembers-1
+                call h5gget_obj_info_idx_f(bcface, ".", igrp, gname, type, ierr)
+
+                !
+                ! Test if group is a boundary condition function. 'BCP_'
+                !
+                if (gname(1:4) == 'BCP_') then
+
+                    ! Store name
+                    pnames(iprop) = gname
+                    iprop = iprop + 1
+
+                end if
+
+            end do ! igrp
+
+
+
+            !
+            ! Now, go about deleting them all.
+            ! Previously, we were deleting them one at a time, but then the index
+            ! traversal call get_obj_info_idx was failing for more than one property
+            ! because the index was screwed up.
+            !
+            do iprop = 1,nprop
+
+                call delete_bcproperty_hdf(bcface,pnames(iprop))
+            
+            end do
+
 
         end if ! nmembers
 
@@ -818,7 +874,6 @@ contains
         !
         ! Delete bcproperty attributes
         !
-        print*, "deleting boundary condition property attributes"
         call delete_group_attributes(bcprop)
 
 
@@ -867,12 +922,17 @@ contains
         integer(HID_T),     intent(in)  :: bcface
 
         integer(HID_T)                          :: bcprop
-        integer(HSIZE_T)                        :: iattr
-        integer(ik)                             :: nattr
         integer                                 :: nmembers, igrp, type, ierr
-        character(len=10)                       :: faces(NFACES)
-        character(len=1024),    allocatable     :: anames(:)
-        character(len=1024)                     :: gname
+        character(len=1024)                     :: gname, bcname
+
+
+
+        !
+        !  Print bc name
+        !
+        call h5ltget_attribute_string_f(bcface, ".", "bc_name", bcname, ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"get_bcnames_hdf: h5ltset_attribute_string")
+        call write_line('['//trim(adjustl(bcname))//']')
 
 
 
@@ -905,8 +965,15 @@ contains
                     if (ierr /= 0) call chidg_signal(FATAL,"print_boundarycondition_properties: error opening bcproperty")
 
 
-
+                    !
+                    ! Print property name
+                    !
                     call write_line(trim(gname(5:)))
+
+
+                    !
+                    ! Print property options
+                    !
                     call print_property_options(bcprop)
 
 
@@ -946,6 +1013,7 @@ contains
     !!
     !------------------------------------------------------------------------------------------
     subroutine print_property_options(bcprop)
+        use iso_fortran_env
         integer(HID_T),     intent(in)      :: bcprop
 
 
@@ -965,10 +1033,12 @@ contains
         call h5ltget_attribute_string_f(bcprop, ".", 'function', fcn, ierr)
         if (ierr /= 0) call chidg_signal(FATAL,"print_property_options: error retrieving property function name")
         call write_line(" ")
-        call write_line('Function: ', fcn, columns=.true., column_width = 15)
+        call write_line(' f(t,x,y,z) = '//trim(adjustl(fcn)))
         call write_line("____________________________________")
         call write_line(" ")
         
+
+
 
         !
         ! Get number of attributes attached to the group id
@@ -980,6 +1050,7 @@ contains
 
         allocate(option_keys(nattr), option_vals(nattr), stat=ierr)
         if (ierr /= 0) call AllocationError
+
 
 
         !
@@ -1029,10 +1100,214 @@ contains
 
 
 
+    !>
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   2/5/2016
+    !!
+    !!
+    !!
+    !--------------------------------------------------------------------------------------------
+    subroutine edit_property(bcface,pname)
+        integer(HID_T),     intent(in)  :: bcface
+        character(*),       intent(in)  :: pname
+
+        integer(HID_T)                  :: bcprop
+        integer(HSIZE_T)                :: adim
+        character(len=:),   allocatable :: command
+        character(len=1024)             :: option, new_function
+        logical                         :: option_exists, run
+        real(rk)                        :: val
+        integer                         :: ierr
+
+        !
+        ! Open bcproperty_t group
+        !
+        call h5gopen_f(bcface, "BCP_"//trim(pname), bcprop, ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"edit_property: error opening bcproperty")
+
+
+
+        !
+        ! Edit option loop
+        !
+        run = .true.
+        do while (run)
+
+            !
+            ! Read option to edit
+            !
+            command = "Enter 'function' or option name: "
+            call write_line(command, color='blue')
+            read(*,*) option
+
+
+            !
+            ! Check option exists
+            !
+            call h5aexists_f(bcprop, trim(option), option_exists, ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,"edit_property: error opening option attribute")
+
+
+            !
+            ! Handle option_exists
+            !
+            if ( option_exists ) then
+
+
+                if ( trim(option) == "function" ) then
+
+                    !
+                    ! Set function
+                    !
+                    command = "Set function: "
+                    call write_line(command, color='blue')
+                    read(*,*) new_function
+
+                    call set_function(bcprop, trim(new_function))
+
+
+                else
+
+                    command = "Set option value: "
+                    call write_line(command, color='blue')
+                    read(*,*) val
+
+                    !
+                    ! Set option
+                    !
+                    adim = 1
+                    call h5ltset_attribute_double_f(bcface, "BCP_"//trim(pname), trim(option), [val], adim, ierr)
+                    if (ierr /= 0) call chidg_signal(FATAL,"edit_property: error setting option value")
+
+                end if
+
+                !
+                ! Close routine
+                !
+                run = .false.
+            else
+
+                call write_line("Invalid option", color='blue')
+
+            end if
+
+
+        end do ! run
+
+
+        !
+        ! Close bcproperty
+        !
+        call h5gclose_f(bcprop,ierr)
+
+    end subroutine edit_property
+    !********************************************************************************************
 
 
 
 
+
+
+
+
+
+
+
+
+    !>
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   2/5/2016
+    !!
+    !!
+    !!
+    !-------------------------------------------------------------------------------------------
+    function check_property_exists(bcface,pname) result(exist_status)
+        integer(HID_T),     intent(in)  :: bcface
+        character(*),       intent(in)  :: pname
+
+        integer :: ierr
+        logical :: exist_status
+
+        
+        !
+        ! Call object exist check
+        !
+        call h5lexists_f(bcface, "BCP_"//trim(pname), exist_status, ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"check_property_exists: error check if property exists.")
+
+
+    end function check_property_exists
+    !********************************************************************************************
+
+
+
+
+
+
+
+
+
+
+    !>
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   2/5/2016
+    !!
+    !!
+    !!
+    !--------------------------------------------------------------------------------------------
+    subroutine set_function(bcprop, fname)
+        integer(HID_T),     intent(in)  :: bcprop
+        character(*),       intent(in)  :: fname
+
+        integer(HSIZE_T)                :: adim
+        class(function_t),  allocatable :: fcn
+        character(len=:),   allocatable :: option
+        real(rk)                        :: val
+        integer(ik)                     :: nopt, iopt
+        integer                         :: ierr
+        
+
+        !
+        ! Delete bcproperty attributes
+        !
+        call delete_group_attributes(bcprop)
+
+
+        !
+        ! Set 'function' attribute
+        !
+        call h5ltset_attribute_string_f(bcprop, ".", "function", trim(fname), ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"set_function: error setting function name")
+
+
+        !
+        ! Create specified function
+        !
+        call create_function(fcn,fname)
+
+
+        !
+        ! Set function options
+        !
+        nopt = fcn%get_noptions()
+
+        do iopt = 1,nopt
+
+            option = fcn%get_option_key(iopt)
+            val    = fcn%get_option_value(option)
+            !
+            ! Set option
+            !
+            adim = 1
+            call h5ltset_attribute_double_f(bcprop, ".", trim(option), [val], adim, ierr)
+
+        end do ! iopt
+
+    end subroutine set_function
+    !********************************************************************************************
 
 
 

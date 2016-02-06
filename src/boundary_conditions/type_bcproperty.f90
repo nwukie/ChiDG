@@ -214,7 +214,6 @@ contains
 
         if ( fcn_allocated ) then
 
-            print*, 'getting options from bcproperty_t'
             noptions = self%fcn%get_noptions()
 
         else

@@ -131,12 +131,7 @@ contains
         real(rk),               allocatable :: temp_vals(:)
 
 
-        print*, 'inside function%add_option'
-
-        print*, 'calling self%get_noptions'
         noptions = self%get_noptions()
-        print*, 'got noptions'
-
 
         !
         ! Check if key already exists
@@ -397,18 +392,13 @@ contains
         integer(ik)     :: nopt
 
 
-        print*, 'getting options from function%get_noptions'
-
-
         if ( allocated(self%option_vals) ) then
 
-            print*, 'getting size from self%option_vals'
             nopt = size(self%option_vals)
         else
             nopt = 0
         end if
 
-        print*, 'leaving get_noptions from function_t'
 
     end function get_noptions
     !*********************************************************************************************

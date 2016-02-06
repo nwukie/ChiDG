@@ -249,7 +249,7 @@ contains
     subroutine add_bc(self,domain,bc,face)
         class(chidg_data_t),    intent(inout)   :: self
         character(*),           intent(in)      :: domain
-        class(bc_t),            intent(inout)      :: bc
+        class(bc_t),            intent(inout)   :: bc
         integer(ik),            intent(in)      :: face
 
         integer(ik)                 :: idom, ierr

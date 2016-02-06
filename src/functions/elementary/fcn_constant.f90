@@ -43,17 +43,14 @@ contains
         !
         ! Set function name
         !
-        print*, 'function constant - adding a name'
         call self%add_name("constant")
 
 
         !
         ! Set function options to default settings
         !
-        print*, 'function constant - adding an option'
         call self%add_option('val',1._rk)
 
-        print*, 'everything added'
 
     end subroutine init
     !*************************************************************************

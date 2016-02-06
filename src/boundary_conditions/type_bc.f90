@@ -27,10 +27,11 @@ module type_bc
     !--------------------------------------------------------------------------------------------
     type, public, abstract :: bc_t
 
-        integer(ik),    allocatable :: dom(:)                   !< Indices of domains
-        integer(ik),    allocatable :: elems(:)                 !< Indices of elements associated with boundary condition
-        integer(ik),    allocatable :: faces(:)                 !< Indices of the boundary face for elements elems(ielems)
-        logical, public             :: isInitialized = .false.  !< Logical switch for indicating the boundary condition initializaiton status
+
+        integer(ik),        allocatable :: dom(:)                   !< Indices of domains
+        integer(ik),        allocatable :: elems(:)                 !< Indices of elements associated with boundary condition
+        integer(ik),        allocatable :: faces(:)                 !< Indices of the boundary face for elements elems(ielems)
+        logical,    public              :: isInitialized = .false.  !< Logical switch for indicating the boundary condition initializaiton status
 
 
         !
@@ -57,7 +58,6 @@ module type_bc
 
 
         procedure   :: get_property_name
-!        procedure   :: get_property_function
         procedure   :: get_nproperties
 
         procedure   :: get_noptions
@@ -344,13 +344,13 @@ contains
     !!
     !!
     !--------------------------------------------------------------------------------------------
-    subroutine set_fcn(self,bcfcn,fcn)
+    subroutine set_fcn(self,bcprop,fcn)
         class(bc_t),            intent(inout)   :: self
-        character(*),           intent(in)      :: bcfcn
+        character(*),           intent(in)      :: bcprop
         character(*),           intent(in)      :: fcn
 
 
-        call self%bcproperties%set_fcn(bcfcn,fcn)
+        call self%bcproperties%set_fcn(bcprop,fcn)
 
 
     end subroutine set_fcn
@@ -372,13 +372,13 @@ contains
     !!
     !!
     !-----------------------------------------------------------------------------------------------
-    subroutine set_fcn_option(self,bcfcn,option,val)
+    subroutine set_fcn_option(self,bcprop,option,val)
         class(bc_t),            intent(inout)   :: self
-        character(*),           intent(in)      :: bcfcn
+        character(*),           intent(in)      :: bcprop
         character(*),           intent(in)      :: option
         real(rk),               intent(in)      :: val
 
-        call self%bcproperties%set_fcn_option(bcfcn,option,val)
+        call self%bcproperties%set_fcn_option(bcprop,option,val)
 
     end subroutine set_fcn_option
     !************************************************************************************************
@@ -601,9 +601,7 @@ contains
 
         integer(ik)     :: noptions
 
-        print*, 'getting options from bc_t'
         noptions = self%bcproperties%bcprop(iprop)%get_noptions()
-
 
     end function get_noptions
     !***************************************************************************************************

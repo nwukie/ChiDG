@@ -59,7 +59,16 @@ contains
 
         integer(ik) :: ierr
 
+
+        if ( allocated(bc) ) then
+            deallocate(bc)
+        end if
+
+
+
+
         select case (trim(string))
+
 !            ! PERIODIC
 !            case ('periodic','Periodic')
 !                allocate(bc, source=PERIODIC, stat=ierr)
@@ -106,7 +115,8 @@ contains
 
             ! DEFAULT - ERROR
             case default
-                call chidg_signal(FATAL,"create_bc: Boundary condition string was not recognized. Check that the boundary condition is registered in create_bc and that spelling is correct.")            
+
+                call chidg_signal_one(FATAL,"create_bc: Boundary condition string was not recognized. Check that the boundary condition is registered in create_bc and that spelling is correct.",trim(string))
 
 
 

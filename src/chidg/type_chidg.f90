@@ -1,5 +1,6 @@
 module type_chidg
 #include <messenger.h>
+    use mod_constants,          only: NFACES
     use mod_equations,          only: initialize_equations
     use mod_grid,               only: initialize_grid
     use mod_io,                 only: read_input, nterms_s, eqnset
@@ -10,6 +11,7 @@ module type_chidg
     use type_matrixsolver,      only: matrixsolver_t
     use type_preconditioner,    only: preconditioner_t
     use type_meshdata,          only: meshdata_t
+    use type_bcdata,            only: bcdata_t
     use type_dict,              only: dict_t
 
     use mod_timescheme,         only: create_timescheme
@@ -19,7 +21,7 @@ module type_chidg
                                       detect_chimera_donors, &
                                       compute_chimera_interpolators
 
-    use mod_hdfio,              only: read_grid_hdf, read_solution_hdf, write_solution_hdf
+    use mod_hdfio,              only: read_grid_hdf, read_boundaryconditions_hdf, read_solution_hdf, write_solution_hdf
 
     implicit none
 
@@ -56,6 +58,7 @@ module type_chidg
 
         ! IO procedures
         procedure   :: read_grid
+        procedure   :: read_boundaryconditions
         procedure   :: read_solution
         procedure   :: write_solution
 
@@ -258,15 +261,11 @@ contains
         integer                             :: iext, extloc, idom, ndomains
 
 
-
-
         !
         ! Get filename extension
         !
         extensions = ['.h5']
         extension = get_file_extension(gridfile, extensions)
-
-
 
 
         !
@@ -277,8 +276,6 @@ contains
         else
             call chidg_signal(FATAL,"chidg%read_grid: grid file extension not recognized")
         end if
-
-
 
 
         !
@@ -296,10 +293,78 @@ contains
         end do
 
 
-
-
     end subroutine read_grid
     !*************************************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+    !>  Read boundary conditions from grid file.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   2/5/2016
+    !!
+    !!  @param[in]  gridfile    String specifying a gridfile, including extension.
+    !!
+    !-------------------------------------------------------------------------------------------------------------
+    subroutine read_boundaryconditions(self, gridfile)
+        class(chidg_t), intent(inout)   :: self
+        character(*),   intent(in)      :: gridfile
+
+        character(len=5),   dimension(1)    :: extensions
+        character(len=:),   allocatable     :: extension, dname
+        type(bcdata_t),     allocatable     :: bcdata(:)
+        integer                             :: idom, ndomains, iface, ierr
+
+        !
+        ! Get filename extension
+        !
+        extensions = ['.h5']
+        extension = get_file_extension(gridfile, extensions)
+
+
+        !
+        ! Call boundary condition reader based on file extension
+        !
+        if ( extension == '.h5' ) then
+            call read_boundaryconditions_hdf(gridfile,bcdata)
+        else
+            call chidg_signal(FATAL,"chidg%read_boundaryconditions: grid file extension not recognized")
+        end if
+
+
+
+        !
+        ! Add boundary conditions to ChiDG
+        !
+        ndomains = size(bcdata)
+        do idom = 1,ndomains
+
+            dname = bcdata(idom)%domain_
+
+            do iface = 1,NFACES
+
+
+                if ( allocated(bcdata(idom)%bcs(iface)%bc) ) then
+
+                    call self%data%add_bc(dname, bcdata(idom)%bcs(iface)%bc, bcdata(idom)%bcface(iface))
+
+                end if
+
+
+            end do !iface
+        end do !idom
+
+
+    end subroutine read_boundaryconditions
+    !**************************************************************************************************************
 
 
 

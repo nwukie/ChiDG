@@ -7,4 +7,7 @@ add_lib_sources(
                 #bc_periodic.f90
                 type_bcproperty.f90
                 type_bcproperty_set.f90
+                type_bcdata.f90
+                bc_empty.f90
                 )
+

@@ -118,6 +118,9 @@ contains
         ! Close file
         !
         call h5fclose_f(fid,ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"get_properties_hdf: h5fclose.")        
+        call h5close_f(ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"get_properties_hdf: h5close.")        
 
     end function get_properties_hdf
     !**************************************************************************************************************
@@ -476,12 +479,9 @@ contains
             end if
 
 
-!            ! Set value.
-!            adim = 1
-!            call h5ltset_attribute_int_f(fid, trim(adjustl(names(idom))), 'idomain', [idom], adim, ierr)
-!            if (ierr /= 0) call chidg_signal(FATAL,"get_domain_indices_hdf: error writing an initial domain index")
-!
+            !
             ! Get value that was just set to be sure. 
+            !
             call h5ltget_attribute_int_f(fid, trim(adjustl(names(idom))), 'idomain', buf, ierr)
             if (ierr /= 0) call chidg_signal(FATAL,"get_domain_indices_hdf: error retrieving domain indices")
 
@@ -489,6 +489,13 @@ contains
             ! Set value detected to indices array that will be passed back from the function
             !
             indices(idom) = buf(1)
+
+
+            !
+            ! Close domain
+            !
+            call h5gclose_f(did,ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,"get_domain_indices: h5gclose")
 
         end do
 
@@ -764,6 +771,7 @@ contains
             ! Close boundary condition face group
             !
             call h5gclose_f(bcface_id,ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,"get_bcnames_hdf: h5gclose.")
 
         end do
 
@@ -772,8 +780,7 @@ contains
         ! Close the boundary condition group
         ! 
         call h5gclose_f(bc_id,ierr)
-
-
+        if (ierr /= 0) call chidg_signal(FATAL,"get_bcnames_hdf: h5gclose.")
 
 
     end function get_bcnames_hdf

@@ -204,7 +204,7 @@ contains
         !
         do idom = 1,size(mesh)
 
-            call write_line('Detecting chimera donors for domain: ', idom, delimiter='')
+            call write_line('Detecting chimera donors for domain: ', idom, delimiter='  ')
 
 
             !
@@ -219,7 +219,7 @@ contains
                 receiver%ielement = mesh(idom)%chimera%recv%data(ichimera_face)%receiver_element
                 receiver%iface    = mesh(idom)%chimera%recv%data(ichimera_face)%receiver_face
 
-                call write_line('   Face ', ichimera_face,' of ',mesh(idom)%chimera%recv%nfaces, delimiter='')
+                call write_line('   Face ', ichimera_face,' of ',mesh(idom)%chimera%recv%nfaces, delimiter='  ')
 
                 !
                 ! Loop through quadrature nodes on Chimera face and find donors

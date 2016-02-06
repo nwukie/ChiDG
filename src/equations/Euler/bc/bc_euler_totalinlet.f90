@@ -29,7 +29,10 @@ module bc_euler_totalinlet
     type, public, extends(bc_t) :: euler_totalinlet_t
 
     contains
-        procedure :: compute    !> bc implementation
+
+        procedure   :: add_options  !< Add boundary condition options
+        procedure   :: compute      !< bc implementation
+
     end type euler_totalinlet_t
     !-------------------------------------------------------------------------------------------
 
@@ -38,9 +41,41 @@ module bc_euler_totalinlet
 
 contains
 
+
+
+
+    !>
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   2/5/2016
+    !!
+    !!
+    !!
+    !--------------------------------------------------------------------------------------------
+    subroutine add_options(self)
+        class(euler_totalinlet_t),  intent(inout)   :: self
+
+
+        !
+        ! Add functions
+        !
+        call self%bcproperties%add('TotalPressure',   'Required')
+        call self%bcproperties%add('TotalTemperature','Required')
+
+
+    end subroutine add_options
+    !********************************************************************************************
+
+
+
+
+
+
+
     !> Specialized compute routine for Extrapolation Boundary Condition
     !!
     !!  @author Nathan A. Wukie
+    !!  @date   2/6/2016
     !!
     !!  @param[in]      mesh    Mesh data containing elements and faces for the domain
     !!  @param[inout]   sdata   Solver data containing solution vector, rhs, linearization, etc.
@@ -81,7 +116,10 @@ contains
                         T_bc,   p_bc,   rho_bc, rhoE_bc,                    &
                         vmag2_m, vmag, H_bc
 
-        real(rk)    :: gam_m, cp_m, TT, PT, M
+        real(rk), dimension(mesh(face%idomain)%faces(face%ielement,face%iface)%gq%face%nnodes) :: TT, PT
+
+        !real(rk)    :: gam_m, cp_m, TT, PT, M
+        real(rk)    :: gam_m, cp_m, M
         real(rk)    :: norm_bc(3)
 
 
@@ -116,28 +154,24 @@ contains
         seed = compute_seed(mesh,idom,ielem,iface,idonor,iblk)
 
 
+        !associate (norms => mesh(idom)%faces(ielem,iface)%norm, unorms => mesh(idom)%faces(ielem,iface)%unorm, faces => mesh(idom)%faces, q => sdata%q)
+        associate (norms => mesh(idom)%faces(ielem,iface)%norm, unorms => mesh(idom)%faces(ielem,iface)%unorm, faces => mesh(idom)%faces, &
+                coords => mesh(idom)%faces(ielem,iface)%quad_pts,    q => sdata%q,      time => sdata%t )
+
         !
         ! Set boundary condition Total Temperature and Total Pressure
         !
-        TT = 300._rk
-        PT = 110000._rk
+        !TT = 300._rk
+        !PT = 110000._rk
+        PT = self%bcproperties%compute("TotalPressure",   time,coords)
+        TT = self%bcproperties%compute("TotalTemperature",time,coords)
+
         norm_bc = [ONE, ZERO, ZERO]
-        !norm_bc = [ZERO, ONE, ZERO]
-        !norm_bc = [ONE, ZERO, ZERO]
 
-
-
-        associate (norms => mesh(idom)%faces(ielem,iface)%norm, unorms => mesh(idom)%faces(ielem,iface)%unorm, faces => mesh(idom)%faces, q => sdata%q)
 
             !
             ! Interpolate interior solution to quadrature nodes
             !
-!            call interpolate_face(mesh,q,idom,ielem,iface,irho, rho_m, seed, LOCAL)
-!            call interpolate_face(mesh,q,idom,ielem,iface,irhou,rhou_m,seed, LOCAL)
-!            call interpolate_face(mesh,q,idom,ielem,iface,irhov,rhov_m,seed, LOCAL)
-!            call interpolate_face(mesh,q,idom,ielem,iface,irhow,rhow_m,seed, LOCAL)
-!            call interpolate_face(mesh,q,idom,ielem,iface,irhoE,rhoE_m,seed, LOCAL)
-!
             call interpolate_face(mesh,face,q,irho, rho_m, LOCAL)
             call interpolate_face(mesh,face,q,irhou,rhou_m,LOCAL)
             call interpolate_face(mesh,face,q,irhov,rhov_m,LOCAL)
@@ -197,7 +231,6 @@ contains
             select type(prop)
                 type is (EULER_properties_t)
                     rho_bc = p_bc/(T_bc*prop%R)
-                    !rho_bc = gam_m*(M**TWO)*p_bc/(T_bc)
             end select
 
 
@@ -220,8 +253,6 @@ contains
 
             integrand = flux_x*norms(:,1) + flux_y*norms(:,2) + flux_z*norms(:,3)
 
-            !call integrate_boundary_scalar_flux(mesh(idom)%faces(ielem,iface),sdata,idom,irho,iblk,flux)
-            !call integrate_boundary_scalar_flux(mesh,sdata,face,irho,iblk,idonor,seed,flux)
             call integrate_boundary_scalar_flux(mesh,sdata,face,flux,irho,integrand)
 
             !=================================================
@@ -233,8 +264,6 @@ contains
 
             integrand = flux_x*norms(:,1) + flux_y*norms(:,2) + flux_z*norms(:,3)
 
-            !call integrate_boundary_scalar_flux(mesh(idom)%faces(ielem,iface),sdata,idom,irhou,iblk,flux)
-            !call integrate_boundary_scalar_flux(mesh,sdata,face,irhou,iblk,idonor,seed,flux)
             call integrate_boundary_scalar_flux(mesh,sdata,face,flux,irhou,integrand)
 
             !=================================================
@@ -246,8 +275,6 @@ contains
 
             integrand = flux_x*norms(:,1) + flux_y*norms(:,2) + flux_z*norms(:,3)
 
-            !call integrate_boundary_scalar_flux(mesh(idom)%faces(ielem,iface),sdata,idom,irhov,iblk,flux)
-            !call integrate_boundary_scalar_flux(mesh,sdata,face,irhov,iblk,idonor,seed,flux)
             call integrate_boundary_scalar_flux(mesh,sdata,face,flux,irhov,integrand)
 
             !=================================================
@@ -259,8 +286,6 @@ contains
 
             integrand = flux_x*norms(:,1) + flux_y*norms(:,2) + flux_z*norms(:,3)
 
-            !call integrate_boundary_scalar_flux(mesh(idom)%faces(ielem,iface),sdata,idom,irhow,iblk,flux)
-            !call integrate_boundary_scalar_flux(mesh,sdata,face,irhow,iblk,idonor,seed,flux)
             call integrate_boundary_scalar_flux(mesh,sdata,face,flux,irhow,integrand)
 
 
@@ -273,8 +298,6 @@ contains
 
             integrand = flux_x*norms(:,1) + flux_y*norms(:,2) + flux_z*norms(:,3)
 
-            !call integrate_boundary_scalar_flux(mesh(idom)%faces(ielem,iface),sdata,idom,irhoE,iblk,flux)
-            !call integrate_boundary_scalar_flux(mesh,sdata,face,irhoE,iblk,idonor,seed,flux)
             call integrate_boundary_scalar_flux(mesh,sdata,face,flux,irhoE,integrand)
 
 

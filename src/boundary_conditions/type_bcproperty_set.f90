@@ -93,10 +93,17 @@ contains
 
 
         !
-        ! Initialize new bcfunction
+        ! Initialize new bcproperty
         !
         temp_bcprop(ifcn)%name_  = bcprop
         temp_bcprop(ifcn)%type_  = ftype
+
+
+        !
+        ! Set default function to f(t,x,y,z) = constant
+        !
+        call temp_bcprop(ifcn)%set('function','constant')
+
 
 
         !
@@ -134,18 +141,14 @@ contains
         !
         ! Get index of bcfcn in self%bcfcn(:)
         !
-        print*, 'getting property index'
-
         ind = self%get_property_index(bcprop)
 
 
         !
         ! Set concrete function
         !
-        print*, 'setting a concrete function'
         call self%bcprop(ind)%set('function',fcn)
 
-        print*, 'concrete function was set'
 
     end subroutine set_fcn
     !************************************************************************************

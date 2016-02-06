@@ -27,7 +27,7 @@ module bc_euler_pressureoutlet
 
     contains
 
-        procedure   :: add_options  !< Set boundary condition options
+        procedure   :: add_options  !< Add boundary condition options
         procedure   :: compute      !< boundary condition function implementation
 
     end type euler_pressureoutlet_t
@@ -48,16 +48,11 @@ contains
     subroutine add_options(self)    
         class(euler_pressureoutlet_t),  intent(inout)   :: self
 
-
         !
         ! Add functions
         !
-        print*, 'euler_pressureoutlet - adding static pressure property'
-        call self%bcproperties%add('Static Pressure','Required')
-
-        print*, 'euler_pressureoutlet - adding static pressure function - constant'
-        call self%bcproperties%set_fcn('Static Pressure','constant')
-        print*, ' did that'
+        call self%bcproperties%add('StaticPressure','Required')         ! add StaticPressure
+        !call self%bcproperties%set_fcn('StaticPressure','constant')     ! set default function
 
 
         !
@@ -131,7 +126,7 @@ contains
                 !
                 ! Get back pressure from function.
                 !
-                p_bc = self%bcproperties%compute("Static Pressure",time,coords)
+                p_bc = self%bcproperties%compute("StaticPressure",time,coords)
 
 
 

@@ -1,4 +1,5 @@
 module mod_function
+#include <messenger.h>
     use mod_kinds,      only: rk, ik
     use type_function,  only: function_t
 
@@ -41,6 +42,15 @@ contains
     subroutine create_function(fcn,str)
         class(function_t), allocatable, intent(inout)   :: fcn
         character(*),                   intent(in)      :: str
+
+
+        !
+        ! Check if function is already allocated. If so, reset.
+        !
+        if ( allocated(fcn) ) then
+            deallocate(fcn)
+        end if
+
 
 
         !

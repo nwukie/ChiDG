@@ -171,6 +171,7 @@ contains
         ! Close HDF5 file and Fortran interface
         !
         call h5fclose_f(fid, ierr)  ! Close HDF5 File
+        if (ierr /= 0) call chidg_signal(FATAL,"chidg_edit: error closing file.")
         call h5close_f(ierr)        ! Close HDF5 Fortran interface
 
 

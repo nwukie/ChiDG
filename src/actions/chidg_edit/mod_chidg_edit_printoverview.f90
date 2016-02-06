@@ -130,16 +130,36 @@ contains
     subroutine print_chidg_edit_header()
 
 
-        call write_line(" ____________________________________________________________________________________________________________________", color='blue', ltrim=.false.)
-        call write_line("        ______               ____     _____                                                                          ", color='blue', ltrim=.false.)
-        call write_line("       |        |           |    \   |     |                                                                         ", color='blue', ltrim=.false.)
-        call write_line("       |        |        .  |     |  |                                                                               ", color='blue', ltrim=.false.)
-        call write_line("       |        |_____      |     |  |   __                              chidg edit                                  ", color='blue', ltrim=.false.)
-        call write_line("       |        |     |  |  |     |  |     |                                                                         ", color='blue', ltrim=.false.)
-        call write_line("       |        |     |  |  |     |  |     |                                                                         ", color='blue', ltrim=.false.)
-        call write_line("       |______  |     |  |  |____/   |_____|                                                                         ", color='blue', ltrim=.false.)
-        call write_line(" ____________________________________________________________________________________________________________________", color='blue', ltrim=.false.)
-        call write_line(" ")
+!        call write_line(" ____________________________________________________________________________________________________________________", color='blue', ltrim=.false.)
+!        call write_line("        ______               ____     _____                                                                          ", color='blue', ltrim=.false.)
+!        call write_line("       |        |           |    \   |     |                                                                         ", color='blue', ltrim=.false.)
+!        call write_line("       |        |        .  |     |  |                                                                               ", color='blue', ltrim=.false.)
+!        call write_line("       |        |_____      |     |  |   __                              chidg edit                                  ", color='blue', ltrim=.false.)
+!        call write_line("       |        |     |  |  |     |  |     |                                                                         ", color='blue', ltrim=.false.)
+!        call write_line("       |        |     |  |  |     |  |     |                                                                         ", color='blue', ltrim=.false.)
+!        call write_line("       |______  |     |  |  |____/   |_____|                                                                         ", color='blue', ltrim=.false.)
+!        call write_line(" ____________________________________________________________________________________________________________________", color='blue', ltrim=.false.)
+!        call write_line(" ")
+
+
+
+        call write_line("______________________________________________________________________________________________________________________", color='blue', ltrim=.false.)
+        call write_line("                                                                                                                      ", color='blue', ltrim=.false.)
+        call write_line("                                                                                                                      ", color='blue', ltrim=.false.)
+        call write_line("     _|_|_|  _|        _|  _|_|_|      _|_|_|                                                                         ", color='blue', ltrim=.false.)
+        call write_line("   _|        _|_|_|        _|    _|  _|                                                                               ", color='blue', ltrim=.false.)
+        call write_line("   _|        _|    _|  _|  _|    _|  _|  _|_|                               chidg edit                                ", color='blue', ltrim=.false.)
+        call write_line("   _|        _|    _|  _|  _|    _|  _|    _|                                                                         ", color='blue', ltrim=.false.)
+        call write_line("     _|_|_|  _|    _|  _|  _|_|_|      _|_|_|                                                                         ", color='blue', ltrim=.false.)
+        call write_line("                                                                                                                      ", color='blue', ltrim=.false.)
+        call write_line("______________________________________________________________________________________________________________________", color='blue', ltrim=.false.)
+
+
+
+
+
+
+
 
 
     end subroutine print_chidg_edit_header

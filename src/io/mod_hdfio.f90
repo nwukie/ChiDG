@@ -1,8 +1,11 @@
 module mod_hdfio
 #include <messenger.h>
     use mod_kinds,          only: rk,ik
-    use mod_constants,      only: ZERO
+    use mod_constants,      only: ZERO, NFACES
     use type_meshdata,      only: meshdata_t
+    use type_bcdata,        only: bcdata_t
+    use type_bc,            only: bc_t
+    use mod_bc,             only: create_bc
     use type_chidg_data,    only: chidg_data_t
     use mod_hdf_utilities,  only: get_ndomains_hdf
     use hdf5
@@ -71,7 +74,8 @@ contains
         !
         !  Open input file using default properties.
         !
-        call h5fopen_f(filename, H5F_ACC_RDONLY_F, fid, ierr)
+        !call h5fopen_f(filename, H5F_ACC_RDONLY_F, fid, ierr)
+        call h5fopen_f(filename, H5F_ACC_RDWR_F, fid, ierr)
         if (ierr /= 0) call chidg_signal(FATAL,'read_grid_hdf5 - h5fopen_f: There was an error opening the grid file.')
 
 
@@ -218,6 +222,7 @@ contains
         !  Close file and Fortran interface
         !
         call h5fclose_f(fid, ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"read_grid_hdf: error closing file.")
         call h5close_f(ierr)
 
     end subroutine read_grid_hdf
@@ -670,7 +675,8 @@ contains
         !
         ! Open input file using default properties.
         !
-        call h5fopen_f(filename, H5F_ACC_RDWR_F, fid, ierr)
+        !call h5fopen_f(filename, H5F_ACC_RDWR_F, fid, ierr)
+        call h5fopen_f(filename, H5F_ACC_RDONLY_F, fid, ierr)
         if (ierr /= 0) call chidg_signal(FATAL,"read_solution_hdf5 - h5fopen_f")
 
 
@@ -718,6 +724,7 @@ contains
         ! Close HDF5 file and Fortran interface
         !
         call h5fclose_f(fid, ierr)      ! Close the HDF5 file
+        if (ierr /= 0) call chidg_signal(FATAL,"read_solution_hdf: error closing file.")
         call h5close_f(ierr)            ! Close the HDF5 Fortran interface
 
     end subroutine read_solution_hdf
@@ -857,7 +864,9 @@ contains
         ! Close HDF5 file and Fortran interface
         !
         call h5fclose_f(fid, ierr)      ! Close HDF5 File
+        if (ierr /= 0) call chidg_signal(FATAL,"write_solution_hdf: error closing file.")
         call h5close_f(ierr)            ! Close HDF5 Fortran interface
+        if (ierr /= 0) call chidg_signal(FATAL,"write_solution_hdf: h5close.")
 
     end subroutine write_solution_hdf
     !*********************************************************************************************************
@@ -867,6 +876,295 @@ contains
 
 
 
+
+
+
+
+
+
+    !>
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   2/5/2016
+    !!
+    !!
+    !!
+    !!
+    !!
+    !---------------------------------------------------------------------------------------------------------
+    subroutine read_boundaryconditions_hdf(filename, bcdata)
+        character(*),   intent(in)                  :: filename
+        type(bcdata_t), intent(inout), allocatable  :: bcdata(:)
+
+        integer(HID_T)      :: fid, bcgroup, bcface, bcprop
+        integer(HSIZE_T)    :: adim
+        logical             :: FileExists
+
+        class(bc_t),            allocatable     :: bc
+        character(len=1024)                     :: bcname, pname, oname, fname
+        real(rk)                                :: ovalue
+        real(rk),   dimension(1)                :: rbuf
+        character(len=10)                       :: faces(NFACES)
+        character(10)                           :: gname
+        integer                                 :: nmembers, type, ierr, ndomains, igrp, &
+                                                   idom, iface, iopt, noptions, nprop, iprop
+        integer, dimension(1)                   :: buf
+
+
+
+
+        faces = ["  XI_MIN","  XI_MAX"," ETA_MIN"," ETA_MAX","ZETA_MIN","ZETA_MAX"]
+
+
+
+        !
+        !  Check file exists
+        !
+        inquire(file=filename, exist=FileExists)
+        if (.not. FileExists) then
+            call chidg_signal(FATAL,'read_boundaryconditions_hdf: Could not find grid file')
+        end if
+
+
+        !
+        ! Open hdf interface
+        !
+        call h5open_f(ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,'read_boundaryconditions_hdf - h5open_f: HDF5 Fortran interface had an error during initialization')
+
+
+        !
+        ! Open file
+        !
+        !call h5fopen_f(filename, H5F_ACC_RDONLY_F, fid, ierr)
+        call h5fopen_f(filename, H5F_ACC_RDWR_F, fid, ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,'read_boundaryconditions_hdf - h5fopen_f: There was an error opening the grid file.')
+
+
+
+        !
+        !  Get number of domains from attribute 'ndomains' in file root
+        !
+        ndomains = get_ndomains_hdf(fid)
+
+
+        !
+        !  Allocate number of domains
+        !
+        if (ndomains == 0) call chidg_signal(FATAL,'read_boundaryconditions_hdf: No Domains were found in the file')
+        allocate(bcdata(ndomains), stat=ierr)
+        if (ierr /= 0) call AllocationError
+
+
+        !
+        ! Loop domains
+        !
+        !  Get number of groups in the file root
+        call h5gn_members_f(fid, "/", nmembers, ierr)
+
+
+        !  Loop through groups and read domains
+        idom = 1
+        do igrp = 0,nmembers-1
+            call h5gget_obj_info_idx_f(fid,"/", igrp, gname, type, ierr)
+
+            if (gname(1:2) == 'D_') then
+
+                !
+                ! Set domain name.
+                !
+                bcdata(idom)%domain_ = gname
+
+
+                !
+                ! Open the Domain/BoundaryConditions group
+                !
+                call h5gopen_f(fid, trim(gname)//"/BoundaryConditions", bcgroup, ierr, H5P_DEFAULT_F)
+                if (ierr /= 0) stop "Error: read_boundaryconditions_hdf -- h5gopen_f: Domain/BoundaryConditions group did not open properly"
+
+
+
+                !
+                ! Allocation bcs for current domain
+                !
+                allocate( bcdata(idom)%bcs(NFACES), bcdata(idom)%bcface(NFACES), stat=ierr )
+                if (ierr /= 0) call AllocationError
+
+
+                !
+                ! Loop faces and get boundary condition for each
+                !
+                ! TODO: should probably turn this into a loop over bcs instead of faces.
+                do iface = 1,NFACES
+
+                    !
+                    ! Open face boundary condition group
+                    !
+                    call h5gopen_f(bcgroup, trim(adjustl(faces(iface))), bcface, ierr)
+                    if (ierr /= 0) call chidg_signal(FATAL,"read_boundaryconditions_hdf: error opening boundary face group")
+        
+
+                    !
+                    ! Get face associated with the 
+                    !
+                    ! TODO: WARNING, should replace with XI_MIN, XI_MAX, etc. somehow.
+                    bcdata(idom)%bcface(iface) = iface
+
+
+                    !
+                    ! Get boundary condition name string
+                    !
+                    call h5ltget_attribute_string_f(bcface, ".", "bc_name", bcname, ierr)
+                    if (ierr /= 0) call chidg_signal(FATAL,"read_boundaryconditions_hdf: error reading boundary condition name, bc_name")
+
+
+                    if ( trim(bcname) == 'empty' ) then
+
+                        cycle
+
+                    else
+
+                        !
+                        ! Create boundary condition from face data
+                        !
+                        call create_bc(trim(bcname),bc)
+
+
+
+                        !
+                        ! Get available boundary condition properties to search for.
+                        !
+                        nprop = bc%get_nproperties()
+
+                        
+                        !
+                        ! Loop through properties
+                        !
+                        do iprop = 1,nprop
+
+
+                            !
+                            ! Get property name
+                            !
+                            pname = bc%get_property_name(iprop)
+
+
+                            !
+                            ! Open property in HDF file
+                            !
+                            call h5gopen_f(bcface, "BCP_"//trim(pname), bcprop, ierr)
+                            if (ierr /= 0) call chidg_signal(FATAL,"read_boundaryconditions: error opening bcproperty group.")
+
+
+                            !
+                            ! Read the function name set for the property.
+                            !
+                            call h5ltget_attribute_string_f(bcprop, ".", "function", fname, ierr)
+                            if (ierr /= 0) call chidg_signal(FATAL,"read_boundaryconditions: error getting function name.")
+
+                            
+                            !
+                            ! Set/Create the function for the current property
+                            !
+                            call bc%set_fcn(trim(pname), trim(fname))
+
+                            
+                            !
+                            ! Get number of options for the function
+                            !
+                            noptions = bc%get_noptions(iprop)
+
+
+                            !
+                            ! Get each option value
+                            !
+                            do iopt = 1,noptions
+
+                                !
+                                ! Get option name
+                                !
+                                oname = bc%get_option_key(iprop,iopt)
+
+
+                                !
+                                ! Get option value from file
+                                !
+                                adim = 1
+                                call h5ltget_attribute_double_f(bcprop, ".", trim(oname), rbuf, ierr)
+                                if (ierr /= 0) call chidg_signal(FATAL,"read_boundaryconditions: error getting option value")
+                                ovalue = rbuf(1)
+
+
+                                !
+                                ! Set boundary condition option
+                                !
+                                call bc%set_fcn_option(trim(pname), trim(oname), ovalue)
+
+
+                            end do ! iopt
+
+
+                            !
+                            ! Close current property group
+                            !
+                            call h5gclose_f(bcprop,ierr)
+                            if (ierr /= 0) call chidg_signal(FATAL,"read_boundaryconditions_hdf: h5gclose")
+
+
+
+                        end do !iprop
+
+
+
+                        !
+                        ! Boundary condition is defined for the current face, save to bcdata
+                        !
+                        allocate(bcdata(idom)%bcs(iface)%bc, source = bc, stat=ierr)
+                        if (ierr /= 0) call AllocationError
+
+
+                    end if ! bcname == empty
+
+
+                    !
+                    ! Close face boundary condition group
+                    !
+                    call h5gclose_f(bcface, ierr)
+                    if (ierr /= 0) call chidg_signal(FATAL,"read_boundaryconditions_hdf: h5gclose")
+
+
+                end do ! iface
+
+
+
+                idom = idom + 1
+
+
+
+                !
+                ! Close BoundaryCondition group
+                !
+                call h5gclose_f(bcgroup, ierr)
+                if (ierr /= 0) call chidg_signal(FATAL,"read_boundaryconditions_hdf: h5gclose")
+
+
+            end if !gname, idom
+
+
+        end do  ! igrp
+
+
+        !
+        !  Close file and Fortran interface
+        !
+        call h5fclose_f(fid, ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"read_boundaryconditions_hdf: error closing file.")
+        call h5close_f(ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"read_boundaryconditions_hdf: error closing hdf interface.")
+
+
+    end subroutine read_boundaryconditions_hdf
+    !*********************************************************************************************************
 
 
 

@@ -6,7 +6,7 @@ module mod_chidg_edit_printoverview
 
     use mod_hdf_utilities,  only: get_properties_hdf, get_ndomains_hdf, get_domain_names_hdf,       &
                                   get_order_coordinate_hdf, get_order_solution_hdf, get_eqnset_hdf, &
-                                  get_domain_indices_hdf
+                                  get_domain_indices_hdf, check_contains_grid_hdf, check_contains_solution_hdf
 
     implicit none
 
@@ -35,11 +35,12 @@ contains
         integer(ik),        intent(in), optional    :: active_domain
 
 
-        integer(ik)                         :: ndom, idom, idom_hdf
+        integer(ik)                         :: ndom, idom, idom_hdf, ierr
         integer(ik),            allocatable :: dindices(:)
         character(len=1024),    allocatable :: dnames(:), eqnset(:)
         character(len=:),       allocatable :: dname_trim
         integer(ik),            allocatable :: corder(:), sorder(:)
+        logical                             :: contains_grid, contains_solution
 
 
 
@@ -59,9 +60,43 @@ contains
 
 
 
+        !
+        ! Check file contents
+        !
+        contains_grid     = check_contains_grid_hdf(fid)
+        contains_solution = check_contains_solution_hdf(fid)
+
+        !
+        ! Handle contains_grid
+        !
+        if ( contains_grid ) then
+            corder   = get_order_coordinate_hdf(fid,dnames)
+        else
+            allocate(corder(ndom), stat=ierr)
+            if (ierr /= 0) call AllocationError
+
+            corder = 0  ! 0-Order coordinate indicating no grid
+        end if
+
+        
+        !
+        ! Handle contains_solution
+        !
+        if ( contains_solution ) then
+            sorder   = get_order_solution_hdf(fid,dnames)
+        else
+            allocate(sorder(ndom), stat=ierr)
+            if (ierr /= 0) call AllocationError
+
+            sorder = 0  ! 0-Order solution inticating no solution
+        end if
+
+
+        
+        !
+        ! Get equationset strings.
+        !
         eqnset   = get_eqnset_hdf(fid,dnames)
-        corder   = get_order_coordinate_hdf(fid,dnames)
-        sorder   = get_order_coordinate_hdf(fid,dnames)
 
 
 

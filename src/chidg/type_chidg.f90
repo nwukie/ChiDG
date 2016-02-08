@@ -92,9 +92,9 @@ contains
 
         ! Call environment initialization routines by default on first init call
         if (.not. self%envInitialized ) then
+            call log_init()
             call initialize_equations()
             call initialize_grid()
-            call log_init()
             self%envInitialized = .true.
         end if
 

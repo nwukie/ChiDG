@@ -13,6 +13,7 @@ module type_timescheme
     !> solver abstract type definition
     !!
     !!  @author Nathan A. Wukie
+    !!  @date   2/8/2016
     !!
     !!
     !------------------------------------------------------------------------------------------------------
@@ -20,7 +21,6 @@ module type_timescheme
 
         real(rk)        :: testing
         logical         :: solverInitialized = .false.
-
 
 
         ! OPTIONS
@@ -48,8 +48,7 @@ module type_timescheme
         procedure   :: init
         procedure   :: init_spec
 
-        ! Must define these procedures in the extended type
-        procedure(data_interface),   deferred   :: solve
+        procedure(data_interface),   deferred   :: solve    ! Must define this procedures in the extended type
 
         procedure   :: set
         procedure   :: report
@@ -98,6 +97,7 @@ module type_timescheme
     ! Interface for passing a domain_t type
     abstract interface
         subroutine data_interface(self,data,matrixsolver,preconditioner)
+        !subroutine data_interface(self,data,nonlinear_solver,linear_solver,preconditioner)
             use type_chidg_data,        only: chidg_data_t
             use type_matrixsolver,      only: matrixsolver_t
             use type_preconditioner,    only: preconditioner_t
@@ -117,14 +117,16 @@ contains
 
 
 
-    !> Common time_scheme initialization interface.
+    !>  Common time_scheme initialization interface.
     !!      - Call initialization for options if present
     !!      - Call user-specified initialization routine for concrete type
     !!
     !!  @author Nathan A. Wukie
+    !!  @date   2/8/2016
     !!
     !!  @param[inout]   domains     Array of domains
     !!  @param[inout]   options     Dictionary containing options
+    !!
     !-------------------------------------------------------------------------------------------------------------
     subroutine init(self,data)
         class(timescheme_t),    intent(inout)   :: self
@@ -154,6 +156,7 @@ contains
     !> Procedure for setting base time_scheme options
     !!
     !!  @author Nathan A. Wukie
+    !!  @date   2/8/2016
     !!
     !!  @param[in]  options     Dictionary containing base solver options
     !!
@@ -188,6 +191,7 @@ contains
     !! time_scheme.
     !!
     !!  @author Nathan A. Wukie
+    !!  @date   2/8/2016
     !!
     !-------------------------------------------------------------------------------------------------------------
     subroutine init_spec(self,data,options)
@@ -212,7 +216,7 @@ contains
     !> Print timescheme report
     !!
     !!  @author Nathan A. Wukie
-    !!
+    !!  @date   2/8/2016
     !!
     !!
     !!
@@ -231,8 +235,8 @@ contains
         !
         call write_line(' ')
         call write_line('---------------------------------   Time Scheme Report  ----------------------------------')
-        call write_line('Newton iterations: ', self%newton_iterations%at(1))
-        call write_line('Total time: ', self%total_time%at(1))
+        call write_line('Newton iterations: ', self%newton_iterations%at(1), columns=.True., column_width=20)
+        call write_line('Total time: ', self%total_time%at(1), columns=.True., column_width=20)
         call write_line(' ')
         call write_line('------------------------------------------------------------------------------------------')
 
@@ -241,7 +245,7 @@ contains
         !
         ! Print per-iteration report
         !
-        call write_line('        Residual time', '              Norm[R]', '             Matrix time', '      Matrix iterations')
+        call write_line('Residual time', 'Norm[R]', 'Matrix time', 'Matrix iterations', columns=.True., column_width=20)
 
 
         !
@@ -253,7 +257,7 @@ contains
             matrix_time       = self%matrix_time%at(i)
             matrix_iterations = self%matrix_iterations%at(i)
             
-            call write_line(residual_time, residual_norm, matrix_time, matrix_iterations, delimiter=', ')
+            call write_line(residual_time, residual_norm, matrix_time, matrix_iterations, delimiter=', ', columns=.True., column_width=20)
         end do
 
 
@@ -270,8 +274,8 @@ contains
 
 
         call write_line(' ')
-        call write_line('Total residual time: ', total_residual)
-        call write_line('Total matrix time  : ', total_matrix)
+        call write_line('Total residual time: ', total_residual, columns=.True., column_width=20)
+        call write_line('Total matrix time  : ', total_matrix,   columns=.True., column_width=20)
         call write_line('------------------------------------------------------------------------------------------')
 
 

@@ -8,7 +8,7 @@ module messenger
     character(len=2), parameter     :: default_delimiter = '  '     ! Delimiter of line parameters
     character(len=:), allocatable   :: current_delimiter            ! Delimiter of line parameters
     integer                         :: unit                         ! Unit of log file
-    integer                         :: max_msg_length = 160         ! Maximum width of message line
+    integer                         :: max_msg_length = 300         ! Maximum width of message line
     logical                         :: log_initialized = .false.    ! Status of log file
 
     character(len=:), allocatable   :: color_begin
@@ -346,7 +346,7 @@ contains
                     !
                     ! Add data to line
                     !
-                    call add_to_line(auxdata,delimiter,columns,column_width,ltrim)
+                    call add_to_line(auxdata,delimiter,columns,column_width,color,ltrim)
 
             end if
 
@@ -360,18 +360,6 @@ contains
 
         end do
 
-
-
-
-        !
-        ! Set color
-        !
-        if ( present(color) ) then
-            call set_color(color)
-        else
-            call set_color('black')
-        end if
-        
 
 
 
@@ -403,11 +391,12 @@ contains
     !!  @param[in]  column_width    Optional integer indicating the column width if columns was indicated.
     !!
     !--------------------------------------------------------------------------------------------------------------
-    subroutine add_to_line(linedata,delimiter,columns,column_width,ltrim)
+    subroutine add_to_line(linedata,delimiter,columns,column_width,color,ltrim)
         class(*),       intent(in)              :: linedata
         character(*),   intent(in), optional    :: delimiter
         logical,        intent(in), optional    :: columns
         integer(ik),    intent(in), optional    :: column_width
+        character(*),   intent(in), optional    :: color
         logical,        intent(in), optional    :: ltrim
 
         character(100)                  :: write_internal
@@ -433,6 +422,18 @@ contains
 
 
         !
+        ! Set color
+        !
+        if ( present(color) ) then
+            call set_color(color)
+        else
+            call set_color('none')
+        end if
+
+
+
+
+        !
         ! Add to line. Since variable is polymorphic, we have to test for each type and handle
         ! appropriately. Numeric data gets first written to a string variable and then concatatenated to 
         ! the module-global 'line' variable.
@@ -443,10 +444,18 @@ contains
                 temp = linedata
 
             type is(integer)
-                write(write_internal, '(I10.0)') linedata
+                if ( linedata == 0 ) then
+                    write_internal = '0'
+                else
+                    write(write_internal, '(I10.0)') linedata
+                end if
                 temp = write_internal
             type is(integer(8))
-                write(write_internal, '(I10.0)') linedata
+                if ( linedata == 0 ) then
+                    write_internal = '0'
+                else
+                    write(write_internal, '(I10.0)') linedata
+                end if
                 temp = write_internal
 
             type is(real)
@@ -501,6 +510,8 @@ contains
 
 
 
+
+
         !
         ! Append spaces for column alignment
         !
@@ -530,7 +541,11 @@ contains
 
 
 
-        line = line//temp_b
+        ! Append new text to line
+        !line = line//temp_b
+        line = line//color_begin//temp_b//color_end
+
+        ! Append delimiter
         line = line//current_delimiter
 
 
@@ -545,10 +560,10 @@ contains
 
 
 
-    !> Handles sending module-global 'line' string to a destination of either the screen, a file, or both.
-    !! Is is determined by the IO_DESTINATION variable from mod_constants.
+    !>  Handles sending module-global 'line' string to a destination of either the screen, a file, or both.
+    !!  Is is determined by the IO_DESTINATION variable from mod_constants.
     !!
-    !! Line wrapping is also handled, set by the module parameter 'max_msg_length'.
+    !!  Line wrapping is also handled, set by the module parameter 'max_msg_length'.
     !!
     !!  @author Nathan A. Wukie
     !!  @date   2/3/2016
@@ -621,7 +636,7 @@ contains
             !
             ! Colorize output
             !
-            writeline = achar(27)//color_begin//writeline//achar(27)//color_end
+            !writeline = color_begin//writeline//color_end
 
 
 
@@ -633,7 +648,6 @@ contains
             !
             if ( IO_DESTINATION == 'screen' ) then
                 print*, writeline
-                !print*, achar(27)//'[95m pink '//achar(27)//'[0m.'//writeline
 
 
             else if ( IO_DESTINATION == 'file' ) then
@@ -700,35 +714,39 @@ contains
     subroutine set_color(color)
         character(*),   intent(in)  :: color
 
-        color_end = '[m'
+        color_end = achar(27)//'[m'
 
         select case (color)
             case ('black')
-                color_begin = '[30m'
+                color_begin = achar(27)//'[30m'
 
             case ('red')
-                color_begin = '[31m'
+                color_begin = achar(27)//'[31m'
 
             case ('green')
-                color_begin = '[32m'
+                color_begin = achar(27)//'[32m'
 
             case ('yellow')
-                color_begin = '[33m'
+                color_begin = achar(27)//'[33m'
 
             case ('blue')
-                color_begin = '[34m'
+                color_begin = achar(27)//'[34m'
 
             case ('purple')
-                color_begin = '[35m'
+                color_begin = achar(27)//'[35m'
 
             case ('aqua')
-                color_begin = '[36m'
+                color_begin = achar(27)//'[36m'
 
             case ('pink')
-                color_begin = '[95m'
+                color_begin = achar(27)//'[95m'
+
+            case ('none')
+                color_begin = ''
+                color_end   = ''
 
             case default
-                color_begin = '[30m'
+                color_begin = achar(27)//'[30m'
                 call message(__FILE__,__LINE__,1, "set_color: unrecognized color string.",color) ! send warning
 
         end select

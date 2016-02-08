@@ -12,7 +12,8 @@ module type_bcproperty_set
 
 
 
-    !>
+    !>  A class containing a set of bcproperty_t instances. This class manages the 
+    !!  addition of properties, setting their functions, setting their options.
     !!
     !!  @author Nathan A. Wukie
     !!  @date   2/2/2016
@@ -28,15 +29,10 @@ module type_bcproperty_set
         ! bcfcn procedures
         procedure   :: add              !< Procedure for adding bcfunction_t's to the list
 
-!        procedure   :: get_bcfcn_index  !< Return the index of a bcfunction_t, given a name.
-!        procedure   :: get_bcfcn_name   !< Return the name of a bcfunction_t, given an index
-!        procedure   :: nfunctions       !< Return the number of bcfunction_t's in the set
 
-
-        procedure   :: get_property_index
-        procedure   :: get_property_name
-        procedure   :: get_property_function
-        procedure   :: get_nproperties
+        procedure   :: get_nproperties          !< Return the number of properties in the set.
+        procedure   :: get_property_index       !< Return the index of a property in the set, given an identifying string.
+        procedure   :: get_property_name        !< Return a string of the property, given an index in the set.
 
         ! bcfunction%fcn procedures
         procedure   :: set_fcn          !< Procedure for setting the particular function associated with bcfunction_t
@@ -269,12 +265,13 @@ contains
 
 
 
-    !>
+    !>  Given the index of a property in the list, return the property name.
     !!
     !!  @author Nathan A. Wukie
     !!  @date   2/4/2016
     !!
-    !!
+    !!  @param[in]  iprop   Index of a property in the set to be queried.
+    !!  @result     pname   String containing the name of the specified property.
     !!
     !-------------------------------------------------------------------------------------
     function get_property_name(self,iprop) result(pname)
@@ -299,47 +296,8 @@ contains
 
 
 
-    !>
-    !!
-    !!  @author Nathan A. Wukie
-    !!  @date   2/4/2016
-    !!
-    !!
-    !!
-    !-----------------------------------------------------------------------------------------
-    function get_property_function(self,iprop) result(fcn)
-        class(bcproperty_set_t),    intent(in)  :: self
-        integer(ik),                intent(in)  :: iprop
 
-        class(function_t),  allocatable :: fcn
-
-
-        allocate(fcn, source=self%bcprop(iprop)%fcn)
-        !fcn = self%bcprop(iprop)%fcn
-
-
-    end function get_property_function
-    !******************************************************************************************
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    !>  Return the number of functions in the set.
+    !>  Return the number of properties in the set.
     !!
     !!  @author Nathan A. Wukie
     !!  @date   2/4/2016
@@ -370,7 +328,10 @@ contains
     !!  @author Nathan A. Wukie
     !!  @date   2/3/2016
     !!
-    !!
+    !!  @param[in]  bcprop  String of the property to be computed.
+    !!  @param[in]  time    Real value of the global time.
+    !!  @param[in]  coord   point_t instance containing the coordinates.
+    !!  @result     val     Real value of the function. f = f(t,coord)
     !!
     !---------------------------------------------------------------------------------------
     impure elemental function compute(self,bcprop,time,coord) result(val)

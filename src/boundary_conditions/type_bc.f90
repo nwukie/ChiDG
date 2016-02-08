@@ -57,19 +57,13 @@ module type_bc
         procedure   :: set_fcn_option                       !< Set function-specific options for a specified bcfunction_t
 
 
-        procedure   :: get_property_name
-        procedure   :: get_nproperties
+        procedure   :: get_nproperties                      !< Return the number of properties associated with the boundary condition.
+        procedure   :: get_property_name                    !< Return the name of a property given a property index.
 
-        procedure   :: get_noptions
-        procedure   :: get_option_key
-        procedure   :: get_option_value
+        procedure   :: get_noptions                         !< Return the number of available options for a given property, specified by a property index.
+        procedure   :: get_option_key                       !< Return the key for an option, given a property index and subsequent option index.
+        procedure   :: get_option_value                     !< Return the value of a given key, inside of a specified property.
 
-
-!        procedure   :: get_function_name                    !< Return the name of a function given an index
-!        procedure   :: nfunctions                           !< Return the number of functions in the boundary condition
-!        procedure   :: list_fcns                            !< List available bcfunction_t's
-!        procedure   :: list_fcn_options                     !< List available function_t options for a given bcfunction_t
-        
     end type bc_t
     !*********************************************************************************************
 
@@ -336,12 +330,13 @@ contains
 
 
 
-    !>
+    !>  Set a function for a specified property.
     !!
     !!  @author Nathan A. Wukie
     !!  @date   2/3/2016
     !!
-    !!
+    !!  @param[in]  bcprop  String specifying a bcproperty_t to edit.
+    !!  @param[in]  fcn     String specifying the concrete function_t to set.
     !!
     !--------------------------------------------------------------------------------------------
     subroutine set_fcn(self,bcprop,fcn)
@@ -364,12 +359,14 @@ contains
 
 
 
-    !>
+    !>  Set a function option for a specified property.
     !!
     !!  @author Nathan A. Wukie
     !!  @date   2/3/2016
     !!
-    !!
+    !!  @param[in]  bcprop  String specifying a bcproperty_t to edit.
+    !!  @param[in]  option  String specifying a particular option within bcproperty_f%fcn to edit
+    !!  @param[in]  val     Real value to be set for the option.
     !!
     !-----------------------------------------------------------------------------------------------
     subroutine set_fcn_option(self,bcprop,option,val)
@@ -390,118 +387,7 @@ contains
 
 
 
-!
-!    !>
-!    !!
-!    !!  @author Nathan A. Wukie
-!    !!  @date   2/3/2016
-!    !!
-!    !!
-!    !!
-!    !-------------------------------------------------------------------------------------------------
-!    function get_fcns(self) result(str)
-!        class(bc_t),    intent(in)  :: self
-!
-!        character(len=:),   allocatable :: str
-!
-!
-!
-!    end function get_fcns
-!    !*************************************************************************************************
-!
-!
-!
-
-
-
-
-
-
-
-!
-!    !>
-!    !!
-!    !!  @author Nathan A. Wukie
-!    !!  @date   2/3/2016
-!    !!
-!    !!
-!    !!
-!    !-------------------------------------------------------------------------------------------------
-!    function get_fcn_options(self,bcfcn) result(str)
-!        class(bc_t),    intent(in)  :: self
-!        character(*),   intent(in)  :: bcfcn
-!
-!        integer(ik)                     :: ifcn
-!        character(len=:),   allocatable :: str
-!
-!
-!        ifcn = self%bcfunctions%get_bcfcn_index(bcfcn)
-!
-!
-!
-!    end function get_fcn_options
-!    !**************************************************************************************************
-!
-!
-
-
-    
-
-
-    !>
-    !!
-    !!  @author Nathan A. Wukie
-    !!  @date   2/4/2016
-    !!
-    !!
-    !!
-    !---------------------------------------------------------------------------------------------------
-    function get_property_name(self,iprop) result(pname)
-        class(bc_t),    intent(in)  :: self
-        integer(ik),    intent(in)  :: iprop
-
-        character(len=:),   allocatable :: pname
-
-        pname = self%bcproperties%get_property_name(iprop) 
-
-    end function get_property_name
-    !***************************************************************************************************
-
-
-
-
-
-
-
-
-
-
-!    !>
-!    !!
-!    !!  @author Nathan A. Wukie
-!    !!  @date   2/4/2016
-!    !!
-!    !!
-!    !!
-!    !----------------------------------------------------------------------------------------------------
-!    function get_property_function(self,iprop) result(fcn)
-!        class(bc_t),    intent(in)  :: self
-!        integer(ik),    intent(in)  :: iprop
-!
-!        class(function_t),  allocatable :: fcn
-!
-!
-!        allocate(fcn, source=self%bcproperties%get_property_function(iprop) )
-!        !fcn = self%bcproperties%get_property_function(iprop)
-!
-!
-!    end function get_property_function
-!    !****************************************************************************************************
-!
-
-
-
-    !>  Return number of properties in the boundary condition.
+    !>  Return number of properties available in the boundary condition.
     !!
     !!  @author Nathan A. Wukie
     !!  @date   2/4/2016
@@ -526,21 +412,59 @@ contains
 
 
 
+    !>  Return a property name string, given the index of the property in the boundary condition.
+    !!
+    !!  This probably works best by first calling get_nproperties, and then iterating through the 
+    !!  number of available properties to get their names.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   2/4/2016
+    !!
+    !!  @param[in]  iprop   Integer specifying the index of the property to be queried.
+    !!  @result     pname   String of the property name associated with the index.
+    !!
+    !---------------------------------------------------------------------------------------------------
+    function get_property_name(self,iprop) result(pname)
+        class(bc_t),    intent(in)  :: self
+        integer(ik),    intent(in)  :: iprop
+
+        character(len=:),   allocatable :: pname
+
+        pname = self%bcproperties%get_property_name(iprop) 
+
+    end function get_property_name
+    !***************************************************************************************************
 
 
-    !>  Return an option key, given a property index and option index.
+
+
+
+
+
+
+
+
+
+
+    !>  Return an option key, given a property index and option index. 
+    !!
+    !!  One probably calls get_noptions(iprop)
+    !!  first, to get the number of available options for the function currently set for the property 'iprop'.
+    !!  Then one can loop over the number of available options and return their availble names dynamically.
     !!
     !!  @author Nathan A. Wukie
     !!  @date   2/4/2016
     !!
     !!
-    !!
+    !!  @param[in]  iprop       Integer index of a property to modify.
+    !!  @param[in]  ioption     Integer index of an option inside bcproperty%fcn
+    !!  @result     key         String(key) corresponding to the option index (ioption)
     !!
     !----------------------------------------------------------------------------------------------------
     function get_option_key(self,iprop,ioption) result(key)
-        class(bc_t),    intent(inout)  :: self
-        integer(ik),    intent(in)  :: iprop
-        integer(ik),    intent(in)  :: ioption
+        class(bc_t),    intent(inout)   :: self
+        integer(ik),    intent(in)      :: iprop
+        integer(ik),    intent(in)      :: ioption
 
         character(len=:),   allocatable :: key
 
@@ -563,7 +487,9 @@ contains
     !!  @author Nathan A. Wukie
     !!  @date   2/4/2016
     !!
-    !!
+    !!  @param[in]  iprop       Integer index of a property to modify.
+    !!  @param[in]  key         String(key) specifying the option to be queried.
+    !!  @result     val         Returned value of the selected key.
     !!
     !!
     !----------------------------------------------------------------------------------------------------
@@ -592,7 +518,9 @@ contains
     !!  @author Nathan A. Wukie
     !!  @date   2/4/2016
     !!
-    !!
+    !!  @param[in]  iprop       Integer index of a property to query.
+    !!  @result     noption     Returned number of options available for the property. Dependends on 
+    !!                          the function that is set for the property.
     !!
     !---------------------------------------------------------------------------------------------------
     function get_noptions(self,iprop) result(noptions)
@@ -605,24 +533,6 @@ contains
 
     end function get_noptions
     !***************************************************************************************************
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 

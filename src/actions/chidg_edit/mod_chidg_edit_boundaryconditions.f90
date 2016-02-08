@@ -117,12 +117,13 @@ contains
     !!
     !!
     !-----------------------------------------------------------------------------------------------
-    subroutine print_boundaryconditions_overview(fid,active_domain)
+    subroutine print_boundaryconditions_overview(fid,active_domain,active_face)
         integer(HID_T),     intent(in)              :: fid
         integer(ik),        intent(in), optional    :: active_domain
+        integer(ik),        intent(in), optional    :: active_face
 
 
-        integer(ik)                         :: idom_hdf, ndom
+        integer(ik)                         :: idom_hdf, ndom, iface
         character(len=1024),    allocatable :: bcs(:)
         character(len=1024)                 :: dname
 
@@ -147,7 +148,7 @@ contains
         ! Write domain and boundary conditions. 
         ! TODO: Assumes NFACES=6. Could generalize.
         !
-        call write_line("Domain name","1 - XI_MIN","2 - XI_MAX","3 - ETA_MIN","4 - ETA_MAX","5 - ZETA_MIN","6 - ZETA_MAX", columns=.True., column_width=20)
+        call write_line("Domain name","1 - XI_MIN","2 - XI_MAX","3 - ETA_MIN","4 - ETA_MAX","5 - ZETA_MIN","6 - ZETA_MAX", columns=.True., column_width=22)
         do idom_hdf = 1,ndom
 
             !
@@ -159,20 +160,44 @@ contains
 
             if (present(active_domain)) then
             
+                !
+                ! Print active domain
+                !
                 if (idom_hdf == active_domain) then
-                    call write_line(dname(3:),  bcs(XI_MIN),   bcs(XI_MAX),  &
-                                                bcs(ETA_MIN),  bcs(ETA_MAX), & 
-                                                bcs(ZETA_MIN), bcs(ZETA_MAX), columns=.True., column_width=20, color='pink')
+
+                    ! Need to add information individually to selectively color the entries.
+                    call add_to_line(dname(3:), columns=.True., column_width=22, color='pink')
+                    do iface = 1,6
+                        if ( present(active_face) ) then
+                            if ( iface == active_face ) then
+                                call add_to_line( "["//trim(bcs(iface))//"]", columns=.True., column_width=22, color='blue')
+                            else
+                                call add_to_line( trim(bcs(iface)), columns=.True., column_width=22, color='pink')
+                            end if
+                        else
+                            call add_to_line( trim(bcs(iface)), columns=.True., column_width=22, color='pink')
+                        end if
+                    end do
+                    call send_line()
+
+
+
+                !
+                ! Print non-active domains
+                !
                 else
-                    call write_line(dname(3:),  bcs(XI_MIN),   bcs(XI_MAX),  &
-                                                bcs(ETA_MIN),  bcs(ETA_MAX), & 
-                                                bcs(ZETA_MIN), bcs(ZETA_MAX), columns=.True., column_width=20)
+                    call write_line(dname(3:),  trim(bcs(XI_MIN)),   trim(bcs(XI_MAX)),  &
+                                                trim(bcs(ETA_MIN)),  trim(bcs(ETA_MAX)), & 
+                                                trim(bcs(ZETA_MIN)), trim(bcs(ZETA_MAX)), columns=.True., column_width=22)
                 end if
 
             else
-                call write_line(dname(3:),  bcs(XI_MIN),   bcs(XI_MAX),  &
-                                            bcs(ETA_MIN),  bcs(ETA_MAX), & 
-                                            bcs(ZETA_MIN), bcs(ZETA_MAX), columns=.True., column_width=20)
+                !
+                ! Print domain info if no active domain is present
+                !
+                call write_line(dname(3:),  trim(bcs(XI_MIN)),   trim(bcs(XI_MAX)),  &
+                                            trim(bcs(ETA_MIN)),  trim(bcs(ETA_MAX)), & 
+                                            trim(bcs(ZETA_MIN)), trim(bcs(ZETA_MAX)), columns=.True., column_width=22)
             end if
 
         end do
@@ -409,7 +434,7 @@ contains
             !
             call execute_command_line("clear")
             call print_overview(fid,idom_hdf)
-            call print_boundaryconditions_overview(fid,idom_hdf)
+            call print_boundaryconditions_overview(fid,idom_hdf,iface)
             dname_trim = trim(adjustl(dname)) 
             call print_boundaryconditions_domain_face(dname_trim(3:), trim(adjustl(faces(iface))))
 

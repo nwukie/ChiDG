@@ -9,7 +9,21 @@ module type_bcproperty
 
 
 
-    !>
+    !>  A class for boundary condition properties.
+    !!
+    !!  If one wishes to allow a user to specify information about a boundary condition, that
+    !!  occurs via this boundary condition property mechanism. When implementing a boundary
+    !!  condition, a developer decides what information should be specified at runtime by the user.
+    !!  For example, total pressure and total temperature. The developer then adds an instance of
+    !!  this bcproperty_t for each property. One for total pressure. One for total temperature.
+    !!
+    !!  The bcproperty_t class then manages the options for a given property. A function must be 
+    !!  specified to describe the property in space and time. This could be a constant, or it
+    !!  could vary in space and time, depending on the allocation of self%fcn. The dynamic
+    !!  function_t then has potential options to be set. For a constant function, just a value.
+    !!  For a trig function, maybe amplitude and phase. These particular options can be accessed
+    !!  through the bcproperty_t methods get_noptions, get_option_key, get_option_value.
+    !!  
     !!
     !!  @author Nathan A. Wukie
     !!  @date   2/1/2016
@@ -23,15 +37,15 @@ module type_bcproperty
 
     contains
 
-        procedure   :: set
-        procedure   :: get
-        procedure   :: status   !< Indicates if self%fcn component has been allocated
+        procedure   :: status           !< Indicates if self%fcn component has been allocated
 
-        procedure   :: get_name
+        procedure   :: set              !<  Set the name_, type_, or fcn components
+        procedure   :: get              !<  Get the name_, type_, or fcn compoenents
 
-        procedure   :: get_noptions
-        procedure   :: get_option_key
-        procedure   :: get_option_value
+        procedure   :: get_name         !< Return the name of the bcproperty. Ex. StaticPressure.
+        procedure   :: get_noptions     !< Return the number of available options for the property. Depends on fcn.
+        procedure   :: get_option_key   !< Return the key of an option, given option index.
+        procedure   :: get_option_value !< Return the value of an option, given a key.
 
     end type bcproperty_t
     !***************************************************************************************
@@ -137,7 +151,7 @@ contains
 
 
 
-    !> Returns the status of the allocatable function component.
+    !> Returns the status of the allocatable function component. True if allocated, false otherwise.
     !!
     !!  @author Nathan A. Wukie
     !!  @date   2/2/2016
@@ -168,7 +182,6 @@ contains
     !!  @date   2/4/2016
     !!
     !!
-    !!
     !---------------------------------------------------------------------------------------
     function get_name(self) result(name_string)
         class(bcproperty_t),    intent(in)  :: self
@@ -192,11 +205,10 @@ contains
 
 
 
-    !>  Return the number of available options.
+    !>  Return the number of available options. Depends on the allocated self%fcn
     !!
     !!  @author Nathan A. Wukie
     !!  @date   2/4/2016
-    !!
     !!
     !!
     !----------------------------------------------------------------------------------------
@@ -235,14 +247,16 @@ contains
     !!  @author Nathan A. Wukie
     !!  @date   2/4/2016
     !!
+    !!  @param[in]  iopt    Integer index of the option to be queried.
+    !!  @result     key     String containing the name of the queried key.
     !!
     !----------------------------------------------------------------------------------------
     function get_option_key(self,iopt) result(key)
-        class(bcproperty_t),    intent(inout)  :: self
-        integer(ik),            intent(in)  :: iopt
+        class(bcproperty_t),    intent(inout)   :: self
+        integer(ik),            intent(in)      :: iopt
 
         character(len=:),   allocatable :: key
-        logical     :: fcn_allocated
+        logical                         :: fcn_allocated
 
         !
         ! Check that function is allocated
@@ -270,7 +284,8 @@ contains
     !!  @author Nathan A. Wukie
     !!  @date   2/4/2016
     !!
-    !!
+    !!  @param[in]  key     String(key) indicating the option to be queried.
+    !!  @result     val     Value of the specified key.
     !!
     !-----------------------------------------------------------------------------------------
     function get_option_value(self,key) result(val)
@@ -294,17 +309,6 @@ contains
 
     end function get_option_value
     !****************************************************************************************
-
-
-
-
-
-
-
-
-
-
-
 
 
 

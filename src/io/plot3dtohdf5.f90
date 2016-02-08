@@ -209,8 +209,9 @@ program plot3dtohdf5
         read*, eqnset_string
 
 
-!        ! Write equationset attribute
-!        call h5ltset_attribute_string_f(Block_id, "/", 'EquationSet', trim(eqnset_string), ierr)
+        ! Write equationset attribute
+        !call h5ltset_attribute_string_f(Block_id, "/", 'EquationSet', trim(eqnset_string), ierr)
+        call h5ltset_attribute_string_f(Block_id, ".", 'eqnset', trim(eqnset_string), ierr)
 
 
 

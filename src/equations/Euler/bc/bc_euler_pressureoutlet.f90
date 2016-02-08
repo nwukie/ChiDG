@@ -52,7 +52,6 @@ contains
         ! Add functions
         !
         call self%bcproperties%add('StaticPressure','Required')         ! add StaticPressure
-        !call self%bcproperties%set_fcn('StaticPressure','constant')     ! set default function
 
 
         !

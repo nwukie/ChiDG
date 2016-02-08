@@ -45,7 +45,7 @@ contains
         real(rk), dimension(:,:,:), allocatable, target :: xpts, ypts, zpts
         type(c_ptr)                                     :: cp_pts
 
-        character(10)                           :: gname
+        character(1024)                         :: gname
         integer                                 :: nmembers, type, ierr, ndomains, igrp,    &
                                                    npts, izeta, ieta, ixi, idom, nterms_1d, &
                                                    mapping, nterms_c
@@ -89,7 +89,7 @@ contains
         !
         !  Allocate number of domains
         !
-        if (ndomains == 0) call chidg_signal(FATAL,'read_hdf5: No Domains were found in the file')
+        if (ndomains == 0) call chidg_signal(FATAL,'read_grid_hdf5: No Domains were found in the file')
         allocate(meshdata(ndomains), stat=ierr)
         if (ierr /= 0) call AllocationError
 
@@ -99,8 +99,11 @@ contains
 
         !  Get number of groups in the file root
         call h5gn_members_f(fid, "/", nmembers, ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"read_grid_hdf5: error getting number of groups in file root.")
 
+        !
         !  Loop through groups and read domains
+        !
         idom = 1
         do igrp = 0,nmembers-1
             call h5gget_obj_info_idx_f(fid,"/", igrp, gname, type, ierr)
@@ -111,7 +114,7 @@ contains
                 ! Open the Domain/Grid group
                 !
                 call h5gopen_f(fid, trim(gname)//"/Grid", gid, ierr, H5P_DEFAULT_F)
-                if (ierr /= 0) stop "Error: read_grid_hdf5 -- h5gopen_f: Domain/Grid group did not open properly"
+                if (ierr /= 0) call chidg_signal_one(FATAL,"read_grid_hdf: Domagin/Grid group did not open properly.", trim(gname)//'/Grid')
 
 
                 !
@@ -882,30 +885,31 @@ contains
 
 
 
-    !>
+    !>  Read boundary conditions from HDF5 file in ChiDG format and return data in bcdata_t container.
+    !!  The calling procedure can then use the returned bcdata_t to initialize boundary conditions.
     !!
     !!  @author Nathan A. Wukie
     !!  @date   2/5/2016
     !!
-    !!
-    !!
-    !!
+    !!  @param[in]  filename        String of the HDF5 file to be read.
+    !!  @param[inout]   bcdata(:)   Array of bcdata_t instances, one for each domain. These will be returned with
+    !!                              data about the boundary conditions that can be used for initialization.
     !!
     !---------------------------------------------------------------------------------------------------------
     subroutine read_boundaryconditions_hdf(filename, bcdata)
         character(*),   intent(in)                  :: filename
         type(bcdata_t), intent(inout), allocatable  :: bcdata(:)
 
-        integer(HID_T)      :: fid, bcgroup, bcface, bcprop
-        integer(HSIZE_T)    :: adim
-        logical             :: FileExists
+        integer(HID_T)                          :: fid, bcgroup, bcface, bcprop
+        integer(HSIZE_T)                        :: adim
+        logical                                 :: FileExists
 
         class(bc_t),            allocatable     :: bc
         character(len=1024)                     :: bcname, pname, oname, fname
         real(rk)                                :: ovalue
         real(rk),   dimension(1)                :: rbuf
         character(len=10)                       :: faces(NFACES)
-        character(10)                           :: gname
+        character(1024)                         :: gname
         integer                                 :: nmembers, type, ierr, ndomains, igrp, &
                                                    idom, iface, iopt, noptions, nprop, iprop
         integer, dimension(1)                   :: buf

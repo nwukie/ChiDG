@@ -21,6 +21,7 @@ module quasi_newton
     !>  Solution advancement via the backward-euler method
     !!
     !!  @author Nathan A. Wukie
+    !!  @date   2/8/2016
     !!
     !---------------------------------------------------------------------------------------------
     type, extends(timescheme_t), public :: quasi_newton_t
@@ -53,8 +54,8 @@ contains
 
     !> Solve for update 'dq'
     !!
-    !!
-    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   2/8/2016
     !!
     !!
     !-------------------------------------------------------------------------------------------------
@@ -80,6 +81,7 @@ contains
         associate ( q => data%sdata%q, dq => data%sdata%dq, rhs => data%sdata%rhs, lhs => data%sdata%lhs, dt => self%dt)
 
             call write_line('Entering time')
+            call write_line(' ')
 
             !
             ! start timer
@@ -104,7 +106,7 @@ contains
 
             do while ( rnorm > self%tol )
                 niter = niter + 1
-                call write_line("   niter: ", niter, delimiter='')
+                call write_line("   niter: ", niter, delimiter='', columns=.True., column_width=20)
 
 
 
@@ -126,7 +128,7 @@ contains
                 !
                 ! Print diagnostics
                 !
-                call write_line("   R(Q) - Norm: ", resid, delimiter='')
+                call write_line("   R(Q) - Norm: ", resid, delimiter='', columns=.True., column_width=20)
                 call self%residual_norm%push_back(resid)
 
 
@@ -244,7 +246,7 @@ contains
             ! stop timer
             !
             call self%timer%stop()
-            call self%timer%report('Solver Elapsed Time:')
+            call self%timer%report('Solver Elapsed Time: ')
             call self%total_time%push_back(self%timer%elapsed())
 
 
@@ -258,9 +260,10 @@ contains
 
 
         entropy_error = compute_entropy_error(data)
-        call write_line('Entropy error: ', entropy_error, delimiter='')
+        call write_line('Entropy error: ', entropy_error, delimiter='', columns=.True., column_width=20)
 
     end subroutine solve
+    !************************************************************************************************************
 
 
 

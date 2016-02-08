@@ -136,7 +136,7 @@ contains
 
 
 
-    !> Given a file identifier, return the number of domains in an hdf5 file.
+    !>  Given a file identifier, return the number of domains in an hdf5 file.
     !!
     !!  @author Nathan A. Wukie
     !!  @date   2/3/2016
@@ -174,11 +174,13 @@ contains
 
 
 
-    !> Test if the file contains a Grid.
+    !>  Test if the file contains a Grid.
     !!
     !!  @author Nathan A. Wukie
     !!  @date   2/3/2016
     !!
+    !!  @param[in]  fid             HDF5 file identifier.
+    !!  @result     grid_status     Logical indicating if ChiDG grid exists in file, fid.
     !!
     !--------------------------------------------------------------------------------------------------------------
     function check_contains_grid_hdf(fid) result(grid_status)
@@ -223,11 +225,13 @@ contains
 
 
 
-    !> Test if the file contains a Solution.
+    !>  Test if the file contains a Solution.
     !!
     !!  @author Nathan A. Wukie
     !!  @date   2/3/2016
     !!
+    !!  @param[in]  fid                 HDF5 file identifier.
+    !!  @result     solution_status     Logical indicating if ChiDG solution exists in file, fid.
     !!
     !---------------------------------------------------------------------------------------------------------------
     function check_contains_solution_hdf(fid) result(solution_status)
@@ -241,7 +245,7 @@ contains
         !
         ! Get attribute for 'contains_grid
         !
-        call h5ltget_attribute_string_f(fid, "/", 'contains_grid', contains_solution_attr, ierr)
+        call h5ltget_attribute_string_f(fid, "/", 'contains_solution', contains_solution_attr, ierr)
         if (ierr /= 0) call chidg_signal(FATAL,"check_contains_solution - h5ltget_attribute_string_f")
 
 
@@ -270,7 +274,7 @@ contains
 
 
 
-    !> Return a list of domain names from an HDF5 file identifier.
+    !>  Return a list of domain names from an HDF5 file identifier.
     !!
     !!  @author Nathan A. Wukie
     !!  @date   2/3/2016
@@ -346,12 +350,14 @@ contains
 
 
 
-    !> Return a list of domain names from an HDF5 file identifier.
+    !>  Return a domain name given a domain index.
     !!
     !!  @author Nathan A. Wukie
     !!  @date   2/3/2016
     !!
-    !!  @param[in]  fid     HDF file identifier
+    !!  @param[in]  fid         HDF file identifier
+    !!  @param[in]  idom_hdf    A specified domain index to be queried. This is an attribute of each domain in 
+    !!                          the HDF file, per the ChiDG convention.
     !!
     !---------------------------------------------------------------------------------------------------------------
     function get_domain_name_hdf(fid,idom_hdf) result(dname)
@@ -384,17 +390,6 @@ contains
 
     end function get_domain_name_hdf
     !*************************************************************************************************************
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -589,6 +584,9 @@ contains
         integer(HID_T),         intent(in)  :: fid
         character(len=1024),    intent(in)  :: dnames(:)
 
+        integer(HID_T)              :: did
+        integer(HSIZE_T)            :: adim
+        logical                     :: order_exists
         integer(ik), allocatable    :: orders(:)
         integer                     :: ierr, idom, order
         integer, dimension(1)       :: buf
@@ -605,20 +603,49 @@ contains
         !  Loop through groups and read domains
         !
         do idom = 1,size(dnames)
+            !
+            ! Open domain group
+            !
+            call h5gopen_f(fid, trim(dnames(idom)), did, ierr)
+            if (ierr /= 0) call chidg_signal_one(FATAL,"get_order_solution_hdf: error opening domain group.", trim(dnames(idom)) )
+
+            
+            !
+            ! Check 'order_solution' attribute exists
+            !
+            call h5aexists_f(did, 'order_solution', order_exists, ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,"get_order_solution_hdf: error check attribue exists.")
+
+
 
             !
-            !  Get coordinate mapping
+            ! Handle attribute does not exist
             !
-            call h5ltget_attribute_int_f(fid, trim(dnames(idom)), 'order_solution', buf, ierr)
-            if (ierr /= 0) stop "Error: get_order_coordinate_hdf - h5ltget_attribute_int_f"
+            if ( .not. order_exists ) then
+                adim = 1
+                buf = 0
+                call h5ltset_attribute_int_f(did, ".", 'order_solution', buf, adim, ierr)
+                if (ierr /= 0) call chidg_signal(FATAL,"get_order_solution_hdf: error setting attribute.")
+            end if
+
+
+
+            !
+            !  Get solution order
+            !
+            !call h5ltget_attribute_int_f(fid, trim(dnames(idom)), 'order_solution', buf, ierr)
+            call h5ltget_attribute_int_f(did, ".", 'order_solution', buf, ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,"get_order_solution_hdf: error getting order_solution attribute.")
 
 
             !
             ! Compute number of terms in coordinate expansion
             !
             order = buf(1)
-
             orders(idom) = int(order, kind=ik)
+
+
+            call h5gclose_f(did,ierr)
 
         end do
 
@@ -649,6 +676,8 @@ contains
         integer(HID_T),         intent(in)  :: fid
         character(len=1024),    intent(in)  :: dnames(:)
 
+        integer(HID_T)                      :: did
+        logical                             :: eqnset_exists
         character(len=1024), allocatable    :: eqnsets(:)
         integer                             :: ierr, idom
 
@@ -664,13 +693,39 @@ contains
         !  Loop through groups and read domains
         !
         do idom = 1,size(dnames)
+            !
+            ! Open domain
+            !
+            call h5gopen_f(fid, trim(dnames(idom)), did, ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,"get_eqnset_hdf: error opening domain group.")
+
 
             !
-            !  Get eqnset string
+            ! Check eqnset attribute exists.
             !
-            call h5ltget_attribute_string_f(fid, trim(dnames(idom)), 'eqnset', eqnsets(idom), ierr)
-            if (ierr /= 0) stop "Error: get_eqnset_hdf - h5ltget_attribute_int_f"
+            call h5aexists_f(did, 'eqnset', eqnset_exists, ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,"get_eqnset_hdf: error checking if 'eqnset' exists.")
 
+
+            !
+            ! If eqnset doesn't exists, create attribute and set to 'empty'
+            !
+            if ( .not. eqnset_exists ) then
+                !call h5ltset_attribute_string_f(fid, trim(dnames(idom)), 'eqnset', 'empty', ierr)
+                call h5ltset_attribute_string_f(did, ".", 'eqnset', 'empty', ierr)
+                if (ierr /= 0) call chidg_signal(FATAL,"get_eqnset_hdf: error setting empty 'eqnset' attribute.")
+            end if
+
+
+            !
+            !  Get eqnset string from hdf attribute.
+            !
+            !call h5ltget_attribute_string_f(fid, trim(dnames(idom)), 'eqnset', eqnsets(idom), ierr)
+            call h5ltget_attribute_string_f(did, ".", 'eqnset', eqnsets(idom), ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,"get_eqnset_hdf - h5ltget_attribute_int_f.")
+
+
+            call h5gclose_f(did,ierr)
 
         end do
 
@@ -687,13 +742,14 @@ contains
 
 
 
-    !>  Return 
+    !>  Return the boundary condition names from the HDF file that are set for each face of a particular domain.
     !!
     !!  @author Nathan A. Wukie
     !!  @date   2/3/2016
     !!
     !!  @param[in]  fid         ChiDG HDF5 file identifier.
-    !!  @result     bcnames     Array of boundary conditions for each domain. bcnames(idom,ibc)
+    !!  @param[in]  dname       String indicating the boundary condition to query.
+    !!  @result     bcnames     Array of boundary condition names for the specified domain. bcnames(ibc)
     !!
     !---------------------------------------------------------------------------------------------------------
     function get_bcnames_hdf(fid,dname) result(bcnames)
@@ -815,7 +871,6 @@ contains
         type(h5o_info_t), target                :: h5_info
 
 
-
         !
         ! Get number of attributes attached to the group id
         !
@@ -829,7 +884,6 @@ contains
         !
         if ( nattr > 0 ) then
 
-
             !
             ! Delete by index. h5adelete_by_idx_f returns idx with the next index so it doesn't need manually updated.
             !
@@ -840,9 +894,7 @@ contains
             end do
 
 
-
         end if ! nattr
-
 
 
     end subroutine delete_group_attributes

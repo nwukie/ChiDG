@@ -1639,7 +1639,9 @@ CONTAINS
 !        REAL(DBL_AD)                    :: xp_ad_v(size(v)), &
 !                                           xp_ad(size(u,1))
         REAL(DBL_AD), dimension(size(v),size(v(1)%xp_ad_))      :: xp_ad_vm
+        REAL(DBL_AD), dimension(size(v(1)%xp_ad_), size(v))     :: xp_ad_vm_tr
         REAL(DBL_AD), dimension(size(u,1),size(v(1)%xp_ad_))    :: res_xp_m
+        REAL(DBL_AD), dimension(size(v(1)%xp_ad_), size(u,1))   :: res_xp_m_tr
         INTEGER:: i,j
 
 
@@ -1654,16 +1656,28 @@ CONTAINS
         !
         res%x_ad_ = MATMUL(u,v%x_ad_)
 
+!        !
+!        ! Assemble derivative components as a matrix
+!        !
+!        do i = 1,size(v)
+!            xp_ad_vm(i,:) = v(i)%xp_ad_
+!        end do
+        
         !
-        ! Assemble derivative components as a matrix
+        ! Assemble transposed matrix instead to improve memory access
         !
         do i = 1,size(v)
-            xp_ad_vm(i,:) = v(i)%xp_ad_
+            xp_ad_vm_tr(:,i) = v(i)%xp_ad_
         end do
 
 
-        !print*, size(u,1), size(u,2), size(xp_ad_vm,1), size(xp_ad_vm,2)
-        res_xp_m = matmul(u,xp_ad_vm)
+
+
+        !
+        ! Multiply derivatives
+        !
+        !res_xp_m = matmul(u,xp_ad_vm)
+        res_xp_m = matmul(u,transpose(xp_ad_vm_tr))
 
 
 
@@ -1674,23 +1688,6 @@ CONTAINS
             res(i)%xp_ad_ = res_xp_m(i,:)
         end do
 
-
-
-
-!        do i=1,size(v(1)%xp_ad_)
-!
-!            ! Assemble derivative components for V
-!            do j = 1,size(v)
-!                xp_ad_v(j) = v(j)%xp_ad_(i)
-!            end do
-!
-!            xp_ad = MATMUL(u,xp_ad_v)
-!
-!            do j = 1,size(res)
-!                res(j)%xp_ad_(i) = xp_ad(j)
-!            end do
-!
-!       end do
 
     END FUNCTION MATMUL_MV_RD_D
 

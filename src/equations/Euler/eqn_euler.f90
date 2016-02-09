@@ -69,6 +69,7 @@ contains
         call self%set_name("Euler")
 
 
+
         !
         ! Set up properties
         !

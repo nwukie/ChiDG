@@ -29,12 +29,13 @@ module type_bcset
                                                         !! without SOURCE or MOLD, for which we need a concrete type
 
     contains
-        procedure :: add     !< Call for adding a boundary condition
-        procedure :: apply   !< Spatial application of the boundary condition
 
+        procedure   :: add     !< Call for adding a boundary condition
+        procedure   :: apply   !< Spatial application of the boundary condition
+        final       :: destructor
 
-        final :: destructor
     end type bcset_t
+    !******************************************************************************************
 
 
 

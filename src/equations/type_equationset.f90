@@ -19,12 +19,11 @@ module type_equationset
     !!   - Contains arrays of flux components
     !!
     !!  @author Nathan A. Wukie
-    !!  @date   1/28/2016
+    !!  @date   2/8/2016
     !!
     !-------------------------------------------------------------------------------------------------
     type, public, abstract :: equationset_t
-        !character(100)              :: name     ! TODO: change this to allocatable
-        character(len=:), allocatable       :: name     ! TODO: change this to allocatable
+        character(len=:), allocatable       :: name 
         integer(ik)                         :: neqns
 
         ! Equation set properties
@@ -53,6 +52,7 @@ module type_equationset
         procedure(self_interface),     deferred  :: init
 
         procedure   :: set_name
+        procedure   :: get_name
 
         procedure   :: add_properties
         procedure   :: add_equation
@@ -81,7 +81,7 @@ contains
 
 
 
-    !> Set name of the equation set
+    !> Set name of the equation set.
     !!
     !!  @author Nathan A. Wukie
     !!  @date   1/28/2016
@@ -97,6 +97,31 @@ contains
 
     end subroutine set_name
     !*********************************************************************************************************
+
+
+
+
+    !>  Return the name of the equation set.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   2/8/2016
+    !!
+    !!
+    !---------------------------------------------------------------------------------------------------------
+    function get_name(self) result(ename)
+        class(equationset_t),   intent(inout)   :: self
+
+        character(len=:),   allocatable :: ename
+
+
+        ename = self%name
+
+    end function get_name
+    !*********************************************************************************************************
+
+
+
+
 
 
 
@@ -234,7 +259,7 @@ contains
         !
         self%neqns = size(self%prop%eqns)
 
-    end subroutine
+    end subroutine add_equation
     !***************************************************************************************************************
 
 

@@ -15,6 +15,7 @@ contains
     !! it is contained in the file string.
     !!
     !!  @author Nathan A. Wukie
+    !!  @date   2/8/2016
     !!
     !!  @param[in]  file        Character string containing a file name
     !!  @param[in]  extensions  Array of character strings. Each string is an accepted extension
@@ -47,9 +48,80 @@ contains
 
 
     end function get_file_extension
-    !##############################################################################################
+    !**********************************************************************************************
 
 
+
+
+
+
+
+    !>  Converts a character string to all lower-case by comparing the index of each character in the
+    !!  ASCII set and shifting the index to the appropriate case of the character.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   2/8/2016
+    !!
+    !!
+    !-----------------------------------------------------------------------------------------------
+    function string_to_lower(string) result(string_lower)
+        character(*),   intent(in)  :: string
+
+        character(len=len(string))  :: string_lower
+        integer                         :: i, k
+
+        do i = 1,len(trim(string))
+            
+            k = iachar(string(i:i))
+
+
+            if ( k >= iachar('A') .and. k <= iachar('Z') ) then
+                k = k + (iachar('a') - iachar('A'))
+                string_lower(i:i) = achar(k)
+            else
+                string_lower(i:i) = string(i:i)
+            end if
+
+        end do ! i
+    end function string_to_lower
+    !************************************************************************************************
+
+
+
+
+
+
+
+
+    !>  Converts a character string to all upper-case by comparing the index of each character in the
+    !!  ASCII set and shifting the index to the appropriate case of the character.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   2/8/2016
+    !!
+    !!
+    !-----------------------------------------------------------------------------------------------
+    function string_to_upper(string) result(string_upper)
+        character(*),   intent(in)  :: string
+
+        character(len=len(string))  :: string_upper
+        integer                         :: i, k
+
+        do i = 1,len(trim(string))
+            
+            k = iachar(string(i:i))
+
+
+            if ( k >= iachar('a') .and. k <= iachar('z') ) then
+                k = k - (iachar('a') - iachar('A'))
+                string_upper(i:i) = achar(k)
+            else
+                string_upper(i:i) = string(i:i)
+            end if
+
+        end do ! i
+    end function string_to_upper
+    !************************************************************************************************
 
 
 

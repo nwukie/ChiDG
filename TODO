@@ -110,8 +110,13 @@ Nonlinear Solver
 
 
 
-PDE
+Equation set - PDE
 !----------------------------------------------------------------------
+@detail Redo nomenclature from 'equation set' to 'PDE'
+@author Nathan A. Wukie
+@date   2/8/2016
+
+
 @detail Add blockage terms to Euler equations
 @author Nathan A. Wukie
 @date   1/28/2016

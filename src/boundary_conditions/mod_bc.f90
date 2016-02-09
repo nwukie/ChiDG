@@ -14,6 +14,7 @@ module mod_bc
 #include <messenger.h>
     use mod_kinds,      only: rk,ik
     use type_bc,        only: bc_t
+    use type_bcvector,  only: bcvector_t
 
     ! IMPORT BOUNDARY CONDITIONS
 !    use bc_periodic,                    only: periodic_t
@@ -27,24 +28,65 @@ module mod_bc
     implicit none
 
 
-    ! Instantiate boundary conditions so they can be sourced by the factory
-!    type(periodic_t)                    :: PERIODIC
-    type(linearadvection_extrapolate_t) :: LINEARADVECTION_EXTRAPOLATE
-    type(euler_wall_t)                  :: EULER_WALL
-    type(euler_totalinlet_t)            :: EULER_TOTALINLET
-    type(euler_pressureoutlet_t)        :: EULER_PRESSUREOUTLET
-    type(euler_extrapolate_t)           :: EULER_EXTRAPOLATE
-!    type(lineuler_extrapolate_t)        :: LINEULER_EXTRAPOLATE
-!    type(lineuler_inlet_t)              :: LINEULER_INLET
-
+    !
+    ! Global vector of registered boundary conditions
+    !
+    type(bcvector_t)   :: registered_bcs
 
 
 contains
 
 
+    !>  Register boundary conditions in a module vector.
+    !!
+    !!  This allows the available boundary conditions to be queried in the same way that they 
+    !!  are registered for allocation.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   2/8/2016
+    !!
+    !!
+    !--------------------------------------------------------------------------------------------
+    subroutine register_bcs()
+        integer :: nbcs, ibc
+
+        ! Instantiate bcs
+        type(linearadvection_extrapolate_t) :: LINEARADVECTION_EXTRAPOLATE
+        type(euler_wall_t)                  :: EULER_WALL
+        type(euler_totalinlet_t)            :: EULER_TOTALINLET
+        type(euler_pressureoutlet_t)        :: EULER_PRESSUREOUTLET
+        type(euler_extrapolate_t)           :: EULER_EXTRAPOLATE
+
+        ! Register in global vector
+        call registered_bcs%push_back(LINEARADVECTION_EXTRAPOLATE)
+        call registered_bcs%push_back(EULER_WALL)
+        call registered_bcs%push_back(EULER_TOTALINLET)
+        call registered_bcs%push_back(EULER_PRESSUREOUTLET)
+        call registered_bcs%push_back(EULER_EXTRAPOLATE)
+
+
+        !
+        ! Initialize each boundary condition in set
+        !
+        nbcs = registered_bcs%size()
+        do ibc = 1,nbcs
+            call registered_bcs%data(ibc)%bc%add_options()
+        end do
+
+
+    end subroutine register_bcs
+    !********************************************************************************************
+
+
+
+
+
+
+
 
     !> Boundary condition factory
-    !!      - Allocate the appropriate boundary condition based on the incoming string specification
+    !!      - Allocate a concrete boundary condition type based on the incoming string specification.
+    !!      - Initialize the allocated boundary condition.
     !!
     !!  @author Nathan A. Wukie
     !!  @date   1/31/2016
@@ -53,11 +95,11 @@ contains
     !!  @param[inout]   bc      Allocatable boundary condition
     !!
     !--------------------------------------------------------------
-    subroutine create_bc(string,bc)
-        character(*),                   intent(in)      :: string
+    subroutine create_bc(bcstring,bc)
+        character(*),                   intent(in)      :: bcstring
         class(bc_t),    allocatable,    intent(inout)   :: bc
 
-        integer(ik) :: ierr
+        integer(ik) :: ierr, bcindex
 
 
         if ( allocated(bc) ) then
@@ -66,77 +108,105 @@ contains
 
 
 
+        !
+        ! Find equation set in 'registered_bcs' vector
+        !
+        bcindex = registered_bcs%index_by_name(trim(bcstring))
 
-        select case (trim(string))
-
-!            ! PERIODIC
-!            case ('periodic','Periodic')
-!                allocate(bc, source=PERIODIC, stat=ierr)
-!
-            ! Linear Advection - extrapolation boundary condition
-            case ('extrapolate_la','extrapolation_la','Extrapolate_la','Extrapolation_la')
-                allocate(bc, source=LINEARADVECTION_EXTRAPOLATE, stat=ierr)
-
-
-
-            ! Euler - slip wall
-            case ('euler_wall','slip_wall','Euler_Wall','Slip_Wall','SlipWall')
-                allocate(bc, source=EULER_WALL, stat=ierr)
-
-            ! Euler - total inlet
-            case ('euler_totalinlet','Euler_TotalInlet')
-                allocate(bc, source=EULER_TOTALINLET, stat=ierr)
-
-
-
-            ! Euler - pressure oulet
-            case ('euler_pressureoutlet','Euler_PressureOutlet')
-                allocate(bc, source=EULER_PRESSUREOUTLET, stat=ierr)
-
-
-
-            ! Euler - extrapolate
-            case ('euler_extrapolate','Euler_Extrapolate')
-                allocate(bc, source=EULER_EXTRAPOLATE, stat=ierr)
-
-
-
-!            ! Linearized Euler
-!            case ('lineuler_extrapolate')
-!                allocate(bc, source=LINEULER_EXTRAPOLATE, stat=ierr)
-!
-!
-!            case ('lineuler_inlet')
-!                allocate(bc, source=LINEULER_INLET, stat=ierr)
-
-
-
-
-
-            ! DEFAULT - ERROR
-            case default
-
-                call chidg_signal_one(FATAL,"create_bc: Boundary condition string was not recognized. Check that the boundary condition is registered in create_bc and that spelling is correct.",trim(string))
-
-
-
-        end select
 
 
         !
-        ! Check allocation status
+        ! Check equationset was found in 'registered_bcs'
         !
-        if (ierr /= 0) call AllocationError
+        if (bcindex == 0) call chidg_signal_one(FATAL,"create_bc: boundary condition not recognized", trim(bcstring))
 
 
+
         !
-        ! Add specialized boundary condition options from the concrete type definition.
+        ! Allocate conrete bc_t instance
         !
-        call bc%add_options()
+        allocate(bc, source=registered_bcs%data(bcindex)%bc, stat=ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"create_bc: error allocating boundary condition from global vector.")
+
+
+
+        !
+        ! Check boundary condition was allocated
+        !
+        if ( .not. allocated(bc) ) call chidg_signal(FATAL,"create_bc: error allocating concrete boundary condition.")
+
 
 
     end subroutine create_bc
     !*************************************************************************************
+
+
+
+
+
+
+
+    !>  This is really a utilitity for 'chidg edit' to dynamically list the avalable 
+    !!  boundary conditions.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   2/8/2016
+    !!
+    !--------------------------------------------------------------------------------------
+    subroutine list_bcs()
+        integer                         :: nbcs, ibc
+        character(len=:),   allocatable :: bcname
+
+        nbcs = registered_bcs%size()
+
+
+        do ibc = 1,nbcs
+
+            bcname = registered_bcs%data(ibc)%bc%get_name()
+
+
+            call write_line(trim(bcname))
+        end do ! ieqn
+
+    end subroutine list_bcs
+    !**************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

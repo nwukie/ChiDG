@@ -27,6 +27,7 @@ module type_bc
     !--------------------------------------------------------------------------------------------
     type, public, abstract :: bc_t
 
+        character(len=:),   allocatable :: name
 
         integer(ik),        allocatable :: dom(:)                   !< Indices of domains
         integer(ik),        allocatable :: elems(:)                 !< Indices of elements associated with boundary condition
@@ -52,6 +53,8 @@ module type_bc
 
         procedure   :: add_options                          !< Specialized by each bc_t implementation. Adds options available
 
+        procedure   :: set_name                             !< Set the boundary condition name
+        procedure   :: get_name                             !< Return the boundary condition name
 
         procedure   :: set_fcn                              !< Set a particular function definition for a specified bcfunction_t
         procedure   :: set_fcn_option                       !< Set function-specific options for a specified bcfunction_t
@@ -533,6 +536,63 @@ contains
 
     end function get_noptions
     !***************************************************************************************************
+
+
+
+
+
+    !>  Set the boundary condition name.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   2/8/2016
+    !!
+    !!
+    !---------------------------------------------------------------------------------------------------
+    subroutine set_name(self,bcname)
+        class(bc_t),    intent(inout)   :: self
+        character(*),   intent(in)      :: bcname
+
+        self%name = trim(bcname)
+
+
+    end subroutine set_name
+    !***************************************************************************************************
+
+
+
+
+
+
+
+
+    !>  Return the boundary condition name.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   2/8/2016
+    !!
+    !!
+    !--------------------------------------------------------------------------------------------------
+    function get_name(self) result(bcname)
+        class(bc_t),    intent(in)  :: self
+
+        character(len=:), allocatable :: bcname
+
+        bcname = self%name
+
+    end function get_name
+    !***************************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

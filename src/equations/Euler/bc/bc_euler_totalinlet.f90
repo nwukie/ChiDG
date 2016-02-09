@@ -24,6 +24,7 @@ module bc_euler_totalinlet
     !!      - Extrapolate interior variables to be used for calculating the boundary flux.
     !!  
     !!  @author Nathan A. Wukie
+    !!  @date   2/8/2016
     !!
     !-------------------------------------------------------------------------------------------
     type, public, extends(bc_t) :: euler_totalinlet_t
@@ -55,6 +56,11 @@ contains
     subroutine add_options(self)
         class(euler_totalinlet_t),  intent(inout)   :: self
 
+        !
+        ! Set name
+        !
+        call self%set_name('euler_totalinlet')
+
 
         !
         ! Add functions
@@ -83,6 +89,7 @@ contains
     !!  @param[in]      iface   Index of the face being computed
     !!  @param[in]      iblk    Index of the linearization block being computed
     !!  @param[inout]   prop    properties_t object containing equations and material_t objects
+    !!
     !-------------------------------------------------------------------------------------------
     !subroutine compute(self,mesh,sdata,prop,idom,ielem,iface,iblk)
     subroutine compute(self,mesh,sdata,prop,face,flux)

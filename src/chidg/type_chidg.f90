@@ -1,7 +1,8 @@
 module type_chidg
 #include <messenger.h>
     use mod_constants,          only: NFACES
-    use mod_equations,          only: initialize_equations
+    use mod_equations,          only: register_equations
+    use mod_bc,                 only: register_bcs
     use mod_grid,               only: initialize_grid
     use mod_io,                 only: read_input, nterms_s, eqnset
     use mod_string_utilities,   only: get_file_extension
@@ -93,7 +94,8 @@ contains
         ! Call environment initialization routines by default on first init call
         if (.not. self%envInitialized ) then
             call log_init()
-            call initialize_equations()
+            call register_equations()
+            call register_bcs()
             call initialize_grid()
             self%envInitialized = .true.
         end if

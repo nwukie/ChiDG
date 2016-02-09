@@ -13,6 +13,7 @@ module mod_chidg_edit
     use hdf5
     use h5lt
 
+    use type_chidg,                         only: chidg_t
     use mod_chidg_edit_domaininfo,          only: chidg_edit_domaininfo
     use mod_chidg_edit_boundaryconditions,  only: chidg_edit_boundaryconditions
     use mod_chidg_edit_matrixsolver,        only: chidg_edit_matrixsolver
@@ -51,9 +52,10 @@ contains
     subroutine chidg_edit(filename)
         character(*),   intent(in)  :: filename
 
+        type(chidg_t)                   :: chidg
 
-        logical     :: run, fileexists
-        integer(ik) :: ierr
+        logical                         :: run, fileexists
+        integer(ik)                     :: ierr
 
         character(len=:),   allocatable :: char_input
         integer(ik)                     :: int_input
@@ -63,6 +65,11 @@ contains
 
         integer(HID_T)     :: fid
 
+
+        !
+        ! Initialize chidg environment
+        !
+        call chidg%init('env')
 
         !
         ! Send ChiDG output to screen

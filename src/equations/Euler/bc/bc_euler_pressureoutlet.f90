@@ -49,6 +49,12 @@ contains
         class(euler_pressureoutlet_t),  intent(inout)   :: self
 
         !
+        ! Set name
+        !
+        call self%set_name('euler_pressureoutlet')
+
+
+        !
         ! Add functions
         !
         call self%bcproperties%add('StaticPressure','Required')         ! add StaticPressure

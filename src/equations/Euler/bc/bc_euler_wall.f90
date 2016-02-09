@@ -27,7 +27,8 @@ module bc_euler_wall
     type, public, extends(bc_t) :: euler_wall_t
 
     contains
-        procedure :: compute    !> bc implementation
+        procedure   :: add_options
+        procedure   :: compute    !> bc implementation
     end type euler_wall_t
     !-------------------------------------------------------------------------------------------
 
@@ -35,6 +36,50 @@ module bc_euler_wall
 
 
 contains
+
+
+
+    !>  Procedure for registering boundary condition options. Needs executed upon allocation.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   2/2/2016
+    !!
+    !------------------------------------------------------------------------------------------
+    subroutine add_options(self)    
+        class(euler_wall_t),  intent(inout)   :: self
+
+        !
+        ! Set name
+        !
+        call self%set_name('euler_wall')
+
+
+        !
+        ! Add functions
+        !
+
+
+        !
+        ! Add parameters
+        !
+
+
+    end subroutine add_options
+    !******************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
     !> Specialized compute routine for Euler Slip-Wall Boundary Condition
     !!

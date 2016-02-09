@@ -3,7 +3,7 @@ module mod_chidg_edit_boundaryconditions
     use mod_kinds,      only: rk, ik
     use mod_constants,  only: NFACES, XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX
     use type_bc,        only: bc_t
-    use mod_bc,         only: create_bc
+    use mod_bc,         only: create_bc, list_bcs
     use type_function,  only: function_t
     use mod_function,   only: create_function
     use hdf5
@@ -401,7 +401,7 @@ contains
         character(len=1024)                 :: dname
         character(len=:),       allocatable :: command, dname_trim
         character(len=1024)                 :: bc_string, pname
-        logical                             :: run_edit_bc_face, get_property, property_exists
+        logical                             :: run_edit_bc_face, get_property, property_exists, set_bc, print_bcs
 
 
         faces = ["  XI_MIN","  XI_MAX"," ETA_MIN"," ETA_MAX","ZETA_MIN","ZETA_MAX"]
@@ -478,29 +478,48 @@ contains
                 ! Set boundary condition case
                 !
                 case (1)
-                    !
-                    ! Refresh display
-                    !
-                    call execute_command_line("clear")
-                    call print_overview(fid,idom_hdf)
-                    call print_boundaryconditions_overview(fid,idom_hdf)
-                    dname_trim = trim(adjustl(dname)) 
-                    call print_boundaryconditions_domain_face(dname_trim(3:), trim(adjustl(faces(iface))))
+                    set_bc    = .true.
+                    print_bcs = .false.
+                    do while (set_bc)
+                        !
+                        ! Refresh display
+                        !
+                        call execute_command_line("clear")
+                        call print_overview(fid,idom_hdf)
+                        call print_boundaryconditions_overview(fid,idom_hdf,iface)
+                        dname_trim = trim(adjustl(dname)) 
+                        call print_boundaryconditions_domain_face(dname_trim(3:), trim(adjustl(faces(iface))))
+
+                        if (print_bcs) then
+                            call list_bcs()
+                        end if
 
 
-                    !
-                    ! Get boundary condition string from user
-                    !
-                    command = "Enter boundary condition(0 to exit): "
-                    call write_line(' ')
-                    call write_line(command,color='blue')
-                    read(*,*) bc_string
 
-                
-                    !
-                    ! Call routine to set boundary condition in hdf file.
-                    !
-                    call set_boundarycondition_face(bcgroup,bcface,bc_string)
+                        !
+                        ! Get boundary condition string from user
+                        !
+                        command = "Enter boundary condition(? to list): "
+                        call write_line(' ')
+                        call write_line(command,color='blue')
+                        read(*,*) bc_string
+
+
+                        if ( trim(bc_string) == '?' ) then
+                            
+                            print_bcs = .true.
+
+                        else
+                        
+                            !
+                            ! Call routine to set boundary condition in hdf file.
+                            !
+                            call set_boundarycondition_face(bcgroup,bcface,bc_string)
+
+                            set_bc = .false.
+                        end if
+
+                    end do ! set_bc
 
 
 
@@ -597,6 +616,7 @@ contains
         ! Add new boundary condition and settings
         !
         call add_boundarycondition_hdf(bcgroup,bcface,bcstring)
+
 
 
     end subroutine set_boundarycondition_face

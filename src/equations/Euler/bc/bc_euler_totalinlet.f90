@@ -45,11 +45,10 @@ contains
 
 
 
-    !>
+    !>  Add options for total pressure/temperature boundary condition.
     !!
     !!  @author Nathan A. Wukie
     !!  @date   2/5/2016
-    !!
     !!
     !!
     !--------------------------------------------------------------------------------------------
@@ -67,6 +66,16 @@ contains
         !
         call self%bcproperties%add('TotalPressure',   'Required')
         call self%bcproperties%add('TotalTemperature','Required')
+        call self%bcproperties%add('nx',              'Required')
+        call self%bcproperties%add('ny',              'Required')
+        call self%bcproperties%add('nz',              'Required')
+
+        !
+        ! Set default angle
+        !
+        call self%set_fcn_option('nx', 'val', 1._rk)
+        call self%set_fcn_option('ny', 'val', 0._rk)
+        call self%set_fcn_option('nz', 'val', 0._rk)
 
 
     end subroutine add_options
@@ -101,18 +110,9 @@ contains
         type(function_info_t),          intent(in)      :: flux
 
 
-!        integer(ik),                    intent(in)      :: idom
-!        integer(ik),                    intent(in)      :: ielem
-!        integer(ik),                    intent(in)      :: iface
-!        integer(ik),                    intent(in)      :: iblk
-
         ! Equation indices
         integer(ik)     :: irho, irhou, irhov, irhow, irhoE
 
-        integer(ik)             :: iface_p, ineighbor, idonor
-        integer(ik)             :: idom, ielem, iface, iblk
-        type(seed_t)            :: seed
-!        type(face_indices_t)    :: face
 
         ! Storage at quadrature nodes
         type(AD_D), dimension(mesh(face%idomain)%faces(face%ielement,face%iface)%gq%face%nnodes)   ::  &
@@ -123,12 +123,13 @@ contains
                         T_bc,   p_bc,   rho_bc, rhoE_bc,                    &
                         vmag2_m, vmag, H_bc
 
-        real(rk), dimension(mesh(face%idomain)%faces(face%ielement,face%iface)%gq%face%nnodes) :: TT, PT
+        real(rk), dimension(mesh(face%idomain)%faces(face%ielement,face%iface)%gq%face%nnodes) :: TT, PT, nx, ny, nz
 
-        !real(rk)    :: gam_m, cp_m, TT, PT, M
-        real(rk)    :: gam_m, cp_m, M
-        real(rk)    :: norm_bc(3)
-
+        real(rk)        :: gam_m, cp_m, M
+        !real(rk)        :: norm_bc(3)
+        integer(ik)     :: iface_p, ineighbor, idonor
+        integer(ik)     :: idom, ielem, iface, iblk
+        type(seed_t)    :: seed
 
         idonor = 0
 
@@ -143,16 +144,10 @@ contains
         irhoE = prop%get_eqn_index("rhoE")
 
 
-
-!        face%idomain  = idom
-!        face%ielement = ielem
-!        face%iface    = iface
-
         idom  = face%idomain
         ielem = face%ielement
         iface = face%iface
-
-        iblk   = flux%iblk
+        iblk  = flux%iblk
 
 
         !
@@ -161,19 +156,19 @@ contains
         seed = compute_seed(mesh,idom,ielem,iface,idonor,iblk)
 
 
-        !associate (norms => mesh(idom)%faces(ielem,iface)%norm, unorms => mesh(idom)%faces(ielem,iface)%unorm, faces => mesh(idom)%faces, q => sdata%q)
         associate (norms => mesh(idom)%faces(ielem,iface)%norm, unorms => mesh(idom)%faces(ielem,iface)%unorm, faces => mesh(idom)%faces, &
                 coords => mesh(idom)%faces(ielem,iface)%quad_pts,    q => sdata%q,      time => sdata%t )
 
         !
         ! Set boundary condition Total Temperature and Total Pressure
         !
-        !TT = 300._rk
-        !PT = 110000._rk
         PT = self%bcproperties%compute("TotalPressure",   time,coords)
         TT = self%bcproperties%compute("TotalTemperature",time,coords)
+        nx = self%bcproperties%compute("nx", time, coords)
+        ny = self%bcproperties%compute("ny", time, coords)
+        nz = self%bcproperties%compute("nz", time, coords)
 
-        norm_bc = [ONE, ZERO, ZERO]
+        !norm_bc = [ONE, ZERO, ZERO]
 
 
             !
@@ -204,9 +199,18 @@ contains
             !
             ! Compute boundary condition velocity components from imposed direction
             !
-            u_bc = vmag*norm_bc(1)
-            v_bc = vmag*norm_bc(2)
-            w_bc = vmag*norm_bc(3)
+            !u_bc = vmag*norm_bc(1)
+            !v_bc = vmag*norm_bc(2)
+            !w_bc = vmag*norm_bc(3)
+
+
+            u_bc = vmag*nx
+            v_bc = vmag*ny
+            w_bc = vmag*nz
+
+
+
+
 
 
 

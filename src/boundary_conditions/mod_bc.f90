@@ -17,7 +17,7 @@ module mod_bc
     use type_bcvector,  only: bcvector_t
 
     ! IMPORT BOUNDARY CONDITIONS
-!    use bc_periodic,                    only: periodic_t
+    use bc_periodic,                    only: periodic_t
     use bc_linearadvection_extrapolate, only: linearadvection_extrapolate_t
     use bc_euler_wall,                  only: euler_wall_t
     use bc_euler_totalinlet,            only: euler_totalinlet_t
@@ -53,6 +53,7 @@ contains
         !
         ! Instantiate bcs
         !
+        type(periodic_t)                    :: PERIODIC
         type(linearadvection_extrapolate_t) :: LINEARADVECTION_EXTRAPOLATE
         type(euler_wall_t)                  :: EULER_WALL
         type(euler_totalinlet_t)            :: EULER_TOTALINLET
@@ -64,6 +65,7 @@ contains
             !
             ! Register in global vector
             !
+            call registered_bcs%push_back(PERIODIC)
             call registered_bcs%push_back(LINEARADVECTION_EXTRAPOLATE)
             call registered_bcs%push_back(EULER_WALL)
             call registered_bcs%push_back(EULER_TOTALINLET)

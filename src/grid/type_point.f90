@@ -24,13 +24,17 @@ module type_point
 
     contains
 
-        procedure :: set
-        procedure :: x
-        procedure :: y
-        procedure :: z
-        procedure :: xi
-        procedure :: eta
-        procedure :: zeta
+        procedure   :: set
+        procedure   :: x
+        procedure   :: y
+        procedure   :: z
+        procedure   :: xi
+        procedure   :: eta
+        procedure   :: zeta
+
+        procedure   :: add_x
+        procedure   :: add_y
+        procedure   :: add_z
 
     end type point_t
     !*************************************************************************************************************
@@ -193,6 +197,94 @@ contains
         self%c3_ = zeta_in
     end subroutine
     !*********************************************************************************************************
+
+
+
+
+
+
+
+
+    !>  Add to x-coordinate
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   2/9/2016
+    !!
+    !!
+    !----------------------------------------------------------------------------------------------------
+    subroutine add_x(self, inc_x)
+        class(point_t), intent(inout)   :: self
+        real(rk),       intent(in)      :: inc_x
+
+
+        self%c1_ = self%c1_ + inc_x
+
+
+    end subroutine add_x
+    !****************************************************************************************************
+
+
+
+
+
+
+
+
+    !>  Add to y-coordinate
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   2/9/2016
+    !!
+    !!
+    !----------------------------------------------------------------------------------------------------
+    subroutine add_y(self, inc_y)
+        class(point_t), intent(inout)   :: self
+        real(rk),       intent(in)      :: inc_y
+
+
+        self%c2_ = self%c2_ + inc_y
+
+
+    end subroutine add_y
+    !****************************************************************************************************
+
+
+
+
+
+
+
+
+    !>  Add to x-coordinate
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   2/9/2016
+    !!
+    !!
+    !----------------------------------------------------------------------------------------------------
+    subroutine add_z(self, inc_z)
+        class(point_t), intent(inout)   :: self
+        real(rk),       intent(in)      :: inc_z
+
+
+        self%c3_ = self%c3_ + inc_z
+
+
+    end subroutine add_z
+    !****************************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

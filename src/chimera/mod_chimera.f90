@@ -186,6 +186,7 @@ contains
         integer(ik) :: idonor_domain, idonor_element
         integer(ik) :: idomain_list, ielement_list
 
+        real(rk)    :: offset_x, offset_y, offset_z
 
         type(face_info_t)       :: receiver
         type(element_indices_t)    :: donor
@@ -226,8 +227,26 @@ contains
                 !
                 do igq = 1,mesh(receiver%idomain)%faces(receiver%ielement,receiver%iface)%gq%face%nnodes
 
+                    !
+                    ! Get node coordinates
+                    !
                     gq_node = mesh(receiver%idomain)%faces(receiver%ielement,receiver%iface)%quad_pts(igq)
+
+
+                    !
+                    ! Get offset coordinates from face for potential periodic offset.
+                    !
+                    offset_x = mesh(receiver%idomain)%faces(receiver%ielement,receiver%iface)%chimera_offset_x
+                    offset_y = mesh(receiver%idomain)%faces(receiver%ielement,receiver%iface)%chimera_offset_y
+                    offset_z = mesh(receiver%idomain)%faces(receiver%ielement,receiver%iface)%chimera_offset_z
+
+                    call gq_node%add_x(offset_x)
+                    call gq_node%add_y(offset_y)
+                    call gq_node%add_z(offset_z)
+
+                    !
                     ! Call routine to find gq donor for current node
+                    !
                     call compute_gq_donor(mesh,gq_node, receiver, donor, donor_coord)
 
 

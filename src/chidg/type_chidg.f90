@@ -162,12 +162,6 @@ contains
 
 
 
-
-
-
-
-
-
     !>  Set ChiDG environment components
     !!
     !!      -   Set time-scheme

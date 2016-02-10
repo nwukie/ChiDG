@@ -1,8 +1,9 @@
 module type_bc
 #include <messenger.h>
     use mod_kinds,              only: rk, ik
-    use mod_constants,          only: XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX, BOUNDARY
+    use mod_constants,          only: XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX, BOUNDARY, CHIMERA, ORPHAN
     use type_mesh,              only: mesh_t
+    use type_point,             only: point_t
     use type_solverdata,        only: solverdata_t
     use type_properties,        only: properties_t
     use type_face_info,         only: face_info_t
@@ -116,10 +117,12 @@ contains
         type(mesh_t),           intent(inout)       :: mesh
         integer(ik),            intent(in)          :: iface 
 
-        
-        integer(ik)                 :: nelem_xi, nelem_eta, nelem_zeta, nelem_bc, ielem_bc, & 
-                                       xi_begin, eta_begin, zeta_begin, xi_end, eta_end, zeta_end, & 
-                                       ixi, ieta, izeta, ierr, ielem, ielem_test
+        type(point_t)                   :: pnt
+        character(len=:),   allocatable :: bcname        
+        real(rk)                        :: time
+        integer(ik)                     :: nelem_xi, nelem_eta, nelem_zeta, nelem_bc, ielem_bc, & 
+                                           xi_begin, eta_begin, zeta_begin, xi_end, eta_end, zeta_end, & 
+                                           ixi, ieta, izeta, ierr, ielem, ielem_test
         
         nelem_xi   = mesh%nelem_xi
         nelem_eta  = mesh%nelem_eta
@@ -183,10 +186,27 @@ contains
                     ielem_bc = ielem_bc + 1
 
 
-                    !
-                    ! Set face to boundary condition face
-                    !
-                    mesh%faces(ielem,iface)%ftype = BOUNDARY
+                    bcname = self%get_name()
+                    if ( trim(bcname) == 'periodic' ) then
+                        !
+                        ! Set to ORPHAN face so it will be recognized as chimera in the detection process.
+                        !
+                        mesh%faces(ielem,iface)%ftype = ORPHAN
+
+                        !
+                        ! Set periodic offset from boundary condition to the face. To be used in detection of gq_donor.
+                        !
+                        mesh%faces(ielem,iface)%chimera_offset_x = self%bcproperties%compute('offset_x', time, pnt) ! time and do nothing here, but the interface for a function requires them.
+                        mesh%faces(ielem,iface)%chimera_offset_y = self%bcproperties%compute('offset_y', time, pnt)
+                        mesh%faces(ielem,iface)%chimera_offset_z = self%bcproperties%compute('offset_z', time, pnt)
+
+                    else
+                        !
+                        ! Set face to boundary condition face
+                        !
+                        mesh%faces(ielem,iface)%ftype = BOUNDARY
+                    end if
+
                 end do ! ixi
             end do ! ieta
         end do ! izeta
@@ -195,7 +215,6 @@ contains
         !
         ! Call user-specialized boundary condition initialization
         !
-        !call self%init_spec(mesh,iface,options)
         call self%init_spec(mesh,iface)
 
 

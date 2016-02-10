@@ -20,6 +20,8 @@ subroutine rtest_linearadvection_implicit_convergence()
 
     use type_chidg,         only: chidg_t
     use type_point,         only: point_t
+    use type_bc,            only: bc_t
+    use mod_bc,             only: create_bc
 
     use mod_grid_operators, only: initialize_variable
     use type_function,      only: function_t
@@ -30,6 +32,7 @@ subroutine rtest_linearadvection_implicit_convergence()
     implicit none
 
     type(chidg_t)                       :: chidg
+    class(bc_t),            allocatable :: bc
     type(point_t),          allocatable :: pts(:,:,:)
     class(function_t),      allocatable :: fcn
     type(dict_t)                        :: toptions, moptions
@@ -110,12 +113,13 @@ subroutine rtest_linearadvection_implicit_convergence()
     !
     ! Set boundary conditions
     !
-    call chidg%data%add_bc('D_01','extrapolation_la',XI_MIN)
-    call chidg%data%add_bc('D_01','extrapolation_la',XI_MAX)
-    call chidg%data%add_bc('D_01','extrapolation_la',ETA_MIN)
-    call chidg%data%add_bc('D_01','extrapolation_la',ETA_MAX)
-    call chidg%data%add_bc('D_01','extrapolation_la',ZETA_MIN)
-    call chidg%data%add_bc('D_01','extrapolation_la',ZETA_MAX)
+    call create_bc('linearadvection_extrapolate', bc)
+    call chidg%data%add_bc('D_01',bc,XI_MIN)
+    call chidg%data%add_bc('D_01',bc,XI_MAX)
+    call chidg%data%add_bc('D_01',bc,ETA_MIN)
+    call chidg%data%add_bc('D_01',bc,ETA_MAX)
+    call chidg%data%add_bc('D_01',bc,ZETA_MIN)
+    call chidg%data%add_bc('D_01',bc,ZETA_MAX)
 
 
     !
@@ -129,10 +133,10 @@ subroutine rtest_linearadvection_implicit_convergence()
     ! Set initial solution
     !
     call create_function(fcn,'gaussian')
-    call fcn%set('b_x',0._rk)
-    call fcn%set('b_y',1.5_rk)
-    call fcn%set('b_z',1.5_rk)
-    call fcn%set('c',2.0_rk)
+    call fcn%set_option('b_x',0._rk)
+    call fcn%set_option('b_y',1.5_rk)
+    call fcn%set_option('b_z',1.5_rk)
+    call fcn%set_option('c',2.0_rk)
     call initialize_variable(chidg%data,1,fcn)
 
 

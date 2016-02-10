@@ -293,11 +293,10 @@ contains
 
 
 
-    !>
+    !>  Return an option key, given the index of an available option.
     !!
     !!  @author Nathan A. Wukie
     !!  @date   2/4/2016
-    !!
     !!
     !---------------------------------------------------------------------------------------------
     function get_option_key(self,iopt) result(key)
@@ -310,7 +309,7 @@ contains
         noptions = self%get_noptions()
 
         if (iopt > noptions) then
-            call chidg_signal(FATAL,"function%get_optionkey: option index exceeds the bounds of the available number of options")
+            call chidg_signal(FATAL,"function%get_optionkey: option index exceeds the bounds of the available number of options.")
         else
             key = trim(self%option_keys(iopt))
         end if
@@ -330,11 +329,10 @@ contains
 
 
 
-    !>
+    !>  Return the value of an option, given an option key.
     !!
     !!  @author Nathan A. Wukie
     !!  @date   2/4/2016
-    !!
     !!
     !!
     !--------------------------------------------------------------------------------------------
@@ -378,11 +376,10 @@ contains
 
 
 
-    !>
+    !>  Return the number of available options.
     !!
     !!  @author Nathan A. Wukie
     !!  @date   2/4/2016
-    !!
     !!
     !!
     !---------------------------------------------------------------------------------------------
@@ -415,11 +412,10 @@ contains
 
 
 
-    !>
+    !>  Given a key, check if it exists as a valid option for the function.
     !!
     !!  @author Nathan A. Wukie
     !!  @date   2/4/2016
-    !!
     !!
     !!
     !---------------------------------------------------------------------------------------------
@@ -463,11 +459,10 @@ contains
 
 
 
-    !>
+    !>  Return the index of an option in the option list, given an identifying key.
     !!
     !!  @author Nathan A. Wukie
     !!  @date   2/4/2016
-    !!
     !!
     !!
     !---------------------------------------------------------------------------------------------
@@ -498,32 +493,6 @@ contains
 
     end function get_key_index
     !*********************************************************************************************
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 

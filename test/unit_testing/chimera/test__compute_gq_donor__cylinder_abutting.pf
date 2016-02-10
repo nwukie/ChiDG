@@ -11,6 +11,8 @@ subroutine test_compute_gq_donor_cylinder_abutting()
     use type_meshdata,      only: meshdata_t
     use type_function,      only: function_t
     use type_point,         only: point_t
+    use type_bc,            only: bc_t
+    use mod_bc,             only: create_bc
 
 
     use mod_grid_operators, only: initialize_variable
@@ -23,9 +25,10 @@ subroutine test_compute_gq_donor_cylinder_abutting()
 
 
     type(chidg_t)                   :: chidgA
-    type(meshdata_t), allocatable   :: meshdataA(:)
-    class(function_t), allocatable  :: constant, gaussian
-    real(rk), allocatable           :: density_residual_D4_E31(:), density_residual_D4_E36(:)
+    class(bc_t),        allocatable :: wall, inlet, outlet
+    type(meshdata_t),   allocatable :: meshdataA(:)
+    class(function_t),  allocatable :: constant, gaussian
+    real(rk),           allocatable :: density_residual_D4_E31(:), density_residual_D4_E36(:)
     integer(ik)                     :: idom, ielem, ChiID, idom_d, ielem_d, iface, nterms_s, ndonors, gq_index, igq, ngq
     real(rk)                        :: chi_xi, chi_eta, chi_zeta, ref_xi, ref_eta, ref_zeta
     type(point_t)                   :: chimera_node
@@ -59,40 +62,48 @@ subroutine test_compute_gq_donor_cylinder_abutting()
     end do
 
 
+    !
+    ! Create boundary conditions
+    !
+    call create_bc('euler_wall', wall)
+    call create_bc('euler_pressureoutlet', outlet)
+    call create_bc('euler_totalinlet', inlet)
+
+
 
     !
     ! Add boundary conditions ChiDG - A
     !
     !call chidgA%data%add_bc('D_01','euler_totalinlet',XI_MIN)
     !call chidgA%data%add_bc('D_01','euler_pressureoutlet',XI_MAX)
-    call chidgA%data%add_bc('D_01','euler_wall',ETA_MIN)
-    call chidgA%data%add_bc('D_01','euler_wall',ETA_MAX)
-    call chidgA%data%add_bc('D_01','euler_wall',ZETA_MIN)
-    call chidgA%data%add_bc('D_01','euler_wall',ZETA_MAX)
+    call chidgA%data%add_bc('D_01',wall,ETA_MIN)
+    call chidgA%data%add_bc('D_01',wall,ETA_MAX)
+    call chidgA%data%add_bc('D_01',wall,ZETA_MIN)
+    call chidgA%data%add_bc('D_01',wall,ZETA_MAX)
 
 
     !call chidgA%data%add_bc('D_02','euler_totalinlet',XI_MIN)
     !call chidgA%data%add_bc('D_02','euler_pressureoutlet',XI_MAX)
-    call chidgA%data%add_bc('D_02','euler_pressureoutlet',ETA_MIN)
-    call chidgA%data%add_bc('D_02','euler_wall',ETA_MAX)
-    call chidgA%data%add_bc('D_02','euler_wall',ZETA_MIN)
-    call chidgA%data%add_bc('D_02','euler_wall',ZETA_MAX)
+    call chidgA%data%add_bc('D_02',outlet,ETA_MIN)
+    call chidgA%data%add_bc('D_02',wall,ETA_MAX)
+    call chidgA%data%add_bc('D_02',wall,ZETA_MIN)
+    call chidgA%data%add_bc('D_02',wall,ZETA_MAX)
 
 
     !call chidgA%data%add_bc('D_03','euler_totalinlet',XI_MIN)
     !call chidgA%data%add_bc('D_03','euler_pressureoutlet',XI_MAX)
-    call chidgA%data%add_bc('D_03','euler_wall',ETA_MIN)
-    call chidgA%data%add_bc('D_03','euler_wall',ETA_MAX)
-    call chidgA%data%add_bc('D_03','euler_wall',ZETA_MIN)
-    call chidgA%data%add_bc('D_03','euler_wall',ZETA_MAX)
+    call chidgA%data%add_bc('D_03',wall,ETA_MIN)
+    call chidgA%data%add_bc('D_03',wall,ETA_MAX)
+    call chidgA%data%add_bc('D_03',wall,ZETA_MIN)
+    call chidgA%data%add_bc('D_03',wall,ZETA_MAX)
 
 
     !call chidgA%data%add_bc('D_04','euler_totalinlet',XI_MIN)
     !call chidgA%data%add_bc('D_04','euler_pressureoutlet',XI_MAX)
-    call chidgA%data%add_bc('D_04','euler_totalinlet',ETA_MIN)
-    call chidgA%data%add_bc('D_04','euler_wall',ETA_MAX)
-    call chidgA%data%add_bc('D_04','euler_wall',ZETA_MIN)
-    call chidgA%data%add_bc('D_04','euler_wall',ZETA_MAX)
+    call chidgA%data%add_bc('D_04',inlet,ETA_MIN)
+    call chidgA%data%add_bc('D_04',wall,ETA_MAX)
+    call chidgA%data%add_bc('D_04',wall,ZETA_MIN)
+    call chidgA%data%add_bc('D_04',wall,ZETA_MAX)
 
 
 
@@ -112,19 +123,19 @@ subroutine test_compute_gq_donor_cylinder_abutting()
     !
     call create_function(constant,'constant')
 
-    call constant%set('val',1.13_rk)
+    call constant%set_option('val',1.13_rk)
     call initialize_variable(chidgA%data,1,constant)
 
-    call constant%set('val',190.0_rk)
+    call constant%set_option('val',190.0_rk)
     call initialize_variable(chidgA%data,2,constant)
 
-    call constant%set('val',ZERO)
+    call constant%set_option('val',ZERO)
     call initialize_variable(chidgA%data,3,constant)
 
-    call constant%set('val',ZERO)
+    call constant%set_option('val',ZERO)
     call initialize_variable(chidgA%data,4,constant)
 
-    call constant%set('val',248000._rk)
+    call constant%set_option('val',248000._rk)
     call initialize_variable(chidgA%data,5,constant)
 
 

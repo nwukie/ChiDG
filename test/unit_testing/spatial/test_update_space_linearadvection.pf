@@ -10,6 +10,8 @@ subroutine test_update_space_linearadvection()
     use type_chidg,         only: chidg_t
     use type_meshdata,      only: meshdata_t
     use type_function,      only: function_t
+    use type_bc,            only: bc_t
+    use mod_bc,             only: create_bc
 
 
     use mod_grid_operators, only: initialize_variable
@@ -22,8 +24,9 @@ subroutine test_update_space_linearadvection()
 
 
     type(chidg_t)                   :: chidgA, chidgB
-    type(meshdata_t), allocatable   :: meshdataA(:), meshdataB(:)
-    class(function_t), allocatable  :: constant, gaussian
+    class(bc_t),        allocatable :: bc
+    type(meshdata_t),   allocatable :: meshdataA(:), meshdataB(:)
+    class(function_t),  allocatable :: constant, gaussian
     integer(ik)     :: idom, nterms_s, ChiID
     real(rk)        :: tol
 
@@ -62,35 +65,39 @@ subroutine test_update_space_linearadvection()
     end do
 
 
+    !
+    ! Create boundary condition
+    !
+    call create_bc('linearadvection_extrapolate', bc)
 
 
     !
     ! Add boundary conditions ChiDG - A
     !
-    call chidgA%data%add_bc('D_01','extrapolate_la',XI_MIN)
-    call chidgA%data%add_bc('D_01','extrapolate_la',XI_MAX)
-    call chidgA%data%add_bc('D_01','extrapolate_la',ETA_MIN)
-    call chidgA%data%add_bc('D_01','extrapolate_la',ETA_MAX)
-    call chidgA%data%add_bc('D_01','extrapolate_la',ZETA_MIN)
-    call chidgA%data%add_bc('D_01','extrapolate_la',ZETA_MAX)
+    call chidgA%data%add_bc('D_01',bc,XI_MIN)
+    call chidgA%data%add_bc('D_01',bc,XI_MAX)
+    call chidgA%data%add_bc('D_01',bc,ETA_MIN)
+    call chidgA%data%add_bc('D_01',bc,ETA_MAX)
+    call chidgA%data%add_bc('D_01',bc,ZETA_MIN)
+    call chidgA%data%add_bc('D_01',bc,ZETA_MAX)
 
     !
     ! Add boundary conditions to ChiDG - B
     !
-    call chidgB%data%add_bc('D_01','extrapolate_la',XI_MIN)
+    call chidgB%data%add_bc('D_01',bc,XI_MIN)
     !call chidgB%data%add_bc('D_01','extrapolate_la',XI_MAX)
-    call chidgB%data%add_bc('D_01','extrapolate_la',ETA_MIN)
-    call chidgB%data%add_bc('D_01','extrapolate_la',ETA_MAX)
-    call chidgB%data%add_bc('D_01','extrapolate_la',ZETA_MIN)
-    call chidgB%data%add_bc('D_01','extrapolate_la',ZETA_MAX)
+    call chidgB%data%add_bc('D_01',bc,ETA_MIN)
+    call chidgB%data%add_bc('D_01',bc,ETA_MAX)
+    call chidgB%data%add_bc('D_01',bc,ZETA_MIN)
+    call chidgB%data%add_bc('D_01',bc,ZETA_MAX)
 
 
     !call chidgB%data%add_bc('D_02','extrapolate_la',XI_MIN)
-    call chidgB%data%add_bc('D_02','extrapolate_la',XI_MAX)
-    call chidgB%data%add_bc('D_02','extrapolate_la',ETA_MIN)
-    call chidgB%data%add_bc('D_02','extrapolate_la',ETA_MAX)
-    call chidgB%data%add_bc('D_02','extrapolate_la',ZETA_MIN)
-    call chidgB%data%add_bc('D_02','extrapolate_la',ZETA_MAX)
+    call chidgB%data%add_bc('D_02',bc,XI_MAX)
+    call chidgB%data%add_bc('D_02',bc,ETA_MIN)
+    call chidgB%data%add_bc('D_02',bc,ETA_MAX)
+    call chidgB%data%add_bc('D_02',bc,ZETA_MIN)
+    call chidgB%data%add_bc('D_02',bc,ZETA_MAX)
 
 
 

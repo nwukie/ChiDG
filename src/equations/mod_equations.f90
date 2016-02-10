@@ -22,12 +22,11 @@ module mod_equations
 
 
 
-
-    ! Equation set vector
+    !
+    ! Vector of registered equations.
+    !
     type(evector_t)             :: registered_equations
-
-
-    logical :: uninitialized = .false.
+    logical                     :: initialized = .false.
 
 
 contains
@@ -36,7 +35,7 @@ contains
 
 
 
-    !>  Register equations in a module vector.
+    !>  Register equations in a module vector. This is called from chidg%init('env').
     !!
     !!  This allows the available equations to be queried in the same way that they 
     !!  are registered for allocation.
@@ -49,29 +48,42 @@ contains
     subroutine register_equations()
         integer :: neqns, ieqn
 
+        !
         ! Instantiate Equations
+        !
         type(scalar_e)              :: SCALAR
         type(linearadvection_e)     :: LINEARADVECTION
         type(duallinearadvection_e) :: DUALLINEARADVECTION
         type(euler_e)               :: EULER
 
 
-        ! Store in global vector
-        call registered_equations%push_back(SCALAR)
-        call registered_equations%push_back(LINEARADVECTION)
-        call registered_equations%push_back(DUALLINEARADVECTION)
-        call registered_equations%push_back(EULER)
+        if ( .not. initialized ) then
+            !
+            ! Register in global vector
+            !
+            call registered_equations%push_back(SCALAR)
+            call registered_equations%push_back(LINEARADVECTION)
+            call registered_equations%push_back(DUALLINEARADVECTION)
+            call registered_equations%push_back(EULER)
 
 
 
-        !
-        ! Initialize each equation in set
-        !
-        neqns = registered_equations%size()
-        do ieqn = 1,neqns
-            call registered_equations%data(ieqn)%item%init()
-        end do
 
+
+            !
+            ! Initialize each equation in set. Doesn't need editing
+            !
+            neqns = registered_equations%size()
+            do ieqn = 1,neqns
+                call registered_equations%data(ieqn)%item%init()
+            end do
+
+            !
+            ! Confirm initialization
+            !
+            initialized = .true.
+
+        end if
 
     end subroutine register_equations
     !************************************************************************************

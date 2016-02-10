@@ -8,6 +8,8 @@ module test_function_status_mod
     use type_point,                     only: point_t
     use type_equationset_function_data, only: equationset_function_data_t
     use mod_testutils,                  only: meshgen
+    use type_bc,                        only: bc_t
+    use mod_bc,                         only: create_bc
 
     use type_face_info,                 only: face_info_t
     use type_function_info,             only: function_info_t
@@ -50,8 +52,9 @@ contains
     subroutine setUp(this)
         class(test_function_status),    intent(inout)   :: this
 
-        type(point_t),  allocatable                     ::  pts(:,:,:)
-        integer(ik)                                     ::  nterms_c, nterms_s
+        type(point_t),  allocatable                     :: pts(:,:,:)
+        integer(ik)                                     :: nterms_c, nterms_s
+        class(bc_t),    allocatable                     :: bc
 
         !
         ! Initialize ChiDG environment
@@ -76,12 +79,13 @@ contains
         !
         ! Add boundary conditions to the domain
         !
-        call this%chidg%data%add_bc('D_01','extrapolate_la',XI_MIN)
-        call this%chidg%data%add_bc('D_01','extrapolate_la',XI_MAX)
-        call this%chidg%data%add_bc('D_01','extrapolate_la',ETA_MIN)
-        call this%chidg%data%add_bc('D_01','extrapolate_la',ETA_MAX)
-        call this%chidg%data%add_bc('D_01','extrapolate_la',ZETA_MIN)
-        call this%chidg%data%add_bc('D_01','extrapolate_la',ZETA_MAX)
+        call create_bc('linearadvection_extrapolate', bc)
+        call this%chidg%data%add_bc('D_01',bc,XI_MIN)
+        call this%chidg%data%add_bc('D_01',bc,XI_MAX)
+        call this%chidg%data%add_bc('D_01',bc,ETA_MIN)
+        call this%chidg%data%add_bc('D_01',bc,ETA_MAX)
+        call this%chidg%data%add_bc('D_01',bc,ZETA_MIN)
+        call this%chidg%data%add_bc('D_01',bc,ZETA_MAX)
 
     end subroutine setUp
     !**********************************************************************************

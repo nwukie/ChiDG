@@ -79,7 +79,7 @@ contains
         !
         nterms_s = 8
         nterms_c = 8
-        call this%chidg%data%add_domain('D_01',pts,nterms_c,'LA',nterms_s)
+        call this%chidg%data%add_domain('D_01',pts,nterms_c,'linearadvection',nterms_s)
         call this%chidg%data%init_sdata()
 
     end subroutine

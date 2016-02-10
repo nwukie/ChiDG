@@ -5,6 +5,8 @@ module test_interpolate_chimera_mod
     use type_seed,          only: seed_t
     use type_meshdata,      only: meshdata_t
     use type_face_info,     only: face_info_t
+    use type_bc,            only: bc_t
+    use mod_bc,             only: create_bc
 
 
     use mod_kinds,          only: rk,ik
@@ -33,6 +35,7 @@ module test_interpolate_chimera_mod
 
 @TestCase
     type, extends(TestCase) ::  test_interpolate_chimera
+
         type(chidg_t)                   :: chidg
         class(function_t),  allocatable :: fcn
 
@@ -55,7 +58,8 @@ contains
         class(test_interpolate_chimera),    intent(inout)   :: this
 
         integer(ik)                     :: nterms_s, ivar, idom
-        type(meshdata_t), allocatable   :: meshdata(:) 
+        type(meshdata_t),   allocatable :: meshdata(:) 
+        class(bc_t),        allocatable :: bc
         
         !
         ! Send log to file
@@ -87,19 +91,20 @@ contains
         !
         ! Set boundary conditions
         !
-        call this%chidg%data%add_bc('D_01','extrapolate_la',XI_MIN)
+        call create_bc('linearadvection_extrapolate', bc)
+        call this%chidg%data%add_bc('D_01',bc,XI_MIN)
         !call this%chidg%data%add_bc('D_01','extrapolate_la',XI_MAX)
-        call this%chidg%data%add_bc('D_01','extrapolate_la',ETA_MIN)
-        call this%chidg%data%add_bc('D_01','extrapolate_la',ETA_MAX)
-        call this%chidg%data%add_bc('D_01','extrapolate_la',ZETA_MIN)
-        call this%chidg%data%add_bc('D_01','extrapolate_la',ZETA_MAX)
+        call this%chidg%data%add_bc('D_01',bc,ETA_MIN)
+        call this%chidg%data%add_bc('D_01',bc,ETA_MAX)
+        call this%chidg%data%add_bc('D_01',bc,ZETA_MIN)
+        call this%chidg%data%add_bc('D_01',bc,ZETA_MAX)
 
         !call this%chidg%data%add_bc('D_02','extrapolate_la',XI_MIN)
-        call this%chidg%data%add_bc('D_02','extrapolate_la',XI_MAX)
-        call this%chidg%data%add_bc('D_02','extrapolate_la',ETA_MIN)
-        call this%chidg%data%add_bc('D_02','extrapolate_la',ETA_MAX)
-        call this%chidg%data%add_bc('D_02','extrapolate_la',ZETA_MIN)
-        call this%chidg%data%add_bc('D_02','extrapolate_la',ZETA_MAX)
+        call this%chidg%data%add_bc('D_02',bc,XI_MAX)
+        call this%chidg%data%add_bc('D_02',bc,ETA_MIN)
+        call this%chidg%data%add_bc('D_02',bc,ETA_MAX)
+        call this%chidg%data%add_bc('D_02',bc,ZETA_MIN)
+        call this%chidg%data%add_bc('D_02',bc,ZETA_MAX)
 
 
 
@@ -127,7 +132,7 @@ contains
         ! Initialize variable
         !
         call create_function(this%fcn,'constant')                       ! Allocate constant function
-        call this%fcn%set('val',5._rk)                                  ! Set constant function value
+        call this%fcn%set_option('val',5._rk)                           ! Set constant function value
         call initialize_variable(this%chidg%data,ivar,this%fcn)         ! Initialize variable using constant function
 
     
@@ -212,7 +217,8 @@ contains
             
             
             ! Initialize reference
-            call self%fcn%dict%get('val',val)
+            !call self%fcn%dict%get('val',val)
+            val = self%fcn%get_option_value('val')
             u_ref = val
             
             
@@ -373,7 +379,7 @@ contains
             !
             ! Initialize reference
             !
-            call self%fcn%dict%get('val',val)
+            val = self%fcn%get_option_value('val')
             u_ref = val
             
             

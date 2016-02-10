@@ -8,6 +8,8 @@ subroutine test_integrate_boundary_unit_constant()
 
     use type_chidg,         only: chidg_t
     use type_point,         only: point_t
+    use type_bc,            only: bc_t
+    use mod_bc,             only: create_bc
     use type_face_info,     only: face_info_t
     use type_function_info, only: function_info_t
     use type_seed,          only: seed_t
@@ -24,6 +26,7 @@ subroutine test_integrate_boundary_unit_constant()
 
     type(point_t),      allocatable     :: pts(:,:,:)
     type(chidg_t)                       :: chidg
+    class(bc_t),        allocatable     :: bc
     integer(ik)                         :: nterms_c, nterms_s, iblk, idom, ngq, ielem, iface, ifcn
     integer(ik)                         :: idonor, ivar, igq
     type(AD_D),         allocatable     :: integrand(:)
@@ -52,18 +55,19 @@ subroutine test_integrate_boundary_unit_constant()
 
     nterms_c = 8
     nterms_s = 1
-
     call chidg%data%add_domain('D_01',pts,nterms_c,'linearadvection',nterms_s)
+
 
     !
     ! Need boundary conditions or else faces are ORPHAN and won't store integral
     !
-    call chidg%data%add_bc('D_01','extrapolate_la',XI_MIN)
-    call chidg%data%add_bc('D_01','extrapolate_la',XI_MAX)
-    call chidg%data%add_bc('D_01','extrapolate_la',ETA_MIN)
-    call chidg%data%add_bc('D_01','extrapolate_la',ETA_MAX)
-    call chidg%data%add_bc('D_01','extrapolate_la',ZETA_MIN)
-    call chidg%data%add_bc('D_01','extrapolate_la',ZETA_MAX)
+    call create_bc('linearadvection_extrapolate',bc)
+    call chidg%data%add_bc('D_01',bc,XI_MIN)
+    call chidg%data%add_bc('D_01',bc,XI_MAX)
+    call chidg%data%add_bc('D_01',bc,ETA_MIN)
+    call chidg%data%add_bc('D_01',bc,ETA_MAX)
+    call chidg%data%add_bc('D_01',bc,ZETA_MIN)
+    call chidg%data%add_bc('D_01',bc,ZETA_MAX)
 
 
 
@@ -79,7 +83,7 @@ subroutine test_integrate_boundary_unit_constant()
     ! Initialize solution to constant value
     !
     call create_function(constant,'constant')
-    call constant%set('val',1._rk)
+    call constant%set_option('val',1._rk)
     call initialize_variable(chidg%data,1,constant)
 
 
@@ -179,6 +183,8 @@ subroutine test_integrate_boundary_nonunit_constant()
     use type_face_info,     only: face_info_t
     use type_function_info, only: function_info_t
     use type_seed,          only: seed_t
+    use type_bc,            only: bc_t
+    use mod_bc,             only: create_bc
 
     use type_function,      only: function_t
     use mod_function,       only: create_function
@@ -191,6 +197,7 @@ subroutine test_integrate_boundary_nonunit_constant()
 
     type(point_t),      allocatable     :: pts(:,:,:)
     type(chidg_t)                       :: chidg
+    class(bc_t),        allocatable     :: bc
     integer(ik)                         :: nterms_c, nterms_s, igq, ngq, ivar, ifcn
     integer(ik)                         :: idomain, iblk, idonor
     type(AD_D),         allocatable     :: integrand(:)
@@ -227,13 +234,13 @@ subroutine test_integrate_boundary_nonunit_constant()
     !
     ! Need boundary conditions or else faces are ORPHAN and won't store integral
     !
-    call chidg%data%add_bc('D_01','extrapolate_la',XI_MIN)
-    call chidg%data%add_bc('D_01','extrapolate_la',XI_MAX)
-    call chidg%data%add_bc('D_01','extrapolate_la',ETA_MIN)
-    call chidg%data%add_bc('D_01','extrapolate_la',ETA_MAX)
-    call chidg%data%add_bc('D_01','extrapolate_la',ZETA_MIN)
-    call chidg%data%add_bc('D_01','extrapolate_la',ZETA_MAX)
-
+    call create_bc('linearadvection_extrapolate',bc)
+    call chidg%data%add_bc('D_01',bc,XI_MIN)
+    call chidg%data%add_bc('D_01',bc,XI_MAX)
+    call chidg%data%add_bc('D_01',bc,ETA_MIN)
+    call chidg%data%add_bc('D_01',bc,ETA_MAX)
+    call chidg%data%add_bc('D_01',bc,ZETA_MIN)
+    call chidg%data%add_bc('D_01',bc,ZETA_MAX)
 
 
 
@@ -248,7 +255,7 @@ subroutine test_integrate_boundary_nonunit_constant()
     ! Initialize solution to constant value
     !
     call create_function(constant,'constant')
-    call constant%set('val',1._rk)
+    call constant%set_option('val',1._rk)
     call initialize_variable(chidg%data,1,constant)
 
     

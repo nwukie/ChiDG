@@ -11,6 +11,8 @@ subroutine test_chidgMatrix_operator_mv()
     use type_chidgMatrix,   only: chidgMatrix_t
     use type_chidgVector,   only: chidgVector_t
     use type_meshdata,      only: meshdata_t
+    use type_bc,            only: bc_t
+    use mod_bc,             only: create_bc
 
     use mod_hdfio,          only: read_grid_hdf
 
@@ -19,7 +21,8 @@ subroutine test_chidgMatrix_operator_mv()
 
 
     type(chidg_t)                   :: chidg
-    type(meshdata_t), allocatable   :: meshdata(:)
+    type(meshdata_t),   allocatable :: meshdata(:)
+    class(bc_t),        allocatable :: bc
     integer(ik)                     :: nterms_s, idom
     real(rk), dimension(8)          :: bref_1, bref_2
     real(rk)                        :: tol
@@ -56,18 +59,19 @@ subroutine test_chidgMatrix_operator_mv()
     !
     ! Set boundary conditions
     !
-    call chidg%data%add_bc('D_01','extrapolate_la',XI_MIN)
-    call chidg%data%add_bc('D_01','extrapolate_la',ETA_MIN)
-    call chidg%data%add_bc('D_01','extrapolate_la',ETA_MAX)
-    call chidg%data%add_bc('D_01','extrapolate_la',ZETA_MIN)
-    call chidg%data%add_bc('D_01','extrapolate_la',ZETA_MAX)
+    call create_bc('linearadvection_extrapolate', bc)
+    call chidg%data%add_bc('D_01',bc,XI_MIN)
+    call chidg%data%add_bc('D_01',bc,ETA_MIN)
+    call chidg%data%add_bc('D_01',bc,ETA_MAX)
+    call chidg%data%add_bc('D_01',bc,ZETA_MIN)
+    call chidg%data%add_bc('D_01',bc,ZETA_MAX)
 
 
-    call chidg%data%add_bc('D_02','extrapolate_la',XI_MAX)
-    call chidg%data%add_bc('D_02','extrapolate_la',ETA_MIN)
-    call chidg%data%add_bc('D_02','extrapolate_la',ETA_MAX)
-    call chidg%data%add_bc('D_02','extrapolate_la',ZETA_MIN)
-    call chidg%data%add_bc('D_02','extrapolate_la',ZETA_MAX)
+    call chidg%data%add_bc('D_02',bc,XI_MAX)
+    call chidg%data%add_bc('D_02',bc,ETA_MIN)
+    call chidg%data%add_bc('D_02',bc,ETA_MAX)
+    call chidg%data%add_bc('D_02',bc,ZETA_MIN)
+    call chidg%data%add_bc('D_02',bc,ZETA_MAX)
 
     !
     ! Initialize ChiDG Chimera Interfaces

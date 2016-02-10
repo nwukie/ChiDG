@@ -10,6 +10,8 @@ subroutine test_update_space_euler()
     use type_chidg,         only: chidg_t
     use type_meshdata,      only: meshdata_t
     use type_function,      only: function_t
+    use type_bc,            only: bc_t
+    use mod_bc,             only: create_bc
 
     use mod_grid_operators, only: initialize_variable
     use mod_function,       only: create_function
@@ -21,13 +23,14 @@ subroutine test_update_space_euler()
 
 
     type(chidg_t)                   :: chidgA, chidgB
-    type(meshdata_t), allocatable   :: meshdataA(:), meshdataB(:)
-    class(function_t), allocatable  :: constant, gaussian
-    integer(ik)     :: idom, nterms_s
-    real(rk)        :: tol
+    type(meshdata_t),   allocatable :: meshdataA(:), meshdataB(:)
+    class(bc_t),        allocatable :: wall, inlet, outlet
+    class(function_t),  allocatable :: constant, gaussian
+    integer(ik)                     :: idom, nterms_s
+    real(rk)                        :: tol
 
 
-    tol             = 1.e-7_rk
+    tol             = 1.e-6_rk
     nterms_s        = 8
     IO_DESTINATION  = 'file'
 
@@ -60,34 +63,42 @@ subroutine test_update_space_euler()
 
 
 
+    !
+    ! Create boundary conditions
+    !
+    call create_bc('euler_wall', wall)
+    call create_bc('euler_pressureoutlet', outlet)
+    call create_bc('euler_totalinlet', inlet)
+
+
 
     !
     ! Add boundary conditions ChiDG - A
     !
-    call chidgA%data%add_bc('D_01','euler_totalinlet',XI_MIN)
-    call chidgA%data%add_bc('D_01','euler_pressureoutlet',XI_MAX)
-    call chidgA%data%add_bc('D_01','euler_wall',ETA_MIN)
-    call chidgA%data%add_bc('D_01','euler_wall',ETA_MAX)
-    call chidgA%data%add_bc('D_01','euler_wall',ZETA_MIN)
-    call chidgA%data%add_bc('D_01','euler_wall',ZETA_MAX)
+    call chidgA%data%add_bc('D_01',inlet,XI_MIN)
+    call chidgA%data%add_bc('D_01',outlet,XI_MAX)
+    call chidgA%data%add_bc('D_01',wall,ETA_MIN)
+    call chidgA%data%add_bc('D_01',wall,ETA_MAX)
+    call chidgA%data%add_bc('D_01',wall,ZETA_MIN)
+    call chidgA%data%add_bc('D_01',wall,ZETA_MAX)
 
     !
     ! Add boundary conditions to ChiDG - B
     !
-    call chidgB%data%add_bc('D_01','euler_totalinlet',XI_MIN)
+    call chidgB%data%add_bc('D_01',inlet,XI_MIN)
     !call chidgB%data%add_bc('D_01','euler_pressureoutlet',XI_MAX)
-    call chidgB%data%add_bc('D_01','euler_wall',ETA_MIN)
-    call chidgB%data%add_bc('D_01','euler_wall',ETA_MAX)
-    call chidgB%data%add_bc('D_01','euler_wall',ZETA_MIN)
-    call chidgB%data%add_bc('D_01','euler_wall',ZETA_MAX)
+    call chidgB%data%add_bc('D_01',wall,ETA_MIN)
+    call chidgB%data%add_bc('D_01',wall,ETA_MAX)
+    call chidgB%data%add_bc('D_01',wall,ZETA_MIN)
+    call chidgB%data%add_bc('D_01',wall,ZETA_MAX)
 
 
     !call chidgB%data%add_bc('D_02','euler_totalinlet',XI_MIN)
-    call chidgB%data%add_bc('D_02','euler_pressureoutlet',XI_MAX)
-    call chidgB%data%add_bc('D_02','euler_wall',ETA_MIN)
-    call chidgB%data%add_bc('D_02','euler_wall',ETA_MAX)
-    call chidgB%data%add_bc('D_02','euler_wall',ZETA_MIN)
-    call chidgB%data%add_bc('D_02','euler_wall',ZETA_MAX)
+    call chidgB%data%add_bc('D_02',outlet,XI_MAX)
+    call chidgB%data%add_bc('D_02',wall,ETA_MIN)
+    call chidgB%data%add_bc('D_02',wall,ETA_MAX)
+    call chidgB%data%add_bc('D_02',wall,ZETA_MIN)
+    call chidgB%data%add_bc('D_02',wall,ZETA_MAX)
 
 
 
@@ -109,23 +120,23 @@ subroutine test_update_space_euler()
     !
     call create_function(constant,'constant')
 
-    call constant%set('val',1.13262_rk)
+    call constant%set_option('val',1.13262_rk)
     call initialize_variable(chidgA%data,1,constant)
     call initialize_variable(chidgB%data,1,constant)
 
-    call constant%set('val',190.339029_rk)
+    call constant%set_option('val',190.339029_rk)
     call initialize_variable(chidgA%data,2,constant)
     call initialize_variable(chidgB%data,2,constant)
 
-    call constant%set('val',ZERO)
+    call constant%set_option('val',ZERO)
     call initialize_variable(chidgA%data,3,constant)
     call initialize_variable(chidgB%data,3,constant)
 
-    call constant%set('val',ZERO)
+    call constant%set_option('val',ZERO)
     call initialize_variable(chidgA%data,4,constant)
     call initialize_variable(chidgB%data,4,constant)
 
-    call constant%set('val',248493.425_rk)
+    call constant%set_option('val',248493.425_rk)
     call initialize_variable(chidgA%data,5,constant)
     call initialize_variable(chidgB%data,5,constant)
 

@@ -18,13 +18,57 @@ module bc_linearadvection_extrapolate
 
 
     contains
-        procedure :: compute    !> bc implementation
+
+        procedure   :: add_options
+        procedure   :: compute    !> bc implementation
+
     end type linearadvection_extrapolate_t
 
 
 
 
 contains
+
+
+
+    !>  Procedure for registering boundary condition options. Needs executed upon allocation.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   2/2/2016
+    !!
+    !------------------------------------------------------------------------------------------
+    subroutine add_options(self)    
+        class(linearadvection_extrapolate_t),  intent(inout)   :: self
+
+        !
+        ! Set name
+        !
+        call self%set_name('linearadvection_extrapolate')
+
+
+        !
+        ! Add functions
+        !
+
+
+        !
+        ! Add parameters
+        !
+
+
+    end subroutine add_options
+    !******************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
 
     !> Specialized compute routine for Extrapolation Boundary Condition
     !!

@@ -99,9 +99,9 @@ contains
         !
         call create_function(fcn,'constant')
         
-        call fcn%set('val',1.0_rk)
+        call fcn%set_option('val',1.0_rk)
         call initialize_variable(this%chidg%data,1,fcn)
-        call fcn%set('val',1.0_rk)
+        call fcn%set_option('val',1.0_rk)
         call initialize_variable(this%chidg%data,2,fcn)
             
     end subroutine
@@ -163,7 +163,7 @@ contains
         integer(ik) :: ielem, iblk, irow
         real(rk)    :: tol
         
-        tol = 1.0e-6_rk
+        tol = 1.0e-5_rk
         
         ielem = 14
         
@@ -197,7 +197,7 @@ contains
         integer(ik) :: ielem, iface, ivar, iblk, irow
         real(rk)    :: tol
         
-        tol = 1.0e-6_rk
+        tol = 1.0e-5_rk
         
         ielem = 14
         

@@ -95,7 +95,7 @@ contains
         ! Initialize variable
         !
         call create_function(this%fcn,'constant')                       ! Allocate constant function
-        call this%fcn%set('val',5._rk)                                  ! Set constant function value
+        call this%fcn%set_option('val',5._rk)                           ! Set constant function value
         call initialize_variable(this%chidg%data,ivar,this%fcn)         ! Initialize variable using constant function
 
     
@@ -148,7 +148,7 @@ contains
 
 
         ! Initialize reference
-        call self%fcn%dict%get('val',val)
+        val = self%fcn%get_option_value('val')
         u_ref = val
         !u_ref = self%fcn%value_
 
@@ -192,7 +192,7 @@ contains
         
         
         ! Initialize reference
-        call self%fcn%dict%get('val',val)
+        val = self%fcn%get_option_value('val')
         u_ref = val
         !u_ref = self%fcn%value_ 
         
@@ -253,7 +253,7 @@ contains
             
             
             ! Initialize reference
-            call self%fcn%dict%get('val',val)
+            val = self%fcn%get_option_value('val')
             u_ref = val
             !u_ref = self%fcn%value_ 
 
@@ -370,7 +370,7 @@ contains
             
             
             ! Initialize reference
-            call self%fcn%dict%get('val',val)
+            val = self%fcn%get_option_value('val')
             u_ref = val
             !u_ref = self%fcn%value_ 
             
@@ -508,7 +508,7 @@ contains
             
             
             ! Initialize reference
-            call self%fcn%dict%get('val',val)
+            val = self%fcn%get_option_value('val')
             u_ref = val
             !u_ref = self%fcn%value_ 
 
@@ -651,7 +651,7 @@ contains
             !
             ! Initialize reference
             !
-            call self%fcn%dict%get('val',val)
+            val = self%fcn%get_option_value('val')
             u_ref = val
             !u_ref = self%fcn%value_ 
             
@@ -804,7 +804,7 @@ contains
             
             
             ! Initialize reference
-            call self%fcn%dict%get('val',val)
+            val = self%fcn%get_option_value('val')
             u_ref = val
             !u_ref = self%fcn%value_ 
             
@@ -959,9 +959,8 @@ contains
             !
             ! Initialize reference
             !
-            call self%fcn%dict%get('val',val)
+            val = self%fcn%get_option_value('val')
             u_ref = val
-            !u_ref = self%fcn%value_ 
             
             
             ! Test that interpolation to quadrature nodes from modes to autodiff variables 

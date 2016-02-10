@@ -31,8 +31,8 @@ module mod_bc
     !
     ! Global vector of registered boundary conditions
     !
-    type(bcvector_t)   :: registered_bcs
-
+    type(bcvector_t)    :: registered_bcs
+    logical             :: initialized = .false.
 
 contains
 
@@ -50,29 +50,41 @@ contains
     subroutine register_bcs()
         integer :: nbcs, ibc
 
+        !
         ! Instantiate bcs
+        !
         type(linearadvection_extrapolate_t) :: LINEARADVECTION_EXTRAPOLATE
         type(euler_wall_t)                  :: EULER_WALL
         type(euler_totalinlet_t)            :: EULER_TOTALINLET
         type(euler_pressureoutlet_t)        :: EULER_PRESSUREOUTLET
         type(euler_extrapolate_t)           :: EULER_EXTRAPOLATE
 
-        ! Register in global vector
-        call registered_bcs%push_back(LINEARADVECTION_EXTRAPOLATE)
-        call registered_bcs%push_back(EULER_WALL)
-        call registered_bcs%push_back(EULER_TOTALINLET)
-        call registered_bcs%push_back(EULER_PRESSUREOUTLET)
-        call registered_bcs%push_back(EULER_EXTRAPOLATE)
+
+        if ( .not. initialized ) then
+            !
+            ! Register in global vector
+            !
+            call registered_bcs%push_back(LINEARADVECTION_EXTRAPOLATE)
+            call registered_bcs%push_back(EULER_WALL)
+            call registered_bcs%push_back(EULER_TOTALINLET)
+            call registered_bcs%push_back(EULER_PRESSUREOUTLET)
+            call registered_bcs%push_back(EULER_EXTRAPOLATE)
 
 
-        !
-        ! Initialize each boundary condition in set
-        !
-        nbcs = registered_bcs%size()
-        do ibc = 1,nbcs
-            call registered_bcs%data(ibc)%bc%add_options()
-        end do
+            !
+            ! Initialize each boundary condition in set. Doesn't need modified.
+            !
+            nbcs = registered_bcs%size()
+            do ibc = 1,nbcs
+                call registered_bcs%data(ibc)%bc%add_options()
+            end do
 
+            !
+            ! Confirm initialization
+            !
+            initialized = .true.
+
+        end if
 
     end subroutine register_bcs
     !********************************************************************************************

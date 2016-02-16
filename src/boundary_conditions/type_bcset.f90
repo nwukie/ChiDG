@@ -101,6 +101,8 @@ contains
 
 
 
+
+
     !>  Call bc_t%apply for each boundary condition in the set
     !!
     !!  @author Nathan A. Wukie
@@ -131,6 +133,12 @@ contains
             ! Only apply if there is an allocated boundary condition in the current slot
             !
             if (allocated(self%bcs(ibc)%bc)) then
+
+!                !
+!                ! Get number of coupled elements
+!                !
+!                call self%bcs(ibc)%bc%
+
                 call self%bcs(ibc)%bc%apply(mesh,sdata,prop,idom,iblk)
             end if
 
@@ -138,6 +146,60 @@ contains
 
     end subroutine apply
     !******************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+!    !>  Call bc_t%apply for each boundary condition in the set
+!    !!
+!    !!  @author Nathan A. Wukie
+!    !!  @date   1/31/2016
+!    !!
+!    !!  @param[inout]   mesh    mesh_t containing elements and faces
+!    !!  @param[inout]   sdata   solverdata_t object containing solution, rhs, and linearization
+!    !!  @param[inout]   iblk    integer block direction with respect to which we are computing the linearization
+!    !!  @param[inout]   prop    properties_t object with equationset properties, and material_t objects
+!    !!
+!    !----------------------------------------------------------------------------------------
+!    subroutine apply(self,mesh,sdata,prop,idom,iblk)
+!        class(bcset_t),         intent(inout)   :: self
+!        type(mesh_t),           intent(inout)   :: mesh(:)
+!        class(solverdata_t),    intent(inout)   :: sdata
+!        class(properties_t),    intent(inout)   :: prop
+!        integer(ik),            intent(in)      :: idom
+!        integer(ik),            intent(in)      :: iblk
+!
+!        integer(ik) :: ibc
+!
+!        !
+!        ! Loop through boundary condition array and call apply for each
+!        !
+!        do ibc = 1,size(self%bcs)
+!
+!            !
+!            ! Only apply if there is an allocated boundary condition in the current slot
+!            !
+!            if (allocated(self%bcs(ibc)%bc)) then
+!                call self%bcs(ibc)%bc%apply(mesh,sdata,prop,idom,iblk)
+!            end if
+!
+!        end do
+!
+!    end subroutine apply
+!    !******************************************************************************************
 
 
 

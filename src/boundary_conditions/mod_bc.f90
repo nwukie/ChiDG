@@ -16,15 +16,16 @@ module mod_bc
     use type_bc,        only: bc_t
     use type_bcvector,  only: bcvector_t
 
-    ! IMPORT BOUNDARY CONDITIONS
-    use bc_periodic,                    only: periodic_t
-    use bc_linearadvection_extrapolate, only: linearadvection_extrapolate_t
-    use bc_euler_wall,                  only: euler_wall_t
-    use bc_euler_totalinlet,            only: euler_totalinlet_t
-    use bc_euler_pressureoutlet,        only: euler_pressureoutlet_t
-    use bc_euler_extrapolate,           only: euler_extrapolate_t
-!    use bc_lineuler_extrapolate,        only: lineuler_extrapolate_t
-!    use bc_lineuler_inlet,              only: lineuler_inlet_t
+    !
+    ! Import boundary conditions
+    !
+    use bc_periodic,                        only: periodic_t
+    use bc_linearadvection_extrapolate,     only: linearadvection_extrapolate_t
+    use bc_euler_wall,                      only: euler_wall_t
+    use bc_euler_totalinlet,                only: euler_totalinlet_t
+    use bc_euler_totalinlet_characteristic, only: euler_totalinlet_characteristic_t
+    use bc_euler_pressureoutlet,            only: euler_pressureoutlet_t
+    use bc_euler_extrapolate,               only: euler_extrapolate_t
     implicit none
 
 
@@ -53,12 +54,13 @@ contains
         !
         ! Instantiate bcs
         !
-        type(periodic_t)                    :: PERIODIC
-        type(linearadvection_extrapolate_t) :: LINEARADVECTION_EXTRAPOLATE
-        type(euler_wall_t)                  :: EULER_WALL
-        type(euler_totalinlet_t)            :: EULER_TOTALINLET
-        type(euler_pressureoutlet_t)        :: EULER_PRESSUREOUTLET
-        type(euler_extrapolate_t)           :: EULER_EXTRAPOLATE
+        type(periodic_t)                        :: PERIODIC
+        type(linearadvection_extrapolate_t)     :: LINEARADVECTION_EXTRAPOLATE
+        type(euler_wall_t)                      :: EULER_WALL
+        type(euler_totalinlet_t)                :: EULER_TOTALINLET
+        type(euler_totalinlet_characteristic_t) :: EULER_TOTALINLET_CHARCTERISTIC
+        type(euler_pressureoutlet_t)            :: EULER_PRESSUREOUTLET
+        type(euler_extrapolate_t)               :: EULER_EXTRAPOLATE
 
 
         if ( .not. initialized ) then
@@ -69,6 +71,7 @@ contains
             call registered_bcs%push_back(LINEARADVECTION_EXTRAPOLATE)
             call registered_bcs%push_back(EULER_WALL)
             call registered_bcs%push_back(EULER_TOTALINLET)
+            call registered_bcs%push_back(EULER_TOTALINLET_CHARCTERISTIC)
             call registered_bcs%push_back(EULER_PRESSUREOUTLET)
             call registered_bcs%push_back(EULER_EXTRAPOLATE)
 

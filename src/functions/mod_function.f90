@@ -2,51 +2,116 @@ module mod_function
 #include <messenger.h>
     use mod_kinds,      only: rk, ik
     use type_function,  only: function_t
+    use type_fcnvector, only: fcnvector_t
 
-    ! IMPORT FUNCTIONS
+    !
+    ! Import functions
+    !
     use fcn_xsquared,           only: xsquared_f
     use fcn_ysquared,           only: ysquared_f
     use fcn_zsquared,           only: zsquared_f
     use fcn_xyz,                only: xyz_f
     use fcn_gaussian,           only: gaussian_f
     use fcn_constant,           only: constant_f
-!    use fcn_isentropic_vortex,  only: isentropic_vortex_f
-!    use fcn_sod_shock_tube,     only: sod_shock_tube_f
-!    use fcn_roe_check,          only: roe_check_f
+    use fcn_sin,                only: sin_f
     implicit none
 
-    ! LIST OF FUNCTION OBJECTS
-    type(xsquared_f)            :: xsquared
-    type(ysquared_f)            :: ysquared
-    type(zsquared_f)            :: zsquared
-    type(xyz_f)                 :: xyz
-    type(gaussian_f)            :: gaussian
-    type(constant_f)            :: constant
-!    type(isentropic_vortex_f)   :: isentropic_vortex
-!    type(sod_shock_tube_f)      :: sod_shock_tube
-!    type(roe_check_f)           :: roe_check
 
+
+    !
+    ! Global vector of registered functions
+    !
+    type(fcnvector_t)   :: registered_fcns
+    logical             :: initialized = .false.
 
 contains
 
 
-    !> Factory method for allocating concrete functions
+    !>  Register functions in a module vector.
+    !!
+    !!  This allows the available functions to be queried in the same way that they 
+    !!  are registered for allocation.
     !!
     !!  @author Nathan A. Wukie
-    !!  @date   2/2/2016
+    !!  @date   2/9/2016
     !!
-    !!  @param[inout]   fcn     Incoming function base class to be allocated
-    !!  @param[in]      str     Function string for selecting concrete type
     !!
-    !-------------------------------------------------------------------------------------
-    subroutine create_function(fcn,str)
-        class(function_t), allocatable, intent(inout)   :: fcn
-        character(*),                   intent(in)      :: str
-
+    !--------------------------------------------------------------------------------------------
+    subroutine register_functions()
+        integer :: nfcns, ifcn
 
         !
-        ! Check if function is already allocated. If so, reset.
+        ! Instantiate functions
         !
+        type(xsquared_f)            :: xsquared
+        type(ysquared_f)            :: ysquared
+        type(zsquared_f)            :: zsquared
+        type(xyz_f)                 :: xyz
+        type(gaussian_f)            :: gaussian
+        type(constant_f)            :: constant
+        type(sin_f)                 :: sin_function
+
+        
+
+        if ( .not. initialized ) then
+            !
+            ! Register in global vector
+            !
+            call registered_fcns%push_back(xsquared)
+            call registered_fcns%push_back(ysquared)
+            call registered_fcns%push_back(zsquared)
+            call registered_fcns%push_back(xyz)
+            call registered_fcns%push_back(gaussian)
+            call registered_fcns%push_back(constant)
+            call registered_fcns%push_back(sin_function)
+
+
+            !
+            ! Initialize each boundary condition in set. Doesn't need modified.
+            !
+            nfcns = registered_fcns%size()
+            do ifcn = 1,nfcns
+                call registered_fcns%data(ifcn)%fcn%init()
+            end do
+
+            !
+            ! Confirm initialization
+            !
+            initialized = .true.
+
+        end if
+
+    end subroutine register_functions
+    !********************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+    !> Factory method for allocating concrete functions
+    !!
+    !!      - Allocate a concrete function_t based on the incoming string specification.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   2/9/2016
+    !!
+    !!  @param[in]      string  Character string used to select the appropriate boundary condition
+    !!  @param[inout]   fcn      Allocatable boundary condition
+    !!
+    !--------------------------------------------------------------
+    subroutine create_function(fcn,string)
+        class(function_t),  allocatable,    intent(inout)   :: fcn
+        character(*),                       intent(in)      :: string
+
+        integer(ik) :: ierr, fcnindex
+
+
         if ( allocated(fcn) ) then
             deallocate(fcn)
         end if
@@ -54,50 +119,65 @@ contains
 
 
         !
-        ! Allocate function to concrete type
+        ! Find equation set in 'registered_bcs' vector
         !
-        select case (trim(str))
-            case ('xsquared')
-                allocate(fcn,source=xsquared)
+        fcnindex = registered_fcns%index_by_name(trim(string))
 
-            case ('ysquared')
-                allocate(fcn,source=ysquared)
-
-            case ('zsquared')
-                allocate(fcn,source=zsquared)
-
-            case ('xyz')
-                allocate(fcn,source=xyz)
-
-            case ('gaussian')
-                allocate(fcn,source=gaussian)
-
-            case ('constant')
-                allocate(fcn,source=constant)
-
-!            case ('isentropic_vortex','isentropic vortex')
-!                allocate(fcn,source=isentropic_vortex)
-!
-!            case ('sod','sod_shock_tube')
-!                allocate(fcn,source=sod_shock_tube)
-!
-!            case ('roe_check')
-!                allocate(fcn,source=roe_check)
-
-            case default
-                stop "Error: assign_function -- function string not recognized"
-
-        end select
 
 
         !
-        ! Call function initialization for options
+        ! Check function was found in 'registered_fcns'
         !
-        call fcn%init()
+        if (fcnindex == 0) call chidg_signal_one(FATAL,"create_function: function not recognized", trim(string))
+
+
+
+        !
+        ! Allocate conrete function_t instance
+        !
+        allocate(fcn, source=registered_fcns%data(fcnindex)%fcn, stat=ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"create_function: error allocating function from global vector.")
+
+
+
+        !
+        ! Check boundary condition was allocated
+        !
+        if ( .not. allocated(fcn) ) call chidg_signal(FATAL,"create_function: error allocating concrete function.")
+
 
 
     end subroutine create_function
-    !**************************************************************************************
+    !*****************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

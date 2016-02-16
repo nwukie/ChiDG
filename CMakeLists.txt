@@ -130,7 +130,6 @@ message(STATUS "LAPACK_LIBRARIES: " ${LAPACK_LIBRARIES})
 # NOTE: export MPI_ROOT path as shell environment variable such that 
 #       $MPI_ROOT/gnu or $MPI_ROOT/intel are valid. Inside the 'gnu' or 'intel'
 #       folder one should find lib and include directories.
-#set(MPI_ROOT "/usr/local/mpich")
 
 # Select vendor installation
 if (${Fortran_VENDOR} MATCHES "INTEL")
@@ -255,7 +254,9 @@ if (TESTING)
 
     enable_testing()
 
+    #
     # Set pFUnit installation based on compiler vendor
+    #
     if (${Fortran_VENDOR} MATCHES "INTEL")
         set(PF_ROOT $ENV{PFUNIT}/intel)
     elseif (${Fortran_VENDOR} MATCHES "GNU")
@@ -263,11 +264,15 @@ if (TESTING)
     endif()
 
 
+    #
     # Set location of pFUnit libs
+    #
     set(PFU_LIB ${PF_ROOT}/lib)
 
 
+    #
     # Add unit tests
+    #
     add_subdirectory(test)
 
 

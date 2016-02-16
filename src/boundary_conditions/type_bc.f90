@@ -295,6 +295,75 @@ contains
 
 
 
+
+
+
+
+!    !>  Apply boundary condition to the mesh and solution
+!    !!      - Loops through the associated elements(faces) and calls the specialized bc_t%compute
+!    !!        procedure for computing the rhs and linearization.
+!    !!
+!    !!
+!    !!  @author Nathan A. Wukie
+!    !!  @date   1/31/2016
+!    !!
+!    !!  @param[in]      mesh    mesh_t defining elements and faces
+!    !!  @param[inout]   sdata   solverdata_t containing solution, rhs, and linearization(lin) data
+!    !!  @param[in]      iblk    Block of the linearization for the current element that is being computed (XI_MIN, XI_MAX, eta.)
+!    !!  @param[inout]   prop    properties_t object containing equationset properties and material_t objects
+!    !!
+!    !---------------------------------------------------------------------------------------------
+!    subroutine apply(self,mesh,sdata,prop,idom,iblk)
+!        class(bc_t),            intent(inout)   :: self
+!        type(mesh_t),           intent(in)      :: mesh(:)
+!        class(solverdata_t),    intent(inout)   :: sdata
+!        class(properties_t),    intent(inout)   :: prop
+!        integer(ik),            intent(in)      :: idom
+!        integer(ik),            intent(in)      :: iblk
+!
+!        integer(ik) :: ielem_bc, ielem, iface, idonor, iflux
+!
+!        type(face_info_t)       :: face
+!        type(function_info_t)   :: flux
+!
+!        !
+!        ! Loop through associated boundary condition elements and call compute routine for the boundary flux calculation
+!        !
+!        do ielem_bc = 1,size(self%elems)
+!            ielem  = self%elems(ielem_bc)   ! Get index of the element being operated on
+!            iface  = self%faces(ielem_bc)   ! Get face index of element 'ielem' that is being operated on
+!            iflux  = 0
+!            idonor = 0
+!
+!
+!            face%idomain  = idom
+!            face%ielement = ielem
+!            face%iface    = iface
+!            face%seed     = compute_seed(mesh,idom,ielem,iface,idonor,iblk)
+!
+!
+!            flux%ifcn     = iflux
+!            flux%idonor   = idonor
+!            flux%iblk     = iblk
+!
+!
+!            !
+!            ! For the current boundary element(face), call specialized compute procedure
+!            !
+!            call self%compute(mesh,sdata,prop,face,flux)
+!
+!        end do
+!
+!
+!    end subroutine apply
+!    !********************************************************************************************
+!
+
+
+
+
+
+
     !> Default specialized initialization procedure. This is called from the base bc%init procedure
     !! and can be overwritten by derived types to implement specialized initiailization details.
     !!

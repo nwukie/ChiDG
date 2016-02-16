@@ -249,6 +249,19 @@ contains
                 call data%bcset(idom)%apply(data%mesh,data%sdata,data%eqnset(idom)%item%prop,idom,iblk)
             end do
 
+            
+!            !
+!            ! New boundary condition loop. Boundary conditions are potentially coupled so we need to 
+!            ! 
+!            !
+!            do idom = 1,data%ndomains()
+!
+!                !
+!                ! Call boundary conditions for each domain
+!                !
+!                call data%bcset(idom)%apply(data%mesh,data%sdata,data%eqnset(idom)%item%prop,
+!
+!            end do ! idom
 
 
 

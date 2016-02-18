@@ -7,6 +7,7 @@ module type_solverdata
     use type_mesh,                      only: mesh_t
     use type_function_status,           only: function_status_t
     use type_equationset_function_data, only: equationset_function_data_t
+    use type_bcset_coupling,            only: bcset_coupling_t
     implicit none
 
 
@@ -70,12 +71,14 @@ contains
     !!  @date   2/1/2016
     !!
     !!  @param[in]  mesh                Array of mesh_t instances which define storage requirements.
+    !!  @param[in]  bcset_coupling      Array of bcset_coupling instances which describe the coupling of elements in bcs.
     !!  @param[in]  function_data       Array of containers that hold information on number of each function in eqnset.
     !!
     !----------------------------------------------------------------------------------------------------------
-    subroutine init_base(self,mesh,function_data)
+    subroutine init_base(self,mesh,bcset_coupling,function_data)
         class(solverdata_t),                intent(inout), target   :: self
         type(mesh_t),                       intent(in)              :: mesh(:)
+        type(bcset_coupling_t),             intent(in)              :: bcset_coupling(:)
         type(equationset_function_data_t),  intent(in)              :: function_data(:)
         
 
@@ -89,7 +92,7 @@ contains
         call self%q%init(  mesh)
         call self%dq%init( mesh)
         call self%rhs%init(mesh)
-        call self%lhs%init(mesh,'full')
+        call self%lhs%init(mesh,bcset_coupling,'full')
 
 
     

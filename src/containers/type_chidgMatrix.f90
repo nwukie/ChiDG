@@ -5,6 +5,7 @@ module type_chidgMatrix
     use type_mesh,              only: mesh_t
     use type_face_info,         only: face_info_t
     use type_seed,              only: seed_t
+    use type_bcset_coupling,    only: bcset_coupling_t
     use DNAD_D
     implicit none
 
@@ -31,6 +32,7 @@ module type_chidgMatrix
         ! Setters
         procedure   :: store                                !< Store linearization data for local blocks
         procedure   :: store_chimera                        !< Store linearization data for chimera blocks
+        procedure   :: store_bc                             !< Store linearization data for boundary condition blocks
         procedure   :: clear                                !< Zero matrix-values
 
 
@@ -47,7 +49,7 @@ contains
 
 
 
-    !> Subroutine for initializing chidgMatrix_t
+    !>  Subroutine for initializing chidgMatrix_t
     !!
     !!  @author Nathan A. Wukie
     !!  @date   2/1/2016
@@ -56,9 +58,10 @@ contains
     !!  
     !!
     !-----------------------------------------------------------------------------------------------------------
-    subroutine initialize(self,mesh,mtype)
+    subroutine initialize(self,mesh,bcset_coupling,mtype)
         class(chidgMatrix_t),   intent(inout)   :: self
         type(mesh_t),           intent(in)      :: mesh(:)
+        type(bcset_coupling_t), intent(in)      :: bcset_coupling(:)
         character(*),           intent(in)      :: mtype
 
         integer(ik) :: ierr, ndomains, idom
@@ -77,7 +80,7 @@ contains
         ! Call initialization procedure for each blockmatrix_t
         !
         do idom = 1,ndomains
-            call self%dom(idom)%init(mesh(idom),mtype)
+            call self%dom(idom)%init(mesh(idom),bcset_coupling(idom),mtype)
         end do
 
 
@@ -156,6 +159,55 @@ contains
 
     end subroutine store_chimera
     !***********************************************************************************************************
+
+
+
+
+
+
+
+
+
+    !> Procedure for stiring linearization information for boundary condition faces
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   2/1/2016
+    !!
+    !!
+    !!  @param[in]  integral    Array of modes from the spatial scheme, with embedded partial derivatives for the linearization matrix
+    !!  @param[in]  face        face_info_t containing the indices defining the Chimera face
+    !!  @param[in]  seed        seed_t containing the indices defining the element against which the Chimera face was linearized
+    !!  @param[in]  ivar        Index of the variable, for which the linearization was computed
+    !!
+    !-----------------------------------------------------------------------------------------------------------
+    subroutine store_bc(self,integral,face,seed,ivar)
+        class(chidgMatrix_t),       intent(inout)   :: self
+        type(AD_D),                 intent(in)      :: integral(:)
+        type(face_info_t),          intent(in)      :: face
+        type(seed_t),               intent(in)      :: seed
+        integer(ik),                intent(in)      :: ivar 
+
+        integer(ik) :: idom
+
+        idom = face%idomain
+
+        !
+        ! Store linearization in associated domain blockmatrix_t
+        !
+        call self%dom(idom)%store_bc(integral,face,seed,ivar)
+
+    end subroutine store_bc
+    !***********************************************************************************************************
+
+
+
+
+
+
+
+
+
+
 
 
 

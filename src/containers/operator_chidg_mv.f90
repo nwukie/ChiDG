@@ -75,18 +75,18 @@ contains
             !
             ! Routine for off-diagonal, chimera blocks
             !
-            if (allocated(A%dom(idom)%chiblks)) then
-                do ielem = 1,size(A%dom(idom)%chiblks,1)
-                    do iblk = 1,size(A%dom(idom)%chiblks,2)
+            if (allocated(A%dom(idom)%chi_blks)) then
+                do ielem = 1,size(A%dom(idom)%chi_blks,1)
+                    do iblk = 1,size(A%dom(idom)%chi_blks,2)
 
 
-                        if (allocated(A%dom(idom)%chiblks(ielem,iblk)%mat)) then
-                            dparent = A%dom(idom)%chiblks(ielem,iblk)%dparent()
-                            eparent = A%dom(idom)%chiblks(ielem,iblk)%eparent()
+                        if (allocated(A%dom(idom)%chi_blks(ielem,iblk)%mat)) then
+                            dparent = A%dom(idom)%chi_blks(ielem,iblk)%dparent()
+                            eparent = A%dom(idom)%chi_blks(ielem,iblk)%eparent()
 
                             associate ( resvec => res%dom(idom)%lvecs(ielem)%vec, &
                                         xvec => x%dom(dparent)%lvecs(eparent)%vec, &
-                                        Amat => A%dom(idom)%chiblks(ielem,iblk)%mat) 
+                                        Amat => A%dom(idom)%chi_blks(ielem,iblk)%mat) 
 
                                 !
                                 ! Test matrix vector sizes
@@ -101,7 +101,40 @@ contains
 
                     end do ! iblk
                 end do ! ielem
-            end if
+            end if  ! allocated
+
+
+
+            !
+            ! Routine for boundary condition blocks
+            !
+            if ( allocated(A%dom(idom)%bc_blks) ) then
+                do ielem = 1,size(A%dom(idom)%bc_blks,1)
+                    do iblk = 1,size(A%dom(idom)%bc_blks,2)
+
+
+                        if ( allocated(A%dom(idom)%bc_blks(ielem,iblk)%mat) ) then
+                            dparent = A%dom(idom)%bc_blks(ielem,iblk)%dparent()
+                            eparent = A%dom(idom)%bc_blks(ielem,iblk)%eparent()
+
+                            associate ( resvec => res%dom(idom)%lvecs(ielem)%vec, &
+                                        xvec => x%dom(dparent)%lvecs(eparent)%vec, &
+                                        Amat => A%dom(idom)%bc_blks(ielem,iblk)%mat) 
+
+                                !
+                                ! Test matrix vector sizes
+                                !
+                                nonconforming = ( size(Amat,2) /= size(xvec) )
+                                if (nonconforming) call chidg_signal(FATAL,"operator_chidg_mv: nonconforming Chimera m-v operation")
+
+                                resvec = resvec + matmul(Amat,xvec)
+
+                            end associate
+                        end if
+
+                    end do ! iblk
+                end do ! ielem
+            end if  ! allocated
 
         end do ! idom
 

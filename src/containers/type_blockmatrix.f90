@@ -9,6 +9,7 @@ module type_blockmatrix
     use type_densematrix,       only: densematrix_t
     use type_face_info,         only: face_info_t
     use type_seed,              only: seed_t
+    use type_bcset_coupling,    only: bcset_coupling_t
     use DNAD_D
     implicit none
 
@@ -31,11 +32,15 @@ module type_blockmatrix
     !-------------------------------------------------------------------------------------------------------------------------------
     type, public :: blockmatrix_t
 
-        type(densematrix_t), allocatable :: lblks(:,:)                      !< Local domain blocks
+        type(densematrix_t), allocatable :: lblks(:,:)                      !< Local domain blocks  (nelem, NBLK)
         integer(ik),         allocatable :: ldata(:,:)                      !< Local block data     (nvars, nterms)
 
-        type(densematrix_t), allocatable :: chiblks(:,:)                    !< Chimera inter-domain blocks (nChiElems, MaxDonors)
-
+        !
+        ! These may be better located in an array of densematrix_vector containers instead of just an allocatable array.
+        !
+        !type(densematrix_t), allocatable :: chiblks(:,:)                    !< Chimera inter-domain blocks (nelem, MaxDonors)
+        type(densematrix_t), allocatable :: chi_blks(:,:)                    !< Chimera inter-domain blocks (nelem, MaxDonors)
+        type(densematrix_t), allocatable :: bc_blks(:,:)                     !< Boundary condition coupling blocks   (nelem, Max coupled elems)
 
     contains
         ! Initializers
@@ -46,6 +51,7 @@ module type_blockmatrix
         ! Setters
         procedure :: store                                                  !< Store linearization data for local blocks
         procedure :: store_chimera                                          !< Store linearization data for chimera blocks
+        procedure :: store_bc                                               !< Store linearization data for boundary condition blocks
         procedure :: clear                                                  !< Zero all data storage
 
 
@@ -70,21 +76,24 @@ contains
     !!  @param[in]  mtype   character string indicating the type of matrix to be initialized (ie. Full, Lower-Diagonal, Upper-Diagonal
     !!
     !--------------------------------------------------------------------------------------------------------------------------------
-    subroutine initialize_linearization(self,mesh,mtype)
-        class(blockmatrix_t),   intent(inout)   :: self
-        class(mesh_t),          intent(in)      :: mesh
-        character(*),           intent(in)      :: mtype
+    subroutine initialize_linearization(self,mesh,bcset_coupling,mtype)
+        class(blockmatrix_t),   intent(inout)             :: self
+        class(mesh_t),          intent(in)                :: mesh
+        type(bcset_coupling_t), intent(in), optional      :: bcset_coupling
+        character(*),           intent(in)                :: mtype
 
         integer(ik), allocatable    :: blocks(:)
         integer(ik)                 :: nelem, nblk, ierr, ielem, iblk, size1d, parent, block_index, neqns, nterms_s
         integer(ik)                 :: nchimera_elements, maxdonors, idonor, iface, eparent, dparent
-        integer(ik)                 :: iopen, ChiID, ndonors
+        integer(ik)                 :: iopen, ChiID, ndonors, max_coupled_elems, ncoupled_elems, icoupled_elem, icoupled_elem_bc, ielem_bc, ibc
         logical                     :: new_elements
         logical                     :: chimera_face
         logical                     :: more_donors
         logical                     :: donor_already_called
         logical                     :: contains_chimera_face
+        logical                     :: block_initialized
         logical                     :: init_chimera = .false.
+        logical                     :: init_bc      = .false.
 
 
         !
@@ -94,22 +103,27 @@ contains
             case ('full','Full','FULL')
                 blocks = [XI_MIN,XI_MAX,ETA_MIN,ETA_MAX,ZETA_MIN,ZETA_MAX,DIAG]
                 init_chimera = .true.
+                init_bc      = .true.
 
             case ('L','l','Lower','lower')
                 blocks = [XI_MIN,ETA_MIN,ZETA_MIN]
                 init_chimera = .false.
+                init_bc      = .false.
 
             case ('U','u','Upper','upper')
                 blocks = [XI_MAX,ETA_MAX,ZETA_MAX]
                 init_chimera = .false.
+                init_bc      = .false.
 
             case ('LD','ld','LowerDiagonal','lowerdiagonal')
                 blocks = [XI_MIN,ETA_MIN,ZETA_MIN,DIAG]
                 init_chimera = .false.
+                init_bc      = .false.
                 
             case ('UD','ud','UpperDiagonal','upperdiagonal')
                 blocks = [XI_MAX,ETA_MAX,ZETA_MAX,DIAG]
                 init_chimera = .false.
+                init_bc      = .false.
 
             case default
                 call chidg_signal(FATAL,'blockmatrix%init: unrecognized matrix type')
@@ -128,9 +142,11 @@ contains
         if (.not. mesh%solInitialized) call chidg_signal(FATAL,'blockmatrix_t%initialize_linearization: Incoming mesh_t was not initialized. Make sure to call mesh%init_sol')
 
 
+        !------------------------------------------------------------------------------
         !
-        ! Allocate for 'localblocks'
+        ! Allocation for 'local blocks'
         !
+        !------------------------------------------------------------------------------
         ! If matrix was already allocated, deallocate and then reallocate matrix size
         ! Reallocation would take place if the number of elements were changed
         !
@@ -158,10 +174,15 @@ contains
 
 
 
+        !------------------------------------------------------------------------------
+        !
+        ! Allocation for 'chimera blocks'
+        !
+        !------------------------------------------------------------------------------
+        if (allocated(self%chi_blks)) deallocate(self%chi_blks)
         !
         ! Assemble some Chimera data
         !
-        if (allocated(self%chiblks)) deallocate(self%chiblks)
         
         !
         ! Get maximum number of donor elements to a given element. May include donors from multiple faces
@@ -211,10 +232,51 @@ contains
         if (init_chimera) then
             if (maxdonors > 0) then
 
-                allocate(self%chiblks(nelem, maxdonors), stat=ierr)
+                allocate(self%chi_blks(nelem, maxdonors), stat=ierr)
                 if (ierr /= 0) call AllocationError
 
             end if
+        end if
+
+
+
+
+
+        !------------------------------------------------------------------------------
+        !
+        ! Allocation for 'boundary condition blocks'
+        !
+        !------------------------------------------------------------------------------
+        if (init_bc) then
+            if (allocated(self%bc_blks)) deallocate(self%bc_blks)
+
+            !
+            ! Get maximum number of coupled elements across all boundary conditions.
+            !
+            max_coupled_elems = 0
+            do ibc = 1,size(bcset_coupling%bc)
+
+                !
+                ! Loop through bc elems and test number of coupled elements against current maximum
+                !
+                do ielem = 1,size(bcset_coupling%bc(ibc)%elems)
+                    ncoupled_elems = bcset_coupling%bc(ibc)%coupled_elems(ielem)%size()
+                
+                    if ( ncoupled_elems > max_coupled_elems ) then
+                        max_coupled_elems = ncoupled_elems
+                    end if
+
+                end do ! ielem
+
+            end do ! ibc
+
+
+            !
+            ! Allocate boundary condition blocks
+            !
+            allocate(self%bc_blks(nelem,max_coupled_elems), stat=ierr)
+            if (ierr /= 0) call AllocationError
+
         end if
 
 
@@ -226,16 +288,17 @@ contains
 
 
 
-
-
         !
-        ! Loop through elements and call initialization for linearization denseblock matrices
+        ! Loop through elements and call initialization for 'local' and 'chimera' denseblock matrices
         !
         do ielem = 1,mesh%nelem
 
+            
+            !--------------------------------------------
             !
-            ! Loop through 'blocks' and call initialization. localblocks
+            ! Initialization  --  'local blocks'
             !
+            !--------------------------------------------
             do block_index = 1,size(blocks)
                 iblk = blocks(block_index)
                 size1d = mesh%elems(ielem)%neqns  *  mesh%elems(ielem)%nterms_s
@@ -262,12 +325,15 @@ contains
                     self%ldata(ielem,2) = mesh%elems(ielem)%nterms_s
                 end if
 
-            end do
+            end do ! init local
+            !********************************************
 
 
+            !--------------------------------------------
             !
-            ! Call initialization for Chimera blocks
+            ! Initialization  --  'chimera blocks'
             !
+            !--------------------------------------------
             if (init_chimera) then
                 do iface = 1,NFACES
 
@@ -298,8 +364,8 @@ contains
                             ! Check if block initialization was already called for current donor
                             !
                             do iblk = 1,maxdonors
-                                donor_already_called = ( dparent == self%chiblks(ielem,iblk)%dparent() .and. &
-                                                         eparent == self%chiblks(ielem,iblk)%eparent() )
+                                donor_already_called = ( dparent == self%chi_blks(ielem,iblk)%dparent() .and. &
+                                                         eparent == self%chi_blks(ielem,iblk)%eparent() )
                                 if (donor_already_called) exit
                             end do
 
@@ -313,7 +379,7 @@ contains
                                 ! Find next open block to initialize for the current element
                                 !
                                 do iblk = 1,maxdonors
-                                    if (.not. allocated(self%chiblks(ielem,iblk)%mat) ) then
+                                    if (.not. allocated(self%chi_blks(ielem,iblk)%mat) ) then
                                         iopen = iblk
                                         exit
                                     end if
@@ -322,7 +388,7 @@ contains
                                 !
                                 ! Call block initialization
                                 !
-                                call self%chiblks(ielem,iopen)%init(size1d,dparent,eparent)
+                                call self%chi_blks(ielem,iopen)%init(size1d,dparent,eparent)
 
                             end if
 
@@ -333,13 +399,75 @@ contains
                 end do ! iface
 
             end if  ! init_chimera
-
-
+            !********************************************
 
         end do ! ielem
 
 
 
+        !--------------------------------------------
+        !
+        ! Initialization  --  'boundary condition blocks'
+        !
+        !--------------------------------------------
+        !
+        ! Loop through boundary conditions and initialize blocks for coupling
+        !
+        if (init_bc) then
+            do ibc = 1,size(bcset_coupling%bc)
+
+                !
+                ! For the current boundary condition, loop through bc elements.
+                !
+                do ielem_bc = 1,size(bcset_coupling%bc(ibc)%elems)
+
+                    ncoupled_elems = bcset_coupling%bc(ibc)%coupled_elems(ielem_bc)%size()
+                    !
+                    ! Initialize block storage for each coupled element
+                    !
+                    do icoupled_elem_bc = 1,ncoupled_elems
+
+                        !
+                        ! Get block indices
+                        !
+                        ielem         = bcset_coupling%bc(ibc)%elems(ielem_bc)
+                        icoupled_elem = bcset_coupling%bc(ibc)%coupled_elems(ielem_bc)%at(icoupled_elem_bc)
+
+
+                        !
+                        ! Check if block has already been initialized for the coupled element
+                        !
+                        block_initialized = .false.
+                        do iblk = 1,size(self%bc_blks,2)
+                            if ( self%bc_blks(ielem,iblk)%eparent() == icoupled_elem ) then
+                                block_initialized = .true.
+                                exit
+                            end if
+                        end do
+
+
+                        if ( .not. block_initialized ) then
+                            !
+                            ! Compute block size
+                            !
+                            size1d = mesh%elems(ielem)%neqns  *  mesh%elems(ielem)%nterms_s
+
+                            !
+                            ! Call boundary condition block initialization
+                            !
+                            dparent = mesh%idomain
+                            eparent = icoupled_elem
+                            call self%bc_blks(ielem,icoupled_elem_bc)%init(size1d,dparent,eparent)
+                        end if
+
+
+                    end do ! icoupled_elem
+
+                end do ! ielem
+
+            end do ! ibc
+
+        end if ! init_bc
 
 
 
@@ -473,9 +601,9 @@ contains
         ! Find donor block location 
         !
         donorblk = 0
-        do iblk = 1,size(self%chiblks,2)
-            block_match = ( (idom_d  == self%chiblks(ielem,iblk)%dparent()) .and. &
-                            (ielem_d == self%chiblks(ielem,iblk)%eparent()) )
+        do iblk = 1,size(self%chi_blks,2)
+            block_match = ( (idom_d  == self%chi_blks(ielem,iblk)%dparent()) .and. &
+                            (ielem_d == self%chi_blks(ielem,iblk)%eparent()) )
 
             if ( block_match ) then
                 donorblk = iblk
@@ -494,13 +622,128 @@ contains
         do iarray = 1,size(integral)
             ! Do a += operation to add derivatives to any that are currently stored
             irow = irow_start + iarray
-            self%chiblks(ielem,donorblk)%mat(irow,:) = self%chiblks(ielem,donorblk)%mat(irow,:) + integral(iarray)%xp_ad_
+            self%chi_blks(ielem,donorblk)%mat(irow,:) = self%chi_blks(ielem,donorblk)%mat(irow,:) + integral(iarray)%xp_ad_
         end do
 
 
 
     end subroutine store_chimera
     !*******************************************************************************************************************************
+
+
+
+
+
+
+
+
+
+
+    !>  Stores derivative data from boundary condition coupling to the linearization matrix
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   2/1/2016
+    !!
+    !!  @param[in]  integral    Array of modes from the spatial scheme, with embedded partial derivatives for the linearization matrix
+    !!  @param[in]  face        face_info_t containing indices for the location of the face being linearized.
+    !!  @param[in]  seed        seed_t containing indices of the element against which the linearization was computed.
+    !!  @param[in]  ivar        Index of the variable
+    !!
+    !--------------------------------------------------------------------------------------------------------------------------------
+    subroutine store_bc(self,integral,face,seed,ivar)
+        class(blockmatrix_t),       intent(inout)   :: self
+        type(AD_D),                 intent(in)      :: integral(:)
+        type(face_info_t),          intent(in)      :: face
+        type(seed_t),               intent(in)      :: seed
+        integer(ik),                intent(in)      :: ivar
+
+        integer(ik) :: idom, idom_d, ielem, ielem_d, iblk, iarray
+        integer(ik) :: irow, irow_start, i
+        integer(ik) :: neqns, nterms, bcblk
+        logical     :: block_match = .false.
+        logical     :: no_bc_block = .false.
+        logical     :: local_element_linearization = .false.
+
+        idom  = face%idomain
+        ielem = face%ielement
+
+        idom_d  = seed%idom
+        ielem_d = seed%ielem
+
+
+        !
+        ! If ielem = ielem_d then the linearization is with respect to the local element. 
+        ! So, this is stored in the self%lblks array in the DIAG location, instead of
+        ! the self%bc_blks array. In general, the storage location is not important,
+        ! but the ILU preconditioner expects the full diagonal contribution to be in 
+        ! lblks.
+        !
+        local_element_linearization = (ielem == ielem_d)
+
+        if ( local_element_linearization ) then
+
+            call self%store(integral,ielem,DIAG,ivar)
+
+        else
+
+            !
+            ! Get stored information for the block
+            !
+            neqns  = self%ldata(ielem,1)
+            nterms = self%ldata(ielem,2)
+
+            !
+            ! Compute correct row offset for ivar
+            !
+            irow_start = ( (ivar - 1) * nterms )
+
+
+            !
+            ! Find coupled bc block location 
+            !
+            bcblk = 0
+            do iblk = 1,size(self%bc_blks,2)
+                block_match = ( (idom_d  == self%bc_blks(ielem,iblk)%dparent()) .and. &
+                                (ielem_d == self%bc_blks(ielem,iblk)%eparent()) )
+
+                if ( block_match ) then
+                    bcblk = iblk
+                    exit
+                end if
+            end do
+
+            no_bc_block = (bcblk == 0)
+            if (no_bc_block) call chidg_signal(FATAL,"blockmatrix%store_bc: no bc block found to store derivatives.")
+
+
+
+            !
+            ! Store derivatives
+            !
+            do iarray = 1,size(integral)
+                ! Do a += operation to add derivatives to any that are currently stored
+                irow = irow_start + iarray
+                self%bc_blks(ielem,bcblk)%mat(irow,:) = self%bc_blks(ielem,bcblk)%mat(irow,:) + integral(iarray)%xp_ad_
+            end do
+
+
+        end if ! check local block.
+
+    end subroutine store_bc
+    !*******************************************************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -553,23 +796,49 @@ contains
             !
             ! For each Chimera block linearization for the current element
             !
-            if (allocated(self%chiblks)) then
-                do iblk = 1,size(self%chiblks,2)
+            if (allocated(self%chi_blks)) then
+                do iblk = 1,size(self%chi_blks,2)
 
                     !
                     ! Check if the block storage is actually allocated
                     !
-                    if (allocated(self%chiblks(ielem,iblk)%mat)) then
+                    if (allocated(self%chi_blks(ielem,iblk)%mat)) then
 
                         !
                         ! If so, set to ZERO
                         !
-                        self%chiblks(ielem,iblk)%mat = ZERO
+                        self%chi_blks(ielem,iblk)%mat = ZERO
 
                     end if
 
                 end do ! iblk
             end if
+
+
+
+
+            !
+            ! For each boundary condition block linearization for the current element
+            !
+            if (allocated(self%bc_blks)) then
+                do iblk = 1,size(self%bc_blks,2)
+
+                    !
+                    ! Check if the block storage is actually allocated
+                    !
+                    if (allocated(self%bc_blks(ielem,iblk)%mat)) then
+
+                        !
+                        ! If so, set to ZERO
+                        !
+                        self%bc_blks(ielem,iblk)%mat = ZERO
+
+                    end if
+
+                end do ! iblk
+            end if
+
+
 
 
 

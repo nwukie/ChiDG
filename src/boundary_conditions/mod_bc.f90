@@ -26,6 +26,7 @@ module mod_bc
     use bc_euler_totalinlet_characteristic, only: euler_totalinlet_characteristic_t
     use bc_euler_pressureoutlet,            only: euler_pressureoutlet_t
     use bc_euler_extrapolate,               only: euler_extrapolate_t
+!    use bc_euler_giles_inlet,               only: euler_giles_inlet_t
     implicit none
 
 
@@ -61,6 +62,7 @@ contains
         type(euler_totalinlet_characteristic_t) :: EULER_TOTALINLET_CHARCTERISTIC
         type(euler_pressureoutlet_t)            :: EULER_PRESSUREOUTLET
         type(euler_extrapolate_t)               :: EULER_EXTRAPOLATE
+!        type(euler_giles_inlet_t)               :: EULER_GILES_INLET
 
 
         if ( .not. initialized ) then
@@ -74,6 +76,7 @@ contains
             call registered_bcs%push_back(EULER_TOTALINLET_CHARCTERISTIC)
             call registered_bcs%push_back(EULER_PRESSUREOUTLET)
             call registered_bcs%push_back(EULER_EXTRAPOLATE)
+!            call registered_bcs%push_back(EULER_GILES_INLET)
 
 
             !
@@ -105,11 +108,11 @@ contains
     !!      - Allocate a concrete boundary condition type based on the incoming string specification.
     !!      - Initialize the allocated boundary condition.
     !!
-    !!  @author Nathan A. Wukie
-    !!  @date   1/31/2016
+    !! @author Nathan A. Wukie
+    !! @date   1/31/2016
     !!
-    !!  @param[in]      string  Character string used to select the appropriate boundary condition
-    !!  @param[inout]   bc      Allocatable boundary condition
+    !! @param[in]      string  Character string used to select the appropriate boundary condition
+    !! @param[inout]   bc      Allocatable boundary condition
     !!
     !--------------------------------------------------------------
     subroutine create_bc(bcstring,bc)
@@ -180,9 +183,8 @@ contains
         do ibc = 1,nbcs
 
             bcname = registered_bcs%data(ibc)%bc%get_name()
-
-
             call write_line(trim(bcname))
+
         end do ! ieqn
 
     end subroutine list_bcs

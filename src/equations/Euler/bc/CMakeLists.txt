@@ -4,4 +4,5 @@ add_lib_sources(
                 bc_euler_pressureoutlet.f90
                 bc_euler_extrapolate.f90
                 bc_euler_wall.f90
+#                bc_euler_giles_inlet.f90
                 )

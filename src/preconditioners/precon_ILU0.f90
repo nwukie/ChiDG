@@ -63,7 +63,7 @@ contains
         ! Initialize each blockmatrix
         !
         do idom = 1,ndom
-            call self%LD(idom)%init(data%mesh(idom),'LowerDiagonal')
+            call self%LD(idom)%init(mesh=data%mesh(idom),mtype='LowerDiagonal')
             call self%LD(idom)%clear()
         end do
 

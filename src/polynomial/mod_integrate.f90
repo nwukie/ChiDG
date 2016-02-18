@@ -427,7 +427,8 @@ contains
                 ! Only store rhs once. if iblk == DIAG. Also, since the integral could be computed more than once for chimera faces, only store for the first donor.
                 ! The integral should be the same for any value of idonor. Only the derivatives will change
                 !
-                if ( ftype == BOUNDARY .and. iblk == DIAG ) then
+                !if ( ftype == BOUNDARY .and. iblk == DIAG ) then
+                if ( ftype == BOUNDARY ) then
 
                     vals = rhs(ielem)%getvar(ieqn) + integral(:)%x_ad_
                     call rhs(ielem)%setvar(ieqn,vals)
@@ -542,12 +543,13 @@ contains
 
                 if (iblk /= DIAG) then
                     !
-                    ! Store linearization of Chimera boundary
+                    ! Store linearization of Chimera boundary donor elements.
                     !
                     call lhs%store_chimera(integral,face_info,seed,ieqn)
                 else
                     !
-                    ! There should only be one contribution to the linearization of the Chimera face wrt the interior variables
+                    ! Store linearization of Chimera boundary receiver element. Since this could be computed multiple times,
+                    ! we just store it once.
                     !
                     if (idonor == 1) then
                         call lhs%store(integral,idom,ielem,iblk,ieqn)
@@ -560,8 +562,7 @@ contains
                 !
                 ! Store linearization of boundary condition
                 !
-                call lhs%store(integral,idom,ielem,iblk,ieqn)
-
+                call lhs%store_bc(integral,face_info,seed,ieqn)
 
 
 

@@ -10,7 +10,10 @@ module type_chidg_data
     use type_bcset,                     only: bcset_t
     use type_equationset_wrapper,       only: equationset_wrapper_t
     use type_solverdata,                only: solverdata_t
-    use type_equationset_function_data,         only: equationset_function_data_t
+
+    !
+    use type_equationset_function_data, only: equationset_function_data_t
+    use type_bcset_coupling,            only: bcset_coupling_t
 
     ! Factory methods
     use mod_equations,                  only: create_equationset
@@ -89,10 +92,10 @@ contains
     subroutine init_sdata(self)
         class(chidg_data_t),     intent(inout)   :: self
 
-        integer(ik) :: idom, ndom, maxflux, ierr
-        logical     :: increase_maxflux = .false.
+        integer(ik) :: idom, ndom, ierr
 
-        type(equationset_function_data_t), allocatable :: function_data(:)
+        type(equationset_function_data_t),  allocatable :: function_data(:)
+        type(bcset_coupling_t),             allocatable :: bcset_coupling(:)
 
 
         !
@@ -108,12 +111,23 @@ contains
         end do
 
 
+        !
+        ! Assemble boundary condition coupling information to pass to sdata initialization for LHS storage
+        !
+        ndom = self%ndomains()
+        allocate(bcset_coupling(ndom), stat=ierr)
+        if ( ierr /= 0 ) call AllocationError
+
+        do idom = 1,self%ndomains()
+            bcset_coupling(idom) = self%bcset(idom)%get_bcset_coupling()
+        end do
+
 
 
         !
         ! Initialize solver data 
         !
-        call self%sdata%init(self%mesh, function_data)
+        call self%sdata%init(self%mesh, bcset_coupling, function_data)
 
     end subroutine init_sdata
     !*************************************************************************************************************

@@ -10,5 +10,7 @@ add_lib_sources(
                 type_bcproperty_set.f90
                 type_bcdata.f90
                 bc_empty.f90
+                type_bcset_coupling.f90
+                type_bc_coupling.f90
                 )
 

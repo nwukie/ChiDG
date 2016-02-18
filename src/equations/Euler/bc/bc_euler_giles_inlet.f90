@@ -1,6 +1,6 @@
-module bc_euler_totalinlet
+module bc_euler_giles_inlet
     use mod_kinds,          only: rk,ik
-    use mod_constants,      only: ONE, TWO, HALF, ZERO, LOCAL
+    use mod_constants,      only: ONE, TWO, FOUR, HALF, ZERO, LOCAL
 
     use type_bc,            only: bc_t
     use type_solverdata,    only: solverdata_t
@@ -22,18 +22,19 @@ module bc_euler_totalinlet
     !!      - Extrapolate interior variables to be used for calculating the boundary flux.
     !!  
     !!  @author Nathan A. Wukie
-    !!  @date   2/8/2016
+    !!  @date   2/16/2016
     !!
     !-------------------------------------------------------------------------------------------
-    type, public, extends(bc_t) :: euler_totalinlet_t
+    type, public, extends(bc_t) :: euler_giles_inlet_t
 
     contains
 
-        procedure   :: add_options  !< Add boundary condition options
-        procedure   :: compute      !< bc implementation
+        procedure   :: add_options          !< Add boundary condition options.
+        procedure   :: init_spec            !< Specialized bc initialization.
+        procedure   :: compute              !< bc function implementation.
 
-    end type euler_totalinlet_t
-    !-------------------------------------------------------------------------------------------
+    end type euler_giles_inlet_t
+    !*******************************************************************************************
 
 
 
@@ -46,17 +47,17 @@ contains
     !>  Add options for total pressure/temperature boundary condition.
     !!
     !!  @author Nathan A. Wukie
-    !!  @date   2/5/2016
+    !!  @date   2/16/2016
     !!
     !!
     !--------------------------------------------------------------------------------------------
     subroutine add_options(self)
-        class(euler_totalinlet_t),  intent(inout)   :: self
+        class(euler_giles_inlet_t),  intent(inout)   :: self
 
         !
         ! Set name
         !
-        call self%set_name('euler_totalinlet')
+        call self%set_name('euler_giles_inlet')
 
 
         !
@@ -67,6 +68,14 @@ contains
         call self%bcproperties%add('nx',              'Required')
         call self%bcproperties%add('ny',              'Required')
         call self%bcproperties%add('nz',              'Required')
+        call self%bcproperties%add('periodicity',     'Required')
+
+
+        !
+        ! Set default total pressure/temperature
+        !
+        call self%set_fcn_option('TotalPressure',    'val', 110000.0)
+        call self%set_fcn_option('TotalTemperature', 'val', 300.0)
 
         !
         ! Set default angle
@@ -85,10 +94,53 @@ contains
 
 
 
+
+
+
+    !>  Specialized initialization for the boundary condition.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   2/16/2016
+    !!
+    !!
+    !!
+    !---------------------------------------------------------------------------------------------
+    subroutine init_spec(self,mesh,iface)
+        class(euler_giles_inlet_t), intent(inout)   :: self
+        type(mesh_t),               intent(in)      :: mesh(:)
+        integer(ik),                intent(in)      :: iface
+
+
+
+    end subroutine init_spec
+    !*********************************************************************************************
+        
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     !> Specialized compute routine for Extrapolation Boundary Condition
     !!
     !!  @author Nathan A. Wukie
-    !!  @date   2/6/2016
+    !!  @date   2/16/2016
     !!
     !!  @param[in]      mesh    Mesh data containing elements and faces for the domain
     !!  @param[inout]   sdata   Solver data containing solution vector, rhs, linearization, etc.
@@ -99,12 +151,12 @@ contains
     !!
     !-------------------------------------------------------------------------------------------
     subroutine compute(self,mesh,sdata,prop,face,flux)
-        class(euler_totalinlet_t),      intent(inout)   :: self
-        type(mesh_t),                   intent(in)      :: mesh(:)
-        type(solverdata_t),             intent(inout)   :: sdata
-        class(properties_t),            intent(inout)   :: prop
-        type(face_info_t),              intent(in)      :: face
-        type(function_info_t),          intent(in)      :: flux
+        class(euler_giles_inlet_t), intent(inout)   :: self
+        type(mesh_t),               intent(in)      :: mesh(:)
+        type(solverdata_t),         intent(inout)   :: sdata
+        class(properties_t),        intent(inout)   :: prop
+        type(face_info_t),          intent(in)      :: face
+        type(function_info_t),      intent(in)      :: flux
 
 
         ! Equation indices
@@ -116,14 +168,12 @@ contains
                         rho_m,  rhou_m, rhov_m, rhow_m, rhoE_m, p_m,        &
                         flux_x, flux_y, flux_z, integrand,                  &
                         u_m,    v_m,    w_m,                                &
-                        u_bc,   v_bc,   w_bc,                               &
-                        T_bc,   p_bc,   rho_bc, rhoE_bc,                    &
-                        vmag2_m, vmag, H_bc
+                        u_b,    v_b,    w_b,                                &
+                        t_b,    p_b,    rho_b, rhoE_b,                      &
+                        vmag2_m, vmag, H_b, Ht, Rplus, c_i, gam_m, a, b, c, cb_plus, cb_minus, c_b, vmag_b, M_b
 
-        real(rk), dimension(mesh(face%idomain)%faces(face%ielement,face%iface)%gq%face%nnodes) :: TT, PT, nx, ny, nz
+        real(rk), dimension(mesh(face%idomain)%faces(face%ielement,face%iface)%gq%face%nnodes) :: TT, PT, nx, ny, nz, periodicity
 
-        real(rk)        :: gam_m, cp_m, M
-        !real(rk)        :: norm_bc(3)
         integer(ik)     :: iface_p, ineighbor, idonor
         integer(ik)     :: idom, ielem, iface, iblk
 
@@ -146,7 +196,6 @@ contains
         iblk  = flux%iblk
 
 
-
         associate (norms => mesh(idom)%faces(ielem,iface)%norm, unorms => mesh(idom)%faces(ielem,iface)%unorm, faces => mesh(idom)%faces, &
                 coords => mesh(idom)%faces(ielem,iface)%quad_pts,    q => sdata%q,      time => sdata%t )
 
@@ -154,11 +203,48 @@ contains
             !
             ! Get boundary condition Total Temperature, Total Pressure, and normal vector
             !
-            PT = self%bcproperties%compute("TotalPressure",     time, coords)
-            TT = self%bcproperties%compute("TotalTemperature",  time, coords)
-            nx = self%bcproperties%compute("nx",                time, coords)
-            ny = self%bcproperties%compute("ny",                time, coords)
-            nz = self%bcproperties%compute("nz",                time, coords)
+            PT = self%bcproperties%compute("TotalPressure",        time, coords)
+            TT = self%bcproperties%compute("TotalTemperature",     time, coords)
+            nx = self%bcproperties%compute("nx",                   time, coords)
+            ny = self%bcproperties%compute("ny",                   time, coords)
+            nz = self%bcproperties%compute("nz",                   time, coords)
+            periodicity = self%bcproperties%compute("periodicity", time, coords)
+
+
+
+            !
+            ! Get points across boundary at current element span.
+            !
+            call compute_dft_points(mesh,idom,ielem,iface,periodicity)
+
+
+
+
+            !
+            ! Interpolate primitive variables at specified points across boundary. To be DFT'd.
+            !
+            call interpolate_boundary(mesh,face,q,irho ,rho_p ,points)
+            call interpolate_boundary(mesh,face,q,irhou,rhou_p,points)
+            call interpolate_boundary(mesh,face,q,irhov,rhov_p,points)
+            call interpolate_boundary(mesh,face,q,irhow,rhow_p,points)
+            call interpolate_boundary(mesh,face,q,irhoE,rhoE_p,points)
+
+
+
+
+            !
+            ! Compute span DFT of primitive variables
+            !
+            rho_modes  = dft(rho_p )
+            rhou_modes = dft(rhou_p)
+            rhov_modes = dft(rhov_p)
+            rhow_modes = dft(rhow_p)
+            rhoE_modes = dft(rhoE_p)
+
+
+
+
+
 
 
 
@@ -171,6 +257,11 @@ contains
             call interpolate_face(mesh,face,q,irhow,rhow_m,LOCAL)
             call interpolate_face(mesh,face,q,irhoE,rhoE_m,LOCAL)
 
+            call prop%fluid%compute_pressure(rho_m,rhou_m,rhov_m,rhow_m,rhoE_m,p_m)
+            call prop%fluid%compute_gamma(rho_m,rhou_m,rhov_m,rhow_m,rhoE_m,gam_m)
+
+
+
 
 
             !
@@ -180,40 +271,73 @@ contains
             v_m = rhov_m/rho_m
             w_m = rhow_m/rho_m
 
+
             !
-            ! Compute velocity magnitude squared from interior state
+            ! Compute interior speed of sound
+            !
+            c_i = sqrt(gam_m * p_m / rho_m )
+
+
+            !
+            ! Compute velocity magnitude from interior state
             !
             vmag2_m = (u_m*u_m) + (v_m*v_m) + (w_m*w_m)
             vmag = sqrt(vmag2_m)
 
 
+
+            !
+            ! Compute interior total enthalpy and R+ characteristic
+            !
+            Ht    = (p_m / rho_m) * (gam_m/(gam_m - ONE)) + HALF*(vmag2_m)
+            Rplus = -vmag - TWO*c_i/(gam_m - ONE)
+
+
+
+            !
+            ! solve quadratic equation for c_b
+            !
+            a = ONE + TWO/(gam_m - ONE)
+            b = TWO * Rplus
+            c = ((gam_m - ONE)/TWO) * (Rplus**TWO - TWO*Ht)
+            
+
+            cb_plus  = (-b  +  sqrt(b**TWO - FOUR*a*c))/(TWO*a)
+            cb_minus = (-b  -  sqrt(b**TWO - FOUR*a*c))/(TWO*a)
+
+            c_b = max(cb_plus,cb_minus)
+
+
+
+            !
+            ! Get boundary condition velocity from extrapolated characteristic and computed c_b
+            !
+            vmag_b = -TWO*c_b/(gam_m - ONE) - Rplus
+
+
+            !
+            ! Compute boundary Mach number
+            !
+            M_b = vmag_b/c_b
+
+
+
+            !
+            ! Compute boundary pressure and temperature
+            !
+            p_b = PT * (ONE + (gam_m - ONE)/TWO * M_b**TWO )**(-gam_m/(gam_m-ONE))
+            t_b = TT * (p_b / PT)**((gam_m-ONE)/gam_m)
+
+
+
             !
             ! Compute boundary condition velocity components from imposed direction
             !
-            u_bc = vmag*nx
-            v_bc = vmag*ny
-            w_bc = vmag*nz
+            u_b = vmag_b*nx
+            v_b = vmag_b*ny
+            w_b = vmag_b*nz
 
 
-
-
-
-
-
-
-            !
-            ! Compute boundary condition temperature and pressure
-            !
-            !& HARDCODED GAMMA. HARDCODED CP
-            gam_m = 1.4_rk
-
-            select type(prop)
-                type is (EULER_properties_t)
-                    cp_m  = (prop%R)*(gam_m/(gam_m-ONE))
-            end select
-
-            T_bc = TT - (vmag2_m)/(TWO*cp_m)
-            p_bc = PT*((T_bc/TT)**(gam_m/(gam_m-ONE)))
 
 
             !
@@ -221,26 +345,25 @@ contains
             !
             select type(prop)
                 type is (EULER_properties_t)
-                    rho_bc = p_bc/(T_bc*prop%R)
+                    rho_b = p_b/(t_b*prop%R)
             end select
-
 
 
 
             !
             ! Compute energy and enthalpy
             !
-            rhoE_bc = p_bc/(gam_m - ONE) + (rho_bc/TWO)*( (u_bc*u_bc) + (v_bc*v_bc) + (w_bc*w_bc) )
-            H_bc    = (rhoE_bc + p_bc)/rho_bc
+            rhoE_b = p_b/(gam_m - ONE) + (rho_b/TWO)*( (u_b*u_b) + (v_b*v_b) + (w_b*w_b) )
+            H_b    = (rhoE_b + p_b)/rho_b
 
 
 
             !=================================================
             ! Mass flux
             !=================================================
-            flux_x = (rho_bc * u_bc)
-            flux_y = (rho_bc * v_bc)
-            flux_z = (rho_bc * w_bc)
+            flux_x = (rho_b * u_b)
+            flux_y = (rho_b * v_b)
+            flux_z = (rho_b * w_b)
 
             integrand = flux_x*norms(:,1) + flux_y*norms(:,2) + flux_z*norms(:,3)
 
@@ -249,9 +372,9 @@ contains
             !=================================================
             ! x-momentum flux
             !=================================================
-            flux_x = (rho_bc * u_bc * u_bc) + p_bc
-            flux_y = (rho_bc * u_bc * v_bc)
-            flux_z = (rho_bc * u_bc * w_bc)
+            flux_x = (rho_b * u_b * u_b) + p_b
+            flux_y = (rho_b * u_b * v_b)
+            flux_z = (rho_b * u_b * w_b)
 
             integrand = flux_x*norms(:,1) + flux_y*norms(:,2) + flux_z*norms(:,3)
 
@@ -260,9 +383,9 @@ contains
             !=================================================
             ! y-momentum flux
             !=================================================
-            flux_x = (rho_bc * v_bc * u_bc)
-            flux_y = (rho_bc * v_bc * v_bc) + p_bc
-            flux_z = (rho_bc * v_bc * w_bc)
+            flux_x = (rho_b * v_b * u_b)
+            flux_y = (rho_b * v_b * v_b) + p_b
+            flux_z = (rho_b * v_b * w_b)
 
             integrand = flux_x*norms(:,1) + flux_y*norms(:,2) + flux_z*norms(:,3)
 
@@ -271,9 +394,9 @@ contains
             !=================================================
             ! z-momentum flux
             !=================================================
-            flux_x = (rho_bc * w_bc * u_bc)
-            flux_y = (rho_bc * w_bc * v_bc)
-            flux_z = (rho_bc * w_bc * w_bc) + p_bc
+            flux_x = (rho_b * w_b * u_b)
+            flux_y = (rho_b * w_b * v_b)
+            flux_z = (rho_b * w_b * w_b) + p_b
 
             integrand = flux_x*norms(:,1) + flux_y*norms(:,2) + flux_z*norms(:,3)
 
@@ -283,9 +406,9 @@ contains
             !=================================================
             ! Energy flux
             !=================================================
-            flux_x = (rho_bc * u_bc * H_bc)
-            flux_y = (rho_bc * v_bc * H_bc)
-            flux_z = (rho_bc * w_bc * H_bc)
+            flux_x = (rho_b * u_b * H_b)
+            flux_y = (rho_b * v_b * H_b)
+            flux_z = (rho_b * w_b * H_b)
 
             integrand = flux_x*norms(:,1) + flux_y*norms(:,2) + flux_z*norms(:,3)
 
@@ -294,11 +417,12 @@ contains
 
         end associate
 
-    end subroutine
+    end subroutine compute
+    !*********************************************************************************************
 
 
 
 
 
 
-end module bc_euler_totalinlet
+end module bc_euler_giles_inlet

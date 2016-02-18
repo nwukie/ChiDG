@@ -1,17 +1,16 @@
 module type_bc
 #include <messenger.h>
     use mod_kinds,              only: rk, ik
-    use mod_constants,          only: XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX, BOUNDARY, CHIMERA, ORPHAN
+    use mod_constants,          only: XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX, BOUNDARY, CHIMERA, ORPHAN, BC_BLK
     use type_mesh,              only: mesh_t
     use type_point,             only: point_t
+    use type_ivector,           only: ivector_t
     use type_solverdata,        only: solverdata_t
     use type_properties,        only: properties_t
     use type_face_info,         only: face_info_t
     use type_function_info,     only: function_info_t
     use type_bcproperty_set,    only: bcproperty_set_t
     use type_function,          only: function_t
-
-    use mod_DNAD_tools,         only: compute_seed
     implicit none
     private
 
@@ -33,6 +32,9 @@ module type_bc
         integer(ik),        allocatable :: dom(:)                   !< Indices of domains
         integer(ik),        allocatable :: elems(:)                 !< Indices of elements associated with boundary condition
         integer(ik),        allocatable :: faces(:)                 !< Indices of the boundary face for elements elems(ielems)
+
+        type(ivector_t),    allocatable :: coupled_elems(:)         !< For each element on the boundary, a vector of element block-indices coupled with the current element.
+
         logical,    public              :: isInitialized = .false.  !< Logical switch for indicating the boundary condition initializaiton status
 
 
@@ -46,27 +48,30 @@ module type_bc
 
 
 
-        procedure   :: init                                 !< Boundary condition initialization
-        procedure   :: init_spec                            !< Call specialized initialization routine
-        procedure   :: apply                                !< Spatial application of the boundary condition
-        procedure(compute_interface), deferred :: compute   !< Implements boundary condition calculation
+        procedure                               :: init                     !< Boundary condition initialization
+        procedure                               :: init_spec                !< Call specialized initialization routine
+        procedure                               :: init_boundary_coupling   !< Initialize book-keeping for coupling interaction between elements.
+        procedure(compute_interface), deferred  :: compute                  !< Implements boundary condition function
+        procedure                               :: apply                    !< Apply bc function over bc elements
 
 
-        procedure   :: add_options                          !< Specialized by each bc_t implementation. Adds options available
+        procedure   :: add_options                              !< Specialized by each bc_t implementation. Adds options available
 
-        procedure   :: set_name                             !< Set the boundary condition name
-        procedure   :: get_name                             !< Return the boundary condition name
+        procedure   :: set_name                                 !< Set the boundary condition name
+        procedure   :: get_name                                 !< Return the boundary condition name
 
-        procedure   :: set_fcn                              !< Set a particular function definition for a specified bcfunction_t
-        procedure   :: set_fcn_option                       !< Set function-specific options for a specified bcfunction_t
+        procedure   :: set_fcn                                  !< Set a particular function definition for a specified bcfunction_t
+        procedure   :: set_fcn_option                           !< Set function-specific options for a specified bcfunction_t
 
 
-        procedure   :: get_nproperties                      !< Return the number of properties associated with the boundary condition.
-        procedure   :: get_property_name                    !< Return the name of a property given a property index.
+        procedure   :: get_nproperties                          !< Return the number of properties associated with the boundary condition.
+        procedure   :: get_property_name                        !< Return the name of a property given a property index.
 
-        procedure   :: get_noptions                         !< Return the number of available options for a given property, specified by a property index.
-        procedure   :: get_option_key                       !< Return the key for an option, given a property index and subsequent option index.
-        procedure   :: get_option_value                     !< Return the value of a given key, inside of a specified property.
+        procedure   :: get_noptions                             !< Return the number of available options for a given property, specified by a property index.
+        procedure   :: get_option_key                           !< Return the key for an option, given a property index and subsequent option index.
+        procedure   :: get_option_value                         !< Return the value of a given key, inside of a specified property.
+
+        procedure   :: get_ncoupled_elems                       !< Return the number of elements coupled with a specified boundary element.
 
     end type bc_t
     !*********************************************************************************************
@@ -105,13 +110,6 @@ contains
     !!  @param[in]  iface   block face index to which the boundary condition is being applied
     !!
     !------------------------------------------------------------------------------------------
-    !
-    ! Proposed new interface:   
-    !   subroutine init(self,mesh,elems,faces,options)
-    !
-    !
-    !
-    !subroutine init(self,mesh,iface,options)
     subroutine init(self,mesh,iface)
         class(bc_t),            intent(inout)       :: self
         type(mesh_t),           intent(inout)       :: mesh
@@ -168,7 +166,7 @@ contains
         !
         ! Allocate storage for element and face indices
         !
-        allocate(self%elems(nelem_bc), self%faces(nelem_bc), stat=ierr)
+        allocate(self%elems(nelem_bc), self%faces(nelem_bc), self%coupled_elems(nelem_bc), stat=ierr)
         if (ierr /= 0) call AllocationError
 
 
@@ -218,6 +216,12 @@ contains
         call self%init_spec(mesh,iface)
 
 
+        !
+        ! Call user-specialized boundary coupling initialization
+        !
+        call self%init_boundary_coupling(mesh,iface)
+
+
 
         self%isInitialized = .true. ! Set initialization confirmation
 
@@ -226,138 +230,6 @@ contains
     
 
 
-
-
-
-
-    !>  Apply boundary condition to the mesh and solution
-    !!      - Loops through the associated elements(faces) and calls the specialized bc_t%compute
-    !!        procedure for computing the rhs and linearization.
-    !!
-    !!
-    !!  @author Nathan A. Wukie
-    !!  @date   1/31/2016
-    !!
-    !!  @param[in]      mesh    mesh_t defining elements and faces
-    !!  @param[inout]   sdata   solverdata_t containing solution, rhs, and linearization(lin) data
-    !!  @param[in]      iblk    Block of the linearization for the current element that is being computed (XI_MIN, XI_MAX, eta.)
-    !!  @param[inout]   prop    properties_t object containing equationset properties and material_t objects
-    !!
-    !---------------------------------------------------------------------------------------------
-    subroutine apply(self,mesh,sdata,prop,idom,iblk)
-        class(bc_t),            intent(inout)   :: self
-        type(mesh_t),           intent(in)      :: mesh(:)
-        class(solverdata_t),    intent(inout)   :: sdata
-        class(properties_t),    intent(inout)   :: prop
-        integer(ik),            intent(in)      :: idom
-        integer(ik),            intent(in)      :: iblk
-
-        integer(ik) :: ielem_bc, ielem, iface, idonor, iflux
-
-        type(face_info_t)       :: face
-        type(function_info_t)   :: flux
-
-        !
-        ! Loop through associated boundary condition elements and call compute routine for the boundary flux calculation
-        !
-        do ielem_bc = 1,size(self%elems)
-            ielem  = self%elems(ielem_bc)   ! Get index of the element being operated on
-            iface  = self%faces(ielem_bc)   ! Get face index of element 'ielem' that is being operated on
-            iflux  = 0
-            idonor = 0
-
-
-            face%idomain  = idom
-            face%ielement = ielem
-            face%iface    = iface
-            face%seed     = compute_seed(mesh,idom,ielem,iface,idonor,iblk)
-
-
-            flux%ifcn     = iflux
-            flux%idonor   = idonor
-            flux%iblk     = iblk
-
-
-            !
-            ! For the current boundary element(face), call specialized compute procedure
-            !
-            call self%compute(mesh,sdata,prop,face,flux)
-
-        end do
-
-
-    end subroutine apply
-    !********************************************************************************************
-
-
-
-
-
-
-
-
-
-
-
-!    !>  Apply boundary condition to the mesh and solution
-!    !!      - Loops through the associated elements(faces) and calls the specialized bc_t%compute
-!    !!        procedure for computing the rhs and linearization.
-!    !!
-!    !!
-!    !!  @author Nathan A. Wukie
-!    !!  @date   1/31/2016
-!    !!
-!    !!  @param[in]      mesh    mesh_t defining elements and faces
-!    !!  @param[inout]   sdata   solverdata_t containing solution, rhs, and linearization(lin) data
-!    !!  @param[in]      iblk    Block of the linearization for the current element that is being computed (XI_MIN, XI_MAX, eta.)
-!    !!  @param[inout]   prop    properties_t object containing equationset properties and material_t objects
-!    !!
-!    !---------------------------------------------------------------------------------------------
-!    subroutine apply(self,mesh,sdata,prop,idom,iblk)
-!        class(bc_t),            intent(inout)   :: self
-!        type(mesh_t),           intent(in)      :: mesh(:)
-!        class(solverdata_t),    intent(inout)   :: sdata
-!        class(properties_t),    intent(inout)   :: prop
-!        integer(ik),            intent(in)      :: idom
-!        integer(ik),            intent(in)      :: iblk
-!
-!        integer(ik) :: ielem_bc, ielem, iface, idonor, iflux
-!
-!        type(face_info_t)       :: face
-!        type(function_info_t)   :: flux
-!
-!        !
-!        ! Loop through associated boundary condition elements and call compute routine for the boundary flux calculation
-!        !
-!        do ielem_bc = 1,size(self%elems)
-!            ielem  = self%elems(ielem_bc)   ! Get index of the element being operated on
-!            iface  = self%faces(ielem_bc)   ! Get face index of element 'ielem' that is being operated on
-!            iflux  = 0
-!            idonor = 0
-!
-!
-!            face%idomain  = idom
-!            face%ielement = ielem
-!            face%iface    = iface
-!            face%seed     = compute_seed(mesh,idom,ielem,iface,idonor,iblk)
-!
-!
-!            flux%ifcn     = iflux
-!            flux%idonor   = idonor
-!            flux%iblk     = iblk
-!
-!
-!            !
-!            ! For the current boundary element(face), call specialized compute procedure
-!            !
-!            call self%compute(mesh,sdata,prop,face,flux)
-!
-!        end do
-!
-!
-!    end subroutine apply
-!    !********************************************************************************************
-!
 
 
 
@@ -384,6 +256,191 @@ contains
 
     end subroutine init_spec
     !********************************************************************************************
+
+
+
+
+
+
+
+
+
+    !>  Default boundary coupling initialization routine. 
+    !!
+    !!  Default initializes coupling for a given element to just itself and no coupling with 
+    !!  other elements on the boundary. For a boundary condition that is coupled across the face
+    !!  this routine can be overwritten to set the coupling information specific to the boundary 
+    !!  condition.
+    !!  
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   2/16/2016
+    !!
+    !--------------------------------------------------------------------------------------------
+    subroutine init_boundary_coupling(self,mesh,iface)
+        class(bc_t),    intent(inout)   :: self
+        type(mesh_t),   intent(in)      :: mesh
+        integer(ik),    intent(in)      :: iface
+
+        integer(ik) :: ielem_bc, ielem
+
+
+
+        !
+        ! Loop through elements and set default coupling information
+        !
+        do ielem_bc = 1,size(self%elems)
+
+
+            !
+            ! Get block-element index of current ielem_bc
+            !
+            ielem = self%elems(ielem_bc)
+
+            
+            !
+            ! Add the element index as the only dependency.
+            !
+            call self%coupled_elems(ielem_bc)%push_back(ielem)
+
+
+        end do ! ielem_bc
+
+
+    end subroutine init_boundary_coupling
+    !********************************************************************************************
+
+
+
+
+
+
+
+
+
+    !>  Function for returning the number of elements coupled with a specified boundary element.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   2/16/2016
+    !!
+    !!
+    !!
+    !--------------------------------------------------------------------------------------------
+    function get_ncoupled_elems(self,ielem) result(ncoupled_elems)
+        class(bc_t),    intent(inout)   :: self
+        integer(ik),    intent(in)      :: ielem
+
+        integer(ik) :: ncoupled_elems
+
+
+        ncoupled_elems = self%coupled_elems(ielem)%size()
+
+
+    end function get_ncoupled_elems
+    !********************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    !>  Apply boundary condition to the mesh and solution
+    !!      - Loops through the associated elements(faces) and calls the specialized bc_t%compute
+    !!        procedure for computing the rhs and linearization.
+    !!
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   1/31/2016
+    !!
+    !!  @param[in]      mesh    mesh_t defining elements and faces
+    !!  @param[inout]   sdata   solverdata_t containing solution, rhs, and linearization(lin) data
+    !!  @param[in]      iblk    Block of the linearization for the current element that is being computed (XI_MIN, XI_MAX, eta.)
+    !!  @param[inout]   prop    properties_t object containing equationset properties and material_t objects
+    !!
+    !---------------------------------------------------------------------------------------------
+    subroutine apply(self,mesh,sdata,prop,idom)
+        class(bc_t),            intent(inout)   :: self
+        type(mesh_t),           intent(in)      :: mesh(:)
+        class(solverdata_t),    intent(inout)   :: sdata
+        class(properties_t),    intent(inout)   :: prop
+        integer(ik),            intent(in)      :: idom
+
+        integer(ik) :: ielem_bc, ielem, iface, idonor, iflux, icoupled_elem, ncoupled_elems
+
+        type(face_info_t)       :: face
+        type(function_info_t)   :: flux
+
+        !
+        ! Loop through associated boundary condition elements and call compute routine for the boundary flux calculation
+        !
+        do ielem_bc = 1,size(self%elems)
+            ielem  = self%elems(ielem_bc)   ! Get index of the element being operated on
+            iface  = self%faces(ielem_bc)   ! Get face index of element 'ielem' that is being operated on
+
+
+            face%idomain  = idom
+            face%ielement = ielem
+            face%iface    = iface
+
+            flux%ifcn     = 0       ! Boundary conditions are not tracked.
+            flux%idonor   = 0       ! Chimera interface not applicable on boundary condition.
+            flux%iblk     = BC_BLK  ! Indicates to storage routine in LHS to store in BC section.
+
+            
+            !
+            ! For current element, get number of coupled elements.
+            !
+            ncoupled_elems = self%get_ncoupled_elems(ielem_bc)
+
+
+            !
+            ! Compute current element function enough times to linearize all the coupled elements.
+            ! If no coupling accross the face, the ncoupled_elems=1 for just the local interior element.
+            !
+            do icoupled_elem = 1,ncoupled_elems
+
+                !
+                ! Get coupled element to linearize against.
+                !
+                face%seed%idom  = idom
+                face%seed%ielem = self%coupled_elems(ielem_bc)%at(icoupled_elem)
+
+                !
+                ! For the current boundary element(face), call specialized compute procedure.
+                !
+                call self%compute(mesh,sdata,prop,face,flux)
+
+            end do !ielem_c
+
+
+        end do !ielem_bc
+
+
+    end subroutine apply
+    !********************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -604,7 +661,7 @@ contains
 
 
 
-    !>   Return the number of available options, given a property index.
+    !>  Return the number of available options, given a property index.
     !!
     !!  @author Nathan A. Wukie
     !!  @date   2/4/2016
@@ -669,21 +726,6 @@ contains
 
     end function get_name
     !***************************************************************************************************
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 

@@ -238,30 +238,13 @@ contains
             !                                      Boundary Scheme
             !------------------------------------------------------------------------------------------
             !
-            ! Boundary conditions
+            ! Apply boundary conditions for each domain.
             !
-            ! For boundary conditions, the linearization only depends on Q-, which is the solution vector
-            ! for the interior element. So, we only need to compute derivatives for the interior element (DIAG)
-            !
-
-            iblk = 7    ! DIAG
             do idom = 1,data%ndomains()
-                call data%bcset(idom)%apply(data%mesh,data%sdata,data%eqnset(idom)%item%prop,idom,iblk)
-            end do
 
-            
-!            !
-!            ! New boundary condition loop. Boundary conditions are potentially coupled so we need to 
-!            ! 
-!            !
-!            do idom = 1,data%ndomains()
-!
-!                !
-!                ! Call boundary conditions for each domain
-!                !
-!                call data%bcset(idom)%apply(data%mesh,data%sdata,data%eqnset(idom)%item%prop,
-!
-!            end do ! idom
+                call data%bcset(idom)%apply(data%mesh,data%sdata,data%eqnset(idom)%item%prop,idom)
+
+            end do ! idom
 
 
 

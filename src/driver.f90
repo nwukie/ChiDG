@@ -36,8 +36,6 @@ program driver
 
 
 
-
-
     !
     ! Check for command-line arguments
     !
@@ -194,13 +192,17 @@ program driver
     else if ( narg == 2 ) then
 
 
-
-
         call get_command_argument(1,chidg_action)
         call get_command_argument(2,filename)
         chidg_action = trim(chidg_action)
         filename = trim(filename)
         
+
+        !
+        ! Initialize ChiDG environment
+        !
+        call chidg%init('env')
+
 
         !
         ! Select ChiDG action
@@ -212,11 +214,12 @@ program driver
         else if ( trim(chidg_action) == 'convert' ) then
             call chidg_convert(trim(filename))
 
-
-
         else
-            call chidg_signal_one(FATAL,"chidg: unrecognized action.",trim(chidg_action))
+            call chidg_signal(FATAL,"chidg: unrecognized action '"//trim(chidg_action)//"'. Valid options are: 'edit', 'convert'")
+
         end if
+
+
 
 
     else

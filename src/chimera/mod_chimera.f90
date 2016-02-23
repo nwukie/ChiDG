@@ -397,8 +397,8 @@ contains
     subroutine compute_gq_donor(mesh,gq_node,receiver_face,donor_element,donor_coordinate)
         type(mesh_t),               intent(in)      :: mesh(:)
         type(point_t),              intent(in)      :: gq_node
-        type(face_info_t),      intent(in)      :: receiver_face
-        type(element_indices_t),   intent(inout)   :: donor_element
+        type(face_info_t),          intent(in)      :: receiver_face
+        type(element_indices_t),    intent(inout)   :: donor_element
         type(point_t),              intent(inout)   :: donor_coordinate
 
 

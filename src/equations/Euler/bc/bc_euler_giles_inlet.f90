@@ -5,6 +5,7 @@ module bc_euler_giles_inlet
     use type_bc,            only: bc_t
     use type_solverdata,    only: solverdata_t
     use type_mesh,          only: mesh_t
+    use type_point,         only: point_t
     use type_properties,    only: properties_t
     use type_face_info,     only: face_info_t
     use type_function_info, only: function_info_t
@@ -12,6 +13,7 @@ module bc_euler_giles_inlet
 
     use mod_integrate,      only: integrate_boundary_scalar_flux
     use mod_interpolate,    only: interpolate_face
+    use mod_dft,            only: dft, idft_mode_points
     use DNAD_D
     
     use EULER_properties,   only: EULER_properties_t
@@ -27,11 +29,15 @@ module bc_euler_giles_inlet
     !-------------------------------------------------------------------------------------------
     type, public, extends(bc_t) :: euler_giles_inlet_t
 
+        type(point_t),  allocatable :: dft_points(:)
+
+
     contains
 
-        procedure   :: add_options          !< Add boundary condition options.
-        procedure   :: init_spec            !< Specialized bc initialization.
-        procedure   :: compute              !< bc function implementation.
+        procedure   :: add_options              !< Add boundary condition options.
+        procedure   :: init_spec                !< Specialized bc initialization.
+        procedure   :: init_boundary_coupling   !< Implement specialized coupling information between elements.
+        procedure   :: compute                  !< bc function implementation.
 
     end type euler_giles_inlet_t
     !*******************************************************************************************
@@ -74,15 +80,15 @@ contains
         !
         ! Set default total pressure/temperature
         !
-        call self%set_fcn_option('TotalPressure',    'val', 110000.0)
-        call self%set_fcn_option('TotalTemperature', 'val', 300.0)
+        call self%set_fcn_option('TotalPressure',    'val', 110000.0_rk)
+        call self%set_fcn_option('TotalTemperature', 'val', 300.0_rk)
 
         !
         ! Set default angle
         !
-        call self%set_fcn_option('nx', 'val', 1._rk)
-        call self%set_fcn_option('ny', 'val', 0._rk)
-        call self%set_fcn_option('nz', 'val', 0._rk)
+        call self%set_fcn_option('nx', 'val', ONE)
+        call self%set_fcn_option('ny', 'val', ZERO)
+        call self%set_fcn_option('nz', 'val', ZERO)
 
 
     end subroutine add_options
@@ -107,9 +113,26 @@ contains
     !---------------------------------------------------------------------------------------------
     subroutine init_spec(self,mesh,iface)
         class(euler_giles_inlet_t), intent(inout)   :: self
-        type(mesh_t),               intent(in)      :: mesh(:)
+        type(mesh_t),               intent(inout)   :: mesh
         integer(ik),                intent(in)      :: iface
 
+        real(rk)        :: periodicity
+        real(rk)        :: zero_time
+        type(point_t)   :: zero_point
+
+
+        !
+        ! Get boundary periodicity from bc options.
+        !
+        zero_time  = ZERO
+        call zero_point%set(ZERO,ZERO,ZERO)
+        periodicity = self%bcproperties%compute("periodicity", zero_time, zero_point)
+
+
+        !
+        ! Compute dft points
+        !
+        self%dft_points = compute_dft_points(mesh,self%elems,iface,periodicity)
 
 
     end subroutine init_spec
@@ -125,6 +148,53 @@ contains
 
 
 
+    !>  Implement specific boundary coupling.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   2/16/2016
+    !!
+    !!
+    !!
+    !!
+    !---------------------------------------------------------------------------------------------
+    subroutine init_boundary_coupling(self,mesh,iface)
+        class(euler_giles_inlet_t), intent(inout)   :: self
+        type(mesh_t),               intent(in)      :: mesh
+        integer(ik),                intent(in)      :: iface
+
+        integer(ik) :: ielem_bc, ielem_coupled, ielem
+
+
+        !
+        ! Loop through elements. For the current 2D giles, every element on the boundary
+        ! is coupled with every other element on the boundary through the Fourier transform.
+        !
+        do ielem_bc = 1,size(self%elems)
+
+
+            !
+            ! Register all elements as coupled to the current element.
+            !
+            do ielem_coupled = 1,size(self%elems)
+
+                !
+                ! Get block-element index of current ielem_bc.
+                !
+                ielem = self%elems(ielem_bc) 
+
+                !
+                ! Add element index to the coupling for the current element.
+                !
+                call self%coupled_elems(ielem_bc)%push_back(ielem)
+
+            end do ! ielem_coupled
+
+        end do  !ielem_bc
+
+
+
+    end subroutine init_boundary_coupling
+    !*********************************************************************************************
 
 
 
@@ -170,7 +240,8 @@ contains
                         u_m,    v_m,    w_m,                                &
                         u_b,    v_b,    w_b,                                &
                         t_b,    p_b,    rho_b, rhoE_b,                      &
-                        vmag2_m, vmag, H_b, Ht, Rplus, c_i, gam_m, a, b, c, cb_plus, cb_minus, c_b, vmag_b, M_b
+                        vmag2_m, vmag, H_b, Ht, Rplus, c_i, gam_m, a, b, c, cb_plus, cb_minus, c_b, vmag_b, M_b, &
+                        rho_modes, rhou_modes, rhov_modes, rhow_modes, rhoE_modes
 
         real(rk), dimension(mesh(face%idomain)%faces(face%ielement,face%iface)%gq%face%nnodes) :: TT, PT, nx, ny, nz, periodicity
 
@@ -212,94 +283,112 @@ contains
 
 
 
+
+            !---------------------------------------------------------------------
             !
-            ! Get points across boundary at current element span.
+            !   Decompose boundary into Fourier modes of characteristic variables
             !
-            call compute_dft_points(mesh,idom,ielem,iface,periodicity)
-
-
-
-
-            !
-            ! Interpolate primitive variables at specified points across boundary. To be DFT'd.
-            !
-            call interpolate_boundary(mesh,face,q,irho ,rho_p ,points)
-            call interpolate_boundary(mesh,face,q,irhou,rhou_p,points)
-            call interpolate_boundary(mesh,face,q,irhov,rhov_p,points)
-            call interpolate_boundary(mesh,face,q,irhow,rhow_p,points)
-            call interpolate_boundary(mesh,face,q,irhoE,rhoE_p,points)
-
-
-
+            !---------------------------------------------------------------------
 
             !
-            ! Compute span DFT of primitive variables
+            ! Interpolate conservative variables at specified points across boundary. To be DFT'd.
             !
-            rho_modes  = dft(rho_p )
-            rhou_modes = dft(rhou_p)
-            rhov_modes = dft(rhov_p)
-            rhow_modes = dft(rhow_p)
-            rhoE_modes = dft(rhoE_p)
+            call interpolate_boundary(mesh,face,q,irho ,rho_b ,self%dft_points)
+            call interpolate_boundary(mesh,face,q,irhou,rhou_b,self%dft_points)
+            call interpolate_boundary(mesh,face,q,irhov,rhov_b,self%dft_points)
+            call interpolate_boundary(mesh,face,q,irhow,rhow_b,self%dft_points)
+            call interpolate_boundary(mesh,face,q,irhoE,rhoE_b,self%dft_points)
+
+        
+            !
+            ! Compute primitive variables
+            !
+            call prop%fluid%compute_pressure(rho_b,rhou_b,rhov_b,rhow_b,rhoE_b,p_b  )
+            call prop%fluid%compute_gamma(   rho_b,rhou_b,rhov_b,rhow_b,rhoE_b,gam_b)
+            u_b = rhou_b / rho_b
+            v_b = rhov_b / rho_b
+            w_b = rhow_b / rho_b
 
 
-
-
-
+            !
+            ! Compute speed of sound across boundary
+            !
+            c_b = sqrt(gam_b * p_b / rho_b )
 
 
 
             !
-            ! Interpolate interior solution to quadrature nodes
+            ! Compute characteristic variables across boundary
             !
-            call interpolate_face(mesh,face,q,irho, rho_m, LOCAL)
-            call interpolate_face(mesh,face,q,irhou,rhou_m,LOCAL)
-            call interpolate_face(mesh,face,q,irhov,rhov_m,LOCAL)
-            call interpolate_face(mesh,face,q,irhow,rhow_m,LOCAL)
-            call interpolate_face(mesh,face,q,irhoE,rhoE_m,LOCAL)
-
-            call prop%fluid%compute_pressure(rho_m,rhou_m,rhov_m,rhow_m,rhoE_m,p_m)
-            call prop%fluid%compute_gamma(rho_m,rhou_m,rhov_m,rhow_m,rhoE_m,gam_m)
+            c1_b = -(c_b**TWO)*rho_b +      ZERO     +       ZERO      +    p_b
+            c2_b =         ZERO      +      ZERO     +  rho_b*c_b*v_b  +   ZERO
+            c3_b =         ZERO      + rho_b*c_b*u_b +       ZERO      +    p_b
+            c4_b =         ZERO      - rho_b*c_b*u_b +       ZERO      +    p_b
 
 
+            !
+            ! Compute DFT of characteristic variables
+            !
+            call dft(c1_b, c1_real, c1_imag)
+            call dft(c2_b, c2_real, c2_imag)
+            call dft(c3_b, c3_real, c3_imag)
+            call dft(c4_b, c4_real, c4_imag)
 
+
+
+
+
+            !-------------------------------------------------------
+            !
+            !   Adjust mean component
+            !
+            !-------------------------------------------------------
+
+
+            !
+            ! Evaluate mean component of characteristic variables at gq nodes
+            !
+            imode = 1
+            call idft_mode_points(ymin, periodicity, c1_real, c1_imag, imode, gq_y_points, c1_f)
+            call idft_mode_points(ymin, periodicity, c2_real, c2_imag, imode, gq_y_points, c2_f)
+            call idft_mode_points(ymin, periodicity, c3_real, c3_imag, imode, gq_y_points, c3_f)
+            call idft_mode_points(ymin, periodicity, c4_real, c4_imag, imode, gq_y_points, c4_f)
 
 
             !
             ! Compute velocity components
             !
-            u_m = rhou_m/rho_m
-            v_m = rhov_m/rho_m
-            w_m = rhow_m/rho_m
+            u_f = rhou_f/rho_f
+            v_f = rhov_f/rho_f
+            w_f = rhow_f/rho_f
 
 
             !
             ! Compute interior speed of sound
             !
-            c_i = sqrt(gam_m * p_m / rho_m )
+            c_f = sqrt(gam_f * p_f / rho_f )
 
 
             !
             ! Compute velocity magnitude from interior state
             !
-            vmag2_m = (u_m*u_m) + (v_m*v_m) + (w_m*w_m)
-            vmag = sqrt(vmag2_m)
-
+            vmag2_f = (u_f*u_f) + (v_f*v_f) + (w_f*w_f)
+            vmag_f = sqrt(vmag2_f)
 
 
             !
-            ! Compute interior total enthalpy and R+ characteristic
+            ! Compute face total enthalpy and R+ characteristic
             !
-            Ht    = (p_m / rho_m) * (gam_m/(gam_m - ONE)) + HALF*(vmag2_m)
-            Rplus = -vmag - TWO*c_i/(gam_m - ONE)
-
+            Ht_f    = (p_f / rho_f) * (gam_f/(gam_f - ONE)) + HALF*(vmag2_f)
+            Rplus_f = -vmag_f - TWO*c_f/(gam_f - ONE)
 
 
             !
             ! solve quadratic equation for c_b
             !
-            a = ONE + TWO/(gam_m - ONE)
-            b = TWO * Rplus
-            c = ((gam_m - ONE)/TWO) * (Rplus**TWO - TWO*Ht)
+            a = ONE + TWO/(gam_f - ONE)
+            b = TWO * Rplus_f
+            c = ((gam_f - ONE)/TWO) * (Rplus_f**TWO - TWO*Ht_f)
             
 
             cb_plus  = (-b  +  sqrt(b**TWO - FOUR*a*c))/(TWO*a)
@@ -312,7 +401,7 @@ contains
             !
             ! Get boundary condition velocity from extrapolated characteristic and computed c_b
             !
-            vmag_b = -TWO*c_b/(gam_m - ONE) - Rplus
+            vmag_b = -TWO*c_b/(gam_m - ONE) - Rplus_f
 
 
             !
@@ -347,6 +436,71 @@ contains
                 type is (EULER_properties_t)
                     rho_b = p_b/(t_b*prop%R)
             end select
+
+
+
+
+
+
+
+
+            !
+            ! Evaluate influence of characteristic harmonics.
+            !
+            ! Dont use mean component here so only use 2,nmodes.
+            !
+            do imode = 2,nmodes
+
+                !
+                ! Evaluate modes of characteristics at gq points. c1,c2,c3=0 ( 1D, unsteady, nonreflecting).
+                !
+                dc4 = idft_mode_points(c4_modes,ymin,periodicity,gq_y_points)
+
+                !
+                ! Compute update in primitive variables resulting from characteristics
+                !
+                rho_b = rho_b + dc4*(ONE/(TWO*(cbar**TWO)))
+                u_b   = u_b   - dc4*(ONE/(TWO*rhobar*cbar))
+                v_b   = v_b
+                w_b   = w_b
+                p_b   = p_b   + dc4*HALF
+                
+
+            end do ! imode
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

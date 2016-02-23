@@ -114,8 +114,8 @@ contains
 
 
                         if ( allocated(A%dom(idom)%bc_blks(ielem,iblk)%mat) ) then
-                            dparent = A%dom(idom)%bc_blks(ielem,iblk)%dparent()
-                            eparent = A%dom(idom)%bc_blks(ielem,iblk)%eparent()
+                             dparent = A%dom(idom)%bc_blks(ielem,iblk)%dparent()
+                             eparent = A%dom(idom)%bc_blks(ielem,iblk)%eparent()
 
                             associate ( resvec => res%dom(idom)%lvecs(ielem)%vec, &
                                         xvec => x%dom(dparent)%lvecs(eparent)%vec, &

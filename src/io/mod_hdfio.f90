@@ -7,10 +7,14 @@ module mod_hdfio
     use type_bc,            only: bc_t
     use mod_bc,             only: create_bc
     use type_chidg_data,    only: chidg_data_t
-    use mod_hdf_utilities,  only: get_ndomains_hdf
+    use mod_hdf_utilities,  only: get_ndomains_hdf, get_domain_names_hdf, get_eqnset_hdf
     use hdf5
     use h5lt
     use mod_io, only: nterms_s, eqnset
+    
+
+
+
     implicit none
 
 
@@ -45,6 +49,7 @@ contains
         real(rk), dimension(:,:,:), allocatable, target :: xpts, ypts, zpts
         type(c_ptr)                                     :: cp_pts
 
+        character(len=1024),    allocatable     :: dnames(:), eqnset(:)
         character(1024)                         :: gname
         integer                                 :: nmembers, type, ierr, ndomains, igrp,    &
                                                    npts, izeta, ieta, ixi, idom, nterms_1d, &
@@ -96,20 +101,34 @@ contains
 
 
 
-
+        !
         !  Get number of groups in the file root
+        !
         call h5gn_members_f(fid, "/", nmembers, ierr)
         if (ierr /= 0) call chidg_signal(FATAL,"read_grid_hdf5: error getting number of groups in file root.")
+
+
+
+        !
+        ! Get equationset strings.
+        !
+        dnames   = get_domain_names_hdf(fid)
+        eqnset   = get_eqnset_hdf(fid,dnames)
+
+
+
 
         !
         !  Loop through groups and read domains
         !
         idom = 1
-        do igrp = 0,nmembers-1
-            call h5gget_obj_info_idx_f(fid,"/", igrp, gname, type, ierr)
-
-            if (gname(1:2) == 'D_') then
-
+        do idom = 1,size(dnames)
+!        do igrp = 0,nmembers-1
+!            call h5gget_obj_info_idx_f(fid,"/", igrp, gname, type, ierr)
+!
+!            if (gname(1:2) == 'D_') then
+!
+             gname = dnames(idom)
                 !
                 ! Open the Domain/Grid group
                 !
@@ -186,9 +205,10 @@ contains
                 end do
 
 
+                !
                 ! Read equation set attribute
-!                call h5ltget_attribute_string_f(fid,trim(gname),'EquationSet',eqnset,ierr)
-!                if (ierr /= 0) stop "Error: read_grid_hdf5: h5ltget_attribute_string_f -- EquationSet"
+                !
+                meshdata(idom)%eqnset = eqnset(idom)
 
 
 
@@ -214,9 +234,9 @@ contains
 
                 ! Deallocate points for the current domain
                 deallocate(zpts,ypts,xpts)
-                idom = idom + 1
+!                idom = idom + 1
 
-            end if
+            !end if
 
         end do  ! igrp
 
@@ -715,7 +735,6 @@ contains
                 !
                 ! Read variable
                 !
-                !call read_variable_hdf(filename,cvar,time,idom,data)
                 call read_variable_hdf(fid,cvar,time,trim(dname),data)
             end do ! ieqn
 

@@ -246,6 +246,12 @@ contains
         !
         ! Allocation for 'boundary condition blocks'
         !
+        ! TODO: If the only 'coupled' element to the local face flux is the local element,
+        !       then a block is still allocated for it here. However, the linearization of the
+        !       local element is stored in self%lblks so the block here is not used. It
+        !       would be wasted compute time in the matrix-vector product because it is 
+        !       just zeros.
+        !
         !------------------------------------------------------------------------------
         if (init_bc) then
             if (allocated(self%bc_blks)) deallocate(self%bc_blks)
@@ -289,7 +295,7 @@ contains
 
 
         !
-        ! Loop through elements and call initialization for 'local' and 'chimera' denseblock matrices
+        ! Loop through elements and call initialization for 'local', 'chimera', and 'boundary condition' denseblock matrices
         !
         do ielem = 1,mesh%nelem
 
@@ -639,7 +645,10 @@ contains
 
 
 
-    !>  Stores derivative data from boundary condition coupling to the linearization matrix
+    !>  Stores derivative data from boundary condition coupling to the linearization matrix.
+    !!
+    !!  The linearization of a flux wrt the local element is stored in self%lblks in the DIAG location.
+    !!  The linearization of a flux wrt other elements on the boundary is stored in self%bc_blks.
     !!
     !!  @author Nathan A. Wukie
     !!  @date   2/1/2016

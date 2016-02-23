@@ -15,6 +15,7 @@ module type_meshdata
 
         character(len=:),   allocatable :: name             !< Name of the current block
         type(point_t),      allocatable :: points(:,:,:)    !< Rank-3 array containing mesh points
+        character(len=:),   allocatable :: eqnset           !< String indicating the equation set to allocate for the domain
         integer(ik)                     :: nterms_c         !< Integer specifying the number of terms in the coordinate expansion
         integer(ik)                     :: proc             !< Integer specifying the processor assignment
 

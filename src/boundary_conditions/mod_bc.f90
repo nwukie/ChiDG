@@ -5,9 +5,8 @@
 !!  Registering boundary conditions
 !!      - To register a boundary condition:
 !!          1st: Import it's definition for use in the current module
-!!          2nd: Declare an instance of the boundary condition
-!!          3rd: Extend 'create_bc' to include a selection criteria for the boundary condition
-!!          4th: Under the selection criteria in 'create_bc', include a statement for dynamically allocating the boundary condition
+!!          2nd: In the 'register_bcs' routine, declare an instance of the boundary condition
+!!          3rd: In the 'register_bcs' routine, push an instanace of the bc to the registered_bcs vector 
 !!
 !--------------------------------------------------------
 module mod_bc
@@ -26,7 +25,9 @@ module mod_bc
     use bc_euler_totalinlet_characteristic, only: euler_totalinlet_characteristic_t
     use bc_euler_pressureoutlet,            only: euler_pressureoutlet_t
     use bc_euler_extrapolate,               only: euler_extrapolate_t
-!    use bc_euler_giles_inlet,               only: euler_giles_inlet_t
+    use bc_euler_giles_outlet,              only: euler_giles_outlet_t
+    use bc_euler_giles_outlet_2D_a,         only: euler_giles_outlet_2D_a_t
+    use bc_euler_giles_outlet_2D_b,         only: euler_giles_outlet_2D_b_t
     implicit none
 
 
@@ -42,7 +43,9 @@ contains
     !>  Register boundary conditions in a module vector.
     !!
     !!  This allows the available boundary conditions to be queried in the same way that they 
-    !!  are registered for allocation.
+    !!  are registered for allocation. 
+    !!
+    !!  This gets called by chidg%init('env')
     !!
     !!  @author Nathan A. Wukie
     !!  @date   2/8/2016
@@ -62,7 +65,9 @@ contains
         type(euler_totalinlet_characteristic_t) :: EULER_TOTALINLET_CHARCTERISTIC
         type(euler_pressureoutlet_t)            :: EULER_PRESSUREOUTLET
         type(euler_extrapolate_t)               :: EULER_EXTRAPOLATE
-!        type(euler_giles_inlet_t)               :: EULER_GILES_INLET
+        type(euler_giles_outlet_t)              :: EULER_GILES_OUTLET
+        type(euler_giles_outlet_2D_a_t)         :: EULER_GILES_OUTLET_2D_A
+        type(euler_giles_outlet_2D_b_t)         :: EULER_GILES_OUTLET_2D_B
 
 
         if ( .not. initialized ) then
@@ -76,7 +81,10 @@ contains
             call registered_bcs%push_back(EULER_TOTALINLET_CHARCTERISTIC)
             call registered_bcs%push_back(EULER_PRESSUREOUTLET)
             call registered_bcs%push_back(EULER_EXTRAPOLATE)
-!            call registered_bcs%push_back(EULER_GILES_INLET)
+
+            call registered_bcs%push_back(EULER_GILES_OUTLET)
+            call registered_bcs%push_back(EULER_GILES_OUTLET_2D_A)
+            call registered_bcs%push_back(EULER_GILES_OUTLET_2D_B)
 
 
             !
@@ -84,7 +92,9 @@ contains
             !
             nbcs = registered_bcs%size()
             do ibc = 1,nbcs
+
                 call registered_bcs%data(ibc)%bc%add_options()
+
             end do
 
             !

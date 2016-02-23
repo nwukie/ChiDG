@@ -36,7 +36,6 @@ module type_vector
         !< Data modifiers
         procedure,  public  :: push_back
         procedure,  public  :: clear
-        procedure           :: push_back_store
         procedure           :: increase_capacity
 
 
@@ -53,6 +52,7 @@ contains
     !> This function returns the number of elements stored in the container
     !!
     !!  @author Nathan A. Wukie
+    !!  @date   2/17/2016
     !!
     !!
     !-------------------------------------------------------------------------
@@ -69,6 +69,7 @@ contains
     !> This function returns the total capacity of the container to store elements
     !!
     !!  @author Nathan A. Wukie
+    !!  @date   2/17/2016
     !!
     !!
     !-------------------------------------------------------------------------
@@ -88,27 +89,20 @@ contains
 
 
 
-    !> Store real element to end of vector
+    !> Store element to end of vector
     !!
     !!  @author Nathan A. Wukie
+    !!  @date   2/17/2016
     !!
     !!
-    !--------------------------------------------------------------------------------------------
-    subroutine push_back(self,relement)
+    !-----------------------------------------------------------------------------------------
+    subroutine push_back(self,element)
         class(vector_t), intent(inout)   :: self
-        real(rk),        intent(in)      :: relement
+        class(*),        intent(in)      :: element
         
         type(datawrapper_t)     :: wrapper
         logical                 :: capacity_reached
         integer                 :: ierr, size
-
-        
-        !
-        ! Allocate wrapper component and store data
-        !
-        allocate(wrapper%elem, source=relement, stat=ierr)
-        if (ierr /= 0) AllocationError
-
 
         !
         ! Test if container has storage available. If not, then increase capacity
@@ -117,13 +111,22 @@ contains
         if (capacity_reached) then
             call self%increase_capacity()
         end if
+        
+
+        !
+        ! Allocate wrapper component and store data
+        !
+        !allocate(wrapper%elem, source=element, stat=ierr)
+        !if (ierr /= 0) call AllocationError
 
 
         !
         ! Add element to end of vector
         !
         size = self%size()
-        self%data(size + 1) = element
+        allocate(self%data(size + 1)%elem, source=element, stat=ierr)
+        if (ierr /= 0) call AllocationError
+        !self%data(size + 1) = element
 
 
         !
@@ -133,6 +136,7 @@ contains
 
 
     end subroutine push_back
+    !*****************************************************************************************
 
 
 
@@ -154,7 +158,7 @@ contains
         self%size_     = 0
         self%capacity_ = 0
 
-        deallocate(self%data_)
+        deallocate(self%data)
 
     end subroutine clear
 
@@ -223,6 +227,7 @@ contains
     !> Increase the storage capacity of the vector by a buffer size predefined in the container
     !!
     !!  @author Nathan A. Wukie
+    !!  @date   2/17/2016
     !!
     !!
     !------------------------------------------------------------------------------------------
@@ -236,7 +241,12 @@ contains
         !
         ! Allocate temporary vector of current size plus a buffer
         !
-        newsize = ubound(self%data,1) + self%buffer_
+        if ( allocated(self%data) ) then
+            newsize = ubound(self%data,1) + self%buffer_
+        else
+            newsize = self%buffer_
+        end if
+
         allocate(temp(newsize),stat=ierr)
         if (ierr /= 0) call AllocationError
 
@@ -262,6 +272,7 @@ contains
 
 
     end subroutine increase_capacity
+    !******************************************************************************************
 
 
 

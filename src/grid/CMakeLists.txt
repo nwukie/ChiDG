@@ -9,6 +9,7 @@ add_lib_sources(
                 mod_interpolate.f90
                 mod_grid.f90 
                 mod_grid_tools.f90
+                mod_grid_tools_two.f90
                 mod_grid_operators.f90
                 mod_DNAD_tools.f90
                 )

@@ -39,10 +39,12 @@ contains
     !>  Factory method for creating matrixsolver objects
     !!
     !!  @author Nathan A. Wukie
+    !!  @date   2/17/2016
     !!
     !!  @param[in]      mstring     Character string used to select the appropriate matrixsolver for allocation
     !!  @param[inout]   msolver     matrixsolver_t that will be allocated to a concrete type.
-    !------------------------------------------------------
+    !!
+    !---------------------------------------------------------------------------------------------------------------------
     subroutine create_matrixsolver(mstring,msolver,options)
         character(len=*),                    intent(in)      :: mstring
         class(matrixsolver_t), allocatable,  intent(inout)   :: msolver
@@ -97,16 +99,8 @@ contains
 
 
 
-
-
-
-
-
-
-
-
-
     end subroutine create_matrixsolver
+    !*********************************************************************************************************************
 
 
 

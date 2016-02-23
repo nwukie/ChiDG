@@ -1424,8 +1424,61 @@ CONTAINS
          ENDIF
     END FUNCTION ASIN_D_D
 
+
+
+    !-----------------------------------------
+    !
+    ! @author   Nathan A. Wukie
+    ! @date     2/23/2016
+    !
+    ! ATAN of dual numbers
+    ! ATAN<u,up>=<ATAN(u), up/(1+(u%x_ad_)**2)>
+    !----------------------------------------
+    ELEMENTAL FUNCTION ATAN_D_D(u) RESULT(res)
+         TYPE (AD_D), INTENT(IN)::u
+         TYPE (AD_D)::res
+         REAL(DBL_AD)::tmp 
+         allocate(res%xp_ad_(size(u%xp_ad_)))
+
+         res%x_ad_ = ATAN(u%x_ad_)
+
+         tmp= 1.0d0/(1.0D0+(u%x_ad_)**2)
+         res%xp_ad_= u%xp_ad_*tmp
+    END FUNCTION ATAN_D_D
+
+
+
+
+!    !-----------------------------------------
+!    !
+!    ! @author   Nathan A. Wukie
+!    ! @date     2/23/2016
+!    !
+!    ! ATAN2 of dual numbers
+!    ! ATAN2<u,up>=<ATAN2(u), up/(1+(u%x_ad_)**2)>
+!    !----------------------------------------
+!    ELEMENTAL FUNCTION ATAN2_D_D(u,v) RESULT(res)
+!         TYPE (AD_D), INTENT(IN)::u
+!         TYPE (AD_D), INTENT(IN)::v
+!         TYPE (AD_D)::res
+!         REAL(DBL_AD)::tmp 
+!         allocate(res%xp_ad_(size(u%xp_ad_)))
+!
+!         res%x_ad_ = ATAN2(u%x_ad_,v%x_ad_)
+!
+!         tmp= 1.0d0/(1.0D0+(u%x_ad_)**2)
+!         res%xp_ad_= u%xp_ad_*tmp
+!    END FUNCTION ATAN2_D_D
+!
+
+
+
+
+
+
+
         
-      !-----------------------------------------
+    !-----------------------------------------
     ! COS of dual numbers
     ! COS<u,up>=<COS(u),-up*SIN(u)>
     !----------------------------------------

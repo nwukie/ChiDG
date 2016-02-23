@@ -16,10 +16,13 @@ module type_matrixsolver
     !! for solving the linear system Ax=b  
     !!
     !!  @author Nathan A. Wukie
+    !!  @date   2/17/2016
     !!
     !!
     !-----------------------------------------------------------------------------------------------------
     type, public, abstract :: matrixsolver_t
+
+!        character(len=:), allocatable   :: name_
 
         ! OPTIONS
         real(rk)        :: tol   = 1.e-8_rk     !< Convergance tolerance for iterative solvers
@@ -32,7 +35,9 @@ module type_matrixsolver
     contains
     
         procedure   :: init
+!        procedure   :: set_options
         procedure   :: set
+!        procedure   :: get_name
 
         procedure(solve_interface), deferred :: solve
 
@@ -76,6 +81,7 @@ contains
     !> Base initialization for every matrixsolver
     !!
     !!  @author Nathan A. Wukie
+    !!  @date   2/17/2016
     !!
     !!
     !---------------------------------------------------------------------------------------------------
@@ -92,11 +98,34 @@ contains
 
 
 
+!    !>
+!    !!
+!    !!  @author Nathan A. Wukie
+!    !!  @date   2/17/2016
+!    !!
+!    !!
+!    !!
+!    !------------------------------------------------------------------------------------------
+!    subroutine set_options(self)
+!        class(matrixsolver_t),  intent(inout)   :: self
+!
+!
+!
+!    end subroutine set_options
+!    !*******************************************************************************************
 
 
-    !> Procedure for setting base matrix_solver options
+
+
+
+
+
+
+
+    !> Procedure for setting base matrix_solver options.
     !!
     !!  @author Nathan A. Wukie
+    !!  @date   2/17/2016
     !!
     !!  @param[in]  options     Dictionary containing base matrixsovler options
     !!
@@ -111,6 +140,27 @@ contains
     end subroutine set
     !***************************************************************************************************
 
+
+
+
+
+!    !>  Return the name of the matrix solver.
+!    !!
+!    !!  @author Nathan A. Wukie
+!    !!  @date   2/17/2016
+!    !!
+!    !!
+!    !!
+!    !-----------------------------------------------------------------------------------------
+!    function get_name(self) result(res)
+!        class(matrixsolver_t),  intent(in)  :: self
+!
+!        character(len=:), allocatable :: res
+!
+!        res = trim(self%name_)
+!
+!    end function get_name
+!    !******************************************************************************************
 
 
 
@@ -133,7 +183,8 @@ contains
     !! So a residual is defined as:
     !!      R = b - Ax
     !!
-    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   2/17/2016
     !!
     !--------------------------------------------------------------------------------------------------------
     function residual(self,A,x,b) result(r)
@@ -188,6 +239,8 @@ contains
     !!
     !!  error = ||R||_2
     !!
+    !!  @author Nathan A. Wukie
+    !!  @date   2/17/2016
     !!
     !-------------------------------------------------------------------------------------------------
     function error(self,A,x,b) result(err)

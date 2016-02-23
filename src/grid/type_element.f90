@@ -9,7 +9,7 @@ module type_element
     use DNAD_D
     use mod_quadrature,         only: GQ, get_quadrature
     use mod_grid,               only: ELEM_MAP
-    use mod_polynomial,         only: polynomialVal
+    use mod_polynomial,         only: polynomialVal, dpolynomialVal
     use mod_grid_tools,         only: compute_modal_coordinates
     use mod_inv,                only: inv
     implicit none
@@ -82,6 +82,8 @@ module type_element
         procedure, public   :: x
         procedure, public   :: y
         procedure, public   :: z
+        procedure, public   :: compute_metric
+
 
         ! Private utility procedure
         procedure           :: compute_element_matrices
@@ -674,6 +676,79 @@ contains
 
     end function z
     !***************************************************************************************************************
+
+
+
+
+
+
+
+
+    !> Compute coordinate metric term at a given point in computational space
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   2/1/2016
+    !!
+    !!  @param[in]  elem        element_t containing the geometry definition and data
+    !!  @param[in]  cart_dir    Cartesian coordinate being differentiated
+    !!  @param[in]  comp_dir    Computational coordinate being differentiated with respect to
+    !!  @param[in]  xi          Computational coordinate - xi
+    !!  @param[in]  eta         Computational coordinate - eta
+    !!  @param[in]  zeta        Computational coordinate - zeta
+    !!
+    !----------------------------------------------------------------------------------------------------------------
+    function compute_metric(self,cart_dir,comp_dir,xi,eta,zeta) result(val)
+        class(element_t),   intent(in)  :: self
+        integer(ik),        intent(in)  :: cart_dir
+        integer(ik),        intent(in)  :: comp_dir
+        real(rk),           intent(in)  :: xi, eta, zeta
+        
+        real(rk)        :: val
+        type(point_t)   :: node
+        real(rk)        :: polyvals(self%nterms_c)
+        integer(ik)     :: iterm, ielem
+
+
+        if (cart_dir > 3) call chidg_signal(FATAL,"Error: mesh_point -- card_dir exceeded 3 physical coordinates")
+        if (comp_dir > 3) call chidg_signal(FATAL,"Error: mesh_point -- comp_dir exceeded 3 physical coordinates")
+
+        call node%set(xi,eta,zeta)
+
+
+        !
+        ! Evaluate polynomial modes at node location
+        !
+        do iterm = 1,self%nterms_c
+
+            polyvals(iterm) = dpolynomialVal(3,self%nterms_c,iterm,node,comp_dir)
+
+        end do
+
+
+        !
+        ! Evaluate mesh point from dot product of modes and polynomial values
+        !
+        val = dot_product(self%coords%getvar(cart_dir), polyvals)
+
+
+
+    end function compute_metric
+    !****************************************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

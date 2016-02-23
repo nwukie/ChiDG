@@ -224,6 +224,7 @@ contains
                 if ( crit >= L ) reorthogonalize = .true.
                 
 
+                reorthogonalize = .true.
                 if ( reorthogonalize ) then
                     call write_line('GMRES: Reorthogonalizing...')
 

@@ -274,7 +274,8 @@ contains
     !!
     !-------------------------------------------------------------------------------------------------------
     function getterm(self,ivar,iterm) result(mode_out)
-        class(densevector_t),   intent(inout)   :: self
+        !class(densevector_t),   intent(inout)   :: self
+        class(densevector_t),   intent(in)   :: self
         integer(ik),            intent(in)      :: ivar, iterm
 
         real(rk)    :: mode_out

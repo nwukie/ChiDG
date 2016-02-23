@@ -4,11 +4,16 @@ module mod_interpolate
     use mod_constants,      only: CHIMERA, INTERIOR, BOUNDARY, &
                                   LOCAL, NEIGHBOR
     use DNAD_D
+    use type_ivector,       only: ivector_t
+    use type_rvector,       only: rvector_t
+    use type_point,         only: point_t
     use type_mesh,          only: mesh_t
     use type_seed,          only: seed_t
     use type_face_info,     only: face_info_t
     use type_chidgVector,   only: chidgVector_t
     use mod_DNAD_tools,     only: compute_neighbor_domain, compute_neighbor_element, compute_neighbor_face
+    use mod_polynomial,     only: polynomialVal
+    use mod_grid_tools_two, only: compute_element_donor
     implicit none
 
 
@@ -23,6 +28,9 @@ module mod_interpolate
     end interface
 
 
+    interface interpolate_boundary
+        module procedure    interpolate_boundary_autodiff
+    end interface
 
 
 
@@ -574,6 +582,249 @@ contains
     end subroutine interpolate_face_standard
     !*************************************************************************************************************
 
+
+
+
+
+
+
+
+
+
+
+
+
+    !> Interpolate variable from polynomial expansion to explicit values at quadrature nodes. The automatic
+    !! differentiation process really starts here, when the polynomial expansion is evaluated.
+    !!
+    !! The interpolation process occurs through a matrix-vector multiplication. That is an interpolation matrix
+    !! multiplied by a vector of modes from the polynomial expansion. To start the automatic differentiation, 
+    !! the derivative arrays of the values for the polynomial modes must be initialized before any computation. 
+    !! So, before the matrix-vector multiplication.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   2/1/2016
+    !!
+    !!  @param[in]      mesh        Array of mesh instances.
+    !!  @param[in]      face        Face info, such as indices for locating the face in the mesh.
+    !!  @param[in]      q           Solution vector
+    !!  @param[in]      ieqn        Index of the equation variable being interpolated
+    !!  @param[inout]   var_gq      Array of auto-diff values of the equation evaluated at gq points that is passed back
+    !!  @param[in]      source      LOCAL/NEIGHBOR indicating which element to interpolate from
+    !!
+    !-----------------------------------------------------------------------------------------------------------
+    subroutine interpolate_boundary_autodiff(mesh,face,q,ieqn,points,var)
+        type(mesh_t),           intent(in)              :: mesh(:)
+        type(face_info_t),      intent(in)              :: face
+        type(chidgVector_t),    intent(in)              :: q
+        integer(ik),            intent(in)              :: ieqn
+        type(point_t),          intent(in)              :: points(:)
+        type(AD_D),             intent(inout)           :: var(:)
+
+        integer(ik)     :: idom, ielem, iface
+        type(seed_t)    :: seed
+
+        type(AD_D), allocatable  :: qdiff(:)
+        type(AD_D), allocatable  :: tmp(:)
+        real(rk),   allocatable  :: interpolator(:,:)
+
+        real(rk)        :: xi, eta, zeta
+        integer(ik)     :: nderiv, set_deriv, iterm, nterms_s, ierr, neqns_seed, nterms_s_seed, ipnt, nterms
+        integer(ik)     :: idom_seed, ielem_seed, idonor, idom_interp, ielem_interp, igq
+        integer(ik)     :: idom_d, ielem_d
+        type(point_t)   :: point_comp, node
+        type(ivector_t) :: donor_domains, donor_elements
+        type(rvector_t) :: donor_xi, donor_eta, donor_zeta
+        logical         :: linearize_me             = .false.
+
+
+
+
+
+        idom  = face%idomain
+        ielem = face%ielement
+        iface = face%iface
+        seed  = face%seed
+
+
+        !
+        ! Get domain/element index that is being differentiated
+        !
+        idom_seed  = seed%idom
+        ielem_seed = seed%ielem
+
+
+
+        !
+        ! Get the number of degrees of freedom for the seed element
+        ! and set this as the number of partial derivatives to track
+        !
+        if (ielem_seed == 0) then
+            !
+            ! If ielem_seed == 0 then we aren't interested in tracking derivatives
+            !
+            nderiv = 1
+
+        else
+            !
+            ! Get number of equations and terms in solution expansions
+            !
+            neqns_seed    = mesh(idom_seed)%elems(ielem_seed)%neqns
+            nterms_s_seed = mesh(idom_seed)%elems(ielem_seed)%nterms_s
+
+            !
+            ! Compute number of unknowns in the seed element, which is the number of partial derivatives we are tracking
+            !
+            nderiv = neqns_seed  *  nterms_s_seed
+        end if
+
+
+
+        !
+        ! Allocate the derivative array for each autodiff variable
+        ! MIGHT NOT NEED THIS IF IT GETS AUTOMATICALLY ALLOCATED ON ASSIGNMENT -- TEST
+        !
+        do igq = 1,size(var)
+            allocate(var(igq)%xp_ad_(nderiv))
+        end do
+
+
+
+
+        !
+        ! Find elements associated with boundary nodes
+        !
+        do ipnt = 1,size(points)
+
+
+            call compute_element_donor(mesh, points(ipnt), idom_d, ielem_d, point_comp)
+
+
+            call donor_domains%push_back(  idom_d  )
+            call donor_elements%push_back( ielem_d )
+            call donor_xi%push_back(   point_comp%c1_ )
+            call donor_eta%push_back(  point_comp%c2_ )
+            call donor_zeta%push_back( point_comp%c3_ )
+
+        end do ! ipnt
+
+
+
+
+        !
+        ! For each donor element to the interpolation.
+        !
+        do idonor = 1,donor_elements%size()
+
+
+            !
+            ! Get donor element and coordinate
+            !
+            idom_interp  = donor_domains%at(idonor)
+            ielem_interp = donor_elements%at(idonor)
+
+            xi   = donor_xi%at(  idonor)
+            eta  = donor_eta%at( idonor)
+            zeta = donor_zeta%at(idonor)
+
+            call node%set(xi,eta,zeta)
+
+
+            !
+            ! Get interpolation matrix from quadrature instance
+            !
+            nterms = mesh(idom_interp)%elems(ielem_interp)%nterms_s
+            if (allocated(interpolator)) deallocate(interpolator)
+            allocate(interpolator(1,nterms), stat=ierr)
+            if (ierr /= 0) call AllocationError
+
+            do iterm = 1,nterms
+                interpolator(1,iterm) = polynomialVal(3,nterms,iterm,node)
+            end do ! imode
+
+
+
+
+
+            !
+            ! If the current element is being differentiated (ielem == ielem_seed)
+            ! then copy the solution modes to local AD variable and seed derivatives
+            !
+
+            linearize_me = ( (idom_interp == idom_seed) .and. (ielem_interp == ielem_seed) )
+
+            if ( linearize_me ) then
+
+
+                !
+                ! Allocate AD array to store a copy of the solution which starts the differentiation
+                !
+                nterms_s = mesh(idom_interp)%elems(ielem_interp)%nterms_s
+                if ( allocated(qdiff) ) deallocate(qdiff)
+                allocate(qdiff(nterms_s), stat=ierr)
+                if (ierr /= 0) call AllocationError
+
+
+                !
+                ! Allocate derivative arrays for temporary solution variable
+                !
+                do iterm = 1,nterms_s
+                    allocate(qdiff(iterm)%xp_ad_(nderiv))
+                end do
+
+
+                !
+                ! Copy the solution variables from 'q' to 'qdiff'
+                !
+                qdiff = q%dom(idom_interp)%lvecs(ielem_interp)%getvar(ieqn)
+
+
+                !
+                ! Loop through the terms in qdiff and seed derivatives
+                !
+                do iterm = 1,size(qdiff)
+                    ! For the given term, seed its appropriate derivative
+                    set_deriv = (ieqn - 1)*nterms_s + iterm
+                    qdiff(iterm)%xp_ad_(set_deriv) = 1.0_rk
+                end do
+
+
+
+
+                !
+                ! Interpolate solution to GQ nodes via matrix-vector multiplication
+                !
+                !var(idonor) = matmul(interpolator(1,:),  qdiff)
+                tmp = matmul(interpolator,  qdiff)
+                var(idonor) = tmp(1)
+
+            else
+
+                !
+                ! If the solution variable derivatives dont need initialized
+                ! then just use the q(ielem) values and derivatives get
+                ! initialized to zero
+                !
+
+                if ( allocated(tmp) ) deallocate(tmp)
+                allocate(tmp(1))
+                allocate(tmp(1)%xp_ad_(nderiv))
+
+                
+                !var(idonor) = matmul(interpolator(1,:),  q%dom(idom_interp)%lvecs(ielem_interp)%getvar(ieqn))
+                tmp = matmul(interpolator,  q%dom(idom_interp)%lvecs(ielem_interp)%getvar(ieqn))
+                var(idonor) = tmp(1)
+
+            end if
+
+
+
+
+        end do ! idonor
+
+
+    end subroutine interpolate_boundary_autodiff
+    !*************************************************************************************************************
 
 
 

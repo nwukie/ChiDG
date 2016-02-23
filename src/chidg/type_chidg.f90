@@ -5,7 +5,7 @@ module type_chidg
     use mod_bc,                 only: register_bcs
     use mod_function,           only: register_functions
     use mod_grid,               only: initialize_grid
-    use mod_io,                 only: read_input, nterms_s, eqnset
+    use mod_io,                 only: read_input, nterms_s
     use mod_string_utilities,   only: get_file_extension
 
     use type_chidg_data,        only: chidg_data_t
@@ -290,7 +290,7 @@ contains
                                       trim(meshdata(idom)%name),    &
                                       meshdata(idom)%points,        &
                                       meshdata(idom)%nterms_c,      &
-                                      eqnset,                       &
+                                      meshdata(idom)%eqnset,        &
                                       nterms_s                      &
                                       )
         end do

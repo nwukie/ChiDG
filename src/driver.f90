@@ -21,6 +21,7 @@ program driver
     use mod_tecio,              only: write_tecio_variables
     use mod_chidg_edit,         only: chidg_edit
     use mod_chidg_convert,      only: chidg_convert
+    use mod_chidg_interpolate,  only: chidg_interpolate
     use mod_io
     
     !
@@ -32,7 +33,7 @@ program driver
     class(function_t),  allocatable     :: constant, vortex, sod, roe
 
     integer(ik)                         :: narg
-    character(len=1024)                 :: chidg_action, filename
+    character(len=1024)                 :: chidg_action, filename, file_a, file_b
 
 
 
@@ -187,7 +188,7 @@ program driver
 
 
     !
-    ! ChiDG tool execution
+    ! ChiDG tool execution. 2 arguments.
     !
     else if ( narg == 2 ) then
 
@@ -214,10 +215,35 @@ program driver
         else if ( trim(chidg_action) == 'convert' ) then
             call chidg_convert(trim(filename))
 
+
         else
             call chidg_signal(FATAL,"chidg: unrecognized action '"//trim(chidg_action)//"'. Valid options are: 'edit', 'convert'")
 
         end if
+
+
+
+    !
+    ! ChiDG tool execution. 3 arguments.
+    !
+    else if ( narg == 3 ) then
+
+
+        call get_command_argument(1,chidg_action)
+        call get_command_argument(2,file_a)
+        call get_command_argument(3,file_b)
+        
+
+        if ( trim(chidg_action) == 'interpolate' ) then
+            call chidg_interpolate(trim(file_a), trim(file_b))
+
+        else
+            call chidg_signal(FATAL,"chidg: unrecognized action '"//trim(chidg_action)//"'. Valid options are: 'edit', 'convert'")
+
+        end if
+
+
+
 
 
 

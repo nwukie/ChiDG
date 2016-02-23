@@ -428,7 +428,8 @@ contains
                 ! The integral should be the same for any value of idonor. Only the derivatives will change
                 !
                 !if ( ftype == BOUNDARY .and. iblk == DIAG ) then
-                if ( ftype == BOUNDARY ) then
+                if ( ftype == BOUNDARY .and. ( ielem == face_info%seed%ielem ) ) then
+
 
                     vals = rhs(ielem)%getvar(ieqn) + integral(:)%x_ad_
                     call rhs(ielem)%setvar(ieqn,vals)

@@ -251,6 +251,7 @@ contains
 
 
 
+
             call timer%stop()
             call timer%report('Spatial Discretization Time')
             if (present(timing)) then

@@ -220,9 +220,6 @@ subroutine test_integrate_boundary_nonunit_constant()
     !
     call meshgen('111',pts)
 
-    face%idomain  = 1
-    face%ielement = 1
-    face%iface    = XI_MIN
 
     nterms_c = 8
     nterms_s = 1
@@ -282,6 +279,10 @@ subroutine test_integrate_boundary_nonunit_constant()
     seed%idom  = 1
     seed%ielem = 1
     
+    face%idomain  = 1
+    face%ielement = 1
+    face%iface    = XI_MIN
+    face%seed     = seed
 
     idomain = 1
     ivar    = 1

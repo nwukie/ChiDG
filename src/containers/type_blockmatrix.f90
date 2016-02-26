@@ -253,7 +253,7 @@ contains
         !       just zeros.
         !
         !------------------------------------------------------------------------------
-        if (init_bc) then
+        if ( init_bc .and. present(bcset_coupling) ) then
             if (allocated(self%bc_blks)) deallocate(self%bc_blks)
 
             !
@@ -419,7 +419,7 @@ contains
         !
         ! Loop through boundary conditions and initialize blocks for coupling
         !
-        if (init_bc) then
+        if ( init_bc .and. present(bcset_coupling) ) then
             do ibc = 1,size(bcset_coupling%bc)
 
                 !

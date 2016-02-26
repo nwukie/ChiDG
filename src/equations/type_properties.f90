@@ -15,7 +15,7 @@ module type_properties
     !! and miscelaneous data pertaining to a particular equationset
     !!
     !!  @author Nathan A. Wukie
-    !!
+    !!  @date   2/25/2016
     !!
     !!
     !!
@@ -55,6 +55,7 @@ contains
     !>  Equation properties initialization
     !!
     !!  @author Nathan A. Wukie
+    !!  @date   2/25/2016
     !!
     !!  @param[in]  fluid   fluid_t object to be assigned
     !!  @param[in]  solid   solid_t object to be assigned
@@ -94,9 +95,10 @@ contains
     !! is initialized with an index indicating its location in the set. That index is used to 
     !! access the correct solution data values.
     !!
-    !!   @author Nathan A. Wukie
+    !!  @author Nathan A. Wukie
+    !!  @date   2/25/2016
     !!
-    !!   @param[in]  varstring   Character string identifying the desired variable
+    !!  @param[in]  varstring   Character string identifying the desired variable
     !!
     !---------------------------------------------------------------------------------------------------
     function get_eqn_index(self,varstring) result(varindex)
@@ -143,7 +145,7 @@ contains
     !> Add a fluid definition to the properties type
     !!
     !!  @author Nathan A. Wukie
-    !!
+    !!  @date   2/25/2016
     !!
     !!
     !---------------------------------------------------------------------------------------------------
@@ -177,28 +179,6 @@ contains
 
     end subroutine add_fluid
     !***************************************************************************************************
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 

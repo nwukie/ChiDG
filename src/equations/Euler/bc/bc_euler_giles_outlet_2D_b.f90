@@ -355,19 +355,6 @@ contains
 
 
 
-!                !
-!                ! TESTING PRESSURE MODES
-!                !
-!                call dft(p_b, ptest_real, ptest_imag)
-!
-!                print*, 'Amplitude of Fourier mode for p'
-!                do imode = 1,size(ptest_real)
-!                    print*, sqrt(ptest_real(imode)%x_ad_**TWO + ptest_imag(imode)%x_ad_**TWO)
-!                end do
-
-
-
-
                 !
                 ! Get boundary mean components at gq nodes
                 !
@@ -405,10 +392,6 @@ contains
 
 
 
-
-
-
-
                 !
                 ! Compute c4 characteristic due to update in mean pressure
                 !
@@ -417,9 +400,6 @@ contains
                 drho_mean =  (ONE/(TWO*c_bar_gq**TWO))       * c4_mean
                 du_mean   = -(ONE/(TWO*rho_bar_gq*c_bar_gq)) * c4_mean
                 dp_mean   =  HALF                            * c4_mean
-
-
-
 
 
 
@@ -451,7 +431,6 @@ contains
                 call dft(c2_b,  c2_real,  c2_imag)
                 call dft(c3_b,  c3_real,  c3_imag)
                 call dft(c4_b,  c4_real,  c4_imag)
-
 
 
 
@@ -524,11 +503,6 @@ contains
                     !
                     ! Add contribution of current mode characteristics to primitive variable perturbation
                     !
-!                    drho_mode = drho_mode + (-ONE/(c_bar_gq**TWO))* c1_gq +              ZERO                +    (ONE/(TWO*c_bar_gq**TWO))   * c3_gq +     (ONE/(TWO*c_bar_gq**TWO))   * c4_gq
-!                    du_mode   = du_mode   +         ZERO                  +              ZERO                + (ONE/(TWO*rho_bar_gq*c_bar_gq))* c3_gq -  (ONE/(TWO*rho_bar_gq*c_bar_gq))* c4_gq
-!                    dv_mode   = dv_mode   +         ZERO                  + ONE/(rho_bar_gq*c_bar_gq)* c2_gq +                ZERO                    +                 ZERO
-!                    dp_mode   = dp_mode   +         ZERO                  +              ZERO                +             HALF               * c3_gq +                 HALF            * c4_gq
-
 !                    drho_mode = drho_mode + TWO*     (ONE/(TWO*c_bar_gq**TWO))*c4_gq
 !                    du_mode   = du_mode   - TWO* (ONE/(TWO*rho_bar_gq*c_bar_gq))*c4_gq
 !                    dv_mode   = dv_mode   + TWO*                ZERO
@@ -614,8 +588,6 @@ contains
                 !
                 rhoE_bc = p_bc/(gam_bar_gq - ONE) + (rho_bc/TWO)*(u_bc*u_bc + v_bc*v_bc + w_bc*w_bc)
                 H_bc = (rhoE_bc + p_bc)/rho_bc
-
-
 
 
 

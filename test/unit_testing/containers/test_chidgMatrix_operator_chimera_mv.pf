@@ -137,7 +137,7 @@ subroutine test_chidgMatrix_operator_chimera_mv()
     !
     idonor = 1
     ! Set matrix values corresponding to first donor
-    chidg%data%sdata%lhs%dom(idom)%chiblks(ielem,idonor)%mat = ONE
+    chidg%data%sdata%lhs%dom(idom)%chi_blks(ielem,idonor)%mat = ONE
 
     idom_d = chidg%data%mesh(idom)%chimera%recv%data(ChiID)%donor_domain%at(idonor)
     ielem_d = chidg%data%mesh(idom)%chimera%recv%data(ChiID)%donor_element%at(idonor)
@@ -150,7 +150,7 @@ subroutine test_chidgMatrix_operator_chimera_mv()
 
     idonor = 2
     ! Set matrix values corresponding to first donor
-    chidg%data%sdata%lhs%dom(idom)%chiblks(ielem,idonor)%mat = TWO
+    chidg%data%sdata%lhs%dom(idom)%chi_blks(ielem,idonor)%mat = TWO
 
 
 
@@ -281,15 +281,15 @@ subroutine test_chidgMatrix_operator_chimera_mv()
 
 
     idonor = 1
-    idom_p = chidg%data%sdata%lhs%dom(idom)%chiblks(ielem,idonor)%dparent()
-    ielem_p = chidg%data%sdata%lhs%dom(idom)%chiblks(ielem,idonor)%eparent()
-    refvec = refvec + matmul(chidg%data%sdata%lhs%dom(idom)%chiblks(ielem,idonor)%mat, chidg%data%sdata%rhs%dom(idom_p)%lvecs(ielem_p)%vec)
+    idom_p = chidg%data%sdata%lhs%dom(idom)%chi_blks(ielem,idonor)%dparent()
+    ielem_p = chidg%data%sdata%lhs%dom(idom)%chi_blks(ielem,idonor)%eparent()
+    refvec = refvec + matmul(chidg%data%sdata%lhs%dom(idom)%chi_blks(ielem,idonor)%mat, chidg%data%sdata%rhs%dom(idom_p)%lvecs(ielem_p)%vec)
 
 
     idonor = 2
-    idom_p = chidg%data%sdata%lhs%dom(idom)%chiblks(ielem,idonor)%dparent()
-    ielem_p = chidg%data%sdata%lhs%dom(idom)%chiblks(ielem,idonor)%eparent()
-    refvec = refvec + matmul(chidg%data%sdata%lhs%dom(idom)%chiblks(ielem,idonor)%mat, chidg%data%sdata%rhs%dom(idom_p)%lvecs(ielem_p)%vec)
+    idom_p = chidg%data%sdata%lhs%dom(idom)%chi_blks(ielem,idonor)%dparent()
+    ielem_p = chidg%data%sdata%lhs%dom(idom)%chi_blks(ielem,idonor)%eparent()
+    refvec = refvec + matmul(chidg%data%sdata%lhs%dom(idom)%chi_blks(ielem,idonor)%mat, chidg%data%sdata%rhs%dom(idom_p)%lvecs(ielem_p)%vec)
 
 
 

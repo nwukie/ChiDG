@@ -228,25 +228,25 @@ subroutine test_update_space_linearadvection()
     ! Domain 1 Chimera Blocks
     !
     @assertEqual(chidgA%data%sdata%lhs%dom(1)%lblks(2,XI_MIN)%mat,   chidgB%data%sdata%lhs%dom(1)%lblks(2,XI_MIN)%mat)
-    @assertEqual(chidgA%data%sdata%lhs%dom(1)%lblks(2,XI_MAX)%mat,   chidgB%data%sdata%lhs%dom(1)%chiblks(2,1)%mat)
+    @assertEqual(chidgA%data%sdata%lhs%dom(1)%lblks(2,XI_MAX)%mat,   chidgB%data%sdata%lhs%dom(1)%chi_blks(2,1)%mat)
     @assertEqual(chidgA%data%sdata%lhs%dom(1)%lblks(2,ETA_MAX)%mat,  chidgB%data%sdata%lhs%dom(1)%lblks(2,ETA_MAX)%mat)
     @assertEqual(chidgA%data%sdata%lhs%dom(1)%lblks(2,ZETA_MAX)%mat, chidgB%data%sdata%lhs%dom(1)%lblks(2,ZETA_MAX)%mat)
 
 
     @assertEqual(chidgA%data%sdata%lhs%dom(1)%lblks(6,XI_MIN)%mat,   chidgB%data%sdata%lhs%dom(1)%lblks(4,XI_MIN)%mat)
-    @assertEqual(chidgA%data%sdata%lhs%dom(1)%lblks(6,XI_MAX)%mat,   chidgB%data%sdata%lhs%dom(1)%chiblks(4,1)%mat)
+    @assertEqual(chidgA%data%sdata%lhs%dom(1)%lblks(6,XI_MAX)%mat,   chidgB%data%sdata%lhs%dom(1)%chi_blks(4,1)%mat)
     @assertEqual(chidgA%data%sdata%lhs%dom(1)%lblks(6,ETA_MIN)%mat,  chidgB%data%sdata%lhs%dom(1)%lblks(4,ETA_MIN)%mat)
     @assertEqual(chidgA%data%sdata%lhs%dom(1)%lblks(6,ZETA_MAX)%mat, chidgB%data%sdata%lhs%dom(1)%lblks(4,ZETA_MAX)%mat)
 
 
     @assertEqual(chidgA%data%sdata%lhs%dom(1)%lblks(10,XI_MIN)%mat,   chidgB%data%sdata%lhs%dom(1)%lblks(6,XI_MIN)%mat)
-    @assertEqual(chidgA%data%sdata%lhs%dom(1)%lblks(10,XI_MAX)%mat,   chidgB%data%sdata%lhs%dom(1)%chiblks(6,1)%mat)
+    @assertEqual(chidgA%data%sdata%lhs%dom(1)%lblks(10,XI_MAX)%mat,   chidgB%data%sdata%lhs%dom(1)%chi_blks(6,1)%mat)
     @assertEqual(chidgA%data%sdata%lhs%dom(1)%lblks(10,ETA_MAX)%mat,  chidgB%data%sdata%lhs%dom(1)%lblks(6,ETA_MAX)%mat)
     @assertEqual(chidgA%data%sdata%lhs%dom(1)%lblks(10,ZETA_MIN)%mat, chidgB%data%sdata%lhs%dom(1)%lblks(6,ZETA_MIN)%mat)
 
 
     @assertEqual(chidgA%data%sdata%lhs%dom(1)%lblks(14,XI_MIN)%mat,   chidgB%data%sdata%lhs%dom(1)%lblks(8,XI_MIN)%mat)
-    @assertEqual(chidgA%data%sdata%lhs%dom(1)%lblks(14,XI_MAX)%mat,   chidgB%data%sdata%lhs%dom(1)%chiblks(8,1)%mat)
+    @assertEqual(chidgA%data%sdata%lhs%dom(1)%lblks(14,XI_MAX)%mat,   chidgB%data%sdata%lhs%dom(1)%chi_blks(8,1)%mat)
     @assertEqual(chidgA%data%sdata%lhs%dom(1)%lblks(14,ETA_MIN)%mat,  chidgB%data%sdata%lhs%dom(1)%lblks(8,ETA_MIN)%mat)
     @assertEqual(chidgA%data%sdata%lhs%dom(1)%lblks(14,ZETA_MIN)%mat, chidgB%data%sdata%lhs%dom(1)%lblks(8,ZETA_MIN)%mat)
 
@@ -254,25 +254,25 @@ subroutine test_update_space_linearadvection()
     !
     ! Domain 2 Chimera Blocks
     !
-    @assertEqual(chidgA%data%sdata%lhs%dom(1)%lblks(3,XI_MIN)%mat,   chidgB%data%sdata%lhs%dom(2)%chiblks(1,1)%mat)
+    @assertEqual(chidgA%data%sdata%lhs%dom(1)%lblks(3,XI_MIN)%mat,   chidgB%data%sdata%lhs%dom(2)%chi_blks(1,1)%mat)
     @assertEqual(chidgA%data%sdata%lhs%dom(1)%lblks(3,XI_MAX)%mat,   chidgB%data%sdata%lhs%dom(2)%lblks(1,XI_MAX)%mat)
     @assertEqual(chidgA%data%sdata%lhs%dom(1)%lblks(3,ETA_MAX)%mat,  chidgB%data%sdata%lhs%dom(2)%lblks(1,ETA_MAX)%mat)
     @assertEqual(chidgA%data%sdata%lhs%dom(1)%lblks(3,ZETA_MAX)%mat, chidgB%data%sdata%lhs%dom(2)%lblks(1,ZETA_MAX)%mat)
 
 
-    @assertEqual(chidgA%data%sdata%lhs%dom(1)%lblks(7,XI_MIN)%mat,   chidgB%data%sdata%lhs%dom(2)%chiblks(3,1)%mat)
+    @assertEqual(chidgA%data%sdata%lhs%dom(1)%lblks(7,XI_MIN)%mat,   chidgB%data%sdata%lhs%dom(2)%chi_blks(3,1)%mat)
     @assertEqual(chidgA%data%sdata%lhs%dom(1)%lblks(7,XI_MAX)%mat,   chidgB%data%sdata%lhs%dom(2)%lblks(3,XI_MAX)%mat)
     @assertEqual(chidgA%data%sdata%lhs%dom(1)%lblks(7,ETA_MIN)%mat,  chidgB%data%sdata%lhs%dom(2)%lblks(3,ETA_MIN)%mat)
     @assertEqual(chidgA%data%sdata%lhs%dom(1)%lblks(7,ZETA_MAX)%mat, chidgB%data%sdata%lhs%dom(2)%lblks(3,ZETA_MAX)%mat)
 
 
-    @assertEqual(chidgA%data%sdata%lhs%dom(1)%lblks(11,XI_MIN)%mat,   chidgB%data%sdata%lhs%dom(2)%chiblks(5,1)%mat)
+    @assertEqual(chidgA%data%sdata%lhs%dom(1)%lblks(11,XI_MIN)%mat,   chidgB%data%sdata%lhs%dom(2)%chi_blks(5,1)%mat)
     @assertEqual(chidgA%data%sdata%lhs%dom(1)%lblks(11,XI_MAX)%mat,   chidgB%data%sdata%lhs%dom(2)%lblks(5,XI_MAX)%mat)
     @assertEqual(chidgA%data%sdata%lhs%dom(1)%lblks(11,ETA_MAX)%mat,  chidgB%data%sdata%lhs%dom(2)%lblks(5,ETA_MAX)%mat)
     @assertEqual(chidgA%data%sdata%lhs%dom(1)%lblks(11,ZETA_MIN)%mat, chidgB%data%sdata%lhs%dom(2)%lblks(5,ZETA_MIN)%mat)
 
 
-    @assertEqual(chidgA%data%sdata%lhs%dom(1)%lblks(15,XI_MIN)%mat,   chidgB%data%sdata%lhs%dom(2)%chiblks(7,1)%mat)
+    @assertEqual(chidgA%data%sdata%lhs%dom(1)%lblks(15,XI_MIN)%mat,   chidgB%data%sdata%lhs%dom(2)%chi_blks(7,1)%mat)
     @assertEqual(chidgA%data%sdata%lhs%dom(1)%lblks(15,XI_MAX)%mat,   chidgB%data%sdata%lhs%dom(2)%lblks(7,XI_MAX)%mat)
     @assertEqual(chidgA%data%sdata%lhs%dom(1)%lblks(15,ETA_MIN)%mat,  chidgB%data%sdata%lhs%dom(2)%lblks(7,ETA_MIN)%mat)
     @assertEqual(chidgA%data%sdata%lhs%dom(1)%lblks(15,ZETA_MIN)%mat, chidgB%data%sdata%lhs%dom(2)%lblks(7,ZETA_MIN)%mat)

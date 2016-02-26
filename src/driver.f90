@@ -30,7 +30,7 @@ program driver
     implicit none
     type(chidg_t)                       :: chidg
     type(dict_t)                        :: toptions, moptions
-    class(function_t),  allocatable     :: constant, vortex, sod, roe
+    class(function_t),  allocatable     :: constant
 
     integer(ik)                         :: narg
     character(len=1024)                 :: chidg_action, filename, file_a, file_b
@@ -108,12 +108,10 @@ program driver
 
 
             ! rho
-            !call constant%set_option('val',1.13_rk)
             call constant%set_option('val',1.25_rk)
             call initialize_variable(chidg%data,1,constant)
 
             ! rho_u
-            !call constant%set_option('val',190._rk)
             call constant%set_option('val',80._rk)
             call initialize_variable(chidg%data,2,constant)
 
@@ -126,7 +124,6 @@ program driver
             call initialize_variable(chidg%data,4,constant)
 
             ! rho_E
-            !call constant%set_option('val',248000._rk)
             call constant%set_option('val',270000._rk)
             call initialize_variable(chidg%data,5,constant)
 

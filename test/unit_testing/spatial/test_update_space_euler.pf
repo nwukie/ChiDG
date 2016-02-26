@@ -176,14 +176,14 @@ subroutine test_update_space_euler()
     !
     ! Domain 1 Chimera Blocks
     !
-    @assertEqual(chidgA%data%sdata%lhs%dom(1)%lblks(6,XI_MAX)%mat,   chidgB%data%sdata%lhs%dom(1)%chiblks(6,1)%mat, tol)
-    @assertEqual(chidgA%data%sdata%lhs%dom(1)%lblks(7,XI_MIN)%mat,   chidgB%data%sdata%lhs%dom(2)%chiblks(1,1)%mat, tol)
-    @assertEqual(chidgA%data%sdata%lhs%dom(1)%lblks(18,XI_MAX)%mat,  chidgB%data%sdata%lhs%dom(1)%chiblks(12,1)%mat, tol)
-    @assertEqual(chidgA%data%sdata%lhs%dom(1)%lblks(19,XI_MIN)%mat,  chidgB%data%sdata%lhs%dom(2)%chiblks(7,1)%mat, tol)
-    @assertEqual(chidgA%data%sdata%lhs%dom(1)%lblks(30,XI_MAX)%mat,  chidgB%data%sdata%lhs%dom(1)%chiblks(18,1)%mat, tol)
-    @assertEqual(chidgA%data%sdata%lhs%dom(1)%lblks(31,XI_MIN)%mat,  chidgB%data%sdata%lhs%dom(2)%chiblks(13,1)%mat, tol)
-    @assertEqual(chidgA%data%sdata%lhs%dom(1)%lblks(42,XI_MAX)%mat,  chidgB%data%sdata%lhs%dom(1)%chiblks(24,1)%mat, tol)
-    @assertEqual(chidgA%data%sdata%lhs%dom(1)%lblks(43,XI_MIN)%mat,  chidgB%data%sdata%lhs%dom(2)%chiblks(19,1)%mat, tol)
+    @assertEqual(chidgA%data%sdata%lhs%dom(1)%lblks(6,XI_MAX)%mat,   chidgB%data%sdata%lhs%dom(1)%chi_blks(6,1)%mat, tol)
+    @assertEqual(chidgA%data%sdata%lhs%dom(1)%lblks(7,XI_MIN)%mat,   chidgB%data%sdata%lhs%dom(2)%chi_blks(1,1)%mat, tol)
+    @assertEqual(chidgA%data%sdata%lhs%dom(1)%lblks(18,XI_MAX)%mat,  chidgB%data%sdata%lhs%dom(1)%chi_blks(12,1)%mat, tol)
+    @assertEqual(chidgA%data%sdata%lhs%dom(1)%lblks(19,XI_MIN)%mat,  chidgB%data%sdata%lhs%dom(2)%chi_blks(7,1)%mat, tol)
+    @assertEqual(chidgA%data%sdata%lhs%dom(1)%lblks(30,XI_MAX)%mat,  chidgB%data%sdata%lhs%dom(1)%chi_blks(18,1)%mat, tol)
+    @assertEqual(chidgA%data%sdata%lhs%dom(1)%lblks(31,XI_MIN)%mat,  chidgB%data%sdata%lhs%dom(2)%chi_blks(13,1)%mat, tol)
+    @assertEqual(chidgA%data%sdata%lhs%dom(1)%lblks(42,XI_MAX)%mat,  chidgB%data%sdata%lhs%dom(1)%chi_blks(24,1)%mat, tol)
+    @assertEqual(chidgA%data%sdata%lhs%dom(1)%lblks(43,XI_MIN)%mat,  chidgB%data%sdata%lhs%dom(2)%chi_blks(19,1)%mat, tol)
 
 
 

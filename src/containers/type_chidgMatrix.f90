@@ -59,10 +59,10 @@ contains
     !!
     !-----------------------------------------------------------------------------------------------------------
     subroutine initialize(self,mesh,bcset_coupling,mtype)
-        class(chidgMatrix_t),   intent(inout)   :: self
-        type(mesh_t),           intent(in)      :: mesh(:)
-        type(bcset_coupling_t), intent(in)      :: bcset_coupling(:)
-        character(*),           intent(in)      :: mtype
+        class(chidgMatrix_t),   intent(inout)           :: self
+        type(mesh_t),           intent(in)              :: mesh(:)
+        type(bcset_coupling_t), intent(in), optional    :: bcset_coupling(:)
+        character(*),           intent(in)              :: mtype
 
         integer(ik) :: ierr, ndomains, idom
 
@@ -80,7 +80,13 @@ contains
         ! Call initialization procedure for each blockmatrix_t
         !
         do idom = 1,ndomains
-            call self%dom(idom)%init(mesh(idom),bcset_coupling(idom),mtype)
+
+            if ( present(bcset_coupling) ) then
+                call self%dom(idom)%init(mesh(idom),bcset_coupling(idom),mtype)
+            else
+                call self%dom(idom)%init(mesh(idom),mtype=mtype)
+            end if
+
         end do
 
 

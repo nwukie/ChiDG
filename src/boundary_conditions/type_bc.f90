@@ -28,14 +28,15 @@ module type_bc
     type, public, abstract :: bc_t
 
         character(len=:),   allocatable :: name
+        logical,    public              :: isInitialized = .false.  !< Logical switch for indicating the boundary condition initializaiton status
 
+        !
+        ! Boundary condition geometry
+        !
         integer(ik),        allocatable :: dom(:)                   !< Indices of domains
         integer(ik),        allocatable :: elems(:)                 !< Indices of elements associated with boundary condition
         integer(ik),        allocatable :: faces(:)                 !< Indices of the boundary face for elements elems(ielems)
-
         type(ivector_t),    allocatable :: coupled_elems(:)         !< For each element on the boundary, a vector of element block-indices coupled with the current element.
-
-        logical,    public              :: isInitialized = .false.  !< Logical switch for indicating the boundary condition initializaiton status
 
 
         !

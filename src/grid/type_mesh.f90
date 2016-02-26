@@ -23,13 +23,13 @@ module type_mesh
     !------------------------------------------------------------------------------------------------------------
     type, public :: mesh_t
         ! Integer parameters
-        integer(ik)         :: neqns      = 0                           !< Number of equations being solved
-        integer(ik)         :: nterms_s   = 0                           !< Number of terms in the solution expansion
-        integer(ik)         :: nterms_c   = 0                           !< Number of terms in the grid coordinate expansion
-        integer(ik)         :: nelem_xi   = 0                           !< Number of elements in the xi-direction
-        integer(ik)         :: nelem_eta  = 0                           !< Number of elements in the eta-direction
-        integer(ik)         :: nelem_zeta = 0                           !< Number of elements in the zeta-direction
-        integer(ik)         :: nelem      = 0                           !< Number of total elements
+        integer(ik)                     :: neqns      = 0               !< Number of equations being solved
+        integer(ik)                     :: nterms_s   = 0               !< Number of terms in the solution expansion
+        integer(ik)                     :: nterms_c   = 0               !< Number of terms in the grid coordinate expansion
+        integer(ik)                     :: nelem_xi   = 0               !< Number of elements in the xi-direction
+        integer(ik)                     :: nelem_eta  = 0               !< Number of elements in the eta-direction
+        integer(ik)                     :: nelem_zeta = 0               !< Number of elements in the zeta-direction
+        integer(ik)                     :: nelem      = 0               !< Number of total elements
 
         ! Grid data
         integer(ik)                     :: idomain
@@ -38,8 +38,8 @@ module type_mesh
         type(chimera_t)                 :: chimera                      !< Chimera interface data
 
         ! Initialization flags
-        logical             :: geomInitialized = .false.                !< Status of geometry initialization
-        logical             :: solInitialized  = .false.                !< Status of numerics initialization
+        logical                         :: geomInitialized = .false.    !< Status of geometry initialization
+        logical                         :: solInitialized  = .false.    !< Status of numerics initialization
 
 
     contains
@@ -119,7 +119,7 @@ contains
 
 
 
-    !> Mesh numerics initialization procedure
+    !>  Mesh numerics initialization procedure
     !!
     !!  Sets number of equations being solved, number of terms in the solution expansion and
     !!  calls sub-initialization routines for individual element and face numerics

@@ -41,6 +41,7 @@ module type_chidg_data
     !--------------------------------------------------------------------------------------------------------------
     type, public  :: chidg_data_t
 
+        logical                                     :: solverInitialized = .false.
         integer(ik),        private                 :: ndomains_ = 0
         type(domaininfo_t),             allocatable :: info(:)      !< General container for domain information
 
@@ -50,11 +51,8 @@ module type_chidg_data
         type(equationset_wrapper_t),    allocatable :: eqnset(:)    !< Array of equation set instances. One for each domain.
         type(solverdata_t)                          :: sdata        !< Solver data container for solution vectors and matrices
 
-
-        logical                                     :: solverInitialized = .false.
-
-
     contains
+
         ! Initialization procedure for solution data. Execute after all domains are added.
         procedure   :: init_sdata
 
@@ -65,7 +63,6 @@ module type_chidg_data
         ! Accessors
         procedure   :: get_domain_index     !< Given a domain name, return domain index
         procedure   :: ndomains             !< Return number of domains in chidg instance
-        
 
     end type chidg_data_t
     !*************************************************************************************************************

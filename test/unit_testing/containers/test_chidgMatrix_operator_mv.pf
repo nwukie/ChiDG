@@ -83,7 +83,7 @@ subroutine test_chidgMatrix_operator_mv()
     !
     ! Initialize data containers
     !
-    call A%init(chidg%data%mesh,'full')
+    call A%init(chidg%data%mesh,mtype='full')
     call x%init(chidg%data%mesh)
     call b%init(chidg%data%mesh)
 
@@ -95,11 +95,12 @@ subroutine test_chidgMatrix_operator_mv()
     A%dom(1)%lblks(1,DIAG)%mat  = ONE
 
 
-    A%dom(1)%chiblks(2,1)%mat = TWO
-    A%dom(1)%chiblks(2,2)%mat = THREE
+    A%dom(1)%chi_blks(2,1)%mat = TWO
+    A%dom(1)%chi_blks(2,2)%mat = THREE
 
 
-    A%dom(2)%chiblks(1,1)%mat = FOUR
+    A%dom(2)%chi_blks(1,1)%mat = FOUR
+
 
 
 
@@ -149,8 +150,8 @@ subroutine test_chidgMatrix_operator_mv()
     !
     ! Test max donors
     !
-    @assertEqual(2,size(A%dom(1)%chiblks,2))
-    @assertEqual(2,size(A%dom(2)%chiblks,2))
+    @assertEqual(2,size(A%dom(1)%chi_blks,2))
+    @assertEqual(2,size(A%dom(2)%chi_blks,2))
 
 
 

@@ -22,20 +22,28 @@ module type_equationset
     !------------------------------------------------------------------------------
     !> [equationset_t]
     type, public, abstract :: equationset_t
-        character(100)                              :: name
-        integer(ik)                                 :: neqns
 
+
+        character(len=:),               allocatable :: name 
+        integer(ik)                                 :: neqns
         class(properties_t),            allocatable :: prop
+
 
         type(boundary_flux_wrapper_t),  allocatable :: boundary_advective_flux(:)
         type(volume_flux_wrapper_t),    allocatable :: volume_advective_flux(:)
 
 
     contains
+
+
         procedure(self_interface),     deferred     :: init
         procedure                                   :: add_equation
         procedure                                   :: add_volume_advective_flux
         procedure                                   :: add_boundary_advective_flux
+
+        procedure   :: set_name
+        procedure   :: get_name
+
 
     end type equationset_t
     !> [equationset_t]

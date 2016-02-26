@@ -1,7 +1,15 @@
-module mod_fgmres_standard
+module type_fgmres_householder
 #include <messenger.h>
     use mod_kinds,              only: rk, ik
-    use mod_constants,          only: DIAG, ZERO, TWO
+    use mod_constants,          only: ZERO
+    use mod_inv,                only: inv
+    use type_matrixsolver,      only: matrixsolver_t 
+    use type_preconditioner,    only: preconditioner_t
+    use type_chidgVector
+    use type_chidgMatrix
+
+    use operator_chidg_mv
+    use operator_chidg_dot,     only: dot
     use mod_inv,                only: inv
     implicit none
         
@@ -9,6 +17,23 @@ module mod_fgmres_standard
 
 
 
+
+
+    !> Generalized Minimum Residual linear system solver
+    !!
+    !!  @author Nathan A. Wukie
+    !!
+    !---------------------------------------------------------------------------------------------
+    type, public, extends(matrixsolver_t) :: fgmres_householder_t
+
+        integer(ik) :: m = 800
+
+    contains
+
+        procedure   :: solve
+
+    end type fgmres_householder_t
+    !*********************************************************************************************
 
 
 
@@ -20,66 +45,84 @@ contains
     !> Solution routine
     !!
     !!  @author Nathan A. Wukie
-    !!  @date   2/24/2016
     !!
     !!
     !!
-    !--------------------------------------------------------------
-    subroutine fgmres_standard(A,x,b)
-        real(rk), dimension(:,:),   intent(in)               :: A
-        real(rk), dimension(:),     intent(inout)            :: x
-        real(rk), dimension(:),     intent(in)               :: b
+    !---------------------------------------------------------------------------------------------
+    subroutine solve(self,A,x,b,M)
+        class(fgmres_householder_t), intent(inout)               :: self
+        type(chidgMatrix_t),         intent(inout)               :: A
+        type(chidgVector_t),         intent(inout)               :: x
+        type(chidgVector_t),         intent(inout)               :: b
+        class(preconditioner_t),     intent(inout), optional     :: M
 
 
 
-        real(rk), dimension(:), allocatable     :: r0, w, x0
-        real(rk), allocatable                   :: v(:,:), z(:,:)
+        type(chidgVector_t)                     :: r, r0, diff, xold, w, x0
+        type(chidgVector_t), allocatable        :: v(:), z(:)
         real(rk),            allocatable        :: h(:,:), h_square(:,:)
         real(rk),            allocatable        :: p(:), y(:), c(:), s(:), p_dim(:), y_dim(:)
-        real(rk)                                :: pj, pjp, h_ij, h_ipj
+        real(rk)                                :: pj, pjp, h_ij, h_ipj, htmp
 
-        integer(ik) :: ierr, isol, nvecs, mrestart
-        integer(ik) :: i, j, k, l
-        real(rk)    :: res, gam, tol
+        integer(ik) :: iparent, ierr, ivec, isol, nvecs, ielem
+        integer(ik) :: i, j, k, l, ii                 ! Loop counters
+        real(rk)    :: res, err, r0norm, gam, delta, norm_before, norm_after, crit
 
         logical     :: converged = .false.
+        logical     :: max_iter  = .false.
 
-
-        tol = 1.e-11_rk
+        logical :: equal = .false.
+        logical :: reorthogonalize = .false.
 
 
         !
-        ! Set GMRES parameters
+        ! Start timer
         !
-        mrestart = 200
+        call self%timer%reset()
+        call self%timer%start()
+        call write_line('           Matrix Solver: ')
+
+
+
+        !
+        ! Update preconditioner
+        !
+        call M%update(A,b)
+
 
 
         !
         ! Allocate and initialize Krylov vectors V
         !
-        allocate(v(size(x),mrestart+1),  &
-                 z(size(x),mrestart+1), stat=ierr)
+        allocate(v(self%m+1),  &
+                 z(self%m+1), stat=ierr)
         if (ierr /= 0) call AllocationError
+
+        do ivec = 1,size(v)
+            v(ivec) = b
+            z(ivec) = b
+            call v(ivec)%clear()
+            call z(ivec)%clear()
+        end do
 
 
 
         !
         ! Allocate hessenberg matrix to store orthogonalization
         !
-        allocate(h(mrestart + 1, mrestart), stat=ierr)
+        allocate(h(self%m + 1, self%m), stat=ierr)
         if (ierr /= 0) call AllocationError
         h = ZERO
-
 
 
 
         !
         ! Allocate vectors for solving hessenberg system
         !
-        allocate(p(mrestart+1), &
-                 y(mrestart+1), &
-                 c(mrestart+1), &
-                 s(mrestart+1), stat=ierr)
+        allocate(p(self%m+1), &
+                 y(self%m+1), &
+                 c(self%m+1), &
+                 s(self%m+1), stat=ierr)
         if (ierr /= 0) call AllocationError
         p = ZERO
         y = ZERO
@@ -92,20 +135,23 @@ contains
         ! Set initial solution x. ZERO
         !
         x0 = x
-        x0 = ZERO
-        x  = ZERO
+        call x0%clear()
+        call x%clear()
 
 
+        self%niter = 0
 
 
         res = 1._rk
-        do while (res > tol)
+        do while (res > self%tol)
 
             !
             ! Clear working variables
             !
-            v = ZERO
-            z = ZERO
+            do ivec = 1,size(v)
+                call v(ivec)%clear()
+                call z(ivec)%clear()
+            end do
 
 
             p = ZERO
@@ -119,59 +165,53 @@ contains
             !
             ! Compute initial residual r0, residual norm, and normalized r0
             !
-            r0      = b - matmul(A,x)
-
-            
-            v(:,1)    = r0/norm2(r0)
-
+            r0      = self%residual(A,x0,b)
+            p(1)    = r0%norm()
+            v(1)    = r0/r0%norm()
 
 
 
-            p(1) = norm2(r0)
             !
             ! Outer GMRES Loop
             !
             nvecs = 0
-            do j = 1, mrestart
+            do j = 1,self%m
                 nvecs = nvecs + 1
            
-
-
                 !
                 ! Apply preconditioner:  z(j) = Minv * v(j)
                 !
-                !z(j) = M%apply(A,v(j))
-
+                z(j) = M%apply(A,v(j))
 
 
                 !
                 ! Compute w = Av for the current iteration
                 !
-                w = matmul(A,v(:,j))
+                w = A*z(j)
+                norm_before = w%norm()
+
 
 
 
                 !
-                ! Orthogonalization loop
+                ! Orthogonalization loop. Modified Gram-Schmidt (MGS)
                 !
                 do i = 1,j
 
-                    h(i,j) = dot_product(w,v(:,i))
+                    h(i,j) = dot(w,v(i))
                     
-                    w  = w - h(i,j)*v(:,i)
+                    w = w - h(i,j)*v(i)
 
                 end do
 
-                h(j+1,j) = norm2(w)
-
-
+                h(j+1,j) = w%norm()
+                norm_after = h(j+1,j)
 
 
                 !
                 ! Compute next Krylov vector
                 !
-                v(:,j+1) = w/h(j+1,j)
-
+                v(j+1) = w/h(j+1,j)
 
 
 
@@ -200,7 +240,6 @@ contains
                 s(j) = h(j+1,j)/gam
 
 
-
                 !
                 ! Givens rotation on h
                 !
@@ -214,33 +253,30 @@ contains
                 pj = c(j)*p(j)
                 pjp = -s(j)*p(j)
 
-
                 p(j)     = pj
                 p(j+1)   = pjp
 
 
-
                 
+                !
+                ! Update iteration counter
+                !
+                self%niter = self%niter + 1_ik
+
 
 
                 !
                 ! Test exit conditions
                 !
                 res = abs(p(j+1))
-                !print*, '       ', res
-                converged = (res < tol)
+                call write_line(res)
+                converged = (res < self%tol)
                 
                 if ( converged ) then
                     exit
                 end if
 
-
-
-
-            end do  ! Outer GMRES Loop - m
-
-
-
+            end do  ! Outer GMRES Loop - restarts after m iterations
 
 
 
@@ -273,7 +309,6 @@ contains
 
 
 
-
             !
             ! Solve the system
             !
@@ -287,8 +322,7 @@ contains
             !
             x = x0
             do isol = 1,nvecs
-                !x = x + y_dim(isol)*z(isol)
-                x = x + y_dim(isol)*v(:,isol)
+                x = x + y_dim(isol)*z(isol)
             end do
 
 
@@ -312,11 +346,20 @@ contains
 
 
 
+        !
+        ! Report
+        !
+        err = self%error(A,x,b)
+        call write_line('   Matrix Solver Error: ', err, delimiter='')
+
+        call self%timer%stop()
+        call self%timer%report('Matrix solver compute time: ')
 
 
 
-    end subroutine fgmres_standard
+    end subroutine solve
+    !************************************************************************************************************
 
 
 
-end module mod_fgmres_standard
+end module type_fgmres_householder

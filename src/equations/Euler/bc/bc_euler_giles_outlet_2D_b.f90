@@ -28,7 +28,6 @@ module bc_euler_giles_outlet_2D_b
     type, public, extends(bc_t) :: euler_giles_outlet_2D_b_t
 
         type(point_t),  allocatable     :: dft_points(:)
-!        real(rk),       allocatable     :: dft_span_z(:)
 
     contains
 
@@ -268,7 +267,8 @@ contains
                         rho_real, rhou_real, rhov_real, rhow_real, rhoE_real,   &
                         rho_imag, rhou_imag, rhov_imag, rhow_imag, rhoE_imag,   &
                         c1_real,  c2_real,   c3_real,   c4_real,                &
-                        c1_imag,  c2_imag,   c3_imag,   c4_imag
+                        c1_imag,  c2_imag,   c3_imag,   c4_imag,                &
+                        ptest_real, ptest_imag
 
 
         real(rk)        :: periodicity
@@ -352,6 +352,20 @@ contains
                 call dft(rhov_b, rhov_real, rhov_imag)
                 call dft(rhow_b, rhow_real, rhow_imag)
                 call dft(rhoE_b, rhoE_real, rhoE_imag)
+
+
+
+!                !
+!                ! TESTING PRESSURE MODES
+!                !
+!                call dft(p_b, ptest_real, ptest_imag)
+!
+!                print*, 'Amplitude of Fourier mode for p'
+!                do imode = 1,size(ptest_real)
+!                    print*, sqrt(ptest_real(imode)%x_ad_**TWO + ptest_imag(imode)%x_ad_**TWO)
+!                end do
+
+
 
 
                 !
@@ -440,10 +454,6 @@ contains
 
 
 
-!                print*, 'Amplitude of Fourier mode for c4'
-!                do imode = 1,size(c4_real)
-!                    print*, sqrt(c4_real(imode)%x_ad_**TWO + c4_imag(imode)%x_ad_**TWO)
-!                end do
 
                 !
                 ! Get y-component of cartesian coordinates for quadrature nodes to evaluate the DFT modes.
@@ -579,10 +589,10 @@ contains
                 !
                 ! Get contribution to primitive variables from c1,c2,c3
                 !
-                drho_mode = drho_mode + (-ONE/(c_bar_gq**TWO))* c1_gq +              ZERO                +    (ONE/(TWO*c_bar_gq**TWO))   * c3_gq 
-                du_mode   = du_mode   +         ZERO                  +              ZERO                + (ONE/(TWO*rho_bar_gq*c_bar_gq))* c3_gq
+                drho_mode = drho_mode + (-ONE/(c_bar_gq**TWO))* c1_gq +              ZERO                +    (ONE/(TWO*c_bar_gq**TWO))    * c3_gq 
+                du_mode   = du_mode   +         ZERO                  +              ZERO                + (ONE/(TWO*rho_bar_gq*c_bar_gq)) * c3_gq
                 dv_mode   = dv_mode   +         ZERO                  + ONE/(rho_bar_gq*c_bar_gq)* c2_gq +                ZERO                
-                dp_mode   = dp_mode   +         ZERO                  +              ZERO                +             HALF               * c3_gq
+                dp_mode   = dp_mode   +         ZERO                  +              ZERO                +                HALF             * c3_gq
 
 
 
@@ -591,11 +601,11 @@ contains
                 !
                 ! Compute total primitive variables from mean, contribution from modal update, contribution from mean update.
                 !
-                rho_bc = rho_bar_gq - drho_mean + drho_mode
-                u_bc   = u_bar_gq   - du_mean   + du_mode
+                rho_bc = rho_bar_gq + drho_mean + drho_mode
+                u_bc   = u_bar_gq   + du_mean   + du_mode
                 v_bc   = v_bar_gq               + dv_mode
                 w_bc   = w_bar_gq
-                p_bc   = p_bar_gq   - dp_mean   + dp_mode
+                p_bc   = p_bar_gq   + dp_mean   + dp_mode
 
 
 

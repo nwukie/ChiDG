@@ -58,7 +58,7 @@ contains
 
 
 
-    !>   Boundary Flux routine for Euler
+    !>  Boundary Flux routine for Euler
     !!
     !!  @author Nathan A. Wukie
     !!  @date   1/28/2016

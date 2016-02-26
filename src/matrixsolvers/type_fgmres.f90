@@ -217,14 +217,15 @@ contains
                 !
                 ! They recommend L<1 for robustness, but it seems for these problems L can be increased.
                 !
-                L = 5.5_rk
+                L = 4.0_rk
                 crit = sum(abs(h(1:j,j)))/norm_before
                 
                 if ( crit <  L ) reorthogonalize = .false.
                 if ( crit >= L ) reorthogonalize = .true.
                 
 
-                reorthogonalize = .true.
+                ! Force reorthogonalization
+                reorthogonalize = .true. 
                 if ( reorthogonalize ) then
                     call write_line('GMRES: Reorthogonalizing...')
 

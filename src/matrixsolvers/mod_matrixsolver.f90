@@ -11,7 +11,8 @@ module mod_matrixsolver
 !    use type_gaussseidel,   only: gaussseidel_t
 !    use type_sor,           only: sor_t
 !    use type_gmres,         only: gmres_t
-    use type_fgmres,        only: fgmres_t
+    use type_fgmres,                only: fgmres_t
+    use type_fgmres_householder,    only: fgmres_householder_t
     
 
     
@@ -23,7 +24,8 @@ module mod_matrixsolver
 !    type(gaussseidel_t)     :: GAUSSSEIDEL
 !    type(sor_t)             :: SOR
 !    type(gmres_t)           :: GMRES
-    type(fgmres_t)          :: FGMRES
+    type(fgmres_t)             :: FGMRES
+    type(fgmres_householder_t) :: FGMRES_HOUSEHOLDER
 
 
 
@@ -72,6 +74,8 @@ contains
             case ('fgmres','FGMRES')
                 allocate(msolver, source=FGMRES, stat=ierr)
 
+            case ('fgmres_householder','FGMRES_HOUSEHOLDER')
+                allocate(msolver, source=FGMRES, stat=ierr)
 
             case default
                 call chidg_signal(FATAL,"create_matrixsolver: matrix solver string did not match any valid type")

@@ -6,6 +6,7 @@ add_lib_sources(type_matrixsolver.f90
 #                type_sor.f90
 #                type_gmres.f90
                 type_fgmres.f90
+                type_fgmres_householder.f90
                 mod_gaussseidel_standard.f90
                 mod_fgmres_standard.f90
                 )

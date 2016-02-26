@@ -14,7 +14,8 @@ module precon_ILU0
 
     !> ILU0 preconditioner
     !!
-    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   2/24/2016
     !!
     !!
     !------------------------------------------------------------------------------------------------------------------
@@ -28,6 +29,7 @@ module precon_ILU0
         procedure   :: apply
 
     end type precon_ILU0_t
+    !*****************************************************************************************************************
 
 
 
@@ -40,6 +42,7 @@ contains
     !! a Lower-Diagonal block matrix for storing the LU decomposition.
     !!  
     !!  @author Nathan A. Wukie
+    !!  @date   2/24/2016
     !!
     !!  @param[inout]   domain      domain_t instance containing a mesh component used to initialize the block matrix
     !!
@@ -70,7 +73,8 @@ contains
 
         self%initialized = .true.
 
-    end subroutine
+    end subroutine init
+    !*****************************************************************************************************************
 
 
 
@@ -82,6 +86,7 @@ contains
     !> Compute the block diagonal inversion and store so it can be applied.
     !!
     !!  @author Nathan A. Wukie
+    !!  @date   2/24/2016
     !!
     !!
     !----------------------------------------------------------------------------------------------------------------
@@ -126,6 +131,7 @@ contains
 
 
 
+
             lower_blocks = [XI_MIN, ETA_MIN, ZETA_MIN]
             upper_blocks = [XI_MAX, ETA_MAX, ZETA_MAX]
 
@@ -166,6 +172,7 @@ contains
         end do ! idom
 
     end subroutine update
+    !*******************************************************************************************
 
 
 
@@ -177,10 +184,11 @@ contains
     !> Apply the preconditioner to the krylov vector 'v' and return preconditioned vector 'z'
     !!
     !!  @author Nathan A. Wukie
+    !!  @date   2/24/2016
     !!
     !!
     !!
-    !-------------------------------------------------------------------------
+    !--------------------------------------------------------------------------------------------
     function apply(self,A,v) result(z)
         class(precon_ILU0_t),   intent(inout)   :: self
         type(chidgMatrix_t),    intent(in)      :: A

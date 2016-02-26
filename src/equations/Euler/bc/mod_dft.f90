@@ -27,25 +27,25 @@ contains
     !!
     !----------------------------------------------------------------------------------
     function compute_dft_points(mesh,elems,iface,periodicity) result(points)
-        type(mesh_t),   intent(in)  :: mesh
-        integer(ik),    intent(in)  :: elems(:)
-        integer(ik),    intent(in)  :: iface
-        real(rk),       intent(in)  :: periodicity
+        type(mesh_t),   intent(in)   :: mesh
+        integer(ik),    intent(in)   :: elems(:)
+        integer(ik),    intent(in)   :: iface
+        real(rk),       intent(in)   :: periodicity
 
-        type(point_t),  allocatable :: points(:)
-        integer(ik)                 :: nmodes, npoints, ierr, ielem_bc, ielem, var, mode, ipnt, min_y_element, elem_min
-        integer(ik)                 :: min_y_loc
-        real(rk)                    :: xi, eta, zeta, min_y, dy, xloc
+        type(point_t),  allocatable  :: points(:)
+        integer(ik)                  :: nmodes, npoints, ierr, ielem_bc, ielem, var, mode, ipnt, min_y_element, elem_min
+        integer(ik)                  :: min_y_loc
+        real(rk)                     :: xi, eta, zeta, min_y, dy, xloc
 
-        real(rk),       allocatable :: mean_y_coordinates(:)
-        integer(ik),    allocatable :: mean_y_elements(:)
-        real(rk),   dimension(2)    :: ylocs, xlocs
+        real(rk),       allocatable  :: mean_y_coordinates(:)
+        integer(ik),    allocatable  :: mean_y_elements(:)
+        real(rk),       dimension(2) :: ylocs, xlocs
 
 
         !
         ! Number of Fourier harmonics to compute
         !
-        nmodes = 5
+        nmodes = 2
 
 
         !

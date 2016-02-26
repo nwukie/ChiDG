@@ -15,10 +15,11 @@ module precon_jacobi
 
     !> Block-Jacobi preconditioner
     !!
+    !!  @author Nathan A. Wukie
+    !!  @date   2/24/2016
     !!
     !!
-    !!
-    !----------------------------------------------------------------------
+    !-----------------------------------------------------------------------------
     type, extends(preconditioner_t) :: precon_jacobi_t
 
         type(densematrix_t), allocatable    :: D(:,:)     !< inverse of block diagonal, (ndom,maxelems)
@@ -28,7 +29,8 @@ module precon_jacobi
         procedure   :: update
         procedure   :: apply
 
-    end type
+    end type precon_jacobi_t
+    !******************************************************************************
 
 
 
@@ -38,7 +40,8 @@ contains
 
     !> Initialize preconditioner storage
     !!
-    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   2/24/2016
     !!
     !!
     !!
@@ -82,6 +85,7 @@ contains
 
 
     end subroutine init
+    !***************************************************************************************
 
 
 
@@ -96,9 +100,10 @@ contains
     !> Compute the block diagonal inversion and store so it can be applied.
     !!
     !!  @author Nathan A. Wukie
+    !!  @date   2/24/2016
     !!
     !!
-    !---------------------------------------------------------------------
+    !----------------------------------------------------------------------------------------
     subroutine update(self,A,b)
         class(precon_jacobi_t), intent(inout)   :: self
         type(chidgMatrix_t),    intent(in)      :: A
@@ -144,6 +149,7 @@ contains
 
 
     end subroutine update
+    !***************************************************************************************
 
 
 
@@ -155,10 +161,11 @@ contains
     !> Apply the preconditioner to the krylov vector 'v' and return preconditioned vector 'z'
     !!
     !!  @author Nathan A. Wukie
+    !!  @date   2/24/2016
     !!
     !!
     !!
-    !-------------------------------------------------------------------------
+    !----------------------------------------------------------------------------------------
     function apply(self,A,v) result(z)
         class(precon_jacobi_t), intent(inout)   :: self
         type(chidgMatrix_t),    intent(in)      :: A
@@ -189,7 +196,8 @@ contains
 
 
 
-    end function
+    end function apply
+    !****************************************************************************************
 
 
 

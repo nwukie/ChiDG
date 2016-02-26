@@ -12,12 +12,13 @@ module mod_equations
     use type_equationset,               only: equationset_t
     use type_evector,                   only: evector_t
 
+    !
     ! Import Equations
+    !
     use eqn_scalar,                     only: scalar_e
     use eqn_linearadvection,            only: linearadvection_e
     use eqn_duallinearadvection,        only: duallinearadvection_e
     use eqn_euler,                      only: euler_e
-!    use eqn_linearized_euler,           only: linearized_euler_e
     implicit none
 
 
@@ -87,6 +88,8 @@ contains
 
     end subroutine register_equations
     !************************************************************************************
+
+
 
 
 

@@ -17,6 +17,7 @@ contains
     !> Solution routine
     !!
     !!  @author Nathan A. Wukie
+    !!  @date   2/24/2016
     !!
     !!
     !!

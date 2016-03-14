@@ -15,10 +15,10 @@ module type_element
     implicit none
 
 
-    !> Element data type
+    !>  Element data type
     !!
     !!  NOTE: could be dangerous to declare static arrays of elements using gfortran because
-    !!        the compiler doens't have complete finalization rules implemented. Useing allocatables
+    !!        the compiler doens't have complete finalization rules implemented. Using allocatables
     !!        seems to work fine.
     !!
     !!  @author Nathan A. Wukie
@@ -251,6 +251,11 @@ contains
 
 
     !>  Assign quadrature instances for solution modes (GQ) and mesh modes (GQMESH)
+    !!      self%gq
+    !!      self%gqmesh
+    !!
+    !!  TODO: would be good to eliminate pointers in the element data type and just use integer indices to
+    !!        a global array of quadrature instances.
     !!
     !!  @author Nathan A. Wukie
     !!  @date   2/1/2016
@@ -523,8 +528,8 @@ contains
         integer(ik)  :: iterm,i,j
         real(rk)     :: temp(self%nterms_s,self%gq%vol%nnodes)
 
-        self%invmass = 0._rk
-        self%mass = 0._rk
+        self%invmass = ZERO
+        self%mass    = ZERO
         temp = transpose(self%gq%vol%val)
 
         !

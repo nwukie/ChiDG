@@ -1,6 +1,6 @@
 module bc_euler_pressureoutlet
     use mod_kinds,          only: rk,ik
-    use mod_constants,      only: ONE, TWO, HALF, LOCAL
+    use mod_constants,      only: ZERO, ONE, TWO, HALF, LOCAL
     use type_bc,            only: bc_t
     use type_solverdata,    only: solverdata_t
     use type_mesh,          only: mesh_t
@@ -109,6 +109,7 @@ contains
 
         real(rk),   dimension(mesh(face%idomain)%faces(face%ielement,face%iface)%gq%face%nnodes)   :: p_bc
 
+        integer(ik) :: inode
 
         associate ( idom => face%idomain, ielem => face%ielement, iface => face%iface )
 
@@ -168,6 +169,7 @@ contains
                 !
                 rhoE_bc = p_bc/(gam_m - ONE) + (rho_m/TWO)*(u_m*u_m + v_m*v_m + w_m*w_m)
                 H_bc = (rhoE_bc + p_bc)/rho_m
+
 
 
 

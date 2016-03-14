@@ -396,6 +396,7 @@ contains
                 ! Compute c4 characteristic due to update in mean pressure
                 !
                 c4_mean = -TWO*(p_bar_gq - p_set)
+                !c4_mean = (p_bar_gq - p_set)
 
                 drho_mean =  (ONE/(TWO*c_bar_gq**TWO))       * c4_mean
                 du_mean   = -(ONE/(TWO*rho_bar_gq*c_bar_gq)) * c4_mean
@@ -461,6 +462,7 @@ contains
                 !
                 nmodes = size(rho_real)
                 do imode = 2,(nmodes-1)/2
+                !do imode = 1,(nmodes-1)/2
 
                     !
                     ! 2D steady Giles
@@ -503,10 +505,13 @@ contains
                     !
                     ! Add contribution of current mode characteristics to primitive variable perturbation
                     !
+                    
+                    ! I think the TWO is taken into account in idft_mode_points now
 !                    drho_mode = drho_mode + TWO*     (ONE/(TWO*c_bar_gq**TWO))*c4_gq
 !                    du_mode   = du_mode   - TWO* (ONE/(TWO*rho_bar_gq*c_bar_gq))*c4_gq
 !                    dv_mode   = dv_mode   + TWO*                ZERO
 !                    dp_mode   = dp_mode   + TWO*             HALF*c4_gq
+
 
 
                     drho_mode = drho_mode +     (ONE/(TWO*c_bar_gq**TWO))*c4_gq
@@ -553,7 +558,7 @@ contains
                 ! Compute c1,c2,c3 characteristics
                 !
                 !
-                ! Compute characteristic variables across the boundary, to be DFT'd.
+                ! Compute characteristic variables across the boundary
                 !
                 c1_gq =   (-c_bar_gq**TWO)*drho_gq  +              ZERO             +              ZERO             +         dp_gq
                 c2_gq =            ZERO             +              ZERO             +  (rho_bar_gq*c_bar_gq)*dv_gq  +        ZERO

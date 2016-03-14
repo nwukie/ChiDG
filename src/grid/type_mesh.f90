@@ -68,7 +68,7 @@ contains
 
 
 
-    !> Mesh geometry initialization procedure
+    !>  Mesh geometry initialization procedure
     !!
     !!  Sets number of terms in coordinate expansion for the entire domain
     !!  and calls sub-initialization routines for individual element and face geometry
@@ -166,10 +166,12 @@ contains
 
 
 
-    !> Mesh - element initialization procedure
+    !>  Mesh - element initialization procedure
     !!
     !!  Computes the number of elements based on the element mapping selected and
     !!  calls the element initialization procedure on individual elements.
+    !!
+    !!  TODO: Generalize for non-block structured ness. Eliminate dependence on, xi, eta, zeta directions.
     !!
     !!  @author Nathan A. Wukie
     !!  @date   2/1/2016
@@ -308,7 +310,7 @@ contains
 
 
 
-    !> Mesh - element solution data initialization
+    !>  Mesh - element solution data initialization
     !!
     !!  @author Nathan A. Wukie
     !!  @date   2/1/2016
@@ -353,7 +355,7 @@ contains
 
 
 
-    !> Mesh - face initialization procedure
+    !>  Mesh - face initialization procedure
     !!
     !!  @author Nathan A. Wukie
     !!  @date   2/1/2016
@@ -452,7 +454,7 @@ contains
 
 
 
-    !> Mesh - face initialization procedure
+    !>  Mesh - face initialization procedure
     !!
     !!  @author Nathan A. Wukie
     !!  @date   2/1/2016

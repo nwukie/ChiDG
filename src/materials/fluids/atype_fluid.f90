@@ -4,15 +4,21 @@ module atype_fluid
     implicit none
     private
 
-    !
-    !
-    !
-    !
-    !---------------------------------------------------------------
+
+
+
+
+    !>  Abstract fluid class
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   3/15/2016
+    !!
+    !--------------------------------------------------------------------------
     type, public, abstract :: fluid_t
 
 
     contains
+
         generic, public                     :: compute_pressure => compute_pressure_ad, compute_pressure_real
         generic, public                     :: compute_gamma    => compute_gamma_ad,    compute_gamma_real
 
@@ -23,7 +29,7 @@ module atype_fluid
         procedure(compute_real), deferred   :: compute_gamma_real
 
     end type fluid_t
-    !---------------------------------------------------------------
+    !**************************************************************************
 
 
 

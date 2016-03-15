@@ -11,24 +11,33 @@ module type_solverdata
     implicit none
 
 
+
     !> Container for solver data.
     !!
     !!  @author Nathan A. Wukie 
-    !!  @date   2/1/2016
+    !!  @date   3/15/2016
     !!
     !!
     !-------------------------------------------------------------------------------------------------------
     type, public  :: solverdata_t
+
+        !
         ! Base solver data
+        !
         type(chidgVector_t)             :: q                        !< Solution vector
         type(chidgVector_t)             :: dq                       !< Change in solution vector
         type(chidgVector_t)             :: rhs                      !< Residual of the spatial scheme
         type(chidgMatrix_t)             :: lhs                      !< Linearization of the spatial scheme
 
-        real(rk)                        :: t                        !< Global time-step
+        !
+        ! Time information
+        !
+        real(rk)                        :: t                        !< Global time
         real(rk),   allocatable         :: dt(:,:)                  !< Element-local time-step, (ndomains,maxelems)
 
-
+        !
+        ! Function registration
+        !
         type(function_status_t)         :: function_status          !< Class for the status of a function residual and linearization
 
 

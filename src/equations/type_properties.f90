@@ -31,6 +31,7 @@ module type_properties
         class(solid_t),   allocatable   :: solid
 
     contains
+
         procedure   :: init
         procedure   :: get_eqn_index
 

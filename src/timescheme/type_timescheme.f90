@@ -19,7 +19,7 @@ module type_timescheme
     !------------------------------------------------------------------------------------------------------
     type, abstract, public  :: timescheme_t
 
-        real(rk)        :: testing
+        !real(rk)        :: testing
         logical         :: solverInitialized = .false.
 
 
@@ -213,7 +213,7 @@ contains
 
 
 
-    !> Print timescheme report
+    !>  Print timescheme report
     !!
     !!  @author Nathan A. Wukie
     !!  @date   2/8/2016

@@ -17,14 +17,14 @@ module mod_spatial
 contains
 
 
-    !> Spatial loop through domains, elements, and faces. Functions get called for each element/face.
+    !>  Spatial loop through domains, elements, and faces. Functions get called for each element/face.
     !!
     !!  @author Nathan A. Wukie
+    !!  @date   3/15/2016
     !!
     !!
     !!
-    !!
-    !------------------------------------------------------------------------------------------------------------------------------
+    !------------------------------------------------------------------------------------------------------------------
     subroutine update_space(data,timing,info)
         implicit none
         type(chidg_data_t), intent(inout)   :: data

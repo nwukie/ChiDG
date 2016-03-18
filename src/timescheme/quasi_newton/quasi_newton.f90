@@ -151,10 +151,13 @@ contains
 
 
 
+
                 !
                 ! Compute element-local pseudo-timestep
                 !
-                call compute_timestep(data,cfln)
+                data%sdata%dt = cfln
+                !call compute_timestep(data,cfln)
+
 
 
 
@@ -259,8 +262,8 @@ contains
 
 
 
-        entropy_error = compute_entropy_error(data)
-        call write_line('Entropy error: ', entropy_error, delimiter='', columns=.True., column_width=20)
+        !entropy_error = compute_entropy_error(data)
+        !call write_line('Entropy error: ', entropy_error, delimiter='', columns=.True., column_width=20)
 
     end subroutine solve
     !************************************************************************************************************

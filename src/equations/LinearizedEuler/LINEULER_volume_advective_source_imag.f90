@@ -1,7 +1,7 @@
 module LINEULER_volume_advective_source_imag
     use mod_kinds,              only: rk,ik
     use mod_constants,          only: NFACES,ONE,TWO,HALF,ZERO, &
-                                      XI_MIN,XI_MAX,ETA_MIN,ETA_MAX,ZETA_MIN,ZETA_MAX,DIAG
+                                      XI_MIN,XI_MAX,ETA_MIN,ETA_MAX,ZETA_MIN,ZETA_MAX,DIAG,PI
 
     use type_mesh,              only: mesh_t
     use atype_volume_flux,      only: volume_flux_t
@@ -18,12 +18,23 @@ module LINEULER_volume_advective_source_imag
 
     private
 
+
+
+    !>
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   3/17/2016
+    !!
+    !-----------------------------------------------------------------------------------
     type, extends(volume_flux_t), public :: LINEULER_volume_advective_source_imag_t
 
 
     contains
+
         procedure  :: compute
+
     end type LINEULER_volume_advective_source_imag_t
+    !************************************************************************************
 
 
 
@@ -38,21 +49,22 @@ contains
 
 
 
-    !==========================================================
-    !
-    !   Volume Flux routine for Euler
-    !
-    !===========================================================
+    !>
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   3/17/2016
+    !!
+    !!
+    !---------------------------------------------------------------------------------------
     subroutine compute(self,mesh,sdata,prop,idom,ielem,iblk)
-        class(LINEULER_volume_advective_source_imag_t),   intent(in)      :: self
-        type(mesh_t),                           intent(in)      :: mesh(:)
-        type(solverdata_t),                     intent(inout)   :: sdata
-        class(properties_t),                    intent(inout)   :: prop
-        integer(ik),                            intent(in)      :: idom, ielem, iblk
+        class(LINEULER_volume_advective_source_imag_t), intent(in)      :: self
+        type(mesh_t),                                   intent(in)      :: mesh(:)
+        type(solverdata_t),                             intent(inout)   :: sdata
+        class(properties_t),                            intent(inout)   :: prop
+        integer(ik),                                    intent(in)      :: idom, ielem, iblk
 
         ! Equation indices
-        !------------------------------------------------------------
-        integer(ik)    :: irho_r, irho_i
+        integer(ik)    :: irho_r,  irho_i
         integer(ik)    :: irhou_r, irhou_i
         integer(ik)    :: irhov_r, irhov_i
         integer(ik)    :: irhow_r, irhow_i
@@ -93,8 +105,7 @@ contains
         ! Gamma
         !
         gam = 1.4_rk
-        !omega = 1._rk
-        omega = 0.1_rk
+        omega = 348.329_rk * TWO * PI
 
 
 
@@ -160,7 +171,8 @@ contains
 
         call integrate_volume_source(mesh(idom)%elems(ielem),sdata,idom,irhoE_i,iblk,flux)
 
-    end subroutine
+    end subroutine compute
+    !*********************************************************************************************************
 
 
 

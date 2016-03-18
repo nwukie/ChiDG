@@ -23,9 +23,10 @@ module eqn_linearized_euler
 
 
 
-    !> The Euler Equations, governing inviscid fluid flows.
+    !>  The Euler Equations, governing inviscid fluid flows.
     !!
-    !!   @author Nathan A. Wukie
+    !!  @author Nathan A. Wukie
+    !!  @date   3/17/2016
     !!
     !------------------------------------------------------------------------------------------------------
     type, extends(equationset_t), public :: linearized_euler_e
@@ -52,13 +53,14 @@ contains
 
 
 
-    !> Initialize the Euler equations
+    !>  Initialize the Euler equations
     !!
     !!   - initialize properties
     !!   - add equations
     !!   - assign flux components
     !!
-    !!   @author Nathan A. Wukie
+    !!  @author Nathan A. Wukie
+    !!  @date   3/17/2016
     !!
     !------------------------------------------------------------------------------------------------------
     subroutine init(self)
@@ -81,7 +83,7 @@ contains
         !
         ! Set equationset name.
         !
-        self%name    = 'Linearized Euler'
+        call self%set_name("LinearizedEuler")
 
 
         !
@@ -99,13 +101,13 @@ contains
         !
         ! Allocate and initialize equations
         !
-        call self%add_equation("rho_r",1)
+        call self%add_equation("rho_r", 1)
         call self%add_equation("rhou_r",2)
         call self%add_equation("rhov_r",3)
         call self%add_equation("rhow_r",4)
         call self%add_equation("rhoE_r",5)
 
-        call self%add_equation("rho_i",6)
+        call self%add_equation("rho_i", 6)
         call self%add_equation("rhou_i",7)
         call self%add_equation("rhov_i",8)
         call self%add_equation("rhow_i",9)

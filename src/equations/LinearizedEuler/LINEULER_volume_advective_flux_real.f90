@@ -19,12 +19,23 @@ module LINEULER_volume_advective_flux_real
 
     private
 
+
+    !>  Volume advective flux for Linearized Euler equations - real.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   3/17/2016
+    !!
+    !!
+    !----------------------------------------------------------------------------------
     type, extends(volume_flux_t), public :: LINEULER_volume_advective_flux_real_t
 
 
     contains
+
         procedure  :: compute
+
     end type LINEULER_volume_advective_flux_real_t
+    !***********************************************************************************
 
 
 
@@ -39,20 +50,23 @@ contains
 
 
 
-    !==========================================================
-    !
-    !   Volume Flux routine for Euler
-    !
-    !===========================================================
+    !>
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   3/17/2016
+    !!
+    !!
+    !!
+    !----------------------------------------------------------------------------------
     subroutine compute(self,mesh,sdata,prop,idom,ielem,iblk)
         class(LINEULER_volume_advective_flux_real_t),   intent(in)      :: self
-        type(mesh_t),                           intent(in)      :: mesh(:)
-        type(solverdata_t),                     intent(inout)   :: sdata
-        class(properties_t),                    intent(inout)   :: prop
-        integer(ik),                            intent(in)      :: idom, ielem, iblk
+        type(mesh_t),                                   intent(in)      :: mesh(:)
+        type(solverdata_t),                             intent(inout)   :: sdata
+        class(properties_t),                            intent(inout)   :: prop
+        integer(ik),                                    intent(in)      :: idom, ielem, iblk
+
 
         ! Equation indices
-        !------------------------------------------------------------
         integer(ik)    :: irho
         integer(ik)    :: irhou
         integer(ik)    :: irhov
@@ -74,7 +88,9 @@ contains
         idonor = 0
 
 
-        !-------------------------------------------------------------
+        !
+        ! Get equation indices
+        !
         irho  = prop%get_eqn_index("rho_r")
         irhou = prop%get_eqn_index("rhou_r")
         irhov = prop%get_eqn_index("rhov_r")
@@ -175,7 +191,8 @@ contains
 
         call integrate_volume_flux(mesh(idom)%elems(ielem),sdata,idom,irhoE,iblk,flux_x,flux_y,flux_z)
 
-    end subroutine
+    end subroutine compute
+    !******************************************************************************************************
 
 
 

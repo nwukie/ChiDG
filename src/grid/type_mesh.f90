@@ -22,7 +22,10 @@ module type_mesh
     !!
     !------------------------------------------------------------------------------------------------------------
     type, public :: mesh_t
+
+        !
         ! Integer parameters
+        !
         integer(ik)                     :: neqns      = 0               !< Number of equations being solved
         integer(ik)                     :: nterms_s   = 0               !< Number of terms in the solution expansion
         integer(ik)                     :: nterms_c   = 0               !< Number of terms in the grid coordinate expansion
@@ -30,17 +33,21 @@ module type_mesh
         integer(ik)                     :: nelem_eta  = 0               !< Number of elements in the eta-direction
         integer(ik)                     :: nelem_zeta = 0               !< Number of elements in the zeta-direction
         integer(ik)                     :: nelem      = 0               !< Number of total elements
+        integer(ik)                     :: ntime      = 0               !< Number of time instances
 
+        !
         ! Grid data
+        !
         integer(ik)                     :: idomain
         type(element_t),  allocatable   :: elems(:)                     !< Element storage (1:nelem)
         type(face_t),     allocatable   :: faces(:,:)                   !< Face storage    (1:nelem,1:nfaces)
         type(chimera_t)                 :: chimera                      !< Chimera interface data
 
+        !
         ! Initialization flags
+        !
         logical                         :: geomInitialized = .false.    !< Status of geometry initialization
         logical                         :: solInitialized  = .false.    !< Status of numerics initialization
-
 
     contains
 
@@ -73,8 +80,10 @@ contains
     !!  Sets number of terms in coordinate expansion for the entire domain
     !!  and calls sub-initialization routines for individual element and face geometry
     !!
+    !!
     !!  @author Nathan A. Wukie
     !!  @date   2/1/2016
+    !!
     !!
     !!  @param[in]  nterms_c    Number of terms in the coordinate expansion
     !!  @param[in]  points_g    Rank-3 matrix of coordinate points defining a block mesh
@@ -118,14 +127,15 @@ contains
 
 
 
-
     !>  Mesh numerics initialization procedure
     !!
     !!  Sets number of equations being solved, number of terms in the solution expansion and
     !!  calls sub-initialization routines for individual element and face numerics
     !!
+    !!
     !!  @author Nathan A. Wukie
     !!  @date   2/1/2016
+    !!
     !!
     !!  @param[in]  neqns       Number of equations being solved in the current domain
     !!  @param[in]  nterms_s    Number of terms in the solution expansion
@@ -166,6 +176,7 @@ contains
 
 
 
+
     !>  Mesh - element initialization procedure
     !!
     !!  Computes the number of elements based on the element mapping selected and
@@ -173,8 +184,10 @@ contains
     !!
     !!  TODO: Generalize for non-block structured ness. Eliminate dependence on, xi, eta, zeta directions.
     !!
+    !!
     !!  @author Nathan A. Wukie
     !!  @date   2/1/2016
+    !!
     !!
     !!  @param[in]  points_g    Rank-3 matrix of coordinate points defining a block mesh
     !!
@@ -354,7 +367,6 @@ contains
 
 
 
-
     !>  Mesh - face initialization procedure
     !!
     !!  @author Nathan A. Wukie
@@ -454,6 +466,7 @@ contains
 
 
 
+
     !>  Mesh - face initialization procedure
     !!
     !!  @author Nathan A. Wukie
@@ -483,6 +496,7 @@ contains
             end do ! iface
 
         end do ! ielem
+
 
     end subroutine init_faces_sol
     !***************************************************************************************************************

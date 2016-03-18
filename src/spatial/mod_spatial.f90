@@ -10,6 +10,7 @@ module mod_spatial
     use type_function_info, only: function_info_t
 
     use mod_DNAD_tools
+    use mod_condition,      only: cond
 
     implicit none
 
@@ -46,7 +47,7 @@ contains
         type(function_info_t)       :: function_info
 
 
-        integer(ik) :: irow, ientry
+        integer(ik) :: irow, ientry, dim_a, dim_b
         real(rk)    :: res
 
 
@@ -249,34 +250,43 @@ contains
 
 
 
-!            !
-!            ! Print maximum value of boundary condition jacobian blocks
-!            !
-!            do idom = 1,data%ndomains()
-!
-!                associate ( mesh => data%mesh(idom), sdata => data%sdata, eqnset => data%eqnset(idom)%item, prop => data%eqnset(idom)%item%prop)
-!
-!                nelem = mesh%nelem
-!
-!
-!                do ielem = 1,nelem
-!                    print*, idom, ielem
-!
-!                    do iblk = 1,size(sdata%lhs%dom(idom)%bc_blks,2)
-!
-!                        if ( allocated(sdata%lhs%dom(idom)%bc_blks(ielem,iblk)%mat) ) then
-!
-!                            print*,  maxval(sdata%lhs%dom(idom)%bc_blks(ielem,iblk)%mat)
-!
-!                        end if
-!
-!
-!                    end do ! iblk
-!
-!                end do ! ielem
-!            
-!                end associate
-!            end do ! idom
+            !
+            ! Print maximum value of boundary condition jacobian blocks
+            !
+            do idom = 1,data%ndomains()
+
+                associate ( mesh => data%mesh(idom), sdata => data%sdata, eqnset => data%eqnset(idom)%item, prop => data%eqnset(idom)%item%prop)
+
+                nelem = mesh%nelem
+
+
+                do ielem = 1,nelem
+
+                    if (ielem == 1) then
+                        print*, data%mesh(idom)%elems(ielem)%quad_pts(:)%c1_
+                    end if
+
+
+                    print*, idom, ielem
+
+                    !do iblk = 1,size(sdata%lhs%dom(idom)%bc_blks,2)
+                    iblk = DIAG
+
+                        if ( allocated(sdata%lhs%dom(idom)%lblks(ielem,iblk)%mat) ) then
+
+                            !print*,  maxval(sdata%lhs%dom(idom)%lblks(ielem,iblk)%mat)
+
+                            print*,  cond(sdata%lhs%dom(idom)%lblks(ielem,iblk)%mat)
+
+                        end if
+
+
+                    !end do ! iblk
+
+                end do ! ielem
+            
+                end associate
+            end do ! idom
 
 
 

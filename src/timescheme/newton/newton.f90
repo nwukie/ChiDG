@@ -210,8 +210,8 @@ contains
         call self%newton_iterations%push_back(niter)
 
 
-        entropy_error = compute_entropy_error(data)
-        call write_line('Entropy error: ', entropy_error, delimiter='')
+        !entropy_error = compute_entropy_error(data)
+        !call write_line('Entropy error: ', entropy_error, delimiter='')
 
     end subroutine solve
 

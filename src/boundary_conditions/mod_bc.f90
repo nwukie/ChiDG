@@ -28,6 +28,10 @@ module mod_bc
     use bc_euler_giles_outlet,              only: euler_giles_outlet_t
     use bc_euler_giles_outlet_2D_a,         only: euler_giles_outlet_2D_a_t
     use bc_euler_giles_outlet_2D_b,         only: euler_giles_outlet_2D_b_t
+
+    use bc_lineuler_inlet,                  only: lineuler_inlet_t
+    use bc_lineuler_outlet,                 only: lineuler_outlet_t
+    use bc_lineuler_extrapolate,            only: lineuler_extrapolate_t
     implicit none
 
 
@@ -60,6 +64,7 @@ contains
         !
         type(periodic_t)                        :: PERIODIC
         type(linearadvection_extrapolate_t)     :: LINEARADVECTION_EXTRAPOLATE
+
         type(euler_wall_t)                      :: EULER_WALL
         type(euler_totalinlet_t)                :: EULER_TOTALINLET
         type(euler_totalinlet_characteristic_t) :: EULER_TOTALINLET_CHARCTERISTIC
@@ -68,6 +73,10 @@ contains
         type(euler_giles_outlet_t)              :: EULER_GILES_OUTLET
         type(euler_giles_outlet_2D_a_t)         :: EULER_GILES_OUTLET_2D_A
         type(euler_giles_outlet_2D_b_t)         :: EULER_GILES_OUTLET_2D_B
+
+        type(lineuler_inlet_t)                  :: LINEULER_INLET
+        type(lineuler_outlet_t)                 :: LINEULER_OUTLET
+        type(lineuler_extrapolate_t)            :: LINEULER_EXTRAPOLATE
 
 
         if ( .not. initialized ) then
@@ -85,6 +94,10 @@ contains
             call registered_bcs%push_back(EULER_GILES_OUTLET)
             call registered_bcs%push_back(EULER_GILES_OUTLET_2D_A)
             call registered_bcs%push_back(EULER_GILES_OUTLET_2D_B)
+
+            call registered_bcs%push_back(LINEULER_INLET)
+            call registered_bcs%push_back(LINEULER_OUTLET)
+            call registered_bcs%push_back(LINEULER_EXTRAPOLATE)
 
 
             !

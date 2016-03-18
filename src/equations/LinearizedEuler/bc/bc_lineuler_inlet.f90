@@ -5,10 +5,9 @@ module bc_lineuler_inlet
     use type_solverdata,    only: solverdata_t
     use type_mesh,          only: mesh_t
     use type_properties,    only: properties_t
-    use type_seed,          only: seed_t
-    use type_face_location, only: face_location_t
+    use type_face_info,     only: face_info_t
+    use type_function_info, only: function_info_t
 
-    use mod_DNAD_tools,     only: compute_seed
     use mod_integrate,      only: integrate_boundary_scalar_flux
     use mod_interpolate,    only: interpolate_face
     use DNAD_D
@@ -18,27 +17,62 @@ module bc_lineuler_inlet
     implicit none
 
 
-    !> Extrapolation boundary condition 
+    !>  Extrapolation boundary condition 
     !!      - Extrapolate interior variables to be used for calculating the boundary flux.
     !!  
     !!  @author Nathan A. Wukie
+    !!  @date   3/17/2016
     !!
     !-------------------------------------------------------------------------------------------
     type, public, extends(bc_t) :: lineuler_inlet_t
 
     contains
-        procedure :: compute    !> bc implementation
+    
+        procedure   :: add_options
+        procedure   :: compute    !> bc implementation
+
     end type lineuler_inlet_t
-    !-------------------------------------------------------------------------------------------
+    !*******************************************************************************************
 
 
 
 
 contains
 
+
+
+    !>
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   3/17/2016
+    !!
+    !!
+    !!
+    !-------------------------------------------------------------------------------------------
+    subroutine add_options(self)
+        class(lineuler_inlet_t),    intent(inout)   :: self
+
+        !
+        ! Set name
+        ! 
+        call self%set_name('lineuler_inlet')
+
+
+    end subroutine add_options
+    !*******************************************************************************************
+
+
+
+
+
+
+
+
+
     !> Specialized compute routine for Extrapolation Boundary Condition
     !!
     !!  @author Nathan A. Wukie
+    !!  @date   3/17/2016
     !!
     !!  @param[in]      mesh    Mesh data containing elements and faces for the domain
     !!  @param[inout]   sdata   Solver data containing solution vector, rhs, linearization, etc.
@@ -46,34 +80,34 @@ contains
     !!  @param[in]      iface   Index of the face being computed
     !!  @param[in]      iblk    Index of the linearization block being computed
     !!  @param[inout]   prop    properties_t object containing equations and material_t objects
+    !!
     !-------------------------------------------------------------------------------------------
-    subroutine compute(self,mesh,sdata,prop,idom,ielem,iface,iblk)
-        class(lineuler_inlet_t),     intent(inout)   :: self
+    subroutine compute(self,mesh,sdata,prop,face,flux)
+        class(lineuler_inlet_t),        intent(inout)   :: self
         type(mesh_t),                   intent(in)      :: mesh(:)
         type(solverdata_t),             intent(inout)   :: sdata
         class(properties_t),            intent(inout)   :: prop
-        integer(ik),                    intent(in)      :: idom
-        integer(ik),                    intent(in)      :: ielem
-        integer(ik),                    intent(in)      :: iface
-        integer(ik),                    intent(in)      :: iblk
+        type(face_info_t),              intent(in)      :: face
+        type(function_info_t),          intent(in)      :: flux
+
 
         ! Equation indices
         integer(ik)     :: irho_r, irhou_r, irhov_r, irhow_r, irhoE_r
         integer(ik)     :: irho_i, irhou_i, irhov_i, irhow_i, irhoE_i
 
-        integer(ik)             :: idonor
-        type(seed_t)            :: seed
-        type(face_location_t)   :: face
 
         ! Storage at quadrature nodes
-        type(AD_D), dimension(mesh(idom)%faces(ielem,iface)%gq%face%nnodes)   ::  &
-                        rho_r,  rhou_r, rhov_r, rhow_r, rhoE_r,        &
-                        rho_i,  rhou_i, rhov_i, rhow_i, rhoE_i,        &
-                        flux_x, flux_y, flux_z, flux
+        type(AD_D), dimension(mesh(face%idomain)%faces(face%ielement,face%iface)%gq%face%nnodes)   ::  &
+                        rho_r,      rhou_r,     rhov_r,     rhow_r,     rhoE_r,         &
+                        rho_i,      rhou_i,     rhov_i,     rhow_i,     rhoE_i,         &
+                        p_r,        u_r,        c1,         c2,         c3,     c4,     &
+                        drho,       du,         dp,                                     &
+                        drho_total, du_total,   dp_total,                               &
+                        drho_user,  du_user,    dp_user,                                &
+                        flux_x, flux_y, flux_z, integrand
 
 
 
-        idonor = 0
 
 
         !
@@ -95,56 +129,111 @@ contains
 
 
 
-        face%idomain  = idom
-        face%ielement = ielem
-        face%iface    = iface
+        associate ( idom => face%idomain, ielem => face%ielement, iface => face%iface )
 
-
-
-        !
-        ! Get seed element for derivatives
-        !
-        seed = compute_seed(mesh,idom,ielem,iface,idonor,iblk)
-
-
-        associate (norms => mesh(idom)%faces(ielem,iface)%norm, unorms => mesh(idom)%faces(ielem,iface)%unorm, faces => mesh(idom)%faces, q => sdata%q)
+            associate (norms => mesh(idom)%faces(ielem,iface)%norm, unorms => mesh(idom)%faces(ielem,iface)%unorm, faces => mesh(idom)%faces, q => sdata%q)
 
             !
             ! Interpolate interior solution to quadrature nodes
             !
-            call interpolate_face(mesh,q,idom,ielem,iface,irho_r, rho_r, seed, LOCAL)
-            call interpolate_face(mesh,q,idom,ielem,iface,irhou_r,rhou_r,seed, LOCAL)
-            call interpolate_face(mesh,q,idom,ielem,iface,irhov_r,rhov_r,seed, LOCAL)
-            call interpolate_face(mesh,q,idom,ielem,iface,irhow_r,rhow_r,seed, LOCAL)
-            call interpolate_face(mesh,q,idom,ielem,iface,irhoE_r,rhoE_r,seed, LOCAL)
+            call interpolate_face(mesh,face,q,irho_r, rho_r,  LOCAL)
+            call interpolate_face(mesh,face,q,irhou_r,rhou_r, LOCAL)
+            call interpolate_face(mesh,face,q,irhov_r,rhov_r, LOCAL)
+            call interpolate_face(mesh,face,q,irhow_r,rhow_r, LOCAL)
+            call interpolate_face(mesh,face,q,irhoE_r,rhoE_r, LOCAL)
 
 
-            call interpolate_face(mesh,q,idom,ielem,iface,irho_i, rho_i, seed, LOCAL)
-            call interpolate_face(mesh,q,idom,ielem,iface,irhou_i,rhou_i,seed, LOCAL)
-            call interpolate_face(mesh,q,idom,ielem,iface,irhov_i,rhov_i,seed, LOCAL)
-            call interpolate_face(mesh,q,idom,ielem,iface,irhow_i,rhow_i,seed, LOCAL)
-            call interpolate_face(mesh,q,idom,ielem,iface,irhoE_i,rhoE_i,seed, LOCAL)
+            call interpolate_face(mesh,face,q,irho_i, rho_i,  LOCAL)
+            call interpolate_face(mesh,face,q,irhou_i,rhou_i, LOCAL)
+            call interpolate_face(mesh,face,q,irhov_i,rhov_i, LOCAL)
+            call interpolate_face(mesh,face,q,irhow_i,rhow_i, LOCAL)
+            call interpolate_face(mesh,face,q,irhoE_i,rhoE_i, LOCAL)
 
 
-            rho_r  = ZERO
-            rhou_r = ZERO
-            rhov_r = ZERO
-            rhow_r = ZERO
-            rhoE_r = ZERO
+!            rho_r  = ZERO
+!            rhou_r = ZERO
+!            rhov_r = ZERO
+!            rhow_r = ZERO
+!            rhoE_r = ZERO
 
 
-            rho_i  = ZERO
-            rhou_i = ZERO
-            rhov_i = ZERO
-            rhow_i = ZERO
-            rhoE_i = ZERO
+!            rho_i  = ZERO
+!            rhou_i = ZERO
+!            rhov_i = ZERO
+!            rhow_i = ZERO
+!            rhoE_i = ZERO
 
 
-            rho_r  = -4.2602822704736e-6_rk
-            rhou_r = -5.2125010830968e-9_rk
-            rhov_r = ZERO
-            rhow_r = ZERO
-            rhoE_r = 1.25_rk
+            !
+            ! Compute real velocity
+            !
+            !u_r = rhou_r/rho_r
+
+            u_r = rhou_r/rhobar  -  rhobar*ubar * rho_r
+
+
+
+            !
+            ! Compute real pressure
+            !
+            ! TODO: Double check linearization of pressure equation here
+            !
+            p_r = (gam-ONE)*(rhoE_r + HALF*(ubar**TWO + vbar**TWO + wbar**TWO)*rho_r - ( ubar*rhou_r  +  vbar*rhov_r  +  wbar*rhow_r ) )
+
+            
+
+
+
+            !
+            ! Compute outgoing Characteristic, c4, from perturbed variables
+            !
+            c4 = -rhobar*cbar * u_r  +  p_r
+
+
+            !
+            ! Get contribution to variables from interior solution, coming from c4
+            !
+            drho =  (ONE/(TWO*cbar**TWO))   * c4
+            du   = -(ONE/(TWO*rhobar*cbar)) * c4
+            dp   =  (HALF * c4)
+
+
+            !
+            ! Get contribution from user-specified perturbations
+            !
+            dp_user = rho_r
+            dp_user = 1._rk
+
+            !
+            ! Compute in-going characteristics from user-specified data
+            !
+            c1 = dp_user
+            c3 = dp_user
+            
+
+            !
+            ! Compute primitive perturbations from user-specified data
+            !
+            drho_user = -(ONE/(cbar**TWO))*c1  +  (ONE/(TWO*cbar**TWO))*c3
+            du_user   =  (ONE/(TWO*rhobar*cbar))*c3
+            dp_user   =  HALF*c3
+
+
+            !
+            ! Accumulate perturbations from interior and user-specified data
+            !
+            drho_total = drho + drho_user
+            du_total   = du   + du_user
+            dp_total   = dp   + dp_user
+
+            rho_r  = drho_total
+            !rhou_r = drho_total + du_total
+            rhou_r = rhobar*du_total  +  rhobar*rhobar*ubar*rho_r
+            rhov_r = rhov_r
+            rhow_r = rhow_r
+
+!            p_r = (gam-ONE)*(rhoE_r + HALF*(ubar**TWO + vbar**TWO + wbar**TWO)*rho_r - ( ubar*rhou_r  +  vbar*rhov_r  +  wbar*rhow_r ) )
+            rhoE_r = p_r/(gam-ONE) - ( HALF*(ubar**TWO + vbar**TWO + wbar**TWO)*rho_r - ( ubar*rhou_r  +  vbar*rhov_r  +  wbar*rhow_r ) )
 
 
 
@@ -164,9 +253,9 @@ contains
                      rho_y_rhoE * rhoE_r
             flux_z = rhow_r
 
-            flux = flux_x*norms(:,1) + flux_y*norms(:,2) + flux_z*norms(:,3)
+            integrand = flux_x*norms(:,1) + flux_y*norms(:,2) + flux_z*norms(:,3)
 
-            call integrate_boundary_scalar_flux(mesh,sdata,face,irho_r,iblk,idonor,seed,flux)
+            call integrate_boundary_scalar_flux(mesh,sdata,face,flux,irho_r,integrand)
 
 
 
@@ -182,9 +271,9 @@ contains
                      rho_y_rhoE * rhoE_i
             flux_z = rhow_r
 
-            flux = flux_x*norms(:,1) + flux_y*norms(:,2) + flux_z*norms(:,3)
+            integrand = flux_x*norms(:,1) + flux_y*norms(:,2) + flux_z*norms(:,3)
 
-            call integrate_boundary_scalar_flux(mesh,sdata,face,irho_i,iblk,idonor,seed,flux)
+            call integrate_boundary_scalar_flux(mesh,sdata,face,flux,irho_i,integrand)
 
 
 
@@ -207,9 +296,9 @@ contains
                      rhou_y_rhoE * rhoE_r
             flux_z = ZERO
 
-            flux = flux_x*norms(:,1) + flux_y*norms(:,2) + flux_z*norms(:,3)
+            integrand = flux_x*norms(:,1) + flux_y*norms(:,2) + flux_z*norms(:,3)
 
-            call integrate_boundary_scalar_flux(mesh,sdata,face,irhou_r,iblk,idonor,seed,flux)
+            call integrate_boundary_scalar_flux(mesh,sdata,face,flux,irhou_r,integrand)
 
 
             flux_x = rhou_x_rho  * rho_i  + &
@@ -222,9 +311,9 @@ contains
                      rhou_y_rhoE * rhoE_i
             flux_z = ZERO
 
-            flux = flux_x*norms(:,1) + flux_y*norms(:,2) + flux_z*norms(:,3)
+            integrand = flux_x*norms(:,1) + flux_y*norms(:,2) + flux_z*norms(:,3)
 
-            call integrate_boundary_scalar_flux(mesh,sdata,face,irhou_i,iblk,idonor,seed,flux)
+            call integrate_boundary_scalar_flux(mesh,sdata,face,flux,irhou_i,integrand)
 
 
 
@@ -246,9 +335,9 @@ contains
                      rhov_y_rhoE * rhoE_r
             flux_z = ZERO
 
-            flux = flux_x*norms(:,1) + flux_y*norms(:,2) + flux_z*norms(:,3)
+            integrand = flux_x*norms(:,1) + flux_y*norms(:,2) + flux_z*norms(:,3)
 
-            call integrate_boundary_scalar_flux(mesh,sdata,face,irhov_r,iblk,idonor,seed,flux)
+            call integrate_boundary_scalar_flux(mesh,sdata,face,flux,irhov_r,integrand)
 
 
             flux_x = rhov_x_rho  * rho_i  + &
@@ -261,9 +350,9 @@ contains
                      rhov_y_rhoE * rhoE_i
             flux_z = ZERO
 
-            flux = flux_x*norms(:,1) + flux_y*norms(:,2) + flux_z*norms(:,3)
+            integrand = flux_x*norms(:,1) + flux_y*norms(:,2) + flux_z*norms(:,3)
 
-            call integrate_boundary_scalar_flux(mesh,sdata,face,irhov_i,iblk,idonor,seed,flux)
+            call integrate_boundary_scalar_flux(mesh,sdata,face,flux,irhov_i,integrand)
 
 
 
@@ -303,9 +392,9 @@ contains
                      rhoE_y_rhoE * rhoE_r
             flux_z = ZERO
 
-            flux = flux_x*norms(:,1) + flux_y*norms(:,2) + flux_z*norms(:,3)
+            integrand = flux_x*norms(:,1) + flux_y*norms(:,2) + flux_z*norms(:,3)
 
-            call integrate_boundary_scalar_flux(mesh,sdata,face,irhoE_r,iblk,idonor,seed,flux)
+            call integrate_boundary_scalar_flux(mesh,sdata,face,flux,irhoE_r,integrand)
 
 
             flux_x = rhoE_x_rho  * rho_i  + &
@@ -318,11 +407,9 @@ contains
                      rhoE_y_rhoE * rhoE_i
             flux_z = ZERO
 
-            flux = flux_x*norms(:,1) + flux_y*norms(:,2) + flux_z*norms(:,3)
+            integrand = flux_x*norms(:,1) + flux_y*norms(:,2) + flux_z*norms(:,3)
 
-            call integrate_boundary_scalar_flux(mesh,sdata,face,irhoE_i,iblk,idonor,seed,flux)
-
-
+            call integrate_boundary_scalar_flux(mesh,sdata,face,flux,irhoE_i,integrand)
 
 
 
@@ -331,10 +418,13 @@ contains
 
 
 
+
+            end associate
 
         end associate
 
-    end subroutine
+    end subroutine compute
+    !*********************************************************************************************************
 
 
 

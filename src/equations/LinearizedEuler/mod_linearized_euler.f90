@@ -6,23 +6,23 @@ module mod_linearized_euler
 
     real(rk), parameter :: gam = 1.4_rk
 
-    !real(rk), parameter :: rho_c  = 1.1928790357326_rk
-    real(rk), parameter :: rho_c  = 1._rk
-    !real(rk), parameter :: rhou_c = 151.826008671035_rk
-    !real(rk), parameter :: rhou_c = 50._rk
-    real(rk), parameter :: rhou_c = 0.2_rk
-    !real(rk), parameter :: rhou_c = 0.001_rk
+    real(rk), parameter :: rho_c  = 1.2_rk
+    real(rk), parameter :: rhou_c = 0._rk
     real(rk), parameter :: rhov_c = 0._rk
     real(rk), parameter :: rhow_c = 0._rk
-    !real(rk), parameter :: rhoE_c = 259661.975866153_rk
-    real(rk), parameter :: rhoE_c = 1._rk
+    real(rk), parameter :: rhoE_c = 260000.0_rk
 
-    real(rk), parameter :: ubar = rhou_c / rho_c
-    real(rk), parameter :: vbar = rhov_c / rho_c
-    real(rk), parameter :: wbar = rhow_c / rho_c
+    real(rk), parameter :: rhobar = rho_c
+    real(rk), parameter :: ubar   = rhou_c / rho_c
+    real(rk), parameter :: vbar   = rhov_c / rho_c
+    real(rk), parameter :: wbar   = rhow_c / rho_c
 
-    real(rk), parameter :: pbar = (gam - ONE) * (rhoE_c - HALF*( (rhou_c*rhou_c) + (rhov_c*rhov_c) + (rhow_c*rhow_c))/rho_c )
-    real(rk), parameter :: Hbar = (rhoE_c + pbar) / rho_c
+    real(rk), parameter :: pbar   = (gam - ONE) * (rhoE_c - HALF*( (rhou_c*rhou_c) + (rhov_c*rhov_c) + (rhow_c*rhow_c))/rho_c )
+    real(rk), parameter :: Hbar   = (rhoE_c + pbar) / rho_c
+
+    real(rk), parameter :: cbar   = sqrt(gam * pbar / rhobar)
+
+
 
     real(rk), parameter :: dp_drho  = ((gam - ONE)/TWO) * ( ubar**TWO + vbar**TWO )
     real(rk), parameter :: dp_drhou = -(gam - ONE)*ubar

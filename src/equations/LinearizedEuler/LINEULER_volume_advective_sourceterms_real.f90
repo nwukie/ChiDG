@@ -18,12 +18,23 @@ module LINEULER_volume_advective_sourceterms_real
 
     private
 
+
+    !>
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   3/17/2016
+    !!
+    !!
+    !----------------------------------------------------------------------------------------
     type, extends(volume_flux_t), public :: LINEULER_volume_advective_sourceterms_real_t
 
 
     contains
+
         procedure  :: compute
+        
     end type LINEULER_volume_advective_sourceterms_real_t
+    !*****************************************************************************************
 
 
 
@@ -38,21 +49,22 @@ contains
 
 
 
-    !==========================================================
-    !
-    !   Volume Flux routine for Euler
-    !
-    !===========================================================
+    !>
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   3/17/2016
+    !!
+    !!
+    !-----------------------------------------------------------------------------------------
     subroutine compute(self,mesh,sdata,prop,idom,ielem,iblk)
-        class(LINEULER_volume_advective_sourceterms_real_t),   intent(in)      :: self
-        type(mesh_t),                           intent(in)      :: mesh(:)
-        type(solverdata_t),                     intent(inout)   :: sdata
-        class(properties_t),                    intent(inout)   :: prop
-        integer(ik),                            intent(in)      :: idom, ielem, iblk
+        class(LINEULER_volume_advective_sourceterms_real_t),    intent(in)      :: self
+        type(mesh_t),                                           intent(in)      :: mesh(:)
+        type(solverdata_t),                                     intent(inout)   :: sdata
+        class(properties_t),                                    intent(inout)   :: prop
+        integer(ik),                                            intent(in)      :: idom, ielem, iblk
 
         ! Equation indices
-        !------------------------------------------------------------
-        integer(ik)    :: irho_r, irho_i
+        integer(ik)    :: irho_r,  irho_i
         integer(ik)    :: irhou_r, irhou_i
         integer(ik)    :: irhov_r, irhov_i
         integer(ik)    :: irhow_r, irhow_i
@@ -76,7 +88,9 @@ contains
         idonor = 0
 
 
-        !-------------------------------------------------------------
+        !
+        ! Get equation indices
+        !
         irho_r  = prop%get_eqn_index("rho_r")
         irhou_r = prop%get_eqn_index("rhou_r")
         irhov_r = prop%get_eqn_index("rhov_r")
@@ -129,7 +143,7 @@ contains
             flux(igq) = eps * exp(-alpha * (x**TWO + y**TWO) )
 
         end do
-        !flux = ZERO
+        flux = ZERO
 
         call integrate_volume_source(mesh(idom)%elems(ielem),sdata,idom,irho_r,iblk,flux)
 
@@ -145,7 +159,7 @@ contains
             flux(igq) = eps * exp(-alpha * (x**TWO + y**TWO) )
 
         end do
-        !flux = ZERO
+        flux = ZERO
 
         call integrate_volume_source(mesh(idom)%elems(ielem),sdata,idom,irhou_r,iblk,flux)
 
@@ -161,7 +175,7 @@ contains
             flux(igq) = eps * exp(-alpha * (x**TWO + y**TWO) )
 
         end do
-        !flux = ZERO
+        flux = ZERO
 
         call integrate_volume_source(mesh(idom)%elems(ielem),sdata,idom,irhov_r,iblk,flux)
 
@@ -185,11 +199,12 @@ contains
             flux(igq) = eps * exp(-alpha * (x**TWO + y**TWO) )
 
         end do
-        !flux = ZERO
+        flux = ZERO
 
         call integrate_volume_source(mesh(idom)%elems(ielem),sdata,idom,irhoE_r,iblk,flux)
 
-    end subroutine
+    end subroutine compute
+    !**********************************************************************************************************
 
 
 

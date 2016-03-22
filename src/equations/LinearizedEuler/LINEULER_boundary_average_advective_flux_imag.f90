@@ -150,22 +150,37 @@ contains
             flux_x_m = rho_x_rho  * rho_m  + &
                        rho_x_rhou * rhou_m + &
                        rho_x_rhov * rhov_m + &
+                       rho_x_rhow * rhow_m + &
                        rho_x_rhoE * rhoE_m
             flux_y_m = rho_y_rho  * rho_m  + &
                        rho_y_rhou * rhou_m + &
                        rho_y_rhov * rhov_m + &
+                       rho_y_rhow * rhow_m + &
                        rho_y_rhoE * rhoE_m 
-            flux_z_m = rhow_m
+            flux_z_m = rho_z_rho  * rho_m  + &
+                       rho_z_rhou * rhou_m + &
+                       rho_z_rhov * rhov_m + &
+                       rho_z_rhow * rhow_m + &
+                       rho_z_rhoE * rhoE_m 
+
 
             flux_x_p = rho_x_rho  * rho_p  + &
                        rho_x_rhou * rhou_p + &
                        rho_x_rhov * rhov_p + &
+                       rho_x_rhow * rhow_p + &
                        rho_x_rhoE * rhoE_p
             flux_y_p = rho_y_rho  * rho_p  + &
                        rho_y_rhou * rhou_p + &
                        rho_y_rhov * rhov_p + &
+                       rho_y_rhow * rhow_p + &
                        rho_y_rhoE * rhoE_p 
-            flux_z_p = rhow_p
+            flux_z_p = rho_z_rho  * rho_p  + &
+                       rho_z_rhou * rhou_p + &
+                       rho_z_rhov * rhov_p + &
+                       rho_z_rhow * rhow_p + &
+                       rho_z_rhoE * rhoE_p 
+
+
 
             flux_x = (flux_x_m + flux_x_p)
             flux_y = (flux_y_m + flux_y_p)
@@ -184,25 +199,34 @@ contains
             flux_x_m = rhou_x_rho  * rho_m  + &
                        rhou_x_rhou * rhou_m + &
                        rhou_x_rhov * rhov_m + &
+                       rhou_x_rhow * rhow_m + &
                        rhou_x_rhoE * rhoE_m
             flux_y_m = rhou_y_rho  * rho_m  + &
                        rhou_y_rhou * rhou_m + &
                        rhou_y_rhov * rhov_m + &
+                       rhou_y_rhow * rhow_m + &
                        rhou_y_rhoE * rhoE_m 
-            flux_z_m = ZERO
-
+            flux_z_m = rhou_z_rho  * rho_m  + &
+                       rhou_z_rhou * rhou_m + &
+                       rhou_z_rhov * rhov_m + &
+                       rhou_z_rhow * rhow_m + &
+                       rhou_z_rhoE * rhoE_m 
 
             flux_x_p = rhou_x_rho  * rho_p  + &
                        rhou_x_rhou * rhou_p + &
                        rhou_x_rhov * rhov_p + &
+                       rhou_x_rhow * rhow_p + &
                        rhou_x_rhoE * rhoE_p
             flux_y_p = rhou_y_rho  * rho_p  + &
                        rhou_y_rhou * rhou_p + &
                        rhou_y_rhov * rhov_p + &
+                       rhou_y_rhow * rhow_p + &
                        rhou_y_rhoE * rhoE_p 
-            flux_z_p = ZERO
-
-
+            flux_z_p = rhou_z_rho  * rho_p  + &
+                       rhou_z_rhou * rhou_p + &
+                       rhou_z_rhov * rhov_p + &
+                       rhou_z_rhow * rhow_p + &
+                       rhou_z_rhoE * rhoE_p 
 
 
 
@@ -223,26 +247,35 @@ contains
             flux_x_m = rhov_x_rho  * rho_m  + &
                        rhov_x_rhou * rhou_m + &
                        rhov_x_rhov * rhov_m + &
+                       rhov_x_rhow * rhow_m + &
                        rhov_x_rhoE * rhoE_m
             flux_y_m = rhov_y_rho  * rho_m  + &
                        rhov_y_rhou * rhou_m + &
                        rhov_y_rhov * rhov_m + &
+                       rhov_y_rhow * rhow_m + &
                        rhov_y_rhoE * rhoE_m 
-            flux_z_m = ZERO
-
+            flux_z_m = rhov_z_rho  * rho_m  + &
+                       rhov_z_rhou * rhou_m + &
+                       rhov_z_rhov * rhov_m + &
+                       rhov_z_rhow * rhow_m + &
+                       rhov_z_rhoE * rhoE_m 
 
 
             flux_x_p = rhov_x_rho  * rho_p  + &
                        rhov_x_rhou * rhou_p + &
                        rhov_x_rhov * rhov_p + &
+                       rhov_x_rhow * rhow_p + &
                        rhov_x_rhoE * rhoE_p
             flux_y_p = rhov_y_rho  * rho_p  + &
                        rhov_y_rhou * rhou_p + &
                        rhov_y_rhov * rhov_p + &
+                       rhov_y_rhow * rhow_p + &
                        rhov_y_rhoE * rhoE_p 
-            flux_z_p = ZERO
-
-
+            flux_z_p = rhov_z_rho  * rho_p  + &
+                       rhov_z_rhou * rhou_p + &
+                       rhov_z_rhov * rhov_p + &
+                       rhov_z_rhow * rhow_p + &
+                       rhov_z_rhoE * rhoE_p 
 
 
 
@@ -256,53 +289,90 @@ contains
 
             call integrate_boundary_scalar_flux(mesh,sdata,face_info,function_info,irhov,integrand)
 
-!            !================================
-!            !       Z-MOMENTUM FLUX
-!            !================================
-!            flux_x_m = (rhow_m*rhou_m)/rho_m
-!            flux_y_m = (rhow_m*rhov_m)/rho_m
-!            flux_z_m = (rhow_m*rhow_m)/rho_m + p_m
-!
-!            flux_x_p = (rhow_p*rhou_p)/rho_p
-!            flux_y_p = (rhow_p*rhov_p)/rho_p
-!            flux_z_p = (rhow_p*rhow_p)/rho_p + p_p
-!
-!            flux_x = (flux_x_m + flux_x_p)
-!            flux_y = (flux_y_m + flux_y_p)
-!            flux_z = (flux_z_m + flux_z_p)
-!
-!
-!            ! dot with normal vector
-!            flux = HALF*(flux_x*norms(:,1) + flux_y*norms(:,2) + flux_z*norms(:,3))
-!
-!            call integrate_boundary_scalar_flux(mesh,sdata,face,irhow,iblk,idonor,seed,flux)
-!
+            !================================
+            !       Z-MOMENTUM FLUX
+            !================================
+            flux_x_m = rhow_x_rho  * rho_m  + &
+                       rhow_x_rhou * rhou_m + &
+                       rhow_x_rhov * rhov_m + &
+                       rhow_x_rhow * rhow_m + &
+                       rhow_x_rhoE * rhoE_m
+            flux_y_m = rhow_y_rho  * rho_m  + &
+                       rhow_y_rhou * rhou_m + &
+                       rhow_y_rhov * rhov_m + &
+                       rhow_y_rhow * rhow_m + &
+                       rhow_y_rhoE * rhoE_m 
+            flux_z_m = rhow_z_rho  * rho_m  + &
+                       rhow_z_rhou * rhou_m + &
+                       rhow_z_rhov * rhov_m + &
+                       rhow_z_rhow * rhow_m + &
+                       rhow_z_rhoE * rhoE_m 
+
+
+            flux_x_p = rhow_x_rho  * rho_p  + &
+                       rhow_x_rhou * rhou_p + &
+                       rhow_x_rhov * rhov_p + &
+                       rhow_x_rhow * rhow_p + &
+                       rhow_x_rhoE * rhoE_p
+            flux_y_p = rhow_y_rho  * rho_p  + &
+                       rhow_y_rhou * rhou_p + &
+                       rhow_y_rhov * rhov_p + &
+                       rhow_y_rhow * rhow_p + &
+                       rhow_y_rhoE * rhoE_p 
+            flux_z_p = rhow_z_rho  * rho_p  + &
+                       rhow_z_rhou * rhou_p + &
+                       rhow_z_rhov * rhov_p + &
+                       rhow_z_rhow * rhow_p + &
+                       rhow_z_rhoE * rhoE_p 
+
+
+            flux_x = (flux_x_m + flux_x_p)
+            flux_y = (flux_y_m + flux_y_p)
+            flux_z = (flux_z_m + flux_z_p)
+
+
+            ! dot with normal vector
+            integrand = HALF*(flux_x*norms(:,1) + flux_y*norms(:,2) + flux_z*norms(:,3))
+
+            call integrate_boundary_scalar_flux(mesh,sdata,face_info,function_info,irhow,integrand)
+
+
+
+
             !================================
             !          ENERGY FLUX
             !================================
             flux_x_m = rhoE_x_rho  * rho_m  + &
                        rhoE_x_rhou * rhou_m + &
                        rhoE_x_rhov * rhov_m + &
+                       rhoE_x_rhow * rhow_m + &
                        rhoE_x_rhoE * rhoE_m
             flux_y_m = rhoE_y_rho  * rho_m  + &
                        rhoE_y_rhou * rhou_m + &
                        rhoE_y_rhov * rhov_m + &
+                       rhoE_y_rhow * rhow_m + &
                        rhoE_y_rhoE * rhoE_m 
-            flux_z_m = ZERO
-
+            flux_z_m = rhoE_z_rho  * rho_m  + &
+                       rhoE_z_rhou * rhou_m + &
+                       rhoE_z_rhov * rhov_m + &
+                       rhoE_z_rhow * rhow_m + &
+                       rhoE_z_rhoE * rhoE_m 
 
             flux_x_p = rhoE_x_rho  * rho_p  + &
                        rhoE_x_rhou * rhou_p + &
                        rhoE_x_rhov * rhov_p + &
+                       rhoE_x_rhow * rhow_p + &
                        rhoE_x_rhoE * rhoE_p
             flux_y_p = rhoE_y_rho  * rho_p  + &
                        rhoE_y_rhou * rhou_p + &
                        rhoE_y_rhov * rhov_p + &
+                       rhoE_y_rhow * rhow_p + &
                        rhoE_y_rhoE * rhoE_p 
-            flux_z_p = ZERO
-
-
-
+            flux_z_p = rhoE_z_rho  * rho_p  + &
+                       rhoE_z_rhou * rhou_p + &
+                       rhoE_z_rhov * rhov_p + &
+                       rhoE_z_rhow * rhow_p + &
+                       rhoE_z_rhoE * rhoE_p 
 
 
             flux_x = (flux_x_m + flux_x_p)

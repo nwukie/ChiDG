@@ -126,6 +126,11 @@ Equation set - PDE
 
 
 
+Framework
+!-------------------------------------------------------------------------
+@detail Abstract Basis and Test functions from each other
+@author Nathan A. Wukie
+@date   3/20/2016
 
 
 

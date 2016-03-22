@@ -1,6 +1,6 @@
 module LINEULER_LaxFriedrichs_flux_real
     use mod_kinds,              only: rk,ik
-    use mod_constants,          only: NFACES,ONE,TWO,HALF,ZERO, &
+    use mod_constants,          only: NFACES,ONE,TWO,HALF,FOUR,ZERO, &
                                       XI_MIN,XI_MAX,ETA_MIN,ETA_MAX,ZETA_MIN,ZETA_MAX, &
                                       LOCAL, NEIGHBOR
 

@@ -101,6 +101,7 @@ contains
                         rho_r,      rhou_r,     rhov_r,     rhow_r,     rhoE_r,         &
                         rho_i,      rhou_i,     rhov_i,     rhow_i,     rhoE_i,         &
                         p_r,        u_r,        c1,         c2,         c3,     c4,     &
+                        p_i,        u_i,                                                &
                         drho,       du,         dp,                                     &
                         drho_total, du_total,   dp_total,                               &
                         drho_user,  du_user,    dp_user,                                &
@@ -150,25 +151,21 @@ contains
             call interpolate_face(mesh,face,q,irhoE_i,rhoE_i, LOCAL)
 
 
-!            rho_r  = ZERO
-!            rhou_r = ZERO
-!            rhov_r = ZERO
-!            rhow_r = ZERO
-!            rhoE_r = ZERO
 
 
-!            rho_i  = ZERO
-!            rhou_i = ZERO
-!            rhov_i = ZERO
-!            rhow_i = ZERO
-!            rhoE_i = ZERO
+
+
+            !----------------------------------------------
+            !
+            !   REAL BOUNDARY CONDITION
+            !
+            !----------------------------------------------
 
 
             !
             ! Compute real velocity
             !
             !u_r = rhou_r/rho_r
-
             u_r = rhou_r/rhobar  -  rhobar*ubar * rho_r
 
 
@@ -198,11 +195,13 @@ contains
             dp   =  (HALF * c4)
 
 
+
+
             !
             ! Get contribution from user-specified perturbations
             !
             dp_user = rho_r
-            dp_user = 1._rk
+            dp_user = 20._rk
 
             !
             ! Compute in-going characteristics from user-specified data
@@ -219,6 +218,7 @@ contains
             dp_user   =  HALF*c3
 
 
+
             !
             ! Accumulate perturbations from interior and user-specified data
             !
@@ -227,13 +227,103 @@ contains
             dp_total   = dp   + dp_user
 
             rho_r  = drho_total
-            !rhou_r = drho_total + du_total
             rhou_r = rhobar*du_total  +  rhobar*rhobar*ubar*rho_r
             rhov_r = rhov_r
             rhow_r = rhow_r
-
-!            p_r = (gam-ONE)*(rhoE_r + HALF*(ubar**TWO + vbar**TWO + wbar**TWO)*rho_r - ( ubar*rhou_r  +  vbar*rhov_r  +  wbar*rhow_r ) )
             rhoE_r = p_r/(gam-ONE) - ( HALF*(ubar**TWO + vbar**TWO + wbar**TWO)*rho_r - ( ubar*rhou_r  +  vbar*rhov_r  +  wbar*rhow_r ) )
+
+
+
+
+
+
+
+            !----------------------------------------------
+            !
+            !   IMAGINARY BOUNDARY CONDITION
+            !
+            !----------------------------------------------
+
+
+
+            !
+            ! Compute real velocity
+            !
+            !u_r = rhou_r/rho_r
+            u_i = rhou_i/rhobar  -  rhobar*ubar * rho_i
+
+
+
+            !
+            ! Compute real pressure
+            !
+            ! TODO: Double check linearization of pressure equation here
+            !
+            p_i = (gam-ONE)*(rhoE_i + HALF*(ubar**TWO + vbar**TWO + wbar**TWO)*rho_i - ( ubar*rhou_i  +  vbar*rhov_i  +  wbar*rhow_i ) )
+
+            
+
+
+
+            !
+            ! Compute outgoing Characteristic, c4, from perturbed variables
+            !
+            c4 = -rhobar*cbar * u_i  +  p_i
+
+
+            !
+            ! Get contribution to variables from interior solution, coming from c4
+            !
+            drho =  (ONE/(TWO*cbar**TWO))   * c4
+            du   = -(ONE/(TWO*rhobar*cbar)) * c4
+            dp   =  (HALF * c4)
+
+
+
+
+            !
+            ! Get contribution from user-specified perturbations
+            !
+            dp_user = rho_r
+            dp_user = 0._rk
+
+            !
+            ! Compute in-going characteristics from user-specified data
+            !
+            c1 = dp_user
+            c3 = dp_user
+            
+
+            !
+            ! Compute primitive perturbations from user-specified data
+            !
+            drho_user = -(ONE/(cbar**TWO))*c1  +  (ONE/(TWO*cbar**TWO))*c3
+            du_user   =  (ONE/(TWO*rhobar*cbar))*c3
+            dp_user   =  HALF*c3
+
+
+
+            !
+            ! Accumulate perturbations from interior and user-specified data
+            !
+            drho_total = drho + drho_user
+            du_total   = du   + du_user
+            dp_total   = dp   + dp_user
+
+            rho_i  = drho_total
+            rhou_i = rhobar*du_total  +  rhobar*rhobar*ubar*rho_i
+            rhov_i = rhov_i
+            rhow_i = rhow_i
+            rhoE_i = p_i/(gam-ONE) - ( HALF*(ubar**TWO + vbar**TWO + wbar**TWO)*rho_i - ( ubar*rhou_i  +  vbar*rhov_i  +  wbar*rhow_i ) )
+
+
+
+
+
+
+
+
+
 
 
 
@@ -246,12 +336,18 @@ contains
             flux_x = rho_x_rho  * rho_r  + &
                      rho_x_rhou * rhou_r + &
                      rho_x_rhov * rhov_r + &
+                     rho_x_rhow * rhow_r + &
                      rho_x_rhoE * rhoE_r
             flux_y = rho_y_rho  * rho_r  + &
                      rho_y_rhou * rhou_r + &
                      rho_y_rhov * rhov_r + &
+                     rho_y_rhow * rhow_r + &
                      rho_y_rhoE * rhoE_r
-            flux_z = rhow_r
+            flux_z = rho_z_rho  * rho_r  + &
+                     rho_z_rhou * rhou_r + &
+                     rho_z_rhov * rhov_r + &
+                     rho_z_rhow * rhow_r + &
+                     rho_z_rhoE * rhoE_r
 
             integrand = flux_x*norms(:,1) + flux_y*norms(:,2) + flux_z*norms(:,3)
 
@@ -264,12 +360,18 @@ contains
             flux_x = rho_x_rho  * rho_i  + &
                      rho_x_rhou * rhou_i + &
                      rho_x_rhov * rhov_i + &
+                     rho_x_rhow * rhow_i + &
                      rho_x_rhoE * rhoE_i
             flux_y = rho_y_rho  * rho_i  + &
                      rho_y_rhou * rhou_i + &
                      rho_y_rhov * rhov_i + &
+                     rho_y_rhow * rhow_i + &
                      rho_y_rhoE * rhoE_i
-            flux_z = rhow_r
+            flux_z = rho_z_rho  * rho_i  + &
+                     rho_z_rhou * rhou_i + &
+                     rho_z_rhov * rhov_i + &
+                     rho_z_rhow * rhow_i + &
+                     rho_z_rhoE * rhoE_i
 
             integrand = flux_x*norms(:,1) + flux_y*norms(:,2) + flux_z*norms(:,3)
 
@@ -289,27 +391,42 @@ contains
             flux_x = rhou_x_rho  * rho_r  + &
                      rhou_x_rhou * rhou_r + &
                      rhou_x_rhov * rhov_r + &
+                     rhou_x_rhow * rhow_r + &
                      rhou_x_rhoE * rhoE_r
             flux_y = rhou_y_rho  * rho_r  + &
                      rhou_y_rhou * rhou_r + &
                      rhou_y_rhov * rhov_r + &
+                     rhou_y_rhow * rhow_r + &
                      rhou_y_rhoE * rhoE_r
-            flux_z = ZERO
+            flux_z = rhou_z_rho  * rho_r  + &
+                     rhou_z_rhou * rhou_r + &
+                     rhou_z_rhov * rhov_r + &
+                     rhou_z_rhow * rhow_r + &
+                     rhou_z_rhoE * rhoE_r
 
             integrand = flux_x*norms(:,1) + flux_y*norms(:,2) + flux_z*norms(:,3)
 
             call integrate_boundary_scalar_flux(mesh,sdata,face,flux,irhou_r,integrand)
 
 
+
+
+
             flux_x = rhou_x_rho  * rho_i  + &
                      rhou_x_rhou * rhou_i + &
                      rhou_x_rhov * rhov_i + &
+                     rhou_x_rhow * rhow_i + &
                      rhou_x_rhoE * rhoE_i
             flux_y = rhou_y_rho  * rho_i  + &
                      rhou_y_rhou * rhou_i + &
                      rhou_y_rhov * rhov_i + &
+                     rhou_y_rhow * rhow_i + &
                      rhou_y_rhoE * rhoE_i
-            flux_z = ZERO
+            flux_z = rhou_z_rho  * rho_i  + &
+                     rhou_z_rhou * rhou_i + &
+                     rhou_z_rhov * rhov_i + &
+                     rhou_z_rhow * rhow_i + &
+                     rhou_z_rhoE * rhoE_i
 
             integrand = flux_x*norms(:,1) + flux_y*norms(:,2) + flux_z*norms(:,3)
 
@@ -328,27 +445,41 @@ contains
             flux_x = rhov_x_rho  * rho_r  + &
                      rhov_x_rhou * rhou_r + &
                      rhov_x_rhov * rhov_r + &
+                     rhov_x_rhow * rhow_r + &
                      rhov_x_rhoE * rhoE_r
             flux_y = rhov_y_rho  * rho_r  + &
                      rhov_y_rhou * rhou_r + &
                      rhov_y_rhov * rhov_r + &
+                     rhov_y_rhow * rhow_r + &
                      rhov_y_rhoE * rhoE_r
-            flux_z = ZERO
+            flux_z = rhov_z_rho  * rho_r  + &
+                     rhov_z_rhou * rhou_r + &
+                     rhov_z_rhov * rhov_r + &
+                     rhov_z_rhow * rhow_r + &
+                     rhov_z_rhoE * rhoE_r
 
             integrand = flux_x*norms(:,1) + flux_y*norms(:,2) + flux_z*norms(:,3)
 
             call integrate_boundary_scalar_flux(mesh,sdata,face,flux,irhov_r,integrand)
 
 
+
+
             flux_x = rhov_x_rho  * rho_i  + &
                      rhov_x_rhou * rhou_i + &
                      rhov_x_rhov * rhov_i + &
+                     rhov_x_rhow * rhow_i + &
                      rhov_x_rhoE * rhoE_i
             flux_y = rhov_y_rho  * rho_i  + &
                      rhov_y_rhou * rhou_i + &
                      rhov_y_rhov * rhov_i + &
+                     rhov_y_rhow * rhow_i + &
                      rhov_y_rhoE * rhoE_i
-            flux_z = ZERO
+            flux_z = rhov_z_rho  * rho_i  + &
+                     rhov_z_rhou * rhou_i + &
+                     rhov_z_rhov * rhov_i + &
+                     rhov_z_rhow * rhow_i + &
+                     rhov_z_rhoE * rhoE_i
 
             integrand = flux_x*norms(:,1) + flux_y*norms(:,2) + flux_z*norms(:,3)
 
@@ -361,36 +492,76 @@ contains
 
 
 
+            !=================================================
+            ! z-momentum flux
+            !=================================================
+
+            flux_x = rhow_x_rho  * rho_r  + &
+                     rhow_x_rhou * rhou_r + &
+                     rhow_x_rhov * rhov_r + &
+                     rhow_x_rhow * rhow_r + &
+                     rhow_x_rhoE * rhoE_r
+            flux_y = rhow_y_rho  * rho_r  + &
+                     rhow_y_rhou * rhou_r + &
+                     rhow_y_rhov * rhov_r + &
+                     rhow_y_rhow * rhow_r + &
+                     rhow_y_rhoE * rhoE_r
+            flux_z = rhow_z_rho  * rho_r  + &
+                     rhow_z_rhou * rhou_r + &
+                     rhow_z_rhov * rhov_r + &
+                     rhow_z_rhow * rhow_r + &
+                     rhow_z_rhoE * rhoE_r
+
+            integrand = flux_x*norms(:,1) + flux_y*norms(:,2) + flux_z*norms(:,3)
+
+            call integrate_boundary_scalar_flux(mesh,sdata,face,flux,irhow_r,integrand)
 
 
 
-!            !=================================================
-!            ! z-momentum flux
-!            !=================================================
-!            flux_x = (rho_m * w_m * u_m)
-!            flux_y = (rho_m * w_m * v_m)
-!            flux_z = (rho_m * w_m * w_m) + p_m
-!
-!            flux = flux_x*norms(:,1) + flux_y*norms(:,2) + flux_z*norms(:,3)
-!
-!            !call integrate_boundary_scalar_flux(mesh(idom)%faces(ielem,iface),sdata,idom,irhow,iblk,flux)
-!            call integrate_boundary_scalar_flux(mesh,sdata,face,irhow,iblk,idonor,seed,flux)
-!
+
+            flux_x = rhow_x_rho  * rho_i  + &
+                     rhow_x_rhou * rhou_i + &
+                     rhow_x_rhov * rhov_i + &
+                     rhow_x_rhow * rhow_i + &
+                     rhow_x_rhoE * rhoE_i
+            flux_y = rhow_y_rho  * rho_i  + &
+                     rhow_y_rhou * rhou_i + &
+                     rhow_y_rhov * rhov_i + &
+                     rhow_y_rhow * rhow_i + &
+                     rhow_y_rhoE * rhoE_i
+            flux_z = rhow_z_rho  * rho_i  + &
+                     rhow_z_rhou * rhou_i + &
+                     rhow_z_rhov * rhov_i + &
+                     rhow_z_rhow * rhow_i + &
+                     rhow_z_rhoE * rhoE_i
+
+            integrand = flux_x*norms(:,1) + flux_y*norms(:,2) + flux_z*norms(:,3)
+
+            call integrate_boundary_scalar_flux(mesh,sdata,face,flux,irhow_i,integrand)
+
+
+
+
 
             !=================================================
             ! Energy flux
             !=================================================
 
-
             flux_x = rhoE_x_rho  * rho_r  + &
                      rhoE_x_rhou * rhou_r + &
                      rhoE_x_rhov * rhov_r + &
+                     rhoE_x_rhow * rhow_r + &
                      rhoE_x_rhoE * rhoE_r
             flux_y = rhoE_y_rho  * rho_r  + &
                      rhoE_y_rhou * rhou_r + &
                      rhoE_y_rhov * rhov_r + &
+                     rhoE_y_rhow * rhow_r + &
                      rhoE_y_rhoE * rhoE_r
-            flux_z = ZERO
+            flux_z = rhoE_z_rho  * rho_r  + &
+                     rhoE_z_rhou * rhou_r + &
+                     rhoE_z_rhov * rhov_r + &
+                     rhoE_z_rhow * rhow_r + &
+                     rhoE_z_rhoE * rhoE_r
 
             integrand = flux_x*norms(:,1) + flux_y*norms(:,2) + flux_z*norms(:,3)
 
@@ -400,21 +571,22 @@ contains
             flux_x = rhoE_x_rho  * rho_i  + &
                      rhoE_x_rhou * rhou_i + &
                      rhoE_x_rhov * rhov_i + &
+                     rhoE_x_rhow * rhow_i + &
                      rhoE_x_rhoE * rhoE_i
             flux_y = rhoE_y_rho  * rho_i  + &
                      rhoE_y_rhou * rhou_i + &
                      rhoE_y_rhov * rhov_i + &
+                     rhoE_y_rhow * rhow_i + &
                      rhoE_y_rhoE * rhoE_i
-            flux_z = ZERO
+            flux_z = rhoE_z_rho  * rho_i  + &
+                     rhoE_z_rhou * rhou_i + &
+                     rhoE_z_rhov * rhov_i + &
+                     rhoE_z_rhow * rhow_i + &
+                     rhoE_z_rhoE * rhoE_i
 
             integrand = flux_x*norms(:,1) + flux_y*norms(:,2) + flux_z*norms(:,3)
 
             call integrate_boundary_scalar_flux(mesh,sdata,face,flux,irhoE_i,integrand)
-
-
-
-
-
 
 
 

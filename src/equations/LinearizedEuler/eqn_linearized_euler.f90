@@ -102,16 +102,16 @@ contains
         ! Allocate and initialize equations
         !
         call self%add_equation("rho_r", 1)
-        call self%add_equation("rhou_r",2)
-        call self%add_equation("rhov_r",3)
-        call self%add_equation("rhow_r",4)
-        call self%add_equation("rhoE_r",5)
-
-        call self%add_equation("rho_i", 6)
-        call self%add_equation("rhou_i",7)
-        call self%add_equation("rhov_i",8)
-        call self%add_equation("rhow_i",9)
+        call self%add_equation("rho_i", 2)
+        call self%add_equation("rhou_r",3)
+        call self%add_equation("rhou_i",4)
+        call self%add_equation("rhov_r",5)
+        call self%add_equation("rhov_i",6)
+        call self%add_equation("rhow_r",7)
+        call self%add_equation("rhow_i",8)
+        call self%add_equation("rhoE_r",9)
         call self%add_equation("rhoE_i",10)
+
 
 
         !

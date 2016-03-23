@@ -1,6 +1,6 @@
 module PRIMLINEULER_volume_advective_source_real
     use mod_kinds,              only: rk,ik
-    use mod_constants,          only: NFACES,ONE,TWO,HALF,ZERO, &
+    use mod_constants,          only: NFACES,ONE,TWO,THREE,HALF,ZERO, &
                                       XI_MIN,XI_MAX,ETA_MIN,ETA_MAX,ZETA_MIN,ZETA_MAX,DIAG,PI
 
     use type_mesh,              only: mesh_t
@@ -75,7 +75,7 @@ contains
         integer(ik)    :: iseed, idonor, igq
         type(seed_t)   :: seed
 
-        real(rk)    :: gam, omega, sigma_max, thickness, xl
+        real(rk)    :: gam, omega,thickness, eps, kappa
 
 
 
@@ -86,7 +86,13 @@ contains
                     flux
 
         real(rk), dimension(mesh(idom)%elems(ielem)%gq%vol%nnodes)      ::  &
-                    x, sigma
+                    x, y, sigma_x, sigma_y, sigma, fcn
+
+        logical :: inA = .false.
+        logical :: inB = .false.
+        logical :: inC = .false.
+
+
 
         idonor = 0
 
@@ -115,25 +121,61 @@ contains
 
 
 
-        !
-        ! Compute PML coefficient
-        !
-        
-        ! Get x-coordinate
-        x = mesh(idom)%elems(ielem)%quad_pts(:)%c1_
-        sigma_max = 600._rk
-        thickness = 2._rk
-        xl        = 8._rk
 
-        sigma = sigma_max * abs( (x - xl)/thickness )**TWO
+
+
+
+
+        !
+        ! Absorbing layer
+        !
+        thickness = HALF
+        eps       = 100._rk
+        kappa     = 1._rk
+
+        ! Get coordinates
+        x = mesh(idom)%elems(ielem)%quad_pts(:)%c1_
+        y = mesh(idom)%elems(ielem)%quad_pts(:)%c2_
 
         do igq = 1,size(x)
-            if ( x(igq) < xl ) then
-                sigma(igq) = ZERO
+
+            inA = ( x(igq) > -THREE ) .and. ( x(igq) < -THREE + thickness ) .and. ( y(igq) > 1.2_rk )
+            inB = ( y(igq) > 4.6_rk - thickness )  .and.  ( y(igq) < 4.6_rk )
+            inC = ( x(igq) > 6.2_rk - thickness )
+
+            if ( inA ) then
+                fcn     = -(ONE/thickness)*x  +  (ONE - THREE/thickness)
+                sigma_x = eps*(ONE-exp(kappa*fcn**TWO))/(ONE-exp(kappa))
+            
+            else if ( inB ) then
+                fcn     =  (ONE/thickness)*x  +  (ONE - 6.2_rk/thickness)
+                sigma_x = eps*(ONE-exp(kappa*fcn**TWO))/(ONE-exp(kappa))
+
+            else
+                sigma_x = ZERO
+
             end if
+
+
+            if ( inB ) then
+                fcn     =  (ONE/thickness)*y  +  (ONE - 4.6_rk/thickness)
+                sigma_y = eps*(ONE-exp(kappa*fcn**TWO))/(ONE-exp(kappa))
+
+            else
+                sigma_y = ZERO
+            end if
+
+            sigma = sigma_x * sigma_y
+
         end do
 
-        sigma = ZERO
+
+
+
+
+
+
+
 
         !
         ! Get neighbor face and seed element for derivatives
@@ -162,7 +204,7 @@ contains
         !===========================
         !        MASS FLUX
         !===========================
-        flux = -omega * rho_i   -  sigma*rho_r
+        flux = -omega * rho_i   -  (omega * sigma * rho_r)
 
         call integrate_volume_source(mesh(idom)%elems(ielem),sdata,idom,irho_r,iblk,flux)
 
@@ -170,7 +212,7 @@ contains
         !===========================
         !     X-MOMENTUM FLUX
         !===========================
-        flux = -omega * u_i   -  sigma*u_r
+        flux = -omega * u_i   -  (omega * sigma * u_r)
 
         call integrate_volume_source(mesh(idom)%elems(ielem),sdata,idom,iu_r,iblk,flux)
 
@@ -178,21 +220,21 @@ contains
         !============================
         !     Y-MOMENTUM FLUX
         !============================
-        flux = -omega * v_i   -  sigma*v_r
+        flux = -omega * v_i   -  (omega * sigma * v_r)
 
         call integrate_volume_source(mesh(idom)%elems(ielem),sdata,idom,iv_r,iblk,flux)
 
         !============================
         !     Z-MOMENTUM FLUX
         !============================
-        flux = -omega * w_i   -  sigma*w_r
+        flux = -omega * w_i   -  (omega * sigma * w_r)
 
         call integrate_volume_source(mesh(idom)%elems(ielem),sdata,idom,iw_r,iblk,flux)
 
         !============================
         !       ENERGY FLUX
         !============================
-        flux = -omega * p_i   -  sigma*p_r
+        flux = -omega * p_i   -  (omega * sigma * p_r)
 
         call integrate_volume_source(mesh(idom)%elems(ielem),sdata,idom,ip_r,iblk,flux)
 

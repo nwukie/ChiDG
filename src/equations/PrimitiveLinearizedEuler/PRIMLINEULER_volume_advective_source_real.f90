@@ -147,7 +147,7 @@ contains
 !                sigma_x = eps*(ONE-exp(kappa*fcn**TWO))/(ONE-exp(kappa))
                 sigma_x = fcn
             
-            else if ( inB ) then
+            else if ( inC ) then
                 fcn     =  (ONE/thickness)*x  +  (ONE - 6.2_rk/thickness)
 !                sigma_x = eps*(ONE-exp(kappa*fcn**TWO))/(ONE-exp(kappa))
                 sigma_x = fcn

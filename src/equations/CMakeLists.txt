@@ -3,6 +3,7 @@ add_subdirectory(LinearAdvection)
 add_subdirectory(DualLinearAdvection)
 add_subdirectory(Euler)
 add_subdirectory(LinearizedEuler)
+add_subdirectory(PrimitiveLinearizedEuler)
 
 
 

@@ -33,6 +33,12 @@ module mod_bc
     use bc_lineuler_outlet,                 only: lineuler_outlet_t
     use bc_lineuler_extrapolate,            only: lineuler_extrapolate_t
     use bc_lineuler_wall,                   only: lineuler_wall_t
+
+    use bc_primlineuler_inlet,              only: primlineuler_inlet_t
+    use bc_primlineuler_outlet,             only: primlineuler_outlet_t
+    use bc_primlineuler_extrapolate,        only: primlineuler_extrapolate_t
+    use bc_primlineuler_wall,               only: primlineuler_wall_t
+
     implicit none
 
 
@@ -80,6 +86,10 @@ contains
         type(lineuler_extrapolate_t)            :: LINEULER_EXTRAPOLATE
         type(lineuler_wall_t)                   :: LINEULER_WALL
 
+        type(primlineuler_inlet_t)              :: PRIMLINEULER_INLET
+        type(primlineuler_outlet_t)             :: PRIMLINEULER_OUTLET
+        type(primlineuler_extrapolate_t)        :: PRIMLINEULER_EXTRAPOLATE
+        type(primlineuler_wall_t)               :: PRIMLINEULER_WALL
 
         if ( .not. initialized ) then
             !
@@ -102,6 +112,10 @@ contains
             call registered_bcs%push_back(LINEULER_EXTRAPOLATE)
             call registered_bcs%push_back(LINEULER_WALL)
 
+            call registered_bcs%push_back(PRIMLINEULER_INLET)
+            call registered_bcs%push_back(PRIMLINEULER_OUTLET)
+            call registered_bcs%push_back(PRIMLINEULER_EXTRAPOLATE)
+            call registered_bcs%push_back(PRIMLINEULER_WALL)
 
             !
             ! Initialize each boundary condition in set. Doesn't need modified.

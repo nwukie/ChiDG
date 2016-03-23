@@ -20,6 +20,7 @@ module mod_equations
     use eqn_duallinearadvection,        only: duallinearadvection_e
     use eqn_euler,                      only: euler_e
     use eqn_linearized_euler,           only: linearized_euler_e
+    use eqn_primitive_linearized_euler, only: primitive_linearized_euler_e
     implicit none
 
 
@@ -58,6 +59,7 @@ contains
         type(duallinearadvection_e) :: DUALLINEARADVECTION
         type(euler_e)               :: EULER
         type(linearized_euler_e)    :: LINEARIZED_EULER
+        type(primitive_linearized_euler_e)    :: PRIMITIVE_LINEARIZED_EULER
 
 
         if ( .not. initialized ) then
@@ -69,6 +71,7 @@ contains
             call registered_equations%push_back(DUALLINEARADVECTION)
             call registered_equations%push_back(EULER)
             call registered_equations%push_back(LINEARIZED_EULER)
+            call registered_equations%push_back(PRIMITIVE_LINEARIZED_EULER)
 
 
 

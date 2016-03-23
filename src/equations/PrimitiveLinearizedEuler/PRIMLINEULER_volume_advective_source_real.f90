@@ -116,7 +116,6 @@ contains
         ! Gamma
         !
         gam = 1.4_rk
-        !omega = 348.329_rk * TWO * PI
         omega = 956._rk * TWO * PI
 
 
@@ -145,11 +144,13 @@ contains
 
             if ( inA ) then
                 fcn     = -(ONE/thickness)*x  +  (ONE - THREE/thickness)
-                sigma_x = eps*(ONE-exp(kappa*fcn**TWO))/(ONE-exp(kappa))
+!                sigma_x = eps*(ONE-exp(kappa*fcn**TWO))/(ONE-exp(kappa))
+                sigma_x = fcn
             
             else if ( inB ) then
                 fcn     =  (ONE/thickness)*x  +  (ONE - 6.2_rk/thickness)
-                sigma_x = eps*(ONE-exp(kappa*fcn**TWO))/(ONE-exp(kappa))
+!                sigma_x = eps*(ONE-exp(kappa*fcn**TWO))/(ONE-exp(kappa))
+                sigma_x = fcn
 
             else
                 sigma_x = ZERO
@@ -159,7 +160,8 @@ contains
 
             if ( inB ) then
                 fcn     =  (ONE/thickness)*y  +  (ONE - 4.6_rk/thickness)
-                sigma_y = eps*(ONE-exp(kappa*fcn**TWO))/(ONE-exp(kappa))
+!                sigma_y = eps*(ONE-exp(kappa*fcn**TWO))/(ONE-exp(kappa))
+                sigma_y = fcn
 
             else
                 sigma_y = ZERO
@@ -204,7 +206,7 @@ contains
         !===========================
         !        MASS FLUX
         !===========================
-        flux = -omega * rho_i   -  (omega * sigma * rho_r)
+        flux = -omega * rho_i   -  (sigma_x + sigma_y + sigma_x*sigma_y/omega) * rho_r
 
         call integrate_volume_source(mesh(idom)%elems(ielem),sdata,idom,irho_r,iblk,flux)
 
@@ -212,7 +214,7 @@ contains
         !===========================
         !     X-MOMENTUM FLUX
         !===========================
-        flux = -omega * u_i   -  (omega * sigma * u_r)
+        flux = -omega * u_i   -  (sigma_x + sigma_y + sigma_x*sigma_y/omega) * u_r
 
         call integrate_volume_source(mesh(idom)%elems(ielem),sdata,idom,iu_r,iblk,flux)
 
@@ -220,21 +222,21 @@ contains
         !============================
         !     Y-MOMENTUM FLUX
         !============================
-        flux = -omega * v_i   -  (omega * sigma * v_r)
+        flux = -omega * v_i   -  (sigma_x + sigma_y + sigma_x*sigma_y/omega) * v_r
 
         call integrate_volume_source(mesh(idom)%elems(ielem),sdata,idom,iv_r,iblk,flux)
 
         !============================
         !     Z-MOMENTUM FLUX
         !============================
-        flux = -omega * w_i   -  (omega * sigma * w_r)
+        flux = -omega * w_i   -  (sigma_x + sigma_y + sigma_x*sigma_y/omega) * w_r
 
         call integrate_volume_source(mesh(idom)%elems(ielem),sdata,idom,iw_r,iblk,flux)
 
         !============================
         !       ENERGY FLUX
         !============================
-        flux = -omega * p_i   -  (omega * sigma * p_r)
+        flux = -omega * p_i   -  (sigma_x + sigma_y + sigma_x*sigma_y/omega) * p_r
 
         call integrate_volume_source(mesh(idom)%elems(ielem),sdata,idom,ip_r,iblk,flux)
 

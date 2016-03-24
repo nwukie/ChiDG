@@ -10,5 +10,6 @@ add_lib_sources(eqn_primitive_linearized_euler.f90
                 PRIMLINEULER_volume_advective_source_real.f90
                 PRIMLINEULER_volume_advective_source_imag.f90
                 PRIMLINEULER_properties.f90
+                PRIMLINEULER_volume_advective_sourceterms_real.f90
                 mod_primitive_linearized_euler.f90
                 )

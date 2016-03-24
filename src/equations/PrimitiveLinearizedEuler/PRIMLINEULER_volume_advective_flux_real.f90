@@ -1,6 +1,6 @@
 module PRIMLINEULER_volume_advective_flux_real
     use mod_kinds,              only: rk,ik
-    use mod_constants,          only: NFACES,ONE,TWO,THREE,HALF,ZERO,PI,&
+    use mod_constants,          only: NFACES,ONE,TWO,THREE,FOUR,FIVE,EIGHT,HALF,ZERO,PI,&
                                       XI_MIN,XI_MAX,ETA_MIN,ETA_MAX,ZETA_MIN,ZETA_MAX,DIAG
 
     use type_mesh,              only: mesh_t
@@ -86,6 +86,7 @@ contains
         logical :: inA = .false.
         logical :: inB = .false.
         logical :: inC = .false.
+        logical :: inD = .false.
 
 
 
@@ -142,6 +143,7 @@ contains
 
 
 
+
         !
         ! Absorbing layer
         !
@@ -155,20 +157,17 @@ contains
 
         do igq = 1,size(x)
 
-            inA = ( x(igq) > -THREE ) .and. ( x(igq) < -THREE + thickness ) .and. ( y(igq) > 1.2_rk )
-            inB = ( y(igq) > 4.6_rk - thickness )  .and.  ( y(igq) < 4.6_rk )
-            inC = ( x(igq) > 6.2_rk - thickness )
+            inA = ( x(igq) < -FOUR + thickness )
+            inB = ( y(igq) >  FIVE - thickness )
+            inC = ( x(igq) > EIGHT - thickness )
+            inD = ( y(igq) < -FIVE + thickness )
 
             if ( inA ) then
-!                fcn     = -(ONE/thickness)*x**TWO  +  (ONE - THREE/thickness)
-                fcn     =  abs( ( -2.5_rk - x ) / thickness )**TWO
-!                sigma_x = eps*(ONE-exp(kappa*fcn**TWO))/(ONE-exp(kappa))
+                fcn     =  abs( ( x - (-FOUR+thickness) ) / thickness )**TWO
                 sigma_x = eps * fcn
             
             else if ( inC ) then
-!                fcn     =  (ONE/thickness)*x**TWO  +  (ONE - 6.2_rk/thickness)
-                fcn     =  abs( ( x - 5.7_rk ) / thickness )**TWO
-!                sigma_x = eps*(ONE-exp(kappa*fcn**TWO))/(ONE-exp(kappa))
+                fcn     =  abs( ( x - (EIGHT-thickness) ) / thickness )**TWO
                 sigma_x = eps * fcn
 
             else
@@ -177,10 +176,14 @@ contains
             end if
 
 
+
+
             if ( inB ) then
-!                fcn     =  (ONE/thickness)*y**TWO  +  (ONE - 4.6_rk/thickness)
-                fcn     =  abs( ( y - 4.6_rk ) / thickness )**TWO
-!                sigma_y = eps*(ONE-exp(kappa*fcn**TWO))/(ONE-exp(kappa))
+                fcn     =  abs( ( y - ( FIVE-thickness) ) / thickness )**TWO
+                sigma_y = eps * fcn
+
+            else if ( inD ) then
+                fcn     =  abs( ( y - (-FIVE+thickness) ) / thickness )**TWO
                 sigma_y = eps * fcn
 
             else
@@ -189,9 +192,8 @@ contains
 
             sigma = sigma_x * sigma_y
 
+
         end do
-
-
 
 
 

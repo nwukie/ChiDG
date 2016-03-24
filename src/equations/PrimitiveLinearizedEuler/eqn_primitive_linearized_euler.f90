@@ -12,6 +12,7 @@ module eqn_primitive_linearized_euler
     use PRIMLINEULER_LaxFriedrichs_flux_imag,               only: PRIMLINEULER_LaxFriedrichs_flux_imag_t
     use PRIMLINEULER_volume_advective_source_real,          only: PRIMLINEULER_volume_advective_source_real_t
     use PRIMLINEULER_volume_advective_source_imag,          only: PRIMLINEULER_volume_advective_source_imag_t
+    use PRIMLINEULER_volume_advective_sourceterms_real,     only: PRIMLINEULER_volume_advective_sourceterms_real_t
     use PRIMLINEULER_properties,                            only: PRIMLINEULER_properties_t
     implicit none
 
@@ -74,6 +75,7 @@ contains
         type(PRIMLINEULER_LaxFriedrichs_flux_imag_t)                :: lax_imag
         type(PRIMLINEULER_volume_advective_source_real_t)           :: volume_source_real
         type(PRIMLINEULER_volume_advective_source_imag_t)           :: volume_source_imag
+        type(PRIMLINEULER_volume_advective_sourceterms_real_t)      :: volume_sourceterms_real
         type(PRIMLINEULER_properties_t)                             :: prop
 
         type(perfect_gas_t)                                     :: perfect_gas
@@ -123,6 +125,7 @@ contains
         call self%add_volume_advective_flux(volume_flux_imag)
         call self%add_volume_advective_flux(volume_source_real)
         call self%add_volume_advective_flux(volume_source_imag)
+        call self%add_volume_advective_flux(volume_sourceterms_real)
 
 
     end subroutine init

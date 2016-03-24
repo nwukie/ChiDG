@@ -129,7 +129,7 @@ contains
         ! Absorbing layer
         !
         thickness = HALF
-        eps       = 100._rk
+        eps       = 700._rk
         kappa     = 1._rk
 
         ! Get coordinates
@@ -145,12 +145,12 @@ contains
             if ( inA ) then
                 fcn     = -(ONE/thickness)*x  +  (ONE - THREE/thickness)
 !                sigma_x = eps*(ONE-exp(kappa*fcn**TWO))/(ONE-exp(kappa))
-                sigma_x = fcn
+                sigma_x = eps * fcn
             
             else if ( inC ) then
                 fcn     =  (ONE/thickness)*x  +  (ONE - 6.2_rk/thickness)
 !                sigma_x = eps*(ONE-exp(kappa*fcn**TWO))/(ONE-exp(kappa))
-                sigma_x = fcn
+                sigma_x = eps * fcn
 
             else
                 sigma_x = ZERO
@@ -161,7 +161,7 @@ contains
             if ( inB ) then
                 fcn     =  (ONE/thickness)*y  +  (ONE - 4.6_rk/thickness)
 !                sigma_y = eps*(ONE-exp(kappa*fcn**TWO))/(ONE-exp(kappa))
-                sigma_y = fcn
+                sigma_y = eps * fcn
 
             else
                 sigma_y = ZERO

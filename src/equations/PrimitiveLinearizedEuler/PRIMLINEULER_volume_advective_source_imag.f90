@@ -138,13 +138,15 @@ contains
             inC = ( x(igq) > 6.2_rk - thickness )
 
             if ( inA ) then
-                fcn     = -(ONE/thickness)*x  +  (ONE - THREE/thickness)
-                !sigma_x = eps*(ONE-exp(kappa*fcn**TWO))/(ONE-exp(kappa))
+!                fcn     = -(ONE/thickness)*x**TWO  +  (ONE - THREE/thickness)
+                fcn     =  abs( ( -2.5_rk - x ) / thickness )**TWO
+!                sigma_x = eps*(ONE-exp(kappa*fcn**TWO))/(ONE-exp(kappa))
                 sigma_x = eps * fcn
             
             else if ( inC ) then
-                fcn     =  (ONE/thickness)*x  +  (ONE - 6.2_rk/thickness)
-                !sigma_x = eps*(ONE-exp(kappa*fcn**TWO))/(ONE-exp(kappa))
+!                fcn     =  (ONE/thickness)*x**TWO  +  (ONE - 6.2_rk/thickness)
+                fcn     =  abs( ( x - 5.7_rk ) / thickness )**TWO
+!                sigma_x = eps*(ONE-exp(kappa*fcn**TWO))/(ONE-exp(kappa))
                 sigma_x = eps * fcn
 
             else
@@ -154,8 +156,9 @@ contains
 
 
             if ( inB ) then
-                fcn     =  (ONE/thickness)*y  +  (ONE - 4.6_rk/thickness)
-                !sigma_y = eps*(ONE-exp(kappa*fcn**TWO))/(ONE-exp(kappa))
+!                fcn     =  (ONE/thickness)*y**TWO  +  (ONE - 4.6_rk/thickness)
+                fcn     =  abs( ( y - 4.6_rk ) / thickness )**TWO
+!                sigma_y = eps*(ONE-exp(kappa*fcn**TWO))/(ONE-exp(kappa))
                 sigma_y = eps * fcn
 
             else

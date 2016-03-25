@@ -143,15 +143,16 @@ contains
         ! Gamma
         !
         gam = 1.4_rk
-        omega = 956._rk * TWO * PI
+        !omega = 956._rk * TWO * PI
+        omega = 1200._rk * TWO * PI
 
 
 
         !
         ! Absorbing layer
         !
-        thickness = HALF
-        eps       = 700._rk
+        thickness = 2.0_rk
+        eps       = 1500._rk
         kappa     = 1._rk
 
         ! Get coordinates

@@ -280,16 +280,20 @@ contains
         if ( ierr /= 0 ) call AllocationError
 
 
+
+
         !
         ! Initialize new boundary condition from mesh data and face index
         !
         call bc_copy%init(self%mesh(idom),face)
 
 
+
         !
         ! Add initialized boundary condition to bcset_t for domain 'idom'
         !
         call self%bcset(idom)%add(bc_copy)
+
 
 
     end subroutine add_bc

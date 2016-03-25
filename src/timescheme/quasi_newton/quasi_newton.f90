@@ -125,6 +125,7 @@ contains
                 resid = rhs%norm()
 
 
+
                 !
                 ! Print diagnostics
                 !

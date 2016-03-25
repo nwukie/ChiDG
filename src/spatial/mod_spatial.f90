@@ -241,11 +241,11 @@ contains
 
 
 
+
+
             !------------------------------------------------------------------------------------------
             !                                      Boundary Scheme
             !------------------------------------------------------------------------------------------
-            print*, 'Boundary conditions'
-
             !
             ! Apply boundary conditions for each domain.
             !
@@ -258,43 +258,40 @@ contains
 
 
 
-            !
-            ! Print maximum value of boundary condition jacobian blocks
-            !
-            do idom = 1,data%ndomains()
-
-                associate ( mesh => data%mesh(idom), sdata => data%sdata, eqnset => data%eqnset(idom)%item, prop => data%eqnset(idom)%item%prop)
-
-                nelem = mesh%nelem
-
-
-                do ielem = 1,nelem
-
-                    print*, idom, ielem
-
-                    !do iblk = 1,size(sdata%lhs%dom(idom)%bc_blks,2)
-                    iblk = DIAG
-
-                        if ( allocated(sdata%lhs%dom(idom)%lblks(ielem,iblk)%mat) ) then
-
-                            !print*,  maxval(sdata%lhs%dom(idom)%lblks(ielem,iblk)%mat)
-
-                            print*,  cond(sdata%lhs%dom(idom)%lblks(ielem,iblk)%mat)
-
-                        end if
-
-
-                    !end do ! iblk
-
-                end do ! ielem
-            
-                end associate
-            end do ! idom
-
-
-
-
-
+!            !
+!            ! Print maximum value of boundary condition jacobian blocks
+!            !
+!            do idom = 1,data%ndomains()
+!
+!                associate ( mesh => data%mesh(idom), sdata => data%sdata, eqnset => data%eqnset(idom)%item, prop => data%eqnset(idom)%item%prop)
+!
+!                nelem = mesh%nelem
+!
+!
+!                do ielem = 1,nelem
+!
+!                    print*, idom, ielem
+!
+!                    !do iblk = 1,size(sdata%lhs%dom(idom)%bc_blks,2)
+!                    iblk = DIAG
+!
+!                        if ( allocated(sdata%lhs%dom(idom)%lblks(ielem,iblk)%mat) ) then
+!
+!                            !print*,  maxval(sdata%lhs%dom(idom)%lblks(ielem,iblk)%mat)
+!
+!                            !print*,  cond(sdata%lhs%dom(idom)%lblks(ielem,iblk)%mat)
+!
+!                        end if
+!
+!
+!                    !end do ! iblk
+!
+!                end do ! ielem
+!            
+!                end associate
+!            end do ! idom
+!
+!
 
 
 

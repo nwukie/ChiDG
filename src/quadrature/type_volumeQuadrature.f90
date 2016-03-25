@@ -2,7 +2,7 @@ module type_volumeQuadrature
 #include <messenger.h>
     use mod_kinds,          only: rk,ik
     use mod_constants,      only: NFACES,XI_MIN,XI_MAX,ETA_MIN,ETA_MAX,ZETA_MIN,ZETA_MAX, &
-                                  XI_DIR,ETA_DIR,ZETA_DIR,SPACEDIM
+                                  XI_DIR,ETA_DIR,ZETA_DIR,SPACEDIM, ZERO
 
     use mod_GaussLegendre,  only: gl_nodes, gl_weights
     use mod_polynomial,     only: polynomialVal, dpolynomialVal
@@ -94,10 +94,25 @@ contains
         !
         ! find number nodes in 1D polynomial
         nnodes1d = 0
-        do while (nnodes1d*nnodes1d*nnodes1d /= nnodes)
-            nnodes1d = nnodes1d + 1
-        end do
-        if (nnodes1d*nnodes1d*nnodes1d > nnodes) stop "Error in volume quadrature node count"
+        if ( SPACEDIM == 3 ) then
+
+            do while (nnodes1d*nnodes1d*nnodes1d /= nnodes)
+                nnodes1d = nnodes1d + 1
+            end do
+            if (nnodes1d*nnodes1d*nnodes1d > nnodes) stop "Error in volume quadrature node count"
+
+        elseif ( SPACEDIM == 2 ) then
+
+            do while (nnodes1d*nnodes1d /= nnodes)
+                nnodes1d = nnodes1d + 1
+            end do
+            if (nnodes1d*nnodes1d > nnodes) stop "Error in volume quadrature node count"
+
+        else
+            call chidg_signal(FATAL,"volumeQuadrature%init: Invalid SPACEDIM")
+
+        end if
+
 
         allocate(xi_vals(nnodes1d),eta_vals(nnodes1d),zeta_vals(nnodes1d))
         allocate(xi_weights(nnodes1d),eta_weights(nnodes1d),zeta_weights(nnodes1d))
@@ -113,36 +128,72 @@ contains
         !
         ! Volume node coordinates and weights
         !
-        inode = 1
-        do izeta = 1,nnodes1d
+        if ( SPACEDIM == 3 ) then
+        
+            inode = 1
+            do izeta = 1,nnodes1d
+                do ieta = 1,nnodes1d
+                    do ixi = 1,nnodes1d
+                        xi   = xi_vals(  ixi)
+                        eta  = eta_vals( ieta)
+                        zeta = zeta_vals(izeta)
+
+                        call self%nodes(inode)%set(xi,eta,zeta)
+                        self%weights(inode) = xi_weights(ixi)*eta_weights(ieta)*zeta_weights(izeta)
+
+                        inode = inode + 1
+                    end do
+                end do
+            end do
+
+        else if ( SPACEDIM == 2 ) then
+
+            inode = 1
             do ieta = 1,nnodes1d
                 do ixi = 1,nnodes1d
                     xi   = xi_vals(  ixi)
                     eta  = eta_vals( ieta)
-                    zeta = zeta_vals(izeta)
+                    zeta = ZERO
 
                     call self%nodes(inode)%set(xi,eta,zeta)
-                    self%weights(inode) = xi_weights(ixi)*eta_weights(ieta)*zeta_weights(izeta)
+                    self%weights(inode) = xi_weights(ixi)*eta_weights(ieta)
 
                     inode = inode + 1
                 end do
             end do
-        end do
+
+        end if
 
 
         !
         ! Initialize values and partial derivatives of each modal
         ! polynomial at each volume quadrature node
         !
-        do iterm = 1,nterms
-            do inode = 1,nnodes
-                    node = self%nodes(inode)
-                    self%val(   inode,iterm) =  polynomialVal(SPACEDIM,nterms,iterm,node)
-                    self%ddxi(  inode,iterm) = dpolynomialVal(SPACEDIM,nterms,iterm,node,XI_DIR)
-                    self%ddeta( inode,iterm) = dpolynomialVal(SPACEDIM,nterms,iterm,node,ETA_DIR)
-                    self%ddzeta(inode,iterm) = dpolynomialVal(SPACEDIM,nterms,iterm,node,ZETA_DIR)
+        if ( SPACEDIM == 3 ) then
+            do iterm = 1,nterms
+                do inode = 1,nnodes
+                        node = self%nodes(inode)
+                        self%val(   inode,iterm) =  polynomialVal(SPACEDIM,nterms,iterm,node)
+                        self%ddxi(  inode,iterm) = dpolynomialVal(SPACEDIM,nterms,iterm,node,XI_DIR)
+                        self%ddeta( inode,iterm) = dpolynomialVal(SPACEDIM,nterms,iterm,node,ETA_DIR)
+                        self%ddzeta(inode,iterm) = dpolynomialVal(SPACEDIM,nterms,iterm,node,ZETA_DIR)
+                end do
             end do
-        end do
+
+
+        else if ( SPACEDIM == 2 ) then
+            do iterm = 1,nterms
+                do inode = 1,nnodes
+                        node = self%nodes(inode)
+                        self%val(   inode,iterm) =  polynomialVal(SPACEDIM,nterms,iterm,node)
+                        self%ddxi(  inode,iterm) = dpolynomialVal(SPACEDIM,nterms,iterm,node,XI_DIR)
+                        self%ddeta( inode,iterm) = dpolynomialVal(SPACEDIM,nterms,iterm,node,ETA_DIR)
+                        self%ddzeta(inode,iterm) = ZERO
+                end do
+            end do
+
+        end if
+
 
 
 

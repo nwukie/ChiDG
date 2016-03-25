@@ -9,7 +9,7 @@ module mod_io
 #include <messenger.h>
     !!          Module Includes             !!
     use mod_kinds,     only: rk,ik
-    use mod_constants, only: MAXBLOCKS
+    use mod_constants, only: MAXBLOCKS, SPACEDIM
 
     !!          Variable Declarations       !!
     implicit none
@@ -178,7 +178,15 @@ contains
         ! Compute number of terms in polynomial expansions
         !
         nterms_sol1d = (solution_order)
-        nterms_s = nterms_sol1d * nterms_sol1d * nterms_sol1d
+
+        if ( SPACEDIM == 3 ) then
+            nterms_s = nterms_sol1d * nterms_sol1d * nterms_sol1d
+        else if ( SPACEDIM == 2 ) then
+            nterms_s = nterms_sol1d * nterms_sol1d
+        else
+            call chidg_signal(FATAL,"mod_io: Invalid SPACEDIM")
+        end if
+
 
 
     end subroutine read_input

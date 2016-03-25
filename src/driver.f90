@@ -24,6 +24,9 @@ program driver
     use mod_chidg_interpolate,  only: chidg_interpolate
     use mod_io
     
+
+    use mod_grid_operators,     only: solution_point
+    
     !
     ! Variable declarations
     !
@@ -173,6 +176,9 @@ program driver
         ! Write initial solution
         !
         if (initial_write) call chidg%write_solution(solutionfile_out)
+
+
+
 
 
         !

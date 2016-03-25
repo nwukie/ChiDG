@@ -1,7 +1,7 @@
 module mod_hdfio
 #include <messenger.h>
     use mod_kinds,          only: rk,ik
-    use mod_constants,      only: ZERO, NFACES
+    use mod_constants,      only: ZERO, NFACES, SPACEDIM
     use type_meshdata,      only: meshdata_t
     use type_bcdata,        only: bcdata_t
     use type_bc,            only: bc_t
@@ -123,12 +123,9 @@ contains
         !
         idom = 1
         do idom = 1,size(dnames)
-!        do igrp = 0,nmembers-1
-!            call h5gget_obj_info_idx_f(fid,"/", igrp, gname, type, ierr)
-!
-!            if (gname(1:2) == 'D_') then
-!
-             gname = dnames(idom)
+
+                gname = dnames(idom)
+
                 !
                 ! Open the Domain/Grid group
                 !
@@ -145,7 +142,12 @@ contains
                 mapping = buf(1)
                 if (ierr /= 0) stop "Error: read_grid_hdf5 - h5ltget_attribute_int_f"
                 nterms_1d = (mapping + 1)
-                nterms_c = nterms_1d * nterms_1d * nterms_1d
+
+                if ( SPACEDIM == 3 ) then
+                    nterms_c = nterms_1d * nterms_1d * nterms_1d
+                else if ( SPACEDIM == 2 ) then
+                    nterms_c = nterms_1d * nterms_1d
+                end if
 
                 meshdata(idom)%nterms_c = nterms_c
                 meshdata(idom)%name     = gname
@@ -334,7 +336,12 @@ contains
         order = ibuf(1)
         if (ierr /= 0) call chidg_signal(FATAL,"read_variable_hdf5 - h5ltget_attribute_int_f")
         nterms_1d = (order + 1) ! To be consistent with the definition of (Order = 'Order of the polynomial')
-        nterms_s = nterms_1d*nterms_1d*nterms_1d
+
+        if ( SPACEDIM == 3 ) then
+            nterms_s = nterms_1d*nterms_1d*nterms_1d
+        else if ( SPACEDIM == 2 ) then
+            nterms_s = nterms_1d*nterms_1d
+        end if
 
 
         
@@ -845,16 +852,29 @@ contains
             !
             adim = 1
             order_s = 0
-            do while ( order_s*order_s*order_s /= data%mesh(idom)%nterms_s )
-               order_s = order_s + 1 
-            end do
-            order_s = order_s - 1 ! to be consistent with he definition of 'Order of the polynomial'
+
+            if ( SPACEDIM == 3 ) then
+
+                do while ( order_s*order_s*order_s /= data%mesh(idom)%nterms_s )
+                   order_s = order_s + 1 
+                end do
+                order_s = order_s - 1 ! to be consistent with he definition of 'Order of the polynomial'
+
+            else if ( SPACEDIM == 2 ) then
+                do while ( order_s*order_s /= data%mesh(idom)%nterms_s )
+                   order_s = order_s + 1 
+                end do
+                order_s = order_s - 1 ! to be consistent with he definition of 'Order of the polynomial'
+
+            end if
 
             call h5ltset_attribute_int_f(fid, trim(dname), 'order_solution', [order_s], adim, ierr)
             if (ierr /= 0) call chidg_signal(FATAL,"write_variable_hdf5 - h5ltset_attribute_int_f")
 
             call h5ltset_attribute_string_f(fid, trim(dname), 'eqnset', trim(data%eqnset(idom)%item%name), ierr)
             if (ierr /= 0) call chidg_signal(FATAL,"write_variable_hdf5 - h5ltset_attribute_int_f")
+
+
 
 
             !
@@ -1020,6 +1040,7 @@ contains
                 ! TODO: should probably turn this into a loop over bcs instead of faces.
                 do iface = 1,NFACES
 
+
                     !
                     ! Open face boundary condition group
                     !
@@ -1032,6 +1053,7 @@ contains
                     !
                     ! TODO: WARNING, should replace with XI_MIN, XI_MAX, etc. somehow.
                     bcdata(idom)%bcface(iface) = iface
+
 
 
                     !

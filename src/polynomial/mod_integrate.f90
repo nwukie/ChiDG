@@ -67,6 +67,8 @@ contains
         integral_x = matmul(transpose(elem%dtdx),flux_x)                            ! Integrate
 
 
+
+
         !
         ! FLUX-Y
         ! Multiply by column of test function gradients, integrate, add to RHS, add derivatives to linearization
@@ -238,7 +240,6 @@ contains
             ! Multiply each component by quadrature weights. The fluxes have already been multiplied by norm
             !
             integrand = (integrand) * (weights)
-
             integral = matmul(transpose(val),integrand)
 
 

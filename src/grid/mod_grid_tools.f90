@@ -65,9 +65,11 @@ contains
 
         if (size(elem_map(imap)%mat,1) /= size(pts)) stop "Error: compute_modal_coordinates -- mapping and point sizes do not match"
 
+
         xmodes = matmul(elem_map(imap)%mat,pts(:)%c1_)
         ymodes = matmul(elem_map(imap)%mat,pts(:)%c2_)
         zmodes = matmul(elem_map(imap)%mat,pts(:)%c3_)
+
 
         call cmodes%setvar(1,xmodes)
         call cmodes%setvar(2,ymodes)

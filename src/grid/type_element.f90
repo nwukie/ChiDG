@@ -2,7 +2,7 @@ module type_element
 #include <messenger.h>
     use mod_kinds,              only: rk,ik
     use mod_constants,          only: SPACEDIM,NFACES,XI_MIN,XI_MAX,ETA_MIN, &
-                                      ETA_MAX,ZETA_MIN,ZETA_MAX,ONE,ZERO
+                                      ETA_MAX,ZETA_MIN,ZETA_MAX,ONE,ZERO, ZETA_DIR
     use type_point,             only: point_t
     use type_densevector,       only: densevector_t
     use type_quadrature,        only: quadrature_t
@@ -129,7 +129,8 @@ contains
         integer(ik),        intent(in)    :: idomain
         integer(ik),        intent(in)    :: ielem
 
-        integer(ik)                         :: ierr, nterms_c
+        type(point_t)                       :: pnt
+        integer(ik)                         :: ierr, nterms_c, ipt
         real(rk), dimension(:,:), pointer   :: imap => null()
 
         if (self%geomInitialized) call chidg_signal(FATAL,'element%init_geom -- element already initialized')
@@ -157,7 +158,8 @@ contains
         ! Allocate storage
         !
         allocate(self%elem_pts(nterms_c),stat=ierr)
-        call self%coords%init(nterms_c,SPACEDIM,ielem)
+        !call self%coords%init(nterms_c,SPACEDIM,ielem)
+        call self%coords%init(nterms_c,3,ielem)
         self%idomain  = idomain
         self%ielem    = ielem
         self%elem_pts = points
@@ -167,6 +169,9 @@ contains
         ! Compute mesh x,y,z modes
         !
         call compute_modal_coordinates(self%elem_pts,mapping,self%coords)
+
+
+
 
 
         !
@@ -210,6 +215,7 @@ contains
         self%nterms_s    = nterms_s                 ! Set number of terms in modal expansion of solution
         self%neqns       = neqns                    ! Set number of equations being solved
 
+
         call self%assign_quadrature()               ! With nterms_s and nterms_c defined, we can assign a quadrature instance
         nnodes           = self%gq%vol%nnodes       ! With a quadrature instance assigned, we have the number of quadrature nodes
 
@@ -218,7 +224,8 @@ contains
         ! Allocate storage for element data structures
         !
         allocate(self%jinv(nnodes),                         &
-                 self%metric(SPACEDIM,SPACEDIM,nnodes),     &
+                 !self%metric(SPACEDIM,SPACEDIM,nnodes),     &
+                 self%metric(3,3,nnodes),     &
                  self%quad_pts(nnodes),                     &
                  self%dtdx(nnodes,nterms_s),                &
                  self%dtdy(nnodes,nterms_s),                &
@@ -274,6 +281,8 @@ contains
         nterms_c = self%nterms_c
 
         if (nterms_c == 0) call chidg_signal(FATAL,'element%assign_quadrature -- coordinate expansion not defined')
+
+
 
         !
         ! Get number of quadrature nodes
@@ -344,6 +353,18 @@ contains
         dzdzeta = matmul(self%gqmesh%vol%ddzeta,self%coords%getvar(3))
 
 
+
+
+        if ( SPACEDIM == 2 ) then
+            dzdxi   = ZERO
+            dzdeta  = ZERO
+            dzdzeta = ONE
+        end if
+
+
+
+
+
         !
         ! Loop through quadrature nodes and compute metric terms
         !
@@ -362,12 +383,23 @@ contains
         end do
 
 
+
+
+
         !
         ! Compute inverse cell mapping jacobian
         !
-        self%jinv = dxdxi*dydeta*dzdzeta - dxdeta*dydxi*dzdzeta - &
-                    dxdxi*dydzeta*dzdeta + dxdzeta*dydxi*dzdeta + &
-                    dxdeta*dydzeta*dzdxi - dxdzeta*dydeta*dzdxi
+        if ( SPACEDIM == 3 ) then
+            self%jinv = dxdxi*dydeta*dzdzeta - dxdeta*dydxi*dzdzeta - &
+                        dxdxi*dydzeta*dzdeta + dxdzeta*dydxi*dzdeta + &
+                        dxdeta*dydzeta*dzdxi - dxdzeta*dydeta*dzdxi
+
+        else if ( SPACEDIM == 2 ) then
+            self%jinv = dxdxi*dydeta - dxdeta*dydxi
+
+        else
+            call chidg_signal(FATAL,"element%compute_quadrature_metrics")
+        end if
 
 
         !
@@ -547,6 +579,7 @@ contains
         self%mass = matmul(temp,self%gq%vol%val)
 
 
+
         !
         ! Compute and store the inverted mass matrix
         !
@@ -593,7 +626,13 @@ contains
         ! Evaluate polynomial modes at node location
         !
         do iterm = 1,self%nterms_c
-            polyvals(iterm)  = polynomialVal(3,self%nterms_c,iterm,node)
+
+            if ( SPACEDIM == 3 ) then
+                polyvals(iterm)  = polynomialVal(3,self%nterms_c,iterm,node)
+            else if ( SPACEDIM == 2 ) then
+                polyvals(iterm)  = polynomialVal(2,self%nterms_c,iterm,node)
+            end if
+
         end do
 
         
@@ -634,7 +673,13 @@ contains
         ! Evaluate polynomial modes at node location
         !
         do iterm = 1,self%nterms_c
-            polyvals(iterm)  = polynomialVal(3,self%nterms_c,iterm,node)
+
+            if ( SPACEDIM == 3 ) then
+                polyvals(iterm)  = polynomialVal(3,self%nterms_c,iterm,node)
+            else if ( SPACEDIM == 2 ) then
+                polyvals(iterm)  = polynomialVal(2,self%nterms_c,iterm,node)
+            end if
+
         end do
 
 
@@ -674,7 +719,13 @@ contains
         ! Evaluate polynomial modes at node location
         !
         do iterm = 1,self%nterms_c
-            polyvals(iterm)  = polynomialVal(3,self%nterms_c,iterm,node)
+
+            if ( SPACEDIM == 3 ) then
+                polyvals(iterm)  = polynomialVal(3,self%nterms_c,iterm,node)
+            else if ( SPACEDIM == 2 ) then
+                polyvals(iterm)  = polynomialVal(2,self%nterms_c,iterm,node)
+            end if
+
         end do
 
 
@@ -729,7 +780,20 @@ contains
         !
         do iterm = 1,self%nterms_c
 
-            polyvals(iterm) = dpolynomialVal(3,self%nterms_c,iterm,node,comp_dir)
+            if ( SPACEDIM == 3 ) then
+
+                polyvals(iterm) = dpolynomialVal(3,self%nterms_c,iterm,node,comp_dir)
+
+
+            else if ( SPACEDIM == 2 ) then
+
+                if ( comp_dir == ZETA_DIR ) then
+                    polyvals(iterm) = ZERO
+                else
+                    polyvals(iterm) = dpolynomialVal(2,self%nterms_c,iterm,node,comp_dir)
+                end if
+
+            end if
 
         end do
 

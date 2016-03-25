@@ -1,7 +1,7 @@
 module mod_hdf_utilities
 #include <messenger.h>
     use mod_kinds,              only: rk, ik
-    use mod_constants,          only: NFACES
+    use mod_constants,          only: NFACES, SPACEDIM
     use type_file_properties,   only: file_properties_t
     use hdf5
     use h5lt
@@ -99,10 +99,21 @@ contains
         ! Compute number of terms in the polynomial expansions
         !
         nterms_1d = (prop%order_c + 1)
-        prop%nterms_c = nterms_1d * nterms_1d * nterms_1d
+
+        if ( SPACEDIM == 3 ) then
+            prop%nterms_c = nterms_1d * nterms_1d * nterms_1d
+        else if ( SPACEDIM == 2 ) then
+            prop%nterms_c = nterms_1d * nterms_1d
+        end if
+
 
         nterms_1d = (prop%order_s + 1)
-        prop%nterms_s = nterms_1d * nterms_1d * nterms_1d
+
+        if ( SPACEDIM == 3 ) then
+            prop%nterms_s = nterms_1d * nterms_1d * nterms_1d
+        else if ( SPACEDIM == 2 ) then
+            prop%nterms_s = nterms_1d * nterms_1d
+        end if
 
 
 

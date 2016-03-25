@@ -1,7 +1,7 @@
 module type_mesh
     use mod_kinds,          only: rk,ik
     use mod_constants,      only: NFACES,XI_MIN,XI_MAX,ETA_MIN,ETA_MAX,ZETA_MIN,ZETA_MAX, &
-                                  ORPHAN, INTERIOR, BOUNDARY, CHIMERA
+                                  ORPHAN, INTERIOR, BOUNDARY, CHIMERA, SPACEDIM
 
     use type_element,       only: element_t
     use type_face,          only: face_t
@@ -219,10 +219,18 @@ contains
         ! Compute number of 1d points for a single element
         !
         npts_1d = 0
-        do while (npts_1d*npts_1d*npts_1d < self%nterms_c)
-            npts_1d = npts_1d + 1       ! really just computing the cubed root of nterms_c, the number of terms in the coordinate expansion
-        end do
+        
+        if ( SPACEDIM == 3 ) then
+            do while (npts_1d*npts_1d*npts_1d < self%nterms_c)
+                npts_1d = npts_1d + 1       ! really just computing the cubed root of nterms_c, the number of terms in the coordinate expansion
+            end do
 
+        else if ( SPACEDIM == 2 ) then
+            do while (npts_1d*npts_1d < self%nterms_c)
+                npts_1d = npts_1d + 1       ! really just computing the cubed root of nterms_c, the number of terms in the coordinate expansion
+            end do
+
+        end if
 
         !
         ! Count number of elements in each direction and check mesh conforms to
@@ -293,14 +301,26 @@ contains
                     ! array into a local points array for initializing an individual element
                     !
                     ipt = 1
-                    do ipt_zeta = 1,npts_1d
+
+                    if ( SPACEDIM == 3 ) then
+                        do ipt_zeta = 1,npts_1d
+                            do ipt_eta = 1,npts_1d
+                                do ipt_xi = 1,npts_1d
+                                    points_l(ipt) = points_g(xi_start+(ipt_xi-1),eta_start+(ipt_eta-1),zeta_start+(ipt_zeta-1))
+                                    ipt = ipt + 1
+                                end do
+                            end do
+                        end do
+
+                    else if ( SPACEDIM == 2 ) then
                         do ipt_eta = 1,npts_1d
                             do ipt_xi = 1,npts_1d
-                                points_l(ipt) = points_g(xi_start+(ipt_xi-1),eta_start+(ipt_eta-1),zeta_start+(ipt_zeta-1))
+                                points_l(ipt) = points_g(xi_start+(ipt_xi-1),eta_start+(ipt_eta-1), 1 )
                                 ipt = ipt + 1
                             end do
                         end do
-                    end do
+
+                    end if
 
 
                     !

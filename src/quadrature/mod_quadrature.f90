@@ -1,7 +1,7 @@
 module mod_quadrature
 #include <messenger.h>
     use mod_kinds,          only: rk,ik
-    use mod_constants,      only: PI
+    use mod_constants,      only: PI, SPACEDIM
     use type_quadrature,    only: quadrature_t
     implicit none
 
@@ -40,10 +40,25 @@ contains
         ! Find number of terms in the 1d expansion
         !
         nterms1d = 0
-        do while (nterms1d*nterms1d*nterms1d /= nterms_s)
-            nterms1d = nterms1d + 1
-        end do
-        if (nterms1d*nterms1d*nterms1d > nterms_s) call chidg_signal(FATAL, "Incorrect number of terms counted when computing quadrature nodes")
+
+        if ( SPACEDIM == 3 ) then
+
+            do while (nterms1d*nterms1d*nterms1d /= nterms_s)
+                nterms1d = nterms1d + 1
+            end do
+            if (nterms1d*nterms1d*nterms1d > nterms_s) call chidg_signal(FATAL, "Incorrect number of terms counted when computing quadrature nodes")
+
+        else if ( SPACEDIM == 2 ) then
+
+            do while (nterms1d*nterms1d /= nterms_s)
+                nterms1d = nterms1d + 1
+            end do
+            if (nterms1d*nterms1d > nterms_s) call chidg_signal(FATAL, "Incorrect number of terms counted when computing quadrature nodes")
+
+        else
+            call chidg_signal(FATAL,"mod_quadrature: Invalid SPACEDIM")
+
+        end if
 
 
         !
@@ -75,8 +90,17 @@ contains
         nnodes2d = nnodes1d*nnodes1d
         nnodes3d = nnodes1d*nnodes1d*nnodes1d
 
-        nnodes_face = nnodes2d
-        nnodes_vol  = nnodes3d
+        
+        if ( SPACEDIM == 3 ) then
+            nnodes_face = nnodes2d
+            nnodes_vol  = nnodes3d
+        else if ( SPACEDIM == 2 ) then
+            nnodes_face = nnodes1d
+            nnodes_vol  = nnodes2d
+        else
+            call chidg_signal(FATAL,"mod_quadrature: Invalid SPACEDIM")
+        end if
+
 
     end subroutine compute_nnodes_gq
     !*********************************************************************************************************
@@ -108,6 +132,7 @@ contains
 
         integer(ik) :: igq
         logical     :: has_correct_nodes_terms
+
 
 
         !

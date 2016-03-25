@@ -1,6 +1,7 @@
 module mod_grid_operators
 #include <messenger.h>
     use mod_kinds,          only: rk, ik
+    use mod_constants,      only: SPACEDIM
     use type_point,         only: point_t
     use type_element,       only: element_t
     use type_blockvector,   only: blockvector_t
@@ -120,7 +121,11 @@ contains
         !
         do iterm = 1,elem%nterms_c
 
-            polyvals(iterm) = polynomialVal(3,elem%nterms_c,iterm,node)
+            if ( SPACEDIM == 3 ) then
+                polyvals(iterm) = polynomialVal(3,elem%nterms_c,iterm,node)
+            else if ( SPACEDIM == 2 ) then
+                polyvals(iterm) = polynomialVal(2,elem%nterms_c,iterm,node)
+            end if
 
         end do
 
@@ -171,7 +176,11 @@ contains
         !
         do iterm = 1,q%nterms()
 
-            polyvals(iterm)  = polynomialVal(3,q%nterms(),iterm,node)
+            if ( SPACEDIM == 3 ) then
+                polyvals(iterm)  = polynomialVal(3,q%nterms(),iterm,node)
+            else if ( SPACEDIM == 2 ) then
+                polyvals(iterm)  = polynomialVal(2,q%nterms(),iterm,node)
+            end if
 
         end do
 
@@ -228,7 +237,11 @@ contains
         !
         do iterm = 1,elem%nterms_c
 
-            polyvals(iterm) = dpolynomialVal(3,elem%nterms_c,iterm,node,comp_dir)
+            if ( SPACEDIM == 3 ) then
+                polyvals(iterm) = dpolynomialVal(3,elem%nterms_c,iterm,node,comp_dir)
+            else if ( SPACEDIM == 2 ) then
+                polyvals(iterm) = dpolynomialVal(2,elem%nterms_c,iterm,node,comp_dir)
+            end if
 
         end do
 

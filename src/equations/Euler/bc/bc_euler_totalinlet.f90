@@ -161,7 +161,6 @@ contains
             nz = self%bcproperties%compute("nz",                time, coords)
 
 
-
             !
             ! Interpolate interior solution to quadrature nodes
             !

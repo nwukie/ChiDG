@@ -3,7 +3,8 @@ module type_face
     use mod_kinds,              only: rk,ik
     use mod_constants,          only: XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, &
                                       ZETA_MIN, ZETA_MAX, XI_DIR, ETA_DIR, ZETA_DIR, &
-                                      SPACEDIM, NFACES, TWO, NO_INTERIOR_NEIGHBOR
+                                      SPACEDIM, NFACES, TWO, NO_INTERIOR_NEIGHBOR,   &
+                                      ZERO, ONE
 
     use type_point,             only: point_t
     use type_element,           only: element_t
@@ -183,9 +184,12 @@ contains
         !
         allocate(self%quad_pts(nnodes),                    &
                  self%jinv(nnodes),                        &
-                 self%metric(SPACEDIM,SPACEDIM,nnodes),    &
-                 self%norm(nnodes,SPACEDIM),               &
-                 self%unorm(nnodes,SPACEDIM), stat=ierr)
+                 !self%metric(SPACEDIM,SPACEDIM,nnodes),    &
+                 self%metric(3,3,nnodes),    &
+                 !self%norm(nnodes,SPACEDIM),               &
+                 self%norm(nnodes,3),               &
+                 !self%unorm(nnodes,SPACEDIM), stat=ierr)
+                 self%unorm(nnodes,3), stat=ierr)
         if (ierr /= 0) call AllocationError
 
         
@@ -254,6 +258,15 @@ contains
         end associate
 
         
+
+        if ( SPACEDIM == 2 ) then
+            dzdxi   = ZERO
+            dzdeta  = ZERO
+            dzdzeta = ONE
+        end if
+
+
+
         !
         ! At each quadrature node, compute metric terms.
         !
@@ -275,9 +288,18 @@ contains
         !
         ! compute inverse cell mapping jacobian terms
         !
-        invjac = dxdxi*dydeta*dzdzeta - dxdeta*dydxi*dzdzeta - &
-                 dxdxi*dydzeta*dzdeta + dxdzeta*dydxi*dzdeta + &
-                 dxdeta*dydzeta*dzdxi - dxdzeta*dydeta*dzdxi
+        if ( SPACEDIM == 3 ) then
+            invjac = dxdxi*dydeta*dzdzeta - dxdeta*dydxi*dzdzeta - &
+                     dxdxi*dydzeta*dzdeta + dxdzeta*dydxi*dzdeta + &
+                     dxdeta*dydzeta*dzdxi - dxdzeta*dydeta*dzdxi
+
+        else if ( SPACEDIM == 2 ) then
+            invjac = dxdxi*dydeta - dxdeta*dydxi
+
+        end if
+
+
+
 
         self%jinv = invjac
 
@@ -338,34 +360,71 @@ contains
         !
         ! Compute normal vectors for each face
         !
-        select case (self%iface)
-            case (XI_MIN, XI_MAX)
+        if ( SPACEDIM == 3 ) then
 
-                do inode = 1,nnodes
-                    self%norm(inode,XI_DIR)   = dydeta(inode)*dzdzeta(inode) - dydzeta(inode)*dzdeta(inode)
-                    self%norm(inode,ETA_DIR)  = dxdzeta(inode)*dzdeta(inode) - dxdeta(inode)*dzdzeta(inode)
-                    self%norm(inode,ZETA_DIR) = dxdeta(inode)*dydzeta(inode) - dxdzeta(inode)*dydeta(inode)
-                end do
 
-            case (ETA_MIN, ETA_MAX)
+            select case (self%iface)
+                case (XI_MIN, XI_MAX)
 
-                do inode = 1,nnodes
-                    self%norm(inode,XI_DIR)   = dydzeta(inode)*dzdxi(inode)  - dydxi(inode)*dzdzeta(inode)
-                    self%norm(inode,ETA_DIR)  = dxdxi(inode)*dzdzeta(inode)  - dxdzeta(inode)*dzdxi(inode)
-                    self%norm(inode,ZETA_DIR) = dxdzeta(inode)*dydxi(inode)  - dxdxi(inode)*dydzeta(inode)
-                end do
+                    do inode = 1,nnodes
+                        self%norm(inode,XI_DIR)   = dydeta(inode)*dzdzeta(inode) - dydzeta(inode)*dzdeta(inode)
+                        self%norm(inode,ETA_DIR)  = dxdzeta(inode)*dzdeta(inode) - dxdeta(inode)*dzdzeta(inode)
+                        self%norm(inode,ZETA_DIR) = dxdeta(inode)*dydzeta(inode) - dxdzeta(inode)*dydeta(inode)
+                    end do
 
-            case (ZETA_MIN, ZETA_MAX)
+                case (ETA_MIN, ETA_MAX)
 
-                do inode = 1,nnodes
-                    self%norm(inode,XI_DIR)   = dydxi(inode)*dzdeta(inode)   - dzdxi(inode)*dydeta(inode)
-                    self%norm(inode,ETA_DIR)  = dzdxi(inode)*dxdeta(inode)   - dxdxi(inode)*dzdeta(inode)
-                    self%norm(inode,ZETA_DIR) = dxdxi(inode)*dydeta(inode)   - dydxi(inode)*dxdeta(inode)
-                end do
+                    do inode = 1,nnodes
+                        self%norm(inode,XI_DIR)   = dydzeta(inode)*dzdxi(inode)  - dydxi(inode)*dzdzeta(inode)
+                        self%norm(inode,ETA_DIR)  = dxdxi(inode)*dzdzeta(inode)  - dxdzeta(inode)*dzdxi(inode)
+                        self%norm(inode,ZETA_DIR) = dxdzeta(inode)*dydxi(inode)  - dxdxi(inode)*dydzeta(inode)
+                    end do
 
-            case default
-                stop "Error: invalid face index in face initialization"
-        end select
+                case (ZETA_MIN, ZETA_MAX)
+
+                    do inode = 1,nnodes
+                        self%norm(inode,XI_DIR)   = dydxi(inode)*dzdeta(inode)   - dzdxi(inode)*dydeta(inode)
+                        self%norm(inode,ETA_DIR)  = dzdxi(inode)*dxdeta(inode)   - dxdxi(inode)*dzdeta(inode)
+                        self%norm(inode,ZETA_DIR) = dxdxi(inode)*dydeta(inode)   - dydxi(inode)*dxdeta(inode)
+                    end do
+
+                case default
+                    stop "Error: invalid face index in face initialization"
+            end select
+
+        else if ( SPACEDIM == 2 ) then
+
+            select case (self%iface)
+                case (XI_MIN, XI_MAX)
+
+                    do inode = 1,nnodes
+                        self%norm(inode,XI_DIR)   =  dydeta(inode)
+                        self%norm(inode,ETA_DIR)  = -dxdeta(inode)
+                        self%norm(inode,ZETA_DIR) =  ZERO
+                    end do
+
+                case (ETA_MIN, ETA_MAX)
+
+                    do inode = 1,nnodes
+                        self%norm(inode,XI_DIR)   = -dydxi(inode)
+                        self%norm(inode,ETA_DIR)  =  dxdxi(inode)
+                        self%norm(inode,ZETA_DIR) =  ZERO
+                    end do
+
+                case (ZETA_MIN, ZETA_MAX)
+
+                    do inode = 1,nnodes
+                        self%norm(inode,XI_DIR)   = ZERO
+                        self%norm(inode,ETA_DIR)  = ZERO
+                        self%norm(inode,ZETA_DIR) = ONE
+                    end do
+
+                case default
+                    stop "Error: invalid face index in face initialization"
+            end select
+
+        end if
+
 
         
         !

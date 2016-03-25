@@ -12,7 +12,7 @@ module mod_chimera
     use mod_constants,          only: NFACES, ORPHAN, CHIMERA, &
                                       X_DIR,  Y_DIR,   Z_DIR, &
                                       XI_DIR, ETA_DIR, ZETA_DIR, &
-                                      ONE
+                                      ONE, ZERO, SPACEDIM
 
     use type_mesh,              only: mesh_t
     use type_point,             only: point_t
@@ -429,6 +429,8 @@ contains
         ygq = gq_node%c2_
         zgq = gq_node%c3_
 
+
+
         !
         ! Loop through domains and search for potential donor candidates
         !
@@ -467,8 +469,8 @@ contains
                 xmax = xmax + 0.1*dx
                 ymin = ymin - 0.1*dy
                 ymax = ymax + 0.1*dy
-                zmin = zmin - 0.1*dz
-                zmax = zmax + 0.1*dz
+                zmin = (zmin-0.001) - 0.1*dz
+                zmax = (zmax+0.001) + 0.1*dz
 
                 !
                 ! Test if gq_node is contained within the bounding coordinates
@@ -542,19 +544,34 @@ contains
                 R(3) = -(zn - zgq)
 
 
+
                 !
                 ! Assemble coordinate jacobian matrix
                 !
-                mat(1,1) = metric_point(mesh(idom)%elems(ielem),X_DIR,XI_DIR,  xi,eta,zeta)
-                mat(2,1) = metric_point(mesh(idom)%elems(ielem),Y_DIR,XI_DIR,  xi,eta,zeta)
-                mat(3,1) = metric_point(mesh(idom)%elems(ielem),Z_DIR,XI_DIR,  xi,eta,zeta)
-                mat(1,2) = metric_point(mesh(idom)%elems(ielem),X_DIR,ETA_DIR, xi,eta,zeta)
-                mat(2,2) = metric_point(mesh(idom)%elems(ielem),Y_DIR,ETA_DIR, xi,eta,zeta)
-                mat(3,2) = metric_point(mesh(idom)%elems(ielem),Z_DIR,ETA_DIR, xi,eta,zeta)
-                mat(1,3) = metric_point(mesh(idom)%elems(ielem),X_DIR,ZETA_DIR,xi,eta,zeta)
-                mat(2,3) = metric_point(mesh(idom)%elems(ielem),Y_DIR,ZETA_DIR,xi,eta,zeta)
-                mat(3,3) = metric_point(mesh(idom)%elems(ielem),Z_DIR,ZETA_DIR,xi,eta,zeta)
+                if ( SPACEDIM == 3 ) then
+                    mat(1,1) = metric_point(mesh(idom)%elems(ielem),X_DIR,XI_DIR,  xi,eta,zeta)
+                    mat(2,1) = metric_point(mesh(idom)%elems(ielem),Y_DIR,XI_DIR,  xi,eta,zeta)
+                    mat(3,1) = metric_point(mesh(idom)%elems(ielem),Z_DIR,XI_DIR,  xi,eta,zeta)
+                    mat(1,2) = metric_point(mesh(idom)%elems(ielem),X_DIR,ETA_DIR, xi,eta,zeta)
+                    mat(2,2) = metric_point(mesh(idom)%elems(ielem),Y_DIR,ETA_DIR, xi,eta,zeta)
+                    mat(3,2) = metric_point(mesh(idom)%elems(ielem),Z_DIR,ETA_DIR, xi,eta,zeta)
+                    mat(1,3) = metric_point(mesh(idom)%elems(ielem),X_DIR,ZETA_DIR,xi,eta,zeta)
+                    mat(2,3) = metric_point(mesh(idom)%elems(ielem),Y_DIR,ZETA_DIR,xi,eta,zeta)
+                    mat(3,3) = metric_point(mesh(idom)%elems(ielem),Z_DIR,ZETA_DIR,xi,eta,zeta)
 
+                else if ( SPACEDIM == 2 ) then
+                    mat(1,1) = metric_point(mesh(idom)%elems(ielem),X_DIR,XI_DIR,  xi,eta,zeta)
+                    mat(2,1) = metric_point(mesh(idom)%elems(ielem),Y_DIR,XI_DIR,  xi,eta,zeta)
+                    mat(3,1) = metric_point(mesh(idom)%elems(ielem),Z_DIR,XI_DIR,  xi,eta,zeta)
+                    mat(1,2) = metric_point(mesh(idom)%elems(ielem),X_DIR,ETA_DIR, xi,eta,zeta)
+                    mat(2,2) = metric_point(mesh(idom)%elems(ielem),Y_DIR,ETA_DIR, xi,eta,zeta)
+                    mat(3,2) = metric_point(mesh(idom)%elems(ielem),Z_DIR,ETA_DIR, xi,eta,zeta)
+                    mat(1,3) = ZERO
+                    mat(2,3) = ZERO
+                    mat(3,3) = ONE
+
+
+                end if
 
                 !
                 ! Invert jacobian matrix
@@ -727,7 +744,13 @@ contains
                     do iterm = 1,nterms
                         do ipt = 1,npts
                             node = mesh(idom)%chimera%recv%data(iChiID)%donor_coords(idonor)%at(ipt)
-                            interpolator(ipt,iterm) = polynomialVal(3,nterms,iterm,node)
+
+                            if ( SPACEDIM == 3 ) then
+                                interpolator(ipt,iterm) = polynomialVal(3,nterms,iterm,node)
+                            else if ( SPACEDIM == 2 ) then
+                                interpolator(ipt,iterm) = polynomialVal(2,nterms,iterm,node)
+                            end if
+
                         end do ! ipt
                     end do ! iterm
 

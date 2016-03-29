@@ -172,7 +172,7 @@ contains
 
 
             !
-            ! Outer GMRES Loop
+            ! Inner GMRES restart loop
             !
             nvecs = 0
             do j = 1,self%m

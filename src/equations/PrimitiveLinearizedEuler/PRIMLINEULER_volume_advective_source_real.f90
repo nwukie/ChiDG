@@ -1,6 +1,6 @@
 module PRIMLINEULER_volume_advective_source_real
     use mod_kinds,              only: rk,ik
-    use mod_constants,          only: NFACES,ONE,TWO,THREE,FOUR,FIVE,EIGHT,HALF,ZERO, &
+    use mod_constants,          only: NFACES,ONE,TWO,THREE,FOUR,FIVE,EIGHT,NINE,HALF,ZERO, &
                                       XI_MIN,XI_MAX,ETA_MIN,ETA_MAX,ZETA_MIN,ZETA_MAX,DIAG,PI
 
     use type_mesh,              only: mesh_t
@@ -143,10 +143,18 @@ contains
 
         do igq = 1,size(x)
 
-            inA = ( x(igq) < -FOUR + thickness )
+!            inA = ( x(igq) < -FOUR + thickness )
+!            inB = ( y(igq) >  FIVE - thickness )
+!            inC = ( x(igq) > EIGHT - thickness )
+!            inD = ( y(igq) < -FIVE + thickness )
+
+            inA = ( x(igq) < -NINE + thickness )
             inB = ( y(igq) >  FIVE - thickness )
-            inC = ( x(igq) > EIGHT - thickness )
+            inC = ( x(igq) >  NINE - thickness )
             inD = ( y(igq) < -FIVE + thickness )
+
+
+
 
             if ( inA ) then
                 fcn     =  abs( ( x - (-FOUR+thickness) ) / thickness )**TWO
@@ -168,9 +176,9 @@ contains
                 fcn     =  abs( ( y - ( FIVE-thickness) ) / thickness )**TWO
                 sigma_y = eps * fcn
 
-            else if ( inD ) then
-                fcn     =  abs( ( y - (-FIVE+thickness) ) / thickness )**TWO
-                sigma_y = eps * fcn
+!            else if ( inD ) then
+!                fcn     =  abs( ( y - (-FIVE+thickness) ) / thickness )**TWO
+!                sigma_y = eps * fcn
 
             else
                 sigma_y = ZERO

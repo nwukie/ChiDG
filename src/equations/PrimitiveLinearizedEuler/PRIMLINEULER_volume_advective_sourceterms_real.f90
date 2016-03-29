@@ -188,9 +188,10 @@ contains
         !============================
         !       ENERGY FLUX
         !============================
-        x0 = FOUR
+        x0 = ZERO
         y0 = ZERO
-        eps = 429.8837052_rk
+        !eps = 429.8837052_rk
+        eps = 171.9534821_rk
 
         do igq = 1,size(rho_r)
             x = mesh(idom)%elems(ielem)%quad_pts(igq)%c1_

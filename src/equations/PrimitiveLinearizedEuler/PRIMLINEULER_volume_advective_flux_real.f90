@@ -73,7 +73,7 @@ contains
         integer(ik)    :: iseed, i, idonor, igq
         type(seed_t)   :: seed
 
-        real(rk)    :: gam, omega, thickness, eps, kappa
+        real(rk)    :: gam, thickness, eps, kappa
 
         type(AD_D), dimension(mesh(idom)%elems(ielem)%gq%vol%nnodes)      ::  &
                     rho_r, u_r, v_r, w_r, p_r,                        &
@@ -140,7 +140,7 @@ contains
         !
         gam = 1.4_rk
         !omega = 956._rk * TWO * PI
-        omega = 1200._rk * TWO * PI
+        !omega = 1200._rk * TWO * PI
 
 
 

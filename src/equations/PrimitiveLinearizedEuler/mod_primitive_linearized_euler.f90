@@ -1,6 +1,6 @@
 module mod_primitive_linearized_euler
     use mod_kinds,      only: rk, ik
-    use mod_constants,  only: HALF, ONE, TWO, ZERO
+    use mod_constants,  only: HALF, ONE, TWO, ZERO, PI
     implicit none
 
     !
@@ -12,6 +12,7 @@ module mod_primitive_linearized_euler
 
 
     real(rk), parameter :: gam = 1.4_rk
+    real(rk), parameter :: omega = 1432.945684_rk * TWO * PI
 
     !
     ! Dimensional mean flow

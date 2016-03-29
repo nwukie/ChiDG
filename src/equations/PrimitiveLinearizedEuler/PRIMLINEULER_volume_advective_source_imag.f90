@@ -13,7 +13,8 @@ module PRIMLINEULER_volume_advective_source_imag
     use mod_DNAD_tools
     use DNAD_D
 
-    use PRIMLINEULER_properties,    only: PRIMLINEULER_properties_t
+    use PRIMLINEULER_properties,        only: PRIMLINEULER_properties_t
+    use mod_primitive_linearized_euler, only: omega
     implicit none
 
     private
@@ -74,7 +75,7 @@ contains
         integer(ik)    :: iseed, i, idonor, igq
         type(seed_t)   :: seed
 
-        real(rk)    :: gam, omega, thickness, eps, kappa
+        real(rk)    :: gam, thickness, eps, kappa
 
 
 
@@ -116,7 +117,7 @@ contains
         !
         gam = 1.4_rk
         !omega = 956._rk * TWO * PI
-        omega = 1200._rk * TWO * PI
+        !omega = 1200._rk * TWO * PI
 
 
 

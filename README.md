@@ -5,8 +5,6 @@ A Chimera-based, discontinuous Galerkin solver
 
 
 
-
-
 ## Dependencies
 
 HDF5: ChiDG-formatted IO
@@ -48,7 +46,7 @@ To generate the documentation, in a terminal:
 
 
 
-## Author List:
+## Author Acknowledgement:
 Nathan A. Wukie   nwukie@gmail.com
 
 
@@ -56,7 +54,10 @@ Nathan A. Wukie   nwukie@gmail.com
 
 
 
-
+## Sponsorshop Acknowledgement:
+This material is based upon work supported by the National Science Foundation Graduate Research Fellowship Program under Grant No. 1610397. 
+Any opinions, findings, and conclusions or recommendations expressed in this material are those of the author(s) and do not necessarily 
+reflect the views of the National Science Foundation.
 
 
 

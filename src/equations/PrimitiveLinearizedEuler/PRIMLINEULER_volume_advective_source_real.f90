@@ -157,11 +157,11 @@ contains
 
 
             if ( inA ) then
-                fcn     =  abs( ( x - (-FOUR+thickness) ) / thickness )**TWO
+                fcn     =  abs( ( x - (-NINE+thickness) ) / thickness )**TWO
                 sigma_x = eps * fcn
             
             else if ( inC ) then
-                fcn     =  abs( ( x - (EIGHT-thickness) ) / thickness )**TWO
+                fcn     =  abs( ( x - (NINE-thickness) ) / thickness )**TWO
                 sigma_x = eps * fcn
 
             else

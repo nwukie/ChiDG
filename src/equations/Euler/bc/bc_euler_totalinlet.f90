@@ -64,9 +64,13 @@ contains
         !
         call self%bcproperties%add('TotalPressure',   'Required')
         call self%bcproperties%add('TotalTemperature','Required')
+
+        call self%bcproperties%add('normal_direction','Required')
         call self%bcproperties%add('nx',              'Required')
         call self%bcproperties%add('ny',              'Required')
         call self%bcproperties%add('nz',              'Required')
+        call self%bcproperties%add('nr',              'Required')
+        call self%bcproperties%add('nt',              'Required')
 
         !
         ! Set default angle
@@ -120,7 +124,8 @@ contains
                         T_bc,   p_bc,   rho_bc, rhoE_bc,                    &
                         vmag2_m, vmag, H_bc
 
-        real(rk), dimension(mesh(face%idomain)%faces(face%ielement,face%iface)%gq%face%nnodes) :: TT, PT, nx, ny, nz
+        real(rk), dimension(mesh(face%idomain)%faces(face%ielement,face%iface)%gq%face%nnodes)     ::  &
+                        TT, PT, nx, ny, nz, nr, nt, theta, normal_direction, x, y
 
         real(rk)        :: gam_m, cp_m, M
         !real(rk)        :: norm_bc(3)
@@ -156,9 +161,36 @@ contains
             !
             PT = self%bcproperties%compute("TotalPressure",     time, coords)
             TT = self%bcproperties%compute("TotalTemperature",  time, coords)
-            nx = self%bcproperties%compute("nx",                time, coords)
-            ny = self%bcproperties%compute("ny",                time, coords)
-            nz = self%bcproperties%compute("nz",                time, coords)
+
+            normal_direction = self%bcproperties%compute("normal_direction",    time, coords)
+
+            if ( normal_direction(1) == ONE ) then
+                nx = self%bcproperties%compute("nx",                                time, coords)
+                ny = self%bcproperties%compute("ny",                                time, coords)
+                nz = self%bcproperties%compute("nz",                                time, coords)
+
+            else if ( normal_direction(1) == TWO ) then
+                nr = self%bcproperties%compute("nr",                                time, coords)
+                nt = self%bcproperties%compute("nt",                                time, coords)
+                nz = self%bcproperties%compute("nz",                                time, coords)
+
+                !
+                ! Compute 'r' for each quadrature point
+                !
+                x = mesh(idom)%elems(ielem)%quad_pts(:)%c1_
+                y = mesh(idom)%elems(ielem)%quad_pts(:)%c2_
+
+                theta = atan2(y,x)
+
+                nx = cos(theta)*nr - sin(theta)*nt
+                ny = sin(theta)*nr + cos(theta)*nt
+                nz = nz
+
+            end if
+
+
+            
+
 
 
 

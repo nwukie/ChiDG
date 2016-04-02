@@ -1,7 +1,7 @@
 module type_bc
 #include <messenger.h>
     use mod_kinds,              only: rk, ik
-    use mod_constants,          only: XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX, BOUNDARY, CHIMERA, ORPHAN, BC_BLK
+    use mod_constants,          only: XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX, BOUNDARY, CHIMERA, ORPHAN, BC_BLK, ONE, TWO
     use type_mesh,              only: mesh_t
     use type_point,             only: point_t
     use type_ivector,           only: ivector_t
@@ -195,9 +195,16 @@ contains
                         !
                         ! Set periodic offset from boundary condition to the face. To be used in detection of gq_donor.
                         !
-                        mesh%faces(ielem,iface)%chimera_offset_x = self%bcproperties%compute('offset_x', time, pnt) ! time and do nothing here, but the interface for a function requires them.
-                        mesh%faces(ielem,iface)%chimera_offset_y = self%bcproperties%compute('offset_y', time, pnt)
-                        mesh%faces(ielem,iface)%chimera_offset_z = self%bcproperties%compute('offset_z', time, pnt)
+                        if ( self%bcproperties%compute('type', time, pnt) == ONE ) then
+                            mesh%faces(ielem,iface)%periodic_type = 'cartesian'
+                        else if ( self%bcproperties%compute('type', time, pnt) == TWO ) then
+                            mesh%faces(ielem,iface)%periodic_type = 'cylindrical'
+                        end if
+
+                        mesh%faces(ielem,iface)%chimera_offset_x     = self%bcproperties%compute('offset_x', time, pnt) ! time, pnt and do nothing here, but interface for function requires them.
+                        mesh%faces(ielem,iface)%chimera_offset_y     = self%bcproperties%compute('offset_y', time, pnt)
+                        mesh%faces(ielem,iface)%chimera_offset_z     = self%bcproperties%compute('offset_z', time, pnt)
+                        mesh%faces(ielem,iface)%chimera_offset_theta = self%bcproperties%compute('offset_theta', time, pnt)
 
                     else
                         !

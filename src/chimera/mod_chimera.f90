@@ -24,6 +24,7 @@ module mod_chimera
 
     use mod_polynomial,         only: polynomialVal
     use mod_grid_operators,     only: mesh_point, metric_point
+    use mod_periodic,           only: compute_periodic_offset
     use mod_inv,                only: inv
     implicit none
 
@@ -236,13 +237,16 @@ contains
                     !
                     ! Get offset coordinates from face for potential periodic offset.
                     !
-                    offset_x = mesh(receiver%idomain)%faces(receiver%ielement,receiver%iface)%chimera_offset_x
-                    offset_y = mesh(receiver%idomain)%faces(receiver%ielement,receiver%iface)%chimera_offset_y
-                    offset_z = mesh(receiver%idomain)%faces(receiver%ielement,receiver%iface)%chimera_offset_z
+                    !offset_x = mesh(receiver%idomain)%faces(receiver%ielement,receiver%iface)%chimera_offset_x
+                    !offset_y = mesh(receiver%idomain)%faces(receiver%ielement,receiver%iface)%chimera_offset_y
+                    !offset_z = mesh(receiver%idomain)%faces(receiver%ielement,receiver%iface)%chimera_offset_z
+                    
+                    call compute_periodic_offset(mesh(receiver%idomain)%faces(receiver%ielement,receiver%iface), gq_node, offset_x, offset_y, offset_z)
 
                     call gq_node%add_x(offset_x)
                     call gq_node%add_y(offset_y)
                     call gq_node%add_z(offset_z)
+
 
                     !
                     ! Call routine to find gq donor for current node
@@ -621,7 +625,7 @@ contains
         ! Sanity check on donors and set donor_element location
         !
         if (ndonors == 0) then
-            call chidg_signal(FATAL,"compute_gq_donor: No donor found for gq_node")
+            call chidg_signal_three(FATAL,"compute_gq_donor: No donor found for gq_node", gq_node%c1_, gq_node%c2_, gq_node%c3_)
 
         elseif (ndonors > 1) then
             !TODO: Account for case of multiple overlapping donors. When a gq node could be filled by two or more elements.
@@ -634,6 +638,7 @@ contains
             
             donor_element%idomain  = candidate_domains%at(idonor)
             donor_element%ielement = candidate_elements%at(idonor)
+
 
             xi   = donors_xi%at(1)
             eta  = donors_eta%at(1)

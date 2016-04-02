@@ -15,6 +15,12 @@
 
 
 
+TESTS
+!--------------------------------------------------------------------------------------
+Test boundary condition coupling
+Test periodic boundary conditions, cartesian and cylindrical
+Test coordinate system transformations, rotations
+
 
 Preconditioners
 !---------------------------------------------------------------------

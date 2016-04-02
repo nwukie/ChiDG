@@ -98,21 +98,23 @@ contains
     !!  @param[in]  info_two    Optional auxiliary information to be reported.
     !!
     !-------------------------------------------------------------------------------------------------------------
-    subroutine message(pathname, linenum, sig, msg, info_one, info_two)
+    subroutine message(pathname, linenum, sig, msg, info_one, info_two, info_three)
         character(*), intent(in)                        :: pathname
         integer(ik),  intent(in)                        :: linenum
         integer(ik),  intent(in)                        :: sig
         character(*), intent(in)                        :: msg
         class(*),     intent(in), target,   optional    :: info_one
         class(*),     intent(in), target,   optional    :: info_two
+        class(*),     intent(in), target,   optional    :: info_three
 
         integer                         :: iaux, pathstart
         integer(ik)                     :: ierr
         character(len=:), allocatable   :: subpath, temppath
         class(*), pointer               :: auxdata => null()
         character(100)                  :: warnstr, errstr, killstr, genstr, starstr, linechar, dashstr, blankstr
-        logical                         :: print_info_one = .false.
-        logical                         :: print_info_two = .false.
+        logical                         :: print_info_one   = .false.
+        logical                         :: print_info_two   = .false.
+        logical                         :: print_info_three = .false.
 
 
         warnstr =  '***************************************  Warning  ***************************************'
@@ -192,11 +194,13 @@ contains
         !
         do iaux = 1,2
 
-            print_info_one = ( present(info_one) .and. (iaux == 1) )
-            print_info_two = ( present(info_two) .and. (iaux == 2) )
+            print_info_one   = ( present(info_one)   .and. (iaux == 1) )
+            print_info_two   = ( present(info_two)   .and. (iaux == 2) )
+            print_info_three = ( present(info_three) .and. (iaux == 3) )
 
-            if ( print_info_one ) auxdata => info_one
-            if ( print_info_two ) auxdata => info_two
+            if ( print_info_one )   auxdata => info_one
+            if ( print_info_two )   auxdata => info_two
+            if ( print_info_three ) auxdata => info_three
 
             !
             ! auxdata pointer is used to point to current auxiliary data variable and then go through the available IO types

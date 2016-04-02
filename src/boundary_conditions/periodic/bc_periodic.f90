@@ -54,9 +54,11 @@ contains
         !
         ! Add functions
         !
+        call self%bcproperties%add('type', 'Required')
         call self%bcproperties%add('offset_x', 'Required')
         call self%bcproperties%add('offset_y', 'Required')
         call self%bcproperties%add('offset_z', 'Required')
+        call self%bcproperties%add('offset_theta', 'Required')
 
 
         !

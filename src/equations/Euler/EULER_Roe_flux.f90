@@ -1,6 +1,6 @@
 module EULER_Roe_flux
     use mod_kinds,              only: rk,ik
-    use mod_constants,          only: NFACES,ONE,TWO,HALF, &
+    use mod_constants,          only: NFACES,ONE,TWO,HALF,PI, &
                                       XI_MIN,XI_MAX,ETA_MIN,ETA_MAX,ZETA_MIN,ZETA_MAX,ZERO, &
                                       LOCAL, NEIGHBOR
 
@@ -83,6 +83,7 @@ contains
 
 
         integer(ik)     :: idom,  ielem,  iface
+        integer(ik)     :: idom_m,  ielem_m,  iface_m
         integer(ik)     :: ifcn,  idonor, iblk
 
         ! Storage at quadrature nodes
@@ -92,6 +93,7 @@ contains
                         rhov_m,     rhov_p,                                         &
                         rhow_m,     rhow_p,                                         &
                         rhoe_m,     rhoe_p,                                         &
+                        rhor_p,     rhot_p,                                         &
                         p_m,        p_p,                                            &
                         un_m,       un_p,                                           &
                         a_m,        a_p,                                            &
@@ -105,6 +107,13 @@ contains
                         vmag_p, vmag_m,                                             &
                         delr,   delp,   delvmag, delu, delv, delw,                  &
                         sqrt_rhom, sqrt_rhop, sqrt_rhom_plus_rhop, ctil2
+
+
+        real(rk), dimension(mesh(face_info%idomain)%faces(face_info%ielement,face_info%iface)%gq%face%nnodes)    :: &
+                        x_m, y_m, z_m, r_m, theta_m, theta_p
+
+        real(rk)    :: theta_offset
+
 
 
         !===========================================================================
@@ -147,6 +156,45 @@ contains
 
             call interpolate_face(mesh,face_info,q, irhoE, rhoE_m, LOCAL)
             call interpolate_face(mesh,face_info,q, irhoE, rhoE_p, NEIGHBOR)
+
+
+
+            idom_m  = face_info%idomain
+            ielem_m = face_info%ielement
+            iface_m = face_info%iface
+
+
+            if ( mesh(idom_m)%faces(ielem_m, iface_m)%periodic_type == 'cylindrical' ) then
+                theta_offset = (PI/180._rk)*mesh(idom_m)%faces(ielem_m,iface_m)%chimera_offset_theta
+
+                x_m     = mesh(idom_m)%faces(ielem_m,iface_m)%quad_pts(:)%c1_
+                y_m     = mesh(idom_m)%faces(ielem_m,iface_m)%quad_pts(:)%c2_
+                r_m     = sqrt(x_m**TWO + y_m**TWO)
+                theta_m = atan2(y_m,x_m)
+
+
+                theta_p = theta_m + theta_offset
+
+                !
+                ! Transform 'p' cartesian vector to 'p' cylindrical at theta_p
+                !
+                ! rhor and rhotheta are constant from face to face
+                !
+                rhor_p =  cos(theta_p)*rhou_p + sin(theta_p)*rhov_p ! rhor
+                rhot_p = -sin(theta_p)*rhou_p + cos(theta_p)*rhov_p ! rhotheta
+
+
+                !
+                ! Transform 'p' cylindrical to 'p' cartesian at theta_m
+                !
+                rhou_p = cos(theta_m)*rhor_p - sin(theta_m)*rhot_p
+                rhov_p = sin(theta_m)*rhor_p + cos(theta_m)*rhot_p
+
+            end if
+
+
+
+
 
 
 

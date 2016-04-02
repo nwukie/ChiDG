@@ -25,24 +25,26 @@ module type_face
     !!
     !-------------------------------------------------------------------------------------------------------------
     type, public :: face_t
-        integer(ik)                  :: neqns
-        integer(ik)                  :: nterms_s
-        integer(ik)                  :: ftype               !< interior, or boundary condition, or Chimera interface, or Orphan
-        integer(ik)                  :: iface               !< XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, etc
+        integer(ik)                     :: neqns
+        integer(ik)                     :: nterms_s
+        integer(ik)                     :: ftype               !< interior, or boundary condition, or Chimera interface, or Orphan
+        integer(ik)                     :: iface               !< XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, etc
 
-        integer(ik)                  :: idomain             !< Domain index of parent element
-        integer(ik)                  :: iparent             !< Element index of parent element
+        integer(ik)                     :: idomain             !< Domain index of parent element
+        integer(ik)                     :: iparent             !< Element index of parent element
 
-        integer(ik)                  :: ineighbor           !< Block-local index of neighbor element
+        integer(ik)                     :: ineighbor           !< Block-local index of neighbor element
 
 
         ! Chimera identifier
-        integer(ik)                  :: ChiID = 0                   !< Identifier for domain-local Chimera interfaces
+        integer(ik)                     :: ChiID = 0                   !< Identifier for domain-local Chimera interfaces
 
         ! Chimera face offset. For periodic boundary condition.
-        real(rk)                     :: chimera_offset_x = 0._rk
-        real(rk)                     :: chimera_offset_y = 0._rk
-        real(rk)                     :: chimera_offset_z = 0._rk
+        character(len=:), allocatable   :: periodic_type
+        real(rk)                        :: chimera_offset_x = 0._rk
+        real(rk)                        :: chimera_offset_y = 0._rk
+        real(rk)                        :: chimera_offset_z = 0._rk
+        real(rk)                        :: chimera_offset_theta = 0._rk
 
 
         ! Geometry

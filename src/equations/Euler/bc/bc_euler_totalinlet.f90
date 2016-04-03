@@ -12,6 +12,7 @@ module bc_euler_totalinlet
 
     use mod_integrate,      only: integrate_boundary_scalar_flux
     use mod_interpolate,    only: interpolate_face
+    use mod_interpolation,  only: interpolate
     use DNAD_D
     
     use EULER_properties,   only: EULER_properties_t
@@ -125,11 +126,14 @@ contains
                         vmag2_m, vmag, H_bc
 
         real(rk), dimension(mesh(face%idomain)%faces(face%ielement,face%iface)%gq%face%nnodes)     ::  &
-                        TT, PT, nx, ny, nz, nr, nt, theta, normal_direction, x, y
+                        TT, PT, nx, ny, nz, nr, nt, theta, normal_direction, x, y, r
+
+
+        real(rk),   dimension(:), allocatable   :: nt_list, nz_list, r_list
 
         real(rk)        :: gam_m, cp_m, M
         !real(rk)        :: norm_bc(3)
-        integer(ik)     :: iface_p, ineighbor, idonor
+        integer(ik)     :: iface_p, ineighbor, idonor, igq
         integer(ik)     :: idom, ielem, iface, iblk
 
         idonor = 0
@@ -162,6 +166,16 @@ contains
             PT = self%bcproperties%compute("TotalPressure",     time, coords)
             TT = self%bcproperties%compute("TotalTemperature",  time, coords)
 
+
+
+
+            
+
+
+
+
+
+
             normal_direction = self%bcproperties%compute("normal_direction",    time, coords)
 
             if ( normal_direction(1) == ONE ) then
@@ -170,18 +184,115 @@ contains
                 nz = self%bcproperties%compute("nz",                                time, coords)
 
             else if ( normal_direction(1) == TWO ) then
-                nr = self%bcproperties%compute("nr",                                time, coords)
-                nt = self%bcproperties%compute("nt",                                time, coords)
-                nz = self%bcproperties%compute("nz",                                time, coords)
+                !    nr = self%bcproperties%compute("nr",                                time, coords)
+                !    nt = self%bcproperties%compute("nt",                                time, coords)
+                !    nz = self%bcproperties%compute("nz",                                time, coords)
+
+
+                nt_list = [ -0.81 , &
+!                nt_list = [ -6.9563700e-01, &
+!                            -6.9230692e-01, &
+!                            -6.9686474e-01, &
+!                            -7.0946004e-01, &
+!                            -7.2646673e-01, &
+!                            -7.4132022e-01, &
+!                            -7.5575061e-01, &
+                            -7.3e-01, &
+!                            -7.8543577e-01, &
+!                            -7.9826773e-01, &
+!                            -8.0138955e-01, &
+!                            -7.9816260e-01, &
+!                            -7.9020850e-01, &
+!                            -7.7763999e-01, &
+                            -7.3e-01, &
+!                            -7.3825524e-01, &
+!                            -7.0473328e-01, &
+!                            -6.6282917e-01, &
+!                            -6.1581275e-01, &
+!                            -5.8010602e-01]
+                            -0.906]
+
+                nz_list = [0.57 , &
+!                nz_list = [ 7.1786153e-01, &
+!                            7.2111112e-01, &
+!                            7.1677954e-01, &
+!                            7.0441621e-01, &
+!                            6.8697670e-01, &
+!                            6.7102051e-01, &
+!                            6.5479947e-01, &
+                            6.8e-01, &
+!                            6.1893928e-01, &
+!                            6.0226461e-01, &
+!                            5.9803574e-01, &
+!                            6.0223647e-01, &
+!                            6.1250682e-01, &
+!                            6.2822382e-01, &
+                            6.8e-01, &
+!                            6.7361056e-01, &
+!                            7.0827946e-01, &
+!                            7.4728079e-01, &
+!                            7.8613656e-01, &
+!                            8.1260999e-01]
+                           0.422 ]
+                            
+
+
+                r_list = [ 2.7004460e-01  , &
+!                           2.7389670e-01 , &
+!                           2.7459810e-01 , &
+!                           2.7565020e-01 , &
+!                           2.7705300e-01 , &
+!                           2.7845580e-01 , &
+!                           2.7985860e-01 , &
+                           2.8126140e-01 , &
+!                           2.8336560e-01 , &
+!                           2.8511910e-01 , &
+!                           2.8722330e-01 , &
+!                           2.8932750e-01 , &
+!                           2.9143170e-01 , &
+!                           2.9388660e-01 , &
+                           2.9599080e-01 , &
+!                           2.9809500e-01 , &
+!                           2.9984850e-01 , &
+!                           3.0195270e-01 , &
+!                           3.0335550e-01 , &
+                           3.0475830e-01]
+
+
 
                 !
-                ! Compute 'r' for each quadrature point
+                ! Compute theta
                 !
                 x = mesh(idom)%elems(ielem)%quad_pts(:)%c1_
                 y = mesh(idom)%elems(ielem)%quad_pts(:)%c2_
+                r = sqrt( x**TWO + y**TWO )
 
+                !
+                ! Compute r, interpolate nt, nz from list
+                !
+                do igq = 1,size(nx)
+
+                    call interpolate('linear',r_list,nt_list, r(igq), nt(igq) )
+                    call interpolate('linear',r_list,nz_list, r(igq), nz(igq) )
+                    nr = ZERO
+
+                end do ! igq
+
+
+
+
+
+!                !
+!                ! Compute theta
+!                !
+!                x = mesh(idom)%elems(ielem)%quad_pts(:)%c1_
+!                y = mesh(idom)%elems(ielem)%quad_pts(:)%c2_
+!
                 theta = atan2(y,x)
 
+                !
+                ! Convert cylindrical vectors to cartesian
+                ! 
                 nx = cos(theta)*nr - sin(theta)*nt
                 ny = sin(theta)*nr + cos(theta)*nt
                 nz = nz

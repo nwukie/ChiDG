@@ -114,15 +114,15 @@ contains
 
 
 
-    !> Boundary condition factory
+    !>  Boundary condition factory
     !!      - Allocate a concrete boundary condition type based on the incoming string specification.
     !!      - Initialize the allocated boundary condition.
     !!
-    !! @author Nathan A. Wukie
-    !! @date   1/31/2016
+    !!  @author Nathan A. Wukie
+    !!  @date   1/31/2016
     !!
-    !! @param[in]      string  Character string used to select the appropriate boundary condition
-    !! @param[inout]   bc      Allocatable boundary condition
+    !!  @param[in]      string  Character string used to select the appropriate boundary condition
+    !!  @param[inout]   bc      Allocatable boundary condition
     !!
     !----------------------------------------------------------------------------------------------------
     subroutine create_bc(bcstring,bc)
@@ -176,7 +176,7 @@ contains
 
 
 
-    !>  This is really a utilitity for 'chidg edit' to dynamically list the avalable 
+    !>  This is really just a utilitity for 'chidg edit' to dynamically list the avalable 
     !!  boundary conditions.
     !!
     !!  @author Nathan A. Wukie

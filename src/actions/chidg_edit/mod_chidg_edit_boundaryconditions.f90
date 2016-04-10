@@ -668,7 +668,7 @@ contains
         
 
             !
-            ! Add boundary condition functions
+            ! Add boundary condition properties
             !
             call add_bcproperties_hdf(bcface,bc)
         end if

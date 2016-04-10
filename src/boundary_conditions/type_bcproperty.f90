@@ -32,7 +32,8 @@ module type_bcproperty
     type, public :: bcproperty_t
 
         character(len=:),   allocatable :: name_    !< Name of the property the function is applied to. Ex. Static Pressure.
-        character(len=:),   allocatable :: type_    !< Property type.  'Required' or 'Optional'
+        !character(len=:),   allocatable :: type_    !< Property type.  'Required' or 'Optional'
+        character(len=:),   allocatable :: type_    !< Property type.  'Function' or 'Parameter'
         class(function_t),  allocatable :: fcn      !< allocatable function class
 
     contains

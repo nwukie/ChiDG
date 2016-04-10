@@ -13,7 +13,7 @@ module type_bcset
     private
 
 
-    !> Type for a set of boundary conditions that get applied to a block
+    !>  Type for a set of boundary conditions that get applied to a block
     !!      - Contains an array of wrapped boundary conditions types that
     !!        can be added.
     !!
@@ -46,7 +46,7 @@ module type_bcset
 contains
 
 
-    !> Add boundary condition to the boundary condition array
+    !>  Add boundary condition to the boundary condition array
     !!
     !!  @author Nathan A. Wukie
     !!  @date   1/31/2016
@@ -158,8 +158,6 @@ contains
     !!
     !!  @author Nathan A. Wukie
     !!  @date   2/16/2016
-    !!
-    !!
     !!
     !!
     !------------------------------------------------------------------------------------------

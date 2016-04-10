@@ -75,6 +75,7 @@ contains
 
     !> ChiDG environment initialization routine
     !!      - Call initiailization procedures for equations, grid data, reading input
+    !!      - chidg%init('env') should be called before any activity with ChiDG is begun.
     !!
     !!  @author Nathan A. Wukie
     !!  @date   2/1/2016
@@ -246,7 +247,7 @@ contains
 
 
 
-    !> Read grid file
+    !>  Read grid from file.
     !!
     !!  @author Nathan A. Wukie
     !!  @date   2/1/2016
@@ -380,7 +381,7 @@ contains
 
 
 
-    !> Read solution.
+    !>  Read solution from file.
     !!
     !!  @author Nathan A. Wukie
     !!  @date   2/1/2016

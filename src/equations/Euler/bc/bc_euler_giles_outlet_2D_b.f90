@@ -18,6 +18,9 @@ module bc_euler_giles_outlet_2D_b
     implicit none
 
 
+
+
+
     !> Extrapolation boundary condition 
     !!      - Extrapolate interior variables to be used for calculating the boundary flux.
     !!  
@@ -42,7 +45,11 @@ module bc_euler_giles_outlet_2D_b
 
 
 
+
+
 contains
+
+
 
 
     !>  Procedure for registering boundary condition options. Needs executed upon allocation.
@@ -115,6 +122,13 @@ contains
         self%dft_points = compute_dft_points(mesh,self%elems,iface,periodicity)
 
 
+
+        print*, 'dft points'
+        do ipt = 1,size(self%dft_points)
+            print*, self%dft_points(ipt)%c1_, self%dft_points(ipt)%c2_, self%dft_points(ipt)%c3_
+        end do
+
+
     end subroutine init_spec
     !*********************************************************************************************
         
@@ -143,12 +157,16 @@ contains
 
         logical :: same_span = .false.
 
+
+        print*, 'init_boundary_coupling - begin'
+
         !
         ! Loop through elements. For the current 2D giles, every element on the boundary
         ! is coupled with every other element on the boundary through the Fourier transform.
         !
         do ielem_bc = 1,size(self%elems)
 
+            print*, 'ielem_bc', ielem_bc 
 
             !
             ! Register all elements as coupled to the current element.
@@ -167,12 +185,15 @@ contains
                 ielem_test = self%elems(ielem_coupled)
 
                 
-                var  = 3
+                !var  = 1    ! x-span
+                !var  = 2    ! y-span
+                var  = 3    ! z-span
                 mode = 1
                 
-                same_span = ( abs(mesh%elems(ielem)%coords%getterm(3,mode) - mesh%elems(ielem_test)%coords%getterm(3,mode)) < 0.00001_rk )
+                same_span = ( abs(mesh%elems(ielem)%coords%getterm(var,mode) - mesh%elems(ielem_test)%coords%getterm(var,mode)) < 0.00001_rk )
                                 
 
+                ! Set up boundary-global coupling
                 if ( same_span ) then
 
                     !
@@ -180,7 +201,11 @@ contains
                     !
                     call self%coupled_elems(ielem_bc)%push_back(ielem_test)
 
+                    print*, 'coupled with: ', ielem_test
+
                 end if ! same_span
+
+
 
 
 
@@ -188,9 +213,16 @@ contains
             end do ! ielem_coupled
 
 
+
         end do  !ielem_bc
 
 
+
+
+     
+
+
+        print*, 'init_boundary_coupling - end'
 
     end subroutine init_boundary_coupling
     !*********************************************************************************************
@@ -248,7 +280,7 @@ contains
                         drho_mode, du_mode, dv_mode, dw_mode, dp_mode,          &
                         drho_mean, du_mean, dv_mean, dw_mean, dp_mean,          &
                         rho_bc, u_bc, v_bc, w_bc, p_bc, rhoE_bc, H_bc,          &
-                        beta, A1_coeff, A1_real, A1_imag, A2_real,              &
+                        B, A2_real, A2_imag, A3_real, A3_imag,                  &
                         c1_gq,    c2_gq,     c3_gq,     c4_gq
 
         type(AD_D), dimension(size(self%dft_points))    ::                      &
@@ -287,6 +319,7 @@ contains
                         coords => mesh(idom)%faces(ielem,iface)%quad_pts,    q => sdata%q,      time => sdata%t )
 
 
+                !print*, 'giles - 1'
                 
                 !
                 ! Get equation indices
@@ -298,6 +331,7 @@ contains
                 irhoE = prop%get_eqn_index("rhoE")
 
 
+                !print*, 'giles - 2'
 
 
                 !
@@ -313,17 +347,21 @@ contains
                 periodicity = self%bcproperties%compute("periodicity", zero_time, zero_point)
 
 
+                !print*, 'giles - 3'
 
                 !
                 ! Set span location for interpolating on the boundary.
                 !
+                ! TODO: Hardcoded zavg
+                !
                 zavg = mesh(idom)%elems(ielem)%coords%getterm(3,1)
                 do ipt = 1,size(self%dft_points)
-                    call self%dft_points(ipt)%z(zavg)
+                   call self%dft_points(ipt)%z(zavg)
                 end do
 
 
 
+                !print*, 'giles - 4'
                 !
                 ! Interpolate solution across the boundary to be DFT'd.
                 !
@@ -333,6 +371,7 @@ contains
                 call interpolate_boundary(mesh,face,q,irhow, self%dft_points, rhow_b)
                 call interpolate_boundary(mesh,face,q,irhoE, self%dft_points, rhoE_b)
                 
+                !print*, 'giles - 5'
 
                 !
                 ! Compute primitive variables across boundary
@@ -342,6 +381,7 @@ contains
                 w_b = rhow_b / rho_b
                 call prop%fluid%compute_pressure(rho_b,rhou_b,rhov_b,rhow_b,rhoE_b,p_b)
 
+                !print*, 'giles - 6'
 
 
                 !
@@ -354,6 +394,7 @@ contains
                 call dft(rhoE_b, rhoE_real, rhoE_imag)
 
 
+                !print*, 'giles - 7'
 
                 !
                 ! Get boundary mean components at gq nodes
@@ -372,6 +413,7 @@ contains
                 c_bar_gq = sqrt(gam_bar_gq * p_bar_gq / rho_bar_gq )
 
 
+                !print*, 'giles - 8'
 
                 !
                 ! Get boundary mean components at dft nodes
@@ -391,12 +433,12 @@ contains
 
 
 
+                !print*, 'giles - 9'
 
                 !
                 ! Compute c4 characteristic due to update in mean pressure
                 !
                 c4_mean = -TWO*(p_bar_gq - p_set)
-                !c4_mean = (p_bar_gq - p_set)
 
                 drho_mean =  (ONE/(TWO*c_bar_gq**TWO))       * c4_mean
                 du_mean   = -(ONE/(TWO*rho_bar_gq*c_bar_gq)) * c4_mean
@@ -404,6 +446,7 @@ contains
 
 
 
+                !print*, 'giles - 10'
 
                 !
                 ! Compute total perturbation in primitive variables across the boundary
@@ -414,6 +457,7 @@ contains
                 dw   = w_b   - w_bar_b
                 dp   = p_b   - p_bar_b
 
+                !print*, 'giles - 11'
 
                 !
                 ! Compute characteristic variables across the boundary, to be DFT'd.
@@ -424,6 +468,7 @@ contains
                 c4_b =            ZERO            -  (rho_bar_b*c_bar_b)*du  +         ZERO             +         dp
 
 
+                !print*, 'giles - 12'
                 
                 !
                 ! Compute modes of characteristic variables.
@@ -434,6 +479,7 @@ contains
                 call dft(c4_b,  c4_real,  c4_imag)
 
 
+                !print*, 'giles - 13'
 
                 !
                 ! Get y-component of cartesian coordinates for quadrature nodes to evaluate the DFT modes.
@@ -442,6 +488,7 @@ contains
 
 
 
+                !print*, 'giles - 14'
 
                 !
                 ! initialize derivative arrays
@@ -456,6 +503,7 @@ contains
                 c4_gq     = c_bar_gq*ZERO
 
 
+                !print*, 'giles - 15'
 
                 !
                 ! Loop through Fourier modes and apply boundary conditions.
@@ -467,25 +515,38 @@ contains
                     !
                     ! 2D steady Giles
                     !
-                    beta = sqrt(c_bar_gq**TWO - u_bar_gq**TWO - v_bar_gq**TWO)
+                    B = sqrt( c_bar_gq**TWO - u_bar_gq**TWO - v_bar_gq**TWO )
+                    !beta = sqrt(c_bar_gq**TWO - u_bar_gq**TWO - v_bar_gq**TWO)
 
 
-                    A1_coeff = -TWO*u_bar_gq/(v_bar_gq**TWO + beta**TWO)
-                    A1_real = A1_coeff*v_bar_gq
-                    A1_imag = A1_coeff*beta
 
-                    A2_real = (-(v_bar_gq**TWO) + beta**TWO)/(v_bar_gq**TWO + beta**TWO)
+!                    A1_coeff = -TWO*u_bar_gq/(v_bar_gq**TWO + beta**TWO)
+!                    A1_real = A1_coeff*v_bar_gq
+!                    A1_imag = A1_coeff*beta
+!
+!                    A2_real = (-(v_bar_gq**TWO) + beta**TWO)/(v_bar_gq**TWO + beta**TWO)
+
+                    A2_real = - TWO * u_bar_gq * v_bar_gq / ( v_bar_gq**TWO + B**TWO )
+                    A2_imag = - TWO * u_bar_gq * B / ( v_bar_gq**TWO + B**TWO )
+
+                    A3_real = ( v_bar_gq**TWO - B**TWO ) / ( v_bar_gq**TWO + B**TWO )
+                    A3_imag = ( TWO * v_bar_gq * B ) / ( v_bar_gq**TWO + B**TWO )
+
 
 
 
                     !
                     ! Apply boundary condition to 4th characteristic of current mode.
                     !
-                    c4_real(imode) =                  A1_real(1) * c2_real(imode)  +  A1_imag(1) * c2_imag(imode)*(-ONE)    ! minus 1 from i*i
-                    c4_real(imode) = c4_real(imode) - A2_real(1) * c3_real(imode)
+!                    c4_real(imode) =                  A1_real(1) * c2_real(imode)  +  A1_imag(1) * c2_imag(imode)*(-ONE)    ! minus 1 from i*i
+!                    c4_real(imode) = c4_real(imode) - A2_real(1) * c3_real(imode)
+!
+!                    c4_imag(imode) =                  A1_real(1) * c2_imag(imode)  +  A1_imag(1) * c2_real(imode)
+!                    c4_imag(imode) = c4_imag(imode) - A2_real(1) * c3_imag(imode)
 
-                    c4_imag(imode) =                  A1_real(1) * c2_imag(imode)  +  A1_imag(1) * c2_real(imode)
-                    c4_imag(imode) = c4_imag(imode) - A2_real(1) * c3_imag(imode)
+
+                    c4_real(imode) = A2_real(1)*c2_real(imode)  -  A2_imag(1)*c2_imag(imode)  +  A3_real(1)*c3_real(imode)  -  A3_imag(1)*c3_imag(imode)
+                    c4_imag(imode) = A2_real(1)*c2_imag(imode)  +  A2_imag(1)*c2_real(imode)  +  A3_real(1)*c3_imag(imode)  +  A3_imag(1)*c3_real(imode)
 
 
 
@@ -495,25 +556,24 @@ contains
                     !
                     !   TODO: HARDCODED -ONE as ymin here.
                     !
-                    call idft_mode_points(-ONE,periodicity, c1_real(imode), c1_imag(imode), imode, gq_points_y, c1_gq)
-                    call idft_mode_points(-ONE,periodicity, c2_real(imode), c2_imag(imode), imode, gq_points_y, c2_gq)
-                    call idft_mode_points(-ONE,periodicity, c3_real(imode), c3_imag(imode), imode, gq_points_y, c3_gq)
-                    call idft_mode_points(-ONE,periodicity, c4_real(imode), c4_imag(imode), imode, gq_points_y, c4_gq)
+                    !call idft_mode_points(-ONE,periodicity, c1_real(imode), c1_imag(imode), imode, gq_points_y, c1_gq)
+                    !call idft_mode_points(-ONE,periodicity, c2_real(imode), c2_imag(imode), imode, gq_points_y, c2_gq)
+                    !call idft_mode_points(-ONE,periodicity, c3_real(imode), c3_imag(imode), imode, gq_points_y, c3_gq)
+                    !call idft_mode_points(-ONE,periodicity, c4_real(imode), c4_imag(imode), imode, gq_points_y, c4_gq)
 
+                    !call idft_mode_points(-0.08205_rk,periodicity, c1_real(imode), c1_imag(imode), imode, gq_points_y, c1_gq)
+                    !call idft_mode_points(-0.08205_rk,periodicity, c2_real(imode), c2_imag(imode), imode, gq_points_y, c2_gq)
+                    !call idft_mode_points(-0.08205_rk,periodicity, c3_real(imode), c3_imag(imode), imode, gq_points_y, c3_gq)
+                    !call idft_mode_points(-0.08205_rk,periodicity, c4_real(imode), c4_imag(imode), imode, gq_points_y, c4_gq)
 
+                    call idft_mode_points(-0._rk,periodicity, c1_real(imode), c1_imag(imode), imode, gq_points_y, c1_gq)
+                    call idft_mode_points(-0._rk,periodicity, c2_real(imode), c2_imag(imode), imode, gq_points_y, c2_gq)
+                    call idft_mode_points(-0._rk,periodicity, c3_real(imode), c3_imag(imode), imode, gq_points_y, c3_gq)
+                    call idft_mode_points(-0._rk,periodicity, c4_real(imode), c4_imag(imode), imode, gq_points_y, c4_gq)
 
                     !
                     ! Add contribution of current mode characteristics to primitive variable perturbation
                     !
-                    
-                    ! I think the TWO is taken into account in idft_mode_points now
-!                    drho_mode = drho_mode + TWO*     (ONE/(TWO*c_bar_gq**TWO))*c4_gq
-!                    du_mode   = du_mode   - TWO* (ONE/(TWO*rho_bar_gq*c_bar_gq))*c4_gq
-!                    dv_mode   = dv_mode   + TWO*                ZERO
-!                    dp_mode   = dp_mode   + TWO*             HALF*c4_gq
-
-
-
                     drho_mode = drho_mode +     (ONE/(TWO*c_bar_gq**TWO))*c4_gq
                     du_mode   = du_mode   - (ONE/(TWO*rho_bar_gq*c_bar_gq))*c4_gq
                     dv_mode   = dv_mode   +                ZERO
@@ -524,6 +584,7 @@ contains
                 end do ! imode
 
 
+                !print*, 'giles - 16'
                 !
                 ! Interpolate interior solution to face quadrature nodes
                 !
@@ -534,6 +595,7 @@ contains
                 call interpolate_face(mesh,face,q,irhoE,rhoE_m,LOCAL)
 
 
+                !print*, 'giles - 17'
                 !
                 ! Compute interior primitive variables
                 !
@@ -543,6 +605,7 @@ contains
                 call prop%fluid%compute_pressure(rho_m,rhou_m,rhov_m,rhow_m,rhoE_m,p_m)
 
 
+                !print*, 'giles - 18'
 
                 !
                 ! Compute variation in primitive variables from the mean.
@@ -593,6 +656,18 @@ contains
                 !
                 rhoE_bc = p_bc/(gam_bar_gq - ONE) + (rho_bc/TWO)*(u_bc*u_bc + v_bc*v_bc + w_bc*w_bc)
                 H_bc = (rhoE_bc + p_bc)/rho_bc
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

@@ -56,10 +56,12 @@ module type_bc
         procedure                               :: apply                    !< Apply bc function over bc elements
 
 
-        procedure   :: add_options                              !< Specialized by each bc_t implementation. Adds options available
 
         procedure   :: set_name                                 !< Set the boundary condition name
         procedure   :: get_name                                 !< Return the boundary condition name
+
+        
+        procedure   :: add_options                              !< Specialized by each bc_t implementation. Adds options available
 
         procedure   :: set_fcn                                  !< Set a particular function definition for a specified bcfunction_t
         procedure   :: set_fcn_option                           !< Set function-specific options for a specified bcfunction_t

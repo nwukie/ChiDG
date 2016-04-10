@@ -192,7 +192,7 @@ contains
         !
         ! Loop through auxiliary variables. If present, try to print.
         !
-        do iaux = 1,2
+        do iaux = 1,3
 
             print_info_one   = ( present(info_one)   .and. (iaux == 1) )
             print_info_two   = ( present(info_two)   .and. (iaux == 2) )

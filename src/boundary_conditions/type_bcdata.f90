@@ -7,11 +7,11 @@ module type_bcdata
 
 
 
-    !>
+    !>  This container is used to load information from a grid file and pass that back
+    !!  to ChiDG so it can be initialized.
     !!
     !!  @author Nathan A. Wukie
     !!  @date   2/5/2016
-    !!
     !!
     !!
     !------------------------------------------------------------------------------

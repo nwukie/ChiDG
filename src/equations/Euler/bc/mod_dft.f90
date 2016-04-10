@@ -1,7 +1,7 @@
 module mod_dft
 #include <messenger.h>
     use mod_kinds,      only: ik, rk
-    use mod_constants,  only: PI, ZERO, ONE, TWO, XI_MIN, XI_MAX, ETA_MIN, ETA_MAX
+    use mod_constants,  only: PI, ZERO, ONE, TWO, XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX, X_DIR, Y_DIR, Z_DIR
     use type_mesh,      only: mesh_t
     use type_point,     only: point_t
     use DNAD_D
@@ -35,17 +35,17 @@ contains
         type(point_t),  allocatable  :: points(:)
         integer(ik)                  :: nmodes, npoints, ierr, ielem_bc, ielem, var, mode, ipnt, min_y_element, elem_min
         integer(ik)                  :: min_y_loc
-        real(rk)                     :: xi, eta, zeta, min_y, dy, xloc
+        real(rk)                     :: xi, eta, zeta, min_y, dy, xloc, zloc
 
         real(rk),       allocatable  :: mean_y_coordinates(:)
         integer(ik),    allocatable  :: mean_y_elements(:)
-        real(rk),       dimension(2) :: ylocs, xlocs
+        real(rk),       dimension(2) :: ylocs, xlocs, zlocs
 
 
         !
         ! Number of Fourier harmonics to compute
         !
-        nmodes = 2
+        nmodes = 10
 
 
         !
@@ -90,8 +90,8 @@ contains
             !
             ! Get mean y-coordinate from element. y-coordinate variable = 2. Mode = 1
             ! 
-            var  = 2
-            mode = 1
+            var  = Y_DIR    ! y-coordinate index
+            mode = 1        ! Coordinate average
             mean_y_coordinates(ielem_bc) = mesh%elems(ielem)%coords%getterm(var,mode)
             mean_y_elements(ielem_bc)    = ielem
 
@@ -107,7 +107,7 @@ contains
         elem_min = mean_y_elements(min_y_element)
 
         !
-        ! For the element with the minimm mean y-coordinate, find minimum y-coordinate
+        ! For the element with the minimum mean y-coordinate, find minimum y-coordinate
         ! on the boundary face. So, for the time being, XI_MIN, ETA_MIN, ZETA=0
         !
 !        !xi   = -ONE ! INLET
@@ -125,9 +125,13 @@ contains
             xlocs(1) = mesh%elems(elem_min)%x(-ONE, ONE,ZERO)
             xlocs(2) = mesh%elems(elem_min)%x(-ONE,-ONE,ZERO)
 
+            zlocs(1) = mesh%elems(elem_min)%z(-ONE, ONE,ZERO)
+            zlocs(2) = mesh%elems(elem_min)%z(-ONE,-ONE,ZERO)
+
             min_y_loc = minloc(ylocs,1)
             min_y     = ylocs(min_y_loc) + 0.000001_rk
             xloc      = xlocs(min_y_loc)
+            zloc      = zlocs(min_y_loc)
 
         else if ( (iface == XI_MAX) ) then
             ylocs(1) = mesh%elems(elem_min)%y(ONE, ONE,ZERO)
@@ -136,9 +140,14 @@ contains
             xlocs(1) = mesh%elems(elem_min)%x(ONE, ONE,ZERO)
             xlocs(2) = mesh%elems(elem_min)%x(ONE,-ONE,ZERO)
 
+            zlocs(1) = mesh%elems(elem_min)%z(ONE, ONE,ZERO)
+            zlocs(2) = mesh%elems(elem_min)%z(ONE,-ONE,ZERO)
+
+
             min_y_loc = minloc(ylocs,1)
             min_y     = ylocs(min_y_loc) + 0.000001_rk
             xloc      = xlocs(min_y_loc)
+            zloc      = zlocs(min_y_loc)
 
         else if ( (iface == ETA_MIN) ) then
             ylocs(1) = mesh%elems(elem_min)%y( ONE,-ONE,ZERO)
@@ -147,9 +156,13 @@ contains
             xlocs(1) = mesh%elems(elem_min)%x( ONE,-ONE,ZERO)
             xlocs(2) = mesh%elems(elem_min)%x(-ONE,-ONE,ZERO)
 
+            zlocs(1) = mesh%elems(elem_min)%z( ONE,-ONE,ZERO)
+            zlocs(2) = mesh%elems(elem_min)%z(-ONE,-ONE,ZERO)
+
             min_y_loc = minloc(ylocs,1)
             min_y     = ylocs(min_y_loc) + 0.000001_rk
             xloc      = xlocs(min_y_loc)
+            zloc      = zlocs(min_y_loc)
 
         else if ( (iface == ETA_MAX) ) then
             ylocs(1) = mesh%elems(elem_min)%y( ONE,ONE,ZERO)
@@ -158,11 +171,15 @@ contains
             xlocs(1) = mesh%elems(elem_min)%x( ONE,ONE,ZERO)
             xlocs(2) = mesh%elems(elem_min)%x(-ONE,ONE,ZERO)
 
+            zlocs(1) = mesh%elems(elem_min)%z( ONE,ONE,ZERO)
+            zlocs(2) = mesh%elems(elem_min)%z(-ONE,ONE,ZERO)
+
             min_y_loc = minloc(ylocs,1)
             min_y     = ylocs(min_y_loc) + 0.000001_rk
             xloc      = xlocs(min_y_loc)
+            zloc      = zlocs(min_y_loc)
 
-        else if ( (iface == ETA_MIN) .or. (iface == ETA_MAX) ) then
+        else if ( (iface == ZETA_MIN) .or. (iface == ZETA_MAX) ) then
 
             call chidg_signal(FATAL,"compute_dft_ponts: assumes boundary is on a XI or ETA face.")
 
@@ -173,7 +190,8 @@ contains
         !
         ! Create array of points from (min_y) to (min_y + periodicity)
         !
-        call points(1)%set(xloc, min_y, ZERO)
+        !call points(1)%set(xloc, min_y, ZERO)
+        call points(1)%set(xloc, min_y, zloc)
         do ipnt = 2,npoints
 
 

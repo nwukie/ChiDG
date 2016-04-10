@@ -78,6 +78,7 @@ contains
             !
             ! No periodic type was allocated so no offset.
             !
+            !print*, 'No periodic offset'
             offset_x = ZERO
             offset_y = ZERO
             offset_z = ZERO

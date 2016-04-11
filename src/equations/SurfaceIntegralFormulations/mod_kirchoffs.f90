@@ -32,7 +32,7 @@ contains
         complex(rk),    dimension(:),   allocatable :: pressures
         type(point_t),  dimension(:),   allocatable :: points
 
-        nterms_s = 6*6*6
+        nterms_s = 5*5*5
 
         !
         ! Initialize ChiDG environment
@@ -74,7 +74,7 @@ contains
 
         print*, chidg%data%eqnset(1)%item%name
 
-        res       = 1000
+        res       = 2000
 
         allocate(theta(res), points(res), stat=ierr)
         if ( ierr /= 0 ) call AllocationError
@@ -284,7 +284,7 @@ contains
 
 
 
-                        ! Assemple complex variables
+                        ! Assemble complex variables
                         rho = cmplx(rho_r, rho_i)
                         u   = cmplx(u_r, u_i)
                         v   = cmplx(v_r, v_i)
@@ -323,7 +323,7 @@ contains
 
 
                         ! Compute derivative of pressure in the direction of the face normal
-                        dpdn    = dpdx*nx + dpdy*ny + dpdz*nz
+                        dpdn = dpdx*nx + dpdy*ny + dpdz*nz
 
 
 
@@ -354,7 +354,7 @@ contains
 
                             
                             leading_term     = exp(imag*omega*r/cbar)
-                            one_over_r_term  = ONE/r*(-(imag*omega/cbar)*rdotn*p - dpdn) 
+                            one_over_r_term  = (ONE/r)*(-(imag*omega/cbar)*rdotn*p - dpdn) 
                             one_over_r2_term = p*rdotn/(r**TWO)
 
 

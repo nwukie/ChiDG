@@ -48,7 +48,7 @@ contains
         integer(ik)             :: idom, ielem, ivar, inode, idom_d, ielem_d, ierr
         type(point_t)           :: node, new_node, point_comp
 
-        nterms_s = 6*6*6
+        nterms_s = 5*5*5
 
 
         !

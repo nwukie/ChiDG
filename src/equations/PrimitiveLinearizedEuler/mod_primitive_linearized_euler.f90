@@ -12,7 +12,8 @@ module mod_primitive_linearized_euler
 
 
     real(rk), parameter :: gam = 1.4_rk
-    real(rk), parameter :: omega = 1432.945684_rk * TWO * PI
+    !real(rk), parameter :: omega = 1432.945684_rk * TWO * PI
+    real(rk), parameter :: omega = 956._rk * TWO * PI
 
     !
     ! Dimensional mean flow

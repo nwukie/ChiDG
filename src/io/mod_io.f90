@@ -87,7 +87,7 @@ module mod_io
     integer(ik),         save    :: nwrite         = 100
     logical,             save    :: initial_write  = .true.
     logical,             save    :: final_write    = .true.
-    integer(ik),         save    :: output_res     = 10
+    integer(ik),         save    :: output_res     = 5
      
     
 

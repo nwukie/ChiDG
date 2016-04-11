@@ -38,6 +38,7 @@ module mod_bc
     use bc_primlineuler_outlet,             only: primlineuler_outlet_t
     use bc_primlineuler_extrapolate,        only: primlineuler_extrapolate_t
     use bc_primlineuler_wall,               only: primlineuler_wall_t
+    use bc_kirchoff,                        only: kirchoff_t
 
     implicit none
 
@@ -90,6 +91,7 @@ contains
         type(primlineuler_outlet_t)             :: PRIMLINEULER_OUTLET
         type(primlineuler_extrapolate_t)        :: PRIMLINEULER_EXTRAPOLATE
         type(primlineuler_wall_t)               :: PRIMLINEULER_WALL
+        type(kirchoff_t)                        :: KIRCHOFF
 
         if ( .not. initialized ) then
             !
@@ -116,6 +118,7 @@ contains
             call registered_bcs%push_back(PRIMLINEULER_OUTLET)
             call registered_bcs%push_back(PRIMLINEULER_EXTRAPOLATE)
             call registered_bcs%push_back(PRIMLINEULER_WALL)
+            call registered_bcs%push_back(KIRCHOFF)
 
             !
             ! Initialize each boundary condition in set. Doesn't need modified.

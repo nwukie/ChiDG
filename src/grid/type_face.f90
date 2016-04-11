@@ -1,9 +1,10 @@
 module type_face
 #include  <messenger.h>
     use mod_kinds,              only: rk,ik
-    use mod_constants,          only: XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, &
-                                      ZETA_MIN, ZETA_MAX, XI_DIR, ETA_DIR, ZETA_DIR, &
-                                      SPACEDIM, NFACES, TWO, NO_INTERIOR_NEIGHBOR,   &
+    use mod_constants,          only: XI_MIN, XI_MAX, ETA_MIN, ETA_MAX,                 &
+                                      ZETA_MIN, ZETA_MAX, XI_DIR, ETA_DIR, ZETA_DIR,    &
+                                      X_DIR, Y_DIR, Z_DIR,                              &
+                                      SPACEDIM, NFACES, TWO, NO_INTERIOR_NEIGHBOR,      &
                                       ZERO, ONE
 
     use type_point,             only: point_t
@@ -56,7 +57,14 @@ module type_face
         real(rk),           allocatable :: jinv(:)          !< array of inverse element jacobians on the face
         real(rk),           allocatable :: metric(:,:,:)    !< Face metric terms
         real(rk),           allocatable :: norm(:,:)        !< Face normals
-        real(rk),           allocatable :: unorm(:,:)       !< Unit normals
+        real(rk),           allocatable :: unorm(:,:)       !< Unit Face normals in cartesian coordinates
+
+
+        ! Matrices of cartesian gradients of basis/test functions
+        !---------------------------------------------------------
+        real(rk), allocatable       :: dtdx(:,:)            !< Derivative of basis functions in x-direction at quadrature nodes
+        real(rk), allocatable       :: dtdy(:,:)            !< Derivative of basis functions in y-direction at quadrature nodes
+        real(rk), allocatable       :: dtdz(:,:)            !< Derivative of basis functions in z-direction at quadrature nodes
 
 
         ! Quadrature matrices
@@ -81,6 +89,7 @@ module type_face
         procedure           :: compute_quadrature_metrics   !< Compute metric terms at quadrature nodes
         procedure           :: compute_quadrature_normals   !< Compute normals at quadrature nodes
         procedure           :: compute_quadrature_coords    !< Compute cartesian coordinates at quadrature nodes
+        procedure           :: compute_gradients_cartesian  !< Compute gradients in cartesian coordinates
 
         procedure           :: get_neighbor_element         !< Return neighbor element index
         procedure           :: get_neighbor_face            !< Return neighbor face index
@@ -182,15 +191,22 @@ contains
         !
         ! Allocate storage for face data structures.
         !
-        allocate(self%quad_pts(nnodes),                    &
-                 self%jinv(nnodes),                        &
-                 !self%metric(SPACEDIM,SPACEDIM,nnodes),    &
-                 self%metric(3,3,nnodes),    &
-                 !self%norm(nnodes,SPACEDIM),               &
-                 self%norm(nnodes,3),               &
-                 !self%unorm(nnodes,SPACEDIM), stat=ierr)
-                 self%unorm(nnodes,3), stat=ierr)
+        allocate(self%quad_pts(nnodes),                     &
+                 self%jinv(nnodes),                         &
+                 !self%metric(SPACEDIM,SPACEDIM,nnodes),     &
+                 self%metric(3,3,nnodes),                   &
+                 !self%norm(nnodes,SPACEDIM),                &
+                 self%norm(nnodes,3),                       &
+                 !self%unorm(nnodes,SPACEDIM), stat=ierr)    &
+                 self%unorm(nnodes,3),                      &
+                 self%dtdx(nnodes,self%nterms_s),           &
+                 self%dtdy(nnodes,self%nterms_s),           &
+                 self%dtdz(nnodes,self%nterms_s), stat=ierr) 
         if (ierr /= 0) call AllocationError
+
+
+
+
 
         
         !
@@ -199,6 +215,7 @@ contains
         call self%compute_quadrature_metrics()
         call self%compute_quadrature_normals()
         call self%compute_quadrature_coords()
+        call self%compute_gradients_cartesian()
 
 
         !
@@ -442,13 +459,67 @@ contains
         ! Compute unit normals
         !
         norm_mag = sqrt(self%norm(:,XI_DIR)**TWO + self%norm(:,ETA_DIR)**TWO + self%norm(:,ZETA_DIR)**TWO)
-        self%unorm(:,XI_DIR) = self%norm(:,XI_DIR)/norm_mag
-        self%unorm(:,ETA_DIR) = self%norm(:,ETA_DIR)/norm_mag
+        self%unorm(:,XI_DIR)   = self%norm(:,XI_DIR)/norm_mag
+        self%unorm(:,ETA_DIR)  = self%norm(:,ETA_DIR)/norm_mag
         self%unorm(:,ZETA_DIR) = self%norm(:,ZETA_DIR)/norm_mag
+
+
+
 
 
     end subroutine compute_quadrature_normals
     !************************************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+    !>  Compute matrices containing cartesian gradients of basis/test function
+    !!  at each quadrature node.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   4/1/2016
+    !!
+    !!
+    !--------------------------------------------------------------------------------------------------------
+    subroutine compute_gradients_cartesian(self)
+        class(face_t),      intent(inout)   :: self
+
+        integer(ik)                         :: iterm,inode,iface,nnodes
+
+        iface  = self%iface
+        nnodes = self%gq%face%nnodes
+
+
+
+        do iterm = 1,self%nterms_s
+            do inode = 1,nnodes
+                self%dtdx(inode,iterm) = self%metric(1,1,inode) * self%gq%face%ddxi(inode,iterm,iface)   * (ONE/self%jinv(inode)) + &
+                                         self%metric(2,1,inode) * self%gq%face%ddeta(inode,iterm,iface)  * (ONE/self%jinv(inode)) + &
+                                         self%metric(3,1,inode) * self%gq%face%ddzeta(inode,iterm,iface) * (ONE/self%jinv(inode))
+
+                self%dtdy(inode,iterm) = self%metric(1,2,inode) * self%gq%face%ddxi(inode,iterm,iface)   * (ONE/self%jinv(inode)) + &
+                                         self%metric(2,2,inode) * self%gq%face%ddeta(inode,iterm,iface)  * (ONE/self%jinv(inode)) + &
+                                         self%metric(3,2,inode) * self%gq%face%ddzeta(inode,iterm,iface) * (ONE/self%jinv(inode))
+
+                self%dtdz(inode,iterm) = self%metric(1,3,inode) * self%gq%face%ddxi(inode,iterm,iface)   * (ONE/self%jinv(inode)) + &
+                                         self%metric(2,3,inode) * self%gq%face%ddeta(inode,iterm,iface)  * (ONE/self%jinv(inode)) + &
+                                         self%metric(3,3,inode) * self%gq%face%ddzeta(inode,iterm,iface) * (ONE/self%jinv(inode))
+            end do
+        end do
+
+    end subroutine compute_gradients_cartesian
+    !*********************************************************************************************************
+
+
+
+
 
 
 

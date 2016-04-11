@@ -109,7 +109,7 @@ contains
     !!
     !---------------------------------------------------------------------------------------------------------
     function get_name(self) result(ename)
-        class(equationset_t),   intent(inout)   :: self
+        class(equationset_t),   intent(in)   :: self
 
         character(len=:),   allocatable :: ename
 

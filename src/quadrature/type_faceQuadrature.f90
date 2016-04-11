@@ -23,8 +23,8 @@ module type_faceQuadrature
     !---------------------------------------------------------------------------------------------------
     type, public :: faceQuadrature_t
         integer(ik)                                 :: nnodes
-        type(point_t),  dimension(:,:), allocatable :: nodes
-        real(rk),       dimension(:,:), allocatable :: weights
+        type(point_t),  dimension(:,:), allocatable :: nodes    !< (:, iface)
+        real(rk),       dimension(:,:), allocatable :: weights  !< (:, iface)
 
         real(rk), dimension(:,:,:), allocatable :: val      !< (:,:,iface)
         real(rk), dimension(:,:,:), allocatable :: ddxi     !< ''

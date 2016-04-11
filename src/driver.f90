@@ -22,6 +22,7 @@ program driver
     use mod_chidg_edit,         only: chidg_edit
     use mod_chidg_convert,      only: chidg_convert
     use mod_chidg_interpolate,  only: chidg_interpolate
+    use mod_kirchoffs,          only: kirchoff
     use mod_io
     
 
@@ -241,6 +242,9 @@ program driver
 
         else if ( trim(chidg_action) == 'convert' ) then
             call chidg_convert(trim(filename))
+
+        else if ( trim(chidg_action) == 'kirchoff' ) then
+            call kirchoff(filename)
 
 
         else

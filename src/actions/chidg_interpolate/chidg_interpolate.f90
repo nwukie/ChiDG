@@ -1,6 +1,7 @@
 module mod_chidg_interpolate
 #include <messenger.h>
     use mod_kinds,          only: rk, ik
+    use mod_constants,      only: ZERO
     use type_point,         only: point_t
     use type_mesh,          only: mesh_t
     use type_chidg,         only: chidg_t
@@ -42,12 +43,12 @@ contains
         type(chidg_t)           :: chidg_source
         type(chidg_t)           :: chidg_target
 
-        real(rk)                :: xi, eta, zeta
+        real(rk)                :: xi, eta, zeta, x, y, z, r
         real(rk),   allocatable :: vals(:), val_modes(:)
         integer(ik)             :: idom, ielem, ivar, inode, idom_d, ielem_d, ierr
-        type(point_t)           :: node, point_comp
+        type(point_t)           :: node, new_node, point_comp
 
-        nterms_s = 3*3*3
+        nterms_s = 6*6*6
 
 
         !
@@ -60,10 +61,17 @@ contains
         ! Read grid data from files.
         !
         print*, 'Reading grids: ', trim(sourcefile), trim(targetfile)
+
+        print*, '    ', trim(sourcefile)
         call chidg_source%read_grid(trim(sourcefile))
+        print*, '    ', trim(targetfile)
         call chidg_target%read_grid(trim(targetfile))
 
+        print*, 'Initializing solution data structures'
+        
+        print*, '    ', trim(sourcefile)
         call chidg_source%data%init_sdata()
+        print*, '    ', trim(targetfile)
         call chidg_target%data%init_sdata()
 
 
@@ -102,14 +110,30 @@ contains
                    allocate(vals(size(chidg_target%data%mesh(idom)%elems(ielem)%quad_pts)), stat=ierr )
                    if (ierr /= 0) call AllocationError
 
+
+
                    do inode = 1,size(chidg_target%data%mesh(idom)%elems(ielem)%quad_pts)
 
                        node = chidg_target%data%mesh(idom)%elems(ielem)%quad_pts(inode)
 
+
+                       !
+                       ! For cylindrical rotation
+                       !
+                       x = node%c1_
+                       y = node%c2_
+                       z = node%c3_
+                       r = sqrt( y*y  +  z*z )
+                       new_node%c1_ = node%c1_
+                       new_node%c2_ = r
+                       new_node%c3_ = ZERO
+
+
                        !
                        ! Find donor domain/element in source chidg instance.
                        !
-                       call compute_element_donor(chidg_source%data%mesh, node, idom_d, ielem_d, point_comp)
+                       !call compute_element_donor(chidg_source%data%mesh, node, idom_d, ielem_d, point_comp)
+                       call compute_element_donor(chidg_source%data%mesh, new_node, idom_d, ielem_d, point_comp)
 
                        
                        !

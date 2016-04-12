@@ -48,7 +48,7 @@ contains
         integer(ik)             :: idom, ielem, ivar, inode, idom_d, ielem_d, ierr
         type(point_t)           :: node, new_node, point_comp
 
-        nterms_s = 5*5*5
+        nterms_s = 4*4*4
 
 
         !
@@ -69,10 +69,20 @@ contains
 
         print*, 'Initializing solution data structures'
         
+
         print*, '    ', trim(sourcefile)
-        call chidg_source%data%init_sdata()
+
+        nterms_s = 3*3
+        call chidg_source%initialize_solution_domains(nterms_s)
+        call chidg_source%initialize_solution_solver()
         print*, '    ', trim(targetfile)
-        call chidg_target%data%init_sdata()
+
+        nterms_s = 3*3*3
+        print*, 'initialize_solution_domains'
+        call chidg_target%initialize_solution_domains(nterms_s)
+        print*, 'initialize_solution_solver'
+        call chidg_target%initialize_solution_solver()
+
 
 
         !
@@ -102,6 +112,7 @@ contains
 
                do ivar = 1,chidg_target%data%eqnset(idom)%item%neqns
 
+                    print*, 'interpolate - 1'
 
                    !
                    ! Interpolate solution from source to target at integration points for projection.
@@ -111,15 +122,18 @@ contains
                    if (ierr /= 0) call AllocationError
 
 
+                    print*, 'interpolate - 2'
 
                    do inode = 1,size(chidg_target%data%mesh(idom)%elems(ielem)%quad_pts)
 
                        node = chidg_target%data%mesh(idom)%elems(ielem)%quad_pts(inode)
 
+                       print*, 'interpolate - 3'
 
                        !
                        ! For cylindrical rotation
                        !
+                       print*, 'Warning - Interpolation specialized for cylindrical rotation'
                        x = node%c1_
                        y = node%c2_
                        z = node%c3_
@@ -128,6 +142,7 @@ contains
                        new_node%c2_ = r
                        new_node%c3_ = ZERO
 
+                       print*, 'interpolate - 4'
 
                        !
                        ! Find donor domain/element in source chidg instance.
@@ -135,6 +150,7 @@ contains
                        !call compute_element_donor(chidg_source%data%mesh, node, idom_d, ielem_d, point_comp)
                        call compute_element_donor(chidg_source%data%mesh, new_node, idom_d, ielem_d, point_comp)
 
+                       print*, 'interpolate - 5'
                        
                        !
                        ! Get solution at node from source chidg instance
@@ -144,8 +160,9 @@ contains
                        zeta = point_comp%c3_
                        vals(inode) = solution_point(chidg_source%data%sdata%q%dom(idom_d)%lvecs(ielem_d),ivar,xi,eta,zeta)
 
+                       print*, 'interpolate - 6'
 
-                   end do !inode
+                    end do !inode
 
                     
                     !
@@ -153,15 +170,20 @@ contains
                     !
                     vals = vals * chidg_target%data%mesh(idom)%elems(ielem)%gq%vol%weights
 
-                   val_modes = matmul(transpose(chidg_target%data%mesh(idom)%elems(ielem)%gq%vol%val), vals) / chidg_target%data%mesh(idom)%elems(ielem)%gq%vol%dmass
+
+                    print*, 'interpolate - 7'
+
+                    val_modes = matmul(transpose(chidg_target%data%mesh(idom)%elems(ielem)%gq%vol%val), vals) / chidg_target%data%mesh(idom)%elems(ielem)%gq%vol%dmass
 
 
+                    print*, 'interpolate - 8'
 
-                   !
-                   ! Store the projected modes to the solution expansion
-                   !
-                   call chidg_target%data%sdata%q%dom(idom)%lvecs(ielem)%setvar(ivar,val_modes)
+                    !
+                    ! Store the projected modes to the solution expansion
+                    !
+                    call chidg_target%data%sdata%q%dom(idom)%lvecs(ielem)%setvar(ivar,val_modes)
 
+                    print*, 'interpolate - 9'
 
                end do ! ivar
 

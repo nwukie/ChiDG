@@ -43,22 +43,25 @@ module type_chidg_data
 
         logical                                     :: solverInitialized = .false.
         integer(ik),        private                 :: ndomains_ = 0
-        type(domaininfo_t),             allocatable :: info(:)      !< General container for domain information
+        integer(ik),        private                 :: spacedim_ = 3    !< Default 3D 
+        type(domaininfo_t),             allocatable :: info(:)          !< General container for domain information
 
         
-        type(mesh_t),                   allocatable :: mesh(:)      !< Array of mesh instances. One for each domain.
-        type(bcset_t),                  allocatable :: bcset(:)     !< Array of boundary condition set instances. One for each domain.
-        type(equationset_wrapper_t),    allocatable :: eqnset(:)    !< Array of equation set instances. One for each domain.
-        type(solverdata_t)                          :: sdata        !< Solver data container for solution vectors and matrices
+        type(mesh_t),                   allocatable :: mesh(:)          !< Array of mesh instances. One for each domain.
+        type(bcset_t),                  allocatable :: bcset(:)         !< Array of boundary condition set instances. One for each domain.
+        type(equationset_wrapper_t),    allocatable :: eqnset(:)        !< Array of equation set instances. One for each domain.
+        type(solverdata_t)                          :: sdata            !< Solver data container for solution vectors and matrices
 
     contains
-
-        ! Initialization procedure for solution data. Execute after all domains are added.
-        procedure   :: init_sdata
 
         ! Modifiers for adding domains and boundary conditions
         procedure   :: add_domain
         procedure   :: add_bc
+
+        ! Initialization procedure for solution data. Execute after all domains are added.
+        procedure   :: initialize_solution_domains
+        procedure   :: initialize_solution_solver
+        !procedure   :: init_sdata
 
         ! Accessors
         procedure   :: get_domain_index     !< Given a domain name, return domain index
@@ -86,7 +89,8 @@ contains
     !!
     !-------------------------------------------------------------------------------------------------------------
     ! subroutine initialize_solver_data
-    subroutine init_sdata(self)
+    !subroutine init_sdata(self)
+    subroutine initialize_solution_solver(self)
         class(chidg_data_t),     intent(inout)   :: self
 
         integer(ik) :: idom, ndom, ierr
@@ -126,7 +130,8 @@ contains
         !
         call self%sdata%init(self%mesh, bcset_coupling, function_data)
 
-    end subroutine init_sdata
+    !end subroutine init_sdata
+    end subroutine initialize_solution_solver
     !*************************************************************************************************************
 
 
@@ -149,13 +154,14 @@ contains
     !!  @param[in]  nterms_s    Integer defining the number of terms in the solution expansion
     !!
     !---------------------------------------------------------------------------------------------------------------
-    subroutine add_domain(self,name,points,nterms_c,eqnset,nterms_s)
+    !subroutine add_domain(self,name,points,nterms_c,eqnset,nterms_s)
+    subroutine add_domain(self,name,points,nterms_c,eqnset)
         class(chidg_data_t),    intent(inout)   :: self
         character(*),           intent(in)      :: name
         type(point_t),          intent(in)      :: points(:,:,:)
         integer(ik),            intent(in)      :: nterms_c
         character(*),           intent(in)      :: eqnset
-        integer(ik),            intent(in)      :: nterms_s
+        !integer(ik),            intent(in)      :: nterms_s
 
         integer(ik) :: idom, ierr
 
@@ -216,10 +222,12 @@ contains
         call create_equationset(eqnset,temp_eqnset(idom)%item)
 
 
-        !
-        ! Initialize mesh numerics based on equation set and polynomial expansion order
-        !
-        call temp_mesh(idom)%init_sol(temp_eqnset(idom)%item%neqns,nterms_s)
+print*, 'chidg_data%add_domain - 1'
+!        !
+!        ! Initialize mesh numerics based on equation set and polynomial expansion order
+!        !
+!        call temp_mesh(idom)%init_sol(temp_eqnset(idom)%item%neqns,nterms_s)
+print*, 'chidg_data%add_domain - 2'
 
 
         !
@@ -230,6 +238,8 @@ contains
         call move_alloc(temp_mesh,self%mesh)
         call move_alloc(temp_bcset,self%bcset)
         call move_alloc(temp_eqnset,self%eqnset)
+
+        call write_line('Domain ', idom, 'nelem', self%mesh(idom)%nelem)
 
     end subroutine add_domain
     !***************************************************************************************************************
@@ -246,7 +256,7 @@ contains
 
 
 
-    !> Add a boundary condition to a ChiDG domain
+    !>  Add a boundary condition to a ChiDG domain
     !!
     !!  @author Nathan A. Wukie
     !!  @date   2/1/2016
@@ -281,7 +291,6 @@ contains
 
 
 
-
         !
         ! Initialize new boundary condition from mesh data and face index
         !
@@ -298,6 +307,50 @@ contains
 
     end subroutine add_bc
     !**********************************************************************************************************
+
+
+
+
+
+
+
+
+    !>  For each domain, call solution initialization
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   4/11/2016
+    !!
+    !!
+    !!
+    !!
+    !----------------------------------------------------------------------------------------------------------
+    subroutine initialize_solution_domains(self,nterms_s)
+        class(chidg_data_t),    intent(inout)   :: self
+        integer(ik),            intent(in)      :: nterms_s
+
+        integer(ik) :: idomain, neqns
+
+        print*, 'chidg_data%initialize_solution_domains'
+
+        do idomain = 1,self%ndomains()
+
+            neqns = self%eqnset(idomain)%item%neqns
+
+            print*, idomain, neqns, nterms_s
+            !
+            ! Initialize mesh numerics based on equation set and polynomial expansion order
+            !
+            call self%mesh(idomain)%init_sol(neqns,nterms_s)
+
+        end do
+
+
+    end subroutine initialize_solution_domains
+    !**********************************************************************************************************
+
+
+
+
 
 
 

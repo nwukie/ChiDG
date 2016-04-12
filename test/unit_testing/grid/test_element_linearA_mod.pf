@@ -325,67 +325,67 @@ contains
     end subroutine
 
 
-@Test
-    subroutine testElement_face_normals(self)
-        class(test_element_linearA),    intent(inout)   :: self
-        real(rk), dimension(self%faces(XI_MAX)%gq%face%nnodes) :: test_norm_x, test_norm_y, test_norm_z
+@test
+    subroutine testelement_face_normals(self)
+        class(test_element_lineara),    intent(inout)   :: self
+        real(rk), dimension(self%faces(xi_max)%gq%face%nnodes) :: test_norm_x, test_norm_y, test_norm_z
         real(rk)    :: tol
         
         tol = 1.e-15_rk
         
-        ! XI_MIN
+        ! xi_min
         test_norm_x = -0.25_rk
-        test_norm_y = ZERO
-        test_norm_z = ZERO
+        test_norm_y = zero
+        test_norm_z = zero
         
-        @assertEqual(test_norm_x,self%faces(XI_MIN)%norm(:,1),tol)
-        @assertEqual(test_norm_y,self%faces(XI_MIN)%norm(:,2),tol)
-        @assertEqual(test_norm_z,self%faces(XI_MIN)%norm(:,3),tol)
+        @assertequal(test_norm_x,self%faces(xi_min)%norm(:,1),tol)
+        @assertequal(test_norm_y,self%faces(xi_min)%norm(:,2),tol)
+        @assertequal(test_norm_z,self%faces(xi_min)%norm(:,3),tol)
         
-        ! XI_MAX
+        ! xi_max
         test_norm_x = 0.25_rk
-        test_norm_y = ZERO
-        test_norm_z = ZERO
+        test_norm_y = zero
+        test_norm_z = zero
         
-        @assertEqual(test_norm_x,self%faces(XI_MAX)%norm(:,1),tol)
-        @assertEqual(test_norm_y,self%faces(XI_MAX)%norm(:,2),tol)
-        @assertEqual(test_norm_z,self%faces(XI_MAX)%norm(:,3),tol)
+        @assertequal(test_norm_x,self%faces(xi_max)%norm(:,1),tol)
+        @assertequal(test_norm_y,self%faces(xi_max)%norm(:,2),tol)
+        @assertequal(test_norm_z,self%faces(xi_max)%norm(:,3),tol)
         
-        ! ETA_MIN
-        test_norm_x = ZERO
+        ! eta_min
+        test_norm_x = zero
         test_norm_y = -1.25_rk
-        test_norm_z = ZERO
+        test_norm_z = zero
         
-        @assertEqual(test_norm_x,self%faces(ETA_MIN)%norm(:,1),tol)
-        @assertEqual(test_norm_y,self%faces(ETA_MIN)%norm(:,2),tol)
-        @assertEqual(test_norm_z,self%faces(ETA_MIN)%norm(:,3),tol)     
+        @assertequal(test_norm_x,self%faces(eta_min)%norm(:,1),tol)
+        @assertequal(test_norm_y,self%faces(eta_min)%norm(:,2),tol)
+        @assertequal(test_norm_z,self%faces(eta_min)%norm(:,3),tol)     
         
-        ! ETA_MAX
-        test_norm_x = ZERO
+        ! eta_max
+        test_norm_x = zero
         test_norm_y = 1.25_rk
-        test_norm_z = ZERO
+        test_norm_z = zero
         
-        @assertEqual(test_norm_x,self%faces(ETA_MAX)%norm(:,1),tol)
-        @assertEqual(test_norm_y,self%faces(ETA_MAX)%norm(:,2),tol)
-        @assertEqual(test_norm_z,self%faces(ETA_MAX)%norm(:,3),tol)
+        @assertequal(test_norm_x,self%faces(eta_max)%norm(:,1),tol)
+        @assertequal(test_norm_y,self%faces(eta_max)%norm(:,2),tol)
+        @assertequal(test_norm_z,self%faces(eta_max)%norm(:,3),tol)
 
-        ! ZETA_MIN
-        test_norm_x = ZERO
-        test_norm_y = ZERO
+        ! zeta_min
+        test_norm_x = zero
+        test_norm_y = zero
         test_norm_z = -1.25_rk
         
-        @assertEqual(test_norm_x,self%faces(ZETA_MIN)%norm(:,1),tol)
-        @assertEqual(test_norm_y,self%faces(ZETA_MIN)%norm(:,2),tol)
-        @assertEqual(test_norm_z,self%faces(ZETA_MIN)%norm(:,3),tol)
+        @assertequal(test_norm_x,self%faces(zeta_min)%norm(:,1),tol)
+        @assertequal(test_norm_y,self%faces(zeta_min)%norm(:,2),tol)
+        @assertequal(test_norm_z,self%faces(zeta_min)%norm(:,3),tol)
         
-        ! ZETA_MAX
-        test_norm_x = ZERO
-        test_norm_y = ZERO
+        ! zeta_max
+        test_norm_x = zero
+        test_norm_y = zero
         test_norm_z = 1.25_rk
         
-        @assertEqual(test_norm_x,self%faces(ZETA_MAX)%norm(:,1),tol)
-        @assertEqual(test_norm_y,self%faces(ZETA_MAX)%norm(:,2),tol)
-        @assertEqual(test_norm_z,self%faces(ZETA_MAX)%norm(:,3),tol)
+        @assertequal(test_norm_x,self%faces(zeta_max)%norm(:,1),tol)
+        @assertequal(test_norm_y,self%faces(zeta_max)%norm(:,2),tol)
+        @assertequal(test_norm_z,self%faces(zeta_max)%norm(:,3),tol)
        
 
     end subroutine
@@ -394,6 +394,73 @@ contains
 
 
 
+
+
+
+@Test
+    subroutine testElement_face_unit_normals(self)
+        class(test_element_linearA),    intent(inout)   :: self
+        real(rk), dimension(self%faces(XI_MAX)%gq%face%nnodes) :: test_norm_x, test_norm_y, test_norm_z
+        real(rk)    :: tol
+        
+        tol = 1.e-15_rk
+        
+        ! XI_MIN
+        test_norm_x = -ONE
+        test_norm_y = ZERO
+        test_norm_z = ZERO
+        
+        @assertEqual(test_norm_x,self%faces(XI_MIN)%unorm(:,1),tol)
+        @assertEqual(test_norm_y,self%faces(XI_MIN)%unorm(:,2),tol)
+        @assertEqual(test_norm_z,self%faces(XI_MIN)%unorm(:,3),tol)
+        
+        ! XI_MAX
+        test_norm_x = ONE
+        test_norm_y = ZERO
+        test_norm_z = ZERO
+        
+        @assertEqual(test_norm_x,self%faces(XI_MAX)%unorm(:,1),tol)
+        @assertEqual(test_norm_y,self%faces(XI_MAX)%unorm(:,2),tol)
+        @assertEqual(test_norm_z,self%faces(XI_MAX)%unorm(:,3),tol)
+        
+        ! ETA_MIN
+        test_norm_x = ZERO
+        test_norm_y = -ONE
+        test_norm_z = ZERO
+        
+        @assertEqual(test_norm_x,self%faces(ETA_MIN)%unorm(:,1),tol)
+        @assertEqual(test_norm_y,self%faces(ETA_MIN)%unorm(:,2),tol)
+        @assertEqual(test_norm_z,self%faces(ETA_MIN)%unorm(:,3),tol)     
+        
+        ! ETA_MAX
+        test_norm_x = ZERO
+        test_norm_y = ONE
+        test_norm_z = ZERO
+        
+        @assertEqual(test_norm_x,self%faces(ETA_MAX)%unorm(:,1),tol)
+        @assertEqual(test_norm_y,self%faces(ETA_MAX)%unorm(:,2),tol)
+        @assertEqual(test_norm_z,self%faces(ETA_MAX)%unorm(:,3),tol)
+
+        ! ZETA_MIN
+        test_norm_x = ZERO
+        test_norm_y = ZERO
+        test_norm_z = -ONE
+        
+        @assertEqual(test_norm_x,self%faces(ZETA_MIN)%unorm(:,1),tol)
+        @assertEqual(test_norm_y,self%faces(ZETA_MIN)%unorm(:,2),tol)
+        @assertEqual(test_norm_z,self%faces(ZETA_MIN)%unorm(:,3),tol)
+        
+        ! ZETA_MAX
+        test_norm_x = ZERO
+        test_norm_y = ZERO
+        test_norm_z = ONE
+        
+        @assertEqual(test_norm_x,self%faces(ZETA_MAX)%unorm(:,1),tol)
+        @assertEqual(test_norm_y,self%faces(ZETA_MAX)%unorm(:,2),tol)
+        @assertEqual(test_norm_z,self%faces(ZETA_MAX)%unorm(:,3),tol)
+       
+
+    end subroutine
 
 
 

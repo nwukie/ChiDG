@@ -188,21 +188,21 @@ contains
         !============================
         !       ENERGY FLUX
         !============================
-        x0 = ZERO
-        y0 = ZERO
-        !eps = 429.8837052_rk
-        eps = 171.9534821_rk
-
-        do igq = 1,size(rho_r)
-            x = mesh(idom)%elems(ielem)%quad_pts(igq)%c1_
-            y = mesh(idom)%elems(ielem)%quad_pts(igq)%c2_
-
-            flux(igq) = eps * exp(-LOG(TWO) * ((x-x0)**TWO + (y-y0)**TWO)/(0.2_rk**TWO) )
-
-        end do
-
-        !call integrate_volume_source(mesh(idom)%elems(ielem),sdata,idom,ip_r,iblk,flux)
-        call integrate_volume_source(mesh(idom)%elems(ielem),sdata,idom,ip_i,iblk,flux)
+!        x0 = ZERO
+!        y0 = ZERO
+!        !eps = 429.8837052_rk
+!        eps = 171.9534821_rk
+!
+!        do igq = 1,size(rho_r)
+!            x = mesh(idom)%elems(ielem)%quad_pts(igq)%c1_
+!            y = mesh(idom)%elems(ielem)%quad_pts(igq)%c2_
+!
+!            flux(igq) = eps * exp(-LOG(TWO) * ((x-x0)**TWO + (y-y0)**TWO)/(0.2_rk**TWO) )
+!
+!        end do
+!
+!        !call integrate_volume_source(mesh(idom)%elems(ielem),sdata,idom,ip_r,iblk,flux)
+!        call integrate_volume_source(mesh(idom)%elems(ielem),sdata,idom,ip_i,iblk,flux)
 
     end subroutine compute
     !**********************************************************************************************************

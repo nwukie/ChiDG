@@ -32,7 +32,7 @@ contains
         complex(rk),    dimension(:),   allocatable :: pressures
         type(point_t),  dimension(:),   allocatable :: points
 
-        nterms_s = 5*5*5
+        nterms_s = 4*4*4
 
         !
         ! Initialize ChiDG environment
@@ -55,7 +55,9 @@ contains
         !
         ! Initialize solution data storage
         !
-        call chidg%data%init_sdata()
+        !call chidg%data%init_sdata()
+        call chidg%initialize_solution_domains(nterms_s)
+        call chidg%initialize_solution_solver()
 
         print*, chidg%data%eqnset(1)%item%name
 
@@ -80,7 +82,7 @@ contains
         if ( ierr /= 0 ) call AllocationError
 
         theta_min = ZERO
-        theta_max = PI/TWO
+        theta_max = 120._rk*PI/180._rk
 
         r        = 46._rk
         theta    = ZERO

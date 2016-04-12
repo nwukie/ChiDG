@@ -177,7 +177,9 @@ contains
         do iterm = 1,q%nterms()
 
             if ( SPACEDIM == 3 ) then
-                polyvals(iterm)  = polynomialVal(3,q%nterms(),iterm,node)
+                !polyvals(iterm)  = polynomialVal(3,q%nterms(),iterm,node)
+                print*, 'WARNING: solution_point screwed up'
+                polyvals(iterm)  = polynomialVal(2,q%nterms(),iterm,node)
             else if ( SPACEDIM == 2 ) then
                 polyvals(iterm)  = polynomialVal(2,q%nterms(),iterm,node)
             end if

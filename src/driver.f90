@@ -100,8 +100,14 @@ program driver
         !
         ! Initialize solution data storage
         !
+        call chidg%initialize_solution_domains(nterms_s)
         call chidg%init('chimera')
-        call chidg%data%init_sdata()
+
+
+
+        !call chidg%data%init_sdata()
+        call chidg%initialize_solution_solver()
+
 
 
         !

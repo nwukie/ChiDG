@@ -181,7 +181,7 @@ contains
             ! Get contribution from user-specified perturbations
             !
             dp_user = rho_r
-            dp_user = 43.3033_rk
+            dp_user = 40.8166_rk
 
             !
             ! Compute in-going characteristics from user-specified data

@@ -157,7 +157,9 @@ contains
         !
         ! Call numerics initialization for elements and faces
         !
+        print*, 'mesh%init_elems_sol'
         call self%init_elems_sol(neqns,nterms_s) 
+        print*, 'mesh%init_faces_sol'
         call self%init_faces_sol()               
 
         
@@ -370,6 +372,7 @@ contains
         ! Call the numerics initialization procedure for each element
         !
         do ielem = 1,self%nelem
+            print*, 'mesh%init_elems_sol', self%neqns, self%nterms_s
             call self%elems(ielem)%init_sol(self%neqns,self%nterms_s)
         end do
 

@@ -2,7 +2,7 @@ module type_volumeQuadrature
 #include <messenger.h>
     use mod_kinds,          only: rk,ik
     use mod_constants,      only: NFACES,XI_MIN,XI_MAX,ETA_MIN,ETA_MAX,ZETA_MIN,ZETA_MAX, &
-                                  XI_DIR,ETA_DIR,ZETA_DIR,SPACEDIM, ZERO
+                                  XI_DIR,ETA_DIR,ZETA_DIR,ZERO
 
     use mod_GaussLegendre,  only: gl_nodes, gl_weights
     use mod_polynomial,     only: polynomialVal, dpolynomialVal
@@ -60,7 +60,7 @@ contains
     !!  @param[in]  nterms  Number of terms in the associated polynomial expansion
     !!
     !-----------------------------------------------------------------------------------------------------------
-    subroutine init(self,nnodes,nterms)
+    subroutine init(self,spacedim,nnodes,nterms)
         class(volumeQuadrature_t),  intent(inout)   :: self
         integer(ik),                intent(in)      :: nnodes
         integer(ik),                intent(in)      :: nterms

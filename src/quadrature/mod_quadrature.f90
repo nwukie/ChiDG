@@ -1,7 +1,7 @@
 module mod_quadrature
 #include <messenger.h>
     use mod_kinds,          only: rk,ik
-    use mod_constants,      only: PI, SPACEDIM
+    use mod_constants,      only: PI
     use type_quadrature,    only: quadrature_t
     implicit none
 
@@ -29,26 +29,28 @@ contains
     !!  @param[out] nnodes_vol  Number of quadrature nodes defined for a volume
     !!
     !-------------------------------------------------------------------------------------------------------
-    subroutine compute_nnodes_gq(nterms_s,nterms_c,nnodes_face,nnodes_vol)
+    !subroutine compute_nnodes_gq(nterms_s,nterms_c,nnodes_face,nnodes_vol)
+    subroutine compute_nnodes_gq(spacedim,nterms_s,nterms_c,nnodes_face,nnodes_vol)
         use mod_io,                     only: gq_rule
 
-        integer(ik), intent(in)        :: nterms_s, nterms_c
-        integer(ik), intent(out)       :: nnodes_face, nnodes_vol
-        integer(ik)                    :: nterms1d,nnodes1d,nnodes2d,nnodes3d
+        integer(ik), intent(in)         :: spacedim
+        integer(ik), intent(in)         :: nterms_s, nterms_c
+        integer(ik), intent(out)        :: nnodes_face, nnodes_vol
+        integer(ik)                     :: nterms1d,nnodes1d,nnodes2d,nnodes3d
 
         !
         ! Find number of terms in the 1d expansion
         !
         nterms1d = 0
 
-        if ( SPACEDIM == 3 ) then
+        if ( spacedim == 3 ) then
 
             do while (nterms1d*nterms1d*nterms1d /= nterms_s)
                 nterms1d = nterms1d + 1
             end do
             if (nterms1d*nterms1d*nterms1d > nterms_s) call chidg_signal(FATAL, "Incorrect number of terms counted when computing quadrature nodes")
 
-        else if ( SPACEDIM == 2 ) then
+        else if ( spacedim == 2 ) then
 
             do while (nterms1d*nterms1d /= nterms_s)
                 nterms1d = nterms1d + 1
@@ -104,6 +106,59 @@ contains
 
     end subroutine compute_nnodes_gq
     !*********************************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+
+
+    !>  Compute number of quadrature nodes in one dimension
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   4/11/2016
+    !!
+    !!
+    !!
+    !---------------------------------------------------------------------------------------------------------
+    function compute_nnodes1d(spacedim,nnodes)
+        integer(ik),    intent(in)  :: spacedim
+        integer(ik),    intent(in)  :: nnodes
+
+        integer(ik) :: nnodes1d
+
+
+        if ( spacedim == 3 ) then
+
+            do while (nnodes1d*nnodes1d*nnodes1d /= nnodes)
+                nnodes1d = nnodes1d + 1
+            end do
+            if (nnodes1d*nnodes1d*nnodes1d > nnodes) call chidg_signal(FATAL, "Incorrect number of terms counted when computing quadrature nodes")
+
+        else if ( spacedim == 2 ) then
+
+            do while (nnodes1d*nnodes1d /= nnodes)
+                nnodes1d = nnodes1d + 1
+            end do
+            if (nnodes1d*nnodes1d > nnodes) call chidg_signal(FATAL, "Incorrect number of terms counted when computing quadrature nodes")
+
+        else
+            call chidg_signal(FATAL,'compute_nnodes1d: Invalid value for spatial dimension - spacedim.')
+
+        end if
+
+
+    end function compute_nnodes1d
+    !*********************************************************************************************************
+
+
+
 
 
 

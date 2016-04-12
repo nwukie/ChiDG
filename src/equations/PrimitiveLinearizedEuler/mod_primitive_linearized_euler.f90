@@ -11,18 +11,20 @@ module mod_primitive_linearized_euler
     real(rk), parameter :: l_r    = 1._rk
 
 
-    real(rk), parameter :: gam = 1.4_rk
+    real(rk), parameter :: gam       = 1.4_rk
     !real(rk), parameter :: omega = 1432.945684_rk * TWO * PI
-    real(rk), parameter :: omega = 956._rk * TWO * PI
+    real(rk), parameter :: omega     = 956._rk * TWO * PI
+    real(rk), parameter :: thickness = 1.0_rk
+    real(rk), parameter :: eps       = 2300_rk
 
     !
     ! Dimensional mean flow
     !
-    real(rk), parameter :: rho_d = 1.2_rk
+    real(rk), parameter :: rho_d = 1.225_rk
     real(rk), parameter :: u_d   = 0._rk
     real(rk), parameter :: v_d   = 0._rk
     real(rk), parameter :: w_d   = 0._rk
-    real(rk), parameter :: p_d   = 110000.0_rk
+    real(rk), parameter :: p_d   = 101150.0_rk
 
 
 !    !

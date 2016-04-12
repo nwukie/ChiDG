@@ -96,7 +96,9 @@ program HDF5toTEC
     ! Initialize solution data storage
     !
 !    call chidg%init('chimera')
-    call chidg%data%init_sdata()
+!    call chidg%data%init_sdata()
+    call chidg%initialize_solution_domains(nterms_s)
+    call chidg%initialize_solution_solver()
 
 
 

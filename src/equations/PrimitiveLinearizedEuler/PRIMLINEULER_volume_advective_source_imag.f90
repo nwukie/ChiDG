@@ -14,7 +14,7 @@ module PRIMLINEULER_volume_advective_source_imag
     use DNAD_D
 
     use PRIMLINEULER_properties,        only: PRIMLINEULER_properties_t
-    use mod_primitive_linearized_euler, only: omega
+    use mod_primitive_linearized_euler, only: omega, gam, thickness, eps
     implicit none
 
     private
@@ -75,7 +75,7 @@ contains
         integer(ik)    :: iseed, i, idonor, igq
         type(seed_t)   :: seed
 
-        real(rk)    :: gam, thickness, eps, kappa
+!        real(rk)    :: gam, thickness, eps, kappa
 
 
 
@@ -115,7 +115,7 @@ contains
         !
         ! Gamma
         !
-        gam = 1.4_rk
+        !gam = 1.4_rk
         !omega = 956._rk * TWO * PI
         !omega = 1200._rk * TWO * PI
 
@@ -126,9 +126,9 @@ contains
         !
         ! Absorbing layer
         !
-        thickness = 2.0_rk
-        eps       = 1500._rk
-        kappa     = 1._rk
+        !thickness = 0.7_rk
+        !eps       = 1700._rk
+        !kappa     = 1._rk
 
         ! Get coordinates
         x = mesh(idom)%elems(ielem)%quad_pts(:)%c1_
@@ -137,24 +137,62 @@ contains
         do igq = 1,size(x)
 
 
-            inA = ( x(igq) < -NINE + thickness )
-            inB = ( y(igq) >  FIVE - thickness )
-            inC = ( x(igq) >  NINE - thickness )
+!   Two cylinder scattering
+!            inA = ( x(igq) < -NINE + thickness )
+!            inB = ( y(igq) >  FIVE - thickness )
+!            inC = ( x(igq) >  NINE - thickness )
+!            inD = ( y(igq) < -FIVE + thickness )
+!
+!
+!            if ( inA ) then
+!                fcn     =  abs( ( x - (-NINE+thickness) ) / thickness )**TWO
+!                sigma_x = eps * fcn
+!            
+!            else if ( inC ) then
+!                fcn     =  abs( ( x - (NINE-thickness) ) / thickness )**TWO
+!                sigma_x = eps * fcn
+!
+!            else
+!                sigma_x = ZERO
+!
+!            end if
+!
+!
+!
+!
+!            if ( inB ) then
+!                fcn     =  abs( ( y - ( FIVE-thickness) ) / thickness )**TWO
+!                sigma_y = eps * fcn
+!
+!!            else if ( inD ) then
+!!                fcn     =  abs( ( y - (-FIVE+thickness) ) / thickness )**TWO
+!!                sigma_y = eps * fcn
+!
+!            else
+!                sigma_y = ZERO
+!            end if
+
+
+
+
+
+            ! Munt duct
+            inA = ( x(igq) < -THREE + thickness ) .and. ( y(igq) > 1.2_rk )
+            inB = ( y(igq) >  4.6_rk - thickness )
+            inC = ( x(igq) >  6.2_rk - thickness )
             inD = ( y(igq) < -FIVE + thickness )
 
 
-
-
             if ( inA ) then
-                fcn     =  abs( ( x - (-NINE+thickness) ) / thickness )**TWO
-                sigma_x = eps * fcn
+                fcn(igq)     =  abs( ( x(igq) - (-THREE+thickness) ) / thickness )**TWO
+                sigma_x(igq) = eps * fcn(igq)
             
             else if ( inC ) then
-                fcn     =  abs( ( x - (NINE-thickness) ) / thickness )**TWO
-                sigma_x = eps * fcn
+                fcn(igq)     =  abs( ( x(igq) - (6.2_rk-thickness) ) / thickness )**TWO
+                sigma_x(igq) = eps * fcn(igq)
 
             else
-                sigma_x = ZERO
+                sigma_x(igq) = ZERO
 
             end if
 
@@ -162,18 +200,20 @@ contains
 
 
             if ( inB ) then
-                fcn     =  abs( ( y - ( FIVE-thickness) ) / thickness )**TWO
-                sigma_y = eps * fcn
+                fcn(igq)     =  abs( ( y(igq) - ( 4.6_rk-thickness) ) / thickness )**TWO
+                sigma_y(igq) = eps * fcn(igq)
 
 !            else if ( inD ) then
 !                fcn     =  abs( ( y - (-FIVE+thickness) ) / thickness )**TWO
 !                sigma_y = eps * fcn
 
             else
-                sigma_y = ZERO
+                sigma_y(igq) = ZERO
             end if
 
-            sigma = sigma_x * sigma_y
+
+
+            sigma(igq) = sigma_x(igq) * sigma_y(igq)
 
 
         end do

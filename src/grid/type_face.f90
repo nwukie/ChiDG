@@ -4,8 +4,9 @@ module type_face
     use mod_constants,          only: XI_MIN, XI_MAX, ETA_MIN, ETA_MAX,                 &
                                       ZETA_MIN, ZETA_MAX, XI_DIR, ETA_DIR, ZETA_DIR,    &
                                       X_DIR, Y_DIR, Z_DIR,                              &
-                                      SPACEDIM, NFACES, TWO, NO_INTERIOR_NEIGHBOR,      &
-                                      ZERO, ONE
+                                      TWO_DIM, THREE_DIM,                               &
+                                      NFACES, NO_INTERIOR_NEIGHBOR,                     &
+                                      ZERO, ONE, TWO
 
     use type_point,             only: point_t
     use type_element,           only: element_t
@@ -27,6 +28,7 @@ module type_face
     !!
     !-------------------------------------------------------------------------------------------------------------
     type, public :: face_t
+        integer(ik)                  :: spacedim            !< Number of spatial dimensions
         integer(ik)                  :: neqns
         integer(ik)                  :: nterms_s
         integer(ik)                  :: ftype               !< interior, or boundary condition, or Chimera interface, or Orphan
@@ -136,6 +138,7 @@ contains
         !
         self%iface      = iface
         self%ftype      = ftype
+        self%spacedim   = elem%spacedim
         self%idomain    = elem%idomain
         self%iparent    = elem%ielem
         self%ineighbor  = ineighbor
@@ -276,7 +279,7 @@ contains
 
         
 
-        if ( SPACEDIM == 2 ) then
+        if ( self%spacedim == TWO_DIM ) then
             dzdxi   = ZERO
             dzdeta  = ZERO
             dzdzeta = ONE
@@ -305,12 +308,12 @@ contains
         !
         ! compute inverse cell mapping jacobian terms
         !
-        if ( SPACEDIM == 3 ) then
+        if ( self%spacedim == THREE_DIM ) then
             invjac = dxdxi*dydeta*dzdzeta - dxdeta*dydxi*dzdzeta - &
                      dxdxi*dydzeta*dzdeta + dxdzeta*dydxi*dzdeta + &
                      dxdeta*dydzeta*dzdxi - dxdzeta*dydeta*dzdxi
 
-        else if ( SPACEDIM == 2 ) then
+        else if ( self%spacedim == TWO_DIM ) then
             invjac = dxdxi*dydeta - dxdeta*dydxi
 
         end if
@@ -377,7 +380,7 @@ contains
         !
         ! Compute normal vectors for each face
         !
-        if ( SPACEDIM == 3 ) then
+        if ( self%spacedim == THREE_DIM ) then
 
 
             select case (self%iface)
@@ -409,7 +412,7 @@ contains
                     stop "Error: invalid face index in face initialization"
             end select
 
-        else if ( SPACEDIM == 2 ) then
+        else if ( self%spacedim == TWO_DIM ) then
 
             select case (self%iface)
                 case (XI_MIN, XI_MAX)

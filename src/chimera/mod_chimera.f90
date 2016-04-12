@@ -12,7 +12,7 @@ module mod_chimera
     use mod_constants,          only: NFACES, ORPHAN, CHIMERA, &
                                       X_DIR,  Y_DIR,   Z_DIR, &
                                       XI_DIR, ETA_DIR, ZETA_DIR, &
-                                      ONE, ZERO, SPACEDIM
+                                      ONE, ZERO, TWO_DIM, THREE_DIM
 
     use type_mesh,              only: mesh_t
     use type_point,             only: point_t
@@ -402,7 +402,7 @@ contains
         type(point_t),              intent(inout)   :: donor_coordinate
 
 
-        integer(ik)             :: idom, ielem, inewton
+        integer(ik)             :: idom, ielem, inewton, spacedim
         integer(ik)             :: icandidate, ncandidates, idonor, ndonors
         real(rk)                :: xgq, ygq, zgq
         real(rk)                :: xi,  eta, zeta
@@ -469,8 +469,8 @@ contains
                 xmax = xmax + 0.1*dx
                 ymin = ymin - 0.1*dy
                 ymax = ymax + 0.1*dy
-                zmin = (zmin-0.001) - 0.1*dz
-                zmax = (zmax+0.001) + 0.1*dz
+                zmin = (zmin-0.001) - 0.1*dz    ! This is to help 2D
+                zmax = (zmax+0.001) + 0.1*dz    ! This is to help 2D
 
                 !
                 ! Test if gq_node is contained within the bounding coordinates
@@ -518,6 +518,8 @@ contains
 
             idom  = candidate_domains%at(icandidate)
             ielem = candidate_elements%at(icandidate)
+            spacedim = mesh(idom)%spacedim
+
 
             !
             ! Newton iteration to find the donor local coordinates
@@ -548,7 +550,7 @@ contains
                 !
                 ! Assemble coordinate jacobian matrix
                 !
-                if ( SPACEDIM == 3 ) then
+                if ( spacedim == THREE_DIM ) then
                     mat(1,1) = metric_point(mesh(idom)%elems(ielem),X_DIR,XI_DIR,  xi,eta,zeta)
                     mat(2,1) = metric_point(mesh(idom)%elems(ielem),Y_DIR,XI_DIR,  xi,eta,zeta)
                     mat(3,1) = metric_point(mesh(idom)%elems(ielem),Z_DIR,XI_DIR,  xi,eta,zeta)
@@ -559,7 +561,7 @@ contains
                     mat(2,3) = metric_point(mesh(idom)%elems(ielem),Y_DIR,ZETA_DIR,xi,eta,zeta)
                     mat(3,3) = metric_point(mesh(idom)%elems(ielem),Z_DIR,ZETA_DIR,xi,eta,zeta)
 
-                else if ( SPACEDIM == 2 ) then
+                else if ( spacedim == TWO_DIM ) then
                     mat(1,1) = metric_point(mesh(idom)%elems(ielem),X_DIR,XI_DIR,  xi,eta,zeta)
                     mat(2,1) = metric_point(mesh(idom)%elems(ielem),Y_DIR,XI_DIR,  xi,eta,zeta)
                     mat(3,1) = metric_point(mesh(idom)%elems(ielem),Z_DIR,XI_DIR,  xi,eta,zeta)
@@ -695,7 +697,7 @@ contains
         type(mesh_t),   intent(inout)   :: mesh(:)
 
         integer(ik) :: idom, iChiID, idonor, idom_d, ielem_d, ierr, ipt, iterm
-        integer(ik) :: npts, nterms_s, nterms
+        integer(ik) :: npts, nterms_s, nterms, spacedim
 
         type(point_t)           :: node
         real(rk), allocatable   :: interpolator(:,:)
@@ -707,6 +709,7 @@ contains
         !
         do idom = 1,size(mesh)
 
+            spacedim = mesh(idom)%spacedim
 
             !
             ! Loop over each chimera face
@@ -745,9 +748,9 @@ contains
                         do ipt = 1,npts
                             node = mesh(idom)%chimera%recv%data(iChiID)%donor_coords(idonor)%at(ipt)
 
-                            if ( SPACEDIM == 3 ) then
+                            if ( spacedim == THREE_DIM ) then
                                 interpolator(ipt,iterm) = polynomialVal(3,nterms,iterm,node)
-                            else if ( SPACEDIM == 2 ) then
+                            else if ( spacedim == TWO_DIM ) then
                                 interpolator(ipt,iterm) = polynomialVal(2,nterms,iterm,node)
                             end if
 

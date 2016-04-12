@@ -1,14 +1,15 @@
 module type_element
 #include <messenger.h>
     use mod_kinds,              only: rk,ik
-    use mod_constants,          only: SPACEDIM,NFACES,XI_MIN,XI_MAX,ETA_MIN, &
-                                      ETA_MAX,ZETA_MIN,ZETA_MAX,ONE,ZERO, ZETA_DIR
+    use mod_constants,          only: NFACES,XI_MIN,XI_MAX,ETA_MIN, &
+                                      ETA_MAX,ZETA_MIN,ZETA_MAX,ONE,ZERO, ZETA_DIR, TWO_DIM, THREE_DIM
     use type_point,             only: point_t
     use type_densevector,       only: densevector_t
     use type_quadrature,        only: quadrature_t
     use DNAD_D
     use mod_quadrature,         only: GQ, get_quadrature
-    use mod_grid,               only: ELEM_MAP
+    !use mod_grid,               only: ELEM_MAP
+    use mod_grid,               only: get_element_mapping
     use mod_polynomial,         only: polynomialVal, dpolynomialVal
     use mod_grid_tools,         only: compute_modal_coordinates
     use mod_inv,                only: inv
@@ -26,11 +27,12 @@ module type_element
     !!
     !------------------------------------------------------------------------------------------------------------
     type, public :: element_t
-        integer(ik)      :: neqns                           !< Number of equations being solved
-        integer(ik)      :: nterms_s                        !< Number of terms in solution expansion.  
-        integer(ik)      :: nterms_c                        !< Number of terms in coordinate expansion. 
-        integer(ik)      :: idomain                         !< Processor-local domain index
-        integer(ik)      :: ielem                           !< Block-local element index. Consider the block could have been split
+        integer(ik)     :: spacedim                         !< Number of spatial dimensions for the element
+        integer(ik)     :: neqns                            !< Number of equations being solved
+        integer(ik)     :: nterms_s                         !< Number of terms in solution expansion.  
+        integer(ik)     :: nterms_c                         !< Number of terms in coordinate expansion. 
+        integer(ik)     :: idomain                          !< Processor-local domain index
+        integer(ik)     :: ielem                            !< Block-local element index. Consider the block could have been split
                                                             !< for parallelization.
 
         integer(ik)      :: ielem_bg                        !< Block-global element index. The index an element would have if
@@ -122,35 +124,49 @@ contains
     !!  @param[in] points       Array of cartesian points defining the element
     !!
     !---------------------------------------------------------------------------------------
-    subroutine init_geom(self,mapping,points,idomain,ielem)
-        class(element_t),   intent(inout) :: self
-        integer(ik),        intent(in)    :: mapping
-        type(point_t),      intent(in)    :: points(:)
-        integer(ik),        intent(in)    :: idomain
-        integer(ik),        intent(in)    :: ielem
+    subroutine init_geom(self,spacedim,mapping,points,idomain,ielem)
+        class(element_t),   intent(inout)   :: self
+        integer(ik),        intent(in)      :: spacedim
+        integer(ik),        intent(in)      :: mapping
+        type(point_t),      intent(in)      :: points(:)
+        integer(ik),        intent(in)      :: idomain
+        integer(ik),        intent(in)      :: ielem
 
         type(point_t)                       :: pnt
         integer(ik)                         :: ierr, nterms_c, ipt
-        real(rk), dimension(:,:), pointer   :: imap => null()
+!        real(rk), dimension(:,:), pointer   :: imap => null()
+        real(rk), allocatable   :: element_mapping(:,:)
 
         if (self%geomInitialized) call chidg_signal(FATAL,'element%init_geom -- element already initialized')
 
 
 
+!        !
+!        ! Check if the element mappings are initialized. If so, then get a pointer to the correct mapping 
+!        ! and set number of coordinate expansion terms
+!        !
+!        if (allocated(elem_map(mapping)%mat)) then
+!!            imap            => elem_map(mapping)%mat
+!            nterms_c        = size(elem_map(mapping)%mat,1) ! Get nterms of coordinate expansion from size of mapping matrix
+!            self%nterms_c   = nterms_c                      ! Set number of terms in coordinate expansion
+!
+!
+!            if (nterms_c /= size(points)) call chidg_signal(FATAL,'element%init_geom -- mapping and points do not match')
+!        else
+!            call chidg_signal(FATAL,"element%init_geom -- element mapping not initialized. Probably need to call 'init' on chidg environment")
+!        end if
+!
+
         !
-        ! Check if the element mappings are initialized. If so, then get a pointer to the correct mapping 
-        ! and set number of coordinate expansion terms
+        ! Get index for element mapping
         !
-        if (allocated(elem_map(mapping)%mat)) then
-            imap            => elem_map(mapping)%mat
-            nterms_c        = size(elem_map(mapping)%mat,1) ! Get nterms of coordinate expansion from size of mapping matrix
-            self%nterms_c   = nterms_c                      ! Set number of terms in coordinate expansion
+        element_mapping = get_element_mapping(spacedim,mapping)
+        nterms_c = size(element_mapping,1)
+        self%nterms_c = nterms_c
+        if (nterms_c /= size(points)) call chidg_signal(FATAL,'element%init_geom -- mapping and points do not match')
 
 
-            if (nterms_c /= size(points)) call chidg_signal(FATAL,'element%init_geom -- mapping and points do not match')
-        else
-            call chidg_signal(FATAL,"element%init_geom -- element mapping not initialized. Probably need to call 'init' on chidg environment")
-        end if
+
 
 
 
@@ -160,6 +176,7 @@ contains
         allocate(self%elem_pts(nterms_c),stat=ierr)
         !call self%coords%init(nterms_c,SPACEDIM,ielem)
         call self%coords%init(nterms_c,3,ielem)
+        self%spacedim = spacedim
         self%idomain  = idomain
         self%ielem    = ielem
         self%elem_pts = points
@@ -168,7 +185,8 @@ contains
         !
         ! Compute mesh x,y,z modes
         !
-        call compute_modal_coordinates(self%elem_pts,mapping,self%coords)
+        !call compute_modal_coordinates(self%elem_pts,mapping,self%coords)
+        call compute_modal_coordinates(spacedim,self%elem_pts,mapping,self%coords)
 
 
 
@@ -273,10 +291,11 @@ contains
         use mod_quadrature,     only: compute_nnodes_gq
         class(element_t),   intent(inout)   :: self
 
-        integer(ik) :: nterms_s,nterms_c
+        integer(ik) :: nterms_s,nterms_c,spacedim
         integer(ik) :: nnodes_face, nnodes_vol, igq, igq_s, igq_f
         logical     :: has_correct_nodes_terms
 
+        spacedim = self%spacedim
         nterms_s = self%nterms_s
         nterms_c = self%nterms_c
 
@@ -287,20 +306,20 @@ contains
         !
         ! Get number of quadrature nodes
         !
-        call compute_nnodes_gq(nterms_s,nterms_c,nnodes_face,nnodes_vol)
+        call compute_nnodes_gq(spacedim,nterms_s,nterms_c,nnodes_face,nnodes_vol)
 
 
         !
         ! Get solution quadrature instance
         !
-        call get_quadrature(nterms_s,nnodes_vol,nnodes_face,igq_s)
+        call get_quadrature(spacedim,nterms_s,nnodes_vol,nnodes_face,igq_s)
         self%gq => GQ(igq_s)
 
 
         !
         ! Get coordinate quadrature instance
         !
-        call get_quadrature(nterms_c,nnodes_vol,nnodes_face,igq_f)
+        call get_quadrature(spacedim,nterms_c,nnodes_vol,nnodes_face,igq_f)
         self%gqmesh => GQ(igq_f)
 
 
@@ -355,7 +374,7 @@ contains
 
 
 
-        if ( SPACEDIM == 2 ) then
+        if ( self%spacedim == TWO_DIM ) then
             dzdxi   = ZERO
             dzdeta  = ZERO
             dzdzeta = ONE
@@ -389,12 +408,12 @@ contains
         !
         ! Compute inverse cell mapping jacobian
         !
-        if ( SPACEDIM == 3 ) then
+        if ( self%spacedim == THREE_DIM ) then
             self%jinv = dxdxi*dydeta*dzdzeta - dxdeta*dydxi*dzdzeta - &
                         dxdxi*dydzeta*dzdeta + dxdzeta*dydxi*dzdeta + &
                         dxdeta*dydzeta*dzdxi - dxdzeta*dydeta*dzdxi
 
-        else if ( SPACEDIM == 2 ) then
+        else if ( self%spacedim == TWO_DIM ) then
             self%jinv = dxdxi*dydeta - dxdeta*dydxi
 
         else
@@ -627,9 +646,9 @@ contains
         !
         do iterm = 1,self%nterms_c
 
-            if ( SPACEDIM == 3 ) then
+            if ( self%spacedim == THREE_DIM ) then
                 polyvals(iterm)  = polynomialVal(3,self%nterms_c,iterm,node)
-            else if ( SPACEDIM == 2 ) then
+            else if ( self%spacedim == TWO_DIM ) then
                 polyvals(iterm)  = polynomialVal(2,self%nterms_c,iterm,node)
             end if
 
@@ -674,9 +693,9 @@ contains
         !
         do iterm = 1,self%nterms_c
 
-            if ( SPACEDIM == 3 ) then
+            if ( self%spacedim == THREE_DIM ) then
                 polyvals(iterm)  = polynomialVal(3,self%nterms_c,iterm,node)
-            else if ( SPACEDIM == 2 ) then
+            else if ( self%spacedim == TWO_DIM ) then
                 polyvals(iterm)  = polynomialVal(2,self%nterms_c,iterm,node)
             end if
 
@@ -720,9 +739,9 @@ contains
         !
         do iterm = 1,self%nterms_c
 
-            if ( SPACEDIM == 3 ) then
+            if ( self%spacedim == THREE_DIM ) then
                 polyvals(iterm)  = polynomialVal(3,self%nterms_c,iterm,node)
-            else if ( SPACEDIM == 2 ) then
+            else if ( self%spacedim == TWO_DIM ) then
                 polyvals(iterm)  = polynomialVal(2,self%nterms_c,iterm,node)
             end if
 
@@ -780,12 +799,12 @@ contains
         !
         do iterm = 1,self%nterms_c
 
-            if ( SPACEDIM == 3 ) then
+            if ( self%spacedim == THREE_DIM ) then
 
                 polyvals(iterm) = dpolynomialVal(3,self%nterms_c,iterm,node,comp_dir)
 
 
-            else if ( SPACEDIM == 2 ) then
+            else if ( self%spacedim == TWO_DIM ) then
 
                 if ( comp_dir == ZETA_DIR ) then
                     polyvals(iterm) = ZERO

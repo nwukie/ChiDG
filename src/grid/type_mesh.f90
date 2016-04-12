@@ -1,7 +1,7 @@
 module type_mesh
     use mod_kinds,          only: rk,ik
     use mod_constants,      only: NFACES,XI_MIN,XI_MAX,ETA_MIN,ETA_MAX,ZETA_MIN,ZETA_MAX, &
-                                  ORPHAN, INTERIOR, BOUNDARY, CHIMERA, SPACEDIM
+                                  ORPHAN, INTERIOR, BOUNDARY, CHIMERA, TWO_DIM, THREE_DIM
 
     use type_element,       only: element_t
     use type_face,          only: face_t
@@ -26,6 +26,7 @@ module type_mesh
         !
         ! Integer parameters
         !
+        integer(ik)                     :: spacedim   = 0               !< Number of spatial dimensions
         integer(ik)                     :: neqns      = 0               !< Number of equations being solved
         integer(ik)                     :: nterms_s   = 0               !< Number of terms in the solution expansion
         integer(ik)                     :: nterms_c   = 0               !< Number of terms in the grid coordinate expansion
@@ -89,9 +90,10 @@ contains
     !!  @param[in]  points_g    Rank-3 matrix of coordinate points defining a block mesh
     !!
     !------------------------------------------------------------------------------------------------------------
-    subroutine init_geom(self,idomain,nterms_c,points_g)
+    subroutine init_geom(self,idomain,spacedim,nterms_c,points_g)
         class(mesh_t),  intent(inout), target   :: self
         integer(ik),    intent(in)              :: idomain
+        integer(ik),    intent(in)              :: spacedim
         integer(ik),    intent(in)              :: nterms_c
         type(point_t),  intent(in)              :: points_g(:,:,:)
         type(element_t), pointer                :: temp(:)
@@ -100,6 +102,7 @@ contains
         !
         ! Store number of terms in coordinate expansion and domain index
         !
+        self%spacedim = spacedim
         self%nterms_c = nterms_c
         self%idomain  = idomain
 
@@ -107,7 +110,7 @@ contains
         !
         ! Call geometry initialization for elements and faces
         !
-        call self%init_elems_geom(points_g)
+        call self%init_elems_geom(spacedim,points_g)
         call self%init_faces_geom()
 
 
@@ -157,9 +160,7 @@ contains
         !
         ! Call numerics initialization for elements and faces
         !
-        print*, 'mesh%init_elems_sol'
         call self%init_elems_sol(neqns,nterms_s) 
-        print*, 'mesh%init_faces_sol'
         call self%init_faces_sol()               
 
         
@@ -194,9 +195,13 @@ contains
     !!  @param[in]  points_g    Rank-3 matrix of coordinate points defining a block mesh
     !!
     !------------------------------------------------------------------------------------------------------------
-    subroutine init_elems_geom(self,points_g)
+    !subroutine init_elems_geom(self,points_g)
+    subroutine init_elems_geom(self,spacedim,points_g)
         class(mesh_t),  intent(inout)   :: self
+        integer(ik),    intent(in)      :: spacedim
         type(point_t),  intent(in)      :: points_g(:,:,:)
+
+
         type(point_t),  allocatable     :: points_l(:)
 
         integer(ik)                ::   ierr,     ipt,       ielem,             &
@@ -222,12 +227,12 @@ contains
         !
         npts_1d = 0
         
-        if ( SPACEDIM == 3 ) then
+        if ( spacedim == THREE_DIM ) then
             do while (npts_1d*npts_1d*npts_1d < self%nterms_c)
                 npts_1d = npts_1d + 1       ! really just computing the cubed root of nterms_c, the number of terms in the coordinate expansion
             end do
 
-        else if ( SPACEDIM == 2 ) then
+        else if ( spacedim == TWO_DIM ) then
             do while (npts_1d*npts_1d < self%nterms_c)
                 npts_1d = npts_1d + 1       ! really just computing the cubed root of nterms_c, the number of terms in the coordinate expansion
             end do
@@ -304,7 +309,7 @@ contains
                     !
                     ipt = 1
 
-                    if ( SPACEDIM == 3 ) then
+                    if ( spacedim == THREE_DIM ) then
                         do ipt_zeta = 1,npts_1d
                             do ipt_eta = 1,npts_1d
                                 do ipt_xi = 1,npts_1d
@@ -314,7 +319,7 @@ contains
                             end do
                         end do
 
-                    else if ( SPACEDIM == 2 ) then
+                    else if ( spacedim == TWO_DIM ) then
                         do ipt_eta = 1,npts_1d
                             do ipt_xi = 1,npts_1d
                                 points_l(ipt) = points_g(xi_start+(ipt_xi-1),eta_start+(ipt_eta-1), 1 )
@@ -328,7 +333,8 @@ contains
                     !
                     ! Element geometry initialization
                     !
-                    call self%elems(ielem)%init_geom(mapping,points_l,idomain,ielem)
+                    !call self%elems(ielem)%init_geom(mapping,points_l,idomain,ielem)
+                    call self%elems(ielem)%init_geom(spacedim,mapping,points_l,idomain,ielem)
                     ielem = ielem + 1
                 end do
             end do
@@ -372,7 +378,6 @@ contains
         ! Call the numerics initialization procedure for each element
         !
         do ielem = 1,self%nelem
-            print*, 'mesh%init_elems_sol', self%neqns, self%nterms_s
             call self%elems(ielem)%init_sol(self%neqns,self%nterms_s)
         end do
 

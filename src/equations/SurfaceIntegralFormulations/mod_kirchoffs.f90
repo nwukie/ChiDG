@@ -32,7 +32,7 @@ contains
         complex(rk),    dimension(:),   allocatable :: pressures
         type(point_t),  dimension(:),   allocatable :: points
 
-        nterms_s = 4*4*4
+        nterms_s = 5*5*5
 
         !
         ! Initialize ChiDG environment
@@ -43,7 +43,7 @@ contains
         !
         ! Read grid data from file
         !
-        call chidg%read_grid(chidg_file)
+        call chidg%read_grid(chidg_file,3)
 
 
         !
@@ -76,13 +76,14 @@ contains
 
         print*, chidg%data%eqnset(1)%item%name
 
-        res       = 2000
+        res       = 4000
 
         allocate(theta(res), points(res), stat=ierr)
         if ( ierr /= 0 ) call AllocationError
 
         theta_min = ZERO
-        theta_max = 120._rk*PI/180._rk
+        !theta_max = 120._rk*PI/180._rk
+        theta_max = PI/TWO
 
         r        = 46._rk
         theta    = ZERO

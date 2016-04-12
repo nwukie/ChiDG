@@ -255,11 +255,15 @@ contains
     !!  @date   2/1/2016
     !!
     !!  @param[in]  gridfile    String containing a grid file name, including extension.
+    !!  @param[in]  spacedim    Number of spatial dimensions
+    !!
+    !!  TODO: Generalize spacedim
     !!
     !----------------------------------------------------------------------------------------------
-    subroutine read_grid(self,gridfile)
+    subroutine read_grid(self,gridfile,spacedim)
         class(chidg_t),     intent(inout)   :: self
         character(*),       intent(in)      :: gridfile
+        integer(ik),        intent(in)      :: spacedim
 
         character(len=5),   dimension(1)    :: extensions
         character(len=:),   allocatable     :: extension
@@ -300,6 +304,7 @@ contains
             call self%data%add_domain(                              &
                                       trim(meshdata(idom)%name),    &
                                       meshdata(idom)%points,        &
+                                      spacedim,                     &
                                       meshdata(idom)%nterms_c,      &
                                       meshdata(idom)%eqnset         &
                                       )

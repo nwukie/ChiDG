@@ -1,7 +1,7 @@
 module mod_grid
 #include <messenger.h>
     use mod_kinds,          only: rk,ik
-    use mod_constants,      only: ONE, TWO, ZERO, SPACEDIM
+    use mod_constants,      only: ONE, TWO, ZERO, TWO_DIM, THREE_DIM
     use mod_polynomial,     only: polynomialVal
     use type_densematrix,   only: densematrix_t
     use mod_inv
@@ -11,7 +11,9 @@ module mod_grid
     ! coordinate mapping matrices
     !
     integer(ik),         parameter      :: nmap = 4
-    type(densematrix_t), save,  target  :: ELEM_MAP(nmap)  !< array of matrices
+    !type(densematrix_t), save,  target  :: ELEM_MAP(nmap)  !< array of matrices
+    type(densematrix_t), save,  target  :: ELEM_MAP_2D(nmap)  !< array of matrices
+    type(densematrix_t), save,  target  :: ELEM_MAP_3D(nmap)  !< array of matrices
 
     logical :: uninitialized = .true.
 
@@ -32,7 +34,8 @@ contains
     subroutine initialize_grid()
 
         if (uninitialized) then
-            call compute_element_mappings()
+            call compute_element_mappings(TWO_DIM)
+            call compute_element_mappings(THREE_DIM)
         end if
 
         uninitialized = .false.
@@ -53,9 +56,14 @@ contains
     !!  @author Nathan A. Wukie
     !!  @date   2/1/2016
     !!
+    !!  TODO: TEST
+    !!  TODO: Generalize better for spatial dimension
+    !!
+    !!
     !---------------------------------------------------------------------------------------------------
-    subroutine compute_element_mappings()
+    subroutine compute_element_mappings(spacedim)
         use type_point, only: point_t
+        integer(ik),    intent(in)  :: spacedim
 
         type(point_t),  allocatable :: nodes(:)
         real(rk),       allocatable :: xi(:),eta(:),zeta(:)
@@ -80,10 +88,10 @@ contains
             !
             ! Initialize mapping for reference element.
             !
-            if ( SPACEDIM == 3 ) then
-                call elem_map(imap)%init(npts_3d(imap),npts_3d(imap),0)
-            else if ( SPACEDIM == 2 ) then
-                call elem_map(imap)%init(npts_2d(imap),npts_2d(imap),0)
+            if ( spacedim == THREE_DIM ) then
+                call ELEM_MAP_3D(imap)%init(npts_3d(imap),npts_3d(imap),0)
+            else if ( spacedim == TWO_DIM ) then
+                call ELEM_MAP_2D(imap)%init(npts_2d(imap),npts_2d(imap),0)
             end if
 
 
@@ -91,14 +99,14 @@ contains
             !
             ! Allocate storage for nodes and coordinates.
             !
-            if ( SPACEDIM == 3 ) then
+            if ( spacedim == THREE_DIM ) then
                 allocate(nodes(npts_3d(imap)),  &
                          xi(npts_1d(imap)),     &
                          eta(npts_1d(imap)),    &
                          zeta(npts_1d(imap)), stat=ierr)
                 if (ierr /= 0) call AllocationError
 
-            else if ( SPACEDIM == 2 ) then
+            else if ( spacedim == TWO_DIM ) then
                 allocate(nodes(npts_2d(imap)),  &
                          xi(npts_1d(imap)),     &
                          eta(npts_1d(imap)),    &
@@ -122,7 +130,7 @@ contains
             ! Set up reference mesh nodes in each direction
             !
             inode = 1
-            if ( SPACEDIM == 3 ) then
+            if ( spacedim == THREE_DIM ) then
 
                 do izeta = 1,npts_1d(imap)
                     do ieta = 1,npts_1d(imap)
@@ -133,7 +141,7 @@ contains
                     end do
                 end do
 
-            else if ( SPACEDIM == 2 ) then
+            else if ( spacedim == TWO_DIM ) then
 
                 do ieta = 1,npts_1d(imap)
                     do ixi = 1,npts_1d(imap)
@@ -143,7 +151,7 @@ contains
                 end do
 
             else
-                call chidg_signal(FATAL,"mod_grid::compute_elements_mappings - Invalid SPACEDIM")
+                call chidg_signal(FATAL,"mod_grid::compute_elements_mappings - Invalid spacedim")
 
             end if
 
@@ -151,17 +159,17 @@ contains
             !
             ! Compute the values of each mapping term at each mesh point
             !
-            if ( SPACEDIM == 3 ) then
+            if ( spacedim == THREE_DIM ) then
                 do iterm = 1,npts_3d(imap)
                     do inode = 1,npts_3d(imap)
-                        ELEM_MAP(imap)%mat(inode,iterm) = polynomialVal(3,npts_3d(imap),iterm,nodes(inode))
+                        ELEM_MAP_3D(imap)%mat(inode,iterm) = polynomialVal(3,npts_3d(imap),iterm,nodes(inode))
                     end do
                 end do
 
-            else if ( SPACEDIM == 2 ) then
+            else if ( spacedim == TWO_DIM ) then
                 do iterm = 1,npts_2d(imap)
                     do inode = 1,npts_2d(imap)
-                        ELEM_MAP(imap)%mat(inode,iterm) = polynomialVal(2,npts_2d(imap),iterm,nodes(inode))
+                        ELEM_MAP_2D(imap)%mat(inode,iterm) = polynomialVal(2,npts_2d(imap),iterm,nodes(inode))
                     end do
                 end do
 
@@ -172,7 +180,11 @@ contains
             ! Invert matrix so that it can multiply a vector of
             ! element points to compute the mode amplitudes of the x,y mappings
             !
-            elem_map(imap)%mat = inv(ELEM_MAP(imap)%mat)
+            if ( spacedim == THREE_DIM ) then
+                ELEM_MAP_3D(imap)%mat = inv(ELEM_MAP_3D(imap)%mat)
+            else if ( spacedim == TWO_DIM ) then
+                ELEM_MAP_2D(imap)%mat = inv(ELEM_MAP_2D(imap)%mat)
+            end if
 
 
             !
@@ -188,6 +200,42 @@ contains
 
 
 
+
+
+
+
+
+
+
+    !>  Return a matrix to compute the coordinate expansion.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   4/11/2016
+    !!
+    !!
+    !!
+    !----------------------------------------------------------------------------------------------------------
+    function get_element_mapping(spacedim,imap) result(matrix)
+        integer(ik),    intent(in) :: spacedim
+        integer(ik),    intent(in) :: imap
+
+        real(rk),   allocatable :: matrix(:,:)
+
+        if ( allocated(ELEM_MAP_2D(imap)%mat) .and. allocated(ELEM_MAP_3D(imap)%mat) ) then
+
+
+            if ( spacedim == TWO_DIM ) then
+                matrix = ELEM_MAP_2D(imap)%mat
+            else if ( spacedim == THREE_DIM ) then
+                matrix = ELEM_MAP_3D(imap)%mat
+            end if
+
+        else
+            call chidg_signal(FATAL,"get_element_mapping: element mappings are not allocated. Probably need to call chidg%init('env')")
+        end if
+
+    end function get_element_mapping
+    !**********************************************************************************************************
 
 
 

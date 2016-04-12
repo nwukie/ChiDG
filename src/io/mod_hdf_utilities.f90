@@ -1,7 +1,7 @@
 module mod_hdf_utilities
 #include <messenger.h>
     use mod_kinds,              only: rk, ik
-    use mod_constants,          only: NFACES, SPACEDIM
+    use mod_constants,          only: NFACES, TWO_DIM, THREE_DIM
     use type_file_properties,   only: file_properties_t
     use hdf5
     use h5lt
@@ -31,8 +31,8 @@ contains
         character(*),   intent(in)  :: filename
 
         integer(HID_T)              :: fid
-        integer(ik)                 :: ierr
-        integer(ik), allocatable    :: nterms_1d(:)
+        integer(ik)                 :: ierr, idom
+        integer(ik)                 :: nterms_1d
         logical                     :: fileexists = .false.
 
         type(file_properties_t)     :: prop
@@ -67,6 +67,7 @@ contains
         ! Get number of domains
         !
         prop%ndomains = get_ndomains_hdf(fid)
+        call prop%set_ndomains(prop%ndomains)
 
 
         !
@@ -96,27 +97,45 @@ contains
 
 
         !
-        ! Compute number of terms in the polynomial expansions
+        ! Get number of spatial dimensions
         !
-        nterms_1d = (prop%order_c + 1)
+        print*, 'get_properties_hdf - 1'
+        prop%spacedim = get_spacedim_hdf(fid,prop%domain_names)
 
-        if ( SPACEDIM == 3 ) then
-            prop%nterms_c = nterms_1d * nterms_1d * nterms_1d
-        else if ( SPACEDIM == 2 ) then
-            prop%nterms_c = nterms_1d * nterms_1d
-        end if
+        print*, allocated(prop%spacedim)
 
-
-        nterms_1d = (prop%order_s + 1)
-
-        if ( SPACEDIM == 3 ) then
-            prop%nterms_s = nterms_1d * nterms_1d * nterms_1d
-        else if ( SPACEDIM == 2 ) then
-            prop%nterms_s = nterms_1d * nterms_1d
-        end if
+        print*, 'get_properties_hdf - 2'
 
 
+        !
+        ! Compute number of terms in the polynomial expansions for each domain
+        !
+        do idom = 1,prop%ndomains
+            nterms_1d = (prop%order_c(idom) + 1)
 
+            
+            print*, 'get_properties_hdf - 3'
+            print*, idom, prop%spacedim(idom)
+            if ( prop%spacedim(idom) == THREE_DIM ) then
+                prop%nterms_c(idom) = nterms_1d * nterms_1d * nterms_1d
+            else if ( prop%spacedim(idom) == TWO_DIM ) then
+                prop%nterms_c(idom) = nterms_1d * nterms_1d
+            end if
+
+
+            print*, 'get_properties_hdf - 4'
+            nterms_1d = (prop%order_s(idom) + 1)
+
+            if ( prop%spacedim(idom) == THREE_DIM ) then
+                prop%nterms_s(idom) = nterms_1d * nterms_1d * nterms_1d
+            else if ( prop%spacedim(idom) == TWO_DIM ) then
+                prop%nterms_s(idom) = nterms_1d * nterms_1d
+            end if
+
+        end do ! idom
+
+
+        print*, 'get_properties_hdf - 5'
         !
         ! Get equation set for each domain
         !
@@ -662,6 +681,81 @@ contains
 
     end function get_order_solution_hdf
     !*************************************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    !>  Returns an array of integers that specifies the number of spatial dimensions to use for every domain.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   4/11/2016
+    !!
+    !!  @param[in]  fid         HDF file identifier.
+    !!  @param[in]  dnames(:)   List of domain names to be interrogated. 
+    !!
+    !-------------------------------------------------------------------------------------------------------------
+    function get_spacedim_hdf(fid, dnames) result(spacedims)
+        integer(HID_T),         intent(in)  :: fid
+        character(len=1024),    intent(in)  :: dnames(:)
+
+        integer(ik), allocatable    :: spacedims(:)
+        integer                     :: ierr, idom, spacedim
+        integer, dimension(1)       :: buf
+
+
+        !
+        ! Allocate storage for orders
+        !
+        allocate(spacedims(size(dnames)), stat=ierr)
+        if (ierr /= 0) call AllocationError
+
+        !
+        !  Loop through groups and read domains
+        !
+        do idom = 1,size(dnames)
+
+            !
+            !  Get coordinate mapping
+            !
+            call h5ltget_attribute_int_f(fid, trim(dnames(idom)), 'spacedim', buf, ierr)
+            if (ierr /= 0) stop "Error: get_spacedim_hdf - h5ltget_attribute_int_f"
+
+
+            !
+            ! Compute number of terms in coordinate expansion
+            !
+            spacedim = buf(1)
+
+            spacedims(idom) = int(spacedim, kind=ik)
+
+        end do
+
+    end function get_spacedim_hdf
+    !*************************************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

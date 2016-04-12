@@ -9,7 +9,7 @@ module mod_io
 #include <messenger.h>
     !!          Module Includes             !!
     use mod_kinds,     only: rk,ik
-    use mod_constants, only: MAXBLOCKS, SPACEDIM
+    use mod_constants, only: MAXBLOCKS, TWO_DIM, THREE_DIM
 
     !!          Variable Declarations       !!
     implicit none
@@ -32,6 +32,7 @@ module mod_io
     !--------------------------------------------------
     character(len=100),  save    :: basis = 'legendre'
     integer(ik),         save    :: solution_order  = 1
+    integer(ik),         save    :: spacedim        = 3
 
  
 
@@ -128,7 +129,8 @@ contains
                                             solutionfile_out
 
         namelist /space/                    basis,                 &
-                                            solution_order
+                                            solution_order,        &
+                                            spacedim
 
         namelist /quadrature/               gq_rule
 
@@ -179,12 +181,12 @@ contains
         !
         nterms_sol1d = (solution_order)
 
-        if ( SPACEDIM == 3 ) then
+        if ( spacedim == THREE_DIM ) then
             nterms_s = nterms_sol1d * nterms_sol1d * nterms_sol1d
-        else if ( SPACEDIM == 2 ) then
+        else if ( spacedim == TWO_DIM ) then
             nterms_s = nterms_sol1d * nterms_sol1d
         else
-            call chidg_signal(FATAL,"mod_io: Invalid SPACEDIM")
+            call chidg_signal(FATAL,"mod_io: Invalid spacedim")
         end if
 
 

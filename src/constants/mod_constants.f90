@@ -60,7 +60,10 @@ module mod_constants
     !
     ! Constants for spatial definition
     !
-    integer(ik), parameter :: SPACEDIM  = 3
+!    integer(ik), parameter :: SPACEDIM  = 3
+    integer(ik), parameter :: ONE_DIM   = 1
+    integer(ik), parameter :: TWO_DIM   = 2
+    integer(ik), parameter :: THREE_DIM = 3
     integer(ik), parameter :: NFACES    = 6
 
 

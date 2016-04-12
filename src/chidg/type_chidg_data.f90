@@ -155,10 +155,12 @@ contains
     !!
     !---------------------------------------------------------------------------------------------------------------
     !subroutine add_domain(self,name,points,nterms_c,eqnset,nterms_s)
-    subroutine add_domain(self,name,points,nterms_c,eqnset)
+    !subroutine add_domain(self,name,points,nterms_c,eqnset)
+    subroutine add_domain(self,name,points,spacedim,nterms_c,eqnset)
         class(chidg_data_t),    intent(inout)   :: self
         character(*),           intent(in)      :: name
         type(point_t),          intent(in)      :: points(:,:,:)
+        integer(ik),            intent(in)      :: spacedim
         integer(ik),            intent(in)      :: nterms_c
         character(*),           intent(in)      :: eqnset
         !integer(ik),            intent(in)      :: nterms_s
@@ -213,7 +215,8 @@ contains
         !
         ! Initialize new mesh
         !
-        call temp_mesh(idom)%init_geom(idom,nterms_c,points)
+        !call temp_mesh(idom)%init_geom(idom,nterms_c,points)
+        call temp_mesh(idom)%init_geom(idom,spacedim,nterms_c,points)
 
 
         !

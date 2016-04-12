@@ -1,7 +1,7 @@
 module mod_hdfio
 #include <messenger.h>
     use mod_kinds,          only: rk,ik
-    use mod_constants,      only: ZERO, NFACES, SPACEDIM
+    use mod_constants,      only: ZERO, NFACES, TWO_DIM, THREE_DIM
     use type_meshdata,      only: meshdata_t
     use type_bcdata,        only: bcdata_t
     use type_bc,            only: bc_t
@@ -53,8 +53,8 @@ contains
         character(1024)                         :: gname
         integer                                 :: nmembers, type, ierr, ndomains, igrp,    &
                                                    npts, izeta, ieta, ixi, idom, nterms_1d, &
-                                                   mapping, nterms_c
-        integer, dimension(1)                   :: buf
+                                                   mapping, nterms_c, spacedim
+        integer, dimension(1)                   :: mapping_buf, spacedim_buf
         logical                                 :: FileExists
 
 
@@ -136,21 +136,25 @@ contains
                 !
                 !  Get number of terms in coordinate expansion
                 !
-                call h5ltget_attribute_int_f(fid, trim(gname), 'mapping', buf, ierr)
-
-
-                mapping = buf(1)
+                call h5ltget_attribute_int_f(fid, trim(gname), 'mapping', mapping_buf, ierr)
+                mapping = mapping_buf(1)
                 if (ierr /= 0) stop "Error: read_grid_hdf5 - h5ltget_attribute_int_f"
                 nterms_1d = (mapping + 1)
 
-                if ( SPACEDIM == 3 ) then
+
+                call h5ltget_attribute_int_f(fid, trim(gname), 'spacedim', spacedim_buf, ierr)
+                spacedim = spacedim_buf(1)
+
+
+                if ( spacedim == THREE_DIM ) then
                     nterms_c = nterms_1d * nterms_1d * nterms_1d
-                else if ( SPACEDIM == 2 ) then
+                else if ( spacedim == TWO_DIM ) then
                     nterms_c = nterms_1d * nterms_1d
                 end if
 
                 meshdata(idom)%nterms_c = nterms_c
                 meshdata(idom)%name     = gname
+                meshdata(idom)%spacedim = spacedim
 
 
                 !
@@ -306,6 +310,7 @@ contains
         real(rk), allocatable           :: bufferterms(:)
         type(c_ptr)                     :: cp_var
 
+        integer(ik)                     :: spacedim
         integer                         :: type,    ierr,       igrp,               &
                                            npts,    nterms_1d,  nterms_s,   order,  &
                                            ivar,    ielem,      nterms_ielem,   idom
@@ -337,9 +342,13 @@ contains
         if (ierr /= 0) call chidg_signal(FATAL,"read_variable_hdf5 - h5ltget_attribute_int_f")
         nterms_1d = (order + 1) ! To be consistent with the definition of (Order = 'Order of the polynomial')
 
-        if ( SPACEDIM == 3 ) then
+
+
+        spacedim = data%mesh(idom)%spacedim
+
+        if ( spacedim == THREE_DIM ) then
             nterms_s = nterms_1d*nterms_1d*nterms_1d
-        else if ( SPACEDIM == 2 ) then
+        else if ( spacedim == TWO_DIM ) then
             nterms_s = nterms_1d*nterms_1d
         end if
 
@@ -793,7 +802,7 @@ contains
         integer(HID_T)                  :: fid
         integer(HSIZE_T)                :: adim
         integer(ik)                     :: idom, ndomains
-        integer(ik)                     :: ieqn, neqns
+        integer(ik)                     :: ieqn, neqns, spacedim
         integer(ik)                     :: time
         character(len=:),   allocatable :: cvar
         character(len=:),   allocatable :: dname
@@ -852,15 +861,16 @@ contains
             !
             adim = 1
             order_s = 0
+            spacedim = data%mesh(idom)%spacedim
 
-            if ( SPACEDIM == 3 ) then
+            if ( spacedim == THREE_DIM ) then
 
                 do while ( order_s*order_s*order_s /= data%mesh(idom)%nterms_s )
                    order_s = order_s + 1 
                 end do
                 order_s = order_s - 1 ! to be consistent with he definition of 'Order of the polynomial'
 
-            else if ( SPACEDIM == 2 ) then
+            else if ( spacedim == TWO_DIM ) then
                 do while ( order_s*order_s /= data%mesh(idom)%nterms_s )
                    order_s = order_s + 1 
                 end do

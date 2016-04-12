@@ -114,61 +114,6 @@ contains
 
 
 
-
-
-
-
-
-    !>  Compute number of quadrature nodes in one dimension
-    !!
-    !!  @author Nathan A. Wukie
-    !!  @date   4/11/2016
-    !!
-    !!
-    !!
-    !---------------------------------------------------------------------------------------------------------
-    function compute_nnodes1d(spacedim,nnodes)
-        integer(ik),    intent(in)  :: spacedim
-        integer(ik),    intent(in)  :: nnodes
-
-        integer(ik) :: nnodes1d
-
-
-        if ( spacedim == 3 ) then
-
-            do while (nnodes1d*nnodes1d*nnodes1d /= nnodes)
-                nnodes1d = nnodes1d + 1
-            end do
-            if (nnodes1d*nnodes1d*nnodes1d > nnodes) call chidg_signal(FATAL, "Incorrect number of terms counted when computing quadrature nodes")
-
-        else if ( spacedim == 2 ) then
-
-            do while (nnodes1d*nnodes1d /= nnodes)
-                nnodes1d = nnodes1d + 1
-            end do
-            if (nnodes1d*nnodes1d > nnodes) call chidg_signal(FATAL, "Incorrect number of terms counted when computing quadrature nodes")
-
-        else
-            call chidg_signal(FATAL,'compute_nnodes1d: Invalid value for spatial dimension - spacedim.')
-
-        end if
-
-
-    end function compute_nnodes1d
-    !*********************************************************************************************************
-
-
-
-
-
-
-
-
-
-
-
-
-
     !>  Routine to find a quadrature instance or initialize a new one and return
     !!  its location in the global quadrature array 'igq' in GQ(igq)
     !!
@@ -181,12 +126,16 @@ contains
     !!                          the global quadrature instance array, GQ
     !!
     !---------------------------------------------------------------------------------------------------------
-    subroutine get_quadrature(nterms,nn_v,nn_f,gqout)
-        integer(ik),    intent(in)       :: nterms, nn_v, nn_f
-        integer(ik),    intent(inout)    :: gqout
+    subroutine get_quadrature(spacedim,nterms,nn_v,nn_f,gqout)
+        integer(ik),    intent(in)      :: spacedim
+        integer(ik),    intent(in)      :: nterms
+        integer(ik),    intent(in)      :: nn_v
+        integer(ik),    intent(in)      :: nn_f
+        integer(ik),    intent(inout)   :: gqout
 
         integer(ik) :: igq
         logical     :: has_correct_nodes_terms
+        logical     :: is_correct_spacedim
 
 
 
@@ -202,8 +151,9 @@ contains
                 ! If we are here, check if the current GQ(igq) has the right terms and nodes.
                 !
                 has_correct_nodes_terms = (GQ(igq)%nterms == nterms) .and. (GQ(igq)%nnodes_v == nn_v)
+                is_correct_spacedim     = ( GQ(igq)%spacedim == spacedim )
 
-                if (has_correct_nodes_terms) then
+                if (has_correct_nodes_terms .and. is_correct_spacedim) then
                     gqout = igq
                     exit
                 end if
@@ -213,7 +163,7 @@ contains
                 ! If we are here, then no initialized GQ instance was found that met the requirements,
                 ! so, we initialize a new one.
                 !
-                call GQ(igq)%init(nn_f,nn_v,nterms)
+                call GQ(igq)%init(spacedim,nn_f,nn_v,nterms)
                 gqout = igq
                 exit
 

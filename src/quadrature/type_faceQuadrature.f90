@@ -1,13 +1,14 @@
 module type_faceQuadrature
 #include <messenger.h>
-    use mod_kinds,          only: rk,ik
-    use mod_constants,      only: NFACES,XI_MIN,XI_MAX,ETA_MIN,ETA_MAX,ZETA_MIN,ZETA_MAX, &
-                                  XI_DIR,ETA_DIR,ZETA_DIR,SPACEDIM, ZERO
-    use mod_polynomial,     only: polynomialVal,dpolynomialVal
-    use mod_gaussLegendre,  only: gl_nodes, gl_weights
-    use mod_inv,            only: inv
+    use mod_kinds,              only: rk,ik
+    use mod_constants,          only: NFACES,XI_MIN,XI_MAX,ETA_MIN,ETA_MAX,ZETA_MIN,ZETA_MAX, &
+                                      XI_DIR,ETA_DIR,ZETA_DIR, ZERO
+    use mod_polynomial,         only: polynomialVal,dpolynomialVal
+    use mod_quadrature_tools,   only: compute_nnodes1d_face
+    use mod_gaussLegendre,      only: gl_nodes, gl_weights
+    use mod_inv,                only: inv
 
-    use type_point,     only: point_t
+    use type_point,             only: point_t
 
     implicit none
     private
@@ -49,14 +50,19 @@ contains
     !!  @author Nathan A. Wukie
     !!
     !!
+    !!  TODO: TEST SPACEDIM
+    !!
+    !!
     !----------------------------------------------------------------------------------------------------
-    subroutine init(self,nnodes_face,nterms)
+    subroutine init(self,spacedim,nnodes_face,nterms)
         class(faceQuadrature_t),    intent(inout)   :: self
+        integer(ik),                intent(in)      :: spacedim
         integer(ik),                intent(in)      :: nnodes_face
         integer(ik),                intent(in)      :: nterms
 
+
         integer(ik)                             :: inode, iterm, iface, cface
-        integer(ik)                             :: nnodes1d,     nterms1d,       nterms2d
+        integer(ik)                             :: nnodes1d
         integer(ik)                             :: ixi,          ieta,           izeta
         real(rk)                                :: xi,           eta,            zeta
         real(rk), dimension(:), allocatable     :: xi_vals,      eta_vals,       zeta_vals
@@ -78,51 +84,52 @@ contains
 
 
 
-        !
-        ! Find number of terms in 1D variable
-        !
-        nterms1d = 0
-
-        if ( SPACEDIM == 3 ) then
-            do while (nterms1d*nterms1d*nterms1d /= nterms)
-                nterms1d = nterms1d + 1
-            end do
-            if (nterms1d*nterms1d*nterms1d > nterms) stop "Error in face quadrature term count"
-
-
-        else if ( SPACEDIM == 2 ) then
-            do while (nterms1d*nterms1d /= nterms)
-                nterms1d = nterms1d + 1
-            end do
-            if (nterms1d*nterms1d > nterms) stop "Error in face quadrature term count"
-
-        else
-            call chidg_signal(FATAL,"faceQuadrature%init: Invalid SPACEDIM")
-
-        end if
-
+!        !
+!        ! Find number of terms in 1D variable
+!        !
+!        nterms1d = 0
+!
+!        if ( SPACEDIM == 3 ) then
+!            do while (nterms1d*nterms1d*nterms1d /= nterms)
+!                nterms1d = nterms1d + 1
+!            end do
+!            if (nterms1d*nterms1d*nterms1d > nterms) stop "Error in face quadrature term count"
+!
+!
+!        else if ( SPACEDIM == 2 ) then
+!            do while (nterms1d*nterms1d /= nterms)
+!                nterms1d = nterms1d + 1
+!            end do
+!            if (nterms1d*nterms1d > nterms) stop "Error in face quadrature term count"
+!
+!        else
+!            call chidg_signal(FATAL,"faceQuadrature%init: Invalid SPACEDIM")
+!
+!        end if
+!
 
 
         !
         ! Initialize quadrature node coordinates for face sets
         !
         ! find number nodes in 1D polynomial
-        nnodes1d = 0
-
-        if ( SPACEDIM == 3 ) then
-
-            do while (nnodes1d*nnodes1d /= nnodes_face)
-                nnodes1d = nnodes1d + 1
-            end do
-            if (nnodes1d*nnodes1d > nnodes_face) stop "Error in face quadrature node count"
-
-        else if ( SPACEDIM == 2 ) then
-            nnodes1d = nnodes_face
-            if (nnodes1d > nnodes_face) stop "Error in face quadrature node count"
-
-        else 
-            call chidg_signal(FATAL,"faceQuadrature%init: Invalid SPACEDIM")
-        end if
+        nnodes1d = compute_nnodes1d_face(spacedim,nnodes_face)
+!        nnodes1d = 0
+!
+!        if ( SPACEDIM == 3 ) then
+!
+!            do while (nnodes1d*nnodes1d /= nnodes_face)
+!                nnodes1d = nnodes1d + 1
+!            end do
+!            if (nnodes1d*nnodes1d > nnodes_face) stop "Error in face quadrature node count"
+!
+!        else if ( SPACEDIM == 2 ) then
+!            nnodes1d = nnodes_face
+!            if (nnodes1d > nnodes_face) stop "Error in face quadrature node count"
+!
+!        else 
+!            call chidg_signal(FATAL,"faceQuadrature%init: Invalid SPACEDIM")
+!        end if
 
 
         allocate(xi_vals(nnodes1d),eta_vals(nnodes1d),zeta_vals(nnodes1d))
@@ -140,7 +147,7 @@ contains
 
 
 
-        if ( SPACEDIM == 3 ) then
+        if ( spacedim == 3 ) then
 
 
 
@@ -252,7 +259,7 @@ contains
 
 
 
-        else if ( SPACEDIM == 2 ) then
+        else if ( spacedim == 2 ) then
 
 
             !
@@ -363,7 +370,7 @@ contains
         face_indices = [XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX]
 
 
-        if ( SPACEDIM == 3 ) then
+        if ( spacedim == 3 ) then
 
 
             do iterm = 1,nterms
@@ -379,17 +386,17 @@ contains
                         ! on the xi_min face
                         !
                         node = self%nodes(inode,cface)
-                        self%val(   inode,iterm,cface) =  polynomialVal(SPACEDIM,nterms,iterm,node)
-                        self%ddxi(  inode,iterm,cface) = dpolynomialVal(SPACEDIM,nterms,iterm,node,XI_DIR)
-                        self%ddeta( inode,iterm,cface) = dpolynomialVal(SPACEDIM,nterms,iterm,node,ETA_DIR)
-                        self%ddzeta(inode,iterm,cface) = dpolynomialVal(SPACEDIM,nterms,iterm,node,ZETA_DIR)
+                        self%val(   inode,iterm,cface) =  polynomialVal(spacedim,nterms,iterm,node)
+                        self%ddxi(  inode,iterm,cface) = dpolynomialVal(spacedim,nterms,iterm,node,XI_DIR)
+                        self%ddeta( inode,iterm,cface) = dpolynomialVal(spacedim,nterms,iterm,node,ETA_DIR)
+                        self%ddzeta(inode,iterm,cface) = dpolynomialVal(spacedim,nterms,iterm,node,ZETA_DIR)
 
                     end do
                 end do
             end do
 
 
-        else if ( SPACEDIM == 2 ) then
+        else if ( spacedim == 2 ) then
 
 
             do iterm = 1,nterms
@@ -405,9 +412,9 @@ contains
                         ! on the xi_min face
                         !
                         node = self%nodes(inode,cface)
-                        self%val(   inode,iterm,cface) =  polynomialVal(SPACEDIM,nterms,iterm,node)
-                        self%ddxi(  inode,iterm,cface) = dpolynomialVal(SPACEDIM,nterms,iterm,node,XI_DIR)
-                        self%ddeta( inode,iterm,cface) = dpolynomialVal(SPACEDIM,nterms,iterm,node,ETA_DIR)
+                        self%val(   inode,iterm,cface) =  polynomialVal(spacedim,nterms,iterm,node)
+                        self%ddxi(  inode,iterm,cface) = dpolynomialVal(spacedim,nterms,iterm,node,XI_DIR)
+                        self%ddeta( inode,iterm,cface) = dpolynomialVal(spacedim,nterms,iterm,node,ETA_DIR)
                         self%ddzeta(inode,iterm,cface) = ZERO
 
                     end do

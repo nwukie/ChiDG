@@ -158,7 +158,7 @@ contains
                                         !val = solution_point(q%lvecs_m(ielem_xi,ielem_eta,ielem_zeta),ivar,xi,eta,zeta)
                                         ielem = ielem_xi + (nelem_xi)*(ielem_eta-1) + (nelem_xi * nelem_eta)*(ielem_zeta-1)
                                         !val = solution_point(q%lvecs(ielem),ivar,xi,eta,zeta)
-                                        val = solution_point(data%sdata%q%dom(idom)%lvecs(ielem),ivar,xi,eta,zeta)
+                                        val = solution_point(data%mesh(idom)%elems(ielem), data%sdata%q%dom(idom)%lvecs(ielem),ivar,xi,eta,zeta)
 
                                         tecstat = TECDAT142(1,valeq,1)
                                     

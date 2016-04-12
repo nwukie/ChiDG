@@ -1,7 +1,7 @@
 module mod_grid_operators
 #include <messenger.h>
     use mod_kinds,          only: rk, ik
-    use mod_constants,      only: SPACEDIM
+    use mod_constants,      only: TWO_DIM, THREE_DIM
     use type_point,         only: point_t
     use type_element,       only: element_t
     use type_blockvector,   only: blockvector_t
@@ -32,7 +32,7 @@ contains
         integer(ik),            intent(in)      :: ivar
         class(function_t),      intent(inout)   :: fcn
 
-        integer(ik)             :: ielem, ierr, idom, nterms
+        integer(ik)             :: ielem, ierr, idom, nterms, spacedim
         real(rk), allocatable   :: fmodes(:)
 
 
@@ -44,6 +44,11 @@ contains
             if (ivar > data%eqnset(idom)%item%neqns ) call chidg_signal(FATAL,'initialize_variable: variable index ivar exceeds the number of equations')
 
             do ielem = 1,data%mesh(idom)%nelem
+
+                    !
+                    ! Get spacedim
+                    !
+                    spacedim = data%mesh(idom)%elems(ielem)%spacedim
 
                     !
                     ! Initial array allocation
@@ -68,7 +73,7 @@ contains
                     !
                     ! Call function projection
                     !
-                    call project_function_xyz(fcn,data%mesh(idom)%elems(ielem)%nterms_s,data%mesh(idom)%elems(ielem)%coords,fmodes)
+                    call project_function_xyz(fcn,spacedim,data%mesh(idom)%elems(ielem)%nterms_s,data%mesh(idom)%elems(ielem)%coords,fmodes)
 
 
                     !
@@ -109,21 +114,22 @@ contains
         real(rk)        :: val
         type(point_t)   :: node
         real(rk)        :: polyvals(elem%nterms_c)
-        integer(ik)     :: iterm, ielem
+        integer(ik)     :: iterm, ielem, spacedim
 
         if (icoord > 3) call chidg_signal(FATAL,"Error: mesh_point -- icoord exceeded 3 physical coordinates")
 
         call node%set(xi,eta,zeta)
 
+        spacedim = elem%spacedim
 
         !
         ! Evaluate polynomial modes at node location
         !
         do iterm = 1,elem%nterms_c
 
-            if ( SPACEDIM == 3 ) then
+            if ( spacedim == THREE_DIM ) then
                 polyvals(iterm) = polynomialVal(3,elem%nterms_c,iterm,node)
-            else if ( SPACEDIM == 2 ) then
+            else if ( spacedim == TWO_DIM ) then
                 polyvals(iterm) = polynomialVal(2,elem%nterms_c,iterm,node)
             end if
 
@@ -157,30 +163,31 @@ contains
     !!  @param[in]  zeta    Real value for zeta-coordinate
     !!
     !----------------------------------------------------------------------------------------------------------------
-    function solution_point(q,ivar,xi,eta,zeta) result(val)
-        class(densevector_t),   intent(in)     :: q
-        integer(ik),            intent(in)     :: ivar
-        real(rk),               intent(in)     :: xi,eta,zeta
+    !function solution_point(q,ivar,xi,eta,zeta) result(val)
+    function solution_point(elem,q,ivar,xi,eta,zeta) result(val)
+        type(element_t),        intent(in)      :: elem
+        class(densevector_t),   intent(in)      :: q
+        integer(ik),            intent(in)      :: ivar
+        real(rk),               intent(in)      :: xi,eta,zeta
 
         real(rk)                   :: val
         type(point_t)              :: node
         real(rk)                   :: polyvals(q%nterms())
-        integer(ik)                :: iterm, ielem
+        integer(ik)                :: iterm, ielem, spacedim
 
 
         call node%set(xi,eta,zeta)
 
+        spacedim = elem%spacedim
 
         !
         ! Evaluate polynomial modes at node location
         !
         do iterm = 1,q%nterms()
 
-            if ( SPACEDIM == 3 ) then
-                !polyvals(iterm)  = polynomialVal(3,q%nterms(),iterm,node)
-                print*, 'WARNING: solution_point screwed up'
-                polyvals(iterm)  = polynomialVal(2,q%nterms(),iterm,node)
-            else if ( SPACEDIM == 2 ) then
+            if ( spacedim == THREE_DIM ) then
+                polyvals(iterm)  = polynomialVal(3,q%nterms(),iterm,node)
+            else if ( spacedim == TWO_DIM ) then
                 polyvals(iterm)  = polynomialVal(2,q%nterms(),iterm,node)
             end if
 
@@ -225,7 +232,7 @@ contains
         real(rk)        :: val
         type(point_t)   :: node
         real(rk)        :: polyvals(elem%nterms_c)
-        integer(ik)     :: iterm, ielem
+        integer(ik)     :: iterm, ielem, spacedim
 
 
         if (cart_dir > 3) call chidg_signal(FATAL,"Error: mesh_point -- card_dir exceeded 3 physical coordinates")
@@ -233,15 +240,17 @@ contains
 
         call node%set(xi,eta,zeta)
 
+        spacedim = elem%spacedim
+
 
         !
         ! Evaluate polynomial modes at node location
         !
         do iterm = 1,elem%nterms_c
 
-            if ( SPACEDIM == 3 ) then
+            if ( spacedim == THREE_DIM ) then
                 polyvals(iterm) = dpolynomialVal(3,elem%nterms_c,iterm,node,comp_dir)
-            else if ( SPACEDIM == 2 ) then
+            else if ( spacedim == TWO_DIM ) then
                 polyvals(iterm) = dpolynomialVal(2,elem%nterms_c,iterm,node,comp_dir)
             end if
 

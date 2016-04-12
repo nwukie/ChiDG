@@ -4,4 +4,5 @@ add_lib_sources(
                 type_faceQuadrature.f90 
                 type_quadrature.f90 
                 mod_quadrature.f90
+                mod_quadrature_tools.f90
                 )

@@ -30,7 +30,7 @@ program plot3dtohdf5
 
     ! plot3d vars
     integer(ik)                 :: i,j,k,imax,jmax,kmax,ext_loc
-    integer(ik)                 :: ierr,igrid,nelem,nblks,mapping
+    integer(ik)                 :: ierr,igrid,nelem,nblks,mapping,spacedim
     integer(ik), allocatable    :: blkdims(:,:)
     real(rk),    allocatable    :: xcoords(:,:,:), ycoords(:,:,:), zcoords(:,:,:)
 
@@ -133,10 +133,20 @@ program plot3dtohdf5
 
     ! Loop through grid domain and for each domain, create an HDF5 group (D_$BLOCKNAME)
     do igrid = 1,nblks
+        ! Read spacedim from user
+        print*, "Enter number of spatial dimensions for block: ", igrid
+        print*, "Key -- ( 2 = 2D, 3 = 3D )"
+        read*, spacedim
+
+        ! check input
+        if ( (spacedim /= 2) .and. (spacedim /= 3) ) stop "Invalid spacedim"
+
+
         ! Read mapping from user
         print*, "Enter mapping for block: ", igrid
         print*,  "Key -- (1 = linear, 2 = quadratic, 3 = cubic, 4 = quartic)"
         read*, mapping
+
 
 
         ! Dimensions for reading plot3d grid
@@ -164,6 +174,7 @@ program plot3dtohdf5
         ! Write domain attributes
         call h5ltset_attribute_int_f(file_id, trim(blockgroup), 'idomain', [igrid],   adim, ierr)
         call h5ltset_attribute_int_f(file_id, trim(blockgroup), 'mapping', [mapping], adim, ierr)
+        call h5ltset_attribute_int_f(file_id, trim(blockgroup), 'spacedim',[spacedim], adim, ierr)
 
 
         ! Create a grid-group within the current block domain

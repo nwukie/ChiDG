@@ -2,7 +2,8 @@ module type_element
 #include <messenger.h>
     use mod_kinds,              only: rk,ik
     use mod_constants,          only: NFACES,XI_MIN,XI_MAX,ETA_MIN, &
-                                      ETA_MAX,ZETA_MIN,ZETA_MAX,ONE,ZERO, ZETA_DIR, TWO_DIM, THREE_DIM
+                                      ETA_MAX,ZETA_MIN,ZETA_MAX,ONE,ZERO, &
+                                      X_DIR, Y_DIR, Z_DIR, ZETA_DIR, TWO_DIM, THREE_DIM
     use type_point,             only: point_t
     use type_densevector,       only: densevector_t
     use type_quadrature,        only: quadrature_t
@@ -81,10 +82,13 @@ module type_element
 
 
         ! Public utility procedures
-        procedure, public   :: x
-        procedure, public   :: y
-        procedure, public   :: z
-        procedure, public   :: compute_metric
+        procedure, public   :: x                      !< Compute a discrete value for the x-coordinate at a given xi,eta,zeta.
+        procedure, public   :: y                      !< Compute a discrete value for the y-coordinate at a given xi,eta,zeta.
+        procedure, public   :: z                      !< Compute a discrete value for the z-coordinate at a given xi,eta,zeta.
+
+        procedure, public   :: grid_point             !< Compute a discrete value for a physical coordinate at a given xi, eta, zeta.
+        procedure, public   :: metric_point           !< Compute a discrete value for a metric term at a given xi, eta, zeta.
+        procedure, public   :: solution_point         !< Compute a discrete value for the solution at a given xi,eta, zeta.
 
 
         ! Private utility procedure
@@ -134,31 +138,13 @@ contains
 
         type(point_t)                       :: pnt
         integer(ik)                         :: ierr, nterms_c, ipt
-!        real(rk), dimension(:,:), pointer   :: imap => null()
         real(rk), allocatable   :: element_mapping(:,:)
+
 
         if (self%geomInitialized) call chidg_signal(FATAL,'element%init_geom -- element already initialized')
 
-
-
-!        !
-!        ! Check if the element mappings are initialized. If so, then get a pointer to the correct mapping 
-!        ! and set number of coordinate expansion terms
-!        !
-!        if (allocated(elem_map(mapping)%mat)) then
-!!            imap            => elem_map(mapping)%mat
-!            nterms_c        = size(elem_map(mapping)%mat,1) ! Get nterms of coordinate expansion from size of mapping matrix
-!            self%nterms_c   = nterms_c                      ! Set number of terms in coordinate expansion
-!
-!
-!            if (nterms_c /= size(points)) call chidg_signal(FATAL,'element%init_geom -- mapping and points do not match')
-!        else
-!            call chidg_signal(FATAL,"element%init_geom -- element mapping not initialized. Probably need to call 'init' on chidg environment")
-!        end if
-!
-
         !
-        ! Get index for element mapping
+        ! Get element mapping
         !
         element_mapping = get_element_mapping(spacedim,mapping)
         nterms_c = size(element_mapping,1)
@@ -166,15 +152,10 @@ contains
         if (nterms_c /= size(points)) call chidg_signal(FATAL,'element%init_geom -- mapping and points do not match')
 
 
-
-
-
-
         !
         ! Allocate storage
         !
         allocate(self%elem_pts(nterms_c),stat=ierr)
-        !call self%coords%init(nterms_c,SPACEDIM,ielem)
         call self%coords%init(nterms_c,3,ielem)
         self%spacedim = spacedim
         self%idomain  = idomain
@@ -185,11 +166,7 @@ contains
         !
         ! Compute mesh x,y,z modes
         !
-        !call compute_modal_coordinates(self%elem_pts,mapping,self%coords)
         call compute_modal_coordinates(spacedim,self%elem_pts,mapping,self%coords)
-
-
-
 
 
         !
@@ -242,8 +219,7 @@ contains
         ! Allocate storage for element data structures
         !
         allocate(self%jinv(nnodes),                         &
-                 !self%metric(SPACEDIM,SPACEDIM,nnodes),     &
-                 self%metric(3,3,nnodes),     &
+                 self%metric(3,3,nnodes),                   &
                  self%quad_pts(nnodes),                     &
                  self%dtdx(nnodes,nterms_s),                &
                  self%dtdy(nnodes,nterms_s),                &
@@ -341,6 +317,7 @@ contains
     !!  @author Nathan A. Wukie
     !!  @date   2/1/2016
     !!
+    !! TODO: Generalized 2D physical coordinates. Currently assumes x-y
     !!
     !--------------------------------------------------------------------------------------------------------------
     subroutine compute_quadrature_metrics(self)
@@ -374,6 +351,9 @@ contains
 
 
 
+        !
+        ! TODO: Generalized 2D physical coordinates. Currently assumes x-y
+        !
         if ( self%spacedim == TWO_DIM ) then
             dzdxi   = ZERO
             dzdeta  = ZERO
@@ -408,17 +388,10 @@ contains
         !
         ! Compute inverse cell mapping jacobian
         !
-        if ( self%spacedim == THREE_DIM ) then
-            self%jinv = dxdxi*dydeta*dzdzeta - dxdeta*dydxi*dzdzeta - &
-                        dxdxi*dydzeta*dzdeta + dxdzeta*dydxi*dzdeta + &
-                        dxdeta*dydzeta*dzdxi - dxdzeta*dydeta*dzdxi
+        self%jinv = dxdxi*dydeta*dzdzeta - dxdeta*dydxi*dzdzeta - &
+                    dxdxi*dydzeta*dzdeta + dxdzeta*dydxi*dzdeta + &
+                    dxdeta*dydzeta*dzdxi - dxdzeta*dydeta*dzdxi
 
-        else if ( self%spacedim == TWO_DIM ) then
-            self%jinv = dxdxi*dydeta - dxdeta*dydxi
-
-        else
-            call chidg_signal(FATAL,"element%compute_quadrature_metrics")
-        end if
 
 
         !
@@ -637,20 +610,18 @@ contains
 
         type(point_t)              :: node
         real(rk)                   :: polyvals(self%nterms_c)
-        integer(ik)                :: iterm
+        integer(ik)                :: iterm, spacedim
 
         call node%set(xi,eta,zeta)
+
+        spacedim = self%spacedim
 
         !
         ! Evaluate polynomial modes at node location
         !
         do iterm = 1,self%nterms_c
 
-            if ( self%spacedim == THREE_DIM ) then
-                polyvals(iterm)  = polynomialVal(3,self%nterms_c,iterm,node)
-            else if ( self%spacedim == TWO_DIM ) then
-                polyvals(iterm)  = polynomialVal(2,self%nterms_c,iterm,node)
-            end if
+            polyvals(iterm)  = polynomialVal(spacedim,self%nterms_c,iterm,node)
 
         end do
 
@@ -684,20 +655,18 @@ contains
 
         type(point_t)              :: node
         real(rk)                   :: polyvals(self%nterms_c)
-        integer(ik)                :: iterm
+        integer(ik)                :: iterm, spacedim
 
         call node%set(xi,eta,zeta)
+
+        spacedim = self%spacedim
 
         !
         ! Evaluate polynomial modes at node location
         !
         do iterm = 1,self%nterms_c
 
-            if ( self%spacedim == THREE_DIM ) then
-                polyvals(iterm)  = polynomialVal(3,self%nterms_c,iterm,node)
-            else if ( self%spacedim == TWO_DIM ) then
-                polyvals(iterm)  = polynomialVal(2,self%nterms_c,iterm,node)
-            end if
+            polyvals(iterm)  = polynomialVal(spacedim,self%nterms_c,iterm,node)
 
         end do
 
@@ -730,20 +699,18 @@ contains
 
         type(point_t)              :: node
         real(rk)                   :: polyvals(self%nterms_c)
-        integer(ik)                :: iterm
+        integer(ik)                :: iterm, spacedim
 
         call node%set(xi,eta,zeta)
+
+        spacedim = self%spacedim
 
         !
         ! Evaluate polynomial modes at node location
         !
         do iterm = 1,self%nterms_c
 
-            if ( self%spacedim == THREE_DIM ) then
-                polyvals(iterm)  = polynomialVal(3,self%nterms_c,iterm,node)
-            else if ( self%spacedim == TWO_DIM ) then
-                polyvals(iterm)  = polynomialVal(2,self%nterms_c,iterm,node)
-            end if
+            polyvals(iterm)  = polynomialVal(spacedim,self%nterms_c,iterm,node)
 
         end do
 
@@ -755,6 +722,65 @@ contains
 
     end function z
     !***************************************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+
+    !>  Compute a coordinate value, based on the location in reference space (xi, eta, zeta)
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   2/1/2016
+    !!
+    !!  @param[in]  elem    Element containing coordinate expansion
+    !!  @param[in]  icoord  Integer corresponding to coordinate index 1(x), 2(y), 3(z)
+    !!  @param[in]  xi      Real value for xi-coordinate
+    !!  @param[in]  eta     Real value for eta-coordinate
+    !!  @param[in]  zeta    Real value for zeta-coordinate
+    !!
+    !--------------------------------------------------------------------------------------------------------------
+    function grid_point(self,icoord,xi,eta,zeta) result(val)
+        class(element_t),   intent(in)  :: self
+        integer(ik),        intent(in)  :: icoord
+        real(rk),           intent(in)  :: xi, eta, zeta
+
+        real(rk)        :: val
+        type(point_t)   :: node
+        real(rk)        :: polyvals(self%nterms_c)
+        integer(ik)     :: iterm, ielem, spacedim
+
+        if (icoord > 3) call chidg_signal(FATAL,"Error: element%grid_point -- icoord exceeded 3 physical coordinates")
+
+
+        call node%set(xi,eta,zeta)
+
+        spacedim = self%spacedim
+
+
+        !
+        ! Evaluate polynomial modes at node location
+        !
+        do iterm = 1,self%nterms_c
+                polyvals(iterm) = polynomialVal(spacedim,self%nterms_c,iterm,node)
+        end do
+
+
+        !
+        ! Evaluate mesh point from dot product of modes and polynomial values
+        !
+        val = dot_product(self%coords%getvar(icoord), polyvals)
+
+    end function grid_point
+    !****************************************************************************************************************
+
+
 
 
 
@@ -776,7 +802,7 @@ contains
     !!  @param[in]  zeta        Computational coordinate - zeta
     !!
     !----------------------------------------------------------------------------------------------------------------
-    function compute_metric(self,cart_dir,comp_dir,xi,eta,zeta) result(val)
+    function metric_point(self,cart_dir,comp_dir,xi,eta,zeta) result(val)
         class(element_t),   intent(in)  :: self
         integer(ik),        intent(in)  :: cart_dir
         integer(ik),        intent(in)  :: comp_dir
@@ -785,7 +811,7 @@ contains
         real(rk)        :: val
         type(point_t)   :: node
         real(rk)        :: polyvals(self%nterms_c)
-        integer(ik)     :: iterm, ielem
+        integer(ik)     :: iterm, ielem, spacedim
 
 
         if (cart_dir > 3) call chidg_signal(FATAL,"Error: mesh_point -- card_dir exceeded 3 physical coordinates")
@@ -793,27 +819,13 @@ contains
 
         call node%set(xi,eta,zeta)
 
+        spacedim = self%spacedim
 
         !
         ! Evaluate polynomial modes at node location
         !
         do iterm = 1,self%nterms_c
-
-            if ( self%spacedim == THREE_DIM ) then
-
-                polyvals(iterm) = dpolynomialVal(3,self%nterms_c,iterm,node,comp_dir)
-
-
-            else if ( self%spacedim == TWO_DIM ) then
-
-                if ( comp_dir == ZETA_DIR ) then
-                    polyvals(iterm) = ZERO
-                else
-                    polyvals(iterm) = dpolynomialVal(2,self%nterms_c,iterm,node,comp_dir)
-                end if
-
-            end if
-
+            polyvals(iterm) = dpolynomialVal(spacedim,self%nterms_c,iterm,node,comp_dir)
         end do
 
 
@@ -824,7 +836,22 @@ contains
 
 
 
-    end function compute_metric
+        !
+        ! 2D/3D. For metric terms, unlike solution derivatives, dzdzeta is 1 for 2D, 0 else.
+        !
+        if ( spacedim == TWO_DIM ) then
+            if (      (cart_dir == X_DIR) .and. (comp_dir == ZETA_DIR) ) then
+                val = ZERO
+            else if ( (cart_dir == Y_DIR) .and. (comp_dir == ZETA_DIR) ) then
+                val = ZERO
+            else if ( (cart_dir == Z_DIR) .and. (comp_dir == ZETA_DIR) ) then
+                val = ONE
+            end if
+        end if
+
+
+
+    end function metric_point
     !****************************************************************************************************************
 
 
@@ -835,6 +862,51 @@ contains
 
 
 
+    !>  Compute a variable value, based on the location in reference space (xi, eta, zeta)
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   2/1/2016
+    !!
+    !!  @param[in]  elem    Element that the solution expansion is associated with.
+    !!  @param[in]  q       Solution expansion for a given element.
+    !!  @param[in]  ivar    Integer corresponding to variable index.
+    !!  @param[in]  xi      Real value for xi-coordinate.
+    !!  @param[in]  eta     Real value for eta-coordinate.
+    !!  @param[in]  zeta    Real value for zeta-coordinate.
+    !!
+    !----------------------------------------------------------------------------------------------------------------
+    function solution_point(self,q,ivar,xi,eta,zeta) result(val)
+        class(element_t),       intent(in)      :: self
+        class(densevector_t),   intent(in)      :: q
+        integer(ik),            intent(in)      :: ivar
+        real(rk),               intent(in)      :: xi,eta,zeta
+
+        real(rk)                   :: val
+        type(point_t)              :: node
+        real(rk)                   :: polyvals(q%nterms())
+        integer(ik)                :: iterm, ielem, spacedim
+
+
+        call node%set(xi,eta,zeta)
+
+        spacedim = self%spacedim
+
+
+        !
+        ! Evaluate polynomial modes at node location
+        !
+        do iterm = 1,q%nterms()
+            polyvals(iterm)  = polynomialVal(spacedim,q%nterms(),iterm,node)
+        end do
+
+
+        !
+        ! Evaluate x from dot product of modes and polynomial values
+        !
+        val = dot_product(q%getvar(ivar),polyvals)
+
+    end function solution_point
+    !****************************************************************************************************************
 
 
 

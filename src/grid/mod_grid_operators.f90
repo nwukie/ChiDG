@@ -1,7 +1,7 @@
 module mod_grid_operators
 #include <messenger.h>
     use mod_kinds,          only: rk, ik
-    use mod_constants,      only: TWO_DIM, THREE_DIM
+    use mod_constants,      only: TWO_DIM, THREE_DIM, X_DIR, Y_DIR, Z_DIR, ZETA_DIR, ONE, ZERO
     use type_point,         only: point_t
     use type_element,       only: element_t
     use type_blockvector,   only: blockvector_t
@@ -92,115 +92,106 @@ contains
 
 
 
+! ALL THESE WERE MOVED TO TYPE-BOUND PROCEDURES IN type_element.f90
 
-
-    !>  Compute a coordinate value, based on the location in reference space (xi, eta, zeta)
-    !!
-    !!  @author Nathan A. Wukie
-    !!  @date   2/1/2016
-    !!
-    !!  @param[in]  elem    Element containing coordinate expansion
-    !!  @param[in]  icoord  Integer corresponding to coordinate index 1(x), 2(y), 3(z)
-    !!  @param[in]  xi      Real value for xi-coordinate
-    !!  @param[in]  eta     Real value for eta-coordinate
-    !!  @param[in]  zeta    Real value for zeta-coordinate
-    !!
-    !--------------------------------------------------------------------------------------------------------------
-    function mesh_point(elem,icoord,xi,eta,zeta) result(val)
-        class(element_t),   intent(in)  :: elem
-        integer(ik),        intent(in)  :: icoord
-        real(rk),           intent(in)  :: xi, eta, zeta
-
-        real(rk)        :: val
-        type(point_t)   :: node
-        real(rk)        :: polyvals(elem%nterms_c)
-        integer(ik)     :: iterm, ielem, spacedim
-
-        if (icoord > 3) call chidg_signal(FATAL,"Error: mesh_point -- icoord exceeded 3 physical coordinates")
-
-        call node%set(xi,eta,zeta)
-
-        spacedim = elem%spacedim
-
-        !
-        ! Evaluate polynomial modes at node location
-        !
-        do iterm = 1,elem%nterms_c
-
-            if ( spacedim == THREE_DIM ) then
-                polyvals(iterm) = polynomialVal(3,elem%nterms_c,iterm,node)
-            else if ( spacedim == TWO_DIM ) then
-                polyvals(iterm) = polynomialVal(2,elem%nterms_c,iterm,node)
-            end if
-
-        end do
-
-
-        !
-        ! Evaluate mesh point from dot product of modes and polynomial values
-        !
-        val = dot_product(elem%coords%getvar(icoord), polyvals)
-
-    end function mesh_point
-    !****************************************************************************************************************
-
-
-
-
-
-
-
-
-    !>  Compute a variable value, based on the location in reference space (xi, eta, zeta)
-    !!
-    !!  @author Nathan A. Wukie
-    !!  @date   2/1/2016
-    !!
-    !!  @param[in]  q       Solution expansion for a given element
-    !!  @param[in]  ivar    Integer corresponding to variable index
-    !!  @param[in]  xi      Real value for xi-coordinate
-    !!  @param[in]  eta     Real value for eta-coordinate
-    !!  @param[in]  zeta    Real value for zeta-coordinate
-    !!
-    !----------------------------------------------------------------------------------------------------------------
-    !function solution_point(q,ivar,xi,eta,zeta) result(val)
-    function solution_point(elem,q,ivar,xi,eta,zeta) result(val)
-        type(element_t),        intent(in)      :: elem
-        class(densevector_t),   intent(in)      :: q
-        integer(ik),            intent(in)      :: ivar
-        real(rk),               intent(in)      :: xi,eta,zeta
-
-        real(rk)                   :: val
-        type(point_t)              :: node
-        real(rk)                   :: polyvals(q%nterms())
-        integer(ik)                :: iterm, ielem, spacedim
-
-
-        call node%set(xi,eta,zeta)
-
-        spacedim = elem%spacedim
-
-        !
-        ! Evaluate polynomial modes at node location
-        !
-        do iterm = 1,q%nterms()
-
-            if ( spacedim == THREE_DIM ) then
-                polyvals(iterm)  = polynomialVal(3,q%nterms(),iterm,node)
-            else if ( spacedim == TWO_DIM ) then
-                polyvals(iterm)  = polynomialVal(2,q%nterms(),iterm,node)
-            end if
-
-        end do
-
-
-        !
-        ! Evaluate x from dot product of modes and polynomial values
-        !
-        val = dot_product(q%getvar(ivar),polyvals)
-
-    end function solution_point
-    !****************************************************************************************************************
+!    !>  Compute a coordinate value, based on the location in reference space (xi, eta, zeta)
+!    !!
+!    !!  @author Nathan A. Wukie
+!    !!  @date   2/1/2016
+!    !!
+!    !!  @param[in]  elem    Element containing coordinate expansion
+!    !!  @param[in]  icoord  Integer corresponding to coordinate index 1(x), 2(y), 3(z)
+!    !!  @param[in]  xi      Real value for xi-coordinate
+!    !!  @param[in]  eta     Real value for eta-coordinate
+!    !!  @param[in]  zeta    Real value for zeta-coordinate
+!    !!
+!    !--------------------------------------------------------------------------------------------------------------
+!    function mesh_point(elem,icoord,xi,eta,zeta) result(val)
+!        class(element_t),   intent(in)  :: elem
+!        integer(ik),        intent(in)  :: icoord
+!        real(rk),           intent(in)  :: xi, eta, zeta
+!
+!        real(rk)        :: val
+!        type(point_t)   :: node
+!        real(rk)        :: polyvals(elem%nterms_c)
+!        integer(ik)     :: iterm, ielem, spacedim
+!
+!        if (icoord > 3) call chidg_signal(FATAL,"Error: mesh_point -- icoord exceeded 3 physical coordinates")
+!
+!
+!        call node%set(xi,eta,zeta)
+!
+!        spacedim = elem%spacedim
+!
+!        !
+!        ! Evaluate polynomial modes at node location
+!        !
+!        do iterm = 1,elem%nterms_c
+!                polyvals(iterm) = polynomialVal(spacedim,elem%nterms_c,iterm,node)
+!        end do
+!
+!
+!        !
+!        ! Evaluate mesh point from dot product of modes and polynomial values
+!        !
+!        val = dot_product(elem%coords%getvar(icoord), polyvals)
+!
+!    end function mesh_point
+!    !****************************************************************************************************************
+!
+!
+!
+!
+!
+!
+!
+!
+!    !>  Compute a variable value, based on the location in reference space (xi, eta, zeta)
+!    !!
+!    !!  @author Nathan A. Wukie
+!    !!  @date   2/1/2016
+!    !!
+!    !!  @param[in]  elem    Element that the solution expansion is associated with.
+!    !!  @param[in]  q       Solution expansion for a given element.
+!    !!  @param[in]  ivar    Integer corresponding to variable index.
+!    !!  @param[in]  xi      Real value for xi-coordinate.
+!    !!  @param[in]  eta     Real value for eta-coordinate.
+!    !!  @param[in]  zeta    Real value for zeta-coordinate.
+!    !!
+!    !----------------------------------------------------------------------------------------------------------------
+!    function solution_point(elem,q,ivar,xi,eta,zeta) result(val)
+!        type(element_t),        intent(in)      :: elem
+!        class(densevector_t),   intent(in)      :: q
+!        integer(ik),            intent(in)      :: ivar
+!        real(rk),               intent(in)      :: xi,eta,zeta
+!
+!        real(rk)                   :: val
+!        type(point_t)              :: node
+!        real(rk)                   :: polyvals(q%nterms())
+!        integer(ik)                :: iterm, ielem, spacedim
+!
+!
+!        call node%set(xi,eta,zeta)
+!
+!        spacedim = elem%spacedim
+!
+!
+!        !
+!        ! Evaluate polynomial modes at node location
+!        !
+!        do iterm = 1,q%nterms()
+!            polyvals(iterm)  = polynomialVal(spacedim,q%nterms(),iterm,node)
+!        end do
+!
+!
+!        !
+!        ! Evaluate x from dot product of modes and polynomial values
+!        !
+!        val = dot_product(q%getvar(ivar),polyvals)
+!
+!    end function solution_point
+!    !****************************************************************************************************************
+!
 
 
 
@@ -209,65 +200,75 @@ contains
 
 
 
-
-    !> Compute coordinate metric term at a given point in computational space
-    !!
-    !!  @author Nathan A. Wukie
-    !!  @date   2/1/2016
-    !!
-    !!  @param[in]  elem        element_t containing the geometry definition and data
-    !!  @param[in]  cart_dir    Cartesian coordinate being differentiated
-    !!  @param[in]  comp_dir    Computational coordinate being differentiated with respect to
-    !!  @param[in]  xi          Computational coordinate - xi
-    !!  @param[in]  eta         Computational coordinate - eta
-    !!  @param[in]  zeta        Computational coordinate - zeta
-    !!
-    !----------------------------------------------------------------------------------------------------------------
-    function metric_point(elem,cart_dir,comp_dir,xi,eta,zeta) result(val)
-        class(element_t),   intent(in)  :: elem
-        integer(ik),        intent(in)  :: cart_dir
-        integer(ik),        intent(in)  :: comp_dir
-        real(rk),           intent(in)  :: xi, eta, zeta
-        
-        real(rk)        :: val
-        type(point_t)   :: node
-        real(rk)        :: polyvals(elem%nterms_c)
-        integer(ik)     :: iterm, ielem, spacedim
-
-
-        if (cart_dir > 3) call chidg_signal(FATAL,"Error: mesh_point -- card_dir exceeded 3 physical coordinates")
-        if (comp_dir > 3) call chidg_signal(FATAL,"Error: mesh_point -- comp_dir exceeded 3 physical coordinates")
-
-        call node%set(xi,eta,zeta)
-
-        spacedim = elem%spacedim
-
-
-        !
-        ! Evaluate polynomial modes at node location
-        !
-        do iterm = 1,elem%nterms_c
-
-            if ( spacedim == THREE_DIM ) then
-                polyvals(iterm) = dpolynomialVal(3,elem%nterms_c,iterm,node,comp_dir)
-            else if ( spacedim == TWO_DIM ) then
-                polyvals(iterm) = dpolynomialVal(2,elem%nterms_c,iterm,node,comp_dir)
-            end if
-
-        end do
-
-
-        !
-        ! Evaluate mesh point from dot product of modes and polynomial values
-        !
-        val = dot_product(elem%coords%getvar(cart_dir), polyvals)
-
-
-
-    end function metric_point
-    !****************************************************************************************************************
-
-
+!    !> Compute coordinate metric term at a given point in computational space
+!    !!
+!    !!  @author Nathan A. Wukie
+!    !!  @date   2/1/2016
+!    !!
+!    !!  @param[in]  elem        element_t containing the geometry definition and data
+!    !!  @param[in]  cart_dir    Cartesian coordinate being differentiated
+!    !!  @param[in]  comp_dir    Computational coordinate being differentiated with respect to
+!    !!  @param[in]  xi          Computational coordinate - xi
+!    !!  @param[in]  eta         Computational coordinate - eta
+!    !!  @param[in]  zeta        Computational coordinate - zeta
+!    !!
+!    !----------------------------------------------------------------------------------------------------------------
+!    function metric_point(elem,cart_dir,comp_dir,xi,eta,zeta) result(val)
+!        class(element_t),   intent(in)  :: elem
+!        integer(ik),        intent(in)  :: cart_dir
+!        integer(ik),        intent(in)  :: comp_dir
+!        real(rk),           intent(in)  :: xi, eta, zeta
+!        
+!        real(rk)        :: val
+!        type(point_t)   :: node
+!        real(rk)        :: polyvals(elem%nterms_c)
+!        integer(ik)     :: iterm, ielem, spacedim
+!
+!
+!        if (cart_dir > 3) call chidg_signal(FATAL,"Error: mesh_point -- card_dir exceeded 3 physical coordinates")
+!        if (comp_dir > 3) call chidg_signal(FATAL,"Error: mesh_point -- comp_dir exceeded 3 physical coordinates")
+!
+!
+!        call node%set(xi,eta,zeta)
+!
+!        spacedim = elem%spacedim
+!
+!
+!        !
+!        ! Evaluate polynomial modes at node location
+!        !
+!        do iterm = 1,elem%nterms_c
+!            polyvals(iterm) = dpolynomialVal(spacedim,elem%nterms_c,iterm,node,comp_dir)
+!        end do
+!
+!
+!        !
+!        ! Evaluate mesh point from dot product of modes and polynomial values
+!        !
+!        val = dot_product(elem%coords%getvar(cart_dir), polyvals)
+!
+!
+!
+!
+!        !
+!        ! 2D/3D. For metric terms, unlike solution derivatives, dzdzeta is 1 for 2D, 0 else.
+!        !
+!        if ( spacedim == TWO_DIM ) then
+!            if (      (cart_dir == X_DIR) .and. (comp_dir == ZETA_DIR) ) then
+!                val = ZERO
+!            else if ( (cart_dir == Y_DIR) .and. (comp_dir == ZETA_DIR) ) then
+!                val = ZERO
+!            else if ( (cart_dir == Z_DIR) .and. (comp_dir == ZETA_DIR) ) then
+!                val = ONE
+!            end if
+!        end if
+!
+!
+!
+!    end function metric_point
+!    !****************************************************************************************************************
+!
+!
 
 
 

@@ -25,9 +25,6 @@ program driver
     use mod_kirchoffs,          only: kirchoff
     use mod_io
     
-
-    use mod_grid_operators,     only: solution_point
-    
     !
     ! Variable declarations
     !

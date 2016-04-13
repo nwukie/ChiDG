@@ -273,14 +273,18 @@ contains
                 eta_val = LegendreVal1D(eta_mode,eta)
 
                 dpolyval = dxi_val*eta_val
-            case (ETA_DIR)
 
+            case (ETA_DIR)
                 xi_val   = LegendreVal1D(xi_mode,xi)
                 deta_val = DLegendreVal1D(eta_mode,eta)
 
                 dpolyval = xi_val*deta_val
+
+            case (ZETA_DIR)
+                dpolyval = ZERO     ! By definition of 2D polynomial, no derivative in ZETA dimension
+
             case default
-                print*, "valid derivative directions are - 'xi', 'eta'"
+                print*, "valid derivative directions are - 'XI_DIR', 'ETA_DIR', 'ZETA_DIR'"
                 stop
         end select
 
@@ -338,7 +342,7 @@ contains
 
                 dpolyval  = xi_val*eta_val*dzeta_val
             case default
-                print*, "valid derivative directions are - 'xi', 'eta', 'zeta'"
+                print*, "valid derivative directions are - 'XI_DIR', 'ETA_DIR', 'ZETA_DIR'"
                 stop
         end select
 

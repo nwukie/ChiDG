@@ -1,7 +1,7 @@
 module mod_kirchoffs
 #include <messenger.h>
     use mod_kinds,                  only: rk, ik
-    use mod_constants,              only: NFACES, ZERO, ONE, TWO, PI
+    use mod_constants,              only: NFACES, ZERO, ONE, TWO, FOUR, PI
     use type_chidg,                 only: chidg_t
     use type_mesh,                  only: mesh_t
     use type_point,                 only: point_t
@@ -32,7 +32,7 @@ contains
         complex(rk),    dimension(:),   allocatable :: pressures
         type(point_t),  dimension(:),   allocatable :: points
 
-        nterms_s = 5*5*5
+        nterms_s = 4*4*4
 
         !
         ! Initialize ChiDG environment
@@ -82,8 +82,8 @@ contains
         if ( ierr /= 0 ) call AllocationError
 
         theta_min = ZERO
-        !theta_max = 120._rk*PI/180._rk
-        theta_max = PI/TWO
+        theta_max = 120._rk*PI/180._rk
+        !theta_max = PI/TWO
 
         r        = 46._rk
         theta    = ZERO
@@ -103,6 +103,8 @@ contains
 
         print*, pressures
 
+        pressures = pressures / (FOUR*PI)
+
 
         !
         ! Close ChiDG
@@ -114,7 +116,7 @@ contains
         open(newunit=fileunit, file='p.out')
 
         do itheta = 1,res
-            write(fileunit,*) theta(itheta), sqrt( real(pressures(itheta))**TWO + imag(pressures(itheta))**TWO ) / sqrt(TWO)
+            write(fileunit,*) theta(itheta), sqrt( real(pressures(itheta))**TWO + aimag(pressures(itheta))**TWO ) / sqrt(TWO)
         end do
 
 

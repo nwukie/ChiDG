@@ -6,7 +6,6 @@ module mod_chidg_interpolate
     use type_mesh,          only: mesh_t
     use type_chidg,         only: chidg_t
     use mod_grid_tools_two, only: compute_element_donor
-    use mod_grid_operators, only: solution_point
     use mod_io,             only: nterms_s
     implicit none
 
@@ -71,12 +70,12 @@ contains
 
         print*, '    ', trim(sourcefile)
 
-        nterms_s = 5*5
+        nterms_s = 4*4
         call chidg_source%initialize_solution_domains(nterms_s)
         call chidg_source%initialize_solution_solver()
         print*, '    ', trim(targetfile)
 
-        nterms_s = 5*5*5
+        nterms_s = 4*4*4
         print*, 'initialize_solution_domains'
         call chidg_target%initialize_solution_domains(nterms_s)
         print*, 'initialize_solution_solver'
@@ -155,7 +154,8 @@ contains
                        xi   = point_comp%c1_
                        eta  = point_comp%c2_
                        zeta = point_comp%c3_
-                       vals(inode) = solution_point(chidg_source%data%mesh(idom_d)%elems(ielem_d), chidg_source%data%sdata%q%dom(idom_d)%lvecs(ielem_d),ivar,xi,eta,zeta)
+                       !vals(inode) = solution_point(chidg_source%data%mesh(idom_d)%elems(ielem_d), chidg_source%data%sdata%q%dom(idom_d)%lvecs(ielem_d),ivar,xi,eta,zeta)
+                       vals(inode) = chidg_source%data%mesh(idom_d)%elems(ielem_d)%solution_point(chidg_source%data%sdata%q%dom(idom_d)%lvecs(ielem_d),ivar,xi,eta,zeta)
 
 
                     end do !inode

@@ -1,7 +1,6 @@
 module mod_tecio
     use mod_kinds,              only: rk,ik,TEC
     use mod_constants,          only: ONE, HALF, TWO
-    use mod_grid_operators,     only: mesh_point, solution_point
     use mod_tecio_interface,    only: init_tecio_file, init_tecio_zone, finalize_tecio
 
     use type_element,           only: element_t
@@ -64,7 +63,9 @@ contains
         !
         varstring = "X Y Z"     ! Initialize variables string with mesh coordinates
         ieq = 1
-        !& DEBUG - DOMAINS - Assumes same equation set in all domains
+        !
+        ! TODO: Generalized TECIO for variable equation sets
+        !
         do while (ieq <= data%eqnset(1)%item%neqns)
             !varstring = trim(varstring)//" "//trim(domain%eqnset%eqns(ieq)%name)
             varstring = trim(varstring)//" "//trim(data%eqnset(1)%item%prop%eqns(ieq)%name)
@@ -80,7 +81,6 @@ contains
 
 
         do idom = 1,data%ndomains()
-        !associate (mesh => data%mesh(idom), eqnset => data%eqnset(idom)%item, sdata => data%sdata)
 
             !
             ! Store element indices for current block
@@ -118,10 +118,8 @@ contains
                                         xi = (((real(ipt_xi,rk)-ONE)/(real(npts,rk)-ONE)) - HALF)*TWO
 
                                         ! Get coordinate value at point
-                                        !val = mesh_point(elem(ielem_xi,ielem_eta,ielem_zeta),icoord,xi,eta,zeta)
-                                        !val = mesh_point(data%mesh(idom)%elems_m(ielem_xi,ielem_eta,ielem_zeta),icoord,xi,eta,zeta)
                                         ielem = ielem_xi + (nelem_xi)*(ielem_eta-1) + (nelem_xi * nelem_eta)*(ielem_zeta-1)
-                                        val = mesh_point(data%mesh(idom)%elems(ielem),icoord,xi,eta,zeta)
+                                        val = data%mesh(idom)%elems(ielem)%grid_point(icoord,xi,eta,zeta)
                                         tecstat = TECDAT142(1,valeq,1)
 
                                     end do
@@ -155,13 +153,9 @@ contains
                                         xi = (((real(ipt_xi,rk)-ONE)/(real(npts,rk)-ONE)) - HALF)*TWO
 
                                         ! Get solution value at point
-                                        !val = solution_point(q%lvecs_m(ielem_xi,ielem_eta,ielem_zeta),ivar,xi,eta,zeta)
                                         ielem = ielem_xi + (nelem_xi)*(ielem_eta-1) + (nelem_xi * nelem_eta)*(ielem_zeta-1)
-                                        !val = solution_point(q%lvecs(ielem),ivar,xi,eta,zeta)
-                                        val = solution_point(data%mesh(idom)%elems(ielem), data%sdata%q%dom(idom)%lvecs(ielem),ivar,xi,eta,zeta)
-
+                                        val = data%mesh(idom)%elems(ielem)%solution_point(data%sdata%q%dom(idom)%lvecs(ielem),ivar,xi,eta,zeta)
                                         tecstat = TECDAT142(1,valeq,1)
-                                    
                                     
                                     end do
                                 end do
@@ -178,7 +172,6 @@ contains
 
 
 
-        !end associate
         end do ! idom
 
 

@@ -101,10 +101,10 @@ contains
         call self%q%init(  mesh)
         call self%dq%init( mesh)
         call self%rhs%init(mesh)
-        print*, '**********************************************'
-        print*, 'Warning - LHS not initialized'
-        print*, '**********************************************'
-!        call self%lhs%init(mesh,bcset_coupling,'full')
+!        print*, '**********************************************'
+!        print*, 'Warning - LHS not initialized'
+!        print*, '**********************************************'
+        call self%lhs%init(mesh,bcset_coupling,'full')
 
 
     

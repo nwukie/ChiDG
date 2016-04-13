@@ -58,7 +58,6 @@ contains
     !!  @param[in]      imap    Integer for selecting the appropriate element mapping from 'elem_map'
     !!  @param[inout]   cmodes  Modal values for the coordinate expansion
     !---------------------------------------------------------------------------------------------------------
-    !subroutine compute_modal_coordinates(pts,imap,cmodes)
     subroutine compute_modal_coordinates(spacedim,pts,imap,cmodes)
         integer(ik),                    intent(in)      :: spacedim
         type(point_t),  dimension(:),   intent(in)      :: pts
@@ -68,16 +67,10 @@ contains
         real(rk), dimension(size(pts))  :: xmodes, ymodes, zmodes
         real(rk),   allocatable         :: element_mapping(:,:)
 
-!        if (size(elem_map(imap)%mat,1) /= size(pts)) stop "Error: compute_modal_coordinates -- mapping and point sizes do not match"
 
 
         element_mapping = get_element_mapping(spacedim,imap)
         if (size(element_mapping,1) /= size(pts) ) call chidg_signal(FATAL, "compute_modal_coordinate: mapping and point sizes do not match.")
-
-
-!        xmodes = matmul(elem_map(imap)%mat,pts(:)%c1_)
-!        ymodes = matmul(elem_map(imap)%mat,pts(:)%c2_)
-!        zmodes = matmul(elem_map(imap)%mat,pts(:)%c3_)
 
 
         xmodes = matmul(element_mapping,pts(:)%c1_)

@@ -23,7 +23,6 @@ module mod_chimera
     use type_pvector,           only: pvector_t
 
     use mod_polynomial,         only: polynomialVal
-    use mod_grid_operators,     only: mesh_point, metric_point
     use mod_inv,                only: inv
     implicit none
 
@@ -63,7 +62,8 @@ contains
 
         
         !
-        ! Loop through each element of each domain
+        ! Loop through each element of each domain and look for ORPHAN face-types.
+        ! If orphan is found, designate as CHIMERA and increment nchimera_faces
         !
         do idom = 1,ndom
             nchimera_faces = 0
@@ -123,6 +123,10 @@ contains
 
 
 
+        !
+        ! Now that all CHIMERA faces have been identified and we know the total number,
+        ! we can store their data in the mesh-local chimera data container.
+        !
         do idom = 1,ndom
             do ielem = 1,mesh(idom)%nelem
 
@@ -354,9 +358,6 @@ contains
 
 
 
-
-
-
                 !
                 ! Clear temporary face arrays
                 !
@@ -532,9 +533,9 @@ contains
                 !
                 ! Compute local cartesian coordinates as a function of xi,eta,zeta
                 !
-                xn = mesh_point(mesh(idom)%elems(ielem),X_DIR,xi,eta,zeta)
-                yn = mesh_point(mesh(idom)%elems(ielem),Y_DIR,xi,eta,zeta)
-                zn = mesh_point(mesh(idom)%elems(ielem),Z_DIR,xi,eta,zeta)
+                xn = mesh(idom)%elems(ielem)%x(xi,eta,zeta)
+                yn = mesh(idom)%elems(ielem)%y(xi,eta,zeta)
+                zn = mesh(idom)%elems(ielem)%z(xi,eta,zeta)
 
 
 
@@ -550,30 +551,16 @@ contains
                 !
                 ! Assemble coordinate jacobian matrix
                 !
-                if ( spacedim == THREE_DIM ) then
-                    mat(1,1) = metric_point(mesh(idom)%elems(ielem),X_DIR,XI_DIR,  xi,eta,zeta)
-                    mat(2,1) = metric_point(mesh(idom)%elems(ielem),Y_DIR,XI_DIR,  xi,eta,zeta)
-                    mat(3,1) = metric_point(mesh(idom)%elems(ielem),Z_DIR,XI_DIR,  xi,eta,zeta)
-                    mat(1,2) = metric_point(mesh(idom)%elems(ielem),X_DIR,ETA_DIR, xi,eta,zeta)
-                    mat(2,2) = metric_point(mesh(idom)%elems(ielem),Y_DIR,ETA_DIR, xi,eta,zeta)
-                    mat(3,2) = metric_point(mesh(idom)%elems(ielem),Z_DIR,ETA_DIR, xi,eta,zeta)
-                    mat(1,3) = metric_point(mesh(idom)%elems(ielem),X_DIR,ZETA_DIR,xi,eta,zeta)
-                    mat(2,3) = metric_point(mesh(idom)%elems(ielem),Y_DIR,ZETA_DIR,xi,eta,zeta)
-                    mat(3,3) = metric_point(mesh(idom)%elems(ielem),Z_DIR,ZETA_DIR,xi,eta,zeta)
+                mat(1,1) = mesh(idom)%elems(ielem)%metric_point(X_DIR,XI_DIR,  xi,eta,zeta)
+                mat(2,1) = mesh(idom)%elems(ielem)%metric_point(Y_DIR,XI_DIR,  xi,eta,zeta)
+                mat(3,1) = mesh(idom)%elems(ielem)%metric_point(Z_DIR,XI_DIR,  xi,eta,zeta)
+                mat(1,2) = mesh(idom)%elems(ielem)%metric_point(X_DIR,ETA_DIR, xi,eta,zeta)
+                mat(2,2) = mesh(idom)%elems(ielem)%metric_point(Y_DIR,ETA_DIR, xi,eta,zeta)
+                mat(3,2) = mesh(idom)%elems(ielem)%metric_point(Z_DIR,ETA_DIR, xi,eta,zeta)
+                mat(1,3) = mesh(idom)%elems(ielem)%metric_point(X_DIR,ZETA_DIR,xi,eta,zeta)
+                mat(2,3) = mesh(idom)%elems(ielem)%metric_point(Y_DIR,ZETA_DIR,xi,eta,zeta)
+                mat(3,3) = mesh(idom)%elems(ielem)%metric_point(Z_DIR,ZETA_DIR,xi,eta,zeta)
 
-                else if ( spacedim == TWO_DIM ) then
-                    mat(1,1) = metric_point(mesh(idom)%elems(ielem),X_DIR,XI_DIR,  xi,eta,zeta)
-                    mat(2,1) = metric_point(mesh(idom)%elems(ielem),Y_DIR,XI_DIR,  xi,eta,zeta)
-                    mat(3,1) = metric_point(mesh(idom)%elems(ielem),Z_DIR,XI_DIR,  xi,eta,zeta)
-                    mat(1,2) = metric_point(mesh(idom)%elems(ielem),X_DIR,ETA_DIR, xi,eta,zeta)
-                    mat(2,2) = metric_point(mesh(idom)%elems(ielem),Y_DIR,ETA_DIR, xi,eta,zeta)
-                    mat(3,2) = metric_point(mesh(idom)%elems(ielem),Z_DIR,ETA_DIR, xi,eta,zeta)
-                    mat(1,3) = ZERO
-                    mat(2,3) = ZERO
-                    mat(3,3) = ONE
-
-
-                end if
 
                 !
                 ! Invert jacobian matrix
@@ -746,13 +733,9 @@ contains
                     !
                     do iterm = 1,nterms
                         do ipt = 1,npts
-                            node = mesh(idom)%chimera%recv%data(iChiID)%donor_coords(idonor)%at(ipt)
 
-                            if ( spacedim == THREE_DIM ) then
-                                interpolator(ipt,iterm) = polynomialVal(3,nterms,iterm,node)
-                            else if ( spacedim == TWO_DIM ) then
-                                interpolator(ipt,iterm) = polynomialVal(2,nterms,iterm,node)
-                            end if
+                            node = mesh(idom)%chimera%recv%data(iChiID)%donor_coords(idonor)%at(ipt)
+                            interpolator(ipt,iterm) = polynomialVal(spacedim,nterms,iterm,node)
 
                         end do ! ipt
                     end do ! iterm

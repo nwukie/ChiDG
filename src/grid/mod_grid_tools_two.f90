@@ -147,9 +147,6 @@ contains
                 !
                 ! Compute local cartesian coordinates as a function of xi,eta,zeta
                 !
-!                xn = mesh_point(mesh(idom)%elems(ielem),X_DIR,xi,eta,zeta)
-!                yn = mesh_point(mesh(idom)%elems(ielem),Y_DIR,xi,eta,zeta)
-!                zn = mesh_point(mesh(idom)%elems(ielem),Z_DIR,xi,eta,zeta)
                 xn = mesh(idom)%elems(ielem)%x(xi,eta,zeta)
                 yn = mesh(idom)%elems(ielem)%y(xi,eta,zeta)
                 zn = mesh(idom)%elems(ielem)%z(xi,eta,zeta)
@@ -167,40 +164,15 @@ contains
                 !
                 ! Assemble coordinate jacobian matrix
                 !
-!                mat(1,1) = metric_point(mesh(idom)%elems(ielem),X_DIR,XI_DIR,  xi,eta,zeta)
-!                mat(2,1) = metric_point(mesh(idom)%elems(ielem),Y_DIR,XI_DIR,  xi,eta,zeta)
-!                mat(3,1) = metric_point(mesh(idom)%elems(ielem),Z_DIR,XI_DIR,  xi,eta,zeta)
-!                mat(1,2) = metric_point(mesh(idom)%elems(ielem),X_DIR,ETA_DIR, xi,eta,zeta)
-!                mat(2,2) = metric_point(mesh(idom)%elems(ielem),Y_DIR,ETA_DIR, xi,eta,zeta)
-!                mat(3,2) = metric_point(mesh(idom)%elems(ielem),Z_DIR,ETA_DIR, xi,eta,zeta)
-!                mat(1,3) = metric_point(mesh(idom)%elems(ielem),X_DIR,ZETA_DIR,xi,eta,zeta)
-!                mat(2,3) = metric_point(mesh(idom)%elems(ielem),Y_DIR,ZETA_DIR,xi,eta,zeta)
-!                mat(3,3) = metric_point(mesh(idom)%elems(ielem),Z_DIR,ZETA_DIR,xi,eta,zeta)
-
-                if ( spacedim == THREE_DIM ) then
-                    mat(1,1) = mesh(idom)%elems(ielem)%compute_metric(X_DIR,XI_DIR,  xi,eta,zeta)
-                    mat(2,1) = mesh(idom)%elems(ielem)%compute_metric(Y_DIR,XI_DIR,  xi,eta,zeta)
-                    mat(3,1) = mesh(idom)%elems(ielem)%compute_metric(Z_DIR,XI_DIR,  xi,eta,zeta)
-                    mat(1,2) = mesh(idom)%elems(ielem)%compute_metric(X_DIR,ETA_DIR, xi,eta,zeta)
-                    mat(2,2) = mesh(idom)%elems(ielem)%compute_metric(Y_DIR,ETA_DIR, xi,eta,zeta)
-                    mat(3,2) = mesh(idom)%elems(ielem)%compute_metric(Z_DIR,ETA_DIR, xi,eta,zeta)
-                    mat(1,3) = mesh(idom)%elems(ielem)%compute_metric(X_DIR,ZETA_DIR,xi,eta,zeta)
-                    mat(2,3) = mesh(idom)%elems(ielem)%compute_metric(Y_DIR,ZETA_DIR,xi,eta,zeta)
-                    mat(3,3) = mesh(idom)%elems(ielem)%compute_metric(Z_DIR,ZETA_DIR,xi,eta,zeta)
-
-                else if ( spacedim == TWO_DIM ) then
-                    mat(1,1) = mesh(idom)%elems(ielem)%compute_metric(X_DIR,XI_DIR,  xi,eta,zeta)
-                    mat(2,1) = mesh(idom)%elems(ielem)%compute_metric(Y_DIR,XI_DIR,  xi,eta,zeta)
-                    mat(3,1) = mesh(idom)%elems(ielem)%compute_metric(Z_DIR,XI_DIR,  xi,eta,zeta)
-                    mat(1,2) = mesh(idom)%elems(ielem)%compute_metric(X_DIR,ETA_DIR, xi,eta,zeta)
-                    mat(2,2) = mesh(idom)%elems(ielem)%compute_metric(Y_DIR,ETA_DIR, xi,eta,zeta)
-                    mat(3,2) = mesh(idom)%elems(ielem)%compute_metric(Z_DIR,ETA_DIR, xi,eta,zeta)
-                    mat(1,3) = ZERO
-                    mat(2,3) = ZERO
-                    mat(3,3) = ONE
-
-                end if
-
+                mat(1,1) = mesh(idom)%elems(ielem)%metric_point(X_DIR,XI_DIR,  xi,eta,zeta)
+                mat(2,1) = mesh(idom)%elems(ielem)%metric_point(Y_DIR,XI_DIR,  xi,eta,zeta)
+                mat(3,1) = mesh(idom)%elems(ielem)%metric_point(Z_DIR,XI_DIR,  xi,eta,zeta)
+                mat(1,2) = mesh(idom)%elems(ielem)%metric_point(X_DIR,ETA_DIR, xi,eta,zeta)
+                mat(2,2) = mesh(idom)%elems(ielem)%metric_point(Y_DIR,ETA_DIR, xi,eta,zeta)
+                mat(3,2) = mesh(idom)%elems(ielem)%metric_point(Z_DIR,ETA_DIR, xi,eta,zeta)
+                mat(1,3) = mesh(idom)%elems(ielem)%metric_point(X_DIR,ZETA_DIR,xi,eta,zeta)
+                mat(2,3) = mesh(idom)%elems(ielem)%metric_point(Y_DIR,ZETA_DIR,xi,eta,zeta)
+                mat(3,3) = mesh(idom)%elems(ielem)%metric_point(Z_DIR,ZETA_DIR,xi,eta,zeta)
 
 
                 !

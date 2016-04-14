@@ -13,7 +13,7 @@ subroutine test_blockvector_distribute()
     type(blockvector_t)         :: bvec
     type(point_t), allocatable  :: pts(:,:,:)
     real(rk), allocatable       :: fullvec(:)
-    integer(ik)                 :: idomain, nterms_c, nterms_s
+    integer(ik)                 :: idomain, nterms_c, nterms_s, spacedim
 
 
 
@@ -35,9 +35,11 @@ subroutine test_blockvector_distribute()
     ! Call domain initialization
     !
     idomain  = 1
+    spacedim = 3
     nterms_c = 8
     nterms_s = 8
-    call chidg%data%add_domain('D_01',pts,nterms_c,'scalar',nterms_s)
+    call chidg%data%add_domain('D_01',pts,spacedim,nterms_c,'scalar')
+    call chidg%initialize_solution_domains(nterms_s)
 
 
     !

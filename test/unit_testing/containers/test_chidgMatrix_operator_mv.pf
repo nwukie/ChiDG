@@ -23,7 +23,7 @@ subroutine test_chidgMatrix_operator_mv()
     type(chidg_t)                   :: chidg
     type(meshdata_t),   allocatable :: meshdata(:)
     class(bc_t),        allocatable :: bc
-    integer(ik)                     :: nterms_s, idom
+    integer(ik)                     :: nterms_s, idom, spacedim
     real(rk), dimension(8)          :: bref_1, bref_2
     real(rk)                        :: tol
 
@@ -31,6 +31,7 @@ subroutine test_chidgMatrix_operator_mv()
     type(chidgVector_t)             :: x, b
 
     tol             = 1.e-13_rk
+    spacedim        = 3
     nterms_s        = 8
     IO_DESTINATION  = 'file'
     
@@ -51,8 +52,9 @@ subroutine test_chidgMatrix_operator_mv()
     ! Initialize domains
     !
     do idom = 1,size(meshdata)
-        call chidg%data%add_domain(trim(meshdata(idom)%name), meshdata(idom)%points, meshdata(idom)%nterms_c, 'linearadvection', nterms_s)
+        call chidg%data%add_domain(trim(meshdata(idom)%name), meshdata(idom)%points,spacedim,meshdata(idom)%nterms_c,'linearadvection')
     end do
+    call chidg%initialize_solution_domains(nterms_s)
 
 
 

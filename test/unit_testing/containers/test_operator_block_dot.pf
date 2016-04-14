@@ -3,7 +3,8 @@ subroutine test_operator_block_dot()
     use pfunit_mod
 
     use mod_kinds,          only: rk, ik
-    use mod_constants,      only: ZERO, ONE, TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT, NINE, TEN
+    use mod_constants,      only: ZERO, ONE, TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT, NINE, TEN, &
+                                  IO_DESTINATION
     use type_blockvector,   only: blockvector_t
     use type_chidg,         only: chidg_t
     use type_point,         only: point_t
@@ -19,16 +20,18 @@ subroutine test_operator_block_dot()
     type(blockvector_t)         :: a, b
 
     real(rk)                    :: tol
-    integer(ik)                 :: nterms_c, nterms_s, idomain
+    integer(ik)                 :: nterms_c, nterms_s, idomain, spacedim
     real(rk),   dimension(8)    :: vec_a1, vec_a2, vec_a3, vec_b1, vec_b2, vec_b3
     real(rk)                    :: dot_ref, dot_test
 
 
     tol         = 1.e-13_rk
     idomain     = 1
+    spacedim    = 3
     nterms_c    = 8
     nterms_s    = 8
 
+    IO_DESTINATION = 'file'
 
 
     ! Initialize ChiDG
@@ -40,9 +43,8 @@ subroutine test_operator_block_dot()
 
     
     ! Initialize domain
-    !call dom%init_geom(idomain,nterms_c,pts)
-    !call dom%init_sol('Scalar',nterms_s)
-    call chidg%data%add_domain('D_01',pts,nterms_c,'scalar',nterms_s)
+    call chidg%data%add_domain('D_01',pts,spacedim,nterms_c,'scalar')
+    call chidg%initialize_solution_domains(nterms_s)
 
 
 

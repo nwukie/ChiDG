@@ -58,6 +58,15 @@ contains
         call self%set_name('primlineuler_inlet')
 
 
+        !
+        ! Add functions
+        !
+!        call self%bcproperties%add('AzimuthalMode', 'Required')
+!        call self%bcproperties%add('RadialMode',    'Required')
+
+
+
+
     end subroutine add_options
     !*******************************************************************************************
 

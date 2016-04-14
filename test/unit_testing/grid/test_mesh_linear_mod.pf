@@ -35,7 +35,7 @@ contains
         type(point_t)               :: pts(4,4,4)
         integer(ik)                 :: ftype, ineighbor, mapping, ielem, &
                                        ipt_xi, ipt_eta, ipt_zeta, ipt
-        integer(ik)                 :: neqns, nterms_s, nterms_c, idomain
+        integer(ik)                 :: neqns, nterms_s, nterms_c, idomain, spacedim
         real(rk), dimension(npt)    :: x,y,z
 
         !
@@ -95,10 +95,11 @@ contains
         ! Initialize mesh
         !
         idomain  = 1
+        spacedim = 3
         nterms_c = 8
         neqns = 1
         nterms_s = 8
-        call this%mesh%init_geom(idomain,nterms_c,pts)
+        call this%mesh%init_geom(idomain,spacedim,nterms_c,pts)
         call this%mesh%init_sol(neqns,nterms_s)
 
     end subroutine

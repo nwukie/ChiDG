@@ -20,7 +20,7 @@ subroutine test_blockmatrix__store_1eq_8terms()
     type(point_t), allocatable  :: pts(:,:,:)    
     type(blockmatrix_t)         :: bmat
     type(AD_D)                  :: integral(8)
-    integer(ik)                 :: ielem, iblk, ivar, nderiv, i, neqns, nterms_c, nterms_s, idomain
+    integer(ik)                 :: ielem, iblk, ivar, nderiv, i, neqns, nterms_c, nterms_s, idomain, spacedim
     
     call chidg%init('env')
     
@@ -32,10 +32,11 @@ subroutine test_blockmatrix__store_1eq_8terms()
     !
     neqns  = 1
     idomain  = 1
+    spacedim = 3
     nterms_c = 8
     nterms_s = 8
     call meshgen('3x3x3',pts)
-    call mesh%init_geom(idomain,nterms_c,pts)
+    call mesh%init_geom(idomain,spacedim,nterms_c,pts)
     call mesh%init_sol(neqns,nterms_s)    ! Initialize numerics
 
 
@@ -150,7 +151,7 @@ subroutine test_blockmatrix__store_2eq_8terms()
     type(point_t), allocatable  :: pts(:,:,:)
     type(blockmatrix_t)         :: bmat
     type(AD_D)                  :: integral(8)
-    integer(ik)                 :: ielem, iblk, ivar, nderiv, i, neqns, nterms_c, nterms_s, idomain
+    integer(ik)                 :: ielem, iblk, ivar, nderiv, i, neqns, nterms_c, nterms_s, idomain, spacedim
     
     call chidg%init('env')
     
@@ -160,11 +161,12 @@ subroutine test_blockmatrix__store_2eq_8terms()
     !
     neqns   = 2
     idomain  = 1
+    spacedim = 3
     nterms_c = 8
     nterms_s = 8
-    call meshgen('3x3x3',pts)                   ! Generate points for 3x3x3 mesh
-    call mesh%init_geom(idomain,nterms_c,pts)   ! Initialize geometry
-    call mesh%init_sol(neqns,nterms_s)          ! Initialize numerics
+    call meshgen('3x3x3',pts)                           ! Generate points for 3x3x3 mesh
+    call mesh%init_geom(idomain,spacedim,nterms_c,pts)  ! Initialize geometry
+    call mesh%init_sol(neqns,nterms_s)                  ! Initialize numerics
 
 
     !
@@ -275,7 +277,7 @@ subroutine test_blockmatrix__clear_1eq_8terms()
     type(point_t), allocatable  :: pts(:,:,:)
     type(blockmatrix_t)         :: bmat
     type(AD_D)                  :: integral(8)
-    integer(ik)                 :: ielem, iblk, ivar, nderiv, i, neqns, nterms_c, nterms_s, idomain
+    integer(ik)                 :: ielem, iblk, ivar, nderiv, i, neqns, nterms_c, nterms_s, idomain, spacedim
     real(rk)                    :: tol
 
     tol = 1.e-16_rk
@@ -289,11 +291,12 @@ subroutine test_blockmatrix__clear_1eq_8terms()
     !
     neqns    = 1
     idomain  = 1
+    spacedim = 3
     nterms_c = 8
     nterms_s = 8
-    call meshgen('3x3x3',pts)                 ! Generate points for 3x3x3 mesh
-    call mesh%init_geom(idomain,nterms_c,pts) ! Initialize geometry
-    call mesh%init_sol(neqns,nterms_s)        ! Initialize numerics
+    call meshgen('3x3x3',pts)                           ! Generate points for 3x3x3 mesh
+    call mesh%init_geom(idomain,spacedim,nterms_c,pts)  ! Initialize geometry
+    call mesh%init_sol(neqns,nterms_s)                  ! Initialize numerics
 
 
 

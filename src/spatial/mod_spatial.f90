@@ -86,7 +86,7 @@ contains
             !
             ! XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX, DIAG
             !
-            print*, 'Interior Scheme'
+            call write_line('Interior Scheme')
 
             do iblk = 1,7           ! 1-6 = linearization of neighbor blocks, 7 = linearization of Q- block(self)
 

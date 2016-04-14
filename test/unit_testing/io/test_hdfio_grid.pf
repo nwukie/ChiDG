@@ -5,7 +5,7 @@ subroutine testIO__read_grid_hdf__D1_E1_M1()
     use type_chidg,             only: chidg_t
     use type_meshdata,          only: meshdata_t
     use mod_kinds,              only: rk,ik
-    use mod_constants,          only: ZERO, ONE
+    use mod_constants,          only: ZERO, ONE, IO_DESTINATION
     use mod_hdfio,              only: read_grid_hdf
     use mod_grid,               only: compute_element_mappings
     implicit none
@@ -14,6 +14,7 @@ subroutine testIO__read_grid_hdf__D1_E1_M1()
     type(meshdata_t), allocatable   :: meshdata(:)
     character(100), parameter       :: filename = 'D1_E1_M1.h5'
     integer,        parameter       :: ndomains = 1
+    integer(ik),    parameter       :: spacedim = 3
     integer(ik),    parameter       :: nterms_c = 8
     integer(ik),    parameter       :: nterms_s = 8
     integer,        parameter       :: nelem    = 1
@@ -22,6 +23,9 @@ subroutine testIO__read_grid_hdf__D1_E1_M1()
     
     tol = 1.e-14_rk
     
+
+    IO_DESTINATION = 'file'
+
     ! Initialize element mapping
     call chidg%init('env')
     
@@ -30,7 +34,9 @@ subroutine testIO__read_grid_hdf__D1_E1_M1()
     ! Read grid and add domain to chidg
     !
     call read_grid_hdf(filename, meshdata)
-    call chidg%data%add_domain(meshdata(1)%name,meshdata(1)%points,meshdata(1)%nterms_c,'scalar',nterms_s)
+    call chidg%data%add_domain(meshdata(1)%name,meshdata(1)%points,spacedim,meshdata(1)%nterms_c,'scalar')
+    call chidg%initialize_solution_domains(nterms_s)
+    call chidg%initialize_solution_solver()
 
 
 
@@ -42,9 +48,18 @@ subroutine testIO__read_grid_hdf__D1_E1_M1()
     @assertEqual(nterms_c,chidg%data%mesh(1)%nterms_c)
     
     ! Test points
-    x = [ZERO, ONE, ZERO, ONE, ZERO, ONE, ZERO, ONE]
-    y = [ZERO, ZERO, ONE, ONE, ZERO, ZERO, ONE, ONE]
-    z = [ZERO, ZERO, ZERO, ZERO, ONE, ONE, ONE, ONE]
+
+! This is for element with corner at zero
+!    x = [ZERO, ONE, ZERO, ONE, ZERO, ONE, ZERO, ONE]
+!    y = [ZERO, ZERO, ONE, ONE, ZERO, ZERO, ONE, ONE]
+!    z = [ZERO, ZERO, ZERO, ZERO, ONE, ONE, ONE, ONE]
+
+
+! This is for element with center at zero
+    x = [-ONE,  ONE, -ONE,  ONE, -ONE,  ONE, -ONE, ONE]
+    y = [-ONE, -ONE,  ONE,  ONE, -ONE, -ONE,  ONE, ONE]
+    z = [-ONE, -ONE, -ONE, -ONE,  ONE,  ONE,  ONE, ONE]
+
     @assertEqual(x,chidg%data%mesh(1)%elems(1)%elem_pts(:)%c1_,tol)
     @assertEqual(y,chidg%data%mesh(1)%elems(1)%elem_pts(:)%c2_,tol)
     @assertEqual(z,chidg%data%mesh(1)%elems(1)%elem_pts(:)%c3_,tol)
@@ -74,7 +89,7 @@ subroutine testIO__read_grid_hdf__D1_E27_M1()
     use type_chidg,             only: chidg_t
     use type_meshdata,          only: meshdata_t
     use mod_kinds,              only: rk,ik
-    use mod_constants,          only: ZERO, THIRD, NFACES
+    use mod_constants,          only: ZERO, THIRD, NFACES, IO_DESTINATION
     use mod_hdfio,              only: read_grid_hdf
     use mod_grid,               only: compute_element_mappings
     implicit none
@@ -83,6 +98,7 @@ subroutine testIO__read_grid_hdf__D1_E27_M1()
     type(meshdata_t),   allocatable :: meshdata(:)
     character(100), parameter       :: filename = 'D1_E27_M1.h5'
     integer,        parameter       :: ndomains = 1
+    integer,        parameter       :: spacedim = 3
     integer,        parameter       :: nterms_c = 8
     integer,        parameter       :: nterms_s = 8
     integer,        parameter       :: nelem    = 27
@@ -92,6 +108,9 @@ subroutine testIO__read_grid_hdf__D1_E27_M1()
     
     tol = 1.e-14_rk
     
+    IO_DESTINATION = 'file'
+
+
     ! Initialize element mapping
     call chidg%init('env')
     
@@ -100,7 +119,8 @@ subroutine testIO__read_grid_hdf__D1_E27_M1()
     ! Read grid and add domain to chidg
     !
     call read_grid_hdf(filename,meshdata)
-    call chidg%data%add_domain(meshdata(1)%name, meshdata(1)%points, meshdata(1)%nterms_c, 'scalar', nterms_s)
+    call chidg%data%add_domain(meshdata(1)%name, meshdata(1)%points, spacedim,meshdata(1)%nterms_c, 'scalar')
+    call chidg%initialize_solution_domains(nterms_s)
 
     
     ! Test number of allocated domains
@@ -154,7 +174,7 @@ subroutine testIO__read_grid_hdf__D2_E1_M1()
     use type_chidg,             only: chidg_t
     use type_meshdata,          only: meshdata_t
     use mod_kinds,              only: rk,ik
-    use mod_constants,          only: ZERO, ONE
+    use mod_constants,          only: ZERO, ONE, IO_DESTINATION
     use mod_hdfio,              only: read_grid_hdf
     use mod_grid,               only: compute_element_mappings
     implicit none
@@ -163,6 +183,7 @@ subroutine testIO__read_grid_hdf__D2_E1_M1()
     type(meshdata_t), allocatable   :: meshdata(:)
     character(100), parameter       :: filename = 'D2_E1_M1.h5'
     integer,        parameter       :: ndomains = 2
+    integer(ik),    parameter       :: spacedim = 3
     integer(ik),    parameter       :: nterms_c = 8
     integer(ik),    parameter       :: nterms_s = 8
     integer,        parameter       :: nelem    = 1
@@ -172,6 +193,8 @@ subroutine testIO__read_grid_hdf__D2_E1_M1()
     
     tol = 1.e-14_rk
     
+    IO_DESTINATION = 'file'
+
     ! Initialize element mapping
     call chidg%init('env')
     
@@ -182,8 +205,9 @@ subroutine testIO__read_grid_hdf__D2_E1_M1()
     call read_grid_hdf(filename, meshdata)
 
     do idom = 1,size(meshdata)
-        call chidg%data%add_domain(meshdata(idom)%name,meshdata(idom)%points,meshdata(idom)%nterms_c,'scalar',nterms_s)
+        call chidg%data%add_domain(meshdata(idom)%name,meshdata(idom)%points,spacedim,meshdata(idom)%nterms_c,'scalar')
     end do
+    call chidg%initialize_solution_domains(nterms_s)
 
 
 
@@ -242,7 +266,7 @@ subroutine testIO__read_grid_hdf__D2_E27_M1()
     use type_chidg,             only: chidg_t
     use type_meshdata,          only: meshdata_t
     use mod_kinds,              only: rk,ik
-    use mod_constants,          only: ZERO, ONE, THIRD
+    use mod_constants,          only: ZERO, ONE, THIRD, IO_DESTINATION
     use mod_hdfio,              only: read_grid_hdf
     use mod_grid,               only: compute_element_mappings
     implicit none
@@ -251,6 +275,7 @@ subroutine testIO__read_grid_hdf__D2_E27_M1()
     type(meshdata_t), allocatable   :: meshdata(:)
     character(100), parameter       :: filename = 'D2_E27_M1.h5'
     integer,        parameter       :: ndomains = 2
+    integer(ik),    parameter       :: spacedim = 3
     integer(ik),    parameter       :: nterms_c = 8
     integer(ik),    parameter       :: nterms_s = 8
     integer,        parameter       :: nelem    = 27
@@ -260,6 +285,8 @@ subroutine testIO__read_grid_hdf__D2_E27_M1()
     
     tol = 1.e-14_rk
     
+    IO_DESTINATION = 'file'
+
     ! Initialize element mapping
     call chidg%init('env')
     
@@ -270,8 +297,9 @@ subroutine testIO__read_grid_hdf__D2_E27_M1()
     call read_grid_hdf(filename, meshdata)
 
     do idom = 1,size(meshdata)
-        call chidg%data%add_domain(meshdata(idom)%name,meshdata(idom)%points,meshdata(idom)%nterms_c,'scalar',nterms_s)
+        call chidg%data%add_domain(meshdata(idom)%name,meshdata(idom)%points,spacedim,meshdata(idom)%nterms_c,'scalar')
     end do
+    call chidg%initialize_solution_domains(nterms_s)
 
 
 

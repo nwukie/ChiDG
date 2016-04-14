@@ -225,12 +225,10 @@ contains
         call create_equationset(eqnset,temp_eqnset(idom)%item)
 
 
-print*, 'chidg_data%add_domain - 1'
 !        !
 !        ! Initialize mesh numerics based on equation set and polynomial expansion order
 !        !
 !        call temp_mesh(idom)%init_sol(temp_eqnset(idom)%item%neqns,nterms_s)
-print*, 'chidg_data%add_domain - 2'
 
 
         !
@@ -333,13 +331,13 @@ print*, 'chidg_data%add_domain - 2'
 
         integer(ik) :: idomain, neqns
 
-        print*, 'chidg_data%initialize_solution_domains'
 
+        call write_line('idomain', 'nelements')
         do idomain = 1,self%ndomains()
 
             neqns = self%eqnset(idomain)%item%neqns
 
-            print*, idomain, neqns, nterms_s
+            call write_line(idomain, self%mesh(idomain)%nelem)
             !
             ! Initialize mesh numerics based on equation set and polynomial expansion order
             !

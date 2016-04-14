@@ -57,7 +57,7 @@ contains
     subroutine setUp(this)
         class(test_interpolate_chimera),    intent(inout)   :: this
 
-        integer(ik)                     :: nterms_s, ivar, idom
+        integer(ik)                     :: nterms_s, ivar, idom, spacedim
         type(meshdata_t),   allocatable :: meshdata(:) 
         class(bc_t),        allocatable :: bc
         
@@ -76,16 +76,20 @@ contains
         !
         ! Read D2_E8_M1. Two domains, 2x2x2 elements in each domain, linear mapping
         !
-        call read_grid_hdf('D2_E8_M1.h5',meshdata)
+        !call read_grid_hdf('D2_E8_M1.h5',meshdata)
+        call read_grid_hdf('D2_E8_M1_abutting.h5',meshdata)
 
 
         !
         ! Add domain to ChiDG
         !
+        spacedim = 3
         nterms_s = 8
         do idom = 1,size(meshdata)
-            call this%chidg%data%add_domain(trim(meshdata(idom)%name),meshdata(idom)%points,meshdata(idom)%nterms_c,'linearadvection',nterms_s)
+            call this%chidg%data%add_domain(trim(meshdata(idom)%name),meshdata(idom)%points,spacedim,meshdata(idom)%nterms_c,'linearadvection')
         end do
+        call this%chidg%initialize_solution_domains(nterms_s)
+        
 
 
         !
@@ -120,7 +124,8 @@ contains
         !
         ! Initialize chidg solution data storage
         !
-        call this%chidg%data%init_sdata()
+        !call this%chidg%data%init_sdata()
+        call this%chidg%initialize_solution_solver()
 
         !
         ! Initialized solution to constant values
@@ -212,12 +217,10 @@ contains
             !
             ! PROCEDURE BEING TESTED
             !
-            !call interpolate_face(self%chidg%data%mesh,q,idomain,ielem,iface,ivar,u_gq,seed, NEIGHBOR)
             call interpolate_face(self%chidg%data%mesh,face,q,ivar,u_gq, NEIGHBOR)
             
             
             ! Initialize reference
-            !call self%fcn%dict%get('val',val)
             val = self%fcn%get_option_value('val')
             u_ref = val
             
@@ -289,7 +292,6 @@ contains
             !
             ! PROCEDURE BEING TESTED
             !
-            !call interpolate_face(self%chidg%data%mesh,q,idomain,ielem,iface,ivar,u_gq,seed, NEIGHBOR)
             call interpolate_face(self%chidg%data%mesh,face,q,ivar,u_gq, NEIGHBOR)
             
             deriv_ref = ZERO
@@ -372,7 +374,6 @@ contains
             !
             ! PROCEDURE BEING TESTED
             !
-            !call interpolate_face(self%chidg%data%mesh,q,idomain,ielem,iface,ivar,u_gq,seed, NEIGHBOR)
             call interpolate_face(self%chidg%data%mesh,face,q,ivar,u_gq, NEIGHBOR)
             
             

@@ -27,13 +27,14 @@ subroutine test_update_space_linearadvection()
     class(bc_t),        allocatable :: bc
     type(meshdata_t),   allocatable :: meshdataA(:), meshdataB(:)
     class(function_t),  allocatable :: constant, gaussian
-    integer(ik)     :: idom, nterms_s, ChiID
+    integer(ik)     :: idom, nterms_s, ChiID, spacedim
     real(rk)        :: tol
 
 
 
 
     tol             = 1.e-15_rk
+    spacedim        = 3
     nterms_s        = 8
     IO_DESTINATION  = 'file'
 
@@ -46,10 +47,11 @@ subroutine test_update_space_linearadvection()
 
 
     !
-    ! Read grid
+    ! Read grid. These grids are the same geometry. The first has only one block. The second has two blocks.
+    ! Here, we wish to initialize both and then compare the initialized data between the two. They should be the same.
     !
-    call read_grid_hdf('D1_E16_M1.h5',meshdataA)
-    call read_grid_hdf('D2_E8_M1_abutting.h5',meshdataB)
+    call read_grid_hdf('D1_E16_M1.h5',meshdataA)            ! One, 4x2x2 grid
+    call read_grid_hdf('D2_E8_M1_abutting.h5',meshdataB)    ! Two, 2x2x2 grids that abut
 
 
 
@@ -57,12 +59,14 @@ subroutine test_update_space_linearadvection()
     ! Add domains
     !
     do idom = 1,size(meshdataA)
-        call chidgA%data%add_domain(trim(meshdataA(idom)%name),meshdataA(idom)%points,meshdataA(idom)%nterms_c,'linearadvection',nterms_s)
+        call chidgA%data%add_domain(trim(meshdataA(idom)%name),meshdataA(idom)%points,spacedim,meshdataA(idom)%nterms_c,'linearadvection')
     end do
+    call chidgA%initialize_solution_domains(nterms_s)
 
     do idom = 1,size(meshdataB)
-        call chidgB%data%add_domain(trim(meshdataB(idom)%name),meshdataB(idom)%points,meshdataB(idom)%nterms_c,'linearadvection',nterms_s)
+        call chidgB%data%add_domain(trim(meshdataB(idom)%name),meshdataB(idom)%points,spacedim,meshdataB(idom)%nterms_c,'linearadvection')
     end do
+    call chidgB%initialize_solution_domains(nterms_s)
 
 
     !
@@ -106,10 +110,10 @@ subroutine test_update_space_linearadvection()
     ! Initialize solution data storage
     !
     call chidgA%init('chimera')
-    call chidgA%data%init_sdata()
+    call chidgA%initialize_solution_solver()
 
     call chidgB%init('chimera')
-    call chidgB%data%init_sdata()
+    call chidgB%initialize_solution_solver()
 
 
 

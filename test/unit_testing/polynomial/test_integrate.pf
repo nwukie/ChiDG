@@ -3,7 +3,7 @@ subroutine test_integrate_boundary_unit_constant()
     use pfunit_mod
     use mod_kinds,          only: rk, ik
     use mod_constants,      only: ONE, DIAG, BOUNDARY_ADVECTIVE_FLUX, &
-                                  XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX
+                                  XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX, IO_DESTINATION
     use mod_integrate,      only: integrate_boundary_scalar_flux
 
     use type_chidg,         only: chidg_t
@@ -27,7 +27,7 @@ subroutine test_integrate_boundary_unit_constant()
     type(point_t),      allocatable     :: pts(:,:,:)
     type(chidg_t)                       :: chidg
     class(bc_t),        allocatable     :: bc
-    integer(ik)                         :: nterms_c, nterms_s, iblk, idom, ngq, ielem, iface, ifcn
+    integer(ik)                         :: nterms_c, nterms_s, iblk, idom, ngq, ielem, iface, ifcn, spacedim
     integer(ik)                         :: idonor, ivar, igq
     type(AD_D),         allocatable     :: integrand(:)
     class(function_t),  allocatable     :: constant
@@ -35,6 +35,9 @@ subroutine test_integrate_boundary_unit_constant()
     type(face_info_t)                   :: face
     type(function_info_t)               :: flux
     type(seed_t)                        :: seed
+
+
+    IO_DESTINATION = 'file'
 
 
     !
@@ -53,9 +56,10 @@ subroutine test_integrate_boundary_unit_constant()
     iface    = 1
 
 
+    spacedim = 3
     nterms_c = 8
     nterms_s = 1
-    call chidg%data%add_domain('D_01',pts,nterms_c,'linearadvection',nterms_s)
+    call chidg%data%add_domain('D_01',pts,spacedim,nterms_c,'linearadvection')
 
 
     !
@@ -74,7 +78,9 @@ subroutine test_integrate_boundary_unit_constant()
     !
     ! Initialize solver data
     !
-    call chidg%data%init_sdata()
+    !call chidg%data%init_sdata()
+    call chidg%data%initialize_solution_domains(nterms_s)
+    call chidg%data%initialize_solution_solver()
     call chidg%data%sdata%function_status%clear()
 
 
@@ -175,7 +181,7 @@ subroutine test_integrate_boundary_nonunit_constant()
     use pfunit_mod
     use mod_kinds,          only: rk, ik
     use mod_constants,      only: ONE, XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX, &
-                                  BOUNDARY_ADVECTIVE_FLUX
+                                  BOUNDARY_ADVECTIVE_FLUX, IO_DESTINATION
     use mod_integrate,      only: integrate_boundary_scalar_flux
 
     use type_chidg,         only: chidg_t
@@ -198,7 +204,7 @@ subroutine test_integrate_boundary_nonunit_constant()
     type(point_t),      allocatable     :: pts(:,:,:)
     type(chidg_t)                       :: chidg
     class(bc_t),        allocatable     :: bc
-    integer(ik)                         :: nterms_c, nterms_s, igq, ngq, ivar, ifcn
+    integer(ik)                         :: nterms_c, nterms_s, igq, ngq, ivar, ifcn, spacedim
     integer(ik)                         :: idomain, iblk, idonor
     type(AD_D),         allocatable     :: integrand(:)
     class(function_t),  allocatable     :: constant
@@ -207,6 +213,7 @@ subroutine test_integrate_boundary_nonunit_constant()
     type(function_info_t)               :: flux
     type(seed_t)                        :: seed
 
+    IO_DESTINATION = 'file'
 
     !
     ! Initialize chidg environment
@@ -221,11 +228,12 @@ subroutine test_integrate_boundary_nonunit_constant()
     call meshgen('111',pts)
 
 
+    spacedim = 3
     nterms_c = 8
     nterms_s = 1
 
 
-    call chidg%data%add_domain('D_01',pts,nterms_c,'scalar',nterms_s)
+    call chidg%data%add_domain('D_01',pts,spacedim,nterms_c,'scalar')
 
 
     !
@@ -244,7 +252,9 @@ subroutine test_integrate_boundary_nonunit_constant()
     !
     ! Initialize solver data 
     !
-    call chidg%data%init_sdata()
+    !call chidg%data%init_sdata()
+    call chidg%data%initialize_solution_domains(nterms_s)
+    call chidg%data%initialize_solution_solver()
 
 
 

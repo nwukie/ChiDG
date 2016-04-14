@@ -2,16 +2,17 @@
 @Test
 subroutine testElementMapping_allocated() 
     use pfunit_mod
-    use mod_grid,               only: compute_element_mappings, ELEM_MAP
+    use mod_grid,               only: compute_element_mappings, ELEM_MAP_3D
     use mod_kinds,              only: rk,ik
+    use mod_constants,          only: THREE_DIM
     implicit none
     
-    call compute_element_mappings()
+    call compute_element_mappings(THREE_DIM)
     
-    @assertTrue(allocated(elem_map(1)%mat))
-    @assertTrue(allocated(elem_map(2)%mat))
-    @assertTrue(allocated(elem_map(3)%mat))
-    @assertTrue(allocated(elem_map(4)%mat))
+    @assertTrue(allocated(ELEM_MAP_3D(1)%mat))
+    @assertTrue(allocated(ELEM_MAP_3D(2)%mat))
+    @assertTrue(allocated(ELEM_MAP_3D(3)%mat))
+    @assertTrue(allocated(ELEM_MAP_3D(4)%mat))
     
 end subroutine
 
@@ -22,16 +23,17 @@ end subroutine
 @Test
 subroutine testElementMapping_sizes() 
     use pfunit_mod
-    use mod_grid,               only: compute_element_mappings, ELEM_MAP
+    use mod_grid,               only: compute_element_mappings, ELEM_MAP_3D
     use mod_kinds,              only: rk,ik
+    use mod_constants,          only: THREE_DIM
     implicit none
     
-    call compute_element_mappings()
+    call compute_element_mappings(THREE_DIM)
     
-    @assertTrue(size(elem_map(1)%mat,1) == 8)
-    @assertTrue(size(elem_map(2)%mat,1) == 27)
-    @assertTrue(size(elem_map(3)%mat,1) == 64)
-    @assertTrue(size(elem_map(4)%mat,1) == 125)
+    @assertTrue(size(ELEM_MAP_3D(1)%mat,1) == 8)
+    @assertTrue(size(ELEM_MAP_3D(2)%mat,1) == 27)
+    @assertTrue(size(ELEM_MAP_3D(3)%mat,1) == 64)
+    @assertTrue(size(ELEM_MAP_3D(4)%mat,1) == 125)
     
 end subroutine
 
@@ -48,9 +50,9 @@ end subroutine
 @Test
 subroutine testElementMapping_reversability_linear() 
     use pfunit_mod
-    use mod_grid,               only: compute_element_mappings, ELEM_MAP
+    use mod_grid,               only: compute_element_mappings, ELEM_MAP_3D
     use mod_kinds,              only: rk,ik
-    use mod_constants,          only: ZERO, ONE, TWO, TENTH
+    use mod_constants,          only: ZERO, ONE, TWO, TENTH, THREE_DIM
     use mod_polynomial,         only: polynomialVal
     use type_point,             only: point_t
     use type_densevector,       only: densevector_t
@@ -65,7 +67,7 @@ subroutine testElementMapping_reversability_linear()
     tol = 1.e-13_rk
     
     
-    call compute_element_mappings()
+    call compute_element_mappings(THREE_DIM)
     
     call coords%init(8,3,1)   !> 8 terms, 3 coordinates (x,y,z), ielem = 1
     
@@ -118,9 +120,9 @@ subroutine testElementMapping_reversability_linear()
     end do
     
     ! Compute modal coordinates
-    call coords%setvar(1,matmul(elem_map(1)%mat,pts_init(:)%c1_))
-    call coords%setvar(2,matmul(elem_map(1)%mat,pts_init(:)%c2_))
-    call coords%setvar(3,matmul(elem_map(1)%mat,pts_init(:)%c3_))
+    call coords%setvar(1,matmul(ELEM_MAP_3D(1)%mat,pts_init(:)%c1_))
+    call coords%setvar(2,matmul(ELEM_MAP_3D(1)%mat,pts_init(:)%c2_))
+    call coords%setvar(3,matmul(ELEM_MAP_3D(1)%mat,pts_init(:)%c3_))
     
     
     ! Compute matrix of polynomial values for reverse calculation
@@ -155,9 +157,9 @@ end subroutine
 @Test
 subroutine testElementMapping_reversability_quadratic() 
     use pfunit_mod
-    use mod_grid,               only: compute_element_mappings, ELEM_MAP
+    use mod_grid,               only: compute_element_mappings, ELEM_MAP_3D
     use mod_kinds,              only: rk,ik
-    use mod_constants,          only: ZERO, ONE, TWO, THREE, TENTH
+    use mod_constants,          only: ZERO, ONE, TWO, THREE, TENTH, THREE_DIM
     use mod_polynomial,         only: polynomialVal
     use type_point,             only: point_t
     use type_densevector,       only: densevector_t
@@ -172,7 +174,7 @@ subroutine testElementMapping_reversability_quadratic()
     tol    = 1.e-13_rk
     npt_1d = 3
     
-    call compute_element_mappings()
+    call compute_element_mappings(THREE_DIM)
     
     call coords%init(27,3,1)   !> 27 terms, 3 coordinates (x,y,z), ielem = 1
     
@@ -226,9 +228,9 @@ subroutine testElementMapping_reversability_quadratic()
     end do
     
     ! Compute modal coordinates
-    call coords%setvar(1,matmul(elem_map(2)%mat,pts_init(:)%c1_))
-    call coords%setvar(2,matmul(elem_map(2)%mat,pts_init(:)%c2_))
-    call coords%setvar(3,matmul(elem_map(2)%mat,pts_init(:)%c3_))
+    call coords%setvar(1,matmul(ELEM_MAP_3D(2)%mat,pts_init(:)%c1_))
+    call coords%setvar(2,matmul(ELEM_MAP_3D(2)%mat,pts_init(:)%c2_))
+    call coords%setvar(3,matmul(ELEM_MAP_3D(2)%mat,pts_init(:)%c3_))
     
     
     ! Compute matrix of polynomial values for reverse calculation
@@ -262,9 +264,9 @@ end subroutine
 @Test
 subroutine testElementMapping_reversability_cubic() 
     use pfunit_mod
-    use mod_grid,               only: compute_element_mappings, ELEM_MAP
+    use mod_grid,               only: compute_element_mappings, ELEM_MAP_3D
     use mod_kinds,              only: rk,ik
-    use mod_constants,          only: ZERO, ONE, TWO, THREE, FOUR, TENTH
+    use mod_constants,          only: ZERO, ONE, TWO, THREE, FOUR, TENTH, THREE_DIM
     use mod_polynomial,         only: polynomialVal
     use type_point,             only: point_t
     use type_densevector,       only: densevector_t
@@ -279,7 +281,7 @@ subroutine testElementMapping_reversability_cubic()
     tol = 1.e-13_rk
     npt_1d = 4
     
-    call compute_element_mappings()
+    call compute_element_mappings(THREE_DIM)
     
     call coords%init(64,3,1)   ! 64 terms, 3 coordinates (x,y,z), ielem = 1
     
@@ -333,9 +335,9 @@ subroutine testElementMapping_reversability_cubic()
     end do
     
     ! Compute modal coordinates
-    call coords%setvar(1,matmul(elem_map(3)%mat,pts_init(:)%c1_))
-    call coords%setvar(2,matmul(elem_map(3)%mat,pts_init(:)%c2_))
-    call coords%setvar(3,matmul(elem_map(3)%mat,pts_init(:)%c3_))
+    call coords%setvar(1,matmul(ELEM_MAP_3D(3)%mat,pts_init(:)%c1_))
+    call coords%setvar(2,matmul(ELEM_MAP_3D(3)%mat,pts_init(:)%c2_))
+    call coords%setvar(3,matmul(ELEM_MAP_3D(3)%mat,pts_init(:)%c3_))
     
     
     ! Compute matrix of polynomial values for reverse calculation
@@ -369,9 +371,9 @@ end subroutine
 @Test
 subroutine testElementMapping_reversability_quartic() 
     use pfunit_mod
-    use mod_grid,               only: compute_element_mappings, ELEM_MAP
+    use mod_grid,               only: compute_element_mappings, ELEM_MAP_3D
     use mod_kinds,              only: rk,ik
-    use mod_constants,          only: ZERO, ONE, TWO, THREE, FOUR, TENTH
+    use mod_constants,          only: ZERO, ONE, TWO, THREE, FOUR, TENTH, THREE_DIM
     use mod_polynomial,         only: polynomialVal
     use type_point,             only: point_t
     use type_densevector,       only: densevector_t
@@ -386,7 +388,7 @@ subroutine testElementMapping_reversability_quartic()
     tol = 1.e-13_rk
     npt_1d = 5
     
-    call compute_element_mappings()
+    call compute_element_mappings(THREE_DIM)
     
     call coords%init(125,3,1)   ! 125 terms, 3 coordinates (x,y,z)
     
@@ -440,9 +442,9 @@ subroutine testElementMapping_reversability_quartic()
     end do
     
     ! Compute modal coordinates
-    call coords%setvar(1,matmul(elem_map(4)%mat,pts_init(:)%c1_))
-    call coords%setvar(2,matmul(elem_map(4)%mat,pts_init(:)%c2_))
-    call coords%setvar(3,matmul(elem_map(4)%mat,pts_init(:)%c3_))
+    call coords%setvar(1,matmul(ELEM_MAP_3D(4)%mat,pts_init(:)%c1_))
+    call coords%setvar(2,matmul(ELEM_MAP_3D(4)%mat,pts_init(:)%c2_))
+    call coords%setvar(3,matmul(ELEM_MAP_3D(4)%mat,pts_init(:)%c3_))
     
     
     ! Compute matrix of polynomial values for reverse calculation

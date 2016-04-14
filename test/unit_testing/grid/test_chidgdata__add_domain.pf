@@ -2,6 +2,7 @@
 subroutine test_chidgdata__add_domain__onedomain()
     use pfunit_mod
     use mod_kinds,      only: ik, rk
+    use mod_constants,  only: IO_DESTINATION
     use type_chidg,     only: chidg_t
     use type_point,     only: point_t
     use mod_testutils,  only: meshgen
@@ -10,8 +11,10 @@ subroutine test_chidgdata__add_domain__onedomain()
 
     type(chidg_t)               :: chidg
     type(point_t),  allocatable :: pts(:,:,:)
-    integer(ik)                 :: nterms_c, nterms_s
+    integer(ik)                 :: nterms_c, nterms_s, spacedim
     
+
+    IO_DESTINATION = 'file'
 
     !
     ! Initialize ChiDG environment
@@ -30,12 +33,13 @@ subroutine test_chidgdata__add_domain__onedomain()
     !
     nterms_c = 8
     nterms_s = 8
+    spacedim = 3
 
     
     !
     ! call chidg%data%add_domain. THIS IS BEING TESTED
     !
-    call chidg%data%add_domain('D_01',pts,nterms_c,'scalar',nterms_s)
+    call chidg%data%add_domain('D_01',pts,spacedim,nterms_c,'scalar')
 
 
 

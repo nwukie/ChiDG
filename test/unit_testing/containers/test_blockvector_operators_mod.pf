@@ -3,7 +3,7 @@ module test_blockvector_operators_mod
     use type_chidg,         only: chidg_t
     use mod_kinds,          only: rk,ik
     use mod_constants,      only: ZERO, ONE, TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT, NINE, TEN, &
-                                  XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX
+                                  XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX, IO_DESTINATION
     use type_point,         only: point_t
     use type_blockvector
     use mod_testutils,      only: meshgen
@@ -27,9 +27,10 @@ contains
     !! procedure. The argument names have to match
     subroutine setUp(this)
         class(test_blockvector_operators),    intent(inout)   :: this
-        integer(ik)                                 :: nterms_s, ivar, nterms_c
+        integer(ik)                                 :: nterms_s, ivar, nterms_c, spacedim
         type(point_t), allocatable                  :: pts(:,:,:)
         
+        IO_DESTINATION = 'file'
         
         !
         ! Initialize ChiDG environment
@@ -42,9 +43,11 @@ contains
         !
         call meshgen('221',pts)
 
+        spacedim = 3
         nterms_c = 8
         nterms_s = 8
-        call this%chidg%data%add_domain('D_01',pts,nterms_c,'Scalar',nterms_s)
+        call this%chidg%data%add_domain('D_01',pts,spacedim,nterms_c,'Scalar')
+        call this%chidg%initialize_solution_domains(nterms_s)
 
 
         !

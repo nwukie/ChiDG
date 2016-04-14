@@ -28,7 +28,7 @@ subroutine test_chidgMatrix_operator_chimera_mv()
     class(bc_t),        allocatable :: wall, inlet, outlet
     class(function_t),  allocatable :: constant, gaussian
     real(rk),           allocatable :: density_residual_D4_E31(:), density_residual_D4_E36(:)
-    integer(ik)                     :: ChiID, iface, nterms_s, ndonors, gq_index, igq, ngq, neqns
+    integer(ik)                     :: ChiID, iface, nterms_s, ndonors, gq_index, igq, ngq, neqns, spacedim
     integer(ik)                     :: idom, ielem, idom_d, ielem_d, idonor, idom_p, ielem_p, iblk
     real(rk)                        :: chi_xi, chi_eta, chi_zeta, ref_xi, ref_eta, ref_zeta
     type(point_t)                   :: chimera_node
@@ -38,6 +38,7 @@ subroutine test_chidgMatrix_operator_chimera_mv()
 
 
     tol             = 1.e-12_rk
+    spacedim        = 3
     nterms_s        = 8
     neqns           = 5
     IO_DESTINATION  = 'file'
@@ -61,8 +62,9 @@ subroutine test_chidgMatrix_operator_chimera_mv()
     ! Add domains
     !
     do idom = 1,size(meshdata)
-        call chidg%data%add_domain(trim(meshdata(idom)%name),meshdata(idom)%points,meshdata(idom)%nterms_c,'euler',nterms_s)
+        call chidg%data%add_domain(trim(meshdata(idom)%name),meshdata(idom)%points,spacedim,meshdata(idom)%nterms_c,'euler')
     end do
+    call chidg%initialize_solution_domains(nterms_s)
 
 
     !
@@ -108,14 +110,14 @@ subroutine test_chidgMatrix_operator_chimera_mv()
     ! Initialize solution data storage
     !
     call chidg%init('chimera')
-    call chidg%data%init_sdata()
+    !call chidg%data%init_sdata()
+    call chidg%initialize_solution_solver()
 
 
 
 
 
     
-
 
 
 

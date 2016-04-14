@@ -64,7 +64,7 @@ contains
         !
         inquire(file=filename, exist=FileExists)
         if (.not. FileExists) then
-            call chidg_signal(FATAL,'read_grid_hdf5: Could not find grid file')
+            call chidg_signal_one(FATAL,'read_grid_hdf5: Could not find grid file',filename)
         end if
 
 

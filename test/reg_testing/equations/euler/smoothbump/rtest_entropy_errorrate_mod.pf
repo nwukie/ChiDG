@@ -184,6 +184,7 @@ contains
         !
         !------------------------------------------------------------------------------
         basis           = 'legendre'
+        spacedim        = 3
         nterms_s        = self%order**THREE
         gq_rule         = 2
         eqnset          = 'euler'
@@ -230,11 +231,12 @@ contains
             call chidg%data%add_domain(                         &
                                        meshdata(idom)%name,     &
                                        meshdata(idom)%points,   &
+                                       spacedim,                &
                                        meshdata(idom)%nterms_c, &
-                                       eqnset,                  &
-                                       nterms_s                 &
+                                       eqnset                   &
                                        )
         end do
+        call chidg%initialize_solution_domains(nterms_s)
 
 
         !
@@ -268,7 +270,7 @@ contains
         call chidg%data%add_bc('D_01',wall,ZETA_MAX)
 
 
-        call chidg%data%init_sdata()
+        call chidg%initialize_solution_solver()
 
         !
         ! Initialize solution

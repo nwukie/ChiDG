@@ -756,7 +756,8 @@ contains
         real(rk)        :: polyvals(self%nterms_c)
         integer(ik)     :: iterm, ielem, spacedim
 
-        if (icoord > 3) call chidg_signal(FATAL,"Error: element%grid_point -- icoord exceeded 3 physical coordinates")
+        if (icoord > 3)                 call chidg_signal(FATAL,"element%grid_point -- icoord exceeded 3 physical coordinates")
+        if (.not. self%geomInitialized) call chidg_signal(FATAL,"element%grid_point: geometry not initialized")
 
 
         call node%set(xi,eta,zeta)

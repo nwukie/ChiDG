@@ -31,7 +31,7 @@ contains
         integer(ik), parameter  :: npt = 8
         type(point_t)           :: pts(npt)
         real(rk)                :: sqrt_two, inv_sqrt_two
-        integer(ik)             :: ftype, ineighbor, mapping, ielem, idomain
+        integer(ik)             :: ftype, ineighbor, mapping, ielem, idomain, spacedim
         
         
         call this%chidg%init('env')
@@ -62,10 +62,11 @@ contains
         call pts(8)%set(sqrt_two,       1._rk,      0._rk)
         
         !> Initialize Element geometry and Numerics
+        spacedim = 3
         mapping = 1
         idomain = 1
         ielem   = 1
-        call this%elem%init_geom(mapping,pts,idomain,ielem)
+        call this%elem%init_geom(spacedim,mapping,pts,idomain,ielem)
         call this%elem%init_sol(2,8)    !> 2 equations, 8 terms (3*3*3)
         
         !> Initialize faces for element

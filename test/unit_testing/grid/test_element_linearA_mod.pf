@@ -32,7 +32,7 @@ contains
         
         integer(ik), parameter  :: npt = 8
         type(point_t)           :: pts(npt)
-        integer(ik)             :: ftype, ineighbor, mapping, ielem, idomain
+        integer(ik)             :: ftype, ineighbor, mapping, ielem, idomain, spacedim
         
         
         gq_rule = 1 !> Set collocation quadrature for testing coordinates at quadrature points
@@ -63,10 +63,11 @@ contains
         
         
         !> Initialize Element geometry and Numerics
+        spacedim = 3
         mapping = 1
         idomain = 1
         ielem   = 1
-        call this%elem%init_geom(mapping,pts,idomain,ielem)
+        call this%elem%init_geom(spacedim,mapping,pts,idomain,ielem)
         call this%elem%init_sol(2,8)    !> 2 equations, 8 terms (3*3*3)
         
         
@@ -294,7 +295,7 @@ contains
 
 
 !------------------------------------------------------------------------------
-!>                                Face tests
+!                                Face tests
 !------------------------------------------------------------------------------
 
 
@@ -461,6 +462,150 @@ contains
        
 
     end subroutine
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+!------------------------------------------------------------------------------
+!      element%mesh_point, element%solution_point, element%metric_point
+!------------------------------------------------------------------------------
+
+
+! Test mesh_point routine returns the correct x-coordinate value
+@Test
+subroutine test__mesh_point__x(self)
+    class(test_element_linearA),    intent(inout)   :: self
+
+    real(rk), dimension(5)  :: ref_coords, check_coords, xi, eta, zeta
+    integer(ik)             :: icoord, ipt
+                    
+
+    xi = [-1.0_rk, -0.5_rk, 0.5_rk, 1.0_rk, 0.5_rk]
+    eta = [-ONE, -ONE, -ONE, -ONE, ZERO]
+    zeta = [-ONE, -ONE, -ONE, -ONE, ZERO] 
+
+    ref_coords = [ZERO, 1.25_rk, 3.75_rk, 5._rk, 3.75_rk]
+
+
+    icoord = 1 ! Check x-coordinates
+    do ipt = 1,5
+        check_coords(ipt) = self%elem%grid_point(icoord, xi(ipt), eta(ipt), zeta(ipt))
+    end do
+
+    @assertEqual(ref_coords,check_coords)
+
+end subroutine
+
+
+
+    
+! Test mesh_point routine returns the correct y-coordinate value
+@Test
+subroutine test__mesh_point__y(self)
+    class(test_element_linearA),    intent(inout)   :: self
+
+    real(rk), dimension(5)  :: ref_coords, check_coords, xi, eta, zeta
+    integer(ik)             :: icoord, ipt
+                    
+
+    xi   = [-ONE, -ONE, -ONE, -ONE, ZERO]
+    eta  = [-1.0_rk, -0.5_rk, 0.5_rk, 1.0_rk, 0.5_rk]
+    zeta = [-ONE, -ONE, -ONE, -ONE, ZERO] 
+
+    ref_coords = [ZERO, 0.25_rk, 0.75_rk, 1._rk, 0.75_rk]
+
+
+    icoord = 2 ! Check y-coordinates
+    do ipt = 1,5
+        check_coords(ipt) = self%elem%grid_point(icoord, xi(ipt), eta(ipt), zeta(ipt))
+    end do
+
+    @assertEqual(ref_coords,check_coords)
+
+end subroutine
+
+
+
+
+! Test mesh_point routine returns the correct z-coordinate value
+@Test
+subroutine test__mesh_point__z(self)
+    class(test_element_linearA),    intent(inout)   :: self
+
+    real(rk), dimension(5)  :: ref_coords, check_coords, xi, eta, zeta
+    integer(ik)             :: icoord, ipt
+                    
+
+    xi   = [-ONE, -ONE, -ONE, -ONE, ZERO]
+    eta  = [-ONE, -ONE, -ONE, -ONE, ZERO] 
+    zeta = [-1.0_rk, -0.5_rk, 0.5_rk, 1.0_rk, 0.5_rk]
+
+    ref_coords = [ZERO, 0.25_rk, 0.75_rk, 1._rk, 0.75_rk]
+
+
+    icoord = 3 ! Check z-coordinates
+    do ipt = 1,5
+        check_coords(ipt) = self%elem%grid_point(icoord, xi(ipt), eta(ipt), zeta(ipt))
+    end do
+
+    @assertEqual(ref_coords,check_coords)
+
+end subroutine
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

@@ -654,7 +654,7 @@ contains
                 if (log_initialized) then
                     write(unit,*) writeline
                 else
-                    stop "Trying to write a line, but log file not inititlized. Call chidg%init('io')"
+                    stop "Trying to write a line, but log file not inititlized. Call chidg%init('env')"
                 end if
 
 
@@ -664,7 +664,7 @@ contains
                     print*, writeline
                     write(unit,*) writeline
                 else
-                    stop "Trying to write a line, but log file not inititlized. Call chidg%init('io')"
+                    stop "Trying to write a line, but log file not inititlized. Call chidg%init('env')"
                 end if
 
 

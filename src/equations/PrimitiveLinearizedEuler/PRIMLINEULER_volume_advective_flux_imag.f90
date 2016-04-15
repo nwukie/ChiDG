@@ -286,6 +286,8 @@ contains
                  rho_y_w    * w_r    + &
                  rho_y_p    * p_r)*sigma_x/omega
 
+!         flux_z = flux_y
+!         flux_z = ZERO
         flux_z = rho_z_rho  * rho_i  + &
                  rho_z_u    * u_i    + &
                  rho_z_v    * v_i    + &
@@ -322,6 +324,8 @@ contains
                  u_y_w    * w_r    + &
                  u_y_p    * p_r)*sigma_x/omega
 
+!        flux_z = flux_y
+!        flux_z = ZERO
         flux_z = u_z_rho  * rho_i  + &
                  u_z_u    * u_i    + &
                  u_z_v    * v_i    + &
@@ -358,6 +362,8 @@ contains
                  v_y_w    * w_r    + &
                  v_y_p    * p_r)*sigma_x/omega
 
+!         flux_z = flux_y
+!         flux_z = ZERO
         flux_z = v_z_rho  * rho_i  + &
                  v_z_u    * u_i    + &
                  v_z_v    * v_i    + &
@@ -393,6 +399,8 @@ contains
                  w_y_w    * w_r    + &
                  w_y_p    * p_r)*sigma_x/omega
 
+!        flux_z = flux_y
+!        flux_z = ZERO
         flux_z = w_z_rho  * rho_i  + &
                  w_z_u    * u_i    + &
                  w_z_v    * v_i    + &
@@ -428,7 +436,9 @@ contains
                  p_y_v    * v_r    + &
                  p_y_w    * w_r    + &
                  p_y_p    * p_r)*sigma_x/omega
-
+  
+!        flux_z = flux_y
+!        flux_z = ZERO
         flux_z = p_z_rho  * rho_i  + &
                  p_z_u    * u_i    + &
                  p_z_v    * v_i    + &

@@ -1,0 +1,36 @@
+@Test
+subroutine test_cylindricalduct()
+    use pfunit_mod
+    use mod_kinds,              only: rk, ik
+    use type_chidg,             only: chidg_t
+    use mod_cylindricalduct,    only: compute_cylindricalduct_eigenvalues
+    implicit none
+
+    type(chidg_t)           :: chidg
+    real(rk), allocatable   :: evals(:), known_evals(:)
+    integer(ik)             :: m, neig
+
+    ! Initialize chidg
+    call chidg%init('env')
+
+    m    = 3    ! Azimuthal mode order
+    neig = 3    ! Number of eigenvalues to compute
+    
+    !
+    ! Compute eigenvalues of cylindrical duct modes
+    !
+    ! THIS IS BEING TESTED
+    !
+    evals = compute_cylindricalduct_eigenvalues(m,neig)
+
+
+    known_evals = [4.2012_rk, 8.0152_rk, 11.3459_rk]
+    @assertEqual(known_evals, evals, 1.e-3_rk)
+
+
+
+    ! Close ChiDG
+    call chidg%close()
+
+
+end subroutine test_cylindricalduct

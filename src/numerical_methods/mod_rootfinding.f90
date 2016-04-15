@@ -8,10 +8,7 @@ module mod_rootfinding
 
 
 
-
 contains
-
-
 
 
     !>  Use the bisection method to find the root of a function, given
@@ -30,14 +27,14 @@ contains
     !!  @param[in]  tol         Optional tolerance on convergnance
     !!
     !------------------------------------------------------------------------------------
-    function bisect(fcn, xlower, xupper, tol) result(fc)
+    function bisect(fcn, xlower, xupper, tol_in) result(xout)
         class(function_t),  intent(inout)           :: fcn
         real(rk),           intent(in)              :: xlower
         real(rk),           intent(in)              :: xupper
-        real(rk),           intent(inout), optional :: tol
+        real(rk),           intent(inout), optional :: tol_in
 
-        logical         :: not_zero = .true.
-        real(rk)        :: fa, fb, fc, time
+        logical         :: not_zero
+        real(rk)        :: fa, fb, fc, time, tol, xout
         type(point_t)   :: a, b, c
 
         call a%set(ZERO, ZERO, ZERO)
@@ -49,7 +46,9 @@ contains
         !
         ! Set default tolerance
         !
-        if ( .not. present(tol) ) then
+        if ( present(tol_in) ) then
+            tol = tol_in
+        else
             tol = 1.e-14_rk
         end if
 
@@ -66,19 +65,20 @@ contains
         !
         ! Bisection iteration
         !
+        not_zero = .true.
         do while ( not_zero ) 
 
             ! Compute new location
             c%c1_ = (a%c1_ + b%c1_)/TWO
 
-            ! Compute new function value at location 'c'
+            ! Compute new function value at middle location 'c'
             fc = fcn%compute(time,c)
 
             ! Check for convergence
             not_zero = ( fc > tol ) .or. ((b%c1_-a%c1_)/TWO > tol)
 
             ! Update bounds
-            if ( sign(fc,fc) == sign(fa,fa) ) then
+            if ( int(sign(ONE,fc)) == int(sign(ONE,fa)) ) then
                 a = c
                 fa = fcn%compute(time,a)
             else
@@ -88,9 +88,31 @@ contains
 
         end do
 
+        ! Save root
+        xout = c%c1_
 
     end function bisect
     !*************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

@@ -1,0 +1,81 @@
+!>  Test the root-finding routine 'bisect'
+!!
+!!  Given a known function, f(x)=x^2 - 2x, with roots at x=0, x=2,
+!!  Apply the 'bisect' routine, and check that a known root is computed
+!!  correctly.
+!!
+!!  @author Nathan A. Wukie
+!!  @date   4/14/2016
+!!
+!!------------------------------------------------------------------
+@Test
+subroutine test_bisect()
+    use pfunit_mod
+    use mod_kinds,          only: rk
+    use mod_constants,      only: ONE, TWO
+    use mod_rootfinding,    only: bisect
+    use type_chidg,         only: chidg_t
+    use type_function,      only: function_t
+    use mod_function,       only: create_function
+    
+    type(chidg_t)                   :: chidg
+    class(function_t), allocatable  :: fcn
+    real(rk)                        :: known_zero, bisect_zero, tol
+
+    tol = 1.e-14_rk
+    !
+    ! Initialize log
+    !
+    call chidg%init('env')
+
+    !
+    ! Get function
+    !
+    call create_function(fcn,'polynomial')
+
+    !
+    ! Set polynomial function parameters for: f(x) = x^2 - 2x
+    !
+    call fcn%set_option('e', ONE)
+    call fcn%set_option('f',-TWO)
+
+    !
+    ! Call 'bisect' to find root between 1.1, and 2.1.
+    !
+    ! THIS IS BEING TESTED.
+    !
+    bisect_zero = bisect(fcn, 1.1_rk, 2.1_rk)
+
+    known_zero  = TWO
+    @assertEqual(known_zero, bisect_zero, tol)
+
+
+    !
+    ! Close ChiDG
+    !
+    call chidg%close()
+
+
+end subroutine test_bisect
+!*******************************************************************
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -7,13 +7,15 @@ module mod_function
     !
     ! Import functions
     !
-    use fcn_xsquared,           only: xsquared_f
-    use fcn_ysquared,           only: ysquared_f
-    use fcn_zsquared,           only: zsquared_f
-    use fcn_xyz,                only: xyz_f
-    use fcn_gaussian,           only: gaussian_f
-    use fcn_constant,           only: constant_f
-    use fcn_sin,                only: sin_f
+    use fcn_xsquared,                       only: xsquared_f
+    use fcn_ysquared,                       only: ysquared_f
+    use fcn_zsquared,                       only: zsquared_f
+    use fcn_xyz,                            only: xyz_f
+    use fcn_gaussian,                       only: gaussian_f
+    use fcn_constant,                       only: constant_f
+    use fcn_sin,                            only: sin_f
+    use fcn_polynomial,                     only: polynomial_f
+    use fcn_cylindricalduct_eigenfunction,  only: cylindricalduct_eigenfunction_f
     implicit none
 
 
@@ -43,13 +45,19 @@ contains
         !
         ! Instantiate functions
         !
-        type(xsquared_f)            :: xsquared
-        type(ysquared_f)            :: ysquared
-        type(zsquared_f)            :: zsquared
-        type(xyz_f)                 :: xyz
-        type(gaussian_f)            :: gaussian
-        type(constant_f)            :: constant
-        type(sin_f)                 :: sin_function
+        type(xsquared_f)                        :: xsquared
+        type(ysquared_f)                        :: ysquared
+        type(zsquared_f)                        :: zsquared
+        type(xyz_f)                             :: xyz
+        type(gaussian_f)                        :: gaussian
+        type(constant_f)                        :: constant
+        type(sin_f)                             :: sin_function
+        type(polynomial_f)                      :: polynomial
+
+        !
+        ! Acoustics
+        !
+        type(cylindricalduct_eigenfunction_f)   :: cylindricalduct_eigenfunction
 
         
 
@@ -64,6 +72,8 @@ contains
             call registered_fcns%push_back(gaussian)
             call registered_fcns%push_back(constant)
             call registered_fcns%push_back(sin_function)
+            call registered_fcns%push_back(polynomial)
+            call registered_fcns%push_back(cylindricalduct_eigenfunction)
 
 
             !

@@ -3,6 +3,7 @@ module bc_primlineuler_inlet
     use mod_constants,      only: ONE, TWO, HALF, ZERO, LOCAL
     use type_bc,            only: bc_t
     use type_solverdata,    only: solverdata_t
+    use type_point,         only: point_t
     use type_mesh,          only: mesh_t
     use type_properties,    only: properties_t
     use type_face_info,     only: face_info_t
@@ -14,6 +15,8 @@ module bc_primlineuler_inlet
     
     use PRIMLINEULER_properties,   only: PRIMLINEULER_properties_t
     use mod_primitive_linearized_euler
+
+    use mod_cylindricalduct,        only: compute_cylindricalduct_eigenvalues, compute_cylindricalduct_mode
     implicit none
 
 
@@ -26,8 +29,11 @@ module bc_primlineuler_inlet
     !-------------------------------------------------------------------------------------------
     type, public, extends(bc_t) :: primlineuler_inlet_t
 
+        real(rk)    :: alpha
+
     contains
     
+        procedure   :: init_spec
         procedure   :: add_options
         procedure   :: compute    !> bc implementation
 
@@ -47,7 +53,6 @@ contains
     !!  @date   3/17/2016
     !!
     !!
-    !!
     !-------------------------------------------------------------------------------------------
     subroutine add_options(self)
         class(primlineuler_inlet_t),    intent(inout)   :: self
@@ -61,14 +66,78 @@ contains
         !
         ! Add functions
         !
-!        call self%bcproperties%add('AzimuthalMode', 'Required')
-!        call self%bcproperties%add('RadialMode',    'Required')
+        call self%bcproperties%add('AzimuthalMode', 'Required')     ! 0 -> inf
+        call self%bcproperties%add('RadialMode',    'Required')     ! 1 -> inf
 
 
 
 
     end subroutine add_options
     !*******************************************************************************************
+
+
+
+
+
+
+
+
+
+    !>  Specialized initialization for the boundary condition.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   2/16/2016
+    !!
+    !!
+    !---------------------------------------------------------------------------------------------
+    subroutine init_spec(self,mesh,iface)
+        class(primlineuler_inlet_t), intent(inout)   :: self
+        type(mesh_t),                intent(inout)   :: mesh
+        integer(ik),                 intent(in)      :: iface
+
+        type(point_t)           :: zero_point
+        real(rk)                :: zero_time
+        integer(ik)             :: neig, m, n
+        real(rk), allocatable   :: evalues(:)
+
+        zero_time  = ZERO
+        call zero_point%set(ZERO,ZERO,ZERO)
+
+        
+        !
+        ! Get azimuthal, radial mode numbers from user-specified options
+        !
+        m = int(self%bcproperties%compute("AzimuthalMode", zero_time, zero_point))
+        n = int(self%bcproperties%compute("RadialMode", zero_time,zero_point))
+
+
+        !
+        ! Set module mode parameter so flux routines have access to user-specified boundary input.
+        !
+        mod_m = m
+        mod_n = n
+
+
+        !
+        ! Compute/store eigenvalue of specified duct mode
+        !
+        neig       = n
+        evalues    = compute_cylindricalduct_eigenvalues(m,neig)
+        self%alpha = evalues(n)
+        
+
+    end subroutine init_spec
+    !*********************************************************************************************
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -105,6 +174,12 @@ contains
         integer(ik)     :: irho_i, iu_i, iv_i, iw_i, ip_i
 
 
+        type(point_t)   :: zero_point
+        real(rk)        :: zero_time
+        integer(ik)     :: m, n
+        real(rk)        :: amplitude
+
+
         ! Storage at quadrature nodes
         type(AD_D), dimension(mesh(face%idomain)%faces(face%ielement,face%iface)%gq%face%nnodes)   ::  &
                         rho_r,      u_r,     v_r,     w_r,     p_r,         &
@@ -117,6 +192,8 @@ contains
 
 
 
+        call zero_point%set(ZERO,ZERO,ZERO)
+        zero_time = ZERO
 
 
         !
@@ -159,6 +236,13 @@ contains
             call interpolate_face(mesh,face,q,ip_i,p_i, LOCAL)
 
 
+            !
+            ! Get azimuthal, radial mode numbers from user-specified options
+            !
+            m = int(self%bcproperties%compute("AzimuthalMode", zero_time, zero_point))
+            n = int(self%bcproperties%compute("RadialMode", zero_time,zero_point))
+            
+
 
 
 
@@ -187,10 +271,13 @@ contains
 
 
             !
-            ! Get contribution from user-specified perturbations
+            ! Compute modal pressure distribution from user-specified mode
             !
             dp_user = rho_r
             dp_user = 40.8166_rk
+            !amplitude = 40.8166_rk
+            !dp_user = amplitude * compute_cylindricalduct_mode(m, self%alpha, mesh(idom)%faces(ielem,iface)%quad_pts(:)%c2_, 1.2_rk)
+
 
             !
             ! Compute in-going characteristics from user-specified data

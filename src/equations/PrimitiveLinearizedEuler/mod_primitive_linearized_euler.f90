@@ -4,6 +4,13 @@ module mod_primitive_linearized_euler
     implicit none
 
     !
+    ! Azimuthal orther
+    !
+    integer(ik) :: mod_m = 0    ! Could get set by boundary conidtions
+    integer(ik) :: mod_n = 1    ! Could get set by boundary conidtions
+
+
+    !
     ! Nondimensionalization
     !
     real(rk), parameter :: u_r    = 1._rk

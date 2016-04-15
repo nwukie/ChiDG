@@ -14,7 +14,7 @@ module PRIMLINEULER_volume_advective_source_real
     use DNAD_D
 
     use PRIMLINEULER_properties,    only: PRIMLINEULER_properties_t
-    use mod_primitive_linearized_euler, only: omega, thickness, eps, gam
+    use mod_primitive_linearized_euler, only: omega, thickness, eps, gam, rhobar, pbar, mod_m
     implicit none
 
     private
@@ -256,7 +256,8 @@ contains
         !===========================
         !        MASS FLUX
         !===========================
-        flux = -omega * rho_i   -  (sigma_x + sigma_y + sigma_x*sigma_y/omega) * rho_r
+        flux = -omega * rho_i   +   (rhobar/y)*v_r   -   (real(mod_m,rk)*rhobar/y)*w_i   -  (sigma_x + sigma_y + sigma_x*sigma_y/omega) * rho_r
+        !flux = -omega * rho_i   -  (sigma_x + sigma_y + sigma_x*sigma_y/omega) * rho_r
 
         call integrate_volume_source(mesh(idom)%elems(ielem),sdata,idom,irho_r,iblk,flux)
 
@@ -279,14 +280,16 @@ contains
         !============================
         !     Z-MOMENTUM FLUX
         !============================
-        flux = -omega * w_i   -  (sigma_x + sigma_y + sigma_x*sigma_y/omega) * w_r
+        flux = -omega * w_i   -   (real(mod_m,rk)/(rhobar*y))*p_i   -  (sigma_x + sigma_y + sigma_x*sigma_y/omega) * w_r
+        !flux = -omega * w_i   -  (sigma_x + sigma_y + sigma_x*sigma_y/omega) * w_r
 
         call integrate_volume_source(mesh(idom)%elems(ielem),sdata,idom,iw_r,iblk,flux)
 
         !============================
         !       ENERGY FLUX
         !============================
-        flux = -omega * p_i   -  (sigma_x + sigma_y + sigma_x*sigma_y/omega) * p_r
+        flux = -omega * p_i   +   (gam*pbar/y)*v_r   -   (gam*pbar*real(mod_m,rk)/y)*w_i   -   (sigma_x + sigma_y + sigma_x*sigma_y/omega) * p_r
+        !flux = -omega * p_i    -   (sigma_x + sigma_y + sigma_x*sigma_y/omega) * p_r
 
         call integrate_volume_source(mesh(idom)%elems(ielem),sdata,idom,ip_r,iblk,flux)
 

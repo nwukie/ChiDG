@@ -4,7 +4,9 @@ add_subdirectory(DualLinearAdvection)
 add_subdirectory(Euler)
 add_subdirectory(LinearizedEuler)
 add_subdirectory(PrimitiveLinearizedEuler)
-add_subdirectory(SurfaceIntegralFormulations)
+
+
+add_subdirectory(Acoustics)
 
 
 

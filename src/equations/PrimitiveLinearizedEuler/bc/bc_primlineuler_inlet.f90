@@ -274,9 +274,9 @@ contains
             ! Compute modal pressure distribution from user-specified mode
             !
             dp_user = rho_r
-            dp_user = 40.8166_rk
-            !amplitude = 40.8166_rk
-            !dp_user = amplitude * compute_cylindricalduct_mode(m, self%alpha, mesh(idom)%faces(ielem,iface)%quad_pts(:)%c2_, 1.2_rk)
+            !dp_user = 40.8166_rk
+            amplitude = 40.8166_rk
+            dp_user = amplitude * compute_cylindricalduct_mode(m, self%alpha, mesh(idom)%faces(ielem,iface)%quad_pts(:)%c2_, 1.2_rk)
 
 
             !
@@ -383,11 +383,14 @@ contains
                      rho_y_v    * v_r    + &
                      rho_y_w    * w_r    + &
                      rho_y_p    * p_r
-            flux_z = rho_z_rho  * rho_r  + &
-                     rho_z_u    * u_r    + &
-                     rho_z_v    * v_r    + &
-                     rho_z_w    * w_r    + &
-                     rho_z_p    * p_r
+
+            flux_z = flux_y
+            flux_z = ZERO
+!            flux_z = rho_z_rho  * rho_r  + &
+!                     rho_z_u    * u_r    + &
+!                     rho_z_v    * v_r    + &
+!                     rho_z_w    * w_r    + &
+!                     rho_z_p    * p_r
 
             integrand = flux_x*norms(:,1) + flux_y*norms(:,2) + flux_z*norms(:,3)
 
@@ -407,11 +410,14 @@ contains
                      rho_y_v    * v_i    + &
                      rho_y_w    * w_i    + &
                      rho_y_p    * p_i
-            flux_z = rho_z_rho  * rho_i  + &
-                     rho_z_u    * u_i    + &
-                     rho_z_v    * v_i    + &
-                     rho_z_w    * w_i    + &
-                     rho_z_p    * p_i
+
+            flux_z = flux_y
+            flux_z = ZERO
+!            flux_z = rho_z_rho  * rho_i  + &
+!                     rho_z_u    * u_i    + &
+!                     rho_z_v    * v_i    + &
+!                     rho_z_w    * w_i    + &
+!                     rho_z_p    * p_i
 
             integrand = flux_x*norms(:,1) + flux_y*norms(:,2) + flux_z*norms(:,3)
 
@@ -438,11 +444,14 @@ contains
                      u_y_v    * v_r    + &
                      u_y_w    * w_r    + &
                      u_y_p    * p_r
-            flux_z = u_z_rho  * rho_r  + &
-                     u_z_u    * u_r    + &
-                     u_z_v    * v_r    + &
-                     u_z_w    * w_r    + &
-                     u_z_p    * p_r
+
+            flux_z = flux_y
+            flux_z = ZERO
+!            flux_z = u_z_rho  * rho_r  + &
+!                     u_z_u    * u_r    + &
+!                     u_z_v    * v_r    + &
+!                     u_z_w    * w_r    + &
+!                     u_z_p    * p_r
 
             integrand = flux_x*norms(:,1) + flux_y*norms(:,2) + flux_z*norms(:,3)
 
@@ -462,11 +471,14 @@ contains
                      u_y_v    * v_i    + &
                      u_y_w    * w_i    + &
                      u_y_p    * p_i
-            flux_z = u_z_rho  * rho_i  + &
-                     u_z_u    * u_i    + &
-                     u_z_v    * v_i    + &
-                     u_z_w    * w_i    + &
-                     u_z_p    * p_i
+
+            flux_z = flux_y
+            flux_z = ZERO
+!            flux_z = u_z_rho  * rho_i  + &
+!                     u_z_u    * u_i    + &
+!                     u_z_v    * v_i    + &
+!                     u_z_w    * w_i    + &
+!                     u_z_p    * p_i
 
             integrand = flux_x*norms(:,1) + flux_y*norms(:,2) + flux_z*norms(:,3)
 
@@ -492,11 +504,14 @@ contains
                      v_y_v    * v_r    + &
                      v_y_w    * w_r    + &
                      v_y_p    * p_r
-            flux_z = v_z_rho  * rho_r  + &
-                     v_z_u    * u_r    + &
-                     v_z_v    * v_r    + &
-                     v_z_w    * w_r    + &
-                     v_z_p    * p_r
+
+            flux_z = flux_y
+            flux_z = ZERO
+!            flux_z = v_z_rho  * rho_r  + &
+!                     v_z_u    * u_r    + &
+!                     v_z_v    * v_r    + &
+!                     v_z_w    * w_r    + &
+!                     v_z_p    * p_r
 
             integrand = flux_x*norms(:,1) + flux_y*norms(:,2) + flux_z*norms(:,3)
 
@@ -515,11 +530,14 @@ contains
                      v_y_v    * v_i    + &
                      v_y_w    * w_i    + &
                      v_y_p    * p_i
-            flux_z = v_z_rho  * rho_i  + &
-                     v_z_u    * u_i    + &
-                     v_z_v    * v_i    + &
-                     v_z_w    * w_i    + &
-                     v_z_p    * p_i
+
+            flux_z = flux_y
+            flux_z = ZERO
+!            flux_z = v_z_rho  * rho_i  + &
+!                     v_z_u    * u_i    + &
+!                     v_z_v    * v_i    + &
+!                     v_z_w    * w_i    + &
+!                     v_z_p    * p_i
 
             integrand = flux_x*norms(:,1) + flux_y*norms(:,2) + flux_z*norms(:,3)
 
@@ -546,11 +564,14 @@ contains
                      w_y_v    * v_r    + &
                      w_y_w    * w_r    + &
                      w_y_p    * p_r
-            flux_z = w_z_rho  * rho_r  + &
-                     w_z_u    * u_r    + &
-                     w_z_v    * v_r    + &
-                     w_z_w    * w_r    + &
-                     w_z_p    * p_r
+
+            flux_z = flux_y
+            flux_z = ZERO
+!            flux_z = w_z_rho  * rho_r  + &
+!                     w_z_u    * u_r    + &
+!                     w_z_v    * v_r    + &
+!                     w_z_w    * w_r    + &
+!                     w_z_p    * p_r
 
             integrand = flux_x*norms(:,1) + flux_y*norms(:,2) + flux_z*norms(:,3)
 
@@ -569,11 +590,14 @@ contains
                      w_y_v    * v_i    + &
                      w_y_w    * w_i    + &
                      w_y_p    * p_i
-            flux_z = w_z_rho  * rho_i  + &
-                     w_z_u    * u_i    + &
-                     w_z_v    * v_i    + &
-                     w_z_w    * w_i    + &
-                     w_z_p    * p_i
+
+            flux_z = flux_y
+            flux_z = ZERO
+!            flux_z = w_z_rho  * rho_i  + &
+!                     w_z_u    * u_i    + &
+!                     w_z_v    * v_i    + &
+!                     w_z_w    * w_i    + &
+!                     w_z_p    * p_i
 
             integrand = flux_x*norms(:,1) + flux_y*norms(:,2) + flux_z*norms(:,3)
 
@@ -597,11 +621,14 @@ contains
                      p_y_v    * v_r    + &
                      p_y_w    * w_r    + &
                      p_y_p    * p_r
-            flux_z = p_z_rho  * rho_r  + &
-                     p_z_u    * u_r    + &
-                     p_z_v    * v_r    + &
-                     p_z_w    * w_r    + &
-                     p_z_p    * p_r
+
+            flux_z = flux_y
+            flux_z = ZERO
+!            flux_z = p_z_rho  * rho_r  + &
+!                     p_z_u    * u_r    + &
+!                     p_z_v    * v_r    + &
+!                     p_z_w    * w_r    + &
+!                     p_z_p    * p_r
 
             integrand = flux_x*norms(:,1) + flux_y*norms(:,2) + flux_z*norms(:,3)
 
@@ -618,11 +645,14 @@ contains
                      p_y_v    * v_i    + &
                      p_y_w    * w_i    + &
                      p_y_p    * p_i
-            flux_z = p_z_rho  * rho_i  + &
-                     p_z_u    * u_i    + &
-                     p_z_v    * v_i    + &
-                     p_z_w    * w_i    + &
-                     p_z_p    * p_i
+
+            flux_z = flux_y
+            flux_z = ZERO
+!            flux_z = p_z_rho  * rho_i  + &
+!                     p_z_u    * u_i    + &
+!                     p_z_v    * v_i    + &
+!                     p_z_w    * w_i    + &
+!                     p_z_p    * p_i
 
             integrand = flux_x*norms(:,1) + flux_y*norms(:,2) + flux_z*norms(:,3)
 

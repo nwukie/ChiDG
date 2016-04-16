@@ -150,11 +150,11 @@ contains
                        rho_y_v    * v_m + &
                        rho_y_w    * w_m + &
                        rho_y_p    * p_m 
-            flux_z_m = rho_z_rho  * rho_m  + &
-                       rho_z_u    * u_m + &
-                       rho_z_v    * v_m + &
-                       rho_z_w    * w_m + &
-                       rho_z_p    * p_m 
+!            flux_z_m = rho_z_rho  * rho_m  + &
+!                       rho_z_u    * u_m + &
+!                       rho_z_v    * v_m + &
+!                       rho_z_w    * w_m + &
+!                       rho_z_p    * p_m 
 
             flux_x_p = rho_x_rho  * rho_p  + &
                        rho_x_u    * u_p + &
@@ -166,16 +166,18 @@ contains
                        rho_y_v    * v_p + &
                        rho_y_w    * w_p + &
                        rho_y_p    * p_p 
-            flux_z_p = rho_z_rho  * rho_p  + &
-                       rho_z_u    * u_p + &
-                       rho_z_v    * v_p + &
-                       rho_z_w    * w_p + &
-                       rho_z_p    * p_p 
+!            flux_z_p = rho_z_rho  * rho_p  + &
+!                       rho_z_u    * u_p + &
+!                       rho_z_v    * v_p + &
+!                       rho_z_w    * w_p + &
+!                       rho_z_p    * p_p 
 
 
             flux_x = (flux_x_m + flux_x_p)
             flux_y = (flux_y_m + flux_y_p)
-            flux_z = (flux_z_m + flux_z_p)
+            flux_z = flux_y
+            flux_z = ZERO
+!            flux_z = (flux_z_m + flux_z_p)
 
 
 
@@ -200,11 +202,11 @@ contains
                        u_y_v    * v_m + &
                        u_y_w    * w_m + &
                        u_y_p    * p_m 
-            flux_z_m = u_z_rho  * rho_m  + &
-                       u_z_u    * u_m + &
-                       u_z_v    * v_m + &
-                       u_z_w    * w_m + &
-                       u_z_p    * p_m 
+!            flux_z_m = u_z_rho  * rho_m  + &
+!                       u_z_u    * u_m + &
+!                       u_z_v    * v_m + &
+!                       u_z_w    * w_m + &
+!                       u_z_p    * p_m 
 
             flux_x_p = u_x_rho  * rho_p  + &
                        u_x_u    * u_p + &
@@ -216,16 +218,18 @@ contains
                        u_y_v    * v_p + &
                        u_y_w    * w_p + &
                        u_y_p    * p_p 
-            flux_z_p = u_z_rho  * rho_p  + &
-                       u_z_u    * u_p + &
-                       u_z_v    * v_p + &
-                       u_z_w    * w_p + &
-                       u_z_p    * p_p 
+!            flux_z_p = u_z_rho  * rho_p  + &
+!                       u_z_u    * u_p + &
+!                       u_z_v    * v_p + &
+!                       u_z_w    * w_p + &
+!                       u_z_p    * p_p 
 
 
             flux_x = (flux_x_m + flux_x_p)
             flux_y = (flux_y_m + flux_y_p)
-            flux_z = (flux_z_m + flux_z_p)
+            flux_z = flux_y
+            flux_z = ZERO
+!            flux_z = (flux_z_m + flux_z_p)
 
 
             ! dot with normal vector
@@ -248,11 +252,11 @@ contains
                        v_y_v    * v_m + &
                        v_y_w    * w_m + &
                        v_y_p    * p_m 
-            flux_z_m = v_z_rho  * rho_m  + &
-                       v_z_u    * u_m + &
-                       v_z_v    * v_m + &
-                       v_z_w    * w_m + &
-                       v_z_p    * p_m 
+!            flux_z_m = v_z_rho  * rho_m  + &
+!                       v_z_u    * u_m + &
+!                       v_z_v    * v_m + &
+!                       v_z_w    * w_m + &
+!                       v_z_p    * p_m 
 
 
             flux_x_p = v_x_rho  * rho_p  + &
@@ -265,17 +269,19 @@ contains
                        v_y_v    * v_p + &
                        v_y_w    * w_p + &
                        v_y_p    * p_p 
-            flux_z_p = v_z_rho  * rho_p  + &
-                       v_z_u    * u_p + &
-                       v_z_v    * v_p + &
-                       v_z_w    * w_p + &
-                       v_z_p    * p_p 
+!            flux_z_p = v_z_rho  * rho_p  + &
+!                       v_z_u    * u_p + &
+!                       v_z_v    * v_p + &
+!                       v_z_w    * w_p + &
+!                       v_z_p    * p_p 
 
 
 
             flux_x = (flux_x_m + flux_x_p)
             flux_y = (flux_y_m + flux_y_p)
-            flux_z = (flux_z_m + flux_z_p)
+            flux_z = flux_y
+            flux_z = ZERO
+!            flux_z = (flux_z_m + flux_z_p)
 
 
 
@@ -300,11 +306,11 @@ contains
                        w_y_v    * v_m + &
                        w_y_w    * w_m + &
                        w_y_p    * p_m 
-            flux_z_m = w_z_rho  * rho_m  + &
-                       w_z_u    * u_m + &
-                       w_z_v    * v_m + &
-                       w_z_w    * w_m + &
-                       w_z_p    * p_m 
+!            flux_z_m = w_z_rho  * rho_m  + &
+!                       w_z_u    * u_m + &
+!                       w_z_v    * v_m + &
+!                       w_z_w    * w_m + &
+!                       w_z_p    * p_m 
 
 
             flux_x_p = w_x_rho  * rho_p  + &
@@ -317,17 +323,19 @@ contains
                        w_y_v    * v_p + &
                        w_y_w    * w_p + &
                        w_y_p    * p_p 
-            flux_z_p = w_z_rho  * rho_p  + &
-                       w_z_u    * u_p + &
-                       w_z_v    * v_p + &
-                       w_z_w    * w_p + &
-                       w_z_p    * p_p 
+!            flux_z_p = w_z_rho  * rho_p  + &
+!                       w_z_u    * u_p + &
+!                       w_z_v    * v_p + &
+!                       w_z_w    * w_p + &
+!                       w_z_p    * p_p 
 
 
 
             flux_x = (flux_x_m + flux_x_p)
             flux_y = (flux_y_m + flux_y_p)
-            flux_z = (flux_z_m + flux_z_p)
+            flux_z = flux_y
+            flux_z = ZERO
+!            flux_z = (flux_z_m + flux_z_p)
 
 
 
@@ -350,11 +358,11 @@ contains
                        p_y_v    * v_m + &
                        p_y_w    * w_m + &
                        p_y_p    * p_m 
-            flux_z_m = p_z_rho  * rho_m  + &
-                       p_z_u    * u_m + &
-                       p_z_v    * v_m + &
-                       p_z_w    * w_m + &
-                       p_z_p    * p_m 
+!            flux_z_m = p_z_rho  * rho_m  + &
+!                       p_z_u    * u_m + &
+!                       p_z_v    * v_m + &
+!                       p_z_w    * w_m + &
+!                       p_z_p    * p_m 
 
             flux_x_p = p_x_rho  * rho_p  + &
                        p_x_u    * u_p + &
@@ -366,17 +374,19 @@ contains
                        p_y_v    * v_p + &
                        p_y_w    * w_p + &
                        p_y_p    * p_p 
-            flux_z_p = p_z_rho  * rho_p  + &
-                       p_z_u    * u_p + &
-                       p_z_v    * v_p + &
-                       p_z_w    * w_p + &
-                       p_z_p    * p_p 
+!            flux_z_p = p_z_rho  * rho_p  + &
+!                       p_z_u    * u_p + &
+!                       p_z_v    * v_p + &
+!                       p_z_w    * w_p + &
+!                       p_z_p    * p_p 
 
 
 
             flux_x = (flux_x_m + flux_x_p)
             flux_y = (flux_y_m + flux_y_p)
-            flux_z = (flux_z_m + flux_z_p)
+            flux_z = flux_y
+            flux_z = ZERO
+!            flux_z = (flux_z_m + flux_z_p)
 
 
             ! dot with normal vector

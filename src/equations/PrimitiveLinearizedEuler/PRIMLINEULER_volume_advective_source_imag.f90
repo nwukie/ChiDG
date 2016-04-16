@@ -183,6 +183,17 @@ contains
             inD = ( y(igq) < -FIVE + thickness )
 
 
+
+
+            inA = .false.
+            inB = .false.
+            inC = .false.
+            inD = .false.
+
+
+
+
+
             if ( inA ) then
                 fcn(igq)     =  abs( ( x(igq) - (-THREE+thickness) ) / thickness )**TWO
                 sigma_x(igq) = eps * fcn(igq)

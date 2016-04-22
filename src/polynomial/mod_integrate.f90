@@ -58,6 +58,9 @@ contains
         flux_y = (flux_y) * (elem%gq%vol%weights) * (elem%jinv)
         flux_z = (flux_z) * (elem%gq%vol%weights) * (elem%jinv)
 
+!        flux_x = (flux_x) * (elem%gq%vol%weights) * (elem%jinv) * (elem%quad_pts(:)%c2_)
+!        flux_y = (flux_y) * (elem%gq%vol%weights) * (elem%jinv) * (elem%quad_pts(:)%c2_)
+!        flux_z = (flux_z) * (elem%gq%vol%weights) * (elem%jinv) * (elem%quad_pts(:)%c2_)
 
 
         !
@@ -86,6 +89,9 @@ contains
 
 
         integral = integral_x + integral_y + integral_z
+
+        
+
         call store_volume_integrals(integral,sdata,idom,ielem,ieqn,iblk)            ! Store values and derivatives
 
 
@@ -137,6 +143,7 @@ contains
         ! Multiply each component by quadrature weights and element jacobians
         !
         source = (source) * (elem%gq%vol%weights) * (elem%jinv)
+!        source = (source) * (elem%gq%vol%weights) * (elem%jinv) * (elem%quad_pts(:)%c2_)
 
 
 
@@ -144,6 +151,7 @@ contains
         ! Multiply by column of test function gradients, integrate, add to RHS, add derivatives to linearization
         !
         integral = matmul(transpose(elem%gq%vol%val),source)                        ! Integrate
+
 
 
 
@@ -216,7 +224,9 @@ contains
         !
         ! Store quadrature flux for neighbor integral
         !
+!        integrand = integrand * mesh(idom)%faces(ielem,iface)%quad_pts(:)%c2_
         integrand_n = integrand
+
 
 
         !

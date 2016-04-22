@@ -268,6 +268,14 @@ program driver
         call get_command_argument(3,file_b)
         
 
+
+        !
+        ! Initialize ChiDG environment
+        !
+        call chidg%init('env')
+
+
+
         if ( trim(chidg_action) == 'interpolate' ) then
             call chidg_interpolate(trim(file_a), trim(file_b))
 

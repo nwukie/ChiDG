@@ -11,7 +11,7 @@ module mod_kirchoffs
     use type_point,                 only: point_t
 
     use mod_interpolate,            only: interpolate_face
-    use mod_primitive_linearized_euler,     only: cbar, omega
+    use mod_primitive_linearized_euler_axisymmetric,     only: cbar, omega
     use mod_io,                             only: nterms_s
     implicit none
 
@@ -32,7 +32,7 @@ contains
         complex(rk),    dimension(:),   allocatable :: pressures
         type(point_t),  dimension(:),   allocatable :: points
 
-        nterms_s = 4*4*4
+        nterms_s = 5*5*5
 
         !
         ! Initialize ChiDG environment
@@ -174,7 +174,7 @@ contains
         logical     :: primitive_linearized_euler = .false.
         logical     :: kirchoff_surface = .false.
         complex(rk) :: pressures(size(points)), imag, integral
-        real(rk)    :: xo, yo, zo
+        real(rk)    :: xo, yo, zo, m
 
         real(rk), dimension(:), allocatable     ::  &
                     rho_r, u_r, v_r, w_r, p_r,      &
@@ -182,7 +182,8 @@ contains
                     xs, ys, zs, r, rx, ry, rz,      &
                     dpi_dx, dpi_dy, dpi_dz,                   &
                     dpr_dx, dpr_dy, dpr_dz,                   &
-                    nx, ny, nz, nxi, neta, nzeta, rdotn
+                    nx, ny, nz, nxi, neta, nzeta, rdotn,      &
+                    y, z, theta
 
         complex(rk), dimension(:), allocatable  ::                  &
                     rho, u, v, w, p,                                &
@@ -191,8 +192,8 @@ contains
 
 
 
-
-
+        ! Azimuthal order
+        m         = 0._rk
 
 
         imag      = cmplx(ZERO, ONE )
@@ -266,11 +267,15 @@ contains
                                  dpdx(nnodes), dpdy(nnodes), dpdz(nnodes),                          &
                                  r(nnodes), &
                                  leading_term(nnodes), one_over_r_term(nnodes), one_over_r2_term(nnodes),  &
-                                 rho(nnodes),   u(nnodes),   v(nnodes),   w(nnodes),   p(nnodes), stat=ierr)
+                                 rho(nnodes),   u(nnodes),   v(nnodes),   w(nnodes),   p(nnodes),           &
+                                 z(nnodes),      y(nnodes),  theta(nnodes),  stat=ierr)
                         if ( ierr /= 0 ) call AllocationError
 
 
-
+                        ! Get cartesian coords, compute theta
+                        y = mesh(idom_l)%faces(ielem_l,iface_l)%quad_pts(:)%c2_
+                        z = mesh(idom_l)%faces(ielem_l,iface_l)%quad_pts(:)%c3_
+                        theta = atan2(z,y)
 
 
 
@@ -289,12 +294,26 @@ contains
 
 
 
+
+
+
                         ! Assemble complex variables
                         rho = cmplx(rho_r, rho_i)
                         u   = cmplx(u_r, u_i)
                         v   = cmplx(v_r, v_i)
                         w   = cmplx(w_r, w_i)
                         p   = cmplx(p_r, p_i)
+
+
+                        ! Compute new value, based on THETA and M
+                        rho = rho*exp(imag*real(m,rk)*theta)
+                        u = u*exp(imag*real(m,rk)*theta)
+                        v = v*exp(imag*real(m,rk)*theta)
+                        w = w*exp(imag*real(m,rk)*theta)
+                        p = p*exp(imag*real(m,rk)*theta)
+
+
+
 
                         ! Get surface(source) coordinates
                         xs = mesh(idom_l)%faces(ielem_l,iface_l)%quad_pts(:)%c1_
@@ -386,7 +405,7 @@ contains
                                    dpdx,  dpdy, dpdz,         &
                                    r, &
                                    leading_term,    one_over_r_term, one_over_r2_term, &
-                                   rho,   u,   v,   w,   p)
+                                   rho,   u,   v,   w,   p, z, y, theta)
 
 
 

@@ -70,12 +70,12 @@ contains
 
         print*, '    ', trim(sourcefile)
 
-        nterms_s = 4*4
+        nterms_s = 5*5
         call chidg_source%initialize_solution_domains(nterms_s)
         call chidg_source%initialize_solution_solver()
         print*, '    ', trim(targetfile)
 
-        nterms_s = 4*4*4
+        nterms_s = 5*5*5
         print*, 'initialize_solution_domains'
         call chidg_target%initialize_solution_domains(nterms_s)
         print*, 'initialize_solution_solver'

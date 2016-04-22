@@ -26,7 +26,7 @@ module type_fgmres
     !---------------------------------------------------------------------------------------------
     type, public, extends(matrixsolver_t) :: fgmres_t
 
-        integer(ik) :: m = 1000
+        integer(ik) :: m = 2000
 
     contains
 

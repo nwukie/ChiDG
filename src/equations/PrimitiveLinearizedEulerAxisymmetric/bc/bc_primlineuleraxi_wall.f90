@@ -106,8 +106,8 @@ contains
                         drho_user,  du_user,    dp_user,                                &
                         flux_x, flux_y, flux_z, integrand
 
-        real(rk), dimension(mesh(face%idomain)%faces(face%ielement,face%iface)%gq%face%nnodes)   ::  &
-                        y
+!        real(rk), dimension(mesh(face%idomain)%faces(face%ielement,face%iface)%gq%face%nnodes)   ::  &
+!                        y
 
 
 
@@ -154,10 +154,10 @@ contains
 
 
 
-            !
-            ! Get y-coordinate
-            !
-            y = mesh(idom)%faces(ielem,iface)%quad_pts(:)%c2_
+!            !
+!            ! Get y-coordinate
+!            !
+!            y = mesh(idom)%faces(ielem,iface)%quad_pts(:)%c2_
 
 
 
@@ -185,7 +185,6 @@ contains
 !                     rho_z_p * p_r
 
             integrand = flux_x*norms(:,1) + flux_y*norms(:,2) + flux_z*norms(:,3)
-!            integrand = integrand*y
 
             call integrate_boundary_scalar_flux(mesh,sdata,face,flux,irho_r,integrand)
 
@@ -213,7 +212,6 @@ contains
 !                     rho_z_p * p_i
 
             integrand = flux_x*norms(:,1) + flux_y*norms(:,2) + flux_z*norms(:,3)
-!            integrand = integrand*y
 
             call integrate_boundary_scalar_flux(mesh,sdata,face,flux,irho_i,integrand)
 
@@ -249,7 +247,6 @@ contains
 !                     u_z_p * p_r
 
             integrand = flux_x*norms(:,1) + flux_y*norms(:,2) + flux_z*norms(:,3)
-!            integrand = integrand*y
 
             call integrate_boundary_scalar_flux(mesh,sdata,face,flux,iu_r,integrand)
 
@@ -277,7 +274,6 @@ contains
 !                     u_z_p * p_i
 
             integrand = flux_x*norms(:,1) + flux_y*norms(:,2) + flux_z*norms(:,3)
-!            integrand = integrand*y
 
             call integrate_boundary_scalar_flux(mesh,sdata,face,flux,iu_i,integrand)
 
@@ -311,7 +307,6 @@ contains
 !                     v_z_p * p_r
 
             integrand = flux_x*norms(:,1) + flux_y*norms(:,2) + flux_z*norms(:,3)
-!            integrand = integrand*y
 
             call integrate_boundary_scalar_flux(mesh,sdata,face,flux,iv_r,integrand)
 
@@ -338,7 +333,6 @@ contains
 !                     v_z_p * p_i
 
             integrand = flux_x*norms(:,1) + flux_y*norms(:,2) + flux_z*norms(:,3)
-!            integrand = integrand*y
 
             call integrate_boundary_scalar_flux(mesh,sdata,face,flux,iv_i,integrand)
 
@@ -373,7 +367,6 @@ contains
 !                     w_z_p * p_r
 
             integrand = flux_x*norms(:,1) + flux_y*norms(:,2) + flux_z*norms(:,3)
-!            integrand = integrand*y
 
             call integrate_boundary_scalar_flux(mesh,sdata,face,flux,iw_r,integrand)
 
@@ -400,7 +393,6 @@ contains
 !                     w_z_p * p_i
 
             integrand = flux_x*norms(:,1) + flux_y*norms(:,2) + flux_z*norms(:,3)
-!            integrand = integrand*y
 
             call integrate_boundary_scalar_flux(mesh,sdata,face,flux,iw_i,integrand)
 
@@ -432,7 +424,6 @@ contains
 !                     p_z_p * p_r
 
             integrand = flux_x*norms(:,1) + flux_y*norms(:,2) + flux_z*norms(:,3)
-!            integrand = integrand*y
 
             call integrate_boundary_scalar_flux(mesh,sdata,face,flux,ip_r,integrand)
 
@@ -457,7 +448,6 @@ contains
 !                     p_z_p * p_i
 
             integrand = flux_x*norms(:,1) + flux_y*norms(:,2) + flux_z*norms(:,3)
-!            integrand = integrand*y
 
             call integrate_boundary_scalar_flux(mesh,sdata,face,flux,ip_i,integrand)
 

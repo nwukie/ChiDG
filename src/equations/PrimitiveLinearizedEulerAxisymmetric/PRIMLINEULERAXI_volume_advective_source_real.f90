@@ -265,8 +265,8 @@ contains
         ! Unsteady source
         flux =        -   omega * rho_i
 
-        ! F_r divergence source
-        flux = flux   +   (rhobar/y) * v_r
+!        ! F_r divergence source
+!        flux = flux   +   (rhobar/y) * v_r
         
         ! F_theta divergence source
         flux = flux   -   (rhobar*real(mod_m,rk)/y)*w_i
@@ -330,7 +330,7 @@ contains
         flux =        -   omega * p_i
 
         ! F_r divergence source
-        flux = flux   +   (gam*pbar/y)*v_r
+!        flux = flux   +   (gam*pbar/y)*v_r
 
         ! F_theta divergence source
         flux = flux   -   (gam*pbar*real(mod_m,rk)/y)*w_i

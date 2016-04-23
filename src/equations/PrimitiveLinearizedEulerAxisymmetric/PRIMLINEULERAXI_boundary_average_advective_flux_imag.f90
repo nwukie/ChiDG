@@ -99,8 +99,8 @@ contains
                         integrand
 
 
-        real(rk), dimension(mesh(face_info%idomain)%faces(face_info%ielement,face_info%iface)%gq%face%nnodes)    :: &
-                        y
+!        real(rk), dimension(mesh(face_info%idomain)%faces(face_info%ielement,face_info%iface)%gq%face%nnodes)    :: &
+!                        y
 
 
 
@@ -143,10 +143,10 @@ contains
             call interpolate_face(mesh,face_info,q, ip, p_p, NEIGHBOR)
 
 
-            !
-            ! Get y-coordinate
-            !
-            y = mesh(idom)%faces(ielem,iface)%quad_pts(:)%c2_
+!            !
+!            ! Get y-coordinate
+!            !
+!            y = mesh(idom)%faces(ielem,iface)%quad_pts(:)%c2_
 
 
 
@@ -157,15 +157,15 @@ contains
             !       MASS FLUX
             !================================
             flux_x_m = rho_x_rho  * rho_m  + &
-                       rho_x_u * u_m + &
-                       rho_x_v * v_m + &
-                       rho_x_w * w_m + &
-                       rho_x_p * p_m
+                       rho_x_u    * u_m + &
+                       rho_x_v    * v_m + &
+                       rho_x_w    * w_m + &
+                       rho_x_p    * p_m
             flux_y_m = rho_y_rho  * rho_m  + &
-                       rho_y_u * u_m + &
-                       rho_y_v * v_m + &
-                       rho_y_w * w_m + &
-                       rho_y_p * p_m 
+                       rho_y_u    * u_m + &
+                       rho_y_v    * v_m + &
+                       rho_y_w    * w_m + &
+                       rho_y_p    * p_m 
 !            flux_z_m = rho_z_rho  * rho_m  + &
 !                       rho_z_u * u_m + &
 !                       rho_z_v * v_m + &
@@ -174,15 +174,15 @@ contains
 
 
             flux_x_p = rho_x_rho  * rho_p  + &
-                       rho_x_u * u_p + &
-                       rho_x_v * v_p + &
-                       rho_x_w * w_p + &
-                       rho_x_p * p_p
+                       rho_x_u    * u_p + &
+                       rho_x_v    * v_p + &
+                       rho_x_w    * w_p + &
+                       rho_x_p    * p_p
             flux_y_p = rho_y_rho  * rho_p  + &
-                       rho_y_u * u_p + &
-                       rho_y_v * v_p + &
-                       rho_y_w * w_p + &
-                       rho_y_p * p_p 
+                       rho_y_u    * u_p + &
+                       rho_y_v    * v_p + &
+                       rho_y_w    * w_p + &
+                       rho_y_p    * p_p 
 !            flux_z_p = rho_z_rho  * rho_p  + &
 !                       rho_z_u * u_p + &
 !                       rho_z_v * v_p + &
@@ -200,7 +200,6 @@ contains
 
             ! dot with normal vector
             integrand = HALF*(flux_x*norms(:,1) + flux_y*norms(:,2) + flux_z*norms(:,3))
-!            integrand = integrand * y   ! cylindrical integral
 
             call integrate_boundary_scalar_flux(mesh,sdata,face_info,function_info,irho,integrand)
 
@@ -209,15 +208,15 @@ contains
             !       X-MOMENTUM FLUX
             !================================
             flux_x_m = u_x_rho  * rho_m  + &
-                       u_x_u * u_m + &
-                       u_x_v * v_m + &
-                       u_x_w * w_m + &
-                       u_x_p * p_m
+                       u_x_u    * u_m + &
+                       u_x_v    * v_m + &
+                       u_x_w    * w_m + &
+                       u_x_p    * p_m
             flux_y_m = u_y_rho  * rho_m  + &
-                       u_y_u * u_m + &
-                       u_y_v * v_m + &
-                       u_y_w * w_m + &
-                       u_y_p * p_m 
+                       u_y_u    * u_m + &
+                       u_y_v    * v_m + &
+                       u_y_w    * w_m + &
+                       u_y_p    * p_m 
 !            flux_z_m = u_z_rho  * rho_m  + &
 !                       u_z_u * u_m + &
 !                       u_z_v * v_m + &
@@ -225,15 +224,15 @@ contains
 !                       u_z_p * p_m 
 
             flux_x_p = u_x_rho  * rho_p  + &
-                       u_x_u * u_p + &
-                       u_x_v * v_p + &
-                       u_x_w * w_p + &
-                       u_x_p * p_p
+                       u_x_u    * u_p + &
+                       u_x_v    * v_p + &
+                       u_x_w    * w_p + &
+                       u_x_p    * p_p
             flux_y_p = u_y_rho  * rho_p  + &
-                       u_y_u * u_p + &
-                       u_y_v * v_p + &
-                       u_y_w * w_p + &
-                       u_y_p * p_p 
+                       u_y_u    * u_p + &
+                       u_y_v    * v_p + &
+                       u_y_w    * w_p + &
+                       u_y_p    * p_p 
 !            flux_z_p = u_z_rho  * rho_p  + &
 !                       u_z_u * u_p + &
 !                       u_z_v * v_p + &
@@ -251,7 +250,6 @@ contains
 
             ! dot with normal vector
             integrand = HALF*(flux_x*norms(:,1) + flux_y*norms(:,2) + flux_z*norms(:,3))
-!            integrand = integrand * y   ! cylindrical integral
 
             call integrate_boundary_scalar_flux(mesh,sdata,face_info,function_info,iu,integrand)
 
@@ -260,15 +258,15 @@ contains
             !       Y-MOMENTUM FLUX
             !================================
             flux_x_m = v_x_rho  * rho_m  + &
-                       v_x_u * u_m + &
-                       v_x_v * v_m + &
-                       v_x_w * w_m + &
-                       v_x_p * p_m
+                       v_x_u    * u_m + &
+                       v_x_v    * v_m + &
+                       v_x_w    * w_m + &
+                       v_x_p    * p_m
             flux_y_m = v_y_rho  * rho_m  + &
-                       v_y_u * u_m + &
-                       v_y_v * v_m + &
-                       v_y_w * w_m + &
-                       v_y_p * p_m 
+                       v_y_u    * u_m + &
+                       v_y_v    * v_m + &
+                       v_y_w    * w_m + &
+                       v_y_p    * p_m 
 !            flux_z_m = v_z_rho  * rho_m  + &
 !                       v_z_u * u_m + &
 !                       v_z_v * v_m + &
@@ -277,15 +275,15 @@ contains
 
 
             flux_x_p = v_x_rho  * rho_p  + &
-                       v_x_u * u_p + &
-                       v_x_v * v_p + &
-                       v_x_w * w_p + &
-                       v_x_p * p_p
+                       v_x_u    * u_p + &
+                       v_x_v    * v_p + &
+                       v_x_w    * w_p + &
+                       v_x_p    * p_p
             flux_y_p = v_y_rho  * rho_p  + &
-                       v_y_u * u_p + &
-                       v_y_v * v_p + &
-                       v_y_w * w_p + &
-                       v_y_p * p_p 
+                       v_y_u    * u_p + &
+                       v_y_v    * v_p + &
+                       v_y_w    * w_p + &
+                       v_y_p    * p_p 
 !            flux_z_p = v_z_rho  * rho_p  + &
 !                       v_z_u * u_p + &
 !                       v_z_v * v_p + &
@@ -303,7 +301,6 @@ contains
 
             ! dot with normal vector
             integrand = HALF*(flux_x*norms(:,1) + flux_y*norms(:,2) + flux_z*norms(:,3))
-!            integrand = integrand * y   ! cylindrical integral
 
             call integrate_boundary_scalar_flux(mesh,sdata,face_info,function_info,iv,integrand)
 
@@ -353,7 +350,6 @@ contains
 
             ! dot with normal vector
             integrand = HALF*(flux_x*norms(:,1) + flux_y*norms(:,2) + flux_z*norms(:,3))
-!            integrand = integrand * y   ! cylindrical integral
 
             call integrate_boundary_scalar_flux(mesh,sdata,face_info,function_info,iw,integrand)
 
@@ -405,7 +401,6 @@ contains
 
             ! dot with normal vector
             integrand = HALF*(flux_x*norms(:,1) + flux_y*norms(:,2) + flux_z*norms(:,3))
-!            integrand = integrand * y   ! cylindrical integral
 
             call integrate_boundary_scalar_flux(mesh,sdata,face_info,function_info,ip,integrand)
 

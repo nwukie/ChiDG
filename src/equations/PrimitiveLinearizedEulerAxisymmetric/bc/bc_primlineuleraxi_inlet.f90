@@ -281,8 +281,8 @@ contains
             !
             dp_user = rho_r
             !dp_user = 40.8166_rk
-            amplitude = 40.8166_rk
-            !amplitude = 20._rk
+            !amplitude = 40.8166_rk
+            amplitude = 20.404_rk
             dp_user = amplitude * compute_cylindricalduct_mode(m, self%alpha, mesh(idom)%faces(ielem,iface)%quad_pts(:)%c2_, 1.2_rk)
 
 

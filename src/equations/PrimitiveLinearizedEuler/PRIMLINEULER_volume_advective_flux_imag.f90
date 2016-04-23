@@ -293,13 +293,11 @@ contains
                  rho_y_w    * w_r    + &
                  rho_y_p    * p_r)*sigma_x/omega
 
-         flux_z = flux_y
-         flux_z = ZERO
-!        flux_z = rho_z_rho  * rho_i  + &
-!                 rho_z_u    * u_i    + &
-!                 rho_z_v    * v_i    + &
-!                 rho_z_w    * w_i    + &
-!                 rho_z_p    * p_i
+        flux_z = rho_z_rho  * rho_i  + &
+                 rho_z_u    * u_i    + &
+                 rho_z_v    * v_i    + &
+                 rho_z_w    * w_i    + &
+                 rho_z_p    * p_i
 
         call integrate_volume_flux(mesh(idom)%elems(ielem),sdata,idom,irho_i,iblk,flux_x,flux_y,flux_z)
 
@@ -331,13 +329,11 @@ contains
                  u_y_w    * w_r    + &
                  u_y_p    * p_r)*sigma_x/omega
 
-        flux_z = flux_y
-        flux_z = ZERO
-!        flux_z = u_z_rho  * rho_i  + &
-!                 u_z_u    * u_i    + &
-!                 u_z_v    * v_i    + &
-!                 u_z_w    * w_i    + &
-!                 u_z_p    * p_i
+        flux_z = u_z_rho  * rho_i  + &
+                 u_z_u    * u_i    + &
+                 u_z_v    * v_i    + &
+                 u_z_w    * w_i    + &
+                 u_z_p    * p_i
 
         call integrate_volume_flux(mesh(idom)%elems(ielem),sdata,idom,iu_i,iblk,flux_x,flux_y,flux_z)
 
@@ -369,13 +365,11 @@ contains
                  v_y_w    * w_r    + &
                  v_y_p    * p_r)*sigma_x/omega
 
-         flux_z = flux_y
-         flux_z = ZERO
-!        flux_z = v_z_rho  * rho_i  + &
-!                 v_z_u    * u_i    + &
-!                 v_z_v    * v_i    + &
-!                 v_z_w    * w_i    + &
-!                 v_z_p    * p_i
+        flux_z = v_z_rho  * rho_i  + &
+                 v_z_u    * u_i    + &
+                 v_z_v    * v_i    + &
+                 v_z_w    * w_i    + &
+                 v_z_p    * p_i
 
         call integrate_volume_flux(mesh(idom)%elems(ielem),sdata,idom,iv_i,iblk,flux_x,flux_y,flux_z)
 
@@ -406,13 +400,11 @@ contains
                  w_y_w    * w_r    + &
                  w_y_p    * p_r)*sigma_x/omega
 
-        flux_z = flux_y
-        flux_z = ZERO
-!        flux_z = w_z_rho  * rho_i  + &
-!                 w_z_u    * u_i    + &
-!                 w_z_v    * v_i    + &
-!                 w_z_w    * w_i    + &
-!                 w_z_p    * p_i
+        flux_z = w_z_rho  * rho_i  + &
+                 w_z_u    * u_i    + &
+                 w_z_v    * v_i    + &
+                 w_z_w    * w_i    + &
+                 w_z_p    * p_i
 
 
         call integrate_volume_flux(mesh(idom)%elems(ielem),sdata,idom,iw_i,iblk,flux_x,flux_y,flux_z)
@@ -444,13 +436,11 @@ contains
                  p_y_w    * w_r    + &
                  p_y_p    * p_r)*sigma_x/omega
   
-        flux_z = flux_y
-        flux_z = ZERO
-!        flux_z = p_z_rho  * rho_i  + &
-!                 p_z_u    * u_i    + &
-!                 p_z_v    * v_i    + &
-!                 p_z_w    * w_i    + &
-!                 p_z_p    * p_i
+        flux_z = p_z_rho  * rho_i  + &
+                 p_z_u    * u_i    + &
+                 p_z_v    * v_i    + &
+                 p_z_w    * w_i    + &
+                 p_z_p    * p_i
 
         call integrate_volume_flux(mesh(idom)%elems(ielem),sdata,idom,ip_i,iblk,flux_x,flux_y,flux_z)
 

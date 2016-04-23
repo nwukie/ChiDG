@@ -276,6 +276,7 @@ contains
                         y = mesh(idom_l)%faces(ielem_l,iface_l)%quad_pts(:)%c2_
                         z = mesh(idom_l)%faces(ielem_l,iface_l)%quad_pts(:)%c3_
                         theta = atan2(z,y)
+                        r = sqrt(y**TWO + z**TWO)
 
 
 
@@ -303,6 +304,9 @@ contains
                         v   = cmplx(v_r, v_i)
                         w   = cmplx(w_r, w_i)
                         p   = cmplx(p_r, p_i)
+
+                        where ( r < 0.1_rk ) p = cmplx(ZERO,ZERO)
+
 
 
                         ! Compute new value, based on THETA and M

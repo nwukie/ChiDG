@@ -269,10 +269,10 @@ contains
         flux =            omega * rho_r
 
         ! F_r divergence source
-        flux = flux   +   (rhobar/y) * v_i
+!        flux = flux   +   (rhobar/y) * v_i
 
         ! F_theta divergence source
-        flux = flux   +   (rhobar*real(mod_m,rk)/y) * w_r
+!        flux = flux   +   (rhobar*real(mod_m,rk)/y) * w_r
 
 
         call integrate_volume_source(mesh(idom)%elems(ielem),sdata,idom,irho_i,iblk,flux)
@@ -321,7 +321,7 @@ contains
 
 
         ! F_theta divergence source
-        flux = flux   +   (real(mod_m,rk)/(rhobar*y)) * p_r
+!        flux = flux   +   (real(mod_m,rk)/(rhobar*y)) * p_r
         
 
         call integrate_volume_source(mesh(idom)%elems(ielem),sdata,idom,iw_i,iblk,flux)
@@ -333,10 +333,10 @@ contains
         flux =            omega * p_r
 
         ! F_r divergence source
-        flux = flux   +   (gam*pbar/y)*v_i
+!        flux = flux   +   (gam*pbar/y)*v_i
 
         ! F_theta divergence source
-        flux = flux   +   (gam*pbar*real(mod_m,rk)/y)*w_r
+!        flux = flux   +   (gam*pbar*real(mod_m,rk)/y)*w_r
         
 
 

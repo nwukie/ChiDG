@@ -96,8 +96,8 @@ contains
                         flux_x,     flux_y,     flux_z,                     &
                         integrand
 
-        real(rk), dimension(mesh(face_info%idomain)%faces(face_info%ielement,face_info%iface)%gq%face%nnodes)    :: &
-                        y
+!        real(rk), dimension(mesh(face_info%idomain)%faces(face_info%ielement,face_info%iface)%gq%face%nnodes)    :: &
+!                        y
 
 
         !===========================================================================
@@ -137,10 +137,10 @@ contains
             call interpolate_face(mesh,face_info,q, ip, p_p, NEIGHBOR)
 
 
-            !
-            ! Get y-coordinate
-            !
-            y = mesh(idom)%faces(ielem,iface)%quad_pts(:)%c2_
+!            !
+!            ! Get y-coordinate
+!            !
+!            y = mesh(idom)%faces(ielem,iface)%quad_pts(:)%c2_
 
 
 
@@ -190,7 +190,6 @@ contains
 
             ! dot with normal vector
             integrand = HALF*(flux_x*norms(:,1) + flux_y*norms(:,2) + flux_z*norms(:,3))
-!            integrand = integrand * y   ! cylindrical integral
 
             call integrate_boundary_scalar_flux(mesh,sdata,face_info,function_info,irho,integrand)
 
@@ -242,7 +241,6 @@ contains
 
             ! dot with normal vector
             integrand = HALF*(flux_x*norms(:,1) + flux_y*norms(:,2) + flux_z*norms(:,3))
-!            integrand = integrand * y   ! cylindrical integral
 
             call integrate_boundary_scalar_flux(mesh,sdata,face_info,function_info,iu,integrand)
 
@@ -296,7 +294,6 @@ contains
 
             ! dot with normal vector
             integrand = HALF*(flux_x*norms(:,1) + flux_y*norms(:,2) + flux_z*norms(:,3))
-!            integrand = integrand * y   ! cylindrical integral
 
             call integrate_boundary_scalar_flux(mesh,sdata,face_info,function_info,iv,integrand)
 
@@ -351,7 +348,6 @@ contains
 
             ! dot with normal vector
             integrand = HALF*(flux_x*norms(:,1) + flux_y*norms(:,2) + flux_z*norms(:,3))
-!            integrand = integrand * y   ! cylindrical integral
 
             call integrate_boundary_scalar_flux(mesh,sdata,face_info,function_info,iw,integrand)
 
@@ -402,7 +398,6 @@ contains
 
             ! dot with normal vector
             integrand = HALF*(flux_x*norms(:,1) + flux_y*norms(:,2) + flux_z*norms(:,3))
-!            integrand = integrand * y   ! cylindrical integral
 
             call integrate_boundary_scalar_flux(mesh,sdata,face_info,function_info,ip,integrand)
 

@@ -281,8 +281,8 @@ contains
                  rho_y_w    * w_i    + &
                  rho_y_p    * p_i    
 
-         flux_z = flux_y
-         flux_z = ZERO
+        flux_z = flux_y
+        flux_z = ZERO
 !        flux_z = rho_z_rho  * rho_i  + &
 !                 rho_z_u    * u_i    + &
 !                 rho_z_v    * v_i    + &

@@ -138,4 +138,9 @@ Framework
 
 
 
+IO
+!-------------------------------------------------------------------------
+@detail When reading solution, check that file contains solution
+@author Nathan A. Wukie
+@date   4/22/2016
 

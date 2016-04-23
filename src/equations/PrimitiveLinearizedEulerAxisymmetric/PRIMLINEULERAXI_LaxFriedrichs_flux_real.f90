@@ -106,7 +106,7 @@ contains
 
 
         real(rk), dimension(mesh(face_info%idomain)%faces(face_info%ielement,face_info%iface)%gq%face%nnodes)    :: &
-                        y, un, wave_c
+                        un, wave_c
 
         !===========================================================================
         ! NOTE: var_m signifies "minus" and would indicate a local element variable
@@ -173,10 +173,10 @@ contains
             wave = wave_c
 
 
-            !
-            ! Get y-coordinate
-            !
-            y = mesh(idom)%faces(ielem,iface)%quad_pts(:)%c2_
+!            !
+!            ! Get y-coordinate
+!            !
+!            y = mesh(idom)%faces(ielem,iface)%quad_pts(:)%c2_
 
 
             !================================
@@ -185,7 +185,6 @@ contains
             upwind = -wave*(rho_p - rho_m)
 
             integrand = HALF * ( upwind*norms(:,1)*unorms(:,1)  +  upwind*norms(:,2)*unorms(:,2)  +  upwind*norms(:,3)*unorms(:,3) )
-!            integrand = integrand * y   ! cylindrical integral
 
             call integrate_boundary_scalar_flux(mesh,sdata,face_info,function_info,irho,integrand)
 
@@ -196,7 +195,6 @@ contains
             upwind = -wave*(u_p - u_m)
 
             integrand = HALF * ( upwind*norms(:,1)*unorms(:,1)  +  upwind*norms(:,2)*unorms(:,2)  +  upwind*norms(:,3)*unorms(:,3) )
-!            integrand = integrand * y   ! cylindrical integral
 
             call integrate_boundary_scalar_flux(mesh,sdata,face_info,function_info,iu,integrand)
 
@@ -207,7 +205,6 @@ contains
             upwind = -wave*(v_p - v_m)
 
             integrand = HALF * ( upwind*norms(:,1)*unorms(:,1)  +  upwind*norms(:,2)*unorms(:,2)  +  upwind*norms(:,3)*unorms(:,3) )
-!            integrand = integrand * y   ! cylindrical integral
 
             call integrate_boundary_scalar_flux(mesh,sdata,face_info,function_info,iv,integrand)
 
@@ -217,7 +214,6 @@ contains
             upwind = -wave*(w_p - w_m)
 
             integrand = HALF * ( upwind*norms(:,1)*unorms(:,1)  +  upwind*norms(:,2)*unorms(:,2)  +  upwind*norms(:,3)*unorms(:,3) )
-!            integrand = integrand * y   ! cylindrical integral
 
             call integrate_boundary_scalar_flux(mesh,sdata,face_info,function_info,iw,integrand)
 
@@ -227,7 +223,6 @@ contains
             upwind = -wave*(p_p - p_m)
 
             integrand = HALF * ( upwind*norms(:,1)*unorms(:,1)  +  upwind*norms(:,2)*unorms(:,2)  +  upwind*norms(:,3)*unorms(:,3) )
-!            integrand = integrand * y   ! cylindrical integral
 
             call integrate_boundary_scalar_flux(mesh,sdata,face_info,function_info,ip,integrand)
 

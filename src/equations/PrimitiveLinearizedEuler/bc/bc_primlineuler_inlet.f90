@@ -190,6 +190,9 @@ contains
                         drho_user,  du_user,    dp_user,                                &
                         flux_x, flux_y, flux_z, integrand
 
+        real(rk),   dimension(mesh(face%idomain)%faces(face%ielement,face%iface)%gq%face%nnodes)    :: &
+                        x, y, z, r, theta
+                    
 
 
         call zero_point%set(ZERO,ZERO,ZERO)
@@ -243,8 +246,19 @@ contains
             n = int(self%bcproperties%compute("RadialMode", zero_time,zero_point))
             
 
+            !
+            ! Compute r, theta
+            !
+            y = mesh(idom)%faces(ielem,iface)%quad_pts(:)%c2_
+            z = mesh(idom)%faces(ielem,iface)%quad_pts(:)%c3_
+            r = sqrt(y**TWO + z**TWO)
+            theta = atan2(z,y)
 
 
+            !
+            ! BC Perturbation Amplitude
+            !
+            amplitude = 40.8166_rk
 
 
             !----------------------------------------------
@@ -274,9 +288,7 @@ contains
             ! Compute modal pressure distribution from user-specified mode
             !
             dp_user = rho_r
-            !dp_user = 40.8166_rk
-            amplitude = 40.8166_rk
-            dp_user = amplitude * compute_cylindricalduct_mode(m, self%alpha, mesh(idom)%faces(ielem,iface)%quad_pts(:)%c2_, 1.2_rk)
+            dp_user = cos(real(m,rk)*theta) * amplitude * compute_cylindricalduct_mode(m, self%alpha, r, 1.212_rk)
 
 
             !
@@ -337,7 +349,9 @@ contains
             ! Get contribution from user-specified perturbations
             !
             dp_user = rho_r
-            dp_user = 0._rk
+            dp_user = sin(real(m,rk)*theta) * amplitude * compute_cylindricalduct_mode(m, self%alpha, r, 1.212_rk)
+
+
 
             !
             ! Compute in-going characteristics from user-specified data

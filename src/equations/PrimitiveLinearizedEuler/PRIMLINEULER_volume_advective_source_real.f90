@@ -87,12 +87,14 @@ contains
                     flux
 
         real(rk), dimension(mesh(idom)%elems(ielem)%gq%vol%nnodes)      ::  &
-                    x, y, sigma_x, sigma_y, sigma, fcn
+                    x, y, z, r, sigma_x, sigma_y, sigma_z, fcn
 
         logical :: inA = .false.
         logical :: inB = .false.
         logical :: inC = .false.
         logical :: inD = .false.
+        logical :: inE = .false.
+        logical :: inF = .false.
 
 
 
@@ -115,121 +117,75 @@ contains
 
 
         !
-        ! Gamma
-        !
-        !gam = 1.4_rk
-        !omega = 956._rk * TWO * PI
-        !omega = 1200._rk * TWO * PI
-
-
-
-
-
-
-
-
-
-
-        !
-        ! Absorbing layer
-        !
-        !thickness = 0.7_rk
-        !eps       = 1700._rk
-        !kappa     = 1._rk
-
         ! Get coordinates
+        !
         x = mesh(idom)%elems(ielem)%quad_pts(:)%c1_
         y = mesh(idom)%elems(ielem)%quad_pts(:)%c2_
+        z = mesh(idom)%elems(ielem)%quad_pts(:)%c3_
+        r = sqrt(y**TWO + z**TWO)
 
+        
+        !
+        ! Compute PML Layers
+        !
         do igq = 1,size(x)
 
 
-!            inA = ( x(igq) < -NINE + thickness )
-!            inB = ( y(igq) >  FIVE - thickness )
-!            inC = ( x(igq) >  NINE - thickness )
-!            inD = ( y(igq) < -FIVE + thickness )
-!
-!
-!
-!
-!            if ( inA ) then
-!                fcn     =  abs( ( x - (-NINE+thickness) ) / thickness )**TWO
-!                sigma_x = eps * fcn
-!            
-!            else if ( inC ) then
-!                fcn     =  abs( ( x - (NINE-thickness) ) / thickness )**TWO
-!                sigma_x = eps * fcn
-!
-!            else
-!                sigma_x = ZERO
-!
-!            end if
-!
-!
-!
-!
-!            if ( inB ) then
-!                fcn     =  abs( ( y - ( FIVE-thickness) ) / thickness )**TWO
-!                sigma_y = eps * fcn
-!
-!!            else if ( inD ) then
-!!                fcn     =  abs( ( y - (-FIVE+thickness) ) / thickness )**TWO
-!!                sigma_y = eps * fcn
-!
-!            else
-!                sigma_y = ZERO
-!            end if
-
-
-
-
             ! Munt duct
-            inA = ( x(igq) < -THREE + thickness ) .and. ( y(igq) > 1.2_rk )
-            inB = ( y(igq) >  4.6_rk - thickness )
-            inC = ( x(igq) >  6.2_rk - thickness )
-            inD = ( y(igq) < -FIVE + thickness )
-
-            inA = .false.
-            inB = .false.
-            inC = .false.
-            inD = .false.
+            inA = ( x(igq) < -THREE + thickness ) .and. ( r(igq) > 1.212_rk )
+            inB = ( x(igq) >  THREE - thickness )
+            inC = ( y(igq) < -2.121_rk + thickness )
+            inD = ( y(igq) >  2.121_rk - thickness )
+            inE = ( z(igq) < -2.121_rk + thickness )
+            inF = ( z(igq) >  2.121_rk - thickness )
 
 
+
+!            inA = .false.
+!            inB = .false.
+!            inC = .false.
+!            inD = .false.
+
+
+            ! X-PML
             if ( inA ) then
                 fcn(igq)     =  abs( ( x(igq) - (-THREE+thickness) ) / thickness )**TWO
                 sigma_x(igq) = eps * fcn(igq)
-            
-            else if ( inC ) then
-                fcn(igq)     =  abs( ( x(igq) - (6.2_rk-thickness) ) / thickness )**TWO
+            else if ( inB ) then
+                fcn(igq)     =  abs( ( x(igq) - ( THREE-thickness) ) / thickness )**TWO
                 sigma_x(igq) = eps * fcn(igq)
-
             else
                 sigma_x(igq) = ZERO
-
             end if
 
 
-
-
-            if ( inB ) then
-                fcn(igq)     =  abs( ( y(igq) - ( 4.6_rk-thickness) ) / thickness )**TWO
+            ! Y-PML
+            if ( inC ) then
+                fcn(igq)     =  abs( ( y(igq) - (-2.121_rk+thickness) ) / thickness )**TWO
                 sigma_y(igq) = eps * fcn(igq)
-
-!            else if ( inD ) then
-!                fcn     =  abs( ( y - (-FIVE+thickness) ) / thickness )**TWO
-!                sigma_y = eps * fcn
-
+            else if ( inD ) then
+                fcn(igq)     =  abs( ( y(igq) - ( 2.121_rk-thickness) ) / thickness )**TWO
+                sigma_y(igq) = eps * fcn(igq)
             else
                 sigma_y(igq) = ZERO
             end if
 
 
-
-
-            sigma(igq) = sigma_x(igq) * sigma_y(igq)
-
+            ! Z-PML
+            if ( inE ) then
+                fcn(igq)     =  abs( ( z(igq) - (-2.121_rk+thickness) ) / thickness )**TWO
+                sigma_z(igq) = eps * fcn(igq)
+            else if ( inF ) then
+                fcn(igq)     =  abs( ( z(igq) - ( 2.121_rk-thickness) ) / thickness )**TWO
+                sigma_z(igq) = eps * fcn(igq)
+            else
+                sigma_z(igq) = ZERO
+            end if
 
         end do
+
+
+
 
 
 
@@ -261,7 +217,8 @@ contains
         !===========================
         !        MASS FLUX
         !===========================
-        flux = -omega * rho_i    -  (sigma_x + sigma_y + sigma_x*sigma_y/omega) * rho_r
+        flux = -omega * rho_i * (ONE - (sigma_x*sigma_y + sigma_x*sigma_z + sigma_y*sigma_z)/(omega*omega) )  -  &
+                omega * rho_r * ( - (sigma_x+sigma_y+sigma_z)/omega  +  (sigma_x*sigma_y*sigma_z)/(omega*omega*omega) )
 
         call integrate_volume_source(mesh(idom)%elems(ielem),sdata,idom,irho_r,iblk,flux)
 
@@ -269,7 +226,8 @@ contains
         !===========================
         !     X-MOMENTUM FLUX
         !===========================
-        flux = -omega * u_i   -  (sigma_x + sigma_y + sigma_x*sigma_y/omega) * u_r
+        flux = -omega * u_i * (ONE - (sigma_x*sigma_y + sigma_x*sigma_z + sigma_y*sigma_z)/(omega*omega) )  -  &
+                omega * u_r * ( - (sigma_x+sigma_y+sigma_z)/omega  +  (sigma_x*sigma_y*sigma_z)/(omega*omega*omega) )
 
         call integrate_volume_source(mesh(idom)%elems(ielem),sdata,idom,iu_r,iblk,flux)
 
@@ -277,21 +235,24 @@ contains
         !============================
         !     Y-MOMENTUM FLUX
         !============================
-        flux = -omega * v_i   -  (sigma_x + sigma_y + sigma_x*sigma_y/omega) * v_r
+        flux = -omega * v_i * (ONE - (sigma_x*sigma_y + sigma_x*sigma_z + sigma_y*sigma_z)/(omega*omega) )  -  &
+                omega * v_r * ( - (sigma_x+sigma_y+sigma_z)/omega  +  (sigma_x*sigma_y*sigma_z)/(omega*omega*omega) )
 
         call integrate_volume_source(mesh(idom)%elems(ielem),sdata,idom,iv_r,iblk,flux)
 
         !============================
         !     Z-MOMENTUM FLUX
         !============================
-        flux = -omega * w_i   -  (sigma_x + sigma_y + sigma_x*sigma_y/omega) * w_r
+        flux = -omega * w_i * (ONE - (sigma_x*sigma_y + sigma_x*sigma_z + sigma_y*sigma_z)/(omega*omega) )  -  &
+                omega * w_r * ( - (sigma_x+sigma_y+sigma_z)/omega  +  (sigma_x*sigma_y*sigma_z)/(omega*omega*omega) )
 
         call integrate_volume_source(mesh(idom)%elems(ielem),sdata,idom,iw_r,iblk,flux)
 
         !============================
         !       ENERGY FLUX
         !============================
-        flux = -omega * p_i   -   (sigma_x + sigma_y + sigma_x*sigma_y/omega) * p_r
+        flux = -omega * p_i * (ONE - (sigma_x*sigma_y + sigma_x*sigma_z + sigma_y*sigma_z)/(omega*omega) )  -  &
+                omega * p_r * ( - (sigma_x+sigma_y+sigma_z)/omega  +  (sigma_x*sigma_y*sigma_z)/(omega*omega*omega) )
 
         call integrate_volume_source(mesh(idom)%elems(ielem),sdata,idom,ip_r,iblk,flux)
 

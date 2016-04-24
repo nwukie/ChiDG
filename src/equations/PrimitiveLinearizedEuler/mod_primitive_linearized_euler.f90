@@ -21,7 +21,7 @@ module mod_primitive_linearized_euler
     real(rk), parameter :: gam       = 1.4_rk
     !real(rk), parameter :: omega = 1432.945684_rk * TWO * PI
     real(rk), parameter :: omega     = 956._rk * TWO * PI
-    real(rk), parameter :: thickness = 1.0_rk
+    real(rk), parameter :: thickness = 0.5_rk
     real(rk), parameter :: eps       = 2300_rk
 
     !

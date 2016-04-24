@@ -84,12 +84,14 @@ contains
                     flux_x, flux_y, flux_z
 
         real(rk), dimension(mesh(idom)%elems(ielem)%gq%vol%nnodes)      ::  &
-                    x, y, sigma_x, sigma_y, sigma, fcn
+                    x, y, z, r, sigma_x, sigma_y, sigma_z, fcn
 
         logical :: inA = .false.
         logical :: inB = .false.
         logical :: inC = .false.
         logical :: inD = .false.
+        logical :: inE = .false.
+        logical :: inF = .false.
 
 
 
@@ -139,112 +141,72 @@ contains
         call interpolate_element(mesh,sdata%q,idom,ielem,ip_i,p_i,seed)
 
 
-        !
-        ! Gamma
-        !
-        !gam = 1.4_rk
-        !omega = 956._rk * TWO * PI
-        !omega = 1200._rk * TWO * PI
-
 
 
         !
-        ! Absorbing layer
-        !
-        !thickness = 0.7_rk
-        !eps       = 700._rk
-        !kappa     = 1._rk
-
         ! Get coordinates
+        !
         x = mesh(idom)%elems(ielem)%quad_pts(:)%c1_
         y = mesh(idom)%elems(ielem)%quad_pts(:)%c2_
+        z = mesh(idom)%elems(ielem)%quad_pts(:)%c3_
+        r = sqrt(y**TWO + z**TWO)
 
+        !
+        ! Compute PML Layers
+        !
         do igq = 1,size(x)
-
-! Two cylinder scattering
-!            inA = ( x(igq) < -NINE + thickness )
-!            inB = ( y(igq) >  FIVE - thickness )
-!            inC = ( x(igq) >  NINE - thickness )
-!            inD = ( y(igq) < -FIVE + thickness )
-!
-!
-!            if ( inA ) then
-!                fcn     =  abs( ( x - (-NINE+thickness) ) / thickness )**TWO
-!                sigma_x = eps * fcn
-!            
-!            else if ( inC ) then
-!                fcn     =  abs( ( x - (NINE-thickness) ) / thickness )**TWO
-!                sigma_x = eps * fcn
-!
-!            else
-!                sigma_x = ZERO
-!
-!            end if
-!
-!
-!
-!
-!            if ( inB ) then
-!                fcn     =  abs( ( y - ( FIVE-thickness) ) / thickness )**TWO
-!                sigma_y = eps * fcn
-!
-!!            else if ( inD ) then
-!!                fcn     =  abs( ( y - (-FIVE+thickness) ) / thickness )**TWO
-!!                sigma_y = eps * fcn
-!
-!            else
-!                sigma_y = ZERO
-!            end if
-
-
-
 
 
             ! Munt duct
-            inA = ( x(igq) < -THREE + thickness ) .and. ( y(igq) > 1.2_rk )
-            inB = ( y(igq) >  4.6_rk - thickness )
-            inC = ( x(igq) >  6.2_rk - thickness )
-            inD = ( y(igq) < -FIVE + thickness )
+            inA = ( x(igq) < -THREE + thickness ) .and. ( r(igq) > 1.212_rk )
+            inB = ( x(igq) >  THREE - thickness )
+            inC = ( y(igq) < -2.121_rk + thickness )
+            inD = ( y(igq) >  2.121_rk - thickness )
+            inE = ( z(igq) < -2.121_rk + thickness )
+            inF = ( z(igq) >  2.121_rk - thickness )
 
 
 
-            inA = .false.
-            inB = .false.
-            inC = .false.
-            inD = .false.
+!            inA = .false.
+!            inB = .false.
+!            inC = .false.
+!            inD = .false.
 
 
-
+            ! X-PML
             if ( inA ) then
                 fcn(igq)     =  abs( ( x(igq) - (-THREE+thickness) ) / thickness )**TWO
                 sigma_x(igq) = eps * fcn(igq)
-            
-            else if ( inC ) then
-                fcn(igq)     =  abs( ( x(igq) - (6.2_rk-thickness) ) / thickness )**TWO
+            else if ( inB ) then
+                fcn(igq)     =  abs( ( x(igq) - ( THREE-thickness) ) / thickness )**TWO
                 sigma_x(igq) = eps * fcn(igq)
-
             else
                 sigma_x(igq) = ZERO
-
             end if
 
 
-
-
-            if ( inB ) then
-                fcn(igq)     =  abs( ( y(igq) - ( 4.6_rk-thickness) ) / thickness )**TWO
+            ! Y-PML
+            if ( inC ) then
+                fcn(igq)     =  abs( ( y(igq) - (-2.121_rk+thickness) ) / thickness )**TWO
                 sigma_y(igq) = eps * fcn(igq)
-
-!            else if ( inD ) then
-!                fcn     =  abs( ( y - (-FIVE+thickness) ) / thickness )**TWO
-!                sigma_y = eps * fcn
-
+            else if ( inD ) then
+                fcn(igq)     =  abs( ( y(igq) - ( 2.121_rk-thickness) ) / thickness )**TWO
+                sigma_y(igq) = eps * fcn(igq)
             else
                 sigma_y(igq) = ZERO
             end if
 
-            sigma(igq) = sigma_x(igq) * sigma_y(igq)
 
+            ! Z-PML
+            if ( inE ) then
+                fcn(igq)     =  abs( ( z(igq) - (-2.121_rk+thickness) ) / thickness )**TWO
+                sigma_z(igq) = eps * fcn(igq)
+            else if ( inF ) then
+                fcn(igq)     =  abs( ( z(igq) - ( 2.121_rk-thickness) ) / thickness )**TWO
+                sigma_z(igq) = eps * fcn(igq)
+            else
+                sigma_z(igq) = ZERO
+            end if
 
         end do
 
@@ -269,35 +231,41 @@ contains
         !===========================
         !        MASS FLUX
         !===========================
-        flux_x = rho_x_rho  * rho_i  + &
+        flux_x = (rho_x_rho * rho_i  + &
                  rho_x_u    * u_i    + &
                  rho_x_v    * v_i    + &
                  rho_x_w    * w_i    + &
-                 rho_x_p    * p_i    + &
+                 rho_x_p    * p_i)*(ONE - sigma_y*sigma_z/(omega*omega))  - &
                  ! PML
                  (rho_x_rho * rho_r  + &
                  rho_x_u    * u_r    + &
                  rho_x_v    * v_r    + &
                  rho_x_w    * w_r    + &
-                 rho_x_p    * p_r)*sigma_y/omega
+                 rho_x_p    * p_r)*((sigma_y+sigma_z)/omega)
 
-        flux_y = rho_y_rho  * rho_i  + &
+        flux_y = (rho_y_rho * rho_i  + &
                  rho_y_u    * u_i    + &
                  rho_y_v    * v_i    + &
                  rho_y_w    * w_i    + &
-                 rho_y_p    * p_i    + &
+                 rho_y_p    * p_i)*(ONE - sigma_x*sigma_z/(omega*omega))  - &
                  ! PML
                  (rho_y_rho * rho_r  + &
                  rho_y_u    * u_r    + &
                  rho_y_v    * v_r    + &
                  rho_y_w    * w_r    + &
-                 rho_y_p    * p_r)*sigma_x/omega
+                 rho_y_p    * p_r)*((sigma_x+sigma_z)/omega)
 
-        flux_z = rho_z_rho  * rho_i  + &
+        flux_z = (rho_z_rho * rho_i  + &
                  rho_z_u    * u_i    + &
                  rho_z_v    * v_i    + &
                  rho_z_w    * w_i    + &
-                 rho_z_p    * p_i
+                 rho_z_p    * p_i)*(ONE - sigma_x*sigma_y/(omega*omega))  - &
+                 (rho_z_rho * rho_r  + &
+                 rho_z_u    * u_r    + &
+                 rho_z_v    * v_r    + &
+                 rho_z_w    * w_r    + &
+                 rho_z_p    * p_r)*((sigma_x+sigma_y)/omega)
+
 
         call integrate_volume_flux(mesh(idom)%elems(ielem),sdata,idom,irho_i,iblk,flux_x,flux_y,flux_z)
 
@@ -305,35 +273,40 @@ contains
         !===========================
         !     X-MOMENTUM FLUX
         !===========================
-        flux_x = u_x_rho  * rho_i  + &
+        flux_x = (u_x_rho  * rho_i  + &
                  u_x_u    * u_i    + &
                  u_x_v    * v_i    + &
                  u_x_w    * w_i    + &
-                 u_x_p    * p_i    + &
+                 u_x_p    * p_i)*(ONE - sigma_y*sigma_z/(omega*omega))  - &
                  ! PML
-                 (u_x_rho * rho_r  + &
+                (u_x_rho * rho_r  + &
                  u_x_u    * u_r    + &
                  u_x_v    * v_r    + &
                  u_x_w    * w_r    + &
-                 u_x_p    * p_r)*sigma_y/omega
+                 u_x_p    * p_r)*((sigma_y+sigma_z)/omega)
 
-        flux_y = u_y_rho  * rho_i  + &
+        flux_y = (u_y_rho  * rho_i  + &
                  u_y_u    * u_i    + &
                  u_y_v    * v_i    + &
                  u_y_w    * w_i    + &
-                 u_y_p    * p_i    + &
+                 u_y_p    * p_i)*(ONE - sigma_x*sigma_z/(omega*omega))  - &
                  ! PML
-                 (u_y_rho * rho_r  + &
+                (u_y_rho * rho_r  + &
                  u_y_u    * u_r    + &
                  u_y_v    * v_r    + &
                  u_y_w    * w_r    + &
-                 u_y_p    * p_r)*sigma_x/omega
+                 u_y_p    * p_r)*((sigma_x+sigma_z)/omega)
 
-        flux_z = u_z_rho  * rho_i  + &
+        flux_z = (u_z_rho  * rho_i  + &
                  u_z_u    * u_i    + &
                  u_z_v    * v_i    + &
                  u_z_w    * w_i    + &
-                 u_z_p    * p_i
+                 u_z_p    * p_i)*(ONE - sigma_x*sigma_y/(omega*omega))  - &
+                (u_z_rho * rho_r  + &
+                 u_z_u    * u_r    + &
+                 u_z_v    * v_r    + &
+                 u_z_w    * w_r    + &
+                 u_z_p    * p_r)*((sigma_x+sigma_y)/omega)
 
         call integrate_volume_flux(mesh(idom)%elems(ielem),sdata,idom,iu_i,iblk,flux_x,flux_y,flux_z)
 
@@ -341,70 +314,80 @@ contains
         !============================
         !     Y-MOMENTUM FLUX
         !============================
-        flux_x = v_x_rho  * rho_i  + &
+        flux_x = (v_x_rho  * rho_i  + &
                  v_x_u    * u_i    + &
                  v_x_v    * v_i    + &
                  v_x_w    * w_i    + &
-                 v_x_p    * p_i    + &
+                 v_x_p    * p_i)*(ONE - sigma_y*sigma_z/(omega*omega))  - &
                  ! PML
-                 (v_x_rho * rho_r  + &
+                (v_x_rho * rho_r  + &
                  v_x_u    * u_r    + &
                  v_x_v    * v_r    + &
                  v_x_w    * w_r    + &
-                 v_x_p    * p_r)*sigma_y/omega
+                 v_x_p    * p_r)*((sigma_y+sigma_z)/omega)
 
-        flux_y = v_y_rho  * rho_i  + &
+        flux_y = (v_y_rho  * rho_i  + &
                  v_y_u    * u_i    + &
                  v_y_v    * v_i    + &
                  v_y_w    * w_i    + &
-                 v_y_p    * p_i    + &
+                 v_y_p    * p_i)*(ONE - sigma_x*sigma_z/(omega*omega))  - &
                  ! PML
-                 (v_y_rho * rho_r  + &
+                (v_y_rho * rho_r  + &
                  v_y_u    * u_r    + &
                  v_y_v    * v_r    + &
                  v_y_w    * w_r    + &
-                 v_y_p    * p_r)*sigma_x/omega
+                 v_y_p    * p_r)*((sigma_x+sigma_z)/omega)
 
-        flux_z = v_z_rho  * rho_i  + &
+        flux_z = (v_z_rho  * rho_i  + &
                  v_z_u    * u_i    + &
                  v_z_v    * v_i    + &
                  v_z_w    * w_i    + &
-                 v_z_p    * p_i
+                 v_z_p    * p_i)*(ONE - sigma_x*sigma_y/(omega*omega))  - &
+                (v_z_rho * rho_r  + &
+                 v_z_u    * u_r    + &
+                 v_z_v    * v_r    + &
+                 v_z_w    * w_r    + &
+                 v_z_p    * p_r)*((sigma_x+sigma_y)/omega)
 
         call integrate_volume_flux(mesh(idom)%elems(ielem),sdata,idom,iv_i,iblk,flux_x,flux_y,flux_z)
 
         !============================
         !     Z-MOMENTUM FLUX
         !============================
-        flux_x = w_x_rho  * rho_i  + &
+        flux_x = (w_x_rho  * rho_i  + &
                  w_x_u    * u_i    + &
                  w_x_v    * v_i    + &
                  w_x_w    * w_i    + &
-                 w_x_p    * p_i    + &
+                 w_x_p    * p_i)*(ONE - sigma_y*sigma_z/(omega*omega))  - &
                  ! PML
-                 (w_x_rho * rho_r  + &
+                (w_x_rho * rho_r  + &
                  w_x_u    * u_r    + &
                  w_x_v    * v_r    + &
                  w_x_w    * w_r    + &
-                 w_x_p    * p_r)*sigma_y/omega
+                 w_x_p    * p_r)*((sigma_y+sigma_z)/omega)
 
-        flux_y = w_y_rho  * rho_i  + &
+        flux_y = (w_y_rho  * rho_i  + &
                  w_y_u    * u_i    + &
                  w_y_v    * v_i    + &
                  w_y_w    * w_i    + &
-                 w_y_p    * p_i    + &
+                 w_y_p    * p_i)*(ONE - sigma_x*sigma_z/(omega*omega))  - &
                  ! PML
-                 (w_y_rho * rho_r  + &
+                (w_y_rho * rho_r  + &
                  w_y_u    * u_r    + &
                  w_y_v    * v_r    + &
                  w_y_w    * w_r    + &
-                 w_y_p    * p_r)*sigma_x/omega
+                 w_y_p    * p_r)*((sigma_x+sigma_z)/omega)
 
-        flux_z = w_z_rho  * rho_i  + &
+        flux_z = (w_z_rho  * rho_i  + &
                  w_z_u    * u_i    + &
                  w_z_v    * v_i    + &
                  w_z_w    * w_i    + &
-                 w_z_p    * p_i
+                 w_z_p    * p_i)*(ONE - sigma_x*sigma_y/(omega*omega))  - &
+                (w_z_rho * rho_r  + &
+                 w_z_u    * u_r    + &
+                 w_z_v    * v_r    + &
+                 w_z_w    * w_r    + &
+                 w_z_p    * p_r)*((sigma_x+sigma_y)/omega)
 
 
         call integrate_volume_flux(mesh(idom)%elems(ielem),sdata,idom,iw_i,iblk,flux_x,flux_y,flux_z)
@@ -412,35 +395,40 @@ contains
         !============================
         !       ENERGY FLUX
         !============================
-        flux_x = p_x_rho  * rho_i  + &
+        flux_x = (p_x_rho  * rho_i  + &
                  p_x_u    * u_i    + &
                  p_x_v    * v_i    + &
                  p_x_w    * w_i    + &
-                 p_x_p    * p_i    + &
+                 p_x_p    * p_i)*(ONE - sigma_y*sigma_z/(omega*omega))  - &
                  ! PML
-                 (p_x_rho * rho_r  + &
+                (p_x_rho * rho_r  + &
                  p_x_u    * u_r    + &
                  p_x_v    * v_r    + &
                  p_x_w    * w_r    + &
-                 p_x_p    * p_r)*sigma_y/omega
+                 p_x_p    * p_r)*((sigma_y+sigma_z)/omega)
 
-        flux_y = p_y_rho  * rho_i  + &
+        flux_y = (p_y_rho  * rho_i  + &
                  p_y_u    * u_i    + &
                  p_y_v    * v_i    + &
                  p_y_w    * w_i    + &
-                 p_y_p    * p_i    + &
+                 p_y_p    * p_i)*(ONE - sigma_x*sigma_z/(omega*omega))  - &
                  ! PML
-                 (p_y_rho * rho_r  + &
+                (p_y_rho * rho_r  + &
                  p_y_u    * u_r    + &
                  p_y_v    * v_r    + &
                  p_y_w    * w_r    + &
-                 p_y_p    * p_r)*sigma_x/omega
+                 p_y_p    * p_r)*((sigma_x+sigma_z)/omega)
   
-        flux_z = p_z_rho  * rho_i  + &
+        flux_z = (p_z_rho  * rho_i  + &
                  p_z_u    * u_i    + &
                  p_z_v    * v_i    + &
                  p_z_w    * w_i    + &
-                 p_z_p    * p_i
+                 p_z_p    * p_i)*(ONE - sigma_x*sigma_y/(omega*omega))  - &
+                (p_z_rho * rho_r  + &
+                 p_z_u    * u_r    + &
+                 p_z_v    * v_r    + &
+                 p_z_w    * w_r    + &
+                 p_z_p    * p_r)*((sigma_x+sigma_y)/omega)
 
         call integrate_volume_flux(mesh(idom)%elems(ielem),sdata,idom,ip_i,iblk,flux_x,flux_y,flux_z)
 

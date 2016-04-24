@@ -223,7 +223,7 @@ contains
                   rho_x_u    * u_r    + &
                   rho_x_v    * v_r    + &
                   rho_x_w    * w_r    + &
-                  rho_x_p    * p_r)*(ONE-sigma_y*sigma_z/(omega*omega))  + &
+                  rho_x_p    * p_r)*(ONE-sigma_y*sigma_z/(omega*omega))  - &
                  ! PML
                  (rho_x_rho * rho_i  + &
                   rho_x_u    * u_i    + &
@@ -235,7 +235,7 @@ contains
                   rho_y_u    * u_r    + &
                   rho_y_v    * v_r    + &
                   rho_y_w    * w_r    + &
-                  rho_y_p    * p_r)*(ONE-sigma_x*sigma_z/(omega*omega))  + &
+                  rho_y_p    * p_r)*(ONE-sigma_x*sigma_z/(omega*omega))  - &
                  ! PML
                  (rho_y_rho * rho_i  + &
                   rho_y_u    * u_i    + &
@@ -247,7 +247,7 @@ contains
                   rho_z_u    * u_r    + &
                   rho_z_v    * v_r    + &
                   rho_z_w    * w_r    + &
-                  rho_z_p    * p_r)*(ONE-sigma_x*sigma_y/(omega*omega))  + &
+                  rho_z_p    * p_r)*(ONE-sigma_x*sigma_y/(omega*omega))  - &
                  ! PML
                  (rho_z_rho * rho_i  + &
                   rho_z_u    * u_i    + &
@@ -265,7 +265,7 @@ contains
                  u_x_u    * u_r    + &
                  u_x_v    * v_r    + &
                  u_x_w    * w_r    + &
-                 u_x_p    * p_r)*(ONE-sigma_y*sigma_z/(omega*omega))  + &
+                 u_x_p    * p_r)*(ONE-sigma_y*sigma_z/(omega*omega))  - &
                  ! PML
                  (u_x_rho  * rho_i  + &
                   u_x_u    * u_i    + &
@@ -277,7 +277,7 @@ contains
                  u_y_u    * u_r    + &
                  u_y_v    * v_r    + &
                  u_y_w    * w_r    + &
-                 u_y_p    * p_r)*(ONE-sigma_x*sigma_z/(omega*omega))  + &
+                 u_y_p    * p_r)*(ONE-sigma_x*sigma_z/(omega*omega))  - &
                  ! PML
                  (u_y_rho  * rho_i  + &
                   u_y_u    * u_i    + &
@@ -289,7 +289,7 @@ contains
                  u_z_u    * u_r    + &
                  u_z_v    * v_r    + &
                  u_z_w    * w_r    + &
-                 u_z_p    * p_r)*(ONE-sigma_x*sigma_y/(omega*omega))  + &
+                 u_z_p    * p_r)*(ONE-sigma_x*sigma_y/(omega*omega))  - &
                  ! PML
                  (u_z_rho * rho_i  + &
                   u_z_u    * u_i    + &
@@ -307,7 +307,7 @@ contains
                  v_x_u    * u_r    + &
                  v_x_v    * v_r    + &
                  v_x_w    * w_r    + &
-                 v_x_p    * p_r)*(ONE-sigma_y*sigma_z/(omega*omega))  + &
+                 v_x_p    * p_r)*(ONE-sigma_y*sigma_z/(omega*omega))  - &
                  ! PML
                  (v_x_rho  * rho_i  + &
                   v_x_u    * u_i    + &
@@ -319,7 +319,7 @@ contains
                  v_y_u    * u_r    + &
                  v_y_v    * v_r    + &
                  v_y_w    * w_r    + &
-                 v_y_p    * p_r)*(ONE-sigma_x*sigma_z/(omega*omega))  + &
+                 v_y_p    * p_r)*(ONE-sigma_x*sigma_z/(omega*omega))  - &
                  ! PML
                  (v_y_rho * rho_i  + &
                   v_y_u    * u_i    + &
@@ -331,7 +331,7 @@ contains
                  v_z_u    * u_r    + &
                  v_z_v    * v_r    + &
                  v_z_w    * w_r    + &
-                 v_z_p    * p_r)*(ONE-sigma_x*sigma_y/(omega*omega))  + &
+                 v_z_p    * p_r)*(ONE-sigma_x*sigma_y/(omega*omega))  - &
                  ! PML
                  (v_z_rho * rho_i  + &
                   v_z_u    * u_i    + &
@@ -348,7 +348,7 @@ contains
                  w_x_u    * u_r    + &
                  w_x_v    * v_r    + &
                  w_x_w    * w_r    + &
-                 w_x_p    * p_r)*(ONE-sigma_y*sigma_z/(omega*omega))  + &
+                 w_x_p    * p_r)*(ONE-sigma_y*sigma_z/(omega*omega))  - &
                  ! PML
                  (w_x_rho * rho_i  + &
                   w_x_u   * u_i    + &
@@ -360,7 +360,7 @@ contains
                  w_y_u    * u_r    + &
                  w_y_v    * v_r    + &
                  w_y_w    * w_r    + &
-                 w_y_p    * p_r)*(ONE-sigma_x*sigma_z/(omega*omega))  + &
+                 w_y_p    * p_r)*(ONE-sigma_x*sigma_z/(omega*omega))  - &
                  ! PML
                  (w_y_rho * rho_i  + &
                   w_y_u    * u_i    + &
@@ -372,7 +372,7 @@ contains
                  w_z_u    * u_r    + &
                  w_z_v    * v_r    + &
                  w_z_w    * w_r    + &
-                 w_z_p    * p_r)*(ONE-sigma_x*sigma_y/(omega*omega))  + &
+                 w_z_p    * p_r)*(ONE-sigma_x*sigma_y/(omega*omega))  - &
                  ! PML
                  (w_z_rho * rho_i  + &
                   w_z_u    * u_i    + &
@@ -389,7 +389,7 @@ contains
                  p_x_u    * u_r    + &
                  p_x_v    * v_r    + &
                  p_x_w    * w_r    + &
-                 p_x_p    * p_r)*(ONE-sigma_y*sigma_z/(omega*omega))  + &
+                 p_x_p    * p_r)*(ONE-sigma_y*sigma_z/(omega*omega))  - &
                  ! PML
                  (p_x_rho  * rho_i  + &
                   p_x_u    * u_i    + &
@@ -401,7 +401,7 @@ contains
                  p_y_u    * u_r    + &
                  p_y_v    * v_r    + &
                  p_y_w    * w_r    + &
-                 p_y_p    * p_r)*(ONE-sigma_x*sigma_z/(omega*omega))  + &
+                 p_y_p    * p_r)*(ONE-sigma_x*sigma_z/(omega*omega))  - &
                  ! PML
                  (p_y_rho * rho_i  + &
                   p_y_u    * u_i    + &
@@ -413,7 +413,7 @@ contains
                  p_z_u    * u_r    + &
                  p_z_v    * v_r    + &
                  p_z_w    * w_r    + &
-                 p_z_p    * p_r)*(ONE-sigma_x*sigma_y/(omega*omega))  + &
+                 p_z_p    * p_r)*(ONE-sigma_x*sigma_y/(omega*omega))  - &
                  ! PML
                  (p_z_rho * rho_i  + &
                   p_z_u    * u_i    + &

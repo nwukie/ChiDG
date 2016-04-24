@@ -217,7 +217,7 @@ contains
         !===========================
         !        MASS FLUX
         !===========================
-        flux =  omega * rho_r * (ONE - (sigma_x*sigma_y+sigma_x*sigma_z+sigma_y*sigma_z)/(omega*omega) )  - &
+        flux =  omega * rho_r * (ONE - (sigma_x*sigma_y+sigma_x*sigma_z+sigma_y*sigma_z)/(omega*omega) )  + &
                 omega * rho_i * ( -(sigma_x+sigma_y+sigma_z)/omega  +  (sigma_x*sigma_y*sigma_z)/(omega*omega*omega) )
 
         call integrate_volume_source(mesh(idom)%elems(ielem),sdata,idom,irho_i,iblk,flux)
@@ -226,7 +226,7 @@ contains
         !===========================
         !     X-MOMENTUM FLUX
         !===========================
-        flux =  omega * u_r * (ONE - (sigma_x*sigma_y+sigma_x*sigma_z+sigma_y*sigma_z)/(omega*omega) )    - &
+        flux =  omega * u_r * (ONE - (sigma_x*sigma_y+sigma_x*sigma_z+sigma_y*sigma_z)/(omega*omega) )    + &
                 omega * u_i * ( -(sigma_x+sigma_y+sigma_z)/omega  +  (sigma_x*sigma_y*sigma_z)/(omega*omega*omega) )
 
         call integrate_volume_source(mesh(idom)%elems(ielem),sdata,idom,iu_i,iblk,flux)
@@ -235,7 +235,7 @@ contains
         !============================
         !     Y-MOMENTUM FLUX
         !============================
-        flux =  omega * v_r * (ONE - (sigma_x*sigma_y+sigma_x*sigma_z+sigma_y*sigma_z)/(omega*omega) )    - &
+        flux =  omega * v_r * (ONE - (sigma_x*sigma_y+sigma_x*sigma_z+sigma_y*sigma_z)/(omega*omega) )    + &
                 omega * v_i * ( -(sigma_x+sigma_y+sigma_z)/omega  +  (sigma_x*sigma_y*sigma_z)/(omega*omega*omega) )
 
         call integrate_volume_source(mesh(idom)%elems(ielem),sdata,idom,iv_i,iblk,flux)
@@ -243,7 +243,7 @@ contains
         !============================
         !     Z-MOMENTUM FLUX
         !============================
-        flux =  omega * w_r * (ONE - (sigma_x*sigma_y+sigma_x*sigma_z+sigma_y*sigma_z)/(omega*omega) )    - &
+        flux =  omega * w_r * (ONE - (sigma_x*sigma_y+sigma_x*sigma_z+sigma_y*sigma_z)/(omega*omega) )    + &
                 omega * w_i * ( -(sigma_x+sigma_y+sigma_z)/omega  +  (sigma_x*sigma_y*sigma_z)/(omega*omega*omega) )
 
         call integrate_volume_source(mesh(idom)%elems(ielem),sdata,idom,iw_i,iblk,flux)
@@ -251,7 +251,7 @@ contains
         !============================
         !       ENERGY FLUX
         !============================
-        flux =  omega * p_r * (ONE - (sigma_x*sigma_y+sigma_x*sigma_z+sigma_y*sigma_z)/(omega*omega) )    - &
+        flux =  omega * p_r * (ONE - (sigma_x*sigma_y+sigma_x*sigma_z+sigma_y*sigma_z)/(omega*omega) )    + &
                 omega * p_i * ( -(sigma_x+sigma_y+sigma_z)/omega  +  (sigma_x*sigma_y*sigma_z)/(omega*omega*omega) )
 
         call integrate_volume_source(mesh(idom)%elems(ielem),sdata,idom,ip_i,iblk,flux)

@@ -32,7 +32,7 @@ contains
         complex(rk),    dimension(:),   allocatable :: pressures
         type(point_t),  dimension(:),   allocatable :: points
 
-        nterms_s = 5*5*5
+        nterms_s = 6*6*6
 
         !
         ! Initialize ChiDG environment
@@ -76,7 +76,7 @@ contains
 
         print*, chidg%data%eqnset(1)%item%name
 
-        res       = 4000
+        res       = 1000
 
         allocate(theta(res), points(res), stat=ierr)
         if ( ierr /= 0 ) call AllocationError
@@ -86,6 +86,7 @@ contains
         !theta_max = PI/TWO
 
         r        = 46._rk
+        !r        = 100._rk
         theta    = ZERO
         dtheta = (theta_max - theta_min)/real(res,kind=rk)
 
@@ -170,7 +171,7 @@ contains
         integer(ik)    :: ip_r,   ip_i
 
         integer(ik) :: ndomains, idom, ielem, iface, ibc, nnodes, iobs, ierr
-        integer(ik) :: idom_l, ielem_l, iface_l
+        integer(ik) :: idom_l, ielem_l, iface_l, igq
         logical     :: primitive_linearized_euler = .false.
         logical     :: kirchoff_surface = .false.
         complex(rk) :: pressures(size(points)), imag, integral
@@ -183,7 +184,8 @@ contains
                     dpi_dx, dpi_dy, dpi_dz,                   &
                     dpr_dx, dpr_dy, dpr_dz,                   &
                     nx, ny, nz, nxi, neta, nzeta, rdotn,      &
-                    y, z, theta
+                    x, y, z, theta,                           &
+                    x1, y1, z1, r1, x2, y2, z2, r2, face_scale
 
         complex(rk), dimension(:), allocatable  ::                  &
                     rho, u, v, w, p,                                &
@@ -193,7 +195,7 @@ contains
 
 
         ! Azimuthal order
-        m         = 0._rk
+        m         = 9._rk
 
 
         imag      = cmplx(ZERO, ONE )
@@ -268,11 +270,14 @@ contains
                                  r(nnodes), &
                                  leading_term(nnodes), one_over_r_term(nnodes), one_over_r2_term(nnodes),  &
                                  rho(nnodes),   u(nnodes),   v(nnodes),   w(nnodes),   p(nnodes),           &
-                                 z(nnodes),      y(nnodes),  theta(nnodes),  stat=ierr)
+                                 x(nnodes), z(nnodes),      y(nnodes),  theta(nnodes),                      &
+                                 x1(nnodes), y1(nnodes), z1(nnodes), r1(nnodes),                            &
+                                 x2(nnodes), y2(nnodes), z2(nnodes), r2(nnodes), face_scale(nnodes), stat=ierr)
                         if ( ierr /= 0 ) call AllocationError
 
 
                         ! Get cartesian coords, compute theta
+                        x = mesh(idom_l)%faces(ielem_l,iface_l)%quad_pts(:)%c1_
                         y = mesh(idom_l)%faces(ielem_l,iface_l)%quad_pts(:)%c2_
                         z = mesh(idom_l)%faces(ielem_l,iface_l)%quad_pts(:)%c3_
                         theta = atan2(z,y)
@@ -305,16 +310,15 @@ contains
                         w   = cmplx(w_r, w_i)
                         p   = cmplx(p_r, p_i)
 
-                        where ( r < 0.1_rk ) p = cmplx(ZERO,ZERO)
 
 
 
                         ! Compute new value, based on THETA and M
-                        rho = rho*exp(imag*real(m,rk)*theta)
-                        u = u*exp(imag*real(m,rk)*theta)
-                        v = v*exp(imag*real(m,rk)*theta)
-                        w = w*exp(imag*real(m,rk)*theta)
-                        p = p*exp(imag*real(m,rk)*theta)
+                        !rho = rho*exp(imag*real(m,rk)*theta)
+                        !u = u*exp(imag*real(m,rk)*theta)
+                        !v = v*exp(imag*real(m,rk)*theta)
+                        !w = w*exp(imag*real(m,rk)*theta)
+                        !p = p*exp(imag*real(m,rk)*theta)
 
 
 
@@ -331,7 +335,22 @@ contains
                         ny = mesh(idom_l)%faces(ielem_l,iface_l)%unorm(:,2)
                         nz = mesh(idom_l)%faces(ielem_l,iface_l)%unorm(:,3)
 
+                        !
+                        ! Compute two points along vector
+                        !
+                        x1 = xs + 0.001*nx
+                        y1 = ys + 0.001*ny
+                        z1 = zs + 0.001*nz
+                        r1 = sqrt(y1**TWO + z1**TWO)
 
+                        x2 = xs + 0.002*nx
+                        y2 = ys + 0.002*ny
+                        z2 = zs + 0.002*nz
+                        r2 = sqrt(y2**TWO + z2**TWO)
+
+                        where ( r2<r1 .and. xs<-0.01 ) nx = -nx
+                        where ( r2<r1 .and. xs<-0.01 ) ny = -ny
+                        where ( r2<r1 .and. xs<-0.01 ) nz = -nz
 
                         ! Compute derivatives of pressure
                         dpr_dx = matmul(mesh(idom_l)%faces(ielem_l,iface_l)%dtdx, sdata%q%dom(idom_l)%lvecs(ielem_l)%getvar(ip_r) )
@@ -342,12 +361,14 @@ contains
                         dpi_dz = matmul(mesh(idom_l)%faces(ielem_l,iface_l)%dtdz, sdata%q%dom(idom_l)%lvecs(ielem_l)%getvar(ip_i) )
 
 
-
         
 
                         dpdx = cmplx(dpr_dx, dpi_dx)
                         dpdy = cmplx(dpr_dy, dpi_dy)
                         dpdz = cmplx(dpr_dz, dpi_dz)
+
+
+
 
 
                         ! Compute derivative of pressure in the direction of the face normal
@@ -368,15 +389,18 @@ contains
                             ! Compute distance from source to current observer for each quadrature point
                             r = sqrt( (xo-xs)**TWO  +  (yo-ys)**TWO  +  (zo-zs)**TWO )
     
-                            ! Compute radius vector at each quadrature point
-                            rx = xo-xs
-                            ry = yo-ys
-                            rz = zo-zs
+                            ! Compute unit radius vector at each quadrature point
+                            rx = (xo-xs)/r
+                            ry = (yo-ys)/r
+                            rz = (zo-zs)/r
+
+                            
 
 
                             ! Compute cos(theta), r dot n
                             !
                             !   TODO: FIX THIS FOR CARTESIAN NORMALS
+                            ! Maybe already fixed?
                             !
                             rdotn = rx*nx + ry*ny + rz*nz
 
@@ -389,8 +413,15 @@ contains
                             ! Compute Kirchhoff Integrand
                             integrand = leading_term*( one_over_r_term  +  one_over_r2_term )
 
+
+                            ! Kind of like face jacobian
+                            face_scale = sqrt( mesh(idom_l)%faces(ielem_l,iface_l)%norm(:,1)**TWO + mesh(idom_l)%faces(ielem_l,iface_l)%norm(:,2)**TWO + mesh(idom_l)%faces(ielem_l,iface_l)%norm(:,3)**TWO )
+
                             ! Compute integral contribution from current face
-                            integral = sum( integrand * mesh(idom_l)%faces(ielem_l,iface_l)%jinv * mesh(idom_l)%faces(ielem_l,iface_l)%gq%face%weights(:,iface_l) )
+                            !integral = sum( integrand * mesh(idom_l)%faces(ielem_l,iface_l)%jinv * mesh(idom_l)%faces(ielem_l,iface_l)%gq%face%weights(:,iface_l) )
+                            integral = sum( integrand * face_scale * mesh(idom_l)%faces(ielem_l,iface_l)%gq%face%weights(:,iface_l) )
+
+
 
                             ! Contribute to current observer
                             pressures(iobs) = pressures(iobs) + integral
@@ -409,7 +440,8 @@ contains
                                    dpdx,  dpdy, dpdz,         &
                                    r, &
                                    leading_term,    one_over_r_term, one_over_r2_term, &
-                                   rho,   u,   v,   w,   p, z, y, theta)
+                                   rho,   u,   v,   w,   p, x, z, y, theta,             &
+                                   x1, y1, z1, r1, x2, y2, z2, r2, face_scale)
 
 
 

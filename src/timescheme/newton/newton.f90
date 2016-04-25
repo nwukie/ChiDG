@@ -77,6 +77,8 @@ contains
       
         real(rk)                :: entropy_error
 
+        !logical                 :: tolerance_check
+        !logical                 :: maxiter_check
 
 
 
@@ -101,8 +103,11 @@ contains
             resid  = ONE    ! Force inner loop entry
             niter = 0       ! Initialize inner loop counter
 
-
-            do while ( resid > self%tol )
+            !tolerance_check = .true.
+            !maxiter_check   = .true.
+            !do while ( resid > self%tol )
+            !do while ( tolerance_check .and. maxiter_check )
+            do while ( niter == 0 )
                 niter = niter + 1
 
                 call write_line("   niter: ", niter, delimiter='')
@@ -123,6 +128,8 @@ contains
                 call self%residual_time%push_back(timing)   ! non-essential record-keeping
 
                 resid = rhs%norm()
+                !tolerance_check =  (resid > self%tol)
+                !maxiter_check   =  (niter < self%
 
 
                 !

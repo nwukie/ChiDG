@@ -61,7 +61,7 @@ contains
         print*, 'Reading grids: ', trim(sourcefile), trim(targetfile)
 
         print*, '    ', trim(sourcefile)
-        call chidg_source%read_grid(trim(sourcefile), 2)
+        call chidg_source%read_grid(trim(sourcefile), 3)
         print*, '    ', trim(targetfile)
         call chidg_target%read_grid(trim(targetfile), 3)
 
@@ -70,7 +70,7 @@ contains
 
         print*, '    ', trim(sourcefile)
 
-        nterms_s = 5*5
+        nterms_s = 5*5*5
         call chidg_source%initialize_solution_domains(nterms_s)
         call chidg_source%initialize_solution_solver()
         print*, '    ', trim(targetfile)
@@ -94,9 +94,9 @@ contains
 
 
 
-        print*, '**************************************************************'
-        print*, 'Warning - Interpolation specialized for cylindrical rotation'
-        print*, '**************************************************************'
+!        print*, '**************************************************************'
+!        print*, 'Warning - Interpolation specialized for cylindrical rotation'
+!        print*, '**************************************************************'
 
 
 
@@ -130,21 +130,21 @@ contains
                        !
                        ! For cylindrical rotation
                        !
-                       !print*, 'Warning - Interpolation specialized for cylindrical rotation'
-                       x = node%c1_
-                       y = node%c2_
-                       z = node%c3_
-                       r = sqrt( y*y  +  z*z )
-                       new_node%c1_ = node%c1_
-                       new_node%c2_ = r
-                       new_node%c3_ = ZERO
+!                       print*, 'Warning - Interpolation specialized for cylindrical rotation'
+!                       x = node%c1_
+!                       y = node%c2_
+!                       z = node%c3_
+!                       r = sqrt( y*y  +  z*z )
+!                       new_node%c1_ = node%c1_
+!                       new_node%c2_ = r
+!                       new_node%c3_ = ZERO
 
 
                        !
-                       ! Find donor domain/element in source chidg instance.
+                       ! Find donor domain/element in source chidg instance. Returns point_comp
                        !
-                       !call compute_element_donor(chidg_source%data%mesh, node, idom_d, ielem_d, point_comp)
-                       call compute_element_donor(chidg_source%data%mesh, new_node, idom_d, ielem_d, point_comp)
+                       call compute_element_donor(chidg_source%data%mesh, node, idom_d, ielem_d, point_comp)
+                       !call compute_element_donor(chidg_source%data%mesh, new_node, idom_d, ielem_d, point_comp)
 
 
                        
@@ -162,14 +162,15 @@ contains
 
                     
                     !
-                    ! Multiply by quadratre weights
+                    ! Multiply by quadrature weights
                     !
                     vals = vals * chidg_target%data%mesh(idom)%elems(ielem)%gq%vol%weights
 
 
-
+                    !
+                    ! Compute projection
+                    !
                     val_modes = matmul(transpose(chidg_target%data%mesh(idom)%elems(ielem)%gq%vol%val), vals) / chidg_target%data%mesh(idom)%elems(ielem)%gq%vol%dmass
-
 
 
                     !

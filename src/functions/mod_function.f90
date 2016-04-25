@@ -16,6 +16,7 @@ module mod_function
     use fcn_sin,                            only: sin_f
     use fcn_polynomial,                     only: polynomial_f
     use fcn_cylindricalduct_eigenfunction,  only: cylindricalduct_eigenfunction_f
+    use fcn_monopole,                       only: monopole_f
     implicit none
 
 
@@ -58,6 +59,7 @@ contains
         ! Acoustics
         !
         type(cylindricalduct_eigenfunction_f)   :: cylindricalduct_eigenfunction
+        type(monopole_f)                        :: monopole
 
         
 
@@ -74,6 +76,7 @@ contains
             call registered_fcns%push_back(sin_function)
             call registered_fcns%push_back(polynomial)
             call registered_fcns%push_back(cylindricalduct_eigenfunction)
+            call registered_fcns%push_back(monopole)
 
 
             !

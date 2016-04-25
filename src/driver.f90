@@ -13,6 +13,7 @@
 program driver
 #include <messenger.h>
     use mod_kinds,              only: rk, ik
+    use mod_constants,          only: ONE, TWO, ZERO
     use type_chidg,             only: chidg_t
     use mod_grid_operators,     only: initialize_variable
     use type_dict,              only: dict_t
@@ -31,7 +32,7 @@ program driver
     implicit none
     type(chidg_t)                       :: chidg
     type(dict_t)                        :: toptions, moptions
-    class(function_t),  allocatable     :: constant
+    class(function_t),  allocatable     :: constant, monopole
 
     integer(ik)                         :: narg
     character(len=1024)                 :: chidg_action, filename, file_a, file_b
@@ -112,6 +113,7 @@ program driver
         !
         if (solutionfile_in == 'none') then
             call create_function(constant,'constant')
+            call create_function(monopole,'monopole')
 
 
             ! rho
@@ -133,6 +135,8 @@ program driver
             ! rho_E
             call constant%set_option('val',0._rk)
             call initialize_variable(chidg%data,5,constant)
+            !call monopole%set_option('a',ZERO)
+            !call initialize_variable(chidg%data,5,monopole)
 
 
             ! rho
@@ -154,6 +158,8 @@ program driver
             ! rho_E
             call constant%set_option('val',0._rk)
             call initialize_variable(chidg%data,10,constant)
+            !call monopole%set_option('a',TWO)
+            !call initialize_variable(chidg%data,10,monopole)
 
 
 
@@ -185,10 +191,10 @@ program driver
 
 
 
-        !
-        ! Run ChiDG simulation
-        !
-        call chidg%run()
+!        !
+!        ! Run ChiDG simulation
+!        !
+!        call chidg%run()
 
 
         !
@@ -199,10 +205,10 @@ program driver
 
 
 
-        !
-        ! Reporting
-        !
-        call chidg%report()
+!        !
+!        ! Reporting
+!        !
+!        call chidg%report()
 
 
 

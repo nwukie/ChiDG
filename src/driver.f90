@@ -191,10 +191,10 @@ program driver
 
 
 
-!        !
-!        ! Run ChiDG simulation
-!        !
-!        call chidg%run()
+        !
+        ! Run ChiDG simulation
+        !
+        call chidg%run()
 
 
         !
@@ -205,10 +205,10 @@ program driver
 
 
 
-!        !
-!        ! Reporting
-!        !
-!        call chidg%report()
+        !
+        ! Reporting
+        !
+        call chidg%report()
 
 
 

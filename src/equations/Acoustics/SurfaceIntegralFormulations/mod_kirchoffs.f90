@@ -348,9 +348,9 @@ contains
                         z2 = zs + 0.002*nz
                         r2 = sqrt(y2**TWO + z2**TWO)
 
-                        where ( r2<r1 .and. xs<-0.01 ) nx = -nx
-                        where ( r2<r1 .and. xs<-0.01 ) ny = -ny
-                        where ( r2<r1 .and. xs<-0.01 ) nz = -nz
+                        where ( r2<r1 .and. xs<-0.001 ) nx = -nx
+                        where ( r2<r1 .and. xs<-0.001 ) ny = -ny
+                        where ( r2<r1 .and. xs<-0.001 ) nz = -nz
 
                         ! Compute derivatives of pressure
                         dpr_dx = matmul(mesh(idom_l)%faces(ielem_l,iface_l)%dtdx, sdata%q%dom(idom_l)%lvecs(ielem_l)%getvar(ip_r) )

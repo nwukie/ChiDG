@@ -1,5 +1,5 @@
 module mod_tecio
-    use mod_kinds,              only: rk,ik,TEC
+    use mod_kinds,              only: rk,ik,rdouble,TEC
     use mod_constants,          only: ONE, HALF, TWO
     use mod_tecio_interface,    only: init_tecio_file, init_tecio_zone, finalize_tecio
 
@@ -39,7 +39,8 @@ contains
         integer(ik)        :: npts, icoord, ielem
         integer(4)         :: tecstat
 
-        real(rk)           :: val(1)
+        !real(rk)           :: val(1)
+        real(rdouble)      :: val(1)
         real(TEC)          :: valeq(1)
         equivalence           (valeq(1), val(1))
         real(rk)           :: xi,eta,zeta
@@ -119,7 +120,7 @@ contains
 
                                         ! Get coordinate value at point
                                         ielem = ielem_xi + (nelem_xi)*(ielem_eta-1) + (nelem_xi * nelem_eta)*(ielem_zeta-1)
-                                        val = data%mesh(idom)%elems(ielem)%grid_point(icoord,xi,eta,zeta)
+                                        val = real(data%mesh(idom)%elems(ielem)%grid_point(icoord,xi,eta,zeta),rdouble)
                                         tecstat = TECDAT142(1,valeq,1)
 
                                     end do
@@ -154,7 +155,7 @@ contains
 
                                         ! Get solution value at point
                                         ielem = ielem_xi + (nelem_xi)*(ielem_eta-1) + (nelem_xi * nelem_eta)*(ielem_zeta-1)
-                                        val = data%mesh(idom)%elems(ielem)%solution_point(data%sdata%q%dom(idom)%lvecs(ielem),ivar,xi,eta,zeta)
+                                        val = real(data%mesh(idom)%elems(ielem)%solution_point(data%sdata%q%dom(idom)%lvecs(ielem),ivar,xi,eta,zeta),rdouble)
                                         tecstat = TECDAT142(1,valeq,1)
                                     
                                     end do

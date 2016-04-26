@@ -12,7 +12,7 @@ module mod_chimera
     use mod_constants,          only: NFACES, ORPHAN, CHIMERA, &
                                       X_DIR,  Y_DIR,   Z_DIR, &
                                       XI_DIR, ETA_DIR, ZETA_DIR, &
-                                      ONE, ZERO, TWO_DIM, THREE_DIM
+                                      ONE, ZERO, TWO_DIM, THREE_DIM, RKTOL
 
     use type_mesh,              only: mesh_t
     use type_point,             only: point_t
@@ -424,7 +424,9 @@ contains
         real(rk)    :: res, dx, dy, dz
 
 
-        tol = 1.e-12_rk
+        !tol = 1.e-12_rk
+        tol = RKTOL
+
 
         xgq = gq_node%c1_
         ygq = gq_node%c2_

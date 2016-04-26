@@ -556,6 +556,8 @@ contains
         self%mass    = ZERO
         temp = transpose(self%gq%vol%val)
 
+
+
         !
         ! Multiply rows by quadrature weights and cell jacobians
         !
@@ -576,6 +578,8 @@ contains
         ! Compute and store the inverted mass matrix
         !
         self%invmass = inv(self%mass)
+
+
 
     end subroutine compute_mass_matrix
     !**************************************************************************************************************

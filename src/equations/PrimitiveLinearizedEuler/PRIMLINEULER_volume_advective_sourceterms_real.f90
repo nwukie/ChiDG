@@ -132,17 +132,21 @@ contains
 !        !===========================
 !        !        MASS FLUX
 !        !===========================
-!        eps = ZERO
-!        do igq = 1,size(rho)
+!        x0 = ZERO
+!        y0 = ZERO
+!
+!        eps = 
+!
+!        do igq = 1,size(rho_r)
 !            x = mesh(idom)%elems(ielem)%quad_pts(igq)%c1_
 !            y = mesh(idom)%elems(ielem)%quad_pts(igq)%c2_
 !
-!            flux(igq) = eps * exp(-alpha * (x**TWO + y**TWO) )
+!            flux(igq) = eps * exp(-(LOG(TWO)/TWO) * ((x-x0)**TWO + (y-y0)**TWO)/(0.2_rk**TWO) )
 !
 !        end do
-!        flux = ZERO
 !
-!        call integrate_volume_source(mesh(idom)%elems(ielem),sdata,idom,irho_r,iblk,flux)
+!
+!        call integrate_volume_source(mesh(idom)%elems(ielem),sdata,idom,irho_i,iblk,flux)
 !
 !
 !        !===========================
@@ -185,9 +189,9 @@ contains
 !!
 !!        call integrate_volume_flux(mesh(idom)%elems(ielem),sdata,idom,irhow,iblk,flux_x,flux_y,flux_z)
 !!
-        !============================
-        !       ENERGY FLUX
-        !============================
+!        !============================
+!        !       ENERGY FLUX
+!        !============================
 !        x0 = ZERO
 !        y0 = ZERO
 !        !eps = 429.8837052_rk
@@ -197,7 +201,11 @@ contains
 !            x = mesh(idom)%elems(ielem)%quad_pts(igq)%c1_
 !            y = mesh(idom)%elems(ielem)%quad_pts(igq)%c2_
 !
-!            flux(igq) = eps * exp(-LOG(TWO) * ((x-x0)**TWO + (y-y0)**TWO)/(0.2_rk**TWO) )
+!            ! Multi-geometry scattering
+!            !flux(igq) = eps * exp(-LOG(TWO) * ((x-x0)**TWO + (y-y0)**TWO)/(0.2_rk**TWO) )
+!
+!            ! Monopole
+!            flux(igq) = eps * exp(-(LOG(TWO)/TWO) * ((x-x0)**TWO + (y-y0)**TWO)/(0.2_rk**TWO) )
 !
 !        end do
 !

@@ -203,7 +203,7 @@ include_directories(${CMAKE_SOURCE_DIR}/src/tools)    # Need include here for ma
 #                     Add core library and driver targets
 #----------------------------------------------------------------------------------- 
 add_library(coredg STATIC ${LIB_SRCS})
-target_link_libraries(coredg ${HDF5_LIBRARIES} ${LAPACK_LIBRARIES} ${TECPLOT_LIBRARIES} ${MPI_Fortran_LIBRARIES})
+target_link_libraries(coredg ${HDF5_LIBRARIES} ${LAPACK_LIBRARIES} ${BLAS_LIBRARIES} ${TECPLOT_LIBRARIES} ${MPI_Fortran_LIBRARIES})
 set_target_properties(coredg PROPERTIES 
                              COMPILE_FLAGS "${CMAKE_Fortran_FLAGS} ${MPI_Fortran_COMPILE_FLAGS}"
                              LINK_FLAGS    "${CMAKE_Fortran_LINK_FLAGS} ${MPI_Fortran_LINK_FLAGS}")

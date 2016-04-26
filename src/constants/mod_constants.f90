@@ -138,7 +138,6 @@ module mod_constants
 
 
 
-
     !
     ! Boundary condition parameters
     !
@@ -165,7 +164,10 @@ module mod_constants
 
 
 
-
-
+    !
+    !
+    !
+    real(rk),   parameter :: RKTOL = 20._rk * epsilon(1._rk)    ! Real-Kind Tolerance. Floating-point tolerance, one order of magnitude larger than machine precision.
+    
 
 end module mod_constants

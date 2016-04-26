@@ -1,6 +1,6 @@
 module mod_hdfio
 #include <messenger.h>
-    use mod_kinds,          only: rk,ik
+    use mod_kinds,          only: rk,ik,rdouble
     use mod_constants,      only: ZERO, NFACES, TWO_DIM, THREE_DIM
     use type_meshdata,      only: meshdata_t
     use type_bcdata,        only: bcdata_t
@@ -46,7 +46,8 @@ contains
         integer(HSIZE_T) :: dims(3), maxdims(3)                     ! Dataspace dimensions
 
         type(c_ptr)                                     :: pts
-        real(rk), dimension(:,:,:), allocatable, target :: xpts, ypts, zpts
+        !real(rk), dimension(:,:,:), allocatable, target :: xpts, ypts, zpts
+        real(rdouble), dimension(:,:,:), allocatable, target :: xpts, ypts, zpts
         type(c_ptr)                                     :: cp_pts
 
         character(len=1024),    allocatable     :: dnames(:), eqnset(:)
@@ -205,7 +206,7 @@ contains
                 do izeta = 1,dims(3)
                     do ieta = 1,dims(2)
                         do ixi = 1,dims(1)
-                            call meshdata(idom)%points(ixi,ieta,izeta)%set(xpts(ixi,ieta,izeta),ypts(ixi,ieta,izeta),zpts(ixi,ieta,izeta))
+                            call meshdata(idom)%points(ixi,ieta,izeta)%set(real(xpts(ixi,ieta,izeta),rk),real(ypts(ixi,ieta,izeta),rk),real(zpts(ixi,ieta,izeta),rk))
                         end do
                     end do
                 end do
@@ -277,6 +278,8 @@ contains
     !!  Opens a given hdf5 file. Loads the EquationSet and solution order and calls solution initialization
     !!  procedure for each domain. Searches for the given variable and time instance. If it finds it, load to a
     !!
+    !!  Note: Convention is that all floating-point data is double precision format. Conversion to working-precision
+    !!        should happen after reading the data from the HDF file.
     !!
     !!  @author Nathan A. Wukie
     !!  @date   2/3/2016
@@ -306,8 +309,10 @@ contains
         character(100)                  :: cbuf
         character(100)                  :: var_gqp
 
-        real(rk), allocatable, target   :: var(:,:,:)
-        real(rk), allocatable           :: bufferterms(:)
+        !real(rk), allocatable, target   :: var(:,:,:)
+        !real(rk), allocatable           :: bufferterms(:)
+        real(rdouble), allocatable, target   :: var(:,:,:)
+        real(rdouble), allocatable           :: bufferterms(:)
         type(c_ptr)                     :: cp_var
 
         integer(ik)                     :: spacedim
@@ -424,7 +429,7 @@ contains
 
 
 
-                call data%sdata%q%dom(idom)%lvecs(ielem)%setvar(ivar,bufferterms)
+                call data%sdata%q%dom(idom)%lvecs(ielem)%setvar(ivar,real(bufferterms,rk))
             end do
 
         else
@@ -496,7 +501,8 @@ contains
         character(100)                  :: var_grp
         character(100)                  :: ctime
 
-        real(rk), allocatable, target   :: var(:,:,:)
+        !real(rk), allocatable, target   :: var(:,:,:)
+        real(rdouble), allocatable, target   :: var(:,:,:)
         type(c_ptr)                     :: cp_var
 
         integer(ik)                     :: nmembers,    type,   ierr,       ndomains,   igrp,   &
@@ -599,7 +605,6 @@ contains
         !
         ! Get variable integer index from variable character string
         !
-        !ivar = data%eqnset(idom)%item%prop%get_eqn_index(cvar)
         ivar = data%eqnset(idom)%item%prop%get_eqn_index(varstring)
 
 
@@ -610,7 +615,7 @@ contains
         allocate(var(dims(1),dims(2),dims(3)))
 
         do ielem = 1,data%mesh(idom)%nelem
-                var(:,ielem,itime) = data%sdata%q%dom(idom)%lvecs(ielem)%getvar(ivar)
+                var(:,ielem,itime) = real(data%sdata%q%dom(idom)%lvecs(ielem)%getvar(ivar),rk)
         end do
 
 
@@ -956,7 +961,8 @@ contains
         class(bc_t),            allocatable     :: bc
         character(len=1024)                     :: bcname, pname, oname, fname
         real(rk)                                :: ovalue
-        real(rk),   dimension(1)                :: rbuf
+        !real(rk),   dimension(1)                :: rbuf
+        real(rdouble),   dimension(1)                :: rbuf
         character(len=10)                       :: faces(NFACES)
         character(1024)                         :: gname
         integer                                 :: nmembers, type, ierr, ndomains, igrp, &
@@ -1145,9 +1151,11 @@ contains
                                 ! Get option value from file
                                 !
                                 adim = 1
+                                !call h5ltget_attribute_double_f(bcprop, ".", trim(oname), rbuf, ierr)
                                 call h5ltget_attribute_double_f(bcprop, ".", trim(oname), rbuf, ierr)
                                 if (ierr /= 0) call chidg_signal(FATAL,"read_boundaryconditions: error getting option value")
-                                ovalue = rbuf(1)
+                                !ovalue = rbuf(1)
+                                ovalue = real(rbuf(1),rk)
 
 
                                 !

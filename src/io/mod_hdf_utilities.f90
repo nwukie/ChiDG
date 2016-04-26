@@ -99,23 +99,18 @@ contains
         !
         ! Get number of spatial dimensions
         !
-        print*, 'get_properties_hdf - 1'
         prop%spacedim = get_spacedim_hdf(fid,prop%domain_names)
 
-        print*, allocated(prop%spacedim)
 
-        print*, 'get_properties_hdf - 2'
 
 
         !
         ! Compute number of terms in the polynomial expansions for each domain
         !
         do idom = 1,prop%ndomains
-            nterms_1d = (prop%order_c(idom) + 1)
-
             
-            print*, 'get_properties_hdf - 3'
-            print*, idom, prop%spacedim(idom)
+
+            nterms_1d = (prop%order_c(idom) + 1)
             if ( prop%spacedim(idom) == THREE_DIM ) then
                 prop%nterms_c(idom) = nterms_1d * nterms_1d * nterms_1d
             else if ( prop%spacedim(idom) == TWO_DIM ) then
@@ -123,19 +118,18 @@ contains
             end if
 
 
-            print*, 'get_properties_hdf - 4'
+ 
             nterms_1d = (prop%order_s(idom) + 1)
-
             if ( prop%spacedim(idom) == THREE_DIM ) then
                 prop%nterms_s(idom) = nterms_1d * nterms_1d * nterms_1d
             else if ( prop%spacedim(idom) == TWO_DIM ) then
                 prop%nterms_s(idom) = nterms_1d * nterms_1d
             end if
 
+
         end do ! idom
 
 
-        print*, 'get_properties_hdf - 5'
         !
         ! Get equation set for each domain
         !

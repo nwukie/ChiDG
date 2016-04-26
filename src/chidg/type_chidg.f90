@@ -106,7 +106,6 @@ contains
             call register_equations()
             call register_bcs()
 
-            
             call initialize_grid()
             self%envInitialized = .true.
         end if

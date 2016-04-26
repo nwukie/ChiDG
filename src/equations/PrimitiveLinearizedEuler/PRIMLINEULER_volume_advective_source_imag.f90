@@ -138,20 +138,29 @@ contains
             inE = ( z(igq) < -2.121_rk + thickness )
             inF = ( z(igq) >  2.121_rk - thickness )
 
+!            ! Monopole
+!            inA = ( x(igq) < -100._rk + thickness ) 
+!            inB = ( x(igq) >  100._rk - thickness )
+!            inC = ( y(igq) < -100._rk + thickness )
+!            inD = ( y(igq) >  100._rk - thickness )
+!            inE = ( z(igq) < -2.121_rk + thickness )
+!            inF = ( z(igq) >  2.121_rk - thickness )
 
 
 !            inA = .false.
 !            inB = .false.
 !            inC = .false.
 !            inD = .false.
+!            inE = .false.
+!            inF = .false.
 
 
             ! X-PML
             if ( inA ) then
-                fcn(igq)     =  abs( ( x(igq) - (-THREE+thickness) ) / thickness )**TWO
+                fcn(igq)     =  abs( ( x(igq) - (-3._rk+thickness) ) / thickness )**TWO
                 sigma_x(igq) = eps * fcn(igq)
             else if ( inB ) then
-                fcn(igq)     =  abs( ( x(igq) - ( THREE-thickness) ) / thickness )**TWO
+                fcn(igq)     =  abs( ( x(igq) - ( 3._rk-thickness) ) / thickness )**TWO
                 sigma_x(igq) = eps * fcn(igq)
             else
                 sigma_x(igq) = ZERO

@@ -318,6 +318,11 @@ contains
 
 
 
+            !
+            ! Maybe consider setting this. I think it is the correct 1D nonreflecting approach.
+            !
+            !v_r = ZERO
+            !w_r = ZERO
 
 
 

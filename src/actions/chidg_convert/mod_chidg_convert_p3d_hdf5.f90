@@ -10,7 +10,7 @@
 !--------------------------------------------------------------------------------------------
 module mod_chidg_convert_p3d_hdf5
 #include <messenger.h>
-    use mod_kinds,   only: rk,ik
+    use mod_kinds,   only: rk,ik, rdouble
     use hdf5
     use h5lt
     implicit none
@@ -52,7 +52,8 @@ contains
         integer(ik)                 :: i,j,k,imax,jmax,kmax,ext_loc
         integer(ik)                 :: ierr,igrid,nelem,nblks,mapping, spacedim
         integer(ik), allocatable    :: blkdims(:,:)
-        real(rk),    allocatable    :: xcoords(:,:,:), ycoords(:,:,:), zcoords(:,:,:)
+        !real(rk),    allocatable    :: xcoords(:,:,:), ycoords(:,:,:), zcoords(:,:,:)
+        real(rdouble),    allocatable    :: xcoords(:,:,:), ycoords(:,:,:), zcoords(:,:,:)
 
         ! equation set string
         character(len=100)          :: eqnset_string

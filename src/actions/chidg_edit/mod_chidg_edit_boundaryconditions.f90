@@ -1,6 +1,6 @@
 module mod_chidg_edit_boundaryconditions
 #include <messenger.h>
-    use mod_kinds,      only: rk, ik
+    use mod_kinds,      only: rk, ik, rdouble
     use mod_constants,  only: NFACES, XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX
     use type_bc,        only: bc_t
     use mod_bc,         only: create_bc, list_bcs
@@ -757,7 +757,7 @@ contains
                     ! Set the option as a real attribute
                     !
                     adim = 1
-                    call h5ltset_attribute_double_f(prop_id, ".", option_key, [option_value], adim, ierr)
+                    call h5ltset_attribute_double_f(prop_id, ".", option_key, [real(option_value,rdouble)], adim, ierr)
 
                 end do
             end if
@@ -1068,7 +1068,8 @@ contains
         character(len=1024)                     :: fcn
         real(rk),               allocatable     :: option_vals(:)
         type(h5o_info_t),       target          :: h5_info
-        real(rk),   dimension(1)                :: buf
+        !real(rk),   dimension(1)                :: buf
+        real(rdouble),   dimension(1)                :: buf
 
 
 
@@ -1111,7 +1112,7 @@ contains
                 if ( trim(option_keys(iattr)) /= 'function' ) then  ! don't read function. not a floating point attribute.
                     call h5ltget_attribute_double_f(bcprop, ".", option_keys(iattr), buf, ierr)
                     if (ierr /= 0) call chidg_signal(FATAL,"print_property_options: error reading attribute value")
-                    option_vals(iattr) = buf(1)
+                    option_vals(iattr) = real(buf(1),rk)
                 end if
             end do
 
@@ -1222,7 +1223,7 @@ contains
                     ! Set option
                     !
                     adim = 1
-                    call h5ltset_attribute_double_f(bcface, "BCP_"//trim(pname), trim(option), [val], adim, ierr)
+                    call h5ltset_attribute_double_f(bcface, "BCP_"//trim(pname), trim(option), [real(val,rdouble)], adim, ierr)
                     if (ierr /= 0) call chidg_signal(FATAL,"edit_property: error setting option value")
 
                 end if
@@ -1347,7 +1348,7 @@ contains
             ! Set option
             !
             adim = 1
-            call h5ltset_attribute_double_f(bcprop, ".", trim(option), [val], adim, ierr)
+            call h5ltset_attribute_double_f(bcprop, ".", trim(option), [real(val,rdouble)], adim, ierr)
 
         end do ! iopt
 

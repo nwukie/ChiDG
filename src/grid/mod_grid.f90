@@ -10,7 +10,7 @@ module mod_grid
     !
     ! coordinate mapping matrices
     !
-    integer(ik),         parameter      :: nmap = 4
+    integer(ik),         parameter      :: nmap = 7
     !type(densematrix_t), save,  target  :: ELEM_MAP(nmap)  !< array of matrices
     type(densematrix_t), save,  target  :: ELEM_MAP_2D(nmap)  !< array of matrices
     type(densematrix_t), save,  target  :: ELEM_MAP_3D(nmap)  !< array of matrices
@@ -67,7 +67,8 @@ contains
 
         type(point_t),  allocatable :: nodes(:)
         real(rk),       allocatable :: xi(:),eta(:),zeta(:)
-        integer(ik)                 :: npts_1d(4), npts_2d(4), npts_3d(4)
+        !integer(ik)                 :: npts_1d(4), npts_2d(4), npts_3d(4)
+        integer(ik)                 :: npts_1d(7), npts_2d(7), npts_3d(7)
         integer(ik)                 :: ierr, imap, iterm, inode, ipt
         integer(ik)                 :: ixi,  ieta, izeta
 
@@ -75,7 +76,8 @@ contains
         ! Mapping order
         ! [linear, quadratic, cubic, quartic]
         !
-        npts_1d = [2,3,4,5]                 ! Number of points defining an edge
+        !npts_1d = [2,3,4,5]                 ! Number of points defining an edge
+        npts_1d = [2,3,4,5,6,7,8]           ! Number of points defining an edge
         npts_2d = npts_1d*npts_1d           ! Number of points defining an element in 2D
         npts_3d = npts_1d*npts_1d*npts_1d   ! Number of points defining an element in 3D
 

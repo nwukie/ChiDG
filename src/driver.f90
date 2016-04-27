@@ -50,6 +50,7 @@ program driver
     !
     if ( narg == 0 ) then
 
+        print*, 'driver - 1'
 
         !
         ! Initialize ChiDG environment
@@ -58,11 +59,13 @@ program driver
         call chidg%init('io')
 
 
+        print*, 'driver - 2'
         !
         ! Read grid data from file
         !
         call chidg%read_grid(gridfile, spacedim)
 
+        print*, 'driver - 3'
 
         !
         ! Read boundary conditions
@@ -70,6 +73,7 @@ program driver
         call chidg%read_boundaryconditions(gridfile)
 
 
+        print*, 'driver - 4'
 
         !
         ! Set time-scheme options
@@ -80,6 +84,7 @@ program driver
         call toptions%set('nwrite',nwrite)
         call toptions%set('cfl0',cfl0)
 
+        print*, 'driver - 5'
 
         !
         ! Set matrix solver options
@@ -87,6 +92,7 @@ program driver
         call moptions%set('tol',mtol)
 
 
+        print*, 'driver - 6'
         !
         ! Set ChiDG components
         !
@@ -100,10 +106,6 @@ program driver
         !
         call chidg%initialize_solution_domains(nterms_s)
         call chidg%init('chimera')
-
-
-
-        !call chidg%data%init_sdata()
         call chidg%initialize_solution_solver()
 
 
@@ -113,7 +115,6 @@ program driver
         !
         if (solutionfile_in == 'none') then
             call create_function(constant,'constant')
-            call create_function(monopole,'monopole')
 
 
             ! rho
@@ -135,8 +136,6 @@ program driver
             ! rho_E
             call constant%set_option('val',0._rk)
             call initialize_variable(chidg%data,5,constant)
-            !call monopole%set_option('a',ZERO)
-            !call initialize_variable(chidg%data,5,monopole)
 
 
             ! rho
@@ -158,10 +157,6 @@ program driver
             ! rho_E
             call constant%set_option('val',0._rk)
             call initialize_variable(chidg%data,10,constant)
-            !call monopole%set_option('a',TWO)
-            !call initialize_variable(chidg%data,10,monopole)
-
-
 
 
         else
@@ -218,6 +213,30 @@ program driver
         ! Close ChiDG
         !
         call chidg%close()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

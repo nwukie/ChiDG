@@ -333,7 +333,6 @@ contains
                     !
                     ! Element geometry initialization
                     !
-                    !call self%elems(ielem)%init_geom(mapping,points_l,idomain,ielem)
                     call self%elems(ielem)%init_geom(spacedim,mapping,points_l,idomain,ielem)
                     ielem = ielem + 1
                 end do

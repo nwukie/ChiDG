@@ -81,23 +81,34 @@ contains
         allocate(theta(res), points(res), stat=ierr)
         if ( ierr /= 0 ) call AllocationError
 
-        theta_min = ZERO
-        theta_max = 120._rk*PI/180._rk
-        !theta_max = PI/TWO
-
-        r        = 46._rk
-        !r        = 100._rk
-        theta    = ZERO
+        
+        !
+        ! Set 'R' and 'Theta'
+        !
+        r           = 46._rk
+        theta_min   = ZERO
+        theta_max   = 120._rk*PI/180._rk
         dtheta = (theta_max - theta_min)/real(res,kind=rk)
 
+        theta       = ZERO
         do itheta = 2,res
             theta(itheta) = theta(itheta-1) + dtheta
         end do
 
+        
+        !
+        ! Initialize cartesian coordinates of observer points
+        !
         points(:)%c1_ = r*cos(theta)
         points(:)%c2_ = r*sin(theta)
         points(:)%c3_ = ZERO
 
+
+
+
+        !
+        ! Compute integral over Kirchoff surface
+        !
         print*, chidg%data%eqnset(1)%item%name
         pressures = compute_kirchoffs_integral(chidg%data%mesh,chidg%data%bcset,chidg%data%eqnset,chidg%data%sdata,points) 
 
@@ -114,8 +125,10 @@ contains
 
 
 
+        !
+        ! Write far-field RMS pressure to file.
+        !
         open(newunit=fileunit, file='p.out')
-
         do itheta = 1,res
             write(fileunit,*) theta(itheta), sqrt( real(pressures(itheta))**TWO + aimag(pressures(itheta))**TWO ) / sqrt(TWO)
         end do
@@ -229,7 +242,7 @@ contains
 
 
             !
-            ! Check domain has the correct equation set for the integra
+            ! Check domain has the correct equation set for the integral
             !
             primitive_linearized_euler = ( eqnset(idom)%item%get_name() == 'PrimitiveLinearizedEuler' )
             if ( .not. primitive_linearized_euler ) call chidg_signal(FATAL,"compute_kirchoffs_integral: domain does not have correct equation set")
@@ -241,15 +254,16 @@ contains
             !
             do ibc = 1,size(bcset(idom)%bcs)
 
-            
+                ! 
                 ! Check if boundary condition is Kirchoff boundary 
+                !
                 kirchoff_surface = ( bcset(idom)%bcs(ibc)%bc%get_name() == "Kirchoff" )
 
 
 
+
+
                 if ( kirchoff_surface ) then
-
-
 
 
                     ! For each face, compute Kirchoff integral
@@ -312,17 +326,6 @@ contains
 
 
 
-
-                        ! Compute new value, based on THETA and M
-                        !rho = rho*exp(imag*real(m,rk)*theta)
-                        !u = u*exp(imag*real(m,rk)*theta)
-                        !v = v*exp(imag*real(m,rk)*theta)
-                        !w = w*exp(imag*real(m,rk)*theta)
-                        !p = p*exp(imag*real(m,rk)*theta)
-
-
-
-
                         ! Get surface(source) coordinates
                         xs = mesh(idom_l)%faces(ielem_l,iface_l)%quad_pts(:)%c1_
                         ys = mesh(idom_l)%faces(ielem_l,iface_l)%quad_pts(:)%c2_
@@ -335,8 +338,11 @@ contains
                         ny = mesh(idom_l)%faces(ielem_l,iface_l)%unorm(:,2)
                         nz = mesh(idom_l)%faces(ielem_l,iface_l)%unorm(:,3)
 
+
                         !
-                        ! Compute two points along vector
+                        ! Re-orient normal vector for eta-min faces pointing in.
+                        ! Compute two points along vector, if radius of second point is smaller than radius
+                        ! of first point, then normal is pointing in and should be reversed.
                         !
                         x1 = xs + 0.001*nx
                         y1 = ys + 0.001*ny
@@ -352,6 +358,8 @@ contains
                         where ( r2<r1 .and. xs<-0.001 ) ny = -ny
                         where ( r2<r1 .and. xs<-0.001 ) nz = -nz
 
+
+
                         ! Compute derivatives of pressure
                         dpr_dx = matmul(mesh(idom_l)%faces(ielem_l,iface_l)%dtdx, sdata%q%dom(idom_l)%lvecs(ielem_l)%getvar(ip_r) )
                         dpi_dx = matmul(mesh(idom_l)%faces(ielem_l,iface_l)%dtdx, sdata%q%dom(idom_l)%lvecs(ielem_l)%getvar(ip_i) )
@@ -361,18 +369,14 @@ contains
                         dpi_dz = matmul(mesh(idom_l)%faces(ielem_l,iface_l)%dtdz, sdata%q%dom(idom_l)%lvecs(ielem_l)%getvar(ip_i) )
 
 
-        
-
                         dpdx = cmplx(dpr_dx, dpi_dx)
                         dpdy = cmplx(dpr_dy, dpi_dy)
                         dpdz = cmplx(dpr_dz, dpi_dz)
 
 
-
-
-
                         ! Compute derivative of pressure in the direction of the face normal
                         dpdn = dpdx*nx + dpdy*ny + dpdz*nz
+
 
 
 

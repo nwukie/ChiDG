@@ -962,7 +962,7 @@ contains
         character(len=1024)                     :: bcname, pname, oname, fname
         real(rk)                                :: ovalue
         !real(rk),   dimension(1)                :: rbuf
-        real(rdouble),   dimension(1)                :: rbuf
+        real(rdouble),   dimension(1)           :: rbuf
         character(len=10)                       :: faces(NFACES)
         character(1024)                         :: gname
         integer                                 :: nmembers, type, ierr, ndomains, igrp, &

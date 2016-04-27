@@ -25,8 +25,8 @@ module mod_kinds
 
     ! generic/default kinds
     integer, parameter :: ik = ilong     ! default integer kind
-    integer, parameter :: rk = rdouble   ! default real kind
-    !integer, parameter :: rk = rsingle   ! default real kind
+    !integer, parameter :: rk = rdouble   ! default real kind
+    integer, parameter :: rk = rsingle   ! default real kind
 
     ! TECPLOT
     integer, parameter, public :: TEC = 4

@@ -424,8 +424,7 @@ contains
         real(rk)    :: res, dx, dy, dz
 
 
-        !tol = 1.e-12_rk
-        tol = RKTOL
+        tol = 10._rk*RKTOL
 
 
         xgq = gq_node%c1_

@@ -1,6 +1,6 @@
 module mod_rootfinding
     use mod_kinds,      only: rk, ik
-    use mod_constants,  only: ZERO, ONE, TWO
+    use mod_constants,  only: ZERO, ONE, TWO, RKTOL
     use type_point,     only: point_t
     use type_function,  only: function_t
     implicit none
@@ -49,7 +49,7 @@ contains
         if ( present(tol_in) ) then
             tol = tol_in
         else
-            tol = 1.e-14_rk
+            tol = RKTOL
         end if
 
 

@@ -29,13 +29,14 @@ subroutine test_compute_gq_donor_cylinder_abutting()
     type(meshdata_t),   allocatable :: meshdataA(:)
     class(function_t),  allocatable :: constant, gaussian
     real(rk),           allocatable :: density_residual_D4_E31(:), density_residual_D4_E36(:)
-    integer(ik)                     :: idom, ielem, ChiID, idom_d, ielem_d, iface, nterms_s, ndonors, gq_index, igq, ngq
+    integer(ik)                     :: idom, ielem, ChiID, idom_d, ielem_d, iface, nterms_s, ndonors, gq_index, igq, ngq, spacedim
     real(rk)                        :: chi_xi, chi_eta, chi_zeta, ref_xi, ref_eta, ref_zeta
     type(point_t)                   :: chimera_node
     real(rk)                        :: tol
 
 
     tol            = 1.e-12_rk
+    spacedim       = 3
     nterms_s       = 8
     IO_DESTINATION = 'file'
 
@@ -58,8 +59,9 @@ subroutine test_compute_gq_donor_cylinder_abutting()
     ! Add domains
     !
     do idom = 1,size(meshdataA)
-        call chidgA%data%add_domain(trim(meshdataA(idom)%name),meshdataA(idom)%points,meshdataA(idom)%nterms_c,'euler',nterms_s)
+        call chidgA%data%add_domain(trim(meshdataA(idom)%name),meshdataA(idom)%points,spacedim,meshdataA(idom)%nterms_c,'euler')
     end do
+    call chidgA%initialize_solution_domains(nterms_s)
 
 
     !
@@ -114,7 +116,7 @@ subroutine test_compute_gq_donor_cylinder_abutting()
     ! Initialize solution data storage
     !
     call chidgA%init('chimera')
-    call chidgA%data%init_sdata()
+    call chidgA%initialize_solution_solver()
 
 
 

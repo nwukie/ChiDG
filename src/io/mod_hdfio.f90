@@ -1,7 +1,7 @@
 module mod_hdfio
 #include <messenger.h>
-    use mod_kinds,          only: rk,ik
-    use mod_constants,      only: ZERO, NFACES
+    use mod_kinds,          only: rk,ik,rdouble
+    use mod_constants,      only: ZERO, NFACES, TWO_DIM, THREE_DIM
     use type_meshdata,      only: meshdata_t
     use type_bcdata,        only: bcdata_t
     use type_bc,            only: bc_t
@@ -46,15 +46,16 @@ contains
         integer(HSIZE_T) :: dims(3), maxdims(3)                     ! Dataspace dimensions
 
         type(c_ptr)                                     :: pts
-        real(rk), dimension(:,:,:), allocatable, target :: xpts, ypts, zpts
+        !real(rk), dimension(:,:,:), allocatable, target :: xpts, ypts, zpts
+        real(rdouble), dimension(:,:,:), allocatable, target :: xpts, ypts, zpts
         type(c_ptr)                                     :: cp_pts
 
         character(len=1024),    allocatable     :: dnames(:), eqnset(:)
         character(1024)                         :: gname
         integer                                 :: nmembers, type, ierr, ndomains, igrp,    &
                                                    npts, izeta, ieta, ixi, idom, nterms_1d, &
-                                                   mapping, nterms_c
-        integer, dimension(1)                   :: buf
+                                                   mapping, nterms_c, spacedim
+        integer, dimension(1)                   :: mapping_buf, spacedim_buf
         logical                                 :: FileExists
 
 
@@ -64,7 +65,7 @@ contains
         !
         inquire(file=filename, exist=FileExists)
         if (.not. FileExists) then
-            call chidg_signal(FATAL,'read_grid_hdf5: Could not find grid file')
+            call chidg_signal_one(FATAL,'read_grid_hdf5: Could not find grid file',filename)
         end if
 
 
@@ -123,12 +124,9 @@ contains
         !
         idom = 1
         do idom = 1,size(dnames)
-!        do igrp = 0,nmembers-1
-!            call h5gget_obj_info_idx_f(fid,"/", igrp, gname, type, ierr)
-!
-!            if (gname(1:2) == 'D_') then
-!
-             gname = dnames(idom)
+
+                gname = dnames(idom)
+
                 !
                 ! Open the Domain/Grid group
                 !
@@ -139,16 +137,25 @@ contains
                 !
                 !  Get number of terms in coordinate expansion
                 !
-                call h5ltget_attribute_int_f(fid, trim(gname), 'mapping', buf, ierr)
-
-
-                mapping = buf(1)
+                call h5ltget_attribute_int_f(fid, trim(gname), 'mapping', mapping_buf, ierr)
+                mapping = mapping_buf(1)
                 if (ierr /= 0) stop "Error: read_grid_hdf5 - h5ltget_attribute_int_f"
                 nterms_1d = (mapping + 1)
-                nterms_c = nterms_1d * nterms_1d * nterms_1d
+
+
+                call h5ltget_attribute_int_f(fid, trim(gname), 'spacedim', spacedim_buf, ierr)
+                spacedim = spacedim_buf(1)
+
+
+                if ( spacedim == THREE_DIM ) then
+                    nterms_c = nterms_1d * nterms_1d * nterms_1d
+                else if ( spacedim == TWO_DIM ) then
+                    nterms_c = nterms_1d * nterms_1d
+                end if
 
                 meshdata(idom)%nterms_c = nterms_c
                 meshdata(idom)%name     = gname
+                meshdata(idom)%spacedim = spacedim
 
 
                 !
@@ -199,7 +206,7 @@ contains
                 do izeta = 1,dims(3)
                     do ieta = 1,dims(2)
                         do ixi = 1,dims(1)
-                            call meshdata(idom)%points(ixi,ieta,izeta)%set(xpts(ixi,ieta,izeta),ypts(ixi,ieta,izeta),zpts(ixi,ieta,izeta))
+                            call meshdata(idom)%points(ixi,ieta,izeta)%set(real(xpts(ixi,ieta,izeta),rk),real(ypts(ixi,ieta,izeta),rk),real(zpts(ixi,ieta,izeta),rk))
                         end do
                     end do
                 end do
@@ -271,6 +278,8 @@ contains
     !!  Opens a given hdf5 file. Loads the EquationSet and solution order and calls solution initialization
     !!  procedure for each domain. Searches for the given variable and time instance. If it finds it, load to a
     !!
+    !!  Note: Convention is that all floating-point data is double precision format. Conversion to working-precision
+    !!        should happen after reading the data from the HDF file.
     !!
     !!  @author Nathan A. Wukie
     !!  @date   2/3/2016
@@ -300,10 +309,13 @@ contains
         character(100)                  :: cbuf
         character(100)                  :: var_gqp
 
-        real(rk), allocatable, target   :: var(:,:,:)
-        real(rk), allocatable           :: bufferterms(:)
+        !real(rk), allocatable, target   :: var(:,:,:)
+        !real(rk), allocatable           :: bufferterms(:)
+        real(rdouble), allocatable, target   :: var(:,:,:)
+        real(rdouble), allocatable           :: bufferterms(:)
         type(c_ptr)                     :: cp_var
 
+        integer(ik)                     :: spacedim
         integer                         :: type,    ierr,       igrp,               &
                                            npts,    nterms_1d,  nterms_s,   order,  &
                                            ivar,    ielem,      nterms_ielem,   idom
@@ -334,7 +346,16 @@ contains
         order = ibuf(1)
         if (ierr /= 0) call chidg_signal(FATAL,"read_variable_hdf5 - h5ltget_attribute_int_f")
         nterms_1d = (order + 1) ! To be consistent with the definition of (Order = 'Order of the polynomial')
-        nterms_s = nterms_1d*nterms_1d*nterms_1d
+
+
+
+        spacedim = data%mesh(idom)%spacedim
+
+        if ( spacedim == THREE_DIM ) then
+            nterms_s = nterms_1d*nterms_1d*nterms_1d
+        else if ( spacedim == TWO_DIM ) then
+            nterms_s = nterms_1d*nterms_1d
+        end if
 
 
         
@@ -408,7 +429,7 @@ contains
 
 
 
-                call data%sdata%q%dom(idom)%lvecs(ielem)%setvar(ivar,bufferterms)
+                call data%sdata%q%dom(idom)%lvecs(ielem)%setvar(ivar,real(bufferterms,rk))
             end do
 
         else
@@ -480,7 +501,8 @@ contains
         character(100)                  :: var_grp
         character(100)                  :: ctime
 
-        real(rk), allocatable, target   :: var(:,:,:)
+        !real(rk), allocatable, target   :: var(:,:,:)
+        real(rdouble), allocatable, target   :: var(:,:,:)
         type(c_ptr)                     :: cp_var
 
         integer(ik)                     :: nmembers,    type,   ierr,       ndomains,   igrp,   &
@@ -583,7 +605,6 @@ contains
         !
         ! Get variable integer index from variable character string
         !
-        !ivar = data%eqnset(idom)%item%prop%get_eqn_index(cvar)
         ivar = data%eqnset(idom)%item%prop%get_eqn_index(varstring)
 
 
@@ -594,7 +615,7 @@ contains
         allocate(var(dims(1),dims(2),dims(3)))
 
         do ielem = 1,data%mesh(idom)%nelem
-                var(:,ielem,itime) = data%sdata%q%dom(idom)%lvecs(ielem)%getvar(ivar)
+                var(:,ielem,itime) = real(data%sdata%q%dom(idom)%lvecs(ielem)%getvar(ivar),rk)
         end do
 
 
@@ -786,7 +807,7 @@ contains
         integer(HID_T)                  :: fid
         integer(HSIZE_T)                :: adim
         integer(ik)                     :: idom, ndomains
-        integer(ik)                     :: ieqn, neqns
+        integer(ik)                     :: ieqn, neqns, spacedim
         integer(ik)                     :: time
         character(len=:),   allocatable :: cvar
         character(len=:),   allocatable :: dname
@@ -845,16 +866,30 @@ contains
             !
             adim = 1
             order_s = 0
-            do while ( order_s*order_s*order_s /= data%mesh(idom)%nterms_s )
-               order_s = order_s + 1 
-            end do
-            order_s = order_s - 1 ! to be consistent with he definition of 'Order of the polynomial'
+            spacedim = data%mesh(idom)%spacedim
+
+            if ( spacedim == THREE_DIM ) then
+
+                do while ( order_s*order_s*order_s /= data%mesh(idom)%nterms_s )
+                   order_s = order_s + 1 
+                end do
+                order_s = order_s - 1 ! to be consistent with he definition of 'Order of the polynomial'
+
+            else if ( spacedim == TWO_DIM ) then
+                do while ( order_s*order_s /= data%mesh(idom)%nterms_s )
+                   order_s = order_s + 1 
+                end do
+                order_s = order_s - 1 ! to be consistent with he definition of 'Order of the polynomial'
+
+            end if
 
             call h5ltset_attribute_int_f(fid, trim(dname), 'order_solution', [order_s], adim, ierr)
             if (ierr /= 0) call chidg_signal(FATAL,"write_variable_hdf5 - h5ltset_attribute_int_f")
 
             call h5ltset_attribute_string_f(fid, trim(dname), 'eqnset', trim(data%eqnset(idom)%item%name), ierr)
             if (ierr /= 0) call chidg_signal(FATAL,"write_variable_hdf5 - h5ltset_attribute_int_f")
+
+
 
 
             !
@@ -926,7 +961,8 @@ contains
         class(bc_t),            allocatable     :: bc
         character(len=1024)                     :: bcname, pname, oname, fname
         real(rk)                                :: ovalue
-        real(rk),   dimension(1)                :: rbuf
+        !real(rk),   dimension(1)                :: rbuf
+        real(rdouble),   dimension(1)           :: rbuf
         character(len=10)                       :: faces(NFACES)
         character(1024)                         :: gname
         integer                                 :: nmembers, type, ierr, ndomains, igrp, &
@@ -1020,6 +1056,7 @@ contains
                 ! TODO: should probably turn this into a loop over bcs instead of faces.
                 do iface = 1,NFACES
 
+
                     !
                     ! Open face boundary condition group
                     !
@@ -1032,6 +1069,7 @@ contains
                     !
                     ! TODO: WARNING, should replace with XI_MIN, XI_MAX, etc. somehow.
                     bcdata(idom)%bcface(iface) = iface
+
 
 
                     !
@@ -1113,9 +1151,11 @@ contains
                                 ! Get option value from file
                                 !
                                 adim = 1
+                                !call h5ltget_attribute_double_f(bcprop, ".", trim(oname), rbuf, ierr)
                                 call h5ltget_attribute_double_f(bcprop, ".", trim(oname), rbuf, ierr)
                                 if (ierr /= 0) call chidg_signal(FATAL,"read_boundaryconditions: error getting option value")
-                                ovalue = rbuf(1)
+                                !ovalue = rbuf(1)
+                                ovalue = real(rbuf(1),rk)
 
 
                                 !

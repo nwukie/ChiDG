@@ -21,20 +21,26 @@ module type_densevector
     !!
     !-------------------------------------------------------------------------------------------------------------
     type, public :: densevector_t
+
+        !
         ! Element Associativity
+        !
         integer(ik), private    :: parent_ = 0                  !< Associated parent element
 
-
+        !
         ! Storage size and equation information
+        !
         integer(ik), private    :: nterms_                      !< Number of terms in an expansion
         integer(ik), private    :: nvars_                       !< Number of equations included
+        integer(ik), private    :: ntime_                       !< Number of time instances
     
-
+        !
         ! Vector storage
+        !
         real(rk),  dimension(:), allocatable :: vec             !< Vector storage
 
-
     contains
+
         ! Initializers
         generic, public :: init => init_vector
         procedure, private :: init_vector                       !< Initialize vector storage
@@ -125,9 +131,11 @@ contains
     !!
     !-------------------------------------------------------------------------------------------------------
     subroutine init_vector(self,nterms,nvars,parent)
+!    subroutine init_vector(self,nterms,nvars,ntime,parent)
         class(densevector_t),   intent(inout), target   :: self
         integer(ik),            intent(in)              :: nterms
         integer(ik),            intent(in)              :: nvars
+!        integer(ik),            intent(in)              :: ntime
         integer(ik),            intent(in)              :: parent
 
         integer(ik) :: ierr, vsize
@@ -138,6 +146,7 @@ contains
         self%parent_ = parent
         self%nterms_ = nterms
         self%nvars_  = nvars
+!        self%ntime_  = ntime
 
 
         !
@@ -164,7 +173,7 @@ contains
         !
         self%vec = 0._rk
 
-    end subroutine
+    end subroutine init_vector
     !******************************************************************************************************
 
 

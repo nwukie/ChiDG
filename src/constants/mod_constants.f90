@@ -60,7 +60,10 @@ module mod_constants
     !
     ! Constants for spatial definition
     !
-    integer(ik), parameter :: SPACEDIM  = 3
+!    integer(ik), parameter :: SPACEDIM  = 3
+    integer(ik), parameter :: ONE_DIM   = 1
+    integer(ik), parameter :: TWO_DIM   = 2
+    integer(ik), parameter :: THREE_DIM = 3
     integer(ik), parameter :: NFACES    = 6
 
 
@@ -141,7 +144,6 @@ module mod_constants
 
 
 
-
     !
     ! Boundary condition parameters
     !
@@ -168,7 +170,10 @@ module mod_constants
 
 
 
-
-
+    !
+    !
+    !
+    real(rk),   parameter :: RKTOL = 20._rk * epsilon(1._rk)    ! Real-Kind Tolerance. Floating-point tolerance, one order of magnitude larger than machine precision.
+    
 
 end module mod_constants

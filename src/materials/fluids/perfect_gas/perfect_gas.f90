@@ -41,6 +41,8 @@ contains
     !!  @param[in]      rhoE    Fluid Total Energy
     !!  @param[inout]   vals    Fluid pressure
     !!
+    !!  TODO: Fix hardcoded gamma
+    !!
     !-------------------------------------------------------------------------------------
     subroutine compute_pressure_ad(self,rho,rhou,rhov,rhow,rhoE,vals)
         class(perfect_gas_t),   intent(in)      :: self
@@ -75,6 +77,8 @@ contains
     !!  @param[in]      rhow    Fluid z-momentum
     !!  @param[in]      rhoE    Fluid Total Energy
     !!  @param[inout]   vals    Fluid pressure
+    !!
+    !!  TODO: Fix hardcoded gamma
     !!
     !------------------------------------------------------------------------------------
     subroutine compute_pressure_real(self,rho,rhou,rhov,rhow,rhoE,vals)

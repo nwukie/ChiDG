@@ -19,6 +19,7 @@ module type_quadrature
     !----------------------------------------------------------------------------------------------------------
     type, public :: quadrature_t
 
+        integer(ik)                 :: spacedim     !< Number of spatial dimensions the quadrature set is initialialized for.
         integer(ik)                 :: nnodes_v     !< Number of nodes in the volume quadrature set.
         integer(ik)                 :: nnodes_f     !< Number of nodes in the face quadrature set.
         integer(ik)                 :: nterms       !< Number of terms in the expansion being integrated.
@@ -47,15 +48,16 @@ contains
 
     !>
     !!
-    !!
+    !!  TODO: TEST SPACEDIM
     !!
     !!
     !!
     !!
     !!
     !----------------------------------------------------------------------------------------------------------
-    subroutine init(self,nnodes_face,nnodes_vol,nterms)
+    subroutine init(self,spacedim,nnodes_face,nnodes_vol,nterms)
         class(quadrature_t), intent(inout) :: self
+        integer(ik),         intent(in)    :: spacedim
         integer(ik),         intent(in)    :: nnodes_face
         integer(ik),         intent(in)    :: nnodes_vol
         integer(ik),         intent(in)    :: nterms
@@ -63,6 +65,7 @@ contains
         !
         ! Set nnodes, nterms for the quadrature instance.
         !
+        self%spacedim = spacedim
         self%nnodes_v = nnodes_vol
         self%nnodes_f = nnodes_face
         self%nterms   = nterms
@@ -70,8 +73,8 @@ contains
         !
         ! Initialize volume/face quadrature instances
         !
-        call self%vol%init(nnodes_vol,nterms)
-        call self%face%init(nnodes_face,nterms)
+        call self%vol%init(spacedim,nnodes_vol,nterms)
+        call self%face%init(spacedim,nnodes_face,nterms)
 
 
         self%isInitialized = .true.

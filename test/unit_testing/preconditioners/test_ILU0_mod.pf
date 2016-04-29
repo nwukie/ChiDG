@@ -40,7 +40,7 @@ contains
         class(test_preconditioner_ILU0),    intent(inout)   :: this
 
         type(point_t),  allocatable :: pts(:,:,:)
-        integer(ik)                 :: nterms_c, nterms_s
+        integer(ik)                 :: nterms_c, nterms_s, spacedim
 
         
         !
@@ -64,15 +64,17 @@ contains
         !
         ! Add domain
         !
+        spacedim = 3
         nterms_c = 8
         nterms_s = 1
-        call this%chidg%data%add_domain('D_01',pts,nterms_c,'scalar',nterms_s)
+        call this%chidg%data%add_domain('D_01',pts,spacedim,nterms_c,'scalar')
 
 
         !
         ! Call sdata initialization
         !
-        call this%chidg%data%init_sdata()
+        call this%chidg%initialize_solution_domains(nterms_s)
+        call this%chidg%initialize_solution_solver()
 
 
 

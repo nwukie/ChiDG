@@ -28,6 +28,25 @@ module mod_bc
     use bc_euler_giles_outlet,              only: euler_giles_outlet_t
     use bc_euler_giles_outlet_2D_a,         only: euler_giles_outlet_2D_a_t
     use bc_euler_giles_outlet_2D_b,         only: euler_giles_outlet_2D_b_t
+
+    use bc_lineuler_inlet,                  only: lineuler_inlet_t
+    use bc_lineuler_outlet,                 only: lineuler_outlet_t
+    use bc_lineuler_extrapolate,            only: lineuler_extrapolate_t
+    use bc_lineuler_wall,                   only: lineuler_wall_t
+
+    use bc_primlineuler_inlet,              only: primlineuler_inlet_t
+    use bc_primlineuler_outlet,             only: primlineuler_outlet_t
+    use bc_primlineuler_extrapolate,        only: primlineuler_extrapolate_t
+    use bc_primlineuler_wall,               only: primlineuler_wall_t
+
+    use bc_primlineuleraxi_inlet,           only: primlineuleraxi_inlet_t
+    use bc_primlineuleraxi_outlet,          only: primlineuleraxi_outlet_t
+    use bc_primlineuleraxi_extrapolate,     only: primlineuleraxi_extrapolate_t
+    use bc_primlineuleraxi_wall,            only: primlineuleraxi_wall_t
+    use bc_primlineuleraxi_axi,             only: primlineuleraxi_axi_t
+
+    use bc_kirchoff,                        only: kirchoff_t
+
     implicit none
 
 
@@ -60,6 +79,7 @@ contains
         !
         type(periodic_t)                        :: PERIODIC
         type(linearadvection_extrapolate_t)     :: LINEARADVECTION_EXTRAPOLATE
+
         type(euler_wall_t)                      :: EULER_WALL
         type(euler_totalinlet_t)                :: EULER_TOTALINLET
         type(euler_totalinlet_characteristic_t) :: EULER_TOTALINLET_CHARCTERISTIC
@@ -69,6 +89,24 @@ contains
         type(euler_giles_outlet_2D_a_t)         :: EULER_GILES_OUTLET_2D_A
         type(euler_giles_outlet_2D_b_t)         :: EULER_GILES_OUTLET_2D_B
 
+        type(lineuler_inlet_t)                  :: LINEULER_INLET
+        type(lineuler_outlet_t)                 :: LINEULER_OUTLET
+        type(lineuler_extrapolate_t)            :: LINEULER_EXTRAPOLATE
+        type(lineuler_wall_t)                   :: LINEULER_WALL
+
+        type(primlineuler_inlet_t)              :: PRIMLINEULER_INLET
+        type(primlineuler_outlet_t)             :: PRIMLINEULER_OUTLET
+        type(primlineuler_extrapolate_t)        :: PRIMLINEULER_EXTRAPOLATE
+        type(primlineuler_wall_t)               :: PRIMLINEULER_WALL
+
+        type(primlineuleraxi_inlet_t)           :: PRIMLINEULERAXI_INLET
+        type(primlineuleraxi_outlet_t)          :: PRIMLINEULERAXI_OUTLET
+        type(primlineuleraxi_extrapolate_t)     :: PRIMLINEULERAXI_EXTRAPOLATE
+        type(primlineuleraxi_wall_t)            :: PRIMLINEULERAXI_WALL
+        type(primlineuleraxi_axi_t)             :: PRIMLINEULERAXI_AXI
+
+
+        type(kirchoff_t)                        :: KIRCHOFF
 
         if ( .not. initialized ) then
             !
@@ -76,16 +114,38 @@ contains
             !
             call registered_bcs%push_back(PERIODIC)
             call registered_bcs%push_back(LINEARADVECTION_EXTRAPOLATE)
+
+
             call registered_bcs%push_back(EULER_WALL)
             call registered_bcs%push_back(EULER_TOTALINLET)
             call registered_bcs%push_back(EULER_TOTALINLET_CHARCTERISTIC)
             call registered_bcs%push_back(EULER_PRESSUREOUTLET)
             call registered_bcs%push_back(EULER_EXTRAPOLATE)
-
             call registered_bcs%push_back(EULER_GILES_OUTLET)
             call registered_bcs%push_back(EULER_GILES_OUTLET_2D_A)
             call registered_bcs%push_back(EULER_GILES_OUTLET_2D_B)
 
+
+            call registered_bcs%push_back(LINEULER_INLET)
+            call registered_bcs%push_back(LINEULER_OUTLET)
+            call registered_bcs%push_back(LINEULER_EXTRAPOLATE)
+            call registered_bcs%push_back(LINEULER_WALL)
+
+
+            call registered_bcs%push_back(PRIMLINEULER_INLET)
+            call registered_bcs%push_back(PRIMLINEULER_OUTLET)
+            call registered_bcs%push_back(PRIMLINEULER_EXTRAPOLATE)
+            call registered_bcs%push_back(PRIMLINEULER_WALL)
+
+
+            call registered_bcs%push_back(PRIMLINEULERAXI_INLET)
+            call registered_bcs%push_back(PRIMLINEULERAXI_OUTLET)
+            call registered_bcs%push_back(PRIMLINEULERAXI_EXTRAPOLATE)
+            call registered_bcs%push_back(PRIMLINEULERAXI_WALL)
+            call registered_bcs%push_back(PRIMLINEULERAXI_AXI)
+
+
+            call registered_bcs%push_back(KIRCHOFF)
 
             !
             ! Initialize each boundary condition in set. Doesn't need modified.

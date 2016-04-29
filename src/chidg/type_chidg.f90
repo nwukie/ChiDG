@@ -5,7 +5,8 @@ module type_chidg
     use mod_bc,                 only: register_bcs
     use mod_function,           only: register_functions
     use mod_grid,               only: initialize_grid
-    use mod_io,                 only: read_input, nterms_s
+    !use mod_io,                 only: read_input, nterms_s
+    use mod_io,                 only: read_input
     use mod_string_utilities,   only: get_file_extension
 
     use type_chidg_data,        only: chidg_data_t
@@ -63,6 +64,8 @@ module type_chidg
         procedure   :: read_boundaryconditions
         procedure   :: read_solution
         procedure   :: write_solution
+        procedure   :: initialize_solution_domains
+        procedure   :: initialize_solution_solver
 
     end type chidg_t
     !*********************************************************************************************************
@@ -253,11 +256,15 @@ contains
     !!  @date   2/1/2016
     !!
     !!  @param[in]  gridfile    String containing a grid file name, including extension.
+    !!  @param[in]  spacedim    Number of spatial dimensions
+    !!
+    !!  TODO: Generalize spacedim
     !!
     !----------------------------------------------------------------------------------------------
-    subroutine read_grid(self,gridfile)
+    subroutine read_grid(self,gridfile,spacedim)
         class(chidg_t),     intent(inout)   :: self
         character(*),       intent(in)      :: gridfile
+        integer(ik),        intent(in)      :: spacedim
 
         character(len=5),   dimension(1)    :: extensions
         character(len=:),   allocatable     :: extension
@@ -287,13 +294,24 @@ contains
         !
         ndomains = size(meshdata)
         do idom = 1,ndomains
+!            call self%data%add_domain(                              &
+!                                      trim(meshdata(idom)%name),    &
+!                                      meshdata(idom)%points,        &
+!                                      meshdata(idom)%nterms_c,      &
+!                                      meshdata(idom)%eqnset,        &
+!                                      nterms_s                      &
+!                                      )
+
             call self%data%add_domain(                              &
                                       trim(meshdata(idom)%name),    &
                                       meshdata(idom)%points,        &
+                                      spacedim,                     &
                                       meshdata(idom)%nterms_c,      &
-                                      meshdata(idom)%eqnset,        &
-                                      nterms_s                      &
+                                      meshdata(idom)%eqnset         &
                                       )
+
+
+
         end do
 
 
@@ -418,6 +436,79 @@ contains
 
     end subroutine read_solution
     !************************************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+
+    
+
+    !>  Initialize all solution and solver storage.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   4/11/2016
+    !!
+    !!  @param[in]  nterms_s    Number of terms in the solution polynomial expansion.
+    !!
+    !------------------------------------------------------------------------------------------------------------
+    subroutine initialize_solution_domains(self,nterms_s)
+        class(chidg_t),     intent(inout)   :: self
+        integer(ik),        intent(in)      :: nterms_s
+
+        !
+        ! TODO: put in checks for prerequisites
+        !
+
+
+
+        !
+        ! Call domain solution storage initialization: mesh data structures that depend on solution expansion etc.
+        !
+        call self%data%initialize_solution_domains(nterms_s)
+
+
+    end subroutine initialize_solution_domains
+    !************************************************************************************************************
+
+
+
+
+
+
+    !>  Initialize all solution and solver storage.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   4/11/2016
+    !!
+    !!  @param[in]  nterms_s    Number of terms in the solution polynomial expansion.
+    !!
+    !------------------------------------------------------------------------------------------------------------
+    subroutine initialize_solution_solver(self)
+        class(chidg_t),     intent(inout)   :: self
+
+
+        !
+        ! TODO: put in checks for prerequisites
+        !
+
+        !
+        ! Call solver solution storage initialization: vectors, matrices, etc.
+        !
+        call self%data%initialize_solution_solver()
+
+
+
+    end subroutine initialize_solution_solver
+    !************************************************************************************************************
+
+
 
 
 

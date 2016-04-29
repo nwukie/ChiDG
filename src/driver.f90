@@ -13,6 +13,7 @@
 program driver
 #include <messenger.h>
     use mod_kinds,              only: rk, ik
+    use mod_constants,          only: ONE, TWO, ZERO
     use type_chidg,             only: chidg_t
     use mod_grid_operators,     only: initialize_variable
     use type_dict,              only: dict_t
@@ -22,6 +23,7 @@ program driver
     use mod_chidg_edit,         only: chidg_edit
     use mod_chidg_convert,      only: chidg_convert
     use mod_chidg_interpolate,  only: chidg_interpolate
+    use mod_kirchoffs,          only: kirchoff
     use mod_io
     
     !
@@ -30,7 +32,7 @@ program driver
     implicit none
     type(chidg_t)                       :: chidg
     type(dict_t)                        :: toptions, moptions
-    class(function_t),  allocatable     :: constant
+    class(function_t),  allocatable     :: constant, monopole
 
     integer(ik)                         :: narg
     character(len=1024)                 :: chidg_action, filename, file_a, file_b
@@ -59,7 +61,7 @@ program driver
         !
         ! Read grid data from file
         !
-        call chidg%read_grid(gridfile)
+        call chidg%read_grid(gridfile, spacedim)
 
 
         !
@@ -96,8 +98,10 @@ program driver
         !
         ! Initialize solution data storage
         !
+        call chidg%initialize_solution_domains(nterms_s)
         call chidg%init('chimera')
-        call chidg%data%init_sdata()
+        call chidg%initialize_solution_solver()
+
 
 
         !
@@ -108,11 +112,11 @@ program driver
 
 
             ! rho
-            call constant%set_option('val',1.25_rk)
+            call constant%set_option('val',0._rk)
             call initialize_variable(chidg%data,1,constant)
 
             ! rho_u
-            call constant%set_option('val',80._rk)
+            call constant%set_option('val',0._rk)
             call initialize_variable(chidg%data,2,constant)
 
             ! rho_v
@@ -124,8 +128,30 @@ program driver
             call initialize_variable(chidg%data,4,constant)
 
             ! rho_E
-            call constant%set_option('val',270000._rk)
+            call constant%set_option('val',0._rk)
             call initialize_variable(chidg%data,5,constant)
+
+
+            ! rho
+            call constant%set_option('val',0._rk)
+            call initialize_variable(chidg%data,6,constant)
+
+            ! rho_u
+            call constant%set_option('val',0._rk)
+            call initialize_variable(chidg%data,7,constant)
+
+            ! rho_v
+            call constant%set_option('val',0._rk)
+            call initialize_variable(chidg%data,8,constant)
+
+            ! rho_w
+            call constant%set_option('val',0._rk)
+            call initialize_variable(chidg%data,9,constant)
+
+            ! rho_E
+            call constant%set_option('val',0._rk)
+            call initialize_variable(chidg%data,10,constant)
+
 
         else
 
@@ -149,6 +175,9 @@ program driver
         ! Write initial solution
         !
         if (initial_write) call chidg%write_solution(solutionfile_out)
+
+
+
 
 
         !
@@ -184,6 +213,30 @@ program driver
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     !
     ! ChiDG tool execution. 2 arguments.
     !
@@ -212,6 +265,9 @@ program driver
         else if ( trim(chidg_action) == 'convert' ) then
             call chidg_convert(trim(filename))
 
+        else if ( trim(chidg_action) == 'kirchoff' ) then
+            call kirchoff(filename)
+
 
         else
             call chidg_signal(FATAL,"chidg: unrecognized action '"//trim(chidg_action)//"'. Valid options are: 'edit', 'convert'")
@@ -230,6 +286,14 @@ program driver
         call get_command_argument(2,file_a)
         call get_command_argument(3,file_b)
         
+
+
+        !
+        ! Initialize ChiDG environment
+        !
+        call chidg%init('env')
+
+
 
         if ( trim(chidg_action) == 'interpolate' ) then
             call chidg_interpolate(trim(file_a), trim(file_b))

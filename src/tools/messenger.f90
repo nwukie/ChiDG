@@ -650,25 +650,25 @@ contains
             !
             ! Write to destination
             !
-            if ( IO_DESTINATION == 'screen' ) then
+            if ( trim(IO_DESTINATION) == 'screen' ) then
                 print*, writeline
 
 
-            else if ( IO_DESTINATION == 'file' ) then
+            else if ( trim(IO_DESTINATION) == 'file' ) then
                 if (log_initialized) then
                     write(unit,*) writeline
                 else
-                    stop "Trying to write a line, but log file not inititlized. Call chidg%init('io')"
+                    stop "Trying to write a line, but log file not inititlized. Call chidg%init('env')"
                 end if
 
 
 
-            else if ( IO_DESTINATION == 'both' ) then
+            else if ( trim(IO_DESTINATION) == 'both' ) then
                 if (log_initialized) then
                     print*, writeline
                     write(unit,*) writeline
                 else
-                    stop "Trying to write a line, but log file not inititlized. Call chidg%init('io')"
+                    stop "Trying to write a line, but log file not inititlized. Call chidg%init('env')"
                 end if
 
 

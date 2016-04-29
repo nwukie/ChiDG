@@ -4,7 +4,7 @@ subroutine test_operator_block_mv()
 
     use mod_kinds,          only: rk, ik
     use mod_constants,      only: ZERO, ONE, TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT, &
-                                  NINE, TEN, DIAG, XI_MIN, XI_MAX
+                                  NINE, TEN, DIAG, XI_MIN, XI_MAX, IO_DESTINATION
 
     use type_blockvector,   only: blockvector_t
     use type_chidg,         only: chidg_t
@@ -21,7 +21,7 @@ subroutine test_operator_block_mv()
     type(blockvector_t)         :: x, b
 
     real(rk)                    :: tol
-    integer(ik)                 :: nterms_c, nterms_s, idomain
+    integer(ik)                 :: nterms_c, nterms_s, idomain, spacedim
     real(rk), dimension(8,8)    :: diag_1, diag_2, diag_3, ximax_1, ximin_2, ximax_2, ximin_3
     real(rk), dimension(8)      :: x_1, x_2, x_3
     real(rk), dimension(8)      :: b_ref_1, b_ref_2, b_ref_3
@@ -30,9 +30,11 @@ subroutine test_operator_block_mv()
 
     tol         = 1.e-13_rk
     idomain     = 1
+    spacedim    = 3
     nterms_c    = 8
     nterms_s    = 8
 
+    IO_DESTINATION = 'file'
 
     ! Initialize ChiDG
     call chidg%init('env')
@@ -43,9 +45,8 @@ subroutine test_operator_block_mv()
 
 
     ! Initialize domain
-!    call dom%init_geom(idomain,nterms_c,pts)
-!    call dom%init_sol('Scalar',nterms_s)
-    call chidg%data%add_domain('D_01',pts,nterms_c,'scalar',nterms_s)
+    call chidg%data%add_domain('D_01',pts,spacedim,nterms_c,'scalar')
+    call chidg%initialize_solution_domains(nterms_s)
 
 
 

@@ -11,7 +11,7 @@ contains
     !> Compute value of hierarchical Legendre polynomial expansion.
     !!
     !!  @author Nathan A. Wukie
-    !!
+    !!  @date   3/20/2016
     !!
     !!
     !!
@@ -44,8 +44,8 @@ contains
 
     !>
     !!
-    !!
-    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   3/20/2016
     !!
     !!
     !!
@@ -81,12 +81,18 @@ contains
 
 
 
+
+
+
+
+
+
     !>  A set of 2D, Lagrange polynomials is associated with the coordinates
     !!  in 'nodes'. This function computes the value of the Lagrange polynomial
     !!  associated with the 'currentnode' at the coordinate '(xpos,ypos)'.
     !!  
     !!  @author Nathan A. Wukie
-    !!
+    !!  @date   3/20/2016
     !!
     !!
     !---------------------------------------------------------------------------------------------------
@@ -126,7 +132,7 @@ contains
     !!  associated with the 'currentnode' at the coordinate '(xpos,ypos,zpos)'.
     !!  
     !!  @author Nathan A. Wukie
-    !!
+    !!  @date   3/20/2016
     !!
     !!
     !----------------------------------------------------------------------------------------------------
@@ -167,7 +173,7 @@ contains
     !> Compute directional derivative of legendre polynomial.
     !!
     !!  @author Nathan A. Wukie
-    !!
+    !!  @date   3/20/2016
     !!
     !!
     !!
@@ -205,7 +211,7 @@ contains
     !>  Compute the first derivative of the nterm Legendre polynomial at the location 'pos' between -1 and 1.
     !!
     !!  @author Nathan A. Wukie
-    !!
+    !!  @date   3/20/2016
     !!
     !--------------------------------------------------------------------------------------------------------
     recursive function DLegendreVal1D(nterm,pos) result(dpolyval)
@@ -236,11 +242,15 @@ contains
 
 
 
+
+
+
     !>  A set of 1D-Lagrange polynomials is associated with the coordinates
     !!  in 'nodes'. This function compute the derivative of the Lagrange polynomial
     !!  associated with the 'currentnode' at the location 'pos'.
     !!
     !!  @author Nathan A. Wukie
+    !!  @date   3/20/2016
     !!
     !-------------------------------------------------------------------------------------------------------
     function DLegendreVal2D(currentmode,xi,eta,dir) result(dpolyval)
@@ -263,14 +273,18 @@ contains
                 eta_val = LegendreVal1D(eta_mode,eta)
 
                 dpolyval = dxi_val*eta_val
-            case (ETA_DIR)
 
+            case (ETA_DIR)
                 xi_val   = LegendreVal1D(xi_mode,xi)
                 deta_val = DLegendreVal1D(eta_mode,eta)
 
                 dpolyval = xi_val*deta_val
+
+            case (ZETA_DIR)
+                dpolyval = ZERO     ! By definition of 2D polynomial, no derivative in ZETA dimension
+
             case default
-                print*, "valid derivative directions are - 'xi', 'eta'"
+                print*, "valid derivative directions are - 'XI_DIR', 'ETA_DIR', 'ZETA_DIR'"
                 stop
         end select
 
@@ -288,6 +302,7 @@ contains
     !!  1D derivatives, since the 3D modes are constructed from a tensor product of 1D modes
     !!
     !!  @author Nathan A. Wukie
+    !!  @date   3/20/2016
     !!
     !-------------------------------------------------------------------------------------------------------
     function DLegendreVal3D(currentmode,xi,eta,zeta,dir) result(dpolyval)
@@ -327,7 +342,7 @@ contains
 
                 dpolyval  = xi_val*eta_val*dzeta_val
             case default
-                print*, "valid derivative directions are - 'xi', 'eta', 'zeta'"
+                print*, "valid derivative directions are - 'XI_DIR', 'ETA_DIR', 'ZETA_DIR'"
                 stop
         end select
 

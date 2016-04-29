@@ -21,7 +21,7 @@ program HDF5toTEC
     use mod_tecio,              only: write_tecio_variables
     use type_file_properties,   only: file_properties_t
     use mod_file_utilities,     only: get_file_properties
-    use mod_io,                 only: nterms_s, eqnset
+    use mod_io,                 only: nterms_s, eqnset, spacedim
     
     !
     ! Variable declarations
@@ -68,7 +68,7 @@ program HDF5toTEC
     call get_command_argument(2, solutionfile)
 
 
-
+    print*, 'HDF5toTEC - 1'
 
 
     !
@@ -80,25 +80,32 @@ program HDF5toTEC
 
     nterms_s    = file_props%nterms_s(1)    ! Global variable from mod_io
     eqnset      = file_props%eqnset(1)      ! Global variable from mod_io
+    spacedim    = file_props%spacedim(1)    ! Global variable from mod_io
+
+    print*, 'HDF5toTEC - 2'
 
 
-
+    print*, nterms_s, spacedim
 
     !
     ! Read grid data from file
     !
-    call chidg%read_grid(gridfile)
+    call chidg%read_grid(gridfile,spacedim)
 
 
+    print*, 'HDF5toTEC - 3'
 
 
     !
     ! Initialize solution data storage
     !
 !    call chidg%init('chimera')
-    call chidg%data%init_sdata()
+!    call chidg%data%init_sdata()
+    call chidg%initialize_solution_domains(nterms_s)
+    call chidg%initialize_solution_solver()
 
 
+    print*, 'HDF5toTEC - 4'
 
 
     !
@@ -107,6 +114,7 @@ program HDF5toTEC
     call chidg%read_solution(solutionfile)
 
 
+    print*, 'HDF5toTEC - 5'
 
 
     !
@@ -115,6 +123,7 @@ program HDF5toTEC
     call write_tecio_variables(chidg%data,'0.plt',1)
 
 
+    print*, 'HDF5toTEC - 6'
     
 
     !

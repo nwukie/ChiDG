@@ -6,7 +6,7 @@ module eqn_euler
 
     use EULER_boundary_average_advective_flux,  only: EULER_boundary_average_advective_flux_t
     use EULER_volume_advective_flux,            only: EULER_volume_advective_flux_t
-!    use EULER_LaxFriedrichs_flux,               only: EULER_LaxFriedrichs_flux_t
+    use EULER_LaxFriedrichs_flux,               only: EULER_LaxFriedrichs_flux_t
     use EULER_Roe_flux,                         only: EULER_Roe_flux_t
     use EULER_properties,                       only: EULER_properties_t
     implicit none
@@ -58,6 +58,7 @@ contains
         type(EULER_volume_advective_flux_t)             :: volume_flux
         type(EULER_boundary_average_advective_flux_t)   :: average_flux
         type(EULER_Roe_flux_t)                          :: roe
+        type(EULER_LaxFriedrichs_flux_t)                :: LF
         type(EULER_properties_t)                        :: prop
 
         type(perfect_gas_t)                             :: perfect_gas
@@ -98,6 +99,7 @@ contains
         !
         call self%add_boundary_advective_flux(average_flux)
         call self%add_boundary_advective_flux(roe)
+        !call self%add_boundary_advective_flux(LF)
         call self%add_volume_advective_flux(volume_flux)
 
 

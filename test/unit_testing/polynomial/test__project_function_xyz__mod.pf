@@ -1,7 +1,7 @@
 module test__project_function_xyz__mod
     use pfunit_mod
     use mod_kinds,              only: rk,ik
-    use mod_constants,          only: ZERO, FIVE, THREE
+    use mod_constants,          only: ZERO, FIVE, THREE, IO_DESTINATION
     use type_chidg,             only: chidg_t
     use type_point,             only: point_t
     use type_function,          only: function_t
@@ -48,7 +48,9 @@ contains
         
         integer(ik), parameter  :: npt = 8
         type(point_t)           :: pts(2,2,2)
-        integer(ik)             :: nterms_c, nterms_s, idomain
+        integer(ik)             :: nterms_c, idomain, spacedim
+
+        IO_DESTINATION = 'file'
         
         !> (x = 0-5 :: y = 0-1 :: z = 0-1)
         !!          *-------*
@@ -76,10 +78,12 @@ contains
 
         
         ! Initialize domain
-        nterms_c = npt
+        nterms_c      = npt
         this%nterms_s = 27
+        spacedim      = 3
 
-        call this%chidg%data%add_domain('D_01',pts,nterms_c,'scalar',this%nterms_s)
+        call this%chidg%data%add_domain('D_01',pts,spacedim,nterms_c,'scalar')
+        call this%chidg%initialize_solution_domains(this%nterms_s)
 
         
     end subroutine setUp
@@ -127,6 +131,8 @@ contains
 
         tol = 1.e-12_rk
 
+
+
         call create_function(fcn,'x_squared')
         associate (elem => self%chidg%data%mesh(1)%elems(1))
             
@@ -154,7 +160,7 @@ contains
             !
             ! Compute projection of function onto polynonmial basis
             !
-            call project_function_xyz(fcn,self%nterms_s,elem%coords,fmodes)
+            call project_function_xyz(fcn,elem%spacedim,self%nterms_s,elem%coords,fmodes)
     
 
             !
@@ -246,7 +252,7 @@ contains
         !
         ! Compute projection of function onto polynonmial basis
         !
-        call project_function_xyz(fcn,self%nterms_s,elem%coords,fmodes)
+        call project_function_xyz(fcn,elem%spacedim,self%nterms_s,elem%coords,fmodes)
 
 
         !
@@ -337,7 +343,7 @@ contains
         !
         ! Compute projection of function onto polynonmial basis
         !
-        call project_function_xyz(fcn,self%nterms_s,elem%coords,fmodes)
+        call project_function_xyz(fcn,elem%spacedim,self%nterms_s,elem%coords,fmodes)
 
 
         !
@@ -438,7 +444,7 @@ contains
         !
         ! Compute projection of function onto polynonmial basis
         !
-        call project_function_xyz(fcn,self%nterms_s,elem%coords,fmodes)
+        call project_function_xyz(fcn,elem%spacedim,self%nterms_s,elem%coords,fmodes)
 
 
         !

@@ -64,7 +64,7 @@ contains
         
         integer(ik), parameter      :: npt = 64
         type(point_t), allocatable  :: pts(:,:,:)
-        integer(ik)                 :: neqns, nterms_s, nterms_c
+        integer(ik)                 :: neqns, nterms_s, nterms_c, spacedim
         real(rk), dimension(npt)    :: x,y,z
         class(function_t), allocatable  :: fcn
 
@@ -89,10 +89,12 @@ contains
         !
         ! Initialize domain
         !
+        spacedim = 3
         nterms_s = 8
         nterms_c = 8
-        call this%chidg%data%add_domain('D_01',pts,nterms_c,'linearadvection',nterms_s)
-        call this%chidg%data%init_sdata()
+        call this%chidg%data%add_domain('D_01',pts,spacedim,nterms_c,'linearadvection')
+        call this%chidg%initialize_solution_domains(nterms_s)
+        call this%chidg%initialize_solution_solver()
 
 
         call create_function(fcn,'constant')

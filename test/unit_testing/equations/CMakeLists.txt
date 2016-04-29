@@ -1,6 +1,7 @@
 add_subdirectory(Euler)
 add_subdirectory(LinearAdvection)
 add_subdirectory(DualLinearAdvection)
+add_subdirectory(Acoustics)
 
 add_test_sources(equations
                 test_equation_dummy.pf

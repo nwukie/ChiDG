@@ -1,7 +1,8 @@
 module test_chidgVector_operators_mod
     use pfunit_mod
     use mod_kinds,          only: rk, ik
-    use mod_constants,      only: ZERO, HALF, ONE, TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT
+    use mod_constants,      only: ZERO, HALF, ONE, TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT, &
+                                  IO_DESTINATION
     use type_chidg,         only: chidg_t
     use type_point,         only: point_t
     use mod_testutils,      only: meshgen
@@ -33,8 +34,9 @@ contains
         class(test_chidgVector),    intent(inout)   :: this
 
         type(point_t),  allocatable :: pts(:,:,:)
-        integer(ik)                 :: nterms_c, nterms_s
+        integer(ik)                 :: nterms_c, nterms_s, spacedim
 
+        IO_DESTINATION = 'file'
 
         !
         ! Initialize ChiDG environment
@@ -51,9 +53,11 @@ contains
         !
         ! Add domain to ChiDG
         !
+        spacedim = 3
         nterms_c = 8
         nterms_s = 8
-        call this%chidg%data%add_domain('D_01',pts,nterms_c,'Scalar',nterms_s)
+        call this%chidg%data%add_domain('D_01',pts,spacedim,nterms_c,'Scalar')
+        call this%chidg%initialize_solution_domains(nterms_s)
 
 
         !

@@ -1,9 +1,11 @@
 module mod_grid_tools
+#include <messenger.h>
     use mod_kinds,              only: rk,ik
     use mod_quadrature,         only: GQ
     use type_point,             only: point_t
     use type_densevector,       only: densevector_t
-    use mod_grid,               only: elem_map
+    !use mod_grid,               only: elem_map
+    use mod_grid,               only: get_element_mapping
     implicit none
 
 
@@ -56,18 +58,26 @@ contains
     !!  @param[in]      imap    Integer for selecting the appropriate element mapping from 'elem_map'
     !!  @param[inout]   cmodes  Modal values for the coordinate expansion
     !---------------------------------------------------------------------------------------------------------
-    subroutine compute_modal_coordinates(pts,imap,cmodes)
-        type(point_t),  dimension(:),   intent(in)    :: pts
-        integer(ik),                    intent(in)    :: imap
-        type(densevector_t),            intent(inout) :: cmodes
+    subroutine compute_modal_coordinates(spacedim,pts,imap,cmodes)
+        integer(ik),                    intent(in)      :: spacedim
+        type(point_t),  dimension(:),   intent(in)      :: pts
+        integer(ik),                    intent(in)      :: imap
+        type(densevector_t),            intent(inout)   :: cmodes
 
         real(rk), dimension(size(pts))  :: xmodes, ymodes, zmodes
+        real(rk),   allocatable         :: element_mapping(:,:)
 
-        if (size(elem_map(imap)%mat,1) /= size(pts)) stop "Error: compute_modal_coordinates -- mapping and point sizes do not match"
 
-        xmodes = matmul(elem_map(imap)%mat,pts(:)%c1_)
-        ymodes = matmul(elem_map(imap)%mat,pts(:)%c2_)
-        zmodes = matmul(elem_map(imap)%mat,pts(:)%c3_)
+
+        element_mapping = get_element_mapping(spacedim,imap)
+        if (size(element_mapping,1) /= size(pts) ) call chidg_signal(FATAL, "compute_modal_coordinate: mapping and point sizes do not match.")
+
+
+        xmodes = matmul(element_mapping,pts(:)%c1_)
+        ymodes = matmul(element_mapping,pts(:)%c2_)
+        zmodes = matmul(element_mapping,pts(:)%c3_)
+
+
 
         call cmodes%setvar(1,xmodes)
         call cmodes%setvar(2,ymodes)

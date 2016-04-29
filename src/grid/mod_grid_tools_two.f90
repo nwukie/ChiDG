@@ -1,6 +1,7 @@
 module mod_grid_tools_two
+#include <messenger.h>
     use mod_kinds,          only: rk,ik
-    use mod_constants,      only: ONE, TWO, X_DIR, Y_DIR, Z_DIR, XI_DIR, ETA_DIR, ZETA_DIR
+    use mod_constants,      only: ZERO, ONE, TWO, X_DIR, Y_DIR, Z_DIR, XI_DIR, ETA_DIR, ZETA_DIR, TWO_DIM, THREE_DIM
     use mod_inv
 
     use type_mesh,          only: mesh_t
@@ -36,7 +37,7 @@ contains
                        xmin, xmax, ymin, ymax, zmin, zmax,      &
                        dx, dy, dz, xn, yn, zn, xi, eta, zeta
 
-        integer(ik) :: ncandidates, idom, ielem, inewton, icandidate
+        integer(ik) :: ncandidates, idom, ielem, inewton, icandidate, spacedim
 
         type(ivector_t)         :: candidate_domains
         type(ivector_t)         :: candidate_elements
@@ -93,8 +94,8 @@ contains
                 xmax = xmax + 0.1*dx
                 ymin = ymin - 0.1*dy
                 ymax = ymax + 0.1*dy
-                zmin = zmin - 0.1*dz
-                zmax = zmax + 0.1*dz
+                zmin = (zmin-0.001) - 0.1*dz    ! This is to help 2D
+                zmax = (zmax+0.001) + 0.1*dz    ! This is to help 2D
 
                 !
                 ! Test if gq_node is contained within the bounding coordinates
@@ -133,6 +134,7 @@ contains
 
             idom  = candidate_domains%at(icandidate)
             ielem = candidate_elements%at(icandidate)
+            spacedim = mesh(idom)%spacedim
 
             !
             ! Newton iteration to find the donor local coordinates
@@ -145,9 +147,6 @@ contains
                 !
                 ! Compute local cartesian coordinates as a function of xi,eta,zeta
                 !
-!                xn = mesh_point(mesh(idom)%elems(ielem),X_DIR,xi,eta,zeta)
-!                yn = mesh_point(mesh(idom)%elems(ielem),Y_DIR,xi,eta,zeta)
-!                zn = mesh_point(mesh(idom)%elems(ielem),Z_DIR,xi,eta,zeta)
                 xn = mesh(idom)%elems(ielem)%x(xi,eta,zeta)
                 yn = mesh(idom)%elems(ielem)%y(xi,eta,zeta)
                 zn = mesh(idom)%elems(ielem)%z(xi,eta,zeta)
@@ -165,26 +164,15 @@ contains
                 !
                 ! Assemble coordinate jacobian matrix
                 !
-!                mat(1,1) = metric_point(mesh(idom)%elems(ielem),X_DIR,XI_DIR,  xi,eta,zeta)
-!                mat(2,1) = metric_point(mesh(idom)%elems(ielem),Y_DIR,XI_DIR,  xi,eta,zeta)
-!                mat(3,1) = metric_point(mesh(idom)%elems(ielem),Z_DIR,XI_DIR,  xi,eta,zeta)
-!                mat(1,2) = metric_point(mesh(idom)%elems(ielem),X_DIR,ETA_DIR, xi,eta,zeta)
-!                mat(2,2) = metric_point(mesh(idom)%elems(ielem),Y_DIR,ETA_DIR, xi,eta,zeta)
-!                mat(3,2) = metric_point(mesh(idom)%elems(ielem),Z_DIR,ETA_DIR, xi,eta,zeta)
-!                mat(1,3) = metric_point(mesh(idom)%elems(ielem),X_DIR,ZETA_DIR,xi,eta,zeta)
-!                mat(2,3) = metric_point(mesh(idom)%elems(ielem),Y_DIR,ZETA_DIR,xi,eta,zeta)
-!                mat(3,3) = metric_point(mesh(idom)%elems(ielem),Z_DIR,ZETA_DIR,xi,eta,zeta)
-
-                mat(1,1) = mesh(idom)%elems(ielem)%compute_metric(X_DIR,XI_DIR,  xi,eta,zeta)
-                mat(2,1) = mesh(idom)%elems(ielem)%compute_metric(Y_DIR,XI_DIR,  xi,eta,zeta)
-                mat(3,1) = mesh(idom)%elems(ielem)%compute_metric(Z_DIR,XI_DIR,  xi,eta,zeta)
-                mat(1,2) = mesh(idom)%elems(ielem)%compute_metric(X_DIR,ETA_DIR, xi,eta,zeta)
-                mat(2,2) = mesh(idom)%elems(ielem)%compute_metric(Y_DIR,ETA_DIR, xi,eta,zeta)
-                mat(3,2) = mesh(idom)%elems(ielem)%compute_metric(Z_DIR,ETA_DIR, xi,eta,zeta)
-                mat(1,3) = mesh(idom)%elems(ielem)%compute_metric(X_DIR,ZETA_DIR,xi,eta,zeta)
-                mat(2,3) = mesh(idom)%elems(ielem)%compute_metric(Y_DIR,ZETA_DIR,xi,eta,zeta)
-                mat(3,3) = mesh(idom)%elems(ielem)%compute_metric(Z_DIR,ZETA_DIR,xi,eta,zeta)
-
+                mat(1,1) = mesh(idom)%elems(ielem)%metric_point(X_DIR,XI_DIR,  xi,eta,zeta)
+                mat(2,1) = mesh(idom)%elems(ielem)%metric_point(Y_DIR,XI_DIR,  xi,eta,zeta)
+                mat(3,1) = mesh(idom)%elems(ielem)%metric_point(Z_DIR,XI_DIR,  xi,eta,zeta)
+                mat(1,2) = mesh(idom)%elems(ielem)%metric_point(X_DIR,ETA_DIR, xi,eta,zeta)
+                mat(2,2) = mesh(idom)%elems(ielem)%metric_point(Y_DIR,ETA_DIR, xi,eta,zeta)
+                mat(3,2) = mesh(idom)%elems(ielem)%metric_point(Z_DIR,ETA_DIR, xi,eta,zeta)
+                mat(1,3) = mesh(idom)%elems(ielem)%metric_point(X_DIR,ZETA_DIR,xi,eta,zeta)
+                mat(2,3) = mesh(idom)%elems(ielem)%metric_point(Y_DIR,ZETA_DIR,xi,eta,zeta)
+                mat(3,3) = mesh(idom)%elems(ielem)%metric_point(Z_DIR,ZETA_DIR,xi,eta,zeta)
 
 
                 !
@@ -244,6 +232,15 @@ contains
             end if
 
         end do ! icandidate
+
+
+
+
+        !
+        ! Sanity check on donors and set donor_element location
+        !
+        if ( .not. donor_found ) call chidg_signal(FATAL,"compute_element_donor: No donor found for gq_node")
+
 
 
 

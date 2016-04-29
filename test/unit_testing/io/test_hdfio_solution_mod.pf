@@ -2,7 +2,7 @@ module test_hdfio_solution_mod
     use pfunit_mod
     use type_chidg,         only: chidg_t
     use mod_kinds,          only: rk,ik
-    use mod_constants,      only: ONE, TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT, ZERO
+    use mod_constants,      only: ONE, TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT, ZERO, IO_DESTINATION
     use mod_hdfio,          only: read_grid_hdf, read_variable_hdf, write_variable_hdf
     use type_chidg,         only: chidg_t
     use type_meshdata,      only: meshdata_t
@@ -44,8 +44,10 @@ contains
     subroutine setUp(this)
         class(test_hdfio_solution),    intent(inout)   :: this
 
-        integer(ik)                     :: nterms_s, nterms_c
+        integer(ik)                     :: nterms_s, nterms_c, spacedim
         type(meshdata_t), allocatable   :: meshdata(:)
+
+        IO_DESTINATION = 'file'
 
         !
         ! Initialize ChiDG environment
@@ -62,13 +64,17 @@ contains
         !
         ! Initialize chidg domain
         !
+        spacedim = 3
         nterms_s = 1
-        call this%chidgO1%data%add_domain(meshdata(1)%name,meshdata(1)%points,meshdata(1)%nterms_c,'scalar',nterms_s)
-        call this%chidgO1%data%init_sdata()
+        call this%chidgO1%data%add_domain(meshdata(1)%name,meshdata(1)%points,spacedim,meshdata(1)%nterms_c,'scalar')
+        call this%chidgO1%initialize_solution_domains(nterms_s)
+        call this%chidgO1%initialize_solution_solver()
 
+        spacedim = 3
         nterms_s = 8
-        call this%chidgO2%data%add_domain(meshdata(1)%name,meshdata(1)%points,meshdata(1)%nterms_c,'scalar',nterms_s)
-        call this%chidgO2%data%init_sdata()
+        call this%chidgO2%data%add_domain(meshdata(1)%name,meshdata(1)%points,spacedim,meshdata(1)%nterms_c,'scalar')
+        call this%chidgO2%initialize_solution_domains(nterms_s)
+        call this%chidgO2%initialize_solution_solver()
 
 
         !

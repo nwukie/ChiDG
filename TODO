@@ -109,7 +109,9 @@ Nonlinear Solver
 @date   1/28/2016
 
 
-
+@detail Check for zero residual on first iteration. Else could get NaN's.
+@author Nathan A. Wukie
+@date   4/14/2016
 
 
 
@@ -132,9 +134,29 @@ Equation set - PDE
 
 
 
+Framework
+!-------------------------------------------------------------------------
+@detail Abstract Basis and Test functions from each other
+@author Nathan A. Wukie
+@date   3/20/2016
+
+
+
+
+
+IO
+!-------------------------------------------------------------------------
+@detail When reading solution, check that file contains solution
+@author Nathan A. Wukie
+@date   4/22/2016
 
 
 
 
 
 
+Polynomials
+!--------------------------------------------------------------------------
+@detail Put check on if the order of the polynomial requested has been implemented.
+@author Nathan A. Wukie
+@date   4/27/2016

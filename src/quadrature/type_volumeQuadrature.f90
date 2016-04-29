@@ -1,12 +1,13 @@
 module type_volumeQuadrature
 #include <messenger.h>
-    use mod_kinds,          only: rk,ik
-    use mod_constants,      only: NFACES,XI_MIN,XI_MAX,ETA_MIN,ETA_MAX,ZETA_MIN,ZETA_MAX, &
-                                  XI_DIR,ETA_DIR,ZETA_DIR,SPACEDIM
+    use mod_kinds,              only: rk,ik
+    use mod_constants,          only: NFACES,XI_MIN,XI_MAX,ETA_MIN,ETA_MAX,ZETA_MIN,ZETA_MAX, &
+                                      XI_DIR,ETA_DIR,ZETA_DIR,ZERO, TWO_DIM, THREE_DIM, ONE
 
-    use mod_GaussLegendre,  only: gl_nodes, gl_weights
-    use mod_polynomial,     only: polynomialVal, dpolynomialVal
-    use type_point,         only: point_t
+    use mod_GaussLegendre,      only: gl_nodes, gl_weights
+    use mod_polynomial,         only: polynomialVal, dpolynomialVal
+    use mod_quadrature_tools,   only: compute_nnodes1d_volume
+    use type_point,             only: point_t
 
     implicit none
     private
@@ -59,12 +60,19 @@ contains
     !!  @param[in]  nnodes  Number of nodes used for Gauss-quadrature
     !!  @param[in]  nterms  Number of terms in the associated polynomial expansion
     !!
+    !!
+    !!  TODO: TEST SPACEDIM
+    !!
     !-----------------------------------------------------------------------------------------------------------
-    subroutine init(self,nnodes,nterms)
+    subroutine init(self,spacedim,nnodes,nterms)
         class(volumeQuadrature_t),  intent(inout)   :: self
+        integer(ik),                intent(in)      :: spacedim
         integer(ik),                intent(in)      :: nnodes
         integer(ik),                intent(in)      :: nterms
+
+
         integer(ik)                                 :: ixi,ieta,izeta,inode,iterm,nnodes1d,ierr
+        integer(ik)                                 :: nnodes_xi, nnodes_eta, nnodes_zeta
         real(rk)                                    :: xi,eta,zeta
         real(rk), dimension(:), allocatable         :: xi_vals,eta_vals,zeta_vals
         real(rk), dimension(:), allocatable         :: xi_weights,eta_weights,zeta_weights
@@ -93,11 +101,7 @@ contains
         ! Initialize quadrature node coordinates for face sets
         !
         ! find number nodes in 1D polynomial
-        nnodes1d = 0
-        do while (nnodes1d*nnodes1d*nnodes1d /= nnodes)
-            nnodes1d = nnodes1d + 1
-        end do
-        if (nnodes1d*nnodes1d*nnodes1d > nnodes) stop "Error in volume quadrature node count"
+        nnodes1d = compute_nnodes1d_volume(spacedim,nnodes)
 
         allocate(xi_vals(nnodes1d),eta_vals(nnodes1d),zeta_vals(nnodes1d))
         allocate(xi_weights(nnodes1d),eta_weights(nnodes1d),zeta_weights(nnodes1d))
@@ -110,11 +114,28 @@ contains
         call gl_weights(nnodes1d,zeta_weights)
 
 
+
+        !
+        ! Specialize for 2D, 3D
+        !
+        if ( spacedim == THREE_DIM ) then
+            nnodes_zeta = nnodes1d
+        else if ( spacedim == TWO_DIM ) then
+            nnodes_zeta  = 1
+            zeta_weights = ONE
+            zeta_vals    = ZERO
+        end if
+
+
+
+
+
+
         !
         ! Volume node coordinates and weights
         !
         inode = 1
-        do izeta = 1,nnodes1d
+        do izeta = 1,nnodes_zeta        ! specialized for 2D/3D
             do ieta = 1,nnodes1d
                 do ixi = 1,nnodes1d
                     xi   = xi_vals(  ixi)
@@ -130,6 +151,10 @@ contains
         end do
 
 
+
+
+
+
         !
         ! Initialize values and partial derivatives of each modal
         ! polynomial at each volume quadrature node
@@ -137,12 +162,13 @@ contains
         do iterm = 1,nterms
             do inode = 1,nnodes
                     node = self%nodes(inode)
-                    self%val(   inode,iterm) =  polynomialVal(SPACEDIM,nterms,iterm,node)
-                    self%ddxi(  inode,iterm) = dpolynomialVal(SPACEDIM,nterms,iterm,node,XI_DIR)
-                    self%ddeta( inode,iterm) = dpolynomialVal(SPACEDIM,nterms,iterm,node,ETA_DIR)
-                    self%ddzeta(inode,iterm) = dpolynomialVal(SPACEDIM,nterms,iterm,node,ZETA_DIR)
+                    self%val(   inode,iterm) =  polynomialVal(spacedim,nterms,iterm,node)
+                    self%ddxi(  inode,iterm) = dpolynomialVal(spacedim,nterms,iterm,node,XI_DIR)
+                    self%ddeta( inode,iterm) = dpolynomialVal(spacedim,nterms,iterm,node,ETA_DIR)
+                    self%ddzeta(inode,iterm) = dpolynomialVal(spacedim,nterms,iterm,node,ZETA_DIR)
             end do
         end do
+
 
 
 

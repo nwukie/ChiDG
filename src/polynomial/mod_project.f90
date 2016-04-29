@@ -18,14 +18,16 @@ contains
     !!
     !!  @author Nathan A. Wukie
     !!
-    !!  @param[in]  fcn     Incoming function to evaluate. Arguments should be in cartesian coordinates(x, y, z).
-    !!  @param[in]  nterms  Number of terms in the basis being projected to
-    !!  @param[in]  cmodes  Modal coefficients of coordinate expansion to evaluate cartesian coordinates
-    !!  @param[out] fmodes  Modal coefficients of the projected function
+    !!  @param[in]  fcn         Incoming function to evaluate. Arguments should be in cartesian coordinates(x, y, z).
+    !!  @param[in]  spacedim    Number of spatial dimensions in the expansions
+    !!  @param[in]  nterms      Number of terms in the basis being projected to
+    !!  @param[in]  cmodes      Modal coefficients of coordinate expansion to evaluate cartesian coordinates
+    !!  @param[out] fmodes      Modal coefficients of the projected function
     !!
     !-----------------------------------------------------------------------------------------------------------------
-    subroutine project_function_xyz(fcn,nterms,cmodes,fmodes)
+    subroutine project_function_xyz(fcn,spacedim,nterms,cmodes,fmodes)
         class(function_t),      intent(inout)   :: fcn
+        integer(ik),            intent(in)      :: spacedim
         integer(ik),            intent(in)      :: nterms
         type(densevector_t),    intent(in)      :: cmodes           ! Expansion contains x-modes, y-modes, and z-modes
         real(rk),               intent(inout)   :: fmodes(:)
@@ -41,15 +43,15 @@ contains
         !
         ! Compute number of face and volume quadrature nodes
         !
-        call compute_nnodes_gq(nterms,cmodes%nterms(),nn_face,nn_vol)
+        call compute_nnodes_gq(spacedim,nterms,cmodes%nterms(),nn_face,nn_vol)
 
 
         !
         ! Find the correct quadrature instance for projecting the function values
         ! and for evaluating the coordinates at discrete points.
         !
-        call get_quadrature(nterms,nn_vol,nn_face,gq_p)
-        call get_quadrature(cmodes%nterms(),nn_vol,nn_face,gq_c)
+        call get_quadrature(spacedim,nterms,nn_vol,nn_face,gq_p)
+        call get_quadrature(spacedim,cmodes%nterms(),nn_vol,nn_face,gq_c)
 
 
         !

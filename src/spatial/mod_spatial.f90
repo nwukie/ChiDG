@@ -10,6 +10,8 @@ module mod_spatial
     use type_function_info, only: function_info_t
 
     use mod_DNAD_tools
+    use mod_condition,      only: cond
+    use mod_eigenvalues,    only: eigenvalues
 
     implicit none
 
@@ -46,9 +48,12 @@ contains
         type(function_info_t)       :: function_info
 
 
-        integer(ik) :: irow, ientry
+        integer(ik) :: irow, ientry, dim_a, dim_b
         real(rk)    :: res
 
+        real(rk),   allocatable :: full_matrix(:,:)
+        real(rk),   allocatable :: wr(:), wi(:)
+        integer(ik)             :: row_start, row_end, col_start, col_end, eparent, ierr, ndof_elem, ndof, neqn, fileunit
 
         !
         ! Start timer on spatial discretization update
@@ -81,6 +86,8 @@ contains
             !
             ! XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX, DIAG
             !
+            call write_line('Interior Scheme')
+
             do iblk = 1,7           ! 1-6 = linearization of neighbor blocks, 7 = linearization of Q- block(self)
 
 
@@ -234,6 +241,8 @@ contains
 
 
 
+
+
             !------------------------------------------------------------------------------------------
             !                                      Boundary Scheme
             !------------------------------------------------------------------------------------------
@@ -260,14 +269,87 @@ contains
 !
 !
 !                do ielem = 1,nelem
+!
 !                    print*, idom, ielem
 !
-!                    do iblk = 1,size(sdata%lhs%dom(idom)%bc_blks,2)
+!                    !do iblk = 1,size(sdata%lhs%dom(idom)%bc_blks,2)
+!                    iblk = DIAG
 !
-!                        if ( allocated(sdata%lhs%dom(idom)%bc_blks(ielem,iblk)%mat) ) then
+!                        if ( allocated(sdata%lhs%dom(idom)%lblks(ielem,iblk)%mat) ) then
 !
-!                            print*,  maxval(sdata%lhs%dom(idom)%bc_blks(ielem,iblk)%mat)
+!                            !print*,  maxval(sdata%lhs%dom(idom)%lblks(ielem,iblk)%mat)
 !
+!                            !print*,  cond(sdata%lhs%dom(idom)%lblks(ielem,iblk)%mat)
+!
+!                        end if
+!
+!
+!                    !end do ! iblk
+!
+!                end do ! ielem
+!            
+!                end associate
+!            end do ! idom
+!
+!
+
+
+
+
+
+
+
+!            !
+!            ! Build matrix
+!            !
+!            do idom = 1,data%ndomains()
+!
+!                associate ( mesh => data%mesh(idom), sdata => data%sdata, eqnset => data%eqnset(idom)%item, prop => data%eqnset(idom)%item%prop)
+!
+!                nelem = mesh%nelem
+!
+!
+!                neqn      = 10
+!                ndof_elem = mesh%nterms_s*neqn
+!                ndof      = ndof_elem * nelem
+!
+!                !
+!                ! Allocate full matrix
+!                !
+!                allocate(full_matrix(ndof,ndof), wr(ndof), wi(ndof), stat=ierr)
+!                if (ierr /= 0) call AllocationError
+!
+!
+!
+!
+!
+!                do ielem = 1,nelem
+!
+!                    !
+!                    ! Compute row offset
+!                    !
+!                    row_start = 1 + (ielem-1)*ndof_elem
+!                    row_end   = row_start + (ndof_elem-1)
+!
+!
+!                    do iblk = 1,size(sdata%lhs%dom(idom)%lblks,2)
+!
+!                        if ( allocated(sdata%lhs%dom(idom)%lblks(ielem,iblk)%mat) ) then
+!                            
+!                            !
+!                            ! Get associated element index
+!                            !
+!                            eparent = sdata%lhs%dom(idom)%lblks(ielem,iblk)%eparent()
+!
+!                            !
+!                            ! Compute column start
+!                            !
+!                            col_start = 1 + (eparent-1)*ndof_elem
+!                            col_end   = col_start + (ndof_elem-1)
+!
+!
+!                            full_matrix(row_start:row_end,col_start:col_end) = sdata%lhs%dom(idom)%lblks(ielem,iblk)%mat
+!                            
 !                        end if
 !
 !
@@ -277,8 +359,22 @@ contains
 !            
 !                end associate
 !            end do ! idom
-
-
+!
+!
+!            !
+!            ! Estimate eigenvalues of the matrix
+!            !
+!            call eigenvalues(full_matrix,wr,wi)
+!
+!
+!            open(newunit=fileunit, file='eigenvalues.dat')
+!
+!            do i = 1,size(wr)
+!                write(fileunit,*) wr(i), wi(i)
+!            end do
+!
+!            close(fileunit)
+!
 
 
 

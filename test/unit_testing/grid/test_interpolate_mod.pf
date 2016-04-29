@@ -49,7 +49,7 @@ contains
     !---------------------------------------------------------------------------------------------
     subroutine setUp(this)
         class(test_interpolate),    intent(inout)   :: this
-        integer(ik)                                 :: nterms_c, nterms_s, ivar
+        integer(ik)                                 :: nterms_c, nterms_s, ivar, spacedim
 
         type(point_t),  allocatable                 :: pts(:,:,:)
         
@@ -74,15 +74,18 @@ contains
         !
         ! Add domain to ChiDG
         !
+        spacedim = 3
         nterms_c = 8
         nterms_s = 8
-        call this%chidg%data%add_domain('D_01',pts,nterms_c,'Scalar',nterms_s)
+        call this%chidg%data%add_domain('D_01',pts,spacedim,nterms_c,'Scalar')
 
 
         !
         ! Initialize chidg solution data storage
         !
-        call this%chidg%data%init_sdata()
+        call this%chidg%initialize_solution_domains(nterms_s)
+        call this%chidg%initialize_solution_solver()
+        !call this%chidg%data%init_sdata()
 
 
         !

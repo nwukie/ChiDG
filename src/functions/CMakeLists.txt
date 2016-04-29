@@ -1,6 +1,8 @@
 add_subdirectory(elementary)
 add_subdirectory(gaussian)
 add_subdirectory(trigonometric)
+add_subdirectory(polynomial)
+add_subdirectory(acoustics)
 
 add_lib_sources(
                 type_function.f90

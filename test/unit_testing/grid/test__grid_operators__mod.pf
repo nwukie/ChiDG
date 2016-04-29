@@ -62,8 +62,6 @@ contains
         idomain  = 1 
         nterms_c = 8
         nterms_s = 27
-!        call this%dom%init_geom(idomain,nterms_c,pts_m)
-!        call this%dom%init_sol('scalar',nterms_s)
 
         call this%chidg%data%add_domain('D_01',pts_m,nterms_c,'scalar',nterms_s)
         call this%chidg%data%init_sdata()

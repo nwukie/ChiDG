@@ -2,14 +2,15 @@
 !!  which is read by the FlexDG code
 !!
 !!  @author Nathan A. Wukie
-!!  @date   2/3/2016
+!!  @date   4/11/2016
 !!
 !!
 !!
 !!
 !--------------------------------------------------------------------------------------------
 module mod_chidg_convert_p3d_hdf5
-    use mod_kinds,   only: rk,ik
+#include <messenger.h>
+    use mod_kinds,   only: rk,ik, rdouble
     use hdf5
     use h5lt
     implicit none
@@ -49,9 +50,10 @@ contains
 
         ! plot3d vars
         integer(ik)                 :: i,j,k,imax,jmax,kmax,ext_loc
-        integer(ik)                 :: ierr,igrid,nelem,nblks,mapping
+        integer(ik)                 :: ierr,igrid,nelem,nblks,mapping, spacedim
         integer(ik), allocatable    :: blkdims(:,:)
-        real(rk),    allocatable    :: xcoords(:,:,:), ycoords(:,:,:), zcoords(:,:,:)
+        !real(rk),    allocatable    :: xcoords(:,:,:), ycoords(:,:,:), zcoords(:,:,:)
+        real(rdouble),    allocatable    :: xcoords(:,:,:), ycoords(:,:,:), zcoords(:,:,:)
 
         ! equation set string
         character(len=100)          :: eqnset_string
@@ -119,7 +121,7 @@ contains
         ! Make space for storing dimensions of each block domain
         !
         allocate(blkdims(3,nblks),stat=ierr)
-        if (ierr /= 0) stop "Error: allocate blkdims"
+        if (ierr /= 0) call AllocationError
 
         !
         ! read index dimensions for each block
@@ -132,9 +134,20 @@ contains
         ! Loop through grid domain and for each domain, create an HDF5 group (D_$BLOCKNAME)
         !
         do igrid = 1,nblks
+
+            ! Read spacedim from user
+            spacedim = 0
+            do while ( (spacedim < 2) .or. (spacedim > 3) )
+                print*, "Enter number of spatial dimensions for block: ", igrid
+                print*, "Key -- ( 2 = 2D, 3 = 3D )"
+                read*, spacedim
+            end do
+
+
             ! Read mapping from user
             print*, "Enter mapping for block: ", igrid
-            print*,  "Key -- (1 = linear, 2 = quadratic, 3 = cubic, 4 = quartic)"
+            !print*,  "Key -- (1 = linear, 2 = quadratic, 3 = cubic, 4 = quartic)"
+            print*,  "Key -- (1 = linear, 2 = quadratic, 3 = cubic, 4 = quartic, 5= quintic, 6 = sextic, 7 = septic )"
             read*, mapping
 
 
@@ -169,8 +182,9 @@ contains
             !
             ! Write domain attributes
             !
-            call h5ltset_attribute_int_f(file_id, trim(blockgroup), 'idomain', [igrid],   adim, ierr)
-            call h5ltset_attribute_int_f(file_id, trim(blockgroup), 'mapping', [mapping], adim, ierr)
+            call h5ltset_attribute_int_f(file_id, trim(blockgroup), 'idomain',  [igrid],    adim, ierr)
+            call h5ltset_attribute_int_f(file_id, trim(blockgroup), 'mapping',  [mapping],  adim, ierr)
+            call h5ltset_attribute_int_f(file_id, trim(blockgroup), 'spacedim', [spacedim], adim, ierr)
 
             !
             ! Create a grid-group within the current block domain

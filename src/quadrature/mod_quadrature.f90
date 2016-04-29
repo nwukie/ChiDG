@@ -29,21 +29,38 @@ contains
     !!  @param[out] nnodes_vol  Number of quadrature nodes defined for a volume
     !!
     !-------------------------------------------------------------------------------------------------------
-    subroutine compute_nnodes_gq(nterms_s,nterms_c,nnodes_face,nnodes_vol)
+    !subroutine compute_nnodes_gq(nterms_s,nterms_c,nnodes_face,nnodes_vol)
+    subroutine compute_nnodes_gq(spacedim,nterms_s,nterms_c,nnodes_face,nnodes_vol)
         use mod_io,                     only: gq_rule
 
-        integer(ik), intent(in)        :: nterms_s, nterms_c
-        integer(ik), intent(out)       :: nnodes_face, nnodes_vol
-        integer(ik)                    :: nterms1d,nnodes1d,nnodes2d,nnodes3d
+        integer(ik), intent(in)         :: spacedim
+        integer(ik), intent(in)         :: nterms_s, nterms_c
+        integer(ik), intent(out)        :: nnodes_face, nnodes_vol
+        integer(ik)                     :: nterms1d,nnodes1d,nnodes2d,nnodes3d
 
         !
         ! Find number of terms in the 1d expansion
         !
         nterms1d = 0
-        do while (nterms1d*nterms1d*nterms1d /= nterms_s)
-            nterms1d = nterms1d + 1
-        end do
-        if (nterms1d*nterms1d*nterms1d > nterms_s) call chidg_signal(FATAL, "Incorrect number of terms counted when computing quadrature nodes")
+
+        if ( spacedim == 3 ) then
+
+            do while (nterms1d*nterms1d*nterms1d /= nterms_s)
+                nterms1d = nterms1d + 1
+            end do
+            if (nterms1d*nterms1d*nterms1d > nterms_s) call chidg_signal(FATAL, "Incorrect number of terms counted when computing quadrature nodes")
+
+        else if ( spacedim == 2 ) then
+
+            do while (nterms1d*nterms1d /= nterms_s)
+                nterms1d = nterms1d + 1
+            end do
+            if (nterms1d*nterms1d > nterms_s) call chidg_signal(FATAL, "Incorrect number of terms counted when computing quadrature nodes")
+
+        else
+            call chidg_signal(FATAL,"mod_quadrature: Invalid SPACEDIM")
+
+        end if
 
 
         !
@@ -75,13 +92,20 @@ contains
         nnodes2d = nnodes1d*nnodes1d
         nnodes3d = nnodes1d*nnodes1d*nnodes1d
 
-        nnodes_face = nnodes2d
-        nnodes_vol  = nnodes3d
+        
+        if ( SPACEDIM == 3 ) then
+            nnodes_face = nnodes2d
+            nnodes_vol  = nnodes3d
+        else if ( SPACEDIM == 2 ) then
+            nnodes_face = nnodes1d
+            nnodes_vol  = nnodes2d
+        else
+            call chidg_signal(FATAL,"mod_quadrature: Invalid SPACEDIM")
+        end if
+
 
     end subroutine compute_nnodes_gq
     !*********************************************************************************************************
-
-
 
 
 
@@ -102,12 +126,17 @@ contains
     !!                          the global quadrature instance array, GQ
     !!
     !---------------------------------------------------------------------------------------------------------
-    subroutine get_quadrature(nterms,nn_v,nn_f,gqout)
-        integer(ik),    intent(in)       :: nterms, nn_v, nn_f
-        integer(ik),    intent(inout)    :: gqout
+    subroutine get_quadrature(spacedim,nterms,nn_v,nn_f,gqout)
+        integer(ik),    intent(in)      :: spacedim
+        integer(ik),    intent(in)      :: nterms
+        integer(ik),    intent(in)      :: nn_v
+        integer(ik),    intent(in)      :: nn_f
+        integer(ik),    intent(inout)   :: gqout
 
         integer(ik) :: igq
         logical     :: has_correct_nodes_terms
+        logical     :: is_correct_spacedim
+
 
 
         !
@@ -122,8 +151,9 @@ contains
                 ! If we are here, check if the current GQ(igq) has the right terms and nodes.
                 !
                 has_correct_nodes_terms = (GQ(igq)%nterms == nterms) .and. (GQ(igq)%nnodes_v == nn_v)
+                is_correct_spacedim     = ( GQ(igq)%spacedim == spacedim )
 
-                if (has_correct_nodes_terms) then
+                if (has_correct_nodes_terms .and. is_correct_spacedim) then
                     gqout = igq
                     exit
                 end if
@@ -133,7 +163,7 @@ contains
                 ! If we are here, then no initialized GQ instance was found that met the requirements,
                 ! so, we initialize a new one.
                 !
-                call GQ(igq)%init(nn_f,nn_v,nterms)
+                call GQ(igq)%init(spacedim,nn_f,nn_v,nterms)
                 gqout = igq
                 exit
 

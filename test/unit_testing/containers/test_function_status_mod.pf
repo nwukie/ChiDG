@@ -3,7 +3,7 @@ module test_function_status_mod
     use mod_kinds,                      only: ik, rk
     use mod_constants,                  only: XI_MIN, XI_MAX, ETA_MIN, &
                                               ETA_MAX, ZETA_MIN, ZETA_MAX, &
-                                              NFUNCTION_TYPES, NFACES, NBLK
+                                              NFUNCTION_TYPES, NFACES, NBLK, IO_DESTINATION
     use type_chidg,                     only: chidg_t
     use type_point,                     only: point_t
     use type_equationset_function_data, only: equationset_function_data_t
@@ -53,8 +53,10 @@ contains
         class(test_function_status),    intent(inout)   :: this
 
         type(point_t),  allocatable                     :: pts(:,:,:)
-        integer(ik)                                     :: nterms_c, nterms_s
+        integer(ik)                                     :: nterms_c, nterms_s, spacedim
         class(bc_t),    allocatable                     :: bc
+
+        IO_DESTINATION = 'file'
 
         !
         ! Initialize ChiDG environment
@@ -71,9 +73,11 @@ contains
         !
         ! Add domain to ChiDG
         !
+        spacedim = 3
         nterms_c = 8
         nterms_s = 8
-        call this%chidg%data%add_domain('D_01',pts,nterms_c,'duallinearadvection',nterms_s)
+        call this%chidg%data%add_domain('D_01',pts,spacedim,nterms_c,'duallinearadvection')
+        call this%chidg%initialize_solution_domains(nterms_s)
 
 
         !

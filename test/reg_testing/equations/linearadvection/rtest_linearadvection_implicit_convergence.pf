@@ -49,6 +49,7 @@ subroutine rtest_linearadvection_implicit_convergence()
     !
     !============================================================================
     basis          = 'legendre'
+    spacedim       = 3
     nterms_s       = 27
     gq_rule        = 2
     eqnset         = 'linearadvection'
@@ -100,13 +101,15 @@ subroutine rtest_linearadvection_implicit_convergence()
     ! Generate points for mesh
     !
     call meshgen('333',pts)
+    spacedim = 3
     nterms_c = 8
 
 
     !
     ! Add domain to ChiDG
     !
-    call chidg%data%add_domain('D_01',pts,nterms_c,eqnset,nterms_s)
+    call chidg%data%add_domain('D_01',pts,spacedim,nterms_c,eqnset)
+    call chidg%initialize_solution_domains(nterms_s)
 
 
 
@@ -125,7 +128,7 @@ subroutine rtest_linearadvection_implicit_convergence()
     !
     ! Initialize solution storage
     !
-    call chidg%data%init_sdata()
+    call chidg%initialize_solution_solver()
 
 
 

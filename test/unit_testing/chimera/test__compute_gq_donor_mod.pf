@@ -71,9 +71,10 @@ contains
 
         type(meshdata_t)                :: meshdata
         character(len=100)              :: filename = 'D2_E8_M1.h5'
-        integer(ik)                     :: nterms_s, nterms_c
+        integer(ik)                     :: nterms_s, nterms_c, spacedim
 
 
+        spacedim        = 3
         nterms_c        = 8
         nterms_s        = 8
         IO_DESTINATION  = 'file'
@@ -96,7 +97,8 @@ contains
         !
         ! Add domain to ChiDG
         !
-        call this%chidg%data%add_domain('D_01',meshdata%points,nterms_c,'linearadvection',nterms_s)
+        call this%chidg%data%add_domain('D_01',meshdata%points,spacedim,nterms_c,'linearadvection')
+        call this%chidg%initialize_solution_domains(nterms_s)
 
 
     end subroutine

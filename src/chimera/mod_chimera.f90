@@ -12,7 +12,7 @@ module mod_chimera
     use mod_constants,          only: NFACES, ORPHAN, CHIMERA, &
                                       X_DIR,  Y_DIR,   Z_DIR, &
                                       XI_DIR, ETA_DIR, ZETA_DIR, &
-                                      ONE
+                                      ONE, ZERO, TWO_DIM, THREE_DIM, RKTOL
 
     use type_mesh,              only: mesh_t
     use type_point,             only: point_t
@@ -64,7 +64,8 @@ contains
 
         
         !
-        ! Loop through each element of each domain
+        ! Loop through each element of each domain and look for ORPHAN face-types.
+        ! If orphan is found, designate as CHIMERA and increment nchimera_faces
         !
         do idom = 1,ndom
             nchimera_faces = 0
@@ -124,6 +125,10 @@ contains
 
 
 
+        !
+        ! Now that all CHIMERA faces have been identified and we know the total number,
+        ! we can store their data in the mesh-local chimera data container.
+        !
         do idom = 1,ndom
             do ielem = 1,mesh(idom)%nelem
 
@@ -358,9 +363,6 @@ contains
 
 
 
-
-
-
                 !
                 ! Clear temporary face arrays
                 !
@@ -406,7 +408,7 @@ contains
         type(point_t),              intent(inout)   :: donor_coordinate
 
 
-        integer(ik)             :: idom, ielem, inewton
+        integer(ik)             :: idom, ielem, inewton, spacedim
         integer(ik)             :: icandidate, ncandidates, idonor, ndonors
         real(rk)                :: xgq, ygq, zgq
         real(rk)                :: xi,  eta, zeta
@@ -427,11 +429,14 @@ contains
         real(rk)    :: res, dx, dy, dz
 
 
-        tol = 1.e-12_rk
+        tol = 10._rk*RKTOL
+
 
         xgq = gq_node%c1_
         ygq = gq_node%c2_
         zgq = gq_node%c3_
+
+
 
         !
         ! Loop through domains and search for potential donor candidates
@@ -471,8 +476,8 @@ contains
                 xmax = xmax + 0.1*dx
                 ymin = ymin - 0.1*dy
                 ymax = ymax + 0.1*dy
-                zmin = zmin - 0.1*dz
-                zmax = zmax + 0.1*dz
+                zmin = (zmin-0.001) - 0.1*dz    ! This is to help 2D
+                zmax = (zmax+0.001) + 0.1*dz    ! This is to help 2D
 
                 !
                 ! Test if gq_node is contained within the bounding coordinates
@@ -520,6 +525,8 @@ contains
 
             idom  = candidate_domains%at(icandidate)
             ielem = candidate_elements%at(icandidate)
+            spacedim = mesh(idom)%spacedim
+
 
             !
             ! Newton iteration to find the donor local coordinates
@@ -532,9 +539,9 @@ contains
                 !
                 ! Compute local cartesian coordinates as a function of xi,eta,zeta
                 !
-                xn = mesh_point(mesh(idom)%elems(ielem),X_DIR,xi,eta,zeta)
-                yn = mesh_point(mesh(idom)%elems(ielem),Y_DIR,xi,eta,zeta)
-                zn = mesh_point(mesh(idom)%elems(ielem),Z_DIR,xi,eta,zeta)
+                xn = mesh(idom)%elems(ielem)%x(xi,eta,zeta)
+                yn = mesh(idom)%elems(ielem)%y(xi,eta,zeta)
+                zn = mesh(idom)%elems(ielem)%z(xi,eta,zeta)
 
 
 
@@ -546,18 +553,19 @@ contains
                 R(3) = -(zn - zgq)
 
 
+
                 !
                 ! Assemble coordinate jacobian matrix
                 !
-                mat(1,1) = metric_point(mesh(idom)%elems(ielem),X_DIR,XI_DIR,  xi,eta,zeta)
-                mat(2,1) = metric_point(mesh(idom)%elems(ielem),Y_DIR,XI_DIR,  xi,eta,zeta)
-                mat(3,1) = metric_point(mesh(idom)%elems(ielem),Z_DIR,XI_DIR,  xi,eta,zeta)
-                mat(1,2) = metric_point(mesh(idom)%elems(ielem),X_DIR,ETA_DIR, xi,eta,zeta)
-                mat(2,2) = metric_point(mesh(idom)%elems(ielem),Y_DIR,ETA_DIR, xi,eta,zeta)
-                mat(3,2) = metric_point(mesh(idom)%elems(ielem),Z_DIR,ETA_DIR, xi,eta,zeta)
-                mat(1,3) = metric_point(mesh(idom)%elems(ielem),X_DIR,ZETA_DIR,xi,eta,zeta)
-                mat(2,3) = metric_point(mesh(idom)%elems(ielem),Y_DIR,ZETA_DIR,xi,eta,zeta)
-                mat(3,3) = metric_point(mesh(idom)%elems(ielem),Z_DIR,ZETA_DIR,xi,eta,zeta)
+                mat(1,1) = mesh(idom)%elems(ielem)%metric_point(X_DIR,XI_DIR,  xi,eta,zeta)
+                mat(2,1) = mesh(idom)%elems(ielem)%metric_point(Y_DIR,XI_DIR,  xi,eta,zeta)
+                mat(3,1) = mesh(idom)%elems(ielem)%metric_point(Z_DIR,XI_DIR,  xi,eta,zeta)
+                mat(1,2) = mesh(idom)%elems(ielem)%metric_point(X_DIR,ETA_DIR, xi,eta,zeta)
+                mat(2,2) = mesh(idom)%elems(ielem)%metric_point(Y_DIR,ETA_DIR, xi,eta,zeta)
+                mat(3,2) = mesh(idom)%elems(ielem)%metric_point(Z_DIR,ETA_DIR, xi,eta,zeta)
+                mat(1,3) = mesh(idom)%elems(ielem)%metric_point(X_DIR,ZETA_DIR,xi,eta,zeta)
+                mat(2,3) = mesh(idom)%elems(ielem)%metric_point(Y_DIR,ZETA_DIR,xi,eta,zeta)
+                mat(3,3) = mesh(idom)%elems(ielem)%metric_point(Z_DIR,ZETA_DIR,xi,eta,zeta)
 
 
                 !
@@ -683,7 +691,7 @@ contains
         type(mesh_t),   intent(inout)   :: mesh(:)
 
         integer(ik) :: idom, iChiID, idonor, idom_d, ielem_d, ierr, ipt, iterm
-        integer(ik) :: npts, nterms_s, nterms
+        integer(ik) :: npts, nterms_s, nterms, spacedim
 
         type(point_t)           :: node
         real(rk), allocatable   :: interpolator(:,:)
@@ -695,6 +703,7 @@ contains
         !
         do idom = 1,size(mesh)
 
+            spacedim = mesh(idom)%spacedim
 
             !
             ! Loop over each chimera face
@@ -731,8 +740,10 @@ contains
                     !
                     do iterm = 1,nterms
                         do ipt = 1,npts
+
                             node = mesh(idom)%chimera%recv%data(iChiID)%donor_coords(idonor)%at(ipt)
-                            interpolator(ipt,iterm) = polynomialVal(3,nterms,iterm,node)
+                            interpolator(ipt,iterm) = polynomialVal(spacedim,nterms,iterm,node)
+
                         end do ! ipt
                     end do ! iterm
 

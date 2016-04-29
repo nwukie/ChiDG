@@ -136,8 +136,10 @@ REAL(DBL_AD)      ::negative_one=-1.0d0
                                     ! make this private will create difficulty to use the original write/read commands,
                                    ! hence x_ad_ and xp_ad_ are variables which can be accessed using D%x_ad_ and
                                     ! D%xp_ad_ in other units using this module in which D is defined as TYPE DUAL_NUM.
-        REAL(DBL_AD)              :: x_ad_      ! functional value
-        REAL(DBL_AD), allocatable :: xp_ad_(:)  ! derivative
+        !REAL(DBL_AD)              :: x_ad_      ! functional value
+        !REAL(DBL_AD), allocatable :: xp_ad_(:)  ! derivative
+        REAL(rk)              :: x_ad_      ! functional value
+        REAL(rk), allocatable :: xp_ad_(:)  ! derivative
 
 
     END TYPE AD_D
@@ -1684,17 +1686,22 @@ CONTAINS
     ! <u,up>.<v,vp>=<u.v,up.v+u.vp>
     !----------------------------------------
     FUNCTION MATMUL_MV_RD_D(u,v) RESULT(res)
-        REAL(DBL_AD), intent(in)     :: u(:,:)
+        !REAL(DBL_AD), intent(in)     :: u(:,:)
+        REAL(rk), intent(in)     :: u(:,:)
         TYPE(AD_D), intent(in)       :: v(:)
 !        TYPE(AD_D)                      :: res(size(v))
 !        TYPE(AD_D)                      :: res(size(u,1))  !> Causes memory leak in ifort 15.0.3. Doesn't seem to be deallocating everything correctly
         TYPE(AD_D), allocatable, dimension(:) :: res        !> Declaring as allocatable to fix memory leak
 !        REAL(DBL_AD)                    :: xp_ad_v(size(v)), &
 !                                           xp_ad(size(u,1))
-        REAL(DBL_AD), dimension(size(v),size(v(1)%xp_ad_))      :: xp_ad_vm
-        REAL(DBL_AD), dimension(size(v(1)%xp_ad_), size(v))     :: xp_ad_vm_tr
-        REAL(DBL_AD), dimension(size(u,1),size(v(1)%xp_ad_))    :: res_xp_m
-        REAL(DBL_AD), dimension(size(v(1)%xp_ad_), size(u,1))   :: res_xp_m_tr
+        REAL(rk), dimension(size(v),size(v(1)%xp_ad_))      :: xp_ad_vm
+        REAL(rk), dimension(size(v(1)%xp_ad_), size(v))     :: xp_ad_vm_tr
+        REAL(rk), dimension(size(u,1),size(v(1)%xp_ad_))    :: res_xp_m
+        REAL(rk), dimension(size(v(1)%xp_ad_), size(u,1))   :: res_xp_m_tr
+        !REAL(DBL_AD), dimension(size(v),size(v(1)%xp_ad_))      :: xp_ad_vm
+        !REAL(DBL_AD), dimension(size(v(1)%xp_ad_), size(v))     :: xp_ad_vm_tr
+        !REAL(DBL_AD), dimension(size(u,1),size(v(1)%xp_ad_))    :: res_xp_m
+        !REAL(DBL_AD), dimension(size(v(1)%xp_ad_), size(u,1))   :: res_xp_m_tr
         INTEGER:: i,j
 
 

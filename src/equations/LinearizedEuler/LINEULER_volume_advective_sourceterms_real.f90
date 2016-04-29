@@ -18,12 +18,23 @@ module LINEULER_volume_advective_sourceterms_real
 
     private
 
+
+    !>
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   3/17/2016
+    !!
+    !!
+    !----------------------------------------------------------------------------------------
     type, extends(volume_flux_t), public :: LINEULER_volume_advective_sourceterms_real_t
 
 
     contains
+
         procedure  :: compute
+        
     end type LINEULER_volume_advective_sourceterms_real_t
+    !*****************************************************************************************
 
 
 
@@ -38,21 +49,22 @@ contains
 
 
 
-    !==========================================================
-    !
-    !   Volume Flux routine for Euler
-    !
-    !===========================================================
+    !>
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   3/17/2016
+    !!
+    !!
+    !-----------------------------------------------------------------------------------------
     subroutine compute(self,mesh,sdata,prop,idom,ielem,iblk)
-        class(LINEULER_volume_advective_sourceterms_real_t),   intent(in)      :: self
-        type(mesh_t),                           intent(in)      :: mesh(:)
-        type(solverdata_t),                     intent(inout)   :: sdata
-        class(properties_t),                    intent(inout)   :: prop
-        integer(ik),                            intent(in)      :: idom, ielem, iblk
+        class(LINEULER_volume_advective_sourceterms_real_t),    intent(in)      :: self
+        type(mesh_t),                                           intent(in)      :: mesh(:)
+        type(solverdata_t),                                     intent(inout)   :: sdata
+        class(properties_t),                                    intent(inout)   :: prop
+        integer(ik),                                            intent(in)      :: idom, ielem, iblk
 
         ! Equation indices
-        !------------------------------------------------------------
-        integer(ik)    :: irho_r, irho_i
+        integer(ik)    :: irho_r,  irho_i
         integer(ik)    :: irhou_r, irhou_i
         integer(ik)    :: irhov_r, irhov_i
         integer(ik)    :: irhow_r, irhow_i
@@ -76,17 +88,19 @@ contains
         idonor = 0
 
 
-        !-------------------------------------------------------------
+        !
+        ! Get equation indices
+        !
         irho_r  = prop%get_eqn_index("rho_r")
         irhou_r = prop%get_eqn_index("rhou_r")
         irhov_r = prop%get_eqn_index("rhov_r")
-        irhow_r = prop%get_eqn_index("rhow_r")
+!        irhow_r = prop%get_eqn_index("rhow_r")
         irhoE_r = prop%get_eqn_index("rhoE_r")
 
         irho_i  = prop%get_eqn_index("rho_i")
         irhou_i = prop%get_eqn_index("rhou_i")
         irhov_i = prop%get_eqn_index("rhov_i")
-        irhow_i = prop%get_eqn_index("rhow_i")
+!        irhow_i = prop%get_eqn_index("rhow_i")
         irhoE_i = prop%get_eqn_index("rhoE_i")
 
 
@@ -106,90 +120,91 @@ contains
         call interpolate_element(mesh,sdata%q,idom,ielem,irho_r, rho, seed)
         call interpolate_element(mesh,sdata%q,idom,ielem,irhou_r,rhou,seed)
         call interpolate_element(mesh,sdata%q,idom,ielem,irhov_r,rhov,seed)
-        call interpolate_element(mesh,sdata%q,idom,ielem,irhow_r,rhow,seed)
+!        call interpolate_element(mesh,sdata%q,idom,ielem,irhow_r,rhow,seed)
         call interpolate_element(mesh,sdata%q,idom,ielem,irhoE_r,rhoE,seed)
 
 
 
-        ! Initialize flux derivative storage
-        flux = rho
-        flux = ZERO
-
-        !alpha = 0.05_rk
-        alpha = 0.1_rk
-        !alpha = 0.3_rk
-        !===========================
-        !        MASS FLUX
-        !===========================
-        eps = ZERO
-        do igq = 1,size(rho)
-            x = mesh(idom)%elems(ielem)%quad_pts(igq)%c1_
-            y = mesh(idom)%elems(ielem)%quad_pts(igq)%c2_
-
-            flux(igq) = eps * exp(-alpha * (x**TWO + y**TWO) )
-
-        end do
-        !flux = ZERO
-
-        call integrate_volume_source(mesh(idom)%elems(ielem),sdata,idom,irho_r,iblk,flux)
-
-
-        !===========================
-        !     X-MOMENTUM FLUX
-        !===========================
-        eps = ZERO
-        do igq = 1,size(rho)
-            x = mesh(idom)%elems(ielem)%quad_pts(igq)%c1_
-            y = mesh(idom)%elems(ielem)%quad_pts(igq)%c2_
-
-            flux(igq) = eps * exp(-alpha * (x**TWO + y**TWO) )
-
-        end do
-        !flux = ZERO
-
-        call integrate_volume_source(mesh(idom)%elems(ielem),sdata,idom,irhou_r,iblk,flux)
-
-
-        !============================
-        !     Y-MOMENTUM FLUX
-        !============================
-        eps = ZERO
-        do igq = 1,size(rho)
-            x = mesh(idom)%elems(ielem)%quad_pts(igq)%c1_
-            y = mesh(idom)%elems(ielem)%quad_pts(igq)%c2_
-
-            flux(igq) = eps * exp(-alpha * (x**TWO + y**TWO) )
-
-        end do
-        !flux = ZERO
-
-        call integrate_volume_source(mesh(idom)%elems(ielem),sdata,idom,irhov_r,iblk,flux)
-
-!        !============================
-!        !     Z-MOMENTUM FLUX
-!        !============================
-!        flux_x = (rhow*rhou)/rho
-!        flux_y = (rhow*rhov)/rho
-!        flux_z = (rhow*rhow)/rho  +  p
+!        ! Initialize flux derivative storage
+!        flux = rho
+!        flux = ZERO
 !
-!        call integrate_volume_flux(mesh(idom)%elems(ielem),sdata,idom,irhow,iblk,flux_x,flux_y,flux_z)
+!        !alpha = 0.05_rk
+!        alpha = 0.1_rk
+!        !alpha = 0.3_rk
+!        !===========================
+!        !        MASS FLUX
+!        !===========================
+!        eps = ZERO
+!        do igq = 1,size(rho)
+!            x = mesh(idom)%elems(ielem)%quad_pts(igq)%c1_
+!            y = mesh(idom)%elems(ielem)%quad_pts(igq)%c2_
 !
-        !============================
-        !       ENERGY FLUX
-        !============================
-        eps = 1._rk
-        do igq = 1,size(rho)
-            x = mesh(idom)%elems(ielem)%quad_pts(igq)%c1_
-            y = mesh(idom)%elems(ielem)%quad_pts(igq)%c2_
+!            flux(igq) = eps * exp(-alpha * (x**TWO + y**TWO) )
+!
+!        end do
+!        flux = ZERO
+!
+!        call integrate_volume_source(mesh(idom)%elems(ielem),sdata,idom,irho_r,iblk,flux)
+!
+!
+!        !===========================
+!        !     X-MOMENTUM FLUX
+!        !===========================
+!        eps = ZERO
+!        do igq = 1,size(rho)
+!            x = mesh(idom)%elems(ielem)%quad_pts(igq)%c1_
+!            y = mesh(idom)%elems(ielem)%quad_pts(igq)%c2_
+!
+!            flux(igq) = eps * exp(-alpha * (x**TWO + y**TWO) )
+!
+!        end do
+!        flux = ZERO
+!
+!        call integrate_volume_source(mesh(idom)%elems(ielem),sdata,idom,irhou_r,iblk,flux)
+!
+!
+!        !============================
+!        !     Y-MOMENTUM FLUX
+!        !============================
+!        eps = ZERO
+!        do igq = 1,size(rho)
+!            x = mesh(idom)%elems(ielem)%quad_pts(igq)%c1_
+!            y = mesh(idom)%elems(ielem)%quad_pts(igq)%c2_
+!
+!            flux(igq) = eps * exp(-alpha * (x**TWO + y**TWO) )
+!
+!        end do
+!        flux = ZERO
+!
+!        call integrate_volume_source(mesh(idom)%elems(ielem),sdata,idom,irhov_r,iblk,flux)
+!
+!!        !============================
+!!        !     Z-MOMENTUM FLUX
+!!        !============================
+!!        flux_x = (rhow*rhou)/rho
+!!        flux_y = (rhow*rhov)/rho
+!!        flux_z = (rhow*rhow)/rho  +  p
+!!
+!!        call integrate_volume_flux(mesh(idom)%elems(ielem),sdata,idom,irhow,iblk,flux_x,flux_y,flux_z)
+!!
+!        !============================
+!        !       ENERGY FLUX
+!        !============================
+!        eps = 1._rk
+!        do igq = 1,size(rho)
+!            x = mesh(idom)%elems(ielem)%quad_pts(igq)%c1_
+!            y = mesh(idom)%elems(ielem)%quad_pts(igq)%c2_
+!
+!            flux(igq) = eps * exp(-alpha * (x**TWO + y**TWO) )
+!
+!        end do
+!        flux = ZERO
+!
+!        call integrate_volume_source(mesh(idom)%elems(ielem),sdata,idom,irhoE_r,iblk,flux)
 
-            flux(igq) = eps * exp(-alpha * (x**TWO + y**TWO) )
-
-        end do
-        !flux = ZERO
-
-        call integrate_volume_source(mesh(idom)%elems(ielem),sdata,idom,irhoE_r,iblk,flux)
-
-    end subroutine
+    end subroutine compute
+    !**********************************************************************************************************
 
 
 

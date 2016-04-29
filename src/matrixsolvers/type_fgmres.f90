@@ -26,7 +26,7 @@ module type_fgmres
     !---------------------------------------------------------------------------------------------
     type, public, extends(matrixsolver_t) :: fgmres_t
 
-        integer(ik) :: m = 800
+        integer(ik) :: m = 1000
 
     contains
 
@@ -172,7 +172,7 @@ contains
 
 
             !
-            ! Outer GMRES Loop
+            ! Inner GMRES restart loop
             !
             nvecs = 0
             do j = 1,self%m

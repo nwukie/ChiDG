@@ -1,9 +1,11 @@
 module mod_polynomial
+#include <messenger.h>
     use mod_kinds,  only: rk,ik
     use type_point, only: point_t
 
     use mod_legendre
     use mod_lagrange
+    use mod_ordering,
     implicit none
 
 contains
@@ -29,6 +31,7 @@ contains
 
         real(rk)                    :: xi,eta,zeta
         real(rk)                    :: polyval
+
 
         xi   = node%c1_
         eta  = node%c2_

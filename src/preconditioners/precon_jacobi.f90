@@ -141,11 +141,11 @@ contains
         !
         ! Replace the block diagonal D with Dinv
         !
-        !do idom = 1,ndom
-        !    do ielem = 1,size(A%dom(idom)%lblks,1)
-        !        self%D(idom,ielem)%mat = inv(self%D(idom,ielem)%mat)
-        !    end do
-        !end do
+        do idom = 1,ndom
+            do ielem = 1,size(A%dom(idom)%lblks,1)
+                self%D(idom,ielem)%mat = inv(self%D(idom,ielem)%mat)
+            end do
+        end do
 
 
     end subroutine update
@@ -189,8 +189,8 @@ contains
         !
         do idom = 1,ndom
             do ielem = 1,size(A%dom(idom)%lblks,1)
-                call fgmres_standard(self%D(idom,ielem)%mat, z%dom(idom)%lvecs(ielem)%vec, v%dom(idom)%lvecs(ielem)%vec)
-                !z%dom(idom)%lvecs(ielem)%vec = matmul(self%D(idom,ielem)%mat,v%dom(idom)%lvecs(ielem)%vec)
+                !call fgmres_standard(self%D(idom,ielem)%mat, z%dom(idom)%lvecs(ielem)%vec, v%dom(idom)%lvecs(ielem)%vec)
+                z%dom(idom)%lvecs(ielem)%vec = matmul(self%D(idom,ielem)%mat,v%dom(idom)%lvecs(ielem)%vec)
             end do
         end do
 

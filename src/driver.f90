@@ -50,7 +50,6 @@ program driver
     !
     if ( narg == 0 ) then
 
-        print*, 'driver - 1'
 
         !
         ! Initialize ChiDG environment
@@ -59,13 +58,11 @@ program driver
         call chidg%init('io')
 
 
-        print*, 'driver - 2'
         !
         ! Read grid data from file
         !
         call chidg%read_grid(gridfile, spacedim)
 
-        print*, 'driver - 3'
 
         !
         ! Read boundary conditions
@@ -73,7 +70,6 @@ program driver
         call chidg%read_boundaryconditions(gridfile)
 
 
-        print*, 'driver - 4'
 
         !
         ! Set time-scheme options
@@ -84,7 +80,6 @@ program driver
         call toptions%set('nwrite',nwrite)
         call toptions%set('cfl0',cfl0)
 
-        print*, 'driver - 5'
 
         !
         ! Set matrix solver options
@@ -92,7 +87,6 @@ program driver
         call moptions%set('tol',mtol)
 
 
-        print*, 'driver - 6'
         !
         ! Set ChiDG components
         !

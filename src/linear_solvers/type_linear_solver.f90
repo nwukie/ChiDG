@@ -1,4 +1,4 @@
-module type_matrixsolver
+module type_linear_solver
     use mod_kinds,          only: rk,ik
     use type_dict,          only: dict_t
     use type_chidgMatrix,   only: chidgMatrix_t
@@ -20,7 +20,7 @@ module type_matrixsolver
     !!
     !!
     !-----------------------------------------------------------------------------------------------------
-    type, public, abstract :: matrixsolver_t
+    type, public, abstract :: linear_solver_t
 
 !        character(len=:), allocatable   :: name_
 
@@ -44,7 +44,7 @@ module type_matrixsolver
         procedure   :: residual
         procedure   :: error
 
-    end type matrixsolver_t
+    end type linear_solver_t
     !******************************************************************************************************
 
 
@@ -59,9 +59,9 @@ module type_matrixsolver
             use type_chidgMatrix,       only: chidgMatrix_t
             use type_chidgVector,       only: chidgVector_t
             use type_preconditioner,    only: preconditioner_t
-            import matrixsolver_t
+            import linear_solver_t
 
-            class(matrixsolver_t),      intent(inout)           :: self
+            class(linear_solver_t),      intent(inout)           :: self
             type(chidgMatrix_t),        intent(inout)           :: A
             type(chidgVector_t),        intent(inout)           :: x
             type(chidgVector_t),        intent(inout)           :: b
@@ -86,7 +86,7 @@ contains
     !!
     !---------------------------------------------------------------------------------------------------
     subroutine init(self)
-        class(matrixsolver_t),  intent(inout)   :: self
+        class(linear_solver_t),  intent(inout)   :: self
 
 
     end subroutine init
@@ -131,7 +131,7 @@ contains
     !!
     !--------------------------------------------------------------------------------------------------
     subroutine set(self,options)
-        class(matrixsolver_t),  intent(inout)   :: self
+        class(linear_solver_t),  intent(inout)   :: self
         type(dict_t),           intent(inout)   :: options
 
         call options%get('tol',     self%tol)
@@ -188,7 +188,7 @@ contains
     !!
     !--------------------------------------------------------------------------------------------------------
     function residual(self,A,x,b) result(r)
-        class(matrixsolver_t),  intent(inout)   :: self
+        class(linear_solver_t),  intent(inout)   :: self
         type(chidgMatrix_t),    intent(inout)   :: A
         type(chidgVector_t),    intent(inout)   :: x
         type(chidgVector_t),    intent(inout)   :: b
@@ -244,7 +244,7 @@ contains
     !!
     !-------------------------------------------------------------------------------------------------
     function error(self,A,x,b) result(err)
-        class(matrixsolver_t),  intent(inout)   :: self
+        class(linear_solver_t),  intent(inout)   :: self
         type(chidgMatrix_t),    intent(inout)   :: A
         type(chidgVector_t),    intent(inout)   :: x
         type(chidgVector_t),    intent(inout)   :: b
@@ -279,4 +279,4 @@ contains
 
 
 
-end module type_matrixsolver
+end module type_linear_solver

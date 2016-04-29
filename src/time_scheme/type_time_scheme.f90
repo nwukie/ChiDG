@@ -1,12 +1,13 @@
-module type_timescheme
-    use messenger,          only: write_line
-    use mod_kinds,          only: rk,ik
-    use type_matrixsolver,  only: matrixsolver_t
-    use type_dict,          only: dict_t
-    use type_timer,         only: timer_t
-    use type_rvector,       only: rvector_t
-    use type_ivector,       only: ivector_t
-    use type_chidg_data,    only: chidg_data_t
+module type_time_scheme
+    use messenger,              only: write_line
+    use mod_kinds,              only: rk,ik
+    use type_linear_solver,     only: linear_solver_t
+    use type_nonlinear_solver,  only: nonlinear_solver_t
+    use type_dict,              only: dict_t
+    use type_timer,             only: timer_t
+    use type_rvector,           only: rvector_t
+    use type_ivector,           only: ivector_t
+    use type_chidg_data,        only: chidg_data_t
     implicit none
 
 
@@ -17,7 +18,7 @@ module type_timescheme
     !!
     !!
     !------------------------------------------------------------------------------------------------------
-    type, abstract, public  :: timescheme_t
+    type, abstract, public  :: time_scheme_t
 
         !real(rk)        :: testing
         logical         :: solverInitialized = .false.
@@ -48,12 +49,13 @@ module type_timescheme
         procedure   :: init
         procedure   :: init_spec
 
-        procedure(data_interface),   deferred   :: solve    ! Must define this procedures in the extended type
+        !procedure(data_interface),   deferred   :: solve    ! Must define this procedures in the extended type
+        procedure(data_interface),   deferred   :: iterate   ! Must define this procedures in the extended type
 
         procedure   :: set
         procedure   :: report
 
-    end type timescheme_t
+    end type time_scheme_t
     !******************************************************************************************************
 
 
@@ -72,8 +74,8 @@ module type_timescheme
     
     abstract interface
         subroutine self_interface(self)
-            import timescheme_t
-            class(timescheme_t),   intent(inout)   :: self
+            import time_scheme_t
+            class(time_scheme_t),   intent(inout)   :: self
         end subroutine
     end interface
 
@@ -83,8 +85,8 @@ module type_timescheme
         subroutine init_interface(self,data,options)
             use type_chidg_data, only: chidg_data_t
             use type_dict,       only: dict_t
-            import timescheme_t
-            class(timescheme_t),    intent(inout)   :: self
+            import time_scheme_t
+            class(time_scheme_t),    intent(inout)   :: self
             type(chidg_data_t),     intent(inout)   :: data
             type(dict_t), optional, intent(inout)   :: options
         end subroutine
@@ -96,15 +98,16 @@ module type_timescheme
 
     ! Interface for passing a domain_t type
     abstract interface
-        subroutine data_interface(self,data,matrixsolver,preconditioner)
-        !subroutine data_interface(self,data,nonlinear_solver,linear_solver,preconditioner)
+        subroutine data_interface(self,data,nonlinear_solver,linear_solver,preconditioner)
             use type_chidg_data,        only: chidg_data_t
-            use type_matrixsolver,      only: matrixsolver_t
+            use type_nonlinear_solver,  only: nonlinear_solver_t
+            use type_linear_solver,     only: linear_solver_t
             use type_preconditioner,    only: preconditioner_t
-            import timescheme_t
-            class(timescheme_t),                    intent(inout)   :: self
+            import time_scheme_t
+            class(time_scheme_t),                   intent(inout)   :: self
             type(chidg_data_t),                     intent(inout)   :: data
-            class(matrixsolver_t),      optional,   intent(inout)   :: matrixsolver
+            class(nonlinear_solver_t),  optional,   intent(inout)   :: nonlinear_solver
+            class(linear_solver_t),     optional,   intent(inout)   :: linear_solver
             class(preconditioner_t),    optional,   intent(inout)   :: preconditioner
         end subroutine
     end interface
@@ -129,7 +132,7 @@ contains
     !!
     !-------------------------------------------------------------------------------------------------------------
     subroutine init(self,data)
-        class(timescheme_t),    intent(inout)   :: self
+        class(time_scheme_t),   intent(inout)   :: self
         type(chidg_data_t),     intent(inout)   :: data
 
 
@@ -162,7 +165,7 @@ contains
     !!
     !------------------------------------------------------------------------------------------------------------
     subroutine set(self,options)
-        class(timescheme_t),    intent(inout)   :: self
+        class(time_scheme_t),   intent(inout)   :: self
         type(dict_t),           intent(inout)   :: options
 
 
@@ -195,7 +198,7 @@ contains
     !!
     !-------------------------------------------------------------------------------------------------------------
     subroutine init_spec(self,data,options)
-        class(timescheme_t),    intent(inout)   :: self
+        class(time_scheme_t),   intent(inout)   :: self
         type(chidg_data_t),     intent(inout)   :: data
         type(dict_t), optional, intent(inout)   :: options
 
@@ -222,7 +225,7 @@ contains
     !!
     !---------------------------------------------------------------------------------------------------------------------
     subroutine report(self)
-        class(timescheme_t),   intent(in)  :: self
+        class(time_scheme_t),   intent(in)  :: self
 
         integer(ik) :: i
 
@@ -289,4 +292,4 @@ contains
 
 
 
-end module type_timescheme
+end module type_time_scheme

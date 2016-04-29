@@ -3,7 +3,7 @@ module type_fgmres
     use mod_kinds,              only: rk, ik
     use mod_constants,          only: ZERO
     use mod_inv,                only: inv
-    use type_matrixsolver,      only: matrixsolver_t 
+    use type_linear_solver,     only: linear_solver_t 
     use type_preconditioner,    only: preconditioner_t
     use type_chidgVector
     use type_chidgMatrix
@@ -24,7 +24,7 @@ module type_fgmres
     !!  @author Nathan A. Wukie
     !!
     !---------------------------------------------------------------------------------------------
-    type, public, extends(matrixsolver_t) :: fgmres_t
+    type, public, extends(linear_solver_t) :: fgmres_t
 
         integer(ik) :: m = 1000
 
@@ -80,7 +80,7 @@ contains
         !
         call self%timer%reset()
         call self%timer%start()
-        call write_line('           Matrix Solver: ')
+        call write_line('           Linear Solver: ')
 
 
 
@@ -384,10 +384,10 @@ contains
         ! Report
         !
         err = self%error(A,x,b)
-        call write_line('   Matrix Solver Error: ', err, delimiter='')
+        call write_line('   Linear Solver Error: ', err, delimiter='')
 
         call self%timer%stop()
-        call self%timer%report('Matrix solver compute time: ')
+        call self%timer%report('Linear solver compute time: ')
 
 
 

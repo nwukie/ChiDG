@@ -2,9 +2,9 @@ module newton
     use messenger,              only: write_line
     use mod_kinds,              only: rk,ik
     use mod_constants,          only: ZERO, ONE, TWO, DIAG
-    use type_timescheme,        only: timescheme_t
+    use type_nonlinear_solver,  only: nonlinear_solver_t
+    use type_linear_solver,     only: linear_solver_t
     use type_chidg_data,        only: chidg_data_t
-    use type_matrixsolver,      only: matrixsolver_t
     use type_preconditioner,    only: preconditioner_t
     use type_chidgVector
 
@@ -27,7 +27,7 @@ module newton
     !!  @author Nathan A. Wukie
     !!
     !----------------------------------------------------------------------------------------
-    type, extends(timescheme_t), public :: newton_t
+    type, extends(nonlinear_solver_t), public :: newton_t
 
 
 
@@ -62,10 +62,10 @@ contains
     !!
     !!
     !-------------------------------------------------------------------------------------------------
-    subroutine solve(self,data,matrixsolver,preconditioner)
+    subroutine solve(self,data,linear_solver,preconditioner)
         class(newton_t),                    intent(inout)   :: self
         type(chidg_data_t),                 intent(inout)   :: data
-        class(matrixsolver_t),   optional,  intent(inout)   :: matrixsolver
+        class(linear_solver_t),  optional,  intent(inout)   :: linear_solver
         class(preconditioner_t), optional,  intent(inout)   :: preconditioner
 
         character(100)          :: filename
@@ -153,10 +153,10 @@ contains
                 !
                 ! We need to solve the matrix system Ax=b for the update vector x (dq)
                 !
-                call matrixsolver%solve(lhs,dq,b,preconditioner)
+                call linear_solver%solve(lhs,dq,b,preconditioner)
 
-                call self%matrix_iterations%push_back(matrixsolver%niter)
-                call self%matrix_time%push_back(matrixsolver%timer%elapsed())
+                call self%matrix_iterations%push_back(linear_solver%niter)
+                call self%matrix_time%push_back(linear_solver%timer%elapsed())
 
 
 

@@ -23,7 +23,7 @@ module mod_chimera
     use type_pvector,           only: pvector_t
 
     use mod_polynomial,         only: polynomialVal
-    use mod_grid_operators,     only: mesh_point, metric_point
+!    use mod_grid_operators,     only: mesh_point, metric_point
     use mod_periodic,           only: compute_periodic_offset
     use mod_inv,                only: inv
     implicit none

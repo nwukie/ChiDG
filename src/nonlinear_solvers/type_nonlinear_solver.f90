@@ -1,7 +1,7 @@
 module type_nonlinear_solver
     use messenger,          only: write_line
     use mod_kinds,          only: rk,ik
-    use type_matrixsolver,  only: matrixsolver_t
+    use type_linear_solver, only: linear_solver_t
     use type_dict,          only: dict_t
     use type_timer,         only: timer_t
     use type_rvector,       only: rvector_t
@@ -93,14 +93,14 @@ module type_nonlinear_solver
 
     ! Interface for passing a domain_t type
     abstract interface
-        subroutine data_interface(self,data,matrixsolver,preconditioner)
+        subroutine data_interface(self,data,linear_solver,preconditioner)
             use type_chidg_data,        only: chidg_data_t
-            use type_matrixsolver,      only: matrixsolver_t
+            use type_linear_solver,     only: linear_solver_t
             use type_preconditioner,    only: preconditioner_t
             import nonlinear_solver_t
             class(nonlinear_solver_t),              intent(inout)   :: self
             type(chidg_data_t),                     intent(inout)   :: data
-            class(matrixsolver_t),      optional,   intent(inout)   :: matrixsolver
+            class(linear_solver_t),     optional,   intent(inout)   :: linear_solver
             class(preconditioner_t),    optional,   intent(inout)   :: preconditioner
         end subroutine
     end interface
@@ -162,9 +162,9 @@ contains
         type(dict_t),               intent(inout)   :: options
 
 
-        call options%get('tol',self%tol)
-        call options%get('nsteps',self%nsteps)
-        call options%get('nwrite',self%nwrite)
+!        call options%get('tol',self%tol)
+!        call options%get('nsteps',self%nsteps)
+!        call options%get('nwrite',self%nwrite)
 
     end subroutine set
     !*************************************************************************************************************

@@ -19,20 +19,20 @@ module mod_io
     !--------------------------------------------------
     character(len=100),  save    :: gridfile
     character(len=100),  save    :: gridtype
-    character(len=100),  save    :: tecplot_prefix      = 'tec'
-    character(len=100),  save    :: hdf_out             = 'solution.h5'
+    character(len=100),  save    :: tecplot_prefix   = 'tec'
+    character(len=100),  save    :: hdf_out          = 'solution.h5'
 
-    character(len=100),  save    :: solutionfile_in     = 'none'
-    character(len=100),  save    :: solutionfile_out    = 'none'
+    character(len=100),  save    :: solutionfile_in  = 'none'
+    character(len=100),  save    :: solutionfile_out = 'none'
 
 
 
 
     ! SPACE
     !--------------------------------------------------
-    character(len=100),  save    :: basis = 'legendre'
-    integer(ik),         save    :: solution_order  = 1
-    integer(ik),         save    :: spacedim        = 3
+    character(len=100),  save    :: basis            = 'legendre'
+    integer(ik),         save    :: solution_order   = 1
+    integer(ik),         save    :: spacedim         = 3
 
  
 
@@ -40,7 +40,7 @@ module mod_io
     
     ! QUADRATURE
     !--------------------------------------------------
-    integer(ik),         save    :: gq_rule = 2          !> 1: Collocation, 2: Over-integration
+    integer(ik),         save    :: gq_rule          = 2          !> 1: Collocation, 2: Over-integration
    
 
 
@@ -48,7 +48,7 @@ module mod_io
     
     ! EQUATION SET 
     !--------------------------------------------------
-    character(len=100),  save    :: eqnset = 'scalar'
+    character(len=100),  save    :: eqnset           = 'scalar'
   
   
 
@@ -57,27 +57,30 @@ module mod_io
     
     ! TIME
     !--------------------------------------------------
-    character(len=100),  save    :: timescheme
-    real(rk),            save    :: dt = 0.001_rk
-    real(rk),            save    :: cfl0 = 1._rk
-    integer(ik),         save    :: nsteps = 100
-    real(rk),            save    :: ttol = 1.e-8
-    integer(ik),         save    :: ntime_instances = 1
+    character(len=100),  save    :: time_scheme      = 'steady'
+    real(rk),            save    :: dt               = 0.001_rk
+    real(rk),            save    :: cfl0             = 1._rk
+    integer(ik),         save    :: nsteps           = 100
+    real(rk),            save    :: ttol             = 1.e-8
+    integer(ik),         save    :: ntime_instances  = 1
    
    
 
+    ! NONLINEAR SOLVER
+    !-------------------------------------------------
+    character(len=100),  save    :: nonlinear_solver = 'newton'
 
    
-    ! MATRIX SOLVER
+    ! LINEAR SOLVER
     !--------------------------------------------------
-    character(len=100),  save    :: matrixsolver = 'direct'
-    real(rk),            save    :: mtol = 1.e-8
+    character(len=100),  save    :: linear_solver    = 'fgmres'
+    real(rk),            save    :: mtol             = 1.e-8
 
 
 
     ! PRECONDITIONER
     !--------------------------------------------------
-    character(len=100),  save    :: preconditioner = 'identity'
+    character(len=100),  save    :: preconditioner   = 'identity'
    
    
 
@@ -85,10 +88,10 @@ module mod_io
 
     ! IO
     !--------------------------------------------------
-    integer(ik),         save    :: nwrite         = 100
-    logical,             save    :: initial_write  = .true.
-    logical,             save    :: final_write    = .true.
-    integer(ik),         save    :: output_res     = 10
+    integer(ik),         save    :: nwrite           = 100
+    logical,             save    :: initial_write    = .true.
+    logical,             save    :: final_write      = .true.
+    integer(ik),         save    :: output_res       = 10
      
     
 
@@ -136,14 +139,17 @@ contains
 
         namelist /equation_set/             eqnset
 
-        namelist /time/                     timescheme,            &
+        namelist /time/                     time_scheme,           &
                                             cfl0,                  &
                                             dt,                    &
                                             nsteps,                &
                                             ntime_instances,       &
                                             ttol
 
-        namelist /matrix_solver/            matrixsolver,          &
+
+        namelist /nonlinear_solve/          nonlinear_solver
+
+        namelist /linear_solve/             linear_solver,         &
                                             mtol,                  &
                                             preconditioner
 
@@ -171,7 +177,8 @@ contains
         read(7,nml=quadrature)
         read(7,nml=equation_set)
         read(7,nml=time)
-        read(7,nml=matrix_solver)
+        read(7,nml=nonlinear_solve)
+        read(7,nml=linear_solve)
         read(7,nml=io)
 
 

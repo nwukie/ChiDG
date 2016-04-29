@@ -5,20 +5,21 @@ module type_chidg
     use mod_bc,                 only: register_bcs
     use mod_function,           only: register_functions
     use mod_grid,               only: initialize_grid
-    !use mod_io,                 only: read_input, nterms_s
     use mod_io,                 only: read_input
     use mod_string_utilities,   only: get_file_extension
 
     use type_chidg_data,        only: chidg_data_t
-    use type_timescheme,        only: timescheme_t
-    use type_matrixsolver,      only: matrixsolver_t
+    use type_time_scheme,       only: time_scheme_t
+    use type_linear_solver,     only: linear_solver_t
+    use type_nonlinear_solver,  only: nonlinear_solver_t
     use type_preconditioner,    only: preconditioner_t
     use type_meshdata,          only: meshdata_t
     use type_bcdata,            only: bcdata_t
     use type_dict,              only: dict_t
 
-    use mod_timescheme,         only: create_timescheme
-    use mod_matrixsolver,       only: create_matrixsolver
+    use mod_time_scheme,        only: create_time_scheme
+    use mod_linear_solver,      only: create_linear_solver
+    use mod_nonlinear_solver,   only: create_nonlinear_solver
     use mod_preconditioner,     only: create_preconditioner
     use mod_chimera,            only: detect_chimera_faces,  &
                                       detect_chimera_donors, &
@@ -34,7 +35,7 @@ module type_chidg
 
     !>  The ChiDG Environment container
     !!
-    !!      - Contains an array of domains, a time advancement scheme, a matrix solver, and a preconditioner
+    !!      - Contains an array of domains, a time advancement scheme, a nonlinear solver, a linear solver, and a preconditioner
     !!
     !!  @author Nathan A. Wukie
     !!  @date   2/1/2016
@@ -43,8 +44,9 @@ module type_chidg
     type, public    :: chidg_t
 
         type(chidg_data_t)                          :: data
-        class(timescheme_t),        allocatable     :: timescheme
-        class(matrixsolver_t),      allocatable     :: matrixsolver
+        class(time_scheme_t),       allocatable     :: time_scheme
+        class(nonlinear_solver_t),  allocatable     :: nonlinear_solver
+        class(linear_solver_t),     allocatable     :: linear_solver
         class(preconditioner_t),    allocatable     :: preconditioner
 
         logical :: envInitialized = .false.
@@ -147,12 +149,13 @@ contains
                 !
                 ! Test chidg necessary components have been allocated
                 !
-                if (.not. allocated(self%timescheme))     call chidg_signal(FATAL,"chidg%timescheme component was not allocated")
-                if (.not. allocated(self%matrixsolver))   call chidg_signal(FATAL,"chidg%matrixsolver component was not allocated")
-                if (.not. allocated(self%preconditioner)) call chidg_signal(FATAL,"chidg%preconditioner component was not allocated")
+                if (.not. allocated(self%time_scheme))      call chidg_signal(FATAL,"chidg%time_scheme component was not allocated")
+                if (.not. allocated(self%nonlinear_solver)) call chidg_signal(FATAL,"chidg%nonlinear_solver component was not allocated")
+                if (.not. allocated(self%linear_solver))    call chidg_signal(FATAL,"chidg%linearsolver component was not allocated")
+                if (.not. allocated(self%preconditioner))   call chidg_signal(FATAL,"chidg%preconditioner component was not allocated")
 
 
-                call self%timescheme%init(self%data)
+                call self%time_scheme%init(self%data)
                 call self%preconditioner%init(self%data)
 
 
@@ -176,7 +179,8 @@ contains
     !>  Set ChiDG environment components
     !!
     !!      -   Set time-scheme
-    !!      -   Set matrix solver
+    !!      -   Set nonlinear solver
+    !!      -   Set linear solver
     !!      -   Set preconditioner
     !!      -   Set number of allocated domains (default=1)
     !!
@@ -203,23 +207,38 @@ contains
             ! Allocation for time scheme
             !
             case ('Time','time','time_scheme','Time_Scheme','timescheme','TimeScheme')
-                if (allocated(self%timescheme)) then
-                    deallocate(self%timescheme)
-                    call create_timescheme(selection,self%timescheme,options)
+                if (allocated(self%time_scheme)) then
+                    deallocate(self%time_scheme)
+                    call create_time_scheme(selection,self%time_scheme,options)
                 else
-                    call create_timescheme(selection,self%timescheme,options)
+                    call create_time_scheme(selection,self%time_scheme,options)
                 end if
 
 
+
             !
-            ! Allocation for matrix solver
+            ! Allocation for nonlinear solver
             !
-            case ('matrixsolver','MatrixSolver','matrix_solver','Matrix_Solver')
-                if (allocated(self%matrixsolver)) then
-                    deallocate(self%matrixsolver)
-                    call create_matrixsolver(selection,self%matrixsolver,options)
+            case ('nonlinearsolver','NonlinearSolver','nonlinear_solver','Nonlinear_Solver')
+                if (allocated(self%nonlinear_solver)) then
+                    deallocate(self%nonlinear_solver)
+                    call create_nonlinear_solver(selection,self%nonlinear_solver,options)
                 else
-                    call create_matrixsolver(selection,self%matrixsolver,options)
+                    call create_nonlinear_solver(selection,self%nonlinear_solver,options)
+                end if
+
+
+
+
+            !
+            ! Allocation for linear solver
+            !
+            case ('linearsolver','LinearSolver','linear_solver','Linear_Solver')
+                if (allocated(self%linear_solver)) then
+                    deallocate(self%linear_solver)
+                    call create_linear_solver(selection,self%linear_solver,options)
+                else
+                    call create_linear_solver(selection,self%linear_solver,options)
                 end if
 
 
@@ -294,13 +313,6 @@ contains
         !
         ndomains = size(meshdata)
         do idom = 1,ndomains
-!            call self%data%add_domain(                              &
-!                                      trim(meshdata(idom)%name),    &
-!                                      meshdata(idom)%points,        &
-!                                      meshdata(idom)%nterms_c,      &
-!                                      meshdata(idom)%eqnset,        &
-!                                      nterms_s                      &
-!                                      )
 
             call self%data%add_domain(                              &
                                       trim(meshdata(idom)%name),    &
@@ -309,7 +321,6 @@ contains
                                       meshdata(idom)%nterms_c,      &
                                       meshdata(idom)%eqnset         &
                                       )
-
 
 
         end do
@@ -576,7 +587,7 @@ contains
 
     !>  Run ChiDG simulation
     !!
-    !!      - This routine passes the domain data, matrixsolver, and preconditioner
+    !!      - This routine passes the domain data, nonlinear solver, linear solver, and preconditioner
     !!        components to the time scheme for iteration
     !!
     !!  @author Nathan A. Wukie
@@ -587,7 +598,7 @@ contains
         class(chidg_t),     intent(inout)   :: self
 
 
-        call self%timescheme%solve(self%data,self%matrixsolver,self%preconditioner)
+        call self%time_scheme%iterate(self%data,self%nonlinear_solver,self%linear_solver,self%preconditioner)
 
 
     end subroutine run
@@ -614,7 +625,8 @@ contains
         class(chidg_t), intent(inout)   :: self
 
 
-        call self%timescheme%report()
+        !call self%time_scheme%report()
+        call self%nonlinear_solver%report()
         !call self%preconditioner%report()
 
 

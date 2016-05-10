@@ -40,7 +40,7 @@ This includes:
 
 \image html d__chidg_data__more_detailed.png
 
-\sa \ref subpage_mesh, \ref subpage_solution, \ref subpage_equationsets
+\sa \ref subpage_mesh, \ref subpage_solver, \ref subpage_equationsets
 
 
 

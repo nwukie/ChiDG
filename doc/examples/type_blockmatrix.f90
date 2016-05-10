@@ -29,35 +29,22 @@ module type_blockmatrix
     !!  elem #3:
     !!    .
     !!    .
-    !-------------------------------------------------------------------------------------------------------------------------------
+    !-----------------------------------------------------------------------------------------------------------------------
+    !> [blockmatrix_t]
     type, public :: blockmatrix_t
 
-        type(densematrix_t), allocatable :: lblks(:,:)                      !< Local domain blocks  (nelem, NBLK)
-        integer(ik),         allocatable :: ldata(:,:)                      !< Block-local  data    (ielem, 1) -> nvars, (ielem, 2) -> nterms (nvars, nterms)
+        type(densematrix_t), allocatable :: lblks(:,:)      ! Block-local linearization matrices  (nelem, NBLK)
+        integer(ik),         allocatable :: ldata(:,:)      ! Block-local block data    (ielem, 1) -> nvars, (ielem, 2) -> nterms
 
         !
-        ! These may be better located in an array of densematrix_vector containers instead of just an allocatable array.
+        ! Chimera, Boundary condition coupling blocks.
         !
-        type(densematrix_t), allocatable :: chi_blks(:,:)                    !< Chimera inter-domain blocks         (nelem, MaxDonors)
-        type(densematrix_t), allocatable :: bc_blks(:,:)                     !< Boundary condition coupling blocks  (nelem, Max coupled elems)
+        type(densematrix_t), allocatable :: chi_blks(:,:)   ! Chimera inter-domain blocks         (nelem, Max donors)
+        type(densematrix_t), allocatable :: bc_blks(:,:)    ! Boundary condition coupling blocks  (nelem, Max coupled elems)
 
-    contains
-        ! Initializers
-        generic,   public  :: init => initialize_linearization              !< Initialize full linearization matrix
-        procedure, private :: initialize_linearization
-
-
-        ! Setters
-        procedure :: store                                                  !< Store linearization data for local blocks
-        procedure :: store_chimera                                          !< Store linearization data for chimera blocks
-        procedure :: store_bc                                               !< Store linearization data for boundary condition blocks
-        procedure :: clear                                                  !< Zero all data storage
-
-
-
-        final :: destructor
     end type blockmatrix_t
-    !*******************************************************************************************************************************
+    !> [blockmatrix_t]
+    !***********************************************************************************************************************
 
 
 

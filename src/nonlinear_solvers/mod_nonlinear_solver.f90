@@ -9,12 +9,14 @@ module mod_nonlinear_solver
 
     ! Import solverdata types
     use newton,                         only: newton_t
+    use quasi_newton,                   only: quasi_newton_t
     implicit none
 
 
 
     ! Instantiate solver types for sourcing
     type(newton_t)                      :: NEWTON
+    type(quasi_newton_t)                :: QUASI_NEWTON
 
 
 
@@ -47,6 +49,8 @@ contains
             case ('newton','Newton')
                 allocate(instance, source=NEWTON)
 
+            case ('quasi_newton','Quasi_Newton')
+                allocate(instance, source=QUASI_NEWTON)
 
             case default
                 call chidg_signal(FATAL,'create_nonlinear_solver -- solver string not recognized')

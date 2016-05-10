@@ -3,15 +3,15 @@
 subroutine test__create_timescheme__allocated()
     use pfunit_mod
     use mod_kinds,          only: rk,ik
-    use mod_timescheme,     only: create_timescheme
-    use type_timescheme,    only: timescheme_t
+    use mod_time_scheme,    only: create_time_scheme
+    use type_time_scheme,   only: time_scheme_t
     
     implicit none
-    class(timescheme_t),    allocatable :: time
+    class(time_scheme_t),    allocatable :: time
     
     
     ! PROCEDURE BEING TESTED
-    call create_timescheme('newton',time)
+    call create_time_scheme('steady',time)
     
     
     ! Test allocated
@@ -29,22 +29,22 @@ end subroutine
 subroutine test__create_timescheme__type()
     use pfunit_mod
     use mod_kinds,              only: rk,ik
-    use mod_timescheme,         only: create_timescheme
-    use type_timescheme,        only: timescheme_t
-    use newton,                 only: newton_t
+    use mod_time_scheme,        only: create_time_scheme
+    use type_time_scheme,       only: time_scheme_t
+    use steady,                 only: steady_t
     
     implicit none
-    class(timescheme_t),     allocatable :: time
+    class(time_scheme_t),     allocatable :: time
     
     
         
     ! PROCEDURE BEING TESTED
-    call create_timescheme('newton',time)
+    call create_time_scheme('steady',time)
     
     
     ! Test for correct type
     select type(time)
-        type is (newton_t)
+        type is (steady_t)
             ! correct type
             @assertTrue(.true.) 
         

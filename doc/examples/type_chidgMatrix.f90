@@ -20,28 +20,13 @@ module type_chidgMatrix
     !!
     !!
     !-----------------------------------------------------------------------------------------------------------
+    !> [chidgmatrix_t]
     type, public :: chidgMatrix_t
 
-        type(blockmatrix_t), allocatable    :: dom(:)          !< Array of block-matrices. One for each domain
-
-
-
-    contains
-        !> Initializers
-        generic,    public  :: init => initialize
-        procedure,  private :: initialize           !< ChiDGMatrix initialization
-
-        !> Setters
-        procedure   :: store                        !< Store linearization data for local blocks
-        procedure   :: store_chimera                !< Store linearization data for chimera blocks
-        procedure   :: clear                        !< Zero matrix-values
-
-
-        !procedure   :: build                       !< Build full-matrix representation of the block-sparse matrix
-
-        final       :: destructor
+        type(blockmatrix_t), allocatable    :: dom(:)
 
     end type chidgMatrix_t
+    !> [chidgmatrix_t]
     !-----------------------------------------------------------------------------------------------------------
 
 

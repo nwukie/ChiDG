@@ -25,9 +25,9 @@ module type_time_scheme
 
 
         ! OPTIONS
-        real(rk)        :: cfl0     = 1.0_rk        !< Initial CFL number
+!        real(rk)        :: cfl0     = 1.0_rk        !< Initial CFL number
+!        real(rk)        :: tol      = 1.e-13_rk     !< Convergence tolerance
         real(rk)        :: dt       = 0.001_rk      !< Time-step increment
-        real(rk)        :: tol      = 1.e-13_rk     !< Convergence tolerance
         integer(ik)     :: nsteps   = 100           !< Number of time steps to compute
         integer(ik)     :: nwrite   = 10            !< Write data every 'nwrite' steps
 
@@ -46,14 +46,13 @@ module type_time_scheme
 
     contains
 
-        procedure   :: init
-        procedure   :: init_spec
+        procedure   :: init         !< General initialization procedure. Should get called automatically.
+        procedure   :: init_spec    !< Specialized initialization for each different scheme. Gets called by general 'init'
 
-        !procedure(data_interface),   deferred   :: solve    ! Must define this procedures in the extended type
-        procedure(data_interface),   deferred   :: iterate   ! Must define this procedures in the extended type
-
-        procedure   :: set
+        procedure   :: set          !< Set time_scheme properties.
         procedure   :: report
+
+        procedure(data_interface),   deferred   :: iterate   ! Must define this procedures in the extended type
 
     end type time_scheme_t
     !******************************************************************************************************
@@ -170,10 +169,10 @@ contains
 
 
         call options%get('dt',self%dt)
-        call options%get('tol',self%tol)
         call options%get('nsteps',self%nsteps)
         call options%get('nwrite',self%nwrite)
-        call options%get('cfl0',self%cfl0)
+        !call options%get('tol',self%tol)
+        !call options%get('cfl0',self%cfl0)
 
     end subroutine set
     !*************************************************************************************************************

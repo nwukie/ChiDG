@@ -166,13 +166,16 @@ contains
             inF = ( z(igq) >  2.121_rk - thickness )
 
 
-!            ! Monopole
-!            inA = ( x(igq) < -3._rk + thickness ) 
-!            inB = ( x(igq) >  3._rk - thickness )
+!            ! Two-cylinder scattering
+!            inA = ( x(igq) < -NINE + thickness )
+!            inB = ( x(igq) >  NINE - thickness )
 !            inC = ( y(igq) < -2.121_rk + thickness )
-!            inD = ( y(igq) >  2.121_rk - thickness )
+!            inD = ( y(igq) >  FIVE - thickness )
 !            inE = ( z(igq) < -2.121_rk + thickness )
 !            inF = ( z(igq) >  2.121_rk - thickness )
+
+
+
 
 !            inA = .false.
 !            inB = .false.

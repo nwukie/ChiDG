@@ -1,9 +1,9 @@
 module quasi_newton
     use mod_kinds,              only: rk,ik
     use mod_constants,          only: ZERO, ONE, TWO, DIAG
-    use type_timescheme,        only: timescheme_t
     use type_chidg_data,        only: chidg_data_t
-    use type_matrixsolver,      only: matrixsolver_t
+    use type_nonlinear_solver,  only: nonlinear_solver_t
+    use type_linear_solver,     only: linear_solver_t
     use type_preconditioner,    only: preconditioner_t
     use type_chidgVector
 
@@ -24,14 +24,12 @@ module quasi_newton
     !!  @date   2/8/2016
     !!
     !---------------------------------------------------------------------------------------------
-    type, extends(timescheme_t), public :: quasi_newton_t
-
+    type, extends(nonlinear_solver_t), public :: quasi_newton_t
 
 
     contains
     
         procedure   :: solve
-
         final       :: destructor
 
     end type quasi_newton_t
@@ -59,10 +57,10 @@ contains
     !!
     !!
     !-------------------------------------------------------------------------------------------------
-    subroutine solve(self,data,matrixsolver,preconditioner)
+    subroutine solve(self,data,linear_solver,preconditioner)
         class(quasi_newton_t),                  intent(inout)   :: self
         type(chidg_data_t),                     intent(inout)   :: data
-        class(matrixsolver_t),      optional,   intent(inout)   :: matrixsolver
+        class(linear_solver_t),     optional,   intent(inout)   :: linear_solver
         class(preconditioner_t),    optional,   intent(inout)   :: preconditioner
 
         character(100)          :: filename
@@ -78,7 +76,8 @@ contains
 
 
         wcount = 1
-        associate ( q => data%sdata%q, dq => data%sdata%dq, rhs => data%sdata%rhs, lhs => data%sdata%lhs, dt => self%dt)
+        !associate ( q => data%sdata%q, dq => data%sdata%dq, rhs => data%sdata%rhs, lhs => data%sdata%lhs, dt => self%dt)
+        associate ( q => data%sdata%q, dq => data%sdata%dq, rhs => data%sdata%rhs, lhs => data%sdata%lhs)
 
             call write_line('Entering time')
             call write_line(' ')
@@ -156,8 +155,8 @@ contains
                 !
                 ! Compute element-local pseudo-timestep
                 !
-                data%sdata%dt = cfln
-                !call compute_timestep(data,cfln)
+                !data%sdata%dt = cfln
+                call compute_timestep(data,cfln)
 
 
 
@@ -206,9 +205,9 @@ contains
                 !
                 ! We need to solve the matrix system Ax=b for the update vector x (dq)
                 !
-                call matrixsolver%solve(lhs,dq,b,preconditioner)
-                call self%matrix_iterations%push_back(matrixsolver%niter)
-                call self%matrix_time%push_back(matrixsolver%timer%elapsed())
+                call linear_solver%solve(lhs,dq,b,preconditioner)
+                call self%matrix_iterations%push_back(linear_solver%niter)
+                call self%matrix_time%push_back(linear_solver%timer%elapsed())
 
 
 
@@ -235,12 +234,12 @@ contains
 
 
 
-                if (wcount == self%nwrite) then
-                    write(filename, "(I7,A4)") 1000000+niter, '.plt'
-                    call write_tecio_variables(data,trim(filename),niter+1)
-                    wcount = 0
-                end if
-                wcount = wcount + 1
+                !if (wcount == self%nwrite) then
+                !    write(filename, "(I7,A4)") 1000000+niter, '.plt'
+                !    call write_tecio_variables(data,trim(filename),niter+1)
+                !    wcount = 0
+                !end if
+                !wcount = wcount + 1
 
 
             end do ! niter

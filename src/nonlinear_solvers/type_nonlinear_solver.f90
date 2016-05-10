@@ -10,7 +10,7 @@ module type_nonlinear_solver
     implicit none
 
 
-    !> solver abstract type definition
+    !>  Nonlinear solver abstract type definition
     !!
     !!  @author Nathan A. Wukie
     !!  @date   2/8/2016
@@ -25,7 +25,7 @@ module type_nonlinear_solver
         real(rk)        :: cfl0     = 1.0_rk        !< Initial CFL number
         real(rk)        :: tol      = 1.e-13_rk     !< Convergence tolerance
         integer(ik)     :: nsteps   = 100           !< Number of time steps to compute
-        integer(ik)     :: nwrite   = 10            !< Write data every 'nwrite' steps
+!        integer(ik)     :: nwrite   = 10            !< Write data every 'nwrite' steps
 
 
         type(timer_t)   :: timer                    !< Timer data-type
@@ -162,9 +162,9 @@ contains
         type(dict_t),               intent(inout)   :: options
 
 
-!        call options%get('tol',self%tol)
-!        call options%get('nsteps',self%nsteps)
-!        call options%get('nwrite',self%nwrite)
+        call options%get('tol',self%tol)
+        call options%get('cfl0',self%cfl0)
+        call options%get('nsteps',self%nsteps)
 
     end subroutine set
     !*************************************************************************************************************

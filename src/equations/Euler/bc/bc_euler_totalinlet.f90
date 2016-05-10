@@ -1,4 +1,5 @@
 module bc_euler_totalinlet
+#include <messenger.h>
     use mod_kinds,          only: rk,ik
     use mod_constants,      only: ONE, TWO, HALF, ZERO, LOCAL
 
@@ -171,33 +172,36 @@ contains
 
             normal_direction = self%bcproperties%compute("normal_direction",    time, coords)
 
-            if ( normal_direction(1) == ONE ) then
+!            if ( normal_direction(1) == ONE ) then
                 nx = self%bcproperties%compute("nx",                                time, coords)
                 ny = self%bcproperties%compute("ny",                                time, coords)
                 nz = self%bcproperties%compute("nz",                                time, coords)
 
-            else if ( normal_direction(1) == TWO ) then
-                nr = self%bcproperties%compute("nr",                                time, coords)
-                nt = self%bcproperties%compute("nt",                                time, coords)
-                nz = self%bcproperties%compute("nz",                                time, coords)
-
-
-                !
-                ! Compute theta
-                !
-                x = mesh(idom)%elems(ielem)%quad_pts(:)%c1_
-                y = mesh(idom)%elems(ielem)%quad_pts(:)%c2_
-
-                theta = atan2(y,x)
-
-                !
-                ! Convert cylindrical vectors to cartesian
-                ! 
-                nx = cos(theta)*nr - sin(theta)*nt
-                ny = sin(theta)*nr + cos(theta)*nt
-                nz = nz
-
-            end if
+!            else if ( normal_direction(1) == TWO ) then
+!                nr = self%bcproperties%compute("nr",                                time, coords)
+!                nt = self%bcproperties%compute("nt",                                time, coords)
+!                nz = self%bcproperties%compute("nz",                                time, coords)
+!
+!
+!                !
+!                ! Compute theta
+!                !
+!                x = mesh(idom)%elems(ielem)%quad_pts(:)%c1_
+!                y = mesh(idom)%elems(ielem)%quad_pts(:)%c2_
+!
+!                theta = atan2(y,x)
+!
+!                !
+!                ! Convert cylindrical vectors to cartesian
+!                ! 
+!                nx = cos(theta)*nr - sin(theta)*nt
+!                ny = sin(theta)*nr + cos(theta)*nt
+!                nz = nz
+!
+!            else
+!                call write_line("Warning: bc_euler_totalinlet not reading inlet direction")
+!
+!            end if
 
 
             

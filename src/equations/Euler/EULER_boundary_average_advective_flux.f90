@@ -156,36 +156,36 @@ contains
             iface_m = face_info%iface
 
 
-            if ( mesh(idom_m)%faces(ielem_m, iface_m)%periodic_type == 'cylindrical' ) then
-                theta_offset = (PI/180._rk)*mesh(idom_m)%faces(ielem_m,iface_m)%chimera_offset_theta
-
-                x_m     = mesh(idom_m)%faces(ielem_m,iface_m)%quad_pts(:)%c1_
-                y_m     = mesh(idom_m)%faces(ielem_m,iface_m)%quad_pts(:)%c2_
-                r_m     = sqrt(x_m**TWO + y_m**TWO)
-                theta_m = atan2(y_m,x_m)
-
-
-                theta_p = theta_m + theta_offset
-
-                !
-                ! Transform 'p' cartesian vector to 'p' cylindrical at theta_p
-                !
-                ! rhor and rhotheta are constant from face to face
-                !
-                rhor_p =  cos(theta_p)*rhou_p + sin(theta_p)*rhov_p ! rhor
-                rhot_p = -sin(theta_p)*rhou_p + cos(theta_p)*rhov_p ! rhotheta
-
-
-                !
-                ! Transform 'p' cylindrical to 'p' cartesian at theta_m
-                !
-                rhou_p = cos(theta_m)*rhor_p - sin(theta_m)*rhot_p
-                rhov_p = sin(theta_m)*rhor_p + cos(theta_m)*rhot_p
-
-            end if
-
-
-
+!            if ( mesh(idom_m)%faces(ielem_m, iface_m)%periodic_type == 'cylindrical' ) then
+!                theta_offset = (PI/180._rk)*mesh(idom_m)%faces(ielem_m,iface_m)%chimera_offset_theta
+!
+!                x_m     = mesh(idom_m)%faces(ielem_m,iface_m)%quad_pts(:)%c1_
+!                y_m     = mesh(idom_m)%faces(ielem_m,iface_m)%quad_pts(:)%c2_
+!                r_m     = sqrt(x_m**TWO + y_m**TWO)
+!                theta_m = atan2(y_m,x_m)
+!
+!
+!                theta_p = theta_m + theta_offset
+!
+!                !
+!                ! Transform 'p' cartesian vector to 'p' cylindrical at theta_p
+!                !
+!                ! rhor and rhotheta are constant from face to face
+!                !
+!                rhor_p =  cos(theta_p)*rhou_p + sin(theta_p)*rhov_p ! rhor
+!                rhot_p = -sin(theta_p)*rhou_p + cos(theta_p)*rhov_p ! rhotheta
+!
+!
+!                !
+!                ! Transform 'p' cylindrical to 'p' cartesian at theta_m
+!                !
+!                rhou_p = cos(theta_m)*rhor_p - sin(theta_m)*rhot_p
+!                rhov_p = sin(theta_m)*rhor_p + cos(theta_m)*rhot_p
+!
+!            end if
+!
+!
+!
 
 
 

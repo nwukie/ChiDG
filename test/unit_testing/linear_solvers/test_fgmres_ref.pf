@@ -21,7 +21,7 @@ subroutine test_fgmres_ref_solve()
 
     type(chidgMatrix_t)         :: A
     type(chidgVector_t)         :: x, b
-    type(fgmres_t)              :: matrix_solver
+    type(fgmres_t)              :: linear_solver
     
     real(rk)    :: tol
     integer(ik) :: nterms_c, nterms_s, idomain, spacedim
@@ -44,9 +44,10 @@ subroutine test_fgmres_ref_solve()
     !
     ! Set ChiDG components
     !
-    call chidg%set('timescheme',    'newton')
-    call chidg%set('matrixsolver',  'fgmres')
-    call chidg%set('preconditioner','identity')
+    call chidg%set('time_scheme',       'steady')
+    call chidg%set('nonlinear_solver',  'newton')
+    call chidg%set('linear_solver',     'fgmres')
+    call chidg%set('preconditioner',    'identity')
 
 
     !
@@ -108,9 +109,9 @@ subroutine test_fgmres_ref_solve()
     ! Solve matrix system. Ax=b. TESTING
     !
     associate ( M => chidg%preconditioner )
-    matrix_solver%report = .false.  
-    matrix_solver%tol    = 1.e-13_rk
-    call matrix_solver%solve(A,x,b,M)
+    linear_solver%report = .false.  
+    linear_solver%tol    = 1.e-13_rk
+    call linear_solver%solve(A,x,b,M)
     end associate
 
 

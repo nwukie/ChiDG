@@ -8,20 +8,12 @@ module mod_time_scheme
 
 
     ! Import solverdata types
-!    use forward_euler,                  only: forward_euler_t
-!    use backward_euler,                 only: backward_euler_t
-!    use backward_euler_subiteration,    only: backward_euler_subiteration_t
-!    use quasi_newton,                   only: quasi_newton_t
     use steady,                         only: steady_t
     implicit none
 
 
 
     ! Instantiate solver types for sourcing
-!    type(forward_euler_t)               :: FORWARD_EULER_INSTANCE
-!    type(backward_euler_t)              :: BACKWARD_EULER_INSTANCE
-!    type(backward_euler_subiteration_t) :: BACKWARD_EULER_SUBITERATION_INSTANCE
-!    type(quasi_newton_t)                :: QUASI_NEWTON_INSTANCE
     type(steady_t)                      :: STEADY
 
 

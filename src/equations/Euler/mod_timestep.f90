@@ -40,7 +40,6 @@ contains
                         lam     !< characteristic speed
 
         
-        !associate ( elems => domain%mesh%elems, q => domain%sdata%q )
         !
         ! Loop through elements and compute time-step function
         !
@@ -96,7 +95,6 @@ contains
                 !
                 ! Compute mean characteristic speed. First compute average velocity magnitude and sound speed
                 !
-                ! lam = vmag + c
                 lam = sum(vmag)/size(vmag) + sum(c)/size(vmag)
 
 
@@ -109,7 +107,6 @@ contains
                 !
                 ! Compute elemen-local timestep
                 !
-                !domain%sdata%dt(ielem) = (cfl*h)/lam
                 data%sdata%dt(idom,ielem) = (cfl*h)/lam
 
 

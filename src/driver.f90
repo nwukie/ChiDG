@@ -23,6 +23,7 @@ program driver
     use mod_chidg_edit,         only: chidg_edit
     use mod_chidg_convert,      only: chidg_convert
     use mod_chidg_interpolate,  only: chidg_interpolate
+    use mod_chidg_post,         only: chidg_post
     use mod_kirchoffs,          only: kirchoff
     use mod_io
     
@@ -75,16 +76,21 @@ program driver
         ! Set time-scheme options
         !
         call toptions%set('dt',dt)
-        call toptions%set('tol',ttol)
-        call toptions%set('nsteps',nsteps)
+        call toptions%set('nsteps',time_steps)
         call toptions%set('nwrite',nwrite)
-        call toptions%set('cfl0',cfl0)
 
 
         !
-        ! Set matrix solver options
+        ! Set nonlinear solver options
         !
-        call loptions%set('tol',mtol)
+        call noptions%set('tol',ntol)
+        call noptions%set('cfl0',cfl0)
+        call noptions%set('nsteps',nonlinear_steps)
+
+        !
+        ! Set linear solver options
+        !
+        call loptions%set('tol',ltol)
 
 
         !
@@ -113,11 +119,11 @@ program driver
 
 
             ! rho
-            call constant%set_option('val',0._rk)
+            call constant%set_option('val',1.20_rk)
             call initialize_variable(chidg%data,1,constant)
 
             ! rho_u
-            call constant%set_option('val',0._rk)
+            call constant%set_option('val',50._rk)
             call initialize_variable(chidg%data,2,constant)
 
             ! rho_v
@@ -129,30 +135,30 @@ program driver
             call initialize_variable(chidg%data,4,constant)
 
             ! rho_E
-            call constant%set_option('val',0._rk)
+            call constant%set_option('val',230000._rk)
             call initialize_variable(chidg%data,5,constant)
 
 
-            ! rho
-            call constant%set_option('val',0._rk)
-            call initialize_variable(chidg%data,6,constant)
-
-            ! rho_u
-            call constant%set_option('val',0._rk)
-            call initialize_variable(chidg%data,7,constant)
-
-            ! rho_v
-            call constant%set_option('val',0._rk)
-            call initialize_variable(chidg%data,8,constant)
-
-            ! rho_w
-            call constant%set_option('val',0._rk)
-            call initialize_variable(chidg%data,9,constant)
-
-            ! rho_E
-            call constant%set_option('val',0._rk)
-            call initialize_variable(chidg%data,10,constant)
-
+!            ! rho
+!            call constant%set_option('val',0._rk)
+!            call initialize_variable(chidg%data,6,constant)
+!
+!            ! rho_u
+!            call constant%set_option('val',0._rk)
+!            call initialize_variable(chidg%data,7,constant)
+!
+!            ! rho_v
+!            call constant%set_option('val',0._rk)
+!            call initialize_variable(chidg%data,8,constant)
+!
+!            ! rho_w
+!            call constant%set_option('val',0._rk)
+!            call initialize_variable(chidg%data,9,constant)
+!
+!            ! rho_E
+!            call constant%set_option('val',0._rk)
+!            call initialize_variable(chidg%data,10,constant)
+!
 
         else
 
@@ -262,9 +268,11 @@ program driver
         if ( trim(chidg_action) == 'edit' ) then
             call chidg_edit(trim(filename))
 
-
         else if ( trim(chidg_action) == 'convert' ) then
             call chidg_convert(trim(filename))
+
+        else if ( trim(chidg_action) == 'post' ) then
+            call chidg_post(trim(filename))
 
         else if ( trim(chidg_action) == 'kirchoff' ) then
             call kirchoff(filename)

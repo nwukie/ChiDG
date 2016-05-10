@@ -1,0 +1,110 @@
+/*!
+
+
+\page subpage_solver Solver data structures
+The `solverdata_t` type stores solution information. In particular, data structures that correspond to the 
+often used terms in numerical solution methods. These are shown in the simplified data type definition as
+
+\snippet doc/examples/type_solverdata.f90 solverdata_t
+
+In general, all solution data in a `chidg_t` instance is stored in either `chidgvector_t` or 
+`chidgmatrix_t` data types. These account for the number of equations for a given domain, the
+number of elements, and order of the solution expansion.
+
+
+
+
+
+
+
+
+
+\section s_solver_chidgvector ChiDG vector
+
+\snippet doc/examples/type_chidgVector.f90 chidgvector_t
+
+\image html d__chidgvector.png
+
+
+
+
+
+
+\subsection s_solver_chidgvector_blockvector Block vector
+
+\snippet doc/examples/type_blockvector.f90 blockvector_t
+
+\image html d__blockvector.png
+
+
+
+
+
+
+\subsection s_solver_chidgvector_densevector Dense vector
+
+\snippet doc/examples/type_densevector.f90 densevector_t
+
+\image html d__densevector.png
+
+
+
+
+
+
+
+
+
+
+
+
+
+\section s_solver_chidgmatrix ChiDG matrix
+
+
+
+\snippet doc/examples/type_chidgMatrix.f90 chidgmatrix_t
+
+\image html d__chidgmatrix.png
+
+
+
+
+
+
+\subsection s_solver_chidgmatrix_blockmatrix Block matrix
+
+\snippet doc/examples/type_blockmatrix.f90 blockmatrix_t
+
+\image html d__blockmatrix_lblks.png
+\image html d__blockmatrix_local_linearization.png
+\image html d__blockmatrix_chimera_linearization.png
+\image html d__blockmatrix_bc_linearization.png
+
+
+
+
+
+\subsection s_solver_chidgmatrix_densematrix Dense matrix
+
+\snippet doc/examples/type_densematrix.f90 densematrix_t
+
+\image html d__densematrix.png
+\image html d__densematrix_detail.png
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+*/

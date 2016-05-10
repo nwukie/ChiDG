@@ -32,7 +32,7 @@ contains
         complex(rk),    dimension(:),   allocatable :: pressures
         type(point_t),  dimension(:),   allocatable :: points
 
-        nterms_s = 6*6*6
+        nterms_s = 7*7*7
 
         !
         ! Initialize ChiDG environment

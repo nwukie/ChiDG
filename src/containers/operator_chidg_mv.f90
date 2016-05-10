@@ -127,7 +127,17 @@ contains
                                 nonconforming = ( size(Amat,2) /= size(xvec) )
                                 if (nonconforming) call chidg_signal(FATAL,"operator_chidg_mv: nonconforming Chimera m-v operation")
 
+
+                                !
+                                ! Do MV multiply and add to vector
+                                !
                                 resvec = resvec + matmul(Amat,xvec)
+
+                                ! Test without global coupling
+                                !if (ielem == eparent) then
+                                !    resvec = resvec + matmul(Amat,xvec)
+                                !end if
+
 
                             end associate
                         end if

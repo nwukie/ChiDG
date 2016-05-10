@@ -152,7 +152,7 @@ contains
     !!  @date   4/14/2016
     !!
     !----------------------------------------------------------------------------
-    elemental function compute_cylindricalduct_mode(m,alpha,r,rmax) result(val)
+    impure elemental function compute_cylindricalduct_mode(m,alpha,r,rmax) result(val)
         integer(ik),    intent(in)  :: m
         real(rk),       intent(in)  :: alpha
         real(rk),       intent(in)  :: r
@@ -171,6 +171,7 @@ contains
         else
             normalization = sqrt(TWO)/(bessel_jn(m,alpha)*sqrt(ONE - (real(m,rk)**TWO)/alpha**TWO))
         end if
+
 
         ! Apply normalization 
         val = val*normalization

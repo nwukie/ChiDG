@@ -105,9 +105,9 @@ contains
 
             !tolerance_check = .true.
             !maxiter_check   = .true.
-            !do while ( resid > self%tol )
+            do while ( resid > self%tol )
             !do while ( tolerance_check .and. maxiter_check )
-            do while ( niter == 0 )
+            !do while ( niter == 0 )
                 niter = niter + 1
 
                 call write_line("   niter: ", niter, delimiter='')
@@ -187,12 +187,12 @@ contains
                 !
                 ! Write incremental solution
                 !
-                if (wcount == self%nwrite) then
-                    write(filename, "(I7,A4)") 1000000+niter, '.plt'
-                    call write_tecio_variables(data,trim(filename),niter+1)
-                    wcount = 0
-                end if
-                wcount = wcount + 1
+                !if (wcount == self%nwrite) then
+                !    write(filename, "(I7,A4)") 1000000+niter, '.plt'
+                !    call write_tecio_variables(data,trim(filename),niter+1)
+                !    wcount = 0
+                !end if
+                !wcount = wcount + 1
 
 
             end do ! niter

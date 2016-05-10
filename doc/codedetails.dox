@@ -7,11 +7,13 @@
 
 \subpage subpage_mesh
 
-\subpage subpage_solution
+\subpage subpage_solver
 
 \subpage subpage_equationsets
 
-\subpage subpage_quadrature
+\subpage subpage_integration
+
+\subpage subpage_autodiff
 
 \subpage subpage_io
 

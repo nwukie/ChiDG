@@ -183,15 +183,16 @@ contains
         ! Define input data here that is normally read through the namelist input file
         !
         !------------------------------------------------------------------------------
-        basis           = 'legendre'
-        spacedim        = 3
-        nterms_s        = self%order**THREE
-        gq_rule         = 2
-        eqnset          = 'euler'
-        timescheme      = 'quasi_newton'
-        matrixsolver    = 'fgmres'
-        preconditioner  = 'ILU0'
-        IO_DESTINATION  = 'file'
+        basis            = 'legendre'
+        spacedim         = 3
+        nterms_s         = self%order**THREE
+        gq_rule          = 2
+        eqnset           = 'euler'
+        time_scheme      = 'steady'
+        nonlinear_solver = 'quasi_newton'
+        linear_solver    = 'fgmres'
+        preconditioner   = 'ILU0'
+        IO_DESTINATION   = 'file'
         !------------------------------------------------------------------------------
 
 
@@ -242,8 +243,9 @@ contains
         !
         ! Set ChiDG components
         !
-        call chidg%set('time_scheme',timescheme,toptions)
-        call chidg%set('matrixsolver',matrixsolver,moptions)
+        call chidg%set('time_scheme',time_scheme,toptions)
+        call chidg%set('nonlinear_solver',nonlinear_solver,moptions)
+        call chidg%set('linear_solver',linear_solver,moptions)
         call chidg%set('preconditioner',preconditioner)
 
 

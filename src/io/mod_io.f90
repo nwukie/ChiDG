@@ -59,8 +59,7 @@ module mod_io
     !--------------------------------------------------
     character(len=100),  save    :: time_scheme      = 'steady'
     real(rk),            save    :: dt               = 0.001_rk
-    real(rk),            save    :: cfl0             = 1._rk
-    integer(ik),         save    :: nsteps           = 100
+    integer(ik),         save    :: time_steps       = 100
     real(rk),            save    :: ttol             = 1.e-8
     integer(ik),         save    :: ntime_instances  = 1
    
@@ -69,12 +68,16 @@ module mod_io
     ! NONLINEAR SOLVER
     !-------------------------------------------------
     character(len=100),  save    :: nonlinear_solver = 'newton'
+    integer(ik),         save    :: nonlinear_steps  = 100
+    real(rk),            save    :: ntol             = 1.e-8
+    real(rk),            save    :: cfl0             = 1._rk
+    
 
    
     ! LINEAR SOLVER
     !--------------------------------------------------
     character(len=100),  save    :: linear_solver    = 'fgmres'
-    real(rk),            save    :: mtol             = 1.e-8
+    real(rk),            save    :: ltol             = 1.e-8
 
 
 
@@ -140,17 +143,19 @@ contains
         namelist /equation_set/             eqnset
 
         namelist /time/                     time_scheme,           &
-                                            cfl0,                  &
                                             dt,                    &
-                                            nsteps,                &
+                                            time_steps,            &
                                             ntime_instances,       &
                                             ttol
 
 
-        namelist /nonlinear_solve/          nonlinear_solver
+        namelist /nonlinear_solve/          nonlinear_solver,      &
+                                            nonlinear_steps,       &
+                                            cfl0,                  &
+                                            ntol
 
         namelist /linear_solve/             linear_solver,         &
-                                            mtol,                  &
+                                            ltol,                  &
                                             preconditioner
 
 

@@ -9,12 +9,13 @@ module type_element
     use type_quadrature,        only: quadrature_t
     use DNAD_D
     use mod_quadrature,         only: GQ, get_quadrature
-    !use mod_grid,               only: ELEM_MAP
     use mod_grid,               only: get_element_mapping
     use mod_polynomial,         only: polynomialVal, dpolynomialVal
     use mod_grid_tools,         only: compute_modal_coordinates
     use mod_inv,                only: inv
     implicit none
+
+
 
 
     !>  Element data type

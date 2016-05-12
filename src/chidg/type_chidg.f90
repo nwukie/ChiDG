@@ -66,6 +66,8 @@ module type_chidg
         procedure   :: read_boundaryconditions
         procedure   :: read_solution
         procedure   :: write_solution
+
+        ! Initialization
         procedure   :: initialize_solution_domains
         procedure   :: initialize_solution_solver
 

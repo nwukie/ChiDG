@@ -29,19 +29,15 @@ module type_face
     !-------------------------------------------------------------------------------------------------------------
     type, public :: face_t
         integer(ik)                  :: spacedim            !< Number of spatial dimensions
-        integer(ik)                  :: neqns
-        integer(ik)                  :: nterms_s
+        integer(ik)                  :: neqns               !< Number of equations in equationset_t
+        integer(ik)                  :: nterms_s            !< Number of terms in solution polynomial expansion
         integer(ik)                  :: ftype               !< interior, or boundary condition, or Chimera interface, or Orphan
         integer(ik)                  :: iface               !< XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, etc
 
-        integer(ik)                     :: idomain             !< Domain index of parent element
-        integer(ik)                     :: iparent             !< Element index of parent element
-
-        integer(ik)                     :: ineighbor           !< Block-local index of neighbor element
-
-
-        ! Chimera identifier
-        integer(ik)                     :: ChiID = 0                   !< Identifier for domain-local Chimera interfaces
+        integer(ik)                  :: idomain             !< Domain index of parent element
+        integer(ik)                  :: iparent             !< Element index of parent element
+        integer(ik)                  :: ineighbor           !< Block-local index of neighbor element
+        integer(ik)                  :: ChiID = 0           !< Identifier for domain-local Chimera interfaces
 
         ! Chimera face offset. For periodic boundary condition.
         character(len=:), allocatable   :: periodic_type
@@ -66,15 +62,15 @@ module type_face
 
         ! Matrices of cartesian gradients of basis/test functions
         !---------------------------------------------------------
-        real(rk), allocatable       :: dtdx(:,:)            !< Derivative of basis functions in x-direction at quadrature nodes
-        real(rk), allocatable       :: dtdy(:,:)            !< Derivative of basis functions in y-direction at quadrature nodes
-        real(rk), allocatable       :: dtdz(:,:)            !< Derivative of basis functions in z-direction at quadrature nodes
+        real(rk),           allocatable :: dtdx(:,:)        !< Derivative of basis functions in x-direction at quadrature nodes
+        real(rk),           allocatable :: dtdy(:,:)        !< Derivative of basis functions in y-direction at quadrature nodes
+        real(rk),           allocatable :: dtdz(:,:)        !< Derivative of basis functions in z-direction at quadrature nodes
 
 
         ! Quadrature matrices
         !---------------------------------------------------------
-        type(quadrature_t),  pointer :: gq     => null()    !< Pointer to solution quadrature instance
-        type(quadrature_t),  pointer :: gqmesh => null()    !< Pointer to mesh quadrature instance
+        type(quadrature_t),  pointer    :: gq     => null() !< Pointer to solution quadrature instance
+        type(quadrature_t),  pointer    :: gqmesh => null() !< Pointer to mesh quadrature instance
 
 
 

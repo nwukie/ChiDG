@@ -25,9 +25,6 @@ ChiDG is hosted in a git repository on <a href="https://www.gitlab.com">www.gitl
 \code  git clone https://gitlab.com/nwukie/ChiDG.git ChiDG     \endcode
 
 
-<B>
-NOTE: ChiDG is currently in pre-release. As such, public read-access to the above repository is restricted.
-</B>
 
 \n
 \n

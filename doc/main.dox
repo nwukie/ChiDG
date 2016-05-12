@@ -16,17 +16,23 @@ ChiDG is a Chimera-based framework for solving sets of partial differential equa
 
 
 
-
-
-
-\section s_contents Contents
-
+\section s_gettingstarted Getting started
 
 \li \ref page_installation
-\li \ref page_develop
-\li \ref page_usage
+\li \ref page_gridgeneration
 \li \ref page_examplecases
+
+
+
+
+
+
+\section s_documentation Documentation
+
+
+\li \ref page_usage
 \li \ref page_codedetails
+\li \ref page_develop
 \li \ref page_references
 \li \ref page_license
 

@@ -120,7 +120,7 @@ and also the number of quadrature points being used to perform the integration o
 so a given `element_t` contains pointers `gq` and `gqmesh` to quadrature instances that correspond to the solution and coordinate polynomial
 expansions respectively.
 
-See \subpage subpage_quadrature
+See \subpage subpage_integration
 
 
 

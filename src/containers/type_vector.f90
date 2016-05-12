@@ -9,6 +9,15 @@ end module type_datawrapper
 
 
 
+
+
+
+
+
+
+
+
+
 module type_vector
 #include <messenger.h>
     use mod_kinds,          only: rk, ik
@@ -18,30 +27,35 @@ module type_vector
 
 
 
+    !>
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   5/11/2016
+    !!
+    !------------------------------------------------------------------------
     type, public :: vector_t
+
         integer(ik)                         :: size_        = 0
         integer(ik)                         :: capacity_    = 0
         integer(ik)                         :: buffer_      = 20
-
-
-
-
-        type(datawrapper_t),   allocatable :: data(:)
+        type(datawrapper_t),   allocatable  :: data(:)
 
     contains
         procedure, public   :: size
         procedure, public   :: capacity
 
 
-        !< Data modifiers
+        ! Data modifiers
         procedure,  public  :: push_back
         procedure,  public  :: clear
-        procedure           :: increase_capacity
+        procedure,  private :: increase_capacity
 
 
-        !< Data accessors
+        ! Data accessors
         procedure, public   :: at
+
     end type vector_t
+    !*************************************************************************
 
 
 
@@ -55,14 +69,14 @@ contains
     !!  @date   2/17/2016
     !!
     !!
-    !-------------------------------------------------------------------------
+    !-------------------------------------------------------------------------------
     function size(self) result(res)
         class(vector_t),    intent(in)  :: self
-
         integer(ik) :: res
 
         res = self%size_
-    end function
+    end function size
+    !*******************************************************************************
 
 
 
@@ -72,14 +86,14 @@ contains
     !!  @date   2/17/2016
     !!
     !!
-    !-------------------------------------------------------------------------
+    !-------------------------------------------------------------------------------
     function capacity(self) result(res)
         class(vector_t),    intent(in)  :: self
-
         integer(ik) :: res
 
         res = self%capacity_
-    end function
+    end function capacity
+    !*******************************************************************************
 
 
 
@@ -116,8 +130,8 @@ contains
         !
         ! Allocate wrapper component and store data
         !
-        !allocate(wrapper%elem, source=element, stat=ierr)
-        !if (ierr /= 0) call AllocationError
+        allocate(wrapper%elem, source=element, stat=ierr)
+        if (ierr /= 0) call AllocationError
 
 
         !
@@ -149,9 +163,10 @@ contains
     !> Clear container contents
     !!
     !!  @author Nathan A. Wukie
+    !!  @date   5/11/2016
     !!
     !!
-    !-------------------------------------------------------------------------
+    !----------------------------------------------------------------------------------------
     subroutine clear(self)
         class(vector_t),   intent(inout)   :: self
 
@@ -161,6 +176,7 @@ contains
         deallocate(self%data)
 
     end subroutine clear
+    !****************************************************************************************
 
 
 
@@ -175,8 +191,8 @@ contains
 
     !> Access element at index location
     !!
-    !!
-    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   5/11/2016
     !!
     !!
     !!
@@ -204,7 +220,8 @@ contains
         allocate(res, source=self%data(index)%elem)
 
 
-    end function
+    end function at
+    !****************************************************************************************
 
 
 

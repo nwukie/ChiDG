@@ -146,8 +146,7 @@ contains
 
             ! Read mapping from user
             print*, "Enter mapping for block: ", igrid
-            !print*,  "Key -- (1 = linear, 2 = quadratic, 3 = cubic, 4 = quartic)"
-            print*,  "Key -- (1 = linear, 2 = quadratic, 3 = cubic, 4 = quartic, 5= quintic, 6 = sextic, 7 = septic )"
+            print*,  "Key -- (1 = linear, 2 = quadratic, 3 = cubic, 4 = quartic, 5 = quintic, 6 = sextic, 7 = septic )"
             read*, mapping
 
 

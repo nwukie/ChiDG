@@ -22,6 +22,7 @@ module type_fgmres
     !> Generalized Minimum Residual linear system solver
     !!
     !!  @author Nathan A. Wukie
+    !!  @date   5/11/2016
     !!
     !---------------------------------------------------------------------------------------------
     type, public, extends(linear_solver_t) :: fgmres_t
@@ -45,6 +46,7 @@ contains
     !> Solution routine
     !!
     !!  @author Nathan A. Wukie
+    !!  @date   5/11/2016
     !!
     !!
     !!
@@ -255,12 +257,12 @@ contains
                 if (j /= 1) then
                     do i = 1,j-1
                         ! Need temp values here so we don't directly overwrite the h(i,j) and h(i+1,j) values 
-                        h_ij     = c(i)*h(i,j)  +  s(i)*h(i+1,j)
+                        h_ij     =  c(i)*h(i,j)  +  s(i)*h(i+1,j)
                         h_ipj    = -s(i)*h(i,j)  +  c(i)*h(i+1,j)
 
 
-                        h(i,j)    = h_ij
-                        h(i+1,j)  = h_ipj
+                        h(i,j)   = h_ij
+                        h(i+1,j) = h_ipj
                     end do
                 end if
 
@@ -284,7 +286,7 @@ contains
                 !
                 ! Givens rotation on p. Need temp values here so we aren't directly overwriting the p(j) value until we want to
                 !
-                pj = c(j)*p(j)
+                pj  =  c(j)*p(j)
                 pjp = -s(j)*p(j)
 
                 p(j)     = pj

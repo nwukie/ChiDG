@@ -6,12 +6,13 @@
 \code{.f90} type(chidg_t)   chidg   \endcode
 
 The chidg_t data type is the top-level interface for ChiDG. A chidg_t instance contains
-four primary components. These are:
+five primary components. These are:
     \code{.f90} 
-                type(chidg_data_t)        data            
-                type(matrixsolver_t)      matrixsolver
-                type(preconditioner_t)    preconditioner  
-                type(timscheme_t)         timescheme
+                type(chidg_data_t)          data            
+                type(timscheme_t)           timescheme
+                type(nonlinear_solver_t)    nonlinear_solver
+                type(linear_solver_t)       linear_solver
+                type(preconditioner_t)      preconditioner  
     \endcode
 
 
@@ -64,6 +65,7 @@ This includes:
 \code{.f90} call chidg%run()    \endcode
 
 \image html d__chidg_run.png
+
 
 
 

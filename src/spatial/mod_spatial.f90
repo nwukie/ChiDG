@@ -131,8 +131,7 @@ contains
                                 !
                                 interior_face = ( mesh%faces(ielem,iface)%ftype == INTERIOR )
                                 chimera_face  = ( mesh%faces(ielem,iface)%ftype == CHIMERA )
-
-                                compute_face = (interior_face .or. chimera_face) .and. ( (iblk == iface) .or. (iblk == DIAG) )
+                                compute_face  = (interior_face .or. chimera_face) .and. ( (iblk == iface) .or. (iblk == DIAG) )
 
 
 
@@ -258,123 +257,6 @@ contains
 
 
 
-!            !
-!            ! Print maximum value of boundary condition jacobian blocks
-!            !
-!            do idom = 1,data%ndomains()
-!
-!                associate ( mesh => data%mesh(idom), sdata => data%sdata, eqnset => data%eqnset(idom)%item, prop => data%eqnset(idom)%item%prop)
-!
-!                nelem = mesh%nelem
-!
-!
-!                do ielem = 1,nelem
-!
-!                    print*, idom, ielem
-!
-!                    !do iblk = 1,size(sdata%lhs%dom(idom)%bc_blks,2)
-!                    iblk = DIAG
-!
-!                        if ( allocated(sdata%lhs%dom(idom)%lblks(ielem,iblk)%mat) ) then
-!
-!                            !print*,  maxval(sdata%lhs%dom(idom)%lblks(ielem,iblk)%mat)
-!
-!                            !print*,  cond(sdata%lhs%dom(idom)%lblks(ielem,iblk)%mat)
-!
-!                        end if
-!
-!
-!                    !end do ! iblk
-!
-!                end do ! ielem
-!            
-!                end associate
-!            end do ! idom
-!
-!
-
-
-
-
-
-
-
-!            !
-!            ! Build matrix
-!            !
-!            do idom = 1,data%ndomains()
-!
-!                associate ( mesh => data%mesh(idom), sdata => data%sdata, eqnset => data%eqnset(idom)%item, prop => data%eqnset(idom)%item%prop)
-!
-!                nelem = mesh%nelem
-!
-!
-!                neqn      = 10
-!                ndof_elem = mesh%nterms_s*neqn
-!                ndof      = ndof_elem * nelem
-!
-!                !
-!                ! Allocate full matrix
-!                !
-!                allocate(full_matrix(ndof,ndof), wr(ndof), wi(ndof), stat=ierr)
-!                if (ierr /= 0) call AllocationError
-!
-!
-!
-!
-!
-!                do ielem = 1,nelem
-!
-!                    !
-!                    ! Compute row offset
-!                    !
-!                    row_start = 1 + (ielem-1)*ndof_elem
-!                    row_end   = row_start + (ndof_elem-1)
-!
-!
-!                    do iblk = 1,size(sdata%lhs%dom(idom)%lblks,2)
-!
-!                        if ( allocated(sdata%lhs%dom(idom)%lblks(ielem,iblk)%mat) ) then
-!                            
-!                            !
-!                            ! Get associated element index
-!                            !
-!                            eparent = sdata%lhs%dom(idom)%lblks(ielem,iblk)%eparent()
-!
-!                            !
-!                            ! Compute column start
-!                            !
-!                            col_start = 1 + (eparent-1)*ndof_elem
-!                            col_end   = col_start + (ndof_elem-1)
-!
-!
-!                            full_matrix(row_start:row_end,col_start:col_end) = sdata%lhs%dom(idom)%lblks(ielem,iblk)%mat
-!                            
-!                        end if
-!
-!
-!                    end do ! iblk
-!
-!                end do ! ielem
-!            
-!                end associate
-!            end do ! idom
-!
-!
-!            !
-!            ! Estimate eigenvalues of the matrix
-!            !
-!            call eigenvalues(full_matrix,wr,wi)
-!
-!
-!            open(newunit=fileunit, file='eigenvalues.dat')
-!
-!            do i = 1,size(wr)
-!                write(fileunit,*) wr(i), wi(i)
-!            end do
-!
-!            close(fileunit)
-!
 
 
 

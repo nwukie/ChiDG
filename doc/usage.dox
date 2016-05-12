@@ -11,15 +11,86 @@
 \n
 \n
 <HR>
-\section s_commandline Command line
 
-\code{.sh}  chidg       \endcode
+\section s_commandline_action ChiDG Actions
 
+\subsection s_commandline_action_convert chidg convert
+To convert from block-structured Plot3D format grid files to ChiDG grid files, 
+the 'convert' action can be used as
+\code{.f90} chidg convert grid.x            \endcode
+
+\image html chidg_action_convert.png
+
+\n
+\n
+
+
+
+
+
+
+\subsection s_commandline_action_edit chidg edit
+To edit a ChiDG file(boundary conditions, domain info, etc.), the 'edit'
+action can be used as
+\code{.f90} chidg edit grid_solution.h5  \endcode
+
+
+`chidg edit` on startup:
+\image html chidg_action_edit.png
+
+\n
+\n
+
+`chidg edit` in boundary condition screen:
+\image html chidg_action_edit_bc.png
 
 
 \n
 \n
 
+
+\subsection s_commandline_action_post chidg post
+To post-process a ChiDG solution into a visualization format, the 'post'
+action can be used as
+\code{.f90} chidg post grid_solution.h5  \endcode
+
+
+
+
+
+
+
+
+\n
+\n
+\n
+
+
+
+
+
+
+
+
+\section s_commandline_run Run ChiDG
+Running  `chidg` requires three things:
+    1. The `chidg` executable
+    2. A ChiDG-format grid file
+    3. A chidg.nml namelist file
+
+See \subpage page_installation for direction on building the `chidg` executable.\n
+See \subpage page_gridgeneration for direction on creating ChiDG-format grid files.\n
+See 'ChiDG namelist format' for direction on a proper ChiDG namelist format.\n
+
+
+In a directory with the ChiDG-format grid file and a valid chidg.nml namelist input file,
+the `chidg` simulation can be run by calling the ChiDG executable in that directory as
+
+\code{.f90}  chidg       \endcode
+
+\n
+\n
+\n
 
 
 

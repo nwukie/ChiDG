@@ -48,7 +48,6 @@ contains
 
     !>
     !!
-    !!  TODO: TEST SPACEDIM
     !!
     !!
     !!

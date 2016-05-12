@@ -4,7 +4,6 @@ module mod_grid_tools
     use mod_quadrature,         only: GQ
     use type_point,             only: point_t
     use type_densevector,       only: densevector_t
-    !use mod_grid,               only: elem_map
     use mod_grid,               only: get_element_mapping
     implicit none
 

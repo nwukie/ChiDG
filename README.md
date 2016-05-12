@@ -45,6 +45,10 @@ To generate the documentation, in a terminal:
 
 
 
+## License
+ChiDG is licensed under the GNU GPLv2 open-source license.
+
+
 
 ## Author Acknowledgement:
 Nathan A. Wukie   nwukie@gmail.com

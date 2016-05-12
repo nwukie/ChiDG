@@ -130,6 +130,9 @@ contains
 
 
 
+
+
+
     !>  Mesh numerics initialization procedure
     !!
     !!  Sets number of equations being solved, number of terms in the solution expansion and
@@ -180,6 +183,10 @@ contains
 
 
 
+
+
+
+
     !>  Mesh - element initialization procedure
     !!
     !!  Computes the number of elements based on the element mapping selected and
@@ -195,7 +202,6 @@ contains
     !!  @param[in]  points_g    Rank-3 matrix of coordinate points defining a block mesh
     !!
     !------------------------------------------------------------------------------------------------------------
-    !subroutine init_elems_geom(self,points_g)
     subroutine init_elems_geom(self,spacedim,points_g)
         class(mesh_t),  intent(inout)   :: self
         integer(ik),    intent(in)      :: spacedim
@@ -350,6 +356,12 @@ contains
 
 
 
+
+
+
+
+
+
     !>  Mesh - element solution data initialization
     !!
     !!  @author Nathan A. Wukie
@@ -383,6 +395,9 @@ contains
 
     end subroutine init_elems_sol
     !***************************************************************************************************************
+
+
+
 
 
 
@@ -494,6 +509,10 @@ contains
 
 
 
+
+
+
+
     !>  Mesh - face initialization procedure
     !!
     !!  @author Nathan A. Wukie
@@ -527,6 +546,10 @@ contains
 
     end subroutine init_faces_sol
     !***************************************************************************************************************
+
+
+
+
 
 
 

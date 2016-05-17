@@ -16,7 +16,7 @@
 
 \subsection s_commandline_action_convert chidg convert
 To convert from block-structured Plot3D format grid files to ChiDG grid files, 
-the 'convert' action can be used as
+the <B>`convert`</B> action can be used as
 \code{.f90} chidg convert grid.x            \endcode
 
 \image html chidg_action_convert.png
@@ -30,7 +30,7 @@ the 'convert' action can be used as
 
 
 \subsection s_commandline_action_edit chidg edit
-To edit a ChiDG file(boundary conditions, domain info, etc.), the 'edit'
+To edit a ChiDG file(boundary conditions, domain info, etc.), the <B>`edit`</B>
 action can be used as
 \code{.f90} chidg edit grid_solution.h5  \endcode
 
@@ -50,7 +50,7 @@ action can be used as
 
 
 \subsection s_commandline_action_post chidg post
-To post-process a ChiDG solution into a visualization format, the 'post'
+To post-process a ChiDG solution into a visualization format, the <B>`post`</B>
 action can be used as
 \code{.f90} chidg post grid_solution.h5  \endcode
 

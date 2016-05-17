@@ -4,6 +4,14 @@
 
 
 
+
+Supporting files:
+
+<a href="smoothbump_generator.f90" target="_blank"><b>smoothbump_generator.f90</b></a>\n
+<a href="smoothbump.h5" target="_blank"><b>smoothbump.h5</b></a>
+
+
+
 \image html smoothbump_cp_contours.png
 \image html smoothbump_verification.png
 

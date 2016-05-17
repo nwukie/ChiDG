@@ -10,7 +10,8 @@
 !--------------------------------------------------------------------------------------------
 module mod_chidg_convert_p3d_hdf5
 #include <messenger.h>
-    use mod_kinds,   only: rk,ik, rdouble
+    use mod_kinds,      only: rk,ik, rdouble
+    use mod_constants,  only: IO_DESTINATION
     use hdf5
     use h5lt
     implicit none
@@ -48,12 +49,11 @@ contains
         integer(HID_T)              :: ximin_id,  ximax_id,  etamin_id,  etamax_id,  zetamin_id,  zetamax_id
         integer(HSIZE_T)            :: dims(3), adim
 
-        ! plot3d vars
-        integer(ik)                 :: i,j,k,imax,jmax,kmax,ext_loc
+        ! Plot3d vars
+        integer(ik)                 :: i,j,k,imax,jmax,kmax,ext_loc, fileunit
         integer(ik)                 :: ierr,igrid,nelem,nblks,mapping, spacedim
-        integer(ik), allocatable    :: blkdims(:,:)
-        !real(rk),    allocatable    :: xcoords(:,:,:), ycoords(:,:,:), zcoords(:,:,:)
-        real(rdouble),    allocatable    :: xcoords(:,:,:), ycoords(:,:,:), zcoords(:,:,:)
+        integer(ik),    allocatable :: blkdims(:,:)
+        real(rdouble),  allocatable :: xcoords(:,:,:), ycoords(:,:,:), zcoords(:,:,:)
 
         ! equation set string
         character(len=100)          :: eqnset_string
@@ -62,18 +62,29 @@ contains
         integer(ik)                 :: ximin_bc, ximax_bc, etamin_bc, etamax_bc, zetamin_bc, zetamax_bc
 
 
+        !
+        ! Print ChiDG Header
+        !
+        !call print_header()
+    
+        !
+        ! Send output to screen, not file.
+        !
+        IO_DESTINATION = 'screen'
+
+
 
         !
         ! Check if input file exists
         !
         inquire(file=filename, exist=file_exists)
         if (file_exists) then
-            print*, "Found ", trim(filename)
+            call write_line("Found "//trim(filename))
             ext_loc = index(filename,'.')           ! get location of extension
             file_prefix = filename(1:(ext_loc-1))   ! save file prefix w/o extension
             hdf_file = trim(file_prefix)//'.h5'     ! set hdf5 filename with extension
         else
-            print*, "Error: could not find file ", filename
+            call chidg_signal_one(FATAL,"File not found.",filename)
         end if
 
 
@@ -83,9 +94,9 @@ contains
         !
         ! HDF5 interface
         call h5open_f(ierr)                                         ! Open HDF5
-        if (ierr /= 0) stop "Error: h5open_f"
+        if (ierr /= 0) call chidg_signal(FATAL,"Error: h5open_f")
         call h5fcreate_f(hdf_file, H5F_ACC_TRUNC_F, file_id, ierr)  ! Create HDF5 file
-        if (ierr /= 0) stop "Error: h5fcreate_f"
+        if (ierr /= 0) call chidg_signal(FATAL,"Error: h5fcreate_f")
 
         ! Add file major.minor version numbers as attributes
         adim = 1
@@ -98,9 +109,9 @@ contains
         !
         ! Read plot3d grid
         !
-        open(unit=7, file=trim(filename), form='unformatted')
-        read(7) nblks
-        print*, nblks," grid blocks"
+        open(newunit=fileunit, file=trim(filename), form='unformatted')
+        read(fileunit) nblks
+        call write_line(nblks," grid blocks", delimiter=" ")
 
 
 
@@ -126,7 +137,7 @@ contains
         !
         ! read index dimensions for each block
         !
-        read(7) (blkdims(1,igrid), blkdims(2,igrid), blkdims(3,igrid), igrid=1,nblks)
+        read(fileunit) (blkdims(1,igrid), blkdims(2,igrid), blkdims(3,igrid), igrid=1,nblks)
 
 
 
@@ -138,15 +149,15 @@ contains
             ! Read spacedim from user
             spacedim = 0
             do while ( (spacedim < 2) .or. (spacedim > 3) )
-                print*, "Enter number of spatial dimensions for block: ", igrid
-                print*, "Key -- ( 2 = 2D, 3 = 3D )"
+                call write_line("Enter number of spatial dimensions for block: ", igrid, delimiter=" ")
+                call write_line("Key -- ( 2 = 2D, 3 = 3D )")
                 read*, spacedim
             end do
 
 
             ! Read mapping from user
-            print*, "Enter mapping for block: ", igrid
-            print*,  "Key -- (1 = linear, 2 = quadratic, 3 = cubic, 4 = quartic, 5 = quintic, 6 = sextic, 7 = septic )"
+            call write_line("Enter mapping for block: ", igrid, delimiter=" ")
+            call write_line("Key -- (1 = linear, 2 = quadratic, 3 = cubic, 4 = quartic, 5 = quintic, 6 = sextic, 7 = septic )")
             read*, mapping
 
 
@@ -166,7 +177,7 @@ contains
             allocate(xcoords(imax,jmax,kmax),ycoords(imax,jmax,kmax),zcoords(imax,jmax,kmax),stat=ierr)
             if (ierr /= 0) stop "memory allocation error: plot3d_to_hdf5"
 
-            read(7) ((( xcoords(i,j,k), i=1,imax), j=1,jmax), k=1,kmax), &
+            read(fileunit) ((( xcoords(i,j,k), i=1,imax), j=1,jmax), k=1,kmax), &
                     ((( ycoords(i,j,k), i=1,imax), j=1,jmax), k=1,kmax), &
                     ((( zcoords(i,j,k), i=1,imax), j=1,jmax), k=1,kmax)
 
@@ -228,8 +239,8 @@ contains
             !
             ! Read equationset from user
             !
-            print*, "Setting equation set for domain ", igrid
-            print*, "Enter equation set: "
+            call write_line("Setting equation set for domain ", igrid, delimiter=" ")
+            call write_line("Enter equation set: ")
             read*, eqnset_string
 
 
@@ -303,6 +314,8 @@ contains
             !
             call h5gclose_f(Grid_id, ierr)
             if (ierr /= 0) stop "Error: h5gclose_f"
+            call h5gclose_f(BC_id, ierr)
+            if (ierr /= 0) stop "Error: h5gclose_f"
             call h5gclose_f(Block_id, ierr)
             if (ierr /= 0) stop "Error: h5gclose_f"
 
@@ -312,11 +325,19 @@ contains
 
 
 
-        close(7)                        ! Close plot3d file
+        !
+        ! Close files and interfaces
+        !
+        close(fileunit)                 ! Close plot3d file
         call h5fclose_f(file_id,ierr)   ! Close hdf5 file
-        call h5close_f(ierr)            ! Close hdf5
+        call h5close_f(ierr)            ! Close hdf5 interface
 
-        print*, "Saved ", trim(file_prefix)//'.h5'
+
+        
+        !
+        ! Exit message
+        !
+        call write_line("Saved ", trim(file_prefix)//'.h5', delimiter=" ")
 
 
     end subroutine chidg_convert_p3d_hdf5

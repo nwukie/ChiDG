@@ -90,16 +90,14 @@ endif()
 #                                  Find HDF5
 #----------------------------------------------------------------------------------- 
 # NOTE: export HDF5_ROOT path as shell environment variable such that 
-#       $HDF5_ROOT/gnu or $HDF5_ROOT/intel are valid. Inside the 'gnu' or 'intel'
-#       folder one should find lib and include directories. The find_package
-#       module looks first for $HDF5_ROOT. Here we append the gnu or intel folder to 
-#       the environment variable based on what compiler we are using.
+#       $HDF5_ROOT contains the bin, lib, include directories for HDF5.
+#       The find_package module looks first for $HDF5_ROOT.
 
-if (${Fortran_VENDOR} MATCHES "INTEL")
-    set(ENV{HDF5_ROOT} $ENV{HDF5_ROOT}/intel)
-elseif (${Fortran_VENDOR} MATCHES "GNU")
-    set(ENV{HDF5_ROOT} $ENV{HDF5_ROOT}/gnu)
-endif()
+#if (${Fortran_VENDOR} MATCHES "INTEL")
+#    set(ENV{HDF5_ROOT} $ENV{HDF5_ROOT}/intel)
+#elseif (${Fortran_VENDOR} MATCHES "GNU")
+#    set(ENV{HDF5_ROOT} $ENV{HDF5_ROOT}/gnu)
+#endif()
 
 
 find_package(HDF5 REQUIRED COMPONENTS Fortran HL Fortran_HL)
@@ -124,31 +122,31 @@ message(STATUS "LAPACK_LIBRARIES: " ${LAPACK_LIBRARIES})
 
 
 
-#----------------------------------------------------------------------------------- 
-#                                  Find MPI
-#----------------------------------------------------------------------------------- 
-# NOTE: export MPI_ROOT path as shell environment variable such that 
-#       $MPI_ROOT/gnu or $MPI_ROOT/intel are valid. Inside the 'gnu' or 'intel'
-#       folder one should find lib and include directories.
-
-# Select vendor installation
-if (${Fortran_VENDOR} MATCHES "INTEL")
-    set(MPI_VENDOR_ROOT $ENV{MPI_ROOT}/intel)
-elseif (${Fortran_VENDOR} MATCHES "GNU")
-    set(MPI_VENDOR_ROOT $ENV{MPI_ROOT}/gnu)
-endif()
-
-message(STATUS "Fortran_VENDOR: ${Fortran_VENDOR}")
-message(STATUS "MPI_VENDOR_ROOT: ${MPI_VENDOR_ROOT}")
-
-set(MPI_Fortran_COMPILER "${MPI_VENDOR_ROOT}/bin/mpifort")
-set(MPI_Fortran_INCLUDE_PATH "${MPI_VENDOR_ROOT}/include")
-
-
-find_package(MPI REQUIRED)
-
-include_directories(${MPI_Fortran_INCLUDE_PATH})
-
+##----------------------------------------------------------------------------------- 
+##                                  Find MPI - STUB
+##----------------------------------------------------------------------------------- 
+## NOTE: export MPI_ROOT path as shell environment variable such that 
+##       $MPI_ROOT/gnu or $MPI_ROOT/intel are valid. Inside the 'gnu' or 'intel'
+##       folder one should find lib and include directories.
+#
+## Select vendor installation
+#if (${Fortran_VENDOR} MATCHES "INTEL")
+#    set(MPI_VENDOR_ROOT $ENV{MPI_ROOT}/intel)
+#elseif (${Fortran_VENDOR} MATCHES "GNU")
+#    set(MPI_VENDOR_ROOT $ENV{MPI_ROOT}/gnu)
+#endif()
+#
+#message(STATUS "Fortran_VENDOR: ${Fortran_VENDOR}")
+#message(STATUS "MPI_VENDOR_ROOT: ${MPI_VENDOR_ROOT}")
+#
+#set(MPI_Fortran_COMPILER "${MPI_VENDOR_ROOT}/bin/mpifort")
+#set(MPI_Fortran_INCLUDE_PATH "${MPI_VENDOR_ROOT}/include")
+#
+#
+#find_package(MPI REQUIRED)
+#
+#include_directories(${MPI_Fortran_INCLUDE_PATH})
+#
 
 
 
@@ -203,17 +201,22 @@ include_directories(${CMAKE_SOURCE_DIR}/src/tools)    # Need include here for ma
 #                     Add core library and driver targets
 #----------------------------------------------------------------------------------- 
 add_library(coredg STATIC ${LIB_SRCS})
-target_link_libraries(coredg ${HDF5_LIBRARIES} ${LAPACK_LIBRARIES} ${BLAS_LIBRARIES} ${TECPLOT_LIBRARIES} ${MPI_Fortran_LIBRARIES})
+#target_link_libraries(coredg ${HDF5_LIBRARIES} ${LAPACK_LIBRARIES} ${BLAS_LIBRARIES} ${TECPLOT_LIBRARIES} ${MPI_Fortran_LIBRARIES})
+target_link_libraries(coredg ${HDF5_LIBRARIES} ${LAPACK_LIBRARIES} ${BLAS_LIBRARIES} ${TECPLOT_LIBRARIES})
 set_target_properties(coredg PROPERTIES 
-                             COMPILE_FLAGS "${CMAKE_Fortran_FLAGS} ${MPI_Fortran_COMPILE_FLAGS}"
-                             LINK_FLAGS    "${CMAKE_Fortran_LINK_FLAGS} ${MPI_Fortran_LINK_FLAGS}")
+                             COMPILE_FLAGS "${CMAKE_Fortran_FLAGS}"
+                             LINK_FLAGS    "${CMAKE_Fortran_LINK_FLAGS}")
+                             #COMPILE_FLAGS "${CMAKE_Fortran_FLAGS} ${MPI_Fortran_COMPILE_FLAGS}"
+                             #LINK_FLAGS    "${CMAKE_Fortran_LINK_FLAGS} ${MPI_Fortran_LINK_FLAGS}")
 
 # Add driver executable linked to coredg library
 add_executable(chidg ${EXE_SRCS})
 target_link_libraries(chidg coredg ${HDF5_LIBRARIES} ${TECPLOT_LIBRARIES} ${MPI_Fortran_LIBRARIES})
 set_target_properties(chidg PROPERTIES 
-                            COMPILE_FLAGS "${CMAKE_Fortran_FLAGS} ${MPI_Fortran_COMPILE_FLAGS}"
-                            LINK_FLAGS    "${CMAKE_Fortran_LINK_FLAGS} ${MPI_Fortran_LINK_FLAGS} -lstdc++ -lpthread")
+                            COMPILE_FLAGS "${CMAKE_Fortran_FLAGS}"
+                            LINK_FLAGS    "${CMAKE_Fortran_LINK_FLAGS} -lstdc++ -lpthread")
+                            #COMPILE_FLAGS "${CMAKE_Fortran_FLAGS} ${MPI_Fortran_COMPILE_FLAGS}"
+                            #LINK_FLAGS    "${CMAKE_Fortran_LINK_FLAGS} ${MPI_Fortran_LINK_FLAGS} -lstdc++ -lpthread")
                             # need to link stdc++ here for tecio
                             
 

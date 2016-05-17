@@ -46,19 +46,19 @@ To generate the documentation, in a terminal:
 
 
 ## License
-ChiDG is licensed under the GNU GPLv2 open-source license.
+ChiDG is licensed under the GNU GPLv2 or later.
 
 
 
 ## Author Acknowledgement:
-Nathan A. Wukie   nwukie@gmail.com
+Nathan A. Wukie   <wukiena@mail.uc.edu>
 
 
 
 
 
 
-## Sponsorshop Acknowledgement:
+## Sponsorship Acknowledgement:
 This material is based upon work supported by the National Science Foundation Graduate Research Fellowship Program under Grant No. 1610397. 
 Any opinions, findings, and conclusions or recommendations expressed in this material are those of the author(s) and do not necessarily 
 reflect the views of the National Science Foundation.

@@ -1,37 +1,3 @@
-!>  This file generates a grid for the 2D smooth bump test case. The grid is generated
-!!  with extra points to facilitate a quartic element mapping. This is achieved by agglomerating
-!!  elements inside of ChiDG. So, extra points are required.
-!!
-!!  Compile with:
-!!      gfortran smoothbump_generator_2d.f90
-!!
-!!  Generate grid by running compiled executable:
-!!      ./a.out
-!!
-!!  Input block dimension:
-!!      ex: 6, 2, 2
-!!
-!!  Result is found in:
-!!      'smoothbump_6x2x2.x'    ( Double-precision, unformatted, plot3d )
-!!
-!!
-!!
-!!  Geometry:
-!!      x = [-1.5, 1.5]
-!!
-!!      At ymin:
-!!      y(x) = 0.0625 exp^{-25 x^2)
-!!  
-!!      At ymax:
-!!      y(x) = 0.8
-!!
-!!
-!!
-!!  @author Nathan A. Wukie
-!!  @date   4/18/2016
-!!
-!!
-!------------------------------------------------------------------------------------------------
 program smoothbump_generator
     implicit none
 
@@ -100,16 +66,16 @@ program smoothbump_generator
     end do
 
 
-
     !
     ! Write coordinates to file
     !
     open(unit=7, file=trim(buffer), form='unformatted')
-
     write(7) 1
     write(7) npt_x, npt_y, npt_z
     write(7) (((( coord(i,j,k,n), i=1,npt_x), j=1,npt_y), k=1,npt_z), n=1,ncoords)
-
     close(7)
+
+
+
 
 end program smoothbump_generator

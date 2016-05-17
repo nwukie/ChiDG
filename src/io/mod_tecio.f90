@@ -8,7 +8,7 @@ module mod_tecio
     use type_solverdata,        only: solverdata_t
     use type_chidg_data,        only: chidg_data_t
 
-    use mod_io,                 only: OUTPUT_RES
+    use mod_constants,          only: OUTPUT_RES
     implicit none
 
 #include "tecio.f90"

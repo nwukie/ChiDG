@@ -214,14 +214,6 @@ program driver
 
 
 
-        !
-        ! Close ChiDG
-        !
-        call chidg%close()
-
-
-
-
 
 
 
@@ -329,6 +321,14 @@ program driver
 
 
 
+
+
+
+
+    !
+    ! Close ChiDG interface
+    !
+    call chidg%close()
 
 
 

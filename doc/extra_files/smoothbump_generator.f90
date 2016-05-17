@@ -1,3 +1,12 @@
+!>  This Fortran program creates a block-structured grid in Plot3D format for the smooth
+!!  bump test case, commonly used to evaluate high-order CFD codes by measuring their
+!!  entropy production for isentropic flow.
+!!
+!!  @author Nathan A. Wukie
+!!  @date   09/01/2015
+!!
+!!
+!----------------------------------------------------------------------------------------------
 program smoothbump_generator
     implicit none
 

@@ -21,7 +21,7 @@ module mod_chidg_post_hdf2tec
     use mod_tecio,              only: write_tecio_variables
     use type_file_properties,   only: file_properties_t
     use mod_file_utilities,     only: get_file_properties
-    use mod_io,                 only: nterms_s, eqnset, spacedim
+    use mod_io,                 only: nterms_s, spacedim
     implicit none
 
 
@@ -47,6 +47,7 @@ contains
     
         type(chidg_t)                       :: chidg
         type(file_properties_t)             :: file_props
+        character(:),           allocatable :: eqnset
 
 
 

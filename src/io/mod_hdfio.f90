@@ -10,7 +10,7 @@ module mod_hdfio
     use mod_hdf_utilities,  only: get_ndomains_hdf, get_domain_names_hdf, get_eqnset_hdf
     use hdf5
     use h5lt
-    use mod_io, only: nterms_s, eqnset
+    use mod_io, only: nterms_s
     
 
 

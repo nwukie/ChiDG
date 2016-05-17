@@ -19,8 +19,8 @@ module mod_io
     !--------------------------------------------------
     character(len=100),  save    :: gridfile
     character(len=100),  save    :: gridtype
-    character(len=100),  save    :: tecplot_prefix   = 'tec'
-    character(len=100),  save    :: hdf_out          = 'solution.h5'
+!    character(len=100),  save    :: tecplot_prefix   = 'tec'
+!    character(len=100),  save    :: hdf_out          = 'solution.h5'
 
     character(len=100),  save    :: solutionfile_in  = 'none'
     character(len=100),  save    :: solutionfile_out = 'none'
@@ -34,7 +34,6 @@ module mod_io
     integer(ik),         save    :: solution_order   = 1
     integer(ik),         save    :: spacedim         = 3
 
- 
 
 
     
@@ -42,16 +41,6 @@ module mod_io
     !--------------------------------------------------
     integer(ik),         save    :: gq_rule          = 2          !> 1: Collocation, 2: Over-integration
    
-
-
-   
-    
-    ! EQUATION SET 
-    !--------------------------------------------------
-    character(len=100),  save    :: eqnset           = 'scalar'
-  
-  
-
 
 
     
@@ -78,11 +67,6 @@ module mod_io
     !--------------------------------------------------
     character(len=100),  save    :: linear_solver    = 'fgmres'
     real(rk),            save    :: ltol             = 1.e-8
-
-
-
-    ! PRECONDITIONER
-    !--------------------------------------------------
     character(len=100),  save    :: preconditioner   = 'identity'
    
    
@@ -94,7 +78,7 @@ module mod_io
     integer(ik),         save    :: nwrite           = 100
     logical,             save    :: initial_write    = .true.
     logical,             save    :: final_write      = .true.
-    integer(ik),         save    :: output_res       = 10
+!    integer(ik),         save    :: output_res       = 10
      
     
 
@@ -129,8 +113,8 @@ contains
 
         namelist /files/                    gridfile,              &
                                             gridtype,              &
-                                            hdf_out,               &
-                                            tecplot_prefix,        &
+!                                            hdf_out,               &
+!                                            tecplot_prefix,        &
                                             solutionfile_in,       &
                                             solutionfile_out
 
@@ -140,7 +124,6 @@ contains
 
         namelist /quadrature/               gq_rule
 
-        namelist /equation_set/             eqnset
 
         namelist /time/                     time_scheme,           &
                                             dt,                    &
@@ -160,7 +143,7 @@ contains
 
 
         namelist /io/                       nwrite,                &
-                                            output_res,            &
+!                                            output_res,            &
                                             initial_write,         &
                                             final_write
 
@@ -180,7 +163,6 @@ contains
         read(7,nml=files)
         read(7,nml=space)
         read(7,nml=quadrature)
-        read(7,nml=equation_set)
         read(7,nml=time)
         read(7,nml=nonlinear_solve)
         read(7,nml=linear_solve)

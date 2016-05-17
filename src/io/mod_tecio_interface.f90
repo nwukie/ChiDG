@@ -1,7 +1,7 @@
 module mod_tecio_interface
     use iso_c_binding
     use mod_kinds,      only: rk,ik,rdouble,TEC
-    use mod_io,         only: OUTPUT_RES
+    use mod_constants,  only: OUTPUT_RES
     use type_mesh,      only: mesh_t
 
 

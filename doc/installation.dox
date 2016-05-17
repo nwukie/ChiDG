@@ -16,8 +16,8 @@ Installing ChiDG:
 <HR>
 
 \section s_obtaining Obtaining ChiDG
-ChiDG is hosted in a git repository on <a href="https://www.github.com">www.github.com</a> and may be cloned 
-using the `https` protocol as 
+ChiDG is hosted in a git repository on <a href="https://www.github.com/nwukie/ChiDG">www.github.com/nwukie/ChiDG</a> 
+and may be cloned using the `https` protocol as 
 
 \code  git clone https://github.com/nwukie/ChiDG.git ChiDG     \endcode
 
@@ -125,6 +125,7 @@ ChiDG uses the CMake build system. Out-of-source builds, as described here, are 
 
 
 
+Back to \subpage s_gettingstarted
 
 
 \n

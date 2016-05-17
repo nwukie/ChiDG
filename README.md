@@ -7,20 +7,20 @@ A Chimera-based, discontinuous Galerkin solver
 
 ## Dependencies
 
-HDF5: ChiDG-formatted IO
-TecIO: Visualization IO
-MPICH: Parallelization
-CMake: Build system
+-HDF5: ChiDG-formatted IO
+-TecIO: Visualization IO
+-MPICH: Parallelization
+-CMake: Build system
 
 
 
 ## Installation
 
-NOTE: ChiDG uses features of the most recent Fortran standard (F2008). Updated versions of Fortran compilers
-NOTE: are required.
+ChiDG uses features of the most recent Fortran standard (F2008). Updated versions of Fortran 
+compilers are required.
 
 Successfully Tested compiler versions:
-    gfortran 5.2
+    -gfortran 5.2
 
 
 ChiDG uses the CMake build system.
@@ -30,9 +30,9 @@ ChiDG uses the CMake build system.
 
 ## Documentation
 
-Documentation for the code can be obtained either by downloading a copy from the gitlab page at:
+Documentation for the code can be obtained either by downloading a copy from the github page at:
 
-    TODO: Insert html  link
+[link](www.github.com/nwukie/ChiDG_site "ChiDG Documentation")
 
 or by generating the doxygen-based documentation manually. 
 
@@ -51,7 +51,7 @@ ChiDG is licensed under the GNU GPLv2 or later.
 
 
 ## Author Acknowledgement:
-Nathan A. Wukie   <wukiena@mail.uc.edu>
+Nathan A. Wukie   <nwukie@gmail.com>
 
 
 
@@ -59,9 +59,10 @@ Nathan A. Wukie   <wukiena@mail.uc.edu>
 
 
 ## Sponsorship Acknowledgement:
-This material is based upon work supported by the National Science Foundation Graduate Research Fellowship Program under Grant No. 1610397. 
-Any opinions, findings, and conclusions or recommendations expressed in this material are those of the author(s) and do not necessarily 
-reflect the views of the National Science Foundation.
+This material is based upon work supported by the National Science Foundation Graduate 
+Research Fellowship Program under Grant No. 1610397. Any opinions, findings, and 
+conclusions or recommendations expressed in this material are those of the author(s) 
+and do not necessarily reflect the views of the National Science Foundation.
 
 
 

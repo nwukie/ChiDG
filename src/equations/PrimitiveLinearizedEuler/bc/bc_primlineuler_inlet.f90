@@ -90,10 +90,9 @@ contains
     !!
     !!
     !---------------------------------------------------------------------------------------------
-    subroutine init_spec(self,mesh,iface)
+    subroutine init_spec(self,mesh)
         class(primlineuler_inlet_t), intent(inout)   :: self
         type(mesh_t),                intent(inout)   :: mesh
-        integer(ik),                 intent(in)      :: iface
 
         type(point_t)           :: zero_point
         real(rk)                :: zero_time

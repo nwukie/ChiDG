@@ -77,52 +77,18 @@ contains
         !
         ! Read D2_E8_M1. Two domains, 2x2x2 elements in each domain, linear mapping
         !
-        call read_grid_hdf('D2_E8_M1_overlapping_multipledonor.h5',meshdata)
-
-        !
-        ! Add domain to ChiDG
-        !
         spacedim = 3
         nterms_s = 8
-        do idom = 1,size(meshdata)
-            call this%chidg%data%add_domain(trim(meshdata(idom)%name),meshdata(idom)%points,spacedim,meshdata(idom)%nterms_c,'linearadvection')
-        end do
-        call this%chidg%initialize_solution_domains(nterms_s)
+        call this%chidg%read_grid('D2_E8_M1_overlapping_multipledonor.h5',spacedim)
+        call this%chidg%read_boundaryconditions('D2_E8_M1_overlapping_multipledonor.h5')
 
-
-        !
-        ! Set boundary conditions
-        !
-        call create_bc('linearadvection_extrapolate', bc)
-        call this%chidg%data%add_bc('D_01',bc,XI_MIN)
-        !call this%chidg%data%add_bc('D_01','extrapolate_la',XI_MAX)
-        call this%chidg%data%add_bc('D_01',bc,ETA_MIN)
-        call this%chidg%data%add_bc('D_01',bc,ETA_MAX)
-        call this%chidg%data%add_bc('D_01',bc,ZETA_MIN)
-        call this%chidg%data%add_bc('D_01',bc,ZETA_MAX)
-
-        !call this%chidg%data%add_bc('D_02','extrapolate_la',XI_MIN)
-        call this%chidg%data%add_bc('D_02',bc,XI_MAX)
-        call this%chidg%data%add_bc('D_02',bc,ETA_MIN)
-        call this%chidg%data%add_bc('D_02',bc,ETA_MAX)
-        call this%chidg%data%add_bc('D_02',bc,ZETA_MIN)
-        call this%chidg%data%add_bc('D_02',bc,ZETA_MAX)
-
-
-
-
-        !
-        ! Initialize Chimera interfaces
-        !
-        call detect_chimera_faces(this%chidg%data%mesh)
-        call detect_chimera_donors(this%chidg%data%mesh)
-        call compute_chimera_interpolators(this%chidg%data%mesh)
 
 
         !
         ! Initialize chidg solution data storage
         !
-        !call this%chidg%data%init_sdata()
+        call this%chidg%initialize_solution_domains(nterms_s)
+        call this%chidg%init('chimera')
         call this%chidg%initialize_solution_solver()
 
         !

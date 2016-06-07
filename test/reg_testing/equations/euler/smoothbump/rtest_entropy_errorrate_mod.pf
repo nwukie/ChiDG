@@ -187,7 +187,7 @@ contains
         spacedim         = 3
         nterms_s         = self%order**THREE
         gq_rule          = 2
-        eqnset           = 'euler'
+        !eqnset           = 'euler'
         time_scheme      = 'steady'
         nonlinear_solver = 'quasi_newton'
         linear_solver    = 'fgmres'
@@ -229,12 +229,20 @@ contains
         ! Initialize domains
         !
         do idom = 1,size(meshdata)
-            call chidg%data%add_domain(                         &
-                                       meshdata(idom)%name,     &
-                                       meshdata(idom)%points,   &
-                                       spacedim,                &
-                                       meshdata(idom)%nterms_c, &
-                                       eqnset                   &
+            !call chidg%data%add_domain(                         &
+            !                           meshdata(idom)%name,     &
+            !                           meshdata(idom)%points,   &
+            !                           spacedim,                &
+            !                           meshdata(idom)%nterms_c, &
+            !                           eqnset                   &
+            !                           )
+            call chidg%data%add_domain(                             &
+                                       meshdata(idom)%name,         &
+                                       meshdata(idom)%points,       &
+                                       meshdata(idom)%connectivity, &
+                                       spacedim,                    &
+                                       meshdata(idom)%nterms_c,     &
+                                       meshdata(idom)%eqnset        &
                                        )
         end do
         call chidg%initialize_solution_domains(nterms_s)
@@ -264,12 +272,13 @@ contains
         !
         ! Initialize boundary conditions and solution numerics
         ! 
-        call chidg%data%add_bc('D_01',inlet,XI_MIN)
-        call chidg%data%add_bc('D_01',outlet,XI_MAX)
-        call chidg%data%add_bc('D_01',wall,ETA_MIN)
-        call chidg%data%add_bc('D_01',wall,ETA_MAX)
-        call chidg%data%add_bc('D_01',wall,ZETA_MIN)
-        call chidg%data%add_bc('D_01',wall,ZETA_MAX)
+        print*, 'FIX BOUNDARY CONDITIONS'
+!        call chidg%data%add_bc('D_01',inlet,XI_MIN)
+!        call chidg%data%add_bc('D_01',outlet,XI_MAX)
+!        call chidg%data%add_bc('D_01',wall,ETA_MIN)
+!        call chidg%data%add_bc('D_01',wall,ETA_MAX)
+!        call chidg%data%add_bc('D_01',wall,ZETA_MIN)
+!        call chidg%data%add_bc('D_01',wall,ZETA_MAX)
 
 
         call chidg%initialize_solution_solver()

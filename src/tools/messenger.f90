@@ -1,6 +1,7 @@
 module messenger
     use mod_kinds,      only: rk,ik
     use mod_constants,  only: IO_DESTINATION
+    use mpi_f08
     implicit none
 
 
@@ -125,6 +126,7 @@ contains
         blankstr = '               '
 
 
+
         !
         ! Chop off unimportant beginning of file path
         !
@@ -175,6 +177,7 @@ contains
                 call write_line(trim(msg))
 
             case (3)    ! Fatal Error -- Code terminates
+                
                 call write_line(trim(killstr))
                 call write_line(trim(genstr))
                 call write_line(blankstr)
@@ -198,9 +201,11 @@ contains
             print_info_two   = ( present(info_two)   .and. (iaux == 2) )
             print_info_three = ( present(info_three) .and. (iaux == 3) )
 
+
             if ( print_info_one )   auxdata => info_one
             if ( print_info_two )   auxdata => info_two
             if ( print_info_three ) auxdata => info_three
+
 
             !
             ! auxdata pointer is used to point to current auxiliary data variable and then go through the available IO types
@@ -229,6 +234,7 @@ contains
                 end select
 
             end if ! present(info_one)
+
 
 
             !
@@ -264,8 +270,8 @@ contains
         !
         select case (sig)
             case (3)    ! Fatal Error -- Code terminates
-                !stop
-                error stop
+                stop
+                !call MPI_Abort(MPI_COMM_WORLD,sig,ierr)
 
             case default
 

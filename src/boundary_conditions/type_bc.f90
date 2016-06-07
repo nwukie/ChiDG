@@ -1,7 +1,7 @@
 module type_bc
 #include <messenger.h>
     use mod_kinds,              only: rk, ik
-    use mod_constants,          only: XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX, BOUNDARY, CHIMERA, ORPHAN, BC_BLK, ONE, TWO
+    use mod_constants,          only: XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX, BOUNDARY, CHIMERA, ORPHAN, BC_BLK, ONE, TWO, RKTOL
     use type_mesh,              only: mesh_t
     use type_point,             only: point_t
     use type_ivector,           only: ivector_t
@@ -11,6 +11,7 @@ module type_bc
     use type_function_info,     only: function_info_t
     use type_bcproperty_set,    only: bcproperty_set_t
     use type_function,          only: function_t
+    use type_connectivity,      only: connectivity_t
     implicit none
     private
 
@@ -69,11 +70,9 @@ module type_bc
 
         procedure   :: get_nproperties                          !< Return the number of properties associated with the boundary condition.
         procedure   :: get_property_name                        !< Return the name of a property given a property index.
-
         procedure   :: get_noptions                             !< Return the number of available options for a given property, specified by a property index.
         procedure   :: get_option_key                           !< Return the key for an option, given a property index and subsequent option index.
         procedure   :: get_option_value                         !< Return the value of a given key, inside of a specified property.
-
         procedure   :: get_ncoupled_elems                       !< Return the number of elements coupled with a specified boundary element.
 
     end type bc_t
@@ -113,57 +112,30 @@ contains
     !!  @param[in]  iface   block face index to which the boundary condition is being applied
     !!
     !------------------------------------------------------------------------------------------
-    subroutine init(self,mesh,iface)
+    !subroutine init(self,mesh,iface)
+    subroutine init(self,mesh,bc_connectivity)
         class(bc_t),            intent(inout)       :: self
         type(mesh_t),           intent(inout)       :: mesh
-        integer(ik),            intent(in)          :: iface 
+        !integer(ik),            intent(in)          :: iface 
+        !integer(ik),            intent(in)          :: bc_connectivity(:,:)
+        type(connectivity_t),   intent(in)          :: bc_connectivity
 
-        type(point_t)                   :: pnt
+        type(point_t)                   :: pnt, point_one, point_two, point_three
         character(len=:),   allocatable :: bcname        
-        real(rk)                        :: time
+        real(rk)                        :: time, x, y, z
         integer(ik)                     :: nelem_xi, nelem_eta, nelem_zeta, nelem_bc, ielem_bc, & 
                                            xi_begin, eta_begin, zeta_begin, xi_end, eta_end, zeta_end, & 
-                                           ixi, ieta, izeta, ierr, ielem, ielem_test
+                                           ixi, ieta, izeta, ierr, ielem, ielem_test, nface_nodes, iface, inode, i
+
+        logical,    allocatable         :: node_matched(:), xi_face, eta_face, zeta_face
         
-        nelem_xi   = mesh%nelem_xi
-        nelem_eta  = mesh%nelem_eta
-        nelem_zeta = mesh%nelem_zeta
-
-        xi_begin   = 1
-        eta_begin  = 1
-        zeta_begin = 1
-
-        xi_end   = nelem_xi
-        eta_end  = nelem_eta
-        zeta_end = nelem_zeta
 
 
         !
-        ! Compute number of elements associated with the boundary condition
-        ! Constrain index ranges for a particular face on the block
+        ! Get number of elements/faces associated with boundary condition.
         !
-        select case (iface)
-            case (XI_MIN)                           ! XI_MIN constant
-                nelem_bc = nelem_eta * nelem_zeta
-                xi_end = 1
-            case (XI_MAX)                           ! XI_MAX constant
-                nelem_bc = nelem_eta * nelem_zeta
-                xi_begin = nelem_xi
-            case (ETA_MIN)                          ! ETA_MIN constant
-                nelem_bc = nelem_xi * nelem_zeta
-                eta_end = 1
-            case (ETA_MAX)                          ! ETA_MAX constant
-                nelem_bc = nelem_xi * nelem_zeta
-                eta_begin = nelem_eta
-            case (ZETA_MIN)                         ! ZETA_MIN constant
-                nelem_bc = nelem_xi * nelem_eta
-                zeta_end = 1
-            case (ZETA_MAX)                         ! ZETA_MAX constant
-                nelem_bc = nelem_xi * nelem_eta
-                zeta_begin = nelem_zeta
-            case default
-                call chidg_signal(FATAL,"bc%init: Invalid block face 'iface'. Valid face indices are iface = [1-6]")
-        end select
+        nelem_bc = size(bc_connectivity%data,1)
+
 
 
         !
@@ -173,20 +145,106 @@ contains
         if (ierr /= 0) call AllocationError
 
 
-        ielem_bc = 1
         !
-        ! Loop over a face of the block and store element indices
+        ! Loop through each bc face and call initialization for each face
         !
-        do izeta = zeta_begin,zeta_end
-            do ieta = eta_begin,eta_end
-                do ixi = xi_begin,xi_end
-                    ielem = ixi + nelem_xi*(ieta-1) + nelem_xi*nelem_eta*(izeta-1)
+        do ielem_bc = 1,size(bc_connectivity%data,1)
 
+
+            nface_nodes = size(bc_connectivity%data,2)
+            if ( allocated(node_matched) ) deallocate(node_matched)
+            allocate(node_matched(nface_nodes), stat=ierr)
+            if (ierr /= 0) call AllocationError
+            node_matched = .false.
+
+            
+            !
+            ! Search for element with common nodes
+            !
+            do ielem = 1,mesh%nelem
+
+                ! Loop through bc nodes and see if current element has them all
+                do inode = 1,nface_nodes
+                    if ( any( mesh%elems(ielem)%connectivity(3:) == bc_connectivity%data(ielem_bc,inode) ) ) then
+                        node_matched(inode) = .true.
+                    end if
+                end do
+
+            
+
+                ! If all match, set element/face indices in boundary condition list.
+                if ( all(node_matched) ) then
+
+                    !
+                    ! Set element index
+                    !
                     self%elems(ielem_bc) = ielem
+
+
+
+                    !
+                    ! Detect element face index associated with the boundary condition
+                    !
+                    ! Get xi,eta,zeta for three points, defining a face
+                    !
+                    x = mesh%nodes(bc_connectivity%data(ielem_bc,1))%c1_
+                    y = mesh%nodes(bc_connectivity%data(ielem_bc,1))%c2_
+                    z = mesh%nodes(bc_connectivity%data(ielem_bc,1))%c3_
+                    point_one = mesh%elems(ielem)%computational_point(x,y,z)
+
+
+                    x = mesh%nodes(bc_connectivity%data(ielem_bc,2))%c1_
+                    y = mesh%nodes(bc_connectivity%data(ielem_bc,2))%c2_
+                    z = mesh%nodes(bc_connectivity%data(ielem_bc,2))%c3_
+                    point_two = mesh%elems(ielem)%computational_point(x,y,z)
+
+
+                    x = mesh%nodes(bc_connectivity%data(ielem_bc,nface_nodes))%c1_
+                    y = mesh%nodes(bc_connectivity%data(ielem_bc,nface_nodes))%c2_
+                    z = mesh%nodes(bc_connectivity%data(ielem_bc,nface_nodes))%c3_
+                    point_three = mesh%elems(ielem)%computational_point(x,y,z)
+
+
+                    xi_face   = ( (abs(point_one%c1_ - point_two%c1_) < 100.*RKTOL)  .and. (abs(point_one%c1_ - point_three%c1_) < 100.*RKTOL) )
+                    eta_face  = ( (abs(point_one%c2_ - point_two%c2_) < 100.*RKTOL)  .and. (abs(point_one%c2_ - point_three%c2_) < 100.*RKTOL) )
+                    zeta_face = ( (abs(point_one%c3_ - point_two%c3_) < 100.*RKTOL)  .and. (abs(point_one%c3_ - point_three%c3_) < 100.*RKTOL) )
+
+
+
+                    if ( xi_face ) then
+                        if (point_one%c1_ < 0.) then
+                            iface = XI_MIN
+                        else
+                            iface = XI_MAX
+                        end if
+                    
+                    else if ( eta_face ) then
+                        if (point_one%c2_ < 0.) then
+                            iface = ETA_MIN
+                        else
+                            iface = ETA_MAX
+                        end if
+
+                    else if ( zeta_face ) then
+                        if (point_one%c3_ < 0.) then
+                            iface = ZETA_MIN
+                        else
+                            iface = ZETA_MAX
+                        end if
+
+                    else
+                        call chidg_signal(FATAL,"bc%init: could not determine element face associated with the boundary")
+
+                    end if
+
+                    !
+                    ! Set face index
+                    !
                     self%faces(ielem_bc) = iface
-                    ielem_bc = ielem_bc + 1
 
 
+
+                    ! Set face type - 'ftype'
                     bcname = self%get_name()
                     if ( trim(bcname) == 'periodic' ) then
                         !
@@ -213,23 +271,137 @@ contains
                         ! Set face to boundary condition face
                         !
                         mesh%faces(ielem,iface)%ftype = BOUNDARY
+                        !print*, 'ielem, ielem_bc, iface:', ielem, ielem_bc, iface
                     end if
 
-                end do ! ixi
-            end do ! ieta
-        end do ! izeta
 
+                    ! End search
+                    exit
+
+                end if
+
+            end do ! ielem
+
+
+
+
+
+        end do !ibc_face
+
+
+
+
+
+
+
+
+!        nelem_xi   = mesh%nelem_xi
+!        nelem_eta  = mesh%nelem_eta
+!        nelem_zeta = mesh%nelem_zeta
+!
+!        xi_begin   = 1
+!        eta_begin  = 1
+!        zeta_begin = 1
+!
+!        xi_end   = nelem_xi
+!        eta_end  = nelem_eta
+!        zeta_end = nelem_zeta
+!
+!
+!        !
+!        ! Compute number of elements associated with the boundary condition
+!        ! Constrain index ranges for a particular face on the block
+!        !
+!        select case (iface)
+!            case (XI_MIN)                           ! XI_MIN constant
+!                nelem_bc = nelem_eta * nelem_zeta
+!                xi_end = 1
+!            case (XI_MAX)                           ! XI_MAX constant
+!                nelem_bc = nelem_eta * nelem_zeta
+!                xi_begin = nelem_xi
+!            case (ETA_MIN)                          ! ETA_MIN constant
+!                nelem_bc = nelem_xi * nelem_zeta
+!                eta_end = 1
+!            case (ETA_MAX)                          ! ETA_MAX constant
+!                nelem_bc = nelem_xi * nelem_zeta
+!                eta_begin = nelem_eta
+!            case (ZETA_MIN)                         ! ZETA_MIN constant
+!                nelem_bc = nelem_xi * nelem_eta
+!                zeta_end = 1
+!            case (ZETA_MAX)                         ! ZETA_MAX constant
+!                nelem_bc = nelem_xi * nelem_eta
+!                zeta_begin = nelem_zeta
+!            case default
+!                call chidg_signal(FATAL,"bc%init: Invalid block face 'iface'. Valid face indices are iface = [1-6]")
+!        end select
+!
+!
+!        !
+!        ! Allocate storage for element and face indices
+!        !
+!        allocate(self%elems(nelem_bc), self%faces(nelem_bc), self%coupled_elems(nelem_bc), stat=ierr)
+!        if (ierr /= 0) call AllocationError
+!
+!
+!        ielem_bc = 1
+!        !
+!        ! Loop over a face of the block and store element indices
+!        !
+!        do izeta = zeta_begin,zeta_end
+!            do ieta = eta_begin,eta_end
+!                do ixi = xi_begin,xi_end
+!                    ielem = ixi + nelem_xi*(ieta-1) + nelem_xi*nelem_eta*(izeta-1)
+!
+!                    self%elems(ielem_bc) = ielem
+!                    self%faces(ielem_bc) = iface
+!                    ielem_bc = ielem_bc + 1
+!
+!
+!                    bcname = self%get_name()
+!                    if ( trim(bcname) == 'periodic' ) then
+!                        !
+!                        ! Set to ORPHAN face so it will be recognized as chimera in the detection process.
+!                        !
+!                        mesh%faces(ielem,iface)%ftype = ORPHAN
+!
+!                        !
+!                        ! Set periodic offset from boundary condition to the face. To be used in detection of gq_donor.
+!                        !
+!                        if ( self%bcproperties%compute('type', time, pnt) == ONE ) then
+!                            mesh%faces(ielem,iface)%periodic_type = 'cartesian'
+!                        else if ( self%bcproperties%compute('type', time, pnt) == TWO ) then
+!                            mesh%faces(ielem,iface)%periodic_type = 'cylindrical'
+!                        end if
+!
+!                        mesh%faces(ielem,iface)%chimera_offset_x     = self%bcproperties%compute('offset_x', time, pnt) ! time, pnt and do nothing here, but interface for function requires them.
+!                        mesh%faces(ielem,iface)%chimera_offset_y     = self%bcproperties%compute('offset_y', time, pnt)
+!                        mesh%faces(ielem,iface)%chimera_offset_z     = self%bcproperties%compute('offset_z', time, pnt)
+!                        mesh%faces(ielem,iface)%chimera_offset_theta = self%bcproperties%compute('offset_theta', time, pnt)
+!
+!                    else
+!                        !
+!                        ! Set face to boundary condition face
+!                        !
+!                        mesh%faces(ielem,iface)%ftype = BOUNDARY
+!                    end if
+!
+!                end do ! ixi
+!            end do ! ieta
+!        end do ! izeta
+!
 
         !
         ! Call user-specialized boundary condition initialization
         !
-        call self%init_spec(mesh,iface)
+        !call self%init_spec(mesh,iface)
+        call self%init_spec(mesh)
 
 
         !
         ! Call user-specialized boundary coupling initialization
         !
-        call self%init_boundary_coupling(mesh,iface)
+        !call self%init_boundary_coupling(mesh,iface)
+        call self%init_boundary_coupling(mesh)
 
 
 
@@ -256,10 +428,11 @@ contains
     !!  @param[in]      iface       block face index to which the boundary condition is being applied
     !!
     !----------------------------------------------------------------------------------------------
-    subroutine init_spec(self,mesh,iface)
+    !subroutine init_spec(self,mesh,iface)
+    subroutine init_spec(self,mesh)
         class(bc_t),            intent(inout)   :: self
         type(mesh_t),           intent(inout)   :: mesh
-        integer(ik),            intent(in)      :: iface
+!        integer(ik),            intent(in)      :: iface
 
 
 
@@ -287,10 +460,11 @@ contains
     !!  @date   2/16/2016
     !!
     !----------------------------------------------------------------------------------------------
-    subroutine init_boundary_coupling(self,mesh,iface)
+!    subroutine init_boundary_coupling(self,mesh,iface)
+    subroutine init_boundary_coupling(self,mesh)
         class(bc_t),    intent(inout)   :: self
         type(mesh_t),   intent(in)      :: mesh
-        integer(ik),    intent(in)      :: iface
+!        integer(ik),    intent(in)      :: iface
 
         integer(ik) :: ielem_bc, ielem
 

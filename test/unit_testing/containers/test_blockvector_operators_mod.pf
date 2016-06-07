@@ -28,7 +28,8 @@ contains
     subroutine setUp(this)
         class(test_blockvector_operators),    intent(inout)   :: this
         integer(ik)                                 :: nterms_s, ivar, nterms_c, spacedim
-        type(point_t), allocatable                  :: pts(:,:,:)
+        type(point_t),  allocatable                 :: nodes(:)
+        integer(ik),    allocatable                 :: connectivity(:,:)
         
         IO_DESTINATION = 'file'
         
@@ -41,12 +42,12 @@ contains
         !
         ! Read 2x2x1 element grid
         !
-        call meshgen('221',pts)
+        call meshgen('221',nodes,connectivity)
 
         spacedim = 3
         nterms_c = 8
         nterms_s = 8
-        call this%chidg%data%add_domain('D_01',pts,spacedim,nterms_c,'Scalar')
+        call this%chidg%data%add_domain('D_01',nodes,connectivity,spacedim,nterms_c,'Scalar')
         call this%chidg%initialize_solution_domains(nterms_s)
 
 

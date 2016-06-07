@@ -26,14 +26,15 @@ contains
     !!
     !!
     !----------------------------------------------------------------------------------
-    function compute_dft_points(mesh,elems,iface,periodicity) result(points)
+    !function compute_dft_points(mesh,elems,iface,periodicity) result(points)
+    function compute_dft_points(mesh,elems,faces,periodicity) result(points)
         type(mesh_t),   intent(in)   :: mesh
         integer(ik),    intent(in)   :: elems(:)
-        integer(ik),    intent(in)   :: iface
+        integer(ik),    intent(in)   :: faces(:)
         real(rk),       intent(in)   :: periodicity
 
         type(point_t),  allocatable  :: points(:)
-        integer(ik)                  :: nmodes, npoints, ierr, ielem_bc, ielem, var, mode, ipnt, min_y_element, elem_min
+        integer(ik)                  :: nmodes, npoints, ierr, ielem_bc, ielem, var, mode, ipnt, min_y_element, elem_min, iface
         integer(ik)                  :: min_y_loc
         real(rk)                     :: xi, eta, zeta, min_y, dy, xloc, zloc
 
@@ -41,6 +42,10 @@ contains
         integer(ik),    allocatable  :: mean_y_elements(:)
         real(rk),       dimension(2) :: ylocs, xlocs, zlocs
 
+        !
+        ! TODO: fix hard coded face orientation
+        !
+        iface = faces(1)
 
         !
         ! Number of Fourier harmonics to compute

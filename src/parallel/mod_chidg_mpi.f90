@@ -7,7 +7,7 @@
 !!
 !!
 !-----------------------------------------------------------------------------
-module mod_mpichi
+module mod_chidg_mpi
     use mod_kinds,  only: rk, ik
     implicit none
 
@@ -17,8 +17,8 @@ module mod_mpichi
     integer(ik) :: irank        !< Rank of current process
     integer(ik) :: nrank        !< Number of global ranks
 
-    integer, parameter :: GLOBAL_MASTER = 0  !< Master rank for all global processes
-    !integer, parameter :: GROUP_MASTER  = 0  !< Master rank for group of processes
+    integer, parameter :: GLOBAL_MASTER = 0     !< Master rank for all global processes. This shall not be modified during run-time.
+    !integer, parameter :: GROUP_MASTER  = 0    !< Master rank for group of processes. This could be modified during run-time for a group.
 
 
 
@@ -34,4 +34,4 @@ contains
 
 
 
-end module mod_mpichi
+end module mod_chidg_mpi

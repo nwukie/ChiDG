@@ -13,63 +13,71 @@ contains
     !!  procedure for generating the points
     !!
     !!  @author Nathan A. Wukie
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   5/24/2016
+    !!
     !!  @param[in]      string   Character string used to select a specialized meshgen call
     !!  @param[inout]   pts      points_t array of rank-3 that gets allocated, filled, and returned
     !--------------------------------------------------------------------
-    subroutine meshgen(string,pts)
+    !subroutine meshgen(string,pts)
+    subroutine meshgen(string,nodes,connectivity)
         character(*),               intent(in)      :: string
-        type(point_t), allocatable, intent(inout)   :: pts(:,:,:)
+        !type(point_t), allocatable, intent(inout)   :: pts(:,:,:)
+        type(point_t),  allocatable,    intent(inout)   :: nodes(:)
+        integer(ik),    allocatable,    intent(inout)   :: connectivity(:,:)
 
 
         select case (trim(string))
             case ('1x1x1','111')
-                call meshgen_1x1x1_linear(pts)
+                call meshgen_1x1x1_linear(nodes,connectivity)
 
             case ('1x1x1_unit','111u')
-                call meshgen_1x1x1_unit_linear(pts)
+                call meshgen_1x1x1_unit_linear(nodes,connectivity)
 
             case ('3x3x3','333')
-                call meshgen_3x3x3_linear(pts)
+                call meshgen_3x3x3_linear(nodes,connectivity)
 
             case ('3x3x3_unit','333u')
-                call meshgen_3x3x3_unit_linear(pts)
+                call meshgen_3x3x3_unit_linear(nodes,connectivity)
 
             case ('2x2x2','222')
-                call meshgen_2x2x2_linear(pts)
+                call meshgen_2x2x2_linear(nodes,connectivity)
 
             case ('2x2x1','221')
-                call meshgen_2x2x1_linear(pts)
+                call meshgen_2x2x1_linear(nodes,connectivity)
 
             case ('3x3x1','331')
-                call meshgen_3x3x1_linear(pts)
+                call meshgen_3x3x1_linear(nodes,connectivity)
 
             case ('4x1x1','411')
-                call meshgen_4x1x1_linear(pts)
+                call meshgen_4x1x1_linear(nodes,connectivity)
 
             case ('3x1x1','311')
-                call meshgen_3x1x1_linear(pts)
+                call meshgen_3x1x1_linear(nodes,connectivity)
 
             case ('2x1x1','211')
-                call meshgen_2x1x1_linear(pts)
+                call meshgen_2x1x1_linear(nodes,connectivity)
 
             case ('40x15x1')
-                call meshgen_40x15x1_linear(pts)
+                call meshgen_40x15x1_linear(nodes,connectivity)
 
             case ('15x15x1')
-                call meshgen_15x15x1_linear(pts)
+                call meshgen_15x15x1_linear(nodes,connectivity)
 
             case ('15x15x2')
-                call meshgen_15x15x2_linear(pts)
+                call meshgen_15x15x2_linear(nodes,connectivity)
 
             case ('15x15x3')
-                call meshgen_15x15x3_linear(pts)
+                call meshgen_15x15x3_linear(nodes,connectivity)
 
             case default
                 call chidg_signal(FATAL,'String identifying mesh generation routine was not recognized')
         end select
 
 
-    end subroutine
+    end subroutine meshgen
+    !****************************************************************************
 
 
 
@@ -84,12 +92,18 @@ contains
     !> Generate a set of points defining a 1x1x1 element mesh
     !!
     !!  @author Nathan A. Wukie
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   5/24/2016
+    !!
     !!  @param[inout]   pts     points_t array of rank-3 that gets allocated, filled, and returned
     !---------------------------------------------------------------------
-    subroutine meshgen_1x1x1_linear(pts)
-        type(point_t), allocatable, intent(inout)  :: pts(:,:,:)
+    subroutine meshgen_1x1x1_linear(nodes,connectivity)
+        type(point_t),  allocatable,    intent(inout)   :: nodes(:)
+        integer(ik),    allocatable,    intent(inout)   :: connectivity(:,:)
 
-        integer(ik) :: ipt_xi, ipt_eta, ipt_zeta, ipt, ierr, npts_x, npts_y, npts_z
+        integer(ik) :: ipt_xi, ipt_eta, ipt_zeta, ipt, ierr, npts_x, npts_y, npts_z, npts, nelem, npts_element
+        integer(ik) :: ielem_x, ielem_y, ielem_z, ipt_x, ipt_y, ipt_z, ipt_elem, ielem, xstart, ystart, zstart
         real(rk)    :: x,y,z, dx, dy, dz
 
         ! elements (1x1x1) - linear
@@ -103,30 +117,66 @@ contains
         dz = 1._rk
 
         ! Allocate point storage
-        allocate(pts(npts_x,npts_y,npts_z), stat=ierr)
+        npts = npts_x*npts_y*npts_z
+        nelem = (npts_x-1)*(npts_y-1)*(npts_z-1)
+        npts_element = 8    !linear
+        allocate(nodes(npts), connectivity(nelem,2+npts_element), stat=ierr)
         if (ierr /= 0) call AllocationError
 
         ipt = 1
         z = ZERO
         do ipt_zeta = 1,npts_z
             y = ZERO
-
             do ipt_eta = 1,npts_y
                 x = ZERO
-
                 do ipt_xi = 1,npts_x
-                    call pts(ipt_xi,ipt_eta,ipt_zeta)%set(x, y, z)
+
+
+                    call nodes(ipt)%set(x, y, z)
                     ipt = ipt + 1
+
+
                     x = x + dx
                 end do
-
                 y = y + dy
             end do
-
             z = z + dz
         end do
 
-    end subroutine
+        ielem = 1
+        do ielem_z = 1,npts_z-1
+            do ielem_y = 1,npts_y-1
+                do ielem_x = 1,npts_x-1
+                    connectivity(ielem,1) = ielem
+                    connectivity(ielem,2) = 1       !linear
+
+                    xstart = 1 + (ielem_x-1)
+                    ystart = 1 + (ielem_y-1)
+                    zstart = 1 + (ielem_z-1)
+                    
+                    
+                    ipt_elem = 1
+                    do ipt_z = zstart,(zstart+1)
+                        do ipt_y = ystart,(ystart+1)
+                            do ipt_x = xstart,(xstart+1)
+                                ipt = ipt_x  +  (ipt_y-1)*npts_x  +  (ipt_z-1)*(npts_x*npts_y)     
+                                connectivity(ielem,2+ipt_elem) = ipt
+                                ipt_elem = ipt_elem + 1
+                            end do
+                        end do
+                    end do
+
+                    ielem = ielem + 1
+                end do
+            end do
+        end do
+
+
+
+
+
+    end subroutine meshgen_1x1x1_linear
+    !***********************************************************************
 
 
 
@@ -146,10 +196,12 @@ contains
     !!  @author Nathan A. Wukie
     !!  @param[inout]   pts     points_t array of rank-3 that gets allocated, filled, and returned
     !---------------------------------------------------------------------
-    subroutine meshgen_1x1x1_unit_linear(pts)
-        type(point_t), allocatable, intent(inout)  :: pts(:,:,:)
+    subroutine meshgen_1x1x1_unit_linear(nodes,connectivity)
+        type(point_t),  allocatable,    intent(inout)   :: nodes(:)
+        integer(ik),    allocatable,    intent(inout)   :: connectivity(:,:)
 
-        integer(ik) :: ipt_xi, ipt_eta, ipt_zeta, ipt, ierr, npts_x, npts_y, npts_z
+        integer(ik) :: ipt_xi, ipt_eta, ipt_zeta, ipt, ierr, npts_x, npts_y, npts_z, npts, nelem, npts_element
+        integer(ik) :: ielem_x, ielem_y, ielem_z, ipt_x, ipt_y, ipt_z, ipt_elem, ielem, xstart, ystart, zstart
         real(rk)    :: x,y,z, dx, dy, dz
 
         ! elements (1x1x1) - linear
@@ -163,30 +215,68 @@ contains
         dz = 2._rk
 
         ! Allocate point storage
-        allocate(pts(npts_x,npts_y,npts_z), stat=ierr)
+        npts = npts_x*npts_y*npts_z
+        nelem = (npts_x-1)*(npts_y-1)*(npts_z-1)
+        npts_element = 8    !linear
+        allocate(nodes(npts), connectivity(nelem,2+npts_element), stat=ierr)
         if (ierr /= 0) call AllocationError
 
         ipt = 1
         z = -ONE
         do ipt_zeta = 1,npts_z
             y = -ONE
-
             do ipt_eta = 1,npts_y
                 x = -ONE
-
                 do ipt_xi = 1,npts_x
-                    call pts(ipt_xi,ipt_eta,ipt_zeta)%set(x, y, z)
+
+                    call nodes(ipt)%set(x, y, z)
                     ipt = ipt + 1
+
                     x = x + dx
                 end do
-
                 y = y + dy
             end do
-
             z = z + dz
         end do
 
-    end subroutine
+
+
+        ielem = 1
+        do ielem_z = 1,npts_z-1
+            do ielem_y = 1,npts_y-1
+                do ielem_x = 1,npts_x-1
+                    connectivity(ielem,1) = ielem
+                    connectivity(ielem,2) = 1       !linear
+
+                    xstart = 1 + (ielem_x-1)
+                    ystart = 1 + (ielem_y-1)
+                    zstart = 1 + (ielem_z-1)
+                    
+                    
+                    ipt_elem = 1
+                    do ipt_z = zstart,(zstart+1)
+                        do ipt_y = ystart,(ystart+1)
+                            do ipt_x = xstart,(xstart+1)
+                                ipt = ipt_x  +  (ipt_y-1)*npts_x  +  (ipt_z-1)*(npts_x*npts_y)     
+                                connectivity(ielem,2+ipt_elem) = ipt
+                                ipt_elem = ipt_elem + 1
+                            end do
+                        end do
+                    end do
+
+                    ielem = ielem + 1
+                end do
+            end do
+        end do
+
+
+
+
+
+
+
+    end subroutine meshgen_1x1x1_unit_linear
+    !*************************************************************************
 
 
 
@@ -204,11 +294,14 @@ contains
     !!  @author Nathan A. Wukie
     !!  @param[inout]   pts     points_t array of rank-3 that gets allocated, filled, and returned
     !---------------------------------------------------------------------
-    subroutine meshgen_2x2x2_linear(pts)
-        type(point_t), allocatable, intent(inout)  :: pts(:,:,:)
+    subroutine meshgen_2x2x2_linear(nodes,connectivity)
+        type(point_t),  allocatable,    intent(inout)   :: nodes(:)
+        integer(ik),    allocatable,    intent(inout)   :: connectivity(:,:)
+
+        integer(ik) :: ipt_xi, ipt_eta, ipt_zeta, ipt, ierr, npts_x, npts_y, npts_z, npts, nelem, npts_element
+        integer(ik) :: ielem_x, ielem_y, ielem_z, ipt_x, ipt_y, ipt_z, ipt_elem, ielem, xstart, ystart, zstart
 
         integer(ik), parameter      :: npt = 27
-        integer(ik)                 :: ipt_xi, ipt_eta, ipt_zeta, ipt, ierr
         real(rk), dimension(npt)    :: x,y,z
 
         ! elements (2x2x2) - linear
@@ -240,20 +333,62 @@ contains
 
 
         ! Allocate point storage
-        allocate(pts(3,3,3), stat=ierr)
+        npts_x = 3
+        npts_y = 3
+        npts_z = 3
+        npts = npts_x*npts_y*npts_z
+        nelem = (npts_x-1)*(npts_y-1)*(npts_z-1)
+        npts_element = 8    !linear
+        allocate(nodes(npts), connectivity(nelem,2+npts_element), stat=ierr)
         if (ierr /= 0) call AllocationError
 
         ipt = 1
         do ipt_zeta = 1,3
             do ipt_eta = 1,3
                 do ipt_xi = 1,3
-                    call pts(ipt_xi,ipt_eta,ipt_zeta)%set(x(ipt), y(ipt), z(ipt))
+                    call nodes(ipt)%set(x(ipt), y(ipt), z(ipt))
                     ipt = ipt + 1
                 end do
             end do
         end do
 
-    end subroutine
+
+
+
+        ielem = 1
+        do ielem_z = 1,npts_z-1
+            do ielem_y = 1,npts_y-1
+                do ielem_x = 1,npts_x-1
+                    connectivity(ielem,1) = ielem
+                    connectivity(ielem,2) = 1       !linear
+
+                    xstart = 1 + (ielem_x-1)
+                    ystart = 1 + (ielem_y-1)
+                    zstart = 1 + (ielem_z-1)
+                    
+                    
+                    ipt_elem = 1
+                    do ipt_z = zstart,(zstart+1)
+                        do ipt_y = ystart,(ystart+1)
+                            do ipt_x = xstart,(xstart+1)
+                                ipt = ipt_x  +  (ipt_y-1)*npts_x  +  (ipt_z-1)*(npts_x*npts_y)     
+                                connectivity(ielem,2+ipt_elem) = ipt
+                                ipt_elem = ipt_elem + 1
+                            end do
+                        end do
+                    end do
+
+                    ielem = ielem + 1
+                end do
+            end do
+        end do
+
+
+
+
+
+    end subroutine meshgen_2x2x2_linear
+    !******************************************************************************
 
 
 
@@ -272,11 +407,14 @@ contains
     !!  @author Nathan A. Wukie
     !!  @param[inout]   pts     points_t array of rank-3 that gets allocated, filled, and returned
     !---------------------------------------------------------------------
-    subroutine meshgen_2x2x1_linear(pts)
-        type(point_t), allocatable, intent(inout)  :: pts(:,:,:)
+    subroutine meshgen_2x2x1_linear(nodes,connectivity)
+        type(point_t),  allocatable,    intent(inout)   :: nodes(:)
+        integer(ik),    allocatable,    intent(inout)   :: connectivity(:,:)
+
+        integer(ik) :: ipt_xi, ipt_eta, ipt_zeta, ipt, ierr, npts_x, npts_y, npts_z, npts, nelem, npts_element
+        integer(ik) :: ielem_x, ielem_y, ielem_z, ipt_x, ipt_y, ipt_z, ipt_elem, ielem, xstart, ystart, zstart
 
         integer(ik), parameter      :: npt = 18
-        integer(ik)                 :: ipt_xi, ipt_eta, ipt_zeta, ipt, ierr
         real(rk), dimension(npt)    :: x,y,z
 
         ! elements (2x2x1) - linear
@@ -306,20 +444,62 @@ contains
 
 
         ! Allocate point storage
-        allocate(pts(3,3,2), stat=ierr)
+        npts_x = 3
+        npts_y = 3
+        npts_z = 2
+        npts = npts_x*npts_y*npts_z
+        nelem = (npts_x-1)*(npts_y-1)*(npts_z-1)
+        npts_element = 8    !linear
+        allocate(nodes(npts), connectivity(nelem,2+npts_element), stat=ierr)
         if (ierr /= 0) call AllocationError
 
         ipt = 1
         do ipt_zeta = 1,2
             do ipt_eta = 1,3
                 do ipt_xi = 1,3
-                    call pts(ipt_xi,ipt_eta,ipt_zeta)%set(x(ipt), y(ipt), z(ipt))
+                    call nodes(ipt)%set(x(ipt), y(ipt), z(ipt))
                     ipt = ipt + 1
                 end do
             end do
         end do
 
-    end subroutine
+
+
+
+        ielem = 1
+        do ielem_z = 1,npts_z-1
+            do ielem_y = 1,npts_y-1
+                do ielem_x = 1,npts_x-1
+                    connectivity(ielem,1) = ielem
+                    connectivity(ielem,2) = 1       !linear
+
+                    xstart = 1 + (ielem_x-1)
+                    ystart = 1 + (ielem_y-1)
+                    zstart = 1 + (ielem_z-1)
+                    
+                    
+                    ipt_elem = 1
+                    do ipt_z = zstart,(zstart+1)
+                        do ipt_y = ystart,(ystart+1)
+                            do ipt_x = xstart,(xstart+1)
+                                ipt = ipt_x  +  (ipt_y-1)*npts_x  +  (ipt_z-1)*(npts_x*npts_y)     
+                                connectivity(ielem,2+ipt_elem) = ipt
+                                ipt_elem = ipt_elem + 1
+                            end do
+                        end do
+                    end do
+
+                    ielem = ielem + 1
+                end do
+            end do
+        end do
+
+
+
+
+
+    end subroutine meshgen_2x2x1_linear
+    !****************************************************************************
 
 
 
@@ -340,11 +520,14 @@ contains
     !!  @author Nathan A. Wukie
     !!  @param[inout]   pts     points_t array of rank-3 that gets allocated, filled, and returned
     !---------------------------------------------------------------------
-    subroutine meshgen_3x3x3_linear(pts)
-        type(point_t), allocatable, intent(inout)  :: pts(:,:,:)
+    subroutine meshgen_3x3x3_linear(nodes,connectivity)
+        type(point_t),  allocatable,    intent(inout)   :: nodes(:)
+        integer(ik),    allocatable,    intent(inout)   :: connectivity(:,:)
+
+        integer(ik) :: ipt_xi, ipt_eta, ipt_zeta, ipt, ierr, npts_x, npts_y, npts_z, npts, nelem, npts_element
+        integer(ik) :: ielem_x, ielem_y, ielem_z, ipt_x, ipt_y, ipt_z, ipt_elem, ielem, xstart, ystart, zstart
 
         integer(ik), parameter      :: npt = 64
-        integer(ik)                 :: ipt_xi, ipt_eta, ipt_zeta, ipt
         real(rk), dimension(npt)    :: x,y,z
 
         ! elements (3x3x3) - linear
@@ -384,19 +567,58 @@ contains
 
 
         ! Allocate point storage
-        allocate(pts(4,4,4))
+        npts_x = 4
+        npts_y = 4
+        npts_z = 4
+        npts = npts_x*npts_y*npts_z
+        nelem = (npts_x-1)*(npts_y-1)*(npts_z-1)
+        npts_element = 8    !linear
+        allocate(nodes(npts), connectivity(nelem,2+npts_element), stat=ierr)
+        if (ierr /= 0) call AllocationError
 
         ipt = 1
         do ipt_zeta = 1,4
             do ipt_eta = 1,4
                 do ipt_xi = 1,4
-                    call pts(ipt_xi,ipt_eta,ipt_zeta)%set(x(ipt), y(ipt), z(ipt))
+                    call nodes(ipt)%set(x(ipt), y(ipt), z(ipt))
                     ipt = ipt + 1
                 end do
             end do
         end do
 
-    end subroutine
+
+        ielem = 1
+        do ielem_z = 1,npts_z-1
+            do ielem_y = 1,npts_y-1
+                do ielem_x = 1,npts_x-1
+                    connectivity(ielem,1) = ielem
+                    connectivity(ielem,2) = 1       !linear
+
+                    xstart = 1 + (ielem_x-1)
+                    ystart = 1 + (ielem_y-1)
+                    zstart = 1 + (ielem_z-1)
+                    
+                    
+                    ipt_elem = 1
+                    do ipt_z = zstart,(zstart+1)
+                        do ipt_y = ystart,(ystart+1)
+                            do ipt_x = xstart,(xstart+1)
+                                ipt = ipt_x  +  (ipt_y-1)*npts_x  +  (ipt_z-1)*(npts_x*npts_y)     
+                                connectivity(ielem,2+ipt_elem) = ipt
+                                ipt_elem = ipt_elem + 1
+                            end do
+                        end do
+                    end do
+
+                    ielem = ielem + 1
+                end do
+            end do
+        end do
+
+
+
+    end subroutine meshgen_3x3x3_linear
+    !***************************************************************************
 
 
 
@@ -418,11 +640,14 @@ contains
     !!  @author Nathan A. Wukie
     !!  @param[inout]   pts     points_t array of rank-3 that gets allocated, filled, and returned
     !---------------------------------------------------------------------
-    subroutine meshgen_3x3x3_unit_linear(pts)
-        type(point_t), allocatable, intent(inout)  :: pts(:,:,:)
+    subroutine meshgen_3x3x3_unit_linear(nodes,connectivity)
+        type(point_t),  allocatable,    intent(inout)   :: nodes(:)
+        integer(ik),    allocatable,    intent(inout)   :: connectivity(:,:)
+
+        integer(ik) :: ipt_xi, ipt_eta, ipt_zeta, ipt, ierr, npts_x, npts_y, npts_z, npts, nelem, npts_element
+        integer(ik) :: ielem_x, ielem_y, ielem_z, ipt_x, ipt_y, ipt_z, ipt_elem, ielem, xstart, ystart, zstart
 
         integer(ik), parameter      :: npt = 64
-        integer(ik)                 :: ipt_xi, ipt_eta, ipt_zeta, ipt
         real(rk), dimension(npt)    :: x,y,z
 
         ! elements (3x3x3) - unit linear
@@ -462,19 +687,62 @@ contains
 
 
         ! Allocate point storage
-        allocate(pts(4,4,4))
+        npts_x = 4
+        npts_y = 4
+        npts_z = 4
+        npts = npts_x*npts_y*npts_z
+        nelem = (npts_x-1)*(npts_y-1)*(npts_z-1)
+        npts_element = 8    !linear
+        allocate(nodes(npts), connectivity(nelem,2+npts_element), stat=ierr)
+        if (ierr /= 0) call AllocationError
 
         ipt = 1
         do ipt_zeta = 1,4
             do ipt_eta = 1,4
                 do ipt_xi = 1,4
-                    call pts(ipt_xi,ipt_eta,ipt_zeta)%set(x(ipt), y(ipt), z(ipt))
+                    call nodes(ipt)%set(x(ipt), y(ipt), z(ipt))
                     ipt = ipt + 1
                 end do
             end do
         end do
 
-    end subroutine
+
+
+
+        ielem = 1
+        do ielem_z = 1,npts_z-1
+            do ielem_y = 1,npts_y-1
+                do ielem_x = 1,npts_x-1
+                    connectivity(ielem,1) = ielem
+                    connectivity(ielem,2) = 1       !linear
+
+                    xstart = 1 + (ielem_x-1)
+                    ystart = 1 + (ielem_y-1)
+                    zstart = 1 + (ielem_z-1)
+                    
+                    
+                    ipt_elem = 1
+                    do ipt_z = zstart,(zstart+1)
+                        do ipt_y = ystart,(ystart+1)
+                            do ipt_x = xstart,(xstart+1)
+                                ipt = ipt_x  +  (ipt_y-1)*npts_x  +  (ipt_z-1)*(npts_x*npts_y)     
+                                connectivity(ielem,2+ipt_elem) = ipt
+                                ipt_elem = ipt_elem + 1
+                            end do
+                        end do
+                    end do
+
+                    ielem = ielem + 1
+                end do
+            end do
+        end do
+
+
+
+
+
+    end subroutine meshgen_3x3x3_unit_linear
+    !**********************************************************************
 
 
 
@@ -505,11 +773,14 @@ contains
     !!  @author Nathan A. Wukie
     !!  @param[inout]   pts     points_t array of rank-3 that gets allocated, filled, and returned
     !---------------------------------------------------------------------
-    subroutine meshgen_3x3x1_linear(pts)
-        type(point_t), allocatable, intent(inout)  :: pts(:,:,:)
+    subroutine meshgen_3x3x1_linear(nodes,connectivity)
+        type(point_t),  allocatable,    intent(inout)   :: nodes(:)
+        integer(ik),    allocatable,    intent(inout)   :: connectivity(:,:)
+
+        integer(ik) :: ipt_xi, ipt_eta, ipt_zeta, ipt, ierr, npts_x, npts_y, npts_z, npts, nelem, npts_element
+        integer(ik) :: ielem_x, ielem_y, ielem_z, ipt_x, ipt_y, ipt_z, ipt_elem, ielem, xstart, ystart, zstart
 
         integer(ik), parameter      :: npt = 32
-        integer(ik)                 :: ipt_xi, ipt_eta, ipt_zeta, ipt
         real(rk), dimension(npt)    :: x,y,z
 
         ! elements (3x3x1) - linear
@@ -543,19 +814,58 @@ contains
 
 
         ! Allocate point storage
-        allocate(pts(4,4,2))
+        npts_x = 4
+        npts_y = 4
+        npts_z = 2
+        npts = npts_x*npts_y*npts_z
+        nelem = (npts_x-1)*(npts_y-1)*(npts_z-1)
+        npts_element = 8    !linear
+        allocate(nodes(npts), connectivity(nelem,2+npts_element), stat=ierr)
+        if (ierr /= 0) call AllocationError
 
         ipt = 1
         do ipt_zeta = 1,2
             do ipt_eta = 1,4
                 do ipt_xi = 1,4
-                    call pts(ipt_xi,ipt_eta,ipt_zeta)%set(x(ipt), y(ipt), z(ipt))
+                    call nodes(ipt)%set(x(ipt), y(ipt), z(ipt))
                     ipt = ipt + 1
                 end do
             end do
         end do
 
-    end subroutine
+
+        ielem = 1
+        do ielem_z = 1,npts_z-1
+            do ielem_y = 1,npts_y-1
+                do ielem_x = 1,npts_x-1
+                    connectivity(ielem,1) = ielem
+                    connectivity(ielem,2) = 1       !linear
+
+                    xstart = 1 + (ielem_x-1)
+                    ystart = 1 + (ielem_y-1)
+                    zstart = 1 + (ielem_z-1)
+                    
+                    
+                    ipt_elem = 1
+                    do ipt_z = zstart,(zstart+1)
+                        do ipt_y = ystart,(ystart+1)
+                            do ipt_x = xstart,(xstart+1)
+                                ipt = ipt_x  +  (ipt_y-1)*npts_x  +  (ipt_z-1)*(npts_x*npts_y)     
+                                connectivity(ielem,2+ipt_elem) = ipt
+                                ipt_elem = ipt_elem + 1
+                            end do
+                        end do
+                    end do
+
+                    ielem = ielem + 1
+                end do
+            end do
+        end do
+
+
+
+    end subroutine meshgen_3x3x1_linear
+    !*************************************************************************
 
 
 
@@ -577,11 +887,14 @@ contains
     !!  @author Nathan A. Wukie
     !!  @param[inout]   pts     points_t array of rank-3 that gets allocated, filled, and returned
     !---------------------------------------------------------------------
-    subroutine meshgen_4x1x1_linear(pts)
-        type(point_t), allocatable, intent(inout)  :: pts(:,:,:)
+    subroutine meshgen_4x1x1_linear(nodes,connectivity)
+        type(point_t),  allocatable,    intent(inout)   :: nodes(:)
+        integer(ik),    allocatable,    intent(inout)   :: connectivity(:,:)
+
+        integer(ik) :: ipt_xi, ipt_eta, ipt_zeta, ipt, ierr, npts_x, npts_y, npts_z, npts, nelem, npts_element
+        integer(ik) :: ielem_x, ielem_y, ielem_z, ipt_x, ipt_y, ipt_z, ipt_elem, ielem, xstart, ystart, zstart
 
         integer(ik), parameter      :: npt = 20
-        integer(ik)                 :: ipt_xi, ipt_eta, ipt_zeta, ipt, ierr
         real(rk), dimension(npt)    :: x,y,z
 
         ! elements (4x1x1) - linear
@@ -613,20 +926,59 @@ contains
 
 
         ! Allocate point storage
-        allocate(pts(5,2,2), stat=ierr)
+        npts_x = 5
+        npts_y = 2
+        npts_z = 2
+        npts = npts_x*npts_y*npts_z
+        nelem = (npts_x-1)*(npts_y-1)*(npts_z-1)
+        npts_element = 8    !linear
+        allocate(nodes(npts), connectivity(nelem,2+npts_element), stat=ierr)
         if (ierr /= 0) call AllocationError
 
         ipt = 1
         do ipt_zeta = 1,2
             do ipt_eta = 1,2
                 do ipt_xi = 1,5
-                    call pts(ipt_xi,ipt_eta,ipt_zeta)%set(x(ipt), y(ipt), z(ipt))
+                    call nodes(ipt)%set(x(ipt), y(ipt), z(ipt))
                     ipt = ipt + 1
                 end do
             end do
         end do
 
-    end subroutine
+
+
+        ielem = 1
+        do ielem_z = 1,npts_z-1
+            do ielem_y = 1,npts_y-1
+                do ielem_x = 1,npts_x-1
+                    connectivity(ielem,1) = ielem
+                    connectivity(ielem,2) = 1       !linear
+
+                    xstart = 1 + (ielem_x-1)
+                    ystart = 1 + (ielem_y-1)
+                    zstart = 1 + (ielem_z-1)
+                    
+                    
+                    ipt_elem = 1
+                    do ipt_z = zstart,(zstart+1)
+                        do ipt_y = ystart,(ystart+1)
+                            do ipt_x = xstart,(xstart+1)
+                                ipt = ipt_x  +  (ipt_y-1)*npts_x  +  (ipt_z-1)*(npts_x*npts_y)     
+                                connectivity(ielem,2+ipt_elem) = ipt
+                                ipt_elem = ipt_elem + 1
+                            end do
+                        end do
+                    end do
+
+                    ielem = ielem + 1
+                end do
+            end do
+        end do
+
+
+
+    end subroutine meshgen_4x1x1_linear
+    !************************************************************************
 
 
 
@@ -644,11 +996,14 @@ contains
     !!  @author Nathan A. Wukie
     !!  @param[inout]   pts     points_t array of rank-3 that gets allocated, filled, and returned
     !---------------------------------------------------------------------
-    subroutine meshgen_2x1x1_linear(pts)
-        type(point_t), allocatable, intent(inout)  :: pts(:,:,:)
+    subroutine meshgen_2x1x1_linear(nodes,connectivity)
+        type(point_t),  allocatable,    intent(inout)   :: nodes(:)
+        integer(ik),    allocatable,    intent(inout)   :: connectivity(:,:)
+
+        integer(ik) :: ipt_xi, ipt_eta, ipt_zeta, ipt, ierr, npts_x, npts_y, npts_z, npts, nelem, npts_element
+        integer(ik) :: ielem_x, ielem_y, ielem_z, ipt_x, ipt_y, ipt_z, ipt_elem, ielem, xstart, ystart, zstart
 
         integer(ik), parameter      :: npt = 12
-        integer(ik)                 :: ipt_xi, ipt_eta, ipt_zeta, ipt, ierr
         real(rk), dimension(npt)    :: x,y,z
 
         ! elements (3x1x1) - linear
@@ -680,20 +1035,58 @@ contains
 
 
         ! Allocate point storage
-        allocate(pts(3,2,2), stat=ierr)
+        npts_x = 3
+        npts_y = 2
+        npts_z = 2
+        npts = npts_x*npts_y*npts_z
+        nelem = (npts_x-1)*(npts_y-1)*(npts_z-1)
+        npts_element = 8    !linear
+        allocate(nodes(npts), connectivity(nelem,2+npts_element), stat=ierr)
         if (ierr /= 0) call AllocationError
 
         ipt = 1
         do ipt_zeta = 1,2
             do ipt_eta = 1,2
                 do ipt_xi = 1,3
-                    call pts(ipt_xi,ipt_eta,ipt_zeta)%set(x(ipt), y(ipt), z(ipt))
+                    call nodes(ipt)%set(x(ipt), y(ipt), z(ipt))
                     ipt = ipt + 1
                 end do
             end do
         end do
 
-    end subroutine
+
+        ielem = 1
+        do ielem_z = 1,npts_z-1
+            do ielem_y = 1,npts_y-1
+                do ielem_x = 1,npts_x-1
+                    connectivity(ielem,1) = ielem
+                    connectivity(ielem,2) = 1       !linear
+
+                    xstart = 1 + (ielem_x-1)
+                    ystart = 1 + (ielem_y-1)
+                    zstart = 1 + (ielem_z-1)
+                    
+                    
+                    ipt_elem = 1
+                    do ipt_z = zstart,(zstart+1)
+                        do ipt_y = ystart,(ystart+1)
+                            do ipt_x = xstart,(xstart+1)
+                                ipt = ipt_x  +  (ipt_y-1)*npts_x  +  (ipt_z-1)*(npts_x*npts_y)     
+                                connectivity(ielem,2+ipt_elem) = ipt
+                                ipt_elem = ipt_elem + 1
+                            end do
+                        end do
+                    end do
+
+                    ielem = ielem + 1
+                end do
+            end do
+        end do
+
+
+
+    end subroutine meshgen_2x1x1_linear
+    !************************************************************************
 
 
 
@@ -723,11 +1116,14 @@ contains
     !!  @author Nathan A. Wukie
     !!  @param[inout]   pts     points_t array of rank-3 that gets allocated, filled, and returned
     !---------------------------------------------------------------------
-    subroutine meshgen_3x1x1_linear(pts)
-        type(point_t), allocatable, intent(inout)  :: pts(:,:,:)
+    subroutine meshgen_3x1x1_linear(nodes,connectivity)
+        type(point_t),  allocatable,    intent(inout)   :: nodes(:)
+        integer(ik),    allocatable,    intent(inout)   :: connectivity(:,:)
+
+        integer(ik) :: ipt_xi, ipt_eta, ipt_zeta, ipt, ierr, npts_x, npts_y, npts_z, npts, nelem, npts_element
+        integer(ik) :: ielem_x, ielem_y, ielem_z, ipt_x, ipt_y, ipt_z, ipt_elem, ielem, xstart, ystart, zstart
 
         integer(ik), parameter      :: npt = 16
-        integer(ik)                 :: ipt_xi, ipt_eta, ipt_zeta, ipt, ierr
         real(rk), dimension(npt)    :: x,y,z
 
         ! elements (3x1x1) - linear
@@ -759,20 +1155,59 @@ contains
 
 
         ! Allocate point storage
-        allocate(pts(4,2,2), stat=ierr)
+        npts_x = 4
+        npts_y = 2
+        npts_z = 2
+        npts = npts_x*npts_y*npts_z
+        nelem = (npts_x-1)*(npts_y-1)*(npts_z-1)
+        npts_element = 8    !linear
+        allocate(nodes(npts), connectivity(nelem,2+npts_element), stat=ierr)
         if (ierr /= 0) call AllocationError
 
         ipt = 1
         do ipt_zeta = 1,2
             do ipt_eta = 1,2
                 do ipt_xi = 1,4
-                    call pts(ipt_xi,ipt_eta,ipt_zeta)%set(x(ipt), y(ipt), z(ipt))
+                    call nodes(ipt)%set(x(ipt), y(ipt), z(ipt))
                     ipt = ipt + 1
                 end do
             end do
         end do
 
-    end subroutine
+
+        ielem = 1
+        do ielem_z = 1,npts_z-1
+            do ielem_y = 1,npts_y-1
+                do ielem_x = 1,npts_x-1
+                    connectivity(ielem,1) = ielem
+                    connectivity(ielem,2) = 1       !linear
+
+                    xstart = 1 + (ielem_x-1)
+                    ystart = 1 + (ielem_y-1)
+                    zstart = 1 + (ielem_z-1)
+                    
+                    
+                    ipt_elem = 1
+                    do ipt_z = zstart,(zstart+1)
+                        do ipt_y = ystart,(ystart+1)
+                            do ipt_x = xstart,(xstart+1)
+                                ipt = ipt_x  +  (ipt_y-1)*npts_x  +  (ipt_z-1)*(npts_x*npts_y)     
+                                connectivity(ielem,2+ipt_elem) = ipt
+                                ipt_elem = ipt_elem + 1
+                            end do
+                        end do
+                    end do
+
+                    ielem = ielem + 1
+                end do
+            end do
+        end do
+
+
+
+
+    end subroutine meshgen_3x1x1_linear
+    !***********************************************************************
 
 
 
@@ -797,10 +1232,13 @@ contains
     !!  @author Nathan A. Wukie
     !!  @param[inout]   pts     points_t array of rank-3 that gets allocated, filled, and returned
     !---------------------------------------------------------------------
-    subroutine meshgen_40x15x1_linear(pts)
-        type(point_t), allocatable, intent(inout)  :: pts(:,:,:)
+    subroutine meshgen_40x15x1_linear(nodes,connectivity)
+        type(point_t),  allocatable,    intent(inout)   :: nodes(:)
+        integer(ik),    allocatable,    intent(inout)   :: connectivity(:,:)
 
-        integer(ik) :: ipt_xi, ipt_eta, ipt_zeta, ipt, ierr, npts_x, npts_y, npts_z
+        integer(ik) :: ipt_xi, ipt_eta, ipt_zeta, ipt, ierr, npts_x, npts_y, npts_z, npts, nelem, npts_element
+        integer(ik) :: ielem_x, ielem_y, ielem_z, ipt_x, ipt_y, ipt_z, ipt_elem, ielem, xstart, ystart, zstart
+
         real(rk)    :: x,y,z, dx, dy, dz
 
         ! elements (40x15x1) - linear
@@ -814,30 +1252,64 @@ contains
         dz = 1._rk
 
         ! Allocate point storage
-        allocate(pts(npts_x,npts_y,npts_z), stat=ierr)
+        npts  = npts_x*npts_y*npts_z
+        nelem = (npts_x-1)*(npts_y-1)*(npts_z-1)
+        npts_element = 8    !linear
+        allocate(nodes(npts), connectivity(nelem,2+npts_element), stat=ierr)
         if (ierr /= 0) call AllocationError
 
         ipt = 1
         z = ZERO
         do ipt_zeta = 1,npts_z
             y = ZERO
-
             do ipt_eta = 1,npts_y
                 x = ZERO
-
                 do ipt_xi = 1,npts_x
-                    call pts(ipt_xi,ipt_eta,ipt_zeta)%set(x, y, z)
+
+                    call nodes(ipt)%set(x, y, z)
                     ipt = ipt + 1
+
                     x = x + dx
                 end do
-
                 y = y + dy
             end do
-
             z = z + dz
         end do
 
-    end subroutine
+
+
+        ielem = 1
+        do ielem_z = 1,npts_z-1
+            do ielem_y = 1,npts_y-1
+                do ielem_x = 1,npts_x-1
+                    connectivity(ielem,1) = ielem
+                    connectivity(ielem,2) = 1       !linear
+
+                    xstart = 1 + (ielem_x-1)
+                    ystart = 1 + (ielem_y-1)
+                    zstart = 1 + (ielem_z-1)
+                    
+                    
+                    ipt_elem = 1
+                    do ipt_z = zstart,(zstart+1)
+                        do ipt_y = ystart,(ystart+1)
+                            do ipt_x = xstart,(xstart+1)
+                                ipt = ipt_x  +  (ipt_y-1)*npts_x  +  (ipt_z-1)*(npts_x*npts_y)     
+                                connectivity(ielem,2+ipt_elem) = ipt
+                                ipt_elem = ipt_elem + 1
+                            end do
+                        end do
+                    end do
+
+                    ielem = ielem + 1
+                end do
+            end do
+        end do
+
+
+
+    end subroutine meshgen_40x15x1_linear
+    !**********************************************************************
 
 
 
@@ -856,10 +1328,13 @@ contains
     !!  @author Nathan A. Wukie
     !!  @param[inout]   pts     points_t array of rank-3 that gets allocated, filled, and returned
     !---------------------------------------------------------------------
-    subroutine meshgen_15x15x1_linear(pts)
-        type(point_t), allocatable, intent(inout)  :: pts(:,:,:)
+    subroutine meshgen_15x15x1_linear(nodes,connectivity)
+        type(point_t),  allocatable,    intent(inout)   :: nodes(:)
+        integer(ik),    allocatable,    intent(inout)   :: connectivity(:,:)
 
-        integer(ik) :: ipt_xi, ipt_eta, ipt_zeta, ipt, ierr, npts_x, npts_y, npts_z
+        integer(ik) :: ipt_xi, ipt_eta, ipt_zeta, ipt, ierr, npts_x, npts_y, npts_z, npts, nelem, npts_element
+        integer(ik) :: ielem_x, ielem_y, ielem_z, ipt_x, ipt_y, ipt_z, ipt_elem, ielem, xstart, ystart, zstart
+
         real(rk)    :: x,y,z, dx, dy, dz
 
         ! elements (15x15x1) - linear
@@ -873,30 +1348,65 @@ contains
         dz = 1.0_rk
 
         ! Allocate point storage
-        allocate(pts(npts_x,npts_y,npts_z), stat=ierr)
+        npts  = npts_x*npts_y*npts_z
+        nelem = (npts_x-1)*(npts_y-1)*(npts_z-1)
+        npts_element = 8    !linear
+        allocate(nodes(npts), connectivity(nelem,2+npts_element), stat=ierr)
         if (ierr /= 0) call AllocationError
 
         ipt = 1
         z = ZERO
         do ipt_zeta = 1,npts_z
             y = ZERO
-
             do ipt_eta = 1,npts_y
                 x = ZERO
-
                 do ipt_xi = 1,npts_x
-                    call pts(ipt_xi,ipt_eta,ipt_zeta)%set(x, y, z)
+
+                    call nodes(ipt)%set(x, y, z)
                     ipt = ipt + 1
+
                     x = x + dx
                 end do
-
                 y = y + dy
             end do
-
             z = z + dz
         end do
 
-    end subroutine
+
+
+
+        ielem = 1
+        do ielem_z = 1,npts_z-1
+            do ielem_y = 1,npts_y-1
+                do ielem_x = 1,npts_x-1
+                    connectivity(ielem,1) = ielem
+                    connectivity(ielem,2) = 1       !linear
+
+                    xstart = 1 + (ielem_x-1)
+                    ystart = 1 + (ielem_y-1)
+                    zstart = 1 + (ielem_z-1)
+                    
+                    
+                    ipt_elem = 1
+                    do ipt_z = zstart,(zstart+1)
+                        do ipt_y = ystart,(ystart+1)
+                            do ipt_x = xstart,(xstart+1)
+                                ipt = ipt_x  +  (ipt_y-1)*npts_x  +  (ipt_z-1)*(npts_x*npts_y)     
+                                connectivity(ielem,2+ipt_elem) = ipt
+                                ipt_elem = ipt_elem + 1
+                            end do
+                        end do
+                    end do
+
+                    ielem = ielem + 1
+                end do
+            end do
+        end do
+
+
+
+    end subroutine meshgen_15x15x1_linear
+    !**************************************************************************
 
 
 
@@ -914,10 +1424,13 @@ contains
     !!  @author Nathan A. Wukie
     !!  @param[inout]   pts     points_t array of rank-3 that gets allocated, filled, and returned
     !---------------------------------------------------------------------
-    subroutine meshgen_15x15x2_linear(pts)
-        type(point_t), allocatable, intent(inout)  :: pts(:,:,:)
+    subroutine meshgen_15x15x2_linear(nodes,connectivity)
+        type(point_t),  allocatable,    intent(inout)   :: nodes(:)
+        integer(ik),    allocatable,    intent(inout)   :: connectivity(:,:)
 
-        integer(ik) :: ipt_xi, ipt_eta, ipt_zeta, ipt, ierr, npts_x, npts_y, npts_z
+        integer(ik) :: ipt_xi, ipt_eta, ipt_zeta, ipt, ierr, npts_x, npts_y, npts_z, npts, nelem, npts_element
+        integer(ik) :: ielem_x, ielem_y, ielem_z, ipt_x, ipt_y, ipt_z, ipt_elem, ielem, xstart, ystart, zstart
+
         real(rk)    :: x,y,z, dx, dy, dz
 
         ! elements (15x15x2) - linear
@@ -931,30 +1444,70 @@ contains
         dz = 0.5_rk
 
         ! Allocate point storage
-        allocate(pts(npts_x,npts_y,npts_z), stat=ierr)
+        npts  = npts_x*npts_y*npts_z
+        nelem = (npts_x-1)*(npts_y-1)*(npts_z-1)
+        npts_element = 8    !linear
+        allocate(nodes(npts), connectivity(nelem,2+npts_element), stat=ierr)
         if (ierr /= 0) call AllocationError
 
         ipt = 1
         z = ZERO
         do ipt_zeta = 1,npts_z
             y = ZERO
-
             do ipt_eta = 1,npts_y
                 x = ZERO
-
                 do ipt_xi = 1,npts_x
-                    call pts(ipt_xi,ipt_eta,ipt_zeta)%set(x, y, z)
+
+                    call nodes(ipt)%set(x, y, z)
                     ipt = ipt + 1
+
                     x = x + dx
                 end do
-
                 y = y + dy
             end do
-
             z = z + dz
         end do
 
-    end subroutine
+
+
+
+
+        ielem = 1
+        do ielem_z = 1,npts_z-1
+            do ielem_y = 1,npts_y-1
+                do ielem_x = 1,npts_x-1
+                    connectivity(ielem,1) = ielem
+                    connectivity(ielem,2) = 1       !linear
+
+                    xstart = 1 + (ielem_x-1)
+                    ystart = 1 + (ielem_y-1)
+                    zstart = 1 + (ielem_z-1)
+                    
+                    
+                    ipt_elem = 1
+                    do ipt_z = zstart,(zstart+1)
+                        do ipt_y = ystart,(ystart+1)
+                            do ipt_x = xstart,(xstart+1)
+                                ipt = ipt_x  +  (ipt_y-1)*npts_x  +  (ipt_z-1)*(npts_x*npts_y)     
+                                connectivity(ielem,2+ipt_elem) = ipt
+                                ipt_elem = ipt_elem + 1
+                            end do
+                        end do
+                    end do
+
+                    ielem = ielem + 1
+                end do
+            end do
+        end do
+
+
+
+
+
+
+
+    end subroutine meshgen_15x15x2_linear
+    !******************************************************************************
 
 
 
@@ -979,10 +1532,13 @@ contains
     !!  @author Nathan A. Wukie
     !!  @param[inout]   pts     points_t array of rank-3 that gets allocated, filled, and returned
     !---------------------------------------------------------------------
-    subroutine meshgen_15x15x3_linear(pts)
-        type(point_t), allocatable, intent(inout)  :: pts(:,:,:)
+    subroutine meshgen_15x15x3_linear(nodes,connectivity)
+        type(point_t),  allocatable,    intent(inout)   :: nodes(:)
+        integer(ik),    allocatable,    intent(inout)   :: connectivity(:,:)
 
-        integer(ik) :: ipt_xi, ipt_eta, ipt_zeta, ipt, ierr, npts_x, npts_y, npts_z
+        integer(ik) :: ipt_xi, ipt_eta, ipt_zeta, ipt, ierr, npts_x, npts_y, npts_z, npts, nelem, npts_element
+        integer(ik) :: ielem_x, ielem_y, ielem_z, ipt_x, ipt_y, ipt_z, ipt_elem, ielem, xstart, ystart, zstart
+
         real(rk)    :: x,y,z, dx, dy, dz
 
         ! elements (15x15x3) - linear
@@ -996,30 +1552,65 @@ contains
         dz = 0.5_rk
 
         ! Allocate point storage
-        allocate(pts(npts_x,npts_y,npts_z), stat=ierr)
+        npts  = npts_x*npts_y*npts_z
+        nelem = (npts_x-1)*(npts_y-1)*(npts_z-1)
+        npts_element = 8    !linear
+        allocate(nodes(npts), connectivity(nelem,2+npts_element), stat=ierr)
         if (ierr /= 0) call AllocationError
 
         ipt = 1
         z = ZERO
         do ipt_zeta = 1,npts_z
             y = ZERO
-
             do ipt_eta = 1,npts_y
                 x = ZERO
-
                 do ipt_xi = 1,npts_x
-                    call pts(ipt_xi,ipt_eta,ipt_zeta)%set(x, y, z)
+
+                    call nodes(ipt)%set(x, y, z)
                     ipt = ipt + 1
+
                     x = x + dx
                 end do
-
                 y = y + dy
             end do
-
             z = z + dz
         end do
 
-    end subroutine
+
+
+        ielem = 1
+        do ielem_z = 1,npts_z-1
+            do ielem_y = 1,npts_y-1
+                do ielem_x = 1,npts_x-1
+                    connectivity(ielem,1) = ielem
+                    connectivity(ielem,2) = 1       !linear
+
+                    xstart = 1 + (ielem_x-1)
+                    ystart = 1 + (ielem_y-1)
+                    zstart = 1 + (ielem_z-1)
+                    
+                    
+                    ipt_elem = 1
+                    do ipt_z = zstart,(zstart+1)
+                        do ipt_y = ystart,(ystart+1)
+                            do ipt_x = xstart,(xstart+1)
+                                ipt = ipt_x  +  (ipt_y-1)*npts_x  +  (ipt_z-1)*(npts_x*npts_y)     
+                                connectivity(ielem,2+ipt_elem) = ipt
+                                ipt_elem = ipt_elem + 1
+                            end do
+                        end do
+                    end do
+
+                    ielem = ielem + 1
+                end do
+            end do
+        end do
+
+
+
+
+    end subroutine meshgen_15x15x3_linear
+    !**************************************************************************
 
 
 

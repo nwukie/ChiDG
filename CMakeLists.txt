@@ -138,15 +138,15 @@ message(STATUS "LAPACK_LIBRARIES: " ${LAPACK_LIBRARIES})
 #
 #message(STATUS "Fortran_VENDOR: ${Fortran_VENDOR}")
 #message(STATUS "MPI_VENDOR_ROOT: ${MPI_VENDOR_ROOT}")
-#
-#set(MPI_Fortran_COMPILER "${MPI_VENDOR_ROOT}/bin/mpifort")
-#set(MPI_Fortran_INCLUDE_PATH "${MPI_VENDOR_ROOT}/include")
-#
-#
-#find_package(MPI REQUIRED)
-#
-#include_directories(${MPI_Fortran_INCLUDE_PATH})
-#
+
+set(MPI_Fortran_COMPILER "/opt/local/bin/mpifort")
+set(MPI_Fortran_INCLUDE_PATH "/opt/local/lib/openmpi-mp")
+
+
+find_package(MPI REQUIRED)
+
+include_directories(${MPI_Fortran_INCLUDE_PATH})
+
 
 
 
@@ -260,12 +260,13 @@ if (TESTING)
     #
     # Set pFUnit installation based on compiler vendor
     #
-    if (${Fortran_VENDOR} MATCHES "INTEL")
-        set(PF_ROOT $ENV{PFUNIT}/intel)
-    elseif (${Fortran_VENDOR} MATCHES "GNU")
-        set(PF_ROOT $ENV{PFUNIT}/gnu)
-    endif()
+    #if (${Fortran_VENDOR} MATCHES "INTEL")
+    #    set(PF_ROOT $ENV{PFUNIT}/intel)
+    #elseif (${Fortran_VENDOR} MATCHES "GNU")
+    #    set(PF_ROOT $ENV{PFUNIT}/gnu)
+    #endif()
 
+    set(PF_ROOT $ENV{PFUNIT})
 
     #
     # Set location of pFUnit libs

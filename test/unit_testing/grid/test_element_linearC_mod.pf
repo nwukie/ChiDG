@@ -29,7 +29,8 @@ contains
         class(test_element_linearC),    intent(inout)   :: this
         
         integer(ik), parameter  :: npt = 8
-        type(point_t)           :: pts(npt)
+        type(point_t)           :: nodes(npt)
+        integer(ik)             :: connectivity(10)
         real(rk)                :: sqrt_two, inv_sqrt_two
         integer(ik)             :: ftype, ineighbor, mapping, ielem, idomain, spacedim
         
@@ -52,24 +53,26 @@ contains
         !!
         sqrt_two        = sqrt(2._rk)
         inv_sqrt_two    = 1._rk/sqrt_two
-        call pts(1)%set(0._rk,          0._rk,      0._rk)
-        call pts(2)%set(inv_sqrt_two,   0._rk,      inv_sqrt_two)
-        call pts(3)%set(inv_sqrt_two,   0._rk,     -inv_sqrt_two)
-        call pts(4)%set(sqrt_two,       0._rk,      0._rk)
-        call pts(5)%set(0._rk,          1._rk,      0._rk)
-        call pts(6)%set(inv_sqrt_two,   1._rk,      inv_sqrt_two)
-        call pts(7)%set(inv_sqrt_two,   1._rk,     -inv_sqrt_two)
-        call pts(8)%set(sqrt_two,       1._rk,      0._rk)
+        call nodes(1)%set(0._rk,          0._rk,      0._rk)
+        call nodes(2)%set(inv_sqrt_two,   0._rk,      inv_sqrt_two)
+        call nodes(3)%set(inv_sqrt_two,   0._rk,     -inv_sqrt_two)
+        call nodes(4)%set(sqrt_two,       0._rk,      0._rk)
+        call nodes(5)%set(0._rk,          1._rk,      0._rk)
+        call nodes(6)%set(inv_sqrt_two,   1._rk,      inv_sqrt_two)
+        call nodes(7)%set(inv_sqrt_two,   1._rk,     -inv_sqrt_two)
+        call nodes(8)%set(sqrt_two,       1._rk,      0._rk)
+
+        connectivity = [1,1,  1, 2, 3, 4, 5, 6, 7, 8]
         
-        !> Initialize Element geometry and Numerics
+        ! Initialize Element geometry and Numerics
         spacedim = 3
         mapping = 1
         idomain = 1
         ielem   = 1
-        call this%elem%init_geom(spacedim,mapping,pts,idomain,ielem)
-        call this%elem%init_sol(2,8)    !> 2 equations, 8 terms (3*3*3)
+        call this%elem%init_geom(spacedim,nodes,connectivity,idomain)
+        call this%elem%init_sol(2,8)    ! 2 equations, 8 terms (3*3*3)
         
-        !> Initialize faces for element
+        ! Initialize faces for element
         ftype = 0
         ineighbor = 0
         call this%faces(XI_MIN)%init_geom(XI_MIN,ftype,this%elem,ineighbor)

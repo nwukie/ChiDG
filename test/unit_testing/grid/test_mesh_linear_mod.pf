@@ -9,6 +9,7 @@ module test_mesh_linear_mod
     use type_mesh,      only: mesh_t
     use type_element,   only: element_t
     use type_face,      only: face_t
+    use mod_testutils,  only: meshgen
     implicit none
 
     public  :: test_mesh_linear
@@ -32,7 +33,9 @@ contains
         class(test_mesh_linear),    intent(inout)   :: this
         
         integer(ik), parameter      :: npt = 64
-        type(point_t)               :: pts(4,4,4)
+        !type(point_t)               :: pts(4,4,4)
+        type(point_t),  allocatable :: nodes(:)
+        integer(ik),    allocatable :: connectivity(:,:)
         integer(ik)                 :: ftype, ineighbor, mapping, ielem, &
                                        ipt_xi, ipt_eta, ipt_zeta, ipt
         integer(ik)                 :: neqns, nterms_s, nterms_c, idomain, spacedim
@@ -65,30 +68,31 @@ contains
         !      *-------*-------*-------*
         !         
         !
-        x = [ZERO, ONE, TWO, THREE, ZERO, ONE, TWO, THREE, ZERO, ONE, TWO, THREE, ZERO, ONE, TWO, THREE, &
-             ZERO, ONE, TWO, THREE, ZERO, ONE, TWO, THREE, ZERO, ONE, TWO, THREE, ZERO, ONE, TWO, THREE, &
-             ZERO, ONE, TWO, THREE, ZERO, ONE, TWO, THREE, ZERO, ONE, TWO, THREE, ZERO, ONE, TWO, THREE, &
-             ZERO, ONE, TWO, THREE, ZERO, ONE, TWO, THREE, ZERO, ONE, TWO, THREE, ZERO, ONE, TWO, THREE]
-             
-        y = [ZERO, ZERO, ZERO, ZERO, ONE, ONE, ONE, ONE, TWO, TWO, TWO, TWO, THREE, THREE, THREE, THREE, &
-             ZERO, ZERO, ZERO, ZERO, ONE, ONE, ONE, ONE, TWO, TWO, TWO, TWO, THREE, THREE, THREE, THREE, &
-             ZERO, ZERO, ZERO, ZERO, ONE, ONE, ONE, ONE, TWO, TWO, TWO, TWO, THREE, THREE, THREE, THREE, &
-             ZERO, ZERO, ZERO, ZERO, ONE, ONE, ONE, ONE, TWO, TWO, TWO, TWO, THREE, THREE, THREE, THREE]
-             
-        z = [ZERO, ZERO, ZERO, ZERO, ZERO, ZERO, ZERO, ZERO, ZERO, ZERO, ZERO, ZERO, ZERO, ZERO, ZERO, ZERO, &
-             ONE, ONE, ONE, ONE, ONE, ONE, ONE, ONE, ONE, ONE, ONE, ONE, ONE, ONE, ONE, ONE, &
-             TWO, TWO, TWO, TWO, TWO, TWO, TWO, TWO, TWO, TWO, TWO, TWO, TWO, TWO, TWO, TWO, &
-             THREE, THREE, THREE, THREE, THREE, THREE, THREE, THREE, THREE, THREE, THREE, THREE, THREE, THREE, THREE, THREE]
-             
-        ipt = 1
-        do ipt_zeta = 1,4
-            do ipt_eta = 1,4
-                do ipt_xi = 1,4
-                    call pts(ipt_xi,ipt_eta,ipt_zeta)%set(x(ipt), y(ipt), z(ipt))
-                    ipt = ipt + 1
-                end do
-            end do      
-        end do
+!        x = [ZERO, ONE, TWO, THREE, ZERO, ONE, TWO, THREE, ZERO, ONE, TWO, THREE, ZERO, ONE, TWO, THREE, &
+!             ZERO, ONE, TWO, THREE, ZERO, ONE, TWO, THREE, ZERO, ONE, TWO, THREE, ZERO, ONE, TWO, THREE, &
+!             ZERO, ONE, TWO, THREE, ZERO, ONE, TWO, THREE, ZERO, ONE, TWO, THREE, ZERO, ONE, TWO, THREE, &
+!             ZERO, ONE, TWO, THREE, ZERO, ONE, TWO, THREE, ZERO, ONE, TWO, THREE, ZERO, ONE, TWO, THREE]
+!             
+!        y = [ZERO, ZERO, ZERO, ZERO, ONE, ONE, ONE, ONE, TWO, TWO, TWO, TWO, THREE, THREE, THREE, THREE, &
+!             ZERO, ZERO, ZERO, ZERO, ONE, ONE, ONE, ONE, TWO, TWO, TWO, TWO, THREE, THREE, THREE, THREE, &
+!             ZERO, ZERO, ZERO, ZERO, ONE, ONE, ONE, ONE, TWO, TWO, TWO, TWO, THREE, THREE, THREE, THREE, &
+!             ZERO, ZERO, ZERO, ZERO, ONE, ONE, ONE, ONE, TWO, TWO, TWO, TWO, THREE, THREE, THREE, THREE]
+!             
+!        z = [ZERO, ZERO, ZERO, ZERO, ZERO, ZERO, ZERO, ZERO, ZERO, ZERO, ZERO, ZERO, ZERO, ZERO, ZERO, ZERO, &
+!             ONE, ONE, ONE, ONE, ONE, ONE, ONE, ONE, ONE, ONE, ONE, ONE, ONE, ONE, ONE, ONE, &
+!             TWO, TWO, TWO, TWO, TWO, TWO, TWO, TWO, TWO, TWO, TWO, TWO, TWO, TWO, TWO, TWO, &
+!             THREE, THREE, THREE, THREE, THREE, THREE, THREE, THREE, THREE, THREE, THREE, THREE, THREE, THREE, THREE, THREE]
+!             
+!        ipt = 1
+!        do ipt_zeta = 1,4
+!            do ipt_eta = 1,4
+!                do ipt_xi = 1,4
+!                    call pts(ipt_xi,ipt_eta,ipt_zeta)%set(x(ipt), y(ipt), z(ipt))
+!                    ipt = ipt + 1
+!                end do
+!            end do      
+!        end do
+        call meshgen('333',nodes,connectivity)
 
 
         !
@@ -99,7 +103,7 @@ contains
         nterms_c = 8
         neqns = 1
         nterms_s = 8
-        call this%mesh%init_geom(idomain,spacedim,nterms_c,pts)
+        call this%mesh%init_geom(idomain,spacedim,nterms_c,nodes,connectivity)
         call this%mesh%init_sol(neqns,nterms_s)
 
     end subroutine
@@ -135,9 +139,9 @@ contains
         @assertEqual(neqns,self%mesh%neqns)
         @assertEqual(nterms_s,self%mesh%nterms_s)
         @assertEqual(nterms_c,self%mesh%nterms_c)
-        @assertEqual(nelem_xi,self%mesh%nelem_xi)
-        @assertEqual(nelem_eta,self%mesh%nelem_eta)
-        @assertEqual(nelem_zeta,self%mesh%nelem_zeta)
+!        @assertEqual(nelem_xi,self%mesh%nelem_xi)
+!        @assertEqual(nelem_eta,self%mesh%nelem_eta)
+!        @assertEqual(nelem_zeta,self%mesh%nelem_zeta)
         @assertEqual(nelem,self%mesh%nelem)
         @assertEqual(idomain,self%mesh%idomain)
 

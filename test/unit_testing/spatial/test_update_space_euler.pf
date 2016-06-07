@@ -23,8 +23,6 @@ subroutine test_update_space_euler()
 
 
     type(chidg_t)                   :: chidgA, chidgB
-    type(meshdata_t),   allocatable :: meshdataA(:), meshdataB(:)
-    class(bc_t),        allocatable :: wall, inlet, outlet
     class(function_t),  allocatable :: constant, gaussian
     integer(ik)                     :: idom, nterms_s, spacedim
     real(rk)                        :: tol
@@ -46,62 +44,12 @@ subroutine test_update_space_euler()
     !
     ! Read grid
     !
-    call read_grid_hdf('smoothbump_onedomain_twobump.h5',meshdataA)
-    call read_grid_hdf('smoothbump_twodomain_twobump_abutting.h5',meshdataB)
+    call chidgA%read_grid('smoothbump_onedomain_twobump.h5',spacedim)
+    call chidgB%read_grid('smoothbump_twodomain_twobump_abutting.h5',spacedim)
 
+    call chidgA%read_boundaryconditions('smoothbump_onedomain_twobump.h5')
+    call chidgB%read_boundaryconditions('smoothbump_twodomain_twobump_abutting.h5')
 
-
-    !
-    ! Add domains
-    !
-    do idom = 1,size(meshdataA)
-        call chidgA%data%add_domain(trim(meshdataA(idom)%name),meshdataA(idom)%points,spacedim,meshdataA(idom)%nterms_c,'euler')
-    end do
-    call chidgA%initialize_solution_domains(nterms_s)
-
-    do idom = 1,size(meshdataB)
-        call chidgB%data%add_domain(trim(meshdataB(idom)%name),meshdataB(idom)%points,spacedim,meshdataB(idom)%nterms_c,'euler')
-    end do
-    call chidgB%initialize_solution_domains(nterms_s)
-
-
-
-    !
-    ! Create boundary conditions
-    !
-    call create_bc('euler_wall', wall)
-    call create_bc('euler_pressureoutlet', outlet)
-    call create_bc('euler_totalinlet', inlet)
-
-
-
-    !
-    ! Add boundary conditions ChiDG - A
-    !
-    call chidgA%data%add_bc('D_01',inlet,XI_MIN)
-    call chidgA%data%add_bc('D_01',outlet,XI_MAX)
-    call chidgA%data%add_bc('D_01',wall,ETA_MIN)
-    call chidgA%data%add_bc('D_01',wall,ETA_MAX)
-    call chidgA%data%add_bc('D_01',wall,ZETA_MIN)
-    call chidgA%data%add_bc('D_01',wall,ZETA_MAX)
-
-    !
-    ! Add boundary conditions to ChiDG - B
-    !
-    call chidgB%data%add_bc('D_01',inlet,XI_MIN)
-    !call chidgB%data%add_bc('D_01','euler_pressureoutlet',XI_MAX)
-    call chidgB%data%add_bc('D_01',wall,ETA_MIN)
-    call chidgB%data%add_bc('D_01',wall,ETA_MAX)
-    call chidgB%data%add_bc('D_01',wall,ZETA_MIN)
-    call chidgB%data%add_bc('D_01',wall,ZETA_MAX)
-
-
-    !call chidgB%data%add_bc('D_02','euler_totalinlet',XI_MIN)
-    call chidgB%data%add_bc('D_02',outlet,XI_MAX)
-    call chidgB%data%add_bc('D_02',wall,ETA_MIN)
-    call chidgB%data%add_bc('D_02',wall,ETA_MAX)
-    call chidgB%data%add_bc('D_02',wall,ZETA_MIN)
-    call chidgB%data%add_bc('D_02',wall,ZETA_MAX)
 
 
 
@@ -109,6 +57,9 @@ subroutine test_update_space_euler()
     !
     ! Initialize solution data storage
     !
+    call chidgA%initialize_solution_domains(nterms_s)
+    call chidgB%initialize_solution_domains(nterms_s)
+
     call chidgA%init('chimera')
     call chidgA%data%initialize_solution_solver()
 
@@ -210,12 +161,6 @@ subroutine test_update_space_euler()
     @assertEqual(chidgA%data%sdata%rhs%dom(1)%lvecs(31)%vec, chidgB%data%sdata%rhs%dom(2)%lvecs(13)%vec,tol)
     @assertEqual(chidgA%data%sdata%rhs%dom(1)%lvecs(42)%vec, chidgB%data%sdata%rhs%dom(1)%lvecs(24)%vec,tol)
     @assertEqual(chidgA%data%sdata%rhs%dom(1)%lvecs(43)%vec, chidgB%data%sdata%rhs%dom(2)%lvecs(19)%vec,tol)
-
-
-
-
-
-
 
 
 

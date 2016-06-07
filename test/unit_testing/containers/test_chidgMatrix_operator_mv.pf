@@ -45,35 +45,11 @@ subroutine test_chidgMatrix_operator_mv()
     !
     ! Get grid points
     !
-    call read_grid_hdf("D2_E8_M1_overlapping_multipledonor.h5",meshdata)
+    call chidg%read_grid('D2_E8_M1_overlapping_multipledonor.h5',spacedim)
+    call chidg%read_boundaryconditions('D2_E8_M1_overlapping_multipledonor.h5')
 
 
-    !
-    ! Initialize domains
-    !
-    do idom = 1,size(meshdata)
-        call chidg%data%add_domain(trim(meshdata(idom)%name), meshdata(idom)%points,spacedim,meshdata(idom)%nterms_c,'linearadvection')
-    end do
     call chidg%initialize_solution_domains(nterms_s)
-
-
-
-    !
-    ! Set boundary conditions
-    !
-    call create_bc('linearadvection_extrapolate', bc)
-    call chidg%data%add_bc('D_01',bc,XI_MIN)
-    call chidg%data%add_bc('D_01',bc,ETA_MIN)
-    call chidg%data%add_bc('D_01',bc,ETA_MAX)
-    call chidg%data%add_bc('D_01',bc,ZETA_MIN)
-    call chidg%data%add_bc('D_01',bc,ZETA_MAX)
-
-
-    call chidg%data%add_bc('D_02',bc,XI_MAX)
-    call chidg%data%add_bc('D_02',bc,ETA_MIN)
-    call chidg%data%add_bc('D_02',bc,ETA_MAX)
-    call chidg%data%add_bc('D_02',bc,ZETA_MIN)
-    call chidg%data%add_bc('D_02',bc,ZETA_MAX)
 
     !
     ! Initialize ChiDG Chimera Interfaces

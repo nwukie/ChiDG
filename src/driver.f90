@@ -19,13 +19,18 @@ program driver
     use type_dict,              only: dict_t
     use type_function,          only: function_t
     use mod_function,           only: create_function
-    use mod_tecio,              only: write_tecio_variables
+    use mod_io
+
+    ! Actions
     use mod_chidg_edit,         only: chidg_edit
     use mod_chidg_convert,      only: chidg_convert
     use mod_chidg_interpolate,  only: chidg_interpolate
     use mod_chidg_post,         only: chidg_post
     use mod_kirchoffs,          only: kirchoff
-    use mod_io
+
+    ! MPI
+    use mod_chidg_mpi,          only: irank, nrank
+    use mpi_f08
 
 
 
@@ -38,9 +43,21 @@ program driver
     type(dict_t)                        :: toptions, noptions, loptions
     class(function_t),  allocatable     :: constant, monopole
 
+    integer                             :: ierr
     integer(ik)                         :: narg
     character(len=1024)                 :: chidg_action, filename, file_a, file_b
 
+
+
+    !
+    ! Initialize MPI
+    !
+    call MPI_Init(ierr)
+    if (ierr /= 0) call chidg_signal(FATAL,"MPI_Init")
+    call MPI_Comm_Size(MPI_COMM_WORLD,nrank,ierr)
+    if (ierr /= 0) call chidg_signal(FATAL,"MPI_Comm_Size")
+    call MPI_Comm_Rank(MPI_COMM_WORLD,irank,ierr)
+    if (ierr /= 0) call chidg_signal(FATAL,"MPI_Comm_Rank")
 
 
 
@@ -63,16 +80,43 @@ program driver
         call chidg%init('io')
 
 
+
+!        !
+!        ! Read connectivity, partition, distribute
+!        !
+!        if ( irank == GLOBAL_MASTER ) then
+!
+!            call read_connectivity(gridfile,connectivity)
+!
+!            call partition_connectivity(connectivity, partitions)
+!
+!            call send_partitions(partitions)
+!
+!        end if
+!
+!
+!        !
+!        ! Receive partition
+!        !
+!        call recv_partition(partition) ! may need MPI_Barrier inside
+
+
+
         !
-        ! Read grid data from file
+        ! Read grid data from file. One partition at a time to avoid the file being accessed simultaneously.
         !
         call chidg%read_grid(gridfile, spacedim)
-
-
-        !
-        ! Read boundary conditions
-        !
         call chidg%read_boundaryconditions(gridfile)
+!        do iread = 1,nrank 
+!            if ( irank == iread ) then
+!
+!                call chidg%read_grid(gridfile, spacedim, partition)
+!                call chidg%read_boundaryconditions(gridfile, partition)
+!
+!            end if
+!
+!            call MPI_Barrier(ierr)  ! sync to prevent simultaneous file access
+!        end do
 
 
 
@@ -170,6 +214,11 @@ program driver
             ! TODO: put in check that solutionfile actually contains solution
             !
             call chidg%read_solution(solutionfile_in)
+!            do iread = 1,nrank
+!                if ( iread == irank ) then
+!                    call chidg%read_solution(solutionfile_in,partition)
+!                end if
+!            end do
 
         end if
 

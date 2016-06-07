@@ -3,7 +3,7 @@ module type_element
     use mod_kinds,              only: rk,ik
     use mod_constants,          only: NFACES,XI_MIN,XI_MAX,ETA_MIN, &
                                       ETA_MAX,ZETA_MIN,ZETA_MAX,ONE,ZERO, &
-                                      X_DIR, Y_DIR, Z_DIR, ZETA_DIR, TWO_DIM, THREE_DIM
+                                      X_DIR, Y_DIR, Z_DIR, XI_DIR, ETA_DIR, ZETA_DIR, TWO_DIM, THREE_DIM, RKTOL
     use type_point,             only: point_t
     use type_densevector,       only: densevector_t
     use type_quadrature,        only: quadrature_t
@@ -13,6 +13,7 @@ module type_element
     use mod_polynomial,         only: polynomialVal, dpolynomialVal
     use mod_grid_tools,         only: compute_modal_coordinates
     use mod_inv,                only: inv
+    use mod_connectivity_tools, only: connectivity_get_ielem, connectivity_get_mapping, connectivity_get_node
     implicit none
 
 
@@ -42,6 +43,7 @@ module type_element
 
         ! Element quadrature points, mesh points and modes
         !---------------------------------------------------------
+        integer(ik),   allocatable  :: connectivity(:)      !< Connectivity list. Integer indices of the associated nodes in block node list
         type(point_t), allocatable  :: quad_pts(:)          !< Cartesian coordinates of discrete quadrature points
         type(point_t), allocatable  :: elem_pts(:)          !< Cartesian coordinates of discrete points defining element
         type(densevector_t)         :: coords               !< Modal representation of cartesian coordinates (nterms_var,(x,y,z))
@@ -88,6 +90,7 @@ module type_element
         procedure, public   :: z                      !< Compute a discrete value for the z-coordinate at a given xi,eta,zeta.
 
         procedure, public   :: grid_point             !< Compute a discrete value for a physical coordinate at a given xi, eta, zeta.
+        procedure, public   :: computational_point    !< Compute a discrete value for a computational coordinate at a given x, y, z.
         procedure, public   :: metric_point           !< Compute a discrete value for a metric term at a given xi, eta, zeta.
         procedure, public   :: solution_point         !< Compute a discrete value for the solution at a given xi,eta, zeta.
 
@@ -129,20 +132,56 @@ contains
     !!  @param[in] points       Array of cartesian points defining the element
     !!
     !---------------------------------------------------------------------------------------
-    subroutine init_geom(self,spacedim,mapping,points,idomain,ielem)
+    !subroutine init_geom(self,spacedim,mapping,points,idomain,ielem)
+    subroutine init_geom(self,spacedim,nodes,connectivity,idomain)
         class(element_t),   intent(inout)   :: self
         integer(ik),        intent(in)      :: spacedim
-        integer(ik),        intent(in)      :: mapping
-        type(point_t),      intent(in)      :: points(:)
+        !integer(ik),        intent(in)      :: mapping
+        type(point_t),      intent(in)      :: nodes(:)
+        integer(ik),        intent(in)      :: connectivity(:)
         integer(ik),        intent(in)      :: idomain
-        integer(ik),        intent(in)      :: ielem
+!        integer(ik),        intent(in)      :: ielem
 
-        type(point_t)                       :: pnt
-        integer(ik)                         :: ierr, nterms_c, ipt
-        real(rk), allocatable   :: element_mapping(:,:)
+        type(point_t),  allocatable         :: points(:)
+        real(rk),       allocatable         :: element_mapping(:,:)
+        integer(ik)                         :: ierr, nterms_c, ipt, npts_1d, npts, nnodes, mapping, ielem, inode
 
 
         if (self%geomInitialized) call chidg_signal(FATAL,'element%init_geom -- element already initialized')
+
+
+        !
+        ! Get connectivity info
+        !
+        ielem   = connectivity_get_ielem(connectivity)
+        mapping = connectivity_get_mapping(connectivity)
+
+
+
+        !
+        ! Accumulate coordinates for current element from node list.
+        !
+        npts_1d = mapping+1
+        npts    = npts_1d * npts_1d * npts_1d
+        allocate(points(npts), stat=ierr)
+        if (ierr /= 0) call AllocationError
+
+        do ipt = 1,npts
+            !
+            ! Get node index
+            !
+            inode = connectivity_get_node(connectivity,ipt)
+
+            !
+            ! Add node to element points list
+            !
+            points(ipt) = nodes(inode)
+        end do !ipt
+
+
+
+
+
 
         !
         ! Get element mapping
@@ -158,16 +197,19 @@ contains
         !
         allocate(self%elem_pts(nterms_c),stat=ierr)
         call self%coords%init(nterms_c,3,ielem)
-        self%spacedim = spacedim
-        self%idomain  = idomain
-        self%ielem    = ielem
-        self%elem_pts = points
+        self%spacedim       = spacedim
+        self%idomain        = idomain
+        self%ielem          = ielem
+        self%elem_pts       = points
+        self%connectivity   = connectivity
 
         
         !
         ! Compute mesh x,y,z modes
         !
         call compute_modal_coordinates(spacedim,self%elem_pts,mapping,self%coords)
+
+
 
 
         !
@@ -820,8 +862,8 @@ contains
         integer(ik)     :: iterm, ielem, spacedim
 
 
-        if (cart_dir > 3) call chidg_signal(FATAL,"Error: mesh_point -- card_dir exceeded 3 physical coordinates")
-        if (comp_dir > 3) call chidg_signal(FATAL,"Error: mesh_point -- comp_dir exceeded 3 physical coordinates")
+        if (cart_dir > 3) call chidg_signal(FATAL,"Error: metric_point -- card_dir exceeded 3 physical coordinates")
+        if (comp_dir > 3) call chidg_signal(FATAL,"Error: metric_point -- comp_dir exceeded 3 physical coordinates")
 
         call node%set(xi,eta,zeta)
 
@@ -913,6 +955,149 @@ contains
 
     end function solution_point
     !****************************************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+    
+    !>  Compute a computational location(xi,eta,zeta), based on the location in cartesian space (x,y,z)
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   5/23/2016
+    !!
+    !!  @param[in]  coord   Computational coordinate that is getting computed (xi, eta, zeta)
+    !!  @param[in]  x       Real value for x-coordinate.
+    !!  @param[in]  y       Real value for y-coordinate.
+    !!  @param[in]  z       Real value for z-coordinate.
+    !!
+    !----------------------------------------------------------------------------------------------------------------
+    function computational_point(self,x,y,z) result(loc)
+        class(element_t),   intent(in)  :: self
+        real(rk),           intent(in)  :: x
+        real(rk),           intent(in)  :: y
+        real(rk),           intent(in)  :: z
+
+        type(point_t)       :: loc
+        real(rk)            :: xi,  eta, zeta,   &
+                               xn,  yn,  zn
+        integer(ik)         :: inewton
+
+        real(rk)    :: mat(3,3), minv(3,3)
+        real(rk)    :: R(3)
+        real(rk)    :: dcoord(3)
+        real(rk)    :: res, dx, dy, dz, tol
+
+
+        tol = 100._rk*RKTOL
+
+
+        !
+        ! Newton iteration to find the donor local coordinates
+        !
+        xi   = ZERO
+        eta  = ZERO
+        zeta = ZERO
+        do inewton = 1,20
+
+            !
+            ! Compute local cartesian coordinates as a function of xi,eta,zeta
+            !
+            xn = self%x(xi,eta,zeta)
+            yn = self%y(xi,eta,zeta)
+            zn = self%z(xi,eta,zeta)
+
+
+
+            !
+            ! Assemble residual vector
+            !
+            R(1) = -(xn - x)
+            R(2) = -(yn - y)
+            R(3) = -(zn - z)
+
+
+
+            !
+            ! Assemble coordinate jacobian matrix
+            !
+            mat(1,1) = self%metric_point(X_DIR,XI_DIR,  xi,eta,zeta)
+            mat(2,1) = self%metric_point(Y_DIR,XI_DIR,  xi,eta,zeta)
+            mat(3,1) = self%metric_point(Z_DIR,XI_DIR,  xi,eta,zeta)
+            mat(1,2) = self%metric_point(X_DIR,ETA_DIR, xi,eta,zeta)
+            mat(2,2) = self%metric_point(Y_DIR,ETA_DIR, xi,eta,zeta)
+            mat(3,2) = self%metric_point(Z_DIR,ETA_DIR, xi,eta,zeta)
+            mat(1,3) = self%metric_point(X_DIR,ZETA_DIR,xi,eta,zeta)
+            mat(2,3) = self%metric_point(Y_DIR,ZETA_DIR,xi,eta,zeta)
+            mat(3,3) = self%metric_point(Z_DIR,ZETA_DIR,xi,eta,zeta)
+
+
+
+            !
+            ! Invert jacobian matrix
+            !
+            minv = inv(mat)
+
+
+            !
+            ! Compute coordinate update
+            !
+            dcoord = matmul(minv,R)
+
+
+            !
+            ! Update coordinates
+            !
+            xi   = xi   + dcoord(1)
+            eta  = eta  + dcoord(2)
+            zeta = zeta + dcoord(3)
+
+
+            !
+            ! Compute residual coordinate norm
+            !
+            res = norm2(R)
+
+
+            !
+            ! Exit if converged
+            !
+            if ( res < tol ) then
+                call loc%set(xi,eta,zeta)
+                exit
+            end if
+
+
+            !
+            ! Limit computational coordinates, in case they go out of bounds.
+            !
+            if ( xi   >  ONE ) xi   =  ONE
+            if ( xi   < -ONE ) xi   = -ONE
+            if ( eta  >  ONE ) eta  =  ONE
+            if ( eta  < -ONE ) eta  = -ONE
+            if ( zeta >  ONE ) zeta =  ONE
+            if ( zeta < -ONE ) zeta = -ONE
+
+
+            if ( inewton == 20 ) then
+                call chidg_signal(WARN,"element%computational_point: Newton iteration did not converge")
+            end if
+
+        end do ! inewton
+
+
+
+
+    end function computational_point
+    !********************************************************************************************
+
+
 
 
 

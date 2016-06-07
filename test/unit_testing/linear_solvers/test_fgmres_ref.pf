@@ -17,7 +17,8 @@ subroutine test_fgmres_ref_solve()
     implicit none
 
     type(chidg_t)               :: chidg
-    type(point_t), allocatable  :: pts(:,:,:)
+    type(point_t),  allocatable :: nodes(:)
+    integer(ik),    allocatable :: connectivity(:,:)
 
     type(chidgMatrix_t)         :: A
     type(chidgVector_t)         :: x, b
@@ -53,13 +54,13 @@ subroutine test_fgmres_ref_solve()
     !
     ! Get grid points
     !
-    call meshgen('211',pts)
+    call meshgen('211',nodes,connectivity)
 
 
     !
     ! Initialize domain
     !
-    call chidg%data%add_domain('D_01',pts,spacedim,nterms_c,'Scalar')
+    call chidg%data%add_domain('D_01',nodes,connectivity,spacedim,nterms_c,'Scalar')
     call chidg%initialize_solution_domains(nterms_s)
     call chidg%initialize_solution_solver()
 

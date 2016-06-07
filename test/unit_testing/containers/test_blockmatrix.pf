@@ -17,7 +17,8 @@ subroutine test_blockmatrix__store_1eq_8terms()
     implicit none
     type(chidg_t)               :: chidg
     type(mesh_t)                :: mesh
-    type(point_t), allocatable  :: pts(:,:,:)    
+    type(point_t),  allocatable :: nodes(:)
+    integer(ik),    allocatable :: connectivity(:,:)
     type(blockmatrix_t)         :: bmat
     type(AD_D)                  :: integral(8)
     integer(ik)                 :: ielem, iblk, ivar, nderiv, i, neqns, nterms_c, nterms_s, idomain, spacedim
@@ -35,8 +36,9 @@ subroutine test_blockmatrix__store_1eq_8terms()
     spacedim = 3
     nterms_c = 8
     nterms_s = 8
-    call meshgen('3x3x3',pts)
-    call mesh%init_geom(idomain,spacedim,nterms_c,pts)
+    call meshgen('3x3x3',nodes,connectivity)
+    !call mesh%init_geom(idomain,spacedim,nterms_c,pts)
+    call mesh%init_geom(idomain,spacedim,nterms_c,nodes,connectivity)
     call mesh%init_sol(neqns,nterms_s)    ! Initialize numerics
 
 
@@ -148,7 +150,8 @@ subroutine test_blockmatrix__store_2eq_8terms()
     implicit none
     type(chidg_t)               :: chidg
     type(mesh_t)                :: mesh    
-    type(point_t), allocatable  :: pts(:,:,:)
+    type(point_t),  allocatable :: nodes(:)
+    integer(ik),    allocatable :: connectivity(:,:)
     type(blockmatrix_t)         :: bmat
     type(AD_D)                  :: integral(8)
     integer(ik)                 :: ielem, iblk, ivar, nderiv, i, neqns, nterms_c, nterms_s, idomain, spacedim
@@ -164,9 +167,9 @@ subroutine test_blockmatrix__store_2eq_8terms()
     spacedim = 3
     nterms_c = 8
     nterms_s = 8
-    call meshgen('3x3x3',pts)                           ! Generate points for 3x3x3 mesh
-    call mesh%init_geom(idomain,spacedim,nterms_c,pts)  ! Initialize geometry
-    call mesh%init_sol(neqns,nterms_s)                  ! Initialize numerics
+    call meshgen('3x3x3',nodes,connectivity)                            ! Generate points for 3x3x3 mesh
+    call mesh%init_geom(idomain,spacedim,nterms_c,nodes,connectivity)   ! Initialize geometry
+    call mesh%init_sol(neqns,nterms_s)                                  ! Initialize numerics
 
 
     !
@@ -274,7 +277,8 @@ subroutine test_blockmatrix__clear_1eq_8terms()
     implicit none
     type(chidg_t)               :: chidg
     type(mesh_t)                :: mesh    
-    type(point_t), allocatable  :: pts(:,:,:)
+    type(point_t),  allocatable :: nodes(:)
+    integer(ik),    allocatable :: connectivity(:,:)
     type(blockmatrix_t)         :: bmat
     type(AD_D)                  :: integral(8)
     integer(ik)                 :: ielem, iblk, ivar, nderiv, i, neqns, nterms_c, nterms_s, idomain, spacedim
@@ -294,9 +298,9 @@ subroutine test_blockmatrix__clear_1eq_8terms()
     spacedim = 3
     nterms_c = 8
     nterms_s = 8
-    call meshgen('3x3x3',pts)                           ! Generate points for 3x3x3 mesh
-    call mesh%init_geom(idomain,spacedim,nterms_c,pts)  ! Initialize geometry
-    call mesh%init_sol(neqns,nterms_s)                  ! Initialize numerics
+    call meshgen('3x3x3',nodes,connectivity)                            ! Generate points for 3x3x3 mesh
+    call mesh%init_geom(idomain,spacedim,nterms_c,nodes,connectivity)   ! Initialize geometry
+    call mesh%init_sol(neqns,nterms_s)                                  ! Initialize numerics
 
 
 

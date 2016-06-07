@@ -310,6 +310,8 @@ contains
         end if
 
 
+
+
         !
         ! Add domains to ChiDG%data
         !
@@ -319,11 +321,11 @@ contains
             call self%data%add_domain(                              &
                                       trim(meshdata(idom)%name),    &
                                       meshdata(idom)%points,        &
+                                      meshdata(idom)%connectivity,  &
                                       spacedim,                     &
                                       meshdata(idom)%nterms_c,      &
                                       meshdata(idom)%eqnset         &
                                       )
-
 
         end do
 
@@ -389,7 +391,7 @@ contains
 
                 if ( allocated(bcdata(idom)%bcs(iface)%bc) ) then
 
-                    call self%data%add_bc(dname, bcdata(idom)%bcs(iface)%bc, bcdata(idom)%bcface(iface))
+                    call self%data%add_bc(dname, bcdata(idom)%bcs(iface)%bc, bcdata(idom)%bc_connectivity(iface))
 
                 end if
 

@@ -51,70 +51,14 @@ subroutine test_compute_gq_donor_cylinder_abutting()
     !
     ! Read grid
     !
-    call read_grid_hdf('cylinder_chimera_abutting.h5',meshdataA)
-
-
-
-    !
-    ! Add domains
-    !
-    do idom = 1,size(meshdataA)
-        call chidgA%data%add_domain(trim(meshdataA(idom)%name),meshdataA(idom)%points,spacedim,meshdataA(idom)%nterms_c,'euler')
-    end do
-    call chidgA%initialize_solution_domains(nterms_s)
-
-
-    !
-    ! Create boundary conditions
-    !
-    call create_bc('euler_wall', wall)
-    call create_bc('euler_pressureoutlet', outlet)
-    call create_bc('euler_totalinlet', inlet)
-
-
-
-    !
-    ! Add boundary conditions ChiDG - A
-    !
-    !call chidgA%data%add_bc('D_01','euler_totalinlet',XI_MIN)
-    !call chidgA%data%add_bc('D_01','euler_pressureoutlet',XI_MAX)
-    call chidgA%data%add_bc('D_01',wall,ETA_MIN)
-    call chidgA%data%add_bc('D_01',wall,ETA_MAX)
-    call chidgA%data%add_bc('D_01',wall,ZETA_MIN)
-    call chidgA%data%add_bc('D_01',wall,ZETA_MAX)
-
-
-    !call chidgA%data%add_bc('D_02','euler_totalinlet',XI_MIN)
-    !call chidgA%data%add_bc('D_02','euler_pressureoutlet',XI_MAX)
-    call chidgA%data%add_bc('D_02',outlet,ETA_MIN)
-    call chidgA%data%add_bc('D_02',wall,ETA_MAX)
-    call chidgA%data%add_bc('D_02',wall,ZETA_MIN)
-    call chidgA%data%add_bc('D_02',wall,ZETA_MAX)
-
-
-    !call chidgA%data%add_bc('D_03','euler_totalinlet',XI_MIN)
-    !call chidgA%data%add_bc('D_03','euler_pressureoutlet',XI_MAX)
-    call chidgA%data%add_bc('D_03',wall,ETA_MIN)
-    call chidgA%data%add_bc('D_03',wall,ETA_MAX)
-    call chidgA%data%add_bc('D_03',wall,ZETA_MIN)
-    call chidgA%data%add_bc('D_03',wall,ZETA_MAX)
-
-
-    !call chidgA%data%add_bc('D_04','euler_totalinlet',XI_MIN)
-    !call chidgA%data%add_bc('D_04','euler_pressureoutlet',XI_MAX)
-    call chidgA%data%add_bc('D_04',inlet,ETA_MIN)
-    call chidgA%data%add_bc('D_04',wall,ETA_MAX)
-    call chidgA%data%add_bc('D_04',wall,ZETA_MIN)
-    call chidgA%data%add_bc('D_04',wall,ZETA_MAX)
-
-
-
-
+    call chidgA%read_grid('cylinder_chimera_abutting.h5',spacedim)
+    call chidgA%read_boundaryconditions('cylinder_chimera_abutting.h5')
 
 
     !
     ! Initialize solution data storage
     !
+    call chidgA%initialize_solution_domains(nterms_s)
     call chidgA%init('chimera')
     call chidgA%initialize_solution_solver()
 

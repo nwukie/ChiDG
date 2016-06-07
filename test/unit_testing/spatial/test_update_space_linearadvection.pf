@@ -50,59 +50,16 @@ subroutine test_update_space_linearadvection()
     ! Read grid. These grids are the same geometry. The first has only one block. The second has two blocks.
     ! Here, we wish to initialize both and then compare the initialized data between the two. They should be the same.
     !
-    call read_grid_hdf('D1_E16_M1.h5',meshdataA)            ! One, 4x2x2 grid
-    call read_grid_hdf('D2_E8_M1_abutting.h5',meshdataB)    ! Two, 2x2x2 grids that abut
+    call chidgA%read_grid('D1_E16_M1.h5',spacedim)
+    call chidgB%read_grid('D2_E8_M1_abutting.h5',spacedim)
+
+    call chidgA%read_boundaryconditions('D1_E16_M1.h5')
+    call chidgB%read_boundaryconditions('D2_E8_M1_abutting.h5')
+    
 
 
-
-    !
-    ! Add domains
-    !
-    do idom = 1,size(meshdataA)
-        call chidgA%data%add_domain(trim(meshdataA(idom)%name),meshdataA(idom)%points,spacedim,meshdataA(idom)%nterms_c,'linearadvection')
-    end do
     call chidgA%initialize_solution_domains(nterms_s)
-
-    do idom = 1,size(meshdataB)
-        call chidgB%data%add_domain(trim(meshdataB(idom)%name),meshdataB(idom)%points,spacedim,meshdataB(idom)%nterms_c,'linearadvection')
-    end do
     call chidgB%initialize_solution_domains(nterms_s)
-
-
-    !
-    ! Create boundary condition
-    !
-    call create_bc('linearadvection_extrapolate', bc)
-
-
-    !
-    ! Add boundary conditions ChiDG - A
-    !
-    call chidgA%data%add_bc('D_01',bc,XI_MIN)
-    call chidgA%data%add_bc('D_01',bc,XI_MAX)
-    call chidgA%data%add_bc('D_01',bc,ETA_MIN)
-    call chidgA%data%add_bc('D_01',bc,ETA_MAX)
-    call chidgA%data%add_bc('D_01',bc,ZETA_MIN)
-    call chidgA%data%add_bc('D_01',bc,ZETA_MAX)
-
-    !
-    ! Add boundary conditions to ChiDG - B
-    !
-    call chidgB%data%add_bc('D_01',bc,XI_MIN)
-    !call chidgB%data%add_bc('D_01','extrapolate_la',XI_MAX)
-    call chidgB%data%add_bc('D_01',bc,ETA_MIN)
-    call chidgB%data%add_bc('D_01',bc,ETA_MAX)
-    call chidgB%data%add_bc('D_01',bc,ZETA_MIN)
-    call chidgB%data%add_bc('D_01',bc,ZETA_MAX)
-
-
-    !call chidgB%data%add_bc('D_02','extrapolate_la',XI_MIN)
-    call chidgB%data%add_bc('D_02',bc,XI_MAX)
-    call chidgB%data%add_bc('D_02',bc,ETA_MIN)
-    call chidgB%data%add_bc('D_02',bc,ETA_MAX)
-    call chidgB%data%add_bc('D_02',bc,ZETA_MIN)
-    call chidgB%data%add_bc('D_02',bc,ZETA_MAX)
-
 
 
 

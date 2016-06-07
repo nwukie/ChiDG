@@ -42,19 +42,21 @@ contains
         character(*),                   intent(in)      :: filename
         type(meshdata_t), allocatable,  intent(inout)   :: meshdata(:)
 
-        integer(HID_T)   :: fid, gid, sid, did_x, did_y, did_z      ! Identifiers
-        integer(HSIZE_T) :: dims(3), maxdims(3)                     ! Dataspace dimensions
+        integer(HID_T)   :: fid, gid, sid, did_x, did_y, did_z, did_e      ! Identifiers
+        integer(HSIZE_T) :: rank_one_dims(1), rank_two_dims(2), dims(3), maxdims(3)                     ! Dataspace dimensions
 
         type(c_ptr)                                     :: pts
         !real(rk), dimension(:,:,:), allocatable, target :: xpts, ypts, zpts
-        real(rdouble), dimension(:,:,:), allocatable, target :: xpts, ypts, zpts
-        type(c_ptr)                                     :: cp_pts
+        !real(rdouble), dimension(:,:,:), allocatable, target :: xpts, ypts, zpts
+        real(rdouble), dimension(:), allocatable, target :: xpts, ypts, zpts
+        integer,                     allocatable, target :: connectivity(:,:)
+        type(c_ptr)                                     :: cp_pts, cp_conn
 
         character(len=1024),    allocatable     :: dnames(:), eqnset(:)
         character(1024)                         :: gname
         integer                                 :: nmembers, type, ierr, ndomains, igrp,    &
                                                    npts, izeta, ieta, ixi, idom, nterms_1d, &
-                                                   mapping, nterms_c, spacedim
+                                                   mapping, nterms_c, spacedim, ipt
         integer, dimension(1)                   :: mapping_buf, spacedim_buf
         logical                                 :: FileExists
 
@@ -170,28 +172,35 @@ contains
                 !  Get the dataspace id and dimensions
                 !
                 call h5dget_space_f(did_x, sid, ierr)
-                call h5sget_simple_extent_dims_f(sid, dims, maxdims, ierr)
+                call h5sget_simple_extent_dims_f(sid, rank_one_dims, maxdims, ierr)
+                npts = rank_one_dims(1)
 
 
                 !
                 !  Read x-points
                 !
-                allocate(xpts(dims(1),dims(2),dims(3)))
-                cp_pts = c_loc(xpts(1,1,1))
+                !allocate(xpts(dims(1),dims(2),dims(3)))
+                !cp_pts = c_loc(xpts(1,1,1))
+                allocate(xpts(npts),stat=ierr)
+                cp_pts = c_loc(xpts(1))
                 call h5dread_f(did_x, H5T_NATIVE_DOUBLE, cp_pts, ierr)
                 if (ierr /= 0) stop "Error: read_grid_hdf5 -- h5dread_f"
 
 
 !                allocate(ypts, mold=xpts)   ! bug in gcc
-                allocate(ypts(dims(1),dims(2),dims(3)))
-                cp_pts = c_loc(ypts(1,1,1))
+                !allocate(ypts(dims(1),dims(2),dims(3)))
+                !cp_pts = c_loc(ypts(1,1,1))
+                allocate(ypts(npts))
+                cp_pts = c_loc(ypts(1))
                 call h5dread_f(did_y, H5T_NATIVE_DOUBLE, cp_pts, ierr)
                 if (ierr /= 0) stop "Error: read_grid_hdf5 -- h5dread_f"
 
 
 !                allocate(zpts, mold=xpts)   ! bug in gcc
-                allocate(zpts(dims(1),dims(2),dims(3)))
-                cp_pts = c_loc(zpts(1,1,1))
+                !allocate(zpts(dims(1),dims(2),dims(3)))
+                !cp_pts = c_loc(zpts(1,1,1))
+                allocate(zpts(npts))
+                cp_pts = c_loc(zpts(1))
                 call h5dread_f(did_z, H5T_NATIVE_DOUBLE, cp_pts, ierr)
                 if (ierr /= 0) stop "Error: read_grid_hdf5 -- h5dread_f"
 
@@ -199,17 +208,52 @@ contains
                 !
                 !  Accumulate pts into a single points_t matrix to initialize domain
                 !
-                npts = dims(1)*dims(2)*dims(3)
-                allocate(meshdata(idom)%points(dims(1),dims(2),dims(3)), stat=ierr)
+                !npts = dims(1)*dims(2)*dims(3)
+                !allocate(meshdata(idom)%points(dims(1),dims(2),dims(3)), stat=ierr)
+                allocate(meshdata(idom)%points(npts), stat=ierr)
                 if (ierr /= 0) call AllocationError
                     
-                do izeta = 1,dims(3)
-                    do ieta = 1,dims(2)
-                        do ixi = 1,dims(1)
-                            call meshdata(idom)%points(ixi,ieta,izeta)%set(real(xpts(ixi,ieta,izeta),rk),real(ypts(ixi,ieta,izeta),rk),real(zpts(ixi,ieta,izeta),rk))
-                        end do
-                    end do
+                !do izeta = 1,dims(3)
+                !    do ieta = 1,dims(2)
+                !        do ixi = 1,dims(1)
+                !            call meshdata(idom)%points(ixi,ieta,izeta)%set(real(xpts(ixi,ieta,izeta),rk),real(ypts(ixi,ieta,izeta),rk),real(zpts(ixi,ieta,izeta),rk))
+                !        end do
+                !    end do
+                !end do
+
+                do ipt = 1,rank_one_dims(1)
+                    call meshdata(idom)%points(ipt)%set(real(xpts(ipt),rk),real(ypts(ipt),rk),real(zpts(ipt),rk))
                 end do
+
+
+
+
+
+                !
+                ! Open Elements connectivity dataset
+                !
+                call h5dopen_f(gid, "Elements", did_e, ierr, H5P_DEFAULT_F)
+
+                !
+                !  Get the dataspace id and dimensions
+                !
+                call h5dget_space_f(did_e, sid, ierr)
+                call h5sget_simple_extent_dims_f(sid, rank_two_dims, maxdims, ierr)
+                if (allocated(connectivity)) deallocate(connectivity)
+                allocate(connectivity(rank_two_dims(1),rank_two_dims(2)))
+
+
+                !
+                ! Read connectivity
+                ! 
+                cp_conn = c_loc(connectivity(1,1))
+                call h5dread_f(did_e, H5T_NATIVE_INTEGER, cp_conn, ierr)
+                if (ierr /= 0) stop "Error: read_grid_hdf5 -- h5dread_f"
+                meshdata(idom)%connectivity = connectivity
+
+
+
+
 
 
                 !
@@ -241,9 +285,7 @@ contains
 
                 ! Deallocate points for the current domain
                 deallocate(zpts,ypts,xpts)
-!                idom = idom + 1
 
-            !end if
 
         end do  ! igrp
 
@@ -309,8 +351,6 @@ contains
         character(100)                  :: cbuf
         character(100)                  :: var_gqp
 
-        !real(rk), allocatable, target   :: var(:,:,:)
-        !real(rk), allocatable           :: bufferterms(:)
         real(rdouble), allocatable, target   :: var(:,:,:)
         real(rdouble), allocatable           :: bufferterms(:)
         type(c_ptr)                     :: cp_var
@@ -954,8 +994,9 @@ contains
         character(*),   intent(in)                  :: filename
         type(bcdata_t), intent(inout), allocatable  :: bcdata(:)
 
-        integer(HID_T)                          :: fid, bcgroup, bcface, bcprop
+        integer(HID_T)                          :: fid, bcgroup, bcface, bcprop, faces_did, faces_sid
         integer(HSIZE_T)                        :: adim
+        integer(HSIZE_T)                        :: rank_two_dims(2), maxdims(2)                    ! Dataspace dimensions
         logical                                 :: FileExists
 
         class(bc_t),            allocatable     :: bc
@@ -966,8 +1007,11 @@ contains
         character(len=10)                       :: faces(NFACES)
         character(1024)                         :: gname
         integer                                 :: nmembers, type, ierr, ndomains, igrp, &
-                                                   idom, iface, iopt, noptions, nprop, iprop
+                                                   idom, iface, iopt, noptions, nprop, iprop, &
+                                                   npts_face, nbcfaces
         integer, dimension(1)                   :: buf
+        integer,            allocatable, target :: bc_connectivity(:,:)
+        type(c_ptr)                             :: cp_conn
 
 
 
@@ -1046,7 +1090,8 @@ contains
                 !
                 ! Allocation bcs for current domain
                 !
-                allocate( bcdata(idom)%bcs(NFACES), bcdata(idom)%bcface(NFACES), stat=ierr )
+                !allocate( bcdata(idom)%bcs(NFACES), bcdata(idom)%bcface(NFACES), stat=ierr )
+                allocate( bcdata(idom)%bcs(NFACES), bcdata(idom)%bc_connectivity(NFACES), stat=ierr )
                 if (ierr /= 0) call AllocationError
 
 
@@ -1068,7 +1113,33 @@ contains
                     ! Get face associated with the 
                     !
                     ! TODO: WARNING, should replace with XI_MIN, XI_MAX, etc. somehow.
-                    bcdata(idom)%bcface(iface) = iface
+                    !bcdata(idom)%bcface(iface) = iface
+                    !bcdata(idom)%bc_connectivity(iface)
+                    call h5dopen_f(bcface, "Faces", faces_did, ierr, H5P_DEFAULT_F)
+
+
+                    !
+                    !  Get the dataspace id and dimensions
+                    !
+                    call h5dget_space_f(faces_did, faces_sid, ierr)
+                    call h5sget_simple_extent_dims_f(faces_sid, rank_two_dims, maxdims, ierr)
+                    nbcfaces  = rank_two_dims(1)
+                    npts_face = rank_two_dims(2)
+
+
+
+                    if ( allocated(bc_connectivity) ) deallocate(bc_connectivity)
+                    allocate(bc_connectivity(nbcfaces,npts_face),stat=ierr)
+                    if (ierr /= 0) call AllocationError
+                    cp_conn = c_loc(bc_connectivity(1,1))
+                    call h5dread_f(faces_did, H5T_NATIVE_INTEGER, cp_conn, ierr)
+                    if (ierr /= 0) call chidg_signal(FATAL,"read_boundaryconditions_hdf5 -- h5dread_f")
+
+                    !
+                    ! Store boundary condition connectivity
+                    !
+                    bcdata(idom)%bc_connectivity(iface)%data = bc_connectivity
+
 
 
 

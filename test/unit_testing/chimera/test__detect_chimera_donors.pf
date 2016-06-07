@@ -55,17 +55,18 @@ subroutine test__detect_chimera_donors()
     !
     ! Read 2-Domain overlapping grid
     !
-    call read_grid_hdf(filename,meshdata)
+    call chidg%read_grid(filename,spacedim)
+    call chidg%read_boundaryconditions(filename)
 
 
 
-    !
-    ! Add domains to ChiDG
-    !
-    ndom = size(meshdata)
-    do idom = 1,ndom
-        call chidg%data%add_domain(trim(meshdata(idom)%name),meshdata(idom)%points,spacedim,meshdata(idom)%nterms_c,'linearadvection')
-    end do
+!    !
+!    ! Add domains to ChiDG
+!    !
+!    ndom = size(meshdata)
+!    do idom = 1,ndom
+!        call chidg%data%add_domain(trim(meshdata(idom)%name),meshdata(idom)%points,meshdata(idom)%connectivity,spacedim,meshdata(idom)%nterms_c,'linearadvection')
+!    end do
     call chidg%initialize_solution_domains(nterms_s)
 
 
@@ -73,20 +74,21 @@ subroutine test__detect_chimera_donors()
     !
     ! Add boundary conditions
     !
-    call create_bc('linearadvection_extrapolate', bc)
-    call chidg%data%add_bc('D_01',bc,XI_MIN)
-    !call chidg%data%add_bc('D_01','extrapolate_la',XI_MAX)     ! Skip XI_MAX face for Chimera interface
-    call chidg%data%add_bc('D_01',bc,ETA_MIN)
-    call chidg%data%add_bc('D_01',bc,ETA_MAX)
-    call chidg%data%add_bc('D_01',bc,ZETA_MIN)
-    call chidg%data%add_bc('D_01',bc,ZETA_MAX)
-
-    !call chidg%data%add_bc('D_02','extrapolate_la',XI_MIN)     ! Skip XI_MIN face for Chimera interface
-    call chidg%data%add_bc('D_02',bc,XI_MAX)
-    call chidg%data%add_bc('D_02',bc,ETA_MIN)
-    call chidg%data%add_bc('D_02',bc,ETA_MAX)
-    call chidg%data%add_bc('D_02',bc,ZETA_MIN)
-    call chidg%data%add_bc('D_02',bc,ZETA_MAX)
+!    print*, 'FIX BOUNDARY CONDITIONS'
+!    call create_bc('linearadvection_extrapolate', bc)
+!    call chidg%data%add_bc('D_01',bc,XI_MIN)
+!    !call chidg%data%add_bc('D_01','extrapolate_la',XI_MAX)     ! Skip XI_MAX face for Chimera interface
+!    call chidg%data%add_bc('D_01',bc,ETA_MIN)
+!    call chidg%data%add_bc('D_01',bc,ETA_MAX)
+!    call chidg%data%add_bc('D_01',bc,ZETA_MIN)
+!    call chidg%data%add_bc('D_01',bc,ZETA_MAX)
+!
+!    !call chidg%data%add_bc('D_02','extrapolate_la',XI_MIN)     ! Skip XI_MIN face for Chimera interface
+!    call chidg%data%add_bc('D_02',bc,XI_MAX)
+!    call chidg%data%add_bc('D_02',bc,ETA_MIN)
+!    call chidg%data%add_bc('D_02',bc,ETA_MAX)
+!    call chidg%data%add_bc('D_02',bc,ZETA_MIN)
+!    call chidg%data%add_bc('D_02',bc,ZETA_MAX)
 
 
 

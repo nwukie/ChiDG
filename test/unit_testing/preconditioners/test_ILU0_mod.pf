@@ -39,7 +39,8 @@ contains
     subroutine setUp(this)
         class(test_preconditioner_ILU0),    intent(inout)   :: this
 
-        type(point_t),  allocatable :: pts(:,:,:)
+        type(point_t),  allocatable :: nodes(:)
+        integer(ik),    allocatable :: connectivity(:,:)
         integer(ik)                 :: nterms_c, nterms_s, spacedim
 
         
@@ -58,7 +59,7 @@ contains
         !
         ! Initialize a 3-element geometry
         !
-        call meshgen('311',pts)
+        call meshgen('311',nodes,connectivity)
 
 
         !
@@ -67,7 +68,7 @@ contains
         spacedim = 3
         nterms_c = 8
         nterms_s = 1
-        call this%chidg%data%add_domain('D_01',pts,spacedim,nterms_c,'scalar')
+        call this%chidg%data%add_domain('D_01',nodes,connectivity,spacedim,nterms_c,'scalar')
 
 
         !

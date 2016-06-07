@@ -90,14 +90,14 @@ contains
         !
         ! Read 2-Domain overlapping grid
         !
-        call meshgen('2x2x2',meshdata%points)
+        call meshgen('2x2x2',meshdata%points,meshdata%connectivity)
 
 
 
         !
         ! Add domain to ChiDG
         !
-        call this%chidg%data%add_domain('D_01',meshdata%points,spacedim,nterms_c,'linearadvection')
+        call this%chidg%data%add_domain('D_01',meshdata%points,meshdata%connectivity,spacedim,nterms_c,'linearadvection')
         call this%chidg%initialize_solution_domains(nterms_s)
 
 

@@ -54,63 +54,20 @@ subroutine test_chidgMatrix_operator_chimera_mv()
     !
     ! Read grid
     !
-    call read_grid_hdf('cylinder_chimera_overlapping_multipledonor.h5',meshdata)
+    call chidg%read_grid('cylinder_chimera_overlapping_multipledonor.h5',spacedim)
+    call chidg%read_boundaryconditions('cylinder_chimera_overlapping_multipledonor.h5')
+
+
+
+
 
 
 
     !
-    ! Add domains
+    ! Initialize data
     !
-    do idom = 1,size(meshdata)
-        call chidg%data%add_domain(trim(meshdata(idom)%name),meshdata(idom)%points,spacedim,meshdata(idom)%nterms_c,'euler')
-    end do
     call chidg%initialize_solution_domains(nterms_s)
-
-
-    !
-    ! Create boundary conditions
-    !
-    call create_bc('euler_wall', wall)
-    call create_bc('euler_pressureoutlet', outlet)
-    call create_bc('euler_totalinlet', inlet)
-
-
-    !
-    ! Add boundary conditions ChiDG - A
-    !
-    call chidg%data%add_bc('D_01',wall,ETA_MIN)
-    call chidg%data%add_bc('D_01',wall,ETA_MAX)
-    call chidg%data%add_bc('D_01',wall,ZETA_MIN)
-    call chidg%data%add_bc('D_01',wall,ZETA_MAX)
-
-
-    call chidg%data%add_bc('D_02',outlet,ETA_MIN)
-    call chidg%data%add_bc('D_02',wall,ETA_MAX)
-    call chidg%data%add_bc('D_02',wall,ZETA_MIN)
-    call chidg%data%add_bc('D_02',wall,ZETA_MAX)
-
-
-    call chidg%data%add_bc('D_03',wall,ETA_MIN)
-    call chidg%data%add_bc('D_03',wall,ETA_MAX)
-    call chidg%data%add_bc('D_03',wall,ZETA_MIN)
-    call chidg%data%add_bc('D_03',wall,ZETA_MAX)
-
-
-    call chidg%data%add_bc('D_04',inlet,ETA_MIN)
-    call chidg%data%add_bc('D_04',wall,ETA_MAX)
-    call chidg%data%add_bc('D_04',wall,ZETA_MIN)
-    call chidg%data%add_bc('D_04',wall,ZETA_MAX)
-
-
-
-
-
-
-    !
-    ! Initialize solution data storage
-    !
     call chidg%init('chimera')
-    !call chidg%data%init_sdata()
     call chidg%initialize_solution_solver()
 
 

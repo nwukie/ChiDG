@@ -56,7 +56,8 @@ contains
         class(test_eq_euler),    intent(inout)   :: this
         
         integer(ik),        parameter       :: npt = 64
-        type(point_t),      allocatable     :: pts(:,:,:)
+        type(point_t),      allocatable     :: nodes(:)
+        integer(ik),        allocatable     :: connectivity(:,:)
         class(function_t),  allocatable     :: fcn
         integer(ik)                         :: neqns, nterms_s, nterms_c, spacedim
         real(rk), dimension(npt)            :: x,y,z
@@ -76,7 +77,7 @@ contains
         !
         ! Generate points array for 3x3x3 mesh
         !
-        call meshgen('3x3x3',pts)
+        call meshgen('3x3x3',nodes,connectivity)
 
 
         !
@@ -85,7 +86,7 @@ contains
         spacedim = 3
         nterms_s = 8
         nterms_c = 8
-        call this%chidg%data%add_domain('D_01',pts,spacedim,nterms_c,'euler')
+        call this%chidg%data%add_domain('D_01',nodes,connectivity,spacedim,nterms_c,'euler')
         call this%chidg%initialize_solution_domains(nterms_s)
         call this%chidg%initialize_solution_solver()
 

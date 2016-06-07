@@ -18,7 +18,8 @@ subroutine test_fgmres_solve()
     implicit none
 
     type(chidg_t)               :: chidg
-    type(point_t), allocatable  :: pts(:,:,:)
+    type(point_t),  allocatable :: nodes(:)
+    integer(ik),    allocatable :: connectivity(:,:)
 
     real(rk)    :: tol
     integer(ik) :: nterms_c, nterms_s, idomain, spacedim
@@ -51,13 +52,13 @@ subroutine test_fgmres_solve()
     !
     ! Get grid points
     !
-    call meshgen('311',pts)
+    call meshgen('311',nodes,connectivity)
 
 
     !
     ! Initialize domain
     !
-    call chidg%data%add_domain('D_01',pts,spacedim,nterms_c,'Scalar')
+    call chidg%data%add_domain('D_01',nodes,connectivity,spacedim,nterms_c,'Scalar')
     call chidg%initialize_solution_domains(nterms_s)
     call chidg%initialize_solution_solver()
 

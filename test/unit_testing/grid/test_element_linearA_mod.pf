@@ -16,7 +16,8 @@ module test_element_linearA_mod
     type, extends(TestCase) ::  test_element_linearA
         type(chidg_t)               :: chidg
         type(element_t)             :: elem
-        type(face_t), allocatable   :: faces(:)
+        type(face_t),   allocatable :: faces(:)
+        type(point_t),  allocatable :: nodes(:)
 
     contains
         procedure   ::  setUp
@@ -31,7 +32,8 @@ contains
         class(test_element_linearA),    intent(inout)   :: this
         
         integer(ik), parameter  :: npt = 8
-        type(point_t)           :: pts(npt)
+        type(point_t)           :: nodes(npt)
+        integer(ik)             :: connectivity(10)
         integer(ik)             :: ftype, ineighbor, mapping, ielem, idomain, spacedim
         
         
@@ -52,14 +54,17 @@ contains
         !!      *-------*
         !!         y=1
         !!
-        call pts(1)%set(0._rk, 0._rk, 0._rk)
-        call pts(2)%set(5._rk, 0._rk, 0._rk)
-        call pts(3)%set(0._rk, 1._rk, 0._rk)
-        call pts(4)%set(5._rk, 1._rk, 0._rk)
-        call pts(5)%set(0._rk, 0._rk, 1._rk)
-        call pts(6)%set(5._rk, 0._rk, 1._rk)
-        call pts(7)%set(0._rk, 1._rk, 1._rk)
-        call pts(8)%set(5._rk, 1._rk, 1._rk)
+        call nodes(1)%set(0._rk, 0._rk, 0._rk)
+        call nodes(2)%set(5._rk, 0._rk, 0._rk)
+        call nodes(3)%set(0._rk, 1._rk, 0._rk)
+        call nodes(4)%set(5._rk, 1._rk, 0._rk)
+        call nodes(5)%set(0._rk, 0._rk, 1._rk)
+        call nodes(6)%set(5._rk, 0._rk, 1._rk)
+        call nodes(7)%set(0._rk, 1._rk, 1._rk)
+        call nodes(8)%set(5._rk, 1._rk, 1._rk)
+        this%nodes = nodes
+
+        connectivity = [1,1,   1, 2, 3, 4, 5, 6, 7, 8]
         
         
         !> Initialize Element geometry and Numerics
@@ -67,7 +72,7 @@ contains
         mapping = 1
         idomain = 1
         ielem   = 1
-        call this%elem%init_geom(spacedim,mapping,pts,idomain,ielem)
+        call this%elem%init_geom(spacedim,nodes,connectivity,idomain)
         call this%elem%init_sol(2,8)    !> 2 equations, 8 terms (3*3*3)
         
         
@@ -492,7 +497,7 @@ contains
 
 
 !------------------------------------------------------------------------------
-!      element%mesh_point, element%solution_point, element%metric_point
+!      element%mesh_point, element%solution_point, element%metric_point, element%computational_point
 !------------------------------------------------------------------------------
 
 
@@ -584,6 +589,42 @@ end subroutine
 
 
 
+
+! Test computational_point routine returns the correct xi-coordinate value
+@Test
+subroutine test__computational_point(self)
+    class(test_element_linearA),    intent(inout)   :: self
+
+    real(rk), dimension(8)  :: ref_xi, ref_eta, ref_zeta
+    real(rk), dimension(8)  :: check_xi, check_eta, check_zeta
+    type(point_t)           :: check_coords
+    real(rk)                :: x, y, z
+    integer(ik)             :: ipt
+                    
+
+
+    ref_xi   = [-ONE, ONE, -ONE, ONE, -ONE, ONE, -ONE, ONE]
+    ref_eta  = [-ONE, -ONE, ONE, ONE, -ONE, -ONE, ONE, ONE]
+    ref_zeta = [-ONE, -ONE, -ONE, -ONE, ONE, ONE, ONE, ONE]
+
+
+    do ipt = 1,size(self%nodes)
+        x = self%nodes(ipt)%c1_
+        y = self%nodes(ipt)%c2_
+        z = self%nodes(ipt)%c3_
+
+        check_coords = self%elem%computational_point(x, y, z)
+
+        check_xi(ipt)   = check_coords%c1_
+        check_eta(ipt)  = check_coords%c2_
+        check_zeta(ipt) = check_coords%c3_
+    end do
+
+    @assertEqual(ref_xi,   check_xi  )
+    @assertEqual(ref_eta,  check_eta )
+    @assertEqual(ref_zeta, check_zeta)
+
+end subroutine test__computational_point
 
 
 

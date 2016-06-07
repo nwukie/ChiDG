@@ -10,7 +10,8 @@ subroutine test_chidgdata__add_domain__onedomain()
 
 
     type(chidg_t)               :: chidg
-    type(point_t),  allocatable :: pts(:,:,:)
+    type(point_t),  allocatable :: nodes(:)
+    integer(ik),    allocatable :: connectivity(:,:)
     integer(ik)                 :: nterms_c, nterms_s, spacedim
     
 
@@ -25,7 +26,8 @@ subroutine test_chidgdata__add_domain__onedomain()
     !
     ! Generate mesh points
     !
-    call meshgen('333',pts)
+    !call meshgen('333',pts)
+    call meshgen('333',nodes,connectivity)
 
 
     !
@@ -39,7 +41,8 @@ subroutine test_chidgdata__add_domain__onedomain()
     !
     ! call chidg%data%add_domain. THIS IS BEING TESTED
     !
-    call chidg%data%add_domain('D_01',pts,spacedim,nterms_c,'scalar')
+    !call chidg%data%add_domain('D_01',pts,spacedim,nterms_c,'scalar')
+    call chidg%data%add_domain('D_01',nodes,connectivity,spacedim,nterms_c,'scalar')
 
 
 

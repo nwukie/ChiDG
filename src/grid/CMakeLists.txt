@@ -12,4 +12,6 @@ add_lib_sources(
                 mod_grid_tools_two.f90
                 mod_grid_operators.f90
                 mod_DNAD_tools.f90
+                type_connectivity.f90
+                mod_connectivity_tools.f90
                 )

@@ -22,17 +22,15 @@ module test__project_function_xyz__mod
     !!  @date   2/2/2016
     !!
     !-----------------------------------------------------------------------------------------
-    @TestCase
+@TestCase
     type, extends(TestCase) ::  test_project_function_xyz
 
         type(chidg_t)   :: chidg
         integer(ik)     :: nterms_s
 
     contains
-
         procedure   ::  setUp
         procedure   ::  tearDown
-
     end type test_project_function_xyz
     !*****************************************************************************************
 
@@ -47,7 +45,9 @@ contains
         class(test_project_function_xyz),    intent(inout)   :: this
         
         integer(ik), parameter  :: npt = 8
-        type(point_t)           :: pts(2,2,2)
+        !type(point_t)           :: pts(2,2,2)
+        type(point_t)           :: nodes(8)
+        integer(ik)             :: connectivity(1,10)
         integer(ik)             :: nterms_c, idomain, spacedim
 
         IO_DESTINATION = 'file'
@@ -63,15 +63,25 @@ contains
         !!      *-------*
         !!         y=1
         !!
-        call pts(1,1,1)%set(0._rk, 0._rk, 0._rk)
-        call pts(2,1,1)%set(5._rk, 0._rk, 0._rk)
-        call pts(1,2,1)%set(0._rk, 1._rk, 0._rk)
-        call pts(2,2,1)%set(5._rk, 1._rk, 0._rk)
-        call pts(1,1,2)%set(0._rk, 0._rk, 1._rk)
-        call pts(2,1,2)%set(5._rk, 0._rk, 1._rk)
-        call pts(1,2,2)%set(0._rk, 1._rk, 1._rk)
-        call pts(2,2,2)%set(5._rk, 1._rk, 1._rk)
+        !call pts(1,1,1)%set(0._rk, 0._rk, 0._rk)
+        !call pts(2,1,1)%set(5._rk, 0._rk, 0._rk)
+        !call pts(1,2,1)%set(0._rk, 1._rk, 0._rk)
+        !call pts(2,2,1)%set(5._rk, 1._rk, 0._rk)
+        !call pts(1,1,2)%set(0._rk, 0._rk, 1._rk)
+        !call pts(2,1,2)%set(5._rk, 0._rk, 1._rk)
+        !call pts(1,2,2)%set(0._rk, 1._rk, 1._rk)
+        !call pts(2,2,2)%set(5._rk, 1._rk, 1._rk)
         
+        call nodes(1)%set(0._rk, 0._rk, 0._rk)
+        call nodes(2)%set(5._rk, 0._rk, 0._rk)
+        call nodes(3)%set(0._rk, 1._rk, 0._rk)
+        call nodes(4)%set(5._rk, 1._rk, 0._rk)
+        call nodes(5)%set(0._rk, 0._rk, 1._rk)
+        call nodes(6)%set(5._rk, 0._rk, 1._rk)
+        call nodes(7)%set(0._rk, 1._rk, 1._rk)
+        call nodes(8)%set(5._rk, 1._rk, 1._rk)
+
+        connectivity(1,:) = [1,1, 1, 2, 3, 4, 5, 6, 7, 8]
 
         ! Initialize ChiDG environment
         call this%chidg%init('env')
@@ -82,7 +92,8 @@ contains
         this%nterms_s = 27
         spacedim      = 3
 
-        call this%chidg%data%add_domain('D_01',pts,spacedim,nterms_c,'scalar')
+        !call this%chidg%data%add_domain('D_01',pts,spacedim,nterms_c,'scalar')
+        call this%chidg%data%add_domain('D_01',nodes,connectivity,spacedim,nterms_c,'scalar')
         call this%chidg%initialize_solution_domains(this%nterms_s)
 
         
@@ -116,17 +127,17 @@ contains
     !!
     !!
     !--------------------------------------------------------------------------------------------
-    @Test
-    subroutine test_project__x2(self)
-        class(test_project_function_xyz),    intent(inout)   :: self
-        real(rk)                                             :: fmodes(self%nterms_s)
+@Test
+    subroutine test_project__x2(this)
+        class(test_project_function_xyz),    intent(inout)   :: this
+        real(rk)                                             :: fmodes(this%nterms_s)
         class(function_t), allocatable                       :: fcn
         integer(ik), parameter      :: npt = 11
         integer(ik)                 :: ipt, iterm
         type(point_t)               :: pts(npt), rpts(npt)
         
         real(rk)                    :: x(npt), y(npt), z(npt), rvals(npt), fvals(npt)
-        real(rk)                    :: pvals(npt,self%nterms_s)
+        real(rk)                    :: pvals(npt,this%nterms_s)
         real(rk)                    :: ref_integral, fintegral, xi, tol, time
 
         tol = 1.e-12_rk
@@ -134,7 +145,7 @@ contains
 
 
         call create_function(fcn,'x_squared')
-        associate (elem => self%chidg%data%mesh(1)%elems(1))
+        associate (elem => this%chidg%data%mesh(1)%elems(1))
             
             ! Function evaluation points
             x = [0._rk, 0.5_rk, 1.0_rk, 1.5_rk, 2.0_rk, 2.5_rk, 3.0_rk, 3.5_rk, 4.0_rk, 4.5_rk, 5.0_rk]
@@ -160,7 +171,7 @@ contains
             !
             ! Compute projection of function onto polynonmial basis
             !
-            call project_function_xyz(fcn,elem%spacedim,self%nterms_s,elem%coords,fmodes)
+            call project_function_xyz(fcn,elem%spacedim,this%nterms_s,elem%coords,fmodes)
     
 
             !

@@ -10,6 +10,7 @@ module type_chidg_data
     use type_bcset,                     only: bcset_t
     use type_equationset_wrapper,       only: equationset_wrapper_t
     use type_solverdata,                only: solverdata_t
+    use type_connectivity,              only: connectivity_t
 
     !
     use type_equationset_function_data, only: equationset_function_data_t
@@ -154,16 +155,14 @@ contains
     !!  @param[in]  nterms_s    Integer defining the number of terms in the solution expansion
     !!
     !---------------------------------------------------------------------------------------------------------------
-    !subroutine add_domain(self,name,points,nterms_c,eqnset,nterms_s)
-    !subroutine add_domain(self,name,points,nterms_c,eqnset)
-    subroutine add_domain(self,name,points,spacedim,nterms_c,eqnset)
+    subroutine add_domain(self,name,nodes,connectivity,spacedim,nterms_c,eqnset)
         class(chidg_data_t),    intent(inout)   :: self
         character(*),           intent(in)      :: name
-        type(point_t),          intent(in)      :: points(:,:,:)
+        type(point_t),          intent(in)      :: nodes(:)
+        integer(ik),            intent(in)      :: connectivity(:,:)
         integer(ik),            intent(in)      :: spacedim
         integer(ik),            intent(in)      :: nterms_c
         character(*),           intent(in)      :: eqnset
-        !integer(ik),            intent(in)      :: nterms_s
 
         integer(ik) :: idom, ierr
 
@@ -172,6 +171,16 @@ contains
         type(mesh_t),                   allocatable :: temp_mesh(:)
         type(bcset_t),                  allocatable :: temp_bcset(:)
         type(equationset_wrapper_t),    allocatable :: temp_eqnset(:)
+
+
+
+        !
+        ! Check for valid connectivity format
+        !
+        if ( size(connectivity,2) < 10 ) then
+            call chidg_signal(FATAL,"chidg_data%add_domain: Invalid connectivity format")
+        end if
+
 
 
         !
@@ -215,8 +224,7 @@ contains
         !
         ! Initialize new mesh
         !
-        !call temp_mesh(idom)%init_geom(idom,nterms_c,points)
-        call temp_mesh(idom)%init_geom(idom,spacedim,nterms_c,points)
+        call temp_mesh(idom)%init_geom(idom,spacedim,nterms_c,nodes,connectivity)
 
 
         !
@@ -225,10 +233,6 @@ contains
         call create_equationset(eqnset,temp_eqnset(idom)%item)
 
 
-!        !
-!        ! Initialize mesh numerics based on equation set and polynomial expansion order
-!        !
-!        call temp_mesh(idom)%init_sol(temp_eqnset(idom)%item%neqns,nterms_s)
 
 
         !
@@ -268,11 +272,11 @@ contains
     !!  @param[in]  options     Boundary condition options dictionary
     !!
     !---------------------------------------------------------------------------------------------------------------
-    subroutine add_bc(self,domain,bc,face)
+    subroutine add_bc(self,domain,bc,bc_connectivity)
         class(chidg_data_t),    intent(inout)   :: self
         character(*),           intent(in)      :: domain
         class(bc_t),            intent(inout)   :: bc
-        integer(ik),            intent(in)      :: face
+        type(connectivity_t),   intent(in)      :: bc_connectivity
 
         integer(ik)                 :: idom, ierr
         class(bc_t), allocatable    :: bc_copy
@@ -295,7 +299,7 @@ contains
         !
         ! Initialize new boundary condition from mesh data and face index
         !
-        call bc_copy%init(self%mesh(idom),face)
+        call bc_copy%init(self%mesh(idom),bc_connectivity)
 
 
 

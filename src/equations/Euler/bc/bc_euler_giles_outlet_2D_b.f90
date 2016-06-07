@@ -96,10 +96,9 @@ contains
     !!
     !!
     !---------------------------------------------------------------------------------------------
-    subroutine init_spec(self,mesh,iface)
+    subroutine init_spec(self,mesh)
         class(euler_giles_outlet_2D_b_t), intent(inout)   :: self
         type(mesh_t),                intent(inout)   :: mesh
-        integer(ik),                 intent(in)      :: iface
 
         real(rk)        :: periodicity
         real(rk)        :: zero_time
@@ -119,7 +118,8 @@ contains
         !
         ! Compute dft points
         !
-        self%dft_points = compute_dft_points(mesh,self%elems,iface,periodicity)
+        !self%dft_points = compute_dft_points(mesh,self%elems,iface,periodicity)
+        self%dft_points = compute_dft_points(mesh,self%elems,self%faces,periodicity)
 
 
 
@@ -148,10 +148,9 @@ contains
     !!
     !!
     !---------------------------------------------------------------------------------------------
-    subroutine init_boundary_coupling(self,mesh,iface)
-        class(euler_giles_outlet_2D_b_t), intent(inout)   :: self
-        type(mesh_t),                intent(in)      :: mesh
-        integer(ik),                 intent(in)      :: iface
+    subroutine init_boundary_coupling(self,mesh)
+        class(euler_giles_outlet_2D_b_t),   intent(inout)   :: self
+        type(mesh_t),                       intent(in)      :: mesh
 
         integer(ik) :: ielem_bc, ielem_coupled, ielem, ielem_test, var, mode, i
 

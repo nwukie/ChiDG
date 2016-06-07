@@ -16,7 +16,8 @@ subroutine test_operator_block_dot()
 
 
     type(chidg_t)               :: chidg
-    type(point_t),  allocatable :: pts(:,:,:)
+    type(point_t),  allocatable :: nodes(:)
+    integer(ik),    allocatable :: connectivity(:,:)
     type(blockvector_t)         :: a, b
 
     real(rk)                    :: tol
@@ -39,11 +40,11 @@ subroutine test_operator_block_dot()
 
 
     ! Get grid points
-    call meshgen('311',pts)
+    call meshgen('311',nodes,connectivity)
 
     
     ! Initialize domain
-    call chidg%data%add_domain('D_01',pts,spacedim,nterms_c,'scalar')
+    call chidg%data%add_domain('D_01',nodes,connectivity,spacedim,nterms_c,'scalar')
     call chidg%initialize_solution_domains(nterms_s)
 
 

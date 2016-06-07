@@ -52,7 +52,8 @@ contains
     subroutine setUp(this)
         class(test_function_status),    intent(inout)   :: this
 
-        type(point_t),  allocatable                     :: pts(:,:,:)
+        type(point_t),  allocatable                     :: nodes(:)
+        integer(ik),    allocatable                     :: connectivity(:,:)
         integer(ik)                                     :: nterms_c, nterms_s, spacedim
         class(bc_t),    allocatable                     :: bc
 
@@ -67,7 +68,7 @@ contains
         !
         ! Generate some mesh data. 3x3x3 element block.
         !
-        call meshgen('333',pts)
+        call meshgen('333',nodes,connectivity)
 
 
         !
@@ -76,20 +77,10 @@ contains
         spacedim = 3
         nterms_c = 8
         nterms_s = 8
-        call this%chidg%data%add_domain('D_01',pts,spacedim,nterms_c,'duallinearadvection')
+        call this%chidg%data%add_domain('D_01',nodes,connectivity,spacedim,nterms_c,'duallinearadvection')
         call this%chidg%initialize_solution_domains(nterms_s)
 
 
-        !
-        ! Add boundary conditions to the domain
-        !
-        call create_bc('linearadvection_extrapolate', bc)
-        call this%chidg%data%add_bc('D_01',bc,XI_MIN)
-        call this%chidg%data%add_bc('D_01',bc,XI_MAX)
-        call this%chidg%data%add_bc('D_01',bc,ETA_MIN)
-        call this%chidg%data%add_bc('D_01',bc,ETA_MAX)
-        call this%chidg%data%add_bc('D_01',bc,ZETA_MIN)
-        call this%chidg%data%add_bc('D_01',bc,ZETA_MAX)
 
     end subroutine setUp
     !**********************************************************************************

@@ -25,6 +25,8 @@ module type_face
     !!  @author Nathan A. Wukie
     !!  @date   2/1/2016
     !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   5/23/2016
     !!
     !-------------------------------------------------------------------------------------------------------------
     type, public :: face_t
@@ -37,6 +39,7 @@ module type_face
         integer(ik)                  :: idomain             !< Domain index of parent element
         integer(ik)                  :: iparent             !< Element index of parent element
         integer(ik)                  :: ineighbor           !< Block-local index of neighbor element
+!        integer(ik)                  :: ineighbor_face      !< Neighbor-local index of neighbor face
         integer(ik)                  :: ChiID = 0           !< Identifier for domain-local Chimera interfaces
 
         ! Chimera face offset. For periodic boundary condition.
@@ -128,7 +131,7 @@ contains
         class(face_t),      intent(inout)       :: self
         integer(ik),        intent(in)          :: iface
         integer(ik),        intent(in)          :: ftype
-        type(element_t),    intent(in), target  :: elem
+        type(element_t),    intent(in), target  :: elem         ! Note: probably don't need target anymore
         integer(ik),        intent(in)          :: ineighbor
 
         !
@@ -587,7 +590,7 @@ contains
 
         else
 
-            !& ASSUMPTION: BLOCK-STRUCTURED
+            !& ASSUMPTION: All elements have same orientation.
             if ( self%iface == XI_MIN ) then
                 neighbor_f = XI_MAX
             else if ( self%iface == XI_MAX ) then

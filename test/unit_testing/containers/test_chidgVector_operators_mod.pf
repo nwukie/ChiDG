@@ -33,7 +33,8 @@ contains
     subroutine setUp(this)
         class(test_chidgVector),    intent(inout)   :: this
 
-        type(point_t),  allocatable :: pts(:,:,:)
+        type(point_t),  allocatable :: nodes(:)
+        integer(ik),    allocatable :: connectivity(:,:)
         integer(ik)                 :: nterms_c, nterms_s, spacedim
 
         IO_DESTINATION = 'file'
@@ -47,7 +48,7 @@ contains
         !
         ! Generate points for 2x2x2 element mesh
         !
-        call meshgen('222',pts)
+        call meshgen('222',nodes,connectivity)
 
 
         !
@@ -56,7 +57,7 @@ contains
         spacedim = 3
         nterms_c = 8
         nterms_s = 8
-        call this%chidg%data%add_domain('D_01',pts,spacedim,nterms_c,'Scalar')
+        call this%chidg%data%add_domain('D_01',nodes,connectivity,spacedim,nterms_c,'Scalar')
         call this%chidg%initialize_solution_domains(nterms_s)
 
 

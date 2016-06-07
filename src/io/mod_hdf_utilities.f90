@@ -172,14 +172,17 @@ contains
         integer(HID_T), intent(in)  :: fid
 
 
-        integer(ik)             :: ndomains, ierr
+        integer                 :: ierr
+        !integer(ik)             :: ndomains, ierr
+        integer(ik)             :: ndomains
         integer, dimension(1)   :: buf
+
 
         !
         !  Get number of domains from attribute 'ndomains' in file root
         !
-        call h5ltget_attribute_int_f(fid, "/", 'ndomains', buf, ierr)
-        if (ierr /= 0) call chidg_signal(FATAL,'get_ndomains_hdf: h5ltget_attribute_int_f had a problem getting the number of domains')
+        call h5ltget_attribute_int_f(fid, "/", "ndomains", buf, ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"get_ndomains_hdf: h5ltget_attribute_int_f had a problem getting the number of domains")
 
         ndomains = int(buf(1), kind=ik)
 

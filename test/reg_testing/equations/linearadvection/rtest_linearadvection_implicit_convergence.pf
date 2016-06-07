@@ -33,9 +33,10 @@ subroutine rtest_linearadvection_implicit_convergence()
 
     type(chidg_t)                       :: chidg
     class(bc_t),            allocatable :: bc
-    type(point_t),          allocatable :: pts(:,:,:)
+    type(point_t),          allocatable :: nodes(:)
+    integer(ik),            allocatable :: connectivity(:,:)
     class(function_t),      allocatable :: fcn
-    type(dict_t)                        :: toptions, moptions
+    type(dict_t)                        :: toptions, noptions, loptions
     integer(ik)                         :: nterms_c, itime
 
 
@@ -52,7 +53,7 @@ subroutine rtest_linearadvection_implicit_convergence()
     spacedim          = 3
     nterms_s          = 27
     gq_rule           = 2
-    eqnset            = 'linearadvection'
+    !eqnset            = 'linearadvection'
     time_scheme       = 'backward_euler_subiteration'
     nonlinear_solver  = 'quasi_newton'
     linear_solver     = 'fgmres'
@@ -71,17 +72,21 @@ subroutine rtest_linearadvection_implicit_convergence()
     ! Set timescheme options to pass during initialization
     !
     call toptions%set('dt',0.1_rk)
-    call toptions%set('tol',1.e-14_rk)
-    call toptions%set('nsteps',1)
-    call toptions%set('nwrite',0)
-    call toptions%set('cfl0',1.0_rk)
+    call toptions%set('nsteps',10)
+    call toptions%set('nwrite',100)
 
 
     !
-    ! Set matrixsolver options to pass during initialization
+    ! Set nonlinear solver options to pass during initialization
     !
-    call moptions%set('tol',  1.e-14_rk)
+    call noptions%set('tol',1.e-14_rk)
+    call noptions%set('cfl0',2.0_rk)
+    call noptions%set('nsteps',100)
 
+    !
+    ! Set nonlinear solver options to pass during initialization
+    !
+    call loptions%set('tol', 1.e-14_rk)
 
     !
     ! Initialize ChiDG environment.
@@ -94,15 +99,15 @@ subroutine rtest_linearadvection_implicit_convergence()
     ! Set ChiDG components
     !
     call chidg%set('time_scheme',time_scheme,toptions)
-    call chidg%set('nonlinear_solver',nonlinear_solver,moptions)
-    call chidg%set('linear_solver',linear_solver,moptions)
+    call chidg%set('nonlinear_solver',nonlinear_solver,noptions)
+    call chidg%set('linear_solver',linear_solver,loptions)
     call chidg%set('preconditioner',preconditioner)
 
 
     !
     ! Generate points for mesh
     !
-    call meshgen('333',pts)
+    call meshgen('333',nodes,connectivity)
     spacedim = 3
     nterms_c = 8
 
@@ -110,7 +115,8 @@ subroutine rtest_linearadvection_implicit_convergence()
     !
     ! Add domain to ChiDG
     !
-    call chidg%data%add_domain('D_01',pts,spacedim,nterms_c,eqnset)
+    !call chidg%data%add_domain('D_01',pts,spacedim,nterms_c,eqnset)
+    call chidg%data%add_domain('D_01',nodes,connectivity,spacedim,nterms_c,'linearadvection')
     call chidg%initialize_solution_domains(nterms_s)
 
 
@@ -118,13 +124,14 @@ subroutine rtest_linearadvection_implicit_convergence()
     !
     ! Set boundary conditions
     !
-    call create_bc('linearadvection_extrapolate', bc)
-    call chidg%data%add_bc('D_01',bc,XI_MIN)
-    call chidg%data%add_bc('D_01',bc,XI_MAX)
-    call chidg%data%add_bc('D_01',bc,ETA_MIN)
-    call chidg%data%add_bc('D_01',bc,ETA_MAX)
-    call chidg%data%add_bc('D_01',bc,ZETA_MIN)
-    call chidg%data%add_bc('D_01',bc,ZETA_MAX)
+    print*, 'FIX BOUNDARY CONDITION'
+!    call create_bc('linearadvection_extrapolate', bc)
+!    call chidg%data%add_bc('D_01',bc,XI_MIN)
+!    call chidg%data%add_bc('D_01',bc,XI_MAX)
+!    call chidg%data%add_bc('D_01',bc,ETA_MIN)
+!    call chidg%data%add_bc('D_01',bc,ETA_MAX)
+!    call chidg%data%add_bc('D_01',bc,ZETA_MIN)
+!    call chidg%data%add_bc('D_01',bc,ZETA_MAX)
 
 
     !
@@ -143,6 +150,7 @@ subroutine rtest_linearadvection_implicit_convergence()
     call fcn%set_option('b_z',1.5_rk)
     call fcn%set_option('c',2.0_rk)
     call initialize_variable(chidg%data,1,fcn)
+
 
 
 

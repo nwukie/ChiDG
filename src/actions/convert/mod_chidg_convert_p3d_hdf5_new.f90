@@ -269,12 +269,12 @@ contains
             if (ierr /= 0) stop "Error: h5gcreate_f"
 
 
-            !
-            ! Write grid-group attributes
-            !
-            call h5ltset_attribute_int_f(Grid_id, '.', 'nelem_xi',  [nelem_i], adim, ierr)
-            call h5ltset_attribute_int_f(Grid_id, '.', 'nelem_eta', [nelem_j], adim, ierr)
-            call h5ltset_attribute_int_f(Grid_id, '.', 'nelem_zeta',[nelem_k], adim, ierr)
+            !!
+            !! Write grid-group attributes
+            !!
+            !call h5ltset_attribute_int_f(Grid_id, '.', 'nelem_xi',  [nelem_i], adim, ierr)
+            !call h5ltset_attribute_int_f(Grid_id, '.', 'nelem_eta', [nelem_j], adim, ierr)
+            !call h5ltset_attribute_int_f(Grid_id, '.', 'nelem_zeta',[nelem_k], adim, ierr)
 
             !
             ! Create dataspaces for grid coordinates

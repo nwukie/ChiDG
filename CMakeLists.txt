@@ -153,6 +153,29 @@ include_directories(${MPI_Fortran_INCLUDE_PATH})
 
 
 
+#-----------------------------------------------------------------------------------
+#                                   Find METIS
+#-----------------------------------------------------------------------------------
+
+find_path(METIS_INCLUDE_DIR metis.h)
+find_library(METIS_LIBRARY metis)
+
+if(METIS_INCLUDE_DIR)
+    if(METIS_LIBRARY)
+        set(METIS_FOUND "YES") 
+    endif(METIS_LIBRARY)
+endif(METIS_INCLUDE_DIR)
+
+message(STATUS "METIS INCLUDE DIR: " ${METIS_INCLUDE_DIR})
+message(STATUS "METIS LIBRARIES: " ${METIS_LIBRARY})
+include_directories(${METIS_INCLUDE_DIR})
+
+
+
+
+
+
+
 
 
 #----------------------------------------------------------------------------------- 
@@ -202,7 +225,7 @@ include_directories(${CMAKE_SOURCE_DIR}/src/tools)    # Need include here for ma
 #----------------------------------------------------------------------------------- 
 add_library(coredg STATIC ${LIB_SRCS})
 #target_link_libraries(coredg ${HDF5_LIBRARIES} ${LAPACK_LIBRARIES} ${BLAS_LIBRARIES} ${TECPLOT_LIBRARIES} ${MPI_Fortran_LIBRARIES})
-target_link_libraries(coredg ${HDF5_LIBRARIES} ${LAPACK_LIBRARIES} ${BLAS_LIBRARIES} ${TECPLOT_LIBRARIES})
+target_link_libraries(coredg ${HDF5_LIBRARIES} ${LAPACK_LIBRARIES} ${BLAS_LIBRARIES} ${TECPLOT_LIBRARIES} ${METIS_LIBRARIES})
 set_target_properties(coredg PROPERTIES 
                              COMPILE_FLAGS "${CMAKE_Fortran_FLAGS}"
                              LINK_FLAGS    "${CMAKE_Fortran_LINK_FLAGS}")
@@ -211,7 +234,7 @@ set_target_properties(coredg PROPERTIES
 
 # Add driver executable linked to coredg library
 add_executable(chidg ${EXE_SRCS})
-target_link_libraries(chidg coredg ${HDF5_LIBRARIES} ${TECPLOT_LIBRARIES} ${MPI_Fortran_LIBRARIES})
+target_link_libraries(chidg coredg ${HDF5_LIBRARIES} ${TECPLOT_LIBRARIES} ${MPI_Fortran_LIBRARIES} ${METIS_LIBRARIES})
 set_target_properties(chidg PROPERTIES 
                             COMPILE_FLAGS "${CMAKE_Fortran_FLAGS}"
                             LINK_FLAGS    "${CMAKE_Fortran_LINK_FLAGS} -lstdc++ -lpthread")

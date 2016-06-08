@@ -166,7 +166,7 @@ module mod_constants
     !
     integer(ik),   parameter    :: MAXBLOCKS        = 200
     character(6)                :: IO_DESTINATION   = 'both'
-    integer(ik)                 :: OUTPUT_RES       = 2
+    integer(ik)                 :: OUTPUT_RES       = 10
 
 
 

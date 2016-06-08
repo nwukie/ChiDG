@@ -1,0 +1,73 @@
+@Test
+subroutine test_partition_metis()
+    use iso_c_binding,  only: c_ptr, c_int, c_null_ptr
+    use mod_metis,      only: METIS_PartMeshNodal
+    use pfunit_mod
+    implicit none
+
+
+    integer(c_int), parameter   :: ne=2, nn=6, nparts=2
+    integer(c_int), allocatable :: eptr(:), nodes(:), epart(:), npart(:)
+    integer(c_int)              :: n
+    type(c_ptr)                 :: vwgt, vsize, tpwgts, options
+
+
+    vwgt    = c_null_ptr
+    vsize   = c_null_ptr
+    tpwgts  = c_null_ptr
+    options = c_null_ptr
+
+
+    allocate(eptr(ne+1), nodes(ne*4), epart(ne), npart(nn))
+
+    eptr  = [0, 4, 8] 
+    nodes = [0, 1, 2, 3, 1, 4, 5, 2]
+
+
+
+    call METIS_PartMeshNodal(ne,nn,eptr,nodes,vwgt,vsize,2,tpwgts,options,n,epart,npart)
+
+
+
+    @assertEqual([0,0,1,0,1,1],npart)
+    @assertEqual([0,1],epart)
+
+end subroutine test_partition_metis
+
+
+
+
+
+!@Test
+!subroutine test_partition_metis_multiblock()
+!    use pfunit_mod
+!
+!
+!    integer, parameter  :: ne=3, nn=10, nparts=2
+!    integer             :: eptr(ne+1), nodes(ne*4), epart(ne), npart(nn), n
+!    integer, pointer    :: vwgt=>null(), vsize=>null(), mopts=>null(), options=>null()
+!    real(8), pointer    :: tpwgts=>null()
+!
+!    eptr  = [0, 4, 8, 12] 
+!    nodes = [0, 1, 2, 3, 1, 4, 5, 2, 6, 7, 8, 9]
+!
+!    call METIS_PartMeshNodal(ne,nn,eptr,nodes,vwgt,vsize,2,tpwgts,mopts,n,epart,npart)
+!
+!
+!end subroutine test_partition_metis_multiblock
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

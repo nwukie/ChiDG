@@ -14,8 +14,8 @@ module mod_chidg_mpi
 
 
     
-    integer(ik) :: irank        !< Rank of current process
-    integer(ik) :: nrank        !< Number of global ranks
+    integer(ik) :: IRANK = 1        !< Rank of current process
+    integer(ik) :: NRANK = 2        !< Number of global ranks
 
     integer, parameter :: GLOBAL_MASTER = 0     !< Master rank for all global processes. This shall not be modified during run-time.
     !integer, parameter :: GROUP_MASTER  = 0    !< Master rank for group of processes. This could be modified during run-time for a group.

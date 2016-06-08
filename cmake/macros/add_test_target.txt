@@ -103,7 +103,8 @@ macro (add_test_target target_subdirectory test_type)
     #
 	#-------------------------------------------------------------------------------------------------------
 	add_executable(${target_name} ${PF_ROOT}/include/driver.F90 ${_test_sources})
-	target_link_libraries(${target_name} ${PF_ROOT}/lib/libpfunit.a coredg -lstdc++ -lpthread ${MPI_Fortran_LIBRARIES})
+	#target_link_libraries(${target_name} ${PF_ROOT}/lib/libpfunit.a coredg -lstdc++ -lpthread ${MPI_Fortran_LIBRARIES})
+	target_link_libraries(${target_name} ${PF_ROOT}/lib/libpfunit.a coredg -lstdc++ -lpthread ${MPI_Fortran_LIBRARIES} ${METIS_LIBRARY})
 	
 	set_target_properties(${target_name} PROPERTIES 
                              #COMPILE_FLAGS "-DUSE_MPI=True -DBUILD_ROBUST=True ${MPI_Fortran_COMPILE_FLAGS}"

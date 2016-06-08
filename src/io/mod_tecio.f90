@@ -388,8 +388,6 @@ contains
             ! Write element connectivity
             npts_element     = (OUTPUT_RES+1)*(OUTPUT_RES+1)*(OUTPUT_RES+1)
             nsub_per_element = (OUTPUT_RES*OUTPUT_RES*OUTPUT_RES)
-            print*, "nsub_per_element, nelem"
-            print*, nsub_per_element, nelem
             nsub_elements    = nsub_per_element * nelem
 
             if (allocated(connectivity)) deallocate(connectivity)
@@ -400,16 +398,18 @@ contains
             nelem_eta  = OUTPUT_RES
             nelem_xi   = OUTPUT_RES
 
+
+            ! For each element
             do ielem = 1,nelem
 
-                ! For each sub-element, store connectivity
+                ! Within each element, sample into sub-elements to account for variation within element
                 do ielem_zeta = 1,nelem_zeta
                     do ielem_eta = 1,nelem_eta
                         do ielem_xi = 1,nelem_xi
 
                             ielem_start  = ielem_xi  +  (ielem_eta-1)*(nelem_xi)  +  (ielem_zeta-1)*(nelem_xi*nelem_eta)
                             ielem_global = ielem_start   +   (ielem-1)*(nelem_zeta*nelem_eta*nelem_xi)
-                            ielem_offset = (npts_element-1)*(ielem-1)
+                            ielem_offset = (npts_element)*(ielem-1)
 
                             istart = ielem_xi  +  (ielem_eta-1)*(nelem_xi+1)  +  (ielem_zeta-1)*((nelem_xi+1)*(nelem_eta+1))
 

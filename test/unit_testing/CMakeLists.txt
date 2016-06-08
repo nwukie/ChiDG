@@ -15,6 +15,7 @@ add_subdirectory(chimera)
 add_subdirectory(spatial)
 add_subdirectory(tools)
 add_subdirectory(actions)
+add_subdirectory(parallel)
 
 
 

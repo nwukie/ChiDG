@@ -29,7 +29,7 @@ program driver
     use mod_kirchoffs,          only: kirchoff
 
     ! MPI
-    use mod_chidg_mpi,          only: irank, nrank
+    use mod_chidg_mpi,          only: IRANK, NRANK
     use mpi_f08
 
 
@@ -43,8 +43,7 @@ program driver
     type(dict_t)                        :: toptions, noptions, loptions
     class(function_t),  allocatable     :: constant, monopole
 
-    integer                             :: ierr
-    integer(ik)                         :: narg
+    integer                             :: ierr, narg
     character(len=1024)                 :: chidg_action, filename, file_a, file_b
 
 
@@ -86,9 +85,9 @@ program driver
 !        !
 !        if ( irank == GLOBAL_MASTER ) then
 !
-!            call read_connectivity(gridfile,connectivity)
+!            call read_connectivity(gridfile,connectivities)
 !
-!            call partition_connectivity(connectivity, partitions)
+!            call partition_connectivity(connectivities, partitions)
 !
 !            call send_partitions(partitions)
 !

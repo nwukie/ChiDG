@@ -1,0 +1,45 @@
+@Test
+subroutine test_partition_connectivity()
+    use pfunit_mod
+    use mod_partitioners,   only: partition_connectivity
+    use type_connectivity,  only: connectivity_t
+    use type_partition,     only: partition_t
+    implicit none
+
+    type(connectivity_t),   allocatable :: connectivities(:)
+    type(partition_t),      allocatable :: partitions(:)
+
+    allocate(connectivities(2))
+
+    !
+    ! Initialize connectivity storage
+    !
+    call connectivities(1)%init(2)
+    call connectivities(2)%init(2)
+
+
+    
+    !
+    ! Assemble connectivities
+    !
+    connectivities(1)%nnodes = 12
+    connectivities(1)%data(1,:) = [1, 1, 1, 2, 5, 4, 7, 8, 11, 10]
+    connectivities(1)%data(2,:) = [1, 1, 2, 3, 6, 5, 8, 9, 12, 11]
+
+
+    connectivities(2)%nnodes = 12
+    connectivities(2)%data(1,:) = [1, 1, 1, 2, 5, 4, 7, 8, 11, 10]
+    connectivities(2)%data(2,:) = [1, 1, 2, 3, 6, 5, 8, 9, 12, 11]
+
+
+    
+    !
+    ! Partition connectivities. THIS IS BEING TESTED
+    !
+    call partition_connectivity(connectivities, partitions)
+
+
+
+
+
+end subroutine test_partition_connectivity

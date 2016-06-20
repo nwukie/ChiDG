@@ -1,7 +1,6 @@
 module messenger
     use mod_kinds,      only: rk,ik
     use mod_constants,  only: IO_DESTINATION
-    use mpi_f08
     implicit none
 
 

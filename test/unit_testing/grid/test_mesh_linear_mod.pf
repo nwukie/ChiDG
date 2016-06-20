@@ -3,13 +3,14 @@ module test_mesh_linear_mod
     use mod_kinds,      only: rk,ik
     use mod_constants,  only: ZERO, ONE, TWO, THREE, FIVE, SIX, EIGHT, NINE, TEN, &
                               XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX, NFACES
-
-    use type_chidg,     only: chidg_t
-    use type_point,     only: point_t
-    use type_mesh,      only: mesh_t
-    use type_element,   only: element_t
-    use type_face,      only: face_t
     use mod_testutils,  only: meshgen
+
+    use type_chidg,                 only: chidg_t
+    use type_point,                 only: point_t
+    use type_mesh,                  only: mesh_t
+    use type_element,               only: element_t
+    use type_face,                  only: face_t
+    use type_domain_connectivity,   only: domain_connectivity_t
     implicit none
 
     public  :: test_mesh_linear
@@ -33,9 +34,8 @@ contains
         class(test_mesh_linear),    intent(inout)   :: this
         
         integer(ik), parameter      :: npt = 64
-        !type(point_t)               :: pts(4,4,4)
         type(point_t),  allocatable :: nodes(:)
-        integer(ik),    allocatable :: connectivity(:,:)
+        type(domain_connectivity_t) :: connectivity
         integer(ik)                 :: ftype, ineighbor, mapping, ielem, &
                                        ipt_xi, ipt_eta, ipt_zeta, ipt
         integer(ik)                 :: neqns, nterms_s, nterms_c, idomain, spacedim
@@ -105,6 +105,7 @@ contains
         nterms_s = 8
         call this%mesh%init_geom(idomain,spacedim,nterms_c,nodes,connectivity)
         call this%mesh%init_sol(neqns,nterms_s)
+        call this%mesh%init_comm_local()
 
     end subroutine
     
@@ -143,7 +144,7 @@ contains
 !        @assertEqual(nelem_eta,self%mesh%nelem_eta)
 !        @assertEqual(nelem_zeta,self%mesh%nelem_zeta)
         @assertEqual(nelem,self%mesh%nelem)
-        @assertEqual(idomain,self%mesh%idomain)
+        @assertEqual(idomain,self%mesh%idomain_g)
 
     end subroutine
     
@@ -187,20 +188,20 @@ contains
         
         associate (faces => self%mesh%faces)
             ! Test parent element
-            @assertEqual(14,faces(14,XI_MIN)%iparent)
-            @assertEqual(14,faces(14,XI_MAX)%iparent)
-            @assertEqual(14,faces(14,ETA_MIN)%iparent)
-            @assertEqual(14,faces(14,ETA_MAX)%iparent)
-            @assertEqual(14,faces(14,ZETA_MIN)%iparent)
-            @assertEqual(14,faces(14,ZETA_MAX)%iparent)        
+            @assertEqual(14,faces(14,XI_MIN)%iparent_g)
+            @assertEqual(14,faces(14,XI_MAX)%iparent_g)
+            @assertEqual(14,faces(14,ETA_MIN)%iparent_g)
+            @assertEqual(14,faces(14,ETA_MAX)%iparent_g)
+            @assertEqual(14,faces(14,ZETA_MIN)%iparent_g)
+            @assertEqual(14,faces(14,ZETA_MAX)%iparent_g)        
             
             ! Test neighbor elements
-            @assertEqual(13,faces(14,XI_MIN)%ineighbor)
-            @assertEqual(15,faces(14,XI_MAX)%ineighbor)
-            @assertEqual(11,faces(14,ETA_MIN)%ineighbor)
-            @assertEqual(17,faces(14,ETA_MAX)%ineighbor)
-            @assertEqual(5,faces(14,ZETA_MIN)%ineighbor)
-            @assertEqual(23,faces(14,ZETA_MAX)%ineighbor)
+            @assertEqual(13,faces(14,XI_MIN)%get_neighbor_element())
+            @assertEqual(15,faces(14,XI_MAX)%get_neighbor_element())
+            @assertEqual(11,faces(14,ETA_MIN)%get_neighbor_element())
+            @assertEqual(17,faces(14,ETA_MAX)%get_neighbor_element())
+            @assertEqual(5,faces(14,ZETA_MIN)%get_neighbor_element())
+            @assertEqual(23,faces(14,ZETA_MAX)%get_neighbor_element())
         end associate
 
     end subroutine
@@ -214,12 +215,12 @@ contains
         
         associate (faces => self%mesh%faces)
             !> Test neighbor elements
-            @assertEqual(0,faces(1,XI_MIN)%ineighbor)
-            @assertEqual(2,faces(1,XI_MAX)%ineighbor)
-            @assertEqual(0,faces(1,ETA_MIN)%ineighbor)
-            @assertEqual(4,faces(1,ETA_MAX)%ineighbor)
-            @assertEqual(0,faces(1,ZETA_MIN)%ineighbor)
-            @assertEqual(10,faces(1,ZETA_MAX)%ineighbor)
+            @assertEqual(0,faces(1,XI_MIN)%get_neighbor_element())
+            @assertEqual(2,faces(1,XI_MAX)%get_neighbor_element())
+            @assertEqual(0,faces(1,ETA_MIN)%get_neighbor_element())
+            @assertEqual(4,faces(1,ETA_MAX)%get_neighbor_element())
+            @assertEqual(0,faces(1,ZETA_MIN)%get_neighbor_element())
+            @assertEqual(10,faces(1,ZETA_MAX)%get_neighbor_element())
         end associate
         
     end subroutine

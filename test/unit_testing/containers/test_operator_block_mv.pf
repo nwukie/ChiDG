@@ -2,22 +2,23 @@
 subroutine test_operator_block_mv()
     use pfunit_mod
 
-    use mod_kinds,          only: rk, ik
-    use mod_constants,      only: ZERO, ONE, TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT, &
-                                  NINE, TEN, DIAG, XI_MIN, XI_MAX, IO_DESTINATION
+    use mod_kinds,                  only: rk, ik
+    use mod_constants,              only: ZERO, ONE, TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT, &
+                                          NINE, TEN, DIAG, XI_MIN, XI_MAX, IO_DESTINATION
 
-    use type_blockvector,   only: blockvector_t
-    use type_chidg,         only: chidg_t
-    use type_point,         only: point_t
+    use type_blockvector,           only: blockvector_t
+    use type_chidg,                 only: chidg_t
+    use type_point,                 only: point_t
+    use type_domain_connectivity,   only: domain_connectivity_t
 
-    use mod_testutils,      only: meshgen
+    use mod_testutils,              only: meshgen
 
     use operator_block_mv
     implicit none
 
     type(chidg_t)               :: chidg
     type(point_t),  allocatable :: nodes(:)
-    integer(ik),    allocatable :: connectivity(:,:)
+    type(domain_connectivity_t) :: connectivity
     type(blockmatrix_t)         :: A
     type(blockvector_t)         :: x, b
 
@@ -48,6 +49,7 @@ subroutine test_operator_block_mv()
     ! Initialize domain
     call chidg%data%add_domain('D_01',nodes,connectivity,spacedim,nterms_c,'scalar')
     call chidg%initialize_solution_domains(nterms_s)
+    call chidg%init('communication')
 
 
 
@@ -123,7 +125,7 @@ subroutine test_operator_block_mv()
     !
     ! Close ChiDG interface
     !
-    call chidg%close()
+    call chidg%close('core')
 
 
 

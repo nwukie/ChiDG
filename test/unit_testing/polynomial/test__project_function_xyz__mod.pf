@@ -1,14 +1,15 @@
 module test__project_function_xyz__mod
     use pfunit_mod
-    use mod_kinds,              only: rk,ik
-    use mod_constants,          only: ZERO, FIVE, THREE, IO_DESTINATION
-    use type_chidg,             only: chidg_t
-    use type_point,             only: point_t
-    use type_function,          only: function_t
-    use mod_function,           only: create_function
-    use mod_project,            only: project_function_xyz
-    use mod_grid,               only: compute_element_mappings
-    use mod_polynomial,         only: PolynomialVal
+    use mod_kinds,                  only: rk,ik
+    use mod_constants,              only: ZERO, FIVE, THREE, IO_DESTINATION
+    use type_chidg,                 only: chidg_t
+    use type_point,                 only: point_t
+    use type_function,              only: function_t
+    use type_domain_connectivity,   only: domain_connectivity_t
+    use mod_function,               only: create_function
+    use mod_project,                only: project_function_xyz
+    use mod_grid,                   only: compute_element_mappings
+    use mod_polynomial,             only: PolynomialVal
     
     implicit none
 
@@ -44,11 +45,10 @@ contains
     subroutine setUp(this)
         class(test_project_function_xyz),    intent(inout)   :: this
         
-        integer(ik), parameter  :: npt = 8
-        !type(point_t)           :: pts(2,2,2)
-        type(point_t)           :: nodes(8)
-        integer(ik)             :: connectivity(1,10)
-        integer(ik)             :: nterms_c, idomain, spacedim
+        integer(ik), parameter      :: npt = 8
+        type(point_t)               :: nodes(8)
+        type(domain_connectivity_t) :: connectivity
+        integer(ik)                 :: nterms_c, idomain, spacedim
 
         IO_DESTINATION = 'file'
         
@@ -63,15 +63,6 @@ contains
         !!      *-------*
         !!         y=1
         !!
-        !call pts(1,1,1)%set(0._rk, 0._rk, 0._rk)
-        !call pts(2,1,1)%set(5._rk, 0._rk, 0._rk)
-        !call pts(1,2,1)%set(0._rk, 1._rk, 0._rk)
-        !call pts(2,2,1)%set(5._rk, 1._rk, 0._rk)
-        !call pts(1,1,2)%set(0._rk, 0._rk, 1._rk)
-        !call pts(2,1,2)%set(5._rk, 0._rk, 1._rk)
-        !call pts(1,2,2)%set(0._rk, 1._rk, 1._rk)
-        !call pts(2,2,2)%set(5._rk, 1._rk, 1._rk)
-        
         call nodes(1)%set(0._rk, 0._rk, 0._rk)
         call nodes(2)%set(5._rk, 0._rk, 0._rk)
         call nodes(3)%set(0._rk, 1._rk, 0._rk)
@@ -81,7 +72,9 @@ contains
         call nodes(7)%set(0._rk, 1._rk, 1._rk)
         call nodes(8)%set(5._rk, 1._rk, 1._rk)
 
-        connectivity(1,:) = [1,1, 1, 2, 3, 4, 5, 6, 7, 8]
+        call connectivity%init(1,8)
+        call connectivity%data(1)%init(1)
+        connectivity%data(1)%data = [1,1,1, 1, 2, 3, 4, 5, 6, 7, 8]
 
         ! Initialize ChiDG environment
         call this%chidg%init('env')
@@ -92,7 +85,6 @@ contains
         this%nterms_s = 27
         spacedim      = 3
 
-        !call this%chidg%data%add_domain('D_01',pts,spacedim,nterms_c,'scalar')
         call this%chidg%data%add_domain('D_01',nodes,connectivity,spacedim,nterms_c,'scalar')
         call this%chidg%initialize_solution_domains(this%nterms_s)
 
@@ -110,7 +102,7 @@ contains
         !
         ! Close ChiDG interface
         !
-        call this%chidg%close()
+        call this%chidg%close('core')
 
 
     end subroutine tearDown
@@ -119,6 +111,13 @@ contains
 
 
 
+!    @Test
+!    subroutine testing(this)
+!        class(test_project_function_xyz),   intent(inout)   :: this
+!
+!        @assertTrue(.true.)
+!
+!    end subroutine testing
 
     !> Test projection of the function f(t,x,y,z) = x^2
     !!
@@ -127,7 +126,7 @@ contains
     !!
     !!
     !--------------------------------------------------------------------------------------------
-@Test
+    @Test
     subroutine test_project__x2(this)
         class(test_project_function_xyz),    intent(inout)   :: this
         real(rk)                                             :: fmodes(this%nterms_s)

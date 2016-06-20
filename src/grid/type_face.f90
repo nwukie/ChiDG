@@ -6,7 +6,7 @@ module type_face
                                       X_DIR, Y_DIR, Z_DIR,                              &
                                       TWO_DIM, THREE_DIM,                               &
                                       NFACES, NO_INTERIOR_NEIGHBOR,                     &
-                                      ZERO, ONE, TWO
+                                      ZERO, ONE, TWO, ORPHAN
 
     use type_point,             only: point_t
     use type_element,           only: element_t
@@ -30,17 +30,37 @@ module type_face
     !!
     !-------------------------------------------------------------------------------------------------------------
     type, public :: face_t
-        integer(ik)                  :: spacedim            !< Number of spatial dimensions
-        integer(ik)                  :: neqns               !< Number of equations in equationset_t
-        integer(ik)                  :: nterms_s            !< Number of terms in solution polynomial expansion
-        integer(ik)                  :: ftype               !< interior, or boundary condition, or Chimera interface, or Orphan
-        integer(ik)                  :: iface               !< XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, etc
+        integer(ik)                 :: spacedim            !< Number of spatial dimensions
+        integer(ik)                 :: neqns               !< Number of equations in equationset_t
+        integer(ik)                 :: nterms_s            !< Number of terms in solution polynomial expansion
 
-        integer(ik)                  :: idomain             !< Domain index of parent element
-        integer(ik)                  :: iparent             !< Element index of parent element
-        integer(ik)                  :: ineighbor           !< Block-local index of neighbor element
-!        integer(ik)                  :: ineighbor_face      !< Neighbor-local index of neighbor face
-        integer(ik)                  :: ChiID = 0           !< Identifier for domain-local Chimera interfaces
+        ! Self information
+        integer(ik)                 :: ftype               !< INTERIOR, BOUNDARY, CHIMERA, ORPHAN 
+        integer(ik)                 :: iface               !< XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, etc
+
+        ! Owner-element information
+!        integer(ik)                 :: idomain             !< Domain index of parent element
+!        integer(ik)                 :: iparent             !< Element index of parent element
+!        integer(ik)                 :: ineighbor           !< Block-local index of neighbor element
+
+        ! Prototype                 
+        integer(ik)                 :: idomain_g            !< Global index of the parent domain
+        integer(ik)                 :: idomain_l            !< Processor-local index of the parent domain
+        integer(ik)                 :: iparent_g            !< Domain-global index of the parent element
+        integer(ik)                 :: iparent_l            !< Processor-local index of the parent element
+
+
+        ! Neighbor information
+
+        ! Prototype
+        integer(ik)                 :: ineighbor_proc       !< MPI processor rank of the neighboring element
+        integer(ik)                 :: ineighbor_domain_g   !< Global index of the neighboring element's domain
+        integer(ik)                 :: ineighbor_domain_l   !< Processor-local index of the neighboring element's domain
+        integer(ik)                 :: ineighbor_element_g  !< Domain-global index of the neighboring element
+        integer(ik)                 :: ineighbor_element_l  !< Processor-local index of the neighboring element
+!        integer(ik)                 :: ineighbor_face      !< Neighbor-local index of neighbor face
+
+        integer(ik)                 :: ChiID = 0           !< Identifier for domain-local Chimera interfaces
 
         ! Chimera face offset. For periodic boundary condition.
         character(len=:), allocatable   :: periodic_type
@@ -79,14 +99,16 @@ module type_face
 
         ! Logical tests
         !---------------------------------------------------------
-        logical :: geomInitialized = .false.
-        logical :: numInitialized  = .false.
+        logical :: geomInitialized     = .false.
+        logical :: neighborInitialized = .false.
+        logical :: numInitialized      = .false.
 
 
 
     contains
 
         procedure           :: init_geom
+        procedure           :: init_neighbor
         procedure           :: init_sol
 
         procedure           :: compute_quadrature_metrics   !< Compute metric terms at quadrature nodes
@@ -127,22 +149,30 @@ contains
     !!  @param[in] ineighbor    Index of neighbor element in the block
     !!
     !----------------------------------------------------------------------------------------------------------
-    subroutine init_geom(self,iface,ftype,elem,ineighbor)
+    !subroutine init_geom(self,iface,ftype,elem,ineighbor)
+    subroutine init_geom(self,iface,elem)
         class(face_t),      intent(inout)       :: self
         integer(ik),        intent(in)          :: iface
-        integer(ik),        intent(in)          :: ftype
-        type(element_t),    intent(in), target  :: elem         ! Note: probably don't need target anymore
-        integer(ik),        intent(in)          :: ineighbor
+        !integer(ik),        intent(in)          :: ftype
+        !type(element_t),    intent(in), target  :: elem         ! Note: probably don't need target anymore
+        type(element_t),    intent(in)          :: elem
+        !integer(ik),        intent(in)          :: ineighbor
 
         !
         ! Set indices
         !
         self%iface      = iface
-        self%ftype      = ftype
+        self%ftype      = ORPHAN
         self%spacedim   = elem%spacedim
-        self%idomain    = elem%idomain
-        self%iparent    = elem%ielem
-        self%ineighbor  = ineighbor
+
+
+!        self%idomain    = elem%idomain
+!        self%iparent    = elem%ielem
+!        self%ineighbor  = ineighbor
+        self%idomain_g = elem%idomain_g
+        self%idomain_l = elem%idomain_l
+        self%iparent_g = elem%ielem_g
+        self%iparent_l = elem%ielem_l
 
         
         !
@@ -158,6 +188,51 @@ contains
 
     end subroutine init_geom
     !**********************************************************************************************************
+
+
+
+
+
+
+
+
+
+
+    !>
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   6/10/2016
+    !!
+    !!
+    !!
+    !----------------------------------------------------------------------------------------------------------
+    subroutine init_neighbor(self,ftype,ineighbor_domain_g,ineighbor_domain_l,ineighbor_element_g,ineighbor_element_l,ineighbor_proc)
+        class(face_t),  intent(inout)   :: self
+        integer(ik),    intent(in)      :: ftype
+        integer(ik),    intent(in)      :: ineighbor_domain_g
+        integer(ik),    intent(in)      :: ineighbor_domain_l
+        integer(ik),    intent(in)      :: ineighbor_element_g
+        integer(ik),    intent(in)      :: ineighbor_element_l
+        integer(ik),    intent(in)      :: ineighbor_proc
+
+
+        self%ftype = ftype
+        self%ineighbor_domain_g  = ineighbor_domain_g
+        self%ineighbor_domain_l  = ineighbor_domain_l
+        self%ineighbor_element_g = ineighbor_element_g
+        self%ineighbor_element_l = ineighbor_element_l
+        self%ineighbor_proc      = ineighbor_proc
+
+
+        self%neighborInitialized = .true.
+    end subroutine init_neighbor
+    !***********************************************************************************************************
+
+
+
+
+
+
 
 
 
@@ -555,7 +630,7 @@ contains
         integer(ik) :: neighbor_e
 
 
-        neighbor_e = self%ineighbor
+        neighbor_e = self%ineighbor_element_l
 
 
     end function get_neighbor_element

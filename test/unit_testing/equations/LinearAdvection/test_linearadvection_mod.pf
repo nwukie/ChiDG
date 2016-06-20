@@ -1,19 +1,20 @@
 module test_linearadvection_mod
     use pfunit_mod
-    use mod_kinds,          only: rk,ik
-    use mod_constants,      only: ZERO, ONE, TWO, THREE, FIVE, SIX, EIGHT, NINE, TEN, &
-                                  XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX, NFACES, &
-                                  IO_DESTINATION
+    use mod_kinds,                  only: rk,ik
+    use mod_constants,              only: ZERO, ONE, TWO, THREE, FIVE, SIX, EIGHT, NINE, TEN, &
+                                          XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX, NFACES, &
+                                          IO_DESTINATION
 
-    use type_chidg,         only: chidg_t
-    use type_point,         only: point_t
-    use type_function,      only: function_t
-    use mod_function,       only: create_function
-    use type_densematrix,   only: densematrix_t
-    use mod_testutils,      only: meshgen
-    use mod_hdfio,            only: read_grid_hdf
+    use type_chidg,                 only: chidg_t
+    use type_point,                 only: point_t
+    use type_function,              only: function_t
+    use type_domain_connectivity,   only: domain_connectivity_t
+    use mod_function,               only: create_function
+    use type_densematrix,           only: densematrix_t
+    use mod_testutils,              only: meshgen
+    use mod_hdfio,                  only: read_grid_hdf
+    use mod_grid_operators,         only: initialize_variable
     use mod_check_jacobian
-    use mod_grid_operators, only: initialize_variable
     implicit none
 
     public  :: test_eq_LA
@@ -64,7 +65,7 @@ contains
         
         integer(ik), parameter      :: npt = 64
         type(point_t),  allocatable :: nodes(:)
-        integer(ik),    allocatable :: connectivity(:,:)
+        type(domain_connectivity_t) :: connectivity
         integer(ik)                 :: neqns, nterms_s, nterms_c, spacedim
         real(rk), dimension(npt)    :: x,y,z
         class(function_t), allocatable  :: fcn
@@ -95,6 +96,7 @@ contains
         nterms_c = 8
         call this%chidg%data%add_domain('D_01',nodes,connectivity,spacedim,nterms_c,'linearadvection')
         call this%chidg%initialize_solution_domains(nterms_s)
+        call this%chidg%init('communication')
         call this%chidg%initialize_solution_solver()
 
 
@@ -111,7 +113,7 @@ contains
         !
         ! Close ChiDG interface
         !
-        call this%chidg%close()
+        call this%chidg%close('core')
     end subroutine
 
 

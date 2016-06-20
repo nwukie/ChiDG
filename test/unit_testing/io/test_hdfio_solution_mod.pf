@@ -106,8 +106,8 @@ contains
         !
         ! Close ChiDG instances
         !
-        call this%chidgO1%close()
-        call this%chidgO2%close()
+        call this%chidgO1%close('core')
+        call this%chidgO2%close('core')
 
     end subroutine
     !***************************************************************************************************************

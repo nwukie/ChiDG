@@ -133,6 +133,8 @@ module mod_constants
     !
     ! NEIGHBOR STATUS
     !
+    integer(ik), parameter :: NO_NEIGHBOR_FOUND    = 0
+    integer(ik), parameter :: NEIGHBOR_FOUND       = 1
     integer(ik), parameter :: NO_INTERIOR_NEIGHBOR = 0       ! Face does not have an interior neighbor
 
 
@@ -158,6 +160,11 @@ module mod_constants
     integer(ik), parameter :: NGQ = 1
 
 
+
+    !
+    ! MPI constants
+    !
+    integer(ik), parameter :: NO_PARTITION = -1
 
 
 

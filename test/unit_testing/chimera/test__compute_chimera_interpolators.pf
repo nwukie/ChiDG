@@ -61,6 +61,7 @@ subroutine test__compute_chimera_interpolators()
 
 
     call chidg%initialize_solution_domains(nterms_s)
+    call chidg%init('communication')
 
 
 
@@ -87,7 +88,7 @@ subroutine test__compute_chimera_interpolators()
     !
     ! Close ChiDG interface
     !
-    call chidg%close()
+    call chidg%close('core')
 
 
 

@@ -1,8 +1,9 @@
 module mod_testutils
 #include <messenger.h>
-    use mod_kinds,      only: rk,ik
-    use mod_constants,  only: ZERO, ONE, TWO, THREE, FOUR, FIVE, SIX
-    use type_point,     only: point_t
+    use mod_kinds,                  only: rk,ik
+    use mod_constants,              only: ZERO, ONE, TWO, THREE, FOUR, FIVE, SIX
+    use type_point,                 only: point_t
+    use type_domain_connectivity,   only: domain_connectivity_t
     implicit none
 
 
@@ -17,15 +18,14 @@ contains
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   5/24/2016
     !!
-    !!  @param[in]      string   Character string used to select a specialized meshgen call
-    !!  @param[inout]   pts      points_t array of rank-3 that gets allocated, filled, and returned
+    !!  @param[in]      string          Character string used to select a specialized meshgen call
+    !!  @param[inout]   nodes           Array of node coordinates for the grid
+    !!  @param[inout]   connectivity    Connectivity data for the grid
     !--------------------------------------------------------------------
-    !subroutine meshgen(string,pts)
     subroutine meshgen(string,nodes,connectivity)
-        character(*),               intent(in)      :: string
-        !type(point_t), allocatable, intent(inout)   :: pts(:,:,:)
+        character(*),                   intent(in)      :: string
         type(point_t),  allocatable,    intent(inout)   :: nodes(:)
-        integer(ik),    allocatable,    intent(inout)   :: connectivity(:,:)
+        type(domain_connectivity_t),    intent(inout)   :: connectivity
 
 
         select case (trim(string))
@@ -100,7 +100,8 @@ contains
     !---------------------------------------------------------------------
     subroutine meshgen_1x1x1_linear(nodes,connectivity)
         type(point_t),  allocatable,    intent(inout)   :: nodes(:)
-        integer(ik),    allocatable,    intent(inout)   :: connectivity(:,:)
+        type(domain_connectivity_t),    intent(inout)   :: connectivity
+        !integer(ik),    allocatable,    intent(inout)   :: connectivity(:,:)
 
         integer(ik) :: ipt_xi, ipt_eta, ipt_zeta, ipt, ierr, npts_x, npts_y, npts_z, npts, nelem, npts_element
         integer(ik) :: ielem_x, ielem_y, ielem_z, ipt_x, ipt_y, ipt_z, ipt_elem, ielem, xstart, ystart, zstart
@@ -120,8 +121,11 @@ contains
         npts = npts_x*npts_y*npts_z
         nelem = (npts_x-1)*(npts_y-1)*(npts_z-1)
         npts_element = 8    !linear
-        allocate(nodes(npts), connectivity(nelem,2+npts_element), stat=ierr)
+        !allocate(nodes(npts), connectivity(nelem,2+npts_element), stat=ierr)
+        allocate(nodes(npts), stat=ierr)
         if (ierr /= 0) call AllocationError
+
+        call connectivity%init(nelem,npts)
 
         ipt = 1
         z = ZERO
@@ -147,8 +151,10 @@ contains
         do ielem_z = 1,npts_z-1
             do ielem_y = 1,npts_y-1
                 do ielem_x = 1,npts_x-1
-                    connectivity(ielem,1) = ielem
-                    connectivity(ielem,2) = 1       !linear
+                    call connectivity%data(ielem)%init(1)
+                    connectivity%data(ielem)%data(1) = 1        ! idomain
+                    connectivity%data(ielem)%data(2) = ielem    ! ielement
+                    connectivity%data(ielem)%data(3) = 1        ! mapping
 
                     xstart = 1 + (ielem_x-1)
                     ystart = 1 + (ielem_y-1)
@@ -160,7 +166,8 @@ contains
                         do ipt_y = ystart,(ystart+1)
                             do ipt_x = xstart,(xstart+1)
                                 ipt = ipt_x  +  (ipt_y-1)*npts_x  +  (ipt_z-1)*(npts_x*npts_y)     
-                                connectivity(ielem,2+ipt_elem) = ipt
+                                !connectivity(ielem,2+ipt_elem) = ipt
+                                call connectivity%data(ielem)%set_element_node(ipt_elem, ipt)
                                 ipt_elem = ipt_elem + 1
                             end do
                         end do
@@ -198,7 +205,7 @@ contains
     !---------------------------------------------------------------------
     subroutine meshgen_1x1x1_unit_linear(nodes,connectivity)
         type(point_t),  allocatable,    intent(inout)   :: nodes(:)
-        integer(ik),    allocatable,    intent(inout)   :: connectivity(:,:)
+        type(domain_connectivity_t),    intent(inout)   :: connectivity
 
         integer(ik) :: ipt_xi, ipt_eta, ipt_zeta, ipt, ierr, npts_x, npts_y, npts_z, npts, nelem, npts_element
         integer(ik) :: ielem_x, ielem_y, ielem_z, ipt_x, ipt_y, ipt_z, ipt_elem, ielem, xstart, ystart, zstart
@@ -218,8 +225,15 @@ contains
         npts = npts_x*npts_y*npts_z
         nelem = (npts_x-1)*(npts_y-1)*(npts_z-1)
         npts_element = 8    !linear
-        allocate(nodes(npts), connectivity(nelem,2+npts_element), stat=ierr)
+
+        !allocate(nodes(npts), connectivity(nelem,2+npts_element), stat=ierr)
+        allocate(nodes(npts), stat=ierr)
         if (ierr /= 0) call AllocationError
+
+        call connectivity%init(nelem,npts)
+
+
+
 
         ipt = 1
         z = -ONE
@@ -245,8 +259,10 @@ contains
         do ielem_z = 1,npts_z-1
             do ielem_y = 1,npts_y-1
                 do ielem_x = 1,npts_x-1
-                    connectivity(ielem,1) = ielem
-                    connectivity(ielem,2) = 1       !linear
+                    call connectivity%data(ielem)%init(1)
+                    connectivity%data(ielem)%data(1) = 1        ! idomain
+                    connectivity%data(ielem)%data(2) = ielem    ! ielement
+                    connectivity%data(ielem)%data(3) = 1        ! mapping
 
                     xstart = 1 + (ielem_x-1)
                     ystart = 1 + (ielem_y-1)
@@ -258,7 +274,8 @@ contains
                         do ipt_y = ystart,(ystart+1)
                             do ipt_x = xstart,(xstart+1)
                                 ipt = ipt_x  +  (ipt_y-1)*npts_x  +  (ipt_z-1)*(npts_x*npts_y)     
-                                connectivity(ielem,2+ipt_elem) = ipt
+                                !connectivity(ielem,2+ipt_elem) = ipt
+                                call connectivity%data(ielem)%set_element_node(ipt_elem, ipt)
                                 ipt_elem = ipt_elem + 1
                             end do
                         end do
@@ -296,7 +313,7 @@ contains
     !---------------------------------------------------------------------
     subroutine meshgen_2x2x2_linear(nodes,connectivity)
         type(point_t),  allocatable,    intent(inout)   :: nodes(:)
-        integer(ik),    allocatable,    intent(inout)   :: connectivity(:,:)
+        type(domain_connectivity_t),    intent(inout)   :: connectivity
 
         integer(ik) :: ipt_xi, ipt_eta, ipt_zeta, ipt, ierr, npts_x, npts_y, npts_z, npts, nelem, npts_element
         integer(ik) :: ielem_x, ielem_y, ielem_z, ipt_x, ipt_y, ipt_z, ipt_elem, ielem, xstart, ystart, zstart
@@ -339,8 +356,16 @@ contains
         npts = npts_x*npts_y*npts_z
         nelem = (npts_x-1)*(npts_y-1)*(npts_z-1)
         npts_element = 8    !linear
-        allocate(nodes(npts), connectivity(nelem,2+npts_element), stat=ierr)
+
+        !allocate(nodes(npts), connectivity(nelem,2+npts_element), stat=ierr)
+        allocate(nodes(npts), stat=ierr)
         if (ierr /= 0) call AllocationError
+
+        call connectivity%init(nelem,npts)
+
+
+
+
 
         ipt = 1
         do ipt_zeta = 1,3
@@ -359,8 +384,10 @@ contains
         do ielem_z = 1,npts_z-1
             do ielem_y = 1,npts_y-1
                 do ielem_x = 1,npts_x-1
-                    connectivity(ielem,1) = ielem
-                    connectivity(ielem,2) = 1       !linear
+                    call connectivity%data(ielem)%init(1)
+                    connectivity%data(ielem)%data(1) = 1        ! idomain
+                    connectivity%data(ielem)%data(2) = ielem    ! ielement
+                    connectivity%data(ielem)%data(3) = 1        ! mapping
 
                     xstart = 1 + (ielem_x-1)
                     ystart = 1 + (ielem_y-1)
@@ -372,7 +399,8 @@ contains
                         do ipt_y = ystart,(ystart+1)
                             do ipt_x = xstart,(xstart+1)
                                 ipt = ipt_x  +  (ipt_y-1)*npts_x  +  (ipt_z-1)*(npts_x*npts_y)     
-                                connectivity(ielem,2+ipt_elem) = ipt
+                                !connectivity(ielem,2+ipt_elem) = ipt
+                                call connectivity%data(ielem)%set_element_node(ipt_elem, ipt)
                                 ipt_elem = ipt_elem + 1
                             end do
                         end do
@@ -409,7 +437,7 @@ contains
     !---------------------------------------------------------------------
     subroutine meshgen_2x2x1_linear(nodes,connectivity)
         type(point_t),  allocatable,    intent(inout)   :: nodes(:)
-        integer(ik),    allocatable,    intent(inout)   :: connectivity(:,:)
+        type(domain_connectivity_t),    intent(inout)   :: connectivity
 
         integer(ik) :: ipt_xi, ipt_eta, ipt_zeta, ipt, ierr, npts_x, npts_y, npts_z, npts, nelem, npts_element
         integer(ik) :: ielem_x, ielem_y, ielem_z, ipt_x, ipt_y, ipt_z, ipt_elem, ielem, xstart, ystart, zstart
@@ -450,8 +478,15 @@ contains
         npts = npts_x*npts_y*npts_z
         nelem = (npts_x-1)*(npts_y-1)*(npts_z-1)
         npts_element = 8    !linear
-        allocate(nodes(npts), connectivity(nelem,2+npts_element), stat=ierr)
+
+        !allocate(nodes(npts), connectivity(nelem,2+npts_element), stat=ierr)
+        allocate(nodes(npts), stat=ierr)
         if (ierr /= 0) call AllocationError
+
+        call connectivity%init(nelem,npts)
+
+
+
 
         ipt = 1
         do ipt_zeta = 1,2
@@ -470,8 +505,10 @@ contains
         do ielem_z = 1,npts_z-1
             do ielem_y = 1,npts_y-1
                 do ielem_x = 1,npts_x-1
-                    connectivity(ielem,1) = ielem
-                    connectivity(ielem,2) = 1       !linear
+                    call connectivity%data(ielem)%init(1)
+                    connectivity%data(ielem)%data(1) = 1        ! idomain
+                    connectivity%data(ielem)%data(2) = ielem    ! ielement
+                    connectivity%data(ielem)%data(3) = 1        ! mapping
 
                     xstart = 1 + (ielem_x-1)
                     ystart = 1 + (ielem_y-1)
@@ -483,7 +520,8 @@ contains
                         do ipt_y = ystart,(ystart+1)
                             do ipt_x = xstart,(xstart+1)
                                 ipt = ipt_x  +  (ipt_y-1)*npts_x  +  (ipt_z-1)*(npts_x*npts_y)     
-                                connectivity(ielem,2+ipt_elem) = ipt
+                                !connectivity(ielem,2+ipt_elem) = ipt
+                                call connectivity%data(ielem)%set_element_node(ipt_elem, ipt)
                                 ipt_elem = ipt_elem + 1
                             end do
                         end do
@@ -522,7 +560,7 @@ contains
     !---------------------------------------------------------------------
     subroutine meshgen_3x3x3_linear(nodes,connectivity)
         type(point_t),  allocatable,    intent(inout)   :: nodes(:)
-        integer(ik),    allocatable,    intent(inout)   :: connectivity(:,:)
+        type(domain_connectivity_t),    intent(inout)   :: connectivity
 
         integer(ik) :: ipt_xi, ipt_eta, ipt_zeta, ipt, ierr, npts_x, npts_y, npts_z, npts, nelem, npts_element
         integer(ik) :: ielem_x, ielem_y, ielem_z, ipt_x, ipt_y, ipt_z, ipt_elem, ielem, xstart, ystart, zstart
@@ -573,8 +611,14 @@ contains
         npts = npts_x*npts_y*npts_z
         nelem = (npts_x-1)*(npts_y-1)*(npts_z-1)
         npts_element = 8    !linear
-        allocate(nodes(npts), connectivity(nelem,2+npts_element), stat=ierr)
+
+
+        !allocate(nodes(npts), connectivity(nelem,2+npts_element), stat=ierr)
+        allocate(nodes(npts), stat=ierr)
         if (ierr /= 0) call AllocationError
+
+        call connectivity%init(nelem,npts)
+
 
         ipt = 1
         do ipt_zeta = 1,4
@@ -591,8 +635,10 @@ contains
         do ielem_z = 1,npts_z-1
             do ielem_y = 1,npts_y-1
                 do ielem_x = 1,npts_x-1
-                    connectivity(ielem,1) = ielem
-                    connectivity(ielem,2) = 1       !linear
+                    call connectivity%data(ielem)%init(1)
+                    connectivity%data(ielem)%data(1) = 1        ! idomain
+                    connectivity%data(ielem)%data(2) = ielem    ! ielement
+                    connectivity%data(ielem)%data(3) = 1        ! mapping
 
                     xstart = 1 + (ielem_x-1)
                     ystart = 1 + (ielem_y-1)
@@ -604,7 +650,8 @@ contains
                         do ipt_y = ystart,(ystart+1)
                             do ipt_x = xstart,(xstart+1)
                                 ipt = ipt_x  +  (ipt_y-1)*npts_x  +  (ipt_z-1)*(npts_x*npts_y)     
-                                connectivity(ielem,2+ipt_elem) = ipt
+                                !connectivity(ielem,2+ipt_elem) = ipt
+                                call connectivity%data(ielem)%set_element_node(ipt_elem, ipt)
                                 ipt_elem = ipt_elem + 1
                             end do
                         end do
@@ -642,7 +689,7 @@ contains
     !---------------------------------------------------------------------
     subroutine meshgen_3x3x3_unit_linear(nodes,connectivity)
         type(point_t),  allocatable,    intent(inout)   :: nodes(:)
-        integer(ik),    allocatable,    intent(inout)   :: connectivity(:,:)
+        type(domain_connectivity_t),    intent(inout)   :: connectivity
 
         integer(ik) :: ipt_xi, ipt_eta, ipt_zeta, ipt, ierr, npts_x, npts_y, npts_z, npts, nelem, npts_element
         integer(ik) :: ielem_x, ielem_y, ielem_z, ipt_x, ipt_y, ipt_z, ipt_elem, ielem, xstart, ystart, zstart
@@ -693,8 +740,15 @@ contains
         npts = npts_x*npts_y*npts_z
         nelem = (npts_x-1)*(npts_y-1)*(npts_z-1)
         npts_element = 8    !linear
-        allocate(nodes(npts), connectivity(nelem,2+npts_element), stat=ierr)
+
+        !allocate(nodes(npts), connectivity(nelem,2+npts_element), stat=ierr)
+        allocate(nodes(npts), stat=ierr)
         if (ierr /= 0) call AllocationError
+
+        call connectivity%init(nelem,npts)
+
+
+
 
         ipt = 1
         do ipt_zeta = 1,4
@@ -713,8 +767,10 @@ contains
         do ielem_z = 1,npts_z-1
             do ielem_y = 1,npts_y-1
                 do ielem_x = 1,npts_x-1
-                    connectivity(ielem,1) = ielem
-                    connectivity(ielem,2) = 1       !linear
+                    call connectivity%data(ielem)%init(1)
+                    connectivity%data(ielem)%data(1) = 1        ! idomain
+                    connectivity%data(ielem)%data(2) = ielem    ! ielement
+                    connectivity%data(ielem)%data(3) = 1        ! mapping
 
                     xstart = 1 + (ielem_x-1)
                     ystart = 1 + (ielem_y-1)
@@ -726,7 +782,8 @@ contains
                         do ipt_y = ystart,(ystart+1)
                             do ipt_x = xstart,(xstart+1)
                                 ipt = ipt_x  +  (ipt_y-1)*npts_x  +  (ipt_z-1)*(npts_x*npts_y)     
-                                connectivity(ielem,2+ipt_elem) = ipt
+                                !connectivity(ielem,2+ipt_elem) = ipt
+                                call connectivity%data(ielem)%set_element_node(ipt_elem, ipt)
                                 ipt_elem = ipt_elem + 1
                             end do
                         end do
@@ -775,7 +832,7 @@ contains
     !---------------------------------------------------------------------
     subroutine meshgen_3x3x1_linear(nodes,connectivity)
         type(point_t),  allocatable,    intent(inout)   :: nodes(:)
-        integer(ik),    allocatable,    intent(inout)   :: connectivity(:,:)
+        type(domain_connectivity_t),    intent(inout)   :: connectivity
 
         integer(ik) :: ipt_xi, ipt_eta, ipt_zeta, ipt, ierr, npts_x, npts_y, npts_z, npts, nelem, npts_element
         integer(ik) :: ielem_x, ielem_y, ielem_z, ipt_x, ipt_y, ipt_z, ipt_elem, ielem, xstart, ystart, zstart
@@ -820,8 +877,14 @@ contains
         npts = npts_x*npts_y*npts_z
         nelem = (npts_x-1)*(npts_y-1)*(npts_z-1)
         npts_element = 8    !linear
-        allocate(nodes(npts), connectivity(nelem,2+npts_element), stat=ierr)
+
+        !allocate(nodes(npts), connectivity(nelem,2+npts_element), stat=ierr)
+        allocate(nodes(npts), stat=ierr)
         if (ierr /= 0) call AllocationError
+
+        call connectivity%init(nelem,npts)
+
+
 
         ipt = 1
         do ipt_zeta = 1,2
@@ -838,8 +901,10 @@ contains
         do ielem_z = 1,npts_z-1
             do ielem_y = 1,npts_y-1
                 do ielem_x = 1,npts_x-1
-                    connectivity(ielem,1) = ielem
-                    connectivity(ielem,2) = 1       !linear
+                    call connectivity%data(ielem)%init(1)
+                    connectivity%data(ielem)%data(1) = 1        ! idomain
+                    connectivity%data(ielem)%data(2) = ielem    ! ielement
+                    connectivity%data(ielem)%data(3) = 1        ! mapping
 
                     xstart = 1 + (ielem_x-1)
                     ystart = 1 + (ielem_y-1)
@@ -851,7 +916,8 @@ contains
                         do ipt_y = ystart,(ystart+1)
                             do ipt_x = xstart,(xstart+1)
                                 ipt = ipt_x  +  (ipt_y-1)*npts_x  +  (ipt_z-1)*(npts_x*npts_y)     
-                                connectivity(ielem,2+ipt_elem) = ipt
+                                !connectivity(ielem,2+ipt_elem) = ipt
+                                call connectivity%data(ielem)%set_element_node(ipt_elem, ipt)
                                 ipt_elem = ipt_elem + 1
                             end do
                         end do
@@ -889,7 +955,7 @@ contains
     !---------------------------------------------------------------------
     subroutine meshgen_4x1x1_linear(nodes,connectivity)
         type(point_t),  allocatable,    intent(inout)   :: nodes(:)
-        integer(ik),    allocatable,    intent(inout)   :: connectivity(:,:)
+        type(domain_connectivity_t),    intent(inout)   :: connectivity
 
         integer(ik) :: ipt_xi, ipt_eta, ipt_zeta, ipt, ierr, npts_x, npts_y, npts_z, npts, nelem, npts_element
         integer(ik) :: ielem_x, ielem_y, ielem_z, ipt_x, ipt_y, ipt_z, ipt_elem, ielem, xstart, ystart, zstart
@@ -932,8 +998,13 @@ contains
         npts = npts_x*npts_y*npts_z
         nelem = (npts_x-1)*(npts_y-1)*(npts_z-1)
         npts_element = 8    !linear
-        allocate(nodes(npts), connectivity(nelem,2+npts_element), stat=ierr)
+
+        !allocate(nodes(npts), connectivity(nelem,2+npts_element), stat=ierr)
+        allocate(nodes(npts), stat=ierr)
         if (ierr /= 0) call AllocationError
+        call connectivity%init(nelem,npts)
+
+
 
         ipt = 1
         do ipt_zeta = 1,2
@@ -951,8 +1022,10 @@ contains
         do ielem_z = 1,npts_z-1
             do ielem_y = 1,npts_y-1
                 do ielem_x = 1,npts_x-1
-                    connectivity(ielem,1) = ielem
-                    connectivity(ielem,2) = 1       !linear
+                    call connectivity%data(ielem)%init(1)
+                    connectivity%data(ielem)%data(1) = 1        ! idomain
+                    connectivity%data(ielem)%data(2) = ielem    ! ielement
+                    connectivity%data(ielem)%data(3) = 1        ! mapping
 
                     xstart = 1 + (ielem_x-1)
                     ystart = 1 + (ielem_y-1)
@@ -964,7 +1037,8 @@ contains
                         do ipt_y = ystart,(ystart+1)
                             do ipt_x = xstart,(xstart+1)
                                 ipt = ipt_x  +  (ipt_y-1)*npts_x  +  (ipt_z-1)*(npts_x*npts_y)     
-                                connectivity(ielem,2+ipt_elem) = ipt
+                                !connectivity(ielem,2+ipt_elem) = ipt
+                                call connectivity%data(ielem)%set_element_node(ipt_elem, ipt)
                                 ipt_elem = ipt_elem + 1
                             end do
                         end do
@@ -998,7 +1072,7 @@ contains
     !---------------------------------------------------------------------
     subroutine meshgen_2x1x1_linear(nodes,connectivity)
         type(point_t),  allocatable,    intent(inout)   :: nodes(:)
-        integer(ik),    allocatable,    intent(inout)   :: connectivity(:,:)
+        type(domain_connectivity_t),    intent(inout)   :: connectivity
 
         integer(ik) :: ipt_xi, ipt_eta, ipt_zeta, ipt, ierr, npts_x, npts_y, npts_z, npts, nelem, npts_element
         integer(ik) :: ielem_x, ielem_y, ielem_z, ipt_x, ipt_y, ipt_z, ipt_elem, ielem, xstart, ystart, zstart
@@ -1041,8 +1115,14 @@ contains
         npts = npts_x*npts_y*npts_z
         nelem = (npts_x-1)*(npts_y-1)*(npts_z-1)
         npts_element = 8    !linear
-        allocate(nodes(npts), connectivity(nelem,2+npts_element), stat=ierr)
+
+        !allocate(nodes(npts), connectivity(nelem,2+npts_element), stat=ierr)
+        allocate(nodes(npts), stat=ierr)
         if (ierr /= 0) call AllocationError
+        call connectivity%init(nelem,npts)
+
+
+
 
         ipt = 1
         do ipt_zeta = 1,2
@@ -1059,8 +1139,10 @@ contains
         do ielem_z = 1,npts_z-1
             do ielem_y = 1,npts_y-1
                 do ielem_x = 1,npts_x-1
-                    connectivity(ielem,1) = ielem
-                    connectivity(ielem,2) = 1       !linear
+                    call connectivity%data(ielem)%init(1)
+                    connectivity%data(ielem)%data(1) = 1        ! idomain
+                    connectivity%data(ielem)%data(2) = ielem    ! ielement
+                    connectivity%data(ielem)%data(3) = 1        ! mapping
 
                     xstart = 1 + (ielem_x-1)
                     ystart = 1 + (ielem_y-1)
@@ -1072,7 +1154,8 @@ contains
                         do ipt_y = ystart,(ystart+1)
                             do ipt_x = xstart,(xstart+1)
                                 ipt = ipt_x  +  (ipt_y-1)*npts_x  +  (ipt_z-1)*(npts_x*npts_y)     
-                                connectivity(ielem,2+ipt_elem) = ipt
+                                !connectivity(ielem,2+ipt_elem) = ipt
+                                call connectivity%data(ielem)%set_element_node(ipt_elem, ipt)
                                 ipt_elem = ipt_elem + 1
                             end do
                         end do
@@ -1118,7 +1201,7 @@ contains
     !---------------------------------------------------------------------
     subroutine meshgen_3x1x1_linear(nodes,connectivity)
         type(point_t),  allocatable,    intent(inout)   :: nodes(:)
-        integer(ik),    allocatable,    intent(inout)   :: connectivity(:,:)
+        type(domain_connectivity_t),    intent(inout)   :: connectivity
 
         integer(ik) :: ipt_xi, ipt_eta, ipt_zeta, ipt, ierr, npts_x, npts_y, npts_z, npts, nelem, npts_element
         integer(ik) :: ielem_x, ielem_y, ielem_z, ipt_x, ipt_y, ipt_z, ipt_elem, ielem, xstart, ystart, zstart
@@ -1161,8 +1244,10 @@ contains
         npts = npts_x*npts_y*npts_z
         nelem = (npts_x-1)*(npts_y-1)*(npts_z-1)
         npts_element = 8    !linear
-        allocate(nodes(npts), connectivity(nelem,2+npts_element), stat=ierr)
+        !allocate(nodes(npts), connectivity(nelem,2+npts_element), stat=ierr)
+        allocate(nodes(npts), stat=ierr)
         if (ierr /= 0) call AllocationError
+        call connectivity%init(nelem,npts)
 
         ipt = 1
         do ipt_zeta = 1,2
@@ -1179,8 +1264,10 @@ contains
         do ielem_z = 1,npts_z-1
             do ielem_y = 1,npts_y-1
                 do ielem_x = 1,npts_x-1
-                    connectivity(ielem,1) = ielem
-                    connectivity(ielem,2) = 1       !linear
+                    call connectivity%data(ielem)%init(1)
+                    connectivity%data(ielem)%data(1) = 1        ! idomain
+                    connectivity%data(ielem)%data(2) = ielem    ! ielement
+                    connectivity%data(ielem)%data(3) = 1        ! mapping
 
                     xstart = 1 + (ielem_x-1)
                     ystart = 1 + (ielem_y-1)
@@ -1192,7 +1279,8 @@ contains
                         do ipt_y = ystart,(ystart+1)
                             do ipt_x = xstart,(xstart+1)
                                 ipt = ipt_x  +  (ipt_y-1)*npts_x  +  (ipt_z-1)*(npts_x*npts_y)     
-                                connectivity(ielem,2+ipt_elem) = ipt
+                                !connectivity(ielem,2+ipt_elem) = ipt
+                                call connectivity%data(ielem)%set_element_node(ipt_elem, ipt)
                                 ipt_elem = ipt_elem + 1
                             end do
                         end do
@@ -1234,7 +1322,7 @@ contains
     !---------------------------------------------------------------------
     subroutine meshgen_40x15x1_linear(nodes,connectivity)
         type(point_t),  allocatable,    intent(inout)   :: nodes(:)
-        integer(ik),    allocatable,    intent(inout)   :: connectivity(:,:)
+        type(domain_connectivity_t),    intent(inout)   :: connectivity
 
         integer(ik) :: ipt_xi, ipt_eta, ipt_zeta, ipt, ierr, npts_x, npts_y, npts_z, npts, nelem, npts_element
         integer(ik) :: ielem_x, ielem_y, ielem_z, ipt_x, ipt_y, ipt_z, ipt_elem, ielem, xstart, ystart, zstart
@@ -1255,8 +1343,10 @@ contains
         npts  = npts_x*npts_y*npts_z
         nelem = (npts_x-1)*(npts_y-1)*(npts_z-1)
         npts_element = 8    !linear
-        allocate(nodes(npts), connectivity(nelem,2+npts_element), stat=ierr)
+        !allocate(nodes(npts), connectivity(nelem,2+npts_element), stat=ierr)
+        allocate(nodes(npts), stat=ierr)
         if (ierr /= 0) call AllocationError
+        call connectivity%init(nelem,npts)
 
         ipt = 1
         z = ZERO
@@ -1282,8 +1372,10 @@ contains
         do ielem_z = 1,npts_z-1
             do ielem_y = 1,npts_y-1
                 do ielem_x = 1,npts_x-1
-                    connectivity(ielem,1) = ielem
-                    connectivity(ielem,2) = 1       !linear
+                    call connectivity%data(ielem)%init(1)
+                    connectivity%data(ielem)%data(1) = 1        ! idomain
+                    connectivity%data(ielem)%data(2) = ielem    ! ielement
+                    connectivity%data(ielem)%data(3) = 1        ! mapping
 
                     xstart = 1 + (ielem_x-1)
                     ystart = 1 + (ielem_y-1)
@@ -1295,7 +1387,8 @@ contains
                         do ipt_y = ystart,(ystart+1)
                             do ipt_x = xstart,(xstart+1)
                                 ipt = ipt_x  +  (ipt_y-1)*npts_x  +  (ipt_z-1)*(npts_x*npts_y)     
-                                connectivity(ielem,2+ipt_elem) = ipt
+                                !connectivity(ielem,2+ipt_elem) = ipt
+                                call connectivity%data(ielem)%set_element_node(ipt_elem, ipt)
                                 ipt_elem = ipt_elem + 1
                             end do
                         end do
@@ -1330,7 +1423,7 @@ contains
     !---------------------------------------------------------------------
     subroutine meshgen_15x15x1_linear(nodes,connectivity)
         type(point_t),  allocatable,    intent(inout)   :: nodes(:)
-        integer(ik),    allocatable,    intent(inout)   :: connectivity(:,:)
+        type(domain_connectivity_t),    intent(inout)   :: connectivity
 
         integer(ik) :: ipt_xi, ipt_eta, ipt_zeta, ipt, ierr, npts_x, npts_y, npts_z, npts, nelem, npts_element
         integer(ik) :: ielem_x, ielem_y, ielem_z, ipt_x, ipt_y, ipt_z, ipt_elem, ielem, xstart, ystart, zstart
@@ -1351,8 +1444,10 @@ contains
         npts  = npts_x*npts_y*npts_z
         nelem = (npts_x-1)*(npts_y-1)*(npts_z-1)
         npts_element = 8    !linear
-        allocate(nodes(npts), connectivity(nelem,2+npts_element), stat=ierr)
+        !allocate(nodes(npts), connectivity(nelem,2+npts_element), stat=ierr)
+        allocate(nodes(npts), stat=ierr)
         if (ierr /= 0) call AllocationError
+        call connectivity%init(nelem,npts)
 
         ipt = 1
         z = ZERO
@@ -1379,8 +1474,10 @@ contains
         do ielem_z = 1,npts_z-1
             do ielem_y = 1,npts_y-1
                 do ielem_x = 1,npts_x-1
-                    connectivity(ielem,1) = ielem
-                    connectivity(ielem,2) = 1       !linear
+                    call connectivity%data(ielem)%init(1)
+                    connectivity%data(ielem)%data(1) = 1        ! idomain
+                    connectivity%data(ielem)%data(2) = ielem    ! ielement
+                    connectivity%data(ielem)%data(3) = 1        ! mapping
 
                     xstart = 1 + (ielem_x-1)
                     ystart = 1 + (ielem_y-1)
@@ -1392,7 +1489,8 @@ contains
                         do ipt_y = ystart,(ystart+1)
                             do ipt_x = xstart,(xstart+1)
                                 ipt = ipt_x  +  (ipt_y-1)*npts_x  +  (ipt_z-1)*(npts_x*npts_y)     
-                                connectivity(ielem,2+ipt_elem) = ipt
+                                !connectivity(ielem,2+ipt_elem) = ipt
+                                call connectivity%data(ielem)%set_element_node(ipt_elem, ipt)
                                 ipt_elem = ipt_elem + 1
                             end do
                         end do
@@ -1426,7 +1524,7 @@ contains
     !---------------------------------------------------------------------
     subroutine meshgen_15x15x2_linear(nodes,connectivity)
         type(point_t),  allocatable,    intent(inout)   :: nodes(:)
-        integer(ik),    allocatable,    intent(inout)   :: connectivity(:,:)
+        type(domain_connectivity_t),    intent(inout)   :: connectivity
 
         integer(ik) :: ipt_xi, ipt_eta, ipt_zeta, ipt, ierr, npts_x, npts_y, npts_z, npts, nelem, npts_element
         integer(ik) :: ielem_x, ielem_y, ielem_z, ipt_x, ipt_y, ipt_z, ipt_elem, ielem, xstart, ystart, zstart
@@ -1447,8 +1545,10 @@ contains
         npts  = npts_x*npts_y*npts_z
         nelem = (npts_x-1)*(npts_y-1)*(npts_z-1)
         npts_element = 8    !linear
-        allocate(nodes(npts), connectivity(nelem,2+npts_element), stat=ierr)
+        !allocate(nodes(npts), connectivity(nelem,2+npts_element), stat=ierr)
+        allocate(nodes(npts), stat=ierr)
         if (ierr /= 0) call AllocationError
+        call connectivity%init(nelem,npts)
 
         ipt = 1
         z = ZERO
@@ -1476,8 +1576,10 @@ contains
         do ielem_z = 1,npts_z-1
             do ielem_y = 1,npts_y-1
                 do ielem_x = 1,npts_x-1
-                    connectivity(ielem,1) = ielem
-                    connectivity(ielem,2) = 1       !linear
+                    call connectivity%data(ielem)%init(1)
+                    connectivity%data(ielem)%data(1) = 1        ! idomain
+                    connectivity%data(ielem)%data(2) = ielem    ! ielement
+                    connectivity%data(ielem)%data(3) = 1        ! mapping
 
                     xstart = 1 + (ielem_x-1)
                     ystart = 1 + (ielem_y-1)
@@ -1489,7 +1591,8 @@ contains
                         do ipt_y = ystart,(ystart+1)
                             do ipt_x = xstart,(xstart+1)
                                 ipt = ipt_x  +  (ipt_y-1)*npts_x  +  (ipt_z-1)*(npts_x*npts_y)     
-                                connectivity(ielem,2+ipt_elem) = ipt
+                                !connectivity(ielem,2+ipt_elem) = ipt
+                                call connectivity%data(ielem)%set_element_node(ipt_elem, ipt)
                                 ipt_elem = ipt_elem + 1
                             end do
                         end do
@@ -1534,7 +1637,7 @@ contains
     !---------------------------------------------------------------------
     subroutine meshgen_15x15x3_linear(nodes,connectivity)
         type(point_t),  allocatable,    intent(inout)   :: nodes(:)
-        integer(ik),    allocatable,    intent(inout)   :: connectivity(:,:)
+        type(domain_connectivity_t),    intent(inout)   :: connectivity
 
         integer(ik) :: ipt_xi, ipt_eta, ipt_zeta, ipt, ierr, npts_x, npts_y, npts_z, npts, nelem, npts_element
         integer(ik) :: ielem_x, ielem_y, ielem_z, ipt_x, ipt_y, ipt_z, ipt_elem, ielem, xstart, ystart, zstart
@@ -1555,8 +1658,10 @@ contains
         npts  = npts_x*npts_y*npts_z
         nelem = (npts_x-1)*(npts_y-1)*(npts_z-1)
         npts_element = 8    !linear
-        allocate(nodes(npts), connectivity(nelem,2+npts_element), stat=ierr)
+        !allocate(nodes(npts), connectivity(nelem,2+npts_element), stat=ierr)
+        allocate(nodes(npts), stat=ierr)
         if (ierr /= 0) call AllocationError
+        call connectivity%init(nelem,npts)
 
         ipt = 1
         z = ZERO
@@ -1582,8 +1687,10 @@ contains
         do ielem_z = 1,npts_z-1
             do ielem_y = 1,npts_y-1
                 do ielem_x = 1,npts_x-1
-                    connectivity(ielem,1) = ielem
-                    connectivity(ielem,2) = 1       !linear
+                    call connectivity%data(ielem)%init(1)
+                    connectivity%data(ielem)%data(1) = 1        ! idomain
+                    connectivity%data(ielem)%data(2) = ielem    ! ielement
+                    connectivity%data(ielem)%data(3) = 1        ! mapping
 
                     xstart = 1 + (ielem_x-1)
                     ystart = 1 + (ielem_y-1)
@@ -1595,7 +1702,8 @@ contains
                         do ipt_y = ystart,(ystart+1)
                             do ipt_x = xstart,(xstart+1)
                                 ipt = ipt_x  +  (ipt_y-1)*npts_x  +  (ipt_z-1)*(npts_x*npts_y)     
-                                connectivity(ielem,2+ipt_elem) = ipt
+                                !connectivity(ielem,2+ipt_elem) = ipt
+                                call connectivity%data(ielem)%set_element_node(ipt_elem, ipt)
                                 ipt_elem = ipt_elem + 1
                             end do
                         end do
@@ -1611,29 +1719,6 @@ contains
 
     end subroutine meshgen_15x15x3_linear
     !**************************************************************************
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 

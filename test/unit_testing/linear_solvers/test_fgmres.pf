@@ -1,25 +1,26 @@
 @Test
 subroutine test_fgmres_solve()
     use pfunit_mod
-    use mod_kinds,          only: rk, ik
-    use mod_constants,      only: ZERO, ONE, TWO, THREE, FOUR, DIAG, XI_MIN, XI_MAX, &
-                                  IO_DESTINATION
+    use mod_kinds,                  only: rk, ik
+    use mod_constants,              only: ZERO, ONE, TWO, THREE, FOUR, DIAG, XI_MIN, XI_MAX, &
+                                          IO_DESTINATION
 
-    use type_chidg,         only: chidg_t
-    use type_point,         only: point_t
+    use type_chidg,                 only: chidg_t
+    use type_point,                 only: point_t
+    use type_domain_connectivity,   only: domain_connectivity_t
 
-    use type_fgmres,        only: fgmres_t
-    use precon_identity,    only: precon_identity_t
+    use type_fgmres,                only: fgmres_t
+    use precon_identity,            only: precon_identity_t
 
     use type_chidgMatrix
     use type_chidgVector
 
-    use mod_testutils,      only: meshgen
+    use mod_testutils,              only: meshgen
     implicit none
 
     type(chidg_t)               :: chidg
     type(point_t),  allocatable :: nodes(:)
-    integer(ik),    allocatable :: connectivity(:,:)
+    type(domain_connectivity_t) :: connectivity
 
     real(rk)    :: tol
     integer(ik) :: nterms_c, nterms_s, idomain, spacedim
@@ -60,6 +61,7 @@ subroutine test_fgmres_solve()
     !
     call chidg%data%add_domain('D_01',nodes,connectivity,spacedim,nterms_c,'Scalar')
     call chidg%initialize_solution_domains(nterms_s)
+    call chidg%init('communication')
     call chidg%initialize_solution_solver()
 
 
@@ -128,6 +130,6 @@ subroutine test_fgmres_solve()
     !
     ! Close ChiDG interface
     !
-    call chidg%close()
+    call chidg%close('core')
 
 end subroutine test_fgmres_solve

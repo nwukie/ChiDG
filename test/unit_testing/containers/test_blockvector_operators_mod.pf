@@ -1,12 +1,13 @@
 module test_blockvector_operators_mod
     use pfunit_mod
-    use type_chidg,         only: chidg_t
-    use mod_kinds,          only: rk,ik
-    use mod_constants,      only: ZERO, ONE, TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT, NINE, TEN, &
-                                  XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX, IO_DESTINATION
-    use type_point,         only: point_t
+    use type_chidg,                 only: chidg_t
+    use mod_kinds,                  only: rk,ik
+    use mod_constants,              only: ZERO, ONE, TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT, NINE, TEN, &
+                                          XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX, IO_DESTINATION
+    use type_point,                 only: point_t
     use type_blockvector
-    use mod_testutils,      only: meshgen
+    use type_domain_connectivity,   only: domain_connectivity_t
+    use mod_testutils,              only: meshgen
     implicit none
 
     public  :: test_blockvector_operators
@@ -29,7 +30,7 @@ contains
         class(test_blockvector_operators),    intent(inout)   :: this
         integer(ik)                                 :: nterms_s, ivar, nterms_c, spacedim
         type(point_t),  allocatable                 :: nodes(:)
-        integer(ik),    allocatable                 :: connectivity(:,:)
+        type(domain_connectivity_t)                 :: connectivity
         
         IO_DESTINATION = 'file'
         
@@ -82,7 +83,7 @@ contains
         !
         ! Close ChiDG interface
         !
-        call this%chidg%close()
+        call this%chidg%close('core')
     end subroutine
 
 

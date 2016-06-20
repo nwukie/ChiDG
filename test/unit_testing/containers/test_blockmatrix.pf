@@ -5,20 +5,21 @@
 @Test
 subroutine test_blockmatrix__store_1eq_8terms()
     use pfunit_mod
-    use mod_kinds,          only: rk,ik
-    use mod_constants,      only: ZERO, ONE, TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT
-    use type_chidg,         only: chidg_t
-    use type_mesh,          only: mesh_t
-    use type_point,         only: point_t
-    use type_blockmatrix,   only: blockmatrix_t
-    use mod_testutils,      only: meshgen
+    use mod_kinds,                  only: rk,ik
+    use mod_constants,              only: ZERO, ONE, TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT
+    use type_chidg,                 only: chidg_t
+    use type_mesh,                  only: mesh_t
+    use type_point,                 only: point_t
+    use type_blockmatrix,           only: blockmatrix_t
+    use type_domain_connectivity,   only: domain_connectivity_t
+    use mod_testutils,              only: meshgen
     use DNAD_D
     
     implicit none
     type(chidg_t)               :: chidg
     type(mesh_t)                :: mesh
     type(point_t),  allocatable :: nodes(:)
-    integer(ik),    allocatable :: connectivity(:,:)
+    type(domain_connectivity_t) :: connectivity
     type(blockmatrix_t)         :: bmat
     type(AD_D)                  :: integral(8)
     integer(ik)                 :: ielem, iblk, ivar, nderiv, i, neqns, nterms_c, nterms_s, idomain, spacedim
@@ -37,10 +38,9 @@ subroutine test_blockmatrix__store_1eq_8terms()
     nterms_c = 8
     nterms_s = 8
     call meshgen('3x3x3',nodes,connectivity)
-    !call mesh%init_geom(idomain,spacedim,nterms_c,pts)
     call mesh%init_geom(idomain,spacedim,nterms_c,nodes,connectivity)
     call mesh%init_sol(neqns,nterms_s)    ! Initialize numerics
-
+    call mesh%init_comm_local()
 
 
 
@@ -123,7 +123,7 @@ subroutine test_blockmatrix__store_1eq_8terms()
     !
     ! Close ChiDG interface
     !
-    call chidg%close()
+    call chidg%close('core')
 
 end subroutine
 
@@ -138,20 +138,21 @@ end subroutine
 @Test
 subroutine test_blockmatrix__store_2eq_8terms()
     use pfunit_mod
-    use mod_kinds,          only: rk,ik
-    use mod_constants,      only: ONE, TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT
-    use type_chidg,         only: chidg_t
-    use type_mesh,          only: mesh_t
-    use type_point,         only: point_t
-    use type_blockmatrix,   only: blockmatrix_t
-    use mod_testutils,      only: meshgen
+    use mod_kinds,                  only: rk,ik
+    use mod_constants,              only: ONE, TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT
+    use type_chidg,                 only: chidg_t
+    use type_mesh,                  only: mesh_t
+    use type_point,                 only: point_t
+    use type_blockmatrix,           only: blockmatrix_t
+    use type_domain_connectivity,   only: domain_connectivity_t
+    use mod_testutils,              only: meshgen
     use DNAD_D
     
     implicit none
     type(chidg_t)               :: chidg
     type(mesh_t)                :: mesh    
     type(point_t),  allocatable :: nodes(:)
-    integer(ik),    allocatable :: connectivity(:,:)
+    type(domain_connectivity_t) :: connectivity
     type(blockmatrix_t)         :: bmat
     type(AD_D)                  :: integral(8)
     integer(ik)                 :: ielem, iblk, ivar, nderiv, i, neqns, nterms_c, nterms_s, idomain, spacedim
@@ -170,6 +171,7 @@ subroutine test_blockmatrix__store_2eq_8terms()
     call meshgen('3x3x3',nodes,connectivity)                            ! Generate points for 3x3x3 mesh
     call mesh%init_geom(idomain,spacedim,nterms_c,nodes,connectivity)   ! Initialize geometry
     call mesh%init_sol(neqns,nterms_s)                                  ! Initialize numerics
+    call mesh%init_comm_local()
 
 
     !
@@ -247,7 +249,7 @@ subroutine test_blockmatrix__store_2eq_8terms()
     !
     ! Close ChiDG interface
     !
-    call chidg%close()
+    call chidg%close('core')
 end subroutine
 
 
@@ -265,20 +267,21 @@ end subroutine
 @Test
 subroutine test_blockmatrix__clear_1eq_8terms()
     use pfunit_mod
-    use mod_kinds,          only: rk,ik
-    use mod_constants,      only: ZERO, ONE, TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT
-    use type_chidg,         only: chidg_t
-    use type_mesh,          only: mesh_t
-    use type_point,         only: point_t
-    use type_blockmatrix,   only: blockmatrix_t
-    use mod_testutils,      only: meshgen
+    use mod_kinds,                  only: rk,ik
+    use mod_constants,              only: ZERO, ONE, TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT
+    use type_chidg,                 only: chidg_t
+    use type_mesh,                  only: mesh_t
+    use type_point,                 only: point_t
+    use type_blockmatrix,           only: blockmatrix_t
+    use type_domain_connectivity,   only: domain_connectivity_t
+    use mod_testutils,              only: meshgen
     use DNAD_D
     
     implicit none
     type(chidg_t)               :: chidg
     type(mesh_t)                :: mesh    
     type(point_t),  allocatable :: nodes(:)
-    integer(ik),    allocatable :: connectivity(:,:)
+    type(domain_connectivity_t) :: connectivity
     type(blockmatrix_t)         :: bmat
     type(AD_D)                  :: integral(8)
     integer(ik)                 :: ielem, iblk, ivar, nderiv, i, neqns, nterms_c, nterms_s, idomain, spacedim
@@ -301,6 +304,7 @@ subroutine test_blockmatrix__clear_1eq_8terms()
     call meshgen('3x3x3',nodes,connectivity)                            ! Generate points for 3x3x3 mesh
     call mesh%init_geom(idomain,spacedim,nterms_c,nodes,connectivity)   ! Initialize geometry
     call mesh%init_sol(neqns,nterms_s)                                  ! Initialize numerics
+    call mesh%init_comm_local()
 
 
 
@@ -401,7 +405,7 @@ subroutine test_blockmatrix__clear_1eq_8terms()
     !
     ! Close ChiDG interface
     !
-    call chidg%close()
+    call chidg%close('core')
     
 end subroutine
 

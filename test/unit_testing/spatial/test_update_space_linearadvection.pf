@@ -66,9 +66,11 @@ subroutine test_update_space_linearadvection()
     !
     ! Initialize solution data storage
     !
+    call chidgA%init('communication')
     call chidgA%init('chimera')
     call chidgA%initialize_solution_solver()
 
+    call chidgB%init('communication')
     call chidgB%init('chimera')
     call chidgB%initialize_solution_solver()
 
@@ -282,8 +284,8 @@ subroutine test_update_space_linearadvection()
     !
     ! Close ChiDG interface
     !
-    call chidgA%close()
-    call chidgB%close()
+    call chidgA%close('core')
+    call chidgB%close('core')
 
 
 

@@ -1,13 +1,14 @@
 module test_ILU0_mod
     use pfunit_mod
-    use mod_kinds,          only: rk, ik
-    use mod_constants,      only: DIAG, XI_MIN, XI_MAX, ONE, TWO, THREE, FIVE, TEN, IO_DESTINATION
-    use type_chidg,         only: chidg_t
-    use type_point,         only: point_t
-    use type_chidgVector,   only: chidgVector_t
-    use precon_ILU0,        only: precon_ILU0_t
+    use mod_kinds,                  only: rk, ik
+    use mod_constants,              only: DIAG, XI_MIN, XI_MAX, ONE, TWO, THREE, FIVE, TEN, IO_DESTINATION
+    use type_chidg,                 only: chidg_t
+    use type_point,                 only: point_t
+    use type_chidgVector,           only: chidgVector_t
+    use type_domain_connectivity,   only: domain_connectivity_t
+    use precon_ILU0,                only: precon_ILU0_t
 
-    use mod_testutils,      only: meshgen
+    use mod_testutils,              only: meshgen
     implicit none
 
 
@@ -40,7 +41,7 @@ contains
         class(test_preconditioner_ILU0),    intent(inout)   :: this
 
         type(point_t),  allocatable :: nodes(:)
-        integer(ik),    allocatable :: connectivity(:,:)
+        type(domain_connectivity_t) :: connectivity
         integer(ik)                 :: nterms_c, nterms_s, spacedim
 
         
@@ -75,6 +76,7 @@ contains
         ! Call sdata initialization
         !
         call this%chidg%initialize_solution_domains(nterms_s)
+        call this%chidg%init('communication')
         call this%chidg%initialize_solution_solver()
 
 
@@ -112,7 +114,7 @@ contains
         class(test_preconditioner_ILU0),    intent(inout)   :: this
 
 
-
+        call this%chidg%close('core')
 
     end subroutine
 

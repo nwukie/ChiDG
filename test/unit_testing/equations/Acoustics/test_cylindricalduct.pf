@@ -30,7 +30,7 @@ subroutine test_cylindricalduct()
 
 
     ! Close ChiDG
-    call chidg%close()
+    call chidg%close('core')
 
 
 end subroutine test_cylindricalduct

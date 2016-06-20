@@ -50,6 +50,7 @@ subroutine test_chidgMatrix_operator_mv()
 
 
     call chidg%initialize_solution_domains(nterms_s)
+    call chidg%init('communication')
 
     !
     ! Initialize ChiDG Chimera Interfaces
@@ -136,6 +137,6 @@ subroutine test_chidgMatrix_operator_mv()
     !
     ! Close ChiDG interface
     !
-    call chidg%close()
+    call chidg%close('core')
 
 end subroutine

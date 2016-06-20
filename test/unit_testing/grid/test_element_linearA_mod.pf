@@ -1,13 +1,15 @@
 module test_element_linearA_mod
     use pfunit_mod
-    use mod_kinds,      only: rk,ik
-    use mod_constants,  only: ZERO, ONE, TWO, THREE, FIVE, SIX, EIGHT, NINE, TEN, &
-                              XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX
-    use type_chidg,     only: chidg_t
-    use type_point,     only: point_t
-    use type_element,   only: element_t
-    use type_face,      only: face_t
-    use mod_io,         only: gq_rule
+    use mod_kinds,                  only: rk,ik
+    use mod_constants,              only: ZERO, ONE, TWO, THREE, FIVE, SIX, EIGHT, NINE, TEN, &
+                                          XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX
+    use type_chidg,                 only: chidg_t
+    use type_point,                 only: point_t
+    use type_element,               only: element_t
+    use type_face,                  only: face_t
+    !use type_domain_connectivity,   only: domain_connectivity_t
+    use type_element_connectivity,  only: element_connectivity_t
+    use mod_io,                     only: gq_rule
     implicit none
 
     public  :: test_element_linearA
@@ -31,10 +33,11 @@ contains
     subroutine setUp(this)
         class(test_element_linearA),    intent(inout)   :: this
         
-        integer(ik), parameter  :: npt = 8
-        type(point_t)           :: nodes(npt)
-        integer(ik)             :: connectivity(10)
-        integer(ik)             :: ftype, ineighbor, mapping, ielem, idomain, spacedim
+        integer(ik), parameter          :: npt = 8
+        type(point_t)                   :: nodes(npt)
+        type(element_connectivity_t)    :: connectivity
+        integer(ik)                     :: ftype, mapping, ielem, idomain, spacedim
+        integer(ik)                     :: ineighbor_domain_g, ineighbor_domain_l, ineighbor_element_g, ineighbor_element_l, ineighbor_proc
         
         
         gq_rule = 1 !> Set collocation quadrature for testing coordinates at quadrature points
@@ -64,27 +67,43 @@ contains
         call nodes(8)%set(5._rk, 1._rk, 1._rk)
         this%nodes = nodes
 
-        connectivity = [1,1,   1, 2, 3, 4, 5, 6, 7, 8]
+        mapping = 1
+        call connectivity%init(mapping)
+        call connectivity%set_domain_index(1)
+        call connectivity%set_element_index(1)
+        call connectivity%set_element_nodes([1, 2, 3, 4, 5, 6, 7, 8])
         
         
         !> Initialize Element geometry and Numerics
         spacedim = 3
-        mapping = 1
         idomain = 1
         ielem   = 1
-        call this%elem%init_geom(spacedim,nodes,connectivity,idomain)
+        call this%elem%init_geom(spacedim,nodes,connectivity,idomain,ielem)
         call this%elem%init_sol(2,8)    !> 2 equations, 8 terms (3*3*3)
         
         
+        !> Initialize face geometries
+        call this%faces(XI_MIN)%init_geom(XI_MIN,this%elem)
+        call this%faces(XI_MAX)%init_geom(XI_MAX,this%elem)
+        call this%faces(ETA_MIN)%init_geom(ETA_MIN,this%elem)
+        call this%faces(ETA_MAX)%init_geom(ETA_MAX,this%elem)
+        call this%faces(ZETA_MIN)%init_geom(ZETA_MIN,this%elem)
+        call this%faces(ZETA_MAX)%init_geom(ZETA_MAX,this%elem)
+
+        !> Initialize face neighbors
         ftype = 0
-        ineighbor = 0
-        !> Initialize faces for element
-        call this%faces(XI_MIN)%init_geom(XI_MIN,ftype,this%elem,ineighbor)
-        call this%faces(XI_MAX)%init_geom(XI_MAX,ftype,this%elem,ineighbor)
-        call this%faces(ETA_MIN)%init_geom(ETA_MIN,ftype,this%elem,ineighbor)
-        call this%faces(ETA_MAX)%init_geom(ETA_MAX,ftype,this%elem,ineighbor)
-        call this%faces(ZETA_MIN)%init_geom(ZETA_MIN,ftype,this%elem,ineighbor)
-        call this%faces(ZETA_MAX)%init_geom(ZETA_MAX,ftype,this%elem,ineighbor)
+        ineighbor_domain_g = 0
+        ineighbor_domain_l = 0
+        ineighbor_element_g = 0
+        ineighbor_element_l = 0
+        ineighbor_proc      = 0
+        call this%faces(XI_MIN)%init_neighbor(ftype,ineighbor_domain_g,ineighbor_domain_l,ineighbor_element_g,ineighbor_element_l,ineighbor_proc)
+        call this%faces(XI_MAX)%init_neighbor(ftype,ineighbor_domain_g,ineighbor_domain_l,ineighbor_element_g,ineighbor_element_l,ineighbor_proc)
+        call this%faces(ETA_MIN)%init_neighbor(ftype,ineighbor_domain_g,ineighbor_domain_l,ineighbor_element_g,ineighbor_element_l,ineighbor_proc)
+        call this%faces(ETA_MAX)%init_neighbor(ftype,ineighbor_domain_g,ineighbor_domain_l,ineighbor_element_g,ineighbor_element_l,ineighbor_proc)
+        call this%faces(ZETA_MIN)%init_neighbor(ftype,ineighbor_domain_g,ineighbor_domain_l,ineighbor_element_g,ineighbor_element_l,ineighbor_proc)
+        call this%faces(ZETA_MAX)%init_neighbor(ftype,ineighbor_domain_g,ineighbor_domain_l,ineighbor_element_g,ineighbor_element_l,ineighbor_proc)
+
         
         call this%faces(XI_MIN)%init_sol(this%elem)
         call this%faces(XI_MAX)%init_sol(this%elem)
@@ -101,7 +120,7 @@ contains
         !
         ! Close ChiDG interface
         !
-        call this%chidg%close()
+        call this%chidg%close('core')
 
     end subroutine
 

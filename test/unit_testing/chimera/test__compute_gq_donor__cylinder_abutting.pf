@@ -59,6 +59,7 @@ subroutine test_compute_gq_donor_cylinder_abutting()
     ! Initialize solution data storage
     !
     call chidgA%initialize_solution_domains(nterms_s)
+    call chidgA%init('communication')
     call chidgA%init('chimera')
     call chidgA%initialize_solution_solver()
 
@@ -132,7 +133,7 @@ subroutine test_compute_gq_donor_cylinder_abutting()
 
 
 
-    call chidgA%close()
+    call chidgA%close('core')
 
 
 end subroutine test_compute_gq_donor_cylinder_abutting

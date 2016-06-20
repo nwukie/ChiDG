@@ -6,14 +6,15 @@ subroutine test_integrate_boundary_unit_constant()
                                   XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX, IO_DESTINATION
     use mod_integrate,      only: integrate_boundary_scalar_flux
 
-    use type_chidg,         only: chidg_t
-    use type_point,         only: point_t
-    use type_bc,            only: bc_t
-    use type_connectivity,  only: connectivity_t
-    use mod_bc,             only: create_bc
-    use type_face_info,     only: face_info_t
-    use type_function_info, only: function_info_t
-    use type_seed,          only: seed_t
+    use type_chidg,                 only: chidg_t
+    use type_point,                 only: point_t
+    use type_bc,                    only: bc_t
+    use type_domain_connectivity,   only: domain_connectivity_t
+    use type_boundary_connectivity, only: boundary_connectivity_t
+    use mod_bc,                     only: create_bc
+    use type_face_info,             only: face_info_t
+    use type_function_info,         only: function_info_t
+    use type_seed,                  only: seed_t
 
 
     use type_function,      only: function_t
@@ -26,10 +27,11 @@ subroutine test_integrate_boundary_unit_constant()
 
 
     type(point_t),      allocatable     :: nodes(:)
-    integer(ik),        allocatable     :: connectivity(:,:)
+    type(domain_connectivity_t)         :: connectivity
+    type(boundary_connectivity_t)       :: bc_connectivity
     type(chidg_t)                       :: chidg
     class(bc_t),        allocatable     :: bc
-    integer(ik)                         :: nterms_c, nterms_s, iblk, idom, ngq, ielem, iface, ifcn, spacedim
+    integer(ik)                         :: nterms_c, nterms_s, iblk, idom, ngq, ielem, iface, ifcn, spacedim, mapping
     integer(ik)                         :: idonor, ivar, igq
     type(AD_D),         allocatable     :: integrand(:)
     class(function_t),  allocatable     :: constant
@@ -37,7 +39,6 @@ subroutine test_integrate_boundary_unit_constant()
     type(face_info_t)                   :: face
     type(function_info_t)               :: flux
     type(seed_t)                        :: seed
-    type(connectivity_t)                :: bc_connectivity
 
 
     IO_DESTINATION = 'file'
@@ -60,6 +61,7 @@ subroutine test_integrate_boundary_unit_constant()
 
 
     spacedim = 3
+    mapping  = 1
     nterms_c = 8
     nterms_s = 1
     call chidg%data%add_domain('D_01',nodes,connectivity,spacedim,nterms_c,'linearadvection')
@@ -68,19 +70,21 @@ subroutine test_integrate_boundary_unit_constant()
     !
     ! Need boundary conditions or else faces are ORPHAN and won't store integral
     !
-    allocate(bc_connectivity%data(1,4))
+    !allocate(bc_connectivity%data(1,4))
+    call bc_connectivity%init(1)
+    call bc_connectivity%data(1)%init(mapping)
     call create_bc('linearadvection_extrapolate',bc)
-    bc_connectivity%data(1,:) = [1, 3, 5, 7]
+    call bc_connectivity%data(1)%set_face_nodes([1, 3, 5, 7])
     call chidg%data%add_bc('D_01',bc,bc_connectivity)
-    bc_connectivity%data(1,:) = [2, 4, 6, 8]
+    call bc_connectivity%data(1)%set_face_nodes([2, 4, 6, 8])
     call chidg%data%add_bc('D_01',bc,bc_connectivity)
-    bc_connectivity%data(1,:) = [1, 2, 5, 6]
+    call bc_connectivity%data(1)%set_face_nodes([1, 2, 5, 6])
     call chidg%data%add_bc('D_01',bc,bc_connectivity)
-    bc_connectivity%data(1,:) = [3, 4, 7, 8]
+    call bc_connectivity%data(1)%set_face_nodes([3, 4, 7, 8])
     call chidg%data%add_bc('D_01',bc,bc_connectivity)
-    bc_connectivity%data(1,:) = [1, 2, 3, 4]
+    call bc_connectivity%data(1)%set_face_nodes([1, 2, 3, 4])
     call chidg%data%add_bc('D_01',bc,bc_connectivity)
-    bc_connectivity%data(1,:) = [5, 6, 7, 8]
+    call bc_connectivity%data(1)%set_face_nodes([5, 6, 7, 8])
     call chidg%data%add_bc('D_01',bc,bc_connectivity)
 
 
@@ -88,9 +92,14 @@ subroutine test_integrate_boundary_unit_constant()
     !
     ! Initialize solver data
     !
-    call chidg%data%initialize_solution_domains(nterms_s)
-    call chidg%data%initialize_solution_solver()
-    call chidg%data%sdata%function_status%clear()
+    !call chidg%data%initialize_solution_domains(nterms_s)
+    !call chidg%data%initialize_solution_solver()
+    !call chidg%data%sdata%function_status%clear()
+
+    call chidg%initialize_solution_domains(nterms_s)
+    call chidg%init('communication')
+    call chidg%init('chimera')
+    call chidg%initialize_solution_solver()
 
 
 
@@ -165,7 +174,7 @@ subroutine test_integrate_boundary_unit_constant()
     !
     ! Close ChiDG interface
     !
-    call chidg%close()
+    call chidg%close('core')
 
 
 
@@ -193,29 +202,31 @@ subroutine test_integrate_boundary_nonunit_constant()
                                   BOUNDARY_ADVECTIVE_FLUX, IO_DESTINATION
     use mod_integrate,      only: integrate_boundary_scalar_flux
 
-    use type_chidg,         only: chidg_t
-    use type_point,         only: point_t
-    use type_face_info,     only: face_info_t
-    use type_function_info, only: function_info_t
-    use type_connectivity,  only: connectivity_t
-    use type_seed,          only: seed_t
-    use type_bc,            only: bc_t
-    use mod_bc,             only: create_bc
+    use type_chidg,                 only: chidg_t
+    use type_point,                 only: point_t
+    use type_face_info,             only: face_info_t
+    use type_function_info,         only: function_info_t
+    use type_domain_connectivity,   only: domain_connectivity_t
+    use type_boundary_connectivity, only: boundary_connectivity_t
+    use type_seed,                  only: seed_t
+    use type_bc,                    only: bc_t
+    use mod_bc,                     only: create_bc
 
-    use type_function,      only: function_t
-    use mod_function,       only: create_function
-    use mod_testutils,      only: meshgen
-    use mod_grid_operators, only: initialize_variable
+    use type_function,              only: function_t
+    use mod_function,               only: create_function
+    use mod_testutils,              only: meshgen
+    use mod_grid_operators,         only: initialize_variable
     use DNAD_D
     implicit none
 
 
 
     type(point_t),      allocatable     :: nodes(:)
-    integer(ik),        allocatable     :: connectivity(:,:)
+    type(domain_connectivity_t)         :: connectivity
+    type(boundary_connectivity_t)       :: bc_connectivity
     type(chidg_t)                       :: chidg
     class(bc_t),        allocatable     :: bc
-    integer(ik)                         :: nterms_c, nterms_s, igq, ngq, ivar, ifcn, spacedim
+    integer(ik)                         :: nterms_c, nterms_s, igq, ngq, ivar, ifcn, spacedim, mapping
     integer(ik)                         :: idomain, iblk, idonor
     type(AD_D),         allocatable     :: integrand(:)
     class(function_t),  allocatable     :: constant
@@ -223,7 +234,6 @@ subroutine test_integrate_boundary_nonunit_constant()
     type(face_info_t)                   :: face
     type(function_info_t)               :: flux
     type(seed_t)                        :: seed
-    type(connectivity_t)                :: bc_connectivity
 
     IO_DESTINATION = 'file'
 
@@ -241,6 +251,7 @@ subroutine test_integrate_boundary_nonunit_constant()
 
 
     spacedim = 3
+    mapping  = 1
     nterms_c = 8
     nterms_s = 1
 
@@ -251,28 +262,33 @@ subroutine test_integrate_boundary_nonunit_constant()
     !
     ! Need boundary conditions or else faces are ORPHAN and won't store integral
     !
-    allocate(bc_connectivity%data(1,4))
     call create_bc('linearadvection_extrapolate',bc)
-    bc_connectivity%data(1,:) = [1, 3, 5, 7]
+    call bc_connectivity%init(1)
+    call bc_connectivity%data(1)%init(mapping)
+    call bc_connectivity%data(1)%set_face_nodes([1, 3, 5, 7])
     call chidg%data%add_bc('D_01',bc,bc_connectivity)
-    bc_connectivity%data(1,:) = [2, 4, 6, 8]
+    call bc_connectivity%data(1)%set_face_nodes([2, 4, 6, 8])
     call chidg%data%add_bc('D_01',bc,bc_connectivity)
-    bc_connectivity%data(1,:) = [1, 2, 5, 6]
+    call bc_connectivity%data(1)%set_face_nodes([1, 2, 5, 6])
     call chidg%data%add_bc('D_01',bc,bc_connectivity)
-    bc_connectivity%data(1,:) = [3, 4, 7, 8]
+    call bc_connectivity%data(1)%set_face_nodes([3, 4, 7, 8])
     call chidg%data%add_bc('D_01',bc,bc_connectivity)
-    bc_connectivity%data(1,:) = [1, 2, 3, 4]
+    call bc_connectivity%data(1)%set_face_nodes([1, 2, 3, 4])
     call chidg%data%add_bc('D_01',bc,bc_connectivity)
-    bc_connectivity%data(1,:) = [5, 6, 7, 8]
+    call bc_connectivity%data(1)%set_face_nodes([5, 6, 7, 8])
     call chidg%data%add_bc('D_01',bc,bc_connectivity)
 
 
     !
     ! Initialize solver data 
     !
-    call chidg%data%initialize_solution_domains(nterms_s)
-    call chidg%data%initialize_solution_solver()
+    !call chidg%data%initialize_solution_domains(nterms_s)
+    !call chidg%data%initialize_solution_solver()
 
+    call chidg%initialize_solution_domains(nterms_s)
+    call chidg%init('communication')
+    call chidg%init('chimera')
+    call chidg%initialize_solution_solver()
 
 
     !
@@ -475,7 +491,7 @@ subroutine test_integrate_boundary_nonunit_constant()
     !
     ! Close ChiDG interface
     !
-    call chidg%close()
+    call chidg%close('core')
 
 
 

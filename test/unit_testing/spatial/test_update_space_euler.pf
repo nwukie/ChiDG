@@ -60,9 +60,11 @@ subroutine test_update_space_euler()
     call chidgA%initialize_solution_domains(nterms_s)
     call chidgB%initialize_solution_domains(nterms_s)
 
+    call chidgA%init('communication')
     call chidgA%init('chimera')
     call chidgA%data%initialize_solution_solver()
 
+    call chidgB%init('communication')
     call chidgB%init('chimera')
     call chidgB%data%initialize_solution_solver()
 
@@ -168,7 +170,7 @@ subroutine test_update_space_euler()
     !
     ! Close ChiDG interface
     !
-    call chidgA%close()
-    call chidgB%close()
+    call chidgA%close('core')
+    call chidgB%close('core')
 
 end subroutine test_update_space_euler

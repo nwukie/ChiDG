@@ -237,7 +237,7 @@ contains
             end if
 
         else
-            call chidg_signal(FATAL,"get_element_mapping: element mappings are not allocated. Probably need to call chidg%init('env')")
+            call chidg_signal(FATAL,"get_element_mapping: selected element mapping is not allocated. Probably need to call chidg%init('env'). Or, maybe your mapping is incorrect.")
         end if
 
     end function get_element_mapping

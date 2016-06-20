@@ -60,14 +60,8 @@ subroutine test__detect_chimera_donors()
 
 
 
-!    !
-!    ! Add domains to ChiDG
-!    !
-!    ndom = size(meshdata)
-!    do idom = 1,ndom
-!        call chidg%data%add_domain(trim(meshdata(idom)%name),meshdata(idom)%points,meshdata(idom)%connectivity,spacedim,meshdata(idom)%nterms_c,'linearadvection')
-!    end do
     call chidg%initialize_solution_domains(nterms_s)
+    call chidg%init('communication')
 
 
 
@@ -233,7 +227,7 @@ subroutine test__detect_chimera_donors()
     !
     ! Close ChiDG interface
     !
-    call chidg%close()
+    call chidg%close('core')
 
 
 

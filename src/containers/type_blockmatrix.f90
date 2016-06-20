@@ -311,11 +311,14 @@ contains
                 !
                 ! Parent is the element with respect to which the linearization is computed
                 !
-                dparent = mesh%idomain
+                !dparent = mesh%idomain
+                dparent = mesh%idomain_l
                 if (iblk == DIAG) then
-                    eparent = mesh%elems(ielem)%ielem
+                    !eparent = mesh%elems(ielem)%ielem
+                    eparent = mesh%elems(ielem)%ielem_l
                 else
-                    eparent = mesh%faces(ielem,iblk)%ineighbor
+                    !eparent = mesh%faces(ielem,iblk)%ineighbor
+                    eparent = mesh%faces(ielem,iblk)%get_neighbor_element()
                 end if
 
 
@@ -460,7 +463,8 @@ contains
                             !
                             ! Call boundary condition block initialization
                             !
-                            dparent = mesh%idomain
+                            !dparent = mesh%idomain
+                            dparent = mesh%idomain_l
                             eparent = icoupled_elem
                             call self%bc_blks(ielem,icoupled_elem_bc)%init(size1d,dparent,eparent)
                         end if

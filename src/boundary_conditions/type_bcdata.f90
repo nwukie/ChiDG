@@ -1,7 +1,7 @@
 module type_bcdata
-    use mod_kinds,          only: ik
-    use type_bcwrapper,     only: bcwrapper_t
-    use type_connectivity,  only: connectivity_t
+    use mod_kinds,                  only: ik
+    use type_bcwrapper,             only: bcwrapper_t
+    use type_boundary_connectivity, only: boundary_connectivity_t
     implicit none
 
 
@@ -18,11 +18,10 @@ module type_bcdata
     !------------------------------------------------------------------------------
     type, public :: bcdata_t
 
-        character(len=:),       allocatable :: domain_      !< Domain name the bcdata is associated with
-        type(bcwrapper_t),      allocatable :: bcs(:)       !< Array of boundary conditions for each face
-        !integer(ik),            allocatable :: bcface(:)    !< bc face index. XI_MIN, XI_MAX, ETA_MIN, etc.
-        !integer(ik),            allocatable :: bc_connectivity(:,:)    !< bc face index. XI_MIN, XI_MAX, ETA_MIN, etc.
-        type(connectivity_t),   allocatable :: bc_connectivity(:)    !< bc face index. XI_MIN, XI_MAX, ETA_MIN, etc.
+        character(len=:),               allocatable :: domain_              !< Domain name the bcdata is associated with
+        type(bcwrapper_t),              allocatable :: bcs(:)               !< Array of boundary conditions for each face
+        type(boundary_connectivity_t),  allocatable :: bc_connectivity(:)   !< 
+        !type(connectivity_t),   allocatable :: bc_connectivity(:)          !<
 
     contains
 

@@ -12,6 +12,9 @@ add_lib_sources(
                 mod_grid_tools_two.f90
                 mod_grid_operators.f90
                 mod_DNAD_tools.f90
-                type_connectivity.f90
+                type_domain_connectivity.f90
+                type_element_connectivity.f90
+                type_boundary_connectivity.f90
+                type_face_connectivity.f90
                 mod_connectivity_tools.f90
                 )

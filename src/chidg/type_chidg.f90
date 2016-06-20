@@ -16,6 +16,7 @@ module type_chidg
     use type_meshdata,          only: meshdata_t
     use type_bcdata,            only: bcdata_t
     use type_dict,              only: dict_t
+    use type_partition,         only: partition_t
 
     use mod_time_scheme,        only: create_time_scheme
     use mod_linear_solver,      only: create_linear_solver
@@ -24,9 +25,10 @@ module type_chidg
     use mod_chimera,            only: detect_chimera_faces,  &
                                       detect_chimera_donors, &
                                       compute_chimera_interpolators
+    use mod_communication,      only: establish_communication
+    use mod_chidg_mpi,          only: chidg_mpi_init, chidg_mpi_finalize
 
-    use mod_hdfio,              only: read_grid_hdf, read_boundaryconditions_hdf, read_solution_hdf, write_solution_hdf
-
+    use mod_hdfio,              only: read_grid_hdf, read_grid_partition_hdf, read_boundaryconditions_hdf, read_boundaryconditions_partition_hdf, read_solution_hdf, write_solution_hdf
     implicit none
 
 
@@ -104,14 +106,16 @@ contains
         if (.not. self%envInitialized ) then
             call log_init()
 
-            !
+
             ! Order matters here. Functions need to come first. Used by equations and bcs.
-            !
             call register_functions()
             call register_equations()
             call register_bcs()
 
             call initialize_grid()
+
+
+
             self%envInitialized = .true.
         end if
 
@@ -127,12 +131,18 @@ contains
             case ('env')
 
 
+            case ('mpi')
+                call chidg_mpi_init()
+
             !
             ! Read Namelist input file
             !
             case ('io')
                 call read_input()
 
+
+            case ('communication')
+                call establish_communication(self%data%mesh)
 
             !
             ! Initialize chimera
@@ -278,14 +288,16 @@ contains
     !!
     !!  @param[in]  gridfile    String containing a grid file name, including extension.
     !!  @param[in]  spacedim    Number of spatial dimensions
+    !!  @param[in]  partition   Optional partition for partial read of grid data during parallel execution.
     !!
     !!  TODO: Generalize spacedim
     !!
-    !----------------------------------------------------------------------------------------------
-    subroutine read_grid(self,gridfile,spacedim)
-        class(chidg_t),     intent(inout)   :: self
-        character(*),       intent(in)      :: gridfile
-        integer(ik),        intent(in)      :: spacedim
+    !------------------------------------------------------------------------------------------------------------
+    subroutine read_grid(self,gridfile,spacedim,partition)
+        class(chidg_t),     intent(inout)           :: self
+        character(*),       intent(in)              :: gridfile
+        integer(ik),        intent(in)              :: spacedim
+        type(partition_t),  intent(in), optional    :: partition
 
         character(len=5),   dimension(1)    :: extensions
         character(len=:),   allocatable     :: extension
@@ -304,7 +316,11 @@ contains
         ! Call grid reader based on file extension
         !
         if ( extension == '.h5' ) then
-            call read_grid_hdf(gridfile,meshdata)
+            if (present(partition)) then
+                call read_grid_partition_hdf(gridfile,partition,meshdata)
+            else
+                call read_grid_hdf(gridfile,meshdata)
+            end if
         else
             call chidg_signal(FATAL,"chidg%read_grid: grid file extension not recognized")
         end if
@@ -331,7 +347,7 @@ contains
 
 
     end subroutine read_grid
-    !*************************************************************************************************************
+    !**********************************************************************************************************
 
 
 
@@ -351,9 +367,11 @@ contains
     !!  @param[in]  gridfile    String specifying a gridfile, including extension.
     !!
     !-------------------------------------------------------------------------------------------------------------
-    subroutine read_boundaryconditions(self, gridfile)
-        class(chidg_t), intent(inout)   :: self
-        character(*),   intent(in)      :: gridfile
+    !subroutine read_boundaryconditions(self, gridfile)
+    subroutine read_boundaryconditions(self, gridfile, partition)
+        class(chidg_t),     intent(inout)           :: self
+        character(*),       intent(in)              :: gridfile
+        type(partition_t),  intent(in), optional    :: partition
 
         character(len=5),   dimension(1)    :: extensions
         character(len=:),   allocatable     :: extension, dname
@@ -371,7 +389,11 @@ contains
         ! Call boundary condition reader based on file extension
         !
         if ( extension == '.h5' ) then
-            call read_boundaryconditions_hdf(gridfile,bcdata)
+            if (present(partition)) then
+                call read_boundaryconditions_partition_hdf(gridfile,bcdata,partition)
+            else
+                call read_boundaryconditions_hdf(gridfile,bcdata)
+            end if
         else
             call chidg_signal(FATAL,"chidg%read_boundaryconditions: grid file extension not recognized")
         end if
@@ -384,19 +406,19 @@ contains
         ndomains = size(bcdata)
         do idom = 1,ndomains
 
-            dname = bcdata(idom)%domain_
 
+            dname = bcdata(idom)%domain_
             do iface = 1,NFACES
 
-
                 if ( allocated(bcdata(idom)%bcs(iface)%bc) ) then
-
-                    call self%data%add_bc(dname, bcdata(idom)%bcs(iface)%bc, bcdata(idom)%bc_connectivity(iface))
-
+                    if ( trim(bcdata(idom)%bcs(iface)%bc%name) /= "empty" ) then
+                        call self%data%add_bc(dname, bcdata(idom)%bcs(iface)%bc, bcdata(idom)%bc_connectivity(iface))
+                    end if
                 end if
 
-
             end do !iface
+
+
         end do !idom
 
 
@@ -652,11 +674,32 @@ contains
     !!
     !!
     !------------------------------------------------------------------------------------------------------------
-    subroutine close(self)
-        class(chidg_t), intent(inout)   :: self
+    subroutine close(self,selection)
+        class(chidg_t), intent(inout)               :: self
+        character(*),   intent(in),     optional    :: selection
 
 
-        call log_finalize()
+
+        if ( present(selection) ) then 
+            select case (selection)
+                case ('log')
+                    call log_finalize()
+                case ('mpi')
+                    call chidg_mpi_finalize()
+                case ('core')   ! All except mpi
+                    call log_finalize()
+
+                case default
+                    call chidg_signal(FATAL,"chidg%close: invalid close string")
+            end select
+
+
+        else
+
+            call log_finalize()
+            call chidg_mpi_finalize()
+
+        end if
 
 
     end subroutine close

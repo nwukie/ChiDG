@@ -1,9 +1,10 @@
 module test_interpolate_mod
     use pfunit_mod
-    use type_chidg,         only: chidg_t
-    use type_point,         only: point_t
-    use type_seed,          only: seed_t
-    use type_face_info,     only: face_info_t
+    use type_chidg,                 only: chidg_t
+    use type_point,                 only: point_t
+    use type_seed,                  only: seed_t
+    use type_face_info,             only: face_info_t
+    use type_domain_connectivity,   only: domain_connectivity_t
 
 
     use mod_kinds,          only: rk,ik
@@ -52,7 +53,7 @@ contains
         integer(ik)                                 :: nterms_c, nterms_s, ivar, spacedim
 
         type(point_t),  allocatable                 :: nodes(:)
-        integer(ik),    allocatable                 :: connectivity(:,:)
+        type(domain_connectivity_t)                 :: connectivity
         
         !
         ! Send log to file
@@ -85,8 +86,8 @@ contains
         ! Initialize chidg solution data storage
         !
         call this%chidg%initialize_solution_domains(nterms_s)
+        call this%chidg%init('communication')
         call this%chidg%initialize_solution_solver()
-        !call this%chidg%data%init_sdata()
 
 
         !
@@ -112,7 +113,7 @@ contains
         !
         ! Close ChiDG interface
         !
-        call this%chidg%close()
+        call this%chidg%close('core')
 
         
     end subroutine

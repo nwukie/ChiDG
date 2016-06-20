@@ -119,7 +119,8 @@ contains
            if (iblk == DIAG) then
                ielem_p = ielem
            else
-               ielem_p = mesh(1)%faces(ielem,iblk)%ineighbor
+               !ielem_p = mesh(1)%faces(ielem,iblk)%ineighbor_l
+               ielem_p = mesh(1)%faces(ielem,iblk)%get_neighbor_element()
            end if
 
 
@@ -240,7 +241,8 @@ contains
             ielem_p = ielem
             iface   = 1
         else
-            ielem_p = data%mesh(1)%faces(ielem,iblk)%ineighbor
+            !ielem_p = data%mesh(1)%faces(ielem,iblk)%ineighbor_l
+            ielem_p = data%mesh(1)%faces(ielem,iblk)%get_neighbor_element()
             iface   = iblk
         end if
 

@@ -10,9 +10,9 @@ module type_chidg_data
     use type_bcset,                     only: bcset_t
     use type_equationset_wrapper,       only: equationset_wrapper_t
     use type_solverdata,                only: solverdata_t
-    use type_connectivity,              only: connectivity_t
+    use type_domain_connectivity,       only: domain_connectivity_t
+    use type_boundary_connectivity,     only: boundary_connectivity_t
 
-    !
     use type_equationset_function_data, only: equationset_function_data_t
     use type_bcset_coupling,            only: bcset_coupling_t
 
@@ -62,7 +62,6 @@ module type_chidg_data
         ! Initialization procedure for solution data. Execute after all domains are added.
         procedure   :: initialize_solution_domains
         procedure   :: initialize_solution_solver
-        !procedure   :: init_sdata
 
         ! Accessors
         procedure   :: get_domain_index     !< Given a domain name, return domain index
@@ -89,8 +88,6 @@ contains
     !!
     !!
     !-------------------------------------------------------------------------------------------------------------
-    ! subroutine initialize_solver_data
-    !subroutine init_sdata(self)
     subroutine initialize_solution_solver(self)
         class(chidg_data_t),     intent(inout)   :: self
 
@@ -131,7 +128,6 @@ contains
         !
         call self%sdata%init(self%mesh, bcset_coupling, function_data)
 
-    !end subroutine init_sdata
     end subroutine initialize_solution_solver
     !*************************************************************************************************************
 
@@ -155,16 +151,18 @@ contains
     !!  @param[in]  nterms_s    Integer defining the number of terms in the solution expansion
     !!
     !---------------------------------------------------------------------------------------------------------------
+    !subroutine add_domain(self,name,idomain_l,nodes,connectivity,spacedim,nterms_c,eqnset)
     subroutine add_domain(self,name,nodes,connectivity,spacedim,nterms_c,eqnset)
-        class(chidg_data_t),    intent(inout)   :: self
-        character(*),           intent(in)      :: name
-        type(point_t),          intent(in)      :: nodes(:)
-        integer(ik),            intent(in)      :: connectivity(:,:)
-        integer(ik),            intent(in)      :: spacedim
-        integer(ik),            intent(in)      :: nterms_c
-        character(*),           intent(in)      :: eqnset
+        class(chidg_data_t),            intent(inout)   :: self
+        character(*),                   intent(in)      :: name
+!        integer(ik),                    intent(in)      :: idomain_l
+        type(point_t),                  intent(in)      :: nodes(:)
+        type(domain_connectivity_t),    intent(in)      :: connectivity
+        integer(ik),                    intent(in)      :: spacedim
+        integer(ik),                    intent(in)      :: nterms_c
+        character(*),                   intent(in)      :: eqnset
 
-        integer(ik) :: idom, ierr
+        integer(ik) :: idomain_l, ierr
 
 
         type(domaininfo_t),             allocatable :: temp_info(:)
@@ -174,12 +172,12 @@ contains
 
 
 
-        !
-        ! Check for valid connectivity format
-        !
-        if ( size(connectivity,2) < 10 ) then
-            call chidg_signal(FATAL,"chidg_data%add_domain: Invalid connectivity format")
-        end if
+!        !
+!        ! Check for valid connectivity format
+!        !
+!        if ( size(connectivity,2) < 10 ) then
+!            call chidg_signal(FATAL,"chidg_data%add_domain: Invalid connectivity format")
+!        end if
 
 
 
@@ -187,7 +185,15 @@ contains
         ! Increment number of domains by one
         !
         self%ndomains_ = self%ndomains_ + 1
-        idom = self%ndomains_
+        idomain_l      = self%ndomains_
+
+        !
+        ! TODO: SHOULD SET idomain from connectivity data. Might not correspond to ndomains for parallel calculations.
+        ! DONE: CHECK FOR CORRECTNESS
+        !
+        !call chidg_signal(WARN,"add_domain: fix specification of idomain")
+        !idom = self%ndomains_
+        !idom = idomain_l
 
 
 
@@ -218,19 +224,24 @@ contains
         !
         ! Set domain info
         !
-        temp_info(idom)%name = name
+        temp_info(idomain_l)%name = name
 
 
         !
         ! Initialize new mesh
         !
-        call temp_mesh(idom)%init_geom(idom,spacedim,nterms_c,nodes,connectivity)
+        !
+        ! TODO: SHOULD SET idomain from connectivity data. Might not correspond to ndomains for parallel calculations.
+        ! DONE: CHECK FOR CORRECTNESS
+        !
+        !call chidg_signal(WARN,"add_domain: fix specification of idomain")
+        call temp_mesh(idomain_l)%init_geom(idomain_l,spacedim,nterms_c,nodes,connectivity)
 
 
         !
         ! Allocate equation set
         !
-        call create_equationset(eqnset,temp_eqnset(idom)%item)
+        call create_equationset(eqnset,temp_eqnset(idomain_l)%item)
 
 
 
@@ -244,7 +255,7 @@ contains
         call move_alloc(temp_bcset,self%bcset)
         call move_alloc(temp_eqnset,self%eqnset)
 
-        call write_line('Domain ', idom, 'nelem', self%mesh(idom)%nelem)
+        call write_line('Domain ', idomain_l, 'nelem', self%mesh(idomain_l)%nelem)
 
     end subroutine add_domain
     !***************************************************************************************************************
@@ -273,10 +284,10 @@ contains
     !!
     !---------------------------------------------------------------------------------------------------------------
     subroutine add_bc(self,domain,bc,bc_connectivity)
-        class(chidg_data_t),    intent(inout)   :: self
-        character(*),           intent(in)      :: domain
-        class(bc_t),            intent(inout)   :: bc
-        type(connectivity_t),   intent(in)      :: bc_connectivity
+        class(chidg_data_t),            intent(inout)   :: self
+        character(*),                   intent(in)      :: domain
+        class(bc_t),                    intent(inout)   :: bc
+        type(boundary_connectivity_t),  intent(in)      :: bc_connectivity
 
         integer(ik)                 :: idom, ierr
         class(bc_t), allocatable    :: bc_copy
@@ -336,12 +347,10 @@ contains
         integer(ik) :: idomain, neqns
 
 
-        call write_line('idomain', 'nelements')
         do idomain = 1,self%ndomains()
 
             neqns = self%eqnset(idomain)%item%neqns
 
-            call write_line(idomain, self%mesh(idomain)%nelem)
             !
             ! Initialize mesh numerics based on equation set and polynomial expansion order
             !

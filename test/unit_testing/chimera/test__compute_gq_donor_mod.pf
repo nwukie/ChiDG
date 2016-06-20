@@ -99,6 +99,7 @@ contains
         !
         call this%chidg%data%add_domain('D_01',meshdata%points,meshdata%connectivity,spacedim,nterms_c,'linearadvection')
         call this%chidg%initialize_solution_domains(nterms_s)
+        call this%chidg%init('communication')
 
 
     end subroutine
@@ -111,7 +112,7 @@ contains
         !
         ! Close ChiDG interface
         !
-        call this%chidg%close()
+        call this%chidg%close('core')
 
     end subroutine
 

@@ -88,6 +88,7 @@ contains
         ! Initialize chidg solution data storage
         !
         call this%chidg%initialize_solution_domains(nterms_s)
+        call this%chidg%init('communication')
         call this%chidg%init('chimera')
         call this%chidg%initialize_solution_solver()
 
@@ -114,7 +115,7 @@ contains
         !
         ! Close ChiDG interface
         !
-        call this%chidg%close()
+        call this%chidg%close('core')
 
 
     end subroutine

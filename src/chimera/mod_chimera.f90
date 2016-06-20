@@ -83,6 +83,7 @@ contains
                     !
                     orphan_face = ( mesh(idom)%faces(ielem,iface)%ftype == ORPHAN ) 
 
+
                     !
                     ! If orphan_face, set as Chimera face so it can search for donors in other domains
                     !

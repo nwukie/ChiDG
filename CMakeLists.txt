@@ -146,6 +146,8 @@ set(MPI_Fortran_INCLUDE_PATH "/opt/local/lib/openmpi-mp")
 find_package(MPI REQUIRED)
 
 include_directories(${MPI_Fortran_INCLUDE_PATH})
+include_directories("/opt/local/include/openmpi-mp")
+
 
 
 
@@ -158,16 +160,16 @@ include_directories(${MPI_Fortran_INCLUDE_PATH})
 #-----------------------------------------------------------------------------------
 
 find_path(METIS_INCLUDE_DIR metis.h)
-find_library(METIS_LIBRARY metis)
+find_library(METIS_LIBRARIES metis)
 
 if(METIS_INCLUDE_DIR)
-    if(METIS_LIBRARY)
+    if(METIS_LIBRARIES)
         set(METIS_FOUND "YES") 
-    endif(METIS_LIBRARY)
+    endif(METIS_LIBRARIES)
 endif(METIS_INCLUDE_DIR)
 
 message(STATUS "METIS INCLUDE DIR: " ${METIS_INCLUDE_DIR})
-message(STATUS "METIS LIBRARIES: " ${METIS_LIBRARY})
+message(STATUS "METIS LIBRARIES: " ${METIS_LIBRARIES})
 include_directories(${METIS_INCLUDE_DIR})
 
 

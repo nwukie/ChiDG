@@ -49,7 +49,8 @@ contains
         integer(ik)                             :: ielem, i
         type(AD_D), dimension(elem%nterms_s)    :: integral, integral_x, integral_y, integral_z
 
-        ielem = elem%ielem  ! get element index
+        !ielem = elem%ielem  ! get element index
+        ielem = elem%ielem_l  ! get element index
 
         !
         ! Multiply each component by quadrature weights and element jacobians
@@ -138,7 +139,8 @@ contains
         integer(ik)                             :: ielem, i
         type(AD_D), dimension(elem%nterms_s)    :: integral, integral_x, integral_y, integral_z
 
-        ielem = elem%ielem  ! get element index
+        !ielem = elem%ielem  ! get element index
+        ielem = elem%ielem_l  ! get element index
 
         !
         ! Multiply each component by quadrature weights and element jacobians

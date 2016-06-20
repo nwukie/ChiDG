@@ -18,6 +18,7 @@ module mod_bc
     !
     ! Import boundary conditions
     !
+    use bc_empty,                           only: empty_t
     use bc_periodic,                        only: periodic_t
     use bc_linearadvection_extrapolate,     only: linearadvection_extrapolate_t
     use bc_euler_wall,                      only: euler_wall_t
@@ -77,6 +78,7 @@ contains
         !
         ! Instantiate bcs
         !
+        type(empty_t)                           :: EMPTY
         type(periodic_t)                        :: PERIODIC
         type(linearadvection_extrapolate_t)     :: LINEARADVECTION_EXTRAPOLATE
 
@@ -112,6 +114,7 @@ contains
             !
             ! Register in global vector
             !
+            call registered_bcs%push_back(EMPTY)
             call registered_bcs%push_back(PERIODIC)
             call registered_bcs%push_back(LINEARADVECTION_EXTRAPOLATE)
 
@@ -199,14 +202,14 @@ contains
 
 
         !
-        ! Find equation set in 'registered_bcs' vector
+        ! Find boundary condition string in 'registered_bcs' vector
         !
         bcindex = registered_bcs%index_by_name(trim(bcstring))
 
 
 
         !
-        ! Check equationset was found in 'registered_bcs'
+        ! Check boundary condition was found in 'registered_bcs'
         !
         if (bcindex == 0) call chidg_signal_one(FATAL,"create_bc: boundary condition not recognized", trim(bcstring))
 

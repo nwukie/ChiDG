@@ -127,7 +127,7 @@ subroutine test__detect_chimera_faces()
     !
     ! Close ChiDG interface
     !
-    call chidg%close('core')
+    call chidg%close()
 
 
 end subroutine

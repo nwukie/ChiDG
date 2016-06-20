@@ -1,18 +1,19 @@
 @Test
 subroutine test_blockvector_distribute()
     use pfunit_mod
-    use mod_kinds,          only: rk,ik
-    use mod_constants,      only: ONE, TWO, THREE, FOUR
-    use type_blockvector,   only: blockvector_t
-    use mod_testutils,      only: meshgen
-    use type_chidg,         only: chidg_t
-    use type_point,         only: point_t
+    use mod_kinds,                  only: rk,ik
+    use mod_constants,              only: ONE, TWO, THREE, FOUR
+    use type_blockvector,           only: blockvector_t
+    use mod_testutils,              only: meshgen
+    use type_chidg,                 only: chidg_t
+    use type_point,                 only: point_t
+    use type_domain_connectivity,   only: domain_connectivity_t
 
     implicit none
     type(chidg_t)               :: chidg
     type(blockvector_t)         :: bvec
     type(point_t),  allocatable :: nodes(:)
-    integer(ik),    allocatable :: connectivity(:,:)
+    type(domain_connectivity_t) :: connectivity
     real(rk),       allocatable :: fullvec(:)
     integer(ik)                 :: idomain, nterms_c, nterms_s, spacedim
 
@@ -88,7 +89,7 @@ subroutine test_blockvector_distribute()
     !
     ! Close ChiDG interface
     !
-    call chidg%close()
+    call chidg%close('core')
 
 
 end subroutine

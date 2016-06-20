@@ -482,10 +482,8 @@ contains
 
             !
             ! Get idomain attribute from fid/domain/idomain
-            ! TODO: fix attribute discover. This causes a warning/error if not found.
             !
             call h5aexists_f(did, 'idomain', attribute_exists, ierr)
-            !call h5ltget_attribute_int_f(fid,trim(adjustl(names(idom))),'idomain',buf,ierr)
 
             
             !
@@ -519,7 +517,7 @@ contains
             call h5gclose_f(did,ierr)
             if (ierr /= 0) call chidg_signal(FATAL,"get_domain_indices: h5gclose")
 
-        end do
+        end do ! idom
 
 
     end function get_domain_indices_hdf
@@ -660,7 +658,6 @@ contains
             !
             !  Get solution order
             !
-            !call h5ltget_attribute_int_f(fid, trim(dnames(idom)), 'order_solution', buf, ierr)
             call h5ltget_attribute_int_f(did, ".", 'order_solution', buf, ierr)
             if (ierr /= 0) call chidg_signal(FATAL,"get_order_solution_hdf: error getting order_solution attribute.")
 

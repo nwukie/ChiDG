@@ -94,7 +94,8 @@ contains
             ielem_n = mesh(idom)%chimera%recv%data(ChiID)%donor_element%at(idonor)
 
         else
-            ielem_n = mesh(idom)%faces(ielem,iface)%ineighbor
+            !ielem_n = mesh(idom)%faces(ielem,iface)%ineighbor
+            ielem_n = mesh(idom)%faces(ielem,iface)%get_neighbor_element()
         end if
 
 
@@ -236,7 +237,8 @@ contains
             if ( interior_face ) then
 
                 seed%idom  = idom
-                seed%ielem = mesh(idom)%faces(ielem,iface)%ineighbor
+                !seed%ielem = mesh(idom)%faces(ielem,iface)%ineighbor
+                seed%ielem = mesh(idom)%faces(ielem,iface)%get_neighbor_element()
 
 
             !

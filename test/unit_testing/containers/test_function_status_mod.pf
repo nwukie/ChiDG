@@ -6,6 +6,7 @@ module test_function_status_mod
                                               NFUNCTION_TYPES, NFACES, NBLK, IO_DESTINATION
     use type_chidg,                     only: chidg_t
     use type_point,                     only: point_t
+    use type_domain_connectivity,       only: domain_connectivity_t
     use type_equationset_function_data, only: equationset_function_data_t
     use mod_testutils,                  only: meshgen
     use type_bc,                        only: bc_t
@@ -53,7 +54,7 @@ contains
         class(test_function_status),    intent(inout)   :: this
 
         type(point_t),  allocatable                     :: nodes(:)
-        integer(ik),    allocatable                     :: connectivity(:,:)
+        type(domain_connectivity_t)                     :: connectivity
         integer(ik)                                     :: nterms_c, nterms_s, spacedim
         class(bc_t),    allocatable                     :: bc
 
@@ -99,7 +100,7 @@ contains
         !
         ! Close ChiDG
         !
-        call this%chidg%close()
+        call this%chidg%close('core')
 
     end subroutine tearDown
     !**********************************************************************************

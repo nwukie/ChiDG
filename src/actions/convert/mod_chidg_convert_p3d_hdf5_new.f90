@@ -351,7 +351,8 @@ contains
             !
             ! Generate element connectivities
             !
-            info_size = 2               ! ielem, elem_type, ipt_1, ipt_2, ipt_3, ...
+            !info_size = 2               ! ielem, elem_type, ipt_1, ipt_2, ipt_3, ...
+            info_size = 3               ! idomain, ielem, elem_type, ipt_1, ipt_2, ipt_3, ...
             dims_rank_two(1) = nelem
             dims_rank_two(2) = info_size + npts_element
 
@@ -366,8 +367,9 @@ contains
                     do ielem_i = 1,nelem_i
 
                         ! Set element info
-                        elements(ielem,1) = ielem
-                        elements(ielem,2) = mapping
+                        elements(ielem,1) = igrid
+                        elements(ielem,2) = ielem
+                        elements(ielem,3) = mapping
 
                         ! Get starting point
                         istart_i = 1 + ((ielem_i-1)*mapping) 
@@ -384,7 +386,7 @@ contains
                                 do ipt_i = istart_i,(istart_i + mapping)
 
                                     ipt = ipt_i  +  (ipt_j-1)*npt_i  +  (ipt_k-1)*(npt_i*npt_j)
-                                    elements(ielem,2+ipt_elem) = ipt
+                                    elements(ielem,info_size+ipt_elem) = ipt
 
                                     ipt_elem = ipt_elem + 1
                                 end do

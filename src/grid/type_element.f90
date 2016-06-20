@@ -4,16 +4,18 @@ module type_element
     use mod_constants,          only: NFACES,XI_MIN,XI_MAX,ETA_MIN, &
                                       ETA_MAX,ZETA_MIN,ZETA_MAX,ONE,ZERO, &
                                       X_DIR, Y_DIR, Z_DIR, XI_DIR, ETA_DIR, ZETA_DIR, TWO_DIM, THREE_DIM, RKTOL
-    use type_point,             only: point_t
-    use type_densevector,       only: densevector_t
-    use type_quadrature,        only: quadrature_t
-    use DNAD_D
     use mod_quadrature,         only: GQ, get_quadrature
     use mod_grid,               only: get_element_mapping
     use mod_polynomial,         only: polynomialVal, dpolynomialVal
     use mod_grid_tools,         only: compute_modal_coordinates
     use mod_inv,                only: inv
     use mod_connectivity_tools, only: connectivity_get_ielem, connectivity_get_mapping, connectivity_get_node
+
+    use type_point,                 only: point_t
+    use type_densevector,           only: densevector_t
+    use type_quadrature,            only: quadrature_t
+    use type_element_connectivity,  only: element_connectivity_t
+    use DNAD_D
     implicit none
 
 
@@ -34,43 +36,44 @@ module type_element
         integer(ik)     :: neqns                            !< Number of equations being solved
         integer(ik)     :: nterms_s                         !< Number of terms in solution expansion.  
         integer(ik)     :: nterms_c                         !< Number of terms in coordinate expansion. 
-        integer(ik)     :: idomain                          !< Processor-local domain index
-        integer(ik)     :: ielem                            !< Block-local element index. Consider the block could have been split
-                                                            !< for parallelization.
 
-        integer(ik)      :: ielem_bg                        !< Block-global element index. The index an element would have if
-                                                            !< rejoined into one block after being split for parallelization.
+
+        integer(ik)     :: idomain_g                        !< Global index of the parent domain
+        integer(ik)     :: idomain_l                        !< Processor-local index of the parent domain
+        integer(ik)     :: ielem_g                          !< Domain-global index of the element
+        integer(ik)     :: ielem_l                          !< Processor-local index of the element
+
 
         ! Element quadrature points, mesh points and modes
         !---------------------------------------------------------
-        integer(ik),   allocatable  :: connectivity(:)      !< Connectivity list. Integer indices of the associated nodes in block node list
-        type(point_t), allocatable  :: quad_pts(:)          !< Cartesian coordinates of discrete quadrature points
-        type(point_t), allocatable  :: elem_pts(:)          !< Cartesian coordinates of discrete points defining element
-        type(densevector_t)         :: coords               !< Modal representation of cartesian coordinates (nterms_var,(x,y,z))
+        type(element_connectivity_t)    :: connectivity      !< Connectivity list. Integer indices of the associated nodes in block node list
+        type(point_t), allocatable      :: quad_pts(:)          !< Cartesian coordinates of discrete quadrature points
+        type(point_t), allocatable      :: elem_pts(:)          !< Cartesian coordinates of discrete points defining element
+        type(densevector_t)             :: coords               !< Modal representation of cartesian coordinates (nterms_var,(x,y,z))
 
         ! Element metric terms
         !---------------------------------------------------------
-        real(rk), allocatable       :: metric(:,:,:)        !< metric matrix for each quadrature node    (mat_i,mat_j,quad_pt)
-        real(rk), allocatable       :: jinv(:)              !< jacobian terms at quadrature nodes
+        real(rk), allocatable           :: metric(:,:,:)        !< metric matrix for each quadrature node    (mat_i,mat_j,quad_pt)
+        real(rk), allocatable           :: jinv(:)              !< jacobian terms at quadrature nodes
 
         ! Matrices of cartesian gradients of basis/test functions
         !---------------------------------------------------------
-        real(rk), allocatable       :: dtdx(:,:)            !< Derivative of basis functions in x-direction at quadrature nodes
-        real(rk), allocatable       :: dtdy(:,:)            !< Derivative of basis functions in y-direction at quadrature nodes
-        real(rk), allocatable       :: dtdz(:,:)            !< Derivative of basis functions in z-direction at quadrature nodes
+        real(rk), allocatable           :: dtdx(:,:)            !< Derivative of basis functions in x-direction at quadrature nodes
+        real(rk), allocatable           :: dtdy(:,:)            !< Derivative of basis functions in y-direction at quadrature nodes
+        real(rk), allocatable           :: dtdz(:,:)            !< Derivative of basis functions in z-direction at quadrature nodes
 
         ! Quadrature matrices
         !---------------------------------------------------------
-        type(quadrature_t), pointer  :: gq     => null()    !< Pointer to quadrature instance for solution expansion
-        type(quadrature_t), pointer  :: gqmesh => null()    !< Pointer to quadrature instance for coordinate expansion
+        type(quadrature_t), pointer     :: gq     => null()    !< Pointer to quadrature instance for solution expansion
+        type(quadrature_t), pointer     :: gqmesh => null()    !< Pointer to quadrature instance for coordinate expansion
 
         ! Element-local mass matrices
         !---------------------------------------------------------
-        real(rk), allocatable   :: mass(:,:)
-        real(rk), allocatable   :: invmass(:,:)
+        real(rk), allocatable           :: mass(:,:)
+        real(rk), allocatable           :: invmass(:,:)
 
         ! Element volume
-        real(rk)                :: vol
+        real(rk)                        :: vol
 
         ! Logical tests
         logical :: geomInitialized = .false.
@@ -132,19 +135,17 @@ contains
     !!  @param[in] points       Array of cartesian points defining the element
     !!
     !---------------------------------------------------------------------------------------
-    !subroutine init_geom(self,spacedim,mapping,points,idomain,ielem)
-    subroutine init_geom(self,spacedim,nodes,connectivity,idomain)
-        class(element_t),   intent(inout)   :: self
-        integer(ik),        intent(in)      :: spacedim
-        !integer(ik),        intent(in)      :: mapping
-        type(point_t),      intent(in)      :: nodes(:)
-        integer(ik),        intent(in)      :: connectivity(:)
-        integer(ik),        intent(in)      :: idomain
-!        integer(ik),        intent(in)      :: ielem
+    subroutine init_geom(self,spacedim,nodes,connectivity,idomain_l,ielem_l)
+        class(element_t),               intent(inout)   :: self
+        integer(ik),                    intent(in)      :: spacedim
+        type(point_t),                  intent(in)      :: nodes(:)
+        type(element_connectivity_t),   intent(in)      :: connectivity
+        integer(ik),                    intent(in)      :: idomain_l
+        integer(ik),                    intent(in)      :: ielem_l
 
         type(point_t),  allocatable         :: points(:)
         real(rk),       allocatable         :: element_mapping(:,:)
-        integer(ik)                         :: ierr, nterms_c, ipt, npts_1d, npts, nnodes, mapping, ielem, inode
+        integer(ik)                         :: ierr, nterms_c, ipt, npts_1d, npts, nnodes, mapping, ielem, inode, idomain_g, ielem_g
 
 
         if (self%geomInitialized) call chidg_signal(FATAL,'element%init_geom -- element already initialized')
@@ -153,9 +154,9 @@ contains
         !
         ! Get connectivity info
         !
-        ielem   = connectivity_get_ielem(connectivity)
-        mapping = connectivity_get_mapping(connectivity)
-
+        idomain_g = connectivity%get_domain_index()
+        ielem_g   = connectivity%get_element_index()
+        mapping   = connectivity%get_element_mapping()
 
 
         !
@@ -170,14 +171,13 @@ contains
             !
             ! Get node index
             !
-            inode = connectivity_get_node(connectivity,ipt)
+            inode = connectivity%get_element_node(ipt)
 
             !
             ! Add node to element points list
             !
             points(ipt) = nodes(inode)
         end do !ipt
-
 
 
 
@@ -198,8 +198,10 @@ contains
         allocate(self%elem_pts(nterms_c),stat=ierr)
         call self%coords%init(nterms_c,3,ielem)
         self%spacedim       = spacedim
-        self%idomain        = idomain
-        self%ielem          = ielem
+        self%idomain_g      = idomain_g
+        self%idomain_l      = idomain_l
+        self%ielem_g        = ielem_g
+        self%ielem_l        = ielem_l
         self%elem_pts       = points
         self%connectivity   = connectivity
 

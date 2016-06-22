@@ -150,32 +150,42 @@ contains
 
         ! Test 1
         call gqnode(1)%set(0.25_rk,0.25_rk,0.25_rk)
-        donor(1)%idomain  = 1
-        donor(1)%ielement = 1
+        donor(1)%idomain_g  = 1
+        donor(1)%idomain_l  = 1
+        donor(1)%ielement_g = 1
+        donor(1)%ielement_l = 1
         call donor_coords(1)%set(-0.5_rk,-0.5_rk,-0.5_rk)
 
         ! Test 2
         call gqnode(2)%set(1.25_rk,0.25_rk,0.25_rk)
-        donor(2)%idomain  = 1
-        donor(2)%ielement = 2
+        donor(2)%idomain_g  = 1
+        donor(2)%idomain_l  = 1
+        donor(2)%ielement_g = 2
+        donor(2)%ielement_l = 2
         call donor_coords(2)%set(-0.5_rk,-0.5_rk,-0.5_rk)
 
         ! Test 3
         call gqnode(3)%set(1.25_rk,1.25_rk,1.25_rk)
-        donor(3)%idomain  = 1
-        donor(3)%ielement = 8
+        donor(3)%idomain_g  = 1
+        donor(3)%idomain_l  = 1
+        donor(3)%ielement_g = 8
+        donor(3)%ielement_l = 8
         call donor_coords(3)%set(-0.5_rk,-0.5_rk,-0.5_rk)
 
         ! Test 4
         call gqnode(4)%set(0.25_rk,0.25_rk,1.25_rk)
-        donor(4)%idomain  = 1
-        donor(4)%ielement = 5
+        donor(4)%idomain_g  = 1
+        donor(4)%idomain_l  = 1
+        donor(4)%ielement_g = 5
+        donor(4)%ielement_l = 5
         call donor_coords(4)%set(-0.5_rk,-0.5_rk,-0.5_rk)
 
         ! Test 5
         call gqnode(5)%set(0.75_rk, 0.75_rk, 0.75_rk)
-        donor(5)%idomain  = 1
-        donor(5)%ielement = 1
+        donor(5)%idomain_g  = 1
+        donor(5)%idomain_l  = 1
+        donor(5)%ielement_g = 1
+        donor(5)%ielement_l = 1
         call donor_coords(5)%set(0.5_rk,0.5_rk,0.5_rk)
 
 
@@ -224,9 +234,11 @@ contains
         type(face_info_t)               :: receiver
 
 
-        receiver%idomain  = 0
-        receiver%ielement = 0
-        receiver%iface    = 0
+        receiver%idomain_g  = 0
+        receiver%idomain_l  = 0
+        receiver%ielement_g = 0
+        receiver%ielement_l = 0
+        receiver%iface      = 0
 
 
         !
@@ -238,8 +250,10 @@ contains
         !
         ! Check that the correct donor element was found
         !
-        @assertEqual(self%donor%idomain, donor%idomain)
-        @assertEqual(self%donor%ielement,donor%ielement)
+        @assertEqual(self%donor%idomain_g, donor%idomain_g)
+        @assertEqual(self%donor%idomain_l, donor%idomain_l)
+        @assertEqual(self%donor%ielement_g,donor%ielement_g)
+        @assertEqual(self%donor%ielement_l,donor%ielement_l)
 
 
         !

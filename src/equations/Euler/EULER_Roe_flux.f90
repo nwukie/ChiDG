@@ -83,11 +83,11 @@ contains
 
 
         integer(ik)     :: idom,  ielem,  iface
-        integer(ik)     :: idom_m,  ielem_m,  iface_m
+!        integer(ik)     :: idom_m,  ielem_m,  iface_m
         integer(ik)     :: ifcn,  idonor, iblk
 
         ! Storage at quadrature nodes
-        type(AD_D), dimension(mesh(face_info%idomain)%faces(face_info%ielement,face_info%iface)%gq%face%nnodes)    ::   &
+        type(AD_D), dimension(mesh(face_info%idomain_l)%faces(face_info%ielement_l,face_info%iface)%gq%face%nnodes)    ::   &
                         rho_m,      rho_p,                                          &
                         rhou_m,     rhou_p,                                         &
                         rhov_m,     rhov_p,                                         &
@@ -109,7 +109,7 @@ contains
                         sqrt_rhom, sqrt_rhop, sqrt_rhom_plus_rhop, ctil2
 
 
-        real(rk), dimension(mesh(face_info%idomain)%faces(face_info%ielement,face_info%iface)%gq%face%nnodes)    :: &
+        real(rk), dimension(mesh(face_info%idomain_l)%faces(face_info%ielement_l,face_info%iface)%gq%face%nnodes)    :: &
                         x_m, y_m, z_m, r_m, theta_m, theta_p
 
         real(rk)    :: theta_offset
@@ -127,8 +127,8 @@ contains
         irhoE = prop%get_eqn_index("rhoE")
 
         
-        idom  = face_info%idomain
-        ielem = face_info%ielement
+        idom  = face_info%idomain_l
+        ielem = face_info%ielement_l
         iface = face_info%iface
 
         ifcn   = function_info%ifcn
@@ -159,11 +159,11 @@ contains
 
 
 
-            idom_m  = face_info%idomain
-            ielem_m = face_info%ielement
-            iface_m = face_info%iface
-
-
+!            idom_m  = face%idomain_l
+!            ielem_m = face%ielement_l
+!            iface_m = face%iface
+!
+!
 !            if ( mesh(idom_m)%faces(ielem_m, iface_m)%periodic_type == 'cylindrical' ) then
 !                theta_offset = (PI/180._rk)*mesh(idom_m)%faces(ielem_m,iface_m)%chimera_offset_theta
 !

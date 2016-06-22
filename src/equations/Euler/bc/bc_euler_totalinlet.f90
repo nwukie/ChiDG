@@ -118,7 +118,7 @@ contains
 
 
         ! Storage at quadrature nodes
-        type(AD_D), dimension(mesh(face%idomain)%faces(face%ielement,face%iface)%gq%face%nnodes)   ::  &
+        type(AD_D), dimension(mesh(face%idomain_l)%faces(face%ielement_l,face%iface)%gq%face%nnodes)   ::  &
                         rho_m,  rhou_m, rhov_m, rhow_m, rhoE_m, p_m,        &
                         flux_x, flux_y, flux_z, integrand,                  &
                         u_m,    v_m,    w_m,                                &
@@ -126,7 +126,7 @@ contains
                         T_bc,   p_bc,   rho_bc, rhoE_bc,                    &
                         vmag2_m, vmag, H_bc
 
-        real(rk), dimension(mesh(face%idomain)%faces(face%ielement,face%iface)%gq%face%nnodes)     ::  &
+        real(rk), dimension(mesh(face%idomain_l)%faces(face%ielement_l,face%iface)%gq%face%nnodes)     ::  &
                         TT, PT, nx, ny, nz, nr, nt, theta, normal_direction, x, y, r
 
 
@@ -150,8 +150,8 @@ contains
         irhoE = prop%get_eqn_index("rhoE")
 
 
-        idom  = face%idomain
-        ielem = face%ielement
+        idom  = face%idomain_l
+        ielem = face%ielement_l
         iface = face%iface
         iblk  = flux%iblk
 

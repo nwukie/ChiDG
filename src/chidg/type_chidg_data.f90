@@ -151,11 +151,9 @@ contains
     !!  @param[in]  nterms_s    Integer defining the number of terms in the solution expansion
     !!
     !---------------------------------------------------------------------------------------------------------------
-    !subroutine add_domain(self,name,idomain_l,nodes,connectivity,spacedim,nterms_c,eqnset)
     subroutine add_domain(self,name,nodes,connectivity,spacedim,nterms_c,eqnset)
         class(chidg_data_t),            intent(inout)   :: self
         character(*),                   intent(in)      :: name
-!        integer(ik),                    intent(in)      :: idomain_l
         type(point_t),                  intent(in)      :: nodes(:)
         type(domain_connectivity_t),    intent(in)      :: connectivity
         integer(ik),                    intent(in)      :: spacedim
@@ -186,15 +184,6 @@ contains
         !
         self%ndomains_ = self%ndomains_ + 1
         idomain_l      = self%ndomains_
-
-        !
-        ! TODO: SHOULD SET idomain from connectivity data. Might not correspond to ndomains for parallel calculations.
-        ! DONE: CHECK FOR CORRECTNESS
-        !
-        !call chidg_signal(WARN,"add_domain: fix specification of idomain")
-        !idom = self%ndomains_
-        !idom = idomain_l
-
 
 
         !
@@ -230,11 +219,6 @@ contains
         !
         ! Initialize new mesh
         !
-        !
-        ! TODO: SHOULD SET idomain from connectivity data. Might not correspond to ndomains for parallel calculations.
-        ! DONE: CHECK FOR CORRECTNESS
-        !
-        !call chidg_signal(WARN,"add_domain: fix specification of idomain")
         call temp_mesh(idomain_l)%init_geom(idomain_l,spacedim,nterms_c,nodes,connectivity)
 
 

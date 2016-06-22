@@ -116,9 +116,14 @@ contains
                                 !
                                 ! Define face indices
                                 !
-                                face_info%idomain  = idom
-                                face_info%ielement = ielem
-                                face_info%iface    = iface
+!                                face_info%idomain  = idom
+!                                face_info%ielement = ielem
+!                                face_info%iface    = iface
+                                face_info%idomain_g  = mesh%elems(ielem)%idomain_g
+                                face_info%idomain_l  = mesh%elems(ielem)%idomain_l
+                                face_info%ielement_g = mesh%elems(ielem)%ielement_g
+                                face_info%ielement_l = mesh%elems(ielem)%ielement_l
+                                face_info%iface      = iface
 
 
 

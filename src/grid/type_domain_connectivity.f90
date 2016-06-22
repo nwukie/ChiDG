@@ -56,21 +56,16 @@ contains
     !!  @param[in]  max_mapping     Maximum mapping order in the connectivity list
     !!
     !--------------------------------------------------------------------------------
-    !subroutine init(self,idomain_l,nelements,nnodes)
     subroutine init(self,nelements,nnodes)
         class(domain_connectivity_t),   intent(inout)   :: self
-!        integer(ik),                    intent(in)      :: idomain_l
         integer(ik),                    intent(in)      :: nelements
         integer(ik),                    intent(in)      :: nnodes
         
         integer(ik) :: ierr
 
-        
-!        self%idomain_l = idomain_l
         self%nnodes    = nnodes
 
 
-        !allocate(self%data(nelements), self%partition(nelements), stat=ierr)
         allocate(self%data(nelements), stat=ierr)
         if (ierr /= 0) call AllocationError
 
@@ -296,6 +291,7 @@ contains
         class(domain_connectivity_t),   intent(in)  :: self
         integer(ik),                    intent(in)  :: idx
 
+        integer(ik)                     :: mapping, idomain, ielement
         type(element_connectivity_t)    :: element_connectivity
 
         element_connectivity = self%data(idx)

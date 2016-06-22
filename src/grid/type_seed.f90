@@ -19,8 +19,12 @@ module type_seed
     !----------------------------------------------------------------------
     type, public :: seed_t
 
-        integer(ik) :: idom
-        integer(ik) :: ielem
+!        integer(ik) :: idom
+!        integer(ik) :: ielem
+        integer(ik) :: idomain_g
+        integer(ik) :: idomain_l
+        integer(ik) :: ielement_g
+        integer(ik) :: ielement_l
 
     end type seed_t
     !**********************************************************************

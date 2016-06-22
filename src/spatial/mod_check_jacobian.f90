@@ -120,7 +120,7 @@ contains
                ielem_p = ielem
            else
                !ielem_p = mesh(1)%faces(ielem,iblk)%ineighbor_l
-               ielem_p = mesh(1)%faces(ielem,iblk)%get_neighbor_element()
+               ielem_p = mesh(1)%faces(ielem,iblk)%get_neighbor_element_l()
            end if
 
 
@@ -241,8 +241,7 @@ contains
             ielem_p = ielem
             iface   = 1
         else
-            !ielem_p = data%mesh(1)%faces(ielem,iblk)%ineighbor_l
-            ielem_p = data%mesh(1)%faces(ielem,iblk)%get_neighbor_element()
+            ielem_p = data%mesh(1)%faces(ielem,iblk)%get_neighbor_element_l()
             iface   = iblk
         end if
 
@@ -268,10 +267,14 @@ contains
             vec_fd = rhs
 
 
-            face_info%idomain  = idom
-            face_info%ielement = ielem
-            face_info%iface    = iface
-            face_info%seed     = compute_seed(data%mesh,idom,ielem,iface,idonor,iblk)
+!            face_info%idomain  = idom
+!            face_info%ielement = ielem
+            face_info%idomain_g  = data%mesh(idom)%elems(ielem)%idomain_g
+            face_info%idomain_l  = data%mesh(idom)%elems(ielem)%idomain_l
+            face_info%ielement_g = data%mesh(idom)%elems(ielem)%ielement_g
+            face_info%ielement_l = data%mesh(idom)%elems(ielem)%ielement_l
+            face_info%iface      = iface
+            face_info%seed       = compute_seed(data%mesh,idom,ielem,iface,idonor,iblk)
 
 
             !
@@ -299,9 +302,9 @@ contains
             !
             ! Store linearization computed from DNAD
             !
-            blk_dnad = lhs%lblks(ielem,iblk)
-            blk_fd = blk_dnad   ! Sourced allocation
-            blk_fd%mat = ZERO   ! Zero storage
+            blk_dnad   = lhs%lblks(ielem,iblk)
+            blk_fd     = blk_dnad   ! Sourced allocation
+            blk_fd%mat = ZERO       ! Zero storage
 
 
 

@@ -132,15 +132,19 @@ subroutine test_integrate_boundary_unit_constant()
 
 
 
-    seed%ielem = 1   ! doesn't matter what this is. Only checking the values here
-    seed%idom  = 1
+    seed%idomain_g  = 1
+    seed%idomain_l  = 1
+    seed%ielement_g = 1   ! doesn't matter what this is. Only checking the values here
+    seed%ielement_l = 1   ! doesn't matter what this is. Only checking the values here
 
 
 
-    face%idomain  = idom
-    face%ielement = ielem
-    face%iface    = iface
-    face%seed     = seed
+    face%idomain_g  = idom
+    face%idomain_l  = idom
+    face%ielement_g = ielem
+    face%ielement_l = ielem
+    face%iface      = iface
+    face%seed       = seed
 
 
     
@@ -319,13 +323,17 @@ subroutine test_integrate_boundary_nonunit_constant()
     !
     ! Set seed. Doesn't really matter what, since we are just checking the values here
     !
-    seed%idom  = 1
-    seed%ielem = 1
+    seed%idomain_g  = 1
+    seed%idomain_l  = 1
+    seed%ielement_g = 1
+    seed%ielement_l = 1
     
-    face%idomain  = 1
-    face%ielement = 1
-    face%iface    = XI_MIN
-    face%seed     = seed
+    face%idomain_g  = 1
+    face%idomain_l  = 1
+    face%ielement_g = 1
+    face%ielement_l = 1
+    face%iface      = XI_MIN
+    face%seed       = seed
 
     idomain = 1
     ivar    = 1

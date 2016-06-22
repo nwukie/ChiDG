@@ -1,11 +1,14 @@
 module mod_communication
     use mod_kinds,      only: rk, ik
     use type_mesh,      only: mesh_t
+
+    use mod_chimera,    only: detect_chimera_faces,  &
+                              detect_chimera_donors, &
+                              compute_chimera_interpolators
     use mod_chidg_mpi,  only: IRANK, NRANK
     use mpi_f08
     implicit none
 
-!#include "mpif.h"
 
 
 
@@ -29,16 +32,18 @@ contains
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   6/16/2016
     !!
-    !!  @param[inout]   mesh    An array of mesh types on the local processor.
+    !!  @param[inout]   mesh        An array of mesh types on the local processor.
+    !!  @param[in]      ChiDG_COMM  An mpi communicator of the relevant processors. Particularly usefull for testing.
     !!
-    !-------------------------------------------------------------------------------
-    subroutine establish_communication(mesh)
+    !--------------------------------------------------------------------------------------------------------
+    subroutine establish_neighbor_communication(mesh,ChiDG_COMM)
         type(mesh_t),   intent(inout)   :: mesh(:)
+        type(mpi_comm), intent(in)      :: ChiDG_COMM
 
         integer(ik) :: imesh, iproc, idomain_g, idomain_l, ielem_l, ierr
         integer(ik) :: ineighbor_domain_g, ineighbor_domain_l, ineighbor_element_g, ineighbor_element_l
         integer(ik) :: data(4), corner_indices(4)
-        logical     :: has_domain, searching, neighbor_element
+        logical     :: has_domain, searching, neighbor_element, searching_mesh
         logical     :: includes_corner_one, includes_corner_two, includes_corner_three, includes_corner_four
 
 
@@ -46,14 +51,8 @@ contains
         ! All ranks initialize local communication
         !
         do imesh = 1,size(mesh)
-
             call mesh(imesh)%init_comm_local()
-            print*, "Rank ", IRANK, ": Established local communication"
-
         end do
-
-
-
 
 
 
@@ -69,16 +68,27 @@ contains
 
 
 
+            !
             ! For current rank, send out requests for neighbors
+            !
             if ( iproc == IRANK ) then
-                do imesh = 1,size(mesh)
 
-                    print*, "Rank ", IRANK, ": Establishing global communication"
-                    call mesh(imesh)%init_comm_global()
-                    print*, "Rank ", IRANK, ": Done Establishing global communication"
+                do imesh = 1,size(mesh)
+                    ! Broadcast that a mesh from iproc is searching for face neighbors
+                    searching_mesh=.true.
+                    call MPI_BCast(searching_mesh,1,MPI_LOGICAL,iproc,ChiDG_COMM,ierr)
+
+                    ! Initiate search for communication across processors
+                    call mesh(imesh)%init_comm_global(ChiDG_COMM)
 
                 end do !imesh
+
+
+                ! Broadcast that no more mesh instances are searching for face neighbors
+                searching_mesh=.false.
+                call MPI_BCast(searching_mesh,1,MPI_LOGICAL,iproc,ChiDG_COMM,ierr)
             end if ! iproc
+
 
 
 
@@ -88,99 +98,69 @@ contains
             !
             if ( iproc /= IRANK ) then
 
-                ! Process face request and send status
-                print*, "Rank ", IRANK, ": Waiting for request from root process"
-                call MPI_BCast(searching,1,MPI_LOGICAL,iproc,MPI_COMM_WORLD,ierr)
-                print*, "Rank ", IRANK, ": Done waiting for request from root process"
-                do while ( searching )
-                    
-                    ! Receive global domain index of mesh being searched
-                    print*, "Rank ", IRANK, ": Waiting for domain index"
-                    call MPI_BCast(idomain_g,1,MPI_INTEGER4,iproc,MPI_COMM_WORLD,ierr)
-                    print*, "Rank ", IRANK, ": Done waiting for domain index"
 
-                    ! Check if we have domain index
-                    has_domain = .false.
-                    do imesh = 1,size(mesh)
-                        if ( idomain_g == mesh(imesh)%idomain_g ) then
-                            idomain_l  = imesh
-                            has_domain = .true.
-                        end if
-                    end do
-
-                    ! Send domain status
-                    print*, "Rank ", IRANK, ": Sending domain status"
-                    call MPI_Send(has_domain,1,MPI_LOGICAL,iproc,1,MPI_COMM_WORLD,ierr)
-                    print*, "Rank ", IRANK, ": Done sending domain status"
+                ! Check if iproc is searching mesh instances
+                call MPI_BCast(searching_mesh,1,MPI_LOGICAL,iproc,ChiDG_COMM,ierr)
+                do while ( searching_mesh )
 
 
-                    ! If we have partition of the global domain being searched, receive face information and try to find match
-                    if ( has_domain ) then 
-                        ! Receive corner indices of face to be matched
-                        print*, "Rank ", IRANK, ": Waiting for face corner indices"
-                        call MPI_Recv(corner_indices,4,MPI_INTEGER4,iproc,2,MPI_COMM_WORLD,MPI_STATUS_IGNORE,ierr)
-                        print*, "Rank ", IRANK, ": Done waiting for face corner indices"
+                    call MPI_BCast(searching,1,MPI_LOGICAL,iproc,ChiDG_COMM,ierr)
+                    do while ( searching )
+                        
+                        ! Receive global domain index of mesh being searched
+                        call MPI_Recv(idomain_g,1,MPI_INTEGER4,iproc,0,ChiDG_COMM,MPI_STATUS_IGNORE,ierr)
 
-                        ! Loop through local domain and try to find a match
-                        ! Test the incoming face nodes against local elements, if all face nodes are also contained in an element, then they are neighbors.
-                        neighbor_element = .false.
-                        do ielem_l = 1,mesh(idomain_l)%nelem
-                            includes_corner_one   = any( mesh(idomain_l)%elems(ielem_l)%connectivity%get_element_nodes() == corner_indices(1) )
-                            includes_corner_two   = any( mesh(idomain_l)%elems(ielem_l)%connectivity%get_element_nodes() == corner_indices(2) )
-                            includes_corner_three = any( mesh(idomain_l)%elems(ielem_l)%connectivity%get_element_nodes() == corner_indices(3) )
-                            includes_corner_four  = any( mesh(idomain_l)%elems(ielem_l)%connectivity%get_element_nodes() == corner_indices(4) )
-                            neighbor_element = ( includes_corner_one .and. includes_corner_two .and. includes_corner_three .and. includes_corner_four )
 
-                            ! Send element-found status. If found, send element index information.
-                            print*, "Rank ", IRANK, ": Sending face status"
-                            call MPI_Send(neighbor_element,1,MPI_LOGICAL,iproc,3,MPI_COMM_WORLD,ierr)
-                            print*, "Rank ", IRANK, ": Done sending face status"
-                            if ( neighbor_element ) then
-                                ineighbor_domain_g  = mesh(idomain_l)%elems(ielem_l)%connectivity%get_domain_index()
-                                ineighbor_domain_l  = idomain_l
-                                ineighbor_element_g = mesh(idomain_l)%elems(ielem_l)%connectivity%get_element_index()
-                                ineighbor_element_l = ielem_l
-
-                                data = [ineighbor_domain_g, ineighbor_domain_l, ineighbor_element_g, ineighbor_element_l]
-                                print*, "Rank ", IRANK, ": Sending face information"
-                                call MPI_Send(data,4,MPI_INTEGER4,iproc,4,MPI_COMM_WORLD,ierr)
-                                print*, "Rank ", IRANK, ": Done sending face information"
+                        ! Search through local domains and check indices
+                        do imesh = 1,size(mesh)
+                            has_domain = ( idomain_g == mesh(imesh)%idomain_g )
+                            if ( has_domain ) then
                                 exit
                             end if
-
                         end do
 
-                    end if
 
-                    ! Detect if iproc is still sending out face requests. 
-                    print*, "Rank ", IRANK, ": Waiting for request status from root process"
-                    call MPI_BCast(searching,1,MPI_LOGICAL,iproc,MPI_COMM_WORLD,ierr)
-                    print*, "Rank ", IRANK, ": Done waiting for request status from root process"
-                end do 
-                
+                        
+                        ! Send domain status. If we have a match, initiate handle_comm_request
+                        call MPI_Send(has_domain,1,MPI_LOGICAL,iproc,1,ChiDG_COMM,ierr)
+
+                        if ( has_domain ) then
+                            call mesh(imesh)%handle_neighbor_request(iproc,ChiDG_COMM)
+                        end if
+
+
+
+                        ! Detect if iproc is still sending out face requests. 
+                        call MPI_BCast(searching,1,MPI_LOGICAL,iproc,ChiDG_COMM,ierr)
+
+                    end do ! searching faces
+
+
+                    ! Check if iproc is searching another mesh or finished.
+                    call MPI_BCast(searching_mesh,1,MPI_LOGICAL,iproc,ChiDG_COMM,ierr)
+                end do ! searching_mesh
 
             end if !iproc
+
+
 
 
 
             !
             ! Barrier
             !
-            print*, "Rank ", IRANK, ": Waiting at Barrier"
-            call MPI_Barrier(MPI_COMM_WORLD,ierr)
-            print*, "Rank ", IRANK, ": Done waiting at Barrier"
+            call MPI_Barrier(ChiDG_COMM,ierr)
 
 
-        end do
+        end do ! iproc
 
 
 
 
 
 
-    end subroutine establish_communication
-    !********************************************************************************
-
+    end subroutine establish_neighbor_communication
+    !***********************************************************************************************
 
 
 
@@ -200,13 +180,37 @@ contains
 
 
 
+    !>  Establish chimera face communication.
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   6/22/2016
+    !!
+    !!
+    !!  @param[inout]   mesh        An array of mesh types on the local processor.
+    !!  @param[in]      ChiDG_COMM  An mpi communicator of the relevant processors. Particularly usefull for testing.
+    !!
+    !!
+    !-----------------------------------------------------------------------------------------------
+    subroutine establish_chimera_communication(mesh, ChiDG_COMM)
+        type(mesh_t),   intent(inout)   :: mesh(:)
+        type(mpi_comm)                  :: ChiDG_COMM
 
 
 
+        call detect_chimera_faces(mesh)
 
 
 
+        call detect_chimera_donors(mesh)
 
+
+
+        call compute_chimera_interpolators(mesh)
+
+
+
+    end subroutine establish_chimera_communication
+    !***********************************************************************************************
 
 
 

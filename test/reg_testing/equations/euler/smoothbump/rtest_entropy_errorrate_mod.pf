@@ -126,7 +126,6 @@ contains
         character(len=200) :: buffer
 
         write(buffer,'( "(gridfile, order)=","(", A10,",", I2, ")" )') this%gridfile, this%order
-        !write(buffer,'(A10,I2)') this%gridfile, this%order
 
 
         string = trim(buffer)
@@ -171,7 +170,7 @@ contains
         class(bc_t),        allocatable :: wall, inlet, outlet
         type(meshdata_t),   allocatable :: meshdata(:)
         class(function_t),  allocatable :: fcn
-        type(dict_t)                    :: toptions, noptions, loptions
+!        type(dict_t)                    :: toptions, noptions, loptions
         integer(ik)                     :: nterms_c, itime, idom
         real(rk)                        :: tol, entropy_error
 
@@ -187,7 +186,6 @@ contains
         spacedim         = 3
         nterms_s         = self%order**THREE
         gq_rule          = 2
-        !eqnset           = 'euler'
         time_scheme      = 'steady'
         nonlinear_solver = 'quasi_newton'
         linear_solver    = 'fgmres'

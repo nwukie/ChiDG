@@ -99,7 +99,7 @@ contains
 
 
         ! Storage at quadrature nodes
-        type(AD_D), dimension(mesh(face%idomain)%faces(face%ielement,face%iface)%gq%face%nnodes)   ::  &
+        type(AD_D), dimension(mesh(face%idomain_l)%faces(face%ielement_l,face%iface)%gq%face%nnodes)   ::  &
                         rho_r,      rhou_r,     rhov_r,     rhow_r,     rhoE_r,         &
                         rho_i,      rhou_i,     rhov_i,     rhow_i,     rhoE_i,         &
                         p_r,        u_r,        v_r,        w_r,                        &
@@ -133,7 +133,7 @@ contains
 
 
 
-        associate ( idom => face%idomain, ielem => face%ielement, iface => face%iface )
+        associate ( idom => face%idomain_l, ielem => face%ielement_l, iface => face%iface )
 
             associate (norms => mesh(idom)%faces(ielem,iface)%norm, unorms => mesh(idom)%faces(ielem,iface)%unorm, faces => mesh(idom)%faces, q => sdata%q)
 

@@ -72,6 +72,7 @@ module type_mesh
         ! Utilities
         procedure, private  :: find_neighbor_local
         procedure, private  :: find_neighbor_global
+        procedure           :: handle_neighbor_request
 
         final               :: destructor
 
@@ -277,6 +278,7 @@ contains
             ! Element geometry initialization
             !
             element_connectivity = connectivity%get_element_connectivity(ielem_l)
+!            print*, element_connectivity%get_domain_index()
             call self%elems(ielem_l)%init_geom(spacedim,nodes,element_connectivity,idomain_l,ielem_l)
 
         end do ! ielem
@@ -396,6 +398,63 @@ contains
 
 
 
+
+
+
+
+
+
+
+
+
+    !>  Mesh - face initialization procedure
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   2/1/2016
+    !!
+    !!
+    !!
+    !!
+    !---------------------------------------------------------------------------------------------------------------
+    subroutine init_faces_sol(self)
+        class(mesh_t), intent(inout)  :: self
+
+        integer(ik) :: ielem, iface
+
+        !
+        ! Loop through elements
+        !
+        do ielem = 1,self%nelem
+
+            !
+            ! Loop through faces and call numerics initialization routine
+            !
+            do iface = 1,NFACES
+
+                call self%faces(ielem,iface)%init_sol(self%elems(ielem))
+
+            end do ! iface
+
+        end do ! ielem
+
+
+    end subroutine init_faces_sol
+    !***************************************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     !>
     !!
     !!  @author Nathan A. Wukie (AFRL)
@@ -500,8 +559,9 @@ contains
     !!
     !!
     !--------------------------------------------------------------------------------------------------------------
-    subroutine init_comm_global(self)
+    subroutine init_comm_global(self,ChiDG_COMM)
         class(mesh_t),                  intent(inout)   :: self
+        type(mpi_comm),                 intent(in)      :: ChiDG_COMM
 
 
         integer(ik)             :: ixi,ieta,izeta,iface,ftype,ielem,ierr, ielem_neighbor
@@ -516,7 +576,6 @@ contains
 
 
 
-
         do ielem = 1,self%nelem
             do iface = 1,NFACES
                 neighbor_status = NO_NEIGHBOR_FOUND
@@ -527,9 +586,7 @@ contains
                 if ( self%faces(ielem,iface)%ftype == ORPHAN ) then
                     ! send search request for neighbor face among global MPI ranks.
                     searching = .true.
-                    print*, "Rank ", IRANK, ": Sending request for face neighbor"
-                    call MPI_Bcast(searching,1,MPI_LOGICAL,IRANK,MPI_COMM_WORLD,ierr)
-                    print*, "Rank ", IRANK, ": Done sending request for face neighbor"
+                    call MPI_Bcast(searching,1,MPI_LOGICAL,IRANK,ChiDG_COMM,ierr)
 
                     call self%find_neighbor_global(ielem,iface,             &
                                                    ineighbor_domain_g,      &
@@ -537,7 +594,8 @@ contains
                                                    ineighbor_element_g,     &
                                                    ineighbor_element_l,     &
                                                    ineighbor_proc,          &
-                                                   neighbor_status)
+                                                   neighbor_status,         &
+                                                   ChiDG_COMM)
                             
                 
                     !
@@ -573,14 +631,93 @@ contains
 
         ! End search for global faces
         searching = .false.
-        print*, "Rank ", IRANK, ": Broadcasting message, finished searching for faces"
-        call MPI_Bcast(searching,1,MPI_LOGICAL,IRANK,MPI_COMM_WORLD,ierr)
-        print*, "Rank ", IRANK, ": Done broadcasting message, finished searching for faces"
+        call MPI_Bcast(searching,1,MPI_LOGICAL,IRANK,ChiDG_COMM,ierr)
+
 
 
 
 
     end subroutine init_comm_global
+    !**************************************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    !>  Outside of this subroutine, it should have already been determined that a neighbor request was initiated
+    !!  from another processor and the current processor contains part of the domain of interest. This routine
+    !!  receives corner indices from the requesting processor and tries to find a match in the current mesh.
+    !!  The status of the element match is sent back. If a match was 
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   6/21/2016
+    !!
+    !!
+    !!
+    !!
+    !--------------------------------------------------------------------------------------------------------------
+    subroutine handle_neighbor_request(self,iproc,ChiDG_COMM)
+        class(mesh_t),  intent(inout)   :: self
+        integer(ik),    intent(in)      :: iproc
+        type(mpi_comm), intent(in)      :: ChiDG_COMM
+
+        integer(ik) :: idomain_g, ielem_l, imesh
+        integer(ik) :: ineighbor_domain_g, ineighbor_domain_l, ineighbor_element_g, ineighbor_element_l
+        integer(ik) :: data(4), corner_indices(4)
+        integer     :: ierr
+        logical     :: includes_corner_one, includes_corner_two, includes_corner_three, includes_corner_four
+        logical     :: searching, has_domain, neighbor_element
+
+
+
+        ! Receive corner indices of face to be matched
+        call MPI_Recv(corner_indices,4,MPI_INTEGER4,iproc,2,ChiDG_COMM,MPI_STATUS_IGNORE,ierr)
+
+        ! Loop through local domain and try to find a match
+        ! Test the incoming face nodes against local elements, if all face nodes are also contained in an element, then they are neighbors.
+        neighbor_element = .false.
+        do ielem_l = 1,self%nelem
+            includes_corner_one   = any( self%elems(ielem_l)%connectivity%get_element_nodes() == corner_indices(1) )
+            includes_corner_two   = any( self%elems(ielem_l)%connectivity%get_element_nodes() == corner_indices(2) )
+            includes_corner_three = any( self%elems(ielem_l)%connectivity%get_element_nodes() == corner_indices(3) )
+            includes_corner_four  = any( self%elems(ielem_l)%connectivity%get_element_nodes() == corner_indices(4) )
+            neighbor_element = ( includes_corner_one .and. includes_corner_two .and. includes_corner_three .and. includes_corner_four )
+
+            if ( neighbor_element ) then
+                ineighbor_domain_g  = self%elems(ielem_l)%connectivity%get_domain_index()
+                ineighbor_domain_l  = self%elems(ielem_l)%idomain_l
+                ineighbor_element_g = self%elems(ielem_l)%connectivity%get_element_index()
+                ineighbor_element_l = self%elems(ielem_l)%ielement_l
+
+                data = [ineighbor_domain_g, ineighbor_domain_l, ineighbor_element_g, ineighbor_element_l]
+                exit
+            end if
+
+        end do ! ielem_l
+
+
+
+        ! Send element-found status. If found, send element index information.
+        call MPI_Send(neighbor_element,1,MPI_LOGICAL,iproc,3,ChiDG_COMM,ierr)
+
+        if ( neighbor_element ) then
+            call MPI_Send(data,4,MPI_INTEGER4,iproc,4,ChiDG_COMM,ierr)
+        end if
+
+
+
+
+    end subroutine handle_neighbor_request
     !**************************************************************************************************************
 
 
@@ -608,39 +745,9 @@ contains
 
 
 
-    !>  Mesh - face initialization procedure
-    !!
-    !!  @author Nathan A. Wukie
-    !!  @date   2/1/2016
-    !!
-    !!
-    !!
-    !!
-    !---------------------------------------------------------------------------------------------------------------
-    subroutine init_faces_sol(self)
-        class(mesh_t), intent(inout)  :: self
-
-        integer(ik) :: ielem, iface
-
-        !
-        ! Loop through elements
-        !
-        do ielem = 1,self%nelem
-
-            !
-            ! Loop through faces and call numerics initialization routine
-            !
-            do iface = 1,NFACES
-
-                call self%faces(ielem,iface)%init_sol(self%elems(ielem))
-
-            end do ! iface
-
-        end do ! ielem
 
 
-    end subroutine init_faces_sol
-    !***************************************************************************************************************
+
 
 
 
@@ -743,7 +850,7 @@ contains
     !!
     !!
     !---------------------------------------------------------------------------------------------------------------
-    subroutine find_neighbor_global(self,ielem_l,iface,ineighbor_domain_g,ineighbor_domain_l,ineighbor_element_g,ineighbor_element_l,ineighbor_proc,neighbor_status)
+    subroutine find_neighbor_global(self,ielem_l,iface,ineighbor_domain_g,ineighbor_domain_l,ineighbor_element_g,ineighbor_element_l,ineighbor_proc,neighbor_status,ChiDG_COMM)
         class(mesh_t),                  intent(inout)   :: self
         integer(ik),                    intent(in)      :: ielem_l
         integer(ik),                    intent(in)      :: iface
@@ -753,6 +860,7 @@ contains
         integer(ik),                    intent(inout)   :: ineighbor_element_l
         integer(ik),                    intent(inout)   :: ineighbor_proc
         integer(ik),                    intent(inout)   :: neighbor_status
+        type(mpi_comm),                 intent(in)      :: ChiDG_COMM
 
         integer(ik) :: corner_one, corner_two, corner_three, corner_four
         integer(ik) :: corner_indices(4), data(4), ielem_neighbor, mapping, iproc, idomain_g, ierr
@@ -780,26 +888,30 @@ contains
         neighbor_element = .false.
 
 
-        ! send global domain index of mesh being searched
-        idomain_g = self%elems(ielem_l)%connectivity%get_domain_index()
-        call MPI_Bcast(idomain_g,1,MPI_INTEGER4,IRANK,MPI_COMM_WORLD,ierr)
 
 
         do iproc = 0,NRANK-1
             if ( iproc /= IRANK ) then
+
+                ! send global domain index of mesh being searched
+                idomain_g = self%elems(ielem_l)%connectivity%get_domain_index()
+                call MPI_Send(idomain_g,1,MPI_INTEGER4,iproc,0,ChiDG_COMM,ierr)
+
+
                 ! Check if other MPI rank has domain 
-                call MPI_Recv(has_domain,1,MPI_LOGICAL,iproc,1,MPI_COMM_WORLD,MPI_STATUS_IGNORE,ierr)
+                call MPI_Recv(has_domain,1,MPI_LOGICAL,iproc,1,ChiDG_COMM,MPI_STATUS_IGNORE,ierr)
+
 
                 ! If so, send corner information
                 if ( has_domain ) then
                     ! Send corner indices
-                    call MPI_Send(corner_indices,4,MPI_INTEGER4,iproc,2,MPI_COMM_WORLD,ierr)
+                    call MPI_Send(corner_indices,4,MPI_INTEGER4,iproc,2,ChiDG_COMM,ierr)
 
                     ! Get status from proc on if it has neighbor element
-                    call MPI_Recv(neighbor_element,1,MPI_LOGICAL,iproc,3,MPI_COMM_WORLD,MPI_STATUS_IGNORE,ierr)
+                    call MPI_Recv(neighbor_element,1,MPI_LOGICAL,iproc,3,ChiDG_COMM,MPI_STATUS_IGNORE,ierr)
 
                     if (neighbor_element) then
-                        call MPI_Recv(data,4,MPI_INTEGER4,iproc,4,MPI_COMM_WORLD,MPI_STATUS_IGNORE,ierr)
+                        call MPI_Recv(data,4,MPI_INTEGER4,iproc,4,ChiDG_COMM,MPI_STATUS_IGNORE,ierr)
                         ineighbor_domain_g  = data(1)
                         ineighbor_domain_l  = data(2)
                         ineighbor_element_g = data(3)
@@ -818,17 +930,6 @@ contains
 
     end subroutine find_neighbor_global
     !***************************************************************************************************************
-
-
-
-
-
-
-
-
-
-
-
 
 
 

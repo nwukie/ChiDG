@@ -83,7 +83,8 @@ contains
 
         integer(ik), allocatable    :: blocks(:)
         integer(ik)                 :: nelem, nblk, ierr, ielem, iblk, size1d, parent, block_index, neqns, nterms_s
-        integer(ik)                 :: nchimera_elements, maxdonors, idonor, iface, eparent, dparent
+        integer(ik)                 :: nchimera_elements, maxdonors, idonor, iface
+        integer(ik)                 :: eparent_l, dparent_l
         integer(ik)                 :: iopen, ChiID, ndonors, max_coupled_elems, ncoupled_elems, icoupled_elem, icoupled_elem_bc, ielem_bc, ibc
         logical                     :: new_elements
         logical                     :: chimera_face
@@ -311,22 +312,19 @@ contains
                 !
                 ! Parent is the element with respect to which the linearization is computed
                 !
-                !dparent = mesh%idomain
-                dparent = mesh%idomain_l
+                dparent_l = mesh%idomain_l
                 if (iblk == DIAG) then
-                    !eparent = mesh%elems(ielem)%ielem
-                    eparent = mesh%elems(ielem)%ielem_l
+                    eparent_l = mesh%elems(ielem)%ielement_l
                 else
-                    !eparent = mesh%faces(ielem,iblk)%ineighbor
-                    eparent = mesh%faces(ielem,iblk)%get_neighbor_element()
+                    eparent_l = mesh%faces(ielem,iblk)%get_neighbor_element_l()
                 end if
 
 
                 !
                 ! Call initialization procedure if parent is not 0 (0 meaning there is no parent for that block, probably a boundary)
                 !
-                if (eparent /= 0) then
-                    call self%lblks(ielem,iblk)%init(size1d,dparent,eparent)
+                if (eparent_l /= 0) then
+                    call self%lblks(ielem,iblk)%init(size1d,dparent_l,eparent_l)
 
                     ! Store data about number of equations and number of terms in solution expansion
                     self%ldata(ielem,1) = mesh%elems(ielem)%neqns
@@ -361,10 +359,10 @@ contains
                         ! Call block initialization for each Chimera donor
                         !
                         do idonor = 1,ndonors
-                            neqns    = mesh%chimera%recv%data(ChiID)%donor_neqns%at(idonor)
-                            nterms_s = mesh%chimera%recv%data(ChiID)%donor_nterms_s%at(idonor)
-                            dparent  = mesh%chimera%recv%data(ChiID)%donor_domain%at(idonor)
-                            eparent  = mesh%chimera%recv%data(ChiID)%donor_element%at(idonor)
+                            neqns     = mesh%chimera%recv%data(ChiID)%donor_neqns%at(idonor)
+                            nterms_s  = mesh%chimera%recv%data(ChiID)%donor_nterms_s%at(idonor)
+                            dparent_l = mesh%chimera%recv%data(ChiID)%donor_domain_l%at(idonor)
+                            eparent_l = mesh%chimera%recv%data(ChiID)%donor_element_l%at(idonor)
 
                             size1d = neqns * nterms_s
 
@@ -372,8 +370,8 @@ contains
                             ! Check if block initialization was already called for current donor
                             !
                             do iblk = 1,maxdonors
-                                donor_already_called = ( dparent == self%chi_blks(ielem,iblk)%dparent() .and. &
-                                                         eparent == self%chi_blks(ielem,iblk)%eparent() )
+                                donor_already_called = ( dparent_l == self%chi_blks(ielem,iblk)%dparent() .and. &
+                                                         eparent_l == self%chi_blks(ielem,iblk)%eparent() )
                                 if (donor_already_called) exit
                             end do
 
@@ -396,7 +394,7 @@ contains
                                 !
                                 ! Call block initialization
                                 !
-                                call self%chi_blks(ielem,iopen)%init(size1d,dparent,eparent)
+                                call self%chi_blks(ielem,iopen)%init(size1d,dparent_l,eparent_l)
 
                             end if
 
@@ -464,9 +462,9 @@ contains
                             ! Call boundary condition block initialization
                             !
                             !dparent = mesh%idomain
-                            dparent = mesh%idomain_l
-                            eparent = icoupled_elem
-                            call self%bc_blks(ielem,icoupled_elem_bc)%init(size1d,dparent,eparent)
+                            dparent_l = mesh%idomain_l
+                            eparent_l = icoupled_elem
+                            call self%bc_blks(ielem,icoupled_elem_bc)%init(size1d,dparent_l,eparent_l)
                         end if
 
 
@@ -581,24 +579,25 @@ contains
         type(seed_t),               intent(in)      :: seed
         integer(ik),                intent(in)      :: ivar
 
-        integer(ik) :: idom, idom_d, ielem, ielem_d, iblk, iarray
-        integer(ik) :: irow, irow_start, donorblk, i
+        integer(ik) :: idomain_l, ielement_l
+        integer(ik) :: idonor_domain_l, idonor_element_l
+        integer(ik) :: irow, irow_start, donorblk, i, iblk, iarray
         integer(ik) :: neqns, nterms
         logical     :: block_match    = .false.
         logical     :: no_donor_block = .false.
 
-        idom  = face%idomain
-        ielem = face%ielement
+        idomain_l  = face%idomain_l
+        ielement_l = face%ielement_l
 
-        idom_d  = seed%idom
-        ielem_d = seed%ielem
+        idonor_domain_l  = seed%idomain_l
+        idonor_element_l = seed%ielement_l
 
 
         !
         ! Get stored information for the block
         !
-        neqns  = self%ldata(ielem,1)
-        nterms = self%ldata(ielem,2)
+        neqns  = self%ldata(ielement_l,1)
+        nterms = self%ldata(ielement_l,2)
 
         !
         ! Compute correct row offset for ivar
@@ -611,8 +610,8 @@ contains
         !
         donorblk = 0
         do iblk = 1,size(self%chi_blks,2)
-            block_match = ( (idom_d  == self%chi_blks(ielem,iblk)%dparent()) .and. &
-                            (ielem_d == self%chi_blks(ielem,iblk)%eparent()) )
+            block_match = ( (idonor_domain_l  == self%chi_blks(ielement_l,iblk)%dparent()) .and. &
+                            (idonor_element_l == self%chi_blks(ielement_l,iblk)%eparent()) )
 
             if ( block_match ) then
                 donorblk = iblk
@@ -631,7 +630,7 @@ contains
         do iarray = 1,size(integral)
             ! Do a += operation to add derivatives to any that are currently stored
             irow = irow_start + iarray
-            self%chi_blks(ielem,donorblk)%mat(irow,:) = self%chi_blks(ielem,donorblk)%mat(irow,:) + integral(iarray)%xp_ad_
+            self%chi_blks(ielement_l,donorblk)%mat(irow,:) = self%chi_blks(ielement_l,donorblk)%mat(irow,:) + integral(iarray)%xp_ad_
         end do
 
 
@@ -669,18 +668,19 @@ contains
         type(seed_t),               intent(in)      :: seed
         integer(ik),                intent(in)      :: ivar
 
-        integer(ik) :: idom, idom_d, ielem, ielem_d, iblk, iarray
-        integer(ik) :: irow, irow_start, i
+        integer(ik) :: idomain_l, ielement_l
+        integer(ik) :: idonor_domain_l, idonor_element_l
+        integer(ik) :: irow, irow_start, i, iblk, iarray
         integer(ik) :: neqns, nterms, bcblk
         logical     :: block_match = .false.
         logical     :: no_bc_block = .false.
         logical     :: local_element_linearization = .false.
 
-        idom  = face%idomain
-        ielem = face%ielement
+        idomain_l  = face%idomain_l
+        ielement_l = face%ielement_l
 
-        idom_d  = seed%idom
-        ielem_d = seed%ielem
+        idonor_domain_l  = seed%idomain_l
+        idonor_element_l = seed%ielement_l
 
 
         !
@@ -690,19 +690,19 @@ contains
         ! but the ILU preconditioner expects the full diagonal contribution to be in 
         ! lblks.
         !
-        local_element_linearization = (ielem == ielem_d)
+        local_element_linearization = (ielement_l == idonor_element_l)
 
         if ( local_element_linearization ) then
 
-            call self%store(integral,ielem,DIAG,ivar)
+            call self%store(integral,ielement_l,DIAG,ivar)
 
         else
 
             !
             ! Get stored information for the block
             !
-            neqns  = self%ldata(ielem,1)
-            nterms = self%ldata(ielem,2)
+            neqns  = self%ldata(ielement_l,1)
+            nterms = self%ldata(ielement_l,2)
 
             !
             ! Compute correct row offset for ivar
@@ -715,8 +715,8 @@ contains
             !
             bcblk = 0
             do iblk = 1,size(self%bc_blks,2)
-                block_match = ( (idom_d  == self%bc_blks(ielem,iblk)%dparent()) .and. &
-                                (ielem_d == self%bc_blks(ielem,iblk)%eparent()) )
+                block_match = ( (idonor_domain_l  == self%bc_blks(ielement_l,iblk)%dparent()) .and. &
+                                (idonor_element_l == self%bc_blks(ielement_l,iblk)%eparent()) )
 
                 if ( block_match ) then
                     bcblk = iblk
@@ -735,7 +735,7 @@ contains
             do iarray = 1,size(integral)
                 ! Do a += operation to add derivatives to any that are currently stored
                 irow = irow_start + iarray
-                self%bc_blks(ielem,bcblk)%mat(irow,:) = self%bc_blks(ielem,bcblk)%mat(irow,:) + integral(iarray)%xp_ad_
+                self%bc_blks(ielement_l,bcblk)%mat(irow,:) = self%bc_blks(ielement_l,bcblk)%mat(irow,:) + integral(iarray)%xp_ad_
             end do
 
 

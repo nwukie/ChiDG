@@ -143,8 +143,7 @@ contains
         ! Loop through elements and call initialization for densevectors
         !
         do ielem = 1,mesh%nelem
-            !parent = mesh%elems(ielem)%ielem
-            parent = mesh%elems(ielem)%ielem_l
+            parent = mesh%elems(ielem)%ielement_l
             nterms = mesh%elems(ielem)%nterms_s
             neqns  = mesh%elems(ielem)%neqns
 

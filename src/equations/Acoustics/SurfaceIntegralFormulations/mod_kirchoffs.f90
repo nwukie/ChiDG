@@ -11,7 +11,7 @@ module mod_kirchoffs
     use type_point,                 only: point_t
 
     use mod_interpolate,            only: interpolate_face
-    use mod_primitive_linearized_euler_axisymmetric,     only: cbar, omega
+    use mod_primitive_linearized_euler,     only: cbar, omega
     use mod_io,                             only: nterms_s
     implicit none
 

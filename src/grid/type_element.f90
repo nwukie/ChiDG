@@ -40,8 +40,8 @@ module type_element
 
         integer(ik)     :: idomain_g                        !< Global index of the parent domain
         integer(ik)     :: idomain_l                        !< Processor-local index of the parent domain
-        integer(ik)     :: ielem_g                          !< Domain-global index of the element
-        integer(ik)     :: ielem_l                          !< Processor-local index of the element
+        integer(ik)     :: ielement_g                       !< Domain-global index of the element
+        integer(ik)     :: ielement_l                       !< Processor-local index of the element
 
 
         ! Element quadrature points, mesh points and modes
@@ -158,6 +158,8 @@ contains
         ielem_g   = connectivity%get_element_index()
         mapping   = connectivity%get_element_mapping()
 
+!        print*, 'inig_geom', idomain_g
+
 
         !
         ! Accumulate coordinates for current element from node list.
@@ -200,11 +202,12 @@ contains
         self%spacedim       = spacedim
         self%idomain_g      = idomain_g
         self%idomain_l      = idomain_l
-        self%ielem_g        = ielem_g
-        self%ielem_l        = ielem_l
+        self%ielement_g     = ielem_g
+        self%ielement_l     = ielem_l
         self%elem_pts       = points
         self%connectivity   = connectivity
 
+!        print*, self%connectivity%get_domain_index()
         
         !
         ! Compute mesh x,y,z modes
@@ -1071,6 +1074,7 @@ contains
             ! Exit if converged
             !
             if ( res < tol ) then
+                loc%status = 0  ! point found
                 call loc%set(xi,eta,zeta)
                 exit
             end if
@@ -1088,6 +1092,7 @@ contains
 
 
             if ( inewton == 20 ) then
+                loc%status = 1  ! point not found
                 call chidg_signal(WARN,"element%computational_point: Newton iteration did not converge")
             end if
 

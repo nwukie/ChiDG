@@ -333,9 +333,11 @@ subroutine test_function_status__compute(this)
     !
     ! Initialize face_info and function_info containers to pass to function_status%compute_function
     !
-    face_info%idomain  = 1
-    face_info%ielement = 2
-    face_info%iface    = 2
+    face_info%idomain_g  = 1
+    face_info%idomain_l  = 1
+    face_info%ielement_g = 2
+    face_info%ielement_l = 2
+    face_info%iface      = 2
 
     function_info%type = 1
     function_info%ifcn = 1
@@ -446,9 +448,11 @@ subroutine test_function_status__linearize(this)
     !
     ! Initialize face_info and function_info containers to pass to function_status%compute_function
     !
-    face_info%idomain  = 1
-    face_info%ielement = 2
-    face_info%iface    = 2
+    face_info%idomain_g  = 1
+    face_info%idomain_l  = 1
+    face_info%ielement_g = 2
+    face_info%ielement_l = 2
+    face_info%iface      = 2
 
     function_info%type = 1
     function_info%ifcn = 1

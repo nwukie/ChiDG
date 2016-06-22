@@ -63,8 +63,10 @@ contains
                 !
                 ! Interpolate variables
                 !
-                seed%idom  = 0
-                seed%ielem = 0
+                seed%idomain_g  = 0
+                seed%idomain_l  = 0
+                seed%ielement_g = 0
+                seed%ielement_l = 0
                 call interpolate_element(data%mesh,data%sdata%q,idom,ielem,irho,  rho)
                 call interpolate_element(data%mesh,data%sdata%q,idom,ielem,irhou, rhou)
                 call interpolate_element(data%mesh,data%sdata%q,idom,ielem,irhov, rhov)

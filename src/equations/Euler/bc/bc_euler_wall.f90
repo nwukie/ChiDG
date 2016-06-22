@@ -105,7 +105,7 @@ contains
         integer(ik)             :: idom, ielem, iface, idonor, iblk
 
         ! Storage at quadrature nodes
-        type(AD_D), dimension(mesh(face%idomain)%faces(face%ielement,face%iface)%gq%face%nnodes)   ::  &
+        type(AD_D), dimension(mesh(face%idomain_l)%faces(face%ielement_l,face%iface)%gq%face%nnodes)   ::  &
                         rho_m,  rhou_m, rhov_m, rhow_m, rhoE_m, p_m, integrand, flux_x, flux_y, flux_z,  &
                         rhou_bc, rhov_bc, rhow_bc, rhoE_bc, u_bc, v_bc, w_bc, u_m, v_m, w_m, p_bc
 
@@ -125,8 +125,8 @@ contains
         irhoE = prop%get_eqn_index("rhoE")
 
 
-        idom  = face%idomain
-        ielem = face%ielement
+        idom  = face%idomain_l
+        ielem = face%ielement_l
         iface = face%iface
 
         iblk   = flux%iblk

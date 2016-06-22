@@ -22,7 +22,6 @@ module test_interpolate_chimera_multipledonor_mod
 
 
     use DNAD_D
-    use mod_DNAD_tools,     only: compute_neighbor_element, compute_neighbor_face
 
     use type_function,      only: function_t
     use mod_function,       only: create_function
@@ -154,17 +153,21 @@ contains
             !
             ! A seed element, this is a neighbor for this test - so all derivative arrays should be seeded to zero
             !
-            seed%idom  = 1
-            seed%ielem = 2
+            seed%idomain_g  = 1
+            seed%idomain_l  = 1
+            seed%ielement_g = 2
+            seed%ielement_l = 2
 
 
             !
             ! Set face
             !
-            face%idomain  = idomain
-            face%ielement = ielem
-            face%iface    = iface
-            face%seed     = seed
+            face%idomain_g  = idomain
+            face%idomain_l  = idomain
+            face%ielement_g = ielem
+            face%ielement_l = ielem
+            face%iface      = iface
+            face%seed       = seed
 
             tol   = 1.e-13_rk
             ivar  = self%chidg%data%eqnset(1)%item%prop%get_eqn_index('u')
@@ -225,16 +228,20 @@ contains
             !
             ! A seed element, this is the current element. Since we are performing a NEIGHBOR interpolation, derivatives should be zero
             !
-            seed%idom  = 1
-            seed%ielem = 2
+            seed%idomain_g  = 1
+            seed%idomain_l  = 1
+            seed%ielement_g = 2
+            seed%ielement_l = 2
 
             !
             ! Set face
             !
-            face%idomain  = idomain
-            face%ielement = ielem
-            face%iface    = iface
-            face%seed     = seed
+            face%idomain_g  = idomain
+            face%idomain_l  = idomain
+            face%ielement_g = ielem
+            face%ielement_l = ielem
+            face%iface      = iface
+            face%seed       = seed
 
 
             tol   = 1.e-13_rk
@@ -301,16 +308,20 @@ contains
             !
             ! A seed element, neighbor to ielem/iface. Performing NEIGHBOR interpolation so all dervative arrays should be nonzero
             !
-            seed%idom  = 2
-            seed%ielem = 1     ! neighbor to element 14 about face 1
+            seed%idomain_g  = 2
+            seed%idomain_l  = 2
+            seed%ielement_g = 1     ! neighbor to element 14 about face 1
+            seed%ielement_l = 1     ! neighbor to element 14 about face 1
 
             !
             ! Set face
             !
-            face%idomain  = idomain
-            face%ielement = ielem
-            face%iface    = iface
-            face%seed     = seed
+            face%idomain_g  = idomain
+            face%idomain_l  = idomain
+            face%ielement_g = ielem
+            face%ielement_l = ielem
+            face%iface      = iface
+            face%seed       = seed
 
 
             tol   = 1.e-13_rk
@@ -378,17 +389,21 @@ contains
             !
             ! A seed element, neighbor to ielem/iface. Performing NEIGHBOR interpolation so all dervative arrays should be nonzero
             !
-            seed%idom  = 2
-            seed%ielem = 1
+            seed%idomain_g  = 2
+            seed%idomain_l  = 2
+            seed%ielement_g = 1
+            seed%ielement_l = 1
 
 
             !
             ! Set face
             !
-            face%idomain  = idomain
-            face%ielement = ielem
-            face%iface    = iface
-            face%seed     = seed
+            face%idomain_g  = idomain
+            face%idomain_l  = idomain
+            face%ielement_g = ielem
+            face%ielement_l = ielem
+            face%iface      = iface
+            face%seed       = seed
 
 
 

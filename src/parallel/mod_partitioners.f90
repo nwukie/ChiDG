@@ -307,11 +307,6 @@ contains
 
 
 
-        print*, 'number of partitions:', size(partitions)
-        print*, '   number of connectivitites in partition 1:', size(partitions(1)%connectivities)
-        !print*, '   number of connectivitites in partition 2:', size(partitions(2)%connectivities)
-
-
 
     end subroutine partition_connectivity
     !*************************************************************************************************
@@ -338,8 +333,9 @@ contains
     !!
     !!
     !--------------------------------------------------------------------------------------------------
-    subroutine send_partitions(partitions)
-        type(partition_t),  intent(in)    :: partitions(:)
+    subroutine send_partitions(partitions,ChiDG_COMM)
+        type(partition_t),  intent(in)  :: partitions(:)
+        type(mpi_comm),     intent(in)  :: ChiDG_COMM
 
         integer                     :: ipartition, npartitions, ierr
         integer                     :: dims(3), iconn, nconn, idomain, nelements, max_mapping, header_size, max_element_nodes, nnodes
@@ -358,8 +354,7 @@ contains
 
             ! Send number of connectivities in current partition
             nconn = size(partitions(ipartition)%connectivities)
-            print*, 'Number of connectivities in the partition being sent:', nconn
-            call MPI_Send(nconn,1,MPI_INTEGER, ipartition-1, 0, MPI_COMM_WORLD, ierr)
+            call MPI_Send(nconn,1,MPI_INTEGER, ipartition-1, 0, ChiDG_COMM, ierr)
 
 
             ! Send connectivities
@@ -374,7 +369,7 @@ contains
                 dims(1) = nelements
                 dims(2) = header_size + max_element_nodes
                 dims(3) = nnodes
-                call MPI_Send(dims,3,MPI_INTEGER, ipartition-1, 1+iconn, MPI_COMM_WORLD, ierr)
+                call MPI_Send(dims,3,MPI_INTEGER, ipartition-1, 1+iconn, ChiDG_COMM, ierr)
 
                 ! Assemble connectivity data
                 if (allocated(conn)) deallocate(conn)
@@ -385,7 +380,7 @@ contains
                 end do
 
                 ! Send connectivity data
-                call MPI_Send(conn,dims(1)*dims(2), MPI_INTEGER4, ipartition-1, 1+nconn+1, MPI_COMM_WORLD, ierr)
+                call MPI_Send(conn,dims(1)*dims(2), MPI_INTEGER4, ipartition-1, 1+nconn+1, ChiDG_COMM, ierr)
 
             end do ! iconn
 
@@ -415,11 +410,12 @@ contains
     !!
     !!
     !--------------------------------------------------------------------------------------------------
-    subroutine recv_partition(partition)
-        type(partition_t),  intent(inout) :: partition
+    subroutine recv_partition(partition,ChiDG_COMM)
+        type(partition_t),  intent(inout)   :: partition
+        type(mpi_comm),     intent(in)      :: ChiDG_COMM
 
         integer                     :: ipartition, npartitions, ierr
-        integer                     :: dims(3), iconn, nconn, idomain, nelements, ielem, iprint
+        integer                     :: dims(3), iconn, nconn, idomain, nelements, ielem
         integer                     :: idomain_g, ielement_g, mapping, nnodes_element
         integer                     :: max_element_nodes, nnodes
         integer,    allocatable     :: nodes(:)
@@ -428,7 +424,7 @@ contains
 
 
         ! Receive number of connectivities and inititalize partition
-        call MPI_Recv(nconn,1,MPI_INTEGER, GLOBAL_MASTER, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE, ierr)
+        call MPI_Recv(nconn,1,MPI_INTEGER, GLOBAL_MASTER, 0, ChiDG_COMM, MPI_STATUS_IGNORE, ierr)
         call partition%init(nconn)
 
 
@@ -437,7 +433,7 @@ contains
 
 
             ! Recv connectivity information
-            call MPI_Recv(dims,3,MPI_INTEGER, GLOBAL_MASTER, 1+iconn, MPI_COMM_WORLD, MPI_STATUS_IGNORE, ierr)
+            call MPI_Recv(dims,3,MPI_INTEGER, GLOBAL_MASTER, 1+iconn, ChiDG_COMM, MPI_STATUS_IGNORE, ierr)
             nelements         = dims(1)
             max_element_nodes = dims(2)
             nnodes            = dims(3)
@@ -451,7 +447,7 @@ contains
 
 
             ! Recv connectivity data
-            call MPI_Recv(conn,dims(1)*dims(2), MPI_INTEGER4, GLOBAL_MASTER, 1+nconn+1, MPI_COMM_WORLD, MPI_STATUS_IGNORE, ierr)
+            call MPI_Recv(conn,dims(1)*dims(2), MPI_INTEGER4, GLOBAL_MASTER, 1+nconn+1, ChiDG_COMM, MPI_STATUS_IGNORE, ierr)
 
 
 
@@ -469,6 +465,7 @@ contains
                 call partition%connectivities(iconn)%data(ielem)%set_element_index(ielement_g)
                 call partition%connectivities(iconn)%data(ielem)%set_element_mapping(mapping)
                 call partition%connectivities(iconn)%data(ielem)%set_element_nodes(nodes)
+                call partition%connectivities(iconn)%data(ielem)%set_element_partition(IRANK)
 
             end do
 
@@ -478,16 +475,6 @@ contains
 
 
 
-        
-!        do iprint = 0,NRANK-1
-!            if (iprint == IRANK) then
-!                print*, 'Hi from rank: ', IRANK
-!                do ielem = 1,nelements
-!                    print*, partition%connectivities(1)%data(ielem)%data
-!                end do
-!            end if
-!            call MPI_Barrier(MPI_COMM_WORLD,ierr)
-!        end do
 
     end subroutine recv_partition
     !***************************************************************************************************

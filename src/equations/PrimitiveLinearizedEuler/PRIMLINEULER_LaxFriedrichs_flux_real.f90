@@ -95,7 +95,7 @@ contains
 
 
         ! Storage at quadrature nodes
-        type(AD_D), dimension(mesh(face_info%idomain)%faces(face_info%ielement,face_info%iface)%gq%face%nnodes)    :: &
+        type(AD_D), dimension(mesh(face_info%idomain_l)%faces(face_info%ielement_l,face_info%iface)%gq%face%nnodes)    :: &
                         rho_m,   rho_p,                                        &
                         u_m,     u_p,                                       &
                         v_m,     v_p,                                       &
@@ -105,7 +105,7 @@ contains
                         wave
 
 
-        real(rk), dimension(mesh(face_info%idomain)%faces(face_info%ielement,face_info%iface)%gq%face%nnodes)    :: &
+        real(rk), dimension(mesh(face_info%idomain_l)%faces(face_info%ielement_l,face_info%iface)%gq%face%nnodes)    :: &
                         un, wave_c
 
         !===========================================================================
@@ -119,8 +119,8 @@ contains
         ip = prop%get_eqn_index("p_r")
 
 
-        idom  = face_info%idomain
-        ielem = face_info%ielement
+        idom  = face_info%idomain_l
+        ielem = face_info%ielement_l
         iface = face_info%iface
 
         ifcn   = function_info%ifcn

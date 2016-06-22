@@ -7,77 +7,51 @@
 !----------------------------------------------------------------------------------------------------------
 module mod_io
 #include <messenger.h>
-    !!          Module Includes             !!
-    use mod_kinds,     only: rk,ik
-    use mod_constants, only: MAXBLOCKS, TWO_DIM, THREE_DIM
-
-    !!          Variable Declarations       !!
+    use mod_kinds,      only: rk,ik
+    use mod_constants,  only: MAXBLOCKS, TWO_DIM, THREE_DIM
+    use type_dict,      only: dict_t
     implicit none
 
 
-    ! FILES
-    !--------------------------------------------------
-    character(len=100),  save    :: gridfile
-    character(len=100),  save    :: gridtype
-!    character(len=100),  save    :: tecplot_prefix   = 'tec'
-!    character(len=100),  save    :: hdf_out          = 'solution.h5'
+    ! Files
+    character(len=100),     save    :: gridfile
+    character(len=100),     save    :: gridtype
+    character(len=100),     save    :: solutionfile_in  = 'none'
+    character(len=100),     save    :: solutionfile_out = 'none'
 
-    character(len=100),  save    :: solutionfile_in  = 'none'
-    character(len=100),  save    :: solutionfile_out = 'none'
+    ! Space
+    character(len=100),     save    :: basis            = 'legendre'
+    integer(ik),            save    :: solution_order   = 1
+    integer(ik),            save    :: spacedim         = 3
 
-
-
-
-    ! SPACE
-    !--------------------------------------------------
-    character(len=100),  save    :: basis            = 'legendre'
-    integer(ik),         save    :: solution_order   = 1
-    integer(ik),         save    :: spacedim         = 3
-
-
-
+    ! Quadrature
+    integer(ik),            save    :: gq_rule          = 2          !> 1: Collocation, 2: Over-integration
+   
+    ! Time
+    character(len=100),     save    :: time_scheme      = 'steady'
+    real(rk),               save    :: dt               = 0.001_rk
+    integer(ik),            save    :: time_steps       = 100
+    real(rk),               save    :: ttol             = 1.e-8
+    integer(ik),            save    :: ntime_instances  = 1
+    type(dict_t),           save    :: toptions
+   
+    ! Nonlinear solver
+    character(len=100),     save    :: nonlinear_solver = 'newton'
+    integer(ik),            save    :: nonlinear_steps  = 100
+    real(rk),               save    :: ntol             = 1.e-8
+    real(rk),               save    :: cfl0             = 1._rk
+    type(dict_t),           save    :: noptions
     
-    ! QUADRATURE
-    !--------------------------------------------------
-    integer(ik),         save    :: gq_rule          = 2          !> 1: Collocation, 2: Over-integration
+    ! Linear solver
+    character(len=100),     save    :: linear_solver    = 'fgmres'
+    real(rk),               save    :: ltol             = 1.e-8
+    character(len=100),     save    :: preconditioner   = 'identity'
+    type(dict_t),           save    :: loptions
    
-
-
-    
-    ! TIME
-    !--------------------------------------------------
-    character(len=100),  save    :: time_scheme      = 'steady'
-    real(rk),            save    :: dt               = 0.001_rk
-    integer(ik),         save    :: time_steps       = 100
-    real(rk),            save    :: ttol             = 1.e-8
-    integer(ik),         save    :: ntime_instances  = 1
-   
-   
-
-    ! NONLINEAR SOLVER
-    !-------------------------------------------------
-    character(len=100),  save    :: nonlinear_solver = 'newton'
-    integer(ik),         save    :: nonlinear_steps  = 100
-    real(rk),            save    :: ntol             = 1.e-8
-    real(rk),            save    :: cfl0             = 1._rk
-    
-
-   
-    ! LINEAR SOLVER
-    !--------------------------------------------------
-    character(len=100),  save    :: linear_solver    = 'fgmres'
-    real(rk),            save    :: ltol             = 1.e-8
-    character(len=100),  save    :: preconditioner   = 'identity'
-   
-   
-
-
-
-    ! IO
-    !--------------------------------------------------
-    integer(ik),         save    :: nwrite           = 100
-    logical,             save    :: initial_write    = .true.
-    logical,             save    :: final_write      = .true.
+    ! io
+    integer(ik),            save    :: nwrite           = 100
+    logical,                save    :: initial_write    = .true.
+    logical,                save    :: final_write      = .true.
 !    integer(ik),         save    :: output_res       = 10
      
     
@@ -113,8 +87,6 @@ contains
 
         namelist /files/                    gridfile,              &
                                             gridtype,              &
-!                                            hdf_out,               &
-!                                            tecplot_prefix,        &
                                             solutionfile_in,       &
                                             solutionfile_out
 
@@ -182,6 +154,26 @@ contains
         else
             call chidg_signal(FATAL,"mod_io: Invalid spacedim")
         end if
+
+
+
+
+
+        !
+        ! Initialize options dictionaries
+        !
+        ! Set time-scheme options
+        call toptions%set('dt',dt)
+        call toptions%set('nsteps',time_steps)
+        call toptions%set('nwrite',nwrite)
+
+        ! Set nonlinear solver options
+        call noptions%set('tol',ntol)
+        call noptions%set('cfl0',cfl0)
+        call noptions%set('nsteps',nonlinear_steps)
+
+        ! Set linear solver options
+        call loptions%set('tol',ltol)
 
 
 

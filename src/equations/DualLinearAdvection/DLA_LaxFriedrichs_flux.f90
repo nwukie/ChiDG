@@ -62,7 +62,7 @@ contains
 
         real(rk)                 :: cx, cy, cz
         integer(ik)              :: iu_a, iu_b
-        type(AD_D), dimension(mesh(face_info%idomain)%faces(face_info%ielement,face_info%iface)%gq%face%nnodes)  :: & 
+        type(AD_D), dimension(mesh(face_info%idomain_l)%faces(face_info%ielement_l,face_info%iface)%gq%face%nnodes)  :: & 
                     ua_l, ua_r, ub_l, ub_r, flux_x, flux_y, flux_z, integrand
 
 
@@ -73,8 +73,8 @@ contains
         iu_b      = prop%get_eqn_index('u_b')
 
 
-        idom  = face_info%idomain
-        ielem = face_info%ielement
+        idom  = face_info%idomain_l
+        ielem = face_info%ielement_l
         iface = face_info%iface
 
         

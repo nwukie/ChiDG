@@ -26,9 +26,9 @@ module mod_bc
     use bc_euler_totalinlet_characteristic, only: euler_totalinlet_characteristic_t
     use bc_euler_pressureoutlet,            only: euler_pressureoutlet_t
     use bc_euler_extrapolate,               only: euler_extrapolate_t
-    use bc_euler_giles_outlet,              only: euler_giles_outlet_t
-    use bc_euler_giles_outlet_2D_a,         only: euler_giles_outlet_2D_a_t
-    use bc_euler_giles_outlet_2D_b,         only: euler_giles_outlet_2D_b_t
+!    use bc_euler_giles_outlet,              only: euler_giles_outlet_t
+!    use bc_euler_giles_outlet_2D_a,         only: euler_giles_outlet_2D_a_t
+!    use bc_euler_giles_outlet_2D_b,         only: euler_giles_outlet_2D_b_t
 
     use bc_lineuler_inlet,                  only: lineuler_inlet_t
     use bc_lineuler_outlet,                 only: lineuler_outlet_t
@@ -39,12 +39,6 @@ module mod_bc
     use bc_primlineuler_outlet,             only: primlineuler_outlet_t
     use bc_primlineuler_extrapolate,        only: primlineuler_extrapolate_t
     use bc_primlineuler_wall,               only: primlineuler_wall_t
-
-    use bc_primlineuleraxi_inlet,           only: primlineuleraxi_inlet_t
-    use bc_primlineuleraxi_outlet,          only: primlineuleraxi_outlet_t
-    use bc_primlineuleraxi_extrapolate,     only: primlineuleraxi_extrapolate_t
-    use bc_primlineuleraxi_wall,            only: primlineuleraxi_wall_t
-    use bc_primlineuleraxi_axi,             only: primlineuleraxi_axi_t
 
     use bc_kirchoff,                        only: kirchoff_t
 
@@ -87,9 +81,9 @@ contains
         type(euler_totalinlet_characteristic_t) :: EULER_TOTALINLET_CHARCTERISTIC
         type(euler_pressureoutlet_t)            :: EULER_PRESSUREOUTLET
         type(euler_extrapolate_t)               :: EULER_EXTRAPOLATE
-        type(euler_giles_outlet_t)              :: EULER_GILES_OUTLET
-        type(euler_giles_outlet_2D_a_t)         :: EULER_GILES_OUTLET_2D_A
-        type(euler_giles_outlet_2D_b_t)         :: EULER_GILES_OUTLET_2D_B
+!        type(euler_giles_outlet_t)              :: EULER_GILES_OUTLET
+!        type(euler_giles_outlet_2D_a_t)         :: EULER_GILES_OUTLET_2D_A
+!        type(euler_giles_outlet_2D_b_t)         :: EULER_GILES_OUTLET_2D_B
 
         type(lineuler_inlet_t)                  :: LINEULER_INLET
         type(lineuler_outlet_t)                 :: LINEULER_OUTLET
@@ -100,12 +94,6 @@ contains
         type(primlineuler_outlet_t)             :: PRIMLINEULER_OUTLET
         type(primlineuler_extrapolate_t)        :: PRIMLINEULER_EXTRAPOLATE
         type(primlineuler_wall_t)               :: PRIMLINEULER_WALL
-
-        type(primlineuleraxi_inlet_t)           :: PRIMLINEULERAXI_INLET
-        type(primlineuleraxi_outlet_t)          :: PRIMLINEULERAXI_OUTLET
-        type(primlineuleraxi_extrapolate_t)     :: PRIMLINEULERAXI_EXTRAPOLATE
-        type(primlineuleraxi_wall_t)            :: PRIMLINEULERAXI_WALL
-        type(primlineuleraxi_axi_t)             :: PRIMLINEULERAXI_AXI
 
 
         type(kirchoff_t)                        :: KIRCHOFF
@@ -124,9 +112,9 @@ contains
             call registered_bcs%push_back(EULER_TOTALINLET_CHARCTERISTIC)
             call registered_bcs%push_back(EULER_PRESSUREOUTLET)
             call registered_bcs%push_back(EULER_EXTRAPOLATE)
-            call registered_bcs%push_back(EULER_GILES_OUTLET)
-            call registered_bcs%push_back(EULER_GILES_OUTLET_2D_A)
-            call registered_bcs%push_back(EULER_GILES_OUTLET_2D_B)
+!            call registered_bcs%push_back(EULER_GILES_OUTLET)
+!            call registered_bcs%push_back(EULER_GILES_OUTLET_2D_A)
+!            call registered_bcs%push_back(EULER_GILES_OUTLET_2D_B)
 
 
             call registered_bcs%push_back(LINEULER_INLET)
@@ -139,13 +127,6 @@ contains
             call registered_bcs%push_back(PRIMLINEULER_OUTLET)
             call registered_bcs%push_back(PRIMLINEULER_EXTRAPOLATE)
             call registered_bcs%push_back(PRIMLINEULER_WALL)
-
-
-            call registered_bcs%push_back(PRIMLINEULERAXI_INLET)
-            call registered_bcs%push_back(PRIMLINEULERAXI_OUTLET)
-            call registered_bcs%push_back(PRIMLINEULERAXI_EXTRAPOLATE)
-            call registered_bcs%push_back(PRIMLINEULERAXI_WALL)
-            call registered_bcs%push_back(PRIMLINEULERAXI_AXI)
 
 
             call registered_bcs%push_back(KIRCHOFF)

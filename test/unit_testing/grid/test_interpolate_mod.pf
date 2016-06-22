@@ -16,7 +16,7 @@ module test_interpolate_mod
     use mod_grid_operators, only: initialize_variable
     use mod_testutils,      only: meshgen
     use DNAD_D
-    use mod_DNAD_tools,     only: compute_neighbor_element, compute_neighbor_face
+    use mod_DNAD_tools,     only: compute_neighbor_element_l, compute_neighbor_face
     use type_function,      only: function_t
     use mod_function,       only: create_function
     implicit none
@@ -237,8 +237,10 @@ contains
             !
             ! A seed element, so all derivative arrays should be seeded to zero
             !
-            seed%idom  = 1
-            seed%ielem = 15
+            seed%idomain_g  = 1
+            seed%idomain_l  = 1
+            seed%ielement_g = 15
+            seed%ielement_l = 15
 
             tol   = 1.e-13_rk
             ivar  = self%chidg%data%eqnset(1)%item%prop%get_eqn_index('u')
@@ -294,8 +296,10 @@ contains
             !
             ! A seed element, so all derivative arrays should be seeded to zero
             !
-            seed%idom  = 1
-            seed%ielem = 15
+            seed%idomain_g  = 1
+            seed%idomain_l  = 1
+            seed%ielement_g = 15
+            seed%ielement_l = 15
 
 
             tol   = 1.e-13_rk
@@ -354,8 +358,10 @@ contains
             !
             ! A seed element, so all derivative arrays should be seeded to zero
             !
-            seed%idom  = 1
-            seed%ielem = 14    ! a seed element, so all derivative arrays should be seeded to zero
+            seed%idomain_g  = 1
+            seed%idomain_l  = 1
+            seed%ielement_g = 14    ! a seed element, so all derivative arrays should be seeded to zero
+            seed%ielement_l = 14    ! a seed element, so all derivative arrays should be seeded to zero
 
 
             tol   = 1.e-13_rk
@@ -409,8 +415,10 @@ contains
             !
             ! A seed element, so all derivative arrays should be seeded to zero
             !
-            seed%idom  = 1
-            seed%ielem = 14
+            seed%idomain_g  = 1
+            seed%idomain_l  = 1
+            seed%ielement_g = 14
+            seed%ielement_l = 14
 
 
             tol   = 1.e-13_rk
@@ -483,15 +491,19 @@ contains
             !
             ! A seed element, this is a neighbor for this test - so all derivative arrays should be seeded to zero
             !
-            seed%idom  = 1
-            seed%ielem = 15
+            seed%idomain_g  = 1
+            seed%idomain_l  = 1
+            seed%ielement_g = 15
+            seed%ielement_l = 15
 
 
             !
             ! Set face
             !
-            face%idomain = idomain
-            face%ielement = ielem
+            face%idomain_g = idomain
+            face%idomain_l = idomain
+            face%ielement_g = ielem
+            face%ielement_l = ielem
             face%iface    = iface
             face%seed     = seed
 
@@ -555,18 +567,22 @@ contains
             !
             ! A seed element, this is a neihgbor for this test - so all derivative arrays should be seeded to zero
             !
-            seed%idom  = 1
-            seed%ielem = 15
+            seed%idomain_g  = 1
+            seed%idomain_l  = 1
+            seed%ielement_g = 15
+            seed%ielement_l = 15
 
 
 
             !
             ! Set face
             !
-            face%idomain = idomain
-            face%ielement = ielem
-            face%iface    = iface
-            face%seed     = seed
+            face%idomain_g  = idomain
+            face%idomain_l  = idomain
+            face%ielement_g = ielem
+            face%ielement_l = ielem
+            face%iface      = iface
+            face%seed       = seed
 
 
 
@@ -621,17 +637,21 @@ contains
             !
             ! A seed element, same as ielem - so all derivative arrays should include non-zeros
             !
-            seed%idom  = 1
-            seed%ielem = 14
+            seed%idomain_g  = 1
+            seed%idomain_l  = 1
+            seed%ielement_g = 14
+            seed%ielement_l = 14
 
 
             !
             ! Set face
             !
-            face%idomain = idomain
-            face%ielement = ielem
-            face%iface    = iface
-            face%seed     = seed
+            face%idomain_g  = idomain
+            face%idomain_l  = idomain
+            face%ielement_g = ielem
+            face%ielement_l = ielem
+            face%iface      = iface
+            face%seed       = seed
 
 
 
@@ -695,17 +715,21 @@ contains
             !
             ! A seed element, same as ielem - so all derivative arrays should include non-zeros
             !
-            seed%idom  = 1
-            seed%ielem = 14
+            seed%idomain_g  = 1
+            seed%idomain_l  = 1
+            seed%ielement_g = 14
+            seed%ielement_l = 14
 
 
             !
             ! Set face
             !
-            face%idomain = idomain
-            face%ielement = ielem
-            face%iface    = iface
-            face%seed     = seed
+            face%idomain_g  = idomain
+            face%idomain_l  = idomain
+            face%ielement_g = ielem
+            face%ielement_l = ielem
+            face%iface      = iface
+            face%seed       = seed
 
 
 
@@ -777,17 +801,21 @@ contains
             !
             ! A seed element, this is a neighbor for this test - so all derivative arrays should be seeded to zero
             !
-            seed%idom  = 1
-            seed%ielem = 15
+            seed%idomain_g  = 1
+            seed%idomain_l  = 1
+            seed%ielement_g = 15
+            seed%ielement_l = 15
 
 
             !
             ! Set face
             !
-            face%idomain = idomain
-            face%ielement = ielem
-            face%iface    = iface
-            face%seed     = seed
+            face%idomain_g  = idomain
+            face%idomain_l  = idomain
+            face%ielement_g = ielem
+            face%ielement_l = ielem
+            face%iface      = iface
+            face%seed       = seed
 
 
 
@@ -850,16 +878,20 @@ contains
             !
             ! A seed element, this is a neihgbor for this test - so all derivative arrays should be seeded to zero
             !
-            seed%idom  = 1
-            seed%ielem = 15
+            seed%idomain_g  = 1
+            seed%idomain_l  = 1
+            seed%ielement_g = 15
+            seed%ielement_l = 15
 
             !
             ! Set face
             !
-            face%idomain = idomain
-            face%ielement = ielem
-            face%iface    = iface
-            face%seed     = seed
+            face%idomain_g  = idomain
+            face%idomain_l  = idomain
+            face%ielement_g = ielem
+            face%ielement_l = ielem
+            face%iface      = iface
+            face%seed       = seed
 
 
 
@@ -930,17 +962,21 @@ contains
             !
             ! A seed element, same as ielem - so all derivative arrays should include non-zeros
             !
-            seed%idom  = 1
-            seed%ielem = 13     ! neighbor to element 14 about face 1
+            seed%idomain_g  = 1
+            seed%idomain_l  = 1
+            seed%ielement_g = 13     ! neighbor to element 14 about face 1
+            seed%ielement_l = 13     ! neighbor to element 14 about face 1
 
 
             !
             ! Set face
             !
-            face%idomain = idomain
-            face%ielement = ielem
-            face%iface    = iface
-            face%seed     = seed
+            face%idomain_g  = idomain
+            face%idomain_l  = idomain
+            face%ielement_g = ielem
+            face%ielement_l = ielem
+            face%iface      = iface
+            face%seed       = seed
 
 
 
@@ -1005,17 +1041,21 @@ contains
             !
             ! A seed element, same as ielem - so all derivative arrays should include non-zeros
             !
-            seed%idom  = 1
-            seed%ielem = 13     ! neighbor to element 14 about face 1
+            seed%idomain_g  = 1
+            seed%idomain_l  = 1
+            seed%ielement_g = 13     ! neighbor to element 14 about face 1
+            seed%ielement_l = 13     ! neighbor to element 14 about face 1
 
 
             !
             ! Set face
             !
-            face%idomain = idomain
-            face%ielement = ielem
-            face%iface    = iface
-            face%seed     = seed
+            face%idomain_g  = idomain
+            face%idomain_l  = idomain
+            face%ielement_g = ielem
+            face%ielement_l = ielem
+            face%iface      = iface
+            face%seed       = seed
 
 
             
@@ -1039,7 +1079,7 @@ contains
             
             ! Test that interpolation to quadrature nodes from modes to autodiff variables 
             ! on an element volume is producing expected results
-            ielem_n = compute_neighbor_element(self%chidg%data%mesh,idomain,ielem,iface,idonor)
+            ielem_n = compute_neighbor_element_l(self%chidg%data%mesh,idomain,ielem,iface,idonor)
             iface_n = compute_neighbor_face(   self%chidg%data%mesh,idomain,ielem,iface,idonor)
 
 

@@ -22,11 +22,13 @@ module type_chidg
     use mod_linear_solver,      only: create_linear_solver
     use mod_nonlinear_solver,   only: create_nonlinear_solver
     use mod_preconditioner,     only: create_preconditioner
-    use mod_chimera,            only: detect_chimera_faces,  &
-                                      detect_chimera_donors, &
-                                      compute_chimera_interpolators
-    use mod_communication,      only: establish_communication
+!    use mod_chimera,            only: detect_chimera_faces,  &
+!                                      detect_chimera_donors, &
+!                                      compute_chimera_interpolators
+
+    use mod_communication,      only: establish_neighbor_communication, establish_chimera_communication
     use mod_chidg_mpi,          only: chidg_mpi_init, chidg_mpi_finalize
+    use mpi_f08
 
     use mod_hdfio,              only: read_grid_hdf, read_grid_partition_hdf, read_boundaryconditions_hdf, read_boundaryconditions_partition_hdf, read_solution_hdf, write_solution_hdf
     implicit none
@@ -89,18 +91,34 @@ contains
     !!  @author Nathan A. Wukie
     !!  @date   2/1/2016
     !!
-    !!  @param[in]  level   Initialization level specification. 'env', 'io', or 'finalize'
+    !!  @param[in]  level   Initialization level specification. 'env', 'communication', 'io', or 'finalize'
     !!
     !--------------------------------------------------------------------------------------------
-    subroutine init(self,level)
-        class(chidg_t),  intent(inout)   :: self
-        character(*),    intent(in)      :: level
+    subroutine init(self,level,comm)
+        class(chidg_t), intent(inout)           :: self
+        character(*),   intent(in)              :: level
+        type(mpi_comm), intent(in), optional    :: comm
+
+        type(mpi_comm)  :: ChiDG_COMM
+
+
+        !
+        ! Default communicator for 'communication' is MPI_COMM_WORLD
+        !
+        if ( present(comm) ) then
+            ChiDG_COMM = comm
+        else
+            ChiDG_COMM = MPI_COMM_WORLD
+        end if
+
 
 
         ! Valid strings are:
-        !   - 'env'         Basic environment initialization. Equations and supporting grid data
-        !   - 'io'          Read namelist input.
-        !   - 'finalize'    Call component initialization routines before run
+        !   - 'env'             Basic environment initialization. Equations and supporting grid data
+        !   - 'mpi'             Call MPI initialization for ChiDG. This would not be called in a test, since pFUnit is calling init.
+        !   - 'communication'   Establish local and global communication
+        !   - 'io'              Read namelist input.
+        !   - 'finalize'        Call component initialization routines before run
 
         ! Call environment initialization routines by default on first init call
         if (.not. self%envInitialized ) then
@@ -142,15 +160,16 @@ contains
 
 
             case ('communication')
-                call establish_communication(self%data%mesh)
+                call establish_neighbor_communication(self%data%mesh,ChiDG_COMM)
 
             !
             ! Initialize chimera
             !
             case ('chimera')
-                call detect_chimera_faces(self%data%mesh)
-                call detect_chimera_donors(self%data%mesh)
-                call compute_chimera_interpolators(self%data%mesh)
+                call establish_chimera_communication(self%data%mesh,ChiDG_COMM)
+                !call detect_chimera_faces(self%data%mesh)
+                !call detect_chimera_donors(self%data%mesh)
+                !call compute_chimera_interpolators(self%data%mesh)
 
 
             !

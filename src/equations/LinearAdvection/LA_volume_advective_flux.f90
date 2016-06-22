@@ -92,7 +92,6 @@ contains
         ! Get seed element for derivatives
         !
         seed = compute_seed(mesh,idom,ielem,iface,idonor,iblk)
-        !iseed   = compute_seed_element(mesh,idom,ielem,iface,iblk,idonor)
 
 
         !

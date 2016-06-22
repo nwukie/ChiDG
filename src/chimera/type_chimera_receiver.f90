@@ -15,9 +15,6 @@ module type_chimera_receiver
 
         type(chimera_receiver_data_t),  allocatable :: data(:)
 
-
-
-
     contains
 
 

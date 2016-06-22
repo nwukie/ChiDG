@@ -18,9 +18,14 @@ module type_point
     !-------------------------------------------------------------------------------------------------------------
     type, public :: point_t
 
-        real(rk) :: c1_ = ZERO, &
-                    c2_ = ZERO, &
-                    c3_ = ZERO
+        integer(ik) :: status = 0   ! Status code. Could be used to indicate if the point is valid. 
+                                    ! For example, if the chimera routine was searching for a donor point, 
+                                    ! this could indicate if the point returned was actually included in the element,
+                                    ! or if the routine failed. Other than that, non-consequential.
+
+        real(rk)    :: c1_ = ZERO, &
+                       c2_ = ZERO, &
+                       c3_ = ZERO
 
     contains
 

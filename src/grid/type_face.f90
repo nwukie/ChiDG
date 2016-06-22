@@ -39,11 +39,6 @@ module type_face
         integer(ik)                 :: iface               !< XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, etc
 
         ! Owner-element information
-!        integer(ik)                 :: idomain             !< Domain index of parent element
-!        integer(ik)                 :: iparent             !< Element index of parent element
-!        integer(ik)                 :: ineighbor           !< Block-local index of neighbor element
-
-        ! Prototype                 
         integer(ik)                 :: idomain_g            !< Global index of the parent domain
         integer(ik)                 :: idomain_l            !< Processor-local index of the parent domain
         integer(ik)                 :: iparent_g            !< Domain-global index of the parent element
@@ -116,7 +111,8 @@ module type_face
         procedure           :: compute_quadrature_coords    !< Compute cartesian coordinates at quadrature nodes
         procedure           :: compute_gradients_cartesian  !< Compute gradients in cartesian coordinates
 
-        procedure           :: get_neighbor_element         !< Return neighbor element index
+        procedure           :: get_neighbor_element_g       !< Return neighbor element index
+        procedure           :: get_neighbor_element_l       !< Return neighbor element index
         procedure           :: get_neighbor_face            !< Return neighbor face index
 
         final               :: destructor
@@ -144,41 +140,32 @@ contains
     !!  @date   2/1/2016
     !!
     !!  @param[in] iface        Element face integer (XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX)
-    !!  @param[in] ftype        Face type (0 - interior face, 1 - boundary face)
     !!  @param[in] elem         Parent element which many face members point to
-    !!  @param[in] ineighbor    Index of neighbor element in the block
     !!
     !----------------------------------------------------------------------------------------------------------
-    !subroutine init_geom(self,iface,ftype,elem,ineighbor)
     subroutine init_geom(self,iface,elem)
         class(face_t),      intent(inout)       :: self
         integer(ik),        intent(in)          :: iface
-        !integer(ik),        intent(in)          :: ftype
-        !type(element_t),    intent(in), target  :: elem         ! Note: probably don't need target anymore
         type(element_t),    intent(in)          :: elem
-        !integer(ik),        intent(in)          :: ineighbor
 
         !
         ! Set indices
         !
-        self%iface      = iface
-        self%ftype      = ORPHAN
-        self%spacedim   = elem%spacedim
+        self%iface     = iface
+        self%ftype     = ORPHAN
+        self%spacedim  = elem%spacedim
 
 
-!        self%idomain    = elem%idomain
-!        self%iparent    = elem%ielem
-!        self%ineighbor  = ineighbor
         self%idomain_g = elem%idomain_g
         self%idomain_l = elem%idomain_l
-        self%iparent_g = elem%ielem_g
-        self%iparent_l = elem%ielem_l
+        self%iparent_g = elem%ielement_g
+        self%iparent_l = elem%ielement_l
 
         
         !
         ! Set coordinates
         !
-        self%coords     = elem%coords
+        self%coords = elem%coords
 
 
         !
@@ -624,7 +611,7 @@ contains
     !!
     !!
     !-----------------------------------------------------------------------------------------------------------
-    function get_neighbor_element(self) result(neighbor_e)
+    function get_neighbor_element_l(self) result(neighbor_e)
         class(face_t),  intent(in)   ::  self
 
         integer(ik) :: neighbor_e
@@ -633,8 +620,43 @@ contains
         neighbor_e = self%ineighbor_element_l
 
 
-    end function get_neighbor_element
+    end function get_neighbor_element_l
     !***********************************************************************************************************
+
+
+
+
+
+
+    !> Return neighbor element index
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   2/1/2016
+    !!
+    !!
+    !!
+    !-----------------------------------------------------------------------------------------------------------
+    function get_neighbor_element_g(self) result(neighbor_e)
+        class(face_t),  intent(in)   ::  self
+
+        integer(ik) :: neighbor_e
+
+
+        neighbor_e = self%ineighbor_element_g
+
+
+    end function get_neighbor_element_g
+    !***********************************************************************************************************
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -655,7 +677,7 @@ contains
 
 
 
-        neighbor_e = self%get_neighbor_element()
+        neighbor_e = self%get_neighbor_element_l()
 
 
 

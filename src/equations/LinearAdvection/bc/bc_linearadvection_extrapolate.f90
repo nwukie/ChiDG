@@ -80,7 +80,7 @@ contains
     !!  @param[in]      ielem   Index of the element being computed
     !!  @param[in]      iface   Index of the face being computed
     !!  @param[in]      iblk    Index of the linearization block being computed
-    !----------------------------------------------------------
+    !---------------------------------------------------------------------------------------------
     subroutine compute(self,mesh,sdata,prop,face,flux)
         class(linearadvection_extrapolate_t),   intent(inout)   :: self
         type(mesh_t),                           intent(in)      :: mesh(:)
@@ -94,14 +94,8 @@ contains
 
 
 
-
-
-
-
-
-
-
-    end subroutine
+    end subroutine compute
+    !*********************************************************************************************
 
 
 

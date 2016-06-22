@@ -104,7 +104,7 @@ contains
         integer(ik)     :: idom, ielem, iface
 
         ! Storage at quadrature nodes
-        type(AD_D), dimension(mesh(face%idomain)%faces(face%ielement,face%iface)%gq%face%nnodes)   ::  &
+        type(AD_D), dimension(mesh(face%idomain_l)%faces(face%ielement_l,face%iface)%gq%face%nnodes)   ::  &
                         rho_r,  rhou_r, rhov_r, rhow_r, rhoE_r,        &
                         rho_i,  rhou_i, rhov_i, rhow_i, rhoE_i,        &
                         flux_x, flux_y, flux_z, integrand
@@ -129,8 +129,8 @@ contains
         irhoE_i = prop%get_eqn_index("rhoE_i")
 
 
-        idom  = face%idomain
-        ielem = face%ielement
+        idom  = face%idomain_l
+        ielem = face%ielement_l
         iface = face%iface
 
 
@@ -416,13 +416,6 @@ contains
             integrand = flux_x*norms(:,1) + flux_y*norms(:,2) + flux_z*norms(:,3)
 
             call integrate_boundary_scalar_flux(mesh,sdata,face,flux,irhoE_i,integrand)
-
-
-
-
-
-
-
 
 
 

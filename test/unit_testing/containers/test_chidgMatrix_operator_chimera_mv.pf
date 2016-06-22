@@ -99,8 +99,8 @@ subroutine test_chidgMatrix_operator_chimera_mv()
     ! Set matrix values corresponding to first donor
     chidg%data%sdata%lhs%dom(idom)%chi_blks(ielem,idonor)%mat = ONE
 
-    idom_d = chidg%data%mesh(idom)%chimera%recv%data(ChiID)%donor_domain%at(idonor)
-    ielem_d = chidg%data%mesh(idom)%chimera%recv%data(ChiID)%donor_element%at(idonor)
+    idom_d = chidg%data%mesh(idom)%chimera%recv%data(ChiID)%donor_domain_l%at(idonor)
+    ielem_d = chidg%data%mesh(idom)%chimera%recv%data(ChiID)%donor_element_l%at(idonor)
     
 
     ! Set vector values for first donor
@@ -114,8 +114,8 @@ subroutine test_chidgMatrix_operator_chimera_mv()
 
 
 
-    idom_d = chidg%data%mesh(idom)%chimera%recv%data(ChiID)%donor_domain%at(idonor)
-    ielem_d = chidg%data%mesh(idom)%chimera%recv%data(ChiID)%donor_element%at(idonor)
+    idom_d = chidg%data%mesh(idom)%chimera%recv%data(ChiID)%donor_domain_l%at(idonor)
+    ielem_d = chidg%data%mesh(idom)%chimera%recv%data(ChiID)%donor_element_l%at(idonor)
 
 
 

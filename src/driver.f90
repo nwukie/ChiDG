@@ -16,7 +16,6 @@ program driver
     use mod_constants,              only: ONE, TWO, ZERO
     use type_chidg,                 only: chidg_t
     use mod_grid_operators,         only: initialize_variable
-    use type_dict,                  only: dict_t
     use type_function,              only: function_t
     use mod_function,               only: create_function
     use type_domain_connectivity,   only: domain_connectivity_t
@@ -34,17 +33,15 @@ program driver
 
     ! MPI
     use mod_chidg_mpi,          only: IRANK, NRANK, GLOBAL_MASTER
-    use mpi_f08,                only: MPI_Barrier, MPI_COMM_WORLD
+    use mpi_f08
 
     
     !
     ! Variable declarations
     !
     implicit none
-!    include 'mpif.h'
     type(chidg_t)                       :: chidg
     type(partition_t)                   :: partition
-    type(dict_t)                        :: toptions, noptions, loptions
 
     type(domain_connectivity_t),    allocatable :: connectivities(:)
     type(partition_t),              allocatable :: partitions(:)
@@ -71,17 +68,6 @@ program driver
     if ( narg == 0 ) then
 
 
-!        !
-!        ! Initialize MPI
-!        !
-!        call MPI_Init(ierr)
-!        if (ierr /= 0) call chidg_signal(FATAL,"MPI_Init")
-!        call MPI_Comm_Size(MPI_COMM_WORLD,NRANK,ierr)
-!        if (ierr /= 0) call chidg_signal(FATAL,"MPI_Comm_Size")
-!        call MPI_Comm_Rank(MPI_COMM_WORLD,IRANK,ierr)
-!        if (ierr /= 0) call chidg_signal(FATAL,"MPI_Comm_Rank")
-
-
 
         !
         ! Initialize ChiDG environment
@@ -101,7 +87,7 @@ program driver
 
             call partition_connectivity(connectivities, partitions)
 
-            call send_partitions(partitions)
+            call send_partitions(partitions,MPI_COMM_WORLD)
         end if
 
 
@@ -109,7 +95,7 @@ program driver
         !
         ! Receive partition from GLOBAL_MASTER
         !
-        call recv_partition(partition)
+        call recv_partition(partition,MPI_COMM_WORLD)
 
 
 
@@ -120,35 +106,14 @@ program driver
         if ( irank == GLOBAL_MASTER ) call write_line("Reading grid")
         do iread = 0,NRANK-1
             if ( iread == IRANK ) then
-                print*, "Rank ", IRANK, ": reading grid"
                 call chidg%read_grid(gridfile, spacedim, partition)
-                print*, "Rank ", IRANK, ": done reading grid"
-                !print*, IRANK, " reading boundary conditions"
-                !call chidg%read_boundaryconditions(gridfile, partition)
+                call chidg%read_boundaryconditions(gridfile, partition)
             end if
 
-            print*, "Rank ", IRANK, ": waiting"
             call MPI_Barrier(MPI_COMM_WORLD,ierr)  ! sync to prevent simultaneous file access
         end do
 
 
-
-
-
-
-        ! Set time-scheme options
-        call toptions%set('dt',dt)
-        call toptions%set('nsteps',time_steps)
-        call toptions%set('nwrite',nwrite)
-
-
-        ! Set nonlinear solver options
-        call noptions%set('tol',ntol)
-        call noptions%set('cfl0',cfl0)
-        call noptions%set('nsteps',nonlinear_steps)
-
-        ! Set linear solver options
-        call loptions%set('tol',ltol)
 
 
 
@@ -168,114 +133,114 @@ program driver
         call chidg%initialize_solution_domains(nterms_s)
         print*, "Rank ", IRANK, ": Initializing communication"
         call chidg%init('communication')
-!        call chidg%init('chimera')
-!        call chidg%initialize_solution_solver()
-!
-!
-!
-!        !
-!        ! Initialize solution
-!        !
-!        if (solutionfile_in == 'none') then
-!            call create_function(constant,'constant')
-!
-!
+        call chidg%init('chimera')
+        call chidg%initialize_solution_solver()
+
+
+
+        !
+        ! Initialize solution
+        !
+        if (solutionfile_in == 'none') then
+            call create_function(constant,'constant')
+
+
+            ! rho
+            call constant%set_option('val',1.20_rk)
+            call initialize_variable(chidg%data,1,constant)
+
+            ! rho_u
+            call constant%set_option('val',50._rk)
+            call initialize_variable(chidg%data,2,constant)
+
+            ! rho_v
+            call constant%set_option('val',0._rk)
+            call initialize_variable(chidg%data,3,constant)
+
+            ! rho_w
+            call constant%set_option('val',0._rk)
+            call initialize_variable(chidg%data,4,constant)
+
+            ! rho_E
+            call constant%set_option('val',230000._rk)
+            call initialize_variable(chidg%data,5,constant)
+
+
 !            ! rho
-!            call constant%set_option('val',1.20_rk)
-!            call initialize_variable(chidg%data,1,constant)
+!            call constant%set_option('val',0._rk)
+!            call initialize_variable(chidg%data,6,constant)
 !
 !            ! rho_u
-!            call constant%set_option('val',50._rk)
-!            call initialize_variable(chidg%data,2,constant)
+!            call constant%set_option('val',0._rk)
+!            call initialize_variable(chidg%data,7,constant)
 !
 !            ! rho_v
 !            call constant%set_option('val',0._rk)
-!            call initialize_variable(chidg%data,3,constant)
+!            call initialize_variable(chidg%data,8,constant)
 !
 !            ! rho_w
 !            call constant%set_option('val',0._rk)
-!            call initialize_variable(chidg%data,4,constant)
+!            call initialize_variable(chidg%data,9,constant)
 !
 !            ! rho_E
-!            call constant%set_option('val',230000._rk)
-!            call initialize_variable(chidg%data,5,constant)
+!            call constant%set_option('val',0._rk)
+!            call initialize_variable(chidg%data,10,constant)
 !
-!
-!!            ! rho
-!!            call constant%set_option('val',0._rk)
-!!            call initialize_variable(chidg%data,6,constant)
-!!
-!!            ! rho_u
-!!            call constant%set_option('val',0._rk)
-!!            call initialize_variable(chidg%data,7,constant)
-!!
-!!            ! rho_v
-!!            call constant%set_option('val',0._rk)
-!!            call initialize_variable(chidg%data,8,constant)
-!!
-!!            ! rho_w
-!!            call constant%set_option('val',0._rk)
-!!            call initialize_variable(chidg%data,9,constant)
-!!
-!!            ! rho_E
-!!            call constant%set_option('val',0._rk)
-!!            call initialize_variable(chidg%data,10,constant)
-!!
-!
-!        else
-!
-!            !
-!            ! TODO: put in check that solutionfile actually contains solution
-!            !
-!            call chidg%read_solution(solutionfile_in)
-!!            do iread = 1,nrank
-!!                if ( iread == irank ) then
-!!                    call chidg%read_solution(solutionfile_in,partition)
-!!                end if
-!!            end do
-!
-!        end if
-!
-!        
-!
-!
+
+        else
+
+            !
+            ! TODO: put in check that solutionfile actually contains solution
+            !
+            call chidg%read_solution(solutionfile_in)
+!            do iread = 1,nrank
+!                if ( iread == irank ) then
+!                    call chidg%read_solution(solutionfile_in,partition)
+!                end if
+!            end do
+
+        end if
+
+        
+
+
+        !
+        ! Wrap-up initialization activities
+        !
+        call chidg%init('finalize')
+
+        !
+        ! Write initial solution
+        !
+        if (initial_write) call chidg%write_solution(solutionfile_out)
+
+
+
+
+
+        !
+        ! Run ChiDG simulation
+        !
+        call chidg%run()
+
+
+
+
+
+        !
+        ! Write final solution
+        !
+        if (final_write) call chidg%write_solution(solutionfile_out)
+
+        !
+        ! Reporting
+        !
+        call chidg%report()
+
 !        !
-!        ! Wrap-up initialization activities
+!        ! Close MPI
 !        !
-!        call chidg%init('finalize')
-!
-!        !
-!        ! Write initial solution
-!        !
-!        if (initial_write) call chidg%write_solution(solutionfile_out)
-!
-!
-!
-!
-!
-!        !
-!        ! Run ChiDG simulation
-!        !
-!        call chidg%run()
-!
-!
-!
-!
-!
-!        !
-!        ! Write final solution
-!        !
-!        if (final_write) call chidg%write_solution(solutionfile_out)
-!
-!        !
-!        ! Reporting
-!        !
-!        call chidg%report()
-!
-!!        !
-!!        ! Close MPI
-!!        !
-!!        call MPI_Finalize(ierr)
+!        call MPI_Finalize(ierr)
 
 
 

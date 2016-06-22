@@ -49,8 +49,7 @@ contains
         integer(ik)                             :: ielem, i
         type(AD_D), dimension(elem%nterms_s)    :: integral, integral_x, integral_y, integral_z
 
-        !ielem = elem%ielem  ! get element index
-        ielem = elem%ielem_l  ! get element index
+        ielem = elem%ielement_l  ! get element index
 
         !
         ! Multiply each component by quadrature weights and element jacobians
@@ -139,8 +138,7 @@ contains
         integer(ik)                             :: ielem, i
         type(AD_D), dimension(elem%nterms_s)    :: integral, integral_x, integral_y, integral_z
 
-        !ielem = elem%ielem  ! get element index
-        ielem = elem%ielem_l  ! get element index
+        ielem = elem%ielement_l  ! get element index
 
         !
         ! Multiply each component by quadrature weights and element jacobians
@@ -205,24 +203,24 @@ contains
         type(AD_D),             allocatable     :: integrand_n(:)
         type(face_info_t)                       :: face_n
         type(function_info_t)                   :: function_n
-        integer(ik)                             :: ielem_n, iface_n, iblk_n
+        integer(ik)                             :: ineighbor_element_l, ineighbor_face, iblk_n
 
         integer(ik)                             :: nterms_s, ierr, ftype
         type(AD_D), allocatable                 :: integral(:)
 
 
-        associate ( idom  => face_info%idomain,   ielem  => face_info%ielement,    iface => face_info%iface, &
+        associate ( idomain_l  => face_info%idomain_l,   ielement_l  => face_info%ielement_l,    iface => face_info%iface, &
                     ifcn  => function_info%ifcn,  idonor => function_info%idonor,  iblk  => function_info%iblk )
 
 
-        ftype    = mesh(idom)%faces(ielem,iface)%ftype
-        nterms_s = mesh(idom)%faces(ielem,iface)%nterms_s
+        ftype    = mesh(idomain_l)%faces(ielement_l,iface)%ftype
+        nterms_s = mesh(idomain_l)%faces(ielement_l,iface)%nterms_s
 
 
 
         ! Neighbor indices
-        ielem_n  = mesh(idom)%faces(ielem,iface)%get_neighbor_element()
-        iface_n  = mesh(idom)%faces(ielem,iface)%get_neighbor_face()
+        ineighbor_element_l = mesh(idomain_l)%faces(ielement_l,iface)%get_neighbor_element_l()
+        ineighbor_face      = mesh(idomain_l)%faces(ielement_l,iface)%get_neighbor_face()
 
 
         !
@@ -247,9 +245,9 @@ contains
         !
         ! Integrate and apply once
         !
-        associate ( weights => mesh(idom)%faces(ielem,iface)%gq%face%weights(:,iface), &
-                    jinv => mesh(idom)%faces(ielem,iface)%jinv, &
-                    val => mesh(idom)%faces(ielem,iface)%gq%face%val(:,:,iface) )
+        associate ( weights => mesh(idomain_l)%faces(ielement_l,iface)%gq%face%weights(:,iface), &
+                    jinv => mesh(idomain_l)%faces(ielement_l,iface)%jinv, &
+                    val => mesh(idomain_l)%faces(ielement_l,iface)%gq%face%val(:,:,iface) )
 
 
             !
@@ -272,12 +270,18 @@ contains
         !
         ! Integrate and apply second time if there is a neighbor
         !
-        if ( ielem_n /= NO_INTERIOR_NEIGHBOR ) then
+        if ( ineighbor_element_l /= NO_INTERIOR_NEIGHBOR ) then
 
-            face_n%idomain  = idom
-            face_n%ielement = ielem_n
-            face_n%iface    = iface_n
-            face_n%seed     = face_info%seed
+!            face_n%idomain  = idom
+!            face_n%ielement = ielem_n
+!            face_n%iface    = iface_n
+!            face_n%seed     = face_info%seed
+            face_n%idomain_g  = mesh(idomain_l)%faces(ielement_l,iface)%ineighbor_domain_g
+            face_n%idomain_l  = mesh(idomain_l)%faces(ielement_l,iface)%ineighbor_domain_l
+            face_n%ielement_g = mesh(idomain_l)%faces(ielement_l,iface)%ineighbor_element_g
+            face_n%ielement_l = mesh(idomain_l)%faces(ielement_l,iface)%ineighbor_element_l
+            face_n%iface      = mesh(idomain_l)%faces(ielement_l,iface)%get_neighbor_face()
+            face_n%seed       = face_info%seed
 
 
             !
@@ -286,7 +290,7 @@ contains
             if ( iblk /= DIAG ) then
                     iblk_n = DIAG
             else if ( iblk == DIAG ) then
-                    iblk_n = iface_n
+                    iblk_n = ineighbor_face
             else
                 call chidg_signal(FATAL,"store_boundary_integrals: unexpected value")
             end if
@@ -299,9 +303,9 @@ contains
             
 
 
-            associate ( weights_n => mesh(idom)%faces(ielem_n,iface_n)%gq%face%weights(:,iface_n), &
-                        jinv_n => mesh(idom)%faces(ielem_n,iface_n)%jinv, & 
-                        val_n => mesh(idom)%faces(ielem_n,iface_n)%gq%face%val(:,:,iface_n) )
+            associate ( weights_n => mesh(idomain_l)%faces(ineighbor_element_l,ineighbor_face)%gq%face%weights(:,ineighbor_face), &
+                        jinv_n => mesh(idomain_l)%faces(ineighbor_element_l,ineighbor_face)%jinv, & 
+                        val_n => mesh(idomain_l)%faces(ineighbor_element_l,ineighbor_face)%gq%face%val(:,:,ineighbor_face) )
 
                 integrand_n = (integrand_n) * (weights_n)
 
@@ -430,26 +434,25 @@ contains
 
 
 
-        associate ( idom  => face_info%idomain,    ielem  => face_info%ielement,    iface => face_info%iface, &
-                    ifcn  => function_info%ifcn,   idonor => function_info%idonor,  iblk  => function_info%iblk )
+        associate ( idomain_l  => face_info%idomain_l, ielement_l  => face_info%ielement_l, iface => face_info%iface, &
+                    ifcn  => function_info%ifcn,       idonor => function_info%idonor,      iblk  => function_info%iblk )
 
 
-            ftype = mesh(idom)%faces(ielem,iface)%ftype
+            ftype = mesh(idomain_l)%faces(ielement_l,iface)%ftype
 
 
-            associate ( rhs => sdata%rhs%dom(idom)%lvecs, lhs => sdata%lhs)
+            associate ( rhs => sdata%rhs%dom(idomain_l)%lvecs, lhs => sdata%lhs)
 
 
                 !
                 ! Only store rhs once. if iblk == DIAG. Also, since the integral could be computed more than once for chimera faces, only store for the first donor.
                 ! The integral should be the same for any value of idonor. Only the derivatives will change
                 !
-                !if ( ftype == BOUNDARY .and. iblk == DIAG ) then
-                if ( ftype == BOUNDARY .and. ( ielem == face_info%seed%ielem ) ) then
+                if ( ftype == BOUNDARY .and. ( ielement_l == face_info%seed%ielement_l ) ) then
 
 
-                    vals = rhs(ielem)%getvar(ieqn) + integral(:)%x_ad_
-                    call rhs(ielem)%setvar(ieqn,vals)
+                    vals = rhs(ielement_l)%getvar(ieqn) + integral(:)%x_ad_
+                    call rhs(ielement_l)%setvar(ieqn,vals)
 
 
 
@@ -457,8 +460,8 @@ contains
                 else if ( ftype == CHIMERA .and. iblk == DIAG ) then
 
                     if (idonor == 1) then
-                        vals = rhs(ielem)%getvar(ieqn) + integral(:)%x_ad_
-                        call rhs(ielem)%setvar(ieqn,vals)
+                        vals = rhs(ielement_l)%getvar(ieqn) + integral(:)%x_ad_
+                        call rhs(ielement_l)%setvar(ieqn,vals)
                     end if
 
 
@@ -479,8 +482,8 @@ contains
                         !
                         ! Add to residual and store
                         !
-                        vals = rhs(ielem)%getvar(ieqn) + integral(:)%x_ad_
-                        call rhs(ielem)%setvar(ieqn,vals)
+                        vals = rhs(ielement_l)%getvar(ieqn) + integral(:)%x_ad_
+                        call rhs(ielement_l)%setvar(ieqn,vals)
 
 
                         !
@@ -531,7 +534,7 @@ contains
         integer(ik),            intent(in)      :: ieqn
         type(AD_D),             intent(inout)   :: integral(:)
 
-        integer(ik)                 :: i, idom, ielem, iface, ftype, ChiID
+        integer(ik)                 :: i, idomain_l, ielement_l, iface, ftype, ChiID
         integer(ik)                 :: iblk, idonor, ifcn
         type(seed_t)                :: seed
         real(rk)                    :: vals(size(integral))
@@ -539,11 +542,11 @@ contains
         logical :: add_linearization
 
 
-        idom  = face_info%idomain
-        ielem = face_info%ielement
-        iface = face_info%iface
-        seed  = face_info%seed
-        ftype = mesh(idom)%faces(ielem,iface)%ftype
+        idomain_l  = face_info%idomain_l
+        ielement_l = face_info%ielement_l
+        iface      = face_info%iface
+        seed       = face_info%seed
+        ftype      = mesh(idomain_l)%faces(ielement_l,iface)%ftype
 
         ifcn   = function_info%ifcn
         idonor = function_info%idonor
@@ -551,7 +554,7 @@ contains
 
 
 
-        associate ( rhs => sdata%rhs%dom(idom)%lvecs, lhs => sdata%lhs)
+        associate ( rhs => sdata%rhs%dom(idomain_l)%lvecs, lhs => sdata%lhs)
 
 
             !
@@ -570,7 +573,7 @@ contains
                     ! we just store it once.
                     !
                     if (idonor == 1) then
-                        call lhs%store(integral,idom,ielem,iblk,ieqn)
+                        call lhs%store(integral,idomain_l,ielement_l,iblk,ieqn)
                     end if
                 end if
 
@@ -594,7 +597,7 @@ contains
                 !
                 if ( add_linearization ) then
                     ! Store linearization
-                    call lhs%store(integral,idom,ielem,iblk,ieqn)
+                    call lhs%store(integral,idomain_l,ielement_l,iblk,ieqn)
 
                     ! Register flux as linearized
                     call sdata%function_status%register_function_linearized( face_info, function_info, ieqn )

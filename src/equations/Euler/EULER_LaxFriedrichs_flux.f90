@@ -86,7 +86,7 @@ contains
 
 
         ! Storage at quadrature nodes
-        type(AD_D), dimension(mesh(face_info%idomain)%faces(face_info%ielement,face_info%iface)%gq%face%nnodes)    :: &
+        type(AD_D), dimension(mesh(face_info%idomain_l)%faces(face_info%ielement_l,face_info%iface)%gq%face%nnodes)    :: &
                         rho_m,      rho_p,                                        &
                         rhou_m,     rhou_p,                                       &
                         rhov_m,     rhov_p,                                       &
@@ -100,7 +100,7 @@ contains
                         gam_m,      gam_p,                                        &
                         integrand
 
-        real(rk), dimension(mesh(face_info%idomain)%faces(face_info%ielement,face_info%iface)%gq%face%nnodes)    :: &
+        real(rk), dimension(mesh(face_info%idomain_l)%faces(face_info%ielement_l,face_info%iface)%gq%face%nnodes)    :: &
                         norm_mag
 
         !===========================================================================
@@ -113,8 +113,8 @@ contains
         irhow = prop%get_eqn_index("rhow")
         irhoE = prop%get_eqn_index("rhoE")
 
-        idom  = face_info%idomain
-        ielem = face_info%ielement
+        idom  = face_info%idomain_l
+        ielem = face_info%ielement_l
         iface = face_info%iface
 
         ifcn   = function_info%ifcn
@@ -183,7 +183,6 @@ contains
             !================================
             upwind = -wave*(rho_p - rho_m)
 
-            !integrand = HALF*( upwind*norms(:,1)*unorms(:,1)  +  upwind*norms(:,2)*unorms(:,2)  +  upwind*norms(:,3)*unorms(:,3) )
             integrand = HALF * upwind * norm_mag
 
             call integrate_boundary_scalar_flux(mesh,sdata,face_info,function_info,irho,integrand)
@@ -194,7 +193,6 @@ contains
             !================================
             upwind = -wave*(rhou_p - rhou_m)
 
-            !integrand = HALF*( upwind*norms(:,1)*unorms(:,1)  +  upwind*norms(:,2)*unorms(:,2)  +  upwind*norms(:,3)*unorms(:,3) )
             integrand = HALF * upwind * norm_mag
 
             call integrate_boundary_scalar_flux(mesh,sdata,face_info,function_info,irhou,integrand)
@@ -205,7 +203,6 @@ contains
             !================================
             upwind = -wave*(rhov_p - rhov_m)
 
-            !integrand = HALF*( upwind*norms(:,1)*unorms(:,1)  +  upwind*norms(:,2)*unorms(:,2)  +  upwind*norms(:,3)*unorms(:,3) )
             integrand = HALF * upwind * norm_mag
 
             call integrate_boundary_scalar_flux(mesh,sdata,face_info,function_info,irhov,integrand)
@@ -215,7 +212,6 @@ contains
             !================================
             upwind = -wave*(rhow_p - rhow_m)
 
-            !integrand = HALF*( upwind*norms(:,1)*unorms(:,1)  +  upwind*norms(:,2)*unorms(:,2)  +  upwind*norms(:,3)*unorms(:,3) )
             integrand = HALF * upwind * norm_mag
 
             call integrate_boundary_scalar_flux(mesh,sdata,face_info,function_info,irhow,integrand)
@@ -225,7 +221,6 @@ contains
             !================================
             upwind = -wave*(rhoE_p - rhoE_m)
 
-            !integrand = HALF*( upwind*norms(:,1)*unorms(:,1)  +  upwind*norms(:,2)*unorms(:,2)  +  upwind*norms(:,3)*unorms(:,3) )
             integrand = HALF * upwind * norm_mag
 
             call integrate_boundary_scalar_flux(mesh,sdata,face_info,function_info,irhoE,integrand)

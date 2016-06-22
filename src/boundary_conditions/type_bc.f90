@@ -498,14 +498,14 @@ contains
     !!  @param[inout]   prop    properties_t object containing equationset properties and material_t objects
     !!
     !---------------------------------------------------------------------------------------------
-    subroutine apply(self,mesh,sdata,prop,idom)
+    subroutine apply(self,mesh,sdata,prop,idomain_l)
         class(bc_t),            intent(inout)   :: self
         type(mesh_t),           intent(in)      :: mesh(:)
         class(solverdata_t),    intent(inout)   :: sdata
         class(properties_t),    intent(inout)   :: prop
-        integer(ik),            intent(in)      :: idom
+        integer(ik),            intent(in)      :: idomain_l
 
-        integer(ik) :: ielem_bc, ielem, iface, idonor, iflux, icoupled_elem, ncoupled_elems
+        integer(ik) :: ielem_bc, ielement_l, ielement_c, iface, idonor, iflux, icoupled_elem, ncoupled_elems
 
         type(face_info_t)       :: face
         type(function_info_t)   :: flux
@@ -514,13 +514,15 @@ contains
         ! Loop through associated boundary condition elements and call compute routine for the boundary flux calculation
         !
         do ielem_bc = 1,size(self%elems)
-            ielem  = self%elems(ielem_bc)   ! Get index of the element being operated on
-            iface  = self%faces(ielem_bc)   ! Get face index of element 'ielem' that is being operated on
+            ielement_l  = self%elems(ielem_bc)   ! Get index of the element being operated on
+            iface       = self%faces(ielem_bc)   ! Get face index of element 'ielem' that is being operated on
 
 
-            face%idomain  = idom
-            face%ielement = ielem
-            face%iface    = iface
+            face%idomain_g  = mesh(idomain_l)%elems(ielement_l)%idomain_g
+            face%idomain_l  = mesh(idomain_l)%elems(ielement_l)%idomain_l
+            face%ielement_g = mesh(idomain_l)%elems(ielement_l)%ielement_g
+            face%ielement_l = mesh(idomain_l)%elems(ielement_l)%ielement_l
+            face%iface      = iface
 
             flux%ifcn     = 0       ! Boundary conditions are not tracked.
             flux%idonor   = 0       ! Chimera interface not applicable on boundary condition.
@@ -542,8 +544,11 @@ contains
                 !
                 ! Get coupled element to linearize against.
                 !
-                face%seed%idom  = idom
-                face%seed%ielem = self%coupled_elems(ielem_bc)%at(icoupled_elem)
+                ielement_c = self%coupled_elems(ielem_bc)%at(icoupled_elem)
+                face%seed%idomain_g  = mesh(idomain_l)%elems(ielement_c)%idomain_g
+                face%seed%idomain_l  = mesh(idomain_l)%elems(ielement_c)%idomain_l
+                face%seed%ielement_g = mesh(idomain_l)%elems(ielement_c)%ielement_g
+                face%seed%ielement_l = mesh(idomain_l)%elems(ielement_c)%ielement_l
 
                 !
                 ! For the current boundary element(face), call specialized compute procedure.

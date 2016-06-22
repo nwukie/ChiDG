@@ -1695,7 +1695,7 @@ contains
             gname = get_domain_name_hdf(fid,idom)
 
             ! Set domain name.
-            bcdata(idom)%domain_ = gname
+            bcdata(iconn)%domain_ = gname
 
 
             !
@@ -1709,7 +1709,7 @@ contains
             !
             ! Allocation bcs for current domain
             !
-            allocate( bcdata(idom)%bcs(NFACES), bcdata(idom)%bc_connectivity(NFACES), stat=ierr )
+            allocate( bcdata(iconn)%bcs(NFACES), bcdata(iconn)%bc_connectivity(NFACES), stat=ierr )
             if (ierr /= 0) call AllocationError
 
 
@@ -1733,10 +1733,12 @@ contains
                 call h5ltget_attribute_string_f(bcface, ".", "bc_name", bcname, ierr)
                 if (ierr /= 0) call chidg_signal(FATAL,"read_boundaryconditions_partition_hdf: error reading boundary condition name, bc_name")
 
+
+
                 !
                 ! Get face associated with the 
                 !
-                ! TODO: WARNING, should replace with XI_MIN, XI_MAX, etc. somehow.
+                ! TODO: WARNING, should replace with XI_MIN, XI_MAX, etc. somehow. Maybe not...
                 call h5dopen_f(bcface, "Faces", faces_did, ierr, H5P_DEFAULT_F)
 
 
@@ -1768,9 +1770,9 @@ contains
                 !
                 ! Store boundary condition connectivity
                 !
-                call bcdata(idom)%bc_connectivity(iface)%init(nbcfaces)
+                call bcdata(iconn)%bc_connectivity(iface)%init(nbcfaces)
                 do ibc_face = 1,nbcfaces
-                    bcdata(idom)%bc_connectivity(iface)%data(ibc_face)%data = bc_connectivity(ibc_face,:)
+                    bcdata(iconn)%bc_connectivity(iface)%data(ibc_face)%data = bc_connectivity(ibc_face,:)
                 end do
 
 
@@ -1882,7 +1884,7 @@ contains
                     !
                     ! Boundary condition is defined for the current face, save to bcdata
                     !
-                    allocate(bcdata(idom)%bcs(iface)%bc, source=bc, stat=ierr)
+                    allocate(bcdata(iconn)%bcs(iface)%bc, source=bc, stat=ierr)
                     if (ierr /= 0) call AllocationError
 
 
@@ -1898,7 +1900,6 @@ contains
 
             end do ! iface
 
-            idom = idom + 1
 
             ! Close BoundaryCondition group
             call h5gclose_f(bcgroup, ierr)

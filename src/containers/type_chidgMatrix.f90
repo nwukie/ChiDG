@@ -154,14 +154,14 @@ contains
         type(seed_t),               intent(in)      :: seed
         integer(ik),                intent(in)      :: ivar 
 
-        integer(ik) :: idom
+        integer(ik) :: idomain_l
 
-        idom = face%idomain
+        idomain_l = face%idomain_l
 
         !
         ! Store linearization in associated domain blockmatrix_t
         !
-        call self%dom(idom)%store_chimera(integral,face,seed,ivar)
+        call self%dom(idomain_l)%store_chimera(integral,face,seed,ivar)
 
     end subroutine store_chimera
     !***********************************************************************************************************
@@ -193,14 +193,14 @@ contains
         type(seed_t),               intent(in)      :: seed
         integer(ik),                intent(in)      :: ivar 
 
-        integer(ik) :: idom
+        integer(ik) :: idomain_l
 
-        idom = face%idomain
+        idomain_l = face%idomain_l
 
         !
         ! Store linearization in associated domain blockmatrix_t
         !
-        call self%dom(idom)%store_bc(integral,face,seed,ivar)
+        call self%dom(idomain_l)%store_bc(integral,face,seed,ivar)
 
     end subroutine store_bc
     !***********************************************************************************************************

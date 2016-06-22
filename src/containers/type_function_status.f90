@@ -113,11 +113,11 @@ contains
 
 
 
-        associate(idom => face_info%idomain,  ielem => face_info%ielement, iface => face_info%iface, &
+        associate(idomain_l => face_info%idomain_l,  ielement_l => face_info%ielement_l, iface => face_info%iface, &
                   type => function_info%type, ifcn => function_info%ifcn )
 
 
-        function_already_computed = self%dom(idom)%function_computed(type,ielem,iface,ifcn)
+        function_already_computed = self%dom(idomain_l)%function_computed(type,ielement_l,iface,ifcn)
 
 
         if ( function_already_computed ) then
@@ -166,11 +166,11 @@ contains
 
 
 
-        associate(idom => face_info%idomain,  ielem => face_info%ielement, iface => face_info%iface, &
+        associate(idomain_l => face_info%idomain_l,  ielement_l => face_info%ielement_l, iface => face_info%iface, &
                   type => function_info%type, ifcn => function_info%ifcn,  iblk => function_info%iblk )
 
 
-        function_already_computed = self%dom(idom)%function_equation_computed(type,ielem,iface,ifcn,ieqn)
+        function_already_computed = self%dom(idomain_l)%function_equation_computed(type,ielement_l,iface,ifcn,ieqn)
 
 
         if ( function_already_computed ) then
@@ -214,11 +214,11 @@ contains
         logical :: res
 
 
-        associate(idom => face_info%idomain,  ielem => face_info%ielement, iface => face_info%iface, &
+        associate(idomain_l => face_info%idomain_l,  ielement_l => face_info%ielement_l, iface => face_info%iface, &
                   type => function_info%type, ifcn => function_info%ifcn,  iblk => function_info%iblk )
 
 
-        function_already_linearized = self%dom(idom)%function_linearized(type,ielem,iface,ifcn,iblk)
+        function_already_linearized = self%dom(idomain_l)%function_linearized(type,ielement_l,iface,ifcn,iblk)
 
 
 
@@ -264,11 +264,11 @@ contains
         logical :: res
 
 
-        associate(idom => face_info%idomain,  ielem => face_info%ielement, iface => face_info%iface, &
+        associate(idomain_l => face_info%idomain_l,  ielement_l => face_info%ielement_l, iface => face_info%iface, &
                   type => function_info%type, ifcn => function_info%ifcn,  iblk => function_info%iblk )
 
 
-        function_already_linearized = self%dom(idom)%function_equation_linearized(type,ielem,iface,ifcn,iblk,ieqn)
+        function_already_linearized = self%dom(idomain_l)%function_equation_linearized(type,ielement_l,iface,ifcn,iblk,ieqn)
 
 
 
@@ -319,12 +319,12 @@ contains
         
 
 
-        associate(idom => face_info%idomain,  ielem => face_info%ielement, iface => face_info%iface, &
+        associate(idomain_l => face_info%idomain_l,  ielement_l => face_info%ielement_l, iface => face_info%iface, &
                   type => function_info%type, ifcn => function_info%ifcn,  iblk => function_info%iblk )
 
 
-            self%dom(idom)%function_computed(type,ielem,iface,ifcn) = .true.
-            self%dom(idom)%function_equation_computed(type,ielem,iface,ifcn,ieqn) = .true.
+            self%dom(idomain_l)%function_computed(type,ielement_l,iface,ifcn) = .true.
+            self%dom(idomain_l)%function_equation_computed(type,ielement_l,iface,ifcn,ieqn) = .true.
 
         end associate
     end subroutine register_function_computed
@@ -363,12 +363,12 @@ contains
         
 
 
-        associate(idom => face_info%idomain,  ielem => face_info%ielement, iface => face_info%iface, &
+        associate(idomain_l => face_info%idomain_l,  ielement_l => face_info%ielement_l, iface => face_info%iface, &
                   type => function_info%type, ifcn => function_info%ifcn,  iblk => function_info%iblk )
 
 
-            self%dom(idom)%function_linearized(type,ielem,iface,ifcn,iblk) = .true.
-            self%dom(idom)%function_equation_linearized(type,ielem,iface,ifcn,iblk,ieqn) = .true.
+            self%dom(idomain_l)%function_linearized(type,ielement_l,iface,ifcn,iblk) = .true.
+            self%dom(idomain_l)%function_equation_linearized(type,ielement_l,iface,ifcn,iblk,ieqn) = .true.
 
         end associate
     end subroutine register_function_linearized

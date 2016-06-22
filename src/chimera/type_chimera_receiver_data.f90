@@ -19,16 +19,25 @@ module type_chimera_receiver_data
 
         integer(ik)                     :: ndonors = 0
 
-        integer(ik)                     :: receiver_domain      !< Domain index of receiver
-        integer(ik)                     :: receiver_element     !< Element index of receiver
-        integer(ik)                     :: receiver_face        !< Face index of receiver
+!        integer(ik)                     :: receiver_domain      !< Domain index of receiver
+!        integer(ik)                     :: receiver_element     !< Element index of receiver
+!        integer(ik)                     :: receiver_face        !< Face index of receiver
 
+        integer(ik)                     :: receiver_proc        !< Processor rank of receiver
+        integer(ik)                     :: receiver_domain_g    !< ChiDG-global domain index of receiver
+        integer(ik)                     :: receiver_domain_l    !< Proc-local domain index of receiver
+        integer(ik)                     :: receiver_element_g   !< Domain-global element index of receiver
+        integer(ik)                     :: receiver_element_l   !< Proc-local element index of receiver
+        integer(ik)                     :: receiver_face        !< Face index of receiver
 
         ! Access via data%donor_domain%at(idonor)
         type(ivector_t)                 :: donor_neqns
         type(ivector_t)                 :: donor_nterms_s
-        type(ivector_t)                 :: donor_domain         !< Vector of domain indices
-        type(ivector_t)                 :: donor_element        !< Vector of element indices for the location in the corresponding domain
+        type(ivector_t)                 :: donor_proc           !< Vector of processor ranks
+        type(ivector_t)                 :: donor_domain_g       !< Vector of domain indices
+        type(ivector_t)                 :: donor_domain_l       !< Vector of domain indices
+        type(ivector_t)                 :: donor_element_g      !< Vector of element indices for the location in the corresponding domain
+        type(ivector_t)                 :: donor_element_l      !< Vector of element indices for the location in the corresponding domain
         type(mvector_t)                 :: donor_interpolator   !< Vector of matrices defining the Chimera interpolation
 
         ! The access for this component is slightly different than the above components

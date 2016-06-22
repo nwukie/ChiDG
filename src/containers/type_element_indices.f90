@@ -12,8 +12,12 @@ module type_element_indices
     !---------------------------------------------------------------------
     type, public :: element_indices_t
 
-        integer(ik) :: idomain
-        integer(ik) :: ielement
+!        integer(ik) :: idomain
+!        integer(ik) :: ielement
+        integer(ik) :: idomain_g
+        integer(ik) :: idomain_l
+        integer(ik) :: ielement_g
+        integer(ik) :: ielement_l
 
     end type element_indices_t
     !*********************************************************************

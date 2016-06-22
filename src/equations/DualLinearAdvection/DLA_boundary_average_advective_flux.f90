@@ -46,7 +46,6 @@ contains
     !   Boundary Flux routine for Scalar
     !
     !===========================================================
-    !subroutine compute(self,mesh,sdata,prop,idom,ielem,iface,iblk,idonor)
     subroutine compute(self,mesh,sdata,prop,face_info,function_info)
         class(DLA_boundary_average_advective_flux_t),   intent(in)      :: self
         type(mesh_t),                                   intent(in)      :: mesh(:)
@@ -55,15 +54,13 @@ contains
         type(face_info_t),                              intent(in)      :: face_info
         type(function_info_t),                          intent(in)      :: function_info
 
-        !integer(ik),                                    intent(in)      :: idom, ielem, iface, iblk
-        !integer(ik),                                    intent(in)      :: idonor
 
         integer(ik)             :: idom, ielem, iface
         integer(ik)             :: ifcn, idonor, iblk
 
         real(rk)                 :: cx, cy, cz
         integer(ik)              :: iu_a, iu_b
-        type(AD_D), dimension(mesh(face_info%idomain)%faces(face_info%ielement,face_info%iface)%gq%face%nnodes) :: &
+        type(AD_D), dimension(mesh(face_info%idomain_l)%faces(face_info%ielement_l,face_info%iface)%gq%face%nnodes) :: &
                         ua_l, ua_r, ub_l, ub_r, flux_x, flux_y, flux_z, integrand
 
 
@@ -74,8 +71,8 @@ contains
         iu_b = prop%get_eqn_index("u_b")
 
 
-        idom  = face_info%idomain
-        ielem = face_info%ielement
+        idom  = face_info%idomain_l
+        ielem = face_info%ielement_l
         iface = face_info%iface
 
 

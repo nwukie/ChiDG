@@ -105,8 +105,8 @@ subroutine test_compute_gq_donor_cylinder_abutting()
     iface = XI_MIN
 
     ChiID = chidgA%data%mesh(4)%faces(ielem,iface)%ChiID
-    idom_d = chidgA%data%mesh(4)%chimera%recv%data(ChiID)%donor_domain%at(1)
-    ielem_d = chidgA%data%mesh(4)%chimera%recv%data(ChiID)%donor_element%at(1)
+    idom_d = chidgA%data%mesh(4)%chimera%recv%data(ChiID)%donor_domain_l%at(1)
+    ielem_d = chidgA%data%mesh(4)%chimera%recv%data(ChiID)%donor_element_l%at(1)
     ngq = chidgA%data%mesh(idom)%chimera%recv%data(ChiID)%donor_gq_indices(1)%size()
 
     do igq = 1,ngq

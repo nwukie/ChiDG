@@ -102,7 +102,7 @@ contains
            !
            ! Store temporary rhs
            !
-           rhs_r%lvecs(ielem) = rhs%lvecs(ielem)
+           rhs_r%vecs(ielem) = rhs%vecs(ielem)
 
 
            !
@@ -137,8 +137,8 @@ contains
                    !
                    ! Perturb the iterm-th term in the solution expansion for variable ivar in element ielem.
                    !
-                   qhold = q%lvecs(ielem_p)%getterm(ivar,iterm)
-                   call q%lvecs(ielem_p)%setterm(ivar,iterm,qhold + eps)
+                   qhold = q%vecs(ielem_p)%getterm(ivar,iterm)
+                   call q%vecs(ielem_p)%setterm(ivar,iterm,qhold + eps)
 
 
                    !
@@ -159,7 +159,7 @@ contains
                    !
                    ! Return perturbed value to normal state
                    !
-                   call q%lvecs(ielem_p)%setterm(ivar,iterm,qhold)
+                   call q%vecs(ielem_p)%setterm(ivar,iterm,qhold)
 
 
                    !
@@ -172,7 +172,7 @@ contains
                    ! Store to column of blk_fd
                    !
                    icol = (ivar-1)*nterms + iterm                  ! Compute appropriate column for storing linearization
-                   blk_fd%mat(:,icol) = vec_fd%lvecs(ielem)%vec    ! Store finite difference linearization of the residual
+                   blk_fd%mat(:,icol) = vec_fd%vecs(ielem)%vec    ! Store finite difference linearization of the residual
 
 
                    !
@@ -343,7 +343,7 @@ contains
             !
             ! Store temporary rhs
             !
-            rhs_r%lvecs(ielem) = rhs%lvecs(ielem)
+            rhs_r%vecs(ielem) = rhs%vecs(ielem)
 
 
             !
@@ -367,8 +367,8 @@ contains
                     !
                     ! Perturb the iterm-th term in the solution expansion for variable ivar in element ielem.
                     !
-                    qhold = q%lvecs(ielem_p)%getterm(ivar,iterm)
-                    call q%lvecs(ielem_p)%setterm(ivar,iterm,qhold + eps)
+                    qhold = q%vecs(ielem_p)%getterm(ivar,iterm)
+                    call q%vecs(ielem_p)%setterm(ivar,iterm,qhold + eps)
 
 
                     !
@@ -401,7 +401,7 @@ contains
                     !
                     ! Return perturbed value to normal state
                     !
-                    call q%lvecs(ielem_p)%setterm(ivar,iterm,qhold)
+                    call q%vecs(ielem_p)%setterm(ivar,iterm,qhold)
 
 
                     !
@@ -414,7 +414,7 @@ contains
                     ! Store to column of blk_fd
                     !
                     icol = (ivar-1)*nterms + iterm                  ! Compute appropriate column for storing linearization
-                    blk_fd%mat(:,icol) = vec_fd%lvecs(ielem)%vec
+                    blk_fd%mat(:,icol) = vec_fd%vecs(ielem)%vec
 
 
                     !

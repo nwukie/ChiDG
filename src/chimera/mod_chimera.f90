@@ -24,7 +24,6 @@ module mod_chimera
 
     use mod_polynomial,         only: polynomialVal
     use mod_periodic,           only: compute_periodic_offset
-    use mod_inv,                only: inv
     use mod_chidg_mpi,          only: IRANK, NRANK
     implicit none
 

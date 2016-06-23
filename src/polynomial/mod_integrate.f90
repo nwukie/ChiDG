@@ -369,7 +369,7 @@ contains
         integer(ik) :: i
         real(rk)    :: vals(size(integral))
 
-        associate ( rhs => sdata%rhs%dom(idom)%lvecs, lhs => sdata%lhs)
+        associate ( rhs => sdata%rhs%dom(idom)%vecs, lhs => sdata%lhs)
 
             !
             ! Only store rhs once. if iblk == DIAG
@@ -441,7 +441,7 @@ contains
             ftype = mesh(idomain_l)%faces(ielement_l,iface)%ftype
 
 
-            associate ( rhs => sdata%rhs%dom(idomain_l)%lvecs, lhs => sdata%lhs)
+            associate ( rhs => sdata%rhs%dom(idomain_l)%vecs, lhs => sdata%lhs)
 
 
                 !
@@ -554,7 +554,7 @@ contains
 
 
 
-        associate ( rhs => sdata%rhs%dom(idomain_l)%lvecs, lhs => sdata%lhs)
+        associate ( rhs => sdata%rhs%dom(idomain_l)%vecs, lhs => sdata%lhs)
 
 
             !

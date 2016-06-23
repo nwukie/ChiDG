@@ -166,7 +166,7 @@ subroutine test_integrate_boundary_unit_constant()
     call integrate_boundary_scalar_flux(chidg%data%mesh,sdata,face,flux,ivar,integrand)
 
 
-    integral = sdata%rhs%dom(1)%lvecs(1)%vec(1)
+    integral = sdata%rhs%dom(1)%vecs(1)%vec(1)
 
     end associate
 
@@ -360,7 +360,7 @@ subroutine test_integrate_boundary_nonunit_constant()
     call integrate_boundary_scalar_flux(chidg%data%mesh,sdata,face,flux,ivar,integrand)
 
 
-    integral = sdata%rhs%dom(1)%lvecs(1)%vec(1)
+    integral = sdata%rhs%dom(1)%vecs(1)%vec(1)
 
 
     ref_integral = -1._rk
@@ -381,7 +381,7 @@ subroutine test_integrate_boundary_nonunit_constant()
     call integrate_boundary_scalar_flux(chidg%data%mesh,sdata,face,flux,ivar,integrand)
 
 
-    integral = sdata%rhs%dom(1)%lvecs(1)%vec(1)
+    integral = sdata%rhs%dom(1)%vecs(1)%vec(1)
 
 
     ref_integral = 1._rk
@@ -404,7 +404,7 @@ subroutine test_integrate_boundary_nonunit_constant()
     call integrate_boundary_scalar_flux(chidg%data%mesh,sdata,face,flux,ivar,integrand)
 
 
-    integral = sdata%rhs%dom(1)%lvecs(1)%vec(1)
+    integral = sdata%rhs%dom(1)%vecs(1)%vec(1)
 
 
     ref_integral = -1._rk
@@ -429,7 +429,7 @@ subroutine test_integrate_boundary_nonunit_constant()
     call integrate_boundary_scalar_flux(chidg%data%mesh,sdata,face,flux,ivar,integrand)
 
 
-    integral = sdata%rhs%dom(1)%lvecs(1)%vec(1)
+    integral = sdata%rhs%dom(1)%vecs(1)%vec(1)
 
 
     ref_integral = 1._rk
@@ -453,7 +453,7 @@ subroutine test_integrate_boundary_nonunit_constant()
     call integrate_boundary_scalar_flux(chidg%data%mesh,sdata,face,flux,ivar,integrand)
 
 
-    integral = sdata%rhs%dom(1)%lvecs(1)%vec(1)
+    integral = sdata%rhs%dom(1)%vecs(1)%vec(1)
 
 
     ref_integral = -1._rk
@@ -477,7 +477,7 @@ subroutine test_integrate_boundary_nonunit_constant()
     call integrate_boundary_scalar_flux(chidg%data%mesh,sdata,face,flux,ivar,integrand)
 
 
-    integral = sdata%rhs%dom(1)%lvecs(1)%vec(1)
+    integral = sdata%rhs%dom(1)%vecs(1)%vec(1)
 
 
     ref_integral = 1._rk

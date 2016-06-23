@@ -17,19 +17,19 @@ module type_blockvector
     !------------------------------------------------------------------------------------------------------------------------
     type, public :: blockvector_t
 
-        type(densevector_t), allocatable :: lvecs(:)        !< Local element vectors
-        integer(ik),         allocatable :: ldata(:,:)      !< Local block data     (nvars, nterms)
-
+        type(densevector_t), allocatable :: vecs(:)     !< Local element vectors
 
     contains
         ! Initializers
-        generic,   public   :: init => init_vector          !< Initialize local vector
-        procedure, private  :: init_vector
+        procedure, public   :: init                     !< Initialize local vector
+!        generic,   public   :: init => init_vector      !< Initialize local vector
+!        procedure, private  :: init_vector
 
-        procedure, public   :: distribute                   !< Given a full-vector representation, distribute it to the denseblock format
-        procedure, public   :: clear                        !< Zero all vector storage elements
+        procedure, public   :: distribute               !< Given a full-vector representation, distribute it to the denseblock format
+        procedure, public   :: clear                    !< Zero all vector storage elements
         
-        procedure, public   :: norm
+        procedure, public   :: norm                     !< Return the L2 vector norm of the block-vector
+        procedure, public   :: sumsqr                   !< Return the sum of the squared block-vector entries
         procedure, public   :: nentries
         procedure, public   :: dump
 
@@ -101,37 +101,36 @@ contains
     !!  @param[in]  mesh    mesh_t instance containing initialized elements and faces
     !!
     !---------------------------------------------------------------------------------------------------------------
-    subroutine init_vector(self,mesh)
-        class(blockvector_t), intent(inout), target  :: self
-        class(mesh_t),        intent(in)             :: mesh
+    subroutine init(self,mesh)
+        class(blockvector_t), intent(inout) :: self
+        class(mesh_t),        intent(in)    :: mesh
 
         integer(ik)                     :: nelem, nblk, ierr, ielem, iblk, size1d, parent, nterms, neqns
         logical                         :: new_elements
-        type(densevector_t), pointer    :: temp(:)
 
         nelem = mesh%nelem  ! Number of elements in the local block
 
 
         !
-        ! ALLOCATE SIZE FOR 'lvecs'
+        ! ALLOCATE SIZE FOR 'vecs'
         ! If vector was already allocated, deallocate and then reallocate vector size
         ! Reallocation would take place if the number of elements were changed
         !
-        if (allocated(self%lvecs)) then
+        if (allocated(self%vecs)) then
             !
             ! If the size is already allocated, check if the number of elements has changed.
             ! If so (new_elements), then reallocate matrix size.
             ! If not, do nothing
             !
-            new_elements = (mesh%nelem /= size(self%lvecs))
+            new_elements = (mesh%nelem /= size(self%vecs))
             if (new_elements) then
-                deallocate(self%lvecs, self%ldata)
-                allocate(self%lvecs(nelem), self%ldata(nelem,2), stat=ierr)
+                deallocate(self%vecs)
+                allocate(self%vecs(nelem), stat=ierr)
             end if
 
         else
 
-            allocate(self%lvecs(nelem), self%ldata(nelem,2), stat=ierr)
+            allocate(self%vecs(nelem), stat=ierr)
 
         end if
         if (ierr /= 0) call AllocationError
@@ -148,17 +147,14 @@ contains
             neqns  = mesh%elems(ielem)%neqns
 
             ! Call densevector initialization routine
-            call self%lvecs(ielem)%init(nterms,neqns,parent)
+            call self%vecs(ielem)%init(nterms,neqns,parent)
 
-            ! Store data about number of equations and number of terms in solution expansion
-            self%ldata(ielem,1) = mesh%elems(ielem)%neqns
-            self%ldata(ielem,2) = mesh%elems(ielem)%nterms_s
         end do
 
 
 
 
-    end subroutine init_vector
+    end subroutine init
     !*******************************************************************************************************************
 
 
@@ -193,16 +189,14 @@ contains
         ! Compute total entries allocated in the blockvector container. 
         !
         ndof = 0
-        do ielem = 1,size(self%lvecs)
-            nvars  = self%ldata(ielem,1)
-            nterms = self%ldata(ielem,2)
+        do ielem = 1,size(self%vecs)
+            nvars = self%vecs(ielem)%nvars()
+            nterms = self%vecs(ielem)%nterms()
             
             ndof = ndof  +  (nvars * nterms)
         end do
 
-        !
         ! Test that the number of dof's match between the full and block format's
-        !
         if (ndof /= size(fullvec) ) call chidg_signal(FATAL,"blockvector_t%distribute: Storage sizes of full-vector and block-vector are not equal.")
 
 
@@ -211,10 +205,10 @@ contains
         ! Loop through elements and store data from full-vector
         !
         fstart = 1
-        do ielem = 1,size(self%lvecs)
+        do ielem = 1,size(self%vecs)
             ! Get number of entries for current block
-            nvars  = self%ldata(ielem,1)
-            nterms = self%ldata(ielem,2)
+            nvars = self%vecs(ielem)%nvars()
+            nterms = self%vecs(ielem)%nterms()
             ndof_l = nvars * nterms
 
             fend = fstart + (ndof_l-1)
@@ -224,7 +218,7 @@ contains
             if (fend > size(fullvec) ) call chidg_signal(FATAL,"blockvector%distribute: array bounds exceeded")
 
 
-            self%lvecs(ielem)%vec = fullvec(fstart:fend)
+            self%vecs(ielem)%vec = fullvec(fstart:fend)
 
             fstart = fend + 1
         end do
@@ -248,7 +242,7 @@ contains
 
 
 
-    !> Zero all vector storage elements in blockvector%lvecs
+    !> Zero all vector storage elements in blockvector%vecs
     !!
     !!  @author Nathan A. Wukie
     !!  @date   2/1/2016
@@ -260,14 +254,10 @@ contains
 
         integer(ik) :: iblk
 
-
-        !
         ! Call clear for each densevector component
-        !
-        do iblk = 1,size(self%lvecs)
-            call self%lvecs(iblk)%clear()
+        do iblk = 1,size(self%vecs)
+            call self%vecs(iblk)%clear()
         end do
-
 
     end subroutine clear
     !****************************************************************************************************************************************
@@ -285,7 +275,7 @@ contains
 
 
 
-    !> Compute the L2-norm of the vector
+    !> Compute the L2-norm of the block vector
     !!
     !!  @author Nathan A. Wukie
     !!  @date   2/1/2016
@@ -293,36 +283,66 @@ contains
     !!
     !----------------------------------------------------------------------------------------------------------------------------------------
     function norm(self) result(res)
-        class(blockvector_t),   intent(inout)   :: self
+        class(blockvector_t),   intent(in)  :: self
 
         real(rk)    :: res
         integer(ik) :: ielem
 
-
-
         res = ZERO
 
-        !
         ! Loop through block vectors and compute contribution to vector L2-Norm
-        !
-        do ielem = 1,size(self%lvecs)
-
-
-            !
+        do ielem = 1,size(self%vecs)
             ! Square vector values and sum
-            !
-            res = res + sum( self%lvecs(ielem)%vec ** TWO )
-
+            res = res + sum( self%vecs(ielem)%vec ** TWO )
         end do
 
 
-        !
         ! Take the square root of the result
-        !
         res = sqrt(res)
 
-    end function
+    end function norm
     !*****************************************************************************************************************************************
+
+
+
+
+
+
+
+
+
+    !>  Sum of the squared block-vector entries
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   2/1/2016
+    !!
+    !!
+    !----------------------------------------------------------------------------------------------------------------------------------------
+    function sumsqr(self) result(res)
+        class(blockvector_t),   intent(in)  :: self
+
+        real(rk)    :: res
+        integer(ik) :: ielem
+
+        res = ZERO
+
+        ! Loop through block vectors and compute contribution to sum of squared entries
+        do ielem = 1,size(self%vecs)
+            ! Square vector values and sum
+            res = res + sum( self%vecs(ielem)%vec ** TWO )
+        end do
+
+
+    end function sumsqr
+    !*****************************************************************************************************************************************
+
+
+
+
+
+
+
+
 
 
 
@@ -351,9 +371,9 @@ contains
         !
         ! Loop through block vectors and compute contribution to number of entries
         !
-        do ielem = 1,size(self%lvecs)
+        do ielem = 1,size(self%vecs)
 
-            res = res + self%lvecs(ielem)%nentries()
+            res = res + self%vecs(ielem)%nentries()
 
         end do
 
@@ -375,10 +395,10 @@ contains
         class(blockvector_t),   intent(in)  :: self
         integer(ik) :: ielem, ientry
 
-        do ielem = 1,size(self%lvecs)
+        do ielem = 1,size(self%vecs)
             print*, ielem
-            do ientry = 1,size(self%lvecs(ielem)%vec)
-                print*, self%lvecs(ielem)%vec(ientry)
+            do ientry = 1,size(self%vecs(ielem)%vec)
+                print*, self%vecs(ielem)%vec(ientry)
             end do
         end do
 
@@ -411,13 +431,9 @@ contains
         real(rk),               intent(in)  :: left
         type(blockvector_t),    intent(in)  :: right
 
-        type(blockvector_t), target     :: res
+        type(blockvector_t) :: res
 
-
-
-        res%ldata = right%ldata
-
-        res%lvecs = left * right%lvecs
+        res%vecs = left * right%vecs
 
     end function mult_real_bv
     !************************************************************************
@@ -435,14 +451,9 @@ contains
         type(blockvector_t),    intent(in)  :: left
         real(rk),               intent(in)  :: right
 
-        type(blockvector_t), target     :: res
+        type(blockvector_t) :: res
 
-
-
-
-        res%ldata = left%ldata
-
-        res%lvecs = left%lvecs * right
+        res%vecs = left%vecs * right
 
     end function mult_bv_real
     !************************************************************************
@@ -461,14 +472,9 @@ contains
         real(rk),               intent(in)  :: left
         type(blockvector_t),    intent(in)  :: right
 
-        type(blockvector_t), target     :: res
+        type(blockvector_t) :: res
 
-
-
-
-        res%ldata = right%ldata
-
-        res%lvecs = left / right%lvecs
+        res%vecs = left / right%vecs
 
     end function div_real_bv
     !************************************************************************
@@ -486,14 +492,9 @@ contains
         type(blockvector_t),    intent(in)  :: left
         real(rk),               intent(in)  :: right
 
-        type(blockvector_t), target     :: res
+        type(blockvector_t) :: res
 
-
-
-
-        res%ldata = left%ldata
-
-        res%lvecs = left%lvecs / right
+        res%vecs = left%vecs / right
 
     end function div_bv_real
     !*************************************************************************
@@ -513,12 +514,9 @@ contains
         type(blockvector_t),  intent(in)  :: left
         type(blockvector_t),  intent(in)  :: right
 
-        type(blockvector_t), target     :: res
+        type(blockvector_t) :: res
 
-
-        res%ldata = right%ldata
-
-        res%lvecs = left%lvecs + right%lvecs
+        res%vecs = left%vecs + right%vecs
 
     end function add_bv_bv
     !*************************************************************************
@@ -537,13 +535,9 @@ contains
         type(blockvector_t),  intent(in)  :: left
         type(blockvector_t),  intent(in)  :: right
 
-        type(blockvector_t), target     :: res
+        type(blockvector_t) :: res
 
-
-
-        res%ldata = right%ldata
-
-        res%lvecs = left%lvecs - right%lvecs
+        res%vecs = left%vecs - right%vecs
 
     end function sub_bv_bv
     !*************************************************************************

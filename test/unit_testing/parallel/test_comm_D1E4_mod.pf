@@ -1,0 +1,203 @@
+module test_comm_D1E4_mod
+    use mod_kinds,                  only: rk, ik
+    use mod_constants,              only: XI_MIN, XI_MAX, BOUNDARY, IO_DESTINATION, TWO
+
+    use type_chidg,                 only: chidg_t
+    use type_partition,             only: partition_t
+    use type_domain_connectivity,   only: domain_connectivity_t
+    use type_function,              only: function_t
+
+    use mod_grid_operators,         only: initialize_variable
+    use mod_function,               only: create_function
+    use mod_hdfio,                  only: read_connectivity_hdf
+    use mod_partitioners,           only: partition_connectivity, send_partitions, recv_partition
+    use mod_chidg_mpi,              only: IRANK, NRANK, GLOBAL_MASTER
+
+    use mpi_f08,                    only: MPI_Barrier, MPI_COMM_WORLD, MPI_COMM
+    use pfunit_mod
+    implicit none
+
+
+
+    !>
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   6/23/2016
+    !!
+    !------------------------------------------------------------------
+    @TestCase
+    type, extends(MpiTestCase) :: test_comm_D1E4
+
+        type(chidg_t)   :: chidg
+
+        integer(ik)     :: nterms_s = 27
+        type(mpi_comm)  :: ChiDG_COMM
+
+    contains
+        procedure       :: setUp
+        procedure       :: tearDown
+    end type test_comm_D1E4
+    !******************************************************************
+
+
+
+
+contains
+
+    !>  This test reads a 4x1x1 element grid using 1, 2, 3, and 4 processors and tests communication data.
+    !!
+    !!  Using 1 processor, all communication(face neighbors) should be local. Using 4 processors, all communication
+    !!  should occur globally, across processors. Here, we just check all the indices defining the communication
+    !!  for the different cases, npes=[1, 2, 3, 4].
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   6/21/2016
+    !!
+    !-----------------------------------------------------------------------------------
+    subroutine setUp(this)
+        class(test_comm_D1E4), intent(inout) :: this
+
+        type(domain_connectivity_t),    allocatable :: connectivities(:)
+        type(partition_t),              allocatable :: partitions(:)
+        type(partition_t)                           :: partition
+
+
+        class(function_t),  allocatable :: fcn
+        character(len=:),   allocatable :: gridfile
+        integer(ik)                     :: iread, spacedim, ierr, nterms_s, ielem
+        real(rk)                        :: initial_vals(this%nterms_s)
+
+        
+        IRANK                   = this%getProcessRank()
+        NRANK                   = this%getNumProcessesRequested()
+        this%ChiDG_COMM%mpi_val = this%getMpiCommunicator()
+
+
+        call this%chidg%init('env')
+
+
+        IO_DESTINATION = 'file'
+        gridfile       = 'D1_E4_M1.h5'
+        spacedim       = 3
+
+
+
+
+        !
+        ! Read connectivities, partition, distribute
+        !
+        if ( IRANK == GLOBAL_MASTER ) then
+            call read_connectivity_hdf(gridfile,connectivities)
+
+            call partition_connectivity(connectivities, partitions)
+
+            call send_partitions(partitions,this%ChiDG_COMM)
+        end if
+
+
+        !
+        ! Receive partition from GLOBAL_MASTER
+        !
+        call recv_partition(partition,this%ChiDG_COMM)
+
+
+        !
+        ! Read partition data: grid, boundary conditions
+        !
+        do iread = 0,NRANK-1
+            if ( iread == IRANK ) then
+                call this%chidg%read_grid(gridfile, spacedim, partition)
+                call this%chidg%read_boundaryconditions(gridfile, partition)
+            end if
+
+            call MPI_Barrier(this%ChiDG_COMM,ierr)  ! sync to prevent simultaneous file access
+        end do
+
+
+        !
+        ! Initialization
+        !
+        call this%chidg%initialize_solution_domains(this%nterms_s)
+        call this%chidg%init('communication',this%ChiDG_COMM)
+        call this%chidg%initialize_solution_solver()
+
+
+
+
+        !
+        ! Initialize solution vector
+        !
+        initial_vals = 1.2_rk
+        do ielem = 1,this%chidg%data%mesh(1)%nelem
+            call this%chidg%data%sdata%q%dom(1)%vecs(ielem)%setvar(1,initial_vals)
+        end do
+
+
+
+
+    end subroutine setUp
+
+
+    subroutine tearDown(this)
+        class(test_comm_D1E4), intent(inout) :: this
+
+        call this%chidg%close('core')
+
+    end subroutine tearDown
+    !***********************************************************************************************
+
+
+
+
+
+
+
+
+
+    !>  Test the parallel computation of the chidgVector norm. 
+    !!  This tests the routine: chidgVector%norm_comm
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   6/23/2016
+    !!
+    !---------------------------------------------------------------------------------------
+    @Test(npes=[1,2,3,4])
+    subroutine chidgvector__norm_comm(self)
+        class(test_comm_D1E4), intent(inout) :: self
+
+        integer(ik)     :: nelem
+        real(rk)        :: computed_norm, expected_norm
+
+        IRANK = self%getProcessRank()
+
+
+        !
+        ! Compute vector norm across processors. THIS IS BEING TESTED
+        !
+        computed_norm = self%chidg%data%sdata%q%norm(self%ChiDG_COMM)
+
+        nelem = 4
+        expected_norm = (1.2_rk**TWO) * self%nterms_s * nelem
+        expected_norm = sqrt(expected_norm)
+
+        
+        if (IRANK == 0) then
+            @assertEqual(expected_norm,computed_norm)
+        end if
+
+    end subroutine chidgvector__norm_comm
+    !******************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+
+
+end module test_comm_D1E4_mod

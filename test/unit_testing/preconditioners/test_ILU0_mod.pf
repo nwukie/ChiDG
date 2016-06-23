@@ -98,9 +98,9 @@ contains
         !
         ! Initialize RHS vector with some reference values
         !
-        this%chidg%data%sdata%rhs%dom(1)%lvecs(1)%vec = ONE
-        this%chidg%data%sdata%rhs%dom(1)%lvecs(2)%vec = TWO
-        this%chidg%data%sdata%rhs%dom(1)%lvecs(3)%vec = THREE
+        this%chidg%data%sdata%rhs%dom(1)%vecs(1)%vec = ONE
+        this%chidg%data%sdata%rhs%dom(1)%vecs(2)%vec = TWO
+        this%chidg%data%sdata%rhs%dom(1)%vecs(3)%vec = THREE
 
 
     end subroutine
@@ -276,9 +276,9 @@ subroutine test_ILU0_apply(self)
 
 
 
-    @assertEqual(6.142857143_rk ,z%dom(1)%lvecs(1)%vec(1),tol)
-    @assertEqual(2.57142857_rk  ,z%dom(1)%lvecs(2)%vec(1),tol)
-    @assertEqual(0.2142857143_rk,z%dom(1)%lvecs(3)%vec(1),tol)
+    @assertEqual(6.142857143_rk ,z%dom(1)%vecs(1)%vec(1),tol)
+    @assertEqual(2.57142857_rk  ,z%dom(1)%vecs(2)%vec(1),tol)
+    @assertEqual(0.2142857143_rk,z%dom(1)%vecs(3)%vec(1),tol)
 
 
 end subroutine

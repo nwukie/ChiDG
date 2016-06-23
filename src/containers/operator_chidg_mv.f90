@@ -58,8 +58,8 @@ contains
                     if (allocated(A%dom(idom)%lblks(ielem,iblk)%mat)) then
                         eparent = A%dom(idom)%lblks(ielem,iblk)%eparent()
 
-                        associate ( resvec => res%dom(idom)%lvecs(ielem)%vec, &
-                                    xvec => x%dom(idom)%lvecs(eparent)%vec,   &
+                        associate ( resvec => res%dom(idom)%vecs(ielem)%vec, &
+                                    xvec => x%dom(idom)%vecs(eparent)%vec,   &
                                     Amat => A%dom(idom)%lblks(ielem,iblk)%mat)
 
                             resvec = resvec + matmul(Amat,xvec)
@@ -84,8 +84,8 @@ contains
                             dparent = A%dom(idom)%chi_blks(ielem,iblk)%dparent()
                             eparent = A%dom(idom)%chi_blks(ielem,iblk)%eparent()
 
-                            associate ( resvec => res%dom(idom)%lvecs(ielem)%vec, &
-                                        xvec => x%dom(dparent)%lvecs(eparent)%vec, &
+                            associate ( resvec => res%dom(idom)%vecs(ielem)%vec, &
+                                        xvec => x%dom(dparent)%vecs(eparent)%vec, &
                                         Amat => A%dom(idom)%chi_blks(ielem,iblk)%mat) 
 
                                 !
@@ -117,8 +117,8 @@ contains
                              dparent = A%dom(idom)%bc_blks(ielem,iblk)%dparent()
                              eparent = A%dom(idom)%bc_blks(ielem,iblk)%eparent()
 
-                            associate ( resvec => res%dom(idom)%lvecs(ielem)%vec, &
-                                        xvec => x%dom(dparent)%lvecs(eparent)%vec, &
+                            associate ( resvec => res%dom(idom)%vecs(ielem)%vec, &
+                                        xvec => x%dom(dparent)%vecs(eparent)%vec, &
                                         Amat => A%dom(idom)%bc_blks(ielem,iblk)%mat) 
 
                                 !

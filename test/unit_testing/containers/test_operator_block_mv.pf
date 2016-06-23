@@ -82,9 +82,9 @@ subroutine test_operator_block_mv()
     !
     ! Initialize blockvector data (x)
     !
-    x%lvecs(1)%vec = ONE
-    x%lvecs(2)%vec = TWO
-    x%lvecs(3)%vec = THREE
+    x%vecs(1)%vec = ONE
+    x%vecs(2)%vec = TWO
+    x%vecs(3)%vec = THREE
 
 
 
@@ -112,9 +112,9 @@ subroutine test_operator_block_mv()
     !
     ! Test conditions
     !
-    @assertEqual(b_ref_1,b%lvecs(1)%vec)
-    @assertEqual(b_ref_2,b%lvecs(2)%vec)
-    @assertEqual(b_ref_3,b%lvecs(3)%vec)
+    @assertEqual(b_ref_1,b%vecs(1)%vec)
+    @assertEqual(b_ref_2,b%vecs(2)%vec)
+    @assertEqual(b_ref_3,b%vecs(3)%vec)
 
 
 

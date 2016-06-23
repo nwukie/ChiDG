@@ -19,8 +19,8 @@ module mod_chidg_mpi
     integer(ik) :: IRANK = 0        !< Rank of current process
     integer(ik) :: NRANK = 1        !< Number of global ranks
 
-    integer, parameter :: GLOBAL_MASTER = 0     !< Master rank for all global processes. This shall not be modified during run-time.
-    !integer, parameter :: GROUP_MASTER  = 0    !< Master rank for group of processes. This could be modified during run-time for a group.
+    integer, parameter :: GLOBAL_MASTER = 0    !< Master rank for all global processes. This shall not be modified during run-time.
+    integer            :: GROUP_MASTER  = 0    !< Master rank for group of processes. This could be modified during run-time for a group.
 
 
     logical :: chidg_mpi_initialized = .false.
@@ -57,6 +57,8 @@ contains
 
             chidg_mpi_initialized = .true.
         end if
+
+
 
         call MPI_Comm_Size(MPI_COMM_WORLD,NRANK,ierr)
         if (ierr /= 0) call chidg_signal(FATAL,"MPI_Comm_Size")

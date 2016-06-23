@@ -99,6 +99,7 @@ contains
 
 
 
+
         !
         ! Check communication data. proc, neighbor indices, etc.
         !
@@ -325,22 +326,10 @@ contains
 
 
 
-
         call chidg%close('core')
-
 
     end subroutine test_init_comm_D1E4
     !******************************************************************************************
-
-
-
-
-
-
-
-
-
-
 
 
 

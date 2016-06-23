@@ -49,7 +49,7 @@ contains
 
                 if (allocated(A%lblks(ielem,iblk)%mat)) then
                     iparent = A%lblks(ielem,iblk)%eparent()
-                    res%lvecs(ielem)%vec = res%lvecs(ielem)%vec + matmul(A%lblks(ielem,iblk)%mat,x%lvecs(iparent)%vec)
+                    res%vecs(ielem)%vec = res%vecs(ielem)%vec + matmul(A%lblks(ielem,iblk)%mat,x%vecs(iparent)%vec)
                 end if
 
             end do  ! iblk

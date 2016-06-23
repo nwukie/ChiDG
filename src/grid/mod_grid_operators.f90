@@ -53,7 +53,7 @@ contains
                     !
                     ! Initial array allocation
                     !
-                    nterms = data%sdata%q%dom(idom)%lvecs(ielem)%nterms()
+                    nterms = data%sdata%q%dom(idom)%vecs(ielem)%nterms()
                     if (.not. allocated(fmodes)) allocate(fmodes(nterms))
 
 
@@ -79,7 +79,7 @@ contains
                     !
                     ! Store the projected modes to the solution expansion
                     !
-                    call data%sdata%q%dom(idom)%lvecs(ielem)%setvar(ivar,fmodes)
+                    call data%sdata%q%dom(idom)%vecs(ielem)%setvar(ivar,fmodes)
 
             end do ! ielem
 

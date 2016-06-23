@@ -234,7 +234,7 @@ contains
                         !
                         eparent = self%LD(idom)%lblks(irow,iblk)%eparent()
 
-                        z%dom(idom)%lvecs(irow)%vec = z%dom(idom)%lvecs(irow)%vec - matmul(self%LD(idom)%lblks(irow,iblk)%mat, z%dom(idom)%lvecs(eparent)%vec)
+                        z%dom(idom)%vecs(irow)%vec = z%dom(idom)%vecs(irow)%vec - matmul(self%LD(idom)%lblks(irow,iblk)%mat, z%dom(idom)%vecs(eparent)%vec)
 
                     end if
 
@@ -263,7 +263,7 @@ contains
                         !
                         eparent = A%dom(idom)%lblks(irow,iblk)%eparent()
 
-                        z%dom(idom)%lvecs(irow)%vec = z%dom(idom)%lvecs(irow)%vec - matmul(A%dom(idom)%lblks(irow,iblk)%mat, z%dom(idom)%lvecs(eparent)%vec)
+                        z%dom(idom)%vecs(irow)%vec = z%dom(idom)%vecs(irow)%vec - matmul(A%dom(idom)%lblks(irow,iblk)%mat, z%dom(idom)%vecs(eparent)%vec)
 
                     end if
 
@@ -273,8 +273,8 @@ contains
                 !
                 ! Diagonal block
                 !
-                !z%lvecs(irow)%vec = matmul(inv(self%LD%lblks(irow,DIAG)%mat), z%lvecs(irow)%vec)
-                z%dom(idom)%lvecs(irow)%vec = matmul(self%LD(idom)%lblks(irow,DIAG)%mat, z%dom(idom)%lvecs(irow)%vec)
+                !z%vecs(irow)%vec = matmul(inv(self%LD%lblks(irow,DIAG)%mat), z%vecs(irow)%vec)
+                z%dom(idom)%vecs(irow)%vec = matmul(self%LD(idom)%lblks(irow,DIAG)%mat, z%dom(idom)%vecs(irow)%vec)
 
             end do ! irow
 

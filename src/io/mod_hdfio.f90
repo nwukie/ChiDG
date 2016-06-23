@@ -719,7 +719,7 @@ contains
            !  Test to make sure the number of elements in the variable group
            !  and the current domain are conforming
            !
-           ElementsEqual = (size(data%sdata%q%dom(idom)%lvecs) == size(var,2))
+           ElementsEqual = (size(data%sdata%q%dom(idom)%vecs) == size(var,2))
            if (ElementsEqual) then
                !
                !  Loop through elements and set 'variable' values
@@ -728,7 +728,7 @@ contains
                    !
                    ! Get number of terms initialized for the current element
                    !
-                   nterms_ielem = data%sdata%q%dom(idom)%lvecs(ielem)%nterms()
+                   nterms_ielem = data%sdata%q%dom(idom)%vecs(ielem)%nterms()
   
   
                    !
@@ -753,7 +753,7 @@ contains
    
    
   
-                   call data%sdata%q%dom(idom)%lvecs(ielem)%setvar(ivar,real(bufferterms,rk))
+                   call data%sdata%q%dom(idom)%vecs(ielem)%setvar(ivar,real(bufferterms,rk))
                end do
    
            else
@@ -938,7 +938,7 @@ contains
         allocate(var(dims(1),dims(2),dims(3)))
 
         do ielem = 1,data%mesh(idom)%nelem
-                var(:,ielem,itime) = real(data%sdata%q%dom(idom)%lvecs(ielem)%getvar(ivar),rk)
+                var(:,ielem,itime) = real(data%sdata%q%dom(idom)%vecs(ielem)%getvar(ivar),rk)
         end do
 
 

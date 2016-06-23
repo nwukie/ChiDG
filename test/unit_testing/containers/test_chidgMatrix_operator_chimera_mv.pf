@@ -104,7 +104,7 @@ subroutine test_chidgMatrix_operator_chimera_mv()
     
 
     ! Set vector values for first donor
-    chidg%data%sdata%rhs%dom(idom_d)%lvecs(ielem_d)%vec = THREE
+    chidg%data%sdata%rhs%dom(idom_d)%vecs(ielem_d)%vec = THREE
 
 
 
@@ -121,7 +121,7 @@ subroutine test_chidgMatrix_operator_chimera_mv()
 
 
     ! Set vector values for first donor
-    chidg%data%sdata%rhs%dom(idom_d)%lvecs(ielem_d)%vec = FOUR
+    chidg%data%sdata%rhs%dom(idom_d)%vecs(ielem_d)%vec = FOUR
 
 
 
@@ -161,7 +161,7 @@ subroutine test_chidgMatrix_operator_chimera_mv()
 
 
 
-    @assertEqual(refvec, chidg%data%sdata%dq%dom(idom)%lvecs(ielem)%vec, tol)
+    @assertEqual(refvec, chidg%data%sdata%dq%dom(idom)%vecs(ielem)%vec, tol)
 
 
 
@@ -214,42 +214,42 @@ subroutine test_chidgMatrix_operator_chimera_mv()
     iblk = XI_MAX
     idom_p = chidg%data%sdata%lhs%dom(idom)%lblks(ielem,iblk)%dparent()
     ielem_p = chidg%data%sdata%lhs%dom(idom)%lblks(ielem,iblk)%eparent()
-    refvec = refvec + matmul(chidg%data%sdata%lhs%dom(idom)%lblks(ielem,iblk)%mat, chidg%data%sdata%rhs%dom(idom_p)%lvecs(ielem_p)%vec)
+    refvec = refvec + matmul(chidg%data%sdata%lhs%dom(idom)%lblks(ielem,iblk)%mat, chidg%data%sdata%rhs%dom(idom_p)%vecs(ielem_p)%vec)
 
 
 
     iblk = ETA_MIN
     idom_p = chidg%data%sdata%lhs%dom(idom)%lblks(ielem,iblk)%dparent()
     ielem_p = chidg%data%sdata%lhs%dom(idom)%lblks(ielem,iblk)%eparent()
-    refvec = refvec + matmul(chidg%data%sdata%lhs%dom(idom)%lblks(ielem,iblk)%mat, chidg%data%sdata%rhs%dom(idom_p)%lvecs(ielem_p)%vec)
+    refvec = refvec + matmul(chidg%data%sdata%lhs%dom(idom)%lblks(ielem,iblk)%mat, chidg%data%sdata%rhs%dom(idom_p)%vecs(ielem_p)%vec)
 
     iblk = ETA_MAX
     idom_p = chidg%data%sdata%lhs%dom(idom)%lblks(ielem,iblk)%dparent()
     ielem_p = chidg%data%sdata%lhs%dom(idom)%lblks(ielem,iblk)%eparent()
-    refvec = refvec + matmul(chidg%data%sdata%lhs%dom(idom)%lblks(ielem,iblk)%mat, chidg%data%sdata%rhs%dom(idom_p)%lvecs(ielem_p)%vec)
+    refvec = refvec + matmul(chidg%data%sdata%lhs%dom(idom)%lblks(ielem,iblk)%mat, chidg%data%sdata%rhs%dom(idom_p)%vecs(ielem_p)%vec)
 
     iblk = ZETA_MAX
     idom_p = chidg%data%sdata%lhs%dom(idom)%lblks(ielem,iblk)%dparent()
     ielem_p = chidg%data%sdata%lhs%dom(idom)%lblks(ielem,iblk)%eparent()
-    refvec = refvec + matmul(chidg%data%sdata%lhs%dom(idom)%lblks(ielem,iblk)%mat, chidg%data%sdata%rhs%dom(idom_p)%lvecs(ielem_p)%vec)
+    refvec = refvec + matmul(chidg%data%sdata%lhs%dom(idom)%lblks(ielem,iblk)%mat, chidg%data%sdata%rhs%dom(idom_p)%vecs(ielem_p)%vec)
 
     iblk = DIAG
     idom_p = chidg%data%sdata%lhs%dom(idom)%lblks(ielem,iblk)%dparent()
     ielem_p = chidg%data%sdata%lhs%dom(idom)%lblks(ielem,iblk)%eparent()
-    refvec = refvec + matmul(chidg%data%sdata%lhs%dom(idom)%lblks(ielem,iblk)%mat, chidg%data%sdata%rhs%dom(idom_p)%lvecs(ielem_p)%vec)
+    refvec = refvec + matmul(chidg%data%sdata%lhs%dom(idom)%lblks(ielem,iblk)%mat, chidg%data%sdata%rhs%dom(idom_p)%vecs(ielem_p)%vec)
 
 
 
     idonor = 1
     idom_p = chidg%data%sdata%lhs%dom(idom)%chi_blks(ielem,idonor)%dparent()
     ielem_p = chidg%data%sdata%lhs%dom(idom)%chi_blks(ielem,idonor)%eparent()
-    refvec = refvec + matmul(chidg%data%sdata%lhs%dom(idom)%chi_blks(ielem,idonor)%mat, chidg%data%sdata%rhs%dom(idom_p)%lvecs(ielem_p)%vec)
+    refvec = refvec + matmul(chidg%data%sdata%lhs%dom(idom)%chi_blks(ielem,idonor)%mat, chidg%data%sdata%rhs%dom(idom_p)%vecs(ielem_p)%vec)
 
 
     idonor = 2
     idom_p = chidg%data%sdata%lhs%dom(idom)%chi_blks(ielem,idonor)%dparent()
     ielem_p = chidg%data%sdata%lhs%dom(idom)%chi_blks(ielem,idonor)%eparent()
-    refvec = refvec + matmul(chidg%data%sdata%lhs%dom(idom)%chi_blks(ielem,idonor)%mat, chidg%data%sdata%rhs%dom(idom_p)%lvecs(ielem_p)%vec)
+    refvec = refvec + matmul(chidg%data%sdata%lhs%dom(idom)%chi_blks(ielem,idonor)%mat, chidg%data%sdata%rhs%dom(idom_p)%vecs(ielem_p)%vec)
 
 
 
@@ -270,7 +270,7 @@ subroutine test_chidgMatrix_operator_chimera_mv()
     !
     ! Check that the reference vector and the vector are equal for location idom, ielem
     !
-    @assertEqual(refvec, chidg%data%sdata%dq%dom(idom)%lvecs(ielem)%vec)
+    @assertEqual(refvec, chidg%data%sdata%dq%dom(idom)%vecs(ielem)%vec)
 
 
 

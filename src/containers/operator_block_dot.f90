@@ -34,9 +34,9 @@ contains
         !
         ! Compute vector dot-product
         !
-        do ielem = 1,size(a%lvecs)
+        do ielem = 1,size(a%vecs)
 
-            res = res + dot_product(a%lvecs(ielem)%vec, b%lvecs(ielem)%vec)
+            res = res + dot_product(a%vecs(ielem)%vec, b%vecs(ielem)%vec)
 
         end do  ! ielem
         

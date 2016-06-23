@@ -86,10 +86,10 @@ subroutine test_chidgMatrix_operator_mv()
     !
     ! Initialize chidgMatrix data
     !
-    x%dom(1)%lvecs(2)%vec = 0.1_rk
+    x%dom(1)%vecs(2)%vec = 0.1_rk
 
-    x%dom(2)%lvecs(1)%vec = 0.2_rk
-    x%dom(2)%lvecs(3)%vec = 0.3_rk
+    x%dom(2)%vecs(1)%vec = 0.2_rk
+    x%dom(2)%vecs(3)%vec = 0.3_rk
 
 
 
@@ -120,8 +120,8 @@ subroutine test_chidgMatrix_operator_mv()
     !
     ! Test MV operation
     !
-    @assertEqual(bref_1,b%dom(1)%lvecs(2)%vec,tol)
-    @assertEqual(bref_2,b%dom(2)%lvecs(1)%vec,tol)
+    @assertEqual(bref_1,b%dom(1)%vecs(2)%vec,tol)
+    @assertEqual(bref_2,b%dom(2)%vecs(1)%vec,tol)
 
 
 

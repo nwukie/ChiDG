@@ -187,7 +187,7 @@ contains
     !!
     !!
     !!  @param[inout]   mesh        An array of mesh types on the local processor.
-    !!  @param[in]      ChiDG_COMM  An mpi communicator of the relevant processors. Particularly usefull for testing.
+    !!  @param[in]      ChiDG_COMM  An mpi communicator of the relevant processors. Particularly useful for testing.
     !!
     !!
     !-----------------------------------------------------------------------------------------------
@@ -211,6 +211,13 @@ contains
 
     end subroutine establish_chimera_communication
     !***********************************************************************************************
+
+
+
+
+
+
+
 
 
 

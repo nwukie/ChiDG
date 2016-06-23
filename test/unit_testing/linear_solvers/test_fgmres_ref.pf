@@ -98,8 +98,8 @@ subroutine test_fgmres_ref_solve()
     ! [ 1]
     ! [ 1]
     !
-    b%dom(1)%lvecs(1)%vec = ONE
-    b%dom(1)%lvecs(2)%vec = ONE
+    b%dom(1)%vecs(1)%vec = ONE
+    b%dom(1)%vecs(2)%vec = ONE
 
 
     !
@@ -124,8 +124,8 @@ subroutine test_fgmres_ref_solve()
     !     [-1]
     ! x = [ 1]
     !
-    @assertEqual(-ONE,x%dom(1)%lvecs(1)%vec,tol)
-    @assertEqual(ONE,x%dom(1)%lvecs(2)%vec,tol)
+    @assertEqual(-ONE,x%dom(1)%vecs(1)%vec,tol)
+    @assertEqual(ONE,x%dom(1)%vecs(2)%vec,tol)
 
 
 

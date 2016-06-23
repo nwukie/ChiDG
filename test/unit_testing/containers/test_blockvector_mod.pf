@@ -16,8 +16,15 @@ module test_blockvector_mod
 
     public  :: test_blockvector
 
-@TestCase
+    !>
+    !!
+    !!  @author Nathan A. Wukie
+    !!
+    !!
+    !----------------------------------------------------------------------------
+    @TestCase
     type, extends(TestCase) ::  test_blockvector
+
         type(chidg_t)                        :: chidg
         type(blockvector_t)                  :: bvec
         type(constant_f)                     :: fcn
@@ -26,11 +33,16 @@ module test_blockvector_mod
         procedure   ::  setUp
         procedure   ::  tearDown
     end type test_blockvector
+    !*****************************************************************************
 
 
 contains
+
+    !>
     !! NOTE: make sure to use 'this' instead of 'self' since these are over-writting a derived type 
     !! procedure. The argument names have to match
+    !!
+    !--------------------------------------------------------------------------------------------------
     subroutine setUp(this)
         class(test_blockvector),    intent(inout)   :: this
 
@@ -78,86 +90,89 @@ contains
         !
         call this%chidg%close('core')
     end subroutine
+    !******************************************************************************************************
 
 
 
 
 
-!------------------------------------------------------------------------------------------------------
-!------------------------------------------------------------------------------------------------------
-!------------------------------------------------------------------------------------------------------
-!------------------------------------------------------------------------------------------------------
 
 
-
-!
-! Test that number of rows equals number of elements
-!
-@Test
+    !>  Test that number of rows equals number of elements
+    !!
+    !!  @author Nathan A. Wukie
+    !!
+    !!
+    !--------------------------------------------------------------------------
+    @Test
     subroutine test_blockvector__init__nrows(self)
         class(test_blockvector),    intent(inout)   :: self
         
         integer(ik)                 :: nelem
 
         nelem = self%chidg%data%mesh(1)%nelem
-        @assertEqual(nelem,size(self%bvec%lvecs,1))  
+        @assertEqual(nelem,size(self%bvec%vecs,1))  
 
-    end subroutine
+    end subroutine test_blockvector__init__nrows
+    !**************************************************************************
     
 
 
 
-
-
     
     
     
     
-!
-!  Test that appropriate blocks are allocated. Test block dimensions
-!
-@Test
+    !>  Test that appropriate blocks are allocated. Test block dimensions
+    !!
+    !!  @author Nathan A. Wukie
+    !!
+    !!
+    !!
+    !--------------------------------------------------------------------------
+    @Test
     subroutine test_blockvector__init__densevector_allocation(self)
         class(test_blockvector),    intent(inout)   :: self
         
 
-        associate ( lvecs => self%bvec%lvecs )
+        associate ( vecs => self%bvec%vecs )
 
             !
             ! Test densevector storage is allocated for each element
             !
-            @assertTrue(allocated(lvecs(1)%vec))
-            @assertTrue(allocated(lvecs(2)%vec))
-            @assertTrue(allocated(lvecs(3)%vec))
-            @assertTrue(allocated(lvecs(4)%vec))
-            @assertTrue(allocated(lvecs(5)%vec))
-            @assertTrue(allocated(lvecs(6)%vec))
-            @assertTrue(allocated(lvecs(7)%vec))
-            @assertTrue(allocated(lvecs(8)%vec))
-            @assertTrue(allocated(lvecs(9)%vec))
-            @assertTrue(allocated(lvecs(10)%vec))
-            @assertTrue(allocated(lvecs(11)%vec))
-            @assertTrue(allocated(lvecs(12)%vec))
-            @assertTrue(allocated(lvecs(13)%vec))
-            @assertTrue(allocated(lvecs(14)%vec))
-            @assertTrue(allocated(lvecs(15)%vec))
-            @assertTrue(allocated(lvecs(16)%vec))
-            @assertTrue(allocated(lvecs(17)%vec))
-            @assertTrue(allocated(lvecs(18)%vec))
-            @assertTrue(allocated(lvecs(19)%vec))
-            @assertTrue(allocated(lvecs(20)%vec))
-            @assertTrue(allocated(lvecs(21)%vec))
-            @assertTrue(allocated(lvecs(22)%vec))
-            @assertTrue(allocated(lvecs(23)%vec))
-            @assertTrue(allocated(lvecs(24)%vec))
-            @assertTrue(allocated(lvecs(25)%vec))
-            @assertTrue(allocated(lvecs(26)%vec))
-            @assertTrue(allocated(lvecs(27)%vec))
+            @assertTrue(allocated(vecs(1)%vec))
+            @assertTrue(allocated(vecs(2)%vec))
+            @assertTrue(allocated(vecs(3)%vec))
+            @assertTrue(allocated(vecs(4)%vec))
+            @assertTrue(allocated(vecs(5)%vec))
+            @assertTrue(allocated(vecs(6)%vec))
+            @assertTrue(allocated(vecs(7)%vec))
+            @assertTrue(allocated(vecs(8)%vec))
+            @assertTrue(allocated(vecs(9)%vec))
+            @assertTrue(allocated(vecs(10)%vec))
+            @assertTrue(allocated(vecs(11)%vec))
+            @assertTrue(allocated(vecs(12)%vec))
+            @assertTrue(allocated(vecs(13)%vec))
+            @assertTrue(allocated(vecs(14)%vec))
+            @assertTrue(allocated(vecs(15)%vec))
+            @assertTrue(allocated(vecs(16)%vec))
+            @assertTrue(allocated(vecs(17)%vec))
+            @assertTrue(allocated(vecs(18)%vec))
+            @assertTrue(allocated(vecs(19)%vec))
+            @assertTrue(allocated(vecs(20)%vec))
+            @assertTrue(allocated(vecs(21)%vec))
+            @assertTrue(allocated(vecs(22)%vec))
+            @assertTrue(allocated(vecs(23)%vec))
+            @assertTrue(allocated(vecs(24)%vec))
+            @assertTrue(allocated(vecs(25)%vec))
+            @assertTrue(allocated(vecs(26)%vec))
+            @assertTrue(allocated(vecs(27)%vec))
             
         end associate
 
 
-    end subroutine
+    end subroutine test_blockvector__init__densevector_allocation
+    !**************************************************************************
 
 
 
@@ -166,17 +181,21 @@ contains
 
 
 
-!
-! Test that densevector components of blockvector are all initialized with correct storage sizes
-!
-@Test
+    !>  Test that densevector components of blockvector are all initialized with correct storage sizes
+    !!
+    !!  @author Nathan A. Wukie
+    !!
+    !!
+    !!
+    !--------------------------------------------------------------------------
+    @Test
     subroutine test_blockvector__init__densevector_sizes(self)
         class(test_blockvector),    intent(inout)       :: self
 
         integer(ik) :: size1d
 
 
-        associate ( mesh => self%chidg%data%mesh(1), lvecs => self%bvec%lvecs)
+        associate ( mesh => self%chidg%data%mesh(1), vecs => self%bvec%vecs)
 
 
             !
@@ -185,38 +204,39 @@ contains
             size1d = mesh%nterms_s  *  mesh%neqns
 
 
-            @assertEqual(size1d,size(lvecs(1)%vec))
-            @assertEqual(size1d,size(lvecs(2)%vec))
-            @assertEqual(size1d,size(lvecs(3)%vec))
-            @assertEqual(size1d,size(lvecs(4)%vec))
-            @assertEqual(size1d,size(lvecs(5)%vec))
-            @assertEqual(size1d,size(lvecs(6)%vec))
-            @assertEqual(size1d,size(lvecs(7)%vec))
-            @assertEqual(size1d,size(lvecs(8)%vec))
-            @assertEqual(size1d,size(lvecs(9)%vec))
-            @assertEqual(size1d,size(lvecs(10)%vec))
-            @assertEqual(size1d,size(lvecs(11)%vec))
-            @assertEqual(size1d,size(lvecs(12)%vec))
-            @assertEqual(size1d,size(lvecs(13)%vec))
-            @assertEqual(size1d,size(lvecs(14)%vec))
-            @assertEqual(size1d,size(lvecs(15)%vec))
-            @assertEqual(size1d,size(lvecs(16)%vec))
-            @assertEqual(size1d,size(lvecs(17)%vec))
-            @assertEqual(size1d,size(lvecs(18)%vec))
-            @assertEqual(size1d,size(lvecs(19)%vec))
-            @assertEqual(size1d,size(lvecs(20)%vec))
-            @assertEqual(size1d,size(lvecs(21)%vec))
-            @assertEqual(size1d,size(lvecs(22)%vec))
-            @assertEqual(size1d,size(lvecs(23)%vec))
-            @assertEqual(size1d,size(lvecs(24)%vec))
-            @assertEqual(size1d,size(lvecs(25)%vec))
-            @assertEqual(size1d,size(lvecs(26)%vec))
-            @assertEqual(size1d,size(lvecs(27)%vec))
+            @assertEqual(size1d,size(vecs(1)%vec))
+            @assertEqual(size1d,size(vecs(2)%vec))
+            @assertEqual(size1d,size(vecs(3)%vec))
+            @assertEqual(size1d,size(vecs(4)%vec))
+            @assertEqual(size1d,size(vecs(5)%vec))
+            @assertEqual(size1d,size(vecs(6)%vec))
+            @assertEqual(size1d,size(vecs(7)%vec))
+            @assertEqual(size1d,size(vecs(8)%vec))
+            @assertEqual(size1d,size(vecs(9)%vec))
+            @assertEqual(size1d,size(vecs(10)%vec))
+            @assertEqual(size1d,size(vecs(11)%vec))
+            @assertEqual(size1d,size(vecs(12)%vec))
+            @assertEqual(size1d,size(vecs(13)%vec))
+            @assertEqual(size1d,size(vecs(14)%vec))
+            @assertEqual(size1d,size(vecs(15)%vec))
+            @assertEqual(size1d,size(vecs(16)%vec))
+            @assertEqual(size1d,size(vecs(17)%vec))
+            @assertEqual(size1d,size(vecs(18)%vec))
+            @assertEqual(size1d,size(vecs(19)%vec))
+            @assertEqual(size1d,size(vecs(20)%vec))
+            @assertEqual(size1d,size(vecs(21)%vec))
+            @assertEqual(size1d,size(vecs(22)%vec))
+            @assertEqual(size1d,size(vecs(23)%vec))
+            @assertEqual(size1d,size(vecs(24)%vec))
+            @assertEqual(size1d,size(vecs(25)%vec))
+            @assertEqual(size1d,size(vecs(26)%vec))
+            @assertEqual(size1d,size(vecs(27)%vec))
             
         end associate   
     
     
-    end subroutine
+    end subroutine test_blockvector__init__densevector_sizes
+    !**************************************************************************
     
     
 
@@ -227,35 +247,15 @@ contains
 
 
 
-!
-! Test that blockvector%ldata component was initialized with correct data
-!
-@Test
-    subroutine test_blockvector__init__ldata(self)
-        class(test_blockvector),    intent(inout)       :: self
 
-        integer(ik) :: ielem
-
-        do ielem = 1,self%chidg%data%mesh(1)%nelem
-            @assertEqual(1,self%bvec%ldata(ielem,1))
-            @assertEqual(8,self%bvec%ldata(ielem,2))
-        end do
-
-
-    end subroutine
-
-
-
-
-
-
-
-
-
-!
-! Test blockvector%norm procedure
-!
-@Test
+    !>  Test blockvector%norm procedure
+    !!
+    !!  @author Nathan A. Wukie
+    !!
+    !!
+    !!
+    !---------------------------------------------------------------------------
+    @Test
     subroutine test_blockvector__norm(self)
         class(test_blockvector),    intent(inout)   :: self
 
@@ -264,41 +264,99 @@ contains
         real(rk)    :: ref_vec(8)
 
         ! Zero values
-        do ielem = 1,size(self%bvec%lvecs)
-            self%bvec%lvecs(ielem)%vec = ZERO
+        do ielem = 1,size(self%bvec%vecs)
+            self%bvec%vecs(ielem)%vec = ZERO
         end do
 
 
-        ref_vec= [ONE, TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT]
-        !
         ! Initialize select values.
-        !
-        self%bvec%lvecs(1)%vec  = ref_vec   ! Element 1 Values
-        self%bvec%lvecs(27)%vec = ref_vec   ! Element 27 values
-
-        norm_ref = sqrt( sum( ref_vec**TWO + ref_vec**TWO) )    ! Twice since two elements were set
+        ref_vec= [ONE, TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT]
+        self%bvec%vecs(1)%vec  = ref_vec   ! Element 1 Values
+        self%bvec%vecs(27)%vec = ref_vec   ! Element 27 values
 
 
-
-        !
         ! Compute norm. THIS IS WHAT WE ARE TESTING
-        !
         norm = self%bvec%norm()
 
 
+        norm_ref = sqrt( sum( ref_vec**TWO + ref_vec**TWO) )    ! Twice since two elements were set
         @assertEqual(norm_ref,norm)
 
-    end subroutine
+    end subroutine test_blockvector__norm
+    !***************************************************************************
 
 
 
 
 
 
-!
-! Test blockvector%clear procedure
-!
-@Test
+
+
+
+
+
+    !>  Test blockvector%sumsqr procedure
+    !!
+    !!  @author Nathan A. Wukie
+    !!
+    !!
+    !!
+    !---------------------------------------------------------------------------
+    @Test
+    subroutine test_blockvector__sumsqr(self)
+        class(test_blockvector),    intent(inout)   :: self
+
+        integer(ik) :: ielem
+        real(rk)    :: sumsqr_ref, sumsqr
+        real(rk)    :: ref_vec(8)
+
+        ! Zero values
+        do ielem = 1,size(self%bvec%vecs)
+            self%bvec%vecs(ielem)%vec = ZERO
+        end do
+
+
+        ! Initialize select values.
+        ref_vec= [ONE, TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT]
+        self%bvec%vecs(1)%vec  = ref_vec   ! Element 1 Values
+        self%bvec%vecs(27)%vec = ref_vec   ! Element 27 values
+
+
+        ! Compute sumsqr. THIS IS WHAT WE ARE TESTING
+        sumsqr = self%bvec%sumsqr()
+
+
+        sumsqr_ref = sum( ref_vec**TWO + ref_vec**TWO)   ! Twice since two elements were set
+        @assertEqual(sumsqr_ref,sumsqr)
+
+    end subroutine test_blockvector__sumsqr
+    !***************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    !>  Test blockvector%clear procedure
+    !!
+    !!  @author Nathan A. Wukie
+    !!
+    !!
+    !!
+    !----------------------------------------------------------------------------
+    @Test
     subroutine test_blockvector__clear(self)
         class(test_blockvector),    intent(inout)   :: self
 
@@ -310,33 +368,36 @@ contains
 
 
         ! Initialize all componenets
-        do ielem = 1,size(self%bvec%lvecs)
-            self%bvec%lvecs(ielem)%vec = ref_vec
+        do ielem = 1,size(self%bvec%vecs)
+            self%bvec%vecs(ielem)%vec = ref_vec
         end do
 
 
 
-        !
         ! Call blockvector%clear to ZERO vector storage. THIS IS BEING TESTED.
-        !
         call self%bvec%clear()
 
 
-        do ielem = 1,size(self%bvec%lvecs)
-            @assertEqual(ZERO,self%bvec%lvecs(ielem)%vec)
+        do ielem = 1,size(self%bvec%vecs)
+            @assertEqual(ZERO,self%bvec%vecs(ielem)%vec)
         end do 
 
 
-    end subroutine
+    end subroutine test_blockvector__clear
+    !****************************************************************************
 
 
 
 
 
-!
-! Test blockvector%nentries procedure
-!
-@Test
+    !>  Test blockvector%nentries procedure
+    !!
+    !!  @author Nathan A. Wukie
+    !!
+    !!
+    !!
+    !----------------------------------------------------------------------------
+    @Test
     subroutine test_blockvector__nentries(self)
         class(test_blockvector),    intent(inout)   :: self
 
@@ -355,7 +416,8 @@ contains
 
         @assertEqual(nentries_ref,nentries)
 
-    end subroutine
+    end subroutine test_blockvector__nentries
+    !*****************************************************************************
 
 
 

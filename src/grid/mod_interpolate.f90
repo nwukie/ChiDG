@@ -116,7 +116,7 @@ contains
             !
             ! Copy the solution variables from 'q' to 'qdiff'
             !
-            qdiff = q%dom(idomain_l)%lvecs(ielement_l)%getvar(ieqn)
+            qdiff = q%dom(idomain_l)%vecs(ielement_l)%getvar(ieqn)
 
 
             !
@@ -142,7 +142,7 @@ contains
             ! then just use the q(ielem) values and derivatives get
             ! initialized to zero
             !
-            var_gq = matmul(mesh(idomain_l)%elems(ielement_l)%gq%vol%val,q%dom(idomain_l)%lvecs(ielement_l)%getvar(ieqn))
+            var_gq = matmul(mesh(idomain_l)%elems(ielement_l)%gq%vol%val,q%dom(idomain_l)%vecs(ielement_l)%getvar(ieqn))
         end if
 
 
@@ -394,7 +394,7 @@ contains
                 !
                 ! Copy the solution variables from 'q' to 'qdiff'
                 !
-                qdiff = q%dom(idom_l_interp)%lvecs(ielem_l_interp)%getvar(ieqn)
+                qdiff = q%dom(idom_l_interp)%vecs(ielem_l_interp)%getvar(ieqn)
 
 
                 !
@@ -453,7 +453,7 @@ contains
                 ! initialized to zero
                 !
                 if ( conforming_interpolation ) then
-                    var_gq = matmul(interpolator,  q%dom(idom_l_interp)%lvecs(ielem_l_interp)%getvar(ieqn))
+                    var_gq = matmul(interpolator,  q%dom(idom_l_interp)%vecs(ielem_l_interp)%getvar(ieqn))
                 elseif ( chimera_interpolation ) then
 
                     !
@@ -474,7 +474,7 @@ contains
                     !
                     ! Perform interpolation
                     !
-                    var_gq_chimera = matmul(interpolator,  q%dom(idom_l_interp)%lvecs(ielem_l_interp)%getvar(ieqn))
+                    var_gq_chimera = matmul(interpolator,  q%dom(idom_l_interp)%vecs(ielem_l_interp)%getvar(ieqn))
 
                     !
                     ! Scatter chimera nodes to appropriate location in var_gq
@@ -528,7 +528,7 @@ contains
         ! This takes the form of a matrix multiplication of the quadrature matrix
         ! with the array of modes for the given variable.
         !
-        var_gq = matmul(mesh(idomain_l)%elems(ielement_l)%gq%vol%val, q%dom(idomain_l)%lvecs(ielement_l)%getvar(ieqn))
+        var_gq = matmul(mesh(idomain_l)%elems(ielement_l)%gq%vol%val, q%dom(idomain_l)%vecs(ielement_l)%getvar(ieqn))
 
     end subroutine interpolate_element_standard
     !*************************************************************************************************************
@@ -564,7 +564,7 @@ contains
         ! This takes the form of a matrix multiplication of the face quadrature matrix
         ! with the array of modes for the given variable
         !
-        var_gq = matmul(mesh(idomain_l)%faces(ielement_l,iface)%gq%face%val(:,:,iface), q%dom(idomain_l)%lvecs(ielement_l)%getvar(ieqn))
+        var_gq = matmul(mesh(idomain_l)%faces(ielement_l,iface)%gq%face%val(:,:,iface), q%dom(idomain_l)%vecs(ielement_l)%getvar(ieqn))
 
 
 
@@ -765,7 +765,7 @@ contains
 !                !
 !                ! Copy the solution variables from 'q' to 'qdiff'
 !                !
-!                qdiff = q%dom(idom_interp)%lvecs(ielem_interp)%getvar(ieqn)
+!                qdiff = q%dom(idom_interp)%vecs(ielem_interp)%getvar(ieqn)
 !
 !
 !                !
@@ -800,8 +800,8 @@ contains
 !                allocate(tmp(1)%xp_ad_(nderiv))
 !
 !                
-!                !var(idonor) = matmul(interpolator(1,:),  q%dom(idom_interp)%lvecs(ielem_interp)%getvar(ieqn))
-!                tmp = matmul(interpolator,  q%dom(idom_interp)%lvecs(ielem_interp)%getvar(ieqn))
+!                !var(idonor) = matmul(interpolator(1,:),  q%dom(idom_interp)%vecs(ielem_interp)%getvar(ieqn))
+!                tmp = matmul(interpolator,  q%dom(idom_interp)%vecs(ielem_interp)%getvar(ieqn))
 !                var(idonor) = tmp(1)
 !
 !            end if

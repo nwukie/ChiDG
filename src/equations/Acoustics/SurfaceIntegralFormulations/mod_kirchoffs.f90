@@ -361,12 +361,12 @@ contains
 
 
                         ! Compute derivatives of pressure
-                        dpr_dx = matmul(mesh(idom_l)%faces(ielem_l,iface_l)%dtdx, sdata%q%dom(idom_l)%lvecs(ielem_l)%getvar(ip_r) )
-                        dpi_dx = matmul(mesh(idom_l)%faces(ielem_l,iface_l)%dtdx, sdata%q%dom(idom_l)%lvecs(ielem_l)%getvar(ip_i) )
-                        dpr_dy = matmul(mesh(idom_l)%faces(ielem_l,iface_l)%dtdy, sdata%q%dom(idom_l)%lvecs(ielem_l)%getvar(ip_r) )
-                        dpi_dy = matmul(mesh(idom_l)%faces(ielem_l,iface_l)%dtdy, sdata%q%dom(idom_l)%lvecs(ielem_l)%getvar(ip_i) )
-                        dpr_dz = matmul(mesh(idom_l)%faces(ielem_l,iface_l)%dtdz, sdata%q%dom(idom_l)%lvecs(ielem_l)%getvar(ip_r) )
-                        dpi_dz = matmul(mesh(idom_l)%faces(ielem_l,iface_l)%dtdz, sdata%q%dom(idom_l)%lvecs(ielem_l)%getvar(ip_i) )
+                        dpr_dx = matmul(mesh(idom_l)%faces(ielem_l,iface_l)%dtdx, sdata%q%dom(idom_l)%vecs(ielem_l)%getvar(ip_r) )
+                        dpi_dx = matmul(mesh(idom_l)%faces(ielem_l,iface_l)%dtdx, sdata%q%dom(idom_l)%vecs(ielem_l)%getvar(ip_i) )
+                        dpr_dy = matmul(mesh(idom_l)%faces(ielem_l,iface_l)%dtdy, sdata%q%dom(idom_l)%vecs(ielem_l)%getvar(ip_r) )
+                        dpi_dy = matmul(mesh(idom_l)%faces(ielem_l,iface_l)%dtdy, sdata%q%dom(idom_l)%vecs(ielem_l)%getvar(ip_i) )
+                        dpr_dz = matmul(mesh(idom_l)%faces(ielem_l,iface_l)%dtdz, sdata%q%dom(idom_l)%vecs(ielem_l)%getvar(ip_r) )
+                        dpi_dz = matmul(mesh(idom_l)%faces(ielem_l,iface_l)%dtdz, sdata%q%dom(idom_l)%vecs(ielem_l)%getvar(ip_i) )
 
 
                         dpdx = cmplx(dpr_dx, dpi_dx)

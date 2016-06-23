@@ -93,9 +93,9 @@ subroutine test_fgmres_solve()
         ! [ 30]
         ! [-24]
         !
-        b%dom(1)%lvecs(1)%vec = 24._rk
-        b%dom(1)%lvecs(2)%vec = 30._rk
-        b%dom(1)%lvecs(3)%vec = -24._rk
+        b%dom(1)%vecs(1)%vec = 24._rk
+        b%dom(1)%vecs(2)%vec = 30._rk
+        b%dom(1)%vecs(3)%vec = -24._rk
 
         
 
@@ -120,9 +120,9 @@ subroutine test_fgmres_solve()
         ! x = [ 4]
         !     [-5]
         !
-        @assertEqual(3._rk,x%dom(1)%lvecs(1)%vec,tol)
-        @assertEqual(4._rk,x%dom(1)%lvecs(2)%vec,tol)
-        @assertEqual(-5._rk,x%dom(1)%lvecs(3)%vec,tol)
+        @assertEqual(3._rk,x%dom(1)%vecs(1)%vec,tol)
+        @assertEqual(4._rk,x%dom(1)%vecs(2)%vec,tol)
+        @assertEqual(-5._rk,x%dom(1)%vecs(3)%vec,tol)
 
     end associate
 

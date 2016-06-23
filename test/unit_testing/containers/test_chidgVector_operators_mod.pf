@@ -7,18 +7,23 @@ module test_chidgVector_operators_mod
     use type_point,                 only: point_t
     use type_domain_connectivity,   only: domain_connectivity_t
     use mod_testutils,              only: meshgen
-
     use type_chidgVector
-
     implicit none
 
     public :: test_chidgVector
 
 
+    !>
+    !!
+    !!  @author Nathan A. Wukie
+    !!
+    !!
+    !-------------------------------------------------------------------
     @TestCase
     type, extends(TestCase) :: test_chidgVector
         type(chidg_t)       :: chidg
 
+        integer(ik)         :: nterms_s = 8
         type(chidgVector_t) :: vec_a
         type(chidgVector_t) :: vec_b
 
@@ -26,17 +31,25 @@ module test_chidgVector_operators_mod
         procedure   :: setUp
         procedure   :: tearDown
     end type test_chidgVector
+    !*******************************************************************
 
 
 contains
 
 
+    !>
+    !!
+    !!  @author Nathan A. Wukie
+    !!
+    !!
+    !!
+    !-------------------------------------------------------------------------------------------
     subroutine setUp(this)
         class(test_chidgVector),    intent(inout)   :: this
 
         type(point_t),  allocatable :: nodes(:)
         type(domain_connectivity_t) :: connectivity
-        integer(ik)                 :: nterms_c, nterms_s, spacedim
+        integer(ik)                 :: nterms_c, spacedim
 
         IO_DESTINATION = 'file'
 
@@ -57,9 +70,8 @@ contains
         !
         spacedim = 3
         nterms_c = 8
-        nterms_s = 8
         call this%chidg%data%add_domain('D_01',nodes,connectivity,spacedim,nterms_c,'Scalar')
-        call this%chidg%initialize_solution_domains(nterms_s)
+        call this%chidg%initialize_solution_domains(this%nterms_s)
 
 
         !
@@ -73,24 +85,24 @@ contains
         !
         ! Set vector values
         !
-        this%vec_a%dom(1)%lvecs(1)%vec = ONE
-        this%vec_a%dom(1)%lvecs(2)%vec = TWO
-        this%vec_a%dom(1)%lvecs(3)%vec = THREE
-        this%vec_a%dom(1)%lvecs(4)%vec = FOUR
-        this%vec_a%dom(1)%lvecs(5)%vec = FIVE
-        this%vec_a%dom(1)%lvecs(6)%vec = SIX
-        this%vec_a%dom(1)%lvecs(7)%vec = SEVEN
-        this%vec_a%dom(1)%lvecs(8)%vec = EIGHT
+        this%vec_a%dom(1)%vecs(1)%vec = ONE
+        this%vec_a%dom(1)%vecs(2)%vec = TWO
+        this%vec_a%dom(1)%vecs(3)%vec = THREE
+        this%vec_a%dom(1)%vecs(4)%vec = FOUR
+        this%vec_a%dom(1)%vecs(5)%vec = FIVE
+        this%vec_a%dom(1)%vecs(6)%vec = SIX
+        this%vec_a%dom(1)%vecs(7)%vec = SEVEN
+        this%vec_a%dom(1)%vecs(8)%vec = EIGHT
 
 
-        this%vec_b%dom(1)%lvecs(1)%vec = ONE
-        this%vec_b%dom(1)%lvecs(2)%vec = TWO
-        this%vec_b%dom(1)%lvecs(3)%vec = THREE
-        this%vec_b%dom(1)%lvecs(4)%vec = FOUR
-        this%vec_b%dom(1)%lvecs(5)%vec = FIVE
-        this%vec_b%dom(1)%lvecs(6)%vec = SIX
-        this%vec_b%dom(1)%lvecs(7)%vec = SEVEN
-        this%vec_b%dom(1)%lvecs(8)%vec = EIGHT
+        this%vec_b%dom(1)%vecs(1)%vec = ONE
+        this%vec_b%dom(1)%vecs(2)%vec = TWO
+        this%vec_b%dom(1)%vecs(3)%vec = THREE
+        this%vec_b%dom(1)%vecs(4)%vec = FOUR
+        this%vec_b%dom(1)%vecs(5)%vec = FIVE
+        this%vec_b%dom(1)%vecs(6)%vec = SIX
+        this%vec_b%dom(1)%vecs(7)%vec = SEVEN
+        this%vec_b%dom(1)%vecs(8)%vec = EIGHT
 
 
     end subroutine
@@ -100,16 +112,21 @@ contains
     subroutine tearDown(this)
         class(test_chidgVector),    intent(inout)   :: this
 
-        !
         ! Close ChiDG interface
-        !
         call this%chidg%close('core')
+
     end subroutine
+    !*****************************************************************************************
 
 
 
 
-
+    !>
+    !!
+    !!  @author Nathan A. Wukie
+    !!
+    !!
+    !-----------------------------------------------------------------------
     @Test
     subroutine test_chidgVector__add(self)
         class(test_chidgVector),    intent(inout)   :: self
@@ -119,20 +136,28 @@ contains
 
         res = self%vec_a + self%vec_b
 
-        @assertEqual(TWO, res%dom(1)%lvecs(1)%vec)
-        @assertEqual(FOUR, res%dom(1)%lvecs(2)%vec)
-        @assertEqual(SIX, res%dom(1)%lvecs(3)%vec)
-        @assertEqual(EIGHT, res%dom(1)%lvecs(4)%vec)
-        @assertEqual(10._rk, res%dom(1)%lvecs(5)%vec)
-        @assertEqual(12._rk, res%dom(1)%lvecs(6)%vec)
-        @assertEqual(14._rk, res%dom(1)%lvecs(7)%vec)
-        @assertEqual(16._rk, res%dom(1)%lvecs(8)%vec)
+        @assertEqual(TWO, res%dom(1)%vecs(1)%vec)
+        @assertEqual(FOUR, res%dom(1)%vecs(2)%vec)
+        @assertEqual(SIX, res%dom(1)%vecs(3)%vec)
+        @assertEqual(EIGHT, res%dom(1)%vecs(4)%vec)
+        @assertEqual(10._rk, res%dom(1)%vecs(5)%vec)
+        @assertEqual(12._rk, res%dom(1)%vecs(6)%vec)
+        @assertEqual(14._rk, res%dom(1)%vecs(7)%vec)
+        @assertEqual(16._rk, res%dom(1)%vecs(8)%vec)
 
-    end subroutine
+    end subroutine test_chidgVector__add
+    !***********************************************************************
     
 
 
 
+
+    !>
+    !!
+    !!  @author Nathan A. Wukie
+    !!
+    !!
+    !-----------------------------------------------------------------------
     @Test
     subroutine test_chidgVector__sub(self)
         class(test_chidgVector),    intent(inout)   :: self
@@ -142,20 +167,29 @@ contains
 
         res = self%vec_a - self%vec_b
 
-        @assertEqual(ZERO, res%dom(1)%lvecs(1)%vec)
-        @assertEqual(ZERO, res%dom(1)%lvecs(2)%vec)
-        @assertEqual(ZERO, res%dom(1)%lvecs(3)%vec)
-        @assertEqual(ZERO, res%dom(1)%lvecs(4)%vec)
-        @assertEqual(ZERO, res%dom(1)%lvecs(5)%vec)
-        @assertEqual(ZERO, res%dom(1)%lvecs(6)%vec)
-        @assertEqual(ZERO, res%dom(1)%lvecs(7)%vec)
-        @assertEqual(ZERO, res%dom(1)%lvecs(8)%vec)
+        @assertEqual(ZERO, res%dom(1)%vecs(1)%vec)
+        @assertEqual(ZERO, res%dom(1)%vecs(2)%vec)
+        @assertEqual(ZERO, res%dom(1)%vecs(3)%vec)
+        @assertEqual(ZERO, res%dom(1)%vecs(4)%vec)
+        @assertEqual(ZERO, res%dom(1)%vecs(5)%vec)
+        @assertEqual(ZERO, res%dom(1)%vecs(6)%vec)
+        @assertEqual(ZERO, res%dom(1)%vecs(7)%vec)
+        @assertEqual(ZERO, res%dom(1)%vecs(8)%vec)
 
-    end subroutine
+    end subroutine test_chidgVector__sub
+    !***********************************************************************
     
 
 
 
+    
+    !>
+    !!
+    !!  @author Nathan A. Wukie
+    !!
+    !!
+    !!
+    !-----------------------------------------------------------------------
     @Test
     subroutine test_chidgVector__mult_rv(self)
         class(test_chidgVector),    intent(inout)   :: self
@@ -165,16 +199,17 @@ contains
 
         res = 2._rk * self%vec_b
 
-        @assertEqual(TWO, res%dom(1)%lvecs(1)%vec)
-        @assertEqual(FOUR, res%dom(1)%lvecs(2)%vec)
-        @assertEqual(SIX, res%dom(1)%lvecs(3)%vec)
-        @assertEqual(EIGHT, res%dom(1)%lvecs(4)%vec)
-        @assertEqual(10._rk, res%dom(1)%lvecs(5)%vec)
-        @assertEqual(12._rk, res%dom(1)%lvecs(6)%vec)
-        @assertEqual(14._rk, res%dom(1)%lvecs(7)%vec)
-        @assertEqual(16._rk, res%dom(1)%lvecs(8)%vec)
+        @assertEqual(TWO, res%dom(1)%vecs(1)%vec)
+        @assertEqual(FOUR, res%dom(1)%vecs(2)%vec)
+        @assertEqual(SIX, res%dom(1)%vecs(3)%vec)
+        @assertEqual(EIGHT, res%dom(1)%vecs(4)%vec)
+        @assertEqual(10._rk, res%dom(1)%vecs(5)%vec)
+        @assertEqual(12._rk, res%dom(1)%vecs(6)%vec)
+        @assertEqual(14._rk, res%dom(1)%vecs(7)%vec)
+        @assertEqual(16._rk, res%dom(1)%vecs(8)%vec)
 
-    end subroutine
+    end subroutine test_chidgVector__mult_rv
+    !***********************************************************************
     
 
 
@@ -182,6 +217,12 @@ contains
 
 
 
+    !>
+    !!
+    !!  @author Nathan A. Wukie
+    !!
+    !!
+    !----------------------------------------------------------------------
     @Test
     subroutine test_chidgVector__mult_vr(self)
         class(test_chidgVector),    intent(inout)   :: self
@@ -191,22 +232,29 @@ contains
 
         res = self%vec_b * 2._rk
 
-        @assertEqual(TWO, res%dom(1)%lvecs(1)%vec)
-        @assertEqual(FOUR, res%dom(1)%lvecs(2)%vec)
-        @assertEqual(SIX, res%dom(1)%lvecs(3)%vec)
-        @assertEqual(EIGHT, res%dom(1)%lvecs(4)%vec)
-        @assertEqual(10._rk, res%dom(1)%lvecs(5)%vec)
-        @assertEqual(12._rk, res%dom(1)%lvecs(6)%vec)
-        @assertEqual(14._rk, res%dom(1)%lvecs(7)%vec)
-        @assertEqual(16._rk, res%dom(1)%lvecs(8)%vec)
+        @assertEqual(TWO, res%dom(1)%vecs(1)%vec)
+        @assertEqual(FOUR, res%dom(1)%vecs(2)%vec)
+        @assertEqual(SIX, res%dom(1)%vecs(3)%vec)
+        @assertEqual(EIGHT, res%dom(1)%vecs(4)%vec)
+        @assertEqual(10._rk, res%dom(1)%vecs(5)%vec)
+        @assertEqual(12._rk, res%dom(1)%vecs(6)%vec)
+        @assertEqual(14._rk, res%dom(1)%vecs(7)%vec)
+        @assertEqual(16._rk, res%dom(1)%vecs(8)%vec)
 
-    end subroutine
-
-
-
+    end subroutine test_chidgVector__mult_vr
+    !**********************************************************************
 
 
 
+
+
+
+    !>
+    !!
+    !!  @author Nathan A. Wukie
+    !!
+    !!
+    !----------------------------------------------------------------------
     @Test
     subroutine test_chidgVector__div_rv(self)
         class(test_chidgVector),    intent(inout)   :: self
@@ -216,19 +264,28 @@ contains
 
         res = 2._rk / self%vec_b
 
-        @assertEqual(TWO, res%dom(1)%lvecs(1)%vec)
-        @assertEqual(ONE, res%dom(1)%lvecs(2)%vec)
-        @assertEqual(2._rk/3._rk, res%dom(1)%lvecs(3)%vec)
-        @assertEqual(2._rk/4._rk, res%dom(1)%lvecs(4)%vec)
-        @assertEqual(2._rk/5._rk, res%dom(1)%lvecs(5)%vec)
-        @assertEqual(2._rk/6._rk, res%dom(1)%lvecs(6)%vec)
-        @assertEqual(2._rk/7._rk, res%dom(1)%lvecs(7)%vec)
-        @assertEqual(2._rk/8._rk, res%dom(1)%lvecs(8)%vec)
+        @assertEqual(TWO, res%dom(1)%vecs(1)%vec)
+        @assertEqual(ONE, res%dom(1)%vecs(2)%vec)
+        @assertEqual(2._rk/3._rk, res%dom(1)%vecs(3)%vec)
+        @assertEqual(2._rk/4._rk, res%dom(1)%vecs(4)%vec)
+        @assertEqual(2._rk/5._rk, res%dom(1)%vecs(5)%vec)
+        @assertEqual(2._rk/6._rk, res%dom(1)%vecs(6)%vec)
+        @assertEqual(2._rk/7._rk, res%dom(1)%vecs(7)%vec)
+        @assertEqual(2._rk/8._rk, res%dom(1)%vecs(8)%vec)
 
-    end subroutine
+    end subroutine test_chidgVector__div_rv
+    !**********************************************************************
 
 
 
+
+
+    !>
+    !!
+    !!  @author Nathan A. Wukie
+    !!
+    !!
+    !----------------------------------------------------------------------
     @Test
     subroutine test_chidgVector__div_vr(self)
         class(test_chidgVector),    intent(inout)   :: self
@@ -238,16 +295,94 @@ contains
 
         res = self%vec_b / 2._rk
 
-        @assertEqual(HALF, res%dom(1)%lvecs(1)%vec)
-        @assertEqual(ONE, res%dom(1)%lvecs(2)%vec)
-        @assertEqual(1.5_rk, res%dom(1)%lvecs(3)%vec)
-        @assertEqual(TWO, res%dom(1)%lvecs(4)%vec)
-        @assertEqual(2.5_rk, res%dom(1)%lvecs(5)%vec)
-        @assertEqual(THREE, res%dom(1)%lvecs(6)%vec)
-        @assertEqual(3.5_rk, res%dom(1)%lvecs(7)%vec)
-        @assertEqual(FOUR, res%dom(1)%lvecs(8)%vec)
+        @assertEqual(HALF, res%dom(1)%vecs(1)%vec)
+        @assertEqual(ONE, res%dom(1)%vecs(2)%vec)
+        @assertEqual(1.5_rk, res%dom(1)%vecs(3)%vec)
+        @assertEqual(TWO, res%dom(1)%vecs(4)%vec)
+        @assertEqual(2.5_rk, res%dom(1)%vecs(5)%vec)
+        @assertEqual(THREE, res%dom(1)%vecs(6)%vec)
+        @assertEqual(3.5_rk, res%dom(1)%vecs(7)%vec)
+        @assertEqual(FOUR, res%dom(1)%vecs(8)%vec)
 
-    end subroutine
+    end subroutine test_chidgVector__div_vr
+    !**********************************************************************
+
+
+
+
+
+
+    !>
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!
+    !!
+    !----------------------------------------------------------------------
+    @Test
+    subroutine test_chidgVector__norm(self)
+        class(test_chidgVector),    intent(inout)   :: self
+
+        real(rk)    :: computed_norm, expected_norm
+        integer(ik) :: nterms_s
+
+        expected_norm = ONE**TWO   * self%nterms_s + &
+                        TWO**TWO   * self%nterms_s + &
+                        THREE**TWO * self%nterms_s + &
+                        FOUR**TWO  * self%nterms_s + &
+                        FIVE**TWO  * self%nterms_s + &
+                        SIX**TWO   * self%nterms_s + &
+                        SEVEN**TWO * self%nterms_s + &
+                        EIGHT**TWO * self%nterms_s
+        expected_norm = sqrt(expected_norm)
+
+        computed_norm = self%vec_a%norm()
+
+        @assertEqual(expected_norm,computed_norm)
+
+    end subroutine test_chidgVector__norm
+    !**********************************************************************
+
+
+
+
+    !>
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!
+    !!
+    !----------------------------------------------------------------------
+    @Test
+    subroutine test_chidgVector__sumsqr(self)
+        class(test_chidgVector),    intent(inout)   :: self
+
+        real(rk)    :: computed_sumsqr, expected_sumsqr
+        integer(ik) :: nterms_s
+
+        expected_sumsqr = ONE**TWO   * self%nterms_s + &
+                          TWO**TWO   * self%nterms_s + &
+                          THREE**TWO * self%nterms_s + &
+                          FOUR**TWO  * self%nterms_s + &
+                          FIVE**TWO  * self%nterms_s + &
+                          SIX**TWO   * self%nterms_s + &
+                          SEVEN**TWO * self%nterms_s + &
+                          EIGHT**TWO * self%nterms_s
+
+        computed_sumsqr = self%vec_a%sumsqr()
+
+        @assertEqual(expected_sumsqr,computed_sumsqr)
+
+    end subroutine test_chidgVector__sumsqr
+    !**********************************************************************
+
+
+
+
+
+
+
+
+
+
 
 
 

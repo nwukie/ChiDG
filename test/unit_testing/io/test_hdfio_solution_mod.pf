@@ -139,7 +139,7 @@ contains
 
         idom = 1
 
-        associate ( q => this%chidgO1%data%sdata%q%dom(1)%lvecs )
+        associate ( q => this%chidgO1%data%sdata%q%dom(1)%vecs )
 
             !
             ! Set reference solution values
@@ -214,7 +214,7 @@ contains
         
         idom = 1
         
-        associate ( q => this%chidgO2%data%sdata%q%dom(1)%lvecs )
+        associate ( q => this%chidgO2%data%sdata%q%dom(1)%vecs )
             
             !
             ! Set reference solution values
@@ -291,8 +291,8 @@ contains
         
         idom = 1
         
-        associate ( q1 => this%chidgO1%data%sdata%q%dom(1)%lvecs, &
-                    q2 => this%chidgO2%data%sdata%q%dom(1)%lvecs )
+        associate ( q1 => this%chidgO1%data%sdata%q%dom(1)%vecs, &
+                    q2 => this%chidgO2%data%sdata%q%dom(1)%vecs )
             
             !
             ! Set q1 reference solution values
@@ -375,8 +375,8 @@ contains
         
         idom = 1
         
-        associate ( q1 => this%chidgO1%data%sdata%q%dom(1)%lvecs, &
-                    q2 => this%chidgO2%data%sdata%q%dom(1)%lvecs )
+        associate ( q1 => this%chidgO1%data%sdata%q%dom(1)%vecs, &
+                    q2 => this%chidgO2%data%sdata%q%dom(1)%vecs )
             
             !
             ! Set q2 reference solution values

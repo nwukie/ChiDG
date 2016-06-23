@@ -154,8 +154,8 @@ contains
                        xi   = point_comp%c1_
                        eta  = point_comp%c2_
                        zeta = point_comp%c3_
-                       !vals(inode) = solution_point(chidg_source%data%mesh(idom_d)%elems(ielem_d), chidg_source%data%sdata%q%dom(idom_d)%lvecs(ielem_d),ivar,xi,eta,zeta)
-                       vals(inode) = chidg_source%data%mesh(idom_d)%elems(ielem_d)%solution_point(chidg_source%data%sdata%q%dom(idom_d)%lvecs(ielem_d),ivar,xi,eta,zeta)
+                       !vals(inode) = solution_point(chidg_source%data%mesh(idom_d)%elems(ielem_d), chidg_source%data%sdata%q%dom(idom_d)%vecs(ielem_d),ivar,xi,eta,zeta)
+                       vals(inode) = chidg_source%data%mesh(idom_d)%elems(ielem_d)%solution_point(chidg_source%data%sdata%q%dom(idom_d)%vecs(ielem_d),ivar,xi,eta,zeta)
 
 
                     end do !inode
@@ -176,7 +176,7 @@ contains
                     !
                     ! Store the projected modes to the solution expansion
                     !
-                    call chidg_target%data%sdata%q%dom(idom)%lvecs(ielem)%setvar(ivar,val_modes)
+                    call chidg_target%data%sdata%q%dom(idom)%vecs(ielem)%setvar(ivar,val_modes)
 
 
                end do ! ivar

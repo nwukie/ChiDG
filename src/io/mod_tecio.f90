@@ -160,7 +160,7 @@ contains
 
                                         ! Get solution value at point
                                         ielem = ielem_xi + (nelem_xi)*(ielem_eta-1) + (nelem_xi * nelem_eta)*(ielem_zeta-1)
-                                        val = real(data%mesh(idom)%elems(ielem)%solution_point(data%sdata%q%dom(idom)%lvecs(ielem),ivar,xi,eta,zeta),rdouble)
+                                        val = real(data%mesh(idom)%elems(ielem)%solution_point(data%sdata%q%dom(idom)%vecs(ielem),ivar,xi,eta,zeta),rdouble)
                                         tecstat = TECDAT142(1,valeq,1)
                                     
                                     end do
@@ -361,7 +361,7 @@ contains
 
 
                                 ! Get solution value at point
-                                val = real(data%mesh(idom)%elems(ielem)%solution_point(data%sdata%q%dom(idom)%lvecs(ielem),ivar,xi,eta,zeta),rdouble)
+                                val = real(data%mesh(idom)%elems(ielem)%solution_point(data%sdata%q%dom(idom)%vecs(ielem),ivar,xi,eta,zeta),rdouble)
                                 tecstat = TECDAT142(1,valeq,1)
                                 if (tecstat /= 0) call chidg_signal(FATAL,"write_tecio_variables_unstructured: Error in call to TECDAT142")
                                     

@@ -22,34 +22,26 @@ module type_densevector
     !-------------------------------------------------------------------------------------------------------------
     type, public :: densevector_t
 
-        !
         ! Element Associativity
-        !
         integer(ik), private    :: parent_ = 0                  !< Associated parent element
 
-        !
         ! Storage size and equation information
-        !
         integer(ik), private    :: nterms_                      !< Number of terms in an expansion
         integer(ik), private    :: nvars_                       !< Number of equations included
-        integer(ik), private    :: ntime_                       !< Number of time instances
     
-        !
         ! Vector storage
-        !
         real(rk),  dimension(:), allocatable :: vec             !< Vector storage
 
     contains
 
         ! Initializers
-        generic, public :: init => init_vector
-        procedure, private :: init_vector                       !< Initialize vector storage
+        procedure, public :: init           !< Initialize vector storage
 
-        procedure :: parent                                     !< return parent element
-        procedure :: nentries                                   !< return number of vector entries
-        procedure :: reparent                                   !< reassign parent
-        procedure :: nterms                                     !< return nterms_
-        procedure :: nvars                                      !< return nvars_
+        procedure :: parent                 !< return parent element
+        procedure :: nentries               !< return number of vector entries
+        procedure :: reparent               !< reassign parent
+        procedure :: nterms                 !< return nterms_
+        procedure :: nvars                  !< return nvars_
 
 
         procedure, public   :: setvar
@@ -130,13 +122,11 @@ contains
     !!  @param[in]  parent  Index of associated parent element
     !!
     !-------------------------------------------------------------------------------------------------------
-    subroutine init_vector(self,nterms,nvars,parent)
-!    subroutine init_vector(self,nterms,nvars,ntime,parent)
-        class(densevector_t),   intent(inout), target   :: self
-        integer(ik),            intent(in)              :: nterms
-        integer(ik),            intent(in)              :: nvars
-!        integer(ik),            intent(in)              :: ntime
-        integer(ik),            intent(in)              :: parent
+    subroutine init(self,nterms,nvars,parent)
+        class(densevector_t),   intent(inout)   :: self
+        integer(ik),            intent(in)      :: nterms
+        integer(ik),            intent(in)      :: nvars
+        integer(ik),            intent(in)      :: parent
 
         integer(ik) :: ierr, vsize
 
@@ -146,7 +136,6 @@ contains
         self%parent_ = parent
         self%nterms_ = nterms
         self%nvars_  = nvars
-!        self%ntime_  = ntime
 
 
         !
@@ -173,7 +162,7 @@ contains
         !
         self%vec = 0._rk
 
-    end subroutine init_vector
+    end subroutine init
     !******************************************************************************************************
 
 
@@ -283,9 +272,9 @@ contains
     !!
     !-------------------------------------------------------------------------------------------------------
     function getterm(self,ivar,iterm) result(mode_out)
-        !class(densevector_t),   intent(inout)   :: self
-        class(densevector_t),   intent(in)   :: self
-        integer(ik),            intent(in)      :: ivar, iterm
+        class(densevector_t),   intent(in)  :: self
+        integer(ik),            intent(in)  :: ivar
+        integer(ik),            intent(in)  :: iterm
 
         real(rk)    :: mode_out
         integer(ik) :: istart, iterm_g
@@ -527,7 +516,7 @@ contains
     elemental function mult_real_dv(left,right) result(res)
         real(rk),               intent(in)  :: left
         type(densevector_t),    intent(in)  :: right
-        type(densevector_t), target :: res
+        type(densevector_t) :: res
 
         res%parent_ = right%parent_
         res%nvars_  = right%nvars_
@@ -535,15 +524,13 @@ contains
 
         res%vec     = left * right%vec
 
-        
-
     end function
 
    
     elemental function mult_dv_real(left,right) result(res)
         type(densevector_t),    intent(in)  :: left
         real(rk),               intent(in)  :: right
-        type(densevector_t), target :: res
+        type(densevector_t) :: res
 
 
         res%parent_ = left%parent_
@@ -551,7 +538,6 @@ contains
         res%nterms_ = left%nterms_
 
         res%vec     = left%vec * right
-
 
     end function
 
@@ -565,7 +551,7 @@ contains
     elemental function div_real_dv(left,right) result(res)
         real(rk),               intent(in)  :: left
         type(densevector_t),    intent(in)  :: right
-        type(densevector_t), target :: res
+        type(densevector_t) :: res
 
 
         res%parent_ = right%parent_
@@ -580,7 +566,7 @@ contains
     elemental function div_dv_real(left,right) result(res)
         type(densevector_t),        intent(in)  :: left
         real(rk),                   intent(in)  :: right
-        type(densevector_t), target :: res
+        type(densevector_t) :: res
 
 
         res%parent_ = left%parent_
@@ -588,7 +574,6 @@ contains
         res%nterms_ = left%nterms_
 
         res%vec     = left%vec / right
-
 
     end function
 
@@ -601,7 +586,7 @@ contains
     elemental function add_dv_dv(left,right) result(res)
         type(densevector_t),    intent(in)  :: left
         type(densevector_t),    intent(in)  :: right
-        type(densevector_t), target :: res
+        type(densevector_t) :: res
 
 
         res%parent_ = left%parent_
@@ -618,7 +603,7 @@ contains
     elemental function sub_dv_dv(left,right) result(res)
         type(densevector_t),    intent(in)  :: left
         type(densevector_t),    intent(in)  :: right
-        type(densevector_t), target :: res
+        type(densevector_t) :: res
 
 
         res%parent_ = left%parent_

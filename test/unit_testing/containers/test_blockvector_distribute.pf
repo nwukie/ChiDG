@@ -78,10 +78,10 @@ subroutine test_blockvector_distribute()
     !
     ! Test full-vector values against expected reference values
     !
-    @assertEqual(ONE,bvec%lvecs(1)%vec)
-    @assertEqual(TWO,bvec%lvecs(2)%vec)
-    @assertEqual(THREE,bvec%lvecs(3)%vec)
-    @assertEqual(FOUR,bvec%lvecs(4)%vec)
+    @assertEqual(ONE,bvec%vecs(1)%vec)
+    @assertEqual(TWO,bvec%vecs(2)%vec)
+    @assertEqual(THREE,bvec%vecs(3)%vec)
+    @assertEqual(FOUR,bvec%vecs(4)%vec)
 
 
 

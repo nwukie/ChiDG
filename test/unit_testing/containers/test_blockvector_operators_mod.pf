@@ -63,16 +63,16 @@ contains
         !
         ! Initialize blockvector data for operators
         !
-        this%bv_a%lvecs(1)%vec = ONE
-        this%bv_a%lvecs(2)%vec = TWO
-        this%bv_a%lvecs(3)%vec = THREE
-        this%bv_a%lvecs(4)%vec = FOUR
+        this%bv_a%vecs(1)%vec = ONE
+        this%bv_a%vecs(2)%vec = TWO
+        this%bv_a%vecs(3)%vec = THREE
+        this%bv_a%vecs(4)%vec = FOUR
 
 
-        this%bv_b%lvecs(1)%vec = TWO
-        this%bv_b%lvecs(2)%vec = THREE
-        this%bv_b%lvecs(3)%vec = FOUR
-        this%bv_b%lvecs(4)%vec = FIVE
+        this%bv_b%vecs(1)%vec = TWO
+        this%bv_b%vecs(2)%vec = THREE
+        this%bv_b%vecs(3)%vec = FOUR
+        this%bv_b%vecs(4)%vec = FIVE
 
 
     end subroutine
@@ -118,31 +118,21 @@ contains
 
 
         !
-        ! Test values. blockvector%lvecs%vec
+        ! Test values. blockvector%vecs%vec
         !
-        @assertEqual(val*ONE,   self%bv_res%lvecs(1)%vec)
-        @assertEqual(val*TWO,   self%bv_res%lvecs(2)%vec)
-        @assertEqual(val*THREE, self%bv_res%lvecs(3)%vec)
-        @assertEqual(val*FOUR,  self%bv_res%lvecs(4)%vec)
+        @assertEqual(val*ONE,   self%bv_res%vecs(1)%vec)
+        @assertEqual(val*TWO,   self%bv_res%vecs(2)%vec)
+        @assertEqual(val*THREE, self%bv_res%vecs(3)%vec)
+        @assertEqual(val*FOUR,  self%bv_res%vecs(4)%vec)
 
 
         !
         ! Test parent data
         !
-        @assertEqual(1, self%bv_res%lvecs(1)%parent())
-        @assertEqual(2, self%bv_res%lvecs(2)%parent())
-        @assertEqual(3, self%bv_res%lvecs(3)%parent())
-        @assertEqual(4, self%bv_res%lvecs(4)%parent())
-
-
-
-        !
-        ! Test container data. blockvector%ldata
-        !
-        ! nvars
-        @assertEqual(1, self%bv_res%ldata(:,1))
-        ! nterms
-        @assertEqual(8, self%bv_res%ldata(:,2))
+        @assertEqual(1, self%bv_res%vecs(1)%parent())
+        @assertEqual(2, self%bv_res%vecs(2)%parent())
+        @assertEqual(3, self%bv_res%vecs(3)%parent())
+        @assertEqual(4, self%bv_res%vecs(4)%parent())
 
 
     end subroutine
@@ -178,22 +168,12 @@ contains
 
 
         !
-        ! Test values. blockvector%lvecs%vec
+        ! Test values. blockvector%vecs%vec
         !
-        @assertEqual(val*ONE,   self%bv_res%lvecs(1)%vec)
-        @assertEqual(val*TWO,   self%bv_res%lvecs(2)%vec)
-        @assertEqual(val*THREE, self%bv_res%lvecs(3)%vec)
-        @assertEqual(val*FOUR,  self%bv_res%lvecs(4)%vec)
-
-
-        !
-        ! Test container data. blockvector%ldata
-        !
-        ! nvars
-        @assertEqual(1, self%bv_res%ldata(:,1))
-        ! nterms
-        @assertEqual(8, self%bv_res%ldata(:,2))
-
+        @assertEqual(val*ONE,   self%bv_res%vecs(1)%vec)
+        @assertEqual(val*TWO,   self%bv_res%vecs(2)%vec)
+        @assertEqual(val*THREE, self%bv_res%vecs(3)%vec)
+        @assertEqual(val*FOUR,  self%bv_res%vecs(4)%vec)
 
 
     end subroutine
@@ -224,22 +204,12 @@ contains
 
 
         !
-        ! Test values. blockvector%lvecs%vec
+        ! Test values. blockvector%vecs%vec
         !
-        @assertEqual(val/ONE,   self%bv_res%lvecs(1)%vec)
-        @assertEqual(val/TWO,   self%bv_res%lvecs(2)%vec)
-        @assertEqual(val/THREE, self%bv_res%lvecs(3)%vec)
-        @assertEqual(val/FOUR,  self%bv_res%lvecs(4)%vec)
-
-
-        !
-        ! Test container data. blockvector%ldata
-        !
-        ! nvars
-        @assertEqual(1, self%bv_res%ldata(:,1))
-        ! nterms
-        @assertEqual(8, self%bv_res%ldata(:,2))
-
+        @assertEqual(val/ONE,   self%bv_res%vecs(1)%vec)
+        @assertEqual(val/TWO,   self%bv_res%vecs(2)%vec)
+        @assertEqual(val/THREE, self%bv_res%vecs(3)%vec)
+        @assertEqual(val/FOUR,  self%bv_res%vecs(4)%vec)
 
 
     end subroutine
@@ -273,22 +243,12 @@ contains
 
 
         !
-        ! Test values. blockvector%lvecs%vec
+        ! Test values. blockvector%vecs%vec
         !
-        @assertEqual(ONE/val,   self%bv_res%lvecs(1)%vec)
-        @assertEqual(TWO/val,   self%bv_res%lvecs(2)%vec)
-        @assertEqual(THREE/val, self%bv_res%lvecs(3)%vec)
-        @assertEqual(FOUR/val,  self%bv_res%lvecs(4)%vec)
-
-
-        !
-        ! Test container data. blockvector%ldata
-        !
-        ! nvars
-        @assertEqual(1, self%bv_res%ldata(:,1))
-        ! nterms
-        @assertEqual(8, self%bv_res%ldata(:,2))
-
+        @assertEqual(ONE/val,   self%bv_res%vecs(1)%vec)
+        @assertEqual(TWO/val,   self%bv_res%vecs(2)%vec)
+        @assertEqual(THREE/val, self%bv_res%vecs(3)%vec)
+        @assertEqual(FOUR/val,  self%bv_res%vecs(4)%vec)
 
 
     end subroutine
@@ -319,21 +279,12 @@ contains
 
 
         !
-        ! Test values. blockvector%lvecs%vec
+        ! Test values. blockvector%vecs%vec
         !
-        @assertEqual(THREE, self%bv_res%lvecs(1)%vec)
-        @assertEqual(FIVE,  self%bv_res%lvecs(2)%vec)
-        @assertEqual(SEVEN, self%bv_res%lvecs(3)%vec)
-        @assertEqual(NINE,  self%bv_res%lvecs(4)%vec)
-
-
-        !
-        ! Test container data. blockvector%ldata
-        !
-        ! nvars
-        @assertEqual(1, self%bv_res%ldata(:,1))
-        ! nterms
-        @assertEqual(8, self%bv_res%ldata(:,2))
+        @assertEqual(THREE, self%bv_res%vecs(1)%vec)
+        @assertEqual(FIVE,  self%bv_res%vecs(2)%vec)
+        @assertEqual(SEVEN, self%bv_res%vecs(3)%vec)
+        @assertEqual(NINE,  self%bv_res%vecs(4)%vec)
 
 
 
@@ -368,22 +319,12 @@ contains
 
 
         !
-        ! Test values. blockvector%lvecs%vec
+        ! Test values. blockvector%vecs%vec
         !
-        @assertEqual(-ONE, self%bv_res%lvecs(1)%vec)
-        @assertEqual(-ONE, self%bv_res%lvecs(2)%vec)
-        @assertEqual(-ONE, self%bv_res%lvecs(3)%vec)
-        @assertEqual(-ONE, self%bv_res%lvecs(4)%vec)
-
-
-        !
-        ! Test container data. blockvector%ldata
-        !
-        ! nvars
-        @assertEqual(1, self%bv_res%ldata(:,1))
-        ! nterms
-        @assertEqual(8, self%bv_res%ldata(:,2))
-
+        @assertEqual(-ONE, self%bv_res%vecs(1)%vec)
+        @assertEqual(-ONE, self%bv_res%vecs(2)%vec)
+        @assertEqual(-ONE, self%bv_res%vecs(3)%vec)
+        @assertEqual(-ONE, self%bv_res%vecs(4)%vec)
 
 
     end subroutine

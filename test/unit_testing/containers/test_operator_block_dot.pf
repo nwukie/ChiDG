@@ -65,9 +65,9 @@ subroutine test_operator_block_dot()
     vec_a2 = [TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT, ONE]
     vec_a3 = [THREE, FOUR, FIVE, SIX, SEVEN, EIGHT, ONE, TWO]
 
-    a%lvecs(1)%vec = vec_a1
-    a%lvecs(2)%vec = vec_a2
-    a%lvecs(3)%vec = vec_a3
+    a%vecs(1)%vec = vec_a1
+    a%vecs(2)%vec = vec_a2
+    a%vecs(3)%vec = vec_a3
 
 
     !
@@ -77,9 +77,9 @@ subroutine test_operator_block_dot()
     vec_b2 = [ONE, TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT]
     vec_b3 = [TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT, ONE]
 
-    b%lvecs(1)%vec = vec_b1
-    b%lvecs(2)%vec = vec_b2
-    b%lvecs(3)%vec = vec_b3
+    b%vecs(1)%vec = vec_b1
+    b%vecs(2)%vec = vec_b2
+    b%vecs(3)%vec = vec_b3
 
 
 

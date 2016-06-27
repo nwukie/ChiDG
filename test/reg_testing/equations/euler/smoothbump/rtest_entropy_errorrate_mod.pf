@@ -11,6 +11,16 @@
 !   This suite runs the smoothbump case with 6x2x2, 12x4x2, and 24x8x2 grids with
 !   quartic elements. Each grid is run from 1st to 4th order accuracy.
 !
+!   The boundary condition settings are:
+!
+!       Inlet:  euler_totalinlet  
+!               110000 Total Pressure 
+!               300 Total Temperature
+!
+!       Outlet: euler_pressureoutlet
+!               93000 Static Pressure
+!
+!       Walls: euler_wall
 !
 !--------------------------------------------------------------------------------
 module rtest_entropy_errorrate_mod
@@ -232,6 +242,7 @@ contains
 
 
         call chidg%initialize_solution_domains(nterms_s)
+        call chidg%init('communication')
         call chidg%init('chimera')
 
 
@@ -318,7 +329,7 @@ contains
         !
         ! Close ChiDG
         !
-         call chidg%close()
+        call chidg%close('core')
 
     end subroutine
     !*******************************************************************************************************

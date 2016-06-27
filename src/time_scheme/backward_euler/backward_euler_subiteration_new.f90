@@ -105,6 +105,13 @@ contains
                 ninner = 0      ! Initialize inner loop counter
                 cfl    = 1._rk
                 dtau   = 0.1_rk
+
+
+
+
+                call nonlinear_solver%solve(data,linear_solver,preconditioner)
+
+
                 do while ( resid > self%tol )
                     call cpu_time(tstart)
                     ninner = ninner + 1

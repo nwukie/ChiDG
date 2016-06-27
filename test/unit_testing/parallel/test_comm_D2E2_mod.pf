@@ -1,4 +1,4 @@
-module test_comm_D1E4_mod
+module test_comm_D2E2_mod
     use mod_kinds,                  only: rk, ik
     use mod_constants,              only: XI_MIN, XI_MAX, BOUNDARY, IO_DESTINATION, TWO
 
@@ -25,7 +25,7 @@ module test_comm_D1E4_mod
     !!
     !------------------------------------------------------------------
     @TestCase
-    type, extends(MpiTestCase) :: test_comm_D1E4
+    type, extends(MpiTestCase) :: test_comm_D2E2
 
         type(chidg_t)   :: chidg
 
@@ -35,33 +35,33 @@ module test_comm_D1E4_mod
     contains
         procedure       :: setUp
         procedure       :: tearDown
-    end type test_comm_D1E4
+    end type test_comm_D2E2
     !******************************************************************
+
 
 
 
 
 contains
 
-    !>  This test reads a 4x1x1 element grid using 1, 2, 3, and 4 processors and tests communication data.
+    !>  This test reads two 2x1x1 element grids using 1, 2, and 4 processors and tests communication data.
     !!
     !!  Using 1 processor, all communication(face neighbors) should be local. Using 4 processors, all communication
     !!  should occur globally, across processors.
     !!
     !!  @author Nathan A. Wukie (AFRL)
-    !!  @date   6/21/2016
+    !!  @date   6/22/2016
     !!
     !-----------------------------------------------------------------------------------
     subroutine setUp(this)
-        class(test_comm_D1E4), intent(inout) :: this
+        class(test_comm_D2E2), intent(inout) :: this
 
         type(domain_connectivity_t),    allocatable :: connectivities(:)
         type(partition_t),              allocatable :: partitions(:)
         type(partition_t)                           :: partition
 
-
-        character(len=:),   allocatable :: gridfile
-        integer(ik)                     :: iread, spacedim, ierr, ielem
+        character(len=:), allocatable   :: gridfile
+        integer(ik)                     :: iread, spacedim, ierr, idom, ielem
         real(rk)                        :: initial_vals(this%nterms_s)
 
         
@@ -74,7 +74,7 @@ contains
 
 
         IO_DESTINATION = 'file'
-        gridfile       = 'D1_E4_M1.h5'
+        gridfile       = 'D2_E2_M1.h5'
         spacedim       = 3
 
 
@@ -125,10 +125,11 @@ contains
         ! Initialize solution vector
         !
         initial_vals = 1.2_rk
-        do ielem = 1,this%chidg%data%mesh(1)%nelem
-            call this%chidg%data%sdata%q%dom(1)%vecs(ielem)%setvar(1,initial_vals)
+        do idom = 1,size(this%chidg%data%mesh)
+            do ielem = 1,this%chidg%data%mesh(idom)%nelem
+                call this%chidg%data%sdata%q%dom(idom)%vecs(ielem)%setvar(1,initial_vals)
+            end do
         end do
-
 
 
 
@@ -136,12 +137,12 @@ contains
 
 
     subroutine tearDown(this)
-        class(test_comm_D1E4), intent(inout) :: this
+        class(test_comm_D2E2), intent(inout) :: this
 
         call this%chidg%close('core')
 
     end subroutine tearDown
-    !***********************************************************************************************
+    !******************************************************************************************
 
 
 
@@ -151,6 +152,7 @@ contains
 
 
 
+    !@Test(npes=[1,2,4])
     !>  Test the parallel computation of the chidgVector norm. 
     !!  This tests the routine: chidgVector%norm_comm
     !!
@@ -160,7 +162,7 @@ contains
     !---------------------------------------------------------------------------------------
     @Test(npes=[1,2,3,4])
     subroutine chidgvector__norm_comm(self)
-        class(test_comm_D1E4), intent(inout) :: self
+        class(test_comm_D2E2), intent(inout) :: self
 
         integer(ik)     :: nelem
         real(rk)        :: computed_norm, expected_norm
@@ -199,7 +201,7 @@ contains
     !---------------------------------------------------------------------------------------
     @Test(npes=[1,2,3,4])
     subroutine chidgvector__dot_comm(self)
-        class(test_comm_D1E4), intent(inout) :: self
+        class(test_comm_D2E2), intent(inout) :: self
 
         type(chidgVector_t) :: a, b
         integer(ik)         :: nelem
@@ -230,6 +232,4 @@ contains
 
 
 
-
-
-end module test_comm_D1E4_mod
+end module test_comm_D2E2_mod

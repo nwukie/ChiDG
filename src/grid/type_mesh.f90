@@ -24,6 +24,8 @@ module type_mesh
     !!  @author Nathan A. Wukie
     !!  @date   2/1/2016
     !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   6/27/2016
     !!
     !------------------------------------------------------------------------------------------------------------
     type, public :: mesh_t
@@ -60,14 +62,13 @@ module type_mesh
         procedure           :: init_geom
         procedure           :: init_sol
 
-        procedure           :: init_comm_local
-        procedure           :: init_comm_global
-
         procedure, private  :: init_elems_geom
         procedure, private  :: init_elems_sol
         procedure, private  :: init_faces_geom
         procedure, private  :: init_faces_sol
 
+        procedure           :: init_comm_local
+        procedure           :: init_comm_global
 
         ! Utilities
         procedure, private  :: find_neighbor_local
@@ -274,11 +275,8 @@ contains
         idomain_l = self%idomain_l
         do ielem_l = 1,nelem
 
-            !
             ! Element geometry initialization
-            !
             element_connectivity = connectivity%get_element_connectivity(ielem_l)
-!            print*, element_connectivity%get_domain_index()
             call self%elems(ielem_l)%init_geom(spacedim,nodes,element_connectivity,idomain_l,ielem_l)
 
         end do ! ielem
@@ -377,9 +375,7 @@ contains
         do ielem = 1,self%nelem
             do iface = 1,NFACES
 
-                !
                 ! Call face geometry initialization
-                !
                 call self%faces(ielem,iface)%init_geom(iface,self%elems(ielem))
 
 
@@ -739,28 +735,6 @@ contains
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
     !>
     !!
     !!  @author Nathan A. Wukie (AFRL)
@@ -930,32 +904,6 @@ contains
 
     end subroutine find_neighbor_global
     !***************************************************************************************************************
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 

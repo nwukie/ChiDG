@@ -24,6 +24,16 @@ module LA_boundary_average_advective_flux
 
     private
 
+
+
+    !>
+    !!
+    !!  @author Nathan A. Wukie
+    !!
+    !!
+    !!
+    !!
+    !--------------------------------------------------------------------------------
     type, extends(boundary_flux_t), public :: LA_boundary_average_advective_flux_t
 
 
@@ -31,20 +41,23 @@ module LA_boundary_average_advective_flux
         procedure   :: compute
 
     end type LA_boundary_average_advective_flux_t
+    !********************************************************************************
+
+
 
 contains
 
-    ! Compute the average advective boundary flux for scalar linear advection
-    !
-    !   @author Nathan A. Wukie
-    !
-    !   @param[in]      mesh    Mesh data
-    !   @param[inout]   sdata   Solver data. Solution, RHS, Linearization etc.
-    !   @param[in]      ielem   Element index
-    !   @param[in]      iface   Face index
-    !   @param[in]      iblk    Block index indicating the linearization direction
-    !
-    !---------------------------------------------------------------------
+    !> Compute the average advective boundary flux for scalar linear advection
+    !!
+    !!   @author Nathan A. Wukie
+    !!
+    !!   @param[in]      mesh    Mesh data
+    !!   @param[inout]   sdata   Solver data. Solution, RHS, Linearization etc.
+    !!   @param[in]      ielem   Element index
+    !!   @param[in]      iface   Face index
+    !!   @param[in]      iblk    Block index indicating the linearization direction
+    !!
+    !-----------------------------------------------------------------------------------------
     subroutine compute(self,mesh,sdata,prop,face_info,function_info)
         class(LA_boundary_average_advective_flux_t),    intent(in)      :: self
         type(mesh_t),                                   intent(in)      :: mesh(:)
@@ -76,8 +89,8 @@ contains
         iface = face_info%iface
 
 
+        associate ( norms => mesh(idom)%faces(ielem,iface)%norm )
 
-        associate (norms => mesh(idom)%faces(ielem,iface)%norm )
 
         !
         ! Get equation set properties
@@ -98,12 +111,13 @@ contains
 
 
 
+
         !
         ! Compute boundary average flux
         !
-        flux_x = ((cx*u_l + cx*u_r)/TWO )  *  norms(:,1)
-        flux_y = ((cy*u_l + cy*u_r)/TWO )  *  norms(:,2)
-        flux_z = ((cz*u_l + cz*u_r)/TWO )  *  norms(:,3)
+        flux_x = ((cx*u_r + cx*u_l)/TWO ) * norms(:,1)
+        flux_y = ((cy*u_r + cy*u_l)/TWO ) * norms(:,2)
+        flux_z = ((cz*u_r + cz*u_l)/TWO ) * norms(:,3)
 
         integrand = flux_x + flux_y + flux_z
 
@@ -115,7 +129,8 @@ contains
 
 
         end associate
-    end subroutine
+    end subroutine compute
+    !**************************************************************************************************
 
 
 

@@ -113,7 +113,7 @@ contains
         !
         ! Close ChiDG
         !
-        call chidg%close()
+        call chidg%close('core')
 
 
 

@@ -25,6 +25,13 @@ module LA_LaxFriedrichs_flux
 
 
 
+    !>
+    !!
+    !!  @author Nathan A. Wukie
+    !!
+    !!
+    !!
+    !!
     !--------------------------------------------------------------------------
     type, extends(boundary_flux_t), public :: LA_LaxFriedrichs_flux_t
 
@@ -33,18 +40,20 @@ module LA_LaxFriedrichs_flux
         procedure   :: compute
 
     end type LA_LaxFriedrichs_flux_t
-    !---------------------------------------------------------------------------
+    !**************************************************************************
 
 contains
 
 
 
 
-    !
-    !
-    !
-    !
-    !
+    !>
+    !!
+    !!  @author Nathan A. Wukie
+    !!
+    !!
+    !!
+    !!
     !---------------------------------------------------------------------------
     subroutine compute(self,mesh,sdata,prop,face_info,function_info)
         class(LA_LaxFriedrichs_flux_t),     intent(in)      :: self
@@ -99,11 +108,11 @@ contains
  
 
         !
-        ! Compute boundary upwind flux
+        ! Compute boundary upwind flux. [  Significant: (u_r - u_l) not (u_l - u_r)  ]
         !
-        flux_x = (cx * (u_l - u_r)/TWO )  *  norms(:,1) * unorms(:,1)
-        flux_y = (cy * (u_l - u_r)/TWO )  *  norms(:,2) * unorms(:,2)
-        flux_z = (cz * (u_l - u_r)/TWO )  *  norms(:,3) * unorms(:,3)
+        flux_x = (cx * (u_r - u_l)/TWO ) * norms(:,1) * unorms(:,1)
+        flux_y = (cy * (u_r - u_l)/TWO ) * norms(:,2) * unorms(:,2)
+        flux_z = (cz * (u_r - u_l)/TWO ) * norms(:,3) * unorms(:,3)
 
         integrand = flux_x + flux_y + flux_z
 
@@ -116,7 +125,8 @@ contains
 
 
         end associate
-    end subroutine
+    end subroutine compute
+    !*******************************************************************************************************
 
 
 

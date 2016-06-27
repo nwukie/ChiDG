@@ -34,6 +34,7 @@ module type_densematrix
         ! ZERO VALUE INDICATES UNASSIGNED
         integer(ik), private    :: dparent_ = 0     !< parent domain    For chimera reference accross domains
         integer(ik), private    :: eparent_ = 0     !< parent element
+!        integer(ik), private    :: dparent_g_ = 0
 
         ! Block storage
         ! NOTE: Assumes square blocks. TODO: extend for variable element solution expansion.
@@ -47,13 +48,14 @@ module type_densematrix
 
         ! Getters
         ! Block dimensions
-        !
-        !      ---> j
-        !  |
+        !   -->j
         !  |
         !  v
-        !
         !  i
+!        procedure   :: dparent_global
+!        procedure   :: dparent_local
+!        procedure   :: eparent_global
+!        procedure   :: eparent_local
         procedure :: dparent                        !< return parent domain
         procedure :: eparent                        !< return parent element
         procedure :: nentries                       !< return number of matrix entries
@@ -113,12 +115,8 @@ contains
         ! Allocate block storage
         ! Check if storage was already allocated and reallocate if necessary
         !
-        if (allocated(self%mat)) then
-            deallocate(self%mat)
-            allocate(self%mat(idim,jdim),stat=ierr)
-        else
-            allocate(self%mat(idim,jdim),stat=ierr)
-        end if
+        if (allocated(self%mat)) deallocate(self%mat)
+        allocate(self%mat(idim,jdim),stat=ierr)
         if (ierr /= 0) call AllocationError
 
 
@@ -127,7 +125,7 @@ contains
         !
         self%mat = 0._rk
 
-    end subroutine
+    end subroutine init_gen
     !******************************************************************************************************************
 
 
@@ -170,12 +168,8 @@ contains
         ! Allocate block storage
         ! Check if storage was already allocated and reallocate if necessary
         !
-        if (allocated(self%mat)) then
-            deallocate(self%mat)
-            allocate(self%mat(bsize,bsize),stat=ierr)
-        else
-            allocate(self%mat(bsize,bsize),stat=ierr)
-        end if
+        if (allocated(self%mat)) deallocate(self%mat)
+        allocate(self%mat(bsize,bsize),stat=ierr)
         if (ierr /= 0) call AllocationError
 
 
@@ -185,7 +179,7 @@ contains
         !
         self%mat = 0._rk
 
-    end subroutine
+    end subroutine init_square
     !*******************************************************************************************************************
 
 
@@ -213,7 +207,7 @@ contains
 
         i = size(self%mat,1)
 
-    end function
+    end function idim
     !*******************************************************************************************************************
 
 
@@ -242,7 +236,7 @@ contains
 
         j = size(self%mat,2)
 
-    end function
+    end function jdim
     !*******************************************************************************************************************
 
 
@@ -271,7 +265,7 @@ contains
 
         n = size(self%mat,1) * size(self%mat,2)
 
-    end function
+    end function nentries
     !*******************************************************************************************************************
 
 
@@ -299,7 +293,7 @@ contains
 
         par = self%dparent_
 
-    end function
+    end function dparent
     !*******************************************************************************************************************
 
 
@@ -325,7 +319,8 @@ contains
         integer(ik)                     :: par
 
         par = self%eparent_
-    end function
+
+    end function eparent
     !*******************************************************************************************************************
 
 
@@ -365,7 +360,7 @@ contains
         end if
         if (ierr /= 0) call AllocationError
 
-    end subroutine
+    end subroutine resize
     !*******************************************************************************************************************
 
 
@@ -386,7 +381,7 @@ contains
 
         self%eparent_ = par
 
-    end subroutine
+    end subroutine reparent
     !*******************************************************************************************************************
 
 

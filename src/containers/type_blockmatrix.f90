@@ -101,27 +101,27 @@ contains
         !
         select case (trim(mtype))
             case ('full','Full','FULL')
-                blocks = [XI_MIN,XI_MAX,ETA_MIN,ETA_MAX,ZETA_MIN,ZETA_MAX,DIAG]
+                blocks       = [XI_MIN,XI_MAX,ETA_MIN,ETA_MAX,ZETA_MIN,ZETA_MAX,DIAG]
                 init_chimera = .true.
                 init_bc      = .true.
 
             case ('L','l','Lower','lower')
-                blocks = [XI_MIN,ETA_MIN,ZETA_MIN]
+                blocks       = [XI_MIN,ETA_MIN,ZETA_MIN]
                 init_chimera = .false.
                 init_bc      = .false.
 
             case ('U','u','Upper','upper')
-                blocks = [XI_MAX,ETA_MAX,ZETA_MAX]
+                blocks       = [XI_MAX,ETA_MAX,ZETA_MAX]
                 init_chimera = .false.
                 init_bc      = .false.
 
             case ('LD','ld','LowerDiagonal','lowerdiagonal')
-                blocks = [XI_MIN,ETA_MIN,ZETA_MIN,DIAG]
+                blocks       = [XI_MIN,ETA_MIN,ZETA_MIN,DIAG]
                 init_chimera = .false.
                 init_bc      = .false.
                 
             case ('UD','ud','UpperDiagonal','upperdiagonal')
-                blocks = [XI_MAX,ETA_MAX,ZETA_MAX,DIAG]
+                blocks       = [XI_MAX,ETA_MAX,ZETA_MAX,DIAG]
                 init_chimera = .false.
                 init_bc      = .false.
 
@@ -196,7 +196,7 @@ contains
             do iface = 1,NFACES
 
                 !
-                ! Check for Chimera face type and add donor count
+                ! Check for Chimera face type and add to element donor count
                 !
                 if (mesh%faces(ielem,iface)%ftype == CHIMERA) then
                     ChiID = mesh%faces(ielem,iface)%ChiID
@@ -461,7 +461,6 @@ contains
                             !
                             ! Call boundary condition block initialization
                             !
-                            !dparent = mesh%idomain
                             dparent_l = mesh%idomain_l
                             eparent_l = icoupled_elem
                             call self%bc_blks(ielem,icoupled_elem_bc)%init(size1d,dparent_l,eparent_l)

@@ -228,8 +228,6 @@ contains
         call create_equationset(eqnset,temp_eqnset(idomain_l)%item)
 
 
-
-
         !
         ! Move rezied temp allocation back to chidg_data container. 
         ! Be careful about pointer components here! Their location in memory has changed.

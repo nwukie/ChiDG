@@ -46,7 +46,7 @@ program driver
     type(domain_connectivity_t),    allocatable :: connectivities(:)
     type(partition_t),              allocatable :: partitions(:)
 
-    class(function_t),  allocatable     :: constant, monopole
+    class(function_t),  allocatable     :: constant, monopole, fcn
 
     integer                             :: ierr, narg, iread
     character(len=1024)                 :: chidg_action, filename, file_a, file_b
@@ -142,50 +142,43 @@ program driver
         ! Initialize solution
         !
         if (solutionfile_in == 'none') then
-            call create_function(constant,'constant')
+
+            !
+            ! Set initial solution
+            !
+            call create_function(fcn,'gaussian')
+            call fcn%set_option('b_x',0._rk)
+            call fcn%set_option('b_y',1.5_rk)
+            call fcn%set_option('b_z',1.5_rk)
+            call fcn%set_option('c',1.0_rk)
+            call initialize_variable(chidg%data,1,fcn)
 
 
-            ! rho
-            call constant%set_option('val',1.20_rk)
-            call initialize_variable(chidg%data,1,constant)
-
-            ! rho_u
-            call constant%set_option('val',50._rk)
-            call initialize_variable(chidg%data,2,constant)
-
-            ! rho_v
-            call constant%set_option('val',0._rk)
-            call initialize_variable(chidg%data,3,constant)
-
-            ! rho_w
-            call constant%set_option('val',0._rk)
-            call initialize_variable(chidg%data,4,constant)
-
-            ! rho_E
-            call constant%set_option('val',230000._rk)
-            call initialize_variable(chidg%data,5,constant)
 
 
+!            call create_function(constant,'constant')
+!
 !            ! rho
-!            call constant%set_option('val',0._rk)
-!            call initialize_variable(chidg%data,6,constant)
+!            call constant%set_option('val',1.20_rk)
+!            call initialize_variable(chidg%data,1,constant)
 !
 !            ! rho_u
-!            call constant%set_option('val',0._rk)
-!            call initialize_variable(chidg%data,7,constant)
+!            call constant%set_option('val',50._rk)
+!            call initialize_variable(chidg%data,2,constant)
 !
 !            ! rho_v
 !            call constant%set_option('val',0._rk)
-!            call initialize_variable(chidg%data,8,constant)
+!            call initialize_variable(chidg%data,3,constant)
 !
 !            ! rho_w
 !            call constant%set_option('val',0._rk)
-!            call initialize_variable(chidg%data,9,constant)
+!            call initialize_variable(chidg%data,4,constant)
 !
 !            ! rho_E
-!            call constant%set_option('val',0._rk)
-!            call initialize_variable(chidg%data,10,constant)
-!
+!            call constant%set_option('val',230000._rk)
+!            call initialize_variable(chidg%data,5,constant)
+
+
 
         else
 

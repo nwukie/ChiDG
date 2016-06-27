@@ -10,21 +10,15 @@ module fcn_sin
 
 
 
-    !>  Gaussian function.
+    !>  Sine function in y-coordinate.
     !!
-    !!  Three 1D Gaussian functions are computed; one for each dimension. They are multiplied
-    !!  together to create a 3D version of the function.
-    !!
-    !!  \f$  f_x(t,\vec{x}) = a e^{- \frac{(x-b_x)^2}{2c^2} }    \\
-    !!       f_y(t,\vec{x}) = a e^{- \frac{(y-b_y)^2}{2c^2} }    \\
-    !!       f_z(t,\vec{x}) = a e^{- \frac{(z-b_z)^2}{2c^2} }    \\
-    !!       f(t,\vec{x}) = f_x * f_y * f_z                      \f$
+    !!  \f$ f(t,\vec{x}) = mean + amp sin(freq*y)   \f$
     !!
     !!  Function parameters:
     !!
-    !!  \f$ a   -   \text{Amplitude of the distribution}   \\
-    !!      b_i -   \text{Offset in coordinate 'i'}        \\
-    !!      c   -   \text{Width of the distribution}   \f$
+    !!  \f$ mean - \text{Mean value offset}   \\
+    !!      amp  - \text{Amplitude of the sine function}        \\
+    !!      freq - \text{Frequency of the sine function}   \f$
     !!
     !!  @author Nathan A. Wukie
     !!  @date   2/1/2016
@@ -67,7 +61,7 @@ contains
         !
         call self%add_option('mean', 1._rk)
         call self%add_option('amplitude', 1._rk)
-        call self%add_option('period', 2._rk * PI)
+        call self%add_option('frequency', 2._rk * PI)
 
 
 
@@ -94,7 +88,7 @@ contains
         real(rk)                        :: val
 
         real(rk)    :: x,   y,   z, &
-                       mean, amp, period
+                       mean, amp, frequency
 
         !
         ! Get inputs and function parameters
@@ -103,15 +97,15 @@ contains
         y = coord%c2_
         z = coord%c3_
 
-        mean   = self%get_option_value('mean')
-        amp    = self%get_option_value('amplitude')
-        period = self%get_option_value('period')
+        mean      = self%get_option_value('mean')
+        amp       = self%get_option_value('amplitude')
+        frequency = self%get_option_value('frequency')
 
 
         !
         ! Compute function
         !
-        val = mean + amp * sin(period * y)
+        val = mean + amp * sin(frequency * y)
 
     end function compute
     !***********************************************************************************

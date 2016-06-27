@@ -11,6 +11,7 @@ module type_fgmres
     use operator_chidg_mv
     use operator_chidg_dot,     only: dot
     use mod_inv,                only: inv
+    use mpi_f08
     implicit none
         
 
@@ -48,7 +49,9 @@ contains
     !!  @author Nathan A. Wukie
     !!  @date   5/11/2016
     !!
-    !!
+    !!  @author Nathan A. Wukie (AFRL) 
+    !!  @date   6/23/2016
+    !!  @note   parallelization
     !!
     !---------------------------------------------------------------------------------------------
     subroutine solve(self,A,x,b,M)
@@ -167,9 +170,10 @@ contains
             !
             ! Compute initial residual r0, residual norm, and normalized r0
             !
-            r0      = self%residual(A,x0,b)
-            v(1)    = r0/r0%norm()
-            p(1)    = r0%norm()
+            r0     = self%residual(A,x0,b)
+            r0norm = r0%norm(MPI_COMM_WORLD)
+            v(1)   = r0/r0norm
+            p(1)   = r0norm
 
 
 
@@ -189,21 +193,21 @@ contains
                 !
                 ! Compute w = Av for the current iteration
                 !
-                w = A*z(j)
-                norm_before = w%norm()
+                w = A*z(j)  ! PARALLELIZE M-V PRODUCT
+                norm_before = w%norm(MPI_COMM_WORLD)
 
                 !
                 ! Orthogonalization loop. Modified Gram-Schmidt (MGS)
                 !
                 do i = 1,j
 
-                    h(i,j) = dot(w,v(i))
+                    h(i,j) = dot(w,v(i),MPI_COMM_WORLD)
                     
                     w = w - h(i,j)*v(i)
 
                 end do
 
-                h(j+1,j) = w%norm()
+                h(j+1,j) = w%norm(MPI_COMM_WORLD)
                 norm_after = h(j+1,j)
 
 
@@ -233,13 +237,13 @@ contains
 
                     do i = 1,j
 
-                        htmp   = dot(w,v(i))
+                        htmp   = dot(w,v(i),MPI_COMM_WORLD)
                         h(i,j) = h(i,j) + htmp
 
                         w = w - htmp*v(i)
                     end do
 
-                    h(j+1,j) = w%norm()
+                    h(j+1,j) = w%norm(MPI_COMM_WORLD)
                 end if
 
 
@@ -326,8 +330,8 @@ contains
             end if
             
             allocate(h_square(nvecs,nvecs), &
-                    p_dim(nvecs),      &
-                    y_dim(nvecs), stat=ierr)
+                     p_dim(nvecs),          &
+                     y_dim(nvecs), stat=ierr)
             if (ierr /= 0) call AllocationError
 
 

@@ -1,17 +1,16 @@
 module forward_euler
     use mod_kinds,              only: rk,ik
     use mod_constants,          only: ZERO
-    use atype_time_scheme,      only: time_scheme_t
-    use atype_matrixsolver,     only: matrixsolver_t
+    use type_time_scheme,       only: time_scheme_t
+    use type_chidg_data,        only: chidg_data_t
+    use type_nonlinear_solver,  only: nonlinear_solver_t
+    use type_linear_solver,     only: linear_solver_t
     use type_preconditioner,    only: preconditioner_t
-    use type_domain,            only: domain_t
-    use type_dict,              only: dict_t
-    !use type_expansion
-    use type_blockvector
+    use type_chidgVector
 
     use mod_spatial,            only: update_space
 
-    use mod_tecio,              only: write_tecio_variables
+    use mod_tecio,              only: write_tecio_variables_unstructured
     implicit none
     private
 
@@ -52,7 +51,7 @@ module forward_euler
 
 
     contains
-        procedure   :: solve
+        procedure   :: iterate
 
         final :: destructor
     end type forward_euler_t
@@ -69,45 +68,46 @@ contains
     !!
     !!
     !-------------------------------------------------------------------------------------------------
-    subroutine solve(self,domain,matrixsolver,preconditioner)
-        class(forward_euler_t),             intent(inout)   :: self
-        type(domain_t),                     intent(inout)   :: domain
-        class(matrixsolver_t),   optional,  intent(inout)   :: matrixsolver
-        class(preconditioner_t), optional,  intent(inout)   :: preconditioner
+    subroutine iterate(self,data,nonlinear_solver,linear_solver,preconditioner)
+        class(forward_euler_t),                 intent(inout)   :: self
+        type(chidg_data_t),                     intent(inout)   :: data
+        class(nonlinear_solver_t),  optional,   intent(inout)   :: nonlinear_solver
+        class(linear_solver_t),     optional,   intent(inout)   :: linear_solver
+        class(preconditioner_t),    optional,   intent(inout)   :: preconditioner
 
         character(100)          :: filename
-        integer(ik)             :: itime, nsteps, ielem, wcount, iblk, ieqn
+        integer(ik)             :: itime, nsteps, ielem, wcount, iblk, ieqn, idom
         real(rk), allocatable   :: vals(:)
 
 
         wcount = 1
-        associate ( q => domain%sdata%q, dq => domain%sdata%dq, rhs => domain%sdata%rhs, lin => domain%sdata%lin, dt => self%dt)
+        associate ( q => data%sdata%q, dq => data%sdata%dq, rhs => data%sdata%rhs, lhs => data%sdata%lhs, dt => self%dt)
 
             print*, 'entering time'
             do itime = 1,self%nsteps
                 print*, "Step: ", itime
 
 
-                !call q%dump()
-
                 ! Update Spatial Residual and Linearization (rhs, lin)
-                call update_space(domain)
+                call update_space(data)
 
 
                 ! Multiply RHS by mass matrix 
-                do ielem = 1,domain%mesh%nelem
-                    do ieqn = 1,domain%eqnset%neqns
-                        vals = matmul(domain%mesh%elems(ielem)%invmass, rhs%lvecs(ielem)%getvar(ieqn))
-                        call rhs%lvecs(ielem)%setvar(ieqn,vals)
-                    end do
-                end do
+                do idom = 1,data%ndomains()
+                    do ielem = 1,data%mesh(idom)%nelem
 
+                        do ieqn = 1,data%eqnset(idom)%item%neqns
+                            vals = matmul(data%mesh(idom)%elems(ielem)%invmass, rhs%dom(idom)%vecs(ielem)%getvar(ieqn))
+                            call rhs%dom(idom)%vecs(ielem)%setvar(ieqn,vals)
+                        end do
 
-                !call rhs%dump()
-                !read(*,*)
+                    end do !ielem
+                end do !idom
+
 
                 ! Compute update vector
                 dq = (-dt) * rhs
+
 
                 ! Advance solution with update vector
                 q  = q + dq
@@ -115,22 +115,22 @@ contains
 
                 if (wcount == self%nwrite) then
                     write(filename, "(I7,A4)") 1000000+itime, '.plt'
-                    call write_tecio_variables(domain,trim(filename),itime+1)
+                    call write_tecio_variables_unstructured(data,trim(filename),itime+1)
                     wcount = 0
                 end if
 
 
-
                 ! Clear residual and linearization storage
                 call rhs%clear()
-                call lin%clear()
+                call lhs%clear()
 
                 wcount = wcount + 1
             end do
 
         end associate
 
-    end subroutine solve
+    end subroutine iterate
+    !********************************************************************************************
 
 
 
@@ -139,10 +139,16 @@ contains
 
 
     
+    !>
+    !!
+    !!
+    !!
+    !----------------------------------------------------
     subroutine destructor(self)
         type(forward_euler_t),      intent(in) :: self
 
-    end subroutine
+    end subroutine destructor
+    !****************************************************
 
 
 

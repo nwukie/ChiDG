@@ -1,16 +1,17 @@
 module rtest_duallinearadvection_mod
     use pfunit_mod
-    use mod_kinds,          only: rk,ik
-    use mod_constants,      only: ZERO, ONE, TWO, THREE, FIVE, SIX, EIGHT, NINE, TEN, &
-                                  XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX, NFACES, &
-                                  IO_DESTINATION
-    use type_chidg,         only: chidg_t
-    use type_function,      only: function_t
-    use mod_function,       only: create_function
-    use mod_grid_operators, only: initialize_variable
-    use type_point,         only: point_t
-    use type_densematrix,   only: densematrix_t
-    use mod_testutils,      only: meshgen
+    use mod_kinds,                  only: rk,ik
+    use mod_constants,              only: ZERO, ONE, TWO, THREE, FIVE, SIX, EIGHT, NINE, TEN, &
+                                          XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX, DIAG, NFACES, &
+                                          IO_DESTINATION
+    use type_chidg,                 only: chidg_t
+    use type_function,              only: function_t
+    use mod_function,               only: create_function
+    use mod_grid_operators,         only: initialize_variable
+    use type_point,                 only: point_t
+    use type_densematrix,           only: densematrix_t
+    use type_domain_connectivity,   only: domain_connectivity_t
+    use mod_testutils,              only: meshgen
     use mod_check_jacobian
     implicit none
 
@@ -19,15 +20,27 @@ module rtest_duallinearadvection_mod
 
     !> This parameter is used to test the linearization for different blocks.
     !> iblk = [XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX, DIAG]
+    !!
+    !!
+    !!
+    !!
+    !--------------------------------------------------------------------------
     @TestParameter(constructor=newBlock)
     type, extends (AbstractTestParameter) :: blockParam
         integer(ik)         :: iblk
     contains
         procedure :: toString
     end type blockParam
+    !***************************************************************************
     
     
     
+    !>
+    !!
+    !!
+    !!
+    !!
+    !---------------------------------------------------------------------------
     @TestCase(constructor=newTest)
     type, extends(ParameterizedTestCase) ::  test_eq_duallinearadvection
         type(chidg_t)       :: chidg
@@ -36,24 +49,25 @@ module rtest_duallinearadvection_mod
         procedure   ::  setUp
         procedure   ::  tearDown
     end type test_eq_duallinearadvection
+    !***************************************************************************
 
 
 
 
 
 contains
-    !------------------------
-    !> SET-UP  +  TEAR-DOWN
-    !------------------------
 
     !> NOTE: make sure to use 'this' instead of 'self' since these are over-writting a derived type 
     !! procedure. The argument names have to match
+    !!
+    !!
+    !----------------------------------------------------------------------------------------------------
     subroutine setUp(this)
         class(test_eq_duallinearadvection),    intent(inout)   :: this
         
         integer(ik),        parameter       :: npt = 64
         type(point_t),      allocatable     :: nodes(:)
-        integer(ik),        allocatable     :: connectivity(:,:)
+        type(domain_connectivity_t)         :: connectivity
         class(function_t),  allocatable     :: fcn
         integer(ik)                         :: neqns, nterms_s, nterms_c, spacedim
         real(rk), dimension(npt)            :: x,y,z
@@ -87,10 +101,11 @@ contains
         ! Initialize solution storage
         !
         call this%chidg%initialize_solution_domains(nterms_s)
+        call this%chidg%init('communication')
         call this%chidg%initialize_solution_solver()
 
 
-    end subroutine
+    end subroutine setUp
     
 
     subroutine tearDown(this)
@@ -99,10 +114,11 @@ contains
         !
         ! Close ChiDG
         !
-        call this%chidg%close()
+        call this%chidg%close('core')
 
 
-    end subroutine
+    end subroutine tearDown
+    !******************************************************************************************
 
 
     !--------------------------
@@ -137,12 +153,30 @@ contains
 
 
 
-!------------------------------------------------------------------------------------------
-!                                        TESTS
-!------------------------------------------------------------------------------------------
 
-! Test Volume Flux jacobian calclation against exact solution
-@Test(cases = [1, 2, 3, 4, 5, 6, 7])
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    !> Test Volume Flux jacobian calclation against exact solution
+    !!
+    !!  @author Nathan A. Wukie
+    !!
+    !!
+    !---------------------------------------------------------------------------------------
+    @Test(cases = [1, 2, 3, 4, 5, 6, 7])
     subroutine test_DLA_jacobian_volume_advective_flux_exact(self)
         class(test_eq_duallinearadvection),    intent(inout)   :: self
         
@@ -170,19 +204,16 @@ contains
 
         
 
-        if ( iblk == 7 ) then
+        if ( iblk == DIAG ) then
             blk_exact      = ZERO ! zero all components
             blk_exact(4,1) = EIGHT
             blk_exact(5,2) = 2.6666666666666_rk
             blk_exact(6,3) = 2.6666666666666_rk
             blk_exact(8,7) = 0.8888888888888_rk
 
-
-
             ! Test volume jacobian for each equation
             @assertEqual(-blk_exact, blk_dnad%mat(1:8,1:8), tol)   
             @assertEqual(-blk_exact, blk_dnad%mat(9:16,9:16), tol)
-
 
         else
             blk_exact = ZERO
@@ -190,9 +221,9 @@ contains
             @assertEqual(blk_exact, blk_dnad%mat(9:16,9:16), tol)
         end if
 
-    
 
-    end subroutine
+    end subroutine test_DLA_jacobian_volume_advective_flux_exact
+    !*****************************************************************************************
 
 
 

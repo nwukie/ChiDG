@@ -52,6 +52,7 @@ subroutine rtest_linearadvection_implicit_convergence()
     spacedim          = 3
     nterms_s          = 27
     gq_rule           = 2
+    !eqnset            = 'linearadvection'
     time_scheme       = 'backward_euler_subiteration'
     nonlinear_solver  = 'quasi_newton'
     linear_solver     = 'fgmres'
@@ -104,16 +105,37 @@ subroutine rtest_linearadvection_implicit_convergence()
     !
     ! Generate points for mesh
     !
+    call meshgen('333',nodes,connectivity)
     spacedim = 3
-    call chidg%read_grid('D1_E27_M1.h5',spacedim)
-    call chidg%read_boundaryconditions('D1_E27_M1.h5')
+    nterms_c = 8
 
 
-
-
+    !
+    ! Add domain to ChiDG
+    !
+    call chidg%data%add_domain('D_01',nodes,connectivity,spacedim,nterms_c,'linearadvection')
     call chidg%initialize_solution_domains(nterms_s)
-    call chidg%init('communication')
+
+
+
+    !
+    ! Set boundary conditions
+    !
+    print*, 'FIX BOUNDARY CONDITION'
+!    call create_bc('linearadvection_extrapolate', bc)
+!    call chidg%data%add_bc('D_01',bc,XI_MIN)
+!    call chidg%data%add_bc('D_01',bc,XI_MAX)
+!    call chidg%data%add_bc('D_01',bc,ETA_MIN)
+!    call chidg%data%add_bc('D_01',bc,ETA_MAX)
+!    call chidg%data%add_bc('D_01',bc,ZETA_MIN)
+!    call chidg%data%add_bc('D_01',bc,ZETA_MAX)
+
+
+    !
+    ! Initialize solution storage
+    !
     call chidg%initialize_solution_solver()
+    call chidg%init('communication')
 
 
 

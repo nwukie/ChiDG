@@ -94,6 +94,8 @@ contains
 
         real(rk)                        :: val
 
+        
+        integer(ik) :: fcn_dim
         real(rk)    :: x,   y,   z, &
                        a,   b_x, b_y, b_z, c, &
                        v_x, v_y, v_z
@@ -105,21 +107,21 @@ contains
         y = coord%c2_
         z = coord%c3_
 
-        a   = self%get_option_value('a')
-        b_x = self%get_option_value('b_x')
-        b_y = self%get_option_value('b_y')
-        b_x = self%get_option_value('b_z')
-        c   = self%get_option_value('c')
+        a       = self%get_option_value('a')
+        b_x     = self%get_option_value('b_x')
+        b_y     = self%get_option_value('b_y')
+        b_z     = self%get_option_value('b_z')
+        c       = self%get_option_value('c')
 
 
-        !
-        ! Compute function
-        !
+
         v_x = a * exp( - ((x - b_x)**TWO) / (TWO * c**TWO))
         v_y = a * exp( - ((y - b_y)**TWO) / (TWO * c**TWO))
         v_z = a * exp( - ((z - b_z)**TWO) / (TWO * c**TWO))
 
-
+        !
+        ! Compute function
+        !
         val = v_x * v_y * v_z
 
     end function compute

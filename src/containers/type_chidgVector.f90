@@ -212,8 +212,6 @@ contains
 
     !>  Compute the L2-Norm of the vector within the space of processors given by the MPI communicator
     !!  
-    !!  NOTE: Only the GROUP_MASTER processor will return a valid value for the vector norm.
-    !!
     !!  @author Nathan A. Wukie
     !!  @date   6/23/2016
     !!
@@ -233,11 +231,18 @@ contains
         ! Compute sum of the squared elements of the processor-local vector
         sumsqr = self%sumsqr()
 
+
         ! Reduce sumsqr values across processors
         call MPI_Reduce(sumsqr,norm,1,MPI_REAL8,MPI_SUM,GROUP_MASTER,comm,ierr)
 
+
         ! Take the square root of the result
         norm = sqrt(norm)
+
+
+        ! Broadcast the result
+        call MPI_BCast(norm,1,MPI_REAL8,GROUP_MASTER,comm,ierr)
+
 
     end function norm_comm
     !*****************************************************************************************************

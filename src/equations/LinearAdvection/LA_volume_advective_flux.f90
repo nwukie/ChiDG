@@ -19,25 +19,33 @@ module LA_volume_advective_flux
     implicit none
     private
 
-    !
-    !
-    !----------------------------------------------------------------
+    !>
+    !!
+    !!  @author Nathan A. Wukie
+    !!
+    !!
+    !!
+    !!
+    !-------------------------------------------------------------------------
     type, extends(volume_flux_t), public :: LA_volume_advective_flux_t
 
 
     contains
         procedure   :: compute
-
     end type LA_volume_advective_flux_t
+    !*************************************************************************
 
 contains
 
 
-    !
-    !
-    !
-    !
-    !---------------------------------------------------------------
+    !>
+    !!
+    !!  @author Nathan A. Wukie
+    !!
+    !!
+    !!
+    !!
+    !------------------------------------------------------------------------------------
     subroutine compute(self,mesh,sdata,prop,idom,ielem,iblk)
         class(LA_volume_advective_flux_t),  intent(in)      :: self
         type(mesh_t),                       intent(in)      :: mesh(:)
@@ -115,7 +123,8 @@ contains
 
 
 
-    end subroutine
+    end subroutine compute
+    !****************************************************************************************************
 
 
 

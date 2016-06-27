@@ -22,8 +22,6 @@ module type_blockvector
     contains
         ! Initializers
         procedure, public   :: init                     !< Initialize local vector
-!        generic,   public   :: init => init_vector      !< Initialize local vector
-!        procedure, private  :: init_vector
 
         procedure, public   :: distribute               !< Given a full-vector representation, distribute it to the denseblock format
         procedure, public   :: clear                    !< Zero all vector storage elements

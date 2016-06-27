@@ -8,13 +8,15 @@ module mod_time_scheme
 
 
     ! Import solverdata types
-    use steady,                         only: steady_t
+    use steady,                     only: steady_t
+    use forward_euler,              only: forward_euler_t
     implicit none
 
 
 
     ! Instantiate solver types for sourcing
     type(steady_t)                      :: STEADY
+    type(forward_euler_t)               :: FORWARD_EULER
 
 
 
@@ -48,12 +50,14 @@ contains
 
         select case (trim(time_string))
 
-            case ('steady','Steady')
+            case ('steady','Steady','STEADY')
                 allocate(instance, source=STEADY)
 
+            case ('forward_euler','Forward_Euler','FORWARD_EULER','forward euler')
+                allocate(instance, source=FORWARD_EULER)
 
             case default
-                call chidg_signal(FATAL,'create_time_scheme -- solver string not recognized')
+                call chidg_signal_one(FATAL,'create_time_scheme -- string not recognized',time_string)
         end select
 
 

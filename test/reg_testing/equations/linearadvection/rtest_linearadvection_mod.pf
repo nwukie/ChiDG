@@ -1,13 +1,14 @@
 module rtest_linearadvection_mod
     use pfunit_mod
-    use mod_kinds,          only: rk,ik
-    use mod_constants,      only: ZERO, ONE, TWO, THREE, FIVE, SIX, EIGHT, NINE, TEN, &
-                                  XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX, NFACES, &
-                                  IO_DESTINATION
-    use type_chidg,         only: chidg_t
-    use type_point,         only: point_t
-    use type_densematrix,   only: densematrix_t
-    use mod_testutils,      only: meshgen
+    use mod_kinds,                  only: rk,ik
+    use mod_constants,              only: ZERO, ONE, TWO, THREE, FIVE, SIX, EIGHT, NINE, TEN, &
+                                          XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX, DIAG, NFACES, &
+                                          IO_DESTINATION
+    use type_chidg,                 only: chidg_t
+    use type_point,                 only: point_t
+    use type_densematrix,           only: densematrix_t
+    use type_domain_connectivity,   only: domain_connectivity_t
+    use mod_testutils,              only: meshgen
     use mod_check_jacobian
     implicit none
 
@@ -19,18 +20,27 @@ module rtest_linearadvection_mod
 
     !> This parameter is used to test the linearization for different blocks.
     !> iblk = [XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX, DIAG]
+    !!
+    !!
+    !!
+    !---------------------------------------------------------------------------
     @TestParameter(constructor=newBlock)
     type, extends (AbstractTestParameter) :: blockParam
         integer(ik)         :: iblk
     contains
         procedure :: toString
     end type blockParam
+    !***************************************************************************
     
     
     
 
 
-    ! Main Testing Fixture with data containers
+    !> Main Testing Fixture with data containers
+    !!
+    !!
+    !!
+    !---------------------------------------------------------------------------
     @TestCase(constructor=newTest)
     type, extends(ParameterizedTestCase) ::  rtest_eq_LA
         type(chidg_t)       :: chidg
@@ -39,6 +49,7 @@ module rtest_linearadvection_mod
         procedure   ::  setUp
         procedure   ::  tearDown
     end type rtest_eq_LA
+    !***************************************************************************
 
 
 
@@ -56,7 +67,7 @@ contains
         
         integer(ik), parameter      :: npt = 64
         type(point_t), allocatable  :: nodes(:)
-        integer(ik),    allocatable :: connectivity(:,:)
+        type(domain_connectivity_t) :: connectivity
         integer(ik)                 :: neqns, nterms_s, nterms_c, spacedim
         real(rk), dimension(npt)    :: x,y,z
         
@@ -83,6 +94,7 @@ contains
         nterms_c = 8
         call this%chidg%data%add_domain('D_01',nodes,connectivity,spacedim,nterms_c,'linearadvection')
         call this%chidg%initialize_solution_domains(nterms_s)
+        call this%chidg%init('communication')
         call this%chidg%initialize_solution_solver()
 
     end subroutine
@@ -93,7 +105,7 @@ contains
         !
         ! Close ChiDG
         !
-        call this%chidg%close()
+        call this%chidg%close('core')
 
     end subroutine
 
@@ -140,11 +152,30 @@ contains
  
 
 
-!------------------------------------------------------------------------------------------
-!>                                        TESTS
-!------------------------------------------------------------------------------------------
-! Test Volume Flux jacobian calclation
-@Test(cases = [7])
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    !>  Test Volume Flux jacobian calclation
+    !!
+    !!  @author Nathan A. Wukie
+    !!
+    !!
+    !!
+    !---------------------------------------------------------------------------------------------
+    @Test(cases = [7])
     subroutine rtest_LA_jacobian_volume_advective_flux(self)
         class(rtest_eq_LA),    intent(inout)   :: self
         
@@ -189,7 +220,8 @@ contains
 
         @assertEqual(jref, blk_dnad%mat, tol)
         
-    end subroutine
+    end subroutine rtest_LA_jacobian_volume_advective_flux
+    !**********************************************************************************************
     
     
     

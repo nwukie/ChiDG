@@ -1,4 +1,4 @@
-#add_subdirectory(forward_euler)                
+add_subdirectory(forward_euler)                
 #add_subdirectory(backward_euler)
 
 

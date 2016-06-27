@@ -10,6 +10,7 @@ module type_blockmatrix
     use type_face_info,         only: face_info_t
     use type_seed,              only: seed_t
     use type_bcset_coupling,    only: bcset_coupling_t
+    use mod_chidg_mpi,          only: IRANK
     use DNAD_D
     implicit none
 
@@ -312,19 +313,38 @@ contains
                 !
                 ! Parent is the element with respect to which the linearization is computed
                 !
+!                dparent_l = mesh%idomain_l
+!                if (iblk == DIAG) then
+!                    eparent_l = mesh%elems(ielem)%ielement_l
+!                else
+!                    eparent_l = mesh%faces(ielem,iblk)%get_neighbor_element_l()
+!                end if
+
                 dparent_l = mesh%idomain_l
                 if (iblk == DIAG) then
-                    eparent_l = mesh%elems(ielem)%ielement_l
+                    dparent_g   = mesh%elems(ielem)%idomain_g
+                    dparent_l   = mesh%elems(ielem)%idomain_l
+                    eparent_g   = mesh%elems(ielem)%ielement_g
+                    eparent_l   = mesh%elems(ielem)%ielement_l
+                    parent_proc = IRANK
                 else
-                    eparent_l = mesh%faces(ielem,iblk)%get_neighbor_element_l()
+                    dparent_g   = mesh%faces(ielem,iblk)%ineighbor_domain_g
+                    dparent_l   = mesh%faces(ielem,iblk)%ineighbor_domain_l
+                    dparent_g   = mesh%faces(ielem,iblk)%ineighbor_element_g
+                    dparent_l   = mesh%faces(ielem,iblk)%ineighbor_element_l
+                    parent_proc = mesh%faces(ielem,iblk)%ineighbor_proc
                 end if
+
+
+
 
 
                 !
                 ! Call initialization procedure if parent is not 0 (0 meaning there is no parent for that block, probably a boundary)
                 !
                 if (eparent_l /= 0) then
-                    call self%lblks(ielem,iblk)%init(size1d,dparent_l,eparent_l)
+                    !call self%lblks(ielem,iblk)%init(size1d,dparent_l,eparent_l)
+                    call self%lblks(ielem,iblk)%init(size1d,size1d,dparent_g,dparent_l,eparent_g,eparent_l,parent_proc)
 
                     ! Store data about number of equations and number of terms in solution expansion
                     self%ldata(ielem,1) = mesh%elems(ielem)%neqns
@@ -359,10 +379,13 @@ contains
                         ! Call block initialization for each Chimera donor
                         !
                         do idonor = 1,ndonors
-                            neqns     = mesh%chimera%recv%data(ChiID)%donor_neqns%at(idonor)
-                            nterms_s  = mesh%chimera%recv%data(ChiID)%donor_nterms_s%at(idonor)
-                            dparent_l = mesh%chimera%recv%data(ChiID)%donor_domain_l%at(idonor)
-                            eparent_l = mesh%chimera%recv%data(ChiID)%donor_element_l%at(idonor)
+                            neqns       = mesh%chimera%recv%data(ChiID)%donor_neqns%at(idonor)
+                            nterms_s    = mesh%chimera%recv%data(ChiID)%donor_nterms_s%at(idonor)
+                            dparent_g   = mesh%chimera%recv%data(ChiID)%donor_domain_g%at(idonor)
+                            dparent_l   = mesh%chimera%recv%data(ChiID)%donor_domain_l%at(idonor)
+                            eparent_g   = mesh%chimera%recv%data(ChiID)%donor_element_g%at(idonor)
+                            eparent_l   = mesh%chimera%recv%data(ChiID)%donor_element_l%at(idonor)
+                            parent_proc = mesh%chimera%recv%data(ChiID)%donor_proc%at(idonor)
 
                             size1d = neqns * nterms_s
 
@@ -370,8 +393,10 @@ contains
                             ! Check if block initialization was already called for current donor
                             !
                             do iblk = 1,maxdonors
-                                donor_already_called = ( dparent_l == self%chi_blks(ielem,iblk)%dparent() .and. &
-                                                         eparent_l == self%chi_blks(ielem,iblk)%eparent() )
+                                donor_already_called = ( dparent_g == self%chi_blks(ielem,iblk)%dparent_g() .and. &
+                                                         dparent_l == self%chi_blks(ielem,iblk)%dparent_l() .and. &
+                                                         eparent_g == self%chi_blks(ielem,iblk)%eparent_g() .and. &
+                                                         eparent_l == self%chi_blks(ielem,iblk)%eparent_l() )
                                 if (donor_already_called) exit
                             end do
 
@@ -394,7 +419,8 @@ contains
                                 !
                                 ! Call block initialization
                                 !
-                                call self%chi_blks(ielem,iopen)%init(size1d,dparent_l,eparent_l)
+                                !call self%chi_blks(ielem,iopen)%init(size1d,dparent_l,eparent_l)
+                                call self%chi_blks(ielem,iopen)%init(size1d,size1d,dparent_g,dparent_l,eparent_g,eparent_l,parent_proc)
 
                             end if
 
@@ -411,69 +437,69 @@ contains
 
 
 
-        !--------------------------------------------
-        !
-        ! Initialization  --  'boundary condition blocks'
-        !
-        !--------------------------------------------
-        !
-        ! Loop through boundary conditions and initialize blocks for coupling
-        !
-        if ( init_bc .and. present(bcset_coupling) ) then
-            do ibc = 1,size(bcset_coupling%bc)
-
-                !
-                ! For the current boundary condition, loop through bc elements.
-                !
-                do ielem_bc = 1,size(bcset_coupling%bc(ibc)%elems)
-
-                    ncoupled_elems = bcset_coupling%bc(ibc)%coupled_elems(ielem_bc)%size()
-                    !
-                    ! Initialize block storage for each coupled element
-                    !
-                    do icoupled_elem_bc = 1,ncoupled_elems
-
-                        !
-                        ! Get block indices
-                        !
-                        ielem         = bcset_coupling%bc(ibc)%elems(ielem_bc)
-                        icoupled_elem = bcset_coupling%bc(ibc)%coupled_elems(ielem_bc)%at(icoupled_elem_bc)
-
-
-                        !
-                        ! Check if block has already been initialized for the coupled element
-                        !
-                        block_initialized = .false.
-                        do iblk = 1,size(self%bc_blks,2)
-                            if ( self%bc_blks(ielem,iblk)%eparent() == icoupled_elem ) then
-                                block_initialized = .true.
-                                exit
-                            end if
-                        end do
-
-
-                        if ( .not. block_initialized ) then
-                            !
-                            ! Compute block size
-                            !
-                            size1d = mesh%elems(ielem)%neqns  *  mesh%elems(ielem)%nterms_s
-
-                            !
-                            ! Call boundary condition block initialization
-                            !
-                            dparent_l = mesh%idomain_l
-                            eparent_l = icoupled_elem
-                            call self%bc_blks(ielem,icoupled_elem_bc)%init(size1d,dparent_l,eparent_l)
-                        end if
-
-
-                    end do ! icoupled_elem
-
-                end do ! ielem
-
-            end do ! ibc
-
-        end if ! init_bc
+!        !--------------------------------------------
+!        !
+!        ! Initialization  --  'boundary condition blocks'
+!        !
+!        !--------------------------------------------
+!        !
+!        ! Loop through boundary conditions and initialize blocks for coupling
+!        !
+!        if ( init_bc .and. present(bcset_coupling) ) then
+!            do ibc = 1,size(bcset_coupling%bc)
+!
+!                !
+!                ! For the current boundary condition, loop through bc elements.
+!                !
+!                do ielem_bc = 1,size(bcset_coupling%bc(ibc)%elems)
+!
+!                    ncoupled_elems = bcset_coupling%bc(ibc)%coupled_elems(ielem_bc)%size()
+!                    !
+!                    ! Initialize block storage for each coupled element
+!                    !
+!                    do icoupled_elem_bc = 1,ncoupled_elems
+!
+!                        !
+!                        ! Get block indices
+!                        !
+!                        ielem         = bcset_coupling%bc(ibc)%elems(ielem_bc)
+!                        icoupled_elem = bcset_coupling%bc(ibc)%coupled_elems(ielem_bc)%at(icoupled_elem_bc)
+!
+!
+!                        !
+!                        ! Check if block has already been initialized for the coupled element
+!                        !
+!                        block_initialized = .false.
+!                        do iblk = 1,size(self%bc_blks,2)
+!                            if ( self%bc_blks(ielem,iblk)%eparent() == icoupled_elem ) then
+!                                block_initialized = .true.
+!                                exit
+!                            end if
+!                        end do
+!
+!
+!                        if ( .not. block_initialized ) then
+!                            !
+!                            ! Compute block size
+!                            !
+!                            size1d = mesh%elems(ielem)%neqns  *  mesh%elems(ielem)%nterms_s
+!
+!                            !
+!                            ! Call boundary condition block initialization
+!                            !
+!                            dparent_l = mesh%idomain_l
+!                            eparent_l = icoupled_elem
+!                            call self%bc_blks(ielem,icoupled_elem_bc)%init(size1d,dparent_l,eparent_l)
+!                        end if
+!
+!
+!                    end do ! icoupled_elem
+!
+!                end do ! ielem
+!
+!            end do ! ibc
+!
+!        end if ! init_bc
 
 
 
@@ -609,8 +635,8 @@ contains
         !
         donorblk = 0
         do iblk = 1,size(self%chi_blks,2)
-            block_match = ( (idonor_domain_l  == self%chi_blks(ielement_l,iblk)%dparent()) .and. &
-                            (idonor_element_l == self%chi_blks(ielement_l,iblk)%eparent()) )
+            block_match = ( (idonor_domain_l  == self%chi_blks(ielement_l,iblk)%dparent_l()) .and. &
+                            (idonor_element_l == self%chi_blks(ielement_l,iblk)%eparent_l()) )
 
             if ( block_match ) then
                 donorblk = iblk
@@ -714,8 +740,8 @@ contains
             !
             bcblk = 0
             do iblk = 1,size(self%bc_blks,2)
-                block_match = ( (idonor_domain_l  == self%bc_blks(ielement_l,iblk)%dparent()) .and. &
-                                (idonor_element_l == self%bc_blks(ielement_l,iblk)%eparent()) )
+                block_match = ( (idonor_domain_l  == self%bc_blks(ielement_l,iblk)%dparent_l()) .and. &
+                                (idonor_element_l == self%bc_blks(ielement_l,iblk)%eparent_l()) )
 
                 if ( block_match ) then
                     bcblk = iblk

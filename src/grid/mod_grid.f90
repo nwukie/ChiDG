@@ -2,7 +2,7 @@ module mod_grid
 #include <messenger.h>
     use mod_kinds,          only: rk,ik
     use mod_constants,      only: ONE, TWO, ZERO, TWO_DIM, THREE_DIM, NFACES, &
-                                  XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX
+                                  XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX, NO_PROC
     use mod_polynomial,     only: polynomialVal
     use type_densematrix,   only: densematrix_t
     use mod_inv
@@ -95,9 +95,9 @@ contains
             ! Initialize mapping for reference element.
             !
             if ( spacedim == THREE_DIM ) then
-                call ELEM_MAP_3D(imap)%init(npts_3d(imap),npts_3d(imap),0)
+                call ELEM_MAP_3D(imap)%init(npts_3d(imap),npts_3d(imap),0,0,0,0,NO_PROC)
             else if ( spacedim == TWO_DIM ) then
-                call ELEM_MAP_2D(imap)%init(npts_2d(imap),npts_2d(imap),0)
+                call ELEM_MAP_2D(imap)%init(npts_2d(imap),npts_2d(imap),0,0,0,0,NO_PROC)
             end if
 
 

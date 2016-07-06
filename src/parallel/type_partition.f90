@@ -17,7 +17,8 @@ module type_partition
     !-----------------------------------------------------------------------------
     type, public :: partition_t
 
-        type(domain_connectivity_t),   allocatable :: connectivities(:)
+        integer(ik)                                 :: nconn
+        type(domain_connectivity_t),    allocatable :: connectivities(:)
 
     contains
 
@@ -52,6 +53,7 @@ contains
 
         integer(ik) :: ierr
 
+        self%nconn = nconn
 
         allocate(self%connectivities(nconn), stat=ierr)
         if (ierr /= 0) call AllocationError

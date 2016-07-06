@@ -16,7 +16,7 @@ subroutine test_chidgMatrix_operator_mv()
 
     use mod_hdfio,          only: read_grid_hdf
 
-    use operator_chidg_mv
+    use operator_chidg_mv,  only: chidg_mv
     implicit none
 
 
@@ -100,7 +100,8 @@ subroutine test_chidgMatrix_operator_mv()
     !
     ! Perform matrix-vector multiplication. THIS IS BEING TESTED
     !
-    b = A*x
+    !b = A*x
+    b = chidg_mv(A,x)
 
 
 
@@ -139,4 +140,4 @@ subroutine test_chidgMatrix_operator_mv()
     !
     call chidg%close('core')
 
-end subroutine
+end subroutine test_chidgMatrix_operator_mv

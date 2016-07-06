@@ -1,10 +1,11 @@
 module mod_hdfio
 #include <messenger.h>
     use mod_kinds,                  only: rk,ik,rdouble
-    use mod_constants,              only: ZERO, NFACES, TWO_DIM, THREE_DIM
+    use mod_constants,              only: ZERO, NFACES, TWO_DIM, THREE_DIM, NO_PROC
     use mod_bc,                     only: create_bc
     use mod_hdf_utilities,          only: get_ndomains_hdf, get_domain_names_hdf, get_eqnset_hdf, get_domain_indices_hdf, get_domain_name_hdf
     use mod_io,                     only: nterms_s
+    use mod_chidg_mpi,              only: IRANK
 
     use type_chidg_data,            only: chidg_data_t
     use type_meshdata,              only: meshdata_t
@@ -256,6 +257,8 @@ contains
                 !connectivities(idom)%data = connectivity
                 do ielem = 1,nelements
                     meshdata(idom)%connectivity%data(ielem)%data = connectivity(ielem,:)
+!                    call meshdata(idom)%connectivity%data(ielem)%set_element_nodes(connectivity(ielem,:))
+                    call meshdata(idom)%connectivity%data(ielem)%set_element_partition(IRANK)
                 end do
 
 
@@ -639,7 +642,7 @@ contains
            real(rdouble), allocatable           :: bufferterms(:)
            type(c_ptr)                     :: cp_var
   
-           integer(ik)                     :: spacedim
+           integer(ik)                     :: spacedim, ielem_g
            integer                         :: type,    ierr,       igrp,               &
                                               npts,    nterms_1d,  nterms_s,   order,  &
                                               ivar,    ielem,      nterms_ielem,   idom
@@ -688,15 +691,15 @@ contains
            !
            call h5dopen_f(gid, trim(varstring), vid, ierr, H5P_DEFAULT_F)
            if (ierr /= 0) call chidg_signal(FATAL,"read_variable_hdf5 -- variable does not exist or was not opened correctly")
-!!!
    
+
            !
            ! Get the dataspace id and dimensions
            !
            call h5dget_space_f(vid, sid, ierr)
            call h5sget_simple_extent_dims_f(sid, dims, maxdims, ierr)
-!!!
    
+
            !
            ! Read 'variable' dataset
            !
@@ -716,51 +719,44 @@ contains
   
   
            !
-           !  Test to make sure the number of elements in the variable group
-           !  and the current domain are conforming
+           !  Loop through elements and set 'variable' values
            !
-           ElementsEqual = (size(data%sdata%q%dom(idom)%vecs) == size(var,2))
-           if (ElementsEqual) then
+           do ielem = 1,data%mesh(idom)%nelem
                !
-               !  Loop through elements and set 'variable' values
+               ! Get number of terms initialized for the current element
                !
-               do ielem = 1,data%mesh(idom)%nelem
-                   !
-                   ! Get number of terms initialized for the current element
-                   !
-                   nterms_ielem = data%sdata%q%dom(idom)%vecs(ielem)%nterms()
-  
-  
-                   !
-                   ! Allocate bufferterm storage that will be used to set variable data
-                   !
-                   if (allocated(bufferterms)) deallocate(bufferterms)
-                   allocate(bufferterms(nterms_ielem), stat=ierr)
-                   bufferterms = ZERO
-                   if (ierr /= 0) call AllocationError
-  
-  
-                   !
-                   ! Check for reading lower, higher, or same-order solution
-                   !
-                   if ( nterms_s < nterms_ielem ) then
-                       bufferterms(1:nterms_s) = var(1:nterms_s, ielem, itime)             ! Reading a lower order solution
-                   else if ( nterms_s > nterms_ielem ) then
-                       bufferterms(1:nterms_ielem) = var(1:nterms_ielem, ielem, itime)     ! Reading a higher-order solution
-                   else
-                       bufferterms(1:nterms_ielem) = var(1:nterms_ielem, ielem, itime)     ! Reading a solution of same order
-                   end if
-   
-   
-  
-                   call data%sdata%q%dom(idom)%vecs(ielem)%setvar(ivar,real(bufferterms,rk))
-               end do
-   
-           else
-               call chidg_signal(FATAL,"read_variable_hdf5 -- number of elements in file variable and domain do not match")
-           end if
-  
-   
+               nterms_ielem = data%sdata%q%dom(idom)%vecs(ielem)%nterms()
+               ielem_g      = data%mesh(idom)%elems(ielem)%ielement_g
+
+
+               !
+               ! Allocate bufferterm storage that will be used to set variable data
+               !
+               if (allocated(bufferterms)) deallocate(bufferterms)
+               allocate(bufferterms(nterms_ielem), stat=ierr)
+               bufferterms = ZERO
+               if (ierr /= 0) call AllocationError
+
+
+               !
+               ! Check for reading lower, higher, or same-order solution
+               !
+               if ( nterms_s < nterms_ielem ) then
+                   bufferterms(1:nterms_s) = var(1:nterms_s, ielem_g, itime)             ! Reading a lower order solution
+               else if ( nterms_s > nterms_ielem ) then
+                   bufferterms(1:nterms_ielem) = var(1:nterms_ielem, ielem_g, itime)     ! Reading a higher-order solution
+               else
+                   bufferterms(1:nterms_ielem) = var(1:nterms_ielem, ielem_g, itime)     ! Reading a solution of same order
+               end if
+
+
+
+               call data%sdata%q%dom(idom)%vecs(ielem)%setvar(ivar,real(bufferterms,rk))
+
+
+           end do
+
+
    
    
            !
@@ -789,7 +785,7 @@ contains
 
 
 
-    !> Write HDF5 variable
+    !>  Write HDF5 variable
     !!
     !!  Opens a given hdf5 file. Loads the EquationSet and solution order and calls solution initialization
     !!  procedure for each domain. Searches for the given variable and time instance. If it finds it, load to a
@@ -814,25 +810,28 @@ contains
 
 
         integer(HID_T)   :: gid, sid, did, crp_list         ! Identifiers
-        integer(HSIZE_T) :: maxdims(3), adim                ! Dataspace dimensions
-        integer(HSIZE_T) :: dims(3)                         ! Dataspace dimensions
+        integer(HID_T)   :: grid_id, sid_e, did_e           ! Identifiers
+        integer(HID_T)   :: memspace, filespace             ! Identifiers
+        integer(HSIZE_T) :: edims(2), maxdims(3), adim      ! Dataspace dimensions
+        integer(HSIZE_T) :: dims(3), dimsm(3)               ! Dataspace dimensions
         integer(HSIZE_T) :: dimsc(3)                        ! Chunk size for extendible data sets
+        integer(HSIZE_T) :: start(3), count(3)
         type(H5O_INFO_T) :: info                            ! Object info type
 
-        integer                         :: ndims
-        integer, dimension(1)           :: ibuf
-        character(100)                  :: cbuf
-        character(100)                  :: var_grp
-        character(100)                  :: ctime
+        integer                             :: ndims
+        integer, dimension(1)               :: ibuf
+        character(100)                      :: cbuf
+        character(100)                      :: var_grp
+        character(100)                      :: ctime
 
-        real(rdouble), allocatable, target   :: var(:,:,:)
-        type(c_ptr)                     :: cp_var
+        real(rdouble), allocatable, target  :: var(:,:,:)
+        type(c_ptr)                         :: cp_var
 
-        integer(ik)                     :: nmembers,    type,   ierr,       ndomains,   igrp,   &
-                                           npts,        nterms_1d,  nterms_s,   order,  &
-                                           ivar,        ielem,      idom
-        logical                         :: FileExists, VariablesExists, DataExists, ElementsEqual
-        logical                         :: exists
+        integer(ik)                         :: nmembers,    type,       ierr,       ndomains,   igrp,   &
+                                               npts,        order,              &
+                                               ivar,        ielem,      idom,       nelem_g,    ielement_g
+        logical                             :: FileExists, VariablesExists, DataExists, ElementsEqual
+        logical                             :: exists
 
 
 
@@ -847,14 +846,31 @@ contains
         ! Open the Domain/Variables group
         !
         if (exists) then
-
             ! If 'Variables' group exists then open the existing group
             call h5gopen_f(fid, trim(dname)//"/Variables", gid, ierr, H5P_DEFAULT_F)
-            if (ierr /= 0) call chidg_signal(FATAL,"h5gopen_f -- Domain/Grid group did not open properly")
+            if (ierr /= 0) call chidg_signal(FATAL,"write_variable_hdf: Domain/Variables group did not open properly")
         else
             ! If 'Variables group does not exist, then create one.
             call h5gcreate_f(fid, trim(dname)//"/Variables", gid, ierr)
         end if
+
+
+
+        !
+        ! Get total number of elements in the domain from the grid file
+        !
+        call h5gopen_f(fid, trim(dname)//"/Grid", grid_id, ierr, H5P_DEFAULT_F)
+        if (ierr /= 0) call chidg_signal_one(FATAL,"write_variable_hdf: Domagin/Grid group did not open properly.", trim(dname)//'/Grid')
+        call h5dopen_f(grid_id, "Elements", did_e, ierr, H5P_DEFAULT_F)
+        call h5dget_space_f(did_e, sid_e, ierr)
+        call h5sget_simple_extent_dims_f(sid_e, edims, maxdims, ierr)
+        nelem_g  = edims(1)
+        
+        call h5dclose_f(did_e,ierr)
+        call h5sclose_f(sid_e,ierr)
+        call h5gclose_f(grid_id,ierr)
+
+
 
 
 
@@ -865,7 +881,7 @@ contains
         ndims = 3
 
         dims(1) = data%mesh(idom)%nterms_s
-        dims(2) = data%mesh(idom)%nelem
+        dims(2) = nelem_g
         dims(3) = itime                     ! TODO: Should probably better inform the dataspace dimension here. Probably set mesh_t%ntime
         maxdims(1) = H5S_UNLIMITED_F
         maxdims(2) = H5S_UNLIMITED_F
@@ -884,13 +900,13 @@ contains
         !
         ! Modify dataset creation properties, i.e. enable chunking in order to append dataspace, if needed.
         !
-        dimsc = [1, data%mesh(idom)%nelem, 1]  ! Chunk size
+        dimsc = [1, nelem_g, 1]  ! Chunk size
 
         call h5pcreate_f(H5P_DATASET_CREATE_F, crp_list, ierr)
-        if (ierr /= 0) call chidg_signal(FATAL, "Error: write_variable_hdf5 -- h5pcreate_f error enabling chunking")
+        if (ierr /= 0) call chidg_signal(FATAL, "write_variable_hdf: h5pcreate_f error enabling chunking")
 
         call h5pset_chunk_f(crp_list, ndims, dimsc, ierr)
-        if (ierr /= 0) call chidg_signal(FATAL, "Error: write_variable_hdf5 -- h5pset_chunk_f error setting chunk properties")
+        if (ierr /= 0) call chidg_signal(FATAL, "write_variable_hdf: h5pset_chunk_f error setting chunk properties")
 
 
 
@@ -900,27 +916,27 @@ contains
         if (exists) then
             ! Open the existing dataset
             call h5dopen_f(gid, trim(varstring), did, ierr, H5P_DEFAULT_F)
-            if (ierr /= 0) call chidg_signal(FATAL,"Error: write_variable_hdf5 -- variable does not exist or was not opened correctly")
+            if (ierr /= 0) call chidg_signal(FATAL,"write_variable_hdf: variable does not exist or was not opened correctly")
 
 
             ! Extend dataset if necessary
             call h5dset_extent_f(did, dims, ierr)
-            if (ierr /= 0) call chidg_signal(FATAL, "Error: write_variable_hdf5 -- h5dset_extent_f")
+            if (ierr /= 0) call chidg_signal(FATAL, "write_variable_hdf: h5dset_extent_f")
 
 
             ! Update existing dataspace ID since it may have been expanded
             call h5dget_space_f(did, sid, ierr)
-            if (ierr /= 0) call chidg_signal(FATAL, "Error: write_variable_hdf5 -- h5dget_space_f")
+            if (ierr /= 0) call chidg_signal(FATAL, "write_variable_hdf: h5dget_space_f")
 
         else
             ! Create a new dataspace
-            call h5screate_simple_f(ndims,dims, sid, ierr, maxdims)
-            if (ierr /= 0) call chidg_signal(FATAL,"Error: write_variable_hdf5 - h5screate_simple_f")
+            call h5screate_simple_f(ndims,dims,sid,ierr,maxdims)
+            if (ierr /= 0) call chidg_signal(FATAL,"write_variable_hdf: h5screate_simple_f")
 
 
             ! Create a new dataset
             call h5dcreate_f(gid, trim(varstring), H5T_NATIVE_DOUBLE, sid, did, ierr, crp_list)
-            if (ierr /= 0) call chidg_signal(FATAL,"write_variable_hdf5 - h5dcreate_f")
+            if (ierr /= 0) call chidg_signal(FATAL,"write_variable_hdf: h5dcreate_f")
         end if
 
 
@@ -935,21 +951,41 @@ contains
         !
         ! Assemble variable buffer matrix that gets written to file
         !
-        allocate(var(dims(1),dims(2),dims(3)))
+        allocate(var(dims(1),1,1))
+
 
         do ielem = 1,data%mesh(idom)%nelem
-                var(:,ielem,itime) = real(data%sdata%q%dom(idom)%vecs(ielem)%getvar(ivar),rk)
+
+            ! get domain-global element index
+            ielement_g = data%mesh(idom)%elems(ielem)%ielement_g
+
+            start    = [1-1,ielement_g-1,itime-1]   ! actually offset, so 0-based
+            count(1) = dims(1)
+            count(2) = 1
+            count(3) = 1
+
+            ! Select subset of dataspace - sid
+            call h5sselect_hyperslab_f(sid, H5S_SELECT_SET_F, start, count, ierr)
+
+
+            ! Create a memory dataspace
+            dimsm(1) = size(var,1)
+            dimsm(2) = size(var,2)
+            dimsm(3) = size(var,3)
+            call h5screate_simple_f(ndims,dimsm,memspace,ierr)
+
+
+            var(:,1,1) = real(data%sdata%q%dom(idom)%vecs(ielem)%getvar(ivar),rdouble)
+            cp_var = c_loc(var(1,1,1))
+
+            call h5dwrite_f(did, H5T_NATIVE_DOUBLE, cp_var, ierr, memspace, sid)
+
+
+            call h5sclose_f(memspace,ierr)
+
+
         end do
 
-
-
-        !
-        ! Write variable buffer
-        !
-        cp_var = c_loc(var(1,1,1))
-
-        call h5dwrite_f(did, H5T_NATIVE_DOUBLE, cp_var, ierr)
-        if (ierr /= 0) call chidg_signal(FATAL,"write_variable_hdf5 - h5dwrite_f")
 
 
         !
@@ -1109,6 +1145,11 @@ contains
 
 
 
+
+
+
+
+
     !> Write solution modes to HDF file.
     !!
     !!  @author Nathan A. Wukie
@@ -1206,10 +1247,10 @@ contains
             end if
 
             call h5ltset_attribute_int_f(fid, trim(dname), 'order_solution', [order_s], adim, ierr)
-            if (ierr /= 0) call chidg_signal(FATAL,"write_variable_hdf5 - h5ltset_attribute_int_f")
+            if (ierr /= 0) call chidg_signal(FATAL,"write_solution_partition_hdf5 - h5ltset_attribute_int_f")
 
             call h5ltset_attribute_string_f(fid, trim(dname), 'eqnset', trim(data%eqnset(idom)%item%name), ierr)
-            if (ierr /= 0) call chidg_signal(FATAL,"write_variable_hdf5 - h5ltset_attribute_int_f")
+            if (ierr /= 0) call chidg_signal(FATAL,"write_solution_partition_hdf5 - h5ltset_attribute_int_f")
 
 
 
@@ -1968,7 +2009,7 @@ contains
         character(len=1024),    allocatable     :: dnames(:), eqnset(:)
         character(1024)                         :: gname
         integer                                 :: nmembers, type, ierr, ndomains, igrp,    &
-                                                   idom, idomain, nelements, ielem, nnodes
+                                                   idom, idomain, nelements, ielem, nnodes, mapping
         logical                                 :: FileExists
 
 
@@ -2092,7 +2133,10 @@ contains
 
                 !connectivities(idom)%data = connectivity
                 do ielem = 1,nelements
+                    mapping = connectivity(ielem,3)
+                    call connectivities(idom)%data(ielem)%init(mapping)
                     connectivities(idom)%data(ielem)%data = connectivity(ielem,:)
+                    call connectivities(idom)%data(ielem)%set_element_partition(NO_PROC)
                 end do
 
 

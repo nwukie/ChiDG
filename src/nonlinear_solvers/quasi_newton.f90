@@ -1,15 +1,17 @@
 module quasi_newton
     use mod_kinds,              only: rk,ik
     use mod_constants,          only: ZERO, ONE, TWO, DIAG
+    use mod_spatial,            only: update_space
+    use mod_tecio,              only: write_tecio_variables
+    use mod_chidg_mpi,          only: ChiDG_COMM, GLOBAL_MASTER
+
     use type_chidg_data,        only: chidg_data_t
     use type_nonlinear_solver,  only: nonlinear_solver_t
     use type_linear_solver,     only: linear_solver_t
     use type_preconditioner,    only: preconditioner_t
     use type_chidgVector
 
-    use mod_spatial,            only: update_space
 
-    use mod_tecio,              only: write_tecio_variables
 
     use mod_entropy,            only: compute_entropy_error
     use mod_timestep,           only: compute_timestep
@@ -79,8 +81,8 @@ contains
         !associate ( q => data%sdata%q, dq => data%sdata%dq, rhs => data%sdata%rhs, lhs => data%sdata%lhs, dt => self%dt)
         associate ( q => data%sdata%q, dq => data%sdata%dq, rhs => data%sdata%rhs, lhs => data%sdata%lhs)
 
-            call write_line('Entering time')
-            call write_line(' ')
+            call write_line('Entering time', io_proc=GLOBAL_MASTER)
+            call write_line(' ', io_proc=GLOBAL_MASTER)
 
             !
             ! start timer
@@ -105,7 +107,7 @@ contains
 
             do while ( rnorm > self%tol )
                 niter = niter + 1
-                call write_line("   niter: ", niter, delimiter='', columns=.True., column_width=20)
+                call write_line("   niter: ", niter, delimiter='', columns=.True., column_width=20, io_proc=GLOBAL_MASTER)
 
 
 
@@ -121,14 +123,14 @@ contains
                 call update_space(data,timing)
                 call self%residual_time%push_back(timing)
 
-                resid = rhs%norm()
+                resid = rhs%norm(ChiDG_COMM)
 
 
 
                 !
                 ! Print diagnostics
                 !
-                call write_line("   R(Q) - Norm: ", resid, delimiter='', columns=.True., column_width=20)
+                call write_line("   R(Q) - Norm: ", resid, delimiter='', columns=.True., column_width=20, io_proc=GLOBAL_MASTER)
                 call self%residual_norm%push_back(resid)
 
 
@@ -137,9 +139,9 @@ contains
                 !
                 ! Store residual norm for first iteration
                 if (niter == 1) then
-                    rnorm0 = rhs%norm()
+                    rnorm0 = rhs%norm(ChiDG_COMM)
                 end if
-                rnorm = rhs%norm()
+                rnorm = rhs%norm(ChiDG_COMM)
 
 
 

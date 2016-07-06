@@ -278,11 +278,11 @@ contains
         ! TODO: Generalized TECIO for different equation set in each domain.
         !
         do while (ieq <= data%eqnset(1)%item%neqns)
-            !varstring = trim(varstring)//" "//trim(domain%eqnset%eqns(ieq)%name)
             varstring = trim(varstring)//" "//trim(data%eqnset(1)%item%prop%eqns(ieq)%name)
             ieq = ieq + 1
         end do
 
+        
 
         !
         ! Open and initialize TecIO file

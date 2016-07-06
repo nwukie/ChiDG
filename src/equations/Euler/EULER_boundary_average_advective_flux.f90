@@ -20,9 +20,6 @@ module EULER_boundary_average_advective_flux
     use EULER_properties,       only: EULER_properties_t
     implicit none
 
-
-    integer :: counter = 0
-
     private
 
 

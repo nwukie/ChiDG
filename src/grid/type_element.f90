@@ -11,6 +11,9 @@ module type_element
     use mod_inv,                only: inv
     use mod_connectivity_tools, only: connectivity_get_ielem, connectivity_get_mapping, connectivity_get_node
 
+    ! test
+    use mod_chidg_mpi,          only: IRANK
+
     use type_point,                 only: point_t
     use type_densevector,           only: densevector_t
     use type_quadrature,            only: quadrature_t
@@ -45,30 +48,25 @@ module type_element
 
 
         ! Element quadrature points, mesh points and modes
-        !---------------------------------------------------------
         type(element_connectivity_t)    :: connectivity      !< Connectivity list. Integer indices of the associated nodes in block node list
         type(point_t), allocatable      :: quad_pts(:)          !< Cartesian coordinates of discrete quadrature points
         type(point_t), allocatable      :: elem_pts(:)          !< Cartesian coordinates of discrete points defining element
         type(densevector_t)             :: coords               !< Modal representation of cartesian coordinates (nterms_var,(x,y,z))
 
         ! Element metric terms
-        !---------------------------------------------------------
         real(rk), allocatable           :: metric(:,:,:)        !< metric matrix for each quadrature node    (mat_i,mat_j,quad_pt)
         real(rk), allocatable           :: jinv(:)              !< jacobian terms at quadrature nodes
 
         ! Matrices of cartesian gradients of basis/test functions
-        !---------------------------------------------------------
         real(rk), allocatable           :: dtdx(:,:)            !< Derivative of basis functions in x-direction at quadrature nodes
         real(rk), allocatable           :: dtdy(:,:)            !< Derivative of basis functions in y-direction at quadrature nodes
         real(rk), allocatable           :: dtdz(:,:)            !< Derivative of basis functions in z-direction at quadrature nodes
 
         ! Quadrature matrices
-        !---------------------------------------------------------
         type(quadrature_t), pointer     :: gq     => null()    !< Pointer to quadrature instance for solution expansion
         type(quadrature_t), pointer     :: gqmesh => null()    !< Pointer to quadrature instance for coordinate expansion
 
         ! Element-local mass matrices
-        !---------------------------------------------------------
         real(rk), allocatable           :: mass(:,:)
         real(rk), allocatable           :: invmass(:,:)
 
@@ -148,7 +146,7 @@ contains
         integer(ik)                         :: ierr, nterms_c, ipt, npts_1d, npts, nnodes, mapping, ielem, inode, idomain_g, ielem_g
 
 
-        if (self%geomInitialized) call chidg_signal(FATAL,'element%init_geom -- element already initialized')
+        if (self%geomInitialized) call chidg_signal(FATAL,"element%init_geom -- element already initialized")
 
 
         !
@@ -158,7 +156,6 @@ contains
         ielem_g   = connectivity%get_element_index()
         mapping   = connectivity%get_element_mapping()
 
-!        print*, 'inig_geom', idomain_g
 
 
         !
@@ -191,14 +188,14 @@ contains
         element_mapping = get_element_mapping(spacedim,mapping)
         nterms_c = size(element_mapping,1)
         self%nterms_c = nterms_c
-        if (nterms_c /= size(points)) call chidg_signal(FATAL,'element%init_geom -- mapping and points do not match')
+        if (nterms_c /= size(points)) call chidg_signal(FATAL,"element%init_geom -- mapping and points do not match")
 
 
         !
         ! Allocate storage
         !
         allocate(self%elem_pts(nterms_c),stat=ierr)
-        call self%coords%init(nterms_c,3,ielem)
+        call self%coords%init(nterms_c,3,idomain_g,idomain_l,ielem_g,ielem_l)
         self%spacedim       = spacedim
         self%idomain_g      = idomain_g
         self%idomain_l      = idomain_l
@@ -207,7 +204,6 @@ contains
         self%elem_pts       = points
         self%connectivity   = connectivity
 
-!        print*, self%connectivity%get_domain_index()
         
         !
         ! Compute mesh x,y,z modes
@@ -215,12 +211,11 @@ contains
         call compute_modal_coordinates(spacedim,self%elem_pts,mapping,self%coords)
 
 
-
-
         !
         ! Confirm element geometry was initialized
         !
         self%geomInitialized = .true.   
+
 
     end subroutine init_geom
     !***********************************************************************************************************
@@ -252,7 +247,7 @@ contains
         integer(ik) :: ierr
         integer(ik) :: nnodes,nnodes_face,nnodes_vol
 
-        if (self%numInitialized) call chidg_signal(FATAL,'element%init_sol -- element already initialized')
+        if (self%numInitialized) call chidg_signal(FATAL,"element%init_sol -- element already initialized")
 
 
         self%nterms_s    = nterms_s                 ! Set number of terms in modal expansion of solution
@@ -323,7 +318,7 @@ contains
         nterms_s = self%nterms_s
         nterms_c = self%nterms_c
 
-        if (nterms_c == 0) call chidg_signal(FATAL,'element%assign_quadrature -- coordinate expansion not defined')
+        if (nterms_c == 0) call chidg_signal(FATAL,"element%assign_quadrature -- coordinate expansion not defined")
 
 
 

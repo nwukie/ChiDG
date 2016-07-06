@@ -3,7 +3,13 @@ module mod_interpolate
     use mod_kinds,          only: rk,ik
     use mod_constants,      only: CHIMERA, INTERIOR, BOUNDARY, &
                                   LOCAL, NEIGHBOR
+    use mod_DNAD_tools,     only: compute_neighbor_domain_l, compute_neighbor_element_l, compute_neighbor_face, &
+                                  compute_neighbor_domain_g, compute_neighbor_element_g
+    use mod_polynomial,     only: polynomialVal
+    use mod_grid_tools_two, only: compute_element_donor
+    use mod_chidg_mpi,      only: IRANK
     use DNAD_D
+
     use type_ivector,       only: ivector_t
     use type_rvector,       only: rvector_t
     use type_point,         only: point_t
@@ -11,9 +17,6 @@ module mod_interpolate
     use type_seed,          only: seed_t
     use type_face_info,     only: face_info_t
     use type_chidgVector,   only: chidgVector_t
-    use mod_DNAD_tools,     only: compute_neighbor_domain_l, compute_neighbor_element_l, compute_neighbor_face
-    use mod_polynomial,     only: polynomialVal
-    use mod_grid_tools_two, only: compute_element_donor
     implicit none
 
 
@@ -192,12 +195,14 @@ contains
         real(rk),   allocatable  :: interpolator(:,:)
 
         integer(ik) :: nderiv, set_deriv, iterm, igq, nterms_s, ierr, neqns_seed, nterms_s_seed
-!        integer(ik) :: idomain_l_seed, ielement_l_seed, 
-        integer(ik) :: ndonors, idonor, idom_l_interp, ielem_l_interp, iface_interp
+        integer(ik) :: ndonors, idonor, donor_proc
+        integer(ik) :: idom_l_interp, ielem_l_interp, iface_interp, idom_g_interp, ielem_g_interp
+        integer(ik) :: recv_comm, recv_domain, recv_element
         integer(ik) :: ChiID
         logical     :: linearize_me             = .false.
         logical     :: chimera_interpolation    = .false.
         logical     :: conforming_interpolation = .false.
+        logical     :: parallel_interpolation
 
 
         ! Chimera data
@@ -208,6 +213,8 @@ contains
 
 
         mask = .false.
+
+
 
         idomain_l  = face%idomain_l
         ielement_l = face%ielement_l
@@ -224,6 +231,8 @@ contains
 
             ndonors = 1
 
+            parallel_interpolation = .false.
+
         !
         ! Test if interpolating from neighbor element(s)
         !
@@ -233,12 +242,22 @@ contains
             conforming_interpolation = ( mesh(idomain_l)%faces(ielement_l,iface)%ftype == INTERIOR )
 
 
+
             !
             ! Test for standard conforming interpolation from neighbor
             !
             if ( conforming_interpolation ) then
 
                 ndonors = 1
+
+                ! Probably won't need this here after rearranging the nderiv section below
+                parallel_interpolation  =  ( IRANK /= mesh(idomain_l)%faces(ielement_l,iface)%ineighbor_proc )
+                if (parallel_interpolation) then
+                    recv_comm    = mesh(idomain_l)%faces(ielement_l,iface)%recv_comm
+                    recv_domain  = mesh(idomain_l)%faces(ielement_l,iface)%recv_domain
+                    recv_element = mesh(idomain_l)%faces(ielement_l,iface)%recv_element
+                end if
+
 
             !
             ! Test for chimera interpolation from neighbor
@@ -248,18 +267,13 @@ contains
                 ChiID   = mesh(idomain_l)%faces(ielement_l,iface)%ChiID
                 ndonors = mesh(idomain_l)%chimera%recv%data(ChiID)%ndonors
 
-
             else
-
                 call chidg_signal(FATAL,"interpolate_face: invalid value for 'face%ftype'")
-
             end if
 
 
         else
-
             call chidg_signal(FATAL,"interpolate_face: invalid value for incoming parameter 'source'")
-
         end if
 
 
@@ -267,6 +281,8 @@ contains
 
 
 
+        ! PROBABLY NEED TO MOVE THIS DOWN BELOW NEXT SECTION SO WE CAN DETERMINE parallel_interpolation
+        ! DEPENDING ON CHIMERA DONOR.
         !
         ! Get the number of degrees of freedom for the seed element
         ! and set this as the number of partial derivatives to track
@@ -280,8 +296,13 @@ contains
             !
             ! Get number of equations and terms in solution expansions
             !
-            neqns_seed    = mesh(seed%idomain_l)%elems(seed%ielement_l)%neqns
-            nterms_s_seed = mesh(seed%idomain_l)%elems(seed%ielement_l)%nterms_s
+            if ( seed%iproc /= IRANK ) then
+                neqns_seed    = q%recv%comm(seed%recv_comm)%dom(seed%recv_domain)%vecs(seed%recv_element)%nvars()
+                nterms_s_seed = q%recv%comm(seed%recv_comm)%dom(seed%recv_domain)%vecs(seed%recv_element)%nterms()
+            else
+                neqns_seed    = mesh(seed%idomain_l)%elems(seed%ielement_l)%neqns
+                nterms_s_seed = mesh(seed%idomain_l)%elems(seed%ielement_l)%nterms_s
+            end if
 
             !
             ! Compute number of unknowns in the seed element, which is the number of partial derivatives we are tracking
@@ -313,7 +334,9 @@ contains
                 !
                 ! Interpolate from LOCAL element
                 !
+                idom_g_interp  = mesh(idomain_l)%elems(ielement_l)%idomain_g
                 idom_l_interp  = idomain_l
+                ielem_g_interp = mesh(idomain_l)%elems(ielement_l)%ielement_g
                 ielem_l_interp = ielement_l
                 iface_interp   = iface
 
@@ -330,35 +353,63 @@ contains
                 !
                 if ( conforming_interpolation ) then
 
-                    idom_l_interp  = compute_neighbor_domain_l( mesh,idomain_l,ielement_l,iface,idonor)
-                    ielem_l_interp = compute_neighbor_element_l(mesh,idomain_l,ielement_l,iface,idonor)
-                    iface_interp   = compute_neighbor_face(     mesh,idomain_l,ielement_l,iface,idonor)
+                    parallel_interpolation   = ( IRANK /= mesh(idomain_l)%faces(ielement_l,iface)%ineighbor_proc )
+                    if (parallel_interpolation) then
+                        idom_g_interp  = mesh(idomain_l)%faces(ielement_l,iface)%ineighbor_domain_g  
+                        idom_l_interp  = mesh(idomain_l)%faces(ielement_l,iface)%ineighbor_domain_l
+                        ielem_g_interp = mesh(idomain_l)%faces(ielement_l,iface)%ineighbor_element_g
+                        ielem_l_interp = mesh(idomain_l)%faces(ielement_l,iface)%ineighbor_element_l
+                        ! THIS PROBABLY NEEDS IMPROVED
+                        iface_interp   = compute_neighbor_face(     mesh,idomain_l,ielement_l,iface,idonor)
 
-                    interpolator = mesh(idom_l_interp)%faces(ielem_l_interp,iface_interp)%gq%face%val(:,:,iface_interp)
+                        recv_comm    = mesh(idomain_l)%faces(ielement_l,iface)%recv_comm
+                        recv_domain  = mesh(idomain_l)%faces(ielement_l,iface)%recv_domain
+                        recv_element = mesh(idomain_l)%faces(ielement_l,iface)%recv_element
+
+                        ! THIS PROBABLY NEEDS IMPROVED
+                        ! Using iface_interp to get an interpolation for an opposite face. Assumes same order and eqns.
+                        interpolator   = mesh(idomain_l)%faces(ielement_l,iface)%gq%face%val(:,:,iface_interp)
+
+                    else
+                        idom_g_interp  = compute_neighbor_domain_g( mesh,idomain_l,ielement_l,iface,idonor)
+                        idom_l_interp  = compute_neighbor_domain_l( mesh,idomain_l,ielement_l,iface,idonor)
+                        ielem_g_interp = compute_neighbor_element_g(mesh,idomain_l,ielement_l,iface,idonor)
+                        ielem_l_interp = compute_neighbor_element_l(mesh,idomain_l,ielement_l,iface,idonor)
+                        iface_interp   = compute_neighbor_face(     mesh,idomain_l,ielement_l,iface,idonor)
+
+                        interpolator   = mesh(idom_l_interp)%faces(ielem_l_interp,iface_interp)%gq%face%val(:,:,iface_interp)
+                    end if
 
                 !
                 ! Interpolate from CHIMERA NEIGHBOR element
                 !
                 elseif ( chimera_interpolation ) then
 
-                    !idom_interp  = mesh(idom)%chimera%recv%data(ChiID)%donor_domain%at(idonor)
-                    !ielem_interp = mesh(idom)%chimera%recv%data(ChiID)%donor_element%at(idonor)
-                    idom_l_interp  = mesh(idomain_l)%chimera%recv%data(ChiID)%donor_domain_l%at(idonor)
-                    ielem_l_interp = mesh(idomain_l)%chimera%recv%data(ChiID)%donor_element_l%at(idonor)
+                    idom_g_interp   = mesh(idomain_l)%chimera%recv%data(ChiID)%donor_domain_g%at(idonor)
+                    idom_l_interp   = mesh(idomain_l)%chimera%recv%data(ChiID)%donor_domain_l%at(idonor)
+                    ielem_g_interp  = mesh(idomain_l)%chimera%recv%data(ChiID)%donor_element_g%at(idonor)
+                    ielem_l_interp  = mesh(idomain_l)%chimera%recv%data(ChiID)%donor_element_l%at(idonor)
+                    donor_proc      = mesh(idomain_l)%chimera%recv%data(ChiID)%donor_proc%at(idonor)
 
-                    interpolator = mesh(idomain_l)%chimera%recv%data(ChiID)%donor_interpolator%at(idonor)
-                    gq_node_indices = mesh(idomain_l)%chimera%recv%data(ChiID)%donor_gq_indices(idonor)%data()
+
+                    if (IRANK /= donor_proc) parallel_interpolation = .true.
+                    if (parallel_interpolation) then
+                        ! SHOULD SET RECV INDICES
+                        ! recv_comm
+                        ! recv_domain
+                        ! recv_element
+                        call chidg_signal(FATAL,"interpolate_face_autodiff: parallel chimera interpolation not implemented")
+                    else
+                        interpolator    = mesh(idomain_l)%chimera%recv%data(ChiID)%donor_interpolator%at(idonor)
+                        gq_node_indices = mesh(idomain_l)%chimera%recv%data(ChiID)%donor_gq_indices(idonor)%data()
+                    end if
+
 
                     ! Create mask over full GQ vector of only those nodes that are filled by the current element
                     do inode = 1,size(gq_node_indices)
                         mask(gq_node_indices(inode)) = .true.
                     end do
 
-
-
-                !
-                ! Error case
-                !
                 else
                     call chidg_signal(FATAL,"interpolate_face: neighbor conforming_interpolation nor chimera_interpolation were detected")
                 end if
@@ -366,11 +417,13 @@ contains
 
 
 
+
             !
             ! If the current element is being differentiated (ielem == ielem_seed)
             ! then copy the solution modes to local AD variable and seed derivatives
             !
-            linearize_me = ( (idom_l_interp == seed%idomain_l) .and. (ielem_l_interp == seed%ielement_l) )
+            !linearize_me = ( (idom_l_interp == seed%idomain_l) .and. (ielem_l_interp == seed%ielement_l) )
+            linearize_me = ( (idom_g_interp == seed%idomain_g) .and. (ielem_g_interp == seed%ielement_g) )
 
             if ( linearize_me ) then
 
@@ -378,10 +431,16 @@ contains
                 !
                 ! Allocate AD array to store a copy of the solution which starts the differentiation
                 !
-                nterms_s = mesh(idom_l_interp)%elems(ielem_l_interp)%nterms_s
+                if (parallel_interpolation) then
+                    nterms_s = q%recv%comm(recv_comm)%dom(recv_domain)%vecs(recv_element)%nterms()
+                else
+                    nterms_s = mesh(idom_l_interp)%elems(ielem_l_interp)%nterms_s
+                end if
+
                 if ( allocated(qdiff) ) deallocate(qdiff)
                 allocate(qdiff(nterms_s), stat=ierr)
                 if (ierr /= 0) call AllocationError
+
 
 
                 !
@@ -391,10 +450,16 @@ contains
                     allocate(qdiff(iterm)%xp_ad_(nderiv))
                 end do
 
+
                 !
                 ! Copy the solution variables from 'q' to 'qdiff'
                 !
-                qdiff = q%dom(idom_l_interp)%vecs(ielem_l_interp)%getvar(ieqn)
+                if (parallel_interpolation) then
+                    qdiff = q%recv%comm(recv_comm)%dom(recv_domain)%vecs(recv_element)%getvar(ieqn)
+                else
+                    qdiff = q%dom(idom_l_interp)%vecs(ielem_l_interp)%getvar(ieqn)
+                end if
+
 
 
                 !
@@ -408,12 +473,12 @@ contains
 
 
 
-
                 !
                 ! Interpolate solution to GQ nodes via matrix-vector multiplication
                 !
                 if ( conforming_interpolation ) then
                     var_gq = matmul(interpolator,  qdiff)
+
                 elseif ( chimera_interpolation ) then
 
                     !
@@ -453,7 +518,12 @@ contains
                 ! initialized to zero
                 !
                 if ( conforming_interpolation ) then
-                    var_gq = matmul(interpolator,  q%dom(idom_l_interp)%vecs(ielem_l_interp)%getvar(ieqn))
+                    if (parallel_interpolation) then
+                        var_gq = matmul(interpolator,  q%recv%comm(recv_comm)%dom(recv_domain)%vecs(recv_element)%getvar(ieqn))
+                    else
+                        var_gq = matmul(interpolator,  q%dom(idom_l_interp)%vecs(ielem_l_interp)%getvar(ieqn))
+                    end if
+
                 elseif ( chimera_interpolation ) then
 
                     !
@@ -474,7 +544,11 @@ contains
                     !
                     ! Perform interpolation
                     !
-                    var_gq_chimera = matmul(interpolator,  q%dom(idom_l_interp)%vecs(ielem_l_interp)%getvar(ieqn))
+                    if (parallel_interpolation) then
+                        var_gq_chimera = matmul(interpolator,  q%recv%comm(recv_comm)%dom(recv_domain)%vecs(recv_element)%getvar(ieqn))
+                    else
+                        var_gq_chimera = matmul(interpolator,  q%dom(idom_l_interp)%vecs(ielem_l_interp)%getvar(ieqn))
+                    end if
 
                     !
                     ! Scatter chimera nodes to appropriate location in var_gq

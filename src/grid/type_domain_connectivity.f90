@@ -15,17 +15,14 @@ module type_domain_connectivity
     !------------------------------------------------------------------------------
     type, public :: domain_connectivity_t
 
-!        integer(ik)                                 :: idomain_l        !< Local index of the domain
         integer(ik)                                 :: nnodes           !< Number of nodes in the global node array
+        integer(ik)                                 :: nelements
         type(element_connectivity_t),   allocatable :: data(:)
-!        integer(ik),                    allocatable :: partition(:)
-
 
     contains
         
         procedure   :: init
 
-!        procedure   :: get_local_domain_index   !< Return the partition-local domain index
         procedure   :: get_domain_index         !< Return the global domain index of a given element
         procedure   :: get_element_index        !< Return the index of a given element
         procedure   :: get_element_mapping      !< Return the mapping of a given element
@@ -64,6 +61,7 @@ contains
         integer(ik) :: ierr
 
         self%nnodes    = nnodes
+        self%nelements = nelements
 
 
         allocate(self%data(nelements), stat=ierr)
@@ -72,31 +70,6 @@ contains
 
     end subroutine init
     !********************************************************************************
-
-
-
-
-
-
-
-
-!    !>  Return the partition-local domain index from a connectivity
-!    !!
-!    !!  @author Nathan A. Wukie (AFRL)
-!    !!  @date   6/10/2016
-!    !!
-!    !!
-!    !!
-!    !--------------------------------------------------------------------------------
-!    function get_local_domain_index(self) result(idomain)
-!        class(domain_connectivity_t),  intent(in)  :: self
-!
-!        integer(ik) :: idomain
-!
-!        idomain = self%idomain_l
-!
-!    end function get_local_domain_index
-!    !********************************************************************************
 
 
 
@@ -291,7 +264,8 @@ contains
         class(domain_connectivity_t),   intent(in)  :: self
         integer(ik),                    intent(in)  :: idx
 
-        integer(ik)                     :: mapping, idomain, ielement
+        integer(ik)                     :: mapping, partition, idomain, ielement
+        integer(ik),    allocatable     :: nodes(:)
         type(element_connectivity_t)    :: element_connectivity
 
         element_connectivity = self%data(idx)

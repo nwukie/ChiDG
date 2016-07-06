@@ -64,9 +64,19 @@ contains
 
 
         if ( serial ) then
+
             ! All domains on one partition
+            nconn = size(connectivities)
+            call partitions(1)%init(nconn)
             partitions(1)%connectivities = connectivities        
 
+            ! Set default partition
+            do iconn = 1,size(partitions(1)%connectivities)
+                nelem = partitions(1)%connectivities(iconn)%get_nelements()
+                do ielem = 1,nelem
+                    call partitions(1)%connectivities(iconn)%data(ielem)%set_element_partition(IRANK)
+                end do
+            end do
 
         elseif ( parallel ) then
 
@@ -282,6 +292,7 @@ contains
                                 ipart_elem      = connectivities(iconn)%data(ielem_conn)%get_element_partition()
                                 element_nodes   = connectivities(iconn)%data(ielem_conn)%get_element_nodes()
 
+
                                 ! Set information on element in partition
                                 call partitions(ipartition)%connectivities(ipart_conn)%data(ielem_part)%init(mapping)
                                 call partitions(ipartition)%connectivities(ipart_conn)%data(ielem_part)%set_domain_index(idomain_g)
@@ -324,7 +335,12 @@ contains
 
 
 
-    !>  Master process sends partition information
+    !>  Master process sends partition information.
+    !!
+    !!  NOTE: take care with non-blocking sends, as the call assumes that the data in the location will remain
+    !!        valid at a future time. For example, can't send local variables in the subroutine since their 
+    !!        memory is released once the subroutine ends. For this reason, all the sends are to variables
+    !!        within the paritions(:) containers. This persists.
     !!
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   6/8/2016
@@ -338,9 +354,10 @@ contains
         type(mpi_comm),     intent(in)  :: ChiDG_COMM
 
         integer                     :: ipartition, npartitions, ierr
-        integer                     :: dims(3), iconn, nconn, idomain, nelements, max_mapping, header_size, max_element_nodes, nnodes
-        integer                     :: ielem
-        integer(ik), allocatable    :: conn(:,:)
+        integer                     :: ielem, data_size
+        integer(ik)                 :: iconn , nelements
+        integer(ik)                 :: nconn
+        type(MPI_Request)           :: handle
 
 
         npartitions = size(partitions)
@@ -353,37 +370,27 @@ contains
 
 
             ! Send number of connectivities in current partition
-            nconn = size(partitions(ipartition)%connectivities)
-            call MPI_Send(nconn,1,MPI_INTEGER, ipartition-1, 0, ChiDG_COMM, ierr)
+            call MPI_ISend(partitions(ipartition)%nconn,1,MPI_INTEGER4, ipartition-1, 0, ChiDG_COMM, handle, ierr)
 
 
             ! Send connectivities
+            nconn = partitions(ipartition)%nconn
             do iconn = 1,nconn
 
-                ! Send connectivity information
-                nelements         = partitions(ipartition)%connectivities(iconn)%get_nelements()
-                max_mapping       = partitions(ipartition)%connectivities(iconn)%get_max_mapping()
-                max_element_nodes = (max_mapping+1)*(max_mapping+1)*(max_mapping+1)
-                header_size       = partitions(ipartition)%connectivities(iconn)%get_header_size()
-                nnodes            = partitions(ipartition)%connectivities(iconn)%get_nnodes()
-                dims(1) = nelements
-                dims(2) = header_size + max_element_nodes
-                dims(3) = nnodes
-                call MPI_Send(dims,3,MPI_INTEGER, ipartition-1, 1+iconn, ChiDG_COMM, ierr)
+                call MPI_ISend(partitions(ipartition)%connectivities(iconn)%nelements,1,MPI_INTEGER4, ipartition-1, 0, ChiDG_COMM, handle, ierr)
+                call MPI_ISend(partitions(ipartition)%connectivities(iconn)%nnodes,1,MPI_INTEGER4, ipartition-1, 0, ChiDG_COMM, handle, ierr)
 
-                ! Assemble connectivity data
-                if (allocated(conn)) deallocate(conn)
-                allocate(conn(dims(1),dims(2)), stat=ierr)
-                if (ierr /= 0) call AllocationError
+
+                ! Send a connectivity for each element. Would be more efficient to assemble a consolodated array, but must
+                ! be careful, because it can't be reused until it has been received since we are posting non-blocking sends.
+                nelements = partitions(ipartition)%connectivities(iconn)%get_nelements()
                 do ielem = 1,nelements
-                    conn(ielem,:) = partitions(ipartition)%connectivities(iconn)%data(ielem)%data
+                    call MPI_ISend(partitions(ipartition)%connectivities(iconn)%data(ielem)%connectivity_size, 1, MPI_INTEGER4, ipartition-1, 0, ChiDG_COMM, handle, ierr)
+                    data_size = partitions(ipartition)%connectivities(iconn)%data(ielem)%connectivity_size
+                    call MPI_ISend(partitions(ipartition)%connectivities(iconn)%data(ielem)%data, data_size, MPI_INTEGER4, ipartition-1, 0, ChiDG_COMM, handle, ierr)
                 end do
 
-                ! Send connectivity data
-                call MPI_Send(conn,dims(1)*dims(2), MPI_INTEGER4, ipartition-1, 1+nconn+1, ChiDG_COMM, ierr)
-
             end do ! iconn
-
 
 
         end do ! ipartition
@@ -415,16 +422,16 @@ contains
         type(mpi_comm),     intent(in)      :: ChiDG_COMM
 
         integer                     :: ipartition, npartitions, ierr
-        integer                     :: dims(3), iconn, nconn, idomain, nelements, ielem
+        integer                     :: dims(3), iconn, idomain, ielem
         integer                     :: idomain_g, ielement_g, mapping, nnodes_element
-        integer                     :: max_element_nodes, nnodes
+        integer(ik)                 :: conn_size, nnodes, nelements, nconn
         integer,    allocatable     :: nodes(:)
-        integer(ik), allocatable    :: conn(:,:)
+        integer(ik), allocatable    :: conn(:)
 
 
 
         ! Receive number of connectivities and inititalize partition
-        call MPI_Recv(nconn,1,MPI_INTEGER, GLOBAL_MASTER, 0, ChiDG_COMM, MPI_STATUS_IGNORE, ierr)
+        call MPI_Recv(nconn,1,MPI_INTEGER4, GLOBAL_MASTER, MPI_ANY_TAG, ChiDG_COMM, MPI_STATUS_IGNORE, ierr)
         call partition%init(nconn)
 
 
@@ -433,32 +440,33 @@ contains
 
 
             ! Recv connectivity information
-            call MPI_Recv(dims,3,MPI_INTEGER, GLOBAL_MASTER, 1+iconn, ChiDG_COMM, MPI_STATUS_IGNORE, ierr)
-            nelements         = dims(1)
-            max_element_nodes = dims(2)
-            nnodes            = dims(3)
+            call MPI_Recv(nelements,1,MPI_INTEGER4, GLOBAL_MASTER, MPI_ANY_TAG, ChiDG_COMM, MPI_STATUS_IGNORE, ierr)
+            call MPI_Recv(nnodes,1,MPI_INTEGER4, GLOBAL_MASTER, MPI_ANY_TAG, ChiDG_COMM, MPI_STATUS_IGNORE, ierr)
 
             call partition%connectivities(iconn)%init(nelements,nnodes)
 
-            if (allocated(conn)) deallocate(conn)
-            allocate(conn(nelements,max_element_nodes), stat=ierr)
-            if (ierr /= 0) call AllocationError
 
 
-
-            ! Recv connectivity data
-            call MPI_Recv(conn,dims(1)*dims(2), MPI_INTEGER4, GLOBAL_MASTER, 1+nconn+1, ChiDG_COMM, MPI_STATUS_IGNORE, ierr)
-
-
-
-
-            ! Assemble connectivity
+            ! Recv connectivity for each element
             do ielem = 1,nelements
-                idomain_g  = conn(ielem,1)
-                ielement_g = conn(ielem,2)
-                mapping    = conn(ielem,3)
+
+                ! Get size to recv
+                call MPI_Recv(conn_size, 1, MPI_INTEGER4, GLOBAL_MASTER, MPI_ANY_TAG, ChiDG_COMM, MPI_STATUS_IGNORE, ierr)
+
+                if (allocated(conn)) deallocate(conn)
+                allocate(conn(conn_size), stat=ierr)
+                if (ierr /= 0) call AllocationError
+
+                ! Recv connectivity
+                call MPI_Recv(conn,conn_size, MPI_INTEGER4, GLOBAL_MASTER, MPI_ANY_TAG, ChiDG_COMM, MPI_STATUS_IGNORE, ierr)
+
+
+                ! Set element connectivity
+                idomain_g      = conn(1)
+                ielement_g     = conn(2)
+                mapping        = conn(3)
                 nnodes_element = (mapping+1)*(mapping+1)*(mapping+1)
-                nodes          = conn(ielem,4:4+nnodes_element-1)
+                nodes          = conn(4:4+nnodes_element-1)
 
                 call partition%connectivities(iconn)%data(ielem)%init(mapping)
                 call partition%connectivities(iconn)%data(ielem)%set_domain_index(idomain_g)
@@ -467,13 +475,10 @@ contains
                 call partition%connectivities(iconn)%data(ielem)%set_element_nodes(nodes)
                 call partition%connectivities(iconn)%data(ielem)%set_element_partition(IRANK)
 
-            end do
+            end do !ielem
+
 
         end do !iconn
-
-
-
-
 
 
     end subroutine recv_partition

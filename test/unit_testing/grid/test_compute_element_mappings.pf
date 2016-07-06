@@ -69,7 +69,7 @@ subroutine testElementMapping_reversability_linear()
     
     call compute_element_mappings(THREE_DIM)
     
-    call coords%init(8,3,1)   !> 8 terms, 3 coordinates (x,y,z), ielem = 1
+    call coords%init(8,3,1,1,1,1)   !> 8 terms, 3 coordinates (x,y,z), ielem = 1
     
     ! Compute coordinates of a Hex-element with appropriate number of points
     call random_seed()
@@ -176,7 +176,7 @@ subroutine testElementMapping_reversability_quadratic()
     
     call compute_element_mappings(THREE_DIM)
     
-    call coords%init(27,3,1)   !> 27 terms, 3 coordinates (x,y,z), ielem = 1
+    call coords%init(27,3,1,1,1,1)   !> 27 terms, 3 coordinates (x,y,z), ielem = 1
     
     ! Compute coordinates of a Hex-element with appropriate number of points
     
@@ -283,7 +283,7 @@ subroutine testElementMapping_reversability_cubic()
     
     call compute_element_mappings(THREE_DIM)
     
-    call coords%init(64,3,1)   ! 64 terms, 3 coordinates (x,y,z), ielem = 1
+    call coords%init(64,3,1,1,1,1)   ! 64 terms, 3 coordinates (x,y,z), ielem = 1
     
     ! Compute coordinates of a Hex-element with appropriate number of points
     
@@ -390,7 +390,7 @@ subroutine testElementMapping_reversability_quartic()
     
     call compute_element_mappings(THREE_DIM)
     
-    call coords%init(125,3,1)   ! 125 terms, 3 coordinates (x,y,z)
+    call coords%init(125,3,1,1,1,1)   ! 125 terms, 3 coordinates (x,y,z)
     
     ! Compute coordinates of a Hex-element with appropriate number of points
     

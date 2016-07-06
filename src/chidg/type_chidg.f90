@@ -22,15 +22,13 @@ module type_chidg
     use mod_linear_solver,      only: create_linear_solver
     use mod_nonlinear_solver,   only: create_nonlinear_solver
     use mod_preconditioner,     only: create_preconditioner
-!    use mod_chimera,            only: detect_chimera_faces,  &
-!                                      detect_chimera_donors, &
-!                                      compute_chimera_interpolators
 
     use mod_communication,      only: establish_neighbor_communication, establish_chimera_communication
-    use mod_chidg_mpi,          only: chidg_mpi_init, chidg_mpi_finalize
+    use mod_chidg_mpi,          only: chidg_mpi_init, chidg_mpi_finalize, ChiDG_COMM, IRANK, NRANK
     use mpi_f08
 
-    use mod_hdfio,              only: read_grid_hdf, read_grid_partition_hdf, read_boundaryconditions_hdf, read_boundaryconditions_partition_hdf, read_solution_hdf, write_solution_hdf
+    use mod_hdfio,              only: read_grid_hdf, read_grid_partition_hdf, read_boundaryconditions_hdf, read_boundaryconditions_partition_hdf, &
+                                      read_solution_hdf, write_solution_hdf
     implicit none
 
 
@@ -99,17 +97,6 @@ contains
         character(*),   intent(in)              :: level
         type(mpi_comm), intent(in), optional    :: comm
 
-        type(mpi_comm)  :: ChiDG_COMM
-
-
-        !
-        ! Default communicator for 'communication' is MPI_COMM_WORLD
-        !
-        if ( present(comm) ) then
-            ChiDG_COMM = comm
-        else
-            ChiDG_COMM = MPI_COMM_WORLD
-        end if
 
 
 
@@ -148,6 +135,15 @@ contains
             !
             case ('env')
 
+                !
+                ! Default communicator for 'communication' is MPI_COMM_WORLD
+                !
+                if ( present(comm) ) then
+                    ChiDG_COMM = comm
+                else
+                    ChiDG_COMM = MPI_COMM_WORLD
+                end if
+
 
             case ('mpi')
                 call chidg_mpi_init()
@@ -159,6 +155,9 @@ contains
                 call read_input()
 
 
+            !
+            ! Initialize communication. Local face communication. Global parallel communication.
+            !
             case ('communication')
                 call establish_neighbor_communication(self%data%mesh,ChiDG_COMM)
 
@@ -167,9 +166,6 @@ contains
             !
             case ('chimera')
                 call establish_chimera_communication(self%data%mesh,ChiDG_COMM)
-                !call detect_chimera_faces(self%data%mesh)
-                !call detect_chimera_donors(self%data%mesh)
-                !call compute_chimera_interpolators(self%data%mesh)
 
 
             !
@@ -321,7 +317,7 @@ contains
         character(len=5),   dimension(1)    :: extensions
         character(len=:),   allocatable     :: extension
         type(meshdata_t),   allocatable     :: meshdata(:)
-        integer                             :: iext, extloc, idom, ndomains
+        integer                             :: iext, extloc, idom, ndomains, iread, ierr
 
 
         !
@@ -334,15 +330,24 @@ contains
         !
         ! Call grid reader based on file extension
         !
-        if ( extension == '.h5' ) then
-            if (present(partition)) then
-                call read_grid_partition_hdf(gridfile,partition,meshdata)
-            else
-                call read_grid_hdf(gridfile,meshdata)
+        do iread = 0,NRANK-1
+            if ( iread == IRANK ) then
+
+
+                if ( extension == '.h5' ) then 
+                    if (present(partition)) then
+                        call read_grid_partition_hdf(gridfile,partition,meshdata)
+                    else
+                        call read_grid_hdf(gridfile,meshdata)
+                    end if
+                else
+                    call chidg_signal(FATAL,"chidg%read_grid: grid file extension not recognized")
+                end if
+
+
             end if
-        else
-            call chidg_signal(FATAL,"chidg%read_grid: grid file extension not recognized")
-        end if
+            call MPI_Barrier(ChiDG_COMM,ierr)
+        end do
 
 
 
@@ -386,7 +391,6 @@ contains
     !!  @param[in]  gridfile    String specifying a gridfile, including extension.
     !!
     !-------------------------------------------------------------------------------------------------------------
-    !subroutine read_boundaryconditions(self, gridfile)
     subroutine read_boundaryconditions(self, gridfile, partition)
         class(chidg_t),     intent(inout)           :: self
         character(*),       intent(in)              :: gridfile
@@ -395,7 +399,7 @@ contains
         character(len=5),   dimension(1)    :: extensions
         character(len=:),   allocatable     :: extension, dname
         type(bcdata_t),     allocatable     :: bcdata(:)
-        integer                             :: idom, ndomains, iface, ierr
+        integer                             :: idom, ndomains, iface, ierr, iread
 
         !
         ! Get filename extension
@@ -407,15 +411,24 @@ contains
         !
         ! Call boundary condition reader based on file extension
         !
-        if ( extension == '.h5' ) then
-            if (present(partition)) then
-                call read_boundaryconditions_partition_hdf(gridfile,bcdata,partition)
-            else
-                call read_boundaryconditions_hdf(gridfile,bcdata)
+        do iread = 0,NRANK-1
+            if ( iread == IRANK ) then
+
+
+                if ( extension == '.h5' ) then
+                    if (present(partition)) then
+                        call read_boundaryconditions_partition_hdf(gridfile,bcdata,partition)
+                    else
+                        call read_boundaryconditions_hdf(gridfile,bcdata)
+                    end if
+                else
+                    call chidg_signal(FATAL,"chidg%read_boundaryconditions: grid file extension not recognized")
+                end if
+
+
             end if
-        else
-            call chidg_signal(FATAL,"chidg%read_boundaryconditions: grid file extension not recognized")
-        end if
+            call MPI_Barrier(ChiDG_COMM,ierr)
+        end do
 
 
 
@@ -464,13 +477,13 @@ contains
     !!
     !------------------------------------------------------------------------------------------------------------
     subroutine read_solution(self,solutionfile)
-        class(chidg_t),     intent(inout)   :: self
-        character(*),       intent(in)      :: solutionfile
+        class(chidg_t),     intent(inout)           :: self
+        character(*),       intent(in)              :: solutionfile
 
         character(len=5),   dimension(1)    :: extensions
         character(len=:),   allocatable     :: extension
         type(meshdata_t),   allocatable     :: solutiondata(:)
-        integer                             :: iext, extloc, idom, ndomains
+        integer                             :: iext, extloc, idom, ndomains, iread, ierr
 
 
         !
@@ -483,11 +496,18 @@ contains
         !
         ! Call grid reader based on file extension
         !
-        if ( extension == '.h5' ) then
-            call read_solution_hdf(solutionfile,self%data)
-        else
-            call chidg_signal(FATAL,"chidg%read_solution: grid file extension not recognized")
-        end if
+        do iread = 0,NRANK-1
+            if ( iread == IRANK ) then
+
+                if ( extension == '.h5' ) then
+                    call read_solution_hdf(solutionfile,self%data)
+                else
+                    call chidg_signal(FATAL,"chidg%read_solution: grid file extension not recognized")
+                end if
+
+            end if
+            call MPI_Barrier(ChiDG_COMM,ierr)
+        end do ! iread
 
 
     end subroutine read_solution
@@ -588,13 +608,13 @@ contains
     !!
     !------------------------------------------------------------------------------------------------------------
     subroutine write_solution(self,solutionfile)
-        class(chidg_t),     intent(inout)   :: self
-        character(*),       intent(in)      :: solutionfile
+        class(chidg_t),     intent(inout)           :: self
+        character(*),       intent(in)              :: solutionfile
 
         character(len=5),   dimension(1)    :: extensions
         character(len=:),   allocatable     :: extension
         type(meshdata_t),   allocatable     :: solutiondata(:)
-        integer                             :: iext, extloc, idom, ndomains
+        integer                             :: iext, extloc, idom, ndomains, iwrite, ierr
 
 
         !
@@ -607,11 +627,20 @@ contains
         !
         ! Call grid reader based on file extension
         !
-        if ( extension == '.h5' ) then
-            call write_solution_hdf(solutionfile,self%data)
-        else
-            call chidg_signal(FATAL,"chidg%write_solution: grid file extension not recognized")
-        end if
+        do iwrite = 0,NRANK-1
+            if ( iwrite == IRANK ) then
+
+
+                if ( extension == '.h5' ) then
+                    call write_solution_hdf(solutionfile,self%data)
+                else
+                    call chidg_signal(FATAL,"chidg%write_solution: grid file extension not recognized")
+                end if
+
+
+            end if
+            call MPI_Barrier(ChiDG_COMM,ierr)
+        end do
 
 
     end subroutine write_solution
@@ -670,9 +699,11 @@ contains
         class(chidg_t), intent(inout)   :: self
 
 
-        !call self%time_scheme%report()
-        call self%nonlinear_solver%report()
-        !call self%preconditioner%report()
+        if ( IRANK == GLOBAL_MASTER ) then
+            !call self%time_scheme%report()
+            call self%nonlinear_solver%report()
+            !call self%preconditioner%report()
+        end if
 
 
     end subroutine report

@@ -5,7 +5,7 @@ subroutine test_update_space_euler()
 
     use mod_kinds,          only: rk, ik
     use mod_constants,      only: XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX, DIAG, &
-                                  IO_DESTINATION
+                                  IO_DESTINATION, ZERO
 
     use type_chidg,         only: chidg_t
     use type_meshdata,      only: meshdata_t
@@ -18,7 +18,7 @@ subroutine test_update_space_euler()
     use mod_hdfio,          only: read_grid_hdf
     use mod_spatial,        only: update_space
 
-    use operator_chidg_mv
+    use operator_chidg_mv,  only: chidg_mv
     implicit none
 
 
@@ -146,8 +146,8 @@ subroutine test_update_space_euler()
     !
     ! Compare matrix vector product
     !
-    chidgA%data%sdata%rhs = chidgA%data%sdata%lhs * chidgA%data%sdata%q
-    chidgB%data%sdata%rhs = chidgB%data%sdata%lhs * chidgB%data%sdata%q
+    chidgA%data%sdata%rhs = chidg_mv(chidgA%data%sdata%lhs , chidgA%data%sdata%q)
+    chidgB%data%sdata%rhs = chidg_mv(chidgB%data%sdata%lhs , chidgB%data%sdata%q)
 
 
 

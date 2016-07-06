@@ -19,7 +19,7 @@ subroutine test_Function()
     neqns  = 3
     ielem  = 1
     
-    call poly%init(nterms,neqns,ielem)
+    call poly%init(nterms,neqns, 1, 1, 1, 1)
     
     mat_set(:,1)  = [1.0_rk, 2.0_rk,  3.0_rk,  4.0_rk]
     mat_set(:,2)  = [5.0_rk, 6.0_rk,  7.0_rk,  8.0_rk]

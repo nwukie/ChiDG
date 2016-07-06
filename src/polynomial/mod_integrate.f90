@@ -3,6 +3,8 @@ module mod_integrate
     use mod_kinds,              only: rk,ik
     use mod_constants,          only: XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX, DIAG, CHIMERA, &
                                       NO_INTERIOR_NEIGHBOR, BOUNDARY, INTERIOR, ZERO
+    use mod_chidg_mpi,          only: IRANK
+
     use type_mesh,              only: mesh_t
     use type_element,           only: element_t
     use type_face,              only: face_t
@@ -203,7 +205,8 @@ contains
         type(AD_D),             allocatable     :: integrand_n(:)
         type(face_info_t)                       :: face_n
         type(function_info_t)                   :: function_n
-        integer(ik)                             :: ineighbor_element_l, ineighbor_face, iblk_n
+        integer(ik)                             :: ineighbor_element_l, ineighbor_face, ineighbor_proc, iblk_n
+        logical                                 :: parallel_neighbor
 
         integer(ik)                             :: nterms_s, ierr, ftype
         type(AD_D), allocatable                 :: integral(:)
@@ -219,9 +222,11 @@ contains
 
 
         ! Neighbor indices
+        ineighbor_proc      = mesh(idomain_l)%faces(ielement_l,iface)%ineighbor_proc
         ineighbor_element_l = mesh(idomain_l)%faces(ielement_l,iface)%get_neighbor_element_l()
         ineighbor_face      = mesh(idomain_l)%faces(ielement_l,iface)%get_neighbor_face()
 
+        parallel_neighbor = ( IRANK /= ineighbor_proc )
 
         !
         ! Store quadrature flux for neighbor integral
@@ -271,54 +276,52 @@ contains
         ! Integrate and apply second time if there is a neighbor
         !
         if ( ineighbor_element_l /= NO_INTERIOR_NEIGHBOR ) then
+            if ( .not. parallel_neighbor ) then
 
-!            face_n%idomain  = idom
-!            face_n%ielement = ielem_n
-!            face_n%iface    = iface_n
-!            face_n%seed     = face_info%seed
-            face_n%idomain_g  = mesh(idomain_l)%faces(ielement_l,iface)%ineighbor_domain_g
-            face_n%idomain_l  = mesh(idomain_l)%faces(ielement_l,iface)%ineighbor_domain_l
-            face_n%ielement_g = mesh(idomain_l)%faces(ielement_l,iface)%ineighbor_element_g
-            face_n%ielement_l = mesh(idomain_l)%faces(ielement_l,iface)%ineighbor_element_l
-            face_n%iface      = mesh(idomain_l)%faces(ielement_l,iface)%get_neighbor_face()
-            face_n%seed       = face_info%seed
+                face_n%idomain_g  = mesh(idomain_l)%faces(ielement_l,iface)%ineighbor_domain_g
+                face_n%idomain_l  = mesh(idomain_l)%faces(ielement_l,iface)%ineighbor_domain_l
+                face_n%ielement_g = mesh(idomain_l)%faces(ielement_l,iface)%ineighbor_element_g
+                face_n%ielement_l = mesh(idomain_l)%faces(ielement_l,iface)%ineighbor_element_l
+                face_n%iface      = mesh(idomain_l)%faces(ielement_l,iface)%get_neighbor_face()
+                face_n%seed       = face_info%seed
 
-
-            !
-            ! Get linearization block for the neighbor element
-            !
-            if ( iblk /= DIAG ) then
-                    iblk_n = DIAG
-            else if ( iblk == DIAG ) then
-                    iblk_n = ineighbor_face
-            else
-                call chidg_signal(FATAL,"store_boundary_integrals: unexpected value")
-            end if
-
-
-            function_n%type   = function_info%type
-            function_n%ifcn   = function_info%ifcn
-            function_n%idonor = function_info%idonor
-            function_n%iblk   = iblk_n
-            
-
-
-            associate ( weights_n => mesh(idomain_l)%faces(ineighbor_element_l,ineighbor_face)%gq%face%weights(:,ineighbor_face), &
-                        jinv_n => mesh(idomain_l)%faces(ineighbor_element_l,ineighbor_face)%jinv, & 
-                        val_n => mesh(idomain_l)%faces(ineighbor_element_l,ineighbor_face)%gq%face%val(:,:,ineighbor_face) )
-
-                integrand_n = (integrand_n) * (weights_n)
 
                 !
-                ! Integrate and negate for contribution to neighbor element
+                ! Get linearization block for the neighbor element
                 !
-                integral = -matmul(transpose(val_n),integrand_n)
+                if ( iblk /= DIAG ) then
+                        iblk_n = DIAG
+                else if ( iblk == DIAG ) then
+                        iblk_n = ineighbor_face
+                else
+                    call chidg_signal(FATAL,"store_boundary_integrals: unexpected value")
+                end if
 
-                call store_boundary_integral_residual(     mesh,sdata,face_n,function_n,ieqn,integral)
-                call store_boundary_integral_linearization(mesh,sdata,face_n,function_n,ieqn,integral)
 
-            end associate
+                function_n%type   = function_info%type
+                function_n%ifcn   = function_info%ifcn
+                function_n%idonor = function_info%idonor
+                function_n%iblk   = iblk_n
+                
 
+
+                associate ( weights_n => mesh(idomain_l)%faces(ineighbor_element_l,ineighbor_face)%gq%face%weights(:,ineighbor_face), &
+                            jinv_n => mesh(idomain_l)%faces(ineighbor_element_l,ineighbor_face)%jinv, & 
+                            val_n => mesh(idomain_l)%faces(ineighbor_element_l,ineighbor_face)%gq%face%val(:,:,ineighbor_face) )
+
+                    integrand_n = (integrand_n) * (weights_n)
+
+                    !
+                    ! Integrate and negate for contribution to neighbor element
+                    !
+                    integral = -matmul(transpose(val_n),integrand_n)
+
+                    call store_boundary_integral_residual(     mesh,sdata,face_n,function_n,ieqn,integral)
+                    call store_boundary_integral_linearization(mesh,sdata,face_n,function_n,ieqn,integral)
+
+                end associate
+
+            end if ! .not. parallel_neighbor
         end if ! ielem_n
 
 

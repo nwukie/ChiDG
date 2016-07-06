@@ -4,6 +4,7 @@ module test_interpolate_mod
     use type_point,                 only: point_t
     use type_seed,                  only: seed_t
     use type_face_info,             only: face_info_t
+    use type_function,              only: function_t
     use type_domain_connectivity,   only: domain_connectivity_t
 
 
@@ -11,14 +12,14 @@ module test_interpolate_mod
     use mod_constants,      only: ZERO, ONE, TWO, THREE, FIVE, SIX, EIGHT, NINE, TEN, &
                                   XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX, &
                                   LOCAL, NEIGHBOR, IO_DESTINATION
+    use mod_function,       only: create_function
     use mod_hdfio,          only: read_grid_hdf
     use mod_interpolate,    only: interpolate_face, interpolate_element
     use mod_grid_operators, only: initialize_variable
     use mod_testutils,      only: meshgen
-    use DNAD_D
+    use mod_chidg_mpi,      only: IRANK
     use mod_DNAD_tools,     only: compute_neighbor_element_l, compute_neighbor_face
-    use type_function,      only: function_t
-    use mod_function,       only: create_function
+    use DNAD_D
     implicit none
 
     public  :: test_interpolate
@@ -27,7 +28,15 @@ module test_interpolate_mod
 
 
 
-@TestCase
+    !>
+    !!
+    !!  @author Nathan A. Wukie
+    !!
+    !!
+    !!
+    !!
+    !-----------------------------------------------------------------------------------------
+    @TestCase
     type, extends(TestCase) ::  test_interpolate
 
         type(chidg_t)                   :: chidg
@@ -37,6 +46,7 @@ module test_interpolate_mod
         procedure   ::  setUp
         procedure   ::  tearDown
     end type test_interpolate
+    !*****************************************************************************************
 
 
 
@@ -44,9 +54,13 @@ module test_interpolate_mod
 
 
 contains
-    !---------------------------------------------------------------------------------------------
-    ! NOTE: make sure to use 'this' instead of 'self' since these are over-writting a derived type 
-    ! procedure. The argument names have to match
+
+    !> NOTE: make sure to use 'this' instead of 'self' since these are over-writting a derived type 
+    !! procedure. The argument names have to match
+    !!
+    !!  @author Nathan A. Wukie
+    !!
+    !!
     !---------------------------------------------------------------------------------------------
     subroutine setUp(this)
         class(test_interpolate),    intent(inout)   :: this
@@ -117,13 +131,19 @@ contains
 
         
     end subroutine
+    !******************************************************************************************************
 
 
-!------------------------------------------------------------------------------------------------------
 
 
-!> Test interpolation of modes to volume quadrature nodes. No AD variables
-@Test
+    !> Test interpolation of modes to volume quadrature nodes. No AD variables
+    !!
+    !!  @author Nathan A. Wukie
+    !!
+    !!
+    !!
+    !------------------------------------------------------------------------------------------------------
+    @Test
     subroutine test_interpolate_element_standard(self)
         class(test_interpolate),    intent(inout)   :: self
         
@@ -162,13 +182,23 @@ contains
         ! on an element volume is producing expected results
         @assertEqual(u_ref,u_gq,tol)
 
-    end subroutine
+    end subroutine test_interpolate_element_standard
+    !********************************************************************************************************
     
     
     
     
     
-@Test
+    !>
+    !!
+    !!  @author Nathan A. Wukie
+    !!
+    !!
+    !!
+    !!
+    !!
+    !---------------------------------------------------------------------------------------------------------
+    @Test
     subroutine test_interpolate_face_standard(self)
         class(test_interpolate),    intent(inout)   :: self
         
@@ -206,19 +236,27 @@ contains
         @assertEqual(u_ref,u_gq,tol)
         
         
-    end subroutine
+    end subroutine test_interpolate_face_standard
+    !***********************************************************************************************************
 
 
 
 
 
-!-----------------------------------------------------------------------------------------------------
-!                               ELEMENT - volume interpolation - Autodiff
-!-----------------------------------------------------------------------------------------------------
+    !-----------------------------------------------------------------------------------------------------
+    !                               ELEMENT - volume interpolation - Autodiff
+    !-----------------------------------------------------------------------------------------------------
 
-!> Interpolation of modes to volume quadrature nodes. Seeding neighbor element. Testing fuction values. 
-!-------------------------------------------------------------------------------------------------------------
-@Test
+
+    !> Interpolation of modes to volume quadrature nodes. Seeding neighbor element. Testing fuction values. 
+    !!
+    !!  @author Nathan A. Wukie
+    !!
+    !!
+    !!
+    !!
+    !-------------------------------------------------------------------------------------------------------------
+    @Test
     subroutine test__interpolate_element_autodiff__values__neighbor(self)
         class(test_interpolate),    intent(inout)   :: self
         
@@ -271,13 +309,21 @@ contains
             
         end associate
         
-    end subroutine
+    end subroutine test__interpolate_element_autodiff__values__neighbor
+    !*********************************************************************************************************
 
 
 
-!> Interpolation of modes to volume quadrature nodes. Seeding neighbor element. Testing derivative values.
-!-------------------------------------------------------------------------------------------------------------
-@Test
+    !> Interpolation of modes to volume quadrature nodes. Seeding neighbor element. Testing derivative values.
+    !!
+    !!  @author Nathan A. Wukie
+    !!
+    !!
+    !!
+    !!
+    !!
+    !-------------------------------------------------------------------------------------------------------------
+    @Test
     subroutine test__interpolate_element_autodiff__derivs__neighbor(self)
         class(test_interpolate),    intent(inout)   :: self
         
@@ -330,16 +376,24 @@ contains
             
         end associate
         
-    end subroutine
+    end subroutine test__interpolate_element_autodiff__derivs__neighbor
+    !***************************************************************************************************************
     
     
     
     
     
     
-!> Interpolation of modes to volume quadrature nodes. Seeding neighbor current. Testing function values.    
-!-------------------------------------------------------------------------------------------------------------
-@Test
+    !>  Interpolation of modes to volume quadrature nodes. Seeding neighbor current. Testing function values.    
+    !!
+    !!  @author Nathan A. Wukie
+    !!
+    !!
+    !!
+    !!
+    !!
+    !-------------------------------------------------------------------------------------------------------------
+    @Test
     subroutine test__interpolate_element_autodiff__values__current(self)
         class(test_interpolate),    intent(inout)   :: self
         
@@ -391,12 +445,22 @@ contains
             
         end associate
         
-    end subroutine
+    end subroutine test__interpolate_element_autodiff__values__current
+    !*****************************************************************************************************************
 
 
-!> Interpolation of modes to volume quadrature nodes. Seeding neighbor current. Testing derivative values.
-!-------------------------------------------------------------------------------------------------------------
-@Test
+
+
+
+    !> Interpolation of modes to volume quadrature nodes. Seeding neighbor current. Testing derivative values.
+    !!
+    !!  @author Nathan A. Wukie
+    !!
+    !!
+    !!
+    !!
+    !-------------------------------------------------------------------------------------------------------------
+    @Test
     subroutine test__interpolate_element_autodiff__derivs__current(self)
         class(test_interpolate),    intent(inout)   :: self
         
@@ -454,7 +518,8 @@ contains
             
         end associate
         
-    end subroutine
+    end subroutine test__interpolate_element_autodiff__derivs__current
+    !****************************************************************************************************************
     
     
     
@@ -463,15 +528,21 @@ contains
     
     
     
-!-----------------------------------------------------------------------------------------------------
-!                               Face - surface interpolation - Autodiff
-!-----------------------------------------------------------------------------------------------------
-    
-    
-    
-!> Interpolation of modes to surface quadrature nodes. Seeding neighbor element. source=LOCAL. Testing fuction values. 
-!-------------------------------------------------------------------------------------------------------------
-@Test
+    !-----------------------------------------------------------------------------------------------------
+    !                               Face - surface interpolation - Autodiff
+    !-----------------------------------------------------------------------------------------------------
+        
+        
+        
+    !>  Interpolation of modes to surface quadrature nodes. Seeding neighbor element. source=LOCAL. Testing fuction values. 
+    !!
+    !!  @author Nathan A. Wukie
+    !!
+    !!
+    !!
+    !!
+    !-------------------------------------------------------------------------------------------------------------
+    @Test
     subroutine test__interpolate_face_autodiff__values__idA(self)
         class(test_interpolate),    intent(inout)   :: self
         
@@ -495,6 +566,7 @@ contains
             seed%idomain_l  = 1
             seed%ielement_g = 15
             seed%ielement_l = 15
+            seed%iproc      = IRANK
 
 
             !
@@ -537,16 +609,24 @@ contains
             
         end associate
         
-    end subroutine
+    end subroutine test__interpolate_face_autodiff__values__idA
+    !****************************************************************************************************************
     
     
     
     
     
         
-!> Interpolation of modes to surface quadrature nodes. Seeding neighbor element. source=LOCAL. Testing fuction values. 
-!-------------------------------------------------------------------------------------------------------------
-@Test
+    !>  Interpolation of modes to surface quadrature nodes. Seeding neighbor element. source=LOCAL. Testing fuction values. 
+    !!
+    !!  @author Nathan A. Wukie
+    !!
+    !!
+    !!
+    !!
+    !!
+    !-------------------------------------------------------------------------------------------------------------
+    @Test
     subroutine test__interpolate_face_autodiff__derivatives__idB(self)
         class(test_interpolate),    intent(inout)   :: self
         
@@ -571,6 +651,7 @@ contains
             seed%idomain_l  = 1
             seed%ielement_g = 15
             seed%ielement_l = 15
+            seed%iproc      = IRANK
 
 
 
@@ -611,13 +692,26 @@ contains
             end do
         end associate
         
-    end subroutine
+    end subroutine test__interpolate_face_autodiff__derivatives__idB
+    !*****************************************************************************************************************
+    
+
+
+
+
+
+
     
     
-    
-!> Interpolation of modes to surface quadrature nodes. Seeding current element. source=LOCAL. Testing fuction values. 
-!-------------------------------------------------------------------------------------------------------------
-@Test
+    !>  Interpolation of modes to surface quadrature nodes. Seeding current element. source=LOCAL. Testing fuction values. 
+    !!
+    !!  @author Nathan A. Wukie
+    !!
+    !!
+    !!
+    !!
+    !-------------------------------------------------------------------------------------------------------------
+    @Test
     subroutine test__interpolate_face_autodiff__values__idC(self)
         class(test_interpolate),    intent(inout)   :: self
         
@@ -641,6 +735,7 @@ contains
             seed%idomain_l  = 1
             seed%ielement_g = 14
             seed%ielement_l = 14
+            seed%iproc      = IRANK
 
 
             !
@@ -687,15 +782,24 @@ contains
             
         end associate
         
-    end subroutine
+    end subroutine test__interpolate_face_autodiff__values__idC
+    !******************************************************************************************************************
     
     
     
     
     
-!> Interpolation of modes to surface quadrature nodes. Seeding current element. source=LOCAL. Testing fuction values. 
-!-------------------------------------------------------------------------------------------------------------
-@Test
+
+
+    !>  Interpolation of modes to surface quadrature nodes. Seeding current element. source=LOCAL. Testing fuction values. 
+    !!
+    !!  @author Nathan A. Wukie
+    !!
+    !!
+    !!
+    !!
+    !-------------------------------------------------------------------------------------------------------------
+    @Test
     subroutine test__interpolate_face_autodiff__derivatives__idD(self)
         class(test_interpolate),    intent(inout)   :: self
         
@@ -719,6 +823,7 @@ contains
             seed%idomain_l  = 1
             seed%ielement_g = 14
             seed%ielement_l = 14
+            seed%iproc      = IRANK
 
 
             !
@@ -763,11 +868,8 @@ contains
             end do
         end associate
         
-    end subroutine
-
-
-
-
+    end subroutine test__interpolate_face_autodiff__derivatives__idD
+    !*****************************************************************************************************************
 
 
 
@@ -779,9 +881,14 @@ contains
 
 
     
-!> Interpolation of modes to surface quadrature nodes. Seeding neighbor element. source=NEIGHBOR. Testing fuction values. 
-!-------------------------------------------------------------------------------------------------------------
-@Test
+    !>  Interpolation of modes to surface quadrature nodes. Seeding neighbor element. source=NEIGHBOR. Testing fuction values. 
+    !!
+    !!  @author Nathan A. Wukie
+    !!
+    !!
+    !!
+    !-------------------------------------------------------------------------------------------------------------
+    @Test
     subroutine test__interpolate_face_autodiff__values__idE(self)
         class(test_interpolate),    intent(inout)   :: self
         
@@ -805,6 +912,7 @@ contains
             seed%idomain_l  = 1
             seed%ielement_g = 15
             seed%ielement_l = 15
+            seed%iproc      = IRANK
 
 
             !
@@ -848,16 +956,23 @@ contains
             
         end associate
         
-    end subroutine
+    end subroutine test__interpolate_face_autodiff__values__idE
+    !****************************************************************************************************************
     
     
     
     
     
         
-!> Interpolation of modes to surface quadrature nodes. Seeding neighbor element. source=NEIGHBOR. Testing fuction values. 
-!-------------------------------------------------------------------------------------------------------------
-@Test
+    !>  Interpolation of modes to surface quadrature nodes. Seeding neighbor element. source=NEIGHBOR. Testing fuction values. 
+    !!
+    !!  @author Nathan A. Wukie
+    !!
+    !!
+    !!
+    !!
+    !-------------------------------------------------------------------------------------------------------------
+    @Test
     subroutine test__interpolate_face_autodiff__derivatives__idF(self)
         class(test_interpolate),    intent(inout)   :: self
         
@@ -882,6 +997,7 @@ contains
             seed%idomain_l  = 1
             seed%ielement_g = 15
             seed%ielement_l = 15
+            seed%iproc      = IRANK
 
             !
             ! Set face
@@ -921,7 +1037,8 @@ contains
             end do
         end associate
         
-    end subroutine
+    end subroutine test__interpolate_face_autodiff__derivatives__idF
+    !***************************************************************************************************************
     
 
 
@@ -940,9 +1057,15 @@ contains
 
     
     
-!> Interpolation of modes to surface quadrature nodes. Seeding current element. source=NEIGHBOR. Testing fuction values. 
-!-------------------------------------------------------------------------------------------------------------
-@Test
+    !> Interpolation of modes to surface quadrature nodes. Seeding current element. source=NEIGHBOR. Testing fuction values. 
+    !!
+    !!  @author Nathan A. Wukie
+    !!
+    !!
+    !!
+    !!
+    !-------------------------------------------------------------------------------------------------------------
+    @Test
     subroutine test__interpolate_face_autodiff__values__idG(self)
         class(test_interpolate),    intent(inout)   :: self
         
@@ -966,6 +1089,7 @@ contains
             seed%idomain_l  = 1
             seed%ielement_g = 13     ! neighbor to element 14 about face 1
             seed%ielement_l = 13     ! neighbor to element 14 about face 1
+            seed%iproc      = IRANK
 
 
             !
@@ -1010,15 +1134,22 @@ contains
             
         end associate
         
-    end subroutine
+    end subroutine test__interpolate_face_autodiff__values__idG
+    !******************************************************************************************************************
     
     
     
     
     
-!> Interpolation of modes to surface quadrature nodes. Seeding current element. source=NEIGHBOR. Testing fuction derivatives. 
-!-------------------------------------------------------------------------------------------------------------
-@Test
+    !>  Interpolation of modes to surface quadrature nodes. Seeding current element. source=NEIGHBOR. Testing fuction derivatives. 
+    !!
+    !!  @author Nathan A. Wukie
+    !!
+    !!
+    !!
+    !!
+    !-------------------------------------------------------------------------------------------------------------
+    @Test
     subroutine test__interpolate_face_autodiff__derivatives__idH(self)
         class(test_interpolate),    intent(inout)   :: self
         
@@ -1045,6 +1176,7 @@ contains
             seed%idomain_l  = 1
             seed%ielement_g = 13     ! neighbor to element 14 about face 1
             seed%ielement_l = 13     ! neighbor to element 14 about face 1
+            seed%iproc      = IRANK
 
 
             !
@@ -1092,23 +1224,8 @@ contains
             end do
         end associate
         
-    end subroutine
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    end subroutine test__interpolate_face_autodiff__derivatives__idH
+    !***************************************************************************************************************
 
 
 

@@ -1698,10 +1698,8 @@ CONTAINS
         REAL(rk), dimension(size(v(1)%xp_ad_), size(v))     :: xp_ad_vm_tr
         REAL(rk), dimension(size(u,1),size(v(1)%xp_ad_))    :: res_xp_m
         REAL(rk), dimension(size(v(1)%xp_ad_), size(u,1))   :: res_xp_m_tr
-        !REAL(DBL_AD), dimension(size(v),size(v(1)%xp_ad_))      :: xp_ad_vm
-        !REAL(DBL_AD), dimension(size(v(1)%xp_ad_), size(v))     :: xp_ad_vm_tr
-        !REAL(DBL_AD), dimension(size(u,1),size(v(1)%xp_ad_))    :: res_xp_m
-        !REAL(DBL_AD), dimension(size(v(1)%xp_ad_), size(u,1))   :: res_xp_m_tr
+        real(rk), dimension(size(v))   :: tmp
+        real(rk), dimension(size(u,1)) :: tmp2
         INTEGER:: i,j
 
 
@@ -1714,8 +1712,15 @@ CONTAINS
         !
         ! Standard matrix multiplication of function values
         !
-        res%x_ad_ = MATMUL(u,v%x_ad_)
 
+        ! Broken with GCC 6.1.0
+!        res%x_ad_ = MATMUL(u,v%x_ad_)
+
+        ! Fix for GCC 6.1.0
+        tmp = v%x_ad_
+        tmp2 = matmul(u,tmp)
+        res%x_ad_ = tmp2
+    
 !        !
 !        ! Assemble derivative components as a matrix
 !        !

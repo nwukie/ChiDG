@@ -10,35 +10,39 @@ module type_densematrix
 
     !> Storage for full dense/full matrices.
     !!
+    !!  block associativity
+    !!  Domain-global index of the element, with which this block is associated.
+    !!  For example, a given element has linearization blocks xi_min,xi_max,eta_min, etc.
+    !!
+    !!
+    !!  Block dimensions
+    !!   -->j
+    !!  |
+    !!  v
+    !!  i
+    !!
+    !!
     !!  @author Nathan A. Wukie
     !!  @date   2/1/2016
     !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   6/6/2016
+    !!  @note   Extended for parallel
     !!
     !!
     !--------------------------------------------------------------------------------------------------------
     type, public :: densematrix_t
-        ! block associativity
-        ! Domain-global index of the element, with which this block is associated.
-        ! For example, a given element has linearization blocks xi_min,xi_max,eta_min, etc.
-        ! Below, we consider the linearization of element #6.
-        !
-        !   elem #5         elem #6         elem #7
-        !
-        !  blk_ximin       blk_diag        blk_ximax
-        !
-        !  The value of parent_ for the blocks would be:
-        ! - blk_ximin = 5
-        ! - blk_diag  = 6
-        ! - blk_ximax = 7
-        !
-        ! ZERO VALUE INDICATES UNASSIGNED
-!        integer(ik), private    :: dparent_ = 0     !< parent domain    For chimera reference accross domains
-!        integer(ik), private    :: eparent_ = 0     !< parent element
+        ! zero value indicates unassigned
         integer(ik), private    :: parent_proc_ = 0
         integer(ik), private    :: dparent_g_   = 0   !< Global domain index of the element this block was linearized with respect to
         integer(ik), private    :: dparent_l_   = 0   !< Local domain index of the element this block was linearized with respect to
         integer(ik), private    :: eparent_g_   = 0   !< Global element index of the element this block was linearized with respect to
         integer(ik), private    :: eparent_l_   = 0   !< Local element index of the element this block was linearized with respect to
+
+        ! If associated parent data is being received from another processor, location in chidgVector%recv to find it
+        integer(ik)             :: recv_comm    = 0
+        integer(ik)             :: recv_domain  = 0
+        integer(ik)             :: recv_element = 0
 
         ! Block storage
         ! NOTE: Assumes square blocks. TODO: extend for variable element solution expansion.
@@ -46,28 +50,22 @@ module type_densematrix
 
     contains
         ! Initializers
-        procedure :: init              !< Initialize block with general-sized matrix storage
+        procedure :: init               !< Initialize block with general-sized matrix storage
 
         ! Getters
-        ! Block dimensions
-        !   -->j
-        !  |
-        !  v
-        !  i
-        procedure :: dparent_g                        !< return parent domain
-        procedure :: dparent_l                        !< return parent domain
-        procedure :: eparent_g                        !< return parent element
-        procedure :: eparent_l                        !< return parent element
-        procedure :: parent_proc
-        procedure :: nentries                       !< return number of matrix entries
-        procedure :: idim                           !< return i-dimension of matrix storage
-        procedure :: jdim                           !< return j-dimension of matrix storage
+        procedure :: dparent_g          !< return parent domain
+        procedure :: dparent_l          !< return parent domain
+        procedure :: eparent_g          !< return parent element
+        procedure :: eparent_l          !< return parent element
+        procedure :: parent_proc        !< return the processor rank of the parent
+        procedure :: nentries           !< return number of matrix entries
+        procedure :: idim               !< return i-dimension of matrix storage
+        procedure :: jdim               !< return j-dimension of matrix storage
+        procedure :: dump               !< print out matrix contents
 
         ! Setters
-        procedure :: resize                         !< resize matrix storage
-!        procedure :: reparent                       !< reassign parent
+        procedure :: resize             !< resize matrix storage
 
-        procedure :: dump                           !< print out matrix contents
 
     end type densematrix_t
     !*************************************************************************************************************
@@ -79,8 +77,6 @@ module type_densematrix
     private
 
 contains
-
-
 
 
 
@@ -113,8 +109,6 @@ contains
         !
         ! Set parents
         !
-        !self%dparent_ = dparent
-        !self%eparent_ = eparent
         self%dparent_g_   = dparent_g
         self%dparent_l_   = dparent_l
         self%eparent_g_   = eparent_g
@@ -379,27 +373,6 @@ contains
 
 
 
-!    !> set index of parent
-!    !!
-!    !!  @author Nathan A. Wukie
-!    !!  @date   2/1/2016
-!    !!
-!    !-------------------------------------------------------------------------------------------------------------------
-!    subroutine reparent(self,par)
-!        class(densematrix_t), intent(inout)  :: self
-!        integer(ik),         intent(in)     :: par
-!
-!        self%eparent_ = par
-!
-!    end subroutine reparent
-!    !*******************************************************************************************************************
-
-
-
-
-
-
-
 
 
 
@@ -412,8 +385,10 @@ contains
 
         integer(ik) :: irow
 
-        print*, self%dparent_
-        print*, self%eparent_
+        print*, self%dparent_g_
+        print*, self%dparent_l_
+        print*, self%eparent_g_
+        print*, self%eparent_l_
 
         do irow = 1,size(self%mat,1)
             print*, self%mat(irow,:)

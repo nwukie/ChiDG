@@ -5,7 +5,7 @@ subroutine test_compute_gq_donor_cylinder_abutting()
 
     use mod_kinds,          only: rk, ik
     use mod_constants,      only: XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX, DIAG, &
-                                  IO_DESTINATION
+                                  IO_DESTINATION, ZERO
 
     use type_chidg,         only: chidg_t
     use type_meshdata,      only: meshdata_t
@@ -20,7 +20,7 @@ subroutine test_compute_gq_donor_cylinder_abutting()
     use mod_hdfio,          only: read_grid_hdf
     use mod_spatial,        only: update_space
 
-    use operator_chidg_mv
+!    use operator_chidg_mv,  only: chidg_mv
     implicit none
 
 

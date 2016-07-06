@@ -13,7 +13,7 @@ subroutine test_fgmres_solve()
     use precon_identity,            only: precon_identity_t
 
     use type_chidgMatrix
-    use type_chidgVector
+    use type_chidgVector,           only: chidgVector_t
 
     use mod_testutils,              only: meshgen
     implicit none

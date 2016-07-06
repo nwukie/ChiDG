@@ -1,4 +1,10 @@
-! Test init_square procedure for initializing square matrix storage
+!>  Test init_square procedure for initializing square matrix storage
+!!
+!!  @author Nathan A. Wukie
+!!
+!!
+!!
+!--------------------------------------------------------------------------------
 @Test
 subroutine test_densevector_INIT()
     use pfunit_mod
@@ -6,8 +12,9 @@ subroutine test_densevector_INIT()
     use type_densevector
     
     implicit none
-    type(densevector_t)  :: vec
-    integer(ik)          :: nterms, neqns, vsize, parent, nentries
+    type(densevector_t) :: vec
+    integer(ik)         :: nterms, neqns, vsize, nentries
+    integer(ik)         :: dparent_g, dparent_l, eparent_g, eparent_l
     
     
     ! Test initialization procedure
@@ -15,12 +22,18 @@ subroutine test_densevector_INIT()
     neqns  = 4
     vsize   = nterms * neqns
     nentries = vsize
-    parent = 55
+    dparent_g = 2
+    dparent_l = 1
+    eparent_g = 55
+    eparent_l = 15
     
-    call vec%init(nterms,neqns,parent)
+    call vec%init(nterms,neqns,dparent_g,dparent_l,eparent_g,eparent_l)
     
     @assertEqual(vsize,vec%nentries())
-    @assertEqual(parent,vec%parent())
+    @assertEqual(dparent_g,vec%dparent_g())
+    @assertEqual(dparent_l,vec%dparent_l())
+    @assertEqual(eparent_g,vec%eparent_g())
+    @assertEqual(eparent_l,vec%eparent_l())
     
     
     ! Test reinitialization procedure
@@ -28,97 +41,18 @@ subroutine test_densevector_INIT()
     neqns  = 3
     vsize   = nterms * neqns
     nentries = vsize
-    parent = 22
+    dparent_g = 3
+    dparent_l = 2
+    eparent_g = 22
+    eparent_l = 12
     
-    call vec%init(nterms,neqns,parent)
-    
-    @assertEqual(nentries,vec%nentries())
-    @assertEqual(parent,vec%parent())
-
-end subroutine
-
-
-
-
-
-! Test 'reparent' procedure for assigning new parent element index
-@Test
-subroutine test_densevector_REPARENT()
-    use pfunit_mod
-    use mod_kinds, only: rk,ik
-    use type_densevector
-    
-    implicit none
-    type(densevector_t)     :: vec
-    integer(ik)             :: nterms, neqns, vsize, parent, nentries
-    
-    
-    ! Initialize vector
-    nterms = 8
-    neqns  = 2
-    vsize = nterms * neqns
-    nentries = vsize
-    parent = 55
-    
-    call vec%init(nterms,neqns,parent)
-    
-    ! Test resize procedure
-    parent = 21
-    
-    call vec%reparent(parent)
+    call vec%init(nterms,neqns,dparent_g,dparent_l,eparent_g,eparent_l)
     
     @assertEqual(nentries,vec%nentries())
-    @assertEqual(parent,vec%parent())
+    @assertEqual(dparent_g,vec%dparent_g())
+    @assertEqual(dparent_l,vec%dparent_l())
+    @assertEqual(eparent_g,vec%eparent_g())
+    @assertEqual(eparent_l,vec%eparent_l())
 
-end subroutine
-
-
-
-
-
-
-
-! Test matrix-view of vector data
-!@Test
-!subroutine test_densevector_matrix_view()
-!    use pfunit_mod
-!    use mod_kinds,      only: rk, ik
-!    use mod_constants,  only: ONE, TWO
-!    use type_densevector
-!
-!    implicit none
-!    type(densevector_t)     :: vec
-!    integer(ik)             :: nterms, neqns, vsize, parent, nentries
-!    real(rk)                :: var_one(8), var_two(8)
-!
-!    ! Initialize vector
-!    nterms = 8
-!    neqns = 2
-!    parent = 10
-!    nentries = nterms * neqns
-!
-!    call vec%init(nterms,neqns,parent)
-!    
-!
-!    ! Set vector data
-!    vec%vec(1:8)  = ONE    ! var_one
-!    vec%vec(9:16) = TWO    ! var_two
-!
-!
-!    var_one = vec%mat(:,1)
-!    var_two = vec%mat(:,2)
-!
-!    @assertEqual(ONE,var_one)
-!    @assertEqual(TWO,var_two)
-!
-!end subroutine 
-!
-
-
-
-
-
-
-
-
-
+end subroutine test_densevector_INIT
+!*******************************************************************************

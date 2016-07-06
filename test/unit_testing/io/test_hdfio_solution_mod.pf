@@ -14,7 +14,13 @@ module test_hdfio_solution_mod
 
 
 
-    !----------------------------------------------------------------
+    !>
+    !!
+    !!  @author Nathan A. Wukie
+    !!
+    !!
+    !!
+    !-----------------------------------------------------------------------------
     @TestCase
     type, extends(TestCase) ::  test_hdfio_solution
 
@@ -25,10 +31,12 @@ module test_hdfio_solution_mod
         character(15)               :: fileO2     = 'D1_E27_M1_O2.h5'
     
     contains
+
         procedure   ::  setUp
         procedure   ::  tearDown
+
     end type test_hdfio_solution
-    !#################################################################
+    !*****************************************************************************
 
 
 
@@ -36,10 +44,12 @@ module test_hdfio_solution_mod
 
 contains
 
-    !
-    ! NOTE: make sure to use 'this' instead of 'self' since these are over-writting a derived type 
-    ! procedure. The argument names have to match
-    !
+    !>  NOTE: make sure to use 'this' instead of 'self' since these are over-writting a derived type 
+    !!  procedure. The argument names have to match
+    !!
+    !!
+    !!
+    !!
     !---------------------------------------------------------------------------------------------------------------
     subroutine setUp(this)
         class(test_hdfio_solution),    intent(inout)   :: this
@@ -68,12 +78,14 @@ contains
         nterms_s = 1
         call this%chidgO1%data%add_domain(meshdata(1)%name,meshdata(1)%points,meshdata(1)%connectivity,spacedim,meshdata(1)%nterms_c,'scalar')
         call this%chidgO1%initialize_solution_domains(nterms_s)
+        call this%chidgO1%init('communication')
         call this%chidgO1%initialize_solution_solver()
 
         spacedim = 3
         nterms_s = 8
         call this%chidgO2%data%add_domain(meshdata(1)%name,meshdata(1)%points,meshdata(1)%connectivity,spacedim,meshdata(1)%nterms_c,'scalar')
         call this%chidgO2%initialize_solution_domains(nterms_s)
+        call this%chidgO2%init('communication')
         call this%chidgO2%initialize_solution_solver()
 
 
@@ -115,21 +127,25 @@ contains
 
 
 
-!-----------------------------------------------------------------------------
-!   TESTS
-!-----------------------------------------------------------------------------
 
 
 
 
-    ! This tests writing a first-order solution and reading the first-order solution
-    ! back from file.
-    !
-    !   Testing:    write_solution (O1), read_solution (O1)
-    !
+
+
+
+
+
+    !>  This tests writing a first-order solution and reading the first-order solution
+    !!  back from file.
+    !!
+    !!  Testing:    write_solution (O1), read_solution (O1)
+    !!
+    !!  @author Nathan A. Wukie
+    !!
     !---------------------------------------------------------------------------------
     @Test
-    subroutine test_hdfio_soluiton_writeO1_read_O1(this)
+    subroutine test_hdfio_solution_writeO1_read_O1(this)
         class(test_hdfio_solution),     intent(inout)   :: this 
 
         real(rk)                    :: tol, ref(1)
@@ -186,8 +202,8 @@ contains
 
         end associate
 
-    end subroutine test_hdfio_soluiton_writeO1_read_O1
-    !#################################################################################
+    end subroutine test_hdfio_solution_writeO1_read_O1
+    !*********************************************************************************************
 
 
 
@@ -197,14 +213,16 @@ contains
 
 
 
-    ! This tests writing a second-order solution and reading the second-order solution
-    ! back from file.
-    !
-    !   Testing:    write_solution, read_solution
-    !
-    !---------------------------------------------------------------------------------
+    !>  This tests writing a second-order solution and reading the second-order solution
+    !!  back from file.
+    !!
+    !!  Testing:    write_solution, read_solution
+    !!
+    !!  @author Nathan A. Wukie
+    !!
+    !---------------------------------------------------------------------------------------------
     @Test
-    subroutine test_hdfio_soluiton_writeO2_read_O2(this)
+    subroutine test_hdfio_solution_writeO2_read_O2(this)
         class(test_hdfio_solution),     intent(inout)   :: this 
 
         real(rk)                    :: tol, ref(8)
@@ -259,8 +277,8 @@ contains
 
        end associate
             
-    end subroutine test_hdfio_soluiton_writeO2_read_O2
-    !#################################################################################
+    end subroutine test_hdfio_solution_writeO2_read_O2
+    !************************************************************************************************
 
 
 
@@ -274,14 +292,16 @@ contains
 
 
 
-    ! This tests writing a first-order solution and reading it back into a second-order
-    ! solution.
-    !
-    !   Testing:    write_solution, read_solution
-    !
-    !---------------------------------------------------------------------------------
+    !>  This tests writing a first-order solution and reading it back into a second-order
+    !!  solution.
+    !!
+    !!  Testing:    write_solution, read_solution
+    !!
+    !!  @author Nathan A. Wukie
+    !!
+    !-------------------------------------------------------------------------------------------------
     @Test
-    subroutine test_hdfio_soluiton_writeO1_read_O2(this)
+    subroutine test_hdfio_solution_writeO1_read_O2(this)
         class(test_hdfio_solution),     intent(inout)   :: this 
 
         real(rk)                    :: tol, ref_q1(1), ref_q2(8)
@@ -342,8 +362,8 @@ contains
 
        end associate
             
-    end subroutine test_hdfio_soluiton_writeO1_read_O2
-    !#################################################################################
+    end subroutine test_hdfio_solution_writeO1_read_O2
+    !*********************************************************************************************
 
 
 
@@ -358,14 +378,16 @@ contains
 
 
 
-    ! This tests writing a first-order solution and reading it back into a second-order
-    ! solution.
-    !
-    !   Testing:    write_solution, read_solution
-    !
-    !---------------------------------------------------------------------------------
+    !>  This tests writing a first-order solution and reading it back into a second-order
+    !!  solution.
+    !!
+    !!  Testing:    write_solution, read_solution
+    !!
+    !!  @author Nathan A. Wukie
+    !!
+    !---------------------------------------------------------------------------------------------
     @Test
-    subroutine test_hdfio_soluiton_writeO2_read_O1(this)
+    subroutine test_hdfio_solution_writeO2_read_O1(this)
         class(test_hdfio_solution),     intent(inout)   :: this 
 
         real(rk)                    :: tol, ref_q1(1), ref_q2(8)
@@ -425,8 +447,8 @@ contains
 
        end associate
             
-    end subroutine test_hdfio_soluiton_writeO2_read_O1
-    !#################################################################################
+    end subroutine test_hdfio_solution_writeO2_read_O1
+    !***********************************************************************************************
 
 
 

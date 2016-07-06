@@ -1,10 +1,8 @@
-!> Data type for storing the matrix of dense blocks which hold the linearization for an algorithm
-!!  @author Nathan A. Wukie
 module type_blockmatrix
 #include <messenger.h>
     use mod_kinds,              only: rk,ik
     use mod_constants,          only: DIAG, ZERO, XI_MIN, ETA_MIN, ZETA_MIN, XI_MAX, ETA_MAX, ZETA_MAX, &
-                                      NFACES, CHIMERA
+                                      NFACES, CHIMERA, NO_INTERIOR_NEIGHBOR
     use type_mesh,              only: mesh_t
     use type_densematrix,       only: densematrix_t
     use type_face_info,         only: face_info_t
@@ -19,7 +17,6 @@ module type_blockmatrix
     !!
     !!  @author Nathan A. Wukie
     !!  @date   2/1/2016
-    !!
     !!
     !! localblocks (nelem x 7)
     !!
@@ -36,9 +33,6 @@ module type_blockmatrix
         type(densematrix_t), allocatable :: lblks(:,:)                      !< Local domain blocks  (nelem, NBLK)
         integer(ik),         allocatable :: ldata(:,:)                      !< Block-local  data    (ielem, 1) -> nvars, (ielem, 2) -> nterms (nvars, nterms)
 
-        !
-        ! These may be better located in an array of densematrix_vector containers instead of just an allocatable array.
-        !
         type(densematrix_t), allocatable :: chi_blks(:,:)                    !< Chimera inter-domain blocks         (nelem, MaxDonors)
         type(densematrix_t), allocatable :: bc_blks(:,:)                     !< Boundary condition coupling blocks  (nelem, Max coupled elems)
 
@@ -85,7 +79,7 @@ contains
         integer(ik), allocatable    :: blocks(:)
         integer(ik)                 :: nelem, nblk, ierr, ielem, iblk, size1d, parent, block_index, neqns, nterms_s
         integer(ik)                 :: nchimera_elements, maxdonors, idonor, iface
-        integer(ik)                 :: eparent_l, dparent_l
+        integer(ik)                 :: dparent_g, dparent_l, eparent_g, eparent_l, parent_proc
         integer(ik)                 :: iopen, ChiID, ndonors, max_coupled_elems, ncoupled_elems, icoupled_elem, icoupled_elem_bc, ielem_bc, ibc
         logical                     :: new_elements
         logical                     :: chimera_face
@@ -243,48 +237,48 @@ contains
 
 
 
-        !------------------------------------------------------------------------------
-        !
-        ! Allocation for 'boundary condition blocks'
-        !
-        ! TODO: If the only 'coupled' element to the local face flux is the local element,
-        !       then a block is still allocated for it here. However, the linearization of the
-        !       local element is stored in self%lblks so the block here is not used. It
-        !       would be wasted compute time in the matrix-vector product because it is 
-        !       just zeros.
-        !
-        !------------------------------------------------------------------------------
-        if ( init_bc .and. present(bcset_coupling) ) then
-            if (allocated(self%bc_blks)) deallocate(self%bc_blks)
-
-            !
-            ! Get maximum number of coupled elements across all boundary conditions.
-            !
-            max_coupled_elems = 0
-            do ibc = 1,size(bcset_coupling%bc)
-
-                !
-                ! Loop through bc elems and test number of coupled elements against current maximum
-                !
-                do ielem = 1,size(bcset_coupling%bc(ibc)%elems)
-                    ncoupled_elems = bcset_coupling%bc(ibc)%coupled_elems(ielem)%size()
-                
-                    if ( ncoupled_elems > max_coupled_elems ) then
-                        max_coupled_elems = ncoupled_elems
-                    end if
-
-                end do ! ielem
-
-            end do ! ibc
-
-
-            !
-            ! Allocate boundary condition blocks
-            !
-            allocate(self%bc_blks(nelem,max_coupled_elems), stat=ierr)
-            if (ierr /= 0) call AllocationError
-
-        end if
+!        !------------------------------------------------------------------------------
+!        !
+!        ! Allocation for 'boundary condition blocks'
+!        !
+!        ! TODO: If the only 'coupled' element to the local face flux is the local element,
+!        !       then a block is still allocated for it here. However, the linearization of the
+!        !       local element is stored in self%lblks so the block here is not used. It
+!        !       would be wasted compute time in the matrix-vector product because it is 
+!        !       just zeros.
+!        !
+!        !------------------------------------------------------------------------------
+!        if ( init_bc .and. present(bcset_coupling) ) then
+!            if (allocated(self%bc_blks)) deallocate(self%bc_blks)
+!
+!            !
+!            ! Get maximum number of coupled elements across all boundary conditions.
+!            !
+!            max_coupled_elems = 0
+!            do ibc = 1,size(bcset_coupling%bc)
+!
+!                !
+!                ! Loop through bc elems and test number of coupled elements against current maximum
+!                !
+!                do ielem = 1,size(bcset_coupling%bc(ibc)%elems)
+!                    ncoupled_elems = bcset_coupling%bc(ibc)%coupled_elems(ielem)%size()
+!                
+!                    if ( ncoupled_elems > max_coupled_elems ) then
+!                        max_coupled_elems = ncoupled_elems
+!                    end if
+!
+!                end do ! ielem
+!
+!            end do ! ibc
+!
+!
+!            !
+!            ! Allocate boundary condition blocks
+!            !
+!            allocate(self%bc_blks(nelem,max_coupled_elems), stat=ierr)
+!            if (ierr /= 0) call AllocationError
+!
+!        end if
 
 
 
@@ -313,13 +307,6 @@ contains
                 !
                 ! Parent is the element with respect to which the linearization is computed
                 !
-!                dparent_l = mesh%idomain_l
-!                if (iblk == DIAG) then
-!                    eparent_l = mesh%elems(ielem)%ielement_l
-!                else
-!                    eparent_l = mesh%faces(ielem,iblk)%get_neighbor_element_l()
-!                end if
-
                 dparent_l = mesh%idomain_l
                 if (iblk == DIAG) then
                     dparent_g   = mesh%elems(ielem)%idomain_g
@@ -330,11 +317,10 @@ contains
                 else
                     dparent_g   = mesh%faces(ielem,iblk)%ineighbor_domain_g
                     dparent_l   = mesh%faces(ielem,iblk)%ineighbor_domain_l
-                    dparent_g   = mesh%faces(ielem,iblk)%ineighbor_element_g
-                    dparent_l   = mesh%faces(ielem,iblk)%ineighbor_element_l
+                    eparent_g   = mesh%faces(ielem,iblk)%ineighbor_element_g
+                    eparent_l   = mesh%faces(ielem,iblk)%ineighbor_element_l
                     parent_proc = mesh%faces(ielem,iblk)%ineighbor_proc
                 end if
-
 
 
 
@@ -342,8 +328,7 @@ contains
                 !
                 ! Call initialization procedure if parent is not 0 (0 meaning there is no parent for that block, probably a boundary)
                 !
-                if (eparent_l /= 0) then
-                    !call self%lblks(ielem,iblk)%init(size1d,dparent_l,eparent_l)
+                if (eparent_l /= NO_INTERIOR_NEIGHBOR) then
                     call self%lblks(ielem,iblk)%init(size1d,size1d,dparent_g,dparent_l,eparent_g,eparent_l,parent_proc)
 
                     ! Store data about number of equations and number of terms in solution expansion
@@ -353,6 +338,8 @@ contains
 
             end do ! init local
             !********************************************
+
+
 
 
             !--------------------------------------------
@@ -372,7 +359,7 @@ contains
                         !
                         ! Get ChiID and number of donor elements
                         !
-                        ChiID = mesh%faces(ielem,iface)%ChiID
+                        ChiID   = mesh%faces(ielem,iface)%ChiID
                         ndonors = mesh%chimera%recv%data(ChiID)%ndonors
 
                         !
@@ -419,7 +406,6 @@ contains
                                 !
                                 ! Call block initialization
                                 !
-                                !call self%chi_blks(ielem,iopen)%init(size1d,dparent_l,eparent_l)
                                 call self%chi_blks(ielem,iopen)%init(size1d,size1d,dparent_g,dparent_l,eparent_g,eparent_l,parent_proc)
 
                             end if
@@ -722,6 +708,7 @@ contains
             call self%store(integral,ielement_l,DIAG,ivar)
 
         else
+
 
             !
             ! Get stored information for the block

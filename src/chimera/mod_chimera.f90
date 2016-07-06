@@ -228,7 +228,7 @@ contains
                 receiver%idomain_l  = mesh(idom)%chimera%recv%data(ichimera_face)%receiver_domain_l
                 receiver%ielement_g = mesh(idom)%chimera%recv%data(ichimera_face)%receiver_element_g
                 receiver%ielement_l = mesh(idom)%chimera%recv%data(ichimera_face)%receiver_element_l
-                receiver%iface    = mesh(idom)%chimera%recv%data(ichimera_face)%receiver_face
+                receiver%iface      = mesh(idom)%chimera%recv%data(ichimera_face)%receiver_face
 
                 call write_line('   Face ', ichimera_face,' of ',mesh(idom)%chimera%recv%nfaces, delimiter='  ')
 
@@ -320,6 +320,7 @@ contains
                         call mesh(idom)%chimera%recv%data(ichimera_face)%donor_domain_l%push_back(idomain_l_list)
                         call mesh(idom)%chimera%recv%data(ichimera_face)%donor_element_g%push_back(ielement_g_list)
                         call mesh(idom)%chimera%recv%data(ichimera_face)%donor_element_l%push_back(ielement_l_list)
+                        call mesh(idom)%chimera%recv%data(ichimera_face)%donor_proc%push_back(IRANK)
                         ndonors = ndonors + 1
                     end if
 

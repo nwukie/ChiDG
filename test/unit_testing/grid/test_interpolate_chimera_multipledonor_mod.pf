@@ -15,6 +15,7 @@ module test_interpolate_chimera_multipledonor_mod
                                   LOCAL, NEIGHBOR, IO_DESTINATION
 
     use mod_hdfio,          only: read_grid_hdf
+    use mod_chidg_mpi,      only: IRANK
     use mod_interpolate,    only: interpolate_face, interpolate_element
     use mod_grid_operators, only: initialize_variable
     use mod_testutils,      only: meshgen
@@ -118,20 +119,24 @@ contains
 
 
     end subroutine
-!------------------------------------------------------------------------------------------------------
+    !************************************************************************************************************
 
 
 
     
     
-    
-!-----------------------------------------------------------------------------------------------------
-!                               Face - surface interpolation - Autodiff
-!-----------------------------------------------------------------------------------------------------
-    
+        
+    !-----------------------------------------------------------------------------------------------------
+    !                               Face - surface interpolation - Autodiff
+    !-----------------------------------------------------------------------------------------------------
+        
     
     
     !> Interpolation of modes to surface quadrature nodes. Seeding neighbor element. source=NEIGHBOR. Testing fuction values. 
+    !!
+    !!  @author Nathan A. Wukie
+    !!
+    !!
     !-------------------------------------------------------------------------------------------------------------
     @Test
     subroutine test__interpolate_face_chimera_AD_MD__values__idE(self)
@@ -157,6 +162,7 @@ contains
             seed%idomain_l  = 1
             seed%ielement_g = 2
             seed%ielement_l = 2
+            seed%iproc      = IRANK
 
 
             !
@@ -205,7 +211,11 @@ contains
     
     
         
-    !> Interpolation of modes to surface quadrature nodes. Seeding neighbor element. source=NEIGHBOR. Testing fuction values. 
+    !>  Interpolation of modes to surface quadrature nodes. Seeding neighbor element. source=NEIGHBOR. Testing fuction values. 
+    !!
+    !!  @author Nathan A. Wukie
+    !!
+    !!
     !-------------------------------------------------------------------------------------------------------------
     @Test
     subroutine test__interpolate_face_chimera_AD_MD__derivatives__idF(self)
@@ -232,6 +242,7 @@ contains
             seed%idomain_l  = 1
             seed%ielement_g = 2
             seed%ielement_l = 2
+            seed%iproc      = IRANK
 
             !
             ! Set face
@@ -287,6 +298,11 @@ contains
     
     
     !> Interpolation of modes to surface quadrature nodes. Seeding current element. source=NEIGHBOR. Testing fuction values. 
+    !!
+    !!  @author Nathan A. Wukie
+    !!
+    !!
+    !!
     !-------------------------------------------------------------------------------------------------------------
     @Test
     subroutine test__interpolate_face_chimera_AD_MD__values__idG(self)
@@ -312,6 +328,7 @@ contains
             seed%idomain_l  = 2
             seed%ielement_g = 1     ! neighbor to element 14 about face 1
             seed%ielement_l = 1     ! neighbor to element 14 about face 1
+            seed%iproc      = IRANK
 
             !
             ! Set face
@@ -362,6 +379,11 @@ contains
     
     
     !> Interpolation of modes to surface quadrature nodes. Seeding current element. source=NEIGHBOR. Testing fuction derivatives. 
+    !!
+    !!  @author Nathan A. Wukie
+    !!
+    !!
+    !!
     !-------------------------------------------------------------------------------------------------------------
     @Test
     subroutine test__interpolate_face_chimera_AD_MD__derivatives__idH(self)
@@ -393,6 +415,7 @@ contains
             seed%idomain_l  = 2
             seed%ielement_g = 1
             seed%ielement_l = 1
+            seed%iproc      = IRANK
 
 
             !

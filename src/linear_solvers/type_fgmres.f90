@@ -3,15 +3,17 @@ module type_fgmres
     use mod_kinds,              only: rk, ik
     use mod_constants,          only: ZERO
     use mod_inv,                only: inv
+    use mod_chidg_mpi,          only: ChiDG_COMM, GLOBAL_MASTER
+    use mod_inv,                only: inv
+    use mpi_f08
+
     use type_linear_solver,     only: linear_solver_t 
     use type_preconditioner,    only: preconditioner_t
     use type_chidgVector
     use type_chidgMatrix
 
-    use operator_chidg_mv
     use operator_chidg_dot,     only: dot
-    use mod_inv,                only: inv
-    use mpi_f08
+    use operator_chidg_mv,      only: chidg_mv
     implicit none
         
 
@@ -80,12 +82,13 @@ contains
         logical :: reorthogonalize = .false.
 
 
+
         !
         ! Start timer
         !
         call self%timer%reset()
         call self%timer%start()
-        call write_line('           Linear Solver: ')
+        call write_line('           Linear Solver: ', io_proc=GLOBAL_MASTER)
 
 
 
@@ -171,7 +174,7 @@ contains
             ! Compute initial residual r0, residual norm, and normalized r0
             !
             r0     = self%residual(A,x0,b)
-            r0norm = r0%norm(MPI_COMM_WORLD)
+            r0norm = r0%norm(ChiDG_COMM)
             v(1)   = r0/r0norm
             p(1)   = r0norm
 
@@ -193,21 +196,21 @@ contains
                 !
                 ! Compute w = Av for the current iteration
                 !
-                w = A*z(j)  ! PARALLELIZE M-V PRODUCT
-                norm_before = w%norm(MPI_COMM_WORLD)
+                w = chidg_mv(A,z(j))
+                norm_before = w%norm(ChiDG_COMM)
 
                 !
                 ! Orthogonalization loop. Modified Gram-Schmidt (MGS)
                 !
                 do i = 1,j
 
-                    h(i,j) = dot(w,v(i),MPI_COMM_WORLD)
+                    h(i,j) = dot(w,v(i),ChiDG_COMM)
                     
                     w = w - h(i,j)*v(i)
 
                 end do
 
-                h(j+1,j) = w%norm(MPI_COMM_WORLD)
+                h(j+1,j) = w%norm(ChiDG_COMM)
                 norm_after = h(j+1,j)
 
 
@@ -230,20 +233,20 @@ contains
                 if ( crit >= L ) reorthogonalize = .true.
                 
 
-                ! Force reorthogonalization
-                reorthogonalize = .true. 
+                !! Force reorthogonalization
+                !reorthogonalize = .true. 
                 if ( reorthogonalize ) then
-                    call write_line('GMRES: Reorthogonalizing...')
+                    call write_line('GMRES: Reorthogonalizing...', io_proc=GLOBAL_MASTER)
 
                     do i = 1,j
 
-                        htmp   = dot(w,v(i),MPI_COMM_WORLD)
+                        htmp   = dot(w,v(i),ChiDG_COMM)
                         h(i,j) = h(i,j) + htmp
 
                         w = w - htmp*v(i)
                     end do
 
-                    h(j+1,j) = w%norm(MPI_COMM_WORLD)
+                    h(j+1,j) = w%norm(ChiDG_COMM)
                 end if
 
 
@@ -309,7 +312,7 @@ contains
                 ! Test exit conditions
                 !
                 res = abs(p(j+1))
-                call write_line(res)
+                call write_line(res, io_proc=GLOBAL_MASTER)
                 converged = (res < self%tol)
                 
                 if ( converged ) then
@@ -390,7 +393,7 @@ contains
         ! Report
         !
         err = self%error(A,x,b)
-        call write_line('   Linear Solver Error: ', err, delimiter='')
+        call write_line('   Linear Solver Error: ', err, delimiter='', io_proc=GLOBAL_MASTER)
 
         call self%timer%stop()
         call self%timer%report('Linear solver compute time: ')

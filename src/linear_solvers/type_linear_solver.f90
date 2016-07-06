@@ -2,7 +2,7 @@ module type_linear_solver
     use mod_kinds,          only: rk,ik
     use type_dict,          only: dict_t
     use type_chidgMatrix,   only: chidgMatrix_t
-    use type_chidgVector
+    use type_chidgVector,   only: chidgVector_t
     use type_timer,         only: timer_t
     use operator_chidg_mv
 
@@ -61,7 +61,7 @@ module type_linear_solver
             use type_preconditioner,    only: preconditioner_t
             import linear_solver_t
 
-            class(linear_solver_t),      intent(inout)           :: self
+            class(linear_solver_t),     intent(inout)           :: self
             type(chidgMatrix_t),        intent(inout)           :: A
             type(chidgVector_t),        intent(inout)           :: x
             type(chidgVector_t),        intent(inout)           :: b
@@ -206,7 +206,8 @@ contains
         !
         ! Compute r = b - Ax
         !
-        r = b - A*x
+        !r = b - A*x
+        r = b - chidg_mv(A,x)
 
 
     end function residual

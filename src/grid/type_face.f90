@@ -5,7 +5,7 @@ module type_face
                                       ZETA_MIN, ZETA_MAX, XI_DIR, ETA_DIR, ZETA_DIR,    &
                                       X_DIR, Y_DIR, Z_DIR,                              &
                                       TWO_DIM, THREE_DIM,                               &
-                                      NFACES, NO_INTERIOR_NEIGHBOR,                     &
+                                      NFACES, NO_INTERIOR_NEIGHBOR, NO_PROC,            &
                                       ZERO, ONE, TWO, ORPHAN
 
     use type_point,             only: point_t
@@ -37,6 +37,7 @@ module type_face
         ! Self information
         integer(ik)                 :: ftype               !< INTERIOR, BOUNDARY, CHIMERA, ORPHAN 
         integer(ik)                 :: iface               !< XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, etc
+        integer(ik)                 :: ChiID = 0           !< Identifier for domain-local Chimera interfaces
 
         ! Owner-element information
         integer(ik)                 :: idomain_g            !< Global index of the parent domain
@@ -46,16 +47,16 @@ module type_face
 
 
         ! Neighbor information
-
-        ! Prototype
         integer(ik)                 :: ineighbor_proc       !< MPI processor rank of the neighboring element
         integer(ik)                 :: ineighbor_domain_g   !< Global index of the neighboring element's domain
         integer(ik)                 :: ineighbor_domain_l   !< Processor-local index of the neighboring element's domain
         integer(ik)                 :: ineighbor_element_g  !< Domain-global index of the neighboring element
         integer(ik)                 :: ineighbor_element_l  !< Processor-local index of the neighboring element
+        integer(ik)                 :: recv_comm
+        integer(ik)                 :: recv_domain
+        integer(ik)                 :: recv_element
 !        integer(ik)                 :: ineighbor_face      !< Neighbor-local index of neighbor face
 
-        integer(ik)                 :: ChiID = 0           !< Identifier for domain-local Chimera interfaces
 
         ! Chimera face offset. For periodic boundary condition.
         character(len=:), allocatable   :: periodic_type
@@ -66,12 +67,10 @@ module type_face
 
 
         ! Geometry
-        !---------------------------------------------------------
         type(point_t),      allocatable :: quad_pts(:)      !< Cartesian coordinates of quadrature nodes
         type(densevector_t)             :: coords           !< Element coordinates
 
         ! Metric terms
-        !---------------------------------------------------------
         real(rk),           allocatable :: jinv(:)          !< array of inverse element jacobians on the face
         real(rk),           allocatable :: metric(:,:,:)    !< Face metric terms
         real(rk),           allocatable :: norm(:,:)        !< Face normals
@@ -79,21 +78,17 @@ module type_face
 
 
         ! Matrices of cartesian gradients of basis/test functions
-        !---------------------------------------------------------
         real(rk),           allocatable :: dtdx(:,:)        !< Derivative of basis functions in x-direction at quadrature nodes
         real(rk),           allocatable :: dtdy(:,:)        !< Derivative of basis functions in y-direction at quadrature nodes
         real(rk),           allocatable :: dtdz(:,:)        !< Derivative of basis functions in z-direction at quadrature nodes
 
 
         ! Quadrature matrices
-        !---------------------------------------------------------
         type(quadrature_t),  pointer    :: gq     => null() !< Pointer to solution quadrature instance
         type(quadrature_t),  pointer    :: gqmesh => null() !< Pointer to mesh quadrature instance
 
 
-
         ! Logical tests
-        !---------------------------------------------------------
         logical :: geomInitialized     = .false.
         logical :: neighborInitialized = .false.
         logical :: numInitialized      = .false.
@@ -156,11 +151,23 @@ contains
         self%spacedim  = elem%spacedim
 
 
+        !
+        ! Set owner element
+        !
         self%idomain_g = elem%idomain_g
         self%idomain_l = elem%idomain_l
         self%iparent_g = elem%ielement_g
         self%iparent_l = elem%ielement_l
 
+
+        !
+        ! No neighbor associated at this point
+        !
+        self%ineighbor_domain_g  = NO_INTERIOR_NEIGHBOR
+        self%ineighbor_domain_l  = NO_INTERIOR_NEIGHBOR
+        self%ineighbor_element_g = NO_INTERIOR_NEIGHBOR
+        self%ineighbor_element_l = NO_INTERIOR_NEIGHBOR
+        self%ineighbor_proc      = NO_PROC
         
         !
         ! Set coordinates

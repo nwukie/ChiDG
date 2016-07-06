@@ -15,6 +15,7 @@ module test_interpolate_chimera_mod
                                   LOCAL, NEIGHBOR, IO_DESTINATION
 
     use mod_hdfio,          only: read_grid_hdf
+    use mod_chidg_mpi,      only: IRANK
     use mod_interpolate,    only: interpolate_face, interpolate_element
     use mod_grid_operators, only: initialize_variable
     use mod_chimera
@@ -33,7 +34,14 @@ module test_interpolate_chimera_mod
 
 
 
-@TestCase
+    !>
+    !!
+    !!  @author Nathan A. Wukie
+    !!
+    !!
+    !!
+    !------------------------------------------------------------------------------
+    @TestCase
     type, extends(TestCase) ::  test_interpolate_chimera
 
         type(chidg_t)                   :: chidg
@@ -43,6 +51,8 @@ module test_interpolate_chimera_mod
         procedure   ::  setUp
         procedure   ::  tearDown
     end type test_interpolate_chimera
+    !*******************************************************************************
+
 
 
 
@@ -50,9 +60,12 @@ module test_interpolate_chimera_mod
 
 
 contains
-    !-----------------------------------------------------------------------------------------------
-    ! NOTE: make sure to use 'this' instead of 'self' since these are over-writting a derived type 
-    ! procedure. The argument names have to match
+
+    !>
+    !!
+    !!  NOTE: make sure to use 'this' instead of 'self' since these are over-writting a derived type 
+    !!  procedure. The argument names have to match
+    !!
     !-----------------------------------------------------------------------------------------------
     subroutine setUp(this)
         class(test_interpolate_chimera),    intent(inout)   :: this
@@ -118,22 +131,25 @@ contains
 
         
     end subroutine
-
-
-!------------------------------------------------------------------------------------------------------
+    !------------------------------------------------------------------------------------------------------
 
     
     
     
-!-----------------------------------------------------------------------------------------------------
-!                               Face - surface interpolation - Autodiff
-!-----------------------------------------------------------------------------------------------------
+    !-----------------------------------------------------------------------------------------------------
+    !                               Face - surface interpolation - Autodiff
+    !-----------------------------------------------------------------------------------------------------
+        
     
     
-    
-!> Interpolation of modes to surface quadrature nodes. Seeding neighbor element. source=NEIGHBOR. Testing fuction values. 
-!-------------------------------------------------------------------------------------------------------------
-@Test
+    !>  Interpolation of modes to surface quadrature nodes. Seeding neighbor element. source=NEIGHBOR. Testing fuction values. 
+    !!
+    !!  @author Nathan A. Wukie
+    !!
+    !!
+    !!
+    !-------------------------------------------------------------------------------------------------------------
+    @Test
     subroutine test__interpolate_face_chimera_AD__values__idE(self)
         class(test_interpolate_chimera),    intent(inout)   :: self
         
@@ -161,6 +177,7 @@ contains
             seed%idomain_l  = 1
             seed%ielement_g = 2
             seed%ielement_l = 2
+            seed%iproc      = IRANK
 
             !
             ! Set face indices
@@ -199,16 +216,22 @@ contains
             
         end associate
         
-    end subroutine
+    end subroutine test__interpolate_face_chimera_AD__values__idE
+    !*************************************************************************************************************
     
     
     
     
     
         
-!> Interpolation of modes to surface quadrature nodes. Seeding neighbor element. source=NEIGHBOR. Testing fuction values. 
-!-------------------------------------------------------------------------------------------------------------
-@Test
+    !> Interpolation of modes to surface quadrature nodes. Seeding neighbor element. source=NEIGHBOR. Testing fuction values. 
+    !!
+    !!  @author Nathan A. Wukie
+    !!
+    !!
+    !!
+    !-------------------------------------------------------------------------------------------------------------
+    @Test
     subroutine test__interpolate_face_chimera_AD__derivatives__idF(self)
         class(test_interpolate_chimera),    intent(inout)   :: self
         
@@ -233,6 +256,7 @@ contains
             seed%idomain_l  = 1
             seed%ielement_g = 2
             seed%ielement_l = 2
+            seed%iproc      = IRANK
 
 
             !
@@ -274,7 +298,8 @@ contains
             end do
         end associate
         
-    end subroutine
+    end subroutine test__interpolate_face_chimera_AD__derivatives__idF
+    !*************************************************************************************************************
     
 
 
@@ -293,9 +318,14 @@ contains
 
     
     
-!> Interpolation of modes to surface quadrature nodes. Seeding current element. source=NEIGHBOR. Testing fuction values. 
-!-------------------------------------------------------------------------------------------------------------
-@Test
+    !> Interpolation of modes to surface quadrature nodes. Seeding current element. source=NEIGHBOR. Testing fuction values. 
+    !!
+    !!  @author Nathan A. Wukie
+    !!
+    !!
+    !!
+    !-------------------------------------------------------------------------------------------------------------
+    @Test
     subroutine test__interpolate_face_chimera_AD__values__idG(self)
         class(test_interpolate_chimera),    intent(inout)   :: self
         
@@ -319,6 +349,7 @@ contains
             seed%idomain_l  = 2
             seed%ielement_g = 1     ! neighbor to element 14 about face 1
             seed%ielement_l = 1     ! neighbor to element 14 about face 1
+            seed%iproc      = IRANK
 
 
 
@@ -366,15 +397,20 @@ contains
             
         end associate
         
-    end subroutine
+    end subroutine test__interpolate_face_chimera_AD__values__idG
+    !*************************************************************************************************************
     
     
     
     
     
-!> Interpolation of modes to surface quadrature nodes. Seeding current element. source=NEIGHBOR. Testing fuction derivatives. 
-!-------------------------------------------------------------------------------------------------------------
-@Test
+    !> Interpolation of modes to surface quadrature nodes. Seeding current element. source=NEIGHBOR. Testing fuction derivatives. 
+    !!
+    !!  @author Nathan A. Wukie
+    !!
+    !!
+    !-------------------------------------------------------------------------------------------------------------
+    @Test
     subroutine test__interpolate_face_chimera_AD__derivatives__idH(self)
         class(test_interpolate_chimera),    intent(inout)   :: self
         
@@ -404,6 +440,7 @@ contains
             seed%idomain_l  = 2
             seed%ielement_g = 1
             seed%ielement_l = 1
+            seed%iproc      = IRANK
 
 
             !
@@ -434,7 +471,6 @@ contains
             !
             ! PROCEDURE BEING TESTED
             !
-            !call interpolate_face(self%chidg%data%mesh,q,idomain,ielem,iface,ivar,u_gq,seed, NEIGHBOR)
             call interpolate_face(self%chidg%data%mesh,face,q,ivar,u_gq, NEIGHBOR)
               
             
@@ -458,7 +494,8 @@ contains
             end do
         end associate
         
-    end subroutine
+    end subroutine test__interpolate_face_chimera_AD__derivatives__idH
+    !*****************************************************************************************************************
 
 
 

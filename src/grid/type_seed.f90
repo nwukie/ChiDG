@@ -1,6 +1,6 @@
 module type_seed
     use mod_kinds,  only: ik
-
+    implicit none
 
 
     !> Container that holds information on the element solution being 
@@ -16,21 +16,26 @@ module type_seed
     !!  @author Nathan A. Wukie
     !!  @date   2/1/2016
     !!
-    !----------------------------------------------------------------------
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   7/1/2016
+    !!
+    !----------------------------------------------------------------------------------------------
     type, public :: seed_t
 
-!        integer(ik) :: idom
-!        integer(ik) :: ielem
         integer(ik) :: idomain_g
         integer(ik) :: idomain_l
         integer(ik) :: ielement_g
         integer(ik) :: ielement_l
+        integer(ik) :: iproc
+
+        ! If seed is on another processor, these are its location in the recv container on the current processor
+        ! Otherwise, not used.
+        integer(ik) :: recv_comm
+        integer(ik) :: recv_domain
+        integer(ik) :: recv_element
 
     end type seed_t
-    !**********************************************************************
-
-
-
+    !**********************************************************************************************
 
 
 

@@ -1,5 +1,3 @@
-!> Data type for storing the dense block matrices for the linearization of each element
-!!  @author Nathan A. Wukie
 module type_densevector
 #include <messenger.h>
     use mod_kinds,      only: rk,ik
@@ -11,7 +9,7 @@ module type_densevector
 
 
 
-    !> Container for dense floating-point vector storage.
+    !>  Container for dense floating-point vector storage.
     !!
     !!  @author Nathan A. Wukie
     !!  @date   2/1/2016
@@ -23,7 +21,10 @@ module type_densevector
     type, public :: densevector_t
 
         ! Element Associativity
-        integer(ik), private    :: parent_ = 0                  !< Associated parent element
+        integer(ik), private    :: dparent_g_
+        integer(ik), private    :: dparent_l_
+        integer(ik), private    :: eparent_g_
+        integer(ik), private    :: eparent_l_
 
         ! Storage size and equation information
         integer(ik), private    :: nterms_                      !< Number of terms in an expansion
@@ -34,25 +35,22 @@ module type_densevector
 
     contains
 
-        ! Initializers
         procedure, public :: init           !< Initialize vector storage
 
-        procedure :: parent                 !< return parent element
-        procedure :: nentries               !< return number of vector entries
-        procedure :: reparent               !< reassign parent
-        procedure :: nterms                 !< return nterms_
-        procedure :: nvars                  !< return nvars_
+        procedure, public :: dparent_g
+        procedure, public :: dparent_l
+        procedure, public :: eparent_g
+        procedure, public :: eparent_l
+        procedure, public :: nentries       !< return number of vector entries
+        procedure, public :: nterms         !< return nterms_
+        procedure, public :: nvars          !< return nvars_
 
+        procedure, public :: setvar
+        procedure, public :: getvar
+        procedure, public :: setterm
+        procedure, public :: getterm
 
-        procedure, public   :: setvar
-        procedure, public   :: getvar
-
-        procedure, public   :: getterm
-        procedure, public   :: setterm
-
-
-        procedure, public   :: clear
-
+        procedure, public :: clear
 
     end type densevector_t
     !*************************************************************************************************************
@@ -122,18 +120,25 @@ contains
     !!  @param[in]  parent  Index of associated parent element
     !!
     !-------------------------------------------------------------------------------------------------------
-    subroutine init(self,nterms,nvars,parent)
+    subroutine init(self,nterms,nvars,dparent_g,dparent_l,eparent_g,eparent_l)
         class(densevector_t),   intent(inout)   :: self
         integer(ik),            intent(in)      :: nterms
         integer(ik),            intent(in)      :: nvars
-        integer(ik),            intent(in)      :: parent
+        integer(ik),            intent(in)      :: dparent_g
+        integer(ik),            intent(in)      :: dparent_l
+        integer(ik),            intent(in)      :: eparent_g
+        integer(ik),            intent(in)      :: eparent_l
 
         integer(ik) :: ierr, vsize
 
         !
         ! Set dense-vector integer data
         !
-        self%parent_ = parent
+        self%dparent_g_ = dparent_g
+        self%dparent_l_ = dparent_l
+        self%eparent_g_ = eparent_g
+        self%eparent_l_ = eparent_l
+
         self%nterms_ = nterms
         self%nvars_  = nvars
 
@@ -205,9 +210,6 @@ contains
         !
         modes_out = self%vec(istart:iend)
 
-        ! ifort has occasional and inconsistent trouble remapping vec to mat so this access is sometimes wrong.
-        ! Pretty difficult to diagnose. Should test as much as possible before reenabling the map
-        !modes_out = self%mat(:,ivar)
     end function getvar
     !******************************************************************************************************
 
@@ -366,9 +368,6 @@ contains
 
 
 
-
-
-
     !> Function that returns nterms_ private component
     !!
     !!  @author Nathan A. Wukie
@@ -383,8 +382,6 @@ contains
 
     end function nterms
     !******************************************************************************************************
-
-
 
 
 
@@ -416,59 +413,70 @@ contains
 
 
 
+    !> Function that returns index of block parent
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   6/30/2016
+    !!
+    !-------------------------------------------------------------------------------------------------------
+    function dparent_g(self) result(par)
+        class(densevector_t),   intent(in)      :: self
+        integer(ik)                             :: par
 
+        par = self%dparent_g_
 
+    end function dparent_g
+    !******************************************************************************************************
 
 
 
     !> Function that returns index of block parent
     !!
     !!  @author Nathan A. Wukie
-    !!  @date   2/1/2016
+    !!  @date   6/30/2016
     !!
     !-------------------------------------------------------------------------------------------------------
-    function parent(self) result(par)
+    function dparent_l(self) result(par)
         class(densevector_t),   intent(in)      :: self
         integer(ik)                             :: par
 
-        par = self%parent_
+        par = self%dparent_l_
 
-    end function parent
+    end function dparent_l
     !******************************************************************************************************
 
 
 
-
-
-
-
-
-
-
-
-
-    !> reset index of parent
+    !> Function that returns index of block parent
     !!
     !!  @author Nathan A. Wukie
-    !!  @date   2/1/2016
-    !!
-    !!  @param[in]  par     Index of new parent element
+    !!  @date   6/30/2016
     !!
     !-------------------------------------------------------------------------------------------------------
-    subroutine reparent(self,par)
-        class(densevector_t),   intent(inout)   :: self
-        integer(ik),            intent(in)      :: par
+    function eparent_g(self) result(par)
+        class(densevector_t),   intent(in)      :: self
+        integer(ik)                             :: par
 
+        par = self%eparent_g_
 
-        !
-        ! Set element parent index
-        !
-        self%parent_ = par
-
-    end subroutine reparent
+    end function eparent_g
     !******************************************************************************************************
 
 
+    !> Function that returns index of block parent
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   6/30/2016
+    !!
+    !-------------------------------------------------------------------------------------------------------
+    function eparent_l(self) result(par)
+        class(densevector_t),   intent(in)      :: self
+        integer(ik)                             :: par
+
+        par = self%eparent_l_
+
+    end function eparent_l
+    !******************************************************************************************************
 
 
 
@@ -518,11 +526,14 @@ contains
         type(densevector_t),    intent(in)  :: right
         type(densevector_t) :: res
 
-        res%parent_ = right%parent_
-        res%nvars_  = right%nvars_
-        res%nterms_ = right%nterms_
+        res%dparent_g_ = right%dparent_g_
+        res%dparent_l_ = right%dparent_l_
+        res%eparent_g_ = right%eparent_g_
+        res%eparent_l_ = right%eparent_l_
+        res%nvars_     = right%nvars_
+        res%nterms_    = right%nterms_
 
-        res%vec     = left * right%vec
+        res%vec        = left * right%vec
 
     end function
 
@@ -533,11 +544,14 @@ contains
         type(densevector_t) :: res
 
 
-        res%parent_ = left%parent_
-        res%nvars_  = left%nvars_
-        res%nterms_ = left%nterms_
+        res%dparent_g_ = left%dparent_g_
+        res%dparent_l_ = left%dparent_l_
+        res%eparent_g_ = left%eparent_g_
+        res%eparent_l_ = left%eparent_l_
+        res%nvars_     = left%nvars_
+        res%nterms_    = left%nterms_
 
-        res%vec     = left%vec * right
+        res%vec        = left%vec * right
 
     end function
 
@@ -554,11 +568,14 @@ contains
         type(densevector_t) :: res
 
 
-        res%parent_ = right%parent_
-        res%nvars_  = right%nvars_
-        res%nterms_ = right%nterms_
+        res%dparent_g_ = right%dparent_g_
+        res%dparent_l_ = right%dparent_l_
+        res%eparent_g_ = right%eparent_g_
+        res%eparent_l_ = right%eparent_l_
+        res%nvars_     = right%nvars_
+        res%nterms_    = right%nterms_
         
-        res%vec     = left / right%vec
+        res%vec        = left / right%vec
 
     end function
 
@@ -569,11 +586,14 @@ contains
         type(densevector_t) :: res
 
 
-        res%parent_ = left%parent_
-        res%nvars_  = left%nvars_
-        res%nterms_ = left%nterms_
+        res%dparent_g_ = left%dparent_g_
+        res%dparent_l_ = left%dparent_l_
+        res%eparent_g_ = left%eparent_g_
+        res%eparent_l_ = left%eparent_l_
+        res%nvars_     = left%nvars_
+        res%nterms_    = left%nterms_
 
-        res%vec     = left%vec / right
+        res%vec        = left%vec / right
 
     end function
 
@@ -589,11 +609,14 @@ contains
         type(densevector_t) :: res
 
 
-        res%parent_ = left%parent_
-        res%nvars_  = left%nvars_
-        res%nterms_ = left%nterms_
+        res%dparent_g_ = left%dparent_g_
+        res%dparent_l_ = left%dparent_l_
+        res%eparent_g_ = left%eparent_g_
+        res%eparent_l_ = left%eparent_l_
+        res%nvars_     = left%nvars_
+        res%nterms_    = left%nterms_
 
-        res%vec     = left%vec + right%vec
+        res%vec        = left%vec + right%vec
 
     end function
 
@@ -606,11 +629,14 @@ contains
         type(densevector_t) :: res
 
 
-        res%parent_ = left%parent_
-        res%nvars_  = left%nvars_
-        res%nterms_ = left%nterms_
+        res%dparent_g_ = left%dparent_g_
+        res%dparent_l_ = left%dparent_l_
+        res%eparent_g_ = left%eparent_g_
+        res%eparent_l_ = left%eparent_l_
+        res%nvars_     = left%nvars_
+        res%nterms_    = left%nterms_
 
-        res%vec     = left%vec - right%vec
+        res%vec        = left%vec - right%vec
 
     end function
 

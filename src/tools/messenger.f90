@@ -1,6 +1,7 @@
 module messenger
     use mod_kinds,      only: rk,ik
     use mod_constants,  only: IO_DESTINATION
+    use mod_chidg_mpi,  only: IRANK, GLOBAL_MASTER
     implicit none
 
 
@@ -302,7 +303,7 @@ contains
     !!  @param[in]  column_width    Optional integer indicating the column width if columns was indicated.
     !!
     !----------------------------------------------------------------------------------------------------------
-    subroutine write_line(a,b,c,d,e,f,g,h,delimiter,columns,column_width,color,ltrim)
+    subroutine write_line(a,b,c,d,e,f,g,h,delimiter,columns,column_width,color,ltrim,io_proc)
         class(*),           intent(in), target, optional        :: a
         class(*),           intent(in), target, optional        :: b
         class(*),           intent(in), target, optional        :: c
@@ -316,67 +317,91 @@ contains
         integer(ik),        intent(in),         optional        :: column_width
         character(*),       intent(in),         optional        :: color
         logical,            intent(in),         optional        :: ltrim
-        
+        integer(ik),        intent(in),         optional        :: io_proc
 
         class(*), pointer               :: auxdata => null()
 
         integer :: iaux
         logical :: print_info_one, print_info_two, print_info_three, print_info_four, print_info_five
         logical :: print_info_six, print_info_seven, print_info_eight
+        logical :: proc_write
+
 
         
         !
-        ! Loop through variables and compose line to write
+        ! Decide if io_proc is writing or if all are writing
         !
-        do iaux = 1,8
-
-            print_info_one   = ( present(a) .and. (iaux == 1) )
-            print_info_two   = ( present(b) .and. (iaux == 2) )
-            print_info_three = ( present(c) .and. (iaux == 3) )
-            print_info_four  = ( present(d) .and. (iaux == 4) )
-            print_info_five  = ( present(e) .and. (iaux == 5) )
-            print_info_six   = ( present(f) .and. (iaux == 6) )
-            print_info_seven = ( present(g) .and. (iaux == 7) )
-            print_info_eight = ( present(h) .and. (iaux == 8) )
-
-            if ( print_info_one   )  auxdata => a
-            if ( print_info_two   )  auxdata => b
-            if ( print_info_three )  auxdata => c
-            if ( print_info_four  )  auxdata => d
-            if ( print_info_five  )  auxdata => e
-            if ( print_info_six   )  auxdata => f
-            if ( print_info_seven )  auxdata => g
-            if ( print_info_eight )  auxdata => h
-
-
-
-            if ( associated(auxdata) ) then
-
-                    !
-                    ! Add data to line
-                    !
-                    call add_to_line(auxdata,delimiter,columns,column_width,color,ltrim)
-
+        if ( present(io_proc) ) then
+            if ( IRANK == io_proc ) then
+                proc_write = .true.
+            else
+                proc_write = .false.
             end if
 
+        else
+            proc_write = .true.
+        end if
+
+
+
+
+
+
+        if ( proc_write ) then
+
+            !
+            ! Loop through variables and compose line to write
+            !
+            do iaux = 1,8
+
+                print_info_one   = ( present(a) .and. (iaux == 1) )
+                print_info_two   = ( present(b) .and. (iaux == 2) )
+                print_info_three = ( present(c) .and. (iaux == 3) )
+                print_info_four  = ( present(d) .and. (iaux == 4) )
+                print_info_five  = ( present(e) .and. (iaux == 5) )
+                print_info_six   = ( present(f) .and. (iaux == 6) )
+                print_info_seven = ( present(g) .and. (iaux == 7) )
+                print_info_eight = ( present(h) .and. (iaux == 8) )
+
+                if ( print_info_one   )  auxdata => a
+                if ( print_info_two   )  auxdata => b
+                if ( print_info_three )  auxdata => c
+                if ( print_info_four  )  auxdata => d
+                if ( print_info_five  )  auxdata => e
+                if ( print_info_six   )  auxdata => f
+                if ( print_info_seven )  auxdata => g
+                if ( print_info_eight )  auxdata => h
+
+
+
+                if ( associated(auxdata) ) then
+
+                        !
+                        ! Add data to line
+                        !
+                        call add_to_line(auxdata,delimiter,columns,column_width,color,ltrim)
+
+                end if
+
+
+
+                !
+                ! Unassociate pointer
+                !
+                auxdata => null()
+
+
+            end do
+
+
 
 
             !
-            ! Unassociate pointer
+            ! Send line to output
             !
-            auxdata => null()
+            call send_line()
 
-
-        end do
-
-
-
-
-        !
-        ! Send line to output
-        !
-        call send_line()
-
+        end if ! proc_write
 
 
     end subroutine write_line

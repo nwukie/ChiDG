@@ -3,20 +3,24 @@ module mod_spatial
     use mod_kinds,          only: rk,ik
     use mod_constants,      only: NFACES, DIAG, CHIMERA, INTERIOR, XI_MAX, &
                                   BOUNDARY_ADVECTIVE_FLUX
-    use type_chidg_data,    only: chidg_data_t
-    use type_timer,         only: timer_t
-
-    use type_face_info,     only: face_info_t
-    use type_function_info, only: function_info_t
-
-    use mod_DNAD_tools
+    use mod_chidg_mpi,      only: IRANK, ChiDG_COMM, GLOBAL_MASTER
     use mod_condition,      only: cond
     use mod_eigenvalues,    only: eigenvalues
+    use mpi_f08,            only: MPI_Barrier
+    use mod_DNAD_tools
 
+
+    use type_chidg_data,    only: chidg_data_t
+    use type_timer,         only: timer_t
+    use type_face_info,     only: face_info_t
+    use type_function_info, only: function_info_t
     implicit none
 
 
 contains
+
+
+
 
 
     !>  Spatial loop through domains, elements, and faces. Functions get called for each element/face.
@@ -55,6 +59,8 @@ contains
         real(rk),   allocatable :: wr(:), wi(:)
         integer(ik)             :: row_start, row_end, col_start, col_end, eparent, ierr, ndof_elem, ndof, neqn, fileunit
 
+
+
         !
         ! Start timer on spatial discretization update
         !
@@ -77,6 +83,12 @@ contains
 
 
 
+            !
+            ! Communicate solution vector
+            !
+            call data%sdata%q%comm_send()
+            call data%sdata%q%comm_recv()
+            call data%sdata%q%comm_wait()
 
 
 
@@ -86,7 +98,7 @@ contains
             !
             ! XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX, DIAG
             !
-            call write_line('Interior Scheme')
+            call write_line('Updating spatial scheme', io_proc=GLOBAL_MASTER)
 
             do iblk = 1,7           ! 1-6 = linearization of neighbor blocks, 7 = linearization of Q- block(self)
 
@@ -97,6 +109,8 @@ contains
                 !
                 do idom = 1,data%ndomains()
                     associate ( mesh => data%mesh(idom), sdata => data%sdata, eqnset => data%eqnset(idom)%item, prop => data%eqnset(idom)%item%prop)
+
+
 
                     nelem = mesh%nelem
 
@@ -113,12 +127,10 @@ contains
                             !
                             do iface = 1,NFACES
 
+
                                 !
                                 ! Define face indices
                                 !
-!                                face_info%idomain  = idom
-!                                face_info%ielement = ielem
-!                                face_info%iface    = iface
                                 face_info%idomain_g  = mesh%elems(ielem)%idomain_g
                                 face_info%idomain_l  = mesh%elems(ielem)%idomain_l
                                 face_info%ielement_g = mesh%elems(ielem)%ielement_g
@@ -245,8 +257,6 @@ contains
 
 
 
-
-
             !------------------------------------------------------------------------------------------
             !                                      Boundary Scheme
             !------------------------------------------------------------------------------------------
@@ -261,6 +271,10 @@ contains
 
 
 
+            !
+            ! Synchronize
+            !
+            call MPI_Barrier(ChiDG_COMM,ierr)
 
 
 
@@ -274,19 +288,6 @@ contains
 
     end subroutine update_space
     !******************************************************************************************************************
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 

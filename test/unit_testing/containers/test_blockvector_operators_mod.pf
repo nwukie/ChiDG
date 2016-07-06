@@ -12,22 +12,40 @@ module test_blockvector_operators_mod
 
     public  :: test_blockvector_operators
 
-@TestCase
+    !>
+    !!  
+    !!  @author Nathan A. Wukie
+    !!
+    !!
+    !!
+    !----------------------------------------------------------------------------------------------
+    @TestCase
     type, extends(TestCase) ::  test_blockvector_operators
+
         type(chidg_t)                        :: chidg
         type(blockvector_t)                  :: bv_a, bv_b, bv_res
 
     contains
+
         procedure   ::  setUp
         procedure   ::  tearDown
+
     end type test_blockvector_operators
+    !**********************************************************************************************
 
 
 contains
+
+    !>
     !! NOTE: make sure to use 'this' instead of 'self' since these are over-writting a derived type 
     !! procedure. The argument names have to match
+    !!
+    !!
+    !!
+    !----------------------------------------------------------------------------------------------
     subroutine setUp(this)
         class(test_blockvector_operators),    intent(inout)   :: this
+
         integer(ik)                                 :: nterms_s, ivar, nterms_c, spacedim
         type(point_t),  allocatable                 :: nodes(:)
         type(domain_connectivity_t)                 :: connectivity
@@ -85,24 +103,24 @@ contains
         !
         call this%chidg%close('core')
     end subroutine
+    !*********************************************************************************************************
 
 
 
 
 
-!------------------------------------------------------------------------------------------------------
-!------------------------------------------------------------------------------------------------------
-!------------------------------------------------------------------------------------------------------
-!------------------------------------------------------------------------------------------------------
-!------------------------------------------------------------------------------------------------------
 
 
 
 
-!
-! Test:    real * blockvector
-!
-@Test
+    !>  Test:    real * blockvector
+    !!
+    !!  @author Nathan A. Wukie
+    !!
+    !!
+    !!
+    !----------------------------------------------------------------------------------------------------------
+    @Test
     subroutine test_blockvector_operators_mult_real_bv(self)
         class(test_blockvector_operators),    intent(inout)   :: self
         
@@ -129,13 +147,18 @@ contains
         !
         ! Test parent data
         !
-        @assertEqual(1, self%bv_res%vecs(1)%parent())
-        @assertEqual(2, self%bv_res%vecs(2)%parent())
-        @assertEqual(3, self%bv_res%vecs(3)%parent())
-        @assertEqual(4, self%bv_res%vecs(4)%parent())
+        @assertEqual(1, self%bv_res%vecs(1)%eparent_g())
+        @assertEqual(1, self%bv_res%vecs(1)%eparent_l())
+        @assertEqual(2, self%bv_res%vecs(2)%eparent_g())
+        @assertEqual(2, self%bv_res%vecs(2)%eparent_l())
+        @assertEqual(3, self%bv_res%vecs(3)%eparent_g())
+        @assertEqual(3, self%bv_res%vecs(3)%eparent_l())
+        @assertEqual(4, self%bv_res%vecs(4)%eparent_g())
+        @assertEqual(4, self%bv_res%vecs(4)%eparent_l())
 
 
-    end subroutine
+    end subroutine test_blockvector_operators_mult_real_bv
+    !***********************************************************************************************************
     
 
 
@@ -149,10 +172,15 @@ contains
 
 
 
-!
-! Test:    blockvector * real
-!
-@Test
+    !>  Test:    blockvector * real
+    !!
+    !!  @author Nathan A. Wukie
+    !!
+    !!
+    !!
+    !!
+    !------------------------------------------------------------------------------------------------------------
+    @Test
     subroutine test_blockvector_operators_mult_bv_real(self)
         class(test_blockvector_operators),    intent(inout)   :: self
         
@@ -176,7 +204,20 @@ contains
         @assertEqual(val*FOUR,  self%bv_res%vecs(4)%vec)
 
 
-    end subroutine
+        !
+        ! Test parent data
+        !
+        @assertEqual(1, self%bv_res%vecs(1)%eparent_g())
+        @assertEqual(1, self%bv_res%vecs(1)%eparent_l())
+        @assertEqual(2, self%bv_res%vecs(2)%eparent_g())
+        @assertEqual(2, self%bv_res%vecs(2)%eparent_l())
+        @assertEqual(3, self%bv_res%vecs(3)%eparent_g())
+        @assertEqual(3, self%bv_res%vecs(3)%eparent_l())
+        @assertEqual(4, self%bv_res%vecs(4)%eparent_g())
+        @assertEqual(4, self%bv_res%vecs(4)%eparent_l())
+
+    end subroutine test_blockvector_operators_mult_bv_real
+    !*************************************************************************************************************
     
 
 
@@ -185,10 +226,14 @@ contains
 
 
 
-!
-! Test:    real / blockvector
-!
-@Test
+    !>  Test:    real / blockvector
+    !!
+    !!  @author Nathan A. Wukie
+    !!
+    !!
+    !!
+    !-------------------------------------------------------------------------------------------------------------
+    @Test
     subroutine test_blockvector_operators_div_real_bv(self)
         class(test_blockvector_operators),    intent(inout)   :: self
         
@@ -212,7 +257,20 @@ contains
         @assertEqual(val/FOUR,  self%bv_res%vecs(4)%vec)
 
 
-    end subroutine
+        !
+        ! Test parent data
+        !
+        @assertEqual(1, self%bv_res%vecs(1)%eparent_g())
+        @assertEqual(1, self%bv_res%vecs(1)%eparent_l())
+        @assertEqual(2, self%bv_res%vecs(2)%eparent_g())
+        @assertEqual(2, self%bv_res%vecs(2)%eparent_l())
+        @assertEqual(3, self%bv_res%vecs(3)%eparent_g())
+        @assertEqual(3, self%bv_res%vecs(3)%eparent_l())
+        @assertEqual(4, self%bv_res%vecs(4)%eparent_g())
+        @assertEqual(4, self%bv_res%vecs(4)%eparent_l())
+
+    end subroutine test_blockvector_operators_div_real_bv
+    !*************************************************************************************************************
     
 
 
@@ -224,10 +282,14 @@ contains
 
 
 
-!
-! Test:    blockvector / real
-!
-@Test
+    !>  Test:    blockvector / real
+    !!
+    !!  @author Nathan A. Wukie
+    !!
+    !!
+    !!
+    !--------------------------------------------------------------------------------------------------------------
+    @Test
     subroutine test_blockvector_operators_div_bv_real(self)
         class(test_blockvector_operators),    intent(inout)   :: self
         
@@ -250,8 +312,21 @@ contains
         @assertEqual(THREE/val, self%bv_res%vecs(3)%vec)
         @assertEqual(FOUR/val,  self%bv_res%vecs(4)%vec)
 
+        !
+        ! Test parent data
+        !
+        @assertEqual(1, self%bv_res%vecs(1)%eparent_g())
+        @assertEqual(1, self%bv_res%vecs(1)%eparent_l())
+        @assertEqual(2, self%bv_res%vecs(2)%eparent_g())
+        @assertEqual(2, self%bv_res%vecs(2)%eparent_l())
+        @assertEqual(3, self%bv_res%vecs(3)%eparent_g())
+        @assertEqual(3, self%bv_res%vecs(3)%eparent_l())
+        @assertEqual(4, self%bv_res%vecs(4)%eparent_g())
+        @assertEqual(4, self%bv_res%vecs(4)%eparent_l())
 
-    end subroutine
+
+    end subroutine test_blockvector_operators_div_bv_real
+    !***************************************************************************************************************
     
 
 
@@ -260,10 +335,15 @@ contains
     
 
 
-!
-! Test:    blockvector + blockvector
-!
-@Test
+    
+    !>  Test:    blockvector + blockvector
+    !!
+    !!  @author Nathan A. Wukie
+    !!
+    !!
+    !!
+    !----------------------------------------------------------------------------------------------------------------
+    @Test
     subroutine test_blockvector_operators_add_bv_bv(self)
         class(test_blockvector_operators),    intent(inout)   :: self
         
@@ -286,9 +366,22 @@ contains
         @assertEqual(SEVEN, self%bv_res%vecs(3)%vec)
         @assertEqual(NINE,  self%bv_res%vecs(4)%vec)
 
+        !
+        ! Test parent data
+        !
+        @assertEqual(1, self%bv_res%vecs(1)%eparent_g())
+        @assertEqual(1, self%bv_res%vecs(1)%eparent_l())
+        @assertEqual(2, self%bv_res%vecs(2)%eparent_g())
+        @assertEqual(2, self%bv_res%vecs(2)%eparent_l())
+        @assertEqual(3, self%bv_res%vecs(3)%eparent_g())
+        @assertEqual(3, self%bv_res%vecs(3)%eparent_l())
+        @assertEqual(4, self%bv_res%vecs(4)%eparent_g())
+        @assertEqual(4, self%bv_res%vecs(4)%eparent_l())
 
 
-    end subroutine
+
+    end subroutine test_blockvector_operators_add_bv_bv
+    !*****************************************************************************************************************
     
 
 
@@ -300,10 +393,14 @@ contains
 
 
 
-!
-! Test:    blockvector - blockvector
-!
-@Test
+    !>  Test:    blockvector - blockvector
+    !!
+    !!  @author Nathan A. Wukie
+    !!
+    !!
+    !!
+    !------------------------------------------------------------------------------------------------------------------
+    @Test
     subroutine test_blockvector_operators_sub_bv_bv(self)
         class(test_blockvector_operators),    intent(inout)   :: self
         
@@ -326,31 +423,26 @@ contains
         @assertEqual(-ONE, self%bv_res%vecs(3)%vec)
         @assertEqual(-ONE, self%bv_res%vecs(4)%vec)
 
+        !
+        ! Test parent data
+        !
+        @assertEqual(1, self%bv_res%vecs(1)%eparent_g())
+        @assertEqual(1, self%bv_res%vecs(1)%eparent_l())
+        @assertEqual(2, self%bv_res%vecs(2)%eparent_g())
+        @assertEqual(2, self%bv_res%vecs(2)%eparent_l())
+        @assertEqual(3, self%bv_res%vecs(3)%eparent_g())
+        @assertEqual(3, self%bv_res%vecs(3)%eparent_l())
+        @assertEqual(4, self%bv_res%vecs(4)%eparent_g())
+        @assertEqual(4, self%bv_res%vecs(4)%eparent_l())
 
-    end subroutine
+
+    end subroutine test_blockvector_operators_sub_bv_bv
+    !*******************************************************************************************************************
     
 
 
 
 
-
-
-!
-!! Test:     blockvector = blockvector
-!@Test
-!    subroutine test_blockvector_operators_assignment(self)
-!        class(test_blockvector_operators),  intent(inout)   :: self
-!        
-!        type(blockvector_t) :: res
-!
-!
-!
-!
-!        !
-!        ! Assign blockvector.   TESTING THIS
-!        !
-!        res = self%bv_a
-!
 
 
 

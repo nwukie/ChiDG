@@ -1,132 +1,132 @@
-@Test
-subroutine test_operator_block_mv()
-    use pfunit_mod
-
-    use mod_kinds,                  only: rk, ik
-    use mod_constants,              only: ZERO, ONE, TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT, &
-                                          NINE, TEN, DIAG, XI_MIN, XI_MAX, IO_DESTINATION
-
-    use type_blockvector,           only: blockvector_t
-    use type_chidg,                 only: chidg_t
-    use type_point,                 only: point_t
-    use type_domain_connectivity,   only: domain_connectivity_t
-
-    use mod_testutils,              only: meshgen
-
-    use operator_block_mv
-    implicit none
-
-    type(chidg_t)               :: chidg
-    type(point_t),  allocatable :: nodes(:)
-    type(domain_connectivity_t) :: connectivity
-    type(blockmatrix_t)         :: A
-    type(blockvector_t)         :: x, b
-
-    real(rk)                    :: tol
-    integer(ik)                 :: nterms_c, nterms_s, idomain, spacedim
-    real(rk), dimension(8,8)    :: diag_1, diag_2, diag_3, ximax_1, ximin_2, ximax_2, ximin_3
-    real(rk), dimension(8)      :: x_1, x_2, x_3
-    real(rk), dimension(8)      :: b_ref_1, b_ref_2, b_ref_3
-
-
-
-    tol         = 1.e-13_rk
-    idomain     = 1
-    spacedim    = 3
-    nterms_c    = 8
-    nterms_s    = 8
-
-    IO_DESTINATION = 'file'
-
-    ! Initialize ChiDG
-    call chidg%init('env')
-
-
-    ! Get grid points
-    call meshgen('311',nodes,connectivity)
-
-
-    ! Initialize domain
-    call chidg%data%add_domain('D_01',nodes,connectivity,spacedim,nterms_c,'scalar')
-    call chidg%initialize_solution_domains(nterms_s)
-    call chidg%init('communication')
-
-
-
-    !
-    ! Initialize data containers
-    !
-    call A%init(chidg%data%mesh(1),mtype='full')
-    call x%init(chidg%data%mesh(1))
-    call b%init(chidg%data%mesh(1))
-
-    
-
-    ! 
-    ! Initialize blockmatrix data (A)
-    !
-    A%lblks(1,DIAG)%mat   = ONE
-    A%lblks(1,XI_MAX)%mat = TWO
-    
-    
-    A%lblks(2,XI_MIN)%mat = ONE
-    A%lblks(2,DIAG)%mat   = TWO
-    A%lblks(2,XI_MAX)%mat = THREE
-
-
-    A%lblks(3,XI_MIN)%mat = ONE
-    A%lblks(3,DIAG)%mat   = THREE
-    
-
-
-    !
-    ! Initialize blockvector data (x)
-    !
-    x%vecs(1)%vec = ONE
-    x%vecs(2)%vec = TWO
-    x%vecs(3)%vec = THREE
-
-
-
-
-    !
-    ! Perform matrix-vector multiplication. THIS IS BEING TESTED
-    !
-    b = A*x
-
-
-
-
-    
-    !
-    ! Compute reference values
-    !
-    b_ref_1 = (ONE*ONE)*nterms_s + (TWO*TWO)*nterms_s
-    b_ref_2 = (ONE*ONE)*nterms_s + (TWO*TWO)*nterms_s + (THREE*THREE)*nterms_s
-    b_ref_3 = (ONE*TWO)*nterms_s + (THREE*THREE)*nterms_s
-
-
-
-
-
-    !
-    ! Test conditions
-    !
-    @assertEqual(b_ref_1,b%vecs(1)%vec)
-    @assertEqual(b_ref_2,b%vecs(2)%vec)
-    @assertEqual(b_ref_3,b%vecs(3)%vec)
-
-
-
-
-
-
-
-    !
-    ! Close ChiDG interface
-    !
-    call chidg%close('core')
-
-
-
-end subroutine test_operator_block_mv
+!@Test
+!subroutine test_operator_block_mv()
+!    use pfunit_mod
+!
+!    use mod_kinds,                  only: rk, ik
+!    use mod_constants,              only: ZERO, ONE, TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT, &
+!                                          NINE, TEN, DIAG, XI_MIN, XI_MAX, IO_DESTINATION
+!
+!    use type_blockvector,           only: blockvector_t
+!    use type_chidg,                 only: chidg_t
+!    use type_point,                 only: point_t
+!    use type_domain_connectivity,   only: domain_connectivity_t
+!
+!    use mod_testutils,              only: meshgen
+!
+!    use operator_block_mv
+!    implicit none
+!
+!    type(chidg_t)               :: chidg
+!    type(point_t),  allocatable :: nodes(:)
+!    type(domain_connectivity_t) :: connectivity
+!    type(blockmatrix_t)         :: A
+!    type(blockvector_t)         :: x, b
+!
+!    real(rk)                    :: tol
+!    integer(ik)                 :: nterms_c, nterms_s, idomain, spacedim
+!    real(rk), dimension(8,8)    :: diag_1, diag_2, diag_3, ximax_1, ximin_2, ximax_2, ximin_3
+!    real(rk), dimension(8)      :: x_1, x_2, x_3
+!    real(rk), dimension(8)      :: b_ref_1, b_ref_2, b_ref_3
+!
+!
+!
+!    tol         = 1.e-13_rk
+!    idomain     = 1
+!    spacedim    = 3
+!    nterms_c    = 8
+!    nterms_s    = 8
+!
+!    IO_DESTINATION = 'file'
+!
+!    ! Initialize ChiDG
+!    call chidg%init('env')
+!
+!
+!    ! Get grid points
+!    call meshgen('311',nodes,connectivity)
+!
+!
+!    ! Initialize domain
+!    call chidg%data%add_domain('D_01',nodes,connectivity,spacedim,nterms_c,'scalar')
+!    call chidg%initialize_solution_domains(nterms_s)
+!    call chidg%init('communication')
+!
+!
+!
+!    !
+!    ! Initialize data containers
+!    !
+!    call A%init(chidg%data%mesh(1),mtype='full')
+!    call x%init(chidg%data%mesh(1))
+!    call b%init(chidg%data%mesh(1))
+!
+!    
+!
+!    ! 
+!    ! Initialize blockmatrix data (A)
+!    !
+!    A%lblks(1,DIAG)%mat   = ONE
+!    A%lblks(1,XI_MAX)%mat = TWO
+!    
+!    
+!    A%lblks(2,XI_MIN)%mat = ONE
+!    A%lblks(2,DIAG)%mat   = TWO
+!    A%lblks(2,XI_MAX)%mat = THREE
+!
+!
+!    A%lblks(3,XI_MIN)%mat = ONE
+!    A%lblks(3,DIAG)%mat   = THREE
+!    
+!
+!
+!    !
+!    ! Initialize blockvector data (x)
+!    !
+!    x%vecs(1)%vec = ONE
+!    x%vecs(2)%vec = TWO
+!    x%vecs(3)%vec = THREE
+!
+!
+!
+!
+!    !
+!    ! Perform matrix-vector multiplication. THIS IS BEING TESTED
+!    !
+!    b = A*x
+!
+!
+!
+!
+!    
+!    !
+!    ! Compute reference values
+!    !
+!    b_ref_1 = (ONE*ONE)*nterms_s + (TWO*TWO)*nterms_s
+!    b_ref_2 = (ONE*ONE)*nterms_s + (TWO*TWO)*nterms_s + (THREE*THREE)*nterms_s
+!    b_ref_3 = (ONE*TWO)*nterms_s + (THREE*THREE)*nterms_s
+!
+!
+!
+!
+!
+!    !
+!    ! Test conditions
+!    !
+!    @assertEqual(b_ref_1,b%vecs(1)%vec)
+!    @assertEqual(b_ref_2,b%vecs(2)%vec)
+!    @assertEqual(b_ref_3,b%vecs(3)%vec)
+!
+!
+!
+!
+!
+!
+!
+!    !
+!    ! Close ChiDG interface
+!    !
+!    call chidg%close('core')
+!
+!
+!
+!end subroutine test_operator_block_mv

@@ -8,7 +8,9 @@ module precon_ILU0
     use type_chidgVector
     use type_blockmatrix,       only: blockmatrix_t
 
-    use mod_inv,    only: inv
+    use mod_inv,                only: inv
+
+    use mod_chidg_mpi,          only: IRANK
     implicit none
 
 
@@ -96,12 +98,12 @@ contains
         type(chidgVector_t),    intent(in)      :: b
 
 
-        integer(ik)             :: ielem, irow, icol, eparent, iblk, idom, ndom
+        integer(ik)             :: ielem, irow, icol, eparent_l, iblk, idom, ndom
         integer(ik)             :: lower_blocks(3), upper_blocks(3)
         real(rk), allocatable   :: pdiag(:,:)
 
 
-        call write_line(' Computing ILU0 factorization')
+        call write_line(' Computing ILU0 factorization', io_proc=GLOBAL_MASTER)
 
         !
         ! Test preconditioner initialization
@@ -145,17 +147,19 @@ contains
                 ! Operate on all the L blocks for the current row
                 !
                 do iblk = 1,size(lower_blocks)
-                    if (allocated(self%LD(idom)%lblks(irow,lower_blocks(iblk))%mat)) then
+
+                    if (allocated(self%LD(idom)%lblks(irow,lower_blocks(iblk))%mat) .and. self%LD(idom)%lblks(irow,lower_blocks(iblk))%parent_proc() == IRANK) then
+                    !if (allocated(self%LD(idom)%lblks(irow,lower_blocks(iblk))%mat) ) then
 
 
                         ! Get parent index
-                        eparent = self%LD(idom)%lblks(irow,lower_blocks(iblk))%eparent()
+                        eparent_l = self%LD(idom)%lblks(irow,lower_blocks(iblk))%eparent_l()
 
                         ! Compute and store the contribution to the lower-triangular part of LD
-                        self%LD(idom)%lblks(irow,lower_blocks(iblk))%mat = matmul(A%dom(idom)%lblks(irow,lower_blocks(iblk))%mat,self%LD(idom)%lblks(eparent,DIAG)%mat)
+                        self%LD(idom)%lblks(irow,lower_blocks(iblk))%mat = matmul(A%dom(idom)%lblks(irow,lower_blocks(iblk))%mat,self%LD(idom)%lblks(eparent_l,DIAG)%mat)
 
                         ! Modify the current diagonal by this lower-triangular part multiplied by opposite upper-triangular part. (The component in the transposed position)
-                        self%LD(idom)%lblks(irow,DIAG)%mat = self%LD(idom)%lblks(irow,DIAG)%mat  -  matmul(self%LD(idom)%lblks(irow,lower_blocks(iblk))%mat,  A%dom(idom)%lblks(eparent,upper_blocks(iblk))%mat)
+                        self%LD(idom)%lblks(irow,DIAG)%mat = self%LD(idom)%lblks(irow,DIAG)%mat  -  matmul(self%LD(idom)%lblks(irow,lower_blocks(iblk))%mat,  A%dom(idom)%lblks(eparent_l,upper_blocks(iblk))%mat)
 
                     end if
                 end do ! iblk
@@ -196,7 +200,7 @@ contains
 
         type(chidgVector_t)         :: z
 
-        integer(ik)                 :: ielem, eparent, irow, iblk, block_index, idom, ndom
+        integer(ik)                 :: ielem, eparent_l, irow, iblk, block_index, idom, ndom
         integer(ik), allocatable    :: lower_blocks(:), upper_blocks(:)
 
         !
@@ -228,13 +232,14 @@ contains
                 do block_index = 1,size(lower_blocks)
                     iblk = lower_blocks(block_index)
 
-                    if (allocated(self%LD(idom)%lblks(irow,iblk)%mat)) then
+                    if (allocated(self%LD(idom)%lblks(irow,iblk)%mat) .and. self%LD(idom)%lblks(irow,iblk)%parent_proc() == IRANK) then
+                    !if (allocated(self%LD(idom)%lblks(irow,iblk)%mat) ) then
                         !
                         ! Get associated parent block index
                         !
-                        eparent = self%LD(idom)%lblks(irow,iblk)%eparent()
+                        eparent_l = self%LD(idom)%lblks(irow,iblk)%eparent_l()
 
-                        z%dom(idom)%vecs(irow)%vec = z%dom(idom)%vecs(irow)%vec - matmul(self%LD(idom)%lblks(irow,iblk)%mat, z%dom(idom)%vecs(eparent)%vec)
+                        z%dom(idom)%vecs(irow)%vec = z%dom(idom)%vecs(irow)%vec - matmul(self%LD(idom)%lblks(irow,iblk)%mat, z%dom(idom)%vecs(eparent_l)%vec)
 
                     end if
 
@@ -257,13 +262,14 @@ contains
                 do block_index = 1,size(upper_blocks)
                     iblk = upper_blocks(block_index)
 
-                    if (allocated(A%dom(idom)%lblks(irow,iblk)%mat)) then
+                    if (allocated(A%dom(idom)%lblks(irow,iblk)%mat) .and. A%dom(idom)%lblks(irow,iblk)%parent_proc() == IRANK) then
+                    !if (allocated(A%dom(idom)%lblks(irow,iblk)%mat) ) then
                         !
                         ! Get associated parent block index
                         !
-                        eparent = A%dom(idom)%lblks(irow,iblk)%eparent()
+                        eparent_l = A%dom(idom)%lblks(irow,iblk)%eparent_l()
 
-                        z%dom(idom)%vecs(irow)%vec = z%dom(idom)%vecs(irow)%vec - matmul(A%dom(idom)%lblks(irow,iblk)%mat, z%dom(idom)%vecs(eparent)%vec)
+                        z%dom(idom)%vecs(irow)%vec = z%dom(idom)%vecs(irow)%vec - matmul(A%dom(idom)%lblks(irow,iblk)%mat, z%dom(idom)%vecs(eparent_l)%vec)
 
                     end if
 
@@ -273,7 +279,6 @@ contains
                 !
                 ! Diagonal block
                 !
-                !z%vecs(irow)%vec = matmul(inv(self%LD%lblks(irow,DIAG)%mat), z%vecs(irow)%vec)
                 z%dom(idom)%vecs(irow)%vec = matmul(self%LD(idom)%lblks(irow,DIAG)%mat, z%dom(idom)%vecs(irow)%vec)
 
             end do ! irow

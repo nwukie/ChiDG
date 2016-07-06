@@ -57,10 +57,6 @@ contains
 
 
 
-
-
-
-
         !
         ! Loop through mesh types
         !

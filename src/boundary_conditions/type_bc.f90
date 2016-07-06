@@ -2,6 +2,8 @@ module type_bc
 #include <messenger.h>
     use mod_kinds,                  only: rk, ik
     use mod_constants,              only: XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX, BOUNDARY, CHIMERA, ORPHAN, BC_BLK, ONE, TWO, RKTOL
+    use mod_chidg_mpi,              only: IRANK
+
     use type_mesh,                  only: mesh_t
     use type_point,                 only: point_t
     use type_ivector,               only: ivector_t
@@ -549,6 +551,7 @@ contains
                 face%seed%idomain_l  = mesh(idomain_l)%elems(ielement_c)%idomain_l
                 face%seed%ielement_g = mesh(idomain_l)%elems(ielement_c)%ielement_g
                 face%seed%ielement_l = mesh(idomain_l)%elems(ielement_c)%ielement_l
+                face%seed%iproc      = IRANK
 
                 !
                 ! For the current boundary element(face), call specialized compute procedure.

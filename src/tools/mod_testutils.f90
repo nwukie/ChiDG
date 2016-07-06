@@ -2,6 +2,7 @@ module mod_testutils
 #include <messenger.h>
     use mod_kinds,                  only: rk,ik
     use mod_constants,              only: ZERO, ONE, TWO, THREE, FOUR, FIVE, SIX
+    use mod_chidg_mpi,              only: IRANK
     use type_point,                 only: point_t
     use type_domain_connectivity,   only: domain_connectivity_t
     implicit none
@@ -121,7 +122,6 @@ contains
         npts = npts_x*npts_y*npts_z
         nelem = (npts_x-1)*(npts_y-1)*(npts_z-1)
         npts_element = 8    !linear
-        !allocate(nodes(npts), connectivity(nelem,2+npts_element), stat=ierr)
         allocate(nodes(npts), stat=ierr)
         if (ierr /= 0) call AllocationError
 
@@ -155,6 +155,7 @@ contains
                     connectivity%data(ielem)%data(1) = 1        ! idomain
                     connectivity%data(ielem)%data(2) = ielem    ! ielement
                     connectivity%data(ielem)%data(3) = 1        ! mapping
+                    call connectivity%data(ielem)%set_element_partition(IRANK)
 
                     xstart = 1 + (ielem_x-1)
                     ystart = 1 + (ielem_y-1)
@@ -263,6 +264,7 @@ contains
                     connectivity%data(ielem)%data(1) = 1        ! idomain
                     connectivity%data(ielem)%data(2) = ielem    ! ielement
                     connectivity%data(ielem)%data(3) = 1        ! mapping
+                    call connectivity%data(ielem)%set_element_partition(IRANK)
 
                     xstart = 1 + (ielem_x-1)
                     ystart = 1 + (ielem_y-1)
@@ -388,6 +390,7 @@ contains
                     connectivity%data(ielem)%data(1) = 1        ! idomain
                     connectivity%data(ielem)%data(2) = ielem    ! ielement
                     connectivity%data(ielem)%data(3) = 1        ! mapping
+                    call connectivity%data(ielem)%set_element_partition(IRANK)
 
                     xstart = 1 + (ielem_x-1)
                     ystart = 1 + (ielem_y-1)
@@ -509,6 +512,7 @@ contains
                     connectivity%data(ielem)%data(1) = 1        ! idomain
                     connectivity%data(ielem)%data(2) = ielem    ! ielement
                     connectivity%data(ielem)%data(3) = 1        ! mapping
+                    call connectivity%data(ielem)%set_element_partition(IRANK)
 
                     xstart = 1 + (ielem_x-1)
                     ystart = 1 + (ielem_y-1)
@@ -639,6 +643,7 @@ contains
                     connectivity%data(ielem)%data(1) = 1        ! idomain
                     connectivity%data(ielem)%data(2) = ielem    ! ielement
                     connectivity%data(ielem)%data(3) = 1        ! mapping
+                    call connectivity%data(ielem)%set_element_partition(IRANK)
 
                     xstart = 1 + (ielem_x-1)
                     ystart = 1 + (ielem_y-1)
@@ -771,6 +776,7 @@ contains
                     connectivity%data(ielem)%data(1) = 1        ! idomain
                     connectivity%data(ielem)%data(2) = ielem    ! ielement
                     connectivity%data(ielem)%data(3) = 1        ! mapping
+                    call connectivity%data(ielem)%set_element_partition(IRANK)
 
                     xstart = 1 + (ielem_x-1)
                     ystart = 1 + (ielem_y-1)
@@ -905,6 +911,7 @@ contains
                     connectivity%data(ielem)%data(1) = 1        ! idomain
                     connectivity%data(ielem)%data(2) = ielem    ! ielement
                     connectivity%data(ielem)%data(3) = 1        ! mapping
+                    call connectivity%data(ielem)%set_element_partition(IRANK)
 
                     xstart = 1 + (ielem_x-1)
                     ystart = 1 + (ielem_y-1)
@@ -1026,6 +1033,7 @@ contains
                     connectivity%data(ielem)%data(1) = 1        ! idomain
                     connectivity%data(ielem)%data(2) = ielem    ! ielement
                     connectivity%data(ielem)%data(3) = 1        ! mapping
+                    call connectivity%data(ielem)%set_element_partition(IRANK)
 
                     xstart = 1 + (ielem_x-1)
                     ystart = 1 + (ielem_y-1)
@@ -1143,6 +1151,7 @@ contains
                     connectivity%data(ielem)%data(1) = 1        ! idomain
                     connectivity%data(ielem)%data(2) = ielem    ! ielement
                     connectivity%data(ielem)%data(3) = 1        ! mapping
+                    call connectivity%data(ielem)%set_element_partition(IRANK)
 
                     xstart = 1 + (ielem_x-1)
                     ystart = 1 + (ielem_y-1)
@@ -1268,6 +1277,7 @@ contains
                     connectivity%data(ielem)%data(1) = 1        ! idomain
                     connectivity%data(ielem)%data(2) = ielem    ! ielement
                     connectivity%data(ielem)%data(3) = 1        ! mapping
+                    call connectivity%data(ielem)%set_element_partition(IRANK)
 
                     xstart = 1 + (ielem_x-1)
                     ystart = 1 + (ielem_y-1)
@@ -1376,6 +1386,7 @@ contains
                     connectivity%data(ielem)%data(1) = 1        ! idomain
                     connectivity%data(ielem)%data(2) = ielem    ! ielement
                     connectivity%data(ielem)%data(3) = 1        ! mapping
+                    call connectivity%data(ielem)%set_element_partition(IRANK)
 
                     xstart = 1 + (ielem_x-1)
                     ystart = 1 + (ielem_y-1)
@@ -1478,6 +1489,7 @@ contains
                     connectivity%data(ielem)%data(1) = 1        ! idomain
                     connectivity%data(ielem)%data(2) = ielem    ! ielement
                     connectivity%data(ielem)%data(3) = 1        ! mapping
+                    call connectivity%data(ielem)%set_element_partition(IRANK)
 
                     xstart = 1 + (ielem_x-1)
                     ystart = 1 + (ielem_y-1)
@@ -1580,6 +1592,7 @@ contains
                     connectivity%data(ielem)%data(1) = 1        ! idomain
                     connectivity%data(ielem)%data(2) = ielem    ! ielement
                     connectivity%data(ielem)%data(3) = 1        ! mapping
+                    call connectivity%data(ielem)%set_element_partition(IRANK)
 
                     xstart = 1 + (ielem_x-1)
                     ystart = 1 + (ielem_y-1)
@@ -1691,6 +1704,7 @@ contains
                     connectivity%data(ielem)%data(1) = 1        ! idomain
                     connectivity%data(ielem)%data(2) = ielem    ! ielement
                     connectivity%data(ielem)%data(3) = 1        ! mapping
+                    call connectivity%data(ielem)%set_element_partition(IRANK)
 
                     xstart = 1 + (ielem_x-1)
                     ystart = 1 + (ielem_y-1)

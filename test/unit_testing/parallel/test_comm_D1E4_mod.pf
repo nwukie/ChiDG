@@ -1,8 +1,10 @@
 module test_comm_D1E4_mod
     use mod_kinds,                  only: rk, ik
-    use mod_constants,              only: XI_MIN, XI_MAX, BOUNDARY, IO_DESTINATION, TWO
+    use mod_constants,              only: XI_MIN, XI_MAX, DIAG, BOUNDARY, IO_DESTINATION, &
+                                          ONE, TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT, NINE, TEN
 
     use type_chidg,                 only: chidg_t
+    use type_chidgMatrix,           only: chidgMatrix_t
     use type_chidgVector,           only: chidgVector_t
     use type_partition,             only: partition_t
     use type_domain_connectivity,   only: domain_connectivity_t
@@ -11,6 +13,7 @@ module test_comm_D1E4_mod
     use mod_partitioners,           only: partition_connectivity, send_partitions, recv_partition
     use mod_chidg_mpi,              only: IRANK, NRANK, GLOBAL_MASTER
     use operator_chidg_dot,         only: dot
+    use operator_chidg_mv,          only: chidg_mv
 
     use mpi_f08,                    only: MPI_Barrier, MPI_COMM_WORLD, MPI_COMM
     use pfunit_mod
@@ -70,7 +73,7 @@ contains
         this%ChiDG_COMM%mpi_val = this%getMpiCommunicator()
 
 
-        call this%chidg%init('env')
+        call this%chidg%init('env',this%ChiDG_COMM)
 
 
         IO_DESTINATION = 'file'
@@ -101,14 +104,14 @@ contains
         !
         ! Read partition data: grid, boundary conditions
         !
-        do iread = 0,NRANK-1
-            if ( iread == IRANK ) then
+!        do iread = 0,NRANK-1
+!            if ( iread == IRANK ) then
                 call this%chidg%read_grid(gridfile, spacedim, partition)
                 call this%chidg%read_boundaryconditions(gridfile, partition)
-            end if
-
-            call MPI_Barrier(this%ChiDG_COMM,ierr)  ! sync to prevent simultaneous file access
-        end do
+!            end if
+!
+!            call MPI_Barrier(this%ChiDG_COMM,ierr)  ! sync to prevent simultaneous file access
+!        end do
 
 
         !
@@ -117,8 +120,6 @@ contains
         call this%chidg%initialize_solution_domains(this%nterms_s)
         call this%chidg%init('communication',this%ChiDG_COMM)
         call this%chidg%initialize_solution_solver()
-
-
 
 
         !
@@ -130,9 +131,9 @@ contains
         end do
 
 
-
-
     end subroutine setUp
+
+
 
 
     subroutine tearDown(this)
@@ -190,6 +191,9 @@ contains
 
 
 
+
+
+
     !>  Test the parallel computation of the chidgVector norm. 
     !!  This tests the routine: chidgVector%norm_comm
     !!
@@ -226,6 +230,413 @@ contains
 
     end subroutine chidgvector__dot_comm
     !******************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    !>  Test that storage has been allocated in the chidgVector for receiving data from neighbor
+    !!  processors. For each processor:
+    !!      - check the size of the receiving storate communicator. a%recv%comm
+    !!      - check that the parent element indices of the element to be received is correct
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   6/30/3016
+    !!
+    !!
+    !!
+    !-------------------------------------------------------------------------------------------
+    @Test(npes=[1,2,3,4])
+    subroutine chidgvector__init_recv(self)
+        class(test_comm_D1E4), intent(inout) :: self
+
+        type(chidgVector_t) :: a
+
+        IRANK = self%getProcessRank()
+        NRANK = self%getNumProcessesRequested()
+
+        ! Copy a ChiDG Vector
+        a = self%chidg%data%sdata%q
+
+
+        if (NRANK == 1) then
+
+            @assertEqual(0,size(a%recv%comm))
+
+
+
+
+
+        else if (NRANK == 2) then
+
+            if (IRANK == 0) then
+                @assertEqual(1,size(a%recv%comm))
+
+                @assertequal(1,a%recv%comm(1)%dom(1)%vecs(1)%dparent_g())
+                @assertequal(1,a%recv%comm(1)%dom(1)%vecs(1)%dparent_l())
+                @assertequal(3,a%recv%comm(1)%dom(1)%vecs(1)%eparent_g())
+                @assertequal(1,a%recv%comm(1)%dom(1)%vecs(1)%eparent_l())
+                
+            else if (IRANK == 1) then
+                @assertEqual(1,size(a%recv%comm))
+
+                @assertequal(1,a%recv%comm(1)%dom(1)%vecs(1)%dparent_g())
+                @assertequal(1,a%recv%comm(1)%dom(1)%vecs(1)%dparent_l())
+                @assertequal(2,a%recv%comm(1)%dom(1)%vecs(1)%eparent_g())
+                @assertequal(2,a%recv%comm(1)%dom(1)%vecs(1)%eparent_l())
+            end if
+
+
+
+
+
+
+
+        else if (NRANK == 3) then
+
+            if (IRANK == 0) then
+                @assertEqual(1,size(a%recv%comm))
+
+                @assertequal(1,a%recv%comm(1)%dom(1)%vecs(1)%dparent_g())
+                @assertequal(1,a%recv%comm(1)%dom(1)%vecs(1)%dparent_l())
+                @assertequal(3,a%recv%comm(1)%dom(1)%vecs(1)%eparent_g())
+                @assertequal(2,a%recv%comm(1)%dom(1)%vecs(1)%eparent_l())
+            else if (IRANK == 1) then
+                @assertEqual(2,size(a%recv%comm))
+
+                @assertequal(1,a%recv%comm(1)%dom(1)%vecs(1)%dparent_g())
+                @assertequal(1,a%recv%comm(1)%dom(1)%vecs(1)%dparent_l())
+                @assertequal(1,a%recv%comm(1)%dom(1)%vecs(1)%eparent_g())
+                @assertequal(1,a%recv%comm(1)%dom(1)%vecs(1)%eparent_l())
+
+                @assertequal(1,a%recv%comm(2)%dom(1)%vecs(1)%dparent_g())
+                @assertequal(1,a%recv%comm(2)%dom(1)%vecs(1)%dparent_l())
+                @assertequal(4,a%recv%comm(2)%dom(1)%vecs(1)%eparent_g())
+                @assertequal(1,a%recv%comm(2)%dom(1)%vecs(1)%eparent_l())
+            else if (IRANK == 2) then
+                @assertEqual(1,size(a%recv%comm))
+
+                @assertequal(1,a%recv%comm(1)%dom(1)%vecs(1)%dparent_g())
+                @assertequal(1,a%recv%comm(1)%dom(1)%vecs(1)%dparent_l())
+                @assertequal(2,a%recv%comm(1)%dom(1)%vecs(1)%eparent_g())
+                @assertequal(1,a%recv%comm(1)%dom(1)%vecs(1)%eparent_l())
+            end if
+
+
+
+
+
+
+        else if (NRANK == 4) then
+
+            if (IRANK == 0) then
+                @assertEqual(1,size(a%recv%comm))
+
+                @assertequal(1,a%recv%comm(1)%dom(1)%vecs(1)%dparent_g())
+                @assertequal(1,a%recv%comm(1)%dom(1)%vecs(1)%dparent_l())
+                @assertequal(2,a%recv%comm(1)%dom(1)%vecs(1)%eparent_g())
+                @assertequal(1,a%recv%comm(1)%dom(1)%vecs(1)%eparent_l())
+            else if (IRANK == 1) then
+                @assertEqual(2,size(a%recv%comm))
+
+                @assertequal(1,a%recv%comm(1)%dom(1)%vecs(1)%dparent_g())
+                @assertequal(1,a%recv%comm(1)%dom(1)%vecs(1)%dparent_l())
+                @assertequal(1,a%recv%comm(1)%dom(1)%vecs(1)%eparent_g())
+                @assertequal(1,a%recv%comm(1)%dom(1)%vecs(1)%eparent_l())
+
+                @assertequal(1,a%recv%comm(2)%dom(1)%vecs(1)%dparent_g())
+                @assertequal(1,a%recv%comm(2)%dom(1)%vecs(1)%dparent_l())
+                @assertequal(3,a%recv%comm(2)%dom(1)%vecs(1)%eparent_g())
+                @assertequal(1,a%recv%comm(2)%dom(1)%vecs(1)%eparent_l())
+            else if (IRANK == 2) then
+                @assertEqual(2,size(a%recv%comm))
+
+                @assertequal(1,a%recv%comm(1)%dom(1)%vecs(1)%dparent_g())
+                @assertequal(1,a%recv%comm(1)%dom(1)%vecs(1)%dparent_l())
+                @assertequal(2,a%recv%comm(1)%dom(1)%vecs(1)%eparent_g())
+                @assertequal(1,a%recv%comm(1)%dom(1)%vecs(1)%eparent_l())
+
+                @assertequal(1,a%recv%comm(2)%dom(1)%vecs(1)%dparent_g())
+                @assertequal(1,a%recv%comm(2)%dom(1)%vecs(1)%dparent_l())
+                @assertequal(4,a%recv%comm(2)%dom(1)%vecs(1)%eparent_g())
+                @assertequal(1,a%recv%comm(2)%dom(1)%vecs(1)%eparent_l())
+            else if (IRANK == 3) then
+                @assertEqual(1,size(a%recv%comm))
+
+                @assertequal(1,a%recv%comm(1)%dom(1)%vecs(1)%dparent_g())
+                @assertequal(1,a%recv%comm(1)%dom(1)%vecs(1)%dparent_l())
+                @assertequal(3,a%recv%comm(1)%dom(1)%vecs(1)%eparent_g())
+                @assertequal(1,a%recv%comm(1)%dom(1)%vecs(1)%eparent_l())
+            end if
+
+
+
+
+
+        end if
+
+    end subroutine chidgvector__init_recv
+    !********************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+
+    !>  Test the parallel computation of the chidg matrix-vector product, chidg_mv.
+    !!  This tests the routine: chidg_mv(A,x)
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   7/1/2016
+    !!
+    !---------------------------------------------------------------------------------------
+    @Test(npes=[1,2,3,4])
+    subroutine parallel_chidg_mv(self)
+        class(test_comm_D1E4), intent(inout) :: self
+
+        type(chidgMatrix_t) :: A
+        type(chidgVector_t) :: x, b
+        integer(ik)         :: nelem
+        real(rk)            :: computed_dot, expected_dot
+
+        IRANK = self%getProcessRank()
+
+        ! Create chidgMatrix and two chidgVectors
+        A = self%chidg%data%sdata%lhs
+        x = self%chidg%data%sdata%q
+        b = self%chidg%data%sdata%q
+
+
+        ! Initialize with some data
+        if (NRANK == 1) then
+
+            ! element 1
+            A%dom(1)%lblks(1,DIAG)%mat   = ONE
+            A%dom(1)%lblks(1,XI_MAX)%mat = FIVE
+            x%dom(1)%vecs(1)%vec         = 11._rk
+
+            ! element 2
+            A%dom(1)%lblks(2,XI_MIN)%mat = EIGHT
+            A%dom(1)%lblks(2,DIAG)%mat   = TWO
+            A%dom(1)%lblks(2,XI_MAX)%mat = SIX
+            x%dom(1)%vecs(2)%vec         = 12._rk
+
+            ! element 3
+            A%dom(1)%lblks(3,XI_MIN)%mat = NINE
+            A%dom(1)%lblks(3,DIAG)%mat   = THREE
+            A%dom(1)%lblks(3,XI_MAX)%mat = SEVEN
+            x%dom(1)%vecs(3)%vec         = 13._rk
+            
+            ! element 4
+            A%dom(1)%lblks(4,XI_MIN)%mat = TEN
+            A%dom(1)%lblks(4,DIAG)%mat   = FOUR
+            x%dom(1)%vecs(4)%vec         = 14._rk
+
+
+        else if (NRANK == 2) then
+
+            if (IRANK == 0) then
+                ! element 1
+                A%dom(1)%lblks(1,DIAG)%mat   = ONE
+                A%dom(1)%lblks(1,XI_MAX)%mat = FIVE
+                x%dom(1)%vecs(1)%vec         = 11._rk
+
+                ! element 2
+                A%dom(1)%lblks(2,XI_MIN)%mat = EIGHT
+                A%dom(1)%lblks(2,DIAG)%mat   = TWO
+                A%dom(1)%lblks(2,XI_MAX)%mat = SIX
+                x%dom(1)%vecs(2)%vec         = 12._rk
+
+
+
+            else if (IRANK == 1) then
+                ! element 3
+                A%dom(1)%lblks(1,XI_MIN)%mat = NINE
+                A%dom(1)%lblks(1,DIAG)%mat   = THREE
+                A%dom(1)%lblks(1,XI_MAX)%mat = SEVEN
+                x%dom(1)%vecs(1)%vec         = 13._rk
+                
+                ! element 4
+                A%dom(1)%lblks(2,XI_MIN)%mat = TEN
+                A%dom(1)%lblks(2,DIAG)%mat   = FOUR
+                x%dom(1)%vecs(2)%vec         = 14._rk
+
+            end if
+
+
+        else if (NRANK == 3) then
+
+            if (IRANK == 0) then
+                ! element 4
+                A%dom(1)%lblks(1,XI_MIN)%mat = TEN
+                A%dom(1)%lblks(1,DIAG)%mat   = FOUR
+                x%dom(1)%vecs(1)%vec         = 14._rk
+
+            else if (IRANK == 1) then
+                ! element 2
+                A%dom(1)%lblks(1,XI_MIN)%mat = EIGHT
+                A%dom(1)%lblks(1,DIAG)%mat   = TWO
+                A%dom(1)%lblks(1,XI_MAX)%mat = SIX
+                x%dom(1)%vecs(1)%vec         = 12._rk
+
+                ! element 3
+                A%dom(1)%lblks(2,XI_MIN)%mat = NINE
+                A%dom(1)%lblks(2,DIAG)%mat   = THREE
+                A%dom(1)%lblks(2,XI_MAX)%mat = SEVEN
+                x%dom(1)%vecs(2)%vec         = 13._rk
+                
+            else if (IRANK == 2) then
+                ! element 1
+                A%dom(1)%lblks(1,DIAG)%mat   = ONE
+                A%dom(1)%lblks(1,XI_MAX)%mat = FIVE
+                x%dom(1)%vecs(1)%vec         = 11._rk
+
+            end if
+
+
+        else if (NRANK == 4) then
+
+            if (IRANK == 0) then
+                ! element 1
+                A%dom(1)%lblks(1,DIAG)%mat   = ONE
+                A%dom(1)%lblks(1,XI_MAX)%mat = FIVE
+                x%dom(1)%vecs(1)%vec         = 11._rk
+
+            else if (IRANK == 1) then
+
+                ! element 2
+                A%dom(1)%lblks(1,XI_MIN)%mat = EIGHT
+                A%dom(1)%lblks(1,DIAG)%mat   = TWO
+                A%dom(1)%lblks(1,XI_MAX)%mat = SIX
+                x%dom(1)%vecs(1)%vec         = 12._rk
+
+
+
+            else if (IRANK == 2) then
+                ! element 3
+                A%dom(1)%lblks(1,XI_MIN)%mat = NINE
+                A%dom(1)%lblks(1,DIAG)%mat   = THREE
+                A%dom(1)%lblks(1,XI_MAX)%mat = SEVEN
+                x%dom(1)%vecs(1)%vec         = 13._rk
+
+            else if (IRANK == 3) then
+                
+                ! element 4
+                A%dom(1)%lblks(1,XI_MIN)%mat = TEN
+                A%dom(1)%lblks(1,DIAG)%mat   = FOUR
+                x%dom(1)%vecs(1)%vec         = 14._rk
+
+            end if
+
+
+        end if
+
+
+
+
+
+        !
+        ! Compute vector dot-product across processors. THIS IS BEING TESTED
+        !
+        b = chidg_mv(A,x)
+
+
+
+
+
+
+        if (NRANK == 1) then
+
+            @assertEqual(1917._rk,  b%dom(1)%vecs(1)%vec)
+            @assertEqual(5130._rk,  b%dom(1)%vecs(2)%vec)
+            @assertEqual(6615._rk,  b%dom(1)%vecs(3)%vec)
+            @assertEqual(5022._rk,  b%dom(1)%vecs(4)%vec)
+
+
+        else if (NRANK == 2) then
+
+            if (IRANK == 0) then
+                @assertEqual(1917._rk,  b%dom(1)%vecs(1)%vec)
+                @assertEqual(5130._rk,  b%dom(1)%vecs(2)%vec)
+
+            else if (IRANK == 1) then
+                @assertEqual(6615._rk,  b%dom(1)%vecs(1)%vec)
+                @assertEqual(5022._rk,  b%dom(1)%vecs(2)%vec)
+
+            end if
+
+
+        else if (NRANK == 3) then
+
+            if (IRANK == 0) then
+                @assertEqual(5022._rk,  b%dom(1)%vecs(1)%vec)
+
+            else if (IRANK == 1) then
+                @assertEqual(5130._rk,  b%dom(1)%vecs(1)%vec)
+                @assertEqual(6615._rk,  b%dom(1)%vecs(2)%vec)
+
+            else if (IRANK == 2) then
+                @assertEqual(1917._rk,  b%dom(1)%vecs(1)%vec)
+
+            end if
+
+
+        else if (NRANK == 4) then
+
+            if (IRANK == 0) then
+                @assertEqual(1917._rk,  b%dom(1)%vecs(1)%vec)
+            else if (IRANK == 1) then
+                @assertEqual(5130._rk,  b%dom(1)%vecs(1)%vec)
+            else if (IRANK == 2) then
+                @assertEqual(6615._rk,  b%dom(1)%vecs(1)%vec)
+            else if (IRANK == 3) then
+                @assertEqual(5022._rk,  b%dom(1)%vecs(1)%vec)
+            end if
+
+        end if
+
+
+
+    end subroutine parallel_chidg_mv
+    !******************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

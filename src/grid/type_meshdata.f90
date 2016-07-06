@@ -17,14 +17,12 @@ module type_meshdata
     type, public :: meshdata_t
 
         character(len=:),   allocatable :: name                 !< Name of the current domain
-        !integer(ik)                     :: idomain              !< Integer index of the domain
         type(point_t),      allocatable :: points(:)            !< Array containing mesh points
         type(domain_connectivity_t)     :: connectivity         !< Connectivity data for each element with the indices of associated nodes in the points array
         character(len=:),   allocatable :: eqnset               !< String indicating the equation set to allocate for the domain
         integer(ik)                     :: spacedim             !< Number of spatial dimensions
         integer(ik)                     :: nterms_c             !< Integer specifying the number of terms in the coordinate expansion
         integer(ik)                     :: proc                 !< Integer specifying the processor assignment
-        !integer(ik),        allocatable :: connectivity(:,:)    !< Connectivity data for each element with the indices of associated nodes in the points array 
 
     end type meshdata_t
     !*****************************************************************************************

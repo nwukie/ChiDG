@@ -18,9 +18,13 @@ module type_element_connectivity
     !------------------------------------------------------------------------------
     type, public :: element_connectivity_t
 
-        integer(ik)                 :: header_size = 3  !< idomain_g, ielement_g, mapping
+        ! Static data. Useful for sending MPI information about the connectivity
+        integer(ik)                 :: header_size = 3          !< idomain_g, ielement_g, mapping
+        integer(ik)                 :: nodes_size  = 0          !< Number of nodes in the element connectivity
+        integer(ik)                 :: connectivity_size = 3    !< Total data size
+        integer(ik)                 :: partition                !< MPI Rank that owns the element
+
         integer(ik),    allocatable :: data(:)
-        integer(ik)                 :: partition
 
     contains
         
@@ -61,14 +65,12 @@ contains
         class(element_connectivity_t),  intent(inout)   :: self
         integer(ik),                    intent(in)      :: mapping
         
-        integer(ik) :: ierr, header_size, points_size, connectivity_size
-
+        integer(ik) :: ierr
         
-        header_size = self%header_size
-        points_size = (mapping+1)*(mapping+1)*(mapping+1)
-        connectivity_size = header_size + points_size
+        self%nodes_size        = (mapping+1)*(mapping+1)*(mapping+1)
+        self%connectivity_size = self%header_size + self%nodes_size
 
-        allocate(self%data(connectivity_size), stat=ierr)
+        allocate(self%data(self%connectivity_size), stat=ierr)
         if (ierr /= 0) call AllocationError
 
         ! Initialize to zero, set mapping.
@@ -181,18 +183,6 @@ contains
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
     !>  Return the element mapping from a connectivity
     !!
     !!  @author Nathan A. Wukie (AFRL)
@@ -263,6 +253,8 @@ contains
         integer(ik) :: ipartition
 
         ipartition = self%partition
+
+        if (ipartition == NO_PARTITION) call chidg_signal(FATAL,"element_connectivity%get_element_partition: no element paritition index")
 
     end function get_element_partition
     !********************************************************************************

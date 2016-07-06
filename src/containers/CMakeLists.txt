@@ -16,6 +16,10 @@ add_lib_sources(
 #                type_vector.f90
                 type_chidgMatrix.f90
                 type_chidgVector.f90
+                type_chidgVector_send.f90
+                type_chidgVector_recv.f90
+                type_chidgVector_send_comm.f90
+                type_chidgVector_recv_comm.f90
                 operator_chidg_dot.f90
                 operator_chidg_mv.f90
                 type_solverdata.f90

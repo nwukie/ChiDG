@@ -19,7 +19,7 @@ subroutine test_chidgMatrix_operator_chimera_mv()
     use mod_hdfio,          only: read_grid_hdf
     use mod_spatial,        only: update_space
 
-    use operator_chidg_mv
+    use operator_chidg_mv,  only: chidg_mv
     implicit none
 
 
@@ -126,7 +126,7 @@ subroutine test_chidgMatrix_operator_chimera_mv()
 
 
 
-    chidg%data%sdata%dq = chidg%data%sdata%lhs * chidg%data%sdata%rhs
+    chidg%data%sdata%dq = chidg_mv(chidg%data%sdata%lhs , chidg%data%sdata%rhs)
 
 
 
@@ -212,43 +212,43 @@ subroutine test_chidgMatrix_operator_chimera_mv()
     ! Manual multiplication of one line of the matrix with the residual vector, Including Chimera blocks
     !
     iblk = XI_MAX
-    idom_p = chidg%data%sdata%lhs%dom(idom)%lblks(ielem,iblk)%dparent()
-    ielem_p = chidg%data%sdata%lhs%dom(idom)%lblks(ielem,iblk)%eparent()
+    idom_p = chidg%data%sdata%lhs%dom(idom)%lblks(ielem,iblk)%dparent_l()
+    ielem_p = chidg%data%sdata%lhs%dom(idom)%lblks(ielem,iblk)%eparent_l()
     refvec = refvec + matmul(chidg%data%sdata%lhs%dom(idom)%lblks(ielem,iblk)%mat, chidg%data%sdata%rhs%dom(idom_p)%vecs(ielem_p)%vec)
 
 
 
     iblk = ETA_MIN
-    idom_p = chidg%data%sdata%lhs%dom(idom)%lblks(ielem,iblk)%dparent()
-    ielem_p = chidg%data%sdata%lhs%dom(idom)%lblks(ielem,iblk)%eparent()
+    idom_p = chidg%data%sdata%lhs%dom(idom)%lblks(ielem,iblk)%dparent_l()
+    ielem_p = chidg%data%sdata%lhs%dom(idom)%lblks(ielem,iblk)%eparent_l()
     refvec = refvec + matmul(chidg%data%sdata%lhs%dom(idom)%lblks(ielem,iblk)%mat, chidg%data%sdata%rhs%dom(idom_p)%vecs(ielem_p)%vec)
 
     iblk = ETA_MAX
-    idom_p = chidg%data%sdata%lhs%dom(idom)%lblks(ielem,iblk)%dparent()
-    ielem_p = chidg%data%sdata%lhs%dom(idom)%lblks(ielem,iblk)%eparent()
+    idom_p = chidg%data%sdata%lhs%dom(idom)%lblks(ielem,iblk)%dparent_l()
+    ielem_p = chidg%data%sdata%lhs%dom(idom)%lblks(ielem,iblk)%eparent_l()
     refvec = refvec + matmul(chidg%data%sdata%lhs%dom(idom)%lblks(ielem,iblk)%mat, chidg%data%sdata%rhs%dom(idom_p)%vecs(ielem_p)%vec)
 
     iblk = ZETA_MAX
-    idom_p = chidg%data%sdata%lhs%dom(idom)%lblks(ielem,iblk)%dparent()
-    ielem_p = chidg%data%sdata%lhs%dom(idom)%lblks(ielem,iblk)%eparent()
+    idom_p = chidg%data%sdata%lhs%dom(idom)%lblks(ielem,iblk)%dparent_l()
+    ielem_p = chidg%data%sdata%lhs%dom(idom)%lblks(ielem,iblk)%eparent_l()
     refvec = refvec + matmul(chidg%data%sdata%lhs%dom(idom)%lblks(ielem,iblk)%mat, chidg%data%sdata%rhs%dom(idom_p)%vecs(ielem_p)%vec)
 
     iblk = DIAG
-    idom_p = chidg%data%sdata%lhs%dom(idom)%lblks(ielem,iblk)%dparent()
-    ielem_p = chidg%data%sdata%lhs%dom(idom)%lblks(ielem,iblk)%eparent()
+    idom_p = chidg%data%sdata%lhs%dom(idom)%lblks(ielem,iblk)%dparent_l()
+    ielem_p = chidg%data%sdata%lhs%dom(idom)%lblks(ielem,iblk)%eparent_l()
     refvec = refvec + matmul(chidg%data%sdata%lhs%dom(idom)%lblks(ielem,iblk)%mat, chidg%data%sdata%rhs%dom(idom_p)%vecs(ielem_p)%vec)
 
 
 
     idonor = 1
-    idom_p = chidg%data%sdata%lhs%dom(idom)%chi_blks(ielem,idonor)%dparent()
-    ielem_p = chidg%data%sdata%lhs%dom(idom)%chi_blks(ielem,idonor)%eparent()
+    idom_p = chidg%data%sdata%lhs%dom(idom)%chi_blks(ielem,idonor)%dparent_l()
+    ielem_p = chidg%data%sdata%lhs%dom(idom)%chi_blks(ielem,idonor)%eparent_l()
     refvec = refvec + matmul(chidg%data%sdata%lhs%dom(idom)%chi_blks(ielem,idonor)%mat, chidg%data%sdata%rhs%dom(idom_p)%vecs(ielem_p)%vec)
 
 
     idonor = 2
-    idom_p = chidg%data%sdata%lhs%dom(idom)%chi_blks(ielem,idonor)%dparent()
-    ielem_p = chidg%data%sdata%lhs%dom(idom)%chi_blks(ielem,idonor)%eparent()
+    idom_p = chidg%data%sdata%lhs%dom(idom)%chi_blks(ielem,idonor)%dparent_l()
+    ielem_p = chidg%data%sdata%lhs%dom(idom)%chi_blks(ielem,idonor)%eparent_l()
     refvec = refvec + matmul(chidg%data%sdata%lhs%dom(idom)%chi_blks(ielem,idonor)%mat, chidg%data%sdata%rhs%dom(idom_p)%vecs(ielem_p)%vec)
 
 
@@ -262,7 +262,7 @@ subroutine test_chidgMatrix_operator_chimera_mv()
     !
     ! Standard Matrix-Vector Operation
     !
-    chidg%data%sdata%dq = chidg%data%sdata%lhs * chidg%data%sdata%rhs
+    chidg%data%sdata%dq = chidg_mv(chidg%data%sdata%lhs , chidg%data%sdata%rhs)
 
 
 
@@ -270,7 +270,7 @@ subroutine test_chidgMatrix_operator_chimera_mv()
     !
     ! Check that the reference vector and the vector are equal for location idom, ielem
     !
-    @assertEqual(refvec, chidg%data%sdata%dq%dom(idom)%vecs(ielem)%vec)
+    @assertEqual(refvec, chidg%data%sdata%dq%dom(idom)%vecs(ielem)%vec,tol)
 
 
 

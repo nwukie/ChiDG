@@ -1,12 +1,13 @@
 module type_timer
 #include <messenger.h>
-    use mod_kinds,  only: rk, ik
-
+    use mod_kinds,      only: rk, ik
+    use mod_chidg_mpi,  only: GLOBAL_MASTER
+    use mpi_f08,        only: MPI_WTime
     implicit none
 
 
 
-    !> Timer type for timing procedures
+    !>  Timer type for timing procedures
     !!
     !!  @author Nathan A. Wukie
     !!
@@ -15,9 +16,9 @@ module type_timer
     !-----------------------------------------------------------
     type, public    :: timer_t
 
-        real        :: start_time           !< Timer starting time
-        real        :: stop_time            !< Timer ending time
-        real        :: elapsed_time         !< Timer elapsed time
+        real(rk)    :: start_time           !< Timer starting time
+        real(rk)    :: stop_time            !< Timer ending time
+        real(rk)    :: elapsed_time         !< Timer elapsed time
 
         logical     :: started = .false.    !< Logical state indicating if the timer was started
         logical     :: stopped = .false.    !< Logical state indicating if the timer was stopped
@@ -42,12 +43,13 @@ contains
     !!
     !!  @author Nathan A. Wukie
     !!
-    !--------------------------------------------------------------
+    !---------------------------------------------------------------------------
     subroutine start(self)
         class(timer_t), intent(inout)  :: self
 
         if (.not. self%started) then
-            call cpu_time(self%start_time)
+            !call cpu_time(self%start_time)
+            self%start_time = MPI_WTime()
         else
             call chidg_signal(WARN,'type_timer: Timer was already started')
         end if
@@ -55,6 +57,7 @@ contains
         self%started = .true.
         
     end subroutine start
+    !***************************************************************************
 
 
 
@@ -65,12 +68,13 @@ contains
     !!
     !!  @author Nathan A. Wukie
     !!
-    !--------------------------------------------------------------
+    !---------------------------------------------------------------------------
     subroutine stop(self)
         class(timer_t), intent(inout)  :: self
 
         if (self%started) then
-            call cpu_time(self%stop_time)
+            !call cpu_time(self%stop_time)
+            self%stop_time = MPI_Wtime()
         else
             call chidg_signal(WARN,'type_timer: Timer was never started')
         end if
@@ -78,6 +82,7 @@ contains
         self%stopped = .true.
 
     end subroutine stop
+    !***************************************************************************
 
 
 
@@ -88,7 +93,7 @@ contains
     !!
     !!  @author Nathan A. Wukie
     !!
-    !--------------------------------------------------------------
+    !----------------------------------------------------------------------------
     function elapsed(self) result(elapsed_time)
         class(timer_t), intent(inout)  :: self
 
@@ -102,6 +107,7 @@ contains
         end if
 
     end function elapsed
+    !****************************************************************************
 
 
 
@@ -122,25 +128,20 @@ contains
         real(rk)    :: elapsed
 
 
-        !
         ! Compute the elapsed time
-        !
         elapsed =  self%elapsed()
 
 
-        !
         ! If a message was included, print and append timing. Else, just print the timing
-        !
         if (present(messg)) then
-            call write_line(messg, ' ', elapsed, delimiter='')
-            !print*, messg, ' ', elapsed
+            call write_line(messg, ' ', elapsed, delimiter='', io_proc=GLOBAL_MASTER)
         else
-            call write_line(elapsed)
-            !print*, elapsed
+            call write_line(elapsed, io_proc=GLOBAL_MASTER)
         end if
 
 
     end subroutine report
+    !*******************************************************************************************************
 
 
 
@@ -163,6 +164,7 @@ contains
         self%stopped      = .false.
 
     end subroutine reset
+    !********************************************************************************************************
 
 
 

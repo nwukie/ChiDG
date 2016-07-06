@@ -3,9 +3,11 @@ module type_blockvector
     use mod_kinds,          only: rk,ik
     use mod_constants,      only: ZERO, TWO
     use type_mesh,          only: mesh_t
+    use type_ivector,       only: ivector_t
     use type_densevector
     use DNAD_D
     implicit none
+
 
 
     !> Data type for storing the matrix of dense blocks which hold the linearization for an algorithm
@@ -20,16 +22,18 @@ module type_blockvector
         type(densevector_t), allocatable :: vecs(:)     !< Local element vectors
 
     contains
-        ! Initializers
-        procedure, public   :: init                     !< Initialize local vector
 
-        procedure, public   :: distribute               !< Given a full-vector representation, distribute it to the denseblock format
-        procedure, public   :: clear                    !< Zero all vector storage elements
+        generic,    public  :: init => init_local, init_recv    !< Initialize vector
+        procedure, private  :: init_local                       !< Initialize vector to store data for local domain
+        procedure, private  :: init_recv                        !< Initialize vector to store data for domains being received from another processor
+
+        procedure,  public  :: distribute               !< Given a full-vector representation, distribute it to the denseblock format
+        procedure,  public  :: clear                    !< Zero all vector storage elements
         
-        procedure, public   :: norm                     !< Return the L2 vector norm of the block-vector
-        procedure, public   :: sumsqr                   !< Return the sum of the squared block-vector entries
-        procedure, public   :: nentries
-        procedure, public   :: dump
+        procedure,  public  :: norm                     !< Return the L2 vector norm of the block-vector
+        procedure,  public  :: sumsqr                   !< Return the sum of the squared block-vector entries
+        procedure,  public  :: nentries
+        procedure,  public  :: dump
 
         final :: destructor
 
@@ -91,7 +95,7 @@ contains
 
 
 
-    !> Subroutine for initializing blockvector storage
+    !>  Subroutine for initializing blockvector storage
     !!
     !!  @author Nathan A. Wukie
     !!  @date   2/1/2016
@@ -99,15 +103,16 @@ contains
     !!  @param[in]  mesh    mesh_t instance containing initialized elements and faces
     !!
     !---------------------------------------------------------------------------------------------------------------
-    subroutine init(self,mesh)
-        class(blockvector_t), intent(inout) :: self
-        class(mesh_t),        intent(in)    :: mesh
+    subroutine init_local(self,mesh)
+        class(blockvector_t),   intent(inout) :: self
+        type(mesh_t),           intent(in)    :: mesh
 
-        integer(ik)                     :: nelem, nblk, ierr, ielem, iblk, size1d, parent, nterms, neqns
-        logical                         :: new_elements
+        integer(ik) :: nelem, ierr, ielem, nterms, neqns
+        integer(ik) :: dparent_g, dparent_l, eparent_g, eparent_l
+        logical     :: new_elements
+
 
         nelem = mesh%nelem  ! Number of elements in the local block
-
 
         !
         ! ALLOCATE SIZE FOR 'vecs'
@@ -140,20 +145,186 @@ contains
         ! Loop through elements and call initialization for densevectors
         !
         do ielem = 1,mesh%nelem
-            parent = mesh%elems(ielem)%ielement_l
+            dparent_g = mesh%elems(ielem)%idomain_g
+            dparent_l = mesh%elems(ielem)%idomain_l
+            eparent_g = mesh%elems(ielem)%ielement_g
+            eparent_l = mesh%elems(ielem)%ielement_l
             nterms = mesh%elems(ielem)%nterms_s
             neqns  = mesh%elems(ielem)%neqns
 
             ! Call densevector initialization routine
-            call self%vecs(ielem)%init(nterms,neqns,parent)
+            call self%vecs(ielem)%init(nterms,neqns,dparent_g,dparent_l,eparent_g,eparent_l)
 
         end do
 
 
 
 
-    end subroutine init
+    end subroutine init_local
     !*******************************************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+
+
+    !>  Subroutine for initializing blockvector storage for elements being received from another processor
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   6/30/2016
+    !!
+    !!  @param[in]  mesh    mesh_t instance containing initialized elements and faces
+    !!
+    !---------------------------------------------------------------------------------------------------------------
+    subroutine init_recv(self,mesh,iproc,icomm,idom_recv)
+        class(blockvector_t),   intent(inout)   :: self
+        type(mesh_t),           intent(inout)   :: mesh
+        integer(ik),            intent(in)      :: iproc
+        integer(ik),            intent(in)      :: icomm
+        integer(ik),            intent(in)      :: idom_recv
+
+        type(ivector_t) :: recv_elems
+        integer(ik)     :: nelem_recv, ielem_recv, ierr, ielem, iface, nterms, neqns, loc, recv_element
+        integer(ik)     :: dparent_g, dparent_l, eparent_g, eparent_l
+        logical         :: new_elements, proc_element, already_added, comm_element
+
+
+        !
+        ! Compute number of densevectors being received from proc. One for each comm neighbor element.
+        !
+        do ielem = 1,mesh%nelem
+            do iface = 1,size(mesh%faces,2)
+
+                proc_element = ( iproc == mesh%faces(ielem,iface)%ineighbor_proc )
+            
+
+                ! Test if element has been added to recv list
+                if (proc_element) then
+                    ! Get index of recv element and test if it was already added
+                    recv_element = mesh%faces(ielem,iface)%ineighbor_element_g
+
+                    loc = recv_elems%loc(recv_element)
+                    already_added = (loc /= 0)
+
+                    if (.not. already_added) then
+                        call recv_elems%push_back(recv_element)
+                    end if
+
+                end if
+
+            end do ! iface
+        end do ! ielem
+
+
+        nelem_recv = recv_elems%size()
+        if (nelem_recv == 0) call chidg_signal(FATAL,"blockvector%init_recv: no elements detected in mesh that are being received")
+
+
+
+        !
+        ! Allocate densevector size. If vector was already allocated, deallocate and then reallocate vector size
+        ! Reallocation would take place if the number of elements were changed
+        !
+        if (allocated(self%vecs)) then
+            !
+            ! If the size is already allocated, check if the number of elements has changed.
+            ! If so (new_elements), then reallocate matrix size.
+            ! If not, do nothing
+            !
+            new_elements = (nelem_recv /= size(self%vecs))
+            if (new_elements) then
+                deallocate(self%vecs)
+                allocate(self%vecs(nelem_recv), stat=ierr)
+            end if
+
+        else
+
+            allocate(self%vecs(nelem_recv), stat=ierr)
+
+        end if
+        if (ierr /= 0) call AllocationError
+
+
+
+        !
+        ! Loop through elements and call initialization for densevectors being received. Loop through all elements so
+        ! recv_comm, recv_domain, and recv_element can be initialized since multiple local elements could be receiving 
+        ! the same element and need the recv indices initialized
+        !
+        ! ASSUME: nterms_s of neighbor being received is same as ielem
+        !
+        do ielem_recv = 1,recv_elems%size()
+
+            recv_element = recv_elems%at(ielem_recv)
+
+            do ielem = 1,mesh%nelem
+                do iface = 1,size(mesh%faces,2)
+
+                    proc_element = ( iproc == mesh%faces(ielem,iface)%ineighbor_proc )
+                
+                    comm_element = ( recv_element == mesh%faces(ielem,iface)%ineighbor_element_g )
+                    
+
+                    if (proc_element .and. comm_element) then
+                        dparent_g = mesh%faces(ielem,iface)%ineighbor_domain_g
+                        dparent_l = mesh%faces(ielem,iface)%ineighbor_domain_l
+                        eparent_g = mesh%faces(ielem,iface)%ineighbor_element_g
+                        eparent_l = mesh%faces(ielem,iface)%ineighbor_element_l
+
+                        nterms = mesh%elems(ielem)%nterms_s ! assume same throughout domain
+                        neqns  = mesh%elems(ielem)%neqns    ! assume same throughout domain
+
+                        !
+                        ! Call densevector initialization routine
+                        !
+                        call self%vecs(ielem_recv)%init(nterms,neqns,dparent_g,dparent_l,eparent_g,eparent_l)
+
+
+                        mesh%faces(ielem,iface)%recv_comm    = icomm
+                        mesh%faces(ielem,iface)%recv_domain  = idom_recv
+                        mesh%faces(ielem,iface)%recv_element = ielem_recv
+
+                    end if
+
+
+                end do !iface
+            end do ! ielem
+
+
+        end do !ielem_recv
+
+
+
+    end subroutine init_recv
+    !*******************************************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

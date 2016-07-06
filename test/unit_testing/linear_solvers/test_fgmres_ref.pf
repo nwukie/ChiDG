@@ -12,7 +12,7 @@ subroutine test_fgmres_ref_solve()
     use type_fgmres,                only: fgmres_t
 
     use type_chidgMatrix
-    use type_chidgVector
+    use type_chidgVector,           only: chidgVector_t
 
     use mod_testutils,              only: meshgen
     implicit none
@@ -80,10 +80,9 @@ subroutine test_fgmres_ref_solve()
 
     ! Initialize blockmatrix data (A)
     !
-    ! [0  1]
-    ! [1  0]
+    ! [ 0  1]
+    ! [-1  0]
     ! 
-    !
     A%dom(1)%lblks(1,DIAG)%mat   = ZERO
     A%dom(1)%lblks(1,XI_MAX)%mat = ONE
 

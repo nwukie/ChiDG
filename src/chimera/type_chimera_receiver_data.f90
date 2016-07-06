@@ -19,10 +19,6 @@ module type_chimera_receiver_data
 
         integer(ik)                     :: ndonors = 0
 
-!        integer(ik)                     :: receiver_domain      !< Domain index of receiver
-!        integer(ik)                     :: receiver_element     !< Element index of receiver
-!        integer(ik)                     :: receiver_face        !< Face index of receiver
-
         integer(ik)                     :: receiver_proc        !< Processor rank of receiver
         integer(ik)                     :: receiver_domain_g    !< ChiDG-global domain index of receiver
         integer(ik)                     :: receiver_domain_l    !< Proc-local domain index of receiver

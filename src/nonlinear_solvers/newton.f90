@@ -2,6 +2,7 @@ module newton
     use messenger,              only: write_line
     use mod_kinds,              only: rk,ik
     use mod_constants,          only: ZERO, ONE, TWO, DIAG
+    use mod_chidg_mpi,          only: ChiDG_COMM, GLOBAL_MASTER
     use type_nonlinear_solver,  only: nonlinear_solver_t
     use type_linear_solver,     only: linear_solver_t
     use type_chidg_data,        only: chidg_data_t
@@ -85,7 +86,7 @@ contains
         wcount = 1
         associate ( q => data%sdata%q, dq => data%sdata%dq, rhs => data%sdata%rhs, lhs => data%sdata%lhs)
 
-            call write_line('Entering time')
+            call write_line('Entering time', io_proc=GLOBAL_MASTER)
 
             !
             ! start timer
@@ -110,7 +111,7 @@ contains
             !do while ( niter == 0 )
                 niter = niter + 1
 
-                call write_line("   niter: ", niter, delimiter='')
+                call write_line("   niter: ", niter, delimiter='', io_proc=GLOBAL_MASTER)
 
 
                 !
@@ -127,7 +128,7 @@ contains
 
                 call self%residual_time%push_back(timing)   ! non-essential record-keeping
 
-                resid = rhs%norm()
+                resid = rhs%norm(ChiDG_COMM)
                 !tolerance_check =  (resid > self%tol)
                 !maxiter_check   =  (niter < self%
 
@@ -135,7 +136,7 @@ contains
                 !
                 ! Print diagnostics
                 !
-                call write_line("   R(Q) - Norm: ", resid, delimiter='')
+                call write_line("   R(Q) - Norm: ", resid, delimiter='', io_proc=GLOBAL_MASTER)
                 call self%residual_norm%push_back(resid)
 
 

@@ -2,6 +2,8 @@ module mod_DNAD_tools
 #include <messenger.h>
     use mod_kinds,              only: rk,ik
     use mod_constants,          only: XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX, DIAG, CHIMERA, INTERIOR, BOUNDARY
+    use mod_chidg_mpi,          only: IRANK
+    
     use type_mesh,              only: mesh_t
     use type_seed,              only: seed_t
     implicit none
@@ -50,11 +52,70 @@ contains
             idom_n = mesh(idom)%chimera%recv%data(ChiID)%donor_domain_l%at(idonor)
 
         else
-            idom_n = idom
+            !idom_n = idom
+            idom_n = mesh(idom)%faces(ielem,iface)%ineighbor_domain_l
         end if
 
     end function compute_neighbor_domain_l
     !************************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+
+
+    !> Computes the domain index of the neighbor domain
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   2/1/2016
+    !!
+    !!  @param[in]  mesh    Array of mesh_t instances
+    !!  @param[in]  idom    Domain index of the current element
+    !!  @param[in]  ielem   Element index for mesh(idom)%elems(ielem)
+    !!  @param[in]  iface   Face index for mesh(idom)%faces(ielem,iface)
+    !!  @param[in]  idonor  Index of potential donor elements. For example, Chimera faces could have more than one donor element
+    !!
+    !-----------------------------------------------------------------------------------------------
+    function compute_neighbor_domain_g(mesh,idom,ielem,iface,idonor) result(idom_n)
+        type(mesh_t),   intent(in)  :: mesh(:)
+        integer(ik),    intent(in)  :: idom
+        integer(ik),    intent(in)  :: ielem
+        integer(ik),    intent(in)  :: iface
+        integer(ik),    intent(in)  :: idonor
+
+        integer(ik) :: idom_n, ChiID
+        logical     :: chimera_face = .false.
+
+        chimera_face = (mesh(idom)%faces(ielem,iface)%ftype == CHIMERA)
+
+
+        if ( chimera_face ) then
+
+            ChiID  = mesh(idom)%faces(ielem,iface)%ChiID
+            idom_n = mesh(idom)%chimera%recv%data(ChiID)%donor_domain_g%at(idonor)
+
+        else
+            !idom_n = idom
+            idom_n = mesh(idom)%faces(ielem,iface)%ineighbor_domain_g
+        end if
+
+    end function compute_neighbor_domain_g
+    !************************************************************************************************
+
+
+
+
+
+
+
+
 
 
 
@@ -100,6 +161,67 @@ contains
 
     end function compute_neighbor_element_l
     !************************************************************************************************
+
+
+
+
+
+
+
+
+    !> Computes the element index of the neighbor element
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   2/1/2016
+    !!
+    !!  @param[in]  mesh    Array of mesh_t instances
+    !!  @param[in]  idom    Domain index of the current element
+    !!  @param[in]  ielem   Element index for mesh(idom)%elems(ielem)
+    !!  @param[in]  iface   Face index for mesh(idom)%faces(ielem,iface)
+    !!  @param[in]  idonor  Index of potential donor elements. For example, Chimera faces could have more than one donor element
+    !!
+    !------------------------------------------------------------------------------------------------
+    function compute_neighbor_element_g(mesh,idom,ielem,iface,idonor) result(ielem_n)
+        type(mesh_t),   intent(in)  :: mesh(:)
+        integer(ik),    intent(in)  :: idom
+        integer(ik),    intent(in)  :: ielem
+        integer(ik),    intent(in)  :: iface
+        integer(ik),    intent(in)  :: idonor
+
+        integer(ik) :: ielem_n, ChiID
+        logical     :: chimera_face = .false.
+
+        chimera_face = (mesh(idom)%faces(ielem,iface)%ftype == CHIMERA)
+        
+        if ( chimera_face ) then
+
+            ChiID   = mesh(idom)%faces(ielem,iface)%ChiID
+            ielem_n = mesh(idom)%chimera%recv%data(ChiID)%donor_element_l%at(idonor)
+
+        else
+            ielem_n = mesh(idom)%faces(ielem,iface)%ineighbor_element_g
+        end if
+
+
+    end function compute_neighbor_element_g
+    !************************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -214,6 +336,7 @@ contains
             seed%idomain_l  = mesh(idomain_l)%elems(ielement_l)%idomain_l
             seed%ielement_g = mesh(idomain_l)%elems(ielement_l)%ielement_g
             seed%ielement_l = mesh(idomain_l)%elems(ielement_l)%ielement_l
+            seed%iproc      = IRANK
 
 
 
@@ -237,10 +360,14 @@ contains
             !
             if ( interior_face ) then
 
-                seed%idomain_g  = mesh(idomain_l)%faces(ielement_l,iface)%ineighbor_domain_g
-                seed%idomain_l  = mesh(idomain_l)%faces(ielement_l,iface)%ineighbor_domain_l
-                seed%ielement_g = mesh(idomain_l)%faces(ielement_l,iface)%ineighbor_element_g
-                seed%ielement_l = mesh(idomain_l)%faces(ielement_l,iface)%ineighbor_element_l
+                seed%idomain_g    = mesh(idomain_l)%faces(ielement_l,iface)%ineighbor_domain_g
+                seed%idomain_l    = mesh(idomain_l)%faces(ielement_l,iface)%ineighbor_domain_l
+                seed%ielement_g   = mesh(idomain_l)%faces(ielement_l,iface)%ineighbor_element_g
+                seed%ielement_l   = mesh(idomain_l)%faces(ielement_l,iface)%ineighbor_element_l
+                seed%iproc        = mesh(idomain_l)%faces(ielement_l,iface)%ineighbor_proc
+                seed%recv_comm    = mesh(idomain_l)%faces(ielement_l,iface)%recv_comm
+                seed%recv_domain  = mesh(idomain_l)%faces(ielement_l,iface)%recv_domain
+                seed%recv_element = mesh(idomain_l)%faces(ielement_l,iface)%recv_element
 
 
             !
@@ -253,6 +380,7 @@ contains
                 seed%idomain_l  = mesh(idomain_l)%chimera%recv%data(ChiID)%donor_domain_l%at(idonor)
                 seed%ielement_g = mesh(idomain_l)%chimera%recv%data(ChiID)%donor_element_g%at(idonor)
                 seed%ielement_l = mesh(idomain_l)%chimera%recv%data(ChiID)%donor_element_l%at(idonor)
+                seed%iproc      = mesh(idomain_l)%chimera%recv%data(ChiID)%donor_proc%at(idonor)
 
 
             !
@@ -263,6 +391,7 @@ contains
                 seed%idomain_l  = mesh(idomain_l)%elems(ielement_l)%idomain_l
                 seed%ielement_g = mesh(idomain_l)%elems(ielement_l)%ielement_g
                 seed%ielement_l = mesh(idomain_l)%elems(ielement_l)%ielement_l
+                seed%iproc      = IRANK
 
             !
             ! Invalid Case

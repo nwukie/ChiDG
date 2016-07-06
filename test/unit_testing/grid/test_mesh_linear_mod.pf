@@ -15,21 +15,36 @@ module test_mesh_linear_mod
 
     public  :: test_mesh_linear
 
-@TestCase
+    !>
+    !!
+    !!  @author Nathan A. Wukie
+    !!
+    !!
+    !!
+    !-------------------------------------------------------------------------------------
+    @TestCase
     type, extends(TestCase) ::  test_mesh_linear
 
         type(chidg_t)   :: chidg
         type(mesh_t)    :: mesh
 
     contains
+
         procedure   ::  setUp
         procedure   ::  tearDown
+
     end type test_mesh_linear
+    !**************************************************************************************
 
 
 contains
+
     !> NOTE: make sure to use 'this' instead of 'self' since these are over-writting a derived type 
     !! procedure. The argument names have to match
+    !!
+    !!
+    !!
+    !-------------------------------------------------------------------------------------
     subroutine setUp(this)
         class(test_mesh_linear),    intent(inout)   :: this
         
@@ -68,30 +83,6 @@ contains
         !      *-------*-------*-------*
         !         
         !
-!        x = [ZERO, ONE, TWO, THREE, ZERO, ONE, TWO, THREE, ZERO, ONE, TWO, THREE, ZERO, ONE, TWO, THREE, &
-!             ZERO, ONE, TWO, THREE, ZERO, ONE, TWO, THREE, ZERO, ONE, TWO, THREE, ZERO, ONE, TWO, THREE, &
-!             ZERO, ONE, TWO, THREE, ZERO, ONE, TWO, THREE, ZERO, ONE, TWO, THREE, ZERO, ONE, TWO, THREE, &
-!             ZERO, ONE, TWO, THREE, ZERO, ONE, TWO, THREE, ZERO, ONE, TWO, THREE, ZERO, ONE, TWO, THREE]
-!             
-!        y = [ZERO, ZERO, ZERO, ZERO, ONE, ONE, ONE, ONE, TWO, TWO, TWO, TWO, THREE, THREE, THREE, THREE, &
-!             ZERO, ZERO, ZERO, ZERO, ONE, ONE, ONE, ONE, TWO, TWO, TWO, TWO, THREE, THREE, THREE, THREE, &
-!             ZERO, ZERO, ZERO, ZERO, ONE, ONE, ONE, ONE, TWO, TWO, TWO, TWO, THREE, THREE, THREE, THREE, &
-!             ZERO, ZERO, ZERO, ZERO, ONE, ONE, ONE, ONE, TWO, TWO, TWO, TWO, THREE, THREE, THREE, THREE]
-!             
-!        z = [ZERO, ZERO, ZERO, ZERO, ZERO, ZERO, ZERO, ZERO, ZERO, ZERO, ZERO, ZERO, ZERO, ZERO, ZERO, ZERO, &
-!             ONE, ONE, ONE, ONE, ONE, ONE, ONE, ONE, ONE, ONE, ONE, ONE, ONE, ONE, ONE, ONE, &
-!             TWO, TWO, TWO, TWO, TWO, TWO, TWO, TWO, TWO, TWO, TWO, TWO, TWO, TWO, TWO, TWO, &
-!             THREE, THREE, THREE, THREE, THREE, THREE, THREE, THREE, THREE, THREE, THREE, THREE, THREE, THREE, THREE, THREE]
-!             
-!        ipt = 1
-!        do ipt_zeta = 1,4
-!            do ipt_eta = 1,4
-!                do ipt_xi = 1,4
-!                    call pts(ipt_xi,ipt_eta,ipt_zeta)%set(x(ipt), y(ipt), z(ipt))
-!                    ipt = ipt + 1
-!                end do
-!            end do      
-!        end do
         call meshgen('333',nodes,connectivity)
 
 
@@ -114,16 +105,22 @@ contains
     subroutine tearDown(this)
         class(test_mesh_linear),    intent(inout)   :: this
     end subroutine
-
-!---------------------------------------------------------------------------------------------------------
-!---------------------------------------------------------------------------------------------------------
-!---------------------------------------------------------------------------------------------------------
-!---------------------------------------------------------------------------------------------------------
-!---------------------------------------------------------------------------------------------------------
+    !****************************************************************************************************
 
 
 
-@Test
+
+
+
+
+    !>
+    !!
+    !!  @author Nathan A. Wukie
+    !!
+    !!
+    !!
+    !----------------------------------------------------------------------------------------------------
+    @Test
     subroutine testMesh_integers(self)
         class(test_mesh_linear),    intent(inout)   :: self
         integer(ik) :: neqns, nterms_s, nterms_c, nelem_xi, nelem_eta, nelem_zeta, nelem, idomain
@@ -140,18 +137,22 @@ contains
         @assertEqual(neqns,self%mesh%neqns)
         @assertEqual(nterms_s,self%mesh%nterms_s)
         @assertEqual(nterms_c,self%mesh%nterms_c)
-!        @assertEqual(nelem_xi,self%mesh%nelem_xi)
-!        @assertEqual(nelem_eta,self%mesh%nelem_eta)
-!        @assertEqual(nelem_zeta,self%mesh%nelem_zeta)
         @assertEqual(nelem,self%mesh%nelem)
         @assertEqual(idomain,self%mesh%idomain_g)
 
-    end subroutine
+    end subroutine testMesh_integers
+    !*****************************************************************************************************
     
     
     
-! Test to make sure all elements were initialized
-@Test
+    !>  Test to make sure all elements were initialized
+    !!
+    !!  @author Nathan A. Wukie
+    !!
+    !!
+    !!
+    !-----------------------------------------------------------------------------------------------------
+    @Test
     subroutine testMesh_elements_initialized(self)
         class(test_mesh_linear),    intent(inout)   :: self
         integer(ik) :: ielem
@@ -161,12 +162,19 @@ contains
             @assertTrue(self%mesh%elems(ielem)%numInitialized)
         end do
         
-    end subroutine
+    end subroutine testMesh_elements_initialized
+    !******************************************************************************************************
         
         
         
-! Test to make sure all faces were initialized
-@Test
+    !>  Test to make sure all faces were initialized
+    !!
+    !!  @author Nathan A. Wukie
+    !!
+    !!
+    !!
+    !------------------------------------------------------------------------------------------------------
+    @Test
     subroutine testMesh_faces_initialized(self)
         class(test_mesh_linear),    intent(inout)   :: self
         integer(ik) :: ielem, iface
@@ -177,12 +185,19 @@ contains
                 @assertTrue(self%mesh%faces(ielem,iface)%numInitialized)
             end do
         end do
-    end subroutine
+    end subroutine testMesh_faces_initialized
+    !******************************************************************************************************
         
     
     
-! Test to make sure the parent and neighbor element indices are correct for an interior element
-@Test
+    !>  Test to make sure the parent and neighbor element indices are correct for an interior element
+    !!
+    !!  @author Nathan A. Wukie
+    !!
+    !!
+    !!
+    !------------------------------------------------------------------------------------------------------
+    @Test
     subroutine testMesh_indices_interior(self)
         class(test_mesh_linear),    intent(inout)   :: self
         
@@ -204,12 +219,19 @@ contains
             @assertEqual(23,faces(14,ZETA_MAX)%get_neighbor_element_l())
         end associate
 
-    end subroutine
+    end subroutine testMesh_indices_interior
+    !*******************************************************************************************************
     
     
 
-! Test to make sure the neighbor element indices are correct for a boundary element    
-@Test
+    !>  Test to make sure the neighbor element indices are correct for a boundary element    
+    !!
+    !!  @author Nathan A. Wukie
+    !!
+    !!
+    !!
+    !-------------------------------------------------------------------------------------------------------
+    @Test
     subroutine testMesh_indices_boundary(self)
         class(test_mesh_linear),    intent(inout)   :: self
         
@@ -223,7 +245,8 @@ contains
             @assertEqual(10,faces(1,ZETA_MAX)%get_neighbor_element_l())
         end associate
         
-    end subroutine
+    end subroutine testMesh_indices_boundary
+    !*******************************************************************************************************
     
     
     
@@ -232,7 +255,15 @@ contains
 
 
 
-@Test
+    !>
+    !!
+    !!  @author Nathan A. Wukie
+    !!
+    !!
+    !!
+    !!
+    !---------------------------------------------------------------------------------------------------------
+    @Test
     subroutine testMesh_E1_faces_ftype(self)
         class(test_mesh_linear),    intent(inout)   :: self
         
@@ -271,13 +302,21 @@ contains
         
         
         end associate
-    end subroutine
+    end subroutine testMesh_E1_faces_ftype
+    !**********************************************************************************************************
 
 
 
 
 
-@Test
+    !>
+    !!
+    !!  @author Nathan A. Wukie
+    !!
+    !!
+    !!
+    !-----------------------------------------------------------------------------------------------------------
+    @Test
     subroutine testMesh_E2_faces_ftype(self)
         class(test_mesh_linear),    intent(inout)   :: self
         
@@ -316,11 +355,19 @@ contains
         
         
         end associate
-    end subroutine
+    end subroutine testMesh_E2_faces_ftype
+    !*************************************************************************************************
     
     
     
-@Test
+    !>
+    !!
+    !!  @author Nathan A. Wukie
+    !!
+    !!
+    !!
+    !--------------------------------------------------------------------------------------------------
+    @Test
     subroutine testMesh_E14_faces_ftype(self)
         class(test_mesh_linear),    intent(inout)   :: self
         
@@ -359,10 +406,59 @@ contains
         
         
         end associate
-    end subroutine
+    end subroutine testMesh_E14_faces_ftype
+    !***************************************************************************************************
 
 
 
+
+
+
+    !>  Test that the routine mesh%get_comm_procs is returning all the correct processor ranks that have 
+    !!  been set in self%ineighbor_proc
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   6/30/2016
+    !!
+    !!
+    !----------------------------------------------------------------------------------------------------
+    @Test
+    subroutine testMesh__get_comm_procs(self)
+        class(test_mesh_linear),    intent(inout)   :: self
+
+        integer(ik),    allocatable :: comm_procs(:)
+
+        !
+        ! Initially, all processor ranks should be set to 1, since this is run in serial.
+        ! So, we will manually set a few neighbor ranks to make sure they are getting detected and 
+        ! returned correctly.
+        !
+        self%mesh%faces(14,XI_MIN)%ineighbor_proc   = 2
+        self%mesh%faces(14,XI_MAX)%ineighbor_proc   = 3
+        self%mesh%faces(14,ETA_MIN)%ineighbor_proc  = 4
+        self%mesh%faces(14,ETA_MAX)%ineighbor_proc  = 5
+        self%mesh%faces(14,ZETA_MIN)%ineighbor_proc = 6
+        self%mesh%faces(14,ZETA_MAX)%ineighbor_proc = 0 ! Should not be added because this would indicate on-processor neighbor
+
+        !
+        ! set artificial global communication intialization so mesh%get_comm_procs will run.
+        !
+        self%mesh%global_comm_initialized = .true.
+
+
+        !
+        ! Call get_comm_procs. THIS IS BEING TESTED.
+        !
+        comm_procs = self%mesh%get_comm_procs()
+
+
+        !
+        ! Test
+        !
+        @assertEqual([2,3,4,5,6],comm_procs)
+
+    end subroutine testMesh__get_comm_procs
+    !****************************************************************************************************
 
 
 

@@ -48,7 +48,7 @@ contains
         ChiDG_COMM%mpi_val = this%getMpiCommunicator()
 
 
-        call chidg%init('env')
+        call chidg%init('env',ChiDG_COMM)
 
 
         IO_DESTINATION = 'file'
@@ -80,14 +80,14 @@ contains
         !
         ! Read partition data: grid, boundary conditions
         !
-        do iread = 0,NRANK-1
-            if ( iread == IRANK ) then
+!        do iread = 0,NRANK-1
+!            if ( iread == IRANK ) then
                 call chidg%read_grid(gridfile, spacedim, partition)
                 call chidg%read_boundaryconditions(gridfile, partition)
-            end if
-
-            call MPI_Barrier(ChiDG_COMM,ierr)  ! sync to prevent simultaneous file access
-        end do
+!            end if
+!
+!            call MPI_Barrier(ChiDG_COMM,ierr)  ! sync to prevent simultaneous file access
+!        end do
 
 
         !

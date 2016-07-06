@@ -40,16 +40,16 @@ program driver
     ! Variable declarations
     !
     implicit none
-    type(chidg_t)                       :: chidg
-    type(partition_t)                   :: partition
+    type(chidg_t)                               :: chidg
 
     type(domain_connectivity_t),    allocatable :: connectivities(:)
     type(partition_t),              allocatable :: partitions(:)
+    type(partition_t)                           :: partition
 
-    class(function_t),  allocatable     :: constant, monopole, fcn
 
-    integer                             :: ierr, narg, iread
-    character(len=1024)                 :: chidg_action, filename, file_a, file_b
+    integer                                     :: ierr, narg
+    character(len=1024)                         :: chidg_action, filename, file_a, file_b
+    class(function_t),              allocatable :: constant, monopole, fcn
 
 
 
@@ -73,7 +73,7 @@ program driver
         ! Initialize ChiDG environment
         !
         call chidg%init('mpi')
-        call chidg%init('env')
+        call chidg%init('env',MPI_COMM_WORLD)
         call chidg%init('io')
 
 
@@ -104,15 +104,9 @@ program driver
         ! Read grid data from file. One partition at a time to avoid the file being accessed simultaneously.
         !
         if ( irank == GLOBAL_MASTER ) call write_line("Reading grid")
-        do iread = 0,NRANK-1
-            if ( iread == IRANK ) then
-                call chidg%read_grid(gridfile, spacedim, partition)
-                call chidg%read_boundaryconditions(gridfile, partition)
-            end if
-
-            call MPI_Barrier(MPI_COMM_WORLD,ierr)  ! sync to prevent simultaneous file access
-        end do
-
+        call chidg%read_grid(gridfile, spacedim, partition)
+        if ( irank == GLOBAL_MASTER ) call write_line("Reading boundary conditions")
+        call chidg%read_boundaryconditions(gridfile, partition)
 
 
 
@@ -129,11 +123,13 @@ program driver
         !
         ! Initialize solution data storage
         !
-        print*, "Rank ", IRANK, ": Initializing grid solution data"
+        if ( irank == GLOBAL_MASTER ) call write_line("init sol domains")
         call chidg%initialize_solution_domains(nterms_s)
-        print*, "Rank ", IRANK, ": Initializing communication"
+        if ( irank == GLOBAL_MASTER ) call write_line("init comm")
         call chidg%init('communication')
+        if ( irank == GLOBAL_MASTER ) call write_line("init chimera")
         call chidg%init('chimera')
+        if ( irank == GLOBAL_MASTER ) call write_line("init sol solver")
         call chidg%initialize_solution_solver()
 
 
@@ -143,40 +139,40 @@ program driver
         !
         if (solutionfile_in == 'none') then
 
-            !
-            ! Set initial solution
-            !
-            call create_function(fcn,'gaussian')
-            call fcn%set_option('b_x',0._rk)
-            call fcn%set_option('b_y',1.5_rk)
-            call fcn%set_option('b_z',1.5_rk)
-            call fcn%set_option('c',1.0_rk)
-            call initialize_variable(chidg%data,1,fcn)
+!            !
+!            ! Set initial solution
+!            !
+!            call create_function(fcn,'gaussian')
+!            call fcn%set_option('b_x',0._rk)
+!            call fcn%set_option('b_y',1.5_rk)
+!            call fcn%set_option('b_z',1.5_rk)
+!            call fcn%set_option('c',1.0_rk)
+!            call initialize_variable(chidg%data,1,fcn)
 
 
 
 
-!            call create_function(constant,'constant')
-!
-!            ! rho
-!            call constant%set_option('val',1.20_rk)
-!            call initialize_variable(chidg%data,1,constant)
-!
-!            ! rho_u
-!            call constant%set_option('val',50._rk)
-!            call initialize_variable(chidg%data,2,constant)
-!
-!            ! rho_v
-!            call constant%set_option('val',0._rk)
-!            call initialize_variable(chidg%data,3,constant)
-!
-!            ! rho_w
-!            call constant%set_option('val',0._rk)
-!            call initialize_variable(chidg%data,4,constant)
-!
-!            ! rho_E
-!            call constant%set_option('val',230000._rk)
-!            call initialize_variable(chidg%data,5,constant)
+            call create_function(constant,'constant')
+
+            ! rho
+            call constant%set_option('val',1.20_rk)
+            call initialize_variable(chidg%data,1,constant)
+
+            ! rho_u
+            call constant%set_option('val',50._rk)
+            call initialize_variable(chidg%data,2,constant)
+
+            ! rho_v
+            call constant%set_option('val',0._rk)
+            call initialize_variable(chidg%data,3,constant)
+
+            ! rho_w
+            call constant%set_option('val',0._rk)
+            call initialize_variable(chidg%data,4,constant)
+
+            ! rho_E
+            call constant%set_option('val',230000._rk)
+            call initialize_variable(chidg%data,5,constant)
 
 
 
@@ -186,11 +182,6 @@ program driver
             ! TODO: put in check that solutionfile actually contains solution
             !
             call chidg%read_solution(solutionfile_in)
-!            do iread = 1,nrank
-!                if ( iread == irank ) then
-!                    call chidg%read_solution(solutionfile_in,partition)
-!                end if
-!            end do
 
         end if
 
@@ -225,20 +216,19 @@ program driver
         !
         if (final_write) call chidg%write_solution(solutionfile_out)
 
+
         !
         ! Reporting
         !
         call chidg%report()
 
-!        !
-!        ! Close MPI
-!        !
-!        call MPI_Finalize(ierr)
 
 
 
 
-
+        !
+        ! Close ChiDG
+        !
         call chidg%close('core')
         call chidg%close('mpi')
 

@@ -7,8 +7,43 @@ module test_chidgVector_operators_mod
     use type_point,                 only: point_t
     use type_domain_connectivity,   only: domain_connectivity_t
     use mod_testutils,              only: meshgen
-    use type_chidgVector
+    use type_chidgVector,           only: chidgVector_t, mult_real_chidgVector, mult_chidgVector_real, div_real_chidgVector, div_chidgVector_real, &
+                                          sub_chidgVector_chidgVector, add_chidgVector_chidgVector
     implicit none
+
+
+
+    !
+    ! Copying operator interfaces from type_chidgVector since importing all of chidgVector also 
+    ! imports an mpi type that is also used in pfunit which uses a different interface.
+    !
+    public operator (*)
+    interface operator(*)
+        module procedure mult_real_chidgVector          ! real * chidgVector
+        module procedure mult_chidgVector_real          ! chidgVector * real
+    end interface
+
+
+    public operator (/)
+    interface operator (/)
+        module procedure div_real_chidgVector           ! real / chidgVector
+        module procedure div_chidgVector_real           ! chidgVector / real
+    end interface
+
+
+    public operator (-)
+    interface operator (-)
+        module procedure sub_chidgVector_chidgVector    ! chidgVector - chidgVector
+    end interface
+
+    public operator (+)
+    interface operator (+)
+        module procedure add_chidgVector_chidgVector    ! chidgVector + chidgVector
+    end interface
+    !
+    !
+    !
+
 
     public :: test_chidgVector
 
@@ -72,6 +107,7 @@ contains
         nterms_c = 8
         call this%chidg%data%add_domain('D_01',nodes,connectivity,spacedim,nterms_c,'Scalar')
         call this%chidg%initialize_solution_domains(this%nterms_s)
+        call this%chidg%init('communication')
 
 
         !
@@ -136,10 +172,10 @@ contains
 
         res = self%vec_a + self%vec_b
 
-        @assertEqual(TWO, res%dom(1)%vecs(1)%vec)
-        @assertEqual(FOUR, res%dom(1)%vecs(2)%vec)
-        @assertEqual(SIX, res%dom(1)%vecs(3)%vec)
-        @assertEqual(EIGHT, res%dom(1)%vecs(4)%vec)
+        @assertEqual(TWO,    res%dom(1)%vecs(1)%vec)
+        @assertEqual(FOUR,   res%dom(1)%vecs(2)%vec)
+        @assertEqual(SIX,    res%dom(1)%vecs(3)%vec)
+        @assertEqual(EIGHT,  res%dom(1)%vecs(4)%vec)
         @assertEqual(10._rk, res%dom(1)%vecs(5)%vec)
         @assertEqual(12._rk, res%dom(1)%vecs(6)%vec)
         @assertEqual(14._rk, res%dom(1)%vecs(7)%vec)

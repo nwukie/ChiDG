@@ -97,7 +97,7 @@ contains
 
 
 
-    !> This function returns the location of a given value. If not found, returns 0
+    !>  This function returns the location of a given value. If not found, returns 0
     !!
     !!  @author Nathan A. Wukie
     !!  @date   2/1/2016

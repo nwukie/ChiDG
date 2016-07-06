@@ -85,8 +85,8 @@ contains
     !!
     !----------------------------------------------------------------------------------------------------------
     subroutine init_base(self,mesh,bcset_coupling,function_data)
-        class(solverdata_t),                intent(inout), target   :: self
-        type(mesh_t),                       intent(in)              :: mesh(:)
+        class(solverdata_t),                intent(inout)           :: self
+        type(mesh_t),                       intent(inout)           :: mesh(:)
         type(bcset_coupling_t),             intent(in)              :: bcset_coupling(:)
         type(equationset_function_data_t),  intent(in)              :: function_data(:)
         

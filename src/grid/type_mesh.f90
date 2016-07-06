@@ -2,14 +2,16 @@ module type_mesh
 #include <messenger.h>
     use mod_kinds,                  only: rk,ik
     use mod_constants,              only: NFACES,XI_MIN,XI_MAX,ETA_MIN,ETA_MAX,ZETA_MIN,ZETA_MAX, &
-                                          ORPHAN, INTERIOR, BOUNDARY, CHIMERA, TWO_DIM, THREE_DIM, NO_NEIGHBOR_FOUND, NEIGHBOR_FOUND
+                                          ORPHAN, INTERIOR, BOUNDARY, CHIMERA, TWO_DIM, THREE_DIM, NO_NEIGHBOR_FOUND, NEIGHBOR_FOUND, &
+                                          NO_PROC
     use mod_grid,                   only: FACE_CORNERS
-    use mod_chidg_mpi,              only: IRANK,NRANK
+    use mod_chidg_mpi,              only: IRANK, NRANK, GLOBAL_MASTER
     use mpi_f08
 
     use type_point,                 only: point_t
     use type_element,               only: element_t
     use type_face,                  only: face_t
+    use type_ivector,               only: ivector_t
     use type_chimera,               only: chimera_t
     use type_domain_connectivity,   only: domain_connectivity_t
     use type_element_connectivity,  only: element_connectivity_t
@@ -51,29 +53,35 @@ module type_mesh
         type(face_t),     allocatable   :: faces(:,:)                   !< Face storage    (1:nelem,1:nfaces)
         type(chimera_t)                 :: chimera                      !< Chimera interface data
 
+
         !
         ! Initialization flags
         !
         logical                         :: geomInitialized = .false.    !< Status of geometry initialization
         logical                         :: solInitialized  = .false.    !< Status of numerics initialization
+        logical                         :: local_comm_initialized = .false.
+        logical                         :: global_comm_initialized = .false.
 
     contains
 
-        procedure           :: init_geom
-        procedure           :: init_sol
+        procedure           :: init_geom                !< Call geometry initialization for elements and faces 
+        procedure           :: init_sol                 !< Call initialization for data depending on solution order for elements and faces
 
-        procedure, private  :: init_elems_geom
-        procedure, private  :: init_elems_sol
-        procedure, private  :: init_faces_geom
-        procedure, private  :: init_faces_sol
+        procedure, private  :: init_elems_geom          !< Loop through elements and initialize geometry
+        procedure, private  :: init_elems_sol           !< Loop through elements and initialize data depending on the solution order
+        procedure, private  :: init_faces_geom          !< Loop through faces and initialize geometry
+        procedure, private  :: init_faces_sol           !< Loop through faces and initialize data depending on the solution order
 
-        procedure           :: init_comm_local
-        procedure           :: init_comm_global
+        procedure           :: init_comm_local          !< For faces, find processor-local neighbors and initialize face neighbor indices 
+        procedure           :: init_comm_global         !< For faces, find neighbors across processors and initialize face neighbor indices
 
         ! Utilities
-        procedure, private  :: find_neighbor_local
-        procedure, private  :: find_neighbor_global
-        procedure           :: handle_neighbor_request
+        procedure, private  :: find_neighbor_local      !< Try to find a neighbor for a particular face on the local processor
+        procedure, private  :: find_neighbor_global     !< Try to find a neighbor for a particular face across processors
+        procedure           :: handle_neighbor_request  !< When a neighbor request from another processor occurs, check if current processor contains neighbor
+
+
+        procedure, public   :: get_comm_procs           !< Return the processor ranks that are communicating with the current mesh
 
         final               :: destructor
 
@@ -279,6 +287,13 @@ contains
             element_connectivity = connectivity%get_element_connectivity(ielem_l)
             call self%elems(ielem_l)%init_geom(spacedim,nodes,element_connectivity,idomain_l,ielem_l)
 
+
+
+            if ( IRANK == GLOBAL_MASTER ) then
+                write(*,FMT='(A1,A,t21,F6.2,A)',advance="NO") achar(13), " Initializing element geometry: ", (real(ielem_l)/real(nelem))*100.0, "%"
+            end if
+
+
         end do ! ielem
 
 
@@ -326,7 +341,13 @@ contains
         ! Call the numerics initialization procedure for each element
         !
         do ielem = 1,self%nelem
+
             call self%elems(ielem)%init_sol(self%neqns,self%nterms_s)
+
+            if ( IRANK == GLOBAL_MASTER ) then
+                write(*,FMT='(A1,A,t21,F6.2,A)',advance="NO") achar(13), " Initializing element solution data: ", (real(ielem)/real(self%nelem))*100.0, "%"
+            end if
+
         end do
 
 
@@ -380,6 +401,12 @@ contains
 
 
             end do !iface
+
+
+            if (IRANK == GLOBAL_MASTER) then
+                write(*,FMT='(A1,A,t21,F6.2,A)',advance="NO") achar(13), " Initializing face geometry: ", (real(ielem)/real(self%nelem))*100.0, "%"
+            end if
+
         end do !ielem
 
 
@@ -431,6 +458,10 @@ contains
 
             end do ! iface
 
+            if ( IRANK == GLOBAL_MASTER) then
+                write(*,FMT='(A1,A,t21,F6.2,A)',advance="NO") achar(13), " Initializing face solution data: ", (real(ielem)/real(self%nelem))*100.0, "%"
+            end if
+
         end do ! ielem
 
 
@@ -476,6 +507,12 @@ contains
         ! Loop through each local element and call initialization for each face
         !
         do ielem = 1,self%nelem
+
+            if ( IRANK == GLOBAL_MASTER ) then
+                write(*,FMT='(A1,A,t21,F6.2,A)',advance="NO") achar(13), " Local Comm Percent Complete: ", (real(ielem)/real(self%nelem))*100.0, "%"
+            end if
+
+
             do iface = 1,NFACES
                 neighbor_status = NO_NEIGHBOR_FOUND
 
@@ -507,7 +544,7 @@ contains
                         ineighbor_domain_l  = 0
                         ineighbor_element_g = 0
                         ineighbor_element_l = 0
-                        ineighbor_proc      = 0
+                        ineighbor_proc      = NO_PROC
 
                     end if
 
@@ -524,6 +561,8 @@ contains
         end do !ielem
 
 
+        ! Set initialized
+        self%local_comm_initialized = .true.
 
     end subroutine init_comm_local
     !**************************************************************************************************************
@@ -608,7 +647,7 @@ contains
                         ineighbor_domain_l  = 0
                         ineighbor_element_g = 0
                         ineighbor_element_l = 0
-                        ineighbor_proc      = 0
+                        ineighbor_proc      = NO_PROC
 
                     end if
 
@@ -630,7 +669,8 @@ contains
         call MPI_Bcast(searching,1,MPI_LOGICAL,IRANK,ChiDG_COMM,ierr)
 
 
-
+        ! Set initialized
+        self%global_comm_initialized = .true.
 
 
     end subroutine init_comm_global
@@ -911,17 +951,89 @@ contains
 
 
 
+    !>  Return the processor ranks that are communicating with the current mesh.
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   6/30/2016
+    !!
+    !!
+    !!
+    !!
+    !---------------------------------------------------------------------------------------------------------------
+    function get_comm_procs(self) result(comm_procs)
+        class(mesh_t),   intent(in)  :: self
+
+        type(ivector_t)             :: comm_procs_vector
+        integer(ik),    allocatable :: comm_procs(:)
+        integer(ik)                 :: myrank, neighbor_rank, ielem, iface, loc
+        logical                     :: has_neighbor, already_added, comm_neighbor
+
+        !
+        ! Test if global communication has been initialized
+        !
+        if ( .not. self%global_comm_initialized) call chidg_signal(FATAL,"mesh%get_comm_procs: mesh global communication not initialized")
+
+
+        !
+        ! Get current processor rank
+        !
+        myrank = IRANK
+
+        do ielem = 1,self%nelem
+            do iface = 1,size(self%faces,2)
+
+                !
+                ! Check face has neighbor
+                !
+                has_neighbor = ( self%faces(ielem,iface)%ftype == INTERIOR )
+                if ( has_neighbor ) then
+                    !
+                    ! Get neighbor processor rank
+                    !
+                    neighbor_rank = self%faces(ielem,iface)%ineighbor_proc
+                    comm_neighbor = ( myrank /= neighbor_rank )
+
+                    !
+                    ! If off-processor, add to list, if not already added.
+                    !
+                    if ( comm_neighbor ) then
+                        ! Check if proc was already added to list from another neighbor
+                        loc = comm_procs_vector%loc(neighbor_rank)
+                        already_added = ( loc /= 0 )
+
+                        if (.not. already_added ) call comm_procs_vector%push_back(neighbor_rank)
+                    end if
+
+
+                end if
+                
+
+            end do
+        end do
+
+
+        ! Set vector data to array to be returned.
+        comm_procs = comm_procs_vector%data()
+
+    end function get_comm_procs
+    !***************************************************************************************************************
 
 
 
 
 
 
+    !>
+    !!
+    !!
+    !!
+    !----------------------------------------------------------------------------------------------------------------
     subroutine destructor(self)
         type(mesh_t), intent(inout) :: self
 
     
-    end subroutine
+    end subroutine destructor
+    !****************************************************************************************************************
 
 
 end module type_mesh

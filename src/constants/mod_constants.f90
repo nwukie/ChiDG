@@ -164,7 +164,8 @@ module mod_constants
     !
     ! MPI constants
     !
-    integer(ik), parameter :: NO_PARTITION = -1
+    integer(ik),    parameter   :: NO_PARTITION = -1
+    integer(ik),    parameter   :: NO_PROC      = -2
 
 
 

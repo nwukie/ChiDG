@@ -24,9 +24,8 @@ subroutine test_blockmatrix__store_1eq_8terms()
     type(AD_D)                  :: integral(8)
     integer(ik)                 :: ielem, iblk, ivar, nderiv, i, neqns, nterms_c, nterms_s, idomain, spacedim
     
-    call chidg%init('env')
-    
 
+    call chidg%init('env')
 
 
     !
@@ -38,6 +37,8 @@ subroutine test_blockmatrix__store_1eq_8terms()
     nterms_c = 8
     nterms_s = 8
     call meshgen('3x3x3',nodes,connectivity)
+
+
     call mesh%init_geom(idomain,spacedim,nterms_c,nodes,connectivity)
     call mesh%init_sol(neqns,nterms_s)    ! Initialize numerics
     call mesh%init_comm_local()

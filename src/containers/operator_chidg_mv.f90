@@ -1,16 +1,17 @@
 module operator_chidg_mv
 #include <messenger.h>
     use mod_kinds,          only: rk, ik
+    use mod_chidg_mpi,      only: IRANK, ChiDG_COMM
     use type_chidgMatrix,   only: chidgMatrix_t
     use type_chidgVector
     implicit none
 
 
 
-    public operator(*)
-    interface operator(*)
-        module procedure MULT_chidgMatrix_chidgVector
-    end interface
+!    public operator(*)
+!    interface operator(*)
+!        module procedure MULT_chidgMatrix_chidgVector
+!    end interface
 
 contains
 
@@ -22,16 +23,21 @@ contains
     !!  @author Nathan A. Wukie
     !!  @date   2/1/2016
     !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   6/6/2016
     !!
     !!
     !------------------------------------------------------------------------------------
-    function MULT_chidgMatrix_chidgVector(A,x) result(res)
-        type(chidgMatrix_t),    intent(in)  :: A
-        type(chidgVector_t),    intent(in)  :: x
+    !function MULT_chidgMatrix_chidgVector(A,x) result(res)
+    function chidg_mv(A,x) result(res)
+        type(chidgMatrix_t),    intent(inout)   :: A
+        type(chidgVector_t),    intent(inout)   :: x
 
         type(chidgVector_t) :: res
-        integer(ik)         :: idom, ielem, iblk
+        integer(ik)         :: idom, ielem, iblk, recv_comm, recv_domain, recv_element
         integer(ik)         :: dparent_g, dparent_l, eparent_g, eparent_l
+        integer(ik)         :: matrix_proc, vector_proc
+        logical             :: local_multiply, parallel_multiply
         logical             :: nonconforming = .false.
 
 
@@ -42,15 +48,28 @@ contains
         call res%clear
 
 
+        !
+        ! Check to see if matrix has been initialized with information about where to locate 
+        ! vector information being received from other processors.
+        !
+        if ( .not. A%recv_initialized ) then
+            call A%init_recv(x)
+        end if
 
 
         !
-        ! Compute A*x for global matrix-vector product
+        ! Begin non-blocking send of parallel vector information
+        !
+        call x%comm_send()
+
+
+        !
+        ! Compute A*x for local matrix-vector product
         !
         do idom = 1,size(A%dom)
 
             !
-            ! Routine for local blocks (lblks)
+            ! Routine for neighbor/diag blocks (lblks)
             !
             do ielem = 1,size(A%dom(idom)%lblks,1)
                 do iblk = 1,size(A%dom(idom)%lblks,2)
@@ -62,13 +81,13 @@ contains
                         local_multiply    = ( matrix_proc == vector_proc )
                         parallel_multiply = ( matrix_proc /= vector_proc )
 
-                        dparent_l = A%dom(idom)%lblks(ielem,iblk)%dparent_l()
-                        eparent_l = A%dom(idom)%lblks(ielem,iblk)%eparent_l()
-
         
                         if ( local_multiply ) then
+                            dparent_l = A%dom(idom)%lblks(ielem,iblk)%dparent_l()
+                            eparent_l = A%dom(idom)%lblks(ielem,iblk)%eparent_l()
+
                             associate ( resvec => res%dom(idom)%vecs(ielem)%vec,    &
-                                        xvec   => x%dom(idom)%vecs(eparent_l)%vec,    &
+                                        xvec   => x%dom(idom)%vecs(eparent_l)%vec,  &
                                         Amat   => A%dom(idom)%lblks(ielem,iblk)%mat )
 
                                 resvec = resvec + matmul(Amat,xvec)
@@ -99,12 +118,12 @@ contains
                             parallel_multiply = ( matrix_proc /= vector_proc )
 
 
-                            dparent_l = A%dom(idom)%chi_blks(ielem,iblk)%dparent_l()
-                            eparent_l = A%dom(idom)%chi_blks(ielem,iblk)%eparent_l()
-
                             if ( local_multiply ) then
+                                dparent_l = A%dom(idom)%chi_blks(ielem,iblk)%dparent_l()
+                                eparent_l = A%dom(idom)%chi_blks(ielem,iblk)%eparent_l()
+
                                 associate ( resvec => res%dom(idom)%vecs(ielem)%vec,        &
-                                            xvec   => x%dom(dparent_l)%vecs(eparent_l)%vec,     &
+                                            xvec   => x%dom(dparent_l)%vecs(eparent_l)%vec, &
                                             Amat   => A%dom(idom)%chi_blks(ielem,iblk)%mat  ) 
 
                                     !
@@ -116,7 +135,10 @@ contains
                                     resvec = resvec + matmul(Amat,xvec)
 
                                 end associate
+                            else
+                                call chidg_signal(WARN,"chidgMatrix: matrix-vector parallel multiplication")
                             end if
+
                         end if
 
                     end do ! iblk
@@ -171,9 +193,125 @@ contains
 
 
 
+    
 
 
-    end function MULT_chidgMatrix_chidgVector
+        !
+        ! Begin blocking recv of parallel vector information
+        !
+        call x%comm_recv()
+
+
+
+
+
+
+
+        !
+        ! Compute A*x for parallel matrix-vector product
+        !
+        do idom = 1,size(A%dom)
+
+            !
+            ! Routine for neighbor/diag blocks (lblks)
+            !
+            do ielem = 1,size(A%dom(idom)%lblks,1)
+                do iblk = 1,size(A%dom(idom)%lblks,2)
+                    
+                    if (allocated(A%dom(idom)%lblks(ielem,iblk)%mat)) then
+                        matrix_proc = IRANK
+                        vector_proc = A%dom(idom)%lblks(ielem,iblk)%parent_proc()
+
+                        local_multiply    = ( matrix_proc == vector_proc )
+                        parallel_multiply = ( matrix_proc /= vector_proc )
+
+        
+                        if ( parallel_multiply ) then
+                            dparent_l = A%dom(idom)%lblks(ielem,iblk)%dparent_l()
+                            eparent_l = A%dom(idom)%lblks(ielem,iblk)%eparent_l()
+
+                            recv_comm    = A%dom(idom)%lblks(ielem,iblk)%recv_comm
+                            recv_domain  = A%dom(idom)%lblks(ielem,iblk)%recv_domain
+                            recv_element = A%dom(idom)%lblks(ielem,iblk)%recv_element
+
+                            associate ( resvec => res%dom(idom)%vecs(ielem)%vec,                                    &
+                                        xvec   => x%recv%comm(recv_comm)%dom(recv_domain)%vecs(recv_element)%vec,   &
+                                        Amat   => A%dom(idom)%lblks(ielem,iblk)%mat )
+
+                                resvec = resvec + matmul(Amat,xvec)
+
+                            end associate
+                        end if
+
+                    end if
+
+                end do
+            end do
+
+
+
+!            !
+!            ! Routine for off-diagonal, chimera blocks
+!            !
+!            if (allocated(A%dom(idom)%chi_blks)) then
+!                do ielem = 1,size(A%dom(idom)%chi_blks,1)
+!                    do iblk = 1,size(A%dom(idom)%chi_blks,2)
+!
+!
+!                        if (allocated(A%dom(idom)%chi_blks(ielem,iblk)%mat)) then
+!                            matrix_proc = IRANK
+!                            vector_proc = A%dom(idom)%chi_blks(ielem,iblk)%parent_proc()
+!
+!                            local_multiply    = ( matrix_proc == vector_proc )
+!                            parallel_multiply = ( matrix_proc /= vector_proc )
+!
+!
+!                            if ( parallel_multiply ) then
+!                                dparent_l = A%dom(idom)%chi_blks(ielem,iblk)%dparent_l()
+!                                eparent_l = A%dom(idom)%chi_blks(ielem,iblk)%eparent_l()
+!
+!                                associate ( resvec => res%dom(idom)%vecs(ielem)%vec,        &
+!                                            xvec   => x%comm(comm_index)%dom(comm_domain)%vecs(comm_element)%vec,   &
+!                                            Amat   => A%dom(idom)%chi_blks(ielem,iblk)%mat  ) 
+!
+!                                    !
+!                                    ! Test matrix vector sizes
+!                                    !
+!                                    nonconforming = ( size(Amat,2) /= size(xvec) )
+!                                    if (nonconforming) call chidg_signal(FATAL,"operator_chidg_mv: nonconforming Chimera m-v operation")
+!
+!                                    resvec = resvec + matmul(Amat,xvec)
+!
+!                                end associate
+!                            else
+!                                call chidg_signal(WARN,"chidgMatrix: matrix-vector parallel multiplication")
+!                            end if
+!
+!                        end if
+!
+!                    end do ! iblk
+!                end do ! ielem
+!            end if  ! allocated
+
+
+
+
+            !
+            ! TODO: ADD COUPLED BC DATA
+            !
+
+        end do ! idom
+
+
+
+        !
+        ! Wait until all sends have been recieved
+        !
+        call x%comm_wait()
+
+
+    !end function MULT_chidgMatrix_chidgVector
+    end function chidg_mv
     !****************************************************************************************
 
 

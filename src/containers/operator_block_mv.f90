@@ -7,10 +7,10 @@ module operator_block_mv
 
 
 
-    public operator(*)
-    interface operator(*)
-        module procedure MULT_blockmatrix_blockvector
-    end interface
+!    public operator(*)
+!    interface operator(*)
+!        module procedure MULT_blockmatrix_blockvector
+!    end interface
 
 
 contains

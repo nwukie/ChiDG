@@ -10,38 +10,57 @@ module test_densevector_operators_mod
 
 
 
-! Test container with reference densevector_t types
-@TestCase
+    !>  Test container with reference densevector_t types
+    !!
+    !!  @author Nathan A. Wukie
+    !!
+    !!
+    !!
+    !-----------------------------------------------------------------------------------
+    @TestCase
     type, extends(TestCase) ::  test_densevector_operators
-        type(densevector_t)                  :: dv_a, dv_b, dv_res
+
+        type(densevector_t)     :: dv_a, dv_b, dv_res
+        integer(ik)             :: dparent_g = 2
+        integer(ik)             :: dparent_l = 1
+        integer(ik)             :: eparent_g = 9
+        integer(ik)             :: eparent_l = 5
 
     contains
+
         procedure   ::  setUp
         procedure   ::  tearDown
+
     end type test_densevector_operators
+    !***********************************************************************************
 
 
 
 
 
 contains
-    !! NOTE: make sure to use 'this' instead of 'self' since these are over-writting a derived type 
+
+    !> NOTE: make sure to use 'this' instead of 'self' since these are over-writting a derived type 
     !! procedure. The argument names have to match
+    !!
+    !!
+    !!
+    !!
+    !-------------------------------------------------------------------------------------------------
     subroutine setUp(this)
         class(test_densevector_operators),    intent(inout)   :: this
-        integer(ik)                                 :: parent, nterms, nvars
+        integer(ik)                                 :: nterms, nvars
         
             
     
             ! Initialization parameters
             nterms = 8
             nvars  = 1
-            parent = 9
     
     
             ! Initialize densevectors
-            call this%dv_a%init(nterms,nvars,parent)
-            call this%dv_b%init(nterms,nvars,parent)
+            call this%dv_a%init(nterms,nvars,this%dparent_g,this%dparent_l,this%eparent_g,this%eparent_l)
+            call this%dv_b%init(nterms,nvars,this%dparent_g,this%dparent_l,this%eparent_g,this%eparent_l)
     
 
             ! Initialize blockvector data for operators
@@ -56,14 +75,20 @@ contains
         class(test_densevector_operators),    intent(inout)   :: this
         
     end subroutine
+    !**************************************************************************************************
 
 
 
 
 
-!------------------------------------------------------------------------------------------------------
-!> Test:    real * densevector
-@Test
+    !> Test:    real * densevector
+    !!
+    !!
+    !!
+    !!
+    !!
+    !--------------------------------------------------------------------------------------------------
+    @Test
     subroutine test_densevector_operators_mult_real_bv(self)
         class(test_densevector_operators),    intent(inout)   :: self
         
@@ -88,7 +113,10 @@ contains
         ! Test container data. densevector%parent_/nterms_/nvars_
         !
         ! parent
-        @assertEqual(9, self%dv_res%parent())
+        @assertEqual(self%dparent_g, self%dv_res%dparent_g())
+        @assertEqual(self%dparent_l, self%dv_res%dparent_l())
+        @assertEqual(self%eparent_g, self%dv_res%eparent_g())
+        @assertEqual(self%eparent_l, self%dv_res%eparent_l())
         ! nterms
         @assertEqual(8, self%dv_res%nterms())
         ! nvars
@@ -96,7 +124,8 @@ contains
 
 
 
-    end subroutine
+    end subroutine test_densevector_operators_mult_real_bv
+    !***************************************************************************************************
     
 
 
@@ -108,8 +137,15 @@ contains
 
 
 
-!> Test:    densevector * real
-@Test
+    !>  Test:    densevector * real
+    !!
+    !!
+    !!
+    !!
+    !!
+    !!
+    !----------------------------------------------------------------------------------------------------
+    @Test
     subroutine test_densevector_operators_mult_bv_real(self)
         class(test_densevector_operators),    intent(inout)   :: self
         
@@ -134,14 +170,18 @@ contains
         ! Test container data. densevector%parent_/nterms_/nvars_
         !
         ! parent
-        @assertEqual(9, self%dv_res%parent())
+        @assertEqual(self%dparent_g, self%dv_res%dparent_g())
+        @assertEqual(self%dparent_l, self%dv_res%dparent_l())
+        @assertEqual(self%eparent_g, self%dv_res%eparent_g())
+        @assertEqual(self%eparent_l, self%dv_res%eparent_l())
         ! nterms
         @assertEqual(8, self%dv_res%nterms())
         ! nvars
         @assertEqual(1, self%dv_res%nvars())
 
 
-    end subroutine
+    end subroutine test_densevector_operators_mult_bv_real
+    !***************************************************************************************************
     
 
 
@@ -151,8 +191,14 @@ contains
 
 
 
-!> Test:    real / densevector
-@Test
+    !> Test:    real / densevector
+    !!
+    !!
+    !!
+    !!
+    !!
+    !---------------------------------------------------------------------------------------------------
+    @Test
     subroutine test_densevector_operators_div_real_bv(self)
         class(test_densevector_operators),    intent(inout)   :: self
         
@@ -177,14 +223,18 @@ contains
         ! Test container data. densevector%parent_/nterms_/nvars_
         !
         ! parent
-        @assertEqual(9, self%dv_res%parent())
+        @assertEqual(self%dparent_g, self%dv_res%dparent_g())
+        @assertEqual(self%dparent_l, self%dv_res%dparent_l())
+        @assertEqual(self%eparent_g, self%dv_res%eparent_g())
+        @assertEqual(self%eparent_l, self%dv_res%eparent_l())
         ! nterms
         @assertEqual(8, self%dv_res%nterms())
         ! nvars
         @assertEqual(1, self%dv_res%nvars())
 
 
-    end subroutine
+    end subroutine test_densevector_operators_div_real_bv
+    !**************************************************************************************************
     
 
 
@@ -196,8 +246,15 @@ contains
 
 
 
-!> Test:    densevector / real
-@Test
+    !>  Test:    densevector / real
+    !!
+    !!  @author Nathan A. Wukie
+    !!
+    !!
+    !!
+    !!
+    !---------------------------------------------------------------------------------------------------
+    @Test
     subroutine test_densevector_operators_div_bv_real(self)
         class(test_densevector_operators),    intent(inout)   :: self
         
@@ -221,14 +278,18 @@ contains
         ! Test container data. densevector%parent_/nterms_/nvars_
         !
         ! parent
-        @assertEqual(9, self%dv_res%parent())
+        @assertEqual(self%dparent_g, self%dv_res%dparent_g())
+        @assertEqual(self%dparent_l, self%dv_res%dparent_l())
+        @assertEqual(self%eparent_g, self%dv_res%eparent_g())
+        @assertEqual(self%eparent_l, self%dv_res%eparent_l())
         ! nterms
         @assertEqual(8, self%dv_res%nterms())
         ! nvars
         @assertEqual(1, self%dv_res%nvars())
 
 
-    end subroutine
+    end subroutine test_densevector_operators_div_bv_real
+    !**************************************************************************************************
     
 
 
@@ -237,8 +298,14 @@ contains
     
 
 
-!> Test:    densevector + densevector
-@Test
+    !> Test:    densevector + densevector
+    !!
+    !!
+    !!
+    !!
+    !!
+    !--------------------------------------------------------------------------------------------------
+    @Test
     subroutine test_densevector_operators_add_bv_bv(self)
         class(test_densevector_operators),    intent(inout)   :: self
         
@@ -263,14 +330,18 @@ contains
         ! Test container data. densevector%parent_/nterms_/nvars_
         !
         ! parent
-        @assertEqual(9, self%dv_res%parent())
+        @assertEqual(self%dparent_g, self%dv_res%dparent_g())
+        @assertEqual(self%dparent_l, self%dv_res%dparent_l())
+        @assertEqual(self%eparent_g, self%dv_res%eparent_g())
+        @assertEqual(self%eparent_l, self%dv_res%eparent_l())
         ! nterms
         @assertEqual(8, self%dv_res%nterms())
         ! nvars
         @assertEqual(1, self%dv_res%nvars())
 
 
-    end subroutine
+    end subroutine test_densevector_operators_add_bv_bv
+    !*************************************************************************************************
     
 
 
@@ -282,8 +353,14 @@ contains
 
 
 
-!> Test:    densevector - densevector
-@Test
+    !> Test:    densevector - densevector
+    !!
+    !!
+    !!
+    !!
+    !!
+    !-------------------------------------------------------------------------------------------------
+    @Test
     subroutine test_densevector_operators_sub_bv_bv(self)
         class(test_densevector_operators),    intent(inout)   :: self
         
@@ -309,7 +386,10 @@ contains
         ! Test container data. densevector%parent_/nterms_/nvars_
         !
         ! parent
-        @assertEqual(9, self%dv_res%parent())
+        @assertEqual(self%dparent_g, self%dv_res%dparent_g())
+        @assertEqual(self%dparent_l, self%dv_res%dparent_l())
+        @assertEqual(self%eparent_g, self%dv_res%eparent_g())
+        @assertEqual(self%eparent_l, self%dv_res%eparent_l())
         ! nterms
         @assertEqual(8, self%dv_res%nterms())
         ! nvars
@@ -317,7 +397,8 @@ contains
 
 
 
-    end subroutine
+    end subroutine test_densevector_operators_sub_bv_bv
+    !*************************************************************************************************
     
 
 

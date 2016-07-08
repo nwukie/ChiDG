@@ -403,7 +403,7 @@ contains
             end do !iface
 
 
-            if (IRANK == GLOBAL_MASTER) then
+            if ( IRANK == GLOBAL_MASTER ) then
                 write(*,FMT='(A1,A,t21,F6.2,A)',advance="NO") achar(13), " Initializing face geometry: ", (real(ielem)/real(self%nelem))*100.0, "%"
             end if
 
@@ -458,7 +458,7 @@ contains
 
             end do ! iface
 
-            if ( IRANK == GLOBAL_MASTER) then
+            if ( IRANK == GLOBAL_MASTER ) then
                 write(*,FMT='(A1,A,t21,F6.2,A)',advance="NO") achar(13), " Initializing face solution data: ", (real(ielem)/real(self%nelem))*100.0, "%"
             end if
 
@@ -971,7 +971,7 @@ contains
         !
         ! Test if global communication has been initialized
         !
-        if ( .not. self%global_comm_initialized) call chidg_signal(FATAL,"mesh%get_comm_procs: mesh global communication not initialized")
+        if ( .not. self%global_comm_initialized) call chidg_signal(WARN,"mesh%get_comm_procs: mesh global communication not initialized")
 
 
         !

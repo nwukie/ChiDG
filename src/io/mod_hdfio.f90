@@ -734,19 +734,19 @@ contains
                !
                if (allocated(bufferterms)) deallocate(bufferterms)
                allocate(bufferterms(nterms_ielem), stat=ierr)
-               bufferterms = ZERO
                if (ierr /= 0) call AllocationError
+               bufferterms = ZERO
 
 
                !
                ! Check for reading lower, higher, or same-order solution
                !
                if ( nterms_s < nterms_ielem ) then
-                   bufferterms(1:nterms_s) = var(1:nterms_s, ielem_g, itime)             ! Reading a lower order solution
+               bufferterms(1:nterms_s) = var(1:nterms_s, ielem_g, itime)             ! Reading a lower order solution
                else if ( nterms_s > nterms_ielem ) then
-                   bufferterms(1:nterms_ielem) = var(1:nterms_ielem, ielem_g, itime)     ! Reading a higher-order solution
+               bufferterms(1:nterms_ielem) = var(1:nterms_ielem, ielem_g, itime)     ! Reading a higher-order solution
                else
-                   bufferterms(1:nterms_ielem) = var(1:nterms_ielem, ielem_g, itime)     ! Reading a solution of same order
+               bufferterms(1:nterms_ielem) = var(1:nterms_ielem, ielem_g, itime)     ! Reading a solution of same order
                end if
 
 
@@ -1106,27 +1106,22 @@ contains
             ! For each equation specified for the domain
             ! 
             do ieqn = 1,neqns
-                !
+
                 ! Get variable character string
-                !
                 cvar = trim(data%eqnset(idom)%item%prop%eqns(ieqn)%name)
 
-                !
                 ! Read variable
-                !
                 call read_variable_hdf(fid,cvar,time,trim(dname),data)
+
             end do ! ieqn
 
         end do ! idom
 
 
 
-        !
         ! Close HDF5 file and Fortran interface
-        !
-        call h5fclose_f(fid, ierr)      ! Close the HDF5 file
-        if (ierr /= 0) call chidg_signal(FATAL,"read_solution_hdf: error closing file.")
-        call h5close_f(ierr)            ! Close the HDF5 Fortran interface
+        call h5fclose_f(fid, ierr)
+        call h5close_f(ierr)
 
     end subroutine read_solution_hdf
     !*************************************************************************************************************

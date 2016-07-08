@@ -1,9 +1,13 @@
 module operator_block_dot
-    use mod_kinds,          only: rk, ik
+    use mod_kinds,          only: rk, rdouble, ik
     use mod_constants,      only: ZERO
     use type_blockvector,   only: blockvector_t
 
     implicit none
+
+
+    external DDOT
+    real(rdouble) :: DDOT
 
     
 
@@ -36,7 +40,9 @@ contains
         !
         do ielem = 1,size(a%vecs)
 
-            res = res + dot_product(a%vecs(ielem)%vec, b%vecs(ielem)%vec)
+            !res = res + dot_product(a%vecs(ielem)%vec, b%vecs(ielem)%vec)
+
+            res = res + ddot(size(a%vecs(ielem)%vec), a%vecs(ielem)%vec, 1, b%vecs(ielem)%vec, 1)
 
         end do  ! ielem
         

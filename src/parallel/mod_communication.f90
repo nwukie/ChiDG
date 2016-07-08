@@ -1,11 +1,10 @@
 module mod_communication
     use mod_kinds,      only: rk, ik
     use type_mesh,      only: mesh_t
-
+    use mod_chidg_mpi,  only: IRANK, NRANK
     use mod_chimera,    only: detect_chimera_faces,  &
                               detect_chimera_donors, &
                               compute_chimera_interpolators
-    use mod_chidg_mpi,  only: IRANK, NRANK
     use mpi_f08
     implicit none
 
@@ -55,14 +54,10 @@ contains
         end do
 
 
-
-
         !
         ! Loop through mesh types
         !
         do iproc = 0,NRANK-1
-
-
 
             !
             ! For current rank, send out requests for neighbors

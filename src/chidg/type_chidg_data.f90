@@ -67,6 +67,8 @@ module type_chidg_data
         procedure   :: get_domain_index     !< Given a domain name, return domain index
         procedure   :: ndomains             !< Return number of domains in chidg instance
 
+        procedure   :: report
+
     end type chidg_data_t
     !*************************************************************************************************************
 
@@ -237,7 +239,7 @@ contains
         call move_alloc(temp_bcset,self%bcset)
         call move_alloc(temp_eqnset,self%eqnset)
 
-        call write_line('Domain ', idomain_l, 'nelem', self%mesh(idomain_l)%nelem)
+        !call write_line('Domain ', idomain_l, 'nelem', self%mesh(idomain_l)%nelem)
 
     end subroutine add_domain
     !***************************************************************************************************************
@@ -424,6 +426,49 @@ contains
 
 
 
+
+
+
+
+
+    !>
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   7/7/2016
+    !!
+    !!
+    !!
+    !----------------------------------------------------------------------------------------------------------
+    subroutine report(self,selection)
+        class(chidg_data_t),    intent(in)  :: self
+        character(*),           intent(in)  :: selection
+
+        integer(ik) :: idom
+
+
+        if ( trim(selection) == 'grid' ) then
+
+            do idom = 1,self%ndomains()
+                call write_line('Domain ', idom, '  :  ', self%mesh(idom)%nelem, ' Elements')  
+            end do
+
+
+        else
+
+
+        end if
+
+
+
+
+
+
+
+
+
+
+    end subroutine report
+    !***********************************************************************************************************
 
 
 

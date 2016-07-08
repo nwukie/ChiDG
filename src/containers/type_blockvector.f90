@@ -149,8 +149,8 @@ contains
             dparent_l = mesh%elems(ielem)%idomain_l
             eparent_g = mesh%elems(ielem)%ielement_g
             eparent_l = mesh%elems(ielem)%ielement_l
-            nterms = mesh%elems(ielem)%nterms_s
-            neqns  = mesh%elems(ielem)%neqns
+            nterms    = mesh%elems(ielem)%nterms_s
+            neqns     = mesh%elems(ielem)%neqns
 
             ! Call densevector initialization routine
             call self%vecs(ielem)%init(nterms,neqns,dparent_g,dparent_l,eparent_g,eparent_l)

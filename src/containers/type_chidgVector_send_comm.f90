@@ -3,7 +3,8 @@ module type_chidgVector_send_comm
     use mod_kinds,          only: ik
     use type_mesh,          only: mesh_t
     use type_ivector,       only: ivector_t
-    use mpi_f08,            only: MPI_Request
+    use mod_chidg_mpi,      only: ChiDG_COMM
+    use mpi_f08,            only: MPI_Request, MPI_INTEGER4, MPI_ISend
     implicit none
 
 
@@ -63,9 +64,10 @@ contains
         type(mesh_t),                   intent(in)      :: mesh(:)
         integer(ik),                    intent(in)      :: proc
 
-        integer(ik)                 :: idom, ielem, iface, idom_send, ndom_send, ierr, loc, neighbor_proc
+        integer(ik)                 :: idom, ielem, iface, idom_send, ndom_send, ierr, loc, neighbor_proc, ielem_send
         integer(ik),    allocatable :: comm_procs_dom(:)
         logical                     :: already_added, proc_has_domain, proc_is_neighbor
+        type(mpi_request)           :: null_request
 
 
         !
@@ -130,16 +132,54 @@ contains
                         loc = self%elems_send(idom_send)%loc(ielem)
                         already_added = (loc /= 0)
 
-                        ! Added to send list if not already there
+                        ! Add to send list if not already there
                         if ( .not. already_added ) then
+                            ! Add to send list
                             call self%elems_send(idom_send)%push_back(ielem)
+
                         end if
                     end if
 
 
-                end do ! ielem
+                end do ! iface
             end do ! ielem
         end do ! idom
+
+
+
+
+
+
+
+
+
+        !
+        ! Initialize element send indices for each domain to be sent
+        !
+        do idom_send = 1,self%dom_send%size()
+
+            idom = self%dom_send%at(idom_send)
+
+            ! Communicate domain index
+            call MPI_ISend(mesh(idom)%idomain_g, 1, MPI_INTEGER4, self%proc, 0, ChiDG_COMM, null_request, ierr)
+
+            ! Communicate number of elements being sent
+            call MPI_ISend(self%elems_send(idom_send)%size_, 1, MPI_INTEGER4, self%proc, 0, ChiDG_COMM, null_request, ierr)
+
+
+
+
+            do ielem_send = 1,self%elems_send(idom_send)%size()
+                ielem = self%elems_send(idom_send)%at(ielem_send)
+
+                ! Communicate element index
+                call MPI_ISend(mesh(idom)%elems(ielem)%ielement_g, 1, MPI_INTEGER4, self%proc, 0, ChiDG_COMM, null_request, ierr)
+            end do ! ielem_send
+
+
+        end do ! idom_send
+
+
 
 
     end subroutine init

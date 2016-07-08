@@ -119,9 +119,8 @@ contains
 
             call initialize_grid()
 
-
-
             self%envInitialized = .true.
+
         end if
 
 
@@ -695,14 +694,40 @@ contains
     !!
     !!
     !------------------------------------------------------------------------------------------------------------
-    subroutine report(self)
+    subroutine report(self,selection)
         class(chidg_t), intent(inout)   :: self
+        character(*),   intent(in)      :: selection
+
+        integer(ik) :: ireport, ierr
 
 
-        if ( IRANK == GLOBAL_MASTER ) then
-            !call self%time_scheme%report()
-            call self%nonlinear_solver%report()
-            !call self%preconditioner%report()
+        if ( trim(selection) == 'before' ) then
+
+
+            do ireport = 0,NRANK-1
+                if ( ireport == IRANK ) then
+                    call write_line('MPI Rank: ', IRANK)
+                    call self%data%report('grid')
+                end if
+                call MPI_Barrier(ChiDG_COMM,ierr)
+            end do
+
+
+
+
+
+
+
+
+
+        else if ( trim(selection) == 'after' ) then
+
+            if ( IRANK == GLOBAL_MASTER ) then
+                !call self%time_scheme%report()
+                call self%nonlinear_solver%report()
+                !call self%preconditioner%report()
+            end if
+
         end if
 
 
@@ -717,7 +742,7 @@ contains
 
 
 
-    !> Any activities that need performed before the program completely terminates.
+    !>  Any activities that need performed before the program completely terminates.
     !!
     !!  @author Nathan A. Wukie
     !!  @date   2/1/2016

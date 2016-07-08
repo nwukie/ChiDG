@@ -199,6 +199,7 @@ contains
                 w = chidg_mv(A,z(j))
                 norm_before = w%norm(ChiDG_COMM)
 
+
                 !
                 ! Orthogonalization loop. Modified Gram-Schmidt (MGS)
                 !

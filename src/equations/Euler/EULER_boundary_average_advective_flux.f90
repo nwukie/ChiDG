@@ -146,8 +146,6 @@ contains
             call interpolate_face(mesh,face_info,q, irhoE, rhoE_p, NEIGHBOR)
 
 
-
-
 !            idom_m  = face_info%idomain
 !            ielem_m = face_info%ielement
 !            iface_m = face_info%iface

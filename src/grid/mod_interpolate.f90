@@ -105,6 +105,7 @@ contains
         ! then copy the solution modes to local AD variable and seed derivatives
         !
         linearize_me = ( (idomain_l == seed%idomain_l) .and. (ielement_l == seed%ielement_l) )
+        !linearize_me = ( (idom_g_interp == seed%idomain_g) .and. (ielem_g_interp == seed%ielement_g) )
 
         if (linearize_me) then
 
@@ -228,10 +229,9 @@ contains
             conforming_interpolation = ( (mesh(idomain_l)%faces(ielement_l,iface)%ftype == INTERIOR) .or. &
                                          (mesh(idomain_l)%faces(ielement_l,iface)%ftype == BOUNDARY) .or. &
                                          (mesh(idomain_l)%faces(ielement_l,iface)%ftype == CHIMERA) )         ! including chimera here because in the LOCAL case, it doesn't matter
+            parallel_interpolation   = .false.
 
             ndonors = 1
-
-            parallel_interpolation = .false.
 
         !
         ! Test if interpolating from neighbor element(s)
@@ -334,10 +334,10 @@ contains
                 !
                 ! Interpolate from LOCAL element
                 !
-                idom_g_interp  = mesh(idomain_l)%elems(ielement_l)%idomain_g
                 idom_l_interp  = idomain_l
-                ielem_g_interp = mesh(idomain_l)%elems(ielement_l)%ielement_g
                 ielem_l_interp = ielement_l
+                idom_g_interp  = mesh(idomain_l)%elems(ielement_l)%idomain_g
+                ielem_g_interp = mesh(idomain_l)%elems(ielement_l)%ielement_g
                 iface_interp   = iface
 
                 !
@@ -413,6 +413,9 @@ contains
                 else
                     call chidg_signal(FATAL,"interpolate_face: neighbor conforming_interpolation nor chimera_interpolation were detected")
                 end if
+
+            else
+                call chidg_signal(FATAL,"interpolate_face: invalid source. LOCAL or NEIGHBOR.")
             end if
 
 
@@ -478,6 +481,10 @@ contains
                 !
                 if ( conforming_interpolation ) then
                     var_gq = matmul(interpolator,  qdiff)
+
+
+
+
 
                 elseif ( chimera_interpolation ) then
 

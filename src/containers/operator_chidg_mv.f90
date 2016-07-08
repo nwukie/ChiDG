@@ -1,10 +1,13 @@
 module operator_chidg_mv
 #include <messenger.h>
     use mod_kinds,          only: rk, ik
+    use mod_constants,      only: ONE
     use mod_chidg_mpi,      only: IRANK, ChiDG_COMM
     use type_chidgMatrix,   only: chidgMatrix_t
     use type_chidgVector
     implicit none
+
+    external DGEMV
 
 
 
@@ -36,7 +39,7 @@ contains
         type(chidgVector_t) :: res
         integer(ik)         :: idom, ielem, iblk, recv_comm, recv_domain, recv_element
         integer(ik)         :: dparent_g, dparent_l, eparent_g, eparent_l
-        integer(ik)         :: matrix_proc, vector_proc
+        integer(ik)         :: matrix_proc, vector_proc, nrows, ncols
         logical             :: local_multiply, parallel_multiply
         logical             :: nonconforming = .false.
 
@@ -90,7 +93,11 @@ contains
                                         xvec   => x%dom(idom)%vecs(eparent_l)%vec,  &
                                         Amat   => A%dom(idom)%lblks(ielem,iblk)%mat )
 
-                                resvec = resvec + matmul(Amat,xvec)
+                                !resvec = resvec + matmul(Amat,xvec)
+                                
+                                nrows = size(Amat,1)
+                                ncols = size(Amat,2)
+                                call DGEMV('N', nrows, ncols, ONE, Amat, nrows, xvec, 1, ONE, resvec, 1)
 
                             end associate
                         end if
@@ -238,7 +245,11 @@ contains
                                         xvec   => x%recv%comm(recv_comm)%dom(recv_domain)%vecs(recv_element)%vec,   &
                                         Amat   => A%dom(idom)%lblks(ielem,iblk)%mat )
 
-                                resvec = resvec + matmul(Amat,xvec)
+                                !resvec = resvec + matmul(Amat,xvec)
+
+                                nrows = size(Amat,1)
+                                ncols = size(Amat,2)
+                                call DGEMV('N', nrows, ncols, ONE, Amat, nrows, xvec, 1, ONE, resvec, 1)
 
                             end associate
                         end if

@@ -53,12 +53,19 @@ contains
 
         ielem = elem%ielement_l  ! get element index
 
+
+
+
         !
         ! Multiply each component by quadrature weights and element jacobians
         !
         flux_x = (flux_x) * (elem%gq%vol%weights) * (elem%jinv)
         flux_y = (flux_y) * (elem%gq%vol%weights) * (elem%jinv)
         flux_z = (flux_z) * (elem%gq%vol%weights) * (elem%jinv)
+
+
+
+
 
 !       Add r for cylindrical coordinate system integral
 !        flux_x = (flux_x) * (elem%gq%vol%weights) * (elem%jinv) * (elem%quad_pts(:)%c2_)
@@ -71,6 +78,7 @@ contains
         ! Multiply by column of test function gradients, integrate, add to RHS, add derivatives to linearization
         !
         integral_x = matmul(transpose(elem%dtdx),flux_x)                            ! Integrate
+
 
 
 
@@ -212,8 +220,12 @@ contains
         type(AD_D), allocatable                 :: integral(:)
 
 
-        associate ( idomain_l  => face_info%idomain_l,   ielement_l  => face_info%ielement_l,    iface => face_info%iface, &
-                    ifcn  => function_info%ifcn,  idonor => function_info%idonor,  iblk  => function_info%iblk )
+        associate ( idomain_l   => face_info%idomain_l,     &
+                    ielement_l  => face_info%ielement_l,    &
+                    iface       => face_info%iface,         &
+                    ifcn        => function_info%ifcn,      &
+                    idonor      => function_info%idonor,    &
+                    iblk        => function_info%iblk )
 
 
         ftype    = mesh(idomain_l)%faces(ielement_l,iface)%ftype
@@ -305,9 +317,9 @@ contains
                 
 
 
-                associate ( weights_n => mesh(idomain_l)%faces(ineighbor_element_l,ineighbor_face)%gq%face%weights(:,ineighbor_face), &
-                            jinv_n => mesh(idomain_l)%faces(ineighbor_element_l,ineighbor_face)%jinv, & 
-                            val_n => mesh(idomain_l)%faces(ineighbor_element_l,ineighbor_face)%gq%face%val(:,:,ineighbor_face) )
+                associate ( weights_n => mesh(idomain_l)%faces(ineighbor_element_l,ineighbor_face)%gq%face%weights(:,ineighbor_face),   &
+                            jinv_n    => mesh(idomain_l)%faces(ineighbor_element_l,ineighbor_face)%jinv,                                & 
+                            val_n     => mesh(idomain_l)%faces(ineighbor_element_l,ineighbor_face)%gq%face%val(:,:,ineighbor_face) )
 
                     integrand_n = (integrand_n) * (weights_n)
 
@@ -372,30 +384,27 @@ contains
         integer(ik) :: i
         real(rk)    :: vals(size(integral))
 
-        associate ( rhs => sdata%rhs%dom(idom)%vecs, lhs => sdata%lhs)
 
-            !
-            ! Only store rhs once. if iblk == DIAG
-            !
-            if (iblk == DIAG) then
-                vals = rhs(ielem)%getvar(ieqn) - integral(:)%x_ad_
-                call rhs(ielem)%setvar(ieqn,vals)
-                
-            end if
+        !
+        ! Only store rhs once. if iblk == DIAG
+        !
+        if (iblk == DIAG) then
+            vals = sdata%rhs%dom(idom)%vecs(ielem)%getvar(ieqn) - integral(:)%x_ad_
+            call sdata%rhs%dom(idom)%vecs(ielem)%setvar(ieqn,vals)
+        end if
 
-            !
-            ! Negate derivatives before adding to linearization
-            !
-            do i = 1,size(integral)
-                integral(i)%xp_ad_ = -integral(i)%xp_ad_
-            end do
+        !
+        ! Negate derivatives before adding to linearization
+        !
+        do i = 1,size(integral)
+            integral(i)%xp_ad_ = -integral(i)%xp_ad_
+        end do
 
-            !
-            ! Store linearization
-            !
-            call lhs%store(integral,idom,ielem,iblk,ieqn)
+        !
+        ! Store linearization
+        !
+        call sdata%lhs%store(integral,idom,ielem,iblk,ieqn)
 
-        end associate
 
     end subroutine store_volume_integrals
     !*********************************************************************************************************
@@ -487,7 +496,6 @@ contains
                         !
                         vals = rhs(ielement_l)%getvar(ieqn) + integral(:)%x_ad_
                         call rhs(ielement_l)%setvar(ieqn,vals)
-
 
                         !
                         ! Register flux was stored

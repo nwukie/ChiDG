@@ -123,13 +123,9 @@ program driver
         !
         ! Initialize solution data storage
         !
-        if ( irank == GLOBAL_MASTER ) call write_line("init sol domains")
         call chidg%initialize_solution_domains(nterms_s)
-        if ( irank == GLOBAL_MASTER ) call write_line("init comm")
         call chidg%init('communication')
-        if ( irank == GLOBAL_MASTER ) call write_line("init chimera")
         call chidg%init('chimera')
-        if ( irank == GLOBAL_MASTER ) call write_line("init sol solver")
         call chidg%initialize_solution_solver()
 
 
@@ -205,7 +201,9 @@ program driver
         !
         ! Run ChiDG simulation
         !
+        call chidg%report('before')
         call chidg%run()
+        call chidg%report('after')
 
 
 
@@ -215,14 +213,6 @@ program driver
         ! Write final solution
         !
         if (final_write) call chidg%write_solution(solutionfile_out)
-
-
-        !
-        ! Reporting
-        !
-        call chidg%report()
-
-
 
 
 

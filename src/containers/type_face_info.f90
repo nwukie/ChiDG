@@ -14,8 +14,6 @@ module type_face_info
     !----------------------------------------------------------------------------------
     type, public :: face_info_t
 
-!        integer(ik)     :: idomain      !< Domain index
-!        integer(ik)     :: ielement     !< Domain-local element index
         integer(ik)     :: idomain_g
         integer(ik)     :: idomain_l
         integer(ik)     :: ielement_g

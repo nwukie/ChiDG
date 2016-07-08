@@ -20,9 +20,12 @@ module type_chidgVector_recv
 
         type(chidgVector_recv_comm_t),   allocatable :: comm(:)
 
+
     contains
 
         procedure, public :: init
+
+        procedure, public :: clear
 
     end type chidgVector_recv_t
     !*****************************************************************************************
@@ -99,6 +102,28 @@ contains
 
 
 
+
+    !>
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   7/7/2016
+    !!
+    !!
+    !!
+    !--------------------------------------------------------------------------------------------
+    subroutine clear(self)
+        class(chidgVector_recv_t),  intent(inout)   :: self
+        
+        integer(ik) :: icomm
+
+    
+        do icomm = 1,size(self%comm)
+            call self%comm(icomm)%clear()
+        end do !icomm
+
+
+    end subroutine clear
+    !********************************************************************************************
 
 
 

@@ -7,7 +7,7 @@ module type_chidgVector
     use type_chidgVector_send,      only: chidgVector_send_t
     use type_chidgVector_recv,      only: chidgVector_recv_t
     use type_blockvector
-    use mpi_f08,                    only: MPI_Reduce, MPI_COMM, MPI_REAL8, MPI_SUM, MPI_STATUS_IGNORE, MPI_Recv, MPI_Request, MPI_STATUSES_IGNORE
+    use mpi_f08,                    only: MPI_AllReduce, MPI_Reduce, MPI_COMM, MPI_REAL8, MPI_SUM, MPI_STATUS_IGNORE, MPI_Recv, MPI_Request, MPI_STATUSES_IGNORE
     implicit none
 
 
@@ -140,6 +140,7 @@ contains
         ! Call initialization for determining what data to receive and allocate storage for it
         call self%recv%init(mesh)
 
+
     end subroutine initialize
     !****************************************************************************************************
 
@@ -173,6 +174,8 @@ contains
             call self%dom(idom)%clear()
         end do
 
+        ! Call clear on recv storage
+        call self%recv%clear()
 
     end subroutine clear
     !*****************************************************************************************************
@@ -247,17 +250,11 @@ contains
         sumsqr = self%sumsqr()
 
 
-        ! Reduce sumsqr values across processors
-        call MPI_Reduce(sumsqr,norm,1,MPI_REAL8,MPI_SUM,GROUP_MASTER,comm,ierr)
+        ! Reduce sumsqr across all procs, distribute result back to all
+        call MPI_AllReduce(sumsqr,norm,1,MPI_REAL8,MPI_SUM,comm,ierr)
 
 
-        ! Take the square root of the result
         norm = sqrt(norm)
-
-
-        ! Broadcast the result
-        call MPI_BCast(norm,1,MPI_REAL8,GROUP_MASTER,comm,ierr)
-
 
     end function norm_comm
     !*****************************************************************************************************
@@ -391,6 +388,7 @@ contains
         class(chidgVector_t),   intent(inout)   :: self
 
         integer(ik) :: icomm, idom_recv, ielem_recv, proc_recv, data_size, ierr
+        integer(ik) :: idom_store, ielem_store
 
 
         !
@@ -401,10 +399,21 @@ contains
             proc_recv = self%recv%comm(icomm)%proc
             
             do idom_recv = 1,size(self%recv%comm(icomm)%dom)
+
+                ! Get storage index of incoming domain
+                idom_store = self%recv%comm(icomm)%dom_store%at(idom_recv)
+
+
                 do ielem_recv = 1,size(self%recv%comm(icomm)%dom(idom_recv)%vecs)
 
-                    data_size = size(self%recv%comm(icomm)%dom(idom_recv)%vecs(ielem_recv)%vec)
-                    call MPI_Recv(self%recv%comm(icomm)%dom(idom_recv)%vecs(ielem_recv)%vec, data_size, MPI_REAL8, proc_recv, 0, ChiDG_COMM, MPI_STATUS_IGNORE, ierr)
+                    ! Get storage index of incoming element
+                    ielem_store = self%recv%comm(icomm)%elem_store(idom_recv)%at(ielem_recv)
+
+                    data_size = size(self%recv%comm(icomm)%dom(idom_store)%vecs(ielem_store)%vec)
+                    call MPI_Recv(self%recv%comm(icomm)%dom(idom_store)%vecs(ielem_store)%vec, data_size, MPI_REAL8, proc_recv, 0, ChiDG_COMM, MPI_STATUS_IGNORE, ierr)
+
+                    !data_size = size(self%recv%comm(icomm)%dom(idom_recv)%vecs(ielem_recv)%vec)
+                    !call MPI_Recv(self%recv%comm(icomm)%dom(idom_recv)%vecs(ielem_recv)%vec, data_size, MPI_REAL8, proc_recv, 0, ChiDG_COMM, MPI_STATUS_IGNORE, ierr)
 
                 end do ! ielem_recv
             end do ! idom_recv

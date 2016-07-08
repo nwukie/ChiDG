@@ -8,6 +8,8 @@ module type_chidgVector_send
     implicit none
 
 
+
+
     !>  Container for storing information about what parts of chidgVector to send to other
     !!  processors.
     !!
@@ -92,7 +94,8 @@ contains
 
 
         !
-        ! Accumulate total number of sends and allocate storage for mpi_requests for each send
+        ! Accumulate total number of sends and allocate storage for mpi_requests for each send. 
+        ! That way, chidgVector%comm_wait can wait on them to complete.
         !
         nsends = 0
         do iproc = 1,comm_procs%size()

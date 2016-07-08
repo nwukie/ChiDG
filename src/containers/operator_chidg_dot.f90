@@ -5,7 +5,7 @@ module operator_chidg_dot
     use type_chidgVector,   only: chidgVector_t
     use operator_block_dot, only: block_dot
     use mod_chidg_mpi,      only: GROUP_MASTER
-    use mpi_f08,            only: mpi_comm, MPI_Reduce, MPI_REAL8, MPI_SUM
+    use mpi_f08,            only: mpi_comm, MPI_AllReduce, MPI_Reduce, MPI_REAL8, MPI_SUM
     implicit none
 
     interface dot
@@ -65,13 +65,8 @@ contains
         ! Compute the local vector dot-product
         local_dot = dot_local(a,b)
 
-
-        ! Reduce local dot-product values across processors
-        call MPI_Reduce(local_dot,comm_dot,1,MPI_REAL8,MPI_SUM,GROUP_MASTER,comm,ierr)
-
-
-        ! Broadcast result to the group
-        call MPI_BCast(comm_dot,1,MPI_REAL8,GROUP_MASTER,comm,ierr)
+        ! Reduce local dot-product values across processors, distribute result back to all
+        call MPI_AllReduce(local_dot,comm_dot,1,MPI_REAL8,MPI_SUM,comm,ierr)
 
 
     end function dot_comm

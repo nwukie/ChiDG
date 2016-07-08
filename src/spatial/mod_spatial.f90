@@ -3,7 +3,7 @@ module mod_spatial
     use mod_kinds,          only: rk,ik
     use mod_constants,      only: NFACES, DIAG, CHIMERA, INTERIOR, XI_MAX, &
                                   BOUNDARY_ADVECTIVE_FLUX
-    use mod_chidg_mpi,      only: IRANK, ChiDG_COMM, GLOBAL_MASTER
+    use mod_chidg_mpi,      only: IRANK, NRANK, ChiDG_COMM, GLOBAL_MASTER
     use mod_condition,      only: cond
     use mod_eigenvalues,    only: eigenvalues
     use mpi_f08,            only: MPI_Barrier
@@ -39,7 +39,7 @@ contains
 
         type(timer_t)               :: timer
         integer(ik)                 :: nelem, nfcn, ndonors
-        integer(ik)                 :: idom, ielem, iface, iblk, idonor, ifcn, i, ibc, ChiID
+        integer(ik)                 :: idom, ielem, iface, iblk, idonor, ifcn, i, ibc, ChiID, ielement_g, iproc
         logical                     :: interior_face         = .false.
         logical                     :: chimera_face          = .false.
         logical                     :: compute_face          = .false.
@@ -121,12 +121,10 @@ contains
                     do ielem = 1,nelem
 
 
-
                             !
                             ! Faces loop. For the current element, compute the contributions from boundary integrals
                             !
                             do iface = 1,NFACES
-
 
                                 !
                                 ! Define face indices
@@ -256,7 +254,6 @@ contains
 
 
 
-
             !------------------------------------------------------------------------------------------
             !                                      Boundary Scheme
             !------------------------------------------------------------------------------------------
@@ -275,6 +272,7 @@ contains
             ! Synchronize
             !
             call MPI_Barrier(ChiDG_COMM,ierr)
+
 
 
 

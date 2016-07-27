@@ -145,10 +145,11 @@ include_directories(${MPI_Fortran_INCLUDE_PATH})
 #---------------------------------------------------------------------------------------------------
 
 set(METIS_HINT_INCLUDE_DIR $ENV{METIS_INCLUDE_DIR})
+set(METIS_HINT_LIBRARY_DIR $ENV{METIS_LIBRARY_DIR})
 
 
 find_path(METIS_INCLUDE_DIR metis.h HINTS ${METIS_HINT_INCLUDE_DIR})
-find_library(METIS_LIBRARIES metis)
+find_library(METIS_LIBRARIES metis HINTS ${METIS_HINT_LIBRARY_DIR})
 
 if(METIS_INCLUDE_DIR)
     if(METIS_LIBRARIES)

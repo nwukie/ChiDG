@@ -117,8 +117,13 @@
 !************************************************************************************************************
 
 MODULE DNAD_D
-    use mod_kinds,  only: rsingle,rdouble,ishort,ilong,rk
+    use mod_kinds,      only: rsingle,rdouble,ishort,ilong,rk
+    use mod_constants,  only: ZERO, ONE
+
 IMPLICIT NONE
+
+    external DGEMM
+    external DAXPY
 
 ! Dynamic allocation, so this is no longer used
 !INTEGER(2), PUBLIC,PARAMETER:: NDV_AD=4 ! number of design variables
@@ -1680,81 +1685,156 @@ CONTAINS
 
 
 
+!    !-----------------------------------------
+!    ! MULTIPLY Matrix(Real)-Vector(Dual)
+!    !
+!    ! <u,up>.<v,vp>=<u.v,up.v+u.vp>
+!    !----------------------------------------
+!    FUNCTION MATMUL_MV_RD_D(u,v) RESULT(res)
+!        !REAL(DBL_AD), intent(in)     :: u(:,:)
+!        REAL(rk), intent(in)     :: u(:,:)
+!        TYPE(AD_D), intent(in)       :: v(:)
+!!        TYPE(AD_D)                      :: res(size(v))
+!        TYPE(AD_D)                      :: res(size(u,1))  !> Causes memory leak in ifort 15.0.3. Doesn't seem to be deallocating everything correctly
+!!        TYPE(AD_D), allocatable, dimension(:) :: res        !> Declaring as allocatable to fix memory leak
+!!        REAL(DBL_AD)                    :: xp_ad_v(size(v)), &
+!!                                           xp_ad(size(u,1))
+!!        REAL(rk), dimension(size(v),size(v(1)%xp_ad_))      :: xp_ad_vm
+!        REAL(rk), dimension(size(v(1)%xp_ad_), size(v))     :: xp_ad_vm_tr
+!        REAL(rk), dimension(size(u,1),size(v(1)%xp_ad_))    :: res_xp_m
+!!        REAL(rk), dimension(size(v(1)%xp_ad_), size(u,1))   :: res_xp_m_tr
+!        real(rk), dimension(size(v))   :: tmp
+!        real(rk), dimension(size(u,1)) :: tmp2
+!        INTEGER:: i,j
+!        integer(4) :: nrows_a, ncols_a, ncols_b
+!
+!
+!
+!!        allocate(res(size(u,1)))
+!        do j = 1,size(res)
+!               allocate(res(j)%xp_ad_(size(v(1)%xp_ad_)))
+!        end do
+!
+!        !
+!        ! Standard matrix multiplication of function values
+!        !
+!
+!        ! Broken with GCC 6.1.0
+!!        res%x_ad_ = MATMUL(u,v%x_ad_)
+!
+!        ! Fix for GCC 6.1.0
+!        tmp = v%x_ad_
+!        tmp2 = matmul(u,tmp)
+!        res%x_ad_ = tmp2
+!    
+!!        !
+!!        ! Assemble derivative components as a matrix
+!!        !
+!!        do i = 1,size(v)
+!!            xp_ad_vm(i,:) = v(i)%xp_ad_
+!!        end do
+!        
+!        !
+!        ! Assemble transposed matrix instead to improve memory access
+!        !
+!        do i = 1,size(v)
+!            xp_ad_vm_tr(:,i) = v(i)%xp_ad_
+!        end do
+!
+!
+!
+!
+!        !
+!        ! Multiply derivatives
+!        !
+!        !res_xp_m = matmul(u,xp_ad_vm)
+!!        res_xp_m = matmul(u,transpose(xp_ad_vm_tr))
+!        nrows_a = size(u,1)
+!        ncols_a = size(u,2)
+!        ncols_b = size(xp_ad_vm_tr,1) ! since it is getting transposed
+!        call DGEMM('N', 'T', nrows_a, ncols_b, ncols_a, ONE, u, nrows_a, xp_ad_vm_tr, ncols_b, ZERO, res_xp_m, nrows_a)
+!
+!
+!
+!        !
+!        ! Distribute derivatives
+!        !
+!        do i = 1,size(res)
+!            res(i)%xp_ad_ = res_xp_m(i,:)
+!        end do
+!
+!
+!    END FUNCTION MATMUL_MV_RD_D
+
+
+
+
+
+
+
+
+
     !-----------------------------------------
     ! MULTIPLY Matrix(Real)-Vector(Dual)
     !
     ! <u,up>.<v,vp>=<u.v,up.v+u.vp>
     !----------------------------------------
     FUNCTION MATMUL_MV_RD_D(u,v) RESULT(res)
-        !REAL(DBL_AD), intent(in)     :: u(:,:)
-        REAL(rk), intent(in)     :: u(:,:)
-        TYPE(AD_D), intent(in)       :: v(:)
-!        TYPE(AD_D)                      :: res(size(v))
-!        TYPE(AD_D)                      :: res(size(u,1))  !> Causes memory leak in ifort 15.0.3. Doesn't seem to be deallocating everything correctly
-        TYPE(AD_D), allocatable, dimension(:) :: res        !> Declaring as allocatable to fix memory leak
-!        REAL(DBL_AD)                    :: xp_ad_v(size(v)), &
-!                                           xp_ad(size(u,1))
-        REAL(rk), dimension(size(v),size(v(1)%xp_ad_))      :: xp_ad_vm
-        REAL(rk), dimension(size(v(1)%xp_ad_), size(v))     :: xp_ad_vm_tr
+        REAL(rk),   intent(in)          :: u(:,:)
+        TYPE(AD_D), intent(in)          :: v(:)
+
+        TYPE(AD_D)                                          :: res(size(u,1))  !> Causes memory leak in ifort 15.0.3. Doesn't seem to be deallocating everything correctly
         REAL(rk), dimension(size(u,1),size(v(1)%xp_ad_))    :: res_xp_m
-        REAL(rk), dimension(size(v(1)%xp_ad_), size(u,1))   :: res_xp_m_tr
-        real(rk), dimension(size(v))   :: tmp
-        real(rk), dimension(size(u,1)) :: tmp2
-        INTEGER:: i,j
+        real(rk), dimension(size(v))                        :: tmp
+        real(rk), dimension(size(u,1))                      :: tmp2
+        INTEGER:: i,j,vecsize
 
 
-
-        allocate(res(size(u,1)))
         do j = 1,size(res)
                allocate(res(j)%xp_ad_(size(v(1)%xp_ad_)))
+               res(j)%xp_ad_ = ZERO
         end do
+
+
 
         !
         ! Standard matrix multiplication of function values
         !
 
         ! Broken with GCC 6.1.0
-!        res%x_ad_ = MATMUL(u,v%x_ad_)
+        ! res%x_ad_ = MATMUL(u,v%x_ad_)
 
         ! Fix for GCC 6.1.0
         tmp = v%x_ad_
         tmp2 = matmul(u,tmp)
         res%x_ad_ = tmp2
     
-!        !
-!        ! Assemble derivative components as a matrix
-!        !
-!        do i = 1,size(v)
-!            xp_ad_vm(i,:) = v(i)%xp_ad_
-!        end do
-        
+
+
         !
-        ! Assemble transposed matrix instead to improve memory access
+        ! Multiply derivatives and accumulate
         !
-        do i = 1,size(v)
-            xp_ad_vm_tr(:,i) = v(i)%xp_ad_
+        vecsize = size(v(1)%xp_ad_)
+        do i = 1,size(u,1)
+            do j = 1,size(u,2)
+!                res(i)%xp_ad_ = res(i)%xp_ad_ + u(i,j)*v(j)%xp_ad_
+                call DAXPY(vecsize,u(i,j),v(j)%xp_ad_,1,res(i)%xp_ad_,1)    ! Noticable improvement
+            end do
         end do
 
-
-
-
-        !
-        ! Multiply derivatives
-        !
-        !res_xp_m = matmul(u,xp_ad_vm)
-        res_xp_m = matmul(u,transpose(xp_ad_vm_tr))
-
-
-
-        !
-        ! Distribute derivatives
-        !
-        do i = 1,size(res)
-            res(i)%xp_ad_ = res_xp_m(i,:)
-        end do
 
 
     END FUNCTION MATMUL_MV_RD_D
+
+
+
+
+
+
+
+
+
+
 
 
 

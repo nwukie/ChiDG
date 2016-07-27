@@ -4,8 +4,9 @@ cmake_minimum_required(VERSION 3.4)
 
 
 
+
 #-----------------------------------------------------------------------------------
-#                       CMake macros for adding source files
+#                      CMake macros for adding source files
 #-----------------------------------------------------------------------------------
 include(cmake/macros/add_exe_sources.txt)
 include(cmake/macros/add_lib_sources.txt)
@@ -62,8 +63,10 @@ if (${Fortran_VENDOR} MATCHES "INTEL")
     
 elseif (${Fortran_VENDOR} MATCHES "GNU")
     # Note: -fcheck=all has issues with passing null pointer in tecio_interface
-    set (USER_COMPILE_FLAGS_DEBUG   "-O0 -cpp --coverage -ffree-form -ffree-line-length-none -fbacktrace -fstack-protector -fcheck=bounds -fmax-stack-var-size=1600 -p -g")    # Note: -fcheck=all has issues with passing null pointer in tecio_interface
-    set (USER_COMPILE_FLAGS_RELEASE "-O3 -cpp -ffree-form -ffree-line-length-none -fexternal-blas -march=native -funroll-loops -m64")
+    set (USER_COMPILE_FLAGS_DEBUG   "-O0 -cpp -fopenmp --coverage -ffree-form -ffree-line-length-none -fbacktrace -fstack-protector -fcheck=bounds -fmax-stack-var-size=1600 -p -g")    # Note: -fcheck=all has issues with passing null pointer in tecio_interface
+    #set (USER_COMPILE_FLAGS_RELEASE "-O3 -cpp -fopenmp -ffree-form -ffree-line-length-none -fexternal-blas -march=native -funroll-loops -m64 -fwhole-file")
+    #set (USER_COMPILE_FLAGS_RELEASE "-O3 -cpp -ffree-form -ffree-line-length-none -fexternal-blas -march=native -m64 -funroll-loops -floop-parallelize-all -fwhole-file -ftree-parallelize-loops=4 -floop-interchange -floop-strip-mine -floop-block")
+    set (USER_COMPILE_FLAGS_RELEASE "-O3 -cpp -ffree-form -ffree-line-length-none -fexternal-blas -march=native -m64 -funroll-loops -fwhole-file -floop-interchange -floop-strip-mine -floop-block")
 
     set (CMAKE_Fortran_LINK_FLAGS_DEBUG "-O0 --coverage")
     set (CMAKE_Fortran_LINK_FLAGS_RELEASE "-O3")
@@ -86,19 +89,12 @@ endif()
 
 
 
-#----------------------------------------------------------------------------------- 
-#                                  Find HDF5
-#----------------------------------------------------------------------------------- 
+#--------------------------------------------------------------------------------------------------
+#                                          Find HDF5
+#--------------------------------------------------------------------------------------------------
 # NOTE: export HDF5_ROOT path as shell environment variable such that 
 #       $HDF5_ROOT contains the bin, lib, include directories for HDF5.
 #       The find_package module looks first for $HDF5_ROOT.
-
-#if (${Fortran_VENDOR} MATCHES "INTEL")
-#    set(ENV{HDF5_ROOT} $ENV{HDF5_ROOT}/intel)
-#elseif (${Fortran_VENDOR} MATCHES "GNU")
-#    set(ENV{HDF5_ROOT} $ENV{HDF5_ROOT}/gnu)
-#endif()
-
 
 find_package(HDF5 REQUIRED COMPONENTS Fortran HL Fortran_HL)
 include_directories(${HDF5_INCLUDE_DIRS})
@@ -111,42 +107,30 @@ endif()
 
 
 
-#----------------------------------------------------------------------------------- 
-#                                 Find Lapack
-#----------------------------------------------------------------------------------- 
+#--------------------------------------------------------------------------------------------------
+#                                         Find Lapack
+#--------------------------------------------------------------------------------------------------
 find_package(LAPACK REQUIRED)
-
 message(STATUS "LAPACK_LIBRARIES: " ${LAPACK_LIBRARIES})
 
 
 
 
 
-##----------------------------------------------------------------------------------- 
-##                                  Find MPI - STUB
-##----------------------------------------------------------------------------------- 
-## NOTE: export MPI_ROOT path as shell environment variable such that 
-##       $MPI_ROOT/gnu or $MPI_ROOT/intel are valid. Inside the 'gnu' or 'intel'
-##       folder one should find lib and include directories.
-#
-## Select vendor installation
-#if (${Fortran_VENDOR} MATCHES "INTEL")
-#    set(MPI_VENDOR_ROOT $ENV{MPI_ROOT}/intel)
-#elseif (${Fortran_VENDOR} MATCHES "GNU")
-#    set(MPI_VENDOR_ROOT $ENV{MPI_ROOT}/gnu)
-#endif()
-#
-#message(STATUS "Fortran_VENDOR: ${Fortran_VENDOR}")
-#message(STATUS "MPI_VENDOR_ROOT: ${MPI_VENDOR_ROOT}")
+#--------------------------------------------------------------------------------------------------
+#                                          Find MPI
+#--------------------------------------------------------------------------------------------------
 
-set(MPI_Fortran_COMPILER "/opt/local/bin/mpifort")
-set(MPI_Fortran_INCLUDE_PATH "/opt/local/lib/openmpi-mp")
+# add -DUSER_MPI=True to config to read environment variables
+if (USER_MPI)
+    message(STATUS "Reading environment variables for MPI_Fortran_COMPILER and MPI_Fortran_INCLUDE_PATH. Please be sure these are set as environment variables")
+    set(MPI_Fortran_COMPILER $ENV{MPI_Fortran_COMPILER})
+    set(MPI_Fortran_INCLUDE_PATH $ENV{MPI_Fortran_INCLUDE_PATH})
+endif()
 
 
 find_package(MPI REQUIRED)
-
 include_directories(${MPI_Fortran_INCLUDE_PATH})
-include_directories("/opt/local/include/openmpi-mp")
 
 
 
@@ -155,11 +139,15 @@ include_directories("/opt/local/include/openmpi-mp")
 
 
 
-#-----------------------------------------------------------------------------------
-#                                   Find METIS
-#-----------------------------------------------------------------------------------
 
-find_path(METIS_INCLUDE_DIR metis.h)
+#---------------------------------------------------------------------------------------------------
+#                                           Find METIS
+#---------------------------------------------------------------------------------------------------
+
+set(METIS_HINT_INCLUDE_DIR $ENV{METIS_INCLUDE_DIR})
+
+
+find_path(METIS_INCLUDE_DIR metis.h HINTS ${METIS_HINT_INCLUDE_DIR})
 find_library(METIS_LIBRARIES metis)
 
 if(METIS_INCLUDE_DIR)
@@ -180,9 +168,9 @@ include_directories(${METIS_INCLUDE_DIR})
 
 
 
-#----------------------------------------------------------------------------------- 
-#                               Find Tecplot
-#----------------------------------------------------------------------------------- 
+#--------------------------------------------------------------------------------------------------
+#                                           Find Tecplot
+#--------------------------------------------------------------------------------------------------
 # Shouldn't need user-intervention here.
 # First define TEC_ROOT path as cmake variable such that
 # ${TEC_ROOT}/lib/libtecio.a  ${TEC_ROOT}/include/tecio.f90 are valid.
@@ -208,9 +196,9 @@ message(STATUS "TECPLOT_INCLUDE_DIR: " ${TECPLOT_INCLUDE_DIR})
 
 
 
-#----------------------------------------------------------------------------------- 
-#                        Add source tree and includes
-#----------------------------------------------------------------------------------- 
+#-------------------------------------------------------------------------------------------------
+#                                   Add source tree and includes
+#-------------------------------------------------------------------------------------------------
 add_subdirectory(DNAD)                                                                        
 add_subdirectory(src)
 
@@ -222,9 +210,9 @@ include_directories(${CMAKE_SOURCE_DIR}/src/tools)    # Need include here for ma
 
 
 
-#----------------------------------------------------------------------------------- 
-#                     Add core library and driver targets
-#----------------------------------------------------------------------------------- 
+#-------------------------------------------------------------------------------------------------
+#                               Add core library and driver targets
+#-------------------------------------------------------------------------------------------------
 add_library(coredg STATIC ${LIB_SRCS})
 #target_link_libraries(coredg ${HDF5_LIBRARIES} ${LAPACK_LIBRARIES} ${BLAS_LIBRARIES} ${TECPLOT_LIBRARIES} ${MPI_Fortran_LIBRARIES})
 target_link_libraries(coredg ${HDF5_LIBRARIES} ${LAPACK_LIBRARIES} ${BLAS_LIBRARIES} ${TECPLOT_LIBRARIES} ${METIS_LIBRARIES})
@@ -250,9 +238,9 @@ set_target_properties(chidg PROPERTIES
 
 
 
-#-----------------------------------------------------------------------------------
-#       Install targets
-#----------------------------------------------------------------------------------- 
+#-------------------------------------------------------------------------------------------------
+#                                       Install targets
+#-------------------------------------------------------------------------------------------------
 install(TARGETS chidg coredg
         RUNTIME DESTINATION /usr/local/chidg/bin
         LIBRARY DESTINATION /usr/local/chidg/lib
@@ -271,9 +259,9 @@ install(TARGETS chidg coredg
 
 
 
-#----------------------------------------------------------------------------------- 
-#                   Testing:   enable with -DTESTING=True
-#----------------------------------------------------------------------------------- 
+#---------------------------------------------------------------------------------------------------
+#                               Testing:   enable with -DTESTING=True
+#---------------------------------------------------------------------------------------------------
 # To build tests, the unit-testing framework pFUnit must be compiled with MPI support.
 # The environment variable PFUNIT must be set such that PFUNIT/gnu or PFUNIT/intel
 # are valid.
@@ -312,9 +300,9 @@ endif()
 
 
 
-#------------------------------------------------------------------
-#                    Generate documentation
-#------------------------------------------------------------------
+#-------------------------------------------------------------------------------------------------
+#                                   Generate documentation
+#-------------------------------------------------------------------------------------------------
 
 
 
@@ -326,10 +314,4 @@ endif()
 unset(HDF5_DIR CACHE)
 
 
-
-
-
-
-
-
-
+#-------------------------------------------------------------------------------------------------

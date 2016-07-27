@@ -1,4 +1,4 @@
-module test__compute_gq_donor_mod
+module test__find_gq_donor_mod
     use pfunit_mod
     use mod_kinds,              only: rk, ik
     use mod_constants,          only: XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX, &
@@ -12,14 +12,21 @@ module test__compute_gq_donor_mod
 
     use mod_hdfio,              only: read_grid_hdf
     use mod_testutils,          only: meshgen
-    use mod_chimera
+    use mod_chimera,            only: find_gq_donor
     implicit none
 
-    public  :: test_compute_gq_donor
+    public  :: test_find_gq_donor
 
 
 
 
+    !>
+    !!
+    !!  @author Nathan A. Wukie
+    !!
+    !!
+    !!
+    !----------------------------------------------------------------------------
     @TestParameter
     type, extends(AbstractTestParameter) :: node_donor_coord
         integer(ik)                 :: testNumber   ! Test index
@@ -29,6 +36,7 @@ module test__compute_gq_donor_mod
     contains
         procedure   :: toString
     end type node_donor_coord
+    !****************************************************************************
 
 
 
@@ -37,8 +45,15 @@ module test__compute_gq_donor_mod
 
 
 
+    !>
+    !!
+    !!  @author Nathan A. Wukie
+    !!
+    !!
+    !!
+    !----------------------------------------------------------------------------
     @TestCase(testParameters={getParameters()}, constructor=newTest)
-    type, extends(ParameterizedTestCase) :: test_compute_gq_donor
+    type, extends(ParameterizedTestCase) :: test_find_gq_donor
         type(chidg_t)   :: chidg
 
         type(point_t)            :: gqnode
@@ -47,7 +62,8 @@ module test__compute_gq_donor_mod
     contains
         procedure   :: setUp
         procedure   :: tearDown
-    end type test_compute_gq_donor
+    end type test_find_gq_donor
+    !*****************************************************************************
 
 
 
@@ -65,8 +81,15 @@ contains
 
 
 
+    !>
+    !!
+    !!  @author Nathan A. Wukie
+    !!
+    !!
+    !!
+    !----------------------------------------------------------------------------------------------------
     subroutine setUp(this)
-        class(test_compute_gq_donor),  intent(inout)   :: this
+        class(test_find_gq_donor),  intent(inout)   :: this
 
 
         type(meshdata_t)                :: meshdata
@@ -107,7 +130,7 @@ contains
 
 
     subroutine tearDown(this)
-        class(test_compute_gq_donor),  intent(inout)   :: this
+        class(test_find_gq_donor),  intent(inout)   :: this
 
         !
         ! Close ChiDG interface
@@ -115,6 +138,7 @@ contains
         call this%chidg%close('core')
 
     end subroutine
+    !*************************************************************************************************************************
 
 
 
@@ -126,7 +150,7 @@ contains
     function newTest(testParameter) result(test)
         type(node_donor_coord), intent(in)  :: testParameter
 
-        type(test_compute_gq_donor)    :: test
+        type(test_find_gq_donor)    :: test
 
         test%gqnode      = testParameter%gqnode
         test%donor       = testParameter%donor
@@ -225,9 +249,16 @@ contains
 
 
 
+    !>
+    !!
+    !!  @author Nathan A. Wukie
+    !!
+    !!
+    !!
+    !-----------------------------------------------------------------------------------------------
     @Test
-    subroutine test__compute_gq_donor__point(self)
-        class(test_compute_gq_donor),  intent(inout)   :: self
+    subroutine test__find_gq_donor__point(self)
+        class(test_find_gq_donor),  intent(inout)   :: self
 
         type(point_t)                   :: gq_node, donor_coord
         type(element_indices_t)         :: donor
@@ -244,7 +275,7 @@ contains
         !
         ! Detect Chimera faces. THIS IS BEING TESTED
         !
-        call compute_gq_donor(self%chidg%data%mesh,self%gqnode,receiver,donor,donor_coord)
+        call find_gq_donor(self%chidg%data%mesh,self%gqnode,receiver,donor,donor_coord)
 
 
         !
@@ -264,23 +295,12 @@ contains
         @assertEqual(self%donor_coord%c3_, donor_coord%c3_)
 
 
-    end subroutine
+    end subroutine test__find_gq_donor__point
+    !*************************************************************************************************
 
 
 
 
 
 
-end module test__compute_gq_donor_mod
-
-
-
-
-
-
-
-
-
-
-
-
+end module test__find_gq_donor_mod

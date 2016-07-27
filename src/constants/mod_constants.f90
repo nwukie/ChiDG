@@ -60,7 +60,6 @@ module mod_constants
     !
     ! Constants for spatial definition
     !
-!    integer(ik), parameter :: SPACEDIM  = 3
     integer(ik), parameter :: ONE_DIM   = 1
     integer(ik), parameter :: TWO_DIM   = 2
     integer(ik), parameter :: THREE_DIM = 3
@@ -152,6 +151,13 @@ module mod_constants
     character(len=8),   parameter   :: REQUIRED = 'required'
     character(len=8),   parameter   :: OPTIONAL = 'optional'
 
+
+
+    !
+    ! point_t status
+    !
+    integer(ik), parameter :: VALID_POINT   = 0
+    integer(ik), parameter :: INVALID_POINT = 1
 
 
     !

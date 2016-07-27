@@ -11,7 +11,8 @@ module mod_linear_solver
 !    use type_gaussseidel,   only: gaussseidel_t
 !    use type_sor,           only: sor_t
 !    use type_gmres,         only: gmres_t
-    use type_fgmres,                only: fgmres_t
+    use type_fgmres,            only: fgmres_t
+    use type_fgmres_cgs,        only: fgmres_cgs_t
     
 
     
@@ -23,7 +24,8 @@ module mod_linear_solver
 !    type(gaussseidel_t)     :: GAUSSSEIDEL
 !    type(sor_t)             :: SOR
 !    type(gmres_t)           :: GMRES
-    type(fgmres_t)             :: FGMRES
+    type(fgmres_t)          :: FGMRES
+    type(fgmres_cgs_t)      :: FGMRES_CGS
 
 
 
@@ -71,6 +73,9 @@ contains
 !
             case ('fgmres','FGMRES')
                 allocate(lsolver, source=FGMRES, stat=ierr)
+
+            case ('fgmres_cgs', 'FGMRES_CGS')
+                allocate(lsolver, source=FGMRES_CGS, stat=ierr)
 
 
             case default

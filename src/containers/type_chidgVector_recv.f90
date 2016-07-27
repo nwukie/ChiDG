@@ -55,20 +55,18 @@ contains
         logical                     :: not_in_list
 
         !
-        ! Get communicating processor ranks and add to total list
+        ! Get processor ranks that we are receiving from
         !
         do idom = 1,size(mesh)
-            comm_procs_dom = mesh(idom)%get_comm_procs()
+            comm_procs_dom = mesh(idom)%get_recv_procs()
 
             do iproc = 1,size(comm_procs_dom)
-
                 ! See if proc is already in list
                 loc = comm_procs%loc(comm_procs_dom(iproc))
                 not_in_list = ( loc == 0 )
 
                 ! If not, add to list
                 if ( not_in_list ) call comm_procs%push_back(comm_procs_dom(iproc))
-
             end do ! iproc
 
         end do ! idom

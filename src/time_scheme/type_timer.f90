@@ -1,6 +1,7 @@
 module type_timer
 #include <messenger.h>
     use mod_kinds,      only: rk, ik
+    use mod_constants,  only: ZERO
     use mod_chidg_mpi,  only: GLOBAL_MASTER
     use mpi_f08,        only: MPI_WTime
     implicit none
@@ -18,7 +19,7 @@ module type_timer
 
         real(rk)    :: start_time           !< Timer starting time
         real(rk)    :: stop_time            !< Timer ending time
-        real(rk)    :: elapsed_time         !< Timer elapsed time
+        real(rk)    :: elapsed_time = ZERO  !< Timer elapsed time
 
         logical     :: started = .false.    !< Logical state indicating if the timer was started
         logical     :: stopped = .false.    !< Logical state indicating if the timer was stopped
@@ -79,7 +80,11 @@ contains
             call chidg_signal(WARN,'type_timer: Timer was never started')
         end if
 
+
+        self%elapsed_time = self%elapsed_time + real(self%stop_time - self%start_time,rk)
+
         self%stopped = .true.
+        self%started = .false.
 
     end subroutine stop
     !***************************************************************************
@@ -100,7 +105,8 @@ contains
         real(rk)    :: elapsed_time
         
         if (self%stopped) then
-            elapsed_time = real(self%stop_time - self%start_time,rk)
+            !elapsed_time = real(self%stop_time - self%start_time,rk)
+            elapsed_time = self%elapsed_time
         else
             call chidg_signal(WARN,'type_timer: Timer was not stopped')
             elapsed_time = 123456789._rk

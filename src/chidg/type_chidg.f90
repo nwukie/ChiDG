@@ -160,6 +160,7 @@ contains
             case ('communication')
                 call establish_neighbor_communication(self%data%mesh,ChiDG_COMM)
 
+
             !
             ! Initialize chimera
             !

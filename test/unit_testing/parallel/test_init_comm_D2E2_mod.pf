@@ -80,14 +80,8 @@ contains
         !
         ! Read partition data: grid, boundary conditions
         !
-!        do iread = 0,NRANK-1
-!            if ( iread == IRANK ) then
-                call chidg%read_grid(gridfile, spacedim, partition)
-                call chidg%read_boundaryconditions(gridfile, partition)
-!            end if
-!
-!            call MPI_Barrier(ChiDG_COMM,ierr)  ! sync to prevent simultaneous file access
-!        end do
+        call chidg%read_grid(gridfile, spacedim, partition)
+        call chidg%read_boundaryconditions(gridfile, partition)
 
 
         !

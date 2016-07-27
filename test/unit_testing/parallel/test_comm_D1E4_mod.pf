@@ -104,14 +104,8 @@ contains
         !
         ! Read partition data: grid, boundary conditions
         !
-!        do iread = 0,NRANK-1
-!            if ( iread == IRANK ) then
-                call this%chidg%read_grid(gridfile, spacedim, partition)
-                call this%chidg%read_boundaryconditions(gridfile, partition)
-!            end if
-!
-!            call MPI_Barrier(this%ChiDG_COMM,ierr)  ! sync to prevent simultaneous file access
-!        end do
+        call this%chidg%read_grid(gridfile, spacedim, partition)
+        call this%chidg%read_boundaryconditions(gridfile, partition)
 
 
         !
@@ -281,6 +275,9 @@ contains
             if (IRANK == 0) then
                 @assertEqual(1,size(a%recv%comm))
 
+                @assertEqual(1,size(a%recv%comm(1)%dom))
+                @assertEqual(1,size(a%recv%comm(1)%dom(1)%vecs))
+
                 @assertequal(1,a%recv%comm(1)%dom(1)%vecs(1)%dparent_g())
                 @assertequal(1,a%recv%comm(1)%dom(1)%vecs(1)%dparent_l())
                 @assertequal(3,a%recv%comm(1)%dom(1)%vecs(1)%eparent_g())
@@ -288,6 +285,9 @@ contains
                 
             else if (IRANK == 1) then
                 @assertEqual(1,size(a%recv%comm))
+
+                @assertEqual(1,size(a%recv%comm(1)%dom))
+                @assertEqual(1,size(a%recv%comm(1)%dom(1)%vecs))
 
                 @assertequal(1,a%recv%comm(1)%dom(1)%vecs(1)%dparent_g())
                 @assertequal(1,a%recv%comm(1)%dom(1)%vecs(1)%dparent_l())
@@ -306,6 +306,9 @@ contains
             if (IRANK == 0) then
                 @assertEqual(1,size(a%recv%comm))
 
+                @assertEqual(1,size(a%recv%comm(1)%dom))
+                @assertEqual(1,size(a%recv%comm(1)%dom(1)%vecs))
+
                 @assertequal(1,a%recv%comm(1)%dom(1)%vecs(1)%dparent_g())
                 @assertequal(1,a%recv%comm(1)%dom(1)%vecs(1)%dparent_l())
                 @assertequal(3,a%recv%comm(1)%dom(1)%vecs(1)%eparent_g())
@@ -313,10 +316,16 @@ contains
             else if (IRANK == 1) then
                 @assertEqual(2,size(a%recv%comm))
 
+                @assertEqual(1,size(a%recv%comm(1)%dom))
+                @assertEqual(1,size(a%recv%comm(1)%dom(1)%vecs))
+
                 @assertequal(1,a%recv%comm(1)%dom(1)%vecs(1)%dparent_g())
                 @assertequal(1,a%recv%comm(1)%dom(1)%vecs(1)%dparent_l())
                 @assertequal(1,a%recv%comm(1)%dom(1)%vecs(1)%eparent_g())
                 @assertequal(1,a%recv%comm(1)%dom(1)%vecs(1)%eparent_l())
+
+                @assertEqual(1,size(a%recv%comm(2)%dom))
+                @assertEqual(1,size(a%recv%comm(2)%dom(1)%vecs))
 
                 @assertequal(1,a%recv%comm(2)%dom(1)%vecs(1)%dparent_g())
                 @assertequal(1,a%recv%comm(2)%dom(1)%vecs(1)%dparent_l())
@@ -324,6 +333,9 @@ contains
                 @assertequal(1,a%recv%comm(2)%dom(1)%vecs(1)%eparent_l())
             else if (IRANK == 2) then
                 @assertEqual(1,size(a%recv%comm))
+
+                @assertEqual(1,size(a%recv%comm(1)%dom))
+                @assertEqual(1,size(a%recv%comm(1)%dom(1)%vecs))
 
                 @assertequal(1,a%recv%comm(1)%dom(1)%vecs(1)%dparent_g())
                 @assertequal(1,a%recv%comm(1)%dom(1)%vecs(1)%dparent_l())
@@ -341,6 +353,8 @@ contains
             if (IRANK == 0) then
                 @assertEqual(1,size(a%recv%comm))
 
+                @assertEqual(1,size(a%recv%comm(1)%dom))
+                @assertEqual(1,size(a%recv%comm(1)%dom(1)%vecs))
                 @assertequal(1,a%recv%comm(1)%dom(1)%vecs(1)%dparent_g())
                 @assertequal(1,a%recv%comm(1)%dom(1)%vecs(1)%dparent_l())
                 @assertequal(2,a%recv%comm(1)%dom(1)%vecs(1)%eparent_g())
@@ -348,11 +362,15 @@ contains
             else if (IRANK == 1) then
                 @assertEqual(2,size(a%recv%comm))
 
+                @assertEqual(1,size(a%recv%comm(1)%dom))
+                @assertEqual(1,size(a%recv%comm(1)%dom(1)%vecs))
                 @assertequal(1,a%recv%comm(1)%dom(1)%vecs(1)%dparent_g())
                 @assertequal(1,a%recv%comm(1)%dom(1)%vecs(1)%dparent_l())
                 @assertequal(1,a%recv%comm(1)%dom(1)%vecs(1)%eparent_g())
                 @assertequal(1,a%recv%comm(1)%dom(1)%vecs(1)%eparent_l())
 
+                @assertEqual(1,size(a%recv%comm(2)%dom))
+                @assertEqual(1,size(a%recv%comm(2)%dom(1)%vecs))
                 @assertequal(1,a%recv%comm(2)%dom(1)%vecs(1)%dparent_g())
                 @assertequal(1,a%recv%comm(2)%dom(1)%vecs(1)%dparent_l())
                 @assertequal(3,a%recv%comm(2)%dom(1)%vecs(1)%eparent_g())
@@ -360,11 +378,15 @@ contains
             else if (IRANK == 2) then
                 @assertEqual(2,size(a%recv%comm))
 
+                @assertEqual(1,size(a%recv%comm(1)%dom))
+                @assertEqual(1,size(a%recv%comm(1)%dom(1)%vecs))
                 @assertequal(1,a%recv%comm(1)%dom(1)%vecs(1)%dparent_g())
                 @assertequal(1,a%recv%comm(1)%dom(1)%vecs(1)%dparent_l())
                 @assertequal(2,a%recv%comm(1)%dom(1)%vecs(1)%eparent_g())
                 @assertequal(1,a%recv%comm(1)%dom(1)%vecs(1)%eparent_l())
 
+                @assertEqual(1,size(a%recv%comm(1)%dom))
+                @assertEqual(1,size(a%recv%comm(1)%dom(1)%vecs))
                 @assertequal(1,a%recv%comm(2)%dom(1)%vecs(1)%dparent_g())
                 @assertequal(1,a%recv%comm(2)%dom(1)%vecs(1)%dparent_l())
                 @assertequal(4,a%recv%comm(2)%dom(1)%vecs(1)%eparent_g())
@@ -372,6 +394,8 @@ contains
             else if (IRANK == 3) then
                 @assertEqual(1,size(a%recv%comm))
 
+                @assertEqual(1,size(a%recv%comm(1)%dom))
+                @assertEqual(1,size(a%recv%comm(1)%dom(1)%vecs))
                 @assertequal(1,a%recv%comm(1)%dom(1)%vecs(1)%dparent_g())
                 @assertequal(1,a%recv%comm(1)%dom(1)%vecs(1)%dparent_l())
                 @assertequal(3,a%recv%comm(1)%dom(1)%vecs(1)%eparent_g())

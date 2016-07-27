@@ -14,6 +14,10 @@ module mod_spatial
     use type_timer,         only: timer_t
     use type_face_info,     only: face_info_t
     use type_function_info, only: function_info_t
+
+    use EULER_volume_advective_flux_cacheoptimized, only: EULER_volume_total, EULER_volume_interpolate
+    use EULER_Roe_flux_cacheoptimized,              only: EULER_roe_total,  EULER_roe_interpolate, EULER_roe_integrate
+
     implicit none
 
 
@@ -37,7 +41,7 @@ contains
         real(rk),           optional        :: timing
         integer(ik),        optional        :: info
 
-        type(timer_t)               :: timer
+        type(timer_t)               :: timer, comm_timer
         integer(ik)                 :: nelem, nfcn, ndonors
         integer(ik)                 :: idom, ielem, iface, iblk, idonor, ifcn, i, ibc, ChiID, ielement_g, iproc
         logical                     :: interior_face         = .false.
@@ -86,9 +90,11 @@ contains
             !
             ! Communicate solution vector
             !
+            call comm_timer%start()
             call data%sdata%q%comm_send()
             call data%sdata%q%comm_recv()
             call data%sdata%q%comm_wait()
+            call comm_timer%stop()
 
 
 
@@ -159,7 +165,7 @@ contains
                                     if ( chimera_face ) then
                                         if ( iblk /= DIAG) then ! only need to compute multiple times when we need the linearization of the chimera neighbors
                                             ChiID  = mesh%faces(ielem,iface)%ChiID
-                                            ndonors = mesh%chimera%recv%data(ChiID)%ndonors
+                                            ndonors = mesh%chimera%recv%data(ChiID)%ndonors()
                                         else                    ! If we are linearizing the interior receiver element, only need to compute one.
                                             ndonors = 1
                                         end if
@@ -279,10 +285,17 @@ contains
 
             call timer%stop()
             call timer%report('Spatial Discretization Time')
+            call comm_timer%report('    - Spatial comm time:')
             if (present(timing)) then
                 timing = timer%elapsed()
             end if
 
+            !call EULER_volume_total%report('Euler volume total')
+            !call EULER_volume_interpolate%report('Euler volume interpolate')
+            
+            !call EULER_roe_total%report('Euler roe total')
+            !call EULER_roe_interpolate%report('Euler roe interpolate')
+            !call EULER_roe_integrate%report('Euler roe integrate')
 
     end subroutine update_space
     !******************************************************************************************************************

@@ -399,6 +399,7 @@ contains
         call self%timer%stop()
         call self%timer%report('Linear solver compute time: ')
 
+        call write_line('   Linear Solver Iterations: ', self%niter, delimiter='', io_proc=GLOBAL_MASTER)
 
 
     end subroutine solve

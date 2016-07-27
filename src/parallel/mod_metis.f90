@@ -6,7 +6,8 @@ module mod_metis
 
 
 interface
-    subroutine METIS_PartMeshNodal( ne, nn, eptr, eind, vwgt, vsize, nparts, tpwgt, opts, objval, epart, npart) bind(c)
+    !subroutine METIS_PartMeshNodal( ne, nn, eptr, eind, vwgt, vsize, nparts, tpwgt, opts, objval, epart, npart) bind(c)
+    function METIS_PartMeshNodal( ne, nn, eptr, eind, vwgt, vsize, nparts, tpwgt, opts, objval, epart, npart) bind(c) result(test)
       use iso_c_binding,    only: c_int, c_ptr
       implicit none
 
@@ -15,13 +16,14 @@ interface
       type(c_ptr),                          value   :: vwgt, vsize   
       integer(c_int),                  intent(in)  :: nparts
       type(c_ptr),                          value   :: tpwgt
-      !integer(c_int), dimension(0:39), intent(in)  :: opts
       type(c_ptr),                          value   :: opts
       integer(c_int),                  intent(out) :: objval
       integer(c_int), dimension(*),    intent(out) :: epart
       integer(c_int), dimension(*),    intent(out) :: npart
+      integer(c_int)                               :: test
 
-    end subroutine METIS_PartMeshNodal  
+    !end subroutine METIS_PartMeshNodal  
+    end function METIS_PartMeshNodal  
 end interface
 
 

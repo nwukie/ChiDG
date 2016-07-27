@@ -135,7 +135,7 @@ contains
 
         
         !
-        ! Loop through blocks and look for parallel multiply
+        ! Loop through LOCAL blocks and look for parallel multiply
         !
         do idom = 1,size(self%dom)
             do ielem = 1,size(self%dom(idom)%lblks,1)
@@ -203,6 +203,94 @@ contains
             end do !ielem
 
         end do ! idom
+
+
+
+
+
+
+
+
+
+        !
+        ! Loop through CHIMERA blocks and look for parallel multiply
+        !
+        do idom = 1,size(self%dom)
+
+            if (allocated(self%dom(idom)%chi_blks)) then
+                do ielem = 1,size(self%dom(idom)%chi_blks,1)
+                    do iblk = 1,size(self%dom(idom)%chi_blks,2)
+                        
+                        if (allocated(self%dom(idom)%chi_blks(ielem,iblk)%mat)) then
+                            matrix_proc = IRANK
+                            vector_proc = self%dom(idom)%chi_blks(ielem,iblk)%parent_proc()
+
+                            local_multiply    = ( matrix_proc == vector_proc )
+                            parallel_multiply = ( matrix_proc /= vector_proc )
+
+
+                            if ( parallel_multiply ) then
+                                !
+                                ! Get information about element we need to multiply with
+                                !
+                                dparent_g   = self%dom(idom)%chi_blks(ielem,iblk)%dparent_g()
+                                eparent_g   = self%dom(idom)%chi_blks(ielem,iblk)%eparent_g()
+                                parent_proc = self%dom(idom)%chi_blks(ielem,iblk)%parent_proc()
+
+
+
+                                !
+                                ! Loop through chidgVector%recv to find match
+                                !
+                                match_found = .false.
+                                do icomm = 1,size(x%recv%comm)
+
+                                    comm_proc = x%recv%comm(icomm)%proc
+
+                                    if ( comm_proc == parent_proc ) then
+                                        do idom_recv = 1,size(x%recv%comm(icomm)%dom)
+                                            do ielem_recv = 1,size(x%recv%comm(icomm)%dom(idom_recv)%vecs)
+
+                                                ! Get recv element indices
+                                                drecv_g = x%recv%comm(icomm)%dom(idom_recv)%vecs(ielem_recv)%dparent_g()
+                                                erecv_g = x%recv%comm(icomm)%dom(idom_recv)%vecs(ielem_recv)%eparent_g()
+
+                                    
+
+                                                ! If they match the blockmatrix, set the recv indices so chidg_mv knows how to compute matrix-vector product
+                                                if ( (drecv_g == dparent_g) .and. (erecv_g == eparent_g) ) then
+                                                    self%dom(idom)%chi_blks(ielem,iblk)%recv_comm    = icomm
+                                                    self%dom(idom)%chi_blks(ielem,iblk)%recv_domain  = idom_recv
+                                                    self%dom(idom)%chi_blks(ielem,iblk)%recv_element = ielem_recv
+                                                    match_found = .true.
+                                                end if
+
+                                            end do !ielem_recv
+                                        end do !idom_recv
+                                    end if
+
+                                end do ! icomm
+
+                                if (.not. match_found) call chidg_signal(FATAL,"chidgMatrix%init_recv: no matching recv element found in vector")
+
+
+
+                            end if
+
+                        end if
+
+                    end do !iblk
+                end do !ielem
+            end if
+
+        end do ! idom
+
+
+
+
+
+
+
 
 
 

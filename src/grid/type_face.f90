@@ -47,15 +47,14 @@ module type_face
 
 
         ! Neighbor information
-        integer(ik)                 :: ineighbor_proc       !< MPI processor rank of the neighboring element
-        integer(ik)                 :: ineighbor_domain_g   !< Global index of the neighboring element's domain
-        integer(ik)                 :: ineighbor_domain_l   !< Processor-local index of the neighboring element's domain
-        integer(ik)                 :: ineighbor_element_g  !< Domain-global index of the neighboring element
-        integer(ik)                 :: ineighbor_element_l  !< Processor-local index of the neighboring element
-        integer(ik)                 :: recv_comm
-        integer(ik)                 :: recv_domain
-        integer(ik)                 :: recv_element
-!        integer(ik)                 :: ineighbor_face      !< Neighbor-local index of neighbor face
+        integer(ik)                 :: ineighbor_proc      = NO_PROC    !< MPI processor rank of the neighboring element
+        integer(ik)                 :: ineighbor_domain_g  = 0          !< Global index of the neighboring element's domain
+        integer(ik)                 :: ineighbor_domain_l  = 0          !< Processor-local index of the neighboring element's domain
+        integer(ik)                 :: ineighbor_element_g = 0          !< Domain-global index of the neighboring element
+        integer(ik)                 :: ineighbor_element_l = 0          !< Processor-local index of the neighboring element
+        integer(ik)                 :: recv_comm           = 0
+        integer(ik)                 :: recv_domain         = 0
+        integer(ik)                 :: recv_element        = 0
 
 
         ! Chimera face offset. For periodic boundary condition.
@@ -210,7 +209,7 @@ contains
         integer(ik),    intent(in)      :: ineighbor_proc
 
 
-        self%ftype = ftype
+        self%ftype               = ftype
         self%ineighbor_domain_g  = ineighbor_domain_g
         self%ineighbor_domain_l  = ineighbor_domain_l
         self%ineighbor_element_g = ineighbor_element_g
@@ -219,6 +218,7 @@ contains
 
 
         self%neighborInitialized = .true.
+
     end subroutine init_neighbor
     !***********************************************************************************************************
 

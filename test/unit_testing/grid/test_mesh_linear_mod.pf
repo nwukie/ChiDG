@@ -449,7 +449,7 @@ contains
         !
         ! Call get_comm_procs. THIS IS BEING TESTED.
         !
-        comm_procs = self%mesh%get_comm_procs()
+        comm_procs = self%mesh%get_send_procs()
 
 
         !

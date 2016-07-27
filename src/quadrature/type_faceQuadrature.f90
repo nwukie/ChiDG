@@ -28,6 +28,7 @@ module type_faceQuadrature
         real(rk),       dimension(:,:), allocatable :: weights  !< (:, iface)
 
         real(rk), dimension(:,:,:), allocatable :: val      !< (:,:,iface)
+        real(rk), dimension(:,:,:), allocatable :: val_trans
         real(rk), dimension(:,:,:), allocatable :: ddxi     !< ''
         real(rk), dimension(:,:,:), allocatable :: ddeta    !< ''
         real(rk), dimension(:,:,:), allocatable :: ddzeta   !< ''
@@ -82,6 +83,7 @@ contains
         allocate(self%ddeta( nnodes_face,nterms,NFACES))
         allocate(self%ddzeta(nnodes_face,nterms,NFACES))
 
+        allocate(self%val_trans(   nterms,nnodes_face,NFACES))
 
 
         !
@@ -353,6 +355,11 @@ contains
             end do
         end do
 
+        
+
+        do iface = 1,size(face_indices)
+            self%val_trans(:,:,iface) = transpose(self%val(:,:,iface))
+        end do
 
 
     end subroutine init

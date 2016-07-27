@@ -1,20 +1,18 @@
 module precon_ILU0
 #include <messenger.h>
     use mod_kinds,              only: rk, ik
-    use mod_constants,          only: DIAG, XI_MIN, ETA_MIN, ZETA_MIN, XI_MAX, ETA_MAX, ZETA_MAX
+    use mod_constants,          only: DIAG, XI_MIN, ETA_MIN, ZETA_MIN, XI_MAX, ETA_MAX, ZETA_MAX, ONE
+    use mod_inv,                only: inv
+    use mod_chidg_mpi,          only: IRANK
+
     use type_preconditioner,    only: preconditioner_t
     use type_chidg_data,        only: chidg_data_t
     use type_chidgMatrix,       only: chidgMatrix_t
     use type_chidgVector
-    use type_blockmatrix,       only: blockmatrix_t
-
-    use mod_inv,                only: inv
-
-    use mod_chidg_mpi,          only: IRANK
     implicit none
 
 
-    !> ILU0 preconditioner
+    !>  ILU0 preconditioner
     !!
     !!  @author Nathan A. Wukie
     !!  @date   2/24/2016
@@ -23,9 +21,10 @@ module precon_ILU0
     !------------------------------------------------------------------------------------------------------------------
     type, extends(preconditioner_t) :: precon_ILU0_t
 
-        type(blockmatrix_t), allocatable     :: LD(:)       !< Lower-Diagonal, sparse-block matrix representation
+        type(chidgMatrix_t)     :: LD
 
     contains
+    
         procedure   :: init
         procedure   :: update
         procedure   :: apply
@@ -50,30 +49,17 @@ contains
     !!
     !-----------------------------------------------------------------------------------------------------------------
     subroutine init(self,data)
-        class(precon_ILU0_t),   intent(inout)   :: self
-        type(chidg_data_t),     intent(in)      :: data
-
-        integer(ik) :: idom, ndom, ierr
-
-        ndom = data%ndomains()
-
-        !
-        ! Allocate a Lower-Diagonal block matrix for each domain
-        !
-        allocate(self%LD(ndom), stat=ierr)
-        if (ierr /= 0) call AllocationError
+        class(precon_ILU0_t),    intent(inout)   :: self
+        type(chidg_data_t),         intent(in)      :: data
 
 
-        !
-        ! Initialize each blockmatrix
-        !
-        do idom = 1,ndom
-            call self%LD(idom)%init(mesh=data%mesh(idom),mtype='LowerDiagonal')
-            call self%LD(idom)%clear()
-        end do
+
+        call self%LD%init(mesh=data%mesh, mtype='LowerDiagonal')
+        call self%LD%clear()
 
 
         self%initialized = .true.
+
 
     end subroutine init
     !*****************************************************************************************************************
@@ -93,22 +79,24 @@ contains
     !!
     !----------------------------------------------------------------------------------------------------------------
     subroutine update(self,A,b)
-        class(precon_ILU0_t),   intent(inout)   :: self
-        type(chidgMatrix_t),    intent(in)      :: A
-        type(chidgVector_t),    intent(in)      :: b
+        class(precon_ILU0_t),    intent(inout)   :: self
+        type(chidgMatrix_t),        intent(in)      :: A
+        type(chidgVector_t),        intent(in)      :: b
 
 
-        integer(ik)             :: ielem, irow, icol, eparent_l, iblk, idom, ndom
-        integer(ik)             :: lower_blocks(3), upper_blocks(3)
-        real(rk), allocatable   :: pdiag(:,:)
+        integer(ik)             :: ielem, irow, icol, eparent_l, idom, ndom, ilower, itranspose
 
 
         call write_line(' Computing ILU0 factorization', io_proc=GLOBAL_MASTER)
 
+
+
+
         !
         ! Test preconditioner initialization
         !
-        if ( .not. self%initialized ) call chidg_signal(FATAL,'preconditioner::ILU0%update - preconditioner has not yet been initialized')
+        if ( .not. self%initialized ) call chidg_signal(FATAL,'ILU0%update - preconditioner has not yet been initialized')
+
 
 
         !
@@ -122,23 +110,19 @@ contains
             ! Store diagonal blocks of A
             !
             do ielem = 1,size(A%dom(idom)%lblks,1)
-                self%LD(idom)%lblks(ielem,DIAG)%mat = A%dom(idom)%lblks(ielem,DIAG)%mat
+                self%LD%dom(idom)%lblks(ielem,DIAG)%mat = A%dom(idom)%lblks(ielem,DIAG)%mat
             end do
 
-            !
-            ! Invert first diagonal
-            !
-            self%LD(idom)%lblks(1,DIAG)%mat = inv(self%LD(idom)%lblks(1,DIAG)%mat)
-
-
-
-
-
-            lower_blocks = [XI_MIN, ETA_MIN, ZETA_MIN]
-            upper_blocks = [XI_MAX, ETA_MAX, ZETA_MAX]
 
             !
-            ! Loop through all rows
+            ! Invert first diagonal block
+            !
+            self%LD%dom(idom)%lblks(1,DIAG)%mat = inv(self%LD%dom(idom)%lblks(1,DIAG)%mat)
+
+
+
+            !
+            ! Loop through all Proc-Local rows
             !
             do irow = 2,size(A%dom(idom)%lblks,1)
 
@@ -146,35 +130,39 @@ contains
                 !
                 ! Operate on all the L blocks for the current row
                 !
-                do iblk = 1,size(lower_blocks)
+                do icol = 1,A%dom(idom)%local_lower_blocks(irow)%size()
+                    ilower = A%dom(idom)%local_lower_blocks(irow)%at(icol)
 
-                    if (allocated(self%LD(idom)%lblks(irow,lower_blocks(iblk))%mat) .and. self%LD(idom)%lblks(irow,lower_blocks(iblk))%parent_proc() == IRANK) then
-                    !if (allocated(self%LD(idom)%lblks(irow,lower_blocks(iblk))%mat) ) then
-
+                    if (allocated(A%dom(idom)%lblks(irow,ilower)%mat) .and. A%dom(idom)%lblks(irow,ilower)%parent_proc() == IRANK) then
 
                         ! Get parent index
-                        eparent_l = self%LD(idom)%lblks(irow,lower_blocks(iblk))%eparent_l()
+                        eparent_l = self%LD%dom(idom)%lblks(irow,ilower)%eparent_l()
 
                         ! Compute and store the contribution to the lower-triangular part of LD
-                        self%LD(idom)%lblks(irow,lower_blocks(iblk))%mat = matmul(A%dom(idom)%lblks(irow,lower_blocks(iblk))%mat,self%LD(idom)%lblks(eparent_l,DIAG)%mat)
+                        self%LD%dom(idom)%lblks(irow,ilower)%mat = matmul(A%dom(idom)%lblks(irow,ilower)%mat,self%LD%dom(idom)%lblks(eparent_l,DIAG)%mat)
 
                         ! Modify the current diagonal by this lower-triangular part multiplied by opposite upper-triangular part. (The component in the transposed position)
-                        self%LD(idom)%lblks(irow,DIAG)%mat = self%LD(idom)%lblks(irow,DIAG)%mat  -  matmul(self%LD(idom)%lblks(irow,lower_blocks(iblk))%mat,  A%dom(idom)%lblks(eparent_l,upper_blocks(iblk))%mat)
+                        itranspose = A%dom(idom)%local_transpose(irow,ilower)
+                        self%LD%dom(idom)%lblks(irow,DIAG)%mat = self%LD%dom(idom)%lblks(irow,DIAG)%mat  -  matmul(self%LD%dom(idom)%lblks(irow,ilower)%mat,  A%dom(idom)%lblks(eparent_l,itranspose)%mat)
 
                     end if
-                end do ! iblk
+
+                end do ! icol
 
 
                 !
                 ! Pre-Invert current diagonal block and store
                 !
-                self%LD(idom)%lblks(irow,DIAG)%mat = inv(self%LD(idom)%lblks(irow,DIAG)%mat)
+                self%LD%dom(idom)%lblks(irow,DIAG)%mat = inv(self%LD%dom(idom)%lblks(irow,DIAG)%mat)
 
 
             end do !irow
 
+
+
         end do ! idom
 
+        call write_line(' Done Computing ILU0 factorization', io_proc=GLOBAL_MASTER)
     end subroutine update
     !*******************************************************************************************
 
@@ -200,17 +188,17 @@ contains
 
         type(chidgVector_t)         :: z
 
-        integer(ik)                 :: ielem, eparent_l, irow, iblk, block_index, idom, ndom
-        integer(ik), allocatable    :: lower_blocks(:), upper_blocks(:)
+        integer(ik)                 :: ielem, eparent_l, idom, ndom, irow, icol, ilower, iupper
+
+
+        call self%timer%start()
+
 
         !
         ! Initialize z for preconditioning
         !
         z = v
 
-
-        lower_blocks = [XI_MIN, ETA_MIN, ZETA_MIN]
-        upper_blocks = [XI_MAX, ETA_MAX, ZETA_MAX]
 
 
         !
@@ -221,33 +209,32 @@ contains
 
 
             !
-            ! Forward Solve
+            ! Forward Solve - Local
             !
-            do irow = 1,size(self%LD(idom)%lblks,1)
+            do irow = 1,size(self%LD%dom(idom)%lblks,1)
+
 
 
                 !
                 ! Lower-Triangular blocks
                 !
-                do block_index = 1,size(lower_blocks)
-                    iblk = lower_blocks(block_index)
+                do icol = 1,A%dom(idom)%local_lower_blocks(irow)%size()
+                    ilower = A%dom(idom)%local_lower_blocks(irow)%at(icol)
 
-                    if (allocated(self%LD(idom)%lblks(irow,iblk)%mat) .and. self%LD(idom)%lblks(irow,iblk)%parent_proc() == IRANK) then
-                    !if (allocated(self%LD(idom)%lblks(irow,iblk)%mat) ) then
-                        !
-                        ! Get associated parent block index
-                        !
-                        eparent_l = self%LD(idom)%lblks(irow,iblk)%eparent_l()
-
-                        z%dom(idom)%vecs(irow)%vec = z%dom(idom)%vecs(irow)%vec - matmul(self%LD(idom)%lblks(irow,iblk)%mat, z%dom(idom)%vecs(eparent_l)%vec)
+                    if (allocated(A%dom(idom)%lblks(irow,ilower)%mat) .and. A%dom(idom)%lblks(irow,ilower)%parent_proc() == IRANK) then
+                        
+                            ! Get associated parent block index
+                            eparent_l = self%LD%dom(idom)%lblks(irow,ilower)%eparent_l()
+                            z%dom(idom)%vecs(irow)%vec = z%dom(idom)%vecs(irow)%vec - matmul(self%LD%dom(idom)%lblks(irow,ilower)%mat, z%dom(idom)%vecs(eparent_l)%vec)
 
                     end if
-
 
                 end do
 
 
             end do ! irow
+
+
 
 
 
@@ -259,17 +246,14 @@ contains
                 !
                 ! Upper-Triangular blocks
                 !
-                do block_index = 1,size(upper_blocks)
-                    iblk = upper_blocks(block_index)
+                do icol = 1,A%dom(idom)%local_upper_blocks(irow)%size()
+                    iupper = A%dom(idom)%local_upper_blocks(irow)%at(icol)
 
-                    if (allocated(A%dom(idom)%lblks(irow,iblk)%mat) .and. A%dom(idom)%lblks(irow,iblk)%parent_proc() == IRANK) then
-                    !if (allocated(A%dom(idom)%lblks(irow,iblk)%mat) ) then
-                        !
-                        ! Get associated parent block index
-                        !
-                        eparent_l = A%dom(idom)%lblks(irow,iblk)%eparent_l()
+                    if (allocated(A%dom(idom)%lblks(irow,iupper)%mat) .and. A%dom(idom)%lblks(irow,iupper)%parent_proc() == IRANK) then
 
-                        z%dom(idom)%vecs(irow)%vec = z%dom(idom)%vecs(irow)%vec - matmul(A%dom(idom)%lblks(irow,iblk)%mat, z%dom(idom)%vecs(eparent_l)%vec)
+                            ! Get associated parent block index
+                            eparent_l = A%dom(idom)%lblks(irow,iupper)%eparent_l()
+                            z%dom(idom)%vecs(irow)%vec = z%dom(idom)%vecs(irow)%vec - matmul(A%dom(idom)%lblks(irow,iupper)%mat, z%dom(idom)%vecs(eparent_l)%vec)
 
                     end if
 
@@ -279,9 +263,10 @@ contains
                 !
                 ! Diagonal block
                 !
-                z%dom(idom)%vecs(irow)%vec = matmul(self%LD(idom)%lblks(irow,DIAG)%mat, z%dom(idom)%vecs(irow)%vec)
+                z%dom(idom)%vecs(irow)%vec = matmul(self%LD%dom(idom)%lblks(irow,DIAG)%mat, z%dom(idom)%vecs(irow)%vec)
 
             end do ! irow
+
 
 
 
@@ -289,6 +274,7 @@ contains
 
 
 
+        call self%timer%stop()
 
     end function apply
     !-----------------------------------------------------------------------------------------

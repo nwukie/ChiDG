@@ -8,7 +8,7 @@ subroutine test_partitioner_metis()
 
     integer(c_int), parameter   :: ne=2, nn=6, nparts=2
     integer(c_int), allocatable :: eptr(:), nodes(:), epart(:), npart(:)
-    integer(c_int)              :: n
+    integer(c_int)              :: n, ierr
     type(c_ptr)                 :: vwgt, vsize, tpwgts, options
 
 
@@ -25,7 +25,8 @@ subroutine test_partitioner_metis()
 
 
 
-    call METIS_PartMeshNodal(ne,nn,eptr,nodes,vwgt,vsize,2,tpwgts,options,n,epart,npart)
+    !call METIS_PartMeshNodal(ne,nn,eptr,nodes,vwgt,vsize,2,tpwgts,options,n,epart,npart)
+    ierr = METIS_PartMeshNodal(ne,nn,eptr,nodes,vwgt,vsize,2,tpwgts,options,n,epart,npart)
 
 
 

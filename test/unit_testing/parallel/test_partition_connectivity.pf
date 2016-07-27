@@ -4,15 +4,22 @@ subroutine test_partition_connectivity__onedomain_twopartitions()
     use mod_partitioners,           only: partition_connectivity
     use type_domain_connectivity,   only: domain_connectivity_t
     use type_partition,             only: partition_t
+    use type_chidg,                 only: chidg_t
     use mod_chidg_mpi,              only: NRANK
     implicit none
 
+    type(chidg_t)                               :: chidg
     type(domain_connectivity_t),    allocatable :: connectivities(:)
     type(partition_t),              allocatable :: partitions(:)
     integer :: ielem, nelem
 
     ! Two partitions
     NRANK = 2
+
+
+    call chidg%init('env')
+
+
 
     ! One domain
     allocate(connectivities(1))

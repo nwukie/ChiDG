@@ -60,12 +60,14 @@ contains
 
 
         !
-        ! Detect number of processors that we need to send to
+        ! Detect processors that we need to send to, from all mesh instances.
         !
         do idom = 1,size(mesh)
 
-            comm_procs_dom = mesh(idom)%get_comm_procs() 
+            ! Get comm_procs from current domain
+            comm_procs_dom = mesh(idom)%get_send_procs() 
             
+            ! Loop through and add them to list if not already added
             do iproc = 1,size(comm_procs_dom)
                 ! check if proc was already added to list from another domain
                 loc = comm_procs%loc(comm_procs_dom(iproc))
@@ -76,12 +78,16 @@ contains
         end do ! idom
 
 
+
+
         !
         ! Get total number of procs we are sending to and allocate send info for each
         !
         nprocs_send = comm_procs%size()
         allocate(self%comm(nprocs_send), stat=ierr)
         if (ierr /= 0) call AllocationError
+
+
 
 
         !

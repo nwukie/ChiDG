@@ -76,7 +76,7 @@ contains
 
         type(AD_D), dimension(mesh(idom)%elems(ielem)%gq%vol%nnodes)      ::  &
                     rho, rhou, rhov, rhow, rhoE, p, H,                        &
-                    flux_x, flux_y, flux_z
+                    flux_x, flux_y, flux_z, invrho
 
 
         idonor = 0
@@ -108,7 +108,7 @@ contains
         call interpolate_element(mesh,sdata%q,idom,ielem,irhoE,rhoE,seed)
 
 
-
+        invrho = ONE/rho
 
 
 
@@ -117,7 +117,7 @@ contains
         !
         call prop%fluid%compute_pressure(rho,rhou,rhov,rhow,rhoE,p)
 
-        H = (rhoE + p)/rho
+        H = (rhoE + p)*invrho
 
         !===========================
         !        MASS FLUX
@@ -132,9 +132,9 @@ contains
         !===========================
         !     X-MOMENTUM FLUX
         !===========================
-        flux_x = (rhou*rhou)/rho  +  p
-        flux_y = (rhou*rhov)/rho
-        flux_z = (rhou*rhow)/rho
+        flux_x = (rhou*rhou)*invrho  +  p
+        flux_y = (rhou*rhov)*invrho
+        flux_z = (rhou*rhow)*invrho
 
         call integrate_volume_flux(mesh(idom)%elems(ielem),sdata,idom,irhou,iblk,flux_x,flux_y,flux_z)
 
@@ -142,18 +142,18 @@ contains
         !============================
         !     Y-MOMENTUM FLUX
         !============================
-        flux_x = (rhov*rhou)/rho
-        flux_y = (rhov*rhov)/rho  +  p
-        flux_z = (rhov*rhow)/rho
+        flux_x = (rhov*rhou)*invrho
+        flux_y = (rhov*rhov)*invrho  +  p
+        flux_z = (rhov*rhow)*invrho
 
         call integrate_volume_flux(mesh(idom)%elems(ielem),sdata,idom,irhov,iblk,flux_x,flux_y,flux_z)
 
         !============================
         !     Z-MOMENTUM FLUX
         !============================
-        flux_x = (rhow*rhou)/rho
-        flux_y = (rhow*rhov)/rho
-        flux_z = (rhow*rhow)/rho  +  p
+        flux_x = (rhow*rhou)*invrho
+        flux_y = (rhow*rhov)*invrho
+        flux_z = (rhow*rhow)*invrho  +  p
 
         call integrate_volume_flux(mesh(idom)%elems(ielem),sdata,idom,irhow,iblk,flux_x,flux_y,flux_z)
 

@@ -2,6 +2,8 @@ module type_blockvector
 #include <messenger.h>
     use mod_kinds,          only: rk,ik
     use mod_constants,      only: ZERO, TWO
+    use mod_chidg_mpi,      only: ChiDG_COMM
+    use mpi_f08,            only: MPI_Recv, MPI_ANY_TAG, MPI_STATUS_IGNORE, MPI_INTEGER4
     use type_mesh,          only: mesh_t
     use type_ivector,       only: ivector_t
     use type_densevector
@@ -183,50 +185,32 @@ contains
     !!  @param[in]  mesh    mesh_t instance containing initialized elements and faces
     !!
     !---------------------------------------------------------------------------------------------------------------
-    subroutine init_recv(self,mesh,iproc,icomm,idom_recv)
+    subroutine init_recv(self,iproc)
         class(blockvector_t),   intent(inout)   :: self
-        type(mesh_t),           intent(inout)   :: mesh
         integer(ik),            intent(in)      :: iproc
-        integer(ik),            intent(in)      :: icomm
-        integer(ik),            intent(in)      :: idom_recv
 
         type(ivector_t) :: recv_elems
         integer(ik)     :: nelem_recv, ielem_recv, ierr, ielem, iface, nterms, neqns, loc, recv_element
-        integer(ik)     :: dparent_g, dparent_l, eparent_g, eparent_l
+        integer(ik)     :: idomain_g, idomain_l, ielement_g, ielement_l
         logical         :: new_elements, proc_element, already_added, comm_element
 
 
+
         !
-        ! Compute number of densevectors being received from proc. One for each comm neighbor element.
+        ! Get the domain index we are receiving
         !
-        do ielem = 1,mesh%nelem
-            do iface = 1,size(mesh%faces,2)
-
-                proc_element = ( iproc == mesh%faces(ielem,iface)%ineighbor_proc )
-            
-
-                ! Test if element has been added to recv list
-                if (proc_element) then
-                    ! Get index of recv element and test if it was already added
-                    recv_element = mesh%faces(ielem,iface)%ineighbor_element_g
-
-                    loc = recv_elems%loc(recv_element)
-                    already_added = (loc /= 0)
-
-                    if (.not. already_added) then
-                        call recv_elems%push_back(recv_element)
-                    end if
-
-                end if
-
-            end do ! iface
-        end do ! ielem
+        call MPI_Recv(idomain_g, 1, MPI_INTEGER4, iproc, MPI_ANY_TAG, ChiDG_COMM, MPI_STATUS_IGNORE, ierr)
+        call MPI_Recv(idomain_l, 1, MPI_INTEGER4, iproc, MPI_ANY_TAG, ChiDG_COMM, MPI_STATUS_IGNORE, ierr)
 
 
-        nelem_recv = recv_elems%size()
-        if (nelem_recv == 0) call chidg_signal(FATAL,"blockvector%init_recv: no elements detected in mesh that are being received")
+        !
+        ! Get the number of elements being received from domain
+        !
+        call MPI_Recv(nelem_recv, 1, MPI_INTEGER4, iproc, MPI_ANY_TAG, ChiDG_COMM, MPI_STATUS_IGNORE, ierr)
+        
 
 
+        
 
         !
         ! Allocate densevector size. If vector was already allocated, deallocate and then reallocate vector size
@@ -253,52 +237,27 @@ contains
 
 
 
+
         !
-        ! Loop through elements and call initialization for densevectors being received. Loop through all elements so
-        ! recv_comm, recv_domain, and recv_element can be initialized since multiple local elements could be receiving 
-        ! the same element and need the recv indices initialized
+        ! Loop through and recv element information from sending proc and call initialization on densevector storage
         !
-        ! ASSUME: nterms_s of neighbor being received is same as ielem
-        !
-        do ielem_recv = 1,recv_elems%size()
-
-            recv_element = recv_elems%at(ielem_recv)
-
-            do ielem = 1,mesh%nelem
-                do iface = 1,size(mesh%faces,2)
-
-                    proc_element = ( iproc == mesh%faces(ielem,iface)%ineighbor_proc )
-                
-                    comm_element = ( recv_element == mesh%faces(ielem,iface)%ineighbor_element_g )
-                    
-
-                    if (proc_element .and. comm_element) then
-                        dparent_g = mesh%faces(ielem,iface)%ineighbor_domain_g
-                        dparent_l = mesh%faces(ielem,iface)%ineighbor_domain_l
-                        eparent_g = mesh%faces(ielem,iface)%ineighbor_element_g
-                        eparent_l = mesh%faces(ielem,iface)%ineighbor_element_l
-
-                        nterms = mesh%elems(ielem)%nterms_s ! assume same throughout domain
-                        neqns  = mesh%elems(ielem)%neqns    ! assume same throughout domain
-
-                        !
-                        ! Call densevector initialization routine
-                        !
-                        call self%vecs(ielem_recv)%init(nterms,neqns,dparent_g,dparent_l,eparent_g,eparent_l)
+        do ielem_recv = 1,nelem_recv
 
 
-                        mesh%faces(ielem,iface)%recv_comm    = icomm
-                        mesh%faces(ielem,iface)%recv_domain  = idom_recv
-                        mesh%faces(ielem,iface)%recv_element = ielem_recv
+            call MPI_Recv(ielement_g, 1, MPI_INTEGER4, iproc, MPI_ANY_TAG, ChiDG_COMM, MPI_STATUS_IGNORE, ierr)
+            call MPI_Recv(ielement_l, 1, MPI_INTEGER4, iproc, MPI_ANY_TAG, ChiDG_COMM, MPI_STATUS_IGNORE, ierr)
+            call MPI_Recv(nterms, 1, MPI_INTEGER4, iproc, MPI_ANY_TAG, ChiDG_COMM, MPI_STATUS_IGNORE, ierr)
+            call MPI_Recv(neqns, 1, MPI_INTEGER4, iproc, MPI_ANY_TAG, ChiDG_COMM, MPI_STATUS_IGNORE, ierr)
 
-                    end if
+            !print*, IRANK, 'Receiving: ', idomain_g, ielement_g
+            !
+            ! Call densevector initialization routine
+            !
+            call self%vecs(ielem_recv)%init(nterms,neqns,idomain_g,idomain_l,ielement_g,ielement_l)
 
 
-                end do !iface
-            end do ! ielem
+        end do
 
-
-        end do !ielem_recv
 
 
 

@@ -14,6 +14,15 @@ module test_ILU0_mod
 
     public  :: test_preconditioner_ILU0
 
+
+
+    !>
+    !!
+    !!  @author Nathan A. Wukie
+    !!
+    !!
+    !!
+    !------------------------------------------------------------------------------
     @TestCase
     type, extends(TestCase) :: test_preconditioner_ILU0
 
@@ -24,6 +33,7 @@ module test_ILU0_mod
         procedure   :: setUp
         procedure   :: tearDown
     end type test_preconditioner_ILU0
+    !*******************************************************************************
 
 
 
@@ -151,13 +161,13 @@ subroutine test_ILU0_init(self)
     !
     ! Test that only lower-triangular and diagonal components are allocated
     !
-    @assertTrue(allocated(self%ILU0%LD(1)%lblks(1,DIAG)%mat))
+    @assertTrue(allocated(self%ILU0%LD%dom(1)%lblks(1,DIAG)%mat))
 
-    @assertTrue(allocated(self%ILU0%LD(1)%lblks(2,XI_MIN)%mat))
-    @assertTrue(allocated(self%ILU0%LD(1)%lblks(2,DIAG)%mat))
+    @assertTrue(allocated(self%ILU0%LD%dom(1)%lblks(2,XI_MIN)%mat))
+    @assertTrue(allocated(self%ILU0%LD%dom(1)%lblks(2,DIAG)%mat))
 
-    @assertTrue(allocated(self%ILU0%LD(1)%lblks(3,XI_MIN)%mat))
-    @assertTrue(allocated(self%ILU0%LD(1)%lblks(3,DIAG)%mat))
+    @assertTrue(allocated(self%ILU0%LD%dom(1)%lblks(3,XI_MIN)%mat))
+    @assertTrue(allocated(self%ILU0%LD%dom(1)%lblks(3,DIAG)%mat))
 
 
 end subroutine
@@ -219,15 +229,15 @@ subroutine test_ILU0_update(self)
     !
     ! Test ILU0 preconditioner matrix factorization values
     !
-    @assertEqual(ONE,self%ILU0%LD(1)%lblks(1,DIAG)%mat(1,1))
+    @assertEqual(ONE,self%ILU0%LD%dom(1)%lblks(1,DIAG)%mat(1,1))
 
 
-    @assertEqual(TWO,self%ILU0%LD(1)%lblks(2,XI_MIN)%mat(1,1))
-    @assertEqual(-ONE,self%ILU0%LD(1)%lblks(2,DIAG)%mat(1,1))
+    @assertEqual(TWO,self%ILU0%LD%dom(1)%lblks(2,XI_MIN)%mat(1,1))
+    @assertEqual(-ONE,self%ILU0%LD%dom(1)%lblks(2,DIAG)%mat(1,1))
 
 
-    @assertEqual(-TWO,self%ILU0%LD(1)%lblks(3,XI_MIN)%mat(1,1))
-    @assertEqual((ONE/14._rk),self%ILU0%LD(1)%lblks(3,DIAG)%mat(1,1))
+    @assertEqual(-TWO,self%ILU0%LD%dom(1)%lblks(3,XI_MIN)%mat(1,1))
+    @assertEqual((ONE/14._rk),self%ILU0%LD%dom(1)%lblks(3,DIAG)%mat(1,1))
 
 
 end subroutine

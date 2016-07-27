@@ -1,0 +1,10 @@
+add_lib_sources(
+                precon_RASILU0.f90
+                type_RASILU0_send.f90
+                type_RASILU0_send_comm.f90
+                type_RASILU0_send_comm_dom.f90
+                type_RASILU0_recv.f90
+                type_RASILU0_recv_dom.f90
+                type_RASILU0_recv_dom_comm.f90
+                type_RASILU0_recv_dom_comm_elem.f90
+                )

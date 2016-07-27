@@ -17,14 +17,13 @@ module type_chimera_receiver_data
     !----------------------------------------------------------------------------------------------
     type, public :: chimera_receiver_data_t
 
-        integer(ik)                     :: ndonors = 0
-
         integer(ik)                     :: receiver_proc        !< Processor rank of receiver
         integer(ik)                     :: receiver_domain_g    !< ChiDG-global domain index of receiver
         integer(ik)                     :: receiver_domain_l    !< Proc-local domain index of receiver
         integer(ik)                     :: receiver_element_g   !< Domain-global element index of receiver
         integer(ik)                     :: receiver_element_l   !< Proc-local element index of receiver
         integer(ik)                     :: receiver_face        !< Face index of receiver
+
 
         ! Access via data%donor_domain%at(idonor)
         type(ivector_t)                 :: donor_neqns
@@ -36,6 +35,11 @@ module type_chimera_receiver_data
         type(ivector_t)                 :: donor_element_l      !< Vector of element indices for the location in the corresponding domain
         type(mvector_t)                 :: donor_interpolator   !< Vector of matrices defining the Chimera interpolation
 
+        ! For donor elements being comminucated from off-processor, their location in the recv container for accessing components
+        type(ivector_t)                 :: donor_recv_comm      !< Indices of comm container
+        type(ivector_t)                 :: donor_recv_domain    !< Domain index within comm
+        type(ivector_t)                 :: donor_recv_element   !< Element index within domain
+
         ! The access for this component is slightly different than the above components
         ! Access via data%donor_gq_indices(idonor)%data()
         type(ivector_t), allocatable    :: donor_gq_indices(:)  !< Array of integer vectors defining the GQ node indices associated with a given donor
@@ -43,12 +47,38 @@ module type_chimera_receiver_data
 
     contains
 
+        procedure   :: ndonors
+
     end type chimera_receiver_data_t
     !***********************************************************************************************
 
 
 
 
+contains
+
+
+
+
+
+
+    !>  Return the number of donor elements providing the receiver with data.
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   7/13/2016
+    !!
+    !!
+    !!
+    !-------------------------------------------------------------------------------------------------
+    function ndonors(self) result(res)
+        class(chimera_receiver_data_t), intent(in)  :: self
+
+        integer(ik) :: res
+
+        res = self%donor_neqns%size()
+
+    end function ndonors
+    !**************************************************************************************************
 
 
 

@@ -6,6 +6,7 @@ module operator_block_dot
     implicit none
 
 
+    ! Import BLAS dot product
     external DDOT
     real(rdouble) :: DDOT
 
@@ -30,8 +31,9 @@ contains
         type(blockvector_t),    intent(in)  :: a
         type(blockvector_t),    intent(in)  :: b
 
-        real(rk)    :: res
-        integer(ik) :: ielem
+        real(rk)                :: res
+        integer(ik)             :: ielem
+        integer(4)              :: vecsize
 
         res = ZERO
 
@@ -42,11 +44,11 @@ contains
 
             !res = res + dot_product(a%vecs(ielem)%vec, b%vecs(ielem)%vec)
 
-            res = res + ddot(size(a%vecs(ielem)%vec), a%vecs(ielem)%vec, 1, b%vecs(ielem)%vec, 1)
+            vecsize = size(a%vecs(ielem)%vec)
+            res = res + ddot(vecsize, a%vecs(ielem)%vec, 1, b%vecs(ielem)%vec, 1)
 
         end do  ! ielem
         
-
 
     end function block_dot
     !*****************************************************************************

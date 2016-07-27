@@ -162,22 +162,13 @@ contains
         integer(ik),                    intent(in)      :: nterms_c
         character(*),                   intent(in)      :: eqnset
 
-        integer(ik) :: idomain_l, ierr
+        integer(ik) :: idomain_l, ierr, idom
 
 
         type(domaininfo_t),             allocatable :: temp_info(:)
         type(mesh_t),                   allocatable :: temp_mesh(:)
         type(bcset_t),                  allocatable :: temp_bcset(:)
         type(equationset_wrapper_t),    allocatable :: temp_eqnset(:)
-
-
-
-!        !
-!        ! Check for valid connectivity format
-!        !
-!        if ( size(connectivity,2) < 10 ) then
-!            call chidg_signal(FATAL,"chidg_data%add_domain: Invalid connectivity format")
-!        end if
 
 
 
@@ -225,6 +216,20 @@ contains
 
 
         !
+        ! Check that a domain with the same global index wasn't already added. For example, if a block got split and put on the same processor.
+        ! Some of the MPI communication assumes one unique global domain index for each domain on the processor.
+        !
+        if (self%ndomains_ > 1) then
+            do idom = 1,size(self%mesh)
+                if (self%mesh(idom)%idomain_g == temp_mesh(idomain_l)%idomain_g) call chidg_signal(FATAL,"chidg_data%add_domain: Two domains have same global index. MPI communication assumes this does not happen.")
+            end do !idom
+        end if
+
+
+
+
+
+        !
         ! Allocate equation set
         !
         call create_equationset(eqnset,temp_eqnset(idomain_l)%item)
@@ -239,7 +244,6 @@ contains
         call move_alloc(temp_bcset,self%bcset)
         call move_alloc(temp_eqnset,self%eqnset)
 
-        !call write_line('Domain ', idomain_l, 'nelem', self%mesh(idomain_l)%nelem)
 
     end subroutine add_domain
     !***************************************************************************************************************

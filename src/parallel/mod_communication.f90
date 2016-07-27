@@ -54,6 +54,11 @@ contains
         end do
 
 
+
+
+
+
+
         !
         ! Loop through mesh types
         !
@@ -188,14 +193,15 @@ contains
 
 
 
+        ! Process-local routine, just to flag faces
         call detect_chimera_faces(mesh)
 
 
-
+        ! Detect local or global chimera donors
         call detect_chimera_donors(mesh)
 
 
-
+        ! Compute chimera interpolation matrices to evaluate donor solution at receiver quadrature nodes
         call compute_chimera_interpolators(mesh)
 
 

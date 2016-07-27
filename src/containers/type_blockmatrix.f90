@@ -8,6 +8,7 @@ module type_blockmatrix
     use type_face_info,         only: face_info_t
     use type_seed,              only: seed_t
     use type_bcset_coupling,    only: bcset_coupling_t
+    use type_ivector,           only: ivector_t
     use mod_chidg_mpi,          only: IRANK
     use DNAD_D
     implicit none
@@ -30,11 +31,27 @@ module type_blockmatrix
     !-------------------------------------------------------------------------------------------------------------------------------
     type, public :: blockmatrix_t
 
-        type(densematrix_t), allocatable :: lblks(:,:)                      !< Local domain blocks  (nelem, NBLK)
-        integer(ik),         allocatable :: ldata(:,:)                      !< Block-local  data    (ielem, 1) -> nvars, (ielem, 2) -> nterms (nvars, nterms)
+        !
+        ! Primary storage
+        !
+        type(densematrix_t),    allocatable :: lblks(:,:)                   !< Local domain blocks  (nelem, NBLK)
+        type(densematrix_t),    allocatable :: chi_blks(:,:)                !< Chimera inter-domain blocks         (nelem, MaxDonors)
+        type(densematrix_t),    allocatable :: bc_blks(:,:)                 !< Boundary condition coupling blocks  (nelem, Max coupled elems)
 
-        type(densematrix_t), allocatable :: chi_blks(:,:)                    !< Chimera inter-domain blocks         (nelem, MaxDonors)
-        type(densematrix_t), allocatable :: bc_blks(:,:)                     !< Boundary condition coupling blocks  (nelem, Max coupled elems)
+
+        !
+        ! Supporting data
+        !
+        integer(ik),            allocatable :: ldata(:,:)                   !< Block-local  data    (ielem, 1) -> nvars, (ielem, 2) -> nterms (nvars, nterms)
+        integer(ik),            allocatable :: local_transpose(:,:)         !< Block index of the transposed location (nelem,6)
+        type(ivector_t),        allocatable :: local_lower_blocks(:)        !< For each element, which blocks (1-6) are lower blocks
+        type(ivector_t),        allocatable :: local_upper_blocks(:)        !< For each element, which blocks (1-6) are upper blocks
+
+
+
+
+!        type(blockmatrix_send_t)    :: send
+!        type(blockmatrix_recv_t)    :: recv
 
     contains
         ! Initializers
@@ -79,14 +96,10 @@ contains
         integer(ik), allocatable    :: blocks(:)
         integer(ik)                 :: nelem, nblk, ierr, ielem, iblk, size1d, parent, block_index, neqns, nterms_s
         integer(ik)                 :: nchimera_elements, maxdonors, idonor, iface
-        integer(ik)                 :: dparent_g, dparent_l, eparent_g, eparent_l, parent_proc
+        integer(ik)                 :: dparent_g, dparent_l, eparent_g, eparent_l, parent_proc, eparent_l_trans, iblk_trans
         integer(ik)                 :: iopen, ChiID, ndonors, max_coupled_elems, ncoupled_elems, icoupled_elem, icoupled_elem_bc, ielem_bc, ibc
-        logical                     :: new_elements
-        logical                     :: chimera_face
-        logical                     :: more_donors
-        logical                     :: donor_already_called
-        logical                     :: contains_chimera_face
-        logical                     :: block_initialized
+        logical                     :: new_elements, chimera_face, more_donors, donor_already_called, contains_chimera_face, block_initialized
+        logical                     :: lower_block, upper_block, transposed_block
         logical                     :: init_chimera = .false.
         logical                     :: init_bc      = .false.
 
@@ -139,14 +152,13 @@ contains
 
         !------------------------------------------------------------------------------
         !
-        ! Allocation for 'local blocks'
+        !                       Allocation for 'local blocks'
         !
         !------------------------------------------------------------------------------
         ! If matrix was already allocated, deallocate and then reallocate matrix size
         ! Reallocation would take place if the number of elements were changed
         !
         if (allocated(self%lblks)) then
-
             !
             ! If the size is already allocated, check if the number of elements has changed.
             ! If so (new_elements), then reallocate matrix size.
@@ -155,23 +167,30 @@ contains
             new_elements = (mesh%nelem /= size(self%lblks,1))
             if (new_elements) then
                 deallocate(self%lblks, self%ldata)
-                allocate(self%lblks(nelem,nblk), self%ldata(nelem,2), stat=ierr)
-                if (ierr /= 0) call AllocationError
+                allocate(self%lblks(nelem,nblk),            &
+                         self%ldata(nelem,2),               &
+                         self%local_transpose(nelem,6),     &
+                         self%local_lower_blocks(nelem),    &
+                         self%local_upper_blocks(nelem), stat=ierr)
             end if
 
         else
 
-            allocate(self%lblks(nelem,nblk), self%ldata(nelem,2), stat=ierr)
-            if (ierr /= 0) call AllocationError
+            allocate(self%lblks(nelem,nblk),                &
+                     self%ldata(nelem,2),                   &
+                     self%local_transpose(nelem,6),         &
+                     self%local_lower_blocks(nelem),        &
+                     self%local_upper_blocks(nelem), stat=ierr)
 
         end if
+        if (ierr /= 0) call AllocationError
 
 
 
 
         !------------------------------------------------------------------------------
         !
-        ! Allocation for 'chimera blocks'
+        !                       Allocation for 'chimera blocks'
         !
         !------------------------------------------------------------------------------
         if (allocated(self%chi_blks)) deallocate(self%chi_blks)
@@ -195,7 +214,7 @@ contains
                 !
                 if (mesh%faces(ielem,iface)%ftype == CHIMERA) then
                     ChiID = mesh%faces(ielem,iface)%ChiID
-                    ndonors = ndonors + mesh%chimera%recv%data(ChiID)%ndonors
+                    ndonors = ndonors + mesh%chimera%recv%data(ChiID)%ndonors()
                     contains_chimera_face = .true.
                 end if
 
@@ -239,7 +258,7 @@ contains
 
 !        !------------------------------------------------------------------------------
 !        !
-!        ! Allocation for 'boundary condition blocks'
+!        !                  Allocation for 'boundary condition blocks'
 !        !
 !        ! TODO: If the only 'coupled' element to the local face flux is the local element,
 !        !       then a block is still allocated for it here. However, the linearization of the
@@ -329,11 +348,42 @@ contains
                 ! Call initialization procedure if parent is not 0 (0 meaning there is no parent for that block, probably a boundary)
                 !
                 if (eparent_l /= NO_INTERIOR_NEIGHBOR) then
+
+
+                    ! Initialize dense block
                     call self%lblks(ielem,iblk)%init(size1d,size1d,dparent_g,dparent_l,eparent_g,eparent_l,parent_proc)
 
                     ! Store data about number of equations and number of terms in solution expansion
                     self%ldata(ielem,1) = mesh%elems(ielem)%neqns
                     self%ldata(ielem,2) = mesh%elems(ielem)%nterms_s
+
+                    ! If off-diagonal, store block index as 'upper' or 'lower'
+                    if ( parent_proc == IRANK ) then
+                        lower_block = (eparent_l < ielem)
+                    else if (parent_proc < IRANK) then
+                        lower_block = .true.
+                    else if (parent_proc > IRANK ) then
+                        lower_block = .false.
+                    end if
+
+                    if ( parent_proc == IRANK ) then
+                        upper_block = (eparent_l > ielem)
+                    else if (parent_proc > IRANK) then
+                        upper_block = .true.
+                    else if (parent_proc < IRANK ) then
+                        upper_block = .false.
+                    end if
+
+
+                    !lower_block = ( (eparent_l < ielem .and. parent_proc == IRANK) .or. (parent_proc < IRANK) )
+                    !upper_block = ( (eparent_l > ielem .and. parent_proc == IRANK) .or. (parent_proc > IRANK) )
+                    if ( lower_block ) then
+                        call self%local_lower_blocks(ielem)%push_back(iblk)
+                    else if ( upper_block ) then
+                        call self%local_upper_blocks(ielem)%push_back(iblk)
+                    end if
+
+
                 end if
 
             end do ! init local
@@ -360,7 +410,7 @@ contains
                         ! Get ChiID and number of donor elements
                         !
                         ChiID   = mesh%faces(ielem,iface)%ChiID
-                        ndonors = mesh%chimera%recv%data(ChiID)%ndonors
+                        ndonors = mesh%chimera%recv%data(ChiID)%ndonors()
 
                         !
                         ! Call block initialization for each Chimera donor
@@ -486,6 +536,54 @@ contains
 !            end do ! ibc
 !
 !        end if ! init_bc
+
+
+
+
+
+
+
+        ! 
+        ! Initialize transpose data
+        !
+        select case (trim(mtype))
+            case ('full','Full','FULL')
+
+                self%local_transpose = 0
+                do ielem = 1,mesh%nelem
+                    do iblk = 1,6
+
+                        if ( allocated(self%lblks(ielem,iblk)%mat) .and. self%lblks(ielem,iblk)%parent_proc() == IRANK ) then
+
+                                ! Get parent element of off-diagonal block
+                                eparent_l = self%lblks(ielem,iblk)%eparent_l()
+
+                                !
+                                ! Find block index of transposed location in parent lblks
+                                !
+                                do iblk_trans = 1,6
+                                    ! Make sure the block we are seaching is on-proc
+                                    if ( allocated(self%lblks(eparent_l,iblk_trans)%mat) .and. self%lblks(eparent_l,iblk_trans)%parent_proc() == IRANK ) then
+                                        eparent_l_trans = self%lblks(eparent_l,iblk_trans)%eparent_l()
+
+                                        transposed_block = ( eparent_l_trans == ielem )
+                                        if ( transposed_block ) then
+                                            self%local_transpose(ielem,iblk) = iblk_trans
+                                            exit
+                                        end if
+                                    end if
+
+                                    if ( (iblk_trans == 6 ) .and. (transposed_block .eqv. .false.) ) call chidg_signal(FATAL,"blockmatrix%init: no transposed element found")
+                                end do !iblk_trans
+
+                        end if
+
+
+                    end do !iblk
+                end do !ielem
+
+        end select
+
 
 
 

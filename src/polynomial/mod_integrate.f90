@@ -77,7 +77,8 @@ contains
         ! FLUX-X
         ! Multiply by column of test function gradients, integrate, add to RHS, add derivatives to linearization
         !
-        integral_x = matmul(transpose(elem%dtdx),flux_x)                            ! Integrate
+        !integral_x = matmul(transpose(elem%dtdx),flux_x)                            ! Integrate
+        integral_x = matmul(elem%dtdx_trans,flux_x)                            ! Integrate
 
 
 
@@ -87,7 +88,8 @@ contains
         ! FLUX-Y
         ! Multiply by column of test function gradients, integrate, add to RHS, add derivatives to linearization
         !
-        integral_y = matmul(transpose(elem%dtdy),flux_y)                            ! Integrate
+        !integral_y = matmul(transpose(elem%dtdy),flux_y)                            ! Integrate
+        integral_y = matmul(elem%dtdy_trans,flux_y)                            ! Integrate
 
 
 
@@ -95,7 +97,8 @@ contains
         ! FLUX-Z
         ! Multiply by column of test function gradients, integrate, add to RHS, add derivatives to linearization
         !
-        integral_z = matmul(transpose(elem%dtdz),flux_z)                            ! Integrate
+        !integral_z = matmul(transpose(elem%dtdz),flux_z)                            ! Integrate
+        integral_z = matmul(elem%dtdz_trans,flux_z)                            ! Integrate
 
 
 
@@ -264,14 +267,16 @@ contains
         !
         associate ( weights => mesh(idomain_l)%faces(ielement_l,iface)%gq%face%weights(:,iface), &
                     jinv => mesh(idomain_l)%faces(ielement_l,iface)%jinv, &
-                    val => mesh(idomain_l)%faces(ielement_l,iface)%gq%face%val(:,:,iface) )
+                    val => mesh(idomain_l)%faces(ielement_l,iface)%gq%face%val(:,:,iface), &
+                    valtrans => mesh(idomain_l)%faces(ielement_l, iface)%gq%face%val_trans(:,:,iface) )
 
 
             !
             ! Multiply each component by quadrature weights. The fluxes have already been multiplied by norm
             !
             integrand = (integrand) * (weights)
-            integral = matmul(transpose(val),integrand)
+            !integral = matmul(transpose(val),integrand)
+            integral = matmul(valtrans,integrand)
 
 
             call store_boundary_integral_residual(     mesh,sdata,face_info,function_info,ieqn,integral)
@@ -319,14 +324,16 @@ contains
 
                 associate ( weights_n => mesh(idomain_l)%faces(ineighbor_element_l,ineighbor_face)%gq%face%weights(:,ineighbor_face),   &
                             jinv_n    => mesh(idomain_l)%faces(ineighbor_element_l,ineighbor_face)%jinv,                                & 
-                            val_n     => mesh(idomain_l)%faces(ineighbor_element_l,ineighbor_face)%gq%face%val(:,:,ineighbor_face) )
+                            val_n     => mesh(idomain_l)%faces(ineighbor_element_l,ineighbor_face)%gq%face%val(:,:,ineighbor_face),     &
+                            valtrans_n => mesh(idomain_l)%faces(ineighbor_element_l, ineighbor_face)%gq%face%val_trans(:,:,ineighbor_face) )
 
                     integrand_n = (integrand_n) * (weights_n)
 
                     !
                     ! Integrate and negate for contribution to neighbor element
                     !
-                    integral = -matmul(transpose(val_n),integrand_n)
+                    !integral = -matmul(transpose(val_n),integrand_n)
+                    integral = -matmul(valtrans_n,integrand_n)
 
                     call store_boundary_integral_residual(     mesh,sdata,face_n,function_n,ieqn,integral)
                     call store_boundary_integral_linearization(mesh,sdata,face_n,function_n,ieqn,integral)

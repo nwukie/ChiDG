@@ -204,6 +204,7 @@ contains
         logical     :: chimera_interpolation    = .false.
         logical     :: conforming_interpolation = .false.
         logical     :: parallel_interpolation
+        logical     :: parallel_seed
 
 
         ! Chimera data
@@ -250,22 +251,13 @@ contains
 
                 ndonors = 1
 
-                ! Probably won't need this here after rearranging the nderiv section below
-                parallel_interpolation  =  ( IRANK /= mesh(idomain_l)%faces(ielement_l,iface)%ineighbor_proc )
-                if (parallel_interpolation) then
-                    recv_comm    = mesh(idomain_l)%faces(ielement_l,iface)%recv_comm
-                    recv_domain  = mesh(idomain_l)%faces(ielement_l,iface)%recv_domain
-                    recv_element = mesh(idomain_l)%faces(ielement_l,iface)%recv_element
-                end if
-
-
             !
             ! Test for chimera interpolation from neighbor
             !
             elseif ( chimera_interpolation ) then
 
                 ChiID   = mesh(idomain_l)%faces(ielement_l,iface)%ChiID
-                ndonors = mesh(idomain_l)%chimera%recv%data(ChiID)%ndonors
+                ndonors = mesh(idomain_l)%chimera%recv%data(ChiID)%ndonors()
 
             else
                 call chidg_signal(FATAL,"interpolate_face: invalid value for 'face%ftype'")
@@ -293,10 +285,12 @@ contains
             !
             nderiv = 1
         else
+
             !
             ! Get number of equations and terms in solution expansions
             !
-            if ( seed%iproc /= IRANK ) then
+            parallel_seed = (seed%iproc /= IRANK)
+            if ( parallel_seed ) then
                 neqns_seed    = q%recv%comm(seed%recv_comm)%dom(seed%recv_domain)%vecs(seed%recv_element)%nvars()
                 nterms_s_seed = q%recv%comm(seed%recv_comm)%dom(seed%recv_domain)%vecs(seed%recv_element)%nterms()
             else
@@ -381,7 +375,7 @@ contains
                     end if
 
                 !
-                ! Interpolate from CHIMERA NEIGHBOR element
+                ! Interpolate from CHIMERA donor element
                 !
                 elseif ( chimera_interpolation ) then
 
@@ -391,19 +385,17 @@ contains
                     ielem_l_interp  = mesh(idomain_l)%chimera%recv%data(ChiID)%donor_element_l%at(idonor)
                     donor_proc      = mesh(idomain_l)%chimera%recv%data(ChiID)%donor_proc%at(idonor)
 
-
-                    if (IRANK /= donor_proc) parallel_interpolation = .true.
+                    ! Detect parallel interpolation
+                    parallel_interpolation = (IRANK /= donor_proc)
                     if (parallel_interpolation) then
-                        ! SHOULD SET RECV INDICES
-                        ! recv_comm
-                        ! recv_domain
-                        ! recv_element
-                        call chidg_signal(FATAL,"interpolate_face_autodiff: parallel chimera interpolation not implemented")
-                    else
-                        interpolator    = mesh(idomain_l)%chimera%recv%data(ChiID)%donor_interpolator%at(idonor)
-                        gq_node_indices = mesh(idomain_l)%chimera%recv%data(ChiID)%donor_gq_indices(idonor)%data()
+                         recv_comm    = mesh(idomain_l)%chimera%recv%data(ChiID)%donor_recv_comm%at(idonor)
+                         recv_domain  = mesh(idomain_l)%chimera%recv%data(ChiID)%donor_recv_domain%at(idonor)
+                         recv_element = mesh(idomain_l)%chimera%recv%data(ChiID)%donor_recv_element%at(idonor)
                     end if
 
+
+                    interpolator    = mesh(idomain_l)%chimera%recv%data(ChiID)%donor_interpolator%at(idonor)
+                    gq_node_indices = mesh(idomain_l)%chimera%recv%data(ChiID)%donor_gq_indices(idonor)%data()
 
                     ! Create mask over full GQ vector of only those nodes that are filled by the current element
                     do inode = 1,size(gq_node_indices)

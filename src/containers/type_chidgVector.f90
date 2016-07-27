@@ -48,6 +48,8 @@ module type_chidgVector
         procedure,  public  :: comm_recv                        !< Execute blocking receives of incomming data
         procedure,  public  :: comm_wait                        !< Execute a wait on outstanding non-blocking send data
 
+!        generic :: assignment(=) => 
+
     end type chidgVector_t
     !****************************************************************************************************
 
@@ -336,10 +338,8 @@ contains
             ! Get processor rank we are sending to
             iproc_send = self%send%comm(icomm)%proc
 
-            ! Loop through domains to send
+            ! Loop through domains/elements to send
             do idom_send = 1,self%send%comm(icomm)%dom_send%size()
-
-                ! Get domain index to be send
                 idom = self%send%comm(icomm)%dom_send%at(idom_send)
 
                 do ielem_send = 1,self%send%comm(icomm)%elems_send(idom_send)%size()
@@ -388,7 +388,6 @@ contains
         class(chidgVector_t),   intent(inout)   :: self
 
         integer(ik) :: icomm, idom_recv, ielem_recv, proc_recv, data_size, ierr
-        integer(ik) :: idom_store, ielem_store
 
 
         !
@@ -396,27 +395,17 @@ contains
         !
         do icomm = 1,size(self%recv%comm)
 
+            ! Get process we are receiving from
             proc_recv = self%recv%comm(icomm)%proc
             
+            ! Recv each element chunk
             do idom_recv = 1,size(self%recv%comm(icomm)%dom)
-
-                ! Get storage index of incoming domain
-                idom_store = self%recv%comm(icomm)%dom_store%at(idom_recv)
-
-
                 do ielem_recv = 1,size(self%recv%comm(icomm)%dom(idom_recv)%vecs)
-
-                    ! Get storage index of incoming element
-                    ielem_store = self%recv%comm(icomm)%elem_store(idom_recv)%at(ielem_recv)
-
-                    data_size = size(self%recv%comm(icomm)%dom(idom_store)%vecs(ielem_store)%vec)
-                    call MPI_Recv(self%recv%comm(icomm)%dom(idom_store)%vecs(ielem_store)%vec, data_size, MPI_REAL8, proc_recv, 0, ChiDG_COMM, MPI_STATUS_IGNORE, ierr)
-
-                    !data_size = size(self%recv%comm(icomm)%dom(idom_recv)%vecs(ielem_recv)%vec)
-                    !call MPI_Recv(self%recv%comm(icomm)%dom(idom_recv)%vecs(ielem_recv)%vec, data_size, MPI_REAL8, proc_recv, 0, ChiDG_COMM, MPI_STATUS_IGNORE, ierr)
-
+                    data_size = size(self%recv%comm(icomm)%dom(idom_recv)%vecs(ielem_recv)%vec)
+                    call MPI_Recv(self%recv%comm(icomm)%dom(idom_recv)%vecs(ielem_recv)%vec, data_size, MPI_REAL8, proc_recv, 0, ChiDG_COMM, MPI_STATUS_IGNORE, ierr)
                 end do ! ielem_recv
             end do ! idom_recv
+
 
         end do ! icomm
 

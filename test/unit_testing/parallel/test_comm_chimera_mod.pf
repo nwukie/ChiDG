@@ -1,4 +1,4 @@
-module test_parallel_io_mod
+module test_comm_chimera_mod
     use mod_kinds,                  only: rk, ik
     use mod_constants,              only: XI_MIN, XI_MAX, DIAG, BOUNDARY, IO_DESTINATION, &
                                           ONE, TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT, NINE, TEN
@@ -12,8 +12,6 @@ module test_parallel_io_mod
     use mod_hdfio,                  only: read_connectivity_hdf
     use mod_partitioners,           only: partition_connectivity, send_partitions, recv_partition
     use mod_chidg_mpi,              only: IRANK, NRANK, GLOBAL_MASTER
-    use operator_chidg_dot,         only: dot
-    use operator_chidg_mv,          only: chidg_mv
 
     use mpi_f08,                    only: MPI_Barrier, MPI_COMM_WORLD, MPI_COMM
     use pfunit_mod
@@ -28,20 +26,17 @@ module test_parallel_io_mod
     !!
     !------------------------------------------------------------------
     @TestCase
-    type, extends(MpiTestCase) :: test_parallel_io
+    type, extends(MpiTestCase) :: test_comm_chimera
 
         type(chidg_t)   :: chidg
 
         integer(ik)     :: nterms_s = 27
         type(mpi_comm)  :: ChiDG_COMM
-        type(mpi_comm)  :: ChiDG_COMM_split
-
-        
 
     contains
         procedure       :: setUp
         procedure       :: tearDown
-    end type test_parallel_io
+    end type test_comm_chimera
     !******************************************************************
 
 
@@ -49,17 +44,26 @@ module test_parallel_io_mod
 
 contains
 
-    !>  This test reads a 4x1x1 element grid using 1, 2, 3, and 4 processors and tests communication data.
+    !>  This test reads two, 2x2x2 element domains that are overlapping to test the chimear communication
     !!
-    !!  Using 1 processor, all communication(face neighbors) should be local. Using 4 processors, all communication
-    !!  should occur globally, across processors.
+    !!  Overlapping cubes. Each cube is 2x2x2 elements. Only one element of overlap
+    !!
+    !!    |--------|-|---------|
+    !!    |        | |         |
+    !!    |        | |         |
+    !!    |        | |         |
+    !!    |--------|-|---------|
+    !!
+    !!
+    !!
+    !!
     !!
     !!  @author Nathan A. Wukie (AFRL)
-    !!  @date   6/21/2016
+    !!  @date   7/12/2016
     !!
     !-----------------------------------------------------------------------------------
     subroutine setUp(this)
-        class(test_parallel_io), intent(inout) :: this
+        class(test_comm_chimera), intent(inout) :: this
 
         type(domain_connectivity_t),    allocatable :: connectivities(:)
         type(partition_t),              allocatable :: partitions(:)
@@ -75,24 +79,12 @@ contains
         NRANK                   = this%getNumProcessesRequested()
         this%ChiDG_COMM%mpi_val = this%getMpiCommunicator()
 
-        !
-        ! Create two new communicators
-        !
-        if ( IRANK < 2 ) then
-            color = 1
-        else
-            color = 2
-        end if
-        call MPI_Comm_Split(this%ChiDG_COMM, color, IRANK, this%ChiDG_COMM_split,ierr)
-        call MPI_Comm_Size(this%ChiDG_COMM_split, NRANK, ierr)
-        call MPI_Comm_RANK(this%ChiDG_COMM_split, IRANK, ierr)
+
+        call this%chidg%init('env',this%ChiDG_COMM)
 
 
-        call this%chidg%init('env',this%ChiDG_COMM_split)
-
-
+        gridfile       = 'D2_E8_M1_overlapping_matching.h5'
         IO_DESTINATION = 'file'
-        gridfile       = 'D1_E4_M1.h5'
         spacedim       = 3
 
 
@@ -106,14 +98,14 @@ contains
 
             call partition_connectivity(connectivities, partitions)
 
-            call send_partitions(partitions,this%ChiDG_COMM_split)
+            call send_partitions(partitions,this%ChiDG_COMM)
         end if
 
 
         !
         ! Receive partition from GLOBAL_MASTER
         !
-        call recv_partition(partition,this%ChiDG_COMM_split)
+        call recv_partition(partition,this%ChiDG_COMM)
 
 
         !
@@ -127,21 +119,9 @@ contains
         ! Initialization
         !
         call this%chidg%initialize_solution_domains(this%nterms_s)
-        call this%chidg%init('communication',this%ChiDG_COMM_split)
-        call this%chidg%initialize_solution_solver()
-
-
-
-
-        call this%chidg%read_solution(gridfile)
-
-!        !
-!        ! Initialize solution vector
-!        !
-!        initial_vals = 1.2_rk
-!        do ielem = 1,this%chidg%data%mesh(1)%nelem
-!            call this%chidg%data%sdata%q%dom(1)%vecs(ielem)%setvar(1,initial_vals)
-!        end do
+        call this%chidg%init('communication',this%ChiDG_COMM)
+        call this%chidg%init('chimera',this%ChiDG_COMM)
+!        call this%chidg%initialize_solution_solver()
 
 
     end subroutine setUp
@@ -150,7 +130,7 @@ contains
 
 
     subroutine tearDown(this)
-        class(test_parallel_io), intent(inout) :: this
+        class(test_comm_chimera), intent(inout) :: this
 
         call this%chidg%close('core')
 
@@ -163,8 +143,6 @@ contains
 
 
 
-
-
     !>  Test the parallel computation of the chidgVector norm. 
     !!  This tests the routine: chidgVector%norm_comm
     !!
@@ -172,76 +150,16 @@ contains
     !!  @date   6/23/2016
     !!
     !---------------------------------------------------------------------------------------
-    @Test(npes=[6])
-    subroutine chidgvector__norm_comm(self)
-        class(test_parallel_io), intent(inout) :: self
+    @Test(npes=[1,2,3,4,5,6,7])
+    subroutine detect_chimera_donors_comm(self)
+        class(test_comm_chimera), intent(inout) :: self
 
-        integer(ik)     :: nelem
-        real(rk)        :: computed_norm, expected_norm
 
         IRANK = self%getProcessRank()
 
+        @assertTrue(.true.)
 
-        !
-        ! Compute vector norm across processors. THIS IS BEING TESTED
-        !
-        computed_norm = self%chidg%data%sdata%q%norm(self%ChiDG_COMM)
-
-        nelem = 4
-        expected_norm = (1.2_rk**TWO) * self%nterms_s * nelem
-        expected_norm = sqrt(expected_norm)
-
-        
-        @assertEqual(expected_norm,computed_norm)
-
-    end subroutine chidgvector__norm_comm
-    !******************************************************************************************
-
-
-
-
-
-
-
-
-
-
-
-    !>  Test the parallel computation of the chidgVector norm. 
-    !!  This tests the routine: chidgVector%norm_comm
-    !!
-    !!  @author Nathan A. Wukie (AFRL)
-    !!  @date   6/23/2016
-    !!
-    !---------------------------------------------------------------------------------------
-    @Test(npes=[1,2,3,4])
-    subroutine chidgvector__dot_comm(self)
-        class(test_parallel_io), intent(inout) :: self
-
-        type(chidgVector_t) :: a, b
-        integer(ik)         :: nelem
-        real(rk)            :: computed_dot, expected_dot
-
-        IRANK = self%getProcessRank()
-
-        ! Create two ChiDG Vectors
-        a = self%chidg%data%sdata%q
-        b = self%chidg%data%sdata%q
-
-
-        ! Compute vector dot-product across processors. THIS IS BEING TESTED
-        computed_dot = dot(a,b,self%ChiDG_COMM)
-
-
-        ! Compute expected result
-        nelem = 4
-        expected_dot = (1.2_rk*1.2_rk) * self%nterms_s * nelem
-
-
-
-        @assertEqual(expected_dot,computed_dot,1.e-12_rk)
-
-    end subroutine chidgvector__dot_comm
+    end subroutine detect_chimera_donors_comm
     !******************************************************************************************
 
 
@@ -258,4 +176,7 @@ contains
 
 
 
-end module test_parallel_io_mod
+
+
+
+end module test_comm_chimera_mod

@@ -1,3 +1,5 @@
+add_subdirectory(RASILU0)
+
 add_lib_sources(
                 type_preconditioner.f90 
                 mod_preconditioner.f90
@@ -5,3 +7,4 @@ add_lib_sources(
                 precon_ILU0.f90
                 precon_identity.f90
                 )
+

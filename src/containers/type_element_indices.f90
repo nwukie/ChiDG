@@ -12,12 +12,15 @@ module type_element_indices
     !---------------------------------------------------------------------
     type, public :: element_indices_t
 
-!        integer(ik) :: idomain
-!        integer(ik) :: ielement
         integer(ik) :: idomain_g
         integer(ik) :: idomain_l
         integer(ik) :: ielement_g
         integer(ik) :: ielement_l
+        integer(ik) :: iproc
+
+        integer(ik) :: neqns
+        integer(ik) :: nterms_s
+        integer(ik) :: nterms_c
 
     end type element_indices_t
     !*********************************************************************

@@ -3,7 +3,8 @@ module type_element
     use mod_kinds,              only: rk,ik
     use mod_constants,          only: NFACES,XI_MIN,XI_MAX,ETA_MIN, &
                                       ETA_MAX,ZETA_MIN,ZETA_MAX,ONE,ZERO, &
-                                      X_DIR, Y_DIR, Z_DIR, XI_DIR, ETA_DIR, ZETA_DIR, TWO_DIM, THREE_DIM, RKTOL
+                                      X_DIR, Y_DIR, Z_DIR, XI_DIR, ETA_DIR, ZETA_DIR, TWO_DIM, THREE_DIM, RKTOL, &
+                                      VALID_POINT, INVALID_POINT
     use mod_quadrature,         only: GQ, get_quadrature
     use mod_grid,               only: get_element_mapping
     use mod_polynomial,         only: polynomialVal, dpolynomialVal
@@ -35,16 +36,17 @@ module type_element
     !!
     !------------------------------------------------------------------------------------------------------------
     type, public :: element_t
-        integer(ik)     :: spacedim                         !< Number of spatial dimensions for the element
-        integer(ik)     :: neqns                            !< Number of equations being solved
-        integer(ik)     :: nterms_s                         !< Number of terms in solution expansion.  
-        integer(ik)     :: nterms_c                         !< Number of terms in coordinate expansion. 
 
-
+        ! Element info
         integer(ik)     :: idomain_g                        !< Global index of the parent domain
         integer(ik)     :: idomain_l                        !< Processor-local index of the parent domain
         integer(ik)     :: ielement_g                       !< Domain-global index of the element
         integer(ik)     :: ielement_l                       !< Processor-local index of the element
+
+        integer(ik)     :: spacedim                         !< Number of spatial dimensions for the element
+        integer(ik)     :: neqns                            !< Number of equations being solved
+        integer(ik)     :: nterms_s                         !< Number of terms in solution expansion.  
+        integer(ik)     :: nterms_c                         !< Number of terms in coordinate expansion. 
 
 
         ! Element quadrature points, mesh points and modes
@@ -61,6 +63,9 @@ module type_element
         real(rk), allocatable           :: dtdx(:,:)            !< Derivative of basis functions in x-direction at quadrature nodes
         real(rk), allocatable           :: dtdy(:,:)            !< Derivative of basis functions in y-direction at quadrature nodes
         real(rk), allocatable           :: dtdz(:,:)            !< Derivative of basis functions in z-direction at quadrature nodes
+        real(rk), allocatable           :: dtdx_trans(:,:)            !< Derivative of basis functions in x-direction at quadrature nodes - transposed
+        real(rk), allocatable           :: dtdy_trans(:,:)            !< Derivative of basis functions in y-direction at quadrature nodes - transposed
+        real(rk), allocatable           :: dtdz_trans(:,:)            !< Derivative of basis functions in z-direction at quadrature nodes - transposed
 
         ! Quadrature matrices
         type(quadrature_t), pointer     :: gq     => null()    !< Pointer to quadrature instance for solution expansion
@@ -267,6 +272,9 @@ contains
                  self%dtdx(nnodes,nterms_s),                &
                  self%dtdy(nnodes,nterms_s),                &
                  self%dtdz(nnodes,nterms_s),                &
+                 self%dtdx_trans(nterms_s,nnodes),          &
+                 self%dtdy_trans(nterms_s,nnodes),          &
+                 self%dtdz_trans(nterms_s,nnodes),          &
                  self%mass(nterms_s,nterms_s),              &
                  self%invmass(nterms_s,nterms_s), stat = ierr)
         if (ierr /= 0) call AllocationError
@@ -522,6 +530,11 @@ contains
                                          self%metric(3,3,inode) * self%gq%vol%ddzeta(inode,iterm) * (ONE/self%jinv(inode))
             end do
         end do
+
+
+        self%dtdx_trans = transpose(self%dtdx)
+        self%dtdy_trans = transpose(self%dtdy)
+        self%dtdz_trans = transpose(self%dtdz)
 
     end subroutine compute_gradients_cartesian
     !*********************************************************************************************************
@@ -1069,7 +1082,7 @@ contains
             ! Exit if converged
             !
             if ( res < tol ) then
-                loc%status = 0  ! point found
+                loc%status = VALID_POINT  ! point found
                 call loc%set(xi,eta,zeta)
                 exit
             end if
@@ -1087,8 +1100,8 @@ contains
 
 
             if ( inewton == 20 ) then
-                loc%status = 1  ! point not found
-                call chidg_signal(WARN,"element%computational_point: Newton iteration did not converge")
+                loc%status = INVALID_POINT  ! point not found
+                !call chidg_signal(WARN,"element%computational_point: Newton iteration did not converge")
             end if
 
         end do ! inewton

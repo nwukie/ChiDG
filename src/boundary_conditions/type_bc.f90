@@ -1,7 +1,7 @@
 module type_bc
 #include <messenger.h>
     use mod_kinds,                  only: rk, ik
-    use mod_constants,              only: XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX, BOUNDARY, CHIMERA, ORPHAN, BC_BLK, ONE, TWO, RKTOL
+    use mod_constants,              only: XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX, BOUNDARY, CHIMERA, ORPHAN, BC_BLK, ZERO, ONE, TWO, RKTOL
     use mod_chidg_mpi,              only: IRANK
 
     use type_mesh,                  only: mesh_t
@@ -257,26 +257,26 @@ contains
                     point_three = mesh%elems(ielem)%computational_point(x,y,z)
 
 
-                    xi_face   = ( (abs(point_one%c1_ - point_two%c1_) < 100.*RKTOL)  .and. (abs(point_one%c1_ - point_three%c1_) < 100.*RKTOL) )
-                    eta_face  = ( (abs(point_one%c2_ - point_two%c2_) < 100.*RKTOL)  .and. (abs(point_one%c2_ - point_three%c2_) < 100.*RKTOL) )
-                    zeta_face = ( (abs(point_one%c3_ - point_two%c3_) < 100.*RKTOL)  .and. (abs(point_one%c3_ - point_three%c3_) < 100.*RKTOL) )
+                    xi_face   = ( (abs(point_one%c1_ - point_two%c1_) < 1000.*RKTOL)  .and. (abs(point_one%c1_ - point_three%c1_) < 1000.*RKTOL) )
+                    eta_face  = ( (abs(point_one%c2_ - point_two%c2_) < 1000.*RKTOL)  .and. (abs(point_one%c2_ - point_three%c2_) < 1000.*RKTOL) )
+                    zeta_face = ( (abs(point_one%c3_ - point_two%c3_) < 1000.*RKTOL)  .and. (abs(point_one%c3_ - point_three%c3_) < 1000.*RKTOL) )
 
 
                     ! Determine iface by value of xi,eta,zeta
                     if ( xi_face ) then
-                        if (point_one%c1_ < 0.) then
+                        if (point_one%c1_ < ZERO) then
                             iface = XI_MIN
                         else
                             iface = XI_MAX
                         end if
                     else if ( eta_face ) then
-                        if (point_one%c2_ < 0.) then
+                        if (point_one%c2_ < ZERO) then
                             iface = ETA_MIN
                         else
                             iface = ETA_MAX
                         end if
                     else if ( zeta_face ) then
-                        if (point_one%c3_ < 0.) then
+                        if (point_one%c3_ < ZERO) then
                             iface = ZETA_MIN
                         else
                             iface = ZETA_MAX

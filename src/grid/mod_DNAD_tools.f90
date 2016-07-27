@@ -376,11 +376,14 @@ contains
             elseif ( chimera_face ) then
                 ChiID = mesh(idomain_l)%faces(ielement_l,iface)%ChiID
 
-                seed%idomain_g  = mesh(idomain_l)%chimera%recv%data(ChiID)%donor_domain_g%at(idonor)
-                seed%idomain_l  = mesh(idomain_l)%chimera%recv%data(ChiID)%donor_domain_l%at(idonor)
-                seed%ielement_g = mesh(idomain_l)%chimera%recv%data(ChiID)%donor_element_g%at(idonor)
-                seed%ielement_l = mesh(idomain_l)%chimera%recv%data(ChiID)%donor_element_l%at(idonor)
-                seed%iproc      = mesh(idomain_l)%chimera%recv%data(ChiID)%donor_proc%at(idonor)
+                seed%idomain_g    = mesh(idomain_l)%chimera%recv%data(ChiID)%donor_domain_g%at(idonor)
+                seed%idomain_l    = mesh(idomain_l)%chimera%recv%data(ChiID)%donor_domain_l%at(idonor)
+                seed%ielement_g   = mesh(idomain_l)%chimera%recv%data(ChiID)%donor_element_g%at(idonor)
+                seed%ielement_l   = mesh(idomain_l)%chimera%recv%data(ChiID)%donor_element_l%at(idonor)
+                seed%iproc        = mesh(idomain_l)%chimera%recv%data(ChiID)%donor_proc%at(idonor)
+                seed%recv_comm    = mesh(idomain_l)%chimera%recv%data(ChiID)%donor_recv_comm%at(idonor)
+                seed%recv_domain  = mesh(idomain_l)%chimera%recv%data(ChiID)%donor_recv_domain%at(idonor)
+                seed%recv_element = mesh(idomain_l)%chimera%recv%data(ChiID)%donor_recv_element%at(idonor)
 
 
             !

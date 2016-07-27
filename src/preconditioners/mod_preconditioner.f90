@@ -9,6 +9,7 @@ module mod_preconditioner
     use precon_identity,            only: precon_identity_t
     use precon_jacobi,              only: precon_jacobi_t
     use precon_ILU0,                only: precon_ILU0_t
+    use precon_RASILU0,             only: precon_RASILU0_t
     implicit none
 
 
@@ -17,6 +18,7 @@ module mod_preconditioner
     type(precon_identity_t)             :: IDENTITY
     type(precon_jacobi_t)               :: BLOCKJACOBI
     type(precon_ILU0_t)                 :: ILU0
+    type(precon_RASILU0_t)              :: RASILU0
 
 
 
@@ -37,6 +39,9 @@ contains
 
             case('ilu0','ILU0')
                 allocate(instance, source=ILU0)
+
+            case('rasilu0','RASILU0', 'ras-ilu0', 'RAS-ILU0')
+                allocate(instance, source=RASILU0)
 
             case default
                 call chidg_signal(FATAL,'create_preconditioner -- preconditioner string not recognized')

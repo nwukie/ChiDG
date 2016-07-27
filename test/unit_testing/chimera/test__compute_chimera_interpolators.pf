@@ -25,7 +25,7 @@ subroutine test__compute_chimera_interpolators()
     use mod_bc,         only: create_bc
 
     use mod_hdfio,      only: read_grid_hdf
-    use mod_chimera
+    use mod_chimera,    only: detect_chimera_faces, detect_chimera_donors, compute_chimera_interpolators
     implicit none
 
 

@@ -2,7 +2,8 @@
 !!  @author Nathan A. Wukie
 module type_densematrix
 #include <messenger.h>
-    use mod_kinds,  only: rk,ik
+    use mod_kinds,      only: rk,ik
+    use mod_constants,  only: NO_PROC
     implicit none
 
 
@@ -32,12 +33,14 @@ module type_densematrix
     !!
     !--------------------------------------------------------------------------------------------------------
     type, public :: densematrix_t
+
+
         ! zero value indicates unassigned
-        integer(ik), private    :: parent_proc_ = 0
-        integer(ik), private    :: dparent_g_   = 0   !< Global domain index of the element this block was linearized with respect to
-        integer(ik), private    :: dparent_l_   = 0   !< Local domain index of the element this block was linearized with respect to
-        integer(ik), private    :: eparent_g_   = 0   !< Global element index of the element this block was linearized with respect to
-        integer(ik), private    :: eparent_l_   = 0   !< Local element index of the element this block was linearized with respect to
+        integer(ik)             :: parent_proc_ = NO_PROC
+        integer(ik)             :: dparent_g_   = 0   !< Global domain index of the element this block was linearized with respect to
+        integer(ik)             :: dparent_l_   = 0   !< Local domain index of the element this block was linearized with respect to
+        integer(ik)             :: eparent_g_   = 0   !< Global element index of the element this block was linearized with respect to
+        integer(ik)             :: eparent_l_   = 0   !< Local element index of the element this block was linearized with respect to
 
         ! If associated parent data is being received from another processor, location in chidgVector%recv to find it
         integer(ik)             :: recv_comm    = 0
@@ -45,8 +48,9 @@ module type_densematrix
         integer(ik)             :: recv_element = 0
 
         ! Block storage
-        ! NOTE: Assumes square blocks. TODO: extend for variable element solution expansion.
-        real(rk),  dimension(:,:), allocatable :: mat
+        integer(ik)             :: nrows_
+        integer(ik)             :: ncols_
+        real(rk),   allocatable :: mat(:,:)
 
     contains
         ! Initializers
@@ -116,6 +120,11 @@ contains
         self%parent_proc_ = parent_proc
 
 
+        !
+        ! Set matrix size
+        !
+        self%nrows_ = idim
+        self%ncols_ = jdim
 
         !
         ! Allocate block storage
@@ -347,10 +356,19 @@ contains
     !!
     !-------------------------------------------------------------------------------------------------------------------
     subroutine resize(self,idim,jdim)
-        class(densematrix_t), intent(inout)  :: self
-        integer(ik),         intent(in)     :: idim,jdim
+        class(densematrix_t),   intent(inout)   :: self
+        integer(ik),            intent(in)      :: idim
+        integer(ik),            intent(in)      :: jdim
 
         integer(ik) :: ierr
+
+
+        !
+        ! Set matrix size
+        !
+        self%nrows_ = idim
+        self%ncols_ = jdim
+
 
         !
         ! Allocate block storage

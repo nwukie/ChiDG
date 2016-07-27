@@ -125,17 +125,6 @@ contains
             end do
         end do
 
-        !
-        ! Junk call to compute condition numbers
-        !
-        !do idom = 1,ndom
-        !    do ielem = 1,size(A%dom(idom)%lblks,1)
-        !        print*, 'Invert, display condition number for element: ', ielem
-        !        junk%mat = inv(A%dom(idom)%lblks(ielem,DIAG)%mat)
-        !    end do
-        !end do
-
-
 
 
         !
@@ -174,6 +163,7 @@ contains
         type(chidgVector_t) :: z
         integer(ik)         :: ielem, idom, ndom
 
+        call self%timer%start()
 
         ndom = size(A%dom)
 
@@ -189,12 +179,12 @@ contains
         !
         do idom = 1,ndom
             do ielem = 1,size(A%dom(idom)%lblks,1)
-                !call fgmres_standard(self%D(idom,ielem)%mat, z%dom(idom)%vecs(ielem)%vec, v%dom(idom)%vecs(ielem)%vec)
                 z%dom(idom)%vecs(ielem)%vec = matmul(self%D(idom,ielem)%mat,v%dom(idom)%vecs(ielem)%vec)
             end do
         end do
 
 
+        call self%timer%stop()
 
     end function apply
     !****************************************************************************************

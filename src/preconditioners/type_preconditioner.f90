@@ -3,6 +3,7 @@ module type_preconditioner
     use type_chidgMatrix,   only: chidgMatrix_t
     use type_chidgVector,   only: chidgVector_t
     use type_chidg_data,    only: chidg_data_t
+    use type_timer,         only: timer_t
 
     implicit none
 
@@ -18,7 +19,8 @@ module type_preconditioner
     !-------------------------------------------------------------------
     type, public, abstract :: preconditioner_t
 
-        logical  :: initialized = .false.
+        type(timer_t)       :: timer
+        logical             :: initialized = .false.
 
     contains
         procedure   :: init
@@ -48,6 +50,7 @@ contains
 
 
     end subroutine init
+    !**************************************************************************************
 
 
 
@@ -71,6 +74,7 @@ contains
         type(chidgVector_t),        intent(in)      :: b
 
     end subroutine update
+    !************************************************************************************
 
 
 
@@ -98,7 +102,8 @@ contains
         !
         z = v
 
-    end function
+    end function apply
+    !************************************************************************************
 
 
 

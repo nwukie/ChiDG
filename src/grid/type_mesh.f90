@@ -35,6 +35,9 @@ module type_mesh
         !
         ! Integer parameters
         !
+        integer(ik)                     :: idomain_g
+        integer(ik)                     :: idomain_l
+
         integer(ik)                     :: spacedim   = 0               !< Number of spatial dimensions
         integer(ik)                     :: neqns      = 0               !< Number of equations being solved
         integer(ik)                     :: nterms_s   = 0               !< Number of terms in the solution expansion
@@ -42,12 +45,10 @@ module type_mesh
         integer(ik)                     :: nelem      = 0               !< Number of total elements
         integer(ik)                     :: ntime      = 0               !< Number of time instances
 
-        !
-        ! Grid data
-        !
-        integer(ik)                     :: idomain_g
-        integer(ik)                     :: idomain_l
         
+        !
+        ! Primary mesh data
+        !
         type(point_t),    allocatable   :: nodes(:)                     !< Original node points for the domain
         type(element_t),  allocatable   :: elems(:)                     !< Element storage (1:nelem)
         type(face_t),     allocatable   :: faces(:,:)                   !< Face storage    (1:nelem,1:nfaces)
@@ -57,8 +58,8 @@ module type_mesh
         !
         ! Initialization flags
         !
-        logical                         :: geomInitialized = .false.    !< Status of geometry initialization
-        logical                         :: solInitialized  = .false.    !< Status of numerics initialization
+        logical                         :: geomInitialized = .false.            !< Status of geometry initialization
+        logical                         :: solInitialized  = .false.            !< Status of numerics initialization
         logical                         :: local_comm_initialized = .false.
         logical                         :: global_comm_initialized = .false.
 
@@ -78,10 +79,16 @@ module type_mesh
         ! Utilities
         procedure, private  :: find_neighbor_local      !< Try to find a neighbor for a particular face on the local processor
         procedure, private  :: find_neighbor_global     !< Try to find a neighbor for a particular face across processors
-        procedure           :: handle_neighbor_request  !< When a neighbor request from another processor occurs, check if current processor contains neighbor
+        procedure           :: handle_neighbor_request  !< When a neighbor request from another processor comes in, check if current processor contains neighbor
 
 
-        procedure, public   :: get_comm_procs           !< Return the processor ranks that are communicating with the current mesh
+        procedure,  public  :: get_recv_procs           !< Return the processor ranks that the mesh is receiving from (neighbor+chimera)
+        procedure,  public  :: get_recv_procs_local     !< Return the processor ranks that the mesh is receiving neighbor data from
+        procedure,  public  :: get_recv_procs_chimera   !< Return the processor ranks that the mesh is receiving chimera data from 
+
+        procedure,  public  :: get_send_procs           !< Return the processor ranks that the mesh is sending to (neighbor+chimera)
+        procedure,  public  :: get_send_procs_local     !< Return the processor ranks that the mesh is sending neighbor data to
+        procedure,  public  :: get_send_procs_chimera   !< Return the processor ranks that the mesh is sending chimera data to
 
         final               :: destructor
 
@@ -619,6 +626,7 @@ contains
                 ! Check if face has neighbor on another MPI rank
                 !
                 if ( self%faces(ielem,iface)%ftype == ORPHAN ) then
+
                     ! send search request for neighbor face among global MPI ranks.
                     searching = .true.
                     call MPI_Bcast(searching,1,MPI_LOGICAL,IRANK,ChiDG_COMM,ierr)
@@ -951,7 +959,10 @@ contains
 
 
 
-    !>  Return the processor ranks that are communicating with the current mesh.
+    !>  Return the processor ranks that the current mesh is receiving from.
+    !!
+    !!  This includes interior neighbor elements located on another processor and also chimera
+    !!  donor elements located on another processor.
     !!
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   6/30/2016
@@ -960,7 +971,519 @@ contains
     !!
     !!
     !---------------------------------------------------------------------------------------------------------------
-    function get_comm_procs(self) result(comm_procs)
+    function get_recv_procs(self) result(comm_procs)
+        class(mesh_t),   intent(in)  :: self
+
+        type(ivector_t)             :: comm_procs_vector
+        integer(ik),    allocatable :: comm_procs(:), comm_procs_local(:), comm_procs_chimera(:)
+        integer(ik)                 :: ncomm_procs, loc, iproc, proc
+        logical                     :: already_added
+!        integer(ik)                 :: myrank, neighbor_rank, ielem, iface, loc, ChiID, idonor, donor_rank
+!        logical                     :: has_neighbor, already_added, comm_neighbor, is_chimera, comm_donor
+
+        !
+        ! Test if global communication has been initialized
+        !
+        if ( .not. self%global_comm_initialized) call chidg_signal(WARN,"mesh%get_recv_procs: mesh global communication not initialized")
+
+        
+
+        !
+        ! Get procs we are receiving neighbor data from
+        !
+        comm_procs_local   = self%get_recv_procs_local()
+
+        do iproc = 1,size(comm_procs_local)
+            
+            ! Get proc
+            proc = comm_procs_local(iproc)
+
+            ! Check if proc was already added to list from another neighbor
+            loc = comm_procs_vector%loc(proc)
+            already_added = ( loc /= 0 )
+
+            ! Add to list if not already added
+            if (.not. already_added ) call comm_procs_vector%push_back(proc)
+
+        end do !iproc
+
+
+
+        !
+        ! Get procs we are receiving chimera donors from
+        !
+        comm_procs_chimera = self%get_recv_procs_chimera()
+
+        do iproc = 1,size(comm_procs_chimera)
+            
+            ! Get proc
+            proc = comm_procs_chimera(iproc)
+
+            ! Check if proc was already added to list from another neighbor
+            loc = comm_procs_vector%loc(proc)
+            already_added = ( loc /= 0 )
+
+            ! Add to list if not already added
+            if (.not. already_added ) call comm_procs_vector%push_back(proc)
+
+        end do !iproc
+
+
+
+        !
+        ! Set vector data to array to be returned.
+        !
+        comm_procs = comm_procs_vector%data()
+
+
+!        !
+!        ! Get current processor rank
+!        !
+!        myrank = IRANK
+!
+!        do ielem = 1,self%nelem
+!            do iface = 1,size(self%faces,2)
+!
+!                !
+!                ! Get face properties
+!                !
+!                has_neighbor = ( self%faces(ielem,iface)%ftype == INTERIOR )
+!                is_chimera   = ( self%faces(ielem,iface)%ftype == CHIMERA  )
+!
+!
+!                
+!                !
+!                ! For interior neighbor
+!                !
+!                if ( has_neighbor ) then
+!                    !
+!                    ! Get neighbor processor rank
+!                    !
+!                    neighbor_rank = self%faces(ielem,iface)%ineighbor_proc
+!                    comm_neighbor = ( myrank /= neighbor_rank )
+!
+!                    !
+!                    ! If off-processor, add to list, if not already added.
+!                    !
+!                    if ( comm_neighbor ) then
+!                        ! Check if proc was already added to list from another neighbor
+!                        loc = comm_procs_vector%loc(neighbor_rank)
+!                        already_added = ( loc /= 0 )
+!
+!                        if (.not. already_added ) call comm_procs_vector%push_back(neighbor_rank)
+!                    end if
+!
+!
+!
+!
+!                !
+!                ! For Chimera donors
+!                !
+!                else if ( is_chimera ) then
+!                    !
+!                    ! Loop through donor elements
+!                    !
+!                    ChiID = self%faces(ielem,iface)%ChiID
+!                    do idonor = 1,self%chimera%recv%data(ChiID)%ndonors()
+!                        donor_rank = self%chimera%recv%data(ChiID)%donor_proc%at(idonor)
+!                        comm_donor = ( myrank /= donor_rank )
+!
+!                        !
+!                        ! If off-processor, add to list, if not already added.
+!                        !
+!                        if ( comm_donor ) then
+!                            ! Check if proc was already added to list from another donor or neighbor
+!                            loc = comm_procs_vector%loc(donor_rank)
+!                            already_added = ( loc /= 0 )
+!
+!                            if (.not. already_added) call comm_procs_vector%push_back(donor_rank)
+!                        end if
+!
+!                    end do !idonor
+!
+!
+!                end if
+!
+!
+!                
+!
+!            end do
+!        end do
+!
+!
+!        ! Set vector data to array to be returned.
+!        comm_procs = comm_procs_vector%data()
+
+
+
+    end function get_recv_procs
+    !***************************************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    !>  Return the processor ranks that the current mesh is receiving from.
+    !!
+    !!  This includes interior neighbor elements located on another processor and also chimera
+    !!  donor elements located on another processor.
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   6/30/2016
+    !!
+    !!
+    !!
+    !!
+    !---------------------------------------------------------------------------------------------------------------
+    function get_recv_procs_local(self) result(comm_procs)
+        class(mesh_t),   intent(in)  :: self
+
+        type(ivector_t)             :: comm_procs_vector
+        integer(ik),    allocatable :: comm_procs(:)
+        integer(ik)                 :: myrank, neighbor_rank, ielem, iface, loc
+        logical                     :: has_neighbor, already_added, comm_neighbor, comm_donor
+
+        !
+        ! Test if global communication has been initialized
+        !
+        if ( .not. self%global_comm_initialized) call chidg_signal(WARN,"mesh%get_comm_procs: mesh global communication not initialized")
+
+
+        !
+        ! Get current processor rank
+        !
+        myrank = IRANK
+
+        do ielem = 1,self%nelem
+            do iface = 1,size(self%faces,2)
+
+                !
+                ! Get face properties
+                !
+                has_neighbor = ( self%faces(ielem,iface)%ftype == INTERIOR )
+
+                !
+                ! For interior neighbor
+                !
+                if ( has_neighbor ) then
+                    !
+                    ! Get neighbor processor rank
+                    !
+                    neighbor_rank = self%faces(ielem,iface)%ineighbor_proc
+                    comm_neighbor = ( myrank /= neighbor_rank )
+
+                    !
+                    ! If off-processor, add to list, if not already added.
+                    !
+                    if ( comm_neighbor ) then
+                        ! Check if proc was already added to list from another neighbor
+                        loc = comm_procs_vector%loc(neighbor_rank)
+                        already_added = ( loc /= 0 )
+
+                        if (.not. already_added ) call comm_procs_vector%push_back(neighbor_rank)
+                    end if
+
+                end if
+
+            end do !iface
+        end do !ielem
+
+
+        !
+        ! Set vector data to array to be returned.
+        !
+        comm_procs = comm_procs_vector%data()
+
+    end function get_recv_procs_local
+    !***************************************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+    !>  Return the processor ranks that the current mesh is receiving from.
+    !!
+    !!  This includes interior neighbor elements located on another processor and also chimera
+    !!  donor elements located on another processor.
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   6/30/2016
+    !!
+    !!
+    !!
+    !!
+    !---------------------------------------------------------------------------------------------------------------
+    function get_recv_procs_chimera(self) result(comm_procs)
+        class(mesh_t),   intent(in)  :: self
+
+        type(ivector_t)             :: comm_procs_vector
+        integer(ik),    allocatable :: comm_procs(:)
+        integer(ik)                 :: myrank, neighbor_rank, ielem, iface, loc, ChiID, idonor, donor_rank
+        logical                     :: has_neighbor, already_added, comm_neighbor, is_chimera, comm_donor
+
+        !
+        ! Test if global communication has been initialized
+        !
+        if ( .not. self%global_comm_initialized) call chidg_signal(WARN,"mesh%get_comm_procs: mesh global communication not initialized")
+
+
+        !
+        ! Get current processor rank
+        !
+        myrank = IRANK
+
+        do ielem = 1,self%nelem
+            do iface = 1,size(self%faces,2)
+
+                ! Get face properties
+                is_chimera   = ( self%faces(ielem,iface)%ftype == CHIMERA  )
+
+
+                if ( is_chimera ) then
+                    !
+                    ! Loop through donor elements
+                    !
+                    ChiID = self%faces(ielem,iface)%ChiID
+                    do idonor = 1,self%chimera%recv%data(ChiID)%ndonors()
+                        donor_rank = self%chimera%recv%data(ChiID)%donor_proc%at(idonor)
+                        comm_donor = ( myrank /= donor_rank )
+
+                        !
+                        ! If off-processor, add to list, if not already added.
+                        !
+                        if ( comm_donor ) then
+                            ! Check if proc was already added to list from another donor or neighbor
+                            loc = comm_procs_vector%loc(donor_rank)
+                            already_added = ( loc /= 0 )
+
+                            if (.not. already_added) call comm_procs_vector%push_back(donor_rank)
+                        end if
+
+                    end do !idonor
+
+                end if !is_chimera
+
+
+            end do !iface
+        end do !ielem
+
+
+        !
+        ! Set vector data to array to be returned.
+        !
+        comm_procs = comm_procs_vector%data()
+
+    end function get_recv_procs_chimera
+    !***************************************************************************************************************
+
+
+
+
+
+
+
+
+
+
+    !>  Return the processor ranks that the current mesh is sending to.
+    !!
+    !!  This includes interior neighbor elements located on another processor and also chimera
+    !!  donor elements.
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   6/30/2016
+    !!
+    !!
+    !!
+    !!
+    !---------------------------------------------------------------------------------------------------------------
+    function get_send_procs(self) result(comm_procs)
+        class(mesh_t),   intent(in)  :: self
+
+        type(ivector_t)             :: comm_procs_vector
+        integer(ik),    allocatable :: comm_procs(:), comm_procs_local(:), comm_procs_chimera(:)
+        integer(ik)                 :: iproc, proc, loc
+        logical                     :: already_added
+!        integer(ik)                 :: myrank, neighbor_rank, ielem, iface, loc, ChiID, idonor, donor_rank
+!        logical                     :: has_neighbor, already_added, comm_neighbor, is_chimera, comm_donor
+
+        !
+        ! Test if global communication has been initialized
+        !
+        if ( .not. self%global_comm_initialized) call chidg_signal(WARN,"mesh%get_comm_procs: mesh global communication not initialized")
+
+
+
+
+
+
+
+        !
+        ! Get procs we are receiving neighbor data from
+        !
+        comm_procs_local   = self%get_send_procs_local()
+
+        do iproc = 1,size(comm_procs_local)
+            
+            ! Get proc
+            proc = comm_procs_local(iproc)
+
+            ! Check if proc was already added to list from another neighbor
+            loc = comm_procs_vector%loc(proc)
+            already_added = ( loc /= 0 )
+
+            ! Add to list if not already added
+            if (.not. already_added ) call comm_procs_vector%push_back(proc)
+
+        end do !iproc
+
+
+
+        !
+        ! Get procs we are receiving chimera donors from
+        !
+        comm_procs_chimera = self%get_send_procs_chimera()
+
+        do iproc = 1,size(comm_procs_chimera)
+            
+            ! Get proc
+            proc = comm_procs_chimera(iproc)
+
+            ! Check if proc was already added to list from another neighbor
+            loc = comm_procs_vector%loc(proc)
+            already_added = ( loc /= 0 )
+
+            ! Add to list if not already added
+            if (.not. already_added ) call comm_procs_vector%push_back(proc)
+
+        end do !iproc
+
+
+
+        !
+        ! Set vector data to array to be returned.
+        !
+        comm_procs = comm_procs_vector%data()
+
+
+
+
+
+
+!        !
+!        ! Get current processor rank
+!        !
+!        myrank = IRANK
+!
+!        do ielem = 1,self%nelem
+!            do iface = 1,size(self%faces,2)
+!
+!                !
+!                ! Get face properties
+!                !
+!                has_neighbor = ( self%faces(ielem,iface)%ftype == INTERIOR )
+!
+!                
+!                !
+!                ! For interior neighbor
+!                !
+!                if ( has_neighbor ) then
+!                    !
+!                    ! Get neighbor processor rank
+!                    !
+!                    neighbor_rank = self%faces(ielem,iface)%ineighbor_proc
+!                    comm_neighbor = ( myrank /= neighbor_rank )
+!
+!                    !
+!                    ! If off-processor, add to list, if not already added.
+!                    !
+!                    if ( comm_neighbor ) then
+!                        ! Check if proc was already added to list from another neighbor
+!                        loc = comm_procs_vector%loc(neighbor_rank)
+!                        already_added = ( loc /= 0 )
+!
+!                        if (.not. already_added ) call comm_procs_vector%push_back(neighbor_rank)
+!                    end if
+!
+!                end if
+!                
+!
+!            end do !iface
+!        end do !ielem
+!
+!
+!
+!
+!
+!        !
+!        ! Collect processors that we are sending chimera donor elements to
+!        !
+!        do idonor = 1,self%chimera%send%ndonors()
+!
+!            donor_rank = self%chimera%send%receiver_proc%at(idonor)
+!            comm_donor = (myrank /= donor_rank)
+!
+!
+!            !
+!            ! If off-processor, add to list, if not already added.
+!            !
+!            if ( comm_donor ) then
+!                ! Check if proc was already added to list from another donor or neighbor
+!                loc = comm_procs_vector%loc(donor_rank)
+!                already_added = ( loc /= 0 )
+!
+!                if (.not. already_added) call comm_procs_vector%push_back(donor_rank)
+!            end if
+!
+!
+!        end do !idonor
+!
+!
+!
+!        ! Set vector data to array to be returned.
+!        comm_procs = comm_procs_vector%data()
+
+    end function get_send_procs
+    !***************************************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+    !>  Return the processor ranks that the current mesh is sending to.
+    !!
+    !!  This includes interior neighbor elements located on another processor and also chimera
+    !!  donor elements.
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   6/30/2016
+    !!
+    !!
+    !!
+    !!
+    !---------------------------------------------------------------------------------------------------------------
+    function get_send_procs_local(self) result(comm_procs)
         class(mesh_t),   intent(in)  :: self
 
         type(ivector_t)             :: comm_procs_vector
@@ -983,9 +1506,14 @@ contains
             do iface = 1,size(self%faces,2)
 
                 !
-                ! Check face has neighbor
+                ! Get face properties
                 !
                 has_neighbor = ( self%faces(ielem,iface)%ftype == INTERIOR )
+
+                
+                !
+                ! For interior neighbor
+                !
                 if ( has_neighbor ) then
                     !
                     ! Get neighbor processor rank
@@ -1004,19 +1532,103 @@ contains
                         if (.not. already_added ) call comm_procs_vector%push_back(neighbor_rank)
                     end if
 
-
                 end if
                 
 
-            end do
-        end do
+            end do !iface
+        end do !ielem
 
 
+        !
         ! Set vector data to array to be returned.
+        !
         comm_procs = comm_procs_vector%data()
 
-    end function get_comm_procs
+    end function get_send_procs_local
     !***************************************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    !>  Return the processor ranks that the current mesh is sending to.
+    !!
+    !!  This includes interior neighbor elements located on another processor and also chimera
+    !!  donor elements.
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   6/30/2016
+    !!
+    !!
+    !!
+    !!
+    !---------------------------------------------------------------------------------------------------------------
+    function get_send_procs_chimera(self) result(comm_procs)
+        class(mesh_t),   intent(in)  :: self
+
+        type(ivector_t)             :: comm_procs_vector
+        integer(ik),    allocatable :: comm_procs(:)
+        integer(ik)                 :: myrank, neighbor_rank, ielem, iface, loc, ChiID, idonor, donor_rank
+        logical                     :: already_added, is_chimera, comm_donor
+
+        !
+        ! Test if global communication has been initialized
+        !
+        if ( .not. self%global_comm_initialized) call chidg_signal(WARN,"mesh%get_comm_procs: mesh global communication not initialized")
+
+
+        !
+        ! Get current processor rank
+        !
+        myrank = IRANK
+
+
+        !
+        ! Collect processors that we are sending chimera donor elements to
+        !
+        do idonor = 1,self%chimera%send%ndonors()
+
+            donor_rank = self%chimera%send%receiver_proc%at(idonor)
+            comm_donor = (myrank /= donor_rank)
+
+
+            !
+            ! If off-processor, add to list, if not already added.
+            !
+            if ( comm_donor ) then
+                ! Check if proc was already added to list from another donor or neighbor
+                loc = comm_procs_vector%loc(donor_rank)
+                already_added = ( loc /= 0 )
+
+                if (.not. already_added) call comm_procs_vector%push_back(donor_rank)
+            end if
+
+
+        end do !idonor
+
+
+        !
+        ! Set vector data to array to be returned.
+        !
+        comm_procs = comm_procs_vector%data()
+
+    end function get_send_procs_chimera
+    !***************************************************************************************************************
+
+
+
 
 
 

@@ -83,7 +83,6 @@ contains
 
 
         integer(ik)     :: idom,  ielem,  iface
-!        integer(ik)     :: idom_m,  ielem_m,  iface_m
         integer(ik)     :: ifcn,  idonor, iblk
 
         ! Storage at quadrature nodes
@@ -106,7 +105,7 @@ contains
                         u_p, v_p, w_p,                                              &
                         vmag_p, vmag_m,                                             &
                         delr,   delp,   delvmag, delu, delv, delw,                  &
-                        sqrt_rhom, sqrt_rhop, sqrt_rhom_plus_rhop, ctil2
+                        sqrt_rhom, sqrt_rhop, sqrt_rhom_plus_rhop, ctil2, invrho_m, invrho_p
 
 
         real(rk), dimension(mesh(face_info%idomain_l)%faces(face_info%ielement_l,face_info%iface)%gq%face%nnodes)    :: &
@@ -208,25 +207,32 @@ contains
             call prop%fluid%compute_gamma(rho_m,rhou_m,rhov_m,rhow_m,rhoE_m,gam_m)
             call prop%fluid%compute_gamma(rho_p,rhou_p,rhov_p,rhow_p,rhoE_p,gam_p)
 
+            invrho_m = ONE/rho_m
+            invrho_p = ONE/rho_p
 
             !
             ! Compute enthalpy
             !
-            H_m = (rhoE_m + p_m)/rho_m
-            H_p = (rhoE_p + p_p)/rho_p
+            !H_m = (rhoE_m + p_m)/rho_m
+            !H_p = (rhoE_p + p_p)/rho_p
+            H_m = (rhoE_m + p_m)*invrho_m
+            H_p = (rhoE_p + p_p)*invrho_p
 
 
             !
             ! Compute velocity components
             !
-            u_m = rhou_m/rho_m
-            v_m = rhov_m/rho_m
-            w_m = rhow_m/rho_m
+            !u_m = rhou_m/rho_m
+            !v_m = rhov_m/rho_m
+            !w_m = rhow_m/rho_m
+            u_m = rhou_m*invrho_m
+            v_m = rhov_m*invrho_m
+            w_m = rhow_m*invrho_m
             vmag_m = u_m*unorms(:,1) + v_m*unorms(:,2) + w_m*unorms(:,3)
 
-            u_p = rhou_p/rho_p
-            v_p = rhov_p/rho_p
-            w_p = rhow_p/rho_p
+            u_p = rhou_p*invrho_p
+            v_p = rhov_p*invrho_p
+            w_p = rhow_p*invrho_p
             vmag_p = u_p*(unorms(:,1)) + v_p*(unorms(:,2)) + w_p*(unorms(:,3))
 
 

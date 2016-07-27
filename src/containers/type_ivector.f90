@@ -28,6 +28,7 @@ module type_ivector
 
         ! Data modifiers
         procedure, public   :: push_back
+        procedure, public   :: push_back_unique
         procedure, public   :: clear
         procedure, private  :: increase_capacity
 
@@ -165,6 +166,64 @@ contains
 
     end subroutine push_back
     !********************************************************************************************
+
+
+
+
+
+
+
+
+    !>  Store element at end of vector, if it hasn't already been stored. No duplicate values.
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   7/22/2016
+    !!
+    !!
+    !-------------------------------------------------------------------------------------------
+    subroutine push_back_unique(self,element)
+        class(ivector_t),   intent(inout)   :: self
+        integer(ik),        intent(in)      :: element
+
+        integer(ik) :: loc
+        logical     :: already_added
+
+
+        !
+        ! Check if element was already added
+        !
+        loc = self%loc(element)
+        already_added = (loc /= 0)
+
+
+        !
+        ! If not already in the list, push back
+        !
+        if ( .not. already_added ) call self%push_back(element)
+
+    end subroutine push_back_unique
+    !********************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

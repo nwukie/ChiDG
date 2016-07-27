@@ -104,6 +104,13 @@ contains
         call self%lhs%init(mesh,bcset_coupling,'full')
 
 
+
+        !
+        ! Initialize matrix parallel recv data
+        !
+        call self%lhs%init_recv(self%rhs)
+
+
     
         !
         ! Find maximum number of elements in any domain

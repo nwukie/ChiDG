@@ -100,6 +100,7 @@ contains
                         flux_x_m,   flux_y_m,   flux_z_m,                   &
                         flux_x_p,   flux_y_p,   flux_z_p,                   &
                         flux_x,     flux_y,     flux_z,                     &
+                        invrho_m,   invrho_p,                               &
                         integrand
 
         real(rk), dimension(mesh(face_info%idomain_l)%faces(face_info%ielement_l,face_info%iface)%gq%face%nnodes)    :: &
@@ -145,6 +146,9 @@ contains
             call interpolate_face(mesh,face_info,q, irhoE, rhoE_m, LOCAL)
             call interpolate_face(mesh,face_info,q, irhoE, rhoE_p, NEIGHBOR)
 
+
+            invrho_m = ONE/rho_m
+            invrho_p = ONE/rho_p
 
 !            idom_m  = face_info%idomain
 !            ielem_m = face_info%ielement
@@ -192,8 +196,8 @@ contains
             call prop%fluid%compute_pressure(rho_m,rhou_m,rhov_m,rhow_m,rhoE_m,p_m)
             call prop%fluid%compute_pressure(rho_p,rhou_p,rhov_p,rhow_p,rhoE_p,p_p)
 
-            H_m = (rhoE_m + p_m)/rho_m
-            H_p = (rhoE_p + p_p)/rho_p
+            H_m = (rhoE_m + p_m)*invrho_m
+            H_p = (rhoE_p + p_p)*invrho_p
 
 
 
@@ -222,13 +226,13 @@ contains
             !================================
             !       X-MOMENTUM FLUX
             !================================
-            flux_x_m = (rhou_m*rhou_m)/rho_m + p_m
-            flux_y_m = (rhou_m*rhov_m)/rho_m
-            flux_z_m = (rhou_m*rhow_m)/rho_m
+            flux_x_m = (rhou_m*rhou_m)*invrho_m + p_m
+            flux_y_m = (rhou_m*rhov_m)*invrho_m
+            flux_z_m = (rhou_m*rhow_m)*invrho_m
 
-            flux_x_p = (rhou_p*rhou_p)/rho_p + p_p
-            flux_y_p = (rhou_p*rhov_p)/rho_p
-            flux_z_p = (rhou_p*rhow_p)/rho_p
+            flux_x_p = (rhou_p*rhou_p)*invrho_p + p_p
+            flux_y_p = (rhou_p*rhov_p)*invrho_p
+            flux_z_p = (rhou_p*rhow_p)*invrho_p
 
             flux_x = (flux_x_m + flux_x_p)
             flux_y = (flux_y_m + flux_y_p)
@@ -244,13 +248,13 @@ contains
             !================================
             !       Y-MOMENTUM FLUX
             !================================
-            flux_x_m = (rhov_m*rhou_m)/rho_m
-            flux_y_m = (rhov_m*rhov_m)/rho_m + p_m
-            flux_z_m = (rhov_m*rhow_m)/rho_m
+            flux_x_m = (rhov_m*rhou_m)*invrho_m
+            flux_y_m = (rhov_m*rhov_m)*invrho_m + p_m
+            flux_z_m = (rhov_m*rhow_m)*invrho_m
 
-            flux_x_p = (rhov_p*rhou_p)/rho_p
-            flux_y_p = (rhov_p*rhov_p)/rho_p + p_p
-            flux_z_p = (rhov_p*rhow_p)/rho_p
+            flux_x_p = (rhov_p*rhou_p)*invrho_p
+            flux_y_p = (rhov_p*rhov_p)*invrho_p + p_p
+            flux_z_p = (rhov_p*rhow_p)*invrho_p
 
             flux_x = (flux_x_m + flux_x_p)
             flux_y = (flux_y_m + flux_y_p)
@@ -266,13 +270,13 @@ contains
             !================================
             !       Z-MOMENTUM FLUX
             !================================
-            flux_x_m = (rhow_m*rhou_m)/rho_m
-            flux_y_m = (rhow_m*rhov_m)/rho_m
-            flux_z_m = (rhow_m*rhow_m)/rho_m + p_m
+            flux_x_m = (rhow_m*rhou_m)*invrho_m
+            flux_y_m = (rhow_m*rhov_m)*invrho_m
+            flux_z_m = (rhow_m*rhow_m)*invrho_m + p_m
 
-            flux_x_p = (rhow_p*rhou_p)/rho_p
-            flux_y_p = (rhow_p*rhov_p)/rho_p
-            flux_z_p = (rhow_p*rhow_p)/rho_p + p_p
+            flux_x_p = (rhow_p*rhou_p)*invrho_p
+            flux_y_p = (rhow_p*rhov_p)*invrho_p
+            flux_z_p = (rhow_p*rhow_p)*invrho_p + p_p
 
             flux_x = (flux_x_m + flux_x_p)
             flux_y = (flux_y_m + flux_y_p)

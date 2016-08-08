@@ -3,7 +3,7 @@ module type_fgmres
     use mod_kinds,              only: rk, ik
     use mod_constants,          only: ZERO
     use mod_inv,                only: inv
-    use mod_chidg_mpi,          only: ChiDG_COMM, GLOBAL_MASTER
+    use mod_chidg_mpi,          only: ChiDG_COMM, GLOBAL_MASTER, IRANK, NRANK
     use mod_inv,                only: inv
     use mpi_f08
 
@@ -81,6 +81,7 @@ contains
         logical :: equal = .false.
         logical :: reorthogonalize = .false.
 
+        integer(ik) :: idom_search, ielem_search, nelem_search, elems(6), iproc, idom, ientry
 
 
         !
@@ -187,10 +188,12 @@ contains
             do j = 1,self%m
                 nvecs = nvecs + 1
            
+                
                 !
                 ! Apply preconditioner:  z(j) = Minv * v(j)
                 !
                 z(j) = M%apply(A,v(j))
+
 
 
                 !
@@ -198,6 +201,7 @@ contains
                 !
                 w = chidg_mv(A,z(j))
                 norm_before = w%norm(ChiDG_COMM)
+
 
 
                 !
@@ -235,7 +239,7 @@ contains
                 
 
                 !! Force reorthogonalization
-                !reorthogonalize = .true. 
+                !reorthogonalize = .true.
                 if ( reorthogonalize ) then
                     call write_line('GMRES: Reorthogonalizing...', io_proc=GLOBAL_MASTER)
 
@@ -294,18 +298,18 @@ contains
                 !
                 ! Givens rotation on p. Need temp values here so we aren't directly overwriting the p(j) value until we want to
                 !
-                pj  =  c(j)*p(j)
-                pjp = -s(j)*p(j)
+                pj     =  c(j)*p(j)
+                pjp    = -s(j)*p(j)
 
-                p(j)     = pj
-                p(j+1)   = pjp
+                p(j)   = pj
+                p(j+1) = pjp
 
 
                 
                 !
                 ! Update iteration counter
                 !
-                self%niter = self%niter + 1_ik
+                self%niter = self%niter + 1
 
 
 
@@ -387,7 +391,7 @@ contains
 
 
 
-
+        call MPI_Barrier(ChiDG_COMM,ierr)
 
 
         !

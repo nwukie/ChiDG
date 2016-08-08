@@ -689,7 +689,9 @@ contains
         integer(ik),                intent(in)      :: ivar
 
         integer(ik) :: idomain_l, ielement_l
+        integer(ik) :: idomain_g, ielement_g
         integer(ik) :: idonor_domain_l, idonor_element_l
+        integer(ik) :: idonor_domain_g, idonor_element_g
         integer(ik) :: irow, irow_start, donorblk, i, iblk, iarray
         integer(ik) :: neqns, nterms
         logical     :: block_match    = .false.
@@ -697,9 +699,13 @@ contains
 
         idomain_l  = face%idomain_l
         ielement_l = face%ielement_l
+        idomain_g  = face%idomain_g
+        ielement_g = face%ielement_g
 
         idonor_domain_l  = seed%idomain_l
         idonor_element_l = seed%ielement_l
+        idonor_domain_g  = seed%idomain_g
+        idonor_element_g = seed%ielement_g
 
 
         !
@@ -719,8 +725,10 @@ contains
         !
         donorblk = 0
         do iblk = 1,size(self%chi_blks,2)
-            block_match = ( (idonor_domain_l  == self%chi_blks(ielement_l,iblk)%dparent_l()) .and. &
-                            (idonor_element_l == self%chi_blks(ielement_l,iblk)%eparent_l()) )
+            !block_match = ( (idonor_domain_l  == self%chi_blks(ielement_l,iblk)%dparent_l()) .and. &
+            !                (idonor_element_l == self%chi_blks(ielement_l,iblk)%eparent_l()) )
+            block_match = ( (idonor_domain_g  == self%chi_blks(ielement_l,iblk)%dparent_g()) .and. &
+                            (idonor_element_g == self%chi_blks(ielement_l,iblk)%eparent_g()) )
 
             if ( block_match ) then
                 donorblk = iblk

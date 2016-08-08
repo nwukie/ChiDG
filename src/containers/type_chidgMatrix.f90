@@ -130,7 +130,7 @@ contains
         type(chidgVector_t),    intent(in)      :: x
 
         integer(ik) :: idom, ielem, iblk, matrix_proc, vector_proc, comm_proc
-        integer(ik) :: dparent_g, eparent_g, parent_proc, icomm, idom_recv, ielem_recv, drecv_g, erecv_g
+        integer(ik) :: dparent_g, eparent_g, parent_proc, icomm, idom_recv, ielem_recv, drecv_g, erecv_g, recv_domain, recv_elem
         logical     :: local_multiply, parallel_multiply, match_found
 
         
@@ -249,25 +249,40 @@ contains
 
                                     if ( comm_proc == parent_proc ) then
                                         do idom_recv = 1,size(x%recv%comm(icomm)%dom)
+                                            
+                                            recv_domain = x%recv%comm(icomm)%dom(idom_recv)%vecs(1)%dparent_g()
+                                            if ( recv_domain == dparent_g ) then
+
                                             do ielem_recv = 1,size(x%recv%comm(icomm)%dom(idom_recv)%vecs)
 
                                                 ! Get recv element indices
-                                                drecv_g = x%recv%comm(icomm)%dom(idom_recv)%vecs(ielem_recv)%dparent_g()
-                                                erecv_g = x%recv%comm(icomm)%dom(idom_recv)%vecs(ielem_recv)%eparent_g()
+                                                !drecv_g = x%recv%comm(icomm)%dom(idom_recv)%vecs(ielem_recv)%dparent_g()
+                                                recv_elem = x%recv%comm(icomm)%dom(idom_recv)%vecs(ielem_recv)%eparent_g()
+                                                !erecv_g = x%recv%comm(icomm)%dom(idom_recv)%vecs(ielem_recv)%eparent_g()
 
                                     
 
                                                 ! If they match the blockmatrix, set the recv indices so chidg_mv knows how to compute matrix-vector product
-                                                if ( (drecv_g == dparent_g) .and. (erecv_g == eparent_g) ) then
+                                                !if ( (drecv_g == dparent_g) .and. (erecv_g == eparent_g) .and. (match_found .eqv. .false.) ) then
+                                                if ( recv_elem == eparent_g )  then
                                                     self%dom(idom)%chi_blks(ielem,iblk)%recv_comm    = icomm
                                                     self%dom(idom)%chi_blks(ielem,iblk)%recv_domain  = idom_recv
                                                     self%dom(idom)%chi_blks(ielem,iblk)%recv_element = ielem_recv
                                                     match_found = .true.
+                                                    exit
+                                                !else if ( (drecv_g == dparent_g) .and. (erecv_g == eparent_g) .and. (match_found .eqv. .true.) ) then
+                                                !    call chidg_signal(FATAL,"chidgMatrix: recv entry already found")
                                                 end if
 
                                             end do !ielem_recv
+
+                                            end if ! recv_domain == dparent
+
+                                            if (match_found) exit
                                         end do !idom_recv
                                     end if
+
+                                    if (match_found) exit
 
                                 end do ! icomm
 

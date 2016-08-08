@@ -1,35 +1,41 @@
 module type_chidg
 #include <messenger.h>
-    use mod_constants,          only: NFACES
-    use mod_equations,          only: register_equations
-    use mod_bc,                 only: register_bcs
-    use mod_function,           only: register_functions
-    use mod_grid,               only: initialize_grid
-    use mod_io,                 only: read_input
-    use mod_string_utilities,   only: get_file_extension
+    use mod_constants,              only: NFACES
+    use mod_equations,              only: register_equations
+    use mod_bc,                     only: register_bcs
+    use mod_function,               only: register_functions
+    use mod_grid,                   only: initialize_grid
+    use mod_io,                     only: read_input
+    use mod_string_utilities,       only: get_file_extension
 
-    use type_chidg_data,        only: chidg_data_t
-    use type_time_scheme,       only: time_scheme_t
-    use type_linear_solver,     only: linear_solver_t
-    use type_nonlinear_solver,  only: nonlinear_solver_t
-    use type_preconditioner,    only: preconditioner_t
-    use type_meshdata,          only: meshdata_t
-    use type_bcdata,            only: bcdata_t
-    use type_dict,              only: dict_t
-    use type_partition,         only: partition_t
+    use type_chidg_data,            only: chidg_data_t
+    use type_time_scheme,           only: time_scheme_t
+    use type_linear_solver,         only: linear_solver_t
+    use type_nonlinear_solver,      only: nonlinear_solver_t
+    use type_preconditioner,        only: preconditioner_t
+    use type_meshdata,              only: meshdata_t
+    use type_bcdata,                only: bcdata_t
+    use type_dict,                  only: dict_t
+    use type_domain_connectivity,   only: domain_connectivity_t
+    use type_partition,             only: partition_t
 
-    use mod_time_scheme,        only: create_time_scheme
-    use mod_linear_solver,      only: create_linear_solver
-    use mod_nonlinear_solver,   only: create_nonlinear_solver
-    use mod_preconditioner,     only: create_preconditioner
+    use mod_time_scheme,            only: create_time_scheme
+    use mod_linear_solver,          only: create_linear_solver
+    use mod_nonlinear_solver,       only: create_nonlinear_solver
+    use mod_preconditioner,         only: create_preconditioner
 
-    use mod_communication,      only: establish_neighbor_communication, establish_chimera_communication
-    use mod_chidg_mpi,          only: chidg_mpi_init, chidg_mpi_finalize, ChiDG_COMM, IRANK, NRANK
+    use mod_communication,          only: establish_neighbor_communication, establish_chimera_communication
+    use mod_chidg_mpi,              only: chidg_mpi_init, chidg_mpi_finalize, ChiDG_COMM, IRANK, NRANK
     use mpi_f08
 
-    use mod_hdfio,              only: read_grid_hdf, read_grid_partition_hdf, read_boundaryconditions_hdf, read_boundaryconditions_partition_hdf, &
-                                      read_solution_hdf, write_solution_hdf
+    use mod_hdfio,                  only: read_grid_hdf, read_grid_partition_hdf, read_boundaryconditions_hdf, read_boundaryconditions_partition_hdf, &
+                                          read_solution_hdf, write_solution_hdf, read_connectivity_hdf
+    use mod_partitioners,           only: partition_connectivity, send_partitions, recv_partition
     implicit none
+
+
+
+
 
 
 
@@ -50,6 +56,8 @@ module type_chidg
         class(nonlinear_solver_t),  allocatable     :: nonlinear_solver
         class(linear_solver_t),     allocatable     :: linear_solver
         class(preconditioner_t),    allocatable     :: preconditioner
+
+        type(partition_t)                           :: partition
 
         logical :: envInitialized = .false.
 
@@ -75,6 +83,10 @@ module type_chidg
 
     end type chidg_t
     !*********************************************************************************************************
+
+
+
+
 
 
 
@@ -308,16 +320,45 @@ contains
     !!  TODO: Generalize spacedim
     !!
     !------------------------------------------------------------------------------------------------------------
-    subroutine read_grid(self,gridfile,spacedim,partition)
+    subroutine read_grid(self,gridfile,spacedim)
         class(chidg_t),     intent(inout)           :: self
         character(*),       intent(in)              :: gridfile
         integer(ik),        intent(in)              :: spacedim
-        type(partition_t),  intent(in), optional    :: partition
+
+
+        type(domain_connectivity_t),    allocatable :: connectivities(:)
+        type(partition_t),              allocatable :: partitions(:)
 
         character(len=5),   dimension(1)    :: extensions
         character(len=:),   allocatable     :: extension
         type(meshdata_t),   allocatable     :: meshdata(:)
         integer                             :: iext, extloc, idom, ndomains, iread, ierr
+
+
+        if ( IRANK == GLOBAL_MASTER ) call write_line("Reading grid")
+
+
+        !
+        ! Master rank: Read connectivity, partition connectivity, distribute partitions
+        !
+        if ( IRANK == GLOBAL_MASTER ) then
+            call read_connectivity_hdf(gridfile,connectivities)
+
+            call partition_connectivity(connectivities, partitions)
+
+            call send_partitions(partitions,MPI_COMM_WORLD)
+        end if
+
+
+        !
+        ! All ranks: Receive partition from GLOBAL_MASTER
+        !
+        call recv_partition(self%partition,MPI_COMM_WORLD)
+
+
+
+
+
 
 
         !
@@ -335,11 +376,7 @@ contains
 
 
                 if ( extension == '.h5' ) then 
-                    if (present(partition)) then
-                        call read_grid_partition_hdf(gridfile,partition,meshdata)
-                    else
-                        call read_grid_hdf(gridfile,meshdata)
-                    end if
+                    call read_grid_partition_hdf(gridfile,self%partition,meshdata)
                 else
                     call chidg_signal(FATAL,"chidg%read_grid: grid file extension not recognized")
                 end if
@@ -391,15 +428,16 @@ contains
     !!  @param[in]  gridfile    String specifying a gridfile, including extension.
     !!
     !-------------------------------------------------------------------------------------------------------------
-    subroutine read_boundaryconditions(self, gridfile, partition)
+    subroutine read_boundaryconditions(self, gridfile)
         class(chidg_t),     intent(inout)           :: self
         character(*),       intent(in)              :: gridfile
-        type(partition_t),  intent(in), optional    :: partition
 
         character(len=5),   dimension(1)    :: extensions
         character(len=:),   allocatable     :: extension, dname
         type(bcdata_t),     allocatable     :: bcdata(:)
         integer                             :: idom, ndomains, iface, ierr, iread
+
+        if (IRANK == GLOBAL_MASTER) call write_line('Reading boundary conditions')
 
         !
         ! Get filename extension
@@ -416,11 +454,7 @@ contains
 
 
                 if ( extension == '.h5' ) then
-                    if (present(partition)) then
-                        call read_boundaryconditions_partition_hdf(gridfile,bcdata,partition)
-                    else
-                        call read_boundaryconditions_hdf(gridfile,bcdata)
-                    end if
+                    call read_boundaryconditions_partition_hdf(gridfile,bcdata,self%partition)
                 else
                     call chidg_signal(FATAL,"chidg%read_boundaryconditions: grid file extension not recognized")
                 end if

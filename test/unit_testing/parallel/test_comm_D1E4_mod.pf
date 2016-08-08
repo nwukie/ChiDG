@@ -58,9 +58,9 @@ contains
     subroutine setUp(this)
         class(test_comm_D1E4), intent(inout) :: this
 
-        type(domain_connectivity_t),    allocatable :: connectivities(:)
-        type(partition_t),              allocatable :: partitions(:)
-        type(partition_t)                           :: partition
+!        type(domain_connectivity_t),    allocatable :: connectivities(:)
+!        type(partition_t),              allocatable :: partitions(:)
+!        type(partition_t)                           :: partition
 
 
         character(len=:),   allocatable :: gridfile
@@ -83,29 +83,31 @@ contains
 
 
 
-        !
-        ! Read connectivities, partition, distribute
-        !
-        if ( IRANK == GLOBAL_MASTER ) then
-            call read_connectivity_hdf(gridfile,connectivities)
-
-            call partition_connectivity(connectivities, partitions)
-
-            call send_partitions(partitions,this%ChiDG_COMM)
-        end if
-
-
-        !
-        ! Receive partition from GLOBAL_MASTER
-        !
-        call recv_partition(partition,this%ChiDG_COMM)
+!        !
+!        ! Read connectivities, partition, distribute
+!        !
+!        if ( IRANK == GLOBAL_MASTER ) then
+!            call read_connectivity_hdf(gridfile,connectivities)
+!
+!            call partition_connectivity(connectivities, partitions)
+!
+!            call send_partitions(partitions,this%ChiDG_COMM)
+!        end if
+!
+!
+!        !
+!        ! Receive partition from GLOBAL_MASTER
+!        !
+!        call recv_partition(partition,this%ChiDG_COMM)
 
 
         !
         ! Read partition data: grid, boundary conditions
         !
-        call this%chidg%read_grid(gridfile, spacedim, partition)
-        call this%chidg%read_boundaryconditions(gridfile, partition)
+        !call this%chidg%read_grid(gridfile, spacedim, partition)
+        !call this%chidg%read_boundaryconditions(gridfile, partition)
+        call this%chidg%read_grid(gridfile, spacedim)
+        call this%chidg%read_boundaryconditions(gridfile)
 
 
         !

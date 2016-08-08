@@ -1008,7 +1008,7 @@ contains
         real(rk)    :: res, dx, dy, dz, tol
 
 
-        tol = 100._rk*RKTOL
+        tol = 10._rk*RKTOL
 
 
         !

@@ -102,7 +102,7 @@ contains
         !
         ndom_send = self%dom_send%size()
         if (allocated(self%elems_send)) then
-            call self%dom_send%clear()
+            !call self%dom_send%clear()
             deallocate(self%elems_send)
         end if
         allocate(self%elems_send(ndom_send), stat=ierr)
@@ -202,7 +202,7 @@ contains
 
             idom = self%dom_send%at(idom_send)
 
-            ! Communicate domain index
+            ! Communicate domain indices
             call MPI_ISend(mesh(idom)%idomain_g, 1, MPI_INTEGER4, self%proc, 0, ChiDG_COMM, null_request, ierr)
             call MPI_ISend(mesh(idom)%idomain_l, 1, MPI_INTEGER4, self%proc, 0, ChiDG_COMM, null_request, ierr)
 

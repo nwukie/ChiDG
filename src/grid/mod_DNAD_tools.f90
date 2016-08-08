@@ -339,7 +339,6 @@ contains
             seed%iproc      = IRANK
 
 
-
         !
         ! Check for linearization of neighbor element (neighbor of face(ielem,iface) )
         !
@@ -395,6 +394,7 @@ contains
                 seed%ielement_g = mesh(idomain_l)%elems(ielement_l)%ielement_g
                 seed%ielement_l = mesh(idomain_l)%elems(ielement_l)%ielement_l
                 seed%iproc      = IRANK
+
 
             !
             ! Invalid Case

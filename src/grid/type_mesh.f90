@@ -296,9 +296,9 @@ contains
 
 
 
-            if ( IRANK == GLOBAL_MASTER ) then
-                write(*,FMT='(A1,A,t21,F6.2,A)',advance="NO") achar(13), " Initializing element geometry: ", (real(ielem_l)/real(nelem))*100.0, "%"
-            end if
+!            if ( IRANK == GLOBAL_MASTER ) then
+!                write(*,FMT='(A1,A,t21,F6.2,A)',advance="NO") achar(13), " Initializing element geometry: ", (real(ielem_l)/real(nelem))*100.0, "%"
+!            end if
 
 
         end do ! ielem
@@ -351,9 +351,9 @@ contains
 
             call self%elems(ielem)%init_sol(self%neqns,self%nterms_s)
 
-            if ( IRANK == GLOBAL_MASTER ) then
-                write(*,FMT='(A1,A,t21,F6.2,A)',advance="NO") achar(13), " Initializing element solution data: ", (real(ielem)/real(self%nelem))*100.0, "%"
-            end if
+!            if ( IRANK == GLOBAL_MASTER ) then
+!                write(*,FMT='(A1,A,t21,F6.2,A)',advance="NO") achar(13), " Initializing element solution data: ", (real(ielem)/real(self%nelem))*100.0, "%"
+!            end if
 
         end do
 
@@ -410,9 +410,9 @@ contains
             end do !iface
 
 
-            if ( IRANK == GLOBAL_MASTER ) then
-                write(*,FMT='(A1,A,t21,F6.2,A)',advance="NO") achar(13), " Initializing face geometry: ", (real(ielem)/real(self%nelem))*100.0, "%"
-            end if
+!            if ( IRANK == GLOBAL_MASTER ) then
+!                write(*,FMT='(A1,A,t21,F6.2,A)',advance="NO") achar(13), " Initializing face geometry: ", (real(ielem)/real(self%nelem))*100.0, "%"
+!            end if
 
         end do !ielem
 
@@ -465,9 +465,9 @@ contains
 
             end do ! iface
 
-            if ( IRANK == GLOBAL_MASTER ) then
-                write(*,FMT='(A1,A,t21,F6.2,A)',advance="NO") achar(13), " Initializing face solution data: ", (real(ielem)/real(self%nelem))*100.0, "%"
-            end if
+!            if ( IRANK == GLOBAL_MASTER ) then
+!                write(*,FMT='(A1,A,t21,F6.2,A)',advance="NO") achar(13), " Initializing face solution data: ", (real(ielem)/real(self%nelem))*100.0, "%"
+!            end if
 
         end do ! ielem
 
@@ -515,9 +515,9 @@ contains
         !
         do ielem = 1,self%nelem
 
-            if ( IRANK == GLOBAL_MASTER ) then
-                write(*,FMT='(A1,A,t21,F6.2,A)',advance="NO") achar(13), " Local Comm Percent Complete: ", (real(ielem)/real(self%nelem))*100.0, "%"
-            end if
+!            if ( IRANK == GLOBAL_MASTER ) then
+!                write(*,FMT='(A1,A,t21,F6.2,A)',advance="NO") achar(13), " Local Comm Percent Complete: ", (real(ielem)/real(self%nelem))*100.0, "%"
+!            end if
 
 
             do iface = 1,NFACES
@@ -899,7 +899,7 @@ contains
         corner_four  = FACE_CORNERS(iface,4,mapping)
 
 
-        ! For the current face, get the indices of the coordinate nodes for the corners
+        ! For the current face, get the indices of the coordinate nodes for the corners defining a face
         corner_indices(1) = self%elems(ielem_l)%connectivity%get_element_node(corner_one)
         corner_indices(2) = self%elems(ielem_l)%connectivity%get_element_node(corner_two)
         corner_indices(3) = self%elems(ielem_l)%connectivity%get_element_node(corner_three)
@@ -978,8 +978,6 @@ contains
         integer(ik),    allocatable :: comm_procs(:), comm_procs_local(:), comm_procs_chimera(:)
         integer(ik)                 :: ncomm_procs, loc, iproc, proc
         logical                     :: already_added
-!        integer(ik)                 :: myrank, neighbor_rank, ielem, iface, loc, ChiID, idonor, donor_rank
-!        logical                     :: has_neighbor, already_added, comm_neighbor, is_chimera, comm_donor
 
         !
         ! Test if global communication has been initialized
@@ -1034,85 +1032,6 @@ contains
         ! Set vector data to array to be returned.
         !
         comm_procs = comm_procs_vector%data()
-
-
-!        !
-!        ! Get current processor rank
-!        !
-!        myrank = IRANK
-!
-!        do ielem = 1,self%nelem
-!            do iface = 1,size(self%faces,2)
-!
-!                !
-!                ! Get face properties
-!                !
-!                has_neighbor = ( self%faces(ielem,iface)%ftype == INTERIOR )
-!                is_chimera   = ( self%faces(ielem,iface)%ftype == CHIMERA  )
-!
-!
-!                
-!                !
-!                ! For interior neighbor
-!                !
-!                if ( has_neighbor ) then
-!                    !
-!                    ! Get neighbor processor rank
-!                    !
-!                    neighbor_rank = self%faces(ielem,iface)%ineighbor_proc
-!                    comm_neighbor = ( myrank /= neighbor_rank )
-!
-!                    !
-!                    ! If off-processor, add to list, if not already added.
-!                    !
-!                    if ( comm_neighbor ) then
-!                        ! Check if proc was already added to list from another neighbor
-!                        loc = comm_procs_vector%loc(neighbor_rank)
-!                        already_added = ( loc /= 0 )
-!
-!                        if (.not. already_added ) call comm_procs_vector%push_back(neighbor_rank)
-!                    end if
-!
-!
-!
-!
-!                !
-!                ! For Chimera donors
-!                !
-!                else if ( is_chimera ) then
-!                    !
-!                    ! Loop through donor elements
-!                    !
-!                    ChiID = self%faces(ielem,iface)%ChiID
-!                    do idonor = 1,self%chimera%recv%data(ChiID)%ndonors()
-!                        donor_rank = self%chimera%recv%data(ChiID)%donor_proc%at(idonor)
-!                        comm_donor = ( myrank /= donor_rank )
-!
-!                        !
-!                        ! If off-processor, add to list, if not already added.
-!                        !
-!                        if ( comm_donor ) then
-!                            ! Check if proc was already added to list from another donor or neighbor
-!                            loc = comm_procs_vector%loc(donor_rank)
-!                            already_added = ( loc /= 0 )
-!
-!                            if (.not. already_added) call comm_procs_vector%push_back(donor_rank)
-!                        end if
-!
-!                    end do !idonor
-!
-!
-!                end if
-!
-!
-!                
-!
-!            end do
-!        end do
-!
-!
-!        ! Set vector data to array to be returned.
-!        comm_procs = comm_procs_vector%data()
 
 
 
@@ -1319,17 +1238,13 @@ contains
         integer(ik),    allocatable :: comm_procs(:), comm_procs_local(:), comm_procs_chimera(:)
         integer(ik)                 :: iproc, proc, loc
         logical                     :: already_added
-!        integer(ik)                 :: myrank, neighbor_rank, ielem, iface, loc, ChiID, idonor, donor_rank
-!        logical                     :: has_neighbor, already_added, comm_neighbor, is_chimera, comm_donor
+
+
 
         !
         ! Test if global communication has been initialized
         !
         if ( .not. self%global_comm_initialized) call chidg_signal(WARN,"mesh%get_comm_procs: mesh global communication not initialized")
-
-
-
-
 
 
 

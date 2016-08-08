@@ -249,7 +249,6 @@ contains
             call MPI_Recv(nterms, 1, MPI_INTEGER4, iproc, MPI_ANY_TAG, ChiDG_COMM, MPI_STATUS_IGNORE, ierr)
             call MPI_Recv(neqns, 1, MPI_INTEGER4, iproc, MPI_ANY_TAG, ChiDG_COMM, MPI_STATUS_IGNORE, ierr)
 
-            !print*, IRANK, 'Receiving: ', idomain_g, ielement_g
             !
             ! Call densevector initialization routine
             !

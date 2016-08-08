@@ -190,11 +190,13 @@ contains
     subroutine detect_chimera_donors(mesh)
         type(mesh_t),   intent(inout)   :: mesh(:)
 
-        integer(ik) :: idom, igq, ichimera_face, idonor, ierr, iproc, idonor_proc
+        integer(ik) :: idom, igq, ichimera_face, idonor, ierr, iproc, idonor_proc, iproc_loop
         integer(ik) :: ndonors, neqns, nterms_s
         integer(ik) :: idonor_domain_g, idonor_element_g
         integer(ik) :: idonor_domain_l, idonor_element_l
         integer(ik) :: idomain_g_list, idomain_l_list, ielement_g_list, ielement_l_list, neqns_list, nterms_s_list, nterms_c_list, iproc_list
+        integer(ik) :: local_domain_g, parallel_domain_g, donor_domain_g, min_domain
+        integer(ik), allocatable    :: domains_g(:)
 
         integer(ik) :: receiver_indices(5), parallel_indices(8)
         real(rk)    :: gq_coords(3), parallel_coords(3)
@@ -212,8 +214,12 @@ contains
         logical                     :: searching
         logical                     :: donor_found
         logical                     :: proc_has_donor
+        logical                     :: still_need_donor
+        logical                     :: local_donor, parallel_donor
+        logical                     :: use_local, use_parallel, get_donor
 
-        type(ivector_t)             :: ddomain_g, ddomain_l, delement_g, delement_l, dproc, dneqns, dnterms_s, dnterms_c
+        type(ivector_t)             :: ddomain_g, ddomain_l, delement_g, delement_l, dproc, dneqns, dnterms_s, dnterms_c, donor_procs
+        type(ivector_t)             :: donor_proc_indices, donor_proc_domains
         type(pvector_t)             :: dcoordinate
 
 
@@ -284,73 +290,144 @@ contains
                             call gq_node%add_z(offset_z)
 
 
+                            !! NEW
+                            searching = .true.
+                            call MPI_BCast(searching,1,MPI_LOGICAL, iproc, ChiDG_COMM, ierr)
+
+                            ! Send gq node physical coordinates
+                            gq_coords(1) = gq_node%c1_
+                            gq_coords(2) = gq_node%c2_
+                            gq_coords(3) = gq_node%c3_
+                            call MPI_BCast(gq_coords,3,MPI_REAL8, iproc, ChiDG_COMM, ierr)
+
+                            ! Send receiver indices
+                            receiver_indices(1) = receiver%idomain_g
+                            receiver_indices(2) = receiver%idomain_l
+                            receiver_indices(3) = receiver%ielement_g
+                            receiver_indices(4) = receiver%ielement_l
+                            receiver_indices(5) = receiver%iface
+                            call MPI_BCast(receiver_indices,5,MPI_INTEGER4, iproc, ChiDG_COMM, ierr)
+                            !! NEW
+
+
+
                             !
                             ! Call routine to find LOCAL gq donor for current node
                             !
                             call find_gq_donor(mesh,gq_node, receiver, donor, donor_coord)
                             donor_found = (donor_coord%status == VALID_POINT)
 
+                            local_domain_g = 0
+                            local_donor = .false.
+                            if ( donor_found ) then
+                                local_domain_g = donor%idomain_g
+                                local_donor = .true.
+                            end if
+
+
+
+                            !
+                            ! Check which processors have a valid donor
+                            !
+                            do idonor_proc = 0,NRANK-1
+                                if (idonor_proc /= IRANK) then
+                                    ! Check if a donor was found on proc idonor_proc
+                                    call MPI_Recv(proc_has_donor,1,MPI_LOGICAL, idonor_proc, MPI_ANY_TAG, ChiDG_COMM, MPI_STATUS_IGNORE, ierr)
+
+                                    if (proc_has_donor) then
+                                        call donor_proc_indices%push_back(idonor_proc)
+
+                                        call MPI_Recv(donor_domain_g,1,MPI_INTEGER4, idonor_proc, MPI_ANY_TAG, ChiDG_COMM, MPI_STATUS_IGNORE, ierr)
+                                        call donor_proc_domains%push_back(donor_domain_g)
+                                    end if
+                                end if
+                            end do !idonor_proc
+
+
+
+                            !
+                            ! If there is a parallel donor, determine which has the lowest domain index
+                            !
+                            parallel_domain_g = 0
+                            parallel_donor = .false.
+                            if ( donor_proc_indices%size() > 0 ) then
+                                domains_g = donor_proc_domains%data()
+                                min_domain = minloc(domains_g,1)
+
+                                parallel_domain_g = domains_g(min_domain)
+                                parallel_donor = .true.
+                            end if
                             
 
-                            !
-                            ! Initiate search amongst PARALLEL domains
-                            !
-                            if (.not. donor_found) then
-                                searching = .true.
-                                call MPI_BCast(searching,1,MPI_LOGICAL, iproc, ChiDG_COMM, ierr)
 
-                                ! Send gq node physical coordinates
-                                gq_coords(1) = gq_node%c1_
-                                gq_coords(2) = gq_node%c2_
-                                gq_coords(3) = gq_node%c3_
-                                call MPI_BCast(gq_coords,3,MPI_REAL8, iproc, ChiDG_COMM, ierr)
+                            !
+                            ! Determine which donor to use
+                            !
+                            if ( local_donor .and. parallel_donor ) then
+                                use_parallel = (parallel_domain_g < local_domain_g)
 
-                                ! Send receiver indices
-                                receiver_indices(1) = receiver%idomain_g
-                                receiver_indices(2) = receiver%idomain_l
-                                receiver_indices(3) = receiver%ielement_g
-                                receiver_indices(4) = receiver%ielement_l
-                                receiver_indices(5) = receiver%iface
-                                call MPI_BCast(receiver_indices,5,MPI_INTEGER4, iproc, ChiDG_COMM, ierr)
+                            else if (local_donor .and. (.not. parallel_donor)) then
+                                use_local = .true.
+                                use_parallel = .false.
+
+                            else if (parallel_donor .and. (.not. local_donor)) then
+                                use_local = .false.
+                                use_parallel = .true.
+
+                            else
+                                call chidg_signal(FATAL,"detect_chimera_donor: no valid donor found")
+                            end if
+
+
+
+
+                            !
+                            ! Overwrite donor data if use_parallel
+                            !
+                            if (use_parallel) then
 
                                 !
-                                ! Need to loop through all processors here because they are all waiting for current proc
-                                ! to receive a status, proc_has_donor. But, once we find a donor, we don't really need
-                                ! anything from the other procs, so a little extra logic to check if we've already found one.
+                                ! Send a message to the processes that have donors to indicate if we would like to use it
                                 !
-                                do idonor_proc = 0,NRANK-1
-                                    if (idonor_proc /= IRANK ) then
+                                do iproc_loop = 1,donor_proc_indices%size()
+                                    idonor_proc = donor_proc_indices%at(iproc_loop)
 
-                                        ! Check if a donor was found on proc idonor_proc
-                                        call MPI_Recv(proc_has_donor,1,MPI_LOGICAL, idonor_proc, MPI_ANY_TAG, ChiDG_COMM, MPI_STATUS_IGNORE, ierr)
+                                    get_donor = (iproc_loop == min_domain)
+
+                                    call MPI_Send(get_donor,1,MPI_LOGICAL, idonor_proc, 0, ChiDG_COMM, ierr)
+                                end do !idonor_proc
+
+                                !
+                                ! Receive parallel donor index from processor indicated
+                                !
+                                idonor_proc = donor_proc_indices%at(min_domain)
+                                call MPI_Recv(parallel_indices,8,MPI_INTEGER4, idonor_proc, MPI_ANY_TAG, ChiDG_COMM, MPI_STATUS_IGNORE, ierr)
+                                donor%idomain_g  = parallel_indices(1)
+                                donor%idomain_l  = parallel_indices(2)
+                                donor%ielement_g = parallel_indices(3)
+                                donor%ielement_l = parallel_indices(4)
+                                donor%iproc      = parallel_indices(5)
+                                donor%neqns      = parallel_indices(6)
+                                donor%nterms_s   = parallel_indices(7)
+                                donor%nterms_c   = parallel_indices(8)
 
 
-                                        ! If proc has donor and we haven't found one yet, then store the data. If we've already found one then just
-                                        if (proc_has_donor .and. (.not. donor_found)) then
-                                            ! Receive donor element indices
-                                            call MPI_Recv(parallel_indices,8,MPI_INTEGER4, idonor_proc, MPI_ANY_TAG, ChiDG_COMM, MPI_STATUS_IGNORE, ierr)
-                                            donor%idomain_g  = parallel_indices(1)
-                                            donor%idomain_l  = parallel_indices(2)
-                                            donor%ielement_g = parallel_indices(3)
-                                            donor%ielement_l = parallel_indices(4)
-                                            donor%iproc      = parallel_indices(5)
-                                            donor%neqns      = parallel_indices(6)
-                                            donor%nterms_s   = parallel_indices(7)
-                                            donor%nterms_c   = parallel_indices(8)
 
-                                            ! Receive donor local coordinate
-                                            call MPI_Recv(parallel_coords,3,MPI_REAL8, idonor_proc, MPI_ANY_TAG, ChiDG_COMM, MPI_STATUS_IGNORE, ierr)
-                                            call donor_coord%set(parallel_coords(1), parallel_coords(2), parallel_coords(3))
-                                            donor_found = .true.
-                                            searching = .false.
-                                        end if ! proc_has_donor
+                                ! Receive donor local coordinate
+                                call MPI_Recv(parallel_coords,3,MPI_REAL8, idonor_proc, MPI_ANY_TAG, ChiDG_COMM, MPI_STATUS_IGNORE, ierr)
+                                call donor_coord%set(parallel_coords(1), parallel_coords(2), parallel_coords(3))
 
-                                            
-                                    end if
-                                end do ! idonor_proc
+                            else
 
-                            end if ! donor not found
+                                ! Send a message to all procs with donors that we don't need them
+                                get_donor = .false.
+                                do iproc_loop = 1,donor_proc_indices%size()
+                                    idonor_proc = donor_proc_indices%at(iproc_loop)
 
+                                    call MPI_Send(get_donor,1,MPI_LOGICAL, idonor_proc, 0, ChiDG_COMM, ierr)
+                                end do
+
+                            end if
 
 
 
@@ -358,21 +435,23 @@ contains
                             !
                             ! Add donor location and coordinate
                             !
-                            if (donor_found) then
-                                call ddomain_g%push_back(donor%idomain_g)
-                                call ddomain_l%push_back(donor%idomain_l)
-                                call delement_g%push_back(donor%ielement_g)
-                                call delement_l%push_back(donor%ielement_l)
-                                call dproc%push_back(donor%iproc)
-                                call dneqns%push_back(donor%neqns)
-                                call dnterms_s%push_back(donor%nterms_s)
-                                call dnterms_c%push_back(donor%nterms_c)
+                            call ddomain_g%push_back(donor%idomain_g)
+                            call ddomain_l%push_back(donor%idomain_l)
+                            call delement_g%push_back(donor%ielement_g)
+                            call delement_l%push_back(donor%ielement_l)
+                            call dproc%push_back(donor%iproc)
+                            call dneqns%push_back(donor%neqns)
+                            call dnterms_s%push_back(donor%nterms_s)
+                            call dnterms_c%push_back(donor%nterms_c)
 
-                                call dcoordinate%push_back(donor_coord)
-                            else
-                                call chidg_signal_three(FATAL,"detect_chimera_donors: Failed to find donor for chimera quadrature node", gq_node%c1_, gq_node%c2_, gq_node%c3_)
-                            end if
+                            call dcoordinate%push_back(donor_coord)
 
+
+                            !
+                            ! Clear working vectors
+                            !
+                            call donor_proc_indices%clear()
+                            call donor_proc_domains%clear()
 
                         end do ! igq
 
@@ -444,7 +523,6 @@ contains
                         !
                         ! Allocate chimera donor coordinate and quadrature index arrays. One list for each donor
                         !
-                        !mesh(idom)%chimera%recv%data(ichimera_face)%ndonors = ndonors
                         allocate( mesh(idom)%chimera%recv%data(ichimera_face)%donor_coords(ndonors), &
                                   mesh(idom)%chimera%recv%data(ichimera_face)%donor_gq_indices(ndonors), stat=ierr)
                         if (ierr /= 0) call AllocationError
@@ -510,6 +588,7 @@ contains
                         call dnterms_c%clear()
 
 
+
                     end do ! iface
 
                 end do ! idom
@@ -573,26 +652,33 @@ contains
                     call MPI_Send(donor_found,1,MPI_LOGICAL,iproc,0,ChiDG_COMM,ierr)
 
                     if (donor_found) then
-                        ! Add donor to the send list
-                        call mesh(donor%idomain_l)%chimera%send%add_donor(donor%idomain_g, donor%idomain_l, donor%ielement_g, donor%ielement_l, iproc)
+
+                        call MPI_Send(donor%idomain_g,1,MPI_INTEGER4,iproc,0,ChiDG_COMM,ierr)
+
+                        call MPI_Recv(still_need_donor,1,MPI_LOGICAL, iproc, MPI_ANY_TAG, ChiDG_COMM, MPI_STATUS_IGNORE, ierr)
+
+                        if (still_need_donor) then
+                            ! Add donor to the send list
+                            call mesh(donor%idomain_l)%chimera%send%add_donor(donor%idomain_g, donor%idomain_l, donor%ielement_g, donor%ielement_l, iproc)
 
 
-                        ! Send donor indices
-                        parallel_indices(1) = donor%idomain_g
-                        parallel_indices(2) = donor%idomain_l
-                        parallel_indices(3) = donor%ielement_g
-                        parallel_indices(4) = donor%ielement_l
-                        parallel_indices(5) = donor%iproc
-                        parallel_indices(6) = donor%neqns
-                        parallel_indices(7) = donor%nterms_s
-                        parallel_indices(8) = donor%nterms_c
-                        call MPI_Send(parallel_indices,8,MPI_INTEGER4,iproc,0,ChiDG_COMM,ierr)
+                            ! Send donor indices
+                            parallel_indices(1) = donor%idomain_g
+                            parallel_indices(2) = donor%idomain_l
+                            parallel_indices(3) = donor%ielement_g
+                            parallel_indices(4) = donor%ielement_l
+                            parallel_indices(5) = donor%iproc
+                            parallel_indices(6) = donor%neqns
+                            parallel_indices(7) = donor%nterms_s
+                            parallel_indices(8) = donor%nterms_c
+                            call MPI_Send(parallel_indices,8,MPI_INTEGER4,iproc,0,ChiDG_COMM,ierr)
 
-                        ! Send donor-local coordinate for the quadrature node
-                        parallel_coords(1) = donor_coord%c1_
-                        parallel_coords(2) = donor_coord%c2_
-                        parallel_coords(3) = donor_coord%c3_
-                        call MPI_Send(parallel_coords,3,MPI_REAL8,iproc,0,ChiDG_COMM,ierr)
+                            ! Send donor-local coordinate for the quadrature node
+                            parallel_coords(1) = donor_coord%c1_
+                            parallel_coords(2) = donor_coord%c2_
+                            parallel_coords(3) = donor_coord%c3_
+                            call MPI_Send(parallel_coords,3,MPI_REAL8,iproc,0,ChiDG_COMM,ierr)
+                        end if
 
                     end if
 
@@ -612,15 +698,7 @@ contains
 
 
 
-
-
-
-
         end do ! iproc
-
-
-
-
 
 
 
@@ -664,7 +742,8 @@ contains
 
         integer(ik)             :: idom, ielem, inewton, spacedim
         integer(ik)             :: idomain_g, idomain_l, ielement_g, ielement_l
-        integer(ik)             :: icandidate, ncandidates, idonor, ndonors
+        integer(ik)             :: icandidate, ncandidates, idonor, ndonors, min_domain
+        integer(ik), allocatable    :: domains_g(:)
         type(point_t)           :: gq_comp
         real(rk)                :: xgq, ygq, zgq
         real(rk)                :: dx, dy, dz
@@ -696,6 +775,8 @@ contains
         do idom = 1,size(mesh)
             idomain_g = mesh(idom)%idomain_g
             idomain_l = mesh(idom)%idomain_l
+
+
 
             !
             ! Loop through elements in the current domain
@@ -739,8 +820,7 @@ contains
                 ! Make sure that we arent adding the receiver element itself as a potential donor
                 !
                 receiver = ( (idomain_g == receiver_face%idomain_g) .and. (ielement_g == receiver_face%ielement_g) )
-                !receiver = ( (idomain_g == receiver_face%idomain_g) .and. (ielement_g == receiver_face%ielement_g) .and. &
-                !             (idomain_l == receiver_face%idomain_l) .and. (ielement_l == receiver_face%ielement_l) )
+
 
                 !
                 ! If the node was within the bounding coordinates, flag the element as a potential donor
@@ -760,6 +840,8 @@ contains
 
 
 
+
+
         !
         ! Test gq_node physical coordinates on candidate element volume to try and map to donor local coordinates
         !
@@ -771,11 +853,17 @@ contains
             ielement_l = candidate_elements_l%at(icandidate)
 
             
+            !
             ! Try to find donor (xi,eta,zeta) coordinates for receiver (xgq,ygq,zgq)
+            !
             gq_comp = mesh(idomain_l)%elems(ielement_l)%computational_point(xgq,ygq,zgq)    ! Newton's method routine
 
 
+
             ! Add donor if gq_comp point is valid
+            !
+            ! NOTE: the exit call here enforces that only one candidate is considered and others are thrown away. Maybe not the best choice.
+            !
             donor_found = (gq_comp%status == VALID_POINT)
             if ( donor_found ) then
                 ndonors = ndonors + 1
@@ -783,7 +871,7 @@ contains
                 call donors_xi%push_back(  gq_comp%c1_)
                 call donors_eta%push_back( gq_comp%c2_)
                 call donors_zeta%push_back(gq_comp%c3_)
-                exit
+                !exit
             end if
 
         end do ! icandidate
@@ -834,7 +922,38 @@ contains
         elseif (ndonors > 1) then
             !TODO: Account for case of multiple overlapping donors. When a gq node could be filled by two or more elements.
             !      Maybe, just choose one. Maybe, average contribution from all potential donors.
-            call chidg_signal(FATAL,"find_gq_donor: Multiple donors found for the same gq_node")
+            !call chidg_signal(FATAL,"find_gq_donor: Multiple donors found for the same gq_node")
+
+            !
+            ! OPTION 1: Choose donor with minimum global domain index
+            !
+
+            ! Get domain global indices of valid donors
+            if (allocated(domains_g)) deallocate(domains_g)
+            allocate(domains_g(donors%size()))
+            do idonor = 1,donors%size()
+                domains_g(idonor) = candidate_domains_g%at(donors%at(idonor))
+            end do
+
+            ! Get index of minimum domain
+            min_domain = minloc(domains_g,1)
+            idonor = donors%at(min_domain)
+
+            donor_element%idomain_g  = candidate_domains_g%at(idonor)
+            donor_element%idomain_l  = candidate_domains_l%at(idonor)
+            donor_element%ielement_g = candidate_elements_g%at(idonor)
+            donor_element%ielement_l = candidate_elements_l%at(idonor)
+            donor_element%iproc      = IRANK
+            donor_element%neqns      = mesh(donor_element%idomain_l)%elems(donor_element%ielement_l)%neqns
+            donor_element%nterms_s   = mesh(donor_element%idomain_l)%elems(donor_element%ielement_l)%nterms_s
+            donor_element%nterms_c   = mesh(donor_element%idomain_l)%elems(donor_element%ielement_l)%nterms_c
+
+            xi   = donors_xi%at(min_domain)
+            eta  = donors_eta%at(min_domain)
+            zeta = donors_zeta%at(min_domain)
+            call donor_coordinate%set(xi,eta,zeta)
+            donor_coordinate%status = VALID_POINT
+
 
         else
             call chidg_signal(FATAL,"find_gq_donor: invalid number of donors")

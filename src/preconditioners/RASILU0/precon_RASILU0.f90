@@ -12,7 +12,7 @@ module precon_RASILU0
     use type_chidgMatrix,       only: chidgMatrix_t
     use type_chidgVector,       only: chidgVector_t
 
-    use mpi_f08,                only: MPI_ISend, MPI_Recv, MPI_REAL8, MPI_REQUEST, MPI_STATUS_IGNORE
+    use mpi_f08,                only: MPI_ISend, MPI_Recv, MPI_REAL8, MPI_REQUEST, MPI_STATUS_IGNORE, MPI_Barrier
     implicit none
 
     external DGEMV
@@ -64,6 +64,7 @@ contains
         class(precon_RASILU0_t),    intent(inout)   :: self
         type(chidg_data_t),         intent(in)      :: data
 
+        integer :: ierr
 
         !
         ! Initialize Lower-Diagonal matrix for processor-local data
@@ -77,6 +78,7 @@ contains
         ! Initialize the overlap data
         !
         call self%send%init(data%mesh, data%sdata%lhs)
+!        call MPI_Barrier(ChiDG_Comm,ierr)
         call self%recv%init(data%mesh, data%sdata%lhs, data%sdata%rhs)
 
     

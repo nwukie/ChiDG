@@ -59,7 +59,7 @@ contains
         type(mpi_comm),         intent(in)  :: comm
 
         real(rk)    :: local_dot, comm_dot
-        integer(ik) :: ierr
+        integer     :: ierr
 
 
         ! Compute the local vector dot-product

@@ -7,7 +7,7 @@ module type_chidgVector
     use type_chidgVector_send,      only: chidgVector_send_t
     use type_chidgVector_recv,      only: chidgVector_recv_t
     use type_blockvector
-    use mpi_f08,                    only: MPI_AllReduce, MPI_Reduce, MPI_COMM, MPI_REAL8, MPI_SUM, MPI_STATUS_IGNORE, MPI_Recv, MPI_Request, MPI_STATUSES_IGNORE
+    use mpi_f08,                    only: MPI_AllReduce, MPI_Reduce, MPI_COMM, MPI_REAL8, MPI_SUM, MPI_STATUS_IGNORE, MPI_Recv, MPI_Request, MPI_STATUSES_IGNORE, MPI_INTEGER4
     implicit none
 
 
@@ -347,6 +347,8 @@ contains
 
                     ! Post non-blocking send message for the vector data
                     data_size = size(self%dom(idom)%vecs(ielem)%vec)
+                    call MPI_ISend(self%dom(idom)%vecs(ielem)%dparent_g_, 1, MPI_INTEGER4, iproc_send, 0, ChiDG_COMM, isend_handle, ierr)
+                    call MPI_ISend(self%dom(idom)%vecs(ielem)%eparent_g_, 1, MPI_INTEGER4, iproc_send, 0, ChiDG_COMM, isend_handle, ierr)
                     call MPI_ISend(self%dom(idom)%vecs(ielem)%vec, data_size, MPI_REAL8, iproc_send, 0, ChiDG_COMM, isend_handle, ierr)
 
                     ! Add non-blocking send handle to list of things to wait on
@@ -387,8 +389,9 @@ contains
     subroutine comm_recv(self)
         class(chidgVector_t),   intent(inout)   :: self
 
-        integer(ik) :: icomm, idom_recv, ielem_recv, proc_recv, data_size, ierr
+        integer(ik) :: icomm, idom_recv, ielem_recv, proc_recv, data_size, ierr, dparent_g, eparent_g
 
+        real(rk), allocatable   :: test(:)
 
         !
         ! Receive data from each communicating processor
@@ -402,7 +405,25 @@ contains
             do idom_recv = 1,size(self%recv%comm(icomm)%dom)
                 do ielem_recv = 1,size(self%recv%comm(icomm)%dom(idom_recv)%vecs)
                     data_size = size(self%recv%comm(icomm)%dom(idom_recv)%vecs(ielem_recv)%vec)
+                    call MPI_Recv(dparent_g, 1, MPI_INTEGER4, proc_recv, 0, ChiDG_COMM, MPI_STATUS_IGNORE, ierr)
+                    call MPI_Recv(eparent_g, 1, MPI_INTEGER4, proc_recv, 0, ChiDG_COMM, MPI_STATUS_IGNORE, ierr)
+
+
+                    if ( (dparent_g /= self%recv%comm(icomm)%dom(idom_recv)%vecs(ielem_recv)%dparent_g()) .or. (eparent_g /= self%recv%comm(icomm)%dom(idom_recv)%vecs(ielem_recv)%eparent_g()) ) then
+                        call chidg_signal(FATAL,"Error in comm_send/comm_recv alignment")
+                    end if
                     call MPI_Recv(self%recv%comm(icomm)%dom(idom_recv)%vecs(ielem_recv)%vec, data_size, MPI_REAL8, proc_recv, 0, ChiDG_COMM, MPI_STATUS_IGNORE, ierr)
+
+!                    test = self%recv%comm(icomm)%dom(idom_recv)%vecs(ielem_recv)%vec - real(eparent_g/100._rk,rk)
+!
+!                    if (abs(test(3)) > 0.0000000001_rk) then
+!                        call chidg_signal(FATAL, "comm_recv: wrong value")
+!                    end if
+!
+!                    if ( dparent_g == 1 .and. (eparent_g == 35 .or. eparent_g == 33) ) then
+!                    print*, 'Domain, Element: ', dparent_g, eparent_g
+!                    print*, self%recv%comm(icomm)%dom(idom_recv)%vecs(ielem_recv)%vec
+!                    end if
                 end do ! ielem_recv
             end do ! idom_recv
 

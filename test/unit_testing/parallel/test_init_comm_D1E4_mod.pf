@@ -1,12 +1,12 @@
 module test_init_comm_D1E4_mod
     use mod_constants,              only: XI_MIN, XI_MAX, BOUNDARY, IO_DESTINATION
     use type_chidg,                 only: chidg_t
-    use type_partition,             only: partition_t
-    use type_domain_connectivity,   only: domain_connectivity_t
+!    use type_partition,             only: partition_t
+!    use type_domain_connectivity,   only: domain_connectivity_t
 
     use mod_kinds,                  only: ik
-    use mod_hdfio,                  only: read_connectivity_hdf
-    use mod_partitioners,           only: partition_connectivity, send_partitions, recv_partition
+!    use mod_hdfio,                  only: read_connectivity_hdf
+!    use mod_partitioners,           only: partition_connectivity, send_partitions, recv_partition
     use mod_chidg_mpi,              only: IRANK, NRANK, GLOBAL_MASTER
 
     use mpi_f08,                    only: MPI_Barrier, MPI_COMM_WORLD, MPI_COMM
@@ -34,9 +34,9 @@ contains
         class(MpiTestMethod), intent(inout) :: this
 
         type(chidg_t)                               :: chidg
-        type(domain_connectivity_t),    allocatable :: connectivities(:)
-        type(partition_t),              allocatable :: partitions(:)
-        type(partition_t)                           :: partition
+!        type(domain_connectivity_t),    allocatable :: connectivities(:)
+!        type(partition_t),              allocatable :: partitions(:)
+!        type(partition_t)                           :: partition
         type(mpi_comm)                              :: ChiDG_COMM
 
         integer(ik)                     :: iread, spacedim, ierr, nterms_s
@@ -59,29 +59,31 @@ contains
 
 
 
-        !
-        ! Read connectivities, partition, distribute
-        !
-        if ( IRANK == GLOBAL_MASTER ) then
-            call read_connectivity_hdf(gridfile,connectivities)
-
-            call partition_connectivity(connectivities, partitions)
-
-            call send_partitions(partitions,ChiDG_COMM)
-        end if
-
-
-        !
-        ! Receive partition from GLOBAL_MASTER
-        !
-        call recv_partition(partition,ChiDG_COMM)
+!        !
+!        ! Read connectivities, partition, distribute
+!        !
+!        if ( IRANK == GLOBAL_MASTER ) then
+!            call read_connectivity_hdf(gridfile,connectivities)
+!
+!            call partition_connectivity(connectivities, partitions)
+!
+!            call send_partitions(partitions,ChiDG_COMM)
+!        end if
+!
+!
+!        !
+!        ! Receive partition from GLOBAL_MASTER
+!        !
+!        call recv_partition(partition,ChiDG_COMM)
 
 
         !
         ! Read partition data: grid, boundary conditions
         !
-        call chidg%read_grid(gridfile, spacedim, partition)
-        call chidg%read_boundaryconditions(gridfile, partition)
+        !call chidg%read_grid(gridfile, spacedim, partition)
+        !call chidg%read_boundaryconditions(gridfile, partition)
+        call chidg%read_grid(gridfile, spacedim)
+        call chidg%read_boundaryconditions(gridfile)
 
 
         !

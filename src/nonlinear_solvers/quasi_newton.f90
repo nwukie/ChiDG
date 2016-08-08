@@ -66,7 +66,7 @@ contains
         class(preconditioner_t),    optional,   intent(inout)   :: preconditioner
 
         character(100)          :: filename
-        integer(ik)             :: itime, nsteps, ielem, wcount, iblk, iindex, niter, ieqn, idom
+        integer(ik)             :: itime, nsteps, ielem, wcount, iblk, iindex, niter, ieqn, idom, ierr
         integer(ik)             :: rstart, rend, cstart, cend, nterms
         real(rk)                :: dtau, amp, cfl, cfln, entropy_error, timing
         real(rk)                :: rnorm0, rnorm, resid, resid_new
@@ -243,6 +243,7 @@ contains
                 !end if
                 !wcount = wcount + 1
 
+                call MPI_Barrier(ChiDG_COMM,ierr)
 
             end do ! niter
 

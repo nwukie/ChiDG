@@ -32,9 +32,18 @@ module rtest_entropy_errorrate_mod
     public  :: rtest_equations_euler_entropyerror
 
 
-    !
-    ! This parameter is used to test...
-    !
+
+
+
+
+
+    !>  This parameter initialized the state for each test
+    !!
+    !!  @author Nathan A. Wukie
+    !!
+    !!
+    !!
+    !-------------------------------------------------------------------------------
     @TestParameter
     type, extends(AbstractTestParameter) :: case_grid_order
         character(100)  :: gridfile
@@ -43,13 +52,17 @@ module rtest_entropy_errorrate_mod
     contains
         procedure   :: toString
     end type case_grid_order
+    !*******************************************************************************
 
 
 
 
-    !
-    ! Main testing fixture with data containers
-    !
+    !> Main testing fixture with test components that get initialized for each test
+    !!
+    !!
+    !!
+    !!
+    !-------------------------------------------------------------------------------
     @TestCase(testParameters={getParameters()}, constructor=newTest)
     type, extends(ParameterizedTestCase) :: rtest_equations_euler_entropyerror
         character(100)  :: gridfile
@@ -59,6 +72,10 @@ module rtest_entropy_errorrate_mod
         procedure   :: setUp
         procedure   :: tearDown
     end type rtest_equations_euler_entropyerror
+    !*******************************************************************************
+
+
+
 
 
 
@@ -67,23 +84,21 @@ module rtest_entropy_errorrate_mod
 
 contains
 
-    !
-    ! Set up
-    !
+
+    !> Set-up, tear-down, output
+    !!
+    !!
+    !!
+    !!
+    !--------------------------------------------------------------------------------
     subroutine setUp(this)
         class(rtest_equations_euler_entropyerror),  intent(inout)   :: this
+    end subroutine setUp
 
 
-    end subroutine
-
-
-
-    !
-    ! Tear down
-    !
     subroutine tearDown(this)
         class(rtest_equations_euler_entropyerror),  intent(inout)   :: this
-    end subroutine
+    end subroutine tearDown
 
 
 
@@ -140,6 +155,7 @@ contains
 
         string = trim(buffer)
     end function
+    !********************************************************************************************
 
 
 
@@ -149,13 +165,13 @@ contains
 
 
 
-    !----------------------------------------------------------------------------------------
-    !
-    !
-    ! Test routine
-    !
-    !
-    !----------------------------------------------------------------------------------------
+    !>  Main test routine
+    !!
+    !!
+    !!
+    !!
+    !!
+    !--------------------------------------------------------------------------------------------
     @Test
     subroutine rtest_entropy_error_rate(self)
         use mod_kinds,          only: rk, ik

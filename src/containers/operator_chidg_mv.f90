@@ -5,7 +5,7 @@ module operator_chidg_mv
     use mod_chidg_mpi,      only: IRANK, ChiDG_COMM
     use type_chidgMatrix,   only: chidgMatrix_t
     use type_chidgVector
-    use mod_dgemv,          only: chidg_matmul
+!    use mod_dgemv,          only: chidg_matmul
 
     use type_timer,         only: timer_t
 
@@ -111,8 +111,8 @@ contains
                                 nrows = size(A%dom(idom)%lblks(ielem,iblk)%mat,1)
                                 ncols = size(A%dom(idom)%lblks(ielem,iblk)%mat,2)
                                 call timer_blas%start()
-                                !call DGEMV('N', nrows, ncols, ONE, A%dom(idom)%lblks(ielem,iblk)%mat, nrows, x%dom(idom)%vecs(eparent_l)%vec, 1, ONE, res%dom(idom)%vecs(ielem)%vec, 1)
-                                call chidg_matmul(A%dom(idom)%lblks(ielem,iblk)%mat,x%dom(idom)%vecs(eparent_l)%vec, res%dom(idom)%vecs(ielem)%vec)
+                                call DGEMV('N', nrows, ncols, ONE, A%dom(idom)%lblks(ielem,iblk)%mat, nrows, x%dom(idom)%vecs(eparent_l)%vec, 1, ONE, res%dom(idom)%vecs(ielem)%vec, 1)
+                                !call chidg_matmul(A%dom(idom)%lblks(ielem,iblk)%mat,x%dom(idom)%vecs(eparent_l)%vec, res%dom(idom)%vecs(ielem)%vec)
                                 call timer_blas%stop()
 
                             end associate
@@ -157,13 +157,14 @@ contains
                                     nonconforming = ( size(Amat,2) /= size(xvec) )
                                     if (nonconforming) call chidg_signal(FATAL,"operator_chidg_mv: nonconforming Chimera m-v operation")
 
-                                    !resvec = resvec + matmul(Amat,xvec)
+                                    resvec = resvec + matmul(Amat,xvec)
                                     !res%dom(idom)%vecs(ielem)%vec = res%dom(idom)%vecs(ielem)%vec + matmul(A%dom(idom)%chi_blks(ielem,iblk)%mat, x%dom(dparent_l)%vecs(eparent_l)%vec)
 
-                                    nrows = size(A%dom(idom)%chi_blks(ielem,iblk)%mat,1)
-                                    ncols = size(A%dom(idom)%chi_blks(ielem,iblk)%mat,2)
+
+                                    !nrows = size(A%dom(idom)%chi_blks(ielem,iblk)%mat,1)
+                                    !ncols = size(A%dom(idom)%chi_blks(ielem,iblk)%mat,2)
                                     call timer_blas%start()
-                                    call DGEMV('N', nrows, ncols, ONE, A%dom(idom)%chi_blks(ielem,iblk)%mat, nrows, x%dom(dparent_l)%vecs(eparent_l)%vec, 1, ONE, res%dom(idom)%vecs(ielem)%vec, 1)
+                                    !call DGEMV('N', nrows, ncols, ONE, A%dom(idom)%chi_blks(ielem,iblk)%mat, nrows, x%dom(dparent_l)%vecs(eparent_l)%vec, 1, ONE, res%dom(idom)%vecs(ielem)%vec, 1)
                                     call timer_blas%stop()
 
                                 end associate
@@ -277,8 +278,8 @@ contains
                                 nrows = size(A%dom(idom)%lblks(ielem,iblk)%mat,1)
                                 ncols = size(A%dom(idom)%lblks(ielem,iblk)%mat,2)
                                 call timer_blas%start()
-                                !call DGEMV('N', nrows, ncols, ONE, A%dom(idom)%lblks(ielem,iblk)%mat, nrows, x%recv%comm(recv_comm)%dom(recv_domain)%vecs(recv_element)%vec, 1, ONE, res%dom(idom)%vecs(ielem)%vec, 1)
-                                call chidg_matmul(A%dom(idom)%lblks(ielem,iblk)%mat,x%recv%comm(recv_comm)%dom(recv_domain)%vecs(recv_element)%vec, res%dom(idom)%vecs(ielem)%vec)
+                                call DGEMV('N', nrows, ncols, ONE, A%dom(idom)%lblks(ielem,iblk)%mat, nrows, x%recv%comm(recv_comm)%dom(recv_domain)%vecs(recv_element)%vec, 1, ONE, res%dom(idom)%vecs(ielem)%vec, 1)
+                                !call chidg_matmul(A%dom(idom)%lblks(ielem,iblk)%mat,x%recv%comm(recv_comm)%dom(recv_domain)%vecs(recv_element)%vec, res%dom(idom)%vecs(ielem)%vec)
                                 call timer_blas%stop()
 
                             end associate
@@ -322,18 +323,20 @@ contains
                                             xvec   => x%recv%comm(recv_comm)%dom(recv_domain)%vecs(recv_element)%vec,   &
                                             Amat   => A%dom(idom)%chi_blks(ielem,iblk)%mat )
 
+
                                     !
                                     ! Test matrix vector sizes
                                     !
                                     nonconforming = ( size(Amat,2) /= size(xvec) )
                                     if (nonconforming) call chidg_signal(FATAL,"operator_chidg_mv: nonconforming Chimera m-v operation")
 
-                                    !resvec = resvec + matmul(Amat,xvec)
+                                    resvec = resvec + matmul(Amat,xvec)
                                     !res%dom(idom)%vecs(ielem)%vec = res%dom(idom)%vecs(ielem)%vec + matmul(A%dom(idom)%chi_blks(ielem,iblk)%mat, x%recv%comm(recv_comm)%dom(recv_domain)%vecs(recv_element)%vec)
 
-                                    nrows = size(A%dom(idom)%chi_blks(ielem,iblk)%mat,1)
-                                    ncols = size(A%dom(idom)%chi_blks(ielem,iblk)%mat,2)
-                                    call DGEMV('N', nrows, ncols, ONE, A%dom(idom)%chi_blks(ielem,iblk)%mat, nrows, x%recv%comm(recv_comm)%dom(recv_domain)%vecs(recv_element)%vec, 1, ONE, res%dom(idom)%vecs(ielem)%vec, 1)
+
+                                    !nrows = size(A%dom(idom)%chi_blks(ielem,iblk)%mat,1)
+                                    !ncols = size(A%dom(idom)%chi_blks(ielem,iblk)%mat,2)
+                                    !call DGEMV('N', nrows, ncols, ONE, A%dom(idom)%chi_blks(ielem,iblk)%mat, nrows, x%recv%comm(recv_comm)%dom(recv_domain)%vecs(recv_element)%vec, 1, ONE, res%dom(idom)%vecs(ielem)%vec, 1)
 
 
                                 end associate

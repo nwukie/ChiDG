@@ -21,10 +21,10 @@ module type_densevector
     type, public :: densevector_t
 
         ! Element Associativity
-        integer(ik), private    :: dparent_g_
-        integer(ik), private    :: dparent_l_
-        integer(ik), private    :: eparent_g_
-        integer(ik), private    :: eparent_l_
+        integer(ik)             :: dparent_g_
+        integer(ik)             :: dparent_l_
+        integer(ik)             :: eparent_g_
+        integer(ik)             :: eparent_l_
 
         ! Storage size and equation information
         integer(ik), private    :: nterms_                      !< Number of terms in an expansion

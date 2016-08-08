@@ -213,8 +213,6 @@ contains
             !
             do irow = 1,size(self%LD%dom(idom)%lblks,1)
 
-
-
                 !
                 ! Lower-Triangular blocks
                 !

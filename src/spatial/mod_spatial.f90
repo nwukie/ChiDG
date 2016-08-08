@@ -283,6 +283,11 @@ contains
 
 
 
+
+
+
+
+
             call timer%stop()
             call timer%report('Spatial Discretization Time')
             call comm_timer%report('    - Spatial comm time:')

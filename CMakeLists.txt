@@ -66,7 +66,8 @@ elseif (${Fortran_VENDOR} MATCHES "GNU")
     set (USER_COMPILE_FLAGS_DEBUG   "-O0 -cpp -fopenmp --coverage -ffree-form -ffree-line-length-none -fbacktrace -fstack-protector -fcheck=bounds -fmax-stack-var-size=1600 -p -g")    # Note: -fcheck=all has issues with passing null pointer in tecio_interface
     #set (USER_COMPILE_FLAGS_RELEASE "-O3 -cpp -fopenmp -ffree-form -ffree-line-length-none -fexternal-blas -march=native -funroll-loops -m64 -fwhole-file")
     #set (USER_COMPILE_FLAGS_RELEASE "-O3 -cpp -ffree-form -ffree-line-length-none -fexternal-blas -march=native -m64 -funroll-loops -floop-parallelize-all -fwhole-file -ftree-parallelize-loops=4 -floop-interchange -floop-strip-mine -floop-block")
-    set (USER_COMPILE_FLAGS_RELEASE "-O3 -cpp -ffree-form -ffree-line-length-none -fexternal-blas -march=native -m64 -funroll-loops -fwhole-file -floop-interchange -floop-strip-mine -floop-block")
+    #set (USER_COMPILE_FLAGS_RELEASE "-O3 -cpp -ffree-form -ffree-line-length-none -fexternal-blas -march=native -m64 -funroll-loops -fwhole-file -floop-interchange -floop-strip-mine -floop-block")
+    set (USER_COMPILE_FLAGS_RELEASE "-O3 -cpp -ffree-form -ffree-line-length-none -fexternal-blas -march=native -funroll-loops")
 
     set (CMAKE_Fortran_LINK_FLAGS_DEBUG "-O0 --coverage")
     set (CMAKE_Fortran_LINK_FLAGS_RELEASE "-O3")
@@ -125,11 +126,13 @@ message(STATUS "LAPACK_LIBRARIES: " ${LAPACK_LIBRARIES})
 if (USER_MPI)
     message(STATUS "Reading environment variables for MPI_Fortran_COMPILER and MPI_Fortran_INCLUDE_PATH. Please be sure these are set as environment variables")
     set(MPI_Fortran_COMPILER $ENV{MPI_Fortran_COMPILER})
+    set(MPI_Fortran_MODULE_PATH $ENV{MPI_Fortran_MODULE_PATH})
     set(MPI_Fortran_INCLUDE_PATH $ENV{MPI_Fortran_INCLUDE_PATH})
 endif()
 
 
 find_package(MPI REQUIRED)
+include_directories(${MPI_Fortran_MODULE_PATH})
 include_directories(${MPI_Fortran_INCLUDE_PATH})
 
 
@@ -269,18 +272,19 @@ install(TARGETS chidg coredg
 
 if (TESTING)
 
+    file(REMOVE ${CMAKE_BINARY_DIR}/bin/unittest.sh)
+    file(REMOVE ${CMAKE_BINARY_DIR}/bin/regtest.sh)
+
+
     enable_testing()
 
-    #
-    # Set pFUnit installation based on compiler vendor
-    #
-    #if (${Fortran_VENDOR} MATCHES "INTEL")
-    #    set(PF_ROOT $ENV{PFUNIT}/intel)
-    #elseif (${Fortran_VENDOR} MATCHES "GNU")
-    #    set(PF_ROOT $ENV{PFUNIT}/gnu)
-    #endif()
 
+    #
+    # Get paths for pFUnit and MPIRUN
+    #
     set(PF_ROOT $ENV{PFUNIT})
+    set(MPIRUN_EXECUTABLE $ENV{MPIRUN_EXECUTABLE})
+
 
     #
     # Set location of pFUnit libs

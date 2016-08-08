@@ -8,7 +8,7 @@ add_test_sources(parallel
                 test_comm_chimera_mod.pf
                 )
                 
-add_test_target(parallel unit ${parallel_sources})
+add_test_target(parallel unit_parallel ${parallel_sources})
 
 
 

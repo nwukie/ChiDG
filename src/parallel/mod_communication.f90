@@ -64,6 +64,8 @@ contains
         !
         do iproc = 0,NRANK-1
 
+
+
             !
             ! For current rank, send out requests for neighbors
             !
@@ -191,6 +193,7 @@ contains
         type(mesh_t),   intent(inout)   :: mesh(:)
         type(mpi_comm)                  :: ChiDG_COMM
 
+        integer :: ierr
 
 
         ! Process-local routine, just to flag faces
@@ -205,6 +208,8 @@ contains
         call compute_chimera_interpolators(mesh)
 
 
+        ! Barrier
+        call MPI_Barrier(ChiDG_COMM,ierr)
 
     end subroutine establish_chimera_communication
     !***********************************************************************************************

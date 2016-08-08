@@ -195,7 +195,7 @@ contains
         type(AD_D), allocatable  :: qdiff(:)
         real(rk),   allocatable  :: interpolator(:,:)
 
-        integer(ik) :: nderiv, set_deriv, iterm, igq, nterms_s, ierr, neqns_seed, nterms_s_seed
+        integer(ik) :: nderiv, set_deriv, iterm, igq, nterms_s, ierr, neqns_seed, nterms_s_seed, irow
         integer(ik) :: ndonors, idonor, donor_proc
         integer(ik) :: idom_l_interp, ielem_l_interp, iface_interp, idom_g_interp, ielem_g_interp
         integer(ik) :: recv_comm, recv_domain, recv_element
@@ -417,7 +417,6 @@ contains
             ! If the current element is being differentiated (ielem == ielem_seed)
             ! then copy the solution modes to local AD variable and seed derivatives
             !
-            !linearize_me = ( (idom_l_interp == seed%idomain_l) .and. (ielem_l_interp == seed%ielement_l) )
             linearize_me = ( (idom_g_interp == seed%idomain_g) .and. (ielem_g_interp == seed%ielement_g) )
 
             if ( linearize_me ) then
@@ -494,6 +493,7 @@ contains
                         allocate(var_gq_chimera(igq)%xp_ad_(nderiv))
                     end do
 
+                    linearize_me = ( (idom_g_interp == seed%idomain_g) .and. (ielem_g_interp == seed%ielement_g) )
 
                     !
                     ! Perform interpolation
@@ -564,6 +564,7 @@ contains
             mask = .false.
 
         end do ! idonor
+
 
 
     end subroutine interpolate_face_autodiff

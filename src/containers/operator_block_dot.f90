@@ -42,10 +42,10 @@ contains
         !
         do ielem = 1,size(a%vecs)
 
-            !res = res + dot_product(a%vecs(ielem)%vec, b%vecs(ielem)%vec)
+            res = res + dot_product(a%vecs(ielem)%vec, b%vecs(ielem)%vec)
 
-            vecsize = size(a%vecs(ielem)%vec)
-            res = res + ddot(vecsize, a%vecs(ielem)%vec, 1, b%vecs(ielem)%vec, 1)
+            !vecsize = size(a%vecs(ielem)%vec)
+            !res = res + ddot(vecsize, a%vecs(ielem)%vec, 1, b%vecs(ielem)%vec, 1)
 
         end do  ! ielem
         

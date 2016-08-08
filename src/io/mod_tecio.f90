@@ -274,6 +274,7 @@ contains
         !
         varstring = "X Y Z"     ! Initialize variables string with mesh coordinates
         ieq = 1
+
         !
         ! TODO: Generalized TECIO for different equation set in each domain.
         !

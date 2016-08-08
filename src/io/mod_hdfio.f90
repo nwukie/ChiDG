@@ -646,7 +646,7 @@ contains
            integer                         :: type,    ierr,       igrp,               &
                                               npts,    nterms_1d,  nterms_s,   order,  &
                                               ivar,    ielem,      nterms_ielem,   idom
-           logical                         :: ElementsEqual
+           logical                         :: ElementsEqual, variables_exists
    
    
   
@@ -657,12 +657,20 @@ contains
            idom = data%get_domain_index(dname)
    
    
+
+           !
+           ! Check if 'Variables' group exists
+           !
+           call h5lexists_f(fid, trim(dname)//"/Variables", variables_exists, ierr)
+           if (.not. variables_exists) call chidg_signal(FATAL,"read_variable_hdf: "//trim(dname)//"Variables group does not exist")
+
+
    
            !
            ! Open the Domain/Variables group
            !
            call h5gopen_f(fid, trim(dname)//"/Variables", gid, ierr, H5P_DEFAULT_F)
-           if (ierr /= 0) call chidg_signal(FATAL,"h5gopen_f -- Domain/Grid group did not open properly")
+           if (ierr /= 0) call chidg_signal(FATAL,"h5gopen_f -- Domain/Variables group did not open properly")
    
   
            !

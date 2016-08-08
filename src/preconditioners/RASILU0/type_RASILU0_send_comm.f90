@@ -67,6 +67,7 @@ contains
         self%proc = proc
 
 
+
         !
         ! Accumulate the domains that send to processor 'proc'
         !
@@ -80,6 +81,9 @@ contains
             if (comm_domain) call dom_send%push_back(idom)
 
         end do !idom
+
+
+
 
 
         !
@@ -117,7 +121,8 @@ contains
 
 
             nelem_send = self%dom(idom_send)%elem_send%size()
-            allocate(self%dom(idom)%blk_send(nelem_send), stat=ierr)
+            !allocate(self%dom(idom)%blk_send(nelem_send), stat=ierr)
+            allocate(self%dom(idom_send)%blk_send(nelem_send), stat=ierr)
             if (ierr /= 0) call AllocationError
 
 

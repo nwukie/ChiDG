@@ -13,15 +13,11 @@
 program driver
 #include <messenger.h>
     use mod_kinds,                  only: rk, ik
-    use mod_constants,              only: ONE, TWO, ZERO
+    use mod_constants,              only: CHIMERA, NFACES
     use type_chidg,                 only: chidg_t
     use mod_grid_operators,         only: initialize_variable
     use type_function,              only: function_t
     use mod_function,               only: create_function
-    use type_domain_connectivity,   only: domain_connectivity_t
-    use type_partition,             only: partition_t
-    use mod_partitioners,           only: partition_connectivity, send_partitions, recv_partition
-    use mod_hdfio,                  only: read_connectivity_hdf
     use mod_io
 
     ! Actions
@@ -32,8 +28,8 @@ program driver
     use mod_kirchoffs,          only: kirchoff
 
     ! MPI
-    use mod_chidg_mpi,          only: IRANK, NRANK, GLOBAL_MASTER
-    use mpi_f08
+    use mod_chidg_mpi,          only: IRANK, NRANK
+    use mpi_f08,                only: MPI_COMM_WORLD
 
     
     !
@@ -42,14 +38,14 @@ program driver
     implicit none
     type(chidg_t)                               :: chidg
 
-    type(domain_connectivity_t),    allocatable :: connectivities(:)
-    type(partition_t),              allocatable :: partitions(:)
-    type(partition_t)                           :: partition
 
 
     integer                                     :: ierr, narg
+    integer(ik)                                 :: elems(6), iproc, idom_search, ielem_search, idom, ielem, iface, idonor, nelem_search, ChiID, donor_domain, donor_element
+    integer(ik)                                 :: recv_comm, recv_element, recv_domain, donor_proc
     character(len=1024)                         :: chidg_action, filename, file_a, file_b
     class(function_t),              allocatable :: constant, monopole, fcn
+    logical                                     :: chimera_face
 
 
 
@@ -79,35 +75,10 @@ program driver
 
 
         !
-        ! Read connectivity, partition, distribute
+        ! Read grid and boundary condition data
         !
-        if ( irank == GLOBAL_MASTER ) call write_line("Partitioning grid")
-        if ( irank == GLOBAL_MASTER ) then
-            call read_connectivity_hdf(gridfile,connectivities)
-
-            call partition_connectivity(connectivities, partitions)
-
-            call send_partitions(partitions,MPI_COMM_WORLD)
-        end if
-
-
-
-        !
-        ! Receive partition from GLOBAL_MASTER
-        !
-        call recv_partition(partition,MPI_COMM_WORLD)
-
-
-
-
-        !
-        ! Read grid data from file. One partition at a time to avoid the file being accessed simultaneously.
-        !
-        if ( irank == GLOBAL_MASTER ) call write_line("Reading grid")
-        call chidg%read_grid(gridfile, spacedim, partition)
-        if ( irank == GLOBAL_MASTER ) call write_line("Reading boundary conditions")
-        call chidg%read_boundaryconditions(gridfile, partition)
-
+        call chidg%read_grid(gridfile, spacedim)
+        call chidg%read_boundaryconditions(gridfile)
 
 
 
@@ -193,8 +164,6 @@ program driver
         ! Write initial solution
         !
         if (initial_write) call chidg%write_solution(solutionfile_out)
-
-
 
 
 

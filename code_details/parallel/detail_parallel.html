@@ -1,0 +1,376 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Parallelization &mdash; ChiDG 1 documentation</title>
+  
+
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  
+  
+    <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+  
+
+  
+
+  
+    <link rel="top" title="ChiDG 1 documentation" href="../../index.html"/>
+        <link rel="up" title="Code details" href="../details_main.html"/>
+        <link rel="prev" title="Mesh" href="../mesh/detail_mesh.html"/> 
+
+  
+  <script src="../../_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="../../index.html" class="icon icon-home"> ChiDG
+          
+
+          
+          </a>
+
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+                <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../../installation/package_install.html">Install ChiDG</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../installation/source_install.html">Build ChiDG from source</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../installation/source_install.html#obtaining-chidg">Obtaining ChiDG</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../installation/source_install.html#dependencies">Dependencies</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../installation/source_install.html#cmake">CMake</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../installation/source_install.html#hdf5">HDF5</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../installation/source_install.html#tecio">TecIO</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../installation/source_install.html#compiling-chidg">Compiling ChiDG</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../examples/example_main.html">Examples</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../examples/smoothbump/example_smoothbump.html">Euler smooth bump</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../examples/smoothbump/example_smoothbump.html#background">Background</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../examples/smoothbump/example_smoothbump.html#set-up">Set-up</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../examples/smoothbump/example_smoothbump.html#results">Results</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../examples/naca2412/example_naca2412.html">NACA 2412 Airfoil</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../examples/naca2412/example_naca2412.html#background">Background</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../examples/naca2412/example_naca2412.html#set-up">Set-up</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../examples/naca2412/example_naca2412.html#results">Results</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1 current"><a class="reference internal" href="../details_main.html">Code details</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="../chidg/detail_chidg.html">ChiDG Instance</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../chidg/detail_chidg.html#components">Components</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../chidg/detail_chidg.html#data">Data</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../mesh/detail_mesh.html">Mesh</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../mesh/detail_mesh.html#elements">Elements</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../mesh/detail_mesh.html#metric-terms">Metric terms</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../mesh/detail_mesh.html#derivatives">Derivatives</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../mesh/detail_mesh.html#faces">Faces</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../mesh/detail_mesh.html#face-metrics">Face metrics</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../mesh/detail_mesh.html#face-normals">Face normals</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../mesh/detail_mesh.html#chimera-interfaces">Chimera Interfaces</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../mesh/detail_mesh.html#example">Example</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Parallelization</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#chidg-mpi">ChiDG MPI</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#domain-decomposition">Domain decomposition</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#parallel-matrix-vector-operations">Parallel matrix:vector operations</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#chidgmatrix">chidgMatrix</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#chidgvector">chidgVector</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#parallel-preconditioning">Parallel preconditioning</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#parallel-efficiency">Parallel efficiency</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+        <a href="../../index.html">ChiDG</a>
+      </nav>
+
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          
+
+ 
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../../index.html">Docs</a> &raquo;</li>
+      
+          <li><a href="../details_main.html">Code details</a> &raquo;</li>
+      
+    <li>Parallelization</li>
+      <li class="wy-breadcrumbs-aside">
+        
+          
+            <a href="../../_sources/code_details/parallel/detail_parallel.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="parallelization">
+<h1>Parallelization<a class="headerlink" href="#parallelization" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="chidg-mpi">
+<h2>ChiDG MPI<a class="headerlink" href="#chidg-mpi" title="Permalink to this headline">¶</a></h2>
+<p>ChiDG uses a module named <code class="docutils literal"><span class="pre">mod_chidg_mpi</span></code> to hold information regarding the parallel
+environment available to ChiDG. This includes values for the number of MPI ranks given to
+ChiDG, the rank of the current process, and a communicator(<code class="docutils literal"><span class="pre">ChiDG_COMM</span></code>) containing
+the processes that ChiDG is running on. These are:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">module</span> <span class="n">mod_chidg_mpi</span>
+
+<span class="n">integer</span><span class="p">(</span><span class="n">ik</span><span class="p">)</span>    <span class="p">::</span> <span class="n">IRANK</span>
+<span class="n">integer</span><span class="p">(</span><span class="n">ik</span><span class="p">)</span>    <span class="p">::</span> <span class="n">NRANK</span>
+<span class="nb">type</span><span class="p">(</span><span class="n">mpi_comm</span><span class="p">)</span> <span class="p">::</span> <span class="n">ChiDG_COMM</span>
+</pre></div>
+</div>
+<p>One instance where having a defined communicator for ChiDG is helpful is in unit-testing.
+We may want to test a routine using 1, 2, and 3 MPI ranks. So, we may write a test and run
+it with 3 MPI ranks so MPI_COMM_WORLD includes all of those. However, we only want ChiDG
+to run on subsets of those to test different numbers of processors. So, we can define a
+communicator that informs ChiDG what processors it owns and should be talking to.</p>
+</div>
+<div class="section" id="domain-decomposition">
+<h2>Domain decomposition<a class="headerlink" href="#domain-decomposition" title="Permalink to this headline">¶</a></h2>
+<p>A domain-decomposition approach is used to facilitate the parallel execution of ChiDG.
+The Metis library is used to return a partitioning of the original global problem. The
+number of partitions is equal to the number of processors in the ChiDG_COMM communicator.</p>
+</div>
+<div class="section" id="parallel-matrix-vector-operations">
+<h2>Parallel matrix:vector operations<a class="headerlink" href="#parallel-matrix-vector-operations" title="Permalink to this headline">¶</a></h2>
+<p>ChiDG has matrix and vector data-types defined that represent the global
+problem. They also know how to communicate globally between processors to
+compute operations that are apart of many algorithms for solving linear
+systems of equations.</p>
+<div class="section" id="chidgmatrix">
+<h3>chidgMatrix<a class="headerlink" href="#chidgmatrix" title="Permalink to this headline">¶</a></h3>
+<dl class="function">
+<dt id="mv">
+<code class="descname">mv</code><span class="sig-paren">(</span><em>chidgMatrix</em>, <em>chidgVector</em><span class="sig-paren">)</span><a class="headerlink" href="#mv" title="Permalink to this definition">¶</a></dt>
+<dd><p>This computes the global matrix-vector product between a <code class="docutils literal"><span class="pre">chidgMatrix</span></code> and <code class="docutils literal"><span class="pre">chidgVector</span></code>.
+First, the <code class="docutils literal"><span class="pre">chidgVector%comm_send()</span></code> routine is called to initiate non-blocking sends
+of vector data to communicating processors. Then the processor-local part of the
+matrix-vector product is performed. <code class="docutils literal"><span class="pre">chidgVector%comm_recv()</span></code> is then called to
+receive incoming vector data from communicating processors. The non-local part
+of the matrix-vector product is then performed with the newly-arrived vector data from
+other processors.</p>
+</dd></dl>
+
+</div>
+<div class="section" id="chidgvector">
+<h3>chidgVector<a class="headerlink" href="#chidgvector" title="Permalink to this headline">¶</a></h3>
+<dl class="function">
+<dt>
+<code class="descname">chidgVector%norm()</code></dt>
+<dd><p>This computes the L2-norm of the global chidgVector.
+This performs a sum of the components squared on each processor and then executes
+an <code class="docutils literal"><span class="pre">MPI_AllReduce</span></code> call that distributes the global sum to each processor. The square
+root of this value is then computed locally on each processor to give the global
+L2-norm of the chidgVector across all processors.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="dot">
+<code class="descname">dot</code><span class="sig-paren">(</span><em>chidgVector</em>, <em>chidgVector</em><span class="sig-paren">)</span><a class="headerlink" href="#dot" title="Permalink to this definition">¶</a></dt>
+<dd><p>This computes the vector-vector dot-product of two chidgVector&#8217;s. The processor-local
+dot-product is computed first. <code class="docutils literal"><span class="pre">MPI_AllReduce</span></code> is then called to reduce the results
+across processors and distribute the result.</p>
+</dd></dl>
+
+<dl class="function">
+<dt>
+<code class="descname">chidgVector%comm_send()</code></dt>
+<dd><p>This performs a non-blocking send of the data in the <code class="docutils literal"><span class="pre">chidgVector</span></code> to communicating
+processors.</p>
+</dd></dl>
+
+<dl class="function">
+<dt>
+<code class="descname">chidgVector%comm_recv()</code></dt>
+<dd><p>This performs a blocking receive of the data coming in from communicating processors.</p>
+</dd></dl>
+
+<dl class="function">
+<dt>
+<code class="descname">chidgVector%comm_wait()</code></dt>
+<dd><p>This waits until all entries from <code class="docutils literal"><span class="pre">comm_send()</span></code> have been received by their targets
+and indicates that the contents are safe to modify.</p>
+</dd></dl>
+
+</div>
+</div>
+<div class="section" id="parallel-preconditioning">
+<h2>Parallel preconditioning<a class="headerlink" href="#parallel-preconditioning" title="Permalink to this headline">¶</a></h2>
+</div>
+<div class="section" id="parallel-efficiency">
+<h2>Parallel efficiency<a class="headerlink" href="#parallel-efficiency" title="Permalink to this headline">¶</a></h2>
+<p>There are two distinct areas of a solver algorithm that have different parallelization characteristics.
+These are:</p>
+<blockquote>
+<div><ul class="simple">
+<li>Evaluating the spatial operators</li>
+</ul>
+</div></blockquote>
+<div class="math">
+\[\frac{\partial R}{\partial Q} \quad\quad  R\]</div>
+<div class="line-block">
+<div class="line"><br /></div>
+</div>
+<blockquote>
+<div><ul class="simple">
+<li>Solving a linear system of equations</li>
+</ul>
+</div></blockquote>
+<div class="math">
+\[\frac{\partial R}{\partial Q} \Delta Q = -R\]</div>
+<p>The efficiency of these two components are evaluated here.</p>
+<a class="reference internal image-reference" href="../../_images/scaling_spatial.png"><img alt="../../_images/scaling_spatial.png" class="align-left" src="../../_images/scaling_spatial.png" style="width: 45%;" /></a>
+<a class="reference internal image-reference" href="../../_images/scaling_matrix.png"><img alt="../../_images/scaling_matrix.png" class="align-right" src="../../_images/scaling_matrix.png" style="width: 45%;" /></a>
+<a class="reference internal image-reference" href="../../_images/scaling_preconditioner.png"><img alt="../../_images/scaling_preconditioner.png" class="align-center" src="../../_images/scaling_preconditioner.png" style="width: 50%;" /></a>
+</div>
+</div>
+
+
+           </div>
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+      
+        <a href="../mesh/detail_mesh.html" class="btn btn-neutral" title="Mesh" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2016, Nathan A. Wukie.
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'../../',
+            VERSION:'1',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true
+        };
+    </script>
+      <script type="text/javascript" src="../../_static/jquery.js"></script>
+      <script type="text/javascript" src="../../_static/underscore.js"></script>
+      <script type="text/javascript" src="../../_static/doctools.js"></script>
+      <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="../../_static/js/theme.js"></script>
+  
+
+  
+  
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.StickyNav.enable();
+      });
+  </script>
+   
+
+</body>
+</html>

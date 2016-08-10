@@ -1,0 +1,12 @@
+Install ChiDG
+================
+
+ChiDG can be installed using the Python package manager ``pip``.
+
+:: 
+
+    pip install chidg
+
+
+
+

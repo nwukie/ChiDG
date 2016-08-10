@@ -1,0 +1,72 @@
+.. ChiDG documentation master file, created by
+   sphinx-quickstart on Tue Aug  9 21:10:34 2016.
+   You can adapt this file completely to your liking, but it should at least
+   contain the root `toctree` directive.
+
+Welcome!
+========
+
+**ChiDG: A Chimera-based, discontinuous Galerkin solver**
+
+ChiDG is a Chimera-based framework for solving sets of partial differential 
+equations using the discontinuous Galerkin method.
+
+
+.. :: figures/naca2412_A4p0_grid.png
+.. image:: figures/naca2412.png
+    :width: 36 %
+    :align: left
+.. image:: figures/mode91_3dview.png
+    :width: 32 %
+    :align: right
+.. image:: figures/aachen_turbine_nonreflectingbc.png
+    :width: 20 %
+    :align: center
+
+
+
+
+|
+|
+
+Discretization advantages:
+    - Arbitrarily high-order accurate
+    - Curved elements for conforming to geometry
+    - Chimera overset grids for representing complex geometry
+
+Framework capabilities:
+    - Fully-implicit Newton's method
+    - Intrinsic automatic differentiation
+
+
+
+Getting started
+===============
+
+    - Installation
+    - Tutorial
+    - Examples
+
+
+
+
+
+
+
+.. toctree::
+   :maxdepth: 2
+   :hidden:
+
+   installation/package_install
+   installation/source_install
+   examples/example_main
+   code_details/details_main
+
+
+Indices and tables
+==================
+
+* :ref:`genindex`
+* :ref:`modindex`
+* :ref:`search`
+

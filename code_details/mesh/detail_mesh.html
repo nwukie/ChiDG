@@ -1,0 +1,403 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Mesh &mdash; ChiDG 1 documentation</title>
+  
+
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  
+  
+    <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+  
+
+  
+
+  
+    <link rel="top" title="ChiDG 1 documentation" href="../../index.html"/>
+        <link rel="up" title="Code details" href="../details_main.html"/>
+        <link rel="next" title="Parallelization" href="../parallel/detail_parallel.html"/>
+        <link rel="prev" title="ChiDG Instance" href="../chidg/detail_chidg.html"/> 
+
+  
+  <script src="../../_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="../../index.html" class="icon icon-home"> ChiDG
+          
+
+          
+          </a>
+
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+                <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../../installation/package_install.html">Install ChiDG</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../installation/source_install.html">Build ChiDG from source</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../installation/source_install.html#obtaining-chidg">Obtaining ChiDG</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../installation/source_install.html#dependencies">Dependencies</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../installation/source_install.html#cmake">CMake</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../installation/source_install.html#hdf5">HDF5</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../installation/source_install.html#tecio">TecIO</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../installation/source_install.html#compiling-chidg">Compiling ChiDG</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../examples/example_main.html">Examples</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../examples/smoothbump/example_smoothbump.html">Euler smooth bump</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../examples/smoothbump/example_smoothbump.html#background">Background</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../examples/smoothbump/example_smoothbump.html#set-up">Set-up</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../examples/smoothbump/example_smoothbump.html#results">Results</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../examples/naca2412/example_naca2412.html">NACA 2412 Airfoil</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../examples/naca2412/example_naca2412.html#background">Background</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../examples/naca2412/example_naca2412.html#set-up">Set-up</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../examples/naca2412/example_naca2412.html#results">Results</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1 current"><a class="reference internal" href="../details_main.html">Code details</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="../chidg/detail_chidg.html">ChiDG Instance</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../chidg/detail_chidg.html#components">Components</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../chidg/detail_chidg.html#data">Data</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Mesh</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#elements">Elements</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#metric-terms">Metric terms</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#derivatives">Derivatives</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#faces">Faces</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#face-metrics">Face metrics</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#face-normals">Face normals</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#chimera-interfaces">Chimera Interfaces</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#example">Example</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../parallel/detail_parallel.html">Parallelization</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../parallel/detail_parallel.html#domain-decomposition">Domain decomposition</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../parallel/detail_parallel.html#parallel-matrix-vector-operations">Parallel matrix:vector operations</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../parallel/detail_parallel.html#chidgmatrix">chidgMatrix</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../parallel/detail_parallel.html#chidgvector">chidgVector</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../parallel/detail_parallel.html#parallel-preconditioning">Parallel preconditioning</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../parallel/detail_parallel.html#parallel-efficiency">Parallel efficiency</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+        <a href="../../index.html">ChiDG</a>
+      </nav>
+
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          
+
+ 
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../../index.html">Docs</a> &raquo;</li>
+      
+          <li><a href="../details_main.html">Code details</a> &raquo;</li>
+      
+    <li>Mesh</li>
+      <li class="wy-breadcrumbs-aside">
+        
+          
+            <a href="../../_sources/code_details/mesh/detail_mesh.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="mesh">
+<h1>Mesh<a class="headerlink" href="#mesh" title="Permalink to this headline">¶</a></h1>
+<p>The <code class="docutils literal"><span class="pre">mesh</span></code> data structure contains an entire geometry description for a single
+domain. This exists as an array of <code class="docutils literal"><span class="pre">element</span></code> types, and array of <code class="docutils literal"><span class="pre">face</span></code> types,
+and a <code class="docutils literal"><span class="pre">chimera</span></code> instance. An <code class="docutils literal"><span class="pre">element</span></code> exists for every element in the <code class="docutils literal"><span class="pre">mesh</span></code>
+domain. For a given <code class="docutils literal"><span class="pre">element</span></code>, a <code class="docutils literal"><span class="pre">face</span></code> instance exists for each face.</p>
+<a class="reference internal image-reference" href="../../_images/d_mesh_exploded.png"><img alt="../../_images/d_mesh_exploded.png" class="align-center" src="../../_images/d_mesh_exploded.png" style="width: 90%;" /></a>
+<a class="reference internal image-reference" href="../../_images/d_mesh_arrays.png"><img alt="../../_images/d_mesh_arrays.png" class="align-center" src="../../_images/d_mesh_arrays.png" style="width: 90%;" /></a>
+<div class="section" id="elements">
+<h2>Elements<a class="headerlink" href="#elements" title="Permalink to this headline">¶</a></h2>
+<p>An <code class="docutils literal"><span class="pre">element</span></code> instance contains information needed by the framework and also
+general information that could be useful to users. This includes:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">elem_pts</span><span class="p">(:)</span>     <span class="n">An</span> <span class="n">array</span> <span class="n">of</span> <span class="n">points</span> <span class="n">defining</span> <span class="n">the</span> <span class="n">element</span> <span class="ow">in</span> <span class="n">real</span> <span class="n">space</span><span class="p">(</span><span class="n">cartesian</span><span class="p">,</span> <span class="n">cylindrical</span><span class="p">,</span> <span class="n">etc</span><span class="o">.</span><span class="p">)</span>
+<span class="n">quad_pts</span><span class="p">(:)</span>     <span class="n">An</span> <span class="n">array</span> <span class="n">of</span> <span class="n">points</span> <span class="n">defining</span> <span class="n">the</span> <span class="n">location</span> <span class="n">of</span> <span class="n">each</span> <span class="n">volume</span> <span class="n">quadrature</span> <span class="n">node</span> <span class="ow">in</span> <span class="n">real</span> <span class="n">space</span><span class="o">.</span>
+<span class="n">metric</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span><span class="mi">3</span><span class="p">,:)</span>   <span class="n">An</span> <span class="n">array</span><span class="p">,</span> <span class="n">defining</span> <span class="k">for</span> <span class="n">each</span> <span class="n">quadrature</span> <span class="n">point</span><span class="p">,</span> <span class="n">a</span> <span class="n">matrix</span> <span class="n">of</span> <span class="n">element</span> <span class="n">metric</span> <span class="n">values</span><span class="o">.</span>
+<span class="n">jinv</span><span class="p">(:)</span>         <span class="n">An</span> <span class="n">array</span> <span class="n">of</span> <span class="n">inverse</span> <span class="n">element</span> <span class="n">jacobian</span> <span class="n">values</span> <span class="n">at</span> <span class="n">each</span> <span class="n">volume</span> <span class="n">quadrature</span> <span class="n">node</span><span class="o">.</span>
+<span class="n">dtdx</span><span class="p">(:,:)</span>       <span class="n">An</span> <span class="n">array</span> <span class="n">of</span> <span class="n">derivatives</span> <span class="n">of</span> <span class="n">the</span> <span class="n">basis</span> <span class="n">functions</span> <span class="k">with</span> <span class="n">respect</span> <span class="n">to</span> <span class="n">real</span> <span class="n">coordinates</span> <span class="n">at</span> <span class="n">volume</span> <span class="n">quadrature</span> <span class="n">nodes</span><span class="o">.</span>
+</pre></div>
+</div>
+<a class="reference internal image-reference" href="../../_images/d__element.png"><img alt="../../_images/d__element.png" class="align-center" src="../../_images/d__element.png" style="width: 80%;" /></a>
+<div class="section" id="metric-terms">
+<h3>Metric terms<a class="headerlink" href="#metric-terms" title="Permalink to this headline">¶</a></h3>
+<p>The metric terms are defined at each quadrature point in the <code class="docutils literal"><span class="pre">metric(:,:,:)</span></code> component
+of a given <code class="docutils literal"><span class="pre">element</span></code>. To access the matrix of metric components for a given quadrature
+node &#8216;igq&#8217;, the component can be used as</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">metric</span><span class="p">(:,:,</span><span class="n">igq</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>This returns the metric components at the quadrature node in a 3x3 matrix as:</p>
+<div class="math">
+\[\begin{split}\begin{pmatrix}
+  \xi_x   \quad \xi_y   \quad   \xi_z \\
+  \eta_x  \quad \eta_y  \quad   \eta_z \\
+  \zeta_x \quad \zeta_y \quad   \zeta_z
+\end{pmatrix}\end{split}\]</div>
+<p>Alternatively, a given metric term can be accessed for the set of quadrature nodes as</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">metric</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,:)</span>
+</pre></div>
+</div>
+<p>which would return a 1D array of values for <span class="math">\(\xi_x\)</span> corresponding to each volume
+quadrature node.</p>
+<p>The inverse element jacobian terms <cite>jinv(:)</cite> are defined at each quadrature node as</p>
+<div class="math">
+\[J^{-1} = ( x_\xi \xi_x + x_\eta \eta_x + x_\zeta \zeta_x )\]</div>
+</div>
+<div class="section" id="derivatives">
+<h3>Derivatives<a class="headerlink" href="#derivatives" title="Permalink to this headline">¶</a></h3>
+<p>The derivatives of basis functions with respect to the computational coordinates on a
+reference element are already defined in a quadrature instance associated with an
+element in the component <code class="docutils literal"><span class="pre">element%gq%vol</span></code>. For example, the component
+<code class="docutils literal"><span class="pre">element%gq%vol%ddxi</span></code> gives:</p>
+<div class="math">
+\[\begin{split}\frac{\partial \psi_{igq, imode}}{\partial \xi} =
+    \begin{pmatrix}
+        \frac{\partial \psi_{1,1}}{\partial \xi} &amp;  \frac{\partial \psi_{1,2}}{\partial \xi}  &amp; \cdots  &amp; \frac{\partial \psi_{1,N}}{\partial \xi} \\
+        \frac{\partial \psi_{2,1}}{\partial \xi}  &amp; \frac{\partial \psi_{2,2}}{\partial \xi}  &amp; \cdots  &amp; \frac{\partial \psi_{2,N}}{\partial \xi} \\
+        \vdots &amp; \vdots &amp; \vdots &amp; \vdots \\
+        \frac{\partial \psi_{{ngq},1}}{\partial \xi} &amp; \frac{\partial \psi_{{ngq},2}}{\partial \xi} &amp;  \cdots &amp;  \frac{\partial \psi_{{ngq},N}}{\partial \xi} \\
+    \end{pmatrix}\end{split}\]</div>
+<p>Derivatives in real space coordinates in an <code class="docutils literal"><span class="pre">element</span></code> can be computed using
+<code class="docutils literal"><span class="pre">dtdx(:,:)</span></code> components. The derivatives of basis functions with respect to real
+coordinates(<span class="math">\(x,y,z\)</span> ,:math:<cite>r,theta,z</cite>) are specific to each <code class="docutils literal"><span class="pre">element</span></code>
+and these derivatives can be accessed in the dtdx, dtdy, dtdz components.
+The <code class="docutils literal"><span class="pre">element%dtdx</span></code> component for example gives</p>
+<div class="math">
+\[\begin{split}\frac{\partial \psi_{igq, imode}}{\partial x} =
+    \begin{pmatrix}
+        \frac{\partial \psi_{1,1}}{\partial x} &amp;  \frac{\partial \psi_{1,2}}{\partial x}  &amp; \cdots  &amp; \frac{\partial \psi_{1,N}}{\partial x} \\
+        \frac{\partial \psi_{2,1}}{\partial x}  &amp; \frac{\partial \psi_{2,2}}{\partial x}  &amp; \cdots  &amp; \frac{\partial \psi_{2,N}}{\partial x} \\
+        \vdots &amp; \vdots &amp; \vdots &amp; \vdots \\
+        \frac{\partial \psi_{{ngq},1}}{\partial x} &amp; \frac{\partial \psi_{{ngq},2}}{\partial x} &amp;  \cdots &amp;  \frac{\partial \psi_{{ngq},N}}{\partial x} \\
+    \end{pmatrix}\end{split}\]</div>
+</div>
+</div>
+<div class="section" id="faces">
+<h2>Faces<a class="headerlink" href="#faces" title="Permalink to this headline">¶</a></h2>
+<a class="reference internal image-reference" href="../../_images/d__face.png"><img alt="../../_images/d__face.png" class="align-center" src="../../_images/d__face.png" style="width: 90%;" /></a>
+<div class="section" id="face-metrics">
+<h3>Face metrics<a class="headerlink" href="#face-metrics" title="Permalink to this headline">¶</a></h3>
+<p>Metric terms for the <code class="docutils literal"><span class="pre">face</span></code> data structure are defined exactly the same as for the
+<code class="docutils literal"><span class="pre">element</span></code> data structure. The difference is that the <cite>metric</cite> and <cite>jinv</cite> components of
+<code class="docutils literal"><span class="pre">face</span></code> return values for boundary quadrature nodes. This contrasts the <code class="docutils literal"><span class="pre">element</span></code>
+structure, which returns values for volume quadrature nodes.</p>
+</div>
+<div class="section" id="face-normals">
+<h3>Face normals<a class="headerlink" href="#face-normals" title="Permalink to this headline">¶</a></h3>
+<div class="math">
+\[\vec{x} = [x, y, z]     \quad   \vec{\xi} = [\xi, \eta, \zeta]\]</div>
+<p>Face normal vectors are stored for each face quadrature node. The component <cite>norm</cite> is the
+face normal vector with respect to computational coordinates on a reference element
+(<span class="math">\(\xi\)</span>, <span class="math">\(\eta\)</span>, <span class="math">\(\zeta\)</span>) as</p>
+<div class="math">
+\[\vec{n}_{\xi_k} = \frac{\partial \vec{x}}{\partial \xi_i} \times \frac{\partial \vec{x}}{\partial \xi_j}\]</div>
+<p>where <span class="math">\(\xi_i\)</span> and <span class="math">\(\xi_j\)</span> are the in-place coordinates of face <span class="math">\(\xi_k\)</span>.
+In this was, the normal vectors for <span class="math">\(\xi\)</span>, <span class="math">\(\eta\)</span>, and <span class="math">\(\zeta\)</span> faces
+are defined respectively as</p>
+<div class="math">
+\[ \begin{align}\begin{aligned}\vec{n}_\xi =
+\frac{\partial \vec{x}}{\partial \eta} \times \frac{\partial \vec{x}}{\partial \zeta} =
+[ y_\eta z_\zeta - y_\zeta z_\eta, \quad x_\zeta z_\eta - x_\eta z_\zeta, \quad x_\eta y_\zeta - x_\zeta y_\eta] =
+[ \xi_x, \quad \xi_y, \quad \xi_z ]\\\vec{n}_\eta =
+\frac{\partial \vec{x}}{\partial \zeta} \times \frac{\partial \vec{x}}{\partial \xi} =
+[ y_\zeta z_\xi - y_\xi z_\zeta, \quad x_\xi z_\zeta - x_\zeta z_\xi, \quad x_\zeta y_\xi - x_\xi y_\zeta ] =
+[ \eta_x, \quad \eta_y, \quad \eta_z ]\\\vec{n}_\zeta =
+\frac{\partial \vec{x}}{\partial \xi} \times \frac{\partial \vec{x}}{\partial \eta} =
+[ y_\xi z_\eta - y_\eta z_\xi, \quad x_\eta z_\xi - x_\xi z_\eta, \quad x_\xi y_\eta - x_\eta y_\xi] =
+[ \zeta_x, \quad \zeta_y, \quad \zeta_z ]\end{aligned}\end{align} \]</div>
+<p>Applying the above formula to element faces produces normal vectors that are inward
+facing for <span class="math">\(\xi = -1\)</span> faces and outward facing for <span class="math">\(\xi = 1\)</span> faces.
+Inward facing vectors are negated so that all resultant normal vectors in the <cite>norm</cite>
+component are outward facing. This applied to <span class="math">\(\eta\)</span> and <span class="math">\(\zeta\)</span> faces as well.</p>
+<p>Unit normal vectors can be accessed in the <cite>unorm</cite> component and are computed as</p>
+<div class="math">
+\[\hat{n}_{\xi_i} = \frac{\vec{n}_{\xi_i}}{||\vec{n}_{\xi_i}||_2}\]</div>
+</div>
+</div>
+<div class="section" id="chimera-interfaces">
+<h2>Chimera Interfaces<a class="headerlink" href="#chimera-interfaces" title="Permalink to this headline">¶</a></h2>
+<p>Each <code class="docutils literal"><span class="pre">mesh</span></code> instance contains a <code class="docutils literal"><span class="pre">mesh%chimera</span></code> component that holds all information
+regarding chimera communication for that particular mesh block. This takes the
+form of <code class="docutils literal"><span class="pre">chimera_receiver</span></code> and <code class="docutils literal"><span class="pre">chimera_donor</span></code> components. Currently, only
+the <code class="docutils literal"><span class="pre">chimera_receiver</span></code> is utilized. <code class="docutils literal"><span class="pre">chimera_donor</span></code> will be used to facilitate
+communication between processors for parallel code execution.</p>
+<a class="reference internal image-reference" href="../../_images/d__chimera_receiver.png"><img alt="../../_images/d__chimera_receiver.png" class="align-center" src="../../_images/d__chimera_receiver.png" style="width: 90%;" /></a>
+<p>In a given <code class="docutils literal"><span class="pre">mesh</span></code> block, every face that gets information from a separate block is
+designated as a CHIMERA face, it is assigned an integer ID <cite>face%ChiID</cite>, and it gets an
+entry in the <cite>mesh%chimera%recv%data</cite> components. It can be accessed as</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">mesh</span><span class="o">%</span><span class="n">chimera</span><span class="o">%</span><span class="n">recv</span><span class="o">%</span><span class="n">data</span><span class="p">(</span><span class="n">ChiID</span><span class="p">)</span>
+</pre></div>
+</div>
+<div class="section" id="example">
+<h3>Example<a class="headerlink" href="#example" title="Permalink to this headline">¶</a></h3>
+<p>Consider an example with two mesh domains, as shown below.
+<cite>mesh(1)</cite> contains four elements. <cite>mesh(2)</cite> contains eight elements.
+<cite>mesh(1)</cite> overlaps with <cite>mesh(2)</cite>. In particular, the top faces of elements E3 and E4 lie
+inside <cite>mesh(2)</cite>. These faces are designated as CHIMERA faces and are given a mesh-global
+chimera ID. The top face of E3 is given the ID ChiID=1 and the top face of E4 is given
+the ID ChiID=2.</p>
+<a class="reference internal image-reference" href="../../_images/d__chimera_demo_a.png"><img alt="../../_images/d__chimera_demo_a.png" class="align-center" src="../../_images/d__chimera_demo_a.png" style="width: 90%;" /></a>
+<p>Each CHIMERA face has its own set of chimera information, which can be accessed via
+<cite>mesh%chimera%recv%data(ChiID)</cite>. This is shown below for the two faces in this example.</p>
+<a class="reference internal image-reference" href="../../_images/d__chimera_demo_b.png"><img alt="../../_images/d__chimera_demo_b.png" class="align-center" src="../../_images/d__chimera_demo_b.png" style="width: 90%;" /></a>
+</div>
+</div>
+</div>
+
+
+           </div>
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="../parallel/detail_parallel.html" class="btn btn-neutral float-right" title="Parallelization" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="../chidg/detail_chidg.html" class="btn btn-neutral" title="ChiDG Instance" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2016, Nathan A. Wukie.
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'../../',
+            VERSION:'1',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true
+        };
+    </script>
+      <script type="text/javascript" src="../../_static/jquery.js"></script>
+      <script type="text/javascript" src="../../_static/underscore.js"></script>
+      <script type="text/javascript" src="../../_static/doctools.js"></script>
+      <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="../../_static/js/theme.js"></script>
+  
+
+  
+  
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.StickyNav.enable();
+      });
+  </script>
+   
+
+</body>
+</html>

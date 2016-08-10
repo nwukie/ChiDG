@@ -1,0 +1,10 @@
+Examples
+========
+
+.. toctree::
+   :maxdepth: 2
+   :hidden:
+
+   smoothbump/example_smoothbump
+   naca2412/example_naca2412
+

@@ -1,0 +1,261 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Search &mdash; ChiDG 1 documentation</title>
+  
+
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  
+  
+    <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  
+
+  
+
+  
+    <link rel="top" title="ChiDG 1 documentation" href="index.html"/> 
+
+  
+  <script src="_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="index.html" class="icon icon-home"> ChiDG
+          
+
+          
+          </a>
+
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="#" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+                <ul>
+<li class="toctree-l1"><a class="reference internal" href="installation/package_install.html">Install ChiDG</a></li>
+<li class="toctree-l1"><a class="reference internal" href="installation/source_install.html">Build ChiDG from source</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="installation/source_install.html#obtaining-chidg">Obtaining ChiDG</a></li>
+<li class="toctree-l2"><a class="reference internal" href="installation/source_install.html#dependencies">Dependencies</a></li>
+<li class="toctree-l2"><a class="reference internal" href="installation/source_install.html#cmake">CMake</a></li>
+<li class="toctree-l2"><a class="reference internal" href="installation/source_install.html#hdf5">HDF5</a></li>
+<li class="toctree-l2"><a class="reference internal" href="installation/source_install.html#tecio">TecIO</a></li>
+<li class="toctree-l2"><a class="reference internal" href="installation/source_install.html#compiling-chidg">Compiling ChiDG</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="examples/example_main.html">Examples</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="examples/smoothbump/example_smoothbump.html">Euler smooth bump</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="examples/smoothbump/example_smoothbump.html#background">Background</a></li>
+<li class="toctree-l3"><a class="reference internal" href="examples/smoothbump/example_smoothbump.html#set-up">Set-up</a></li>
+<li class="toctree-l3"><a class="reference internal" href="examples/smoothbump/example_smoothbump.html#results">Results</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="examples/naca2412/example_naca2412.html">NACA 2412 Airfoil</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="examples/naca2412/example_naca2412.html#background">Background</a></li>
+<li class="toctree-l3"><a class="reference internal" href="examples/naca2412/example_naca2412.html#set-up">Set-up</a></li>
+<li class="toctree-l3"><a class="reference internal" href="examples/naca2412/example_naca2412.html#results">Results</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="code_details/details_main.html">Code details</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="code_details/chidg/detail_chidg.html">ChiDG Instance</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="code_details/chidg/detail_chidg.html#components">Components</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="code_details/chidg/detail_chidg.html#data">Data</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="code_details/mesh/detail_mesh.html">Mesh</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="code_details/mesh/detail_mesh.html#elements">Elements</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="code_details/mesh/detail_mesh.html#metric-terms">Metric terms</a></li>
+<li class="toctree-l4"><a class="reference internal" href="code_details/mesh/detail_mesh.html#derivatives">Derivatives</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="code_details/mesh/detail_mesh.html#faces">Faces</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="code_details/mesh/detail_mesh.html#face-metrics">Face metrics</a></li>
+<li class="toctree-l4"><a class="reference internal" href="code_details/mesh/detail_mesh.html#face-normals">Face normals</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="code_details/mesh/detail_mesh.html#chimera-interfaces">Chimera Interfaces</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="code_details/mesh/detail_mesh.html#example">Example</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="code_details/parallel/detail_parallel.html">Parallelization</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="code_details/parallel/detail_parallel.html#chidg-mpi">ChiDG MPI</a></li>
+<li class="toctree-l3"><a class="reference internal" href="code_details/parallel/detail_parallel.html#domain-decomposition">Domain decomposition</a></li>
+<li class="toctree-l3"><a class="reference internal" href="code_details/parallel/detail_parallel.html#parallel-matrix-vector-operations">Parallel matrix:vector operations</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="code_details/parallel/detail_parallel.html#chidgmatrix">chidgMatrix</a></li>
+<li class="toctree-l4"><a class="reference internal" href="code_details/parallel/detail_parallel.html#chidgvector">chidgVector</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="code_details/parallel/detail_parallel.html#parallel-preconditioning">Parallel preconditioning</a></li>
+<li class="toctree-l3"><a class="reference internal" href="code_details/parallel/detail_parallel.html#parallel-efficiency">Parallel efficiency</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+        <a href="index.html">ChiDG</a>
+      </nav>
+
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="index.html">Docs</a> &raquo;</li>
+      
+    <li></li>
+      <li class="wy-breadcrumbs-aside">
+        
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <noscript>
+  <div id="fallback" class="admonition warning">
+    <p class="last">
+      Please activate JavaScript to enable the search
+      functionality.
+    </p>
+  </div>
+  </noscript>
+
+  
+  <div id="search-results">
+  
+  </div>
+
+           </div>
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2016, Nathan A. Wukie.
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'./',
+            VERSION:'1',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true
+        };
+    </script>
+      <script type="text/javascript" src="_static/jquery.js"></script>
+      <script type="text/javascript" src="_static/underscore.js"></script>
+      <script type="text/javascript" src="_static/doctools.js"></script>
+      <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+      <script type="text/javascript" src="_static/searchtools.js"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+  
+
+  
+  
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.StickyNav.enable();
+      });
+  </script>
+  
+  <script type="text/javascript">
+    jQuery(function() { Search.loadIndex("searchindex.js"); });
+  </script>
+  
+  <script type="text/javascript" id="searchindexloader"></script>
+   
+
+
+</body>
+</html>

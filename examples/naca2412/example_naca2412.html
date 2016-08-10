@@ -1,0 +1,279 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>NACA 2412 Airfoil &mdash; ChiDG 1 documentation</title>
+  
+
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  
+  
+    <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+  
+
+  
+
+  
+    <link rel="top" title="ChiDG 1 documentation" href="../../index.html"/>
+        <link rel="up" title="Examples" href="../example_main.html"/>
+        <link rel="next" title="Code details" href="../../code_details/details_main.html"/>
+        <link rel="prev" title="Euler smooth bump" href="../smoothbump/example_smoothbump.html"/> 
+
+  
+  <script src="../../_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="../../index.html" class="icon icon-home"> ChiDG
+          
+
+          
+          </a>
+
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+                <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../../installation/package_install.html">Install ChiDG</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../installation/source_install.html">Build ChiDG from source</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../installation/source_install.html#obtaining-chidg">Obtaining ChiDG</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../installation/source_install.html#dependencies">Dependencies</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../installation/source_install.html#cmake">CMake</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../installation/source_install.html#hdf5">HDF5</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../installation/source_install.html#tecio">TecIO</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../installation/source_install.html#compiling-chidg">Compiling ChiDG</a></li>
+</ul>
+</li>
+<li class="toctree-l1 current"><a class="reference internal" href="../example_main.html">Examples</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="../smoothbump/example_smoothbump.html">Euler smooth bump</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../smoothbump/example_smoothbump.html#background">Background</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../smoothbump/example_smoothbump.html#set-up">Set-up</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../smoothbump/example_smoothbump.html#results">Results</a></li>
+</ul>
+</li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">NACA 2412 Airfoil</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#background">Background</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#set-up">Set-up</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#results">Results</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../code_details/details_main.html">Code details</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../code_details/chidg/detail_chidg.html">ChiDG Instance</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../code_details/chidg/detail_chidg.html#components">Components</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../../code_details/chidg/detail_chidg.html#data">Data</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../code_details/mesh/detail_mesh.html">Mesh</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../code_details/mesh/detail_mesh.html#elements">Elements</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../../code_details/mesh/detail_mesh.html#metric-terms">Metric terms</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../code_details/mesh/detail_mesh.html#derivatives">Derivatives</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../../code_details/mesh/detail_mesh.html#faces">Faces</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../../code_details/mesh/detail_mesh.html#face-metrics">Face metrics</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../code_details/mesh/detail_mesh.html#face-normals">Face normals</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../../code_details/mesh/detail_mesh.html#chimera-interfaces">Chimera Interfaces</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../../code_details/mesh/detail_mesh.html#example">Example</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../code_details/parallel/detail_parallel.html">Parallelization</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../code_details/parallel/detail_parallel.html#domain-decomposition">Domain decomposition</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../code_details/parallel/detail_parallel.html#parallel-matrix-vector-operations">Parallel matrix:vector operations</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../../code_details/parallel/detail_parallel.html#chidgmatrix">chidgMatrix</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../code_details/parallel/detail_parallel.html#chidgvector">chidgVector</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../../code_details/parallel/detail_parallel.html#parallel-preconditioning">Parallel preconditioning</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../code_details/parallel/detail_parallel.html#parallel-efficiency">Parallel efficiency</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+        <a href="../../index.html">ChiDG</a>
+      </nav>
+
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          
+
+ 
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../../index.html">Docs</a> &raquo;</li>
+      
+          <li><a href="../example_main.html">Examples</a> &raquo;</li>
+      
+    <li>NACA 2412 Airfoil</li>
+      <li class="wy-breadcrumbs-aside">
+        
+          
+            <a href="../../_sources/examples/naca2412/example_naca2412.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="naca-2412-airfoil">
+<h1>NACA 2412 Airfoil<a class="headerlink" href="#naca-2412-airfoil" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="background">
+<h2>Background<a class="headerlink" href="#background" title="Permalink to this headline">¶</a></h2>
+</div>
+<div class="section" id="set-up">
+<h2>Set-up<a class="headerlink" href="#set-up" title="Permalink to this headline">¶</a></h2>
+<p>Two configurations(0.0 and 4.0 degree angles of attack) were run for the NACA 2412
+airfoil geometry.</p>
+<p><strong>Grid files:</strong>
+Grid files for both configurations are included here. If access to the grid
+generation software Pointwise is available, the &#8221;.pw&#8221; files used to create the
+grids are included here. Additionally, the Plot3D-Format(.x) grids for both
+configurations are also included. These may be converted to the ChiDG-Format
+HDF5 file using the <code class="docutils literal"><span class="pre">chidg</span> <span class="pre">convert</span></code> action.</p>
+</div>
+<div class="section" id="results">
+<h2>Results<a class="headerlink" href="#results" title="Permalink to this headline">¶</a></h2>
+<a class="reference internal image-reference" href="../../_images/naca2412_example.png"><img alt="../../_images/naca2412_example.png" class="align-center" src="../../_images/naca2412_example.png" style="width: 60%;" /></a>
+</div>
+</div>
+
+
+           </div>
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="../../code_details/details_main.html" class="btn btn-neutral float-right" title="Code details" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="../smoothbump/example_smoothbump.html" class="btn btn-neutral" title="Euler smooth bump" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2016, Nathan A. Wukie.
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'../../',
+            VERSION:'1',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true
+        };
+    </script>
+      <script type="text/javascript" src="../../_static/jquery.js"></script>
+      <script type="text/javascript" src="../../_static/underscore.js"></script>
+      <script type="text/javascript" src="../../_static/doctools.js"></script>
+      <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="../../_static/js/theme.js"></script>
+  
+
+  
+  
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.StickyNav.enable();
+      });
+  </script>
+   
+
+</body>
+</html>

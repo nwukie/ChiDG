@@ -1,0 +1,136 @@
+Build ChiDG from source
+=======================
+
+Obtaining ChiDG
+---------------
+ChiDG is hosted on GitHub and may be cloned using the https protocol as
+
+::
+
+    git clone https://github.com/nwukie/ChiDG.git ChiDG
+
+
+
+Dependencies
+------------
+ChiDG depends on several external libraries and applications.
+
+| CMake
+| HDF5
+| TecIO (distributed with ChiDG)
+|
+
+
+CMake
+-----
+ChiDG uses the CMake build-sytem to generate the ``make`` configuration
+files for the project. If you do not already have CMake installed on your
+system, you should be able to download a package/binary from the CMake Website.
+
+
+HDF5
+----
+HDF5 is used as a container for the ChiDG-formatted grid/solution files and
+is a required dependency of ChiDG
+
+HDF5 Website
+
+The HDF5 library gives the option to build various portions of the library
+itself, depending on what the user needs available. ChiDG uses the HDF5
+Fortran module interfaces and the high-level API. Be sure to configure with the 
+appropriate flags when building HDF5. Refer to the HDF5 documentation and 
+installation guide for complete directions. Likely configuration parameters 
+that are needed are:
+
+::
+
+    --enable-fortran
+    --enable-fortran2003
+
+The ChIDG CMake build will try to automatically locate the HDF5 libraries and
+modules. To ensure they are found, **be sure to set the HDF5_ROOT environment 
+variable** such that the directory includes the ``bin``, ``lib``, and ``include``
+directories where the libraries and modules can be located
+
+
+
+
+
+TecIO
+-----
+Tecplot 360 is currently the primary visualization tool used for ChiDG.
+The TecIO libraries are distributed with the ChiDG project for multiple
+systems and should be linked automatically without user intervention.
+If, for some reason, the packaged TecIO library is incompatible with
+your system, new libraries can be downloaded from the Tecplot website.
+
+TecIO Libraries
+
+
+Compiling ChiDG
+---------------
+
+**Up-to-date Fortran(F2008) compiler required. Tested with gfortran 5.3**
+
+ChiDG uses the CMake build system. Out-of-source build, as described here, 
+are the only supported build method.
+
+
+    - Change to the ChiDG root directory:
+
+    ::
+
+        cd ChiDG/
+
+
+    - Create a new build directory:
+ 
+    ::
+ 
+        mkdir build
+
+    - Change to the build directory:
+ 
+    ::
+ 
+        cd build
+
+    - Configure with CMake including user options:
+ 
+    ::
+ 
+        cmake -DCMAKE_Fortran_COMPILER=gfortran -DCMAKE_BUILD_TYPE=Release ..
+
+    - Run ``make`` to build the ChiDG library and interfaces:
+ 
+    ::
+ 
+        make
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

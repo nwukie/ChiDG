@@ -1,0 +1,13 @@
+Code details
+============
+
+.. toctree::
+    :maxdepth: 2
+    :hidden:
+
+    chidg/detail_chidg
+    mesh/detail_mesh
+    parallel/detail_parallel
+..    solvers/detail_solvers
+..    equations/detail_equations
+..    io/detail_io

@@ -1,0 +1,166 @@
+===============
+Parallelization
+===============
+
+
+ChiDG MPI
+=========
+
+ChiDG uses a module named ``mod_chidg_mpi`` to hold information regarding the parallel
+environment available to ChiDG. This includes values for the number of MPI ranks given to 
+ChiDG, the rank of the current process, and a communicator(``ChiDG_COMM``) containing 
+the processes that ChiDG is running on. These are:
+
+::
+
+    module mod_chidg_mpi
+
+    integer(ik)    :: IRANK
+    integer(ik)    :: NRANK
+    type(mpi_comm) :: ChiDG_COMM
+
+
+One instance where having a defined communicator for ChiDG is helpful is in unit-testing.
+We may want to test a routine using 1, 2, and 3 MPI ranks. So, we may write a test and run
+it with 3 MPI ranks so MPI_COMM_WORLD includes all of those. However, we only want ChiDG
+to run on subsets of those to test different numbers of processors. So, we can define a 
+communicator that informs ChiDG what processors it owns and should be talking to.
+
+
+
+
+Domain decomposition
+====================
+
+A domain-decomposition approach is used to facilitate the parallel execution of ChiDG.
+The Metis library is used to return a partitioning of the original global problem. The
+number of partitions is equal to the number of processors in the ChiDG_COMM communicator.
+
+
+
+
+Parallel matrix:vector operations
+=================================
+
+ChiDG has matrix and vector data-types defined that represent the global
+problem. They also know how to communicate globally between processors to 
+compute operations that are apart of many algorithms for solving linear
+systems of equations.
+
+chidgMatrix
+-----------
+
+.. function:: mv(chidgMatrix,chidgVector)
+
+    This computes the global matrix-vector product between a ``chidgMatrix`` and ``chidgVector``.
+    First, the ``chidgVector%comm_send()`` routine is called to initiate non-blocking sends
+    of vector data to communicating processors. Then the processor-local part of the 
+    matrix-vector product is performed. ``chidgVector%comm_recv()`` is then called to 
+    receive incoming vector data from communicating processors. The non-local part
+    of the matrix-vector product is then performed with the newly-arrived vector data from
+    other processors.
+
+
+chidgVector
+-----------
+
+
+
+.. function:: chidgVector%norm()
+
+    This computes the L2-norm of the global chidgVector.
+    This performs a sum of the components squared on each processor and then executes
+    an ``MPI_AllReduce`` call that distributes the global sum to each processor. The square
+    root of this value is then computed locally on each processor to give the global 
+    L2-norm of the chidgVector across all processors.
+
+
+.. function:: dot(chidgVector,chidgVector)
+
+    This computes the vector-vector dot-product of two chidgVector's. The processor-local 
+    dot-product is computed first. ``MPI_AllReduce`` is then called to reduce the results 
+    across processors and distribute the result.
+
+
+.. function:: chidgVector%comm_send()
+
+    This performs a non-blocking send of the data in the ``chidgVector`` to communicating
+    processors.
+
+
+.. function:: chidgVector%comm_recv()
+
+    This performs a blocking receive of the data coming in from communicating processors.
+
+
+.. function:: chidgVector%comm_wait()
+
+    This waits until all entries from ``comm_send()`` have been received by their targets
+    and indicates that the contents are safe to modify.
+
+
+Parallel preconditioning
+========================
+
+
+
+
+
+
+
+Parallel efficiency
+===================
+
+There are two distinct areas of a solver algorithm that have different parallelization characteristics.
+These are:
+
+    - Evaluating the spatial operators
+
+.. math::
+
+    \frac{\partial R}{\partial Q} \quad\quad  R
+
+|
+
+    - Solving a linear system of equations
+
+.. math::
+
+    \frac{\partial R}{\partial Q} \Delta Q = -R
+
+
+The efficiency of these two components are evaluated here.
+
+    
+
+.. image:: scaling_spatial.png
+    :width: 45 %
+    :align: left
+.. image:: scaling_matrix.png
+    :width: 45 %
+    :align: right
+
+
+
+
+
+
+
+
+.. image:: scaling_preconditioner.png
+    :width: 50 %
+    :align: center
+
+
+
+
+
+
+
+
+
+
+
+
+
+

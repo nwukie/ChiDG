@@ -56,12 +56,13 @@ module rtest_linearadvection_mod
 
 
 contains
-    !------------------------
-    !> SET-UP  +  TEAR-DOWN
-    !------------------------
 
     !> NOTE: make sure to use 'this' instead of 'self' since these are over-writting a derived type 
     !! procedure. The argument names have to match
+    !!
+    !!
+    !!
+    !-------------------------------------------------------------------------------------------------
     subroutine setUp(this)
         class(rtest_eq_LA),    intent(inout)   :: this
         
@@ -97,8 +98,14 @@ contains
         call this%chidg%init('communication')
         call this%chidg%initialize_solution_solver()
 
-    end subroutine
+    end subroutine setUp
+    !**************************************************************************************************
     
+
+    !>
+    !!
+    !!
+    !--------------------------------------------------------------------------------------------------
     subroutine tearDown(this)
         class(rtest_eq_LA),    intent(inout)   :: this
 
@@ -107,39 +114,47 @@ contains
         !
         call this%chidg%close('core')
 
-    end subroutine
+    end subroutine tearDown
+    !**************************************************************************************************
 
 
-    !--------------------------
-    !> PARAMETER CONSTRUCTORS
-    !--------------------------
-    
 
 
-    ! Function for setting the correct parameter value in the constructor
+    !> Function for setting the correct parameter value in the constructor
+    !!
+    !!
+    !--------------------------------------------------------------------------------------------------
     function newBlock(iblk) result(param)
         type(blockParam)        :: param
         integer(ik), intent(in) :: iblk
         
         param%iblk = iblk
     end function newBlock
+    !**************************************************************************************************
+
 
 
 
     
-    ! TestCase constructor for parameter specification
+    !> TestCase constructor for parameter specification
+    !!
+    !!
+    !--------------------------------------------------------------------------------------------------
     function newTest(param)
         type(rtest_eq_LA)        :: newTest
         type(blockParam)        :: param
         
         newTest%iblk = param%iblk
     end function newTest
+    !**************************************************************************************************
 
 
 
  
-    ! ToString - I think this is used to report the particular parameter value
-    ! in case of an error.
+    !> ToString - I think this is used to report the particular parameter value
+    !! in case of an error.
+    !!
+    !--------------------------------------------------------------------------------------------------
     function toString(this) result(string)
         class(blockParam), intent(in)   :: this
         character(:), allocatable       :: string
@@ -149,6 +164,7 @@ contains
         string = str
 
     end function toString
+    !***************************************************************************************************
  
 
 

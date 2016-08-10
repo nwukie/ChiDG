@@ -14,8 +14,8 @@ add_subdirectory(preconditioners)
 add_subdirectory(chimera)
 add_subdirectory(spatial)
 add_subdirectory(tools)
-add_subdirectory(actions)
 add_subdirectory(parallel)
+#add_subdirectory(actions)
 
 
 

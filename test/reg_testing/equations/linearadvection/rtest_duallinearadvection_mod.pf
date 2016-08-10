@@ -1,3 +1,24 @@
+!------------------------------------------------------------------------------------
+!
+!                   Testing equation sets with multiple equations
+!
+!   The purpose of this test is to make sure that the jacobian matrix is getting computed
+!   and stored correctly when using multiple equations. The method for verifying this 
+!   here is to use an equation set with two equations that are exactly the same.
+!   This is what the Dual Linear Advection equation set was implemented for.
+!
+!       du1/dt + c div(u1) = 0
+!       du2/dt + c div(u2) = 0
+!
+!   So, there is no coupling between the equations, and their entries in the jacobian
+!   matrix should be identical. So, we compute the volume advective flux and check
+!   that the values computed for each equation were computed correctly.
+!   
+!   @author Nathan A. Wukie
+!   @author Nathan A. Wukie (AFRL)
+!
+!
+!------------------------------------------------------------------------------------
 module rtest_duallinearadvection_mod
     use pfunit_mod
     use mod_kinds,                  only: rk,ik
@@ -72,42 +93,37 @@ contains
         integer(ik)                         :: neqns, nterms_s, nterms_c, spacedim
         real(rk), dimension(npt)            :: x,y,z
         
-        !
         ! Send log to file
-        !
         IO_DESTINATION = 'file'
 
-        !
         ! Initialize chidg environment
-        !
         call this%chidg%init('env')
 
-        !
         ! Generate points array for 3x3x3 mesh
-        !
         call meshgen('3x3x3_unit',nodes,connectivity)
 
-
-        !
         ! Initialize domain
-        !
         spacedim = 3
         nterms_s = 8
         nterms_c = 8
         call this%chidg%data%add_domain('D_01',nodes,connectivity,spacedim,nterms_c,'DualLinearAdvection')
 
-
-        !
         ! Initialize solution storage
-        !
         call this%chidg%initialize_solution_domains(nterms_s)
         call this%chidg%init('communication')
         call this%chidg%initialize_solution_solver()
 
 
     end subroutine setUp
+    !*******************************************************************************************
     
 
+
+    !>
+    !!
+    !!
+    !!
+    !------------------------------------------------------------------------------------------
     subroutine tearDown(this)
         class(test_eq_duallinearadvection),    intent(inout)   :: this
 
@@ -121,27 +137,37 @@ contains
     !******************************************************************************************
 
 
-    !--------------------------
-    ! PARAMETER CONSTRUCTORS
-    !--------------------------
     
-    ! Function for setting the correct parameter value in the constructor
+    !> Function for setting the correct parameter value in the constructor
+    !!
+    !!
+    !------------------------------------------------------------------------------------------
     function newBlock(iblk) result(param)
         type(blockParam)        :: param
         integer(ik), intent(in) :: iblk
         
         param%iblk = iblk
     end function newBlock
+    !******************************************************************************************
     
-    ! TestCase constructor for parameter specification
+
+    !> TestCase constructor for parameter specification
+    !!
+    !!
+    !------------------------------------------------------------------------------------------
     function newTest(param)
         type(test_eq_duallinearadvection) :: newTest
         type(blockParam)                    :: param
         
         newTest%iblk = param%iblk
     end function newTest
+    !******************************************************************************************
 
-    ! ToString - not sure what this is for yet
+
+    !> ToString - To write out the parameters used in a particular test case. In case of error,
+    !! then the configuration can be reported.
+    !!
+    !------------------------------------------------------------------------------------------
     function toString(this) result(string)
         class(blockParam), intent(in)   :: this
         character(:), allocatable       :: string
@@ -150,6 +176,7 @@ contains
         write(str,'(i0)') this%iblk
         string = str
     end function toString
+    !******************************************************************************************
 
 
 
@@ -224,21 +251,6 @@ contains
 
     end subroutine test_DLA_jacobian_volume_advective_flux_exact
     !*****************************************************************************************
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 

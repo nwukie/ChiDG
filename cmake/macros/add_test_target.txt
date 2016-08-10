@@ -5,13 +5,11 @@ macro (add_test_target target_subdirectory test_type)
     #
 	# set target name
     #
-    #if (${ARGV1} MATCHES "unit")
     if (${ARGV1} STREQUAL "unit")
 	    set(target_name unittest_${ARGV0})
         set(jenkins_file unittest.sh)
         set(testing_dir unit_testing)
         set(max_time 10)
-        #set(runstring "./${target_name} -name ${target_name} -xml ${target_name}.xml -max-timeout-duration ${max_time} -robust\n")
         set(runstring "./${target_name} -name ${target_name} -xml ${target_name}.xml -max-timeout-duration ${max_time}\n")
 
 
@@ -20,15 +18,13 @@ macro (add_test_target target_subdirectory test_type)
         set(jenkins_file unittest.sh)
         set(testing_dir unit_testing)
         set(max_time 10)
-        #set(runstring "${MPIRUN_EXECUTABLE} -np 8 ./${target_name} -name ${target_name} -xml ${target_name}.xml -max-timeout-duration ${max_time} -robust\n")
-        set(runstring "${MPIRUN_EXECUTABLE} -np 8 ./${target_name} -name ${target_name} -xml ${target_name}.xml -max-timeout-duration ${max_time}\n")
+        set(runstring "${MPIRUN_EXECUTABLE} -np 10 ./${target_name} -name ${target_name} -xml ${target_name}.xml -max-timeout-duration ${max_time}\n")
 
     elseif (${ARGV1} STREQUAL "reg")
         set(target_name regtest_${ARGV0})
         set(jenkins_file regtest.sh)
         set(testing_dir reg_testing)
         set(max_time 1000)
-        #set(runstring "./${target_name} -name ${target_name} -xml ${target_name}.xml -max-timeout-duration ${max_time} -robust\n")
         set(runstring "./${target_name} -name ${target_name} -xml ${target_name}.xml -max-timeout-duration ${max_time}\n")
 
     elseif (${ARGV1} STREQUAL "reg_parallel")
@@ -36,8 +32,7 @@ macro (add_test_target target_subdirectory test_type)
         set(jenkins_file regtest.sh)
         set(testing_dir reg_testing)
         set(max_time 1000)
-        #set(runstring "${MPIRUN_EXECUTABLE} -np 8 ./${target_name} -name ${target_name} -xml ${target_name}.xml -max-timeout-duration ${max_time} -robust\n")
-        set(runstring "${MPIRUN_EXECUTABLE} -np 8 ./${target_name} -name ${target_name} -xml ${target_name}.xml -max-timeout-duration ${max_time}\n")
+        set(runstring "${MPIRUN_EXECUTABLE} -np 10 ./${target_name} -name ${target_name} -xml ${target_name}.xml -max-timeout-duration ${max_time}\n")
 
     else()
         message(SEND_ERROR "Invalid test type. Valid types are 'unit' and 'reg'")

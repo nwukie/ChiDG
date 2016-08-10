@@ -1,4 +1,4 @@
-add_test_sources(equations
+add_test_sources(equations_parallel
                  rtest_entropy_errorrate_mod.pf
                  )
 

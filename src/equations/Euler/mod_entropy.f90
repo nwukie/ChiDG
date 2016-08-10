@@ -5,6 +5,8 @@ module mod_entropy
     use type_chidg_data,    only: chidg_data_t
 
     use mod_interpolate,    only: interpolate_element
+    use mod_chidg_mpi,      only: ChiDG_COMM
+    use mpi_f08,            only: MPI_AllReduce, MPI_REAL8, MPI_SUM
     use DNAD_D
 
     implicit none
@@ -24,7 +26,7 @@ contains
     !!
     !!
     !------------------------------------------------------------------------------------
-    function compute_entropy_error(data) result(error_sum)
+    function compute_entropy_error(data) result(entropy_error)
         type(chidg_data_t), intent(inout)   :: data
 
 
@@ -35,8 +37,8 @@ contains
         real(rk), dimension(data%mesh(1)%elems(1)%gq%vol%nnodes)    :: entropy_rise
 
         integer(ik) :: irho, irhou, irhov, irhow, irhoE
-        integer(ik) :: ielem, iface, nelem, iseed, idom
-        real(rk)    :: pinf, tinf, rhoinf, gam, entropy_ref, error_sum, vol, error, entropy_error, vol_sum
+        integer(ik) :: ielem, iface, nelem, iseed, idom, ierr
+        real(rk)    :: pinf, tinf, rhoinf, gam, entropy_ref, error_sum, error_sum_reduced, vol, error, entropy_error, vol_sum, vol_sum_reduced
 
 
         pinf   = 110000._rk
@@ -72,7 +74,6 @@ contains
             !
             ! Zero entropy error
             !
-            entropy_error = ZERO
             error_sum     = ZERO
             vol           = ZERO
             vol_sum       = ZERO
@@ -135,7 +136,15 @@ contains
         end associate
 
 
-        error_sum = sqrt(error_sum/vol_sum)
+
+        ! Reduce the total error across processors
+        call MPI_AllReduce(error_sum,error_sum_reduced,1,MPI_REAL8,MPI_SUM,ChiDG_COMM,ierr)
+
+        ! Reduce the total volume across processors
+        call MPI_AllReduce(vol_sum,vol_sum_reduced,1,MPI_REAL8,MPI_SUM,ChiDG_COMM,ierr)
+
+        ! Compute the global volume-weighted entropy error
+        entropy_error = sqrt(error_sum_reduced/vol_sum_reduced)
 
 
     end function compute_entropy_error

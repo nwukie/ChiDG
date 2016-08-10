@@ -11,6 +11,9 @@
 !   This suite runs the smoothbump case with 6x2x2, 12x4x2, and 24x8x2 grids with
 !   quartic elements. Each grid is run from 1st to 4th order accuracy.
 !
+!   Additionally, this suite runs the above configurations on 1, 2, 7, and 10 
+!   processors. 
+!
 !   The boundary condition settings are:
 !
 !       Inlet:  euler_totalinlet  
@@ -25,27 +28,35 @@
 !--------------------------------------------------------------------------------
 module rtest_entropy_errorrate_mod
     use pfunit_mod
-    use mod_kinds,              only: rk, ik
-    use type_chidg,             only: chidg_t
+    use mod_kinds,          only: rk, ik
+    use mod_constants,      only: ZERO, THREE, IO_DESTINATION
+    use type_chidg,         only: chidg_t
+    use mod_bc,             only: create_bc
+    use type_function,      only: function_t
+    use mod_function,       only: create_function
+    use mod_grid_operators, only: initialize_variable
+    use mod_entropy,        only: compute_entropy_error
+
+    use mod_chidg_mpi,      only: IRANK, NRANK
+    use mpi_f08,            only: MPI_COMM
+    use mod_io
     implicit none
+
 
     public  :: rtest_equations_euler_entropyerror
 
 
 
 
-
-
-
-    !>  This parameter initialized the state for each test
+    !>  This parameter initialize the state for each test
     !!
     !!  @author Nathan A. Wukie
-    !!
+    !!  @author Nathan A. Wukie (AFRL)
     !!
     !!
     !-------------------------------------------------------------------------------
     @TestParameter
-    type, extends(AbstractTestParameter) :: case_grid_order
+    type, extends(MpiTestParameter) :: case_grid_order
         character(100)  :: gridfile
         integer(ik)     :: order
         real(rk)        :: entropy_ref
@@ -57,17 +68,24 @@ module rtest_entropy_errorrate_mod
 
 
 
-    !> Main testing fixture with test components that get initialized for each test
+
+
+
+    !>  Main testing fixture with test components that get initialized for each test
     !!
-    !!
+    !!  @author Nathan A. Wukie 
+    !!  @author Nathan A. Wukie (AFRL)
     !!
     !!
     !-------------------------------------------------------------------------------
     @TestCase(testParameters={getParameters()}, constructor=newTest)
-    type, extends(ParameterizedTestCase) :: rtest_equations_euler_entropyerror
+    type, extends(MpiTestCase) :: rtest_equations_euler_entropyerror
         character(100)  :: gridfile
         integer(ik)     :: order
         real(rk)        :: entropy_ref
+
+        type(chidg_t)   :: chidg
+        type(mpi_comm)  :: ChiDG_COMM
     contains
         procedure   :: setUp
         procedure   :: tearDown
@@ -76,6 +94,14 @@ module rtest_entropy_errorrate_mod
 
 
 
+    !> Simple container to hold arbitrary length file names. That way, we can have
+    !! an array of filenames that get looped through.
+    !!
+    !-------------------------------------------------------------------------------
+    type :: string
+        character(len=:), allocatable   :: str
+    end type
+    !*******************************************************************************
 
 
 
@@ -85,65 +111,93 @@ module rtest_entropy_errorrate_mod
 contains
 
 
-    !> Set-up, tear-down, output
+    !> Parameter constructors
     !!
     !!
     !!
-    !!
-    !--------------------------------------------------------------------------------
-    subroutine setUp(this)
-        class(rtest_equations_euler_entropyerror),  intent(inout)   :: this
-    end subroutine setUp
-
-
-    subroutine tearDown(this)
-        class(rtest_equations_euler_entropyerror),  intent(inout)   :: this
-    end subroutine tearDown
-
-
-
-    !
-    ! Parameter constructors
-    !
+    !------------------------------------------------------------------------------
     function newTest(test_parameter) result(test)
         type(case_grid_order),  intent(in)          :: test_parameter
         type(rtest_equations_euler_entropyerror)    :: test
 
-        test%gridfile = test_parameter%gridfile
-        test%order    = test_parameter%order
+        test%gridfile    = test_parameter%gridfile
+        test%order       = test_parameter%order
         test%entropy_ref = test_parameter%entropy_ref
 
     end function newTest
+    !******************************************************************************
 
 
-    !
-    ! Parameter initialization
-    !
+    !> Parameter initialization
+    !!
+    !!
+    !!
+    !------------------------------------------------------------------------------
     function getParameters() result(params)
         type(case_grid_order), allocatable :: params(:)
     
-        ! case_grid_order('grid',order,reference_entropy)
-        params = [  case_grid_order('smoothbump_6x2x2.h5',  1, 2.761019163e-3_rk), &
-                    case_grid_order('smoothbump_6x2x2.h5',  2, 3.618440627e-3_rk), &
-                    case_grid_order('smoothbump_6x2x2.h5',  3, 1.116431012e-3_rk), &
-                    case_grid_order('smoothbump_6x2x2.h5',  4, 6.731678976e-4_rk), &
-                    case_grid_order('smoothbump_12x4x2.h5', 1, 3.807878665e-3_rk), &
-                    case_grid_order('smoothbump_12x4x2.h5', 2, 1.323352387e-3_rk), &
-                    case_grid_order('smoothbump_12x4x2.h5', 3, 3.940896088e-4_rk), &
-                    case_grid_order('smoothbump_12x4x2.h5', 4, 8.433932228e-5_rk), &
-                    case_grid_order('smoothbump_24x8x2.h5', 1, 4.038806838e-3_rk), &
-                    case_grid_order('smoothbump_24x8x2.h5', 2, 5.554687475e-4_rk), &
-                    case_grid_order('smoothbump_24x8x2.h5', 3, 5.367783209e-5_rk), &
-                    case_grid_order('smoothbump_24x8x2.h5', 4, 7.223333943e-6_rk) &
+        type(string),       allocatable :: files(:)
+        integer(ik),        allocatable :: orders(:)
+        real(rk),           allocatable :: entropies(:)
+        integer(ik) :: icase
+
+        files = [  string('smoothbump_6x2x2.h5') , &
+                   string('smoothbump_6x2x2.h5') , &
+                   string('smoothbump_6x2x2.h5') , &
+                   string('smoothbump_6x2x2.h5') , &
+                   string('smoothbump_12x4x2.h5'), &
+                   string('smoothbump_12x4x2.h5'), &
+                   string('smoothbump_12x4x2.h5'), &
+                   string('smoothbump_12x4x2.h5'), &
+                   string('smoothbump_24x8x2.h5'), &
+                   string('smoothbump_24x8x2.h5'), &
+                   string('smoothbump_24x8x2.h5'), &
+                   string('smoothbump_24x8x2.h5') &
                     ]
 
+        orders = [ 1, &
+                   2, &
+                   3, &
+                   4, &
+                   1, &
+                   2, &
+                   3, &
+                   4, &
+                   1, &
+                   2, &
+                   3, &
+                   4 ]
+
+        entropies = [ 2.761019163e-3_rk, &
+                      3.618440627e-3_rk, &
+                      1.116431012e-3_rk, &
+                      6.731678976e-4_rk, &
+                      3.807878665e-3_rk, &
+                      1.323352387e-3_rk, &
+                      3.940896088e-4_rk, &
+                      8.433932228e-5_rk, &
+                      4.038806838e-3_rk, &
+                      5.554687475e-4_rk, &
+                      5.367783209e-5_rk, &
+                      7.223333943e-6_rk ]
+
+        !Initialize the test case container with the parameter
+        allocate(params(size(files)))
+        do icase = 1,size(files)
+            params(icase)%gridfile    = files(icase)%str
+            params(icase)%order       = orders(icase)
+            params(icase)%entropy_ref = entropies(icase)
+        end do
+
     end function getParameters
+    !*******************************************************************************************
 
 
 
-    !
-    ! Reporting in the case of a failed test
-    !
+    !>  Reporting the parameters of the test
+    !!
+    !!
+    !-------------------------------------------------------------------------------------------
     function toString(this) result(string)
         class (case_grid_order),    intent(in)  :: this
         character(:), allocatable   :: string
@@ -154,7 +208,7 @@ contains
 
 
         string = trim(buffer)
-    end function
+    end function toString
     !********************************************************************************************
 
 
@@ -164,40 +218,22 @@ contains
 
 
 
-
-    !>  Main test routine
+    !>  Set up test routine.
     !!
+    !!  This routine reads the grid file, sets up boundary conditions, initializes storage
+    !!  and sets the appropriate configuration options.
+    !!  This routine also gets the numer of processors and the correct MPI communicator for 
+    !!  the test.
     !!
-    !!
+    !!  @author Nathan A. Wukie
+    !!  @author Nathan A. Wukie (AFRL)
     !!
     !!
     !--------------------------------------------------------------------------------------------
-    @Test
-    subroutine rtest_entropy_error_rate(self)
-        use mod_kinds,          only: rk, ik
-        use mod_constants,      only: ZERO, THREE, XI_MIN, ETA_MIN, ZETA_MIN, XI_MAX, ETA_MAX, ZETA_MAX, &
-                                      IO_DESTINATION
-        use type_chidg,         only: chidg_t
-        use type_bc,            only: bc_t
-        use mod_bc,             only: create_bc
-        use type_meshdata,      only: meshdata_t
-        use type_function,      only: function_t
-        use type_dict,          only: dict_t
-        use mod_function,       only: create_function
-        use mod_grid_operators, only: initialize_variable
-        use mod_hdfio,          only: read_grid_hdf
-        use mod_io
-        use mod_entropy,        only: compute_entropy_error
-        class(rtest_equations_euler_entropyerror),  intent(inout)   :: self
+    subroutine setUp(this)
+        class(rtest_equations_euler_entropyerror),  intent(inout)   :: this
 
-
-
-        type(chidg_t)                   :: chidg
-        class(bc_t),        allocatable :: wall, inlet, outlet
-        type(meshdata_t),   allocatable :: meshdata(:)
         class(function_t),  allocatable :: fcn
-!        type(dict_t)                    :: toptions, noptions, loptions
-        integer(ik)                     :: nterms_c, itime, idom
         real(rk)                        :: tol, entropy_error
 
         
@@ -207,10 +243,12 @@ contains
         !
         ! Define input data here that is normally read through the namelist input file
         !
+        ! As a result, we don't call chidg%init('io')
+        !
         !------------------------------------------------------------------------------
         basis            = 'legendre'
         spacedim         = 3
-        nterms_s         = self%order**THREE
+        nterms_s         = this%order**THREE
         gq_rule          = 2
         time_scheme      = 'steady'
         nonlinear_solver = 'quasi_newton'
@@ -219,93 +257,76 @@ contains
         IO_DESTINATION   = 'file'
         !------------------------------------------------------------------------------
 
-
-
-
         !
+        ! Get MPI communicator information from pFUnit
+        !
+        IRANK                   = this%getProcessRank()
+        NRANK                   = this%getNumProcessesRequested()
+        this%ChiDG_COMM%mpi_val = this%getMpiCommunicator()
+
+
+
         ! Set timescheme options to pass during initialization
-        !
         call toptions%set('dt', 0.1_rk) ! means nothing here
         call toptions%set('nsteps',100)
         call toptions%set('nwrite',0)
 
-        !
         ! Set linear solver options to pass during initialization
-        !
         call loptions%set('tol',1.e-8_rk)
 
-
-        !
         ! Set nonlinear solver options
-        !
         call noptions%set('tol',3.e-5_rk)
         call noptions%set('cfl0',1.0_rk)
         call noptions%set('nsteps',100)
 
+
+
         !
         ! Initialize ChiDG environment
         !
-        call chidg%init('env')
+        call this%chidg%init('env',this%ChiDG_COMM)
 
 
         !
         ! Read grid
         !
-        call chidg%read_grid(self%gridfile,spacedim)
-        call chidg%read_boundaryconditions(self%gridfile)
+        call this%chidg%read_grid(this%gridfile,spacedim)
+        call this%chidg%read_boundaryconditions(this%gridfile)
 
 
 
-
-        call chidg%initialize_solution_domains(nterms_s)
-        call chidg%init('communication')
-        call chidg%init('chimera')
+        call this%chidg%initialize_solution_domains(nterms_s)
+        call this%chidg%init('communication')
+        call this%chidg%init('chimera')
+        call this%chidg%initialize_solution_solver()
 
 
         !
         ! Set ChiDG components
         !
-        call chidg%set('time_scheme',      time_scheme,      toptions)
-        call chidg%set('nonlinear_solver', nonlinear_solver, noptions)
-        call chidg%set('linear_solver',    linear_solver,    loptions)
-        call chidg%set('preconditioner',   preconditioner)
+        call this%chidg%set('time_scheme',      time_scheme,      toptions)
+        call this%chidg%set('nonlinear_solver', nonlinear_solver, noptions)
+        call this%chidg%set('linear_solver',    linear_solver,    loptions)
+        call this%chidg%set('preconditioner',   preconditioner)
 
 
-        !
-        ! Create boundary conditions
-        !
-!        call outlet%set_fcn_option('StaticPressure', 'val', 93000.0_rk)
-!        call inlet%set_fcn_option('TotalPressure', 'val', 110000.0_rk)
-!        call inlet%set_fcn_option('TotalTemperature', 'val', 300.0_rk)
 
-
-        call chidg%initialize_solution_solver()
 
         !
         ! Initialize solution
         !
         call create_function(fcn,'constant')
 
-
-        ! rho
         call fcn%set_option('val',1.13262_rk)
-        call initialize_variable(chidg%data,1,fcn)
-
-        ! rho_u
+        call initialize_variable(this%chidg%data,1,fcn) ! rho
         call fcn%set_option('val',190.339029_rk)
-        call initialize_variable(chidg%data,2,fcn)
-
-        ! rho_v
+        call initialize_variable(this%chidg%data,2,fcn) ! rhou
         call fcn%set_option('val',ZERO)
-        call initialize_variable(chidg%data,3,fcn)
-
-        ! rho_w
+        call initialize_variable(this%chidg%data,3,fcn) ! rhov
         call fcn%set_option('val',ZERO)
-        call initialize_variable(chidg%data,4,fcn)
-
-        ! rho_E
+        call initialize_variable(this%chidg%data,4,fcn) ! rhow
         call fcn%set_option('val',248493.425_rk)
-        call initialize_variable(chidg%data,5,fcn)
+        call initialize_variable(this%chidg%data,5,fcn) ! rhoE
 
 
         
@@ -313,41 +334,65 @@ contains
         !
         ! Wrap-up initialization activities
         !
-        call chidg%init('finalize')
+        call this%chidg%init('finalize')
 
+    end subroutine SetUp
+    !******************************************************************************************************
+
+
+    subroutine tearDown(this)
+        class(rtest_equations_euler_entropyerror),  intent(inout)   :: this
+
+
+        ! Close ChiDG
+        call this%chidg%close('core')
+
+    end subroutine tearDown
+    !******************************************************************************************************
+
+
+
+
+
+
+
+
+
+
+    !>  Run the simulation, compute the entropy error, test against the reference values.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @author Nathan A. Wukie (AFRL)
+    !!
+    !!
+    !!
+    !!
+    !-------------------------------------------------------------------------------------------------------
+    @Test(npes=[1,2,4,7,10])
+    subroutine rtest_entropy_error_rate(self)
+        class(rtest_equations_euler_entropyerror),  intent(inout)   :: self
+
+        real(rk)    :: tol, entropy_error
 
         !
         ! Run ChiDG simulation
         !
-        call chidg%run()
-
-
+        call self%chidg%run()
+        call self%chidg%report('after')
 
         !
         ! Compute entropy error
         !
-        entropy_error = compute_entropy_error(chidg%data)
-
-
-
-        
+        entropy_error = compute_entropy_error(self%chidg%data)
 
         !
         ! Test that computed entropy error is the expected value
         !
-        
-        ! Set tolerance two orders-of-madnitude below entropy_ref
-        tol = self%entropy_ref/100_rk
-
+        tol = self%entropy_ref/100._rk
         @assertEqual(self%entropy_ref,entropy_error,tol)
 
 
-        !
-        ! Close ChiDG
-        !
-        call chidg%close('core')
-
-    end subroutine
+    end subroutine rtest_entropy_error_rate
     !*******************************************************************************************************
 
 

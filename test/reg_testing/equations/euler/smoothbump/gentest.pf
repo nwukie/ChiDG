@@ -1,7 +1,0 @@
-@Test
-subroutine gentest()
-    use pfunit_mod
-
-    @assertTrue(.false.)
-
-end subroutine

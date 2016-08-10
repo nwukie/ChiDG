@@ -68,8 +68,4 @@ contains
 
 
 
-
-
-
-
 end module type_partition

@@ -1,3 +1,57 @@
+!>  Restricted Additive Schwarz(RAS) preconditioner. ILU0 local solve.
+!!
+!!
+!!  Legend:
+!!  =================================================================
+!!  local = The current processor's local elements and their coupling
+!!  proc# = Another processor's elements
+!!  cpl   = Coupling between the elements of neighboring processors
+!!
+!!
+!!  In a domain decomposition block-Jacobi preconditioner, the processor-local problem is solved without
+!!  taking the inter-processor coupling of the problem into account.
+!!
+!!  |--------|---------|--------|
+!!  |        |         |        |
+!!  | proc 0 |   cpl   |  cpl   |
+!!  |        |         |        |
+!!  |--------|---------|--------|                                      |---------|  |-|     |-|
+!!  |        |         |        |           block-Jacobi               |         |  | |     | |
+!!  |  cpl   |  local  |  cpl   |           ----------->               |  local  |  |x|  =  |b|
+!!  |        |         |        |                                      |         |  | |     | |
+!!  |--------|---------|--------|                                      |---------|  |-|     |-|
+!!  |        |         |        |
+!!  |  cpl   |   cpl   | proc 2 |
+!!  |        |         |        |
+!!  |--------|---------|--------|
+!!
+!!
+!!
+!!  The RAS preconditioner considers the local problem and also includes a 1-element overlap with the
+!!  neighboring processors and their coupling. The implementation here rearranges the problem so that
+!!  all overlap data is put at the end of the preconditioning matrix. The restricted part of the
+!!  preconditioner means that the solution of the preconditioning matrix is only applied to the 
+!!  processor-local portion of the global vector. This is why only a portion of the x-vector is shown
+!!  here in the diagram.
+!!
+!!  |--------|---------|--------|
+!!  |        |         |        |
+!!  | proc 0 |   cpl   |  cpl   |
+!!  |        |         |        |
+!!  |--------|---------|--------|                                   |---------|--------| |-|    |-|
+!!  |        |         |        |   Restricted Additive Schwarz     |         |        | | |    | |
+!!  |  cpl   |  local  |  cpl   |           ----------->            |  local  |  cpl   | |x|    | |
+!!  |        |         |        |                                   |         |        | | |    | |
+!!  |--------|---------|--------|                                   |---------|--------| |-|  = |b|
+!!  |        |         |        |                                   |         | proc#  |        | |
+!!  |  cpl   |   cpl   | proc 2 |                                   |  cpl    | overlap|        | |
+!!  |        |         |        |                                   |---------|--------|        |-|
+!!  |--------|---------|--------|
+!!
+!!
+!!
+!!
+!---------------------------------------------------------------------------------------------------------------
 module precon_RASILU0
 #include <messenger.h>
     use mod_kinds,              only: rk, ik
@@ -17,13 +71,14 @@ module precon_RASILU0
 
     external DGEMV
 
-    !>  Restricted Additive Schwarz(RAS) preconditioner using ILU0 to solve the local problems includeing the RAS overlap data.
+    !>  Restricted Additive Schwarz(RAS) preconditioner using ILU0 to solve the local problems includeing the 
+    !!  RAS overlap data.
     !!
-    !!  @author Nathan A. Wukie
-    !!  @date   2/24/2016
+    !!  @author Nathan A. Wukie(AFRL)
+    !!  @date   8/10/2016
     !!
     !!
-    !------------------------------------------------------------------------------------------------------------------
+    !-----------------------------------------------------------------------------------------------------------
     type, extends(preconditioner_t) :: precon_RASILU0_t
 
         type(chidgMatrix_t)     :: LD       !< Lower-Diagonal matrix for local problems
@@ -42,7 +97,7 @@ module precon_RASILU0
         procedure   :: comm_wait
 
     end type precon_RASILU0_t
-    !*****************************************************************************************************************
+    !***********************************************************************************************************
 
 
 
@@ -54,12 +109,12 @@ contains
     !> Initialize the ILU0 preconditioner. This is for allocating storage. In this case, we allocate
     !! a Lower-Diagonal block matrix for storing the LU decomposition.
     !!  
-    !!  @author Nathan A. Wukie
-    !!  @date   2/24/2016
+    !!  @author Nathan A. Wukie(AFRL)
+    !!  @date   8/10/2016
     !!
-    !!  @param[inout]   domain      domain_t instance containing a mesh component used to initialize the block matrix
+    !!  @param[inout]   data      chidg data container, with mesh, solution, etc.
     !!
-    !-----------------------------------------------------------------------------------------------------------------
+    !-----------------------------------------------------------------------------------------------------------
     subroutine init(self,data)
         class(precon_RASILU0_t),    intent(inout)   :: self
         type(chidg_data_t),         intent(in)      :: data
@@ -72,21 +127,15 @@ contains
         call self%LD%init(mesh=data%mesh, mtype='LowerDiagonal')
         self%initialized = .true.
 
-
         
         !
         ! Initialize the overlap data
         !
         call self%send%init(data%mesh, data%sdata%lhs)
-!        call MPI_Barrier(ChiDG_Comm,ierr)
         call self%recv%init(data%mesh, data%sdata%lhs, data%sdata%rhs)
 
-    
-
-
-
     end subroutine init
-    !*****************************************************************************************************************
+    !*************************************************************************************************************
 
 
 
@@ -95,13 +144,18 @@ contains
 
 
 
-    !> Compute the block diagonal inversion and store so it can be applied.
+    !>  Update the preconditioner.
     !!
-    !!  @author Nathan A. Wukie
-    !!  @date   2/24/2016
+    !!  For the Restricted Additive Schwarz algorithm, this exchanges the processor overlap data and 
+    !!  computes information that is reused every iteration. Here, it is premultiplying some
+    !!  of the blocks and computing some matrix inversions that do not depend on the incoming vector.
     !!
     !!
-    !----------------------------------------------------------------------------------------------------------------
+    !!  @author Nathan A. Wukie(AFRL)
+    !!  @date   8/10/2016
+    !!
+    !!
+    !--------------------------------------------------------------------------------------------------------------
     subroutine update(self,A,b)
         class(precon_RASILU0_t),    intent(inout)   :: self
         type(chidgMatrix_t),        intent(in)      :: A
@@ -121,8 +175,6 @@ contains
         !
         call self%comm_send(A)
         call self%comm_recv()
-
-
 
 
 
@@ -153,9 +205,6 @@ contains
             self%LD%dom(idom)%lblks(1,DIAG)%mat = inv(self%LD%dom(idom)%lblks(1,DIAG)%mat)
 
 
-
-
-
             !
             ! Loop through all Proc-Local rows
             !
@@ -183,17 +232,14 @@ contains
                 end do ! icol
 
 
-                !
                 ! Pre-Invert current diagonal block and store
-                !
                 self%LD%dom(idom)%lblks(irow,DIAG)%mat = inv(self%LD%dom(idom)%lblks(irow,DIAG)%mat)
 
 
             end do !irow
 
-
-
         end do ! idom
+
 
 
 
@@ -217,18 +263,23 @@ contains
 
 
 
-                        ! Compute and store the contribution to the lower-triangular part of A comm, since A comm shouldn't get used anywhere else
+                        ! Compute and store the contribution to the lower-triangular part of A comm, since A comm shouldn't 
+                        ! get used anywhere else
                         if ( parent_proc /= IRANK ) then
-                            ! If lower block is coupled with another block in the overlap, get DIAGONAL component from A since overlap data is stored there
+                            ! If lower block is coupled with another block in the overlap, get DIAGONAL component from A since 
+                            ! overlap data is stored there
                             iblk_diag_parent = self%recv%dom(idom)%comm(icomm)%elem(trans_elem)%diag%at(1)
 
-                            associate ( lower => self%recv%dom(idom)%comm(icomm)%elem(ielem)%blks(ilower)%mat,  upper_diag => self%recv%dom(idom)%comm(icomm)%elem(trans_elem)%blks(iblk_diag_parent)%mat )
+                            associate ( lower => self%recv%dom(idom)%comm(icomm)%elem(ielem)%blks(ilower)%mat,  &
+                                        upper_diag => self%recv%dom(idom)%comm(icomm)%elem(trans_elem)%blks(iblk_diag_parent)%mat )
                                 lower = matmul(lower,upper_diag)
                             end associate
 
                         else
-                            ! If lower block is coupled with an interior block, get DIAGONAL component from LD, since we don't want to overwrite these entries in A as that would blow away data we need for the MV product
-                            associate( lower => self%recv%dom(idom)%comm(icomm)%elem(ielem)%blks(ilower)%mat,  upper_diag => self%LD%dom(idom)%lblks(eparent_l,DIAG)%mat )
+                            ! If lower block is coupled with an interior block, get DIAGONAL component from LD, since we 
+                            ! don't want to overwrite these entries in A as that would blow away data we need for the MV product
+                            associate( lower => self%recv%dom(idom)%comm(icomm)%elem(ielem)%blks(ilower)%mat,  &
+                                       upper_diag => self%LD%dom(idom)%lblks(eparent_l,DIAG)%mat )
                                 lower = matmul(lower,upper_diag)
                             end associate
                         end if
@@ -236,15 +287,20 @@ contains
 
 
 
-                        ! Modify the current diagonal by this lower-triangular part multiplied by opposite upper-triangular part. (The component in the transposed position)
+                        ! Modify the current diagonal by this lower-triangular part multiplied by opposite upper-triangular part. 
+                        ! (The component in the transposed position)
                         if ( parent_proc /= IRANK ) then
 
-                            associate ( diag => self%recv%dom(idom)%comm(icomm)%elem(ielem)%blks(iblk_diag)%mat,  lower => self%recv%dom(idom)%comm(icomm)%elem(ielem)%blks(ilower)%mat,  trans => self%recv%dom(idom)%comm(icomm)%elem(trans_elem)%blks(trans_blk)%mat )
+                            associate ( diag => self%recv%dom(idom)%comm(icomm)%elem(ielem)%blks(iblk_diag)%mat,  &
+                                        lower => self%recv%dom(idom)%comm(icomm)%elem(ielem)%blks(ilower)%mat,    &
+                                        trans => self%recv%dom(idom)%comm(icomm)%elem(trans_elem)%blks(trans_blk)%mat )
                                 diag = diag - matmul(lower,trans)
                             end associate
 
                         else
-                            associate ( diag => self%recv%dom(idom)%comm(icomm)%elem(ielem)%blks(iblk_diag)%mat,  lower => self%recv%dom(idom)%comm(icomm)%elem(ielem)%blks(ilower)%mat,  trans => A%dom(idom)%lblks(eparent_l, trans_blk)%mat )
+                            associate ( diag => self%recv%dom(idom)%comm(icomm)%elem(ielem)%blks(iblk_diag)%mat,  &
+                                        lower => self%recv%dom(idom)%comm(icomm)%elem(ielem)%blks(ilower)%mat,    &
+                                        trans => A%dom(idom)%lblks(eparent_l, trans_blk)%mat )
                                 diag = diag - matmul(lower,trans)
                             end associate
                         end if
@@ -254,9 +310,7 @@ contains
                     end do !iblk
 
 
-                    !
                     ! Pre-Invert current diagonal block and store
-                    !
                     iblk_diag = self%recv%dom(idom)%comm(icomm)%elem(ielem)%diag%at(1)
                     self%recv%dom(idom)%comm(icomm)%elem(ielem)%blks(iblk_diag)%mat = inv(self%recv%dom(idom)%comm(icomm)%elem(ielem)%blks(iblk_diag)%mat)
 
@@ -269,13 +323,8 @@ contains
 
 
 
-
-
-
-
-
     end subroutine update
-    !*******************************************************************************************
+    !**********************************************************************************************************
 
 
 
@@ -284,10 +333,31 @@ contains
 
 
 
-    !> Apply the preconditioner to the krylov vector 'v' and return preconditioned vector 'z'
+    !>  Apply the preconditioner to the krylov vector 'v' and return preconditioned vector 'z'.
     !!
-    !!  @author Nathan A. Wukie
-    !!  @date   2/24/2016
+    !!  We are using ILU0 for the local solve, so we perform the exchange of boundary vector data,
+    !!  compute the forward solve of the incomplete factorization and then compute the backward
+    !!  solve of the incomplete factorization.
+    !!  
+    !!  Assumption: All overlap data is placed at the end of the local system of equations.
+    !!          
+    !!          |         |        |
+    !!          |  local  |coupling|
+    !!          |         |        |
+    !!          |---------|--------|
+    !!          |         |        |
+    !!          |coupling |overlap |
+    !!          |         |        |
+    !!
+    !!          So, the algorithm is structured as:
+    !!              - forward solve  (local)
+    !!              - forward solve  (overlap)
+    !!              - backward solve (overlap)
+    !!              - backward solve (local)
+    !!
+    !!
+    !!  @author Nathan A. Wukie(AFRL)
+    !!  @date   8/10/2016
     !!
     !!
     !!
@@ -382,7 +452,8 @@ contains
                         parent_proc = self%recv%dom(idom)%comm(icomm)%elem(ielem)%blks(ilower)%parent_proc()
                         eparent_l   = self%recv%dom(idom)%comm(icomm)%elem(ielem)%blks(ilower)%eparent_l()
                     
-                        associate ( zvec_diag => z%recv%comm(recv_comm_diag)%dom(recv_domain_diag)%vecs(recv_element_diag)%vec, lower => self%recv%dom(idom)%comm(icomm)%elem(ielem)%blks(ilower)%mat )
+                        associate ( zvec_diag => z%recv%comm(recv_comm_diag)%dom(recv_domain_diag)%vecs(recv_element_diag)%vec, &
+                                    lower => self%recv%dom(idom)%comm(icomm)%elem(ielem)%blks(ilower)%mat )
 
                         if ( parent_proc == IRANK ) then
 
@@ -473,7 +544,6 @@ contains
 
                     iupper = A%dom(idom)%local_upper_blocks(irow)%at(icol)
 
-                    !if (allocated(A%dom(idom)%lblks(irow,iupper)%mat) .and. A%dom(idom)%lblks(irow,iupper)%parent_proc() == IRANK) then
                     if ( allocated(A%dom(idom)%lblks(irow,iupper)%mat) ) then
 
                         interior_block = (A%dom(idom)%lblks(irow,iupper)%parent_proc() == IRANK)
@@ -539,12 +609,11 @@ contains
 
 
 
-    !>
+    !>  Send the matrix blocks from the current processor that couple with neighboring processors to those
+    !!  processors so they can be included in the ILU0 solve of the neighbor processor.
     !!
     !!  @author Nathan A. Wukie (AFRL)
-    !!  @date   7/25/2016
-    !!
-    !!
+    !!  @date   8/10/2016
     !!
     !!
     !--------------------------------------------------------------------------------------------------------------
@@ -602,12 +671,10 @@ contains
 
 
 
-    !>
+    !>  Receive matrix blocks from neighboring processors for neighboring elements.
     !!
     !!  @author Nathan A. Wukie (AFRL)
-    !!  @date   7/25/2016
-    !!
-    !!
+    !!  @date   8/10/2016
     !!
     !!
     !--------------------------------------------------------------------------------------------------------------
@@ -655,7 +722,7 @@ contains
     !>
     !!
     !!  @author Nathan A. Wukie (AFRL)
-    !!  @date   7/25/2016
+    !!  @date   8/10/2016
     !!
     !!
     !!

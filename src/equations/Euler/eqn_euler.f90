@@ -6,7 +6,6 @@ module eqn_euler
 
     use EULER_boundary_average_advective_flux,  only: EULER_boundary_average_advective_flux_t
     use EULER_volume_advective_flux,            only: EULER_volume_advective_flux_t
-    use EULER_volume_advective_flux_cacheoptimized,            only: EULER_volume_advective_flux_cacheoptimized_t
     use EULER_LaxFriedrichs_flux,               only: EULER_LaxFriedrichs_flux_t
     use EULER_Roe_flux,                         only: EULER_Roe_flux_t
     use EULER_Roe_flux_cacheoptimized,          only: EULER_Roe_flux_cacheoptimized_t
@@ -58,10 +57,8 @@ contains
 
 
         type(EULER_volume_advective_flux_t)             :: volume_flux
-        type(EULER_volume_advective_flux_cacheoptimized_t) :: volume_flux_cache
         type(EULER_boundary_average_advective_flux_t)   :: average_flux
         type(EULER_Roe_flux_t)                          :: roe
-        type(EULER_Roe_flux_cacheoptimized_t)           :: roe_cache
         type(EULER_LaxFriedrichs_flux_t)                :: LF
         type(EULER_properties_t)                        :: prop
 
@@ -101,10 +98,7 @@ contains
         !
         ! Allocate flux components to specific types for the equation set
         !
-        !call self%add_volume_advective_flux(volume_flux_cache)
         call self%add_boundary_advective_flux(average_flux)
-        !call self%add_boundary_advective_flux(roe_cache)
-
         call self%add_volume_advective_flux(volume_flux)
         call self%add_boundary_advective_flux(roe)
         !call self%add_boundary_advective_flux(LF)

@@ -2,26 +2,19 @@ module test_comm_D1E4_mod
     use mod_kinds,                  only: rk, ik
     use mod_constants,              only: XI_MIN, XI_MAX, DIAG, BOUNDARY, IO_DESTINATION, &
                                           ONE, TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT, NINE, TEN
-
     use type_chidg,                 only: chidg_t
     use type_chidgMatrix,           only: chidgMatrix_t
     use type_chidgVector,           only: chidgVector_t
-    use type_partition,             only: partition_t
-    use type_domain_connectivity,   only: domain_connectivity_t
-
-    use mod_hdfio,                  only: read_connectivity_hdf
-    use mod_partitioners,           only: partition_connectivity, send_partitions, recv_partition
     use mod_chidg_mpi,              only: IRANK, NRANK, GLOBAL_MASTER
     use operator_chidg_dot,         only: dot
     use operator_chidg_mv,          only: chidg_mv
-
-    use mpi_f08,                    only: MPI_Barrier, MPI_COMM_WORLD, MPI_COMM
+    use mpi_f08,                    only: MPI_COMM
     use pfunit_mod
     implicit none
 
 
 
-    !>
+    !>  
     !!
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   6/23/2016
@@ -58,11 +51,6 @@ contains
     subroutine setUp(this)
         class(test_comm_D1E4), intent(inout) :: this
 
-!        type(domain_connectivity_t),    allocatable :: connectivities(:)
-!        type(partition_t),              allocatable :: partitions(:)
-!        type(partition_t)                           :: partition
-
-
         character(len=:),   allocatable :: gridfile
         integer(ik)                     :: iread, spacedim, ierr, ielem
         real(rk)                        :: initial_vals(this%nterms_s)
@@ -81,31 +69,9 @@ contains
         spacedim       = 3
 
 
-
-
-!        !
-!        ! Read connectivities, partition, distribute
-!        !
-!        if ( IRANK == GLOBAL_MASTER ) then
-!            call read_connectivity_hdf(gridfile,connectivities)
-!
-!            call partition_connectivity(connectivities, partitions)
-!
-!            call send_partitions(partitions,this%ChiDG_COMM)
-!        end if
-!
-!
-!        !
-!        ! Receive partition from GLOBAL_MASTER
-!        !
-!        call recv_partition(partition,this%ChiDG_COMM)
-
-
         !
         ! Read partition data: grid, boundary conditions
         !
-        !call this%chidg%read_grid(gridfile, spacedim, partition)
-        !call this%chidg%read_boundaryconditions(gridfile, partition)
         call this%chidg%read_grid(gridfile, spacedim)
         call this%chidg%read_boundaryconditions(gridfile)
 
@@ -128,17 +94,23 @@ contains
 
 
     end subroutine setUp
+    !******************************************************************************************
 
 
 
 
+    !>
+    !!
+    !!
+    !!
+    !------------------------------------------------------------------------------------------
     subroutine tearDown(this)
         class(test_comm_D1E4), intent(inout) :: this
 
         call this%chidg%close('core')
 
     end subroutine tearDown
-    !***********************************************************************************************
+    !******************************************************************************************
 
 
 
@@ -154,7 +126,7 @@ contains
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   6/23/2016
     !!
-    !---------------------------------------------------------------------------------------
+    !------------------------------------------------------------------------------------------
     @Test(npes=[1,2,3,4])
     subroutine chidgvector__norm_comm(self)
         class(test_comm_D1E4), intent(inout) :: self
@@ -196,7 +168,7 @@ contains
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   6/23/2016
     !!
-    !---------------------------------------------------------------------------------------
+    !------------------------------------------------------------------------------------------
     @Test(npes=[1,2,3,4])
     subroutine chidgvector__dot_comm(self)
         class(test_comm_D1E4), intent(inout) :: self

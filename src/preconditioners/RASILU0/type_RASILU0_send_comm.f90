@@ -13,10 +13,10 @@ module type_RASILU0_send_comm
 
 
 
-    !>
+    !>  A container for storing information about what gets sent to a particular neighbor processor.
     !!
-    !!
-    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   8/10/2016
     !!
     !!
     !!
@@ -24,7 +24,10 @@ module type_RASILU0_send_comm
     type, public :: RASILU0_send_comm_t
 
         integer(ik)                                 :: proc
-        type(RASILU0_send_comm_dom_t),  allocatable :: dom(:)
+        type(RASILU0_send_comm_dom_t),  allocatable :: dom(:)   ! A description for each domain being sent.
+                                                                ! doesn't necessarily correspond to 
+                                                                ! the local domains since they might not all
+                                                                ! be sent to the current processor.
 
     contains
 
@@ -41,7 +44,10 @@ contains
 
 
 
-    !>  
+    !>  Initialize the data to be sent to proc.
+    !!
+    !!  - Determine local domains that communicate with the specified processor.
+    !!  - For each domain that neighbors proc, communicate information about each overlap element
     !!
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   7/22/2016
@@ -212,9 +218,6 @@ contains
 
 
             end do !ielem send
-
-
-
 
 
         end do !idom send

@@ -1,5 +1,5 @@
 add_test_sources(equations_parallel
-                 rtest_entropy_errorrate_mod.pf
+                 integration_smoothbump_mod.pf
                  )
 
 

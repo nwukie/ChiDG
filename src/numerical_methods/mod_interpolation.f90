@@ -24,13 +24,10 @@ contains
         real(rk),       intent(inout)   :: ynew
 
 
-
         if ( interpolation_type == 'linear' ) then
-
             call interpolate_linear(xarray,yarray,xnew,ynew)
 
         else
-
             call chidg_signal_one(FATAL, "interpolate: invalid interpolation_type.", interpolation_type)
 
         end if

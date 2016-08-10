@@ -12,7 +12,8 @@ module type_RASILU0_send
 
 
 
-    !>
+    !>  A container for containing information about what to send to each neighboring processor.
+    !!  
     !!
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   7/21/2016
@@ -21,7 +22,7 @@ module type_RASILU0_send
     !------------------------------------------------------------------------------------------------
     type, public :: RASILU0_send_t
 
-        type(RASILU0_send_comm_t),  allocatable :: comm(:)
+        type(RASILU0_send_comm_t),  allocatable :: comm(:)  ! One description for each neighboring processor
 
     contains
 
@@ -39,7 +40,7 @@ module type_RASILU0_send
 contains
 
     
-    !>
+    !>  Find neighboring processors, call initialization for each.
     !!
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   7/22/2016

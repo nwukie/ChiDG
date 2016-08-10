@@ -213,8 +213,6 @@ contains
             !
             ! Compute enthalpy
             !
-            !H_m = (rhoE_m + p_m)/rho_m
-            !H_p = (rhoE_p + p_p)/rho_p
             H_m = (rhoE_m + p_m)*invrho_m
             H_p = (rhoE_p + p_p)*invrho_p
 
@@ -222,9 +220,6 @@ contains
             !
             ! Compute velocity components
             !
-            !u_m = rhou_m/rho_m
-            !v_m = rhov_m/rho_m
-            !w_m = rhow_m/rho_m
             u_m = rhou_m*invrho_m
             v_m = rhov_m*invrho_m
             w_m = rhow_m*invrho_m

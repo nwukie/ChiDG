@@ -295,12 +295,6 @@ contains
                 timing = timer%elapsed()
             end if
 
-            !call EULER_volume_total%report('Euler volume total')
-            !call EULER_volume_interpolate%report('Euler volume interpolate')
-            
-            !call EULER_roe_total%report('Euler roe total')
-            !call EULER_roe_interpolate%report('Euler roe interpolate')
-            !call EULER_roe_integrate%report('Euler roe integrate')
 
     end subroutine update_space
     !******************************************************************************************************************

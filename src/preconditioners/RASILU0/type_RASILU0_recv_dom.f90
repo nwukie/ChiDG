@@ -25,7 +25,8 @@ module type_RASILU0_recv_dom
     !-------------------------------------------------------------------------------------------
     type, public :: RASILU0_recv_dom_t
 
-        type(RASILU0_recv_dom_comm_t), allocatable  :: comm(:)  ! One communication storage type for each processor sending overlapping data.
+        type(RASILU0_recv_dom_comm_t), allocatable  :: comm(:)  ! One communication storage type for 
+                                                                ! each processor sending overlapping data.
 
     contains
 

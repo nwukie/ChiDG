@@ -31,7 +31,7 @@ module type_fgmres_cgs
     !---------------------------------------------------------------------------------------------
     type, public, extends(linear_solver_t) :: fgmres_cgs_t
 
-        integer(ik) :: m = 100
+        integer(ik) :: m = 500
 
     contains
 

@@ -39,6 +39,57 @@ type_RASILU0_send_comm.f90          ! Container of information for each processo
 type_RASILU0_send_comm_dom.f90      ! Container of information for each processor including the domain/element information being sent to that processor
 
 
-
-
-
+!>  Restricted Additive Schwarz(RAS) preconditioner. ILU0 local solve.
+!!
+!!
+!!  Legend:
+!!  =================================================================
+!!  local = The current processor's local elements and their coupling
+!!  proc# = Another processor's elements
+!!  cpl   = Coupling between the elements of neighboring processors
+!!
+!!
+!!  In a domain decomposition block-Jacobi preconditioner, the processor-local problem is solved without
+!!  taking the inter-processor coupling of the problem into account.
+!!
+!!  |--------|---------|--------|
+!!  |        |         |        |
+!!  | proc 0 |   cpl   |  cpl   |
+!!  |        |         |        |
+!!  |--------|---------|--------|                                      |---------|  |-|     |-|
+!!  |        |         |        |           block-Jacobi               |         |  | |     | |
+!!  |  cpl   |  local  |  cpl   |           ----------->               |  local  |  |x|  =  |b|
+!!  |        |         |        |                                      |         |  | |     | |
+!!  |--------|---------|--------|                                      |---------|  |-|     |-|
+!!  |        |         |        |
+!!  |  cpl   |   cpl   | proc 2 |
+!!  |        |         |        |
+!!  |--------|---------|--------|
+!!
+!!
+!!
+!!  The RAS preconditioner considers the local problem and also includes a 1-element overlap with the
+!!  neighboring processors and their coupling. The implementation here rearranges the problem so that
+!!  all overlap data is put at the end of the preconditioning matrix. The restricted part of the
+!!  preconditioner means that the solution of the preconditioning matrix is only applied to the 
+!!  processor-local portion of the global vector. This is why only a portion of the x-vector is shown
+!!  here in the diagram.
+!!
+!!  |--------|---------|--------|
+!!  |        |         |        |
+!!  | proc 0 |   cpl   |  cpl   |
+!!  |        |         |        |
+!!  |--------|---------|--------|                                   |---------|--------| |-|    |-|
+!!  |        |         |        |   Restricted Additive Schwarz     |         |        | | |    | |
+!!  |  cpl   |  local  |  cpl   |           ----------->            |  local  |  cpl   | |x|    | |
+!!  |        |         |        |                                   |         |        | | |    | |
+!!  |--------|---------|--------|                                   |---------|--------| |-|  = |b|
+!!  |        |         |        |                                   |         | proc#  |        | |
+!!  |  cpl   |   cpl   | proc 2 |                                   |  cpl    | overlap|        | |
+!!  |        |         |        |                                   |---------|--------|        |-|
+!!  |--------|---------|--------|
+!!
+!!
+!!
+!!
+!---------------------------------------------------------------------------------------------------------------

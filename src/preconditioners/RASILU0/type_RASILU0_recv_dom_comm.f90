@@ -15,7 +15,7 @@ module type_RASILU0_recv_dom_comm
 
 
 
-    !>
+    !>  A container for storing the overlap elements from a neighboring processor.
     !!
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   7/21/2016
@@ -25,7 +25,9 @@ module type_RASILU0_recv_dom_comm
     type, public :: RASILU0_recv_dom_comm_t
 
         integer(ik)                                     :: proc
-        type(RASILU0_recv_dom_comm_elem_t), allocatable :: elem(:)     ! For each overlapping element coming from a processor, a container storing the linearization blocks being communicated
+        type(RASILU0_recv_dom_comm_elem_t), allocatable :: elem(:)  ! For each overlapping element coming 
+                                                                    ! from a processor, a container storing 
+                                                                    ! the linearization blocks being communicated
 
     contains
         
@@ -44,7 +46,9 @@ contains
 
 
 
-    !>
+    !>  Receives information from the neighboring processor about the elements being received.
+    !!  Determines which blocks received correspond to diagonal, lower, upper blocks
+    !!  and also computes the location of their transposed block.
     !!
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   7/21/2016
@@ -153,7 +157,6 @@ contains
 
             nblk_recv = size(self%elem(ielem_recv)%blks)
 
-            !do iblk_recv = 1,nblk_recv
             do iblk_recv = 1,size(self%elem(ielem_recv)%blks)
                 iblk = self%elem(ielem_recv)%blk_indices(iblk_recv)
 
@@ -224,7 +227,6 @@ contains
             !
             self%elem(ielem_recv)%trans_elem = 0
             self%elem(ielem_recv)%trans_blk = 0
-            !do iblk_recv = 1,nblk_recv
             do iblk_recv = 1,size(self%elem(ielem_recv)%blks)
 
                 transpose_found = .false.
@@ -305,20 +307,13 @@ contains
                         end do !ielem_loop
                         if ( .not. transpose_found ) call chidg_signal(FATAL, "No transposed block found for RASILU0 overlap block")
 
-
-
-
                     end if
-
-
 
                 end if
 
 
 
             end do !iblk_recv
-
-
         end do !ielem_recv
 
 

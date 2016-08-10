@@ -1,18 +1,11 @@
 module test_comm_D2E2_mod
     use mod_kinds,                  only: rk, ik
     use mod_constants,              only: XI_MIN, XI_MAX, BOUNDARY, IO_DESTINATION, TWO
-
     use type_chidg,                 only: chidg_t
     use type_chidgVector,           only: chidgVector_t
-!    use type_partition,             only: partition_t
-!    use type_domain_connectivity,   only: domain_connectivity_t
-
-!    use mod_hdfio,                  only: read_connectivity_hdf
-!    use mod_partitioners,           only: partition_connectivity, send_partitions, recv_partition
     use mod_chidg_mpi,              only: IRANK, NRANK, GLOBAL_MASTER
     use operator_chidg_dot,         only: dot
-
-    use mpi_f08,                    only: MPI_Barrier, MPI_COMM_WORLD, MPI_COMM
+    use mpi_f08,                    only: MPI_COMM
     use pfunit_mod
     implicit none
 
@@ -56,10 +49,6 @@ contains
     subroutine setUp(this)
         class(test_comm_D2E2), intent(inout) :: this
 
-!        type(domain_connectivity_t),    allocatable :: connectivities(:)
-!        type(partition_t),              allocatable :: partitions(:)
-!        type(partition_t)                           :: partition
-
         character(len=:), allocatable   :: gridfile
         integer(ik)                     :: iread, spacedim, ierr, idom, ielem
         real(rk)                        :: initial_vals(this%nterms_s)
@@ -78,31 +67,9 @@ contains
         spacedim       = 3
 
 
-
-
-!        !
-!        ! Read connectivities, partition, distribute
-!        !
-!        if ( IRANK == GLOBAL_MASTER ) then
-!            call read_connectivity_hdf(gridfile,connectivities)
-!
-!            call partition_connectivity(connectivities, partitions)
-!
-!            call send_partitions(partitions,this%ChiDG_COMM)
-!        end if
-!
-!
-!        !
-!        ! Receive partition from GLOBAL_MASTER
-!        !
-!        call recv_partition(partition,this%ChiDG_COMM)
-
-
         !
         ! Read partition data: grid, boundary conditions
         !
-        !call this%chidg%read_grid(gridfile, spacedim, partition)
-        !call this%chidg%read_boundaryconditions(gridfile, partition)
         call this%chidg%read_grid(gridfile, spacedim)
         call this%chidg%read_boundaryconditions(gridfile)
 
@@ -113,8 +80,6 @@ contains
         call this%chidg%initialize_solution_domains(this%nterms_s)
         call this%chidg%init('communication',this%ChiDG_COMM)
         call this%chidg%initialize_solution_solver()
-
-
 
 
         !
@@ -130,8 +95,14 @@ contains
 
 
     end subroutine setUp
+    !******************************************************************************************
 
 
+    !>
+    !!
+    !!
+    !!
+    !------------------------------------------------------------------------------------------
     subroutine tearDown(this)
         class(test_comm_D2E2), intent(inout) :: this
 
@@ -148,7 +119,6 @@ contains
 
 
 
-    !@Test(npes=[1,2,4])
     !>  Test the parallel computation of the chidgVector norm. 
     !!  This tests the routine: chidgVector%norm_comm
     !!

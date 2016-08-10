@@ -1,5 +1,5 @@
-add_test_sources(equations
-                 rtest_smoothbump_rotations_mod.pf
+add_test_sources(equations_parallel
+                 integration_naca2412_mod.pf
                  )
 
 

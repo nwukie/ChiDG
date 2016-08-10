@@ -13,7 +13,7 @@ module type_RASILU0_recv
 
 
 
-    !>
+    !>  A data-type for holding matrix data from neighboring processors.
     !!
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   7/21/2016
@@ -22,7 +22,10 @@ module type_RASILU0_recv
     !------------------------------------------------------------------------------------------
     type, public :: RASILU0_recv_t
 
-        type(RASILU0_recv_dom_t),   allocatable :: dom(:)
+        type(RASILU0_recv_dom_t),   allocatable :: dom(:)   ! A container for each domain of the
+                                                            ! local problem to accept neighboring
+                                                            ! elements from another processor.
+                                                            ! No chimera coupling.
 
     contains
 

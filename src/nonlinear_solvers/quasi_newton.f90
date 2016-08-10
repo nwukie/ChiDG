@@ -78,7 +78,6 @@ contains
 
 
         wcount = 1
-        !associate ( q => data%sdata%q, dq => data%sdata%dq, rhs => data%sdata%rhs, lhs => data%sdata%lhs, dt => self%dt)
         associate ( q => data%sdata%q, dq => data%sdata%dq, rhs => data%sdata%rhs, lhs => data%sdata%lhs)
 
             call write_line('Entering time', io_proc=GLOBAL_MASTER)

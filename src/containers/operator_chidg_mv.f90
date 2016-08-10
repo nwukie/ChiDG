@@ -5,7 +5,6 @@ module operator_chidg_mv
     use mod_chidg_mpi,      only: IRANK, ChiDG_COMM
     use type_chidgMatrix,   only: chidgMatrix_t
     use type_chidgVector
-!    use mod_dgemv,          only: chidg_matmul
 
     use type_timer,         only: timer_t
 

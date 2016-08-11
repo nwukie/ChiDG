@@ -135,6 +135,8 @@
 </li>
 <li class="toctree-l3"><a class="reference internal" href="#parallel-efficiency">Parallel efficiency</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#parallel-preconditioning">Parallel preconditioning</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#block-jacobi">Block-Jacobi</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#restricted-additive-schwarz">Restricted Additive Schwarz</a></li>
 <li class="toctree-l4"><a class="reference internal" href="#references">References</a></li>
 </ul>
 </li>
@@ -338,6 +340,8 @@ These are</p>
 version of the Generalized Minimum Residual(GMRES) algorithm is used. These Krylov-type
 iterative solvers depend greatly on having a good preconditioner in order to obtain
 reasonable convergence of the iterative linear solver.</p>
+<div class="section" id="block-jacobi">
+<h3>Block-Jacobi<a class="headerlink" href="#block-jacobi" title="Permalink to this headline">¶</a></h3>
 <p>One approach to parallel preconditioning is for each processor to consider only it&#8217;s
 local portion of the global matrix as the preconditioning matrix, solve that local
 system, and apply the result as a preconditioner to a vector. This is a block-Jacobi
@@ -347,6 +351,9 @@ This approach suffers when scaling to large numbers of processors, because the p
 matrix on each local processor includes less and less information about the global problem.
 In the limit as there is one element assigned per processor, the preconditioner becomes strictly
 block-Jacobi, which performs poorly.</p>
+</div>
+<div class="section" id="restricted-additive-schwarz">
+<h3>Restricted Additive Schwarz<a class="headerlink" href="#restricted-additive-schwarz" title="Permalink to this headline">¶</a></h3>
 <p>Another approach to parallel preconditioning is to include some overlap data from the nearest
 parallel elements coupled with the local elements. One of these approaches is the
 Restricted Additive Schwarz(RAS) preconditioner. The portions of the neighboring elements
@@ -358,6 +365,7 @@ demonstrated here for moderate scaling. The RAS-type preconditioner, using an
 Incomplete Lower-Upper factorization with zero fill in(ILU0) on the local problem
 performs much better than the block-Jacobi preconditioner with and ILU0 local solve.</p>
 <a class="reference internal image-reference" href="../../_images/scaling_preconditioner.png"><img alt="../../_images/scaling_preconditioner.png" class="align-center" src="../../_images/scaling_preconditioner.png" style="width: 50%;" /></a>
+</div>
 <div class="section" id="references">
 <h3>References<a class="headerlink" href="#references" title="Permalink to this headline">¶</a></h3>
 <p>[1] Boman, E. G., Karen, D. D., Rajamanickam, S., &#8220;Scalable Matrix Computations on Large Scale-Free Graphs Using 2D Graph Partitioning&#8221;, Proceddings of the International Conference on High Performance Computing, Networking, Storage and Analysis, 2013.</p>
@@ -429,7 +437,18 @@ performs much better than the block-Jacobi preconditioner with and ILU0 local so
           SphinxRtdTheme.StickyNav.enable();
       });
   </script>
-   
+  
+<script>
+    (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+    (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+    m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+    })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+
+    ga('create', 'UA-80530851-1', 'auto');
+    ga('set', 'location', 'http://nwukie.github.io/ChiDG_site/');
+    ga('send', 'pageview');
+</script>
+
 
 </body>
 </html>

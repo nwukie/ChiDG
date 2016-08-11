@@ -187,6 +187,9 @@ iterative solvers depend greatly on having a good preconditioner in order to obt
 reasonable convergence of the iterative linear solver.
 
 
+Block-Jacobi
+------------
+
 One approach to parallel preconditioning is for each processor to consider only it's 
 local portion of the global matrix as the preconditioning matrix, solve that local 
 system, and apply the result as a preconditioner to a vector. This is a block-Jacobi
@@ -198,7 +201,8 @@ In the limit as there is one element assigned per processor, the preconditioner 
 block-Jacobi, which performs poorly.
 
 
-
+Restricted Additive Schwarz
+---------------------------
 Another approach to parallel preconditioning is to include some overlap data from the nearest
 parallel elements coupled with the local elements. One of these approaches is the
 Restricted Additive Schwarz(RAS) preconditioner. The portions of the neighboring elements

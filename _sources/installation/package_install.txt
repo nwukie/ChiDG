@@ -1,6 +1,10 @@
 Install ChiDG
 ================
 
+**WARNING: Currently in pre-release. The package-based install is currently being
+developed and not yet well-supported. This should be fully supported upon release.**
+
+
 ChiDG can be installed using the Python package manager ``pip``.
 
 :: 

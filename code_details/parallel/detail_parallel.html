@@ -133,8 +133,11 @@
 <li class="toctree-l4"><a class="reference internal" href="#chidgvector">chidgVector</a></li>
 </ul>
 </li>
-<li class="toctree-l3"><a class="reference internal" href="#parallel-preconditioning">Parallel preconditioning</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#parallel-efficiency">Parallel efficiency</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#parallel-preconditioning">Parallel preconditioning</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#references">References</a></li>
+</ul>
+</li>
 </ul>
 </li>
 </ul>
@@ -210,7 +213,36 @@ communicator that informs ChiDG what processors it owns and should be talking to
 <h2>Domain decomposition<a class="headerlink" href="#domain-decomposition" title="Permalink to this headline">¶</a></h2>
 <p>A domain-decomposition approach is used to facilitate the parallel execution of ChiDG.
 The Metis library is used to return a partitioning of the original global problem. The
-number of partitions is equal to the number of processors in the ChiDG_COMM communicator.</p>
+number of partitions is equal to the number of processors in the <code class="docutils literal"><span class="pre">ChiDG_COMM</span></code> communicator.</p>
+<p>ChiDG uses linear element indices to identify elements. In a parallel context each element
+has two indices; a global index, and a local index. A global element index corresponds to
+the index of the element in its unpartitioned domain. A local element index is the index
+of an element in a processor-local partition of a domain. An element&#8217;s global index never
+changes. However, a local index depends on the partitioning of the original domain.
+This is shown here for a domain before and after partitioning for two processors</p>
+<div class="align-center figure align-left" id="id1">
+<a class="reference internal image-reference" href="../../_images/global_indices.png"><img alt="../../_images/global_indices.png" src="../../_images/global_indices.png" style="width: 225pt;" /></a>
+<p class="caption"><span class="caption-text"><strong>Global element indices</strong></span></p>
+</div>
+<div class="align-center figure align-right" id="id2">
+<a class="reference internal image-reference" href="../../_images/local_indices.png"><img alt="../../_images/local_indices.png" src="../../_images/local_indices.png" style="width: 270pt;" /></a>
+<p class="caption"><span class="caption-text"><strong>Local element indices</strong></span></p>
+</div>
+<div class="line-block">
+<div class="line"><br /></div>
+<div class="line"><br /></div>
+<div class="line"><br /></div>
+<div class="line"><br /></div>
+<div class="line"><br /></div>
+<div class="line"><br /></div>
+<div class="line"><br /></div>
+<div class="line"><br /></div>
+<div class="line"><br /></div>
+<div class="line"><br /></div>
+<div class="line"><br /></div>
+<div class="line"><br /></div>
+<div class="line"><br /></div>
+</div>
 </div>
 <div class="section" id="parallel-matrix-vector-operations">
 <h2>Parallel matrix:vector operations<a class="headerlink" href="#parallel-matrix-vector-operations" title="Permalink to this headline">¶</a></h2>
@@ -220,6 +252,10 @@ compute operations that are apart of many algorithms for solving linear
 systems of equations.</p>
 <div class="section" id="chidgmatrix">
 <h3>chidgMatrix<a class="headerlink" href="#chidgmatrix" title="Permalink to this headline">¶</a></h3>
+<p>The global <code class="docutils literal"><span class="pre">chidgMatrix</span></code> uses a 1D Row-wise parallel distribution[1]. In this way, each
+processor owns an entire Row of the global matrix. The <code class="docutils literal"><span class="pre">chidgVector</span></code>
+located on a given processor corresponds to the row in the <code class="docutils literal"><span class="pre">chidgMatrix</span></code>, as shown here</p>
+<a class="reference internal image-reference" href="../../_images/chidgMatrix_partition.png"><img alt="../../_images/chidgMatrix_partition.png" class="align-center" src="../../_images/chidgMatrix_partition.png" style="width: 30%;" /></a>
 <dl class="function">
 <dt id="mv">
 <code class="descname">mv</code><span class="sig-paren">(</span><em>chidgMatrix</em>, <em>chidgVector</em><span class="sig-paren">)</span><a class="headerlink" href="#mv" title="Permalink to this definition">¶</a></dt>
@@ -275,34 +311,57 @@ and indicates that the contents are safe to modify.</p>
 
 </div>
 </div>
-<div class="section" id="parallel-preconditioning">
-<h2>Parallel preconditioning<a class="headerlink" href="#parallel-preconditioning" title="Permalink to this headline">¶</a></h2>
-</div>
 <div class="section" id="parallel-efficiency">
 <h2>Parallel efficiency<a class="headerlink" href="#parallel-efficiency" title="Permalink to this headline">¶</a></h2>
 <p>There are two distinct areas of a solver algorithm that have different parallelization characteristics.
-These are:</p>
+These are</p>
 <blockquote>
 <div><ul class="simple">
-<li>Evaluating the spatial operators</li>
+<li>Evaluating the spatial operators <span class="math">\(\quad\quad\quad\quad \frac{\partial R}{\partial Q}, R\)</span></li>
 </ul>
 </div></blockquote>
-<div class="math">
-\[\frac{\partial R}{\partial Q} \quad\quad  R\]</div>
 <div class="line-block">
 <div class="line"><br /></div>
 </div>
 <blockquote>
 <div><ul class="simple">
-<li>Solving a linear system of equations</li>
+<li>Solving a linear system of equations <span class="math">\(\quad\quad \frac{\partial R}{\partial Q} \Delta Q = -R\)</span></li>
 </ul>
 </div></blockquote>
-<div class="math">
-\[\frac{\partial R}{\partial Q} \Delta Q = -R\]</div>
-<p>The efficiency of these two components are evaluated here.</p>
+<p>The parallel performance of these two steps are shown here</p>
 <a class="reference internal image-reference" href="../../_images/scaling_spatial.png"><img alt="../../_images/scaling_spatial.png" class="align-left" src="../../_images/scaling_spatial.png" style="width: 45%;" /></a>
 <a class="reference internal image-reference" href="../../_images/scaling_matrix.png"><img alt="../../_images/scaling_matrix.png" class="align-right" src="../../_images/scaling_matrix.png" style="width: 45%;" /></a>
+</div>
+<div class="section" id="parallel-preconditioning">
+<h2>Parallel preconditioning<a class="headerlink" href="#parallel-preconditioning" title="Permalink to this headline">¶</a></h2>
+<p>ChiDG uses iterative solvers to solve linear systems of equations. In particular, a flexible
+version of the Generalized Minimum Residual(GMRES) algorithm is used. These Krylov-type
+iterative solvers depend greatly on having a good preconditioner in order to obtain
+reasonable convergence of the iterative linear solver.</p>
+<p>One approach to parallel preconditioning is for each processor to consider only it&#8217;s
+local portion of the global matrix as the preconditioning matrix, solve that local
+system, and apply the result as a preconditioner to a vector. This is a block-Jacobi
+approach in a domain-decomposition sense. The preconditioning matrix could then be
+solved using some general technique, for example Incomplete Lower-Upper(ILU) factorization.
+This approach suffers when scaling to large numbers of processors, because the preconditioning
+matrix on each local processor includes less and less information about the global problem.
+In the limit as there is one element assigned per processor, the preconditioner becomes strictly
+block-Jacobi, which performs poorly.</p>
+<p>Another approach to parallel preconditioning is to include some overlap data from the nearest
+parallel elements coupled with the local elements. One of these approaches is the
+Restricted Additive Schwarz(RAS) preconditioner. The portions of the neighboring elements
+are included in the local preconditioner and that system is solved. The result is only
+applied to the local vector, hense the term Restricted. The standard Additive Schwarz(AS)
+algorithm distributes the result back to the neighboring processors.</p>
+<p>ChiDG has both block-Jacobi and RAS-type preconditioners. The performance of these are
+demonstrated here for moderate scaling. The RAS-type preconditioner, using an
+Incomplete Lower-Upper factorization with zero fill in(ILU0) on the local problem
+performs much better than the block-Jacobi preconditioner with and ILU0 local solve.</p>
 <a class="reference internal image-reference" href="../../_images/scaling_preconditioner.png"><img alt="../../_images/scaling_preconditioner.png" class="align-center" src="../../_images/scaling_preconditioner.png" style="width: 50%;" /></a>
+<div class="section" id="references">
+<h3>References<a class="headerlink" href="#references" title="Permalink to this headline">¶</a></h3>
+<p>[1] Boman, E. G., Karen, D. D., Rajamanickam, S., &#8220;Scalable Matrix Computations on Large Scale-Free Graphs Using 2D Graph Partitioning&#8221;, Proceddings of the International Conference on High Performance Computing, Networking, Storage and Analysis, 2013.</p>
+</div>
 </div>
 </div>
 

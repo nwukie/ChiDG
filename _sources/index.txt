@@ -8,11 +8,10 @@ Welcome!
 
 **ChiDG: A Chimera-based, discontinuous Galerkin solver**
 
-ChiDG is a Chimera-based framework for solving sets of partial differential 
-equations using the discontinuous Galerkin method.
+ChiDG is a framework for solving sets of partial differential 
+equations using the discontinuous Galerkin method on Chimera-overset grids.
 
 
-.. :: figures/naca2412_A4p0_grid.png
 .. image:: figures/naca2412.png
     :width: 36 %
     :align: left

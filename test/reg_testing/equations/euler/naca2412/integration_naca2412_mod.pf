@@ -22,6 +22,9 @@
 !
 !       Walls: euler_wall
 !
+!   @author Nathan A. Wukie (AFRL)
+!   @date   8/15/2016
+!
 !--------------------------------------------------------------------------------
 module integration_naca2412_mod
     use pfunit_mod
@@ -318,7 +321,6 @@ contains
 
     !>  Run the simulation.
     !!
-    !!      - compute the entropy error, test against the reference values.
     !!      - store the nonlinear convergence to the module variable so it can 
     !!        be used by a test for nonlinear convergence.
     !!
@@ -391,8 +393,8 @@ contains
 
                     @assertEqual(reference_convergence, test_convergence, 1.e-5_rk)
 
-                end do
-        end do
+                end do !iorder
+        end do !inpes
 
 
     end subroutine test_nonlinear_convergence

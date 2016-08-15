@@ -8,6 +8,17 @@
 !   One grid resolution is used and it is run at solution accuracy of 1,2,3, and 
 !   4th-order on 1, 2, 4, 7, and 10 processors.
 !
+!   The test case 'test_symmetry':
+!       - runs the ChiDG simulation for a test case
+!       - Stores the nonlinear convergence history to be used in a later test
+!       - Compares the solution in some elements located symmetrically about the horizontal axis
+!   
+!   The test case 'test_nonlinear_convergence':
+!       - Compares the nonlinear convergence for a given order of accuracy run using
+!         different numbers of processors. This tests that more processors produces
+!         the same convergence of the solver.
+!
+!
 !   The nonlinear convergence for each case is stored in a module global variable 
 !   that is used to compare convergence between the serial and parallel cases.
 !
@@ -21,6 +32,9 @@
 !               Static Pressure   = 100000 (Pa)
 !
 !       Walls: euler_wall
+!
+!   @author Nathan A. Wukie (AFRL)
+!   @date   8/15/2016
 !
 !--------------------------------------------------------------------------------
 module integration_cylinder_mod
@@ -120,6 +134,7 @@ contains
     !******************************************************************************
 
 
+
     !> Parameter initialization
     !!
     !!
@@ -145,7 +160,6 @@ contains
 
 
 
-
     !>  Reporting the parameters of the test
     !!
     !!
@@ -162,7 +176,6 @@ contains
 
     end function toString
     !********************************************************************************************
-
 
 
 
@@ -319,9 +332,10 @@ contains
 
     !>  Run the simulation.
     !!
-    !!      - compute the entropy error, test against the reference values.
     !!      - store the nonlinear convergence to the module variable so it can 
     !!        be used by a test for nonlinear convergence.
+    !!      - test solution symmetry between some elements located symmetrically about the horizontal
+    !!        axis.
     !!
     !!  @author Nathan A. Wukie
     !!  @author Nathan A. Wukie (AFRL)
@@ -449,13 +463,14 @@ contains
     !>  Access the stored nonlinear convergence data(module global variable) and compare the parallel 
     !!  convergence to the serial convergence for each (order) combination.
     !!
-    !!  This assumes that the 'test_calculation' has already been executed for all cases
+    !!  This assumes that the 'test_symmetry' has already been executed for all cases
     !!  and numbers of processors to that the 'nonlinear_convergence' variable has been populated.
     !!  So, we are relying on pFUnit to do things in order here. Works now, but I don't think
     !!  there is a guaruntee that this can't change.
     !!
     !!  @author Nathan A. Wukie
     !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   8/15/2016
     !!
     !-------------------------------------------------------------------------------------------------------
     @Test(npes=[1])

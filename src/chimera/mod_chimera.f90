@@ -12,7 +12,7 @@ module mod_chimera
     use mod_constants,          only: NFACES, ORPHAN, CHIMERA, &
                                       X_DIR,  Y_DIR,   Z_DIR, &
                                       XI_DIR, ETA_DIR, ZETA_DIR, &
-                                      ONE, ZERO, TWO_DIM, THREE_DIM, RKTOL, &
+                                      ONE, ZERO, TWO, TWO_DIM, THREE_DIM, RKTOL, &
                                       INVALID_POINT, VALID_POINT, NO_PROC
 
     use type_mesh,              only: mesh_t
@@ -195,11 +195,12 @@ contains
         integer(ik) :: idonor_domain_g, idonor_element_g
         integer(ik) :: idonor_domain_l, idonor_element_l
         integer(ik) :: idomain_g_list, idomain_l_list, ielement_g_list, ielement_l_list, neqns_list, nterms_s_list, nterms_c_list, iproc_list
-        integer(ik) :: local_domain_g, parallel_domain_g, donor_domain_g, min_domain
+        integer(ik) :: local_domain_g, parallel_domain_g, donor_domain_g, donor_index
         integer(ik), allocatable    :: domains_g(:)
 
         integer(ik) :: receiver_indices(5), parallel_indices(8)
-        real(rk)    :: gq_coords(3), parallel_coords(3)
+        real(rk)    :: gq_coords(3), parallel_coords(3), donor_vol, local_vol, parallel_vol
+        real(rk), allocatable   :: donor_vols(:)
 
         real(rk)    :: offset_x, offset_y, offset_z
 
@@ -220,6 +221,7 @@ contains
 
         type(ivector_t)             :: ddomain_g, ddomain_l, delement_g, delement_l, dproc, dneqns, dnterms_s, dnterms_c, donor_procs
         type(ivector_t)             :: donor_proc_indices, donor_proc_domains
+        type(rvector_t)             :: donor_proc_vols
         type(pvector_t)             :: dcoordinate
 
 
@@ -290,7 +292,6 @@ contains
                             call gq_node%add_z(offset_z)
 
 
-                            !! NEW
                             searching = .true.
                             call MPI_BCast(searching,1,MPI_LOGICAL, iproc, ChiDG_COMM, ierr)
 
@@ -307,20 +308,18 @@ contains
                             receiver_indices(4) = receiver%ielement_l
                             receiver_indices(5) = receiver%iface
                             call MPI_BCast(receiver_indices,5,MPI_INTEGER4, iproc, ChiDG_COMM, ierr)
-                            !! NEW
 
 
 
                             !
                             ! Call routine to find LOCAL gq donor for current node
                             !
-                            call find_gq_donor(mesh,gq_node, receiver, donor, donor_coord)
+                            call find_gq_donor(mesh,gq_node, receiver, donor, donor_coord, donor_volume=local_vol)
                             donor_found = (donor_coord%status == VALID_POINT)
 
                             local_domain_g = 0
                             local_donor = .false.
                             if ( donor_found ) then
-                                local_domain_g = donor%idomain_g
                                 local_donor = .true.
                             end if
 
@@ -339,6 +338,9 @@ contains
 
                                         call MPI_Recv(donor_domain_g,1,MPI_INTEGER4, idonor_proc, MPI_ANY_TAG, ChiDG_COMM, MPI_STATUS_IGNORE, ierr)
                                         call donor_proc_domains%push_back(donor_domain_g)
+
+                                        call MPI_Recv(donor_vol,1,MPI_REAL8, idonor_proc, MPI_ANY_TAG, ChiDG_COMM, MPI_STATUS_IGNORE, ierr)
+                                        call donor_proc_vols%push_back(donor_vol)
                                     end if
                                 end if
                             end do !idonor_proc
@@ -346,15 +348,16 @@ contains
 
 
                             !
-                            ! If there is a parallel donor, determine which has the lowest domain index
+                            !! If there is a parallel donor, determine which has the lowest domain index
+                            ! If there is a parallel donor, determine which has the lowest volume
                             !
                             parallel_domain_g = 0
                             parallel_donor = .false.
                             if ( donor_proc_indices%size() > 0 ) then
-                                domains_g = donor_proc_domains%data()
-                                min_domain = minloc(domains_g,1)
+                                donor_vols = donor_proc_vols%data()
+                                donor_index = minloc(donor_vols,1)
 
-                                parallel_domain_g = domains_g(min_domain)
+                                parallel_vol = donor_vols(donor_index)
                                 parallel_donor = .true.
                             end if
                             
@@ -364,7 +367,8 @@ contains
                             ! Determine which donor to use
                             !
                             if ( local_donor .and. parallel_donor ) then
-                                use_parallel = (parallel_domain_g < local_domain_g)
+                                use_local    = (local_vol    < parallel_vol)
+                                use_parallel = (parallel_vol < local_vol   )
 
                             else if (local_donor .and. (.not. parallel_donor)) then
                                 use_local = .true.
@@ -392,7 +396,7 @@ contains
                                 do iproc_loop = 1,donor_proc_indices%size()
                                     idonor_proc = donor_proc_indices%at(iproc_loop)
 
-                                    get_donor = (iproc_loop == min_domain)
+                                    get_donor = (iproc_loop == donor_index)
 
                                     call MPI_Send(get_donor,1,MPI_LOGICAL, idonor_proc, 0, ChiDG_COMM, ierr)
                                 end do !idonor_proc
@@ -400,7 +404,7 @@ contains
                                 !
                                 ! Receive parallel donor index from processor indicated
                                 !
-                                idonor_proc = donor_proc_indices%at(min_domain)
+                                idonor_proc = donor_proc_indices%at(donor_index)
                                 call MPI_Recv(parallel_indices,8,MPI_INTEGER4, idonor_proc, MPI_ANY_TAG, ChiDG_COMM, MPI_STATUS_IGNORE, ierr)
                                 donor%idomain_g  = parallel_indices(1)
                                 donor%idomain_l  = parallel_indices(2)
@@ -417,7 +421,7 @@ contains
                                 call MPI_Recv(parallel_coords,3,MPI_REAL8, idonor_proc, MPI_ANY_TAG, ChiDG_COMM, MPI_STATUS_IGNORE, ierr)
                                 call donor_coord%set(parallel_coords(1), parallel_coords(2), parallel_coords(3))
 
-                            else
+                            else if (use_local) then
 
                                 ! Send a message to all procs with donors that we don't need them
                                 get_donor = .false.
@@ -426,6 +430,9 @@ contains
 
                                     call MPI_Send(get_donor,1,MPI_LOGICAL, idonor_proc, 0, ChiDG_COMM, ierr)
                                 end do
+
+                            else 
+                                call chidg_signal(FATAL,"detect_chimera_donors: no local or parallel donor found")
 
                             end if
 
@@ -452,6 +459,7 @@ contains
                             !
                             call donor_proc_indices%clear()
                             call donor_proc_domains%clear()
+                            call donor_proc_vols%clear()
 
                         end do ! igq
 
@@ -642,7 +650,7 @@ contains
                     !
                     ! Try to find donor
                     !
-                    call find_gq_donor(mesh,gq_node,receiver,donor,donor_coord)
+                    call find_gq_donor(mesh,gq_node,receiver,donor,donor_coord, donor_volume=donor_vol)
                     donor_found = (donor_coord%status == VALID_POINT)
 
                     
@@ -654,6 +662,7 @@ contains
                     if (donor_found) then
 
                         call MPI_Send(donor%idomain_g,1,MPI_INTEGER4,iproc,0,ChiDG_COMM,ierr)
+                        call MPI_Send(donor_vol,1,MPI_REAL8,iproc,0,ChiDG_COMM,ierr)
 
                         call MPI_Recv(still_need_donor,1,MPI_LOGICAL, iproc, MPI_ANY_TAG, ChiDG_COMM, MPI_STATUS_IGNORE, ierr)
 
@@ -732,17 +741,18 @@ contains
     !!  @param[inout]   donor_coord     Point defining the location of the GQ point in the donor coordinate system
     !!
     !-----------------------------------------------------------------------------------------------------------------------
-    subroutine find_gq_donor(mesh,gq_node,receiver_face,donor_element,donor_coordinate)
-        type(mesh_t),               intent(in)      :: mesh(:)
-        type(point_t),              intent(in)      :: gq_node
-        type(face_info_t),          intent(in)      :: receiver_face
-        type(element_indices_t),    intent(inout)   :: donor_element
-        type(point_t),              intent(inout)   :: donor_coordinate
+    subroutine find_gq_donor(mesh,gq_node,receiver_face,donor_element,donor_coordinate,donor_volume)
+        type(mesh_t),               intent(in)              :: mesh(:)
+        type(point_t),              intent(in)              :: gq_node
+        type(face_info_t),          intent(in)              :: receiver_face
+        type(element_indices_t),    intent(inout)           :: donor_element
+        type(point_t),              intent(inout)           :: donor_coordinate
+        real(rk),                   intent(inout), optional :: donor_volume
 
 
         integer(ik)             :: idom, ielem, inewton, spacedim
         integer(ik)             :: idomain_g, idomain_l, ielement_g, ielement_l
-        integer(ik)             :: icandidate, ncandidates, idonor, ndonors, min_domain
+        integer(ik)             :: icandidate, ncandidates, idonor, ndonors
         integer(ik), allocatable    :: domains_g(:)
         type(point_t)           :: gq_comp
         real(rk)                :: xgq, ygq, zgq
@@ -754,6 +764,11 @@ contains
         type(ivector_t)         :: candidate_domains_g, candidate_domains_l, candidate_elements_g, candidate_elements_l
         type(ivector_t)         :: donors
         type(rvector_t)         :: donors_xi, donors_eta, donors_zeta
+
+        integer(ik)             :: donor_index
+        real(rk), allocatable   :: xcenter(:), ycenter(:), zcenter(:), dist(:), donor_vols(:)
+        real(rk)                :: xcenter_recv, ycenter_recv, zcenter_recv
+
         logical                 :: contained = .false.
         logical                 :: receiver  = .false.
         logical                 :: donor_found
@@ -830,7 +845,7 @@ contains
                     call candidate_domains_l%push_back(idomain_l)
                     call candidate_elements_g%push_back(ielement_g)
                     call candidate_elements_l%push_back(ielement_l)
-                   ncandidates = ncandidates + 1
+                    ncandidates = ncandidates + 1
                 end if
 
 
@@ -916,6 +931,7 @@ contains
             zeta = donors_zeta%at(1)
             call donor_coordinate%set(xi,eta,zeta)
             donor_coordinate%status = VALID_POINT
+            if (present(donor_volume)) donor_volume = mesh(donor_element%idomain_l)%elems(donor_element%ielement_l)%vol
 
 
 
@@ -924,20 +940,84 @@ contains
             !      Maybe, just choose one. Maybe, average contribution from all potential donors.
             !call chidg_signal(FATAL,"find_gq_donor: Multiple donors found for the same gq_node")
 
-            !
-            ! OPTION 1: Choose donor with minimum global domain index
-            !
+            !!
+            !! OPTION 1: Choose donor with minimum global domain index
+            !!
+!
+!            ! Get domain global indices of valid donors
+!            if (allocated(domains_g)) deallocate(domains_g)
+!            allocate(domains_g(donors%size()))
+!            do idonor = 1,donors%size()
+!                domains_g(idonor) = candidate_domains_g%at(donors%at(idonor))
+!            end do
+!
+!            ! Get index of minimum domain
+!            donor_index = minloc(domains_g,1)
+!            idonor = donors%at(donor_index)
+!
+!            donor_element%idomain_g  = candidate_domains_g%at(idonor)
+!            donor_element%idomain_l  = candidate_domains_l%at(idonor)
+!            donor_element%ielement_g = candidate_elements_g%at(idonor)
+!            donor_element%ielement_l = candidate_elements_l%at(idonor)
+!            donor_element%iproc      = IRANK
+!            donor_element%neqns      = mesh(donor_element%idomain_l)%elems(donor_element%ielement_l)%neqns
+!            donor_element%nterms_s   = mesh(donor_element%idomain_l)%elems(donor_element%ielement_l)%nterms_s
+!            donor_element%nterms_c   = mesh(donor_element%idomain_l)%elems(donor_element%ielement_l)%nterms_c
+!
+!
+!            !!
+!            !! OPTION 2: Choose donor with cell center closer to receiver center
+!            !!
+!
+!            ! Get donor cell centers
+!            if (allocated(xcenter) .or. allocated(ycenter) .or. allocated(zcenter) .or. allocated(dist)) deallocate(xcenter, ycenter, zcenter, dist)
+!            allocate(xcenter(donors%size()), ycenter(donors%size()), zcenter(donors%size()), dist(donors%size()))
+!            
+!            do idonor = 1,donors%size()
+!                xcenter(idonor) = mesh(candidate_domains_l%at(donors%at(idonor)))%elems(candidate_elements_l%at(donors%at(idonor)))%coords%getterm(1,1)
+!                ycenter(idonor) = mesh(candidate_domains_l%at(donors%at(idonor)))%elems(candidate_elements_l%at(donors%at(idonor)))%coords%getterm(2,1)
+!                zcenter(idonor) = mesh(candidate_domains_l%at(donors%at(idonor)))%elems(candidate_elements_l%at(donors%at(idonor)))%coords%getterm(3,1)
+!            end do 
+!
+!            ! Get receiver cell center
+!            xcenter_recv = mesh(receiver_face%idomain_l)%elems(receiver_face%ielement_l)%coords%getterm(1,1)
+!            ycenter_recv = mesh(receiver_face%idomain_l)%elems(receiver_face%ielement_l)%coords%getterm(2,1)
+!            zcenter_recv = mesh(receiver_face%idomain_l)%elems(receiver_face%ielement_l)%coords%getterm(3,1)
+!
+!            ! Compute the distance between receiver and donor cell centers
+!            do idonor = 1,donors%size()
+!                dist(idonor) = sqrt((xcenter(idonor)-xcenter_recv)**TWO  +  (ycenter(idonor)-ycenter_recv)**TWO  +  (zcenter(idonor)-zcenter_recv)**TWO)
+!            end do
+!
+!            ! Select the donor element with the minimum distance between cell centers
+!            donor_index = minloc(dist,1)
+!            idonor = donors%at(donor_index)
+!
+!            ! Store donor data to be returned
+!            donor_element%idomain_g  = candidate_domains_g%at(idonor)
+!            donor_element%idomain_l  = candidate_domains_l%at(idonor)
+!            donor_element%ielement_g = candidate_elements_g%at(idonor)
+!            donor_element%ielement_l = candidate_elements_l%at(idonor)
+!            donor_element%iproc      = IRANK
+!            donor_element%neqns      = mesh(donor_element%idomain_l)%elems(donor_element%ielement_l)%neqns
+!            donor_element%nterms_s   = mesh(donor_element%idomain_l)%elems(donor_element%ielement_l)%nterms_s
+!            donor_element%nterms_c   = mesh(donor_element%idomain_l)%elems(donor_element%ielement_l)%nterms_c
+!
 
-            ! Get domain global indices of valid donors
-            if (allocated(domains_g)) deallocate(domains_g)
-            allocate(domains_g(donors%size()))
+            !!
+            !! OPTION 3: Choose donor with minimum volume: should be best resolved
+            !!
+            if (allocated(donor_vols) ) deallocate(donor_vols)
+            allocate(donor_vols(donors%size()))
+            
             do idonor = 1,donors%size()
-                domains_g(idonor) = candidate_domains_g%at(donors%at(idonor))
-            end do
+                donor_vols(idonor) = mesh(candidate_domains_l%at(donors%at(idonor)))%elems(candidate_elements_l%at(donors%at(idonor)))%vol
+            end do 
+    
 
             ! Get index of minimum domain
-            min_domain = minloc(domains_g,1)
-            idonor = donors%at(min_domain)
+            donor_index = minloc(donor_vols,1)
+            idonor = donors%at(donor_index)
 
             donor_element%idomain_g  = candidate_domains_g%at(idonor)
             donor_element%idomain_l  = candidate_domains_l%at(idonor)
@@ -948,11 +1028,19 @@ contains
             donor_element%nterms_s   = mesh(donor_element%idomain_l)%elems(donor_element%ielement_l)%nterms_s
             donor_element%nterms_c   = mesh(donor_element%idomain_l)%elems(donor_element%ielement_l)%nterms_c
 
-            xi   = donors_xi%at(min_domain)
-            eta  = donors_eta%at(min_domain)
-            zeta = donors_zeta%at(min_domain)
+
+
+
+
+            !
+            ! Set donor coordinate and volume if present
+            !
+            xi   = donors_xi%at(donor_index)
+            eta  = donors_eta%at(donor_index)
+            zeta = donors_zeta%at(donor_index)
             call donor_coordinate%set(xi,eta,zeta)
             donor_coordinate%status = VALID_POINT
+            if (present(donor_volume)) donor_volume = mesh(donor_element%idomain_l)%elems(donor_element%ielement_l)%vol
 
 
         else

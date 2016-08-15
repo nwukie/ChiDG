@@ -44,6 +44,7 @@ contains
         type(timer_t)               :: timer, comm_timer
         integer(ik)                 :: nelem, nfcn, ndonors
         integer(ik)                 :: idom, ielem, iface, iblk, idonor, ifcn, i, ibc, ChiID, ielement_g, iproc
+        integer(ik)                 :: nelem_search, idom_search, ielem_search
         logical                     :: interior_face         = .false.
         logical                     :: chimera_face          = .false.
         logical                     :: compute_face          = .false.
@@ -62,6 +63,8 @@ contains
         real(rk),   allocatable :: full_matrix(:,:)
         real(rk),   allocatable :: wr(:), wi(:)
         integer(ik)             :: row_start, row_end, col_start, col_end, eparent, ierr, ndof_elem, ndof, neqn, fileunit
+        !integer(ik)             :: elems(6)
+        integer(ik)             :: elems(14), doms(14)
 
 
 
@@ -195,9 +198,7 @@ contains
 
                                             compute_function     = data%sdata%function_status%compute_function(   face_info, function_info )
                                             linearize_function   = data%sdata%function_status%linearize_function( face_info, function_info )
-
-
-
+                                            
 
                                             if ( compute_function .or. linearize_function ) then
                                                 !
@@ -278,11 +279,6 @@ contains
             ! Synchronize
             !
             call MPI_Barrier(ChiDG_COMM,ierr)
-
-
-
-
-
 
 
 

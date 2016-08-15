@@ -43,11 +43,6 @@ Preconditioners
 
 Boundary Conditions
 !---------------------------------------------------------------------
-@detail     Relocate boundary condition specification to grid file
-@author     Nathan A. Wukie
-@date       1/28/2016           COMPLETED 2/8/2016
-
-
 @detail Implement capability for boundary condition coupled across the entire face. Extra blocks in the linearization
 @author Nathan A. Wukie
 @date   1/28/2016               COMPLETED 2/8/2016
@@ -95,10 +90,6 @@ Time
 
 Nonlinear Solver
 !----------------------------------------------------------------------
-@detail Implement abstraction for nonlinear solver. Presently it is lumped into each timescheme implementation.
-@author Nathan A. Wukie
-@date   2/8/2016
-
 @detail Add physicality check in applying the solution update
 @author Nathan A. Wukie
 @date   1/28/2016

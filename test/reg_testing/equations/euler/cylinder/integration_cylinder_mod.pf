@@ -1,36 +1,29 @@
 !--------------------------------------------------------------------------------
 !
-!                Euler equation set entropy-error regression test
+!                   Euler equations :: Circular Cylinder
 !
-!   This test suite runs a series of tests solving the euler equations on a quartic
-!   smoothbump grid of varying resolution for varying orders of solution accuracy.
-!   At the end of each case, the entropy error is computed for the domain. The flow
-!   phenomena that are present for the smoothbump case should be isentropic. The 
-!   error metric then, is to compute the entropy generated from the numerical scheme.
+!   This test suite runs a series of tests solving the euler equations on a Chimera
+!   O-grid representing a flow over a cylinder. This grid uses the Chimera interfaces 
+!   with an O-grid representing the cylinder geometry on top of a cartesian grid. 
+!   One grid resolution is used and it is run at solution accuracy of 1,2,3, and 
+!   4th-order on 1, 2, 4, 7, and 10 processors.
 !
-!   This suite runs the smoothbump case with 6x2x2, 12x4x2, and 24x8x2 grids with
-!   quartic elements. Each grid is run from 1st to 4th order accuracy. Each 
-!   configuration is run on 1, 2, 7, and 10 processors. The nonlinear convergence
-!   for each case is stored in a module global variable that is used to compare
-!   convergence.
-!
-!   After the simulation for each case has been run, an additional test
-!   compares the nonlinear convergence of the Newton solver from the parallel
-!   simulations to the same case run in serial.
+!   The nonlinear convergence for each case is stored in a module global variable 
+!   that is used to compare convergence between the serial and parallel cases.
 !
 !   The boundary condition settings are:
 !
 !       Inlet:  euler_totalinlet  
-!               Total Pressure    = 110000 (Pa) 
-!               Total Temperature = 300 (K)
+!               Total Pressure    = 110000 (Pa)
+!               Total Temperature = 300 (k)
 !
 !       Outlet: euler_pressureoutlet
-!               Static Pressure   = 93000 (Pa)
+!               Static Pressure   = 100000 (Pa)
 !
 !       Walls: euler_wall
 !
 !--------------------------------------------------------------------------------
-module integration_smoothbump_mod
+module integration_cylinder_mod
     use pfunit_mod
     use mod_kinds,          only: rk, ik
     use mod_constants,      only: ZERO, THREE, IO_DESTINATION
@@ -42,8 +35,8 @@ module integration_smoothbump_mod
     use mod_grid_operators, only: initialize_variable
     use mod_entropy,        only: compute_entropy_error
 
-    use mod_chidg_mpi,      only: IRANK, NRANK
-    use mpi_f08,            only: MPI_COMM
+    use mod_chidg_mpi,      only: IRANK, NRANK, ChiDG_COMM, GLOBAL_MASTER
+    use mpi_f08,            only: MPI_COMM, MPI_ISend, MPI_Recv, MPI_REAL8, MPI_STATUS, MPI_ANY_SOURCE, MPI_REQUEST, MPI_Barrier
     use mod_io
     implicit none
 
@@ -54,10 +47,12 @@ module integration_smoothbump_mod
     !
     ! Procs: 1, 2, 4, 7, 10
     !
-    type(rvector_t) :: nonlinear_convergence(5,3,4) ! nprocs, ngrids, norders
+    type(rvector_t) :: nonlinear_convergence(5,4) ! nprocs, norders
 
+    type(MPI_STATUS)  :: tmp_status
+    type(MPI_REQUEST) :: tmp_request
 
-    public  :: smoothbump
+    public  :: cylinder
 
 
 
@@ -70,7 +65,6 @@ module integration_smoothbump_mod
     !-------------------------------------------------------------------------------
     @TestParameter
     type, extends(MpiTestParameter) :: case_grid_order
-        character(100)  :: gridfile
         integer(ik)     :: order
         real(rk)        :: entropy_ref
     contains
@@ -91,8 +85,7 @@ module integration_smoothbump_mod
     !!
     !-------------------------------------------------------------------------------
     @TestCase(testParameters={getParameters()}, constructor=newTest)
-    type, extends(MpiTestCase) :: smoothbump
-        character(100)  :: gridfile
+    type, extends(MpiTestCase) :: cylinder
         integer(ik)     :: order
         real(rk)        :: entropy_ref
 
@@ -101,20 +94,8 @@ module integration_smoothbump_mod
     contains
         procedure   :: setUp
         procedure   :: tearDown
-    end type smoothbump
+    end type cylinder
     !*******************************************************************************
-
-
-
-    !> Simple container to hold arbitrary length file names. That way, we can have
-    !! an array of filenames that get looped through.
-    !!
-    !-------------------------------------------------------------------------------
-    type :: string
-        character(len=:), allocatable   :: str
-    end type
-    !*******************************************************************************
-
 
 
 
@@ -130,9 +111,8 @@ contains
     !------------------------------------------------------------------------------
     function newTest(test_parameter) result(test)
         type(case_grid_order),  intent(in)          :: test_parameter
-        type(smoothbump)    :: test
+        type(cylinder)    :: test
 
-        test%gridfile    = test_parameter%gridfile
         test%order       = test_parameter%order
         test%entropy_ref = test_parameter%entropy_ref
 
@@ -148,57 +128,16 @@ contains
     function getParameters() result(params)
         type(case_grid_order), allocatable :: params(:)
     
-        type(string),       allocatable :: files(:)
         integer(ik),        allocatable :: orders(:)
         real(rk),           allocatable :: entropies(:)
-        integer(ik) :: icase
+        integer(ik)                     :: icase
 
-        files = [  string('smoothbump_6x2x2.h5') , &
-                   string('smoothbump_6x2x2.h5') , &
-                   string('smoothbump_6x2x2.h5') , &
-                   string('smoothbump_6x2x2.h5') , &
-                   string('smoothbump_12x4x2.h5'), &
-                   string('smoothbump_12x4x2.h5'), &
-                   string('smoothbump_12x4x2.h5'), &
-                   string('smoothbump_12x4x2.h5'), &
-                   string('smoothbump_24x8x2.h5'), &
-                   string('smoothbump_24x8x2.h5'), &
-                   string('smoothbump_24x8x2.h5'), &
-                   string('smoothbump_24x8x2.h5') &
-                    ]
-
-        orders = [ 1, &
-                   2, &
-                   3, &
-                   4, &
-                   1, &
-                   2, &
-                   3, &
-                   4, &
-                   1, &
-                   2, &
-                   3, &
-                   4 ]
-
-        entropies = [ 2.761019163e-3_rk, &
-                      3.618440627e-3_rk, &
-                      1.116431012e-3_rk, &
-                      6.731678976e-4_rk, &
-                      3.807878665e-3_rk, &
-                      1.323352387e-3_rk, &
-                      3.940896088e-4_rk, &
-                      8.433932228e-5_rk, &
-                      4.038806838e-3_rk, &
-                      5.554687475e-4_rk, &
-                      5.367783209e-5_rk, &
-                      7.223333943e-6_rk ]
+        orders = [1, 2, 3, 4]
 
         !Initialize the test case container with the parameter
-        allocate(params(size(files)))
-        do icase = 1,size(files)
-            params(icase)%gridfile    = files(icase)%str
-            params(icase)%order       = orders(icase)
-            params(icase)%entropy_ref = entropies(icase)
+        allocate(params(size(orders)))
+        do icase = 1,size(orders)
+            params(icase)%order = orders(icase)
         end do
 
     end function getParameters
@@ -206,7 +145,9 @@ contains
 
 
 
+
     !>  Reporting the parameters of the test
+    !!
     !!
     !!
     !-------------------------------------------------------------------------------------------
@@ -216,13 +157,11 @@ contains
 
         character(len=200) :: buffer
 
-        write(buffer,'( "(gridfile, order)=","(", A10,",", I2, ")" )') this%gridfile, this%order
+        write(buffer,'( "(order)=","(", I2, ")" )') this%order
         string = trim(buffer)
 
     end function toString
     !********************************************************************************************
-
-
 
 
 
@@ -241,7 +180,7 @@ contains
     !!
     !--------------------------------------------------------------------------------------------
     subroutine setUp(this)
-        class(smoothbump),  intent(inout)   :: this
+        class(cylinder),  intent(inout)   :: this
 
         class(function_t),  allocatable :: fcn
         real(rk)                        :: tol, entropy_error
@@ -262,7 +201,7 @@ contains
         gq_rule          = 2
         time_scheme      = 'steady'
         nonlinear_solver = 'quasi_newton'
-        linear_solver    = 'fgmres_cgs'
+        linear_solver    = 'fgmres'
         preconditioner   = 'RASILU0'
         IO_DESTINATION   = 'file'
         !------------------------------------------------------------------------------
@@ -300,8 +239,8 @@ contains
         !
         ! Read grid
         !
-        call this%chidg%read_grid(this%gridfile,spacedim)
-        call this%chidg%read_boundaryconditions(this%gridfile)
+        call this%chidg%read_grid('cylinder_ogrid.h5',spacedim)
+        call this%chidg%read_boundaryconditions('cylinder_ogrid.h5')
 
 
 
@@ -323,18 +262,28 @@ contains
         !
         ! Initialize solution
         !
-        call create_function(fcn,'constant')
+        if (this%order == 1) then
 
-        call fcn%set_option('val',1.13262_rk)
-        call initialize_variable(this%chidg%data,1,fcn) ! rho
-        call fcn%set_option('val',190.339029_rk)
-        call initialize_variable(this%chidg%data,2,fcn) ! rhou
-        call fcn%set_option('val',ZERO)
-        call initialize_variable(this%chidg%data,3,fcn) ! rhov
-        call fcn%set_option('val',ZERO)
-        call initialize_variable(this%chidg%data,4,fcn) ! rhow
-        call fcn%set_option('val',248493.425_rk)
-        call initialize_variable(this%chidg%data,5,fcn) ! rhoE
+            ! If running first-order, set constant initial condition
+            call create_function(fcn,'constant')
+
+            call fcn%set_option('val',1.13_rk)
+            call initialize_variable(this%chidg%data,1,fcn) ! rho
+            call fcn%set_option('val',190.0_rk)
+            call initialize_variable(this%chidg%data,2,fcn) ! rhou
+            call fcn%set_option('val',ZERO)
+            call initialize_variable(this%chidg%data,3,fcn) ! rhov
+            call fcn%set_option('val',ZERO)
+            call initialize_variable(this%chidg%data,4,fcn) ! rhow
+            call fcn%set_option('val',248000.000_rk)
+            call initialize_variable(this%chidg%data,5,fcn) ! rhoE
+
+        else if (this%order > 1) then
+
+            ! If running higher than first-order, read the lower order solution
+            call this%chidg%read_solution('cylinder_ogrid.h5')
+
+        end if
 
 
         !
@@ -346,8 +295,12 @@ contains
     !******************************************************************************************************
 
 
+    !>
+    !!
+    !!
+    !------------------------------------------------------------------------------------------------------
     subroutine tearDown(this)
-        class(smoothbump),  intent(inout)   :: this
+        class(cylinder),  intent(inout)   :: this
 
         ! Close ChiDG
         call this%chidg%close('core')
@@ -376,15 +329,17 @@ contains
     !!
     !-------------------------------------------------------------------------------------------------------
     @Test(npes=[1,2,4,7,10])
-    subroutine test_entropy_error_rate(self)
-        class(smoothbump),  intent(inout)   :: self
+    subroutine test_symmetry(self)
+        class(cylinder),  intent(inout)   :: self
 
-        real(rk)    :: tol, entropy_error
-        integer(ik) :: npes_index, grid_index, order_index
+        integer(ik) :: npes_index, order_index, ielem_search, dom_search, elem_search, idom, ielem, send_size, ierr
+        integer(ik) :: doms_top(2), elems_top(2), doms_bot(2), elems_bot(2)
+        real(rk), allocatable   :: top_solution(:), bot_solution(:)
 
-
+        !
+        ! Get test case indices
+        !
         npes_index  = get_npes_index(NRANK)
-        grid_index  = get_grid_index(self%gridfile)
         order_index = get_order_index(self%order)
 
 
@@ -393,24 +348,95 @@ contains
         !
         call self%chidg%run()
 
+
+
+
+
         !
         ! Store the nonlinear convergence of the calculation
         !
-        nonlinear_convergence(npes_index,grid_index,order_index) = self%chidg%nonlinear_solver%residual_norm
-
-        !
-        ! Compute entropy error
-        !
-        entropy_error = compute_entropy_error(self%chidg%data)
-
-        !
-        ! Test that computed entropy error is the expected value
-        !
-        tol = self%entropy_ref/100._rk
-        @assertEqual(self%entropy_ref,entropy_error,tol)
+        nonlinear_convergence(npes_index,order_index) = self%chidg%nonlinear_solver%residual_norm
 
 
-    end subroutine test_entropy_error_rate
+
+
+
+
+        !
+        ! Test symmetry. Do some comparisons of the solution between symmetrically located elements
+        !
+        doms_top  = [3, 3]
+        elems_top = [1, 2]  !   domain 3. These elements are the bottom two of the upper middle background block
+
+        doms_bot  = [4, 4]
+        elems_bot = [7, 8]  !   domain 4. These elements are the top two of the lower middle background block
+
+
+        send_size = size(self%chidg%data%sdata%q%dom(1)%vecs(1)%vec)
+        allocate(top_solution(send_size), bot_solution(send_size))
+
+        do ielem_search = 1,size(elems_top)
+            
+            !
+            ! Find the top and bottom solutions and if found, send to the master process so they can be compared
+            !
+            dom_search = doms_top(ielem_search)
+            elem_search = elems_top(ielem_search)
+
+            do idom = 1,self%chidg%data%ndomains()
+                if (self%chidg%data%mesh(idom)%idomain_g == dom_search) then
+
+                    do ielem = 1,size(self%chidg%data%mesh(idom)%elems)
+                        if (self%chidg%data%mesh(idom)%elems(ielem)%ielement_g == elem_search) then
+
+                            call MPI_ISend(self%chidg%data%sdata%q%dom(idom)%vecs(ielem)%vec, send_size, MPI_REAL8, GLOBAL_MASTER, 0, ChiDG_COMM, tmp_request, ierr)
+
+                        end if
+                    end do !ielem
+
+                end if
+            end do !idom
+
+            dom_search = doms_bot(ielem_search)
+            elem_search = elems_bot(ielem_search)
+
+            do idom = 1,self%chidg%data%ndomains()
+                if (self%chidg%data%mesh(idom)%idomain_g == dom_search) then
+
+                    do ielem = 1,size(self%chidg%data%mesh(idom)%elems)
+                        if (self%chidg%data%mesh(idom)%elems(ielem)%ielement_g == elem_search) then
+
+                            call MPI_ISend(self%chidg%data%sdata%q%dom(idom)%vecs(ielem)%vec, send_size, MPI_REAL8, GLOBAL_MASTER, 1, ChiDG_COMM, tmp_request, ierr)
+
+                        end if
+                    end do !ielem
+
+                end if
+            end do !idom
+
+
+
+
+            !
+            ! Receive the top and bottom solutions and compare
+            !
+            if (IRANK == GLOBAL_MASTER) then
+                ! Receive top element solution
+                call MPI_Recv(top_solution, send_size, MPI_REAL8, MPI_ANY_SOURCE, 0, ChiDG_COMM, tmp_status, ierr)
+
+                ! Receive bot element solution
+                call MPI_Recv(bot_solution, send_size, MPI_REAL8, MPI_ANY_SOURCE, 1, ChiDG_COMM, tmp_status, ierr)
+
+                @assertEqual(abs(top_solution),abs(bot_solution), 1.e-5_rk)
+            end if
+
+
+            call MPI_Barrier(ChiDG_COMM,ierr)
+
+        end do !ielem
+
+
+    end subroutine test_symmetry
     !*******************************************************************************************************
 
 
@@ -421,9 +447,9 @@ contains
 
 
     !>  Access the stored nonlinear convergence data(module global variable) and compare the parallel 
-    !!  convergence to the serial convergence for each (grid,order) combination.
+    !!  convergence to the serial convergence for each (order) combination.
     !!
-    !!  This assumes that the 'test_entropy_error_rate' has already been executed for all cases
+    !!  This assumes that the 'test_calculation' has already been executed for all cases
     !!  and numbers of processors to that the 'nonlinear_convergence' variable has been populated.
     !!  So, we are relying on pFUnit to do things in order here. Works now, but I don't think
     !!  there is a guaruntee that this can't change.
@@ -434,34 +460,28 @@ contains
     !-------------------------------------------------------------------------------------------------------
     @Test(npes=[1])
     subroutine test_nonlinear_convergence(self)
-        class(smoothbump),  intent(inout)   :: self
+        class(cylinder),  intent(inout)   :: self
 
-        integer(ik)             :: inpes, igrid, iorder
+        integer(ik)             :: inpes, iorder
         real(rk), allocatable   :: reference_convergence(:), test_convergence(:)
 
         do inpes = 1,5
-            do igrid = 1,3
-                do iorder = 1,4
+            do iorder = 1,4
 
-                    ! Get the serial convergence for this (igrid,iorder)
-                    reference_convergence = nonlinear_convergence(1,igrid,iorder)%data()
+                ! Get the serial convergence for this (igrid,iorder)
+                reference_convergence = nonlinear_convergence(1,iorder)%data()
 
-                    ! Test that the current convergence for the processor count matches the serial convergence
-                    test_convergence = nonlinear_convergence(inpes,igrid,iorder)%data()
+                ! Test that the current convergence for the processor count matches the serial convergence
+                test_convergence = nonlinear_convergence(inpes,iorder)%data()
 
-                    @assertEqual(reference_convergence, test_convergence, 1.e-5_rk)
+                @assertEqual(reference_convergence, test_convergence, 1.e-5_rk)
 
-                end do
             end do
         end do
 
 
     end subroutine test_nonlinear_convergence
     !*******************************************************************************************************
-
-
-
-
 
 
 
@@ -496,25 +516,6 @@ contains
 
 
 
-    ! Utility for returning the index associated with a certain grid file
-    !------------------------------------------------------------------------------
-    function get_grid_index(grid) result(igrid)
-        character(len=*)    :: grid
-        integer(ik)         :: igrid
-
-        select case (trim(grid))
-            case('smoothbump_6x2x2.h5')
-                igrid = 1
-            case('smoothbump_12x4x2.h5')
-                igrid = 2 
-            case('smoothbump_24x8x2.h5')
-                igrid = 3
-        end select
-
-    end function get_grid_index
-    !******************************************************************************
-
-
 
     ! Utility for returning the index associated with a certain order of accuracy
     !------------------------------------------------------------------------------
@@ -541,4 +542,4 @@ contains
 
 
 
-end module integration_smoothbump_mod
+end module integration_cylinder_mod

@@ -381,7 +381,7 @@ contains
         real(rk), allocatable   :: reference_convergence(:), test_convergence(:)
 
         do inpes = 1,5
-                do iorder = 1,4
+                do iorder = 1,2
 
                     ! Get the serial convergence for this (igrid,iorder)
                     reference_convergence = nonlinear_convergence(1,iorder)%data()
@@ -389,7 +389,7 @@ contains
                     ! Test that the current convergence for the processor count matches the serial convergence
                     test_convergence = nonlinear_convergence(inpes,iorder)%data()
 
-                    @assertEqual(reference_convergence, test_convergence, 1.e-6_rk)
+                    @assertEqual(reference_convergence, test_convergence, 1.e-5_rk)
 
                 end do
         end do
@@ -447,10 +447,6 @@ contains
                 iorder = 1
             case(2)
                 iorder = 2
-            case(3)
-                iorder = 3
-            case(4)
-                iorder = 4
         end select
 
     end function get_order_index

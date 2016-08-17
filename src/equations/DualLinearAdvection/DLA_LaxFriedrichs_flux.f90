@@ -3,9 +3,9 @@ module DLA_LaxFriedrichs_flux
     use mod_kinds,              only: rk,ik
     use mod_constants,          only: NFACES,ZERO,ONE,TWO,HALF, &
                                       XI_MIN,XI_MAX,ETA_MIN,ETA_MAX,ZETA_MIN,ZETA_MAX,DIAG, &
-                                      LOCAL, NEIGHBOR
+                                      ME, NEIGHBOR
 
-    use atype_boundary_flux,    only: boundary_flux_t
+    use type_boundary_flux,     only: boundary_flux_t
     use type_mesh,              only: mesh_t
     use type_solverdata,        only: solverdata_t
     use type_face_info,         only: face_info_t
@@ -31,22 +31,26 @@ module DLA_LaxFriedrichs_flux
     !! the volume flux jacobians for each equation. They should be the
     !! same as for the single LinearAdvection equation set
     !!
+    !!  @author Nathan A. Wukie
     !!
-    !-------------------------------------------------------------
+    !-----------------------------------------------------------------------------------------------
     type, extends(boundary_flux_t), public :: DLA_LaxFriedrichs_flux_t
 
     contains
         procedure   :: compute
 
     end type DLA_LaxFriedrichs_flux_t
+    !************************************************************************************************
 
 contains
 
-    !==========================================================
-    !
-    !   Boundary Flux routine for Scalar
-    !
-    !===========================================================
+    !>
+    !!
+    !!  @author Nathan A. Wukie
+    !!
+    !!
+    !!
+    !----------------------------------------------------------------------------------------------------
     subroutine compute(self,mesh,sdata,prop,face_info,function_info)
         class(DLA_LaxFriedrichs_flux_t),    intent(in)      :: self
         type(mesh_t),                       intent(in)      :: mesh(:)
@@ -98,11 +102,11 @@ contains
         !
         ! Interpolate solution to quadrature nodes
         !
-        call interpolate_face(mesh,face_info,sdata%q,iu_a, ua_r, LOCAL)
-        call interpolate_face(mesh,face_info,sdata%q,iu_a, ua_l, NEIGHBOR)
+        call interpolate_face(mesh,face_info,function_info,sdata%q,iu_a, ua_r, 'value', ME)
+        call interpolate_face(mesh,face_info,function_info,sdata%q,iu_a, ua_l, 'value', NEIGHBOR)
 
-        call interpolate_face(mesh,face_info,sdata%q,iu_b, ub_r, LOCAL)
-        call interpolate_face(mesh,face_info,sdata%q,iu_b, ub_l, NEIGHBOR)
+        call interpolate_face(mesh,face_info,function_info,sdata%q,iu_b, ub_r, 'value', ME)
+        call interpolate_face(mesh,face_info,function_info,sdata%q,iu_b, ub_l, 'value', NEIGHBOR)
 
 
 

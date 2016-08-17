@@ -1,4 +1,4 @@
-module atype_fluid
+module type_fluid
     use mod_kinds,  only: rk
     use DNAD_D
     implicit none
@@ -59,4 +59,4 @@ module atype_fluid
     end interface
 
 
-end module atype_fluid
+end module type_fluid

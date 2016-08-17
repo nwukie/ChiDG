@@ -5,6 +5,7 @@ module test_interpolate_chimera_mod
     use type_seed,          only: seed_t
     use type_meshdata,      only: meshdata_t
     use type_face_info,     only: face_info_t
+    use type_function_info, only: function_info_t
     use type_bc,            only: bc_t
     use mod_bc,             only: create_bc
 
@@ -12,13 +13,12 @@ module test_interpolate_chimera_mod
     use mod_kinds,          only: rk,ik
     use mod_constants,      only: ZERO, ONE, TWO, THREE, FIVE, SIX, EIGHT, NINE, TEN, &
                                   XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX, &
-                                  LOCAL, NEIGHBOR, IO_DESTINATION
+                                  NEIGHBOR, IO_DESTINATION
 
     use mod_hdfio,          only: read_grid_hdf
     use mod_chidg_mpi,      only: IRANK
     use mod_interpolate,    only: interpolate_face, interpolate_element
     use mod_grid_operators, only: initialize_variable
-!    use mod_chimera
 
 
     use DNAD_D
@@ -66,7 +66,7 @@ contains
     !!  NOTE: make sure to use 'this' instead of 'self' since these are over-writting a derived type 
     !!  procedure. The argument names have to match
     !!
-    !-----------------------------------------------------------------------------------------------
+    !--------------------------------------------------------------------------------------------
     subroutine setUp(this)
         class(test_interpolate_chimera),    intent(inout)   :: this
 
@@ -159,6 +159,7 @@ contains
         real(rk),   allocatable     :: u_ref(:)
         real(rk)                    :: tol, val
         type(face_info_t)           :: face
+        type(function_info_t)       :: fcn
         
 
 
@@ -187,7 +188,9 @@ contains
             face%ielement_g = ielem
             face%ielement_l = ielem
             face%iface      = iface
-            face%seed       = seed
+            !face%seed       = seed
+            fcn%seed   = seed
+
 
             tol   = 1.e-13_rk
             ivar  = self%chidg%data%eqnset(1)%item%prop%get_eqn_index('u')
@@ -202,7 +205,7 @@ contains
             !
             ! PROCEDURE BEING TESTED
             !
-            call interpolate_face(self%chidg%data%mesh,face,q,ivar,u_gq, NEIGHBOR)
+            call interpolate_face(self%chidg%data%mesh,face,fcn,q,ivar,u_gq, 'value', NEIGHBOR)
             
             
             ! Initialize reference
@@ -241,6 +244,7 @@ contains
         real(rk),   allocatable     :: deriv_ref(:)
         real(rk)                    :: tol
         type(face_info_t)           :: face
+        type(function_info_t)       :: fcn
         
         
         associate ( elems => self%chidg%data%mesh(1)%elems, faces => self%chidg%data%mesh(1)%faces, q => self%chidg%data%sdata%q)        
@@ -266,11 +270,9 @@ contains
             face%idomain_l  = idomain
             face%ielement_g = ielem
             face%ielement_l = ielem
-            face%iface    = iface
-            face%seed     = seed
-
-
-
+            face%iface      = iface
+            !face%seed     = seed
+            fcn%seed   = seed
 
 
 
@@ -288,7 +290,7 @@ contains
             !
             ! PROCEDURE BEING TESTED
             !
-            call interpolate_face(self%chidg%data%mesh,face,q,ivar,u_gq, NEIGHBOR)
+            call interpolate_face(self%chidg%data%mesh,face,fcn,q,ivar,u_gq, 'value', NEIGHBOR)
             
             deriv_ref = ZERO
             
@@ -335,6 +337,7 @@ contains
         real(rk),   allocatable     :: u_ref(:)
         real(rk)                    :: tol, val
         type(face_info_t)           :: face
+        type(function_info_t)       :: fcn
         
         
         associate ( elems => self%chidg%data%mesh(1)%elems, faces => self%chidg%data%mesh(1)%faces, q => self%chidg%data%sdata%q )
@@ -362,9 +365,8 @@ contains
             face%ielement_g = ielem
             face%ielement_l = ielem
             face%iface      = iface
-            face%seed       = seed
-
-            
+            !face%seed       = seed
+            fcn%seed   = seed
 
 
 
@@ -381,7 +383,7 @@ contains
             !
             ! PROCEDURE BEING TESTED
             !
-            call interpolate_face(self%chidg%data%mesh,face,q,ivar,u_gq, NEIGHBOR)
+            call interpolate_face(self%chidg%data%mesh,face,fcn,q,ivar,u_gq, 'value', NEIGHBOR)
             
             
             !
@@ -421,6 +423,7 @@ contains
         real(rk)                    :: tol
         real(rk),   allocatable     :: mat(:,:)
         type(face_info_t)           :: face
+        type(function_info_t)       :: fcn
 
         integer(ik)                 :: ielem_n, iface_n, idonor, ChiID, ndonor_nodes
         
@@ -451,9 +454,7 @@ contains
             face%ielement_g = ielem
             face%ielement_l = ielem
             face%iface      = iface
-            face%seed       = seed
-
-
+            fcn%seed   = seed
 
 
             
@@ -471,7 +472,7 @@ contains
             !
             ! PROCEDURE BEING TESTED
             !
-            call interpolate_face(self%chidg%data%mesh,face,q,ivar,u_gq, NEIGHBOR)
+            call interpolate_face(self%chidg%data%mesh,face,fcn,q,ivar,u_gq, 'value', NEIGHBOR)
               
             
             

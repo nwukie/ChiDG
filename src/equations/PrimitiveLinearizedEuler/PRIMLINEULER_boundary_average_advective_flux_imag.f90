@@ -2,9 +2,9 @@ module PRIMLINEULER_boundary_average_advective_flux_imag
     use mod_kinds,              only: rk,ik
     use mod_constants,          only: NFACES, ZERO, ONE, TWO, HALF, &
                                       XI_MIN,XI_MAX,ETA_MIN,ETA_MAX,ZETA_MIN,ZETA_MAX, &
-                                      LOCAL, NEIGHBOR
+                                      ME, NEIGHBOR
 
-    use atype_boundary_flux,    only: boundary_flux_t
+    use type_boundary_flux,     only: boundary_flux_t
     use type_mesh,              only: mesh_t
     use type_solverdata,        only: solverdata_t
     use type_properties,        only: properties_t
@@ -20,10 +20,8 @@ module PRIMLINEULER_boundary_average_advective_flux_imag
     use PRIMLINEULER_properties,    only: PRIMLINEULER_properties_t
     use mod_primitive_linearized_euler
     implicit none
-
-
-
     private
+
 
 
 
@@ -122,20 +120,20 @@ contains
             !
             ! Interpolate solution to quadrature nodes
             !
-            call interpolate_face(mesh,face_info,q, irho,  rho_m,  LOCAL)
-            call interpolate_face(mesh,face_info,q, irho,  rho_p,  NEIGHBOR)
+            call interpolate_face(mesh,face_info,function_info,q, irho, rho_m, 'value', ME)
+            call interpolate_face(mesh,face_info,function_info,q, irho, rho_p, 'value', NEIGHBOR)
 
-            call interpolate_face(mesh,face_info,q, iu, u_m, LOCAL)
-            call interpolate_face(mesh,face_info,q, iu, u_p, NEIGHBOR)
+            call interpolate_face(mesh,face_info,function_info,q, iu,   u_m,   'value', ME)
+            call interpolate_face(mesh,face_info,function_info,q, iu,   u_p,   'value', NEIGHBOR)
 
-            call interpolate_face(mesh,face_info,q, iv, v_m, LOCAL)
-            call interpolate_face(mesh,face_info,q, iv, v_p, NEIGHBOR)
+            call interpolate_face(mesh,face_info,function_info,q, iv,   v_m,   'value', ME)
+            call interpolate_face(mesh,face_info,function_info,q, iv,   v_p,   'value', NEIGHBOR)
 
-            call interpolate_face(mesh,face_info,q, iw, w_m, LOCAL)
-            call interpolate_face(mesh,face_info,q, iw, w_p, NEIGHBOR)
+            call interpolate_face(mesh,face_info,function_info,q, iw,   w_m,   'value', ME)
+            call interpolate_face(mesh,face_info,function_info,q, iw,   w_p,   'value', NEIGHBOR)
 
-            call interpolate_face(mesh,face_info,q, ip, p_m, LOCAL)
-            call interpolate_face(mesh,face_info,q, ip, p_p, NEIGHBOR)
+            call interpolate_face(mesh,face_info,function_info,q, ip,   p_m,   'value', ME)
+            call interpolate_face(mesh,face_info,function_info,q, ip,   p_p,   'value', NEIGHBOR)
 
 
 

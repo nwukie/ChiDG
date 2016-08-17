@@ -1,7 +1,7 @@
 module mod_check_jacobian
 #include <messenger.h>
     use mod_kinds,          only: rk,ik
-    use mod_constants,      only: NFACES, DIAG, ZERO, BOUNDARY_ADVECTIVE_FLUX
+    use mod_constants,      only: NFACES, DIAG, ZERO, BOUNDARY_ADVECTIVE_FLUX, VOLUME_ADVECTIVE_FLUX
 
     use type_mesh,          only: mesh_t
     use type_solverdata,    only: solverdata_t
@@ -9,10 +9,11 @@ module mod_check_jacobian
     use type_densematrix,   only: densematrix_t
     use type_chidg_data,    only: chidg_data_t
 
+    use type_element_info,  only: element_info_t
     use type_face_info,     only: face_info_t
     use type_function_info, only: function_info_t
 
-    use mod_DNAD_tools,     only: compute_seed
+    use mod_DNAD_tools,     only: element_compute_seed, face_compute_seed
     implicit none
 
 
@@ -42,14 +43,16 @@ contains
 
         type(blockvector_t), allocatable    :: rhs_r, vec_fd
         real(rk)                            :: qhold, eps
-        integer(ik)                         :: nelem, i, iterm, icol, nterms, ivar, iflux, nflux, idom, iel
+        integer(ik)                         :: nelem, i, iterm, icol, nterms, ivar, iflux, nflux, idom, iel, idepend
         integer(ik)                         :: ielem_p              ! element in which the solution is being perturbed for the FD calculation.
+        type(element_info_t)                :: elem_info
+        type(function_info_t)               :: function_info
 
 
         ! ASSUME ONLY ONE DOMAIN IS PRESENT
         idom = 1
 
-
+        idepend = 1
 
 
 
@@ -79,10 +82,26 @@ contains
             ! For the current element, compute the contributions from volume integrals
             !
             idom = 1
+
+            elem_info%idomain_g  = 1
+            elem_info%idomain_l  = 1
+            elem_info%ielement_g = ielem
+            elem_info%ielement_l = ielem
+
+
+
             if (allocated(eqnset(1)%item%volume_advective_flux)) then
                 nflux = size(eqnset(1)%item%volume_advective_flux)
                 do iflux = 1,nflux
-                    call data%eqnset(1)%item%volume_advective_flux(iflux)%flux%compute(data%mesh,data%sdata,prop,idom,ielem,iblk)
+
+                    function_info%type    = VOLUME_ADVECTIVE_FLUX
+                    function_info%ifcn    = iflux
+                    function_info%iblk    = iblk
+                    function_info%idepend = 1
+                    function_info%seed    = element_compute_seed(mesh,idom,ielem,idepend,iblk)
+
+                    !call data%eqnset(1)%item%volume_advective_flux(iflux)%flux%compute(data%mesh,data%sdata,prop,idom,ielem,iblk)
+                    call data%eqnset(1)%item%volume_advective_flux(iflux)%flux%compute(data%mesh,data%sdata,prop,elem_info,function_info)
                 end do
 
             else
@@ -145,10 +164,17 @@ contains
                    ! For the current element, compute the contributions from volume integrals
                    !
                    if (allocated(eqnset(1)%item%volume_advective_flux)) then
-                       nflux = size(eqnset(1)%item%volume_advective_flux)
-                       do iflux = 1,nflux
-                           call eqnset(1)%item%volume_advective_flux(iflux)%flux%compute(mesh,sdata,prop,idom,ielem,iblk)
-                       end do
+                        nflux = size(eqnset(1)%item%volume_advective_flux)
+                        do iflux = 1,nflux
+                            function_info%type    = VOLUME_ADVECTIVE_FLUX
+                            function_info%ifcn    = iflux
+                            function_info%iblk    = iblk
+                            function_info%idepend = 1
+                            function_info%seed    = element_compute_seed(mesh,idom,ielem,idepend,iblk)
+
+                            !call eqnset(1)%item%volume_advective_flux(iflux)%flux%compute(mesh,sdata,prop,idom,ielem,iblk)
+                            call eqnset(1)%item%volume_advective_flux(iflux)%flux%compute(mesh,sdata,prop,elem_info,function_info)
+                        end do
 
                    else
                        print*, eqnset(1)%item%name
@@ -274,7 +300,7 @@ contains
             face_info%ielement_g = data%mesh(idom)%elems(ielem)%ielement_g
             face_info%ielement_l = data%mesh(idom)%elems(ielem)%ielement_l
             face_info%iface      = iface
-            face_info%seed       = compute_seed(data%mesh,idom,ielem,iface,idonor,iblk)
+            !face_info%seed       = compute_seed(data%mesh,idom,ielem,iface,idonor,iblk)
 
 
             !
@@ -284,10 +310,11 @@ contains
                 nflux = size(data%eqnset(1)%item%boundary_advective_flux)
                 do iflux = 1,nflux
 
-                    function_info%type   = BOUNDARY_ADVECTIVE_FLUX
-                    function_info%ifcn   = iflux
-                    function_info%iblk   = iblk
-                    function_info%idonor = idonor
+                    function_info%type    = BOUNDARY_ADVECTIVE_FLUX
+                    function_info%ifcn    = iflux
+                    function_info%iblk    = iblk
+                    function_info%idepend = idonor
+                    function_info%seed    = face_compute_seed(data%mesh,idom,ielem,iface,idonor,iblk)
 
 
                     call data%eqnset(1)%item%boundary_advective_flux(iflux)%flux%compute(data%mesh,data%sdata,prop,face_info, function_info)
@@ -325,10 +352,10 @@ contains
                 do iflux = 1,nflux
 
 
-                    function_info%type   = BOUNDARY_ADVECTIVE_FLUX
-                    function_info%ifcn   = iflux
-                    function_info%iblk   = DIAG
-                    function_info%idonor = idonor
+                    function_info%type    = BOUNDARY_ADVECTIVE_FLUX
+                    function_info%ifcn    = iflux
+                    function_info%iblk    = DIAG
+                    function_info%idepend = idonor
 
 
                     call data%eqnset(1)%item%boundary_advective_flux(iflux)%flux%compute(data%mesh,data%sdata,prop,face_info,function_info)
@@ -380,10 +407,10 @@ contains
                         nflux = size(data%eqnset(1)%item%boundary_advective_flux)
                         do iflux = 1,nflux
 
-                            function_info%type   = BOUNDARY_ADVECTIVE_FLUX
-                            function_info%ifcn   = iflux
-                            function_info%iblk   = DIAG
-                            function_info%idonor = idonor
+                            function_info%type    = BOUNDARY_ADVECTIVE_FLUX
+                            function_info%ifcn    = iflux
+                            function_info%iblk    = DIAG
+                            function_info%idepend = idonor
 
                             call data%eqnset(1)%item%boundary_advective_flux(iflux)%flux%compute(data%mesh,data%sdata,prop,face_info,function_info)
                         end do

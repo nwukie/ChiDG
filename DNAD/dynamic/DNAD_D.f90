@@ -1505,21 +1505,21 @@ CONTAINS
     ! DOT PRODUCT two dual number vectors
     ! <u,up>.<v,vp>=<u.v,u.vp+up.v>
     !----------------------------------------
-    FUNCTION DOT_PRODUCT_DD_D(u,v) RESULT(res)
-         TYPE (AD_D), INTENT(IN)::u(:),v(:)
-         TYPE (AD_D)::res
-!         INTEGER:: i
-!
-         stop "DOT_PRODUCT not implemented"
-!         res = AD_D(size(u(1)%xp_ad_))
-!         res = 0.
-!
-!         res%x_ad_ = DOT_PRODUCT(u%x_ad_,v%x_ad_)
-!
-!         DO i=1,size(u(1)%xp_ad_)
-!           res%xp_ad_(i) =DOT_PRODUCT(u%x_ad_,v%xp_ad_(i))+DOT_PRODUCT(u%xp_ad_(i),v%x_ad_)
-!         ENDDO
-    END FUNCTION DOT_PRODUCT_DD_D
+!    FUNCTION DOT_PRODUCT_DD_D(u,v) RESULT(res)
+!         TYPE (AD_D), INTENT(IN)::u(:),v(:)
+!         TYPE (AD_D)::res
+!!         INTEGER:: i
+!!
+!         stop "DOT_PRODUCT not implemented"
+!!         res = AD_D(size(u(1)%xp_ad_))
+!!         res = 0.
+!!
+!!         res%x_ad_ = DOT_PRODUCT(u%x_ad_,v%x_ad_)
+!!
+!!         DO i=1,size(u(1)%xp_ad_)
+!!           res%xp_ad_(i) =DOT_PRODUCT(u%x_ad_,v%xp_ad_(i))+DOT_PRODUCT(u%xp_ad_(i),v%x_ad_)
+!!         ENDDO
+!    END FUNCTION DOT_PRODUCT_DD_D
 
    
    
@@ -1784,7 +1784,7 @@ CONTAINS
         TYPE(AD_D), intent(in)          :: v(:)
 
         TYPE(AD_D)                                          :: res(size(u,1))  !> Causes memory leak in ifort 15.0.3. Doesn't seem to be deallocating everything correctly
-        REAL(rk), dimension(size(u,1),size(v(1)%xp_ad_))    :: res_xp_m
+   !     REAL(rk), dimension(size(u,1),size(v(1)%xp_ad_))    :: res_xp_m
         real(rk), dimension(size(v))                        :: tmp
         real(rk), dimension(size(u,1))                      :: tmp2
         INTEGER:: i,j,vecsize

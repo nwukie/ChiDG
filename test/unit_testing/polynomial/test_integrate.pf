@@ -144,7 +144,7 @@ subroutine test_integrate_boundary_unit_constant()
     face%ielement_g = ielem
     face%ielement_l = ielem
     face%iface      = iface
-    face%seed       = seed
+!    face%seed       = seed
 
 
     
@@ -152,10 +152,11 @@ subroutine test_integrate_boundary_unit_constant()
     idonor  = 1
     iblk    = DIAG
 
-    flux%type   = BOUNDARY_ADVECTIVE_FLUX
-    flux%ifcn   = ifcn
-    flux%idonor = idonor
-    flux%iblk   = iblk
+    flux%type    = BOUNDARY_ADVECTIVE_FLUX
+    flux%ifcn    = ifcn
+    flux%idepend = idonor
+    flux%iblk    = iblk
+    flux%seed    = seed
 
 
 
@@ -333,7 +334,7 @@ subroutine test_integrate_boundary_nonunit_constant()
     face%ielement_g = 1
     face%ielement_l = 1
     face%iface      = XI_MIN
-    face%seed       = seed
+!    face%seed       = seed
 
     idomain = 1
     ivar    = 1
@@ -343,10 +344,11 @@ subroutine test_integrate_boundary_nonunit_constant()
 
 
 
-    flux%type   = BOUNDARY_ADVECTIVE_FLUX
-    flux%ifcn   = ifcn
-    flux%idonor = idonor
-    flux%iblk   = iblk
+    flux%type    = BOUNDARY_ADVECTIVE_FLUX
+    flux%ifcn    = ifcn
+    flux%idepend = idonor
+    flux%iblk    = iblk
+    flux%seed    = seed
 
 
 

@@ -138,11 +138,18 @@ module mod_constants
 
 
     !
-    ! Interpolation type
+    ! Interpolation source
     !
-    integer(ik), parameter :: LOCAL     = 0         ! Interpolate from current element
-    integer(ik), parameter :: NEIGHBOR  = 1         ! Interpolate from neighbor element
+    !integer(ik), parameter :: LOCAL     = 0        ! Interpolate from current element
+    integer(ik), parameter :: ME       = 0         ! Interpolate from current element
+    integer(ik), parameter :: NEIGHBOR = 1         ! Interpolate from neighbor element
 
+
+    !
+    ! Communication type
+    !
+    integer(ik), parameter :: LOCAL  = 2
+    integer(ik), parameter :: REMOTE = 3
 
 
     !

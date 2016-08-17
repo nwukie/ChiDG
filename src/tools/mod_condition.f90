@@ -59,7 +59,7 @@ contains
         real(rk), dimension(:,:), intent(in) :: A
         real(rk), dimension(size(A,1),size(A,2)) :: Ainv
 
-        real(rk), dimension(size(A,1)) :: work    ! work array for LAPACK
+!        real(rk), dimension(size(A,1)) :: work    ! work array for LAPACK
         real(rk), dimension(size(A,1)) :: nwork
         real(rk), dimension(size(A,1)*4) :: conwork
         integer,  dimension(size(A,1))   :: iconwork

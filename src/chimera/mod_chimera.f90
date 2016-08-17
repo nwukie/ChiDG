@@ -17,7 +17,7 @@ module mod_chimera
 
     use type_mesh,              only: mesh_t
     use type_point,             only: point_t
-    use type_element_indices,   only: element_indices_t
+    use type_element_info,      only: element_info_t
     use type_face_info,         only: face_info_t
     use type_ivector,           only: ivector_t
     use type_rvector,           only: rvector_t
@@ -205,7 +205,7 @@ contains
         real(rk)    :: offset_x, offset_y, offset_z
 
         type(face_info_t)           :: receiver
-        type(element_indices_t)     :: donor
+        type(element_info_t)        :: donor
         type(point_t)               :: donor_coord
         type(point_t)               :: gq_node
         type(point_t)               :: dummy_coord
@@ -745,7 +745,7 @@ contains
         type(mesh_t),               intent(in)              :: mesh(:)
         type(point_t),              intent(in)              :: gq_node
         type(face_info_t),          intent(in)              :: receiver_face
-        type(element_indices_t),    intent(inout)           :: donor_element
+        type(element_info_t),       intent(inout)           :: donor_element
         type(point_t),              intent(inout)           :: donor_coordinate
         real(rk),                   intent(inout), optional :: donor_volume
 

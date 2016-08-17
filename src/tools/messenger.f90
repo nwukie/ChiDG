@@ -109,7 +109,6 @@ contains
         class(*),     intent(in), target,   optional    :: info_three
 
         integer                         :: iaux, pathstart
-        integer(ik)                     :: ierr
         character(len=:), allocatable   :: subpath, temppath
         class(*), pointer               :: auxdata => null()
         character(100)                  :: warnstr, errstr, killstr, genstr, starstr, linechar, dashstr, blankstr
@@ -435,7 +434,7 @@ contains
 
         character(100)                  :: write_internal
         character(len=:),   allocatable :: temp, temp_a, temp_b
-        integer(ik)                     :: current_width, ispace, extra_space, test_blank
+        integer(ik)                     :: current_width, extra_space, test_blank
         logical                         :: blank_line
 
 

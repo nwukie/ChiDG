@@ -13,7 +13,7 @@ add_lib_sources(
                 type_evector.f90
                 type_bcvector.f90
                 type_fcnvector.f90
-#                type_vector.f90
+                #type_vector.f90
                 type_chidgMatrix.f90
                 type_chidgVector.f90
                 type_chidgVector_send.f90
@@ -23,9 +23,10 @@ add_lib_sources(
                 operator_chidg_dot.f90
                 operator_chidg_mv.f90
                 type_solverdata.f90
-                type_element_indices.f90
+                type_element_info.f90
                 type_face_info.f90
                 type_function_info.f90
                 type_function_status.f90
                 type_function_status_data.f90
                 )
+

@@ -1,7 +1,7 @@
 module perfect_gas
     use mod_kinds,      only: rk
     use mod_constants,  only: ONE, HALF, ZERO
-    use atype_fluid,    only: fluid_t
+    use type_fluid,     only: fluid_t
     use DNAD_D
 
 

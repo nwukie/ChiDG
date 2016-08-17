@@ -4,19 +4,19 @@ module PRIMLINEULER_volume_advective_flux_imag
                                       XI_MIN,XI_MAX,ETA_MIN,ETA_MAX,ZETA_MIN,ZETA_MAX,DIAG
 
     use type_mesh,              only: mesh_t
-    use atype_volume_flux,      only: volume_flux_t
+    use type_volume_flux,       only: volume_flux_t
     use type_solverdata,        only: solverdata_t
     use type_properties,        only: properties_t
+    use type_element_info,      only: element_info_t
+    use type_function_info,     only: function_info_t
     
     use mod_interpolate,        only: interpolate_element
     use mod_integrate,          only: integrate_volume_flux
-    use mod_DNAD_tools
     use DNAD_D
 
     use PRIMLINEULER_properties,    only: PRIMLINEULER_properties_t
     use mod_primitive_linearized_euler
     implicit none
-
     private
 
 
@@ -58,12 +58,13 @@ contains
     !!
     !!
     !----------------------------------------------------------------------------------
-    subroutine compute(self,mesh,sdata,prop,idom,ielem,iblk)
+    subroutine compute(self,mesh,sdata,prop,elem_info,function_info)
         class(PRIMLINEULER_volume_advective_flux_imag_t),   intent(in)      :: self
-        type(mesh_t),                                   intent(in)      :: mesh(:)
-        type(solverdata_t),                             intent(inout)   :: sdata
-        class(properties_t),                            intent(inout)   :: prop
-        integer(ik),                                    intent(in)      :: idom, ielem, iblk
+        type(mesh_t),                                       intent(in)      :: mesh(:)
+        type(solverdata_t),                                 intent(inout)   :: sdata
+        class(properties_t),                                intent(inout)   :: prop
+        type(element_info_t),                               intent(in)      :: elem_info
+        type(function_info_t),                              intent(in)      :: function_info
 
 
         ! Equation indices
@@ -71,19 +72,17 @@ contains
         integer(ik)    :: irho_i, iu_i, iv_i, iw_i, ip_i
 
 
-        integer(ik)    :: iseed, i, idonor, igq
-        type(seed_t)   :: seed
+
+        integer(ik)    :: idom, ielem, iblk, igq
+!        real(rk)       :: gam, thickness, eps, kappa
 
 
-        !real(rk)    :: gam, thickness, eps, kappa
-
-
-        type(AD_D), dimension(mesh(idom)%elems(ielem)%gq%vol%nnodes)      ::  &
+        type(AD_D), dimension(mesh(elem_info%idomain_l)%elems(elem_info%ielement_l)%gq%vol%nnodes)      ::  &
                     rho_r, u_r, v_r, w_r, p_r,                        &
                     rho_i, u_i, v_i, w_i, p_i,                        &
                     flux_x, flux_y, flux_z
 
-        real(rk), dimension(mesh(idom)%elems(ielem)%gq%vol%nnodes)      ::  &
+        real(rk), dimension(mesh(elem_info%idomain_l)%elems(elem_info%ielement_l)%gq%vol%nnodes)      ::  &
                     x, y, z, r, sigma_x, sigma_y, sigma_z, fcn
 
         logical :: inA = .false.
@@ -95,7 +94,6 @@ contains
 
 
 
-        idonor = 0
 
 
         !
@@ -116,29 +114,23 @@ contains
 
 
 
-        !
-        ! Get neighbor face and seed element for derivatives
-        !
-        seed = compute_seed(mesh,idom,ielem,iblk,idonor,iblk)
-
-
 
 
         !
         ! Interpolate solution to quadrature nodes
         !
-        call interpolate_element(mesh,sdata%q,idom,ielem,irho_r, rho_r, seed)
-        call interpolate_element(mesh,sdata%q,idom,ielem,iu_r,u_r,seed)
-        call interpolate_element(mesh,sdata%q,idom,ielem,iv_r,v_r,seed)
-        call interpolate_element(mesh,sdata%q,idom,ielem,iw_r,w_r,seed)
-        call interpolate_element(mesh,sdata%q,idom,ielem,ip_r,p_r,seed)
+        call interpolate_element(mesh,sdata%q,idom,ielem,irho_r, rho_r, function_info%seed)
+        call interpolate_element(mesh,sdata%q,idom,ielem,iu_r,   u_r,   function_info%seed)
+        call interpolate_element(mesh,sdata%q,idom,ielem,iv_r,   v_r,   function_info%seed)
+        call interpolate_element(mesh,sdata%q,idom,ielem,iw_r,   w_r,   function_info%seed)
+        call interpolate_element(mesh,sdata%q,idom,ielem,ip_r,   p_r,   function_info%seed)
 
 
-        call interpolate_element(mesh,sdata%q,idom,ielem,irho_i, rho_i, seed)
-        call interpolate_element(mesh,sdata%q,idom,ielem,iu_i,u_i,seed)
-        call interpolate_element(mesh,sdata%q,idom,ielem,iv_i,v_i,seed)
-        call interpolate_element(mesh,sdata%q,idom,ielem,iw_i,w_i,seed)
-        call interpolate_element(mesh,sdata%q,idom,ielem,ip_i,p_i,seed)
+        call interpolate_element(mesh,sdata%q,idom,ielem,irho_i, rho_i, function_info%seed)
+        call interpolate_element(mesh,sdata%q,idom,ielem,iu_i,   u_i,   function_info%seed)
+        call interpolate_element(mesh,sdata%q,idom,ielem,iv_i,   v_i,   function_info%seed)
+        call interpolate_element(mesh,sdata%q,idom,ielem,iw_i,   w_i,   function_info%seed)
+        call interpolate_element(mesh,sdata%q,idom,ielem,ip_i,   p_i,   function_info%seed)
 
 
 

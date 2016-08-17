@@ -17,6 +17,7 @@ module mod_equations
     !
     use eqn_scalar,                                  only: scalar_e
     use eqn_linearadvection,                         only: linearadvection_e
+    use eqn_lineardiffusion,                         only: lineardiffusion_e
     use eqn_duallinearadvection,                     only: duallinearadvection_e
     use eqn_euler,                                   only: euler_e
     use eqn_linearized_euler,                        only: linearized_euler_e
@@ -56,6 +57,7 @@ contains
         !
         type(scalar_e)                                      :: SCALAR
         type(linearadvection_e)                             :: LINEARADVECTION
+        type(lineardiffusion_e)                             :: LINEARDIFFUSION
         type(duallinearadvection_e)                         :: DUALLINEARADVECTION
         type(euler_e)                                       :: EULER
         type(linearized_euler_e)                            :: LINEARIZED_EULER
@@ -68,6 +70,7 @@ contains
             !
             call registered_equations%push_back(SCALAR)
             call registered_equations%push_back(LINEARADVECTION)
+            call registered_equations%push_back(LINEARDIFFUSION)
             call registered_equations%push_back(DUALLINEARADVECTION)
             call registered_equations%push_back(EULER)
             call registered_equations%push_back(LINEARIZED_EULER)
@@ -172,9 +175,8 @@ contains
         do ieqn = 1,neqns
 
             ename = registered_equations%data(ieqn)%item%get_name()
-
-
             call write_line(trim(ename))
+
         end do ! ieqn
 
     end subroutine list_equations

@@ -1,4 +1,4 @@
-module atype_solid
+module type_solid
     implicit none
     private
 
@@ -25,4 +25,4 @@ module atype_solid
 
 
 
-end module atype_solid
+end module type_solid

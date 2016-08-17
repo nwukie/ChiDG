@@ -1,17 +1,10 @@
 module bc_empty
-    use mod_kinds,          only: rk,ik
-    use mod_constants,      only: TWO, HALF, ZERO, LOCAL
-
     use type_bc,            only: bc_t
     use type_solverdata,    only: solverdata_t
     use type_mesh,          only: mesh_t
     use type_properties,    only: properties_t
     use type_face_info,     only: face_info_t
     use type_function_info, only: function_info_t
-
-    use mod_integrate,      only: integrate_boundary_scalar_flux
-    use mod_interpolate,    only: interpolate_face
-    use DNAD_D
     implicit none
     
 
@@ -89,13 +82,13 @@ contains
     !!  @param[in]      iblk    Index of the linearization block being computed
     !!  @param[inout]   prop    properties_t object containing equations and material_t objects
     !-------------------------------------------------------------------------------------------
-    subroutine compute(self,mesh,sdata,prop,face,flux)
+    subroutine compute(self,mesh,sdata,prop,face,fcn)
         class(empty_t),                 intent(inout)   :: self
         type(mesh_t),                   intent(in)      :: mesh(:)
         type(solverdata_t),             intent(inout)   :: sdata
         class(properties_t),            intent(inout)   :: prop
         type(face_info_t),              intent(in)      :: face
-        type(function_info_t),          intent(in)      :: flux
+        type(function_info_t),          intent(in)      :: fcn
 
 
 

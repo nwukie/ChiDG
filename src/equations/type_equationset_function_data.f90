@@ -19,15 +19,8 @@ module type_equationset_function_data
         integer :: nvolume_advective_source = 0
         integer :: nvolume_diffusive_source = 0
 
-    contains
-
     end type equationset_function_data_t
     !******************************************************************
-
-
-contains
-
-
 
 
 

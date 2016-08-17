@@ -1,23 +1,15 @@
 module mod_spatial
 #include <messenger.h>
-    use mod_kinds,          only: rk,ik
-    use mod_constants,      only: NFACES, DIAG, CHIMERA, INTERIOR, XI_MAX, &
-                                  BOUNDARY_ADVECTIVE_FLUX
-    use mod_chidg_mpi,      only: IRANK, NRANK, ChiDG_COMM, GLOBAL_MASTER
-    use mod_condition,      only: cond
-    use mod_eigenvalues,    only: eigenvalues
-    use mpi_f08,            only: MPI_Barrier
-    use mod_DNAD_tools
+    use mod_kinds,              only: rk,ik
+    use mod_constants,          only: NFACES, DIAG, CHIMERA, INTERIOR
+    use mod_chidg_mpi,          only: IRANK, NRANK, ChiDG_COMM, GLOBAL_MASTER
+    use mpi_f08,                only: MPI_Barrier
 
 
-    use type_chidg_data,    only: chidg_data_t
-    use type_timer,         only: timer_t
-    use type_face_info,     only: face_info_t
-    use type_function_info, only: function_info_t
-
-    use EULER_volume_advective_flux_cacheoptimized, only: EULER_volume_total, EULER_volume_interpolate
-    use EULER_Roe_flux_cacheoptimized,              only: EULER_roe_total,  EULER_roe_interpolate, EULER_roe_integrate
-
+    use type_chidg_data,        only: chidg_data_t
+    use type_element_info,      only: element_info_t
+    use type_face_info,         only: face_info_t
+    use type_timer,             only: timer_t
     implicit none
 
 
@@ -32,6 +24,9 @@ contains
     !!  @author Nathan A. Wukie
     !!  @date   3/15/2016
     !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   8/16/2016
+    !!  @note   Improved layout, added computation of diffusion terms.
     !!
     !!
     !------------------------------------------------------------------------------------------------------------------
@@ -42,36 +37,25 @@ contains
         integer(ik),        optional        :: info
 
         type(timer_t)               :: timer, comm_timer
-        integer(ik)                 :: nelem, nfcn, ndonors
-        integer(ik)                 :: idom, ielem, iface, iblk, idonor, ifcn, i, ibc, ChiID, ielement_g, iproc
-        integer(ik)                 :: nelem_search, idom_search, ielem_search
-        logical                     :: interior_face         = .false.
-        logical                     :: chimera_face          = .false.
-        logical                     :: compute_face          = .false.
+        integer(ik)                 :: idom, ielem, iface, iblk, ifcn, ibc, ierr, nelem
+        logical                     :: interior_face
+        logical                     :: chimera_face 
+        logical                     :: compute_face 
 
-        logical                     :: compute_function      = .false.
-        logical                     :: linearize_function    = .false.
+        logical                     :: compute_function
+        logical                     :: linearize_function
 
 
+        type(element_info_t)        :: elem_info
         type(face_info_t)           :: face_info
-        type(function_info_t)       :: function_info
-
-
-        integer(ik) :: irow, ientry, dim_a, dim_b
-        real(rk)    :: res
-
-        real(rk),   allocatable :: full_matrix(:,:)
-        real(rk),   allocatable :: wr(:), wi(:)
-        integer(ik)             :: row_start, row_end, col_start, col_end, eparent, ierr, ndof_elem, ndof, neqn, fileunit
-        !integer(ik)             :: elems(6)
-        integer(ik)             :: elems(14), doms(14)
 
 
 
-        !
-        ! Start timer on spatial discretization update
-        !
-        call timer%start()
+
+            !
+            ! Start timer on spatial discretization update
+            !
+            call timer%start()
 
         
 
@@ -103,158 +87,80 @@ contains
 
 
             !
-            ! Loop through given element and neighbors and compute the corresponding linearization
-            !
-            ! XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX, DIAG
+            ! Loop through given element compute the residual functions and also the linearization of those functions
             !
             call write_line('Updating spatial scheme', io_proc=GLOBAL_MASTER)
 
-            do iblk = 1,7           ! 1-6 = linearization of neighbor blocks, 7 = linearization of Q- block(self)
+
+            ! Loop through domains
+            do idom = 1,data%ndomains()
+                associate ( mesh => data%mesh, sdata => data%sdata, eqnset => data%eqnset(idom)%item, prop => data%eqnset(idom)%item%prop)
+                nelem = mesh(idom)%nelem
+
+                ! Loop through elements in the current domain
+                do ielem = 1,nelem
+
+                    elem_info%idomain_g  = mesh(idom)%elems(ielem)%idomain_g
+                    elem_info%idomain_l  = mesh(idom)%elems(ielem)%idomain_l
+                    elem_info%ielement_g = mesh(idom)%elems(ielem)%ielement_g
+                    elem_info%ielement_l = mesh(idom)%elems(ielem)%ielement_l
 
 
-
-                !
-                ! Loop through local domains
-                !
-                do idom = 1,data%ndomains()
-                    associate ( mesh => data%mesh(idom), sdata => data%sdata, eqnset => data%eqnset(idom)%item, prop => data%eqnset(idom)%item%prop)
+                    ! 1-6 = linearization of neighbor blocks, 7 = linearization of Q- block(self)
+                    do iblk = 1,7
 
 
+                        ! Faces loop. For the current element, compute the contributions from boundary integrals
+                        do iface = 1,NFACES
 
-                    nelem = mesh%nelem
-
-
-                    !
-                    ! Loop through elements in the current domain
-                    !
-                    do ielem = 1,nelem
-
-
-                            !
-                            ! Faces loop. For the current element, compute the contributions from boundary integrals
-                            !
-                            do iface = 1,NFACES
-
-                                !
-                                ! Define face indices
-                                !
-                                face_info%idomain_g  = mesh%elems(ielem)%idomain_g
-                                face_info%idomain_l  = mesh%elems(ielem)%idomain_l
-                                face_info%ielement_g = mesh%elems(ielem)%ielement_g
-                                face_info%ielement_l = mesh%elems(ielem)%ielement_l
-                                face_info%iface      = iface
+                            face_info%idomain_g  = mesh(idom)%elems(ielem)%idomain_g
+                            face_info%idomain_l  = mesh(idom)%elems(ielem)%idomain_l
+                            face_info%ielement_g = mesh(idom)%elems(ielem)%ielement_g
+                            face_info%ielement_l = mesh(idom)%elems(ielem)%ielement_l
+                            face_info%iface      = iface
 
 
-
-                                associate ( face => mesh%faces(ielem,iface) )
-
-                                !
-                                ! Only call the following routines for interior faces -- ftype == 0
-                                ! Furthermore, only call the routines if we are computing derivatives for the neighbor of
-                                ! iface or for the current element(DIAG). This saves a lot of unnecessary compute_boundary calls.
-                                !
-                                interior_face = ( mesh%faces(ielem,iface)%ftype == INTERIOR )
-                                chimera_face  = ( mesh%faces(ielem,iface)%ftype == CHIMERA )
-                                compute_face  = (interior_face .or. chimera_face) .and. ( (iblk == iface) .or. (iblk == DIAG) )
-
-
-
-                                if ( compute_face ) then
-
-                                    !
-                                    ! If Chimera face, how many donor elements are there that need the linearization computed
-                                    ! TODO: Relocate this to a subroutine else-where
-                                    !
-                                    if ( chimera_face ) then
-                                        if ( iblk /= DIAG) then ! only need to compute multiple times when we need the linearization of the chimera neighbors
-                                            ChiID  = mesh%faces(ielem,iface)%ChiID
-                                            ndonors = mesh%chimera%recv%data(ChiID)%ndonors()
-                                        else                    ! If we are linearizing the interior receiver element, only need to compute one.
-                                            ndonors = 1
-                                        end if
-                                    else
-                                        ndonors = 1
-                                    end if
-
-
-                                    !
-                                    ! Test ndonors > 0
-                                    !
-                                    if (ndonors == 0) call chidg_signal(FATAL,'update_residual: no available donors for boundary calculation')
-
-
-
-
-                                    !
-                                    ! Call all boundary advective flux components
-                                    !
-                                    if (allocated(eqnset%boundary_advective_flux)) then
-                                        nfcn = size(eqnset%boundary_advective_flux)
-                                        do ifcn = 1,nfcn
-
-                                            function_info%type   = BOUNDARY_ADVECTIVE_FLUX
-                                            function_info%ifcn   = ifcn
-                                            function_info%iblk   = iblk
-
-                                            compute_function     = data%sdata%function_status%compute_function(   face_info, function_info )
-                                            linearize_function   = data%sdata%function_status%linearize_function( face_info, function_info )
-                                            
-
-                                            if ( compute_function .or. linearize_function ) then
-                                                !
-                                                ! Compute boundary flux once for each donor. For interior faces ndonors == 1. For Chimera faces ndonors is potentially > 1.
-                                                !
-                                                do idonor = 1,ndonors
-                                                    face_info%seed       = compute_seed(data%mesh,idom,ielem,iface,idonor,iblk)
-                                                    function_info%idonor = idonor
-
-                                                    call eqnset%boundary_advective_flux(ifcn)%flux%compute(data%mesh,data%sdata,prop,face_info,function_info)
-                                                end do
-                                            end if
-
-
-                                        end do ! ifcn
-
-                                    end if ! boundary_advective_flux loop
-
-
-
-
-                                end if ! compute_face
-
-
-
-
-                                end associate
-
-                            end do  ! faces loop
-                            
-
-
+                            associate ( face => mesh(idom)%faces(ielem,iface) )
 
                             !
-                            ! Call all volume advective flux components
+                            ! Only call the following routines for interior faces -- ftype == 0
+                            ! Furthermore, only call the routines if we are computing derivatives for the neighbor of
+                            ! iface or for the current element(DIAG). This saves a lot of unnecessary compute_boundary calls.
                             !
-                            ! only need to compute volume_advective_flux for linearization of interior block
-                            if (iblk == DIAG) then
-                                if (allocated(eqnset%volume_advective_flux)) then
-                                    nfcn = size(eqnset%volume_advective_flux)
-                                    do ifcn = 1,nfcn
-
-                                        call eqnset%volume_advective_flux(ifcn)%flux%compute(data%mesh,data%sdata,prop,idom,ielem,iblk)
-
-                                    end do
-                                end if
-                            end if
+                            interior_face = ( mesh(idom)%faces(ielem,iface)%ftype == INTERIOR )
+                            chimera_face  = ( mesh(idom)%faces(ielem,iface)%ftype == CHIMERA )
+                            compute_face  = (interior_face .or. chimera_face) .and. ( (iblk == iface) .or. (iblk == DIAG) )
 
 
 
+                            ! Compute boundary fluxes
+                            if ( compute_face ) then
 
-                    end do  ! ielem
+                                call eqnset%compute_boundary_advective_flux(mesh, sdata, face_info, iblk)
+                                call eqnset%compute_boundary_diffusive_flux(mesh, sdata, face_info, iblk)
 
-                    end associate
-                end do  ! idom
-            end do  ! iblk
+                            end if ! compute_face
+
+
+                            end associate
+
+                        end do  ! faces loop
+                        
+
+
+
+                        !
+                        ! Compute volume fluxes
+                        !
+                        call eqnset%compute_volume_advective_flux(mesh, sdata, elem_info, iblk)
+                        call eqnset%compute_volume_diffusive_flux(mesh, sdata, elem_info, iblk)
+
+
+
+                    end do  ! iblk
+                end do  ! ielem
+                end associate
+            end do  ! idom
 
 
 

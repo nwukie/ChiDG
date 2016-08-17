@@ -4,6 +4,7 @@ module test_interpolate_mod
     use type_point,                 only: point_t
     use type_seed,                  only: seed_t
     use type_face_info,             only: face_info_t
+    use type_function_info,         only: function_info_t
     use type_function,              only: function_t
     use type_domain_connectivity,   only: domain_connectivity_t
 
@@ -11,7 +12,7 @@ module test_interpolate_mod
     use mod_kinds,          only: rk,ik
     use mod_constants,      only: ZERO, ONE, TWO, THREE, FIVE, SIX, EIGHT, NINE, TEN, &
                                   XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX, &
-                                  LOCAL, NEIGHBOR, IO_DESTINATION
+                                  ME, NEIGHBOR, IO_DESTINATION
     use mod_function,       only: create_function
     use mod_hdfio,          only: read_grid_hdf
     use mod_interpolate,    only: interpolate_face, interpolate_element
@@ -534,7 +535,7 @@ contains
         
         
         
-    !>  Interpolation of modes to surface quadrature nodes. Seeding neighbor element. source=LOCAL. Testing fuction values. 
+    !>  Interpolation of modes to surface quadrature nodes. Seeding neighbor element. source=ME. Testing fuction values. 
     !!
     !!  @author Nathan A. Wukie
     !!
@@ -552,6 +553,7 @@ contains
         real(rk),   allocatable     :: u_ref(:)
         real(rk)                    :: tol, val
         type(face_info_t)           :: face
+        type(function_info_t)       :: fcn
         
         
         associate ( elems => self%chidg%data%mesh(1)%elems, faces => self%chidg%data%mesh(1)%faces, q => self%chidg%data%sdata%q)        
@@ -572,12 +574,13 @@ contains
             !
             ! Set face
             !
-            face%idomain_g = idomain
-            face%idomain_l = idomain
+            face%idomain_g  = idomain
+            face%idomain_l  = idomain
             face%ielement_g = ielem
             face%ielement_l = ielem
-            face%iface    = iface
-            face%seed     = seed
+            face%iface      = iface
+!            face%seed     = seed
+            fcn%seed        = seed
 
 
             tol   = 1.e-13_rk
@@ -593,7 +596,7 @@ contains
             !
             ! PROCEDURE BEING TESTED
             !
-            call interpolate_face(self%chidg%data%mesh,face,q,ivar,u_gq,LOCAL)
+            call interpolate_face(self%chidg%data%mesh,face,fcn,q,ivar,u_gq,'value',ME)
             
             
             ! Initialize reference
@@ -617,7 +620,7 @@ contains
     
     
         
-    !>  Interpolation of modes to surface quadrature nodes. Seeding neighbor element. source=LOCAL. Testing fuction values. 
+    !>  Interpolation of modes to surface quadrature nodes. Seeding neighbor element. source=ME. Testing fuction values. 
     !!
     !!  @author Nathan A. Wukie
     !!
@@ -636,6 +639,7 @@ contains
         real(rk),   allocatable     :: deriv_ref(:)
         real(rk)                    :: tol
         type(face_info_t)           :: face
+        type(function_info_t)       :: fcn
         
         
         associate ( elems => self%chidg%data%mesh(1)%elems, faces => self%chidg%data%mesh(1)%faces, q => self%chidg%data%sdata%q)        
@@ -663,7 +667,8 @@ contains
             face%ielement_g = ielem
             face%ielement_l = ielem
             face%iface      = iface
-            face%seed       = seed
+!            face%seed       = seed
+            fcn%seed        = seed
 
 
 
@@ -682,7 +687,7 @@ contains
             !
             ! PROCEDURE BEING TESTED
             !
-            call interpolate_face(self%chidg%data%mesh,face,q,ivar,u_gq,LOCAL)
+            call interpolate_face(self%chidg%data%mesh,face,fcn,q,ivar,u_gq,'value',ME)
             
             deriv_ref = ZERO
             
@@ -703,7 +708,7 @@ contains
 
     
     
-    !>  Interpolation of modes to surface quadrature nodes. Seeding current element. source=LOCAL. Testing fuction values. 
+    !>  Interpolation of modes to surface quadrature nodes. Seeding current element. source=ME. Testing fuction values. 
     !!
     !!  @author Nathan A. Wukie
     !!
@@ -721,6 +726,7 @@ contains
         real(rk),   allocatable     :: u_ref(:)
         real(rk)                    :: tol, val
         type(face_info_t)           :: face
+        type(function_info_t)       :: fcn
         
         
         associate ( elems => self%chidg%data%mesh(1)%elems, faces => self%chidg%data%mesh(1)%faces, q => self%chidg%data%sdata%q )
@@ -746,7 +752,8 @@ contains
             face%ielement_g = ielem
             face%ielement_l = ielem
             face%iface      = iface
-            face%seed       = seed
+!            face%seed       = seed
+            fcn%seed        = seed
 
 
 
@@ -765,7 +772,7 @@ contains
             !
             ! PROCEDURE BEING TESTED
             !
-            call interpolate_face(self%chidg%data%mesh,face,q,ivar,u_gq,LOCAL)
+            call interpolate_face(self%chidg%data%mesh,face,fcn,q,ivar,u_gq,'value',ME)
             
             
             !
@@ -791,7 +798,7 @@ contains
     
 
 
-    !>  Interpolation of modes to surface quadrature nodes. Seeding current element. source=LOCAL. Testing fuction values. 
+    !>  Interpolation of modes to surface quadrature nodes. Seeding current element. source=ME. Testing fuction values. 
     !!
     !!  @author Nathan A. Wukie
     !!
@@ -809,6 +816,7 @@ contains
         real(rk),   allocatable     :: deriv_ref(:)
         real(rk)                    :: tol
         type(face_info_t)           :: face
+        type(function_info_t)       :: fcn
         
         
         associate ( elems => self%chidg%data%mesh(1)%elems, faces => self%chidg%data%mesh(1)%faces, q => self%chidg%data%sdata%q)        
@@ -834,7 +842,8 @@ contains
             face%ielement_g = ielem
             face%ielement_l = ielem
             face%iface      = iface
-            face%seed       = seed
+!            face%seed       = seed
+            fcn%seed        = seed
 
 
 
@@ -853,7 +862,7 @@ contains
             !
             ! PROCEDURE BEING TESTED
             !
-            call interpolate_face(self%chidg%data%mesh,face,q,ivar,u_gq,LOCAL)
+            call interpolate_face(self%chidg%data%mesh,face,fcn,q,ivar,u_gq,'value',ME)
               
             
             
@@ -898,6 +907,7 @@ contains
         real(rk),   allocatable     :: u_ref(:)
         real(rk)                    :: tol, val
         type(face_info_t)           :: face
+        type(function_info_t)       :: fcn
         
         
         associate ( elems => self%chidg%data%mesh(1)%elems, faces => self%chidg%data%mesh(1)%faces, q => self%chidg%data%sdata%q)        
@@ -923,7 +933,9 @@ contains
             face%ielement_g = ielem
             face%ielement_l = ielem
             face%iface      = iface
-            face%seed       = seed
+!            face%seed       = seed
+            fcn%seed        = seed
+
 
 
 
@@ -941,7 +953,7 @@ contains
             !
             ! PROCEDURE BEING TESTED
             !
-            call interpolate_face(self%chidg%data%mesh,face,q,ivar,u_gq,NEIGHBOR)
+            call interpolate_face(self%chidg%data%mesh,face,fcn,q,ivar,u_gq,'value',NEIGHBOR)
             
             
             ! Initialize reference
@@ -982,6 +994,7 @@ contains
         real(rk),   allocatable     :: deriv_ref(:)
         real(rk)                    :: tol
         type(face_info_t)           :: face
+        type(function_info_t)       :: fcn
         
         
         associate ( elems => self%chidg%data%mesh(1)%elems, faces => self%chidg%data%mesh(1)%faces, q => self%chidg%data%sdata%q)        
@@ -1007,7 +1020,8 @@ contains
             face%ielement_g = ielem
             face%ielement_l = ielem
             face%iface      = iface
-            face%seed       = seed
+!            face%seed       = seed
+            fcn%seed        = seed
 
 
 
@@ -1027,7 +1041,7 @@ contains
             !
             ! PROCEDURE BEING TESTED
             !
-            call interpolate_face(self%chidg%data%mesh,face,q,ivar,u_gq,NEIGHBOR)
+            call interpolate_face(self%chidg%data%mesh,face,fcn,q,ivar,u_gq,'value',NEIGHBOR)
             
             deriv_ref = ZERO
             
@@ -1075,6 +1089,7 @@ contains
         real(rk),   allocatable     :: u_ref(:)
         real(rk)                    :: tol, val
         type(face_info_t)           :: face
+        type(function_info_t)       :: fcn
         
         
         associate ( elems => self%chidg%data%mesh(1)%elems, faces => self%chidg%data%mesh(1)%faces, q => self%chidg%data%sdata%q )
@@ -1100,7 +1115,8 @@ contains
             face%ielement_g = ielem
             face%ielement_l = ielem
             face%iface      = iface
-            face%seed       = seed
+!            face%seed       = seed
+            fcn%seed        = seed
 
 
 
@@ -1118,7 +1134,7 @@ contains
             !
             ! PROCEDURE BEING TESTED
             !
-            call interpolate_face(self%chidg%data%mesh,face,q,ivar,u_gq,NEIGHBOR)
+            call interpolate_face(self%chidg%data%mesh,face,fcn,q,ivar,u_gq,'value',NEIGHBOR)
             
             
             !
@@ -1159,6 +1175,7 @@ contains
         real(rk),   allocatable     :: deriv_ref(:)
         real(rk)                    :: tol
         type(face_info_t)           :: face
+        type(function_info_t)       :: fcn
 
         integer(ik)                 :: ielem_n, iface_n, idonor
         
@@ -1187,7 +1204,8 @@ contains
             face%ielement_g = ielem
             face%ielement_l = ielem
             face%iface      = iface
-            face%seed       = seed
+!            face%seed       = seed
+            fcn%seed        = seed
 
 
             
@@ -1205,7 +1223,7 @@ contains
             !
             ! PROCEDURE BEING TESTED
             !
-            call interpolate_face(self%chidg%data%mesh,face,q,ivar,u_gq,NEIGHBOR)
+            call interpolate_face(self%chidg%data%mesh,face,fcn,q,ivar,u_gq,'value',NEIGHBOR)
               
             
             

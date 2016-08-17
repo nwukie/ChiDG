@@ -5,14 +5,14 @@ module LA_volume_advective_flux
                                       XI_MIN,XI_MAX,ETA_MIN,ETA_MAX,ZETA_MIN,ZETA_MAX,DIAG
 
     use type_mesh,              only: mesh_t
-    use atype_volume_flux,      only: volume_flux_t
+    use type_volume_flux,       only: volume_flux_t
     use type_solverdata,        only: solverdata_t
     use type_properties,        only: properties_t
-    use type_seed,              only: seed_t
+    use type_element_info,      only: element_info_t
+    use type_function_info,     only: function_info_t
 
     use mod_interpolate,        only: interpolate_element
     use mod_integrate,          only: integrate_volume_flux
-    use mod_DNAD_tools,         only: compute_neighbor_face, compute_seed
     use DNAD_D
 
     use LA_properties,          only: LA_properties_t
@@ -46,24 +46,26 @@ contains
     !!
     !!
     !------------------------------------------------------------------------------------
-    subroutine compute(self,mesh,sdata,prop,idom,ielem,iblk)
+    subroutine compute(self,mesh,sdata,prop,elem_info,function_info)
         class(LA_volume_advective_flux_t),  intent(in)      :: self
         type(mesh_t),                       intent(in)      :: mesh(:)
         type(solverdata_t),                 intent(inout)   :: sdata
         class(properties_t),                intent(inout)   :: prop
-        integer(ik),                        intent(in)      :: idom, ielem, iblk
+        type(element_info_t),                   intent(in)      :: elem_info
+        type(function_info_t),                  intent(in)      :: function_info
 
 
 
+        integer(ik)             :: idom, ielem, iblk
         type(AD_D), allocatable :: u(:), flux_x(:), flux_y(:), flux_z(:)
         real(rk)                :: cx, cy, cz
-        integer(ik)             :: nnodes, ierr, iface, idonor
-        type(seed_t)            :: seed
-        integer(ik)             :: ivar_u, i
+        integer(ik)             :: nnodes, ierr
+        integer(ik)             :: ivar_u
 
 
-        idonor = 0
-        iface  = iblk
+        idom  = elem_info%idomain_l
+        ielem = elem_info%ielement_l
+        iblk  = function_info%iblk
 
 
         !
@@ -96,16 +98,11 @@ contains
         if (ierr /= 0) call AllocationError
 
 
-        !
-        ! Get seed element for derivatives
-        !
-        seed = compute_seed(mesh,idom,ielem,iface,idonor,iblk)
-
 
         !
         ! Interpolate solution to quadrature nodes
         !
-        call interpolate_element(mesh,sdata%q,idom,ielem,ivar_u,u,seed)
+        call interpolate_element(mesh,sdata%q,idom,ielem,ivar_u,u,function_info%seed)
 
 
         !

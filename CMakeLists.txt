@@ -63,7 +63,8 @@ if (${Fortran_VENDOR} MATCHES "INTEL")
     
 elseif (${Fortran_VENDOR} MATCHES "GNU")
     # Note: -fcheck=all has issues with passing null pointer in tecio_interface
-    set (USER_COMPILE_FLAGS_DEBUG   "-O0 -cpp -fopenmp --coverage -ffree-form -ffree-line-length-none -fbacktrace -fstack-protector -fcheck=bounds -fmax-stack-var-size=1600 -p -g")    # Note: -fcheck=all has issues with passing null pointer in tecio_interface
+    #set (USER_COMPILE_FLAGS_DEBUG   "-O0 -cpp --coverage -ffree-form -ffree-line-length-none -fbacktrace -fstack-protector -fcheck=bounds -fmax-stack-var-size=1600 -Wall -p -g")    # Note: -fcheck=all has issues with passing null pointer in tecio_interface
+    set (USER_COMPILE_FLAGS_DEBUG   "-O0 -cpp --coverage -ffree-form -ffree-line-length-none -fbacktrace -fstack-protector -fcheck=bounds -fmax-stack-var-size=1600 -p -g")    # Note: -fcheck=all has issues with passing null pointer in tecio_interface
     #set (USER_COMPILE_FLAGS_RELEASE "-O3 -cpp -fopenmp -ffree-form -ffree-line-length-none -fexternal-blas -march=native -funroll-loops -m64 -fwhole-file")
     #set (USER_COMPILE_FLAGS_RELEASE "-O3 -cpp -ffree-form -ffree-line-length-none -fexternal-blas -march=native -m64 -funroll-loops -floop-parallelize-all -fwhole-file -ftree-parallelize-loops=4 -floop-interchange -floop-strip-mine -floop-block")
     #set (USER_COMPILE_FLAGS_RELEASE "-O3 -cpp -ffree-form -ffree-line-length-none -fexternal-blas -march=native -m64 -funroll-loops -fwhole-file -floop-interchange -floop-strip-mine -floop-block")

@@ -4,13 +4,14 @@ module LINEULER_volume_advective_sourceterms_real
                                       XI_MIN,XI_MAX,ETA_MIN,ETA_MAX,ZETA_MIN,ZETA_MAX,DIAG
 
     use type_mesh,              only: mesh_t
-    use atype_volume_flux,      only: volume_flux_t
+    use type_volume_flux,       only: volume_flux_t
     use type_solverdata,        only: solverdata_t
     use type_properties,        only: properties_t
+    use type_element_info,      only: element_info_t
+    use type_function_info,     only: function_info_t
     
     use mod_interpolate,        only: interpolate_element
     use mod_integrate,          only: integrate_volume_source
-    use mod_DNAD_tools
     use DNAD_D
 
     use LINEULER_properties,    only: LINEULER_properties_t
@@ -56,12 +57,13 @@ contains
     !!
     !!
     !-----------------------------------------------------------------------------------------
-    subroutine compute(self,mesh,sdata,prop,idom,ielem,iblk)
+    subroutine compute(self,mesh,sdata,prop,elem_info,function_info)
         class(LINEULER_volume_advective_sourceterms_real_t),    intent(in)      :: self
         type(mesh_t),                                           intent(in)      :: mesh(:)
         type(solverdata_t),                                     intent(inout)   :: sdata
         class(properties_t),                                    intent(inout)   :: prop
-        integer(ik),                                            intent(in)      :: idom, ielem, iblk
+        type(element_info_t),                                   intent(in)      :: elem_info
+        type(function_info_t),                                  intent(in)      :: function_info
 
         ! Equation indices
         integer(ik)    :: irho_r,  irho_i
@@ -70,22 +72,20 @@ contains
         integer(ik)    :: irhow_r, irhow_i
         integer(ik)    :: irhoE_r, irhoE_i
 
-
-        integer(ik)    :: iseed, i, idonor, igq
-        type(seed_t)   :: seed
-
-        real(rk)    :: gam, omega, alpha, eps
-        real(rk)    :: x, y
+        integer(ik)    :: idom, ielem, iblk
+        real(rk)       :: gam, omega, alpha, eps
+        real(rk)       :: x, y
 
 
 
-        type(AD_D), dimension(mesh(idom)%elems(ielem)%gq%vol%nnodes)      ::  &
+        type(AD_D), dimension(mesh(elem_info%idomain_l)%elems(elem_info%ielement_l)%gq%vol%nnodes)      ::  &
                     rho, rhou, rhov, rhow, rhoE, p, H,                        &
                     flux
 
 
-
-        idonor = 0
+        idom  = elem_info%idomain_l
+        ielem = elem_info%ielement_l
+        iblk  = function_info%iblk
 
 
         !
@@ -106,22 +106,17 @@ contains
 
 
 
-        !
-        ! Get neighbor face and seed element for derivatives
-        !
-        seed = compute_seed(mesh,idom,ielem,iblk,idonor,iblk)
-
 
 
 
         !
         ! Interpolate solution to quadrature nodes
         !
-        call interpolate_element(mesh,sdata%q,idom,ielem,irho_r, rho, seed)
-        call interpolate_element(mesh,sdata%q,idom,ielem,irhou_r,rhou,seed)
-        call interpolate_element(mesh,sdata%q,idom,ielem,irhov_r,rhov,seed)
-!        call interpolate_element(mesh,sdata%q,idom,ielem,irhow_r,rhow,seed)
-        call interpolate_element(mesh,sdata%q,idom,ielem,irhoE_r,rhoE,seed)
+        call interpolate_element(mesh,sdata%q,idom,ielem,irho_r, rho, function_info%seed)
+        call interpolate_element(mesh,sdata%q,idom,ielem,irhou_r,rhou,function_info%seed)
+        call interpolate_element(mesh,sdata%q,idom,ielem,irhov_r,rhov,function_info%seed)
+!        call interpolate_element(mesh,sdata%q,idom,ielem,irhow_r,rhow,function_info%seed)
+        call interpolate_element(mesh,sdata%q,idom,ielem,irhoE_r,rhoE,function_info%seed)
 
 
 

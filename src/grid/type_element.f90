@@ -148,7 +148,7 @@ contains
 
         type(point_t),  allocatable         :: points(:)
         real(rk),       allocatable         :: element_mapping(:,:)
-        integer(ik)                         :: ierr, nterms_c, ipt, npts_1d, npts, nnodes, mapping, ielem, inode, idomain_g, ielem_g
+        integer(ik)                         :: ierr, nterms_c, ipt, npts_1d, npts, mapping, inode, idomain_g, ielem_g
 
 
         if (self%geomInitialized) call chidg_signal(FATAL,"element%init_geom -- element already initialized")
@@ -250,7 +250,7 @@ contains
         integer(ik),        intent(in)    :: nterms_s
 
         integer(ik) :: ierr
-        integer(ik) :: nnodes,nnodes_face,nnodes_vol
+        integer(ik) :: nnodes
 
         if (self%numInitialized) call chidg_signal(FATAL,"element%init_sol -- element already initialized")
 
@@ -319,8 +319,7 @@ contains
         class(element_t),   intent(inout)   :: self
 
         integer(ik) :: nterms_s,nterms_c,spacedim
-        integer(ik) :: nnodes_face, nnodes_vol, igq, igq_s, igq_f
-        logical     :: has_correct_nodes_terms
+        integer(ik) :: nnodes_face, nnodes_vol, igq_s, igq_f
 
         spacedim = self%spacedim
         nterms_s = self%nterms_s
@@ -605,7 +604,7 @@ contains
     !-------------------------------------------------------------------------------------------------------------
     subroutine compute_mass_matrix(self)
         class(element_t), intent(inout) :: self
-        integer(ik)  :: iterm,i,j
+        integer(ik)  :: iterm
         real(rk)     :: temp(self%nterms_s,self%gq%vol%nnodes)
 
         self%invmass = ZERO
@@ -814,7 +813,7 @@ contains
         real(rk)        :: val
         type(point_t)   :: node
         real(rk)        :: polyvals(self%nterms_c)
-        integer(ik)     :: iterm, ielem, spacedim
+        integer(ik)     :: iterm, spacedim
 
         if (icoord > 3)                 call chidg_signal(FATAL,"element%grid_point -- icoord exceeded 3 physical coordinates")
         if (.not. self%geomInitialized) call chidg_signal(FATAL,"element%grid_point: geometry not initialized")
@@ -872,7 +871,7 @@ contains
         real(rk)        :: val
         type(point_t)   :: node
         real(rk)        :: polyvals(self%nterms_c)
-        integer(ik)     :: iterm, ielem, spacedim
+        integer(ik)     :: iterm, spacedim
 
 
         if (cart_dir > 3) call chidg_signal(FATAL,"Error: metric_point -- card_dir exceeded 3 physical coordinates")
@@ -945,7 +944,7 @@ contains
         real(rk)                   :: val
         type(point_t)              :: node
         real(rk)                   :: polyvals(q%nterms())
-        integer(ik)                :: iterm, ielem, spacedim
+        integer(ik)                :: iterm, spacedim
 
 
         call node%set(xi,eta,zeta)
@@ -1005,7 +1004,8 @@ contains
         real(rk)    :: mat(3,3), minv(3,3)
         real(rk)    :: R(3)
         real(rk)    :: dcoord(3)
-        real(rk)    :: res, dx, dy, dz, tol
+        !real(rk)    :: res, dx, dy, dz, tol
+        real(rk)    :: res, tol
 
 
         tol = 10._rk*RKTOL

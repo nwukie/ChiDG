@@ -227,7 +227,7 @@ contains
                     ielement_l  => face_info%ielement_l,    &
                     iface       => face_info%iface,         &
                     ifcn        => function_info%ifcn,      &
-                    idonor      => function_info%idonor,    &
+                    idonor      => function_info%idepend,   &
                     iblk        => function_info%iblk )
 
 
@@ -300,7 +300,7 @@ contains
                 face_n%ielement_g = mesh(idomain_l)%faces(ielement_l,iface)%ineighbor_element_g
                 face_n%ielement_l = mesh(idomain_l)%faces(ielement_l,iface)%ineighbor_element_l
                 face_n%iface      = mesh(idomain_l)%faces(ielement_l,iface)%get_neighbor_face()
-                face_n%seed       = face_info%seed
+                !face_n%seed       = function_info%seed
 
 
                 !
@@ -315,10 +315,12 @@ contains
                 end if
 
 
-                function_n%type   = function_info%type
-                function_n%ifcn   = function_info%ifcn
-                function_n%idonor = function_info%idonor
-                function_n%iblk   = iblk_n
+                function_n%type    = function_info%type
+                function_n%ifcn    = function_info%ifcn
+                !function_n%idonor  = function_info%idonor
+                function_n%idepend = function_info%idepend
+                function_n%seed    = function_info%seed
+                function_n%iblk    = iblk_n
                 
 
 
@@ -454,7 +456,7 @@ contains
 
 
         associate ( idomain_l  => face_info%idomain_l, ielement_l  => face_info%ielement_l, iface => face_info%iface, &
-                    ifcn  => function_info%ifcn,       idonor => function_info%idonor,      iblk  => function_info%iblk )
+                    ifcn  => function_info%ifcn,       idonor => function_info%idepend,      iblk  => function_info%iblk )
 
 
             ftype = mesh(idomain_l)%faces(ielement_l,iface)%ftype
@@ -467,7 +469,7 @@ contains
                 ! Only store rhs once. if iblk == DIAG. Also, since the integral could be computed more than once for chimera faces, only store for the first donor.
                 ! The integral should be the same for any value of idonor. Only the derivatives will change
                 !
-                if ( ftype == BOUNDARY .and. ( ielement_l == face_info%seed%ielement_l ) ) then
+                if ( ftype == BOUNDARY .and. ( ielement_l == function_info%seed%ielement_l ) ) then
 
 
                     vals = rhs(ielement_l)%getvar(ieqn) + integral(:)%x_ad_
@@ -566,11 +568,11 @@ contains
         idomain_l  = face_info%idomain_l
         ielement_l = face_info%ielement_l
         iface      = face_info%iface
-        seed       = face_info%seed
+        seed       = function_info%seed
         ftype      = mesh(idomain_l)%faces(ielement_l,iface)%ftype
 
         ifcn   = function_info%ifcn
-        idonor = function_info%idonor
+        idonor = function_info%idepend
         iblk   = function_info%iblk
 
 

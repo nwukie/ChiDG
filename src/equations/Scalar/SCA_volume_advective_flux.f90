@@ -5,60 +5,73 @@ module SCA_volume_advective_flux
                                       XI_MIN,XI_MAX,ETA_MIN,ETA_MAX,ZETA_MIN,ZETA_MAX,DIAG
 
     use type_mesh,              only: mesh_t
-    use atype_volume_flux,      only: volume_flux_t
+    use type_volume_flux,       only: volume_flux_t
     use type_solverdata,        only: solverdata_t
     use type_properties,        only: properties_t
-    use type_seed,              only: seed_t
+    use type_element_info,      only: element_info_t
+    use type_function_info,     only: function_info_t
 
 
     use mod_interpolate,        only: interpolate_element
     use mod_integrate,          only: integrate_volume_flux
-    use mod_DNAD_tools
     use DNAD_D
 
     use SCA_properties,          only: SCA_properties_t
     implicit none
     private
 
-    !
-    !
-    !----------------------------------------------------------------
+
+
+
+    !>
+    !!
+    !!  @author Nathan A. Wukie
+    !!
+    !!
+    !!
+    !!
+    !---------------------------------------------------------------------------------------
     type, extends(volume_flux_t), public :: SCA_volume_advective_flux_t
 
-
     contains
+
         procedure   :: compute
 
     end type SCA_volume_advective_flux_t
+    !***************************************************************************************
 
 contains
 
 
-    !
-    !
-    !
-    !
-    !---------------------------------------------------------------
-    subroutine compute(self,mesh,sdata,prop,idom,ielem,iblk)
+    !>
+    !!
+    !!  @author Nathan A. Wukie
+    !!
+    !!
+    !!
+    !!
+    !---------------------------------------------------------------------------------------
+    !subroutine compute(self,mesh,sdata,prop,idom,ielem,iblk)
+    subroutine compute(self,mesh,sdata,prop,elem_info,function_info)
         class(SCA_volume_advective_flux_t), intent(in)      :: self
         type(mesh_t),                       intent(in)      :: mesh(:)
         type(solverdata_t),                 intent(inout)   :: sdata
         class(properties_t),                intent(inout)   :: prop
-        integer(ik),                        intent(in)      :: idom, ielem, iblk
+        type(element_info_t),               intent(in)      :: elem_info
+        type(function_info_t),              intent(in)      :: function_info
+        !integer(ik),                        intent(in)      :: idom, ielem, iblk
 
 
-
+        integer(ik)             :: idom, ielem, iblk
         type(AD_D), allocatable :: u(:), flux_x(:), flux_y(:), flux_z(:)
         real(rk)                :: cx, cy, cz
         integer(ik)             :: nnodes, ierr
-        type(seed_t)            :: seed
-        integer(ik)             :: ivar_u, i
-        integer(ik)             :: idonor, iface
+        integer(ik)             :: ivar_u
 
+        idom  = elem_info%idomain_l
+        ielem = elem_info%ielement_l
+        iblk  = function_info%iblk
 
-
-        idonor = 0
-        iface  = iblk
 
         associate (elem => mesh(idom)%elems(ielem), q => sdata%q)
 
@@ -92,16 +105,9 @@ contains
 
 
             !
-            ! Get seed element for derivatives
-            !
-            seed = compute_seed(mesh,idom,ielem,iface,idonor,iblk)
-            !iseed   = compute_seed_element(mesh,idom,ielem,iface,iblk,idonor)
-
-
-            !
             ! Interpolate solution to quadrature nodes
             !
-            call interpolate_element(mesh,q,idom,ielem,ivar_u,u,seed)
+            call interpolate_element(mesh,q,idom,ielem,ivar_u,u,function_info%seed)
 
 
             !
@@ -119,7 +125,8 @@ contains
 
         end associate
 
-    end subroutine
+    end subroutine compute
+    !******************************************************************************************************
 
 
 

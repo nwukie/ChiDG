@@ -4,4 +4,5 @@ add_lib_sources(
                 mod_communication.f90
                 mod_metis.f90
                 type_partition.f90
+                type_recv.f90
                 )

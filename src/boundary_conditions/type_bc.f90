@@ -84,7 +84,7 @@ module type_bc
 
 
     abstract interface
-        subroutine compute_interface(self,mesh,sdata,prop,face,flux)
+        subroutine compute_interface(self,mesh,sdata,prop,face,fcn)
             use mod_kinds,  only: ik
             import bc_t
             import mesh_t
@@ -98,7 +98,7 @@ module type_bc
             type(solverdata_t),     intent(inout)   :: sdata
             class(properties_t),    intent(inout)   :: prop
             type(face_info_t),      intent(in)      :: face
-            type(function_info_t),  intent(in)      :: flux
+            type(function_info_t),  intent(in)      :: fcn
         end subroutine
     end interface
 
@@ -510,7 +510,7 @@ contains
         integer(ik) :: ielem_bc, ielement_l, ielement_c, iface, idonor, iflux, icoupled_elem, ncoupled_elems
 
         type(face_info_t)       :: face
-        type(function_info_t)   :: flux
+        type(function_info_t)   :: fcn
 
         !
         ! Loop through associated boundary condition elements and call compute routine for the boundary flux calculation
@@ -526,9 +526,9 @@ contains
             face%ielement_l = mesh(idomain_l)%elems(ielement_l)%ielement_l
             face%iface      = iface
 
-            flux%ifcn     = 0       ! Boundary conditions are not tracked.
-            flux%idonor   = 0       ! Chimera interface not applicable on boundary condition.
-            flux%iblk     = BC_BLK  ! Indicates to storage routine in LHS to store in BC section.
+            fcn%ifcn     = 0       ! Boundary conditions are not tracked.
+            fcn%idepend  = 0       ! Chimera interface not applicable on boundary condition.
+            fcn%iblk     = BC_BLK  ! Indicates to storage routine in LHS to store in BC section.
 
             
             !
@@ -547,16 +547,21 @@ contains
                 ! Get coupled element to linearize against.
                 !
                 ielement_c = self%coupled_elems(ielem_bc)%at(icoupled_elem)
-                face%seed%idomain_g  = mesh(idomain_l)%elems(ielement_c)%idomain_g
-                face%seed%idomain_l  = mesh(idomain_l)%elems(ielement_c)%idomain_l
-                face%seed%ielement_g = mesh(idomain_l)%elems(ielement_c)%ielement_g
-                face%seed%ielement_l = mesh(idomain_l)%elems(ielement_c)%ielement_l
-                face%seed%iproc      = IRANK
+                !face%seed%idomain_g  = mesh(idomain_l)%elems(ielement_c)%idomain_g
+                !face%seed%idomain_l  = mesh(idomain_l)%elems(ielement_c)%idomain_l
+                !face%seed%ielement_g = mesh(idomain_l)%elems(ielement_c)%ielement_g
+                !face%seed%ielement_l = mesh(idomain_l)%elems(ielement_c)%ielement_l
+                !face%seed%iproc      = IRANK
+                fcn%seed%idomain_g  = mesh(idomain_l)%elems(ielement_c)%idomain_g
+                fcn%seed%idomain_l  = mesh(idomain_l)%elems(ielement_c)%idomain_l
+                fcn%seed%ielement_g = mesh(idomain_l)%elems(ielement_c)%ielement_g
+                fcn%seed%ielement_l = mesh(idomain_l)%elems(ielement_c)%ielement_l
+                fcn%seed%iproc      = IRANK
 
                 !
                 ! For the current boundary element(face), call specialized compute procedure.
                 !
-                call self%compute(mesh,sdata,prop,face,flux)
+                call self%compute(mesh,sdata,prop,face,fcn)
 
             end do !ielem_c
 

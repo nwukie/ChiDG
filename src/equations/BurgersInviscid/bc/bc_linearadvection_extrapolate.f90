@@ -8,11 +8,12 @@ module bc_linearadvection_extrapolate
     use type_face_info,     only: face_info_t
     use type_function_info, only: function_info_t
 
+
     !> Extrapolation boundary condition 
     !!      - Extrapolate interior variables to be used for calculating the boundary flux.
     !!  
     !!  @author Nathan A. Wukie
-    !--------------------------------------------------
+    !------------------------------------------------------------------------------------------
     type, public, extends(bc_t) :: linearadvection_extrapolate_t
 
 
@@ -23,6 +24,7 @@ module bc_linearadvection_extrapolate
         procedure   :: compute    !> bc implementation
 
     end type linearadvection_extrapolate_t
+    !******************************************************************************************
 
 
 

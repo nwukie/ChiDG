@@ -2,8 +2,8 @@ module type_properties
 #include <messenger.h>
     use mod_kinds,      only: rk, ik
     use type_equation,  only: equation_t
-    use atype_fluid,    only: fluid_t
-    use atype_solid,    only: solid_t
+    use type_fluid,     only: fluid_t
+    use type_solid,     only: solid_t
 
     implicit none
 

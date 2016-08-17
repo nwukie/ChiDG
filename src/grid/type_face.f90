@@ -415,7 +415,7 @@ contains
         real(rk)    :: dxdxi(self%gq%face%nnodes), dxdeta(self%gq%face%nnodes), dxdzeta(self%gq%face%nnodes)
         real(rk)    :: dydxi(self%gq%face%nnodes), dydeta(self%gq%face%nnodes), dydzeta(self%gq%face%nnodes)
         real(rk)    :: dzdxi(self%gq%face%nnodes), dzdeta(self%gq%face%nnodes), dzdzeta(self%gq%face%nnodes)
-        real(rk)    :: invjac(self%gq%face%nnodes), norm_mag(self%gq%face%nnodes)
+        real(rk)    :: norm_mag(self%gq%face%nnodes)
 
         iface = self%iface
         nnodes = self%gq%face%nnodes

@@ -1,6 +1,6 @@
 module bc_lineuler_wall
     use mod_kinds,          only: rk,ik
-    use mod_constants,      only: ONE, TWO, HALF, ZERO, LOCAL
+    use mod_constants,      only: ONE, TWO, HALF, ZERO, ME
     use type_bc,            only: bc_t
     use type_solverdata,    only: solverdata_t
     use type_mesh,          only: mesh_t
@@ -82,13 +82,13 @@ contains
     !!  @param[inout]   prop    properties_t object containing equations and material_t objects
     !!
     !-------------------------------------------------------------------------------------------
-    subroutine compute(self,mesh,sdata,prop,face,flux)
+    subroutine compute(self,mesh,sdata,prop,face,fcn)
         class(lineuler_wall_t),        intent(inout)   :: self
         type(mesh_t),                   intent(in)      :: mesh(:)
         type(solverdata_t),             intent(inout)   :: sdata
         class(properties_t),            intent(inout)   :: prop
         type(face_info_t),              intent(in)      :: face
-        type(function_info_t),          intent(in)      :: flux
+        type(function_info_t),          intent(in)      :: fcn
 
 
         ! Equation indices
@@ -136,18 +136,18 @@ contains
             !
             ! Interpolate interior solution to quadrature nodes
             !
-            call interpolate_face(mesh,face,q,irho_r, rho_r,  LOCAL)
-            call interpolate_face(mesh,face,q,irhou_r,rhou_r, LOCAL)
-            call interpolate_face(mesh,face,q,irhov_r,rhov_r, LOCAL)
-            call interpolate_face(mesh,face,q,irhow_r,rhow_r, LOCAL)
-            call interpolate_face(mesh,face,q,irhoE_r,rhoE_r, LOCAL)
+            call interpolate_face(mesh,face,fcn,q,irho_r, rho_r,   'value', ME)
+            call interpolate_face(mesh,face,fcn,q,irhou_r,rhou_r,  'value', ME)
+            call interpolate_face(mesh,face,fcn,q,irhov_r,rhov_r,  'value', ME)
+            call interpolate_face(mesh,face,fcn,q,irhow_r,rhow_r,  'value', ME)
+            call interpolate_face(mesh,face,fcn,q,irhoE_r,rhoE_r,  'value', ME)
 
 
-            call interpolate_face(mesh,face,q,irho_i, rho_i,  LOCAL)
-            call interpolate_face(mesh,face,q,irhou_i,rhou_i, LOCAL)
-            call interpolate_face(mesh,face,q,irhov_i,rhov_i, LOCAL)
-            call interpolate_face(mesh,face,q,irhow_i,rhow_i, LOCAL)
-            call interpolate_face(mesh,face,q,irhoE_i,rhoE_i, LOCAL)
+            call interpolate_face(mesh,face,fcn,q,irho_i, rho_i,   'value', ME)
+            call interpolate_face(mesh,face,fcn,q,irhou_i,rhou_i,  'value', ME)
+            call interpolate_face(mesh,face,fcn,q,irhov_i,rhov_i,  'value', ME)
+            call interpolate_face(mesh,face,fcn,q,irhow_i,rhow_i,  'value', ME)
+            call interpolate_face(mesh,face,fcn,q,irhoE_i,rhoE_i,  'value', ME)
 
 
 
@@ -175,7 +175,7 @@ contains
 
             integrand = flux_x*norms(:,1) + flux_y*norms(:,2) + flux_z*norms(:,3)
 
-            call integrate_boundary_scalar_flux(mesh,sdata,face,flux,irho_r,integrand)
+            call integrate_boundary_scalar_flux(mesh,sdata,face,fcn,irho_r,integrand)
 
 
 
@@ -199,7 +199,7 @@ contains
 
             integrand = flux_x*norms(:,1) + flux_y*norms(:,2) + flux_z*norms(:,3)
 
-            call integrate_boundary_scalar_flux(mesh,sdata,face,flux,irho_i,integrand)
+            call integrate_boundary_scalar_flux(mesh,sdata,face,fcn,irho_i,integrand)
 
 
 
@@ -230,7 +230,7 @@ contains
 
             integrand = flux_x*norms(:,1) + flux_y*norms(:,2) + flux_z*norms(:,3)
 
-            call integrate_boundary_scalar_flux(mesh,sdata,face,flux,irhou_r,integrand)
+            call integrate_boundary_scalar_flux(mesh,sdata,face,fcn,irhou_r,integrand)
 
 
 
@@ -254,7 +254,7 @@ contains
 
             integrand = flux_x*norms(:,1) + flux_y*norms(:,2) + flux_z*norms(:,3)
 
-            call integrate_boundary_scalar_flux(mesh,sdata,face,flux,irhou_i,integrand)
+            call integrate_boundary_scalar_flux(mesh,sdata,face,fcn,irhou_i,integrand)
 
 
 
@@ -284,7 +284,7 @@ contains
 
             integrand = flux_x*norms(:,1) + flux_y*norms(:,2) + flux_z*norms(:,3)
 
-            call integrate_boundary_scalar_flux(mesh,sdata,face,flux,irhov_r,integrand)
+            call integrate_boundary_scalar_flux(mesh,sdata,face,fcn,irhov_r,integrand)
 
 
 
@@ -307,7 +307,7 @@ contains
 
             integrand = flux_x*norms(:,1) + flux_y*norms(:,2) + flux_z*norms(:,3)
 
-            call integrate_boundary_scalar_flux(mesh,sdata,face,flux,irhov_i,integrand)
+            call integrate_boundary_scalar_flux(mesh,sdata,face,fcn,irhov_i,integrand)
 
 
 
@@ -338,7 +338,7 @@ contains
 
             integrand = flux_x*norms(:,1) + flux_y*norms(:,2) + flux_z*norms(:,3)
 
-            call integrate_boundary_scalar_flux(mesh,sdata,face,flux,irhow_r,integrand)
+            call integrate_boundary_scalar_flux(mesh,sdata,face,fcn,irhow_r,integrand)
 
 
 
@@ -361,7 +361,7 @@ contains
 
             integrand = flux_x*norms(:,1) + flux_y*norms(:,2) + flux_z*norms(:,3)
 
-            call integrate_boundary_scalar_flux(mesh,sdata,face,flux,irhow_i,integrand)
+            call integrate_boundary_scalar_flux(mesh,sdata,face,fcn,irhow_i,integrand)
 
 
 
@@ -389,7 +389,7 @@ contains
 
             integrand = flux_x*norms(:,1) + flux_y*norms(:,2) + flux_z*norms(:,3)
 
-            call integrate_boundary_scalar_flux(mesh,sdata,face,flux,irhoE_r,integrand)
+            call integrate_boundary_scalar_flux(mesh,sdata,face,fcn,irhoE_r,integrand)
 
 
             flux_x = rhoE_x_rho  * rho_i  + &
@@ -410,7 +410,7 @@ contains
 
             integrand = flux_x*norms(:,1) + flux_y*norms(:,2) + flux_z*norms(:,3)
 
-            call integrate_boundary_scalar_flux(mesh,sdata,face,flux,irhoE_i,integrand)
+            call integrate_boundary_scalar_flux(mesh,sdata,face,fcn,irhoE_i,integrand)
 
 
 

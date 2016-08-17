@@ -1,4 +1,4 @@
-module type_element_indices
+module type_element_info
     use mod_kinds,  only: ik
 
 
@@ -10,7 +10,7 @@ module type_element_indices
     !!
     !!
     !---------------------------------------------------------------------
-    type, public :: element_indices_t
+    type, public :: element_info_t
 
         integer(ik) :: idomain_g
         integer(ik) :: idomain_l
@@ -22,10 +22,10 @@ module type_element_indices
         integer(ik) :: nterms_s
         integer(ik) :: nterms_c
 
-    end type element_indices_t
+    end type element_info_t
     !*********************************************************************
 
 
 
 
-end module type_element_indices
+end module type_element_info

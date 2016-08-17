@@ -5,7 +5,7 @@ module BU_volume_advective_flux
                                       XI_MIN,XI_MAX,ETA_MIN,ETA_MAX,ZETA_MIN,ZETA_MAX,DIAG
 
     use type_mesh,              only: mesh_t
-    use atype_volume_flux,      only: volume_flux_t
+    use type_volume_flux,       only: volume_flux_t
     use type_solverdata,        only: solverdata_t
     use type_properties,        only: properties_t
     use type_seed,              only: seed_t

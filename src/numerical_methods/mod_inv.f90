@@ -30,13 +30,13 @@ contains
         real(rk), dimension(size(A,1),size(A,2))                :: Ainv
 
         real(rk), dimension(size(A,1))   :: work    ! work array for LAPACK
-        real(rk), dimension(size(A,1))   :: nwork
-        real(rk), dimension(size(A,1)*4) :: conwork
-        integer,  dimension(size(A,1))   :: iconwork
         integer,  dimension(size(A,1))   :: ipiv    ! pivot indices
         integer :: n, info
 
-        real(rk) :: anorm, rcond
+!        real(rk), dimension(size(A,1))   :: nwork
+!        real(rk), dimension(size(A,1)*4) :: conwork
+!        integer,  dimension(size(A,1))   :: iconwork
+!        real(rk) :: anorm, rcond
 
 
 

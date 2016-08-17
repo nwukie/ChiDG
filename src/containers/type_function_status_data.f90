@@ -73,7 +73,6 @@ contains
         !
         ! Allocate boundary advective flux status storage
         !
-        !nfcn = function_data%nboundary_advective_flux
         nfcn = max(function_data%nboundary_advective_flux, &
                    function_data%nboundary_diffusive_flux, &
                    function_data%nvolume_advective_flux,   &

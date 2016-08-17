@@ -7,7 +7,7 @@ module test__find_gq_donor_mod
     use type_chidg,             only: chidg_t
     use type_meshdata,          only: meshdata_t
     use type_point,             only: point_t
-    use type_element_indices,   only: element_indices_t
+    use type_element_info,      only: element_info_t
     use type_face_info,         only: face_info_t
 
     use mod_hdfio,              only: read_grid_hdf
@@ -31,7 +31,7 @@ module test__find_gq_donor_mod
     type, extends(AbstractTestParameter) :: node_donor_coord
         integer(ik)                 :: testNumber   ! Test index
         type(point_t)               :: gqnode       ! input
-        type(element_indices_t)     :: donor        ! expected output
+        type(element_info_t)        :: donor        ! expected output
         type(point_t)               :: donor_coord  ! expected output
     contains
         procedure   :: toString
@@ -56,9 +56,9 @@ module test__find_gq_donor_mod
     type, extends(ParameterizedTestCase) :: test_find_gq_donor
         type(chidg_t)   :: chidg
 
-        type(point_t)            :: gqnode
-        type(element_indices_t)  :: donor
-        type(point_t)            :: donor_coord
+        type(point_t)           :: gqnode
+        type(element_info_t)    :: donor
+        type(point_t)           :: donor_coord
     contains
         procedure   :: setUp
         procedure   :: tearDown
@@ -168,7 +168,7 @@ contains
 
         integer(ik), parameter      :: ntests = 5
         type(point_t)               :: gqnode(ntests)
-        type(element_indices_t)     :: donor(ntests)
+        type(element_info_t)        :: donor(ntests)
         type(point_t)               :: donor_coords(ntests)
 
 
@@ -260,9 +260,9 @@ contains
     subroutine test__find_gq_donor__point(self)
         class(test_find_gq_donor),  intent(inout)   :: self
 
-        type(point_t)                   :: gq_node, donor_coord
-        type(element_indices_t)         :: donor
-        type(face_info_t)               :: receiver
+        type(point_t)           :: gq_node, donor_coord
+        type(element_info_t)    :: donor
+        type(face_info_t)       :: receiver
 
 
         receiver%idomain_g  = 0

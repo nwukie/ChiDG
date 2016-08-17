@@ -304,7 +304,7 @@ contains
     !!  @param[in]  iblk    Linearization index
     !!
     !-------------------------------------------------------------------------------------------------------------------------
-    function compute_seed(mesh,idomain_l,ielement_l,iface,idonor,iblk) result(seed)
+    function face_compute_seed(mesh,idomain_l,ielement_l,iface,idonor,iblk) result(seed)
         type(mesh_t),   intent(in)  :: mesh(:)
         integer(ik),    intent(in)  :: idomain_l
         integer(ik),    intent(in)  :: ielement_l
@@ -400,7 +400,7 @@ contains
             ! Invalid Case
             !
             else
-                call chidg_signal(FATAL,"compute_seed_domain: invalid face type - face(ielem,iface)%ftype")
+                call chidg_signal(FATAL,"face_compute_seed: invalid face type - face(ielem,iface)%ftype")
             end if
 
 
@@ -408,7 +408,7 @@ contains
         ! Invalid value for iface
         !
         else
-            call chidg_signal(FATAL,"compute_seed_domain: invalid value for iface")
+            call chidg_signal(FATAL,"face_compute_seed: invalid value for iface")
 
         end if
 
@@ -416,8 +416,159 @@ contains
 
 
 
-    end function compute_seed
+    end function face_compute_seed
     !************************************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+
+    !> Compute the domain and element that is being linearized. These are found by checking
+    !! the current element/face neighbors, or by setting the current element itself. Which
+    !! element gets linearized depends on iblk. iblk specifies the direction of the linearization.
+    !! For example, if iblk == XI_MIN, the seed element is that which is the neighbor to the XI_MIN
+    !! face of the current element. The other behavior is if the linearization of the current
+    !! element is desired. That is handled with iblk == DIAG.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   2/1/2016
+    !!
+    !!  @param[in]  mesh    Array of mesh_t instances
+    !!  @param[in]  idom    Domain index of the current element
+    !!  @param[in]  ielem   Element index for mesh(idom)%elems(ielem)
+    !!  @param[in]  iface   Face index for mesh(idom)%faces(ielem,iface)
+    !!  @param[in]  idonor  Index of potential donor elements. For example, Chimera faces could have more than one donor element
+    !!  @param[in]  iblk    Linearization index
+    !!
+    !-------------------------------------------------------------------------------------------------------------------------
+    function element_compute_seed(mesh,idomain_l,ielement_l,idonor,iblk) result(seed)
+        type(mesh_t),   intent(in)  :: mesh(:)
+        integer(ik),    intent(in)  :: idomain_l
+        integer(ik),    intent(in)  :: ielement_l
+        integer(ik),    intent(in)  :: idonor
+        integer(ik),    intent(in)  :: iblk
+
+
+        type(seed_t)    :: seed
+        integer(ik)     :: ChiID, iface
+        logical         :: linearize_me, linearize_neighbor
+        logical         :: chimera_face, interior_face, boundary_face
+
+
+
+        linearize_me        = ( iblk == DIAG )
+        linearize_neighbor  = ( iblk == XI_MIN   .or. iblk == XI_MAX   .or. &
+                                iblk == ETA_MIN  .or. iblk == ETA_MAX  .or. &
+                                iblk == ZETA_MIN .or. iblk == ZETA_MAX )
+
+
+
+        !
+        ! Check for linearization of current element (ielem)
+        !
+        if ( linearize_me ) then
+
+            seed%idomain_g  = mesh(idomain_l)%elems(ielement_l)%idomain_g
+            seed%idomain_l  = mesh(idomain_l)%elems(ielement_l)%idomain_l
+            seed%ielement_g = mesh(idomain_l)%elems(ielement_l)%ielement_g
+            seed%ielement_l = mesh(idomain_l)%elems(ielement_l)%ielement_l
+            seed%iproc      = IRANK
+
+
+        !
+        ! Check for linearization of neighbor element (neighbor of face(ielem,iface) )
+        !
+        elseif ( linearize_neighbor ) then
+
+            !
+            ! Check face in the direction of iblk
+            !
+            iface = iblk
+
+            !
+            ! Check if linearization direction (iface) is a Interior or Chimera face
+            !
+            chimera_face  = ( mesh(idomain_l)%faces(ielement_l,iface)%ftype == CHIMERA  )
+            interior_face = ( mesh(idomain_l)%faces(ielement_l,iface)%ftype == INTERIOR )
+            boundary_face = ( mesh(idomain_l)%faces(ielement_l,iface)%ftype == BOUNDARY )
+
+
+            !
+            ! Linearize wrt Standard Interior Neighbor
+            !
+            if ( interior_face ) then
+
+                seed%idomain_g    = mesh(idomain_l)%faces(ielement_l,iface)%ineighbor_domain_g
+                seed%idomain_l    = mesh(idomain_l)%faces(ielement_l,iface)%ineighbor_domain_l
+                seed%ielement_g   = mesh(idomain_l)%faces(ielement_l,iface)%ineighbor_element_g
+                seed%ielement_l   = mesh(idomain_l)%faces(ielement_l,iface)%ineighbor_element_l
+                seed%iproc        = mesh(idomain_l)%faces(ielement_l,iface)%ineighbor_proc
+                seed%recv_comm    = mesh(idomain_l)%faces(ielement_l,iface)%recv_comm
+                seed%recv_domain  = mesh(idomain_l)%faces(ielement_l,iface)%recv_domain
+                seed%recv_element = mesh(idomain_l)%faces(ielement_l,iface)%recv_element
+
+
+            !
+            ! Linearize wrt Chimera Interior Neighbor
+            !
+            elseif ( chimera_face ) then
+                ChiID = mesh(idomain_l)%faces(ielement_l,iface)%ChiID
+
+                seed%idomain_g    = mesh(idomain_l)%chimera%recv%data(ChiID)%donor_domain_g%at(idonor)
+                seed%idomain_l    = mesh(idomain_l)%chimera%recv%data(ChiID)%donor_domain_l%at(idonor)
+                seed%ielement_g   = mesh(idomain_l)%chimera%recv%data(ChiID)%donor_element_g%at(idonor)
+                seed%ielement_l   = mesh(idomain_l)%chimera%recv%data(ChiID)%donor_element_l%at(idonor)
+                seed%iproc        = mesh(idomain_l)%chimera%recv%data(ChiID)%donor_proc%at(idonor)
+                seed%recv_comm    = mesh(idomain_l)%chimera%recv%data(ChiID)%donor_recv_comm%at(idonor)
+                seed%recv_domain  = mesh(idomain_l)%chimera%recv%data(ChiID)%donor_recv_domain%at(idonor)
+                seed%recv_element = mesh(idomain_l)%chimera%recv%data(ChiID)%donor_recv_element%at(idonor)
+
+
+            !
+            ! Boudnary face, linearize wrt Current element
+            !
+            elseif ( boundary_face ) then
+                seed%idomain_g  = mesh(idomain_l)%elems(ielement_l)%idomain_g
+                seed%idomain_l  = mesh(idomain_l)%elems(ielement_l)%idomain_l
+                seed%ielement_g = mesh(idomain_l)%elems(ielement_l)%ielement_g
+                seed%ielement_l = mesh(idomain_l)%elems(ielement_l)%ielement_l
+                seed%iproc      = IRANK
+
+
+            !
+            ! Invalid Case
+            !
+            else
+                call chidg_signal(FATAL,"element_compute_seed: invalid face type - face(ielem,iface)%ftype")
+            end if
+
+
+        else
+            call chidg_signal(FATAL,"element_compute_seed: invalid value for iface")
+
+        end if
+
+
+
+
+
+    end function element_compute_seed
+    !************************************************************************************************************
+
+
+
+
+
+
+
+
 
 
 

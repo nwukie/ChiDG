@@ -1,5 +1,5 @@
 module type_boundary_flux_wrapper
-    use atype_boundary_flux, only: boundary_flux_t
+    use type_boundary_flux, only: boundary_flux_t
 
 
     !>  Wrapper for polymorphic boundary_flux_t arrays

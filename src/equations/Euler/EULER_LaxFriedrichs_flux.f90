@@ -2,9 +2,9 @@ module EULER_LaxFriedrichs_flux
     use mod_kinds,              only: rk,ik
     use mod_constants,          only: NFACES,ONE,TWO,HALF, &
                                       XI_MIN,XI_MAX,ETA_MIN,ETA_MAX,ZETA_MIN,ZETA_MAX, &
-                                      LOCAL, NEIGHBOR
+                                      ME, NEIGHBOR
 
-    use atype_boundary_flux,    only: boundary_flux_t
+    use type_boundary_flux,     only: boundary_flux_t
     use type_mesh,              only: mesh_t
     use type_solverdata,        only: solverdata_t
     use type_properties,        only: properties_t
@@ -49,9 +49,6 @@ module EULER_LaxFriedrichs_flux
 
 
 contains
-
-
-
 
 
 
@@ -118,7 +115,7 @@ contains
         iface = face_info%iface
 
         ifcn   = function_info%ifcn
-        idonor = function_info%idonor
+        idonor = function_info%idepend
         iblk   = function_info%iblk
 
 
@@ -128,20 +125,20 @@ contains
             !
             ! Interpolate solution to quadrature nodes
             !
-            call interpolate_face(mesh,face_info,q,irho,  rho_m,  LOCAL)
-            call interpolate_face(mesh,face_info,q,irho,  rho_p,  NEIGHBOR)
+            call interpolate_face(mesh,face_info,function_info,q, irho,  rho_m, 'value',  ME)
+            call interpolate_face(mesh,face_info,function_info,q, irho,  rho_p, 'value',  NEIGHBOR)
 
-            call interpolate_face(mesh,face_info,q,irhou, rhou_m, LOCAL)
-            call interpolate_face(mesh,face_info,q,irhou, rhou_p, NEIGHBOR)
+            call interpolate_face(mesh,face_info,function_info,q, irhou, rhou_m, 'value', ME)
+            call interpolate_face(mesh,face_info,function_info,q, irhou, rhou_p, 'value', NEIGHBOR)
 
-            call interpolate_face(mesh,face_info,q,irhov, rhov_m, LOCAL)
-            call interpolate_face(mesh,face_info,q,irhov, rhov_p, NEIGHBOR)
+            call interpolate_face(mesh,face_info,function_info,q, irhov, rhov_m, 'value', ME)
+            call interpolate_face(mesh,face_info,function_info,q, irhov, rhov_p, 'value', NEIGHBOR)
 
-            call interpolate_face(mesh,face_info,q,irhow, rhow_m, LOCAL)
-            call interpolate_face(mesh,face_info,q,irhow, rhow_p, NEIGHBOR)
+            call interpolate_face(mesh,face_info,function_info,q, irhow, rhow_m, 'value', ME)
+            call interpolate_face(mesh,face_info,function_info,q, irhow, rhow_p, 'value', NEIGHBOR)
 
-            call interpolate_face(mesh,face_info,q,irhoE, rhoE_m, LOCAL)
-            call interpolate_face(mesh,face_info,q,irhoE, rhoE_p, NEIGHBOR)
+            call interpolate_face(mesh,face_info,function_info,q, irhoE, rhoE_m, 'value', ME)
+            call interpolate_face(mesh,face_info,function_info,q, irhoE, rhoE_p, 'value', NEIGHBOR)
 
 
             !
@@ -156,9 +153,8 @@ contains
             !
             ! Compute normal velocities: dot-product vector projection along unit-normal direction
             !
-            un_m =  unorms(:,1)*(rhou_m/rho_m) + unorms(:,2)*(rhov_m/rho_m) + unorms(:,3)*(rhow_m/rho_m)
-            !un_p = -unorms(:,1)*(rhou_p/rho_p) - unorms(:,2)*(rhov_p/rho_p) - unorms(:,3)*(rhow_p/rho_p)
-            un_p =  unorms(:,1)*(rhou_p/rho_p) + unorms(:,2)*(rhov_p/rho_p) + unorms(:,3)*(rhow_p/rho_p)
+            un_m = unorms(:,1)*(rhou_m/rho_m) + unorms(:,2)*(rhov_m/rho_m) + unorms(:,3)*(rhow_m/rho_m)
+            un_p = unorms(:,1)*(rhou_p/rho_p) + unorms(:,2)*(rhov_p/rho_p) + unorms(:,3)*(rhow_p/rho_p)
 
             
             !

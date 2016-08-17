@@ -1,7 +1,5 @@
 module bc_periodic
 #include <messenger.h>
-    use mod_kinds,          only: rk,ik
-    use mod_constants,      only: ONE, TWO, HALF, LOCAL
     use type_bc,            only: bc_t
     use type_solverdata,    only: solverdata_t
     use type_mesh,          only: mesh_t
@@ -89,13 +87,13 @@ contains
     !!  @date   1/31/2016
     !!
     !-----------------------------------------------------------------------------------
-    subroutine compute(self,mesh,sdata,prop,face,flux)
+    subroutine compute(self,mesh,sdata,prop,face,fcn)
         class(periodic_t),              intent(inout)   :: self
         type(mesh_t),                   intent(in)      :: mesh(:)
         type(solverdata_t),             intent(inout)   :: sdata
         class(properties_t),            intent(inout)   :: prop
         type(face_info_t),              intent(in)      :: face
-        type(function_info_t),          intent(in)      :: flux
+        type(function_info_t),          intent(in)      :: fcn
 
 
         ! DO NOTHING IN PERIODIC BOUNDARY CONDITION

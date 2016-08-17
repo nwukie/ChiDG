@@ -609,7 +609,6 @@ contains
         integer(ik)             :: ixi,ieta,izeta,iface,ftype,ielem,ierr, ielem_neighbor
         integer(ik)             :: corner_one, corner_two, corner_three, corner_four
         integer(ik)             :: node_indices(4)
-        logical                 :: boundary_face = .false.
         logical                 :: includes_node_one, includes_node_two, includes_node_three, includes_node_four
         logical                 :: neighbor_element, searching
 
@@ -715,12 +714,12 @@ contains
         integer(ik),    intent(in)      :: iproc
         type(mpi_comm), intent(in)      :: ChiDG_COMM
 
-        integer(ik) :: idomain_g, ielem_l, imesh
+        integer(ik) :: ielem_l
         integer(ik) :: ineighbor_domain_g, ineighbor_domain_l, ineighbor_element_g, ineighbor_element_l
         integer(ik) :: data(4), corner_indices(4)
         integer     :: ierr
         logical     :: includes_corner_one, includes_corner_two, includes_corner_three, includes_corner_four
-        logical     :: searching, has_domain, neighbor_element
+        logical     :: neighbor_element
 
 
 
@@ -885,8 +884,7 @@ contains
         type(mpi_comm),                 intent(in)      :: ChiDG_COMM
 
         integer(ik) :: corner_one, corner_two, corner_three, corner_four
-        integer(ik) :: corner_indices(4), data(4), ielem_neighbor, mapping, iproc, idomain_g, ierr
-        logical     :: includes_corner_one, includes_corner_two, includes_corner_three, includes_corner_four
+        integer(ik) :: corner_indices(4), data(4), mapping, iproc, idomain_g, ierr
         logical     :: neighbor_element, has_domain
 
         neighbor_status = NO_NEIGHBOR_FOUND
@@ -976,7 +974,7 @@ contains
 
         type(ivector_t)             :: comm_procs_vector
         integer(ik),    allocatable :: comm_procs(:), comm_procs_local(:), comm_procs_chimera(:)
-        integer(ik)                 :: ncomm_procs, loc, iproc, proc
+        integer(ik)                 :: loc, iproc, proc
         logical                     :: already_added
 
         !
@@ -1069,7 +1067,7 @@ contains
         type(ivector_t)             :: comm_procs_vector
         integer(ik),    allocatable :: comm_procs(:)
         integer(ik)                 :: myrank, neighbor_rank, ielem, iface, loc
-        logical                     :: has_neighbor, already_added, comm_neighbor, comm_donor
+        logical                     :: has_neighbor, already_added, comm_neighbor
 
         !
         ! Test if global communication has been initialized
@@ -1152,8 +1150,8 @@ contains
 
         type(ivector_t)             :: comm_procs_vector
         integer(ik),    allocatable :: comm_procs(:)
-        integer(ik)                 :: myrank, neighbor_rank, ielem, iface, loc, ChiID, idonor, donor_rank
-        logical                     :: has_neighbor, already_added, comm_neighbor, is_chimera, comm_donor
+        integer(ik)                 :: myrank, ielem, iface, loc, ChiID, idonor, donor_rank
+        logical                     :: already_added, is_chimera, comm_donor
 
         !
         ! Test if global communication has been initialized
@@ -1495,8 +1493,8 @@ contains
 
         type(ivector_t)             :: comm_procs_vector
         integer(ik),    allocatable :: comm_procs(:)
-        integer(ik)                 :: myrank, neighbor_rank, ielem, iface, loc, ChiID, idonor, donor_rank
-        logical                     :: already_added, is_chimera, comm_donor
+        integer(ik)                 :: myrank, loc, idonor, donor_rank
+        logical                     :: already_added, comm_donor
 
         !
         ! Test if global communication has been initialized

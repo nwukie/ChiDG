@@ -3,20 +3,18 @@ module LA_boundary_average_advective_flux
     use mod_kinds,                  only: rk,ik
     use mod_constants,              only: NFACES,ZERO,ONE,TWO,HALF, &
                                           XI_MIN,XI_MAX,ETA_MIN,ETA_MAX,ZETA_MIN,ZETA_MAX,DIAG, &
-                                          LOCAL, NEIGHBOR
+                                          ME, NEIGHBOR
 
-    use atype_boundary_flux,        only: boundary_flux_t
+    use type_boundary_flux,         only: boundary_flux_t
     use type_mesh,                  only: mesh_t
     use type_solverdata,            only: solverdata_t
     use type_properties,            only: properties_t
-    use type_seed,                  only: seed_t
     use type_face_info,             only: face_info_t
     use type_function_info,         only: function_info_t
 
 
     use mod_interpolate,            only: interpolate_face
     use mod_integrate,              only: integrate_boundary_scalar_flux
-    use mod_DNAD_tools
     use DNAD_D
 
     use LA_properties,              only: LA_properties_t
@@ -72,7 +70,6 @@ contains
 
         real(rk)                    :: cx, cy, cz
         integer(ik)                 :: iu, ierr, nnodes, i
-        type(seed_t)                :: seed
         type(AD_D), dimension(mesh(face_info%idomain_l)%faces(face_info%ielement_l,face_info%iface)%gq%face%nnodes)    :: &
                                         u_l, u_r, flux_x, flux_y, flux_z, integrand
 
@@ -106,8 +103,8 @@ contains
         !
         ! Interpolate solution to quadrature nodes
         !
-        call interpolate_face(mesh,face_info,sdata%q,iu, u_r, LOCAL)
-        call interpolate_face(mesh,face_info,sdata%q,iu, u_l, NEIGHBOR)
+        call interpolate_face(mesh,face_info,function_info,sdata%q,iu, u_r, 'value', ME)
+        call interpolate_face(mesh,face_info,function_info,sdata%q,iu, u_l, 'value', NEIGHBOR)
 
 
 

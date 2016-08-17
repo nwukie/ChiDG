@@ -3,9 +3,9 @@ module SCA_boundary_average_advective_flux
     use mod_kinds,                  only: rk,ik
     use mod_constants,              only: NFACES,ZERO,ONE,TWO,HALF, &
                                           XI_MIN,XI_MAX,ETA_MIN,ETA_MAX,ZETA_MIN,ZETA_MAX,DIAG, &
-                                          LOCAL, NEIGHBOR
+                                          ME, NEIGHBOR
 
-    use atype_boundary_flux,        only: boundary_flux_t
+    use type_boundary_flux,         only: boundary_flux_t
     use type_mesh,                  only: mesh_t
     use type_solverdata,            only: solverdata_t
     use type_properties,            only: properties_t
@@ -20,31 +20,40 @@ module SCA_boundary_average_advective_flux
 
     use SCA_properties,              only: SCA_properties_t
     implicit none
-
     private
 
+
+    !>
+    !!
+    !!  @author Nathan A. Wukie
+    !!
+    !!
+    !!
+    !---------------------------------------------------------------------------------------------------
     type, extends(boundary_flux_t), public :: SCA_boundary_average_advective_flux_t
 
 
     contains
+
         procedure   :: compute
 
     end type SCA_boundary_average_advective_flux_t
+    !***************************************************************************************************
 
 contains
 
-    ! Compute the average advective boundary flux for scalar linear advection
-    !
-    !   @author Nathan A. Wukie
-    !
-    !   @param[in]      mesh    Mesh data
-    !   @param[inout]   sdata   Solver data. Solution, RHS, Linearization etc.
-    !   @param[in]      idom    Domain index
-    !   @param[in]      ielem   Element index
-    !   @param[in]      iface   Face index
-    !   @param[in]      iblk    Block index indicating the linearization direction
-    !
-    !---------------------------------------------------------------------
+    !> Compute the average advective boundary flux for scalar linear advection
+    !!
+    !!   @author Nathan A. Wukie
+    !!
+    !!   @param[in]      mesh    Mesh data
+    !!   @param[inout]   sdata   Solver data. Solution, RHS, Linearization etc.
+    !!   @param[in]      idom    Domain index
+    !!   @param[in]      ielem   Element index
+    !!   @param[in]      iface   Face index
+    !!   @param[in]      iblk    Block index indicating the linearization direction
+    !!
+    !---------------------------------------------------------------------------------------------------
     subroutine compute(self,mesh,sdata,prop,face_info,function_info)
         class(SCA_boundary_average_advective_flux_t),   intent(in)      :: self
         type(mesh_t),                                   intent(in)      :: mesh(:)
@@ -98,8 +107,8 @@ contains
         !
         ! Interpolate solution to quadrature nodes
         !
-        call interpolate_face(mesh,face_info,sdata%q, iu, u_r, LOCAL)
-        call interpolate_face(mesh,face_info,sdata%q, iu, u_l, NEIGHBOR)
+        call interpolate_face(mesh,face_info,function_info,sdata%q, iu, u_r, 'value', ME)
+        call interpolate_face(mesh,face_info,function_info,sdata%q, iu, u_l, 'value', NEIGHBOR)
 
 
         !
@@ -120,7 +129,7 @@ contains
 
         end associate
     end subroutine compute
-    !*******************************************************************************************
+    !**********************************************************************************************
 
 
 

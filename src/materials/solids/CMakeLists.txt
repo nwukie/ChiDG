@@ -1,1 +1,1 @@
-add_lib_sources(atype_solid.f90)
+add_lib_sources(type_solid.f90)

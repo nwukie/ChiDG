@@ -1,6 +1,6 @@
 module bc_euler_giles_inlet
     use mod_kinds,          only: rk,ik
-    use mod_constants,      only: ONE, TWO, FOUR, HALF, ZERO, LOCAL
+    use mod_constants,      only: ONE, TWO, FOUR, HALF, ZERO
 
     use type_bc,            only: bc_t
     use type_solverdata,    only: solverdata_t
@@ -220,13 +220,13 @@ contains
     !!  @param[inout]   prop    properties_t object containing equations and material_t objects
     !!
     !-------------------------------------------------------------------------------------------
-    subroutine compute(self,mesh,sdata,prop,face,flux)
+    subroutine compute(self,mesh,sdata,prop,face,fcn)
         class(euler_giles_inlet_t), intent(inout)   :: self
         type(mesh_t),               intent(in)      :: mesh(:)
         type(solverdata_t),         intent(inout)   :: sdata
         class(properties_t),        intent(inout)   :: prop
         type(face_info_t),          intent(in)      :: face
-        type(function_info_t),      intent(in)      :: flux
+        type(function_info_t),      intent(in)      :: fcn
 
 
         ! Equation indices
@@ -264,11 +264,11 @@ contains
         idom  = face%idomain
         ielem = face%ielement
         iface = face%iface
-        iblk  = flux%iblk
+        iblk  = fcn%iblk
 
 
         associate (norms => mesh(idom)%faces(ielem,iface)%norm, unorms => mesh(idom)%faces(ielem,iface)%unorm, faces => mesh(idom)%faces, &
-                coords => mesh(idom)%faces(ielem,iface)%quad_pts,    q => sdata%q,      time => sdata%t )
+                   coords => mesh(idom)%faces(ielem,iface)%quad_pts,    q => sdata%q,      time => sdata%t )
 
 
             !
@@ -293,11 +293,11 @@ contains
             !
             ! Interpolate conservative variables at specified points across boundary. To be DFT'd.
             !
-            call interpolate_boundary(mesh,face,q,irho ,rho_b ,self%dft_points)
-            call interpolate_boundary(mesh,face,q,irhou,rhou_b,self%dft_points)
-            call interpolate_boundary(mesh,face,q,irhov,rhov_b,self%dft_points)
-            call interpolate_boundary(mesh,face,q,irhow,rhow_b,self%dft_points)
-            call interpolate_boundary(mesh,face,q,irhoE,rhoE_b,self%dft_points)
+            call interpolate_boundary(mesh,face,fcn,q,irho ,rho_b ,self%dft_points)
+            call interpolate_boundary(mesh,face,fcn,q,irhou,rhou_b,self%dft_points)
+            call interpolate_boundary(mesh,face,fcn,q,irhov,rhov_b,self%dft_points)
+            call interpolate_boundary(mesh,face,fcn,q,irhow,rhow_b,self%dft_points)
+            call interpolate_boundary(mesh,face,fcn,q,irhoE,rhoE_b,self%dft_points)
 
         
             !
@@ -521,7 +521,7 @@ contains
 
             integrand = flux_x*norms(:,1) + flux_y*norms(:,2) + flux_z*norms(:,3)
 
-            call integrate_boundary_scalar_flux(mesh,sdata,face,flux,irho,integrand)
+            call integrate_boundary_scalar_flux(mesh,sdata,face,fcn,irho,integrand)
 
             !=================================================
             ! x-momentum flux
@@ -532,7 +532,7 @@ contains
 
             integrand = flux_x*norms(:,1) + flux_y*norms(:,2) + flux_z*norms(:,3)
 
-            call integrate_boundary_scalar_flux(mesh,sdata,face,flux,irhou,integrand)
+            call integrate_boundary_scalar_flux(mesh,sdata,face,fcn,irhou,integrand)
 
             !=================================================
             ! y-momentum flux
@@ -543,7 +543,7 @@ contains
 
             integrand = flux_x*norms(:,1) + flux_y*norms(:,2) + flux_z*norms(:,3)
 
-            call integrate_boundary_scalar_flux(mesh,sdata,face,flux,irhov,integrand)
+            call integrate_boundary_scalar_flux(mesh,sdata,face,fcn,irhov,integrand)
 
             !=================================================
             ! z-momentum flux
@@ -554,7 +554,7 @@ contains
 
             integrand = flux_x*norms(:,1) + flux_y*norms(:,2) + flux_z*norms(:,3)
 
-            call integrate_boundary_scalar_flux(mesh,sdata,face,flux,irhow,integrand)
+            call integrate_boundary_scalar_flux(mesh,sdata,face,fcn,irhow,integrand)
 
 
             !=================================================
@@ -566,7 +566,7 @@ contains
 
             integrand = flux_x*norms(:,1) + flux_y*norms(:,2) + flux_z*norms(:,3)
 
-            call integrate_boundary_scalar_flux(mesh,sdata,face,flux,irhoE,integrand)
+            call integrate_boundary_scalar_flux(mesh,sdata,face,fcn,irhoE,integrand)
 
 
         end associate

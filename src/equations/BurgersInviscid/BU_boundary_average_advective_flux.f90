@@ -5,7 +5,7 @@ module BU_boundary_average_advective_flux
                                           XI_MIN,XI_MAX,ETA_MIN,ETA_MAX,ZETA_MIN,ZETA_MAX,DIAG, &
                                           LOCAL, NEIGHBOR
 
-    use atype_boundary_flux,        only: boundary_flux_t
+    use type_boundary_flux,         only: boundary_flux_t
     use type_mesh,                  only: mesh_t
     use type_solverdata,            only: solverdata_t
     use type_properties,            only: properties_t

@@ -1,6 +1,7 @@
 module bc_primlineuler_wall
     use mod_kinds,          only: rk,ik
     use mod_constants,      only: ONE, TWO, HALF, ZERO, ME
+
     use type_bc,            only: bc_t
     use type_solverdata,    only: solverdata_t
     use type_mesh,          only: mesh_t
@@ -9,7 +10,7 @@ module bc_primlineuler_wall
     use type_function_info, only: function_info_t
 
     use mod_integrate,      only: integrate_boundary_scalar_flux
-    use mod_interpolate,    only: interpolate_face
+    use mod_interpolate,    only: interpolate
     use DNAD_D
     
     use PRIMLINEULER_properties,   only: PRIMLINEULER_properties_t
@@ -136,20 +137,18 @@ contains
             !
             ! Interpolate interior solution to quadrature nodes
             !
-            call interpolate_face(mesh,face,fcn,q,irho_r, rho_r,  'value', ME)
-            call interpolate_face(mesh,face,fcn,q,iu_r,   u_r,    'value', ME)
-            call interpolate_face(mesh,face,fcn,q,iv_r,   v_r,    'value', ME)
-            call interpolate_face(mesh,face,fcn,q,iw_r,   w_r,    'value', ME)
-            call interpolate_face(mesh,face,fcn,q,ip_r,   p_r,    'value', ME)
+            rho_r = interpolate(mesh,sdata,face,fcn,irho_r, 'value', ME)
+            u_r   = interpolate(mesh,sdata,face,fcn,iu_r,   'value', ME)
+            v_r   = interpolate(mesh,sdata,face,fcn,iv_r,   'value', ME)
+            w_r   = interpolate(mesh,sdata,face,fcn,iw_r,   'value', ME)
+            p_r   = interpolate(mesh,sdata,face,fcn,ip_r,   'value', ME)
 
 
-            call interpolate_face(mesh,face,fcn,q,irho_i, rho_i,  'value', ME)
-            call interpolate_face(mesh,face,fcn,q,iu_i,   u_i,    'value', ME)
-            call interpolate_face(mesh,face,fcn,q,iv_i,   v_i,    'value', ME)
-            call interpolate_face(mesh,face,fcn,q,iw_i,   w_i,    'value', ME)
-            call interpolate_face(mesh,face,fcn,q,ip_i,   p_i,    'value', ME)
-
-
+            rho_i = interpolate(mesh,sdata,face,fcn,irho_i, 'value', ME)
+            u_i   = interpolate(mesh,sdata,face,fcn,iu_i,   'value', ME)
+            v_i   = interpolate(mesh,sdata,face,fcn,iv_i,   'value', ME)
+            w_i   = interpolate(mesh,sdata,face,fcn,iw_i,   'value', ME)
+            p_i   = interpolate(mesh,sdata,face,fcn,ip_i,   'value', ME)
 
 
 

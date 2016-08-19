@@ -20,21 +20,17 @@ module type_volumeQuadrature
     !!  @author Nathan A. Wukie
     !-----------------------------------------------------------------------------------------------------------
     type, public :: volumeQuadrature_t
-        ! Number of volume quadrature nodes
         integer(ik)                 :: nnodes       !< Number of volume quadrature nodes
         integer(ik)                 :: nterms       !< Number of terms in the polynomial expansion
 
-        ! Array of points and weights for each node
         type(point_t),  allocatable :: nodes(:)     !< Array of quadrature node points
         real(rk),       allocatable :: weights(:)   !< Array of quadrature node weights
 
-        ! Polynomial values and derivatives for each node
         real(rk),       allocatable :: val(:,:)     !< Matrix used to interpolate an expansion to quadrature nodes
         real(rk),       allocatable :: ddxi(:,:)    !< Matrix used to interpolate partial derivatives(ddxi) to quadrature nodes
         real(rk),       allocatable :: ddeta(:,:)   !< Matrix used to interpolate partial derivatives(ddeta) to quadrature nodes
         real(rk),       allocatable :: ddzeta(:,:)  !< Matrix used to interpolate partial derivatives(ddzeta) to quadrature nodes
 
-        ! Reference mass matrix
         real(rk),       allocatable :: mass(:,:)    !< Mass matrix for the reference element
         real(rk),       allocatable :: dmass(:)     !< Diagonal of the mass matrix for the reference element
 

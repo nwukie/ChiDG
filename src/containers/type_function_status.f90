@@ -167,7 +167,7 @@ contains
 
 
         associate(idomain_l => face_info%idomain_l,  ielement_l => face_info%ielement_l, iface => face_info%iface, &
-                  type => function_info%type, ifcn => function_info%ifcn,  iblk => function_info%iblk )
+                  type => function_info%type, ifcn => function_info%ifcn,  iblk => function_info%idiff )
 
 
         function_already_computed = self%dom(idomain_l)%function_equation_computed(type,ielement_l,iface,ifcn,ieqn)
@@ -215,7 +215,7 @@ contains
 
 
         associate(idomain_l => face_info%idomain_l,  ielement_l => face_info%ielement_l, iface => face_info%iface, &
-                  type => function_info%type, ifcn => function_info%ifcn,  iblk => function_info%iblk )
+                  type => function_info%type, ifcn => function_info%ifcn,  iblk => function_info%idiff )
 
 
         function_already_linearized = self%dom(idomain_l)%function_linearized(type,ielement_l,iface,ifcn,iblk)
@@ -265,7 +265,7 @@ contains
 
 
         associate(idomain_l => face_info%idomain_l,  ielement_l => face_info%ielement_l, iface => face_info%iface, &
-                  type => function_info%type, ifcn => function_info%ifcn,  iblk => function_info%iblk )
+                  type => function_info%type, ifcn => function_info%ifcn,  iblk => function_info%idiff )
 
 
         function_already_linearized = self%dom(idomain_l)%function_equation_linearized(type,ielement_l,iface,ifcn,iblk,ieqn)
@@ -320,7 +320,7 @@ contains
 
 
         associate(idomain_l => face_info%idomain_l,  ielement_l => face_info%ielement_l, iface => face_info%iface, &
-                  type => function_info%type, ifcn => function_info%ifcn,  iblk => function_info%iblk )
+                  type => function_info%type, ifcn => function_info%ifcn,  iblk => function_info%idiff )
 
 
             self%dom(idomain_l)%function_computed(type,ielement_l,iface,ifcn) = .true.
@@ -364,7 +364,7 @@ contains
 
 
         associate(idomain_l => face_info%idomain_l,  ielement_l => face_info%ielement_l, iface => face_info%iface, &
-                  type => function_info%type, ifcn => function_info%ifcn,  iblk => function_info%iblk )
+                  type => function_info%type, ifcn => function_info%ifcn,  iblk => function_info%idiff )
 
 
             self%dom(idomain_l)%function_linearized(type,ielement_l,iface,ifcn,iblk) = .true.

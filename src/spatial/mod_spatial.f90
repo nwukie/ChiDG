@@ -37,7 +37,7 @@ contains
         integer(ik),        optional        :: info
 
         type(timer_t)               :: timer, comm_timer
-        integer(ik)                 :: idom, ielem, iface, iblk, ifcn, ibc, ierr, nelem
+        integer(ik)                 :: idom, ielem, iface, idiff, ifcn, ibc, ierr, nelem
         logical                     :: interior_face
         logical                     :: chimera_face 
         logical                     :: compute_face 
@@ -107,7 +107,7 @@ contains
 
 
                     ! 1-6 = linearization of neighbor blocks, 7 = linearization of Q- block(self)
-                    do iblk = 1,7
+                    do idiff = 1,7
 
 
                         ! Faces loop. For the current element, compute the contributions from boundary integrals
@@ -129,15 +129,15 @@ contains
                             !
                             interior_face = ( mesh(idom)%faces(ielem,iface)%ftype == INTERIOR )
                             chimera_face  = ( mesh(idom)%faces(ielem,iface)%ftype == CHIMERA )
-                            compute_face  = (interior_face .or. chimera_face) .and. ( (iblk == iface) .or. (iblk == DIAG) )
+                            compute_face  = (interior_face .or. chimera_face) .and. ( (idiff == iface) .or. (idiff == DIAG) )
 
 
 
                             ! Compute boundary fluxes
                             if ( compute_face ) then
 
-                                call eqnset%compute_boundary_advective_flux(mesh, sdata, face_info, iblk)
-                                call eqnset%compute_boundary_diffusive_flux(mesh, sdata, face_info, iblk)
+                                call eqnset%compute_boundary_advective_flux(mesh, sdata, face_info, idiff)
+                                call eqnset%compute_boundary_diffusive_flux(mesh, sdata, face_info, idiff)
 
                             end if ! compute_face
 
@@ -152,12 +152,12 @@ contains
                         !
                         ! Compute volume fluxes
                         !
-                        call eqnset%compute_volume_advective_flux(mesh, sdata, elem_info, iblk)
-                        call eqnset%compute_volume_diffusive_flux(mesh, sdata, elem_info, iblk)
+                        call eqnset%compute_volume_advective_flux(mesh, sdata, elem_info, idiff)
+                        call eqnset%compute_volume_diffusive_flux(mesh, sdata, elem_info, idiff)
 
 
 
-                    end do  ! iblk
+                    end do  ! idiff
                 end do  ! ielem
                 end associate
             end do  ! idom
@@ -174,9 +174,7 @@ contains
             ! Apply boundary conditions for each domain.
             !
             do idom = 1,data%ndomains()
-
                 call data%bcset(idom)%apply(data%mesh,data%sdata,data%eqnset(idom)%item%prop,idom)
-
             end do ! idom
 
 

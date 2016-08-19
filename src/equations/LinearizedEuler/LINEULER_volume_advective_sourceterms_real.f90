@@ -1,7 +1,6 @@
 module LINEULER_volume_advective_sourceterms_real
     use mod_kinds,              only: rk,ik
-    use mod_constants,          only: NFACES,ONE,TWO,HALF,ZERO, &
-                                      XI_MIN,XI_MAX,ETA_MIN,ETA_MAX,ZETA_MIN,ZETA_MAX,DIAG
+    use mod_constants,          only: ONE,TWO,HALF,ZERO
 
     use type_mesh,              only: mesh_t
     use type_volume_flux,       only: volume_flux_t
@@ -10,7 +9,7 @@ module LINEULER_volume_advective_sourceterms_real
     use type_element_info,      only: element_info_t
     use type_function_info,     only: function_info_t
     
-    use mod_interpolate,        only: interpolate_element
+    use mod_interpolate,        only: interpolate
     use mod_integrate,          only: integrate_volume_source
     use DNAD_D
 
@@ -72,7 +71,7 @@ contains
         integer(ik)    :: irhow_r, irhow_i
         integer(ik)    :: irhoE_r, irhoE_i
 
-        integer(ik)    :: idom, ielem, iblk
+        integer(ik)    :: idom, ielem
         real(rk)       :: gam, omega, alpha, eps
         real(rk)       :: x, y
 
@@ -85,7 +84,6 @@ contains
 
         idom  = elem_info%idomain_l
         ielem = elem_info%ielement_l
-        iblk  = function_info%iblk
 
 
         !
@@ -112,12 +110,11 @@ contains
         !
         ! Interpolate solution to quadrature nodes
         !
-        call interpolate_element(mesh,sdata%q,idom,ielem,irho_r, rho, function_info%seed)
-        call interpolate_element(mesh,sdata%q,idom,ielem,irhou_r,rhou,function_info%seed)
-        call interpolate_element(mesh,sdata%q,idom,ielem,irhov_r,rhov,function_info%seed)
-!        call interpolate_element(mesh,sdata%q,idom,ielem,irhow_r,rhow,function_info%seed)
-        call interpolate_element(mesh,sdata%q,idom,ielem,irhoE_r,rhoE,function_info%seed)
-
+        rho  = interpolate(mesh,sdata,elem_info,function_info,irho_r,'value')
+        rhou = interpolate(mesh,sdata,elem_info,function_info,irhou_r,'value')
+        rhov = interpolate(mesh,sdata,elem_info,function_info,irhov_r,'value')
+!        call interpolate(mesh,elem_info,function_info,sdata%q,irhow_r,rhow,'value')
+        rhoE = interpolate(mesh,sdata,elem_info,function_info,irhoE_r,'value')
 
 
 !        ! Initialize flux derivative storage

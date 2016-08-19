@@ -1,9 +1,7 @@
 module LA_LaxFriedrichs_flux
 #include <messenger.h>
     use mod_kinds,              only: rk,ik
-    use mod_constants,          only: NFACES,ZERO,ONE,TWO,HALF, &
-                                      XI_MIN,XI_MAX,ETA_MIN,ETA_MAX,ZETA_MIN,ZETA_MAX,DIAG, &
-                                      ME, NEIGHBOR
+    use mod_constants,          only: ZERO,ONE,TWO,HALF, ME, NEIGHBOR
 
     use type_boundary_flux,     only: boundary_flux_t
     use type_mesh,              only: mesh_t
@@ -12,7 +10,7 @@ module LA_LaxFriedrichs_flux
     use type_face_info,         only: face_info_t
     use type_function_info,     only: function_info_t
 
-    use mod_interpolate,        only: interpolate_face
+    use mod_interpolate,        only: interpolate
     use mod_integrate,          only: integrate_boundary_scalar_flux
     use DNAD_D
 
@@ -100,8 +98,8 @@ contains
         !
         ! Interpolate solution to quadrature nodes
         !
-        call interpolate_face(mesh,face_info,function_info,sdata%q,iu, u_r, 'value', ME)
-        call interpolate_face(mesh,face_info,function_info,sdata%q,iu, u_l, 'value', NEIGHBOR)
+        u_r = interpolate(mesh,sdata,face_info,function_info,iu, 'value', ME)
+        u_l = interpolate(mesh,sdata,face_info,function_info,iu, 'value', NEIGHBOR)
  
 
         !

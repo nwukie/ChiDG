@@ -96,7 +96,7 @@ contains
 
                     function_info%type    = VOLUME_ADVECTIVE_FLUX
                     function_info%ifcn    = iflux
-                    function_info%iblk    = iblk
+                    function_info%idiff   = iblk
                     function_info%idepend = 1
                     function_info%seed    = element_compute_seed(mesh,idom,ielem,idepend,iblk)
 
@@ -168,7 +168,7 @@ contains
                         do iflux = 1,nflux
                             function_info%type    = VOLUME_ADVECTIVE_FLUX
                             function_info%ifcn    = iflux
-                            function_info%iblk    = iblk
+                            function_info%idiff   = iblk
                             function_info%idepend = 1
                             function_info%seed    = element_compute_seed(mesh,idom,ielem,idepend,iblk)
 
@@ -312,7 +312,7 @@ contains
 
                     function_info%type    = BOUNDARY_ADVECTIVE_FLUX
                     function_info%ifcn    = iflux
-                    function_info%iblk    = iblk
+                    function_info%idiff   = iblk
                     function_info%idepend = idonor
                     function_info%seed    = face_compute_seed(data%mesh,idom,ielem,iface,idonor,iblk)
 
@@ -354,7 +354,7 @@ contains
 
                     function_info%type    = BOUNDARY_ADVECTIVE_FLUX
                     function_info%ifcn    = iflux
-                    function_info%iblk    = DIAG
+                    function_info%idiff   = DIAG
                     function_info%idepend = idonor
 
 
@@ -409,7 +409,7 @@ contains
 
                             function_info%type    = BOUNDARY_ADVECTIVE_FLUX
                             function_info%ifcn    = iflux
-                            function_info%iblk    = DIAG
+                            function_info%idiff   = DIAG
                             function_info%idepend = idonor
 
                             call data%eqnset(1)%item%boundary_advective_flux(iflux)%flux%compute(data%mesh,data%sdata,prop,face_info,function_info)

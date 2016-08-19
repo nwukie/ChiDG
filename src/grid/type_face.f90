@@ -30,14 +30,14 @@ module type_face
     !!
     !-------------------------------------------------------------------------------------------------------------
     type, public :: face_t
-        integer(ik)                 :: spacedim            !< Number of spatial dimensions
-        integer(ik)                 :: neqns               !< Number of equations in equationset_t
-        integer(ik)                 :: nterms_s            !< Number of terms in solution polynomial expansion
+        integer(ik)                 :: spacedim             !< Number of spatial dimensions
+        integer(ik)                 :: neqns                !< Number of equations in equationset_t
+        integer(ik)                 :: nterms_s             !< Number of terms in solution polynomial expansion
 
         ! Self information
-        integer(ik)                 :: ftype               !< INTERIOR, BOUNDARY, CHIMERA, ORPHAN 
-        integer(ik)                 :: iface               !< XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, etc
-        integer(ik)                 :: ChiID = 0           !< Identifier for domain-local Chimera interfaces
+        integer(ik)                 :: ftype                !< INTERIOR, BOUNDARY, CHIMERA, ORPHAN 
+        integer(ik)                 :: iface                !< XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, etc
+        integer(ik)                 :: ChiID = 0            !< Identifier for domain-local Chimera interfaces
 
         ! Owner-element information
         integer(ik)                 :: idomain_g            !< Global index of the parent domain
@@ -66,25 +66,25 @@ module type_face
 
 
         ! Geometry
-        type(point_t),      allocatable :: quad_pts(:)      !< Cartesian coordinates of quadrature nodes
-        type(densevector_t)             :: coords           !< Element coordinates
+        type(point_t),      allocatable :: quad_pts(:)          !< Cartesian coordinates of quadrature nodes
+        type(densevector_t)             :: coords               !< Element coordinates
 
         ! Metric terms
-        real(rk),           allocatable :: jinv(:)          !< array of inverse element jacobians on the face
-        real(rk),           allocatable :: metric(:,:,:)    !< Face metric terms
-        real(rk),           allocatable :: norm(:,:)        !< Face normals
-        real(rk),           allocatable :: unorm(:,:)       !< Unit Face normals in cartesian coordinates
+        real(rk),           allocatable :: jinv(:)              !< array of inverse element jacobians on the face
+        real(rk),           allocatable :: metric(:,:,:)        !< Face metric terms
+        real(rk),           allocatable :: norm(:,:)            !< Face normals
+        real(rk),           allocatable :: unorm(:,:)           !< Unit Face normals in cartesian coordinates
 
 
         ! Matrices of cartesian gradients of basis/test functions
-        real(rk),           allocatable :: dtdx(:,:)        !< Derivative of basis functions in x-direction at quadrature nodes
-        real(rk),           allocatable :: dtdy(:,:)        !< Derivative of basis functions in y-direction at quadrature nodes
-        real(rk),           allocatable :: dtdz(:,:)        !< Derivative of basis functions in z-direction at quadrature nodes
+        real(rk),           allocatable :: ddx(:,:)             !< Derivative of basis functions in x-direction at quadrature nodes
+        real(rk),           allocatable :: ddy(:,:)             !< Derivative of basis functions in y-direction at quadrature nodes
+        real(rk),           allocatable :: ddz(:,:)             !< Derivative of basis functions in z-direction at quadrature nodes
 
 
         ! Quadrature matrices
-        type(quadrature_t),  pointer    :: gq     => null() !< Pointer to solution quadrature instance
-        type(quadrature_t),  pointer    :: gqmesh => null() !< Pointer to mesh quadrature instance
+        type(quadrature_t),  pointer    :: gq     => null()     !< Pointer to solution quadrature instance
+        type(quadrature_t),  pointer    :: gqmesh => null()     !< Pointer to mesh quadrature instance
 
 
         ! Logical tests
@@ -100,14 +100,14 @@ module type_face
         procedure           :: init_neighbor
         procedure           :: init_sol
 
-        procedure           :: compute_quadrature_metrics   !< Compute metric terms at quadrature nodes
-        procedure           :: compute_quadrature_normals   !< Compute normals at quadrature nodes
-        procedure           :: compute_quadrature_coords    !< Compute cartesian coordinates at quadrature nodes
-        procedure           :: compute_gradients_cartesian  !< Compute gradients in cartesian coordinates
+        procedure           :: compute_quadrature_metrics       !< Compute metric terms at quadrature nodes
+        procedure           :: compute_quadrature_normals       !< Compute normals at quadrature nodes
+        procedure           :: compute_quadrature_coords        !< Compute cartesian coordinates at quadrature nodes
+        procedure           :: compute_gradients_cartesian      !< Compute gradients in cartesian coordinates
 
-        procedure           :: get_neighbor_element_g       !< Return neighbor element index
-        procedure           :: get_neighbor_element_l       !< Return neighbor element index
-        procedure           :: get_neighbor_face            !< Return neighbor face index
+        procedure           :: get_neighbor_element_g           !< Return neighbor element index
+        procedure           :: get_neighbor_element_l           !< Return neighbor element index
+        procedure           :: get_neighbor_face                !< Return neighbor face index
 
         final               :: destructor
 
@@ -269,9 +269,9 @@ contains
                  self%metric(3,3,nnodes),                   &
                  self%norm(nnodes,3),                       &
                  self%unorm(nnodes,3),                      &
-                 self%dtdx(nnodes,self%nterms_s),           &
-                 self%dtdy(nnodes,self%nterms_s),           &
-                 self%dtdz(nnodes,self%nterms_s), stat=ierr) 
+                 self%ddx(nnodes,self%nterms_s),           &
+                 self%ddy(nnodes,self%nterms_s),           &
+                 self%ddz(nnodes,self%nterms_s), stat=ierr) 
         if (ierr /= 0) call AllocationError
 
 
@@ -540,17 +540,17 @@ contains
 
         do iterm = 1,self%nterms_s
             do inode = 1,nnodes
-                self%dtdx(inode,iterm) = self%metric(1,1,inode) * self%gq%face%ddxi(inode,iterm,iface)   * (ONE/self%jinv(inode)) + &
-                                         self%metric(2,1,inode) * self%gq%face%ddeta(inode,iterm,iface)  * (ONE/self%jinv(inode)) + &
-                                         self%metric(3,1,inode) * self%gq%face%ddzeta(inode,iterm,iface) * (ONE/self%jinv(inode))
+                self%ddx(inode,iterm) = self%metric(1,1,inode) * self%gq%face%ddxi(inode,iterm,iface)   * (ONE/self%jinv(inode)) + &
+                                        self%metric(2,1,inode) * self%gq%face%ddeta(inode,iterm,iface)  * (ONE/self%jinv(inode)) + &
+                                        self%metric(3,1,inode) * self%gq%face%ddzeta(inode,iterm,iface) * (ONE/self%jinv(inode))
 
-                self%dtdy(inode,iterm) = self%metric(1,2,inode) * self%gq%face%ddxi(inode,iterm,iface)   * (ONE/self%jinv(inode)) + &
-                                         self%metric(2,2,inode) * self%gq%face%ddeta(inode,iterm,iface)  * (ONE/self%jinv(inode)) + &
-                                         self%metric(3,2,inode) * self%gq%face%ddzeta(inode,iterm,iface) * (ONE/self%jinv(inode))
+                self%ddy(inode,iterm) = self%metric(1,2,inode) * self%gq%face%ddxi(inode,iterm,iface)   * (ONE/self%jinv(inode)) + &
+                                        self%metric(2,2,inode) * self%gq%face%ddeta(inode,iterm,iface)  * (ONE/self%jinv(inode)) + &
+                                        self%metric(3,2,inode) * self%gq%face%ddzeta(inode,iterm,iface) * (ONE/self%jinv(inode))
 
-                self%dtdz(inode,iterm) = self%metric(1,3,inode) * self%gq%face%ddxi(inode,iterm,iface)   * (ONE/self%jinv(inode)) + &
-                                         self%metric(2,3,inode) * self%gq%face%ddeta(inode,iterm,iface)  * (ONE/self%jinv(inode)) + &
-                                         self%metric(3,3,inode) * self%gq%face%ddzeta(inode,iterm,iface) * (ONE/self%jinv(inode))
+                self%ddz(inode,iterm) = self%metric(1,3,inode) * self%gq%face%ddxi(inode,iterm,iface)   * (ONE/self%jinv(inode)) + &
+                                        self%metric(2,3,inode) * self%gq%face%ddeta(inode,iterm,iface)  * (ONE/self%jinv(inode)) + &
+                                        self%metric(3,3,inode) * self%gq%face%ddzeta(inode,iterm,iface) * (ONE/self%jinv(inode))
             end do
         end do
 

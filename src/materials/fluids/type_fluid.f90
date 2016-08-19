@@ -39,9 +39,9 @@ module type_fluid
             import fluid_t
             import AD_D
 
-            class(fluid_t), intent(in)      :: self
-            type(AD_D),     intent(in)      :: rho(:), rhou(:), rhov(:), rhow(:), rhoE(:)
-            type(AD_D),     intent(inout)   :: vals(:)
+            class(fluid_t),             intent(in)      :: self
+            type(AD_D),                 intent(in)      :: rho(:), rhou(:), rhov(:), rhow(:), rhoE(:)
+            type(AD_D), allocatable,    intent(inout)   :: vals(:)
         end subroutine
     end interface
 
@@ -52,9 +52,9 @@ module type_fluid
             use mod_kinds,  only: rk
             import fluid_t
 
-            class(fluid_t), intent(in)      :: self
-            real(rk),       intent(in)      :: rho(:), rhou(:), rhov(:), rhow(:), rhoE(:)
-            real(rk),       intent(inout)   :: vals(:)
+            class(fluid_t),             intent(in)      :: self
+            real(rk),                   intent(in)      :: rho(:), rhou(:), rhov(:), rhow(:), rhoE(:)
+            real(rk),   allocatable,    intent(inout)   :: vals(:)
         end subroutine
     end interface
 

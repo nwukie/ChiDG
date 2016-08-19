@@ -6,10 +6,11 @@ subroutine test_perfectgas_pressure()
     use DNAD_D
     
 
-    type(perfect_gas_t)               :: fluid
-    type(AD_D),         dimension(8)  :: rho, rhou, rhov, rhow, rhoE, p
-    real(rk),           dimension(8)  :: pref
-    real(rk)                          :: tol
+    type(perfect_gas_t)                     :: fluid
+    type(AD_D),         dimension(8)        :: rho, rhou, rhov, rhow, rhoE
+    type(AD_D), allocatable, dimension(:)   ::p
+    real(rk),           dimension(8)        :: pref
+    real(rk)                                :: tol
 
     tol = 1.e-13_rk
 

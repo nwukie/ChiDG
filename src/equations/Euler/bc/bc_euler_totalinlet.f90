@@ -12,7 +12,7 @@ module bc_euler_totalinlet
 
 
     use mod_integrate,      only: integrate_boundary_scalar_flux
-    use mod_interpolate,    only: interpolate_face
+    use mod_interpolate,    only: interpolate
     use mod_interpolation,  only: interpolate
     use DNAD_D
     
@@ -100,7 +100,6 @@ contains
     !!  @param[inout]   sdata   Solver data containing solution vector, rhs, linearization, etc.
     !!  @param[in]      ielem   Index of the element being computed
     !!  @param[in]      iface   Index of the face being computed
-    !!  @param[in]      iblk    Index of the linearization block being computed
     !!  @param[inout]   prop    properties_t object containing equations and material_t objects
     !!
     !-------------------------------------------------------------------------------------------
@@ -118,7 +117,8 @@ contains
 
 
         ! Storage at quadrature nodes
-        type(AD_D), dimension(mesh(face%idomain_l)%faces(face%ielement_l,face%iface)%gq%face%nnodes)   ::  &
+        !type(AD_D), dimension(mesh(face%idomain_l)%faces(face%ielement_l,face%iface)%gq%face%nnodes)   ::  &
+        type(AD_D), allocatable, dimension(:)   ::  &
                         rho_m,  rhou_m, rhov_m, rhow_m, rhoE_m, p_m,        &
                         flux_x, flux_y, flux_z, integrand,                  &
                         u_m,    v_m,    w_m,                                &
@@ -210,12 +210,17 @@ contains
             !
             ! Interpolate interior solution to quadrature nodes
             !
-            call interpolate_face(mesh,face,fcn,q,irho, rho_m,  'value', ME)
-            call interpolate_face(mesh,face,fcn,q,irhou,rhou_m, 'value', ME)
-            call interpolate_face(mesh,face,fcn,q,irhov,rhov_m, 'value', ME)
-            call interpolate_face(mesh,face,fcn,q,irhow,rhow_m, 'value', ME)
-            call interpolate_face(mesh,face,fcn,q,irhoE,rhoE_m, 'value', ME)
+!            call interpolate_face(mesh,face,fcn,q,irho, rho_m,  'value', ME)
+!            call interpolate_face(mesh,face,fcn,q,irhou,rhou_m, 'value', ME)
+!            call interpolate_face(mesh,face,fcn,q,irhov,rhov_m, 'value', ME)
+!            call interpolate_face(mesh,face,fcn,q,irhow,rhow_m, 'value', ME)
+!            call interpolate_face(mesh,face,fcn,q,irhoE,rhoE_m, 'value', ME)
 
+            rho_m  = interpolate(mesh,sdata,face,fcn,irho,  'value', ME)
+            rhou_m = interpolate(mesh,sdata,face,fcn,irhou, 'value', ME)
+            rhov_m = interpolate(mesh,sdata,face,fcn,irhov, 'value', ME)
+            rhow_m = interpolate(mesh,sdata,face,fcn,irhow, 'value', ME)
+            rhoE_m = interpolate(mesh,sdata,face,fcn,irhoE, 'value', ME)
 
 
             !

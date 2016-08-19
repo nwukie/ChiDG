@@ -1,7 +1,6 @@
 module PRIMLINEULER_volume_advective_sourceterms_real
     use mod_kinds,              only: rk,ik
-    use mod_constants,          only: NFACES,ONE,TWO,FOUR,HALF,ZERO, &
-                                      XI_MIN,XI_MAX,ETA_MIN,ETA_MAX,ZETA_MIN,ZETA_MAX,DIAG
+    use mod_constants,          only: NFACES,ONE,TWO,FOUR,HALF,ZERO
 
     use type_mesh,              only: mesh_t
     use type_volume_flux,       only: volume_flux_t
@@ -10,7 +9,7 @@ module PRIMLINEULER_volume_advective_sourceterms_real
     use type_element_info,      only: element_info_t
     use type_function_info,     only: function_info_t
     
-    use mod_interpolate,        only: interpolate_element
+    use mod_interpolate,        only: interpolate
     use mod_integrate,          only: integrate_volume_source
     use DNAD_D
 
@@ -72,7 +71,7 @@ contains
         integer(ik)    :: iw_r,    iw_i
         integer(ik)    :: ip_r,    ip_i
 
-        integer(ik)    :: idom, ielem, iblk, igq
+        integer(ik)    :: idom, ielem, igq
         real(rk)       :: gam, alpha, eps
         real(rk)       :: x, y, x0, y0
 
@@ -84,8 +83,6 @@ contains
 
         idom  = elem_info%idomain_l
         ielem = elem_info%ielement_l
-        iblk  = function_info%iblk
-
 
 
 
@@ -106,16 +103,14 @@ contains
 
 
 
-
         !
         ! Interpolate solution to quadrature nodes
         !
-        call interpolate_element(mesh,sdata%q,idom,ielem,irho_r, rho_r, function_info%seed)
-        call interpolate_element(mesh,sdata%q,idom,ielem,iu_r,u_r,function_info%seed)
-        call interpolate_element(mesh,sdata%q,idom,ielem,iv_r,v_r,function_info%seed)
-        call interpolate_element(mesh,sdata%q,idom,ielem,iw_r,w_r,function_info%seed)
-        call interpolate_element(mesh,sdata%q,idom,ielem,ip_r,p_r,function_info%seed)
-
+        rho_r = interpolate(mesh,sdata,elem_info,function_info,irho_r, 'value')
+        u_r   = interpolate(mesh,sdata,elem_info,function_info,iu_r,   'value')
+        v_r   = interpolate(mesh,sdata,elem_info,function_info,iv_r,   'value')
+        w_r   = interpolate(mesh,sdata,elem_info,function_info,iw_r,   'value')
+        p_r   = interpolate(mesh,sdata,elem_info,function_info,ip_r,   'value')
 
 
         ! Initialize flux derivative storage

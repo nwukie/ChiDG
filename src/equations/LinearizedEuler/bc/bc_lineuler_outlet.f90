@@ -1,6 +1,7 @@
 module bc_lineuler_outlet
     use mod_kinds,          only: rk,ik
     use mod_constants,      only: ONE, TWO, HALF, ZERO, ME
+
     use type_bc,            only: bc_t
     use type_solverdata,    only: solverdata_t
     use type_mesh,          only: mesh_t
@@ -9,7 +10,7 @@ module bc_lineuler_outlet
     use type_function_info, only: function_info_t
 
     use mod_integrate,      only: integrate_boundary_scalar_flux
-    use mod_interpolate,    only: interpolate_face
+    use mod_interpolate,    only: interpolate
     use DNAD_D
     
     use LINEULER_properties,   only: LINEULER_properties_t
@@ -140,20 +141,18 @@ contains
             !
             ! Interpolate interior solution to quadrature nodes
             !
-            call interpolate_face(mesh,face,fcn,q,irho_r, rho_r,   'value', ME)
-            call interpolate_face(mesh,face,fcn,q,irhou_r,rhou_r,  'value', ME)
-            call interpolate_face(mesh,face,fcn,q,irhov_r,rhov_r,  'value', ME)
-            call interpolate_face(mesh,face,fcn,q,irhow_r,rhow_r,  'value', ME)
-            call interpolate_face(mesh,face,fcn,q,irhoE_r,rhoE_r,  'value', ME)
+            rho_r  = interpolate(mesh,sdata,face,fcn,irho_r, 'value', ME)
+            rhou_r = interpolate(mesh,sdata,face,fcn,irhou_r,'value', ME)
+            rhov_r = interpolate(mesh,sdata,face,fcn,irhov_r,'value', ME)
+            rhow_r = interpolate(mesh,sdata,face,fcn,irhow_r,'value', ME)
+            rhoE_r = interpolate(mesh,sdata,face,fcn,irhoE_r,'value', ME)
 
 
-            call interpolate_face(mesh,face,fcn,q,irho_i, rho_i,   'value', ME)
-            call interpolate_face(mesh,face,fcn,q,irhou_i,rhou_i,  'value', ME)
-            call interpolate_face(mesh,face,fcn,q,irhov_i,rhov_i,  'value', ME)
-            call interpolate_face(mesh,face,fcn,q,irhow_i,rhow_i,  'value', ME)
-            call interpolate_face(mesh,face,fcn,q,irhoE_i,rhoE_i,  'value', ME)
-
-
+            rho_i  = interpolate(mesh,sdata,face,fcn,irho_i, 'value', ME)
+            rhou_i = interpolate(mesh,sdata,face,fcn,irhou_i,'value', ME)
+            rhov_i = interpolate(mesh,sdata,face,fcn,irhov_i,'value', ME)
+            rhow_i = interpolate(mesh,sdata,face,fcn,irhow_i,'value', ME)
+            rhoE_i = interpolate(mesh,sdata,face,fcn,irhoE_i,'value', ME)
 
 
 

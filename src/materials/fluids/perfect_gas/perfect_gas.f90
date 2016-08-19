@@ -47,7 +47,8 @@ contains
     subroutine compute_pressure_ad(self,rho,rhou,rhov,rhow,rhoE,vals)
         class(perfect_gas_t),   intent(in)      :: self
         type(AD_D),             intent(in)      :: rho(:), rhou(:), rhov(:), rhow(:), rhoE(:)
-        type(AD_D),             intent(inout)   :: vals(:)
+        !type(AD_D),             intent(inout)   :: vals(:)
+        type(AD_D), allocatable,    intent(inout)   :: vals(:)
 
         real(rk)    :: gam
 
@@ -84,7 +85,8 @@ contains
     subroutine compute_pressure_real(self,rho,rhou,rhov,rhow,rhoE,vals)
         class(perfect_gas_t),   intent(in)      :: self
         real(rk),               intent(in)      :: rho(:), rhou(:), rhov(:), rhow(:), rhoE(:)
-        real(rk),               intent(inout)   :: vals(:)
+        !real(rk),               intent(inout)   :: vals(:)
+        real(rk),   allocatable, intent(inout)   :: vals(:)
 
         real(rk)    :: gam
 
@@ -116,9 +118,9 @@ contains
     !!
     !------------------------------------------------------------------------
     subroutine compute_gamma_ad(self,rho,rhou,rhov,rhow,rhoE,vals)
-        class(perfect_gas_t),   intent(in)      :: self
-        type(AD_D),             intent(in)      :: rho(:), rhou(:), rhov(:), rhow(:), rhoE(:)
-        type(AD_D),             intent(inout)   :: vals(:)
+        class(perfect_gas_t),       intent(in)      :: self
+        type(AD_D),                 intent(in)      :: rho(:), rhou(:), rhov(:), rhow(:), rhoE(:)
+        type(AD_D), allocatable,    intent(inout)   :: vals(:)
 
         !
         ! Make sure vals derivatives are initialized
@@ -144,9 +146,14 @@ contains
     !!
     !------------------------------------------------------------------------
     subroutine compute_gamma_real(self,rho,rhou,rhov,rhow,rhoE,vals)
-        class(perfect_gas_t),   intent(in)      :: self
-        real(rk),               intent(in)      :: rho(:), rhou(:), rhov(:), rhow(:), rhoE(:)
-        real(rk),               intent(inout)   :: vals(:)
+        class(perfect_gas_t),       intent(in)      :: self
+        real(rk),                   intent(in)      :: rho(:), rhou(:), rhov(:), rhow(:), rhoE(:)
+        real(rk),   allocatable,    intent(inout)   :: vals(:)
+
+        !
+        ! Make sure array is allocated
+        !
+        vals = ZERO*rho
 
         !
         ! Set constant value

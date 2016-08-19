@@ -3,6 +3,7 @@ module test_interpolate_mod
     use type_chidg,                 only: chidg_t
     use type_point,                 only: point_t
     use type_seed,                  only: seed_t
+    use type_element_info,          only: element_info_t
     use type_face_info,             only: face_info_t
     use type_function_info,         only: function_info_t
     use type_function,              only: function_t
@@ -12,10 +13,10 @@ module test_interpolate_mod
     use mod_kinds,          only: rk,ik
     use mod_constants,      only: ZERO, ONE, TWO, THREE, FIVE, SIX, EIGHT, NINE, TEN, &
                                   XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX, &
-                                  ME, NEIGHBOR, IO_DESTINATION
+                                  ME, NEIGHBOR, IO_DESTINATION, VOLUME_ADVECTIVE_FLUX
     use mod_function,       only: create_function
-    use mod_hdfio,          only: read_grid_hdf
-    use mod_interpolate,    only: interpolate_face, interpolate_element
+    use mod_interpolate,    only: interpolate_face_standard, interpolate_face_autodiff, &
+                                  interpolate_element_standard, interpolate_element_autodiff
     use mod_grid_operators, only: initialize_variable
     use mod_testutils,      only: meshgen
     use mod_chidg_mpi,      only: IRANK
@@ -169,7 +170,7 @@ contains
         !
         ! PROCEDURE BEING TESTED
         !
-        call interpolate_element(self%chidg%data%mesh, self%chidg%data%sdata%q, idomain, ielem, ivar, u_gq)
+        u_gq = interpolate_element_standard(self%chidg%data%mesh, self%chidg%data%sdata, idomain, ielem, ivar, 'value')
 
 
 
@@ -224,13 +225,12 @@ contains
         !
         ! PROCEDURE BEING TESTED
         !
-        call interpolate_face(self%chidg%data%mesh,self%chidg%data%sdata%q,idomain,ielem,iface,ivar,u_gq)
+        u_gq = interpolate_face_standard(self%chidg%data%mesh,self%chidg%data%sdata,idomain,ielem,iface,ivar)
         
         
         ! Initialize reference
         val = self%fcn%get_option_value('val')
         u_ref = val
-        !u_ref = self%fcn%value_ 
         
         ! Test that standard interpolation to quadrature 
         ! on an element volume is producing expected results
@@ -266,6 +266,8 @@ contains
         real(rk),   allocatable     :: u_ref(:)
         real(rk)                    :: tol, val
         type(seed_t)                :: seed
+        type(element_info_t)        :: elem_info
+        type(function_info_t)       :: function_info
         
         
         associate ( elems => self%chidg%data%mesh(1)%elems, q => self%chidg%data%sdata%q, rhs => self%chidg%data%sdata%rhs )
@@ -283,25 +285,32 @@ contains
 
             tol   = 1.e-13_rk
             ivar  = self%chidg%data%eqnset(1)%item%prop%get_eqn_index('u')
-
-            ngq = elems(ielem)%gq%nnodes_v
+            ngq   = elems(ielem)%gq%nnodes_v
 
             ! Allocate number of AD variables for data at GQ nodes. Derivative arrays are not yet allocated
             allocate(u_gq(ngq))
             allocate(u_ref(ngq))
             
+            elem_info%idomain_g  = idomain
+            elem_info%idomain_l  = idomain
+            elem_info%ielement_g = ielem
+            elem_info%ielement_l = ielem
 
+            function_info%type    = VOLUME_ADVECTIVE_FLUX
+            function_info%ifcn    = 1
+            function_info%idepend = 1
+            function_info%idiff   = 1
+            function_info%seed    = seed
             
             !
             ! PROCEDURE BEING TESTED
             !
-            call interpolate_element(self%chidg%data%mesh,q,idomain,ielem,ivar,u_gq,seed)
+            u_gq = interpolate_element_autodiff(self%chidg%data%mesh,self%chidg%data%sdata,elem_info,function_info,ivar, 'value')
             
             
             ! Initialize reference
             val = self%fcn%get_option_value('val')
             u_ref = val
-            !u_ref = self%fcn%value_ 
 
             
             ! Test that interpolation to quadrature nodes from modes to autodiff variables 
@@ -333,6 +342,8 @@ contains
         type(AD_D), allocatable     :: u_gq(:)
         real(rk),   allocatable     :: deriv_ref(:)
         real(rk)                    :: tol
+        type(element_info_t)        :: elem_info
+        type(function_info_t)       :: function_info
         
         
         associate ( elems => self%chidg%data%mesh(1)%elems, q => self%chidg%data%sdata%q, rhs => self%chidg%data%sdata%rhs )
@@ -359,11 +370,21 @@ contains
             allocate(u_gq(ngq))
             allocate(deriv_ref(nderiv))
             
+            elem_info%idomain_g  = idomain
+            elem_info%idomain_l  = idomain
+            elem_info%ielement_g = ielem
+            elem_info%ielement_l = ielem
+
+            function_info%type    = VOLUME_ADVECTIVE_FLUX
+            function_info%ifcn    = 1
+            function_info%idepend = 1
+            function_info%idiff   = 1
+            function_info%seed    = seed
             
             !
             ! PROCEDURE BEING TESTED
             !
-            call interpolate_element(self%chidg%data%mesh,q,idomain,ielem,ivar,u_gq,seed)
+            u_gq = interpolate_element_autodiff(self%chidg%data%mesh,self%chidg%data%sdata,elem_info,function_info,ivar, 'value')
             
             
             ! Initialize reference
@@ -403,6 +424,8 @@ contains
         type(AD_D), allocatable     :: u_gq(:)
         real(rk),   allocatable     :: u_ref(:)
         real(rk)                    :: tol, val
+        type(element_info_t)        :: elem_info
+        type(function_info_t)       :: function_info
         
         
         associate ( elems => self%chidg%data%mesh(1)%elems, q => self%chidg%data%sdata%q, rhs => self%chidg%data%sdata%rhs )
@@ -428,17 +451,26 @@ contains
             allocate(u_gq(ngq))
             allocate(u_ref(ngq))
             
+            elem_info%idomain_g  = idomain
+            elem_info%idomain_l  = idomain
+            elem_info%ielement_g = ielem
+            elem_info%ielement_l = ielem
+
+            function_info%type    = VOLUME_ADVECTIVE_FLUX
+            function_info%ifcn    = 1
+            function_info%idepend = 1
+            function_info%idiff   = 1
+            function_info%seed    = seed
             
             !
             ! PROCEDURE BEING TESTED
             !
-            call interpolate_element(self%chidg%data%mesh,q,idomain,ielem,ivar,u_gq,seed)
+            u_gq = interpolate_element_autodiff(self%chidg%data%mesh,self%chidg%data%sdata,elem_info,function_info,ivar, 'value')
             
             
             ! Initialize reference
             val = self%fcn%get_option_value('val')
             u_ref = val
-            !u_ref = self%fcn%value_ 
             
             ! Test that interpolation to quadrature nodes from modes to autodiff variables 
             ! on an element volume is producing expected results
@@ -470,6 +502,8 @@ contains
         type(AD_D), allocatable     :: u_gq(:)
         real(rk),   allocatable     :: deriv_ref(:)
         real(rk)                    :: tol
+        type(element_info_t)        :: elem_info
+        type(function_info_t)       :: function_info
         
         
         associate ( elems => self%chidg%data%mesh(1)%elems, q => self%chidg%data%sdata%q, rhs => self%chidg%data%sdata%rhs )
@@ -496,11 +530,22 @@ contains
             allocate(u_gq(ngq))
             allocate(deriv_ref(nderiv))
             
+            elem_info%idomain_g  = idomain
+            elem_info%idomain_l  = idomain
+            elem_info%ielement_g = ielem
+            elem_info%ielement_l = ielem
+
+            function_info%type    = VOLUME_ADVECTIVE_FLUX
+            function_info%ifcn    = 1
+            function_info%idepend = 1
+            function_info%idiff   = 1
+            function_info%seed    = seed
+
             
             !
             ! PROCEDURE BEING TESTED
             !
-            call interpolate_element(self%chidg%data%mesh,q,idomain,ielem,ivar,u_gq,seed)
+            u_gq = interpolate_element_autodiff(self%chidg%data%mesh,self%chidg%data%sdata,elem_info,function_info,ivar, 'value')
             
             
             ! Initialize reference
@@ -596,7 +641,7 @@ contains
             !
             ! PROCEDURE BEING TESTED
             !
-            call interpolate_face(self%chidg%data%mesh,face,fcn,q,ivar,u_gq,'value',ME)
+            u_gq = interpolate_face_autodiff(self%chidg%data%mesh,self%chidg%data%sdata,face,fcn,ivar,'value',ME)
             
             
             ! Initialize reference
@@ -687,7 +732,7 @@ contains
             !
             ! PROCEDURE BEING TESTED
             !
-            call interpolate_face(self%chidg%data%mesh,face,fcn,q,ivar,u_gq,'value',ME)
+            u_gq = interpolate_face_autodiff(self%chidg%data%mesh,self%chidg%data%sdata,face,fcn,ivar,'value',ME)
             
             deriv_ref = ZERO
             
@@ -772,7 +817,7 @@ contains
             !
             ! PROCEDURE BEING TESTED
             !
-            call interpolate_face(self%chidg%data%mesh,face,fcn,q,ivar,u_gq,'value',ME)
+            u_gq = interpolate_face_autodiff(self%chidg%data%mesh,self%chidg%data%sdata,face,fcn,ivar,'value',ME)
             
             
             !
@@ -862,7 +907,7 @@ contains
             !
             ! PROCEDURE BEING TESTED
             !
-            call interpolate_face(self%chidg%data%mesh,face,fcn,q,ivar,u_gq,'value',ME)
+            u_gq = interpolate_face_autodiff(self%chidg%data%mesh,self%chidg%data%sdata,face,fcn,ivar,'value',ME)
               
             
             
@@ -953,7 +998,7 @@ contains
             !
             ! PROCEDURE BEING TESTED
             !
-            call interpolate_face(self%chidg%data%mesh,face,fcn,q,ivar,u_gq,'value',NEIGHBOR)
+            u_gq = interpolate_face_autodiff(self%chidg%data%mesh,self%chidg%data%sdata,face,fcn,ivar,'value',NEIGHBOR)
             
             
             ! Initialize reference
@@ -1041,7 +1086,7 @@ contains
             !
             ! PROCEDURE BEING TESTED
             !
-            call interpolate_face(self%chidg%data%mesh,face,fcn,q,ivar,u_gq,'value',NEIGHBOR)
+            u_gq = interpolate_face_autodiff(self%chidg%data%mesh,self%chidg%data%sdata,face,fcn,ivar,'value',NEIGHBOR)
             
             deriv_ref = ZERO
             
@@ -1134,7 +1179,7 @@ contains
             !
             ! PROCEDURE BEING TESTED
             !
-            call interpolate_face(self%chidg%data%mesh,face,fcn,q,ivar,u_gq,'value',NEIGHBOR)
+            u_gq = interpolate_face_autodiff(self%chidg%data%mesh,self%chidg%data%sdata,face,fcn,ivar,'value',NEIGHBOR)
             
             
             !
@@ -1223,7 +1268,7 @@ contains
             !
             ! PROCEDURE BEING TESTED
             !
-            call interpolate_face(self%chidg%data%mesh,face,fcn,q,ivar,u_gq,'value',NEIGHBOR)
+            u_gq = interpolate_face_autodiff(self%chidg%data%mesh,self%chidg%data%sdata,face,fcn,ivar,'value',NEIGHBOR)
               
             
             

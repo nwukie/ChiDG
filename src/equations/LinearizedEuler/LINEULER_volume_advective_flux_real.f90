@@ -1,7 +1,6 @@
 module LINEULER_volume_advective_flux_real
     use mod_kinds,              only: rk,ik
-    use mod_constants,          only: NFACES,ONE,TWO,HALF,ZERO, &
-                                      XI_MIN,XI_MAX,ETA_MIN,ETA_MAX,ZETA_MIN,ZETA_MAX,DIAG
+    use mod_constants,          only: ONE,TWO,HALF,ZERO
 
     use type_mesh,              only: mesh_t
     use type_volume_flux,       only: volume_flux_t
@@ -10,9 +9,8 @@ module LINEULER_volume_advective_flux_real
     use type_element_info,      only: element_info_t
     use type_function_info,     only: function_info_t
     
-    use mod_interpolate,        only: interpolate_element
+    use mod_interpolate,        only: interpolate
     use mod_integrate,          only: integrate_volume_flux
-    use mod_DNAD_tools
     use DNAD_D
 
     use LINEULER_properties,    only: LINEULER_properties_t
@@ -60,7 +58,6 @@ contains
     !!
     !!
     !----------------------------------------------------------------------------------
-    !subroutine compute(self,mesh,sdata,prop,idom,ielem,iblk)
     subroutine compute(self,mesh,sdata,prop,elem_info,function_info)
         class(LINEULER_volume_advective_flux_real_t),   intent(in)      :: self
         type(mesh_t),                                   intent(in)      :: mesh(:)
@@ -68,7 +65,6 @@ contains
         class(properties_t),                            intent(inout)   :: prop
         type(element_info_t),                           intent(in)      :: elem_info
         type(function_info_t),                          intent(in)      :: function_info
-        !integer(ik),                                    intent(in)      :: idom, ielem, iblk
 
 
         ! Equation indices
@@ -79,7 +75,7 @@ contains
         integer(ik)    :: irhoe
 
 
-        integer(ik)    :: idom, ielem, iblk
+        integer(ik)    :: idom, ielem
 
 
         type(AD_D), dimension(mesh(elem_info%idomain_l)%elems(elem_info%ielement_l)%gq%vol%nnodes)      ::  &
@@ -88,7 +84,6 @@ contains
 
         idom  = elem_info%idomain_l
         ielem = elem_info%ielement_l
-        iblk  = function_info%iblk
 
 
 
@@ -109,12 +104,11 @@ contains
         !
         ! Interpolate solution to quadrature nodes
         !
-        call interpolate_element(mesh,sdata%q,idom,ielem,irho, rho, function_info%seed)
-        call interpolate_element(mesh,sdata%q,idom,ielem,irhou,rhou,function_info%seed)
-        call interpolate_element(mesh,sdata%q,idom,ielem,irhov,rhov,function_info%seed)
-        call interpolate_element(mesh,sdata%q,idom,ielem,irhow,rhow,function_info%seed)
-        call interpolate_element(mesh,sdata%q,idom,ielem,irhoE,rhoE,function_info%seed)
-
+        rho  = interpolate(mesh,sdata,elem_info,function_info,irho, 'value')
+        rhou = interpolate(mesh,sdata,elem_info,function_info,irhou,'value')
+        rhov = interpolate(mesh,sdata,elem_info,function_info,irhov,'value')
+        rhow = interpolate(mesh,sdata,elem_info,function_info,irhow,'value')
+        rhoE = interpolate(mesh,sdata,elem_info,function_info,irhoE,'value')
 
 
         !===========================
@@ -136,7 +130,7 @@ contains
                  rho_z_rhow * rhow + &
                  rho_z_rhoE * rhoE
 
-        call integrate_volume_flux(mesh(idom)%elems(ielem),sdata,idom,irho,iblk,flux_x,flux_y,flux_z)
+        call integrate_volume_flux(mesh,sdata,elem_info,function_info,irho,flux_x,flux_y,flux_z)
 
 
         !===========================
@@ -158,7 +152,7 @@ contains
                  rhou_z_rhow * rhow + &
                  rhou_z_rhoE * rhoE
 
-        call integrate_volume_flux(mesh(idom)%elems(ielem),sdata,idom,irhou,iblk,flux_x,flux_y,flux_z)
+        call integrate_volume_flux(mesh,sdata,elem_info,function_info,irhou,flux_x,flux_y,flux_z)
 
 
         !============================
@@ -180,7 +174,7 @@ contains
                  rhov_z_rhow * rhow + &
                  rhov_z_rhoE * rhoE
 
-        call integrate_volume_flux(mesh(idom)%elems(ielem),sdata,idom,irhov,iblk,flux_x,flux_y,flux_z)
+        call integrate_volume_flux(mesh,sdata,elem_info,function_info,irhov,flux_x,flux_y,flux_z)
 
         !============================
         !     Z-MOMENTUM FLUX
@@ -201,7 +195,7 @@ contains
                  rhow_z_rhow * rhow + &
                  rhow_z_rhoE * rhoE
 
-        call integrate_volume_flux(mesh(idom)%elems(ielem),sdata,idom,irhow,iblk,flux_x,flux_y,flux_z)
+        call integrate_volume_flux(mesh,sdata,elem_info,function_info,irhow,flux_x,flux_y,flux_z)
 
         !============================
         !       ENERGY FLUX
@@ -222,7 +216,7 @@ contains
                  rhoE_z_rhow * rhow + &
                  rhoE_z_rhoE * rhoE
 
-        call integrate_volume_flux(mesh(idom)%elems(ielem),sdata,idom,irhoE,iblk,flux_x,flux_y,flux_z)
+        call integrate_volume_flux(mesh,sdata,elem_info,function_info,irhoE,flux_x,flux_y,flux_z)
 
     end subroutine compute
     !******************************************************************************************************

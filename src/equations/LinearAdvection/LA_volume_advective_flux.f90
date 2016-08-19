@@ -1,8 +1,7 @@
 module LA_volume_advective_flux
 #include <messenger.h>
     use mod_kinds,              only: rk,ik
-    use mod_constants,          only: NFACES,ZERO,ONE,TWO,HALF, &
-                                      XI_MIN,XI_MAX,ETA_MIN,ETA_MAX,ZETA_MIN,ZETA_MAX,DIAG
+    use mod_constants,          only: ZERO,ONE,TWO,HALF
 
     use type_mesh,              only: mesh_t
     use type_volume_flux,       only: volume_flux_t
@@ -11,7 +10,7 @@ module LA_volume_advective_flux
     use type_element_info,      only: element_info_t
     use type_function_info,     only: function_info_t
 
-    use mod_interpolate,        only: interpolate_element
+    use mod_interpolate,        only: interpolate
     use mod_integrate,          only: integrate_volume_flux
     use DNAD_D
 
@@ -54,9 +53,7 @@ contains
         type(element_info_t),                   intent(in)      :: elem_info
         type(function_info_t),                  intent(in)      :: function_info
 
-
-
-        integer(ik)             :: idom, ielem, iblk
+        integer(ik)             :: idom, ielem
         type(AD_D), allocatable :: u(:), flux_x(:), flux_y(:), flux_z(:)
         real(rk)                :: cx, cy, cz
         integer(ik)             :: nnodes, ierr
@@ -65,7 +62,6 @@ contains
 
         idom  = elem_info%idomain_l
         ielem = elem_info%ielement_l
-        iblk  = function_info%iblk
 
 
         !
@@ -102,7 +98,7 @@ contains
         !
         ! Interpolate solution to quadrature nodes
         !
-        call interpolate_element(mesh,sdata%q,idom,ielem,ivar_u,u,function_info%seed)
+        u = interpolate(mesh,sdata,elem_info,function_info,ivar_u,'value')
 
 
         !
@@ -116,7 +112,7 @@ contains
         !
         ! Integrate volume flux
         !
-        call integrate_volume_flux(mesh(idom)%elems(ielem),sdata,idom,ivar_u,iblk,flux_x,flux_y,flux_z)
+        call integrate_volume_flux(mesh,sdata,elem_info,function_info,ivar_u,flux_x,flux_y,flux_z)
 
 
 

@@ -2,8 +2,7 @@ module mod_timestep
     use mod_kinds,          only: rk, ik
     use mod_constants,      only: THIRD
     use type_chidg_data,    only: chidg_data_t
-    use type_seed,          only: seed_t
-    use mod_interpolate,    only: interpolate_element
+    use mod_interpolate,    only: interpolate
     implicit none
 
 
@@ -25,16 +24,17 @@ contains
 
 
         integer(ik)     :: ielem, nelem, idom
-        type(seed_t)    :: seed
 
         integer(ik) :: irho, irhou, irhov, irhow, irhoE
 
         !& DEBUG: HARD CODED GQ NODES BASED ON FIRST ELEMENT
-        real(rk), dimension(data%mesh(1)%elems(1)%gq%vol%nnodes)  :: rho, rhou, rhov, rhow, rhoE, &
-                                                                    c,   &   !< mean sound speed
-                                                                    gam, &   !< ratio of specific heats
-                                                                    p,   &   !< pressure
-                                                                    vmag     !< velocity magnitude
+        !real(rk), dimension(data%mesh(1)%elems(1)%gq%vol%nnodes)  :: &
+        real(rk), allocatable, dimension(:) :: &
+                rho, rhou, rhov, rhow, rhoE, &
+                c,   &   !< mean sound speed
+                gam, &   !< ratio of specific heats
+                p,   &   !< pressure
+                vmag     !< velocity magnitude
 
         real(rk)    ::  h, &    !< element spacing parameter
                         lam     !< characteristic speed
@@ -63,16 +63,11 @@ contains
                 !
                 ! Interpolate variables
                 !
-                seed%idomain_g  = 0
-                seed%idomain_l  = 0
-                seed%ielement_g = 0
-                seed%ielement_l = 0
-                call interpolate_element(data%mesh,data%sdata%q,idom,ielem,irho,  rho)
-                call interpolate_element(data%mesh,data%sdata%q,idom,ielem,irhou, rhou)
-                call interpolate_element(data%mesh,data%sdata%q,idom,ielem,irhov, rhov)
-                call interpolate_element(data%mesh,data%sdata%q,idom,ielem,irhow, rhow)
-                call interpolate_element(data%mesh,data%sdata%q,idom,ielem,irhoE, rhoE)
-
+                rho  = interpolate(data%mesh,data%sdata,idom,ielem,irho,  'value')
+                rhou = interpolate(data%mesh,data%sdata,idom,ielem,irhou, 'value')
+                rhov = interpolate(data%mesh,data%sdata,idom,ielem,irhov, 'value')
+                rhow = interpolate(data%mesh,data%sdata,idom,ielem,irhow, 'value')
+                rhoE = interpolate(data%mesh,data%sdata,idom,ielem,irhoE, 'value')
 
                 !
                 ! Compute pressure
@@ -83,8 +78,7 @@ contains
                 !
                 ! Compute cell sound speed
                 !
-                !& DEBUG - HARDCODED GAMMA
-                gam = 1.4_rk
+                call data%eqnset(idom)%item%prop%fluid%compute_gamma(rho,rhou,rhov,rhow,rhoE,gam)
                 c = sqrt(gam * p / rho)
 
 
@@ -116,7 +110,6 @@ contains
             end do  ! ielem
         end do  ! idom
 
-        !end associate
 
 
     end subroutine compute_timestep

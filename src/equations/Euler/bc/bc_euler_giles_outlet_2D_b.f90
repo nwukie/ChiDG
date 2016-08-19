@@ -1,6 +1,7 @@
 module bc_euler_giles_outlet_2D_b
     use mod_kinds,          only: rk,ik
     use mod_constants,      only: ZERO, ONE, TWO, HALF, ME
+
     use type_bc,            only: bc_t
     use type_solverdata,    only: solverdata_t
     use type_point,         only: point_t
@@ -10,7 +11,7 @@ module bc_euler_giles_outlet_2D_b
     use type_function_info, only: function_info_t
 
     use mod_integrate,      only: integrate_boundary_scalar_flux
-    use mod_interpolate,    only: interpolate_face, interpolate_boundary
+    use mod_interpolate,    only: interpolate, interpolate_boundary
     use mod_dft,            only: dft, idft_mode_points, compute_dft_points
     use DNAD_D
     
@@ -554,11 +555,11 @@ contains
                 !
                 ! Interpolate interior solution to face quadrature nodes
                 !
-                call interpolate_face(mesh,face,fcn,q,irho, rho_m,  'value', ME)
-                call interpolate_face(mesh,face,fcn,q,irhou,rhou_m, 'value', ME)
-                call interpolate_face(mesh,face,fcn,q,irhov,rhov_m, 'value', ME)
-                call interpolate_face(mesh,face,fcn,q,irhow,rhow_m, 'value', ME)
-                call interpolate_face(mesh,face,fcn,q,irhoE,rhoE_m, 'value', ME)
+                rho_m  = interpolate_face(mesh,sdata,face,fcn,irho,  'value', ME)
+                rhou_m = interpolate_face(mesh,sdata,face,fcn,irhou, 'value', ME)
+                rhov_m = interpolate_face(mesh,sdata,face,fcn,irhov, 'value', ME)
+                rhow_m = interpolate_face(mesh,sdata,face,fcn,irhow, 'value', ME)
+                rhoE_m = interpolate_face(mesh,sdata,face,fcn,irhoE, 'value', ME)
 
 
                 !

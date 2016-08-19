@@ -12,7 +12,13 @@ module test_element_linearB_mod
 
     public  :: test_element_linearB
 
-@TestCase
+    @TestCase
+    !>
+    !!
+    !!
+    !!
+    !!
+    !--------------------------------------------------------------------
     type, extends(TestCase) ::  test_element_linearB
         type(chidg_t)   :: chidg
         type(element_t) :: elem
@@ -21,11 +27,17 @@ module test_element_linearB_mod
         procedure   ::  setUp
         procedure   ::  tearDown
     end type test_element_linearB
+    !********************************************************************
 
 
 contains
+
+
     !> NOTE: make sure to use 'this' instead of 'self' since these are over-writting a derived type 
     !! procedure. The argument names have to match
+    !!
+    !!
+    !-----------------------------------------------------------------------------------------------------
     subroutine setUp(this)
         class(test_element_linearB),    intent(inout)   :: this
         
@@ -34,7 +46,8 @@ contains
         type(element_connectivity_t)    :: connectivity
         real(rk)                        :: sqrt_two, inv_sqrt_two
         integer(ik)                     :: ftype, mapping, ielem, idomain, spacedim
-        integer(ik)                     :: ineighbor_domain_g, ineighbor_domain_l, ineighbor_element_g, ineighbor_element_l, ineighbor_proc
+        integer(ik)                     :: ineighbor_domain_g, ineighbor_domain_l, ineighbor_element_g, &
+                                           ineighbor_element_l, ineighbor_proc
         
         
         call this%chidg%init('env')
@@ -116,8 +129,15 @@ contains
         call this%faces(ETA_MAX)%init_sol(this%elem)
         call this%faces(ZETA_MIN)%init_sol(this%elem)
         call this%faces(ZETA_MAX)%init_sol(this%elem)
-    end subroutine
+    end subroutine setUp
+    !**************************************************************************************************
     
+
+    !>
+    !!
+    !!
+    !!
+    !--------------------------------------------------------------------------------------------------
     subroutine tearDown(this)
         class(test_element_linearB),    intent(inout)   :: this
 
@@ -127,14 +147,21 @@ contains
         !
         call this%chidg%close('core')
 
-    end subroutine
+    end subroutine tearDown
+    !**************************************************************************************************
 
 
 
 
 
 
-@Test
+    @Test
+    !>
+    !!
+    !!
+    !!
+    !!
+    !--------------------------------------------------------------------------------------------------
     subroutine testElement_metric(self)
         class(test_element_linearB),    intent(inout)   :: self
         real(rk)    :: test_metric(3,3,self%elem%gq%vol%nnodes)
@@ -155,14 +182,20 @@ contains
         test_metric(3,3,:) = 0.25_rk
         @assertEqual(test_metric,self%elem%metric,tol)
         
-    end subroutine
+    end subroutine testElement_metric
+    !**************************************************************************************************
 
 
 
 
 
 
-@Test
+    @Test
+    !>
+    !!
+    !!
+    !!
+    !--------------------------------------------------------------------------------------------------
     subroutine testElement_jinv(self)
         class(test_element_linearB),    intent(inout)   :: self
         real(rk)    :: test_jinv(self%elem%gq%vol%nnodes), tol
@@ -170,11 +203,17 @@ contains
         
         test_jinv = 1._rk/8._rk
         @assertEqual(test_jinv,self%elem%jinv,tol)
-    end subroutine
+    end subroutine testElement_jinv
+    !**************************************************************************************************
     
     
     
-@Test
+    @Test
+    !>
+    !!
+    !!
+    !!
+    !--------------------------------------------------------------------------------------------------
     subroutine testElement_mass(self)
         class(test_element_linearB),    intent(inout)   :: self
         real(rk)    :: test_mass(self%elem%nterms_s,self%elem%nterms_s)
@@ -195,19 +234,42 @@ contains
         test_mass = 1._rk/8._rk * test_mass
         
         @assertEqual(test_mass,self%elem%mass,tol)
-    end subroutine
+    end subroutine testElement_mass
+    !***************************************************************************************************
+
+
+    @Test
+    !>
+    !!
+    !!
+    !!
+    !--------------------------------------------------------------------------------------------------
+    subroutine testElement_volume(self)
+        class(test_element_linearB),    intent(inout)   :: self
+        real(rk)    :: test_mass(self%elem%nterms_s,self%elem%nterms_s)
+        real(rk)    :: tol
+        
+        tol = 1.e-15_rk
+        
+        @assertEqual(self%elem%vol,1._rk,tol)
+
+    end subroutine testElement_volume
+    !***************************************************************************************************
 
 
 
 
+    !------------------------------------------------------------------------------
+    !>                                Face tests
+    !------------------------------------------------------------------------------
 
 
-!------------------------------------------------------------------------------
-!>                                Face tests
-!------------------------------------------------------------------------------
-
-
-@Test
+    @Test
+    !>
+    !!
+    !!
+    !!
+    !---------------------------------------------------------------------------------------------------
     subroutine testElement_face_metrics(self)
         class(test_element_linearB),    intent(inout)   :: self
         real(rk)    :: test_metric(3,3,self%faces(XI_MAX)%gq%face%nnodes)
@@ -233,10 +295,17 @@ contains
         @assertEqual(test_metric,self%faces(ETA_MAX)%metric,tol)
         @assertEqual(test_metric,self%faces(ZETA_MIN)%metric,tol)
         @assertEqual(test_metric,self%faces(ZETA_MAX)%metric,tol)
-    end subroutine
+    end subroutine testElement_face_metrics
+    !****************************************************************************************************
 
 
-@Test
+    @Test
+    !>
+    !!
+    !!
+    !!
+    !!
+    !----------------------------------------------------------------------------------------------------
     subroutine testElement_face_normals(self)
         class(test_element_linearB),    intent(inout)   :: self
         real(rk), dimension(self%faces(XI_MAX)%gq%face%nnodes) :: test_norm_x, test_norm_y, test_norm_z
@@ -300,12 +369,8 @@ contains
         @assertEqual(test_norm_z,self%faces(ZETA_MAX)%norm(:,3),tol)
        
 
-    end subroutine
-
-
-
-
-
+    end subroutine testElement_face_normals
+    !*****************************************************************************************************
 
 
 
@@ -321,8 +386,3 @@ contains
 
 
 end module test_element_linearB_mod
-
-
-
-
-

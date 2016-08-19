@@ -47,7 +47,6 @@ module integration_cylinder_mod
     use type_rvector,       only: rvector_t
     use mod_function,       only: create_function
     use mod_grid_operators, only: initialize_variable
-    use mod_entropy,        only: compute_entropy_error
 
     use mod_chidg_mpi,      only: IRANK, NRANK, ChiDG_COMM, GLOBAL_MASTER
     use mpi_f08,            only: MPI_COMM, MPI_ISend, MPI_Recv, MPI_REAL8, MPI_STATUS, MPI_ANY_SOURCE, MPI_REQUEST, MPI_Barrier
@@ -80,7 +79,6 @@ module integration_cylinder_mod
     @TestParameter
     type, extends(MpiTestParameter) :: case_grid_order
         integer(ik)     :: order
-        real(rk)        :: entropy_ref
     contains
         procedure   :: toString
     end type case_grid_order
@@ -101,7 +99,6 @@ module integration_cylinder_mod
     @TestCase(testParameters={getParameters()}, constructor=newTest)
     type, extends(MpiTestCase) :: cylinder
         integer(ik)     :: order
-        real(rk)        :: entropy_ref
 
         type(chidg_t)   :: chidg
         type(mpi_comm)  :: ChiDG_COMM
@@ -127,8 +124,7 @@ contains
         type(case_grid_order),  intent(in)          :: test_parameter
         type(cylinder)    :: test
 
-        test%order       = test_parameter%order
-        test%entropy_ref = test_parameter%entropy_ref
+        test%order = test_parameter%order
 
     end function newTest
     !******************************************************************************
@@ -196,7 +192,7 @@ contains
         class(cylinder),  intent(inout)   :: this
 
         class(function_t),  allocatable :: fcn
-        real(rk)                        :: tol, entropy_error
+        real(rk)                        :: tol
 
         
         tol = 1.e-6_rk
@@ -234,7 +230,7 @@ contains
         call toptions%set('nwrite',0)
 
         ! Set linear solver options to pass during initialization
-        call loptions%set('tol',1.e-8_rk)
+        call loptions%set('tol',1.e-7_rk)
 
         ! Set nonlinear solver options
         call noptions%set('tol',3.e-5_rk)
@@ -257,12 +253,6 @@ contains
 
 
 
-        call this%chidg%initialize_solution_domains(nterms_s)
-        call this%chidg%init('communication')
-        call this%chidg%init('chimera')
-        call this%chidg%initialize_solution_solver()
-
-
         !
         ! Set ChiDG components
         !
@@ -270,6 +260,17 @@ contains
         call this%chidg%set('nonlinear_solver', nonlinear_solver, noptions)
         call this%chidg%set('linear_solver',    linear_solver,    loptions)
         call this%chidg%set('preconditioner',   preconditioner)
+
+
+        !
+        ! Initialize solution data storage
+        !
+        call this%chidg%initialize_solution_domains(nterms_s)
+        call this%chidg%init('communication')
+        call this%chidg%init('chimera')
+        call this%chidg%initialize_solution_solver()
+
+
 
 
         !
@@ -337,8 +338,8 @@ contains
     !!      - test solution symmetry between some elements located symmetrically about the horizontal
     !!        axis.
     !!
-    !!  @author Nathan A. Wukie
     !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   8/18/2016
     !!
     !!
     !-------------------------------------------------------------------------------------------------------
@@ -361,8 +362,6 @@ contains
         ! Run ChiDG simulation
         !
         call self%chidg%run()
-
-
 
 
 
@@ -468,7 +467,6 @@ contains
     !!  So, we are relying on pFUnit to do things in order here. Works now, but I don't think
     !!  there is a guaruntee that this can't change.
     !!
-    !!  @author Nathan A. Wukie
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   8/15/2016
     !!
@@ -488,6 +486,7 @@ contains
 
                 ! Test that the current convergence for the processor count matches the serial convergence
                 test_convergence = nonlinear_convergence(inpes,iorder)%data()
+
 
                 @assertEqual(reference_convergence, test_convergence, 1.e-5_rk)
 

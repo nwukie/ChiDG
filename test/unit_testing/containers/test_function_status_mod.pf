@@ -339,9 +339,9 @@ subroutine test_function_status__compute(this)
     face_info%ielement_l = 2
     face_info%iface      = 2
 
-    function_info%type = 1
-    function_info%ifcn = 1
-    function_info%iblk = 5
+    function_info%type  = 1
+    function_info%ifcn  = 1
+    function_info%idiff = 5
 
     ieqn = 2
 
@@ -454,9 +454,9 @@ subroutine test_function_status__linearize(this)
     face_info%ielement_l = 2
     face_info%iface      = 2
 
-    function_info%type = 1
-    function_info%ifcn = 1
-    function_info%iblk = 5
+    function_info%type  = 1
+    function_info%ifcn  = 1
+    function_info%idiff = 5
 
     ieqn = 2
 

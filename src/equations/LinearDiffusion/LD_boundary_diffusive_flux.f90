@@ -1,9 +1,7 @@
 module LD_boundary_diffusive_flux
 #include <messenger.h>
     use mod_kinds,                  only: rk,ik
-    use mod_constants,              only: NFACES,ZERO,ONE,TWO,HALF, &
-                                          XI_MIN,XI_MAX,ETA_MIN,ETA_MAX,ZETA_MIN,ZETA_MAX,DIAG, &
-                                          ME, NEIGHBOR
+    use mod_constants,              only: ZERO,ONE,TWO,HALF, ME, NEIGHBOR
 
     use type_boundary_flux,         only: boundary_flux_t
     use type_mesh,                  only: mesh_t
@@ -12,8 +10,7 @@ module LD_boundary_diffusive_flux
     use type_face_info,             only: face_info_t
     use type_function_info,         only: function_info_t
 
-
-    use mod_interpolate,            only: interpolate_face
+    use mod_interpolate,            only: interpolate
     use mod_integrate,              only: integrate_boundary_scalar_flux
     use DNAD_D
 
@@ -89,15 +86,15 @@ contains
         associate ( norms => mesh(idom)%faces(ielem,iface)%norm )
 
 
-        !
-        ! Get equation set properties
-        !
-        select type(prop)
-            type is (LD_properties_t)
-                cx = prop%c(1)
-                cy = prop%c(2)
-                cz = prop%c(3)
-        end select
+!        !
+!        ! Get equation set properties
+!        !
+!        select type(prop)
+!            type is (LD_properties_t)
+!                cx = prop%c(1)
+!                cy = prop%c(2)
+!                cz = prop%c(3)
+!        end select
 
         
         !

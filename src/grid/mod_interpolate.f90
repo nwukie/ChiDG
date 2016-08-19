@@ -2,19 +2,20 @@ module mod_interpolate
 #include <messenger.h>
     use mod_kinds,          only: rk,ik
     use mod_constants,      only: CHIMERA, INTERIOR, BOUNDARY, &
-                                  ME, NEIGHBOR, ONE
-    use mod_DNAD_tools,     only: compute_neighbor_domain_l, compute_neighbor_element_l, compute_neighbor_face, &
-                                  compute_neighbor_domain_g, compute_neighbor_element_g
+                                  ME, NEIGHBOR, ONE, ZERO
+                                  
     use mod_polynomial,     only: polynomialVal
     use mod_grid_tools_two, only: compute_element_donor
     use mod_chidg_mpi,      only: IRANK
+    use mod_DNAD_tools,     only: compute_neighbor_face
     use DNAD_D
 
     use type_ivector,       only: ivector_t
     use type_rvector,       only: rvector_t
     use type_point,         only: point_t
     use type_mesh,          only: mesh_t
-    use type_seed,          only: seed_t
+    use type_solverdata,    only: solverdata_t
+    use type_element_info,  only: element_info_t
     use type_face_info,     only: face_info_t
     use type_function_info, only: function_info_t
     use type_recv,          only: recv_t
@@ -22,15 +23,19 @@ module mod_interpolate
     implicit none
 
 
-
-
-    interface interpolate_element
-        module procedure    interpolate_element_autodiff, interpolate_element_standard
+    interface interpolate
+        module procedure    interpolate_element_autodiff, interpolate_element_standard, interpolate_face_autodiff, interpolate_face_standard
     end interface
 
-    interface interpolate_face
-        module procedure    interpolate_face_autodiff,    interpolate_face_standard
-    end interface
+
+
+!    interface interpolate_element
+!        module procedure    interpolate_element_autodiff, interpolate_element_standard
+!    end interface
+!
+!    interface interpolate_face
+!        module procedure    interpolate_face_autodiff,    interpolate_face_standard
+!    end interface
 
 
 !    interface interpolate_boundary
@@ -42,118 +47,102 @@ module mod_interpolate
 contains
 
 
-    !> Compute variable at quadrature nodes.
+    !>  Interpolate polynomial expansion to volume quadrature node set, initializing the
+    !!  automatic differentiation process if needed.
+    !!
+    !!  This returns an array of automatic differentiation(AD) values at the quadrature nodes,
+    !!  that also have their derivatives initialized.
+    !!
+    !!  Some interpolation parameters to note that are used inside here:
+    !!      - interpolation_type:   'value', 'ddx', 'ddy', 'ddz'
     !!
     !!  @author Nathan A. Wukie
     !!  @date   2/1/2016
     !!
-    !!
-    !----------------------------------------------------------------
-    subroutine interpolate_element_autodiff(mesh,q,idomain_l,ielement_l,ieqn,var_gq,seed)
-        type(mesh_t),        intent(in)      :: mesh(:)
-        type(chidgVector_t), intent(in)      :: q
-        integer(ik),         intent(in)      :: idomain_l
-        integer(ik),         intent(in)      :: ielement_l
-        integer(ik),         intent(in)      :: ieqn
-        type(AD_D),          intent(inout)   :: var_gq(:)
-        type(seed_t),        intent(in)      :: seed
+    !-------------------------------------------------------------------------------------------------------
+    function interpolate_element_autodiff(mesh,sdata,elem_info,fcn_info,ieqn,interpolation_type) result(var_gq)
+        type(mesh_t),           intent(in)      :: mesh(:)
+        type(solverdata_t),     intent(in)      :: sdata
+        type(element_info_t),   intent(in)      :: elem_info
+        type(function_info_t),  intent(in)      :: fcn_info
+        integer(ik),            intent(in)      :: ieqn
+        character(len=*),       intent(in)      :: interpolation_type
 
-        type(AD_D)  :: qdiff(mesh(idomain_l)%elems(ielement_l)%nterms_s)
-        integer(ik) :: nderiv, set_deriv, iterm, igq, i, neqns_seed, nterms_s_seed
-        logical     :: linearize_me
+        type(AD_D)  :: var_gq(mesh(elem_info%idomain_l)%elems(elem_info%ielement_l)%gq%vol%nnodes)
+
+        type(AD_D)  :: qdiff(mesh(elem_info%idomain_l)%elems(elem_info%ielement_l)%nterms_s)
+        integer(ik) :: nderiv, set_deriv, iterm
+        logical     :: differentiate_me
+
+        associate( idom => elem_info%idomain_l, ielem => elem_info%ielement_l )
+
+        !
+        ! Get number of derivatives to initialize for automatic differentiation
+        !
+        nderiv = get_interpolation_nderiv(mesh,sdata,fcn_info)
 
 
         !
-        ! Get the number of degrees of freedom for the seed element
-        ! and set this as the number of partial derivatives to track
+        ! Allocate derivative arrays for temporary solution variable
         !
-        if (seed%ielement_l == 0) then
-            !
-            ! If ielem_seed == 0 then we aren't interested in tracking derivatives
-            !
-            nderiv = 1
-
-        !
-        ! Get number of unknowns from element being linearized
-        !
-        else
-
-            !
-            ! Get number of equations and terms in solution expansions
-            !
-            neqns_seed    = mesh(seed%idomain_l)%elems(seed%ielement_l)%neqns
-            nterms_s_seed = mesh(seed%idomain_l)%elems(seed%ielement_l)%nterms_s
-
-            !
-            ! Compute number of unknowns in the seed element, which is the number of partial derivatives we are tracking
-            !
-            nderiv = neqns_seed * nterms_s_seed
-        end if
-
-
-
-        !
-        ! Allocate the derivative array for each autodiff variable
-        ! MIGHT NOT NEED THIS IF IT GETS AUTOMATICALLY ALLOCATED ON ASSIGNMENT -- TEST
-        !
-        do igq = 1,size(var_gq)
-            var_gq(igq) = AD_D(nderiv)
+        do iterm = 1,mesh(idom)%elems(ielem)%nterms_s
+            qdiff(iterm) = AD_D(nderiv)
         end do
 
+
+        !
+        ! Copy the solution variables from 'q' to 'qdiff'
+        !
+        qdiff = sdata%q%dom(idom)%vecs(ielem)%getvar(ieqn)
 
 
         !
         ! If the current element is being differentiated (ielem == ielem_seed)
         ! then copy the solution modes to local AD variable and seed derivatives
         !
-        linearize_me = ( (idomain_l == seed%idomain_l) .and. (ielement_l == seed%ielement_l) )
-        !linearize_me = ( (idom_g_interp == seed%idomain_g) .and. (ielem_g_interp == seed%ielement_g) )
+        differentiate_me = ( (elem_info%idomain_g  == fcn_info%seed%idomain_g ) .and. &
+                             (elem_info%ielement_g == fcn_info%seed%ielement_g) )
 
-        if (linearize_me) then
-
-            !
-            ! Allocate derivative arrays for temporary solution variable
-            !
-            do iterm = 1,mesh(idomain_l)%elems(ielement_l)%nterms_s
-                qdiff(iterm) = AD_D(nderiv)
-            end do
-
-
-            !
-            ! Copy the solution variables from 'q' to 'qdiff'
-            !
-            qdiff = q%dom(idomain_l)%vecs(ielement_l)%getvar(ieqn)
-
-
-            !
-            ! Loop through the terms in qdiff
-            !
+        if (differentiate_me) then
+            ! Differentiating element, initialize appropriate derivatives to ONE
             do iterm = 1,size(qdiff)
-                !
-                ! For the given term, seed its appropriate derivative
-                !
-                set_deriv = (ieqn - 1)*mesh(idomain_l)%elems(ielement_l)%nterms_s + iterm
-                qdiff(iterm)%xp_ad_(set_deriv) = 1.0_rk
+                set_deriv = (ieqn - 1)*mesh(idom)%elems(ielem)%nterms_s + iterm
+                qdiff(iterm)%xp_ad_(set_deriv) = ONE
             end do
-
-
-            !
-            ! Interpolate solution to GQ nodes via matrix-vector multiplication
-            !
-            var_gq = matmul(mesh(idomain_l)%elems(ielement_l)%gq%vol%val,qdiff)
-
         else
-            !
-            ! If the solution variable derivatives dont need initialized
-            ! then just use the q(ielem) values and derivatives get
-            ! initialized to zero
-            !
-            var_gq = matmul(mesh(idomain_l)%elems(ielement_l)%gq%vol%val,q%dom(idomain_l)%vecs(ielement_l)%getvar(ieqn))
+            ! Not differentiating element, set all derivatives to ZERO
+            do iterm = 1,size(qdiff)
+                qdiff(iterm)%xp_ad_ = ZERO
+            end do
         end if
 
 
-    end subroutine interpolate_element_autodiff
-    !***********************************************************************************************************
+
+        !
+        ! Select interpolation type
+        !
+        select case (interpolation_type)
+            case('value')
+                var_gq = matmul(mesh(idom)%elems(ielem)%gq%vol%val,qdiff)
+
+            case('ddx')
+                var_gq = matmul(mesh(idom)%elems(ielem)%ddx,qdiff)
+
+            case('ddy')
+                var_gq = matmul(mesh(idom)%elems(ielem)%ddy,qdiff)
+
+            case('ddz')
+                var_gq = matmul(mesh(idom)%elems(ielem)%ddz,qdiff)
+
+            case default
+                call chidg_signal(FATAL,"interpolate_element_autodiff: invalid interpolation_type. Valid entries are 'value', 'ddx', 'ddy', 'ddz'.")
+        end select
+
+
+        end associate
+
+    end function interpolate_element_autodiff
+    !********************************************************************************************************
 
 
 
@@ -180,59 +169,40 @@ contains
     !!  @author Nathan A. Wukie
     !!  @date   2/1/2016
     !!
-    !!  @param[in]      mesh        Array of mesh instances.
-    !!  @param[in]      face        Face info, such as indices for locating the face in the mesh.
-    !!  @param[in]      q           Solution vector
-    !!  @param[in]      ieqn        Index of the equation variable being interpolated
-    !!  @param[inout]   var_gq      Array of auto-diff values of the equation evaluated at gq points that is passed back
-    !!  @param[in]      source      ME/NEIGHBOR indicating which element to interpolate from
+    !!  @param[in]      mesh                    Array of mesh instances.
+    !!  @param[in]      face                    Face info, such as indices for locating the face in the mesh.
+    !!  @param[in]      q                       Solution vector
+    !!  @param[in]      ieqn                    Index of the equation variable being interpolated
+    !!  @param[inout]   var_gq                  Array of auto-diff values of the equation evaluated at gq points that is passed back
+    !!  @param[in]      interpolation_type      Interpolate 'value', 'ddx', 'ddy', 'ddz'
+    !!  @param[in]      interpolation_source    ME/NEIGHBOR indicating which element to interpolate from
     !!
     !-----------------------------------------------------------------------------------------------------------
-    subroutine interpolate_face_autodiff(mesh,face_info,fcn_info, q, ieqn, var_gq, interpolation_type, interpolation_source)
+    function interpolate_face_autodiff(mesh,sdata,face_info,fcn_info, ieqn, interpolation_type, interpolation_source) result(var_gq)
         type(mesh_t),           intent(in)              :: mesh(:)
+        type(solverdata_t),     intent(in)              :: sdata
         type(face_info_t),      intent(in)              :: face_info
         type(function_info_t),  intent(in)              :: fcn_info
-        type(chidgVector_t),    intent(in)              :: q
         integer(ik),            intent(in)              :: ieqn
-        type(AD_D),             intent(inout)           :: var_gq(:)
         character(len=*),       intent(in)              :: interpolation_type
         integer(ik),            intent(in)              :: interpolation_source
-
-        integer(ik)     :: idomain_l, ielement_l, iface
-        type(seed_t)    :: seed
 
         type(face_info_t)   :: iface_info
         type(recv_t)        :: recv_info
 
-        type(AD_D), allocatable  :: qdiff(:)
-        real(rk),   allocatable  :: interpolator(:,:)
+        type(AD_D)                      :: var_gq(mesh(face_info%idomain_l)%elems(face_info%ielement_l)%gq%face%nnodes)
+        type(AD_D),         allocatable :: qdiff(:)
+        real(rk),           allocatable :: interpolator(:,:)
+        character(len=:),   allocatable :: interpolation_style
 
-        integer(ik) :: nderiv, set_deriv, iterm, igq, nterms_s, ierr, neqns_seed, nterms_s_seed, irow
-        integer(ik) :: ndonors, idonor, donor_proc
-        integer(ik) :: ChiID
-        character(len=:), allocatable   :: interpolation_style
-        logical     :: linearize_me         
-        logical     :: chimera_interpolation
-        logical     :: conforming_interpolation
-        logical     :: parallel_interpolation
-        logical     :: parallel_seed
+        integer(ik) :: nderiv, set_deriv, iterm, igq, nterms_s, ierr
+        logical     :: differentiate_me, conforming_interpolation, chimera_interpolation, parallel_interpolation
 
 
         ! Chimera data
-        !logical                     :: mask(size(var_gq))    ! node mask for Chimera quadrature points
-        logical, allocatable        :: mask(:)          ! node mask for Chimera quadrature points
-        type(AD_D),  allocatable    :: var_gq_chimera(:)
-        integer(ik)                 :: inode
-
-
-!        mask = .false.
-
-
-
-        idomain_l  = face_info%idomain_l
-        ielement_l = face_info%ielement_l
-        iface      = face_info%iface
-        seed       = fcn_info%seed
+        integer(ik)                 :: ndonors, idonor
+        logical,    allocatable     :: mask(:)          ! node mask for distributing Chimera quadrature points
+        type(AD_D), allocatable     :: var_gq_chimera(:)
 
 
         !
@@ -242,7 +212,7 @@ contains
 
 
         !
-        ! Get interpolation style. Conforming/Chimera
+        ! Get interpolation style. Conforming or Chimera
         !
         interpolation_style = get_face_interpolation_style(mesh,face_info,interpolation_source)
         conforming_interpolation = (interpolation_style == 'conforming')
@@ -252,16 +222,7 @@ contains
         !
         ! Get number of derivatives to initialize for automatic differentiation
         !
-        nderiv = get_face_interpolation_nderiv(mesh,q,fcn_info)
-
-
-        !
-        ! Allocate the derivative array for each autodiff variable
-        ! MIGHT NOT NEED THIS IF IT GETS AUTOMATICALLY ALLOCATED ON ASSIGNMENT -- TEST
-        !
-        do igq = 1,size(var_gq)
-            allocate(var_gq(igq)%xp_ad_(nderiv))
-        end do
+        nderiv = get_interpolation_nderiv(mesh,sdata,fcn_info)
 
 
         !
@@ -269,170 +230,91 @@ contains
         !
         do idonor = 1,ndonors
 
-            !recv_info = recv_t(0,0,0)
-
             !
             ! Get face info for face being interpolated to(ME, NEIGHBOR), interpolation matrix, and recv data for parallel access
             !
             iface_info   = get_face_interpolation_info(        mesh,face_info,interpolation_source,idonor)
-            interpolator = get_face_interpolation_interpolator(mesh,face_info,interpolation_source,idonor,interpolation_type,iface_info)
             mask         = get_face_interpolation_mask(        mesh,face_info,interpolation_source,idonor)
             recv_info    = get_face_interpolation_comm(        mesh,face_info,interpolation_source,idonor)
+            interpolator = get_face_interpolation_interpolator(mesh,face_info,interpolation_source,idonor,interpolation_type,iface_info)
 
             parallel_interpolation = (recv_info%comm /= 0)
+
+
+            !
+            ! Allocate AD array to store a copy of the solution which starts the differentiation
+            !
+            if (parallel_interpolation) then
+                nterms_s = sdata%q%recv%comm(recv_info%comm)%dom(recv_info%domain)%vecs(recv_info%element)%nterms()
+            else
+                nterms_s = mesh(iface_info%idomain_l)%elems(iface_info%ielement_l)%nterms_s
+            end if
+
+
+            !
+            ! Allocate solution and derivative arrays for temporary solution variable
+            !
+            if ( allocated(qdiff) ) deallocate(qdiff)
+            allocate(qdiff(nterms_s), stat=ierr)
+            if (ierr /= 0) call AllocationError
+
+            do iterm = 1,nterms_s
+                qdiff(iterm) = AD_D(nderiv)
+            end do
+
+
+            !
+            ! Copy the solution variables from 'q' to 'qdiff'
+            !
+            if (parallel_interpolation) then
+                qdiff = sdata%q%recv%comm(recv_info%comm)%dom(recv_info%domain)%vecs(recv_info%element)%getvar(ieqn)
+            else
+                qdiff = sdata%q%dom(iface_info%idomain_l)%vecs(iface_info%ielement_l)%getvar(ieqn)
+            end if
 
 
             !
             ! If the current element is being differentiated (ielem == ielem_seed)
             ! then copy the solution modes to local AD variable and seed derivatives
             !
-            linearize_me = ( (iface_info%idomain_g == seed%idomain_g) .and. (iface_info%ielement_g == seed%ielement_g) )
+            differentiate_me = ( (iface_info%idomain_g  == fcn_info%seed%idomain_g ) .and. &
+                                 (iface_info%ielement_g == fcn_info%seed%ielement_g) )
 
-
-            if ( linearize_me ) then
-
-
-                !
-                ! Allocate AD array to store a copy of the solution which starts the differentiation
-                !
-                if (parallel_interpolation) then
-                    nterms_s = q%recv%comm(recv_info%comm)%dom(recv_info%domain)%vecs(recv_info%element)%nterms()
-                else
-                    nterms_s = mesh(iface_info%idomain_l)%elems(iface_info%ielement_l)%nterms_s
-                end if
-
-                if ( allocated(qdiff) ) deallocate(qdiff)
-                allocate(qdiff(nterms_s), stat=ierr)
-                if (ierr /= 0) call AllocationError
-
-
-                !
-                ! Allocate derivative arrays for temporary solution variable
-                !
-                do iterm = 1,nterms_s
-                    allocate(qdiff(iterm)%xp_ad_(nderiv))
-                end do
-
-
-                !
-                ! Copy the solution variables from 'q' to 'qdiff'
-                !
-                if (parallel_interpolation) then
-                    qdiff = q%recv%comm(recv_info%comm)%dom(recv_info%domain)%vecs(recv_info%element)%getvar(ieqn)
-                else
-                    qdiff = q%dom(iface_info%idomain_l)%vecs(iface_info%ielement_l)%getvar(ieqn)
-                end if
-
-
-
-                !
-                ! Loop through the terms in qdiff
-                !
+            if ( differentiate_me ) then
+                ! Loop through the terms in qdiff, seed appropriate derivatives to ONE
                 do iterm = 1,size(qdiff)
                     ! For the given term, seed its appropriate derivative
                     set_deriv = (ieqn - 1)*nterms_s + iterm
                     qdiff(iterm)%xp_ad_(set_deriv) = ONE
                 end do
 
-
-
-!                call compute_face_interpolation_autodiff(qdiff
-
-                !
-                ! Interpolate solution to GQ nodes via matrix-vector multiplication
-                !
-                if ( conforming_interpolation ) then
-                    var_gq = matmul(interpolator,  qdiff)
-
-
-
-
-
-                elseif ( chimera_interpolation ) then
-
-                    !
-                    ! Allocate var_gq_chimera size to conform with interpolator
-                    !
-                    if (allocated(var_gq_chimera)) deallocate(var_gq_chimera)
-                    allocate(var_gq_chimera(size(interpolator,1)))
-
-
-                    !
-                    ! Allocate the derivative array for each var_gq_chimera element
-                    !
-                    do igq = 1,size(var_gq_chimera)
-                        allocate(var_gq_chimera(igq)%xp_ad_(nderiv))
-                    end do
-
-                    linearize_me = ( (iface_info%idomain_g == seed%idomain_g) .and. (iface_info%ielement_g == seed%ielement_g) )
-
-                    !
-                    ! Perform interpolation
-                    !
-                    var_gq_chimera = matmul(interpolator,  qdiff)
-
-                    !
-                    ! Scatter chimera nodes to appropriate location in var_gq
-                    !
-                    var_gq = unpack(var_gq_chimera,mask,var_gq)
-
-                else
-                    call chidg_signal(FATAL,"interpolate_face: face interpolation type error")
-                end if
-
             else
-
-
-!                call compute_face_interpolation_standard(
-                !
-                ! If the solution variable derivatives dont need initialized
-                ! then just use the q(ielem) values and derivatives get
-                ! initialized to zero
-                !
-                if ( conforming_interpolation ) then
-                    if (parallel_interpolation) then
-                        var_gq = matmul(interpolator,  q%recv%comm(recv_info%comm)%dom(recv_info%domain)%vecs(recv_info%element)%getvar(ieqn))
-                    else
-                        var_gq = matmul(interpolator,  q%dom(iface_info%idomain_l)%vecs(iface_info%ielement_l)%getvar(ieqn))
-                    end if
-
-                elseif ( chimera_interpolation ) then
-
-                    !
-                    ! Allocate var_gq_chimera size to conform with interpolator
-                    !
-                    if (allocated(var_gq_chimera)) deallocate(var_gq_chimera)
-                    allocate(var_gq_chimera(size(interpolator,1)))
-
-
-                    !
-                    ! Allocate the derivative array for each var_gq_chimera element
-                    !
-                    do igq = 1,size(var_gq_chimera)
-                        allocate(var_gq_chimera(igq)%xp_ad_(nderiv))
-                    end do
-
-
-                    !
-                    ! Perform interpolation
-                    !
-                    if (parallel_interpolation) then
-                        var_gq_chimera = matmul(interpolator,  q%recv%comm(recv_info%comm)%dom(recv_info%domain)%vecs(recv_info%element)%getvar(ieqn))
-                    else
-                        var_gq_chimera = matmul(interpolator,  q%dom(iface_info%idomain_l)%vecs(iface_info%ielement_l)%getvar(ieqn))
-                    end if
-
-                    !
-                    ! Scatter chimera nodes to appropriate location in var_gq
-                    !
-                    var_gq = unpack(var_gq_chimera,mask,var_gq)
-
-                else
-                    call chidg_signal(FATAL,"interpolate_face: face interpolation type error")
-                end if
+                ! Loop through the terms in qdiff. Set all derivatives to ZERO
+                do iterm = 1,size(qdiff)
+                    qdiff(iterm)%xp_ad_ = ZERO
+                end do
 
             end if
 
+
+
+            !
+            ! Interpolate solution to GQ nodes via matrix-vector multiplication
+            !
+            if ( conforming_interpolation ) then
+                var_gq = matmul(interpolator,  qdiff)
+
+
+            elseif ( chimera_interpolation ) then
+                ! Perform interpolation
+                var_gq_chimera = matmul(interpolator,  qdiff)
+
+                ! Scatter chimera nodes to appropriate location in var_gq
+                var_gq = unpack(var_gq_chimera,mask,var_gq)
+
+            else
+                call chidg_signal(FATAL,"interpolate_face: face interpolation type error")
+            end if
 
 
 
@@ -440,7 +322,7 @@ contains
 
 
 
-    end subroutine interpolate_face_autodiff
+    end function interpolate_face_autodiff
     !*************************************************************************************************************
 
 
@@ -462,22 +344,35 @@ contains
     !!
     !!
     !-------------------------------------------------------------------------------------------------------------
-    subroutine interpolate_element_standard(mesh,q,idomain_l,ielement_l,ieqn,var_gq)
+    function interpolate_element_standard(mesh,sdata,idomain_l,ielement_l,ieqn,interpolation_type) result(var_gq)
         type(mesh_t),           intent(in)      :: mesh(:)
-        type(chidgVector_t),    intent(in)      :: q
+        type(solverdata_t),     intent(in)      :: sdata
         integer(ik),            intent(in)      :: idomain_l
         integer(ik),            intent(in)      :: ielement_l
         integer(ik),            intent(in)      :: ieqn
-        real(rk),               intent(inout)   :: var_gq(:)
+        character(len=*),       intent(in)      :: interpolation_type
+
+        real(rk),   dimension(mesh(idomain_l)%elems(ielement_l)%gq%vol%nnodes) :: var_gq
 
         !
         ! Use quadrature instance to compute variable at quadrature nodes.
         ! This takes the form of a matrix multiplication of the quadrature matrix
         ! with the array of modes for the given variable.
         !
-        var_gq = matmul(mesh(idomain_l)%elems(ielement_l)%gq%vol%val, q%dom(idomain_l)%vecs(ielement_l)%getvar(ieqn))
+        select case (interpolation_type)
+            case('value')
+                var_gq = matmul(mesh(idomain_l)%elems(ielement_l)%gq%vol%val, sdata%q%dom(idomain_l)%vecs(ielement_l)%getvar(ieqn))
+            case('ddx')
+                var_gq = matmul(mesh(idomain_l)%elems(ielement_l)%ddx, sdata%q%dom(idomain_l)%vecs(ielement_l)%getvar(ieqn))
+            case('ddy')
+                var_gq = matmul(mesh(idomain_l)%elems(ielement_l)%ddy, sdata%q%dom(idomain_l)%vecs(ielement_l)%getvar(ieqn))
+            case('ddz')
+                var_gq = matmul(mesh(idomain_l)%elems(ielement_l)%ddz, sdata%q%dom(idomain_l)%vecs(ielement_l)%getvar(ieqn))
+            case default
+                call chidg_signal(FATAL,"interpolate_element_standard: invalid interpolation_type. Options are 'value', 'ddx', 'ddy', 'ddz'.")
+        end select
 
-    end subroutine interpolate_element_standard
+    end function interpolate_element_standard
     !*************************************************************************************************************
 
 
@@ -499,23 +394,22 @@ contains
     !!
     !!
     !-------------------------------------------------------------------------------------------------------------
-    subroutine interpolate_face_standard(mesh,q,idomain_l,ielement_l,iface,ieqn,var_gq)
+    function interpolate_face_standard(mesh,sdata,idomain_l,ielement_l,iface,ieqn) result(var_gq)
         type(mesh_t),           intent(in)      :: mesh(:)
-        type(chidgVector_t),    intent(in)      :: q
+        type(solverdata_t),     intent(in)      :: sdata
         integer(ik),            intent(in)      :: idomain_l, ielement_l, iface, ieqn
-        real(rk),               intent(inout)   :: var_gq(:)
 
+        real(rk),   dimension(mesh(idomain_l)%elems(ielement_l)%gq%face%nnodes) :: var_gq
 
         !
         ! Use quadrature instance to compute variable at quadrature nodes.
         ! This takes the form of a matrix multiplication of the face quadrature matrix
         ! with the array of modes for the given variable
         !
-        var_gq = matmul(mesh(idomain_l)%faces(ielement_l,iface)%gq%face%val(:,:,iface), q%dom(idomain_l)%vecs(ielement_l)%getvar(ieqn))
+        var_gq = matmul(mesh(idomain_l)%faces(ielement_l,iface)%gq%face%val(:,:,iface), sdata%q%dom(idomain_l)%vecs(ielement_l)%getvar(ieqn))
 
 
-
-    end subroutine interpolate_face_standard
+    end function interpolate_face_standard
     !*************************************************************************************************************
 
 
@@ -767,146 +661,7 @@ contains
 
 
 
-
-!    !>  This routine returns data necessary to perform a face interpolation.
-!    !!
-!    !!  Given a face, interpolation type, and interpolation source, this routine returns
-!    !!      - a face_info_t of the face to be interpolated to
-!    !!      - an interpolation matrix
-!    !!      - receiver info to be used if the interpolation is remote
-!    !!
-!    !!  @author Nathan A. Wukie (AFRL)
-!    !!  @date   8/16/2016
-!    !!
-!    !!
-!    !------------------------------------------------------------------------------------------------------------------------------------
-!    subroutine get_face_interpolation_info(mesh,face_info,interpolation_type, interpolation_source, idonor, iface_info, interpolator, mask, recv_info)
-!        type(mesh_t),       intent(in)                  :: mesh(:)
-!        type(face_info_t),  intent(in)                  :: face_info
-!        character(len=*),   intent(in)                  :: interpolation_type
-!        integer(ik),        intent(in)                  :: interpolation_source
-!        integer(ik),        intent(in)                  :: idonor
-!        type(face_info_t),  intent(inout)               :: iface_info               !< This always gets set
-!        real(rk),           intent(inout), allocatable  :: interpolator(:,:)        !< This always gets set
-!        logical,            intent(inout)               :: mask(:)                  !< This gets set if CHIMERA interpolation
-!        type(recv_t),       intent(inout)               :: recv_info                !< This gets set if REMOTE interpolation
-!
-!
-!        integer(ik), allocatable    :: gq_node_indices(:)
-!        integer(ik)                 :: inode, ChiID, donor_proc
-!        logical                     :: conforming_interpolation, chimera_interpolation, parallel_interpolation
-!
-!
-!
-!
-!        associate( idom => face_info%idomain_l, ielem => face_info%ielement_l, iface => face_info%iface )
-!
-!        !
-!        ! Compute neighbor access indices
-!        !
-!        if ( interpolation_source == ME ) then
-!
-!            ! Interpolate from ME element
-!            iface_info%idomain_l  = face_info%idomain_l
-!            iface_info%ielement_l = face_info%ielement_l
-!            iface_info%idomain_g  = face_info%idomain_g
-!            iface_info%ielement_g = face_info%ielement_g
-!            iface_info%iface      = face_info%iface
-!
-!            ! Get interpolation matrix from quadrature instance
-!            interpolator = mesh(idom)%faces(ielem,iface)%gq%face%val(:,:,iface)
-!
-!
-!        elseif ( interpolation_source == NEIGHBOR ) then
-!
-!            chimera_interpolation    = ( mesh(idom)%faces(ielem,iface)%ftype == CHIMERA )
-!            conforming_interpolation = ( mesh(idom)%faces(ielem,iface)%ftype == INTERIOR )
-!
-!            !
-!            ! Interpolate from conforming NEIGHBOR element
-!            !
-!            if ( conforming_interpolation ) then
-!
-!                parallel_interpolation   = ( IRANK /= mesh(idom)%faces(ielem,iface)%ineighbor_proc )
-!
-!                if (parallel_interpolation) then
-!                    iface_info%idomain_g  = mesh(idom)%faces(ielem,iface)%ineighbor_domain_g  
-!                    iface_info%idomain_l  = mesh(idom)%faces(ielem,iface)%ineighbor_domain_l
-!                    iface_info%ielement_g = mesh(idom)%faces(ielem,iface)%ineighbor_element_g
-!                    iface_info%ielement_l = mesh(idom)%faces(ielem,iface)%ineighbor_element_l
-!                    iface_info%iface      = compute_neighbor_face(mesh,idom,ielem,iface,idonor)         ! THIS PROBABLY NEEDS IMPROVED
-!
-!                    recv_info%comm    = mesh(idom)%faces(ielem,iface)%recv_comm
-!                    recv_info%domain  = mesh(idom)%faces(ielem,iface)%recv_domain
-!                    recv_info%element = mesh(idom)%faces(ielem,iface)%recv_element
-!
-!                    ! Using iface_interp to get an interpolation for an opposite face. Assumes same order and eqns.
-!                    interpolator      = mesh(idom)%faces(ielem,iface)%gq%face%val(:,:,iface_info%iface)    ! THIS PROBABLY NEEDS IMPROVED
-!
-!                else
-!                    iface_info%idomain_g  = compute_neighbor_domain_g( mesh,idom,ielem,iface,idonor)
-!                    iface_info%idomain_l  = compute_neighbor_domain_l( mesh,idom,ielem,iface,idonor)
-!                    iface_info%ielement_g = compute_neighbor_element_g(mesh,idom,ielem,iface,idonor)
-!                    iface_info%ielement_l = compute_neighbor_element_l(mesh,idom,ielem,iface,idonor)
-!                    iface_info%iface      = compute_neighbor_face(     mesh,idom,ielem,iface,idonor)
-!
-!                    interpolator   = mesh(iface_info%idomain_l)%faces(iface_info%ielement_l,iface_info%iface)%gq%face%val(:,:,iface_info%iface)
-!                end if
-!
-!            !
-!            ! Interpolate from CHIMERA donor element
-!            !
-!            elseif ( chimera_interpolation ) then
-!                ChiID = mesh(idom)%faces(ielem,iface)%ChiID
-!
-!                iface_info%idomain_g  = mesh(idom)%chimera%recv%data(ChiID)%donor_domain_g%at(idonor)
-!                iface_info%idomain_l  = mesh(idom)%chimera%recv%data(ChiID)%donor_domain_l%at(idonor)
-!                iface_info%ielement_g = mesh(idom)%chimera%recv%data(ChiID)%donor_element_g%at(idonor)
-!                iface_info%ielement_l = mesh(idom)%chimera%recv%data(ChiID)%donor_element_l%at(idonor)
-!                donor_proc            = mesh(idom)%chimera%recv%data(ChiID)%donor_proc%at(idonor)
-!
-!                ! Detect parallel interpolation
-!                parallel_interpolation = (IRANK /= donor_proc)
-!                if (parallel_interpolation) then
-!                     recv_info%comm    = mesh(idom)%chimera%recv%data(ChiID)%donor_recv_comm%at(idonor)
-!                     recv_info%domain  = mesh(idom)%chimera%recv%data(ChiID)%donor_recv_domain%at(idonor)
-!                     recv_info%element = mesh(idom)%chimera%recv%data(ChiID)%donor_recv_element%at(idonor)
-!                end if
-!
-!
-!                interpolator    = mesh(idom)%chimera%recv%data(ChiID)%donor_interpolator%at(idonor)
-!                gq_node_indices = mesh(idom)%chimera%recv%data(ChiID)%donor_gq_indices(idonor)%data()
-!
-!                ! Create mask over full GQ vector of only those nodes that are filled by the current element
-!                do inode = 1,size(gq_node_indices)
-!                    mask(gq_node_indices(inode)) = .true.
-!                end do
-!
-!            else
-!                call chidg_signal(FATAL,"get_face_interpolation_info: neighbor conforming_interpolation nor chimera_interpolation were detected")
-!            end if
-!
-!        else
-!            call chidg_signal(FATAL,"get_face_interpolation_info: invalid source. ME or NEIGHBOR.")
-!        end if
-!
-!
-!
-!        end associate
-!
-!
-!    end subroutine get_face_interpolation_info
-!    !**********************************************************************************************************
-
-
-
-
-
-
-
-
-
-    !>  This routine returns face_info data that defines the common face.
+    !>  This routine returns face_info data for the face being interpolated to.
     !!
     !!  Given a face, interpolation type, and interpolation source, this routine returns
     !!      - a face_info_t of the face to be interpolated to
@@ -948,30 +703,15 @@ contains
             chimera_interpolation    = ( mesh(idom)%faces(ielem,iface)%ftype == CHIMERA )
             conforming_interpolation = ( mesh(idom)%faces(ielem,iface)%ftype == INTERIOR )
 
-            !
             ! Interpolate from conforming NEIGHBOR element
-            !
             if ( conforming_interpolation ) then
+                iface_info%idomain_g  = mesh(idom)%faces(ielem,iface)%ineighbor_domain_g  
+                iface_info%idomain_l  = mesh(idom)%faces(ielem,iface)%ineighbor_domain_l
+                iface_info%ielement_g = mesh(idom)%faces(ielem,iface)%ineighbor_element_g
+                iface_info%ielement_l = mesh(idom)%faces(ielem,iface)%ineighbor_element_l
+                iface_info%iface      = compute_neighbor_face(mesh,idom,ielem,iface,idonor)         ! THIS PROBABLY NEEDS IMPROVED
 
-!                parallel_interpolation   = ( IRANK /= mesh(idom)%faces(ielem,iface)%ineighbor_proc )
-!
-!                if (parallel_interpolation) then
-                    iface_info%idomain_g  = mesh(idom)%faces(ielem,iface)%ineighbor_domain_g  
-                    iface_info%idomain_l  = mesh(idom)%faces(ielem,iface)%ineighbor_domain_l
-                    iface_info%ielement_g = mesh(idom)%faces(ielem,iface)%ineighbor_element_g
-                    iface_info%ielement_l = mesh(idom)%faces(ielem,iface)%ineighbor_element_l
-                    iface_info%iface      = compute_neighbor_face(mesh,idom,ielem,iface,idonor)         ! THIS PROBABLY NEEDS IMPROVED
-!                else
-!                    iface_info%idomain_g  = compute_neighbor_domain_g( mesh,idom,ielem,iface,idonor)
-!                    iface_info%idomain_l  = compute_neighbor_domain_l( mesh,idom,ielem,iface,idonor)
-!                    iface_info%ielement_g = compute_neighbor_element_g(mesh,idom,ielem,iface,idonor)
-!                    iface_info%ielement_l = compute_neighbor_element_l(mesh,idom,ielem,iface,idonor)
-!                    iface_info%iface      = compute_neighbor_face(     mesh,idom,ielem,iface,idonor)
-!                end if
-
-            !
             ! Interpolate from CHIMERA donor element
-            !
             elseif ( chimera_interpolation ) then
                 ChiID = mesh(idom)%faces(ielem,iface)%ChiID
                 iface_info%idomain_g  = mesh(idom)%chimera%recv%data(ChiID)%donor_domain_g%at(idonor)
@@ -1004,7 +744,14 @@ contains
 
 
 
-    !>  This r
+    !>  This returns an interpolation matrix that is used to actually perform the interpolation from a modal expansion to 
+    !!  a set of quadrature nodes.
+    !!
+    !!  The interpolation from a modal expansion to a set of quadrature nodes takes the form of a matrix-vector multiplication,
+    !!  where the vector entries are modal coefficients of the polynomial expansion, and the matrix contains entries that 
+    !!  evaluate the modes of the polynomial expansion at the quadrature nodes. This routine returns the interpolation matrix.
+    !!  Additionally, an interpolation could be computing the actual value of the expansion at the nodes('value'), or it could be
+    !!  computing derivatives ('ddx', 'ddy', 'ddz'). The interpolation_type specifies what kind of interpolation to perform.
     !!
     !!  Given a face, interpolation type, and interpolation source, this routine returns
     !!      - a face_info_t of the face to be interpolated to
@@ -1036,7 +783,18 @@ contains
         ! Compute neighbor access indices
         !
         if ( interpolation_source == ME ) then
-            interpolator = mesh(idom)%faces(ielem,iface)%gq%face%val(:,:,iface)
+            select case(interpolation_type)
+                case('value')
+                    interpolator = mesh(idom)%faces(ielem,iface)%gq%face%val(:,:,iface)
+                case('ddx')
+                    interpolator = mesh(idom)%faces(ielem,iface)%ddx
+                case('ddy')
+                    interpolator = mesh(idom)%faces(ielem,iface)%ddy
+                case('ddz')
+                    interpolator = mesh(idom)%faces(ielem,iface)%ddz
+                case default
+                    call chidg_signal(FATAL,"get_face_interpolation_interpolator: Invalid interpolation_type. Options are 'value', 'ddx', 'ddy', 'ddz'.")
+            end select
 
 
 
@@ -1053,16 +811,55 @@ contains
 
                 ! If parallel use iface_interp to get an interpolation for an opposite face. Assumes same order and eqns.
                 if (parallel_interpolation) then
-                    interpolator = mesh(idom)%faces(ielem,iface)%gq%face%val(:,:,donor_face%iface)    ! THIS PROBABLY NEEDS IMPROVED
+                    select case(interpolation_type)
+                        case('value')
+                            interpolator = mesh(idom)%faces(ielem,iface)%gq%face%val(:,:,donor_face%iface)    ! THIS PROBABLY NEEDS IMPROVED
+                        case('ddx')
+!                            interpolator = mesh(idom)%faces(ielem,iface)%ddx
+                            call chidg_signal(FATAL,"get_face_interpolation_interpolator: Parallel 'ddx' not yet implemented.")
+                        case('ddy')
+!                            interpolator = mesh(idom)%faces(ielem,iface)%ddy
+                            call chidg_signal(FATAL,"get_face_interpolation_interpolator: Parallel 'ddx' not yet implemented.")
+                        case('ddz')
+!                            interpolator = mesh(idom)%faces(ielem,iface)%ddz
+                            call chidg_signal(FATAL,"get_face_interpolation_interpolator: Parallel 'ddx' not yet implemented.")
+                        case default
+                            call chidg_signal(FATAL,"get_face_interpolation_interpolator: Invalid interpolation_type. Options are 'value', 'ddx', 'ddy', 'ddz'.")
+                    end select
                 else
-                    interpolator = mesh(donor_face%idomain_l)%faces(donor_face%ielement_l,donor_face%iface)%gq%face%val(:,:,donor_face%iface)
+                    select case(interpolation_type)
+                        case('value')
+                            interpolator = mesh(donor_face%idomain_l)%faces(donor_face%ielement_l,donor_face%iface)%gq%face%val(:,:,donor_face%iface)
+                        case('ddx')
+                            interpolator = mesh(donor_face%idomain_l)%faces(donor_face%ielement_l,donor_face%iface)%ddx
+                        case('ddy')
+                            interpolator = mesh(donor_face%idomain_l)%faces(donor_face%ielement_l,donor_face%iface)%ddy
+                        case('ddz')
+                            interpolator = mesh(donor_face%idomain_l)%faces(donor_face%ielement_l,donor_face%iface)%ddz
+                        case default
+                            call chidg_signal(FATAL,"get_face_interpolation_interpolator: Invalid interpolation_type. Options are 'value', 'ddx', 'ddy', 'ddz'.")
+                    end select
                 end if
 
 
             ! Interpolate from CHIMERA donor element
             elseif ( chimera_interpolation ) then
                 ChiID = mesh(idom)%faces(ielem,iface)%ChiID
-                interpolator = mesh(idom)%chimera%recv%data(ChiID)%donor_interpolator%at(idonor)
+                    select case(interpolation_type)
+                        case('value')
+                            interpolator = mesh(idom)%chimera%recv%data(ChiID)%donor_interpolator%at(idonor)
+                        case('ddx')
+        !                    interpolator = mesh(idom)%faces(ielem,iface)%ddx
+                            call chidg_signal(FATAL,"get_face_interpolation_interpolator: Chimera 'ddx' not yet implemented.")
+                        case('ddy')
+        !                    interpolator = mesh(idom)%faces(ielem,iface)%ddy
+                            call chidg_signal(FATAL,"get_face_interpolation_interpolator: Chimera 'ddy' not yet implemented.")
+                        case('ddz')
+        !                    interpolator = mesh(idom)%faces(ielem,iface)%ddz
+                            call chidg_signal(FATAL,"get_face_interpolation_interpolator: Chimera 'ddz' not yet implemented.")
+                        case default
+                            call chidg_signal(FATAL,"get_face_interpolation_interpolator: Invalid interpolation_type. Options are 'value', 'ddx', 'ddy', 'ddz'.")
+                    end select
 
             else
                 call chidg_signal(FATAL,"get_face_interpolation_interpolator: neighbor conforming_interpolation nor chimera_interpolation were detected")
@@ -1071,7 +868,6 @@ contains
 
 
         else
-
             call chidg_signal(FATAL,"get_face_interpolation_interpolator: invalid source. ME or NEIGHBOR.")
         end if
 
@@ -1098,12 +894,12 @@ contains
 
 
 
-    !>  This routine returns data necessary to perform a face interpolation.
+    !>  This routine returns a logical mask that indicates which nodes in the full quadrature node set
+    !!  are to be filled by a chimera donor. This defines the scatter pattern for the nodes returned by 
+    !!  a chimera donor to the nodes in the full node set.
     !!
-    !!  Given a face, interpolation type, and interpolation source, this routine returns
-    !!      - a face_info_t of the face to be interpolated to
-    !!      - an interpolation matrix
-    !!      - receiver info to be used if the interpolation is remote
+    !!  If the interpolation is not a CHIMERA interpolation, then the mask is simply allocated
+    !!  to length one and has no meaning.
     !!
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   8/16/2016
@@ -1175,12 +971,14 @@ contains
 
 
 
-    !>  This routine returns data necessary to perform a face interpolation.
+    !>  This routine returns a recv_t communication structure indicating whether the interpolation donor is LOCAL
+    !!  or REMOTE. 
     !!
-    !!  Given a face, interpolation type, and interpolation source, this routine returns
-    !!      - a face_info_t of the face to be interpolated to
-    !!      - an interpolation matrix
-    !!      - receiver info to be used if the interpolation is remote
+    !!  The recv_t contains recv_comm, recv_domain, and recv_element components. If these are set, then the interpolation
+    !!  is remote and these indices specify where in the 'recv' container to find the solution modes for the interpolation.
+    !!  If these indices are not set, then the interpolation is LOCAL and the main interpolation routine can use the 
+    !!  local element indices to locate the solution modes.
+    !!  
     !!
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   8/16/2016
@@ -1214,9 +1012,7 @@ contains
             conforming_interpolation = ( mesh(idom)%faces(ielem,iface)%ftype == INTERIOR )
 
 
-            !
             ! Interpolate from conforming NEIGHBOR element
-            !
             if ( conforming_interpolation ) then
 
                 parallel_interpolation   = ( IRANK /= mesh(idom)%faces(ielem,iface)%ineighbor_proc )
@@ -1229,9 +1025,7 @@ contains
 
 
 
-            !
             ! Interpolate from CHIMERA donor element
-            !
             elseif ( chimera_interpolation ) then
                 ChiID = mesh(idom)%faces(ielem,iface)%ChiID
                 donor_proc = mesh(idom)%chimera%recv%data(ChiID)%donor_proc%at(idonor)
@@ -1279,12 +1073,10 @@ contains
 
     !>  Return the number of elements contributing to the interpolation. 
     !!
-    !!  For standard conforming interpolations this will be ==1. For Chimera interpolations, this could be
-    !!  greater >=1.
+    !!  For standard conforming interpolations this will be ==1. For Chimera interpolations, this could be >=1.
     !!
     !!  @author Nathan A. Wukie(AFRL)
     !!  @date   8/17/2016
-    !!
     !!
     !!
     !----------------------------------------------------------------------------------------------------------
@@ -1298,12 +1090,14 @@ contains
 
         associate( idom => face_info%idomain_l, ielem => face_info%ielement_l, iface => face_info%iface )
 
+
         !
         ! Test if interpolating from local element
         !
         if ( interpolation_source == ME ) then
 
             ndonors = 1
+
 
         !
         ! Test if interpolating from neighbor element(s)
@@ -1313,25 +1107,22 @@ contains
             chimera_interpolation    = ( mesh(idom)%faces(ielem,iface)%ftype == CHIMERA )
             conforming_interpolation = ( mesh(idom)%faces(ielem,iface)%ftype == INTERIOR )
 
-            !
-            ! Test for standard conforming interpolation from neighbor
-            !
-            if ( conforming_interpolation ) then
 
+            ! Test for standard conforming interpolation from neighbor
+            if ( conforming_interpolation ) then
                 ndonors = 1
 
-            !
-            ! Test for chimera interpolation from neighbor
-            !
-            elseif ( chimera_interpolation ) then
 
+            ! Test for chimera interpolation from neighbor
+            elseif ( chimera_interpolation ) then
                 ChiID   = mesh(idom)%faces(ielem,iface)%ChiID
                 ndonors = mesh(idom)%chimera%recv%data(ChiID)%ndonors()
+
+
 
             else
                 call chidg_signal(FATAL,"get_face_interpolation_ndonors: invalid value for 'face%ftype'")
             end if
-
 
         else
             call chidg_signal(FATAL,"get_face_interpolation_ndonors: invalid value for incoming parameter 'source'")
@@ -1350,8 +1141,8 @@ contains
     !>  Return the style of the interpolation.
     !!
     !!  Interpolation styles include:
-    !!      - conforming interpolation: 'conforming'
-    !!      - chimera interpolation:    'chimera'
+    !!      - 'conforming'    conforming interpolation
+    !!      - 'chimera'       chimera interpolation
     !!
     !!  @author Nathan A. Wukie(AFRL)
     !!  @date   8/17/2016
@@ -1405,12 +1196,10 @@ contains
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   8/17/2016
     !!
-    !!
-    !!
     !--------------------------------------------------------------------------------------------------------
-    function get_face_interpolation_nderiv(mesh,q,function_info) result(nderiv)
+    function get_interpolation_nderiv(mesh,sdata,function_info) result(nderiv)
         type(mesh_t),           intent(in)  :: mesh(:)
-        type(chidgVector_t),    intent(in)  :: q
+        type(solverdata_t),     intent(in)  :: sdata
         type(function_info_t),  intent(in)  :: function_info
 
         integer(ik) :: nderiv, neqns_seed, nterms_s_seed
@@ -1430,8 +1219,8 @@ contains
             !
             parallel_seed = (function_info%seed%iproc /= IRANK)
             if ( parallel_seed ) then
-                neqns_seed    = q%recv%comm(function_info%seed%recv_comm)%dom(function_info%seed%recv_domain)%vecs(function_info%seed%recv_element)%nvars()
-                nterms_s_seed = q%recv%comm(function_info%seed%recv_comm)%dom(function_info%seed%recv_domain)%vecs(function_info%seed%recv_element)%nterms()
+                neqns_seed    = sdata%q%recv%comm(function_info%seed%recv_comm)%dom(function_info%seed%recv_domain)%vecs(function_info%seed%recv_element)%nvars()
+                nterms_s_seed = sdata%q%recv%comm(function_info%seed%recv_comm)%dom(function_info%seed%recv_domain)%vecs(function_info%seed%recv_element)%nterms()
             else
                 neqns_seed    = mesh(function_info%seed%idomain_l)%elems(function_info%seed%ielement_l)%neqns
                 nterms_s_seed = mesh(function_info%seed%idomain_l)%elems(function_info%seed%ielement_l)%nterms_s
@@ -1444,7 +1233,7 @@ contains
         end if
 
 
-    end function get_face_interpolation_nderiv
+    end function get_interpolation_nderiv
     !********************************************************************************************************
 
 

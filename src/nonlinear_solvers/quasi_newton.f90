@@ -76,7 +76,6 @@ contains
 
 
 
-
         wcount = 1
         associate ( q => data%sdata%q, dq => data%sdata%dq, rhs => data%sdata%rhs, lhs => data%sdata%lhs)
 

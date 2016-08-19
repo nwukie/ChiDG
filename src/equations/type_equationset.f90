@@ -607,12 +607,12 @@ contains
     !!
     !!
     !--------------------------------------------------------------------------------------------------------------
-    subroutine compute_boundary_advective_flux(self,mesh,sdata,face_info,iblk)
+    subroutine compute_boundary_advective_flux(self,mesh,sdata,face_info,idiff)
         class(equationset_t),   intent(inout)   :: self
         type(mesh_t),           intent(in)      :: mesh(:)
         type(solverdata_t),     intent(inout)   :: sdata
         type(face_info_t),      intent(inout)   :: face_info
-        integer(ik),            intent(in)      :: iblk
+        integer(ik),            intent(in)      :: idiff
 
         integer(ik)             :: nfcn, ifcn, idepend, ndepend
         type(function_info_t)   :: function_info
@@ -623,7 +623,7 @@ contains
         !
         ! Get number of elements we are linearizing with respect to
         !
-        ndepend = self%get_boundary_ndependent_elements(mesh,face_info,iblk)
+        ndepend = self%get_boundary_ndependent_elements(mesh,face_info,idiff)
 
 
 
@@ -633,7 +633,7 @@ contains
 
                 function_info%type   = BOUNDARY_ADVECTIVE_FLUX
                 function_info%ifcn   = ifcn
-                function_info%iblk   = iblk
+                function_info%idiff   = idiff
 
                 compute_function     = sdata%function_status%compute_function(   face_info, function_info )
                 linearize_function   = sdata%function_status%linearize_function( face_info, function_info )
@@ -646,7 +646,7 @@ contains
                     !   - For Chimera faces ndepend is potentially > 1.
                     !
                     do idepend = 1,ndepend
-                        function_info%seed    = face_compute_seed(mesh,idom,ielem,iface,idepend,iblk)
+                        function_info%seed    = face_compute_seed(mesh,idom,ielem,iface,idepend,idiff)
                         function_info%idepend = idepend
 
                         call self%boundary_advective_flux(ifcn)%flux%compute(mesh,sdata,prop,face_info,function_info)
@@ -678,12 +678,12 @@ contains
     !!
     !!
     !--------------------------------------------------------------------------------------------------------------
-    subroutine compute_boundary_diffusive_flux(self,mesh,sdata,face_info,iblk)
+    subroutine compute_boundary_diffusive_flux(self,mesh,sdata,face_info,idiff)
         class(equationset_t),   intent(inout)   :: self
         type(mesh_t),           intent(in)      :: mesh(:)
         type(solverdata_t),     intent(inout)   :: sdata
         type(face_info_t),      intent(inout)   :: face_info
-        integer(ik),            intent(in)      :: iblk
+        integer(ik),            intent(in)      :: idiff
 
         integer(ik)             :: nfcn, ifcn, idepend, ndepend
         type(function_info_t)   :: function_info
@@ -695,7 +695,7 @@ contains
         !
         ! Get number of elements we are linearizing with respect to
         !
-        ndepend = self%get_boundary_ndependent_elements(mesh,face_info,iblk)
+        ndepend = self%get_boundary_ndependent_elements(mesh,face_info,idiff)
 
 
         if (allocated(self%boundary_diffusive_flux)) then
@@ -704,7 +704,7 @@ contains
 
                 function_info%type   = BOUNDARY_DIFFUSIVE_FLUX
                 function_info%ifcn   = ifcn
-                function_info%iblk   = iblk
+                function_info%idiff   = idiff
 
                 compute_function     = sdata%function_status%compute_function(   face_info, function_info )
                 linearize_function   = sdata%function_status%linearize_function( face_info, function_info )
@@ -717,7 +717,7 @@ contains
                     !   - For Chimera faces ndepend is potentially > 1.
                     !
                     do idepend = 1,ndepend
-                        function_info%seed    = face_compute_seed(mesh,idom,ielem,iface,idepend,iblk)
+                        function_info%seed    = face_compute_seed(mesh,idom,ielem,iface,idepend,idiff)
                         function_info%idepend = idepend
 
                         call self%boundary_diffusive_flux(ifcn)%flux%compute(mesh,sdata,prop,face_info,function_info)
@@ -753,12 +753,12 @@ contains
     !!
     !!
     !-----------------------------------------------------------------------------------------------------------------
-    subroutine compute_volume_advective_flux(self,mesh,sdata,elem_info,iblk)
+    subroutine compute_volume_advective_flux(self,mesh,sdata,elem_info,idiff)
         class(equationset_t),       intent(inout)   :: self
         type(mesh_t),               intent(in)      :: mesh(:)
         type(solverdata_t),         intent(inout)   :: sdata
         type(element_info_t),       intent(inout)   :: elem_info
-        integer(ik),                intent(in)      :: iblk
+        integer(ik),                intent(in)      :: idiff
 
         integer(ik)             :: nfcn, ifcn, idepend
         type(function_info_t)   :: function_info
@@ -773,16 +773,16 @@ contains
         idepend = 1
 
 
-        compute_flux = ( (iblk == DIAG) .and. allocated(self%volume_advective_flux) )
+        compute_flux = ( (idiff == DIAG) .and. allocated(self%volume_advective_flux) )
         if (compute_flux) then
             nfcn = size(self%volume_advective_flux)
             do ifcn = 1,nfcn
 
                 function_info%type    = VOLUME_ADVECTIVE_FLUX
                 function_info%ifcn    = ifcn
-                function_info%iblk    = iblk
+                function_info%idiff   = idiff
                 function_info%idepend = idepend
-                function_info%seed    = element_compute_seed(mesh,idom,ielem,idepend,iblk)
+                function_info%seed    = element_compute_seed(mesh,idom,ielem,idepend,idiff)
 
                 call self%volume_advective_flux(ifcn)%flux%compute(mesh,sdata,prop,elem_info,function_info)
 
@@ -811,12 +811,12 @@ contains
     !!
     !!
     !-----------------------------------------------------------------------------------------------------------------
-    subroutine compute_volume_diffusive_flux(self,mesh,sdata,elem_info,iblk)
+    subroutine compute_volume_diffusive_flux(self,mesh,sdata,elem_info,idiff)
         class(equationset_t),       intent(inout)   :: self
         type(mesh_t),               intent(in)      :: mesh(:)
         type(solverdata_t),         intent(inout)   :: sdata
         type(element_info_t),       intent(inout)   :: elem_info
-        integer(ik),                intent(in)      :: iblk
+        integer(ik),                intent(in)      :: idiff
 
         integer(ik)             :: nfcn, ifcn, idepend, ndepend
         type(function_info_t)   :: function_info
@@ -828,7 +828,7 @@ contains
         !
         ! Get number of elements we are linearizing with respect to
         !
-        ndepend = self%get_volume_ndependent_elements(mesh,elem_info,iblk)
+        ndepend = self%get_volume_ndependent_elements(mesh,elem_info,idiff)
 
 
         if (allocated(self%volume_diffusive_flux)) then
@@ -844,9 +844,9 @@ contains
 
                     function_info%type    = VOLUME_DIFFUSIVE_FLUX
                     function_info%ifcn    = ifcn
-                    function_info%iblk    = iblk
+                    function_info%idiff    = idiff
                     function_info%idepend = idepend
-                    function_info%seed    = element_compute_seed(mesh,idom,ielem,idepend,iblk)
+                    function_info%seed    = element_compute_seed(mesh,idom,ielem,idepend,idiff)
 
                     call self%volume_diffusive_flux(ifcn)%flux%compute(mesh,sdata,prop, elem_info, function_info)
 
@@ -868,7 +868,7 @@ contains
 
 
 
-    !>  Return the number of elements that a boundary function depends on in the linearization direction 'iblk'.
+    !>  Return the number of elements that a boundary function depends on in the linearization direction 'idiff'.
     !!
     !!  Often, this may be just 1. Because a flux linearized wrt its owner element just has 1 dependent element; itself.
     !!  A flux linearized wrt its neighbor element has just 1 dependent element; it's neighbor. If however, a face
@@ -881,21 +881,21 @@ contains
     !!
     !!
     !----------------------------------------------------------------------------------------------------------------
-    function get_boundary_ndependent_elements(self,mesh,face_info,iblk) result(ndepend)
+    function get_boundary_ndependent_elements(self,mesh,face_info,idiff) result(ndepend)
         class(equationset_t),   intent(in)   :: self
         type(mesh_t),           intent(in)   :: mesh(:)
         type(face_info_t),      intent(in)   :: face_info
-        integer(ik),            intent(in)   :: iblk
+        integer(ik),            intent(in)   :: idiff
 
         integer(ik) :: ChiID, ndepend
         logical     :: depend_me, depend_neighbor, chimera_face
 
         associate( idom => face_info%idomain_l, ielem => face_info%ielement_l, iface => face_info%iface )
 
-        depend_me       = (iblk == DIAG)
-        depend_neighbor = (iblk == XI_MIN   .or. iblk == XI_MAX  .or. &
-                           iblk == ETA_MIN  .or. iblk == ETA_MAX .or. &
-                           iblk == ZETA_MIN .or. iblk == ZETA_MAX)
+        depend_me       = (idiff == DIAG)
+        depend_neighbor = (idiff == XI_MIN   .or. idiff == XI_MAX  .or. &
+                           idiff == ETA_MIN  .or. idiff == ETA_MAX .or. &
+                           idiff == ZETA_MIN .or. idiff == ZETA_MAX)
 
 
         if (depend_me) then
@@ -929,7 +929,7 @@ contains
 
 
 
-    !>  Return the number of elements that a volume function depends on in the linearization direction 'iblk'.
+    !>  Return the number of elements that a volume function depends on in the linearization direction 'idiff'.
     !!
     !!  Often, this may be just 1. Because a flux linearized wrt its owner element just has 1 dependent element; itself.
     !!  A flux linearized wrt its neighbor element has just 1 dependent element; it's neighbor. If however, a face
@@ -942,11 +942,11 @@ contains
     !!
     !!
     !----------------------------------------------------------------------------------------------------------------
-    function get_volume_ndependent_elements(self,mesh,elem_info,iblk) result(ndepend)
+    function get_volume_ndependent_elements(self,mesh,elem_info,idiff) result(ndepend)
         class(equationset_t),   intent(in)   :: self
         type(mesh_t),           intent(in)   :: mesh(:)
         type(element_info_t),   intent(in)   :: elem_info
-        integer(ik),            intent(in)   :: iblk
+        integer(ik),            intent(in)   :: idiff
 
         integer(ik) :: ChiID, ndepend, iface
         logical     :: depend_me, depend_neighbor, chimera_face
@@ -954,10 +954,10 @@ contains
         associate( idom => elem_info%idomain_l, ielem => elem_info%ielement_l )
 
 
-        depend_me       = (iblk == DIAG)
-        depend_neighbor = (iblk == XI_MIN   .or. iblk == XI_MAX  .or. &
-                           iblk == ETA_MIN  .or. iblk == ETA_MAX .or. &
-                           iblk == ZETA_MIN .or. iblk == ZETA_MAX)
+        depend_me       = (idiff == DIAG)
+        depend_neighbor = (idiff == XI_MIN   .or. idiff == XI_MAX  .or. &
+                           idiff == ETA_MIN  .or. idiff == ETA_MAX .or. &
+                           idiff == ZETA_MIN .or. idiff == ZETA_MAX)
 
 
         if (depend_me) then
@@ -968,7 +968,7 @@ contains
 
         else if (depend_neighbor) then
             ! Search iface in the direction of linearization
-            iface = iblk
+            iface = idiff
 
             chimera_face  = ( mesh(idom)%faces(ielem,iface)%ftype == CHIMERA )
 

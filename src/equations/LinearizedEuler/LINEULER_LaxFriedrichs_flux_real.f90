@@ -1,20 +1,16 @@
 module LINEULER_LaxFriedrichs_flux_real
     use mod_kinds,              only: rk,ik
-    use mod_constants,          only: NFACES,ONE,TWO,HALF,FOUR,ZERO, &
-                                      XI_MIN,XI_MAX,ETA_MIN,ETA_MAX,ZETA_MIN,ZETA_MAX, &
-                                      ME, NEIGHBOR
+    use mod_constants,          only: ONE,TWO,HALF,FOUR,ZERO, ME, NEIGHBOR
 
     use type_boundary_flux,     only: boundary_flux_t
     use type_mesh,              only: mesh_t
     use type_solverdata,        only: solverdata_t
     use type_properties,        only: properties_t
-    use type_seed,              only: seed_t
     use type_face_info,         only: face_info_t
     use type_function_info,     only: function_info_t
 
-    use mod_interpolate,        only: interpolate_face
+    use mod_interpolate,        only: interpolate
     use mod_integrate,          only: integrate_boundary_scalar_flux
-    use mod_DNAD_tools
     use DNAD_D
 
     use LINEULER_properties,    only: LINEULER_properties_t
@@ -108,10 +104,7 @@ contains
         real(rk), dimension(mesh(face_info%idomain_l)%faces(face_info%ielement_l,face_info%iface)%gq%face%nnodes)    :: &
                         un, wave_c
 
-        !===========================================================================
-        ! NOTE: var_m signifies "minus" and would indicate a local element variable
-        !       var_p signifies "plus"  and would indicate a neighbor element variable
-        !===========================================================================
+
         irho  = prop%get_eqn_index("rho_r")
         irhou = prop%get_eqn_index("rhou_r")
         irhov = prop%get_eqn_index("rhov_r")
@@ -129,21 +122,20 @@ contains
             !
             ! Interpolate solution to quadrature nodes
             !
-            call interpolate_face(mesh,face_info,function_info,q, irho,  rho_m, 'value',  ME)
-            call interpolate_face(mesh,face_info,function_info,q, irho,  rho_p, 'value',  NEIGHBOR)
+            rho_m  = interpolate(mesh,sdata,face_info,function_info, irho,  'value',  ME)
+            rho_p  = interpolate(mesh,sdata,face_info,function_info, irho,  'value',  NEIGHBOR)
 
-            call interpolate_face(mesh,face_info,function_info,q, irhou, rhou_m, 'value', ME)
-            call interpolate_face(mesh,face_info,function_info,q, irhou, rhou_p, 'value', NEIGHBOR)
+            rhou_m = interpolate(mesh,sdata,face_info,function_info, irhou, 'value', ME)
+            rhou_p = interpolate(mesh,sdata,face_info,function_info, irhou, 'value', NEIGHBOR)
 
-            call interpolate_face(mesh,face_info,function_info,q, irhov, rhov_m, 'value', ME)
-            call interpolate_face(mesh,face_info,function_info,q, irhov, rhov_p, 'value', NEIGHBOR)
+            rhov_m = interpolate(mesh,sdata,face_info,function_info, irhov, 'value', ME)
+            rhov_p = interpolate(mesh,sdata,face_info,function_info, irhov, 'value', NEIGHBOR)
 
-            call interpolate_face(mesh,face_info,function_info,q, irhow, rhow_m, 'value', ME)
-            call interpolate_face(mesh,face_info,function_info,q, irhow, rhow_p, 'value', NEIGHBOR)
+            rhow_m = interpolate(mesh,sdata,face_info,function_info, irhow, 'value', ME)
+            rhow_p = interpolate(mesh,sdata,face_info,function_info, irhow, 'value', NEIGHBOR)
 
-            call interpolate_face(mesh,face_info,function_info,q, irhoE, rhoE_m, 'value', ME)
-            call interpolate_face(mesh,face_info,function_info,q, irhoE, rhoE_p, 'value', NEIGHBOR)
-
+            rhoE_m = interpolate(mesh,sdata,face_info,function_info, irhoE, 'value', ME)
+            rhoE_p = interpolate(mesh,sdata,face_info,function_info, irhoE, 'value', NEIGHBOR)
 
             wave = rho_m
             do igq = 1,size(wave)

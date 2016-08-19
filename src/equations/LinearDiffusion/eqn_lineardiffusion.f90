@@ -67,12 +67,12 @@ contains
         call self%set_name("LinearDiffusion")
 
 
-        !
-        ! Set properties
-        !
-        prop%c(1) = ONE
-        prop%c(2) = ZERO
-        prop%c(3) = ZERO
+!        !
+!        ! Set properties
+!        !
+!        prop%c(1) = ONE
+!        prop%c(2) = ZERO
+!        prop%c(3) = ZERO
 
 
         !

@@ -14,7 +14,7 @@ module LD_properties
     !-------------------------------------------------------------------------
     type, extends(properties_t), public :: LD_properties_t
 
-        real(rk)    :: c(3)
+        real(rk)    :: mu(3)
 
     end type LD_properties_t
     !**************************************************************************

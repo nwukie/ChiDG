@@ -8,6 +8,12 @@ module type_solverdata
     use type_function_status,           only: function_status_t
     use type_equationset_function_data, only: equationset_function_data_t
     use type_bcset_coupling,            only: bcset_coupling_t
+!    use type_BR2,                       only: BR2_t
+    use type_element_info,              only: element_info_t
+    use type_face_info,                 only: face_info_t
+    use type_function_info,             only: function_info_t
+
+!    use mod_interpolate,                only: interpolate_element_autodiff
     implicit none
 
 
@@ -28,6 +34,14 @@ module type_solverdata
         type(chidgVector_t)             :: dq                       !< Change in solution vector
         type(chidgVector_t)             :: rhs                      !< Residual of the spatial scheme
         type(chidgMatrix_t)             :: lhs                      !< Linearization of the spatial scheme
+
+
+!        !
+!        ! BR2 container
+!        !
+!        type(BR2_t)                     :: BR2
+
+
 
         !
         ! Time information
@@ -54,6 +68,8 @@ module type_solverdata
 
         generic, public       :: init => init_base
         procedure, private    :: init_base
+
+!        procedure           :: interpolate
 
     end type solverdata_t
     !*******************************************************************************************************
@@ -151,6 +167,63 @@ contains
 
     end subroutine init_base
     !************************************************************************************************************
+
+
+
+
+
+
+
+
+
+
+!
+!
+!
+!    !>
+!    !!
+!    !!  @author Nathan A. Wukie (AFRL)
+!    !!  @date   8/18/2016
+!    !!
+!    !!
+!    !-----------------------------------------------------------------------------------------------------------
+!    function interpolate_element(mesh,elem_info,function_info, varindex, interpolation_type) result(vargq)
+!        type(mesh_t),           intent(in)  :: mesh(:)
+!        type(element_info_t),   intent(in)  :: elem_info
+!        type(function_info_t),  intent(in)  :: function_info
+!        integer(ik),            intent(in)  :: varindex
+!        character(len=*),       intent(in)  :: interpolation_type
+!
+!        type(AD_D), dimension(mesh(elem_info%idomain_l)%elems(elem_info%ielement_l)%gq%vol%nnodes)  :: vargq
+!
+!
+!        call interpolate_element_autodiff(mesh,elem_info,function_info,self%q,varindex, interpolation_type)
+!
+!
+!
+!    end function interpolate_element
+!    !***********************************************************************************************************
+!
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

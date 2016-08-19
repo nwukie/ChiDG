@@ -8,6 +8,7 @@ module mod_integrate
     use type_mesh,              only: mesh_t
     use type_element,           only: element_t
     use type_face,              only: face_t
+    use type_element_info,      only: element_info_t
     use type_face_info,         only: face_info_t
     use type_function_info,     only: function_info_t
     use type_solverdata,        only: solverdata_t
@@ -39,75 +40,65 @@ contains
     !!  @param[inout]   flux_z  z-Flux and derivatives at quadrature points
     !!
     !--------------------------------------------------------------------------------------------------------
-    subroutine integrate_volume_flux(elem,sdata,idom,ieqn,iblk,flux_x,flux_y,flux_z)
-        type(element_t),        intent(in)      :: elem
+    subroutine integrate_volume_flux(mesh,sdata,elem_info,fcn_info,ieqn,flux_x,flux_y,flux_z)
+        type(mesh_t),           intent(in)      :: mesh(:)
         type(solverdata_t),     intent(inout)   :: sdata
-        integer(ik),            intent(in)      :: idom
+        type(element_info_t),   intent(in)      :: elem_info
+        type(function_info_t),  intent(in)      :: fcn_info
         integer(ik),            intent(in)      :: ieqn
-        integer(ik),            intent(in)      :: iblk
         type(AD_D),             intent(inout)   :: flux_x(:), flux_y(:), flux_z(:)
 
 
-        integer(ik)                             :: ielem, i
-        type(AD_D), dimension(elem%nterms_s)    :: integral, integral_x, integral_y, integral_z
-
-        ielem = elem%ielement_l  ! get element index
+        type(AD_D), dimension(mesh(elem_info%idomain_l)%elems(elem_info%ielement_l)%nterms_s)    :: integral, integral_x, integral_y, integral_z
 
 
+        associate( idom => elem_info%idomain_l, ielem => elem_info%ielement_l, idiff => fcn_info%idiff, &
+                   weights => mesh(elem_info%idomain_l)%elems(elem_info%ielement_l)%gq%vol%weights,     &
+                   jinv => mesh(elem_info%idomain_l)%elems(elem_info%ielement_l)%jinv,                  &
+                   ddx_trans => mesh(elem_info%idomain_l)%elems(elem_info%ielement_l)%ddx_trans,      &
+                   ddy_trans => mesh(elem_info%idomain_l)%elems(elem_info%ielement_l)%ddy_trans,      &
+                   ddz_trans => mesh(elem_info%idomain_l)%elems(elem_info%ielement_l)%ddz_trans )
 
 
         !
         ! Multiply each component by quadrature weights and element jacobians
         !
-        flux_x = (flux_x) * (elem%gq%vol%weights) * (elem%jinv)
-        flux_y = (flux_y) * (elem%gq%vol%weights) * (elem%jinv)
-        flux_z = (flux_z) * (elem%gq%vol%weights) * (elem%jinv)
-
-
-
-
-
-!       Add r for cylindrical coordinate system integral
-!        flux_x = (flux_x) * (elem%gq%vol%weights) * (elem%jinv) * (elem%quad_pts(:)%c2_)
-!        flux_y = (flux_y) * (elem%gq%vol%weights) * (elem%jinv) * (elem%quad_pts(:)%c2_)
-!        flux_z = (flux_z) * (elem%gq%vol%weights) * (elem%jinv) * (elem%quad_pts(:)%c2_)
+        flux_x = flux_x * weights * jinv
+        flux_y = flux_y * weights * jinv
+        flux_z = flux_z * weights * jinv
 
 
         !
-        ! FLUX-X
-        ! Multiply by column of test function gradients, integrate, add to RHS, add derivatives to linearization
+        ! FLUX-X: Multiply by column of test function gradients, integrate
         !
-        !integral_x = matmul(transpose(elem%dtdx),flux_x)                            ! Integrate
-        integral_x = matmul(elem%dtdx_trans,flux_x)                            ! Integrate
-
-
-
+        integral_x = matmul(ddx_trans,flux_x)
 
 
         !
-        ! FLUX-Y
-        ! Multiply by column of test function gradients, integrate, add to RHS, add derivatives to linearization
+        ! FLUX-Y: Multiply by column of test function gradients, integrate
         !
-        !integral_y = matmul(transpose(elem%dtdy),flux_y)                            ! Integrate
-        integral_y = matmul(elem%dtdy_trans,flux_y)                            ! Integrate
+        integral_y = matmul(ddy_trans,flux_y)
+
+
+        !
+        ! FLUX-Z: Multiply by column of test function gradients, integrate
+        !
+        integral_z = matmul(ddz_trans,flux_z)
 
 
 
         !
-        ! FLUX-Z
-        ! Multiply by column of test function gradients, integrate, add to RHS, add derivatives to linearization
+        ! Add componends from each coordiate direction
         !
-        !integral_z = matmul(transpose(elem%dtdz),flux_z)                            ! Integrate
-        integral_z = matmul(elem%dtdz_trans,flux_z)                            ! Integrate
-
-
-
         integral = integral_x + integral_y + integral_z
 
         
+        !
+        ! Store integral and derivatives
+        !
+        call store_volume_integrals(integral,sdata,idom,ielem,ieqn,idiff)
 
-        call store_volume_integrals(integral,sdata,idom,ielem,ieqn,iblk)            ! Store values and derivatives
-
+        end associate
 
     end subroutine integrate_volume_flux
     !*********************************************************************************************************
@@ -139,39 +130,39 @@ contains
     !!  @param[inout]   flux_z  z-Flux and derivatives at quadrature points
     !!
     !--------------------------------------------------------------------------------------------------------
-    subroutine integrate_volume_source(elem,sdata,idom,ieqn,iblk,source)
-        type(element_t),        intent(in)      :: elem
+    subroutine integrate_volume_source(mesh,sdata,elem_info,fcn_info,ieqn,source)
+        type(mesh_t),           intent(in)      :: mesh(:)
         type(solverdata_t),     intent(inout)   :: sdata
-        integer(ik),            intent(in)      :: idom
+        type(element_info_t),   intent(in)      :: elem_info
+        type(function_info_t),  intent(in)      :: fcn_info
         integer(ik),            intent(in)      :: ieqn
-        integer(ik),            intent(in)      :: iblk
         type(AD_D),             intent(inout)   :: source(:)
 
+        type(AD_D), dimension(mesh(elem_info%idomain_l)%elems(elem_info%ielement_l)%nterms_s)    :: integral, integral_x, integral_y, integral_z
 
-        integer(ik)                             :: ielem, i
-        type(AD_D), dimension(elem%nterms_s)    :: integral, integral_x, integral_y, integral_z
-
-        ielem = elem%ielement_l  ! get element index
+        associate( idom => elem_info%idomain_l, ielem => elem_info%ielement_l, idiff => fcn_info%idiff, &
+                   weights => mesh(elem_info%idomain_l)%elems(elem_info%ielement_l)%gq%vol%weights,     &
+                   val     => mesh(elem_info%idomain_l)%elems(elem_info%ielement_l)%gq%vol%val,         &
+                   jinv    => mesh(elem_info%idomain_l)%elems(elem_info%ielement_l)%jinv )
 
         !
         ! Multiply each component by quadrature weights and element jacobians
         !
-        source = (source) * (elem%gq%vol%weights) * (elem%jinv)
-!       Add r for cylindrical coordinate system integral
-!        source = (source) * (elem%gq%vol%weights) * (elem%jinv) * (elem%quad_pts(:)%c2_)
-
+        source = source * weights * jinv
 
 
         !
-        ! Multiply by column of test function gradients, integrate, add to RHS, add derivatives to linearization
+        ! Multiply by column of test functions, integrate
         !
-        integral = matmul(transpose(elem%gq%vol%val),source)                        ! Integrate
+        integral = matmul(transpose(val),source)
 
 
+        !
+        ! Store integral and derivatives
+        !
+        call store_volume_integrals(integral,sdata,idom,ielem,ieqn,idiff)
 
-
-        call store_volume_integrals(integral,sdata,idom,ielem,ieqn,iblk)            ! Store values and derivatives
-
+        end associate
 
     end subroutine integrate_volume_source
     !********************************************************************************************************
@@ -212,15 +203,14 @@ contains
         integer(ik),            intent(in)      :: ieqn
         type(AD_D),             intent(inout)   :: integrand(:)
         
-        ! Data for applying to neighbor
-        type(AD_D),             allocatable     :: integrand_n(:)
-        type(face_info_t)                       :: face_n
-        type(function_info_t)                   :: function_n
-        integer(ik)                             :: ineighbor_element_l, ineighbor_face, ineighbor_proc, iblk_n
-        logical                                 :: parallel_neighbor
+        ! Data for applying to self and neighbor
+        type(AD_D), allocatable     :: integral(:)
+        type(AD_D), allocatable     :: integrand_n(:)
+        type(face_info_t)           :: face_n
+        type(function_info_t)       :: function_n
+        integer(ik)                 :: ineighbor_element_l, ineighbor_face, ineighbor_proc, iblk_n, ierr
+        logical                     :: parallel_neighbor
 
-        integer(ik)                             :: nterms_s, ierr, ftype
-        type(AD_D), allocatable                 :: integral(:)
 
 
         associate ( idomain_l   => face_info%idomain_l,     &
@@ -228,11 +218,7 @@ contains
                     iface       => face_info%iface,         &
                     ifcn        => function_info%ifcn,      &
                     idonor      => function_info%idepend,   &
-                    iblk        => function_info%iblk )
-
-
-        ftype    = mesh(idomain_l)%faces(ielement_l,iface)%ftype
-        nterms_s = mesh(idomain_l)%faces(ielement_l,iface)%nterms_s
+                    iblk        => function_info%idiff )
 
 
 
@@ -243,22 +229,11 @@ contains
 
         parallel_neighbor = ( IRANK /= ineighbor_proc )
 
+
         !
         ! Store quadrature flux for neighbor integral
         !
-!       Add r for cylindrical coordinate system integral
-!        integrand = integrand * mesh(idom)%faces(ielem,iface)%quad_pts(:)%c2_
-
         integrand_n = integrand
-
-
-
-        !
-        ! Allocate integral array. MIGHT NOT NEED THIS. TEST.
-        !
-        allocate(integral(nterms_s), stat=ierr)
-        if (ierr /= 0) call AllocationError
-
 
 
 
@@ -274,8 +249,7 @@ contains
             !
             ! Multiply each component by quadrature weights. The fluxes have already been multiplied by norm
             !
-            integrand = (integrand) * (weights)
-            !integral = matmul(transpose(val),integrand)
+            integrand = integrand * weights
             integral = matmul(valtrans,integrand)
 
 
@@ -300,8 +274,6 @@ contains
                 face_n%ielement_g = mesh(idomain_l)%faces(ielement_l,iface)%ineighbor_element_g
                 face_n%ielement_l = mesh(idomain_l)%faces(ielement_l,iface)%ineighbor_element_l
                 face_n%iface      = mesh(idomain_l)%faces(ielement_l,iface)%get_neighbor_face()
-                !face_n%seed       = function_info%seed
-
 
                 !
                 ! Get linearization block for the neighbor element
@@ -317,11 +289,9 @@ contains
 
                 function_n%type    = function_info%type
                 function_n%ifcn    = function_info%ifcn
-                !function_n%idonor  = function_info%idonor
                 function_n%idepend = function_info%idepend
                 function_n%seed    = function_info%seed
-                function_n%iblk    = iblk_n
-                
+                function_n%idiff   = iblk_n
 
 
                 associate ( weights_n => mesh(idomain_l)%faces(ineighbor_element_l,ineighbor_face)%gq%face%weights(:,ineighbor_face),   &
@@ -329,12 +299,11 @@ contains
                             val_n     => mesh(idomain_l)%faces(ineighbor_element_l,ineighbor_face)%gq%face%val(:,:,ineighbor_face),     &
                             valtrans_n => mesh(idomain_l)%faces(ineighbor_element_l, ineighbor_face)%gq%face%val_trans(:,:,ineighbor_face) )
 
-                    integrand_n = (integrand_n) * (weights_n)
+                    integrand_n = integrand_n * weights_n
 
                     !
                     ! Integrate and negate for contribution to neighbor element
                     !
-                    !integral = -matmul(transpose(val_n),integrand_n)
                     integral = -matmul(valtrans_n,integrand_n)
 
                     call store_boundary_integral_residual(     mesh,sdata,face_n,function_n,ieqn,integral)
@@ -350,15 +319,6 @@ contains
 
     end subroutine integrate_boundary_scalar_flux
     !********************************************************************************************************
-
-
-
-
-
-
-
-
-
 
 
 
@@ -454,16 +414,12 @@ contains
         logical         :: add_flux = .false.
 
 
-
         associate ( idomain_l  => face_info%idomain_l, ielement_l  => face_info%ielement_l, iface => face_info%iface, &
-                    ifcn  => function_info%ifcn,       idonor => function_info%idepend,      iblk  => function_info%iblk )
-
+                    ifcn  => function_info%ifcn,       idonor => function_info%idepend,      iblk  => function_info%idiff )
 
             ftype = mesh(idomain_l)%faces(ielement_l,iface)%ftype
 
-
             associate ( rhs => sdata%rhs%dom(idomain_l)%vecs, lhs => sdata%lhs)
-
 
                 !
                 ! Only store rhs once. if iblk == DIAG. Also, since the integral could be computed more than once for chimera faces, only store for the first donor.
@@ -471,11 +427,8 @@ contains
                 !
                 if ( ftype == BOUNDARY .and. ( ielement_l == function_info%seed%ielement_l ) ) then
 
-
                     vals = rhs(ielement_l)%getvar(ieqn) + integral(:)%x_ad_
                     call rhs(ielement_l)%setvar(ieqn,vals)
-
-
 
 
                 else if ( ftype == CHIMERA .and. iblk == DIAG ) then
@@ -486,8 +439,6 @@ contains
                     end if
 
 
-
-
                 else if ( ftype == INTERIOR ) then
                     !
                     ! Check if particular flux function has been added already
@@ -496,34 +447,21 @@ contains
 
 
 
-                    !
                     ! Store if needed
-                    !
                     if ( add_flux ) then
-                        !
                         ! Add to residual and store
-                        !
                         vals = rhs(ielement_l)%getvar(ieqn) + integral(:)%x_ad_
                         call rhs(ielement_l)%setvar(ieqn,vals)
 
-                        !
                         ! Register flux was stored
-                        !
                         call sdata%function_status%register_function_computed( face_info, function_info, ieqn )
                     end if
-
-
-
-
 
                 end if
 
 
-
             end associate
-
         end associate
-
 
     end subroutine store_boundary_integral_residual
     !***********************************************************************************************************
@@ -573,28 +511,22 @@ contains
 
         ifcn   = function_info%ifcn
         idonor = function_info%idepend
-        iblk   = function_info%iblk
+        iblk   = function_info%idiff
 
 
 
         associate ( rhs => sdata%rhs%dom(idomain_l)%vecs, lhs => sdata%lhs)
 
 
-            !
             ! Store linearization. Rules for different face types.
-            !
             if ( ftype == CHIMERA ) then
 
                 if (iblk /= DIAG) then
-                    !
                     ! Store linearization of Chimera boundary donor elements.
-                    !
                     call lhs%store_chimera(integral,face_info,seed,ieqn)
                 else
-                    !
                     ! Store linearization of Chimera boundary receiver element. Since this could be computed multiple times,
                     ! we just store it once.
-                    !
                     if (idonor == 1) then
                         call lhs%store(integral,idomain_l,ielement_l,iblk,ieqn)
                     end if
@@ -603,9 +535,6 @@ contains
 
 
             else if ( (ftype == BOUNDARY) ) then
-                !
-                ! Store linearization of boundary condition
-                !
                 call lhs%store_bc(integral,face_info,seed,ieqn)
 
 
@@ -615,9 +544,7 @@ contains
 
                 add_linearization = sdata%function_status%linearize_function_equation( face_info, function_info, ieqn )
 
-                !
                 ! Store linearization if not already stored
-                !
                 if ( add_linearization ) then
                     ! Store linearization
                     call lhs%store(integral,idomain_l,ielement_l,iblk,ieqn)

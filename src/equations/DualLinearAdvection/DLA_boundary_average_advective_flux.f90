@@ -12,7 +12,7 @@ module DLA_boundary_average_advective_flux
     use type_function_info,     only: function_info_t
 
 
-    use mod_interpolate,        only: interpolate_face
+    use mod_interpolate,        only: interpolate
     use mod_integrate,          only: integrate_boundary_scalar_flux
     use DNAD_D
 
@@ -99,12 +99,11 @@ contains
         !
         ! Interpolate solution to quadrature nodes
         !
-        call interpolate_face(mesh,face_info,function_info,sdata%q,iu_a, ua_r, 'value', ME)
-        call interpolate_face(mesh,face_info,function_info,sdata%q,iu_a, ua_l, 'value', NEIGHBOR)
+        ua_r = interpolate(mesh,sdata,face_info,function_info,iu_a, 'value', ME)
+        ua_l = interpolate(mesh,sdata,face_info,function_info,iu_a, 'value', NEIGHBOR)
 
-        call interpolate_face(mesh,face_info,function_info,sdata%q,iu_b, ub_r, 'value', ME)
-        call interpolate_face(mesh,face_info,function_info,sdata%q,iu_b, ub_l, 'value', NEIGHBOR)
-
+        ub_r = interpolate(mesh,sdata,face_info,function_info,iu_b, 'value', ME)
+        ub_l = interpolate(mesh,sdata,face_info,function_info,iu_b, 'value', NEIGHBOR)
 
 
         !

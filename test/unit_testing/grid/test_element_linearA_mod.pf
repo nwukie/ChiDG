@@ -7,29 +7,39 @@ module test_element_linearA_mod
     use type_point,                 only: point_t
     use type_element,               only: element_t
     use type_face,                  only: face_t
-    !use type_domain_connectivity,   only: domain_connectivity_t
     use type_element_connectivity,  only: element_connectivity_t
     use mod_io,                     only: gq_rule
     implicit none
 
     public  :: test_element_linearA
 
-@TestCase
+
+    @TestCase
+    !>
+    !!
+    !!
+    !!
+    !--------------------------------------------------------------------------
     type, extends(TestCase) ::  test_element_linearA
         type(chidg_t)               :: chidg
         type(element_t)             :: elem
         type(face_t),   allocatable :: faces(:)
         type(point_t),  allocatable :: nodes(:)
-
     contains
         procedure   ::  setUp
         procedure   ::  tearDown
     end type test_element_linearA
+    !***************************************************************************
 
 
 contains
+
     !> NOTE: make sure to use 'this' instead of 'self' since these are over-writting a derived type 
     !! procedure. The argument names have to match
+    !!
+    !!
+    !!
+    !--------------------------------------------------------------------------------------------------
     subroutine setUp(this)
         class(test_element_linearA),    intent(inout)   :: this
         
@@ -111,8 +121,14 @@ contains
         call this%faces(ETA_MAX)%init_sol(this%elem)
         call this%faces(ZETA_MIN)%init_sol(this%elem)
         call this%faces(ZETA_MAX)%init_sol(this%elem)
-    end subroutine
+    end subroutine setUp
+    !************************************************************************************
     
+
+    !>
+    !!
+    !!
+    !-------------------------------------------------------------------------------------
     subroutine tearDown(this)
         class(test_element_linearA),    intent(inout)   :: this
 
@@ -122,14 +138,18 @@ contains
         !
         call this%chidg%close('core')
 
-    end subroutine
+    end subroutine tearDown
+    !**************************************************************************************
 
 
 
 
 
-!> Test element metric entries at quadrature points
-@Test
+    @Test
+    !> Test element metric entries at quadrature points
+    !!
+    !!
+    !!-------------------------------------------------------------------------------------
     subroutine testElement_metric(self)
         class(test_element_linearA),    intent(inout)   :: self
         real(rk)    :: test_metric(3,3,self%elem%gq%vol%nnodes)
@@ -145,23 +165,34 @@ contains
         test_metric(3,3,:) = 1.25_rk
         @assertEqual(test_metric,self%elem%metric)
         
-    end subroutine
+    end subroutine testElement_metric
+    !***************************************************************************************
 
 
 
-!> Test inverse element jacobian entries at quadrature points
-@Test
+    @Test
+    !> Test inverse element jacobian entries at quadrature points
+    !!
+    !!
+    !!
+    !---------------------------------------------------------------------------------------
     subroutine testElement_jinv(self)
         class(test_element_linearA),    intent(inout)   :: self
         real(rk)    :: test_jinv(self%elem%gq%vol%nnodes)
         
         test_jinv = 0.625_rk
         @assertEqual(test_jinv,self%elem%jinv)
-    end subroutine
+    end subroutine testElement_jinv
+    !****************************************************************************************
+
     
 
-!> Test mass matrix entries
-@Test
+    @Test
+    !> Test mass matrix entries
+    !!
+    !!
+    !!
+    !!---------------------------------------------------------------------------------------
     subroutine testElement_mass(self)
         class(test_element_linearA),    intent(inout)   :: self
         real(rk)    :: test_mass(self%elem%nterms_s,self%elem%nterms_s)
@@ -182,12 +213,37 @@ contains
         test_mass = 0.625_rk * test_mass
         
         @assertEqual(test_mass,self%elem%mass,tol)
-    end subroutine
+    end subroutine testElement_mass
+    !*****************************************************************************************
 
 
 
-!> Test cartesian coordinate values at quadrature nodes
-@Test
+
+
+    @Test
+    !> Test volume
+    !!
+    !!
+    !!
+    !!---------------------------------------------------------------------------------------
+    subroutine testElement_volume(self)
+        class(test_element_linearA),    intent(inout)   :: self
+        real(rk)    :: test_mass(self%elem%nterms_s,self%elem%nterms_s)
+        real(rk)    :: tol
+        
+        tol = 1.e-14_rk
+        
+        @assertEqual(self%elem%vol,5._rk,tol)
+
+    end subroutine testElement_volume
+    !*****************************************************************************************
+
+
+    @Test
+    !> Test cartesian coordinate values at quadrature nodes
+    !!
+    !!
+    !-----------------------------------------------------------------------------------------
     subroutine testElement_quadpts(self)
         class(test_element_linearA),    intent(inout)   :: self
         real(rk), dimension(self%elem%gq%vol%nnodes)    :: test_x, test_y, test_z
@@ -206,49 +262,57 @@ contains
         @assertEqual(test_x,self%elem%quad_pts(:)%c1_)
         @assertEqual(test_y,self%elem%quad_pts(:)%c2_)
         @assertEqual(test_z,self%elem%quad_pts(:)%c3_)
+    end subroutine testElement_quadpts
+    !*******************************************************************************************
+
+
+
+
+
+
+
+    @Test
+    !> Test cartesian gradient matrices
+    !!
+    !!
+    !------------------------------------------------------------------------------------------
+    subroutine testElement_ddx(self)
+        class(test_element_linearA),    intent(inout)   :: self
+        real(rk), dimension(self%elem%gq%vol%nnodes, 8) :: test
+        real(rk), dimension(self%elem%gq%vol%nnodes)    :: xi, eta, zeta
+        
+        real(rk) :: tol
+        
+        tol = 1.e-14_rk
+        
+        xi   = self%elem%gq%vol%nodes(:)%c1_
+        eta  = self%elem%gq%vol%nodes(:)%c2_
+        zeta = self%elem%gq%vol%nodes(:)%c3_
+        
+        
+        
+        test(:,1) = ZERO                !> Mode 1
+        test(:,2) = ZERO                !> Mode 2
+        test(:,3) = ZERO                !> Mode 3
+        test(:,4) = 0.4_rk              !> Mode 4
+        test(:,5) = 0.4_rk * eta        !> Mode 5
+        test(:,6) = 0.4_rk * zeta       !> Mode 6
+        test(:,7) = ZERO                !> Mode 7
+        test(:,8) = 0.4_rk * eta * zeta !> Mode 8
+        @assertEqual(test,self%elem%ddx,tol)
     end subroutine
+    !*******************************************************************************************
 
 
 
 
 
-
-
-!> Test cartesian gradient matrices
-@Test
-   subroutine testElement_dtdx(self)
-       class(test_element_linearA),    intent(inout)   :: self
-       real(rk), dimension(self%elem%gq%vol%nnodes, 8) :: test
-       real(rk), dimension(self%elem%gq%vol%nnodes)    :: xi, eta, zeta
-       
-       real(rk) :: tol
-       
-       tol = 1.e-14_rk
-       
-       xi   = self%elem%gq%vol%nodes(:)%c1_
-       eta  = self%elem%gq%vol%nodes(:)%c2_
-       zeta = self%elem%gq%vol%nodes(:)%c3_
-       
-       
-       
-       test(:,1) = ZERO                !> Mode 1
-       test(:,2) = ZERO                !> Mode 2
-       test(:,3) = ZERO                !> Mode 3
-       test(:,4) = 0.4_rk              !> Mode 4
-       test(:,5) = 0.4_rk * eta        !> Mode 5
-       test(:,6) = 0.4_rk * zeta       !> Mode 6
-       test(:,7) = ZERO                !> Mode 7
-       test(:,8) = 0.4_rk * eta * zeta !> Mode 8
-       @assertEqual(test,self%elem%dtdx,tol)
-   end subroutine
-
-
-
-
-
-!> Test cartesian gradient matrices
-@Test
-   subroutine testElement_dtdy(self)
+    @Test
+    !> Test cartesian gradient matrices
+    !!
+    !!
+    !------------------------------------------------------------------------------------------
+    subroutine testElement_ddy(self)
        class(test_element_linearA),    intent(inout)   :: self
        real(rk), dimension(self%elem%gq%vol%nnodes, 8) :: test
        real(rk), dimension(self%elem%gq%vol%nnodes)    :: xi, eta, zeta
@@ -271,16 +335,20 @@ contains
        test(:,6) = ZERO                !> Mode 6
        test(:,7) = TWO * zeta          !> Mode 7
        test(:,8) = TWO * xi * zeta     !> Mode 8
-       @assertEqual(test,self%elem%dtdy,tol)
-   end subroutine
+       @assertEqual(test,self%elem%ddy,tol)
+    end subroutine
+    !*******************************************************************************************
 
 
 
 
 
-!> Test cartesian gradient matrices
-@Test
-   subroutine testElement_dtdz(self)
+    @Test
+    !> Test cartesian gradient matrices
+    !!
+    !!
+    !------------------------------------------------------------------------------------------
+    subroutine testElement_ddz(self)
        class(test_element_linearA),    intent(inout)   :: self
        real(rk), dimension(self%elem%gq%vol%nnodes, 8) :: test
        real(rk), dimension(self%elem%gq%vol%nnodes)    :: xi, eta, zeta
@@ -303,9 +371,10 @@ contains
        test(:,6) = TWO * xi            !> Mode 6
        test(:,7) = TWO * eta           !> Mode 7
        test(:,8) = TWO * xi * eta      !> Mode 8
-       @assertEqual(test,self%elem%dtdz,tol)
+       @assertEqual(test,self%elem%ddz,tol)
        
-   end subroutine
+    end subroutine
+    !*******************************************************************************************
 
 
 
@@ -323,7 +392,11 @@ contains
 !------------------------------------------------------------------------------
 
 
-@Test
+    @Test
+    !>
+    !!
+    !!
+    !------------------------------------------------------------------------------------------
     subroutine testElement_face_metrics(self)
         class(test_element_linearA),    intent(inout)   :: self
         real(rk)    :: test_metric(3,3,self%faces(XI_MAX)%gq%face%nnodes)
@@ -348,9 +421,14 @@ contains
         @assertEqual(test_metric,self%faces(ZETA_MIN)%metric,tol)
         @assertEqual(test_metric,self%faces(ZETA_MAX)%metric,tol)
     end subroutine
+    !*******************************************************************************************
 
 
-@test
+    @test
+    !>
+    !!
+    !!
+    !------------------------------------------------------------------------------------------
     subroutine testelement_face_normals(self)
         class(test_element_lineara),    intent(inout)   :: self
         real(rk), dimension(self%faces(xi_max)%gq%face%nnodes) :: test_norm_x, test_norm_y, test_norm_z
@@ -414,6 +492,7 @@ contains
        
 
     end subroutine
+    !*******************************************************************************************
 
 
 
@@ -422,7 +501,12 @@ contains
 
 
 
-@Test
+    @Test
+    !>
+    !!
+    !!
+    !!
+    !------------------------------------------------------------------------------------------
     subroutine testElement_face_unit_normals(self)
         class(test_element_linearA),    intent(inout)   :: self
         real(rk), dimension(self%faces(XI_MAX)%gq%face%nnodes) :: test_norm_x, test_norm_y, test_norm_z
@@ -486,6 +570,7 @@ contains
        
 
     end subroutine
+    !*******************************************************************************************
 
 
 
@@ -520,86 +605,100 @@ contains
 !------------------------------------------------------------------------------
 
 
-! Test mesh_point routine returns the correct x-coordinate value
-@Test
-subroutine test__mesh_point__x(self)
-    class(test_element_linearA),    intent(inout)   :: self
+    @Test
+    !> Test mesh_point routine returns the correct x-coordinate value
+    !!
+    !!
+    !------------------------------------------------------------------------------------------
+    subroutine test__mesh_point__x(self)
+        class(test_element_linearA),    intent(inout)   :: self
 
-    real(rk), dimension(5)  :: ref_coords, check_coords, xi, eta, zeta
-    integer(ik)             :: icoord, ipt
-                    
+        real(rk), dimension(5)  :: ref_coords, check_coords, xi, eta, zeta
+        integer(ik)             :: icoord, ipt
+                        
 
-    xi = [-1.0_rk, -0.5_rk, 0.5_rk, 1.0_rk, 0.5_rk]
-    eta = [-ONE, -ONE, -ONE, -ONE, ZERO]
-    zeta = [-ONE, -ONE, -ONE, -ONE, ZERO] 
+        xi = [-1.0_rk, -0.5_rk, 0.5_rk, 1.0_rk, 0.5_rk]
+        eta = [-ONE, -ONE, -ONE, -ONE, ZERO]
+        zeta = [-ONE, -ONE, -ONE, -ONE, ZERO] 
 
-    ref_coords = [ZERO, 1.25_rk, 3.75_rk, 5._rk, 3.75_rk]
+        ref_coords = [ZERO, 1.25_rk, 3.75_rk, 5._rk, 3.75_rk]
 
 
-    icoord = 1 ! Check x-coordinates
-    do ipt = 1,5
-        check_coords(ipt) = self%elem%grid_point(icoord, xi(ipt), eta(ipt), zeta(ipt))
-    end do
+        icoord = 1 ! Check x-coordinates
+        do ipt = 1,5
+            check_coords(ipt) = self%elem%grid_point(icoord, xi(ipt), eta(ipt), zeta(ipt))
+        end do
 
-    @assertEqual(ref_coords,check_coords)
+        @assertEqual(ref_coords,check_coords)
 
-end subroutine
+    end subroutine
+    !*******************************************************************************************
 
 
 
-    
-! Test mesh_point routine returns the correct y-coordinate value
-@Test
-subroutine test__mesh_point__y(self)
-    class(test_element_linearA),    intent(inout)   :: self
+        
+    @Test
+    !> Test mesh_point routine returns the correct y-coordinate value
+    !!
+    !!
+    !!
+    !------------------------------------------------------------------------------------------
+    subroutine test__mesh_point__y(self)
+        class(test_element_linearA),    intent(inout)   :: self
 
-    real(rk), dimension(5)  :: ref_coords, check_coords, xi, eta, zeta
-    integer(ik)             :: icoord, ipt
-                    
+        real(rk), dimension(5)  :: ref_coords, check_coords, xi, eta, zeta
+        integer(ik)             :: icoord, ipt
+                        
 
-    xi   = [-ONE, -ONE, -ONE, -ONE, ZERO]
-    eta  = [-1.0_rk, -0.5_rk, 0.5_rk, 1.0_rk, 0.5_rk]
-    zeta = [-ONE, -ONE, -ONE, -ONE, ZERO] 
+        xi   = [-ONE, -ONE, -ONE, -ONE, ZERO]
+        eta  = [-1.0_rk, -0.5_rk, 0.5_rk, 1.0_rk, 0.5_rk]
+        zeta = [-ONE, -ONE, -ONE, -ONE, ZERO] 
 
-    ref_coords = [ZERO, 0.25_rk, 0.75_rk, 1._rk, 0.75_rk]
+        ref_coords = [ZERO, 0.25_rk, 0.75_rk, 1._rk, 0.75_rk]
 
 
-    icoord = 2 ! Check y-coordinates
-    do ipt = 1,5
-        check_coords(ipt) = self%elem%grid_point(icoord, xi(ipt), eta(ipt), zeta(ipt))
-    end do
+        icoord = 2 ! Check y-coordinates
+        do ipt = 1,5
+            check_coords(ipt) = self%elem%grid_point(icoord, xi(ipt), eta(ipt), zeta(ipt))
+        end do
 
-    @assertEqual(ref_coords,check_coords)
+        @assertEqual(ref_coords,check_coords)
 
-end subroutine
+    end subroutine
+    !*******************************************************************************************
 
 
 
 
-! Test mesh_point routine returns the correct z-coordinate value
-@Test
-subroutine test__mesh_point__z(self)
-    class(test_element_linearA),    intent(inout)   :: self
+    @Test
+    !> Test mesh_point routine returns the correct z-coordinate value
+    !!
+    !!
+    !!
+    !------------------------------------------------------------------------------------------
+    subroutine test__mesh_point__z(self)
+        class(test_element_linearA),    intent(inout)   :: self
 
-    real(rk), dimension(5)  :: ref_coords, check_coords, xi, eta, zeta
-    integer(ik)             :: icoord, ipt
-                    
+        real(rk), dimension(5)  :: ref_coords, check_coords, xi, eta, zeta
+        integer(ik)             :: icoord, ipt
+                        
 
-    xi   = [-ONE, -ONE, -ONE, -ONE, ZERO]
-    eta  = [-ONE, -ONE, -ONE, -ONE, ZERO] 
-    zeta = [-1.0_rk, -0.5_rk, 0.5_rk, 1.0_rk, 0.5_rk]
+        xi   = [-ONE, -ONE, -ONE, -ONE, ZERO]
+        eta  = [-ONE, -ONE, -ONE, -ONE, ZERO] 
+        zeta = [-1.0_rk, -0.5_rk, 0.5_rk, 1.0_rk, 0.5_rk]
 
-    ref_coords = [ZERO, 0.25_rk, 0.75_rk, 1._rk, 0.75_rk]
+        ref_coords = [ZERO, 0.25_rk, 0.75_rk, 1._rk, 0.75_rk]
 
 
-    icoord = 3 ! Check z-coordinates
-    do ipt = 1,5
-        check_coords(ipt) = self%elem%grid_point(icoord, xi(ipt), eta(ipt), zeta(ipt))
-    end do
+        icoord = 3 ! Check z-coordinates
+        do ipt = 1,5
+            check_coords(ipt) = self%elem%grid_point(icoord, xi(ipt), eta(ipt), zeta(ipt))
+        end do
 
-    @assertEqual(ref_coords,check_coords)
+        @assertEqual(ref_coords,check_coords)
 
-end subroutine
+    end subroutine
+    !*******************************************************************************************
 
 
 
@@ -609,59 +708,46 @@ end subroutine
 
 
 
-! Test computational_point routine returns the correct xi-coordinate value
-@Test
-subroutine test__computational_point(self)
-    class(test_element_linearA),    intent(inout)   :: self
+    @Test
+    !> Test computational_point routine returns the correct xi-coordinate value
+    !!
+    !!
+    !!
+    !------------------------------------------------------------------------------------------
+    subroutine test__computational_point(self)
+        class(test_element_linearA),    intent(inout)   :: self
 
-    real(rk), dimension(8)  :: ref_xi, ref_eta, ref_zeta
-    real(rk), dimension(8)  :: check_xi, check_eta, check_zeta
-    type(point_t)           :: check_coords
-    real(rk)                :: x, y, z
-    integer(ik)             :: ipt
-                    
+        real(rk), dimension(8)  :: ref_xi, ref_eta, ref_zeta
+        real(rk), dimension(8)  :: check_xi, check_eta, check_zeta
+        type(point_t)           :: check_coords
+        real(rk)                :: x, y, z
+        integer(ik)             :: ipt
+                        
 
 
-    ref_xi   = [-ONE, ONE, -ONE, ONE, -ONE, ONE, -ONE, ONE]
-    ref_eta  = [-ONE, -ONE, ONE, ONE, -ONE, -ONE, ONE, ONE]
-    ref_zeta = [-ONE, -ONE, -ONE, -ONE, ONE, ONE, ONE, ONE]
+        ref_xi   = [-ONE, ONE, -ONE, ONE, -ONE, ONE, -ONE, ONE]
+        ref_eta  = [-ONE, -ONE, ONE, ONE, -ONE, -ONE, ONE, ONE]
+        ref_zeta = [-ONE, -ONE, -ONE, -ONE, ONE, ONE, ONE, ONE]
 
 
-    do ipt = 1,size(self%nodes)
-        x = self%nodes(ipt)%c1_
-        y = self%nodes(ipt)%c2_
-        z = self%nodes(ipt)%c3_
+        do ipt = 1,size(self%nodes)
+            x = self%nodes(ipt)%c1_
+            y = self%nodes(ipt)%c2_
+            z = self%nodes(ipt)%c3_
 
-        check_coords = self%elem%computational_point(x, y, z)
+            check_coords = self%elem%computational_point(x, y, z)
 
-        check_xi(ipt)   = check_coords%c1_
-        check_eta(ipt)  = check_coords%c2_
-        check_zeta(ipt) = check_coords%c3_
-    end do
+            check_xi(ipt)   = check_coords%c1_
+            check_eta(ipt)  = check_coords%c2_
+            check_zeta(ipt) = check_coords%c3_
+        end do
 
-    @assertEqual(ref_xi,   check_xi  )
-    @assertEqual(ref_eta,  check_eta )
-    @assertEqual(ref_zeta, check_zeta)
+        @assertEqual(ref_xi,   check_xi  )
+        @assertEqual(ref_eta,  check_eta )
+        @assertEqual(ref_zeta, check_zeta)
 
-end subroutine test__computational_point
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    end subroutine test__computational_point
+    !*******************************************************************************************
 
 
 

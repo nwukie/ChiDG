@@ -15,8 +15,8 @@ module type_function_info
 
         integer(ik)     :: type     !< Function type. ex: 'boundary_advective_flux', 'boundary_diffusive_flux', etc.
         integer(ik)     :: ifcn     !< Index of the function of the give type being computed.
-        integer(ik)     :: idepend  !< Dependency index of a given element to the face. Chimera could be > 1.
-        integer(ik)     :: iblk     !< Index of the block being linearized.
+        integer(ik)     :: idepend  !< Dependency index of a given element to the function. Chimera could be > 1.
+        integer(ik)     :: idiff    !< Index of the direction being linearized. XI_MIN, ETA_MAX, DIAG, etc.
         type(seed_t)    :: seed     !< Indices of the element being linearized
 
     end type function_info_t

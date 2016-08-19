@@ -1,8 +1,7 @@
 module DLA_volume_advective_flux
 #include <messenger.h>
     use mod_kinds,              only: rk,ik
-    use mod_constants,          only: NFACES,ZERO,ONE,TWO,HALF, &
-                                      XI_MIN,XI_MAX,ETA_MIN,ETA_MAX,ZETA_MIN,ZETA_MAX,DIAG
+    use mod_constants,          only: ZERO,ONE,TWO,HALF
 
     use type_volume_flux,       only: volume_flux_t
     use type_mesh,              only: mesh_t
@@ -10,8 +9,7 @@ module DLA_volume_advective_flux
     use type_element_info,      only: element_info_t
     use type_function_info,     only: function_info_t
 
-
-    use mod_interpolate,        only: interpolate_element
+    use mod_interpolate,        only: interpolate
     use mod_integrate,          only: integrate_volume_flux
     use DNAD_D
 
@@ -50,7 +48,6 @@ contains
     !!
     !!
     !-----------------------------------------------------------------------------------------------
-    !subroutine compute(self,mesh,sdata,prop,idom,ielem,iblk)
     subroutine compute(self,mesh,sdata,prop,elem_info,function_info)
         class(DLA_volume_advective_flux_t),     intent(in)      :: self
         type(mesh_t),                           intent(in)      :: mesh(:)
@@ -60,7 +57,7 @@ contains
         type(function_info_t),                  intent(in)      :: function_info
 
 
-        integer(ik)             :: idom, ielem, iblk
+        integer(ik)             :: idom, ielem
         type(AD_D), allocatable :: ua(:), ub(:), flux_x(:), flux_y(:), flux_z(:)
         real(rk)                :: cx, cy, cz
         integer(ik)             :: nnodes, ierr
@@ -68,7 +65,6 @@ contains
 
         idom  = elem_info%idomain_l
         ielem = elem_info%ielement_l
-        iblk  = function_info%iblk
 
 
         associate (elem => mesh(idom)%elems(ielem), q => sdata%q)
@@ -110,8 +106,8 @@ contains
             !
             ! Interpolate solution to quadrature nodes
             !
-            call interpolate_element(mesh,q,idom,ielem,iu_a,ua,function_info%seed)
-            call interpolate_element(mesh,q,idom,ielem,iu_b,ub,function_info%seed)
+            ua = interpolate(mesh,sdata,elem_info,function_info,iu_a,'value')
+            ub = interpolate(mesh,sdata,elem_info,function_info,iu_b,'value')
 
 
 
@@ -122,7 +118,7 @@ contains
             flux_y = cy  *  ua
             flux_z = cz  *  ua
 
-            call integrate_volume_flux(elem,sdata,idom,iu_a,iblk,flux_x,flux_y,flux_z)
+            call integrate_volume_flux(mesh,sdata,elem_info,function_info,iu_a,flux_x,flux_y,flux_z)
 
 
 
@@ -131,7 +127,7 @@ contains
             flux_y = cy  *  ub
             flux_z = cz  *  ub
 
-            call integrate_volume_flux(elem,sdata,idom,iu_b,iblk,flux_x,flux_y,flux_z)
+            call integrate_volume_flux(mesh,sdata,elem_info,function_info,iu_b,flux_x,flux_y,flux_z)
 
 
 

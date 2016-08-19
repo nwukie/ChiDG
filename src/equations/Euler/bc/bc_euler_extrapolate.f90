@@ -1,6 +1,7 @@
 module bc_euler_extrapolate
     use mod_kinds,          only: rk,ik
     use mod_constants,      only: ONE, TWO, HALF, ZERO, ME
+
     use type_bc,            only: bc_t
     use type_solverdata,    only: solverdata_t
     use type_mesh,          only: mesh_t
@@ -9,7 +10,7 @@ module bc_euler_extrapolate
     use type_function_info, only: function_info_t
 
     use mod_integrate,      only: integrate_boundary_scalar_flux
-    use mod_interpolate,    only: interpolate_face
+    use mod_interpolate,    only: interpolate
     use DNAD_D
     
     use EULER_properties,   only: EULER_properties_t
@@ -57,10 +58,11 @@ contains
         ! Equation indices
         integer(ik)     :: irho, irhou, irhov, irhow, irhoE
 
-        integer(ik)             :: idom, ielem, iface, idonor, iblk
+        integer(ik)             :: idom, ielem, iface, idonor
 
         ! Storage at quadrature nodes
-        type(AD_D), dimension(mesh(face%idomain_l)%faces(face%ielement_l,face%iface)%gq%face%nnodes)   ::  &
+        !type(AD_D), dimension(mesh(face%idomain_l)%faces(face%ielement_l,face%iface)%gq%face%nnodes)   ::  &
+        type(AD_D), allocatable, dimension(:)   ::  &
                         rho_m,  rhou_m, rhov_m, rhow_m, rhoE_m, p_m,        &
                         H_m,    u_m,    v_m,    w_m,                        &
                         flux_x, flux_y, flux_z, integrand
@@ -84,7 +86,6 @@ contains
         ielem = face%ielement_l
         iface = face%iface
 
-        iblk   = fcn%iblk
 
 
 
@@ -93,11 +94,11 @@ contains
             !
             ! Interpolate interior solution to quadrature nodes
             !
-            call interpolate_face(mesh,face,fcn,q,irho, rho_m,  'value', ME)
-            call interpolate_face(mesh,face,fcn,q,irhou,rhou_m, 'value', ME)
-            call interpolate_face(mesh,face,fcn,q,irhov,rhov_m, 'value', ME)
-            call interpolate_face(mesh,face,fcn,q,irhow,rhow_m, 'value', ME)
-            call interpolate_face(mesh,face,fcn,q,irhoE,rhoE_m, 'value', ME)
+            rho_m  = interpolate(mesh,sdata,face,fcn,irho,  'value', ME)
+            rhou_m = interpolate(mesh,sdata,face,fcn,irhou, 'value', ME)
+            rhov_m = interpolate(mesh,sdata,face,fcn,irhov, 'value', ME)
+            rhow_m = interpolate(mesh,sdata,face,fcn,irhow, 'value', ME)
+            rhoE_m = interpolate(mesh,sdata,face,fcn,irhoE, 'value', ME)
 
 
             call prop%fluid%compute_pressure(rho_m,rhou_m,rhov_m,rhow_m,rhoE_m,p_m)

@@ -155,7 +155,7 @@ subroutine test_integrate_boundary_unit_constant()
     flux%type    = BOUNDARY_ADVECTIVE_FLUX
     flux%ifcn    = ifcn
     flux%idepend = idonor
-    flux%iblk    = iblk
+    flux%idiff   = iblk
     flux%seed    = seed
 
 
@@ -347,7 +347,7 @@ subroutine test_integrate_boundary_nonunit_constant()
     flux%type    = BOUNDARY_ADVECTIVE_FLUX
     flux%ifcn    = ifcn
     flux%idepend = idonor
-    flux%iblk    = iblk
+    flux%idiff   = iblk
     flux%seed    = seed
 
 

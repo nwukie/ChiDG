@@ -10,7 +10,7 @@ module bc_euler_wall
     use type_function_info, only: function_info_t
 
     use mod_integrate,      only: integrate_boundary_scalar_flux
-    use mod_interpolate,    only: interpolate_face
+    use mod_interpolate,    only: interpolate
     use DNAD_D
     implicit none
     
@@ -87,7 +87,6 @@ contains
     !!  @param[inout]   sdata   Solver data containing solution vector, rhs, linearization, etc.
     !!  @param[in]      ielem   Index of the element being computed
     !!  @param[in]      iface   Index of the face being computed
-    !!  @param[in]      iblk    Index of the linearization block being computed
     !!  @param[inout]   prop    properties_t object containing equations and material_t objects
     !-------------------------------------------------------------------------------------------
     subroutine compute(self,mesh,sdata,prop,face,fcn)
@@ -105,7 +104,8 @@ contains
         integer(ik)             :: idom, ielem, iface, idonor
 
         ! Storage at quadrature nodes
-        type(AD_D), dimension(mesh(face%idomain_l)%faces(face%ielement_l,face%iface)%gq%face%nnodes)   ::  &
+        !type(AD_D), dimension(mesh(face%idomain_l)%faces(face%ielement_l,face%iface)%gq%face%nnodes)   ::  &
+        type(AD_D), allocatable, dimension(:)   ::  &
                         rho_m,  rhou_m, rhov_m, rhow_m, rhoE_m, p_m, integrand, flux_x, flux_y, flux_z,  &
                         rhou_bc, rhov_bc, rhow_bc, rhoE_bc, u_bc, v_bc, w_bc, u_m, v_m, w_m, p_bc
 
@@ -139,11 +139,13 @@ contains
             !
             ! Interpolate interior solution to quadrature nodes
             !
-            call interpolate_face(mesh,face,fcn,q,irho, rho_m,  'value', ME)
-            call interpolate_face(mesh,face,fcn,q,irhou,rhou_m, 'value', ME)
-            call interpolate_face(mesh,face,fcn,q,irhov,rhov_m, 'value', ME)
-            call interpolate_face(mesh,face,fcn,q,irhow,rhow_m, 'value', ME)
-            call interpolate_face(mesh,face,fcn,q,irhoE,rhoE_m, 'value', ME)
+            rho_m  = interpolate(mesh,sdata,face,fcn,irho,  'value', ME)
+            rhou_m = interpolate(mesh,sdata,face,fcn,irhou, 'value', ME)
+            rhov_m = interpolate(mesh,sdata,face,fcn,irhov, 'value', ME)
+            rhow_m = interpolate(mesh,sdata,face,fcn,irhow, 'value', ME)
+            rhoE_m = interpolate(mesh,sdata,face,fcn,irhoE, 'value', ME)
+
+
 
             !
             ! Compute interior pressure

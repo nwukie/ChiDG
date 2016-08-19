@@ -13,7 +13,7 @@ module SCA_boundary_average_advective_flux
     use type_face_info,             only: face_info_t
     use type_function_info,         only: function_info_t
 
-    use mod_interpolate,            only: interpolate_face
+    use mod_interpolate,            only: interpolate
     use mod_integrate,              only: integrate_boundary_scalar_flux
     use mod_DNAD_tools
     use DNAD_D
@@ -107,9 +107,11 @@ contains
         !
         ! Interpolate solution to quadrature nodes
         !
-        call interpolate_face(mesh,face_info,function_info,sdata%q, iu, u_r, 'value', ME)
-        call interpolate_face(mesh,face_info,function_info,sdata%q, iu, u_l, 'value', NEIGHBOR)
+        !call interpolate_face(mesh,face_info,function_info,sdata%q, iu, u_r, 'value', ME)
+        !call interpolate_face(mesh,face_info,function_info,sdata%q, iu, u_l, 'value', NEIGHBOR)
 
+        u_r = interpolate(mesh,sdata,face_info,function_info, iu, 'value', ME)
+        u_l = interpolate(mesh,sdata,face_info,function_info, iu, 'value', NEIGHBOR)
 
         !
         ! Compute boundary average flux

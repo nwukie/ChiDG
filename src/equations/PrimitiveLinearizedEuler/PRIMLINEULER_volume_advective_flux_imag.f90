@@ -1,7 +1,6 @@
 module PRIMLINEULER_volume_advective_flux_imag
     use mod_kinds,              only: rk,ik
-    use mod_constants,          only: NFACES,ONE,TWO,THREE,FOUR,FIVE,EIGHT,NINE,HALF,ZERO, PI, &
-                                      XI_MIN,XI_MAX,ETA_MIN,ETA_MAX,ZETA_MIN,ZETA_MAX,DIAG
+    use mod_constants,          only: ONE,TWO,THREE,FOUR,FIVE,EIGHT,NINE,HALF,ZERO, PI
 
     use type_mesh,              only: mesh_t
     use type_volume_flux,       only: volume_flux_t
@@ -10,7 +9,7 @@ module PRIMLINEULER_volume_advective_flux_imag
     use type_element_info,      only: element_info_t
     use type_function_info,     only: function_info_t
     
-    use mod_interpolate,        only: interpolate_element
+    use mod_interpolate,        only: interpolate
     use mod_integrate,          only: integrate_volume_flux
     use DNAD_D
 
@@ -73,8 +72,7 @@ contains
 
 
 
-        integer(ik)    :: idom, ielem, iblk, igq
-!        real(rk)       :: gam, thickness, eps, kappa
+        integer(ik)    :: idom, ielem, igq
 
 
         type(AD_D), dimension(mesh(elem_info%idomain_l)%elems(elem_info%ielement_l)%gq%vol%nnodes)      ::  &
@@ -93,9 +91,6 @@ contains
         logical :: inF = .false.
 
 
-
-
-
         !
         ! Get equation indices
         !
@@ -112,27 +107,21 @@ contains
         ip_r   = prop%get_eqn_index("p_r")
 
 
-
-
-
-
         !
         ! Interpolate solution to quadrature nodes
         !
-        call interpolate_element(mesh,sdata%q,idom,ielem,irho_r, rho_r, function_info%seed)
-        call interpolate_element(mesh,sdata%q,idom,ielem,iu_r,   u_r,   function_info%seed)
-        call interpolate_element(mesh,sdata%q,idom,ielem,iv_r,   v_r,   function_info%seed)
-        call interpolate_element(mesh,sdata%q,idom,ielem,iw_r,   w_r,   function_info%seed)
-        call interpolate_element(mesh,sdata%q,idom,ielem,ip_r,   p_r,   function_info%seed)
+        rho_r = interpolate(mesh,sdata,elem_info,function_info,irho_r, 'value')
+        u_r   = interpolate(mesh,sdata,elem_info,function_info,iu_r,   'value')
+        v_r   = interpolate(mesh,sdata,elem_info,function_info,iv_r,   'value')
+        w_r   = interpolate(mesh,sdata,elem_info,function_info,iw_r,   'value')
+        p_r   = interpolate(mesh,sdata,elem_info,function_info,ip_r,   'value')
 
 
-        call interpolate_element(mesh,sdata%q,idom,ielem,irho_i, rho_i, function_info%seed)
-        call interpolate_element(mesh,sdata%q,idom,ielem,iu_i,   u_i,   function_info%seed)
-        call interpolate_element(mesh,sdata%q,idom,ielem,iv_i,   v_i,   function_info%seed)
-        call interpolate_element(mesh,sdata%q,idom,ielem,iw_i,   w_i,   function_info%seed)
-        call interpolate_element(mesh,sdata%q,idom,ielem,ip_i,   p_i,   function_info%seed)
-
-
+        rho_i = interpolate(mesh,sdata,elem_info,function_info,irho_i, 'value')
+        u_i   = interpolate(mesh,sdata,elem_info,function_info,iu_i,   'value')
+        v_i   = interpolate(mesh,sdata,elem_info,function_info,iv_i,   'value')
+        w_i   = interpolate(mesh,sdata,elem_info,function_info,iw_i,   'value')
+        p_i   = interpolate(mesh,sdata,elem_info,function_info,ip_i,   'value')
 
 
         !
@@ -225,13 +214,6 @@ contains
 
 
 
-
-
-
-
-
-
-
         !===========================
         !        MASS FLUX
         !===========================
@@ -271,7 +253,7 @@ contains
                  rho_z_p    * p_r)*((sigma_x+sigma_y)/omega)
 
 
-        call integrate_volume_flux(mesh(idom)%elems(ielem),sdata,idom,irho_i,iblk,flux_x,flux_y,flux_z)
+        call integrate_volume_flux(mesh,sdata,elem_info,function_info,irho_i,flux_x,flux_y,flux_z)
 
 
         !===========================
@@ -312,7 +294,7 @@ contains
                  u_z_w    * w_r    + &
                  u_z_p    * p_r)*((sigma_x+sigma_y)/omega)
 
-        call integrate_volume_flux(mesh(idom)%elems(ielem),sdata,idom,iu_i,iblk,flux_x,flux_y,flux_z)
+        call integrate_volume_flux(mesh,sdata,elem_info,function_info,iu_i,flux_x,flux_y,flux_z)
 
 
         !============================
@@ -353,7 +335,7 @@ contains
                  v_z_w    * w_r    + &
                  v_z_p    * p_r)*((sigma_x+sigma_y)/omega)
 
-        call integrate_volume_flux(mesh(idom)%elems(ielem),sdata,idom,iv_i,iblk,flux_x,flux_y,flux_z)
+        call integrate_volume_flux(mesh,sdata,elem_info,function_info,iv_i,flux_x,flux_y,flux_z)
 
         !============================
         !     Z-MOMENTUM FLUX
@@ -394,7 +376,7 @@ contains
                  w_z_p    * p_r)*((sigma_x+sigma_y)/omega)
 
 
-        call integrate_volume_flux(mesh(idom)%elems(ielem),sdata,idom,iw_i,iblk,flux_x,flux_y,flux_z)
+        call integrate_volume_flux(mesh,sdata,elem_info,function_info,iw_i,flux_x,flux_y,flux_z)
 
         !============================
         !       ENERGY FLUX
@@ -434,7 +416,7 @@ contains
                  p_z_w    * w_r    + &
                  p_z_p    * p_r)*((sigma_x+sigma_y)/omega)
 
-        call integrate_volume_flux(mesh(idom)%elems(ielem),sdata,idom,ip_i,iblk,flux_x,flux_y,flux_z)
+        call integrate_volume_flux(mesh,sdata,elem_info,function_info,ip_i,flux_x,flux_y,flux_z)
 
     end subroutine compute
     !******************************************************************************************************

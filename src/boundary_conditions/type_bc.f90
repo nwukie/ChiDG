@@ -528,7 +528,7 @@ contains
 
             fcn%ifcn     = 0       ! Boundary conditions are not tracked.
             fcn%idepend  = 0       ! Chimera interface not applicable on boundary condition.
-            fcn%iblk     = BC_BLK  ! Indicates to storage routine in LHS to store in BC section.
+            fcn%idiff    = BC_BLK  ! Indicates to storage routine in LHS to store in BC section.
 
             
             !

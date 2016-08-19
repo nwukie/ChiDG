@@ -4,7 +4,7 @@ module mod_entropy
 
     use type_chidg_data,    only: chidg_data_t
 
-    use mod_interpolate,    only: interpolate_element
+    use mod_interpolate,    only: interpolate
     use mod_chidg_mpi,      only: ChiDG_COMM
     use mpi_f08,            only: MPI_AllReduce, MPI_REAL8, MPI_SUM
     use DNAD_D
@@ -31,7 +31,8 @@ contains
 
 
         !& DEBUG HARDCODED NUMBER OF NODES
-        real(rk), dimension(data%mesh(1)%elems(1)%gq%vol%nnodes)  :: &
+        !real(rk), dimension(data%mesh(1)%elems(1)%gq%vol%nnodes)  :: &
+        real(rk), allocatable, dimension(:) :: &
             rho, rhou, rhov, rhow, rhoE, p, entropy
 
         real(rk), dimension(data%mesh(1)%elems(1)%gq%vol%nnodes)    :: entropy_rise
@@ -92,11 +93,11 @@ contains
                     !
                     ! Interpolate variables to GQ nodes
                     !
-                    call interpolate_element(mesh,sdata%q,idom,ielem,irho,  rho)
-                    call interpolate_element(mesh,sdata%q,idom,ielem,irhou, rhou)
-                    call interpolate_element(mesh,sdata%q,idom,ielem,irhov, rhov)
-                    call interpolate_element(mesh,sdata%q,idom,ielem,irhow, rhow)
-                    call interpolate_element(mesh,sdata%q,idom,ielem,irhoE, rhoE)
+                    rho  = interpolate(mesh,sdata,idom,ielem,irho,  'value')
+                    rhou = interpolate(mesh,sdata,idom,ielem,irhou, 'value')
+                    rhov = interpolate(mesh,sdata,idom,ielem,irhov, 'value')
+                    rhow = interpolate(mesh,sdata,idom,ielem,irhow, 'value')
+                    rhoE = interpolate(mesh,sdata,idom,ielem,irhoE, 'value')
 
 
                     !

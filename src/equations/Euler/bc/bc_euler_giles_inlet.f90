@@ -12,7 +12,7 @@ module bc_euler_giles_inlet
 
 
     use mod_integrate,      only: integrate_boundary_scalar_flux
-    use mod_interpolate,    only: interpolate_face
+    use mod_interpolate,    only: interpolate
     use mod_dft,            only: dft, idft_mode_points
     use DNAD_D
     
@@ -216,7 +216,6 @@ contains
     !!  @param[inout]   sdata   Solver data containing solution vector, rhs, linearization, etc.
     !!  @param[in]      ielem   Index of the element being computed
     !!  @param[in]      iface   Index of the face being computed
-    !!  @param[in]      iblk    Index of the linearization block being computed
     !!  @param[inout]   prop    properties_t object containing equations and material_t objects
     !!
     !-------------------------------------------------------------------------------------------
@@ -246,7 +245,7 @@ contains
         real(rk), dimension(mesh(face%idomain)%faces(face%ielement,face%iface)%gq%face%nnodes) :: TT, PT, nx, ny, nz, periodicity
 
         integer(ik)     :: iface_p, ineighbor, idonor
-        integer(ik)     :: idom, ielem, iface, iblk
+        integer(ik)     :: idom, ielem, iface
 
         idonor = 0
 
@@ -264,7 +263,6 @@ contains
         idom  = face%idomain
         ielem = face%ielement
         iface = face%iface
-        iblk  = fcn%iblk
 
 
         associate (norms => mesh(idom)%faces(ielem,iface)%norm, unorms => mesh(idom)%faces(ielem,iface)%unorm, faces => mesh(idom)%faces, &

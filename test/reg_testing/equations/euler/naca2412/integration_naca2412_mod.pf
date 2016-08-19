@@ -36,7 +36,6 @@ module integration_naca2412_mod
     use type_rvector,       only: rvector_t
     use mod_function,       only: create_function
     use mod_grid_operators, only: initialize_variable
-    use mod_entropy,        only: compute_entropy_error
 
     use mod_chidg_mpi,      only: IRANK, NRANK
     use mpi_f08,            only: MPI_COMM
@@ -67,7 +66,6 @@ module integration_naca2412_mod
     @TestParameter
     type, extends(MpiTestParameter) :: case_grid_order
         integer(ik)     :: order
-        real(rk)        :: entropy_ref
     contains
         procedure   :: toString
     end type case_grid_order
@@ -88,8 +86,6 @@ module integration_naca2412_mod
     @TestCase(testParameters={getParameters()}, constructor=newTest)
     type, extends(MpiTestCase) :: naca2412
         integer(ik)     :: order
-        real(rk)        :: entropy_ref
-
         type(chidg_t)   :: chidg
         type(mpi_comm)  :: ChiDG_COMM
     contains
@@ -115,7 +111,6 @@ contains
         type(naca2412)    :: test
 
         test%order       = test_parameter%order
-        test%entropy_ref = test_parameter%entropy_ref
 
     end function newTest
     !******************************************************************************
@@ -185,7 +180,7 @@ contains
         class(naca2412),  intent(inout)   :: this
 
         class(function_t),  allocatable :: fcn
-        real(rk)                        :: tol, entropy_error
+        real(rk)                        :: tol
 
         
         tol = 1.e-6_rk
@@ -324,15 +319,14 @@ contains
     !!      - store the nonlinear convergence to the module variable so it can 
     !!        be used by a test for nonlinear convergence.
     !!
-    !!  @author Nathan A. Wukie
     !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   8/18/2016
     !!
     !!
     !-------------------------------------------------------------------------------------------------------
     @Test(npes=[1,2,4,7,10])
     subroutine test_calculation(self)
         class(naca2412),  intent(inout)   :: self
-
         integer(ik) :: npes_index, order_index
 
         !

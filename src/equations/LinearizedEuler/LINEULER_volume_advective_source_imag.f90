@@ -1,7 +1,6 @@
 module LINEULER_volume_advective_source_imag
     use mod_kinds,              only: rk,ik
-    use mod_constants,          only: NFACES,ONE,TWO,HALF,ZERO, &
-                                      XI_MIN,XI_MAX,ETA_MIN,ETA_MAX,ZETA_MIN,ZETA_MAX,DIAG,PI
+    use mod_constants,          only: ONE,TWO,HALF,ZERO, PI
 
     use type_mesh,              only: mesh_t
     use type_volume_flux,       only: volume_flux_t
@@ -10,9 +9,8 @@ module LINEULER_volume_advective_source_imag
     use type_element_info,      only: element_info_t
     use type_function_info,     only: function_info_t
     
-    use mod_interpolate,        only: interpolate_element
+    use mod_interpolate,        only: interpolate
     use mod_integrate,          only: integrate_volume_source
-    use mod_DNAD_tools
     use DNAD_D
 
     use LINEULER_properties,    only: LINEULER_properties_t
@@ -58,7 +56,6 @@ contains
     !!
     !!
     !---------------------------------------------------------------------------------------
-    !subroutine compute(self,mesh,sdata,prop,idom,ielem,iblk)
     subroutine compute(self,mesh,sdata,prop,elem_info,function_info)
         class(LINEULER_volume_advective_source_imag_t), intent(in)      :: self
         type(mesh_t),                                   intent(in)      :: mesh(:)
@@ -74,7 +71,7 @@ contains
         integer(ik)    :: irhow_r, irhow_i
         integer(ik)    :: irhoE_r, irhoE_i
 
-        integer(ik)    :: idom, ielem, iblk, igq
+        integer(ik)    :: idom, ielem, igq
         real(rk)       :: gam, omega, sigma_max, thickness, xl
 
 
@@ -90,7 +87,6 @@ contains
 
         idom  = elem_info%idomain_l
         ielem = elem_info%ielement_l
-        iblk  = function_info%iblk
 
 
         !-------------------------------------------------------------
@@ -143,25 +139,24 @@ contains
         !
         ! Interpolate solution to quadrature nodes
         !
-        call interpolate_element(mesh,sdata%q,idom,ielem,irho_r, rho_r, function_info%seed)
-        call interpolate_element(mesh,sdata%q,idom,ielem,irhou_r,rhou_r,function_info%seed)
-        call interpolate_element(mesh,sdata%q,idom,ielem,irhov_r,rhov_r,function_info%seed)
-        call interpolate_element(mesh,sdata%q,idom,ielem,irhow_r,rhow_r,function_info%seed)
-        call interpolate_element(mesh,sdata%q,idom,ielem,irhoE_r,rhoE_r,function_info%seed)
+        rho_r  = interpolate(mesh,sdata,elem_info,function_info,irho_r, 'value')
+        rhou_r = interpolate(mesh,sdata,elem_info,function_info,irhou_r,'value')
+        rhov_r = interpolate(mesh,sdata,elem_info,function_info,irhov_r,'value')
+        rhow_r = interpolate(mesh,sdata,elem_info,function_info,irhow_r,'value')
+        rhoE_r = interpolate(mesh,sdata,elem_info,function_info,irhoE_r,'value')
 
-        call interpolate_element(mesh,sdata%q,idom,ielem,irho_i, rho_i, function_info%seed)
-        call interpolate_element(mesh,sdata%q,idom,ielem,irhou_i,rhou_i,function_info%seed)
-        call interpolate_element(mesh,sdata%q,idom,ielem,irhov_i,rhov_i,function_info%seed)
-        call interpolate_element(mesh,sdata%q,idom,ielem,irhow_i,rhow_i,function_info%seed)
-        call interpolate_element(mesh,sdata%q,idom,ielem,irhoE_i,rhoE_i,function_info%seed)
-
+        rho_i  = interpolate(mesh,sdata,elem_info,function_info,irho_i, 'value')
+        rhou_i = interpolate(mesh,sdata,elem_info,function_info,irhou_i,'value')
+        rhov_i = interpolate(mesh,sdata,elem_info,function_info,irhov_i,'value')
+        rhow_i = interpolate(mesh,sdata,elem_info,function_info,irhow_i,'value')
+        rhoE_i = interpolate(mesh,sdata,elem_info,function_info,irhoE_i,'value')
 
         !===========================
         !        MASS FLUX
         !===========================
         flux =  omega * rho_r  -  sigma*rho_i
 
-        call integrate_volume_source(mesh(idom)%elems(ielem),sdata,idom,irho_i,iblk,flux)
+        call integrate_volume_source(mesh,sdata,elem_info,function_info,irho_i,flux)
 
 
         !===========================
@@ -169,7 +164,7 @@ contains
         !===========================
         flux =  omega * rhou_r  -  sigma*rhou_i
 
-        call integrate_volume_source(mesh(idom)%elems(ielem),sdata,idom,irhou_i,iblk,flux)
+        call integrate_volume_source(mesh,sdata,elem_info,function_info,irhou_i,flux)
 
 
         !============================
@@ -177,21 +172,21 @@ contains
         !============================
         flux =  omega * rhov_r  -  sigma*rhov_i
 
-        call integrate_volume_source(mesh(idom)%elems(ielem),sdata,idom,irhov_i,iblk,flux)
+        call integrate_volume_source(mesh,sdata,elem_info,function_info,irhov_i,flux)
 
         !============================
         !     Z-MOMENTUM FLUX
         !============================
         flux =  omega * rhow_r  -  sigma*rhow_i
 
-        call integrate_volume_source(mesh(idom)%elems(ielem),sdata,idom,irhow_i,iblk,flux)
+        call integrate_volume_source(mesh,sdata,elem_info,function_info,irhow_i,flux)
 
         !============================
         !       ENERGY FLUX
         !============================
         flux =  omega * rhoE_r  -  sigma*rhoE_i
 
-        call integrate_volume_source(mesh(idom)%elems(ielem),sdata,idom,irhoE_i,iblk,flux)
+        call integrate_volume_source(mesh,sdata,elem_info,function_info,irhoE_i,flux)
 
     end subroutine compute
     !*********************************************************************************************************

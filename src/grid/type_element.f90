@@ -50,7 +50,7 @@ module type_element
 
 
         ! Element quadrature points, mesh points and modes
-        type(element_connectivity_t)    :: connectivity      !< Connectivity list. Integer indices of the associated nodes in block node list
+        type(element_connectivity_t)    :: connectivity         !< Connectivity list. Integer indices of the associated nodes in block node list
         type(point_t), allocatable      :: quad_pts(:)          !< Cartesian coordinates of discrete quadrature points
         type(point_t), allocatable      :: elem_pts(:)          !< Cartesian coordinates of discrete points defining element
         type(densevector_t)             :: coords               !< Modal representation of cartesian coordinates (nterms_var,(x,y,z))
@@ -60,23 +60,23 @@ module type_element
         real(rk), allocatable           :: jinv(:)              !< jacobian terms at quadrature nodes
 
         ! Matrices of cartesian gradients of basis/test functions
-        real(rk), allocatable           :: dtdx(:,:)            !< Derivative of basis functions in x-direction at quadrature nodes
-        real(rk), allocatable           :: dtdy(:,:)            !< Derivative of basis functions in y-direction at quadrature nodes
-        real(rk), allocatable           :: dtdz(:,:)            !< Derivative of basis functions in z-direction at quadrature nodes
-        real(rk), allocatable           :: dtdx_trans(:,:)            !< Derivative of basis functions in x-direction at quadrature nodes - transposed
-        real(rk), allocatable           :: dtdy_trans(:,:)            !< Derivative of basis functions in y-direction at quadrature nodes - transposed
-        real(rk), allocatable           :: dtdz_trans(:,:)            !< Derivative of basis functions in z-direction at quadrature nodes - transposed
+        real(rk), allocatable           :: ddx(:,:)             !< Derivative of basis functions in x-direction at quadrature nodes
+        real(rk), allocatable           :: ddy(:,:)             !< Derivative of basis functions in y-direction at quadrature nodes
+        real(rk), allocatable           :: ddz(:,:)             !< Derivative of basis functions in z-direction at quadrature nodes
+        real(rk), allocatable           :: ddx_trans(:,:)       !< Derivative of basis functions in x-direction at quadrature nodes - transposed
+        real(rk), allocatable           :: ddy_trans(:,:)       !< Derivative of basis functions in y-direction at quadrature nodes - transposed
+        real(rk), allocatable           :: ddz_trans(:,:)       !< Derivative of basis functions in z-direction at quadrature nodes - transposed
 
         ! Quadrature matrices
-        type(quadrature_t), pointer     :: gq     => null()    !< Pointer to quadrature instance for solution expansion
-        type(quadrature_t), pointer     :: gqmesh => null()    !< Pointer to quadrature instance for coordinate expansion
+        type(quadrature_t), pointer     :: gq     => null()     !< Pointer to quadrature instance for solution expansion
+        type(quadrature_t), pointer     :: gqmesh => null()     !< Pointer to quadrature instance for coordinate expansion
 
         ! Element-local mass matrices
-        real(rk), allocatable           :: mass(:,:)
-        real(rk), allocatable           :: invmass(:,:)
+        real(rk), allocatable           :: mass(:,:)            !< Mass matrix
+        real(rk), allocatable           :: invmass(:,:)         !< Inverse mass matrix
 
         ! Element volume
-        real(rk)                        :: vol
+        real(rk)                        :: vol                  !< Element volume
 
         ! Logical tests
         logical :: geomInitialized = .false.
@@ -269,12 +269,12 @@ contains
         allocate(self%jinv(nnodes),                         &
                  self%metric(3,3,nnodes),                   &
                  self%quad_pts(nnodes),                     &
-                 self%dtdx(nnodes,nterms_s),                &
-                 self%dtdy(nnodes,nterms_s),                &
-                 self%dtdz(nnodes,nterms_s),                &
-                 self%dtdx_trans(nterms_s,nnodes),          &
-                 self%dtdy_trans(nterms_s,nnodes),          &
-                 self%dtdz_trans(nterms_s,nnodes),          &
+                 self%ddx(nnodes,nterms_s),                &
+                 self%ddy(nnodes,nterms_s),                &
+                 self%ddz(nnodes,nterms_s),                &
+                 self%ddx_trans(nterms_s,nnodes),          &
+                 self%ddy_trans(nterms_s,nnodes),          &
+                 self%ddz_trans(nterms_s,nnodes),          &
                  self%mass(nterms_s,nterms_s),              &
                  self%invmass(nterms_s,nterms_s), stat = ierr)
         if (ierr /= 0) call AllocationError
@@ -464,7 +464,7 @@ contains
 
     !>  Subroutine computes element-specific matrices
     !!      - Mass matrix   (mass, invmass)
-    !!      - Matrices of cartesian gradients of basis/test functions (dtdx, dtdy, dtdz)
+    !!      - Matrices of cartesian gradients of basis/test functions (ddx, ddy, ddz)
     !!      - Cartesian coordinates of quadrature points (quad_pts)
     !!
     !!  @author Nathan A. Wukie
@@ -516,24 +516,24 @@ contains
 
         do iterm = 1,self%nterms_s
             do inode = 1,self%gq%vol%nnodes
-                self%dtdx(inode,iterm) = self%metric(1,1,inode) * self%gq%vol%ddxi(inode,iterm)   * (ONE/self%jinv(inode)) + &
-                                         self%metric(2,1,inode) * self%gq%vol%ddeta(inode,iterm)  * (ONE/self%jinv(inode)) + &
-                                         self%metric(3,1,inode) * self%gq%vol%ddzeta(inode,iterm) * (ONE/self%jinv(inode))
+                self%ddx(inode,iterm) = self%metric(1,1,inode) * self%gq%vol%ddxi(inode,iterm)   * (ONE/self%jinv(inode)) + &
+                                        self%metric(2,1,inode) * self%gq%vol%ddeta(inode,iterm)  * (ONE/self%jinv(inode)) + &
+                                        self%metric(3,1,inode) * self%gq%vol%ddzeta(inode,iterm) * (ONE/self%jinv(inode))
 
-                self%dtdy(inode,iterm) = self%metric(1,2,inode) * self%gq%vol%ddxi(inode,iterm)   * (ONE/self%jinv(inode)) + &
-                                         self%metric(2,2,inode) * self%gq%vol%ddeta(inode,iterm)  * (ONE/self%jinv(inode)) + &
-                                         self%metric(3,2,inode) * self%gq%vol%ddzeta(inode,iterm) * (ONE/self%jinv(inode))
+                self%ddy(inode,iterm) = self%metric(1,2,inode) * self%gq%vol%ddxi(inode,iterm)   * (ONE/self%jinv(inode)) + &
+                                        self%metric(2,2,inode) * self%gq%vol%ddeta(inode,iterm)  * (ONE/self%jinv(inode)) + &
+                                        self%metric(3,2,inode) * self%gq%vol%ddzeta(inode,iterm) * (ONE/self%jinv(inode))
 
-                self%dtdz(inode,iterm) = self%metric(1,3,inode) * self%gq%vol%ddxi(inode,iterm)   * (ONE/self%jinv(inode)) + &
-                                         self%metric(2,3,inode) * self%gq%vol%ddeta(inode,iterm)  * (ONE/self%jinv(inode)) + &
-                                         self%metric(3,3,inode) * self%gq%vol%ddzeta(inode,iterm) * (ONE/self%jinv(inode))
+                self%ddz(inode,iterm) = self%metric(1,3,inode) * self%gq%vol%ddxi(inode,iterm)   * (ONE/self%jinv(inode)) + &
+                                        self%metric(2,3,inode) * self%gq%vol%ddeta(inode,iterm)  * (ONE/self%jinv(inode)) + &
+                                        self%metric(3,3,inode) * self%gq%vol%ddzeta(inode,iterm) * (ONE/self%jinv(inode))
             end do
         end do
 
 
-        self%dtdx_trans = transpose(self%dtdx)
-        self%dtdy_trans = transpose(self%dtdy)
-        self%dtdz_trans = transpose(self%dtdz)
+        self%ddx_trans = transpose(self%ddx)
+        self%ddy_trans = transpose(self%ddy)
+        self%ddz_trans = transpose(self%ddz)
 
     end subroutine compute_gradients_cartesian
     !*********************************************************************************************************

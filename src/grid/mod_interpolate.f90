@@ -24,7 +24,8 @@ module mod_interpolate
 
 
     interface interpolate
-        module procedure    interpolate_element_autodiff, interpolate_element_standard, interpolate_face_autodiff, interpolate_face_standard
+        !module procedure    interpolate_element_autodiff, interpolate_element_standard, interpolate_face_autodiff, interpolate_face_standard
+        module procedure    chidg_interpolate_element, interpolate_element_standard, chidg_interpolate_face, interpolate_face_standard
     end interface
 
 
@@ -47,6 +48,103 @@ module mod_interpolate
 contains
 
 
+
+
+    !>
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   8/19/2016
+    !!
+    !!
+    !--------------------------------------------------------------------------------------------------------
+    function chidg_interpolate_element(mesh,sdata,elem_info,fcn_info,ieqn,interpolation_type) result(var_gq)
+        type(mesh_t),           intent(in)      :: mesh(:)
+        type(solverdata_t),     intent(in)      :: sdata
+        type(element_info_t),   intent(in)      :: elem_info
+        type(function_info_t),  intent(in)      :: fcn_info
+        integer(ik),            intent(in)      :: ieqn
+        character(len=*),       intent(in)      :: interpolation_type
+
+        type(AD_D), dimension(mesh(elem_info%idomain_l)%elems(elem_info%ielement_l)%gq%vol%nnodes)  :: &
+            var_gq, diff, lift
+
+        if (interpolation_type == 'value') then
+
+            var_gq = interpolate_element_autodiff(mesh,sdata%q,elem_info,fcn_info,ieqn,interpolation_type)
+
+        else if (interpolation_type == 'ddx' .or. &
+                 interpolation_type == 'ddy' .or. & 
+                 interpolation_type == 'ddz') then
+
+            diff = interpolate_element_autodiff(mesh,sdata%q,elem_info,fcn_info,ieqn,interpolation_type)
+!            lift = sdata%BR2%get_lift(mesh,elem_info,fcn_info,ieqn,interpolation_type)
+
+            var_gq = diff + lift
+
+        else
+            call chidg_signal(FATAL,"interpolate: Invalid interpolation type. Options are 'value', 'ddx', 'ddy', 'ddz'")
+        end if
+
+
+
+    end function chidg_interpolate_element
+    !********************************************************************************************************
+
+
+
+
+
+
+
+    !>
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   8/19/2016
+    !!
+    !!
+    !--------------------------------------------------------------------------------------------------------
+    function chidg_interpolate_face(mesh,sdata,face_info,fcn_info,ieqn,interpolation_type,interpolation_source) result(var_gq)
+        type(mesh_t),           intent(in)      :: mesh(:)
+        type(solverdata_t),     intent(in)      :: sdata
+        type(face_info_t),      intent(in)      :: face_info
+        type(function_info_t),  intent(in)      :: fcn_info
+        integer(ik),            intent(in)      :: ieqn
+        character(len=*),       intent(in)      :: interpolation_type
+        integer(ik),            intent(in)      :: interpolation_source
+
+        type(AD_D), dimension(mesh(face_info%idomain_l)%elems(face_info%ielement_l)%gq%face%nnodes) :: &
+                var_gq, diff, lift
+
+        if (interpolation_type == 'value') then
+
+            var_gq = interpolate_face_autodiff(mesh,sdata%q,face_info,fcn_info,ieqn,interpolation_type,interpolation_source)
+
+        else if (interpolation_type == 'ddx' .or. &
+                 interpolation_type == 'ddy' .or. & 
+                 interpolation_type == 'ddz') then
+
+            diff = interpolate_face_autodiff(mesh,sdata%q,face_info,fcn_info,ieqn,interpolation_type,interpolation_source)
+!            lift = sdata%BR2%get_lift(mesh,elem_info,fcn_info,ieqn,interpolation_type)
+
+            var_gq = diff + lift
+
+            call chidg_signal(FATAL,"interpolate: Invalid interpolation type. Options are 'value', 'ddx', 'ddy', 'ddz'")
+        end if
+
+
+
+    end function chidg_interpolate_face
+    !********************************************************************************************************
+
+
+
+
+
+
+
+
+
+
     !>  Interpolate polynomial expansion to volume quadrature node set, initializing the
     !!  automatic differentiation process if needed.
     !!
@@ -60,9 +158,9 @@ contains
     !!  @date   2/1/2016
     !!
     !-------------------------------------------------------------------------------------------------------
-    function interpolate_element_autodiff(mesh,sdata,elem_info,fcn_info,ieqn,interpolation_type) result(var_gq)
+    function interpolate_element_autodiff(mesh,q,elem_info,fcn_info,ieqn,interpolation_type) result(var_gq)
         type(mesh_t),           intent(in)      :: mesh(:)
-        type(solverdata_t),     intent(in)      :: sdata
+        type(chidgVector_t),    intent(in)      :: q
         type(element_info_t),   intent(in)      :: elem_info
         type(function_info_t),  intent(in)      :: fcn_info
         integer(ik),            intent(in)      :: ieqn
@@ -79,7 +177,7 @@ contains
         !
         ! Get number of derivatives to initialize for automatic differentiation
         !
-        nderiv = get_interpolation_nderiv(mesh,sdata,fcn_info)
+        nderiv = get_interpolation_nderiv(mesh,q,fcn_info)
 
 
         !
@@ -93,7 +191,7 @@ contains
         !
         ! Copy the solution variables from 'q' to 'qdiff'
         !
-        qdiff = sdata%q%dom(idom)%vecs(ielem)%getvar(ieqn)
+        qdiff = q%dom(idom)%vecs(ielem)%getvar(ieqn)
 
 
         !
@@ -178,9 +276,9 @@ contains
     !!  @param[in]      interpolation_source    ME/NEIGHBOR indicating which element to interpolate from
     !!
     !-----------------------------------------------------------------------------------------------------------
-    function interpolate_face_autodiff(mesh,sdata,face_info,fcn_info, ieqn, interpolation_type, interpolation_source) result(var_gq)
+    function interpolate_face_autodiff(mesh,q,face_info,fcn_info, ieqn, interpolation_type, interpolation_source) result(var_gq)
         type(mesh_t),           intent(in)              :: mesh(:)
-        type(solverdata_t),     intent(in)              :: sdata
+        type(chidgVector_t),    intent(in)              :: q
         type(face_info_t),      intent(in)              :: face_info
         type(function_info_t),  intent(in)              :: fcn_info
         integer(ik),            intent(in)              :: ieqn
@@ -222,7 +320,7 @@ contains
         !
         ! Get number of derivatives to initialize for automatic differentiation
         !
-        nderiv = get_interpolation_nderiv(mesh,sdata,fcn_info)
+        nderiv = get_interpolation_nderiv(mesh,q,fcn_info)
 
 
         !
@@ -245,7 +343,7 @@ contains
             ! Allocate AD array to store a copy of the solution which starts the differentiation
             !
             if (parallel_interpolation) then
-                nterms_s = sdata%q%recv%comm(recv_info%comm)%dom(recv_info%domain)%vecs(recv_info%element)%nterms()
+                nterms_s = q%recv%comm(recv_info%comm)%dom(recv_info%domain)%vecs(recv_info%element)%nterms()
             else
                 nterms_s = mesh(iface_info%idomain_l)%elems(iface_info%ielement_l)%nterms_s
             end if
@@ -267,9 +365,9 @@ contains
             ! Copy the solution variables from 'q' to 'qdiff'
             !
             if (parallel_interpolation) then
-                qdiff = sdata%q%recv%comm(recv_info%comm)%dom(recv_info%domain)%vecs(recv_info%element)%getvar(ieqn)
+                qdiff = q%recv%comm(recv_info%comm)%dom(recv_info%domain)%vecs(recv_info%element)%getvar(ieqn)
             else
-                qdiff = sdata%q%dom(iface_info%idomain_l)%vecs(iface_info%ielement_l)%getvar(ieqn)
+                qdiff = q%dom(iface_info%idomain_l)%vecs(iface_info%ielement_l)%getvar(ieqn)
             end if
 
 
@@ -672,7 +770,7 @@ contains
     !!  @date   8/16/2016
     !!
     !!
-    !------------------------------------------------------------------------------------------------------------------------------------
+    !-----------------------------------------------------------------------------------------------------------------------
     function get_face_interpolation_info(mesh,face_info,interpolation_source,idonor) result(iface_info)
         type(mesh_t),       intent(in)                  :: mesh(:)
         type(face_info_t),  intent(in)                  :: face_info
@@ -762,7 +860,7 @@ contains
     !!  @date   8/16/2016
     !!
     !!
-    !------------------------------------------------------------------------------------------------------------------------------------
+    !---------------------------------------------------------------------------------------------------------------------
     function get_face_interpolation_interpolator(mesh,source_face,interpolation_source,idonor,interpolation_type,donor_face) result(interpolator)
         type(mesh_t),       intent(in)  :: mesh(:)
         type(face_info_t),  intent(in)  :: source_face
@@ -905,7 +1003,7 @@ contains
     !!  @date   8/16/2016
     !!
     !!
-    !------------------------------------------------------------------------------------------------------------------------------------
+    !------------------------------------------------------------------------------------------------------------------
     function get_face_interpolation_mask(mesh,face_info,interpolation_source,idonor) result(mask)
         type(mesh_t),       intent(in)                  :: mesh(:)
         type(face_info_t),  intent(in)                  :: face_info
@@ -984,7 +1082,7 @@ contains
     !!  @date   8/16/2016
     !!
     !!
-    !------------------------------------------------------------------------------------------------------------------------------------
+    !----------------------------------------------------------------------------------------------------------------------
     function get_face_interpolation_comm(mesh,face_info,interpolation_source,idonor) result(recv_info)
         type(mesh_t),       intent(in)                  :: mesh(:)
         type(face_info_t),  intent(in)                  :: face_info
@@ -1197,9 +1295,9 @@ contains
     !!  @date   8/17/2016
     !!
     !--------------------------------------------------------------------------------------------------------
-    function get_interpolation_nderiv(mesh,sdata,function_info) result(nderiv)
+    function get_interpolation_nderiv(mesh,q,function_info) result(nderiv)
         type(mesh_t),           intent(in)  :: mesh(:)
-        type(solverdata_t),     intent(in)  :: sdata
+        type(chidgVector_t),    intent(in)  :: q
         type(function_info_t),  intent(in)  :: function_info
 
         integer(ik) :: nderiv, neqns_seed, nterms_s_seed
@@ -1219,8 +1317,8 @@ contains
             !
             parallel_seed = (function_info%seed%iproc /= IRANK)
             if ( parallel_seed ) then
-                neqns_seed    = sdata%q%recv%comm(function_info%seed%recv_comm)%dom(function_info%seed%recv_domain)%vecs(function_info%seed%recv_element)%nvars()
-                nterms_s_seed = sdata%q%recv%comm(function_info%seed%recv_comm)%dom(function_info%seed%recv_domain)%vecs(function_info%seed%recv_element)%nterms()
+                neqns_seed    = q%recv%comm(function_info%seed%recv_comm)%dom(function_info%seed%recv_domain)%vecs(function_info%seed%recv_element)%nvars()
+                nterms_s_seed = q%recv%comm(function_info%seed%recv_comm)%dom(function_info%seed%recv_domain)%vecs(function_info%seed%recv_element)%nterms()
             else
                 neqns_seed    = mesh(function_info%seed%idomain_l)%elems(function_info%seed%ielement_l)%neqns
                 nterms_s_seed = mesh(function_info%seed%idomain_l)%elems(function_info%seed%ielement_l)%nterms_s

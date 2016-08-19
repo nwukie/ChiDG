@@ -305,7 +305,7 @@ contains
             !
             ! PROCEDURE BEING TESTED
             !
-            u_gq = interpolate_element_autodiff(self%chidg%data%mesh,self%chidg%data%sdata,elem_info,function_info,ivar, 'value')
+            u_gq = interpolate_element_autodiff(self%chidg%data%mesh,q,elem_info,function_info,ivar, 'value')
             
             
             ! Initialize reference
@@ -384,7 +384,7 @@ contains
             !
             ! PROCEDURE BEING TESTED
             !
-            u_gq = interpolate_element_autodiff(self%chidg%data%mesh,self%chidg%data%sdata,elem_info,function_info,ivar, 'value')
+            u_gq = interpolate_element_autodiff(self%chidg%data%mesh,q,elem_info,function_info,ivar, 'value')
             
             
             ! Initialize reference
@@ -465,7 +465,7 @@ contains
             !
             ! PROCEDURE BEING TESTED
             !
-            u_gq = interpolate_element_autodiff(self%chidg%data%mesh,self%chidg%data%sdata,elem_info,function_info,ivar, 'value')
+            u_gq = interpolate_element_autodiff(self%chidg%data%mesh,q,elem_info,function_info,ivar, 'value')
             
             
             ! Initialize reference
@@ -545,7 +545,7 @@ contains
             !
             ! PROCEDURE BEING TESTED
             !
-            u_gq = interpolate_element_autodiff(self%chidg%data%mesh,self%chidg%data%sdata,elem_info,function_info,ivar, 'value')
+            u_gq = interpolate_element_autodiff(self%chidg%data%mesh,q,elem_info,function_info,ivar, 'value')
             
             
             ! Initialize reference
@@ -641,7 +641,7 @@ contains
             !
             ! PROCEDURE BEING TESTED
             !
-            u_gq = interpolate_face_autodiff(self%chidg%data%mesh,self%chidg%data%sdata,face,fcn,ivar,'value',ME)
+            u_gq = interpolate_face_autodiff(self%chidg%data%mesh,q,face,fcn,ivar,'value',ME)
             
             
             ! Initialize reference
@@ -732,7 +732,7 @@ contains
             !
             ! PROCEDURE BEING TESTED
             !
-            u_gq = interpolate_face_autodiff(self%chidg%data%mesh,self%chidg%data%sdata,face,fcn,ivar,'value',ME)
+            u_gq = interpolate_face_autodiff(self%chidg%data%mesh,q,face,fcn,ivar,'value',ME)
             
             deriv_ref = ZERO
             
@@ -817,7 +817,7 @@ contains
             !
             ! PROCEDURE BEING TESTED
             !
-            u_gq = interpolate_face_autodiff(self%chidg%data%mesh,self%chidg%data%sdata,face,fcn,ivar,'value',ME)
+            u_gq = interpolate_face_autodiff(self%chidg%data%mesh,q,face,fcn,ivar,'value',ME)
             
             
             !
@@ -907,7 +907,7 @@ contains
             !
             ! PROCEDURE BEING TESTED
             !
-            u_gq = interpolate_face_autodiff(self%chidg%data%mesh,self%chidg%data%sdata,face,fcn,ivar,'value',ME)
+            u_gq = interpolate_face_autodiff(self%chidg%data%mesh,q,face,fcn,ivar,'value',ME)
               
             
             
@@ -998,7 +998,7 @@ contains
             !
             ! PROCEDURE BEING TESTED
             !
-            u_gq = interpolate_face_autodiff(self%chidg%data%mesh,self%chidg%data%sdata,face,fcn,ivar,'value',NEIGHBOR)
+            u_gq = interpolate_face_autodiff(self%chidg%data%mesh,q,face,fcn,ivar,'value',NEIGHBOR)
             
             
             ! Initialize reference
@@ -1086,7 +1086,7 @@ contains
             !
             ! PROCEDURE BEING TESTED
             !
-            u_gq = interpolate_face_autodiff(self%chidg%data%mesh,self%chidg%data%sdata,face,fcn,ivar,'value',NEIGHBOR)
+            u_gq = interpolate_face_autodiff(self%chidg%data%mesh,q,face,fcn,ivar,'value',NEIGHBOR)
             
             deriv_ref = ZERO
             
@@ -1179,7 +1179,7 @@ contains
             !
             ! PROCEDURE BEING TESTED
             !
-            u_gq = interpolate_face_autodiff(self%chidg%data%mesh,self%chidg%data%sdata,face,fcn,ivar,'value',NEIGHBOR)
+            u_gq = interpolate_face_autodiff(self%chidg%data%mesh,q,face,fcn,ivar,'value',NEIGHBOR)
             
             
             !
@@ -1268,7 +1268,7 @@ contains
             !
             ! PROCEDURE BEING TESTED
             !
-            u_gq = interpolate_face_autodiff(self%chidg%data%mesh,self%chidg%data%sdata,face,fcn,ivar,'value',NEIGHBOR)
+            u_gq = interpolate_face_autodiff(self%chidg%data%mesh,q,face,fcn,ivar,'value',NEIGHBOR)
               
             
             

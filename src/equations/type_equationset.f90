@@ -633,7 +633,7 @@ contains
 
                 function_info%type   = BOUNDARY_ADVECTIVE_FLUX
                 function_info%ifcn   = ifcn
-                function_info%idiff   = idiff
+                function_info%idiff  = idiff
 
                 compute_function     = sdata%function_status%compute_function(   face_info, function_info )
                 linearize_function   = sdata%function_status%linearize_function( face_info, function_info )

@@ -18,6 +18,7 @@ add_subdirectory(numerical_methods)
 add_subdirectory(materials)
 add_subdirectory(chimera)
 add_subdirectory(parallel)
+add_subdirectory(diffusion)
 add_subdirectory(actions)
 
 # Propagate lib_srcs list to parent directory

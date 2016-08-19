@@ -130,6 +130,7 @@ contains
         integer(ik),            intent(in)      :: eparent_l
 
         integer(ik) :: ierr, vsize
+        logical     :: reallocate
 
         !
         ! Set dense-vector integer data
@@ -154,8 +155,13 @@ contains
         ! Check if storage was already allocated and reallocate if necessary
         !
         if (allocated(self%vec)) then
-            deallocate(self%vec)
-            allocate(self%vec(vsize), stat=ierr)
+
+            reallocate = (vsize /= size(self%vec))
+            if (reallocate) then
+                deallocate(self%vec)
+                allocate(self%vec(vsize), stat=ierr)
+            end if
+
         else
             allocate(self%vec(vsize), stat=ierr)
         end if
@@ -165,7 +171,7 @@ contains
         !
         ! Initialize to zero
         !
-        self%vec = 0._rk
+        self%vec = ZERO
 
     end subroutine init
     !******************************************************************************************************

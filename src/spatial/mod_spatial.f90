@@ -106,6 +106,10 @@ contains
                     elem_info%ielement_l = mesh(idom)%elems(ielem)%ielement_l
 
 
+                    ! Compute framework diffusion terms and linearization for current element
+                    call sdata%update_diffusion(mesh,elem_info)
+
+
                     ! 1-6 = linearization of neighbor blocks, 7 = linearization of Q- block(self)
                     do idiff = 1,7
 

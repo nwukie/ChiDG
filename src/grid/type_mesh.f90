@@ -58,10 +58,10 @@ module type_mesh
         !
         ! Initialization flags
         !
-        logical                         :: geomInitialized = .false.            !< Status of geometry initialization
-        logical                         :: solInitialized  = .false.            !< Status of numerics initialization
-        logical                         :: local_comm_initialized = .false.
-        logical                         :: global_comm_initialized = .false.
+        logical                         :: geomInitialized          = .false.   !< Status of geometry initialization
+        logical                         :: solInitialized           = .false.   !< Status of numerics initialization
+        logical                         :: local_comm_initialized   = .false.   !< Status of processor-local communication initialization
+        logical                         :: global_comm_initialized  = .false.   !< Status of processor-global communication initialization
 
     contains
 

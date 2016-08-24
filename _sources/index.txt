@@ -3,14 +3,82 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-Welcome!
-========
+Welcome to ChiDG
+================
 
-**ChiDG: A Chimera-based, discontinuous Galerkin solver**
 
-ChiDG is a framework for solving sets of partial differential 
+.. .. image:: figures/naca2412.png
+    :width: 18 %
+    :align: left
+
+.. .. image:: figures/mode91_3dview.png
+    :width: 16 %
+    :align: center
+
+.. .. image:: figures/aachen_turbine_nonreflectingbc.png
+    :width: 10 %
+    :align: right
+
+
+.. +----------+----------+-----------+
+.. |  |test1| + |test2|  + |test3|   +
+.. +----------+----------+-----------+
+
+
+|
+
+ChiDG is:
+---------
+
+a framework for solving sets of partial differential 
 equations using the discontinuous Galerkin method on Chimera-overset grids.
 
+
+
+
+
+.. image:: figures/icon_dg.png
+    :width: 19 %
+.. image:: figures/icon_curved.png
+    :width: 19%
+.. image:: figures/icon_chimera.png
+    :width: 19%
+.. image:: figures/icon_newton.png
+    :width: 19%
+.. image:: figures/icon_autodiff.png
+    :width: 19%
+
+
+|
+|
+
+ChiDG exists as:
+----------------
+
+a Fortran Class that provides an interface to the simulation environment.
+
+::
+
+    type :: chidg_t
+        type(chidg_data_t)          data
+        type(time_scheme_t)         time_scheme
+        type(nonlinear_solver_t)    nonlinear_solver
+        type(linear_solver_t)       linear_solver
+        type(preconditioner_t)      preconditioner
+        ...
+    end type chidg_t
+
+
+
+
+
+|
+|
+
+
+
+Example simulation applications:
+--------------------------------
 
 .. image:: figures/naca2412.png
     :width: 36 %
@@ -27,16 +95,6 @@ equations using the discontinuous Galerkin method on Chimera-overset grids.
 
 |
 |
-
-Discretization advantages:
-    - Arbitrarily high-order accurate
-    - Curved elements for conforming to geometry
-    - Chimera overset grids for representing complex geometry
-
-Framework capabilities:
-    - Fully-implicit Newton's method
-    - Intrinsic automatic differentiation
-
 
 
 Getting started

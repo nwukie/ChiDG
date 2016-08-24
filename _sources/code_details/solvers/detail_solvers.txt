@@ -1,0 +1,160 @@
+=======
+Solvers
+=======
+
+ChiDG includes both nonlinear and linear solvers. 
+
+
+
+-----------------
+Nonlinear solvers
+-----------------
+
+ChiDG includes nonlinear solvers for solving the nonlinear sets of partial 
+differential equations. In general, the implicit problem statement here is:
+
+    - Find :math:`Q`, such that :math:`R(Q) = 0`
+
+
+|
+|
+|
+|
+
+
+
+
+Newton
+======
+
+The Full-Newton solver solves the equation
+
+.. math::
+
+    R(Q) = 0
+
+
+where :math:`R(Q)` is some potentially nonlinear function of the solution. This depends on 
+the discretization, the equation set, the solution order, and the time-integration scheme. 
+The Newton solver linearizes the problem and computes an update 
+of the solution by solving 
+
+.. math::
+
+    \frac{\partial R}{\partial Q} \Delta Q = -R
+
+So, at each Newton step, a linear system of equations is being solved for :math:`\Delta Q`.
+Once the update is solved for, the solution vector is updated as
+
+.. math::
+
+    Q^{n+1} = Q^{n} + \Delta Q
+
+Considerations:
+---------------
+One item to consider when using the Full-Newton solver is that the Newton
+linearization(direction) is dependent on the current solution. Without a 
+reasonable initial guess, Newton's method can diverge by sending the 
+solution too far in the wrong direction.
+
+
+|
+|
+|
+|
+
+
+
+Quasi-Newton
+============
+
+The Quasi-Newton solver solves a modified set of equations
+
+.. math::
+
+    \int_{\Omega_e} \psi \frac{\partial Q}{\partial \tau} d\Omega + R(Q) = 0
+
+
+Note the addition of a pseudo-time term to the nonlinear system of equations. This is
+an effort increase robustness of the nonlinear solver by limiting the size of the solution
+update in a single Newton step. This is accomplished by adding the time-scaling to the 
+diagonal of the Jacobian matrix, increasing the diagonal dominance of the matrix, and 
+limiting the size of the soltion update. As the solution progresses, the pseudo-timestep is
+increased the pseudo-time derivative goes to zero and the original system of equations
+is recovered.
+
+The Quasi-Newton solver linearizes the problem including the pseudo-time scaling of the
+solution update to the system of equations as
+
+.. math::
+
+    \int_{\Omega_e} \psi \frac{\Delta Q}{\Delta \tau} d\Omega + \frac{\partial R}{\partial Q} \Delta Q = -R
+
+
+So, at each Quasi-Newton step, a linear system of equations is being solved for 
+:math:`\Delta Q`. Once the update is solved for, the solution vector is updated as
+
+.. math::
+
+    Q^{n+1} = Q^{n} + \Delta Q
+
+
+At each Quasi-Newton step, the pseudo-time step is updated as
+
+.. math::
+
+    d\tau = \frac{CFL^n h_e}{\bar{\lambda_e}}
+
+where :math:`h_e = \sqrt[3]{\Omega_e}` and :math:`\bar{\lambda_e} = |\bar{V_e}| + \bar{c}`
+is a mean characteristic speed. The CFL term is computed from the ratio of the initial
+and current residual norms as
+
+.. math::
+
+    CFL^n = CFL^0 \frac{||R(Q^0)||_2}{||R(Q^n)||_2}
+
+
+Options:
+---------
+
+    - CFL0: The initial CFL factor
+
+
+|
+|
+|
+|
+
+--------------
+Linear Solvers
+--------------
+
+
+
+FGMRES
+======
+
+ChiDG uses a flexible version of the Generalized Minimum Residual(FGMRES) algorithm,
+which is an iterative method for solving linear systems of equations. The FGMRES
+algorithm allows the GMRES algorithm to be preconditioned in a flexible way such that 
+the solution can be easily reconstructed.
+
+Options:
+--------
+
+    - m:  Number of iterations before the algorithm is restarted 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

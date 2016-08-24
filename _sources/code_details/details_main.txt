@@ -6,6 +6,8 @@ Code details
     :hidden:
 
     chidg/detail_chidg
+    solvers/detail_solvers
+    containers/detail_containers
     mesh/detail_mesh
     parallel/detail_parallel
 ..    solvers/detail_solvers

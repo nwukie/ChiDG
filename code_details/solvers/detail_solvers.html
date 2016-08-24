@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>ChiDG Instance &mdash; ChiDG 0.1 documentation</title>
+  <title>Solvers &mdash; ChiDG 0.1 documentation</title>
   
 
   
@@ -32,8 +32,8 @@
   
     <link rel="top" title="ChiDG 0.1 documentation" href="../../index.html"/>
         <link rel="up" title="Code details" href="../details_main.html"/>
-        <link rel="next" title="Solvers" href="../solvers/detail_solvers.html"/>
-        <link rel="prev" title="Code details" href="../details_main.html"/> 
+        <link rel="next" title="ChiDG Matrix/Vector" href="../containers/detail_containers.html"/>
+        <link rel="prev" title="ChiDG Instance" href="../chidg/detail_chidg.html"/> 
 
   
   <script src="../../_static/js/modernizr.min.js"></script>
@@ -102,21 +102,21 @@
 </ul>
 </li>
 <li class="toctree-l1 current"><a class="reference internal" href="../details_main.html">Code details</a><ul class="current">
-<li class="toctree-l2 current"><a class="current reference internal" href="#">ChiDG Instance</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="#components">Components</a><ul>
-<li class="toctree-l4"><a class="reference internal" href="#data">Data</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../chidg/detail_chidg.html">ChiDG Instance</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../chidg/detail_chidg.html#components">Components</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../chidg/detail_chidg.html#data">Data</a></li>
 </ul>
 </li>
 </ul>
 </li>
-<li class="toctree-l2"><a class="reference internal" href="../solvers/detail_solvers.html">Solvers</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="../solvers/detail_solvers.html#nonlinear-solvers">Nonlinear solvers</a><ul>
-<li class="toctree-l4"><a class="reference internal" href="../solvers/detail_solvers.html#newton">Newton</a></li>
-<li class="toctree-l4"><a class="reference internal" href="../solvers/detail_solvers.html#quasi-newton">Quasi-Newton</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Solvers</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#nonlinear-solvers">Nonlinear solvers</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#newton">Newton</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#quasi-newton">Quasi-Newton</a></li>
 </ul>
 </li>
-<li class="toctree-l3"><a class="reference internal" href="../solvers/detail_solvers.html#linear-solvers">Linear Solvers</a><ul>
-<li class="toctree-l4"><a class="reference internal" href="../solvers/detail_solvers.html#fgmres">FGMRES</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#linear-solvers">Linear Solvers</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#fgmres">FGMRES</a></li>
 </ul>
 </li>
 </ul>
@@ -202,11 +202,11 @@
       
           <li><a href="../details_main.html">Code details</a> &raquo;</li>
       
-    <li>ChiDG Instance</li>
+    <li>Solvers</li>
       <li class="wy-breadcrumbs-aside">
         
           
-            <a href="../../_sources/code_details/chidg/detail_chidg.txt" rel="nofollow"> View page source</a>
+            <a href="../../_sources/code_details/solvers/detail_solvers.txt" rel="nofollow"> View page source</a>
           
         
       </li>
@@ -216,34 +216,112 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
             
-  <div class="section" id="chidg-instance">
-<h1>ChiDG Instance<a class="headerlink" href="#chidg-instance" title="Permalink to this headline">¶</a></h1>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="nb">type</span><span class="p">(</span><span class="n">chidg_t</span><span class="p">)</span>   <span class="n">chidg</span>
-</pre></div>
+  <div class="section" id="solvers">
+<h1>Solvers<a class="headerlink" href="#solvers" title="Permalink to this headline">¶</a></h1>
+<p>ChiDG includes both nonlinear and linear solvers.</p>
+<div class="section" id="nonlinear-solvers">
+<h2>Nonlinear solvers<a class="headerlink" href="#nonlinear-solvers" title="Permalink to this headline">¶</a></h2>
+<p>ChiDG includes nonlinear solvers for solving the nonlinear sets of partial
+differential equations. In general, the implicit problem statement here is:</p>
+<blockquote>
+<div><ul class="simple">
+<li>Find <span class="math">\(Q\)</span>, such that <span class="math">\(R(Q) = 0\)</span></li>
+</ul>
+</div></blockquote>
+<div class="line-block">
+<div class="line"><br /></div>
+<div class="line"><br /></div>
+<div class="line"><br /></div>
+<div class="line"><br /></div>
 </div>
-<p>The <code class="docutils literal"><span class="pre">chidg_t</span></code> data type is the top-level interface class for ChiDG. A <code class="docutils literal"><span class="pre">chidg_t</span></code>
-instance contains five primary components. These are:</p>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="nb">type</span><span class="p">(</span><span class="n">chidg_data_t</span><span class="p">)</span>          <span class="n">data</span>
-<span class="nb">type</span><span class="p">(</span><span class="n">time_scheme_t</span><span class="p">)</span>         <span class="n">time_scheme</span>
-<span class="nb">type</span><span class="p">(</span><span class="n">nonlinear_solver_t</span><span class="p">)</span>    <span class="n">nonlinear_solver</span>
-<span class="nb">type</span><span class="p">(</span><span class="n">linear_solver_t</span><span class="p">)</span>       <span class="n">linear_solver</span>
-<span class="nb">type</span><span class="p">(</span><span class="n">preconditioner_t</span><span class="p">)</span>      <span class="n">preconditioner</span>
-</pre></div>
+<div class="section" id="newton">
+<h3>Newton<a class="headerlink" href="#newton" title="Permalink to this headline">¶</a></h3>
+<p>The Full-Newton solver solves the equation</p>
+<div class="math">
+\[R(Q) = 0\]</div>
+<p>where <span class="math">\(R(Q)\)</span> is some potentially nonlinear function of the solution. This depends on
+the discretization, the equation set, the solution order, and the time-integration scheme.
+The Newton solver linearizes the problem and computes an update
+of the solution by solving</p>
+<div class="math">
+\[\frac{\partial R}{\partial Q} \Delta Q = -R\]</div>
+<p>So, at each Newton step, a linear system of equations is being solved for <span class="math">\(\Delta Q\)</span>.
+Once the update is solved for, the solution vector is updated as</p>
+<div class="math">
+\[Q^{n+1} = Q^{n} + \Delta Q\]</div>
+<div class="section" id="considerations">
+<h4>Considerations:<a class="headerlink" href="#considerations" title="Permalink to this headline">¶</a></h4>
+<p>One item to consider when using the Full-Newton solver is that the Newton
+linearization(direction) is dependent on the current solution. Without a
+reasonable initial guess, Newton&#8217;s method can diverge by sending the
+solution too far in the wrong direction.</p>
+<div class="line-block">
+<div class="line"><br /></div>
+<div class="line"><br /></div>
+<div class="line"><br /></div>
+<div class="line"><br /></div>
 </div>
-<div class="section" id="components">
-<h2>Components<a class="headerlink" href="#components" title="Permalink to this headline">¶</a></h2>
-<div class="section" id="data">
-<h3>Data<a class="headerlink" href="#data" title="Permalink to this headline">¶</a></h3>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="nb">type</span><span class="p">(</span><span class="n">chidg_data_t</span><span class="p">)</span>  <span class="n">data</span>
-</pre></div>
 </div>
-<p>The <code class="docutils literal"><span class="pre">chidg_data_t</span></code> data type contains all of the working information to run a ChiDG
-calculation. This includes:</p>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="nb">type</span><span class="p">(</span><span class="n">mesh_t</span><span class="p">)</span>                    <span class="n">mesh</span><span class="p">(:)</span>
-<span class="nb">type</span><span class="p">(</span><span class="n">bcset_t</span><span class="p">)</span>                   <span class="n">bcset</span><span class="p">(:)</span>
-<span class="nb">type</span><span class="p">(</span><span class="n">equationset_wrapper_t</span><span class="p">)</span>     <span class="n">eqnset</span><span class="p">(:)</span>
-<span class="nb">type</span><span class="p">(</span><span class="n">solverdata_t</span><span class="p">)</span>              <span class="n">sdata</span>
-</pre></div>
+</div>
+<div class="section" id="quasi-newton">
+<h3>Quasi-Newton<a class="headerlink" href="#quasi-newton" title="Permalink to this headline">¶</a></h3>
+<p>The Quasi-Newton solver solves a modified set of equations</p>
+<div class="math">
+\[\int_{\Omega_e} \psi \frac{\partial Q}{\partial \tau} d\Omega + R(Q) = 0\]</div>
+<p>Note the addition of a pseudo-time term to the nonlinear system of equations. This is
+an effort increase robustness of the nonlinear solver by limiting the size of the solution
+update in a single Newton step. This is accomplished by adding the time-scaling to the
+diagonal of the Jacobian matrix, increasing the diagonal dominance of the matrix, and
+limiting the size of the soltion update. As the solution progresses, the pseudo-timestep is
+increased the pseudo-time derivative goes to zero and the original system of equations
+is recovered.</p>
+<p>The Quasi-Newton solver linearizes the problem including the pseudo-time scaling of the
+solution update to the system of equations as</p>
+<div class="math">
+\[\int_{\Omega_e} \psi \frac{\Delta Q}{\Delta \tau} d\Omega + \frac{\partial R}{\partial Q} \Delta Q = -R\]</div>
+<p>So, at each Quasi-Newton step, a linear system of equations is being solved for
+<span class="math">\(\Delta Q\)</span>. Once the update is solved for, the solution vector is updated as</p>
+<div class="math">
+\[Q^{n+1} = Q^{n} + \Delta Q\]</div>
+<p>At each Quasi-Newton step, the pseudo-time step is updated as</p>
+<div class="math">
+\[d\tau = \frac{CFL^n h_e}{\bar{\lambda_e}}\]</div>
+<p>where <span class="math">\(h_e = \sqrt[3]{\Omega_e}\)</span> and <span class="math">\(\bar{\lambda_e} = |\bar{V_e}| + \bar{c}\)</span>
+is a mean characteristic speed. The CFL term is computed from the ratio of the initial
+and current residual norms as</p>
+<div class="math">
+\[CFL^n = CFL^0 \frac{||R(Q^0)||_2}{||R(Q^n)||_2}\]</div>
+<div class="section" id="options">
+<h4>Options:<a class="headerlink" href="#options" title="Permalink to this headline">¶</a></h4>
+<blockquote>
+<div><ul class="simple">
+<li>CFL0: The initial CFL factor</li>
+</ul>
+</div></blockquote>
+<div class="line-block">
+<div class="line"><br /></div>
+<div class="line"><br /></div>
+<div class="line"><br /></div>
+<div class="line"><br /></div>
+</div>
+</div>
+</div>
+</div>
+<div class="section" id="linear-solvers">
+<h2>Linear Solvers<a class="headerlink" href="#linear-solvers" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="fgmres">
+<h3>FGMRES<a class="headerlink" href="#fgmres" title="Permalink to this headline">¶</a></h3>
+<p>ChiDG uses a flexible version of the Generalized Minimum Residual(FGMRES) algorithm,
+which is an iterative method for solving linear systems of equations. The FGMRES
+algorithm allows the GMRES algorithm to be preconditioned in a flexible way such that
+the solution can be easily reconstructed.</p>
+<div class="section" id="id1">
+<h4>Options:<a class="headerlink" href="#id1" title="Permalink to this headline">¶</a></h4>
+<blockquote>
+<div><ul class="simple">
+<li>m:  Number of iterations before the algorithm is restarted</li>
+</ul>
+</div></blockquote>
 </div>
 </div>
 </div>
@@ -256,10 +334,10 @@ calculation. This includes:</p>
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
-        <a href="../solvers/detail_solvers.html" class="btn btn-neutral float-right" title="Solvers" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
+        <a href="../containers/detail_containers.html" class="btn btn-neutral float-right" title="ChiDG Matrix/Vector" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
-        <a href="../details_main.html" class="btn btn-neutral" title="Code details" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+        <a href="../chidg/detail_chidg.html" class="btn btn-neutral" title="ChiDG Instance" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
       
     </div>
   

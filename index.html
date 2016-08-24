@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>Welcome! &mdash; ChiDG 0.1 documentation</title>
+  <title>Welcome to ChiDG &mdash; ChiDG 0.1 documentation</title>
   
 
   
@@ -107,6 +107,31 @@
 </li>
 </ul>
 </li>
+<li class="toctree-l2"><a class="reference internal" href="code_details/solvers/detail_solvers.html">Solvers</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="code_details/solvers/detail_solvers.html#nonlinear-solvers">Nonlinear solvers</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="code_details/solvers/detail_solvers.html#newton">Newton</a></li>
+<li class="toctree-l4"><a class="reference internal" href="code_details/solvers/detail_solvers.html#quasi-newton">Quasi-Newton</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="code_details/solvers/detail_solvers.html#linear-solvers">Linear Solvers</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="code_details/solvers/detail_solvers.html#fgmres">FGMRES</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="code_details/containers/detail_containers.html">ChiDG Matrix/Vector</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="code_details/containers/detail_containers.html#chidg-vector">ChiDG Vector</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="code_details/containers/detail_containers.html#block-vector">Block Vector</a></li>
+<li class="toctree-l4"><a class="reference internal" href="code_details/containers/detail_containers.html#dense-vector">Dense Vector</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="code_details/containers/detail_containers.html#chidg-matrix">ChiDG Matrix</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="code_details/containers/detail_containers.html#block-matrix">Block Matrix</a></li>
+<li class="toctree-l4"><a class="reference internal" href="code_details/containers/detail_containers.html#dense-matrix">Dense Matrix</a></li>
+</ul>
+</li>
+</ul>
+</li>
 <li class="toctree-l2"><a class="reference internal" href="code_details/mesh/detail_mesh.html">Mesh</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="code_details/mesh/detail_mesh.html#elements">Elements</a><ul>
 <li class="toctree-l4"><a class="reference internal" href="code_details/mesh/detail_mesh.html#metric-terms">Metric terms</a></li>
@@ -173,7 +198,7 @@
   <ul class="wy-breadcrumbs">
     <li><a href="#">Docs</a> &raquo;</li>
       
-    <li>Welcome!</li>
+    <li>Welcome to ChiDG</li>
       <li class="wy-breadcrumbs-aside">
         
           
@@ -187,11 +212,45 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
             
-  <div class="section" id="welcome">
-<h1>Welcome!<a class="headerlink" href="#welcome" title="Permalink to this headline">¶</a></h1>
-<p><strong>ChiDG: A Chimera-based, discontinuous Galerkin solver</strong></p>
-<p>ChiDG is a framework for solving sets of partial differential
+  <div class="section" id="welcome-to-chidg">
+<h1>Welcome to ChiDG<a class="headerlink" href="#welcome-to-chidg" title="Permalink to this headline">¶</a></h1>
+<div class="line-block">
+<div class="line"><br /></div>
+</div>
+<div class="section" id="chidg-is">
+<h2>ChiDG is:<a class="headerlink" href="#chidg-is" title="Permalink to this headline">¶</a></h2>
+<p>a framework for solving sets of partial differential
 equations using the discontinuous Galerkin method on Chimera-overset grids.</p>
+<a class="reference internal image-reference" href="_images/icon_dg.png"><img alt="_images/icon_dg.png" src="_images/icon_dg.png" style="width: 19%;" /></a>
+<a class="reference internal image-reference" href="_images/icon_curved.png"><img alt="_images/icon_curved.png" src="_images/icon_curved.png" style="width: 19%;" /></a>
+<a class="reference internal image-reference" href="_images/icon_chimera.png"><img alt="_images/icon_chimera.png" src="_images/icon_chimera.png" style="width: 19%;" /></a>
+<a class="reference internal image-reference" href="_images/icon_newton.png"><img alt="_images/icon_newton.png" src="_images/icon_newton.png" style="width: 19%;" /></a>
+<a class="reference internal image-reference" href="_images/icon_autodiff.png"><img alt="_images/icon_autodiff.png" src="_images/icon_autodiff.png" style="width: 19%;" /></a>
+<div class="line-block">
+<div class="line"><br /></div>
+<div class="line"><br /></div>
+</div>
+</div>
+<div class="section" id="chidg-exists-as">
+<h2>ChiDG exists as:<a class="headerlink" href="#chidg-exists-as" title="Permalink to this headline">¶</a></h2>
+<p>a Fortran Class that provides an interface to the simulation environment.</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="nb">type</span> <span class="p">::</span> <span class="n">chidg_t</span>
+    <span class="nb">type</span><span class="p">(</span><span class="n">chidg_data_t</span><span class="p">)</span>          <span class="n">data</span>
+    <span class="nb">type</span><span class="p">(</span><span class="n">time_scheme_t</span><span class="p">)</span>         <span class="n">time_scheme</span>
+    <span class="nb">type</span><span class="p">(</span><span class="n">nonlinear_solver_t</span><span class="p">)</span>    <span class="n">nonlinear_solver</span>
+    <span class="nb">type</span><span class="p">(</span><span class="n">linear_solver_t</span><span class="p">)</span>       <span class="n">linear_solver</span>
+    <span class="nb">type</span><span class="p">(</span><span class="n">preconditioner_t</span><span class="p">)</span>      <span class="n">preconditioner</span>
+    <span class="o">...</span>
+<span class="n">end</span> <span class="nb">type</span> <span class="n">chidg_t</span>
+</pre></div>
+</div>
+<div class="line-block">
+<div class="line"><br /></div>
+<div class="line"><br /></div>
+</div>
+</div>
+<div class="section" id="example-simulation-applications">
+<h2>Example simulation applications:<a class="headerlink" href="#example-simulation-applications" title="Permalink to this headline">¶</a></h2>
 <a class="reference internal image-reference" href="_images/naca2412.png"><img alt="_images/naca2412.png" class="align-left" src="_images/naca2412.png" style="width: 36%;" /></a>
 <a class="reference internal image-reference" href="_images/mode91_3dview.png"><img alt="_images/mode91_3dview.png" class="align-right" src="_images/mode91_3dview.png" style="width: 32%;" /></a>
 <a class="reference internal image-reference" href="_images/aachen_turbine_nonreflectingbc.png"><img alt="_images/aachen_turbine_nonreflectingbc.png" class="align-center" src="_images/aachen_turbine_nonreflectingbc.png" style="width: 20%;" /></a>
@@ -199,21 +258,7 @@ equations using the discontinuous Galerkin method on Chimera-overset grids.</p>
 <div class="line"><br /></div>
 <div class="line"><br /></div>
 </div>
-<dl class="docutils">
-<dt>Discretization advantages:</dt>
-<dd><ul class="first last simple">
-<li>Arbitrarily high-order accurate</li>
-<li>Curved elements for conforming to geometry</li>
-<li>Chimera overset grids for representing complex geometry</li>
-</ul>
-</dd>
-<dt>Framework capabilities:</dt>
-<dd><ul class="first last simple">
-<li>Fully-implicit Newton&#8217;s method</li>
-<li>Intrinsic automatic differentiation</li>
-</ul>
-</dd>
-</dl>
+</div>
 </div>
 <div class="section" id="getting-started">
 <h1>Getting started<a class="headerlink" href="#getting-started" title="Permalink to this headline">¶</a></h1>

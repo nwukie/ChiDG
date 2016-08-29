@@ -61,7 +61,7 @@ subroutine test_fgmres_ref_solve()
     !
     ! Initialize domain
     !
-    call chidg%data%add_domain('D_01',nodes,connectivity,spacedim,nterms_c,'Scalar')
+    call chidg%data%add_domain('D_01',nodes,connectivity,spacedim,nterms_c,'LinearAdvection')
     call chidg%initialize_solution_domains(nterms_s)
     call chidg%init('communication')
     call chidg%initialize_solution_solver()

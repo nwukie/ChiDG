@@ -2,7 +2,7 @@ module mod_timestep
     use mod_kinds,          only: rk, ik
     use mod_constants,      only: THIRD
     use type_chidg_data,    only: chidg_data_t
-    use mod_interpolate,    only: interpolate
+    use mod_interpolate,    only: interpolate_element_standard
     implicit none
 
 
@@ -29,12 +29,9 @@ contains
 
         !& DEBUG: HARD CODED GQ NODES BASED ON FIRST ELEMENT
         !real(rk), dimension(data%mesh(1)%elems(1)%gq%vol%nnodes)  :: &
-        real(rk), allocatable, dimension(:) :: &
-                rho, rhou, rhov, rhow, rhoE, &
-                c,   &   !< mean sound speed
-                gam, &   !< ratio of specific heats
-                p,   &   !< pressure
-                vmag     !< velocity magnitude
+        real(rk), allocatable, dimension(:) ::  &
+                rho, rhou, rhov, rhow, rhoE,    &
+                c, gam, p, vmag, tmp
 
         real(rk)    ::  h, &    !< element spacing parameter
                         lam     !< characteristic speed
@@ -63,11 +60,12 @@ contains
                 !
                 ! Interpolate variables
                 !
-                rho  = interpolate(data%mesh,data%sdata,idom,ielem,irho,  'value')
-                rhou = interpolate(data%mesh,data%sdata,idom,ielem,irhou, 'value')
-                rhov = interpolate(data%mesh,data%sdata,idom,ielem,irhov, 'value')
-                rhow = interpolate(data%mesh,data%sdata,idom,ielem,irhow, 'value')
-                rhoE = interpolate(data%mesh,data%sdata,idom,ielem,irhoE, 'value')
+                rho  = interpolate_element_standard(data%mesh,data%sdata%q,idom,ielem,irho,  'value')
+                rhou = interpolate_element_standard(data%mesh,data%sdata%q,idom,ielem,irhou, 'value')
+                rhov = interpolate_element_standard(data%mesh,data%sdata%q,idom,ielem,irhov, 'value')
+                rhow = interpolate_element_standard(data%mesh,data%sdata%q,idom,ielem,irhow, 'value')
+                rhoE = interpolate_element_standard(data%mesh,data%sdata%q,idom,ielem,irhoE, 'value')
+
 
                 !
                 ! Compute pressure
@@ -79,6 +77,9 @@ contains
                 ! Compute cell sound speed
                 !
                 call data%eqnset(idom)%item%prop%fluid%compute_gamma(rho,rhou,rhov,rhow,rhoE,gam)
+
+
+
                 c = sqrt(gam * p / rho)
 
 

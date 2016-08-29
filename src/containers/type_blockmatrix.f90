@@ -626,6 +626,7 @@ contains
         integer(ik) :: iarray, neqns, nterms, irow_start, irow
 
 
+
         !
         ! Get stored information for the block
         !
@@ -644,6 +645,7 @@ contains
         ! The integral values here should be components of the RHS vector. An array of partial derivatives from an AD_D variable
         ! should be stored as a row in the block matrix.
         !
+        
         do iarray = 1,size(integral)
 
             !

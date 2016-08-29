@@ -41,9 +41,9 @@ subroutine test_directsolver_solve()
     ! Initialize domain
 !    allocate(chidg%data%domains(1))
 !    call chidg%data%domains(1)%init_geom(idomain,nterms_c,pts)
-!    call chidg%data%domains(1)%init_sol('Scalar',nterms_s)
+!    call chidg%data%domains(1)%init_sol('LinearAdvection',nterms_s)
 
-    call chidg%data%add_domain('D_01',pts,nterms_c,'Scalar',nterms_s)
+    call chidg%data%add_domain('D_01',pts,nterms_c,'LinearAdvection',nterms_s)
 
     call chidg%data%init_sdata()
 

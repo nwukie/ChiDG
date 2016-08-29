@@ -10,38 +10,13 @@ module mod_interpolate
     use mod_DNAD_tools,     only: compute_neighbor_face
     use DNAD_D
 
-    use type_ivector,       only: ivector_t
-    use type_rvector,       only: rvector_t
-    use type_point,         only: point_t
     use type_mesh,          only: mesh_t
-    use type_solverdata,    only: solverdata_t
     use type_element_info,  only: element_info_t
     use type_face_info,     only: face_info_t
     use type_function_info, only: function_info_t
     use type_recv,          only: recv_t
     use type_chidgVector,   only: chidgVector_t
     implicit none
-
-
-    interface interpolate
-        !module procedure    interpolate_element_autodiff, interpolate_element_standard, interpolate_face_autodiff, interpolate_face_standard
-        module procedure    chidg_interpolate_element, interpolate_element_standard, chidg_interpolate_face, interpolate_face_standard
-    end interface
-
-
-
-!    interface interpolate_element
-!        module procedure    interpolate_element_autodiff, interpolate_element_standard
-!    end interface
-!
-!    interface interpolate_face
-!        module procedure    interpolate_face_autodiff,    interpolate_face_standard
-!    end interface
-
-
-!    interface interpolate_boundary
-!        module procedure    interpolate_boundary_autodiff
-!    end interface
 
 
 
@@ -57,9 +32,9 @@ contains
     !!
     !!
     !--------------------------------------------------------------------------------------------------------
-    function chidg_interpolate_element(mesh,sdata,elem_info,fcn_info,ieqn,interpolation_type) result(var_gq)
+    function chidg_interpolate_element(mesh,q,elem_info,fcn_info,ieqn,interpolation_type) result(var_gq)
         type(mesh_t),           intent(in)      :: mesh(:)
-        type(solverdata_t),     intent(in)      :: sdata
+        type(chidgVector_t),    intent(in)      :: q
         type(element_info_t),   intent(in)      :: elem_info
         type(function_info_t),  intent(in)      :: fcn_info
         integer(ik),            intent(in)      :: ieqn
@@ -70,14 +45,14 @@ contains
 
         if (interpolation_type == 'value') then
 
-            var_gq = interpolate_element_autodiff(mesh,sdata%q,elem_info,fcn_info,ieqn,interpolation_type)
+            var_gq = interpolate_element_autodiff(mesh,q,elem_info,fcn_info,ieqn,interpolation_type)
 
         else if (interpolation_type == 'ddx' .or. &
                  interpolation_type == 'ddy' .or. & 
                  interpolation_type == 'ddz') then
 
-            diff = interpolate_element_autodiff(mesh,sdata%q,elem_info,fcn_info,ieqn,interpolation_type)
-!            lift = sdata%BR2%get_lift(mesh,elem_info,fcn_info,ieqn,interpolation_type)
+            diff = interpolate_element_autodiff(mesh,q,elem_info,fcn_info,ieqn,interpolation_type)
+!            lift = BR2%get_lift(mesh,elem_info,fcn_info,ieqn,interpolation_type)
 
             var_gq = diff + lift
 
@@ -103,9 +78,9 @@ contains
     !!
     !!
     !--------------------------------------------------------------------------------------------------------
-    function chidg_interpolate_face(mesh,sdata,face_info,fcn_info,ieqn,interpolation_type,interpolation_source) result(var_gq)
+    function chidg_interpolate_face(mesh,q,face_info,fcn_info,ieqn,interpolation_type,interpolation_source) result(var_gq)
         type(mesh_t),           intent(in)      :: mesh(:)
-        type(solverdata_t),     intent(in)      :: sdata
+        type(chidgVector_t),    intent(in)      :: q
         type(face_info_t),      intent(in)      :: face_info
         type(function_info_t),  intent(in)      :: fcn_info
         integer(ik),            intent(in)      :: ieqn
@@ -117,17 +92,18 @@ contains
 
         if (interpolation_type == 'value') then
 
-            var_gq = interpolate_face_autodiff(mesh,sdata%q,face_info,fcn_info,ieqn,interpolation_type,interpolation_source)
+            var_gq = interpolate_face_autodiff(mesh,q,face_info,fcn_info,ieqn,interpolation_type,interpolation_source)
 
         else if (interpolation_type == 'ddx' .or. &
                  interpolation_type == 'ddy' .or. & 
                  interpolation_type == 'ddz') then
 
-            diff = interpolate_face_autodiff(mesh,sdata%q,face_info,fcn_info,ieqn,interpolation_type,interpolation_source)
-!            lift = sdata%BR2%get_lift(mesh,elem_info,fcn_info,ieqn,interpolation_type)
+            diff = interpolate_face_autodiff(mesh,q,face_info,fcn_info,ieqn,interpolation_type,interpolation_source)
+!            lift = BR2%get_lift(mesh,elem_info,fcn_info,ieqn,interpolation_type)
 
             var_gq = diff + lift
 
+        else
             call chidg_signal(FATAL,"interpolate: Invalid interpolation type. Options are 'value', 'ddx', 'ddy', 'ddz'")
         end if
 
@@ -442,9 +418,9 @@ contains
     !!
     !!
     !-------------------------------------------------------------------------------------------------------------
-    function interpolate_element_standard(mesh,sdata,idomain_l,ielement_l,ieqn,interpolation_type) result(var_gq)
+    function interpolate_element_standard(mesh,q,idomain_l,ielement_l,ieqn,interpolation_type) result(var_gq)
         type(mesh_t),           intent(in)      :: mesh(:)
-        type(solverdata_t),     intent(in)      :: sdata
+        type(chidgVector_t),    intent(in)      :: q
         integer(ik),            intent(in)      :: idomain_l
         integer(ik),            intent(in)      :: ielement_l
         integer(ik),            intent(in)      :: ieqn
@@ -459,13 +435,13 @@ contains
         !
         select case (interpolation_type)
             case('value')
-                var_gq = matmul(mesh(idomain_l)%elems(ielement_l)%gq%vol%val, sdata%q%dom(idomain_l)%vecs(ielement_l)%getvar(ieqn))
+                var_gq = matmul(mesh(idomain_l)%elems(ielement_l)%gq%vol%val, q%dom(idomain_l)%vecs(ielement_l)%getvar(ieqn))
             case('ddx')
-                var_gq = matmul(mesh(idomain_l)%elems(ielement_l)%ddx, sdata%q%dom(idomain_l)%vecs(ielement_l)%getvar(ieqn))
+                var_gq = matmul(mesh(idomain_l)%elems(ielement_l)%ddx, q%dom(idomain_l)%vecs(ielement_l)%getvar(ieqn))
             case('ddy')
-                var_gq = matmul(mesh(idomain_l)%elems(ielement_l)%ddy, sdata%q%dom(idomain_l)%vecs(ielement_l)%getvar(ieqn))
+                var_gq = matmul(mesh(idomain_l)%elems(ielement_l)%ddy, q%dom(idomain_l)%vecs(ielement_l)%getvar(ieqn))
             case('ddz')
-                var_gq = matmul(mesh(idomain_l)%elems(ielement_l)%ddz, sdata%q%dom(idomain_l)%vecs(ielement_l)%getvar(ieqn))
+                var_gq = matmul(mesh(idomain_l)%elems(ielement_l)%ddz, q%dom(idomain_l)%vecs(ielement_l)%getvar(ieqn))
             case default
                 call chidg_signal(FATAL,"interpolate_element_standard: invalid interpolation_type. Options are 'value', 'ddx', 'ddy', 'ddz'.")
         end select
@@ -492,9 +468,9 @@ contains
     !!
     !!
     !-------------------------------------------------------------------------------------------------------------
-    function interpolate_face_standard(mesh,sdata,idomain_l,ielement_l,iface,ieqn) result(var_gq)
+    function interpolate_face_standard(mesh,q,idomain_l,ielement_l,iface,ieqn) result(var_gq)
         type(mesh_t),           intent(in)      :: mesh(:)
-        type(solverdata_t),     intent(in)      :: sdata
+        type(chidgVector_t),    intent(in)      :: q
         integer(ik),            intent(in)      :: idomain_l, ielement_l, iface, ieqn
 
         real(rk),   dimension(mesh(idomain_l)%elems(ielement_l)%gq%face%nnodes) :: var_gq
@@ -504,7 +480,7 @@ contains
         ! This takes the form of a matrix multiplication of the face quadrature matrix
         ! with the array of modes for the given variable
         !
-        var_gq = matmul(mesh(idomain_l)%faces(ielement_l,iface)%gq%face%val(:,:,iface), sdata%q%dom(idomain_l)%vecs(ielement_l)%getvar(ieqn))
+        var_gq = matmul(mesh(idomain_l)%faces(ielement_l,iface)%gq%face%val(:,:,iface), q%dom(idomain_l)%vecs(ielement_l)%getvar(ieqn))
 
 
     end function interpolate_face_standard

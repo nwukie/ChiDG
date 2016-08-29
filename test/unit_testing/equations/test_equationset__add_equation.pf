@@ -6,15 +6,16 @@ subroutine test_equationset__add_equation__one()
     use pfunit_mod
     
     use mock_equationset,   only: mock_equationset_t
-    use SCA_properties,     only: SCA_properties_t
+    use LA_properties,      only: LA_properties_t
+    !use SCA_properties,     only: SCA_properties_t
 
 
     type(mock_equationset_t)    :: meq
-    type(SCA_properties_t)      :: SCA_prop
+    type(LA_properties_t)      :: LA_prop
 
 
     ! Allocate a concrete properties component in the equationset, which stores the equations
-    allocate(SCA_properties_t::meq%prop)
+    allocate(LA_properties_t::meq%prop)
 
     !
     ! Add one equation. THIS IS BEING TESTED.
@@ -47,15 +48,15 @@ subroutine test_equationset__add_equation__two()
     use pfunit_mod
     
     use mock_equationset,   only: mock_equationset_t
-    use SCA_properties,     only: SCA_properties_t
+    use LA_properties,     only: LA_properties_t
 
 
     type(mock_equationset_t)    :: meq
-    type(SCA_properties_t)      :: SCA_prop
+    type(LA_properties_t)      :: LA_prop
 
 
     ! Allocate a concrete properties component in the equationset, which stores the equations
-    allocate(SCA_properties_t::meq%prop)
+    allocate(LA_properties_t::meq%prop)
 
     !
     ! Add two equations. THIS IS BEING TESTED.

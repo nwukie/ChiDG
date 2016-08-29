@@ -5,13 +5,11 @@ module mod_check_jacobian
 
     use type_mesh,          only: mesh_t
     use type_solverdata,    only: solverdata_t
+    use type_chidg_data,    only: chidg_data_t
+    use type_chidg_worker,  only: chidg_worker_t
+
     use type_blockvector
     use type_densematrix,   only: densematrix_t
-    use type_chidg_data,    only: chidg_data_t
-
-    use type_element_info,  only: element_info_t
-    use type_face_info,     only: face_info_t
-    use type_function_info, only: function_info_t
 
     use mod_DNAD_tools,     only: element_compute_seed, face_compute_seed
     implicit none
@@ -45,8 +43,7 @@ contains
         real(rk)                            :: qhold, eps
         integer(ik)                         :: nelem, i, iterm, icol, nterms, ivar, iflux, nflux, idom, iel, idepend
         integer(ik)                         :: ielem_p              ! element in which the solution is being perturbed for the FD calculation.
-        type(element_info_t)                :: elem_info
-        type(function_info_t)               :: function_info
+        type(chidg_worker_t)                :: worker
 
 
         ! ASSUME ONLY ONE DOMAIN IS PRESENT
@@ -65,6 +62,7 @@ contains
             !                                      Interior Scheme
             !------------------------------------------------------------------------------------------
 
+            call worker%init(data%mesh,data%sdata)
 
             !
             ! Clear all working data
@@ -83,10 +81,10 @@ contains
             !
             idom = 1
 
-            elem_info%idomain_g  = 1
-            elem_info%idomain_l  = 1
-            elem_info%ielement_g = ielem
-            elem_info%ielement_l = ielem
+            worker%element_info%idomain_g  = 1
+            worker%element_info%idomain_l  = 1
+            worker%element_info%ielement_g = ielem
+            worker%element_info%ielement_l = ielem
 
 
 
@@ -94,18 +92,17 @@ contains
                 nflux = size(eqnset(1)%item%volume_advective_flux)
                 do iflux = 1,nflux
 
-                    function_info%type    = VOLUME_ADVECTIVE_FLUX
-                    function_info%ifcn    = iflux
-                    function_info%idiff   = iblk
-                    function_info%idepend = 1
-                    function_info%seed    = element_compute_seed(mesh,idom,ielem,idepend,iblk)
+                    worker%function_info%type    = VOLUME_ADVECTIVE_FLUX
+                    worker%function_info%ifcn    = iflux
+                    worker%function_info%idiff   = iblk
+                    worker%function_info%idepend = 1
+                    worker%function_info%seed    = element_compute_seed(mesh,idom,ielem,idepend,iblk)
 
-                    !call data%eqnset(1)%item%volume_advective_flux(iflux)%flux%compute(data%mesh,data%sdata,prop,idom,ielem,iblk)
-                    call data%eqnset(1)%item%volume_advective_flux(iflux)%flux%compute(data%mesh,data%sdata,prop,elem_info,function_info)
+                    !call data%eqnset(1)%item%volume_advective_flux(iflux)%flux%compute(data%mesh,data%sdata,prop,elem_info,function_info)
+                    call data%eqnset(1)%item%volume_advective_flux(iflux)%flux%compute(worker,prop)
                 end do
 
             else
-                print*, eqnset(1)%item%name
                 call chidg_signal(WARN,"No volume advective flux was found")
             end if
             
@@ -138,7 +135,6 @@ contains
            if (iblk == DIAG) then
                ielem_p = ielem
            else
-               !ielem_p = mesh(1)%faces(ielem,iblk)%ineighbor_l
                ielem_p = mesh(1)%faces(ielem,iblk)%get_neighbor_element_l()
            end if
 
@@ -166,18 +162,17 @@ contains
                    if (allocated(eqnset(1)%item%volume_advective_flux)) then
                         nflux = size(eqnset(1)%item%volume_advective_flux)
                         do iflux = 1,nflux
-                            function_info%type    = VOLUME_ADVECTIVE_FLUX
-                            function_info%ifcn    = iflux
-                            function_info%idiff   = iblk
-                            function_info%idepend = 1
-                            function_info%seed    = element_compute_seed(mesh,idom,ielem,idepend,iblk)
+                            worker%function_info%type    = VOLUME_ADVECTIVE_FLUX
+                            worker%function_info%ifcn    = iflux
+                            worker%function_info%idiff   = iblk
+                            worker%function_info%idepend = 1
+                            worker%function_info%seed    = element_compute_seed(mesh,idom,ielem,idepend,iblk)
 
-                            !call eqnset(1)%item%volume_advective_flux(iflux)%flux%compute(mesh,sdata,prop,idom,ielem,iblk)
-                            call eqnset(1)%item%volume_advective_flux(iflux)%flux%compute(mesh,sdata,prop,elem_info,function_info)
+                            !call eqnset(1)%item%volume_advective_flux(iflux)%flux%compute(mesh,sdata,prop,elem_info,function_info)
+                            call eqnset(1)%item%volume_advective_flux(iflux)%flux%compute(worker,prop)
                         end do
 
                    else
-                       print*, eqnset(1)%item%name
                        call chidg_signal(WARN,"No volume advective flux was found")
                    end if
 
@@ -249,8 +244,10 @@ contains
         integer(ik) :: nelem, i, iterm, iface, ivar, icol, nterms, iflux, nflux, idom, idonor
         integer(ik) :: ielem_p              ! ielem_p is the element in which the solution is being perturbed for the finite difference calculation.
 
-        type(face_info_t)       :: face_info
-        type(function_info_t)   :: function_info
+        type(chidg_worker_t)    :: worker
+
+
+        call worker%init(data%mesh,data%sdata)
 
 
         !
@@ -293,14 +290,11 @@ contains
             vec_fd = rhs
 
 
-!            face_info%idomain  = idom
-!            face_info%ielement = ielem
-            face_info%idomain_g  = data%mesh(idom)%elems(ielem)%idomain_g
-            face_info%idomain_l  = data%mesh(idom)%elems(ielem)%idomain_l
-            face_info%ielement_g = data%mesh(idom)%elems(ielem)%ielement_g
-            face_info%ielement_l = data%mesh(idom)%elems(ielem)%ielement_l
-            face_info%iface      = iface
-            !face_info%seed       = compute_seed(data%mesh,idom,ielem,iface,idonor,iblk)
+            worker%face_info%idomain_g  = data%mesh(idom)%elems(ielem)%idomain_g
+            worker%face_info%idomain_l  = data%mesh(idom)%elems(ielem)%idomain_l
+            worker%face_info%ielement_g = data%mesh(idom)%elems(ielem)%ielement_g
+            worker%face_info%ielement_l = data%mesh(idom)%elems(ielem)%ielement_l
+            worker%face_info%iface      = iface
 
 
             !
@@ -310,18 +304,18 @@ contains
                 nflux = size(data%eqnset(1)%item%boundary_advective_flux)
                 do iflux = 1,nflux
 
-                    function_info%type    = BOUNDARY_ADVECTIVE_FLUX
-                    function_info%ifcn    = iflux
-                    function_info%idiff   = iblk
-                    function_info%idepend = idonor
-                    function_info%seed    = face_compute_seed(data%mesh,idom,ielem,iface,idonor,iblk)
+                    worker%function_info%type    = BOUNDARY_ADVECTIVE_FLUX
+                    worker%function_info%ifcn    = iflux
+                    worker%function_info%idiff   = iblk
+                    worker%function_info%idepend = idonor
+                    worker%function_info%seed    = face_compute_seed(data%mesh,idom,ielem,iface,idonor,iblk)
 
 
-                    call data%eqnset(1)%item%boundary_advective_flux(iflux)%flux%compute(data%mesh,data%sdata,prop,face_info, function_info)
+                    !call data%eqnset(1)%item%boundary_advective_flux(iflux)%flux%compute(data%mesh,data%sdata,prop,face_info, function_info)
+                    call data%eqnset(1)%item%boundary_advective_flux(iflux)%flux%compute(worker,prop)
                 end do
 
             else
-                print*, data%eqnset(1)%item%name
                 call chidg_signal(WARN,"No boundary advective flux was found")
             end if
 
@@ -351,18 +345,17 @@ contains
                 nflux = size(data%eqnset(1)%item%boundary_advective_flux)
                 do iflux = 1,nflux
 
+                    worker%function_info%type    = BOUNDARY_ADVECTIVE_FLUX
+                    worker%function_info%ifcn    = iflux
+                    worker%function_info%idiff   = DIAG
+                    worker%function_info%idepend = idonor
 
-                    function_info%type    = BOUNDARY_ADVECTIVE_FLUX
-                    function_info%ifcn    = iflux
-                    function_info%idiff   = DIAG
-                    function_info%idepend = idonor
+                    !call data%eqnset(1)%item%boundary_advective_flux(iflux)%flux%compute(data%mesh,data%sdata,prop,face_info,function_info)
+                    call data%eqnset(1)%item%boundary_advective_flux(iflux)%flux%compute(worker,prop)
 
-
-                    call data%eqnset(1)%item%boundary_advective_flux(iflux)%flux%compute(data%mesh,data%sdata,prop,face_info,function_info)
                 end do
 
             else
-                print*, data%eqnset(1)%item%name
                 call chidg_signal(WARN,"No boundary advective flux was found")
             end if
 
@@ -407,12 +400,13 @@ contains
                         nflux = size(data%eqnset(1)%item%boundary_advective_flux)
                         do iflux = 1,nflux
 
-                            function_info%type    = BOUNDARY_ADVECTIVE_FLUX
-                            function_info%ifcn    = iflux
-                            function_info%idiff   = DIAG
-                            function_info%idepend = idonor
+                            worker%function_info%type    = BOUNDARY_ADVECTIVE_FLUX
+                            worker%function_info%ifcn    = iflux
+                            worker%function_info%idiff   = DIAG
+                            worker%function_info%idepend = idonor
 
-                            call data%eqnset(1)%item%boundary_advective_flux(iflux)%flux%compute(data%mesh,data%sdata,prop,face_info,function_info)
+                            !call data%eqnset(1)%item%boundary_advective_flux(iflux)%flux%compute(data%mesh,data%sdata,prop,face_info,function_info)
+                            call data%eqnset(1)%item%boundary_advective_flux(iflux)%flux%compute(worker,prop)
                         end do
 
                     else

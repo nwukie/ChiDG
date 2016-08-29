@@ -40,7 +40,7 @@ contains
     !!  @param[inout]   flux_z  z-Flux and derivatives at quadrature points
     !!
     !--------------------------------------------------------------------------------------------------------
-    subroutine integrate_volume_flux(mesh,sdata,elem_info,fcn_info,ieqn,flux_x,flux_y,flux_z)
+    subroutine integrate_volume_vector_flux(mesh,sdata,elem_info,fcn_info,ieqn,flux_x,flux_y,flux_z)
         type(mesh_t),           intent(in)      :: mesh(:)
         type(solverdata_t),     intent(inout)   :: sdata
         type(element_info_t),   intent(in)      :: elem_info
@@ -100,7 +100,7 @@ contains
 
         end associate
 
-    end subroutine integrate_volume_flux
+    end subroutine integrate_volume_vector_flux
     !*********************************************************************************************************
 
 
@@ -130,7 +130,7 @@ contains
     !!  @param[inout]   flux_z  z-Flux and derivatives at quadrature points
     !!
     !--------------------------------------------------------------------------------------------------------
-    subroutine integrate_volume_source(mesh,sdata,elem_info,fcn_info,ieqn,source)
+    subroutine integrate_volume_scalar_source(mesh,sdata,elem_info,fcn_info,ieqn,source)
         type(mesh_t),           intent(in)      :: mesh(:)
         type(solverdata_t),     intent(inout)   :: sdata
         type(element_info_t),   intent(in)      :: elem_info
@@ -164,7 +164,7 @@ contains
 
         end associate
 
-    end subroutine integrate_volume_source
+    end subroutine integrate_volume_scalar_source
     !********************************************************************************************************
 
 

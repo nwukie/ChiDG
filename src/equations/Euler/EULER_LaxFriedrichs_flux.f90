@@ -3,14 +3,8 @@ module EULER_LaxFriedrichs_flux
     use mod_constants,          only: TWO,HALF,ME,NEIGHBOR
 
     use type_boundary_flux,     only: boundary_flux_t
-    use type_mesh,              only: mesh_t
-    use type_solverdata,        only: solverdata_t
+    use type_chidg_worker,      only: chidg_worker_t
     use type_properties,        only: properties_t
-    use type_face_info,         only: face_info_t
-    use type_function_info,     only: function_info_t
-
-    use mod_interpolate,        only: interpolate
-    use mod_integrate,          only: integrate_boundary_scalar_flux
     use DNAD_D
 
     use EULER_properties,       only: EULER_properties_t
@@ -59,13 +53,10 @@ contains
     !!  @date   3/16/2016
     !!
     !!------------------------------------------------------------------------------------------
-    subroutine compute(self,mesh,sdata,prop,face_info,function_info)
+    subroutine compute(self,worker,prop)
         class(EULER_LaxFriedrichs_flux_t),  intent(in)      :: self
-        type(mesh_t),                       intent(in)      :: mesh(:)
-        type(solverdata_t),                 intent(inout)   :: sdata
+        type(chidg_worker_t),               intent(inout)   :: worker
         class(properties_t),                intent(inout)   :: prop
-        type(face_info_t),                  intent(in)      :: face_info
-        type(function_info_t),              intent(in)      :: function_info
 
         ! Equation indices
         integer(ik)     :: irho
@@ -74,12 +65,8 @@ contains
         integer(ik)     :: irhow
         integer(ik)     :: irhoe
 
-        integer(ik)     :: idom, ielem,  iface
-        integer(ik)     :: ifcn, idonor
-
 
         ! Storage at quadrature nodes
-        !type(AD_D), dimension(mesh(face_info%idomain_l)%faces(face_info%ielement_l,face_info%iface)%gq%face%nnodes)    :: &
         type(AD_D), allocatable, dimension(:) :: &
                         rho_m,      rho_p,                                        &
                         rhou_m,     rhou_p,                                       &
@@ -94,130 +81,132 @@ contains
                         gam_m,      gam_p,                                        &
                         integrand
 
-        !real(rk), dimension(mesh(face_info%idomain_l)%faces(face_info%ielement_l,face_info%iface)%gq%face%nnodes)    :: &
         real(rk), allocatable, dimension(:)    :: &
-                        norm_mag
+                        norm_mag, normx, normy, normz, unormx, unormy, unormz
 
-        !===========================================================================
-        ! NOTE: var_m signifies "minus" and would indicate a local element variable
-        !       var_p signifies "plus"  and would indicate a neighbor element variable
-        !===========================================================================
+
         irho  = prop%get_eqn_index("rho")
         irhou = prop%get_eqn_index("rhou")
         irhov = prop%get_eqn_index("rhov")
         irhow = prop%get_eqn_index("rhow")
         irhoE = prop%get_eqn_index("rhoE")
 
-        idom  = face_info%idomain_l
-        ielem = face_info%ielement_l
-        iface = face_info%iface
-
-        ifcn   = function_info%ifcn
-        idonor = function_info%idepend
 
 
+        !
+        ! Interpolate solution to quadrature nodes
+        !
+        rho_m  = worker%interpolate(irho,  'value', ME)
+        rho_p  = worker%interpolate(irho,  'value', NEIGHBOR)
 
-        associate (norms => mesh(idom)%faces(ielem,iface)%norm, unorms=> mesh(idom)%faces(ielem,iface)%unorm, faces => mesh(idom)%faces, q => sdata%q)
+        rhou_m = worker%interpolate(irhou, 'value', ME)
+        rhou_p = worker%interpolate(irhou, 'value', NEIGHBOR)
 
-            !
-            ! Interpolate solution to quadrature nodes
-            !
-            rho_m  = interpolate(mesh,sdata,face_info,function_info, irho,  'value', ME)
-            rho_p  = interpolate(mesh,sdata,face_info,function_info, irho,  'value', NEIGHBOR)
+        rhov_m = worker%interpolate(irhov, 'value', ME)
+        rhov_p = worker%interpolate(irhov, 'value', NEIGHBOR)
 
-            rhou_m = interpolate(mesh,sdata,face_info,function_info, irhou, 'value', ME)
-            rhou_p = interpolate(mesh,sdata,face_info,function_info, irhou, 'value', NEIGHBOR)
+        rhow_m = worker%interpolate(irhow, 'value', ME)
+        rhow_p = worker%interpolate(irhow, 'value', NEIGHBOR)
 
-            rhov_m = interpolate(mesh,sdata,face_info,function_info, irhov, 'value', ME)
-            rhov_p = interpolate(mesh,sdata,face_info,function_info, irhov, 'value', NEIGHBOR)
-
-            rhow_m = interpolate(mesh,sdata,face_info,function_info, irhow, 'value', ME)
-            rhow_p = interpolate(mesh,sdata,face_info,function_info, irhow, 'value', NEIGHBOR)
-
-            rhoE_m = interpolate(mesh,sdata,face_info,function_info, irhoE, 'value', ME)
-            rhoE_p = interpolate(mesh,sdata,face_info,function_info, irhoE, 'value', NEIGHBOR)
-
-            !
-            ! Compute pressure and gamma
-            !
-            call prop%fluid%compute_pressure(rho_m,rhou_m,rhov_m,rhow_m,rhoE_m,p_m)
-            call prop%fluid%compute_pressure(rho_p,rhou_p,rhov_p,rhow_p,rhoE_p,p_p)
-            call prop%fluid%compute_gamma(rho_m,rhou_m,rhov_m,rhow_m,rhoE_m,gam_m)
-            call prop%fluid%compute_gamma(rho_p,rhou_p,rhov_p,rhow_p,rhoE_p,gam_p)
+        rhoE_m = worker%interpolate(irhoE, 'value', ME)
+        rhoE_p = worker%interpolate(irhoE, 'value', NEIGHBOR)
 
 
-            !
-            ! Compute normal velocities: dot-product vector projection along unit-normal direction
-            !
-            un_m = unorms(:,1)*(rhou_m/rho_m) + unorms(:,2)*(rhov_m/rho_m) + unorms(:,3)*(rhow_m/rho_m)
-            un_p = unorms(:,1)*(rhou_p/rho_p) + unorms(:,2)*(rhov_p/rho_p) + unorms(:,3)*(rhow_p/rho_p)
-
-            
-            !
-            ! Compute speed of sound
-            !
-            a_m = sqrt(abs(gam_m * p_m / rho_m))
-            a_p = sqrt(abs(gam_p * p_p / rho_p))
 
 
-            !
-            ! Compute wave speeds
-            !
-            wave_m = abs(un_m) + a_m
-            wave_p = abs(un_p) + a_p
-            wave   = max(wave_m,wave_p)
 
 
-            norm_mag = sqrt(norms(:,1)**TWO + norms(:,2)**TWO + norms(:,3)**TWO)
+        normx  = worker%normal(1)
+        normy  = worker%normal(2)
+        normz  = worker%normal(3)
 
-            !================================
-            !       MASS FLUX
-            !================================
-            upwind = -wave*(rho_p - rho_m)
-
-            integrand = HALF * upwind * norm_mag
-
-            call integrate_boundary_scalar_flux(mesh,sdata,face_info,function_info,irho,integrand)
+        unormx = worker%unit_normal(1)
+        unormy = worker%unit_normal(2)
+        unormz = worker%unit_normal(3)
 
 
-            !================================
-            !       X-MOMENTUM FLUX
-            !================================
-            upwind = -wave*(rhou_p - rhou_m)
-
-            integrand = HALF * upwind * norm_mag
-
-            call integrate_boundary_scalar_flux(mesh,sdata,face_info,function_info,irhou,integrand)
 
 
-            !================================
-            !       Y-MOMENTUM FLUX
-            !================================
-            upwind = -wave*(rhov_p - rhov_m)
+        !
+        ! Compute pressure and gamma
+        !
+        call prop%fluid%compute_pressure(rho_m,rhou_m,rhov_m,rhow_m,rhoE_m,p_m)
+        call prop%fluid%compute_pressure(rho_p,rhou_p,rhov_p,rhow_p,rhoE_p,p_p)
+        call prop%fluid%compute_gamma(rho_m,rhou_m,rhov_m,rhow_m,rhoE_m,gam_m)
+        call prop%fluid%compute_gamma(rho_p,rhou_p,rhov_p,rhow_p,rhoE_p,gam_p)
 
-            integrand = HALF * upwind * norm_mag
 
-            call integrate_boundary_scalar_flux(mesh,sdata,face_info,function_info,irhov,integrand)
+        !
+        ! Compute normal velocities: dot-product vector projection along unit-normal direction
+        !
+        un_m = unormx*(rhou_m/rho_m) + unormy*(rhov_m/rho_m) + unormz*(rhow_m/rho_m)
+        un_p = unormx*(rhou_p/rho_p) + unormy*(rhov_p/rho_p) + unormz*(rhow_p/rho_p)
 
-            !================================
-            !       Z-MOMENTUM FLUX
-            !================================
-            upwind = -wave*(rhow_p - rhow_m)
+        
+        !
+        ! Compute speed of sound
+        !
+        a_m = sqrt(abs(gam_m * p_m / rho_m))
+        a_p = sqrt(abs(gam_p * p_p / rho_p))
 
-            integrand = HALF * upwind * norm_mag
 
-            call integrate_boundary_scalar_flux(mesh,sdata,face_info,function_info,irhow,integrand)
+        !
+        ! Compute wave speeds
+        !
+        wave_m = abs(un_m) + a_m
+        wave_p = abs(un_p) + a_p
+        wave   = max(wave_m,wave_p)
 
-            !================================
-            !          ENERGY FLUX
-            !================================
-            upwind = -wave*(rhoE_p - rhoE_m)
 
-            integrand = HALF * upwind * norm_mag
+        norm_mag = sqrt(normx**TWO + normy**TWO + normz**TWO)
 
-            call integrate_boundary_scalar_flux(mesh,sdata,face_info,function_info,irhoE,integrand)
+        !================================
+        !       MASS FLUX
+        !================================
+        upwind = -wave*(rho_p - rho_m)
 
-        end associate
+        integrand = HALF * upwind * norm_mag
+
+        call worker%integrate_boundary(irho,integrand)
+
+
+        !================================
+        !       X-MOMENTUM FLUX
+        !================================
+        upwind = -wave*(rhou_p - rhou_m)
+
+        integrand = HALF * upwind * norm_mag
+
+        call worker%integrate_boundary(irhou,integrand)
+
+
+        !================================
+        !       Y-MOMENTUM FLUX
+        !================================
+        upwind = -wave*(rhov_p - rhov_m)
+
+        integrand = HALF * upwind * norm_mag
+
+        call worker%integrate_boundary(irhov,integrand)
+
+        !================================
+        !       Z-MOMENTUM FLUX
+        !================================
+        upwind = -wave*(rhow_p - rhow_m)
+
+        integrand = HALF * upwind * norm_mag
+
+        call worker%integrate_boundary(irhow,integrand)
+
+        !================================
+        !          ENERGY FLUX
+        !================================
+        upwind = -wave*(rhoE_p - rhoE_m)
+
+        integrand = HALF * upwind * norm_mag
+
+        call worker%integrate_boundary(irhoE,integrand)
+
 
     end subroutine compute
     !*******************************************************************************************

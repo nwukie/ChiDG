@@ -9,7 +9,7 @@ subroutine test_perfectgas_pressure()
     type(perfect_gas_t)                     :: fluid
     type(AD_D),         dimension(8)        :: rho, rhou, rhov, rhow, rhoE
     type(AD_D), allocatable, dimension(:)   ::p
-    real(rk),           dimension(8)        :: pref
+    real(rk),   allocatable, dimension(:)   :: pref
     real(rk)                                :: tol
 
     tol = 1.e-13_rk
@@ -20,7 +20,6 @@ subroutine test_perfectgas_pressure()
         allocate(rhov(i)%xp_ad_(3))
         allocate(rhow(i)%xp_ad_(3))
         allocate(rhoE(i)%xp_ad_(3))
-        allocate(p(i)%xp_ad_(3))
     end do
 
 

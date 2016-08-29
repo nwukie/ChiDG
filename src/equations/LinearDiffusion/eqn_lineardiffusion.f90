@@ -9,6 +9,7 @@ module eqn_lineardiffusion
 
     use LD_boundary_diffusive_flux,     only: LD_boundary_diffusive_flux_t
     use LD_volume_diffusive_flux,       only: LD_volume_diffusive_flux_t
+    use LD_volume_source,               only: LD_volume_source_t
     use LD_properties,                  only: LD_properties_t
     implicit none
 
@@ -58,6 +59,7 @@ contains
 
         type(LD_boundary_diffusive_flux_t)  :: boundary_flux
         type(LD_volume_diffusive_flux_t)    :: volume_flux
+        type(LD_volume_source_t)            :: source
         type(LD_properties_t)               :: prop
 
         
@@ -67,12 +69,12 @@ contains
         call self%set_name("LinearDiffusion")
 
 
-!        !
-!        ! Set properties
-!        !
-!        prop%c(1) = ONE
-!        prop%c(2) = ZERO
-!        prop%c(3) = ZERO
+        !
+        ! Set properties
+        !
+        prop%mu(1) = ONE
+        prop%mu(2) = ZERO
+        prop%mu(3) = ZERO
 
 
         !
@@ -92,6 +94,7 @@ contains
         ! Allocate flux components to specific types for the equation set
         ! 
         call self%add_volume_diffusive_flux(volume_flux)
+        call self%add_volume_advective_flux(source)
         call self%add_boundary_diffusive_flux(boundary_flux)
 
 

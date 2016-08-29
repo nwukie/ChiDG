@@ -1,11 +1,12 @@
 module bc_periodic
 #include <messenger.h>
     use type_bc,            only: bc_t
-    use type_solverdata,    only: solverdata_t
-    use type_mesh,          only: mesh_t
+    use type_chidg_worker,  only: chidg_worker_t
     use type_properties,    only: properties_t
-    use type_face_info,     only: face_info_t
-    use type_function_info, only: function_info_t
+!    use type_solverdata,    only: solverdata_t
+!    use type_mesh,          only: mesh_t
+!    use type_face_info,     only: face_info_t
+!    use type_function_info, only: function_info_t
     implicit none
 
 
@@ -87,13 +88,15 @@ contains
     !!  @date   1/31/2016
     !!
     !-----------------------------------------------------------------------------------
-    subroutine compute(self,mesh,sdata,prop,face,fcn)
+    !subroutine compute(self,mesh,sdata,prop,face,fcn)
+    subroutine compute(self,worker,prop)
         class(periodic_t),              intent(inout)   :: self
-        type(mesh_t),                   intent(in)      :: mesh(:)
-        type(solverdata_t),             intent(inout)   :: sdata
+        type(chidg_worker_t),           intent(inout)   :: worker
         class(properties_t),            intent(inout)   :: prop
-        type(face_info_t),              intent(in)      :: face
-        type(function_info_t),          intent(in)      :: fcn
+!        type(mesh_t),                   intent(in)      :: mesh(:)
+!        type(solverdata_t),             intent(inout)   :: sdata
+!        type(face_info_t),              intent(in)      :: face
+!        type(function_info_t),          intent(in)      :: fcn
 
 
         ! DO NOTHING IN PERIODIC BOUNDARY CONDITION

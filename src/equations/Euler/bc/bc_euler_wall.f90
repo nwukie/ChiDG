@@ -1,16 +1,10 @@
 module bc_euler_wall
-    use mod_kinds,          only: rk,ik
-    use mod_constants,      only: TWO, HALF, ZERO, ME
+    use mod_kinds,              only: rk,ik
+    use mod_constants,          only: TWO, HALF, ZERO, ME
 
-    use type_bc,            only: bc_t
-    use type_solverdata,    only: solverdata_t
-    use type_mesh,          only: mesh_t
-    use type_properties,    only: properties_t
-    use type_face_info,     only: face_info_t
-    use type_function_info, only: function_info_t
-
-    use mod_integrate,      only: integrate_boundary_scalar_flux
-    use mod_interpolate,    only: interpolate
+    use type_bc,                only: bc_t
+    use type_chidg_worker,      only: chidg_worker_t
+    use type_properties,        only: properties_t
     use DNAD_D
     implicit none
     
@@ -89,30 +83,25 @@ contains
     !!  @param[in]      iface   Index of the face being computed
     !!  @param[inout]   prop    properties_t object containing equations and material_t objects
     !-------------------------------------------------------------------------------------------
-    subroutine compute(self,mesh,sdata,prop,face,fcn)
+    subroutine compute(self,worker,prop)
         class(euler_wall_t),            intent(inout)   :: self
-        type(mesh_t),                   intent(in)      :: mesh(:)
-        type(solverdata_t),             intent(inout)   :: sdata
+        type(chidg_worker_t),           intent(inout)   :: worker
         class(properties_t),            intent(inout)   :: prop
-        type(face_info_t),              intent(in)      :: face
-        type(function_info_t),          intent(in)      :: fcn
 
 
         ! Equation indices
         integer(ik)     :: irho, irhou, irhov, irhow, irhoE
 
-        integer(ik)             :: idom, ielem, iface, idonor
-
-        ! Storage at quadrature nodes
-        !type(AD_D), dimension(mesh(face%idomain_l)%faces(face%ielement_l,face%iface)%gq%face%nnodes)   ::  &
-        type(AD_D), allocatable, dimension(:)   ::  &
-                        rho_m,  rhou_m, rhov_m, rhow_m, rhoE_m, p_m, integrand, flux_x, flux_y, flux_z,  &
-                        rhou_bc, rhov_bc, rhow_bc, rhoE_bc, u_bc, v_bc, w_bc, u_m, v_m, w_m, p_bc
-
         real(rk)    :: gam_m
 
+        ! Storage at quadrature nodes
+        type(AD_D), allocatable, dimension(:)   ::  &
+            rho_m,  rhou_m, rhov_m, rhow_m, rhoE_m, p_m, integrand, flux_x, flux_y, flux_z,  &
+            rhou_bc, rhov_bc, rhow_bc, rhoE_bc, u_bc, v_bc, w_bc, u_m, v_m, w_m, p_bc
 
-        idonor = 0
+        real(rk),   allocatable, dimension(:)   ::  &
+            normx, normy, normz
+
 
 
         !
@@ -125,108 +114,99 @@ contains
         irhoE = prop%get_eqn_index("rhoE")
 
 
-        idom  = face%idomain_l
-        ielem = face%ielement_l
-        iface = face%iface
+
+        !
+        ! Interpolate interior solution to quadrature nodes
+        !
+        rho_m  = worker%interpolate(irho,  'value', ME)
+        rhou_m = worker%interpolate(irhou, 'value', ME)
+        rhov_m = worker%interpolate(irhov, 'value', ME)
+        rhow_m = worker%interpolate(irhow, 'value', ME)
+        rhoE_m = worker%interpolate(irhoE, 'value', ME)
+
+
+        normx = worker%normal(1)
+        normy = worker%normal(2)
+        normz = worker%normal(3)
 
 
 
-
-        associate (norms => mesh(idom)%faces(ielem,iface)%norm, unorms => mesh(idom)%faces(ielem,iface)%unorm, faces => mesh(idom)%faces, q => sdata%q)
-
-
-
-            !
-            ! Interpolate interior solution to quadrature nodes
-            !
-            rho_m  = interpolate(mesh,sdata,face,fcn,irho,  'value', ME)
-            rhou_m = interpolate(mesh,sdata,face,fcn,irhou, 'value', ME)
-            rhov_m = interpolate(mesh,sdata,face,fcn,irhov, 'value', ME)
-            rhow_m = interpolate(mesh,sdata,face,fcn,irhow, 'value', ME)
-            rhoE_m = interpolate(mesh,sdata,face,fcn,irhoE, 'value', ME)
+        !
+        ! Compute interior pressure
+        !
+        call prop%fluid%compute_pressure(rho_m,rhou_m,rhov_m,rhow_m,rhoE_m,p_m)
+        p_bc = p_m
 
 
 
-            !
-            ! Compute interior pressure
-            !
-            call prop%fluid%compute_pressure(rho_m,rhou_m,rhov_m,rhow_m,rhoE_m,p_m)
-            p_bc = p_m
+        !
+        ! Initialize arrays
+        !
+        flux_x = p_bc
+        flux_y = p_bc
+        flux_z = p_bc
 
 
 
-            !
-            ! Initialize arrays
-            !
-            flux_x = p_bc
-            flux_y = p_bc
-            flux_z = p_bc
-            flux_x = ZERO
-            flux_y = ZERO
-            flux_z = ZERO
+        !
+        ! Mass Flux
+        !
+        flux_x = ZERO
+        flux_y = ZERO
+        flux_z = ZERO
+        integrand = flux_x*normx + flux_y*normy + flux_z*normz
+
+        call worker%integrate_boundary(irho, integrand)
+
+
+        !
+        ! Add pressure flux to momentum equation
+        !
+        flux_x = p_bc
+        flux_y = ZERO
+        flux_z = ZERO
+        integrand = flux_x*normx + flux_y*normy + flux_z*normz
+
+        call worker%integrate_boundary(irhou, integrand)
 
 
 
-            !
-            ! Mass Flux
-            !
-            flux_x = ZERO
-            flux_y = ZERO
-            flux_z = ZERO
-            integrand = flux_x*norms(:,1) + flux_y*norms(:,2) + flux_z*norms(:,3)
+        !
+        ! Add pressure flux to momentum equation
+        !
+        flux_x = ZERO
+        flux_y = p_bc
+        flux_z = ZERO
 
-            call integrate_boundary_scalar_flux(mesh,sdata,face,fcn,irho,integrand)
+        integrand = flux_x*normx + flux_y*normy + flux_z*normz
 
-
-            !
-            ! Add pressure flux to momentum equation
-            !
-            flux_x = p_bc
-            flux_y = ZERO
-            flux_z = ZERO
-            integrand = flux_x*norms(:,1) + flux_y*norms(:,2) + flux_z*norms(:,3)
-
-            call integrate_boundary_scalar_flux(mesh,sdata,face,fcn,irhou,integrand)
+        call worker%integrate_boundary(irhov, integrand)
 
 
 
-            !
-            ! Add pressure flux to momentum equation
-            !
-            flux_x = ZERO
-            flux_y = p_bc
-            flux_z = ZERO
+        !
+        ! Add pressure flux to momentum equation
+        !
+        flux_x = ZERO
+        flux_y = ZERO
+        flux_z = p_bc
 
-            integrand = flux_x*norms(:,1) + flux_y*norms(:,2) + flux_z*norms(:,3)
+        integrand = flux_x*normx + flux_y*normy + flux_z*normz
 
-            call integrate_boundary_scalar_flux(mesh,sdata,face,fcn,irhov,integrand)
-
-
-
-            !
-            ! Add pressure flux to momentum equation
-            !
-            flux_x = ZERO
-            flux_y = ZERO
-            flux_z = p_bc
-
-            integrand = flux_x*norms(:,1) + flux_y*norms(:,2) + flux_z*norms(:,3)
-
-            call integrate_boundary_scalar_flux(mesh,sdata,face,fcn,irhow,integrand)
+        call worker%integrate_boundary(irhow, integrand)
 
 
-            !
-            ! Energy Flux
-            !
-            flux_x = ZERO
-            flux_y = ZERO
-            flux_z = ZERO
+        !
+        ! Energy Flux
+        !
+        flux_x = ZERO
+        flux_y = ZERO
+        flux_z = ZERO
 
-            integrand = flux_x*norms(:,1) + flux_y*norms(:,2) + flux_z*norms(:,3)
+        integrand = flux_x*normx + flux_y*normy + flux_z*normz
 
-            call integrate_boundary_scalar_flux(mesh,sdata,face,fcn,irhoE,integrand)
+        call worker%integrate_boundary(irhoE, integrand)
 
-        end associate
 
     end subroutine compute
     !*****************************************************************************************************

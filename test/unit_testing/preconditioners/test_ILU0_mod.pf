@@ -79,7 +79,7 @@ contains
         spacedim = 3
         nterms_c = 8
         nterms_s = 1
-        call this%chidg%data%add_domain('D_01',nodes,connectivity,spacedim,nterms_c,'scalar')
+        call this%chidg%data%add_domain('D_01',nodes,connectivity,spacedim,nterms_c,'LinearAdvection')
 
 
         !

@@ -1,18 +1,16 @@
 module bc_linearadvection_extrapolate
     use mod_kinds,          only: rk,ik
     use type_bc,            only: bc_t
-    use type_solverdata,    only: solverdata_t
-    use type_mesh,          only: mesh_t
+    use type_chidg_worker,  only: chidg_worker_t
     use type_properties,    only: properties_t
+    implicit none
 
-    use type_face_info,     only: face_info_t
-    use type_function_info, only: function_info_t
 
     !> Extrapolation boundary condition 
     !!      - Extrapolate interior variables to be used for calculating the boundary flux.
     !!  
     !!  @author Nathan A. Wukie
-    !--------------------------------------------------
+    !-----------------------------------------------------------------------------------------
     type, public, extends(bc_t) :: linearadvection_extrapolate_t
 
 
@@ -23,6 +21,7 @@ module bc_linearadvection_extrapolate
         procedure   :: compute    !> bc implementation
 
     end type linearadvection_extrapolate_t
+    !******************************************************************************************
 
 
 
@@ -81,13 +80,10 @@ contains
     !!  @param[in]      iface   Index of the face being computed
     !!  @param[in]      iblk    Index of the linearization block being computed
     !---------------------------------------------------------------------------------------------
-    subroutine compute(self,mesh,sdata,prop,face,fcn)
+    subroutine compute(self,worker,prop)
         class(linearadvection_extrapolate_t),   intent(inout)   :: self
-        type(mesh_t),                           intent(in)      :: mesh(:)
-        type(solverdata_t),                     intent(inout)   :: sdata
+        type(chidg_worker_t),                   intent(inout)   :: worker
         class(properties_t),                    intent(inout)   :: prop
-        type(face_info_t),                      intent(in)      :: face
-        type(function_info_t),                  intent(in)      :: fcn
 
 
 

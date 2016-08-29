@@ -117,12 +117,11 @@ contains
     !!  @param[inout]   prop    properties_t object with equationset properties, and material_t objects
     !!
     !----------------------------------------------------------------------------------------
-    subroutine apply(self,mesh,sdata,prop,idom)
+    subroutine apply(self,mesh,sdata,prop)
         class(bcset_t),         intent(inout)   :: self
         type(mesh_t),           intent(inout)   :: mesh(:)
         class(solverdata_t),    intent(inout)   :: sdata
         class(properties_t),    intent(inout)   :: prop
-        integer(ik),            intent(in)      :: idom
 
         integer(ik) :: ibc
 
@@ -135,7 +134,7 @@ contains
             ! Only apply if there is an allocated boundary condition in the current slot
             !
             if (allocated(self%bcs(ibc)%bc)) then
-                call self%bcs(ibc)%bc%apply(mesh,sdata,prop,idom)
+                call self%bcs(ibc)%bc%apply(mesh,sdata,prop)
             end if
 
         end do

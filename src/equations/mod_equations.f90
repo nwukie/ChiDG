@@ -15,12 +15,10 @@ module mod_equations
     !
     ! Import Equations
     !
-    use eqn_scalar,                                  only: scalar_e
     use eqn_linearadvection,                         only: linearadvection_e
     use eqn_lineardiffusion,                         only: lineardiffusion_e
     use eqn_duallinearadvection,                     only: duallinearadvection_e
     use eqn_euler,                                   only: euler_e
-    use eqn_linearized_euler,                        only: linearized_euler_e
     use eqn_primitive_linearized_euler,              only: primitive_linearized_euler_e
     implicit none
 
@@ -55,12 +53,10 @@ contains
         !
         ! Instantiate Equations
         !
-        type(scalar_e)                                      :: SCALAR
         type(linearadvection_e)                             :: LINEARADVECTION
         type(lineardiffusion_e)                             :: LINEARDIFFUSION
         type(duallinearadvection_e)                         :: DUALLINEARADVECTION
         type(euler_e)                                       :: EULER
-        type(linearized_euler_e)                            :: LINEARIZED_EULER
         type(primitive_linearized_euler_e)                  :: PRIMITIVE_LINEARIZED_EULER
 
 
@@ -68,12 +64,10 @@ contains
             !
             ! Register in global vector
             !
-            call registered_equations%push_back(SCALAR)
             call registered_equations%push_back(LINEARADVECTION)
             call registered_equations%push_back(LINEARDIFFUSION)
             call registered_equations%push_back(DUALLINEARADVECTION)
             call registered_equations%push_back(EULER)
-            call registered_equations%push_back(LINEARIZED_EULER)
             call registered_equations%push_back(PRIMITIVE_LINEARIZED_EULER)
 
 

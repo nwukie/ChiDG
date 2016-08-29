@@ -1,22 +1,22 @@
 module bc_euler_giles_inlet
-    use mod_kinds,          only: rk,ik
-    use mod_constants,      only: ONE, TWO, FOUR, HALF, ZERO
+    use mod_kinds,              only: rk,ik
+    use mod_constants,          only: ONE, TWO, FOUR, HALF, ZERO
 
-    use type_bc,            only: bc_t
-    use type_solverdata,    only: solverdata_t
-    use type_mesh,          only: mesh_t
-    use type_point,         only: point_t
-    use type_properties,    only: properties_t
-    use type_face_info,     only: face_info_t
-    use type_function_info, only: function_info_t
+    use type_bc,                only: bc_t
+    use type_solverdata,        only: solverdata_t
+    use type_mesh,              only: mesh_t
+    use type_point,             only: point_t
+    use type_properties,        only: properties_t
+    use type_face_info,         only: face_info_t
+    use type_function_info,     only: function_info_t
 
 
-    use mod_integrate,      only: integrate_boundary_scalar_flux
-    use mod_interpolate,    only: interpolate
-    use mod_dft,            only: dft, idft_mode_points
+    use mod_chidg_interpolate,  only: interpolate
+    use mod_integrate,          only: integrate_boundary_scalar_flux
+    use mod_dft,                only: dft, idft_mode_points
     use DNAD_D
     
-    use EULER_properties,   only: EULER_properties_t
+    use EULER_properties,       only: EULER_properties_t
     implicit none
 
 

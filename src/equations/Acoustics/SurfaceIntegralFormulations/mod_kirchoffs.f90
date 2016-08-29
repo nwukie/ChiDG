@@ -10,7 +10,7 @@ module mod_kirchoffs
     use type_solverdata,            only: solverdata_t
     use type_point,                 only: point_t
 
-    use mod_interpolate,            only: interpolate
+!    use mod_interpolate,            only: interpolate
 !    use mod_primitive_linearized_euler,     only: cbar, omega
     use mod_io,                             only: nterms_s
     implicit none

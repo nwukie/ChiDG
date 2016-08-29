@@ -6,14 +6,7 @@ module DLA_LaxFriedrichs_flux
                                       ME, NEIGHBOR
 
     use type_boundary_flux,     only: boundary_flux_t
-    use type_mesh,              only: mesh_t
-    use type_solverdata,        only: solverdata_t
-    use type_face_info,         only: face_info_t
-    use type_function_info,     only: function_info_t
-
-
-    use mod_interpolate,        only: interpolate
-    use mod_integrate,          only: integrate_boundary_scalar_flux
+    use type_chidg_worker,      only: chidg_worker_t
     use DNAD_D
 
     use type_properties,        only: properties_t
@@ -51,23 +44,20 @@ contains
     !!
     !!
     !----------------------------------------------------------------------------------------------------
-    subroutine compute(self,mesh,sdata,prop,face_info,function_info)
+    subroutine compute(self,worker,prop)
         class(DLA_LaxFriedrichs_flux_t),    intent(in)      :: self
-        type(mesh_t),                       intent(in)      :: mesh(:)
-        type(solverdata_t),                 intent(inout)   :: sdata
+        type(chidg_worker_t),               intent(inout)   :: worker
         class(properties_t),                intent(inout)   :: prop
-        type(face_info_t),                  intent(in)      :: face_info
-        type(function_info_t),              intent(in)      :: function_info
-
-
-        integer(ik)             :: idom, ielem, iface
-        integer(ik)             :: ifcn, idonor, iblk
-
 
         real(rk)                 :: cx, cy, cz
         integer(ik)              :: iu_a, iu_b
-        type(AD_D), dimension(mesh(face_info%idomain_l)%faces(face_info%ielement_l,face_info%iface)%gq%face%nnodes)  :: & 
-                    ua_l, ua_r, ub_l, ub_r, flux_x, flux_y, flux_z, integrand
+
+        type(AD_D), allocatable, dimension(:)   ::  & 
+            ua_l, ua_r, ub_l, ub_r,                 &
+            flux_x, flux_y, flux_z, integrand
+
+        real(rk),   allocatable, dimension(:)   ::  &
+            normx, normy, normz, unormx, unormy, unormz
 
 
         !
@@ -76,13 +66,6 @@ contains
         iu_a      = prop%get_eqn_index('u_a')
         iu_b      = prop%get_eqn_index('u_b')
 
-
-        idom  = face_info%idomain_l
-        ielem = face_info%ielement_l
-        iface = face_info%iface
-
-        
-        associate ( norms => mesh(idom)%faces(ielem,iface)%norm, unorms => mesh(idom)%faces(ielem,iface)%unorm )
 
 
         !
@@ -102,47 +85,46 @@ contains
         !
         ! Interpolate solution to quadrature nodes
         !
-!        call interpolate_face(mesh,face_info,function_info,sdata%q,iu_a, ua_r, 'value', ME)
-!        call interpolate_face(mesh,face_info,function_info,sdata%q,iu_a, ua_l, 'value', NEIGHBOR)
-!
-!        call interpolate_face(mesh,face_info,function_info,sdata%q,iu_b, ub_r, 'value', ME)
-!        call interpolate_face(mesh,face_info,function_info,sdata%q,iu_b, ub_l, 'value', NEIGHBOR)
+        ua_r = worker%interpolate(iu_a, 'value', ME)
+        ua_l = worker%interpolate(iu_a, 'value', NEIGHBOR)
 
-        ua_r = interpolate(mesh,sdata,face_info,function_info,iu_a, 'value', ME)
-        ua_l = interpolate(mesh,sdata,face_info,function_info,iu_a, 'value', NEIGHBOR)
+        ub_r = worker%interpolate(iu_b, 'value', ME)
+        ub_l = worker%interpolate(iu_b, 'value', NEIGHBOR)
 
-        ub_r = interpolate(mesh,sdata,face_info,function_info,iu_b, 'value', ME)
-        ub_l = interpolate(mesh,sdata,face_info,function_info,iu_b, 'value', NEIGHBOR)
+
+
+        normx = worker%normal(1)
+        normy = worker%normal(2)
+        normz = worker%normal(3)
+
+        unormx = worker%unit_normal(1)
+        unormy = worker%unit_normal(2)
+        unormz = worker%unit_normal(3)
+
+        !
+        ! Compute boundary upwind flux
+        !
+        flux_x = (cx * (ua_l - ua_r)/TWO )  *  normx * unormx
+        flux_y = (cy * (ua_l - ua_r)/TWO )  *  normy * unormy
+        flux_z = (cz * (ua_l - ua_r)/TWO )  *  normz * unormz
+
+        integrand = flux_x + flux_y + flux_z
+        call worker%integrate_boundary(iu_a,integrand)
 
 
 
         !
         ! Compute boundary upwind flux
         !
-        flux_x = (cx * (ua_l - ua_r)/TWO )  *  norms(:,1) * unorms(:,1)
-        flux_y = (cy * (ua_l - ua_r)/TWO )  *  norms(:,2) * unorms(:,2)
-        flux_z = (cz * (ua_l - ua_r)/TWO )  *  norms(:,3) * unorms(:,3)
+        flux_x = (cx * (ub_l - ub_r)/TWO )  *  normx * unormx
+        flux_y = (cy * (ub_l - ub_r)/TWO )  *  normy * unormy
+        flux_z = (cz * (ub_l - ub_r)/TWO )  *  normz * unormz
 
         integrand = flux_x + flux_y + flux_z
-        call integrate_boundary_scalar_flux(mesh,sdata,face_info,function_info,iu_a,integrand)
+        call worker%integrate_boundary(iu_b,integrand)
 
 
 
-        !
-        ! Compute boundary upwind flux
-        !
-        flux_x = (cx * (ub_l - ub_r)/TWO )  *  norms(:,1) * unorms(:,1)
-        flux_y = (cy * (ub_l - ub_r)/TWO )  *  norms(:,2) * unorms(:,2)
-        flux_z = (cz * (ub_l - ub_r)/TWO )  *  norms(:,3) * unorms(:,3)
-
-        integrand = flux_x + flux_y + flux_z
-        call integrate_boundary_scalar_flux(mesh,sdata,face_info,function_info,iu_b,integrand)
-
-
-
-
-
-        end associate
     end subroutine compute
     !****************************************************************************************
 

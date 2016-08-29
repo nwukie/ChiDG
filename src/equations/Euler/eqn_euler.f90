@@ -58,7 +58,6 @@ contains
         type(EULER_volume_advective_flux_t)             :: volume_flux
         type(EULER_boundary_average_advective_flux_t)   :: average_flux
         type(EULER_Roe_flux_t)                          :: roe
-        type(EULER_LaxFriedrichs_flux_t)                :: LF
         type(EULER_properties_t)                        :: prop
 
         type(perfect_gas_t)                             :: perfect_gas
@@ -68,7 +67,6 @@ contains
         ! Set equationset name
         !
         call self%set_name("Euler")
-
 
 
         !
@@ -86,21 +84,19 @@ contains
         !
         ! Add equations.
         !
-        call self%add_equation("rho",1)
+        call self%add_equation("rho" ,1)
         call self%add_equation("rhou",2)
         call self%add_equation("rhov",3)
         call self%add_equation("rhow",4)
         call self%add_equation("rhoE",5)
 
 
-
         !
         ! Allocate flux components to specific types for the equation set
         !
-        call self%add_boundary_advective_flux(average_flux)
         call self%add_volume_advective_flux(volume_flux)
+        call self%add_boundary_advective_flux(average_flux)
         call self%add_boundary_advective_flux(roe)
-        !call self%add_boundary_advective_flux(LF)
 
 
     end subroutine init

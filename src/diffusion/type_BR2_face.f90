@@ -1,6 +1,6 @@
 module type_BR2_face
     use mod_kinds,          only: ik
-    use mod_constants,      only: BR2_INTERIOR, BR2_EXTERIOR
+    use mod_constants,      only: BR2_INTERIOR, BR2_EXTERIOR, INTERIOR, CHIMERA
     use type_mesh,          only: mesh_t
     use type_element_info,  only: element_info_t
     use type_chidgVector,   only: chidgVector_t
@@ -50,21 +50,28 @@ contains
         integer(ik),            intent(in)      :: iface
         type(chidgVector_t),    intent(in)      :: q
 
+        logical :: conforming_face, chimera_face
 
     
         ! 
-        ! Initialize/Reinitialize storage allocation if necessary
+        ! Initialize/Reinitialize storage allocation and update interior lifting operators
         !
         call self%owner(1)%init(mesh,elem_info,iface)
-        call self%owner(2)%init(mesh,elem_info,iface)
-
-
-
-        !
-        ! Update face data
-        !
         call self%owner(1)%update(mesh,elem_info,iface,q,BR2_INTERIOR)
-        call self%owner(2)%update(mesh,elem_info,iface,q,BR2_EXTERIOR)
+
+
+
+
+        !
+        ! Initialize/Reinitialize storage allocation and update exterior lifting operator
+        ! if there is an exterior element
+        !
+        conforming_face = (mesh(elem_info%idomain_l)%faces(elem_info%ielement_l,iface)%ftype == INTERIOR)
+        chimera_face    = (mesh(elem_info%idomain_l)%faces(elem_info%ielement_l,iface)%ftype == CHIMERA )
+        if (conforming_face .or. chimera_face) then
+            call self%owner(2)%init(mesh,elem_info,iface)
+            call self%owner(2)%update(mesh,elem_info,iface,q,BR2_EXTERIOR)
+        end if
 
 
 

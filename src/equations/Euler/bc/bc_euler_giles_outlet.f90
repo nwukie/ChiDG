@@ -10,8 +10,9 @@ module bc_euler_giles_outlet
     use type_face_info,     only: face_info_t
     use type_function_info, only: function_info_t
 
+    use mod_chidg_interpolate,    only: interpolate
+    use mod_interpolate,    only: interpolate_boundary
     use mod_integrate,      only: integrate_boundary_scalar_flux
-    use mod_interpolate,    only: interpolate, interpolate_boundary
     use mod_dft,            only: dft, idft_mode_points, compute_dft_points
     use DNAD_D
     

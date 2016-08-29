@@ -21,19 +21,16 @@ module mod_bc
     use bc_empty,                           only: empty_t
     use bc_periodic,                        only: periodic_t
     use bc_linearadvection_extrapolate,     only: linearadvection_extrapolate_t
+    use bc_lineardiffusion_extrapolate,     only: lineardiffusion_extrapolate_t
+    use bc_lineardiffusion_derivative,      only: lineardiffusion_derivative_t
+    use bc_lineardiffusion_value,           only: lineardiffusion_value_t
     use bc_euler_wall,                      only: euler_wall_t
     use bc_euler_totalinlet,                only: euler_totalinlet_t
-    use bc_euler_totalinlet_characteristic, only: euler_totalinlet_characteristic_t
     use bc_euler_pressureoutlet,            only: euler_pressureoutlet_t
     use bc_euler_extrapolate,               only: euler_extrapolate_t
-!    use bc_euler_giles_outlet,              only: euler_giles_outlet_t
-!    use bc_euler_giles_outlet_2D_a,         only: euler_giles_outlet_2D_a_t
-!    use bc_euler_giles_outlet_2D_b,         only: euler_giles_outlet_2D_b_t
-
-    use bc_lineuler_inlet,                  only: lineuler_inlet_t
-    use bc_lineuler_outlet,                 only: lineuler_outlet_t
-    use bc_lineuler_extrapolate,            only: lineuler_extrapolate_t
-    use bc_lineuler_wall,                   only: lineuler_wall_t
+!!    use bc_euler_giles_outlet,              only: euler_giles_outlet_t
+!!    use bc_euler_giles_outlet_2D_a,         only: euler_giles_outlet_2D_a_t
+!!    use bc_euler_giles_outlet_2D_b,         only: euler_giles_outlet_2D_b_t
 
     use bc_primlineuler_inlet,              only: primlineuler_inlet_t
     use bc_primlineuler_outlet,             only: primlineuler_outlet_t
@@ -75,20 +72,17 @@ contains
         type(empty_t)                           :: EMPTY
         type(periodic_t)                        :: PERIODIC
         type(linearadvection_extrapolate_t)     :: LINEARADVECTION_EXTRAPOLATE
+        type(lineardiffusion_extrapolate_t)     :: LINEARDIFFUSION_EXTRAPOLATE
+        type(lineardiffusion_derivative_t)      :: LINEARDIFFUSION_DERIVATIVE
+        type(lineardiffusion_value_t)           :: LINEARDIFFUSION_VALUE
 
         type(euler_wall_t)                      :: EULER_WALL
         type(euler_totalinlet_t)                :: EULER_TOTALINLET
-        type(euler_totalinlet_characteristic_t) :: EULER_TOTALINLET_CHARCTERISTIC
         type(euler_pressureoutlet_t)            :: EULER_PRESSUREOUTLET
         type(euler_extrapolate_t)               :: EULER_EXTRAPOLATE
-!        type(euler_giles_outlet_t)              :: EULER_GILES_OUTLET
-!        type(euler_giles_outlet_2D_a_t)         :: EULER_GILES_OUTLET_2D_A
-!        type(euler_giles_outlet_2D_b_t)         :: EULER_GILES_OUTLET_2D_B
-
-        type(lineuler_inlet_t)                  :: LINEULER_INLET
-        type(lineuler_outlet_t)                 :: LINEULER_OUTLET
-        type(lineuler_extrapolate_t)            :: LINEULER_EXTRAPOLATE
-        type(lineuler_wall_t)                   :: LINEULER_WALL
+!!        type(euler_giles_outlet_t)              :: EULER_GILES_OUTLET
+!!        type(euler_giles_outlet_2D_a_t)         :: EULER_GILES_OUTLET_2D_A
+!!        type(euler_giles_outlet_2D_b_t)         :: EULER_GILES_OUTLET_2D_B
 
         type(primlineuler_inlet_t)              :: PRIMLINEULER_INLET
         type(primlineuler_outlet_t)             :: PRIMLINEULER_OUTLET
@@ -105,23 +99,18 @@ contains
             call registered_bcs%push_back(EMPTY)
             call registered_bcs%push_back(PERIODIC)
             call registered_bcs%push_back(LINEARADVECTION_EXTRAPOLATE)
+            call registered_bcs%push_back(LINEARDIFFUSION_EXTRAPOLATE)
+            call registered_bcs%push_back(LINEARDIFFUSION_DERIVATIVE)
+            call registered_bcs%push_back(LINEARDIFFUSION_VALUE)
 
 
             call registered_bcs%push_back(EULER_WALL)
             call registered_bcs%push_back(EULER_TOTALINLET)
-            call registered_bcs%push_back(EULER_TOTALINLET_CHARCTERISTIC)
             call registered_bcs%push_back(EULER_PRESSUREOUTLET)
             call registered_bcs%push_back(EULER_EXTRAPOLATE)
-!            call registered_bcs%push_back(EULER_GILES_OUTLET)
-!            call registered_bcs%push_back(EULER_GILES_OUTLET_2D_A)
-!            call registered_bcs%push_back(EULER_GILES_OUTLET_2D_B)
-
-
-            call registered_bcs%push_back(LINEULER_INLET)
-            call registered_bcs%push_back(LINEULER_OUTLET)
-            call registered_bcs%push_back(LINEULER_EXTRAPOLATE)
-            call registered_bcs%push_back(LINEULER_WALL)
-
+!!            call registered_bcs%push_back(EULER_GILES_OUTLET)
+!!            call registered_bcs%push_back(EULER_GILES_OUTLET_2D_A)
+!!            call registered_bcs%push_back(EULER_GILES_OUTLET_2D_B)
 
             call registered_bcs%push_back(PRIMLINEULER_INLET)
             call registered_bcs%push_back(PRIMLINEULER_OUTLET)

@@ -8,10 +8,10 @@ module type_solverdata
     use type_function_status,           only: function_status_t
     use type_equationset_function_data, only: equationset_function_data_t
     use type_bcset_coupling,            only: bcset_coupling_t
-    use type_BR2,                       only: BR2_t
     use type_element_info,              only: element_info_t
     use type_face_info,                 only: face_info_t
     use type_function_info,             only: function_info_t
+!    use type_BR2,                       only: BR2_t
     implicit none
 
 
@@ -23,7 +23,7 @@ module type_solverdata
     !!
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   8/19/2016
-    !!  @note   Added BR2 diffusion container
+!    !!  @note   Added BR2 diffusion container
     !!
     !-------------------------------------------------------------------------------------------------------
     type, public  :: solverdata_t
@@ -36,13 +36,7 @@ module type_solverdata
         type(chidgVector_t)             :: rhs                      !< Residual of the spatial scheme
         type(chidgMatrix_t)             :: lhs                      !< Linearization of the spatial scheme
 
-
-        !
-        ! BR2 container
-        !
-        type(BR2_t)                     :: BR2
-
-
+!        type(BR2_t)                     :: BR2
 
         !
         ! Time information
@@ -69,8 +63,6 @@ module type_solverdata
 
         generic, public     :: init => init_base
         procedure, private  :: init_base
-
-        procedure           :: update_diffusion
 
     end type solverdata_t
     !*******************************************************************************************************
@@ -165,48 +157,6 @@ contains
 
     end subroutine init_base
     !************************************************************************************************************
-
-
-
-
-
-
-
-
-
-
-
-    !>
-    !!
-    !!  @author Nathan A. Wukie (AFRL)
-    !!  @date   8/19/2016
-    !!
-    !!
-    !------------------------------------------------------------------------------------------------------------
-    subroutine update_diffusion(self,mesh,elem_info)
-        class(solverdata_t),    intent(inout)   :: self
-        type(mesh_t),           intent(in)      :: mesh(:)
-        type(element_info_t),   intent(in)      :: elem_info
-
-
-        !
-        ! Update BR2 lifing operators
-        !
-        call self%BR2%update(mesh,elem_info,self%q)
-
-
-    end subroutine update_diffusion
-    !*************************************************************************************************************
-
-
-
-
-
-
-
-
-
-
 
 
 

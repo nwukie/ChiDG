@@ -3,15 +3,16 @@ module type_chidg_data
     use mod_kinds,                      only: rk,ik
     use type_point,                     only: point_t
     use type_dict,                      only: dict_t
+    use type_domain_connectivity,       only: domain_connectivity_t
+    use type_boundary_connectivity,     only: boundary_connectivity_t
 
     ! Primary chidg_data_t components
     use type_domaininfo,                only: domaininfo_t
     use type_mesh,                      only: mesh_t
     use type_bcset,                     only: bcset_t
+    use type_bc,                        only: bc_t
     use type_equationset_wrapper,       only: equationset_wrapper_t
     use type_solverdata,                only: solverdata_t
-    use type_domain_connectivity,       only: domain_connectivity_t
-    use type_boundary_connectivity,     only: boundary_connectivity_t
 
     use type_equationset_function_data, only: equationset_function_data_t
     use type_bcset_coupling,            only: bcset_coupling_t
@@ -20,15 +21,13 @@ module type_chidg_data
     use mod_equations,                  only: create_equationset
     use mod_bc,                         only: create_bc
 
-    ! Classes
-    use type_bc,                        only: bc_t
 
     implicit none
 
 
 
 
-    !> Container for ChiDG data.
+    !>  Container for ChiDG data.
     !!
     !!  The format here is to have arrays of mesh_t, bcset_t, and eqnset_t components. The 
     !!  index of those arrays corresponds to a domain in the local ChiDG environment. A 
@@ -45,13 +44,25 @@ module type_chidg_data
         logical                                     :: solverInitialized = .false.
         integer(ik),        private                 :: ndomains_ = 0
         integer(ik),        private                 :: spacedim_ = 3    !< Default 3D 
-        type(domaininfo_t),             allocatable :: info(:)          !< General container for domain information
 
         
+        type(domaininfo_t), allocatable :: info(:)          !< General container for domain information
+
+
+
         type(mesh_t),                   allocatable :: mesh(:)          !< Array of mesh instances. One for each domain.
         type(bcset_t),                  allocatable :: bcset(:)         !< Array of boundary condition set instances. One for each domain.
         type(equationset_wrapper_t),    allocatable :: eqnset(:)        !< Array of equation set instances. One for each domain.
         type(solverdata_t)                          :: sdata            !< Solver data container for solution vectors and matrices
+
+
+!        type(mesh_t),       allocatable :: mesh(:)
+!        type(properties_t), allocatable :: properties(:)
+!        type(solverdata_t)              :: solverdata
+!
+!        type(boundarycondition_t)       :: bc
+!        type(equationset_t)             :: interior
+
 
     contains
 
@@ -182,7 +193,6 @@ contains
         !
         ! Resize array storage
         !
-        ! Allocate new storage arrays
         allocate(temp_info(self%ndomains_),   &
                  temp_mesh(self%ndomains_),   &
                  temp_bcset(self%ndomains_),  &
@@ -193,9 +203,6 @@ contains
         ! Copy previously initialized instances to new array. Be careful about pointers components here!
         ! For example, a pointer from a face to an element would no longer be valid in the new array.
         if (self%ndomains_ > 1) then
-            !temp_mesh(   1:size(self%mesh))    = self%mesh     ! ifort segfaults on this for cases with sevaral domains
-            !temp_bcset(  1:size(self%bcset))   = self%bcset
-            !temp_eqnset( 1:size(self%eqnset))  = self%eqnset
             temp_info(   1:size(self%info))    = self%info(1:size(self%mesh))
             temp_mesh(   1:size(self%mesh))    = self%mesh(1:size(self%mesh))
             temp_bcset(  1:size(self%bcset))   = self%bcset(1:size(self%mesh))
@@ -224,9 +231,6 @@ contains
                 if (self%mesh(idom)%idomain_g == temp_mesh(idomain_l)%idomain_g) call chidg_signal(FATAL,"chidg_data%add_domain: Two domains have same global index. MPI communication assumes this does not happen.")
             end do !idom
         end if
-
-
-
 
 
         !

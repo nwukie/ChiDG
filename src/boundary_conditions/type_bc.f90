@@ -4,13 +4,12 @@ module type_bc
     use mod_constants,              only: XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX, BOUNDARY, CHIMERA, ORPHAN, BC_BLK, ZERO, ONE, TWO, RKTOL
     use mod_chidg_mpi,              only: IRANK
 
+    use type_chidg_worker,          only: chidg_worker_t
     use type_mesh,                  only: mesh_t
     use type_point,                 only: point_t
     use type_ivector,               only: ivector_t
     use type_solverdata,            only: solverdata_t
     use type_properties,            only: properties_t
-    use type_face_info,             only: face_info_t
-    use type_function_info,         only: function_info_t
     use type_bcproperty_set,        only: bcproperty_set_t
     use type_function,              only: function_t
     use type_boundary_connectivity, only: boundary_connectivity_t
@@ -36,12 +35,13 @@ module type_bc
         !
         ! Boundary condition geometry
         !
-        integer(ik),        allocatable :: dom(:)                   !< Indices of domains
-        integer(ik),        allocatable :: elems(:)                 !< Indices of elements associated with boundary condition. Block-local indices. Local to partition.
-        integer(ik),        allocatable :: faces(:)                 !< Indices of the boundary face for elements elems(ielems)
-        type(ivector_t),    allocatable :: coupled_elems(:)         !< For each element on the boundary, a vector of element block-indices coupled with the current element.
+        integer(ik),        allocatable :: dom(:)               !< Indices of domains
+        integer(ik),        allocatable :: elems(:)             !< Indices of bc elements. Block-local indices. Local to partition.
+        integer(ik),        allocatable :: faces(:)             !< Indices of the boundary face for elements elems(ielems)
+        type(ivector_t),    allocatable :: coupled_elems(:)     !< For each element on the boundary, a vector of element block-indices 
+                                                                !< coupled with the current element.
 
-        !        integer(ik),        allocatable :: elems_g(:)               !< Indices of elements associated with boundary condition. Block-global indices. 
+        !integer(ik),        allocatable :: elems_g(:)  !< Indices of elements associated with boundary condition. Block-global indices. 
 
         !
         ! Boundary condition options
@@ -84,21 +84,15 @@ module type_bc
 
 
     abstract interface
-        subroutine compute_interface(self,mesh,sdata,prop,face,fcn)
+        subroutine compute_interface(self,worker,prop)
             use mod_kinds,  only: ik
             import bc_t
-            import mesh_t
-            import solverdata_t
+            import chidg_worker_t
             import properties_t
-            import face_info_t
-            import function_info_t
 
             class(bc_t),            intent(inout)   :: self
-            type(mesh_t),           intent(in)      :: mesh(:)
-            type(solverdata_t),     intent(inout)   :: sdata
+            type(chidg_worker_t),   intent(inout)   :: worker
             class(properties_t),    intent(inout)   :: prop
-            type(face_info_t),      intent(in)      :: face
-            type(function_info_t),  intent(in)      :: fcn
         end subroutine
     end interface
 
@@ -189,7 +183,7 @@ contains
         !
         ! Allocate storage for element and face indices
         !
-        allocate(self%elems(nfaces_bc), self%faces(nfaces_bc), self%coupled_elems(nfaces_bc), stat=ierr)
+        allocate(self%dom(nfaces_bc), self%elems(nfaces_bc), self%faces(nfaces_bc), self%coupled_elems(nfaces_bc), stat=ierr)
         if (ierr /= 0) call AllocationError
 
 
@@ -230,7 +224,8 @@ contains
                     !
                     ! Set element index
                     !
-                    self%elems(iface_bc)   = ielem
+                    self%dom(iface_bc)   = mesh%idomain_l
+                    self%elems(iface_bc) = ielem
 
 
 
@@ -500,35 +495,38 @@ contains
     !!  @param[inout]   prop    properties_t object containing equationset properties and material_t objects
     !!
     !---------------------------------------------------------------------------------------------
-    subroutine apply(self,mesh,sdata,prop,idomain_l)
+    subroutine apply(self,mesh,sdata,prop)
         class(bc_t),            intent(inout)   :: self
         type(mesh_t),           intent(in)      :: mesh(:)
         class(solverdata_t),    intent(inout)   :: sdata
         class(properties_t),    intent(inout)   :: prop
-        integer(ik),            intent(in)      :: idomain_l
 
-        integer(ik) :: ielem_bc, ielement_l, ielement_c, iface, idonor, iflux, icoupled_elem, ncoupled_elems
+        integer(ik) :: ielem_bc, idomain_l, ielement_l, ielement_c, iface, idonor, iflux, icoupled_elem, ncoupled_elems
 
-        type(face_info_t)       :: face
-        type(function_info_t)   :: fcn
+        type(chidg_worker_t)    :: worker
+
+
+        call worker%init(mesh,sdata)
+
 
         !
         ! Loop through associated boundary condition elements and call compute routine for the boundary flux calculation
         !
         do ielem_bc = 1,size(self%elems)
+            idomain_l   = self%dom(ielem_bc)
             ielement_l  = self%elems(ielem_bc)   ! Get index of the element being operated on
             iface       = self%faces(ielem_bc)   ! Get face index of element 'ielem' that is being operated on
 
 
-            face%idomain_g  = mesh(idomain_l)%elems(ielement_l)%idomain_g
-            face%idomain_l  = mesh(idomain_l)%elems(ielement_l)%idomain_l
-            face%ielement_g = mesh(idomain_l)%elems(ielement_l)%ielement_g
-            face%ielement_l = mesh(idomain_l)%elems(ielement_l)%ielement_l
-            face%iface      = iface
+            worker%face_info%idomain_g  = mesh(idomain_l)%elems(ielement_l)%idomain_g
+            worker%face_info%idomain_l  = mesh(idomain_l)%elems(ielement_l)%idomain_l
+            worker%face_info%ielement_g = mesh(idomain_l)%elems(ielement_l)%ielement_g
+            worker%face_info%ielement_l = mesh(idomain_l)%elems(ielement_l)%ielement_l
+            worker%face_info%iface      = iface
 
-            fcn%ifcn     = 0       ! Boundary conditions are not tracked.
-            fcn%idepend  = 0       ! Chimera interface not applicable on boundary condition.
-            fcn%idiff    = BC_BLK  ! Indicates to storage routine in LHS to store in BC section.
+            worker%function_info%ifcn     = 0       ! Boundary conditions are not tracked.
+            worker%function_info%idepend  = 0       ! Chimera interface not applicable on boundary condition.
+            worker%function_info%idiff    = BC_BLK  ! Indicates to storage routine in LHS to store in BC section.
 
             
             !
@@ -547,21 +545,17 @@ contains
                 ! Get coupled element to linearize against.
                 !
                 ielement_c = self%coupled_elems(ielem_bc)%at(icoupled_elem)
-                !face%seed%idomain_g  = mesh(idomain_l)%elems(ielement_c)%idomain_g
-                !face%seed%idomain_l  = mesh(idomain_l)%elems(ielement_c)%idomain_l
-                !face%seed%ielement_g = mesh(idomain_l)%elems(ielement_c)%ielement_g
-                !face%seed%ielement_l = mesh(idomain_l)%elems(ielement_c)%ielement_l
-                !face%seed%iproc      = IRANK
-                fcn%seed%idomain_g  = mesh(idomain_l)%elems(ielement_c)%idomain_g
-                fcn%seed%idomain_l  = mesh(idomain_l)%elems(ielement_c)%idomain_l
-                fcn%seed%ielement_g = mesh(idomain_l)%elems(ielement_c)%ielement_g
-                fcn%seed%ielement_l = mesh(idomain_l)%elems(ielement_c)%ielement_l
-                fcn%seed%iproc      = IRANK
+                worker%function_info%seed%idomain_g  = mesh(idomain_l)%elems(ielement_c)%idomain_g
+                worker%function_info%seed%idomain_l  = mesh(idomain_l)%elems(ielement_c)%idomain_l
+                worker%function_info%seed%ielement_g = mesh(idomain_l)%elems(ielement_c)%ielement_g
+                worker%function_info%seed%ielement_l = mesh(idomain_l)%elems(ielement_c)%ielement_l
+                worker%function_info%seed%iproc      = IRANK
 
                 !
                 ! For the current boundary element(face), call specialized compute procedure.
                 !
-                call self%compute(mesh,sdata,prop,face,fcn)
+                !call self%compute(mesh,sdata,prop,face,fcn)
+                call self%compute(worker,prop)
 
             end do !ielem_c
 

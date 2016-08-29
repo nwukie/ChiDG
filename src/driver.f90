@@ -25,7 +25,7 @@ program driver
     use mod_chidg_convert,      only: chidg_convert
     use mod_chidg_interpolate,  only: chidg_interpolate
     use mod_chidg_post,         only: chidg_post
-    use mod_kirchoffs,          only: kirchoff
+!    use mod_kirchoffs,          only: kirchoff
 
     ! MPI
     use mod_chidg_mpi,          only: IRANK, NRANK
@@ -117,6 +117,11 @@ program driver
 !            call initialize_variable(chidg%data,1,fcn)
 
 
+!            call create_function(constant,'constant')
+!
+!            ! rho
+!            call constant%set_option('val',1.0_rk)
+!            call initialize_variable(chidg%data,1,constant)
 
 
             call create_function(constant,'constant')
@@ -229,8 +234,8 @@ program driver
         else if ( trim(chidg_action) == 'post' ) then
             call chidg_post(trim(filename))
 
-        else if ( trim(chidg_action) == 'kirchoff' ) then
-            call kirchoff(filename)
+!        else if ( trim(chidg_action) == 'kirchoff' ) then
+!            call kirchoff(filename)
 
 
         else

@@ -4,7 +4,7 @@ module mod_entropy
 
     use type_chidg_data,    only: chidg_data_t
 
-    use mod_interpolate,    only: interpolate
+    use mod_interpolate,    only: interpolate_element_standard
     use mod_chidg_mpi,      only: ChiDG_COMM
     use mpi_f08,            only: MPI_AllReduce, MPI_REAL8, MPI_SUM
     use DNAD_D
@@ -93,11 +93,11 @@ contains
                     !
                     ! Interpolate variables to GQ nodes
                     !
-                    rho  = interpolate(mesh,sdata,idom,ielem,irho,  'value')
-                    rhou = interpolate(mesh,sdata,idom,ielem,irhou, 'value')
-                    rhov = interpolate(mesh,sdata,idom,ielem,irhov, 'value')
-                    rhow = interpolate(mesh,sdata,idom,ielem,irhow, 'value')
-                    rhoE = interpolate(mesh,sdata,idom,ielem,irhoE, 'value')
+                    rho  = interpolate_element_standard(mesh,sdata%q,idom,ielem,irho,  'value')
+                    rhou = interpolate_element_standard(mesh,sdata%q,idom,ielem,irhou, 'value')
+                    rhov = interpolate_element_standard(mesh,sdata%q,idom,ielem,irhov, 'value')
+                    rhow = interpolate_element_standard(mesh,sdata%q,idom,ielem,irhow, 'value')
+                    rhoE = interpolate_element_standard(mesh,sdata%q,idom,ielem,irhoE, 'value')
 
 
                     !

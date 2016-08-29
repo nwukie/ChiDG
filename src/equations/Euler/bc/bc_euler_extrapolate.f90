@@ -1,19 +1,13 @@
 module bc_euler_extrapolate
-    use mod_kinds,          only: rk,ik
-    use mod_constants,      only: ONE, TWO, HALF, ZERO, ME
+    use mod_kinds,              only: rk,ik
+    use mod_constants,          only: ONE, TWO, HALF, ZERO, ME
 
-    use type_bc,            only: bc_t
-    use type_solverdata,    only: solverdata_t
-    use type_mesh,          only: mesh_t
-    use type_properties,    only: properties_t
-    use type_face_info,     only: face_info_t
-    use type_function_info, only: function_info_t
-
-    use mod_integrate,      only: integrate_boundary_scalar_flux
-    use mod_interpolate,    only: interpolate
+    use type_bc,                only: bc_t
+    use type_chidg_worker,      only: chidg_worker_t
+    use type_properties,        only: properties_t
     use DNAD_D
     
-    use EULER_properties,   only: EULER_properties_t
+    use EULER_properties,       only: EULER_properties_t
     implicit none
 
 
@@ -26,7 +20,9 @@ module bc_euler_extrapolate
     type, public, extends(bc_t) :: euler_extrapolate_t
 
     contains
+
         procedure :: compute    !> bc implementation
+
     end type euler_extrapolate_t
     !-------------------------------------------------------------------------------------------
 
@@ -46,30 +42,24 @@ contains
     !!  @param[in]      iblk    Index of the linearization block being computed
     !!  @param[inout]   prop    properties_t object containing equations and material_t objects
     !-------------------------------------------------------------------------------------------
-    subroutine compute(self,mesh,sdata,prop,face,fcn)
+    subroutine compute(self,worker,prop)
         class(euler_extrapolate_t),     intent(inout)   :: self
-        type(mesh_t),                   intent(in)      :: mesh(:)
-        type(solverdata_t),             intent(inout)   :: sdata
+        type(chidg_worker_t),           intent(inout)   :: worker
         class(properties_t),            intent(inout)   :: prop
-        type(face_info_t),              intent(in)      :: face
-        type(function_info_t),          intent(in)      :: fcn
 
 
         ! Equation indices
         integer(ik)     :: irho, irhou, irhov, irhow, irhoE
 
-        integer(ik)             :: idom, ielem, iface, idonor
 
         ! Storage at quadrature nodes
-        !type(AD_D), dimension(mesh(face%idomain_l)%faces(face%ielement_l,face%iface)%gq%face%nnodes)   ::  &
-        type(AD_D), allocatable, dimension(:)   ::  &
-                        rho_m,  rhou_m, rhov_m, rhow_m, rhoE_m, p_m,        &
-                        H_m,    u_m,    v_m,    w_m,                        &
-                        flux_x, flux_y, flux_z, integrand
+        type(AD_D), allocatable, dimension(:)   ::          &
+            rho_m,  rhou_m, rhov_m, rhow_m, rhoE_m, p_m,    &
+            H_m,    u_m,    v_m,    w_m,                    &
+            flux_x, flux_y, flux_z, integrand
 
-
-
-        idonor = 0
+        real(rk),   allocatable, dimension(:)   ::  &
+            normx, normy, normz
 
 
         !
@@ -82,91 +72,87 @@ contains
         irhoE = prop%get_eqn_index("rhoE")
 
 
-        idom  = face%idomain_l
-        ielem = face%ielement_l
-        iface = face%iface
+
+        !
+        ! Interpolate interior solution to quadrature nodes
+        !
+        rho_m  = worker%interpolate(irho,  'value', ME)
+        rhou_m = worker%interpolate(irhou, 'value', ME)
+        rhov_m = worker%interpolate(irhov, 'value', ME)
+        rhow_m = worker%interpolate(irhow, 'value', ME)
+        rhoE_m = worker%interpolate(irhoE, 'value', ME)
 
 
+        normx = worker%normal(1)
+        normy = worker%normal(2)
+        normz = worker%normal(3)
 
 
-        associate (norms => mesh(idom)%faces(ielem,iface)%norm, unorms => mesh(idom)%faces(ielem,iface)%unorm, faces => mesh(idom)%faces, q => sdata%q)
+        call prop%fluid%compute_pressure(rho_m,rhou_m,rhov_m,rhow_m,rhoE_m,p_m)
 
-            !
-            ! Interpolate interior solution to quadrature nodes
-            !
-            rho_m  = interpolate(mesh,sdata,face,fcn,irho,  'value', ME)
-            rhou_m = interpolate(mesh,sdata,face,fcn,irhou, 'value', ME)
-            rhov_m = interpolate(mesh,sdata,face,fcn,irhov, 'value', ME)
-            rhow_m = interpolate(mesh,sdata,face,fcn,irhow, 'value', ME)
-            rhoE_m = interpolate(mesh,sdata,face,fcn,irhoE, 'value', ME)
+        u_m = rhou_m/rho_m
+        v_m = rhov_m/rho_m
+        w_m = rhow_m/rho_m
 
+        H_m = (rhoE_m + p_m)/rho_m
 
-            call prop%fluid%compute_pressure(rho_m,rhou_m,rhov_m,rhow_m,rhoE_m,p_m)
+        !=================================================
+        ! Mass flux
+        !=================================================
+        flux_x = (rho_m * u_m)
+        flux_y = (rho_m * v_m)
+        flux_z = (rho_m * w_m)
 
-            u_m = rhou_m/rho_m
-            v_m = rhov_m/rho_m
-            w_m = rhow_m/rho_m
+        integrand = flux_x*normx + flux_y*normy + flux_z*normz
 
-            H_m = (rhoE_m + p_m)/rho_m
+        call worker%integrate_boundary(irho, integrand)
 
-            !=================================================
-            ! Mass flux
-            !=================================================
-            flux_x = (rho_m * u_m)
-            flux_y = (rho_m * v_m)
-            flux_z = (rho_m * w_m)
+        !=================================================
+        ! x-momentum flux
+        !=================================================
+        flux_x = (rho_m * u_m * u_m) + p_m
+        flux_y = (rho_m * u_m * v_m)
+        flux_z = (rho_m * u_m * w_m)
 
-            integrand = flux_x*norms(:,1) + flux_y*norms(:,2) + flux_z*norms(:,3)
+        integrand = flux_x*normx + flux_y*normy + flux_z*normz
 
-            call integrate_boundary_scalar_flux(mesh,sdata,face,fcn,irho,integrand)
+        call worker%integrate_boundary(irhou, integrand)
 
-            !=================================================
-            ! x-momentum flux
-            !=================================================
-            flux_x = (rho_m * u_m * u_m) + p_m
-            flux_y = (rho_m * u_m * v_m)
-            flux_z = (rho_m * u_m * w_m)
+        !=================================================
+        ! y-momentum flux
+        !=================================================
+        flux_x = (rho_m * v_m * u_m)
+        flux_y = (rho_m * v_m * v_m) + p_m
+        flux_z = (rho_m * v_m * w_m)
 
-            integrand = flux_x*norms(:,1) + flux_y*norms(:,2) + flux_z*norms(:,3)
+        integrand = flux_x*normx + flux_y*normy + flux_z*normz
 
-            call integrate_boundary_scalar_flux(mesh,sdata,face,fcn,irhou,integrand)
+        call worker%integrate_boundary(irhov, integrand)
 
-            !=================================================
-            ! y-momentum flux
-            !=================================================
-            flux_x = (rho_m * v_m * u_m)
-            flux_y = (rho_m * v_m * v_m) + p_m
-            flux_z = (rho_m * v_m * w_m)
+        !=================================================
+        ! z-momentum flux
+        !=================================================
+        flux_x = (rho_m * w_m * u_m)
+        flux_y = (rho_m * w_m * v_m)
+        flux_z = (rho_m * w_m * w_m) + p_m
 
-            integrand = flux_x*norms(:,1) + flux_y*norms(:,2) + flux_z*norms(:,3)
+        integrand = flux_x*normx + flux_y*normy + flux_z*normz
 
-            call integrate_boundary_scalar_flux(mesh,sdata,face,fcn,irhov,integrand)
-
-            !=================================================
-            ! z-momentum flux
-            !=================================================
-            flux_x = (rho_m * w_m * u_m)
-            flux_y = (rho_m * w_m * v_m)
-            flux_z = (rho_m * w_m * w_m) + p_m
-
-            integrand = flux_x*norms(:,1) + flux_y*norms(:,2) + flux_z*norms(:,3)
-
-            call integrate_boundary_scalar_flux(mesh,sdata,face,fcn,irhow,integrand)
+        call worker%integrate_boundary(irhow, integrand)
 
 
-            !=================================================
-            ! Energy flux
-            !=================================================
-            flux_x = (rho_m * u_m * H_m)
-            flux_y = (rho_m * v_m * H_m)
-            flux_z = (rho_m * w_m * H_m)
+        !=================================================
+        ! Energy flux
+        !=================================================
+        flux_x = (rho_m * u_m * H_m)
+        flux_y = (rho_m * v_m * H_m)
+        flux_z = (rho_m * w_m * H_m)
 
-            integrand = flux_x*norms(:,1) + flux_y*norms(:,2) + flux_z*norms(:,3)
+        integrand = flux_x*normx + flux_y*normy + flux_z*normz
 
-            call integrate_boundary_scalar_flux(mesh,sdata,face,fcn,irhoE,integrand)
+        call worker%integrate_boundary(irhoE, integrand)
 
 
-        end associate
 
     end subroutine compute
     !*************************************************************************************************

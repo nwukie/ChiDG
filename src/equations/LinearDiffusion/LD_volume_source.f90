@@ -1,7 +1,7 @@
-module LD_volume_diffusive_flux
+module LD_volume_source
 #include <messenger.h>
     use mod_kinds,              only: rk,ik
-    use mod_constants,          only: ZERO,ONE,TWO,HALF
+    use mod_constants,          only: ZERO,ONE,TWO,FOUR,PI
 
     use type_volume_flux,       only: volume_flux_t
     use type_chidg_worker,      only: chidg_worker_t
@@ -14,20 +14,20 @@ module LD_volume_diffusive_flux
 
     !>
     !!
-    !!  @author Nathan A. Wukie
-    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   8/19/2016
     !!
     !!
     !!
     !-------------------------------------------------------------------------
-    type, extends(volume_flux_t), public :: LD_volume_diffusive_flux_t
+    type, extends(volume_flux_t), public :: LD_volume_source_t
 
 
     contains
 
         procedure   :: compute
 
-    end type LD_volume_diffusive_flux_t
+    end type LD_volume_source_t
     !*************************************************************************
 
 contains
@@ -36,23 +36,19 @@ contains
     !>
     !!
     !!  @author Nathan A. Wukie
-    !!
+    !!  @date   8/19/2016
     !!
     !!
     !!
     !------------------------------------------------------------------------------------
     subroutine compute(self,worker,prop)
-        class(LD_volume_diffusive_flux_t),  intent(in)      :: self
+        class(LD_volume_source_t),          intent(in)      :: self
         type(chidg_worker_t),               intent(inout)   :: worker
         class(properties_t),                intent(inout)   :: prop
 
-
-        integer(ik)             :: iu
-        real(rk)                :: mu_x, mu_y, mu_z
-
-        type(AD_D), allocatable, dimension(:)   ::  &
-            flux_x, flux_y, flux_z, dudx, dudy, dudz
-
+        integer(ik)                             :: iu
+        type(AD_D), allocatable, dimension(:)   :: source
+        real(rk),   allocatable, dimension(:)   :: x
 
         !
         ! Get variable index from equation set
@@ -61,38 +57,20 @@ contains
 
 
         !
-        ! Get equation set properties
-        !
-        select type(prop)
-            type is (LD_properties_t)
-                mu_x = prop%mu(1)
-                mu_y = prop%mu(2)
-                mu_z = prop%mu(3)
-        end select
-
-
-        !
         ! Interpolate solution to quadrature nodes
         !
-        dudx = worker%interpolate(iu, 'ddx')
-        dudy = worker%interpolate(iu, 'ddy')
-        dudz = worker%interpolate(iu, 'ddz')
+        source = worker%interpolate(iu, 'ddx')
 
+        x = worker%x('volume')
 
+        source = FOUR*PI*PI*dsin(TWO*PI*x)
 
-        !
-        ! Compute volume flux at quadrature nodes
-        !
-        flux_x = -mu_x*dudx
-        flux_y = -mu_y*dudy
-        flux_z = -mu_z*dudz
 
 
         !
         ! Integrate volume flux
         !
-        call worker%integrate_volume(iu, flux_x, flux_y, flux_z)
-
+        call worker%integrate_volume(iu, source)
 
 
     end subroutine compute
@@ -103,4 +81,4 @@ contains
 
 
 
-end module LD_volume_diffusive_flux
+end module LD_volume_source

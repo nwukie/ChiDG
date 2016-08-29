@@ -72,7 +72,7 @@ contains
         nterms_c = 8
         nterms_s = 8
         spacedim = 3
-        call this%chidg%data%add_domain('D_01',nodes,connectivity,spacedim,nterms_c,'Scalar')
+        call this%chidg%data%add_domain('D_01',nodes,connectivity,spacedim,nterms_c,'LinearAdvection')
         call this%chidg%initialize_solution_domains(nterms_s)
         call this%chidg%init('communication')
 

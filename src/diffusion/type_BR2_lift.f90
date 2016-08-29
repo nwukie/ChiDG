@@ -1,14 +1,16 @@
 module type_BR2_lift
 #include <messenger.h>
     use mod_kinds,          only: ik
-    use mod_constants,      only: BR2_INTERIOR_LOCATION, CHIMERA, INTERIOR
+    use mod_constants,      only: BR2_INTERIOR_LOCATION, BR2_INTERIOR, BR2_EXTERIOR, CHIMERA, INTERIOR, &
+                                  BOUNDARY_DIFFUSIVE_FLUX, DIAG, HALF, ME, NEIGHBOR
     use mod_interpolate,    only: interpolate_face_autodiff
+    use mod_DNAD_tools,     only: face_compute_seed, compute_neighbor_face
     use type_mesh,          only: mesh_t
     use type_element_info,  only: element_info_t
     use type_face_info,     only: face_info_t
     use type_function_info, only: function_info_t
     use type_chidgVector,   only: chidgVector_t
-    use DNAD_D,             only: AD_D
+    use DNAD_D
     implicit none
 
 
@@ -166,7 +168,8 @@ contains
 
         type(face_info_t)       :: face_info
         type(function_info_t)   :: function_info
-
+        integer(ik)             :: idiff_dir, idepend, idom_n, ielem_n, iface_n
+        logical                 :: conforming_face, chimera_face
 
         type(AD_D), allocatable, dimension(:)   ::  &
                 var_m,      var_p,      diff,       &
@@ -187,42 +190,107 @@ contains
         ! Set up function info for differentiation
         !
         if (idiff_BR2 == 1) then
-            idepend = 1
-            idiff_dir = 
-        idepend
-
-        function_info%type    = BOUNDARY_DIFFUSIVE_FLUX ! I don't think this matters here, but just to give a valid entry.
-        function_info%ifcn    = 1                       ! I don't think this matters here, but just to give a valid entry.
-        function_info%idiff   = 
-        function_info%seed    = face_compute_seed(mesh,
-        function_info%idepend = 
+            idiff_dir = DIAG
+            idepend   = 1
+        else
+            idiff_dir = iface
+            idepend = idiff_BR2 - 1
+        end if
 
 
-        var_m = interpolate_face_autodiff(mesh,sdata,face_info,function_info, ieqn, 'value', ME)
-        var_p = interpolate_face_autodiff(mesh,sdata,face_info,function_info, ieqn, 'value', NEIGHBOR)
 
+        function_info%type    = BOUNDARY_DIFFUSIVE_FLUX ! I don't think this matters here, just want to give a valid entry.
+        function_info%ifcn    = 1                       ! I don't think this matters here, just want to give a valid entry.
+        function_info%idiff   = idiff_dir
+        function_info%idepend = idepend
+        function_info%seed    = face_compute_seed(mesh,face_info%idomain_l,face_info%ielement_l,iface,idepend,idiff_dir)
 
-        diff = HALF*(var_p - var_m)
-
-        diff_x = diff*norm(:,1) 
-        diff_y = diff*norm(:,2) 
-        diff_z = diff*norm(:,3) 
 
 
         !
-        ! Integrate the difference over the face
+        ! Interpolate variable to face quadrature nodes
         !
-        integral_x = matmul(val,diff_x)
-        integral_y = matmul(val,diff_y)
-        integral_z = matmul(val,diff_z)
+        conforming_face = ( mesh(face_info%idomain_l)%faces(face_info%ielement_l,iface)%ftype == INTERIOR )
+        chimera_face    = ( mesh(face_info%idomain_l)%faces(face_info%ielement_l,iface)%ftype == CHIMERA  )
+
+        if (conforming_face .or. chimera_face) then
 
 
-        !
-        ! Compute lifting operator modes
-        !
-        self%lift(:,1) = matmul(invmass,integral_x)
-        self%lift(:,2) = matmul(invmass,integral_y)
-        self%lift(:,3) = matmul(invmass,integral_z)
+            if (BR2_TYPE == BR2_INTERIOR) then
+                var_m = interpolate_face_autodiff(mesh,q,face_info,function_info, ieqn, 'value', ME)
+                var_p = interpolate_face_autodiff(mesh,q,face_info,function_info, ieqn, 'value', NEIGHBOR)
+            else if (BR2_TYPE == BR2_EXTERIOR) then
+                var_p = interpolate_face_autodiff(mesh,q,face_info,function_info, ieqn, 'value', ME)
+                var_m = interpolate_face_autodiff(mesh,q,face_info,function_info, ieqn, 'value', NEIGHBOR)
+            else
+                call chidg_signal(FATAL,"BR2_lift%update: Invalid BR2_TYPE selection. Options are BR2_INTERIOR and BR2_EXTERIOR.")
+            end if
+
+
+            diff = HALF*(var_p - var_m)
+
+
+
+            !
+            ! Dot with normal vector
+            !
+            if (BR2_TYPE == BR2_INTERIOR) then
+                associate ( norm     => mesh(elem_info%idomain_l)%faces(elem_info%ielement_l,iface)%norm,                         &
+                            weights  => mesh(elem_info%idomain_l)%faces(elem_info%ielement_l,iface)%gq%face%weights(:,iface),     &
+                            valtrans => mesh(elem_info%idomain_l)%faces(elem_info%ielement_l,iface)%gq%face%val_trans(:,:,iface), &
+                            invmass  => mesh(elem_info%idomain_l)%elems(elem_info%ielement_l)%invmass )
+
+                diff_x = diff * norm(:,1) * weights
+                diff_y = diff * norm(:,2) * weights
+                diff_z = diff * norm(:,3) * weights
+
+                integral_x = matmul(valtrans,diff_x)
+                integral_y = matmul(valtrans,diff_y)
+                integral_z = matmul(valtrans,diff_z)
+
+                self%lift(:,1) = matmul(invmass,integral_x)
+                self%lift(:,2) = matmul(invmass,integral_y)
+                self%lift(:,3) = matmul(invmass,integral_z)
+
+                end associate
+
+
+
+
+            else if (BR2_TYPE == BR2_EXTERIOR) then
+
+
+                if (conforming_face) then
+                    idom_n  = mesh(elem_info%idomain_l)%faces(elem_info%ielement_l,iface)%ineighbor_domain_l
+                    ielem_n = mesh(elem_info%idomain_l)%faces(elem_info%ielement_l,iface)%ineighbor_element_l
+                    iface_n = mesh(elem_info%idomain_l)%faces(elem_info%ielement_l,iface)%get_neighbor_face()
+
+                    associate ( norm     => mesh(idom_n)%faces(ielem_n,iface_n)%norm,                           &
+                                weights  => mesh(idom_n)%faces(ielem_n,iface_n)%gq%face%weights(:,iface_n),     &
+                                valtrans => mesh(idom_n)%faces(ielem_n,iface_n)%gq%face%val_trans(:,:,iface_n), &
+                                invmass  => mesh(idom_n)%elems(ielem_n)%invmass )
+
+                    diff_x = diff * norm(:,1) * weights
+                    diff_y = diff * norm(:,2) * weights
+                    diff_z = diff * norm(:,3) * weights
+
+                    integral_x = matmul(valtrans,diff_x)
+                    integral_y = matmul(valtrans,diff_y)
+                    integral_z = matmul(valtrans,diff_z)
+
+                    self%lift(:,1) = matmul(invmass,integral_x)
+                    self%lift(:,2) = matmul(invmass,integral_y)
+                    self%lift(:,3) = matmul(invmass,integral_z)
+
+                    end associate
+
+                else if (chimera_face) then
+                    call chidg_signal(FATAL,"BR2_lift%update: chimera not yet implemented")
+                end if
+
+            end if
+
+        end if
 
 
     end subroutine update

@@ -4,14 +4,8 @@ module LD_boundary_diffusive_flux
     use mod_constants,              only: ZERO,ONE,TWO,HALF, ME, NEIGHBOR
 
     use type_boundary_flux,         only: boundary_flux_t
-    use type_mesh,                  only: mesh_t
-    use type_solverdata,            only: solverdata_t
+    use type_chidg_worker,          only: chidg_worker_t
     use type_properties,            only: properties_t
-    use type_face_info,             only: face_info_t
-    use type_function_info,         only: function_info_t
-
-    use mod_interpolate,            only: interpolate
-    use mod_integrate,              only: integrate_boundary_scalar_flux
     use DNAD_D
 
     use LD_properties,              only: LD_properties_t
@@ -33,6 +27,7 @@ module LD_boundary_diffusive_flux
 
 
     contains
+
         procedure   :: compute
 
     end type LD_boundary_diffusive_flux_t
@@ -53,22 +48,19 @@ contains
     !!  @param[in]      iblk    Block index indicating the linearization direction
     !!
     !-----------------------------------------------------------------------------------------
-    subroutine compute(self,mesh,sdata,prop,face_info,function_info)
+    subroutine compute(self,worker,prop)
         class(LD_boundary_diffusive_flux_t),    intent(in)      :: self
-        type(mesh_t),                           intent(in)      :: mesh(:)
-        type(solverdata_t),                     intent(inout)   :: sdata
+        type(chidg_worker_t),                   intent(inout)   :: worker
         class(properties_t),                    intent(inout)   :: prop
-        type(face_info_t),                      intent(in)      :: face_info
-        type(function_info_t),                  intent(in)      :: function_info
 
 
-        integer(ik)                 :: idom, ielem, iface
-        integer(ik)                 :: iblk, ifcn, idonor
+        integer(ik)                             :: iu
 
-        real(rk)                    :: cx, cy, cz
-        integer(ik)                 :: iu, ierr, nnodes, i
-        type(AD_D), dimension(mesh(face_info%idomain_l)%faces(face_info%ielement_l,face_info%iface)%gq%face%nnodes)    :: &
-                                        u_l, u_r, flux_x, flux_y, flux_z, integrand
+        type(AD_D), allocatable, dimension(:)   :: &
+            dudx_m, dudx_p, flux_m, flux_p, flux, integrand
+
+        real(rk),   allocatable, dimension(:)   :: &
+            normx, normy, normz
 
 
         !
@@ -78,51 +70,29 @@ contains
 
 
 
-        idom  = face_info%idomain_l
-        ielem = face_info%ielement_l
-        iface = face_info%iface
-
-
-        associate ( norms => mesh(idom)%faces(ielem,iface)%norm )
-
-
-!        !
-!        ! Get equation set properties
-!        !
-!        select type(prop)
-!            type is (LD_properties_t)
-!                cx = prop%c(1)
-!                cy = prop%c(2)
-!                cz = prop%c(3)
-!        end select
-
-        
         !
         ! Interpolate solution to quadrature nodes
         !
-!        call interpolate_face(mesh,face_info,function_info,sdata%q,iu, u_r, LOCAL)
-!        call interpolate_face(mesh,face_info,function_info,sdata%q,iu, u_l, NEIGHBOR)
+        dudx_m = worker%interpolate(iu, 'ddx', ME)
+        dudx_p = worker%interpolate(iu, 'ddx', NEIGHBOR)
 
 
-
+        flux_m = -dudx_m
+        flux_p = -dudx_p
+        flux   = HALF*(flux_m + flux_p)
 
         !
         ! Compute boundary average flux
         !
-        flux_x = ((cx*u_r + cx*u_l)/TWO ) * norms(:,1)
-        flux_y = ((cy*u_r + cy*u_l)/TWO ) * norms(:,2)
-        flux_z = ((cz*u_r + cz*u_l)/TWO ) * norms(:,3)
-
-        integrand = flux_x + flux_y + flux_z
-
+        normx = worker%normal(1)
+        integrand = flux * normx
 
         !
         ! Integrate flux
         !
-        call integrate_boundary_scalar_flux(mesh,sdata,face_info,function_info,iu,integrand)
+        call worker%integrate_boundary(iu, integrand)
 
 
-        end associate
     end subroutine compute
     !**************************************************************************************************
 

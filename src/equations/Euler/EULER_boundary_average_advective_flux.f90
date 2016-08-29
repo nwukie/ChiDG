@@ -3,16 +3,9 @@ module EULER_boundary_average_advective_flux
     use mod_constants,          only: ONE, TWO, HALF, ME, NEIGHBOR
 
     use type_boundary_flux,     only: boundary_flux_t
-    use type_mesh,              only: mesh_t
-    use type_solverdata,        only: solverdata_t
+    use type_chidg_worker,      only: chidg_worker_t
     use type_properties,        only: properties_t
-    use type_face_info,         only: face_info_t
-    use type_function_info,     only: function_info_t
-
-    use mod_interpolate,        only: interpolate
-    use mod_integrate,          only: integrate_boundary_scalar_flux
     use DNAD_D
-
     use EULER_properties,       only: EULER_properties_t
     implicit none
 
@@ -57,53 +50,33 @@ contains
     !!  @date   1/28/2016
     !!
     !!-------------------------------------------------------------------------------------
-    subroutine compute(self,mesh,sdata,prop,face_info,function_info)
+    subroutine compute(self,worker,prop)
         class(EULER_boundary_average_advective_flux_t), intent(in)      :: self
-        type(mesh_t),                                   intent(in)      :: mesh(:)
-        type(solverdata_t),                             intent(inout)   :: sdata
+        type(chidg_worker_t),                           intent(inout)   :: worker
         class(properties_t),                            intent(inout)   :: prop
-        type(face_info_t),                              intent(in)      :: face_info
-        type(function_info_t),                          intent(in)      :: function_info
 
         ! Equation indices
-        integer(ik)     :: irho
-        integer(ik)     :: irhou
-        integer(ik)     :: irhov
-        integer(ik)     :: irhow
-        integer(ik)     :: irhoe
-
-
-
-        integer(ik) :: igq
-
-
-        integer(ik)     :: idom,  ielem,  iface
-        integer(ik)     :: idom_m,  ielem_m,  iface_m
-        integer(ik)     :: ifcn,  idonor
-
+        integer(ik)     :: irho, irhou, irhov, irhow, irhoE
 
 
         ! Storage at quadrature nodes
-        !type(AD_D), dimension(mesh(face_info%idomain_l)%faces(face_info%ielement_l,face_info%iface)%gq%face%nnodes)    :: &
         type(AD_D), allocatable,    dimension(:) :: &
-                        rho_m,      rho_p,                                  &
-                        rhou_m,     rhou_p,                                 &
-                        rhov_m,     rhov_p,                                 &
-                        rhow_m,     rhow_p,                                 &
-                        rhoe_m,     rhoe_p,                                 &
-                        rhor_p,     rhot_p,                                 &
-                        p_m,        p_p,                                    &
-                        H_m,        H_p,                                    &
-                        flux_x_m,   flux_y_m,   flux_z_m,                   &
-                        flux_x_p,   flux_y_p,   flux_z_p,                   &
-                        flux_x,     flux_y,     flux_z,                     &
-                        invrho_m,   invrho_p,                               &
-                        integrand
+            rho_m,      rho_p,                      &
+            rhou_m,     rhou_p,                     &
+            rhov_m,     rhov_p,                     &
+            rhow_m,     rhow_p,                     &
+            rhoe_m,     rhoe_p,                     &
+            rhor_p,     rhot_p,                     &
+            p_m,        p_p,                        &
+            H_m,        H_p,                        &
+            flux_x_m,   flux_y_m,   flux_z_m,       &
+            flux_x_p,   flux_y_p,   flux_z_p,       &
+            flux_x,     flux_y,     flux_z,         &
+            invrho_m,   invrho_p,                   &
+            integrand
 
-        real(rk), dimension(mesh(face_info%idomain_l)%faces(face_info%ielement_l,face_info%iface)%gq%face%nnodes)    :: &
-                        x_m, y_m, z_m, r_m, theta_m, theta_p
-
-        real(rk)    :: theta_offset
+        real(rk), allocatable, dimension(:) ::      &
+            normx, normy, normz
 
 
         irho  = prop%get_eqn_index("rho")
@@ -113,195 +86,158 @@ contains
         irhoE = prop%get_eqn_index("rhoE")
 
 
-        idom  = face_info%idomain_l
-        ielem = face_info%ielement_l
-        iface = face_info%iface
 
+        !
+        ! Interpolate solution to quadrature nodes
+        !
+        rho_m  = worker%interpolate(irho, 'value', ME)
+        rho_p  = worker%interpolate(irho, 'value', NEIGHBOR)
 
-        associate (norms => mesh(idom)%faces(ielem,iface)%norm, faces => mesh(idom)%faces, q => sdata%q)
+        rhou_m = worker%interpolate(irhou, 'value', ME)
+        rhou_p = worker%interpolate(irhou, 'value', NEIGHBOR)
 
-            !
-            ! Interpolate solution to quadrature nodes
-            !
-            rho_m  = interpolate(mesh,sdata,face_info,function_info, irho,  'value', ME)
-            rho_p  = interpolate(mesh,sdata,face_info,function_info, irho,  'value', NEIGHBOR)
+        rhov_m = worker%interpolate(irhov, 'value', ME)
+        rhov_p = worker%interpolate(irhov, 'value', NEIGHBOR)
 
-            rhou_m = interpolate(mesh,sdata,face_info,function_info, irhou, 'value', ME)
-            rhou_p = interpolate(mesh,sdata,face_info,function_info, irhou, 'value', NEIGHBOR)
+        rhow_m = worker%interpolate(irhow, 'value', ME)
+        rhow_p = worker%interpolate(irhow, 'value', NEIGHBOR)
 
-            rhov_m = interpolate(mesh,sdata,face_info,function_info, irhov, 'value', ME)
-            rhov_p = interpolate(mesh,sdata,face_info,function_info, irhov, 'value', NEIGHBOR)
-
-            rhow_m = interpolate(mesh,sdata,face_info,function_info, irhow, 'value', ME)
-            rhow_p = interpolate(mesh,sdata,face_info,function_info, irhow, 'value', NEIGHBOR)
-
-            rhoE_m = interpolate(mesh,sdata,face_info,function_info, irhoE, 'value', ME)
-            rhoE_p = interpolate(mesh,sdata,face_info,function_info, irhoE, 'value', NEIGHBOR)
-
-            invrho_m = ONE/rho_m
-            invrho_p = ONE/rho_p
-
-!            idom_m  = face_info%idomain
-!            ielem_m = face_info%ielement
-!            iface_m = face_info%iface
-!
-!
-!            if ( mesh(idom_m)%faces(ielem_m, iface_m)%periodic_type == 'cylindrical' ) then
-!                theta_offset = (PI/180._rk)*mesh(idom_m)%faces(ielem_m,iface_m)%chimera_offset_theta
-!
-!                x_m     = mesh(idom_m)%faces(ielem_m,iface_m)%quad_pts(:)%c1_
-!                y_m     = mesh(idom_m)%faces(ielem_m,iface_m)%quad_pts(:)%c2_
-!                r_m     = sqrt(x_m**TWO + y_m**TWO)
-!                theta_m = atan2(y_m,x_m)
-!
-!
-!                theta_p = theta_m + theta_offset
-!
-!                !
-!                ! Transform 'p' cartesian vector to 'p' cylindrical at theta_p
-!                !
-!                ! rhor and rhotheta are constant from face to face
-!                !
-!                rhor_p =  cos(theta_p)*rhou_p + sin(theta_p)*rhov_p ! rhor
-!                rhot_p = -sin(theta_p)*rhou_p + cos(theta_p)*rhov_p ! rhotheta
-!
-!
-!                !
-!                ! Transform 'p' cylindrical to 'p' cartesian at theta_m
-!                !
-!                rhou_p = cos(theta_m)*rhor_p - sin(theta_m)*rhot_p
-!                rhov_p = sin(theta_m)*rhor_p + cos(theta_m)*rhot_p
-!
-!            end if
-!
-!
-!
+        rhoE_m = worker%interpolate(irhoE, 'value', ME)
+        rhoE_p = worker%interpolate(irhoE, 'value', NEIGHBOR)
 
 
 
 
-
-            !
-            ! Compute pressure and total enthalpy
-            !
-            call prop%fluid%compute_pressure(rho_m,rhou_m,rhov_m,rhow_m,rhoE_m,p_m)
-            call prop%fluid%compute_pressure(rho_p,rhou_p,rhov_p,rhow_p,rhoE_p,p_p)
-
-            H_m = (rhoE_m + p_m)*invrho_m
-            H_p = (rhoE_p + p_p)*invrho_p
+        invrho_m = ONE/rho_m
+        invrho_p = ONE/rho_p
 
 
 
-            !================================
-            !       MASS FLUX
-            !================================
-            flux_x_m = rhou_m
-            flux_y_m = rhov_m
-            flux_z_m = rhow_m
-
-            flux_x_p = rhou_p
-            flux_y_p = rhov_p
-            flux_z_p = rhow_p
-
-            flux_x = (flux_x_m + flux_x_p)
-            flux_y = (flux_y_m + flux_y_p)
-            flux_z = (flux_z_m + flux_z_p)
+        normx = worker%normal(1)
+        normy = worker%normal(2)
+        normz = worker%normal(3)
 
 
-            ! dot with normal vector
-            integrand = HALF*(flux_x*norms(:,1) + flux_y*norms(:,2) + flux_z*norms(:,3))
 
-            call integrate_boundary_scalar_flux(mesh,sdata,face_info,function_info,irho,integrand)
+        !
+        ! Compute pressure and total enthalpy
+        !
+        call prop%fluid%compute_pressure(rho_m,rhou_m,rhov_m,rhow_m,rhoE_m,p_m)
+        call prop%fluid%compute_pressure(rho_p,rhou_p,rhov_p,rhow_p,rhoE_p,p_p)
 
-
-            !================================
-            !       X-MOMENTUM FLUX
-            !================================
-            flux_x_m = (rhou_m*rhou_m)*invrho_m + p_m
-            flux_y_m = (rhou_m*rhov_m)*invrho_m
-            flux_z_m = (rhou_m*rhow_m)*invrho_m
-
-            flux_x_p = (rhou_p*rhou_p)*invrho_p + p_p
-            flux_y_p = (rhou_p*rhov_p)*invrho_p
-            flux_z_p = (rhou_p*rhow_p)*invrho_p
-
-            flux_x = (flux_x_m + flux_x_p)
-            flux_y = (flux_y_m + flux_y_p)
-            flux_z = (flux_z_m + flux_z_p)
+        H_m = (rhoE_m + p_m)*invrho_m
+        H_p = (rhoE_p + p_p)*invrho_p
 
 
-            ! dot with normal vector
-            integrand = HALF*(flux_x*norms(:,1) + flux_y*norms(:,2) + flux_z*norms(:,3))
 
-            call integrate_boundary_scalar_flux(mesh,sdata,face_info,function_info,irhou,integrand)
+        !================================
+        !       MASS FLUX
+        !================================
+        flux_x_m = rhou_m
+        flux_y_m = rhov_m
+        flux_z_m = rhow_m
 
+        flux_x_p = rhou_p
+        flux_y_p = rhov_p
+        flux_z_p = rhow_p
 
-            !================================
-            !       Y-MOMENTUM FLUX
-            !================================
-            flux_x_m = (rhov_m*rhou_m)*invrho_m
-            flux_y_m = (rhov_m*rhov_m)*invrho_m + p_m
-            flux_z_m = (rhov_m*rhow_m)*invrho_m
-
-            flux_x_p = (rhov_p*rhou_p)*invrho_p
-            flux_y_p = (rhov_p*rhov_p)*invrho_p + p_p
-            flux_z_p = (rhov_p*rhow_p)*invrho_p
-
-            flux_x = (flux_x_m + flux_x_p)
-            flux_y = (flux_y_m + flux_y_p)
-            flux_z = (flux_z_m + flux_z_p)
+        flux_x = (flux_x_m + flux_x_p)
+        flux_y = (flux_y_m + flux_y_p)
+        flux_z = (flux_z_m + flux_z_p)
 
 
-            ! dot with normal vector
-            integrand = HALF*(flux_x*norms(:,1) + flux_y*norms(:,2) + flux_z*norms(:,3))
+        ! dot with normal vector
+        integrand = HALF*(flux_x*normx + flux_y*normy + flux_z*normz)
 
-            call integrate_boundary_scalar_flux(mesh,sdata,face_info,function_info,irhov,integrand)
-
-
-            !================================
-            !       Z-MOMENTUM FLUX
-            !================================
-            flux_x_m = (rhow_m*rhou_m)*invrho_m
-            flux_y_m = (rhow_m*rhov_m)*invrho_m
-            flux_z_m = (rhow_m*rhow_m)*invrho_m + p_m
-
-            flux_x_p = (rhow_p*rhou_p)*invrho_p
-            flux_y_p = (rhow_p*rhov_p)*invrho_p
-            flux_z_p = (rhow_p*rhow_p)*invrho_p + p_p
-
-            flux_x = (flux_x_m + flux_x_p)
-            flux_y = (flux_y_m + flux_y_p)
-            flux_z = (flux_z_m + flux_z_p)
+        call worker%integrate_boundary(irho, integrand)
 
 
-            ! dot with normal vector
-            integrand = HALF*(flux_x*norms(:,1) + flux_y*norms(:,2) + flux_z*norms(:,3))
+        !================================
+        !       X-MOMENTUM FLUX
+        !================================
+        flux_x_m = (rhou_m*rhou_m)*invrho_m + p_m
+        flux_y_m = (rhou_m*rhov_m)*invrho_m
+        flux_z_m = (rhou_m*rhow_m)*invrho_m
 
-            call integrate_boundary_scalar_flux(mesh,sdata,face_info,function_info,irhow,integrand)
+        flux_x_p = (rhou_p*rhou_p)*invrho_p + p_p
+        flux_y_p = (rhou_p*rhov_p)*invrho_p
+        flux_z_p = (rhou_p*rhow_p)*invrho_p
 
-
-            !================================
-            !          ENERGY FLUX
-            !================================
-            flux_x_m = rhou_m*H_m
-            flux_y_m = rhov_m*H_m
-            flux_z_m = rhow_m*H_m
-
-            flux_x_p = rhou_p*H_p
-            flux_y_p = rhov_p*H_p
-            flux_z_p = rhow_p*H_p
-
-            flux_x = (flux_x_m + flux_x_p)
-            flux_y = (flux_y_m + flux_y_p)
-            flux_z = (flux_z_m + flux_z_p)
+        flux_x = (flux_x_m + flux_x_p)
+        flux_y = (flux_y_m + flux_y_p)
+        flux_z = (flux_z_m + flux_z_p)
 
 
-            ! dot with normal vector
-            integrand = HALF*(flux_x*norms(:,1) + flux_y*norms(:,2) + flux_z*norms(:,3))
+        ! dot with normal vector
+        integrand = HALF*(flux_x*normx + flux_y*normy + flux_z*normz)
 
-            call integrate_boundary_scalar_flux(mesh,sdata,face_info,function_info,irhoE,integrand)
+        call worker%integrate_boundary(irhou, integrand)
 
-        end associate
+
+        !================================
+        !       Y-MOMENTUM FLUX
+        !================================
+        flux_x_m = (rhov_m*rhou_m)*invrho_m
+        flux_y_m = (rhov_m*rhov_m)*invrho_m + p_m
+        flux_z_m = (rhov_m*rhow_m)*invrho_m
+
+        flux_x_p = (rhov_p*rhou_p)*invrho_p
+        flux_y_p = (rhov_p*rhov_p)*invrho_p + p_p
+        flux_z_p = (rhov_p*rhow_p)*invrho_p
+
+        flux_x = (flux_x_m + flux_x_p)
+        flux_y = (flux_y_m + flux_y_p)
+        flux_z = (flux_z_m + flux_z_p)
+
+
+        ! dot with normal vector
+        integrand = HALF*(flux_x*normx + flux_y*normy + flux_z*normz)
+
+        call worker%integrate_boundary(irhov, integrand)
+
+
+        !================================
+        !       Z-MOMENTUM FLUX
+        !================================
+        flux_x_m = (rhow_m*rhou_m)*invrho_m
+        flux_y_m = (rhow_m*rhov_m)*invrho_m
+        flux_z_m = (rhow_m*rhow_m)*invrho_m + p_m
+
+        flux_x_p = (rhow_p*rhou_p)*invrho_p
+        flux_y_p = (rhow_p*rhov_p)*invrho_p
+        flux_z_p = (rhow_p*rhow_p)*invrho_p + p_p
+
+        flux_x = (flux_x_m + flux_x_p)
+        flux_y = (flux_y_m + flux_y_p)
+        flux_z = (flux_z_m + flux_z_p)
+
+
+        ! dot with normal vector
+        integrand = HALF*(flux_x*normx + flux_y*normy + flux_z*normz)
+
+        call worker%integrate_boundary(irhow, integrand)
+
+
+        !================================
+        !          ENERGY FLUX
+        !================================
+        flux_x_m = rhou_m*H_m
+        flux_y_m = rhov_m*H_m
+        flux_z_m = rhow_m*H_m
+
+        flux_x_p = rhou_p*H_p
+        flux_y_p = rhov_p*H_p
+        flux_z_p = rhow_p*H_p
+
+        flux_x = (flux_x_m + flux_x_p)
+        flux_y = (flux_y_m + flux_y_p)
+        flux_z = (flux_z_m + flux_z_p)
+
+
+        ! dot with normal vector
+        integrand = HALF*(flux_x*normx + flux_y*normy + flux_z*normz)
+
+        call worker%integrate_boundary(irhoE, integrand)
 
 
     end subroutine compute

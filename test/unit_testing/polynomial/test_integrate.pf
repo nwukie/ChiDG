@@ -261,7 +261,7 @@ subroutine test_integrate_boundary_nonunit_constant()
     nterms_s = 1
 
 
-    call chidg%data%add_domain('D_01',nodes,connectivity,spacedim,nterms_c,'scalar')
+    call chidg%data%add_domain('D_01',nodes,connectivity,spacedim,nterms_c,'LinearAdvection')
 
 
     !

@@ -95,7 +95,7 @@ contains
         spacedim = 3
         nterms_c = 8
         nterms_s = 8
-        call this%chidg%data%add_domain('D_01',nodes,connectivity,spacedim,nterms_c,'Scalar')
+        call this%chidg%data%add_domain('D_01',nodes,connectivity,spacedim,nterms_c,'LinearAdvection')
 
 
         !
@@ -170,7 +170,7 @@ contains
         !
         ! PROCEDURE BEING TESTED
         !
-        u_gq = interpolate_element_standard(self%chidg%data%mesh, self%chidg%data%sdata, idomain, ielem, ivar, 'value')
+        u_gq = interpolate_element_standard(self%chidg%data%mesh, self%chidg%data%sdata%q, idomain, ielem, ivar, 'value')
 
 
 
@@ -225,7 +225,7 @@ contains
         !
         ! PROCEDURE BEING TESTED
         !
-        u_gq = interpolate_face_standard(self%chidg%data%mesh,self%chidg%data%sdata,idomain,ielem,iface,ivar)
+        u_gq = interpolate_face_standard(self%chidg%data%mesh,self%chidg%data%sdata%q,idomain,ielem,iface,ivar)
         
         
         ! Initialize reference

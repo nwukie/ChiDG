@@ -2,15 +2,9 @@ module PRIMLINEULER_volume_advective_source_real
     use mod_kinds,              only: rk,ik
     use mod_constants,          only: NFACES,ONE,TWO,THREE,FOUR,FIVE,EIGHT,NINE,HALF,ZERO,PI
 
-    use type_mesh,              only: mesh_t
     use type_volume_flux,       only: volume_flux_t
-    use type_solverdata,        only: solverdata_t
+    use type_chidg_worker,      only: chidg_worker_t
     use type_properties,        only: properties_t
-    use type_element_info,      only: element_info_t
-    use type_function_info,     only: function_info_t
-    
-    use mod_interpolate,        only: interpolate
-    use mod_integrate,          only: integrate_volume_source
     use DNAD_D
 
     use PRIMLINEULER_properties,    only: PRIMLINEULER_properties_t
@@ -58,13 +52,10 @@ contains
     !!
     !!
     !----------------------------------------------------------------------------------------
-    subroutine compute(self,mesh,sdata,prop,elem_info,function_info)
+    subroutine compute(self,worker,prop)
         class(PRIMLINEULER_volume_advective_source_real_t), intent(in)      :: self
-        type(mesh_t),                                       intent(in)      :: mesh(:)
-        type(solverdata_t),                                 intent(inout)   :: sdata
+        type(chidg_worker_t),                               intent(inout)   :: worker
         class(properties_t),                                intent(inout)   :: prop
-        type(element_info_t),                               intent(in)      :: elem_info
-        type(function_info_t),                              intent(in)      :: function_info
 
         ! Equation indices
         integer(ik)    :: irho_r, irho_i
@@ -73,16 +64,16 @@ contains
         integer(ik)    :: iw_r, iw_i
         integer(ik)    :: ip_r, ip_i
 
-        integer(ik)    :: idom, ielem, igq
+        integer(ik)     :: igq
 
-        type(AD_D), dimension(mesh(elem_info%idomain_l)%elems(elem_info%ielement_l)%gq%vol%nnodes)      ::    &
-                    rho_r, u_r, v_r, w_r, p_r,                      &
-                    rho_i, u_i, v_i, w_i, p_i,                      &
-                    p,     H,                                       &
-                    flux
+        type(AD_D), allocatable, dimension(:)   ::  &
+            rho_r, u_r, v_r, w_r, p_r,              &
+            rho_i, u_i, v_i, w_i, p_i,              &
+            p,     H,                               &
+            source
 
-        real(rk), dimension(mesh(elem_info%idomain_l)%elems(elem_info%ielement_l)%gq%vol%nnodes)      ::  &
-                    x, y, z, r, sigma_x, sigma_y, sigma_z, fcn
+        real(rk),   allocatable, dimension(:)   ::  &
+            x, y, z, r, sigma_x, sigma_y, sigma_z, fcn
 
         logical :: inA = .false.
         logical :: inB = .false.
@@ -90,9 +81,6 @@ contains
         logical :: inD = .false.
         logical :: inE = .false.
         logical :: inF = .false.
-
-        idom  = elem_info%idomain_l
-        ielem = elem_info%ielement_l
 
 
         irho_r = prop%get_eqn_index("rho_r")
@@ -112,9 +100,9 @@ contains
         !
         ! Get coordinates
         !
-        x = mesh(idom)%elems(ielem)%quad_pts(:)%c1_
-        y = mesh(idom)%elems(ielem)%quad_pts(:)%c2_
-        z = mesh(idom)%elems(ielem)%quad_pts(:)%c3_
+        x = worker%x('boundary')
+        y = worker%y('boundary')
+        z = worker%z('boundary')
         r = sqrt(y**TWO + z**TWO)
 
         
@@ -191,60 +179,61 @@ contains
         !
         ! Interpolate solution to quadrature nodes
         !
-        rho_i = interpolate(mesh,sdata,elem_info,function_info,irho_i, 'value')
-        u_i   = interpolate(mesh,sdata,elem_info,function_info,iu_i,   'value')
-        v_i   = interpolate(mesh,sdata,elem_info,function_info,iv_i,   'value')
-        w_i   = interpolate(mesh,sdata,elem_info,function_info,iw_i,   'value')
-        p_i   = interpolate(mesh,sdata,elem_info,function_info,ip_i,   'value')
+        rho_i = worker%interpolate(irho_i, 'value')
+        u_i   = worker%interpolate(iu_i,   'value')
+        v_i   = worker%interpolate(iv_i,   'value')
+        w_i   = worker%interpolate(iw_i,   'value')
+        p_i   = worker%interpolate(ip_i,   'value')
 
-        rho_r = interpolate(mesh,sdata,elem_info,function_info,irho_r, 'value')
-        u_r   = interpolate(mesh,sdata,elem_info,function_info,iu_r,   'value')
-        v_r   = interpolate(mesh,sdata,elem_info,function_info,iv_r,   'value')
-        w_r   = interpolate(mesh,sdata,elem_info,function_info,iw_r,   'value')
-        p_r   = interpolate(mesh,sdata,elem_info,function_info,ip_r,   'value')
+        rho_r = worker%interpolate(irho_r, 'value')
+        u_r   = worker%interpolate(iu_r,   'value')
+        v_r   = worker%interpolate(iv_r,   'value')
+        w_r   = worker%interpolate(iw_r,   'value')
+        p_r   = worker%interpolate(ip_r,   'value')
+
 
 
         !===========================
         !        MASS FLUX
         !===========================
-        flux = -omega * rho_i * (ONE - (sigma_x*sigma_y + sigma_x*sigma_z + sigma_y*sigma_z)/(omega*omega) )  +  &
+        source = -omega * rho_i * (ONE - (sigma_x*sigma_y + sigma_x*sigma_z + sigma_y*sigma_z)/(omega*omega) )  +  &
                 omega * rho_r * ( - (sigma_x+sigma_y+sigma_z)/omega  +  (sigma_x*sigma_y*sigma_z)/(omega*omega*omega) )
 
-        call integrate_volume_source(mesh,sdata,elem_info,function_info,irho_r,flux)
+        call worker%integrate_volume(irho_r, source)
 
 
         !===========================
         !     X-MOMENTUM FLUX
         !===========================
-        flux = -omega * u_i * (ONE - (sigma_x*sigma_y + sigma_x*sigma_z + sigma_y*sigma_z)/(omega*omega) )  +  &
+        source = -omega * u_i * (ONE - (sigma_x*sigma_y + sigma_x*sigma_z + sigma_y*sigma_z)/(omega*omega) )  +  &
                 omega * u_r * ( - (sigma_x+sigma_y+sigma_z)/omega  +  (sigma_x*sigma_y*sigma_z)/(omega*omega*omega) )
 
-        call integrate_volume_source(mesh,sdata,elem_info,function_info,iu_r,flux)
+        call worker%integrate_volume(iu_r, source)
 
 
         !============================
         !     Y-MOMENTUM FLUX
         !============================
-        flux = -omega * v_i * (ONE - (sigma_x*sigma_y + sigma_x*sigma_z + sigma_y*sigma_z)/(omega*omega) )  +  &
+        source = -omega * v_i * (ONE - (sigma_x*sigma_y + sigma_x*sigma_z + sigma_y*sigma_z)/(omega*omega) )  +  &
                 omega * v_r * ( - (sigma_x+sigma_y+sigma_z)/omega  +  (sigma_x*sigma_y*sigma_z)/(omega*omega*omega) )
 
-        call integrate_volume_source(mesh,sdata,elem_info,function_info,iv_r,flux)
+        call worker%integrate_volume(iv_r, source)
 
         !============================
         !     Z-MOMENTUM FLUX
         !============================
-        flux = -omega * w_i * (ONE - (sigma_x*sigma_y + sigma_x*sigma_z + sigma_y*sigma_z)/(omega*omega) )  +  &
+        source = -omega * w_i * (ONE - (sigma_x*sigma_y + sigma_x*sigma_z + sigma_y*sigma_z)/(omega*omega) )  +  &
                 omega * w_r * ( - (sigma_x+sigma_y+sigma_z)/omega  +  (sigma_x*sigma_y*sigma_z)/(omega*omega*omega) )
 
-        call integrate_volume_source(mesh,sdata,elem_info,function_info,iw_r,flux)
+        call worker%integrate_volume(iw_r, source)
 
         !============================
         !       ENERGY FLUX
         !============================
-        flux = -omega * p_i * (ONE - (sigma_x*sigma_y + sigma_x*sigma_z + sigma_y*sigma_z)/(omega*omega) )  +  &
+        source = -omega * p_i * (ONE - (sigma_x*sigma_y + sigma_x*sigma_z + sigma_y*sigma_z)/(omega*omega) )  +  &
                 omega * p_r * ( - (sigma_x+sigma_y+sigma_z)/omega  +  (sigma_x*sigma_y*sigma_z)/(omega*omega*omega) )
 
-        call integrate_volume_source(mesh,sdata,elem_info,function_info,ip_r,flux)
+        call worker%integrate_volume(ip_r, source)
 
     end subroutine compute
     !*********************************************************************************************************

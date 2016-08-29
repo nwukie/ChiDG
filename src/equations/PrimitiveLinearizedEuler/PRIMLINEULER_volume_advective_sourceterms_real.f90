@@ -2,15 +2,16 @@ module PRIMLINEULER_volume_advective_sourceterms_real
     use mod_kinds,              only: rk,ik
     use mod_constants,          only: NFACES,ONE,TWO,FOUR,HALF,ZERO
 
-    use type_mesh,              only: mesh_t
     use type_volume_flux,       only: volume_flux_t
-    use type_solverdata,        only: solverdata_t
+    use type_chidg_worker,      only: chidg_worker_t
     use type_properties,        only: properties_t
-    use type_element_info,      only: element_info_t
-    use type_function_info,     only: function_info_t
-    
-    use mod_interpolate,        only: interpolate
-    use mod_integrate,          only: integrate_volume_source
+!    use type_mesh,              only: mesh_t
+!    use type_solverdata,        only: solverdata_t
+!    use type_element_info,      only: element_info_t
+!    use type_function_info,     only: function_info_t
+!    
+!    use mod_interpolate,        only: interpolate
+!    use mod_integrate,          only: integrate_volume_source
     use DNAD_D
 
     use PRIMLINEULER_properties,    only: PRIMLINEULER_properties_t
@@ -56,13 +57,15 @@ contains
     !!
     !!
     !-----------------------------------------------------------------------------------------
-    subroutine compute(self,mesh,sdata,prop,elem_info,function_info)
+    !subroutine compute(self,mesh,sdata,prop,elem_info,function_info)
+    subroutine compute(self,worker,prop)
         class(PRIMLINEULER_volume_advective_sourceterms_real_t),    intent(in)      :: self
-        type(mesh_t),                                               intent(in)      :: mesh(:)
-        type(solverdata_t),                                         intent(inout)   :: sdata
+        type(chidg_worker_t),                                       intent(inout)   :: worker
         class(properties_t),                                        intent(inout)   :: prop
-        type(element_info_t),                                       intent(in)      :: elem_info
-        type(function_info_t),                                      intent(in)      :: function_info
+!        type(mesh_t),                                               intent(in)      :: mesh(:)
+!        type(solverdata_t),                                         intent(inout)   :: sdata
+!        type(element_info_t),                                       intent(in)      :: elem_info
+!        type(function_info_t),                                      intent(in)      :: function_info
 
         ! Equation indices
         integer(ik)    :: irho_r,  irho_i
@@ -71,18 +74,19 @@ contains
         integer(ik)    :: iw_r,    iw_i
         integer(ik)    :: ip_r,    ip_i
 
-        integer(ik)    :: idom, ielem, igq
         real(rk)       :: gam, alpha, eps
         real(rk)       :: x, y, x0, y0
+        integer(ik)    :: igq
 
 
 
-        type(AD_D), dimension(mesh(elem_info%idomain_l)%elems(elem_info%ielement_l)%gq%vol%nnodes)      ::  &
-                    rho_r, u_r, v_r, w_r, p_r, H,                        &
+        !type(AD_D), dimension(mesh(elem_info%idomain_l)%elems(elem_info%ielement_l)%gq%vol%nnodes)      ::  &
+        type(AD_D), allocatable, dimension(:)   ::  &
+                    rho_r, u_r, v_r, w_r, p_r, H,   &
                     flux
 
-        idom  = elem_info%idomain_l
-        ielem = elem_info%ielement_l
+!        idom  = elem_info%idomain_l
+!        ielem = elem_info%ielement_l
 
 
 
@@ -106,11 +110,18 @@ contains
         !
         ! Interpolate solution to quadrature nodes
         !
-        rho_r = interpolate(mesh,sdata,elem_info,function_info,irho_r, 'value')
-        u_r   = interpolate(mesh,sdata,elem_info,function_info,iu_r,   'value')
-        v_r   = interpolate(mesh,sdata,elem_info,function_info,iv_r,   'value')
-        w_r   = interpolate(mesh,sdata,elem_info,function_info,iw_r,   'value')
-        p_r   = interpolate(mesh,sdata,elem_info,function_info,ip_r,   'value')
+        rho_r = worker%interpolate(irho_r, 'value')
+        u_r   = worker%interpolate(iu_r, 'value')
+        v_r   = worker%interpolate(iv_r, 'value')
+        w_r   = worker%interpolate(iw_r, 'value')
+        p_r   = worker%interpolate(ip_r, 'value')
+
+
+!        rho_r = interpolate(mesh,sdata%q,elem_info,function_info,irho_r, 'value')
+!        u_r   = interpolate(mesh,sdata%q,elem_info,function_info,iu_r,   'value')
+!        v_r   = interpolate(mesh,sdata%q,elem_info,function_info,iv_r,   'value')
+!        w_r   = interpolate(mesh,sdata%q,elem_info,function_info,iw_r,   'value')
+!        p_r   = interpolate(mesh,sdata%q,elem_info,function_info,ip_r,   'value')
 
 
         ! Initialize flux derivative storage

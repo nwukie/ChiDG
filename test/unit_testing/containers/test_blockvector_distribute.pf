@@ -40,7 +40,7 @@ subroutine test_blockvector_distribute()
     spacedim = 3
     nterms_c = 8
     nterms_s = 8
-    call chidg%data%add_domain('D_01',nodes,connectivity,spacedim,nterms_c,'scalar')
+    call chidg%data%add_domain('D_01',nodes,connectivity,spacedim,nterms_c,'LinearAdvection')
     call chidg%initialize_solution_domains(nterms_s)
 
 

@@ -3,6 +3,7 @@ module perfect_gas
     use mod_constants,  only: ONE, HALF, ZERO
     use type_fluid,     only: fluid_t
     use DNAD_D
+    implicit none
 
 
     !> A fluid type under perfect gas assumptions.
@@ -45,17 +46,15 @@ contains
     !!
     !-------------------------------------------------------------------------------------
     subroutine compute_pressure_ad(self,rho,rhou,rhov,rhow,rhoE,vals)
-        class(perfect_gas_t),   intent(in)      :: self
-        type(AD_D),             intent(in)      :: rho(:), rhou(:), rhov(:), rhow(:), rhoE(:)
-        !type(AD_D),             intent(inout)   :: vals(:)
-        type(AD_D), allocatable,    intent(inout)   :: vals(:)
+        class(perfect_gas_t),           intent(in)      :: self
+        type(AD_D),                     intent(in)      :: rho(:), rhou(:), rhov(:), rhow(:), rhoE(:)
+        type(AD_D),     allocatable,    intent(inout)   :: vals(:)
 
-        real(rk)    :: gam
+        real(rk) :: gam
 
         !& DEBUG, HARDCODED GAMMA
         gam = 1.4_rk
 
-        !vals = (gam-ONE)*(rhoE - HALF*rho*((rhou*rhou)/(rho*rho) + (rhov*rhov)/(rho*rho) + (rhow*rhow)/(rho*rho)))
         vals = (gam-ONE)*(rhoE - HALF*( (rhou*rhou) + (rhov*rhov) + (rhow*rhow) )/rho )
 
     end subroutine compute_pressure_ad
@@ -83,12 +82,11 @@ contains
     !!
     !------------------------------------------------------------------------------------
     subroutine compute_pressure_real(self,rho,rhou,rhov,rhow,rhoE,vals)
-        class(perfect_gas_t),   intent(in)      :: self
-        real(rk),               intent(in)      :: rho(:), rhou(:), rhov(:), rhow(:), rhoE(:)
-        !real(rk),               intent(inout)   :: vals(:)
-        real(rk),   allocatable, intent(inout)   :: vals(:)
+        class(perfect_gas_t),       intent(in)      :: self
+        real(rk),                   intent(in)      :: rho(:), rhou(:), rhov(:), rhow(:), rhoE(:)
+        real(rk),   allocatable,    intent(inout)   :: vals(:)
 
-        real(rk)    :: gam
+        real(rk) :: gam
 
         !& DEBUG, HARDCODED GAMMA
         gam = 1.4_rk
@@ -170,4 +168,4 @@ contains
 
 
 
-end module
+end module perfect_gas

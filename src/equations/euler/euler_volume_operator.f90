@@ -1,33 +1,32 @@
-module EULER_volume_advective_flux
+module euler_volume_operator
     use mod_kinds,              only: rk,ik
     use mod_constants,          only: ONE,TWO,HALF
 
-    use type_volume_flux,       only: volume_flux_t
+    use type_operator,          only: operator_t
     use type_properties,        only: properties_t
     use type_chidg_worker,      only: chidg_worker_t
     use DNAD_D
-
-    use EULER_properties,       only: EULER_properties_t
     implicit none
 
     private
 
     
-    !> Volume advective flux for Euler equations.
+    !> Volume flux for Euler equations.
     !!
     !!  @author Nathan A. Wukie
     !!  @date   1/28/2016
     !!
     !!
     !------------------------------------------------------------------------------
-    type, extends(volume_flux_t), public :: EULER_volume_advective_flux_t
+    type, extends(operator_t), public :: euler_volume_operator_t
 
 
     contains
 
-        procedure  :: compute
+        procedure   :: init
+        procedure   :: compute
 
-    end type EULER_volume_advective_flux_t
+    end type euler_volume_operator_t
     !******************************************************************************
 
 
@@ -42,6 +41,32 @@ module EULER_volume_advective_flux
 contains
 
 
+    !>
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   8/29/2016
+    !!
+    !--------------------------------------------------------------------------------
+    subroutine init(self)
+        class(euler_volume_operator_t),   intent(inout)      :: self
+
+        ! Set operator name
+        call self%set_name("Euler Volume Flux")
+
+        ! Set operator type
+        call self%set_operator_type("Volume Advective Flux")
+
+        ! Set operator equations
+        call self%set_equation("Density"   )
+        call self%set_equation("X-Momentum")
+        call self%set_equation("Y-Momentum")
+        call self%set_equation("Z-Momentum")
+        call self%set_equation("Energy"    )
+
+    end subroutine init
+    !********************************************************************************
+
+
 
     !> Volume flux routine for Euler equations.
     !!
@@ -51,9 +76,9 @@ contains
     !!
     !!------------------------------------------------------------------------------
     subroutine compute(self,worker,prop)
-        class(EULER_volume_advective_flux_t),   intent(in)      :: self
-        type(chidg_worker_t),                   intent(inout)   :: worker
-        class(properties_t),                    intent(inout)   :: prop
+        class(euler_volume_operator_t),   intent(in)      :: self
+        type(chidg_worker_t),                       intent(inout)   :: worker
+        class(properties_t),                        intent(inout)   :: prop
 
         ! Equation indices
         integer(ik)    :: irho, irhou, irhov, irhow, irhoE
@@ -68,11 +93,11 @@ contains
         !
         ! Get equation indices
         !
-        irho  = prop%get_eqn_index("rho")
-        irhou = prop%get_eqn_index("rhou")
-        irhov = prop%get_eqn_index("rhov")
-        irhow = prop%get_eqn_index("rhow")
-        irhoE = prop%get_eqn_index("rhoE")
+        irho  = prop%get_equation_index("rho")
+        irhou = prop%get_equation_index("rhou")
+        irhov = prop%get_equation_index("rhov")
+        irhow = prop%get_equation_index("rhow")
+        irhoE = prop%get_equation_index("rhoE")
 
 
 
@@ -152,4 +177,4 @@ contains
 
 
 
-end module EULER_volume_advective_flux
+end module euler_volume_operator

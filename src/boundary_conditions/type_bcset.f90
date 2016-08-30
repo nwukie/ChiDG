@@ -1,16 +1,14 @@
 module type_bcset
 #include <messenger.h>
     use mod_kinds,              only: rk, ik
-    use mod_constants,          only: XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX
+
     use type_mesh,              only: mesh_t
-    use type_equationset,       only: equationset_t
+    use type_equation_set,      only: equation_set_t
     use type_solverdata,        only: solverdata_t
     use type_bc,                only: bc_t
-    use type_bcwrapper,         only: bcwrapper_t
     use type_properties,        only: properties_t
     use type_bcset_coupling,    only: bcset_coupling_t
     implicit none
-    private
 
 
     !>  Type for a set of boundary conditions that get applied to a block
@@ -25,7 +23,8 @@ module type_bcset
 
         integer(ik)                     :: nbcs = 0
 
-        class(bcwrapper_t), allocatable :: bcs(:)       !< Array of boundary conditions. Using a wrapper here
+        !class(bcwrapper_t), allocatable :: bcs(:)
+        type(bc_t),     allocatable     :: bcs(:)       !< Array of boundary conditions. Using a wrapper here
                                                         !! because we can't allocate an array of polymorphic variables
                                                         !! without SOURCE or MOLD, for which we need a concrete type
 
@@ -56,11 +55,11 @@ contains
     !------------------------------------------------------------------------------------------
     subroutine add(self,bc)
         class(bcset_t),     intent(inout)   :: self
-        class(bc_t),        intent(in)      :: bc
+        type(bc_t),         intent(in)      :: bc
 
         integer(ik) :: ibc, ierr
 
-        type(bcwrapper_t), allocatable :: temp_bcs(:)
+        type(bc_t),     allocatable     :: temp_bcs(:)
 
 
         !
@@ -87,7 +86,8 @@ contains
         !
         ! Allocate new boundary condition
         !
-        allocate(temp_bcs(self%nbcs)%bc, source=bc)     ! I think this should source all of the data as well, like an assign
+        temp_bcs(self%nbcs) = bc
+!        allocate(temp_bcs(self%nbcs)%bc, source=bc)     ! I think this should source all of the data as well, like an assign
 
 
         !
@@ -134,7 +134,8 @@ contains
             ! Only apply if there is an allocated boundary condition in the current slot
             !
             if (allocated(self%bcs(ibc)%bc)) then
-                call self%bcs(ibc)%bc%apply(mesh,sdata,prop)
+                !call self%bcs(ibc)%bc%apply(mesh,sdata,prop)
+                call self%bcs(ibc)%apply(mesh,sdata,prop)
             end if
 
         end do
@@ -180,8 +181,10 @@ contains
         do ibc = 1,self%nbcs
             if ( allocated(self%bcs(ibc)%bc) ) then
 
-                bcset_coupling%bc(ibc)%elems         = self%bcs(ibc)%bc%elems
-                bcset_coupling%bc(ibc)%coupled_elems = self%bcs(ibc)%bc%coupled_elems
+                !bcset_coupling%bc(ibc)%elems         = self%bcs(ibc)%bc%elems
+                !bcset_coupling%bc(ibc)%coupled_elems = self%bcs(ibc)%bc%coupled_elems
+                bcset_coupling%bc(ibc)%elems         = self%bcs(ibc)%bc_patch%ielement_l%data()
+                bcset_coupling%bc(ibc)%coupled_elems = self%bcs(ibc)%bc_patch%coupled_elements
 
             end if
         end do ! ibc

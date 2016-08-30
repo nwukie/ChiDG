@@ -1,9 +1,9 @@
 module type_evector
 #include <messenger.h>
-    use mod_kinds,                  only: rk, ik
-    use mod_string_utilities,       only: string_to_upper
-    use type_equationset,           only: equationset_t
-    use type_equationset_wrapper,   only: equationset_wrapper_t
+    use mod_kinds,                      only: rk, ik
+    use mod_string,                     only: string_to_upper
+    use type_equation_builder,          only: equation_builder_t
+    use type_equation_builder_wrapper,  only: equation_builder_wrapper_t
     implicit none
 
 
@@ -20,8 +20,7 @@ module type_evector
         integer(ik)             :: capacity_    = 0
         integer(ik)             :: buffer_      = 20
 
-        type(equationset_wrapper_t), allocatable :: data(:)
-
+        type(equation_builder_wrapper_t), allocatable :: data(:)
 
     contains
 
@@ -99,8 +98,8 @@ contains
     !!
     !--------------------------------------------------------------------------------------
     subroutine push_back(self,element)
-        class(evector_t),       intent(inout)   :: self
-        class(equationset_t),   intent(in)      :: element
+        class(evector_t),           intent(inout)   :: self
+        class(equation_builder_t),  intent(in)      :: element
 
         logical     :: capacity_reached
         integer(ik) :: size, ierr
@@ -119,8 +118,8 @@ contains
         ! Add element to end of vector
         !
         size = self%size()
-        !self%data(size + 1)%item = element
-        allocate(self%data(size + 1)%item, source=element, stat=ierr)
+!        self%data(size + 1) = element
+        allocate(self%data(size + 1)%bld, source=element, stat=ierr)
         if (ierr /= 0) call AllocationError
 
 
@@ -177,9 +176,9 @@ contains
         class(evector_t),   intent(in)  :: self
         integer(ik),        intent(in)  :: index
 
-        integer                                 :: ierr
-        class(equationset_t),    allocatable    :: res
-        logical                                 :: out_of_bounds
+        integer                                     :: ierr
+        class(equation_builder_t),   allocatable    :: res
+        logical                                     :: out_of_bounds
 
         !
         ! Check vector bounds
@@ -193,8 +192,9 @@ contains
         !
         ! Allocate result
         !
-        allocate(res, source=self%data(index)%item, stat=ierr)
+        allocate(res, source=self%data(index)%bld, stat=ierr)
         if (ierr /= 0) call chidg_signal(FATAL,"evector%at: error returning equation set")
+!        res = self%data(index)
 
     end function at
     !*****************************************************************************************
@@ -244,7 +244,7 @@ contains
             !
             ! Get current equation set name
             !
-            ename = self%data(ieqn)%item%get_name()
+            ename = self%data(ieqn)%bld%get_name()
 
             !
             ! Test name against key
@@ -289,8 +289,8 @@ contains
     subroutine increase_capacity(self)
         class(evector_t),   intent(inout)   :: self
 
-        type(equationset_wrapper_t), allocatable   :: temp(:)
-        integer(ik)             :: newsize, ierr
+        integer(ik) :: newsize, ierr
+        type(equation_builder_wrapper_t), allocatable   :: temp(:)
 
 
         !

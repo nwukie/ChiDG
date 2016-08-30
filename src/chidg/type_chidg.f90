@@ -245,7 +245,7 @@ contains
             !
             ! Allocation for time scheme
             !
-            case ('Time','time','time_scheme','Time_Scheme','timescheme','TimeScheme')
+            case ('Time','time','time_scheme','Time_Scheme','timescheme','TimeScheme', 'time scheme', 'Time Scheme')
                 if (allocated(self%time_scheme)) then
                     deallocate(self%time_scheme)
                     call create_time_scheme(selection,self%time_scheme,options)
@@ -258,7 +258,7 @@ contains
             !
             ! Allocation for nonlinear solver
             !
-            case ('nonlinearsolver','NonlinearSolver','nonlinear_solver','Nonlinear_Solver')
+            case ('nonlinearsolver','NonlinearSolver','nonlinear_solver','Nonlinear_Solver','nonlinear solver', 'Nonlinear Solver')
                 if (allocated(self%nonlinear_solver)) then
                     deallocate(self%nonlinear_solver)
                     call create_nonlinear_solver(selection,self%nonlinear_solver,options)
@@ -272,7 +272,7 @@ contains
             !
             ! Allocation for linear solver
             !
-            case ('linearsolver','LinearSolver','linear_solver','Linear_Solver')
+            case ('linearsolver','LinearSolver','linear_solver','Linear_Solver','linear solver', 'Linear Solver')
                 if (allocated(self%linear_solver)) then
                     deallocate(self%linear_solver)
                     call create_linear_solver(selection,self%linear_solver,options)

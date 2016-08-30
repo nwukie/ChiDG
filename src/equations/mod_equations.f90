@@ -8,18 +8,22 @@
 !--------------------------------------------------------------------------------------------------
 module mod_equations
 #include <messenger.h>
-    use mod_kinds,                      only: rk,ik
-    use type_equationset,               only: equationset_t
-    use type_evector,                   only: evector_t
+    use mod_kinds,              only: rk,ik
+    use mod_string,             only: string_t
+    use type_equation_set,      only: equation_set_t
+    use type_equation_builder,  only: equation_builder_t
+    use type_evector,           only: evector_t
 
     !
     ! Import Equations
     !
-    use eqn_linearadvection,                         only: linearadvection_e
-    use eqn_lineardiffusion,                         only: lineardiffusion_e
-    use eqn_duallinearadvection,                     only: duallinearadvection_e
-    use eqn_euler,                                   only: euler_e
-    use eqn_primitive_linearized_euler,              only: primitive_linearized_euler_e
+!    use eqn_linearadvection,                         only: linearadvection_e
+!    use eqn_lineardiffusion,                         only: lineardiffusion_e
+!    use eqn_duallinearadvection,                     only: duallinearadvection_e
+!    use eqn_euler,                                   only: euler_e
+!    use eqn_primitive_linearized_euler,              only: primitive_linearized_euler_e
+
+    use eqn_euler,  only: euler 
     implicit none
 
 
@@ -27,17 +31,101 @@ module mod_equations
     !
     ! Vector of registered equations.
     !
-    type(evector_t)             :: registered_equations
+    type(evector_t)             :: registered_equation_builders
     logical                     :: initialized = .false.
 
+
+
+
+!    !>
+!    !!
+!    !!
+!    !!
+!    !!
+!    !---------------------------------------------------------------------------------------------
+!    type, public :: equation_builder_t
+!
+!        type(string_t)  :: name
+!
+!    contains
+!
+!        procedure(init_interface),  deferred    :: init
+!        procedure(build_interface), deferred    :: build
+!
+!        procedure                               :: set_name
+!        procedure                               :: get_name
+!
+!    end type equation_builder_t
+!    !*********************************************************************************************
+!    abstract interface
+!        subroutine init_interface(self)
+!            import equation_builder_t
+!
+!            class(equation_builder_t),  intent(inout)   :: self
+!        end subroutine
+!    end interface
+!
+!    abstract interface
+!        function build_interface(self,blueprint)
+!            import equation_builder_t
+!
+!            class(equation_builder_t),  intent(in)  :: self
+!            character(len=*),           intent(in)  :: blueprint
+!        end function
+!    end interface
+!    !*********************************************************************************************
 
 contains
 
 
+!    !>
+!    !!
+!    !!
+!    !!
+!    !!
+!    !---------------------------------------------------------------------------------------------
+!    subroutine set_name(self,string)
+!        class(equation_builder_t),  intent(inout)   :: self
+!        character(len=*),           intent(in)      :: string
+!
+!        self%name = string
+!
+!    end subroutine set_name
+!    !*********************************************************************************************
+!    
+!
+!    
+!
+!    !>
+!    !!
+!    !!
+!    !!
+!    !!
+!    !!
+!    !---------------------------------------------------------------------------------------------
+!    function get_name(self) result(builder_name)
+!        class(equation_builder_t),  intent(in)  :: self
+!
+!        character(len=:), allocatable   :: builder_name
+!
+!        builder_name = self%name%str
+!
+!    end function get_name
+!    !*********************************************************************************************
 
 
 
-    !>  Register equations in a module vector. This is called from chidg%init('env').
+
+
+
+
+
+
+
+
+
+
+    !>  Register equation builders in a module vector. This is called from chidg%init('env').
     !!
     !!  This allows the available equations to be queried in the same way that they 
     !!  are registered for allocation.
@@ -47,50 +135,30 @@ contains
     !!
     !!
     !-----------------------------------------------------------------------------------
-    subroutine register_equations()
+    subroutine register_equation_builders()
         integer :: neqns, ieqn
 
         !
         ! Instantiate Equations
         !
-        type(linearadvection_e)                             :: LINEARADVECTION
-        type(lineardiffusion_e)                             :: LINEARDIFFUSION
-        type(duallinearadvection_e)                         :: DUALLINEARADVECTION
-        type(euler_e)                                       :: EULER
-        type(primitive_linearized_euler_e)                  :: PRIMITIVE_LINEARIZED_EULER
+        type(euler) :: euler_builder
 
 
+        !
+        ! Register if needed
+        !
         if ( .not. initialized ) then
-            !
+
             ! Register in global vector
-            !
-            call registered_equations%push_back(LINEARADVECTION)
-            call registered_equations%push_back(LINEARDIFFUSION)
-            call registered_equations%push_back(DUALLINEARADVECTION)
-            call registered_equations%push_back(EULER)
-            call registered_equations%push_back(PRIMITIVE_LINEARIZED_EULER)
+            call registered_equation_builders%push_back(euler_builder)
 
-
-
-
-
-            !
-            ! Initialize each equation in set. Doesn't need editing
-            !
-            neqns = registered_equations%size()
-            do ieqn = 1,neqns
-                call registered_equations%data(ieqn)%item%init()
-            end do
-
-            !
             ! Confirm initialization
-            !
             initialized = .true.
 
         end if
 
-    end subroutine register_equations
-    !************************************************************************************
+    end subroutine register_equation_builders
+    !*************************************************************************************
 
 
 
@@ -108,42 +176,38 @@ contains
     !!  @param[in] eqnset       Allocatable equationset_t class to be instantiated
     !!
     !-------------------------------------------------------------------------------------
-    subroutine create_equationset(eqnstring,eqnset)
-        character(*),                      intent(in)      :: eqnstring
-        class(equationset_t), allocatable, intent(inout)   :: eqnset
+    function build_equation_set(eqnstring,blueprint) result(eqnset)
+        character(len=*),   intent(in)      :: eqnstring
+        character(len=*),   intent(in)      :: blueprint
 
-        integer :: ierr, eindex
+        integer                 :: ierr, bindex
+        type(equation_set_t)    :: eqnset
 
         !
         ! Find equation set in 'available_equations' vector
         !
-        eindex = registered_equations%index_by_name(eqnstring)
-
+        bindex = registered_equations%index_by_name(eqnstring)
 
 
         !
         ! Check equationset was found in 'available_equations'
         !
-        if (eindex == 0) call chidg_signal_one(FATAL,"create_equationset: equation string not recognized", trim(eqnstring))
-
-
-
-        !
-        ! Allocate conrete equationset_t instance
-        !
-        allocate(eqnset, source=registered_equations%data(eindex)%item, stat=ierr)
-        if (ierr /= 0) call chidg_signal(FATAL,"create_equationset: error allocating equationset from global vector.")
-
+        if (bindex == 0) call chidg_signal_one(FATAL,"create_equationset: equation string not recognized", trim(eqnstring))
 
 
         !
-        ! Check equation was allocated
+        ! Get equation set builder
         !
-        if ( .not. allocated(eqnset) ) call chidg_signal(FATAL,"create_equationset: error allocating conrete equation set.")
+        builder = registered_equation_builders%at(bindex)
 
 
+        !
+        ! Build equation set
+        !
+        eqnset = builder%build(blueprint)
 
-    end subroutine create_equationset
+
+    end function build_equation_set
     !*************************************************************************************
 
 
@@ -164,11 +228,11 @@ contains
         integer :: neqns, ieqn
         character(len=:),   allocatable :: ename
         
-        neqns = registered_equations%size()
+        neqns = registered_equation_builders%size()
 
         do ieqn = 1,neqns
 
-            ename = registered_equations%data(ieqn)%item%get_name()
+            ename = registered_equation_builders%data(ieqn)%get_name()
             call write_line(trim(ename))
 
         end do ! ieqn

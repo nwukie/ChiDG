@@ -41,12 +41,9 @@ module type_bc
         type(ivector_t),    allocatable :: coupled_elems(:)     !< For each element on the boundary, a vector of element block-indices 
                                                                 !< coupled with the current element.
 
-        !integer(ik),        allocatable :: elems_g(:)  !< Indices of elements associated with boundary condition. Block-global indices. 
-
         !
         ! Boundary condition options
         !
-        !type(bcparameter_set_t)    :: bcparameters
         type(bcproperty_set_t)      :: bcproperties
 
     contains

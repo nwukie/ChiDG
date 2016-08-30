@@ -1,5 +1,6 @@
 module type_fluid
-    use mod_kinds,  only: rk
+    use mod_kinds,      only: rk
+    use type_material,  only: material_t
     use DNAD_D
     implicit none
     private
@@ -14,7 +15,7 @@ module type_fluid
     !!  @date   3/15/2016
     !!
     !--------------------------------------------------------------------------
-    type, public, abstract :: fluid_t
+    type, public, extends(material_t), abstract :: fluid_t
 
 
     contains
@@ -57,6 +58,63 @@ module type_fluid
             real(rk),   allocatable,    intent(inout)   :: vals(:)
         end subroutine
     end interface
+
+contains
+
+
+
+
+!    !>
+!    !!
+!    !!  @author Nathan A. Wukie (AFRL)
+!    !!  @date   8/30/2016
+!    !!
+!    !!
+!    !------------------------------------------------------------------------------------------
+!    subroutine init(self)
+!        class(fluid_t), intent(inout)   :: self
+!
+!
+!        call self%contribute_equation("Density")
+!        call self%contribute_equation("X-Momentum")
+!        call self%contribute_equation("Y-Momentum")
+!        call self%contribute_equation("Z-Momentum")
+!        call self%contribute_equation("Energy")
+!        call self%contribute_equation("Turbulence Viscosity")
+!        call self%contribute_equation("Turbulence Kinetic Energy")
+!        call self%contribute_equation("Turbulence Dissipation Rate")
+!
+!
+!    end subroutine init
+!    !******************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 end module type_fluid

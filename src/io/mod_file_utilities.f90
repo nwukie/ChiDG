@@ -1,7 +1,7 @@
 module mod_file_utilities
 #include <messenger.h>
     use mod_hdf_utilities,      only: get_properties_hdf
-    use mod_string_utilities,   only: get_file_extension
+    use mod_string,             only: get_file_extension
     use type_file_properties,   only: file_properties_t
     implicit none
 

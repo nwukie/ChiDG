@@ -1,17 +1,12 @@
-module EULER_Roe_flux
+module euler_roe_operator
     use mod_kinds,              only: rk,ik
     use mod_constants,          only: NFACES,ZERO,ONE,TWO,HALF, ME, NEIGHBOR
 
-    use type_boundary_flux,     only: boundary_flux_t
+    use type_operator,          only: operator_t
     use type_properties,        only: properties_t
     use type_chidg_worker,      only: chidg_worker_t
     use DNAD_D
-
-    use EULER_properties,       only: EULER_properties_t
     implicit none
-
-    private
-
 
 
     
@@ -24,13 +19,14 @@ module EULER_Roe_flux
     !!  @date   1/28/2016
     !!
     !------------------------------------------------------------------------------
-    type, extends(boundary_flux_t), public :: EULER_Roe_flux_t
+    type, extends(operator_t), public :: euler_roe_operator_t
 
     contains
 
-        procedure  :: compute
+        procedure   :: init
+        procedure   :: compute
 
-    end type EULER_Roe_flux_t
+    end type euler_roe_operator_t
     !*******************************************************************************
 
 
@@ -45,6 +41,30 @@ module EULER_Roe_flux
 contains
 
 
+    !>
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   8/29/2016
+    !!
+    !--------------------------------------------------------------------------------
+    subroutine init(self)
+        class(euler_roe_operator_t),   intent(inout)    :: self
+
+        ! Set operator name
+        call self%set_name("Euler Roe Flux")
+
+        ! Set operator type
+        call self%set_operator_type("Boundary Advective Flux")
+
+        ! Set operator equations
+        call self%set_equation("Density"   )
+        call self%set_equation("X-Momentum")
+        call self%set_equation("Y-Momentum")
+        call self%set_equation("Z-Momentum")
+        call self%set_equation("Energy"    )
+
+    end subroutine init
+    !********************************************************************************
 
 
 
@@ -56,7 +76,7 @@ contains
     !!
     !!---------------------------------------------------------------------------
     subroutine compute(self,worker,prop)
-        class(EULER_Roe_flux_t),            intent(in)      :: self
+        class(euler_roe_operator_t),        intent(in)      :: self
         type(chidg_worker_t),               intent(inout)   :: worker
         class(properties_t),                intent(inout)   :: prop
 
@@ -90,11 +110,11 @@ contains
 
 
 
-        irho  = prop%get_eqn_index("rho")
-        irhou = prop%get_eqn_index("rhou")
-        irhov = prop%get_eqn_index("rhov")
-        irhow = prop%get_eqn_index("rhow")
-        irhoE = prop%get_eqn_index("rhoE")
+        irho  = prop%get_equation_index("Density"   )
+        irhou = prop%get_equation_index("X-Momentum")
+        irhov = prop%get_equation_index("Y-Momentum")
+        irhow = prop%get_equation_index("Z-Momentum")
+        irhoE = prop%get_equation_index("Energy"    )
 
 
 
@@ -137,6 +157,7 @@ contains
         call prop%fluid%compute_pressure(rho_p,rhou_p,rhov_p,rhow_p,rhoE_p,p_p)
         call prop%fluid%compute_gamma(rho_m,rhou_m,rhov_m,rhow_m,rhoE_m,gam_m)
         call prop%fluid%compute_gamma(rho_p,rhou_p,rhov_p,rhow_p,rhoE_p,gam_p)
+
 
         invrho_m = ONE/rho_m
         invrho_p = ONE/rho_p
@@ -267,4 +288,4 @@ contains
 
 
 
-end module EULER_Roe_flux
+end module euler_roe_operator

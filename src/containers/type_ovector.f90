@@ -1,27 +1,27 @@
-module type_fcnvector
+module type_ovector
 #include <messenger.h>
-    use mod_kinds,                  only: rk, ik
-    use mod_string,                 only: string_to_upper
-    use type_function,              only: function_t
-    use type_function_wrapper,      only: function_wrapper_t
+    use mod_kinds,              only: rk, ik
+    use mod_string,             only: string_to_upper
+    use type_operator,          only: operator_t
+    use type_operator_wrapper,  only: operator_wrapper_t
     implicit none
 
 
 
-    !>  A vector class for storing a dynamic array of bc_t instances.
+    !>  A vector class for storing a dynamic array of operator_t instances.
     !!
-    !!  @author Nathan A. Wukie
-    !!  @date   2/8/2016
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   8/30/2016
+    !!  @note   Templated from evector_t
     !!
     !!
     !---------------------------------------------------------------------------------------
-    type, public :: fcnvector_t
+    type, public :: ovector_t
         integer(ik)             :: size_        = 0
         integer(ik)             :: capacity_    = 0
         integer(ik)             :: buffer_      = 20
 
-        type(function_wrapper_t), allocatable :: data(:)
-
+        type(operator_wrapper_t), allocatable :: data(:)
 
     contains
 
@@ -37,7 +37,7 @@ module type_fcnvector
         procedure, public   :: index_by_name        !< Return an index location of a specified name identifier.
         procedure, public   :: at                   !< Return an instance from the specified index.
 
-    end type fcnvector_t
+    end type ovector_t
     !***************************************************************************************
 
 
@@ -54,7 +54,7 @@ contains
     !!
     !--------------------------------------------------------------------------------------
     function size(self) result(res)
-        class(fcnvector_t),   intent(in)  :: self
+        class(ovector_t),   intent(in)  :: self
 
         integer(ik) :: res
 
@@ -76,7 +76,7 @@ contains
     !!
     !--------------------------------------------------------------------------------------
     function capacity(self) result(res)
-        class(fcnvector_t),   intent(in)  :: self
+        class(ovector_t),   intent(in)  :: self
 
         integer(ik) :: res
 
@@ -99,8 +99,8 @@ contains
     !!
     !--------------------------------------------------------------------------------------
     subroutine push_back(self,element)
-        class(fcnvector_t),       intent(inout)   :: self
-        class(function_t),        intent(in)      :: element
+        class(ovector_t),   intent(inout)   :: self
+        class(operator_t),  intent(in)      :: element
 
         logical     :: capacity_reached
         integer(ik) :: size, ierr
@@ -119,7 +119,8 @@ contains
         ! Add element to end of vector
         !
         size = self%size()
-        allocate(self%data(size + 1)%fcn, source=element, stat=ierr)
+!        self%data(size + 1) = element
+        allocate(self%data(size + 1)%op, source=element, stat=ierr)
         if (ierr /= 0) call AllocationError
 
 
@@ -147,7 +148,7 @@ contains
     !!
     !---------------------------------------------------------------------------------------
     subroutine clear(self)
-        class(fcnvector_t),   intent(inout)   :: self
+        class(ovector_t),   intent(inout)   :: self
 
         self%size_      = 0
         self%capacity_  = 0
@@ -173,27 +174,28 @@ contains
     !!
     !----------------------------------------------------------------------------------------
     function at(self,index) result(res)
-        class(fcnvector_t),   intent(in)  :: self
-        integer(ik),          intent(in)  :: index
+        class(ovector_t),   intent(in)  :: self
+        integer(ik),        intent(in)  :: index
 
-        integer                         :: ierr
-        class(function_t),  allocatable :: res
-        logical                         :: out_of_bounds
+        integer                                 :: ierr
+        class(operator_t),  allocatable :: res
+        logical                                 :: out_of_bounds
 
         !
         ! Check vector bounds
         !
         out_of_bounds = (index > self%size())
         if (out_of_bounds) then
-            call chidg_signal(FATAL,'fcnvector_t%at: out of bounds access')
+            call chidg_signal(FATAL,'vector_t%at: out of bounds access')
         end if
 
 
         !
         ! Allocate result
         !
-        allocate(res, source=self%data(index)%fcn, stat=ierr)
-        if (ierr /= 0) call chidg_signal(FATAL,"fcnvector%at: error returning boundary condition")
+        allocate(res, source=self%data(index)%op, stat=ierr)
+        !res = self%data(index)
+        if (ierr /= 0) call chidg_signal(FATAL,"ovector%at: error returning operator")
 
     end function at
     !*****************************************************************************************
@@ -214,18 +216,18 @@ contains
     !!  @date   2/8/2016
     !!
     !!
-    !!  @param[in]  key     String indicating the boundary condition to return the index of.
+    !!  @param[in]  key     String indicating the equation set to return the index of.
     !!
     !------------------------------------------------------------------------------------------------
     function index_by_name(self,key) result(ind)
-        class(fcnvector_t),     intent(inout)   :: self
-        character(*),           intent(in)      :: key
+        class(ovector_t),   intent(inout)   :: self
+        character(*),       intent(in)      :: key
 
-        integer                         :: nfcns, ifcn, ind
-        character(len=:),   allocatable :: fname
+        integer                         :: neqns, ieqn, ind
+        character(len=:),   allocatable :: ename
         logical                         :: found
 
-        nfcns = self%size()
+        neqns = self%size()
         
         !
         ! Default, ind = 0. If 0 is ultimately returned, no entry was found.
@@ -233,32 +235,33 @@ contains
         ind = 0
 
 
+
+
         !
         ! Loop through vector data.
         !
-        do ifcn = 1,nfcns
+        do ieqn = 1,neqns
 
             !
-            ! Get current function name
+            ! Get current equation set name
             !
-            fname = self%data(ifcn)%fcn%get_name()
-
+            ename = self%data(ieqn)%op%get_name()
 
             !
             ! Test name against key
             !
-            found = ( string_to_upper(trim(key)) == string_to_upper(trim(fname)) )
+            found = ( string_to_upper(trim(key)) == string_to_upper(trim(ename)) )
 
             !
             ! Handle found
             !
             if (found) then
-                ind = ifcn
+                ind = ieqn
                 exit
             end if
 
 
-        end do ! ifcn
+        end do ! ieqn
 
 
 
@@ -285,10 +288,10 @@ contains
     !!
     !------------------------------------------------------------------------------------------
     subroutine increase_capacity(self)
-        class(fcnvector_t),   intent(inout)   :: self
+        class(ovector_t),   intent(inout)   :: self
 
-        type(function_wrapper_t), allocatable   :: temp(:)
-        integer(ik)                      :: newsize, ierr
+        type(operator_wrapper_t), allocatable   :: temp(:)
+        integer(ik)             :: newsize, ierr
 
 
         !
@@ -333,4 +336,4 @@ contains
 
 
 
-end module type_fcnvector
+end module type_ovector

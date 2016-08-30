@@ -52,7 +52,8 @@ module type_chidg_data
 
         type(mesh_t),                   allocatable :: mesh(:)          !< Array of mesh instances. One for each domain.
         type(bcset_t),                  allocatable :: bcset(:)         !< Array of boundary condition set instances. One for each domain.
-        type(equationset_wrapper_t),    allocatable :: eqnset(:)        !< Array of equation set instances. One for each domain.
+        !type(equationset_wrapper_t),    allocatable :: eqnset(:)        !< Array of equation set instances. One for each domain.
+        type(equation_set_t),           allocatable :: eqnset(:)        !< Array of equation set instances. One for each domain.
         type(solverdata_t)                          :: sdata            !< Solver data container for solution vectors and matrices
 
 
@@ -302,7 +303,7 @@ contains
         !
         ! Initialize new boundary condition from mesh data and face index
         !
-        call bc_copy%init(self%mesh(idom),bc_connectivity)
+        call bc_copy%init_bc(self%mesh(idom),bc_connectivity)
 
 
 

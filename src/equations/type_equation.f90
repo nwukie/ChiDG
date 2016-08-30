@@ -12,8 +12,8 @@ module type_equation
     !!
     !-----------------------------------------------------------------------
     type, public :: equation_t
-        character(len=20)  :: name
-        integer(ik)        :: ind
+        character(len=:), allocatable   :: name
+        integer(ik)                     :: ind
     end type equation_t
     !***********************************************************************
 

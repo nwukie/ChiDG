@@ -11,7 +11,6 @@ module type_solverdata
     use type_element_info,              only: element_info_t
     use type_face_info,                 only: face_info_t
     use type_function_info,             only: function_info_t
-!    use type_BR2,                       only: BR2_t
     implicit none
 
 
@@ -21,9 +20,6 @@ module type_solverdata
     !!  @author Nathan A. Wukie 
     !!  @date   3/15/2016
     !!
-    !!  @author Nathan A. Wukie (AFRL)
-    !!  @date   8/19/2016
-!    !!  @note   Added BR2 diffusion container
     !!
     !-------------------------------------------------------------------------------------------------------
     type, public  :: solverdata_t
@@ -36,7 +32,6 @@ module type_solverdata
         type(chidgVector_t)             :: rhs                      !< Residual of the spatial scheme
         type(chidgMatrix_t)             :: lhs                      !< Linearization of the spatial scheme
 
-!        type(BR2_t)                     :: BR2
 
         !
         ! Time information

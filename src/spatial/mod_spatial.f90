@@ -102,7 +102,7 @@ contains
 
         ! Loop through domains
         do idom = 1,data%ndomains()
-            associate ( mesh => data%mesh, eqnset => data%eqnset(idom)%item)
+            associate ( mesh => data%mesh, eqnset => data%eqnset(idom) )
             nelem = mesh(idom)%nelem
 
             ! Loop through elements in the current domain
@@ -137,8 +137,8 @@ contains
                         call worker%set_face_info(face_info)
 
 
-                        call eqnset%compute_boundary_advective_fluxes(worker, idiff)
-                        call eqnset%compute_boundary_diffusive_fluxes(worker, idiff)
+                        call eqnset%compute_boundary_advective_operators(worker, idiff)
+                        call eqnset%compute_boundary_diffusive_operators(worker, idiff)
 
 
                     end do  ! faces loop
@@ -147,8 +147,8 @@ contains
                     !
                     ! Compute volume fluxes
                     !
-                    call eqnset%compute_volume_advective_fluxes(worker, idiff)
-                    call eqnset%compute_volume_diffusive_fluxes(worker, idiff)
+                    call eqnset%compute_volume_advective_operators(worker, idiff)
+                    call eqnset%compute_volume_diffusive_operators(worker, idiff)
 
 
 

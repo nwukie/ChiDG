@@ -1,4 +1,5 @@
 module type_solid
+    use type_material
     implicit none
     private
 
@@ -12,7 +13,7 @@ module type_solid
     !!
     !!
     !----------------------------------------------------------------------------
-    type, public, abstract :: solid_t
+    type, public, extends(material_t), abstract :: solid_t
 
 
 

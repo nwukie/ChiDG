@@ -20,10 +20,10 @@ module mod_bc
     !
     use bc_empty,                           only: empty_t
     use bc_periodic,                        only: periodic_t
-    use bc_linearadvection_extrapolate,     only: linearadvection_extrapolate_t
-    use bc_lineardiffusion_extrapolate,     only: lineardiffusion_extrapolate_t
-    use bc_lineardiffusion_derivative,      only: lineardiffusion_derivative_t
-    use bc_lineardiffusion_value,           only: lineardiffusion_value_t
+!    use bc_linearadvection_extrapolate,     only: linearadvection_extrapolate_t
+!    use bc_lineardiffusion_extrapolate,     only: lineardiffusion_extrapolate_t
+!    use bc_lineardiffusion_derivative,      only: lineardiffusion_derivative_t
+!    use bc_lineardiffusion_value,           only: lineardiffusion_value_t
     use bc_euler_wall,                      only: euler_wall_t
     use bc_euler_totalinlet,                only: euler_totalinlet_t
     use bc_euler_pressureoutlet,            only: euler_pressureoutlet_t
@@ -32,12 +32,12 @@ module mod_bc
 !!    use bc_euler_giles_outlet_2D_a,         only: euler_giles_outlet_2D_a_t
 !!    use bc_euler_giles_outlet_2D_b,         only: euler_giles_outlet_2D_b_t
 
-    use bc_primlineuler_inlet,              only: primlineuler_inlet_t
-    use bc_primlineuler_outlet,             only: primlineuler_outlet_t
-    use bc_primlineuler_extrapolate,        only: primlineuler_extrapolate_t
-    use bc_primlineuler_wall,               only: primlineuler_wall_t
+!    use bc_primlineuler_inlet,              only: primlineuler_inlet_t
+!    use bc_primlineuler_outlet,             only: primlineuler_outlet_t
+!    use bc_primlineuler_extrapolate,        only: primlineuler_extrapolate_t
+!    use bc_primlineuler_wall,               only: primlineuler_wall_t
 
-    use bc_kirchoff,                        only: kirchoff_t
+!    use bc_kirchoff,                        only: kirchoff_t
 
     implicit none
 
@@ -71,10 +71,10 @@ contains
         !
         type(empty_t)                           :: EMPTY
         type(periodic_t)                        :: PERIODIC
-        type(linearadvection_extrapolate_t)     :: LINEARADVECTION_EXTRAPOLATE
-        type(lineardiffusion_extrapolate_t)     :: LINEARDIFFUSION_EXTRAPOLATE
-        type(lineardiffusion_derivative_t)      :: LINEARDIFFUSION_DERIVATIVE
-        type(lineardiffusion_value_t)           :: LINEARDIFFUSION_VALUE
+!        type(linearadvection_extrapolate_t)     :: LINEARADVECTION_EXTRAPOLATE
+!        type(lineardiffusion_extrapolate_t)     :: LINEARDIFFUSION_EXTRAPOLATE
+!        type(lineardiffusion_derivative_t)      :: LINEARDIFFUSION_DERIVATIVE
+!        type(lineardiffusion_value_t)           :: LINEARDIFFUSION_VALUE
 
         type(euler_wall_t)                      :: EULER_WALL
         type(euler_totalinlet_t)                :: EULER_TOTALINLET
@@ -84,13 +84,13 @@ contains
 !!        type(euler_giles_outlet_2D_a_t)         :: EULER_GILES_OUTLET_2D_A
 !!        type(euler_giles_outlet_2D_b_t)         :: EULER_GILES_OUTLET_2D_B
 
-        type(primlineuler_inlet_t)              :: PRIMLINEULER_INLET
-        type(primlineuler_outlet_t)             :: PRIMLINEULER_OUTLET
-        type(primlineuler_extrapolate_t)        :: PRIMLINEULER_EXTRAPOLATE
-        type(primlineuler_wall_t)               :: PRIMLINEULER_WALL
+!        type(primlineuler_inlet_t)              :: PRIMLINEULER_INLET
+!        type(primlineuler_outlet_t)             :: PRIMLINEULER_OUTLET
+!        type(primlineuler_extrapolate_t)        :: PRIMLINEULER_EXTRAPOLATE
+!        type(primlineuler_wall_t)               :: PRIMLINEULER_WALL
 
 
-        type(kirchoff_t)                        :: KIRCHOFF
+!        type(kirchoff_t)                        :: KIRCHOFF
 
         if ( .not. initialized ) then
             !
@@ -98,10 +98,10 @@ contains
             !
             call registered_bcs%push_back(EMPTY)
             call registered_bcs%push_back(PERIODIC)
-            call registered_bcs%push_back(LINEARADVECTION_EXTRAPOLATE)
-            call registered_bcs%push_back(LINEARDIFFUSION_EXTRAPOLATE)
-            call registered_bcs%push_back(LINEARDIFFUSION_DERIVATIVE)
-            call registered_bcs%push_back(LINEARDIFFUSION_VALUE)
+!            call registered_bcs%push_back(LINEARADVECTION_EXTRAPOLATE)
+!            call registered_bcs%push_back(LINEARDIFFUSION_EXTRAPOLATE)
+!            call registered_bcs%push_back(LINEARDIFFUSION_DERIVATIVE)
+!            call registered_bcs%push_back(LINEARDIFFUSION_VALUE)
 
 
             call registered_bcs%push_back(EULER_WALL)
@@ -112,13 +112,13 @@ contains
 !!            call registered_bcs%push_back(EULER_GILES_OUTLET_2D_A)
 !!            call registered_bcs%push_back(EULER_GILES_OUTLET_2D_B)
 
-            call registered_bcs%push_back(PRIMLINEULER_INLET)
-            call registered_bcs%push_back(PRIMLINEULER_OUTLET)
-            call registered_bcs%push_back(PRIMLINEULER_EXTRAPOLATE)
-            call registered_bcs%push_back(PRIMLINEULER_WALL)
+!            call registered_bcs%push_back(PRIMLINEULER_INLET)
+!            call registered_bcs%push_back(PRIMLINEULER_OUTLET)
+!            call registered_bcs%push_back(PRIMLINEULER_EXTRAPOLATE)
+!            call registered_bcs%push_back(PRIMLINEULER_WALL)
 
 
-            call registered_bcs%push_back(KIRCHOFF)
+!            call registered_bcs%push_back(KIRCHOFF)
 
             !
             ! Initialize each boundary condition in set. Doesn't need modified.

@@ -3,11 +3,8 @@ module type_properties
     use mod_kinds,      only: rk, ik
     use type_equation,  only: equation_t
     use type_fluid,     only: fluid_t
-    use type_solid,     only: solid_t
-
     implicit none
 
-    private
 
 
 
@@ -23,20 +20,15 @@ module type_properties
     type, public :: properties_t
         
         ! Equations
-        type(equation_t), allocatable   :: eqns(:)
-
+        type(equation_t),   allocatable :: eqns(:)
 
         ! Materials
-        class(fluid_t),   allocatable   :: fluid
-        class(solid_t),   allocatable   :: solid
+        class(fluid_t),     allocatable :: fluid
 
     contains
 
-        procedure   :: init
-        procedure   :: get_eqn_index
-
+        procedure   :: get_equation_index
         procedure   :: add_fluid
-        !procedure   :: add_solid
 
     end type properties_t
     !*********************************************************************************************
@@ -47,45 +39,6 @@ module type_properties
 
 
 contains
-
-
-
-
-
-
-    !>  Equation properties initialization
-    !!
-    !!  @author Nathan A. Wukie
-    !!  @date   2/25/2016
-    !!
-    !!  @param[in]  fluid   fluid_t object to be assigned
-    !!  @param[in]  solid   solid_t object to be assigned
-    !!
-    !---------------------------------------------------------------------------------------------------
-    subroutine init(self,fluid,solid)
-        class(properties_t),    intent(inout)            :: self
-        class(fluid_t),         intent(in),    optional  :: fluid
-        class(solid_t),         intent(in),    optional  :: solid
-
-        integer(ik) :: ierr
-
-        if (present(fluid)) then
-            allocate(self%fluid, source=fluid, stat=ierr)
-            if (ierr /= 0) call AllocationError
-        end if
-
-        if (present(solid)) then
-            allocate(self%solid, source=solid, stat=ierr)
-            if (ierr /= 0) call AllocationError
-        end if
-
-    end subroutine
-    !***************************************************************************************************
-
-
-
-
-
 
 
 
@@ -102,7 +55,7 @@ contains
     !!  @param[in]  varstring   Character string identifying the desired variable
     !!
     !---------------------------------------------------------------------------------------------------
-    function get_eqn_index(self,varstring) result(varindex)
+    function get_equation_index(self,varstring) result(varindex)
         class(properties_t),    intent(in)  :: self
         character(*),           intent(in)  :: varstring
 
@@ -130,7 +83,7 @@ contains
         !
         if (.not. found) call chidg_signal(FATAL,"Equation string not found in equation set properties")
 
-    end function
+    end function get_equation_index
     !***************************************************************************************************
 
 
@@ -148,7 +101,6 @@ contains
     !!  @author Nathan A. Wukie
     !!  @date   2/25/2016
     !!
-    !!
     !---------------------------------------------------------------------------------------------------
     subroutine add_fluid(self,fluid)
         class(properties_t),    intent(inout)   :: self
@@ -157,23 +109,11 @@ contains
         integer(ik) :: ierr
 
 
-        if (allocated(self%fluid)) then
-            !
-            ! If self%fluid is already allocated, that is strange since only one is allowed per properties_t. Warn it is being replaced.
-            !
-            call chidg_signal(WARN,"properties%add_fluid: fluid component was already allocated. Replacing current definition with new definition")
-
-
-            !
-            ! Deallocate current fluid definition
-            !
-            deallocate(self%fluid)
-
-        end if
+        if (allocated(self%fluid)) deallocate(self%fluid)
 
 
         !
-        ! Allocate new fluid definition
+        ! Allocate new material definition
         !
         allocate(self%fluid, source=fluid, stat=ierr)
         if (ierr /= 0) call AllocationError

@@ -1,11 +1,98 @@
-module mod_string_utilities
+module mod_string
 
 
-
+    type, public :: string_t
+        character(len=:), allocatable   :: str
+    contains
+        procedure   :: lower
+        procedure   :: upper
+        procedure   :: set
+        procedure   :: get
+    end type string_t
 
 
 
 contains
+
+
+
+    !>
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   8/30/2016
+    !!
+    !---------------------------------------------------------------------------------------------
+    subroutine set(self,str)
+        class(string_t),    intent(inout)   :: self
+        character(len=*),   intent(in)      :: str
+
+        self%str = str
+
+    end subroutine set
+    !*********************************************************************************************
+
+
+
+
+    !>
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   8/30/2016
+    !!
+    !---------------------------------------------------------------------------------------------
+    function get(self) result(str)
+        class(string_t),    intent(in)  :: self
+
+        character(len=:),   allocatable :: str
+
+        str = self%str
+
+    end function get
+    !*********************************************************************************************
+
+
+
+
+    !>
+    !!
+    !!
+    !---------------------------------------------------------------------------------------------
+    function lower(self) result(str_lower)
+        class(string_t),    intent(in)  :: self
+
+        character(len=:), allocatable   :: str_lower
+
+        str_lower = string_to_lower(self%str)
+
+    end function lower
+    !*********************************************************************************************
+
+
+
+
+
+    !>
+    !!
+    !!
+    !---------------------------------------------------------------------------------------------
+    function upper(self) result(str_upper)
+        class(string_t),    intent(in)  :: self
+
+        character(len=:), allocatable   :: str_upper
+
+        str_upper = string_to_upper(self%str)
+
+    end function upper
+    !*********************************************************************************************
+
+
+
+
+
+
+
+
+
 
 
 
@@ -132,4 +219,4 @@ contains
 
 
 
-end module mod_string_utilities
+end module mod_string

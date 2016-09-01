@@ -48,7 +48,7 @@ module type_bc
         procedure   :: init_bc_spec         !< Call specialized initialization routine
         procedure   :: init_bc_coupling     !< Initialize book-keeping for coupling interaction between elements.
 
-        procedure   :: add_operator
+        procedure   :: add_bc_operator
 
         procedure   :: compute_bc_operators     !< Apply bc function over bc elements
         procedure   :: get_ncoupled_elems       !< Return the number of elements coupled with a specified boundary element.
@@ -256,34 +256,41 @@ contains
 
 
 
-                    ! Set face type - 'ftype'
-                    bcname = self%get_name()
-                    if ( trim(bcname) == 'periodic' ) then
-                        !
-                        ! Set to ORPHAN face so it will be recognized as chimera in the detection process.
-                        !
-                        mesh%faces(ielem,iface)%ftype = ORPHAN
+!                    ! Set face type - 'ftype'
+!                    bcname = self%get_name()
+!                    if ( trim(bcname) == 'periodic' ) then
+!                        !
+!                        ! Set to ORPHAN face so it will be recognized as chimera in the detection process.
+!                        !
+!                        mesh%faces(ielem,iface)%ftype = ORPHAN
+!
+!                        !
+!                        ! Set periodic offset from boundary condition to the face. To be used in detection of gq_donor.
+!                        !
+!                        if ( self%bcproperties%compute('type', time, pnt) == ONE ) then
+!                            mesh%faces(ielem,iface)%periodic_type = 'cartesian'
+!                        else if ( self%bcproperties%compute('type', time, pnt) == TWO ) then
+!                            mesh%faces(ielem,iface)%periodic_type = 'cylindrical'
+!                        end if
+!
+!                        ! time, pnt do nothing here, but interface for function requires them.
+!                        mesh%faces(ielem,iface)%chimera_offset_x     = self%bcproperties%compute('offset_x',     time, pnt)
+!                        mesh%faces(ielem,iface)%chimera_offset_y     = self%bcproperties%compute('offset_y',     time, pnt)
+!                        mesh%faces(ielem,iface)%chimera_offset_z     = self%bcproperties%compute('offset_z',     time, pnt)
+!                        mesh%faces(ielem,iface)%chimera_offset_theta = self%bcproperties%compute('offset_theta', time, pnt)
+!
+!                    else
+!                        !
+!                        ! Set face to boundary condition face
+!                        !
+!                        mesh%faces(ielem,iface)%ftype = BOUNDARY
+!                    end if
 
-                        !
-                        ! Set periodic offset from boundary condition to the face. To be used in detection of gq_donor.
-                        !
-                        if ( self%bcproperties%compute('type', time, pnt) == ONE ) then
-                            mesh%faces(ielem,iface)%periodic_type = 'cartesian'
-                        else if ( self%bcproperties%compute('type', time, pnt) == TWO ) then
-                            mesh%faces(ielem,iface)%periodic_type = 'cylindrical'
-                        end if
 
-                        ! time, pnt do nothing here, but interface for function requires them.
-                        mesh%faces(ielem,iface)%chimera_offset_x     = self%bcproperties%compute('offset_x',     time, pnt)
-                        mesh%faces(ielem,iface)%chimera_offset_y     = self%bcproperties%compute('offset_y',     time, pnt)
-                        mesh%faces(ielem,iface)%chimera_offset_z     = self%bcproperties%compute('offset_z',     time, pnt)
-                        mesh%faces(ielem,iface)%chimera_offset_theta = self%bcproperties%compute('offset_theta', time, pnt)
-
-                    else
-                        !
-                        ! Set face to boundary condition face
-                        !
+                    if ( allocated(self%bc_advective_operator) ) then
                         mesh%faces(ielem,iface)%ftype = BOUNDARY
+                    else
+                        mesh%faces(ielem,iface)%ftype = ORPHAN
                     end if
 
 
@@ -371,16 +378,18 @@ contains
         type(mesh_t),       intent(in)      :: mesh
         type(bc_patch_t),   intent(inout)   :: bc_patch
 
-        integer(ik) :: ielem_bc, ielem
+        integer(ik) :: iop
 
         !
         ! Have bc_operators initialize the boundary condition coupling
         !
-        do iop = 1,size(self%bc_advective_operators)
+        if (allocated(self%bc_advective_operator)) then
+            do iop = 1,size(self%bc_advective_operator)
 
-            call self%bc_advective_operator(iop)%init_boundary_coupling(mesh,bc_patch)
+                call self%bc_advective_operator(iop)%op%init_bc_coupling(mesh,bc_patch)
 
-        end do !iop
+            end do !iop
+        end if
 
     end subroutine init_bc_coupling
     !**********************************************************************************************
@@ -408,7 +417,7 @@ contains
         integer(ik) :: ncoupled_elems
 
 
-        ncoupled_elems = self%coupled_elems(ielem)%size()
+        ncoupled_elems = self%bc_patch%coupled_elements(ielem)%size()
 
 
     end function get_ncoupled_elems
@@ -443,13 +452,14 @@ contains
     !!  @param[inout]   prop    properties_t object containing equationset properties and material_t objects
     !!
     !---------------------------------------------------------------------------------------------
-    subroutine apply(self,mesh,sdata,prop)
+    subroutine compute_bc_operators(self,mesh,sdata,prop)
         class(bc_t),            intent(inout)   :: self
         type(mesh_t),           intent(in)      :: mesh(:)
         class(solverdata_t),    intent(inout)   :: sdata
         class(properties_t),    intent(inout)   :: prop
 
-        integer(ik) :: ielem_bc, idomain_l, ielement_l, ielement_c, iface, idonor, iflux, icoupled_elem, ncoupled_elems
+        integer(ik) :: ielem_bc, idomain_l, ielement_l, ielement_c, iface, idonor, iflux, &
+                       icoupled_elem, ncoupled_elems, iop
 
         type(chidg_worker_t)    :: worker
 
@@ -460,10 +470,10 @@ contains
         !
         ! Loop through associated boundary condition elements and call compute routine for the boundary flux calculation
         !
-        do ielem_bc = 1,size(self%elems)
-            idomain_l   = self%dom(ielem_bc)
-            ielement_l  = self%elems(ielem_bc)   ! Get index of the element being operated on
-            iface       = self%faces(ielem_bc)   ! Get face index of element 'ielem' that is being operated on
+        do ielem_bc = 1,self%bc_patch%nfaces()
+            idomain_l   = self%bc_patch%idomain_l(ielem_bc)
+            ielement_l  = self%bc_patch%ielement_l(ielem_bc)    ! Get index of the element being operated on
+            iface       = self%bc_patch%iface(ielem_bc)         ! Get face index of element 'ielem' that is being operated on
 
 
             worker%face_info%idomain_g  = mesh(idomain_l)%elems(ielement_l)%idomain_g
@@ -477,40 +487,42 @@ contains
             worker%function_info%idiff    = BC_BLK  ! Indicates to storage routine in LHS to store in BC section.
 
 
-            do iop = 1,size(self%bc_advective_operator)
-            
-                ! For current element, get number of coupled elements.
-                ncoupled_elems = self%get_ncoupled_elems(ielem_bc)
+            if (allocated(self%bc_advective_operator)) then
+                do iop = 1,size(self%bc_advective_operator)
+                
+                    ! For current element, get number of coupled elements.
+                    ncoupled_elems = self%get_ncoupled_elems(ielem_bc)
 
 
-                ! Compute current element function enough times to linearize all the coupled elements.
-                ! If no coupling accross the face, the ncoupled_elems=1 for just the local interior element.
-                do icoupled_elem = 1,ncoupled_elems
+                    ! Compute current element function enough times to linearize all the coupled elements.
+                    ! If no coupling accross the face, the ncoupled_elems=1 for just the local interior element.
+                    do icoupled_elem = 1,ncoupled_elems
 
-                    !
-                    ! Get coupled element to linearize against.
-                    !
-                    ielement_c = self%coupled_elems(ielem_bc)%at(icoupled_elem)
-                    worker%function_info%seed%idomain_g  = mesh(idomain_l)%elems(ielement_c)%idomain_g
-                    worker%function_info%seed%idomain_l  = mesh(idomain_l)%elems(ielement_c)%idomain_l
-                    worker%function_info%seed%ielement_g = mesh(idomain_l)%elems(ielement_c)%ielement_g
-                    worker%function_info%seed%ielement_l = mesh(idomain_l)%elems(ielement_c)%ielement_l
-                    worker%function_info%seed%iproc      = IRANK
+                        !
+                        ! Get coupled element to linearize against.
+                        !
+                        ielement_c = self%bc_patch%coupled_elements(ielem_bc)%at(icoupled_elem)
+                        worker%function_info%seed%idomain_g  = mesh(idomain_l)%elems(ielement_c)%idomain_g
+                        worker%function_info%seed%idomain_l  = mesh(idomain_l)%elems(ielement_c)%idomain_l
+                        worker%function_info%seed%ielement_g = mesh(idomain_l)%elems(ielement_c)%ielement_g
+                        worker%function_info%seed%ielement_l = mesh(idomain_l)%elems(ielement_c)%ielement_l
+                        worker%function_info%seed%iproc      = IRANK
 
-                    !
-                    ! For the current boundary element(face), call specialized compute procedure.
-                    !
-                    call self%compute(worker,prop)
+                        !
+                        ! For the current boundary element(face), call specialized compute procedure.
+                        !
+                        call self%bc_advective_operator(iop)%op%compute(worker,prop)
 
-                end do !ielem_c
+                    end do !ielem_c
 
-            end do !iop
+                end do !iop
+            end if
 
 
         end do !ielem_bc
 
 
-    end subroutine apply
+    end subroutine compute_bc_operators
     !********************************************************************************************
 
 
@@ -530,7 +542,7 @@ contains
     !!
     !!
     !-------------------------------------------------------------------------------------------------
-    subroutine add_operator(self,bc_operator)
+    subroutine add_bc_operator(self,bc_operator)
         class(bc_t),            intent(inout)   :: self
         class(bc_operator_t),   intent(in)      :: bc_operator
 
@@ -547,7 +559,7 @@ contains
             if (ierr /= 0) call AllocationError
 
             ! Copy previously added operators to temp
-            do iop = 1,size(bc_advective_operator)
+            do iop = 1,size(self%bc_advective_operator)
                 allocate(temp(iop)%op, source=self%bc_advective_operator(iop)%op, stat=ierr)
                 if (ierr /= 0) call AllocationError
             end do
@@ -574,7 +586,7 @@ contains
         call move_alloc(temp, self%bc_advective_operator)
 
 
-    end subroutine add_operator
+    end subroutine add_bc_operator
     !**************************************************************************************************
 
 

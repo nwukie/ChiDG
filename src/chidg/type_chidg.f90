@@ -1,12 +1,13 @@
 module type_chidg
 #include <messenger.h>
     use mod_constants,              only: NFACES
-    use mod_equations,              only: register_equations
+    use mod_equations,              only: register_equation_builders
+    use mod_operators,              only: register_operators
     use mod_bc,                     only: register_bcs
     use mod_function,               only: register_functions
     use mod_grid,                   only: initialize_grid
     use mod_io,                     only: read_input
-    use mod_string_utilities,       only: get_file_extension
+    use mod_string,                 only: get_file_extension
 
     use type_chidg_data,            only: chidg_data_t
     use type_time_scheme,           only: time_scheme_t
@@ -28,7 +29,7 @@ module type_chidg
     use mod_chidg_mpi,              only: chidg_mpi_init, chidg_mpi_finalize, ChiDG_COMM, IRANK, NRANK
     use mpi_f08
 
-    use mod_hdfio,                  only: read_grid_hdf, read_grid_partition_hdf, read_boundaryconditions_hdf, read_boundaryconditions_partition_hdf, &
+    use mod_hdfio,                  only: read_grid_partition_hdf, read_boundaryconditions_partition_hdf, &
                                           read_solution_hdf, write_solution_hdf, read_connectivity_hdf
     use mod_partitioners,           only: partition_connectivity, send_partitions, recv_partition
     implicit none
@@ -126,7 +127,8 @@ contains
 
             ! Order matters here. Functions need to come first. Used by equations and bcs.
             call register_functions()
-            call register_equations()
+            call register_equation_builders()
+            call register_operators()
             call register_bcs()
 
             call initialize_grid()
@@ -476,11 +478,12 @@ contains
             dname = bcdata(idom)%domain_
             do iface = 1,NFACES
 
-                if ( allocated(bcdata(idom)%bcs(iface)%bc) ) then
-                    if ( trim(bcdata(idom)%bcs(iface)%bc%name) /= "empty" ) then
-                        call self%data%add_bc(dname, bcdata(idom)%bcs(iface)%bc, bcdata(idom)%bc_connectivity(iface))
-                    end if
-                end if
+                !if ( allocated(bcdata(idom)%bcs(iface)%bc) ) then
+                !    if ( trim(bcdata(idom)%bcs(iface)%bc%name) /= "empty" ) then
+                !        call self%data%add_bc(dname, bcdata(idom)%bcs(iface)%bc, bcdata(idom)%bc_connectivity(iface))
+                !    end if
+                !end if
+                call self%data%add_bc(dname, bcdata(idom)%bcs(iface), bcdata(idom)%bc_connectivity(iface))
 
             end do !iface
 

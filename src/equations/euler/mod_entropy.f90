@@ -53,15 +53,15 @@ contains
 
 
         !& DEBUG - HARDCODED EQUATION SET
-        associate (mesh => data%mesh, sdata => data%sdata, eqnset => data%eqnset, prop => data%eqnset(1)%item%prop)
+        associate (mesh => data%mesh, sdata => data%sdata, eqnset => data%eqnset, prop => data%eqnset(1)%prop)
 
 
             ! Get equation indices
-            irho  = prop%get_eqn_index('rho')
-            irhou = prop%get_eqn_index('rhou')
-            irhov = prop%get_eqn_index('rhov')
-            irhow = prop%get_eqn_index('rhow')
-            irhoE = prop%get_eqn_index('rhoE')
+            irho  = prop%get_equation_index("Density")
+            irhou = prop%get_equation_index("X-Momentum")
+            irhov = prop%get_equation_index("Y-Momentum")
+            irhow = prop%get_equation_index("Z-Momentum")
+            irhoE = prop%get_equation_index("Density")
 
 
             !

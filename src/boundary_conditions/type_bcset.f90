@@ -59,7 +59,7 @@ contains
 
         integer(ik) :: ibc, ierr
 
-        type(bc_t),     allocatable     :: temp_bcs(:)
+        type(bc_t), allocatable :: temp_bcs(:)
 
 
         !
@@ -87,7 +87,6 @@ contains
         ! Allocate new boundary condition
         !
         temp_bcs(self%nbcs) = bc
-!        allocate(temp_bcs(self%nbcs)%bc, source=bc)     ! I think this should source all of the data as well, like an assign
 
 
         !
@@ -130,13 +129,7 @@ contains
         !
         do ibc = 1,size(self%bcs)
 
-            !
-            ! Only apply if there is an allocated boundary condition in the current slot
-            !
-            if (allocated(self%bcs(ibc)%bc)) then
-                !call self%bcs(ibc)%bc%apply(mesh,sdata,prop)
-                call self%bcs(ibc)%apply(mesh,sdata,prop)
-            end if
+            call self%bcs(ibc)%compute_bc_operators(mesh,sdata,prop)
 
         end do
 
@@ -179,14 +172,14 @@ contains
         ! Loop through bcs and assemble coupling information
         !
         do ibc = 1,self%nbcs
-            if ( allocated(self%bcs(ibc)%bc) ) then
-
                 !bcset_coupling%bc(ibc)%elems         = self%bcs(ibc)%bc%elems
                 !bcset_coupling%bc(ibc)%coupled_elems = self%bcs(ibc)%bc%coupled_elems
-                bcset_coupling%bc(ibc)%elems         = self%bcs(ibc)%bc_patch%ielement_l%data()
-                bcset_coupling%bc(ibc)%coupled_elems = self%bcs(ibc)%bc_patch%coupled_elements
 
-            end if
+                ! Only copy if there is data to copy. Or else, coupled_elements will not be allocated
+                if (self%bcs(ibc)%bc_patch%ielement_l_%size() > 0) then
+                    bcset_coupling%bc(ibc)%elems         = self%bcs(ibc)%bc_patch%ielement_l_%data()
+                    bcset_coupling%bc(ibc)%coupled_elems = self%bcs(ibc)%bc_patch%coupled_elements
+                end if
         end do ! ibc
 
 

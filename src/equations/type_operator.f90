@@ -49,7 +49,7 @@ module type_operator
             import chidg_worker_t
             import properties_t
 
-            class(operator_t),      intent(in)      :: self
+            class(operator_t),      intent(inout)   :: self
             type(chidg_worker_t),   intent(inout)   :: worker
             class(properties_t),    intent(inout)   :: prop
         end subroutine
@@ -219,7 +219,6 @@ contains
         type(string_t), allocatable  :: temp(:)
 
 
-
         !
         ! Extend eqns if necessary
         !
@@ -242,7 +241,7 @@ contains
         !
         ! Set new variable
         !
-        temp(size(temp))%str = string
+        call temp(size(temp))%set(string)
 
 
         !

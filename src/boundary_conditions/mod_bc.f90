@@ -11,9 +11,9 @@
 !--------------------------------------------------------
 module mod_bc
 #include <messenger.h>
-    use mod_kinds,      only: rk,ik
-    use type_bc,        only: bc_t
-    use type_bcvector,  only: bcvector_t
+    use mod_kinds,          only: rk,ik
+    use type_bc_operator,   only: bc_operator_t
+    use type_bcvector,      only: bcvector_t
 
     !
     ! Import boundary conditions
@@ -126,7 +126,8 @@ contains
             nbcs = registered_bcs%size()
             do ibc = 1,nbcs
 
-                call registered_bcs%data(ibc)%bc%add_options()
+                call registered_bcs%data(ibc)%op%add_options()
+                call registered_bcs%data(ibc)%op%init()
 
             end do
 
@@ -136,6 +137,7 @@ contains
             initialized = .true.
 
         end if
+
 
     end subroutine register_bcs
     !********************************************************************************************
@@ -159,8 +161,8 @@ contains
     !!
     !----------------------------------------------------------------------------------------------------
     subroutine create_bc(bcstring,bc)
-        character(*),                   intent(in)      :: bcstring
-        class(bc_t),    allocatable,    intent(inout)   :: bc
+        character(*),                           intent(in)      :: bcstring
+        class(bc_operator_t),   allocatable,    intent(inout)   :: bc
 
         integer(ik) :: ierr, bcindex
 
@@ -171,31 +173,17 @@ contains
 
 
 
-        !
         ! Find boundary condition string in 'registered_bcs' vector
-        !
         bcindex = registered_bcs%index_by_name(trim(bcstring))
-
-
-
-        !
-        ! Check boundary condition was found in 'registered_bcs'
-        !
         if (bcindex == 0) call chidg_signal_one(FATAL,"create_bc: boundary condition not recognized", trim(bcstring))
 
 
-
-        !
         ! Allocate conrete bc_t instance
-        !
-        allocate(bc, source=registered_bcs%data(bcindex)%bc, stat=ierr)
+        allocate(bc, source=registered_bcs%data(bcindex)%op, stat=ierr)
         if (ierr /= 0) call chidg_signal(FATAL,"create_bc: error allocating boundary condition from global vector.")
 
 
-
-        !
         ! Check boundary condition was allocated
-        !
         if ( .not. allocated(bc) ) call chidg_signal(FATAL,"create_bc: error allocating concrete boundary condition.")
 
 
@@ -225,7 +213,7 @@ contains
 
         do ibc = 1,nbcs
 
-            bcname = registered_bcs%data(ibc)%bc%get_name()
+            bcname = registered_bcs%data(ibc)%op%get_name()
             call write_line(trim(bcname))
 
         end do ! ieqn
@@ -239,7 +227,28 @@ contains
 
 
 
+    !>
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   9/1/2016
+    !!
+    !!
+    !!
+    !------------------------------------------------------------------------------------------------------
+    function check_bc_operator_exists(opstring) result(operator_found)
+        character(len=*),   intent(in)  :: opstring
 
+        integer(ik) :: opindex
+        logical     :: operator_found
+
+        ! Find boundary condition string in 'registered_bcs' vector
+        opindex = registered_bcs%index_by_name(trim(opstring))
+
+        ! Set status of operator_found
+        operator_found = (opindex /= 0)
+
+    end function check_bc_operator_exists
+    !*******************************************************************************************************
 
 
 

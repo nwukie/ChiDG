@@ -96,7 +96,7 @@ contains
                 do idom = 1,data%ndomains()
                     do ielem = 1,data%mesh(idom)%nelem
 
-                        do ieqn = 1,data%eqnset(idom)%item%neqns
+                        do ieqn = 1,data%eqnset(idom)%prop%nequations()
                             vals = matmul(data%mesh(idom)%elems(ielem)%invmass, rhs%dom(idom)%vecs(ielem)%getvar(ieqn))
                             call rhs%dom(idom)%vecs(ielem)%setvar(ieqn,vals)
                         end do

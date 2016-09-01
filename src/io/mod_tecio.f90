@@ -68,9 +68,9 @@ contains
         !
         ! TODO: Generalized TECIO for different equation set in each domain.
         !
-        do while (ieq <= data%eqnset(1)%item%neqns)
+        do while (ieq <= data%eqnset(1)%prop%nequations())
             !varstring = trim(varstring)//" "//trim(domain%eqnset%eqns(ieq)%name)
-            varstring = trim(varstring)//" "//trim(data%eqnset(1)%item%prop%eqns(ieq)%name)
+            varstring = trim(varstring)//" "//trim(data%eqnset(1)%prop%eqns(ieq)%name)
             ieq = ieq + 1
         end do
 
@@ -144,7 +144,7 @@ contains
 
 
             ! For each variable in equation set, compute value pointwise and save
-            do ivar = 1,data%eqnset(idom)%item%neqns
+            do ivar = 1,data%eqnset(idom)%prop%nequations()
 
                 do ielem_zeta = 1,nelem_zeta
                     do ipt_zeta = 1,zetalim
@@ -278,8 +278,8 @@ contains
         !
         ! TODO: Generalized TECIO for different equation set in each domain.
         !
-        do while (ieq <= data%eqnset(1)%item%neqns)
-            varstring = trim(varstring)//" "//trim(data%eqnset(1)%item%prop%eqns(ieq)%name)
+        do while (ieq <= data%eqnset(1)%prop%nequations())
+            varstring = trim(varstring)//" "//trim(data%eqnset(1)%prop%eqns(ieq)%name)
             ieq = ieq + 1
         end do
 
@@ -346,7 +346,7 @@ contains
 
 
             ! For each variable in equation set, compute value pointwise and save
-            do ivar = 1,data%eqnset(idom)%item%neqns
+            do ivar = 1,data%eqnset(idom)%prop%nequations()
 
                 ! For each actual element, create a sub-sampling of elements to resolve solution variation
                 do ielem = 1,nelem

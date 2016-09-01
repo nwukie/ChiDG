@@ -36,91 +36,7 @@ module mod_equations
 
 
 
-
-!    !>
-!    !!
-!    !!
-!    !!
-!    !!
-!    !---------------------------------------------------------------------------------------------
-!    type, public :: equation_builder_t
-!
-!        type(string_t)  :: name
-!
-!    contains
-!
-!        procedure(init_interface),  deferred    :: init
-!        procedure(build_interface), deferred    :: build
-!
-!        procedure                               :: set_name
-!        procedure                               :: get_name
-!
-!    end type equation_builder_t
-!    !*********************************************************************************************
-!    abstract interface
-!        subroutine init_interface(self)
-!            import equation_builder_t
-!
-!            class(equation_builder_t),  intent(inout)   :: self
-!        end subroutine
-!    end interface
-!
-!    abstract interface
-!        function build_interface(self,blueprint)
-!            import equation_builder_t
-!
-!            class(equation_builder_t),  intent(in)  :: self
-!            character(len=*),           intent(in)  :: blueprint
-!        end function
-!    end interface
-!    !*********************************************************************************************
-
 contains
-
-
-!    !>
-!    !!
-!    !!
-!    !!
-!    !!
-!    !---------------------------------------------------------------------------------------------
-!    subroutine set_name(self,string)
-!        class(equation_builder_t),  intent(inout)   :: self
-!        character(len=*),           intent(in)      :: string
-!
-!        self%name = string
-!
-!    end subroutine set_name
-!    !*********************************************************************************************
-!    
-!
-!    
-!
-!    !>
-!    !!
-!    !!
-!    !!
-!    !!
-!    !!
-!    !---------------------------------------------------------------------------------------------
-!    function get_name(self) result(builder_name)
-!        class(equation_builder_t),  intent(in)  :: self
-!
-!        character(len=:), allocatable   :: builder_name
-!
-!        builder_name = self%name%str
-!
-!    end function get_name
-!    !*********************************************************************************************
-
-
-
-
-
-
-
-
-
 
 
 
@@ -136,7 +52,7 @@ contains
     !!
     !-----------------------------------------------------------------------------------
     subroutine register_equation_builders()
-        integer :: neqns, ieqn
+        integer :: ibuild
 
         !
         ! Instantiate Equations
@@ -151,6 +67,13 @@ contains
 
             ! Register in global vector
             call registered_equation_builders%push_back(euler_builder)
+
+
+
+            ! Initialize each builder
+            do ibuild = 1,registered_equation_builders%size()
+                call registered_equation_builders%data(ibuild)%bld%init()
+            end do
 
             ! Confirm initialization
             initialized = .true.
@@ -180,25 +103,28 @@ contains
         character(len=*),   intent(in)      :: eqnstring
         character(len=*),   intent(in)      :: blueprint
 
-        integer                 :: ierr, bindex
-        type(equation_set_t)    :: eqnset
+        integer                                 :: ierr, bindex
+        type(equation_set_t)                    :: eqnset
+        class(equation_builder_t), allocatable  :: builder
 
         !
         ! Find equation set in 'available_equations' vector
         !
-        bindex = registered_equations%index_by_name(eqnstring)
+        bindex = registered_equation_builders%index_by_name(eqnstring)
 
 
         !
         ! Check equationset was found in 'available_equations'
         !
-        if (bindex == 0) call chidg_signal_one(FATAL,"create_equationset: equation string not recognized", trim(eqnstring))
+        if (bindex == 0) call chidg_signal_one(FATAL,"build_equation_set: equation string not recognized", trim(eqnstring))
 
 
         !
         ! Get equation set builder
         !
-        builder = registered_equation_builders%at(bindex)
+        !builder = registered_equation_builders%at(bindex)
+        allocate(builder, source=registered_equation_builders%at(bindex), stat=ierr)
+        if (ierr /= 0) call AllocationError
 
 
         !
@@ -232,7 +158,7 @@ contains
 
         do ieqn = 1,neqns
 
-            ename = registered_equation_builders%data(ieqn)%get_name()
+            ename = registered_equation_builders%data(ieqn)%bld%get_name()
             call write_line(trim(ename))
 
         end do ! ieqn

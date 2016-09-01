@@ -8,6 +8,8 @@ module mod_string
         procedure   :: upper
         procedure   :: set
         procedure   :: get
+!        procedure, private :: write_formatted
+!        generic :: write(formatted) => write_formatted
     end type string_t
 
 
@@ -89,6 +91,21 @@ contains
 
 
 
+!    !>
+!    !!
+!    !!
+!    !!
+!    !!
+!    !!
+!    !!
+!    !---------------------------------------------------------------------------------------------
+!    subroutine write_formatted(self)
+!        class(string_t),    intent(in)  :: self
+!
+!        print*, 
+!
+!    end subroutine write_formatted
+!    !**********************************************************************************************
 
 
 

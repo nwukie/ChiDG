@@ -1,12 +1,8 @@
 module bc_periodic
 #include <messenger.h>
-    use type_bc,            only: bc_t
+    use type_bc_operator,   only: bc_operator_t
     use type_chidg_worker,  only: chidg_worker_t
     use type_properties,    only: properties_t
-!    use type_solverdata,    only: solverdata_t
-!    use type_mesh,          only: mesh_t
-!    use type_face_info,     only: face_info_t
-!    use type_function_info, only: function_info_t
     implicit none
 
 
@@ -19,12 +15,13 @@ module bc_periodic
     !!  @date   1/31/2016
     !!
     !--------------------------------------------------------------------------------
-    type, extends(bc_t) :: periodic_t
+    type, extends(bc_operator_t) :: periodic_t
 
     contains
 
-        procedure add_options
-        procedure compute
+        procedure   :: add_options
+        procedure   :: init
+        procedure   :: compute
 
     end type periodic_t
     !********************************************************************************
@@ -68,6 +65,30 @@ contains
     end subroutine add_options
     !******************************************************************************************
 
+
+
+
+    !>
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   8/29/2016
+    !!
+    !--------------------------------------------------------------------------------
+    subroutine init(self)
+        class(periodic_t),   intent(inout) :: self
+        
+        !
+        ! Set operator name
+        !
+        call self%set_name("periodic")
+
+        !
+        ! Set operator type
+        !
+        call self%set_operator_type("Boundary Advective Flux")
+
+    end subroutine init
+    !********************************************************************************
 
 
 

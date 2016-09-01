@@ -2,6 +2,8 @@ module mod_hdf_utilities
 #include <messenger.h>
     use mod_kinds,              only: rk, ik
     use mod_constants,          only: NFACES, TWO_DIM, THREE_DIM
+    use type_svector,           only: svector_t
+    use mod_string,             only: string_t
     use type_file_properties,   only: file_properties_t
     use hdf5
     use h5lt
@@ -857,7 +859,10 @@ contains
 
         integer(HID_T)                      :: bc_id, bcface_id
         integer(ik)                         :: ndom, ierr, idom, iface
-        character(len=1024), allocatable    :: bcnames(:)
+        integer                             :: igroup, nmembers, type
+        !character(len=1024), allocatable    :: bcnames(:)
+        type(svector_t),    allocatable     :: bcnames(:)
+        character(len=1024)                 :: gname
         character(len=10)                   :: faces(NFACES)
         logical                             :: exists, bcname_exists
 
@@ -906,34 +911,49 @@ contains
             call h5gopen_f(bc_id, trim(adjustl(faces(iface))), bcface_id, ierr)
             if (ierr /= 0) call chidg_signal(FATAL,"get_bcnames_hdf: h5gopen_f - bcface (ex. XI_MIN)")
 
+
             !
-            ! Check if boundary condition name attribute exists
+            !  Get number of groups linked to the current bc_op
             !
-            call h5aexists_f(bcface_id, "bc_name", bcname_exists, ierr)
+            call h5gn_members_f(bcface_id, ".", nmembers, ierr)
 
 
-            if ( bcname_exists ) then
-                call h5ltget_attribute_string_f(bc_id, trim(adjustl(faces(iface))), "bc_name", bcnames(iface), ierr)
-            else
-                call h5ltset_attribute_string_f(bc_id, trim(adjustl(faces(iface))), "bc_name", "empty", ierr)
-                call h5ltget_attribute_string_f(bc_id, trim(adjustl(faces(iface))), "bc_name", bcnames(iface), ierr)
+            !
+            !  Loop through members and add bc_operators if any exist
+            !
+            if (nmembers > 0) then
+
+                do igroup = 0,nmembers-1
+
+                    ! Get group name
+                    call h5gget_obj_info_idx_f(bcface_id, ".", igroup, gname, type, ierr)
+                    if (ierr /= 0) call chidg_signal(FATAL,"get_bcnames_hdf: error getting boundary condition group name")
+
+                    ! Test if group is a boundary condition operator. 'BCO_'
+                    if (gname(1:4) == 'BCO_') then
+                        call bcnames(iface)%push_back(string_t(trim(gname(5:))))
+                    end if
+
+                end do
+
             end if
-            if (ierr /= 0) call chidg_signal(FATAL,"get_bcnames_hdf: h5ltget_attribute_string")
 
-    
+
+            ! Set empty string if none detected
+            if (bcnames(iface)%size() == 0) then
+                call bcnames(iface)%push_back(string_t('empty'))
+            end if
+
             
-            !
             ! Close boundary condition face group
-            !
             call h5gclose_f(bcface_id,ierr)
             if (ierr /= 0) call chidg_signal(FATAL,"get_bcnames_hdf: h5gclose.")
 
-        end do
+
+        end do !iface
 
 
-        !
         ! Close the boundary condition group
-        ! 
         call h5gclose_f(bc_id,ierr)
         if (ierr /= 0) call chidg_signal(FATAL,"get_bcnames_hdf: h5gclose.")
 

@@ -31,14 +31,12 @@ contains
     !!
     !----------------------------------------------------------------------------------------------------
     subroutine register_operators()
+        integer(ik) :: iop
 
         type(euler_volume_operator_t)           :: euler_volume_operator
         type(euler_boundary_average_operator_t) :: euler_average_operator
         type(euler_roe_operator_t)              :: euler_roe_operator
         type(euler_laxfriedrichs_operator_t)    :: euler_laxfriedrichs_operator
-
-
-
 
 
 
@@ -52,6 +50,13 @@ contains
             call registered_operators%push_back(euler_average_operator)
             call registered_operators%push_back(euler_roe_operator)
             call registered_operators%push_back(euler_laxfriedrichs_operator)
+
+
+            ! Initialize all operators
+            do iop = 1,registered_operators%size()
+                call registered_operators%data(iop)%op%init()
+            end do
+            
 
             operators_initialized = .true.
 

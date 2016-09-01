@@ -14,6 +14,7 @@ add_lib_sources(
                 type_bcvector.f90
                 type_ovector.f90
                 type_fcnvector.f90
+                type_svector.f90
                 #type_vector.f90
                 type_chidgMatrix.f90
                 type_chidgVector.f90

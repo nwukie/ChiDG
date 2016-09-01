@@ -11,15 +11,17 @@ module type_chidg_data
     use type_mesh,                      only: mesh_t
     use type_bcset,                     only: bcset_t
     use type_bc,                        only: bc_t
-    use type_equationset_wrapper,       only: equationset_wrapper_t
+    use type_bc_operator,               only: bc_operator_t
+    use type_bcvector,                  only: bcvector_t
+    use type_equation_set,              only: equation_set_t
     use type_solverdata,                only: solverdata_t
 
     use type_equationset_function_data, only: equationset_function_data_t
     use type_bcset_coupling,            only: bcset_coupling_t
 
     ! Factory methods
-    use mod_equations,                  only: create_equationset
-    use mod_bc,                         only: create_bc
+    use mod_equations,                  only: build_equation_set
+!    use mod_bc,                         only: create_bc
 
 
     implicit none
@@ -52,9 +54,9 @@ module type_chidg_data
 
         type(mesh_t),                   allocatable :: mesh(:)          !< Array of mesh instances. One for each domain.
         type(bcset_t),                  allocatable :: bcset(:)         !< Array of boundary condition set instances. One for each domain.
-        !type(equationset_wrapper_t),    allocatable :: eqnset(:)        !< Array of equation set instances. One for each domain.
         type(equation_set_t),           allocatable :: eqnset(:)        !< Array of equation set instances. One for each domain.
         type(solverdata_t)                          :: sdata            !< Solver data container for solution vectors and matrices
+!        type(equationset_wrapper_t),    allocatable :: eqnset(:)        !< Array of equation set instances. One for each domain.
 
 
 !        type(mesh_t),       allocatable :: mesh(:)
@@ -120,7 +122,8 @@ contains
         if ( ierr /= 0 ) call AllocationError
 
         do idom = 1,self%ndomains()
-            function_data(idom) = self%eqnset(idom)%item%function_data
+            !function_data(idom) = self%eqnset(idom)%item%function_data
+            function_data(idom) = self%eqnset(idom)%function_data
         end do
 
 
@@ -134,7 +137,6 @@ contains
         do idom = 1,self%ndomains()
             bcset_coupling(idom) = self%bcset(idom)%get_bcset_coupling()
         end do
-
 
 
         !
@@ -180,7 +182,7 @@ contains
         type(domaininfo_t),             allocatable :: temp_info(:)
         type(mesh_t),                   allocatable :: temp_mesh(:)
         type(bcset_t),                  allocatable :: temp_bcset(:)
-        type(equationset_wrapper_t),    allocatable :: temp_eqnset(:)
+        type(equation_set_t),           allocatable :: temp_eqnset(:)
 
 
 
@@ -237,7 +239,8 @@ contains
         !
         ! Allocate equation set
         !
-        call create_equationset(eqnset,temp_eqnset(idomain_l)%item)
+        !call create_equationset(eqnset,temp_eqnset(idomain_l)%item)
+        temp_eqnset(idomain_l) = build_equation_set(eqnset,'default')
 
 
         !
@@ -248,6 +251,7 @@ contains
         call move_alloc(temp_mesh,self%mesh)
         call move_alloc(temp_bcset,self%bcset)
         call move_alloc(temp_eqnset,self%eqnset)
+
 
 
     end subroutine add_domain
@@ -276,14 +280,15 @@ contains
     !!  @param[in]  options     Boundary condition options dictionary
     !!
     !---------------------------------------------------------------------------------------------------------------
-    subroutine add_bc(self,domain,bc,bc_connectivity)
+    subroutine add_bc(self,domain,bc_ops,bc_connectivity)
         class(chidg_data_t),            intent(inout)   :: self
         character(*),                   intent(in)      :: domain
-        class(bc_t),                    intent(inout)   :: bc
+        type(bcvector_t),               intent(inout)   :: bc_ops
         type(boundary_connectivity_t),  intent(in)      :: bc_connectivity
 
-        integer(ik)                 :: idom, ierr
-        class(bc_t), allocatable    :: bc_copy
+        integer(ik)                         :: idom, ierr, iop
+        type(bc_t)                          :: bc
+        class(bc_operator_t), allocatable   :: bc_op
 
 
         !
@@ -293,25 +298,30 @@ contains
 
 
         !
-        ! Create a copy of the incoming boundary condition. The copy can then be initialized with a domain geometry
+        ! Add all bc_operators
         !
-        allocate(bc_copy, source=bc, stat=ierr)
-        if ( ierr /= 0 ) call AllocationError
+        do iop = 1,bc_ops%size()
 
+            ! Get boundary condition operator
+            allocate(bc_op, source=bc_ops%at(iop), stat=ierr)
+            if (ierr /= 0) call AllocationError
+
+            ! Add boundary condition operator
+            call bc%add_bc_operator(bc_op)
+
+        end do !iop
 
 
         !
         ! Initialize new boundary condition from mesh data and face index
         !
-        call bc_copy%init_bc(self%mesh(idom),bc_connectivity)
-
+        call bc%init_bc(self%mesh(idom),bc_connectivity)
 
 
         !
         ! Add initialized boundary condition to bcset_t for domain 'idom'
         !
-        call self%bcset(idom)%add(bc_copy)
-
+        call self%bcset(idom)%add(bc)
 
 
     end subroutine add_bc
@@ -342,7 +352,7 @@ contains
 
         do idomain = 1,self%ndomains()
 
-            neqns = self%eqnset(idomain)%item%neqns
+            neqns = self%eqnset(idomain)%prop%nequations()
 
             !
             ! Initialize mesh numerics based on equation set and polynomial expansion order

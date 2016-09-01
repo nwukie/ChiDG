@@ -110,7 +110,7 @@ contains
                print*, 'Domain ', idom, 'Element ', ielem
 
 
-               do ivar = 1,chidg_target%data%eqnset(idom)%item%neqns
+               do ivar = 1,chidg_target%data%eqnset(idom)%prop%nequations()
 
 
                    !

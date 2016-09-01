@@ -76,9 +76,9 @@ contains
     !!
     !!------------------------------------------------------------------------------
     subroutine compute(self,worker,prop)
-        class(euler_volume_operator_t),   intent(in)      :: self
-        type(chidg_worker_t),                       intent(inout)   :: worker
-        class(properties_t),                        intent(inout)   :: prop
+        class(euler_volume_operator_t), intent(inout)   :: self
+        type(chidg_worker_t),           intent(inout)   :: worker
+        class(properties_t),            intent(inout)   :: prop
 
         ! Equation indices
         integer(ik)    :: irho, irhou, irhov, irhow, irhoE
@@ -93,11 +93,11 @@ contains
         !
         ! Get equation indices
         !
-        irho  = prop%get_equation_index("rho")
-        irhou = prop%get_equation_index("rhou")
-        irhov = prop%get_equation_index("rhov")
-        irhow = prop%get_equation_index("rhow")
-        irhoE = prop%get_equation_index("rhoE")
+        irho  = prop%get_equation_index("Density"   )
+        irhou = prop%get_equation_index("X-Momentum")
+        irhov = prop%get_equation_index("Y-Momentum")
+        irhow = prop%get_equation_index("Z-Momentum")
+        irhoE = prop%get_equation_index("Energy"    )
 
 
 

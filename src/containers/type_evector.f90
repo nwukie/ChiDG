@@ -228,12 +228,8 @@ contains
 
         neqns = self%size()
         
-        !
         ! Default, ind = 0. If 0 is ultimately returned, no entry was found.
-        !
         ind = 0
-
-
 
 
         !
@@ -241,24 +237,17 @@ contains
         !
         do ieqn = 1,neqns
 
-            !
             ! Get current equation set name
-            !
             ename = self%data(ieqn)%bld%get_name()
 
-            !
             ! Test name against key
-            !
             found = ( string_to_upper(trim(key)) == string_to_upper(trim(ename)) )
 
-            !
             ! Handle found
-            !
             if (found) then
                 ind = ieqn
                 exit
             end if
-
 
         end do ! ieqn
 

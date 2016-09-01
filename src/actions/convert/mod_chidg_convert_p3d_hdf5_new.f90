@@ -269,22 +269,9 @@ contains
             if (ierr /= 0) stop "Error: h5gcreate_f"
 
 
-            !!
-            !! Write grid-group attributes
-            !!
-            !call h5ltset_attribute_int_f(Grid_id, '.', 'nelem_xi',  [nelem_i], adim, ierr)
-            !call h5ltset_attribute_int_f(Grid_id, '.', 'nelem_eta', [nelem_j], adim, ierr)
-            !call h5ltset_attribute_int_f(Grid_id, '.', 'nelem_zeta',[nelem_k], adim, ierr)
-
             !
             ! Create dataspaces for grid coordinates
             !
-            !call h5screate_simple_f(3, dims, xspace_id, ierr)
-            !if (ierr /= 0) stop "Error: h5screate_simple_f"
-            !call h5screate_simple_f(3, dims, yspace_id, ierr)
-            !if (ierr /= 0) stop "Error: h5screate_simple_f"
-            !call h5screate_simple_f(3, dims, zspace_id, ierr)
-            !if (ierr /= 0) stop "Error: h5screate_simple_f"
             call h5screate_simple_f(1, dims_rank_one, xspace_id, ierr)
             if (ierr /= 0) stop "Error: h5screate_simple_f"
             call h5screate_simple_f(1, dims_rank_one, yspace_id, ierr)
@@ -296,12 +283,6 @@ contains
             !
             ! Create datasets for grid coordinates
             !
-            !call h5dcreate_f(Grid_id, 'CoordinateX', H5T_NATIVE_DOUBLE, xspace_id, xset_id, ierr)
-            !if (ierr /= 0) stop "Error: h5dcreate_f"
-            !call h5dcreate_f(Grid_id, 'CoordinateY', H5T_NATIVE_DOUBLE, yspace_id, yset_id, ierr)
-            !if (ierr /= 0) stop "Error: h5dcreate_f"
-            !call h5dcreate_f(Grid_id, 'CoordinateZ', H5T_NATIVE_DOUBLE, zspace_id, zset_id, ierr)
-            !if (ierr /= 0) stop "Error: h5dcreate_f"
             call h5dcreate_f(Grid_id, 'CoordinateX', H5T_NATIVE_DOUBLE, xspace_id, xset_id, ierr)
             if (ierr /= 0) stop "Error: h5dcreate_f"
             call h5dcreate_f(Grid_id, 'CoordinateY', H5T_NATIVE_DOUBLE, yspace_id, yset_id, ierr)
@@ -332,12 +313,6 @@ contains
             !
             ! Write coordinates to datasets
             !
-            !call h5dwrite_f(xset_id, H5T_NATIVE_DOUBLE, xcoords, dims, ierr)
-            !if (ierr /= 0) stop "Error: h5dwrite_f"
-            !call h5dwrite_f(yset_id, H5T_NATIVE_DOUBLE, ycoords, dims, ierr)
-            !if (ierr /= 0) stop "Error: h5dwrite_f"
-            !call h5dwrite_f(zset_id, H5T_NATIVE_DOUBLE, zcoords, dims, ierr)
-            !if (ierr /= 0) stop "Error: h5dwrite_f"
             call h5dwrite_f(xset_id, H5T_NATIVE_DOUBLE, xcoords_linear, dims_rank_one, ierr)
             if (ierr /= 0) stop "Error: h5dwrite_f"
             call h5dwrite_f(yset_id, H5T_NATIVE_DOUBLE, ycoords_linear, dims_rank_one, ierr)
@@ -351,7 +326,6 @@ contains
             !
             ! Generate element connectivities
             !
-            !info_size = 2               ! ielem, elem_type, ipt_1, ipt_2, ipt_3, ...
             info_size = 3               ! idomain, ielem, elem_type, ipt_1, ipt_2, ipt_3, ...
             dims_rank_two(1) = nelem
             dims_rank_two(2) = info_size + npts_element

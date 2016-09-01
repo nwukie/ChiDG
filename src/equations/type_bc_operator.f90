@@ -43,27 +43,8 @@ module type_bc_operator
         procedure   :: get_option_key                           !< Return the key for an option, given a property index and subsequent option index.
         procedure   :: get_option_value                         !< Return the value of a given key, inside of a specified property.
 
-
-!        procedure(compute_interface), deferred  :: compute      !< Implements boundary condition function
-
-
     end type bc_operator_t
     !*********************************************************************************************
-
-
-
-!    abstract interface
-!        subroutine compute_interface(self,worker,prop)
-!            use mod_kinds,  only: ik
-!            import bc_operator_t
-!            import chidg_worker_t
-!            import properties_t
-!
-!            class(bc_operator_t),   intent(inout)   :: self
-!            type(chidg_worker_t),   intent(inout)   :: worker
-!            class(properties_t),    intent(inout)   :: prop
-!        end subroutine
-!    end interface
 
 
 
@@ -99,7 +80,8 @@ contains
 
             ! Get block-element index of current ielem_bc
             !ielem = bc_patch%ielem(ibc_face)
-            ielem = bc_patch%ielement_l%at(ibc_face)
+            !ielem = bc_patch%ielement_l%at(ibc_face)
+            ielem = bc_patch%ielement_l(ibc_face)
 
             
             ! Add the element index as the only dependency.

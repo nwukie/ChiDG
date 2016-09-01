@@ -138,7 +138,7 @@ contains
 
 
                         call eqnset%compute_boundary_advective_operators(worker, idiff)
-                        call eqnset%compute_boundary_diffusive_operators(worker, idiff)
+!                        call eqnset%compute_boundary_diffusive_operators(worker, idiff)
 
 
                     end do  ! faces loop
@@ -148,7 +148,7 @@ contains
                     ! Compute volume fluxes
                     !
                     call eqnset%compute_volume_advective_operators(worker, idiff)
-                    call eqnset%compute_volume_diffusive_operators(worker, idiff)
+!                    call eqnset%compute_volume_diffusive_operators(worker, idiff)
 
 
 
@@ -170,7 +170,7 @@ contains
         ! Apply boundary conditions for each domain.
         !
         do idom = 1,data%ndomains()
-            call data%bcset(idom)%apply(data%mesh,data%sdata,data%eqnset(idom)%item%prop)
+            call data%bcset(idom)%apply(data%mesh,data%sdata,data%eqnset(idom)%prop)
         end do ! idom
 
 

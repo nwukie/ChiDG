@@ -27,6 +27,7 @@ module type_properties
 
     contains
 
+        procedure   :: nequations
         procedure   :: get_equation_index
         procedure   :: add_fluid
 
@@ -62,29 +63,65 @@ contains
         integer(ik) :: varindex, ieq
         logical     :: found = .false.
 
-        varindex = 123456789
+        varindex = 0
 
 
-        !
         ! Search for character string in self%eqns array. If found set index
-        !
-        do ieq = 1,size(self%eqns)
-            if (varstring == self%eqns(ieq)%name) then
-                varindex = self%eqns(ieq)%ind
-                found = .true.
-                exit
-            end if
-        end do
+        if (allocated(self%eqns)) then
+            do ieq = 1,size(self%eqns)
+                if (varstring == self%eqns(ieq)%name) then
+                    varindex = self%eqns(ieq)%ind
+                    found = .true.
+                    exit
+                end if
+            end do
+
+        else
+            varindex = 0
+        end if
 
 
-
-        !
-        ! Check if index was found
-        !
-        if (.not. found) call chidg_signal(FATAL,"Equation string not found in equation set properties")
+!        ! Check if index was found
+!        if (.not. found) call chidg_signal(FATAL,"Equation string not found in equation set properties")
 
     end function get_equation_index
     !***************************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+    !>
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   8/31/2016
+    !!
+    !!
+    !!
+    !---------------------------------------------------------------------------------------------------
+    function nequations(self) result(neqns)
+        class(properties_t),    intent(in)  :: self
+
+        integer(ik) :: neqns
+
+        if (allocated(self%eqns)) then
+            neqns = size(self%eqns)
+        else
+            neqns = 0
+        end if
+
+    end function nequations
+    !****************************************************************************************************
+
+
+
+
 
 
 

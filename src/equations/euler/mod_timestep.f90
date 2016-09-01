@@ -45,11 +45,11 @@ contains
         !
         ! Get variable indices
         !
-        irho  = data%eqnset(idom)%item%prop%get_eqn_index("rho")
-        irhou = data%eqnset(idom)%item%prop%get_eqn_index("rhou")
-        irhov = data%eqnset(idom)%item%prop%get_eqn_index("rhov")
-        irhow = data%eqnset(idom)%item%prop%get_eqn_index("rhow")
-        irhoE = data%eqnset(idom)%item%prop%get_eqn_index("rhoE")
+        irho  = data%eqnset(idom)%prop%get_equation_index("Density")
+        irhou = data%eqnset(idom)%prop%get_equation_index("X-Momentum")
+        irhov = data%eqnset(idom)%prop%get_equation_index("Y-Momentum")
+        irhow = data%eqnset(idom)%prop%get_equation_index("Z-Momentum")
+        irhoE = data%eqnset(idom)%prop%get_equation_index("Energy")
 
 
 
@@ -70,13 +70,13 @@ contains
                 !
                 ! Compute pressure
                 !
-                call data%eqnset(idom)%item%prop%fluid%compute_pressure(rho,rhou,rhov,rhow,rhoE,p)
+                call data%eqnset(idom)%prop%fluid%compute_pressure(rho,rhou,rhov,rhow,rhoE,p)
             
 
                 !
                 ! Compute cell sound speed
                 !
-                call data%eqnset(idom)%item%prop%fluid%compute_gamma(rho,rhou,rhov,rhow,rhoE,gam)
+                call data%eqnset(idom)%prop%fluid%compute_gamma(rho,rhou,rhov,rhow,rhoE,gam)
 
 
 

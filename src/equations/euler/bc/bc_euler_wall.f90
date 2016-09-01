@@ -2,7 +2,7 @@ module bc_euler_wall
     use mod_kinds,              only: rk,ik
     use mod_constants,          only: TWO, HALF, ZERO, ME
 
-    use type_bc,                only: bc_t
+    use type_bc_operator,       only: bc_operator_t
     use type_chidg_worker,      only: chidg_worker_t
     use type_properties,        only: properties_t
     use DNAD_D
@@ -16,11 +16,14 @@ module bc_euler_wall
     !!  @author Nathan A. Wukie
     !!
     !-------------------------------------------------------------------------------------------
-    type, public, extends(bc_t) :: euler_wall_t
+    type, public, extends(bc_operator_t) :: euler_wall_t
 
     contains
+
         procedure   :: add_options
-        procedure   :: compute    !> bc implementation
+        procedure   :: init         !> Set equations boundary condition is applied to
+        procedure   :: compute      !> bc implementation
+
     end type euler_wall_t
     !*******************************************************************************************
 
@@ -40,11 +43,6 @@ contains
     subroutine add_options(self)    
         class(euler_wall_t),  intent(inout)   :: self
 
-        !
-        ! Set name
-        !
-        call self%set_name('euler_wall')
-
 
         !
         ! Add functions
@@ -62,6 +60,38 @@ contains
 
 
 
+
+
+    !>
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   8/29/2016
+    !!
+    !--------------------------------------------------------------------------------
+    subroutine init(self)
+        class(euler_wall_t),   intent(inout) :: self
+        
+        !
+        ! Set operator name
+        !
+        call self%set_name("euler_wall")
+
+        !
+        ! Set operator type
+        !
+        call self%set_operator_type("Boundary Advective Flux")
+
+        !
+        ! Set operator equations
+        !
+        call self%set_equation("Density"   )
+        call self%set_equation("X-Momentum")
+        call self%set_equation("Y-Momentum")
+        call self%set_equation("Z-Momentum")
+        call self%set_equation("Energy"    )
+
+    end subroutine init
+    !********************************************************************************
 
 
 
@@ -107,11 +137,11 @@ contains
         !
         ! Get equation indices
         !
-        irho  = prop%get_eqn_index("rho")
-        irhou = prop%get_eqn_index("rhou")
-        irhov = prop%get_eqn_index("rhov")
-        irhow = prop%get_eqn_index("rhow")
-        irhoE = prop%get_eqn_index("rhoE")
+        irho  = prop%get_equation_index("Density")
+        irhou = prop%get_equation_index("X-Momentum")
+        irhov = prop%get_equation_index("Y-Momentum")
+        irhow = prop%get_equation_index("Z-Momentum")
+        irhoE = prop%get_equation_index("Energy")
 
 
 

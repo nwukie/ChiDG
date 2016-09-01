@@ -76,9 +76,9 @@ contains
     !!
     !!---------------------------------------------------------------------------
     subroutine compute(self,worker,prop)
-        class(euler_roe_operator_t),        intent(in)      :: self
-        type(chidg_worker_t),               intent(inout)   :: worker
-        class(properties_t),                intent(inout)   :: prop
+        class(euler_roe_operator_t),    intent(inout)   :: self
+        type(chidg_worker_t),           intent(inout)   :: worker
+        class(properties_t),            intent(inout)   :: prop
 
         ! Equation indices
         integer(ik)     :: irho, irhou, irhov, irhow, irhoE

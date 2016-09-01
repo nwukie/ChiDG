@@ -3,7 +3,7 @@ module bc_euler_totalinlet
     use mod_kinds,              only: rk,ik
     use mod_constants,          only: ONE, TWO, HALF, ZERO, ME
 
-    use type_bc,                only: bc_t
+    use type_bc_operator,       only: bc_operator_t
     use type_chidg_worker,      only: chidg_worker_t
     use type_properties,        only: properties_t
     use type_point,             only: point_t
@@ -20,11 +20,12 @@ module bc_euler_totalinlet
     !!  @date   2/8/2016
     !!
     !-------------------------------------------------------------------------------------------
-    type, public, extends(bc_t) :: euler_totalinlet_t
+    type, public, extends(bc_operator_t) :: euler_totalinlet_t
 
     contains
 
         procedure   :: add_options  !< Add boundary condition options
+        procedure   :: init
         procedure   :: compute      !< bc implementation
 
     end type euler_totalinlet_t
@@ -49,12 +50,6 @@ contains
         class(euler_totalinlet_t),  intent(inout)   :: self
 
         !
-        ! Set name
-        !
-        call self%set_name('euler_totalinlet')
-
-
-        !
         ! Add functions
         !
         call self%bcproperties%add('TotalPressure',   'Required')
@@ -77,6 +72,44 @@ contains
 
     end subroutine add_options
     !********************************************************************************************
+
+
+
+
+
+
+    !>
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   8/29/2016
+    !!
+    !--------------------------------------------------------------------------------
+    subroutine init(self)
+        class(euler_totalinlet_t),   intent(inout) :: self
+        
+        !
+        ! Set operator name
+        !
+        call self%set_name("euler_totalinlet")
+
+        !
+        ! Set operator type
+        !
+        call self%set_operator_type("Boundary Advective Flux")
+
+        !
+        ! Set operator equations
+        !
+        call self%set_equation("Density"   )
+        call self%set_equation("X-Momentum")
+        call self%set_equation("Y-Momentum")
+        call self%set_equation("Z-Momentum")
+        call self%set_equation("Energy"    )
+
+    end subroutine init
+    !********************************************************************************
+
+
 
 
 
@@ -128,11 +161,11 @@ contains
         !
         ! Get equation indices
         !
-        irho  = prop%get_eqn_index("rho")
-        irhou = prop%get_eqn_index("rhou")
-        irhov = prop%get_eqn_index("rhov")
-        irhow = prop%get_eqn_index("rhow")
-        irhoE = prop%get_eqn_index("rhoE")
+        irho  = prop%get_equation_index("Density"   )
+        irhou = prop%get_equation_index("X-Momentum")
+        irhov = prop%get_equation_index("Y-Momentum")
+        irhow = prop%get_equation_index("Z-Momentum")
+        irhoE = prop%get_equation_index("Energy"    )
 
 
         !
@@ -202,10 +235,12 @@ contains
         !& HARDCODED GAMMA. HARDCODED CP
         gam_m = 1.4_rk
 
-        select type(prop)
-            type is (EULER_properties_t)
-                cp_m  = (prop%R)*(gam_m/(gam_m-ONE))
-        end select
+!        select type(prop)
+!            type is (EULER_properties_t)
+!                cp_m  = (prop%R)*(gam_m/(gam_m-ONE))
+!        end select
+         cp_m  = 287.15_rk*(gam_m/(gam_m-ONE))
+
 
         T_bc = TT - (vmag2_m)/(TWO*cp_m)
         p_bc = PT*((T_bc/TT)**(gam_m/(gam_m-ONE)))
@@ -214,10 +249,11 @@ contains
         !
         ! Compute boundary condition density from ideal gas law
         !
-        select type(prop)
-            type is (EULER_properties_t)
-                rho_bc = p_bc/(T_bc*prop%R)
-        end select
+!        select type(prop)
+!            type is (EULER_properties_t)
+!                rho_bc = p_bc/(T_bc*prop%R)
+!        end select
+         rho_bc = p_bc/(T_bc*287.15_rk)
 
 
 

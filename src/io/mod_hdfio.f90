@@ -7,10 +7,12 @@ module mod_hdfio
     use mod_io,                     only: nterms_s
     use mod_chidg_mpi,              only: IRANK
 
+    use type_svector,               only: svector_t
+    use mod_string,                 only: string_t
     use type_chidg_data,            only: chidg_data_t
     use type_meshdata,              only: meshdata_t
     use type_bcdata,                only: bcdata_t
-    use type_bc,                    only: bc_t
+    use type_bc_operator,           only: bc_operator_t
     use type_domain_connectivity,   only: domain_connectivity_t
     use type_partition,             only: partition_t
     use hdf5
@@ -723,7 +725,7 @@ contains
            !
            !  Get variable index in EquationSet
            !
-           ivar = data%eqnset(idom)%item%prop%get_eqn_index(trim(varstring))
+           ivar = data%eqnset(idom)%prop%get_equation_index(trim(varstring))
   
   
            !
@@ -843,26 +845,31 @@ contains
 
 
 
+        print*, 'write variable - 1'
         !
         ! Check if 'Variables' group exists
         !
         call h5lexists_f(fid, trim(dname)//"/Variables", exists, ierr)
 
 
+        print*, 'write variable - 2'
 
         !
         ! Open the Domain/Variables group
         !
         if (exists) then
+        print*, 'write variable - 3'
             ! If 'Variables' group exists then open the existing group
             call h5gopen_f(fid, trim(dname)//"/Variables", gid, ierr, H5P_DEFAULT_F)
             if (ierr /= 0) call chidg_signal(FATAL,"write_variable_hdf: Domain/Variables group did not open properly")
         else
+        print*, 'write variable - 4'
             ! If 'Variables group does not exist, then create one.
             call h5gcreate_f(fid, trim(dname)//"/Variables", gid, ierr)
         end if
 
 
+        print*, 'write variable - 5'
 
         !
         ! Get total number of elements in the domain from the grid file
@@ -880,6 +887,7 @@ contains
 
 
 
+        print*, 'write variable - 6'
 
 
         !
@@ -896,6 +904,7 @@ contains
         maxdims(3) = H5S_UNLIMITED_F
 
 
+        print*, 'write variable - 7'
 
 
         !
@@ -904,6 +913,7 @@ contains
         call h5lexists_f(gid, trim(varstring), exists, ierr)
 
 
+        print*, 'write variable - 8'
 
         !
         ! Modify dataset creation properties, i.e. enable chunking in order to append dataspace, if needed.
@@ -917,11 +927,13 @@ contains
         if (ierr /= 0) call chidg_signal(FATAL, "write_variable_hdf: h5pset_chunk_f error setting chunk properties")
 
 
+        print*, 'write variable - 9'
 
         !
         ! Reset dataspace size if necessary
         !
         if (exists) then
+        print*, 'write variable - 10'
             ! Open the existing dataset
             call h5dopen_f(gid, trim(varstring), did, ierr, H5P_DEFAULT_F)
             if (ierr /= 0) call chidg_signal(FATAL,"write_variable_hdf: variable does not exist or was not opened correctly")
@@ -937,6 +949,7 @@ contains
             if (ierr /= 0) call chidg_signal(FATAL, "write_variable_hdf: h5dget_space_f")
 
         else
+        print*, 'write variable - 11'
             ! Create a new dataspace
             call h5screate_simple_f(ndims,dims,sid,ierr,maxdims)
             if (ierr /= 0) call chidg_signal(FATAL,"write_variable_hdf: h5screate_simple_f")
@@ -948,13 +961,15 @@ contains
         end if
 
 
+        print*, 'write variable - 12'
 
         !
         ! Get variable integer index from variable character string
         !
-        ivar = data%eqnset(idom)%item%prop%get_eqn_index(varstring)
+        ivar = data%eqnset(idom)%prop%get_equation_index(varstring)
 
 
+        print*, 'write variable - 13'
 
         !
         ! Assemble variable buffer matrix that gets written to file
@@ -963,6 +978,7 @@ contains
 
 
         do ielem = 1,data%mesh(idom)%nelem
+        print*, 'write variable - 14'
 
             ! get domain-global element index
             ielement_g = data%mesh(idom)%elems(ielem)%ielement_g
@@ -995,6 +1011,7 @@ contains
         end do
 
 
+        print*, 'write variable - 15'
 
         !
         ! Update 'contains_solution' attribute
@@ -1007,6 +1024,7 @@ contains
         call h5sclose_f(sid,ierr)       ! Close Variable dataspaces
         call h5gclose_f(gid,ierr)       ! Close Domain/Variable group
 
+        print*, 'write variable - 16'
 
 
     end subroutine write_variable_hdf
@@ -1106,7 +1124,7 @@ contains
             !
             ! Get number of equations for the current domain
             !
-            neqns = data%eqnset(idom)%item%neqns
+            neqns = data%eqnset(idom)%prop%nequations()
 
 
 
@@ -1116,7 +1134,7 @@ contains
             do ieqn = 1,neqns
 
                 ! Get variable character string
-                cvar = trim(data%eqnset(idom)%item%prop%eqns(ieqn)%name)
+                cvar = trim(data%eqnset(idom)%prop%eqns(ieqn)%name)
 
                 ! Read variable
                 call read_variable_hdf(fid,cvar,time,trim(dname),data)
@@ -1193,6 +1211,7 @@ contains
         time = 1
 
 
+
         !
         ! Check file exists
         !
@@ -1252,7 +1271,7 @@ contains
             call h5ltset_attribute_int_f(fid, trim(dname), 'order_solution', [order_s], adim, ierr)
             if (ierr /= 0) call chidg_signal(FATAL,"write_solution_partition_hdf5 - h5ltset_attribute_int_f")
 
-            call h5ltset_attribute_string_f(fid, trim(dname), 'eqnset', trim(data%eqnset(idom)%item%name), ierr)
+            call h5ltset_attribute_string_f(fid, trim(dname), 'eqnset', trim(data%eqnset(idom)%name), ierr)
             if (ierr /= 0) call chidg_signal(FATAL,"write_solution_partition_hdf5 - h5ltset_attribute_int_f")
 
 
@@ -1261,21 +1280,17 @@ contains
             !
             ! Get number of equations for the current domain
             !
-            neqns = data%eqnset(idom)%item%neqns
+            neqns = data%eqnset(idom)%prop%nequations()
 
 
             !
             ! For each equation specified for the domain
             ! 
             do ieqn = 1,neqns
-                !
                 ! Get variable character string
-                !
-                cvar = trim(data%eqnset(idom)%item%prop%eqns(ieqn)%name)
+                cvar = trim(data%eqnset(idom)%prop%eqns(ieqn)%name)
 
-                !
                 ! Write variable
-                !
                 call write_variable_hdf(fid,cvar,time,dname,data)
             end do ! ieqn
 
@@ -1308,350 +1323,6 @@ contains
     !>  Read boundary conditions from HDF5 file in ChiDG format and return data in bcdata_t container.
     !!  The calling procedure can then use the returned bcdata_t to initialize boundary conditions.
     !!
-    !!  @author Nathan A. Wukie
-    !!  @date   2/5/2016
-    !!
-    !!  @param[in]  filename        String of the HDF5 file to be read.
-    !!  @param[inout]   bcdata(:)   Array of bcdata_t instances, one for each domain. These will be returned with
-    !!                              data about the boundary conditions that can be used for initialization.
-    !!
-    !---------------------------------------------------------------------------------------------------------
-    subroutine read_boundaryconditions_hdf(filename, bcdata)
-        character(*),   intent(in)                  :: filename
-        type(bcdata_t), intent(inout), allocatable  :: bcdata(:)
-
-        integer(HID_T)                          :: fid, bcgroup, bcface, bcprop, faces_did, faces_sid
-        integer(HSIZE_T)                        :: adim
-        integer(HSIZE_T)                        :: rank_two_dims(2), maxdims(2)                    ! Dataspace dimensions
-        logical                                 :: FileExists
-
-        class(bc_t),            allocatable     :: bc
-        character(len=1024)                     :: bcname, pname, oname, fname
-        real(rk)                                :: ovalue
-        real(rdouble),   dimension(1)           :: rbuf
-        character(len=10)                       :: faces(NFACES)
-        character(1024)                         :: gname
-        integer                                 :: nmembers, type, ierr, ndomains, igrp, &
-                                                   idom, iface, iopt, noptions, nprop, iprop, &
-                                                   npts_face, nbcfaces, ibc_face
-        integer, dimension(1)                   :: buf
-        integer,            allocatable, target :: bc_connectivity(:,:)
-        type(c_ptr)                             :: cp_conn
-
-
-
-
-        faces = ["  XI_MIN","  XI_MAX"," ETA_MIN"," ETA_MAX","ZETA_MIN","ZETA_MAX"]
-
-
-
-        !
-        !  Check file exists
-        !
-        inquire(file=filename, exist=FileExists)
-        if (.not. FileExists) then
-            call chidg_signal(FATAL,'read_boundaryconditions_hdf: Could not find grid file')
-        end if
-
-
-        !
-        ! Open hdf interface
-        !
-        call h5open_f(ierr)
-        if (ierr /= 0) call chidg_signal(FATAL,'read_boundaryconditions_hdf - h5open_f: HDF5 Fortran interface had an error during initialization')
-
-
-        !
-        ! Open file
-        !
-        !call h5fopen_f(filename, H5F_ACC_RDONLY_F, fid, ierr)
-        call h5fopen_f(filename, H5F_ACC_RDWR_F, fid, ierr)
-        if (ierr /= 0) call chidg_signal(FATAL,'read_boundaryconditions_hdf - h5fopen_f: There was an error opening the grid file.')
-
-
-
-        !
-        !  Get number of domains from attribute 'ndomains' in file root
-        !
-        ndomains = get_ndomains_hdf(fid)
-
-
-        !
-        !  Allocate number of domains
-        !
-        if (ndomains == 0) call chidg_signal(FATAL,'read_boundaryconditions_hdf: No Domains were found in the file')
-        allocate(bcdata(ndomains), stat=ierr)
-        if (ierr /= 0) call AllocationError
-
-
-        !
-        ! Loop domains
-        !
-        !  Get number of groups in the file root
-        call h5gn_members_f(fid, "/", nmembers, ierr)
-
-
-        !  Loop through groups and read domains
-        idom = 1
-        do igrp = 0,nmembers-1
-            call h5gget_obj_info_idx_f(fid,"/", igrp, gname, type, ierr)
-
-            if (gname(1:2) == 'D_') then
-
-                !
-                ! Set domain name.
-                !
-                bcdata(idom)%domain_ = gname
-
-
-                !
-                ! Open the Domain/BoundaryConditions group
-                !
-                call h5gopen_f(fid, trim(gname)//"/BoundaryConditions", bcgroup, ierr, H5P_DEFAULT_F)
-                if (ierr /= 0) stop "Error: read_boundaryconditions_hdf -- h5gopen_f: Domain/BoundaryConditions group did not open properly"
-
-
-
-                !
-                ! Allocation bcs for current domain
-                !
-                allocate( bcdata(idom)%bcs(NFACES), bcdata(idom)%bc_connectivity(NFACES), stat=ierr )
-                if (ierr /= 0) call AllocationError
-
-
-                !
-                ! Loop faces and get boundary condition for each
-                !
-                ! TODO: should probably turn this into a loop over bcs instead of faces.
-                do iface = 1,NFACES
-
-
-                    !
-                    ! Open face boundary condition group
-                    !
-                    call h5gopen_f(bcgroup, trim(adjustl(faces(iface))), bcface, ierr)
-                    if (ierr /= 0) call chidg_signal(FATAL,"read_boundaryconditions_hdf: error opening boundary face group")
-        
-
-                    !
-                    ! Get face associated with the 
-                    !
-                    ! TODO: WARNING, should replace with XI_MIN, XI_MAX, etc. somehow.
-                    call h5dopen_f(bcface, "Faces", faces_did, ierr, H5P_DEFAULT_F)
-
-
-                    !
-                    !  Get the dataspace id and dimensions
-                    !
-                    call h5dget_space_f(faces_did, faces_sid, ierr)
-                    call h5sget_simple_extent_dims_f(faces_sid, rank_two_dims, maxdims, ierr)
-                    nbcfaces  = rank_two_dims(1)
-                    npts_face = rank_two_dims(2)
-
-
-
-                    !
-                    ! Read boundary condition connectivity
-                    !
-                    if ( allocated(bc_connectivity) ) deallocate(bc_connectivity)
-                    allocate(bc_connectivity(nbcfaces,npts_face),stat=ierr)
-                    if (ierr /= 0) call AllocationError
-                    cp_conn = c_loc(bc_connectivity(1,1))
-                    call h5dread_f(faces_did, H5T_NATIVE_INTEGER, cp_conn, ierr)
-                    if (ierr /= 0) call chidg_signal(FATAL,"read_boundaryconditions_hdf5 -- h5dread_f")
-
-                    call h5dclose_f(faces_did,ierr)
-                    call h5sclose_f(faces_sid,ierr)
-
-                    !
-                    ! Store boundary condition connectivity
-                    !
-                    !bcdata(idom)%bc_connectivity(iface)%data = bc_connectivity
-                    call bcdata(idom)%bc_connectivity(iface)%init(nbcfaces)
-                    do ibc_face = 1,nbcfaces
-                        bcdata(idom)%bc_connectivity(iface)%data(ibc_face)%data = bc_connectivity(ibc_face,:)
-                    end do
-
-
-
-
-                    !
-                    ! Get boundary condition name string
-                    !
-                    call h5ltget_attribute_string_f(bcface, ".", "bc_name", bcname, ierr)
-                    if (ierr /= 0) call chidg_signal(FATAL,"read_boundaryconditions_hdf: error reading boundary condition name, bc_name")
-
-
-                    if ( trim(bcname) == 'empty' ) then
-
-                        cycle
-
-                    else
-
-                        !
-                        ! Create boundary condition from face data
-                        !
-                        call create_bc(trim(bcname),bc)
-
-
-
-                        !
-                        ! Get available boundary condition properties to search for.
-                        !
-                        nprop = bc%get_nproperties()
-
-                        
-                        !
-                        ! Loop through properties
-                        !
-                        do iprop = 1,nprop
-
-
-                            !
-                            ! Get property name
-                            !
-                            pname = bc%get_property_name(iprop)
-
-
-                            !
-                            ! Open property in HDF file
-                            !
-                            call h5gopen_f(bcface, "BCP_"//trim(pname), bcprop, ierr)
-                            if (ierr /= 0) call chidg_signal(FATAL,"read_boundaryconditions: error opening bcproperty group.")
-
-
-                            !
-                            ! Read the function name set for the property.
-                            !
-                            call h5ltget_attribute_string_f(bcprop, ".", "function", fname, ierr)
-                            if (ierr /= 0) call chidg_signal(FATAL,"read_boundaryconditions: error getting function name.")
-
-                            
-                            !
-                            ! Set/Create the function for the current property
-                            !
-                            call bc%set_fcn(trim(pname), trim(fname))
-
-                            
-                            !
-                            ! Get number of options for the function
-                            !
-                            noptions = bc%get_noptions(iprop)
-
-
-                            !
-                            ! Get each option value
-                            !
-                            do iopt = 1,noptions
-
-                                !
-                                ! Get option name
-                                !
-                                oname = bc%get_option_key(iprop,iopt)
-
-
-                                !
-                                ! Get option value from file
-                                !
-                                adim = 1
-                                call h5ltget_attribute_double_f(bcprop, ".", trim(oname), rbuf, ierr)
-                                if (ierr /= 0) call chidg_signal(FATAL,"read_boundaryconditions: error getting option value")
-                                ovalue = real(rbuf(1),rk)
-
-
-                                !
-                                ! Set boundary condition option
-                                !
-                                call bc%set_fcn_option(trim(pname), trim(oname), ovalue)
-
-
-                            end do ! iopt
-
-
-                            !
-                            ! Close current property group
-                            !
-                            call h5gclose_f(bcprop,ierr)
-                            if (ierr /= 0) call chidg_signal(FATAL,"read_boundaryconditions_hdf: h5gclose")
-
-
-
-                        end do !iprop
-
-
-
-                        !
-                        ! Boundary condition is defined for the current face, save to bcdata
-                        !
-                        allocate(bcdata(idom)%bcs(iface)%bc, source = bc, stat=ierr)
-                        if (ierr /= 0) call AllocationError
-
-
-                    end if ! bcname == empty
-
-
-                    !
-                    ! Close face boundary condition group
-                    !
-                    call h5gclose_f(bcface, ierr)
-                    if (ierr /= 0) call chidg_signal(FATAL,"read_boundaryconditions_hdf: h5gclose")
-
-
-                end do ! iface
-
-
-
-                idom = idom + 1
-
-
-
-                !
-                ! Close BoundaryCondition group
-                !
-                call h5gclose_f(bcgroup, ierr)
-                if (ierr /= 0) call chidg_signal(FATAL,"read_boundaryconditions_hdf: h5gclose")
-
-
-            end if !gname, idom
-
-
-        end do  ! igrp
-
-
-        !
-        !  Close file and Fortran interface
-        !
-        call h5fclose_f(fid, ierr)
-        if (ierr /= 0) call chidg_signal(FATAL,"read_boundaryconditions_hdf: error closing file.")
-        call h5close_f(ierr)
-        if (ierr /= 0) call chidg_signal(FATAL,"read_boundaryconditions_hdf: error closing hdf interface.")
-
-
-    end subroutine read_boundaryconditions_hdf
-    !*********************************************************************************************************
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    !>  Read boundary conditions from HDF5 file in ChiDG format and return data in bcdata_t container.
-    !!  The calling procedure can then use the returned bcdata_t to initialize boundary conditions.
-    !!
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   6/9/2016
     !!
@@ -1666,29 +1337,13 @@ contains
         type(bcdata_t),     intent(inout), allocatable  :: bcdata(:)
         type(partition_t),  intent(in)                  :: partition
 
-        integer(HID_T)                          :: fid, bcgroup, bcface, bcprop, faces_did, faces_sid
-        integer(HSIZE_T)                        :: adim
-        integer(HSIZE_T)                        :: rank_two_dims(2), maxdims(2)                    ! Dataspace dimensions
-        logical                                 :: FileExists
-
-        class(bc_t),            allocatable     :: bc
-        character(len=1024)                     :: bcname, pname, oname, fname
-        real(rk)                                :: ovalue
-        real(rdouble),   dimension(1)           :: rbuf
-        character(len=10)                       :: faces(NFACES)
-        character(1024)                         :: gname
-        integer                                 :: nmembers, type, ierr, ndomains, igrp, &
-                                                   idom, iface, iopt, noptions, nprop, iprop, &
-                                                   npts_face, nbcfaces, iconn, nconn, ibc_face
-        integer, dimension(1)                   :: buf
-        integer,            allocatable, target :: bc_connectivity(:,:)
-        type(c_ptr)                             :: cp_conn
-
-
+        character(len=10)       :: faces(NFACES)
+        logical                 :: FileExists
+        integer(HID_T)          :: fid
+        integer                 :: ierr, nconn
 
 
         faces = ["  XI_MIN","  XI_MAX"," ETA_MIN"," ETA_MAX","ZETA_MIN","ZETA_MAX"]
-
 
 
         !
@@ -1710,11 +1365,8 @@ contains
         !
         ! Open file
         !
-        !call h5fopen_f(filename, H5F_ACC_RDONLY_F, fid, ierr)
         call h5fopen_f(filename, H5F_ACC_RDWR_F, fid, ierr)
         if (ierr /= 0) call chidg_signal(FATAL,'read_boundaryconditions_partition_hdf - h5fopen_f: There was an error opening the grid file.')
-
-
 
 
         !
@@ -1725,232 +1377,16 @@ contains
         if (ierr /= 0) call AllocationError
 
 
+        !
+        ! Read boundary condition patches
+        !
+        call read_bc_patches_hdf(fid,bcdata,partition)
 
 
         !
-        !  Loop through connectivities and read boundary conditions
+        ! Read boundary condition operators
         !
-        do iconn = 1,nconn
-
-            ! Get domain index of current connectivity
-            idom = partition%connectivities(iconn)%get_domain_index()
-
-            ! Get name of current domain
-            gname = get_domain_name_hdf(fid,idom)
-
-            ! Set domain name.
-            bcdata(iconn)%domain_ = gname
-
-
-            !
-            ! Open the Domain/BoundaryConditions group
-            !
-            call h5gopen_f(fid, trim(gname)//"/BoundaryConditions", bcgroup, ierr, H5P_DEFAULT_F)
-            if (ierr /= 0) stop "Error: read_boundaryconditions_partition_hdf -- h5gopen_f: Domain/BoundaryConditions group did not open properly"
-
-
-
-            !
-            ! Allocation bcs for current domain
-            !
-            allocate( bcdata(iconn)%bcs(NFACES), bcdata(iconn)%bc_connectivity(NFACES), stat=ierr )
-            if (ierr /= 0) call AllocationError
-
-
-            !
-            ! Loop faces and get boundary condition for each
-            !
-            ! TODO: should probably turn this into a loop over bcs instead of faces.
-            do iface = 1,NFACES
-
-
-                !
-                ! Open face boundary condition group
-                !
-                call h5gopen_f(bcgroup, trim(adjustl(faces(iface))), bcface, ierr)
-                if (ierr /= 0) call chidg_signal(FATAL,"read_boundaryconditions_partition_hdf: error opening boundary face group")
-    
-
-                !
-                ! Get boundary condition name string
-                !
-                call h5ltget_attribute_string_f(bcface, ".", "bc_name", bcname, ierr)
-                if (ierr /= 0) call chidg_signal(FATAL,"read_boundaryconditions_partition_hdf: error reading boundary condition name, bc_name")
-
-
-
-                !
-                ! Get face associated with the 
-                !
-                ! TODO: WARNING, should replace with XI_MIN, XI_MAX, etc. somehow. Maybe not...
-                call h5dopen_f(bcface, "Faces", faces_did, ierr, H5P_DEFAULT_F)
-
-
-                !
-                !  Get the dataspace id and dimensions
-                !
-                call h5dget_space_f(faces_did, faces_sid, ierr)
-                call h5sget_simple_extent_dims_f(faces_sid, rank_two_dims, maxdims, ierr)
-                nbcfaces  = rank_two_dims(1)
-                npts_face = rank_two_dims(2)
-
-
-
-                !
-                ! Read boundary condition connectivity
-                !
-                if ( allocated(bc_connectivity) ) deallocate(bc_connectivity)
-                allocate(bc_connectivity(nbcfaces,npts_face),stat=ierr)
-                if (ierr /= 0) call AllocationError
-                cp_conn = c_loc(bc_connectivity(1,1))
-                call h5dread_f(faces_did, H5T_NATIVE_INTEGER, cp_conn, ierr)
-                if (ierr /= 0) call chidg_signal(FATAL,"read_boundaryconditions_partition_hdf5 -- h5dread_f")
-
-
-                call h5dclose_f(faces_did,ierr)
-                call h5sclose_f(faces_sid,ierr)
-
-
-                !
-                ! Store boundary condition connectivity
-                !
-                call bcdata(iconn)%bc_connectivity(iface)%init(nbcfaces)
-                do ibc_face = 1,nbcfaces
-                    bcdata(iconn)%bc_connectivity(iface)%data(ibc_face)%data = bc_connectivity(ibc_face,:)
-                end do
-
-
-
-
-
-
-
-
-!                if ( trim(bcname) == 'empty' ) then
-!
-!                    cycle
-!
-!                else
-
-
-                    !
-                    ! Create boundary condition from face data
-                    !
-                    call create_bc(trim(bcname),bc)
-
-
-
-                    !
-                    ! Get available boundary condition properties to search for.
-                    !
-                    nprop = bc%get_nproperties()
-
-                    
-                    !
-                    ! Loop through properties
-                    !
-                    do iprop = 1,nprop
-
-
-                        !
-                        ! Get property name
-                        !
-                        pname = bc%get_property_name(iprop)
-
-
-                        !
-                        ! Open property in HDF file
-                        !
-                        call h5gopen_f(bcface, "BCP_"//trim(pname), bcprop, ierr)
-                        if (ierr /= 0) call chidg_signal(FATAL,"read_boundaryconditions_partition_hdf: error opening bcproperty group.")
-
-
-                        !
-                        ! Read the function name set for the property.
-                        !
-                        call h5ltget_attribute_string_f(bcprop, ".", "function", fname, ierr)
-                        if (ierr /= 0) call chidg_signal(FATAL,"read_boundaryconditions_partition_hdf: error getting function name.")
-
-                        
-                        !
-                        ! Set/Create the function for the current property
-                        !
-                        call bc%set_fcn(trim(pname), trim(fname))
-
-                        
-                        !
-                        ! Get number of options for the function
-                        !
-                        noptions = bc%get_noptions(iprop)
-
-
-                        !
-                        ! Get each option value
-                        !
-                        do iopt = 1,noptions
-
-                            !
-                            ! Get option name
-                            !
-                            oname = bc%get_option_key(iprop,iopt)
-
-
-                            !
-                            ! Get option value from file
-                            !
-                            adim = 1
-                            call h5ltget_attribute_double_f(bcprop, ".", trim(oname), rbuf, ierr)
-                            if (ierr /= 0) call chidg_signal(FATAL,"read_boundaryconditions_partition_hdf: error getting option value")
-                            ovalue = real(rbuf(1),rk)
-
-
-                            !
-                            ! Set boundary condition option
-                            !
-                            call bc%set_fcn_option(trim(pname), trim(oname), ovalue)
-
-
-                        end do ! iopt
-
-
-                        !
-                        ! Close current property group
-                        !
-                        call h5gclose_f(bcprop,ierr)
-                        if (ierr /= 0) call chidg_signal(FATAL,"read_boundaryconditions_partition_hdf: h5gclose")
-
-
-
-                    end do !iprop
-
-
-
-                    !
-                    ! Boundary condition is defined for the current face, save to bcdata
-                    !
-                    allocate(bcdata(iconn)%bcs(iface)%bc, source=bc, stat=ierr)
-                    if (ierr /= 0) call AllocationError
-
-
-!                end if ! bcname == empty
-
-
-                !
-                ! Close face boundary condition group
-                !
-                call h5gclose_f(bcface, ierr)
-                if (ierr /= 0) call chidg_signal(FATAL,"read_boundaryconditions_partition_hdf: h5gclose")
-
-
-            end do ! iface
-
-
-            ! Close BoundaryCondition group
-            call h5gclose_f(bcgroup, ierr)
-            if (ierr /= 0) call chidg_signal(FATAL,"read_boundaryconditions_partition_hdf: h5gclose")
-
-
-        end do  ! iconn
+        call read_bc_operators_hdf(fid,bcdata,partition)
 
 
         !
@@ -1974,8 +1410,353 @@ contains
 
 
 
+    !>
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   8/31/2016
+    !!
+    !!
+    !!
+    !------------------------------------------------------------------------------------------------------------
+    subroutine read_bc_patches_hdf(fid, bcdata, partition)
+        integer(HID_T),     intent(in)      :: fid
+        type(bcdata_t),     intent(inout)   :: bcdata(:)
+        type(partition_t),  intent(in)      :: partition
+
+        integer(ik)         :: iconn, nconn, idom, iface, ierr
+        integer             :: ibc_face, nbcfaces, npts_face
+        character(1024)     :: gname
+        character(len=10)   :: faces(NFACES)
+
+        integer(HID_T)      :: bcgroup, bcface, bcprop, faces_did, faces_sid
+        integer(HSIZE_T)    :: adim, rank_two_dims(2), maxdims(2)                    ! Dataspace dimensions
+
+        integer,            allocatable, target :: bc_connectivity(:,:)
+        type(c_ptr)                             :: cp_conn
 
 
+        faces = ["  XI_MIN","  XI_MAX"," ETA_MIN"," ETA_MAX","ZETA_MIN","ZETA_MAX"]
+
+
+
+
+        !
+        !  Loop through connectivities and read boundary conditions
+        !
+        nconn = size(partition%connectivities)
+        do iconn = 1,nconn
+
+
+            ! Get domain index of current connectivity
+            idom = partition%connectivities(iconn)%get_domain_index()
+
+            ! Get name of current domain
+            gname = get_domain_name_hdf(fid,idom)
+
+            ! Set domain name.
+            bcdata(iconn)%domain_ = gname
+
+
+            !
+            ! Open the Domain/BoundaryConditions group
+            !
+            call h5gopen_f(fid, trim(gname)//"/BoundaryConditions", bcgroup, ierr, H5P_DEFAULT_F)
+            if (ierr /= 0) stop "Error: read_bc_patches_hdf -- h5gopen_f: Domain/BoundaryConditions group did not open properly"
+
+
+
+            !
+            ! Allocation bcs for current domain
+            !
+            allocate(bcdata(iconn)%bc_connectivity(NFACES), stat=ierr)
+            if (ierr /= 0) call AllocationError
+
+
+            !
+            ! Loop faces and get boundary condition for each
+            !
+            ! TODO: should probably turn this into a loop over bcs instead of faces.
+            do iface = 1,NFACES
+
+
+                ! Open face boundary condition group
+                call h5gopen_f(bcgroup, trim(adjustl(faces(iface))), bcface, ierr)
+                if (ierr /= 0) call chidg_signal(FATAL,"read_bc_patches_hdf: error opening boundary face group")
+    
+
+                ! Open Faces patch data
+                ! TODO: WARNING, should replace with XI_MIN, XI_MAX, etc. somehow. Maybe not...
+                call h5dopen_f(bcface, "Faces", faces_did, ierr, H5P_DEFAULT_F)
+
+
+                !  Get the dataspace id and dimensions
+                call h5dget_space_f(faces_did, faces_sid, ierr)
+                call h5sget_simple_extent_dims_f(faces_sid, rank_two_dims, maxdims, ierr)
+                nbcfaces  = rank_two_dims(1)
+                npts_face = rank_two_dims(2)
+
+
+                ! Read boundary condition connectivity
+                if ( allocated(bc_connectivity) ) deallocate(bc_connectivity)
+                allocate(bc_connectivity(nbcfaces,npts_face),stat=ierr)
+                if (ierr /= 0) call AllocationError
+                cp_conn = c_loc(bc_connectivity(1,1))
+                call h5dread_f(faces_did, H5T_NATIVE_INTEGER, cp_conn, ierr)
+                if (ierr /= 0) call chidg_signal(FATAL,"read_bc_patches_hdf5 -- h5dread_f")
+
+
+                call h5dclose_f(faces_did,ierr)
+                call h5sclose_f(faces_sid,ierr)
+
+
+                ! Store boundary condition connectivity
+                call bcdata(iconn)%bc_connectivity(iface)%init(nbcfaces)
+                do ibc_face = 1,nbcfaces
+                    bcdata(iconn)%bc_connectivity(iface)%data(ibc_face)%data = bc_connectivity(ibc_face,:)
+                end do
+
+
+                ! Close face boundary condition group
+                call h5gclose_f(bcface, ierr)
+                if (ierr /= 0) call chidg_signal(FATAL,"read_bc_patches_hdf: h5gclose")
+
+
+            end do ! iface
+
+
+            ! Close BoundaryCondition group
+            call h5gclose_f(bcgroup, ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,"read_bc_patches_hdf: h5gclose")
+
+
+        end do  ! iconn
+
+
+
+    end subroutine read_bc_patches_hdf
+    !*******************************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+
+    !>
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   8/31/2016
+    !!
+    !!
+    !!
+    !!
+    !---------------------------------------------------------------------------------------------------------
+    subroutine read_bc_operators_hdf(fid, bcdata, partition)
+        integer(HID_T),     intent(in)      :: fid
+        type(bcdata_t),     intent(inout)   :: bcdata(:)
+        type(partition_t),  intent(in)      :: partition
+
+        type(svector_t)                     :: bc_operator_strings
+        type(string_t)                      :: temp_string
+        class(bc_operator_t), allocatable   :: bc
+
+        real(rdouble),   dimension(1) :: rbuf
+        character(len=10)   :: faces(NFACES)
+        character(len=1024) :: gname, bcname, fname, oname, pname
+        integer(HSIZE_T)    :: adim
+        integer(HID_T)      :: bc_op, bcface, bcgroup, bcprop
+        real(rk)            :: ovalue
+
+
+        integer             :: nmembers, idom, iface, iopt, noptions, nprop, iprop, &
+                               ierr, ndomains, igrp, iconn, nconn, iop, type
+
+
+
+        faces = ["  XI_MIN","  XI_MAX"," ETA_MIN"," ETA_MAX","ZETA_MIN","ZETA_MAX"]
+
+        !
+        !  Loop through connectivities and read boundary conditions
+        !
+        nconn = size(partition%connectivities)
+        do iconn = 1,nconn
+
+            ! Get domain index of current connectivity
+            idom = partition%connectivities(iconn)%get_domain_index()
+
+            ! Get name of current domain
+            gname = get_domain_name_hdf(fid,idom)
+
+            ! Set domain name.
+            bcdata(iconn)%domain_ = gname
+
+
+            !
+            ! Open the Domain/BoundaryConditions group
+            !
+            call h5gopen_f(fid, trim(gname)//"/BoundaryConditions", bcgroup, ierr, H5P_DEFAULT_F)
+            if (ierr /= 0) stop "Error: read_bc_operators_hdf -- h5gopen_f: Domain/BoundaryConditions group did not open properly"
+
+
+
+            !
+            ! Allocation bcs for current domain
+            !
+            allocate( bcdata(iconn)%bcs(NFACES), stat=ierr )
+            if (ierr /= 0) call AllocationError
+
+
+            !
+            ! Loop faces and get boundary condition for each
+            !
+            ! TODO: should probably turn this into a loop over bcs instead of faces.
+            do iface = 1,NFACES
+                call bc_operator_strings%clear()
+
+
+                !
+                ! Open face boundary condition group
+                !
+                call h5gopen_f(bcgroup, trim(adjustl(faces(iface))), bcface, ierr)
+                if (ierr /= 0) call chidg_signal(FATAL,"read_bc_operators_hdf: error opening boundary face group")
+    
+
+
+                !
+                ! First get number of operators. This could be different than number of groups.
+                !
+
+                !  Get number of groups linked to the current bc_face
+                call h5gn_members_f(bcface, ".", nmembers, ierr)
+                if ( nmembers > 0 ) then
+                    do igrp = 0,nmembers-1
+                        ! Get group name
+                        call h5gget_obj_info_idx_f(bcface, ".", igrp, gname, type, ierr)
+
+                        ! Test if group is a boundary condition operator. 'BCO_'
+                        if (gname(1:4) == 'BCO_') then
+                            call bc_operator_strings%push_back(string_t(gname))
+                        end if
+                    end do  ! igrp
+                end if
+
+
+
+
+                !
+                ! Loop through and read operators + their properties
+                !
+                do iop = 1,bc_operator_strings%size()
+
+                    ! Open bc_operator group
+                    temp_string = bc_operator_strings%at(iop)
+                    call h5gopen_f(bcface, trim(temp_string%get()), bc_op, ierr)
+                    if (ierr /= 0) call chidg_signal(FATAL,"read_bc_operators_hdf: error opening bc_operator group.")
+
+                    
+                    ! Get boundary condition name string
+                    bcname = temp_string%get()
+                    bcname = trim(bcname(5:))
+
+
+                    ! Create boundary condition operator from string
+                    call create_bc(trim(bcname),bc)
+
+
+                    ! Get available boundary condition properties to search for.
+                    nprop = bc%get_nproperties()
+
+                    
+                    ! Loop through properties
+                    do iprop = 1,nprop
+
+
+                        ! Get property name
+                        pname = bc%get_property_name(iprop)
+
+
+                        ! Open property in HDF file
+                        call h5gopen_f(bc_op, "BCP_"//trim(pname), bcprop, ierr)
+                        if (ierr /= 0) call chidg_signal(FATAL,"read_bc_operators_hdf: error opening bcproperty group.")
+
+
+                        ! Read the function name set for the property.
+                        call h5ltget_attribute_string_f(bcprop, ".", "function", fname, ierr)
+                        if (ierr /= 0) call chidg_signal(FATAL,"read_bc_operators_hdf: error getting function name.")
+
+                        
+                        ! Set/Create the function for the current property
+                        call bc%set_fcn(trim(pname), trim(fname))
+
+                        
+                        ! Get number of options for the function
+                        noptions = bc%get_noptions(iprop)
+
+
+
+                        ! Get each option value
+                        do iopt = 1,noptions
+                            ! Get option name
+                            oname = bc%get_option_key(iprop,iopt)
+
+                            ! Get option value from file
+                            adim = 1
+                            call h5ltget_attribute_double_f(bcprop, ".", trim(oname), rbuf, ierr)
+                            if (ierr /= 0) call chidg_signal(FATAL,"read_bc_operators_hdf: error getting option value")
+                            ovalue = real(rbuf(1),rk)
+
+                            ! Set boundary condition option
+                            call bc%set_fcn_option(trim(pname), trim(oname), ovalue)
+                        end do ! iopt
+
+
+
+                        ! Close current property group
+                        call h5gclose_f(bcprop,ierr)
+                        if (ierr /= 0) call chidg_signal(FATAL,"read_bc_operators_hdf: h5gclose")
+
+
+
+                    end do !iprop
+
+
+
+                    ! Boundary condition is defined for the current face, save to bcdata
+                    call bcdata(iconn)%bcs(iface)%push_back(bc)
+
+    
+                    ! Close boundary condition operator group
+                    call h5gclose_f(bc_op, ierr)
+                    if (ierr /= 0) call chidg_signal(FATAL,"read_bc_operators_hdf: h5gclose")
+
+
+                end do !iop
+
+                ! Close face boundary condition group
+                call h5gclose_f(bcface, ierr)
+                if (ierr /= 0) call chidg_signal(FATAL,"read_bc_operators_hdf: h5gclose")
+
+
+            end do ! iface
+
+
+            ! Close BoundaryCondition group
+            call h5gclose_f(bcgroup, ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,"read_bc_operators_hdf: h5gclose")
+
+
+        end do  ! iconn
+
+
+
+
+    end subroutine read_bc_operators_hdf
+    !*******************************************************************************************************
 
 
 

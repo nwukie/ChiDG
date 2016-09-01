@@ -53,7 +53,7 @@ contains
 
 
 
-        associate ( mesh => data%mesh, eqnset => data%eqnset, sdata => data%sdata, q => data%sdata%q%dom(1), rhs => data%sdata%rhs%dom(1), lhs => data%sdata%lhs%dom(1), prop => data%eqnset(1)%item%prop )
+        associate ( mesh => data%mesh, eqnset => data%eqnset, sdata => data%sdata, q => data%sdata%q%dom(1), rhs => data%sdata%rhs%dom(1), lhs => data%sdata%lhs%dom(1), prop => data%eqnset(1)%prop )
 
 
             nelem = mesh(1)%nelem
@@ -88,8 +88,8 @@ contains
 
 
 
-            if (allocated(eqnset(1)%item%volume_advective_flux)) then
-                nflux = size(eqnset(1)%item%volume_advective_flux)
+            if (allocated(eqnset(1)%volume_advective_operator)) then
+                nflux = size(eqnset(1)%volume_advective_operator)
                 do iflux = 1,nflux
 
                     worker%function_info%type    = VOLUME_ADVECTIVE_FLUX
@@ -98,8 +98,8 @@ contains
                     worker%function_info%idepend = 1
                     worker%function_info%seed    = element_compute_seed(mesh,idom,ielem,idepend,iblk)
 
-                    !call data%eqnset(1)%item%volume_advective_flux(iflux)%flux%compute(data%mesh,data%sdata,prop,elem_info,function_info)
-                    call data%eqnset(1)%item%volume_advective_flux(iflux)%flux%compute(worker,prop)
+                    !call data%eqnset(1)%volume_advective_flux(iflux)%flux%compute(data%mesh,data%sdata,prop,elem_info,function_info)
+                    call data%eqnset(1)%volume_advective_operator(iflux)%op%compute(worker,prop)
                 end do
 
             else
@@ -146,7 +146,7 @@ contains
            !
            ! Loop through terms, perturb term, compute rhs, compute finite difference jacobian, return term.
            !
-           do ivar = 1,eqnset(1)%item%neqns
+           do ivar = 1,eqnset(1)%prop%nequations()
                do iterm = 1,mesh(1)%nterms_s
 
                    !
@@ -159,8 +159,8 @@ contains
                    !
                    ! For the current element, compute the contributions from volume integrals
                    !
-                   if (allocated(eqnset(1)%item%volume_advective_flux)) then
-                        nflux = size(eqnset(1)%item%volume_advective_flux)
+                   if (allocated(eqnset(1)%volume_advective_operator)) then
+                        nflux = size(eqnset(1)%volume_advective_operator)
                         do iflux = 1,nflux
                             worker%function_info%type    = VOLUME_ADVECTIVE_FLUX
                             worker%function_info%ifcn    = iflux
@@ -168,8 +168,8 @@ contains
                             worker%function_info%idepend = 1
                             worker%function_info%seed    = element_compute_seed(mesh,idom,ielem,idepend,iblk)
 
-                            !call eqnset(1)%item%volume_advective_flux(iflux)%flux%compute(mesh,sdata,prop,elem_info,function_info)
-                            call eqnset(1)%item%volume_advective_flux(iflux)%flux%compute(worker,prop)
+                            !call eqnset(1)%volume_advective_flux(iflux)%flux%compute(mesh,sdata,prop,elem_info,function_info)
+                            call eqnset(1)%volume_advective_operator(iflux)%op%compute(worker,prop)
                         end do
 
                    else
@@ -270,7 +270,7 @@ contains
 
 
 
-        associate ( mesh => data%mesh, q => data%sdata%q%dom(1), rhs => data%sdata%rhs%dom(1), lhs => data%sdata%lhs%dom(1), prop => data%eqnset(1)%item%prop )
+        associate ( mesh => data%mesh, q => data%sdata%q%dom(1), rhs => data%sdata%rhs%dom(1), lhs => data%sdata%lhs%dom(1), prop => data%eqnset(1)%prop )
 
             nelem = mesh(1)%nelem
             nterms = mesh(1)%nterms_s
@@ -300,8 +300,8 @@ contains
             !
             ! For the current element, compute the contributions from boundary integrals
             !
-            if (allocated(data%eqnset(1)%item%boundary_advective_flux)) then
-                nflux = size(data%eqnset(1)%item%boundary_advective_flux)
+            if (allocated(data%eqnset(1)%boundary_advective_operator)) then
+                nflux = size(data%eqnset(1)%boundary_advective_operator)
                 do iflux = 1,nflux
 
                     worker%function_info%type    = BOUNDARY_ADVECTIVE_FLUX
@@ -311,8 +311,8 @@ contains
                     worker%function_info%seed    = face_compute_seed(data%mesh,idom,ielem,iface,idonor,iblk)
 
 
-                    !call data%eqnset(1)%item%boundary_advective_flux(iflux)%flux%compute(data%mesh,data%sdata,prop,face_info, function_info)
-                    call data%eqnset(1)%item%boundary_advective_flux(iflux)%flux%compute(worker,prop)
+                    !call data%eqnset(1)%boundary_advective_flux(iflux)%flux%compute(data%mesh,data%sdata,prop,face_info, function_info)
+                    call data%eqnset(1)%boundary_advective_operator(iflux)%op%compute(worker,prop)
                 end do
 
             else
@@ -341,8 +341,8 @@ contains
             !
             ! Need to use DIAG to get rhs for finite difference calculation. 
             ! This is because RHS is only stored for DIAG in the integrate procedure.
-            if (allocated(data%eqnset(1)%item%boundary_advective_flux)) then
-                nflux = size(data%eqnset(1)%item%boundary_advective_flux)
+            if (allocated(data%eqnset(1)%boundary_advective_operator)) then
+                nflux = size(data%eqnset(1)%boundary_advective_operator)
                 do iflux = 1,nflux
 
                     worker%function_info%type    = BOUNDARY_ADVECTIVE_FLUX
@@ -350,8 +350,8 @@ contains
                     worker%function_info%idiff   = DIAG
                     worker%function_info%idepend = idonor
 
-                    !call data%eqnset(1)%item%boundary_advective_flux(iflux)%flux%compute(data%mesh,data%sdata,prop,face_info,function_info)
-                    call data%eqnset(1)%item%boundary_advective_flux(iflux)%flux%compute(worker,prop)
+                    !call data%eqnset(1)%boundary_advective_flux(iflux)%flux%compute(data%mesh,data%sdata,prop,face_info,function_info)
+                    call data%eqnset(1)%boundary_advective_operator(iflux)%op%compute(worker,prop)
 
                 end do
 
@@ -381,7 +381,7 @@ contains
             !
             ! Loop through terms, perturb term, compute rhs, compute finite difference jacobian, return term.
             !
-            do ivar = 1,data%eqnset(1)%item%neqns
+            do ivar = 1,data%eqnset(1)%prop%nequations()
                 do iterm = 1,data%mesh(1)%nterms_s
 
                     !
@@ -396,8 +396,8 @@ contains
                     !
                     ! Need to use DIAG to get rhs for finite difference calculation. 
                     ! This is because RHS is only stored for DIAG in the integrate procedure.
-                    if (allocated(data%eqnset(1)%item%boundary_advective_flux)) then
-                        nflux = size(data%eqnset(1)%item%boundary_advective_flux)
+                    if (allocated(data%eqnset(1)%boundary_advective_operator)) then
+                        nflux = size(data%eqnset(1)%boundary_advective_operator)
                         do iflux = 1,nflux
 
                             worker%function_info%type    = BOUNDARY_ADVECTIVE_FLUX
@@ -405,12 +405,12 @@ contains
                             worker%function_info%idiff   = DIAG
                             worker%function_info%idepend = idonor
 
-                            !call data%eqnset(1)%item%boundary_advective_flux(iflux)%flux%compute(data%mesh,data%sdata,prop,face_info,function_info)
-                            call data%eqnset(1)%item%boundary_advective_flux(iflux)%flux%compute(worker,prop)
+                            !call data%eqnset(1)%boundary_advective_flux(iflux)%flux%compute(data%mesh,data%sdata,prop,face_info,function_info)
+                            call data%eqnset(1)%boundary_advective_operator(iflux)%op%compute(worker,prop)
                         end do
 
                     else
-                        print*, data%eqnset(1)%item%name
+                        print*, data%eqnset(1)%name
                         call chidg_signal(WARN,"No boundary advective flux was found")
                     end if
 

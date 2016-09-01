@@ -1,4 +1,5 @@
 module type_bc_patch
+#include <messenger.h>
     use mod_kinds,      only: ik
     use type_ivector,   only: ivector_t
     implicit none
@@ -13,9 +14,9 @@ module type_bc_patch
     !-----------------------------------------------------------------------------------------
     type, public :: bc_patch_t
 
-        type(ivector_t)                 :: idomain_l
-        type(ivector_t)                 :: ielement_l
-        type(ivector_t)                 :: iface_l
+        type(ivector_t)                 :: idomain_l_
+        type(ivector_t)                 :: ielement_l_
+        type(ivector_t)                 :: iface_
         type(ivector_t), allocatable    :: coupled_elements(:)
 
     contains
@@ -24,8 +25,8 @@ module type_bc_patch
         procedure   :: nfaces
 
         ! Return indices for a given bc face
-        procedure   :: idomain
-        procedure   :: ielement
+        procedure   :: idomain_l
+        procedure   :: ielement_l
         procedure   :: iface
 
     end type bc_patch_t
@@ -60,9 +61,9 @@ contains
 
 
         ! Add face to bc_patch list
-        call self%idomain_l%push_back(idomain)
-        call self%ielement_l%push_back(ielement)
-        call self%iface_l%push_back(iface)
+        call self%idomain_l_%push_back(idomain)
+        call self%ielement_l_%push_back(ielement)
+        call self%iface_%push_back(iface)
 
 
         ! Extend coupling storage. Need a vector for each bc_face
@@ -91,7 +92,7 @@ contains
 
         integer(ik) :: nfaces_bc
 
-        nfaces_bc = self%iface_l%size()
+        nfaces_bc = self%iface_%size()
 
     end function nfaces
     !***************************************************************************************************
@@ -110,15 +111,15 @@ contains
     !!
     !!
     !--------------------------------------------------------------------------------------------------
-    function idomain(self,ind) result(idom_bc)
+    function idomain_l(self,ind) result(idom_bc)
         class(bc_patch_t),  intent(inout)   :: self
         integer(ik),        intent(in)      :: ind
 
         integer(ik) :: idom_bc
 
-        idom_bc = self%idomain_l%at(ind)
+        idom_bc = self%idomain_l_%at(ind)
 
-    end function idomain
+    end function idomain_l
     !**************************************************************************************************
 
 
@@ -133,15 +134,15 @@ contains
     !!
     !!
     !--------------------------------------------------------------------------------------------------
-    function ielement(self,ind) result(ielem_bc)
+    function ielement_l(self,ind) result(ielem_bc)
         class(bc_patch_t),  intent(inout)   :: self
         integer(ik),        intent(in)      :: ind
 
         integer(ik) :: ielem_bc
 
-        ielem_bc = self%ielement_l%at(ind)
+        ielem_bc = self%ielement_l_%at(ind)
 
-    end function ielement
+    end function ielement_l
     !**************************************************************************************************
 
 
@@ -163,7 +164,7 @@ contains
 
         integer(ik) :: iface_bc
 
-        iface_bc = self%iface_l%at(ind)
+        iface_bc = self%iface_%at(ind)
 
     end function iface
     !**************************************************************************************************

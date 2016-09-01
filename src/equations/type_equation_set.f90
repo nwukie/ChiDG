@@ -47,9 +47,9 @@ module type_equation_set
         ! Name
         character(len=:),           allocatable :: name 
 
-        ! Equations
-        type(properties_t),         allocatable :: prop
-        type(equation_t),           allocatable :: eqns(:)
+        ! Properties/Equations
+        type(properties_t)                      :: prop
+!        type(equation_t),           allocatable :: eqns(:)
 
         ! Operators
         type(operator_wrapper_t),   allocatable :: boundary_advective_operator(:)
@@ -158,7 +158,7 @@ contains
     !---------------------------------------------------------------------------------------------------------
     subroutine add_equation(self,varstring)
         class(equation_set_t),  intent(inout)  :: self
-        character(*),           intent(in)     :: varstring
+        character(len=*),       intent(in)     :: varstring
 
         type(equation_t), allocatable    :: temp(:)
         integer(ik) :: ieq, ierr, ind
@@ -181,25 +181,24 @@ contains
             !
             ! If there are already equations allocated, reallocate and add new equation
             !
-            if (allocated(self%eqns)) then
+            if (allocated(self%prop%eqns)) then
 
                 ! Allocate temp eqn array with one extra slot for new eqn
-                allocate(temp(size(self%eqns) + 1), stat=ierr)
+                allocate(temp(size(self%prop%eqns) + 1), stat=ierr)
                 if (ierr /= 0) call AllocationError
 
                 ! Copy current eqns to first temp slots
-                do ieq = 1,size(self%eqns)
-                    temp(ieq) = self%eqns(ieq)
+                do ieq = 1,size(self%prop%eqns)
+                    temp(ieq) = self%prop%eqns(ieq)
                 end do
 
                 ! Add new eqn to last slot
-                temp(size(temp))%name = varstring
-                !temp(size(temp))%ind  = varindex
-                temp(size(temp))%ind  = size(temp)  ! equation index is set to the index it was added at
+                call temp(size(temp))%set_name(varstring)
+                call temp(size(temp))%set_index(size(temp))
 
 
                 ! Store temp equation array to equation properties
-                self%eqns = temp
+                self%prop%eqns = temp
 
             !
             ! If there are no equations allocated, allocate one slot and set data
@@ -207,12 +206,13 @@ contains
             else
 
                 ! Allocate equation
-                allocate(self%eqns(1), stat=ierr)
+                allocate(self%prop%eqns(1), stat=ierr)
                 if (ierr /= 0) call AllocationError
 
-                self%eqns(1)%name = varstring
+
+                self%prop%eqns(1)%name = varstring
                 !self%eqns(1)%ind  = varindex
-                self%eqns(1)%ind  = 1  ! equation index is set to the index it was added at
+                self%prop%eqns(1)%ind  = 1  ! equation index is set to the index it was added at
 
             end if
 

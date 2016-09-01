@@ -1,5 +1,5 @@
 module bc_empty
-    use type_bc,            only: bc_t
+    use type_bc_operator,   only: bc_operator_t
     use type_chidg_worker,  only: chidg_worker_t
     use type_properties,    only: properties_t
 !    use type_solverdata,    only: solverdata_t
@@ -15,10 +15,11 @@ module bc_empty
     !!  @author Nathan A. Wukie
     !!
     !-------------------------------------------------------------------------------------------
-    type, public, extends(bc_t) :: empty_t
+    type, public, extends(bc_operator_t) :: empty_t
 
     contains
         procedure   :: add_options
+        procedure   :: init
         procedure   :: compute    !> bc implementation
     end type empty_t
     !-------------------------------------------------------------------------------------------
@@ -40,12 +41,6 @@ contains
         class(empty_t),  intent(inout)   :: self
 
         !
-        ! Set name
-        !
-        call self%set_name('empty')
-
-
-        !
         ! Add functions
         !
 
@@ -61,6 +56,29 @@ contains
 
 
 
+
+    !>
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   8/29/2016
+    !!
+    !--------------------------------------------------------------------------------
+    subroutine init(self)
+        class(empty_t), intent(inout) :: self
+        
+        !
+        ! Set operator name
+        !
+        call self%set_name("empty")
+
+        !
+        ! Set operator type
+        !
+        call self%set_operator_type("Boundary Advective Flux")
+
+
+    end subroutine init
+    !********************************************************************************
 
 
 

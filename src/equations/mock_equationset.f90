@@ -1,7 +1,7 @@
 module mock_equationset
-    use type_equationset,  only: equationset_t
+    use type_equation_set,  only: equation_set_t
     
-    type, extends(equationset_t) :: mock_equationset_t
+    type, extends(equation_set_t) :: mock_equation_set_t
 
     contains
         procedure :: init
@@ -10,7 +10,7 @@ module mock_equationset
 contains
 
     subroutine init(self)
-        class(mock_equationset_t),  intent(inout)   :: self
+        class(mock_equation_set_t),  intent(inout)   :: self
     end subroutine
 
 end module

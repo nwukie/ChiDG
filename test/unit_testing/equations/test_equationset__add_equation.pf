@@ -5,22 +5,22 @@
 subroutine test_equationset__add_equation__one()
     use pfunit_mod
     
-    use mock_equationset,   only: mock_equationset_t
-    use LA_properties,      only: LA_properties_t
+    use mock_equation_set,  only: mock_equation_set_t
+!    use LA_properties,      only: LA_properties_t
     !use SCA_properties,     only: SCA_properties_t
 
 
-    type(mock_equationset_t)    :: meq
-    type(LA_properties_t)      :: LA_prop
-
-
-    ! Allocate a concrete properties component in the equationset, which stores the equations
-    allocate(LA_properties_t::meq%prop)
+    type(mock_equation_set_t)   :: meq
+!    type(LA_properties_t)      :: LA_prop
+!
+!
+!    ! Allocate a concrete properties component in the equationset, which stores the equations
+!    allocate(LA_properties_t::meq%prop)
 
     !
     ! Add one equation. THIS IS BEING TESTED.
     !
-    call meq%add_equation("a",1)
+    call meq%add_equation("a")
 
 
 
@@ -47,22 +47,22 @@ end subroutine
 subroutine test_equationset__add_equation__two()
     use pfunit_mod
     
-    use mock_equationset,   only: mock_equationset_t
-    use LA_properties,     only: LA_properties_t
+    use mock_equation_set, only: mock_equation_set_t
+!    use LA_properties,     only: LA_properties_t
 
 
-    type(mock_equationset_t)    :: meq
-    type(LA_properties_t)      :: LA_prop
-
-
-    ! Allocate a concrete properties component in the equationset, which stores the equations
-    allocate(LA_properties_t::meq%prop)
+    type(mock_equation_set_t)  :: meq
+!    type(LA_properties_t)      :: LA_prop
+!
+!
+!    ! Allocate a concrete properties component in the equationset, which stores the equations
+!    allocate(LA_properties_t::meq%prop)
 
     !
     ! Add two equations. THIS IS BEING TESTED.
     !
-    call meq%add_equation("a",1)
-    call meq%add_equation("b",2)
+    call meq%add_equation("a")
+    call meq%add_equation("b")
 
     ! Test number of equations
     @assertEqual(2,size(meq%prop%eqns))

@@ -142,7 +142,7 @@ subroutine test_function_status__init(this)
     !
     ndom = this%chidg%data%ndomains()
     allocate(function_data(ndom))
-    function_data(1) = this%chidg%data%eqnset(1)%item%function_data
+    function_data(1) = this%chidg%data%eqnset(1)%function_data
 
 
     !
@@ -232,7 +232,7 @@ subroutine test_function_status__clear(this)
     !
     ndom = this%chidg%data%ndomains()
     allocate(function_data(ndom))
-    function_data(1) = this%chidg%data%eqnset(1)%item%function_data
+    function_data(1) = this%chidg%data%eqnset(1)%function_data
 
 
     !
@@ -320,7 +320,7 @@ subroutine test_function_status__compute(this)
     !
     ndom = this%chidg%data%ndomains()
     allocate(function_data(ndom))
-    function_data(1) = this%chidg%data%eqnset(1)%item%function_data
+    function_data(1) = this%chidg%data%eqnset(1)%function_data
 
 
     !
@@ -435,7 +435,7 @@ subroutine test_function_status__linearize(this)
     !
     ndom = this%chidg%data%ndomains()
     allocate(function_data(ndom))
-    function_data(1) = this%chidg%data%eqnset(1)%item%function_data
+    function_data(1) = this%chidg%data%eqnset(1)%function_data
 
 
     !

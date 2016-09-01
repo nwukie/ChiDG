@@ -2,17 +2,17 @@
 subroutine test_equationset__set_name()
     use pfunit_mod
 
-    use mock_equationset,           only: mock_equationset_t
+    use mock_equation_set,           only: mock_equation_set_t
     
-    type(mock_equationset_t)        :: meq
+    type(mock_equation_set_t)        :: meq
 
 
     !
     ! Set equationset name. THIS IS BEING TESTED
     !
-    call meq%set_name('mock_equationset')
+    call meq%set_name('mock_equation_set')
 
-    @assertEqual('mock_equationset', meq%name)
+    @assertEqual('mock_equation_set', meq%name)
 
 end subroutine test_equationset__set_name
 

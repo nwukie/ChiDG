@@ -109,7 +109,7 @@ contains
         !
         ! Initialized solution to constant values
         !
-        ivar = this%chidg%data%eqnset(1)%item%prop%get_eqn_index('u')   ! Get variable index
+        ivar = this%chidg%data%eqnset(1)%prop%get_equation_index('u')   ! Get variable index
 
 
         !
@@ -284,7 +284,7 @@ contains
             seed%ielement_l = 15
 
             tol   = 1.e-13_rk
-            ivar  = self%chidg%data%eqnset(1)%item%prop%get_eqn_index('u')
+            ivar  = self%chidg%data%eqnset(1)%prop%get_equation_index('u')
             ngq   = elems(ielem)%gq%nnodes_v
 
             ! Allocate number of AD variables for data at GQ nodes. Derivative arrays are not yet allocated
@@ -361,7 +361,7 @@ contains
 
 
             tol   = 1.e-13_rk
-            ivar  = self%chidg%data%eqnset(1)%item%prop%get_eqn_index('u')
+            ivar  = self%chidg%data%eqnset(1)%prop%get_equation_index('u')
 
             ngq    = elems(ielem)%gq%nnodes_v
             nderiv = elems(ielem)%neqns  *  elems(ielem)%nterms_s
@@ -443,7 +443,7 @@ contains
 
 
             tol   = 1.e-13_rk
-            ivar  = self%chidg%data%eqnset(1)%item%prop%get_eqn_index('u')
+            ivar  = self%chidg%data%eqnset(1)%prop%get_equation_index('u')
             
             ngq = elems(ielem)%gq%nnodes_v  !> Number of quadrature nodes
             
@@ -521,7 +521,7 @@ contains
 
 
             tol   = 1.e-13_rk
-            ivar  = self%chidg%data%eqnset(1)%item%prop%get_eqn_index('u')
+            ivar  = self%chidg%data%eqnset(1)%prop%get_equation_index('u')
 
             ngq = elems(ielem)%gq%nnodes_v      !> Number of quadrature nodes
             nderiv = elems(ielem)%neqns  *  elems(ielem)%nterms_s
@@ -629,7 +629,7 @@ contains
 
 
             tol   = 1.e-13_rk
-            ivar  = self%chidg%data%eqnset(1)%item%prop%get_eqn_index('u')
+            ivar  = self%chidg%data%eqnset(1)%prop%get_equation_index('u')
 
             ngq = faces(ielem,iface)%gq%nnodes_f
 
@@ -719,7 +719,7 @@ contains
 
 
             tol   = 1.e-13_rk
-            ivar  = self%chidg%data%eqnset(1)%item%prop%get_eqn_index('u')
+            ivar  = self%chidg%data%eqnset(1)%prop%get_equation_index('u')
 
             ngq = faces(ielem,iface)%gq%nnodes_f
             nderiv = faces(ielem,iface)%neqns  *  faces(ielem,iface)%nterms_s
@@ -805,7 +805,7 @@ contains
 
 
             tol   = 1.e-13_rk
-            ivar  = self%chidg%data%eqnset(1)%item%prop%get_eqn_index('u')
+            ivar  = self%chidg%data%eqnset(1)%prop%get_equation_index('u')
 
             ngq = faces(ielem,iface)%gq%nnodes_f
             
@@ -894,7 +894,7 @@ contains
 
             
             tol   = 1.e-13_rk
-            ivar  = self%chidg%data%eqnset(1)%item%prop%get_eqn_index('u')
+            ivar  = self%chidg%data%eqnset(1)%prop%get_equation_index('u')
 
             ngq    = faces(ielem,iface)%gq%nnodes_f
             nderiv = faces(ielem,iface)%neqns  *  faces(ielem,iface)%nterms_s
@@ -986,7 +986,7 @@ contains
 
 
             tol   = 1.e-13_rk
-            ivar  = self%chidg%data%eqnset(1)%item%prop%get_eqn_index('u')
+            ivar  = self%chidg%data%eqnset(1)%prop%get_equation_index('u')
 
             ngq = faces(ielem,iface)%gq%nnodes_f
 
@@ -1073,7 +1073,7 @@ contains
 
 
             tol   = 1.e-13_rk
-            ivar  = self%chidg%data%eqnset(1)%item%prop%get_eqn_index('u')
+            ivar  = self%chidg%data%eqnset(1)%prop%get_equation_index('u')
 
             ngq = faces(ielem,iface)%gq%nnodes_f
             nderiv = faces(ielem,iface)%neqns  *  faces(ielem,iface)%nterms_s
@@ -1167,7 +1167,7 @@ contains
 
 
             tol   = 1.e-13_rk
-            ivar  = self%chidg%data%eqnset(1)%item%prop%get_eqn_index('u')
+            ivar  = self%chidg%data%eqnset(1)%prop%get_equation_index('u')
 
             ngq = faces(ielem,iface)%gq%nnodes_f
             
@@ -1255,7 +1255,7 @@ contains
 
             
             tol   = 1.e-13_rk
-            ivar  = self%chidg%data%eqnset(1)%item%prop%get_eqn_index('u')
+            ivar  = self%chidg%data%eqnset(1)%prop%get_equation_index('u')
 
             ngq    = faces(ielem,iface)%gq%nnodes_f
             nderiv = faces(ielem,iface)%neqns  *  faces(ielem,iface)%nterms_s

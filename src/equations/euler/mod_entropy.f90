@@ -57,11 +57,11 @@ contains
 
 
             ! Get equation indices
-            irho  = prop%get_equation_index("Density")
+            irho  = prop%get_equation_index("Density"   )
             irhou = prop%get_equation_index("X-Momentum")
             irhov = prop%get_equation_index("Y-Momentum")
             irhow = prop%get_equation_index("Z-Momentum")
-            irhoE = prop%get_equation_index("Density")
+            irhoE = prop%get_equation_index("Energy"    )
 
 
             !

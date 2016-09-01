@@ -1,6 +1,7 @@
 module bc_linearadvection_extrapolate
     use mod_kinds,          only: rk,ik
-    use type_bc,            only: bc_t
+
+    use type_bc_operator,   only: bc_operator_t
     use type_chidg_worker,  only: chidg_worker_t
     use type_properties,    only: properties_t
     implicit none
@@ -11,13 +12,13 @@ module bc_linearadvection_extrapolate
     !!  
     !!  @author Nathan A. Wukie
     !-----------------------------------------------------------------------------------------
-    type, public, extends(bc_t) :: linearadvection_extrapolate_t
+    type, public, extends(bc_operator_t) :: linearadvection_extrapolate_t
 
 
 
     contains
 
-        procedure   :: add_options
+        procedure   :: init
         procedure   :: compute    !> bc implementation
 
     end type linearadvection_extrapolate_t
@@ -36,7 +37,7 @@ contains
     !!  @date   2/2/2016
     !!
     !------------------------------------------------------------------------------------------
-    subroutine add_options(self)    
+    subroutine init(self)    
         class(linearadvection_extrapolate_t),  intent(inout)   :: self
 
         !
@@ -46,16 +47,12 @@ contains
 
 
         !
-        ! Add functions
+        ! Set operator equations
         !
+        call self%set_equation("u")
 
 
-        !
-        ! Add parameters
-        !
-
-
-    end subroutine add_options
+    end subroutine init
     !******************************************************************************************
 
 

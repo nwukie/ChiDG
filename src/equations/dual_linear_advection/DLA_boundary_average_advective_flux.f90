@@ -5,15 +5,11 @@ module DLA_boundary_average_advective_flux
                                       XI_MIN,XI_MAX,ETA_MIN,ETA_MAX,ZETA_MIN,ZETA_MAX,DIAG, &
                                       ME, NEIGHBOR
 
-    use type_boundary_flux,     only: boundary_flux_t
+    use type_operator,          only: operator_t
     use type_chidg_worker,      only: chidg_worker_t
-    use DNAD_D
-
     use type_properties,        only: properties_t
-    use DLA_properties,         only: DLA_properties_t
+    use DNAD_D
     implicit none
-
-    private
 
 
 
@@ -26,15 +22,43 @@ module DLA_boundary_average_advective_flux
     !!  @author Nathan A. Wukie
     !!
     !---------------------------------------------------------------------------------------------
-    type, extends(boundary_flux_t), public :: DLA_boundary_average_advective_flux_t
+    type, extends(operator_t), public :: DLA_boundary_average_advective_flux_t
 
     contains
+        
+        procedure   :: init
         procedure   :: compute
 
     end type DLA_boundary_average_advective_flux_t
     !*********************************************************************************************
 
 contains
+
+    !>
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   8/29/2016
+    !!
+    !--------------------------------------------------------------------------------
+    subroutine init(self)
+        class(DLA_boundary_average_advective_flux_t),   intent(inout)  :: self
+
+        ! Set operator name
+        call self%set_name("DLA Boundary Average Flux")
+
+        ! Set operator type
+        call self%set_operator_type("Boundary Advective Flux")
+
+        ! Set operator equations
+        call self%set_equation("u_a")
+        call self%set_equation("u_b")
+
+    end subroutine init
+    !********************************************************************************
+
+
+
+
 
 
     !>
@@ -46,7 +70,7 @@ contains
     !!
     !---------------------------------------------------------------------------------------------------
     subroutine compute(self,worker,prop)
-        class(DLA_boundary_average_advective_flux_t),   intent(in)      :: self
+        class(DLA_boundary_average_advective_flux_t),   intent(inout)   :: self
         type(chidg_worker_t),                           intent(inout)   :: worker
         class(properties_t),                            intent(inout)   :: prop
 
@@ -64,20 +88,23 @@ contains
         !
         ! Get integer data
         !
-        iu_a = prop%get_eqn_index("u_a")
-        iu_b = prop%get_eqn_index("u_b")
+        iu_a = prop%get_equation_index("u_a")
+        iu_b = prop%get_equation_index("u_b")
 
 
 
-        !
-        ! Get equation set properties
-        !
-        select type(prop)
-            type is (DLA_properties_t)
-                cx = prop%c(1)
-                cy = prop%c(2)
-                cz = prop%c(3)
-        end select
+!        !
+!        ! Get equation set properties
+!        !
+!        select type(prop)
+!            type is (DLA_properties_t)
+!                cx = prop%c(1)
+!                cy = prop%c(2)
+!                cz = prop%c(3)
+!        end select
+        cx = 1._rk
+        cy = 0._rk
+        cz = 0._rk
 
 
 

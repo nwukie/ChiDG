@@ -845,31 +845,26 @@ contains
 
 
 
-        print*, 'write variable - 1'
         !
         ! Check if 'Variables' group exists
         !
         call h5lexists_f(fid, trim(dname)//"/Variables", exists, ierr)
 
 
-        print*, 'write variable - 2'
 
         !
         ! Open the Domain/Variables group
         !
         if (exists) then
-        print*, 'write variable - 3'
             ! If 'Variables' group exists then open the existing group
             call h5gopen_f(fid, trim(dname)//"/Variables", gid, ierr, H5P_DEFAULT_F)
             if (ierr /= 0) call chidg_signal(FATAL,"write_variable_hdf: Domain/Variables group did not open properly")
         else
-        print*, 'write variable - 4'
             ! If 'Variables group does not exist, then create one.
             call h5gcreate_f(fid, trim(dname)//"/Variables", gid, ierr)
         end if
 
 
-        print*, 'write variable - 5'
 
         !
         ! Get total number of elements in the domain from the grid file
@@ -887,7 +882,6 @@ contains
 
 
 
-        print*, 'write variable - 6'
 
 
         !
@@ -904,7 +898,6 @@ contains
         maxdims(3) = H5S_UNLIMITED_F
 
 
-        print*, 'write variable - 7'
 
 
         !
@@ -913,7 +906,6 @@ contains
         call h5lexists_f(gid, trim(varstring), exists, ierr)
 
 
-        print*, 'write variable - 8'
 
         !
         ! Modify dataset creation properties, i.e. enable chunking in order to append dataspace, if needed.
@@ -927,13 +919,11 @@ contains
         if (ierr /= 0) call chidg_signal(FATAL, "write_variable_hdf: h5pset_chunk_f error setting chunk properties")
 
 
-        print*, 'write variable - 9'
 
         !
         ! Reset dataspace size if necessary
         !
         if (exists) then
-        print*, 'write variable - 10'
             ! Open the existing dataset
             call h5dopen_f(gid, trim(varstring), did, ierr, H5P_DEFAULT_F)
             if (ierr /= 0) call chidg_signal(FATAL,"write_variable_hdf: variable does not exist or was not opened correctly")
@@ -949,7 +939,6 @@ contains
             if (ierr /= 0) call chidg_signal(FATAL, "write_variable_hdf: h5dget_space_f")
 
         else
-        print*, 'write variable - 11'
             ! Create a new dataspace
             call h5screate_simple_f(ndims,dims,sid,ierr,maxdims)
             if (ierr /= 0) call chidg_signal(FATAL,"write_variable_hdf: h5screate_simple_f")
@@ -961,7 +950,6 @@ contains
         end if
 
 
-        print*, 'write variable - 12'
 
         !
         ! Get variable integer index from variable character string
@@ -969,7 +957,6 @@ contains
         ivar = data%eqnset(idom)%prop%get_equation_index(varstring)
 
 
-        print*, 'write variable - 13'
 
         !
         ! Assemble variable buffer matrix that gets written to file
@@ -978,7 +965,6 @@ contains
 
 
         do ielem = 1,data%mesh(idom)%nelem
-        print*, 'write variable - 14'
 
             ! get domain-global element index
             ielement_g = data%mesh(idom)%elems(ielem)%ielement_g
@@ -1011,7 +997,6 @@ contains
         end do
 
 
-        print*, 'write variable - 15'
 
         !
         ! Update 'contains_solution' attribute
@@ -1024,7 +1009,6 @@ contains
         call h5sclose_f(sid,ierr)       ! Close Variable dataspaces
         call h5gclose_f(gid,ierr)       ! Close Domain/Variable group
 
-        print*, 'write variable - 16'
 
 
     end subroutine write_variable_hdf

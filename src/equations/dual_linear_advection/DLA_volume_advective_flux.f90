@@ -3,15 +3,11 @@ module DLA_volume_advective_flux
     use mod_kinds,              only: rk,ik
     use mod_constants,          only: ZERO,ONE,TWO,HALF
 
-    use type_volume_flux,       only: volume_flux_t
+    use type_operator,          only: operator_t
     use type_chidg_worker,      only: chidg_worker_t
-    use DNAD_D
-
     use type_properties,        only: properties_t
-    use DLA_properties,         only: DLA_properties_t
+    use DNAD_D
     implicit none
-
-    private
 
 
 
@@ -24,16 +20,45 @@ module DLA_volume_advective_flux
     !!  @author Nathan A. Wukie
     !!
     !----------------------------------------------------------------------------------------------
-    type, extends(volume_flux_t), public :: DLA_volume_advective_flux_t
+    type, extends(operator_t), public :: DLA_volume_advective_flux_t
 
     contains
 
+        procedure   :: init
         procedure   :: compute
 
     end type DLA_volume_advective_flux_t
     !***********************************************************************************************
 
 contains
+
+
+    !>
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   8/29/2016
+    !!
+    !--------------------------------------------------------------------------------
+    subroutine init(self)
+        class(DLA_volume_advective_flux_t),   intent(inout)  :: self
+
+        ! Set operator name
+        call self%set_name("DLA Volume Flux")
+
+        ! Set operator type
+        call self%set_operator_type("Volume Advective Flux")
+
+        ! Set operator equations
+        call self%set_equation("u_a")
+        call self%set_equation("u_b")
+
+    end subroutine init
+    !********************************************************************************
+
+
+
+
+
 
     !>
     !!
@@ -43,7 +68,7 @@ contains
     !!
     !-----------------------------------------------------------------------------------------------
     subroutine compute(self,worker,prop)
-        class(DLA_volume_advective_flux_t),     intent(in)      :: self
+        class(DLA_volume_advective_flux_t),     intent(inout)   :: self
         type(chidg_worker_t),                   intent(inout)   :: worker
         class(properties_t),                    intent(inout)   :: prop
 
@@ -59,19 +84,22 @@ contains
         !
         ! Get variable index from equation set
         !
-        iu_a = prop%get_eqn_index('u_a')
-        iu_b = prop%get_eqn_index('u_b')
+        iu_a = prop%get_equation_index('u_a')
+        iu_b = prop%get_equation_index('u_b')
 
 
-        !
-        ! Get equation set properties
-        !
-        select type(prop)
-            type is (DLA_properties_t)
-                cx = prop%c(1)
-                cy = prop%c(2)
-                cz = prop%c(3)
-        end select
+!        !
+!        ! Get equation set properties
+!        !
+!        select type(prop)
+!            type is (DLA_properties_t)
+!                cx = prop%c(1)
+!                cy = prop%c(2)
+!                cz = prop%c(3)
+!        end select
+        cx = 1._rk
+        cy = 0._rk
+        cz = 0._rk
 
 
 

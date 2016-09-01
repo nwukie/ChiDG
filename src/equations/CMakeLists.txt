@@ -1,6 +1,6 @@
-#add_subdirectory(LinearAdvection)
+add_subdirectory(linear_advection)
 #add_subdirectory(LinearDiffusion)
-#add_subdirectory(DualLinearAdvection)
+add_subdirectory(dual_linear_advection)
 add_subdirectory(euler)
 #add_subdirectory(PrimitiveLinearizedEuler)
 
@@ -29,7 +29,7 @@ add_lib_sources(type_equation.f90
                 type_bc_patch.f90
                 type_bc.f90
                 type_properties.f90
-                mock_equationset.f90
+                mock_equation_set.f90
                 type_equationset_function_data.f90
                 )
 

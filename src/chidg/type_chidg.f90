@@ -478,11 +478,6 @@ contains
             dname = bcdata(idom)%domain_
             do iface = 1,NFACES
 
-                !if ( allocated(bcdata(idom)%bcs(iface)%bc) ) then
-                !    if ( trim(bcdata(idom)%bcs(iface)%bc%name) /= "empty" ) then
-                !        call self%data%add_bc(dname, bcdata(idom)%bcs(iface)%bc, bcdata(idom)%bc_connectivity(iface))
-                !    end if
-                !end if
                 call self%data%add_bc(dname, bcdata(idom)%bcs(iface), bcdata(idom)%bc_connectivity(iface))
 
             end do !iface

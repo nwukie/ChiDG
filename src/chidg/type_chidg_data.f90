@@ -303,6 +303,7 @@ contains
         do iop = 1,bc_ops%size()
 
             ! Get boundary condition operator
+            if (allocated(bc_op)) deallocate(bc_op)
             allocate(bc_op, source=bc_ops%at(iop), stat=ierr)
             if (ierr /= 0) call AllocationError
 

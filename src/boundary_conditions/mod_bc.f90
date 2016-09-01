@@ -20,7 +20,7 @@ module mod_bc
     !
     use bc_empty,                           only: empty_t
     use bc_periodic,                        only: periodic_t
-!    use bc_linearadvection_extrapolate,     only: linearadvection_extrapolate_t
+    use bc_linearadvection_extrapolate,     only: linearadvection_extrapolate_t
 !    use bc_lineardiffusion_extrapolate,     only: lineardiffusion_extrapolate_t
 !    use bc_lineardiffusion_derivative,      only: lineardiffusion_derivative_t
 !    use bc_lineardiffusion_value,           only: lineardiffusion_value_t
@@ -71,7 +71,7 @@ contains
         !
         type(empty_t)                           :: EMPTY
         type(periodic_t)                        :: PERIODIC
-!        type(linearadvection_extrapolate_t)     :: LINEARADVECTION_EXTRAPOLATE
+        type(linearadvection_extrapolate_t)     :: LINEARADVECTION_EXTRAPOLATE
 !        type(lineardiffusion_extrapolate_t)     :: LINEARDIFFUSION_EXTRAPOLATE
 !        type(lineardiffusion_derivative_t)      :: LINEARDIFFUSION_DERIVATIVE
 !        type(lineardiffusion_value_t)           :: LINEARDIFFUSION_VALUE
@@ -98,7 +98,7 @@ contains
             !
             call registered_bcs%push_back(EMPTY)
             call registered_bcs%push_back(PERIODIC)
-!            call registered_bcs%push_back(LINEARADVECTION_EXTRAPOLATE)
+            call registered_bcs%push_back(LINEARADVECTION_EXTRAPOLATE)
 !            call registered_bcs%push_back(LINEARDIFFUSION_EXTRAPOLATE)
 !            call registered_bcs%push_back(LINEARDIFFUSION_DERIVATIVE)
 !            call registered_bcs%push_back(LINEARDIFFUSION_VALUE)

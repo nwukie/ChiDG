@@ -60,7 +60,7 @@ contains
         !
         ! Set equation set name
         !
-        call euler_eqns%set_name('Euler')
+        call euler_eqns%set_name("Euler")
         
 
         !

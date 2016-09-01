@@ -1038,7 +1038,7 @@ contains
 
             ! Write operator name
             bcstring = bc_operator_strings%at(iop)
-            call write_line('['//trim(adjustl(bcstring%get()))//']')
+            call write_line('['//trim(adjustl(bcstring%get()))//']', color='pink')
 
             
             ! Open operator group

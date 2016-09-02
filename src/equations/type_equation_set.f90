@@ -39,7 +39,7 @@ module type_equation_set
     !!
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   8/16/2016
-    !!  @note   Added support for diffusion terms
+    !!  @note   Reorganized to contain operators instead of fluxes
     !!
     !-------------------------------------------------------------------------------------------------
     type, public :: equation_set_t
@@ -49,7 +49,6 @@ module type_equation_set
 
         ! Properties/Equations
         type(properties_t)                      :: prop
-!        type(equation_t),           allocatable :: eqns(:)
 
         ! Operators
         type(operator_wrapper_t),   allocatable :: boundary_advective_operator(:)
@@ -75,8 +74,8 @@ module type_equation_set
         procedure   :: compute_volume_advective_operators   !< Compute all the volume advective functions
         procedure   :: compute_volume_diffusive_operators   !< Compute all the volume diffusive functions
 
-        procedure   :: get_boundary_ndependent_elements     !< return the number of elements that a boundary function is depending on
-        procedure   :: get_volume_ndependent_elements       !< return the number of elements that a volume function is depending on
+        procedure   :: get_boundary_ndependent_elements     !< return number elements that a boundary function is depending on
+        procedure   :: get_volume_ndependent_elements       !< return number elements that a volume function is depending on
 
     end type equation_set_t
     !**************************************************************************************************
@@ -134,7 +133,6 @@ contains
 
         character(len=:),   allocatable :: ename
 
-
         ename = self%name
 
     end function get_name
@@ -147,10 +145,17 @@ contains
 
 
 
-    !>  Procedure to adding equations to the equation set properties
+    !>  A an equation to the equation set properties
+    !!
+    !!  Just registers the equation string that is specified. This gets put in the properties container,
+    !!  self%prop that stores all the equations being used by the spatial operators.
     !!
     !!  @author Nathan A. Wukie
     !!  @date   1/28/2016
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   8/2/2016
+    !!  @note   modified how the equations are stored.
     !!
     !!  @param[in]  varstring   String defining the variable associated with the equation being added
     !!  @param[in]  varindex    The index of the equation in the given set. 
@@ -211,7 +216,6 @@ contains
 
 
                 self%prop%eqns(1)%name = varstring
-                !self%eqns(1)%ind  = varindex
                 self%prop%eqns(1)%ind  = 1  ! equation index is set to the index it was added at
 
             end if
@@ -230,69 +234,11 @@ contains
 
 
 
-
-
-!    !> Search for a equation string in the self%eqns list. If found, return equation index.
-!    !! A set of equations could be stored in any order. So, when an equation is initialized, it
-!    !! is initialized with an index indicating its location in the set. That index is used to 
-!    !! access the correct solution data values.
-!    !!
-!    !!  @author Nathan A. Wukie
-!    !!  @date   2/25/2016
-!    !!
-!    !!  @param[in]  varstring   Character string identifying the desired variable
-!    !!
-!    !---------------------------------------------------------------------------------------------------
-!    function get_equation_index(self,varstring) result(varindex)
-!        class(equation_set_t),   intent(in)  :: self
-!        character(*),           intent(in)  :: varstring
-!
-!        integer(ik) :: varindex, ieq
-!        logical     :: found = .false.
-!
-!        varindex = 123456789
-!
-!
-!        !
-!        ! Search for character string in self%eqns array. If found set index
-!        !
-!        do ieq = 1,size(self%eqns)
-!            if (varstring == self%eqns(ieq)%name) then
-!                varindex = self%eqns(ieq)%ind
-!                found = .true.
-!                exit
-!            end if
-!        end do
-!
-!
-!
-!        !
-!        ! Check if index was found
-!        !
-!        if (.not. found) call chidg_signal(FATAL,"Equation string not found in equation set properties")
-!
-!    end function get_equation_index
-!    !***************************************************************************************************
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    !>
+    !>  Add a spatial operator to the equation set.
+    !!
+    !!  This accepts a string that is the name of an operator to add. This function then searched the operator
+    !!  register for an operator that matches the incoming string. If one is found, it is created and added 
+    !!  to the equation set.
     !!
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   8/29/2016
@@ -311,7 +257,6 @@ contains
         !
         ! Create new operator
         !
-        !new_operator = build_operator(string)
         allocate(new_operator, source=build_operator(string), stat=ierr)
         if (ierr /= 0) call AllocationError
 
@@ -391,7 +336,6 @@ contains
         !
         ! Assign new operator
         !
-        !temp(size(temp))%op = new_operator
         allocate(temp(size(temp))%op, source=new_operator, stat=ierr)
         if (ierr /= 0) call AllocationError
 
@@ -439,522 +383,7 @@ contains
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-!    !> Add components to volume_advective_flux array
-!    !!
-!    !!  @author Nathan A. Wukie
-!    !!  @date   1/28/2016
-!    !!
-!    !!  @param[in]  flux    Volume advective flux component to be added
-!    !!
-!    !-----------------------------------------------------------------------------------------------------------------------------
-!    !subroutine add_volume_advective_flux(self,flux)
-!    subroutine add_volume_advective_operator(self,string)
-!        class(equation_set_t),   intent(inout)   :: self
-!        character(len=*),       intent(in)      :: string
-!!        class(volume_flux_t),   intent(in)      :: flux
-!    
-!        class(volume_operator_wrapper_t), allocatable   :: temp(:)
-!        integer(ik)     :: ierr, iflux
-!
-!
-!
-!
-!        !
-!        ! Allocate temporary flux array with one additional slot
-!        !
-!        if (allocated(self%volume_advective_operator)) then
-!
-!            ! Allocate
-!            allocate(temp(size(self%volume_advective_operator) + 1), stat=ierr)
-!            if (ierr /= 0) call AllocationError
-!
-!
-!            ! Copy current flux components to temp array
-!            do iflux = 1,size(self%volume_advective_operator)
-!                allocate(temp(iflux)%op,source=self%volume_advective_operator(iflux)%op, stat=ierr)
-!                if (ierr /= 0) call AllocationError
-!            end do
-!
-!        else
-!
-!            ! Allocate new slot
-!            allocate(temp(1), stat=ierr)
-!            if (ierr /= 0) call AllocationError
-!
-!        end if
-!
-!
-!        !
-!        ! Create new operator in last slot
-!        !
-!        call create_operator(temp(size(temp))%op, string)
-!
-!
-!        !
-!        ! Copy temp array back to equationset
-!        !
-!        self%volume_advective_operator = temp
-!
-!
-!
-!
-!
-!
-!!        if (allocated(self%volume_advective_flux)) then
-!!
-!!            !
-!!            ! Allocate temporary flux array with one additional slot
-!!            !
-!!            allocate(temp(size(self%volume_advective_flux) + 1), stat=ierr)
-!!            if (ierr /= 0) call AllocationError
-!!
-!!            !
-!!            ! Copy current flux components to temp array
-!!            !
-!!            do iflux = 1,size(self%volume_advective_flux)
-!!                allocate(temp(iflux)%flux,source=self%volume_advective_flux(iflux)%flux, stat=ierr)
-!!                if (ierr /= 0) call AllocationError
-!!            end do
-!!
-!!
-!!            !
-!!            ! Add new flux to last slot
-!!            !
-!!            allocate(temp(size(temp))%flux, source=flux, stat=ierr)
-!!            if (ierr /= 0) call AllocationError
-!!
-!!            !
-!!            ! Copy temp array back to equationset
-!!            !
-!!            self%volume_advective_flux = temp
-!!
-!!        else
-!!            !
-!!            ! Allocate one slot
-!!            !
-!!            allocate(self%volume_advective_flux(1), stat=ierr)
-!!            if (ierr /= 0) call AllocationError
-!!
-!!            !
-!!            ! Allocate flux component from source
-!!            !
-!!            allocate(self%volume_advective_flux(1)%flux, source=flux, stat=ierr)
-!!            if (ierr /= 0) call AllocationError
-!!
-!!        end if
-!
-!
-!        !
-!        ! Update function data
-!        !
-!        self%function_data%nvolume_advective_flux = size(self%volume_advective_flux)
-!
-!    end subroutine add_volume_advective_flux
-!    !*****************************************************************************************************************************
-!
-!
-!
-!
-!
-!
-!
-!
-!
-!
-!
-!
-!    !> Add components to volume_advective_flux array
-!    !!
-!    !!  @author Nathan A. Wukie
-!    !!  @date   1/28/2016
-!    !!
-!    !!  @param[in]  flux    Volume advective flux component to be added
-!    !!
-!    !-----------------------------------------------------------------------------------------------------------------------------
-!    subroutine add_volume_diffusive_flux(self,flux)
-!        class(equation_set_t),   intent(inout)   :: self
-!        character(len=*),       intent(in)      :: string
-!!        class(volume_flux_t),   intent(in)      :: flux
-!    
-!        class(volume_operator_wrapper_t), allocatable   :: temp(:)
-!        integer(ik)     :: ierr, iflux
-!
-!
-!
-!
-!        !
-!        ! Allocate temporary flux array with one additional slot
-!        !
-!        if (allocated(self%volume_diffusive_operator)) then
-!
-!            ! Allocate
-!            allocate(temp(size(self%volume_diffusive_operator) + 1), stat=ierr)
-!            if (ierr /= 0) call AllocationError
-!
-!
-!            ! Copy current flux components to temp array
-!            do iflux = 1,size(self%volume_diffusive_operator)
-!                allocate(temp(iflux)%op,source=self%volume_diffusive_operator(iflux)%op, stat=ierr)
-!                if (ierr /= 0) call AllocationError
-!            end do
-!
-!        else
-!
-!            ! Allocate new slot
-!            allocate(temp(1), stat=ierr)
-!            if (ierr /= 0) call AllocationError
-!
-!        end if
-!
-!
-!        !
-!        ! Create new operator in last slot
-!        !
-!        call create_operator(temp(size(temp))%op, string)
-!
-!
-!        !
-!        ! Copy temp array back to equationset
-!        !
-!        self%volume_diffusive_operator = temp
-!
-!
-!
-!
-!
-!
-!
-!
-!
-!
-!!        if (allocated(self%volume_diffusive_flux)) then
-!!
-!!            !
-!!            ! Allocate temporary flux array with one additional slot
-!!            !
-!!            allocate(temp(size(self%volume_diffusive_flux) + 1), stat=ierr)
-!!            if (ierr /= 0) call AllocationError
-!!
-!!            !
-!!            ! Copy current flux components to temp array
-!!            !
-!!            do iflux = 1,size(self%volume_diffusive_flux)
-!!                allocate(temp(iflux)%flux,source=self%volume_diffusive_flux(iflux)%flux, stat=ierr)
-!!                if (ierr /= 0) call AllocationError
-!!            end do
-!!
-!!
-!!            !
-!!            ! Add new flux to last slot
-!!            !
-!!            allocate(temp(size(temp))%flux, source=flux, stat=ierr)
-!!            if (ierr /= 0) call AllocationError
-!!
-!!            !
-!!            ! Copy temp array back to equationset
-!!            !
-!!            self%volume_diffusive_flux = temp
-!!
-!!        else
-!!            !
-!!            ! Allocate one slot
-!!            !
-!!            allocate(self%volume_diffusive_flux(1), stat=ierr)
-!!            if (ierr /= 0) call AllocationError
-!!
-!!            !
-!!            ! Allocate flux component from source
-!!            !
-!!            allocate(self%volume_diffusive_flux(1)%flux, source=flux, stat=ierr)
-!!            if (ierr /= 0) call AllocationError
-!!
-!!        end if
-!
-!
-!        !
-!        ! Update function data
-!        !
-!        self%function_data%nvolume_diffusive_flux = size(self%volume_diffusive_flux)
-!
-!    end subroutine add_volume_diffusive_flux
-!    !*****************************************************************************************************************************
-
-
-
-
-
-
-
-
-!    !> Add components to boundary_advective_flux array
-!    !!
-!    !!  @author Nathan A. Wukie
-!    !!  @date   1/28/2016
-!    !!
-!    !!  @param[in]  flux    Boundary advective flux type to be added
-!    !!
-!    !-----------------------------------------------------------------------------------------------------------------------------
-!    !subroutine add_boundary_advective_flux(self,flux)
-!    subroutine add_boundary_advective_operator(self,string)
-!        class(equation_set_t),   intent(inout)   :: self
-!        character(len=*),       intent(in)      :: string
-!        !class(boundary_flux_t), intent(in)      :: flux
-!    
-!        class(boundary_operator_wrapper_t), allocatable   :: temp(:)
-!        integer(ik)     :: ierr, iflux
-!
-!
-!
-!
-!        !
-!        ! Allocate temporary flux array with one additional slot
-!        !
-!        if (allocated(self%boundary_advective_operator)) then
-!
-!            ! Allocate
-!            allocate(temp(size(self%boundary_advective_operator) + 1), stat=ierr)
-!            if (ierr /= 0) call AllocationError
-!
-!
-!            ! Copy current flux components to temp array
-!            do iflux = 1,size(self%boundary_advective_operator)
-!                allocate(temp(iflux)%op,source=self%boundary_advective_operator(iflux)%op, stat=ierr)
-!                if (ierr /= 0) call AllocationError
-!            end do
-!
-!        else
-!
-!            ! Allocate new slot
-!            allocate(temp(1), stat=ierr)
-!            if (ierr /= 0) call AllocationError
-!
-!        end if
-!
-!
-!        !
-!        ! Create new operator in last slot
-!        !
-!        call create_operator(temp(size(temp))%op, string)
-!
-!
-!        !
-!        ! Copy temp array back to equationset
-!        !
-!        self%boundary_advective_operator = temp
-!
-!
-!
-!
-!
-!!        if (allocated(self%boundary_advective_flux)) then
-!!
-!!            !
-!!            ! Allocate temporary flux array with one additional slot
-!!            !
-!!            allocate(temp(size(self%boundary_advective_flux) + 1), stat=ierr)
-!!            if (ierr /= 0) call AllocationError
-!!
-!!
-!!            !
-!!            ! Copy current flux components to temp array
-!!            !
-!!            do iflux = 1,size(self%boundary_advective_flux)
-!!                allocate(temp(iflux)%flux,source=self%boundary_advective_flux(iflux)%flux, stat=ierr)
-!!                if (ierr /= 0) call AllocationError
-!!            end do
-!!
-!!
-!!            !
-!!            ! Add new flux to last slot
-!!            !
-!!            allocate(temp(size(temp))%flux, source=flux, stat=ierr)
-!!            if (ierr /= 0) call AllocationError
-!!
-!!            !
-!!            ! Copy temp array back to equationset
-!!            !
-!!            self%boundary_advective_flux = temp
-!!
-!!        else
-!!
-!!            !
-!!            ! Allocate new slot
-!!            !
-!!            allocate(self%boundary_advective_flux(1), stat=ierr)
-!!            if (ierr /= 0) call AllocationError
-!!
-!!
-!!            !
-!!            ! Allocate flux in new wrapper slot
-!!            !
-!!            allocate(self%boundary_advective_flux(1)%flux, source=flux, stat=ierr)
-!!            if (ierr /= 0) call AllocationError
-!!
-!!        end if
-!
-!
-!
-!        !
-!        ! Update function data
-!        !
-!        self%function_data%nboundary_advective_flux = size(self%boundary_advective_operator)
-!
-!
-!    end subroutine add_boundary_advective_operator
-!    !*****************************************************************************************************************************
-!
-!
-!
-!
-!
-!
-!
-!
-!
-!
-!
-!    !> Add components to boundary_diffusive_flux array
-!    !!
-!    !!  @author Nathan A. Wukie
-!    !!  @date   1/28/2016
-!    !!
-!    !!  @param[in]  flux    Boundary diffusive flux type to be added
-!    !!
-!    !-----------------------------------------------------------------------------------------------------------------------------
-!    !subroutine add_boundary_diffusive_operator(self,flux)
-!    subroutine add_boundary_diffusive_operator(self,string)
-!        class(equation_set_t),   intent(inout)   :: self
-!        character(len=*),       intent(in)      :: string
-!!        class(boundary_flux_t), intent(in)      :: flux
-!    
-!        class(boundary_operator_wrapper_t), allocatable   :: temp(:)
-!        integer(ik)     :: ierr, iflux
-!
-!
-!        
-!        !
-!        ! Allocate temporary flux array with one additional slot
-!        !
-!        if (allocated(self%boundary_diffusive_operator)) then
-!
-!            ! Allocate
-!            allocate(temp(size(self%boundary_diffusive_operator) + 1), stat=ierr)
-!            if (ierr /= 0) call AllocationError
-!
-!
-!            ! Copy current flux components to temp array
-!            do iflux = 1,size(self%boundary_diffusive_operator)
-!                allocate(temp(iflux)%op,source=self%boundary_diffusive_operator(iflux)%op, stat=ierr)
-!                if (ierr /= 0) call AllocationError
-!            end do
-!
-!        else
-!
-!            ! Allocate new slot
-!            allocate(temp(1), stat=ierr)
-!            if (ierr /= 0) call AllocationError
-!
-!        end if
-!
-!
-!        !
-!        ! Create new operator in last slot
-!        !
-!        call create_operator(temp(size(temp))%op, string)
-!
-!
-!        !
-!        ! Copy temp array back to equationset
-!        !
-!        self%boundary_diffusive_operator = temp
-!
-!
-!
-!
-!
-!
-!
-!!        if (allocated(self%boundary_diffusive_flux)) then
-!!
-!!            !
-!!            ! Allocate temporary flux array with one additional slot
-!!            !
-!!            allocate(temp(size(self%boundary_diffusive_flux) + 1), stat=ierr)
-!!            if (ierr /= 0) call AllocationError
-!!
-!!
-!!            !
-!!            ! Copy current flux components to temp array
-!!            !
-!!            do iflux = 1,size(self%boundary_diffusive_flux)
-!!                allocate(temp(iflux)%flux,source=self%boundary_diffusive_flux(iflux)%flux, stat=ierr)
-!!                if (ierr /= 0) call AllocationError
-!!            end do
-!!
-!!
-!!            !
-!!            ! Add new flux to last slot
-!!            !
-!!            allocate(temp(size(temp))%flux, source=flux, stat=ierr)
-!!            if (ierr /= 0) call AllocationError
-!!
-!!            !
-!!            ! Copy temp array back to equationset
-!!            !
-!!            self%boundary_diffusive_flux = temp
-!!
-!!        else
-!!
-!!            !
-!!            ! Allocate new slot
-!!            !
-!!            allocate(self%boundary_diffusive_flux(1), stat=ierr)
-!!            if (ierr /= 0) call AllocationError
-!!
-!!
-!!            !
-!!            ! Allocate flux in new wrapper slot
-!!            !
-!!            allocate(self%boundary_diffusive_flux(1)%flux, source=flux, stat=ierr)
-!!            if (ierr /= 0) call AllocationError
-!!
-!!        end if
-!
-!
-!
-!        !
-!        ! Update function data
-!        !
-!        self%function_data%nboundary_diffusive_flux = size(self%boundary_diffusive_flux)
-!
-!
-!    end subroutine add_boundary_diffusive_operator
-!    !*****************************************************************************************************************************
-
-
-
-
-
-
-
-
-    !>  Loops through the attached boundary advective flux functions and computes them 
+    !>  Loops through the attached boundary advective operator functions and computes them 
     !!
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   8/15/2016
@@ -1000,8 +429,8 @@ contains
                     worker%function_info%ifcn   = ifcn
                     worker%function_info%idiff  = idiff
 
-                    compute_function     = worker%solverdata%function_status%compute_function(   worker%face_info, worker%function_info )
-                    linearize_function   = worker%solverdata%function_status%linearize_function( worker%face_info, worker%function_info )
+                    compute_function   = worker%solverdata%function_status%compute_function(   worker%face_info, worker%function_info )
+                    linearize_function = worker%solverdata%function_status%linearize_function( worker%face_info, worker%function_info )
                     
 
                     if ( compute_function .or. linearize_function ) then
@@ -1041,7 +470,7 @@ contains
 
 
 
-    !>  Loops through the attached boundary diffusive flux functions and computes them 
+    !>  Loops through the attached boundary diffusive operator functions and computes them 
     !!
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   8/15/2016
@@ -1130,7 +559,7 @@ contains
 
 
 
-    !>  Loops through the attached volume advective flux functions and computes them 
+    !>  Loops through the attached volume advective operator functions and computes them 
     !!
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   8/15/2016
@@ -1187,7 +616,7 @@ contains
 
 
 
-    !>  Loops through the attached volume diffusive flux functions and computes them 
+    !>  Loops through the attached volume diffusive operator functions and computes them 
     !!
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   8/16/2016

@@ -5,7 +5,10 @@ module type_bc_patch
     implicit none
 
 
-    !>
+    !>  A boundary condition patch
+    !!
+    !!  This contains the boundary condition geometry description. A domain, element, and face
+    !!  index for each face the boundary condition is operating on.
     !!
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   8/30/2016
@@ -42,12 +45,10 @@ contains
 
 
 
-    !>
+    !>  Add a face to the boundary condition patch.
     !!
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   8/30/2016
-    !!
-    !!
     !!
     !!
     !-------------------------------------------------------------------------------------------------
@@ -81,7 +82,7 @@ contains
 
 
 
-    !>
+    !>  Return the number of faces in the boundary condition patch
     !!
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   8/30/2016
@@ -104,7 +105,7 @@ contains
 
 
 
-    !>
+    !>  Return the local domain index of a boundary condition face
     !!
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   8/30/2016
@@ -127,7 +128,7 @@ contains
 
 
 
-    !>
+    !>  Return the local element index of a boundary condition face
     !!
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   8/30/2016
@@ -151,7 +152,7 @@ contains
 
 
 
-    !>
+    !>  Return the face index of a boundary condition face
     !!
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   8/30/2016

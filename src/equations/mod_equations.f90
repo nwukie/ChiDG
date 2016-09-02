@@ -17,11 +17,6 @@ module mod_equations
     !
     ! Import Equations
     !
-!    use eqn_lineardiffusion,                         only: lineardiffusion_e
-!    use eqn_duallinearadvection,                     only: duallinearadvection_e
-!    use eqn_euler,                                   only: euler_e
-!    use eqn_primitive_linearized_euler,              only: primitive_linearized_euler_e
-
     use eqn_linear_advection,       only: linear_advection
     use eqn_dual_linear_advection,  only: dual_linear_advection
     use eqn_euler,                  only: euler 
@@ -50,6 +45,9 @@ contains
     !!  @author Nathan A. Wukie
     !!  @date   2/8/2016
     !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   9/2/2016
+    !!  @note   Modified to take equation_builder's instead of equation_set's
     !!
     !-----------------------------------------------------------------------------------
     subroutine register_equation_builders()

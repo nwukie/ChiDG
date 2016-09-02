@@ -3,19 +3,19 @@ module type_bc_operator_wrapper
     implicit none
 
 
-    !>  Wrapper for storing an array of dynamic equationset_t allocations.
+    !>  Wrapper for storing an array of bc_operator_t instances that are different types.
     !!
     !!  @author Nathan A. Wukie(AFRL)
     !!  @date   8/29/2016
     !!
     !!
-    !----------------------------------------------------------------------------
+    !-------------------------------------------------------------------------------------
     type, public :: bc_operator_wrapper_t
 
         class(bc_operator_t), allocatable  :: op
 
     end type bc_operator_wrapper_t
-    !*****************************************************************************
+    !*************************************************************************************
 
 
 end module type_bc_operator_wrapper

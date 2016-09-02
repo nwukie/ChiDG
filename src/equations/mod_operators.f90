@@ -33,11 +33,11 @@ contains
 
 
 
-    !>
+    !>  Register new operators in the module vector, registered_operators.
+    !!
     !!
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   8/30/2016
-    !!
     !!
     !!
     !----------------------------------------------------------------------------------------------------
@@ -109,7 +109,8 @@ contains
 
 
 
-    !>
+    !>  Build an operator based on an incoming string specification. Initialize the operator,
+    !!  and return it to the caller.
     !!
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   8/29/2016

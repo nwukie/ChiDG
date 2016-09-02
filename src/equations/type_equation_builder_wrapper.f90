@@ -4,11 +4,19 @@ module type_equation_builder_wrapper
 
 
 
+    !>  A wrapper for equation_builder_t's so they can be stored in an array.
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   9/2/2016
+    !!
+    !!
+    !---------------------------------------------------------------------------------
     type, public :: equation_builder_wrapper_t
 
         class(equation_builder_t),  allocatable :: bld
 
     end type equation_builder_wrapper_t
+    !**********************************************************************************
 
 
 

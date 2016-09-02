@@ -22,6 +22,10 @@ module type_bc_operator
     !!  @author Nathan A. Wukie
     !!  @date   2/3/2016
     !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   9/2/2016
+    !!  @note   Changed boundary condition to inherit operator
+    !!
     !--------------------------------------------------------------------------------------------
     type, public, extends(operator_t), abstract :: bc_operator_t
 
@@ -79,8 +83,6 @@ contains
         do ibc_face = 1,nbc_faces
 
             ! Get block-element index of current ielem_bc
-            !ielem = bc_patch%ielem(ibc_face)
-            !ielem = bc_patch%ielement_l%at(ibc_face)
             ielem = bc_patch%ielement_l(ibc_face)
 
             

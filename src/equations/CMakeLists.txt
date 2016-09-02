@@ -14,13 +14,8 @@ add_lib_sources(type_equation.f90
                 type_equation_set.f90 
                 type_equation_builder.f90
                 type_equation_builder_wrapper.f90
-#                type_equationset_wrapper.f90
                 mod_equations.f90 
-                type_flux.f90
-#                type_volume_operator.f90
-#                type_boundary_operator.f90
-#                type_boundary_operator_wrapper.f90
-#                type_volume_operator_wrapper.f90
+#                type_flux.f90
                 mod_operators.f90
                 type_operator.f90
                 type_operator_wrapper.f90

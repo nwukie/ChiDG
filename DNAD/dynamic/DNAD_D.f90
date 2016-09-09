@@ -146,6 +146,9 @@ REAL(DBL_AD)      ::negative_one=-1.0d0
         REAL(rk)              :: x_ad_      ! functional value
         REAL(rk), allocatable :: xp_ad_(:)  ! derivative
 
+!    contains
+!
+!        final :: destructor
 
     END TYPE AD_D
 
@@ -2200,6 +2203,8 @@ CONTAINS
 
 !    subroutine destructor(self)
 !        type(AD_D), intent(inout) :: self
+!
+!        if (allocated(self%xp_ad_)) deallocate(self%xp_ad_)
 !
 !
 !    end subroutine

@@ -343,6 +343,14 @@ contains
 
 
         !
+        ! Save first-order solution
+        !
+        if (self%order == 1) then
+            call self%chidg%write_solution('naca2412_A0p0.h5')
+        end if
+
+
+        !
         ! Store the nonlinear convergence of the calculation
         !
         nonlinear_convergence(npes_index,order_index) = self%chidg%nonlinear_solver%residual_norm

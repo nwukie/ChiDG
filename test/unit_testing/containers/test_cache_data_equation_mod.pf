@@ -1,0 +1,382 @@
+module test_cache_data_equation_mod
+    use pfunit_mod
+    use mod_kinds,                  only: rk,ik
+    use type_chidg,                 only: chidg_t
+    use type_cache_info,            only: cache_info_t
+    use type_cache_data_equation,   only: cache_data_equation_t
+    implicit none
+
+    public  :: test_cache_data_equation
+
+
+    @TestCase
+    !>
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   9/7/2016
+    !!
+    !--------------------------------------------------------------------------
+    type, extends(TestCase) ::  test_cache_data_equation
+
+        type(chidg_t)               :: chidg
+        integer(ik)                 :: nterms_s = 8
+
+    contains
+        procedure   ::  setUp
+        procedure   ::  tearDown
+    end type test_cache_data_equation
+    !***************************************************************************
+
+
+contains
+
+    !> NOTE: make sure to use 'this' instead of 'self' since these are over-writting a derived type 
+    !! procedure. The argument names have to match
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   9/7/2016
+    !!
+    !--------------------------------------------------------------------------------------------------
+    subroutine setUp(this)
+        class(test_cache_data_equation),    intent(inout)   :: this
+        
+        call this%chidg%init('env')
+        call this%chidg%read_grid('D1_E27_M1.h5',3)
+        call this%chidg%read_boundaryconditions('D1_E27_M1.h5')
+
+        call this%chidg%initialize_solution_domains(this%nterms_s)
+
+    end subroutine setUp
+    !************************************************************************************
+    
+
+    !>
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   9/7/2016
+    !!
+    !-------------------------------------------------------------------------------------
+    subroutine tearDown(this)
+        class(test_cache_data_equation),    intent(inout)   :: this
+
+        !
+        ! Close ChiDG interface
+        !
+        call this%chidg%close('core')
+
+    end subroutine tearDown
+    !**************************************************************************************
+
+
+
+
+
+    @Test
+    !> Test element metric entries at quadrature points
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   9/7/2016
+    !!
+    !!-------------------------------------------------------------------------------------
+    subroutine test_resize_face_interior__allocated(self)
+        class(test_cache_data_equation),    intent(inout)   :: self
+        
+        integer(ik)                 :: idomain, ielem, iface
+        type(cache_data_equation_t) :: cache_data_equation
+
+        idomain = 1
+        ielem   = 14
+        iface   = 1
+
+        !
+        ! Call resize routine. THIS IS BEING TESTED.
+        !
+        call cache_data_equation%resize('face interior',self%chidg%data%mesh,idomain,ielem,iface)
+
+
+        !
+        ! Test that the cache allocated the correct component
+        !
+        @assertTrue(allocated(cache_data_equation%value))
+        @assertTrue(allocated(cache_data_equation%derivative))
+        @assertTrue(allocated(cache_data_equation%lift))
+        
+    end subroutine test_resize_face_interior__allocated
+    !***************************************************************************************
+
+
+
+
+
+    @Test
+    !> Test element metric entries at quadrature points
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   9/7/2016
+    !!
+    !!-------------------------------------------------------------------------------------
+    subroutine test_resize_face_interior__size(self)
+        class(test_cache_data_equation),    intent(inout)   :: self
+        
+        integer(ik)                 :: idomain, ielem, iface, nnodes
+        type(cache_data_equation_t) :: cache_data_equation
+
+        idomain = 1
+        ielem   = 14
+        iface   = 1
+
+
+
+        !
+        ! Call resize routine. THIS IS BEING TESTED.
+        !
+        call cache_data_equation%resize('face interior',self%chidg%data%mesh,idomain,ielem,iface)
+
+
+        !
+        ! Test that the cache allocated the correct component
+        !
+        nnodes = self%chidg%data%mesh(idomain)%faces(ielem,iface)%gq%face%nnodes
+
+        ! Number of ndoes
+        @assertEqual(size(cache_data_equation%value,1), nnodes)
+        ! Number of dependent elements
+        @assertEqual(size(cache_data_equation%value,2), 1)
+
+        ! Number of nodes
+        @assertEqual(size(cache_data_equation%derivative,1), nnodes)
+        ! Number of spatial dimentions
+        @assertEqual(size(cache_data_equation%derivative,2), 3)
+        ! Number of dependent elements
+        @assertEqual(size(cache_data_equation%derivative,3), 2)
+
+        ! Number of nodes
+        @assertEqual(size(cache_data_equation%lift,1), nnodes)
+        ! Number of spatial dimentions
+        @assertEqual(size(cache_data_equation%lift,2), 3)
+        ! Number of dependent elements
+        @assertEqual(size(cache_data_equation%lift,3), 2)
+        
+    end subroutine test_resize_face_interior__size
+    !***************************************************************************************
+
+
+
+
+
+
+
+
+    @Test
+    !> Test element metric entries at quadrature points
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   9/7/2016
+    !!
+    !!-------------------------------------------------------------------------------------
+    subroutine test_resize_face_exterior__allocated(self)
+        class(test_cache_data_equation),    intent(inout)   :: self
+        
+        integer(ik)                 :: idomain, ielem, iface
+        type(cache_data_equation_t) :: cache_data_equation
+
+        idomain = 1
+        ielem   = 14
+        iface   = 1
+
+
+        !
+        ! Call resize routine. THIS IS BEING TESTED.
+        !
+        call cache_data_equation%resize('face exterior',self%chidg%data%mesh,idomain,ielem,iface)
+
+
+        !
+        ! Test that the cache allocated the correct component
+        !
+        @assertTrue(allocated(cache_data_equation%value))
+        @assertTrue(allocated(cache_data_equation%derivative))
+        @assertTrue(allocated(cache_data_equation%lift))
+        
+    end subroutine test_resize_face_exterior__allocated
+    !***************************************************************************************
+
+
+
+
+
+    @Test
+    !> Test element metric entries at quadrature points
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   9/7/2016
+    !!
+    !!-------------------------------------------------------------------------------------
+    subroutine test_resize_face_exterior__size(self)
+        class(test_cache_data_equation),    intent(inout)   :: self
+        
+        integer(ik)                 :: idomain, ielem, iface, nnodes
+        type(cache_info_t)          :: cache_info
+        type(cache_data_equation_t) :: cache_data_equation
+
+        idomain = 1
+        ielem   = 14
+        iface   = 1
+
+
+
+        !
+        ! Call resize routine. THIS IS BEING TESTED.
+        !
+        call cache_data_equation%resize('face exterior',self%chidg%data%mesh,idomain,ielem,iface)
+
+
+        !
+        ! Test that the cache allocated the correct component
+        !
+        nnodes = self%chidg%data%mesh(idomain)%faces(ielem,iface)%gq%face%nnodes
+
+        ! Number of ndoes
+        @assertEqual(size(cache_data_equation%value,1), nnodes)
+        ! Number of dependent elements
+        @assertEqual(size(cache_data_equation%value,2), 1)
+
+        ! Number of nodes
+        @assertEqual(size(cache_data_equation%derivative,1), nnodes)
+        ! Number of spatial dimentions
+        @assertEqual(size(cache_data_equation%derivative,2), 3)
+        ! Number of dependent elements
+        @assertEqual(size(cache_data_equation%derivative,3), 2)
+
+        ! Number of nodes
+        @assertEqual(size(cache_data_equation%lift,1), nnodes)
+        ! Number of spatial dimentions
+        @assertEqual(size(cache_data_equation%lift,2), 3)
+        ! Number of dependent elements
+        @assertEqual(size(cache_data_equation%lift,3), 2)
+        
+    end subroutine test_resize_face_exterior__size
+    !***************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    @Test
+    !> Test element metric entries at quadrature points
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   9/7/2016
+    !!
+    !!-------------------------------------------------------------------------------------
+    subroutine test_resize_element__allocated(self)
+        class(test_cache_data_equation),    intent(inout)   :: self
+        
+        integer(ik)                 :: idomain, ielem
+        type(cache_data_equation_t) :: cache_data_equation
+
+        idomain = 1
+        ielem   = 14
+
+
+        !
+        ! Call resize routine. THIS IS BEING TESTED.
+        !
+        call cache_data_equation%resize('element',self%chidg%data%mesh,idomain,ielem)
+
+
+        !
+        ! Test that the cache allocated the correct component
+        !
+        @assertTrue(allocated(cache_data_equation%value))
+        @assertTrue(allocated(cache_data_equation%derivative))
+        @assertTrue(allocated(cache_data_equation%lift))
+        
+    end subroutine test_resize_element__allocated
+    !***************************************************************************************
+
+
+
+
+
+    @Test
+    !> Test element metric entries at quadrature points
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   9/7/2016
+    !!
+    !!-------------------------------------------------------------------------------------
+    subroutine test_resize_element__size(self)
+        class(test_cache_data_equation),    intent(inout)   :: self
+        
+        integer(ik)                 :: idomain, ielem, nnodes
+        type(cache_data_equation_t) :: cache_data_equation
+
+        idomain = 1
+        ielem   = 14
+
+
+        !
+        ! Call resize routine. THIS IS BEING TESTED.
+        !
+        call cache_data_equation%resize('element',self%chidg%data%mesh,idomain,ielem)
+
+
+        !
+        ! Test that the cache allocated the correct component
+        !
+        nnodes = self%chidg%data%mesh(idomain)%elems(ielem)%gq%vol%nnodes
+
+        ! Number of ndoes
+        @assertEqual(size(cache_data_equation%value,1), nnodes)
+        ! Number of dependent elements
+        @assertEqual(size(cache_data_equation%value,2), 1)
+
+        ! Number of nodes
+        @assertEqual(size(cache_data_equation%derivative,1), nnodes)
+        ! Number of spatial dimentions
+        @assertEqual(size(cache_data_equation%derivative,2), 3)
+        ! Number of dependent elements
+        @assertEqual(size(cache_data_equation%derivative,3), 7)
+
+        ! Number of nodes
+        @assertEqual(size(cache_data_equation%lift,1), nnodes)
+        ! Number of spatial dimentions
+        @assertEqual(size(cache_data_equation%lift,2), 3)
+        ! Number of dependent elements
+        @assertEqual(size(cache_data_equation%lift,3), 7)
+        
+    end subroutine test_resize_element__size
+    !***************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+end module test_cache_data_equation_mod

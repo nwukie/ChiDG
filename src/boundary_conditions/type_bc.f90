@@ -6,6 +6,7 @@ module type_bc
                                           BOUNDARY, CHIMERA, ORPHAN, BC_BLK, ZERO, ONE, TWO, RKTOL
 
     use type_chidg_worker,          only: chidg_worker_t
+    use type_chidg_cache,           only: chidg_cache_t
     use type_equation_set,          only: equation_set_t
     use type_bc_patch,              only: bc_patch_t
     use type_bc_operator,           only: bc_operator_t
@@ -404,9 +405,10 @@ contains
                        icoupled_elem, ncoupled_elems, iop
 
         type(chidg_worker_t)    :: worker
+        type(chidg_cache_t)     :: cache
 
 
-        call worker%init(mesh,sdata)
+        call worker%init(mesh,sdata,cache)
 
 
         !
@@ -418,11 +420,11 @@ contains
             iface       = self%bc_patch%iface(ielem_bc)         ! Get face index of element 'ielem' that is being operated on
 
 
-            worker%face_info%idomain_g  = mesh(idomain_l)%elems(ielement_l)%idomain_g
-            worker%face_info%idomain_l  = mesh(idomain_l)%elems(ielement_l)%idomain_l
-            worker%face_info%ielement_g = mesh(idomain_l)%elems(ielement_l)%ielement_g
-            worker%face_info%ielement_l = mesh(idomain_l)%elems(ielement_l)%ielement_l
-            worker%face_info%iface      = iface
+            worker%element_info%idomain_g  = mesh(idomain_l)%elems(ielement_l)%idomain_g
+            worker%element_info%idomain_l  = mesh(idomain_l)%elems(ielement_l)%idomain_l
+            worker%element_info%ielement_g = mesh(idomain_l)%elems(ielement_l)%ielement_g
+            worker%element_info%ielement_l = mesh(idomain_l)%elems(ielement_l)%ielement_l
+            worker%iface                   = iface
 
             worker%function_info%ifcn     = 0       ! Boundary conditions are not tracked.
             worker%function_info%idepend  = 0       ! Chimera interface not applicable on boundary condition.

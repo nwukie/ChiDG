@@ -7,6 +7,7 @@ module mod_check_jacobian
     use type_solverdata,    only: solverdata_t
     use type_chidg_data,    only: chidg_data_t
     use type_chidg_worker,  only: chidg_worker_t
+    use type_chidg_cache,   only: chidg_cache_t
 
     use type_blockvector
     use type_densematrix,   only: densematrix_t
@@ -43,7 +44,9 @@ contains
         real(rk)                            :: qhold, eps
         integer(ik)                         :: nelem, i, iterm, icol, nterms, ivar, iflux, nflux, idom, iel, idepend
         integer(ik)                         :: ielem_p              ! element in which the solution is being perturbed for the FD calculation.
+
         type(chidg_worker_t)                :: worker
+        type(chidg_cache_t)                 :: cache
 
 
         ! ASSUME ONLY ONE DOMAIN IS PRESENT
@@ -62,7 +65,7 @@ contains
             !                                      Interior Scheme
             !------------------------------------------------------------------------------------------
 
-            call worker%init(data%mesh,data%sdata)
+            call worker%init(data%mesh,data%sdata,cache)
 
             !
             ! Clear all working data
@@ -245,9 +248,10 @@ contains
         integer(ik) :: ielem_p              ! ielem_p is the element in which the solution is being perturbed for the finite difference calculation.
 
         type(chidg_worker_t)    :: worker
+        type(chidg_cache_t)     :: cache
 
 
-        call worker%init(data%mesh,data%sdata)
+        call worker%init(data%mesh,data%sdata,cache)
 
 
         !
@@ -290,11 +294,11 @@ contains
             vec_fd = rhs
 
 
-            worker%face_info%idomain_g  = data%mesh(idom)%elems(ielem)%idomain_g
-            worker%face_info%idomain_l  = data%mesh(idom)%elems(ielem)%idomain_l
-            worker%face_info%ielement_g = data%mesh(idom)%elems(ielem)%ielement_g
-            worker%face_info%ielement_l = data%mesh(idom)%elems(ielem)%ielement_l
-            worker%face_info%iface      = iface
+            worker%element_info%idomain_g  = data%mesh(idom)%elems(ielem)%idomain_g
+            worker%element_info%idomain_l  = data%mesh(idom)%elems(ielem)%idomain_l
+            worker%element_info%ielement_g = data%mesh(idom)%elems(ielem)%ielement_g
+            worker%element_info%ielement_l = data%mesh(idom)%elems(ielem)%ielement_l
+            worker%iface      = iface
 
 
             !

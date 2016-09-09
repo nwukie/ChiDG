@@ -192,11 +192,10 @@ module mod_constants
 
 
     !
-    ! BR2 Parameters
+    ! Cache Parameters
     !
-    integer(ik),    parameter   :: BR2_INTERIOR = 1
-    integer(ik),    parameter   :: BR2_EXTERIOR = 2
-    integer(ik),    parameter   :: BR2_INTERIOR_LOCATION = 1
+    integer(ik),    parameter   :: CACHE_FACE_INTERIOR = 1
+    integer(ik),    parameter   :: CACHE_FACE_EXTERIOR = 2
 
 
     !

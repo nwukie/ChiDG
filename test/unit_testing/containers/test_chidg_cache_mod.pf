@@ -1,0 +1,88 @@
+module test_chidg_cache_mod
+    use pfunit_mod
+    use mod_kinds,                  only: rk,ik
+    use type_chidg,                 only: chidg_t
+    use type_cache_info,            only: cache_info_t
+    use type_chidg_cache,           only: chidg_cache_t
+    implicit none
+
+    public  :: test_chidg_cache
+
+
+    @TestCase
+    !>
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   9/7/2016
+    !!
+    !--------------------------------------------------------------------------
+    type, extends(TestCase) ::  test_chidg_cache
+
+        type(chidg_t)               :: chidg
+        integer(ik)                 :: nterms_s = 8
+
+    contains
+        procedure   ::  setUp
+        procedure   ::  tearDown
+    end type test_chidg_cache
+    !***************************************************************************
+
+
+contains
+
+    !> NOTE: make sure to use 'this' instead of 'self' since these are over-writting a derived type 
+    !! procedure. The argument names have to match
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   9/7/2016
+    !!
+    !--------------------------------------------------------------------------------------------------
+    subroutine setUp(this)
+        class(test_chidg_cache),    intent(inout)   :: this
+        
+        call this%chidg%init('env')
+        call this%chidg%read_grid('D1_E27_M1.h5',3)
+        call this%chidg%read_boundaryconditions('D1_E27_M1.h5')
+
+        call this%chidg%initialize_solution_domains(this%nterms_s)
+        call this%chidg%init('communication')
+
+    end subroutine setUp
+    !************************************************************************************
+    
+
+    !>
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   9/7/2016
+    !!
+    !-------------------------------------------------------------------------------------
+    subroutine tearDown(this)
+        class(test_chidg_cache),    intent(inout)   :: this
+
+        !
+        ! Close ChiDG interface
+        !
+        call this%chidg%close('core')
+
+    end subroutine tearDown
+    !**************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+end module test_chidg_cache_mod

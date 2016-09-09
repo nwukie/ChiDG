@@ -3,6 +3,7 @@ module type_bc_operator
     use mod_kinds,                  only: rk, ik
 
     use type_chidg_worker,          only: chidg_worker_t
+    use type_chidg_cache,           only: chidg_cache_t
     use type_operator,              only: operator_t
     use type_bc_patch,              only: bc_patch_t
     use type_mesh,                  only: mesh_t
@@ -34,26 +35,59 @@ module type_bc_operator
 
     contains
 
+!        procedure(bc_solution), deferred :: compute_bc_solution
+        procedure   :: compute_bc_state
+
         procedure   :: init_bc_coupling
-        procedure   :: add_options                              !< Specialized by each bc_t implementation. Adds options available
+        procedure   :: add_options           !< Specialized by each bc_t implementation. Adds options available
 
-        procedure   :: set_fcn                                  !< Set a particular function definition for a specified bcfunction_t
-        procedure   :: set_fcn_option                           !< Set function-specific options for a specified bcfunction_t
+        procedure   :: set_fcn               !< Set a particular function definition for a specified bcfunction_t
+        procedure   :: set_fcn_option        !< Set function-specific options for a specified bcfunction_t
 
 
-        procedure   :: get_nproperties                          !< Return the number of properties associated with the boundary condition.
-        procedure   :: get_property_name                        !< Return the name of a property given a property index.
-        procedure   :: get_noptions                             !< Return the number of available options for a given property, specified by a property index.
-        procedure   :: get_option_key                           !< Return the key for an option, given a property index and subsequent option index.
-        procedure   :: get_option_value                         !< Return the value of a given key, inside of a specified property.
+        procedure   :: get_nproperties       !< Return the number of properties associated with the boundary condition.
+        procedure   :: get_property_name     !< Return the name of a property given a property index.
+        procedure   :: get_noptions          !< Return the number of available options for a given property, specified by a property index.
+        procedure   :: get_option_key        !< Return the key for an option, given a property index and subsequent option index.
+        procedure   :: get_option_value      !< Return the value of a given key, inside of a specified property.
 
     end type bc_operator_t
     !*********************************************************************************************
 
 
 
+
+!    abstract interface
+!        subroutine bc_solution(self)
+!            import bc_operator_t
+!
+!            class(bc_operator_t)    :: self
+!        end subroutine
+!    end interface
+
+
 contains
 
+
+
+
+
+    !>
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   9/6/2016
+    !!
+    !!
+    !-------------------------------------------------------------------------------------------
+    subroutine compute_bc_state(self,worker,prop)
+        class(bc_operator_t),   intent(inout)   :: self
+        type(chidg_worker_t),   intent(inout)   :: worker
+        class(properties_t),    intent(inout)   :: prop
+
+
+
+    end subroutine compute_bc_state
+    !*******************************************************************************************
 
 
     !>

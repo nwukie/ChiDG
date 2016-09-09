@@ -3,14 +3,14 @@ module mod_spatial
     use mod_kinds,              only: rk,ik
     use mod_constants,          only: NFACES, DIAG, CHIMERA, INTERIOR
     use mod_chidg_mpi,          only: IRANK, NRANK, ChiDG_COMM, GLOBAL_MASTER
-!    use mod_diffusion,          only: BR2
-    use type_BR2,               only: BR2_t
     use mpi_f08,                only: MPI_Barrier
 
 
 
     use type_chidg_data,        only: chidg_data_t
     use type_chidg_worker,      only: chidg_worker_t
+    use type_chidg_cache,       only: chidg_cache_t
+    use type_cache_handler,     only: cache_handler_t
     use type_element_info,      only: element_info_t
     use type_face_info,         only: face_info_t
     use type_timer,             only: timer_t
@@ -54,10 +54,11 @@ contains
         type(element_info_t)        :: elem_info
         type(face_info_t)           :: face_info
 
-        type(BR2_t)                 :: BR2
+        type(chidg_cache_t)         :: cache
+        type(cache_handler_t)       :: cache_handler
 
         ! Initialize Chidg Worker references
-        call worker%init(data%mesh, data%sdata, BR2)
+        call worker%init(data%mesh, data%sdata, cache)
 
 
         !
@@ -116,10 +117,9 @@ contains
 
 
 
-                ! Compute framework diffusion terms and linearization for current element
-!                print*, 'Updating BR2'
-!                call BR2%update(mesh,elem_info,sdata%q)
-!                call sdata%BR2%update(mesh,elem_info,sdata%q)
+                ! Update the element cache
+                call cache_handler%update(worker,data%eqnset,data%bcset)
+
 
 
                 ! 1-6 = linearization of neighbor blocks, 7 = linearization of Q- block(self)
@@ -129,13 +129,7 @@ contains
                     ! Faces loop. For the current element, compute the contributions from boundary integrals
                     do iface = 1,NFACES
 
-                        face_info%idomain_g  = mesh(idom)%elems(ielem)%idomain_g
-                        face_info%idomain_l  = mesh(idom)%elems(ielem)%idomain_l
-                        face_info%ielement_g = mesh(idom)%elems(ielem)%ielement_g
-                        face_info%ielement_l = mesh(idom)%elems(ielem)%ielement_l
-                        face_info%iface      = iface
-                        call worker%set_face_info(face_info)
-
+                        call worker%set_face(iface)
 
                         call eqnset%compute_boundary_advective_operators(worker, idiff)
 !                        call eqnset%compute_boundary_diffusive_operators(worker, idiff)
@@ -143,6 +137,7 @@ contains
 
                     end do  ! faces loop
                     
+
 
                     !
                     ! Compute volume fluxes

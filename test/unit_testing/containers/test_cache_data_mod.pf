@@ -1,0 +1,318 @@
+module test_cache_data_mod
+    use pfunit_mod
+    use mod_kinds,                  only: rk,ik
+    use type_chidg,                 only: chidg_t
+    use type_cache_info,            only: cache_info_t
+    use type_cache_data,            only: cache_data_t
+    implicit none
+
+    public  :: test_cache_data
+
+
+    @TestCase
+    !>
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   9/7/2016
+    !!
+    !--------------------------------------------------------------------------
+    type, extends(TestCase) ::  test_cache_data
+
+        type(chidg_t)               :: chidg
+        integer(ik)                 :: nterms_s = 8
+
+    contains
+        procedure   ::  setUp
+        procedure   ::  tearDown
+    end type test_cache_data
+    !***************************************************************************
+
+
+contains
+
+    !> NOTE: make sure to use 'this' instead of 'self' since these are over-writting a derived type 
+    !! procedure. The argument names have to match
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   9/7/2016
+    !!
+    !--------------------------------------------------------------------------------------------------
+    subroutine setUp(this)
+        class(test_cache_data),    intent(inout)   :: this
+        
+        call this%chidg%init('env')
+        call this%chidg%read_grid('D1_E27_M1.h5',3)
+        call this%chidg%read_boundaryconditions('D1_E27_M1.h5')
+
+        call this%chidg%initialize_solution_domains(this%nterms_s)
+        call this%chidg%init('communication')
+
+    end subroutine setUp
+    !************************************************************************************
+    
+
+    !>
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   9/7/2016
+    !!
+    !-------------------------------------------------------------------------------------
+    subroutine tearDown(this)
+        class(test_cache_data),    intent(inout)   :: this
+
+        !
+        ! Close ChiDG interface
+        !
+        call this%chidg%close('core')
+
+    end subroutine tearDown
+    !**************************************************************************************
+
+
+
+
+
+    @Test
+    !> Test element metric entries at quadrature points
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   9/7/2016
+    !!
+    !!-------------------------------------------------------------------------------------
+    subroutine test_resize_face_interior__allocated(self)
+        class(test_cache_data),    intent(inout)   :: self
+        
+        integer(ik)                 :: idomain, ielem, iface
+        type(cache_data_t)          :: cache_data
+
+        idomain = 1
+        ielem   = 14
+        iface   = 1
+
+
+        !
+        ! Call resize routine. THIS IS BEING TESTED.
+        !
+        call cache_data%resize('face interior',self%chidg%data%mesh,idomain,ielem,iface)
+
+
+        !
+        ! Test that the cache allocated the correct component
+        !
+        @assertTrue(allocated(cache_data%eqn))
+        
+    end subroutine test_resize_face_interior__allocated
+    !***************************************************************************************
+
+
+
+
+
+    @Test
+    !> Test element metric entries at quadrature points
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   9/7/2016
+    !!
+    !!-------------------------------------------------------------------------------------
+    subroutine test_resize_face_interior__size(self)
+        class(test_cache_data),    intent(inout)   :: self
+        
+        integer(ik)                 :: idomain, ielem, iface
+        type(cache_data_t)          :: cache_data
+
+        idomain = 1
+        ielem   = 14
+        iface   = 1
+
+
+        !
+        ! Call resize routine. THIS IS BEING TESTED.
+        !
+        call cache_data%resize('face interior',self%chidg%data%mesh,idomain,ielem,iface)
+
+
+
+        ! Number of equations
+        @assertEqual(size(cache_data%eqn), 1)
+
+        
+    end subroutine test_resize_face_interior__size
+    !***************************************************************************************
+
+
+
+
+
+
+
+
+    @Test
+    !> Test element metric entries at quadrature points
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   9/7/2016
+    !!
+    !!-------------------------------------------------------------------------------------
+    subroutine test_resize_face_exterior__allocated(self)
+        class(test_cache_data),    intent(inout)   :: self
+        
+        integer(ik)                 :: idomain, ielem, iface
+        type(cache_data_t)          :: cache_data
+
+        idomain = 1
+        ielem   = 14
+        iface   = 1
+
+
+        !
+        ! Call resize routine. THIS IS BEING TESTED.
+        !
+        call cache_data%resize('face exterior',self%chidg%data%mesh,idomain,ielem,iface)
+
+
+        !
+        ! Test that the cache allocated the correct component
+        !
+        @assertTrue(allocated(cache_data%eqn))
+        
+    end subroutine test_resize_face_exterior__allocated
+    !***************************************************************************************
+
+
+
+
+
+    @Test
+    !> Test element metric entries at quadrature points
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   9/7/2016
+    !!
+    !!-------------------------------------------------------------------------------------
+    subroutine test_resize_face_exterior__size(self)
+        class(test_cache_data),    intent(inout)   :: self
+        
+        integer(ik)                 :: idomain, ielem, iface
+        type(cache_data_t)          :: cache_data
+
+        idomain = 1
+        ielem   = 14
+        iface   = 1
+
+
+        !
+        ! Call resize routine. THIS IS BEING TESTED.
+        !
+        call cache_data%resize('face exterior',self%chidg%data%mesh,idomain,ielem,iface)
+
+
+
+        ! Number of ndoes
+        @assertEqual(size(cache_data%eqn), 1)
+
+        
+    end subroutine test_resize_face_exterior__size
+    !***************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    @Test
+    !> Test element metric entries at quadrature points
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   9/7/2016
+    !!
+    !!-------------------------------------------------------------------------------------
+    subroutine test_resize_element__allocated(self)
+        class(test_cache_data),    intent(inout)   :: self
+        
+        integer(ik)                 :: idomain, ielem
+        type(cache_data_t)          :: cache_data
+
+        idomain = 1
+        ielem   = 14
+
+
+        !
+        ! Call resize routine. THIS IS BEING TESTED.
+        !
+        call cache_data%resize('element',self%chidg%data%mesh,idomain,ielem)
+
+
+        !
+        ! Test that the cache allocated the correct component
+        !
+        @assertTrue(allocated(cache_data%eqn))
+        
+    end subroutine test_resize_element__allocated
+    !***************************************************************************************
+
+
+
+
+
+    @Test
+    !> Test element metric entries at quadrature points
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   9/7/2016
+    !!
+    !!-------------------------------------------------------------------------------------
+    subroutine test_resize_element__size(self)
+        class(test_cache_data),    intent(inout)   :: self
+        
+        integer(ik)                 :: idomain, ielem
+        type(cache_data_t)          :: cache_data
+
+        
+        idomain = 1
+        ielem   = 14
+
+        !
+        ! Call resize routine. THIS IS BEING TESTED.
+        !
+        call cache_data%resize('element',self%chidg%data%mesh,idomain,ielem)
+
+
+
+        ! Number of ndoes
+        @assertEqual(size(cache_data%eqn), 1)
+
+        
+    end subroutine test_resize_element__size
+    !***************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+end module test_cache_data_mod

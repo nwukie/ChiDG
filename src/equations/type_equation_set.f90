@@ -392,15 +392,15 @@ contains
     !--------------------------------------------------------------------------------------------------------------
     subroutine compute_boundary_advective_operators(self,worker,idiff)
         class(equation_set_t),   intent(inout)   :: self
-        type(chidg_worker_t),   intent(inout)   :: worker
-        integer(ik),            intent(in)      :: idiff
+        type(chidg_worker_t),    intent(inout)   :: worker
+        integer(ik),             intent(in)      :: idiff
 
         integer(ik)             :: nfcn, ifcn, idepend, ndepend
         logical                 :: interior_face, chimera_face, compute_face, compute_function, linearize_function
 
-        associate( mesh => worker%mesh, face_info => worker%face_info, &
-                   idom => worker%face_info%idomain_l, ielem => worker%face_info%ielement_l, &
-                   iface => worker%face_info%iface, prop => self%prop )
+        associate( mesh => worker%mesh, &
+                   idom => worker%element_info%idomain_l, ielem => worker%element_info%ielement_l, &
+                   iface => worker%iface, prop => self%prop )
 
 
         !
@@ -417,7 +417,7 @@ contains
             !
             ! Get number of elements we are linearizing with respect to
             !
-            ndepend = self%get_boundary_ndependent_elements(mesh,face_info,idiff)
+            ndepend = self%get_boundary_ndependent_elements(mesh,worker%face_info(),idiff)
 
 
 
@@ -429,8 +429,8 @@ contains
                     worker%function_info%ifcn   = ifcn
                     worker%function_info%idiff  = idiff
 
-                    compute_function   = worker%solverdata%function_status%compute_function(   worker%face_info, worker%function_info )
-                    linearize_function = worker%solverdata%function_status%linearize_function( worker%face_info, worker%function_info )
+                    compute_function   = worker%solverdata%function_status%compute_function(   worker%face_info(), worker%function_info )
+                    linearize_function = worker%solverdata%function_status%linearize_function( worker%face_info(), worker%function_info )
                     
 
                     if ( compute_function .or. linearize_function ) then
@@ -485,9 +485,9 @@ contains
         integer(ik)             :: nfcn, ifcn, idepend, ndepend
         logical                 :: compute_function, linearize_function, interior_face, chimera_Face, compute_face
 
-        associate( mesh => worker%mesh, face_info => worker%face_info, &
-                   idom => worker%face_info%idomain_l, ielem => worker%face_info%ielement_l, &
-                   iface => worker%face_info%iface, prop => self%prop)
+        associate( mesh => worker%mesh, &
+                   idom => worker%element_info%idomain_l, ielem => worker%element_info%ielement_l, &
+                   iface => worker%iface, prop => self%prop)
 
         !
         ! Only call the following routines for interior faces -- ftype == 0
@@ -503,7 +503,7 @@ contains
             !
             ! Get number of elements we are linearizing with respect to
             !
-            ndepend = self%get_boundary_ndependent_elements(mesh,face_info,idiff)
+            ndepend = self%get_boundary_ndependent_elements(mesh,worker%face_info(),idiff)
 
 
             if (allocated(self%boundary_diffusive_operator)) then
@@ -514,8 +514,8 @@ contains
                     worker%function_info%ifcn   = ifcn
                     worker%function_info%idiff  = idiff
 
-                    compute_function     = worker%solverdata%function_status%compute_function(   worker%face_info, worker%function_info )
-                    linearize_function   = worker%solverdata%function_status%linearize_function( worker%face_info, worker%function_info )
+                    compute_function     = worker%solverdata%function_status%compute_function(   worker%face_info(), worker%function_info )
+                    linearize_function   = worker%solverdata%function_status%linearize_function( worker%face_info(), worker%function_info )
                     
 
                     if ( compute_function .or. linearize_function ) then

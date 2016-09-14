@@ -9,6 +9,11 @@ module mod_operators
     use LA_boundary_average_advective_flux,     only: LA_boundary_average_advective_flux_t
     use LA_LaxFriedrichs_flux,                  only: LA_LaxFriedrichs_flux_t
 
+    use LD_volume_diffusive_operator,           only: LD_volume_diffusive_operator_t
+    use LD_boundary_diffusive_operator,         only: LD_boundary_diffusive_operator_t
+    use LD_volume_source,                       only: LD_volume_source_t
+    use LD_bc_operator,                         only: LD_bc_operator_t
+
     ! Dual Linear Advection Equations
     use DLA_volume_advective_flux,              only: DLA_volume_advective_flux_t
     use DLA_boundary_average_advective_flux,    only: DLA_boundary_average_advective_flux_t
@@ -19,6 +24,7 @@ module mod_operators
     use euler_boundary_average_operator,        only: euler_boundary_average_operator_t
     use euler_roe_operator,                     only: euler_roe_operator_t
     use euler_laxfriedrichs_operator,           only: euler_laxfriedrichs_operator_t
+    use euler_bc_operator,                      only: euler_bc_operator_t
     implicit none
 
 
@@ -44,11 +50,17 @@ contains
     subroutine register_operators()
         integer(ik) :: iop
 
-        ! Linear Advection Equations
+        ! Linear Advection Equation
         type(LA_volume_advective_flux_t)            :: LA_volume_operator
         type(LA_boundary_average_advective_flux_t)  :: LA_average_operator
         type(LA_LaxFriedrichs_flux_t)               :: LA_laxfriedrichs_operator
         
+        ! Linear Diffusion Equation
+        type(LD_volume_diffusive_operator_t)        :: LD_volume_operator
+        type(LD_boundary_diffusive_operator_t)      :: LD_boundary_diffusive_operator
+        type(LD_volume_source_t)                    :: LD_volume_source
+        type(LD_bc_operator_t)                      :: LD_bc_operator
+
         ! Dual Linear Advection Equations
         type(DLA_volume_advective_flux_t)           :: DLA_volume_operator
         type(DLA_boundary_average_advective_flux_t) :: DLA_average_operator
@@ -59,6 +71,7 @@ contains
         type(euler_boundary_average_operator_t)     :: euler_average_operator
         type(euler_roe_operator_t)                  :: euler_roe_operator
         type(euler_laxfriedrichs_operator_t)        :: euler_laxfriedrichs_operator
+        type(euler_bc_operator_t)                   :: euler_bc_operator
 
 
 
@@ -73,6 +86,12 @@ contains
             call registered_operators%push_back(LA_average_operator)
             call registered_operators%push_back(LA_laxfriedrichs_operator)
 
+            ! Register Linear Diffusion
+            call registered_operators%push_back(LD_volume_operator)
+            call registered_operators%push_back(LD_boundary_diffusive_operator)
+            call registered_operators%push_back(LD_volume_source)
+            call registered_operators%push_back(LD_bc_operator)
+
 
             ! Register Dual Linear Advection
             call registered_operators%push_back(DLA_volume_operator)
@@ -85,6 +104,7 @@ contains
             call registered_operators%push_back(euler_average_operator)
             call registered_operators%push_back(euler_roe_operator)
             call registered_operators%push_back(euler_laxfriedrichs_operator)
+            call registered_operators%push_back(euler_bc_operator)
 
 
             ! Initialize all operators

@@ -1,6 +1,6 @@
 module bc_periodic
 #include <messenger.h>
-    use type_bc_operator,   only: bc_operator_t
+    use type_bc_state,      only: bc_state_t
     use type_chidg_worker,  only: chidg_worker_t
     use type_properties,    only: properties_t
     implicit none
@@ -15,13 +15,12 @@ module bc_periodic
     !!  @date   1/31/2016
     !!
     !--------------------------------------------------------------------------------
-    type, extends(bc_operator_t) :: periodic_t
+    type, extends(bc_state_t) :: periodic_t
 
     contains
 
-        procedure   :: add_options
         procedure   :: init
-        procedure   :: compute
+        procedure   :: compute_bc_state
 
     end type periodic_t
     !********************************************************************************
@@ -29,42 +28,6 @@ module bc_periodic
 
 
 contains
-
-
-
-    !>  Procedure for registering boundary condition options. Needs executed upon allocation.
-    !!
-    !!  @author Nathan A. Wukie
-    !!  @date   2/2/2016
-    !!
-    !------------------------------------------------------------------------------------------
-    subroutine add_options(self)    
-        class(periodic_t),  intent(inout)   :: self
-
-        !
-        ! Set name
-        !
-        call self%set_name('periodic')
-
-
-        !
-        ! Add functions
-        !
-        call self%bcproperties%add('type', 'Required')
-        call self%bcproperties%add('offset_x', 'Required')
-        call self%bcproperties%add('offset_y', 'Required')
-        call self%bcproperties%add('offset_z', 'Required')
-        call self%bcproperties%add('offset_theta', 'Required')
-
-
-        !
-        ! Add parameters
-        !
-
-
-    end subroutine add_options
-    !******************************************************************************************
-
 
 
 
@@ -80,19 +43,29 @@ contains
         !
         ! Set operator name
         !
-        call self%set_name("periodic")
+        call self%set_name("Periodic")
+
+
+
 
         !
-        ! Set operator type
+        ! Add functions
         !
-        call self%set_operator_type("Boundary Advective Flux")
+        call self%bcproperties%add('type',          'Required')
+        call self%bcproperties%add('offset_x',      'Required')
+        call self%bcproperties%add('offset_y',      'Required')
+        call self%bcproperties%add('offset_z',      'Required')
+        call self%bcproperties%add('offset_theta',  'Required')
+
+
+        !
+        ! Add parameters
+        !
+
+
 
     end subroutine init
     !********************************************************************************
-
-
-
-
 
 
 
@@ -109,20 +82,15 @@ contains
     !!  @date   1/31/2016
     !!
     !-----------------------------------------------------------------------------------
-    !subroutine compute(self,mesh,sdata,prop,face,fcn)
-    subroutine compute(self,worker,prop)
+    subroutine compute_bc_state(self,worker,prop)
         class(periodic_t),              intent(inout)   :: self
         type(chidg_worker_t),           intent(inout)   :: worker
         class(properties_t),            intent(inout)   :: prop
-!        type(mesh_t),                   intent(in)      :: mesh(:)
-!        type(solverdata_t),             intent(inout)   :: sdata
-!        type(face_info_t),              intent(in)      :: face
-!        type(function_info_t),          intent(in)      :: fcn
 
 
         ! DO NOTHING IN PERIODIC BOUNDARY CONDITION
 
-    end subroutine compute
+    end subroutine compute_bc_state
     !***********************************************************************************
 
 

@@ -8,6 +8,7 @@ module mod_check_jacobian
     use type_chidg_data,    only: chidg_data_t
     use type_chidg_worker,  only: chidg_worker_t
     use type_chidg_cache,   only: chidg_cache_t
+    use type_cache_handler, only: cache_handler_t
 
     use type_blockvector
     use type_densematrix,   only: densematrix_t
@@ -47,6 +48,7 @@ contains
 
         type(chidg_worker_t)                :: worker
         type(chidg_cache_t)                 :: cache
+        type(cache_handler_t)               :: cache_handler
 
 
         ! ASSUME ONLY ONE DOMAIN IS PRESENT
@@ -90,6 +92,11 @@ contains
             worker%element_info%ielement_l = ielem
 
 
+            !
+            ! Update the solution cache
+            !
+            call cache_handler%update(worker,data%eqnset,data%bcset)
+
 
             if (allocated(eqnset(1)%volume_advective_operator)) then
                 nflux = size(eqnset(1)%volume_advective_operator)
@@ -101,7 +108,6 @@ contains
                     worker%function_info%idepend = 1
                     worker%function_info%seed    = element_compute_seed(mesh,idom,ielem,idepend,iblk)
 
-                    !call data%eqnset(1)%volume_advective_flux(iflux)%flux%compute(data%mesh,data%sdata,prop,elem_info,function_info)
                     call data%eqnset(1)%volume_advective_operator(iflux)%op%compute(worker,prop)
                 end do
 
@@ -160,6 +166,15 @@ contains
 
 
                    !
+                   ! Update the solution cache
+                   !
+                   call cache_handler%update(worker,data%eqnset,data%bcset)
+
+
+
+
+
+                   !
                    ! For the current element, compute the contributions from volume integrals
                    !
                    if (allocated(eqnset(1)%volume_advective_operator)) then
@@ -171,7 +186,6 @@ contains
                             worker%function_info%idepend = 1
                             worker%function_info%seed    = element_compute_seed(mesh,idom,ielem,idepend,iblk)
 
-                            !call eqnset(1)%volume_advective_flux(iflux)%flux%compute(mesh,sdata,prop,elem_info,function_info)
                             call eqnset(1)%volume_advective_operator(iflux)%op%compute(worker,prop)
                         end do
 
@@ -249,6 +263,7 @@ contains
 
         type(chidg_worker_t)    :: worker
         type(chidg_cache_t)     :: cache
+        type(cache_handler_t)   :: cache_handler
 
 
         call worker%init(data%mesh,data%sdata,cache)
@@ -302,6 +317,12 @@ contains
 
 
             !
+            ! Update the solution cache
+            !
+            call cache_handler%update(worker,data%eqnset,data%bcset)
+
+
+            !
             ! For the current element, compute the contributions from boundary integrals
             !
             if (allocated(data%eqnset(1)%boundary_advective_operator)) then
@@ -315,7 +336,6 @@ contains
                     worker%function_info%seed    = face_compute_seed(data%mesh,idom,ielem,iface,idonor,iblk)
 
 
-                    !call data%eqnset(1)%boundary_advective_flux(iflux)%flux%compute(data%mesh,data%sdata,prop,face_info, function_info)
                     call data%eqnset(1)%boundary_advective_operator(iflux)%op%compute(worker,prop)
                 end do
 
@@ -354,7 +374,6 @@ contains
                     worker%function_info%idiff   = DIAG
                     worker%function_info%idepend = idonor
 
-                    !call data%eqnset(1)%boundary_advective_flux(iflux)%flux%compute(data%mesh,data%sdata,prop,face_info,function_info)
                     call data%eqnset(1)%boundary_advective_operator(iflux)%op%compute(worker,prop)
 
                 end do
@@ -394,6 +413,10 @@ contains
                     qhold = q%vecs(ielem_p)%getterm(ivar,iterm)
                     call q%vecs(ielem_p)%setterm(ivar,iterm,qhold + eps)
 
+                    !
+                    ! Update the solution cache
+                    !
+                    call cache_handler%update(worker,data%eqnset,data%bcset)
 
                     !
                     ! For the current element, compute the contributions from volume integrals
@@ -409,7 +432,6 @@ contains
                             worker%function_info%idiff   = DIAG
                             worker%function_info%idepend = idonor
 
-                            !call data%eqnset(1)%boundary_advective_flux(iflux)%flux%compute(data%mesh,data%sdata,prop,face_info,function_info)
                             call data%eqnset(1)%boundary_advective_operator(iflux)%op%compute(worker,prop)
                         end do
 

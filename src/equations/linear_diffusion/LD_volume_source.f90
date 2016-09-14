@@ -3,7 +3,7 @@ module LD_volume_source
     use mod_kinds,              only: rk,ik
     use mod_constants,          only: ZERO,ONE,TWO,FOUR,PI
 
-    use type_volume_flux,       only: volume_flux_t
+    use type_operator,          only: operator_t
     use type_chidg_worker,      only: chidg_worker_t
     use type_properties,        only: properties_t
     use DNAD_D
@@ -20,11 +20,12 @@ module LD_volume_source
     !!
     !!
     !-------------------------------------------------------------------------
-    type, extends(volume_flux_t), public :: LD_volume_source_t
+    type, extends(operator_t), public :: LD_volume_source_t
 
 
     contains
 
+        procedure   :: init
         procedure   :: compute
 
     end type LD_volume_source_t
@@ -32,17 +33,45 @@ module LD_volume_source
 
 contains
 
+    !>
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   8/29/2016
+    !!
+    !--------------------------------------------------------------------------------
+    subroutine init(self)
+        class(LD_volume_source_t),   intent(inout)      :: self
+
+        ! Set operator name
+        call self%set_name("Linear Diffusion Volume Source")
+
+        ! Set operator type
+        call self%set_operator_type("Volume Diffusive Flux")
+
+        ! Set operator equations
+        call self%set_equation("u")
+
+    end subroutine init
+    !********************************************************************************
+
+
+
+
+
+
+
+
 
     !>
     !!
-    !!  @author Nathan A. Wukie
+    !!  @author Nathan A. Wukie (AFRL)
     !!  @date   8/19/2016
     !!
     !!
     !!
     !------------------------------------------------------------------------------------
     subroutine compute(self,worker,prop)
-        class(LD_volume_source_t),          intent(in)      :: self
+        class(LD_volume_source_t),          intent(inout)   :: self
         type(chidg_worker_t),               intent(inout)   :: worker
         class(properties_t),                intent(inout)   :: prop
 
@@ -53,13 +82,13 @@ contains
         !
         ! Get variable index from equation set
         !
-        iu = prop%get_eqn_index("u")
+        iu = prop%get_equation_index("u")
 
 
         !
         ! Interpolate solution to quadrature nodes
         !
-        source = worker%interpolate(iu, 'ddx')
+        source = worker%get_element_variable(iu, 'ddx')
 
         x = worker%x('volume')
 

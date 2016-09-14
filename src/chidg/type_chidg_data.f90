@@ -11,7 +11,7 @@ module type_chidg_data
     use type_mesh,                      only: mesh_t
     use type_bcset,                     only: bcset_t
     use type_bc,                        only: bc_t
-    use type_bc_operator,               only: bc_operator_t
+    use type_bc_state,                  only: bc_state_t
     use type_bcvector,                  only: bcvector_t
     use type_equation_set,              only: equation_set_t
     use type_solverdata,                only: solverdata_t
@@ -21,7 +21,6 @@ module type_chidg_data
 
     ! Factory methods
     use mod_equations,                  only: build_equation_set
-!    use mod_bc,                         only: create_bc
 
 
     implicit none
@@ -56,15 +55,6 @@ module type_chidg_data
         type(bcset_t),                  allocatable :: bcset(:)         !< Array of boundary condition set instances. One for each domain.
         type(equation_set_t),           allocatable :: eqnset(:)        !< Array of equation set instances. One for each domain.
         type(solverdata_t)                          :: sdata            !< Solver data container for solution vectors and matrices
-!        type(equationset_wrapper_t),    allocatable :: eqnset(:)        !< Array of equation set instances. One for each domain.
-
-
-!        type(mesh_t),       allocatable :: mesh(:)
-!        type(properties_t), allocatable :: properties(:)
-!        type(solverdata_t)              :: solverdata
-!
-!        type(boundarycondition_t)       :: bc
-!        type(equationset_t)             :: interior
 
 
     contains
@@ -280,15 +270,15 @@ contains
     !!  @param[in]  options     Boundary condition options dictionary
     !!
     !---------------------------------------------------------------------------------------------------------------
-    subroutine add_bc(self,domain,bc_ops,bc_connectivity)
+    subroutine add_bc(self,domain,bc_states,bc_connectivity)
         class(chidg_data_t),            intent(inout)   :: self
         character(*),                   intent(in)      :: domain
-        type(bcvector_t),               intent(inout)   :: bc_ops
+        type(bcvector_t),               intent(inout)   :: bc_states
         type(boundary_connectivity_t),  intent(in)      :: bc_connectivity
 
-        integer(ik)                         :: idom, ierr, iop
+        integer(ik)                         :: idom, ierr, istate, BC_ID
         type(bc_t)                          :: bc
-        class(bc_operator_t), allocatable   :: bc_op
+        class(bc_state_t),  allocatable     :: bc_state
 
 
         !
@@ -297,32 +287,36 @@ contains
         idom = self%get_domain_index(domain)
 
 
-        !
-        ! Add all bc_operators
-        !
-        do iop = 1,bc_ops%size()
 
-            ! Get boundary condition operator
-            if (allocated(bc_op)) deallocate(bc_op)
-            allocate(bc_op, source=bc_ops%at(iop), stat=ierr)
+        !
+        ! Add a new boundary condition and get ID
+        !
+        BC_ID = self%bcset(idom)%add(bc)
+
+
+
+        !
+        ! Add all bc_states
+        !
+        do istate = 1,bc_states%size()
+
+            ! Get boundary condition state
+            if (allocated(bc_state)) deallocate(bc_state)
+            allocate(bc_state, source=bc_states%at(istate), stat=ierr)
             if (ierr /= 0) call AllocationError
 
-            ! Add boundary condition operator
-            call bc%add_bc_operator(bc_op)
+            ! Add boundary condition state
+            call self%bcset(idom)%bcs(BC_ID)%add_bc_state(bc_state)
 
-        end do !iop
-
-
-        !
-        ! Initialize new boundary condition from mesh data and face index
-        !
-        call bc%init_bc(self%mesh(idom),bc_connectivity)
+        end do !istate
 
 
         !
-        ! Add initialized boundary condition to bcset_t for domain 'idom'
+        ! Initialize new boundary condition from mesh data and connectivity information.
+        ! NOTE: init_bc needs called after the boundary condition has been added to the 
+        !       set so it can inform the mesh about it's BC_ID.
         !
-        call self%bcset(idom)%add(bc)
+        call self%bcset(idom)%bcs(BC_ID)%init_bc(self%mesh(idom),bc_connectivity)
 
 
     end subroutine add_bc

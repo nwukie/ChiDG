@@ -12,30 +12,27 @@
 module mod_bc
 #include <messenger.h>
     use mod_kinds,          only: rk,ik
-    use type_bc_operator,   only: bc_operator_t
+    use type_bc_state,      only: bc_state_t
     use type_bcvector,      only: bcvector_t
 
     !
     ! Import boundary conditions
     !
-    use bc_empty,                           only: empty_t
-    use bc_periodic,                        only: periodic_t
-    use bc_linearadvection_extrapolate,     only: linearadvection_extrapolate_t
-!    use bc_lineardiffusion_extrapolate,     only: lineardiffusion_extrapolate_t
-!    use bc_lineardiffusion_derivative,      only: lineardiffusion_derivative_t
-!    use bc_lineardiffusion_value,           only: lineardiffusion_value_t
-    use bc_euler_wall,                      only: euler_wall_t
-    use bc_euler_totalinlet,                only: euler_totalinlet_t
-    use bc_euler_pressureoutlet,            only: euler_pressureoutlet_t
-    use bc_euler_extrapolate,               only: euler_extrapolate_t
-!!    use bc_euler_giles_outlet,              only: euler_giles_outlet_t
-!!    use bc_euler_giles_outlet_2D_a,         only: euler_giles_outlet_2D_a_t
-!!    use bc_euler_giles_outlet_2D_b,         only: euler_giles_outlet_2D_b_t
+    use bc_empty,                               only: empty_t
+    use bc_periodic,                            only: periodic_t
 
-!    use bc_primlineuler_inlet,              only: primlineuler_inlet_t
-!    use bc_primlineuler_outlet,             only: primlineuler_outlet_t
-!    use bc_primlineuler_extrapolate,        only: primlineuler_extrapolate_t
-!    use bc_primlineuler_wall,               only: primlineuler_wall_t
+    ! Scalar boundary conditions
+    use bc_state_linearadvection_extrapolate,   only: linearadvection_extrapolate_t
+    use bc_state_scalar_value,                  only: scalar_value_t
+    use bc_state_scalar_extrapolate,            only: scalar_extrapolate_t
+
+
+    ! Fluid boundary conditions
+    use bc_state_wall,                          only: wall_t
+    use bc_state_totalinlet,                    only: totalinlet_t
+    use bc_state_pressureoutlet,                only: pressureoutlet_t
+
+
 
 !    use bc_kirchoff,                        only: kirchoff_t
 
@@ -72,25 +69,14 @@ contains
         type(empty_t)                           :: EMPTY
         type(periodic_t)                        :: PERIODIC
         type(linearadvection_extrapolate_t)     :: LINEARADVECTION_EXTRAPOLATE
-!        type(lineardiffusion_extrapolate_t)     :: LINEARDIFFUSION_EXTRAPOLATE
-!        type(lineardiffusion_derivative_t)      :: LINEARDIFFUSION_DERIVATIVE
-!        type(lineardiffusion_value_t)           :: LINEARDIFFUSION_VALUE
+        type(scalar_value_t)                    :: SCALAR_VALUE
+        type(scalar_extrapolate_t)              :: SCALAR_EXTRAPOLATE
 
-        type(euler_wall_t)                      :: EULER_WALL
-        type(euler_totalinlet_t)                :: EULER_TOTALINLET
-        type(euler_pressureoutlet_t)            :: EULER_PRESSUREOUTLET
-        type(euler_extrapolate_t)               :: EULER_EXTRAPOLATE
-!!        type(euler_giles_outlet_t)              :: EULER_GILES_OUTLET
-!!        type(euler_giles_outlet_2D_a_t)         :: EULER_GILES_OUTLET_2D_A
-!!        type(euler_giles_outlet_2D_b_t)         :: EULER_GILES_OUTLET_2D_B
-
-!        type(primlineuler_inlet_t)              :: PRIMLINEULER_INLET
-!        type(primlineuler_outlet_t)             :: PRIMLINEULER_OUTLET
-!        type(primlineuler_extrapolate_t)        :: PRIMLINEULER_EXTRAPOLATE
-!        type(primlineuler_wall_t)               :: PRIMLINEULER_WALL
+        type(wall_t)                            :: WALL
+        type(totalinlet_t)                      :: TOTALINLET
+        type(pressureoutlet_t)                  :: PRESSUREOUTLET
 
 
-!        type(kirchoff_t)                        :: KIRCHOFF
 
         if ( .not. initialized ) then
             !
@@ -98,27 +84,15 @@ contains
             !
             call registered_bcs%push_back(EMPTY)
             call registered_bcs%push_back(PERIODIC)
+
             call registered_bcs%push_back(LINEARADVECTION_EXTRAPOLATE)
-!            call registered_bcs%push_back(LINEARDIFFUSION_EXTRAPOLATE)
-!            call registered_bcs%push_back(LINEARDIFFUSION_DERIVATIVE)
-!            call registered_bcs%push_back(LINEARDIFFUSION_VALUE)
+            call registered_bcs%push_back(SCALAR_VALUE)
+            call registered_bcs%push_back(SCALAR_EXTRAPOLATE)
 
+            call registered_bcs%push_back(WALL)
+            call registered_bcs%push_back(TOTALINLET)
+            call registered_bcs%push_back(PRESSUREOUTLET)
 
-            call registered_bcs%push_back(EULER_WALL)
-            call registered_bcs%push_back(EULER_TOTALINLET)
-            call registered_bcs%push_back(EULER_PRESSUREOUTLET)
-            call registered_bcs%push_back(EULER_EXTRAPOLATE)
-!!            call registered_bcs%push_back(EULER_GILES_OUTLET)
-!!            call registered_bcs%push_back(EULER_GILES_OUTLET_2D_A)
-!!            call registered_bcs%push_back(EULER_GILES_OUTLET_2D_B)
-
-!            call registered_bcs%push_back(PRIMLINEULER_INLET)
-!            call registered_bcs%push_back(PRIMLINEULER_OUTLET)
-!            call registered_bcs%push_back(PRIMLINEULER_EXTRAPOLATE)
-!            call registered_bcs%push_back(PRIMLINEULER_WALL)
-
-
-!            call registered_bcs%push_back(KIRCHOFF)
 
             !
             ! Initialize each boundary condition in set. Doesn't need modified.
@@ -126,8 +100,7 @@ contains
             nbcs = registered_bcs%size()
             do ibc = 1,nbcs
 
-                call registered_bcs%data(ibc)%op%add_options()
-                call registered_bcs%data(ibc)%op%init()
+                call registered_bcs%data(ibc)%state%init()
 
             end do
 
@@ -161,8 +134,8 @@ contains
     !!
     !----------------------------------------------------------------------------------------------------
     subroutine create_bc(bcstring,bc)
-        character(*),                           intent(in)      :: bcstring
-        class(bc_operator_t),   allocatable,    intent(inout)   :: bc
+        character(*),                       intent(in)      :: bcstring
+        class(bc_state_t),  allocatable,    intent(inout)   :: bc
 
         integer(ik) :: ierr, bcindex
 
@@ -179,7 +152,7 @@ contains
 
 
         ! Allocate conrete bc_t instance
-        allocate(bc, source=registered_bcs%data(bcindex)%op, stat=ierr)
+        allocate(bc, source=registered_bcs%data(bcindex)%state, stat=ierr)
         if (ierr /= 0) call chidg_signal(FATAL,"create_bc: error allocating boundary condition from global vector.")
 
 
@@ -213,7 +186,7 @@ contains
 
         do ibc = 1,nbcs
 
-            bcname = registered_bcs%data(ibc)%op%get_name()
+            bcname = registered_bcs%data(ibc)%state%get_name()
             call write_line(trim(bcname))
 
         end do ! ieqn
@@ -235,19 +208,19 @@ contains
     !!
     !!
     !------------------------------------------------------------------------------------------------------
-    function check_bc_operator_exists(opstring) result(operator_found)
-        character(len=*),   intent(in)  :: opstring
+    function check_bc_state_exists(state_string) result(state_found)
+        character(len=*),   intent(in)  :: state_string
 
-        integer(ik) :: opindex
-        logical     :: operator_found
+        integer(ik) :: state_index
+        logical     :: state_found
 
         ! Find boundary condition string in 'registered_bcs' vector
-        opindex = registered_bcs%index_by_name(trim(opstring))
+        state_index = registered_bcs%index_by_name(trim(state_string))
 
-        ! Set status of operator_found
-        operator_found = (opindex /= 0)
+        ! Set status of state_found
+        state_found = (state_index /= 0)
 
-    end function check_bc_operator_exists
+    end function check_bc_state_exists
     !*******************************************************************************************************
 
 

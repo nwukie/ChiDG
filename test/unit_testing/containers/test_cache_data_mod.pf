@@ -2,7 +2,6 @@ module test_cache_data_mod
     use pfunit_mod
     use mod_kinds,                  only: rk,ik
     use type_chidg,                 only: chidg_t
-    use type_cache_info,            only: cache_info_t
     use type_cache_data,            only: cache_data_t
     implicit none
 

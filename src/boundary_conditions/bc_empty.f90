@@ -1,11 +1,7 @@
 module bc_empty
-    use type_bc_operator,   only: bc_operator_t
+    use type_bc_state,      only: bc_state_t
     use type_chidg_worker,  only: chidg_worker_t
     use type_properties,    only: properties_t
-!    use type_solverdata,    only: solverdata_t
-!    use type_mesh,          only: mesh_t
-!    use type_face_info,     only: face_info_t
-!    use type_function_info, only: function_info_t
     implicit none
     
 
@@ -15,12 +11,13 @@ module bc_empty
     !!  @author Nathan A. Wukie
     !!
     !-------------------------------------------------------------------------------------------
-    type, public, extends(bc_operator_t) :: empty_t
+    type, public, extends(bc_state_t) :: empty_t
 
     contains
-        procedure   :: add_options
+
         procedure   :: init
-        procedure   :: compute    !> bc implementation
+        procedure   :: compute_bc_state    !> bc implementation
+
     end type empty_t
     !-------------------------------------------------------------------------------------------
 
@@ -28,33 +25,6 @@ module bc_empty
 
 
 contains
-
-
-
-    !>  Procedure for registering boundary condition options. Needs executed upon allocation.
-    !!
-    !!  @author Nathan A. Wukie
-    !!  @date   2/2/2016
-    !!
-    !------------------------------------------------------------------------------------------
-    subroutine add_options(self)    
-        class(empty_t),  intent(inout)   :: self
-
-        !
-        ! Add functions
-        !
-
-
-        !
-        ! Add parameters
-        !
-
-
-    end subroutine add_options
-    !******************************************************************************************
-
-
-
 
 
     !>
@@ -70,11 +40,6 @@ contains
         ! Set operator name
         !
         call self%set_name("empty")
-
-        !
-        ! Set operator type
-        !
-        call self%set_operator_type("Boundary Advective Flux")
 
 
     end subroutine init
@@ -101,19 +66,13 @@ contains
     !!  @param[in]      iblk    Index of the linearization block being computed
     !!  @param[inout]   prop    properties_t object containing equations and material_t objects
     !-------------------------------------------------------------------------------------------
-    !subroutine compute(self,mesh,sdata,prop,face,fcn)
-    subroutine compute(self,worker,prop)
+    subroutine compute_bc_state(self,worker,prop)
         class(empty_t),                 intent(inout)   :: self
         type(chidg_worker_t),           intent(inout)   :: worker
         class(properties_t),            intent(inout)   :: prop
-!        type(mesh_t),                   intent(in)      :: mesh(:)
-!        type(solverdata_t),             intent(inout)   :: sdata
-!        type(face_info_t),              intent(in)      :: face
-!        type(function_info_t),          intent(in)      :: fcn
 
 
-
-    end subroutine compute
+    end subroutine compute_bc_state
     !********************************************************************************************
 
 

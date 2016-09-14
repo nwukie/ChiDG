@@ -1,7 +1,7 @@
-module bc_linearadvection_extrapolate
+module bc_state_linearadvection_extrapolate
     use mod_kinds,          only: rk,ik
 
-    use type_bc_operator,   only: bc_operator_t
+    use type_bc_state,      only: bc_state_t
     use type_chidg_worker,  only: chidg_worker_t
     use type_properties,    only: properties_t
     implicit none
@@ -12,14 +12,14 @@ module bc_linearadvection_extrapolate
     !!  
     !!  @author Nathan A. Wukie
     !-----------------------------------------------------------------------------------------
-    type, public, extends(bc_operator_t) :: linearadvection_extrapolate_t
+    type, public, extends(bc_state_t) :: linearadvection_extrapolate_t
 
 
 
     contains
 
         procedure   :: init
-        procedure   :: compute    !> bc implementation
+        procedure   :: compute_bc_state    !> bc implementation
 
     end type linearadvection_extrapolate_t
     !******************************************************************************************
@@ -44,12 +44,6 @@ contains
         ! Set name
         !
         call self%set_name('linearadvection_extrapolate')
-
-
-        !
-        ! Set operator equations
-        !
-        call self%set_equation("u")
 
 
     end subroutine init
@@ -77,7 +71,7 @@ contains
     !!  @param[in]      iface   Index of the face being computed
     !!  @param[in]      iblk    Index of the linearization block being computed
     !---------------------------------------------------------------------------------------------
-    subroutine compute(self,worker,prop)
+    subroutine compute_bc_state(self,worker,prop)
         class(linearadvection_extrapolate_t),   intent(inout)   :: self
         type(chidg_worker_t),                   intent(inout)   :: worker
         class(properties_t),                    intent(inout)   :: prop
@@ -87,7 +81,7 @@ contains
 
 
 
-    end subroutine compute
+    end subroutine compute_bc_state
     !*********************************************************************************************
 
 
@@ -95,4 +89,4 @@ contains
 
 
 
-end module bc_linearadvection_extrapolate
+end module bc_state_linearadvection_extrapolate

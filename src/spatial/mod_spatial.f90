@@ -59,6 +59,7 @@ contains
 
         ! Initialize Chidg Worker references
         call worker%init(data%mesh, data%sdata, cache)
+!        call worker%init(data%mesh, data%sdata, data%bcset, cache)
 
 
         !
@@ -113,7 +114,7 @@ contains
                 elem_info%idomain_l  = mesh(idom)%elems(ielem)%idomain_l
                 elem_info%ielement_g = mesh(idom)%elems(ielem)%ielement_g
                 elem_info%ielement_l = mesh(idom)%elems(ielem)%ielement_l
-                call worker%set_element_info(elem_info)
+                call worker%set_element(elem_info)
 
 
 
@@ -132,8 +133,8 @@ contains
                         call worker%set_face(iface)
 
                         call eqnset%compute_boundary_advective_operators(worker, idiff)
-!                        call eqnset%compute_boundary_diffusive_operators(worker, idiff)
-
+                        call eqnset%compute_boundary_diffusive_operators(worker, idiff)
+                        call eqnset%compute_bc_operators(worker,data%bcset,idiff)
 
                     end do  ! faces loop
                     
@@ -143,7 +144,7 @@ contains
                     ! Compute volume fluxes
                     !
                     call eqnset%compute_volume_advective_operators(worker, idiff)
-!                    call eqnset%compute_volume_diffusive_operators(worker, idiff)
+                    call eqnset%compute_volume_diffusive_operators(worker, idiff)
 
 
 
@@ -158,15 +159,15 @@ contains
 
 
 
-        !------------------------------------------------------------------------------------------
-        !                                      Boundary Scheme
-        !------------------------------------------------------------------------------------------
-        !
-        ! Apply boundary conditions for each domain.
-        !
-        do idom = 1,data%ndomains()
-            call data%bcset(idom)%apply(data%mesh,data%sdata,data%eqnset(idom)%prop)
-        end do ! idom
+!        !------------------------------------------------------------------------------------------
+!        !                                      Boundary Scheme
+!        !------------------------------------------------------------------------------------------
+!        !
+!        ! Apply boundary conditions for each domain.
+!        !
+!        do idom = 1,data%ndomains()
+!            call data%bcset(idom)%apply(data%mesh,data%sdata,data%eqnset(idom)%prop)
+!        end do ! idom
 
 
 

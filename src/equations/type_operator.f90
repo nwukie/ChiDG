@@ -2,7 +2,7 @@ module type_operator
 #include <messenger.h>
     use mod_kinds,          only: rk, ik
     use mod_constants,      only: BOUNDARY_ADVECTIVE_FLUX, VOLUME_ADVECTIVE_FLUX, &
-                                  BOUNDARY_DIFFUSIVE_FLUX, VOLUME_DIFFUSIVE_FLUX
+                                  BOUNDARY_DIFFUSIVE_FLUX, VOLUME_DIFFUSIVE_FLUX, BC_FLUX
     use mod_string,         only: string_t, string_to_upper
     use type_chidg_worker,  only: chidg_worker_t
     use type_properties,    only: properties_t
@@ -134,7 +134,7 @@ contains
 
         integer(ik)                     :: ind
         character(len=:),   allocatable :: upper
-        logical                         :: volume, boundary, advective, diffusive
+        logical                         :: volume, boundary, advective, diffusive, bc
         
 
 
@@ -148,6 +148,9 @@ contains
 
         ind = index(upper,"BOUNDARY")
         boundary  = (ind /= 0)
+
+        ind = index(upper,"BC")
+        bc        = (ind /= 0)
 
         ind = index(upper,"ADVECTIVE")
         advective = (ind /= 0)
@@ -165,6 +168,8 @@ contains
             self%operator_type = BOUNDARY_ADVECTIVE_FLUX
         else if (boundary .and. diffusive) then
             self%operator_type = BOUNDARY_DIFFUSIVE_FLUX
+        else if ( (bc .and. advective) .or. (bc .and. diffusive) ) then
+            self%operator_type = BC_FLUX
         else
             call chidg_signal(FATAL,"operator%set_operator_type: Did not recognize a valid operator type")
         end if

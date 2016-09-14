@@ -27,11 +27,10 @@ contains
 
         integer(ik) :: irho, irhou, irhov, irhow, irhoE
 
-        !& DEBUG: HARD CODED GQ NODES BASED ON FIRST ELEMENT
-        !real(rk), dimension(data%mesh(1)%elems(1)%gq%vol%nnodes)  :: &
         real(rk), allocatable, dimension(:) ::  &
                 rho, rhou, rhov, rhow, rhoE,    &
-                c, gam, p, vmag, tmp
+                gam, p, vmag, c
+
 
         real(rk)    ::  h, &    !< element spacing parameter
                         lam     !< characteristic speed
@@ -42,14 +41,14 @@ contains
         !
         do idom = 1,data%ndomains()
 
-        !
-        ! Get variable indices
-        !
-        irho  = data%eqnset(idom)%prop%get_equation_index("Density")
-        irhou = data%eqnset(idom)%prop%get_equation_index("X-Momentum")
-        irhov = data%eqnset(idom)%prop%get_equation_index("Y-Momentum")
-        irhow = data%eqnset(idom)%prop%get_equation_index("Z-Momentum")
-        irhoE = data%eqnset(idom)%prop%get_equation_index("Energy")
+            !
+            ! Get variable indices
+            !
+            irho  = data%eqnset(idom)%prop%get_equation_index("Density"   )
+            irhou = data%eqnset(idom)%prop%get_equation_index("X-Momentum")
+            irhov = data%eqnset(idom)%prop%get_equation_index("Y-Momentum")
+            irhow = data%eqnset(idom)%prop%get_equation_index("Z-Momentum")
+            irhoE = data%eqnset(idom)%prop%get_equation_index("Energy"    )
 
 
 
@@ -79,7 +78,16 @@ contains
                 call data%eqnset(idom)%prop%fluid%compute_gamma(rho,rhou,rhov,rhow,rhoE,gam)
 
 
+                
 
+                ! Compiling with DEBUG and bounds checking, gfortran will say 'c' is not correct size.
+                ! This is not correct because 'c' should be sized according to the rhs of the expression.
+                ! The sizes of gam, p, and rho are all the same. This is a recognized bug.
+                !
+                !   GCC/GFortran Bugzilla Bug 52162 
+                !
+                !   It gets triggered by calling the intrinsic sqrt. 
+                !
                 c = sqrt(gam * p / rho)
 
 

@@ -1,5 +1,6 @@
 module type_seed
-    use mod_kinds,  only: ik
+    use mod_kinds,      only: ik
+    use mod_constants,  only: NO_PROC
     implicit none
 
 
@@ -34,8 +35,52 @@ module type_seed
         integer(ik) :: recv_domain
         integer(ik) :: recv_element
 
+    contains
+
+        procedure   :: clear
+
     end type seed_t
     !**********************************************************************************************
+
+
+
+
+
+
+contains
+
+
+
+
+
+    !>
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   9/13/2016
+    !!
+    !!
+    !----------------------------------------------------------------------------------------------
+    subroutine clear(self)
+        class(seed_t),  intent(inout)   :: self
+
+        self%idomain_g    = 0
+        self%idomain_l    = 0
+        self%ielement_g   = 0
+        self%ielement_l   = 0
+        self%iproc        = NO_PROC
+
+        self%recv_comm    = 0
+        self%recv_domain  = 0
+        self%recv_element = 0
+
+    end subroutine clear
+    !**********************************************************************************************
+
+
+
+
+
+
 
 
 

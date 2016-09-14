@@ -389,6 +389,7 @@ contains
             ! Boudnary face, linearize wrt Current element
             !
             elseif ( boundary_face ) then
+!                call chidg_signal(FATAL,"face_compute_seed: Tried to get seed for boundary condition face, but the logic is not implemented.")
                 seed%idomain_g  = mesh(idomain_l)%elems(ielement_l)%idomain_g
                 seed%idomain_l  = mesh(idomain_l)%elems(ielement_l)%idomain_l
                 seed%ielement_g = mesh(idomain_l)%elems(ielement_l)%ielement_g

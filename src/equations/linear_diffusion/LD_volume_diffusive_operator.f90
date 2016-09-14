@@ -1,9 +1,9 @@
-module LD_volume_diffusive_flux
+module LD_volume_diffusive_operator
 #include <messenger.h>
     use mod_kinds,              only: rk,ik
     use mod_constants,          only: ZERO,ONE,TWO,HALF
 
-    use type_volume_flux,       only: volume_flux_t
+    use type_operator,          only: operator_t
     use type_chidg_worker,      only: chidg_worker_t
     use type_properties,        only: properties_t
     use DNAD_D
@@ -14,20 +14,21 @@ module LD_volume_diffusive_flux
 
     !>
     !!
-    !!  @author Nathan A. Wukie
-    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   9/14/2016
     !!
     !!
     !!
     !-------------------------------------------------------------------------
-    type, extends(volume_flux_t), public :: LD_volume_diffusive_flux_t
+    type, extends(operator_t), public :: LD_volume_diffusive_operator_t
 
 
     contains
 
+        procedure   :: init
         procedure   :: compute
 
-    end type LD_volume_diffusive_flux_t
+    end type LD_volume_diffusive_operator_t
     !*************************************************************************
 
 contains
@@ -35,16 +36,41 @@ contains
 
     !>
     !!
-    !!  @author Nathan A. Wukie
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   8/29/2016
     !!
+    !--------------------------------------------------------------------------------
+    subroutine init(self)
+        class(LD_volume_diffusive_operator_t),   intent(inout)      :: self
+
+        ! Set operator name
+        call self%set_name("Linear Diffusion Volume Flux")
+
+        ! Set operator type
+        call self%set_operator_type("Volume Diffusive Flux")
+
+        ! Set operator equations
+        call self%set_equation("u")
+
+    end subroutine init
+    !********************************************************************************
+
+
+
+
+
+    !>
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   9/14/2016
     !!
     !!
     !!
     !------------------------------------------------------------------------------------
     subroutine compute(self,worker,prop)
-        class(LD_volume_diffusive_flux_t),  intent(in)      :: self
-        type(chidg_worker_t),               intent(inout)   :: worker
-        class(properties_t),                intent(inout)   :: prop
+        class(LD_volume_diffusive_operator_t),  intent(inout)   :: self
+        type(chidg_worker_t),                   intent(inout)   :: worker
+        class(properties_t),                    intent(inout)   :: prop
 
 
         integer(ik)             :: iu
@@ -57,7 +83,7 @@ contains
         !
         ! Get variable index from equation set
         !
-        iu = prop%get_eqn_index("u")
+        iu = prop%get_equation_index("u")
 
 
         !
@@ -74,9 +100,9 @@ contains
         !
         ! Interpolate solution to quadrature nodes
         !
-        dudx = worker%interpolate(iu, 'ddx')
-        dudy = worker%interpolate(iu, 'ddy')
-        dudz = worker%interpolate(iu, 'ddz')
+        dudx = worker%get_element_variable(iu, 'ddx')
+        dudy = worker%get_element_variable(iu, 'ddy')
+        dudz = worker%get_element_variable(iu, 'ddz')
 
 
 
@@ -103,4 +129,4 @@ contains
 
 
 
-end module LD_volume_diffusive_flux
+end module LD_volume_diffusive_operator

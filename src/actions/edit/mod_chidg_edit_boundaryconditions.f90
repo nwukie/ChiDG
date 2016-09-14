@@ -2,8 +2,8 @@ module mod_chidg_edit_boundaryconditions
 #include <messenger.h>
     use mod_kinds,          only: rk, ik, rdouble
     use mod_constants,      only: NFACES, XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX
-    use type_bc_operator,   only: bc_operator_t
-    use mod_bc,             only: create_bc, list_bcs, check_bc_operator_exists
+    use type_bc_state,   only: bc_state_t
+    use mod_bc,             only: create_bc, list_bcs, check_bc_state_exists
     use type_svector,       only: svector_t
     use mod_string,         only: string_t
     use type_function,      only: function_t
@@ -126,7 +126,6 @@ contains
 
 
         integer(ik)                         :: idom_hdf, ndom, iface
-!        character(len=1024),    allocatable :: bcs(:)
         type(svector_t),    allocatable     :: bcs(:)
         type(string_t)                      :: bcstring
         character(len=1024)                 :: dname
@@ -473,7 +472,7 @@ contains
             !
             ! Print command options, accept user selection.
             !
-            command = "1:Add boundary operator, 2:Remove boundary operator, 3: Select property, 0:Exit"
+            command = "1:Add boundary state, 2:Remove boundary state, 3: Select property, 0:Exit"
             call write_line(' ')
             call write_line(command,color='blue')
             ierr = 1
@@ -493,7 +492,7 @@ contains
 
 
                 !
-                ! Add bc_operator case
+                ! Add bc_state case
                 !
                 case (1)
                     set_bc    = .true.
@@ -512,8 +511,8 @@ contains
                         end if
 
 
-                        ! Get bc_operator string from user
-                        command = "Enter boundary condition operator(? to list): "
+                        ! Get bc_state string from user
+                        command = "Enter boundary condition state(? to list): "
                         call write_line(' ')
                         call write_line(command,color='blue')
                         read(*,"(A1024)") bc_string
@@ -528,7 +527,7 @@ contains
                             else
                             
                                 ! Call routine to set boundary condition in hdf file.
-                                call add_bc_operator_hdf(bcface,bc_string)
+                                call add_bc_state_hdf(bcface,bc_string)
                                 set_bc = .false.
 
                             end if
@@ -540,7 +539,7 @@ contains
 
 
                 !
-                ! Remove bc_operator case
+                ! Remove bc_state case
                 !
                 case (2)
                     remove_bc = .true.
@@ -553,14 +552,14 @@ contains
                         dname_trim = trim(adjustl(dname))
                         call print_bc_domain_face(dname_trim(3:), trim(adjustl(faces(iface))))
 
-                        ! Get boundary condition operator from user to remove
-                        command = "Enter boundary condition operator to remove: "
+                        ! Get boundary condition state from user to remove
+                        command = "Enter boundary condition state to remove: "
                         call write_line(' ')
                         call write_line(command,color='blue')
                         read(*,"(A1024)") bc_string
 
-                        ! Call routine to remove boundary condition operator
-                        call delete_bc_operator_hdf(bcface,trim(bc_string))
+                        ! Call routine to remove boundary condition state
+                        call delete_bc_state_hdf(bcface,trim(bc_string))
                         remove_bc = .false.
 
                     end do !remove_bc
@@ -640,18 +639,18 @@ contains
     !!
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   9/1/2016
-    !!  @note   Modified to include bc_operators
+    !!  @note   Modified to include bc_states
     !!
     !!
     !---------------------------------------------------------------------------------------------------
-    subroutine add_bc_operator_hdf(bcface,opstring)
+    subroutine add_bc_state_hdf(bcface,opstring)
         integer(HID_T),     intent(in)      :: bcface
         character(*),       intent(in)      :: opstring
 
-        class(bc_operator_t),   allocatable :: bc_operator
+        class(bc_state_t),   allocatable :: bc_state
         integer(ik)                         :: nfcns, ifcn, ierr
         integer(HID_T)                      :: op_id
-        logical                             :: link_exists, operator_found
+        logical                             :: link_exists, state_found
 
 
         if ( trim(opstring) == 'empty' ) then
@@ -661,26 +660,26 @@ contains
             
         else
 
-            ! Check to make sure the bc_operator wasn't previously added
-            call h5lexists_f(bcface, "BCO_"//trim(adjustl(opstring)), link_exists, ierr)
+            ! Check to make sure the bc_state wasn't previously added
+            call h5lexists_f(bcface, "BCS_"//trim(adjustl(opstring)), link_exists, ierr)
 
 
             if (.not. link_exists) then
 
-                ! Check bc_operator exists in the register. 
+                ! Check bc_state exists in the register. 
                 ! If not, user probably entered the wrong string, so do nothing
-                operator_found = check_bc_operator_exists(trim(adjustl(opstring)))
+                state_found = check_bc_state_exists(trim(adjustl(opstring)))
 
-                if (operator_found) then
-                    ! Create a new group for the bc_operator_t
-                    call h5gcreate_f(bcface, "BCO_"//trim(adjustl(opstring)), op_id, ierr)
-                    if (ierr /= 0) call chidg_signal(FATAL,"add_boundarycondition_operator_hdf: error creating new group for bcfunction")
+                if (state_found) then
+                    ! Create a new group for the bc_state_t
+                    call h5gcreate_f(bcface, "BCS_"//trim(adjustl(opstring)), op_id, ierr)
+                    if (ierr /= 0) call chidg_signal(FATAL,"add_boundarycondition_state_hdf: error creating new group for bcfunction")
 
                     ! Create an instance of the specified boundary condition to query its options
-                    call create_bc(opstring,bc_operator)
+                    call create_bc(opstring,bc_state)
 
-                    ! Add bc_operator properties to the group that was created
-                    call add_bc_properties_hdf(op_id,bc_operator)
+                    ! Add bc_state properties to the group that was created
+                    call add_bc_properties_hdf(op_id,bc_state)
 
                     ! Close function group
                     call h5gclose_f(op_id,ierr)
@@ -692,7 +691,7 @@ contains
 
 
 
-    end subroutine add_bc_operator_hdf
+    end subroutine add_bc_state_hdf
     !***************************************************************************************************
 
 
@@ -710,13 +709,13 @@ contains
     !!
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   9/1/2016
-    !!  @note   Modified to include bc_operators
+    !!  @note   Modified to include bc_states
     !!
     !!
     !----------------------------------------------------------------------------------------------------
-    subroutine add_bc_properties_hdf(op_id,bc_operator)
+    subroutine add_bc_properties_hdf(op_id,bc_state)
         integer(HID_T),         intent(in)      :: op_id
-        class(bc_operator_t),   intent(inout)   :: bc_operator
+        class(bc_state_t),   intent(inout)   :: bc_state
 
         integer(HID_T)                  :: prop_id
         integer(HSIZE_T)                :: adim
@@ -729,7 +728,7 @@ contains
         !
         ! Get number of functions in the boundary condition
         !
-        nprop = bc_operator%get_nproperties()
+        nprop = bc_state%get_nproperties()
 
 
         !
@@ -740,7 +739,7 @@ contains
             !
             ! Get string the property is associated with
             !
-            pstring = bc_operator%get_property_name(iprop)
+            pstring = bc_state%get_property_name(iprop)
 
 
             !
@@ -753,7 +752,7 @@ contains
             !
             ! Print property function attribute
             !
-            fcn_name = bc_operator%bcproperties%bcprop(iprop)%fcn%get_name()
+            fcn_name = bc_state%bcproperties%bcprop(iprop)%fcn%get_name()
             call h5ltset_attribute_string_f(prop_id, ".", "function", fcn_name, ierr)
             if (ierr /= 0) call chidg_signal(FATAL,"add_bcproperties_hdf: error setting function attribute")
 
@@ -761,7 +760,7 @@ contains
             !
             ! Get number of options available for the current property
             !
-            nopt = bc_operator%get_noptions(iprop)
+            nopt = bc_state%get_noptions(iprop)
 
 
             if (nopt > 0 ) then
@@ -770,8 +769,8 @@ contains
                     !
                     ! Get the current option and default value.
                     !
-                    option_key   = bc_operator%get_option_key(iprop,iopt)
-                    option_value = bc_operator%get_option_value(iprop,option_key)
+                    option_key   = bc_state%get_option_key(iprop,iopt)
+                    option_value = bc_state%get_option_value(iprop,option_key)
 
                     !
                     ! Set the option as a real attribute
@@ -809,14 +808,14 @@ contains
     !!
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   9/1/2016
-    !!  @note   Modified to include bc_operators
+    !!  @note   Modified to include bc_states
     !!
     !----------------------------------------------------------------------------------------------------
-    subroutine delete_bc_operator_hdf(bcface,opstring)
+    subroutine delete_bc_state_hdf(bcface,opstring)
         integer(HID_T),     intent(in)  :: bcface
         character(len=*),   intent(in)  :: opstring
 
-        integer(HID_T)                          :: bc_op
+        integer(HID_T)                          :: bc_state
 
         integer(HSIZE_T)                        :: iattr, idx
         integer(ik)                             :: nattr
@@ -828,21 +827,21 @@ contains
 
 
         !
-        ! Open the bc_operator group
+        ! Open the bc_state group
         !
-        call h5gopen_f(bcface, "BCO_"//trim(opstring), bc_op, ierr)
+        call h5gopen_f(bcface, "BCS_"//trim(opstring), bc_state, ierr)
 
 
         !
         ! Delete overall boundary condition face attributes
         !
-        call delete_group_attributes(bc_op)
+        call delete_group_attributes(bc_state)
 
 
         !
-        !  Get number of groups linked to the current bc_op
+        !  Get number of groups linked to the current bc_state
         !
-        call h5gn_members_f(bc_op, ".", nmembers, ierr)
+        call h5gn_members_f(bc_state, ".", nmembers, ierr)
 
 
         !
@@ -851,13 +850,13 @@ contains
         if ( nmembers > 0 ) then
 
             !
-            ! First get number of operators. This could be different than number of groups.
+            ! First get number of states. This could be different than number of groups.
             !
             nprop = 0
             do igrp = 0,nmembers-1
 
                 ! Get group name
-                call h5gget_obj_info_idx_f(bc_op, ".", igrp, gname, type, ierr)
+                call h5gget_obj_info_idx_f(bc_state, ".", igrp, gname, type, ierr)
 
                 ! Test if group is a boundary condition function. 'BCP_'
                 if (gname(1:4) == 'BCP_') then
@@ -869,7 +868,7 @@ contains
 
 
             !
-            ! Second, get all operator names
+            ! Second, get all state names
             !
             allocate(pnames(nprop), stat=ierr)
             if (ierr /= 0) call AllocationError
@@ -877,7 +876,7 @@ contains
             do igrp = 0,nmembers-1
 
                 ! Get group name
-                call h5gget_obj_info_idx_f(bc_op, ".", igrp, gname, type, ierr)
+                call h5gget_obj_info_idx_f(bc_state, ".", igrp, gname, type, ierr)
 
                 ! Test if group is a boundary condition function. 'BCP_'
                 if (gname(1:4) == 'BCP_') then
@@ -897,7 +896,7 @@ contains
             ! because the index was screwed up.
             !
             do iprop = 1,nprop
-                call delete_bc_property_hdf(bc_op,pnames(iprop))
+                call delete_bc_property_hdf(bc_state,pnames(iprop))
             end do
 
 
@@ -905,17 +904,17 @@ contains
 
 
         !
-        ! Close the bc_operator group
+        ! Close the bc_state group
         !
-        call h5gclose_f(bc_op,ierr)
+        call h5gclose_f(bc_state,ierr)
 
         !
-        ! Unlink the bc_operator group
+        ! Unlink the bc_state group
         !
-        call h5gunlink_f(bcface,"BCO_"//trim(opstring),ierr)
-        if (ierr /= 0) call chidg_signal(FATAL,"delete_bc_operator_hdf: error unlinking bc_operator group")
+        call h5gunlink_f(bcface,"BCS_"//trim(opstring),ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"delete_bc_state_hdf: error unlinking bc_state group")
 
-    end subroutine delete_bc_operator_hdf
+    end subroutine delete_bc_state_hdf
     !****************************************************************************************************
 
 
@@ -934,12 +933,12 @@ contains
     !!
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   9/1/2016
-    !!  @note   Modified to include bc_operators
+    !!  @note   Modified to include bc_states
     !!
     !!
     !------------------------------------------------------------------------------------------------------
-    subroutine delete_bc_property_hdf(bc_op,pname)
-        integer(HID_T),     intent(in)      :: bc_op
+    subroutine delete_bc_property_hdf(bc_state,pname)
+        integer(HID_T),     intent(in)      :: bc_state
         character(*),       intent(in)      :: pname
 
         integer(HID_T)  :: bcprop
@@ -948,7 +947,7 @@ contains
         !
         ! Open bcproperty group
         !
-        call h5gopen_f(bc_op, trim(adjustl(pname)), bcprop, ierr)
+        call h5gopen_f(bc_state, trim(adjustl(pname)), bcprop, ierr)
         if (ierr /= 0) call chidg_signal(FATAL,"delete_bc_property_hdf: error opening bcproperty group")
 
 
@@ -968,7 +967,7 @@ contains
         !
         ! Now that the data in bcproperty has been removed, unlink the bcproperty group.
         !
-        call h5gunlink_f(bc_op,trim(pname),ierr)
+        call h5gunlink_f(bc_state,trim(pname),ierr)
         if (ierr /= 0) call chidg_signal(FATAL,"delete_bcfunction_hdf: error unlinking bcproperty group")
 
 
@@ -998,7 +997,7 @@ contains
     !!
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   9/1/2016
-    !!  @note   Modified to include bc_operators
+    !!  @note   Modified to include bc_states
     !!
     !!  @param[in]  bcface  HDF5 group identifier. Should be associated with a boundary condition.
     !!
@@ -1006,15 +1005,15 @@ contains
     subroutine print_bc_properties(bcface)
         integer(HID_T),     intent(in)  :: bcface
 
-        integer(HID_T)          :: bcprop, bc_op
+        integer(HID_T)          :: bcprop, bc_state
         integer                 :: nmembers, igrp, type, ierr, iop
         character(len=1024)     :: gname, bcname
-        type(svector_t)         :: bc_operator_strings
+        type(svector_t)         :: bc_state_strings
         type(string_t)          :: bcstring
 
 
         !
-        ! Get operator groups
+        ! Get state groups
         !
         call h5gn_members_f(bcface, ".", nmembers, ierr)
 
@@ -1024,32 +1023,32 @@ contains
                     ! Get group name
                     call h5gget_obj_info_idx_f(bcface, ".", igrp, gname, type, ierr)
 
-                    if (gname(1:4) == 'BCO_') then
-                        call bc_operator_strings%push_back(string_t(trim(gname(5:))))
+                    if (gname(1:4) == 'BCS_') then
+                        call bc_state_strings%push_back(string_t(trim(gname(5:))))
                     end if
             end do
         end if
 
 
         !
-        ! Loop through and print operators + properties
+        ! Loop through and print states + properties
         !
-        do iop = 1,bc_operator_strings%size()
+        do iop = 1,bc_state_strings%size()
 
-            ! Write operator name
-            bcstring = bc_operator_strings%at(iop)
+            ! Write state name
+            bcstring = bc_state_strings%at(iop)
             call write_line('['//trim(adjustl(bcstring%get()))//']', color='pink')
 
             
-            ! Open operator group
-            call h5gopen_f(bcface, "BCO_"//bcstring%get(), bc_op, ierr)
+            ! Open state group
+            call h5gopen_f(bcface, "BCS_"//bcstring%get(), bc_state, ierr)
             
 
 
             !
             !  Get number of groups linked to the current bcface
             !
-            call h5gn_members_f(bc_op, ".", nmembers, ierr)
+            call h5gn_members_f(bc_state, ".", nmembers, ierr)
 
 
             !
@@ -1062,7 +1061,7 @@ contains
                     !
                     ! Get group name
                     !
-                    call h5gget_obj_info_idx_f(bc_op, ".", igrp, gname, type, ierr)
+                    call h5gget_obj_info_idx_f(bc_state, ".", igrp, gname, type, ierr)
 
                     !
                     ! Test if group is a boundary condition function. 'BCP_'
@@ -1071,7 +1070,7 @@ contains
                         !
                         ! Open bcproperty_t group
                         !
-                        call h5gopen_f(bc_op, gname, bcprop, ierr)
+                        call h5gopen_f(bc_state, gname, bcprop, ierr)
                         if (ierr /= 0) call chidg_signal(FATAL,"print_bc_properties: error opening bcproperty")
 
 
@@ -1097,8 +1096,8 @@ contains
                 end do  ! igrp
             end if ! nmembers
 
-            ! Close operator group
-            call h5gclose_f(bc_op,ierr)
+            ! Close state group
+            call h5gclose_f(bc_state,ierr)
 
         end do !iop
 
@@ -1221,26 +1220,26 @@ contains
     !!
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   9/1/2016
-    !!  @note   Modified to include bc_operators
+    !!  @note   Modified to include bc_states
     !!
     !--------------------------------------------------------------------------------------------
     subroutine edit_property(bcface,pname)
         integer(HID_T),     intent(in)  :: bcface
         character(*),       intent(in)  :: pname
 
-        integer(HID_T)                  :: bcprop, bc_op
+        integer(HID_T)                  :: bcprop, bc_state
         integer(HSIZE_T)                :: adim
         character(len=:),   allocatable :: command
         character(len=1024)             :: option, new_function, gname
         logical                         :: option_exists, run, property_found, property_exists
         real(rk)                        :: val
         integer                         :: ierr, type, igrp, iop, nmembers
-        type(svector_t)                 :: bc_operator_strings
+        type(svector_t)                 :: bc_state_strings
         type(string_t)                  :: string
 
 
         !
-        ! Loop through the operators to find the property name
+        ! Loop through the states to find the property name
         !
         call h5gn_members_f(bcface, ".", nmembers, ierr)
 
@@ -1250,15 +1249,15 @@ contains
         !
         if ( nmembers > 0 ) then
 
-            ! First get number of operators. This could be different than number of groups.
+            ! First get number of states. This could be different than number of groups.
             do igrp = 0,nmembers-1
 
                 ! Get group name
                 call h5gget_obj_info_idx_f(bcface, ".", igrp, gname, type, ierr)
 
-                ! Test if group is a boundary condition function. 'BCO_'
-                if (gname(1:4) == 'BCO_') then
-                    call bc_operator_strings%push_back(string_t(trim(gname)))
+                ! Test if group is a boundary condition function. 'BCS_'
+                if (gname(1:4) == 'BCS_') then
+                    call bc_state_strings%push_back(string_t(trim(gname)))
                 end if
 
             end do  ! igrp
@@ -1268,26 +1267,26 @@ contains
 
 
         !
-        ! Find the operator with the property
+        ! Find the state with the property
         !
         property_found = .false.
-        do iop = 1,bc_operator_strings%size()
+        do iop = 1,bc_state_strings%size()
 
-            ! Open the operator group
-            string = bc_operator_strings%at(iop)
-            call h5gopen_f(bcface, string%get(), bc_op, ierr)
+            ! Open the state group
+            string = bc_state_strings%at(iop)
+            call h5gopen_f(bcface, string%get(), bc_state, ierr)
 
             ! Check if it contains a link to the property group
-            call h5lexists_f(bc_op, "BCP_"//trim(pname), property_exists, ierr)
+            call h5lexists_f(bc_state, "BCP_"//trim(pname), property_exists, ierr)
 
             if (property_exists) then
-                call h5gopen_f(bc_op, "BCP_"//trim(pname), bcprop, ierr)
+                call h5gopen_f(bc_state, "BCP_"//trim(pname), bcprop, ierr)
                 if (ierr /= 0) call chidg_signal(FATAL,"edit_property: error opening bcproperty")
                 property_found = .true.
                 exit
             end if
 
-            call h5gclose_f(bc_op,ierr)
+            call h5gclose_f(bc_state,ierr)
         end do !iop
 
 
@@ -1341,7 +1340,7 @@ contains
                     ! Set option
                     !
                     adim = 1
-                    call h5ltset_attribute_double_f(bc_op, "BCP_"//trim(pname), trim(option), [real(val,rdouble)], adim, ierr)
+                    call h5ltset_attribute_double_f(bc_state, "BCP_"//trim(pname), trim(option), [real(val,rdouble)], adim, ierr)
                     if (ierr /= 0) call chidg_signal(FATAL,"edit_property: error setting option value")
 
                 end if
@@ -1385,7 +1384,7 @@ contains
     !!
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   9/1/2016
-    !!  @note   Modified to include bc_operators
+    !!  @note   Modified to include bc_states
     !!
     !!
     !-------------------------------------------------------------------------------------------
@@ -1393,16 +1392,16 @@ contains
         integer(HID_T),     intent(in)  :: bcface
         character(*),       intent(in)  :: pname
 
-        integer(HID_T)          :: bc_op
+        integer(HID_T)          :: bc_state
         integer                 :: ierr, nmembers, igrp, type, iop
         character(len=1024)     :: gname
         logical                 :: exist_status
-        type(svector_t)         :: bc_operator_strings
+        type(svector_t)         :: bc_state_strings
         type(string_t)          :: string
 
         
         !
-        ! Loop through the operators to find the property name
+        ! Loop through the states to find the property name
         !
         call h5gn_members_f(bcface, ".", nmembers, ierr)
 
@@ -1412,15 +1411,15 @@ contains
         !
         if ( nmembers > 0 ) then
 
-            ! First get number of operators. This could be different than number of groups.
+            ! First get number of states. This could be different than number of groups.
             do igrp = 0,nmembers-1
 
                 ! Get group name
                 call h5gget_obj_info_idx_f(bcface, ".", igrp, gname, type, ierr)
 
-                ! Test if group is a boundary condition function. 'BCO_'
-                if (gname(1:4) == 'BCO_') then
-                    call bc_operator_strings%push_back(string_t(trim(gname)))
+                ! Test if group is a boundary condition function. 'BCS_'
+                if (gname(1:4) == 'BCS_') then
+                    call bc_state_strings%push_back(string_t(trim(gname)))
                 end if
 
             end do  ! igrp
@@ -1430,30 +1429,30 @@ contains
 
 
         !
-        ! Find the operator with the property
+        ! Find the state with the property
         !
         exist_status = .false.
-        do iop = 1,bc_operator_strings%size()
+        do iop = 1,bc_state_strings%size()
 
-            ! Open the operator group
-            string = bc_operator_strings%at(iop)
-            call h5gopen_f(bcface, string%get(), bc_op, ierr)
+            ! Open the state group
+            string = bc_state_strings%at(iop)
+            call h5gopen_f(bcface, string%get(), bc_state, ierr)
 
             ! Check if it contains a link to the property group
-            call h5lexists_f(bc_op, "BCP_"//trim(pname), exist_status, ierr)
+            call h5lexists_f(bc_state, "BCP_"//trim(pname), exist_status, ierr)
 
 
 
 
 
             if (exist_status) then
-                ! Close operator
-                call h5gclose_f(bc_op,ierr)
+                ! Close state
+                call h5gclose_f(bc_state,ierr)
                 exit
             end if
 
-            ! Close operator
-            call h5gclose_f(bc_op,ierr)
+            ! Close state
+            call h5gclose_f(bc_state,ierr)
 
         end do !iop
 

@@ -929,8 +929,8 @@ contains
                     call h5gget_obj_info_idx_f(bcface_id, ".", igroup, gname, type, ierr)
                     if (ierr /= 0) call chidg_signal(FATAL,"get_bcnames_hdf: error getting boundary condition group name")
 
-                    ! Test if group is a boundary condition operator. 'BCO_'
-                    if (gname(1:4) == 'BCO_') then
+                    ! Test if group is a boundary condition operator. 'BCS_'
+                    if (gname(1:4) == 'BCS_') then
                         call bcnames(iface)%push_back(string_t(trim(gname(5:))))
                     end if
 

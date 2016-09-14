@@ -1,7 +1,7 @@
 module type_chidg_worker
 #include <messenger.h>
     use mod_kinds,          only: ik, rk
-    use mod_constants,      only: NFACES, ME, NEIGHBOR, ZERO
+    use mod_constants,      only: NFACES, ME, NEIGHBOR, BC, ZERO
     use mod_interpolate,    only: interpolate_element_autodiff, &
                                   interpolate_face_autodiff,    &
                                   get_face_interpolation_info
@@ -46,7 +46,7 @@ module type_chidg_worker
     
         ! Worker state
         procedure   :: init
-        procedure   :: set_element_info     ! Set element_info type
+        procedure   :: set_element          ! Set element_info type
         procedure   :: set_function_info    ! Set function_info type
         procedure   :: set_face             ! Set iface index
         procedure   :: face_info            ! Return a face_info type
@@ -131,13 +131,13 @@ contains
     !!
     !!
     !---------------------------------------------------------------------------------
-    subroutine set_element_info(self,elem_info)
+    subroutine set_element(self,elem_info)
         class(chidg_worker_t),  intent(inout)   :: self
         type(element_info_t),   intent(in)      :: elem_info
 
         self%element_info = elem_info
 
-    end subroutine set_element_info
+    end subroutine set_element
     !**********************************************************************************
 
 
@@ -247,8 +247,11 @@ contains
         !
         if (interp_source == ME) then
             cache_component = 'face interior'
-        else if (interp_source == NEIGHBOR) then
+        else if (interp_source == NEIGHBOR .or. &
+                 interp_source == BC) then
             cache_component = 'face exterior'
+        else
+            call chidg_signal(FATAL,"chidg_worker%get_face_variable: Invalid value for interp_source. Try ME, NEIGHBOR, or BC.")
         end if
 
 
@@ -275,7 +278,18 @@ contains
         !
         ! Retrieve data from cache
         !
-        var_gq = self%cache%get_data(cache_component,cache_type,idirection,self%function_info%seed,ieqn,self%iface)
+        if (cache_type == 'value') then
+            var_gq = self%cache%get_data(cache_component,cache_type,idirection,self%function_info%seed,ieqn,self%iface)
+
+        else if (cache_type == 'derivative') then
+
+            ! Get DG derivative on face
+            var_gq = self%cache%get_data(cache_component,'derivative',idirection,self%function_info%seed,ieqn,self%iface)
+
+            ! Modify derivative by face lift stabilized by a factor of NFACES
+            var_gq = var_gq + real(NFACES,rk)*self%cache%get_data(cache_component,'lift',idirection,self%function_info%seed,ieqn,self%iface)
+
+        end if
 
 
     end function get_face_variable
@@ -307,7 +321,7 @@ contains
 
         type(face_info_t)               :: face_info
         character(len=:), allocatable   :: cache_component, cache_type
-        integer(ik)                     :: idirection, igq
+        integer(ik)                     :: idirection, igq, iface
         logical                         :: keep_linearization
 
 
@@ -334,10 +348,20 @@ contains
         !
         ! Retrieve data from cache
         !
-        var_gq = self%cache%get_data('element',cache_type,idirection,self%function_info%seed,ieqn)
+        if ( cache_type == 'value') then
+            var_gq = self%cache%get_data('element',cache_type,idirection,self%function_info%seed,ieqn)
 
+        else if (cache_type == 'derivative') then
 
+            ! Get DG derivative
+            var_gq = self%cache%get_data('element','derivative',idirection,self%function_info%seed,ieqn)
 
+            ! Add lift contributions from each face
+            do iface = 1,NFACES
+                var_gq = var_gq + self%cache%get_data('face interior', 'lift', idirection, self%function_info%seed,ieqn,iface)
+            end do
+
+        end if
 
     end function get_element_variable
     !**********************************************************************************************
@@ -373,17 +397,16 @@ contains
     !!
     !!
     !----------------------------------------------------------------------------------------------
-    subroutine store_bc_state(self,ieqn,cache_data,data_type)
+    subroutine store_bc_state(self,ieqn,cache_data)
         class(chidg_worker_t),  intent(inout)   :: self
         integer(ik),            intent(in)      :: ieqn
         type(AD_D),             intent(in)      :: cache_data(:)
-        character(len=*),       intent(in)      :: data_type
 
 
         !
         ! Store bc state in cache, face exterior component
         !
-!        call self%cache%set_data(cache_component,cache_data,data_type,self%function_info%idepend,ieqn,self%iface)
+        call self%cache%set_data('face exterior',cache_data,'value',0,self%function_info%seed,ieqn,self%iface)
 
 
 

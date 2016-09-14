@@ -282,6 +282,7 @@ contains
             seed%idomain_l  = 1
             seed%ielement_g = 15
             seed%ielement_l = 15
+            seed%iproc      = IRANK
 
             tol   = 1.e-13_rk
             ivar  = self%chidg%data%eqnset(1)%prop%get_equation_index('u')
@@ -358,6 +359,7 @@ contains
             seed%idomain_l  = 1
             seed%ielement_g = 15
             seed%ielement_l = 15
+            seed%iproc      = IRANK
 
 
             tol   = 1.e-13_rk
@@ -440,6 +442,7 @@ contains
             seed%idomain_l  = 1
             seed%ielement_g = 14    ! a seed element, so all derivative arrays should be seeded to zero
             seed%ielement_l = 14    ! a seed element, so all derivative arrays should be seeded to zero
+            seed%iproc      = IRANK
 
 
             tol   = 1.e-13_rk
@@ -518,6 +521,7 @@ contains
             seed%idomain_l  = 1
             seed%ielement_g = 14
             seed%ielement_l = 14
+            seed%iproc      = IRANK
 
 
             tol   = 1.e-13_rk

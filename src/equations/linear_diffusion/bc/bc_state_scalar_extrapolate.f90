@@ -1,8 +1,11 @@
-module bc_lineardiffusion_extrapolate
+module bc_state_scalar_extrapolate
     use mod_kinds,          only: rk,ik
-    use type_bc,            only: bc_t
+    use mod_constants,      only: ME, ZERO
+    use type_bc_state,      only: bc_state_t
     use type_chidg_worker,  only: chidg_worker_t
     use type_properties,    only: properties_t
+    use type_point,         only: point_t
+    use DNAD_D
     implicit none
 
 
@@ -14,16 +17,14 @@ module bc_lineardiffusion_extrapolate
     !!  @date   8/16/2016
     !!
     !---------------------------------------------------------------------------------------
-    type, public, extends(bc_t) :: lineardiffusion_extrapolate_t
-
-
+    type, public, extends(bc_state_t) :: scalar_extrapolate_t
 
     contains
 
-        procedure   :: add_options
-        procedure   :: compute    !> bc implementation
+        procedure   :: init
+        procedure   :: compute_bc_state    !> bc implementation
 
-    end type lineardiffusion_extrapolate_t
+    end type scalar_extrapolate_t
     !****************************************************************************************
 
 
@@ -39,29 +40,17 @@ contains
     !!  @date   8/16/2016
     !!
     !------------------------------------------------------------------------------------------
-    subroutine add_options(self)    
-        class(lineardiffusion_extrapolate_t),  intent(inout)   :: self
+    subroutine init(self)    
+        class(scalar_extrapolate_t),  intent(inout)   :: self
 
         !
         ! Set name
         !
-        call self%set_name('lineardiffusion_extrapolate')
+        call self%set_name('Scalar Extrapolate')
 
 
-        !
-        ! Add functions
-        !
-
-
-        !
-        ! Add parameters
-        !
-
-
-    end subroutine add_options
+    end subroutine init
     !******************************************************************************************
-
-
 
 
 
@@ -83,17 +72,41 @@ contains
     !!  @param[in]      iface   Index of the face being computed
     !!  @param[in]      iblk    Index of the linearization block being computed
     !---------------------------------------------------------------------------------------------
-    subroutine compute(self,worker,prop)
-        class(lineardiffusion_extrapolate_t),   intent(inout)   :: self
-        type(chidg_worker_t),                   intent(inout)   :: worker
-        class(properties_t),                    intent(inout)   :: prop
+    subroutine compute_bc_state(self,worker,prop)
+        class(scalar_extrapolate_t),    intent(inout)   :: self
+        type(chidg_worker_t),           intent(inout)   :: worker
+        class(properties_t),            intent(inout)   :: prop
+
+        ! Equation indices
+        integer(ik)     :: iu
+
+
+        type(AD_D),     allocatable, dimension(:)   :: u_bc
 
 
 
+        !
+        ! Get equation index
+        !
+        iu = prop%get_equation_index("u")
 
 
 
-    end subroutine compute
+        !
+        ! Get u_m from face interior to extrapolate
+        !
+        u_bc  = worker%get_face_variable(iu, 'value', ME)
+
+
+
+        !
+        ! Store boundary condition state
+        !
+        call worker%store_bc_state(iu, u_bc)
+
+
+
+    end subroutine compute_bc_state
     !*********************************************************************************************
 
 
@@ -101,4 +114,4 @@ contains
 
 
 
-end module bc_lineardiffusion_extrapolate
+end module bc_state_scalar_extrapolate

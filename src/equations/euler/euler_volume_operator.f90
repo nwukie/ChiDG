@@ -104,12 +104,6 @@ contains
         !
         ! Interpolate solution to quadrature nodes
         !
-!        rho  = worker%interpolate(irho,  'value')
-!        rhou = worker%interpolate(irhou, 'value')
-!        rhov = worker%interpolate(irhov, 'value')
-!        rhow = worker%interpolate(irhow, 'value')
-!        rhoE = worker%interpolate(irhoE, 'value')
-
         rho  = worker%get_element_variable(irho,  'value')
         rhou = worker%get_element_variable(irhou, 'value')
         rhov = worker%get_element_variable(irhov, 'value')

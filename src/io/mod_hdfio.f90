@@ -12,7 +12,7 @@ module mod_hdfio
     use type_chidg_data,            only: chidg_data_t
     use type_meshdata,              only: meshdata_t
     use type_bcdata,                only: bcdata_t
-    use type_bc_operator,           only: bc_operator_t
+    use type_bc_state,              only: bc_state_t
     use type_domain_connectivity,   only: domain_connectivity_t
     use type_partition,             only: partition_t
     use hdf5
@@ -1368,9 +1368,9 @@ contains
 
 
         !
-        ! Read boundary condition operators
+        ! Read boundary condition states
         !
-        call read_bc_operators_hdf(fid,bcdata,partition)
+        call read_bc_states_hdf(fid,bcdata,partition)
 
 
         !
@@ -1540,20 +1540,20 @@ contains
     !!
     !!
     !---------------------------------------------------------------------------------------------------------
-    subroutine read_bc_operators_hdf(fid, bcdata, partition)
+    subroutine read_bc_states_hdf(fid, bcdata, partition)
         integer(HID_T),     intent(in)      :: fid
         type(bcdata_t),     intent(inout)   :: bcdata(:)
         type(partition_t),  intent(in)      :: partition
 
-        type(svector_t)                     :: bc_operator_strings
+        type(svector_t)                     :: bc_state_strings
         type(string_t)                      :: temp_string
-        class(bc_operator_t), allocatable   :: bc
+        class(bc_state_t),  allocatable     :: bc
 
         real(rdouble),   dimension(1) :: rbuf
         character(len=10)   :: faces(NFACES)
         character(len=1024) :: gname, bcname, fname, oname, pname
         integer(HSIZE_T)    :: adim
-        integer(HID_T)      :: bc_op, bcface, bcgroup, bcprop
+        integer(HID_T)      :: bc_state, bcface, bcgroup, bcprop
         real(rk)            :: ovalue
 
 
@@ -1584,7 +1584,7 @@ contains
             ! Open the Domain/BoundaryConditions group
             !
             call h5gopen_f(fid, trim(gname)//"/BoundaryConditions", bcgroup, ierr, H5P_DEFAULT_F)
-            if (ierr /= 0) stop "Error: read_bc_operators_hdf -- h5gopen_f: Domain/BoundaryConditions group did not open properly"
+            if (ierr /= 0) stop "Error: read_bc_states_hdf -- h5gopen_f: Domain/BoundaryConditions group did not open properly"
 
 
 
@@ -1600,19 +1600,19 @@ contains
             !
             ! TODO: should probably turn this into a loop over bcs instead of faces.
             do iface = 1,NFACES
-                call bc_operator_strings%clear()
+                call bc_state_strings%clear()
 
 
                 !
                 ! Open face boundary condition group
                 !
                 call h5gopen_f(bcgroup, trim(adjustl(faces(iface))), bcface, ierr)
-                if (ierr /= 0) call chidg_signal(FATAL,"read_bc_operators_hdf: error opening boundary face group")
+                if (ierr /= 0) call chidg_signal(FATAL,"read_bc_states_hdf: error opening boundary face group")
     
 
 
                 !
-                ! First get number of operators. This could be different than number of groups.
+                ! First get number of states. This could be different than number of groups.
                 !
 
                 !  Get number of groups linked to the current bc_face
@@ -1622,9 +1622,9 @@ contains
                         ! Get group name
                         call h5gget_obj_info_idx_f(bcface, ".", igrp, gname, type, ierr)
 
-                        ! Test if group is a boundary condition operator. 'BCO_'
-                        if (gname(1:4) == 'BCO_') then
-                            call bc_operator_strings%push_back(string_t(gname))
+                        ! Test if group is a boundary condition state. 'BCS_'
+                        if (gname(1:4) == 'BCS_') then
+                            call bc_state_strings%push_back(string_t(gname))
                         end if
                     end do  ! igrp
                 end if
@@ -1633,14 +1633,14 @@ contains
 
 
                 !
-                ! Loop through and read operators + their properties
+                ! Loop through and read states + their properties
                 !
-                do iop = 1,bc_operator_strings%size()
+                do iop = 1,bc_state_strings%size()
 
-                    ! Open bc_operator group
-                    temp_string = bc_operator_strings%at(iop)
-                    call h5gopen_f(bcface, trim(temp_string%get()), bc_op, ierr)
-                    if (ierr /= 0) call chidg_signal(FATAL,"read_bc_operators_hdf: error opening bc_operator group.")
+                    ! Open bc_state group
+                    temp_string = bc_state_strings%at(iop)
+                    call h5gopen_f(bcface, trim(temp_string%get()), bc_state, ierr)
+                    if (ierr /= 0) call chidg_signal(FATAL,"read_bc_states_hdf: error opening bc_state group.")
 
                     
                     ! Get boundary condition name string
@@ -1648,7 +1648,7 @@ contains
                     bcname = trim(bcname(5:))
 
 
-                    ! Create boundary condition operator from string
+                    ! Create boundary condition state from string
                     call create_bc(trim(bcname),bc)
 
 
@@ -1665,13 +1665,13 @@ contains
 
 
                         ! Open property in HDF file
-                        call h5gopen_f(bc_op, "BCP_"//trim(pname), bcprop, ierr)
-                        if (ierr /= 0) call chidg_signal(FATAL,"read_bc_operators_hdf: error opening bcproperty group.")
+                        call h5gopen_f(bc_state, "BCP_"//trim(pname), bcprop, ierr)
+                        if (ierr /= 0) call chidg_signal(FATAL,"read_bc_states_hdf: error opening bcproperty group.")
 
 
                         ! Read the function name set for the property.
                         call h5ltget_attribute_string_f(bcprop, ".", "function", fname, ierr)
-                        if (ierr /= 0) call chidg_signal(FATAL,"read_bc_operators_hdf: error getting function name.")
+                        if (ierr /= 0) call chidg_signal(FATAL,"read_bc_states_hdf: error getting function name.")
 
                         
                         ! Set/Create the function for the current property
@@ -1691,7 +1691,7 @@ contains
                             ! Get option value from file
                             adim = 1
                             call h5ltget_attribute_double_f(bcprop, ".", trim(oname), rbuf, ierr)
-                            if (ierr /= 0) call chidg_signal(FATAL,"read_bc_operators_hdf: error getting option value")
+                            if (ierr /= 0) call chidg_signal(FATAL,"read_bc_states_hdf: error getting option value")
                             ovalue = real(rbuf(1),rk)
 
                             ! Set boundary condition option
@@ -1702,7 +1702,7 @@ contains
 
                         ! Close current property group
                         call h5gclose_f(bcprop,ierr)
-                        if (ierr /= 0) call chidg_signal(FATAL,"read_bc_operators_hdf: h5gclose")
+                        if (ierr /= 0) call chidg_signal(FATAL,"read_bc_states_hdf: h5gclose")
 
 
 
@@ -1714,16 +1714,16 @@ contains
                     call bcdata(iconn)%bcs(iface)%push_back(bc)
 
     
-                    ! Close boundary condition operator group
-                    call h5gclose_f(bc_op, ierr)
-                    if (ierr /= 0) call chidg_signal(FATAL,"read_bc_operators_hdf: h5gclose")
+                    ! Close boundary condition state group
+                    call h5gclose_f(bc_state, ierr)
+                    if (ierr /= 0) call chidg_signal(FATAL,"read_bc_states_hdf: h5gclose")
 
 
                 end do !iop
 
                 ! Close face boundary condition group
                 call h5gclose_f(bcface, ierr)
-                if (ierr /= 0) call chidg_signal(FATAL,"read_bc_operators_hdf: h5gclose")
+                if (ierr /= 0) call chidg_signal(FATAL,"read_bc_states_hdf: h5gclose")
 
 
             end do ! iface
@@ -1731,7 +1731,7 @@ contains
 
             ! Close BoundaryCondition group
             call h5gclose_f(bcgroup, ierr)
-            if (ierr /= 0) call chidg_signal(FATAL,"read_bc_operators_hdf: h5gclose")
+            if (ierr /= 0) call chidg_signal(FATAL,"read_bc_states_hdf: h5gclose")
 
 
         end do  ! iconn
@@ -1739,7 +1739,7 @@ contains
 
 
 
-    end subroutine read_bc_operators_hdf
+    end subroutine read_bc_states_hdf
     !*******************************************************************************************************
 
 

@@ -2,9 +2,10 @@ module type_equation_set
 #include <messenger.h>
     use mod_kinds,                      only: rk,ik
     use mod_constants,                  only: INTERIOR, CHIMERA, DIAG, &
-                                              BOUNDARY_ADVECTIVE_FLUX, BOUNDARY_DIFFUSIVE_FLUX, &
-                                              VOLUME_ADVECTIVE_FLUX, VOLUME_DIFFUSIVE_FLUX,     &
-                                              XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX
+                                              BOUNDARY_ADVECTIVE_FLUX, BOUNDARY_DIFFUSIVE_FLUX,         &
+                                              VOLUME_ADVECTIVE_FLUX, VOLUME_DIFFUSIVE_FLUX, BC_FLUX,    &
+                                              XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX,     &
+                                              BOUNDARY
     use mod_operators,                  only: build_operator
     use mod_DNAD_tools,                 only: element_compute_seed, face_compute_seed
 
@@ -20,6 +21,7 @@ module type_equation_set
     use type_face_info,                 only: face_info_t
     use type_function_info,             only: function_info_t
     use type_properties,                only: properties_t
+    use type_bcset,                     only: bcset_t
     implicit none
     private
 
@@ -55,6 +57,7 @@ module type_equation_set
         type(operator_wrapper_t),   allocatable :: boundary_diffusive_operator(:)
         type(operator_wrapper_t),   allocatable :: volume_advective_operator(:)
         type(operator_wrapper_t),   allocatable :: volume_diffusive_operator(:) 
+        type(operator_wrapper_t),   allocatable :: bc_operator(:)
 
         ! Data for the flux and source functions. Ex how many. This gets passed to a container 
         ! in sdata that keeps track of whether these have been executed or not.
@@ -69,10 +72,11 @@ module type_equation_set
         procedure   :: add_equation                         !< Add an equation, it's string, and index
 
 
-        procedure   :: compute_boundary_advective_operators !< Compute all the boundary advective functions
-        procedure   :: compute_boundary_diffusive_operators !< Compute all the boundary diffusive functions
-        procedure   :: compute_volume_advective_operators   !< Compute all the volume advective functions
-        procedure   :: compute_volume_diffusive_operators   !< Compute all the volume diffusive functions
+        procedure   :: compute_boundary_advective_operators !< Compute all the boundary advective operators
+        procedure   :: compute_boundary_diffusive_operators !< Compute all the boundary diffusive operators
+        procedure   :: compute_volume_advective_operators   !< Compute all the volume advective operators
+        procedure   :: compute_volume_diffusive_operators   !< Compute all the volume diffusive operators
+        procedure   :: compute_bc_operators                 !< Compute all the bc operators
 
         procedure   :: get_boundary_ndependent_elements     !< return number elements that a boundary function is depending on
         procedure   :: get_volume_ndependent_elements       !< return number elements that a volume function is depending on
@@ -323,6 +327,31 @@ contains
             end if
 
 
+        else if (operator_type == BC_FLUX) then
+
+
+            ! Allocate temporary flux array with one additional slot
+            if (allocated(self%bc_operator)) then
+
+                ! Allocate
+                allocate(temp(size(self%bc_operator) + 1), stat=ierr)
+                if (ierr /= 0) call AllocationError
+
+                ! Copy current flux components to temp array
+                do iflux = 1,size(self%bc_operator)
+                    allocate(temp(iflux)%op,source=self%bc_operator(iflux)%op, stat=ierr)
+                    if (ierr /= 0) call AllocationError
+                end do
+
+            else
+
+                ! Allocate new slot
+                allocate(temp(1), stat=ierr)
+                if (ierr /= 0) call AllocationError
+
+            end if
+
+
 
 
         else
@@ -352,6 +381,9 @@ contains
         else if (operator_type == VOLUME_ADVECTIVE_FLUX) then
             self%volume_advective_operator = temp
             self%function_data%nvolume_advective_flux = size(self%volume_advective_operator)
+
+        else if (operator_type == BC_FLUX) then
+            self%bc_operator = temp
 
         else
             call chidg_signal_one(FATAL,"equation_set%add_operator: 'Operator type was not valid'", operator_type)
@@ -489,58 +521,58 @@ contains
                    idom => worker%element_info%idomain_l, ielem => worker%element_info%ielement_l, &
                    iface => worker%iface, prop => self%prop)
 
-        !
-        ! Only call the following routines for interior faces -- ftype == 0
-        ! Furthermore, only call the routines if we are computing derivatives for the neighbor of
-        ! iface or for the current element(DIAG). This saves a lot of unnecessary compute_boundary calls.
-        !
-        interior_face = ( mesh(idom)%faces(ielem,iface)%ftype == INTERIOR )
-        chimera_face  = ( mesh(idom)%faces(ielem,iface)%ftype == CHIMERA )
-        compute_face  = (interior_face .or. chimera_face) .and. ( (idiff == iface) .or. (idiff == DIAG) )
-
-        if (compute_face) then
-
-            !
-            ! Get number of elements we are linearizing with respect to
-            !
-            ndepend = self%get_boundary_ndependent_elements(mesh,worker%face_info(),idiff)
-
-
-            if (allocated(self%boundary_diffusive_operator)) then
-                nfcn = size(self%boundary_diffusive_operator)
-                do ifcn = 1,nfcn
-
-                    worker%function_info%type   = BOUNDARY_DIFFUSIVE_FLUX
-                    worker%function_info%ifcn   = ifcn
-                    worker%function_info%idiff  = idiff
-
-                    compute_function     = worker%solverdata%function_status%compute_function(   worker%face_info(), worker%function_info )
-                    linearize_function   = worker%solverdata%function_status%linearize_function( worker%face_info(), worker%function_info )
-                    
-
-                    if ( compute_function .or. linearize_function ) then
-                        !
-                        ! Compute boundary flux once for each donor. 
-                        !   - For interior faces ndepend == 1. 
-                        !   - For Chimera faces ndepend is potentially > 1.
-                        !
-                        do idepend = 1,ndepend
-                            worker%function_info%seed    = face_compute_seed(mesh,idom,ielem,iface,idepend,idiff)
-                            worker%function_info%idepend = idepend
-
-                            call self%boundary_diffusive_operator(ifcn)%op%compute(worker,prop)
-
-                        end do
-                    end if
-
-
-                end do ! ifcn
-
-            end if ! boundary_diffusive_flux loop
-
-
-
-        end if ! compute_face
+!        !
+!        ! Only call the following routines for interior faces -- ftype == 0
+!        ! Furthermore, only call the routines if we are computing derivatives for the neighbor of
+!        ! iface or for the current element(DIAG). This saves a lot of unnecessary compute_boundary calls.
+!        !
+!        interior_face = ( mesh(idom)%faces(ielem,iface)%ftype == INTERIOR )
+!        chimera_face  = ( mesh(idom)%faces(ielem,iface)%ftype == CHIMERA )
+!        compute_face  = (interior_face .or. chimera_face) .and. ( (idiff == iface) .or. (idiff == DIAG) )
+!
+!        if (compute_face) then
+!
+!            !
+!            ! Get number of elements we are linearizing with respect to
+!            !
+!            ndepend = self%get_boundary_ndependent_elements(mesh,worker%face_info(),idiff)
+!
+!
+!            if (allocated(self%boundary_diffusive_operator)) then
+!                nfcn = size(self%boundary_diffusive_operator)
+!                do ifcn = 1,nfcn
+!
+!                    worker%function_info%type   = BOUNDARY_DIFFUSIVE_FLUX
+!                    worker%function_info%ifcn   = ifcn
+!                    worker%function_info%idiff  = idiff
+!
+!                    compute_function     = worker%solverdata%function_status%compute_function(   worker%face_info(), worker%function_info )
+!                    linearize_function   = worker%solverdata%function_status%linearize_function( worker%face_info(), worker%function_info )
+!                    
+!
+!                    if ( compute_function .or. linearize_function ) then
+!                        !
+!                        ! Compute boundary flux once for each donor. 
+!                        !   - For interior faces ndepend == 1. 
+!                        !   - For Chimera faces ndepend is potentially > 1.
+!                        !
+!                        do idepend = 1,ndepend
+!                            worker%function_info%seed    = face_compute_seed(mesh,idom,ielem,iface,idepend,idiff)
+!                            worker%function_info%idepend = idepend
+!
+!                            call self%boundary_diffusive_operator(ifcn)%op%compute(worker,prop)
+!
+!                        end do
+!                    end if
+!
+!
+!                end do ! ifcn
+!
+!            end if ! boundary_diffusive_flux loop
+!
+!
+!
+!        end if ! compute_face
 
         end associate
 
@@ -636,55 +668,173 @@ contains
                    idom => worker%element_info%idomain_l, ielem => worker%element_info%ielement_l, prop => self%prop)
 
 
-        !
-        ! Get number of elements we are linearizing with respect to
-        !
-        ndepend = self%get_volume_ndependent_elements(mesh,elem_info,idiff)
-
-
-
-        linearize_me = (idiff == DIAG)
-        if (linearize_me) then
-            compute_function = .true.
-        else
-            compute_function = ( (mesh(elem_info%idomain_l)%faces(elem_info%ielement_l,idiff)%ftype == INTERIOR) .or. &
-                                 (mesh(elem_info%idomain_l)%faces(elem_info%ielement_l,idiff)%ftype == CHIMERA) )
-        end if
-                            
-
-
-        if (compute_function) then
-
-        if (allocated(self%volume_diffusive_operator)) then
-            nfcn = size(self%volume_diffusive_operator)
-            do ifcn = 1,nfcn
-
-                !
-                ! Compute boundary flux once for each donor. 
-                !   - For interior faces ndepend == 1. 
-                !   - For Chimera faces ndepend is potentially > 1.
-                !
-                do idepend = 1,ndepend
-
-                    worker%function_info%type    = VOLUME_DIFFUSIVE_FLUX
-                    worker%function_info%ifcn    = ifcn
-                    worker%function_info%idiff   = idiff
-                    worker%function_info%idepend = idepend
-                    worker%function_info%seed    = element_compute_seed(mesh,idom,ielem,idepend,idiff)
-
-                    call self%volume_diffusive_operator(ifcn)%op%compute(worker,prop)
-
-                end do
-
-            end do ! ifcn
-        end if
-
-        end if
+!        !
+!        ! Get number of elements we are linearizing with respect to
+!        !
+!        ndepend = self%get_volume_ndependent_elements(mesh,elem_info,idiff)
+!
+!
+!
+!        linearize_me = (idiff == DIAG)
+!        if (linearize_me) then
+!            compute_function = .true.
+!        else
+!            compute_function = ( (mesh(elem_info%idomain_l)%faces(elem_info%ielement_l,idiff)%ftype == INTERIOR) .or. &
+!                                 (mesh(elem_info%idomain_l)%faces(elem_info%ielement_l,idiff)%ftype == CHIMERA) )
+!        end if
+!                            
+!
+!
+!        if (compute_function) then
+!
+!            if (allocated(self%volume_diffusive_operator)) then
+!                nfcn = size(self%volume_diffusive_operator)
+!                do ifcn = 1,nfcn
+!    
+!                    !
+!                    ! Compute boundary flux once for each donor. 
+!                    !   - For interior faces ndepend == 1. 
+!                    !   - For Chimera faces ndepend is potentially > 1.
+!                    !
+!                    do idepend = 1,ndepend
+!    
+!                        worker%function_info%type    = VOLUME_DIFFUSIVE_FLUX
+!                        worker%function_info%ifcn    = ifcn
+!                        worker%function_info%idiff   = idiff
+!                        worker%function_info%idepend = idepend
+!                        worker%function_info%seed    = element_compute_seed(mesh,idom,ielem,idepend,idiff)
+!    
+!                        call self%volume_diffusive_operator(ifcn)%op%compute(worker,prop)
+!    
+!                    end do
+!    
+!                end do ! ifcn
+!            end if
+!
+!        end if
         end associate
 
 
     end subroutine compute_volume_diffusive_operators
     !******************************************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+
+
+    !>  Loops through the attached boundary advective operator functions and computes them 
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   8/15/2016
+    !!
+    !!
+    !--------------------------------------------------------------------------------------------------------------
+    subroutine compute_bc_operators(self,worker,bcset,idiff)
+        class(equation_set_t),      intent(inout)   :: self
+        type(chidg_worker_t),       intent(inout)   :: worker
+        type(bcset_t),              intent(inout)   :: bcset(:)
+        integer(ik),                intent(in)      :: idiff
+
+        integer(ik)             :: nfcn, ifcn, idepend, ndepend, BC_ID, BC_face, ielement_c
+        logical                 :: interior_face, chimera_face, boundary_face, compute_face, &
+                                   compute_function, linearize_function
+
+        associate( mesh => worker%mesh, &
+                   idom => worker%element_info%idomain_l, ielem => worker%element_info%ielement_l, &
+                   iface => worker%iface, prop => self%prop )
+
+
+        !
+        ! Only call the following routines for interior faces -- ftype == 0
+        ! Furthermore, only call the routines if we are computing derivatives for the neighbor of
+        ! iface or for the current element(DIAG). This saves a lot of unnecessary compute_boundary calls.
+        !
+        boundary_face = (mesh(idom)%faces(ielem,iface)%ftype == BOUNDARY)
+        !compute_face  = (boundary_face) .and. ( (idiff == iface) .or. (idiff == DIAG) )
+        compute_face  = (boundary_face) .and. ( (idiff == DIAG) )
+
+        if (compute_face) then
+
+            !
+            ! Get number of elements we are linearizing with respect to
+            !
+            ndepend = self%get_boundary_ndependent_elements(mesh,worker%face_info(),idiff)
+
+
+            !
+            ! Get index of boundary condition. Get index in bc_patch that corresponds to current face.
+            !
+            BC_ID   = mesh(idom)%faces(ielem,iface)%BC_ID
+            BC_face = mesh(idom)%faces(ielem,iface)%BC_face
+
+
+            if (allocated(self%bc_operator)) then
+                nfcn = size(self%bc_operator)
+                do ifcn = 1,nfcn
+
+                    worker%function_info%type   = BC_FLUX
+                    worker%function_info%ifcn   = ifcn
+                    worker%function_info%idiff  = idiff
+
+                    !
+                    ! Compute boundary flux once for each donor. 
+                    !   - For interior faces ndepend == 1. 
+                    !   - For Chimera faces ndepend is potentially > 1.
+                    !   - For BC faces ndepend is potentially > 1.
+                    !
+                    do idepend = 1,ndepend
+
+
+                        !
+                        ! Get coupled element to linearize against.
+                        !
+                        ielement_c = bcset(idom)%bcs(BC_ID)%bc_patch%coupled_elements(BC_face)%at(idepend)
+                        worker%function_info%seed%idomain_g  = mesh(idom)%elems(ielement_c)%idomain_g
+                        worker%function_info%seed%idomain_l  = mesh(idom)%elems(ielement_c)%idomain_l
+                        worker%function_info%seed%ielement_g = mesh(idom)%elems(ielement_c)%ielement_g
+                        worker%function_info%seed%ielement_l = mesh(idom)%elems(ielement_c)%ielement_l
+                        worker%function_info%seed%iproc      = IRANK
+                        worker%function_info%idepend         = idepend
+
+                        call self%bc_operator(ifcn)%op%compute(worker,prop)
+
+                    end do
+
+
+                end do ! ifcn
+
+            end if ! boundary_advective_flux loop
+
+
+
+        end if !compute_face
+
+        end associate
+
+    end subroutine compute_bc_operators
+    !*****************************************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -713,7 +863,7 @@ contains
         integer(ik),            intent(in)   :: idiff
 
         integer(ik) :: ChiID, ndepend
-        logical     :: depend_me, depend_neighbor, chimera_face
+        logical     :: depend_me, depend_neighbor, chimera_face, bc_face
 
         associate( idom => face_info%idomain_l, ielem => face_info%ielement_l, iface => face_info%iface )
 
@@ -732,11 +882,15 @@ contains
         else if (depend_neighbor) then
 
             chimera_face  = ( mesh(idom)%faces(ielem,iface)%ftype == CHIMERA )
+            bc_face       = ( mesh(idom)%faces(ielem,iface)%ftype == BOUNDARY)
 
             if ( chimera_face ) then
-                ! only need to compute multiple times when we need the linearization of the chimera neighbors
                 ChiID  = mesh(idom)%faces(ielem,iface)%ChiID
                 ndepend = mesh(idom)%chimera%recv%data(ChiID)%ndonors()
+
+            else if ( bc_face ) then
+                ndepend = mesh(idom)%faces(ielem,iface)%BC_ndepend
+
             else
                 ! Standard conforming neighbor, only one dependent element.
                 ndepend = 1

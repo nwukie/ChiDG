@@ -1,9 +1,9 @@
 module type_bcvector
 #include <messenger.h>
-    use mod_kinds,                  only: rk, ik
-    use mod_string,                 only: string_to_upper
-    use type_bc_operator,           only: bc_operator_t
-    use type_bc_operator_wrapper,   only: bc_operator_wrapper_t
+    use mod_kinds,              only: rk, ik
+    use mod_string,             only: string_to_upper
+    use type_bc_state,          only: bc_state_t
+    use type_bc_state_wrapper,  only: bc_state_wrapper_t
     implicit none
 
 
@@ -20,7 +20,7 @@ module type_bcvector
         integer(ik)             :: capacity_    = 0
         integer(ik)             :: buffer_      = 20
 
-        type(bc_operator_wrapper_t), allocatable :: data(:)
+        type(bc_state_wrapper_t), allocatable :: data(:)
 
 
     contains
@@ -100,7 +100,7 @@ contains
     !--------------------------------------------------------------------------------------
     subroutine push_back(self,element)
         class(bcvector_t),      intent(inout)   :: self
-        class(bc_operator_t),   intent(in)      :: element
+        class(bc_state_t),   intent(in)      :: element
 
         logical     :: capacity_reached
         integer(ik) :: size, ierr
@@ -120,7 +120,7 @@ contains
         !
         size = self%size()
         !allocate(self%data(size + 1)%item, source=element, stat=ierr)
-        allocate(self%data(size + 1)%op, source=element, stat=ierr)
+        allocate(self%data(size + 1)%state, source=element, stat=ierr)
         if (ierr /= 0) call AllocationError
 
 
@@ -178,7 +178,7 @@ contains
         integer(ik),         intent(in)  :: index
 
         integer                             :: ierr
-        class(bc_operator_t),   allocatable :: res
+        class(bc_state_t),   allocatable :: res
         logical                             :: out_of_bounds
 
         !
@@ -193,7 +193,7 @@ contains
         !
         ! Allocate result
         !
-        allocate(res, source=self%data(index)%op, stat=ierr)
+        allocate(res, source=self%data(index)%state, stat=ierr)
         if (ierr /= 0) call chidg_signal(FATAL,"bcvector%at: error returning boundary condition")
 
     end function at
@@ -244,7 +244,7 @@ contains
             !
             ! Get current boundary condition name
             !
-            ename = self%data(ieqn)%op%get_name()
+            ename = self%data(ieqn)%state%get_name()
 
             !
             ! Test name against key
@@ -287,10 +287,10 @@ contains
     !!
     !------------------------------------------------------------------------------------------
     subroutine increase_capacity(self)
-        class(bcvector_t),   intent(inout)   :: self
+        class(bcvector_t),   intent(inout)      :: self
 
-        type(bc_operator_wrapper_t), allocatable    :: temp(:)
-        integer(ik)                                 :: newsize, ierr
+        type(bc_state_wrapper_t), allocatable   :: temp(:)
+        integer(ik)                             :: newsize, ierr
 
 
         !

@@ -158,7 +158,6 @@ contains
 !>                                        TESTS
 !------------------------------------------------------------------------------------------
 !> Test Volume Flux jacobian calclation
-!@Test(cases = [1, 2, 3, 4, 5, 6, 7])
 @Test(cases = [7])
     subroutine test_EULER_jacobian_volume_advective_flux(self)
         class(test_eq_euler),    intent(inout)   :: self

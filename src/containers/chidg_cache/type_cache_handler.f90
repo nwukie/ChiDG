@@ -1,7 +1,7 @@
 module type_cache_handler
 #include <messenger.h>
     use mod_kinds,          only: rk, ik
-    use mod_constants,      only: NFACES, INTERIOR, CHIMERA, BOUNDARY, DIAG, ME, NEIGHBOR
+    use mod_constants,      only: NFACES, INTERIOR, CHIMERA, BOUNDARY, DIAG, ME, NEIGHBOR, HALF, ONE
     use mod_DNAD_tools,     only: face_compute_seed, element_compute_seed
     use mod_interpolate,    only: interpolate_face_autodiff, interpolate_element_autodiff
     use DNAD_D
@@ -10,6 +10,8 @@ module type_cache_handler
     use type_chidg_worker,  only: chidg_worker_t
     use type_equation_set,  only: equation_set_t
     use type_bcset,         only: bcset_t
+
+    use mod_chidg_mpi,      only: IRANK
     implicit none
 
 
@@ -42,6 +44,12 @@ module type_cache_handler
 
         procedure   :: update
 
+        procedure   :: update_value
+
+        procedure   :: update_lift
+        procedure   :: update_lift_faces_internal
+        procedure   :: update_lift_faces_external
+
     end type cache_handler_t
     !***************************************************************************************
 
@@ -51,6 +59,30 @@ module type_cache_handler
 
 contains
 
+
+    !>
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   9/7/2016
+    !!
+    !!
+    !!
+    !----------------------------------------------------------------------------------------
+    subroutine update(self,worker,equation_set,bc_set)
+        class(cache_handler_t),     intent(inout)   :: self
+        type(chidg_worker_t),       intent(inout)   :: worker
+        type(equation_set_t),       intent(inout)   :: equation_set(:)
+        type(bcset_t),              intent(inout)   :: bc_set(:)
+
+
+        call self%update_value(worker,equation_set,bc_set)
+
+
+        call self%update_lift(worker,equation_set,bc_set)
+
+
+    end subroutine update
+    !****************************************************************************************
 
 
 
@@ -64,13 +96,14 @@ contains
     !!
     !!
     !---------------------------------------------------------------------------------------
-    subroutine update(self,worker,equation_set,bc_set)
+    subroutine update_value(self,worker,equation_set,bc_set)
         class(cache_handler_t),     intent(inout)   :: self
         type(chidg_worker_t),       intent(inout)   :: worker
         type(equation_set_t),       intent(inout)   :: equation_set(:)
         type(bcset_t),              intent(inout)   :: bc_set(:)
 
-        integer(ik)         :: iface, iside, ieqn, idomain_l, ielement_l, idepend, ndepend, ChiID
+        integer(ik)         :: iface, iside, ieqn, idomain_l, ielement_l, idepend, ndepend, ChiID, &
+                               BC_ID, BC_face, ielement_c, istate
 
         type(AD_D), allocatable, dimension(:) :: value_gq
 
@@ -116,7 +149,7 @@ contains
                 value_gq = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,worker%face_info(),worker%function_info,ieqn,'value',ME)
 
                 ! Store gq data in cache
-                call worker%cache%set_data('face interior',value_gq,'value',0,idepend,worker%function_info%seed,ieqn,iface)
+                call worker%cache%set_data('face interior',value_gq,'value',0,worker%function_info%seed,ieqn,iface)
 
             end do !ieqn
 
@@ -134,8 +167,10 @@ contains
                 ndepend = worker%mesh(idomain_l)%chimera%recv%data(ChiID)%ndonors()
 
             else if ( worker%face_type() == BOUNDARY ) then
-!                BCID = worker%mesh(idomain_l)%faces(ielemen_l,iface)%BCID
-!                ndepend = bc_set%bc(BCID)%ndepend()
+                BC_ID   = worker%mesh(idomain_l)%faces(ielement_l,iface)%BC_ID
+                BC_face = worker%mesh(idomain_l)%faces(ielement_l,iface)%BC_face
+                ndepend = bc_set(idomain_l)%bcs(BC_ID)%get_ncoupled_elems(BC_face)
+
             end if
 
 
@@ -145,6 +180,7 @@ contains
             ! Face exterior state
             !
             if ( (worker%face_type() == INTERIOR) .or. (worker%face_type() == CHIMERA) ) then
+                
                 do ieqn = 1,worker%mesh(idomain_l)%neqns
                     do idepend = 1,ndepend
 
@@ -153,7 +189,7 @@ contains
 
                         value_gq = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,worker%face_info(),worker%function_info,ieqn,'value',NEIGHBOR)
 
-                        call worker%cache%set_data('face exterior',value_gq,'value',0,idepend,worker%function_info%seed,ieqn,iface)
+                        call worker%cache%set_data('face exterior',value_gq,'value',0,worker%function_info%seed,ieqn,iface)
 
                     end do !idepend
                 end do !ieqn
@@ -163,12 +199,25 @@ contains
 
             else if ( (worker%face_type() == BOUNDARY) ) then
 
-!                do ieqn = 1,worker%mesh(idomain_l)%neqns
-!                    idepend = 1,ndepend
-!
-!
-!                    end do !idepend
-!                end do !ieqn
+
+                do istate = 1,size(bc_set(idomain_l)%bcs(BC_ID)%bc_state)
+                    do idepend = 1,ndepend
+
+
+                        !
+                        ! Get coupled bc element to linearize against.
+                        !
+                        ielement_c = bc_set(idomain_l)%bcs(BC_ID)%bc_patch%coupled_elements(BC_face)%at(idepend)
+                        worker%function_info%seed%idomain_g  = worker%mesh(idomain_l)%elems(ielement_c)%idomain_g
+                        worker%function_info%seed%idomain_l  = worker%mesh(idomain_l)%elems(ielement_c)%idomain_l
+                        worker%function_info%seed%ielement_g = worker%mesh(idomain_l)%elems(ielement_c)%ielement_g
+                        worker%function_info%seed%ielement_l = worker%mesh(idomain_l)%elems(ielement_c)%ielement_l
+                        worker%function_info%seed%iproc      = IRANK
+
+                        call bc_set(idomain_l)%bcs(BC_ID)%bc_state(istate)%state%compute_bc_state(worker,equation_set(idomain_l)%prop)
+
+                    end do !idepend
+                end do
 
 
 
@@ -176,21 +225,7 @@ contains
             end if
 
 
-
-
-
         end do !iface
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -207,12 +242,44 @@ contains
 
                 value_gq = interpolate_element_autodiff(worker%mesh,worker%solverdata%q,worker%element_info,worker%function_info,ieqn,'value')
 
-                call worker%cache%set_data('element',value_gq,'value',0,idepend,worker%function_info%seed,ieqn)
+                call worker%cache%set_data('element',value_gq,'value',0,worker%function_info%seed,ieqn)
 
         end do !ieqn
 
 
 
+    end subroutine update_value
+    !************************************************************************************************
+
+
+
+
+
+
+
+
+    !>
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   9/13/2016
+    !!
+    !!
+    !------------------------------------------------------------------------------------------------
+    subroutine update_lift(self,worker,equation_set,bc_set)
+        class(cache_handler_t),     intent(inout)   :: self
+        type(chidg_worker_t),       intent(inout)   :: worker
+        type(equation_set_t),       intent(inout)   :: equation_set(:)
+        type(bcset_t),              intent(inout)   :: bc_set(:)
+
+
+        call self%update_lift_faces_internal(worker,equation_set,bc_set)
+
+
+        call self%update_lift_faces_external(worker,equation_set,bc_set)
+
+
+    end subroutine update_lift
+    !************************************************************************************************
 
 
 
@@ -223,8 +290,596 @@ contains
 
 
 
-    end subroutine update
-    !***************************************************************************************
+
+
+
+
+
+    !>
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   9/14/2016
+    !!
+    !!
+    !!
+    !------------------------------------------------------------------------------------------------
+    subroutine update_lift_faces_internal(self,worker,equation_set,bc_set)
+        class(cache_handler_t),     intent(inout)   :: self
+        type(chidg_worker_t),       intent(inout)   :: worker
+        type(equation_set_t),       intent(inout)   :: equation_set(:)
+        type(bcset_t),              intent(inout)   :: bc_set(:)
+
+        integer(ik) :: idomain_l, ielement_l, iface, idepend, ieqn, ndepend, BC_ID, BC_face, ChiID
+
+        type(AD_D), allocatable, dimension(:)   ::          &
+            var_m, var_p, var_diff, var_diff_weighted,      &
+            var_diff_x,     var_diff_y,     var_diff_z,     &
+            rhs_x,          rhs_y,          rhs_z,          &
+            lift_modes_x,   lift_modes_y,   lift_modes_z,   &
+            lift_gq_x,      lift_gq_y,      lift_gq_z
+
+
+        idomain_l  = worker%element_info%idomain_l 
+        ielement_l = worker%element_info%ielement_l 
+
+
+        !
+        ! For each face, compute the lifting operators associated with each equation for the 
+        ! internal and external states and also their linearization.
+        !
+        do iface = 1,NFACES
+
+
+            !
+            ! Update worker face index
+            !
+            call worker%set_face(iface)
+
+
+
+            associate ( weights          => worker%mesh(idomain_l)%elems(ielement_l)%gq%face%weights(:,iface),      &
+                        val_face_trans   => worker%mesh(idomain_l)%elems(ielement_l)%gq%face%val_trans(:,:,iface),  &
+                        val_face         => worker%mesh(idomain_l)%elems(ielement_l)%gq%face%val(:,:,iface),        &
+                        invmass          => worker%mesh(idomain_l)%elems(ielement_l)%invmass)
+
+
+
+
+
+            do ieqn = 1,worker%mesh(idomain_l)%neqns
+
+
+                !
+                ! Compute Interior lift, differentiated wrt Interior
+                !
+                ndepend = 1
+                do idepend = 1,ndepend
+
+                    ! Get Seed
+                    worker%function_info%seed    = face_compute_seed(worker%mesh,idomain_l,ielement_l,iface,idepend,DIAG)
+                    worker%function_info%idepend = idepend
+
+
+                    ! Get interior/exterior state
+                    var_m = worker%cache%get_data('face interior', 'value', 0, worker%function_info%seed, ieqn, iface)
+                    var_p = worker%cache%get_data('face exterior', 'value', 0, worker%function_info%seed, ieqn, iface)
+
+                    ! Difference
+                    var_diff = HALF*(var_p - var_m) 
+
+                    ! Multiply by weights
+                    var_diff_weighted = var_diff * weights
+
+                    ! Multiply by normal. Note: normal is scaled by face jacobian.
+                    var_diff_x = var_diff_weighted * worker%normal(1)
+                    var_diff_y = var_diff_weighted * worker%normal(2)
+                    var_diff_z = var_diff_weighted * worker%normal(3)
+
+                    ! Project onto basis
+                    rhs_x = matmul(val_face_trans,var_diff_x)
+                    rhs_y = matmul(val_face_trans,var_diff_y)
+                    rhs_z = matmul(val_face_trans,var_diff_z)
+
+                    ! Local solve for lift modes in element basis
+                    lift_modes_x = matmul(invmass,rhs_x)
+                    lift_modes_y = matmul(invmass,rhs_y)
+                    lift_modes_z = matmul(invmass,rhs_z)
+
+                    ! Evaluate lift modes at quadrature nodes
+                    lift_gq_x = matmul(val_face,lift_modes_x)
+                    lift_gq_y = matmul(val_face,lift_modes_y)
+                    lift_gq_z = matmul(val_face,lift_modes_z)
+                    
+                    ! Store lift
+                    call worker%cache%set_data('face interior', lift_gq_x, 'lift', 1, worker%function_info%seed, ieqn, iface)
+                    call worker%cache%set_data('face interior', lift_gq_y, 'lift', 2, worker%function_info%seed, ieqn, iface)
+                    call worker%cache%set_data('face interior', lift_gq_z, 'lift', 3, worker%function_info%seed, ieqn, iface)
+
+                end do !idepend
+
+
+
+
+
+                ! 
+                ! Compute the number of dependencies from external state. Sets 'ndepend'
+                !
+                if ( worker%face_type() == INTERIOR ) then
+                    ndepend = 1
+                    
+                else if ( worker%face_type() == CHIMERA ) then
+                    ChiID   = worker%mesh(idomain_l)%faces(ielement_l,iface)%ChiID
+                    ndepend = worker%mesh(idomain_l)%chimera%recv%data(ChiID)%ndonors()
+
+                else if ( worker%face_type() == BOUNDARY ) then
+                    BC_ID   = worker%mesh(idomain_l)%faces(ielement_l,iface)%BC_ID
+                    BC_face = worker%mesh(idomain_l)%faces(ielement_l,iface)%BC_face
+                    ndepend = bc_set(idomain_l)%bcs(BC_ID)%get_ncoupled_elems(BC_face)
+
+                end if
+
+
+
+
+
+                !
+                ! Compute Interior lift, differentiated wrt Exterior
+                !
+                do idepend = 1,ndepend
+
+                    ! Get Seed
+                    worker%function_info%seed    = face_compute_seed(worker%mesh,idomain_l,ielement_l,iface,idepend,iface)
+                    worker%function_info%idepend = idepend
+
+
+                    ! Get interior/exterior state
+                    var_m = worker%cache%get_data('face interior', 'value', 0, worker%function_info%seed, ieqn, iface)
+                    var_p = worker%cache%get_data('face exterior', 'value', 0, worker%function_info%seed, ieqn, iface)
+
+                    ! Difference
+                    var_diff = HALF*(var_p - var_m) 
+
+                    ! Multiply by weights
+                    var_diff_weighted = var_diff * weights
+
+                    ! Multiply by normal. Note: normal is scaled by face jacobian.
+                    var_diff_x = var_diff_weighted * worker%normal(1)
+                    var_diff_y = var_diff_weighted * worker%normal(2)
+                    var_diff_z = var_diff_weighted * worker%normal(3)
+
+                    ! Project onto basis
+                    rhs_x = matmul(val_face_trans,var_diff_x)
+                    rhs_y = matmul(val_face_trans,var_diff_y)
+                    rhs_z = matmul(val_face_trans,var_diff_z)
+
+                    ! Local solve for lift modes in element basis
+                    lift_modes_x = matmul(invmass,rhs_x)
+                    lift_modes_y = matmul(invmass,rhs_y)
+                    lift_modes_z = matmul(invmass,rhs_z)
+
+                    ! Evaluate lift modes at quadrature nodes
+                    lift_gq_x = matmul(val_face,lift_modes_x)
+                    lift_gq_y = matmul(val_face,lift_modes_y)
+                    lift_gq_z = matmul(val_face,lift_modes_z)
+                    
+                    ! Store lift
+                    call worker%cache%set_data('face interior', lift_gq_x, 'lift', 1, worker%function_info%seed, ieqn, iface)
+                    call worker%cache%set_data('face interior', lift_gq_y, 'lift', 2, worker%function_info%seed, ieqn, iface)
+                    call worker%cache%set_data('face interior', lift_gq_z, 'lift', 3, worker%function_info%seed, ieqn, iface)
+
+                end do !idepend
+
+            end do !ieqn
+
+
+            end associate
+
+        end do !iface
+
+
+    end subroutine update_lift_faces_internal
+    !*************************************************************************************************
+
+
+
+
+
+
+
+
+
+
+    !>
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   9/14/2016
+    !!
+    !!
+    !!
+    !------------------------------------------------------------------------------------------------
+    subroutine update_lift_faces_external(self,worker,equation_set,bc_set)
+        class(cache_handler_t),     intent(inout)   :: self
+        type(chidg_worker_t),       intent(inout)   :: worker
+        type(equation_set_t),       intent(inout)   :: equation_set(:)
+        type(bcset_t),              intent(inout)   :: bc_set(:)
+
+        integer(ik) :: idomain_l, ielement_l, iface, idepend, ieqn, ndepend, BC_ID, BC_face, ChiID
+        logical     :: boundary_face, interior_face
+
+
+        idomain_l  = worker%element_info%idomain_l 
+        ielement_l = worker%element_info%ielement_l 
+
+
+        !
+        ! For each face, compute the lifting operators associated with each equation for the 
+        ! internal and external states and also their linearization.
+        !
+        do iface = 1,NFACES
+
+            !
+            ! Update worker face index
+            !
+            call worker%set_face(iface)
+
+
+            !
+            ! Check if boundary or interior
+            !
+            boundary_face = (worker%face_type() == BOUNDARY)
+            interior_face = (worker%face_type() == INTERIOR)
+
+
+
+            !
+            ! Compute lift for each equation
+            !
+            do ieqn = 1,worker%mesh(idomain_l)%neqns
+
+
+                !
+                ! Compute External lift, differentiated wrt Interior
+                !
+                ndepend = 1
+                do idepend = 1,ndepend
+
+                    ! Get Seed
+                    worker%function_info%seed    = face_compute_seed(worker%mesh,idomain_l,ielement_l,iface,idepend,DIAG)
+                    worker%function_info%idepend = idepend
+
+
+                    if (interior_face) then
+                        call handle_external_lift__interior_face(worker,equation_set,bc_set,ieqn)
+                    else if (boundary_face) then
+                        call handle_external_lift__boundary_face(worker,equation_set,bc_set,ieqn)
+                    else
+                        call chidg_signal(FATAL,"update_lift_faces_external: unsupported face type")
+                    end if
+
+
+                end do !idepend
+
+
+
+
+
+                ! 
+                ! Compute the number of dependencies from external state. Sets 'ndepend'
+                !
+                if ( worker%face_type() == INTERIOR ) then
+                    ndepend = 1
+                    
+                else if ( worker%face_type() == CHIMERA ) then
+                    ChiID   = worker%mesh(idomain_l)%faces(ielement_l,iface)%ChiID
+                    ndepend = worker%mesh(idomain_l)%chimera%recv%data(ChiID)%ndonors()
+
+                else if ( worker%face_type() == BOUNDARY ) then
+                    BC_ID   = worker%mesh(idomain_l)%faces(ielement_l,iface)%BC_ID
+                    BC_face = worker%mesh(idomain_l)%faces(ielement_l,iface)%BC_face
+                    ndepend = bc_set(idomain_l)%bcs(BC_ID)%get_ncoupled_elems(BC_face)
+
+                end if
+
+
+
+
+
+                !
+                ! Compute Interior lift, differentiated wrt Exterior
+                !
+                do idepend = 1,ndepend
+
+                    ! Get Seed
+                    worker%function_info%seed    = face_compute_seed(worker%mesh,idomain_l,ielement_l,iface,idepend,iface)
+                    worker%function_info%idepend = idepend
+
+                    if (interior_face) then
+                        call handle_external_lift__interior_face(worker,equation_set,bc_set,ieqn)
+                    else if (boundary_face) then
+                        call handle_external_lift__boundary_face(worker,equation_set,bc_set,ieqn)
+                    else
+                        call chidg_signal(FATAL,"update_lift_faces_external: unsupported face type")
+                    end if
+
+
+                end do !idepend
+
+            end do !ieqn
+
+
+
+        end do !iface
+
+
+    end subroutine update_lift_faces_external
+    !*************************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    !>  Handle computing lift for an external element, when the face is an interior face.
+    !!
+    !!  In this case, the external element exists and we can just use its data. This is not the case
+    !!  for a boundary condition face, and it is complicated further by a Chimera boundary face.
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   9/14/2016
+    !!
+    !!
+    !!
+    !--------------------------------------------------------------------------------------------------
+    subroutine handle_external_lift__interior_face(worker,equation_set,bc_set,ieqn)
+        type(chidg_worker_t),       intent(inout)   :: worker
+        type(equation_set_t),       intent(inout)   :: equation_set(:)
+        type(bcset_t),              intent(inout)   :: bc_set(:)
+        integer(ik),                intent(in)      :: ieqn
+
+        integer(ik) :: idomain_l, ielement_l, iface, idomain_l_n, ielement_l_n, iface_n
+        logical     :: boundary_face, interior_face
+
+        type(AD_D), allocatable, dimension(:)   ::          &
+            var_m, var_p, var_diff, var_diff_weighted,      &
+            var_diff_x,     var_diff_y,     var_diff_z,     &
+            rhs_x,          rhs_y,          rhs_z,          &
+            lift_modes_x,   lift_modes_y,   lift_modes_z,   &
+            lift_gq_x,      lift_gq_y,      lift_gq_z
+
+        real(rk),   allocatable, dimension(:)   :: normx, normy, normz
+
+
+        !
+        ! Interior element
+        ! 
+        idomain_l  = worker%element_info%idomain_l 
+        ielement_l = worker%element_info%ielement_l 
+        iface      = worker%iface
+
+
+        !
+        ! Neighbor element
+        !
+        idomain_l_n  = worker%mesh(idomain_l)%faces(ielement_l,iface)%ineighbor_domain_l
+        ielement_l_n = worker%mesh(idomain_l)%faces(ielement_l,iface)%ineighbor_element_l
+        iface_n      = worker%mesh(idomain_l)%faces(ielement_l,iface)%get_neighbor_face()
+
+        associate ( weights          => worker%mesh(idomain_l_n)%elems(ielement_l_n)%gq%face%weights(:,iface_n),        &
+                    val_face_trans   => worker%mesh(idomain_l_n)%elems(ielement_l_n)%gq%face%val_trans(:,:,iface_n),    &
+                    val_face         => worker%mesh(idomain_l_n)%elems(ielement_l_n)%gq%face%val(:,:,iface_n),          &
+                    invmass          => worker%mesh(idomain_l_n)%elems(ielement_l_n)%invmass)
+
+            ! Get normal vector
+            normx = worker%mesh(idomain_l_n)%faces(ielement_l_n,iface_n)%norm(:,1)
+            normy = worker%mesh(idomain_l_n)%faces(ielement_l_n,iface_n)%norm(:,2)
+            normz = worker%mesh(idomain_l_n)%faces(ielement_l_n,iface_n)%norm(:,3)
+
+            ! Get interior/exterior state
+            var_m = worker%cache%get_data('face interior', 'value', 0, worker%function_info%seed, ieqn, iface)
+            var_p = worker%cache%get_data('face exterior', 'value', 0, worker%function_info%seed, ieqn, iface)
+
+            ! Difference. Relative to exterior element, so reversed
+            var_diff = HALF*(var_m - var_p) 
+
+            ! Multiply by weights
+            var_diff_weighted = var_diff * weights
+
+            ! Multiply by normal. Note: normal is scaled by face jacobian.
+            var_diff_x = var_diff_weighted * normx
+            var_diff_y = var_diff_weighted * normy
+            var_diff_z = var_diff_weighted * normz
+
+            ! Project onto basis
+            rhs_x = matmul(val_face_trans,var_diff_x)
+            rhs_y = matmul(val_face_trans,var_diff_y)
+            rhs_z = matmul(val_face_trans,var_diff_z)
+
+            ! Local solve for lift modes in element basis
+            lift_modes_x = matmul(invmass,rhs_x)
+            lift_modes_y = matmul(invmass,rhs_y)
+            lift_modes_z = matmul(invmass,rhs_z)
+
+            ! Evaluate lift modes at quadrature nodes
+            lift_gq_x = matmul(val_face,lift_modes_x)
+            lift_gq_y = matmul(val_face,lift_modes_y)
+            lift_gq_z = matmul(val_face,lift_modes_z)
+            
+            ! Store lift
+            call worker%cache%set_data('face exterior', lift_gq_x, 'lift', 1, worker%function_info%seed, ieqn, iface)
+            call worker%cache%set_data('face exterior', lift_gq_y, 'lift', 2, worker%function_info%seed, ieqn, iface)
+            call worker%cache%set_data('face exterior', lift_gq_z, 'lift', 3, worker%function_info%seed, ieqn, iface)
+
+
+        end associate
+
+
+
+
+
+
+    end subroutine handle_external_lift__interior_face
+    !*************************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    !>  Handle computing lift for an external element, when the face is a boundary face.
+    !!
+    !!  In this case, the external element does NOT exist, so we use the interior element. This is kind of like
+    !!  Assuming that a boundary element exists of equal size to the interior element.
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   9/14/2016
+    !!
+    !!
+    !!
+    !--------------------------------------------------------------------------------------------------
+    subroutine handle_external_lift__boundary_face(worker,equation_set,bc_set,ieqn)
+        type(chidg_worker_t),       intent(inout)   :: worker
+        type(equation_set_t),       intent(inout)   :: equation_set(:)
+        type(bcset_t),              intent(inout)   :: bc_set(:)
+        integer(ik),                intent(in)      :: ieqn
+
+        integer(ik) :: idomain_l, ielement_l, iface, idomain_l_n, ielement_l_n, iface_n
+        logical     :: boundary_face, interior_face
+
+        type(AD_D), allocatable, dimension(:)   ::          &
+            var_m, var_p, var_diff, var_diff_weighted,      &
+            var_diff_x,     var_diff_y,     var_diff_z,     &
+            rhs_x,          rhs_y,          rhs_z,          &
+            lift_modes_x,   lift_modes_y,   lift_modes_z,   &
+            lift_gq_x,      lift_gq_y,      lift_gq_z
+
+        real(rk),   allocatable, dimension(:)   :: normx, normy, normz
+
+
+        !
+        ! Interior element
+        ! 
+        idomain_l  = worker%element_info%idomain_l 
+        ielement_l = worker%element_info%ielement_l 
+        iface      = worker%iface
+
+
+        !
+        ! Neighbor element
+        !
+        idomain_l_n  = worker%mesh(idomain_l)%faces(ielement_l,iface)%ineighbor_domain_l
+        ielement_l_n = worker%mesh(idomain_l)%faces(ielement_l,iface)%ineighbor_element_l
+        iface_n      = worker%mesh(idomain_l)%faces(ielement_l,iface)%get_neighbor_face()
+
+        associate ( weights          => worker%mesh(idomain_l)%elems(ielement_l)%gq%face%weights(:,iface_n),        &
+                    val_face_trans   => worker%mesh(idomain_l)%elems(ielement_l)%gq%face%val_trans(:,:,iface_n),    &
+                    val_face         => worker%mesh(idomain_l)%elems(ielement_l)%gq%face%val(:,:,iface_n),          &
+                    invmass          => worker%mesh(idomain_l)%elems(ielement_l)%invmass)
+
+            ! Get normal vector. Use reverse of the normal vector from the interior element since no exterior element exists.
+            normx = -worker%mesh(idomain_l)%faces(ielement_l,iface)%norm(:,1)
+            normy = -worker%mesh(idomain_l)%faces(ielement_l,iface)%norm(:,2)
+            normz = -worker%mesh(idomain_l)%faces(ielement_l,iface)%norm(:,3)
+
+            ! Get interior/exterior state
+            var_m = worker%cache%get_data('face interior', 'value', 0, worker%function_info%seed, ieqn, iface)
+            var_p = worker%cache%get_data('face exterior', 'value', 0, worker%function_info%seed, ieqn, iface)
+
+            ! Difference. Relative to exterior element, so reversed
+            var_diff = HALF*(var_m - var_p) 
+
+            ! Multiply by weights
+            var_diff_weighted = var_diff * weights
+
+            ! Multiply by normal. Note: normal is scaled by face jacobian.
+            var_diff_x = var_diff_weighted * normx
+            var_diff_y = var_diff_weighted * normy
+            var_diff_z = var_diff_weighted * normz
+
+            ! Project onto basis
+            rhs_x = matmul(val_face_trans,var_diff_x)
+            rhs_y = matmul(val_face_trans,var_diff_y)
+            rhs_z = matmul(val_face_trans,var_diff_z)
+
+            ! Local solve for lift modes in element basis
+            lift_modes_x = matmul(invmass,rhs_x)
+            lift_modes_y = matmul(invmass,rhs_y)
+            lift_modes_z = matmul(invmass,rhs_z)
+
+            ! Evaluate lift modes at quadrature nodes
+            lift_gq_x = matmul(val_face,lift_modes_x)
+            lift_gq_y = matmul(val_face,lift_modes_y)
+            lift_gq_z = matmul(val_face,lift_modes_z)
+            
+            ! Store lift
+            call worker%cache%set_data('face exterior', lift_gq_x, 'lift', 1, worker%function_info%seed, ieqn, iface)
+            call worker%cache%set_data('face exterior', lift_gq_y, 'lift', 2, worker%function_info%seed, ieqn, iface)
+            call worker%cache%set_data('face exterior', lift_gq_z, 'lift', 3, worker%function_info%seed, ieqn, iface)
+
+
+        end associate
+
+
+
+
+
+
+    end subroutine handle_external_lift__boundary_face
+    !*************************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

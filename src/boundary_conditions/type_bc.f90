@@ -7,10 +7,9 @@ module type_bc
 
     use type_chidg_worker,          only: chidg_worker_t
     use type_chidg_cache,           only: chidg_cache_t
-    use type_equation_set,          only: equation_set_t
     use type_bc_patch,              only: bc_patch_t
-    use type_bc_operator,           only: bc_operator_t
-    use type_bc_operator_wrapper,   only: bc_operator_wrapper_t
+    use type_bc_state,              only: bc_state_t
+    use type_bc_state_wrapper,      only: bc_state_wrapper_t
     use type_mesh,                  only: mesh_t
     use type_point,                 only: point_t
     use type_ivector,               only: ivector_t
@@ -35,13 +34,15 @@ module type_bc
     !!  @note   Reorganized into bc patch, and bc operators
     !!
     !--------------------------------------------------------------------------------------------
-    type, public, extends(equation_set_t) :: bc_t
+    type, public :: bc_t
+
+        integer(ik)                             :: BC_ID     ! Index of the boundary condition in a set. So, a bc knows its location.
 
         ! Boundary condition patch
-        type(bc_patch_t)                            :: bc_patch
+        type(bc_patch_t)                        :: bc_patch
 
-        ! Boundary condition operators
-        class(bc_operator_wrapper_t),   allocatable :: bc_advective_operator(:)
+        ! Boundary condition state
+        class(bc_state_wrapper_t),  allocatable :: bc_state(:)
 
     contains
 
@@ -49,9 +50,8 @@ module type_bc
         procedure   :: init_bc_spec         !< Call specialized initialization routine
         procedure   :: init_bc_coupling     !< Initialize book-keeping for coupling interaction between elements.
 
-        procedure   :: add_bc_operator
+        procedure   :: add_bc_state
 
-        procedure   :: compute_bc_operators     !< Apply bc function over bc elements
         procedure   :: get_ncoupled_elems       !< Return the number of elements coupled with a specified boundary element.
 
 
@@ -84,9 +84,10 @@ contains
         type(point_t)                   :: pnt, point_one, point_two, point_three
         character(len=:),   allocatable :: bcname        
         real(rk)                        :: time, x, y, z
-        integer(ik)                     :: nelem_xi, nelem_eta, nelem_zeta, nelem_bc, ielem_bc, & 
-                                           xi_begin, eta_begin, zeta_begin, xi_end, eta_end, zeta_end, & 
-                                           ixi, ieta, izeta, ierr, ielem, ielem_test, nface_nodes, iface, inode, i, nfaces_bc, iface_bc
+        integer(ik)                     :: nelem_xi, nelem_eta, nelem_zeta, nelem_bc, ielem_bc,         & 
+                                           xi_begin, eta_begin, zeta_begin, xi_end, eta_end, zeta_end,  & 
+                                           ixi, ieta, izeta, ierr, ielem, ielem_test, nface_nodes,      &
+                                           iface, inode, i, nfaces_bc, iface_bc, BC_face, ncoupled_elements
 
         logical,        allocatable :: node_matched(:), xi_face, eta_face, zeta_face
         integer(ik),    allocatable :: element_nodes(:)
@@ -190,11 +191,16 @@ contains
 
 
                     !
-                    ! Add domain, element, face index
+                    ! Add domain, element, face index. Get BC_face, index of where the face exists in the bc_patch
                     !
-                    call self%bc_patch%add_face(mesh%idomain_l,ielem,iface)
+                    BC_face = self%bc_patch%add_face(mesh%idomain_l,ielem,iface)
 
 
+                    !
+                    ! Inform mesh face about BC_ID it is associated with and the location, BC_face, in the boundary condition.
+                    !
+                    mesh%faces(ielem,iface)%BC_ID   = self%BC_ID
+                    mesh%faces(ielem,iface)%BC_face = BC_face
 
 
 
@@ -230,7 +236,7 @@ contains
 !                    end if
 
 
-                    if ( allocated(self%bc_advective_operator) ) then
+                    if ( allocated(self%bc_state) ) then
                         mesh%faces(ielem,iface)%ftype = BOUNDARY
                     else
                         mesh%faces(ielem,iface)%ftype = ORPHAN
@@ -247,7 +253,7 @@ contains
 
             end do ! ielem
 
-        end do !ibc_face
+        end do !ielem_bc
 
 
 
@@ -263,6 +269,27 @@ contains
         ! Call user-specialized boundary coupling initialization
         !
         call self%init_bc_coupling(mesh,self%bc_patch)
+
+
+
+
+        !
+        ! Push ncoupled elements back to mesh face
+        !
+        do iface_bc = 1,self%bc_patch%nfaces()
+
+            !idom  = self%bc_patch%idomain_l(iface_bc)
+            ielem = self%bc_patch%ielement_l(iface_bc)
+            iface = self%bc_patch%iface(iface_bc)
+
+            ncoupled_elements = self%bc_patch%coupled_elements(iface_bc)%size()
+
+            mesh%faces(ielem,iface)%BC_ndepend = ncoupled_elements
+
+        end do !iface_bc
+
+
+
 
 
     end subroutine init_bc
@@ -326,10 +353,10 @@ contains
         !
         ! Have bc_operators initialize the boundary condition coupling
         !
-        if (allocated(self%bc_advective_operator)) then
-            do iop = 1,size(self%bc_advective_operator)
+        if (allocated(self%bc_state)) then
+            do iop = 1,size(self%bc_state)
 
-                call self%bc_advective_operator(iop)%op%init_bc_coupling(mesh,bc_patch)
+                call self%bc_state(iop)%state%init_bc_coupling(mesh,bc_patch)
 
             end do !iop
         end if
@@ -381,93 +408,160 @@ contains
 
 
 
-    !>  Apply boundary condition to the mesh and solution
-    !!      - Loops through the associated elements(faces) and calls the specialized bc_t%compute
-    !!        procedure for computing the rhs and linearization.
-    !!
-    !!
-    !!  @author Nathan A. Wukie
-    !!  @date   1/31/2016
-    !!
-    !!  @param[in]      mesh    mesh_t defining elements and faces
-    !!  @param[inout]   sdata   solverdata_t containing solution, rhs, and linearization(lin) data
-    !!  @param[in]      iblk    Block of the linearization for the current element that is being computed (XI_MIN, XI_MAX, eta.)
-    !!  @param[inout]   prop    properties_t object containing equationset properties and material_t objects
-    !!
-    !---------------------------------------------------------------------------------------------
-    subroutine compute_bc_operators(self,mesh,sdata,prop)
-        class(bc_t),            intent(inout)   :: self
-        type(mesh_t),           intent(in)      :: mesh(:)
-        class(solverdata_t),    intent(inout)   :: sdata
-        class(properties_t),    intent(inout)   :: prop
+!    !>  Apply boundary condition to the mesh and solution
+!    !!      - Loops through the associated elements(faces) and calls the specialized bc_t%compute
+!    !!        procedure for computing the rhs and linearization.
+!    !!
+!    !!
+!    !!  @author Nathan A. Wukie
+!    !!  @date   1/31/2016
+!    !!
+!    !!  @param[in]      mesh    mesh_t defining elements and faces
+!    !!  @param[inout]   sdata   solverdata_t containing solution, rhs, and linearization(lin) data
+!    !!  @param[in]      iblk    Block of the linearization for the current element that is being computed (XI_MIN, XI_MAX, eta.)
+!    !!  @param[inout]   prop    properties_t object containing equationset properties and material_t objects
+!    !!
+!    !---------------------------------------------------------------------------------------------
+!    subroutine compute_bc_operators(self,mesh,sdata,prop)
+!        class(bc_t),            intent(inout)   :: self
+!        type(mesh_t),           intent(in)      :: mesh(:)
+!        class(solverdata_t),    intent(inout)   :: sdata
+!        class(properties_t),    intent(inout)   :: prop
+!
+!        integer(ik) :: ielem_bc, idomain_l, ielement_l, ielement_c, iface, idonor, iflux, &
+!                       icoupled_elem, ncoupled_elems, iop
+!
+!        type(chidg_worker_t)    :: worker
+!        type(chidg_cache_t)     :: cache
+!
+!
+!        call worker%init(mesh,sdata,cache)
+!
+!
+!        !
+!        ! Loop through associated boundary condition elements and call compute routine for the boundary flux calculation
+!        !
+!        do ielem_bc = 1,self%bc_patch%nfaces()
+!            idomain_l   = self%bc_patch%idomain_l(ielem_bc)
+!            ielement_l  = self%bc_patch%ielement_l(ielem_bc)    ! Get index of the element being operated on
+!            iface       = self%bc_patch%iface(ielem_bc)         ! Get face index of element 'ielem' that is being operated on
+!
+!
+!            worker%element_info%idomain_g  = mesh(idomain_l)%elems(ielement_l)%idomain_g
+!            worker%element_info%idomain_l  = mesh(idomain_l)%elems(ielement_l)%idomain_l
+!            worker%element_info%ielement_g = mesh(idomain_l)%elems(ielement_l)%ielement_g
+!            worker%element_info%ielement_l = mesh(idomain_l)%elems(ielement_l)%ielement_l
+!            worker%iface                   = iface
+!
+!            worker%function_info%ifcn     = 0       ! Boundary conditions are not tracked.
+!            worker%function_info%idepend  = 0       ! Chimera interface not applicable on boundary condition.
+!            worker%function_info%idiff    = BC_BLK  ! Indicates to storage routine in LHS to store in BC section.
+!
+!
+!            if (allocated(self%bc_operator)) then
+!                do iop = 1,size(self%bc_operator)
+!                
+!                    ! For current element, get number of coupled elements.
+!                    ncoupled_elems = self%get_ncoupled_elems(ielem_bc)
+!
+!
+!                    ! Compute current element function enough times to linearize all the coupled elements.
+!                    ! If no coupling accross the face, the ncoupled_elems=1 for just the local interior element.
+!                    do icoupled_elem = 1,ncoupled_elems
+!
+!                        !
+!                        ! Get coupled element to linearize against.
+!                        !
+!                        ielement_c = self%bc_patch%coupled_elements(ielem_bc)%at(icoupled_elem)
+!                        worker%function_info%seed%idomain_g  = mesh(idomain_l)%elems(ielement_c)%idomain_g
+!                        worker%function_info%seed%idomain_l  = mesh(idomain_l)%elems(ielement_c)%idomain_l
+!                        worker%function_info%seed%ielement_g = mesh(idomain_l)%elems(ielement_c)%ielement_g
+!                        worker%function_info%seed%ielement_l = mesh(idomain_l)%elems(ielement_c)%ielement_l
+!                        worker%function_info%seed%iproc      = IRANK
+!
+!                        !
+!                        ! For the current boundary element(face), call specialized compute procedure.
+!                        !
+!                        call self%bc_operator(iop)%op%compute(worker,prop)
+!
+!                    end do !ielem_c
+!
+!                end do !iop
+!            end if
+!
+!
+!        end do !ielem_bc
+!
+!
+!    end subroutine compute_bc_operators
+!    !********************************************************************************************
 
-        integer(ik) :: ielem_bc, idomain_l, ielement_l, ielement_c, iface, idonor, iflux, &
-                       icoupled_elem, ncoupled_elems, iop
-
-        type(chidg_worker_t)    :: worker
-        type(chidg_cache_t)     :: cache
 
 
-        call worker%init(mesh,sdata,cache)
 
 
-        !
-        ! Loop through associated boundary condition elements and call compute routine for the boundary flux calculation
-        !
-        do ielem_bc = 1,self%bc_patch%nfaces()
-            idomain_l   = self%bc_patch%idomain_l(ielem_bc)
-            ielement_l  = self%bc_patch%ielement_l(ielem_bc)    ! Get index of the element being operated on
-            iface       = self%bc_patch%iface(ielem_bc)         ! Get face index of element 'ielem' that is being operated on
 
 
-            worker%element_info%idomain_g  = mesh(idomain_l)%elems(ielement_l)%idomain_g
-            worker%element_info%idomain_l  = mesh(idomain_l)%elems(ielement_l)%idomain_l
-            worker%element_info%ielement_g = mesh(idomain_l)%elems(ielement_l)%ielement_g
-            worker%element_info%ielement_l = mesh(idomain_l)%elems(ielement_l)%ielement_l
-            worker%iface                   = iface
-
-            worker%function_info%ifcn     = 0       ! Boundary conditions are not tracked.
-            worker%function_info%idepend  = 0       ! Chimera interface not applicable on boundary condition.
-            worker%function_info%idiff    = BC_BLK  ! Indicates to storage routine in LHS to store in BC section.
 
 
-            if (allocated(self%bc_advective_operator)) then
-                do iop = 1,size(self%bc_advective_operator)
-                
-                    ! For current element, get number of coupled elements.
-                    ncoupled_elems = self%get_ncoupled_elems(ielem_bc)
+
+!    !>
+!    !!
+!    !!  @author Nathan A. Wukie (AFRL)
+!    !!  @date   8/30/2016
+!    !!
+!    !!
+!    !!
+!    !-------------------------------------------------------------------------------------------------
+!    subroutine add_bc_operator(self,bc_operator)
+!        class(bc_t),            intent(inout)   :: self
+!        class(bc_operator_t),   intent(in)      :: bc_operator
+!
+!        integer(ik) :: iop, ierr
+!        class(bc_operator_wrapper_t),   allocatable :: temp(:) 
+!
+!
+!        !
+!        ! Allocate temp storage for (size+1), copy current operators to temp
+!        !        
+!        if (allocated(self%bc_operator)) then
+!
+!            allocate(temp(size(self%bc_operator) + 1), stat=ierr)
+!            if (ierr /= 0) call AllocationError
+!
+!            ! Copy previously added operators to temp
+!            do iop = 1,size(self%bc_operator)
+!                allocate(temp(iop)%op, source=self%bc_operator(iop)%op, stat=ierr)
+!                if (ierr /= 0) call AllocationError
+!            end do
+!
+!        else
+!
+!            allocate(temp(1), stat=ierr)
+!            if (ierr /= 0) call AllocationError
+!
+!        end if
+!
+!
+!        !
+!        ! Allocate new operator to end
+!        !
+!        allocate(temp(size(temp))%op, source=bc_operator, stat=ierr)
+!        if (ierr /= 0) call AllocationError
+!
+!
+!
+!        !
+!        ! Move temp allocation to bc
+!        !
+!        call move_alloc(temp, self%bc_operator)
+!
+!
+!    end subroutine add_bc_operator
+!    !**************************************************************************************************
 
 
-                    ! Compute current element function enough times to linearize all the coupled elements.
-                    ! If no coupling accross the face, the ncoupled_elems=1 for just the local interior element.
-                    do icoupled_elem = 1,ncoupled_elems
 
-                        !
-                        ! Get coupled element to linearize against.
-                        !
-                        ielement_c = self%bc_patch%coupled_elements(ielem_bc)%at(icoupled_elem)
-                        worker%function_info%seed%idomain_g  = mesh(idomain_l)%elems(ielement_c)%idomain_g
-                        worker%function_info%seed%idomain_l  = mesh(idomain_l)%elems(ielement_c)%idomain_l
-                        worker%function_info%seed%ielement_g = mesh(idomain_l)%elems(ielement_c)%ielement_g
-                        worker%function_info%seed%ielement_l = mesh(idomain_l)%elems(ielement_c)%ielement_l
-                        worker%function_info%seed%iproc      = IRANK
-
-                        !
-                        ! For the current boundary element(face), call specialized compute procedure.
-                        !
-                        call self%bc_advective_operator(iop)%op%compute(worker,prop)
-
-                    end do !ielem_c
-
-                end do !iop
-            end if
-
-
-        end do !ielem_bc
-
-
-    end subroutine compute_bc_operators
-    !********************************************************************************************
 
 
 
@@ -486,25 +580,25 @@ contains
     !!
     !!
     !-------------------------------------------------------------------------------------------------
-    subroutine add_bc_operator(self,bc_operator)
-        class(bc_t),            intent(inout)   :: self
-        class(bc_operator_t),   intent(in)      :: bc_operator
+    subroutine add_bc_state(self,bc_state)
+        class(bc_t),        intent(inout)   :: self
+        class(bc_state_t),  intent(in)      :: bc_state
 
         integer(ik) :: iop, ierr
-        class(bc_operator_wrapper_t),   allocatable :: temp(:) 
+        class(bc_state_wrapper_t),   allocatable :: temp(:) 
 
 
         !
-        ! Allocate temp storage for (size+1), copy current operators to temp
+        ! Allocate temp storage for (size+1), copy current states to temp
         !        
-        if (allocated(self%bc_advective_operator)) then
+        if (allocated(self%bc_state)) then
 
-            allocate(temp(size(self%bc_advective_operator) + 1), stat=ierr)
+            allocate(temp(size(self%bc_state) + 1), stat=ierr)
             if (ierr /= 0) call AllocationError
 
-            ! Copy previously added operators to temp
-            do iop = 1,size(self%bc_advective_operator)
-                allocate(temp(iop)%op, source=self%bc_advective_operator(iop)%op, stat=ierr)
+            ! Copy previously added states to temp
+            do iop = 1,size(self%bc_state)
+                allocate(temp(iop)%state, source=self%bc_state(iop)%state, stat=ierr)
                 if (ierr /= 0) call AllocationError
             end do
 
@@ -517,9 +611,9 @@ contains
 
 
         !
-        ! Allocate new operator to end
+        ! Allocate new state to end
         !
-        allocate(temp(size(temp))%op, source=bc_operator, stat=ierr)
+        allocate(temp(size(temp))%state, source=bc_state, stat=ierr)
         if (ierr /= 0) call AllocationError
 
 
@@ -527,11 +621,21 @@ contains
         !
         ! Move temp allocation to bc
         !
-        call move_alloc(temp, self%bc_advective_operator)
+        call move_alloc(temp, self%bc_state)
 
 
-    end subroutine add_bc_operator
+    end subroutine add_bc_state
     !**************************************************************************************************
+
+
+
+
+
+
+
+
+
+
 
 
 

@@ -1,7 +1,7 @@
-module bc_lineardiffusion_value
+module bc_state_scalar_value
     use mod_kinds,          only: rk,ik
-    use mod_constants,      only: ME
-    use type_bc,            only: bc_t
+    use mod_constants,      only: ME, ZERO
+    use type_bc_state,      only: bc_state_t
     use type_chidg_worker,  only: chidg_worker_t
     use type_properties,    only: properties_t
     use type_point,         only: point_t
@@ -17,16 +17,14 @@ module bc_lineardiffusion_value
     !!  @date   8/16/2016
     !!
     !---------------------------------------------------------------------------------------
-    type, public, extends(bc_t) :: lineardiffusion_value_t
-
-
+    type, public, extends(bc_state_t) :: scalar_value_t
 
     contains
 
-        procedure   :: add_options
-        procedure   :: compute    !> bc implementation
+        procedure   :: init
+        procedure   :: compute_bc_state    !> bc implementation
 
-    end type lineardiffusion_value_t
+    end type scalar_value_t
     !****************************************************************************************
 
 
@@ -42,27 +40,22 @@ contains
     !!  @date   8/16/2016
     !!
     !------------------------------------------------------------------------------------------
-    subroutine add_options(self)    
-        class(lineardiffusion_value_t),  intent(inout)   :: self
+    subroutine init(self)    
+        class(scalar_value_t),  intent(inout)   :: self
 
         !
         ! Set name
         !
-        call self%set_name('lineardiffusion_value')
+        call self%set_name('Scalar Value')
 
 
         !
         ! Add functions
         !
-        call self%bcproperties%add('Value','Required')         ! add StaticPressure
+        call self%bcproperties%add('Value','Required')
 
 
-        !
-        ! Add parameters
-        !
-
-
-    end subroutine add_options
+    end subroutine init
     !******************************************************************************************
 
 
@@ -85,29 +78,38 @@ contains
     !!  @param[in]      iface   Index of the face being computed
     !!  @param[in]      iblk    Index of the linearization block being computed
     !---------------------------------------------------------------------------------------------
-    subroutine compute(self,worker,prop)
-        class(lineardiffusion_value_t),     intent(inout)   :: self
+    subroutine compute_bc_state(self,worker,prop)
+        class(scalar_value_t),     intent(inout)   :: self
         type(chidg_worker_t),               intent(inout)   :: worker
         class(properties_t),                intent(inout)   :: prop
 
         ! Equation indices
         integer(ik)     :: iu
 
+        integer(ik)     :: igq
         real(rk)        :: time
 
-        type(AD_D),     allocatable, dimension(:)   :: u_m, flux, integrand, lift, dudx, tmp, tmp2, lift_gq
-        real(rk),       allocatable, dimension(:)   :: u_bc, normx
+        type(AD_D),     allocatable, dimension(:)   :: u_bc
         type(point_t),  allocatable, dimension(:)   :: coords
+
 
 
         !
         ! Get equation index
         !
-        iu = prop%get_eqn_index("u")
+        iu = prop%get_equation_index("u")
+
 
 
         !
-        ! Get derivative value
+        ! Get u_m from face interior to initialize derivatives
+        !
+        u_bc  = worker%get_face_variable(iu, 'value', ME)
+
+
+
+        !
+        ! Get derivative value from boundary condition parameter
         !
         coords = worker%coords()
         time   = worker%time()
@@ -115,38 +117,23 @@ contains
 
 
         !
-        ! Initialize derivatives
+        ! Zero derivatives
         !
-        u_m  = worker%interpolate(iu, 'value', ME)
-        dudx = worker%interpolate(iu, 'ddx',   ME)
+        do igq = 1,size(u_bc)
+            u_bc(igq)%xp_ad_ = ZERO
+        end do
+        
 
-
-!        tmp = -(u_bc - u_m)
-!        tmp2 = matmul(transpose(worker%mesh(worker%face_info%idomain_l)%elems(worker%face_info%ielement_l)%gq%face%val(:,:,worker%face_info%iface)), tmp)
-!        lift = matmul(worker%mesh(worker%face_info%idomain_l)%elems(worker%face_info%ielement_l)%invmass, tmp2)
-!
-!        lift_gq = matmul(worker%mesh(worker%face_info%idomain_l)%elems(worker%face_info%ielement_l)%gq%face%val(:,:,worker%face_info%iface), lift)
-!        dudx = dudx + real(6,rk)*lift_gq
 
 
         !
-        ! Compute diffusive flux
+        ! Store boundary condition state
         !
-        flux = -dudx
-
-
-        !
-        ! Compute integrand
-        !
-        normx = worker%normal(1)
-        integrand = flux*normx
-
-
-        call worker%integrate_boundary(iu, integrand)
+        call worker%store_bc_state(iu, u_bc)
 
 
 
-    end subroutine compute
+    end subroutine compute_bc_state
     !*********************************************************************************************
 
 
@@ -154,4 +141,4 @@ contains
 
 
 
-end module bc_lineardiffusion_value
+end module bc_state_scalar_value

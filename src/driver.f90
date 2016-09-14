@@ -127,11 +127,11 @@ program driver
             call create_function(constant,'constant')
 
             ! rho
-            call constant%set_option('val',1.13_rk)
+            call constant%set_option('val',1.20_rk)
             call initialize_variable(chidg%data,1,constant)
 
             ! rho_u
-            call constant%set_option('val',190._rk)
+            call constant%set_option('val',50._rk)
             call initialize_variable(chidg%data,2,constant)
 
             ! rho_v
@@ -143,7 +143,7 @@ program driver
             call initialize_variable(chidg%data,4,constant)
 
             ! rho_E
-            call constant%set_option('val',248000._rk)
+            call constant%set_option('val',230000._rk)
             call initialize_variable(chidg%data,5,constant)
 
 

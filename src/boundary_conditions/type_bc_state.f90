@@ -1,16 +1,12 @@
-module type_bc_operator
+module type_bc_state
 #include <messenger.h>
     use mod_kinds,                  only: rk, ik
 
-    use type_chidg_worker,          only: chidg_worker_t
-    use type_chidg_cache,           only: chidg_cache_t
-    use type_operator,              only: operator_t
-    use type_bc_patch,              only: bc_patch_t
-    use type_mesh,                  only: mesh_t
-    use type_solverdata,            only: solverdata_t
-    use type_properties,            only: properties_t
     use type_bcproperty_set,        only: bcproperty_set_t
-    use type_boundary_connectivity, only: boundary_connectivity_t
+    use type_chidg_worker,          only: chidg_worker_t
+    use type_properties,            only: properties_t
+    use type_mesh,                  only: mesh_t
+    use type_bc_patch,              only: bc_patch_t
     implicit none
 
 
@@ -24,22 +20,26 @@ module type_bc_operator
     !!  @date   2/3/2016
     !!
     !!  @author Nathan A. Wukie (AFRL)
-    !!  @date   9/2/2016
-    !!  @note   Changed boundary condition to inherit operator
+    !!  @date   9/9/2016
+    !!  @note   Changed boundary condition to compute a bc state
     !!
     !--------------------------------------------------------------------------------------------
-    type, public, extends(operator_t), abstract :: bc_operator_t
+    type, public, abstract :: bc_state_t
+
+        character(len=:), allocatable   :: name
 
         ! Boundary condition options
         type(bcproperty_set_t)          :: bcproperties
 
     contains
 
-!        procedure(bc_solution), deferred :: compute_bc_solution
-        procedure   :: compute_bc_state
+        procedure(bc_state_init),       deferred :: init
+        procedure(bc_state_compute),    deferred :: compute_bc_state
 
         procedure   :: init_bc_coupling
-        procedure   :: add_options           !< Specialized by each bc_t implementation. Adds options available
+
+        procedure   :: set_name
+        procedure   :: get_name
 
         procedure   :: set_fcn               !< Set a particular function definition for a specified bcfunction_t
         procedure   :: set_fcn_option        !< Set function-specific options for a specified bcfunction_t
@@ -51,19 +51,33 @@ module type_bc_operator
         procedure   :: get_option_key        !< Return the key for an option, given a property index and subsequent option index.
         procedure   :: get_option_value      !< Return the value of a given key, inside of a specified property.
 
-    end type bc_operator_t
+    end type bc_state_t
     !*********************************************************************************************
 
 
 
 
-!    abstract interface
-!        subroutine bc_solution(self)
-!            import bc_operator_t
-!
-!            class(bc_operator_t)    :: self
-!        end subroutine
-!    end interface
+    abstract interface
+        subroutine bc_state_init(self)
+            import bc_state_t
+
+            class(bc_state_t),  intent(inout)   :: self
+        end subroutine
+    end interface
+
+
+
+    abstract interface
+        subroutine bc_state_compute(self,worker,prop)
+            import bc_state_t
+            import chidg_worker_t
+            import properties_t
+
+            class(bc_state_t),      intent(inout)   :: self
+            type(chidg_worker_t),   intent(inout)   :: worker
+            class(properties_t),    intent(inout)   :: prop
+        end subroutine
+    end interface
 
 
 contains
@@ -72,64 +86,53 @@ contains
 
 
 
-    !>
-    !!
-    !!  @author Nathan A. Wukie (AFRL)
-    !!  @date   9/6/2016
-    !!
-    !!
-    !-------------------------------------------------------------------------------------------
-    subroutine compute_bc_state(self,worker,prop)
-        class(bc_operator_t),   intent(inout)   :: self
-        type(chidg_worker_t),   intent(inout)   :: worker
-        class(properties_t),    intent(inout)   :: prop
 
 
 
-    end subroutine compute_bc_state
-    !*******************************************************************************************
-
-
-    !>
+    !>  Default boundary coupling initialization routine. 
     !!
-    !!  @author Nathan A. Wukie (AFRL)
-    !!  @date   8/30/2016
+    !!  Default initializes coupling for a given element to just itself and no coupling with 
+    !!  other elements on the boundary. For a boundary condition that is coupled across the face
+    !!  this routine can be overwritten to set the coupling information specific to the boundary 
+    !!  condition.
+    !!  
     !!
+    !!  @author Nathan A. Wukie
+    !!  @date   2/16/2016
     !!
-    !-------------------------------------------------------------------------------------------
+    !----------------------------------------------------------------------------------------------
     subroutine init_bc_coupling(self,mesh,bc_patch)
-        class(bc_operator_t),   intent(in)      :: self
-        type(mesh_t),           intent(in)      :: mesh
-        type(bc_patch_t),       intent(inout)   :: bc_patch
+        class(bc_state_t),  intent(inout)   :: self
+        type(mesh_t),       intent(in)      :: mesh
+        type(bc_patch_t),   intent(inout)   :: bc_patch
 
-        integer(ik) :: ibc_face, ielem, nbc_faces, ierr
+        integer(ik) :: iface_bc, ielem
 
-
-        !
-        ! Get number of bc faces in the patch
-        !
-        nbc_faces = bc_patch%nfaces()
 
 
         !
         ! Loop through elements and set default coupling information
         !
-        do ibc_face = 1,nbc_faces
+        do iface_bc = 1,bc_patch%nfaces()
 
-            ! Get block-element index of current ielem_bc
-            ielem = bc_patch%ielement_l(ibc_face)
+
+            !
+            ! Get block-element index of current iface_bc
+            !
+            ielem = bc_patch%ielement_l(iface_bc)
 
             
+            !
             ! Add the element index as the only dependency.
-            call bc_patch%coupled_elements(ibc_face)%push_back_unique(ielem)
-            ! Improve to:
-            ! call bc_patch%add_coupled_element(ibc_face, element_info)
+            !
+            call bc_patch%coupled_elements(iface_bc)%push_back(ielem)
 
-        end do ! ielem_bc
+
+        end do ! iface_bc
 
 
     end subroutine init_bc_coupling
-    !*******************************************************************************************
+    !**********************************************************************************************
 
 
 
@@ -138,31 +141,6 @@ contains
 
 
 
-
-
-
-
-
-    !> Default options initialization procedure. This is called at the creation of a boundary condition
-    !! in create_bc to set the options of a concrete bc_t. This function can be overwritten by a concrete
-    !! bc_t to set case-specific options; parameters and functions.
-    !!
-    !!      - add entries to self%bcfunctions
-    !!      - add entries to self%bcparameters
-    !!
-    !!  @author Nathan A. Wukie
-    !!  @date   2/3/2016
-    !!
-    !!
-    !--------------------------------------------------------------------------------------------
-    subroutine add_options(self)
-        class(bc_operator_t),            intent(inout)   :: self
-
-
-
-
-    end subroutine add_options
-    !********************************************************************************************
 
 
 
@@ -183,7 +161,7 @@ contains
     !!
     !--------------------------------------------------------------------------------------------
     subroutine set_fcn(self,bcprop,fcn)
-        class(bc_operator_t),            intent(inout)   :: self
+        class(bc_state_t),            intent(inout)   :: self
         character(*),           intent(in)      :: bcprop
         character(*),           intent(in)      :: fcn
 
@@ -213,7 +191,7 @@ contains
     !!
     !-----------------------------------------------------------------------------------------------
     subroutine set_fcn_option(self,bcprop,option,val)
-        class(bc_operator_t),            intent(inout)   :: self
+        class(bc_state_t),            intent(inout)   :: self
         character(*),           intent(in)      :: bcprop
         character(*),           intent(in)      :: option
         real(rk),               intent(in)      :: val
@@ -239,7 +217,7 @@ contains
     !!
     !---------------------------------------------------------------------------------------------------
     function get_nproperties(self) result(nprop)
-        class(bc_operator_t),    intent(in)  :: self
+        class(bc_state_t),    intent(in)  :: self
 
         integer(ik) :: nprop
 
@@ -268,7 +246,7 @@ contains
     !!
     !---------------------------------------------------------------------------------------------------
     function get_property_name(self,iprop) result(pname)
-        class(bc_operator_t),    intent(in)  :: self
+        class(bc_state_t),    intent(in)  :: self
         integer(ik),    intent(in)  :: iprop
 
         character(len=:),   allocatable :: pname
@@ -305,7 +283,7 @@ contains
     !!
     !----------------------------------------------------------------------------------------------------
     function get_option_key(self,iprop,ioption) result(key)
-        class(bc_operator_t),    intent(inout)   :: self
+        class(bc_state_t),    intent(inout)   :: self
         integer(ik),    intent(in)      :: iprop
         integer(ik),    intent(in)      :: ioption
 
@@ -337,7 +315,7 @@ contains
     !!
     !----------------------------------------------------------------------------------------------------
     function get_option_value(self,iprop,key) result(val)
-        class(bc_operator_t),    intent(inout)  :: self
+        class(bc_state_t),    intent(inout)  :: self
         integer(ik),    intent(in)  :: iprop
         character(*),   intent(in)  :: key
 
@@ -367,7 +345,7 @@ contains
     !!
     !---------------------------------------------------------------------------------------------------
     function get_noptions(self,iprop) result(noptions)
-        class(bc_operator_t),    intent(inout)  :: self
+        class(bc_state_t),    intent(inout)  :: self
         integer(ik),    intent(in)  :: iprop
 
         integer(ik)     :: noptions
@@ -389,11 +367,10 @@ contains
     !!
     !---------------------------------------------------------------------------------------------------
     subroutine set_name(self,bcname)
-        class(bc_operator_t),    intent(inout)   :: self
+        class(bc_state_t),    intent(inout)   :: self
         character(*),   intent(in)      :: bcname
 
         self%name = trim(bcname)
-
 
     end subroutine set_name
     !***************************************************************************************************
@@ -413,7 +390,7 @@ contains
     !!
     !--------------------------------------------------------------------------------------------------
     function get_name(self) result(bcname)
-        class(bc_operator_t),    intent(in)  :: self
+        class(bc_state_t),    intent(in)  :: self
 
         character(len=:), allocatable :: bcname
 
@@ -428,4 +405,4 @@ contains
 
 
 
-end module type_bc_operator
+end module type_bc_state

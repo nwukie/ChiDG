@@ -71,7 +71,7 @@ contains
         integer(ik),                    intent(in)              :: ielement_l
         integer(ik),                    intent(in), optional    :: iface
 
-        integer(ik) :: nnodes, ndepend_value, ndepend_deriv, ierr, iface_loop
+        integer(ik) :: nnodes, ndepend_value, ndepend_deriv, ierr, iface_loop, iseed
         logical     :: reallocate
 
 
@@ -150,7 +150,6 @@ contains
 
 
 
-
         !
         ! Re/Allocate 'derivative', 'lift' components
         !
@@ -181,6 +180,24 @@ contains
 
 
 
+
+
+        !
+        ! Clear seed contents
+        !
+        do iseed = 1,size(self%value_seeds)
+            call self%value_seeds(iseed)%clear()
+        end do
+
+        do iseed = 1,size(self%derivative_seeds)
+            call self%derivative_seeds(iseed)%clear()
+        end do
+
+        do iseed = 1,size(self%lift_seeds)
+            call self%lift_seeds(iseed)%clear()
+        end do
+
+
     end subroutine resize
     !*************************************************************************************
 
@@ -199,30 +216,143 @@ contains
     !!
     !!
     !------------------------------------------------------------------------------------
-    subroutine set_data(self,cache_data,data_type,idirection,idepend,seed)
+    subroutine set_data(self,cache_data,data_type,idirection,seed)
         class(cache_data_equation_t),   intent(inout)   :: self
         type(AD_D),                     intent(in)      :: cache_data(:)
         character(len=*),               intent(in)      :: data_type
         integer(ik),                    intent(in)      :: idirection
-        integer(ik),                    intent(in)      :: idepend
         type(seed_t),                   intent(in)      :: seed
 
         character(len=:), allocatable   :: msg
+        logical     :: seed_found, empty_seed
+        integer(ik) :: iseed, seed_location
+
+
+        
 
         select case (trim(data_type))
+
+            !
+            ! Set variable 'value' data
+            !
             case('value')
-                self%value(:,idepend) = cache_data
-                self%value_seeds(idepend) = seed
+                ! Search to see if a value differentiated wrt seed already exist
+                seed_location = 0
+                seed_found = .false.
+                do iseed = 1,size(self%value_seeds)
+                    seed_found = ( (seed%idomain_g  == self%value_seeds(iseed)%idomain_g) .and. &
+                                   (seed%ielement_g == self%value_seeds(iseed)%ielement_g) )
+
+                    if (seed_found) then
+                        seed_location = iseed
+                        exit
+                    end if
+                end do
 
 
+                ! If matching seed was not found, find first empty seed location and place there
+                if (.not. seed_found) then
+                    do iseed = 1,size(self%value_seeds)
+                        empty_seed = (self%value_seeds(iseed)%idomain_g == 0)
+
+                        if (empty_seed) then
+                            seed_location = iseed
+                            exit
+                        end if
+
+                    end do
+                end if
+
+                if (seed_location == 0) call chidg_signal(FATAL,"cache_data_equation%set_data: Did not find a location to put the data")
+
+                ! Store data
+                self%value(:,seed_location) = cache_data
+                self%value_seeds(seed_location) = seed
+
+
+
+            !
+            ! Set variable 'derivative' data
+            !
             case('derivative')
-                self%derivative(:,idirection,idepend) = cache_data
-                self%derivative_seeds(idepend) = seed
+                ! Search to see if a value differentiated wrt seed already exists
+                seed_location = 0
+                seed_found = .false.
+                do iseed = 1,size(self%derivative_seeds)
+                    seed_found = ( (seed%idomain_g  == self%derivative_seeds(iseed)%idomain_g) .and. &
+                                   (seed%ielement_g == self%derivative_seeds(iseed)%ielement_g) )
+
+                    if (seed_found) then
+                        seed_location = iseed
+                        exit
+                    end if
+                end do
 
 
+                ! If matching seed was not found, find first empty seed location and place there
+                if (.not. seed_found) then
+                    do iseed = 1,size(self%derivative_seeds)
+                        empty_seed = (self%derivative_seeds(iseed)%idomain_g == 0)
+
+                        if (empty_seed) then
+                            seed_location = iseed
+                            exit
+                        end if
+
+                    end do
+                end if
+
+                
+                if (seed_location == 0) call chidg_signal(FATAL,"cache_data_equation%set_data: Did not find a location to put the data")
+
+
+                ! Store data
+                self%derivative(:,idirection,seed_location) = cache_data
+                self%derivative_seeds(seed_location) = seed
+
+
+            !
+            ! Set variable 'lift' data
+            !
             case('lift')
-                self%lift(:,idirection,idepend) = cache_data
-                self%lift_seeds(idepend) = seed
+                ! Search to see if a value differentiated wrt seed already exists
+                seed_location = 0
+                seed_found = .false.
+                do iseed = 1,size(self%lift_seeds)
+                    seed_found = ( (seed%idomain_g  == self%lift_seeds(iseed)%idomain_g) .and. &
+                                   (seed%ielement_g == self%lift_seeds(iseed)%ielement_g) )
+
+                    if (seed_found) then
+                        seed_location = iseed
+                        exit
+                    end if
+                end do
+
+
+
+                ! If matching seed was not found, find first empty seed location and place there
+                if (.not. seed_found) then
+                    do iseed = 1,size(self%lift_seeds)
+                        empty_seed = (self%lift_seeds(iseed)%idomain_g == 0)
+
+                        if (empty_seed) then
+                            seed_location = iseed
+                            exit
+                        end if
+
+                    end do
+                end if
+
+
+                if (seed_location == 0) call chidg_signal(FATAL,"cache_data_equation%set_data: Did not find a location to put the data")
+                
+                ! Store data
+                self%lift(:,idirection,seed_location) = cache_data
+                self%lift_seeds(seed_location) = seed
+
+
+
+
 
             case default
                 msg = "cache_data_equation%store: The incoming variable data_type did not have an &
@@ -280,7 +410,7 @@ contains
 
 
         else if (boundary_face) then
-            ndepend = 0
+            ndepend = mesh(idomain_l)%faces(ielement_l,iface)%BC_ndepend
 
         end if
 

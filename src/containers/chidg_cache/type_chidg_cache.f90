@@ -106,13 +106,12 @@ contains
     !!
     !!
     !----------------------------------------------------------------------------------------
-    subroutine set_data(self,cache_component,cache_data,data_type,idirection,idepend,seed,ieqn,iface)
+    subroutine set_data(self,cache_component,cache_data,data_type,idirection,seed,ieqn,iface)
         class(chidg_cache_t),   intent(inout)           :: self
         character(len=*),       intent(in)              :: cache_component
         type(AD_D),             intent(in)              :: cache_data(:)
         character(len=*),       intent(in)              :: data_type
         integer(ik),            intent(in)              :: idirection
-        integer(ik),            intent(in)              :: idepend
         type(seed_t),           intent(in)              :: seed
         integer(ik),            intent(in)              :: ieqn
         integer(ik),            intent(in), optional    :: iface
@@ -141,13 +140,13 @@ contains
         !
         select case(cache_component)
             case('element')
-                call self%element%set_data(cache_data,data_type,idirection,idepend,seed,ieqn)
+                call self%element%set_data(cache_data,data_type,idirection,seed,ieqn)
 
             case('face interior')
-                call self%faces(iface,1)%set_data(cache_data,data_type,idirection,idepend,seed,ieqn)
+                call self%faces(iface,1)%set_data(cache_data,data_type,idirection,seed,ieqn)
 
             case('face exterior')
-                call self%faces(iface,2)%set_data(cache_data,data_type,idirection,idepend,seed,ieqn)
+                call self%faces(iface,2)%set_data(cache_data,data_type,idirection,seed,ieqn)
 
             case default 
                 msg = "chidg_cache%set_data: An invalid value for the cache_component incoming parameter  &

@@ -1,9 +1,9 @@
-module LD_boundary_diffusive_flux
+module LD_boundary_diffusive_operator
 #include <messenger.h>
     use mod_kinds,                  only: rk,ik
     use mod_constants,              only: ZERO,ONE,TWO,HALF, ME, NEIGHBOR
 
-    use type_boundary_flux,         only: boundary_flux_t
+    use type_operator,              only: operator_t
     use type_chidg_worker,          only: chidg_worker_t
     use type_properties,            only: properties_t
     use DNAD_D
@@ -23,19 +23,54 @@ module LD_boundary_diffusive_flux
     !!
     !!
     !--------------------------------------------------------------------------------
-    type, extends(boundary_flux_t), public :: LD_boundary_diffusive_flux_t
+    type, extends(operator_t), public :: LD_boundary_diffusive_operator_t
 
 
     contains
 
+        procedure   :: init
         procedure   :: compute
 
-    end type LD_boundary_diffusive_flux_t
+    end type LD_boundary_diffusive_operator_t
     !********************************************************************************
 
 
 
 contains
+
+
+    !>
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   8/29/2016
+    !!
+    !--------------------------------------------------------------------------------
+    subroutine init(self)
+        class(LD_boundary_diffusive_operator_t),   intent(inout) :: self
+        
+        !
+        ! Set operator name
+        !
+        call self%set_name("Linear Diffusion Boundary Average Flux")
+
+        !
+        ! Set operator type
+        !
+        call self%set_operator_type("Boundary Diffusive Flux")
+
+        !
+        ! Set operator equations
+        !
+        call self%set_equation("u")
+
+    end subroutine init
+    !********************************************************************************
+
+
+
+
+
+
 
     !>  Compute the diffusive boundary flux for scalar linear diffusion.
     !!
@@ -49,9 +84,9 @@ contains
     !!
     !-----------------------------------------------------------------------------------------
     subroutine compute(self,worker,prop)
-        class(LD_boundary_diffusive_flux_t),    intent(in)      :: self
-        type(chidg_worker_t),                   intent(inout)   :: worker
-        class(properties_t),                    intent(inout)   :: prop
+        class(LD_boundary_diffusive_operator_t),    intent(inout)   :: self
+        type(chidg_worker_t),                       intent(inout)   :: worker
+        class(properties_t),                        intent(inout)   :: prop
 
 
         integer(ik)                             :: iu
@@ -66,15 +101,15 @@ contains
         !
         ! Get variable index
         !
-        iu = prop%get_eqn_index("u")
+        iu = prop%get_equation_index("u")
 
 
 
         !
         ! Interpolate solution to quadrature nodes
         !
-        dudx_m = worker%interpolate(iu, 'ddx', ME)
-        dudx_p = worker%interpolate(iu, 'ddx', NEIGHBOR)
+        dudx_m = worker%get_face_variable(iu, 'ddx', ME)
+        dudx_p = worker%get_face_variable(iu, 'ddx', NEIGHBOR)
 
 
         flux_m = -dudx_m
@@ -99,4 +134,4 @@ contains
 
 
 
-end module LD_boundary_diffusive_flux
+end module LD_boundary_diffusive_operator

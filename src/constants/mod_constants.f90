@@ -125,6 +125,7 @@ module mod_constants
     integer(ik), parameter :: VOLUME_DIFFUSIVE_FLUX   = 4
     integer(ik), parameter :: VOLUME_ADVECTIVE_SOURCE = 5
     integer(ik), parameter :: VOLUME_DIFFUSIVE_SOURCE = 6
+    integer(ik), parameter :: BC_FLUX = 7
     integer(ik), parameter :: NFUNCTION_TYPES = 6
 
 
@@ -141,8 +142,9 @@ module mod_constants
     ! Interpolation source
     !
     !integer(ik), parameter :: LOCAL     = 0        ! Interpolate from current element
-    integer(ik), parameter :: ME       = 0         ! Interpolate from current element
-    integer(ik), parameter :: NEIGHBOR = 1         ! Interpolate from neighbor element
+    integer(ik), parameter :: ME       = 0          ! Interpolate from current element
+    integer(ik), parameter :: NEIGHBOR = 1          ! Interpolate from neighbor element
+    integer(ik), parameter :: BC       = 2          ! Interpolate from exterior BC state
 
 
     !

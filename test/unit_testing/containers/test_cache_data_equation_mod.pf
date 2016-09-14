@@ -2,7 +2,6 @@ module test_cache_data_equation_mod
     use pfunit_mod
     use mod_kinds,                  only: rk,ik
     use type_chidg,                 only: chidg_t
-    use type_cache_info,            only: cache_info_t
     use type_cache_data_equation,   only: cache_data_equation_t
     implicit none
 
@@ -216,7 +215,6 @@ contains
         class(test_cache_data_equation),    intent(inout)   :: self
         
         integer(ik)                 :: idomain, ielem, iface, nnodes
-        type(cache_info_t)          :: cache_info
         type(cache_data_equation_t) :: cache_data_equation
 
         idomain = 1

@@ -39,6 +39,10 @@ module type_face
         integer(ik)                 :: iface                !< XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, etc
         integer(ik)                 :: ChiID = 0            !< Identifier for domain-local Chimera interfaces
 
+        integer(ik)                 :: BC_ID  = 0           !< Identifier for Boundary Condition index
+        integer(ik)                 :: BC_face = 0          !< Index in bc_patch
+        integer(ik)                 :: BC_ndepend = 0       !< Number of coupled element if bc face.
+
         ! Owner-element information
         integer(ik)                 :: idomain_g            !< Global index of the parent domain
         integer(ik)                 :: idomain_l            !< Processor-local index of the parent domain
@@ -58,7 +62,7 @@ module type_face
 
 
         ! Chimera face offset. For periodic boundary condition.
-        character(len=:), allocatable   :: periodic_type
+        character(len=:),   allocatable :: periodic_type
         real(rk)                        :: chimera_offset_x = 0._rk
         real(rk)                        :: chimera_offset_y = 0._rk
         real(rk)                        :: chimera_offset_z = 0._rk

@@ -3,7 +3,6 @@ module type_bcset
     use mod_kinds,              only: rk, ik
 
     use type_mesh,              only: mesh_t
-    use type_equation_set,      only: equation_set_t
     use type_solverdata,        only: solverdata_t
     use type_bc,                only: bc_t
     use type_properties,        only: properties_t
@@ -28,7 +27,6 @@ module type_bcset
     contains
 
         procedure   :: add     !< Call for adding a boundary condition
-        procedure   :: apply   !< Spatial application of the boundary condition
         final       :: destructor
 
         procedure   :: get_bcset_coupling
@@ -50,19 +48,26 @@ contains
     !!  @param[in]  bc  Boundary condition that is being added to the list
     !!  
     !------------------------------------------------------------------------------------------
-    subroutine add(self,bc)
+    function add(self,bc) result(BC_ID)
         class(bcset_t),     intent(inout)   :: self
-        type(bc_t),         intent(in)      :: bc
+        type(bc_t),         intent(inout)   :: bc
 
-        integer(ik) :: ibc, ierr
+        integer(ik) :: ibc, ierr, BC_ID
 
         type(bc_t), allocatable :: temp_bcs(:)
 
 
         !
-        ! Increment number of boundary conditioners
+        ! Increment number of boundary conditions
         !
         self%nbcs = self%nbcs + 1
+
+
+        !
+        ! Set BC_ID
+        !
+        bc%BC_ID = self%nbcs
+        BC_ID    = self%nbcs
 
 
         !
@@ -92,45 +97,7 @@ contains
         call move_alloc(temp_bcs,self%bcs)
 
 
-    end subroutine add
-    !******************************************************************************************
-
-
-
-
-
-
-
-
-    !>  Call bc_t%apply for each boundary condition in the set
-    !!
-    !!  @author Nathan A. Wukie
-    !!  @date   1/31/2016
-    !!
-    !!  @param[inout]   mesh    mesh_t containing elements and faces
-    !!  @param[inout]   sdata   solverdata_t object containing solution, rhs, and linearization
-    !!  @param[inout]   iblk    integer block direction with respect to which we are computing the linearization
-    !!  @param[inout]   prop    properties_t object with equationset properties, and material_t objects
-    !!
-    !----------------------------------------------------------------------------------------
-    subroutine apply(self,mesh,sdata,prop)
-        class(bcset_t),         intent(inout)   :: self
-        type(mesh_t),           intent(inout)   :: mesh(:)
-        class(solverdata_t),    intent(inout)   :: sdata
-        class(properties_t),    intent(inout)   :: prop
-
-        integer(ik) :: ibc
-
-        !
-        ! Loop through boundary condition array and call apply for each
-        !
-        do ibc = 1,size(self%bcs)
-
-            call self%bcs(ibc)%compute_bc_operators(mesh,sdata,prop)
-
-        end do
-
-    end subroutine apply
+    end function add
     !******************************************************************************************
 
 

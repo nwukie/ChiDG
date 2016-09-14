@@ -94,8 +94,7 @@ contains
                     neqns = mesh(idomain_l)%neqns
                 else if (chimera_face) then
                     ChiID = mesh(idomain_l)%faces(ielement_l,iface)%ChiID
-                    donor_idomain = mesh(idomain_l)%chimera%recv%data(ChiID)%donor_domain_l%at(1)
-                    neqns = mesh(donor_idomain)%neqns
+                    neqns = mesh(idomain_l)%chimera%recv%data(ChiID)%donor_neqns%at(1)
                 else
                     call chidg_signal(FATAL,"cache_data: Face type wasn't recognized")
                 end if
@@ -159,17 +158,16 @@ contains
     !!
     !!
     !-------------------------------------------------------------------------------
-    subroutine set_data(self,cache_data,data_type,idirection,idepend,seed,ieqn)
+    subroutine set_data(self,cache_data,data_type,idirection,seed,ieqn)
         class(cache_data_t),    intent(inout)   :: self
         type(AD_D),             intent(in)      :: cache_data(:)
         character(len=*),       intent(in)      :: data_type
         integer(ik),            intent(in)      :: idirection
-        integer(ik),            intent(in)      :: idepend
         type(seed_t),           intent(in)      :: seed
         integer(ik),            intent(in)      :: ieqn
 
 
-        call self%eqn(ieqn)%set_data(cache_data,data_type,idirection,idepend,seed)
+        call self%eqn(ieqn)%set_data(cache_data,data_type,idirection,seed)
 
 
     end subroutine set_data
@@ -199,7 +197,7 @@ contains
         
         type(AD_D), allocatable, dimension(:) :: cache_data
         
-        integer(ik) :: igq, idepend
+        integer(ik) :: igq, iseed
         logical     :: seed_found, has_seed
 
 
@@ -213,21 +211,21 @@ contains
                 ! Try to find value differentiated wrt seed.
                 !
                 seed_found = .false.
-                do idepend = 1,size(self%eqn(ieqn)%value_seeds)
+                do iseed = 1,size(self%eqn(ieqn)%value_seeds)
                     
-                    has_seed = (self%eqn(ieqn)%value_seeds(idepend)%idomain_g == seed%idomain_g) .and. &
-                               (self%eqn(ieqn)%value_seeds(idepend)%ielement_g == seed%ielement_g)
+                    has_seed = (self%eqn(ieqn)%value_seeds(iseed)%idomain_g  == seed%idomain_g) .and. &
+                               (self%eqn(ieqn)%value_seeds(iseed)%ielement_g == seed%ielement_g)
 
                     if (has_seed) then
-                        cache_data = self%eqn(ieqn)%value(:,idepend)
+                        cache_data = self%eqn(ieqn)%value(:,iseed)
                         seed_found = .true.
                         exit
                     end if
 
                 end do
 
-                ! If the current component doesn't have a linearization wrt seed, just take default
-                ! values and zero derivatives
+                ! If the current component doesn't have a linearization wrt seed, just take any
+                ! values and zero out autodiff
                 if (.not. seed_found) then
                     cache_data = self%eqn(ieqn)%value(:,1)
 
@@ -235,6 +233,70 @@ contains
                         cache_data(igq)%xp_ad_ = ZERO
                     end do
                 end if
+
+
+
+            case('derivative')
+
+                ! Try to find derivative differentiated wrt seed.
+                !
+                seed_found = .false.
+                do iseed = 1,size(self%eqn(ieqn)%derivative_seeds)
+                    
+                    has_seed = (self%eqn(ieqn)%derivative_seeds(iseed)%idomain_g  == seed%idomain_g) .and. &
+                               (self%eqn(ieqn)%derivative_seeds(iseed)%ielement_g == seed%ielement_g)
+
+                    if (has_seed) then
+                        cache_data = self%eqn(ieqn)%derivative(:,idirection,iseed)
+                        seed_found = .true.
+                        exit
+                    end if
+
+                end do
+
+                ! If the current component doesn't have a linearization wrt seed, just take any
+                ! derivative and zero out autodiff
+                if (.not. seed_found) then
+                    cache_data = self%eqn(ieqn)%derivative(:,idirection,1)
+
+                    do igq = 1,size(cache_data)
+                        cache_data(igq)%xp_ad_ = ZERO
+                    end do
+                end if
+
+
+
+            case('lift')
+
+                ! Try to find lift differentiated wrt seed.
+                !
+                seed_found = .false.
+                do iseed = 1,size(self%eqn(ieqn)%lift_seeds)
+                    
+                    has_seed = (self%eqn(ieqn)%lift_seeds(iseed)%idomain_g  == seed%idomain_g) .and. &
+                               (self%eqn(ieqn)%lift_seeds(iseed)%ielement_g == seed%ielement_g)
+
+                    if (has_seed) then
+                        cache_data = self%eqn(ieqn)%lift(:,idirection,iseed)
+                        seed_found = .true.
+                        exit
+                    end if
+
+                end do
+
+                ! If the current component doesn't have a linearization wrt seed, just take any
+                ! lift and zero out autodiff
+                if (.not. seed_found) then
+                    cache_data = self%eqn(ieqn)%lift(:,idirection,1)
+
+                    do igq = 1,size(cache_data)
+                        cache_data(igq)%xp_ad_ = ZERO
+                    end do
+                end if
+
+
+
+
 
         end select
 

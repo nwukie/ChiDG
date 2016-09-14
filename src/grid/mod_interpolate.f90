@@ -427,6 +427,7 @@ contains
         character(len=*),       intent(in)      :: interpolation_type
 
         real(rk),   dimension(mesh(idomain_l)%elems(ielement_l)%gq%vol%nnodes) :: var_gq
+        !real(rk), allocatable, dimension(:) :: var_gq
 
         !
         ! Use quadrature instance to compute variable at quadrature nodes.

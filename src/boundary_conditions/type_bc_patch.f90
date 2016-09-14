@@ -52,29 +52,40 @@ contains
     !!
     !!
     !-------------------------------------------------------------------------------------------------
-    subroutine add_face(self,idomain,ielement,iface)
+    !subroutine add_face(self,idomain,ielement,iface)
+    function add_face(self,idomain,ielement,iface) result(iface_bc)
         class(bc_patch_t),  intent(inout)   :: self
         integer(ik),        intent(in)      :: idomain
         integer(ik),        intent(in)      :: ielement
         integer(ik),        intent(in)      :: iface
 
-        integer(ik)                     :: nfaces, ierr
+        integer(ik)                     :: nfaces, ierr, iface_bc
 
-
+        !
         ! Add face to bc_patch list
+        !
         call self%idomain_l_%push_back(idomain)
         call self%ielement_l_%push_back(ielement)
         call self%iface_%push_back(iface)
 
 
+        !
+        ! Get location of face in bc_patch
+        !
+        iface_bc = self%iface_%size()
+
+
+        !
         ! Extend coupling storage. Need a vector for each bc_face
+        !
         nfaces = self%nfaces()
         if (allocated(self%coupled_elements)) deallocate(self%coupled_elements)
         allocate(self%coupled_elements(nfaces), stat=ierr)
         if (ierr /= 0) call AllocationError
 
 
-    end subroutine add_face
+    !end subroutine add_face
+    end function add_face
     !**************************************************************************************************
 
 

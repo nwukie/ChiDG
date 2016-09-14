@@ -121,21 +121,6 @@ contains
         !
         ! Interpolate solution to quadrature nodes
         !
-!        rho_m  = worker%interpolate(irho,  'value', ME)
-!        rho_p  = worker%interpolate(irho,  'value', NEIGHBOR)
-!
-!        rhou_m = worker%interpolate(irhou, 'value', ME)
-!        rhou_p = worker%interpolate(irhou, 'value', NEIGHBOR)
-!
-!        rhov_m = worker%interpolate(irhov, 'value', ME)
-!        rhov_p = worker%interpolate(irhov, 'value', NEIGHBOR)
-!
-!        rhow_m = worker%interpolate(irhow, 'value', ME)
-!        rhow_p = worker%interpolate(irhow, 'value', NEIGHBOR)
-!
-!        rhoE_m = worker%interpolate(irhoE, 'value', ME)
-!        rhoE_p = worker%interpolate(irhoE, 'value', NEIGHBOR)
-
         rho_m  = worker%get_face_variable(irho,  'value', ME)
         rho_p  = worker%get_face_variable(irho,  'value', NEIGHBOR)
 

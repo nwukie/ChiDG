@@ -74,7 +74,7 @@ contains
 
 
         integer(ik)             :: iu
-        real(rk)                :: mu_x, mu_y, mu_z
+!        real(rk)                :: mu_x, mu_y, mu_z
 
         type(AD_D), allocatable, dimension(:)   ::  &
             flux_x, flux_y, flux_z, dudx, dudy, dudz
@@ -86,32 +86,32 @@ contains
         iu = prop%get_equation_index("u")
 
 
-        !
-        ! Get equation set properties
-        !
-        select type(prop)
-            type is (LD_properties_t)
-                mu_x = prop%mu(1)
-                mu_y = prop%mu(2)
-                mu_z = prop%mu(3)
-        end select
+!        !
+!        ! Get equation set properties
+!        !
+!        select type(prop)
+!            type is (LD_properties_t)
+!                mu_x = prop%mu(1)
+!                mu_y = prop%mu(2)
+!                mu_z = prop%mu(3)
+!        end select
 
 
         !
         ! Interpolate solution to quadrature nodes
         !
-        dudx = worker%get_element_variable(iu, 'ddx')
-        dudy = worker%get_element_variable(iu, 'ddy')
-        dudz = worker%get_element_variable(iu, 'ddz')
+        dudx = worker%get_element_variable(iu, 'ddx + lift')
+        dudy = worker%get_element_variable(iu, 'ddy + lift')
+        dudz = worker%get_element_variable(iu, 'ddz + lift')
 
 
 
         !
         ! Compute volume flux at quadrature nodes
         !
-        flux_x = -mu_x*dudx
-        flux_y = -mu_y*dudy
-        flux_z = -mu_z*dudz
+        flux_x = -dudx
+        flux_y = -dudy
+        flux_z = -dudz
 
 
         !

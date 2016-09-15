@@ -92,7 +92,8 @@ contains
         integer(ik)                             :: iu
 
         type(AD_D), allocatable, dimension(:)   :: &
-            dudx_m, dudx_p, flux_m, flux_p, flux, integrand
+            dudx_m, dudy_m, dudz_m, dudx_p, dudy_p, dudz_p, &
+            flux_x, flux_y, flux_z, flux_m, flux_p, flux, integrand
 
         real(rk),   allocatable, dimension(:)   :: &
             normx, normy, normz
@@ -103,24 +104,41 @@ contains
         !
         iu = prop%get_equation_index("u")
 
+        normx = worker%normal(1)
+        normy = worker%normal(2)
+        normz = worker%normal(3)
 
 
         !
         ! Interpolate solution to quadrature nodes
         !
-        dudx_m = worker%get_face_variable(iu, 'ddx', ME)
-        dudx_p = worker%get_face_variable(iu, 'ddx', NEIGHBOR)
+        dudx_m = worker%get_face_variable(iu, 'ddx + lift', ME)
+        dudy_m = worker%get_face_variable(iu, 'ddy + lift', ME)
+        dudz_m = worker%get_face_variable(iu, 'ddz + lift', ME)
+
+
+        dudx_p = worker%get_face_variable(iu, 'ddx + lift', NEIGHBOR)
+        dudy_p = worker%get_face_variable(iu, 'ddy + lift', NEIGHBOR)
+        dudz_p = worker%get_face_variable(iu, 'ddz + lift', NEIGHBOR)
 
 
         flux_m = -dudx_m
         flux_p = -dudx_p
-        flux   = HALF*(flux_m + flux_p)
+        flux_x = HALF*(flux_m + flux_p)
+
+        flux_m = -dudy_m
+        flux_p = -dudy_p
+        flux_y = HALF*(flux_m + flux_p)
+
+        flux_m = -dudz_m
+        flux_p = -dudz_p
+        flux_z = HALF*(flux_m + flux_p)
+
 
         !
         ! Compute boundary average flux
         !
-        normx = worker%normal(1)
-        integrand = flux * normx
+        integrand = flux_x*normx + flux_y*normy + flux_z*normz
 
         !
         ! Integrate flux

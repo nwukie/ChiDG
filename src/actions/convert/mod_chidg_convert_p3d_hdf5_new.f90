@@ -69,7 +69,7 @@ contains
         integer,        allocatable :: elements(:,:), faces(:,:)
 
         ! equation set string
-        character(len=100)          :: eqnset_string
+        character(len=1024)         :: eqnset_string
 
         ! boundary condition types
         integer(ik)                 :: ximin_bc, ximax_bc, etamin_bc, etamax_bc, zetamin_bc, zetamax_bc
@@ -406,7 +406,8 @@ contains
             !
             call write_line("Setting equation set for domain ", igrid, delimiter=" ")
             call write_line("Enter equation set: ")
-            read*, eqnset_string
+            !read*, eqnset_string
+            read(*,"(A1024)") eqnset_string
 
 
             !

@@ -169,11 +169,11 @@ contains
         !
         ! Store boundary condition state
         !
-        call worker%store_bc_state(irho,  rho_bc )
-        call worker%store_bc_state(irhou, rhou_bc)
-        call worker%store_bc_state(irhov, rhov_bc)
-        call worker%store_bc_state(irhow, rhow_bc)
-        call worker%store_bc_state(irhoE, rhoE_bc)
+        call worker%store_bc_state(irho,  rho_bc, 'value')
+        call worker%store_bc_state(irhou, rhou_bc,'value')
+        call worker%store_bc_state(irhov, rhov_bc,'value')
+        call worker%store_bc_state(irhow, rhow_bc,'value')
+        call worker%store_bc_state(irhoE, rhoE_bc,'value')
 
 
     end subroutine compute_bc_state

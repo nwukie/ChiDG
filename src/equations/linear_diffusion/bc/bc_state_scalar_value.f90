@@ -89,7 +89,7 @@ contains
         integer(ik)     :: igq
         real(rk)        :: time
 
-        type(AD_D),     allocatable, dimension(:)   :: u_bc
+        type(AD_D),     allocatable, dimension(:)   :: u_bc, dudx_bc, dudy_bc, dudz_bc
         type(point_t),  allocatable, dimension(:)   :: coords
 
 
@@ -106,6 +106,9 @@ contains
         !
         u_bc  = worker%get_face_variable(iu, 'value', ME)
 
+        dudx_bc = worker%get_face_variable(iu, 'ddx', ME)
+        dudy_bc = worker%get_face_variable(iu, 'ddy', ME)
+        dudz_bc = worker%get_face_variable(iu, 'ddz', ME)
 
 
         !
@@ -116,21 +119,20 @@ contains
         u_bc   = self%bcproperties%compute("Value",time,coords)
 
 
+
         !
-        ! Zero derivatives
+        ! Store boundary condition state, Value
         !
-        do igq = 1,size(u_bc)
-            u_bc(igq)%xp_ad_ = ZERO
-        end do
-        
+        call worker%store_bc_state(iu, u_bc, 'value')
 
 
 
         !
-        ! Store boundary condition state
+        ! Store boundary condition state, gradient
         !
-        call worker%store_bc_state(iu, u_bc)
-
+        call worker%store_bc_state(iu, dudx_bc, 'ddx')
+        call worker%store_bc_state(iu, dudy_bc, 'ddy')
+        call worker%store_bc_state(iu, dudz_bc, 'ddz')
 
 
     end subroutine compute_bc_state

@@ -242,6 +242,8 @@ contains
         integer(ik)                     :: idirection, igq
         logical                         :: keep_linearization
 
+
+
         !
         ! Set cache_component
         !
@@ -262,6 +264,8 @@ contains
         if (interp_type == 'value') then
             cache_type = 'value'
             idirection = 0
+
+
         else if (interp_type == 'ddx') then
             cache_type = 'derivative'
             idirection = 1
@@ -270,6 +274,20 @@ contains
             idirection = 2
         else if (interp_type == 'ddz') then
             cache_type = 'derivative'
+            idirection = 3
+
+
+        else if ( (interp_type == 'ddx + lift') .or. &
+                  (interp_type == 'ddx+lift'  ) ) then
+            cache_type = 'derivative + lift'
+            idirection = 1
+        else if ( (interp_type == 'ddy + lift') .or. &
+                  (interp_type == 'ddy+lift'  ) ) then
+            cache_type = 'derivative + lift'
+            idirection = 2
+        else if ( (interp_type == 'ddz + lift') .or. &
+                  (interp_type == 'ddz+lift'  ) ) then
+            cache_type = 'derivative + lift'
             idirection = 3
         end if
 
@@ -286,8 +304,14 @@ contains
             ! Get DG derivative on face
             var_gq = self%cache%get_data(cache_component,'derivative',idirection,self%function_info%seed,ieqn,self%iface)
 
+
+        else if (cache_type == 'derivative + lift') then
+
+            ! Get DG derivative on face
+            var_gq = self%cache%get_data(cache_component,'derivative',idirection,self%function_info%seed,ieqn,self%iface)
+
             ! Modify derivative by face lift stabilized by a factor of NFACES
-            var_gq = var_gq + real(NFACES,rk)*self%cache%get_data(cache_component,'lift',idirection,self%function_info%seed,ieqn,self%iface)
+            var_gq = var_gq + real(NFACES,rk)*self%cache%get_data(cache_component,'lift face',idirection,self%function_info%seed,ieqn,self%iface)
 
         end if
 
@@ -317,12 +341,13 @@ contains
         character(len=*),       intent(in)  :: interp_type
 
         type(AD_D), allocatable, dimension(:) :: &
-            var_gq
+            var_gq, tmp_gq
 
         type(face_info_t)               :: face_info
         character(len=:), allocatable   :: cache_component, cache_type
         integer(ik)                     :: idirection, igq, iface
         logical                         :: keep_linearization
+
 
 
 
@@ -332,6 +357,8 @@ contains
         if (interp_type == 'value') then
             cache_type = 'value'
             idirection = 0
+
+
         else if (interp_type == 'ddx') then
             cache_type = 'derivative'
             idirection = 1
@@ -341,7 +368,25 @@ contains
         else if (interp_type == 'ddz') then
             cache_type = 'derivative'
             idirection = 3
+
+
+        else if ( (interp_type == 'ddx + lift') .or. &
+                  (interp_type == 'ddx+lift'  ) ) then
+            cache_type = 'derivative + lift'
+            idirection = 1
+        else if ( (interp_type == 'ddy + lift') .or. &
+                  (interp_type == 'ddy+lift'  ) ) then
+            cache_type = 'derivative + lift'
+            idirection = 2
+        else if ( (interp_type == 'ddz + lift') .or. &
+                  (interp_type == 'ddz+lift'  ) ) then
+            cache_type = 'derivative + lift'
+            idirection = 3
         end if
+
+
+
+
 
 
 
@@ -351,17 +396,30 @@ contains
         if ( cache_type == 'value') then
             var_gq = self%cache%get_data('element',cache_type,idirection,self%function_info%seed,ieqn)
 
-        else if (cache_type == 'derivative') then
 
+
+        else if (cache_type == 'derivative') then
+            ! Get DG derivative
+            var_gq = self%cache%get_data('element','derivative',idirection,self%function_info%seed,ieqn)
+
+
+
+        else if (cache_type == 'derivative + lift') then
             ! Get DG derivative
             var_gq = self%cache%get_data('element','derivative',idirection,self%function_info%seed,ieqn)
 
             ! Add lift contributions from each face
             do iface = 1,NFACES
-                var_gq = var_gq + self%cache%get_data('face interior', 'lift', idirection, self%function_info%seed,ieqn,iface)
+                tmp_gq = self%cache%get_data('face interior', 'lift element', idirection, self%function_info%seed,ieqn,iface)
+                var_gq = var_gq + tmp_gq
             end do
 
         end if
+
+
+
+
+
 
     end function get_element_variable
     !**********************************************************************************************
@@ -397,16 +455,51 @@ contains
     !!
     !!
     !----------------------------------------------------------------------------------------------
-    subroutine store_bc_state(self,ieqn,cache_data)
+    subroutine store_bc_state(self,ieqn,cache_data,data_type)
         class(chidg_worker_t),  intent(inout)   :: self
         integer(ik),            intent(in)      :: ieqn
         type(AD_D),             intent(in)      :: cache_data(:)
+        character(len=*),       intent(in)      :: data_type
+
+        character(len=:), allocatable   :: cache_type
+        integer(ik)                     :: idirection
+
+
+        !
+        ! Set cache_type
+        !
+        if (data_type == 'value') then
+            cache_type = 'value'
+            idirection = 0
+        else if (data_type == 'ddx') then
+            cache_type = 'derivative'
+            idirection = 1
+        else if (data_type == 'ddy') then
+            cache_type = 'derivative'
+            idirection = 2
+        else if (data_type == 'ddz') then
+            cache_type = 'derivative'
+            idirection = 3
+        else
+            call chidg_signal(FATAL,"worker%store_bc_state: Invalid data_type specification. Options are 'value', 'ddx', 'ddy', 'ddz'.")
+        end if
+
+
+
+
+
 
 
         !
         ! Store bc state in cache, face exterior component
         !
-        call self%cache%set_data('face exterior',cache_data,'value',0,self%function_info%seed,ieqn,self%iface)
+        if (cache_type == 'value') then
+            call self%cache%set_data('face exterior',cache_data,'value',0,self%function_info%seed,ieqn,self%iface)
+
+        else if (cache_type == 'derivative') then
+            call self%cache%set_data('face exterior',cache_data,'derivative',idirection,self%function_info%seed,ieqn,self%iface)
+
+        end if
 
 
 

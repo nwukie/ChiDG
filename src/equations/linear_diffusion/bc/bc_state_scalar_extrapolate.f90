@@ -81,7 +81,8 @@ contains
         integer(ik)     :: iu
 
 
-        type(AD_D),     allocatable, dimension(:)   :: u_bc
+        type(AD_D), allocatable, dimension(:)   ::  &
+                u_bc, dudx_bc, dudy_bc, dudz_bc
 
 
 
@@ -97,13 +98,23 @@ contains
         !
         u_bc  = worker%get_face_variable(iu, 'value', ME)
 
+        dudx_bc = worker%get_face_variable(iu, 'ddx', ME)
+        dudy_bc = worker%get_face_variable(iu, 'ddy', ME)
+        dudz_bc = worker%get_face_variable(iu, 'ddz', ME)
+
 
 
         !
         ! Store boundary condition state
         !
-        call worker%store_bc_state(iu, u_bc)
+        call worker%store_bc_state(iu, u_bc, 'value')
 
+        !
+        ! Store boundary condition state, gradient
+        !
+        call worker%store_bc_state(iu, dudx_bc, 'ddx')
+        call worker%store_bc_state(iu, dudy_bc, 'ddy')
+        call worker%store_bc_state(iu, dudz_bc, 'ddz')
 
 
     end subroutine compute_bc_state

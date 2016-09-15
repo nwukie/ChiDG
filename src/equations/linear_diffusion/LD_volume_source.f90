@@ -88,7 +88,7 @@ contains
         !
         ! Interpolate solution to quadrature nodes
         !
-        source = worker%get_element_variable(iu, 'ddx')
+        source = worker%get_element_variable(iu, 'ddx + lift')
 
         x = worker%x('volume')
 

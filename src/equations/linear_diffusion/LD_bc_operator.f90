@@ -60,7 +60,7 @@ contains
         !
         ! Set operator equations
         !
-        call self%set_equation("u"   )
+        call self%set_equation("u")
 
     end subroutine init
     !********************************************************************************
@@ -92,11 +92,11 @@ contains
 
 
         ! Storage at quadrature nodes
-        type(AD_D), allocatable, dimension(:)   ::          &
+        type(AD_D), allocatable, dimension(:)   ::  &
             dudx, dudy, dudz, flux_x, flux_y, flux_z, integrand
 
 
-        real(rk),   allocatable, dimension(:)   ::          &
+        real(rk),   allocatable, dimension(:)   ::  &
             normx, normy, normz
 
 
@@ -110,9 +110,9 @@ contains
         !
         ! Interpolate boundary condition state to face quadrature nodes
         !
-        dudx  = worker%get_face_variable(iu, 'ddx', BC)
-        dudy  = worker%get_face_variable(iu, 'ddy', BC)
-        dudz  = worker%get_face_variable(iu, 'ddz', BC)
+        dudx  = worker%get_face_variable(iu, 'ddx + lift', BC)
+        dudy  = worker%get_face_variable(iu, 'ddy + lift', BC)
+        dudz  = worker%get_face_variable(iu, 'ddz + lift', BC)
 
 
         normx = worker%normal(1)
@@ -130,6 +130,9 @@ contains
         flux_z = -dudz
 
         integrand = flux_x*normx + flux_y*normy + flux_z*normz
+
+!        print*, 'bc integrand'
+!        print*, integrand(:)%x_ad_
 
         call worker%integrate_boundary(iu, integrand)
 

@@ -266,7 +266,7 @@ contains
 
 
 
-            case('lift')
+            case('lift face')
 
                 ! Try to find lift differentiated wrt seed.
                 !
@@ -277,7 +277,7 @@ contains
                                (self%eqn(ieqn)%lift_seeds(iseed)%ielement_g == seed%ielement_g)
 
                     if (has_seed) then
-                        cache_data = self%eqn(ieqn)%lift(:,idirection,iseed)
+                        cache_data = self%eqn(ieqn)%lift_face(:,idirection,iseed)
                         seed_found = .true.
                         exit
                     end if
@@ -287,7 +287,7 @@ contains
                 ! If the current component doesn't have a linearization wrt seed, just take any
                 ! lift and zero out autodiff
                 if (.not. seed_found) then
-                    cache_data = self%eqn(ieqn)%lift(:,idirection,1)
+                    cache_data = self%eqn(ieqn)%lift_face(:,idirection,1)
 
                     do igq = 1,size(cache_data)
                         cache_data(igq)%xp_ad_ = ZERO
@@ -295,13 +295,44 @@ contains
                 end if
 
 
+            case('lift element')
 
+                ! Try to find lift differentiated wrt seed.
+                !
+                seed_found = .false.
+                do iseed = 1,size(self%eqn(ieqn)%lift_seeds)
+                    
+                    has_seed = (self%eqn(ieqn)%lift_seeds(iseed)%idomain_g  == seed%idomain_g) .and. &
+                               (self%eqn(ieqn)%lift_seeds(iseed)%ielement_g == seed%ielement_g)
+
+                    if (has_seed) then
+                        cache_data = self%eqn(ieqn)%lift_element(:,idirection,iseed)
+                        seed_found = .true.
+                        exit
+                    end if
+
+                end do
+
+                ! If the current component doesn't have a linearization wrt seed, just take any
+                ! lift and zero out autodiff
+                if (.not. seed_found) then
+                    cache_data = self%eqn(ieqn)%lift_element(:,idirection,1)
+
+                    do igq = 1,size(cache_data)
+                        cache_data(igq)%xp_ad_ = ZERO
+                    end do
+                end if
+
+            case default
+
+                call chidg_signal(FATAL,"cache_data%get_data: Invalid data type for getting data. Options are 'value', 'derivative', 'lift face', or 'lift element'")
 
 
         end select
 
 
 
+        if (.not. allocated(cache_data(1)%xp_ad_) ) call chidg_signal(FATAL,"get_data: derivatives not allocated")
 
 
     end function get_data

@@ -117,34 +117,34 @@ program driver
 !            call initialize_variable(chidg%data,1,fcn)
 
 
-!            call create_function(constant,'constant')
-!
-!            ! rho
-!            call constant%set_option('val',1.0_rk)
-!            call initialize_variable(chidg%data,1,constant)
-
-
             call create_function(constant,'constant')
 
             ! rho
-            call constant%set_option('val',1.20_rk)
+            call constant%set_option('val',0.01_rk)
             call initialize_variable(chidg%data,1,constant)
 
-            ! rho_u
-            call constant%set_option('val',50._rk)
-            call initialize_variable(chidg%data,2,constant)
 
-            ! rho_v
-            call constant%set_option('val',0._rk)
-            call initialize_variable(chidg%data,3,constant)
-
-            ! rho_w
-            call constant%set_option('val',0._rk)
-            call initialize_variable(chidg%data,4,constant)
-
-            ! rho_E
-            call constant%set_option('val',230000._rk)
-            call initialize_variable(chidg%data,5,constant)
+!            call create_function(constant,'constant')
+!
+!            ! rho
+!            call constant%set_option('val',1.20_rk)
+!            call initialize_variable(chidg%data,1,constant)
+!
+!            ! rho_u
+!            call constant%set_option('val',50._rk)
+!            call initialize_variable(chidg%data,2,constant)
+!
+!            ! rho_v
+!            call constant%set_option('val',0._rk)
+!            call initialize_variable(chidg%data,3,constant)
+!
+!            ! rho_w
+!            call constant%set_option('val',0._rk)
+!            call initialize_variable(chidg%data,4,constant)
+!
+!            ! rho_E
+!            call constant%set_option('val',230000._rk)
+!            call initialize_variable(chidg%data,5,constant)
 
 
 

@@ -20,16 +20,20 @@ module type_cache_data_equation
     !-------------------------------------------------------------------------------------
     type, public :: cache_data_equation_t
 
-        type(AD_D),     allocatable :: value(:,:)        ! (nnodes, ndepend_value)
+        type(AD_D),     allocatable :: value(:,:)           ! (nnodes, ndepend_value)
         type(seed_t),   allocatable :: value_seeds(:)
 
 
-        type(AD_D),     allocatable :: derivative(:,:,:) ! (nnodes, nderiv_dimension, ndepend_deriv)
+        type(AD_D),     allocatable :: derivative(:,:,:)    ! (nnodes, ndimension, ndepend_deriv)
         type(seed_t),   allocatable :: derivative_seeds(:)
 
 
-        type(AD_D),     allocatable :: lift(:,:,:)        ! (nnodes, nderiv_dimension, ndepend_deriv)
+        type(AD_D),     allocatable :: lift_face(:,:,:)     ! (nnodes_face, ndimension, ndepend_deriv)
+        type(AD_D),     allocatable :: lift_element(:,:,:)  ! (nnodes_vol,  ndimension, ndepend_deriv)
         type(seed_t),   allocatable :: lift_seeds(:)
+
+
+
 
     contains
 
@@ -71,7 +75,7 @@ contains
         integer(ik),                    intent(in)              :: ielement_l
         integer(ik),                    intent(in), optional    :: iface
 
-        integer(ik) :: nnodes, ndepend_value, ndepend_deriv, ierr, iface_loop, iseed
+        integer(ik) :: nnodes, nnodes_vol, nnodes_face, ndepend_value, ndepend_deriv, ierr, iface_loop, iseed
         logical     :: reallocate
 
 
@@ -85,6 +89,9 @@ contains
 
             case('element')
                 nnodes = mesh(idomain_l)%elems(ielement_l)%gq%vol%nnodes
+
+                nnodes_vol  = mesh(idomain_l)%elems(ielement_l)%gq%vol%nnodes
+                nnodes_face = mesh(idomain_l)%elems(ielement_l)%gq%face%nnodes
 
                 ! Interior element
                 ndepend_value = 1
@@ -101,6 +108,9 @@ contains
 
                 nnodes = mesh(idomain_l)%faces(ielement_l,iface)%gq%face%nnodes
 
+                nnodes_vol  = mesh(idomain_l)%faces(ielement_l,iface)%gq%vol%nnodes
+                nnodes_face = mesh(idomain_l)%faces(ielement_l,iface)%gq%face%nnodes
+
                 ! Interior element
                 ndepend_value = 1
 
@@ -112,6 +122,9 @@ contains
 
             case('face exterior')
                 nnodes = mesh(idomain_l)%faces(ielement_l,iface)%gq%face%nnodes
+
+                nnodes_vol  = mesh(idomain_l)%faces(ielement_l,iface)%gq%vol%nnodes
+                nnodes_face = mesh(idomain_l)%faces(ielement_l,iface)%gq%face%nnodes
 
                 ! Exterior Elements
                 ndepend_value = self%get_ndepend_face_exterior(mesh,idomain_l,ielement_l,iface)
@@ -160,10 +173,11 @@ contains
                            (size(self%derivative,3) /= ndepend_deriv) )
 
             if (reallocate) then
-                deallocate(self%derivative, self%lift, self%derivative_seeds, self%lift_seeds)
+                deallocate(self%derivative, self%lift_face, self%lift_element, self%derivative_seeds, self%lift_seeds)
                 allocate(self%derivative(nnodes,3,ndepend_deriv), &
-                         self%lift(      nnodes,3,ndepend_deriv), &
                          self%derivative_seeds(ndepend_deriv),    &
+                         self%lift_face(nnodes_face,3,ndepend_deriv), &
+                         self%lift_element(nnodes_vol,3,ndepend_deriv), &
                          self%lift_seeds(      ndepend_deriv), stat=ierr)
                 if (ierr /= 0) call AllocationError
             end if
@@ -171,8 +185,9 @@ contains
         else
 
             allocate(self%derivative(nnodes,3,ndepend_deriv), &
-                     self%lift(      nnodes,3,ndepend_deriv), &
                      self%derivative_seeds(ndepend_deriv),    &
+                     self%lift_face(nnodes_face,3,ndepend_deriv), &
+                     self%lift_element(nnodes_vol,3,ndepend_deriv), &
                      self%lift_seeds(ndepend_deriv), stat=ierr)
             if (ierr /= 0) call AllocationError
 
@@ -196,6 +211,7 @@ contains
         do iseed = 1,size(self%lift_seeds)
             call self%lift_seeds(iseed)%clear()
         end do
+
 
 
     end subroutine resize
@@ -314,7 +330,7 @@ contains
             !
             ! Set variable 'lift' data
             !
-            case('lift')
+            case('lift face')
                 ! Search to see if a value differentiated wrt seed already exists
                 seed_location = 0
                 seed_found = .false.
@@ -347,7 +363,45 @@ contains
                 if (seed_location == 0) call chidg_signal(FATAL,"cache_data_equation%set_data: Did not find a location to put the data")
                 
                 ! Store data
-                self%lift(:,idirection,seed_location) = cache_data
+                self%lift_face(:,idirection,seed_location) = cache_data
+                self%lift_seeds(seed_location) = seed
+
+
+
+            case('lift element')
+                ! Search to see if a value differentiated wrt seed already exists
+                seed_location = 0
+                seed_found = .false.
+                do iseed = 1,size(self%lift_seeds)
+                    seed_found = ( (seed%idomain_g  == self%lift_seeds(iseed)%idomain_g) .and. &
+                                   (seed%ielement_g == self%lift_seeds(iseed)%ielement_g) )
+
+                    if (seed_found) then
+                        seed_location = iseed
+                        exit
+                    end if
+                end do
+
+
+
+                ! If matching seed was not found, find first empty seed location and place there
+                if (.not. seed_found) then
+                    do iseed = 1,size(self%lift_seeds)
+                        empty_seed = (self%lift_seeds(iseed)%idomain_g == 0)
+
+                        if (empty_seed) then
+                            seed_location = iseed
+                            exit
+                        end if
+
+                    end do
+                end if
+
+
+                if (seed_location == 0) call chidg_signal(FATAL,"cache_data_equation%set_data: Did not find a location to put the data")
+                
+                ! Store data
+                self%lift_element(:,idirection,seed_location) = cache_data
                 self%lift_seeds(seed_location) = seed
 
 
@@ -356,7 +410,7 @@ contains
 
             case default
                 msg = "cache_data_equation%store: The incoming variable data_type did not have an &
-                             valid value. Acceptable entries are 'value', 'derivative', or 'lift'"
+                             valid value. Acceptable entries are 'value', 'derivative', 'lift face', or 'lift element'"
                 call chidg_signal_one(FATAL,msg,data_type)
 
         end select

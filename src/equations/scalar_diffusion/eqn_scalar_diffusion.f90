@@ -1,4 +1,4 @@
-module eqn_linear_diffusion
+module eqn_scalar_diffusion
 #include <messenger.h>
     use type_equation_set,      only: equation_set_t
     use type_equation_builder,  only: equation_builder_t
@@ -8,13 +8,13 @@ module eqn_linear_diffusion
 
     !>
     !!
-    !!
-    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   9/19/2016
     !!
     !!
     !!
     !-----------------------------------------------------------------------------------------------------
-    type, extends(equation_builder_t), public :: linear_diffusion
+    type, extends(equation_builder_t), public :: scalar_diffusion
 
 
     contains
@@ -22,7 +22,7 @@ module eqn_linear_diffusion
         procedure   :: init
         procedure   :: build
 
-    end type linear_diffusion
+    end type scalar_diffusion
     !******************************************************************************************************
 
 
@@ -39,9 +39,9 @@ contains
     !!
     !---------------------------------------------------------------------------------------------
     subroutine init(self)
-        class(linear_diffusion),   intent(inout)  :: self
+        class(scalar_diffusion),   intent(inout)  :: self
 
-        call self%set_name('Linear Diffusion')
+        call self%set_name('Test Scalar Diffusion')
 
     end subroutine init
     !*********************************************************************************************
@@ -52,23 +52,23 @@ contains
 
     !>
     !!
-    !!
-    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   9/19/2016
     !!
     !!
     !!
     !-------------------------------------------------------------------------------------------------------
-    function build(self,blueprint) result(linear_diffusion_eqn)
-        class(linear_diffusion), intent(in)  :: self
+    function build(self,blueprint) result(scalar_diffusion_eqn)
+        class(scalar_diffusion), intent(in)  :: self
         character(len=*),        intent(in)  :: blueprint
 
-        type(equation_set_t)    :: linear_diffusion_eqn
+        type(equation_set_t)    :: scalar_diffusion_eqn
         
 
         !
         ! Set equationset name.
         !
-        call linear_diffusion_eqn%set_name("Linear Diffusion")
+        call scalar_diffusion_eqn%set_name("Test Scalar Diffusion")
 
 
 
@@ -78,13 +78,13 @@ contains
         select case (trim(blueprint))
         
             case('default')
-                call linear_diffusion_eqn%add_operator("Linear Diffusion Boundary Average Flux")
-                call linear_diffusion_eqn%add_operator("Linear Diffusion Volume Flux")
-                call linear_diffusion_eqn%add_operator("Linear Diffusion Volume Source")
-                call linear_diffusion_eqn%add_operator("Linear Diffusion BC Flux")
+                call scalar_diffusion_eqn%add_operator("Scalar Diffusion Boundary Average Operator")
+                call scalar_diffusion_eqn%add_operator("Scalar Diffusion Volume Operator")
+                call scalar_diffusion_eqn%add_operator("Scalar Diffusion BC Operator")
+                call scalar_diffusion_eqn%add_operator("Scalar Diffusion Volume Source Standard")
 
             case default
-                call chidg_signal_one(FATAL, "build lineardiffusion: I didn't recognize the construction parameter &
+                call chidg_signal_one(FATAL, "build scalar diffusion: I didn't recognize the construction parameter &
                                               that was passed to build the equation set.", blueprint)
 
 
@@ -98,4 +98,4 @@ contains
 
 
 
-end module eqn_linear_diffusion
+end module eqn_scalar_diffusion

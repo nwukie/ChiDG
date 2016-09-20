@@ -231,7 +231,7 @@ contains
                 !
                 ! They recommend L<1 for robustness, but it seems for these problems L can be increased.
                 !
-                L = 4.0_rk
+                L = 3.0_rk
                 crit = sum(abs(h(1:j,j)))/norm_before
                 
                 if ( crit <  L ) reorthogonalize = .false.
@@ -239,7 +239,7 @@ contains
                 
 
                 !! Force reorthogonalization
-                !reorthogonalize = .true.
+                reorthogonalize = .true.
                 if ( reorthogonalize ) then
                     call write_line('GMRES: Reorthogonalizing...', io_proc=GLOBAL_MASTER)
 
@@ -283,7 +283,8 @@ contains
                 !
                 ! Compute next rotation
                 !
-                gam  = sqrt( h(j,j)*h(j,j)  +  h(j+1,j)*h(j+1,j) )
+                !gam  = sqrt( h(j,j)*h(j,j)  +  h(j+1,j)*h(j+1,j) )
+                gam  = hypot(h(j,j), h(j+1,j))
                 c(j) = h(j,j)/gam
                 s(j) = h(j+1,j)/gam
 

@@ -1,26 +1,26 @@
-module LD_volume_diffusive_operator
+module SD_volume_source
 #include <messenger.h>
     use mod_kinds,              only: rk,ik
-    use mod_constants,          only: ZERO,ONE,TWO,HALF
+    use mod_constants,          only: ZERO,ONE,TWO,FOUR,PI
 
     use type_operator,          only: operator_t
     use type_chidg_worker,      only: chidg_worker_t
     use type_properties,        only: properties_t
     use DNAD_D
 
-    use LD_properties,          only: LD_properties_t
+    use SD_properties,          only: SD_properties_t
     implicit none
     private
 
     !>
     !!
     !!  @author Nathan A. Wukie (AFRL)
-    !!  @date   9/14/2016
+    !!  @date   8/19/2016
     !!
     !!
     !!
     !-------------------------------------------------------------------------
-    type, extends(operator_t), public :: LD_volume_diffusive_operator_t
+    type, extends(operator_t), public :: SD_volume_source_t
 
 
     contains
@@ -28,11 +28,10 @@ module LD_volume_diffusive_operator
         procedure   :: init
         procedure   :: compute
 
-    end type LD_volume_diffusive_operator_t
+    end type SD_volume_source_t
     !*************************************************************************
 
 contains
-
 
     !>
     !!
@@ -41,13 +40,13 @@ contains
     !!
     !--------------------------------------------------------------------------------
     subroutine init(self)
-        class(LD_volume_diffusive_operator_t),   intent(inout)      :: self
+        class(SD_volume_source_t),   intent(inout)      :: self
 
         ! Set operator name
-        call self%set_name("Linear Diffusion Volume Flux")
+        call self%set_name("Scalar Diffusion Volume Source Standard")
 
         ! Set operator type
-        call self%set_operator_type("Volume Diffusive Flux")
+        call self%set_operator_type("Volume Diffusive Source")
 
         ! Set operator equations
         call self%set_equation("u")
@@ -59,26 +58,26 @@ contains
 
 
 
+
+
+
+
     !>
     !!
     !!  @author Nathan A. Wukie (AFRL)
-    !!  @date   9/14/2016
+    !!  @date   8/19/2016
     !!
     !!
     !!
     !------------------------------------------------------------------------------------
     subroutine compute(self,worker,prop)
-        class(LD_volume_diffusive_operator_t),  intent(inout)   :: self
-        type(chidg_worker_t),                   intent(inout)   :: worker
-        class(properties_t),                    intent(inout)   :: prop
+        class(SD_volume_source_t),          intent(inout)   :: self
+        type(chidg_worker_t),               intent(inout)   :: worker
+        class(properties_t),                intent(inout)   :: prop
 
-
-        integer(ik)             :: iu
-!        real(rk)                :: mu_x, mu_y, mu_z
-
-        type(AD_D), allocatable, dimension(:)   ::  &
-            flux_x, flux_y, flux_z, dudx, dudy, dudz
-
+        integer(ik)                             :: iu
+        type(AD_D), allocatable, dimension(:)   :: source
+        real(rk),   allocatable, dimension(:)   :: x
 
         !
         ! Get variable index from equation set
@@ -86,39 +85,21 @@ contains
         iu = prop%get_equation_index("u")
 
 
-!        !
-!        ! Get equation set properties
-!        !
-!        select type(prop)
-!            type is (LD_properties_t)
-!                mu_x = prop%mu(1)
-!                mu_y = prop%mu(2)
-!                mu_z = prop%mu(3)
-!        end select
-
-
         !
         ! Interpolate solution to quadrature nodes
         !
-        dudx = worker%get_element_variable(iu, 'ddx + lift')
-        dudy = worker%get_element_variable(iu, 'ddy + lift')
-        dudz = worker%get_element_variable(iu, 'ddz + lift')
+        source = worker%get_element_variable(iu, 'ddx + lift')
 
+        x = worker%x('volume')
 
+        source = FOUR*PI*PI*dsin(TWO*PI*x)
 
-        !
-        ! Compute volume flux at quadrature nodes
-        !
-        flux_x = -dudx
-        flux_y = -dudy
-        flux_z = -dudz
 
 
         !
         ! Integrate volume flux
         !
-        call worker%integrate_volume(iu, flux_x, flux_y, flux_z)
-
+        call worker%integrate_volume(iu, source)
 
 
     end subroutine compute
@@ -129,4 +110,4 @@ contains
 
 
 
-end module LD_volume_diffusive_operator
+end module SD_volume_source

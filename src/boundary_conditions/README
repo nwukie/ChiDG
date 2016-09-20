@@ -1,0 +1,68 @@
+Yaaaaaay boundary conditions....
+
+
+How does ChiDG handle boundary conditions?
+
+    A boundary condition in ChiDG consists of two parts; Geometry(bc_patch) and State Functions(bc_state).
+        - The 'bc_patch_t' component of the boundary condition contains the geometry descriptor
+          of what faces the boundary condition is to be applied to. Each face in a 'mesh_t' that is a
+          boundary condition face also knows where it's boundary condition information is located within
+          a boundary condition. A face has BC_ID that defines which boundary condition it is associated with,
+          and BC_face that defines which bc_face in the boundary condition it coincides with. This is because
+          the boundary condition may contain extra information about what other elements the face is coupled
+          with through the boundary condition.
+
+        - The 'bc_state_t' components are a list of boundary condition state functions. A boundary condition
+          is required to compute an external boundary state Q_BC that gets compute as a function of the 
+          boundary condition parameters and the interior solution state Q_BC = f(Q-, BC params). The
+          boundary condition states don't actually do any integrating or contributing to the residual, they
+          just compute an external state as a result of the boundary condition.
+
+
+
+    When one defines a new equation set, along with the interior operators (element interface fluxes and volume integrals), 
+    one shall also implement a bc_operator and include the string BC in the operator type specification in the
+    initialization routine.
+
+
+    Example:
+    subroutine init(self)
+
+        call self%set_name('Linear Diffusion Boundary Condition Operator')
+
+        call self%set_operator_type('BC Diffusive Flux')
+
+    end subroutine init
+
+
+    One also implements the flux definition for the equation set in the bc operator. In this way, the BC operator 
+    gets called on ALL boundary condition faces in the same way. The exterior solution however will have been
+    computed from a specialized 'bc_state_t' function for a specific boundary condition (wall, outlet, etc.).
+    So the specialized Q_BC is used to compute the generic boundary condition flux, Flux = F(Q_BC).
+
+
+
+    So, you could have many different boundary condition state(bc_state_t) functions:
+        
+        - Wall
+        - Inlet
+        - Outlet
+
+    These all just compute an external state Q_BC.
+
+
+    Then you have one boundary condition operator that computes the flux for all boundary condition faces using
+    the external state Q_BC.
+
+
+
+
+
+
+
+
+
+
+
+
+

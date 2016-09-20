@@ -98,7 +98,8 @@ contains
         !
         @assertTrue(allocated(cache_data_equation%value))
         @assertTrue(allocated(cache_data_equation%derivative))
-        @assertTrue(allocated(cache_data_equation%lift))
+        @assertTrue(allocated(cache_data_equation%lift_face))
+        @assertTrue(allocated(cache_data_equation%lift_element))
         
     end subroutine test_resize_face_interior__allocated
     !***************************************************************************************
@@ -117,7 +118,7 @@ contains
     subroutine test_resize_face_interior__size(self)
         class(test_cache_data_equation),    intent(inout)   :: self
         
-        integer(ik)                 :: idomain, ielem, iface, nnodes
+        integer(ik)                 :: idomain, ielem, iface, nnodes_face, nnodes_vol
         type(cache_data_equation_t) :: cache_data_equation
 
         idomain = 1
@@ -135,26 +136,30 @@ contains
         !
         ! Test that the cache allocated the correct component
         !
-        nnodes = self%chidg%data%mesh(idomain)%faces(ielem,iface)%gq%face%nnodes
+        nnodes_face = self%chidg%data%mesh(idomain)%faces(ielem,iface)%gq%face%nnodes
+        nnodes_vol = self%chidg%data%mesh(idomain)%faces(ielem,iface)%gq%vol%nnodes
 
         ! Number of ndoes
-        @assertEqual(size(cache_data_equation%value,1), nnodes)
+        @assertEqual(size(cache_data_equation%value,1), nnodes_face)
         ! Number of dependent elements
         @assertEqual(size(cache_data_equation%value,2), 1)
 
         ! Number of nodes
-        @assertEqual(size(cache_data_equation%derivative,1), nnodes)
+        @assertEqual(size(cache_data_equation%derivative,1), nnodes_face)
         ! Number of spatial dimentions
         @assertEqual(size(cache_data_equation%derivative,2), 3)
         ! Number of dependent elements
         @assertEqual(size(cache_data_equation%derivative,3), 2)
 
         ! Number of nodes
-        @assertEqual(size(cache_data_equation%lift,1), nnodes)
+        @assertEqual(size(cache_data_equation%lift_face,1), nnodes_face)
+        @assertEqual(size(cache_data_equation%lift_element,1), nnodes_vol)
         ! Number of spatial dimentions
-        @assertEqual(size(cache_data_equation%lift,2), 3)
+        @assertEqual(size(cache_data_equation%lift_face,2), 3)
+        @assertEqual(size(cache_data_equation%lift_element,2), 3)
         ! Number of dependent elements
-        @assertEqual(size(cache_data_equation%lift,3), 2)
+        @assertEqual(size(cache_data_equation%lift_face,3), 2)
+        @assertEqual(size(cache_data_equation%lift_element,3), 2)
         
     end subroutine test_resize_face_interior__size
     !***************************************************************************************
@@ -195,7 +200,8 @@ contains
         !
         @assertTrue(allocated(cache_data_equation%value))
         @assertTrue(allocated(cache_data_equation%derivative))
-        @assertTrue(allocated(cache_data_equation%lift))
+        @assertTrue(allocated(cache_data_equation%lift_face))
+        @assertTrue(allocated(cache_data_equation%lift_element))
         
     end subroutine test_resize_face_exterior__allocated
     !***************************************************************************************
@@ -214,7 +220,7 @@ contains
     subroutine test_resize_face_exterior__size(self)
         class(test_cache_data_equation),    intent(inout)   :: self
         
-        integer(ik)                 :: idomain, ielem, iface, nnodes
+        integer(ik)                 :: idomain, ielem, iface, nnodes_face, nnodes_vol
         type(cache_data_equation_t) :: cache_data_equation
 
         idomain = 1
@@ -232,26 +238,30 @@ contains
         !
         ! Test that the cache allocated the correct component
         !
-        nnodes = self%chidg%data%mesh(idomain)%faces(ielem,iface)%gq%face%nnodes
+        nnodes_face = self%chidg%data%mesh(idomain)%faces(ielem,iface)%gq%face%nnodes
+        nnodes_vol  = self%chidg%data%mesh(idomain)%faces(ielem,iface)%gq%vol%nnodes
 
         ! Number of ndoes
-        @assertEqual(size(cache_data_equation%value,1), nnodes)
+        @assertEqual(size(cache_data_equation%value,1), nnodes_face)
         ! Number of dependent elements
         @assertEqual(size(cache_data_equation%value,2), 1)
 
         ! Number of nodes
-        @assertEqual(size(cache_data_equation%derivative,1), nnodes)
+        @assertEqual(size(cache_data_equation%derivative,1), nnodes_face)
         ! Number of spatial dimentions
         @assertEqual(size(cache_data_equation%derivative,2), 3)
         ! Number of dependent elements
         @assertEqual(size(cache_data_equation%derivative,3), 2)
 
         ! Number of nodes
-        @assertEqual(size(cache_data_equation%lift,1), nnodes)
+        @assertEqual(size(cache_data_equation%lift_face,1), nnodes_face)
+        @assertEqual(size(cache_data_equation%lift_element,1), nnodes_vol)
         ! Number of spatial dimentions
-        @assertEqual(size(cache_data_equation%lift,2), 3)
+        @assertEqual(size(cache_data_equation%lift_face,2), 3)
+        @assertEqual(size(cache_data_equation%lift_element,2), 3)
         ! Number of dependent elements
-        @assertEqual(size(cache_data_equation%lift,3), 2)
+        @assertEqual(size(cache_data_equation%lift_face,3), 2)
+        @assertEqual(size(cache_data_equation%lift_element,3), 2)
         
     end subroutine test_resize_face_exterior__size
     !***************************************************************************************
@@ -298,7 +308,8 @@ contains
         !
         @assertTrue(allocated(cache_data_equation%value))
         @assertTrue(allocated(cache_data_equation%derivative))
-        @assertTrue(allocated(cache_data_equation%lift))
+        @assertTrue(allocated(cache_data_equation%lift_face))
+        @assertTrue(allocated(cache_data_equation%lift_element))
         
     end subroutine test_resize_element__allocated
     !***************************************************************************************
@@ -317,7 +328,7 @@ contains
     subroutine test_resize_element__size(self)
         class(test_cache_data_equation),    intent(inout)   :: self
         
-        integer(ik)                 :: idomain, ielem, nnodes
+        integer(ik)                 :: idomain, ielem, nnodes_face, nnodes_vol
         type(cache_data_equation_t) :: cache_data_equation
 
         idomain = 1
@@ -333,26 +344,30 @@ contains
         !
         ! Test that the cache allocated the correct component
         !
-        nnodes = self%chidg%data%mesh(idomain)%elems(ielem)%gq%vol%nnodes
+        nnodes_face = self%chidg%data%mesh(idomain)%elems(ielem)%gq%face%nnodes
+        nnodes_vol  = self%chidg%data%mesh(idomain)%elems(ielem)%gq%vol%nnodes
 
         ! Number of ndoes
-        @assertEqual(size(cache_data_equation%value,1), nnodes)
+        @assertEqual(size(cache_data_equation%value,1), nnodes_vol)
         ! Number of dependent elements
         @assertEqual(size(cache_data_equation%value,2), 1)
 
         ! Number of nodes
-        @assertEqual(size(cache_data_equation%derivative,1), nnodes)
+        @assertEqual(size(cache_data_equation%derivative,1), nnodes_vol)
         ! Number of spatial dimentions
         @assertEqual(size(cache_data_equation%derivative,2), 3)
         ! Number of dependent elements
         @assertEqual(size(cache_data_equation%derivative,3), 7)
 
         ! Number of nodes
-        @assertEqual(size(cache_data_equation%lift,1), nnodes)
+        @assertEqual(size(cache_data_equation%lift_face,1), nnodes_face)
+        @assertEqual(size(cache_data_equation%lift_element,1), nnodes_vol)
         ! Number of spatial dimentions
-        @assertEqual(size(cache_data_equation%lift,2), 3)
+        @assertEqual(size(cache_data_equation%lift_face,2), 3)
+        @assertEqual(size(cache_data_equation%lift_element,2), 3)
         ! Number of dependent elements
-        @assertEqual(size(cache_data_equation%lift,3), 7)
+        @assertEqual(size(cache_data_equation%lift_face,3), 7)
+        @assertEqual(size(cache_data_equation%lift_element,3), 7)
         
     end subroutine test_resize_element__size
     !***************************************************************************************

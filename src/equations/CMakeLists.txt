@@ -1,5 +1,5 @@
 add_subdirectory(linear_advection)
-add_subdirectory(linear_diffusion)
+add_subdirectory(scalar_diffusion)
 add_subdirectory(dual_linear_advection)
 add_subdirectory(euler)
 #add_subdirectory(PrimitiveLinearizedEuler)

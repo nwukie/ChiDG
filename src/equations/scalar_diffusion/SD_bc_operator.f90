@@ -1,4 +1,4 @@
-module LD_bc_operator
+module SD_bc_operator
     use mod_kinds,          only: ik, rk
     use mod_constants,      only: BC
     use type_operator,      only: operator_t
@@ -17,7 +17,7 @@ module LD_bc_operator
     !!
     !!
     !------------------------------------------------------------------------------------------
-    type, public, extends(operator_t) :: LD_bc_operator_t
+    type, public, extends(operator_t) :: SD_bc_operator_t
 
 
     contains
@@ -25,7 +25,7 @@ module LD_bc_operator
         procedure   :: init
         procedure   :: compute
 
-    end type LD_bc_operator_t
+    end type SD_bc_operator_t
     !*******************************************************************************************
 
 
@@ -45,17 +45,17 @@ contains
     !!
     !--------------------------------------------------------------------------------
     subroutine init(self)
-        class(LD_bc_operator_t),   intent(inout) :: self
+        class(SD_bc_operator_t),   intent(inout) :: self
         
         !
         ! Set operator name
         !
-        call self%set_name("Linear Diffusion BC Flux")
+        call self%set_name("Scalar Diffusion BC Operator")
 
         !
         ! Set operator type
         !
-        call self%set_operator_type("BC Diffusive Flux")
+        call self%set_operator_type("BC Diffusive Operator")
 
         !
         ! Set operator equations
@@ -82,7 +82,7 @@ contains
     !!
     !-------------------------------------------------------------------------------------------
     subroutine compute(self,worker,prop)
-        class(LD_bc_operator_t),    intent(inout)   :: self
+        class(SD_bc_operator_t),    intent(inout)   :: self
         type(chidg_worker_t),       intent(inout)   :: worker
         class(properties_t),        intent(inout)   :: prop
 
@@ -131,9 +131,6 @@ contains
 
         integrand = flux_x*normx + flux_y*normy + flux_z*normz
 
-!        print*, 'bc integrand'
-!        print*, integrand(:)%x_ad_
-
         call worker%integrate_boundary(iu, integrand)
 
 
@@ -149,4 +146,4 @@ contains
 
 
 
-end module LD_bc_operator
+end module SD_bc_operator

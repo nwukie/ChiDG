@@ -22,8 +22,9 @@ module mod_chimera
     use type_ivector,           only: ivector_t
     use type_rvector,           only: rvector_t
     use type_pvector,           only: pvector_t
+    use type_mvector,           only: mvector_t
 
-    use mod_polynomial,         only: polynomialVal
+    use mod_polynomial,         only: polynomialVal, dpolynomialVal
     use mod_periodic,           only: compute_periodic_offset
     use mod_chidg_mpi,          only: IRANK, NRANK, ChiDG_COMM
     use mpi_f08,                only: MPI_BCast, MPI_Send, MPI_Recv, MPI_INTEGER4, MPI_REAL8, MPI_LOGICAL, MPI_ANY_TAG, MPI_STATUS_IGNORE
@@ -204,6 +205,11 @@ contains
 
         real(rk)    :: offset_x, offset_y, offset_z
 
+        real(rk)        :: dxdxi, dxdeta, dxdzeta, dydxi, dydeta, dydzeta, dzdxi, dzdeta, dzdzeta, donor_jinv, parallel_jinv
+        real(rk)        :: donor_metric(3,3), parallel_metric(3,3)
+        type(mvector_t) :: dmetric
+        type(rvector_t) :: djinv
+
         type(face_info_t)           :: receiver
         type(element_info_t)        :: donor
         type(point_t)               :: donor_coord
@@ -226,6 +232,7 @@ contains
 
 
 
+
         !
         ! Loop through processes. One will process its chimera faces and try to find processor-local donors. If it can't
         ! find on-processor donors, then it will broadcast a search request to all other processors. All other processors
@@ -235,10 +242,6 @@ contains
         ! have found donor elements for the quadrature nodes.
         !
         do iproc = 0,NRANK-1
-
-
-
-
 
 
             !
@@ -348,7 +351,6 @@ contains
 
 
                             !
-                            !! If there is a parallel donor, determine which has the lowest domain index
                             ! If there is a parallel donor, determine which has the lowest volume
                             !
                             parallel_domain_g = 0
@@ -421,6 +423,13 @@ contains
                                 call MPI_Recv(parallel_coords,3,MPI_REAL8, idonor_proc, MPI_ANY_TAG, ChiDG_COMM, MPI_STATUS_IGNORE, ierr)
                                 call donor_coord%set(parallel_coords(1), parallel_coords(2), parallel_coords(3))
 
+                                ! Receive donor metric matrix
+                                call MPI_Recv(donor_metric,9,MPI_REAL8, idonor_proc, MPI_ANY_TAG, ChiDG_COMM, MPI_STATUS_IGNORE, ierr)
+
+                                ! Receive donor inverse jacobian mapping
+                                call MPI_Recv(donor_jinv,1,MPI_REAL8, idonor_proc, MPI_ANY_TAG, ChiDG_COMM, MPI_STATUS_IGNORE, ierr)
+
+
                             else if (use_local) then
 
                                 ! Send a message to all procs with donors that we don't need them
@@ -431,6 +440,30 @@ contains
                                     call MPI_Send(get_donor,1,MPI_LOGICAL, idonor_proc, 0, ChiDG_COMM, ierr)
                                 end do
 
+                                ! Compute local metric
+                                dxdxi   = mesh(donor%idomain_l)%elems(donor%ielement_l)%metric_point(1,1,donor_coord%c1_,donor_coord%c2_,donor_coord%c3_)
+                                dydxi   = mesh(donor%idomain_l)%elems(donor%ielement_l)%metric_point(2,1,donor_coord%c1_,donor_coord%c2_,donor_coord%c3_)
+                                dzdxi   = mesh(donor%idomain_l)%elems(donor%ielement_l)%metric_point(3,1,donor_coord%c1_,donor_coord%c2_,donor_coord%c3_)
+                                dxdeta  = mesh(donor%idomain_l)%elems(donor%ielement_l)%metric_point(1,2,donor_coord%c1_,donor_coord%c2_,donor_coord%c3_)
+                                dydeta  = mesh(donor%idomain_l)%elems(donor%ielement_l)%metric_point(2,2,donor_coord%c1_,donor_coord%c2_,donor_coord%c3_)
+                                dzdeta  = mesh(donor%idomain_l)%elems(donor%ielement_l)%metric_point(3,2,donor_coord%c1_,donor_coord%c2_,donor_coord%c3_)
+                                dxdzeta = mesh(donor%idomain_l)%elems(donor%ielement_l)%metric_point(1,3,donor_coord%c1_,donor_coord%c2_,donor_coord%c3_)
+                                dydzeta = mesh(donor%idomain_l)%elems(donor%ielement_l)%metric_point(2,3,donor_coord%c1_,donor_coord%c2_,donor_coord%c3_)
+                                dzdzeta = mesh(donor%idomain_l)%elems(donor%ielement_l)%metric_point(3,3,donor_coord%c1_,donor_coord%c2_,donor_coord%c3_)
+
+                                donor_metric(1,1) = dydeta*dzdzeta - dydzeta*dzdeta
+                                donor_metric(2,1) = dydzeta*dzdxi  - dydxi*dzdzeta
+                                donor_metric(3,1) = dydxi*dzdeta   - dydeta*dzdxi
+                                donor_metric(1,2) = dxdzeta*dzdeta - dxdeta*dzdzeta
+                                donor_metric(2,2) = dxdxi*dzdzeta  - dxdzeta*dzdxi
+                                donor_metric(3,2) = dxdeta*dzdxi   - dxdxi*dzdeta
+                                donor_metric(1,3) = dxdeta*dydzeta - dxdzeta*dydeta
+                                donor_metric(2,3) = dxdzeta*dydxi  - dxdxi*dydzeta
+                                donor_metric(3,3) = dxdxi*dydeta   - dxdeta*dydxi
+
+                                donor_jinv = dxdxi*dydeta*dzdzeta - dxdeta*dydxi*dzdzeta - &
+                                             dxdxi*dydzeta*dzdeta + dxdzeta*dydxi*dzdeta + &
+                                             dxdeta*dydzeta*dzdxi - dxdzeta*dydeta*dzdxi
                             else 
                                 call chidg_signal(FATAL,"detect_chimera_donors: no local or parallel donor found")
 
@@ -452,6 +485,8 @@ contains
                             call dnterms_c%push_back(donor%nterms_c)
 
                             call dcoordinate%push_back(donor_coord)
+                            call dmetric%push_back(donor_metric)
+                            call djinv%push_back(donor_jinv)
 
 
                             !
@@ -531,7 +566,9 @@ contains
                         !
                         ! Allocate chimera donor coordinate and quadrature index arrays. One list for each donor
                         !
-                        allocate( mesh(idom)%chimera%recv%data(ichimera_face)%donor_coords(ndonors), &
+                        allocate( mesh(idom)%chimera%recv%data(ichimera_face)%donor_coords(ndonors),        &
+                                  mesh(idom)%chimera%recv%data(ichimera_face)%donor_metrics(ndonors),       &
+                                  mesh(idom)%chimera%recv%data(ichimera_face)%donor_jinv(ndonors),          &
                                   mesh(idom)%chimera%recv%data(ichimera_face)%donor_gq_indices(ndonors), stat=ierr)
                         if (ierr /= 0) call AllocationError
 
@@ -570,6 +607,8 @@ contains
                                 if (donor_match) then
                                     call mesh(idom)%chimera%recv%data(ichimera_face)%donor_gq_indices(idonor)%push_back(igq)
                                     call mesh(idom)%chimera%recv%data(ichimera_face)%donor_coords(idonor)%push_back(dcoordinate%at(igq))
+                                    call mesh(idom)%chimera%recv%data(ichimera_face)%donor_metrics(idonor)%push_back(dmetric%at(igq))
+                                    call mesh(idom)%chimera%recv%data(ichimera_face)%donor_jinv(idonor)%push_back(djinv%at(igq))
                                     exit
                                 end if
                             end do
@@ -590,6 +629,8 @@ contains
                         call delement_g%clear()
                         call delement_l%clear()
                         call dcoordinate%clear()
+                        call dmetric%clear()
+                        call djinv%clear()
                         call dproc%clear()
                         call dneqns%clear()
                         call dnterms_s%clear()
@@ -687,6 +728,36 @@ contains
                             parallel_coords(2) = donor_coord%c2_
                             parallel_coords(3) = donor_coord%c3_
                             call MPI_Send(parallel_coords,3,MPI_REAL8,iproc,0,ChiDG_COMM,ierr)
+
+
+                            ! Compute metric terms for the point in the donor element
+                            dxdxi   = mesh(donor%idomain_l)%elems(donor%ielement_l)%metric_point(1,1,donor_coord%c1_,donor_coord%c2_,donor_coord%c3_)
+                            dydxi   = mesh(donor%idomain_l)%elems(donor%ielement_l)%metric_point(2,1,donor_coord%c1_,donor_coord%c2_,donor_coord%c3_)
+                            dzdxi   = mesh(donor%idomain_l)%elems(donor%ielement_l)%metric_point(3,1,donor_coord%c1_,donor_coord%c2_,donor_coord%c3_)
+                            dxdeta  = mesh(donor%idomain_l)%elems(donor%ielement_l)%metric_point(1,2,donor_coord%c1_,donor_coord%c2_,donor_coord%c3_)
+                            dydeta  = mesh(donor%idomain_l)%elems(donor%ielement_l)%metric_point(2,2,donor_coord%c1_,donor_coord%c2_,donor_coord%c3_)
+                            dzdeta  = mesh(donor%idomain_l)%elems(donor%ielement_l)%metric_point(3,2,donor_coord%c1_,donor_coord%c2_,donor_coord%c3_)
+                            dxdzeta = mesh(donor%idomain_l)%elems(donor%ielement_l)%metric_point(1,3,donor_coord%c1_,donor_coord%c2_,donor_coord%c3_)
+                            dydzeta = mesh(donor%idomain_l)%elems(donor%ielement_l)%metric_point(2,3,donor_coord%c1_,donor_coord%c2_,donor_coord%c3_)
+                            dzdzeta = mesh(donor%idomain_l)%elems(donor%ielement_l)%metric_point(3,3,donor_coord%c1_,donor_coord%c2_,donor_coord%c3_)
+
+                            parallel_metric(1,1) = dydeta*dzdzeta - dydzeta*dzdeta
+                            parallel_metric(2,1) = dydzeta*dzdxi  - dydxi*dzdzeta
+                            parallel_metric(3,1) = dydxi*dzdeta   - dydeta*dzdxi
+                            parallel_metric(1,2) = dxdzeta*dzdeta - dxdeta*dzdzeta
+                            parallel_metric(2,2) = dxdxi*dzdzeta  - dxdzeta*dzdxi
+                            parallel_metric(3,2) = dxdeta*dzdxi   - dxdxi*dzdeta
+                            parallel_metric(1,3) = dxdeta*dydzeta - dxdzeta*dydeta
+                            parallel_metric(2,3) = dxdzeta*dydxi  - dxdxi*dydzeta
+                            parallel_metric(3,3) = dxdxi*dydeta   - dxdeta*dydxi
+                            call MPI_Send(parallel_metric,9,MPI_REAL8,iproc,0,ChiDG_COMM,ierr)
+
+                            ! Compute inverse element jacobian
+                            parallel_jinv = dxdxi*dydeta*dzdzeta - dxdeta*dydxi*dzdzeta - &
+                                            dxdxi*dydzeta*dzdeta + dxdzeta*dydxi*dzdeta + &
+                                            dxdeta*dydzeta*dzdxi - dxdzeta*dydeta*dzdxi
+                            call MPI_Send(parallel_jinv,1,MPI_REAL8,iproc,0,ChiDG_COMM,ierr)
+
                         end if
 
                     end if
@@ -760,7 +831,6 @@ contains
         real(rk)                :: xi,  eta, zeta
         real(rk)                :: xn,  yn,  zn
         real(rk)                :: xmin, xmax, ymin, ymax, zmin, zmax
-        real(rk)                :: tol
         type(ivector_t)         :: candidate_domains_g, candidate_domains_l, candidate_elements_g, candidate_elements_l
         type(ivector_t)         :: donors
         type(rvector_t)         :: donors_xi, donors_eta, donors_zeta
@@ -773,9 +843,6 @@ contains
         logical                 :: receiver  = .false.
         logical                 :: donor_found
 
-
-
-        tol = 10._rk*RKTOL
 
 
         xgq = gq_node%c1_
@@ -1079,12 +1146,14 @@ contains
     subroutine compute_chimera_interpolators(mesh)
         type(mesh_t),   intent(inout)   :: mesh(:)
 
-        integer(ik) :: idom, iChiID, idonor, ierr, ipt, iterm
-        integer(ik) :: donor_idomain_g, donor_idomain_l, donor_ielement_g, donor_ielement_l
-        integer(ik) :: npts, donor_nterms_s, spacedim
+        integer(ik)     :: idom, iChiID, idonor, ierr, ipt, iterm
+        integer(ik)     :: donor_idomain_g, donor_idomain_l, donor_ielement_g, donor_ielement_l
+        integer(ik)     :: npts, donor_nterms_s, spacedim
+        type(point_t)   :: node
 
-        type(point_t)           :: node
-        real(rk), allocatable   :: interpolator(:,:)
+        real(rk), allocatable, dimension(:,:)   ::  &
+            interpolator, interpolator_ddx, interpolator_ddy, interpolator_ddz, metric
+        real(rk)    :: jinv, ddxi, ddeta, ddzeta
 
 
 
@@ -1120,8 +1189,11 @@ contains
                     !
                     ! Allocate interpolator matrix
                     !
-                    if (allocated(interpolator)) deallocate(interpolator)
-                    allocate(interpolator(npts,donor_nterms_s), stat=ierr)
+                    if (allocated(interpolator)) deallocate(interpolator, interpolator_ddx, interpolator_ddy, interpolator_ddz)
+                    allocate(interpolator(    npts,donor_nterms_s), &
+                             interpolator_ddx(npts,donor_nterms_s), &
+                             interpolator_ddy(npts,donor_nterms_s), &
+                             interpolator_ddz(npts,donor_nterms_s), stat=ierr)
                     if (ierr /= 0) call AllocationError
 
                     !
@@ -1133,13 +1205,37 @@ contains
                             node = mesh(idom)%chimera%recv%data(iChiID)%donor_coords(idonor)%at(ipt)
                             interpolator(ipt,iterm) = polynomialVal(spacedim,donor_nterms_s,iterm,node)
 
+                            ddxi   = DPolynomialVal(spacedim,donor_nterms_s,iterm,node,XI_DIR  )
+                            ddeta  = DPolynomialVal(spacedim,donor_nterms_s,iterm,node,ETA_DIR )
+                            ddzeta = DPolynomialVal(spacedim,donor_nterms_s,iterm,node,ZETA_DIR)
+
+                            ! Get metrics for element mapping
+                            metric = mesh(idom)%chimera%recv%data(iChiID)%donor_metrics(idonor)%at(ipt)
+                            jinv   = mesh(idom)%chimera%recv%data(iChiID)%donor_jinv(idonor)%at(ipt)
+
+                            ! Compute cartesian derivative interpolator for gq node
+                            interpolator_ddx(ipt,iterm) = metric(1,1) * ddxi   * (ONE/jinv) + &
+                                                          metric(2,1) * ddeta  * (ONE/jinv) + &
+                                                          metric(3,1) * ddzeta * (ONE/jinv)
+                            interpolator_ddy(ipt,iterm) = metric(1,2) * ddxi   * (ONE/jinv) + &
+                                                          metric(2,2) * ddeta  * (ONE/jinv) + &
+                                                          metric(3,2) * ddzeta * (ONE/jinv)
+                            interpolator_ddz(ipt,iterm) = metric(1,3) * ddxi   * (ONE/jinv) + &
+                                                          metric(2,3) * ddeta  * (ONE/jinv) + &
+                                                          metric(3,3) * ddzeta * (ONE/jinv)
+
                         end do ! ipt
                     end do ! iterm
 
                     !
-                    ! Store interpolator
+                    ! Store interpolators
                     !
                     call mesh(idom)%chimera%recv%data(iChiID)%donor_interpolator%push_back(interpolator)
+                    call mesh(idom)%chimera%recv%data(iChiID)%donor_interpolator_ddx%push_back(interpolator_ddx)
+                    call mesh(idom)%chimera%recv%data(iChiID)%donor_interpolator_ddy%push_back(interpolator_ddy)
+                    call mesh(idom)%chimera%recv%data(iChiID)%donor_interpolator_ddz%push_back(interpolator_ddz)
+
+
 
                 end do  ! idonor
 

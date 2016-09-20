@@ -1,4 +1,4 @@
-module LD_properties
+module SD_properties
     use mod_kinds,  only: rk
     use type_properties,    only: properties_t
 
@@ -12,12 +12,12 @@ module LD_properties
     !!
     !!
     !-------------------------------------------------------------------------
-    type, extends(properties_t), public :: LD_properties_t
+    type, extends(properties_t), public :: SD_properties_t
 
         real(rk)    :: mu(3)
 
-    end type LD_properties_t
+    end type SD_properties_t
     !**************************************************************************
 
 
-end module LD_properties
+end module SD_properties

@@ -78,8 +78,6 @@ contains
       
         real(rk)                :: entropy_error
 
-        !logical                 :: tolerance_check
-        !logical                 :: maxiter_check
 
 
 
@@ -104,11 +102,7 @@ contains
             resid  = ONE    ! Force inner loop entry
             niter = 0       ! Initialize inner loop counter
 
-            !tolerance_check = .true.
-            !maxiter_check   = .true.
             do while ( resid > self%tol )
-            !do while ( tolerance_check .and. maxiter_check )
-            !do while ( niter == 0 )
                 niter = niter + 1
 
                 call write_line("   niter: ", niter, delimiter='', io_proc=GLOBAL_MASTER)
@@ -124,19 +118,21 @@ contains
                 ! Update Spatial Residual and Linearization (rhs, lin)
                 !
                 call update_space(data,timing)
-
-
-                call self%residual_time%push_back(timing)   ! non-essential record-keeping
-
                 resid = rhs%norm(ChiDG_COMM)
-                !tolerance_check =  (resid > self%tol)
-                !maxiter_check   =  (niter < self%
+
+
+                !
+                ! Tolerance check
+                !
+                if ( resid < self%tol ) exit
+
 
 
                 !
                 ! Print diagnostics
                 !
                 call write_line("   R(Q) - Norm: ", resid, delimiter='', io_proc=GLOBAL_MASTER)
+                call self%residual_time%push_back(timing)   ! non-essential record-keeping
                 call self%residual_norm%push_back(resid)
 
 

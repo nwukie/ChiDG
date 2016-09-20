@@ -18,22 +18,65 @@ module mod_equations
     ! Import Equations
     !
     use eqn_linear_advection,       only: linear_advection
-    use eqn_linear_diffusion,       only: linear_diffusion
+    use eqn_scalar_diffusion,       only: scalar_diffusion
     use eqn_dual_linear_advection,  only: dual_linear_advection
     use eqn_euler,                  only: euler 
     implicit none
 
 
 
-    !
-    ! Vector of registered equations.
-    !
-    type(evector_t)             :: registered_equation_builders
-    logical                     :: initialized = .false.
+
+    !>
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   9/19/2016
+    !!
+    !!
+    !--------------------------------------------------------------------------------------
+    type, public :: equation_builder_factory_t
+
+        type(evector_t) :: builders
+
+    contains
+        
+        procedure   :: register
+        procedure   :: produce => build_equation_set
+
+    end type equation_builder_factory_t
+    !**************************************************************************************
+
+
+
+
+    type(equation_builder_factory_t)    :: equation_builder_factory
+    logical                             :: initialized = .false.
 
 
 
 contains
+
+
+    !>
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   9/19/2016
+    !!
+    !!
+    !--------------------------------------------------------------------------------------
+    subroutine register(self,builder)
+        class(equation_builder_factory_t),  intent(inout)   :: self
+        class(equation_builder_t),          intent(in)      :: builder
+
+        call self%builders%push_back(builder)
+
+    end subroutine register
+    !***************************************************************************************
+
+
+
+
+
+
 
 
 
@@ -59,7 +102,7 @@ contains
         !
         type(euler)                 :: euler_builder
         type(linear_advection)      :: linear_advection_builder
-        type(linear_diffusion)      :: linear_diffusion_builder
+        type(scalar_diffusion)      :: scalar_diffusion_builder
         type(dual_linear_advection) :: dual_linear_advection_builder
 
 
@@ -69,17 +112,17 @@ contains
         if ( .not. initialized ) then
 
             ! Register in global vector
-            call registered_equation_builders%push_back(euler_builder)
-            call registered_equation_builders%push_back(linear_advection_builder)
-            call registered_equation_builders%push_back(linear_diffusion_builder)
-            call registered_equation_builders%push_back(dual_linear_advection_builder)
+            call equation_builder_factory%register(euler_builder)
+            call equation_builder_factory%register(linear_advection_builder)
+            call equation_builder_factory%register(scalar_diffusion_builder)
+            call equation_builder_factory%register(dual_linear_advection_builder)
 
 
 
 
             ! Initialize each builder
-            do ibuild = 1,registered_equation_builders%size()
-                call registered_equation_builders%data(ibuild)%bld%init()
+            do ibuild = 1,equation_builder_factory%builders%size()
+                call equation_builder_factory%builders%data(ibuild)%bld%init()
             end do
 
             ! Confirm initialization
@@ -106,9 +149,10 @@ contains
     !!  @param[in] eqnset       Allocatable equationset_t class to be instantiated
     !!
     !-------------------------------------------------------------------------------------
-    function build_equation_set(eqnstring,blueprint) result(eqnset)
-        character(len=*),   intent(in)      :: eqnstring
-        character(len=*),   intent(in)      :: blueprint
+    function build_equation_set(self,eqnstring,blueprint) result(eqnset)
+        class(equation_builder_factory_t),  intent(inout)   :: self
+        character(len=*),                   intent(in)      :: eqnstring
+        character(len=*),                   intent(in)      :: blueprint
 
         integer                                 :: ierr, bindex
         type(equation_set_t)                    :: eqnset
@@ -117,7 +161,7 @@ contains
         !
         ! Find equation set in 'available_equations' vector
         !
-        bindex = registered_equation_builders%index_by_name(eqnstring)
+        bindex = self%builders%index_by_name(eqnstring)
 
 
         !
@@ -129,8 +173,7 @@ contains
         !
         ! Get equation set builder
         !
-        !builder = registered_equation_builders%at(bindex)
-        allocate(builder, source=registered_equation_builders%at(bindex), stat=ierr)
+        allocate(builder, source=self%builders%at(bindex), stat=ierr)
         if (ierr /= 0) call AllocationError
 
 
@@ -161,11 +204,11 @@ contains
         integer :: neqns, ieqn
         character(len=:),   allocatable :: ename
         
-        neqns = registered_equation_builders%size()
+        neqns = equation_builder_factory%builders%size()
 
         do ieqn = 1,neqns
 
-            ename = registered_equation_builders%data(ieqn)%bld%get_name()
+            ename = equation_builder_factory%builders%data(ieqn)%bld%get_name()
             call write_line(trim(ename))
 
         end do ! ieqn

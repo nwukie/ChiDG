@@ -1,4 +1,4 @@
-module LD_boundary_diffusive_operator
+module SD_boundary_operator
 #include <messenger.h>
     use mod_kinds,                  only: rk,ik
     use mod_constants,              only: ZERO,ONE,TWO,HALF, ME, NEIGHBOR
@@ -8,7 +8,7 @@ module LD_boundary_diffusive_operator
     use type_properties,            only: properties_t
     use DNAD_D
 
-    use LD_properties,              only: LD_properties_t
+    use SD_properties,              only: SD_properties_t
     implicit none
 
     private
@@ -23,7 +23,7 @@ module LD_boundary_diffusive_operator
     !!
     !!
     !--------------------------------------------------------------------------------
-    type, extends(operator_t), public :: LD_boundary_diffusive_operator_t
+    type, extends(operator_t), public :: SD_boundary_operator_t
 
 
     contains
@@ -31,7 +31,7 @@ module LD_boundary_diffusive_operator
         procedure   :: init
         procedure   :: compute
 
-    end type LD_boundary_diffusive_operator_t
+    end type SD_boundary_operator_t
     !********************************************************************************
 
 
@@ -46,17 +46,17 @@ contains
     !!
     !--------------------------------------------------------------------------------
     subroutine init(self)
-        class(LD_boundary_diffusive_operator_t),   intent(inout) :: self
+        class(SD_boundary_operator_t),   intent(inout) :: self
         
         !
         ! Set operator name
         !
-        call self%set_name("Linear Diffusion Boundary Average Flux")
+        call self%set_name("Scalar Diffusion Boundary Average Operator")
 
         !
         ! Set operator type
         !
-        call self%set_operator_type("Boundary Diffusive Flux")
+        call self%set_operator_type("Boundary Diffusive Operator")
 
         !
         ! Set operator equations
@@ -84,9 +84,9 @@ contains
     !!
     !-----------------------------------------------------------------------------------------
     subroutine compute(self,worker,prop)
-        class(LD_boundary_diffusive_operator_t),    intent(inout)   :: self
-        type(chidg_worker_t),                       intent(inout)   :: worker
-        class(properties_t),                        intent(inout)   :: prop
+        class(SD_boundary_operator_t),  intent(inout)   :: self
+        type(chidg_worker_t),           intent(inout)   :: worker
+        class(properties_t),            intent(inout)   :: prop
 
 
         integer(ik)                             :: iu
@@ -152,4 +152,4 @@ contains
 
 
 
-end module LD_boundary_diffusive_operator
+end module SD_boundary_operator

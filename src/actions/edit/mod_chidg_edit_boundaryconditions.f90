@@ -3,7 +3,7 @@ module mod_chidg_edit_boundaryconditions
     use mod_kinds,          only: rk, ik, rdouble
     use mod_constants,      only: NFACES, XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX
     use type_bc_state,   only: bc_state_t
-    use mod_bc,             only: create_bc, list_bcs, check_bc_state_exists
+    use mod_bc,             only: create_bc, list_bcs, check_bc_state_registered
     use type_svector,       only: svector_t
     use mod_string,         only: string_t
     use type_function,      only: function_t
@@ -419,7 +419,7 @@ contains
         character(len=:),       allocatable :: command, dname_trim
         character(len=1024)                 :: bc_string, pname
         logical                             :: run_edit_bc_face, get_property, property_exists, set_bc, &
-                                               print_bcs, remove_bc
+                                               print_bcs, remove_bc, bc_state_exists
 
 
         faces = ["  XI_MIN","  XI_MAX"," ETA_MIN"," ETA_MAX","ZETA_MIN","ZETA_MAX"]
@@ -542,6 +542,7 @@ contains
                 ! Remove bc_state case
                 !
                 case (2)
+                    bc_state_exists = .true.
                     remove_bc = .true.
                     do while (remove_bc)
 
@@ -552,6 +553,11 @@ contains
                         dname_trim = trim(adjustl(dname))
                         call print_bc_domain_face(dname_trim(3:), trim(adjustl(faces(iface))))
 
+                        if (.not. bc_state_exists) then
+                            call write_line("The boundary condition state specified for removal wasn't found on the face")
+                        end if
+
+
                         ! Get boundary condition state from user to remove
                         command = "Enter boundary condition state to remove: "
                         call write_line(' ')
@@ -559,8 +565,15 @@ contains
                         read(*,"(A1024)") bc_string
 
                         ! Call routine to remove boundary condition state
-                        call delete_bc_state_hdf(bcface,trim(bc_string))
-                        remove_bc = .false.
+                        bc_state_exists = check_bc_state_exists(bcface,trim(bc_string))
+
+                        if (bc_state_exists) then
+                            call delete_bc_state_hdf(bcface,trim(bc_string))
+                            remove_bc = .false.
+                        end if
+
+                        ! Exit if blank
+                        if (trim(bc_string) == "") remove_bc = .false.
 
                     end do !remove_bc
 
@@ -643,9 +656,9 @@ contains
     !!
     !!
     !---------------------------------------------------------------------------------------------------
-    subroutine add_bc_state_hdf(bcface,opstring)
+    subroutine add_bc_state_hdf(bcface,state_string)
         integer(HID_T),     intent(in)      :: bcface
-        character(*),       intent(in)      :: opstring
+        character(*),       intent(in)      :: state_string
 
         class(bc_state_t),   allocatable :: bc_state
         integer(ik)                         :: nfcns, ifcn, ierr
@@ -653,7 +666,7 @@ contains
         logical                             :: link_exists, state_found
 
 
-        if ( trim(opstring) == 'empty' ) then
+        if ( trim(state_string) == 'empty' ) then
             !
             ! If 'empty' do not allocate new bc
             !
@@ -661,22 +674,22 @@ contains
         else
 
             ! Check to make sure the bc_state wasn't previously added
-            call h5lexists_f(bcface, "BCS_"//trim(adjustl(opstring)), link_exists, ierr)
+            call h5lexists_f(bcface, "BCS_"//trim(adjustl(state_string)), link_exists, ierr)
 
 
             if (.not. link_exists) then
 
                 ! Check bc_state exists in the register. 
                 ! If not, user probably entered the wrong string, so do nothing
-                state_found = check_bc_state_exists(trim(adjustl(opstring)))
+                state_found = check_bc_state_registered(trim(adjustl(state_string)))
 
                 if (state_found) then
                     ! Create a new group for the bc_state_t
-                    call h5gcreate_f(bcface, "BCS_"//trim(adjustl(opstring)), op_id, ierr)
+                    call h5gcreate_f(bcface, "BCS_"//trim(adjustl(state_string)), op_id, ierr)
                     if (ierr /= 0) call chidg_signal(FATAL,"add_boundarycondition_state_hdf: error creating new group for bcfunction")
 
                     ! Create an instance of the specified boundary condition to query its options
-                    call create_bc(opstring,bc_state)
+                    call create_bc(state_string,bc_state)
 
                     ! Add bc_state properties to the group that was created
                     call add_bc_properties_hdf(op_id,bc_state)
@@ -811,9 +824,9 @@ contains
     !!  @note   Modified to include bc_states
     !!
     !----------------------------------------------------------------------------------------------------
-    subroutine delete_bc_state_hdf(bcface,opstring)
+    subroutine delete_bc_state_hdf(bcface,state_string)
         integer(HID_T),     intent(in)  :: bcface
-        character(len=*),   intent(in)  :: opstring
+        character(len=*),   intent(in)  :: state_string
 
         integer(HID_T)                          :: bc_state
 
@@ -826,10 +839,11 @@ contains
         type(h5o_info_t), target                :: h5_info
 
 
+
         !
         ! Open the bc_state group
         !
-        call h5gopen_f(bcface, "BCS_"//trim(opstring), bc_state, ierr)
+        call h5gopen_f(bcface, "BCS_"//trim(state_string), bc_state, ierr)
 
 
         !
@@ -911,8 +925,9 @@ contains
         !
         ! Unlink the bc_state group
         !
-        call h5gunlink_f(bcface,"BCS_"//trim(opstring),ierr)
+        call h5gunlink_f(bcface,"BCS_"//trim(state_string),ierr)
         if (ierr /= 0) call chidg_signal(FATAL,"delete_bc_state_hdf: error unlinking bc_state group")
+
 
     end subroutine delete_bc_state_hdf
     !****************************************************************************************************
@@ -1365,6 +1380,44 @@ contains
 
     end subroutine edit_property
     !********************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+    !>
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   9/15/2016
+    !!
+    !!
+    !!
+    !--------------------------------------------------------------------------------------------
+    function check_bc_state_exists(bcface,bc_state) result(exist_status)
+        integer(HID_T),     intent(in)  :: bcface
+        character(len=*),   intent(in)  :: bc_state
+
+        integer(ik) :: ierr
+        logical     :: exist_status
+
+        ! Check if face contains the bc_state
+        call h5lexists_f(bcface, "BCS_"//trim(bc_state), exist_status, ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"check_bc_state_exists: Error in call to h5lexists_f")
+
+
+    end function check_bc_state_exists
+    !*********************************************************************************************
+
+
+
+
+
 
 
 

@@ -890,14 +890,11 @@ contains
                         case('value')
                             interpolator = mesh(idom)%faces(ielem,iface)%gq%face%val(:,:,donor_face%iface)    ! THIS PROBABLY NEEDS IMPROVED
                         case('ddx')
-!                            interpolator = mesh(idom)%faces(ielem,iface)%ddx
-                            call chidg_signal(FATAL,"get_face_interpolation_interpolator: Parallel 'ddx' not yet implemented.")
+                            interpolator = mesh(idom)%faces(ielem,iface)%neighbor_ddx
                         case('ddy')
-!                            interpolator = mesh(idom)%faces(ielem,iface)%ddy
-                            call chidg_signal(FATAL,"get_face_interpolation_interpolator: Parallel 'ddx' not yet implemented.")
+                            interpolator = mesh(idom)%faces(ielem,iface)%neighbor_ddy
                         case('ddz')
-!                            interpolator = mesh(idom)%faces(ielem,iface)%ddz
-                            call chidg_signal(FATAL,"get_face_interpolation_interpolator: Parallel 'ddx' not yet implemented.")
+                            interpolator = mesh(idom)%faces(ielem,iface)%neighbor_ddz
                         case default
                             call chidg_signal(FATAL,"get_face_interpolation_interpolator: Invalid interpolation_type. Options are 'value', 'ddx', 'ddy', 'ddz'.")
                     end select
@@ -924,14 +921,11 @@ contains
                         case('value')
                             interpolator = mesh(idom)%chimera%recv%data(ChiID)%donor_interpolator%at(idonor)
                         case('ddx')
-        !                    interpolator = mesh(idom)%faces(ielem,iface)%ddx
-                            call chidg_signal(FATAL,"get_face_interpolation_interpolator: Chimera 'ddx' not yet implemented.")
+                            interpolator = mesh(idom)%chimera%recv%data(ChiID)%donor_interpolator_ddx%at(idonor)
                         case('ddy')
-        !                    interpolator = mesh(idom)%faces(ielem,iface)%ddy
-                            call chidg_signal(FATAL,"get_face_interpolation_interpolator: Chimera 'ddy' not yet implemented.")
+                            interpolator = mesh(idom)%chimera%recv%data(ChiID)%donor_interpolator_ddy%at(idonor)
                         case('ddz')
-        !                    interpolator = mesh(idom)%faces(ielem,iface)%ddz
-                            call chidg_signal(FATAL,"get_face_interpolation_interpolator: Chimera 'ddz' not yet implemented.")
+                            interpolator = mesh(idom)%chimera%recv%data(ChiID)%donor_interpolator_ddz%at(idonor)
                         case default
                             call chidg_signal(FATAL,"get_face_interpolation_interpolator: Invalid interpolation_type. Options are 'value', 'ddx', 'ddy', 'ddz'.")
                     end select

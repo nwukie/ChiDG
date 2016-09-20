@@ -46,7 +46,7 @@ contains
         type(element_connectivity_t)    :: connectivity
         real(rk)                        :: sqrt_two, inv_sqrt_two
         integer(ik)                     :: ftype, ineighbor, mapping, ielem, idomain, spacedim
-        integer(ik)                     :: ineighbor_domain_g, ineighbor_domain_l, ineighbor_element_g, ineighbor_element_l, ineighbor_proc
+        integer(ik)                     :: ineighbor_domain_g, ineighbor_domain_l, ineighbor_element_g, ineighbor_element_l, ineighbor_face, ineighbor_proc
         
         
         call this%chidg%init('env')
@@ -108,12 +108,12 @@ contains
         ineighbor_element_g = 0
         ineighbor_element_l = 0
         ineighbor_proc      = 0
-        call this%faces(XI_MIN)%init_neighbor(ftype,ineighbor_domain_g,ineighbor_domain_l,ineighbor_element_g,ineighbor_element_l,ineighbor_proc)
-        call this%faces(XI_MAX)%init_neighbor(ftype,ineighbor_domain_g,ineighbor_domain_l,ineighbor_element_g,ineighbor_element_l,ineighbor_proc)
-        call this%faces(ETA_MIN)%init_neighbor(ftype,ineighbor_domain_g,ineighbor_domain_l,ineighbor_element_g,ineighbor_element_l,ineighbor_proc)
-        call this%faces(ETA_MAX)%init_neighbor(ftype,ineighbor_domain_g,ineighbor_domain_l,ineighbor_element_g,ineighbor_element_l,ineighbor_proc)
-        call this%faces(ZETA_MIN)%init_neighbor(ftype,ineighbor_domain_g,ineighbor_domain_l,ineighbor_element_g,ineighbor_element_l,ineighbor_proc)
-        call this%faces(ZETA_MAX)%init_neighbor(ftype,ineighbor_domain_g,ineighbor_domain_l,ineighbor_element_g,ineighbor_element_l,ineighbor_proc)
+        call this%faces(XI_MIN)%init_neighbor(  ftype,ineighbor_domain_g,ineighbor_domain_l,ineighbor_element_g,ineighbor_element_l,ineighbor_face,ineighbor_proc)
+        call this%faces(XI_MAX)%init_neighbor(  ftype,ineighbor_domain_g,ineighbor_domain_l,ineighbor_element_g,ineighbor_element_l,ineighbor_face,ineighbor_proc)
+        call this%faces(ETA_MIN)%init_neighbor( ftype,ineighbor_domain_g,ineighbor_domain_l,ineighbor_element_g,ineighbor_element_l,ineighbor_face,ineighbor_proc)
+        call this%faces(ETA_MAX)%init_neighbor( ftype,ineighbor_domain_g,ineighbor_domain_l,ineighbor_element_g,ineighbor_element_l,ineighbor_face,ineighbor_proc)
+        call this%faces(ZETA_MIN)%init_neighbor(ftype,ineighbor_domain_g,ineighbor_domain_l,ineighbor_element_g,ineighbor_element_l,ineighbor_face,ineighbor_proc)
+        call this%faces(ZETA_MAX)%init_neighbor(ftype,ineighbor_domain_g,ineighbor_domain_l,ineighbor_element_g,ineighbor_element_l,ineighbor_face,ineighbor_proc)
         
         call this%faces(XI_MIN)%init_sol(this%elem)
         call this%faces(XI_MAX)%init_sol(this%elem)

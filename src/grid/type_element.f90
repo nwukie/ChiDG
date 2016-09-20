@@ -6,14 +6,12 @@ module type_element
                                       X_DIR, Y_DIR, Z_DIR, XI_DIR, ETA_DIR, ZETA_DIR, TWO_DIM, THREE_DIM, RKTOL, &
                                       VALID_POINT, INVALID_POINT
     use mod_quadrature,         only: GQ, get_quadrature
-    use mod_grid,               only: get_element_mapping
+    use mod_grid,               only: get_element_mapping, face_corners
     use mod_polynomial,         only: polynomialVal, dpolynomialVal
     use mod_grid_tools,         only: compute_modal_coordinates
     use mod_inv,                only: inv
     use mod_connectivity_tools, only: connectivity_get_ielem, connectivity_get_mapping, connectivity_get_node
 
-    ! test
-    use mod_chidg_mpi,          only: IRANK
 
     use type_point,                 only: point_t
     use type_densevector,           only: densevector_t
@@ -101,6 +99,9 @@ module type_element
         procedure, public   :: solution_point         !< Compute a discrete value for the solution at a given xi,eta, zeta.
 
 
+        ! Get connected face
+        procedure, public   :: get_face_from_corners
+
         ! Private utility procedure
         procedure           :: compute_element_matrices
         procedure           :: compute_mass_matrix
@@ -108,6 +109,8 @@ module type_element
         procedure           :: compute_quadrature_metrics
         procedure           :: compute_quadrature_coords
         procedure           :: assign_quadrature
+
+
 
         final               :: destructor
 
@@ -900,7 +903,7 @@ contains
         ! 2D/3D. For metric terms, unlike solution derivatives, dzdzeta is 1 for 2D, 0 else.
         !
         if ( spacedim == TWO_DIM ) then
-            if (      (cart_dir == X_DIR) .and. (comp_dir == ZETA_DIR) ) then
+            if      ( (cart_dir == X_DIR) .and. (comp_dir == ZETA_DIR) ) then
                 val = ZERO
             else if ( (cart_dir == Y_DIR) .and. (comp_dir == ZETA_DIR) ) then
                 val = ZERO
@@ -1004,7 +1007,6 @@ contains
         real(rk)    :: mat(3,3), minv(3,3)
         real(rk)    :: R(3)
         real(rk)    :: dcoord(3)
-        !real(rk)    :: res, dx, dy, dz, tol
         real(rk)    :: res, tol
 
 
@@ -1110,6 +1112,93 @@ contains
 
 
     end function computational_point
+    !********************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+
+
+    !>  Given a set of node indices, determine and return the associated face index
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   9/20/2016
+    !!
+    !!
+    !-------------------------------------------------------------------------------------------
+    function get_face_from_corners(self,corner_indices) result(face_index)
+        class(element_t),   intent(in)  :: self
+        integer(ik),        intent(in)  :: corner_indices(:)
+
+        integer(ik), dimension(size(corner_indices))   :: corner_position
+
+        integer(ik), allocatable    :: element_indices(:)
+
+        integer(ik)                 :: nterms_1d, face_index, cindex, eindex, iface_test
+        logical                     :: node_matches, face_match, &
+                                       corner_one_in_face, corner_two_in_face, corner_three_in_face, corner_four_in_face
+
+        !
+        ! Get nodes from connectivity
+        !
+        element_indices = self%connectivity%get_element_nodes()
+
+
+        do cindex = 1,size(corner_indices)
+            do eindex = 1,size(element_indices)
+
+
+                node_matches = (corner_indices(cindex) == element_indices(eindex))
+
+                if (node_matches) then
+                    corner_position(cindex) = eindex
+                    exit
+                end if
+
+
+            end do
+        end do
+
+
+        !
+        ! Determine element mapping index
+        !
+        nterms_1d = 0
+        do while (nterms_1d*nterms_1d*nterms_1d < self%nterms_c)
+            nterms_1d = nterms_1d + 1
+        end do
+
+
+        !
+        ! Test corner positions against known face configurations
+        !
+        do iface_test = 1,NFACES
+            corner_one_in_face   = any(face_corners(iface_test,:,nterms_1d - 1) == corner_position(1))
+            corner_two_in_face   = any(face_corners(iface_test,:,nterms_1d - 1) == corner_position(2))
+            corner_three_in_face = any(face_corners(iface_test,:,nterms_1d - 1) == corner_position(3))
+            corner_four_in_face  = any(face_corners(iface_test,:,nterms_1d - 1) == corner_position(4))
+
+            face_match = (corner_one_in_face .and. corner_two_in_face .and. corner_three_in_face .and. corner_four_in_face )
+
+            if (face_match) then
+                face_index = iface_test
+                exit
+            end if
+
+        end do
+
+
+        if (.not. face_match) call chidg_signal(FATAL,"element%get_face_from_corners: couldn't find a face index that matched the provided corners")
+
+
+    end function get_face_from_corners
     !********************************************************************************************
 
 

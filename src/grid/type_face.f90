@@ -39,8 +39,8 @@ module type_face
         integer(ik)                 :: iface                !< XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, etc
         integer(ik)                 :: ChiID = 0            !< Identifier for domain-local Chimera interfaces
 
-        integer(ik)                 :: BC_ID  = 0           !< Identifier for Boundary Condition index
-        integer(ik)                 :: BC_face = 0          !< Index in bc_patch
+        integer(ik)                 :: BC_ID  = 0           !< Identifier for Boundary Condition index bcs(BC_ID)
+        integer(ik)                 :: BC_face = 0          !< Index in bc_patch bcs(BC_ID)%bc_patch%coupled_elements(BC_face)
         integer(ik)                 :: BC_ndepend = 0       !< Number of coupled element if bc face.
 
         ! Owner-element information
@@ -56,9 +56,15 @@ module type_face
         integer(ik)                 :: ineighbor_domain_l  = 0          !< Processor-local index of the neighboring element's domain
         integer(ik)                 :: ineighbor_element_g = 0          !< Domain-global index of the neighboring element
         integer(ik)                 :: ineighbor_element_l = 0          !< Processor-local index of the neighboring element
+        integer(ik)                 :: ineighbor_face      = 0
         integer(ik)                 :: recv_comm           = 0
         integer(ik)                 :: recv_domain         = 0
         integer(ik)                 :: recv_element        = 0
+
+        real(rk),           allocatable :: neighbor_ddx(:,:)             !< Derivative of basis functions in x-direction at quadrature nodes
+        real(rk),           allocatable :: neighbor_ddy(:,:)             !< Derivative of basis functions in y-direction at quadrature nodes
+        real(rk),           allocatable :: neighbor_ddz(:,:)             !< Derivative of basis functions in z-direction at quadrature nodes
+        real(rk),           allocatable :: neighbor_invmass(:,:)
 
 
         ! Chimera face offset. For periodic boundary condition.
@@ -203,13 +209,14 @@ contains
     !!
     !!
     !----------------------------------------------------------------------------------------------------------
-    subroutine init_neighbor(self,ftype,ineighbor_domain_g,ineighbor_domain_l,ineighbor_element_g,ineighbor_element_l,ineighbor_proc)
+    subroutine init_neighbor(self,ftype,ineighbor_domain_g,ineighbor_domain_l,ineighbor_element_g,ineighbor_element_l,ineighbor_face,ineighbor_proc)
         class(face_t),  intent(inout)   :: self
         integer(ik),    intent(in)      :: ftype
         integer(ik),    intent(in)      :: ineighbor_domain_g
         integer(ik),    intent(in)      :: ineighbor_domain_l
         integer(ik),    intent(in)      :: ineighbor_element_g
         integer(ik),    intent(in)      :: ineighbor_element_l
+        integer(ik),    intent(in)      :: ineighbor_face
         integer(ik),    intent(in)      :: ineighbor_proc
 
 
@@ -218,6 +225,7 @@ contains
         self%ineighbor_domain_l  = ineighbor_domain_l
         self%ineighbor_element_g = ineighbor_element_g
         self%ineighbor_element_l = ineighbor_element_l
+        self%ineighbor_face      = ineighbor_face
         self%ineighbor_proc      = ineighbor_proc
 
 

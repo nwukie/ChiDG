@@ -57,9 +57,9 @@ contains
         type(chidg_cache_t)         :: cache
         type(cache_handler_t)       :: cache_handler
 
+
         ! Initialize Chidg Worker references
         call worker%init(data%mesh, data%sdata, cache)
-!        call worker%init(data%mesh, data%sdata, data%bcset, cache)
 
 
         !
@@ -155,19 +155,6 @@ contains
         end do  ! idom
 
 
-
-
-
-
-!        !------------------------------------------------------------------------------------------
-!        !                                      Boundary Scheme
-!        !------------------------------------------------------------------------------------------
-!        !
-!        ! Apply boundary conditions for each domain.
-!        !
-!        do idom = 1,data%ndomains()
-!            call data%bcset(idom)%apply(data%mesh,data%sdata,data%eqnset(idom)%prop)
-!        end do ! idom
 
 
 

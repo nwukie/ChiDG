@@ -3,6 +3,7 @@ module type_properties
     use mod_kinds,      only: rk, ik
     use type_equation,  only: equation_t
     use type_fluid,     only: fluid_t
+    use type_scalar,    only: scalar_t
     implicit none
 
 
@@ -24,12 +25,14 @@ module type_properties
 
         ! Materials
         class(fluid_t),     allocatable :: fluid
+        class(scalar_t),    allocatable :: scalar
 
     contains
 
         procedure   :: nequations
         procedure   :: get_equation_index
         procedure   :: add_fluid
+        procedure   :: add_scalar
 
     end type properties_t
     !*********************************************************************************************
@@ -157,6 +160,45 @@ contains
 
     end subroutine add_fluid
     !***************************************************************************************************
+
+
+
+
+
+
+
+
+    !> Add a fluid definition to the properties type
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   2/25/2016
+    !!
+    !---------------------------------------------------------------------------------------------------
+    subroutine add_scalar(self,scalar)
+        class(properties_t),    intent(inout)   :: self
+        class(scalar_t),        intent(in)      :: scalar
+
+        integer(ik) :: ierr
+
+
+        if (allocated(self%scalar)) deallocate(self%scalar)
+
+
+        !
+        ! Allocate new material definition
+        !
+        allocate(self%scalar, source=scalar, stat=ierr)
+        if (ierr /= 0) call AllocationError
+
+    end subroutine add_scalar
+    !***************************************************************************************************
+
+
+
+
+
+
+
 
 
 

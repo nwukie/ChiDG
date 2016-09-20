@@ -4,22 +4,23 @@ module mod_operators
     use type_operator,  only: operator_t
     use type_ovector,   only: ovector_t
 
-    ! Linear Advection Equations
+    ! Linear Advection Operators
     use LA_volume_advective_flux,               only: LA_volume_advective_flux_t
     use LA_boundary_average_advective_flux,     only: LA_boundary_average_advective_flux_t
     use LA_LaxFriedrichs_flux,                  only: LA_LaxFriedrichs_flux_t
 
-    use LD_volume_diffusive_operator,           only: LD_volume_diffusive_operator_t
-    use LD_boundary_diffusive_operator,         only: LD_boundary_diffusive_operator_t
-    use LD_volume_source,                       only: LD_volume_source_t
-    use LD_bc_operator,                         only: LD_bc_operator_t
-
-    ! Dual Linear Advection Equations
+    ! Dual Linear Advection Operators
     use DLA_volume_advective_flux,              only: DLA_volume_advective_flux_t
     use DLA_boundary_average_advective_flux,    only: DLA_boundary_average_advective_flux_t
     use DLA_LaxFriedrichs_flux,                 only: DLA_LaxFriedrichs_flux_t
 
-    ! Euler Equations
+    ! Scalar Diffusion Operators
+    use SD_volume_operator,                     only: SD_volume_operator_t
+    use SD_boundary_operator,                   only: SD_boundary_operator_t
+    use SD_volume_source,                       only: SD_volume_source_t
+    use SD_bc_operator,                         only: SD_bc_operator_t
+
+    ! Euler Operators
     use euler_volume_operator,                  only: euler_volume_operator_t
     use euler_boundary_average_operator,        only: euler_boundary_average_operator_t
     use euler_roe_operator,                     only: euler_roe_operator_t
@@ -29,13 +30,99 @@ module mod_operators
 
 
 
-    type(ovector_t) :: registered_operators
-    logical         :: operators_initialized = .false.
+    !>
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   9/19/2016
+    !!
+    !!
+    !-------------------------------------------------------------------------------------------------
+    type, public :: operator_factory_t
+
+        type(ovector_t) :: operators
+
+    contains
+
+        procedure   :: register
+        procedure   :: produce
+
+    end type operator_factory_t
+    !**************************************************************************************************
 
 
+
+    type(operator_factory_t)    :: operator_factory
+    logical                     :: operators_initialized = .false.
 
 
 contains
+
+
+    !>
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   9/19/2016
+    !!
+    !!
+    !--------------------------------------------------------------------------------------------------
+    subroutine register(self,operator_instance)
+        class(operator_factory_t),  intent(inout)   :: self
+        class(operator_t),          intent(inout)   :: operator_instance
+
+        call self%operators%push_back(operator_instance)
+
+    end subroutine register
+    !**************************************************************************************************
+
+
+
+    !>  Build an operator based on an incoming string specification. Initialize the operator,
+    !!  and return it to the caller.
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   8/29/2016
+    !!
+    !!
+    !----------------------------------------------------------------------------------------------------
+    function produce(self,string) result(op)
+        class(operator_factory_t),  intent(inout)   :: self
+        character(len=*),           intent(in)      :: string
+
+        integer(ik)                     :: oindex, ierr
+        class(operator_t),  allocatable :: op
+
+        !
+        ! Find equation set in 'available_equations' vector
+        !
+        oindex = self%operators%index_by_name(string)
+
+
+        !
+        ! Check equationset was found in 'available_equations'
+        !
+        if (oindex == 0) call chidg_signal_one(FATAL,"build_operator: We couldn't find the operator string in the list of registered operators.", trim(string))
+
+
+        !
+        ! Get equation set builder
+        !
+        allocate(op, source=self%operators%at(oindex), stat=ierr)
+        if (ierr /= 0) call AllocationError
+
+
+        if (.not. allocated(op)) call chidg_signal(FATAL,"build_operator: For some reason, the operator didn't get allocated.")
+
+    end function produce
+    !*****************************************************************************************************
+
+
+
+
+
+
+
+
+
 
 
 
@@ -56,10 +143,10 @@ contains
         type(LA_LaxFriedrichs_flux_t)               :: LA_laxfriedrichs_operator
         
         ! Linear Diffusion Equation
-        type(LD_volume_diffusive_operator_t)        :: LD_volume_operator
-        type(LD_boundary_diffusive_operator_t)      :: LD_boundary_diffusive_operator
-        type(LD_volume_source_t)                    :: LD_volume_source
-        type(LD_bc_operator_t)                      :: LD_bc_operator
+        type(SD_volume_operator_t)                  :: SD_volume_operator
+        type(SD_boundary_operator_t)                :: SD_boundary_operator
+        type(SD_bc_operator_t)                      :: SD_bc_operator
+        type(SD_volume_source_t)                    :: SD_volume_source
 
         ! Dual Linear Advection Equations
         type(DLA_volume_advective_flux_t)           :: DLA_volume_operator
@@ -82,34 +169,34 @@ contains
         if (.not. operators_initialized) then
 
             ! Register Linear Advection
-            call registered_operators%push_back(LA_volume_operator)
-            call registered_operators%push_back(LA_average_operator)
-            call registered_operators%push_back(LA_laxfriedrichs_operator)
+            call operator_factory%register(LA_volume_operator)
+            call operator_factory%register(LA_average_operator)
+            call operator_factory%register(LA_laxfriedrichs_operator)
 
             ! Register Linear Diffusion
-            call registered_operators%push_back(LD_volume_operator)
-            call registered_operators%push_back(LD_boundary_diffusive_operator)
-            call registered_operators%push_back(LD_volume_source)
-            call registered_operators%push_back(LD_bc_operator)
+            call operator_factory%register(SD_volume_operator)
+            call operator_factory%register(SD_boundary_operator)
+            call operator_factory%register(SD_volume_source)
+            call operator_factory%register(SD_bc_operator)
 
 
             ! Register Dual Linear Advection
-            call registered_operators%push_back(DLA_volume_operator)
-            call registered_operators%push_back(DLA_average_operator)
-            call registered_operators%push_back(DLA_laxfriedrichs_operator)
+            call operator_factory%register(DLA_volume_operator)
+            call operator_factory%register(DLA_average_operator)
+            call operator_factory%register(DLA_laxfriedrichs_operator)
 
 
             ! Register Euler
-            call registered_operators%push_back(euler_volume_operator)
-            call registered_operators%push_back(euler_average_operator)
-            call registered_operators%push_back(euler_roe_operator)
-            call registered_operators%push_back(euler_laxfriedrichs_operator)
-            call registered_operators%push_back(euler_bc_operator)
+            call operator_factory%register(euler_volume_operator)
+            call operator_factory%register(euler_average_operator)
+            call operator_factory%register(euler_roe_operator)
+            call operator_factory%register(euler_laxfriedrichs_operator)
+            call operator_factory%register(euler_bc_operator)
 
 
             ! Initialize all operators
-            do iop = 1,registered_operators%size()
-                call registered_operators%data(iop)%op%init()
+            do iop = 1,operator_factory%operators%size()
+                call operator_factory%operators%data(iop)%op%init()
             end do
             
 
@@ -129,43 +216,6 @@ contains
 
 
 
-    !>  Build an operator based on an incoming string specification. Initialize the operator,
-    !!  and return it to the caller.
-    !!
-    !!  @author Nathan A. Wukie (AFRL)
-    !!  @date   8/29/2016
-    !!
-    !!
-    !----------------------------------------------------------------------------------------------------
-    function build_operator(string) result(op)
-        character(len=*),   intent(in)  :: string
-
-        integer(ik)                     :: oindex, ierr
-        class(operator_t),  allocatable :: op
-
-        !
-        ! Find equation set in 'available_equations' vector
-        !
-        oindex = registered_operators%index_by_name(string)
-
-
-        !
-        ! Check equationset was found in 'available_equations'
-        !
-        if (oindex == 0) call chidg_signal_one(FATAL,"build_operator: We couldn't find the operator string in the list of registered operators.", trim(string))
-
-
-        !
-        ! Get equation set builder
-        !
-        allocate(op, source=registered_operators%at(oindex), stat=ierr)
-        if (ierr /= 0) call AllocationError
-
-
-        if (.not. allocated(op)) call chidg_signal(FATAL,"build_operator: For some reason, the operator didn't get allocated.")
-
-    end function build_operator
-    !*****************************************************************************************************
 
 
 

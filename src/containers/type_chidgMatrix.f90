@@ -378,21 +378,21 @@ contains
     !!  @param[in]  ivar        Index of the variable, for which the linearization was computed
     !!
     !-----------------------------------------------------------------------------------------------------------
-    subroutine store_chimera(self,integral,face,seed,ivar)
+    subroutine store_chimera(self,integral,face_info,seed,ivar)
         class(chidgMatrix_t),       intent(inout)   :: self
         type(AD_D),                 intent(in)      :: integral(:)
-        type(face_info_t),          intent(in)      :: face
+        type(face_info_t),          intent(in)      :: face_info
         type(seed_t),               intent(in)      :: seed
         integer(ik),                intent(in)      :: ivar 
 
         integer(ik) :: idomain_l
 
-        idomain_l = face%idomain_l
+        idomain_l = face_info%idomain_l
 
         !
         ! Store linearization in associated domain blockmatrix_t
         !
-        call self%dom(idomain_l)%store_chimera(integral,face,seed,ivar)
+        call self%dom(idomain_l)%store_chimera(integral,face_info,seed,ivar)
 
     end subroutine store_chimera
     !***********************************************************************************************************
@@ -417,21 +417,21 @@ contains
     !!  @param[in]  ivar        Index of the variable, for which the linearization was computed
     !!
     !-----------------------------------------------------------------------------------------------------------
-    subroutine store_bc(self,integral,face,seed,ivar)
+    subroutine store_bc(self,integral,face_info,seed,ivar)
         class(chidgMatrix_t),       intent(inout)   :: self
         type(AD_D),                 intent(in)      :: integral(:)
-        type(face_info_t),          intent(in)      :: face
+        type(face_info_t),          intent(in)      :: face_info
         type(seed_t),               intent(in)      :: seed
         integer(ik),                intent(in)      :: ivar 
 
         integer(ik) :: idomain_l
 
-        idomain_l = face%idomain_l
+        idomain_l = face_info%idomain_l
 
         !
         ! Store linearization in associated domain blockmatrix_t
         !
-        call self%dom(idomain_l)%store_bc(integral,face,seed,ivar)
+        call self%dom(idomain_l)%store_bc(integral,face_info,seed,ivar)
 
     end subroutine store_bc
     !***********************************************************************************************************

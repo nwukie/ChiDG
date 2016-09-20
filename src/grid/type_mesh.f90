@@ -508,7 +508,7 @@ contains
         logical                 :: includes_node_one, includes_node_two, includes_node_three, includes_node_four
         logical                 :: neighbor_element
 
-        integer(ik)             :: ineighbor_domain_g, ineighbor_domain_l, ineighbor_element_g, ineighbor_element_l, ineighbor_proc, neighbor_status
+        integer(ik)             :: ineighbor_domain_g, ineighbor_domain_l, ineighbor_element_g, ineighbor_element_l, ineighbor_face, ineighbor_proc, neighbor_status
 
         !
         ! Loop through each local element and call initialization for each face
@@ -532,6 +532,7 @@ contains
                                                   ineighbor_domain_l,        &
                                                   ineighbor_element_g,       &
                                                   ineighbor_element_l,       &
+                                                  ineighbor_face,            &
                                                   ineighbor_proc,            &
                                                   neighbor_status)
 
@@ -551,6 +552,7 @@ contains
                         ineighbor_domain_l  = 0
                         ineighbor_element_g = 0
                         ineighbor_element_l = 0
+                        ineighbor_face      = 0
                         ineighbor_proc      = NO_PROC
 
                     end if
@@ -559,7 +561,7 @@ contains
                     !
                     ! Call face neighbor initialization routine
                     !
-                    call self%faces(ielem,iface)%init_neighbor(ftype,ineighbor_domain_g,ineighbor_domain_l,ineighbor_element_g,ineighbor_element_l,ineighbor_proc)
+                    call self%faces(ielem,iface)%init_neighbor(ftype,ineighbor_domain_g,ineighbor_domain_l,ineighbor_element_g,ineighbor_element_l,ineighbor_face,ineighbor_proc)
 
                 end if
 
@@ -612,8 +614,9 @@ contains
         logical                 :: includes_node_one, includes_node_two, includes_node_three, includes_node_four
         logical                 :: neighbor_element, searching
 
-        integer(ik)             :: ineighbor_domain_g, ineighbor_domain_l, ineighbor_element_g, ineighbor_element_l, ineighbor_proc, neighbor_status
+        integer(ik)             :: ineighbor_domain_g, ineighbor_domain_l, ineighbor_element_g, ineighbor_element_l, ineighbor_face, ineighbor_proc, neighbor_status
 
+        real(rk), allocatable, dimension(:,:)   :: neighbor_ddx, neighbor_ddy, neighbor_ddz, neighbor_invmass
 
 
 
@@ -635,7 +638,12 @@ contains
                                                    ineighbor_domain_l,      &
                                                    ineighbor_element_g,     &
                                                    ineighbor_element_l,     &
+                                                   ineighbor_face,          &
                                                    ineighbor_proc,          &
+                                                   neighbor_ddx,            &
+                                                   neighbor_ddy,            &
+                                                   neighbor_ddz,            &
+                                                   neighbor_invmass,        &
                                                    neighbor_status,         &
                                                    ChiDG_COMM)
                             
@@ -647,6 +655,14 @@ contains
                         ! Neighbor data should already be set, from previous routines. Set face type.
                         ftype = INTERIOR
 
+                        !
+                        ! Set neighbor data
+                        !
+                        self%faces(ielem,iface)%neighbor_ddx     = neighbor_ddx
+                        self%faces(ielem,iface)%neighbor_ddy     = neighbor_ddy
+                        self%faces(ielem,iface)%neighbor_ddz     = neighbor_ddz
+                        self%faces(ielem,iface)%neighbor_invmass = neighbor_invmass
+
                     else
                         ! Default ftype to ORPHAN face and clear neighbor index data.
                         ftype = ORPHAN      ! This should be processed later; either by a boundary condition(ftype=1), or a chimera boundary(ftype=2)
@@ -654,6 +670,7 @@ contains
                         ineighbor_domain_l  = 0
                         ineighbor_element_g = 0
                         ineighbor_element_l = 0
+                        ineighbor_face      = 0
                         ineighbor_proc      = NO_PROC
 
                     end if
@@ -662,7 +679,8 @@ contains
                     !
                     ! Call face neighbor initialization routine
                     !
-                    call self%faces(ielem,iface)%init_neighbor(ftype,ineighbor_domain_g,ineighbor_domain_l,ineighbor_element_g,ineighbor_element_l,ineighbor_proc)
+                    call self%faces(ielem,iface)%init_neighbor(ftype,ineighbor_domain_g,ineighbor_domain_l,ineighbor_element_g,ineighbor_element_l,ineighbor_face,ineighbor_proc)
+
 
                 end if
 
@@ -714,9 +732,9 @@ contains
         integer(ik),    intent(in)      :: iproc
         type(mpi_comm), intent(in)      :: ChiDG_COMM
 
-        integer(ik) :: ielem_l
-        integer(ik) :: ineighbor_domain_g, ineighbor_domain_l, ineighbor_element_g, ineighbor_element_l
-        integer(ik) :: data(4), corner_indices(4)
+        integer(ik) :: ielem_l, iface
+        integer(ik) :: ineighbor_domain_g, ineighbor_domain_l, ineighbor_element_g, ineighbor_element_l, ineighbor_face
+        integer(ik) :: data(5), corner_indices(4), ddx_size(2), invmass_size(2)
         integer     :: ierr
         logical     :: includes_corner_one, includes_corner_two, includes_corner_three, includes_corner_four
         logical     :: neighbor_element
@@ -725,6 +743,7 @@ contains
 
         ! Receive corner indices of face to be matched
         call MPI_Recv(corner_indices,4,MPI_INTEGER4,iproc,2,ChiDG_COMM,MPI_STATUS_IGNORE,ierr)
+
 
         ! Loop through local domain and try to find a match
         ! Test the incoming face nodes against local elements, if all face nodes are also contained in an element, then they are neighbors.
@@ -737,12 +756,23 @@ contains
             neighbor_element = ( includes_corner_one .and. includes_corner_two .and. includes_corner_three .and. includes_corner_four )
 
             if ( neighbor_element ) then
+                !
+                ! Get indices for neighbor element
+                !
                 ineighbor_domain_g  = self%elems(ielem_l)%connectivity%get_domain_index()
                 ineighbor_domain_l  = self%elems(ielem_l)%idomain_l
                 ineighbor_element_g = self%elems(ielem_l)%connectivity%get_element_index()
                 ineighbor_element_l = self%elems(ielem_l)%ielement_l
 
-                data = [ineighbor_domain_g, ineighbor_domain_l, ineighbor_element_g, ineighbor_element_l]
+                
+                !
+                ! Get face index connected to the requesting element
+                !
+                iface = self%elems(ielem_l)%get_face_from_corners(corner_indices)
+                ineighbor_face = iface
+
+                data = [ineighbor_domain_g, ineighbor_domain_l, ineighbor_element_g, ineighbor_element_l, ineighbor_face]
+
                 exit
             end if
 
@@ -754,7 +784,26 @@ contains
         call MPI_Send(neighbor_element,1,MPI_LOGICAL,iproc,3,ChiDG_COMM,ierr)
 
         if ( neighbor_element ) then
-            call MPI_Send(data,4,MPI_INTEGER4,iproc,4,ChiDG_COMM,ierr)
+            !
+            ! Send Indices
+            !
+            call MPI_Send(data,5,MPI_INTEGER4,iproc,4,ChiDG_COMM,ierr)
+
+            !
+            ! Send Element Data
+            !
+            ddx_size(1) = size(self%faces(ielem_l,iface)%ddx,1)
+            ddx_size(2) = size(self%faces(ielem_l,iface)%ddx,2)
+            invmass_size(1) = size(self%elems(ielem_l)%invmass,1)
+            invmass_size(2) = size(self%elems(ielem_l)%invmass,2)
+
+            call MPI_Send(ddx_size,2,MPI_INTEGER4,iproc,5,ChiDG_COMM,ierr)
+            call MPI_Send(invmass_size,2,MPI_INTEGER4,iproc,6,ChiDG_COMM,ierr)
+
+            call MPI_Send(self%faces(ielem_l,iface)%ddx,ddx_size(1)*ddx_size(2),MPI_REAL8,iproc,7,ChiDG_COMM,ierr)
+            call MPI_Send(self%faces(ielem_l,iface)%ddy,ddx_size(1)*ddx_size(2),MPI_REAL8,iproc,8,ChiDG_COMM,ierr)
+            call MPI_Send(self%faces(ielem_l,iface)%ddz,ddx_size(1)*ddx_size(2),MPI_REAL8,iproc,9,ChiDG_COMM,ierr)
+            call MPI_Send(self%elems(ielem_l)%invmass,invmass_size(1)*invmass_size(2),MPI_REAL8,iproc,10,ChiDG_COMM,ierr)
         end if
 
 
@@ -791,7 +840,7 @@ contains
     !!
     !!
     !---------------------------------------------------------------------------------------------------------------
-    subroutine find_neighbor_local(self,ielem_l,iface,ineighbor_domain_g,ineighbor_domain_l,ineighbor_element_g,ineighbor_element_l,ineighbor_proc,neighbor_status)
+    subroutine find_neighbor_local(self,ielem_l,iface,ineighbor_domain_g,ineighbor_domain_l,ineighbor_element_g,ineighbor_element_l,ineighbor_face,ineighbor_proc,neighbor_status)
         class(mesh_t),                  intent(inout)   :: self
         integer(ik),                    intent(in)      :: ielem_l
         integer(ik),                    intent(in)      :: iface
@@ -799,6 +848,7 @@ contains
         integer(ik),                    intent(inout)   :: ineighbor_domain_l
         integer(ik),                    intent(inout)   :: ineighbor_element_g
         integer(ik),                    intent(inout)   :: ineighbor_element_l
+        integer(ik),                    intent(inout)   :: ineighbor_face
         integer(ik),                    intent(inout)   :: ineighbor_proc
         integer(ik),                    intent(inout)   :: neighbor_status
 
@@ -840,6 +890,7 @@ contains
                     ineighbor_domain_l  = self%idomain_l
                     ineighbor_element_g = self%elems(ielem_neighbor)%connectivity%get_element_index()
                     ineighbor_element_l = ielem_neighbor
+                    ineighbor_face      = self%elems(ielem_neighbor)%get_face_from_corners(corner_indices)
                     ineighbor_proc      = self%elems(ielem_neighbor)%connectivity%get_element_partition()
                     neighbor_status     = NEIGHBOR_FOUND
                     exit
@@ -871,7 +922,18 @@ contains
     !!
     !!
     !---------------------------------------------------------------------------------------------------------------
-    subroutine find_neighbor_global(self,ielem_l,iface,ineighbor_domain_g,ineighbor_domain_l,ineighbor_element_g,ineighbor_element_l,ineighbor_proc,neighbor_status,ChiDG_COMM)
+    subroutine find_neighbor_global(self,ielem_l,iface,ineighbor_domain_g,  &
+                                                       ineighbor_domain_l,  &
+                                                       ineighbor_element_g, &
+                                                       ineighbor_element_l, &
+                                                       ineighbor_face,      &
+                                                       ineighbor_proc,      &
+                                                       neighbor_ddx,        &
+                                                       neighbor_ddy,        &
+                                                       neighbor_ddz,        &
+                                                       neighbor_invmass,    &
+                                                       neighbor_status,     &
+                                                       ChiDG_COMM)
         class(mesh_t),                  intent(inout)   :: self
         integer(ik),                    intent(in)      :: ielem_l
         integer(ik),                    intent(in)      :: iface
@@ -879,13 +941,20 @@ contains
         integer(ik),                    intent(inout)   :: ineighbor_domain_l
         integer(ik),                    intent(inout)   :: ineighbor_element_g
         integer(ik),                    intent(inout)   :: ineighbor_element_l
+        integer(ik),                    intent(inout)   :: ineighbor_face
         integer(ik),                    intent(inout)   :: ineighbor_proc
+        real(rk),   allocatable,        intent(inout)   :: neighbor_ddx(:,:)
+        real(rk),   allocatable,        intent(inout)   :: neighbor_ddy(:,:)
+        real(rk),   allocatable,        intent(inout)   :: neighbor_ddz(:,:)
+        real(rk),   allocatable,        intent(inout)   :: neighbor_invmass(:,:)
         integer(ik),                    intent(inout)   :: neighbor_status
         type(mpi_comm),                 intent(in)      :: ChiDG_COMM
 
         integer(ik) :: corner_one, corner_two, corner_three, corner_four
-        integer(ik) :: corner_indices(4), data(4), mapping, iproc, idomain_g, ierr
+        integer(ik) :: corner_indices(4), data(5), mapping, iproc, idomain_g, ierr
+        integer(ik) :: ddx_size(2), invmass_size(2)
         logical     :: neighbor_element, has_domain
+
 
         neighbor_status = NO_NEIGHBOR_FOUND
 
@@ -931,12 +1000,29 @@ contains
                     call MPI_Recv(neighbor_element,1,MPI_LOGICAL,iproc,3,ChiDG_COMM,MPI_STATUS_IGNORE,ierr)
 
                     if (neighbor_element) then
-                        call MPI_Recv(data,4,MPI_INTEGER4,iproc,4,ChiDG_COMM,MPI_STATUS_IGNORE,ierr)
+                        call MPI_Recv(data,5,MPI_INTEGER4,iproc,4,ChiDG_COMM,MPI_STATUS_IGNORE,ierr)
                         ineighbor_domain_g  = data(1)
                         ineighbor_domain_l  = data(2)
                         ineighbor_element_g = data(3)
                         ineighbor_element_l = data(4)
+                        ineighbor_face      = data(5)
                         ineighbor_proc      = iproc
+
+                        call MPI_Recv(ddx_size,2,MPI_INTEGER4,iproc,5,ChiDG_COMM,MPI_STATUS_IGNORE,ierr)
+                        call MPI_Recv(invmass_size,2,MPI_INTEGER4,iproc,6,ChiDG_COMM,MPI_STATUS_IGNORE,ierr)
+
+                        if (allocated(neighbor_ddx)) deallocate(neighbor_ddx,neighbor_ddy,neighbor_ddz,neighbor_invmass)
+                        allocate(neighbor_ddx(ddx_size(1),ddx_size(2)), &
+                                 neighbor_ddy(ddx_size(1),ddx_size(2)), &
+                                 neighbor_ddz(ddx_size(1),ddx_size(2)), &
+                                 neighbor_invmass(invmass_size(1),invmass_size(2)),  stat=ierr)
+                        if (ierr /= 0) call AllocationError
+
+                        call MPI_Recv(neighbor_ddx,ddx_size(1)*ddx_size(2), MPI_REAL8, iproc,7,ChiDG_COMM,MPI_STATUS_IGNORE,ierr)
+                        call MPI_Recv(neighbor_ddy,ddx_size(1)*ddx_size(2), MPI_REAL8, iproc,8,ChiDG_COMM,MPI_STATUS_IGNORE,ierr)
+                        call MPI_Recv(neighbor_ddz,ddx_size(1)*ddx_size(2), MPI_REAL8, iproc,9,ChiDG_COMM,MPI_STATUS_IGNORE,ierr)
+                        call MPI_Recv(neighbor_invmass,invmass_size(1)*invmass_size(2), MPI_REAL8, iproc,10,ChiDG_COMM,MPI_STATUS_IGNORE,ierr)
+
                         neighbor_status     = NEIGHBOR_FOUND
                     end if
                 end if

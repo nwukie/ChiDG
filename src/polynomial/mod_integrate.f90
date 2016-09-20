@@ -96,7 +96,7 @@ contains
         !
         ! Store integral and derivatives
         !
-        call store_volume_integrals(integral,sdata,idom,ielem,ieqn,idiff)
+        call store_volume_integrals(mesh,sdata,elem_info,fcn_info,ieqn,integral)
 
         end associate
 
@@ -160,7 +160,7 @@ contains
         !
         ! Store integral and derivatives
         !
-        call store_volume_integrals(integral,sdata,idom,ielem,ieqn,idiff)
+        call store_volume_integrals(mesh,sdata,elem_info,fcn_info,ieqn,integral)
 
         end associate
 
@@ -342,17 +342,20 @@ contains
     !!  @param[in]      iblk        Block index for the correct linearization block for the current element
     !!
     !---------------------------------------------------------------------------------------------------------
-    subroutine store_volume_integrals(integral,sdata,idom,ielem,ieqn,iblk)
-        type(AD_D),             intent(inout)   :: integral(:)
+    subroutine store_volume_integrals(mesh,sdata,elem_info,fcn_info,ieqn,integral)
+        type(mesh_t),           intent(in)      :: mesh(:)
         type(solverdata_t),     intent(inout)   :: sdata
-        integer(ik),            intent(in)      :: idom
-        integer(ik),            intent(in)      :: ielem
+        type(element_info_t),   intent(in)      :: elem_info
+        type(function_info_t),  intent(in)      :: fcn_info
         integer(ik),            intent(in)      :: ieqn
-        integer(ik),            intent(in)      :: iblk
+        type(AD_D),             intent(inout)   :: integral(:)
 
-        integer(ik) :: i
-        real(rk)    :: vals(size(integral))
+        integer(ik)         :: i
+        logical             :: conforming_face, boundary_face, chimera_face
+        type(face_info_t)   :: face_info
+        real(rk)            :: vals(size(integral))
 
+        associate ( idom => elem_info%idomain_l, ielem => elem_info%ielement_l, iblk => fcn_info%idiff )
 
         !
         ! Only store rhs once. if iblk == DIAG
@@ -369,11 +372,43 @@ contains
             integral(i)%xp_ad_ = -integral(i)%xp_ad_
         end do
 
+
+
+        !
+        ! Check if linearization is with respect to an exterior element
+        !
+        if (iblk /= DIAG) then
+            conforming_face = (mesh(idom)%faces(ielem,iblk)%ftype == INTERIOR)
+            boundary_face   = (mesh(idom)%faces(ielem,iblk)%ftype == BOUNDARY)
+            chimera_face    = (mesh(idom)%faces(ielem,iblk)%ftype == CHIMERA )
+        end if
+
+
+        !
+        ! Initialize a face_info in case it is needed below
+        !
+        face_info%idomain_g  = elem_info%idomain_g
+        face_info%idomain_l  = elem_info%idomain_l
+        face_info%ielement_g = elem_info%ielement_g
+        face_info%ielement_l = elem_info%ielement_l
+        face_info%iface      = iblk
+
+
         !
         ! Store linearization
         !
-        call sdata%lhs%store(integral,idom,ielem,iblk,ieqn)
+        if ((iblk == DIAG) .or. conforming_face) then
+            call sdata%lhs%store(integral,idom,ielem,iblk,ieqn)
+        else if (chimera_face .and. (iblk /= DIAG)) then
+            call sdata%lhs%store_chimera(integral,face_info,fcn_info%seed,ieqn)
+        else if (boundary_face .and. (iblk /= DIAG)) then
+            call sdata%lhs%store_bc(integral,face_info,fcn_info%seed,ieqn)
+        else
+            call chidg_signal(FATAL,"store_volume_integrals: Invalid condition for storing integrals. Could be a bad face type or linearization direction")
+        end if
 
+
+        end associate
 
     end subroutine store_volume_integrals
     !*********************************************************************************************************
@@ -513,6 +548,8 @@ contains
         idonor = function_info%idepend
         iblk   = function_info%idiff
 
+
+        
 
 
         associate ( rhs => sdata%rhs%dom(idomain_l)%vecs, lhs => sdata%lhs)

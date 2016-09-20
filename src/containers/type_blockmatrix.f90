@@ -683,10 +683,10 @@ contains
     !!  @param[in]  ivar        Index of the variable
     !!
     !--------------------------------------------------------------------------------------------------------------------------------
-    subroutine store_chimera(self,integral,face,seed,ivar)
+    subroutine store_chimera(self,integral,face_info,seed,ivar)
         class(blockmatrix_t),       intent(inout)   :: self
         type(AD_D),                 intent(in)      :: integral(:)
-        type(face_info_t),          intent(in)      :: face
+        type(face_info_t),          intent(in)      :: face_info
         type(seed_t),               intent(in)      :: seed
         integer(ik),                intent(in)      :: ivar
 
@@ -699,10 +699,10 @@ contains
         logical     :: block_match    = .false.
         logical     :: no_donor_block = .false.
 
-        idomain_l  = face%idomain_l
-        ielement_l = face%ielement_l
-        idomain_g  = face%idomain_g
-        ielement_g = face%ielement_g
+        idomain_l  = face_info%idomain_l
+        ielement_l = face_info%ielement_l
+        idomain_g  = face_info%idomain_g
+        ielement_g = face_info%ielement_g
 
         idonor_domain_l  = seed%idomain_l
         idonor_element_l = seed%ielement_l
@@ -727,8 +727,6 @@ contains
         !
         donorblk = 0
         do iblk = 1,size(self%chi_blks,2)
-            !block_match = ( (idonor_domain_l  == self%chi_blks(ielement_l,iblk)%dparent_l()) .and. &
-            !                (idonor_element_l == self%chi_blks(ielement_l,iblk)%eparent_l()) )
             block_match = ( (idonor_domain_g  == self%chi_blks(ielement_l,iblk)%dparent_g()) .and. &
                             (idonor_element_g == self%chi_blks(ielement_l,iblk)%eparent_g()) )
 

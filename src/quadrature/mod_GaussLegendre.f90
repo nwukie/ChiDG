@@ -30,7 +30,7 @@ contains
         ! Tolerance tested up to 10th order
         !
         !tol = 1.2e-16_rk
-        tol = 1.2_rk * epsilon(1._rk)
+        tol = 1.1_rk * epsilon(1._rk)
 
         !
         ! compute Legendre term used to generate the correct number of nodes

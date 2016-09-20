@@ -24,6 +24,7 @@ module mod_bc
     ! Scalar boundary conditions
     use bc_state_linearadvection_extrapolate,   only: linearadvection_extrapolate_t
     use bc_state_scalar_value,                  only: scalar_value_t
+    use bc_state_scalar_derivative,             only: scalar_derivative_t
     use bc_state_scalar_extrapolate,            only: scalar_extrapolate_t
 
 
@@ -70,6 +71,7 @@ contains
         type(periodic_t)                        :: PERIODIC
         type(linearadvection_extrapolate_t)     :: LINEARADVECTION_EXTRAPOLATE
         type(scalar_value_t)                    :: SCALAR_VALUE
+        type(scalar_derivative_t)               :: SCALAR_DERIVATIVE
         type(scalar_extrapolate_t)              :: SCALAR_EXTRAPOLATE
 
         type(wall_t)                            :: WALL
@@ -87,6 +89,7 @@ contains
 
             call registered_bcs%push_back(LINEARADVECTION_EXTRAPOLATE)
             call registered_bcs%push_back(SCALAR_VALUE)
+            call registered_bcs%push_back(SCALAR_DERIVATIVE)
             call registered_bcs%push_back(SCALAR_EXTRAPOLATE)
 
             call registered_bcs%push_back(WALL)
@@ -208,7 +211,7 @@ contains
     !!
     !!
     !------------------------------------------------------------------------------------------------------
-    function check_bc_state_exists(state_string) result(state_found)
+    function check_bc_state_registered(state_string) result(state_found)
         character(len=*),   intent(in)  :: state_string
 
         integer(ik) :: state_index
@@ -220,7 +223,7 @@ contains
         ! Set status of state_found
         state_found = (state_index /= 0)
 
-    end function check_bc_state_exists
+    end function check_bc_state_registered
     !*******************************************************************************************************
 
 

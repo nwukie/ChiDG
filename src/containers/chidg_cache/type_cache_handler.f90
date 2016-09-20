@@ -745,7 +745,7 @@ contains
         type(bcset_t),              intent(inout)   :: bc_set(:)
 
         integer(ik) :: idomain_l, ielement_l, iface, idepend, ieqn, ndepend, BC_ID, BC_face, ChiID
-        logical     :: boundary_face, interior_face
+        logical     :: boundary_face, interior_face, chimera_face
 
 
         idomain_l  = worker%element_info%idomain_l 
@@ -769,6 +769,7 @@ contains
             !
             boundary_face = (worker%face_type() == BOUNDARY)
             interior_face = (worker%face_type() == INTERIOR)
+            chimera_face  = (worker%face_type() == CHIMERA )
 
 
 
@@ -793,6 +794,8 @@ contains
                         call handle_external_lift__interior_face(worker,equation_set,bc_set,ieqn)
                     else if (boundary_face) then
                         call handle_external_lift__boundary_face(worker,equation_set,bc_set,ieqn)
+                    else if (chimera_face) then
+                        call handle_external_lift__chimera_face( worker,equation_set,bc_set,ieqn)
                     else
                         call chidg_signal(FATAL,"update_lift_faces_external: unsupported face type")
                     end if
@@ -826,7 +829,7 @@ contains
 
 
                 !
-                ! Compute Interior lift, differentiated wrt Exterior
+                ! Compute External lift, differentiated wrt Exterior
                 !
                 do idepend = 1,ndepend
 
@@ -838,6 +841,8 @@ contains
                         call handle_external_lift__interior_face(worker,equation_set,bc_set,ieqn)
                     else if (boundary_face) then
                         call handle_external_lift__boundary_face(worker,equation_set,bc_set,ieqn)
+                    else if (chimera_face) then
+                        call handle_external_lift__chimera_face( worker,equation_set,bc_set,ieqn)
                     else
                         call chidg_signal(FATAL,"update_lift_faces_external: unsupported face type")
                     end if
@@ -891,8 +896,8 @@ contains
         type(bcset_t),              intent(inout)   :: bc_set(:)
         integer(ik),                intent(in)      :: ieqn
 
-        integer(ik) :: idomain_l, ielement_l, iface, idomain_l_n, ielement_l_n, iface_n
-        logical     :: boundary_face, interior_face
+        integer(ik) :: idomain_l, ielement_l, iface, idomain_l_n, ielement_l_n, iface_n, iproc_n
+        logical     :: boundary_face, interior_face, local_neighbor, remote_neighbor
 
         type(AD_D), allocatable, dimension(:)   ::          &
             var_m, var_p, var_diff, var_diff_weighted,      &
@@ -902,7 +907,8 @@ contains
             lift_gq_face_x, lift_gq_face_y, lift_gq_face_z, &
             lift_gq_vol_x,  lift_gq_vol_y,  lift_gq_vol_z
 
-        real(rk),   allocatable, dimension(:)   :: normx, normy, normz
+        real(rk),   allocatable, dimension(:)   :: normx, normy, normz, weights
+        real(rk),   allocatable, dimension(:,:) :: val_face_trans, val_face, val_vol, invmass
 
 
         !
@@ -918,18 +924,37 @@ contains
         !
         idomain_l_n  = worker%mesh(idomain_l)%faces(ielement_l,iface)%ineighbor_domain_l
         ielement_l_n = worker%mesh(idomain_l)%faces(ielement_l,iface)%ineighbor_element_l
-        iface_n      = worker%mesh(idomain_l)%faces(ielement_l,iface)%get_neighbor_face()
+        iface_n      = worker%mesh(idomain_l)%faces(ielement_l,iface)%ineighbor_face
+        iproc_n      = worker%mesh(idomain_l)%faces(ielement_l,iface)%ineighbor_proc
 
-        associate ( weights          => worker%mesh(idomain_l_n)%elems(ielement_l_n)%gq%face%weights(:,iface_n),        &
-                    val_face_trans   => worker%mesh(idomain_l_n)%elems(ielement_l_n)%gq%face%val_trans(:,:,iface_n),    &
-                    val_face         => worker%mesh(idomain_l_n)%elems(ielement_l_n)%gq%face%val(:,:,iface_n),          &
-                    val_vol          => worker%mesh(idomain_l_n)%elems(ielement_l_n)%gq%vol%val,                        &
-                    invmass          => worker%mesh(idomain_l_n)%elems(ielement_l_n)%invmass)
+        local_neighbor  = (iproc_n == IRANK)
+        remote_neighbor = (iproc_n /= IRANK)
 
-            ! Get normal vector
-            normx = worker%mesh(idomain_l_n)%faces(ielement_l_n,iface_n)%norm(:,1)
-            normy = worker%mesh(idomain_l_n)%faces(ielement_l_n,iface_n)%norm(:,2)
-            normz = worker%mesh(idomain_l_n)%faces(ielement_l_n,iface_n)%norm(:,3)
+
+        if ( local_neighbor ) then
+            weights          = worker%mesh(idomain_l_n)%elems(ielement_l_n)%gq%face%weights(:,iface_n)
+            val_face_trans   = worker%mesh(idomain_l_n)%elems(ielement_l_n)%gq%face%val_trans(:,:,iface_n)
+            val_face         = worker%mesh(idomain_l_n)%elems(ielement_l_n)%gq%face%val(:,:,iface_n)
+            val_vol          = worker%mesh(idomain_l_n)%elems(ielement_l_n)%gq%vol%val
+            invmass          = worker%mesh(idomain_l_n)%elems(ielement_l_n)%invmass
+
+        else if ( remote_neighbor ) then
+            ! User local element gq instance. Assumes same order of accuracy.
+            weights          = worker%mesh(idomain_l)%elems(ielement_l)%gq%face%weights(:,iface_n)
+            val_face_trans   = worker%mesh(idomain_l)%elems(ielement_l)%gq%face%val_trans(:,:,iface_n)
+            val_face         = worker%mesh(idomain_l)%elems(ielement_l)%gq%face%val(:,:,iface_n)
+            val_vol          = worker%mesh(idomain_l)%elems(ielement_l)%gq%vol%val
+
+            invmass          = worker%mesh(idomain_l)%faces(ielement_l,iface)%neighbor_invmass
+
+        end if
+
+
+
+            ! Use reverse of interior element's normal vector
+            normx = -worker%mesh(idomain_l)%faces(ielement_l,iface)%norm(:,1)
+            normy = -worker%mesh(idomain_l)%faces(ielement_l,iface)%norm(:,2)
+            normz = -worker%mesh(idomain_l)%faces(ielement_l,iface)%norm(:,3)
 
             ! Get interior/exterior state
             var_m = worker%cache%get_data('face interior', 'value', 0, worker%function_info%seed, ieqn, iface)
@@ -976,7 +1001,6 @@ contains
             call worker%cache%set_data('face exterior', lift_gq_vol_y, 'lift element', 2, worker%function_info%seed, ieqn, iface)
             call worker%cache%set_data('face exterior', lift_gq_vol_z, 'lift element', 3, worker%function_info%seed, ieqn, iface)
 
-        end associate
 
 
 
@@ -1044,8 +1068,6 @@ contains
         ielement_l_n = worker%mesh(idomain_l)%faces(ielement_l,iface)%ineighbor_element_l
         iface_n      = worker%mesh(idomain_l)%faces(ielement_l,iface)%get_neighbor_face()
 
-!        print*, 'iface_n'
-!        print*, iface_n
 
         associate ( weights          => worker%mesh(idomain_l)%elems(ielement_l)%gq%face%weights(:,iface),        &
                     val_face_trans   => worker%mesh(idomain_l)%elems(ielement_l)%gq%face%val_trans(:,:,iface),    &
@@ -1061,56 +1083,38 @@ contains
             var_m = worker%cache%get_data('face interior', 'value', 0, worker%function_info%seed, ieqn, iface)
             var_p = worker%cache%get_data('face exterior', 'value', 0, worker%function_info%seed, ieqn, iface)
 
-!            print*, 'boundary face'
-!
-!            print*, 'var_m'
-!            print*, var_m(:)%x_ad_
-!            print*, 'var_p'
-!            print*, var_p(:)%x_ad_
 
             ! Difference. Relative to exterior element, so reversed
             var_diff = HALF*(var_m - var_p) 
 
-!            print*, 'var_diff'
-!            print*, var_diff(:)%x_ad_
 
             ! Multiply by weights
             var_diff_weighted = var_diff * weights
 
-!            print*, 'var_diff_weighted'
-!            print*, var_diff_weighted(:)%x_ad_
 
             ! Multiply by normal. Note: normal is scaled by face jacobian.
             var_diff_x = var_diff_weighted * normx
             var_diff_y = var_diff_weighted * normy
             var_diff_z = var_diff_weighted * normz
 
-!            print*, 'var_diff_x'
-!            print*, var_diff_x(:)%x_ad_
 
             ! Project onto basis
             rhs_x = matmul(val_face_trans,var_diff_x)
             rhs_y = matmul(val_face_trans,var_diff_y)
             rhs_z = matmul(val_face_trans,var_diff_z)
 
-!            print*, 'rhs_x'
-!            print*, rhs_x(:)%x_ad_
 
             ! Local solve for lift modes in element basis
             lift_modes_x = matmul(invmass,rhs_x)
             lift_modes_y = matmul(invmass,rhs_y)
             lift_modes_z = matmul(invmass,rhs_z)
 
-!            print*, 'lift_modes_x'
-!            print*, lift_modes_x(:)%x_ad_
 
             ! Evaluate lift modes at quadrature nodes
             lift_gq_x = matmul(val_face,lift_modes_x)
             lift_gq_y = matmul(val_face,lift_modes_y)
             lift_gq_z = matmul(val_face,lift_modes_z)
             
-!            print*, 'lift_gq_x'
-!            print*, lift_gq_x(:)%x_ad_
 
             ! Store lift
             call worker%cache%set_data('face exterior', lift_gq_x, 'lift face', 1, worker%function_info%seed, ieqn, iface)
@@ -1139,6 +1143,116 @@ contains
 
 
 
+    !>  Handle computing lift for an external element, when the face is an interior face.
+    !!
+    !!  In this case, the external element exists and we can just use its data. This is not the case
+    !!  for a boundary condition face, and it is complicated further by a Chimera boundary face.
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   9/14/2016
+    !!
+    !!
+    !!
+    !--------------------------------------------------------------------------------------------------
+    subroutine handle_external_lift__chimera_face(worker,equation_set,bc_set,ieqn)
+        type(chidg_worker_t),       intent(inout)   :: worker
+        type(equation_set_t),       intent(inout)   :: equation_set(:)
+        type(bcset_t),              intent(inout)   :: bc_set(:)
+        integer(ik),                intent(in)      :: ieqn
+
+        integer(ik) :: idomain_l, ielement_l, iface, idomain_l_n, ielement_l_n, iface_n
+        logical     :: boundary_face, interior_face
+
+        type(AD_D), allocatable, dimension(:)   ::          &
+            var_m, var_p, var_diff, var_diff_weighted,      &
+            var_diff_x,     var_diff_y,     var_diff_z,     &
+            rhs_x,          rhs_y,          rhs_z,          &
+            lift_modes_x,   lift_modes_y,   lift_modes_z,   &
+            lift_gq_face_x, lift_gq_face_y, lift_gq_face_z, &
+            lift_gq_vol_x,  lift_gq_vol_y,  lift_gq_vol_z
+
+        real(rk),   allocatable, dimension(:)   :: normx, normy, normz
+
+
+        !
+        ! Interior element
+        ! 
+        idomain_l  = worker%element_info%idomain_l 
+        ielement_l = worker%element_info%ielement_l 
+        iface      = worker%iface
+
+
+
+        !
+        ! Use components from receiver element since no single element exists to act as the exterior element.
+        ! This implicitly treats the diffusion terms as if there were a reflected element like the receiver
+        ! element that was acting as the donor.
+        !
+        associate ( weights          => worker%mesh(idomain_l)%elems(ielement_l)%gq%face%weights(:,iface),        &
+                    val_face_trans   => worker%mesh(idomain_l)%elems(ielement_l)%gq%face%val_trans(:,:,iface),    &
+                    val_face         => worker%mesh(idomain_l)%elems(ielement_l)%gq%face%val(:,:,iface),          &
+                    val_vol          => worker%mesh(idomain_l)%elems(ielement_l)%gq%vol%val,                      &
+                    invmass          => worker%mesh(idomain_l)%elems(ielement_l)%invmass)
+
+            ! Use reversed normal vectors of receiver element
+            normx = -worker%mesh(idomain_l)%faces(ielement_l,iface)%norm(:,1)
+            normy = -worker%mesh(idomain_l)%faces(ielement_l,iface)%norm(:,2)
+            normz = -worker%mesh(idomain_l)%faces(ielement_l,iface)%norm(:,3)
+
+            ! Get interior/exterior state
+            var_m = worker%cache%get_data('face interior', 'value', 0, worker%function_info%seed, ieqn, iface)
+            var_p = worker%cache%get_data('face exterior', 'value', 0, worker%function_info%seed, ieqn, iface)
+
+            ! Difference. Relative to exterior element, so reversed
+            var_diff = HALF*(var_m - var_p) 
+
+            ! Multiply by weights
+            var_diff_weighted = var_diff * weights
+
+            ! Multiply by normal. Note: normal is scaled by face jacobian.
+            var_diff_x = var_diff_weighted * normx
+            var_diff_y = var_diff_weighted * normy
+            var_diff_z = var_diff_weighted * normz
+
+            ! Project onto basis
+            rhs_x = matmul(val_face_trans,var_diff_x)
+            rhs_y = matmul(val_face_trans,var_diff_y)
+            rhs_z = matmul(val_face_trans,var_diff_z)
+
+            ! Local solve for lift modes in element basis
+            lift_modes_x = matmul(invmass,rhs_x)
+            lift_modes_y = matmul(invmass,rhs_y)
+            lift_modes_z = matmul(invmass,rhs_z)
+
+            ! Evaluate lift modes at quadrature nodes
+            lift_gq_face_x = matmul(val_face,lift_modes_x)
+            lift_gq_face_y = matmul(val_face,lift_modes_y)
+            lift_gq_face_z = matmul(val_face,lift_modes_z)
+            
+            ! Store lift
+            call worker%cache%set_data('face exterior', lift_gq_face_x, 'lift face', 1, worker%function_info%seed, ieqn, iface)
+            call worker%cache%set_data('face exterior', lift_gq_face_y, 'lift face', 2, worker%function_info%seed, ieqn, iface)
+            call worker%cache%set_data('face exterior', lift_gq_face_z, 'lift face', 3, worker%function_info%seed, ieqn, iface)
+
+            ! Evaluate lift modes at quadrature nodes
+            lift_gq_vol_x = matmul(val_vol,lift_modes_x)
+            lift_gq_vol_y = matmul(val_vol,lift_modes_y)
+            lift_gq_vol_z = matmul(val_vol,lift_modes_z)
+            
+            ! Store lift
+            call worker%cache%set_data('face exterior', lift_gq_vol_x, 'lift element', 1, worker%function_info%seed, ieqn, iface)
+            call worker%cache%set_data('face exterior', lift_gq_vol_y, 'lift element', 2, worker%function_info%seed, ieqn, iface)
+            call worker%cache%set_data('face exterior', lift_gq_vol_z, 'lift element', 3, worker%function_info%seed, ieqn, iface)
+
+        end associate
+
+
+
+
+
+
+    end subroutine handle_external_lift__chimera_face
+    !*************************************************************************************************
 
 
 

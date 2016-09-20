@@ -6,7 +6,7 @@ module type_equation_set
                                               VOLUME_ADVECTIVE_FLUX, VOLUME_DIFFUSIVE_FLUX, BC_FLUX,    &
                                               XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX,     &
                                               BOUNDARY
-    use mod_operators,                  only: build_operator
+    use mod_operators,                  only: operator_factory
     use mod_DNAD_tools,                 only: element_compute_seed, face_compute_seed
 
     use type_operator,                  only: operator_t
@@ -261,7 +261,7 @@ contains
         !
         ! Create new operator
         !
-        allocate(new_operator, source=build_operator(string), stat=ierr)
+        allocate(new_operator, source=operator_factory%produce(string), stat=ierr)
         if (ierr /= 0) call AllocationError
 
 

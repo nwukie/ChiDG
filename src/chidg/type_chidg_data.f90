@@ -20,7 +20,7 @@ module type_chidg_data
     use type_bcset_coupling,            only: bcset_coupling_t
 
     ! Factory methods
-    use mod_equations,                  only: build_equation_set
+    use mod_equations,                  only: equation_builder_factory
 
 
     implicit none
@@ -229,8 +229,7 @@ contains
         !
         ! Allocate equation set
         !
-        !call create_equationset(eqnset,temp_eqnset(idomain_l)%item)
-        temp_eqnset(idomain_l) = build_equation_set(eqnset,'default')
+        temp_eqnset(idomain_l) = equation_builder_factory%produce(eqnset,'default')
 
 
         !

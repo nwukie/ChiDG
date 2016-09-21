@@ -76,20 +76,29 @@
             
             
                 <ul class="current">
-<li class="toctree-l1"><a class="reference internal" href="../../installation/package_install.html">Install ChiDG</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../installation/source_install.html">Build ChiDG from source</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="../../installation/source_install.html#obtaining-chidg">Obtaining ChiDG</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../installation/source_install.html#dependencies">Dependencies</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../installation/source_install.html#cmake">CMake</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../installation/source_install.html#hdf5">HDF5</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../installation/source_install.html#tecio">TecIO</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../installation/source_install.html#compiling-chidg">Compiling ChiDG</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../getting_started/getting_started.html">Getting Started</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../getting_started/getting_started.html#install-chidg">Install ChiDG</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../getting_started/source_install.html">Build ChiDG from source</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../../getting_started/source_install.html#obtaining-chidg">Obtaining ChiDG</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../getting_started/source_install.html#dependencies">Dependencies</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../getting_started/source_install.html#cmake">CMake</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../getting_started/source_install.html#hdf5">HDF5</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../getting_started/source_install.html#tecio">TecIO</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../getting_started/source_install.html#compiling-chidg">Compiling ChiDG</a></li>
+</ul>
+</li>
+</ul>
+</li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="../../examples/example_main.html">Examples</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="../../examples/smoothbump/example_smoothbump.html">Euler smooth bump</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="../../examples/smoothbump/example_smoothbump.html#background">Background</a></li>
-<li class="toctree-l3"><a class="reference internal" href="../../examples/smoothbump/example_smoothbump.html#set-up">Set-up</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../examples/smoothbump/example_smoothbump.html#setup">Setup</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../../examples/smoothbump/example_smoothbump.html#setup-from-scratch">Setup from scratch:</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../examples/smoothbump/example_smoothbump.html#use-setup-provided">Use setup provided:</a></li>
+</ul>
+</li>
 <li class="toctree-l3"><a class="reference internal" href="../../examples/smoothbump/example_smoothbump.html#results">Results</a></li>
 </ul>
 </li>
@@ -168,6 +177,13 @@
 </li>
 </ul>
 </li>
+<li class="toctree-l2"><a class="reference internal" href="../equations/detail_equations.html">Equation Sets</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../equations/detail_equations.html#mathematical-background">Mathematical background</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../equations/detail_equations.html#metric-terms">Metric terms</a></li>
+</ul>
+</li>
+</ul>
+</li>
 </ul>
 </li>
 </ul>
@@ -232,7 +248,7 @@ general information that could be useful to users. This includes:</p>
 <span class="n">quad_pts</span><span class="p">(:)</span>     <span class="n">An</span> <span class="n">array</span> <span class="n">of</span> <span class="n">points</span> <span class="n">defining</span> <span class="n">the</span> <span class="n">location</span> <span class="n">of</span> <span class="n">each</span> <span class="n">volume</span> <span class="n">quadrature</span> <span class="n">node</span> <span class="ow">in</span> <span class="n">real</span> <span class="n">space</span><span class="o">.</span>
 <span class="n">metric</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span><span class="mi">3</span><span class="p">,:)</span>   <span class="n">An</span> <span class="n">array</span><span class="p">,</span> <span class="n">defining</span> <span class="k">for</span> <span class="n">each</span> <span class="n">quadrature</span> <span class="n">point</span><span class="p">,</span> <span class="n">a</span> <span class="n">matrix</span> <span class="n">of</span> <span class="n">element</span> <span class="n">metric</span> <span class="n">values</span><span class="o">.</span>
 <span class="n">jinv</span><span class="p">(:)</span>         <span class="n">An</span> <span class="n">array</span> <span class="n">of</span> <span class="n">inverse</span> <span class="n">element</span> <span class="n">jacobian</span> <span class="n">values</span> <span class="n">at</span> <span class="n">each</span> <span class="n">volume</span> <span class="n">quadrature</span> <span class="n">node</span><span class="o">.</span>
-<span class="n">dtdx</span><span class="p">(:,:)</span>       <span class="n">An</span> <span class="n">array</span> <span class="n">of</span> <span class="n">derivatives</span> <span class="n">of</span> <span class="n">the</span> <span class="n">basis</span> <span class="n">functions</span> <span class="k">with</span> <span class="n">respect</span> <span class="n">to</span> <span class="n">real</span> <span class="n">coordinates</span> <span class="n">at</span> <span class="n">volume</span> <span class="n">quadrature</span> <span class="n">nodes</span><span class="o">.</span>
+<span class="n">ddx</span><span class="p">(:,:)</span>        <span class="n">An</span> <span class="n">array</span> <span class="n">of</span> <span class="n">derivatives</span> <span class="n">of</span> <span class="n">the</span> <span class="n">basis</span> <span class="n">functions</span> <span class="k">with</span> <span class="n">respect</span> <span class="n">to</span> <span class="n">real</span> <span class="n">coordinates</span> <span class="n">at</span> <span class="n">volume</span> <span class="n">quadrature</span> <span class="n">nodes</span><span class="o">.</span>
 </pre></div>
 </div>
 <a class="reference internal image-reference" href="../../_images/d__element.png"><img alt="../../_images/d__element.png" class="align-center" src="../../_images/d__element.png" style="width: 80%;" /></a>
@@ -257,7 +273,7 @@ node &#8216;igq&#8217;, the component can be used as</p>
 </div>
 <p>which would return a 1D array of values for <span class="math">\(\xi_x\)</span> corresponding to each volume
 quadrature node.</p>
-<p>The inverse element jacobian terms <cite>jinv(:)</cite> are defined at each quadrature node as</p>
+<p>The inverse element jacobian terms <code class="docutils literal"><span class="pre">jinv(:)</span></code> are defined at each quadrature node as</p>
 <div class="math">
 \[J^{-1} = ( x_\xi \xi_x + x_\eta \eta_x + x_\zeta \zeta_x )\]</div>
 </div>
@@ -276,10 +292,10 @@ element in the component <code class="docutils literal"><span class="pre">elemen
         \frac{\partial \psi_{{ngq},1}}{\partial \xi} &amp; \frac{\partial \psi_{{ngq},2}}{\partial \xi} &amp;  \cdots &amp;  \frac{\partial \psi_{{ngq},N}}{\partial \xi} \\
     \end{pmatrix}\end{split}\]</div>
 <p>Derivatives in real space coordinates in an <code class="docutils literal"><span class="pre">element</span></code> can be computed using
-<code class="docutils literal"><span class="pre">dtdx(:,:)</span></code> components. The derivatives of basis functions with respect to real
-coordinates(<span class="math">\(x,y,z\)</span> ,:math:<cite>r,theta,z</cite>) are specific to each <code class="docutils literal"><span class="pre">element</span></code>
-and these derivatives can be accessed in the dtdx, dtdy, dtdz components.
-The <code class="docutils literal"><span class="pre">element%dtdx</span></code> component for example gives</p>
+<code class="docutils literal"><span class="pre">ddx(:,:)</span></code> components. The derivatives of basis functions with respect to real
+coordinates(<span class="math">\(x,y,z\)</span> , <span class="math">\(r,\theta,z\)</span> ) are specific to each <code class="docutils literal"><span class="pre">element</span></code>
+and these derivatives can be accessed in the <code class="docutils literal"><span class="pre">ddx</span></code>, <code class="docutils literal"><span class="pre">ddy</span></code>, <code class="docutils literal"><span class="pre">ddz</span></code> components.
+The <code class="docutils literal"><span class="pre">element%ddx</span></code> component for example gives</p>
 <div class="math">
 \[\begin{split}\frac{\partial \psi_{igq, imode}}{\partial x} =
     \begin{pmatrix}
@@ -296,7 +312,7 @@ The <code class="docutils literal"><span class="pre">element%dtdx</span></code> 
 <div class="section" id="face-metrics">
 <h3>Face metrics<a class="headerlink" href="#face-metrics" title="Permalink to this headline">¶</a></h3>
 <p>Metric terms for the <code class="docutils literal"><span class="pre">face</span></code> data structure are defined exactly the same as for the
-<code class="docutils literal"><span class="pre">element</span></code> data structure. The difference is that the <cite>metric</cite> and <cite>jinv</cite> components of
+<code class="docutils literal"><span class="pre">element</span></code> data structure. The difference is that the <code class="docutils literal"><span class="pre">metric</span></code> and <code class="docutils literal"><span class="pre">jinv</span></code> components of
 <code class="docutils literal"><span class="pre">face</span></code> return values for boundary quadrature nodes. This contrasts the <code class="docutils literal"><span class="pre">element</span></code>
 structure, which returns values for volume quadrature nodes.</p>
 </div>
@@ -304,7 +320,7 @@ structure, which returns values for volume quadrature nodes.</p>
 <h3>Face normals<a class="headerlink" href="#face-normals" title="Permalink to this headline">¶</a></h3>
 <div class="math">
 \[\vec{x} = [x, y, z]     \quad   \vec{\xi} = [\xi, \eta, \zeta]\]</div>
-<p>Face normal vectors are stored for each face quadrature node. The component <cite>norm</cite> is the
+<p>Face normal vectors are stored for each face quadrature node. The component <code class="docutils literal"><span class="pre">norm</span></code> is the
 face normal vector with respect to computational coordinates on a reference element
 (<span class="math">\(\xi\)</span>, <span class="math">\(\eta\)</span>, <span class="math">\(\zeta\)</span>) as</p>
 <div class="math">
@@ -325,9 +341,9 @@ are defined respectively as</p>
 [ \zeta_x, \quad \zeta_y, \quad \zeta_z ]\end{aligned}\end{align} \]</div>
 <p>Applying the above formula to element faces produces normal vectors that are inward
 facing for <span class="math">\(\xi = -1\)</span> faces and outward facing for <span class="math">\(\xi = 1\)</span> faces.
-Inward facing vectors are negated so that all resultant normal vectors in the <cite>norm</cite>
+Inward facing vectors are negated so that all resultant normal vectors in the <code class="docutils literal"><span class="pre">norm</span></code>
 component are outward facing. This applied to <span class="math">\(\eta\)</span> and <span class="math">\(\zeta\)</span> faces as well.</p>
-<p>Unit normal vectors can be accessed in the <cite>unorm</cite> component and are computed as</p>
+<p>Unit normal vectors can be accessed in the <code class="docutils literal"><span class="pre">unorm</span></code> component and are computed as</p>
 <div class="math">
 \[\hat{n}_{\xi_i} = \frac{\vec{n}_{\xi_i}}{||\vec{n}_{\xi_i}||_2}\]</div>
 </div>
@@ -341,22 +357,22 @@ the <code class="docutils literal"><span class="pre">chimera_receiver</span></co
 communication between processors for parallel code execution.</p>
 <a class="reference internal image-reference" href="../../_images/d__chimera_receiver.png"><img alt="../../_images/d__chimera_receiver.png" class="align-center" src="../../_images/d__chimera_receiver.png" style="width: 90%;" /></a>
 <p>In a given <code class="docutils literal"><span class="pre">mesh</span></code> block, every face that gets information from a separate block is
-designated as a CHIMERA face, it is assigned an integer ID <cite>face%ChiID</cite>, and it gets an
-entry in the <cite>mesh%chimera%recv%data</cite> components. It can be accessed as</p>
+designated as a CHIMERA face, it is assigned an integer ID <code class="docutils literal"><span class="pre">face%ChiID</span></code>, and it gets an
+entry in the <code class="docutils literal"><span class="pre">mesh%chimera%recv%data</span></code> components. It can be accessed as</p>
 <div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">mesh</span><span class="o">%</span><span class="n">chimera</span><span class="o">%</span><span class="n">recv</span><span class="o">%</span><span class="n">data</span><span class="p">(</span><span class="n">ChiID</span><span class="p">)</span>
 </pre></div>
 </div>
 <div class="section" id="example">
 <h3>Example<a class="headerlink" href="#example" title="Permalink to this headline">¶</a></h3>
 <p>Consider an example with two mesh domains, as shown below.
-<cite>mesh(1)</cite> contains four elements. <cite>mesh(2)</cite> contains eight elements.
-<cite>mesh(1)</cite> overlaps with <cite>mesh(2)</cite>. In particular, the top faces of elements E3 and E4 lie
-inside <cite>mesh(2)</cite>. These faces are designated as CHIMERA faces and are given a mesh-global
+<code class="docutils literal"><span class="pre">mesh(1)</span></code> contains four elements. <code class="docutils literal"><span class="pre">mesh(2)</span></code> contains eight elements.
+<code class="docutils literal"><span class="pre">mesh(1)</span></code> overlaps with <code class="docutils literal"><span class="pre">mesh(2)</span></code>. In particular, the top faces of elements E3 and E4 lie
+inside <code class="docutils literal"><span class="pre">mesh(2)</span></code>. These faces are designated as CHIMERA faces and are given a mesh-global
 chimera ID. The top face of E3 is given the ID ChiID=1 and the top face of E4 is given
 the ID ChiID=2.</p>
 <a class="reference internal image-reference" href="../../_images/d__chimera_demo_a.png"><img alt="../../_images/d__chimera_demo_a.png" class="align-center" src="../../_images/d__chimera_demo_a.png" style="width: 90%;" /></a>
 <p>Each CHIMERA face has its own set of chimera information, which can be accessed via
-<cite>mesh%chimera%recv%data(ChiID)</cite>. This is shown below for the two faces in this example.</p>
+<code class="docutils literal"><span class="pre">mesh%chimera%recv%data(ChiID)</span></code>. This is shown below for the two faces in this example.</p>
 <a class="reference internal image-reference" href="../../_images/d__chimera_demo_b.png"><img alt="../../_images/d__chimera_demo_b.png" class="align-center" src="../../_images/d__chimera_demo_b.png" style="width: 90%;" /></a>
 </div>
 </div>
@@ -413,6 +429,7 @@ the ID ChiID=2.</p>
       <script type="text/javascript" src="../../_static/underscore.js"></script>
       <script type="text/javascript" src="../../_static/doctools.js"></script>
       <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+      <script type="text/javascript" src="../../_static/mathjax_conf.js"></script>
 
   
 

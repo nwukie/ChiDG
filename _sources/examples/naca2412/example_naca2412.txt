@@ -1,3 +1,5 @@
+.. _example_naca2412:
+
 NACA 2412 Airfoil
 =================
 

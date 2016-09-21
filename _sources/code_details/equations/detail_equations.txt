@@ -1,0 +1,76 @@
+=============
+Equation Sets
+=============
+
+
+
+
+-----------------------
+Mathematical background
+-----------------------
+
+.. math::
+
+    \frac{\partial Q}{\partial t} + \nabla \cdot \vec{F}(Q,\nabla Q) +
+    S(Q,\nabla Q) = 0
+
+The solution variables are expressed as an expansion in basis
+polynomials constructed as a tensor product of 1D Legendre polynomials as
+
+.. math:: 
+
+    Q(t,x,y,z) = \sum_{i=0}^N \sum_{j=0}^N \sum_{k=0}^N Q_{ijk}(t) \psi_i(x)
+    \psi_j(y) \psi_k(z)
+
+
+Multiplying by a column of test functions :math:`\boldsymbol{\psi}` and applying
+Gauss' Divergence Theorem gives our working form of the discontinuous
+Galerkin method as
+
+.. math::
+
+    \int_{\Omega_e} \boldsymbol{\psi} \frac{\partial Q}{\partial t} d\Omega +
+    \int_{\Gamma_e} \boldsymbol{\psi} \vec{F} \cdot \vec{n} d\Gamma - 
+    \int_{\Omega_e} \nabla \boldsymbol{\psi} \cdot \vec{F} d\Omega + 
+    \int_{\Omega_e} \boldsymbol{\psi} \vec{S} d\Omega = 0
+
+
+Two important terms in the above equation are the boundary flux integral and the volume flux
+integral, respectively:
+
+.. math::
+
+    \int_{\Gamma_e} \boldsymbol{\psi} \vec{F} \cdot \vec{n} d\Gamma
+
+
+.. math::
+
+    \int_{\Omega_e} \nabla \boldsymbol{\psi} \cdot \vec{F} d\Omega
+
+
+
+
+
+
+
+
+
+
+
+
+Metric terms
+------------
+
+
+
+
+
+
+
+
+
+
+
+
+
+

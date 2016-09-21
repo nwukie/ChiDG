@@ -1,0 +1,66 @@
+&files
+    gridfile            = 'smoothbump.h5'   ! ChiDG-format HDF file containing a grid.
+    solutionfile_in     = 'none'            ! ChiDG-format HDF file containing a solution. 'none' initializes solution to constant values.
+    solutionfile_out    = 'smoothbump.h5'   ! ChiDG-format HDF file that a solution will be written to.
+/
+
+
+
+
+
+&space
+    basis           = 'legendre'            ! Polynomial basis functions. 'legendre'
+    solution_order  = 1                     ! Solution order of accuracy. '1-7'
+/
+
+
+
+
+
+&quadrature
+    gq_rule        = 2                      ! (1 = Collocation)   (2 = Over-integration)   (3 = Extra Over-integration)
+/
+
+
+
+
+
+&time
+    time_scheme     = 'steady'              ! TIME-INTEGRATION SCHEMES: 'steady'
+    dt              = 0.0001                ! Not used for 'steady'
+    time_steps      = 1000                  ! Not used for 'steady'
+    ttol            = 1.e-6                 ! Not used for 'steady'
+    ntime_instances = 1                     ! Not used for 'steady'
+/
+
+
+
+
+
+&nonlinear_solve
+    nonlinear_solver    = 'quasi_newton'    ! NONLINER_SOLVERS: 'newton', 'quasi-newton'
+    nonlinear_steps     = 20                ! Maximum number of nonlinear iterations
+    ntol                = 1.e-6             ! Convergence tolerance to terminate nonlinear solve
+    cfl0                = 2.0               ! CFL0 for 'quasi-newton' iteration
+/
+
+
+
+
+
+&linear_solve
+    linear_solver       = 'fgmres'          ! LINEAR SOLVERS:  'fgmres'
+    ltol                = 1.e-8             ! Convergence tolerance to terminate linear solve
+    preconditioner      = 'ILU0'            ! PRECONDITIONERS: 'identity', 'jacobi', 'ILU0'
+/
+
+
+
+
+
+&io
+    nwrite         = 50                     ! Write solution state every 'nwrite' iterations
+    initial_write  = .false.                ! Write solution before run
+    final_write    = .true.                 ! Write solution after run
+/
+

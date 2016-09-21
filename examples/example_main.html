@@ -32,7 +32,7 @@
   
     <link rel="top" title="ChiDG 0.1 documentation" href="../index.html"/>
         <link rel="next" title="Euler smooth bump" href="smoothbump/example_smoothbump.html"/>
-        <link rel="prev" title="Build ChiDG from source" href="../installation/source_install.html"/> 
+        <link rel="prev" title="Build ChiDG from source" href="../getting_started/source_install.html"/> 
 
   
   <script src="../_static/js/modernizr.min.js"></script>
@@ -75,20 +75,29 @@
             
             
                 <ul class="current">
-<li class="toctree-l1"><a class="reference internal" href="../installation/package_install.html">Install ChiDG</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../installation/source_install.html">Build ChiDG from source</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="../installation/source_install.html#obtaining-chidg">Obtaining ChiDG</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../installation/source_install.html#dependencies">Dependencies</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../installation/source_install.html#cmake">CMake</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../installation/source_install.html#hdf5">HDF5</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../installation/source_install.html#tecio">TecIO</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../installation/source_install.html#compiling-chidg">Compiling ChiDG</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../getting_started/getting_started.html">Getting Started</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../getting_started/getting_started.html#install-chidg">Install ChiDG</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../getting_started/source_install.html">Build ChiDG from source</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../getting_started/source_install.html#obtaining-chidg">Obtaining ChiDG</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../getting_started/source_install.html#dependencies">Dependencies</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../getting_started/source_install.html#cmake">CMake</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../getting_started/source_install.html#hdf5">HDF5</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../getting_started/source_install.html#tecio">TecIO</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../getting_started/source_install.html#compiling-chidg">Compiling ChiDG</a></li>
+</ul>
+</li>
+</ul>
+</li>
 </ul>
 </li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Examples</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="smoothbump/example_smoothbump.html">Euler smooth bump</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="smoothbump/example_smoothbump.html#background">Background</a></li>
-<li class="toctree-l3"><a class="reference internal" href="smoothbump/example_smoothbump.html#set-up">Set-up</a></li>
+<li class="toctree-l3"><a class="reference internal" href="smoothbump/example_smoothbump.html#setup">Setup</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="smoothbump/example_smoothbump.html#setup-from-scratch">Setup from scratch:</a></li>
+<li class="toctree-l4"><a class="reference internal" href="smoothbump/example_smoothbump.html#use-setup-provided">Use setup provided:</a></li>
+</ul>
+</li>
 <li class="toctree-l3"><a class="reference internal" href="smoothbump/example_smoothbump.html#results">Results</a></li>
 </ul>
 </li>
@@ -167,6 +176,13 @@
 </li>
 </ul>
 </li>
+<li class="toctree-l2"><a class="reference internal" href="../code_details/equations/detail_equations.html">Equation Sets</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../code_details/equations/detail_equations.html#mathematical-background">Mathematical background</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../code_details/equations/detail_equations.html#metric-terms">Metric terms</a></li>
+</ul>
+</li>
+</ul>
+</li>
 </ul>
 </li>
 </ul>
@@ -217,6 +233,26 @@
 <h1>Examples<a class="headerlink" href="#examples" title="Permalink to this headline">¶</a></h1>
 <div class="toctree-wrapper compound">
 </div>
+<div class="line-block">
+<div class="line"><strong>Scalar equations</strong></div>
+<div class="line"><br /></div>
+</div>
+<div class="line-block">
+<div class="line"><strong>Euler equations</strong></div>
+<div class="line-block">
+<div class="line"><a class="reference internal" href="smoothbump/example_smoothbump.html#example-smoothbump"><span class="std std-ref">Euler smooth bump</span></a></div>
+<div class="line"><a class="reference internal" href="naca2412/example_naca2412.html#example-naca2412"><span class="std std-ref">NACA 2412 Airfoil</span></a></div>
+<div class="line"><br /></div>
+</div>
+</div>
+<div class="line-block">
+<div class="line"><strong>Linearized Euler equations</strong></div>
+<div class="line"><br /></div>
+</div>
+<div class="line-block">
+<div class="line"><strong>Navier-Stokes</strong></div>
+<div class="line"><br /></div>
+</div>
 </div>
 
 
@@ -229,7 +265,7 @@
         <a href="smoothbump/example_smoothbump.html" class="btn btn-neutral float-right" title="Euler smooth bump" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
-        <a href="../installation/source_install.html" class="btn btn-neutral" title="Build ChiDG from source" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+        <a href="../getting_started/source_install.html" class="btn btn-neutral" title="Build ChiDG from source" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
       
     </div>
   
@@ -270,6 +306,7 @@
       <script type="text/javascript" src="../_static/underscore.js"></script>
       <script type="text/javascript" src="../_static/doctools.js"></script>
       <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+      <script type="text/javascript" src="../_static/mathjax_conf.js"></script>
 
   
 

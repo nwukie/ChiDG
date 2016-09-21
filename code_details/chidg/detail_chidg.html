@@ -76,20 +76,29 @@
             
             
                 <ul class="current">
-<li class="toctree-l1"><a class="reference internal" href="../../installation/package_install.html">Install ChiDG</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../installation/source_install.html">Build ChiDG from source</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="../../installation/source_install.html#obtaining-chidg">Obtaining ChiDG</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../installation/source_install.html#dependencies">Dependencies</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../installation/source_install.html#cmake">CMake</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../installation/source_install.html#hdf5">HDF5</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../installation/source_install.html#tecio">TecIO</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../installation/source_install.html#compiling-chidg">Compiling ChiDG</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../getting_started/getting_started.html">Getting Started</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../getting_started/getting_started.html#install-chidg">Install ChiDG</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../getting_started/source_install.html">Build ChiDG from source</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../../getting_started/source_install.html#obtaining-chidg">Obtaining ChiDG</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../getting_started/source_install.html#dependencies">Dependencies</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../getting_started/source_install.html#cmake">CMake</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../getting_started/source_install.html#hdf5">HDF5</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../getting_started/source_install.html#tecio">TecIO</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../getting_started/source_install.html#compiling-chidg">Compiling ChiDG</a></li>
+</ul>
+</li>
+</ul>
+</li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="../../examples/example_main.html">Examples</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="../../examples/smoothbump/example_smoothbump.html">Euler smooth bump</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="../../examples/smoothbump/example_smoothbump.html#background">Background</a></li>
-<li class="toctree-l3"><a class="reference internal" href="../../examples/smoothbump/example_smoothbump.html#set-up">Set-up</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../examples/smoothbump/example_smoothbump.html#setup">Setup</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../../examples/smoothbump/example_smoothbump.html#setup-from-scratch">Setup from scratch:</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../examples/smoothbump/example_smoothbump.html#use-setup-provided">Use setup provided:</a></li>
+</ul>
+</li>
 <li class="toctree-l3"><a class="reference internal" href="../../examples/smoothbump/example_smoothbump.html#results">Results</a></li>
 </ul>
 </li>
@@ -168,6 +177,13 @@
 </li>
 </ul>
 </li>
+<li class="toctree-l2"><a class="reference internal" href="../equations/detail_equations.html">Equation Sets</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../equations/detail_equations.html#mathematical-background">Mathematical background</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../equations/detail_equations.html#metric-terms">Metric terms</a></li>
+</ul>
+</li>
+</ul>
+</li>
 </ul>
 </li>
 </ul>
@@ -218,17 +234,22 @@
             
   <div class="section" id="chidg-instance">
 <h1>ChiDG Instance<a class="headerlink" href="#chidg-instance" title="Permalink to this headline">¶</a></h1>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="nb">type</span><span class="p">(</span><span class="n">chidg_t</span><span class="p">)</span>   <span class="n">chidg</span>
+<p>ChiDG exists primarily as a Fortran Class(<code class="docutils literal"><span class="pre">chidg_t</span></code>) that provides an interface to the simulation environment.
+A <code class="docutils literal"><span class="pre">chidg_t</span></code> instance contains five primary components. These are:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="nb">type</span> <span class="p">::</span> <span class="n">chidg_t</span>
+    <span class="nb">type</span><span class="p">(</span><span class="n">chidg_data_t</span><span class="p">)</span>          <span class="n">data</span>
+    <span class="nb">type</span><span class="p">(</span><span class="n">time_scheme_t</span><span class="p">)</span>         <span class="n">time_scheme</span>
+    <span class="nb">type</span><span class="p">(</span><span class="n">nonlinear_solver_t</span><span class="p">)</span>    <span class="n">nonlinear_solver</span>
+    <span class="nb">type</span><span class="p">(</span><span class="n">linear_solver_t</span><span class="p">)</span>       <span class="n">linear_solver</span>
+    <span class="nb">type</span><span class="p">(</span><span class="n">preconditioner_t</span><span class="p">)</span>      <span class="n">preconditioner</span>
+    <span class="o">...</span>
+<span class="n">end</span> <span class="nb">type</span> <span class="n">chidg_t</span>
 </pre></div>
 </div>
-<p>The <code class="docutils literal"><span class="pre">chidg_t</span></code> data type is the top-level interface class for ChiDG. A <code class="docutils literal"><span class="pre">chidg_t</span></code>
-instance contains five primary components. These are:</p>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="nb">type</span><span class="p">(</span><span class="n">chidg_data_t</span><span class="p">)</span>          <span class="n">data</span>
-<span class="nb">type</span><span class="p">(</span><span class="n">time_scheme_t</span><span class="p">)</span>         <span class="n">time_scheme</span>
-<span class="nb">type</span><span class="p">(</span><span class="n">nonlinear_solver_t</span><span class="p">)</span>    <span class="n">nonlinear_solver</span>
-<span class="nb">type</span><span class="p">(</span><span class="n">linear_solver_t</span><span class="p">)</span>       <span class="n">linear_solver</span>
-<span class="nb">type</span><span class="p">(</span><span class="n">preconditioner_t</span><span class="p">)</span>      <span class="n">preconditioner</span>
-</pre></div>
+<div class="line-block">
+<div class="line"><br /></div>
+<div class="line"><br /></div>
+<div class="line"><br /></div>
 </div>
 <div class="section" id="components">
 <h2>Components<a class="headerlink" href="#components" title="Permalink to this headline">¶</a></h2>
@@ -300,6 +321,7 @@ calculation. This includes:</p>
       <script type="text/javascript" src="../../_static/underscore.js"></script>
       <script type="text/javascript" src="../../_static/doctools.js"></script>
       <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+      <script type="text/javascript" src="../../_static/mathjax_conf.js"></script>
 
   
 

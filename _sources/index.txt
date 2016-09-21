@@ -3,6 +3,7 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
+================
 Welcome to ChiDG
 ================
 
@@ -39,6 +40,7 @@ equations using the discontinuous Galerkin method on Chimera-overset grids.
 
 .. image:: figures/icon_dg.png
     :width: 19 %
+    :target: ./code_details/mesh/detail_mesh.html
 .. image:: figures/icon_curved.png
     :width: 19%
 .. image:: figures/icon_chimera.png
@@ -111,13 +113,19 @@ Getting started
 
 
 .. toctree::
-   :maxdepth: 2
-   :hidden:
+   :maxdepth: 4
 
-   installation/package_install
-   installation/source_install
+   getting_started/getting_started
    examples/example_main
    code_details/details_main
+
+
+..   :hidden:
+
+
+
+..   installation/package_install
+..   installation/source_install
 
 
 Indices and tables

@@ -10,6 +10,7 @@ Code details
     containers/detail_containers
     mesh/detail_mesh
     parallel/detail_parallel
+    equations/detail_equations
 ..    solvers/detail_solvers
 ..    equations/detail_equations
 ..    io/detail_io

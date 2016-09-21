@@ -1,5 +1,9 @@
+Getting Started
+===============
+
+
 Install ChiDG
-================
+-------------
 
 **WARNING: Currently in pre-release. The package-based install is currently being
 developed and not yet well-supported. This should be fully supported upon release.**
@@ -10,6 +14,19 @@ ChiDG can be installed using the Python package manager ``pip``.
 :: 
 
     pip install chidg
+
+
+
+.. toctree::
+   :maxdepth: 2
+   :hidden:
+
+   source_install
+
+
+See also: :ref:`source_install`
+
+
 
 
 

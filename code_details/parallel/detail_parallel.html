@@ -32,6 +32,7 @@
   
     <link rel="top" title="ChiDG 0.1 documentation" href="../../index.html"/>
         <link rel="up" title="Code details" href="../details_main.html"/>
+        <link rel="next" title="Equation Sets" href="../equations/detail_equations.html"/>
         <link rel="prev" title="Mesh" href="../mesh/detail_mesh.html"/> 
 
   
@@ -75,20 +76,29 @@
             
             
                 <ul class="current">
-<li class="toctree-l1"><a class="reference internal" href="../../installation/package_install.html">Install ChiDG</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../installation/source_install.html">Build ChiDG from source</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="../../installation/source_install.html#obtaining-chidg">Obtaining ChiDG</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../installation/source_install.html#dependencies">Dependencies</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../installation/source_install.html#cmake">CMake</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../installation/source_install.html#hdf5">HDF5</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../installation/source_install.html#tecio">TecIO</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../installation/source_install.html#compiling-chidg">Compiling ChiDG</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../getting_started/getting_started.html">Getting Started</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../getting_started/getting_started.html#install-chidg">Install ChiDG</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../getting_started/source_install.html">Build ChiDG from source</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../../getting_started/source_install.html#obtaining-chidg">Obtaining ChiDG</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../getting_started/source_install.html#dependencies">Dependencies</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../getting_started/source_install.html#cmake">CMake</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../getting_started/source_install.html#hdf5">HDF5</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../getting_started/source_install.html#tecio">TecIO</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../getting_started/source_install.html#compiling-chidg">Compiling ChiDG</a></li>
+</ul>
+</li>
+</ul>
+</li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="../../examples/example_main.html">Examples</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="../../examples/smoothbump/example_smoothbump.html">Euler smooth bump</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="../../examples/smoothbump/example_smoothbump.html#background">Background</a></li>
-<li class="toctree-l3"><a class="reference internal" href="../../examples/smoothbump/example_smoothbump.html#set-up">Set-up</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../examples/smoothbump/example_smoothbump.html#setup">Setup</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../../examples/smoothbump/example_smoothbump.html#setup-from-scratch">Setup from scratch:</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../examples/smoothbump/example_smoothbump.html#use-setup-provided">Use setup provided:</a></li>
+</ul>
+</li>
 <li class="toctree-l3"><a class="reference internal" href="../../examples/smoothbump/example_smoothbump.html#results">Results</a></li>
 </ul>
 </li>
@@ -163,6 +173,13 @@
 <li class="toctree-l4"><a class="reference internal" href="#block-jacobi">Block-Jacobi</a></li>
 <li class="toctree-l4"><a class="reference internal" href="#restricted-additive-schwarz">Restricted Additive Schwarz</a></li>
 <li class="toctree-l4"><a class="reference internal" href="#references">References</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../equations/detail_equations.html">Equation Sets</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../equations/detail_equations.html#mathematical-background">Mathematical background</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../equations/detail_equations.html#metric-terms">Metric terms</a></li>
 </ul>
 </li>
 </ul>
@@ -405,6 +422,8 @@ performs much better than the block-Jacobi preconditioner with and ILU0 local so
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
+        <a href="../equations/detail_equations.html" class="btn btn-neutral float-right" title="Equation Sets" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
       
         <a href="../mesh/detail_mesh.html" class="btn btn-neutral" title="Mesh" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
       
@@ -447,6 +466,7 @@ performs much better than the block-Jacobi preconditioner with and ILU0 local so
       <script type="text/javascript" src="../../_static/underscore.js"></script>
       <script type="text/javascript" src="../../_static/doctools.js"></script>
       <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+      <script type="text/javascript" src="../../_static/mathjax_conf.js"></script>
 
   
 

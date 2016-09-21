@@ -31,7 +31,7 @@
 
   
     <link rel="top" title="ChiDG 0.1 documentation" href="#"/>
-        <link rel="next" title="Install ChiDG" href="installation/package_install.html"/> 
+        <link rel="next" title="Getting Started" href="getting_started/getting_started.html"/> 
 
   
   <script src="_static/js/modernizr.min.js"></script>
@@ -74,20 +74,29 @@
             
             
                 <ul>
-<li class="toctree-l1"><a class="reference internal" href="installation/package_install.html">Install ChiDG</a></li>
-<li class="toctree-l1"><a class="reference internal" href="installation/source_install.html">Build ChiDG from source</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="installation/source_install.html#obtaining-chidg">Obtaining ChiDG</a></li>
-<li class="toctree-l2"><a class="reference internal" href="installation/source_install.html#dependencies">Dependencies</a></li>
-<li class="toctree-l2"><a class="reference internal" href="installation/source_install.html#cmake">CMake</a></li>
-<li class="toctree-l2"><a class="reference internal" href="installation/source_install.html#hdf5">HDF5</a></li>
-<li class="toctree-l2"><a class="reference internal" href="installation/source_install.html#tecio">TecIO</a></li>
-<li class="toctree-l2"><a class="reference internal" href="installation/source_install.html#compiling-chidg">Compiling ChiDG</a></li>
+<li class="toctree-l1"><a class="reference internal" href="getting_started/getting_started.html">Getting Started</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="getting_started/getting_started.html#install-chidg">Install ChiDG</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="getting_started/source_install.html">Build ChiDG from source</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="getting_started/source_install.html#obtaining-chidg">Obtaining ChiDG</a></li>
+<li class="toctree-l4"><a class="reference internal" href="getting_started/source_install.html#dependencies">Dependencies</a></li>
+<li class="toctree-l4"><a class="reference internal" href="getting_started/source_install.html#cmake">CMake</a></li>
+<li class="toctree-l4"><a class="reference internal" href="getting_started/source_install.html#hdf5">HDF5</a></li>
+<li class="toctree-l4"><a class="reference internal" href="getting_started/source_install.html#tecio">TecIO</a></li>
+<li class="toctree-l4"><a class="reference internal" href="getting_started/source_install.html#compiling-chidg">Compiling ChiDG</a></li>
+</ul>
+</li>
+</ul>
+</li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="examples/example_main.html">Examples</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="examples/smoothbump/example_smoothbump.html">Euler smooth bump</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="examples/smoothbump/example_smoothbump.html#background">Background</a></li>
-<li class="toctree-l3"><a class="reference internal" href="examples/smoothbump/example_smoothbump.html#set-up">Set-up</a></li>
+<li class="toctree-l3"><a class="reference internal" href="examples/smoothbump/example_smoothbump.html#setup">Setup</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="examples/smoothbump/example_smoothbump.html#setup-from-scratch">Setup from scratch:</a></li>
+<li class="toctree-l4"><a class="reference internal" href="examples/smoothbump/example_smoothbump.html#use-setup-provided">Use setup provided:</a></li>
+</ul>
+</li>
 <li class="toctree-l3"><a class="reference internal" href="examples/smoothbump/example_smoothbump.html#results">Results</a></li>
 </ul>
 </li>
@@ -166,6 +175,13 @@
 </li>
 </ul>
 </li>
+<li class="toctree-l2"><a class="reference internal" href="code_details/equations/detail_equations.html">Equation Sets</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="code_details/equations/detail_equations.html#mathematical-background">Mathematical background</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="code_details/equations/detail_equations.html#metric-terms">Metric terms</a></li>
+</ul>
+</li>
+</ul>
+</li>
 </ul>
 </li>
 </ul>
@@ -221,7 +237,7 @@
 <h2>ChiDG is:<a class="headerlink" href="#chidg-is" title="Permalink to this headline">¶</a></h2>
 <p>a framework for solving sets of partial differential
 equations using the discontinuous Galerkin method on Chimera-overset grids.</p>
-<a class="reference internal image-reference" href="_images/icon_dg.png"><img alt="_images/icon_dg.png" src="_images/icon_dg.png" style="width: 19%;" /></a>
+<a class="reference external image-reference" href="./code_details/mesh/detail_mesh.html"><img alt="_images/icon_dg.png" src="_images/icon_dg.png" style="width: 19%;" /></a>
 <a class="reference internal image-reference" href="_images/icon_curved.png"><img alt="_images/icon_curved.png" src="_images/icon_curved.png" style="width: 19%;" /></a>
 <a class="reference internal image-reference" href="_images/icon_chimera.png"><img alt="_images/icon_chimera.png" src="_images/icon_chimera.png" style="width: 19%;" /></a>
 <a class="reference internal image-reference" href="_images/icon_newton.png"><img alt="_images/icon_newton.png" src="_images/icon_newton.png" style="width: 19%;" /></a>
@@ -258,10 +274,8 @@ equations using the discontinuous Galerkin method on Chimera-overset grids.</p>
 <div class="line"><br /></div>
 <div class="line"><br /></div>
 </div>
-</div>
-</div>
 <div class="section" id="getting-started">
-<h1>Getting started<a class="headerlink" href="#getting-started" title="Permalink to this headline">¶</a></h1>
+<h3>Getting started<a class="headerlink" href="#getting-started" title="Permalink to this headline">¶</a></h3>
 <blockquote>
 <div><ul class="simple">
 <li>Installation</li>
@@ -270,15 +284,25 @@ equations using the discontinuous Galerkin method on Chimera-overset grids.</p>
 </ul>
 </div></blockquote>
 <div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="getting_started/getting_started.html">Getting Started</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="getting_started/getting_started.html#install-chidg">Install ChiDG</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="examples/example_main.html">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="code_details/details_main.html">Code details</a></li>
+</ul>
 </div>
 </div>
 <div class="section" id="indices-and-tables">
-<h1>Indices and tables<a class="headerlink" href="#indices-and-tables" title="Permalink to this headline">¶</a></h1>
+<h3>Indices and tables<a class="headerlink" href="#indices-and-tables" title="Permalink to this headline">¶</a></h3>
 <ul class="simple">
 <li><a class="reference internal" href="genindex.html"><span class="std std-ref">Index</span></a></li>
 <li><a class="reference internal" href="py-modindex.html"><span class="std std-ref">Module Index</span></a></li>
 <li><a class="reference internal" href="search.html"><span class="std std-ref">Search Page</span></a></li>
 </ul>
+</div>
+</div>
 </div>
 
 
@@ -288,7 +312,7 @@ equations using the discontinuous Galerkin method on Chimera-overset grids.</p>
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
-        <a href="installation/package_install.html" class="btn btn-neutral float-right" title="Install ChiDG" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
+        <a href="getting_started/getting_started.html" class="btn btn-neutral float-right" title="Getting Started" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
     </div>
@@ -330,6 +354,7 @@ equations using the discontinuous Galerkin method on Chimera-overset grids.</p>
       <script type="text/javascript" src="_static/underscore.js"></script>
       <script type="text/javascript" src="_static/doctools.js"></script>
       <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+      <script type="text/javascript" src="_static/mathjax_conf.js"></script>
 
   
 

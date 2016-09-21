@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>Install ChiDG &mdash; ChiDG 0.1 documentation</title>
+  <title>Build ChiDG from source &mdash; ChiDG 0.1 documentation</title>
   
 
   
@@ -30,7 +30,10 @@
   
 
   
-    <link rel="top" title="ChiDG 0.1 documentation" href="../index.html"/> 
+    <link rel="top" title="ChiDG 0.1 documentation" href="../index.html"/>
+        <link rel="up" title="Getting Started" href="getting_started.html"/>
+        <link rel="next" title="Examples" href="../examples/example_main.html"/>
+        <link rel="prev" title="Getting Started" href="getting_started.html"/> 
 
   
   <script src="../_static/js/modernizr.min.js"></script>
@@ -72,16 +75,16 @@
           
             
             
-                <ul>
-<li class="toctree-l1"><a class="reference internal" href="../getting_started/getting_started.html">Getting Started</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="../getting_started/getting_started.html#install-chidg">Install ChiDG</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="../getting_started/source_install.html">Build ChiDG from source</a><ul>
-<li class="toctree-l4"><a class="reference internal" href="../getting_started/source_install.html#obtaining-chidg">Obtaining ChiDG</a></li>
-<li class="toctree-l4"><a class="reference internal" href="../getting_started/source_install.html#dependencies">Dependencies</a></li>
-<li class="toctree-l4"><a class="reference internal" href="../getting_started/source_install.html#cmake">CMake</a></li>
-<li class="toctree-l4"><a class="reference internal" href="../getting_started/source_install.html#hdf5">HDF5</a></li>
-<li class="toctree-l4"><a class="reference internal" href="../getting_started/source_install.html#tecio">TecIO</a></li>
-<li class="toctree-l4"><a class="reference internal" href="../getting_started/source_install.html#compiling-chidg">Compiling ChiDG</a></li>
+                <ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="getting_started.html">Getting Started</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="getting_started.html#install-chidg">Install ChiDG</a><ul class="current">
+<li class="toctree-l3 current"><a class="current reference internal" href="#">Build ChiDG from source</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#obtaining-chidg">Obtaining ChiDG</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#dependencies">Dependencies</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#cmake">CMake</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#hdf5">HDF5</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#tecio">TecIO</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#compiling-chidg">Compiling ChiDG</a></li>
 </ul>
 </li>
 </ul>
@@ -213,11 +216,13 @@
   <ul class="wy-breadcrumbs">
     <li><a href="../index.html">Docs</a> &raquo;</li>
       
-    <li>Install ChiDG</li>
+          <li><a href="getting_started.html">Getting Started</a> &raquo;</li>
+      
+    <li>Build ChiDG from source</li>
       <li class="wy-breadcrumbs-aside">
         
           
-            <a href="../_sources/installation/package_install.txt" rel="nofollow"> View page source</a>
+            <a href="../_sources/getting_started/source_install.txt" rel="nofollow"> View page source</a>
           
         
       </li>
@@ -227,13 +232,97 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
             
-  <div class="section" id="install-chidg">
-<h1>Install ChiDG<a class="headerlink" href="#install-chidg" title="Permalink to this headline">¶</a></h1>
-<p><strong>WARNING: Currently in pre-release. The package-based install is currently being
-developed and not yet well-supported. This should be fully supported upon release.</strong></p>
-<p>ChiDG can be installed using the Python package manager <code class="docutils literal"><span class="pre">pip</span></code>.</p>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">pip</span> <span class="n">install</span> <span class="n">chidg</span>
+  <div class="section" id="build-chidg-from-source">
+<span id="source-install"></span><h1>Build ChiDG from source<a class="headerlink" href="#build-chidg-from-source" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="obtaining-chidg">
+<h2>Obtaining ChiDG<a class="headerlink" href="#obtaining-chidg" title="Permalink to this headline">¶</a></h2>
+<p>ChiDG is hosted on GitHub and may be cloned using the https protocol as</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">git</span> <span class="n">clone</span> <span class="n">https</span><span class="p">:</span><span class="o">//</span><span class="n">github</span><span class="o">.</span><span class="n">com</span><span class="o">/</span><span class="n">nwukie</span><span class="o">/</span><span class="n">ChiDG</span><span class="o">.</span><span class="n">git</span> <span class="n">ChiDG</span>
 </pre></div>
+</div>
+</div>
+<div class="section" id="dependencies">
+<h2>Dependencies<a class="headerlink" href="#dependencies" title="Permalink to this headline">¶</a></h2>
+<p>ChiDG depends on several external libraries and applications.</p>
+<div class="line-block">
+<div class="line">CMake</div>
+<div class="line">HDF5</div>
+<div class="line">TecIO (distributed with ChiDG)</div>
+<div class="line"><br /></div>
+</div>
+</div>
+<div class="section" id="cmake">
+<h2>CMake<a class="headerlink" href="#cmake" title="Permalink to this headline">¶</a></h2>
+<p>ChiDG uses the CMake build-sytem to generate the <code class="docutils literal"><span class="pre">make</span></code> configuration
+files for the project. If you do not already have CMake installed on your
+system, you should be able to download a package/binary from the CMake Website.</p>
+</div>
+<div class="section" id="hdf5">
+<h2>HDF5<a class="headerlink" href="#hdf5" title="Permalink to this headline">¶</a></h2>
+<p>HDF5 is used as a container for the ChiDG-formatted grid/solution files and
+is a required dependency of ChiDG</p>
+<p>HDF5 Website</p>
+<p>The HDF5 library gives the option to build various portions of the library
+itself, depending on what the user needs available. ChiDG uses the HDF5
+Fortran module interfaces and the high-level API. Be sure to configure with the
+appropriate flags when building HDF5. Refer to the HDF5 documentation and
+installation guide for complete directions. Likely configuration parameters
+that are needed are:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="o">--</span><span class="n">enable</span><span class="o">-</span><span class="n">fortran</span>
+<span class="o">--</span><span class="n">enable</span><span class="o">-</span><span class="n">fortran2003</span>
+</pre></div>
+</div>
+<p>The ChIDG CMake build will try to automatically locate the HDF5 libraries and
+modules. To ensure they are found, <strong>be sure to set the HDF5_ROOT environment
+variable</strong> such that the directory includes the <code class="docutils literal"><span class="pre">bin</span></code>, <code class="docutils literal"><span class="pre">lib</span></code>, and <code class="docutils literal"><span class="pre">include</span></code>
+directories where the libraries and modules can be located</p>
+</div>
+<div class="section" id="tecio">
+<h2>TecIO<a class="headerlink" href="#tecio" title="Permalink to this headline">¶</a></h2>
+<p>Tecplot 360 is currently the primary visualization tool used for ChiDG.
+The TecIO libraries are distributed with the ChiDG project for multiple
+systems and should be linked automatically without user intervention.
+If, for some reason, the packaged TecIO library is incompatible with
+your system, new libraries can be downloaded from the Tecplot website.</p>
+<p>TecIO Libraries</p>
+</div>
+<div class="section" id="compiling-chidg">
+<h2>Compiling ChiDG<a class="headerlink" href="#compiling-chidg" title="Permalink to this headline">¶</a></h2>
+<p><strong>Up-to-date Fortran(F2008) compiler required. Tested with gfortran 5.3</strong></p>
+<p>ChiDG uses the CMake build system. Out-of-source build, as described here,
+are the only supported build method.</p>
+<blockquote>
+<div><ul class="simple">
+<li>Change to the ChiDG root directory:</li>
+</ul>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">cd</span> <span class="n">ChiDG</span><span class="o">/</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li>Create a new build directory:</li>
+</ul>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">mkdir</span> <span class="n">build</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li>Change to the build directory:</li>
+</ul>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">cd</span> <span class="n">build</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li>Configure with CMake including user options:</li>
+</ul>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">cmake</span> <span class="o">-</span><span class="n">DCMAKE_Fortran_COMPILER</span><span class="o">=</span><span class="n">gfortran</span> <span class="o">-</span><span class="n">DCMAKE_BUILD_TYPE</span><span class="o">=</span><span class="n">Release</span> <span class="o">..</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li>Run <code class="docutils literal"><span class="pre">make</span></code> to build the ChiDG library and interfaces:</li>
+</ul>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">make</span>
+</pre></div>
+</div>
+</div></blockquote>
 </div>
 </div>
 
@@ -241,6 +330,15 @@ developed and not yet well-supported. This should be fully supported upon releas
            </div>
           </div>
           <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="../examples/example_main.html" class="btn btn-neutral float-right" title="Examples" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="getting_started.html" class="btn btn-neutral" title="Getting Started" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
   
 
   <hr/>

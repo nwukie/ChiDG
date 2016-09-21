@@ -21,6 +21,20 @@ differential equations. In general, the implicit problem statement here is:
 |
 |
 
+ .. highlight:: Fortran
+
+::
+
+    type, abstract, public :: nonlinear_solver_t
+
+
+    contains
+
+        procedure(data_interface),   deferred   :: solve    ! Must define this procedures in the extended type
+
+    end type nonlinear_solver_t
+
+    
 
 
 

@@ -76,20 +76,29 @@
             
             
                 <ul class="current">
-<li class="toctree-l1"><a class="reference internal" href="../../installation/package_install.html">Install ChiDG</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../installation/source_install.html">Build ChiDG from source</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="../../installation/source_install.html#obtaining-chidg">Obtaining ChiDG</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../installation/source_install.html#dependencies">Dependencies</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../installation/source_install.html#cmake">CMake</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../installation/source_install.html#hdf5">HDF5</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../installation/source_install.html#tecio">TecIO</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../installation/source_install.html#compiling-chidg">Compiling ChiDG</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../getting_started/getting_started.html">Getting Started</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../getting_started/getting_started.html#install-chidg">Install ChiDG</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../getting_started/source_install.html">Build ChiDG from source</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../../getting_started/source_install.html#obtaining-chidg">Obtaining ChiDG</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../getting_started/source_install.html#dependencies">Dependencies</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../getting_started/source_install.html#cmake">CMake</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../getting_started/source_install.html#hdf5">HDF5</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../getting_started/source_install.html#tecio">TecIO</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../getting_started/source_install.html#compiling-chidg">Compiling ChiDG</a></li>
+</ul>
+</li>
+</ul>
+</li>
 </ul>
 </li>
 <li class="toctree-l1 current"><a class="reference internal" href="../example_main.html">Examples</a><ul class="current">
 <li class="toctree-l2 current"><a class="current reference internal" href="#">Euler smooth bump</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#background">Background</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#set-up">Set-up</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#setup">Setup</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#setup-from-scratch">Setup from scratch:</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#use-setup-provided">Use setup provided:</a></li>
+</ul>
+</li>
 <li class="toctree-l3"><a class="reference internal" href="#results">Results</a></li>
 </ul>
 </li>
@@ -168,6 +177,13 @@
 </li>
 </ul>
 </li>
+<li class="toctree-l2"><a class="reference internal" href="../../code_details/equations/detail_equations.html">Equation Sets</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../code_details/equations/detail_equations.html#mathematical-background">Mathematical background</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../../code_details/equations/detail_equations.html#metric-terms">Metric terms</a></li>
+</ul>
+</li>
+</ul>
+</li>
 </ul>
 </li>
 </ul>
@@ -217,7 +233,7 @@
            <div itemprop="articleBody">
             
   <div class="section" id="euler-smooth-bump">
-<h1>Euler smooth bump<a class="headerlink" href="#euler-smooth-bump" title="Permalink to this headline">¶</a></h1>
+<span id="example-smoothbump"></span><h1>Euler smooth bump<a class="headerlink" href="#euler-smooth-bump" title="Permalink to this headline">¶</a></h1>
 <div class="section" id="background">
 <h2>Background<a class="headerlink" href="#background" title="Permalink to this headline">¶</a></h2>
 <p>A canonical problem for verifying high-order solvers is the Euler smooth bump test case.
@@ -235,23 +251,45 @@ over the volume of the domain and computed as:</p>
                                               { \frac{p_\infty}{\rho_\infty^\gamma}     } \Bigg)^2 d\Omega}
                                               {     \int d\Omega }}\]</div>
 </div>
-<div class="section" id="set-up">
-<h2>Set-up<a class="headerlink" href="#set-up" title="Permalink to this headline">¶</a></h2>
-<p><strong>From scratch:</strong>
-A Fortran code is attached that can be used to generate a Plot3D grid file for this case:</p>
-<dl class="docutils">
-<dt>The process when using the Plot3D grid is:</dt>
-<dd><ul class="first last simple">
-<li>Generate Plot3D grid</li>
-<li>Convert the grid to a ChiDG-Format HDF file using the <code class="docutils literal"><span class="pre">chidg</span> <span class="pre">convert</span></code> action</li>
-<li>Impose boundary conditions using the <code class="docutils literal"><span class="pre">chidg</span> <span class="pre">edit</span></code> action</li>
-<li>Run the calculation</li>
-</ul>
-</dd>
-</dl>
-<p><strong>Already set-up:</strong>
-Alternatively, a ChiDG-formatted grid file is also provided with the boundary
+<div class="section" id="setup">
+<h2>Setup<a class="headerlink" href="#setup" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="setup-from-scratch">
+<h3>Setup from scratch:<a class="headerlink" href="#setup-from-scratch" title="Permalink to this headline">¶</a></h3>
+<p>A Fortran code is attached that can be used to generate a Plot3D grid file for this case:</p>
+<div class="line-block">
+<div class="line"><a class="reference download internal" href="../../_downloads/smoothbump_generator.f90" download=""><code class="xref download docutils literal"><span class="pre">smoothbump_generator.f90</span></code></a></div>
+<div class="line"><a class="reference download internal" href="../../_downloads/chidg.nml" download=""><code class="xref download docutils literal"><span class="pre">chidg.nml</span></code></a></div>
+<div class="line"><br /></div>
+</div>
+<div class="line-block">
+<div class="line"><strong>Step 1:</strong> compile the provided grid generator file using a Fortran compiler</div>
+<div class="line"><strong>Step 2:</strong> run the executable to produce an unformatted double precision Plot3D grid file</div>
+<div class="line"><strong>Step 3:</strong> convert the Plot3D grid file to a ChiDG-format grid file using <code class="docutils literal"><span class="pre">chidg</span> <span class="pre">convert</span> <span class="pre">gridfile.x</span></code></div>
+<div class="line"><strong>Step 4:</strong> set boundary conditions on the ChiDG grid using the <code class="docutils literal"><span class="pre">chidg</span> <span class="pre">edit</span> <span class="pre">gridfile.h5</span></code> action</div>
+<div class="line"><strong>Step 5:</strong> download a <code class="docutils literal"><span class="pre">chidg.nml</span></code> configuration file and place it in a run directory with the grid file</div>
+<div class="line"><strong>Step 6:</strong> change to the run directory and execute <code class="docutils literal"><span class="pre">chidg</span></code> from the command line</div>
+<div class="line"><strong>Step 7:</strong> once the simulation is converged, execute <code class="docutils literal"><span class="pre">chidg</span> <span class="pre">post</span> <span class="pre">gridfile.h5</span></code> to write a Tecplot file for visualization</div>
+<div class="line"><br /></div>
+</div>
+</div>
+<div class="section" id="use-setup-provided">
+<h3>Use setup provided:<a class="headerlink" href="#use-setup-provided" title="Permalink to this headline">¶</a></h3>
+<p>Alternatively, a ChiDG-formatted grid file is also provided with the boundary
 conditions already set:</p>
+<div class="line-block">
+<div class="line"><a class="reference download internal" href="../../_downloads/smoothbump.h5" download=""><code class="xref download docutils literal"><span class="pre">smoothbump.h5</span></code></a></div>
+<div class="line"><a class="reference download internal" href="../../_downloads/chidg.nml" download=""><code class="xref download docutils literal"><span class="pre">chidg.nml</span></code></a></div>
+<div class="line"><br /></div>
+</div>
+<div class="line-block">
+<div class="line"><strong>Step 1:</strong> download the <code class="docutils literal"><span class="pre">smoothbump.h5</span></code> grid file and the <code class="docutils literal"><span class="pre">chidg.nml</span></code> settings file</div>
+<div class="line"><strong>Step 2:</strong> place the grid and settings file in a new directory</div>
+<div class="line"><strong>Step 3:</strong> change to the run directory and execute <code class="docutils literal"><span class="pre">chidg</span></code> from the command line</div>
+<div class="line"><strong>Step 4:</strong> once the simulation is converged, execute <code class="docutils literal"><span class="pre">chidg</span> <span class="pre">post</span> <span class="pre">smoothbump.h5</span></code> to write a Tecplot file for visualization</div>
+<div class="line"><br /></div>
+<div class="line"><br /></div>
+</div>
+</div>
 </div>
 <div class="section" id="results">
 <h2>Results<a class="headerlink" href="#results" title="Permalink to this headline">¶</a></h2>
@@ -311,6 +349,7 @@ conditions already set:</p>
       <script type="text/javascript" src="../../_static/underscore.js"></script>
       <script type="text/javascript" src="../../_static/doctools.js"></script>
       <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+      <script type="text/javascript" src="../../_static/mathjax_conf.js"></script>
 
   
 

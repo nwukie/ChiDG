@@ -66,6 +66,7 @@ contains
         integer(ik) :: varindex, ieq
         logical     :: found = .false.
 
+
         varindex = 0
 
 

@@ -14,6 +14,9 @@ module type_operator
     !!
     !!  @author Nathan A. Wukie
     !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @note   Refactoring
+    !!
     !!  Valid Operator Types are:
     !!      BOUNDARY_ADVECTIVE_FLUX
     !!      VOLUME_ADVECTIVE_FLUX

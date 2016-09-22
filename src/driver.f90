@@ -44,7 +44,7 @@ program driver
     integer(ik)                                 :: elems(6), iproc, idom_search, ielem_search, idom, ielem, iface, idonor, nelem_search, ChiID, donor_domain, donor_element
     integer(ik)                                 :: recv_comm, recv_element, recv_domain, donor_proc
     character(len=1024)                         :: chidg_action, filename, file_a, file_b
-    class(function_t),              allocatable :: constant, monopole, fcn
+    class(function_t),              allocatable :: constant, monopole, fcn, polynomial
     logical                                     :: chimera_face
 
 
@@ -118,10 +118,13 @@ program driver
 
 
             call create_function(constant,'constant')
+            call create_function(polynomial,'polynomial')
 
             ! rho
             call constant%set_option('val',0.01_rk)
-            call initialize_variable(chidg%data,1,constant)
+
+            call polynomial%set_option('f',3.5_rk)
+            call initialize_variable(chidg%data,1,polynomial)
 
 
 !            call create_function(constant,'constant')

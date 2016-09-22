@@ -6,14 +6,11 @@
 subroutine test_equationset__add_volume_advective_operator__one()
     use pfunit_mod
     
-    use mock_equation_set,          only: mock_equation_set_t
-    use LA_volume_advective_flux,  only: LA_volume_advective_flux_t
-!    use LA_properties,             only: LA_properties_t
+    use mock_equation_set,              only: mock_equation_set_t
+    use SA_volume_advective_operator,   only: SA_volume_advective_operator_t
 
 
     type(mock_equation_set_t)           :: meq
-!    type(LA_properties_t)              :: LA_prop
-!    type(LA_volume_advective_flux_t)   :: flux
 
     logical :: correct_type = .false.
 
@@ -21,8 +18,7 @@ subroutine test_equationset__add_volume_advective_operator__one()
     !
     ! Add one volume advective flux component. THIS IS BEING TESTED.
     !
-    !call meq%add_volume_advective_flux(flux)
-    call meq%add_operator('LA Volume Flux')
+    call meq%add_operator('Scalar Advection Volume Operator')
 
 
 
@@ -33,7 +29,7 @@ subroutine test_equationset__add_volume_advective_operator__one()
 
     ! Test flux type
     select type (component_flux => meq%volume_advective_operator(1)%op)
-        type is (LA_volume_advective_flux_t)
+        type is (SA_volume_advective_operator_t)
             correct_type = .true. 
         class default
             correct_type = .false.
@@ -57,15 +53,11 @@ end subroutine test_equationset__add_volume_advective_operator__one
 subroutine test_equationset__add_volume_advective_operator__two()
     use pfunit_mod
     
-    use mock_equation_set,         only: mock_equation_set_t
-    use LA_volume_advective_flux,  only: LA_volume_advective_flux_t
-!    use LA_properties,             only: LA_properties_t
+    use mock_equation_set,              only: mock_equation_set_t
+    use SA_volume_advective_operator,   only: SA_volume_advective_operator_t
 
 
     type(mock_equation_set_t)          :: meq
-!    type(LA_properties_t)              :: LA_prop
-!    type(LA_volume_advective_flux_t)   :: flux_a
-!    type(LA_volume_advective_flux_t)   :: flux_b
 
     logical :: correct_type = .false.
 
@@ -73,10 +65,8 @@ subroutine test_equationset__add_volume_advective_operator__two()
     !
     ! Add one volume advective flux component. THIS IS BEING TESTED.
     !
-!    call meq%add_volume_advective_flux(flux_a)
-!    call meq%add_volume_advective_flux(flux_b)
-    call meq%add_operator('LA Volume Flux')
-    call meq%add_operator('LA Volume Flux')
+    call meq%add_operator('Scalar Advection Volume Operator')
+    call meq%add_operator('Scalar Advection Volume Operator')
 
 
 
@@ -87,7 +77,7 @@ subroutine test_equationset__add_volume_advective_operator__two()
 
     ! Test first type
     select type (component_flux => meq%volume_advective_operator(1)%op)
-        type is (LA_volume_advective_flux_t)
+        type is (SA_volume_advective_operator_t)
             correct_type = .true. 
         class default
             correct_type = .false.
@@ -98,7 +88,7 @@ subroutine test_equationset__add_volume_advective_operator__two()
 
     ! Test second type
     select type (component_flux => meq%volume_advective_operator(2)%op)
-        type is (LA_volume_advective_flux_t)
+        type is (SA_volume_advective_operator_t)
             correct_type = .true. 
         class default
             correct_type = .false.
@@ -123,12 +113,11 @@ end subroutine test_equationset__add_volume_advective_operator__two
 subroutine test_equationset__add_boundary_advective_operator__one()
     use pfunit_mod
     
-    use mock_equation_set,                     only: mock_equation_set_t
-    use LA_boundary_average_advective_flux,    only: LA_boundary_average_advective_flux_t
+    use mock_equation_set,                      only: mock_equation_set_t
+    use SA_boundary_average_advective_operator, only: SA_boundary_average_advective_operator_t
 
 
     type(mock_equation_set_t)                  :: meq
-!    type(LA_boundary_average_advective_flux_t) :: average_flux
 
     logical :: correct_type = .false.
 
@@ -136,8 +125,7 @@ subroutine test_equationset__add_boundary_advective_operator__one()
     !
     ! Add one volume advective flux component. THIS IS BEING TESTED.
     !
-    !call meq%add_boundary_advective_flux(average_flux)
-    call meq%add_operator("LA Boundary Average Flux")
+    call meq%add_operator("Scalar Advection Boundary Average Operator")
 
 
 
@@ -148,7 +136,7 @@ subroutine test_equationset__add_boundary_advective_operator__one()
 
     ! Test first type
     select type (component_flux => meq%boundary_advective_operator(1)%op)
-        type is (LA_boundary_average_advective_flux_t)
+        type is (SA_boundary_average_advective_operator_t)
             correct_type = .true. 
         class default
             correct_type = .false.
@@ -169,14 +157,12 @@ end subroutine test_equationset__add_boundary_advective_operator__one
 subroutine test_equationset__add_boundary_advective_operator__two()
     use pfunit_mod
     
-    use mock_equation_set,                     only: mock_equation_set_t
-    use LA_boundary_average_advective_flux,    only: LA_boundary_average_advective_flux_t
-    use LA_LaxFriedrichs_flux,                 only: LA_LaxFriedrichs_flux_t
+    use mock_equation_set,                      only: mock_equation_set_t
+    use SA_boundary_average_advective_operator, only: SA_boundary_average_advective_operator_t
+    use SA_LaxFriedrichs_operator,              only: SA_LaxFriedrichs_operator_t
 
 
     type(mock_equation_set_t)                  :: meq
-!    type(LA_boundary_average_advective_flux_t) :: average_flux
-!    type(LA_LaxFriedrichs_flux_t)              :: upwind_flux
 
     logical :: correct_type = .false.
 
@@ -184,11 +170,8 @@ subroutine test_equationset__add_boundary_advective_operator__two()
     !
     ! Add one volume advective flux component. THIS IS BEING TESTED.
     !
-!    call meq%add_boundary_advective_flux(average_flux)
-!    call meq%add_boundary_advective_flux(upwind_flux)
-
-    call meq%add_operator("LA Boundary Average Flux")
-    call meq%add_operator("LA LaxFriedrichs Flux")
+    call meq%add_operator("Scalar Advection Boundary Average Operator")
+    call meq%add_operator("Scalar Advection LaxFriedrichs Operator")
 
 
     ! Test number of flux components
@@ -198,7 +181,7 @@ subroutine test_equationset__add_boundary_advective_operator__two()
 
     ! Test first type
     select type (component_flux => meq%boundary_advective_operator(1)%op)
-        type is (LA_boundary_average_advective_flux_t)
+        type is (SA_boundary_average_advective_operator_t)
             correct_type = .true. 
         class default
             correct_type = .false.
@@ -209,7 +192,7 @@ subroutine test_equationset__add_boundary_advective_operator__two()
 
     ! Test second type
     select type (component_flux => meq%boundary_advective_operator(2)%op)
-        type is (LA_LaxFriedrichs_flux_t)
+        type is (SA_LaxFriedrichs_operator_t)
             correct_type = .true. 
         class default
             correct_type = .false.

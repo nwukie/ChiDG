@@ -27,7 +27,7 @@
 !       - Test convergence rates for spatial orders of accuracy
 !
 !--------------------------------------------------------------------------------
-module integration_1D_linear_diffusion_mod
+module integration_1D_linear_advection_diffusion_mod
 #include <messenger.h>
     use pfunit_mod
     use mod_kinds,          only: rk, ik
@@ -72,31 +72,17 @@ module integration_1D_linear_diffusion_mod
     real(rk)        :: error(3,2,4)                         ! nprocs, ngrids, norders
     real(rk)        :: error_chimera(3,2,4)                 ! nprocs, ngrids, norders
 
-    public  :: linear_diffusion_1D
+    public  :: linear_advection_diffusion_1D
 
 
 
+    real(rk), parameter :: cx = ONE
+    real(rk), parameter :: cy = ZERO
+    real(rk), parameter :: cz = ZERO
+    real(rk), parameter :: mu = 0.05_rk
 
 
 
-    !>  A custom source term for the current test case
-    !!
-    !!  @author Nathan A. Wukie (AFRL)
-    !!  @date   8/19/2016
-    !!
-    !!  S(x) = 4*pi*pi*sin(2*pi*x)
-    !!
-    !-------------------------------------------------------------------------
-    type, extends(operator_t), public :: test_LD_volume_source_t
-
-
-    contains
-
-        procedure   :: init
-        procedure   :: compute
-
-    end type test_LD_volume_source_t
-    !*************************************************************************
 
 
     !>  A new equation set builder to build a linear diffusion equation set with the 
@@ -106,7 +92,7 @@ module integration_1D_linear_diffusion_mod
     !!  @date   8/19/2016
     !!
     !-----------------------------------------------------------------------------------------------------
-    type, extends(equation_builder_t), public :: test_linear_diffusion_builder_t
+    type, extends(equation_builder_t), public :: test_1D_linear_advection_diffusion_builder_t
 
 
     contains
@@ -114,7 +100,7 @@ module integration_1D_linear_diffusion_mod
         procedure   :: init => init_builder
         procedure   :: build
 
-    end type test_linear_diffusion_builder_t
+    end type test_1D_linear_advection_diffusion_builder_t
     !******************************************************************************************************
 
 
@@ -153,7 +139,7 @@ module integration_1D_linear_diffusion_mod
     !!
     !-------------------------------------------------------------------------------
     @TestCase(testParameters={getParameters()}, constructor=newTest)
-    type, extends(MpiTestCase) :: linear_diffusion_1D
+    type, extends(MpiTestCase) :: linear_advection_diffusion_1D
         character(100)  :: gridfile
         integer(ik)     :: order
 
@@ -162,7 +148,7 @@ module integration_1D_linear_diffusion_mod
     contains
         procedure   :: setUp
         procedure   :: tearDown
-    end type linear_diffusion_1D
+    end type linear_advection_diffusion_1D
     !*******************************************************************************
 
 
@@ -183,78 +169,6 @@ module integration_1D_linear_diffusion_mod
 
 contains
 
-    !-------------------------------------------------------------------------------
-    !                           Volume Source Methods
-    !-------------------------------------------------------------------------------
-
-    !>  Initialize the new volume source operator.
-    !!
-    !!  @author Nathan A. Wukie (AFRL)
-    !!  @date   8/29/2016
-    !!
-    !--------------------------------------------------------------------------------
-    subroutine init(self)
-        class(test_LD_volume_source_t),   intent(inout)      :: self
-
-        ! Set operator name
-        call self%set_name("Test Linear Diffusion Volume Source")
-
-        ! Set operator type
-        call self%set_operator_type("Volume Diffusive Flux")
-
-        ! Set operator equations
-        call self%set_equation("u")
-
-    end subroutine init
-    !********************************************************************************
-
-
-
-    !>  Implement the volume source definition.
-    !!
-    !!  @author Nathan A. Wukie (AFRL)
-    !!  @date   8/19/2016
-    !!
-    !!
-    !------------------------------------------------------------------------------------
-    subroutine compute(self,worker,prop)
-        class(test_LD_volume_source_t),     intent(inout)   :: self
-        type(chidg_worker_t),               intent(inout)   :: worker
-        class(properties_t),                intent(inout)   :: prop
-
-        integer(ik)                             :: iu
-        type(AD_D), allocatable, dimension(:)   :: source
-        real(rk),   allocatable, dimension(:)   :: x
-
-        !
-        ! Get variable index from equation set
-        !
-        iu = prop%get_equation_index("u")
-
-
-        !
-        ! Interpolate solution to quadrature nodes
-        !
-        source = worker%get_element_variable(iu, 'ddx + lift')
-
-        x = worker%x('volume')
-
-        source = FOUR*PI*PI*dsin(TWO*PI*x)
-
-
-
-        !
-        ! Integrate volume flux
-        !
-        call worker%integrate_volume(iu, source)
-
-
-    end subroutine compute
-    !****************************************************************************************************
-
-
-
-
 
     
     !-------------------------------------------------------------------------------
@@ -269,9 +183,9 @@ contains
     !!
     !---------------------------------------------------------------------------------------------
     subroutine init_builder(self)
-        class(test_linear_diffusion_builder_t),   intent(inout)  :: self
+        class(test_1D_linear_advection_diffusion_builder_t),   intent(inout)  :: self
 
-        call self%set_name('Test 1D Linear Diffusion')
+        call self%set_name('Test 1D Linear Advection Diffusion')
 
     end subroutine init_builder
     !*********************************************************************************************
@@ -286,32 +200,34 @@ contains
     !!  @date   9/19/2016
     !!
     !-------------------------------------------------------------------------------------------------------
-    function build(self,blueprint) result(linear_diffusion_eqn)
-        class(test_linear_diffusion_builder_t),   intent(in)  :: self
-        character(len=*),               intent(in)  :: blueprint
+    function build(self,blueprint) result(linear_advection_diffusion_eqn)
+        class(test_1D_linear_advection_diffusion_builder_t),    intent(in)  :: self
+        character(len=*),                                       intent(in)  :: blueprint
 
-        type(equation_set_t)                :: linear_diffusion_eqn
+        type(equation_set_t)                :: linear_advection_diffusion_eqn
         type(linear_coefficient_model_t)    :: linear_coefficient_model
         
 
         !
         ! Set equationset name.
         !
-        call linear_diffusion_eqn%set_name("Test 1D Linear Diffusion")
+        call linear_advection_diffusion_eqn%set_name("Test 1D Linear Advection Diffusion")
 
 
         !
         ! Add spatial operators
         !
-        call linear_diffusion_eqn%add_operator("Scalar Diffusion Boundary Average Operator")
-        call linear_diffusion_eqn%add_operator("Scalar Diffusion Volume Operator")
-        call linear_diffusion_eqn%add_operator("Scalar Diffusion BC Operator")
-        call linear_diffusion_eqn%add_operator("Test Linear Diffusion Volume Source")
+        call linear_advection_diffusion_eqn%add_operator("Linear Advection Boundary Average Operator")
+        call linear_advection_diffusion_eqn%add_operator("Linear Advection LaxFriedrichs Operator")
+        call linear_advection_diffusion_eqn%add_operator("Linear Advection Volume Operator")
+        call linear_advection_diffusion_eqn%add_operator("Scalar Diffusion Boundary Average Operator")
+        call linear_advection_diffusion_eqn%add_operator("Scalar Diffusion Volume Operator")
+        call linear_advection_diffusion_eqn%add_operator("Scalar Diffusion BC Operator")
 
         !
         ! Add model for 'compute_mu' scalar coefficient
         !
-        call linear_diffusion_eqn%prop%add_scalar(linear_coefficient_model)
+        call linear_advection_diffusion_eqn%prop%add_scalar(linear_coefficient_model)
 
 
     end function build
@@ -339,7 +255,7 @@ contains
     !------------------------------------------------------------------------------
     function newTest(test_parameter) result(test)
         type(case_grid_order),  intent(in)          :: test_parameter
-        type(linear_diffusion_1D)    :: test
+        type(linear_advection_diffusion_1D)    :: test
 
         test%gridfile    = test_parameter%gridfile
         test%order       = test_parameter%order
@@ -361,21 +277,21 @@ contains
         integer(ik) :: icase
 
 
-        files = [ string('1D_linear_diffusion_20x1x1.h5'), &
-                  string('1D_linear_diffusion_20x1x1.h5'), &
-                  string('1D_linear_diffusion_20x1x1.h5'), &
-                  string('1D_linear_diffusion_20x1x1.h5'), &
-                  string('1D_linear_diffusion_30x1x1.h5'), &
-                  string('1D_linear_diffusion_30x1x1.h5'), &
-                  string('1D_linear_diffusion_30x1x1.h5'), &
-                  string('1D_linear_diffusion_30x1x1.h5'), &
-                  string('1D_linear_diffusion_20x1x1_chimera.h5'), &
-                  string('1D_linear_diffusion_20x1x1_chimera.h5'), &
-                  string('1D_linear_diffusion_20x1x1_chimera.h5'), &
-                  string('1D_linear_diffusion_20x1x1_chimera.h5'), &
-                  string('1D_linear_diffusion_30x1x1_chimera.h5'), &
-                  string('1D_linear_diffusion_30x1x1_chimera.h5'), &
-                  string('1D_linear_diffusion_30x1x1_chimera.h5')  &
+        files = [ string('1D_linear_advection_diffusion_20x1x1.h5'), &
+                  string('1D_linear_advection_diffusion_20x1x1.h5'), &
+                  string('1D_linear_advection_diffusion_20x1x1.h5'), &
+                  string('1D_linear_advection_diffusion_20x1x1.h5'), &
+                  string('1D_linear_advection_diffusion_30x1x1.h5'), &
+                  string('1D_linear_advection_diffusion_30x1x1.h5'), &
+                  string('1D_linear_advection_diffusion_30x1x1.h5'), &
+                  string('1D_linear_advection_diffusion_30x1x1.h5'), &
+                  string('1D_linear_advection_diffusion_20x1x1_chimera.h5'), &
+                  string('1D_linear_advection_diffusion_20x1x1_chimera.h5'), &
+                  string('1D_linear_advection_diffusion_20x1x1_chimera.h5'), &
+                  string('1D_linear_advection_diffusion_20x1x1_chimera.h5'), &
+                  string('1D_linear_advection_diffusion_30x1x1_chimera.h5'), &
+                  string('1D_linear_advection_diffusion_30x1x1_chimera.h5'), &
+                  string('1D_linear_advection_diffusion_30x1x1_chimera.h5')  &
                   ]
 
 
@@ -444,26 +360,14 @@ contains
     !!
     !--------------------------------------------------------------------------------------------
     subroutine setUp(this)
-        class(linear_diffusion_1D),  intent(inout)   :: this
+        class(linear_advection_diffusion_1D),  intent(inout)   :: this
 
         class(function_t),  allocatable :: fcn
 
         
-        type(test_LD_volume_source_t)           :: source_test_linear_diffusion
-        type(test_linear_diffusion_builder_t)   :: builder_test_linear_diffusion
+        type(test_1D_linear_advection_diffusion_builder_t)  :: builder_test_linear_advection_diffusion
 
 
-
-        !-------------------------------------------------------------------------------
-        !
-        !                 Initialize and register the source operator
-        !
-        !   This has to be done before the equation set builder because it needs to be
-        !   able to find this operator.
-        !
-        !-------------------------------------------------------------------------------
-        call source_test_linear_diffusion%init()
-        call operator_factory%register(source_test_linear_diffusion)
 
 
 
@@ -472,8 +376,8 @@ contains
         !                 Initialize and register equation set builder
         !
         !-------------------------------------------------------------------------------
-        call builder_test_linear_diffusion%init()
-        call equation_builder_factory%register(builder_test_linear_diffusion)
+        call builder_test_linear_advection_diffusion%init()
+        call equation_builder_factory%register(builder_test_linear_advection_diffusion)
 
 
 
@@ -576,7 +480,7 @@ contains
     !!
     !------------------------------------------------------------------------------------------------------
     subroutine tearDown(this)
-        class(linear_diffusion_1D),  intent(inout)   :: this
+        class(linear_advection_diffusion_1D),  intent(inout)   :: this
 
         ! Close ChiDG
         call this%chidg%close('core')
@@ -604,9 +508,9 @@ contains
     !!
     !!
     !-------------------------------------------------------------------------------------------------------
-    @Test(npes=[1,2,3])
+    @Test(npes=[1])
     subroutine run_calculations(self)
-        class(linear_diffusion_1D),  intent(inout)   :: self
+        class(linear_advection_diffusion_1D),  intent(inout)   :: self
 
         real(rk)    :: computed_error
         integer(ik) :: npes_index, grid_index, order_index
@@ -637,7 +541,7 @@ contains
         !
         ! Compute error
         !
-        computed_error = compute_1D_linear_diffusion_error(self%chidg%data,self%ChiDG_COMM)
+        computed_error = compute_1D_linear_advection_diffusion_error(self%chidg%data,self%ChiDG_COMM)
 
 
         !
@@ -674,7 +578,7 @@ contains
     !-------------------------------------------------------------------------------------------------------
     @Test(npes=[1])
     subroutine test_conv_conforming(self)
-        class(linear_diffusion_1D),  intent(inout)   :: self
+        class(linear_advection_diffusion_1D),  intent(inout)   :: self
 
         integer(ik)             :: inpes, igrid, iorder, nsteps
 
@@ -713,7 +617,7 @@ contains
     !-------------------------------------------------------------------------------------------------------
     @Test(npes=[1])
     subroutine test_conv_chimera(self)
-        class(linear_diffusion_1D),  intent(inout)   :: self
+        class(linear_advection_diffusion_1D),  intent(inout)   :: self
 
         integer(ik)             :: inpes, igrid, iorder, nsteps
 
@@ -765,14 +669,14 @@ contains
     !--------------------------------------------------------------------------------------------------------
     @Test(npes=[1])
     subroutine test_err_conforming(self)
-        class(linear_diffusion_1D),  intent(inout)   :: self
+        class(linear_advection_diffusion_1D),  intent(inout)   :: self
 
         integer(ik) :: inpes, igrid, iorder
         real(rk)    :: error_previous, error_current, mesh_parameter_previous, mesh_parameter_current, convergence_rate, tol
 
         tol = 0.1_rk
 
-        do inpes = 1,3
+        do inpes = 1,1
             do igrid = 2,2  ! Start at the second grid because we need the previous grid in order to compute a rate 
                 do iorder = 1,4
 
@@ -813,16 +717,16 @@ contains
     !--------------------------------------------------------------------------------------------------------
     @Test(npes=[1])
     subroutine test_err_chimera(self)
-        class(linear_diffusion_1D),  intent(inout)   :: self
+        class(linear_advection_diffusion_1D),  intent(inout)   :: self
 
         integer(ik) :: inpes, igrid, iorder
         real(rk)    :: error_previous, error_current, mesh_parameter_previous, mesh_parameter_current, convergence_rate, tol
 
         tol = 0.1_rk
 
-        do inpes = 1,3
-            do iorder = 1,3
-                do igrid = 2,2  ! Start at the second grid because we need the previous grid in order to compute a rate 
+        do inpes = 1,1
+            do igrid = 2,2  ! Start at the second grid because we need the previous grid in order to compute a rate 
+                do iorder = 1,3
 
                     error_previous = error_chimera(inpes,igrid-1,iorder)
                     error_current  = error_chimera(inpes,igrid  ,iorder)
@@ -846,38 +750,6 @@ contains
 
 
 
-!        !
-!        ! Fifth order is having some issues demonstrating convergence on the finer grids, I think because of
-!        ! some machine precision issues. We are using a 3D basis to represent a 1D phenomenon so there are
-!        ! a lot of modes doing nothing and probably just contributing to a higher error threshold.
-!        !
-!        do inpes = 1,3
-!            do iorder = 4,4
-!                do igrid = 2,2  ! Start at the second grid because we need the previous grid in order to compute a rate 
-!
-!                    error_previous = error_chimera(inpes,igrid-1,iorder)
-!                    error_current  = error_chimera(inpes,igrid  ,iorder)
-!
-!                    mesh_parameter_previous = mesh_parameter(igrid-1 + 2,iorder)
-!                    mesh_parameter_current  = mesh_parameter(igrid   + 2,iorder)
-!
-!                    
-!                    !
-!                    ! Compute convergence rate of spatial operators. log10(error)/log10(mesh spacing)
-!                    !
-!                    convergence_rate = (log10(error_previous)-log10(error_current))/(log10(mesh_parameter_previous)-log10(mesh_parameter_current))
-!
-!                
-!                    @assertGreaterThan(convergence_rate, real(iorder+1,rk)-tol)
-!
-!                end do
-!            end do
-!        end do
-
-
-
-
-
 
     end subroutine test_err_chimera
     !*******************************************************************************************************
@@ -897,7 +769,7 @@ contains
     !!
     !!
     !------------------------------------------------------------------------------------
-    function compute_1D_linear_diffusion_error(data,ChiDG_COMM) result(error)
+    function compute_1D_linear_advection_diffusion_error(data,ChiDG_COMM) result(error)
         type(chidg_data_t), intent(inout)   :: data
         type(mpi_comm),     intent(in)      :: ChiDG_COMM
 
@@ -913,24 +785,21 @@ contains
         associate (mesh => data%mesh, sdata => data%sdata, eqnset => data%eqnset, prop => data%eqnset(1)%prop)
 
 
+
             !
             ! Get equation indices
             !
             iu = prop%get_equation_index("u")
-
 
             !
             ! Zero error accumulator
             !
             error_squared_sum = ZERO
 
-
-
             !
             ! Loop over elements and accumulate error
             !
             do idom = 1,data%ndomains()
-
                 do ielem = 1,data%mesh(idom)%nelem
 
 
@@ -938,12 +807,15 @@ contains
                     ! Compute the analytical solution at the quadrature nodes
                     !
                     x_gq = mesh(idom)%elems(ielem)%quad_pts(:)%c1_
-                    u_analytical = dsin(TWO*PI*x_gq) + ONE - x_gq
+                    u_analytical = (ONE - exp((x_gq-ONE)*(cx/mu))) / (ONE - exp(-cx/mu))
+
 
                     !
                     ! Interpolate DG numerical solution
                     !
                     u_dg = interpolate_element_standard(mesh,sdata%q,idom,ielem,iu,'value')
+
+
 
                     !
                     ! Compute error at GQ nodes
@@ -964,7 +836,6 @@ contains
 
 
                 end do ! ielem
-
             end do ! idom
 
 
@@ -978,7 +849,7 @@ contains
         ! Sqrt of the reduced error
         error = sqrt(error_squared_sum_reduced)
 
-    end function compute_1D_linear_diffusion_error
+    end function compute_1D_linear_advection_diffusion_error
     !**********************************************************************************************
 
 
@@ -1078,13 +949,13 @@ contains
         integer(ik) :: igrid
 
         select case (trim(grid))
-            case('1D_linear_diffusion_20x1x1.h5')
+            case('1D_linear_advection_diffusion_20x1x1.h5')
                 igrid = 1
-            case('1D_linear_diffusion_30x1x1.h5')
+            case('1D_linear_advection_diffusion_30x1x1.h5')
                 igrid = 2
-            case('1D_linear_diffusion_20x1x1_chimera.h5')
+            case('1D_linear_advection_diffusion_20x1x1_chimera.h5')
                 igrid = 3
-            case('1D_linear_diffusion_30x1x1_chimera.h5')
+            case('1D_linear_advection_diffusion_30x1x1_chimera.h5')
                 igrid = 4
         end select
 
@@ -1119,4 +990,4 @@ contains
 
 
 
-end module integration_1D_linear_diffusion_mod
+end module integration_1D_linear_advection_diffusion_mod

@@ -17,7 +17,7 @@ module mod_equations
     !
     ! Import Equations
     !
-    use eqn_linear_advection,       only: linear_advection
+    use eqn_scalar_advection,       only: scalar_advection
     use eqn_scalar_diffusion,       only: scalar_diffusion
     use eqn_dual_linear_advection,  only: dual_linear_advection
     use eqn_euler,                  only: euler 
@@ -101,7 +101,7 @@ contains
         ! Instantiate Equations
         !
         type(euler)                 :: euler_builder
-        type(linear_advection)      :: linear_advection_builder
+        type(scalar_advection)      :: scalar_advection_builder
         type(scalar_diffusion)      :: scalar_diffusion_builder
         type(dual_linear_advection) :: dual_linear_advection_builder
 
@@ -113,7 +113,7 @@ contains
 
             ! Register in global vector
             call equation_builder_factory%register(euler_builder)
-            call equation_builder_factory%register(linear_advection_builder)
+            call equation_builder_factory%register(scalar_advection_builder)
             call equation_builder_factory%register(scalar_diffusion_builder)
             call equation_builder_factory%register(dual_linear_advection_builder)
 

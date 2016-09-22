@@ -1,4 +1,5 @@
 module type_scalar
+#include <messenger.h>
     use mod_kinds,      only: rk
     use type_material,  only: material_t
     use DNAD_D
@@ -20,37 +21,14 @@ module type_scalar
 
     contains
 
-        procedure(compute_ad),   deferred   :: compute_mu
+        procedure   :: compute_mu
+        procedure   :: compute_cx
+        procedure   :: compute_cy
+        procedure   :: compute_cz
 
     end type scalar_t
     !**************************************************************************
 
-
-
-
-    abstract interface
-        subroutine compute_ad(self,u,vals)
-            import scalar_t
-            import AD_D
-
-            class(scalar_t),            intent(in)      :: self
-            type(AD_D),                 intent(in)      :: u(:)
-            type(AD_D), allocatable,    intent(inout)   :: vals(:)
-        end subroutine
-    end interface
-
-
-
-    abstract interface
-        subroutine compute_real(self,rho,rhou,rhov,rhow,rhoE,vals)
-            use mod_kinds,  only: rk
-            import scalar_t
-
-            class(scalar_t),             intent(in)      :: self
-            real(rk),                   intent(in)      :: rho(:), rhou(:), rhov(:), rhow(:), rhoE(:)
-            real(rk),   allocatable,    intent(inout)   :: vals(:)
-        end subroutine
-    end interface
 
 contains
 
@@ -81,28 +59,108 @@ contains
 !    end subroutine init
 !    !******************************************************************************************
 
+    !>
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   9/21/2016
+    !!
+    !!
+    !-------------------------------------------------------------------------------
+    impure elemental function compute_mu(self,u) result(val)
+        class(scalar_t),    intent(in)  :: self
+        type(AD_D),         intent(in)  :: u
+
+        type(AD_D)                      :: val
+        character(len=:),   allocatable :: msg
+
+        msg = "scalar%compute_mu: There wasn't any compute_mu routine implemented in the            &
+                                  allocated scalar model. Make sure this routine gets implemented   &
+                                  if there are diffusive scalar operators being computed"
+        call chidg_signal(FATAL,msg)
+
+    end function compute_mu
+    !*******************************************************************************
 
 
 
 
 
 
+    !>
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   9/21/2016
+    !!
+    !!
+    !-------------------------------------------------------------------------------
+    impure elemental function compute_cx(self,u) result(val)
+        class(scalar_t),    intent(in)  :: self
+        type(AD_D),         intent(in)  :: u
+
+        type(AD_D)                      :: val
+        character(len=:),   allocatable :: msg
+
+        msg = "scalar%compute_cx: There wasn't any compute_cx routine implemented in the            &
+                                  allocated scalar model. Make sure this routine gets implemented   &
+                                  if there are diffusive scalar operators being computed"
+        call chidg_signal(FATAL,msg)
+
+    end function compute_cx
+    !*******************************************************************************
+
+
+
+
+
+    !>
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   9/21/2016
+    !!
+    !!
+    !-------------------------------------------------------------------------------
+    impure elemental function compute_cy(self,u) result(val)
+        class(scalar_t),    intent(in)  :: self
+        type(AD_D),         intent(in)  :: u
+
+        type(AD_D)                      :: val
+        character(len=:),   allocatable :: msg
+
+        msg = "scalar%compute_cy: There wasn't any compute_cy routine implemented in the            &
+                                  allocated scalar model. Make sure this routine gets implemented   &
+                                  if there are diffusive scalar operators being computed"
+        call chidg_signal(FATAL,msg)
+
+    end function compute_cy
+    !*******************************************************************************
 
 
 
 
 
 
+    !>
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   9/21/2016
+    !!
+    !!
+    !-------------------------------------------------------------------------------
+    impure elemental function compute_cz(self,u) result(val)
+        class(scalar_t),    intent(in)  :: self
+        type(AD_D),         intent(in)  :: u
+
+        type(AD_D)                      :: val
+        character(len=:),   allocatable :: msg
+
+        msg = "scalar%compute_cz: There wasn't any compute_cz routine implemented in the            &
+                                  allocated scalar model. Make sure this routine gets implemented   &
+                                  if there are diffusive scalar operators being computed"
+        call chidg_signal(FATAL,msg)
 
 
-
-
-
-
-
-
-
-
+    end function compute_cz
+    !*******************************************************************************
 
 
 

@@ -122,16 +122,16 @@ contains
 
 
                 !
+                ! Print diagnostics
+                !
+                call write_line("   R(Q) - Norm: ", resid, delimiter='', io_proc=GLOBAL_MASTER)
+
+                !
                 ! Tolerance check
                 !
                 if ( resid < self%tol ) exit
 
 
-
-                !
-                ! Print diagnostics
-                !
-                call write_line("   R(Q) - Norm: ", resid, delimiter='', io_proc=GLOBAL_MASTER)
                 call self%residual_time%push_back(timing)   ! non-essential record-keeping
                 call self%residual_norm%push_back(resid)
 

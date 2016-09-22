@@ -122,10 +122,6 @@ contains
                 resid = rhs%norm(ChiDG_COMM)
 
 
-                !
-                ! Tolerance check
-                !
-                if ( resid < self%tol ) exit
 
 
 
@@ -133,6 +129,12 @@ contains
                 ! Print diagnostics
                 !
                 call write_line("   R(Q) - Norm: ", resid, delimiter='', columns=.True., column_width=20, io_proc=GLOBAL_MASTER)
+
+
+                !
+                ! Tolerance check
+                !
+                if ( resid < self%tol ) exit
                 call self%residual_time%push_back(timing)
                 call self%residual_norm%push_back(resid)
 

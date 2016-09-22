@@ -1,8 +1,9 @@
-module eqn_scalar_advection
+module eqn_scalar_advection_diffusion
 #include <messenger.h>
     use type_equation_set,              only: equation_set_t
     use type_equation_builder,          only: equation_builder_t
     use type_linear_coefficient_model,  only: linear_coefficient_model_t
+    use DNAD_D
     implicit none
 
 
@@ -15,14 +16,14 @@ module eqn_scalar_advection
     !!
     !!
     !-----------------------------------------------------------------------------------------------------
-    type, extends(equation_builder_t), public :: scalar_advection
+    type, extends(equation_builder_t), public :: scalar_advection_diffusion
 
     contains
 
         procedure   :: init
         procedure   :: build
 
-    end type scalar_advection
+    end type scalar_advection_diffusion
     !******************************************************************************************************
 
 
@@ -32,6 +33,11 @@ module eqn_scalar_advection
 
 contains
 
+
+
+
+
+
     !>
     !!
     !!  @author Nathan A. Wukie (AFRL)
@@ -39,9 +45,9 @@ contains
     !!
     !---------------------------------------------------------------------------------------------
     subroutine init(self)
-        class(scalar_advection),   intent(inout)  :: self
+        class(scalar_advection_diffusion),   intent(inout)  :: self
 
-        call self%set_name('Scalar Advection')
+        call self%set_name('Scalar Advection Diffusion')
 
     end subroutine init
     !*********************************************************************************************
@@ -58,18 +64,18 @@ contains
     !!
     !!
     !-------------------------------------------------------------------------------------------------------
-    function build(self,blueprint) result(scalar_advection_eqn)
-        class(scalar_advection),    intent(in)  :: self
+    function build(self,blueprint) result(scalar_advection_diffusion_eqn)
+        class(scalar_advection_diffusion),    intent(in)  :: self
         character(len=*),           intent(in)  :: blueprint
 
-        type(equation_set_t)                :: scalar_advection_eqn
-        type(linear_coefficient_model_t)    :: linear_coefficient_model
+        type(equation_set_t)                :: scalar_advection_diffusion_eqn
+        type(linear_coefficient_model_t)    :: scalar_model
         
 
         !
         ! Set equationset name.
         !
-        call scalar_advection_eqn%set_name("Scalar Advection")
+        call scalar_advection_diffusion_eqn%set_name("Scalar Advection Diffusion")
 
 
         !
@@ -78,16 +84,19 @@ contains
         select case (trim(blueprint))
 
             case('default')
-                call scalar_advection_eqn%add_operator('Scalar Advection Boundary Average Operator')
-                call scalar_advection_eqn%add_operator('Scalar Advection Volume Operator')
-                call scalar_advection_eqn%add_operator('Scalar Advection LaxFriedrichs Operator')
-                call scalar_advection_eqn%add_operator('Scalar Advection BC Operator')
+                call scalar_advection_diffusion_eqn%add_operator('Scalar Advection Boundary Average Operator')
+                call scalar_advection_diffusion_eqn%add_operator('Scalar Advection Volume Operator')
+                call scalar_advection_diffusion_eqn%add_operator('Scalar Advection LaxFriedrichs Operator')
+                call scalar_advection_diffusion_eqn%add_operator('Scalar Advection BC Operator')
+                call scalar_advection_diffusion_eqn%add_operator("Scalar Diffusion Boundary Average Operator")
+                call scalar_advection_diffusion_eqn%add_operator("Scalar Diffusion Volume Operator")
+                call scalar_advection_diffusion_eqn%add_operator("Scalar Diffusion BC Operator")
 
 
-                call scalar_advection_eqn%prop%add_scalar(linear_coefficient_model)
+                call scalar_advection_diffusion_eqn%prop%add_scalar(scalar_model)
 
             case default
-                call chidg_signal_one(FATAL, "build_scalar_advection: I didn't recognize the construction &
+                call chidg_signal_one(FATAL, "build_scalar_advection_diffusion: I didn't recognize the construction &
                                               parameter that was passed to build the equation set.", blueprint)
 
         end select
@@ -100,4 +109,4 @@ contains
 
 
 
-end module eqn_scalar_advection
+end module eqn_scalar_advection_diffusion

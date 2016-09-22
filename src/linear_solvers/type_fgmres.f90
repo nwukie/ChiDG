@@ -239,7 +239,7 @@ contains
                 
 
                 !! Force reorthogonalization
-                reorthogonalize = .true.
+                !reorthogonalize = .true.
                 if ( reorthogonalize ) then
                     call write_line('GMRES: Reorthogonalizing...', io_proc=GLOBAL_MASTER)
 

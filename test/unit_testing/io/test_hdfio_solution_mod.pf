@@ -76,14 +76,14 @@ contains
         !
         spacedim = 3
         nterms_s = 1
-        call this%chidgO1%data%add_domain(meshdata(1)%name,meshdata(1)%points,meshdata(1)%connectivity,spacedim,meshdata(1)%nterms_c,'LinearAdvection')
+        call this%chidgO1%data%add_domain(meshdata(1)%name,meshdata(1)%points,meshdata(1)%connectivity,spacedim,meshdata(1)%nterms_c,'Scalar Advection')
         call this%chidgO1%initialize_solution_domains(nterms_s)
         call this%chidgO1%init('communication')
         call this%chidgO1%initialize_solution_solver()
 
         spacedim = 3
         nterms_s = 8
-        call this%chidgO2%data%add_domain(meshdata(1)%name,meshdata(1)%points,meshdata(1)%connectivity,spacedim,meshdata(1)%nterms_c,'LinearAdvection')
+        call this%chidgO2%data%add_domain(meshdata(1)%name,meshdata(1)%points,meshdata(1)%connectivity,spacedim,meshdata(1)%nterms_c,'Scalar Advection')
         call this%chidgO2%initialize_solution_domains(nterms_s)
         call this%chidgO2%init('communication')
         call this%chidgO2%initialize_solution_solver()

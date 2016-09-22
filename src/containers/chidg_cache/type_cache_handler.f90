@@ -1,7 +1,8 @@
 module type_cache_handler
 #include <messenger.h>
     use mod_kinds,          only: rk, ik
-    use mod_constants,      only: NFACES, INTERIOR, CHIMERA, BOUNDARY, DIAG, ME, NEIGHBOR, HALF, ONE
+    use mod_constants,      only: NFACES, INTERIOR, CHIMERA, BOUNDARY, DIAG, ME, NEIGHBOR, HALF, ONE, &
+                                  XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX
     use mod_DNAD_tools,     only: face_compute_seed, element_compute_seed
     use mod_interpolate,    only: interpolate_face_autodiff, interpolate_element_autodiff
     use DNAD_D
@@ -1061,17 +1062,30 @@ contains
         iface      = worker%iface
 
 
+        if (iface == XI_MIN) then
+            iface_n = XI_MAX
+        else if (iface == ETA_MIN) then
+            iface_n = ETA_MAX
+        else if (iface == ZETA_MIN) then
+            iface_n = ZETA_MAX
+        else if (iface == XI_MAX) then
+            iface_n = XI_MIN
+        else if (iface == ETA_MAX) then
+            iface_n = ETA_MIN
+        else if (iface == ZETA_MAX) then
+            iface_n = ZETA_MIN
+        end if
+
         !
         ! Neighbor element
         !
         idomain_l_n  = worker%mesh(idomain_l)%faces(ielement_l,iface)%ineighbor_domain_l
         ielement_l_n = worker%mesh(idomain_l)%faces(ielement_l,iface)%ineighbor_element_l
-        iface_n      = worker%mesh(idomain_l)%faces(ielement_l,iface)%get_neighbor_face()
 
 
-        associate ( weights          => worker%mesh(idomain_l)%elems(ielement_l)%gq%face%weights(:,iface),        &
-                    val_face_trans   => worker%mesh(idomain_l)%elems(ielement_l)%gq%face%val_trans(:,:,iface),    &
-                    val_face         => worker%mesh(idomain_l)%elems(ielement_l)%gq%face%val(:,:,iface),          &
+        associate ( weights          => worker%mesh(idomain_l)%elems(ielement_l)%gq%face%weights(:,iface_n),        &
+                    val_face_trans   => worker%mesh(idomain_l)%elems(ielement_l)%gq%face%val_trans(:,:,iface_n),    &
+                    val_face         => worker%mesh(idomain_l)%elems(ielement_l)%gq%face%val(:,:,iface_n),          &
                     invmass          => worker%mesh(idomain_l)%elems(ielement_l)%invmass)
 
             ! Get normal vector. Use reverse of the normal vector from the interior element since no exterior element exists.

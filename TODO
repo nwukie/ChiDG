@@ -43,16 +43,6 @@ Preconditioners
 
 Boundary Conditions
 !---------------------------------------------------------------------
-@detail Implement capability for boundary condition coupled across the entire face. Extra blocks in the linearization
-@author Nathan A. Wukie
-@date   1/28/2016               COMPLETED 2/8/2016
-
-
-@detail Implement implicit giles-type boundary condition
-@author Nathan A. Wukie
-@date   1/28/2016
-
-
 
 
 

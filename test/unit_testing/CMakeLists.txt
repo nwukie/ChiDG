@@ -20,8 +20,3 @@ add_subdirectory(parallel)
 
 
 
-
-
-
-# Unit-testing demo case for demonstrating passing and failing tests
-#add_subdirectory(demo)

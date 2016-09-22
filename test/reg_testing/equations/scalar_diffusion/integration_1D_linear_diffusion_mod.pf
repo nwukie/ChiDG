@@ -2,7 +2,7 @@
 !
 !           Test a 1D linear diffusion problem with a source term.
 !
-!   -grad(u) = S
+!   div(-grad(u)) = S
 !
 !   Linear Diffusion Flux Definition:
 !       F(u) = -dudx

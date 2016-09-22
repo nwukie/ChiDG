@@ -63,7 +63,7 @@ contains
         nterms_c = 8
         nterms_s = 27
 
-        call this%chidg%data%add_domain('D_01',pts_m,nterms_c,'LinearAdvection',nterms_s)
+        call this%chidg%data%add_domain('D_01',pts_m,nterms_c,'Scalar Advection',nterms_s)
         call this%chidg%data%init_sdata()
         
         

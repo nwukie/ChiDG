@@ -1,4 +1,4 @@
-module test_linearadvection_mod
+module test_scalar_advection_mod
     use pfunit_mod
     use mod_kinds,                  only: rk,ik
     use mod_constants,              only: ZERO, ONE, TWO, THREE, FIVE, SIX, EIGHT, NINE, TEN, &
@@ -17,7 +17,7 @@ module test_linearadvection_mod
     use mod_check_jacobian
     implicit none
 
-    public  :: test_eq_LA
+    public  :: test_eq_SA
 
 
 
@@ -39,13 +39,13 @@ module test_linearadvection_mod
 
     
     @TestCase(constructor=newTest)
-    type, extends(ParameterizedTestCase) ::  test_eq_LA
+    type, extends(ParameterizedTestCase) ::  test_eq_SA
         type(chidg_t)       :: chidg
         integer(ik)         :: iblk
     contains
         procedure   ::  setUp
         procedure   ::  tearDown
-    end type test_eq_LA
+    end type test_eq_SA
 
 
 
@@ -61,7 +61,7 @@ contains
     ! NOTE: make sure to use 'this' instead of 'self' since these are over-writting a derived type 
     ! procedure. The argument names have to match
     subroutine setUp(this)
-        class(test_eq_LA),    intent(inout)   :: this
+        class(test_eq_SA),    intent(inout)   :: this
         
         integer(ik), parameter      :: npt = 64
         type(point_t),  allocatable :: nodes(:)
@@ -94,7 +94,7 @@ contains
         spacedim = 3
         nterms_s = 8
         nterms_c = 8
-        call this%chidg%data%add_domain('D_01',nodes,connectivity,spacedim,nterms_c,'linearadvection')
+        call this%chidg%data%add_domain('D_01',nodes,connectivity,spacedim,nterms_c,'Scalar Advection')
         call this%chidg%initialize_solution_domains(nterms_s)
         call this%chidg%init('communication')
         call this%chidg%initialize_solution_solver()
@@ -107,7 +107,7 @@ contains
     end subroutine
     
     subroutine tearDown(this)
-        class(test_eq_LA),    intent(inout)   :: this
+        class(test_eq_SA),    intent(inout)   :: this
 
 
         !
@@ -131,7 +131,7 @@ contains
     
     ! TestCase constructor for parameter specification
     function newTest(param)
-        type(test_eq_LA) :: newTest
+        type(test_eq_SA) :: newTest
         type(blockParam)                    :: param
         
         newTest%iblk = param%iblk
@@ -154,8 +154,8 @@ contains
 !------------------------------------------------------------------------------------------
 ! Test Volume Flux jacobian calclation
 @Test(cases = [1, 2, 3, 4, 5, 6, 7])
-    subroutine test_LA_jacobian_volume_advective_flux(self)
-        class(test_eq_LA),    intent(inout)   :: self
+    subroutine test_SA_jacobian_volume_advective_flux(self)
+        class(test_eq_SA),    intent(inout)   :: self
         
         type(densematrix_t) :: blk_dnad, blk_fd
         integer(ik) :: ielem, ivar, iblk, irow
@@ -183,8 +183,8 @@ contains
 
 !> Test Boundary Average Flux jacobian calclation
 @Test(cases = [1, 2, 3, 4, 5, 6, 7])
-    subroutine test_LA_jacobian_boundary_advective_flux(self)
-        class(test_eq_LA),    intent(inout)   :: self
+    subroutine test_SA_jacobian_boundary_advective_flux(self)
+        class(test_eq_SA),    intent(inout)   :: self
         
         type(densematrix_t) :: blk_dnad, blk_fd
         integer(ik) :: ielem, iface, ivar, iblk, irow
@@ -215,4 +215,4 @@ contains
     
     
 
-end module test_linearadvection_mod
+end module test_scalar_advection_mod

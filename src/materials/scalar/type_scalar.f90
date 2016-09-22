@@ -73,8 +73,8 @@ contains
         type(AD_D)                      :: val
         character(len=:),   allocatable :: msg
 
-        msg = "scalar%compute_mu: There wasn't any compute_mu routine implemented in the            &
-                                  allocated scalar model. Make sure this routine gets implemented   &
+        msg = "scalar%compute_mu: There wasn't any compute_mu routine implemented in the &
+                                  allocated scalar model. Make sure this routine gets implemented &
                                   if there are diffusive scalar operators being computed"
         call chidg_signal(FATAL,msg)
 
@@ -100,8 +100,8 @@ contains
         type(AD_D)                      :: val
         character(len=:),   allocatable :: msg
 
-        msg = "scalar%compute_cx: There wasn't any compute_cx routine implemented in the            &
-                                  allocated scalar model. Make sure this routine gets implemented   &
+        msg = "scalar%compute_cx: There wasn't any compute_cx routine implemented in the &
+                                  allocated scalar model. Make sure this routine gets implemented &
                                   if there are diffusive scalar operators being computed"
         call chidg_signal(FATAL,msg)
 
@@ -126,8 +126,8 @@ contains
         type(AD_D)                      :: val
         character(len=:),   allocatable :: msg
 
-        msg = "scalar%compute_cy: There wasn't any compute_cy routine implemented in the            &
-                                  allocated scalar model. Make sure this routine gets implemented   &
+        msg = "scalar%compute_cy: There wasn't any compute_cy routine implemented in the &
+                                  allocated scalar model. Make sure this routine gets implemented &
                                   if there are diffusive scalar operators being computed"
         call chidg_signal(FATAL,msg)
 
@@ -153,8 +153,8 @@ contains
         type(AD_D)                      :: val
         character(len=:),   allocatable :: msg
 
-        msg = "scalar%compute_cz: There wasn't any compute_cz routine implemented in the            &
-                                  allocated scalar model. Make sure this routine gets implemented   &
+        msg = "scalar%compute_cz: There wasn't any compute_cz routine implemented in the &
+                                  allocated scalar model. Make sure this routine gets implemented &
                                   if there are diffusive scalar operators being computed"
         call chidg_signal(FATAL,msg)
 

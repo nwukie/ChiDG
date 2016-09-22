@@ -33,8 +33,6 @@ subroutine testIO__read_grid_hdf__D1_E1_M1()
     call chidg%read_grid(filename, spacedim)
 
     call chidg%initialize_solution_domains(nterms_s)
-!    call chidg%init('communication')
-!    call chidg%initialize_solution_solver()
 
 
 

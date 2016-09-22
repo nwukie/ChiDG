@@ -1,24 +1,24 @@
 !--------------------------------------------------------------------------------
 !
-!           Test a 1D linear diffusion problem with a source term.
+!           Test a 1D linear advection-diffusion problem with a source term.
 !
-!   -grad(u) = S
+!   div( vec(c)*u - mu(u)*grad(u) ) = 0
 !
-!   Linear Diffusion Flux Definition:
-!       F(u) = -dudx
+!   Fluxes:
+!       Advective Flux: F_a(u) = vec(c)*u
+!       Diffusive Flux: F_d(u) = -mu*dudx
 !
-!   Source Definition:
-!       S(x) = -4*pi*pi*sin(2*pi*x)
 !
 !   Boundary conditions are:
 !       Dirichlet U(x=0) = 1
-!       Neumann dU/dX(x=1) = 2pi - 1
+!       Dirichlet U(x=1) = 0
 !
 !   Analytical Solution is:
-!       U(x) = sin(2*pi*x) + 1 - x     for x in [0,1]
+!       numerator   = 1 - exp( (x-1) * cx/mu )
+!       denominator = 1 - exp(-cx/mu)
 !
-!   Reference:
-!       B. van Leer and S. Nomura, "Discontinuous Galerkin for Diffusion", AIAA 2005-5108
+!       U(x) = numerator/denominator    for x in [0,1]
+!
 !
 !
 !   Tests that are being run here:
@@ -27,7 +27,7 @@
 !       - Test convergence rates for spatial orders of accuracy
 !
 !--------------------------------------------------------------------------------
-module integration_1D_linear_advection_diffusion_mod
+module integration_1D_linear_adv_diff_mod
 #include <messenger.h>
     use pfunit_mod
     use mod_kinds,          only: rk, ik
@@ -57,7 +57,7 @@ module integration_1D_linear_advection_diffusion_mod
     use mod_equations,                  only: equation_builder_factory
     use type_equation_builder,          only: equation_builder_t
     use type_equation_set,              only: equation_set_t
-    use type_linear_coefficient_model,  only: linear_coefficient_model_t
+    use type_scalar,                    only: scalar_t
     implicit none
 
 
@@ -67,10 +67,10 @@ module integration_1D_linear_advection_diffusion_mod
     !
     ! Procs: 1, 2, 3
     !
-    type(ivector_t) :: nsteps_convergence(3,2,4)            ! nprocs, ngrids, norders
-    type(ivector_t) :: nsteps_convergence_chimera(3,2,4)    ! nprocs, ngrids, norders
-    real(rk)        :: error(3,2,4)                         ! nprocs, ngrids, norders
-    real(rk)        :: error_chimera(3,2,4)                 ! nprocs, ngrids, norders
+    type(ivector_t) :: nsteps_convergence(3,2,3)            ! nprocs, ngrids, norders
+    type(ivector_t) :: nsteps_convergence_chimera(3,2,3)    ! nprocs, ngrids, norders
+    real(rk)        :: error(3,2,3)                         ! nprocs, ngrids, norders
+    real(rk)        :: error_chimera(3,2,3)                 ! nprocs, ngrids, norders
 
     public  :: linear_advection_diffusion_1D
 
@@ -81,6 +81,26 @@ module integration_1D_linear_advection_diffusion_mod
     real(rk), parameter :: cz = ZERO
     real(rk), parameter :: mu = 0.05_rk
 
+
+
+    !>
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   9/21/2016
+    !!
+    !!
+    !------------------------------------------------------------------------------
+    type, extends(scalar_t) :: test_1D_advection_diffusion_model_t
+
+    contains
+
+        procedure   :: compute_mu
+        procedure   :: compute_cx
+        procedure   :: compute_cy
+        procedure   :: compute_cz
+
+    end type test_1D_advection_diffusion_model_t
+    !******************************************************************************
 
 
 
@@ -170,6 +190,120 @@ module integration_1D_linear_advection_diffusion_mod
 contains
 
 
+    !-------------------------------------------------------------------------------
+    !                      Scalar equation model for cx,cy,cz,mu
+    !-------------------------------------------------------------------------------
+
+
+
+    !>
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   9/21/2016
+    !!
+    !!
+    !-------------------------------------------------------------------------------
+    impure elemental function compute_mu(self,u) result(val)
+        class(test_1D_advection_diffusion_model_t), intent(in)  :: self
+        type(AD_D),                                 intent(in)  :: u
+
+        type(AD_D) :: val
+
+        ! Allocate vals
+        val =u
+
+        ! Set to constant
+        val = mu
+
+    end function compute_mu
+    !*******************************************************************************
+
+
+
+
+
+
+    !>
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   9/21/2016
+    !!
+    !!
+    !-------------------------------------------------------------------------------
+    impure elemental function compute_cx(self,u) result(val)
+        class(test_1D_advection_diffusion_model_t), intent(in)  :: self
+        type(AD_D),                                 intent(in)  :: u
+
+        type(AD_D)  :: val
+
+        ! Allocate vals
+        val =u
+
+        ! Set to constant
+        val = cx
+
+    end function compute_cx
+    !*******************************************************************************
+
+
+
+
+
+    !>
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   9/21/2016
+    !!
+    !!
+    !-------------------------------------------------------------------------------
+    impure elemental function compute_cy(self,u) result(val)
+        class(test_1D_advection_diffusion_model_t), intent(in)  :: self
+        type(AD_D),                                 intent(in)  :: u
+
+        type(AD_D) :: val
+
+        ! Allocate vals
+        val =u
+
+        ! Set to constant
+        val = cy
+
+    end function compute_cy
+    !*******************************************************************************
+
+
+
+
+
+
+    !>
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   9/21/2016
+    !!
+    !!
+    !-------------------------------------------------------------------------------
+    impure elemental function compute_cz(self,u) result(val)
+        class(test_1D_advection_diffusion_model_t), intent(in)  :: self
+        type(AD_D),                                 intent(in)  :: u
+
+        type(AD_D)  :: val
+
+        ! Allocate vals
+        val =u
+
+        ! Set to constant
+        val = cz
+
+    end function compute_cz
+    !*******************************************************************************
+
+
+
+
+
+
+
     
     !-------------------------------------------------------------------------------
     !                           Builder Methods for new equation set
@@ -204,8 +338,8 @@ contains
         class(test_1D_linear_advection_diffusion_builder_t),    intent(in)  :: self
         character(len=*),                                       intent(in)  :: blueprint
 
-        type(equation_set_t)                :: linear_advection_diffusion_eqn
-        type(linear_coefficient_model_t)    :: linear_coefficient_model
+        type(equation_set_t)                        :: linear_advection_diffusion_eqn
+        type(test_1D_advection_diffusion_model_t)   :: scalar_model
         
 
         !
@@ -217,9 +351,10 @@ contains
         !
         ! Add spatial operators
         !
-        call linear_advection_diffusion_eqn%add_operator("Linear Advection Boundary Average Operator")
-        call linear_advection_diffusion_eqn%add_operator("Linear Advection LaxFriedrichs Operator")
-        call linear_advection_diffusion_eqn%add_operator("Linear Advection Volume Operator")
+        call linear_advection_diffusion_eqn%add_operator("Scalar Advection Boundary Average Operator")
+        call linear_advection_diffusion_eqn%add_operator("Scalar Advection LaxFriedrichs Operator")
+        call linear_advection_diffusion_eqn%add_operator("Scalar Advection Volume Operator")
+        call linear_advection_diffusion_eqn%add_operator("Scalar Advection BC Operator")
         call linear_advection_diffusion_eqn%add_operator("Scalar Diffusion Boundary Average Operator")
         call linear_advection_diffusion_eqn%add_operator("Scalar Diffusion Volume Operator")
         call linear_advection_diffusion_eqn%add_operator("Scalar Diffusion BC Operator")
@@ -227,7 +362,7 @@ contains
         !
         ! Add model for 'compute_mu' scalar coefficient
         !
-        call linear_advection_diffusion_eqn%prop%add_scalar(linear_coefficient_model)
+        call linear_advection_diffusion_eqn%prop%add_scalar(scalar_model)
 
 
     end function build
@@ -277,36 +412,30 @@ contains
         integer(ik) :: icase
 
 
-        files = [ string('1D_linear_advection_diffusion_20x1x1.h5'), &
-                  string('1D_linear_advection_diffusion_20x1x1.h5'), &
-                  string('1D_linear_advection_diffusion_20x1x1.h5'), &
-                  string('1D_linear_advection_diffusion_20x1x1.h5'), &
-                  string('1D_linear_advection_diffusion_30x1x1.h5'), &
-                  string('1D_linear_advection_diffusion_30x1x1.h5'), &
-                  string('1D_linear_advection_diffusion_30x1x1.h5'), &
-                  string('1D_linear_advection_diffusion_30x1x1.h5'), &
-                  string('1D_linear_advection_diffusion_20x1x1_chimera.h5'), &
-                  string('1D_linear_advection_diffusion_20x1x1_chimera.h5'), &
-                  string('1D_linear_advection_diffusion_20x1x1_chimera.h5'), &
-                  string('1D_linear_advection_diffusion_20x1x1_chimera.h5'), &
-                  string('1D_linear_advection_diffusion_30x1x1_chimera.h5'), &
-                  string('1D_linear_advection_diffusion_30x1x1_chimera.h5'), &
-                  string('1D_linear_advection_diffusion_30x1x1_chimera.h5')  &
+        files = [ string('1D_linear_advection_diffusion_60x1x1.h5'), &
+                  string('1D_linear_advection_diffusion_60x1x1.h5'), &
+                  string('1D_linear_advection_diffusion_60x1x1.h5'), &
+                  string('1D_linear_advection_diffusion_120x1x1.h5'), &
+                  string('1D_linear_advection_diffusion_120x1x1.h5'), &
+                  string('1D_linear_advection_diffusion_120x1x1.h5'), &
+                  string('1D_linear_advection_diffusion_60x1x1_chimera.h5'), &
+                  string('1D_linear_advection_diffusion_60x1x1_chimera.h5'), &
+                  string('1D_linear_advection_diffusion_60x1x1_chimera.h5'), &
+                  string('1D_linear_advection_diffusion_120x1x1_chimera.h5'), &
+                  string('1D_linear_advection_diffusion_120x1x1_chimera.h5'), &
+                  string('1D_linear_advection_diffusion_120x1x1_chimera.h5')  &
                   ]
 
 
         orders = [ 2, &
                    3, &
                    4, &
-                   5, &
                    2, &
                    3, &
                    4, &
-                   5, &
                    2, &
                    3, &
                    4, &
-                   5, &
                    2, &
                    3, &
                    4  &
@@ -366,8 +495,6 @@ contains
 
         
         type(test_1D_linear_advection_diffusion_builder_t)  :: builder_test_linear_advection_diffusion
-
-
 
 
 
@@ -508,7 +635,7 @@ contains
     !!
     !!
     !-------------------------------------------------------------------------------------------------------
-    @Test(npes=[1])
+    @Test(npes=[1,2,3])
     subroutine run_calculations(self)
         class(linear_advection_diffusion_1D),  intent(inout)   :: self
 
@@ -577,14 +704,14 @@ contains
     !!
     !-------------------------------------------------------------------------------------------------------
     @Test(npes=[1])
-    subroutine test_conv_conforming(self)
+    subroutine test_conv_conform(self)
         class(linear_advection_diffusion_1D),  intent(inout)   :: self
 
         integer(ik)             :: inpes, igrid, iorder, nsteps
 
         do inpes = 1,3
             do igrid = 1,2
-                do iorder = 1,4
+                do iorder = 1,3
 
                     ! Test that the current convergence for the processor count matches the serial convergence
                     nsteps = nsteps_convergence(inpes,igrid,iorder)%size()
@@ -596,7 +723,7 @@ contains
         end do
 
 
-    end subroutine test_conv_conforming
+    end subroutine test_conv_conform
     !*******************************************************************************************************
 
 
@@ -622,20 +749,7 @@ contains
         integer(ik)             :: inpes, igrid, iorder, nsteps
 
         do inpes = 1,3
-            do igrid = 1,1
-                do iorder = 1,4
-
-                    ! Test that the current convergence for the processor count matches the serial convergence
-                    nsteps = nsteps_convergence_chimera(inpes,igrid,iorder)%size()
-
-                    @assertEqual(1, nsteps)
-
-                end do
-            end do
-        end do
-
-        do inpes = 1,3
-            do igrid = 2,2
+            do igrid = 1,2
                 do iorder = 1,3
 
                     ! Test that the current convergence for the processor count matches the serial convergence
@@ -676,9 +790,10 @@ contains
 
         tol = 0.1_rk
 
-        do inpes = 1,1
+
+        do inpes = 1,3
             do igrid = 2,2  ! Start at the second grid because we need the previous grid in order to compute a rate 
-                do iorder = 1,4
+                do iorder = 1,3
 
                     error_previous = error(inpes,igrid-1,iorder)
                     error_current  = error(inpes,igrid  ,iorder)
@@ -724,7 +839,7 @@ contains
 
         tol = 0.1_rk
 
-        do inpes = 1,1
+        do inpes = 1,3
             do igrid = 2,2  ! Start at the second grid because we need the previous grid in order to compute a rate 
                 do iorder = 1,3
 
@@ -746,9 +861,6 @@ contains
                 end do
             end do
         end do
-
-
-
 
 
     end subroutine test_err_chimera
@@ -883,9 +995,9 @@ contains
 
         select case (igrid)
             case(1,3)
-                nelem = 20
+                nelem = 60
             case(2,4)
-                nelem = 30
+                nelem = 120
             case default
                 call chidg_signal(FATAL,"integration_1D_linear_diffusion_mod%mesh_parameter: invalid igrid")
         end select
@@ -897,8 +1009,6 @@ contains
             case(2)
                 nterms_1d = (iorder+1)
             case(3)
-                nterms_1d = (iorder+1)
-            case(4)
                 nterms_1d = (iorder+1)
             case default
                 call chidg_signal(FATAL,"integration_1D_linear_diffusion_mod%mesh_parameter: invalid iorder")
@@ -949,13 +1059,13 @@ contains
         integer(ik) :: igrid
 
         select case (trim(grid))
-            case('1D_linear_advection_diffusion_20x1x1.h5')
+            case('1D_linear_advection_diffusion_60x1x1.h5')
                 igrid = 1
-            case('1D_linear_advection_diffusion_30x1x1.h5')
+            case('1D_linear_advection_diffusion_120x1x1.h5')
                 igrid = 2
-            case('1D_linear_advection_diffusion_20x1x1_chimera.h5')
+            case('1D_linear_advection_diffusion_60x1x1_chimera.h5')
                 igrid = 3
-            case('1D_linear_advection_diffusion_30x1x1_chimera.h5')
+            case('1D_linear_advection_diffusion_120x1x1_chimera.h5')
                 igrid = 4
         end select
 
@@ -978,8 +1088,6 @@ contains
                 iorder = 2
             case(4)
                 iorder = 3
-            case(5)
-                iorder = 4
         end select
 
     end function get_order_index
@@ -990,4 +1098,4 @@ contains
 
 
 
-end module integration_1D_linear_advection_diffusion_mod
+end module integration_1D_linear_adv_diff_mod

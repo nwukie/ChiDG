@@ -45,7 +45,7 @@ subroutine test_operator_block_dot()
 
     
     ! Initialize domain
-    call chidg%data%add_domain('D_01',nodes,connectivity,spacedim,nterms_c,'LinearAdvection')
+    call chidg%data%add_domain('D_01',nodes,connectivity,spacedim,nterms_c,'Scalar Advection')
     call chidg%initialize_solution_domains(nterms_s)
     call chidg%init('communication')
 

@@ -1,4 +1,4 @@
 add_test_sources(equations
-                test_linearadvection_mod.pf
+                test_scalar_advection_mod.pf
                 )
 

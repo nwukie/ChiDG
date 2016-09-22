@@ -28,6 +28,8 @@
   
 
   
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+  
 
   
     <link rel="top" title="ChiDG 0.1 documentation" href="../../index.html"/>
@@ -119,6 +121,12 @@
 </ul>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="../solvers/detail_solvers.html">Solvers</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../solvers/detail_solvers.html#time-integrators">Time Integrators</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../solvers/detail_solvers.html#steady">Steady</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../solvers/detail_solvers.html#forward-euler">Forward Euler</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../solvers/detail_solvers.html#backward-euler">Backward Euler</a></li>
+</ul>
+</li>
 <li class="toctree-l3"><a class="reference internal" href="../solvers/detail_solvers.html#nonlinear-solvers">Nonlinear solvers</a><ul>
 <li class="toctree-l4"><a class="reference internal" href="../solvers/detail_solvers.html#newton">Newton</a></li>
 <li class="toctree-l4"><a class="reference internal" href="../solvers/detail_solvers.html#quasi-newton">Quasi-Newton</a></li>
@@ -126,6 +134,12 @@
 </li>
 <li class="toctree-l3"><a class="reference internal" href="../solvers/detail_solvers.html#linear-solvers">Linear Solvers</a><ul>
 <li class="toctree-l4"><a class="reference internal" href="../solvers/detail_solvers.html#fgmres">FGMRES</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../solvers/detail_solvers.html#preconditioners">Preconditioners</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../solvers/detail_solvers.html#block-jacobi">block-Jacobi</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../solvers/detail_solvers.html#block-ilu0">block-ILU0</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../solvers/detail_solvers.html#restricted-additive-schwarz-ilu0">Restricted Additive Schwarz + ILU0</a></li>
 </ul>
 </li>
 </ul>
@@ -178,10 +192,9 @@
 </ul>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="../equations/detail_equations.html">Equation Sets</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="../equations/detail_equations.html#mathematical-background">Mathematical background</a><ul>
-<li class="toctree-l4"><a class="reference internal" href="../equations/detail_equations.html#metric-terms">Metric terms</a></li>
-</ul>
-</li>
+<li class="toctree-l3"><a class="reference internal" href="../equations/detail_equations.html#mathematical-background">Mathematical background</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../equations/detail_equations.html#chidg-operators">ChiDG Operators</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../equations/detail_equations.html#chidg-equation-sets">ChiDG Equation Sets</a></li>
 </ul>
 </li>
 </ul>
@@ -236,14 +249,14 @@
 <h1>ChiDG Instance<a class="headerlink" href="#chidg-instance" title="Permalink to this headline">¶</a></h1>
 <p>ChiDG exists primarily as a Fortran Class(<code class="docutils literal"><span class="pre">chidg_t</span></code>) that provides an interface to the simulation environment.
 A <code class="docutils literal"><span class="pre">chidg_t</span></code> instance contains five primary components. These are:</p>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="nb">type</span> <span class="p">::</span> <span class="n">chidg_t</span>
-    <span class="nb">type</span><span class="p">(</span><span class="n">chidg_data_t</span><span class="p">)</span>          <span class="n">data</span>
-    <span class="nb">type</span><span class="p">(</span><span class="n">time_scheme_t</span><span class="p">)</span>         <span class="n">time_scheme</span>
-    <span class="nb">type</span><span class="p">(</span><span class="n">nonlinear_solver_t</span><span class="p">)</span>    <span class="n">nonlinear_solver</span>
-    <span class="nb">type</span><span class="p">(</span><span class="n">linear_solver_t</span><span class="p">)</span>       <span class="n">linear_solver</span>
-    <span class="nb">type</span><span class="p">(</span><span class="n">preconditioner_t</span><span class="p">)</span>      <span class="n">preconditioner</span>
-    <span class="o">...</span>
-<span class="n">end</span> <span class="nb">type</span> <span class="n">chidg_t</span>
+<div class="highlight-fortran"><div class="highlight"><pre><span></span><span class="k">type</span> <span class="kd">::</span> <span class="n">chidg_t</span>
+    <span class="k">type</span><span class="p">(</span><span class="n">chidg_data_t</span><span class="p">)</span>          <span class="k">data</span>
+<span class="k">    type</span><span class="p">(</span><span class="n">time_scheme_t</span><span class="p">)</span>         <span class="n">time_scheme</span>
+    <span class="k">type</span><span class="p">(</span><span class="n">nonlinear_solver_t</span><span class="p">)</span>    <span class="n">nonlinear_solver</span>
+    <span class="k">type</span><span class="p">(</span><span class="n">linear_solver_t</span><span class="p">)</span>       <span class="n">linear_solver</span>
+    <span class="k">type</span><span class="p">(</span><span class="n">preconditioner_t</span><span class="p">)</span>      <span class="n">preconditioner</span>
+    <span class="p">...</span>
+<span class="k">end type </span><span class="n">chidg_t</span>
 </pre></div>
 </div>
 <div class="line-block">

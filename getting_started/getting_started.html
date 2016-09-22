@@ -28,10 +28,12 @@
   
 
   
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+  
 
   
     <link rel="top" title="ChiDG 0.1 documentation" href="../index.html"/>
-        <link rel="next" title="Build ChiDG from source" href="source_install.html"/>
+        <link rel="next" title="Examples" href="../examples/example_main.html"/>
         <link rel="prev" title="Welcome to ChiDG" href="../index.html"/> 
 
   
@@ -76,16 +78,16 @@
             
                 <ul class="current">
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Getting Started</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="#install-chidg">Install ChiDG</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="source_install.html">Build ChiDG from source</a><ul>
-<li class="toctree-l4"><a class="reference internal" href="source_install.html#obtaining-chidg">Obtaining ChiDG</a></li>
-<li class="toctree-l4"><a class="reference internal" href="source_install.html#dependencies">Dependencies</a></li>
-<li class="toctree-l4"><a class="reference internal" href="source_install.html#cmake">CMake</a></li>
-<li class="toctree-l4"><a class="reference internal" href="source_install.html#hdf5">HDF5</a></li>
-<li class="toctree-l4"><a class="reference internal" href="source_install.html#tecio">TecIO</a></li>
-<li class="toctree-l4"><a class="reference internal" href="source_install.html#compiling-chidg">Compiling ChiDG</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#install-from-python-package">Install from Python Package</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#build-from-source">Build from source</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#step-1-get-chidg">Step 1: Get ChiDG</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#step-2-install-dependencies">Step 2: Install Dependencies</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#cmake">CMake</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#hdf5">HDF5</a></li>
 </ul>
 </li>
+<li class="toctree-l3"><a class="reference internal" href="#step-3-configure-the-build">Step 3: Configure the build</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#step-4-build-chidg">Step 4: Build ChiDG</a></li>
 </ul>
 </li>
 </ul>
@@ -118,13 +120,26 @@
 </ul>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="../code_details/solvers/detail_solvers.html">Solvers</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../code_details/solvers/detail_solvers.html#time-integrators">Time Integrators</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../code_details/solvers/detail_solvers.html#steady">Steady</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../code_details/solvers/detail_solvers.html#forward-euler">Forward Euler</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../code_details/solvers/detail_solvers.html#backward-euler">Backward Euler</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../code_details/solvers/detail_solvers.html#diagonally-implicit-runge-kutta">Diagonally-Implicit Runge-Kutta</a></li>
+</ul>
+</li>
 <li class="toctree-l3"><a class="reference internal" href="../code_details/solvers/detail_solvers.html#nonlinear-solvers">Nonlinear solvers</a><ul>
 <li class="toctree-l4"><a class="reference internal" href="../code_details/solvers/detail_solvers.html#newton">Newton</a></li>
 <li class="toctree-l4"><a class="reference internal" href="../code_details/solvers/detail_solvers.html#quasi-newton">Quasi-Newton</a></li>
 </ul>
 </li>
 <li class="toctree-l3"><a class="reference internal" href="../code_details/solvers/detail_solvers.html#linear-solvers">Linear Solvers</a><ul>
-<li class="toctree-l4"><a class="reference internal" href="../code_details/solvers/detail_solvers.html#fgmres">FGMRES</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../code_details/solvers/detail_solvers.html#flexible-generalized-minimum-residual">Flexible Generalized Minimum Residual</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../code_details/solvers/detail_solvers.html#preconditioners">Preconditioners</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../code_details/solvers/detail_solvers.html#block-jacobi">block-Jacobi</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../code_details/solvers/detail_solvers.html#block-ilu0">block-ILU0</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../code_details/solvers/detail_solvers.html#restricted-additive-schwarz-block-ilu0">Restricted Additive Schwarz + block-ILU0</a></li>
 </ul>
 </li>
 </ul>
@@ -177,10 +192,9 @@
 </ul>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="../code_details/equations/detail_equations.html">Equation Sets</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="../code_details/equations/detail_equations.html#mathematical-background">Mathematical background</a><ul>
-<li class="toctree-l4"><a class="reference internal" href="../code_details/equations/detail_equations.html#metric-terms">Metric terms</a></li>
-</ul>
-</li>
+<li class="toctree-l3"><a class="reference internal" href="../code_details/equations/detail_equations.html#mathematical-background">Mathematical background</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../code_details/equations/detail_equations.html#chidg-operators">ChiDG Operators</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../code_details/equations/detail_equations.html#chidg-equation-sets">ChiDG Equation Sets</a></li>
 </ul>
 </li>
 </ul>
@@ -231,17 +245,153 @@
             
   <div class="section" id="getting-started">
 <h1>Getting Started<a class="headerlink" href="#getting-started" title="Permalink to this headline">¶</a></h1>
-<div class="section" id="install-chidg">
-<h2>Install ChiDG<a class="headerlink" href="#install-chidg" title="Permalink to this headline">¶</a></h2>
+<p>We need to get a copy of ChiDG up and running on your machine. There are two options
+to accomplish this:</p>
+<blockquote>
+<div><ul class="simple">
+<li><a class="reference internal" href="#install-from-python-package"><span class="std std-ref">Install from Python Package</span></a></li>
+<li><a class="reference internal" href="#build-from-source"><span class="std std-ref">Build from source</span></a></li>
+</ul>
+</div></blockquote>
+<div class="line-block">
+<div class="line"><br /></div>
+<div class="line"><br /></div>
+<div class="line"><br /></div>
+<div class="line"><br /></div>
+<div class="line"><br /></div>
+<div class="line"><br /></div>
+</div>
+<div class="section" id="install-from-python-package">
+<span id="id1"></span><h2>Install from Python Package<a class="headerlink" href="#install-from-python-package" title="Permalink to this headline">¶</a></h2>
 <p><strong>WARNING: Currently in pre-release. The package-based install is currently being
-developed and not yet well-supported. This should be fully supported upon release.</strong></p>
+developed and not yet well-supported. We are working towards supporting this capability.</strong></p>
 <p>ChiDG can be installed using the Python package manager <code class="docutils literal"><span class="pre">pip</span></code>.</p>
 <div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">pip</span> <span class="n">install</span> <span class="n">chidg</span>
 </pre></div>
 </div>
-<div class="toctree-wrapper compound">
+<div class="line-block">
+<div class="line"><br /></div>
+<div class="line"><br /></div>
+<div class="line"><br /></div>
+<div class="line"><br /></div>
+<div class="line"><br /></div>
+<div class="line"><br /></div>
 </div>
-<p>See also: <a class="reference internal" href="source_install.html#source-install"><span class="std std-ref">Build ChiDG from source</span></a></p>
+</div>
+<div class="section" id="build-from-source">
+<span id="id2"></span><h2>Build from source<a class="headerlink" href="#build-from-source" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="step-1-get-chidg">
+<h3>Step 1: Get ChiDG<a class="headerlink" href="#step-1-get-chidg" title="Permalink to this headline">¶</a></h3>
+<p>ChiDG is hosted on GitHub and may be cloned using the https protocol as</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">git</span> <span class="n">clone</span> <span class="n">https</span><span class="p">:</span><span class="o">//</span><span class="n">github</span><span class="o">.</span><span class="n">com</span><span class="o">/</span><span class="n">nwukie</span><span class="o">/</span><span class="n">ChiDG</span><span class="o">.</span><span class="n">git</span> <span class="n">ChiDG</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="step-2-install-dependencies">
+<h3>Step 2: Install Dependencies<a class="headerlink" href="#step-2-install-dependencies" title="Permalink to this headline">¶</a></h3>
+<div class="section" id="cmake">
+<h4>CMake<a class="headerlink" href="#cmake" title="Permalink to this headline">¶</a></h4>
+<p>ChiDG uses the CMake build-sytem to generate the <code class="docutils literal"><span class="pre">make</span></code> configuration
+files for the project. If you do not already have CMake installed on your
+system, you should be able to download a package/binary from the CMake Website.</p>
+</div>
+<div class="section" id="hdf5">
+<h4>HDF5<a class="headerlink" href="#hdf5" title="Permalink to this headline">¶</a></h4>
+<p>HDF5 is used as a container for the ChiDG-formatted grid/solution files and
+is a required dependency of ChiDG. The HDF5 library gives the option to build
+various portions of the library itself, depending on what the user needs available.
+ChiDG uses the HDF5 Fortran module interfaces and the high-level API. Be sure to
+configure with the appropriate flags when building HDF5. Refer to the HDF5 documentation
+and installation guide for complete directions. Likely configuration parameters
+that are needed are:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="o">--</span><span class="n">enable</span><span class="o">-</span><span class="n">fortran</span>
+<span class="o">--</span><span class="n">enable</span><span class="o">-</span><span class="n">fortran2003</span>
+</pre></div>
+</div>
+<p>The ChIDG CMake build will try to automatically locate the HDF5 libraries and
+modules. To ensure they are found, <strong>be sure to set the HDF5_ROOT environment
+variable</strong> such that the directory includes the <code class="docutils literal"><span class="pre">bin</span></code>, <code class="docutils literal"><span class="pre">lib</span></code>, and <code class="docutils literal"><span class="pre">include</span></code>
+directories where the libraries and modules can be located</p>
+</div>
+</div>
+<div class="section" id="step-3-configure-the-build">
+<h3>Step 3: Configure the build<a class="headerlink" href="#step-3-configure-the-build" title="Permalink to this headline">¶</a></h3>
+<table border="1" class="docutils">
+<colgroup>
+<col width="47%" />
+<col width="53%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td colspan="2"><strong>Out-of-source build configuration</strong></td>
+</tr>
+<tr class="row-even"><td>#1 Change to the ChiDG root directory</td>
+<td><code class="docutils literal"><span class="pre">cd</span> <span class="pre">ChiDG</span></code></td>
+</tr>
+<tr class="row-odd"><td>#2 Create a new build directory</td>
+<td><code class="docutils literal"><span class="pre">mkdir</span> <span class="pre">build</span></code></td>
+</tr>
+<tr class="row-even"><td>#3 Change to the build directory</td>
+<td><code class="docutils literal"><span class="pre">cd</span> <span class="pre">build</span></code></td>
+</tr>
+<tr class="row-odd"><td>#4 Configure with CMake + user options</td>
+<td><code class="docutils literal"><span class="pre">cmake</span> <span class="pre">..</span></code>  or <code class="docutils literal"><span class="pre">cmake</span> <span class="pre">-DCMAKE_BUILD_TYPE=Release</span> <span class="pre">..</span></code></td>
+</tr>
+</tbody>
+</table>
+<p>The following parameters can be passed when invoking <code class="docutils literal"><span class="pre">cmake</span></code> in order to configure the build with different options. They are passed with the <code class="docutils literal"><span class="pre">-D</span></code> flag as:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">cmake</span> <span class="o">-</span><span class="n">DParameter</span><span class="o">=</span><span class="n">Option</span> <span class="o">..</span>
+</pre></div>
+</div>
+<table border="1" class="docutils">
+<colgroup>
+<col width="20%" />
+<col width="35%" />
+<col width="45%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Build parameter</th>
+<th class="head">Description</th>
+<th class="head">Options</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td>CMAKE_Fortran_COMPILER</td>
+<td>Specify a Fortran Compiler</td>
+<td>&nbsp;</td>
+</tr>
+<tr class="row-odd"><td>CMAKE_BUILD_TYPE</td>
+<td>Specify what type of compiler settings to build with</td>
+<td><code class="docutils literal"><span class="pre">Release</span></code>
+<code class="docutils literal"><span class="pre">Debug</span></code></td>
+</tr>
+<tr class="row-even"><td>USER_MPI</td>
+<td>Use User environment variables for finding MPI</td>
+<td><code class="docutils literal"><span class="pre">True</span></code>
+<code class="docutils literal"><span class="pre">False</span></code></td>
+</tr>
+<tr class="row-odd"><td>BUILD_TESTS</td>
+<td>Build the test binaries. Requires pFUnit Library</td>
+<td><code class="docutils literal"><span class="pre">True</span></code>
+<code class="docutils literal"><span class="pre">False</span></code></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Up-to-date Fortran(F2008) compiler required. Tested with gfortran 5.3</strong></p>
+</div>
+<div class="section" id="step-4-build-chidg">
+<h3>Step 4: Build ChiDG<a class="headerlink" href="#step-4-build-chidg" title="Permalink to this headline">¶</a></h3>
+<table border="1" class="docutils">
+<colgroup>
+<col width="47%" />
+<col width="53%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td>Run <code class="docutils literal"><span class="pre">make</span></code> to build the ChiDG library</td>
+<td><code class="docutils literal"><span class="pre">make</span></code> or <code class="docutils literal"><span class="pre">make</span> <span class="pre">-j</span> <span class="pre">4</span></code></td>
+</tr>
+</tbody>
+</table>
+</div>
 </div>
 </div>
 
@@ -252,7 +402,7 @@ developed and not yet well-supported. This should be fully supported upon releas
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
-        <a href="source_install.html" class="btn btn-neutral float-right" title="Build ChiDG from source" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
+        <a href="../examples/example_main.html" class="btn btn-neutral float-right" title="Examples" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
         <a href="../index.html" class="btn btn-neutral" title="Welcome to ChiDG" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>

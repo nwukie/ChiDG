@@ -79,7 +79,7 @@ a Fortran Class that provides an interface to the simulation environment.
 
 
 
-Example simulation applications:
+Example applications:
 --------------------------------
 
 .. image:: figures/naca2412.png
@@ -120,12 +120,6 @@ Getting started
    code_details/details_main
 
 
-..   :hidden:
-
-
-
-..   installation/package_install
-..   installation/source_install
 
 
 Indices and tables

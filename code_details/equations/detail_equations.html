@@ -28,6 +28,8 @@
   
 
   
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+  
 
   
     <link rel="top" title="ChiDG 0.1 documentation" href="../../index.html"/>
@@ -118,6 +120,12 @@
 </ul>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="../solvers/detail_solvers.html">Solvers</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../solvers/detail_solvers.html#time-integrators">Time Integrators</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../solvers/detail_solvers.html#steady">Steady</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../solvers/detail_solvers.html#forward-euler">Forward Euler</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../solvers/detail_solvers.html#backward-euler">Backward Euler</a></li>
+</ul>
+</li>
 <li class="toctree-l3"><a class="reference internal" href="../solvers/detail_solvers.html#nonlinear-solvers">Nonlinear solvers</a><ul>
 <li class="toctree-l4"><a class="reference internal" href="../solvers/detail_solvers.html#newton">Newton</a></li>
 <li class="toctree-l4"><a class="reference internal" href="../solvers/detail_solvers.html#quasi-newton">Quasi-Newton</a></li>
@@ -125,6 +133,12 @@
 </li>
 <li class="toctree-l3"><a class="reference internal" href="../solvers/detail_solvers.html#linear-solvers">Linear Solvers</a><ul>
 <li class="toctree-l4"><a class="reference internal" href="../solvers/detail_solvers.html#fgmres">FGMRES</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../solvers/detail_solvers.html#preconditioners">Preconditioners</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../solvers/detail_solvers.html#block-jacobi">block-Jacobi</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../solvers/detail_solvers.html#block-ilu0">block-ILU0</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../solvers/detail_solvers.html#restricted-additive-schwarz-ilu0">Restricted Additive Schwarz + ILU0</a></li>
 </ul>
 </li>
 </ul>
@@ -177,10 +191,9 @@
 </ul>
 </li>
 <li class="toctree-l2 current"><a class="current reference internal" href="#">Equation Sets</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="#mathematical-background">Mathematical background</a><ul>
-<li class="toctree-l4"><a class="reference internal" href="#metric-terms">Metric terms</a></li>
-</ul>
-</li>
+<li class="toctree-l3"><a class="reference internal" href="#mathematical-background">Mathematical background</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#chidg-operators">ChiDG Operators</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#chidg-equation-sets">ChiDG Equation Sets</a></li>
 </ul>
 </li>
 </ul>
@@ -250,16 +263,156 @@ Galerkin method as</p>
 \[\int_{\Omega_e} \boldsymbol{\psi} \frac{\partial Q}{\partial t} d\Omega +
 \int_{\Gamma_e} \boldsymbol{\psi} \vec{F} \cdot \vec{n} d\Gamma -
 \int_{\Omega_e} \nabla \boldsymbol{\psi} \cdot \vec{F} d\Omega +
-\int_{\Omega_e} \boldsymbol{\psi} \vec{S} d\Omega = 0\]</div>
-<p>Two important terms in the above equation are the boundary flux integral and the volume flux
-integral, respectively:</p>
-<div class="math">
+\int_{\Omega_e} \boldsymbol{\psi} S d\Omega = 0\]</div>
+<p>There are three spatial integral operators in the equation above. These are the
+Boundary Integral, Volume Integral, and Source term Integral:</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="29%" />
+<col width="71%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td><strong>Boundary Flux Integral</strong></td>
+<td><div class="first last math">
 \[\int_{\Gamma_e} \boldsymbol{\psi} \vec{F} \cdot \vec{n} d\Gamma\]</div>
-<div class="math">
+</td>
+</tr>
+<tr class="row-even"><td><strong>Volume Flux Integral</strong></td>
+<td><div class="first last math">
 \[\int_{\Omega_e} \nabla \boldsymbol{\psi} \cdot \vec{F} d\Omega\]</div>
-<div class="section" id="metric-terms">
-<h3>Metric terms<a class="headerlink" href="#metric-terms" title="Permalink to this headline">¶</a></h3>
+</td>
+</tr>
+<tr class="row-odd"><td><strong>Volume Source Integral</strong></td>
+<td><div class="first last math">
+\[\int_{\Omega_e} \boldsymbol{\psi} S d\Omega\]</div>
+</td>
+</tr>
+</tbody>
+</table>
+<p>In order to solve a set of equations in the discontinuous Galerkin framework, these
+integral functions must be implemented for the specific equation set being solved.
+It might not be, that each integral operator needs to be implemented, just the ones
+that represent the equation set being solved. So, for example, the Euler equations
+for nonlinear compressible flows do not have a source term, so there is no need
+to implement a volume source integral. In general, for conservation laws of the form</p>
+<div class="math">
+\[\nabla \cdot F(Q) = 0\]</div>
+<p>a <strong>Boundary Flux Integral</strong> and <strong>Volume Flux Integral</strong> will need to be implemented
+for the term <span class="math">\(F(Q)\)</span>. ChiDG represents each implemented integral operator as its
+own object, <code class="docutils literal"><span class="pre">operator_t</span></code>.</p>
 </div>
+<div class="section" id="chidg-operators">
+<h2>ChiDG Operators<a class="headerlink" href="#chidg-operators" title="Permalink to this headline">¶</a></h2>
+<p>The integral expressions in the discontinuous Galerkin formulation are
+represented in ChiDG as <code class="docutils literal"><span class="pre">operator_t</span></code> objects. Each new integral term
+that one wishes to implement is <em>extended</em> from the <code class="docutils literal"><span class="pre">operator_t</span></code>
+base class. These objects do not contain much data. Rather, they primary
+hold a type-bound procedure <code class="docutils literal"><span class="pre">compute</span></code> that allows the function definition
+to be passed around, stored in arrays, etc.</p>
+<div class="highlight-Fortran"><div class="highlight"><pre><span></span><span class="k">type</span><span class="p">,</span> <span class="k">abstract</span> <span class="kd">::</span> <span class="n">operator_t</span>
+
+<span class="k">contains</span>
+
+<span class="k">    procedure</span><span class="p">,</span> <span class="k">deferred</span>   <span class="kd">::</span> <span class="n">init</span>
+    <span class="k">procedure</span><span class="p">,</span> <span class="k">deferred</span>   <span class="kd">::</span> <span class="n">compute</span>
+
+<span class="k">end type </span><span class="n">operator_t</span>
+</pre></div>
+</div>
+<p>When a new operator is defined, it is required that the class type-bound procedures
+<code class="docutils literal"><span class="pre">init</span></code> and <code class="docutils literal"><span class="pre">compute</span></code> also be implemented. These are not implemented for
+the abstract base class because they do not have any meaning until they
+are associated with a specific implementation.</p>
+<dl class="function">
+<dt id="init">
+<code class="descname">init</code><span class="sig-paren">(</span><em>self</em><span class="sig-paren">)</span><a class="headerlink" href="#init" title="Permalink to this definition">¶</a></dt>
+<dd><p>Set the name of the operator. Set the operator type. Set the equations the operator
+is operating on.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="compute">
+<code class="descname">compute</code><span class="sig-paren">(</span><em>worker</em>, <em>prop</em><span class="sig-paren">)</span><a class="headerlink" href="#compute" title="Permalink to this definition">¶</a></dt>
+<dd><p>Implement the function that is operating on the data. Compute the function values, and
+call an integration routine.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>worker</strong> (<em>chidg_worker_t</em>) &#8211; A chidg_worker_t instance that acts as an interface for providing data, integrating, etc.</li>
+<li><strong>prop</strong> (<em>properties_t</em>) &#8211; A properties_t instance</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</div>
+<div class="section" id="chidg-equation-sets">
+<h2>ChiDG Equation Sets<a class="headerlink" href="#chidg-equation-sets" title="Permalink to this headline">¶</a></h2>
+<p>ChiDG takes a composition approach to defining sets of equations, and this is represented
+in an <code class="docutils literal"><span class="pre">equation_set_t</span></code> object. <code class="docutils literal"><span class="pre">equation_set_t</span></code>&#8216;s contain arrays of <code class="docutils literal"><span class="pre">operator_t</span></code>
+instances. In this way, <code class="docutils literal"><span class="pre">operator_t</span></code>&#8216;s can be added to equation sets to represent
+additional equations or additional terms that represent another phenomenon.</p>
+<dl class="class">
+<dt id="equation_set_t">
+<em class="property">class </em><code class="descname">equation_set_t</code><a class="headerlink" href="#equation_set_t" title="Permalink to this definition">¶</a></dt>
+<dd><p>A class</p>
+</dd></dl>
+
+<div class="highlight-Fortran"><div class="highlight"><pre><span></span><span class="k">type</span> <span class="kd">::</span> <span class="n">equation_set_t</span>
+    <span class="k">type</span><span class="p">(</span><span class="n">operator_t</span><span class="p">)</span>    <span class="n">volume_advective_operator</span><span class="p">(:)</span>
+    <span class="k">type</span><span class="p">(</span><span class="n">operator_t</span><span class="p">)</span>    <span class="n">boundary_advective_operators</span><span class="p">(:)</span>
+    <span class="k">type</span><span class="p">(</span><span class="n">operator_t</span><span class="p">)</span>    <span class="n">volume_diffusive_operator</span><span class="p">(:)</span>
+    <span class="k">type</span><span class="p">(</span><span class="n">operator_t</span><span class="p">)</span>    <span class="n">boundary_diffusive_operators</span><span class="p">(:)</span>
+    <span class="p">...</span>
+<span class="k">contains</span>
+
+<span class="k">    procedure</span><span class="p">,</span> <span class="k">public</span> <span class="kd">::</span> <span class="n">add_operator</span>
+
+<span class="k">end type </span><span class="n">equation_set_t</span>
+</pre></div>
+</div>
+<dl class="function">
+<dt id="add_operator">
+<code class="descname">add_operator</code><span class="sig-paren">(</span><em>string</em><span class="sig-paren">)</span><a class="headerlink" href="#add_operator" title="Permalink to this definition">¶</a></dt>
+<dd><p>Accepts a string indicating an operator to add. Internally, the string is used to
+create the operator from a factory.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>string</strong> (<em>str</em>) &#8211; The name of an operator to be added.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<p>For example, an <code class="docutils literal"><span class="pre">equation_set_t</span></code> that represents the Euler equations for
+nonlinear compressible flows might contain the operators</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="48%" />
+<col width="52%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td><strong>Boundary Flux Operators</strong></td>
+<td><ul class="first last simple">
+<li>Euler Boundary Average Flux</li>
+<li>Roe Upwind Flux</li>
+</ul>
+</td>
+</tr>
+<tr class="row-even"><td><strong>Volume Flux Operators</strong></td>
+<td><ul class="first last simple">
+<li>Euler Volume Flux</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
 </div>
 </div>
 

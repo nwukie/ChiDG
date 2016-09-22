@@ -2,13 +2,175 @@
 Solvers
 =======
 
-ChiDG includes both nonlinear and linear solvers. 
+The algorithm choices for the simulation environment are set using the 
+``chidg%set`` method with a selection parameter and a string option:
 
+::
+
+    call chidg%set('Time Integrator', String)
+    call chidg%set('Nonlinear Solver',String)
+    call chidg%set('Linear Solver',   String)
+    call chidg%set('Preconditioner',  String)
+
+
+----------------
+Time Integrators 
+----------------
+
+================================================    ==================
+Algorithm                                           String Selector
+================================================    ==================
+`Steady`_                                           ``Steady``
+`Backward Euler`_                                   ``Backward Euler``
+`Forward Euler`_                                    ``Forward Euler``
+================================================    ==================
+
+
+
+
+Integration of the temporal derivative term
+
+
+.. math::
+
+    \int \psi \frac{\partial Q}{\partial t} d\Omega
+
+in
+
+.. math::
+
+    \int_{\Omega_e} \boldsymbol{\psi} \frac{\partial Q}{\partial t} d\Omega +
+    \int_{\Gamma_e} \boldsymbol{\psi} \vec{F} \cdot \vec{n} d\Gamma - 
+    \int_{\Omega_e} \nabla \boldsymbol{\psi} \cdot \vec{F} d\Omega + 
+    \int_{\Omega_e} \boldsymbol{\psi} S d\Omega = 0
+
+
+is handled by the ``time_integrator_t`` class.
+
+
+
+
+.. code-block:: Fortran
+
+    type, abstract, public :: time_integrator_t
+
+    contains
+
+        procedure(data_interface), deferred :: iterate   ! Must define this procedure in the extended type
+
+    end type time_integrator_t
+
+
+Note that in the terminology used in this section, :math:`M` is the Mass Matrix
+
+.. math::
+
+    \boldsymbol{M} = \int_{\Omega} \boldsymbol{\psi} \boldsymbol{\psi} d\Omega
+
+and :math:`R(Q)` is the right-hand-side vector of spatial operators
+
+.. math::
+
+    R(\hat{Q}) = \int_{\Gamma_e} \boldsymbol{\psi} \vec{F} \cdot \vec{n} d\Gamma - 
+                 \int_{\Omega_e} \nabla \boldsymbol{\psi} \cdot \vec{F} d\Omega + 
+                 \int_{\Omega_e} \boldsymbol{\psi} S d\Omega
+
+Implicit integrators
+====================
+
+
+Steady
+------
+
+.. math::
+
+    \int \psi \frac{\partial Q}{\partial t} d\Omega = 0
+    
+Nonlinear problem:
+
+.. math::
+
+    R(Q) = 0
+
+Newton Linearization:
+
+.. math::
+
+    \frac{\partial R(\hat{Q}^{n})}{\partial Q} \Delta Q = -R(\hat{Q}^{n})
+
+
+Backward Euler
+--------------
+
+Solution advancement via first-order backward difference of the 
+time derivative:
+
+.. math::
+
+    \boldsymbol{M} \frac{\hat{Q}^{n+1} - \hat{Q}^{n}}{\Delta t} = R(\hat{Q}^{n+1})
+
+
+Nonlinear problem:
+
+.. math:: 
+
+    \frac{\Delta \hat{Q}}{\Delta t}\boldsymbol{M} + R(\hat{Q}^{n+1}) = 0
+
+Newton Linearization:
+
+.. math::
+
+    \bigg(\frac{\boldsymbol{M}}{\Delta t} + \frac{\partial R(\hat{Q}^{n})}{\partial Q}\bigg) \Delta Q = -R(\hat{Q}^{n})
+
+
+
+.. Diagonally-Implicit Runge-Kutta
+.. -------------------------------
+
+
+Explicit integrators
+====================
+
+Forward Euler
+-------------
+
+Solution advancement via a first-order forward difference of the
+time derivative:
+
+.. math::
+
+    \hat{Q}^{n+1} = \hat{Q}^n - \boldsymbol{M}^{-1}R(\hat{Q})
+
+
+
+|
+|
+|
+|
+|
+|
+|
+|
 
 
 -----------------
 Nonlinear solvers
 -----------------
+
+
+
+================================================    ==================
+Algorithm                                           String Selector
+================================================    ==================
+`Newton`_                                           ``Newton``
+`Quasi-Newton`_                                     ``Quasi-Newton``
+================================================    ==================
+
+
+
+
+
+
 
 ChiDG includes nonlinear solvers for solving the nonlinear sets of partial 
 differential equations. In general, the implicit problem statement here is:
@@ -16,21 +178,14 @@ differential equations. In general, the implicit problem statement here is:
     - Find :math:`Q`, such that :math:`R(Q) = 0`
 
 
-|
-|
-|
-|
 
- .. highlight:: Fortran
-
-::
+.. code-block:: Fortran
 
     type, abstract, public :: nonlinear_solver_t
 
-
     contains
 
-        procedure(data_interface),   deferred   :: solve    ! Must define this procedures in the extended type
+        procedure(data_interface), deferred :: solve   ! Must define this procedure in the extended type
 
     end type nonlinear_solver_t
 
@@ -41,21 +196,23 @@ differential equations. In general, the implicit problem statement here is:
 Newton
 ======
 
+
+
 The Full-Newton solver solves the equation
 
 .. math::
 
-    R(Q) = 0
+    \mathcal{R}(Q) = 0
 
 
-where :math:`R(Q)` is some potentially nonlinear function of the solution. This depends on 
+where :math:`\mathcal{R}(Q)` is some potentially nonlinear function of the solution. This depends on 
 the discretization, the equation set, the solution order, and the time-integration scheme. 
 The Newton solver linearizes the problem and computes an update 
 of the solution by solving 
 
 .. math::
 
-    \frac{\partial R}{\partial Q} \Delta Q = -R
+    \frac{\partial \mathcal{R}}{\partial Q} \Delta Q = -\mathcal{R}
 
 So, at each Newton step, a linear system of equations is being solved for :math:`\Delta Q`.
 Once the update is solved for, the solution vector is updated as
@@ -86,7 +243,7 @@ The Quasi-Newton solver solves a modified set of equations
 
 .. math::
 
-    \int_{\Omega_e} \psi \frac{\partial Q}{\partial \tau} d\Omega + R(Q) = 0
+    \int_{\Omega_e} \psi \frac{\partial Q}{\partial \tau} d\Omega + \mathcal{R}(Q) = 0
 
 
 Note the addition of a pseudo-time term to the nonlinear system of equations. This is
@@ -102,7 +259,7 @@ solution update to the system of equations as
 
 .. math::
 
-    \int_{\Omega_e} \psi \frac{\Delta Q}{\Delta \tau} d\Omega + \frac{\partial R}{\partial Q} \Delta Q = -R
+    \int_{\Omega_e} \psi \frac{\Delta Q}{\Delta \tau} d\Omega + \frac{\partial \mathcal{R}}{\partial Q} \Delta Q = -\mathcal{R}
 
 
 So, at each Quasi-Newton step, a linear system of equations is being solved for 
@@ -125,7 +282,7 @@ and current residual norms as
 
 .. math::
 
-    CFL^n = CFL^0 \frac{||R(Q^0)||_2}{||R(Q^n)||_2}
+    CFL^n = CFL^0 \frac{||\mathcal{R}(Q^0)||_2}{||\mathcal{R}(Q^n)||_2}
 
 
 Options:
@@ -138,6 +295,9 @@ Options:
 |
 |
 |
+|
+|
+|
 
 --------------
 Linear Solvers
@@ -145,10 +305,17 @@ Linear Solvers
 
 
 
-FGMRES
-======
 
-ChiDG uses a flexible version of the Generalized Minimum Residual(FGMRES) algorithm,
+================================================    ===============
+Algorithm                                           String Selector
+================================================    ===============
+`Flexible Generalized Minimum Residual`_            ``FGMRES``
+================================================    ===============
+
+Flexible Generalized Minimum Residual
+=====================================
+
+A flexible version of the Generalized Minimum Residual(FGMRES) algorithm,
 which is an iterative method for solving linear systems of equations. The FGMRES
 algorithm allows the GMRES algorithm to be preconditioned in a flexible way such that 
 the solution can be easily reconstructed.
@@ -163,7 +330,51 @@ Options:
 
 
 
+|
+|
+|
+|
+|
+|
+|
 
+
+
+
+
+---------------
+Preconditioners
+---------------
+
+
+
+================================================    ===============
+Algorithm                                           String Selector
+================================================    ===============
+`block-Jacobi`_                                     ``Jacobi``
+`block-ILU0`_                                       ``ILU0``
+`Restricted Additive Schwarz + block-ILU0`_         ``RAS+ILU0``
+================================================    ===============
+
+
+
+block-Jacobi
+============
+
+
+
+
+
+
+block-ILU0
+==========
+
+
+
+
+
+Restricted Additive Schwarz + block-ILU0
+========================================
 
 
 

@@ -1,0 +1,377 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Automatic Differentiation &mdash; ChiDG 0.1 documentation</title>
+  
+
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  
+  
+    <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+  
+
+  
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+  
+
+  
+    <link rel="top" title="ChiDG 0.1 documentation" href="../../index.html"/>
+        <link rel="up" title="Code details" href="../details_main.html"/>
+        <link rel="prev" title="Parallelization" href="../parallel/detail_parallel.html"/> 
+
+  
+  <script src="../../_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="../../index.html" class="icon icon-home"> ChiDG
+          
+
+          
+          </a>
+
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+                <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../../getting_started/getting_started.html">Getting Started</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../getting_started/getting_started.html#install-from-python-package">Install from Python Package</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../getting_started/getting_started.html#build-from-source">Build from source</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../getting_started/getting_started.html#step-1-get-chidg">Step 1: Get ChiDG</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../getting_started/getting_started.html#step-2-install-dependencies">Step 2: Install Dependencies</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../../getting_started/getting_started.html#cmake">CMake</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../getting_started/getting_started.html#hdf5">HDF5</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../../getting_started/getting_started.html#step-3-configure-the-build">Step 3: Configure the build</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../getting_started/getting_started.html#step-4-build-chidg">Step 4: Build ChiDG</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../examples/example_main.html">Examples</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../examples/smoothbump/example_smoothbump.html">Euler smooth bump</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../examples/smoothbump/example_smoothbump.html#background">Background</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../examples/smoothbump/example_smoothbump.html#setup">Setup</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../../examples/smoothbump/example_smoothbump.html#setup-from-scratch">Setup from scratch:</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../examples/smoothbump/example_smoothbump.html#use-setup-provided">Use setup provided:</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../../examples/smoothbump/example_smoothbump.html#results">Results</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../examples/naca2412/example_naca2412.html">NACA 2412 Airfoil</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../examples/naca2412/example_naca2412.html#background">Background</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../examples/naca2412/example_naca2412.html#set-up">Set-up</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../examples/naca2412/example_naca2412.html#results">Results</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1 current"><a class="reference internal" href="../details_main.html">Code details</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="../chidg/detail_chidg.html">ChiDG Instance</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../chidg/detail_chidg.html#components">Components</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../chidg/detail_chidg.html#data">Data</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../mesh/detail_mesh.html">Mesh</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../mesh/detail_mesh.html#elements">Elements</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../mesh/detail_mesh.html#metric-terms">Metric terms</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../mesh/detail_mesh.html#derivatives">Derivatives</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../mesh/detail_mesh.html#faces">Faces</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../mesh/detail_mesh.html#face-metrics">Face metrics</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../mesh/detail_mesh.html#face-normals">Face normals</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../mesh/detail_mesh.html#chimera-interfaces">Chimera Interfaces</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../mesh/detail_mesh.html#example">Example</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../solvers/detail_solvers.html">Solvers</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../solvers/detail_solvers.html#time-integrators">Time Integrators</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../solvers/detail_solvers.html#implicit-integrators">Implicit integrators</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../solvers/detail_solvers.html#explicit-integrators">Explicit integrators</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../solvers/detail_solvers.html#nonlinear-solvers">Nonlinear solvers</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../solvers/detail_solvers.html#newton">Newton</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../solvers/detail_solvers.html#quasi-newton">Quasi-Newton</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../solvers/detail_solvers.html#linear-solvers">Linear Solvers</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../solvers/detail_solvers.html#flexible-generalized-minimum-residual">Flexible Generalized Minimum Residual</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../solvers/detail_solvers.html#preconditioners">Preconditioners</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../solvers/detail_solvers.html#block-jacobi">block-Jacobi</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../solvers/detail_solvers.html#block-ilu0">block-ILU0</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../solvers/detail_solvers.html#restricted-additive-schwarz-block-ilu0">Restricted Additive Schwarz + block-ILU0</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../equations/detail_equations.html">Equation Sets</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../equations/detail_equations.html#mathematical-background">Mathematical background</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../equations/detail_equations.html#chidg-operators">ChiDG Operators</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../equations/detail_equations.html#chidg-equation-sets">ChiDG Equation Sets</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../containers/detail_containers.html">ChiDG Matrix/Vector</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../containers/detail_containers.html#chidg-vector">ChiDG Vector</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../containers/detail_containers.html#block-vector">Block Vector</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../containers/detail_containers.html#dense-vector">Dense Vector</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../containers/detail_containers.html#chidg-matrix">ChiDG Matrix</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../containers/detail_containers.html#block-matrix">Block Matrix</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../containers/detail_containers.html#dense-matrix">Dense Matrix</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../parallel/detail_parallel.html">Parallelization</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../parallel/detail_parallel.html#chidg-mpi">ChiDG MPI</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../parallel/detail_parallel.html#domain-decomposition">Domain decomposition</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../parallel/detail_parallel.html#parallel-matrix-vector-operations">Parallel matrix:vector operations</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../parallel/detail_parallel.html#chidgmatrix">chidgMatrix</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../parallel/detail_parallel.html#chidgvector">chidgVector</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../parallel/detail_parallel.html#parallel-efficiency">Parallel efficiency</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../parallel/detail_parallel.html#parallel-preconditioning">Parallel preconditioning</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../parallel/detail_parallel.html#block-jacobi">Block-Jacobi</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../parallel/detail_parallel.html#restricted-additive-schwarz">Restricted Additive Schwarz</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../parallel/detail_parallel.html#references">References</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Automatic Differentiation</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#dnad-dual-number-automatic-differentiation">DNAD - Dual Number Automatic Differentiation</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+        <a href="../../index.html">ChiDG</a>
+      </nav>
+
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          
+
+ 
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../../index.html">Docs</a> &raquo;</li>
+      
+          <li><a href="../details_main.html">Code details</a> &raquo;</li>
+      
+    <li>Automatic Differentiation</li>
+      <li class="wy-breadcrumbs-aside">
+        
+          
+            <a href="../../_sources/code_details/autodiff/detail_autodiff.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="automatic-differentiation">
+<h1>Automatic Differentiation<a class="headerlink" href="#automatic-differentiation" title="Permalink to this headline">¶</a></h1>
+<p>In the context of Newton&#8217;s method, one must provide a Jacobian matrix that contains the
+partial derivatives of some function with respect to an iterate</p>
+<div class="math">
+\[\begin{split}\text{Jacobian Matrix} =
+\begin{pmatrix}
+  \frac{\partial R_1}{\partial Q_1}     \quad   \frac{\partial R_1}{\partial Q_2}  \quad   \cdots \\
+  \frac{\partial R_2}{\partial Q_1}     \quad   \frac{\partial R_2}{\partial Q_2}  \quad   \cdots \\
+  \vdots
+\end{pmatrix}\end{split}\]</div>
+<dl class="docutils">
+<dt>This presents a developer with a number of undesirable tasks:</dt>
+<dd><ul class="first last simple">
+<li>One must derive a differentiated expression of the original function(R) with respect to the
+iterate(Q); A tedious and error-prone process.</li>
+<li>One must implement the differentiated expressions so they can be used by the solver. A tedious
+and error-prone process.</li>
+<li>Any time an equation or spatial operator is modified or added, these processes must be
+repeated and reverified for correctness.</li>
+</ul>
+</dd>
+</dl>
+<p><strong>A solution</strong> - Automatic Differentiation</p>
+<p>Automatic Differentiation means many things because there are many approaches to this topic, but
+the end goal is that a developer offloads the tasks of deriving and implementing differentiated
+functions to some other tool, library, or preprocessor. Here, we will discuss the approach taken
+in ChiDG and how it fits into the framework</p>
+<div class="section" id="dnad-dual-number-automatic-differentiation">
+<h2>DNAD - Dual Number Automatic Differentiation<a class="headerlink" href="#dnad-dual-number-automatic-differentiation" title="Permalink to this headline">¶</a></h2>
+<p>ChiDG uses a tool previously developed by Wenbin Yu and others:</p>
+<p><strong>References:</strong>
+<code class="docutils literal"><span class="pre">Yu,</span> <span class="pre">W.</span> <span class="pre">and</span> <span class="pre">Blair,</span> <span class="pre">M,</span> <span class="pre">&quot;DNAD,</span> <span class="pre">a</span> <span class="pre">Simple</span> <span class="pre">Tool</span> <span class="pre">for</span> <span class="pre">Automatic</span> <span class="pre">Differentiation</span> <span class="pre">of</span> <span class="pre">Fortran</span> <span class="pre">Codes</span> <span class="pre">Using</span> <span class="pre">Dual</span> <span class="pre">Numbers&quot;</span></code>
+<code class="docutils literal"><span class="pre">Spall,</span> <span class="pre">R.</span> <span class="pre">and</span> <span class="pre">Yu,</span> <span class="pre">W.,</span> <span class="pre">&quot;Imbedded</span> <span class="pre">Dual-Number</span> <span class="pre">Automatic</span> <span class="pre">Differentiation</span> <span class="pre">for</span> <span class="pre">CFD</span> <span class="pre">Sensitivity</span> <span class="pre">Analysis&quot;</span></code></p>
+<div class="highlight-Fortran"><div class="highlight"><pre><span></span><span class="k">type</span> <span class="kd">::</span> <span class="n">AD_D</span>
+    <span class="kt">real</span><span class="p">(</span><span class="n">rk</span><span class="p">)</span>              <span class="kd">::</span> <span class="n">x_ad_</span>      <span class="c">! function value</span>
+    <span class="kt">real</span><span class="p">(</span><span class="n">rk</span><span class="p">),</span> <span class="k">allocatable</span> <span class="kd">::</span> <span class="n">xp_ad_</span><span class="p">(:)</span>  <span class="c">! derivatives</span>
+<span class="k">end type </span><span class="n">AD_D</span>
+</pre></div>
+</div>
+<p><strong>References:</strong></p>
+<p>[1]Yu, W. and Blair, M, &#8220;DNAD, a Simple Tool for Automatic Differentiation of Fortran Codes
+Using Dual Numbers&#8221;, Computer Physics Communications, Vol. 184, 2013, pp. 1446-1452</p>
+<p>[2]Spall, R. and Yu, W., &#8220;Imbedded Dual-Number Automatic Differentiation for CFD
+Sensitivity Analysis&#8221;, Journal of Fluids Engineering, Vol 135, 2013</p>
+</div>
+</div>
+
+
+           </div>
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+      
+        <a href="../parallel/detail_parallel.html" class="btn btn-neutral" title="Parallelization" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2016, Nathan A. Wukie.
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'../../',
+            VERSION:'0.1',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true
+        };
+    </script>
+      <script type="text/javascript" src="../../_static/jquery.js"></script>
+      <script type="text/javascript" src="../../_static/underscore.js"></script>
+      <script type="text/javascript" src="../../_static/doctools.js"></script>
+      <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+      <script type="text/javascript" src="../../_static/mathjax_conf.js"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="../../_static/js/theme.js"></script>
+  
+
+  
+  
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.StickyNav.enable();
+      });
+  </script>
+  
+<script>
+    (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+    (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+    m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+    })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+
+    ga('create', 'UA-80530851-1', 'auto');
+    ga('set', 'location', 'http://nwukie.github.io/ChiDG_site/');
+    ga('send', 'pageview');
+</script>
+
+
+</body>
+</html>

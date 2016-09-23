@@ -11,7 +11,7 @@ environment available to ChiDG. This includes values for the number of MPI ranks
 ChiDG, the rank of the current process, and a communicator(``ChiDG_COMM``) containing 
 the processes that ChiDG is running on. These are:
 
-::
+.. code-block:: Fortran
 
     module mod_chidg_mpi
 

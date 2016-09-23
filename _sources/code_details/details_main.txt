@@ -6,11 +6,10 @@ Code details
     :hidden:
 
     chidg/detail_chidg
-    solvers/detail_solvers
-    containers/detail_containers
     mesh/detail_mesh
-    parallel/detail_parallel
+    solvers/detail_solvers
     equations/detail_equations
-..    solvers/detail_solvers
-..    equations/detail_equations
+    containers/detail_containers
+    parallel/detail_parallel
+    autodiff/detail_autodiff
 ..    io/detail_io

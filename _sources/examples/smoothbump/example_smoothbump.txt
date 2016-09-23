@@ -25,10 +25,10 @@ over the volume of the domain and computed as:
 
 .. math:: 
 
-    Entropy Error = \sqrt{  \frac{\int\Bigg( \frac{ \frac{p}{\rho^\gamma} - \frac{p_\infty}{\rho_\infty^\gamma}
-                                                  }
-                                                  { \frac{p_\infty}{\rho_\infty^\gamma}     } \Bigg)^2 d\Omega}
-                                                  {     \int d\Omega }}
+    \text{Entropy Error} = \sqrt{  \frac{\int\Bigg( \frac{ \frac{p}{\rho^\gamma} - \frac{p_\infty}{\rho_\infty^\gamma}
+                                                         }
+                                                         { \frac{p_\infty}{\rho_\infty^\gamma}     } \Bigg)^2 d\Omega}
+                                                         {     \int d\Omega }}
 
 
 

@@ -118,6 +118,23 @@
 </li>
 </ul>
 </li>
+<li class="toctree-l2"><a class="reference internal" href="code_details/mesh/detail_mesh.html">Mesh</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="code_details/mesh/detail_mesh.html#elements">Elements</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="code_details/mesh/detail_mesh.html#metric-terms">Metric terms</a></li>
+<li class="toctree-l4"><a class="reference internal" href="code_details/mesh/detail_mesh.html#derivatives">Derivatives</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="code_details/mesh/detail_mesh.html#faces">Faces</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="code_details/mesh/detail_mesh.html#face-metrics">Face metrics</a></li>
+<li class="toctree-l4"><a class="reference internal" href="code_details/mesh/detail_mesh.html#face-normals">Face normals</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="code_details/mesh/detail_mesh.html#chimera-interfaces">Chimera Interfaces</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="code_details/mesh/detail_mesh.html#example">Example</a></li>
+</ul>
+</li>
+</ul>
+</li>
 <li class="toctree-l2"><a class="reference internal" href="code_details/solvers/detail_solvers.html">Solvers</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="code_details/solvers/detail_solvers.html#time-integrators">Time Integrators</a><ul>
 <li class="toctree-l4"><a class="reference internal" href="code_details/solvers/detail_solvers.html#implicit-integrators">Implicit integrators</a></li>
@@ -141,6 +158,12 @@
 </li>
 </ul>
 </li>
+<li class="toctree-l2"><a class="reference internal" href="code_details/equations/detail_equations.html">Equation Sets</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="code_details/equations/detail_equations.html#mathematical-background">Mathematical background</a></li>
+<li class="toctree-l3"><a class="reference internal" href="code_details/equations/detail_equations.html#chidg-operators">ChiDG Operators</a></li>
+<li class="toctree-l3"><a class="reference internal" href="code_details/equations/detail_equations.html#chidg-equation-sets">ChiDG Equation Sets</a></li>
+</ul>
+</li>
 <li class="toctree-l2"><a class="reference internal" href="code_details/containers/detail_containers.html">ChiDG Matrix/Vector</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="code_details/containers/detail_containers.html#chidg-vector">ChiDG Vector</a><ul>
 <li class="toctree-l4"><a class="reference internal" href="code_details/containers/detail_containers.html#block-vector">Block Vector</a></li>
@@ -150,23 +173,6 @@
 <li class="toctree-l3"><a class="reference internal" href="code_details/containers/detail_containers.html#chidg-matrix">ChiDG Matrix</a><ul>
 <li class="toctree-l4"><a class="reference internal" href="code_details/containers/detail_containers.html#block-matrix">Block Matrix</a></li>
 <li class="toctree-l4"><a class="reference internal" href="code_details/containers/detail_containers.html#dense-matrix">Dense Matrix</a></li>
-</ul>
-</li>
-</ul>
-</li>
-<li class="toctree-l2"><a class="reference internal" href="code_details/mesh/detail_mesh.html">Mesh</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="code_details/mesh/detail_mesh.html#elements">Elements</a><ul>
-<li class="toctree-l4"><a class="reference internal" href="code_details/mesh/detail_mesh.html#metric-terms">Metric terms</a></li>
-<li class="toctree-l4"><a class="reference internal" href="code_details/mesh/detail_mesh.html#derivatives">Derivatives</a></li>
-</ul>
-</li>
-<li class="toctree-l3"><a class="reference internal" href="code_details/mesh/detail_mesh.html#faces">Faces</a><ul>
-<li class="toctree-l4"><a class="reference internal" href="code_details/mesh/detail_mesh.html#face-metrics">Face metrics</a></li>
-<li class="toctree-l4"><a class="reference internal" href="code_details/mesh/detail_mesh.html#face-normals">Face normals</a></li>
-</ul>
-</li>
-<li class="toctree-l3"><a class="reference internal" href="code_details/mesh/detail_mesh.html#chimera-interfaces">Chimera Interfaces</a><ul>
-<li class="toctree-l4"><a class="reference internal" href="code_details/mesh/detail_mesh.html#example">Example</a></li>
 </ul>
 </li>
 </ul>
@@ -188,10 +194,8 @@
 </li>
 </ul>
 </li>
-<li class="toctree-l2"><a class="reference internal" href="code_details/equations/detail_equations.html">Equation Sets</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="code_details/equations/detail_equations.html#mathematical-background">Mathematical background</a></li>
-<li class="toctree-l3"><a class="reference internal" href="code_details/equations/detail_equations.html#chidg-operators">ChiDG Operators</a></li>
-<li class="toctree-l3"><a class="reference internal" href="code_details/equations/detail_equations.html#chidg-equation-sets">ChiDG Equation Sets</a></li>
+<li class="toctree-l2"><a class="reference internal" href="code_details/autodiff/detail_autodiff.html">Automatic Differentiation</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="code_details/autodiff/detail_autodiff.html#dnad-dual-number-automatic-differentiation">DNAD - Dual Number Automatic Differentiation</a></li>
 </ul>
 </li>
 </ul>
@@ -249,11 +253,11 @@
 <h2>ChiDG is:<a class="headerlink" href="#chidg-is" title="Permalink to this headline">¶</a></h2>
 <p>a framework for solving sets of partial differential
 equations using the discontinuous Galerkin method on Chimera-overset grids.</p>
-<a class="reference external image-reference" href="./code_details/mesh/detail_mesh.html"><img alt="_images/icon_dg.png" src="_images/icon_dg.png" style="width: 19%;" /></a>
-<a class="reference internal image-reference" href="_images/icon_curved.png"><img alt="_images/icon_curved.png" src="_images/icon_curved.png" style="width: 19%;" /></a>
+<a class="reference external image-reference" href="./code_details/equations/detail_equations.html"><img alt="_images/icon_dg.png" src="_images/icon_dg.png" style="width: 19%;" /></a>
+<a class="reference external image-reference" href="./code_details/mesh/detail_mesh.html"><img alt="_images/icon_curved.png" src="_images/icon_curved.png" style="width: 19%;" /></a>
 <a class="reference internal image-reference" href="_images/icon_chimera.png"><img alt="_images/icon_chimera.png" src="_images/icon_chimera.png" style="width: 19%;" /></a>
 <a class="reference internal image-reference" href="_images/icon_newton.png"><img alt="_images/icon_newton.png" src="_images/icon_newton.png" style="width: 19%;" /></a>
-<a class="reference internal image-reference" href="_images/icon_autodiff.png"><img alt="_images/icon_autodiff.png" src="_images/icon_autodiff.png" style="width: 19%;" /></a>
+<a class="reference external image-reference" href="./code_details/autodiff/detail_autodiff.html"><img alt="_images/icon_autodiff.png" src="_images/icon_autodiff.png" style="width: 19%;" /></a>
 <div class="line-block">
 <div class="line"><br /></div>
 <div class="line"><br /></div>

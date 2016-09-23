@@ -101,25 +101,14 @@ Example applications:
 |
 
 
-Getting started
-===============
-
-    - Installation
-    - Tutorial
-    - Examples
-
-
-
-
-
-
 
 .. toctree::
-   :maxdepth: 4
-
-   getting_started/getting_started
-   examples/example_main
-   code_details/details_main
+    :maxdepth: 4
+    :hidden:
+ 
+    getting_started/getting_started
+    examples/example_main
+    code_details/details_main
 
 
 

@@ -175,7 +175,7 @@ Algorithm                                           String Selector
 ChiDG includes nonlinear solvers for solving the nonlinear sets of partial 
 differential equations. In general, the implicit problem statement here is:
 
-    - Find :math:`Q`, such that :math:`R(Q) = 0`
+    - Find :math:`Q`, such that :math:`\mathcal{R}(Q) = 0`
 
 
 

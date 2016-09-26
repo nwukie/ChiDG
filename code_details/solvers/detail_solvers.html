@@ -34,8 +34,8 @@
   
     <link rel="top" title="ChiDG 0.1 documentation" href="../../index.html"/>
         <link rel="up" title="Code details" href="../details_main.html"/>
-        <link rel="next" title="ChiDG Matrix/Vector" href="../containers/detail_containers.html"/>
-        <link rel="prev" title="ChiDG Instance" href="../chidg/detail_chidg.html"/> 
+        <link rel="next" title="Equation Sets" href="../equations/detail_equations.html"/>
+        <link rel="prev" title="Mesh" href="../mesh/detail_mesh.html"/> 
 
   
   <script src="../../_static/js/modernizr.min.js"></script>
@@ -120,6 +120,23 @@
 </li>
 </ul>
 </li>
+<li class="toctree-l2"><a class="reference internal" href="../mesh/detail_mesh.html">Mesh</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../mesh/detail_mesh.html#elements">Elements</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../mesh/detail_mesh.html#metric-terms">Metric terms</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../mesh/detail_mesh.html#derivatives">Derivatives</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../mesh/detail_mesh.html#faces">Faces</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../mesh/detail_mesh.html#face-metrics">Face metrics</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../mesh/detail_mesh.html#face-normals">Face normals</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../mesh/detail_mesh.html#chimera-interfaces">Chimera Interfaces</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../mesh/detail_mesh.html#example">Example</a></li>
+</ul>
+</li>
+</ul>
+</li>
 <li class="toctree-l2 current"><a class="current reference internal" href="#">Solvers</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#time-integrators">Time Integrators</a><ul>
 <li class="toctree-l4"><a class="reference internal" href="#implicit-integrators">Implicit integrators</a></li>
@@ -143,6 +160,12 @@
 </li>
 </ul>
 </li>
+<li class="toctree-l2"><a class="reference internal" href="../equations/detail_equations.html">Equation Sets</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../equations/detail_equations.html#mathematical-background">Mathematical background</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../equations/detail_equations.html#chidg-operators">ChiDG Operators</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../equations/detail_equations.html#chidg-equation-sets">ChiDG Equation Sets</a></li>
+</ul>
+</li>
 <li class="toctree-l2"><a class="reference internal" href="../containers/detail_containers.html">ChiDG Matrix/Vector</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="../containers/detail_containers.html#chidg-vector">ChiDG Vector</a><ul>
 <li class="toctree-l4"><a class="reference internal" href="../containers/detail_containers.html#block-vector">Block Vector</a></li>
@@ -152,23 +175,6 @@
 <li class="toctree-l3"><a class="reference internal" href="../containers/detail_containers.html#chidg-matrix">ChiDG Matrix</a><ul>
 <li class="toctree-l4"><a class="reference internal" href="../containers/detail_containers.html#block-matrix">Block Matrix</a></li>
 <li class="toctree-l4"><a class="reference internal" href="../containers/detail_containers.html#dense-matrix">Dense Matrix</a></li>
-</ul>
-</li>
-</ul>
-</li>
-<li class="toctree-l2"><a class="reference internal" href="../mesh/detail_mesh.html">Mesh</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="../mesh/detail_mesh.html#elements">Elements</a><ul>
-<li class="toctree-l4"><a class="reference internal" href="../mesh/detail_mesh.html#metric-terms">Metric terms</a></li>
-<li class="toctree-l4"><a class="reference internal" href="../mesh/detail_mesh.html#derivatives">Derivatives</a></li>
-</ul>
-</li>
-<li class="toctree-l3"><a class="reference internal" href="../mesh/detail_mesh.html#faces">Faces</a><ul>
-<li class="toctree-l4"><a class="reference internal" href="../mesh/detail_mesh.html#face-metrics">Face metrics</a></li>
-<li class="toctree-l4"><a class="reference internal" href="../mesh/detail_mesh.html#face-normals">Face normals</a></li>
-</ul>
-</li>
-<li class="toctree-l3"><a class="reference internal" href="../mesh/detail_mesh.html#chimera-interfaces">Chimera Interfaces</a><ul>
-<li class="toctree-l4"><a class="reference internal" href="../mesh/detail_mesh.html#example">Example</a></li>
 </ul>
 </li>
 </ul>
@@ -190,10 +196,8 @@
 </li>
 </ul>
 </li>
-<li class="toctree-l2"><a class="reference internal" href="../equations/detail_equations.html">Equation Sets</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="../equations/detail_equations.html#mathematical-background">Mathematical background</a></li>
-<li class="toctree-l3"><a class="reference internal" href="../equations/detail_equations.html#chidg-operators">ChiDG Operators</a></li>
-<li class="toctree-l3"><a class="reference internal" href="../equations/detail_equations.html#chidg-equation-sets">ChiDG Equation Sets</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../autodiff/detail_autodiff.html">Automatic Differentiation</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../autodiff/detail_autodiff.html#dnad-dual-number-automatic-differentiation">DNAD - Dual Number Automatic Differentiation</a></li>
 </ul>
 </li>
 </ul>
@@ -378,7 +382,7 @@ time derivative:</p>
 differential equations. In general, the implicit problem statement here is:</p>
 <blockquote>
 <div><ul class="simple">
-<li>Find <span class="math">\(Q\)</span>, such that <span class="math">\(R(Q) = 0\)</span></li>
+<li>Find <span class="math">\(Q\)</span>, such that <span class="math">\(\mathcal{R}(Q) = 0\)</span></li>
 </ul>
 </div></blockquote>
 <div class="highlight-Fortran"><div class="highlight"><pre><span></span><span class="k">type</span><span class="p">,</span> <span class="k">abstract</span><span class="p">,</span> <span class="k">public</span> <span class="kd">::</span> <span class="n">nonlinear_solver_t</span>
@@ -552,10 +556,10 @@ the solution can be easily reconstructed.</p>
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
-        <a href="../containers/detail_containers.html" class="btn btn-neutral float-right" title="ChiDG Matrix/Vector" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
+        <a href="../equations/detail_equations.html" class="btn btn-neutral float-right" title="Equation Sets" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
-        <a href="../chidg/detail_chidg.html" class="btn btn-neutral" title="ChiDG Instance" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+        <a href="../mesh/detail_mesh.html" class="btn btn-neutral" title="Mesh" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
       
     </div>
   

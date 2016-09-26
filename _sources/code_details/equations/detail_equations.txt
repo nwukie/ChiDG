@@ -9,18 +9,32 @@ Equation Sets
 Mathematical background
 -----------------------
 
+The mathematical formulation used by ChiDG considers first a partial differential
+equation in conservation form
+
 .. math::
 
     \frac{\partial Q}{\partial t} + \nabla \cdot \vec{F}(Q,\nabla Q) +
     S(Q,\nabla Q) = 0
 
-The solution variables are expressed as an expansion in basis
+The solution(:math:`Q`) is expressed as an expansion in basis
 polynomials constructed as a tensor product of 1D Legendre polynomials as
 
 .. math:: 
 
     Q(t,x,y,z) = \sum_{i=0}^N \sum_{j=0}^N \sum_{k=0}^N Q_{ijk}(t) \psi_i(x)
     \psi_j(y) \psi_k(z)
+
+
+.. figure:: 1d_dg.png
+
+    **A representation of the discontinuous Galerkin method for 1D elements
+    showing, in each element, a polynomial expansion that represents the
+    solution in that element.**
+
+
+
+
 
 
 Multiplying by a column of test functions :math:`\boldsymbol{\psi}` and applying
@@ -33,6 +47,23 @@ Galerkin method as
     \int_{\Gamma_e} \boldsymbol{\psi} \vec{F} \cdot \vec{n} d\Gamma - 
     \int_{\Omega_e} \nabla \boldsymbol{\psi} \cdot \vec{F} d\Omega + 
     \int_{\Omega_e} \boldsymbol{\psi} S d\Omega = 0
+
+
+.. |solution| image:: 1d_poisson_solution.png
+    :scale: 40 %
+
+.. |modes| image:: 1d_poisson_modes.png
+    :scale: 40 %
+
++----------------------------------------------------------------------------------------------+
+| A 1D DG Solution of a linear poisson equation                                                |
++---------------------------------------------+------------------------------------------------+
+|                                             |                                                |
+| |solution|                                  |   |modes|                                      |
+|                                             |                                                |
+| **Reconstructed solution**                  | **Polynomial modes that produce the solution** |
+|                                             |                                                |
++---------------------------------------------+------------------------------------------------+
 
 
 There are three spatial integral operators in the equation above. These are the 
@@ -184,19 +215,18 @@ additional equations or additional terms that represent another phenomenon.
 
 
 
-
-
-For example, an ``equation_set_t`` that represents the Euler equations for 
-nonlinear compressible flows might contain the operators
-
-
-+-----------------------------+-------------------------------+
-| **Boundary Flux Operators** | - Euler Boundary Average Flux |
-|                             | - Roe Upwind Flux             |
-+-----------------------------+-------------------------------+
-| **Volume Flux Operators**   | - Euler Volume Flux           |
-|                             |                               |
-+-----------------------------+-------------------------------+
+.. tip:: 
+    An ``equation_set_t`` that represents the Euler equations for 
+    nonlinear compressible flows might be composed of the following ``operator_t``'s:
+    
+    
+    +-----------------------------+-------------------------------+
+    | **Boundary Flux Operators** | - Euler Boundary Average Flux |
+    |                             | - Roe Upwind Flux             |
+    +-----------------------------+-------------------------------+
+    | **Volume Flux Operators**   | - Euler Volume Flux           |
+    |                             |                               |
+    +-----------------------------+-------------------------------+
 
 
 

@@ -34,8 +34,8 @@
   
     <link rel="top" title="ChiDG 0.1 documentation" href="../../index.html"/>
         <link rel="up" title="Code details" href="../details_main.html"/>
-        <link rel="next" title="Equation Sets" href="../equations/detail_equations.html"/>
-        <link rel="prev" title="Mesh" href="../mesh/detail_mesh.html"/> 
+        <link rel="next" title="Automatic Differentiation" href="../autodiff/detail_autodiff.html"/>
+        <link rel="prev" title="ChiDG Matrix/Vector" href="../containers/detail_containers.html"/> 
 
   
   <script src="../../_static/js/modernizr.min.js"></script>
@@ -113,45 +113,18 @@
 </ul>
 </li>
 <li class="toctree-l1 current"><a class="reference internal" href="../details_main.html">Code details</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="../architecture/detail_architecture.html">Finding your way around ChiDG</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../architecture/detail_architecture.html#source-layout-chidg-src">Source Layout <code class="docutils literal"><span class="pre">chidg/src</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../architecture/detail_architecture.html#chidg-modules">ChiDG Modules</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../architecture/detail_architecture.html#chidg-datatypes-type-datatype-f90">ChiDG Datatypes <code class="docutils literal"><span class="pre">type_datatype.f90</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../architecture/detail_architecture.html#chidg-topics-src-topic">ChiDG Topics <code class="docutils literal"><span class="pre">src/topic</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
 <li class="toctree-l2"><a class="reference internal" href="../chidg/detail_chidg.html">ChiDG Instance</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="../chidg/detail_chidg.html#components">Components</a><ul>
 <li class="toctree-l4"><a class="reference internal" href="../chidg/detail_chidg.html#data">Data</a></li>
-</ul>
-</li>
-</ul>
-</li>
-<li class="toctree-l2"><a class="reference internal" href="../solvers/detail_solvers.html">Solvers</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="../solvers/detail_solvers.html#time-integrators">Time Integrators</a><ul>
-<li class="toctree-l4"><a class="reference internal" href="../solvers/detail_solvers.html#implicit-integrators">Implicit integrators</a></li>
-<li class="toctree-l4"><a class="reference internal" href="../solvers/detail_solvers.html#explicit-integrators">Explicit integrators</a></li>
-</ul>
-</li>
-<li class="toctree-l3"><a class="reference internal" href="../solvers/detail_solvers.html#nonlinear-solvers">Nonlinear solvers</a><ul>
-<li class="toctree-l4"><a class="reference internal" href="../solvers/detail_solvers.html#newton">Newton</a></li>
-<li class="toctree-l4"><a class="reference internal" href="../solvers/detail_solvers.html#quasi-newton">Quasi-Newton</a></li>
-</ul>
-</li>
-<li class="toctree-l3"><a class="reference internal" href="../solvers/detail_solvers.html#linear-solvers">Linear Solvers</a><ul>
-<li class="toctree-l4"><a class="reference internal" href="../solvers/detail_solvers.html#flexible-generalized-minimum-residual">Flexible Generalized Minimum Residual</a></li>
-</ul>
-</li>
-<li class="toctree-l3"><a class="reference internal" href="../solvers/detail_solvers.html#preconditioners">Preconditioners</a><ul>
-<li class="toctree-l4"><a class="reference internal" href="../solvers/detail_solvers.html#block-jacobi">block-Jacobi</a></li>
-<li class="toctree-l4"><a class="reference internal" href="../solvers/detail_solvers.html#block-ilu0">block-ILU0</a></li>
-<li class="toctree-l4"><a class="reference internal" href="../solvers/detail_solvers.html#restricted-additive-schwarz-block-ilu0">Restricted Additive Schwarz + block-ILU0</a></li>
-</ul>
-</li>
-</ul>
-</li>
-<li class="toctree-l2"><a class="reference internal" href="../containers/detail_containers.html">ChiDG Matrix/Vector</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="../containers/detail_containers.html#chidg-vector">ChiDG Vector</a><ul>
-<li class="toctree-l4"><a class="reference internal" href="../containers/detail_containers.html#block-vector">Block Vector</a></li>
-<li class="toctree-l4"><a class="reference internal" href="../containers/detail_containers.html#dense-vector">Dense Vector</a></li>
-</ul>
-</li>
-<li class="toctree-l3"><a class="reference internal" href="../containers/detail_containers.html#chidg-matrix">ChiDG Matrix</a><ul>
-<li class="toctree-l4"><a class="reference internal" href="../containers/detail_containers.html#block-matrix">Block Matrix</a></li>
-<li class="toctree-l4"><a class="reference internal" href="../containers/detail_containers.html#dense-matrix">Dense Matrix</a></li>
 </ul>
 </li>
 </ul>
@@ -173,6 +146,52 @@
 </li>
 </ul>
 </li>
+<li class="toctree-l2"><a class="reference internal" href="../solvers/detail_solvers.html">Solvers</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../solvers/detail_solvers.html#time-integrators">Time Integrators</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../solvers/detail_solvers.html#chidg-representation">ChiDG Representation</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../solvers/detail_solvers.html#implicit-integrators">Implicit integrators</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../solvers/detail_solvers.html#explicit-integrators">Explicit integrators</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../solvers/detail_solvers.html#nonlinear-solvers">Nonlinear solvers</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../solvers/detail_solvers.html#id1">ChiDG Representation</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../solvers/detail_solvers.html#newton">Newton</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../solvers/detail_solvers.html#quasi-newton">Quasi-Newton</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../solvers/detail_solvers.html#linear-solvers">Linear Solvers</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../solvers/detail_solvers.html#id2">ChiDG Representation</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../solvers/detail_solvers.html#flexible-generalized-minimum-residual">Flexible Generalized Minimum Residual</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../solvers/detail_solvers.html#preconditioners">Preconditioners</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../solvers/detail_solvers.html#id4">ChiDG Representation</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../solvers/detail_solvers.html#block-jacobi">block-Jacobi</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../solvers/detail_solvers.html#block-ilu0">block-ILU0</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../solvers/detail_solvers.html#restricted-additive-schwarz-block-ilu0">Restricted Additive Schwarz + block-ILU0</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../equations/detail_equations.html">Equation Sets</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../equations/detail_equations.html#mathematical-background">Mathematical background</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../equations/detail_equations.html#chidg-operators">ChiDG Operators</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../equations/detail_equations.html#chidg-equation-sets">ChiDG Equation Sets</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../containers/detail_containers.html">ChiDG Matrix/Vector</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../containers/detail_containers.html#chidg-vector">ChiDG Vector</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../containers/detail_containers.html#block-vector">Block Vector</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../containers/detail_containers.html#dense-vector">Dense Vector</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../containers/detail_containers.html#chidg-matrix">ChiDG Matrix</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../containers/detail_containers.html#block-matrix">Block Matrix</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../containers/detail_containers.html#dense-matrix">Dense Matrix</a></li>
+</ul>
+</li>
+</ul>
+</li>
 <li class="toctree-l2 current"><a class="current reference internal" href="#">Parallelization</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#chidg-mpi">ChiDG MPI</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#domain-decomposition">Domain decomposition</a></li>
@@ -190,10 +209,8 @@
 </li>
 </ul>
 </li>
-<li class="toctree-l2"><a class="reference internal" href="../equations/detail_equations.html">Equation Sets</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="../equations/detail_equations.html#mathematical-background">Mathematical background</a></li>
-<li class="toctree-l3"><a class="reference internal" href="../equations/detail_equations.html#chidg-operators">ChiDG Operators</a></li>
-<li class="toctree-l3"><a class="reference internal" href="../equations/detail_equations.html#chidg-equation-sets">ChiDG Equation Sets</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../autodiff/detail_autodiff.html">Automatic Differentiation</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../autodiff/detail_autodiff.html#dnad-dual-number-automatic-differentiation">DNAD - Dual Number Automatic Differentiation</a></li>
 </ul>
 </li>
 </ul>
@@ -434,10 +451,10 @@ performs much better than the block-Jacobi preconditioner with and ILU0 local so
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
-        <a href="../equations/detail_equations.html" class="btn btn-neutral float-right" title="Equation Sets" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
+        <a href="../autodiff/detail_autodiff.html" class="btn btn-neutral float-right" title="Automatic Differentiation" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
-        <a href="../mesh/detail_mesh.html" class="btn btn-neutral" title="Mesh" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+        <a href="../containers/detail_containers.html" class="btn btn-neutral" title="ChiDG Matrix/Vector" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
       
     </div>
   

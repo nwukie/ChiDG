@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>Automatic Differentiation &mdash; ChiDG 0.1 documentation</title>
+  <title>Finding your way around ChiDG &mdash; ChiDG 0.1 documentation</title>
   
 
   
@@ -34,7 +34,8 @@
   
     <link rel="top" title="ChiDG 0.1 documentation" href="../../index.html"/>
         <link rel="up" title="Code details" href="../details_main.html"/>
-        <link rel="prev" title="Parallelization" href="../parallel/detail_parallel.html"/> 
+        <link rel="next" title="ChiDG Instance" href="../chidg/detail_chidg.html"/>
+        <link rel="prev" title="Code details" href="../details_main.html"/> 
 
   
   <script src="../../_static/js/modernizr.min.js"></script>
@@ -112,11 +113,11 @@
 </ul>
 </li>
 <li class="toctree-l1 current"><a class="reference internal" href="../details_main.html">Code details</a><ul class="current">
-<li class="toctree-l2"><a class="reference internal" href="../architecture/detail_architecture.html">Finding your way around ChiDG</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="../architecture/detail_architecture.html#source-layout-chidg-src">Source Layout <code class="docutils literal"><span class="pre">chidg/src</span></code></a><ul>
-<li class="toctree-l4"><a class="reference internal" href="../architecture/detail_architecture.html#chidg-modules">ChiDG Modules</a></li>
-<li class="toctree-l4"><a class="reference internal" href="../architecture/detail_architecture.html#chidg-datatypes-type-datatype-f90">ChiDG Datatypes <code class="docutils literal"><span class="pre">type_datatype.f90</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="../architecture/detail_architecture.html#chidg-topics-src-topic">ChiDG Topics <code class="docutils literal"><span class="pre">src/topic</span></code></a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Finding your way around ChiDG</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#source-layout-chidg-src">Source Layout <code class="docutils literal"><span class="pre">chidg/src</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#chidg-modules">ChiDG Modules</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#chidg-datatypes-type-datatype-f90">ChiDG Datatypes <code class="docutils literal"><span class="pre">type_datatype.f90</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#chidg-topics-src-topic">ChiDG Topics <code class="docutils literal"><span class="pre">src/topic</span></code></a></li>
 </ul>
 </li>
 </ul>
@@ -208,8 +209,8 @@
 </li>
 </ul>
 </li>
-<li class="toctree-l2 current"><a class="current reference internal" href="#">Automatic Differentiation</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="#dnad-dual-number-automatic-differentiation">DNAD - Dual Number Automatic Differentiation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../autodiff/detail_autodiff.html">Automatic Differentiation</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../autodiff/detail_autodiff.html#dnad-dual-number-automatic-differentiation">DNAD - Dual Number Automatic Differentiation</a></li>
 </ul>
 </li>
 </ul>
@@ -246,11 +247,11 @@
       
           <li><a href="../details_main.html">Code details</a> &raquo;</li>
       
-    <li>Automatic Differentiation</li>
+    <li>Finding your way around ChiDG</li>
       <li class="wy-breadcrumbs-aside">
         
           
-            <a href="../../_sources/code_details/autodiff/detail_autodiff.txt" rel="nofollow"> View page source</a>
+            <a href="../../_sources/code_details/architecture/detail_architecture.txt" rel="nofollow"> View page source</a>
           
         
       </li>
@@ -260,51 +261,88 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
             
-  <div class="section" id="automatic-differentiation">
-<h1>Automatic Differentiation<a class="headerlink" href="#automatic-differentiation" title="Permalink to this headline">¶</a></h1>
-<p>In the context of Newton&#8217;s method, one must provide a Jacobian matrix that contains the
-partial derivatives of some function with respect to an iterate</p>
-<div class="math">
-\[\begin{split}\text{Jacobian Matrix} =
-\begin{pmatrix}
-  \frac{\partial R_1}{\partial Q_1}     \quad   \frac{\partial R_1}{\partial Q_2}  \quad   \cdots \\
-  \frac{\partial R_2}{\partial Q_1}     \quad   \frac{\partial R_2}{\partial Q_2}  \quad   \cdots \\
-  \vdots
-\end{pmatrix}\end{split}\]</div>
-<dl class="docutils">
-<dt>This presents a developer with a number of undesirable tasks:</dt>
-<dd><ul class="first last simple">
-<li>One must derive a differentiated expression of the original function(R) with respect to the
-iterate(Q); A tedious and error-prone process.</li>
-<li>One must implement the differentiated expressions so they can be used by the solver. A tedious
-and error-prone process.</li>
-<li>Any time an equation or spatial operator is modified or added, these processes must be
-repeated and reverified for correctness.</li>
+  <div class="section" id="finding-your-way-around-chidg">
+<h1>Finding your way around ChiDG<a class="headerlink" href="#finding-your-way-around-chidg" title="Permalink to this headline">¶</a></h1>
+<p>ChiDG is a fairly large code and exists primarily as a composition of small concepts that
+create the entire simulation environment. Keep in mind that the ChiDG environment
+exists as the <code class="docutils literal"><span class="pre">chidg_t</span></code> datatype, which resides in <code class="docutils literal"><span class="pre">src/chidg/type_chidg.f90</span></code>.
+To understand ChiDG, it is recommended to start with the <code class="docutils literal"><span class="pre">chidg_t</span></code> class, look
+at what it contains. Start there and work your way into the code from the top down.
+You can see what modules are being used by looking at <code class="docutils literal"><span class="pre">use</span></code> statements at the top
+of the file.</p>
+<div class="admonition seealso">
+<p class="first admonition-title">See also</p>
+<p class="last"><a class="reference internal" href="../chidg/detail_chidg.html#chidg-t"><span class="std std-ref">ChiDG Instance</span></a></p>
+</div>
+<div class="section" id="source-layout-chidg-src">
+<h2>Source Layout <code class="docutils literal"><span class="pre">chidg/src</span></code><a class="headerlink" href="#source-layout-chidg-src" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="chidg-modules">
+<h3>ChiDG Modules<a class="headerlink" href="#chidg-modules" title="Permalink to this headline">¶</a></h3>
+<p>Almost <em>everything</em> in ChiDG exists in Fortran Modules. Modules are nice because they allow
+a program to be broken up into logical units and used as necessary. They can also store
+data as module variables that could then be <code class="docutils literal"><span class="pre">use</span></code>&#8216;d throughout the program as global data.
+If you need to make use of a <code class="docutils literal"><span class="pre">mesh_t</span></code> somewhere in the program, then use
+<code class="docutils literal"><span class="pre">use</span> <span class="pre">type_mesh,</span> <span class="pre">only:</span> <span class="pre">mesh_t</span></code> to import the <code class="docutils literal"><span class="pre">mesh_t</span></code> data type and make it available to the
+current file.</p>
+<p>Convention on ChiDG Modules:</p>
+<blockquote>
+<div><ul class="simple">
+<li>Modules that define new data-types begin their name with <code class="docutils literal"><span class="pre">type_</span></code>, as in <code class="docutils literal"><span class="pre">type_mesh.f90</span></code></li>
+<li>Modules that mostly contain procedures begin their name with <code class="docutils literal"><span class="pre">mod_</span></code>, as in <code class="docutils literal"><span class="pre">mod_chimera.f90</span></code></li>
 </ul>
-</dd>
-</dl>
-<p><strong>A solution</strong> - Automatic Differentiation</p>
-<p>Automatic Differentiation means many things because there are many approaches to this topic, but
-the end goal is that a developer offloads the tasks of deriving and implementing differentiated
-functions to some other tool, library, or preprocessor. Here, we will discuss the approach taken
-in ChiDG and how it fits into the framework</p>
-<div class="section" id="dnad-dual-number-automatic-differentiation">
-<h2>DNAD - Dual Number Automatic Differentiation<a class="headerlink" href="#dnad-dual-number-automatic-differentiation" title="Permalink to this headline">¶</a></h2>
-<p>ChiDG uses a tool previously developed by Wenbin Yu and others:</p>
-<p><strong>References:</strong>
-<code class="docutils literal"><span class="pre">Yu,</span> <span class="pre">W.</span> <span class="pre">and</span> <span class="pre">Blair,</span> <span class="pre">M,</span> <span class="pre">&quot;DNAD,</span> <span class="pre">a</span> <span class="pre">Simple</span> <span class="pre">Tool</span> <span class="pre">for</span> <span class="pre">Automatic</span> <span class="pre">Differentiation</span> <span class="pre">of</span> <span class="pre">Fortran</span> <span class="pre">Codes</span> <span class="pre">Using</span> <span class="pre">Dual</span> <span class="pre">Numbers&quot;</span></code>
-<code class="docutils literal"><span class="pre">Spall,</span> <span class="pre">R.</span> <span class="pre">and</span> <span class="pre">Yu,</span> <span class="pre">W.,</span> <span class="pre">&quot;Imbedded</span> <span class="pre">Dual-Number</span> <span class="pre">Automatic</span> <span class="pre">Differentiation</span> <span class="pre">for</span> <span class="pre">CFD</span> <span class="pre">Sensitivity</span> <span class="pre">Analysis&quot;</span></code></p>
-<div class="highlight-Fortran"><div class="highlight"><pre><span></span><span class="k">type</span> <span class="kd">::</span> <span class="n">AD_D</span>
-    <span class="kt">real</span><span class="p">(</span><span class="n">rk</span><span class="p">)</span>              <span class="kd">::</span> <span class="n">x_ad_</span>      <span class="c">! function value</span>
-    <span class="kt">real</span><span class="p">(</span><span class="n">rk</span><span class="p">),</span> <span class="k">allocatable</span> <span class="kd">::</span> <span class="n">xp_ad_</span><span class="p">(:)</span>  <span class="c">! derivatives</span>
-<span class="k">end type </span><span class="n">AD_D</span>
+</div></blockquote>
+</div>
+<div class="section" id="chidg-datatypes-type-datatype-f90">
+<h3>ChiDG Datatypes <code class="docutils literal"><span class="pre">type_datatype.f90</span></code><a class="headerlink" href="#chidg-datatypes-type-datatype-f90" title="Permalink to this headline">¶</a></h3>
+<p>ChiDG uses a lot of datatypes and classes for handling data and algorithms. Any user-defined
+datatype in ChiDG exists in its own module. This helps keep ideas separate and avoids clashes
+between routines of the same name.</p>
+<p>The convention for user-defined types in ChiDG is as follows:</p>
+<blockquote>
+<div><ul class="simple">
+<li>A user-defined datatype(ex. <code class="docutils literal"><span class="pre">newtype</span></code>) in ChiDG exists in its own module, <code class="docutils literal"><span class="pre">type_newtype.f90</span></code>.</li>
+<li>In the module <code class="docutils literal"><span class="pre">type_newtype.f90</span></code>, the naming convention is the type with an appended <code class="docutils literal"><span class="pre">_t</span></code> as in <code class="docutils literal"><span class="pre">newtype_t</span></code>
+to indicate throughout the program that is is a datatype.</li>
+<li>The datatype can then be used throughout a program by importing its definition as, <code class="docutils literal"><span class="pre">use</span> <span class="pre">type_newtype,</span> <span class="pre">only:</span> <span class="pre">newtype_t</span></code>.</li>
+</ul>
+</div></blockquote>
+<div class="highlight-Fortran"><div class="highlight"><pre><span></span><span class="k">module </span><span class="n">type_newtype</span>
+    <span class="k">implicit none</span>
+
+    <span class="c">!&gt;  This is a description of the datatype, newtype_t</span>
+    <span class="c">!!</span>
+    <span class="c">!!  @author Bob the Builder</span>
+    <span class="c">!!  @date   9/4/2016</span>
+    <span class="c">!!</span>
+    <span class="c">!-------------------------------------------------------</span>
+    <span class="k">type</span><span class="p">,</span> <span class="k">public</span> <span class="kd">::</span> <span class="n">newtype_t</span>
+
+        <span class="kt">real</span> <span class="kd">::</span> <span class="n">my_real</span>
+
+    <span class="k">end type </span><span class="n">newtype_t</span>
+    <span class="c">!********************************************************</span>
+
+<span class="k">end module</span>
 </pre></div>
 </div>
-<p><strong>References:</strong></p>
-<p>[1]Yu, W. and Blair, M, &#8220;DNAD, a Simple Tool for Automatic Differentiation of Fortran Codes
-Using Dual Numbers&#8221;, Computer Physics Communications, Vol. 184, 2013, pp. 1446-1452</p>
-<p>[2]Spall, R. and Yu, W., &#8220;Imbedded Dual-Number Automatic Differentiation for CFD
-Sensitivity Analysis&#8221;, Journal of Fluids Engineering, Vol 135, 2013</p>
+</div>
+<div class="section" id="chidg-topics-src-topic">
+<h3>ChiDG Topics <code class="docutils literal"><span class="pre">src/topic</span></code><a class="headerlink" href="#chidg-topics-src-topic" title="Permalink to this headline">¶</a></h3>
+<p>The ChiDG source directory is broken up into topic area directories. This is not out of
+necessity, rather for convenience and organization of ideas. Source files that pertain
+to the representation of computational grids are probably located in <code class="docutils literal"><span class="pre">src/grid</span></code>.
+The base class for a linear system solver is probably located in <code class="docutils literal"><span class="pre">src/linear_solvers</span></code>.</p>
+<div class="section" id="algorithm-topics">
+<h4>Algorithm Topics<a class="headerlink" href="#algorithm-topics" title="Permalink to this headline">¶</a></h4>
+<p>Some topic directories refer to <em>algorithms</em> that may be dynamically switched out at run-time.
+Some examples of these are <code class="docutils literal"><span class="pre">src/linear_solvers</span></code>, <code class="docutils literal"><span class="pre">src/nonlinear_solvers</span></code>, <code class="docutils literal"><span class="pre">src/time_integrators</span></code>,
+<code class="docutils literal"><span class="pre">src/preconditioners</span></code>. Inside an <em>algorithm</em> topic directory, convention is that there is a
+base class with the same name. For example, inside <code class="docutils literal"><span class="pre">src/linear_solvers</span></code> there is a file
+<code class="docutils literal"><span class="pre">type_linear_solver.f90</span></code> that implements the class <code class="docutils literal"><span class="pre">linear_solver_t</span></code>. There are also concrete
+implementations of the <code class="docutils literal"><span class="pre">linear_solver_t</span></code>, such as <code class="docutils literal"><span class="pre">fgmres_t</span></code> inside of the <code class="docutils literal"><span class="pre">src/linear_solvers</span></code>
+topic directory.</p>
+</div>
+</div>
 </div>
 </div>
 
@@ -315,8 +353,10 @@ Sensitivity Analysis&#8221;, Journal of Fluids Engineering, Vol 135, 2013</p>
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
+        <a href="../chidg/detail_chidg.html" class="btn btn-neutral float-right" title="ChiDG Instance" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
       
-        <a href="../parallel/detail_parallel.html" class="btn btn-neutral" title="Parallelization" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+        <a href="../details_main.html" class="btn btn-neutral" title="Code details" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
       
     </div>
   

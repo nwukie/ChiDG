@@ -5,6 +5,7 @@ Code details
     :maxdepth: 2
     :hidden:
 
+    architecture/detail_architecture
     chidg/detail_chidg
     mesh/detail_mesh
     solvers/detail_solvers

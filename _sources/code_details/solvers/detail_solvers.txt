@@ -27,6 +27,9 @@ Algorithm                                           String Selector
 
 
 
+ChiDG Representation
+====================
+
 
 Integration of the temporal derivative term
 
@@ -143,6 +146,7 @@ time derivative:
 
 
 
+
 |
 |
 |
@@ -169,9 +173,8 @@ Algorithm                                           String Selector
 
 
 
-
-
-
+ChiDG Representation
+====================
 ChiDG includes nonlinear solvers for solving the nonlinear sets of partial 
 differential equations. In general, the implicit problem statement here is:
 
@@ -312,6 +315,11 @@ Algorithm                                           String Selector
 `Flexible Generalized Minimum Residual`_            ``FGMRES``
 ================================================    ===============
 
+ChiDG Representation
+====================
+
+
+
 Flexible Generalized Minimum Residual
 =====================================
 
@@ -357,6 +365,8 @@ Algorithm                                           String Selector
 ================================================    ===============
 
 
+ChiDG Representation
+====================
 
 block-Jacobi
 ============

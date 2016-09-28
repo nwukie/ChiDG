@@ -113,6 +113,15 @@
 </ul>
 </li>
 <li class="toctree-l1 current"><a class="reference internal" href="../details_main.html">Code details</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="../architecture/detail_architecture.html">Finding your way around ChiDG</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../architecture/detail_architecture.html#source-layout-chidg-src">Source Layout <code class="docutils literal"><span class="pre">chidg/src</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../architecture/detail_architecture.html#chidg-modules">ChiDG Modules</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../architecture/detail_architecture.html#chidg-datatypes-type-datatype-f90">ChiDG Datatypes <code class="docutils literal"><span class="pre">type_datatype.f90</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../architecture/detail_architecture.html#chidg-topics-src-topic">ChiDG Topics <code class="docutils literal"><span class="pre">src/topic</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
 <li class="toctree-l2"><a class="reference internal" href="../chidg/detail_chidg.html">ChiDG Instance</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="../chidg/detail_chidg.html#components">Components</a><ul>
 <li class="toctree-l4"><a class="reference internal" href="../chidg/detail_chidg.html#data">Data</a></li>
@@ -139,20 +148,24 @@
 </li>
 <li class="toctree-l2 current"><a class="current reference internal" href="#">Solvers</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#time-integrators">Time Integrators</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#chidg-representation">ChiDG Representation</a></li>
 <li class="toctree-l4"><a class="reference internal" href="#implicit-integrators">Implicit integrators</a></li>
 <li class="toctree-l4"><a class="reference internal" href="#explicit-integrators">Explicit integrators</a></li>
 </ul>
 </li>
 <li class="toctree-l3"><a class="reference internal" href="#nonlinear-solvers">Nonlinear solvers</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id1">ChiDG Representation</a></li>
 <li class="toctree-l4"><a class="reference internal" href="#newton">Newton</a></li>
 <li class="toctree-l4"><a class="reference internal" href="#quasi-newton">Quasi-Newton</a></li>
 </ul>
 </li>
 <li class="toctree-l3"><a class="reference internal" href="#linear-solvers">Linear Solvers</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id2">ChiDG Representation</a></li>
 <li class="toctree-l4"><a class="reference internal" href="#flexible-generalized-minimum-residual">Flexible Generalized Minimum Residual</a></li>
 </ul>
 </li>
 <li class="toctree-l3"><a class="reference internal" href="#preconditioners">Preconditioners</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id4">ChiDG Representation</a></li>
 <li class="toctree-l4"><a class="reference internal" href="#block-jacobi">block-Jacobi</a></li>
 <li class="toctree-l4"><a class="reference internal" href="#block-ilu0">block-ILU0</a></li>
 <li class="toctree-l4"><a class="reference internal" href="#restricted-additive-schwarz-block-ilu0">Restricted Additive Schwarz + block-ILU0</a></li>
@@ -282,6 +295,8 @@
 </tr>
 </tbody>
 </table>
+<div class="section" id="chidg-representation">
+<h3>ChiDG Representation<a class="headerlink" href="#chidg-representation" title="Permalink to this headline">¶</a></h3>
 <p>Integration of the temporal derivative term</p>
 <div class="math">
 \[\int \psi \frac{\partial Q}{\partial t} d\Omega\]</div>
@@ -309,6 +324,7 @@
 \[R(\hat{Q}) = \int_{\Gamma_e} \boldsymbol{\psi} \vec{F} \cdot \vec{n} d\Gamma -
              \int_{\Omega_e} \nabla \boldsymbol{\psi} \cdot \vec{F} d\Omega +
              \int_{\Omega_e} \boldsymbol{\psi} S d\Omega\]</div>
+</div>
 <div class="section" id="implicit-integrators">
 <h3>Implicit integrators<a class="headerlink" href="#implicit-integrators" title="Permalink to this headline">¶</a></h3>
 <div class="section" id="steady">
@@ -378,6 +394,8 @@ time derivative:</p>
 </tr>
 </tbody>
 </table>
+<div class="section" id="id1">
+<h3>ChiDG Representation<a class="headerlink" href="#id1" title="Permalink to this headline">¶</a></h3>
 <p>ChiDG includes nonlinear solvers for solving the nonlinear sets of partial
 differential equations. In general, the implicit problem statement here is:</p>
 <blockquote>
@@ -393,6 +411,7 @@ differential equations. In general, the implicit problem statement here is:</p>
 
 <span class="k">end type </span><span class="n">nonlinear_solver_t</span>
 </pre></div>
+</div>
 </div>
 <div class="section" id="newton">
 <h3>Newton<a class="headerlink" href="#newton" title="Permalink to this headline">¶</a></h3>
@@ -488,14 +507,17 @@ and current residual norms as</p>
 </tr>
 </tbody>
 </table>
+<div class="section" id="id2">
+<h3>ChiDG Representation<a class="headerlink" href="#id2" title="Permalink to this headline">¶</a></h3>
+</div>
 <div class="section" id="flexible-generalized-minimum-residual">
 <h3>Flexible Generalized Minimum Residual<a class="headerlink" href="#flexible-generalized-minimum-residual" title="Permalink to this headline">¶</a></h3>
 <p>A flexible version of the Generalized Minimum Residual(FGMRES) algorithm,
 which is an iterative method for solving linear systems of equations. The FGMRES
 algorithm allows the GMRES algorithm to be preconditioned in a flexible way such that
 the solution can be easily reconstructed.</p>
-<div class="section" id="id1">
-<h4>Options:<a class="headerlink" href="#id1" title="Permalink to this headline">¶</a></h4>
+<div class="section" id="id3">
+<h4>Options:<a class="headerlink" href="#id3" title="Permalink to this headline">¶</a></h4>
 <blockquote>
 <div><ul class="simple">
 <li>m:  Number of iterations before the algorithm is restarted</li>
@@ -537,6 +559,9 @@ the solution can be easily reconstructed.</p>
 </tr>
 </tbody>
 </table>
+<div class="section" id="id4">
+<h3>ChiDG Representation<a class="headerlink" href="#id4" title="Permalink to this headline">¶</a></h3>
+</div>
 <div class="section" id="block-jacobi">
 <h3>block-Jacobi<a class="headerlink" href="#block-jacobi" title="Permalink to this headline">¶</a></h3>
 </div>

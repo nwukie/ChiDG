@@ -103,7 +103,7 @@ contains
                     !
                     ! Compute pressure
                     !
-                    call prop%fluid%compute_pressure(rho,rhou,rhov,rhow,rhoE,p)
+                    p = prop%fluid%compute_pressure(rho,rhou,rhov,rhow,rhoE)
 
 
                     !

@@ -1,6 +1,6 @@
 add_subdirectory(scalar)
+add_subdirectory(fluid)
 add_subdirectory(dual_linear_advection)
-add_subdirectory(euler)
 #add_subdirectory(PrimitiveLinearizedEuler)
 
 

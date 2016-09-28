@@ -104,11 +104,10 @@ contains
         !
         ! Get u_m from face interior to initialize derivatives
         !
-        u_bc  = worker%get_face_variable(iu, 'value', ME)
-
-        dudx_bc = worker%get_face_variable(iu, 'ddx', ME)
-        dudy_bc = worker%get_face_variable(iu, 'ddy', ME)
-        dudz_bc = worker%get_face_variable(iu, 'ddz', ME)
+        u_bc    = worker%get_face_variable(iu, 'value', ME)
+        dudx_bc = worker%get_face_variable(iu, 'ddx',   ME)
+        dudy_bc = worker%get_face_variable(iu, 'ddy',   ME)
+        dudz_bc = worker%get_face_variable(iu, 'ddz',   ME)
 
 
         !

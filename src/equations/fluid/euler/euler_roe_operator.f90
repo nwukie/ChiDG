@@ -153,10 +153,10 @@ contains
         !
         ! Compute pressure and gamma
         !
-        call prop%fluid%compute_pressure(rho_m,rhou_m,rhov_m,rhow_m,rhoE_m,p_m)
-        call prop%fluid%compute_pressure(rho_p,rhou_p,rhov_p,rhow_p,rhoE_p,p_p)
-        call prop%fluid%compute_gamma(rho_m,rhou_m,rhov_m,rhow_m,rhoE_m,gam_m)
-        call prop%fluid%compute_gamma(rho_p,rhou_p,rhov_p,rhow_p,rhoE_p,gam_p)
+        p_m = prop%fluid%compute_pressure(rho_m,rhou_m,rhov_m,rhow_m,rhoE_m)
+        p_p = prop%fluid%compute_pressure(rho_p,rhou_p,rhov_p,rhow_p,rhoE_p)
+        gam_m = prop%fluid%compute_gamma(rho_m,rhou_m,rhov_m,rhow_m,rhoE_m)
+        gam_p = prop%fluid%compute_gamma(rho_p,rhou_p,rhov_p,rhow_p,rhoE_p)
 
 
         invrho_m = ONE/rho_m
@@ -254,14 +254,14 @@ contains
 
         call worker%integrate_boundary(irhov, integrand)
 
-        !================================
-        !       Z-MOMENTUM FLUX
-        !================================
-        upwind = C1*(wtil - ctil*unormz)  +  C2_a*wtil  +  C2_b*(delw - delvmag*unormz)  +  C3*(wtil + ctil*unormz)
-
-        integrand = HALF*(upwind*normx*unormx + upwind*normy*unormy + upwind*normz*unormz)
-
-        call worker%integrate_boundary(irhow, integrand)
+!        !================================
+!        !       Z-MOMENTUM FLUX
+!        !================================
+!        upwind = C1*(wtil - ctil*unormz)  +  C2_a*wtil  +  C2_b*(delw - delvmag*unormz)  +  C3*(wtil + ctil*unormz)
+!
+!        integrand = HALF*(upwind*normx*unormx + upwind*normy*unormy + upwind*normz*unormz)
+!
+!        call worker%integrate_boundary(irhow, integrand)
 
         !================================
         !          ENERGY FLUX

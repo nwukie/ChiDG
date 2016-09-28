@@ -41,13 +41,12 @@ module integration_1D_nonlinear_diffusion_mod
     use mod_constants,      only: ZERO, THREE, IO_DESTINATION, ONE, TWO, PI, FOUR
     use type_chidg,         only: chidg_t
     use type_chidg_data,    only: chidg_data_t
-    use mod_bc,             only: create_bc
     use type_function,      only: function_t
-    use type_ivector,       only: ivector_t
     use mod_function,       only: create_function
     use mod_grid_operators, only: initialize_variable
     use mod_interpolate,    only: interpolate_element_standard
     use type_scalar,        only: scalar_t
+    use type_fgmres,        only: fgmres_t
 
     use mod_chidg_mpi,      only: IRANK, NRANK, ChiDG_COMM
     use mpi_f08,            only: MPI_COMM, MPI_REAL8, MPI_SUM
@@ -470,6 +469,20 @@ contains
         call this%chidg%set('nonlinear_solver', nonlinear_solver, noptions)
         call this%chidg%set('linear_solver',    linear_solver,    loptions)
         call this%chidg%set('preconditioner',   preconditioner)
+
+
+        !
+        ! Need to enforce reorthogonalization in FGMRES because the vector 
+        ! norms get very small and easily become linearly dependent, particularlly
+        ! when running in parallel when the linear system becomes more difficult to solve
+        !
+        associate ( fgmres => this%chidg%linear_solver )
+            select type (fgmres)
+                type is (fgmres_t)
+                    fgmres%force_reorthogonalize = .true.
+            end select
+        end associate
+            
 
 
         !

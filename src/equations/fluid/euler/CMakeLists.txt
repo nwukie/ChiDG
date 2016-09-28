@@ -1,6 +1,4 @@
-add_subdirectory(bc)
-
-add_lib_sources(eqn_euler.f90
+add_lib_sources(
                 euler_volume_operator.f90
                 euler_boundary_average_operator.f90
                 euler_laxfriedrichs_operator.f90

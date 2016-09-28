@@ -1,0 +1,101 @@
+module eqn_navier_stokes
+#include <messenger.h>
+    use type_equation_set,      only: equation_set_t
+    use type_equation_builder,  only: equation_builder_t
+    use perfect_gas,            only: perfect_gas_t
+    implicit none
+
+
+    !>
+    !!
+    !!
+    !!
+    !--------------------------------------------------------------------------------------------
+    type, public, extends(equation_builder_t) :: navier_stokes
+
+    contains
+
+        procedure   :: init
+        procedure   :: build
+
+    end type navier_stokes
+    !********************************************************************************************
+
+
+
+
+contains
+
+
+    !>
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   8/30/2016
+    !!
+    !---------------------------------------------------------------------------------------------
+    subroutine init(self)
+        class(navier_stokes),   intent(inout)  :: self
+
+        call self%set_name('Navier Stokes')
+
+    end subroutine init
+    !*********************************************************************************************
+
+
+
+    !>
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   8/30/2016
+    !!
+    !!
+    !---------------------------------------------------------------------------------------------
+    function build(self,blueprint) result(navier_stokes_eqns)
+        class(navier_stokes),       intent(in)  :: self
+        character(len=*),   intent(in)  :: blueprint
+
+        type(equation_set_t)    :: navier_stokes_eqns
+        type(perfect_gas_t)     :: perfect_gas
+
+        !
+        ! Set equation set name
+        !
+        call navier_stokes_eqns%set_name(self%get_name())
+        
+
+        !
+        ! Add spatial operators
+        !
+        select case (trim(blueprint))
+
+
+            case('default')
+                call navier_stokes_eqns%add_operator('Euler Volume Flux')
+                call navier_stokes_eqns%add_operator('Euler Boundary Average Flux')
+                call navier_stokes_eqns%add_operator('Euler Roe Flux')
+                call navier_stokes_eqns%add_operator('Euler BC Flux')
+
+                call navier_stokes_eqns%add_operator('Fluid Viscous Volume Operator')
+                call navier_stokes_eqns%add_operator('Fluid Viscous Boundary Average Operator')
+                call navier_stokes_eqns%add_operator('Fluid Viscous BC Operator')
+
+                call navier_stokes_eqns%prop%add_fluid(perfect_gas)
+
+
+
+            case default
+                call chidg_signal_one(FATAL, "build_navier_stokes: I didn't recognize the construction parameter &
+                                              that was passed to build the equation set.", blueprint)
+
+        end select
+
+
+    end function build
+    !**********************************************************************************************
+
+
+
+
+
+
+end module eqn_navier_stokes

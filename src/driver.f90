@@ -117,37 +117,37 @@ program driver
 !            call initialize_variable(chidg%data,1,fcn)
 
 
-            call create_function(constant,'constant')
-            call create_function(polynomial,'polynomial')
-
-            ! rho
-            call constant%set_option('val',0.01_rk)
-
-            call polynomial%set_option('f',3.5_rk)
-            call initialize_variable(chidg%data,1,polynomial)
-
-
 !            call create_function(constant,'constant')
+!            call create_function(polynomial,'polynomial')
 !
 !            ! rho
-!            call constant%set_option('val',1.20_rk)
-!            call initialize_variable(chidg%data,1,constant)
+!            call constant%set_option('val',0.01_rk)
 !
-!            ! rho_u
-!            call constant%set_option('val',50._rk)
-!            call initialize_variable(chidg%data,2,constant)
-!
-!            ! rho_v
-!            call constant%set_option('val',0._rk)
-!            call initialize_variable(chidg%data,3,constant)
-!
-!            ! rho_w
-!            call constant%set_option('val',0._rk)
-!            call initialize_variable(chidg%data,4,constant)
-!
-!            ! rho_E
-!            call constant%set_option('val',230000._rk)
-!            call initialize_variable(chidg%data,5,constant)
+!            call polynomial%set_option('f',3.5_rk)
+!            call initialize_variable(chidg%data,1,polynomial)
+
+
+            call create_function(constant,'constant')
+
+            ! rho
+            call constant%set_option('val',1.19_rk)
+            call initialize_variable(chidg%data,1,constant)
+
+            ! rho_u
+            call constant%set_option('val',10._rk)
+            call initialize_variable(chidg%data,2,constant)
+
+            ! rho_v
+            call constant%set_option('val',0._rk)
+            call initialize_variable(chidg%data,3,constant)
+
+            ! rho_w
+            call constant%set_option('val',0._rk)
+            call initialize_variable(chidg%data,4,constant)
+
+            ! rho_E
+            call constant%set_option('val',250000._rk)
+            call initialize_variable(chidg%data,5,constant)
 
 
 

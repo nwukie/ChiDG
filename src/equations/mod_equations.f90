@@ -21,6 +21,7 @@ module mod_equations
     use eqn_scalar_diffusion,       only: scalar_diffusion
     use eqn_dual_linear_advection,  only: dual_linear_advection
     use eqn_euler,                  only: euler 
+    use eqn_navier_stokes,          only: navier_stokes
     implicit none
 
 
@@ -100,10 +101,11 @@ contains
         !
         ! Instantiate Equations
         !
-        type(euler)                 :: euler_builder
         type(scalar_advection)      :: scalar_advection_builder
         type(scalar_diffusion)      :: scalar_diffusion_builder
         type(dual_linear_advection) :: dual_linear_advection_builder
+        type(euler)                 :: euler_builder
+        type(navier_stokes)         :: navier_stokes_builder
 
 
         !
@@ -112,10 +114,11 @@ contains
         if ( .not. initialized ) then
 
             ! Register in global vector
-            call equation_builder_factory%register(euler_builder)
             call equation_builder_factory%register(scalar_advection_builder)
             call equation_builder_factory%register(scalar_diffusion_builder)
             call equation_builder_factory%register(dual_linear_advection_builder)
+            call equation_builder_factory%register(euler_builder)
+            call equation_builder_factory%register(navier_stokes_builder)
 
 
 

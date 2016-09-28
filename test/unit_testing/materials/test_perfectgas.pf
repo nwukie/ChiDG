@@ -38,7 +38,7 @@ subroutine test_perfectgas_pressure()
     !
     ! Test fluid pressure calculation
     !
-    call fluid%compute_pressure(rho,rhou,rhov,rhow,rhoE,p)
+    p = fluid%compute_pressure(rho,rhou,rhov,rhow,rhoE)
 
 
     @assertEqual(pref, p(:)%x_ad_, tol)

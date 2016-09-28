@@ -69,13 +69,13 @@ contains
                 !
                 ! Compute pressure
                 !
-                call data%eqnset(idom)%prop%fluid%compute_pressure(rho,rhou,rhov,rhow,rhoE,p)
+                p = data%eqnset(idom)%prop%fluid%compute_pressure(rho,rhou,rhov,rhow,rhoE)
             
 
                 !
                 ! Compute cell sound speed
                 !
-                call data%eqnset(idom)%prop%fluid%compute_gamma(rho,rhou,rhov,rhow,rhoE,gam)
+                gam = data%eqnset(idom)%prop%fluid%compute_gamma(rho,rhou,rhov,rhow,rhoE)
 
 
                 

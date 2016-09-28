@@ -30,7 +30,8 @@ module type_fgmres
     !---------------------------------------------------------------------------------------------
     type, public, extends(linear_solver_t) :: fgmres_t
 
-        integer(ik) :: m = 500
+        integer(ik) :: m = 1000
+        logical     :: force_reorthogonalize = .false.
 
     contains
 
@@ -231,16 +232,14 @@ contains
                 !
                 ! They recommend L<1 for robustness, but it seems for these problems L can be increased.
                 !
-                L = 3.0_rk
+                L = 1.0_rk
                 crit = sum(abs(h(1:j,j)))/norm_before
                 
                 if ( crit <  L ) reorthogonalize = .false.
                 if ( crit >= L ) reorthogonalize = .true.
                 
 
-                !! Force reorthogonalization
-                !reorthogonalize = .true.
-                if ( reorthogonalize ) then
+                if ( reorthogonalize .or. self%force_reorthogonalize ) then
                     call write_line('GMRES: Reorthogonalizing...', io_proc=GLOBAL_MASTER)
 
                     do i = 1,j

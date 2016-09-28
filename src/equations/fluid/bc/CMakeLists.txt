@@ -2,5 +2,8 @@ add_lib_sources(
                 bc_state_totalinlet.f90 
                 bc_state_pressureoutlet.f90
                 bc_state_wall.f90
+                bc_state_moving_wall.f90
+                bc_state_fluid_extrapolate.f90
+                bc_state_momentum_inlet.f90
                 mod_dft.f90
                 )

@@ -1,6 +1,6 @@
 module perfect_gas
     use mod_kinds,      only: rk
-    use mod_constants,  only: ONE, HALF, ZERO
+    use mod_constants,  only: ZERO, HALF, ONE, TWO, THREE
     use type_fluid,     only: fluid_t
     use DNAD_D
     implicit none
@@ -15,12 +15,17 @@ module perfect_gas
     !-------------------------------------------------------------------------------------
     type, extends(fluid_t), public :: perfect_gas_t
 
+        real(rk) :: R = 287.06_rk
+
     contains
 
         procedure   :: compute_pressure_ad
         procedure   :: compute_pressure_real
         procedure   :: compute_gamma_ad
         procedure   :: compute_gamma_real
+        procedure   :: compute_temperature_ad
+        procedure   :: compute_viscosity_dynamic_ad
+        procedure   :: compute_viscosity_second_ad
 
     end type perfect_gas_t
     !*************************************************************************************
@@ -45,10 +50,11 @@ contains
     !!  TODO: Fix hardcoded gamma
     !!
     !-------------------------------------------------------------------------------------
-    subroutine compute_pressure_ad(self,rho,rhou,rhov,rhow,rhoE,vals)
+    function compute_pressure_ad(self,rho,rhou,rhov,rhow,rhoE) result(vals)
         class(perfect_gas_t),           intent(in)      :: self
         type(AD_D),                     intent(in)      :: rho(:), rhou(:), rhov(:), rhow(:), rhoE(:)
-        type(AD_D),     allocatable,    intent(inout)   :: vals(:)
+
+        type(AD_D),     allocatable :: vals(:)
 
         real(rk) :: gam
 
@@ -57,7 +63,7 @@ contains
 
         vals = (gam-ONE)*(rhoE - HALF*( (rhou*rhou) + (rhov*rhov) + (rhow*rhow) )/rho )
 
-    end subroutine compute_pressure_ad
+    end function compute_pressure_ad
     !************************************************************************************
 
 
@@ -81,10 +87,11 @@ contains
     !!  TODO: Fix hardcoded gamma
     !!
     !------------------------------------------------------------------------------------
-    subroutine compute_pressure_real(self,rho,rhou,rhov,rhow,rhoE,vals)
+    function compute_pressure_real(self,rho,rhou,rhov,rhow,rhoE) result(vals)
         class(perfect_gas_t),       intent(in)      :: self
         real(rk),                   intent(in)      :: rho(:), rhou(:), rhov(:), rhow(:), rhoE(:)
-        real(rk),   allocatable,    intent(inout)   :: vals(:)
+
+        real(rk),   allocatable    :: vals(:)
 
         real(rk) :: gam
 
@@ -93,7 +100,7 @@ contains
 
         vals = (gam-ONE)*(rhoE - HALF*rho*((rhou*rhou)/(rho*rho) + (rhov*rhov)/(rho*rho) + (rhow*rhow)/(rho*rho)))
 
-    end subroutine compute_pressure_real
+    end function compute_pressure_real
     !************************************************************************************
 
 
@@ -115,10 +122,11 @@ contains
     !!   @date   2/1/2016
     !!
     !------------------------------------------------------------------------
-    subroutine compute_gamma_ad(self,rho,rhou,rhov,rhow,rhoE,vals)
+    function compute_gamma_ad(self,rho,rhou,rhov,rhow,rhoE) result(vals)
         class(perfect_gas_t),       intent(in)      :: self
         type(AD_D),                 intent(in)      :: rho(:), rhou(:), rhov(:), rhow(:), rhoE(:)
-        type(AD_D), allocatable,    intent(inout)   :: vals(:)
+
+        type(AD_D), allocatable  :: vals(:)
 
         !
         ! Make sure vals derivatives are initialized
@@ -130,7 +138,7 @@ contains
         !
         vals = 1.4_rk
 
-    end subroutine compute_gamma_ad
+    end function compute_gamma_ad
     !***********************************************************************
 
 
@@ -143,10 +151,11 @@ contains
     !!   @date   2/1/2016
     !!
     !------------------------------------------------------------------------
-    subroutine compute_gamma_real(self,rho,rhou,rhov,rhow,rhoE,vals)
+    function compute_gamma_real(self,rho,rhou,rhov,rhow,rhoE) result(vals)
         class(perfect_gas_t),       intent(in)      :: self
         real(rk),                   intent(in)      :: rho(:), rhou(:), rhov(:), rhow(:), rhoE(:)
-        real(rk),   allocatable,    intent(inout)   :: vals(:)
+
+        real(rk),   allocatable :: vals(:)
 
         !
         ! Make sure array is allocated
@@ -158,11 +167,98 @@ contains
         !
         vals = 1.4_rk
 
-    end subroutine compute_gamma_real
+    end function compute_gamma_real
     !***********************************************************************
 
 
 
+
+
+
+    !> Returns a constant gamma value
+    !!
+    !!
+    !!   @author Nathan A. Wukie (AFRL)
+    !!   @date   9/23/2016
+    !!
+    !------------------------------------------------------------------------
+    function compute_temperature_ad(self,rho,rhou,rhov,rhow,rhoE) result(vals)
+        class(perfect_gas_t),       intent(in)      :: self
+        type(AD_D),                 intent(in)      :: rho(:), rhou(:), rhov(:), rhow(:), rhoE(:)
+
+        type(AD_D), allocatable  :: vals(:), P(:)
+
+        !
+        ! Make sure vals derivatives are initialized
+        !
+        P = self%compute_pressure(rho,rhou,rhov,rhow,rhoE)
+
+        !
+        ! Set constant value
+        !
+        vals = P/(rho*self%R)
+
+    end function compute_temperature_ad
+    !***********************************************************************
+
+
+
+
+
+
+    !>  Sutherlands Law for Viscosity
+    !!
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   9/23/2016
+    !!
+    !------------------------------------------------------------------------
+    function compute_viscosity_dynamic_ad(self,T) result(vals)
+        class(perfect_gas_t),       intent(in)      :: self
+        type(AD_D),                 intent(in)      :: T(:)
+
+        type(AD_D), allocatable  :: vals(:)
+
+        real(rk) :: mu0 = 1.7894e-5_rk  ! [kg/(m*s)]
+        real(rk) :: T0  = 273.11_rk     ! [K]
+        real(rk) :: S   = 110.56_rk     ! [K]
+
+        !
+        ! Set constant value
+        !
+        vals = mu0*((T/T0)**(THREE/TWO))*(T0+S)/(T+S)
+
+
+    end function compute_viscosity_dynamic_ad
+    !***********************************************************************
+
+
+
+
+
+
+
+    !>  Stokes' Hypothesis for Second Coefficient of Viscosity
+    !!
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   9/23/2016
+    !!
+    !------------------------------------------------------------------------
+    function compute_viscosity_second_ad(self,mu,T) result(vals)
+        class(perfect_gas_t),       intent(in)      :: self
+        type(AD_D),                 intent(in)      :: mu(:)
+        type(AD_D),                 intent(in)      :: T(:)
+
+        type(AD_D), allocatable  :: vals(:)
+
+        !
+        ! Set constant value
+        !
+        vals = -(TWO/THREE)*mu
+
+    end function compute_viscosity_second_ad
+    !***********************************************************************
 
 
 

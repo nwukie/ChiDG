@@ -2,7 +2,7 @@ module quasi_newton
     use mod_kinds,              only: rk,ik
     use mod_constants,          only: ZERO, ONE, TWO, DIAG
     use mod_spatial,            only: update_space
-    use mod_tecio,              only: write_tecio_variables
+    use mod_tecio,              only: write_tecio_variables_unstructured
     use mod_chidg_mpi,          only: ChiDG_COMM, GLOBAL_MASTER
 
     use type_chidg_data,        only: chidg_data_t
@@ -243,7 +243,7 @@ contains
 
                 !if (wcount == self%nwrite) then
                 !    write(filename, "(I7,A4)") 1000000+niter, '.plt'
-                !    call write_tecio_variables(data,trim(filename),niter+1)
+                !    call write_tecio_variables_unstructured(data,trim(filename),niter+1)
                 !    wcount = 0
                 !end if
                 !wcount = wcount + 1

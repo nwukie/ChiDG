@@ -95,6 +95,9 @@ contains
         type(AD_D), allocatable, dimension(:)   ::      &
             rho_m,  rhou_m,  rhov_m,  rhow_m,  rhoE_m,  &
             rho_bc, rhou_bc, rhov_bc, rhow_bc, rhoE_bc, &
+            drho_dx_m, drhou_dx_m, drhov_dx_m, drhow_dx_m, drhoE_dx_m,  &
+            drho_dy_m, drhou_dy_m, drhov_dy_m, drhow_dy_m, drhoE_dy_m,  &
+            drho_dz_m, drhou_dz_m, drhov_dz_m, drhow_dz_m, drhoE_dz_m,  &
             u_m, v_m, w_m, VMag2
 
 
@@ -118,6 +121,30 @@ contains
         rhov_m = worker%get_face_variable(irhov, 'value', ME)
         rhow_m = worker%get_face_variable(irhow, 'value', ME)
         rhoE_m = worker%get_face_variable(irhoE, 'value', ME)
+
+
+        drho_dx_m  = worker%get_face_variable(irho,  'ddx', ME)
+        drho_dy_m  = worker%get_face_variable(irho,  'ddy', ME)
+        drho_dz_m  = worker%get_face_variable(irho,  'ddz', ME)
+
+        drhou_dx_m = worker%get_face_variable(irhou, 'ddx', ME)
+        drhou_dy_m = worker%get_face_variable(irhou, 'ddy', ME)
+        drhou_dz_m = worker%get_face_variable(irhou, 'ddz', ME)
+
+        drhov_dx_m = worker%get_face_variable(irhov, 'ddx', ME)
+        drhov_dy_m = worker%get_face_variable(irhov, 'ddy', ME)
+        drhov_dz_m = worker%get_face_variable(irhov, 'ddz', ME)
+
+        drhow_dx_m = worker%get_face_variable(irhow, 'ddx', ME)
+        drhow_dy_m = worker%get_face_variable(irhow, 'ddy', ME)
+        drhow_dz_m = worker%get_face_variable(irhow, 'ddz', ME)
+        
+        drhoE_dx_m = worker%get_face_variable(irhoE, 'ddx', ME)
+        drhoE_dy_m = worker%get_face_variable(irhoE, 'ddy', ME)
+        drhoE_dz_m = worker%get_face_variable(irhoE, 'ddz', ME)
+
+
+
 
 
         ! Initialize arrays
@@ -154,6 +181,34 @@ contains
         call worker%store_bc_state(irhov,rhov_bc,'value')
         call worker%store_bc_state(irhow,rhow_bc,'value')
         call worker%store_bc_state(irhoE,rhoE_bc,'value')
+
+
+        drho_dx_m = ZERO
+        drho_dy_m = ZERO
+        drho_dz_m = ZERO
+        call worker%store_bc_state(irho, drho_dx_m, 'ddx')
+        call worker%store_bc_state(irho, drho_dy_m, 'ddy')
+        call worker%store_bc_state(irho, drho_dz_m, 'ddz')
+
+        call worker%store_bc_state(irhou, drhou_dx_m, 'ddx')
+        call worker%store_bc_state(irhou, drhou_dy_m, 'ddy')
+        call worker%store_bc_state(irhou, drhou_dz_m, 'ddz')
+
+        call worker%store_bc_state(irhov, drhov_dx_m, 'ddx')
+        call worker%store_bc_state(irhov, drhov_dy_m, 'ddy')
+        call worker%store_bc_state(irhov, drhov_dz_m, 'ddz')
+
+        call worker%store_bc_state(irhow, drhow_dx_m, 'ddx')
+        call worker%store_bc_state(irhow, drhow_dy_m, 'ddy')
+        call worker%store_bc_state(irhow, drhow_dz_m, 'ddz')
+
+        drhoE_dx_m = ZERO
+        drhoE_dy_m = ZERO
+        drhoE_dz_m = ZERO
+        call worker%store_bc_state(irhoE, drhoE_dx_m, 'ddx')
+        call worker%store_bc_state(irhoE, drhoE_dy_m, 'ddy')
+        call worker%store_bc_state(irhoE, drhoE_dz_m, 'ddz')
+
 
 
     end subroutine compute_bc_state

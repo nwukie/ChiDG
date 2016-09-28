@@ -1,4 +1,4 @@
-module bc_state_pressureoutlet
+module bc_state_fluid_extrapolate
     use mod_kinds,              only: rk,ik
     use mod_constants,          only: ZERO, ONE, HALF, ME
 
@@ -17,14 +17,14 @@ module bc_state_pressureoutlet
     !!  @date   1/31/2016
     !!
     !----------------------------------------------------------------------------------------
-    type, public, extends(bc_state_t) :: pressureoutlet_t
+    type, public, extends(bc_state_t) :: fluid_extrapolate_t
 
     contains
 
         procedure   :: init                 !< Set-up bc state with options/name etc.
         procedure   :: compute_bc_state     !< boundary condition function implementation
 
-    end type pressureoutlet_t
+    end type fluid_extrapolate_t
     !****************************************************************************************
 
 
@@ -41,12 +41,12 @@ contains
     !!
     !--------------------------------------------------------------------------------
     subroutine init(self)
-        class(pressureoutlet_t),   intent(inout) :: self
+        class(fluid_extrapolate_t),   intent(inout) :: self
         
         !
         ! Set operator name
         !
-        call self%set_name("Pressure Outlet")
+        call self%set_name("Fluid Extrapolate")
 
 
 !        !
@@ -62,7 +62,6 @@ contains
         !
         ! Add functions
         !
-        call self%bcproperties%add('Static Pressure','Required')         ! add StaticPressure
 
 
     end subroutine init
@@ -85,7 +84,7 @@ contains
     !!
     !-------------------------------------------------------------------------------------------
     subroutine compute_bc_state(self,worker,prop)
-        class(pressureoutlet_t),    intent(inout)   :: self
+        class(fluid_extrapolate_t),    intent(inout)   :: self
         type(chidg_worker_t),       intent(inout)   :: worker
         class(properties_t),        intent(inout)   :: prop
 
@@ -98,6 +97,9 @@ contains
         type(AD_D), allocatable, dimension(:)   ::      &
             rho_m,  rhou_m,  rhov_m,  rhow_m,  rhoE_m,  &
             rho_bc, rhou_bc, rhov_bc, rhow_bc, rhoE_bc, &
+            drho_dx_m, drhou_dx_m, drhov_dx_m, drhow_dx_m, drhoE_dx_m,  &
+            drho_dy_m, drhou_dy_m, drhov_dy_m, drhow_dy_m, drhoE_dy_m,  &
+            drho_dz_m, drhou_dz_m, drhov_dz_m, drhow_dz_m, drhoE_dz_m,  &
             flux_x, flux_y,  flux_z,  integrand,        &
             u_bc,   v_bc,    w_bc,                      &
             H_bc,   gam_m
@@ -119,13 +121,6 @@ contains
         irhoE = prop%get_equation_index("Energy"    )
 
 
-        !
-        ! Get back pressure from function.
-        !
-        coords = worker%coords()
-        time   = worker%time()
-        p_bc = self%bcproperties%compute("Static Pressure",time,coords)
-
 
         !
         ! Interpolate interior solution to face quadrature nodes
@@ -137,43 +132,60 @@ contains
         rhoE_m = worker%interpolate(irhoE, 'value', ME)
 
 
-        !
-        ! Compute gamma
-        !
-        call prop%fluid%compute_gamma(rho_m,rhou_m,rhov_m,rhow_m,rhoE_m,gam_m)
+        drho_dx_m  = worker%get_face_variable(irho,  'ddx', ME)
+        drho_dy_m  = worker%get_face_variable(irho,  'ddy', ME)
+        drho_dz_m  = worker%get_face_variable(irho,  'ddz', ME)
+
+        drhou_dx_m = worker%get_face_variable(irhou, 'ddx', ME)
+        drhou_dy_m = worker%get_face_variable(irhou, 'ddy', ME)
+        drhou_dz_m = worker%get_face_variable(irhou, 'ddz', ME)
+
+        drhov_dx_m = worker%get_face_variable(irhov, 'ddx', ME)
+        drhov_dy_m = worker%get_face_variable(irhov, 'ddy', ME)
+        drhov_dz_m = worker%get_face_variable(irhov, 'ddz', ME)
+
+        drhow_dx_m = worker%get_face_variable(irhow, 'ddx', ME)
+        drhow_dy_m = worker%get_face_variable(irhow, 'ddy', ME)
+        drhow_dz_m = worker%get_face_variable(irhow, 'ddz', ME)
+        
+        drhoE_dx_m = worker%get_face_variable(irhoE, 'ddx', ME)
+        drhoE_dy_m = worker%get_face_variable(irhoE, 'ddy', ME)
+        drhoE_dz_m = worker%get_face_variable(irhoE, 'ddz', ME)
 
 
-        !
-        ! Extrapolate density and momentum
-        !
-        rho_bc  = rho_m
-        rhou_bc = rhou_m
-        rhov_bc = rhov_m
-        rhow_bc = rhow_m
-
-
-        !
-        ! Compute velocities
-        !
-        u_bc = rhou_bc/rho_bc
-        v_bc = rhov_bc/rho_bc
-        w_bc = rhow_bc/rho_bc
-
-
-        !
-        ! Compute boundary condition energy and enthalpy
-        !
-        rhoE_bc = p_bc/(gam_m - ONE) + (rho_bc*HALF)*(u_bc*u_bc + v_bc*v_bc + w_bc*w_bc)
 
 
         !
         ! Store boundary condition state
         !
-        call worker%store_bc_state(irho,  rho_bc, 'value')
-        call worker%store_bc_state(irhou, rhou_bc,'value')
-        call worker%store_bc_state(irhov, rhov_bc,'value')
-        call worker%store_bc_state(irhow, rhow_bc,'value')
-        call worker%store_bc_state(irhoE, rhoE_bc,'value')
+        call worker%store_bc_state(irho,  rho_m, 'value')
+        call worker%store_bc_state(irhou, rhou_m,'value')
+        call worker%store_bc_state(irhov, rhov_m,'value')
+        call worker%store_bc_state(irhow, rhow_m,'value')
+        call worker%store_bc_state(irhoE, rhoE_m,'value')
+
+
+
+
+        call worker%store_bc_state(irho,  drho_dx_m,  'ddx')
+        call worker%store_bc_state(irho,  drho_dy_m,  'ddy')
+        call worker%store_bc_state(irho,  drho_dz_m,  'ddz')
+
+        call worker%store_bc_state(irhou, drhou_dx_m, 'ddx')
+        call worker%store_bc_state(irhou, drhou_dy_m, 'ddy')
+        call worker%store_bc_state(irhou, drhou_dz_m, 'ddz')
+
+        call worker%store_bc_state(irhov, drhov_dx_m, 'ddx')
+        call worker%store_bc_state(irhov, drhov_dy_m, 'ddy')
+        call worker%store_bc_state(irhov, drhov_dz_m, 'ddz')
+
+        call worker%store_bc_state(irhow, drhow_dx_m, 'ddx')
+        call worker%store_bc_state(irhow, drhow_dy_m, 'ddy')
+        call worker%store_bc_state(irhow, drhow_dz_m, 'ddz')
+
+        call worker%store_bc_state(irhoE, drhoE_dx_m, 'ddx')
+        call worker%store_bc_state(irhoE, drhoE_dy_m, 'ddy')
+        call worker%store_bc_state(irhoE, drhoE_dz_m, 'ddz')
 
 
     end subroutine compute_bc_state
@@ -184,4 +196,4 @@ contains
 
 
 
-end module bc_state_pressureoutlet
+end module bc_state_fluid_extrapolate

@@ -124,9 +124,9 @@ ChiDG Operators
 The integral expressions in the discontinuous Galerkin formulation are 
 represented in ChiDG as ``operator_t`` objects. Each new integral term
 that one wishes to implement is *extended* from the ``operator_t`` 
-base class. These objects do not contain much data. Rather, they primary
+base class. These objects do not contain much data. Rather, they primarily
 hold a type-bound procedure ``compute`` that allows the function definition
-to be passed around, stored in arrays, etc.
+to be passed around, stored as an array of ``operator_t``'s, etc.
 
 
 .. code-block:: Fortran
@@ -149,9 +149,21 @@ are associated with a specific implementation.
 
 .. function:: init(self)
 
-    Set the name of the operator. Set the operator type. Set the equations the operator
-    is operating on.
+    The operator initialization routine requires several bits of information to be implemented
+    when defining a new operator.
 
+        #1 Set the name of the operator 
+            Example:
+                - | ``call self%set_name("Roe Flux")``
+
+        #2 Set the equations that the operator will be operating on:
+            Example:
+                - | ``call self%set_equation("Pressure")``
+
+            Example:
+                - | ``call self%set_equation("Density")``
+                  | ``call self%set_equation("X-Momentum")``
+                  | ``call self%set_equation("Energy")``
 
 
 .. function:: compute(worker,prop)
@@ -164,9 +176,25 @@ are associated with a specific implementation.
     :param properties_t   prop: A properties_t instance
 
 
+Registering new operators
+-------------------------
+Any time a new ``operator_t`` is defined, in order for it to be used, it must be registered
+in the *operator factory*. This is located in ``mod_operators.f90``. This informs the framework
+that the operator exists, and allows the operator to be used by equation sets through the 
+operator factory.
 
 
+.. note:: Register new operators inside ``mod_operators.f90``
 
+    #1: Import the operator definition
+        - | ``use type_new_operator.f90, only: new_operator_t``
+
+    #2: In the module procedure ``register_operators``, create an instance of the operator and add it to the operator factory
+        - | ``type(new_operator_t)  :: my_new_operator``
+          | ``call operator_factory%register(my_new_operator)``
+
+    **Note:** ``register_operators`` gets called on startup so any operators defined and registered
+    there are created and added to the framework at startup.
 
 
 
@@ -182,21 +210,20 @@ additional equations or additional terms that represent another phenomenon.
 
 .. class:: equation_set_t
 
-    A class
     
-.. code-block:: Fortran
+    .. code-block:: Fortran
 
-    type :: equation_set_t
-        type(operator_t)    volume_advective_operator(:)
-        type(operator_t)    boundary_advective_operators(:)
-        type(operator_t)    volume_diffusive_operator(:)
-        type(operator_t)    boundary_diffusive_operators(:)
-        ...
-    contains
+        type :: equation_set_t
+            type(operator_t)    volume_advective_operator(:)
+            type(operator_t)    boundary_advective_operators(:)
+            type(operator_t)    volume_diffusive_operator(:)
+            type(operator_t)    boundary_diffusive_operators(:)
+            ...
+        contains
 
-        procedure, public :: add_operator
+            procedure, public :: add_operator
 
-    end type equation_set_t
+        end type equation_set_t
 
 
 
@@ -228,8 +255,18 @@ additional equations or additional terms that represent another phenomenon.
     |                             |                               |
     +-----------------------------+-------------------------------+
 
+    Such an ``equation_set_t`` could be constructed using the following procedure:
 
+        #1: Create an instance of an ``equation_set_t``:
+            - | ``type(equation_set_t) :: euler_equations``
 
+        #2: Add operators to the new equation set:
+            - | ``call euler_equations%add_operator("Euler Boundary Average Flux")``
+              | ``call euler_equations%add_operator("Roe Upwind Flux")``
+              | ``call euler_equations%add_operator("Euler Volume Flux")``
+
+    **Note:** The operators being added should already be implemented as extensions of 
+    ``operator_t`` and be registered in ``mod_operator.f90``.
 
 
 

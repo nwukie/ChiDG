@@ -175,7 +175,10 @@
 </li>
 <li class="toctree-l2"><a class="reference internal" href="../equations/detail_equations.html">Equation Sets</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="../equations/detail_equations.html#mathematical-background">Mathematical background</a></li>
-<li class="toctree-l3"><a class="reference internal" href="../equations/detail_equations.html#chidg-operators">ChiDG Operators</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../equations/detail_equations.html#chidg-operators">ChiDG Operators</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../equations/detail_equations.html#registering-new-operators">Registering new operators</a></li>
+</ul>
+</li>
 <li class="toctree-l3"><a class="reference internal" href="../equations/detail_equations.html#chidg-equation-sets">ChiDG Equation Sets</a></li>
 </ul>
 </li>
@@ -271,9 +274,12 @@ ChiDG, the rank of the current process, and a communicator(<code class="docutils
 the processes that ChiDG is running on. These are:</p>
 <div class="highlight-Fortran"><div class="highlight"><pre><span></span><span class="k">module </span><span class="n">mod_chidg_mpi</span>
 
-<span class="kt">integer</span><span class="p">(</span><span class="n">ik</span><span class="p">)</span>    <span class="kd">::</span> <span class="n">IRANK</span>
-<span class="kt">integer</span><span class="p">(</span><span class="n">ik</span><span class="p">)</span>    <span class="kd">::</span> <span class="n">NRANK</span>
-<span class="k">type</span><span class="p">(</span><span class="n">mpi_comm</span><span class="p">)</span> <span class="kd">::</span> <span class="n">ChiDG_COMM</span>
+    <span class="kt">integer</span><span class="p">(</span><span class="n">ik</span><span class="p">)</span>    <span class="kd">::</span> <span class="n">IRANK</span>
+    <span class="kt">integer</span><span class="p">(</span><span class="n">ik</span><span class="p">)</span>    <span class="kd">::</span> <span class="n">NRANK</span>
+    <span class="k">type</span><span class="p">(</span><span class="n">mpi_comm</span><span class="p">)</span> <span class="kd">::</span> <span class="n">ChiDG_COMM</span>
+    <span class="p">...</span>
+
+<span class="k">end module</span>
 </pre></div>
 </div>
 <p>One instance where having a defined communicator for ChiDG is helpful is in unit-testing.

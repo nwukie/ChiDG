@@ -15,9 +15,12 @@ the processes that ChiDG is running on. These are:
 
     module mod_chidg_mpi
 
-    integer(ik)    :: IRANK
-    integer(ik)    :: NRANK
-    type(mpi_comm) :: ChiDG_COMM
+        integer(ik)    :: IRANK
+        integer(ik)    :: NRANK
+        type(mpi_comm) :: ChiDG_COMM
+        ...
+
+    end module
 
 
 One instance where having a defined communicator for ChiDG is helpful is in unit-testing.

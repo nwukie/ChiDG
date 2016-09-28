@@ -175,7 +175,10 @@
 </li>
 <li class="toctree-l2 current"><a class="current reference internal" href="#">Equation Sets</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#mathematical-background">Mathematical background</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#chidg-operators">ChiDG Operators</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#chidg-operators">ChiDG Operators</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#registering-new-operators">Registering new operators</a></li>
+</ul>
+</li>
 <li class="toctree-l3"><a class="reference internal" href="#chidg-equation-sets">ChiDG Equation Sets</a></li>
 </ul>
 </li>
@@ -349,9 +352,9 @@ own object, <code class="docutils literal"><span class="pre">operator_t</span></
 <p>The integral expressions in the discontinuous Galerkin formulation are
 represented in ChiDG as <code class="docutils literal"><span class="pre">operator_t</span></code> objects. Each new integral term
 that one wishes to implement is <em>extended</em> from the <code class="docutils literal"><span class="pre">operator_t</span></code>
-base class. These objects do not contain much data. Rather, they primary
+base class. These objects do not contain much data. Rather, they primarily
 hold a type-bound procedure <code class="docutils literal"><span class="pre">compute</span></code> that allows the function definition
-to be passed around, stored in arrays, etc.</p>
+to be passed around, stored as an array of <code class="docutils literal"><span class="pre">operator_t</span></code>&#8216;s, etc.</p>
 <div class="highlight-Fortran"><div class="highlight"><pre><span></span><span class="k">type</span><span class="p">,</span> <span class="k">abstract</span> <span class="kd">::</span> <span class="n">operator_t</span>
 
 <span class="k">contains</span>
@@ -369,8 +372,46 @@ are associated with a specific implementation.</p>
 <dl class="function">
 <dt id="init">
 <code class="descname">init</code><span class="sig-paren">(</span><em>self</em><span class="sig-paren">)</span><a class="headerlink" href="#init" title="Permalink to this definition">¶</a></dt>
-<dd><p>Set the name of the operator. Set the operator type. Set the equations the operator
-is operating on.</p>
+<dd><p>The operator initialization routine requires several bits of information to be implemented
+when defining a new operator.</p>
+<blockquote>
+<div><dl class="docutils">
+<dt>#1 Set the name of the operator</dt>
+<dd><dl class="first last docutils">
+<dt>Example:</dt>
+<dd><ul class="first last">
+<li><div class="first line-block">
+<div class="line"><code class="docutils literal"><span class="pre">call</span> <span class="pre">self%set_name(&quot;Roe</span> <span class="pre">Flux&quot;)</span></code></div>
+</div>
+</li>
+</ul>
+</dd>
+</dl>
+</dd>
+<dt>#2 Set the equations that the operator will be operating on:</dt>
+<dd><dl class="first last docutils">
+<dt>Example:</dt>
+<dd><ul class="first last">
+<li><div class="first line-block">
+<div class="line"><code class="docutils literal"><span class="pre">call</span> <span class="pre">self%set_equation(&quot;Pressure&quot;)</span></code></div>
+</div>
+</li>
+</ul>
+</dd>
+<dt>Example:</dt>
+<dd><ul class="first last">
+<li><div class="first line-block">
+<div class="line"><code class="docutils literal"><span class="pre">call</span> <span class="pre">self%set_equation(&quot;Density&quot;)</span></code></div>
+<div class="line"><code class="docutils literal"><span class="pre">call</span> <span class="pre">self%set_equation(&quot;X-Momentum&quot;)</span></code></div>
+<div class="line"><code class="docutils literal"><span class="pre">call</span> <span class="pre">self%set_equation(&quot;Energy&quot;)</span></code></div>
+</div>
+</li>
+</ul>
+</dd>
+</dl>
+</dd>
+</dl>
+</div></blockquote>
 </dd></dl>
 
 <dl class="function">
@@ -392,6 +433,38 @@ call an integration routine.</p>
 </table>
 </dd></dl>
 
+<div class="section" id="registering-new-operators">
+<h3>Registering new operators<a class="headerlink" href="#registering-new-operators" title="Permalink to this headline">¶</a></h3>
+<p>Any time a new <code class="docutils literal"><span class="pre">operator_t</span></code> is defined, in order for it to be used, it must be registered
+in the <em>operator factory</em>. This is located in <code class="docutils literal"><span class="pre">mod_operators.f90</span></code>. This informs the framework
+that the operator exists, and allows the operator to be used by equation sets through the
+operator factory.</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p>Register new operators inside <code class="docutils literal"><span class="pre">mod_operators.f90</span></code></p>
+<dl class="docutils">
+<dt>#1: Import the operator definition</dt>
+<dd><ul class="first last">
+<li><div class="first line-block">
+<div class="line"><code class="docutils literal"><span class="pre">use</span> <span class="pre">type_new_operator.f90,</span> <span class="pre">only:</span> <span class="pre">new_operator_t</span></code></div>
+</div>
+</li>
+</ul>
+</dd>
+<dt>#2: In the module procedure <code class="docutils literal"><span class="pre">register_operators</span></code>, create an instance of the operator and add it to the operator factory</dt>
+<dd><ul class="first last">
+<li><div class="first line-block">
+<div class="line"><code class="docutils literal"><span class="pre">type(new_operator_t)</span>&nbsp; <span class="pre">::</span> <span class="pre">my_new_operator</span></code></div>
+<div class="line"><code class="docutils literal"><span class="pre">call</span> <span class="pre">operator_factory%register(my_new_operator)</span></code></div>
+</div>
+</li>
+</ul>
+</dd>
+</dl>
+<p class="last"><strong>Note:</strong> <code class="docutils literal"><span class="pre">register_operators</span></code> gets called on startup so any operators defined and registered
+there are created and added to the framework at startup.</p>
+</div>
+</div>
 </div>
 <div class="section" id="chidg-equation-sets">
 <h2>ChiDG Equation Sets<a class="headerlink" href="#chidg-equation-sets" title="Permalink to this headline">¶</a></h2>
@@ -402,10 +475,7 @@ additional equations or additional terms that represent another phenomenon.</p>
 <dl class="class">
 <dt id="equation_set_t">
 <em class="property">class </em><code class="descname">equation_set_t</code><a class="headerlink" href="#equation_set_t" title="Permalink to this definition">¶</a></dt>
-<dd><p>A class</p>
-</dd></dl>
-
-<div class="highlight-Fortran"><div class="highlight"><pre><span></span><span class="k">type</span> <span class="kd">::</span> <span class="n">equation_set_t</span>
+<dd><div class="highlight-Fortran"><div class="highlight"><pre><span></span><span class="k">type</span> <span class="kd">::</span> <span class="n">equation_set_t</span>
     <span class="k">type</span><span class="p">(</span><span class="n">operator_t</span><span class="p">)</span>    <span class="n">volume_advective_operator</span><span class="p">(:)</span>
     <span class="k">type</span><span class="p">(</span><span class="n">operator_t</span><span class="p">)</span>    <span class="n">boundary_advective_operators</span><span class="p">(:)</span>
     <span class="k">type</span><span class="p">(</span><span class="n">operator_t</span><span class="p">)</span>    <span class="n">volume_diffusive_operator</span><span class="p">(:)</span>
@@ -418,6 +488,8 @@ additional equations or additional terms that represent another phenomenon.</p>
 <span class="k">end type </span><span class="n">equation_set_t</span>
 </pre></div>
 </div>
+</dd></dl>
+
 <dl class="function">
 <dt id="add_operator">
 <code class="descname">add_operator</code><span class="sig-paren">(</span><em>string</em><span class="sig-paren">)</span><a class="headerlink" href="#add_operator" title="Permalink to this definition">¶</a></dt>
@@ -437,7 +509,7 @@ create the operator from a factory.</p>
 <p class="first admonition-title">Tip</p>
 <p>An <code class="docutils literal"><span class="pre">equation_set_t</span></code> that represents the Euler equations for
 nonlinear compressible flows might be composed of the following <code class="docutils literal"><span class="pre">operator_t</span></code>&#8216;s:</p>
-<table border="1" class="last docutils">
+<table border="1" class="docutils">
 <colgroup>
 <col width="48%" />
 <col width="52%" />
@@ -458,6 +530,31 @@ nonlinear compressible flows might be composed of the following <code class="doc
 </tr>
 </tbody>
 </table>
+<p>Such an <code class="docutils literal"><span class="pre">equation_set_t</span></code> could be constructed using the following procedure:</p>
+<blockquote>
+<div><dl class="docutils">
+<dt>#1: Create an instance of an <code class="docutils literal"><span class="pre">equation_set_t</span></code>:</dt>
+<dd><ul class="first last">
+<li><div class="first line-block">
+<div class="line"><code class="docutils literal"><span class="pre">type(equation_set_t)</span> <span class="pre">::</span> <span class="pre">euler_equations</span></code></div>
+</div>
+</li>
+</ul>
+</dd>
+<dt>#2: Add operators to the new equation set:</dt>
+<dd><ul class="first last">
+<li><div class="first line-block">
+<div class="line"><code class="docutils literal"><span class="pre">call</span> <span class="pre">euler_equations%add_operator(&quot;Euler</span> <span class="pre">Boundary</span> <span class="pre">Average</span> <span class="pre">Flux&quot;)</span></code></div>
+<div class="line"><code class="docutils literal"><span class="pre">call</span> <span class="pre">euler_equations%add_operator(&quot;Roe</span> <span class="pre">Upwind</span> <span class="pre">Flux&quot;)</span></code></div>
+<div class="line"><code class="docutils literal"><span class="pre">call</span> <span class="pre">euler_equations%add_operator(&quot;Euler</span> <span class="pre">Volume</span> <span class="pre">Flux&quot;)</span></code></div>
+</div>
+</li>
+</ul>
+</dd>
+</dl>
+</div></blockquote>
+<p class="last"><strong>Note:</strong> The operators being added should already be implemented as extensions of
+<code class="docutils literal"><span class="pre">operator_t</span></code> and be registered in <code class="docutils literal"><span class="pre">mod_operator.f90</span></code>.</p>
 </div>
 </div>
 </div>

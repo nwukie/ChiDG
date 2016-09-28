@@ -2,10 +2,10 @@
 Mesh
 ====
 
-The ``mesh`` data structure contains an entire geometry description for a single
-domain. This exists as an array of ``element`` types, and array of ``face`` types,
-and a ``chimera`` instance. An ``element`` exists for every element in the ``mesh``
-domain. For a given ``element``, a ``face`` instance exists for each face.
+The ``mesh_t`` data structure contains an entire geometry description for a single
+domain. This exists as an array of ``element_t`` types, and array of ``face_t`` types,
+and a ``chimera_t`` instance. An ``element_t`` exists for every element in the ``mesh_t``
+domain. For a given ``element_t``, a ``face_t`` instance exists for each face.
 
 
 
@@ -26,7 +26,7 @@ domain. For a given ``element``, a ``face`` instance exists for each face.
 Elements
 -------------
 
-An ``element`` instance contains information needed by the framework and also
+An ``element_t`` instance contains information needed by the framework and also
 general information that could be useful to users. This includes:
 
 ::
@@ -47,7 +47,7 @@ Metric terms
 ------------
 
 The metric terms are defined at each quadrature point in the ``metric(:,:,:)`` component 
-of a given ``element``. To access the matrix of metric components for a given quadrature 
+of a given ``element_t``. To access the matrix of metric components for a given quadrature 
 node 'igq', the component can be used as
 
 ::
@@ -100,9 +100,9 @@ element in the component ``element%gq%vol``. For example, the component
         \end{pmatrix}
 
 
-Derivatives in real space coordinates in an ``element`` can be computed using 
+Derivatives in real space coordinates in an ``element_t`` can be computed using 
 ``ddx(:,:)`` components. The derivatives of basis functions with respect to real 
-coordinates(:math:`x,y,z` , :math:`r,\theta,z` ) are specific to each ``element`` 
+coordinates(:math:`x,y,z` , :math:`r,\theta,z` ) are specific to each ``element_t`` 
 and these derivatives can be accessed in the ``ddx``, ``ddy``, ``ddz`` components. 
 The ``element%ddx`` component for example gives
 
@@ -143,9 +143,9 @@ Faces
 Face metrics
 ------------
 
-Metric terms for the ``face`` data structure are defined exactly the same as for the 
-``element`` data structure. The difference is that the ``metric`` and ``jinv`` components of 
-``face`` return values for boundary quadrature nodes. This contrasts the ``element`` 
+Metric terms for the ``face_t`` data structure are defined exactly the same as for the 
+``element_t`` data structure. The difference is that the ``metric`` and ``jinv`` components of 
+``face_t`` return values for boundary quadrature nodes. This contrasts the ``element_t`` 
 structure, which returns values for volume quadrature nodes.
 
 
@@ -210,7 +210,7 @@ Unit normal vectors can be accessed in the ``unorm`` component and are computed 
 Chimera Interfaces
 ------------------
 
-Each ``mesh`` instance contains a ``mesh%chimera`` component that holds all information
+Each ``mesh_t`` instance contains a ``mesh%chimera`` component that holds all information
 regarding chimera communication for that particular mesh block. This takes the
 form of ``chimera_receiver`` and ``chimera_donor`` components. Currently, only
 the ``chimera_receiver`` is utilized. ``chimera_donor`` will be used to facilitate 
@@ -223,7 +223,7 @@ communication between processors for parallel code execution.
 
 
 
-In a given ``mesh`` block, every face that gets information from a separate block is 
+In a given ``mesh_t`` block, every face that gets information from a separate block is 
 designated as a CHIMERA face, it is assigned an integer ID ``face%ChiID``, and it gets an 
 entry in the ``mesh%chimera%recv%data`` components. It can be accessed as
 

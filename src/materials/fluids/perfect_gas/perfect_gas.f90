@@ -15,7 +15,7 @@ module perfect_gas
     !-------------------------------------------------------------------------------------
     type, extends(fluid_t), public :: perfect_gas_t
 
-        real(rk) :: R = 287.06_rk
+        real(rk) :: R = 287.15_rk
 
     contains
 
@@ -226,8 +226,10 @@ contains
         !
         ! Set constant value
         !
-        vals = mu0*((T/T0)**(THREE/TWO))*(T0+S)/(T+S)
+        !vals = mu0*((T/T0)**(THREE/TWO))*(T0+S)/(T+S)
 
+        vals = T
+        vals = 1._rk
 
     end function compute_viscosity_dynamic_ad
     !***********************************************************************

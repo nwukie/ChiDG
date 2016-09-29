@@ -35,6 +35,8 @@ module mod_bc
     use bc_state_pressureoutlet,                only: pressureoutlet_t
     use bc_state_fluid_extrapolate,             only: fluid_extrapolate_t
     use bc_state_momentum_inlet,                only: momentum_inlet_t
+    use bc_state_symmetry,                      only: symmetry_t
+    use bc_state_farfield,                      only: farfield_t
 
 
 
@@ -83,6 +85,8 @@ contains
         type(pressureoutlet_t)                  :: PRESSUREOUTLET
         type(fluid_extrapolate_t)               :: FLUID_EXTRAPOLATE
         type(momentum_inlet_t)                  :: MOMENTUM_INLET
+        type(symmetry_t)                        :: SYMMETRY
+        type(farfield_t)                        :: FARFIELD
 
 
 
@@ -104,6 +108,8 @@ contains
             call registered_bcs%push_back(PRESSUREOUTLET)
             call registered_bcs%push_back(FLUID_EXTRAPOLATE)
             call registered_bcs%push_back(MOMENTUM_INLET)
+            call registered_bcs%push_back(SYMMETRY)
+            call registered_bcs%push_back(FARFIELD)
 
 
             !

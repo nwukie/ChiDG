@@ -154,9 +154,11 @@ contains
                 !
                 ! Compute new cfl for pseudo-timestep
                 !
+                !cfln = min(self%cfl0*(rnorm0/rnorm),5._rk)
                 cfln = self%cfl0*(rnorm0/rnorm)
 
 
+                
 
 
                 !
@@ -242,8 +244,8 @@ contains
 
 
                 !if (wcount == self%nwrite) then
-                !    write(filename, "(I7,A4)") 1000000+niter, '.plt'
-                !    call write_tecio_variables_unstructured(data,trim(filename),niter+1)
+                    write(filename, "(I7,A4)") 1000000+niter, '.plt'
+                    call write_tecio_variables_unstructured(data,trim(filename),niter+1)
                 !    wcount = 0
                 !end if
                 !wcount = wcount + 1

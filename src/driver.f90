@@ -134,7 +134,7 @@ program driver
             call initialize_variable(chidg%data,1,constant)
 
             ! rho_u
-            call constant%set_option('val',10._rk)
+            call constant%set_option('val',119._rk)
             call initialize_variable(chidg%data,2,constant)
 
             ! rho_v
@@ -146,7 +146,7 @@ program driver
             call initialize_variable(chidg%data,4,constant)
 
             ! rho_E
-            call constant%set_option('val',250000._rk)
+            call constant%set_option('val',255950._rk)
             call initialize_variable(chidg%data,5,constant)
 
 

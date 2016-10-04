@@ -149,21 +149,22 @@ are associated with a specific implementation.
 
 .. function:: init(self)
 
-    The operator initialization routine requires several bits of information to be implemented
+    The operator initializaton routine requires several bits of information to be implemented
     when defining a new operator.
 
         #1 Set the name of the operator 
-            Example:
-                - | ``call self%set_name("Roe Flux")``
+            +---------+---------------------------------------+
+            | Example |  | ``call self%set_name("Roe Flux")`` |
+            +---------+---------------------------------------+
 
         #2 Set the equations that the operator will be operating on:
-            Example:
-                - | ``call self%set_equation("Pressure")``
-
-            Example:
-                - | ``call self%set_equation("Density")``
-                  | ``call self%set_equation("X-Momentum")``
-                  | ``call self%set_equation("Energy")``
+            +---------+---------------------------------------------+
+            | Example |  | ``call self%set_equation("Pressure")``   |
+            +---------+---------------------------------------------+
+            |         |  | ``call self%set_equation("Density")``    |
+            | Example |  | ``call self%set_equation("X-Momentum")`` |
+            |         |  | ``call self%set_equation("Energy")``     |
+            +---------+---------------------------------------------+
 
 
 .. function:: compute(worker,prop)

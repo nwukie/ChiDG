@@ -372,43 +372,49 @@ are associated with a specific implementation.</p>
 <dl class="function">
 <dt id="init">
 <code class="descname">init</code><span class="sig-paren">(</span><em>self</em><span class="sig-paren">)</span><a class="headerlink" href="#init" title="Permalink to this definition">¶</a></dt>
-<dd><p>The operator initialization routine requires several bits of information to be implemented
+<dd><p>The operator initializaton routine requires several bits of information to be implemented
 when defining a new operator.</p>
 <blockquote>
 <div><dl class="docutils">
 <dt>#1 Set the name of the operator</dt>
-<dd><dl class="first last docutils">
-<dt>Example:</dt>
-<dd><ul class="first last">
-<li><div class="first line-block">
+<dd><table border="1" class="first last docutils">
+<colgroup>
+<col width="19%" />
+<col width="81%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td>Example</td>
+<td><div class="first last line-block">
 <div class="line"><code class="docutils literal"><span class="pre">call</span> <span class="pre">self%set_name(&quot;Roe</span> <span class="pre">Flux&quot;)</span></code></div>
 </div>
-</li>
-</ul>
-</dd>
-</dl>
+</td>
+</tr>
+</tbody>
+</table>
 </dd>
 <dt>#2 Set the equations that the operator will be operating on:</dt>
-<dd><dl class="first last docutils">
-<dt>Example:</dt>
-<dd><ul class="first last">
-<li><div class="first line-block">
+<dd><table border="1" class="first last docutils">
+<colgroup>
+<col width="17%" />
+<col width="83%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td>Example</td>
+<td><div class="first last line-block">
 <div class="line"><code class="docutils literal"><span class="pre">call</span> <span class="pre">self%set_equation(&quot;Pressure&quot;)</span></code></div>
 </div>
-</li>
-</ul>
-</dd>
-<dt>Example:</dt>
-<dd><ul class="first last">
-<li><div class="first line-block">
+</td>
+</tr>
+<tr class="row-even"><td>Example</td>
+<td><div class="first last line-block">
 <div class="line"><code class="docutils literal"><span class="pre">call</span> <span class="pre">self%set_equation(&quot;Density&quot;)</span></code></div>
 <div class="line"><code class="docutils literal"><span class="pre">call</span> <span class="pre">self%set_equation(&quot;X-Momentum&quot;)</span></code></div>
 <div class="line"><code class="docutils literal"><span class="pre">call</span> <span class="pre">self%set_equation(&quot;Energy&quot;)</span></code></div>
 </div>
-</li>
-</ul>
-</dd>
-</dl>
+</td>
+</tr>
+</tbody>
+</table>
 </dd>
 </dl>
 </div></blockquote>

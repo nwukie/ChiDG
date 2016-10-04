@@ -209,22 +209,22 @@ The ChiDG executable, ``chidg``, works as:
     - a driver to run ChiDG simulations
 
 
-.. function:: chidg convert file.x
+.. attribute:: chidg convert file.x
 
-    Convert a Plot3D grid file(example in this case: 'file.x') to a ChiDG-formatted HDF5 file.
-
-
-.. function:: chidg edit file.h5
-
-    Edit a ChiDG-formatted HDF5 grid file(example in this case: 'file.h5').
+    - Convert a Plot3D grid file(example in this case: 'file.x') to a ChiDG-formatted HDF5 file.
 
 
-.. function:: chidg post file.h5
+.. attribute:: chidg edit file.h5
+
+    - Edit a ChiDG-formatted HDF5 grid file(example in this case: 'file.h5').
+
+
+.. attribute:: chidg post file.h5
 
     - Post-process a ChiDG-formatted HDF5 grid/solution file. 
     - Creates Tecplot/Paraview files for visualization
 
-.. function:: chidg \ 
+.. attribute:: chidg
 
     - Run a ChiDG simulation
     - Assumes chidg.nml namelist file is present in current directory

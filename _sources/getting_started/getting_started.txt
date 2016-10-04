@@ -77,10 +77,13 @@ that are needed are:
     --enable-fortran
     --enable-fortran2003
 
-The ChIDG CMake build will try to automatically locate the HDF5 libraries and
+The ChiDG CMake build will try to automatically locate the HDF5 libraries and
 modules. To ensure they are found, **be sure to set the HDF5_ROOT environment 
 variable** such that the directory includes the ``bin``, ``lib``, and ``include``
-directories where the libraries and modules can be located
+directories where the libraries and modules can be located.
+
+
+``export HDF5_ROOT='HDF5-Install-Directory'``
 
 
 
@@ -91,50 +94,59 @@ directories where the libraries and modules can be located
 Step 3: Configure the build
 ---------------------------
 
+.. note:: We should probably double-check a few things...
 
-
-+-------------------------------------------------------+---------------------------------------------------------------+
-| **Out-of-source build configuration**                                                                                 |
-+-------------------------------------------------------+---------------------------------------------------------------+
-|                                                       |                                                               |
-| #1 Change to the ChiDG root directory                 |   ``cd ChiDG``                                                |
-|                                                       |                                                               |
-+-------------------------------------------------------+---------------------------------------------------------------+
-|                                                       |                                                               |
-| #2 Create a new build directory                       |   ``mkdir build``                                             |
-|                                                       |                                                               |
-+-------------------------------------------------------+---------------------------------------------------------------+
-|                                                       |                                                               |
-| #3 Change to the build directory                      |   ``cd build``                                                |
-|                                                       |                                                               |
-+-------------------------------------------------------+---------------------------------------------------------------+
-|                                                       |                                                               |
-| #4 Configure with CMake + user options                |   ``cmake ..``  or ``cmake -DCMAKE_BUILD_TYPE=Release ..``    |
-|                                                       |                                                               |
-+-------------------------------------------------------+---------------------------------------------------------------+
+    - **Check** the ``HDF5_ROOT`` environment variable is exported and is set to the install
+      directory of the HDF5 library. The following should be valid: ``$HDF5_ROOT/bin``, ``$HDF5_ROOT/lib``.
 
 
 
-The following parameters can be passed when invoking ``cmake`` in order to configure the build with different options. They are passed with the ``-D`` flag as:
+
+
++----------------------------------------------------+----------------------------------------------------------+
+| **Configure steps**                                                                                           |
++----------------------------------------------------+----------------------------------------------------------+
+|                                                    |                                                          |
+| **#1** Change to the ChiDG root directory          | ``cd ChiDG``                                             |
+|                                                    |                                                          |
++----------------------------------------------------+----------------------------------------------------------+
+|                                                    |                                                          |
+| **#2** Create a new build directory                | ``mkdir build``                                          |
+|                                                    |                                                          |
++----------------------------------------------------+----------------------------------------------------------+
+|                                                    |                                                          |
+| **#3** Change to the build directory               | ``cd build``                                             |
+|                                                    |                                                          |
++----------------------------------------------------+----------------------------------------------------------+
+|                                                    |                                                          |
+| **#4** Configure with CMake + user options         | ``cmake ..``  or ``cmake -DCMAKE_BUILD_TYPE=Release ..`` |
+|                                                    |                                                          |
++----------------------------------------------------+----------------------------------------------------------+
+
+
+
+
+The following parameters can be passed when invoking ``cmake`` in order to configure the build with 
+different options. They are passed with the ``-D`` flag as:
 
 ::
 
     cmake -DParameter=Option ..
 
 
-================================= ========================================================= ===========================================================================
-Build parameter                   Description                                               Options
-================================= ========================================================= ===========================================================================
-CMAKE_Fortran_COMPILER            Specify a Fortran Compiler        
-                                                                                            
-                                                                                            
-CMAKE_BUILD_TYPE                  Specify what type of compiler settings to build with      ``Release``
-                                                                                            ``Debug``
-USER_MPI                          Use User environment variables for finding MPI            ``True``
-                                                                                            ``False``
-BUILD_TESTS                       Build the test binaries. Requires pFUnit Library          ``True``
-                                                                                            ``False``
-================================= ========================================================= ===========================================================================
+=============================== ======================================================= ================
+Build parameter                 Description                                             Options
+=============================== ======================================================= ================
+CMAKE_Fortran_COMPILER          Specify a Fortran Compiler        
+                                                                                        
+                                                                                        
+CMAKE_BUILD_TYPE                Specify what type of compiler settings to build with    ``Release``
+                                                                                        ``Debug``
+USER_MPI                        Use User environment variables for finding MPI          ``True``
+                                                                                        ``False``
+BUILD_TESTS                     Build the test binaries. Requires pFUnit Library        ``True``
+                                                                                        ``False``
+=============================== ======================================================= ================
 
 **Up-to-date Fortran(F2008) compiler required. Tested with gfortran 5.3**
 
@@ -154,12 +166,66 @@ Step 4: Build ChiDG
 -------------------
 
 
-+-------------------------------------------------------+---------------------------------------------------------------+
-|                                                       |                                                               |
-| Run ``make`` to build the ChiDG library               |   ``make`` or ``make -j 4``                                   |
-|                                                       |                                                               |
-+-------------------------------------------------------+---------------------------------------------------------------+
++-------------------------------------------+--------------------------------------------+
+| **Build steps**                                                                        |
++-------------------------------------------+--------------------------------------------+
+|                                           |                                            |
+| Run ``make`` to build the ChiDG library   |   ``make`` or ``make -j 4``                |
+|                                           |                                            |
++-------------------------------------------+--------------------------------------------+
 
 
 
+
+|
+|
+|
+|
+
+
+.. _Usage:
+
+Usage
+=====
+
+So, how does one actually use ChiDG? The interface for using the ChiDG library 
+is still being designed and changed. One thing to keep in mind, is that 
+the interface provided is just an interface. One could create their own driver 
+interface by linking to the library and compiling an executable. For now, we 
+will just focus on detailing how ChiDG currently gets used.
+
+
+ChiDG Executable: ``chidg``
+---------------------------
+
+When you build and install ChiDG, it builds an executable file. This is simply
+a driver file(``src/interfaces/driver.f90``) that uses routines from the ChiDG library. 
+The driver file gets compiled, linked to the ChiDG library, and put in an executable, ``chidg``.
+The ChiDG executable, ``chidg``, works as:
+
+    - a utility for converting Plot3D grid files 
+    - a utility for editing boundary conditions in the ChiDG-format HDF file
+    - a utility for processing a solution for viewing in Tecplot or Paraview
+    - a driver to run ChiDG simulations
+
+
+.. function:: chidg convert file.x
+
+    Convert a Plot3D grid file(example in this case: 'file.x') to a ChiDG-formatted HDF5 file.
+
+
+.. function:: chidg edit file.h5
+
+    Edit a ChiDG-formatted HDF5 grid file(example in this case: 'file.h5').
+
+
+.. function:: chidg post file.h5
+
+    - Post-process a ChiDG-formatted HDF5 grid/solution file. 
+    - Creates Tecplot/Paraview files for visualization
+
+.. function:: chidg \ 
+
+    - Run a ChiDG simulation
+    - Assumes chidg.nml namelist file is present in current directory
 

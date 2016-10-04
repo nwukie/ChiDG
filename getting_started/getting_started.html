@@ -90,6 +90,10 @@
 <li class="toctree-l3"><a class="reference internal" href="#step-4-build-chidg">Step 4: Build ChiDG</a></li>
 </ul>
 </li>
+<li class="toctree-l2"><a class="reference internal" href="#usage">Usage</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#chidg-executable-chidg">ChiDG Executable: <code class="docutils literal"><span class="pre">chidg</span></code></a></li>
+</ul>
+</li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="../examples/example_main.html">Examples</a><ul>
@@ -322,45 +326,55 @@ that are needed are:</p>
 <span class="o">--</span><span class="n">enable</span><span class="o">-</span><span class="n">fortran2003</span>
 </pre></div>
 </div>
-<p>The ChIDG CMake build will try to automatically locate the HDF5 libraries and
+<p>The ChiDG CMake build will try to automatically locate the HDF5 libraries and
 modules. To ensure they are found, <strong>be sure to set the HDF5_ROOT environment
 variable</strong> such that the directory includes the <code class="docutils literal"><span class="pre">bin</span></code>, <code class="docutils literal"><span class="pre">lib</span></code>, and <code class="docutils literal"><span class="pre">include</span></code>
-directories where the libraries and modules can be located</p>
+directories where the libraries and modules can be located.</p>
+<p><code class="docutils literal"><span class="pre">export</span> <span class="pre">HDF5_ROOT='HDF5-Install-Directory'</span></code></p>
 </div>
 </div>
 <div class="section" id="step-3-configure-the-build">
 <h3>Step 3: Configure the build<a class="headerlink" href="#step-3-configure-the-build" title="Permalink to this headline">¶</a></h3>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p>We should probably double-check a few things...</p>
+<ul class="last simple">
+<li><strong>Check</strong> the <code class="docutils literal"><span class="pre">HDF5_ROOT</span></code> environment variable is exported and is set to the install
+directory of the HDF5 library. The following should be valid: <code class="docutils literal"><span class="pre">$HDF5_ROOT/bin</span></code>, <code class="docutils literal"><span class="pre">$HDF5_ROOT/lib</span></code>.</li>
+</ul>
+</div>
 <table border="1" class="docutils">
 <colgroup>
 <col width="47%" />
 <col width="53%" />
 </colgroup>
 <tbody valign="top">
-<tr class="row-odd"><td colspan="2"><strong>Out-of-source build configuration</strong></td>
+<tr class="row-odd"><td colspan="2"><strong>Configure steps</strong></td>
 </tr>
-<tr class="row-even"><td>#1 Change to the ChiDG root directory</td>
+<tr class="row-even"><td><strong>#1</strong> Change to the ChiDG root directory</td>
 <td><code class="docutils literal"><span class="pre">cd</span> <span class="pre">ChiDG</span></code></td>
 </tr>
-<tr class="row-odd"><td>#2 Create a new build directory</td>
+<tr class="row-odd"><td><strong>#2</strong> Create a new build directory</td>
 <td><code class="docutils literal"><span class="pre">mkdir</span> <span class="pre">build</span></code></td>
 </tr>
-<tr class="row-even"><td>#3 Change to the build directory</td>
+<tr class="row-even"><td><strong>#3</strong> Change to the build directory</td>
 <td><code class="docutils literal"><span class="pre">cd</span> <span class="pre">build</span></code></td>
 </tr>
-<tr class="row-odd"><td>#4 Configure with CMake + user options</td>
+<tr class="row-odd"><td><strong>#4</strong> Configure with CMake + user options</td>
 <td><code class="docutils literal"><span class="pre">cmake</span> <span class="pre">..</span></code>  or <code class="docutils literal"><span class="pre">cmake</span> <span class="pre">-DCMAKE_BUILD_TYPE=Release</span> <span class="pre">..</span></code></td>
 </tr>
 </tbody>
 </table>
-<p>The following parameters can be passed when invoking <code class="docutils literal"><span class="pre">cmake</span></code> in order to configure the build with different options. They are passed with the <code class="docutils literal"><span class="pre">-D</span></code> flag as:</p>
+<p>The following parameters can be passed when invoking <code class="docutils literal"><span class="pre">cmake</span></code> in order to configure the build with
+different options. They are passed with the <code class="docutils literal"><span class="pre">-D</span></code> flag as:</p>
 <div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">cmake</span> <span class="o">-</span><span class="n">DParameter</span><span class="o">=</span><span class="n">Option</span> <span class="o">..</span>
 </pre></div>
 </div>
 <table border="1" class="docutils">
 <colgroup>
-<col width="20%" />
-<col width="35%" />
-<col width="45%" />
+<col width="30%" />
+<col width="54%" />
+<col width="16%" />
 </colgroup>
 <thead valign="bottom">
 <tr class="row-odd"><th class="head">Build parameter</th>
@@ -396,15 +410,76 @@ directories where the libraries and modules can be located</p>
 <h3>Step 4: Build ChiDG<a class="headerlink" href="#step-4-build-chidg" title="Permalink to this headline">¶</a></h3>
 <table border="1" class="docutils">
 <colgroup>
-<col width="47%" />
-<col width="53%" />
+<col width="49%" />
+<col width="51%" />
 </colgroup>
 <tbody valign="top">
-<tr class="row-odd"><td>Run <code class="docutils literal"><span class="pre">make</span></code> to build the ChiDG library</td>
+<tr class="row-odd"><td colspan="2"><strong>Build steps</strong></td>
+</tr>
+<tr class="row-even"><td>Run <code class="docutils literal"><span class="pre">make</span></code> to build the ChiDG library</td>
 <td><code class="docutils literal"><span class="pre">make</span></code> or <code class="docutils literal"><span class="pre">make</span> <span class="pre">-j</span> <span class="pre">4</span></code></td>
 </tr>
 </tbody>
 </table>
+<div class="line-block">
+<div class="line"><br /></div>
+<div class="line"><br /></div>
+<div class="line"><br /></div>
+<div class="line"><br /></div>
+</div>
+</div>
+</div>
+<div class="section" id="usage">
+<span id="id3"></span><h2>Usage<a class="headerlink" href="#usage" title="Permalink to this headline">¶</a></h2>
+<p>So, how does one actually use ChiDG? The interface for using the ChiDG library
+is still being designed and changed. One thing to keep in mind, is that
+the interface provided is just an interface. One could create their own driver
+interface by linking to the library and compiling an executable. For now, we
+will just focus on detailing how ChiDG currently gets used.</p>
+<div class="section" id="chidg-executable-chidg">
+<h3>ChiDG Executable: <code class="docutils literal"><span class="pre">chidg</span></code><a class="headerlink" href="#chidg-executable-chidg" title="Permalink to this headline">¶</a></h3>
+<p>When you build and install ChiDG, it builds an executable file. This is simply
+a driver file(<code class="docutils literal"><span class="pre">src/interfaces/driver.f90</span></code>) that uses routines from the ChiDG library.
+The driver file gets compiled, linked to the ChiDG library, and put in an executable, <code class="docutils literal"><span class="pre">chidg</span></code>.
+The ChiDG executable, <code class="docutils literal"><span class="pre">chidg</span></code>, works as:</p>
+<blockquote>
+<div><ul class="simple">
+<li>a utility for converting Plot3D grid files</li>
+<li>a utility for editing boundary conditions in the ChiDG-format HDF file</li>
+<li>a utility for processing a solution for viewing in Tecplot or Paraview</li>
+<li>a driver to run ChiDG simulations</li>
+</ul>
+</div></blockquote>
+<dl class="function">
+<dt>
+<code class="descname">chidg convert file.x</code></dt>
+<dd><p>Convert a Plot3D grid file(example in this case: &#8216;file.x&#8217;) to a ChiDG-formatted HDF5 file.</p>
+</dd></dl>
+
+<dl class="function">
+<dt>
+<code class="descname">chidg edit file.h5</code></dt>
+<dd><p>Edit a ChiDG-formatted HDF5 grid file(example in this case: &#8216;file.h5&#8217;).</p>
+</dd></dl>
+
+<dl class="function">
+<dt>
+<code class="descname">chidg post file.h5</code></dt>
+<dd><ul class="simple">
+<li>Post-process a ChiDG-formatted HDF5 grid/solution file.</li>
+<li>Creates Tecplot/Paraview files for visualization</li>
+</ul>
+</dd></dl>
+
+<dl class="function">
+<dt>
+<code class="descname">chidg \</code></dt>
+<dd><ul class="simple">
+<li>Run a ChiDG simulation</li>
+<li>Assumes chidg.nml namelist file is present in current directory</li>
+</ul>
+</dd></dl>
+
 </div>
 </div>
 </div>

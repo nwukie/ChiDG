@@ -225,7 +225,7 @@ contains
         !
         ! Compute Temperature Jacobians
         !
-        const = ONE/287.06_rk
+        const = ONE/287.15_rk
         dT_drho  = const*invrho*dp_drho  -  const*invrho*invrho*p
         dT_drhou = const*invrho*dp_drhou
         dT_drhov = const*invrho*dp_drhov
@@ -315,18 +315,14 @@ contains
 
         !=================================================
         ! z-momentum flux
-!        !=================================================
-!        flux_x = -tau_xz
-!        flux_y = -tau_yz
-!        flux_z = -tau_zz
-!
-!        integrand = flux_x*normx + flux_y*normy + flux_z*normz
-!
-!
-!!        print*, "bc z-momentum"
-!!        print*, integrand(:)%x_ad_
-!
-!        call worker%integrate_boundary(irhow, integrand)
+        !=================================================
+        flux_x = -tau_xz
+        flux_y = -tau_yz
+        flux_z = -tau_zz
+
+        integrand = flux_x*normx + flux_y*normy + flux_z*normz
+
+        call worker%integrate_boundary(irhow, integrand)
 
         !=================================================
         ! Energy flux

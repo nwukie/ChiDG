@@ -117,14 +117,13 @@ program driver
 !            call initialize_variable(chidg%data,1,fcn)
 
 
-!            call create_function(constant,'constant')
+!            call polynomial%set_option('f',3.5_rk)
 !            call create_function(polynomial,'polynomial')
 !
 !            ! rho
+!            call create_function(constant,'constant')
 !            call constant%set_option('val',0.01_rk)
-!
-!            call polynomial%set_option('f',3.5_rk)
-!            call initialize_variable(chidg%data,1,polynomial)
+!            call initialize_variable(chidg%data,1,constant)
 
 
             call create_function(constant,'constant')
@@ -134,7 +133,7 @@ program driver
             call initialize_variable(chidg%data,1,constant)
 
             ! rho_u
-            call constant%set_option('val',119._rk)
+            call constant%set_option('val',10.0_rk)
             call initialize_variable(chidg%data,2,constant)
 
             ! rho_v
@@ -146,7 +145,7 @@ program driver
             call initialize_variable(chidg%data,4,constant)
 
             ! rho_E
-            call constant%set_option('val',255950._rk)
+            call constant%set_option('val',248000.0_rk)
             call initialize_variable(chidg%data,5,constant)
 
 

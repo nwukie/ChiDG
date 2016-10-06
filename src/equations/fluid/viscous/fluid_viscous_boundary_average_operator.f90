@@ -292,7 +292,7 @@ contains
         !
         ! Compute Temperature Jacobians
         !
-        const = ONE/287.06_rk
+        const = ONE/287.15_rk
         dT_drho_m  = const*invrho_m*dp_drho_m  -  const*invrho_m*invrho_m*p_m
         dT_drhou_m = const*invrho_m*dp_drhou_m
         dT_drhov_m = const*invrho_m*dp_drhov_m
@@ -447,29 +447,24 @@ contains
         !================================
         !       Z-MOMENTUM FLUX
         !================================
-!        flux_x_m = -tau_xz_m
-!        flux_y_m = -tau_yz_m
-!        flux_z_m = -tau_zz_m
-!
-!        flux_x_p = -tau_xz_p
-!        flux_y_p = -tau_yz_p
-!        flux_z_p = -tau_zz_p
-!
-!
-!        flux_x = (flux_x_m + flux_x_p)
-!        flux_y = (flux_y_m + flux_y_p)
-!        flux_z = (flux_z_m + flux_z_p)
-!
-!
-!        ! dot with normal vector
-!        integrand = HALF*(flux_x*normx + flux_y*normy + flux_z*normz)
-!
-!!        print*, "boundary average z-momentum"
-!!        print*, integrand(:)%x_ad_
-!
-!
-!
-!        call worker%integrate_boundary(irhow, integrand)
+        flux_x_m = -tau_xz_m
+        flux_y_m = -tau_yz_m
+        flux_z_m = -tau_zz_m
+
+        flux_x_p = -tau_xz_p
+        flux_y_p = -tau_yz_p
+        flux_z_p = -tau_zz_p
+
+
+        flux_x = (flux_x_m + flux_x_p)
+        flux_y = (flux_y_m + flux_y_p)
+        flux_z = (flux_z_m + flux_z_p)
+
+
+        ! dot with normal vector
+        integrand = HALF*(flux_x*normx + flux_y*normy + flux_z*normz)
+
+        call worker%integrate_boundary(irhow, integrand)
 
 
         !================================

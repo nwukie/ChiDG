@@ -226,10 +226,10 @@ contains
         !
         ! Set constant value
         !
-        !vals = mu0*((T/T0)**(THREE/TWO))*(T0+S)/(T+S)
+        vals = mu0*((T/T0)**(THREE/TWO))*(T0+S)/(T+S)
 
-        vals = T
-        vals = 1._rk
+!        vals = vals * 100000._rk
+!        vals = 1._rk
 
     end function compute_viscosity_dynamic_ad
     !***********************************************************************

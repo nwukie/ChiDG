@@ -202,7 +202,7 @@ contains
         !
         ! Compute Temperature Jacobians
         !
-        const = ONE/287.06_rk
+        const = ONE/287.15_rk
         dT_drho  = const*invrho*dp_drho  -  const*invrho*invrho*p
         dT_drhou = const*invrho*dp_drhou
         dT_drhov = const*invrho*dp_drhov
@@ -288,31 +288,11 @@ contains
         !============================
         !     Z-MOMENTUM FLUX
         !============================
-!        flux_x = -tau_xz
-!        flux_y = -tau_yz
-!        flux_z = -tau_zz
-!
-!        if (any(abs(flux_x(:)%x_ad_) > 0.001)) then
-!            print*, "volume z-momentum"
-!            print*, worker%element_info%ielement_g
-!            print*, 'flux_x'
-!            print*, flux_x(:)%x_ad_
-!        end if
-!        if (any(abs(flux_y(:)%x_ad_) > 0.001)) then
-!            print*, "volume z-momentum"
-!            print*, worker%element_info%ielement_g
-!            print*, 'flux_y'
-!            print*, flux_y(:)%x_ad_
-!        end if
-!        if (any(abs(flux_z(:)%x_ad_) > 0.001)) then
-!            print*, "volume z-momentum"
-!            print*, worker%element_info%ielement_g
-!            print*, 'flux_z'
-!            print*, flux_z(:)%x_ad_
-!        end if
-!
-!
-!        call worker%integrate_volume(irhow, flux_x,flux_y,flux_z)
+        flux_x = -tau_xz
+        flux_y = -tau_yz
+        flux_z = -tau_zz
+
+        call worker%integrate_volume(irhow, flux_x,flux_y,flux_z)
 
         !============================
         !       ENERGY FLUX

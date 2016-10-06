@@ -1,6 +1,7 @@
 add_subdirectory(scalar)
 add_subdirectory(fluid)
 add_subdirectory(dual_linear_advection)
+add_subdirectory(wall_distance)
 #add_subdirectory(PrimitiveLinearizedEuler)
 
 

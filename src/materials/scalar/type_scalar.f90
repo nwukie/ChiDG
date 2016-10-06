@@ -93,9 +93,12 @@ contains
     !!
     !!
     !-------------------------------------------------------------------------------
-    impure elemental function compute_cx(self,u) result(val)
-        class(scalar_t),    intent(in)  :: self
-        type(AD_D),         intent(in)  :: u
+    impure elemental function compute_cx(self,u,dudx,dudy,dudz) result(val)
+        class(scalar_t),    intent(in)              :: self
+        type(AD_D),         intent(in)              :: u
+        type(AD_D),         intent(in), optional    :: dudx
+        type(AD_D),         intent(in), optional    :: dudy
+        type(AD_D),         intent(in), optional    :: dudz
 
         type(AD_D)                      :: val
         character(len=:),   allocatable :: msg
@@ -119,9 +122,12 @@ contains
     !!
     !!
     !-------------------------------------------------------------------------------
-    impure elemental function compute_cy(self,u) result(val)
-        class(scalar_t),    intent(in)  :: self
-        type(AD_D),         intent(in)  :: u
+    impure elemental function compute_cy(self,u,dudx,dudy,dudz) result(val)
+        class(scalar_t),    intent(in)              :: self
+        type(AD_D),         intent(in)              :: u
+        type(AD_D),         intent(in), optional    :: dudx
+        type(AD_D),         intent(in), optional    :: dudy
+        type(AD_D),         intent(in), optional    :: dudz
 
         type(AD_D)                      :: val
         character(len=:),   allocatable :: msg
@@ -146,9 +152,12 @@ contains
     !!
     !!
     !-------------------------------------------------------------------------------
-    impure elemental function compute_cz(self,u) result(val)
-        class(scalar_t),    intent(in)  :: self
-        type(AD_D),         intent(in)  :: u
+    impure elemental function compute_cz(self,u,dudx,dudy,dudz) result(val)
+        class(scalar_t),    intent(in)              :: self
+        type(AD_D),         intent(in)              :: u
+        type(AD_D),         intent(in), optional    :: dudx
+        type(AD_D),         intent(in), optional    :: dudy
+        type(AD_D),         intent(in), optional    :: dudz
 
         type(AD_D)                      :: val
         character(len=:),   allocatable :: msg

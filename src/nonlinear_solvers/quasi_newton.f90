@@ -244,8 +244,8 @@ contains
 
 
                 !if (wcount == self%nwrite) then
-                    write(filename, "(I7,A4)") 1000000+niter, '.plt'
-                    call write_tecio_variables_unstructured(data,trim(filename),niter+1)
+                !    write(filename, "(I7,A4)") 1000000+niter, '.plt'
+                !    call write_tecio_variables_unstructured(data,trim(filename),niter+1)
                 !    wcount = 0
                 !end if
                 !wcount = wcount + 1

@@ -1,4 +1,4 @@
-module euler_roe_operator
+module euler_roe_fix_operator
     use mod_kinds,              only: rk,ik
     use mod_constants,          only: NFACES,ZERO,ONE,TWO,HALF, ME, NEIGHBOR
 
@@ -19,14 +19,14 @@ module euler_roe_operator
     !!  @date   1/28/2016
     !!
     !------------------------------------------------------------------------------
-    type, extends(operator_t), public :: euler_roe_operator_t
+    type, extends(operator_t), public :: euler_roe_fix_operator_t
 
     contains
 
         procedure   :: init
         procedure   :: compute
 
-    end type euler_roe_operator_t
+    end type euler_roe_fix_operator_t
     !*******************************************************************************
 
 
@@ -48,10 +48,10 @@ contains
     !!
     !--------------------------------------------------------------------------------
     subroutine init(self)
-        class(euler_roe_operator_t),   intent(inout)    :: self
+        class(euler_roe_fix_operator_t),   intent(inout)    :: self
 
         ! Set operator name
-        call self%set_name("Euler Roe Flux")
+        call self%set_name("Euler Roe Fix Flux")
 
         ! Set operator type
         call self%set_operator_type("Boundary Advective Flux")
@@ -76,7 +76,7 @@ contains
     !!
     !!---------------------------------------------------------------------------
     subroutine compute(self,worker,prop)
-        class(euler_roe_operator_t),    intent(inout)   :: self
+        class(euler_roe_fix_operator_t),    intent(inout)   :: self
         type(chidg_worker_t),           intent(inout)   :: worker
         class(properties_t),            intent(inout)   :: prop
 
@@ -98,11 +98,13 @@ contains
             H_m,        H_p,                                            &
             rtil, util, vtil, wtil, vmagtil, Htil, ctil, qtil2,         &
             integrand,  upwind,     wave,                               &
-            C1,  C2_a, C2_b,  C3,                                       &
+!            C1,  C2_a, C2_b,  C3,                                       &
             u_m, v_m, w_m,                                              &
             u_p, v_p, w_p,                                              &
             vmag_p, vmag_m,                                             &
-            delr,   delp,   delvmag, delu, delv, delw,                  &
+            delr,  delp, delvmag, delu, delv, delw,                     &
+            delru, delrv, delrw, delrE,                                 &
+            s1, s2, C1, C2, G1, G2,                                     &
             lamda1, lamda2, lamda3,                                     &
             sqrt_rhom, sqrt_rhop, sqrt_rhom_plus_rhop, ctil2, invrho_m, invrho_p
 
@@ -155,8 +157,8 @@ contains
         !
         ! Compute pressure and gamma
         !
-        p_m = prop%fluid%compute_pressure(rho_m,rhou_m,rhov_m,rhow_m,rhoE_m)
-        p_p = prop%fluid%compute_pressure(rho_p,rhou_p,rhov_p,rhow_p,rhoE_p)
+        p_m   = prop%fluid%compute_pressure(rho_m,rhou_m,rhov_m,rhow_m,rhoE_m)
+        p_p   = prop%fluid%compute_pressure(rho_p,rhou_p,rhov_p,rhow_p,rhoE_p)
         gam_m = prop%fluid%compute_gamma(rho_m,rhou_m,rhov_m,rhow_m,rhoE_m)
         gam_p = prop%fluid%compute_gamma(rho_p,rhou_p,rhov_p,rhow_p,rhoE_p)
 
@@ -198,32 +200,28 @@ contains
         Htil = (sqrt_rhom*H_m + sqrt_rhop*H_p) / (sqrt_rhom_plus_rhop)    ! Roe-averaged Enthalpy
 
         vmagtil = util*unormx + vtil*unormy + wtil*unormz  ! Magnitude of Roe-averaged velocity in the face normal direction
+
+        ! Test
+        vmagtil = sqrt(vmagtil*vmagtil)
+
         qtil2   = util**TWO + vtil**TWO + wtil**TWO
 
         !& HARDCODED GAMMA
-        ctil = sqrt((1.4_rk - ONE)*(Htil - HALF*qtil2))                   ! Roe-averaged speed of sound
-        ctil2 = ctil**TWO
-
-
-
-        !
-        ! Compute jump terms
-        !
-        delr    = (rho_m - rho_p)
-        delu    = (u_m - u_p)
-        delv    = (v_m - v_p)
-        delw    = (w_m - w_p)
-        delvmag = (vmag_m - vmag_p)
-        delp    = (p_m - p_p)
+        ctil2 = (1.4_rk - ONE)*(Htil - HALF*qtil2)                   ! Roe-averaged speed of sound
+        ctil  = sqrt(ctil2)
 
 
         !
-        ! Limit wave speeds for entropy fix
+        ! Compute characteristic velocities
         !
-        lamda1 = abs(vmagtil - ctil)
-        lamda2 = abs(vmagtil)
-        lamda3 = abs(vmagtil + ctil)
+        lamda1 = vmagtil + ctil
+        lamda2 = vmagtil - ctil
+        lamda3 = vmagtil
 
+        
+        !
+        ! Entropy fix for characteristic velocities
+        !
         eps = 0.01_rk
         where ( (-eps*ctil < lamda1) .and. (lamda1 < eps*ctil) )
             lamda1 = HALF*(eps*ctil + lamda1*lamda1/(eps*ctil))
@@ -245,8 +243,42 @@ contains
 
 
 
+        !
+        ! Compute s-terms
+        !
+        s1 = HALF*(abs(lamda1) + abs(lamda2)) - abs(lamda3)
+        s2 = HALF*(abs(lamda1) + abs(lamda2))
 
 
+        !
+        ! Compute jump terms
+        !
+        delr    = (rho_p  - rho_m )
+        delu    = (u_p    - u_m   )
+        delv    = (v_p    - v_m   )
+        delw    = (w_p    - w_m   )
+        delvmag = (vmag_p - vmag_m)
+        delp    = (p_p    - p_m   )
+
+        delru = rhou_p - rhou_m
+        delrv = rhov_p - rhov_m
+        delrw = rhow_p - rhow_m
+        delrE = rhoE_p - rhoE_m
+
+
+        !
+        ! Compute G-terms
+        !
+        G1 = (1.4_rk - ONE)*(HALF*qtil2*delr  -  (util*delru + vtil*delrv + wtil*delrw)  +  delrE)
+        G2 = -vmagtil*delr  +  (delru*unormx + delrv*unormy + delrw*unormz)
+
+
+
+        !
+        ! Compute C-terms
+        !
+        C1 = (G1/ctil2)*s1  +  (G2/ctil)*s2
+        C2 = (G1/ctil)*s2   +  (G2*s1)
 
 
 
@@ -255,10 +287,6 @@ contains
 !        C2_b = abs(vmagtil)*rtil
 !        C3   = abs(vmagtil + ctil)*( delp + rtil*ctil*delvmag)/(TWO*(ctil2))
 
-        C1   = abs(lamda1)*( delp - rtil*ctil*delvmag)/(TWO*(ctil2))
-        C2_a = abs(lamda2)*(delr - delp/(ctil2))
-        C2_b = abs(lamda2)*rtil
-        C3   = abs(lamda3)*( delp + rtil*ctil*delvmag)/(TWO*(ctil2))
 
         integrand = delr
         integrand = ZERO
@@ -267,7 +295,9 @@ contains
         !================================
         !       MASS FLUX
         !================================
-        upwind = C1 + C2_a + C3
+!        upwind = C1 + C2_a + C3
+        upwind = -(lamda3*delr  +  C1)
+
 
         integrand = HALF*(upwind*normx*unormx + upwind*normy*unormy + upwind*normz*unormz)
 
@@ -277,7 +307,8 @@ contains
         !================================
         !       X-MOMENTUM FLUX
         !================================
-        upwind = C1*(util - ctil*unormx)  +  C2_a*util  +  C2_b*(delu - delvmag*unormx)  +  C3*(util + ctil*unormx)
+!        upwind = C1*(util - ctil*unormx)  +  C2_a*util  +  C2_b*(delu - delvmag*unormx)  +  C3*(util + ctil*unormx)
+        upwind = -(lamda3*delru  +  C1*util  +  C2*unormx)
 
         integrand = HALF*(upwind*normx*unormx + upwind*normy*unormy + upwind*normz*unormz)
 
@@ -287,7 +318,8 @@ contains
         !================================
         !       Y-MOMENTUM FLUX
         !================================
-        upwind = C1*(vtil - ctil*unormy)  +  C2_a*vtil  +  C2_b*(delv - delvmag*unormy)  +  C3*(vtil + ctil*unormy)
+!        upwind = C1*(vtil - ctil*unormy)  +  C2_a*vtil  +  C2_b*(delv - delvmag*unormy)  +  C3*(vtil + ctil*unormy)
+        upwind = -(lamda3*delrv  + C1*vtil  +  C2*unormy)
 
         integrand = HALF*(upwind*normx*unormx + upwind*normy*unormy + upwind*normz*unormz)
 
@@ -296,7 +328,8 @@ contains
         !================================
         !       Z-MOMENTUM FLUX
         !================================
-        upwind = C1*(wtil - ctil*unormz)  +  C2_a*wtil  +  C2_b*(delw - delvmag*unormz)  +  C3*(wtil + ctil*unormz)
+!        upwind = C1*(wtil - ctil*unormz)  +  C2_a*wtil  +  C2_b*(delw - delvmag*unormz)  +  C3*(wtil + ctil*unormz)
+        upwind = -(lamda3*delrw  +  C1*wtil  +  C2*unormz)
 
         integrand = HALF*(upwind*normx*unormx + upwind*normy*unormy + upwind*normz*unormz)
 
@@ -305,7 +338,8 @@ contains
         !================================
         !          ENERGY FLUX
         !================================
-        upwind = C1*(Htil - ctil*vmagtil)  +  C2_a*(qtil2/TWO)  +  C2_b*(util*delu + vtil*delv + wtil*delw - vmagtil*delvmag)  +  C3*(Htil + ctil*vmagtil)
+!        upwind = C1*(Htil - ctil*vmagtil)  +  C2_a*(qtil2/TWO)  +  C2_b*(util*delu + vtil*delv + wtil*delw - vmagtil*delvmag)  +  C3*(Htil + ctil*vmagtil)
+        upwind = -(lamda3*delrE  +  C1*Htil  +  C2*vmagtil)
 
         integrand = HALF*(upwind*normx*unormx + upwind*normy*unormy + upwind*normz*unormz)
 
@@ -327,4 +361,4 @@ contains
 
 
 
-end module euler_roe_operator
+end module euler_roe_fix_operator

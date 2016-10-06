@@ -1,37 +1,35 @@
-module SA_volume_advective_operator
+module WD_volume_source
 #include <messenger.h>
     use mod_kinds,              only: rk,ik
-    use mod_constants,          only: ZERO,ONE,TWO,HALF
+    use mod_constants,          only: ZERO,ONE,TWO,FOUR,PI
 
     use type_operator,          only: operator_t
     use type_chidg_worker,      only: chidg_worker_t
     use type_properties,        only: properties_t
     use DNAD_D
     implicit none
-
+    private
 
     !>
     !!
-    !!  @author Nathan A. Wukie
-    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   8/19/2016
     !!
     !!
     !!
     !-------------------------------------------------------------------------
-    type, extends(operator_t), public :: SA_volume_advective_operator_t
+    type, extends(operator_t), public :: WD_volume_source_t
 
 
     contains
-    
+
         procedure   :: init
         procedure   :: compute
 
-    end type SA_volume_advective_operator_t
+    end type WD_volume_source_t
     !*************************************************************************
 
 contains
-
-
 
     !>
     !!
@@ -40,13 +38,13 @@ contains
     !!
     !--------------------------------------------------------------------------------
     subroutine init(self)
-        class(SA_volume_advective_operator_t),   intent(inout)  :: self
+        class(WD_volume_source_t),   intent(inout)      :: self
 
         ! Set operator name
-        call self%set_name("Scalar Advection Volume Operator")
+        call self%set_name("Wall Distance Volume Source")
 
         ! Set operator type
-        call self%set_operator_type("Volume Advective Operator")
+        call self%set_operator_type("Volume Advective Source")
 
         ! Set operator equations
         call self%set_equation("u")
@@ -62,67 +60,42 @@ contains
 
 
 
-
-
-
     !>
     !!
-    !!  @author Nathan A. Wukie
-    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   8/19/2016
     !!
     !!
     !!
     !------------------------------------------------------------------------------------
     subroutine compute(self,worker,prop)
-        class(SA_volume_advective_operator_t),  intent(inout)   :: self
+        class(WD_volume_source_t),          intent(inout)   :: self
         type(chidg_worker_t),               intent(inout)   :: worker
         class(properties_t),                intent(inout)   :: prop
 
-
-        integer(ik)             :: iu
-
-        type(AD_D), allocatable, dimension(:)   ::  &
-            u, dudx, dudy, dudz, flux_x, flux_y, flux_z, cx, cy, cz
-
-
+        integer(ik)                             :: iu
+        type(AD_D), allocatable, dimension(:)   :: source
+        real(rk),   allocatable, dimension(:)   :: x, y
 
         !
         ! Get variable index from equation set
         !
-        iu = prop%get_equation_index('u')
+        iu = prop%get_equation_index("u")
 
 
         !
-        ! Interpolate solution to quadrature nodes
+        ! Interpolate solution to quadrature nodes to initialize derivatives
         !
-!        u = worker%interpolate(iu, 'value')
-        u    = worker%get_element_variable(iu, 'value')
-        dudx = worker%get_element_variable(iu, 'ddx'  )
-        dudy = worker%get_element_variable(iu, 'ddy'  )
-        dudz = worker%get_element_variable(iu, 'ddz'  )
+        source = worker%get_element_variable(iu, "value")
 
 
-        !
-        ! Get model coefficients
-        !
-        cx = prop%scalar%compute_cx(u,dudx,dudy,dudz)
-        cy = prop%scalar%compute_cy(u,dudx,dudy,dudz)
-        cz = prop%scalar%compute_cz(u,dudx,dudy,dudz)
-
-
-        !
-        ! Compute volume flux at quadrature nodes
-        !
-        flux_x = cx * u 
-        flux_y = cy * u
-        flux_z = cz * u
+        source = ONE
 
 
         !
         ! Integrate volume flux
         !
-        call worker%integrate_volume(iu, flux_x, flux_y, flux_z)
-
+        call worker%integrate_volume(iu, source)
 
 
     end subroutine compute
@@ -133,4 +106,4 @@ contains
 
 
 
-end module SA_volume_advective_operator
+end module WD_volume_source

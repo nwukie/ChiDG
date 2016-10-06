@@ -52,8 +52,8 @@ contains
 
 
 
-            nelem = data%mesh(idom)%nelem
-            do ielem = 1,nelem
+           nelem = data%mesh(idom)%nelem
+           do ielem = 1,nelem
 
 
                 !
@@ -113,6 +113,7 @@ contains
                 ! Compute elemen-local timestep
                 !
                 data%sdata%dt(idom,ielem) = (cfl*h)/lam
+                !data%sdata%dt(idom,ielem) = cfl*h
 
 
 

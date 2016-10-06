@@ -230,23 +230,23 @@ contains
         !================================
         !       Z-MOMENTUM FLUX
         !================================
-!        flux_x_m = (rhow_m*rhou_m)*invrho_m
-!        flux_y_m = (rhow_m*rhov_m)*invrho_m
-!        flux_z_m = (rhow_m*rhow_m)*invrho_m + p_m
-!
-!        flux_x_p = (rhow_p*rhou_p)*invrho_p
-!        flux_y_p = (rhow_p*rhov_p)*invrho_p
-!        flux_z_p = (rhow_p*rhow_p)*invrho_p + p_p
-!
-!        flux_x = (flux_x_m + flux_x_p)
-!        flux_y = (flux_y_m + flux_y_p)
-!        flux_z = (flux_z_m + flux_z_p)
-!
-!
-!        ! dot with normal vector
-!        integrand = HALF*(flux_x*normx + flux_y*normy + flux_z*normz)
-!
-!        call worker%integrate_boundary(irhow, integrand)
+        flux_x_m = (rhow_m*rhou_m)*invrho_m
+        flux_y_m = (rhow_m*rhov_m)*invrho_m
+        flux_z_m = (rhow_m*rhow_m)*invrho_m + p_m
+
+        flux_x_p = (rhow_p*rhou_p)*invrho_p
+        flux_y_p = (rhow_p*rhov_p)*invrho_p
+        flux_z_p = (rhow_p*rhow_p)*invrho_p + p_p
+
+        flux_x = (flux_x_m + flux_x_p)
+        flux_y = (flux_y_m + flux_y_p)
+        flux_z = (flux_z_m + flux_z_p)
+
+
+        ! dot with normal vector
+        integrand = HALF*(flux_x*normx + flux_y*normy + flux_z*normz)
+
+        call worker%integrate_boundary(irhow, integrand)
 
 
         !================================

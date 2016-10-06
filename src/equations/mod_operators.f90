@@ -20,11 +20,13 @@ module mod_operators
     use SD_boundary_operator,                       only: SD_boundary_operator_t
     use SD_volume_source,                           only: SD_volume_source_t
     use SD_bc_operator,                             only: SD_bc_operator_t
+    use WD_volume_source,                           only: WD_volume_source_t
 
     ! Fluid Inviscid Operators
     use euler_volume_operator,                      only: euler_volume_operator_t
     use euler_boundary_average_operator,            only: euler_boundary_average_operator_t
     use euler_roe_operator,                         only: euler_roe_operator_t
+    use euler_roe_fix_operator,                     only: euler_roe_fix_operator_t
     use euler_laxfriedrichs_operator,               only: euler_laxfriedrichs_operator_t
     use euler_bc_operator,                          only: euler_bc_operator_t
 
@@ -155,6 +157,9 @@ contains
         type(SD_bc_operator_t)                          :: SD_bc_operator
         type(SD_volume_source_t)                        :: SD_volume_source
 
+        ! Wall Distance Source Operator
+        type(WD_volume_source_t)                        :: WD_volume_source
+
         ! Dual Linear Advection Operators
         type(DLA_volume_advective_flux_t)               :: DLA_volume_operator
         type(DLA_boundary_average_advective_flux_t)     :: DLA_average_operator
@@ -164,6 +169,7 @@ contains
         type(euler_volume_operator_t)                   :: euler_volume_operator
         type(euler_boundary_average_operator_t)         :: euler_average_operator
         type(euler_roe_operator_t)                      :: euler_roe_operator
+        type(euler_roe_fix_operator_t)                  :: euler_roe_fix_operator
         type(euler_laxfriedrichs_operator_t)            :: euler_laxfriedrichs_operator
         type(euler_bc_operator_t)                       :: euler_bc_operator
 
@@ -191,6 +197,8 @@ contains
             call operator_factory%register(SD_volume_source)
             call operator_factory%register(SD_bc_operator)
 
+            ! Register Wall Distance Source
+            call operator_factory%register(WD_volume_source)
 
             ! Register Dual Linear Advection
             call operator_factory%register(DLA_volume_operator)
@@ -202,6 +210,7 @@ contains
             call operator_factory%register(euler_volume_operator)
             call operator_factory%register(euler_average_operator)
             call operator_factory%register(euler_roe_operator)
+            call operator_factory%register(euler_roe_fix_operator)
             call operator_factory%register(euler_laxfriedrichs_operator)
             call operator_factory%register(euler_bc_operator)
 

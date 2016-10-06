@@ -77,12 +77,21 @@ contains
         type(equation_set_t),       intent(inout)   :: equation_set(:)
         type(bcset_t),              intent(inout)   :: bc_set(:)
 
+        integer(ik) :: idomain_l
 
         call self%update_value(worker,equation_set,bc_set)
 
         call self%update_derivative(worker,equation_set,bc_set)
 
-        call self%update_lift(worker,equation_set,bc_set)
+        !
+        ! Update lift terms if diffusive operators are present
+        !
+        idomain_l = worker%element_info%idomain_l
+        if (allocated(equation_set(idomain_l)%volume_diffusive_operator) .or. allocated(equation_set(idomain_l)%boundary_diffusive_operator)) then
+
+            call self%update_lift(worker,equation_set,bc_set)
+
+        end if
 
 
     end subroutine update
@@ -201,9 +210,9 @@ contains
 
 
 
-!            else if ( (worker%face_type() == BOUNDARY) ) then
-!
-!
+            else if ( (worker%face_type() == BOUNDARY) ) then
+
+
 !                do istate = 1,size(bc_set(idomain_l)%bcs(BC_ID)%bc_state)
 !                    do idepend = 1,ndepend
 !
@@ -222,7 +231,6 @@ contains
 !
 !                    end do !idepend
 !                end do
-
 
 
 

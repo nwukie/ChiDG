@@ -151,14 +151,14 @@ contains
 
         call worker%integrate_volume(irhov, flux_x,flux_y,flux_z)
 
-!        !============================
-!        !     Z-MOMENTUM FLUX
-!        !============================
-!        flux_x = (rhow*rhou)*invrho
-!        flux_y = (rhow*rhov)*invrho
-!        flux_z = (rhow*rhow)*invrho  +  p
-!
-!        call worker%integrate_volume(irhow, flux_x,flux_y,flux_z)
+        !============================
+        !     Z-MOMENTUM FLUX
+        !============================
+        flux_x = (rhow*rhou)*invrho
+        flux_y = (rhow*rhov)*invrho
+        flux_z = (rhow*rhow)*invrho  +  p
+
+        call worker%integrate_volume(irhow, flux_x,flux_y,flux_z)
 
         !============================
         !       ENERGY FLUX

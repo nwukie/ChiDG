@@ -75,6 +75,8 @@ contains
 
         type(AD_D), dimension(:), allocatable   ::  &
             u_m,  u_p,                              &
+            dudx_m,dudy_m,dudz_m,                   &
+            dudx_p,dudy_p,dudz_p,                   &
             cx_m, cy_m, cz_m,                       &
             cx_p, cy_p, cz_p,                       &
             flux_x, flux_y, flux_z, integrand
@@ -92,19 +94,26 @@ contains
         !
         ! Interpolate solution to quadrature nodes
         !
-        u_m = worker%interpolate(iu, 'value', ME)
-        u_p = worker%interpolate(iu, 'value', NEIGHBOR)
+        u_m    = worker%get_face_variable(iu, 'value', ME)
+        dudx_m = worker%get_face_variable(iu, 'ddx'  , ME)
+        dudy_m = worker%get_face_variable(iu, 'ddy'  , ME)
+        dudz_m = worker%get_face_variable(iu, 'ddz'  , ME)
+
+        u_p    = worker%get_face_variable(iu, 'value', NEIGHBOR)
+        dudx_p = worker%get_face_variable(iu, 'ddx'  , NEIGHBOR)
+        dudy_p = worker%get_face_variable(iu, 'ddy'  , NEIGHBOR)
+        dudz_p = worker%get_face_variable(iu, 'ddz'  , NEIGHBOR)
 
 
         !
         ! Get model coefficients
         !
-        cx_m = prop%scalar%compute_cx(u_m)
-        cy_m = prop%scalar%compute_cy(u_m)
-        cz_m = prop%scalar%compute_cz(u_m)
-        cx_p = prop%scalar%compute_cx(u_p)
-        cy_p = prop%scalar%compute_cy(u_p)
-        cz_p = prop%scalar%compute_cz(u_p)
+        cx_m = prop%scalar%compute_cx(u_m,dudx_m,dudy_m,dudz_m)
+        cy_m = prop%scalar%compute_cy(u_m,dudx_m,dudy_m,dudz_m)
+        cz_m = prop%scalar%compute_cz(u_m,dudx_m,dudy_m,dudz_m)
+        cx_p = prop%scalar%compute_cx(u_p,dudx_p,dudy_p,dudz_p)
+        cy_p = prop%scalar%compute_cy(u_p,dudx_p,dudy_p,dudz_p)
+        cz_p = prop%scalar%compute_cz(u_p,dudx_p,dudy_p,dudz_p)
 
 
         !
@@ -122,9 +131,12 @@ contains
         !
         ! Compute boundary upwind flux
         !
-        flux_x = HALF*(cx_m*u_m - cx_p*u_p)
-        flux_y = HALF*(cy_m*u_m - cy_p*u_p)
-        flux_z = HALF*(cz_m*u_m - cz_p*u_p)
+        !flux_x = HALF*(cx_m*u_m - cx_p*u_p)
+        !flux_y = HALF*(cy_m*u_m - cy_p*u_p)
+        !flux_z = HALF*(cz_m*u_m - cz_p*u_p)
+        flux_x = max(abs(cx_m),abs(cx_p))*HALF*(u_m - u_p)
+        flux_y = max(abs(cy_m),abs(cy_p))*HALF*(u_m - u_p)
+        flux_z = max(abs(cz_m),abs(cz_p))*HALF*(u_m - u_p)
 
         integrand = flux_x*normx*unormx + flux_y*normy*unormy + flux_z*normz*unormz
 

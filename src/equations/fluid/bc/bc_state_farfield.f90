@@ -141,8 +141,6 @@ contains
         c_input = sqrt(1.4_rk*287.15_rk*T_input)
 
 
-!        print*, 'p_input'
-!        print*, p_input
 
         !
         ! Interpolate interior solution to quadrature nodes
@@ -153,21 +151,9 @@ contains
         rhow_m = worker%get_face_variable(irhow, 'value', ME)
         rhoE_m = worker%get_face_variable(irhoE, 'value', ME)
 
-!        print*, 'rho_m'
-!        print*, rho_m(:)%x_ad_
-!        print*, 'rhou_m'
-!        print*, rhou_m(:)%x_ad_
-!        print*, 'rhov_m'
-!        print*, rhov_m(:)%x_ad_
-!        print*, 'rhow_m'
-!        print*, rhow_m(:)%x_ad_
-!        print*, 'rhoE_m'
-!        print*, rhoE_m(:)%x_ad_
         
         p_m = prop%fluid%compute_pressure(rho_m,rhou_m,rhov_m,rhow_m,rhoE_m)
 
-!        print*, 'p_m'
-!        print*, p_m(:)%x_ad_
 
         T_m = p_m/(rho_m*287.15_rk)
         c_m = sqrt(1.4_rk*287.15_rk*T_m)

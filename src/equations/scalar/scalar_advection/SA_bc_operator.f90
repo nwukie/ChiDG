@@ -93,7 +93,9 @@ contains
 
         ! Storage at quadrature nodes
         type(AD_D), allocatable, dimension(:)   ::  &
-            u, cx, cy, cz, flux_x, flux_y, flux_z, integrand
+            u, cx, cy, cz,                          &
+            dudx,dudy,dudz,                         &
+            flux_x, flux_y, flux_z, integrand
 
         real(rk),   allocatable, dimension(:)   ::  &
             normx, normy, normz
@@ -108,15 +110,18 @@ contains
         !
         ! Interpolate boundary condition state to face quadrature nodes
         !
-        u = worker%get_face_variable(iu, 'value', BC)
+        u    = worker%get_face_variable(iu, 'value', BC)
+        dudx = worker%get_face_variable(iu, 'ddx + lift', BC)
+        dudy = worker%get_face_variable(iu, 'ddy + lift', BC)
+        dudz = worker%get_face_variable(iu, 'ddz + lift', BC)
 
 
         !
         ! Get model coefficients
         !
-        cx = prop%scalar%compute_cx(u)
-        cy = prop%scalar%compute_cy(u)
-        cz = prop%scalar%compute_cz(u)
+        cx = prop%scalar%compute_cx(u,dudx,dudy,dudz)
+        cy = prop%scalar%compute_cy(u,dudx,dudy,dudz)
+        cz = prop%scalar%compute_cz(u,dudx,dudy,dudz)
 
         
         !

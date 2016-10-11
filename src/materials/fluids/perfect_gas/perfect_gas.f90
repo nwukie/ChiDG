@@ -228,6 +228,7 @@ contains
         !
         vals = mu0*((T/T0)**(THREE/TWO))*(T0+S)/(T+S)
 
+!        vals = vals * 100._rk
 !        vals = vals * 100000._rk
 !        vals = 1._rk
 

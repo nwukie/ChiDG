@@ -43,11 +43,12 @@ contains
         integer(ik)                 :: ielem_part, ipart_conn, ndomains_in_partition, ipart_elem
 
         integer                     :: idomain, ndomains, ielem_conn, nelem_conn, nelem_total, ierr, idomain_g, ielement_g
-        integer                     :: ielem, inode, ielem_node, node_offset, iconn, nconn, mapping, nnodes_element
+        integer                     :: ielem, inode, ielem_node, node_offset, iconn, nconn, mapping, nnodes_element, nnodes_conn
         integer                     :: ipartition, nindices_total, nindices_element, element_partition
 
         integer(c_int)              :: nelem, nnodes
         integer(c_int), allocatable :: eptr(:), eind(:), epart(:), npart(:)
+        integer(c_int), allocatable, target :: vwgt_array(:)
         integer(c_int)              :: n, npartitions
         type(c_ptr)                 :: vwgt, vsize, tpwgts
 !        type(c_ptr)                        :: options
@@ -90,12 +91,12 @@ contains
             tpwgts  = c_null_ptr
 
             ! METIS Options
-!            options = c_null_ptr
             allocate(options(0:39))
             call METIS_SetDefaultOptions(options)
             options_p = c_loc(options(0))
 
-            !options(0) = 0
+            options(0) = 1      ! PTYPE
+            options(3) = 1      ! IPTYPE
             !options(16) = 1
 
             !
@@ -130,7 +131,7 @@ contains
             !
             ! Allocate storage for partitioning
             !
-            allocate(eptr(nelem_total+1), eind(nindices_total), epart(nelem_total), npart(nnodes), stat=ierr)
+            allocate(eptr(nelem_total+1), eind(nindices_total), epart(nelem_total), npart(nnodes), vwgt_array(nnodes), stat=ierr)
             if (ierr /= 0) call AllocationError
 
 
@@ -162,6 +163,7 @@ contains
                     ! Set element connectivity
                     do ielem_node = 1,nnodes_element
                         eind(inode) = connectivities(iconn)%get_element_node(ielem_conn,ielem_node) + node_offset - 1    ! 0-based
+                        vwgt_array(eind(inode)) = int(real((mapping+1)*(mapping+1)*(mapping+1),rk)/8._rk,c_int)
                         inode = inode + 1
                     end do
 
@@ -169,6 +171,14 @@ contains
                     ielem = ielem + 1
                 end do ! ielem_domain
             
+                ! Get nnodes domain
+                nnodes_conn = connectivities(iconn)%get_nnodes()
+
+                ! Set vertex weights for this domain connectivity
+                vwgt_array(node_offset+1:node_offset+1+nnodes_conn) = int(real((mapping+1)*(mapping+1)*(mapping+1),rk)/8._rk,c_int)
+                print*, "Domain: ", iconn
+                print*, vwgt_array(node_offset+1:node_offset+1+nnodes_conn)
+
 
                 ! Offset by number of nodes in all previous domains
                 node_offset = node_offset + connectivities(iconn)%get_nnodes()
@@ -197,7 +207,14 @@ contains
             npartitions = NRANK
             !call METIS_PartMeshNodal(nelem_total,nnodes,eptr,eind,vwgt,vsize,npartitions,tpwgts,options,n,epart,npart)
             !ierr = METIS_PartMeshNodal(nelem_total,nnodes,eptr,eind,vwgt,vsize,npartitions,tpwgts,options,n,epart,npart)
+
+            ! Standard - Without Weights
+            !ierr = METIS_PartMeshNodal(nelem_total,nnodes,eptr,eind,vwgt,vsize,npartitions,tpwgts,options_p,n,epart,npart)
+
+            ! Advanced - Weight grids based on their element mapping
+            vwgt = c_loc(vwgt_array)
             ierr = METIS_PartMeshNodal(nelem_total,nnodes,eptr,eind,vwgt,vsize,npartitions,tpwgts,options_p,n,epart,npart)
+
             if (ierr /= 1) call chidg_signal(FATAL,"partition_connectivity: Error in METIS_PartMeshNodal")
 
 

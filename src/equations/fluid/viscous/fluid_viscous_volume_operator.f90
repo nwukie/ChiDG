@@ -285,14 +285,14 @@ contains
 
         call worker%integrate_volume(irhov, flux_x,flux_y,flux_z)
 
-        !============================
-        !     Z-MOMENTUM FLUX
-        !============================
-        flux_x = -tau_xz
-        flux_y = -tau_yz
-        flux_z = -tau_zz
-
-        call worker%integrate_volume(irhow, flux_x,flux_y,flux_z)
+!        !============================
+!        !     Z-MOMENTUM FLUX
+!        !============================
+!        flux_x = -tau_xz
+!        flux_y = -tau_yz
+!        flux_z = -tau_zz
+!
+!        call worker%integrate_volume(irhow, flux_x,flux_y,flux_z)
 
         !============================
         !       ENERGY FLUX

@@ -444,27 +444,27 @@ contains
         call worker%integrate_boundary(irhov, integrand)
 
 
-        !================================
-        !       Z-MOMENTUM FLUX
-        !================================
-        flux_x_m = -tau_xz_m
-        flux_y_m = -tau_yz_m
-        flux_z_m = -tau_zz_m
-
-        flux_x_p = -tau_xz_p
-        flux_y_p = -tau_yz_p
-        flux_z_p = -tau_zz_p
-
-
-        flux_x = (flux_x_m + flux_x_p)
-        flux_y = (flux_y_m + flux_y_p)
-        flux_z = (flux_z_m + flux_z_p)
-
-
-        ! dot with normal vector
-        integrand = HALF*(flux_x*normx + flux_y*normy + flux_z*normz)
-
-        call worker%integrate_boundary(irhow, integrand)
+!        !================================
+!        !       Z-MOMENTUM FLUX
+!        !================================
+!        flux_x_m = -tau_xz_m
+!        flux_y_m = -tau_yz_m
+!        flux_z_m = -tau_zz_m
+!
+!        flux_x_p = -tau_xz_p
+!        flux_y_p = -tau_yz_p
+!        flux_z_p = -tau_zz_p
+!
+!
+!        flux_x = (flux_x_m + flux_x_p)
+!        flux_y = (flux_y_m + flux_y_p)
+!        flux_z = (flux_z_m + flux_z_p)
+!
+!
+!        ! dot with normal vector
+!        integrand = HALF*(flux_x*normx + flux_y*normy + flux_z*normz)
+!
+!        call worker%integrate_boundary(irhow, integrand)
 
 
         !================================

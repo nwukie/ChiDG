@@ -13,7 +13,6 @@
 program driver
 #include <messenger.h>
     use mod_kinds,                  only: rk, ik
-    use mod_constants,              only: CHIMERA, NFACES
     use type_chidg,                 only: chidg_t
     use mod_grid_operators,         only: initialize_variable
     use type_function,              only: function_t
@@ -39,13 +38,9 @@ program driver
     type(chidg_t)                               :: chidg
 
 
-
-    integer                                     :: ierr, narg
-    integer(ik)                                 :: elems(6), iproc, idom_search, ielem_search, idom, ielem, iface, idonor, nelem_search, ChiID, donor_domain, donor_element
-    integer(ik)                                 :: recv_comm, recv_element, recv_domain, donor_proc
+    integer                                     :: narg
     character(len=1024)                         :: chidg_action, filename, file_a, file_b
     class(function_t),              allocatable :: constant, monopole, fcn, polynomial
-    logical                                     :: chimera_face
 
 
 

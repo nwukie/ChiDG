@@ -97,6 +97,11 @@ module type_face
         type(quadrature_t),  pointer    :: gqmesh => null()     !< Pointer to mesh quadrature instance
 
 
+        ! BR2 matrix
+        real(rk),           allocatable :: br2_face(:,:)
+        real(rk),           allocatable :: br2_vol(:,:)
+
+
         ! Logical tests
         logical :: geomInitialized     = .false.
         logical :: neighborInitialized = .false.
@@ -260,7 +265,8 @@ contains
         class(face_t),      intent(inout)       :: self
         type(element_t),    intent(in), target  :: elem
 
-        integer(ik) :: ierr, nnodes
+        integer(ik)             :: ierr, nnodes
+        real(rk), allocatable   :: tmp(:,:)
 
         !
         ! Set indices and associate quadrature instances.
@@ -295,6 +301,14 @@ contains
         call self%compute_quadrature_normals()
         call self%compute_quadrature_coords()
         call self%compute_gradients_cartesian()
+
+
+        !
+        ! Compute BR2 matrix
+        !
+        tmp = matmul(elem%invmass,self%gq%face%val_trans(:,:,self%iface))
+        self%br2_face = matmul(self%gq%face%val(:,:,self%iface),tmp)
+        self%br2_vol  = matmul(self%gq%vol%val(:,:),tmp)
 
 
         !

@@ -313,16 +313,18 @@ contains
 
         call worker%integrate_boundary(irhov, integrand)
 
-!        !=================================================
-!        ! z-momentum flux
-!        !=================================================
-!        flux_x = -tau_xz
-!        flux_y = -tau_yz
-!        flux_z = -tau_zz
-!
-!        integrand = flux_x*normx + flux_y*normy + flux_z*normz
-!
-!        call worker%integrate_boundary(irhow, integrand)
+        !=================================================
+        ! z-momentum flux
+        !=================================================
+        flux_x = -tau_xz
+        flux_y = -tau_yz
+        flux_z = -tau_zz
+
+        integrand = flux_x*normx + flux_y*normy + flux_z*normz
+
+        integrand(:)%x_ad_ = 0._rk
+
+        call worker%integrate_boundary(irhow, integrand)
 
         !=================================================
         ! Energy flux

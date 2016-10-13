@@ -19,7 +19,7 @@ contains
 
 
 
-    !> Return a properties instance containing information about an hdf file
+    !>  Return a properties instance containing information about an hdf file
     !!
     !!  @author Nathan A. Wukie
     !!  @date   2/3/2016

@@ -190,16 +190,18 @@ contains
 
         call worker%integrate_boundary(irhov, integrand)
 
-!        !=================================================
-!        ! z-momentum flux
-!        !=================================================
-!        flux_x = (rho_bc * w_bc * u_bc)
-!        flux_y = (rho_bc * w_bc * v_bc)
-!        flux_z = (rho_bc * w_bc * w_bc) + p_bc
-!
-!        integrand = flux_x*normx + flux_y*normy + flux_z*normz
-!
-!        call worker%integrate_boundary(irhow, integrand)
+        !=================================================
+        ! z-momentum flux
+        !=================================================
+        flux_x = (rho_bc * w_bc * u_bc)
+        flux_y = (rho_bc * w_bc * v_bc)
+        flux_z = (rho_bc * w_bc * w_bc) + p_bc
+
+        integrand = flux_x*normx + flux_y*normy + flux_z*normz
+
+        integrand(:)%x_ad_ = 0._rk
+
+        call worker%integrate_boundary(irhow, integrand)
 
         !=================================================
         ! Energy flux

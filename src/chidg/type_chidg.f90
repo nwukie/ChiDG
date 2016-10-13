@@ -7,7 +7,7 @@ module type_chidg
     use mod_function,               only: register_functions
     use mod_grid,                   only: initialize_grid
     use mod_io,                     only: read_input
-    use mod_string,                 only: get_file_extension
+    use mod_string,                 only: get_file_extension, string_t
 
     use type_chidg_data,            only: chidg_data_t
     use type_time_scheme,           only: time_scheme_t
@@ -329,6 +329,7 @@ contains
 
 
         type(domain_connectivity_t),    allocatable :: connectivities(:)
+        type(string_t),                 allocatable :: equation_sets(:)
         type(partition_t),              allocatable :: partitions(:)
 
         character(len=5),   dimension(1)    :: extensions
@@ -344,6 +345,7 @@ contains
         ! Master rank: Read connectivity, partition connectivity, distribute partitions
         !
         if ( IRANK == GLOBAL_MASTER ) then
+
             call read_connectivity_hdf(gridfile,connectivities)
 
             call partition_connectivity(connectivities, partitions)

@@ -293,14 +293,16 @@ contains
 
         call worker%integrate_boundary(irhov, integrand)
 
-!        !================================
-!        !       Z-MOMENTUM FLUX
-!        !================================
-!        upwind = C1*(wtil - ctil*unormz)  +  C2_a*wtil  +  C2_b*(delw - delvmag*unormz)  +  C3*(wtil + ctil*unormz)
-!
-!        integrand = HALF*(upwind*normx*unormx + upwind*normy*unormy + upwind*normz*unormz)
-!
-!        call worker%integrate_boundary(irhow, integrand)
+        !================================
+        !       Z-MOMENTUM FLUX
+        !================================
+        upwind = C1*(wtil - ctil*unormz)  +  C2_a*wtil  +  C2_b*(delw - delvmag*unormz)  +  C3*(wtil + ctil*unormz)
+
+        integrand = HALF*(upwind*normx*unormx + upwind*normy*unormy + upwind*normz*unormz)
+
+        integrand(:)%x_ad_ = 0._rk
+
+        call worker%integrate_boundary(irhow, integrand)
 
         !================================
         !          ENERGY FLUX

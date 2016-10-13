@@ -1956,6 +1956,90 @@ contains
 
 
 
+!    !>  Read an ChiDG-formatted HDF file and return the domain equation sets
+!    !!
+!    !!  @author Nathan A. Wukie (AFRL)
+!    !!  @date   10/12/2016
+!    !!
+!    !!
+!    !-------------------------------------------------------------------------------------------------------
+!    subroutine read_equation_sets_hdf(filename,equation_sets)
+!        character(*),                   intent(in)      :: filename
+!        type(string_t), allocatable,    intent(inout)   :: equation_sets(:)
+!
+!
+!
+!
+!
+!
+!
+!
+!
+!
+!
+!
+!    end subroutine read_equation_sets_hdf
+!    !*******************************************************************************************************
+!
+!
+!
+!
+!
+!
+!
+!
+!
+!
+!
+!
+!    !>  Open a ChiDG-formatted HDF file and return an HDF file identifier
+!    !!
+!    !!  Performs some additional checking on file/library versions
+!    !!
+!    !!  @author Nathan A. Wukie 
+!    !!  @date   10/13/2016
+!    !!
+!    !!
+!    !--------------------------------------------------------------------------------------------------------
+!    function open_file_hdf(filename) result(fid)
+!        character(*),   intent(in)  :: filename
+!
+!        integer(HID_T)  :: fid
+!
+!
+!
+!
+!        !
+!        !  Check file exists
+!        !
+!        inquire(file=filename, exist=FileExists)
+!        if (.not. FileExists) then
+!            call chidg_signal_one(FATAL,"open_file_hdf: Could not find grid file",filename)
+!        end if
+!
+!
+!        !
+!        !  Initialize Fortran interface.
+!        !
+!        call h5open_f(ierr)
+!        if (ierr /= 0) call chidg_signal(FATAL,'read_grid_hdf5 - h5open_f: HDF5 Fortran interface had an error during initialization')
+!
+!
+!
+!        !
+!        !  Open input file using default properties.
+!        !
+!        !call h5fopen_f(filename, H5F_ACC_RDONLY_F, fid, ierr)
+!        call h5fopen_f(filename, H5F_ACC_RDWR_F, fid, ierr)
+!        if (ierr /= 0) call chidg_signal(FATAL,'read_grid_hdf5 - h5fopen_f: There was an error opening the grid file.')
+!
+!
+!
+!
+!
+!
+!    end function open_file_hdf
+!    !********************************************************************************************************
 
 
 

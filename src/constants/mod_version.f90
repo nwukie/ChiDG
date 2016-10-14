@@ -1,16 +1,14 @@
-!> Module containing version information for solvers, formats, etc.
+!>  Module containing version information for ChiDG
 !!
 !!  @author Nathan A. Wukie
-!!  @date   2/1/2016
+!!  @date   10/14/2016
 !!
 !---------------------------------------------------------------------
 module mod_version
     implicit none
 
-    ! HDF5 storage format
-    integer, parameter :: STORAGE_FORMAT_MAJOR = 0
-    integer, parameter :: STORAGE_FORMAT_MINOR = 1
-
-
+    ! ChiDG version
+    integer, parameter :: ChiDG_VERSION_MAJOR = 0
+    integer, parameter :: ChiDG_VERSION_MINOR = 2
 
 end module mod_version

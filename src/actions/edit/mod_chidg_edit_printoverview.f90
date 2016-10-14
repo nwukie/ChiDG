@@ -5,8 +5,8 @@ module mod_chidg_edit_printoverview
     use h5lt
 
     use mod_hdf_utilities,  only: get_properties_hdf, get_ndomains_hdf, get_domain_names_hdf,       &
-                                  get_order_coordinate_hdf, get_order_solution_hdf, get_eqnset_hdf, &
-                                  get_domain_indices_hdf, check_contains_grid_hdf, check_contains_solution_hdf
+                                  get_coordinate_orders_hdf, get_solution_orders_hdf, get_domain_equation_sets_hdf, &
+                                  get_domain_indices_hdf, get_contains_grid_hdf, get_contains_solution_hdf
 
     implicit none
 
@@ -63,14 +63,14 @@ contains
         !
         ! Check file contents
         !
-        contains_grid     = check_contains_grid_hdf(fid)
-        contains_solution = check_contains_solution_hdf(fid)
+        contains_grid     = get_contains_grid_hdf(fid)
+        contains_solution = get_contains_solution_hdf(fid)
 
         !
         ! Handle contains_grid
         !
         if ( contains_grid ) then
-            corder   = get_order_coordinate_hdf(fid,dnames)
+            corder   = get_coordinate_orders_hdf(fid,dnames)
         else
             allocate(corder(ndom), stat=ierr)
             if (ierr /= 0) call AllocationError
@@ -83,7 +83,7 @@ contains
         ! Handle contains_solution
         !
         if ( contains_solution ) then
-            sorder   = get_order_solution_hdf(fid,dnames)
+            sorder   = get_solution_orders_hdf(fid,dnames)
         else
             allocate(sorder(ndom), stat=ierr)
             if (ierr /= 0) call AllocationError
@@ -96,7 +96,7 @@ contains
         !
         ! Get equationset strings.
         !
-        eqnset   = get_eqnset_hdf(fid,dnames)
+        eqnset   = get_domain_equation_sets_hdf(fid,dnames)
 
 
 

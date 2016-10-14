@@ -1,6 +1,5 @@
 module mod_file_utilities
 #include <messenger.h>
-    use mod_hdf_utilities,      only: get_properties_hdf
     use mod_string,             only: get_file_extension
     use type_file_properties,   only: file_properties_t
     implicit none
@@ -9,57 +8,6 @@ module mod_file_utilities
 
 
 contains
-
-
-
-    !>
-    !!
-    !!  @author Nathan A. Wukie
-    !!  @date   1/28/2016
-    !!
-    !!
-    !!
-    !!
-    !----------------------------------------------------------------------------------------------------------
-    function get_file_properties(filename) result(file_props)
-        character(*),   intent(in)  :: filename
-
-        type(file_properties_t)         :: file_props
-        character(len=:), allocatable   :: extension
-        character(len=5), allocatable   :: extensions(:)
-
-
-        extensions = ['.h5']
-
-        !
-        ! Get file extension
-        !
-        extension = get_file_extension(filename, extensions)
-
-
-
-        !
-        ! Call specialized routine for returning file properties
-        !
-        if ( extension == '.h5' ) then
-            file_props = get_properties_hdf(filename)
-        else
-            call chidg_signal(FATAL, "Error: get_fileproperties -- file extension not recognized")
-        end if
-
-
-
-    end function get_file_properties
-    !***********************************************************************************************************
-
-
-
-
-
-
-
-
-
 
 
 

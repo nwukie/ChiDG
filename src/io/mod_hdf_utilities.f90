@@ -2,6 +2,7 @@ module mod_hdf_utilities
 #include <messenger.h>
     use mod_kinds,              only: rk, ik
     use mod_constants,          only: NFACES, TWO_DIM, THREE_DIM
+    use mod_file_utilities,     only: delete_file
     use type_svector,           only: svector_t
     use mod_string,             only: string_t
     use type_file_properties,   only: file_properties_t
@@ -10,10 +11,323 @@ module mod_hdf_utilities
     implicit none
 
 
+    !
+    ! HDF5 storage format
+    !
+    integer, parameter :: STORAGE_FORMAT_MAJOR = 1
+    integer, parameter :: STORAGE_FORMAT_MINOR = 0
+
+
+    ! Attribute sizes
+    integer(HSIZE_T), parameter :: SIZE_ONE = 1
+
 
 
 
 contains
+
+    !----------------------------------------------------------------------------------------
+    !!
+    !!  ChiDG HDF File Format API
+    !!
+    !!  Procedures:
+    !!
+    !!      initialize_chidg_file_hdf
+    !!      check_file_storage_version_hdf
+    !!
+    !!      set_storage_version_major_hdf
+    !!      set_storage_version_minor_hdf
+    !!      get_storage_version_major_hdf
+    !!      get_storage_version_minor_hdf
+    !!
+    !!      get_properties_hdf
+    !!
+    !!      set_ndomains_hdf
+    !!      get_ndomains_hdf
+    !!
+    !!      set_contains_grid_hdf
+    !!      set_contains_solution_hdf
+    !!      get_contains_grid_hdf
+    !!      get_contains_solution_hdf
+    !!
+    !!      get_domain_names_hdf
+    !!      get_domain_name_hdf
+    !!
+    !!      set_domain_index_hdf
+    !!      get_domain_index_hdf
+    !!      get_domain_indices_hdf
+    !!
+    !!      set_coordinate_order_hdf
+    !!      get_coordinate_order_hdf
+    !!      get_coordinate_orders_hdf
+    !!
+    !!      set_solution_order_hdf
+    !!      get_solution_order_hdf
+    !!      get_solution_orders_hdf
+    !!
+    !!      set_domain_dimensionality_hdf
+    !!      get_domain_dimensionality_hdf
+    !!      get_domain_dimensionalities_hdf
+    !!
+    !!      set_domain_mapping_hdf
+    !!      get_domain_mapping_hdf
+    !!
+    !!      set_domain_equation_set_hdf
+    !!      get_domain_equation_set_hdf
+    !!      get_domain_equation_sets_hdf
+    !!
+    !!      get_bcnames_hdf
+    !!
+    !!      delete_group_attributes
+    !!      check_attribute_exists_hdf
+    !!      
+    !!
+    !****************************************************************************************
+
+
+
+
+    !>  Create a ChiDG-format file, with initialized format structure.
+    !!  Return an HDF file identifier
+    !!
+    !!  @author Nathan A. Wukie 
+    !!  @date   9/25/2016
+    !!
+    !!  @param  filename    String for the file to be created, without extension
+    !!
+    !!
+    !----------------------------------------------------------------------------------------
+    function initialize_chidg_file_hdf(filename) result(fid)
+        character(*),   intent(in)  :: filename
+
+        logical         :: file_exists
+        integer(HID_T)  :: fid
+        integer(ik)     :: ierr
+        
+
+        !
+        ! Check if input file already exists
+        !
+        inquire(file=filename, exist=file_exists)
+        if (file_exists) then
+            call write_line("Found "//trim(filename)//" that already exists. Deleting it to create new file...")
+            call delete_file(trim(filename))
+        end if
+
+
+        !
+        ! Create file
+        !
+        call h5fcreate_f(trim(filename)//".h5", H5F_ACC_TRUNC_F, fid, ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"initialize_chidg_file_hdf: Error h5fcreate_f")
+        call write_line("File created: "//trim(filename)//".h5")
+
+
+        !
+        ! Set storage formet
+        !
+        call set_storage_version_major_hdf(fid,STORAGE_FORMAT_MAJOR)
+        call set_storage_version_minor_hdf(fid,STORAGE_FORMAT_MINOR)
+
+
+        !
+        ! Set contains status for grid/solution 
+        !
+        call set_contains_grid_hdf(fid,"False")
+        call set_contains_solution_hdf(fid,"False")
+
+
+        !
+        ! Set "ndomains"
+        !
+        call set_ndomains_hdf(fid,0)
+
+
+    end function initialize_chidg_file_hdf
+    !****************************************************************************************
+
+
+
+
+
+
+    !>  Check the format version of a ChiDG-formatted HDF file and compare it against
+    !!  the version used by the current library. 
+    !!
+    !!  Errors if incompatible.
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   9/25/2016
+    !!
+    !!
+    !!
+    !-----------------------------------------------------------------------------------------
+    subroutine check_file_storage_version_hdf(fid)
+        integer(HID_T), intent(in)  :: fid
+
+        integer(ik)                 :: file_major_version, file_minor_version, user_option
+        character(:), allocatable   :: msg
+        logical                     :: read_user_input
+
+        !
+        ! Get file major.minor version
+        !
+        file_major_version = get_storage_version_major_hdf(fid)
+        file_minor_version = get_storage_version_minor_hdf(fid)
+
+
+        !
+        ! Test against current version
+        !
+        if ( (file_major_version /= STORAGE_FORMAT_MAJOR) .or. &
+             (file_minor_version /= STORAGE_FORMAT_MINOR) ) then
+
+            msg = "check_file_version_hdf: The storage format of the file being worked with does not &
+                   match the storage format in the ChiDG library being used. This probably means the &
+                   file was generated with another version of the ChiDG library and may not be compatible &
+                   with the library currently being used. You could try a few things here. 1: regenerate &
+                   the with with the ChiDG library being used. 2: Use a different version of the ChiDG library &
+                   that uses a storage format for the file being used. 3: Full-speed ahead! Proceed anyways and &
+                   try your luck!"//NEW_LINE('A')//"     Options: Exit(1), Continue(2)."
+
+            call write_line(msg)
+
+            read_user_input = .true.
+            do while(read_user_input)
+                
+                read(*,*) user_option
+
+                if (user_option == 1) then
+                    stop
+                else if (user_option == 2) then
+                    read_user_input = .false.
+                else
+                    call write_line("Valid inputs are: 1,2")
+                    read_user_input = .true.
+                end if
+
+            end do
+
+
+        end if
+        
+
+    end subroutine check_file_storage_version_hdf
+    !*****************************************************************************************
+
+
+
+
+
+
+
+    !>  Set the major version index for a ChiDG-formatted HDF file
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   9/24/2016
+    !!
+    !!
+    !!
+    !----------------------------------------------------------------------------------------
+    subroutine set_storage_version_major_hdf(fid,major_version)
+        integer(HID_T), intent(in)  :: fid
+        integer(ik),    intent(in)  :: major_version
+
+        integer(ik)         :: ierr
+
+        call h5ltset_attribute_int_f(fid, "/", 'Major Version', [major_version], SIZE_ONE, ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"set_storage_version_major_hdf: error setting the major version number")
+
+    end subroutine set_storage_version_major_hdf
+    !****************************************************************************************
+
+
+
+
+    !>  Set the minor version index for a ChiDG-formatted HDF file
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   9/24/2016
+    !!
+    !!
+    !!
+    !----------------------------------------------------------------------------------------
+    subroutine set_storage_version_minor_hdf(fid,minor_version)
+        integer(HID_T), intent(in)  :: fid
+        integer(ik),    intent(in)  :: minor_version
+
+        integer(ik)         :: ierr
+
+        call h5ltset_attribute_int_f(fid, "/", 'Minor Version', [minor_version], SIZE_ONE, ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"set_storage_version_minor_hdf: error setting the minor version number")
+
+    end subroutine set_storage_version_minor_hdf
+    !****************************************************************************************
+
+
+
+    !>  Return the major version index of a ChiDG-formatted HDF file
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   9/24/2016
+    !!
+    !!
+    !!
+    !----------------------------------------------------------------------------------------
+    function get_storage_version_major_hdf(fid) result(major_version)
+        integer(HID_T), intent(in)  :: fid
+
+        integer(ik) :: major_version, ierr, attr_status
+        integer, dimension(1) :: buf
+
+
+        call check_attribute_exists_hdf(fid,"Major Version","Soft Fail",attr_status)
+
+        if (attr_status == 0) then
+            call h5ltget_attribute_int_f(fid, "/", 'Major Version', buf, ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,"set_storage_version_major_hdf: error getting the major version number")
+            major_version = int(buf(1),kind=ik)
+        else
+            major_version = -1
+        end if
+
+    end function get_storage_version_major_hdf
+    !****************************************************************************************
+
+
+
+    !>  Return the minor version index of a ChiDG-formatted HDF file
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   9/24/2016
+    !!
+    !!
+    !!
+    !----------------------------------------------------------------------------------------
+    function get_storage_version_minor_hdf(fid) result(minor_version)
+        integer(HID_T), intent(in)  :: fid
+
+        integer(ik) :: minor_version, ierr, attr_status
+        integer, dimension(1) :: buf
+
+
+        call check_attribute_exists_hdf(fid,"Minor Version","Soft Fail",attr_status)
+
+        if (attr_status == 0) then
+            call h5ltget_attribute_int_f(fid, "/", 'Minor Version', buf, ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,"set_storage_version_minor_hdf: error getting the minor version number")
+            minor_version = int(buf(1),kind=ik)
+        else
+            minor_version = -1
+        end if
+
+    end function get_storage_version_minor_hdf
+    !****************************************************************************************
+
+
+
+
+
 
 
 
@@ -75,8 +389,10 @@ contains
         !
         ! Check for Grid and Solution contents
         !
-        prop%contains_grid      = check_contains_grid_hdf(fid)
-        prop%contains_solution  = check_contains_solution_hdf(fid)
+!        prop%contains_grid      = check_contains_grid_hdf(fid)
+!        prop%contains_solution  = check_contains_solution_hdf(fid)
+        prop%contains_grid      = get_contains_grid_hdf(fid)
+        prop%contains_solution  = get_contains_solution_hdf(fid)
 
 
         !
@@ -90,18 +406,18 @@ contains
         ! Get order of coordinate and solution expansions
         !
         if ( prop%contains_grid ) then
-            prop%order_c = get_order_coordinate_hdf(fid,prop%domain_names)
+            prop%order_c = get_coordinate_orders_hdf(fid,prop%domain_names)
         end if
 
         if ( prop%contains_solution ) then
-            prop%order_s = get_order_solution_hdf(fid,prop%domain_names)
+            prop%order_s = get_solution_orders_hdf(fid,prop%domain_names)
         end if
 
 
         !
         ! Get number of spatial dimensions
         !
-        prop%spacedim = get_spacedim_hdf(fid,prop%domain_names)
+        prop%spacedim = get_domain_dimensionalities_hdf(fid,prop%domain_names)
 
 
 
@@ -135,7 +451,7 @@ contains
         !
         ! Get equation set for each domain
         !
-        prop%eqnset = get_eqnset_hdf(fid, prop%domain_names)
+        prop%eqnset = get_domain_equation_sets_hdf(fid, prop%domain_names)
 
 
 
@@ -156,6 +472,27 @@ contains
 
 
 
+    !>  Given a file identifier, set the number of domains in an hdf5 file.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   2/3/2016
+    !!
+    !!  @param[in]  fid     HDF file identifier
+    !!
+    !--------------------------------------------------------------------------------------------------------------
+    subroutine set_ndomains_hdf(fid,ndomains)
+        integer(HID_T), intent(in)  :: fid
+        integer(ik),    intent(in)  :: ndomains
+
+        integer(ik)         :: ierr
+
+        call h5ltset_attribute_int_f(fid, "/", "ndomains", [ndomains], SIZE_ONE, ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"set_ndomains_hdf: Error h5ltget_attribute_int_f")
+
+    end subroutine set_ndomains_hdf
+    !**************************************************************************************************************
+
+
 
 
 
@@ -173,21 +510,13 @@ contains
     function get_ndomains_hdf(fid) result(ndomains)
         integer(HID_T), intent(in)  :: fid
 
-
         integer                 :: ierr
-        !integer(ik)             :: ndomains, ierr
         integer(ik)             :: ndomains
         integer, dimension(1)   :: buf
 
-
-        !
-        !  Get number of domains from attribute 'ndomains' in file root
-        !
         call h5ltget_attribute_int_f(fid, "/", "ndomains", buf, ierr)
         if (ierr /= 0) call chidg_signal(FATAL,"get_ndomains_hdf: h5ltget_attribute_int_f had a problem getting the number of domains")
-
         ndomains = int(buf(1), kind=ik)
-
 
     end function get_ndomains_hdf
     !**************************************************************************************************************
@@ -195,15 +524,9 @@ contains
 
 
 
-
-
-
-
-
-
-
-
-    !>  Test if the file contains a Grid.
+    !>  Set status of file attribute "/Contains Grid".
+    !!
+    !!  'True'/'False'
     !!
     !!  @author Nathan A. Wukie
     !!  @date   2/3/2016
@@ -212,33 +535,16 @@ contains
     !!  @result     grid_status     Logical indicating if ChiDG grid exists in file, fid.
     !!
     !--------------------------------------------------------------------------------------------------------------
-    function check_contains_grid_hdf(fid) result(grid_status)
+    subroutine set_contains_grid_hdf(fid,status_string)
         integer(HID_T), intent(in)  :: fid
+        character(*),   intent(in)  :: status_string
 
-        logical             :: grid_status
-        character(len=10)   :: contains_grid_attr
-        integer             :: ierr
+        integer(ik) :: ierr
 
-
-        !
-        ! Get attribute for 'contains_grid
-        !
-        call h5ltget_attribute_string_f(fid, "/", 'contains_grid', contains_grid_attr, ierr)
+        call h5ltset_attribute_string_f(fid, "/", "Contains Grid", status_string, ierr)
         if (ierr /= 0) call chidg_signal(FATAL,"check_contains_grid_hdf - h5ltget_attribute_int_f")
 
-
-        !
-        ! Test grid attribute
-        !
-        if (trim(contains_grid_attr) == 'Yes') then
-            grid_status = .true.
-        else
-            grid_status = .false.
-        end if
-
-
-
-    end function check_contains_grid_hdf
+    end subroutine set_contains_grid_hdf
     !**************************************************************************************************************
 
 
@@ -249,6 +555,78 @@ contains
 
 
 
+
+    !>  Return status of file attribute "/Contains Grid".
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   2/3/2016
+    !!
+    !!  @param[in]  fid             HDF5 file identifier.
+    !!  @result     grid_status     Logical indicating if ChiDG grid exists in file, fid.
+    !!
+    !--------------------------------------------------------------------------------------------------------------
+    function get_contains_grid_hdf(fid) result(grid_status)
+        integer(HID_T), intent(in)  :: fid
+
+        logical                         :: grid_status, attr_exists
+        character(len=10)               :: contains_grid_attr
+        character(len=:), allocatable   :: msg
+        integer                         :: ierr
+
+
+        call check_attribute_exists_hdf(fid,"Contains Grid")
+
+
+        !
+        ! Get attribute for 'Contains Grid
+        !
+        call h5ltget_attribute_string_f(fid, "/", "Contains Grid", contains_grid_attr, ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"check_contains_grid_hdf - h5ltget_attribute_int_f")
+
+
+        !
+        ! Test grid attribute
+        !
+        if (trim(contains_grid_attr) == "True" .or. trim(contains_grid_attr) == "true") then
+            grid_status = .true.
+        else
+            grid_status = .false.
+        end if
+
+
+
+    end function get_contains_grid_hdf
+    !**************************************************************************************************************
+
+
+
+
+
+
+
+
+    !>  Set status of file attribute "/Contains Solution".
+    !!
+    !!  'Yes'/'No'
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   2/3/2016
+    !!
+    !!  @param[in]  fid             HDF5 file identifier.
+    !!  @result     grid_status     Logical indicating if ChiDG grid exists in file, fid.
+    !!
+    !--------------------------------------------------------------------------------------------------------------
+    subroutine set_contains_solution_hdf(fid,status_string)
+        integer(HID_T), intent(in)  :: fid
+        character(*),   intent(in)  :: status_string
+
+        integer(ik) :: ierr
+
+        call h5ltset_attribute_string_f(fid, "/", "Contains Solution", status_string, ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"check_contains_solution_hdf - h5ltget_attribute_int_f")
+
+    end subroutine set_contains_solution_hdf
+    !**************************************************************************************************************
 
 
 
@@ -263,25 +641,29 @@ contains
     !!  @result     solution_status     Logical indicating if ChiDG solution exists in file, fid.
     !!
     !---------------------------------------------------------------------------------------------------------------
-    function check_contains_solution_hdf(fid) result(solution_status)
+    function get_contains_solution_hdf(fid) result(solution_status)
         integer(HID_T), intent(in)  :: fid
 
-        logical             :: solution_status
+        logical             :: solution_status, attr_exists
         character(len=10)   :: contains_solution_attr
         integer             :: ierr
 
+        
+        call check_attribute_exists_hdf(fid,"Contains Solution")
+
+
 
         !
-        ! Get attribute for 'contains_grid
+        ! Get attribute for "Contains Solution"
         !
-        call h5ltget_attribute_string_f(fid, "/", 'contains_solution', contains_solution_attr, ierr)
+        call h5ltget_attribute_string_f(fid, "/", 'Contains Solution', contains_solution_attr, ierr)
         if (ierr /= 0) call chidg_signal(FATAL,"check_contains_solution - h5ltget_attribute_string_f")
 
 
         !
         ! Test solution attribute
         !
-        if (trim(contains_solution_attr) == 'Yes') then
+        if (trim(contains_solution_attr) == "True" .or. trim(contains_solution_attr) == "true") then
             solution_status = .true.
         else
             solution_status = .false.
@@ -289,8 +671,120 @@ contains
 
 
 
-    end function check_contains_solution_hdf
+    end function get_contains_solution_hdf
     !***************************************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+!    !>  Test if the file contains a Grid.
+!    !!
+!    !!  @author Nathan A. Wukie
+!    !!  @date   2/3/2016
+!    !!
+!    !!  @param[in]  fid             HDF5 file identifier.
+!    !!  @result     grid_status     Logical indicating if ChiDG grid exists in file, fid.
+!    !!
+!    !--------------------------------------------------------------------------------------------------------------
+!    function check_contains_grid_hdf(fid) result(grid_status)
+!        integer(HID_T), intent(in)  :: fid
+!
+!        logical             :: grid_status
+!        character(len=10)   :: contains_grid_attr
+!        integer             :: ierr
+!
+!
+!        !
+!        ! Get attribute for 'contains_grid
+!        !
+!        call h5ltget_attribute_string_f(fid, "/", 'contains_grid', contains_grid_attr, ierr)
+!        if (ierr /= 0) call chidg_signal(FATAL,"check_contains_grid_hdf - h5ltget_attribute_int_f")
+!
+!
+!        !
+!        ! Test grid attribute
+!        !
+!        if (trim(contains_grid_attr) == 'Yes') then
+!            grid_status = .true.
+!        else
+!            grid_status = .false.
+!        end if
+!
+!
+!
+!    end function check_contains_grid_hdf
+!    !**************************************************************************************************************
+!
+!
+!
+!
+!
+!
+!
+!
+!
+!
+!
+!
+!
+!
+!    !>  Test if the file contains a Solution.
+!    !!
+!    !!  @author Nathan A. Wukie
+!    !!  @date   2/3/2016
+!    !!
+!    !!  @param[in]  fid                 HDF5 file identifier.
+!    !!  @result     solution_status     Logical indicating if ChiDG solution exists in file, fid.
+!    !!
+!    !---------------------------------------------------------------------------------------------------------------
+!    function check_contains_solution_hdf(fid) result(solution_status)
+!        integer(HID_T), intent(in)  :: fid
+!
+!        logical             :: solution_status
+!        character(len=10)   :: contains_solution_attr
+!        integer             :: ierr
+!
+!
+!        !
+!        ! Get attribute for 'contains_grid
+!        !
+!        call h5ltget_attribute_string_f(fid, "/", 'contains_solution', contains_solution_attr, ierr)
+!        if (ierr /= 0) call chidg_signal(FATAL,"check_contains_solution - h5ltget_attribute_string_f")
+!
+!
+!        !
+!        ! Test solution attribute
+!        !
+!        if (trim(contains_solution_attr) == 'Yes') then
+!            solution_status = .true.
+!        else
+!            solution_status = .false.
+!        end if
+!
+!
+!
+!    end function check_contains_solution_hdf
+!    !***************************************************************************************************************
 
 
 
@@ -428,6 +922,71 @@ contains
 
 
 
+    !> Return a list of domain indices from an HDF5 file identifier. This is because, the current method of detecting
+    !! domains by name can change the order they are detected in. So, each domain is given an idomain attribute that 
+    !! is independent of the order of discovery from the file.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   2/3/2016
+    !!
+    !!  @param[in]  fid     HDF file identifier
+    !!
+    !---------------------------------------------------------------------------------------------------------------
+    subroutine set_domain_index_hdf(block_id,domain_index)
+        integer(HID_T),     intent(in)  :: block_id
+        integer(ik),        intent(in)  :: domain_index
+
+        integer(ik)         :: ierr
+
+        call h5ltset_attribute_int_f(block_id,".","Domain Index",[domain_index],SIZE_ONE,ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"set_domain_index_hdf: Error h5ltset_attribute_int_f")
+
+
+    end subroutine set_domain_index_hdf
+    !*************************************************************************************************************
+
+
+
+
+
+    !> Return a list of domain indices from an HDF5 file identifier. This is because, the current method of detecting
+    !! domains by name can change the order they are detected in. So, each domain is given an idomain attribute that 
+    !! is independent of the order of discovery from the file.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   2/3/2016
+    !!
+    !!  @param[in]  fid     HDF file identifier
+    !!
+    !---------------------------------------------------------------------------------------------------------------
+    function get_domain_index_hdf(block_id) result(domain_index)
+        integer(HID_T),     intent(in)  :: block_id
+
+        integer(ik) :: domain_index, ierr
+        integer, dimension(1) :: buf
+
+        call h5ltget_attribute_int_f(block_id,".","Domain Index",buf,ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"get_domain_index_hdf: Error h5ltget_attribute_int_f")
+
+        domain_index = int(buf(1), kind=ik)
+
+    end function get_domain_index_hdf
+    !*************************************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -485,7 +1044,7 @@ contains
             !
             ! Get idomain attribute from fid/domain/idomain
             !
-            call h5aexists_f(did, 'idomain', attribute_exists, ierr)
+            call h5aexists_f(did, 'Domain Index', attribute_exists, ierr)
 
             
             !
@@ -495,7 +1054,7 @@ contains
             if ( .not. attribute_exists ) then
 
                 ! Set value.
-                call h5ltset_attribute_int_f(fid, trim(adjustl(names(idom))), 'idomain', [idom], adim, ierr)
+                call h5ltset_attribute_int_f(fid, trim(adjustl(names(idom))), 'Domain Index', [idom], adim, ierr)
                 if (ierr /= 0) call chidg_signal(FATAL,"get_domain_indices_hdf: error writing an initial domain index")
 
             end if
@@ -504,7 +1063,7 @@ contains
             !
             ! Get value that was just set to be sure. 
             !
-            call h5ltget_attribute_int_f(fid, trim(adjustl(names(idom))), 'idomain', buf, ierr)
+            call h5ltget_attribute_int_f(fid, trim(adjustl(names(idom))), 'Domain Index', buf, ierr)
             if (ierr /= 0) call chidg_signal(FATAL,"get_domain_indices_hdf: error retrieving domain indices")
 
             !
@@ -517,7 +1076,7 @@ contains
             ! Close domain
             !
             call h5gclose_f(did,ierr)
-            if (ierr /= 0) call chidg_signal(FATAL,"get_domain_indices: h5gclose")
+            if (ierr /= 0) call chidg_signal(FATAL,"get_domain_indices_hdf: h5gclose")
 
         end do ! idom
 
@@ -532,10 +1091,96 @@ contains
 
 
 
+    !>
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   2/3/2016
+    !!
+    !!  @param[in]  block_id        HDF file identifier of a block-domain group
+    !!  @param[in]  domain_mapping  Integer specifying the block-domain mapping 1-linear, 2-quadratic, etc.
+    !!
+    !---------------------------------------------------------------------------------------------------------------
+    subroutine set_domain_mapping_hdf(block_id,domain_mapping)
+        integer(HID_T),     intent(in)  :: block_id
+        integer(ik),        intent(in)  :: domain_mapping
+
+        integer(ik)         :: ierr
+
+        call h5ltset_attribute_int_f(block_id,".","Domain Mapping",[domain_mapping],SIZE_ONE,ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"set_domain_mapping_hdf: Error h5ltset_attribute_int_f")
+
+    end subroutine set_domain_mapping_hdf
+    !*************************************************************************************************************
+
+
+
+    !>
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   2/3/2016
+    !!
+    !!  @param[in]  fid     HDF file identifier
+    !!
+    !---------------------------------------------------------------------------------------------------------------
+    function get_domain_mapping_hdf(block_id) result(domain_mapping)
+        integer(HID_T),     intent(in)  :: block_id
+
+        integer(ik) :: domain_mapping, ierr
+        integer, dimension(1) :: buf
+
+        call h5ltget_attribute_int_f(block_id,".","Domain Mapping",buf,ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"get_domain_mapping_hdf: Error h5ltget_attribute_int_f")
+
+        domain_mapping = int(buf(1), kind=ik)
+
+    end function get_domain_mapping_hdf
+    !*************************************************************************************************************
 
 
 
 
+
+    !>
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   9/25/2016
+    !!
+    !!
+    !-------------------------------------------------------------------------------------------------------------
+    subroutine set_coordinate_order_hdf(block_id,order)
+        integer(HID_T), intent(in)  :: block_id
+        integer(ik),    intent(in)  :: order
+
+        integer(ik)         :: ierr
+
+        call h5ltset_attribute_int_f(block_id,".","Coordinate Order", [order],SIZE_ONE,ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"set_coordinate_order_hdf: Error setting 'Coordinate Order' attribute")
+
+    end subroutine set_coordinate_order_hdf
+    !*************************************************************************************************************
+
+
+
+
+
+    !>
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   9/25/2016
+    !!
+    !!
+    !-------------------------------------------------------------------------------------------------------------
+    subroutine get_coordinate_order_hdf(block_id,order)
+        integer(HID_T), intent(in)  :: block_id
+        integer(ik),    intent(in)  :: order
+
+        integer(ik)         :: ierr
+
+        call h5ltset_attribute_int_f(block_id,".","Coordinate Order", [order],SIZE_ONE,ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"get_coordinate_order_hdf: Error getting 'Coordinate Order' attribute")
+
+    end subroutine get_coordinate_order_hdf
+    !*************************************************************************************************************
 
 
 
@@ -553,7 +1198,7 @@ contains
     !!  @param[in]  dnames(:)   List of domain names to be interrogated. 
     !!
     !-------------------------------------------------------------------------------------------------------------
-    function get_order_coordinate_hdf(fid, dnames) result(orders)
+    function get_coordinate_orders_hdf(fid, dnames) result(orders)
         integer(HID_T),         intent(in)  :: fid
         character(len=1024),    intent(in)  :: dnames(:)
 
@@ -576,8 +1221,8 @@ contains
             !
             !  Get coordinate mapping
             !
-            call h5ltget_attribute_int_f(fid, trim(dnames(idom)), 'mapping', buf, ierr)
-            if (ierr /= 0) stop "Error: get_order_coordinate_hdf - h5ltget_attribute_int_f"
+            call h5ltget_attribute_int_f(fid, trim(dnames(idom)), 'Domain Mapping', buf, ierr)
+            if (ierr /= 0) stop "Error: get_coordinate_orders_hdf - h5ltget_attribute_int_f"
 
 
             !
@@ -589,8 +1234,201 @@ contains
 
         end do
 
-    end function get_order_coordinate_hdf
+    end function get_coordinate_orders_hdf
     !*************************************************************************************************************
+
+
+
+
+
+
+
+!
+!    !> Returns an array of integers that specifies the order of the coordinate expansion for every domain.
+!    !!
+!    !!  @author Nathan A. Wukie
+!    !!  @date   2/3/2016
+!    !!
+!    !!  @param[in]  fid         HDF file identifier.
+!    !!  @param[in]  dnames(:)   List of domain names to be interrogated. 
+!    !!
+!    !-------------------------------------------------------------------------------------------------------------
+!    function get_order_coordinate_hdf(fid, dnames) result(orders)
+!        integer(HID_T),         intent(in)  :: fid
+!        character(len=1024),    intent(in)  :: dnames(:)
+!
+!        integer(ik), allocatable    :: orders(:)
+!        integer                     :: ierr, idom, mapping
+!        integer, dimension(1)       :: buf
+!
+!
+!        !
+!        ! Allocate storage for orders
+!        !
+!        allocate(orders(size(dnames)), stat=ierr)
+!        if (ierr /= 0) call AllocationError
+!
+!        !
+!        !  Loop through groups and read domains
+!        !
+!        do idom = 1,size(dnames)
+!
+!            !
+!            !  Get coordinate mapping
+!            !
+!            call h5ltget_attribute_int_f(fid, trim(dnames(idom)), 'mapping', buf, ierr)
+!            if (ierr /= 0) stop "Error: get_order_coordinate_hdf - h5ltget_attribute_int_f"
+!
+!
+!            !
+!            ! Compute number of terms in coordinate expansion
+!            !
+!            mapping = buf(1)
+!
+!            orders(idom) = int(mapping, kind=ik)
+!
+!        end do
+!
+!    end function get_order_coordinate_hdf
+!    !*************************************************************************************************************
+!
+!
+!
+!
+!
+!
+!
+!    !> Returns an array of integer that specifies the order of the solution expansion for every domain.
+!    !!
+!    !!  @author Nathan A. Wukie
+!    !!  @date   2/3/2016
+!    !!
+!    !!  @param[in]  fid     HDF file identifier.
+!    !!  @param[in]  dnames  List of domain names to be interrogated.
+!    !!
+!    !-------------------------------------------------------------------------------------------------------------
+!    function get_order_solution_hdf(fid, dnames) result(orders)
+!        integer(HID_T),         intent(in)  :: fid
+!        character(len=1024),    intent(in)  :: dnames(:)
+!
+!        integer(HID_T)              :: did
+!        integer(HSIZE_T)            :: adim
+!        logical                     :: order_exists
+!        integer(ik), allocatable    :: orders(:)
+!        integer                     :: ierr, idom, order
+!        integer, dimension(1)       :: buf
+!
+!
+!        !
+!        ! Allocate storage for orders
+!        !
+!        allocate(orders(size(dnames)), stat=ierr)
+!        if (ierr /= 0) call AllocationError
+!
+!
+!        !
+!        !  Loop through groups and read domains
+!        !
+!        do idom = 1,size(dnames)
+!            !
+!            ! Open domain group
+!            !
+!            call h5gopen_f(fid, trim(dnames(idom)), did, ierr)
+!            if (ierr /= 0) call chidg_signal_one(FATAL,"get_order_solution_hdf: error opening domain group.", trim(dnames(idom)) )
+!
+!            
+!            !
+!            ! Check 'order_solution' attribute exists
+!            !
+!            call h5aexists_f(did, 'order_solution', order_exists, ierr)
+!            if (ierr /= 0) call chidg_signal(FATAL,"get_order_solution_hdf: error check attribue exists.")
+!
+!
+!
+!            !
+!            ! Handle attribute does not exist
+!            !
+!            if ( .not. order_exists ) then
+!                adim = 1
+!                buf = 0
+!                call h5ltset_attribute_int_f(did, ".", 'order_solution', buf, adim, ierr)
+!                if (ierr /= 0) call chidg_signal(FATAL,"get_order_solution_hdf: error setting attribute.")
+!            end if
+!
+!
+!
+!            !
+!            !  Get solution order
+!            !
+!            call h5ltget_attribute_int_f(did, ".", 'order_solution', buf, ierr)
+!            if (ierr /= 0) call chidg_signal(FATAL,"get_order_solution_hdf: error getting order_solution attribute.")
+!
+!
+!            !
+!            ! Compute number of terms in coordinate expansion
+!            !
+!            order = buf(1)
+!            orders(idom) = int(order, kind=ik)
+!
+!
+!            call h5gclose_f(did,ierr)
+!
+!        end do
+!
+!    end function get_order_solution_hdf
+!    !*************************************************************************************************************
+
+
+
+
+
+
+    !>
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   9/25/2016
+    !!
+    !!
+    !-------------------------------------------------------------------------------------------------------------
+    subroutine set_solution_order_hdf(block_id,order)
+        integer(HID_T), intent(in)  :: block_id
+        integer(ik),    intent(in)  :: order
+
+        integer(ik)         :: ierr
+
+        call h5ltset_attribute_int_f(block_id,".","Solution Order", [order],SIZE_ONE,ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"set_solution_order_hdf: Error setting 'Solution Order' attribute")
+
+    end subroutine set_solution_order_hdf
+    !*************************************************************************************************************
+
+
+
+
+
+    !>
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   9/25/2016
+    !!
+    !!
+    !-------------------------------------------------------------------------------------------------------------
+    function get_solution_order_hdf(block_id) result(order)
+        integer(HID_T), intent(in)  :: block_id
+
+        integer(ik) :: order, ierr
+        integer, dimension(1) :: buf
+
+        call h5ltget_attribute_int_f(block_id,".","Solution Order",buf,ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"get_solution_order_hdf: Error getting 'Solution Order' attribute")
+
+        order = int(buf(1), kind=ik)
+
+    end function get_solution_order_hdf
+    !*************************************************************************************************************
+
+
+
 
 
 
@@ -607,7 +1445,7 @@ contains
     !!  @param[in]  dnames  List of domain names to be interrogated.
     !!
     !-------------------------------------------------------------------------------------------------------------
-    function get_order_solution_hdf(fid, dnames) result(orders)
+    function get_solution_orders_hdf(fid, dnames) result(orders)
         integer(HID_T),         intent(in)  :: fid
         character(len=1024),    intent(in)  :: dnames(:)
 
@@ -634,14 +1472,14 @@ contains
             ! Open domain group
             !
             call h5gopen_f(fid, trim(dnames(idom)), did, ierr)
-            if (ierr /= 0) call chidg_signal_one(FATAL,"get_order_solution_hdf: error opening domain group.", trim(dnames(idom)) )
+            if (ierr /= 0) call chidg_signal_one(FATAL,"get_solution_orders_hdf: error opening domain group.", trim(dnames(idom)) )
 
             
             !
             ! Check 'order_solution' attribute exists
             !
-            call h5aexists_f(did, 'order_solution', order_exists, ierr)
-            if (ierr /= 0) call chidg_signal(FATAL,"get_order_solution_hdf: error check attribue exists.")
+            call h5aexists_f(did, 'Solution Order', order_exists, ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,"get_solution_orders_hdf: error check attribue exists.")
 
 
 
@@ -651,8 +1489,8 @@ contains
             if ( .not. order_exists ) then
                 adim = 1
                 buf = 0
-                call h5ltset_attribute_int_f(did, ".", 'order_solution', buf, adim, ierr)
-                if (ierr /= 0) call chidg_signal(FATAL,"get_order_solution_hdf: error setting attribute.")
+                call h5ltset_attribute_int_f(did, ".", 'Solution Order', buf, adim, ierr)
+                if (ierr /= 0) call chidg_signal(FATAL,"get_solution_orders_hdf: error setting attribute.")
             end if
 
 
@@ -660,8 +1498,9 @@ contains
             !
             !  Get solution order
             !
-            call h5ltget_attribute_int_f(did, ".", 'order_solution', buf, ierr)
-            if (ierr /= 0) call chidg_signal(FATAL,"get_order_solution_hdf: error getting order_solution attribute.")
+            !call h5ltget_attribute_int_f(fid, trim(dnames(idom)), 'order_solution', buf, ierr)
+            call h5ltget_attribute_int_f(did, ".", 'Solution Order', buf, ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,"get_solution_orders_hdf: error getting 'Solution Order' attribute.")
 
 
             !
@@ -675,12 +1514,58 @@ contains
 
         end do
 
-    end function get_order_solution_hdf
+    end function get_solution_orders_hdf
     !*************************************************************************************************************
 
 
 
 
+
+
+    !>
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   4/11/2016
+    !!
+    !!
+    !-------------------------------------------------------------------------------------------------------------
+    subroutine set_domain_dimensionality_hdf(block_id,dimensionality)
+        integer(HID_T), intent(in)  :: block_id
+        integer(ik),    intent(in)  :: dimensionality
+
+        integer(ik)         :: ierr
+
+        !  Get coordinate mapping
+        call h5ltset_attribute_int_f(block_id,".","Domain Dimensionality",[dimensionality],SIZE_ONE,ierr)
+        if (ierr /= 0) stop "Error: set_domain_dimensionality_hdf - h5ltset_attribute_int_f"
+
+    end subroutine set_domain_dimensionality_hdf
+    !*************************************************************************************************************
+
+
+
+
+    !>
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   4/11/2016
+    !!
+    !!
+    !-------------------------------------------------------------------------------------------------------------
+    function get_domain_dimensionality_hdf(block_id) result(dimensionality)
+        integer(HID_T), intent(in)  :: block_id
+
+        integer(ik) :: dimensionality, ierr
+        integer, dimension(1)   :: buf
+
+        !  Get coordinate mapping
+        call h5ltget_attribute_int_f(block_id,".","Domain Dimensionality",buf,ierr)
+        if (ierr /= 0) stop "Error: get_domain_dimensionality_hdf - h5ltget_attribute_int_f"
+
+        dimensionality = int(buf(1),kind=ik)
+
+    end function get_domain_dimensionality_hdf
+    !*************************************************************************************************************
 
 
 
@@ -700,19 +1585,19 @@ contains
     !!  @param[in]  dnames(:)   List of domain names to be interrogated. 
     !!
     !-------------------------------------------------------------------------------------------------------------
-    function get_spacedim_hdf(fid, dnames) result(spacedims)
+    function get_domain_dimensionalities_hdf(fid, dnames) result(dimensionalities)
         integer(HID_T),         intent(in)  :: fid
         character(len=1024),    intent(in)  :: dnames(:)
 
-        integer(ik), allocatable    :: spacedims(:)
-        integer                     :: ierr, idom, spacedim
-        integer, dimension(1)       :: buf
+        integer(ik), allocatable    :: dimensionalities(:)
+        integer(ik)                 :: ierr, idom
+        integer, dimension(1)       :: dimensionality
 
 
         !
         ! Allocate storage for orders
         !
-        allocate(spacedims(size(dnames)), stat=ierr)
+        allocate(dimensionalities(size(dnames)), stat=ierr)
         if (ierr /= 0) call AllocationError
 
         !
@@ -723,20 +1608,14 @@ contains
             !
             !  Get coordinate mapping
             !
-            call h5ltget_attribute_int_f(fid, trim(dnames(idom)), 'spacedim', buf, ierr)
-            if (ierr /= 0) stop "Error: get_spacedim_hdf - h5ltget_attribute_int_f"
+            call h5ltget_attribute_int_f(fid, trim(dnames(idom)), "Domain Dimensionality", dimensionality, ierr)
+            if (ierr /= 0) stop "get_domain_dimensionalities_hdf: Error h5ltget_attribute_int_f"
 
-
-            !
-            ! Compute number of terms in coordinate expansion
-            !
-            spacedim = buf(1)
-
-            spacedims(idom) = int(spacedim, kind=ik)
+            dimensionalities(idom) = dimensionality(1)
 
         end do
 
-    end function get_spacedim_hdf
+    end function get_domain_dimensionalities_hdf
     !*************************************************************************************************************
 
 
@@ -764,6 +1643,116 @@ contains
 
 
 
+
+
+
+
+
+
+
+
+
+!    !>  Returns an array of integers that specifies the number of spatial dimensions to use for every domain.
+!    !!
+!    !!  @author Nathan A. Wukie
+!    !!  @date   4/11/2016
+!    !!
+!    !!  @param[in]  fid         HDF file identifier.
+!    !!  @param[in]  dnames(:)   List of domain names to be interrogated. 
+!    !!
+!    !-------------------------------------------------------------------------------------------------------------
+!    function get_spacedim_hdf(fid, dnames) result(spacedims)
+!        integer(HID_T),         intent(in)  :: fid
+!        character(len=1024),    intent(in)  :: dnames(:)
+!
+!        integer(ik), allocatable    :: spacedims(:)
+!        integer                     :: ierr, idom, spacedim
+!        integer, dimension(1)       :: buf
+!
+!
+!        !
+!        ! Allocate storage for orders
+!        !
+!        allocate(spacedims(size(dnames)), stat=ierr)
+!        if (ierr /= 0) call AllocationError
+!
+!        !
+!        !  Loop through groups and read domains
+!        !
+!        do idom = 1,size(dnames)
+!
+!            !
+!            !  Get coordinate mapping
+!            !
+!            call h5ltget_attribute_int_f(fid, trim(dnames(idom)), 'spacedim', buf, ierr)
+!            if (ierr /= 0) stop "Error: get_spacedim_hdf - h5ltget_attribute_int_f"
+!
+!
+!            !
+!            ! Compute number of terms in coordinate expansion
+!            !
+!            spacedim = buf(1)
+!
+!            spacedims(idom) = int(spacedim, kind=ik)
+!
+!        end do
+!
+!    end function get_spacedim_hdf
+!    !*************************************************************************************************************
+
+
+
+
+
+
+
+
+
+
+    !>
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   4/11/2016
+    !!
+    !!
+    !-------------------------------------------------------------------------------------------------------------
+    subroutine set_domain_equation_set_hdf(block_id,equation_set)
+        integer(HID_T), intent(in)  :: block_id
+        character(*),   intent(in)  :: equation_set
+
+        integer(ik) :: ierr
+
+        !  Get coordinate mapping
+        call h5ltset_attribute_string_f(block_id,".","Equation Set",equation_set,ierr)
+        if (ierr /= 0) stop "Error: set_domain_equation_set_hdf - h5ltset_attribute_string_f"
+
+    end subroutine set_domain_equation_set_hdf
+    !*************************************************************************************************************
+
+
+    !>
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   4/11/2016
+    !!
+    !!
+    !-------------------------------------------------------------------------------------------------------------
+    function get_domain_equation_set_hdf(block_id) result(equation_set)
+        integer(HID_T), intent(in)  :: block_id
+
+        character(1024) :: equation_set
+        integer(ik)     :: ierr
+
+        !  Get coordinate mapping
+        call h5ltget_attribute_string_f(block_id,".","Equation Set",equation_set,ierr)
+        if (ierr /= 0) stop "Error: get_domain_equation_set_hdf - h5ltset_attribute_string_f"
+
+    end function get_domain_equation_set_hdf
+    !*************************************************************************************************************
+
+
+
+
     !> Returns an array of integer that specifies the order of the solution expansion for every domain.
     !!
     !!  @author Nathan A. Wukie
@@ -773,7 +1762,7 @@ contains
     !!  @param[in]  dnames  List of domain names to be interrogated.
     !!
     !------------------------------------------------------------------------------------------------------------
-    function get_eqnset_hdf(fid, dnames) result(eqnsets)
+    function get_domain_equation_sets_hdf(fid, dnames) result(eqnsets)
         integer(HID_T),         intent(in)  :: fid
         character(len=1024),    intent(in)  :: dnames(:)
 
@@ -798,40 +1787,127 @@ contains
             ! Open domain
             !
             call h5gopen_f(fid, trim(dnames(idom)), did, ierr)
-            if (ierr /= 0) call chidg_signal(FATAL,"get_eqnset_hdf: error opening domain group.")
+            if (ierr /= 0) call chidg_signal(FATAL,"get_domain_equation_sets_hdf: error opening domain group.")
 
 
             !
             ! Check eqnset attribute exists.
             !
-            call h5aexists_f(did, 'eqnset', eqnset_exists, ierr)
-            if (ierr /= 0) call chidg_signal(FATAL,"get_eqnset_hdf: error checking if 'eqnset' exists.")
+            call h5aexists_f(did, "Equation Set", eqnset_exists, ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,"get_domain_equation_sets_hdf: error checking if 'Equation Set' exists.")
 
 
             !
             ! If eqnset doesn't exists, create attribute and set to 'empty'
             !
             if ( .not. eqnset_exists ) then
-                !call h5ltset_attribute_string_f(fid, trim(dnames(idom)), 'eqnset', 'empty', ierr)
-                call h5ltset_attribute_string_f(did, ".", 'eqnset', 'empty', ierr)
-                if (ierr /= 0) call chidg_signal(FATAL,"get_eqnset_hdf: error setting empty 'eqnset' attribute.")
+                call h5ltset_attribute_string_f(did, ".", "Equation Set", 'empty', ierr)
+                if (ierr /= 0) call chidg_signal(FATAL,"get_domain_equation_sets_hdf: error setting empty 'Equation Set' attribute.")
             end if
 
 
             !
             !  Get eqnset string from hdf attribute.
             !
-            !call h5ltget_attribute_string_f(fid, trim(dnames(idom)), 'eqnset', eqnsets(idom), ierr)
-            call h5ltget_attribute_string_f(did, ".", 'eqnset', eqnsets(idom), ierr)
-            if (ierr /= 0) call chidg_signal(FATAL,"get_eqnset_hdf - h5ltget_attribute_int_f.")
+            call h5ltget_attribute_string_f(did, ".", "Equation Set", eqnsets(idom), ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,"get_domain_equation_sets_hdf - h5ltget_attribute_int_f.")
 
 
             call h5gclose_f(did,ierr)
 
         end do
 
-    end function get_eqnset_hdf
+    end function get_domain_equation_sets_hdf
     !*********************************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+!    !> Returns an array of integer that specifies the order of the solution expansion for every domain.
+!    !!
+!    !!  @author Nathan A. Wukie
+!    !!  @date   2/3/2016
+!    !!
+!    !!  @param[in]  fid     HDF file identifier.
+!    !!  @param[in]  dnames  List of domain names to be interrogated.
+!    !!
+!    !------------------------------------------------------------------------------------------------------------
+!    function get_eqnset_hdf(fid, dnames) result(eqnsets)
+!        integer(HID_T),         intent(in)  :: fid
+!        character(len=1024),    intent(in)  :: dnames(:)
+!
+!        integer(HID_T)                      :: did
+!        logical                             :: eqnset_exists
+!        character(len=1024), allocatable    :: eqnsets(:)
+!        integer                             :: ierr, idom
+!
+!
+!        !
+!        ! Allocate storage for eqnsets
+!        !
+!        allocate(eqnsets(size(dnames)), stat=ierr)
+!        if (ierr /= 0) call AllocationError
+!
+!
+!        !
+!        !  Loop through groups and read domains
+!        !
+!        do idom = 1,size(dnames)
+!            !
+!            ! Open domain
+!            !
+!            call h5gopen_f(fid, trim(dnames(idom)), did, ierr)
+!            if (ierr /= 0) call chidg_signal(FATAL,"get_eqnset_hdf: error opening domain group.")
+!
+!
+!            !
+!            ! Check eqnset attribute exists.
+!            !
+!            call h5aexists_f(did, 'eqnset', eqnset_exists, ierr)
+!            if (ierr /= 0) call chidg_signal(FATAL,"get_eqnset_hdf: error checking if 'eqnset' exists.")
+!
+!
+!            !
+!            ! If eqnset doesn't exists, create attribute and set to 'empty'
+!            !
+!            if ( .not. eqnset_exists ) then
+!                !call h5ltset_attribute_string_f(fid, trim(dnames(idom)), 'eqnset', 'empty', ierr)
+!                call h5ltset_attribute_string_f(did, ".", 'eqnset', 'empty', ierr)
+!                if (ierr /= 0) call chidg_signal(FATAL,"get_eqnset_hdf: error setting empty 'eqnset' attribute.")
+!            end if
+!
+!
+!            !
+!            !  Get eqnset string from hdf attribute.
+!            !
+!            !call h5ltget_attribute_string_f(fid, trim(dnames(idom)), 'eqnset', eqnsets(idom), ierr)
+!            call h5ltget_attribute_string_f(did, ".", 'eqnset', eqnsets(idom), ierr)
+!            if (ierr /= 0) call chidg_signal(FATAL,"get_eqnset_hdf - h5ltget_attribute_int_f.")
+!
+!
+!            call h5gclose_f(did,ierr)
+!
+!        end do
+!
+!    end function get_eqnset_hdf
+!    !*********************************************************************************************************
 
 
 
@@ -1025,6 +2101,77 @@ contains
 
 
 
+    !>
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   9/25/2016
+    !!
+    !!
+    !!
+    !--------------------------------------------------------------------------------------------
+    subroutine check_attribute_exists_hdf(id,attribute,fail_type,fail_status)
+        integer(HID_T), intent(in)                  :: id
+        character(*),   intent(in)                  :: attribute
+        character(*),   intent(in),     optional    :: fail_type
+        integer(ik),    intent(inout),  optional    :: fail_status
+
+        logical                         :: attribute_exists, hard_stop
+        character(len=:), allocatable   :: msg
+        integer(ik)                     :: ierr
+
+
+        !
+        ! Query attribute existence
+        !
+        call h5aexists_f(id,trim(attribute),attribute_exists,ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"check_attribute_exists_hdf: Error checking if attribute exists")
+
+        !
+        ! Default error mode
+        !
+        hard_stop = .true.
+
+        !
+        ! Check if failure type was specified
+        !
+        if (present(fail_type)) then
+
+            if (trim(fail_type) == "Soft Fail") then
+                hard_stop = .false.
+            else if (trim(fail_type) == "Hard Fail") then
+                hard_stop = .true.
+            else
+                call chidg_signal(FATAL,"check_attribute_exists_hdf: Didn't recognize the specified 'fail_status'.")
+            end if
+
+        end if
+
+        !
+        ! Handle error if necessary
+        !
+        msg = "Attribute "//trim(attribute)//" not found in the file. Maybe the file was generated with an old &
+               version of the ChiDG library. Try regenerating the HDF grid file with an updated version &
+               of the ChiDG library to make sure the file is formatted properly"
+
+        if (.not. attribute_exists) then
+
+            if (present(fail_status)) then
+                fail_status = 1     ! Didnt find attribute
+            end if
+
+            if (hard_stop) then
+                call chidg_signal(FATAL,msg)
+            end if
+
+        else
+            if (present(fail_status)) then
+                fail_status = 0     ! Found attribute, no failure
+            end if
+        end if
+
+
+    end subroutine check_attribute_exists_hdf
+    !********************************************************************************************
 
 
 

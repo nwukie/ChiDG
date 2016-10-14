@@ -20,7 +20,7 @@ module mod_chidg_post_hdf2tec
     use type_dict,              only: dict_t
     use mod_tecio,              only: write_tecio_variables, write_tecio_variables_unstructured
     use type_file_properties,   only: file_properties_t
-    use mod_file_utilities,     only: get_file_properties
+    use mod_hdf_utilities,      only: get_properties_hdf
     use mod_io,                 only: nterms_s, spacedim
     implicit none
 
@@ -68,7 +68,7 @@ contains
         !
         ! TODO: Also, I feel like this isn't used any more. Check into removing it.
         !
-        file_props = get_file_properties(filename)
+        file_props = get_properties_hdf(filename)
 
         nterms_s    = file_props%nterms_s(1)    ! Global variable from mod_io
         eqnset      = file_props%eqnset(1)      ! Global variable from mod_io

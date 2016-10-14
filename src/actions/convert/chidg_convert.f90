@@ -1,6 +1,5 @@
 module mod_chidg_convert
     use mod_chidg_convert_p3d_hdf5,     only: chidg_convert_p3d_hdf5
-    use mod_chidg_convert_p3d_hdf5_new, only: chidg_convert_p3d_hdf5_new
     implicit none
 
 
@@ -20,8 +19,7 @@ contains
         character(*),   intent(in)  :: filename
 
 
-        !call chidg_convert_p3d_hdf5(filename)
-        call chidg_convert_p3d_hdf5_new(filename)
+        call chidg_convert_p3d_hdf5(filename)
 
 
     end subroutine chidg_convert

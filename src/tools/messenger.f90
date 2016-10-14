@@ -9,7 +9,8 @@ module messenger
     character(len=2), parameter     :: default_delimiter = '  '     ! Delimiter of line parameters
     character(len=:), allocatable   :: current_delimiter            ! Delimiter of line parameters
     integer                         :: unit                         ! Unit of log file
-    integer                         :: max_msg_length = 300         ! Maximum width of message line
+    integer, parameter              :: max_msg_length = 300         ! Maximum width of message line
+    integer                         :: msg_length = max_msg_length  ! Default msg_length
     logical                         :: log_initialized = .false.    ! Status of log file
 
     character(len=:), allocatable   :: color_begin, color_end
@@ -112,12 +113,13 @@ contains
 
         integer                         :: iaux, pathstart
         integer(ik)                     :: ierr
-        character(len=:), allocatable   :: subpath, temppath
+        character(len=:), allocatable   :: subpath, temppath, genstr
         class(*), pointer               :: auxdata => null()
-        character(100)                  :: warnstr, errstr, killstr, genstr, starstr, linechar, dashstr, blankstr, oopsstr
+        character(100)                  :: warnstr, errstr, killstr, starstr, linechar, dashstr, blankstr, oopsstr
         logical                         :: print_info_one   = .false.
         logical                         :: print_info_two   = .false.
         logical                         :: print_info_three = .false.
+
 
 
         oopsstr  = '                                         ... Oops :/                                           '
@@ -129,11 +131,17 @@ contains
         blankstr = new_line('A')
 
 
+
+        !
+        ! Set message length 
+        !
+        msg_length = 105
+
         !
         ! Chop off unimportant beginning of file path
         !
         temppath = pathname
-        pathstart = index(temppath, '/ChiDG/')
+        pathstart = index(temppath, 'src/')
         if (pathstart == 0) then
             subpath = temppath      ! The intel compiler provides just the file name, without the path. So here, we just take the file name and don't chop anything
         else
@@ -271,6 +279,11 @@ contains
 
         end select
 
+
+        !
+        ! ReSet message length 
+        !
+        msg_length = max_msg_length
 
 
     end subroutine message
@@ -607,7 +620,7 @@ contains
     !>  Handles sending module-global 'line' string to a destination of either the screen, a file, or both.
     !!  Is is determined by the IO_DESTINATION variable from mod_constants.
     !!
-    !!  Line wrapping is also handled, set by the module parameter 'max_msg_length'.
+    !!  Line wrapping is also handled, set by the module parameter 'msg_length'.
     !!
     !!  @author Nathan A. Wukie
     !!  @date   2/3/2016
@@ -625,8 +638,8 @@ contains
         !
         ! Get line section length
         !
-        if ( len(line) > max_msg_length ) then
-            section_length = max_msg_length
+        if ( len(line) > msg_length ) then
+            section_length = msg_length
         else
             section_length = len(line)
         end if
@@ -653,10 +666,37 @@ contains
         !
         writeline = line
         section = 1
-        lend    = -1
+        lend    = 0
         do while ( lend /= len(line) ) 
-            lstart = 1 + ((section-1) * section_length)
-            lend   = (section) * section_length
+
+            !
+            ! Set position to start writing
+            !
+            lstart = lend + 1
+
+            !
+            ! Set position to stop writing
+            !
+            lend = lend + section_length
+
+            ! Don't go out-of-bounds
+            if (lend >= len(line)) then
+                lend = len(line)
+            else
+                ! Move backwards until a word break so we don't split words when we wrap
+                do while ( (line(lend:lend) /= " ") .and. (lend > 0))
+                    lend = lend-1
+                end do
+            end if
+
+
+            !
+            ! Make sure to at least print something in case where was a really long solid string 
+            ! and we stepped backwards too far.
+            !
+            if (lend < lstart) then
+                lend = lstart + section_length
+            end if
 
             !
             ! Dont go out-of-bounds
@@ -664,8 +704,7 @@ contains
             if (lstart > len(line) ) then
                 exit
             end if
-
-            if (lend > len(line)) then
+            if (lend >= len(line)) then
                 lend = len(line)
             end if
 
@@ -713,7 +752,7 @@ contains
             !
             section = section + 1
 
-        end do ! len(line) > max_msg_length
+        end do ! len(line) > msg_length
 
 
         !

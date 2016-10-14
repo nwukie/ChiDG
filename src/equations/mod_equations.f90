@@ -160,6 +160,7 @@ contains
         character(len=*),                   intent(in)      :: eqnstring
         character(len=*),                   intent(in)      :: blueprint
 
+        character(len=:),           allocatable :: user_msg, dev_msg
         integer                                 :: ierr, bindex
         type(equation_set_t)                    :: eqnset
         class(equation_builder_t), allocatable  :: builder
@@ -173,7 +174,19 @@ contains
         !
         ! Check equationset was found in 'available_equations'
         !
-        if (bindex == 0) call chidg_signal_one(FATAL,"build_equation_set: equation string not recognized", trim(eqnstring))
+        user_msg = "We can't seem to find an equation set that matches the string that was passed &
+                    into the equation set factory. &
+                    Maybe check that the equation set strings that were set for the domains &
+                    are all valid."
+        dev_msg = "Check that the equation set builder is registered properly in &
+                   the equation set builder factory: src/equations/mod_equations.f90. When an equation &
+                   set builder is defined, is needs to be registered in the factory by calling &
+                   'call equation_builder_factory%register(builder)', where 'builder' is the &
+                   object that knows how to build the equation set. This could be done in  &
+                   'mod_equations.register_equation_builders'. The 'register_equation_builders' routine &
+                   gets called on startup and loads all the default equation builders into the factory &
+                   so the library knows what equation sets it can build."
+        if (bindex == 0) call chidg_signal_two(OOPS,user_msg,trim(eqnstring),dev_msg=dev_msg)
 
 
         !

@@ -31,55 +31,61 @@ contains
     !!  ChiDG HDF File Format API
     !!
     !!  Procedures:
+    !!  -----------
     !!
-    !!      initialize_chidg_file_hdf
-    !!      check_file_storage_version_hdf
+    !!  initialize_file_hdf
+    !!  check_file_storage_version_hdf
     !!
-    !!      set_storage_version_major_hdf
-    !!      set_storage_version_minor_hdf
-    !!      get_storage_version_major_hdf
-    !!      get_storage_version_minor_hdf
+    !!  set_storage_version_major_hdf
+    !!  set_storage_version_minor_hdf
+    !!  get_storage_version_major_hdf
+    !!  get_storage_version_minor_hdf
     !!
-    !!      get_properties_hdf
+    !!  get_properties_hdf
     !!
-    !!      set_ndomains_hdf
-    !!      get_ndomains_hdf
+    !!  set_ndomains_hdf
+    !!  get_ndomains_hdf
     !!
-    !!      set_contains_grid_hdf
-    !!      set_contains_solution_hdf
-    !!      get_contains_grid_hdf
-    !!      get_contains_solution_hdf
+    !!  set_contains_grid_hdf
+    !!  get_contains_grid_hdf
     !!
-    !!      get_domain_names_hdf
-    !!      get_domain_name_hdf
+    !!  set_contains_solution_hdf
+    !!  get_contains_solution_hdf
     !!
-    !!      set_domain_index_hdf
-    !!      get_domain_index_hdf
-    !!      get_domain_indices_hdf
+    !!  get_domain_name_hdf
+    !!  get_domain_names_hdf
     !!
-    !!      set_coordinate_order_hdf
-    !!      get_coordinate_order_hdf
-    !!      get_coordinate_orders_hdf
+    !!  set_domain_index_hdf
+    !!  get_domain_index_hdf
+    !!  get_domain_indices_hdf
     !!
-    !!      set_solution_order_hdf
-    !!      get_solution_order_hdf
-    !!      get_solution_orders_hdf
+    !!  set_domain_coordinates_hdf
+    !!  set_domain_elements_hdf
+    !!  set_domain_bc_patch_hdf
     !!
-    !!      set_domain_dimensionality_hdf
-    !!      get_domain_dimensionality_hdf
-    !!      get_domain_dimensionalities_hdf
+    !!  set_coordinate_order_hdf
+    !!  get_coordinate_order_hdf
+    !!  get_coordinate_orders_hdf
     !!
-    !!      set_domain_mapping_hdf
-    !!      get_domain_mapping_hdf
+    !!  set_solution_order_hdf
+    !!  get_solution_order_hdf
+    !!  get_solution_orders_hdf
     !!
-    !!      set_domain_equation_set_hdf
-    !!      get_domain_equation_set_hdf
-    !!      get_domain_equation_sets_hdf
+    !!  set_domain_dimensionality_hdf
+    !!  get_domain_dimensionality_hdf
+    !!  get_domain_dimensionalities_hdf
     !!
-    !!      get_bcnames_hdf
+    !!  set_domain_mapping_hdf
+    !!  get_domain_mapping_hdf
     !!
-    !!      delete_group_attributes
-    !!      check_attribute_exists_hdf
+    !!  set_domain_equation_set_hdf
+    !!  get_domain_equation_set_hdf
+    !!  get_domain_equation_sets_hdf
+    !!
+    !!  get_bcnames_hdf
+    !!
+    !!  delete_group_attributes
+    !!  check_attribute_exists_hdf
     !!      
     !!
     !****************************************************************************************
@@ -97,7 +103,7 @@ contains
     !!
     !!
     !----------------------------------------------------------------------------------------
-    function initialize_chidg_file_hdf(filename) result(fid)
+    function initialize_file_hdf(filename) result(fid)
         character(*),   intent(in)  :: filename
 
         logical         :: file_exists
@@ -119,7 +125,7 @@ contains
         ! Create file
         !
         call h5fcreate_f(trim(filename)//".h5", H5F_ACC_TRUNC_F, fid, ierr)
-        if (ierr /= 0) call chidg_signal(FATAL,"initialize_chidg_file_hdf: Error h5fcreate_f")
+        if (ierr /= 0) call chidg_signal(FATAL,"initialize_file_hdf: Error h5fcreate_f")
         call write_line("File created: "//trim(filename)//".h5")
 
 
@@ -143,7 +149,7 @@ contains
         call set_ndomains_hdf(fid,0)
 
 
-    end function initialize_chidg_file_hdf
+    end function initialize_file_hdf
     !****************************************************************************************
 
 
@@ -182,13 +188,15 @@ contains
         if ( (file_major_version /= STORAGE_FORMAT_MAJOR) .or. &
              (file_minor_version /= STORAGE_FORMAT_MINOR) ) then
 
-            msg = "check_file_version_hdf: The storage format of the file being worked with does not &
-                   match the storage format in the ChiDG library being used. This probably means the &
-                   file was generated with another version of the ChiDG library and may not be compatible &
-                   with the library currently being used. You could try a few things here. 1: regenerate &
-                   the with with the ChiDG library being used. 2: Use a different version of the ChiDG library &
-                   that uses a storage format for the file being used. 3: Full-speed ahead! Proceed anyways and &
-                   try your luck!"//NEW_LINE('A')//"     Options: Exit(1), Continue(2)."
+            msg = "The storage format of the file being worked with &
+                   does not match the storage format in the ChiDG library being used. This &
+                   probably means the file was generated with another version of the ChiDG &
+                   library and may not be compatible with the library currently being used. &
+                   You could try a few things here. 1: regenerate the with with the ChiDG &
+                   library being used. 2: Use a different version of the ChiDG library &
+                   that uses a storage format for the file being used. 3: Full-speed ahead! &
+                   Proceed anyways and try your luck!"//NEW_LINE('A')//"     &
+                   Options: Exit(1), Continue(2)."
 
             call write_line(msg)
 
@@ -342,7 +350,7 @@ contains
     !!  @param[in]  filename    Character string containing a filename for a file that gets interrogated
     !!  @result     prop        file_properties_t instance that gets returned with file information
     !!
-    !-----------------------------------------------------------------------------------------------------------
+    !----------------------------------------------------------------------------------------
     function get_properties_hdf(filename) result(prop)
         character(*),   intent(in)  :: filename
 
@@ -463,7 +471,7 @@ contains
         if (ierr /= 0) call chidg_signal(FATAL,"get_properties_hdf: h5close.")        
 
     end function get_properties_hdf
-    !**************************************************************************************************************
+    !****************************************************************************************
 
 
 
@@ -477,7 +485,7 @@ contains
     !!
     !!  @param[in]  fid     HDF file identifier
     !!
-    !--------------------------------------------------------------------------------------------------------------
+    !----------------------------------------------------------------------------------------
     subroutine set_ndomains_hdf(fid,ndomains)
         integer(HID_T), intent(in)  :: fid
         integer(ik),    intent(in)  :: ndomains
@@ -488,7 +496,7 @@ contains
         if (ierr /= 0) call chidg_signal(FATAL,"set_ndomains_hdf: Error h5ltget_attribute_int_f")
 
     end subroutine set_ndomains_hdf
-    !**************************************************************************************************************
+    !****************************************************************************************
 
 
 
@@ -504,7 +512,7 @@ contains
     !!
     !!  @param[in]  fid     HDF file identifier
     !!
-    !--------------------------------------------------------------------------------------------------------------
+    !----------------------------------------------------------------------------------------
     function get_ndomains_hdf(fid) result(ndomains)
         integer(HID_T), intent(in)  :: fid
 
@@ -517,7 +525,7 @@ contains
         ndomains = int(buf(1), kind=ik)
 
     end function get_ndomains_hdf
-    !**************************************************************************************************************
+    !****************************************************************************************
 
 
 
@@ -532,7 +540,7 @@ contains
     !!  @param[in]  fid             HDF5 file identifier.
     !!  @result     grid_status     Logical indicating if ChiDG grid exists in file, fid.
     !!
-    !--------------------------------------------------------------------------------------------------------------
+    !----------------------------------------------------------------------------------------
     subroutine set_contains_grid_hdf(fid,status_string)
         integer(HID_T), intent(in)  :: fid
         character(*),   intent(in)  :: status_string
@@ -543,7 +551,7 @@ contains
         if (ierr /= 0) call chidg_signal(FATAL,"check_contains_grid_hdf - h5ltget_attribute_int_f")
 
     end subroutine set_contains_grid_hdf
-    !**************************************************************************************************************
+    !****************************************************************************************
 
 
 
@@ -562,7 +570,7 @@ contains
     !!  @param[in]  fid             HDF5 file identifier.
     !!  @result     grid_status     Logical indicating if ChiDG grid exists in file, fid.
     !!
-    !--------------------------------------------------------------------------------------------------------------
+    !---------------------------------------------------------------------------------------
     function get_contains_grid_hdf(fid) result(grid_status)
         integer(HID_T), intent(in)  :: fid
 
@@ -594,7 +602,7 @@ contains
 
 
     end function get_contains_grid_hdf
-    !**************************************************************************************************************
+    !****************************************************************************************
 
 
 
@@ -613,7 +621,7 @@ contains
     !!  @param[in]  fid             HDF5 file identifier.
     !!  @result     grid_status     Logical indicating if ChiDG grid exists in file, fid.
     !!
-    !--------------------------------------------------------------------------------------------------------------
+    !----------------------------------------------------------------------------------------
     subroutine set_contains_solution_hdf(fid,status_string)
         integer(HID_T), intent(in)  :: fid
         character(*),   intent(in)  :: status_string
@@ -624,7 +632,7 @@ contains
         if (ierr /= 0) call chidg_signal(FATAL,"check_contains_solution_hdf - h5ltget_attribute_int_f")
 
     end subroutine set_contains_solution_hdf
-    !**************************************************************************************************************
+    !****************************************************************************************
 
 
 
@@ -638,7 +646,7 @@ contains
     !!  @param[in]  fid                 HDF5 file identifier.
     !!  @result     solution_status     Logical indicating if ChiDG solution exists in file, fid.
     !!
-    !---------------------------------------------------------------------------------------------------------------
+    !----------------------------------------------------------------------------------------
     function get_contains_solution_hdf(fid) result(solution_status)
         integer(HID_T), intent(in)  :: fid
 
@@ -670,7 +678,7 @@ contains
 
 
     end function get_contains_solution_hdf
-    !***************************************************************************************************************
+    !****************************************************************************************
 
 
 
@@ -686,7 +694,7 @@ contains
     !!
     !!  @param[in]  fid     HDF file identifier
     !!
-    !---------------------------------------------------------------------------------------------------------------
+    !----------------------------------------------------------------------------------------
     function get_domain_names_hdf(fid) result(names)
         integer(HID_T),     intent(in)  :: fid
 
@@ -740,7 +748,7 @@ contains
 
 
     end function get_domain_names_hdf
-    !*************************************************************************************************************
+    !****************************************************************************************
 
 
 
@@ -759,7 +767,7 @@ contains
     !!  @param[in]  idom_hdf    A specified domain index to be queried. This is an attribute of each domain in 
     !!                          the HDF file, per the ChiDG convention.
     !!
-    !---------------------------------------------------------------------------------------------------------------
+    !----------------------------------------------------------------------------------------
     function get_domain_name_hdf(fid,idom_hdf) result(dname)
         integer(HID_T),     intent(in)  :: fid
         integer(ik),        intent(in)  :: idom_hdf
@@ -789,7 +797,7 @@ contains
 
 
     end function get_domain_name_hdf
-    !*************************************************************************************************************
+    !****************************************************************************************
 
 
 
@@ -808,7 +816,7 @@ contains
     !!
     !!  @param[in]  fid     HDF file identifier
     !!
-    !---------------------------------------------------------------------------------------------------------------
+    !----------------------------------------------------------------------------------------
     subroutine set_domain_index_hdf(block_id,domain_index)
         integer(HID_T),     intent(in)  :: block_id
         integer(ik),        intent(in)  :: domain_index
@@ -820,7 +828,7 @@ contains
 
 
     end subroutine set_domain_index_hdf
-    !*************************************************************************************************************
+    !****************************************************************************************
 
 
 
@@ -835,7 +843,7 @@ contains
     !!
     !!  @param[in]  fid     HDF file identifier
     !!
-    !---------------------------------------------------------------------------------------------------------------
+    !----------------------------------------------------------------------------------------
     function get_domain_index_hdf(block_id) result(domain_index)
         integer(HID_T),     intent(in)  :: block_id
 
@@ -848,7 +856,7 @@ contains
         domain_index = int(buf(1), kind=ik)
 
     end function get_domain_index_hdf
-    !*************************************************************************************************************
+    !****************************************************************************************
 
 
 
@@ -856,32 +864,17 @@ contains
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    !> Return a list of domain indices from an HDF5 file identifier. This is because, the current method of detecting
-    !! domains by name can change the order they are detected in. So, each domain is given an idomain attribute that 
-    !! is independent of the order of discovery from the file.
+    !> Return a list of domain indices from an HDF5 file identifier. This is because, 
+    !! the current method of detecting domains by name can change the order they are 
+    !! detected in. So, each domain is given an idomain attribute that is independent 
+    !! of the order of discovery from the file.
     !!
     !!  @author Nathan A. Wukie
     !!  @date   2/3/2016
     !!
     !!  @param[in]  fid     HDF file identifier
     !!
-    !---------------------------------------------------------------------------------------------------------------
+    !---------------------------------------------------------------------------------------
     function get_domain_indices_hdf(fid) result(indices)
         integer(HID_T),     intent(in)  :: fid
 
@@ -892,8 +885,6 @@ contains
         integer, dimension(1)                   :: buf
         integer(HSIZE_T)                        :: adim
         logical                                 :: attribute_exists
-
-
 
 
         !
@@ -907,7 +898,6 @@ contains
         !
         allocate(indices(ndomains), stat=ierr)
         if (ierr /= 0) call AllocationError
-
 
 
         !
@@ -962,7 +952,7 @@ contains
 
 
     end function get_domain_indices_hdf
-    !*************************************************************************************************************
+    !****************************************************************************************
 
 
 
@@ -977,9 +967,10 @@ contains
     !!  @date   2/3/2016
     !!
     !!  @param[in]  block_id        HDF file identifier of a block-domain group
-    !!  @param[in]  domain_mapping  Integer specifying the block-domain mapping 1-linear, 2-quadratic, etc.
+    !!  @param[in]  domain_mapping  Integer specifying the block-domain mapping 
+    !!                              1-linear, 2-quadratic, etc.
     !!
-    !---------------------------------------------------------------------------------------------------------------
+    !----------------------------------------------------------------------------------------
     subroutine set_domain_mapping_hdf(block_id,domain_mapping)
         integer(HID_T),     intent(in)  :: block_id
         integer(ik),        intent(in)  :: domain_mapping
@@ -990,7 +981,7 @@ contains
         if (ierr /= 0) call chidg_signal(FATAL,"set_domain_mapping_hdf: Error h5ltset_attribute_int_f")
 
     end subroutine set_domain_mapping_hdf
-    !*************************************************************************************************************
+    !****************************************************************************************
 
 
 
@@ -1001,7 +992,7 @@ contains
     !!
     !!  @param[in]  fid     HDF file identifier
     !!
-    !---------------------------------------------------------------------------------------------------------------
+    !----------------------------------------------------------------------------------------
     function get_domain_mapping_hdf(block_id) result(domain_mapping)
         integer(HID_T),     intent(in)  :: block_id
 
@@ -1014,7 +1005,297 @@ contains
         domain_mapping = int(buf(1), kind=ik)
 
     end function get_domain_mapping_hdf
-    !*************************************************************************************************************
+    !****************************************************************************************
+
+
+
+
+
+
+
+
+
+
+    !>
+    !!
+    !!  @author Nathan A. Wukie 
+    !!  @date   10/15/2016
+    !!
+    !!
+    !----------------------------------------------------------------------------------------
+    subroutine set_domain_coordinates_hdf(block_id,xcoords,ycoords,zcoords)
+        integer(HID_T), intent(in)  :: block_id
+        real(rk),       intent(in)  :: xcoords(:,:,:)
+        real(rk),       intent(in)  :: ycoords(:,:,:)
+        real(rk),       intent(in)  :: zcoords(:,:,:)
+
+        integer(HID_T)      :: grid_id, xspace_id, yspace_id, zspace_id, xset_id, yset_id, zset_id
+        integer(HSIZE_T)    :: dims_rank_one(1), dims_rank_two(2)
+        integer(ik)         :: ierr, ipt, ipt_i, ipt_j, ipt_k, npts, npt_i, npt_j, npt_k
+        real(rk), allocatable, dimension(:) :: xcoords_linear, ycoords_linear, zcoords_linear
+
+        !
+        ! Create a grid-group within the current block domain
+        !
+        call h5gcreate_f(block_id, "Grid", grid_id, ierr)
+        if (ierr /= 0) stop "Error: h5gcreate_f"
+
+
+
+
+        !
+        ! Re-order coordinates to be linear arrays
+        !
+        npt_i = size(xcoords,1)
+        npt_j = size(xcoords,2)
+        npt_k = size(xcoords,3)
+        npts = npt_i*npt_j*npt_k
+        dims_rank_one = npts
+        allocate(xcoords_linear(npts), ycoords_linear(npts), zcoords_linear(npts), stat=ierr)
+
+        ipt = 1
+        do ipt_k = 1,npt_k
+            do ipt_j = 1,npt_j
+                do ipt_i = 1,npt_i
+                    xcoords_linear(ipt) = xcoords(ipt_i,ipt_j,ipt_k)
+                    ycoords_linear(ipt) = ycoords(ipt_i,ipt_j,ipt_k)
+                    zcoords_linear(ipt) = zcoords(ipt_i,ipt_j,ipt_k)
+                    ipt = ipt + 1
+                end do
+            end do
+        end do
+
+        !
+        ! Create dataspaces for grid coordinates
+        !
+        call h5screate_simple_f(1, dims_rank_one, xspace_id, ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"set_domain_coordinates_hdf: h5screate_simple_f")
+        call h5screate_simple_f(1, dims_rank_one, yspace_id, ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"set_domain_coordinates_hdf: h5screate_simple_f")
+        call h5screate_simple_f(1, dims_rank_one, zspace_id, ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"set_domain_coordinates_hdf: h5screate_simple_f")
+
+
+        !
+        ! Create datasets for grid coordinates
+        !
+        call h5dcreate_f(grid_id, "CoordinateX", H5T_NATIVE_DOUBLE, xspace_id, xset_id, ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"set_domain_coordinates_hdf: h5dcreate_f")
+        call h5dcreate_f(grid_id, "CoordinateY", H5T_NATIVE_DOUBLE, yspace_id, yset_id, ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"set_domain_coordinates_hdf: h5dcreate_f")
+        call h5dcreate_f(grid_id, "CoordinateZ", H5T_NATIVE_DOUBLE, zspace_id, zset_id, ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"set_domain_coordinates_hdf: h5dcreate_f")
+
+        !
+        ! Write coordinates to datasets
+        !
+        call h5dwrite_f(xset_id, H5T_NATIVE_DOUBLE, xcoords_linear, dims_rank_one, ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"set_domain_coordinates_her: h5dwrite_f")
+        call h5dwrite_f(yset_id, H5T_NATIVE_DOUBLE, ycoords_linear, dims_rank_one, ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"set_domain_coordinates_her: h5dwrite_f")
+        call h5dwrite_f(zset_id, H5T_NATIVE_DOUBLE, zcoords_linear, dims_rank_one, ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"set_domain_coordinates_her: h5dwrite_f")
+
+
+        !
+        ! Close datasets
+        !
+        call h5dclose_f(xset_id,ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"set_domain_coordinates_her: h5dclose_f")
+        call h5dclose_f(yset_id,ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"set_domain_coordinates_her: h5dclose_f")
+        call h5dclose_f(zset_id,ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"set_domain_coordinates_her: h5dclose_f")
+
+        !
+        ! Close dataspaces
+        !
+        call h5sclose_f(xspace_id,ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"set_domain_coordinates_her: h5sclose_f")
+        call h5sclose_f(yspace_id,ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"set_domain_coordinates_her: h5sclose_f")
+        call h5sclose_f(zspace_id,ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"set_domain_coordinates_her: h5sclose_f")
+
+        !
+        ! Close Grid group
+        !
+        call h5gclose_f(grid_id, ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"set_domain_coordinates_her: h5gclose_f")
+
+
+    end subroutine set_domain_coordinates_hdf
+    !***************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+    !>  Set the element connectivities for a block.
+    !!
+    !!  Accepts array of element connectivities as
+    !!      elements(nelem, size_connectivity)
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   10/15/2016
+    !!
+    !!
+    !----------------------------------------------------------------------------------------
+    subroutine set_domain_elements_hdf(block_id,elements)
+        integer(HID_T), intent(in)  :: block_id
+        integer(ik),    intent(in)  :: elements(:,:)
+
+        integer(ik)         :: ierr
+        integer(HID_T)      :: element_set_id, element_space_id, grid_id
+        integer(HSIZE_T)    :: dims_rank_two(2)
+
+        !
+        ! Size element connectivities
+        !
+        dims_rank_two(1) = size(elements,1)
+        dims_rank_two(2) = size(elements,2)
+
+
+        !
+        ! Create dataspace for element connectivity
+        !
+        call h5screate_simple_f(2, dims_rank_two, element_space_id, ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"set_domain_elements_hdf: h5screate_simple_f")
+
+
+        !
+        ! Create a grid-group within the current block domain
+        !
+        call h5gopen_f(block_id, "Grid", grid_id, ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"set_domain_elements_hdf: h5gcreate_f")
+
+
+        !
+        ! Create dataset for element connectivity
+        !
+        call h5dcreate_f(grid_id, "Elements", H5T_NATIVE_INTEGER, element_space_id, element_set_id, ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"set_domain_elements_hdf: h5dcreate_f")
+
+
+
+        !
+        ! Write element connectivities
+        !
+        call h5dwrite_f(element_set_id, H5T_NATIVE_INTEGER, elements, dims_rank_two, ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"set_domain_elements_hdf: h5dwrite_f")
+
+
+        !
+        ! Close dataset, dataspace, Grid group
+        !
+        call h5dclose_f(element_set_id,ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"set_domain_elements_hdf: h5dclose_f")
+        call h5sclose_f(element_space_id,ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"set_domain_elements_hdf: h5sclose_f")
+        call h5gclose_f(grid_id,ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"set_domain_elements_hdf: h5gclose_f")
+
+
+
+    end subroutine set_domain_elements_hdf
+    !****************************************************************************************
+
+
+
+
+
+
+
+
+
+
+    !>  Set boundary condition patch face indices for a block boundary.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   10/15/2016
+    !!
+    !!  @param[in]  block_id    HDF identifier for the block to be written to
+    !!  @param[in]  faces       Face indices to be set for the boundary condition patch
+    !!  @param[in]  bcface      Integer specifying which boundary of the block to write to
+    !!
+    !---------------------------------------------------------------------------------------
+    subroutine set_domain_bc_patch_hdf(block_id,faces,bcface)
+        integer(HID_T), intent(in)  :: block_id
+        integer(ik),    intent(in)  :: faces(:,:)
+        integer(ik),    intent(in)  :: bcface
+
+        character(len=8)            :: bc_face_strings(6)
+        character(:), allocatable   :: bc_face_string
+        integer                     :: ierr
+        integer(HID_T)              :: bc_id, face_id, face_space_id, face_set_id
+        integer(HSIZE_T)            :: dims(2)
+            
+
+        !
+        ! Create a boundary condition-group within the current block domain
+        !
+        call h5gopen_f(block_id, "BoundaryConditions", bc_id, ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"set_domain_bc_patch_hdf: h5gcreate_f")
+
+
+        !
+        ! Get boundary condition string
+        !
+        bc_face_strings = ["XI_MIN  ","XI_MAX  ","ETA_MIN ","ETA_MAX ","ZETA_MIN","ZETA_MAX"]
+        bc_face_string  = trim(bc_face_strings(bcface))
+
+
+        !
+        ! Create empty group for boundary condition
+        !
+        call h5gcreate_f(bc_id,bc_face_string,face_id, ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"set_domain_bc_patch_hdf: h5gcreate_f")
+
+
+        !
+        ! Create dataspaces for boundary condition connectivity
+        !
+        dims(1) = size(faces,1)
+        dims(2) = size(faces,2)
+        call h5screate_simple_f(2, dims, face_space_id, ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"set_domain_bc_patch_hdf: h5screate_simple_f")
+
+
+        !
+        ! Create datasets for boundary condition connectivity
+        !
+        call h5dcreate_f(face_id,"Faces", H5T_NATIVE_INTEGER, face_space_id, face_set_id,ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"set_domain_bc_patch_hdf: h5dcreate_f")
+
+
+        !
+        ! Write bc faces
+        !
+        call h5dwrite_f(face_set_id, H5T_NATIVE_INTEGER, faces, dims, ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"set_domain_bc_patch_hdf: h5dwrite_f")
+
+
+        !
+        ! Close groups
+        !
+        call h5dclose_f(face_set_id, ierr)
+        call h5sclose_f(face_space_id, ierr)
+        call h5gclose_f(face_id, ierr) 
+        call h5gclose_f(bc_id, ierr)
+
+
+    end subroutine set_domain_bc_patch_hdf
+    !****************************************************************************************
+
+
+
+
 
 
 
@@ -1026,7 +1307,7 @@ contains
     !!  @date   9/25/2016
     !!
     !!
-    !-------------------------------------------------------------------------------------------------------------
+    !----------------------------------------------------------------------------------------
     subroutine set_coordinate_order_hdf(block_id,order)
         integer(HID_T), intent(in)  :: block_id
         integer(ik),    intent(in)  :: order
@@ -1037,7 +1318,7 @@ contains
         if (ierr /= 0) call chidg_signal(FATAL,"set_coordinate_order_hdf: Error setting 'Coordinate Order' attribute")
 
     end subroutine set_coordinate_order_hdf
-    !*************************************************************************************************************
+    !****************************************************************************************
 
 
 
@@ -1049,7 +1330,7 @@ contains
     !!  @date   9/25/2016
     !!
     !!
-    !-------------------------------------------------------------------------------------------------------------
+    !----------------------------------------------------------------------------------------
     subroutine get_coordinate_order_hdf(block_id,order)
         integer(HID_T), intent(in)  :: block_id
         integer(ik),    intent(in)  :: order
@@ -1060,7 +1341,7 @@ contains
         if (ierr /= 0) call chidg_signal(FATAL,"get_coordinate_order_hdf: Error getting 'Coordinate Order' attribute")
 
     end subroutine get_coordinate_order_hdf
-    !*************************************************************************************************************
+    !****************************************************************************************
 
 
 
@@ -1077,7 +1358,7 @@ contains
     !!  @param[in]  fid         HDF file identifier.
     !!  @param[in]  dnames(:)   List of domain names to be interrogated. 
     !!
-    !-------------------------------------------------------------------------------------------------------------
+    !----------------------------------------------------------------------------------------
     function get_coordinate_orders_hdf(fid, dnames) result(orders)
         integer(HID_T),         intent(in)  :: fid
         character(len=1024),    intent(in)  :: dnames(:)
@@ -1115,7 +1396,7 @@ contains
         end do
 
     end function get_coordinate_orders_hdf
-    !*************************************************************************************************************
+    !****************************************************************************************
 
 
 
@@ -1129,7 +1410,7 @@ contains
     !!  @date   9/25/2016
     !!
     !!
-    !-------------------------------------------------------------------------------------------------------------
+    !----------------------------------------------------------------------------------------
     subroutine set_solution_order_hdf(block_id,order)
         integer(HID_T), intent(in)  :: block_id
         integer(ik),    intent(in)  :: order
@@ -1140,7 +1421,7 @@ contains
         if (ierr /= 0) call chidg_signal(FATAL,"set_solution_order_hdf: Error setting 'Solution Order' attribute")
 
     end subroutine set_solution_order_hdf
-    !*************************************************************************************************************
+    !****************************************************************************************
 
 
 
@@ -1152,7 +1433,7 @@ contains
     !!  @date   9/25/2016
     !!
     !!
-    !-------------------------------------------------------------------------------------------------------------
+    !---------------------------------------------------------------------------------------
     function get_solution_order_hdf(block_id) result(order)
         integer(HID_T), intent(in)  :: block_id
 
@@ -1165,7 +1446,7 @@ contains
         order = int(buf(1), kind=ik)
 
     end function get_solution_order_hdf
-    !*************************************************************************************************************
+    !****************************************************************************************
 
 
 
@@ -1184,7 +1465,7 @@ contains
     !!  @param[in]  fid     HDF file identifier.
     !!  @param[in]  dnames  List of domain names to be interrogated.
     !!
-    !-------------------------------------------------------------------------------------------------------------
+    !----------------------------------------------------------------------------------------
     function get_solution_orders_hdf(fid, dnames) result(orders)
         integer(HID_T),         intent(in)  :: fid
         character(len=1024),    intent(in)  :: dnames(:)
@@ -1254,7 +1535,7 @@ contains
         end do
 
     end function get_solution_orders_hdf
-    !*************************************************************************************************************
+    !****************************************************************************************
 
 
 
@@ -1267,7 +1548,7 @@ contains
     !!  @date   4/11/2016
     !!
     !!
-    !-------------------------------------------------------------------------------------------------------------
+    !---------------------------------------------------------------------------------------
     subroutine set_domain_dimensionality_hdf(block_id,dimensionality)
         integer(HID_T), intent(in)  :: block_id
         integer(ik),    intent(in)  :: dimensionality
@@ -1279,7 +1560,7 @@ contains
         if (ierr /= 0) stop "Error: set_domain_dimensionality_hdf - h5ltset_attribute_int_f"
 
     end subroutine set_domain_dimensionality_hdf
-    !*************************************************************************************************************
+    !****************************************************************************************
 
 
 
@@ -1290,7 +1571,7 @@ contains
     !!  @date   4/11/2016
     !!
     !!
-    !-------------------------------------------------------------------------------------------------------------
+    !----------------------------------------------------------------------------------------
     function get_domain_dimensionality_hdf(block_id) result(dimensionality)
         integer(HID_T), intent(in)  :: block_id
 
@@ -1304,7 +1585,7 @@ contains
         dimensionality = int(buf(1),kind=ik)
 
     end function get_domain_dimensionality_hdf
-    !*************************************************************************************************************
+    !****************************************************************************************
 
 
 
@@ -1323,7 +1604,7 @@ contains
     !!  @param[in]  fid         HDF file identifier.
     !!  @param[in]  dnames(:)   List of domain names to be interrogated. 
     !!
-    !-------------------------------------------------------------------------------------------------------------
+    !----------------------------------------------------------------------------------------
     function get_domain_dimensionalities_hdf(fid, dnames) result(dimensionalities)
         integer(HID_T),         intent(in)  :: fid
         character(len=1024),    intent(in)  :: dnames(:)
@@ -1355,7 +1636,7 @@ contains
         end do
 
     end function get_domain_dimensionalities_hdf
-    !*************************************************************************************************************
+    !****************************************************************************************
 
 
 
@@ -1369,7 +1650,7 @@ contains
     !!  @date   4/11/2016
     !!
     !!
-    !-------------------------------------------------------------------------------------------------------------
+    !----------------------------------------------------------------------------------------
     subroutine set_domain_equation_set_hdf(block_id,equation_set)
         integer(HID_T), intent(in)  :: block_id
         character(*),   intent(in)  :: equation_set
@@ -1381,7 +1662,7 @@ contains
         if (ierr /= 0) stop "Error: set_domain_equation_set_hdf - h5ltset_attribute_string_f"
 
     end subroutine set_domain_equation_set_hdf
-    !*************************************************************************************************************
+    !****************************************************************************************
 
 
 
@@ -1393,7 +1674,7 @@ contains
     !!  @date   4/11/2016
     !!
     !!
-    !-------------------------------------------------------------------------------------------------------------
+    !----------------------------------------------------------------------------------------
     function get_domain_equation_set_hdf(block_id) result(equation_set)
         integer(HID_T), intent(in)  :: block_id
 
@@ -1405,7 +1686,7 @@ contains
         if (ierr /= 0) stop "Error: get_domain_equation_set_hdf - h5ltset_attribute_string_f"
 
     end function get_domain_equation_set_hdf
-    !*************************************************************************************************************
+    !****************************************************************************************
 
 
 
@@ -1420,7 +1701,7 @@ contains
     !!  @param[in]  fid     HDF file identifier.
     !!  @param[in]  dnames  List of domain names to be interrogated.
     !!
-    !------------------------------------------------------------------------------------------------------------
+    !----------------------------------------------------------------------------------------
     function get_domain_equation_sets_hdf(fid, dnames) result(eqnsets)
         integer(HID_T),         intent(in)  :: fid
         character(len=1024),    intent(in)  :: dnames(:)
@@ -1477,7 +1758,7 @@ contains
         end do
 
     end function get_domain_equation_sets_hdf
-    !*********************************************************************************************************
+    !****************************************************************************************
 
 
 
@@ -1497,7 +1778,7 @@ contains
     !!  @param[in]  dname       String indicating the boundary condition to query.
     !!  @result     bcnames     Array of boundary condition names for the specified domain. bcnames(ibc)
     !!
-    !---------------------------------------------------------------------------------------------------------
+    !----------------------------------------------------------------------------------------
     function get_bcnames_hdf(fid,dname) result(bcnames)
         integer(HID_T),         intent(in)  :: fid
         character(len=1024),    intent(in)  :: dname
@@ -1603,7 +1884,7 @@ contains
 
 
     end function get_bcnames_hdf
-    !**********************************************************************************************************
+    !****************************************************************************************
 
 
 
@@ -1623,7 +1904,7 @@ contains
     !!
     !!  @param[in]  gid     HDF5 group identifier.
     !!
-    !----------------------------------------------------------------------------------------------------------
+    !---------------------------------------------------------------------------------------
     subroutine delete_group_attributes(gid)
         integer(HID_T),         intent(in)      :: gid
 
@@ -1659,7 +1940,7 @@ contains
 
 
     end subroutine delete_group_attributes
-    !**********************************************************************************************************
+    !****************************************************************************************
 
 
 
@@ -1674,7 +1955,7 @@ contains
     !!
     !!
     !!
-    !--------------------------------------------------------------------------------------------
+    !----------------------------------------------------------------------------------------
     subroutine check_attribute_exists_hdf(id,attribute,fail_type,fail_status)
         integer(HID_T), intent(in)                  :: id
         character(*),   intent(in)                  :: attribute
@@ -1737,7 +2018,7 @@ contains
 
 
     end subroutine check_attribute_exists_hdf
-    !********************************************************************************************
+    !****************************************************************************************
 
 
 

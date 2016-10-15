@@ -3,11 +3,16 @@ module mod_hdfio
     use mod_kinds,                  only: rk,ik,rdouble
     use mod_constants,              only: ZERO, NFACES, TWO_DIM, THREE_DIM, NO_PROC
     use mod_bc,                     only: create_bc
-    use mod_hdf_utilities,          only: get_ndomains_hdf, get_domain_names_hdf, get_domain_equation_sets_hdf, &
-                                          set_solution_order_hdf, get_solution_order_hdf, set_coordinate_order_hdf, &
-                                          get_domain_mapping_hdf, get_domain_dimensionality_hdf, set_contains_solution_hdf, &
-                                          set_domain_equation_set_hdf, check_file_storage_version_hdf, get_domain_indices_hdf, &
-                                          get_domain_name_hdf, get_contains_solution_hdf, get_contains_grid_hdf
+    use mod_hdf_utilities,          only: get_ndomains_hdf, get_domain_names_hdf, &
+                                          get_domain_equation_sets_hdf, set_solution_order_hdf,&
+                                          get_solution_order_hdf, set_coordinate_order_hdf, &
+                                          get_domain_mapping_hdf, &
+                                          get_domain_dimensionality_hdf, &
+                                          set_contains_solution_hdf, &
+                                          set_domain_equation_set_hdf, &
+                                          check_file_storage_version_hdf, &
+                                          get_domain_indices_hdf, get_domain_name_hdf, &
+                                          get_contains_solution_hdf, get_contains_grid_hdf
     use mod_io,                     only: nterms_s
     use mod_chidg_mpi,              only: IRANK
 
@@ -19,6 +24,7 @@ module mod_hdfio
     use type_bc_state,              only: bc_state_t
     use type_domain_connectivity,   only: domain_connectivity_t
     use type_partition,             only: partition_t
+    use iso_c_binding,              only: c_ptr
     use hdf5
     use h5lt
     implicit none
@@ -26,6 +32,127 @@ module mod_hdfio
 
 
 contains
+
+    !----------------------------------------------------------------------------------------
+    !!
+    !!  High-Level API for ChiDG HDF File Format
+    !!
+    !!  Procedures:
+    !!  -----------
+    !!
+    !!  open_file_hdf
+    !!  close_file_hdf
+    !!
+    !!  read_grid_partition_hdf
+    !!
+    !!  read_solution_hdf
+    !!      read_variable_hdf
+    !!
+    !!  write_solution_hdf
+    !!      write_variable_hdf
+    !!
+    !!  read_boundaryconditions_partition_hdf
+    !!      read_bc_patches_hdf
+    !!      read_bc_states_hdf
+    !!
+    !!  read_connectivity_hdf
+    !!      
+    !!
+    !****************************************************************************************
+
+
+
+
+
+
+    !>  Open a ChiDG-formatted HDF file and return an HDF file identifier
+    !!
+    !!      - Check file existence
+    !!      - Open HDF interface
+    !!      - Open file
+    !!      - Check version
+    !!
+    !!  @author Nathan A. Wukie 
+    !!  @date   10/13/2016
+    !!
+    !!
+    !----------------------------------------------------------------------------------------
+    subroutine open_file_hdf(filename,fid)
+        character(*),   intent(in)      :: filename
+        integer(HID_T), intent(inout)   :: fid
+
+        integer         :: ierr
+        logical         :: file_exists
+
+
+        !  Check file exists
+        inquire(file=filename, exist=file_exists)
+        if (.not. file_exists) then
+            call chidg_signal_one(FATAL,"open_file_hdf: Could not find grid file",filename)
+        end if
+
+
+        !
+        !  Initialize Fortran interface.
+        !
+        call h5open_f(ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"open_file_hdf - h5open_f: HDF5 Fortran interface had an error during initialization")
+
+
+        !
+        !  Open input file using default properties.
+        !
+        call h5fopen_f(filename, H5F_ACC_RDWR_F, fid, ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"open_file_hdf - h5fopen_f: There was an error opening the grid file.")
+
+
+
+        !
+        ! Check file format major.minor version
+        !
+        call check_file_storage_version_hdf(fid)
+
+
+    end subroutine open_file_hdf
+    !*****************************************************************************************
+
+
+
+
+
+    
+
+
+    !>  Close ChiDG-formatted HDF file
+    !!
+    !!      - Close file
+    !!      - Close HDF interface
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   10/15/2016
+    !!
+    !----------------------------------------------------------------------------------------
+    subroutine close_file_hdf(fid)
+        integer(HID_T), intent(in)  :: fid
+
+        integer :: ierr
+
+        !
+        !  Close file and Fortran interface
+        !
+        call h5fclose_f(fid, ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"close_file_hdf: error closing file.")
+        call h5close_f(ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"close_file_hdf: error closing HDF interface.")
+    
+
+    end subroutine close_file_hdf
+    !****************************************************************************************
+
+
+
+
+
 
 
 
@@ -42,15 +169,15 @@ contains
     !!  @param[in]      filename    Character string of the file to be read
     !!  @param[inout]   domains     Allocatable array of domains. Allocated in this routine.
     !!
-    !---------------------------------------------------------------------------------------------------------------------
+    !----------------------------------------------------------------------------------------
     subroutine read_grid_partition_hdf(filename, partition, meshdata)
         use mod_io, only: nterms_s
         character(*),                   intent(in)      :: filename
         type(partition_t),              intent(in)      :: partition
         type(meshdata_t), allocatable,  intent(inout)   :: meshdata(:)
 
-        integer(HID_T)   :: fid, gid, block_id, sid, did_x, did_y, did_z, did_e     ! Identifiers
-        integer(HSIZE_T) :: rank_one_dims(1), rank_two_dims(2), dims(3), maxdims(3) ! Dataspace dimensions
+        integer(HID_T)   :: fid, gid, block_id, sid, did_x, did_y, did_z, did_e
+        integer(HSIZE_T) :: rank_one_dims(1), rank_two_dims(2), dims(3), maxdims(3)
 
         type(c_ptr)                                         :: pts
         real(rdouble), dimension(:), allocatable, target    :: xpts, ypts, zpts
@@ -61,7 +188,8 @@ contains
         character(:),           allocatable     :: user_msg
         integer                                 :: nmembers, type, ierr, ndomains, igrp,    &
                                                    npts, izeta, ieta, ixi, idom, nterms_1d, &
-                                                   mapping, nterms_c, spacedim, ipt, iconn, nconn, nelements, nnodes
+                                                   mapping, nterms_c, spacedim, ipt, iconn, &
+                                                   nconn, nelements, nnodes
         integer, dimension(1)                   :: mapping_buf, spacedim_buf
         logical                                 :: FileExists, contains_grid
 
@@ -198,9 +326,6 @@ contains
             end do
 
 
-
-
-
             !
             ! Store connectivity
             !
@@ -250,427 +375,11 @@ contains
         call close_file_hdf(fid)
 
     end subroutine read_grid_partition_hdf
-    !***************************************************************************************************************
+    !****************************************************************************************
   
   
   
    
-   
-   
-   
-   
-   
-   
-   
-  
-  
-   
-   
-       !> Read HDF5 variable
-       !!
-       !!  Opens a given hdf5 file. Loads the EquationSet and solution order and calls solution initialization
-       !!  procedure for each domain. Searches for the given variable and time instance. If it finds it, load to a
-       !!
-       !!  Note: Convention is that all floating-point data is double precision format. Conversion to working-precision
-       !!        should happen after reading the data from the HDF file.
-       !!
-       !!  @author Nathan A. Wukie
-       !!  @date   2/3/2016
-       !!
-       !!  @param[in]      fid         HDF5 file identifier.
-       !!  @param[in]      varstring   Character string of the variable name to be read.
-       !!  @param[in]      itime       Integer of the time instance for the current variable to be read.
-       !!  @param[in]      dname       Character string of the domain to be read from.
-       !!  @param[inout]   data        ChiDG data containing domains. Already allocated.
-       !!
-       !------------------------------------------------------------------------------------------------------------------
-       subroutine read_variable_hdf(fid,varstring,itime,dname,data)
-           use ISO_C_BINDING
-           integer(HID_T),     intent(in)      :: fid
-           character(*),       intent(in)      :: varstring
-           integer(ik),        intent(in)      :: itime
-           character(*),       intent(in)      :: dname
-           type(chidg_data_t), intent(inout)   :: data
-   
-   
-           integer(HID_T)   :: block_id, gid, sid, vid           ! Identifiers
-           integer(HSIZE_T) :: maxdims(3)              ! Dataspace dimensions
-           integer(HSIZE_T) :: dims(3)
-  
-           integer, dimension(1)                :: ibuf
-  
-           character(100)                       :: cbuf
-           character(100)                       :: var_gqp
-   
-           real(rdouble), allocatable, target   :: var(:,:,:)
-           real(rdouble), allocatable           :: bufferterms(:)
-           type(c_ptr)                          :: cp_var
-  
-           integer(ik)                          :: spacedim, ielem_g
-           integer                              :: type,    ierr,       igrp,               &
-                                                   npts,    nterms_1d,  nterms_s,   order,  &
-                                                   ivar,    ielem,      nterms_ielem,   idom
-           logical                              :: ElementsEqual, variables_exists
-   
-   
-           !
-           ! Get name of current domain
-           !
-           idom = data%get_domain_index(dname)
-   
-
-           !
-           ! Open Domain group
-           !
-           call h5gopen_f(fid, trim(dname), block_id, ierr, H5P_DEFAULT_F)
-   
-
-           !
-           ! Check if 'Variables' group exists
-           !
-           call h5lexists_f(block_id, "Variables", variables_exists, ierr)
-           if (.not. variables_exists) call chidg_signal(FATAL,"read_variable_hdf: "//trim(dname)//"Variables group does not exist")
-
-   
-           !
-           ! Open the Domain/Variables group
-           !
-           call h5gopen_f(fid, trim(dname)//"/Variables", gid, ierr, H5P_DEFAULT_F)
-           if (ierr /= 0) call chidg_signal(FATAL,"h5gopen_f -- Domain/Variables group did not open properly")
-   
-  
-           !
-           ! Get number of terms in solution expansion
-           !
-           order = get_solution_order_hdf(block_id)
-           nterms_1d = (order + 1) ! To be consistent with the definition of (Order = 'Order of the polynomial')
-  
-   
-   
-           spacedim = data%mesh(idom)%spacedim
-   
-           if ( spacedim == THREE_DIM ) then
-               nterms_s = nterms_1d*nterms_1d*nterms_1d
-           else if ( spacedim == TWO_DIM ) then
-               nterms_s = nterms_1d*nterms_1d
-           end if
-   
-   
-           
-           !
-           ! Open the Variable dataset
-           !
-           call h5dopen_f(gid, trim(varstring), vid, ierr, H5P_DEFAULT_F)
-           if (ierr /= 0) call chidg_signal(FATAL,"read_variable_hdf5 -- variable does not exist or was not opened correctly")
-   
-
-           !
-           ! Get the dataspace id and dimensions
-           !
-           call h5dget_space_f(vid, sid, ierr)
-           call h5sget_simple_extent_dims_f(sid, dims, maxdims, ierr)
-   
-
-           !
-           ! Read 'variable' dataset
-           !
-           allocate(var(dims(1),dims(2),dims(3)), stat=ierr)               ! Allocate variable buffer
-           if ( ierr /= 0 ) call AllocationError
-   
-           cp_var = c_loc(var(1,1,1))                                      ! Get C-address for buffer
-   
-           call h5dread_f(vid, H5T_NATIVE_DOUBLE, cp_var, ierr)            ! Fortran 2003 interface
-           if (ierr /= 0) call chidg_signal(FATAL,"read_variable_hdf5 -- h5dread_f")
-   
-  
-           !
-           !  Get variable index in EquationSet
-           !
-           ivar = data%eqnset(idom)%prop%get_equation_index(trim(varstring))
-  
-
-           !
-           !  Loop through elements and set 'variable' values
-           !
-           do ielem = 1,data%mesh(idom)%nelem
-               !
-               ! Get number of terms initialized for the current element
-               !
-               nterms_ielem = data%sdata%q%dom(idom)%vecs(ielem)%nterms()
-               ielem_g      = data%mesh(idom)%elems(ielem)%ielement_g
-
-
-               !
-               ! Allocate bufferterm storage that will be used to set variable data
-               !
-               if (allocated(bufferterms)) deallocate(bufferterms)
-               allocate(bufferterms(nterms_ielem), stat=ierr)
-               if (ierr /= 0) call AllocationError
-               bufferterms = ZERO
-
-
-               !
-               ! Check for reading lower, higher, or same-order solution
-               !
-               if ( nterms_s < nterms_ielem ) then
-               bufferterms(1:nterms_s) = var(1:nterms_s, ielem_g, itime)             ! Reading a lower order solution
-               else if ( nterms_s > nterms_ielem ) then
-               bufferterms(1:nterms_ielem) = var(1:nterms_ielem, ielem_g, itime)     ! Reading a higher-order solution
-               else
-               bufferterms(1:nterms_ielem) = var(1:nterms_ielem, ielem_g, itime)     ! Reading a solution of same order
-               end if
-
-
-               call data%sdata%q%dom(idom)%vecs(ielem)%setvar(ivar,real(bufferterms,rk))
-           end do
-
-   
-   
-           !
-           ! Close variable dataset, domain/variable group.
-           !
-           call h5dclose_f(vid,ierr)        ! Close the variable dataset
-           call h5gclose_f(gid,ierr)        ! Close the Domain/Variable group
-           call h5gclose_f(block_id,ierr)   ! Close Domain group
-  
-   
-       end subroutine read_variable_hdf
-       !*****************************************************************************************************************
-   
-   
-   
-   
-   
-   
-  
-   
-   
-
-
-
-
-
-
-
-
-    !>  Write HDF5 variable
-    !!
-    !!  Opens a given hdf5 file. Loads the EquationSet and solution order and calls solution initialization
-    !!  procedure for each domain. Searches for the given variable and time instance. If it finds it, load to a
-    !!
-    !!
-    !!  @author Nathan A. Wukie
-    !!  @date   2/3/2016
-    !!
-    !!  @param[in]      fid         HDF5 file identifier.
-    !!  @param[in]      varstring   Character string of the variable name to be read.
-    !!  @param[in]      itime       Integer of the time instance for the current variable to be read.
-    !!  @param[in]      dname       Character string of the domain name to be read from.
-    !!  @param[inout]   data        chidg_data_t instance containing grid and solution.
-    !!
-    !-----------------------------------------------------------------------------------------------------------------
-    subroutine write_variable_hdf(fid,varstring,itime,dname,data)
-        integer(HID_T),     intent(in)      :: fid
-        character(*),       intent(in)      :: varstring
-        integer(ik),        intent(in)      :: itime
-        character(*),       intent(in)      :: dname
-        type(chidg_data_t), intent(inout)   :: data
-
-
-        integer(HID_T)   :: gid, sid, did, crp_list         ! Identifiers
-        integer(HID_T)   :: grid_id, sid_e, did_e           ! Identifiers
-        integer(HID_T)   :: memspace, filespace             ! Identifiers
-        integer(HSIZE_T) :: edims(2), maxdims(3), adim      ! Dataspace dimensions
-        integer(HSIZE_T) :: dims(3), dimsm(3)               ! Dataspace dimensions
-        integer(HSIZE_T) :: dimsc(3)                        ! Chunk size for extendible data sets
-        integer(HSIZE_T) :: start(3), count(3)
-        type(H5O_INFO_T) :: info                            ! Object info type
-
-        integer                             :: ndims
-        integer, dimension(1)               :: ibuf
-        character(100)                      :: cbuf
-        character(100)                      :: var_grp
-        character(100)                      :: ctime
-
-        real(rdouble), allocatable, target  :: var(:,:,:)
-        type(c_ptr)                         :: cp_var
-
-        integer(ik)                         :: nmembers,    type,       ierr,       ndomains,   igrp,   &
-                                               npts,        order,              &
-                                               ivar,        ielem,      idom,       nelem_g,    ielement_g
-        logical                             :: FileExists, VariablesExists, DataExists, ElementsEqual
-        logical                             :: exists
-
-
-
-        !
-        ! Check if 'Variables' group exists
-        !
-        call h5lexists_f(fid, trim(dname)//"/Variables", exists, ierr)
-
-
-
-        !
-        ! Open the Domain/Variables group
-        !
-        if (exists) then
-            ! If 'Variables' group exists then open the existing group
-            call h5gopen_f(fid, trim(dname)//"/Variables", gid, ierr, H5P_DEFAULT_F)
-            if (ierr /= 0) call chidg_signal(FATAL,"write_variable_hdf: Domain/Variables group did not open properly")
-        else
-            ! If 'Variables group does not exist, then create one.
-            call h5gcreate_f(fid, trim(dname)//"/Variables", gid, ierr)
-        end if
-
-
-
-        !
-        ! Get total number of elements in the domain from the grid file
-        !
-        call h5gopen_f(fid, trim(dname)//"/Grid", grid_id, ierr, H5P_DEFAULT_F)
-        if (ierr /= 0) call chidg_signal_one(FATAL,"write_variable_hdf: Domagin/Grid group did not open properly.", trim(dname)//'/Grid')
-        call h5dopen_f(grid_id, "Elements", did_e, ierr, H5P_DEFAULT_F)
-        call h5dget_space_f(did_e, sid_e, ierr)
-        call h5sget_simple_extent_dims_f(sid_e, edims, maxdims, ierr)
-        nelem_g  = edims(1)
-        
-        call h5dclose_f(did_e,ierr)
-        call h5sclose_f(sid_e,ierr)
-        call h5gclose_f(grid_id,ierr)
-
-
-
-
-
-        !
-        ! Set dimensions of dataspace to write
-        !
-        idom = data%get_domain_index(dname)
-        ndims = 3
-
-        dims(1) = data%mesh(idom)%nterms_s
-        dims(2) = nelem_g
-        dims(3) = itime                     ! TODO: Should probably better inform the dataspace dimension here. Probably set mesh_t%ntime
-        maxdims(1) = H5S_UNLIMITED_F
-        maxdims(2) = H5S_UNLIMITED_F
-        maxdims(3) = H5S_UNLIMITED_F
-
-
-
-
-        !
-        ! Open the Variable dataset, check if Variable dataset already exists
-        !
-        call h5lexists_f(gid, trim(varstring), exists, ierr)
-
-
-
-        !
-        ! Modify dataset creation properties, i.e. enable chunking in order to append dataspace, if needed.
-        !
-        dimsc = [1, nelem_g, 1]  ! Chunk size
-
-        call h5pcreate_f(H5P_DATASET_CREATE_F, crp_list, ierr)
-        if (ierr /= 0) call chidg_signal(FATAL, "write_variable_hdf: h5pcreate_f error enabling chunking")
-
-        call h5pset_chunk_f(crp_list, ndims, dimsc, ierr)
-        if (ierr /= 0) call chidg_signal(FATAL, "write_variable_hdf: h5pset_chunk_f error setting chunk properties")
-
-
-
-        !
-        ! Reset dataspace size if necessary
-        !
-        if (exists) then
-            ! Open the existing dataset
-            call h5dopen_f(gid, trim(varstring), did, ierr, H5P_DEFAULT_F)
-            if (ierr /= 0) call chidg_signal(FATAL,"write_variable_hdf: variable does not exist or was not opened correctly")
-
-
-            ! Extend dataset if necessary
-            call h5dset_extent_f(did, dims, ierr)
-            if (ierr /= 0) call chidg_signal(FATAL, "write_variable_hdf: h5dset_extent_f")
-
-
-            ! Update existing dataspace ID since it may have been expanded
-            call h5dget_space_f(did, sid, ierr)
-            if (ierr /= 0) call chidg_signal(FATAL, "write_variable_hdf: h5dget_space_f")
-
-        else
-            ! Create a new dataspace
-            call h5screate_simple_f(ndims,dims,sid,ierr,maxdims)
-            if (ierr /= 0) call chidg_signal(FATAL,"write_variable_hdf: h5screate_simple_f")
-
-
-            ! Create a new dataset
-            call h5dcreate_f(gid, trim(varstring), H5T_NATIVE_DOUBLE, sid, did, ierr, crp_list)
-            if (ierr /= 0) call chidg_signal(FATAL,"write_variable_hdf: h5dcreate_f")
-        end if
-
-
-
-        !
-        ! Get variable integer index from variable character string
-        !
-        ivar = data%eqnset(idom)%prop%get_equation_index(varstring)
-
-
-
-        !
-        ! Assemble variable buffer matrix that gets written to file
-        !
-        allocate(var(dims(1),1,1))
-
-
-        do ielem = 1,data%mesh(idom)%nelem
-
-            ! get domain-global element index
-            ielement_g = data%mesh(idom)%elems(ielem)%ielement_g
-
-            start    = [1-1,ielement_g-1,itime-1]   ! actually offset, so 0-based
-            count(1) = dims(1)
-            count(2) = 1
-            count(3) = 1
-
-            ! Select subset of dataspace - sid
-            call h5sselect_hyperslab_f(sid, H5S_SELECT_SET_F, start, count, ierr)
-
-
-            ! Create a memory dataspace
-            dimsm(1) = size(var,1)
-            dimsm(2) = size(var,2)
-            dimsm(3) = size(var,3)
-            call h5screate_simple_f(ndims,dimsm,memspace,ierr)
-
-
-            var(:,1,1) = real(data%sdata%q%dom(idom)%vecs(ielem)%getvar(ivar),rdouble)
-            cp_var = c_loc(var(1,1,1))
-
-            call h5dwrite_f(did, H5T_NATIVE_DOUBLE, cp_var, ierr, memspace, sid)
-
-
-            call h5sclose_f(memspace,ierr)
-
-
-        end do
-
-
-
-
-        call h5pclose_f(crp_list, ierr) ! Close dataset creation property
-        call h5dclose_f(did,ierr)       ! Close Variable datasets
-        call h5sclose_f(sid,ierr)       ! Close Variable dataspaces
-        call h5gclose_f(gid,ierr)       ! Close Domain/Variable group
-
-
-
-    end subroutine write_variable_hdf
-    !************************************************************************************************************
-
-
-
-
-
 
 
 
@@ -686,7 +395,7 @@ contains
     !!  @param[in]      filename    Character string of the file to be read from
     !!  @param[inout]   data        chidg_data_t that will accept the solution modes
     !!
-    !-------------------------------------------------------------------------------------------------------------
+    !----------------------------------------------------------------------------------------
     subroutine read_solution_hdf(filename,data)
         use ISO_C_BINDING
         character(*),       intent(in)      :: filename
@@ -774,7 +483,7 @@ contains
 
 
     end subroutine read_solution_hdf
-    !*************************************************************************************************************
+    !****************************************************************************************
 
 
 
@@ -795,9 +504,10 @@ contains
     !!  @param[in]      filename    Character string of the file to be written to
     !!  @param[inout]   data        chidg_data_t containing solution to be written
     !!
-    !!  @TODO   Allow for creation of a new solution file. Currently, incoming filename needs to exist already.
+    !!  @TODO   Allow for creation of a new solution file. Currently, incoming 
+    !!          filename needs to exist already.
     !!
-    !-------------------------------------------------------------------------------------------------------
+    !----------------------------------------------------------------------------------------
     subroutine write_solution_hdf(filename,data)
         use ISO_C_BINDING
         character(*),       intent(in)      :: filename
@@ -921,7 +631,425 @@ contains
 
 
     end subroutine write_solution_hdf
-    !*********************************************************************************************************
+    !*****************************************************************************************
+
+   
+   
+   
+   
+   
+  
+  
+   
+    !>  Read HDF5 variable
+    !!
+    !!  Opens a given ChiDG-formatted HDF file. Loads the equation set and solution order
+    !!  and calls solution initialization procedure for each domain. Searches for the given
+    !!  variable and time instance. If it finds it, load to a
+    !!
+    !!  Note: Convention is that all floating-point data is double precision format.
+    !!        Conversion to working-precision should happen after reading the data from 
+    !!        the HDF file.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   2/3/2016
+    !!
+    !!  @param[in]      fid         HDF5 file identifier.
+    !!  @param[in]      varstring   Character string of the variable name to be read.
+    !!  @param[in]      itime       Integer of the time instance for the current variable 
+    !!                              to be read.
+    !!  @param[in]      dname       Character string of the domain to be read from.
+    !!  @param[inout]   data        ChiDG data containing domains. Already allocated.
+    !!
+    !---------------------------------------------------------------------------------------
+    subroutine read_variable_hdf(fid,varstring,itime,dname,data)
+        integer(HID_T),     intent(in)      :: fid
+        character(*),       intent(in)      :: varstring
+        integer(ik),        intent(in)      :: itime
+        character(*),       intent(in)      :: dname
+        type(chidg_data_t), intent(inout)   :: data
+
+
+        integer(HID_T)   :: block_id, gid, sid, vid           ! Identifiers
+        integer(HSIZE_T) :: maxdims(3)              ! Dataspace dimensions
+        integer(HSIZE_T) :: dims(3)
+
+        integer, dimension(1)                :: ibuf
+
+        character(100)                       :: cbuf
+        character(100)                       :: var_gqp
+
+        real(rdouble), allocatable, target   :: var(:,:,:)
+        real(rdouble), allocatable           :: bufferterms(:)
+        type(c_ptr)                          :: cp_var
+
+        integer(ik)                          :: spacedim, ielem_g
+        integer                              :: type,    ierr,       igrp,               &
+                                                npts,    nterms_1d,  nterms_s,   order,  &
+                                                ivar,    ielem,      nterms_ielem,   idom
+        logical                              :: ElementsEqual, variables_exists
+
+
+        !
+        ! Get name of current domain
+        !
+        idom = data%get_domain_index(dname)
+
+
+        !
+        ! Open Domain group
+        !
+        call h5gopen_f(fid, trim(dname), block_id, ierr, H5P_DEFAULT_F)
+
+
+        !
+        ! Check if 'Variables' group exists
+        !
+        call h5lexists_f(block_id, "Variables", variables_exists, ierr)
+        if (.not. variables_exists) call chidg_signal(FATAL,"read_variable_hdf: "//trim(dname)//"Variables group does not exist")
+
+
+        !
+        ! Open the Domain/Variables group
+        !
+        call h5gopen_f(fid, trim(dname)//"/Variables", gid, ierr, H5P_DEFAULT_F)
+        if (ierr /= 0) call chidg_signal(FATAL,"h5gopen_f -- Domain/Variables group did not open properly")
+
+
+        !
+        ! Get number of terms in solution expansion
+        !
+        order = get_solution_order_hdf(block_id)
+        nterms_1d = (order + 1) ! To be consistent with the definition of (Order = 'Order of the polynomial')
+
+
+
+        spacedim = data%mesh(idom)%spacedim
+
+        if ( spacedim == THREE_DIM ) then
+            nterms_s = nterms_1d*nterms_1d*nterms_1d
+        else if ( spacedim == TWO_DIM ) then
+            nterms_s = nterms_1d*nterms_1d
+        end if
+
+
+        
+        !
+        ! Open the Variable dataset
+        !
+        call h5dopen_f(gid, trim(varstring), vid, ierr, H5P_DEFAULT_F)
+        if (ierr /= 0) call chidg_signal(FATAL,"read_variable_hdf5 -- variable does not exist or was not opened correctly")
+
+
+        !
+        ! Get the dataspace id and dimensions
+        !
+        call h5dget_space_f(vid, sid, ierr)
+        call h5sget_simple_extent_dims_f(sid, dims, maxdims, ierr)
+
+
+        !
+        ! Read 'variable' dataset
+        !
+        allocate(var(dims(1),dims(2),dims(3)), stat=ierr)               ! Allocate variable buffer
+        if ( ierr /= 0 ) call AllocationError
+
+        cp_var = c_loc(var(1,1,1))                                      ! Get C-address for buffer
+
+        call h5dread_f(vid, H5T_NATIVE_DOUBLE, cp_var, ierr)            ! Fortran 2003 interface
+        if (ierr /= 0) call chidg_signal(FATAL,"read_variable_hdf5 -- h5dread_f")
+
+
+        !
+        !  Get variable index in EquationSet
+        !
+        ivar = data%eqnset(idom)%prop%get_equation_index(trim(varstring))
+
+
+        !
+        !  Loop through elements and set 'variable' values
+        !
+        do ielem = 1,data%mesh(idom)%nelem
+            !
+            ! Get number of terms initialized for the current element
+            !
+            nterms_ielem = data%sdata%q%dom(idom)%vecs(ielem)%nterms()
+            ielem_g      = data%mesh(idom)%elems(ielem)%ielement_g
+
+
+            !
+            ! Allocate bufferterm storage that will be used to set variable data
+            !
+            if (allocated(bufferterms)) deallocate(bufferterms)
+            allocate(bufferterms(nterms_ielem), stat=ierr)
+            if (ierr /= 0) call AllocationError
+            bufferterms = ZERO
+
+
+            !
+            ! Check for reading lower, higher, or same-order solution
+            !
+            if ( nterms_s < nterms_ielem ) then
+                ! Reading a lower-order solution
+                bufferterms(1:nterms_s) = var(1:nterms_s, ielem_g, itime)
+            else if ( nterms_s > nterms_ielem ) then
+                ! Reading a higher-order solution
+                bufferterms(1:nterms_ielem) = var(1:nterms_ielem, ielem_g, itime)
+            else
+                ! Reading a solution of same order
+                bufferterms(1:nterms_ielem) = var(1:nterms_ielem, ielem_g, itime)
+            end if
+
+            ! Store modes in ChiDG Vector
+            call data%sdata%q%dom(idom)%vecs(ielem)%setvar(ivar,real(bufferterms,rk))
+
+        end do
+
+
+
+        !
+        ! Close variable dataset, domain/variable group.
+        !
+        call h5dclose_f(vid,ierr)        ! Close the variable dataset
+        call h5gclose_f(gid,ierr)        ! Close the Domain/Variable group
+        call h5gclose_f(block_id,ierr)   ! Close Domain group
+
+
+    end subroutine read_variable_hdf
+    !*************************************************************************************
+   
+   
+   
+   
+   
+   
+  
+   
+   
+
+
+
+
+
+
+
+
+    !>  Write HDF5 variable
+    !!
+    !!  Opens a given hdf5 file. Loads the equation set and solution order and calls solution
+    !!  initialization procedure for each domain. Searches for the given variable and time
+    !!  instance.
+    !!
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   2/3/2016
+    !!
+    !!  @param[in]      fid         HDF5 file identifier.
+    !!  @param[in]      varstring   Character string of the variable name to be read.
+    !!  @param[in]      itime       Integer of the time instance for the current variable 
+    !!                              to be read.
+    !!  @param[in]      dname       Character string of the domain name to be read from.
+    !!  @param[inout]   data        chidg_data_t instance containing grid and solution.
+    !!
+    !----------------------------------------------------------------------------------------
+    subroutine write_variable_hdf(fid,varstring,itime,dname,data)
+        integer(HID_T),     intent(in)      :: fid
+        character(*),       intent(in)      :: varstring
+        integer(ik),        intent(in)      :: itime
+        character(*),       intent(in)      :: dname
+        type(chidg_data_t), intent(inout)   :: data
+
+
+        integer(HID_T)   :: gid, sid, did, crp_list         ! Identifiers
+        integer(HID_T)   :: grid_id, sid_e, did_e           ! Identifiers
+        integer(HID_T)   :: memspace, filespace             ! Identifiers
+        integer(HSIZE_T) :: edims(2), maxdims(3), adim      ! Dataspace dimensions
+        integer(HSIZE_T) :: dims(3), dimsm(3)               ! Dataspace dimensions
+        integer(HSIZE_T) :: dimsc(3)                        ! Chunk size for extendible data sets
+        integer(HSIZE_T) :: start(3), count(3)
+        type(H5O_INFO_T) :: info                            ! Object info type
+
+        integer                             :: ndims
+        integer, dimension(1)               :: ibuf
+        character(100)                      :: cbuf
+        character(100)                      :: var_grp
+        character(100)                      :: ctime
+
+        real(rdouble), allocatable, target  :: var(:,:,:)
+        type(c_ptr)                         :: cp_var
+
+        integer(ik) :: nmembers, type, ierr, ndomains, igrp,    &
+                       npts, order, ivar, ielem, idom, nelem_g, &
+                       ielement_g
+        logical     :: FileExists, VariablesExists, DataExists, ElementsEqual
+        logical     :: exists
+
+
+
+        !
+        ! Check if 'Variables' group exists
+        !
+        call h5lexists_f(fid, trim(dname)//"/Variables", exists, ierr)
+
+
+
+        !
+        ! Open the Domain/Variables group
+        !
+        if (exists) then
+            ! If 'Variables' group exists then open the existing group
+            call h5gopen_f(fid, trim(dname)//"/Variables", gid, ierr, H5P_DEFAULT_F)
+            if (ierr /= 0) call chidg_signal(FATAL,"write_variable_hdf: Domain/Variables group did not open properly")
+        else
+            ! If 'Variables group does not exist, then create one.
+            call h5gcreate_f(fid, trim(dname)//"/Variables", gid, ierr)
+        end if
+
+
+
+        !
+        ! Get total number of elements in the domain from the grid file
+        !
+        call h5gopen_f(fid, trim(dname)//"/Grid", grid_id, ierr, H5P_DEFAULT_F)
+        if (ierr /= 0) call chidg_signal_one(FATAL,"write_variable_hdf: Domagin/Grid group did not open properly.", trim(dname)//'/Grid')
+        call h5dopen_f(grid_id, "Elements", did_e, ierr, H5P_DEFAULT_F)
+        call h5dget_space_f(did_e, sid_e, ierr)
+        call h5sget_simple_extent_dims_f(sid_e, edims, maxdims, ierr)
+        nelem_g  = edims(1)
+        
+        call h5dclose_f(did_e,ierr)
+        call h5sclose_f(sid_e,ierr)
+        call h5gclose_f(grid_id,ierr)
+
+
+
+
+
+        !
+        ! Set dimensions of dataspace to write
+        !
+        idom = data%get_domain_index(dname)
+        ndims = 3
+
+        dims(1) = data%mesh(idom)%nterms_s
+        dims(2) = nelem_g
+        dims(3) = itime ! TODO: Should probably better inform the dataspace dimension here. Probably set mesh_t%ntime
+        maxdims(1) = H5S_UNLIMITED_F
+        maxdims(2) = H5S_UNLIMITED_F
+        maxdims(3) = H5S_UNLIMITED_F
+
+
+
+
+        !
+        ! Open the Variable dataset, check if Variable dataset already exists
+        !
+        call h5lexists_f(gid, trim(varstring), exists, ierr)
+
+
+
+        !
+        ! Modify dataset creation properties, i.e. enable chunking in order to append
+        ! dataspace, if needed.
+        !
+        dimsc = [1, nelem_g, 1]  ! Chunk size
+
+        call h5pcreate_f(H5P_DATASET_CREATE_F, crp_list, ierr)
+        if (ierr /= 0) call chidg_signal(FATAL, "write_variable_hdf: h5pcreate_f error enabling chunking")
+
+        call h5pset_chunk_f(crp_list, ndims, dimsc, ierr)
+        if (ierr /= 0) call chidg_signal(FATAL, "write_variable_hdf: h5pset_chunk_f error setting chunk properties")
+
+
+
+        !
+        ! Reset dataspace size if necessary
+        !
+        if (exists) then
+            ! Open the existing dataset
+            call h5dopen_f(gid, trim(varstring), did, ierr, H5P_DEFAULT_F)
+            if (ierr /= 0) call chidg_signal(FATAL,"write_variable_hdf: variable does not exist or was not opened correctly")
+
+
+            ! Extend dataset if necessary
+            call h5dset_extent_f(did, dims, ierr)
+            if (ierr /= 0) call chidg_signal(FATAL, "write_variable_hdf: h5dset_extent_f")
+
+
+            ! Update existing dataspace ID since it may have been expanded
+            call h5dget_space_f(did, sid, ierr)
+            if (ierr /= 0) call chidg_signal(FATAL, "write_variable_hdf: h5dget_space_f")
+
+        else
+            ! Create a new dataspace
+            call h5screate_simple_f(ndims,dims,sid,ierr,maxdims)
+            if (ierr /= 0) call chidg_signal(FATAL,"write_variable_hdf: h5screate_simple_f")
+
+
+            ! Create a new dataset
+            call h5dcreate_f(gid, trim(varstring), H5T_NATIVE_DOUBLE, sid, did, ierr, crp_list)
+            if (ierr /= 0) call chidg_signal(FATAL,"write_variable_hdf: h5dcreate_f")
+        end if
+
+
+
+        !
+        ! Get variable integer index from variable character string
+        !
+        ivar = data%eqnset(idom)%prop%get_equation_index(varstring)
+
+
+
+        !
+        ! Assemble variable buffer matrix that gets written to file
+        !
+        allocate(var(dims(1),1,1))
+
+
+        do ielem = 1,data%mesh(idom)%nelem
+
+            ! get domain-global element index
+            ielement_g = data%mesh(idom)%elems(ielem)%ielement_g
+
+            start    = [1-1,ielement_g-1,itime-1]   ! actually offset, so 0-based
+            count(1) = dims(1)
+            count(2) = 1
+            count(3) = 1
+
+            ! Select subset of dataspace - sid
+            call h5sselect_hyperslab_f(sid, H5S_SELECT_SET_F, start, count, ierr)
+
+
+            ! Create a memory dataspace
+            dimsm(1) = size(var,1)
+            dimsm(2) = size(var,2)
+            dimsm(3) = size(var,3)
+            call h5screate_simple_f(ndims,dimsm,memspace,ierr)
+
+
+            var(:,1,1) = real(data%sdata%q%dom(idom)%vecs(ielem)%getvar(ivar),rdouble)
+            cp_var = c_loc(var(1,1,1))
+
+            call h5dwrite_f(did, H5T_NATIVE_DOUBLE, cp_var, ierr, memspace, sid)
+
+
+            call h5sclose_f(memspace,ierr)
+
+
+        end do
+
+
+
+
+        call h5pclose_f(crp_list, ierr) ! Close dataset creation property
+        call h5dclose_f(did,ierr)       ! Close Variable datasets
+        call h5sclose_f(sid,ierr)       ! Close Variable dataspaces
+        call h5gclose_f(gid,ierr)       ! Close Domain/Variable group
+
+
+
+    end subroutine write_variable_hdf
+    !****************************************************************************************
 
 
 
@@ -934,18 +1062,32 @@ contains
 
 
 
-    !>  Read boundary conditions from HDF5 file in ChiDG format and return data in bcdata_t container.
-    !!  The calling procedure can then use the returned bcdata_t to initialize boundary conditions.
+
+
+
+
+
+
+
+
+
+
+
+    !>  Read boundary conditions from HDF5 file in ChiDG format and return data in bcdata_t
+    !!  container. The calling procedure can then use the returned bcdata_t to initialize
+    !!  boundary conditions.
     !!
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   6/9/2016
     !!
     !!  @param[in]      filename    String of the HDF5 file to be read.
-    !!  @param[inout]   bcdata(:)   Array of bcdata_t instances, one for each domain. These will be returned with
-    !!                              data about the boundary conditions that can be used for initialization.
-    !!  @param[in]      partition   Partition information to only read boundary conditions for the domains in the partition
+    !!  @param[inout]   bcdata(:)   Array of bcdata_t instances, one for each domain. 
+    !!                              These will be returned with data about the boundary
+    !!                              conditions that can be used for initialization.
+    !!  @param[in]      partition   Partition information to only read boundary conditions 
+    !!                              for the domains in the partition
     !!
-    !---------------------------------------------------------------------------------------------------------
+    !----------------------------------------------------------------------------------------
     subroutine read_boundaryconditions_partition_hdf(filename, bcdata, partition)
         character(*),       intent(in)                  :: filename
         type(bcdata_t),     intent(inout), allocatable  :: bcdata(:)
@@ -992,7 +1134,7 @@ contains
         call close_file_hdf(fid)
 
     end subroutine read_boundaryconditions_partition_hdf
-    !*********************************************************************************************************
+    !****************************************************************************************
 
 
 
@@ -1010,7 +1152,7 @@ contains
     !!
     !!
     !!
-    !------------------------------------------------------------------------------------------------------------
+    !----------------------------------------------------------------------------------------
     subroutine read_bc_patches_hdf(fid, bcdata, partition)
         integer(HID_T),     intent(in)      :: fid
         type(bcdata_t),     intent(inout)   :: bcdata(:)
@@ -1022,15 +1164,13 @@ contains
         character(len=10)   :: faces(NFACES)
 
         integer(HID_T)      :: bcgroup, bcface, bcprop, faces_did, faces_sid
-        integer(HSIZE_T)    :: adim, rank_two_dims(2), maxdims(2)                    ! Dataspace dimensions
+        integer(HSIZE_T)    :: adim, rank_two_dims(2), maxdims(2)
 
         integer,            allocatable, target :: bc_connectivity(:,:)
         type(c_ptr)                             :: cp_conn
 
 
         faces = ["  XI_MIN","  XI_MAX"," ETA_MIN"," ETA_MAX","ZETA_MIN","ZETA_MAX"]
-
-
 
 
         !
@@ -1054,8 +1194,7 @@ contains
             ! Open the Domain/BoundaryConditions group
             !
             call h5gopen_f(fid, trim(gname)//"/BoundaryConditions", bcgroup, ierr, H5P_DEFAULT_F)
-            if (ierr /= 0) stop "Error: read_bc_patches_hdf -- h5gopen_f: Domain/BoundaryConditions group did not open properly"
-
+            if (ierr /= 0) call chidg_signal(FATAL,"read_bc_patches_hdf -- h5gopen_f: Domain/BoundaryConditions group did not open properly")
 
 
             !
@@ -1127,7 +1266,7 @@ contains
 
 
     end subroutine read_bc_patches_hdf
-    !*******************************************************************************************************
+    !****************************************************************************************
 
 
 
@@ -1148,7 +1287,7 @@ contains
     !!
     !!
     !!
-    !---------------------------------------------------------------------------------------------------------
+    !---------------------------------------------------------------------------------------
     subroutine read_bc_states_hdf(fid, bcdata, partition)
         integer(HID_T),     intent(in)      :: fid
         type(bcdata_t),     intent(inout)   :: bcdata(:)
@@ -1193,7 +1332,7 @@ contains
             ! Open the Domain/BoundaryConditions group
             !
             call h5gopen_f(fid, trim(gname)//"/BoundaryConditions", bcgroup, ierr, H5P_DEFAULT_F)
-            if (ierr /= 0) stop "Error: read_bc_states_hdf -- h5gopen_f: Domain/BoundaryConditions group did not open properly"
+            if (ierr /= 0) call chidg_signal(FATAL,"read_bc_states_hdf: Domain/BoundaryConditions group did not open properly")
 
 
 
@@ -1349,7 +1488,7 @@ contains
 
 
     end subroutine read_bc_states_hdf
-    !*******************************************************************************************************
+    !****************************************************************************************
 
 
 
@@ -1363,32 +1502,33 @@ contains
 
 
 
-    !>  This reads an HDF ChiDG grid file and returns an array of connectivities, one for each domain.
+    !>  This reads an HDF ChiDG grid file and returns an array of connectivities, one 
+    !!  for each domain.
     !!
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   6/9/2016
     !!
     !!
     !!
-    !-------------------------------------------------------------------------------------------------------
+    !----------------------------------------------------------------------------------------
     subroutine read_connectivity_hdf(filename, connectivities)
         use mod_io, only: nterms_s
         character(*),                               intent(in)      :: filename
         type(domain_connectivity_t), allocatable,   intent(inout)   :: connectivities(:)
 
-        integer(HID_T)   :: fid, gid, sid, did_x, did_e                             ! Identifiers
-        integer(HSIZE_T) :: rank_one_dims(1), rank_two_dims(2), dims(3), maxdims(3) ! Dataspace dimensions
+        integer(HID_T)   :: fid, gid, sid, did_x, did_e
+        integer(HSIZE_T) :: rank_one_dims(1), rank_two_dims(2), dims(3), maxdims(3)
 
         integer,                     allocatable, target    :: connectivity(:,:)
         type(c_ptr)                                         :: cp_conn
 
-        integer(ik),            allocatable     :: domain_indices(:)
-        character(len=1024),    allocatable     :: dnames(:), eqnset(:)
-        character(1024)                         :: gname
-        character(:),           allocatable     :: user_msg
-        integer                                 :: nmembers, type, ierr, ndomains, igrp,    &
-                                                   idom, idomain, nelements, ielem, nnodes, mapping
-        logical                                 :: FileExists, contains_grid
+        integer(ik),            allocatable :: domain_indices(:)
+        character(len=1024),    allocatable :: dnames(:), eqnset(:)
+        character(1024)                     :: gname
+        character(:),           allocatable :: user_msg
+        integer                             :: nmembers, type, ierr, ndomains, igrp,    &
+                                               idom, idomain, nelements, ielem, nnodes, mapping
+        logical                             :: FileExists, contains_grid
 
 
 
@@ -1533,7 +1673,7 @@ contains
         call close_file_hdf(fid)
 
     end subroutine read_connectivity_hdf
-    !********************************************************************************************************
+    !****************************************************************************************
 
 
 
@@ -1546,98 +1686,6 @@ contains
 
 
 
-
-
-
-
-
-
-    !>  Open a ChiDG-formatted HDF file and return an HDF file identifier
-    !!
-    !!      - Check file existence
-    !!      - Open HDF interface
-    !!      - Open file
-    !!      - Check version
-    !!
-    !!  @author Nathan A. Wukie 
-    !!  @date   10/13/2016
-    !!
-    !!
-    !--------------------------------------------------------------------------------------------------------
-    subroutine open_file_hdf(filename,fid)
-        character(*),   intent(in)      :: filename
-        integer(HID_T), intent(inout)   :: fid
-
-        integer         :: ierr
-        logical         :: file_exists
-
-
-
-        !
-        !  Check file exists
-        !
-        inquire(file=filename, exist=file_exists)
-        if (.not. file_exists) then
-            call chidg_signal_one(FATAL,"open_file_hdf: Could not find grid file",filename)
-        end if
-
-
-        !
-        !  Initialize Fortran interface.
-        !
-        call h5open_f(ierr)
-        if (ierr /= 0) call chidg_signal(FATAL,"open_file_hdf - h5open_f: HDF5 Fortran interface had an error during initialization")
-
-
-        !
-        !  Open input file using default properties.
-        !
-        call h5fopen_f(filename, H5F_ACC_RDWR_F, fid, ierr)
-        if (ierr /= 0) call chidg_signal(FATAL,"open_file_hdf - h5fopen_f: There was an error opening the grid file.")
-
-
-
-        !
-        ! Check file format major.minor version
-        !
-        call check_file_storage_version_hdf(fid)
-
-
-    end subroutine open_file_hdf
-    !********************************************************************************************************
-
-
-
-
-
-    
-
-
-    !>  Close ChiDG-formatted HDF file
-    !!
-    !!      - Close file
-    !!      - Close HDF interface
-    !!
-    !!  @author Nathan A. Wukie
-    !!  @date   10/15/2016
-    !!
-    !---------------------------------------------------------------------------------------------------
-    subroutine close_file_hdf(fid)
-        integer(HID_T), intent(in)  :: fid
-
-        integer :: ierr
-
-        !
-        !  Close file and Fortran interface
-        !
-        call h5fclose_f(fid, ierr)
-        if (ierr /= 0) call chidg_signal(FATAL,"close_file_hdf: error closing file.")
-        call h5close_f(ierr)
-        if (ierr /= 0) call chidg_signal(FATAL,"close_file_hdf: error closing HDF interface.")
-    
-
-    end subroutine close_file_hdf
-    !***********************************************************************************************
 
 
 

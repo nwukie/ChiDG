@@ -476,7 +476,7 @@ contains
         spacedim         = 3
         nterms_s         = this%order**THREE
         gq_rule          = 1
-        time_scheme      = 'steady'
+        time_integrator  = 'steady'
         nonlinear_solver = 'newton'
         linear_solver    = 'fgmres'
         preconditioner   = 'ILU0'
@@ -530,7 +530,7 @@ contains
         !
         ! Set ChiDG components
         !
-        call this%chidg%set('time_scheme',      time_scheme,      toptions)
+        call this%chidg%set('time_integrator',  time_integrator,  toptions)
         call this%chidg%set('nonlinear_solver', nonlinear_solver, noptions)
         call this%chidg%set('linear_solver',    linear_solver,    loptions)
         call this%chidg%set('preconditioner',   preconditioner)

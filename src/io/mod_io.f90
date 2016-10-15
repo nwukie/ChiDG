@@ -28,7 +28,7 @@ module mod_io
     integer(ik),            save    :: gq_rule          = 2          !> 1: Collocation, 2: Over-integration
    
     ! Time
-    character(len=100),     save    :: time_scheme      = 'steady'
+    character(len=100),     save    :: time_integrator  = 'steady'
     real(rk),               save    :: dt               = 0.001_rk
     integer(ik),            save    :: time_steps       = 100
     real(rk),               save    :: ttol             = 1.e-8
@@ -97,7 +97,7 @@ contains
         namelist /quadrature/               gq_rule
 
 
-        namelist /time/                     time_scheme,           &
+        namelist /time/                     time_integrator,       &
                                             dt,                    &
                                             time_steps,            &
                                             ntime_instances,       &
@@ -115,7 +115,6 @@ contains
 
 
         namelist /io/                       nwrite,                &
-!                                            output_res,            &
                                             initial_write,         &
                                             final_write
 
@@ -162,7 +161,7 @@ contains
         !
         ! Initialize options dictionaries
         !
-        ! Set time-scheme options
+        ! Set time-integrator options
         call toptions%set('dt',dt)
         call toptions%set('nsteps',time_steps)
         call toptions%set('nwrite',nwrite)

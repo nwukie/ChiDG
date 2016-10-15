@@ -1,23 +1,23 @@
 !> Test that solverdata_t was returned 'allocated'
 @Test
-subroutine test__create_timescheme__allocated()
+subroutine test__create_time_integrator__allocated()
     use pfunit_mod
-    use mod_kinds,          only: rk,ik
-    use mod_time_scheme,    only: create_time_scheme
-    use type_time_scheme,   only: time_scheme_t
+    use mod_kinds,              only: rk,ik
+    use mod_time_integrators,   only: create_time_integrator
+    use type_time_integrator,   only: time_integrator_t
     
     implicit none
-    class(time_scheme_t),    allocatable :: time
+    class(time_integrator_t),    allocatable :: time
     
     
     ! PROCEDURE BEING TESTED
-    call create_time_scheme('steady',time)
+    call create_time_integrator('steady',time)
     
     
     ! Test allocated
     @assertTrue(allocated(time))
     
-end subroutine
+end subroutine test__create_time_integrator__allocated
 
 
 
@@ -26,20 +26,20 @@ end subroutine
 
 !> Test that allocated type is returned with expected type
 @Test
-subroutine test__create_timescheme__type()
+subroutine test__create_time_integrator__type()
     use pfunit_mod
     use mod_kinds,              only: rk,ik
-    use mod_time_scheme,        only: create_time_scheme
-    use type_time_scheme,       only: time_scheme_t
+    use mod_time_integrators,   only: create_time_integrator
+    use type_time_integrator,   only: time_integrator_t
     use steady,                 only: steady_t
     
     implicit none
-    class(time_scheme_t),     allocatable :: time
+    class(time_integrator_t),     allocatable :: time
     
     
         
     ! PROCEDURE BEING TESTED
-    call create_time_scheme('steady',time)
+    call create_time_integrator('steady',time)
     
     
     ! Test for correct type
@@ -54,5 +54,5 @@ subroutine test__create_timescheme__type()
     end select
             
     
-end subroutine
+end subroutine test__create_time_integrator__type
 

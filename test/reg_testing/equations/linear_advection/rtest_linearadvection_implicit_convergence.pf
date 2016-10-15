@@ -52,7 +52,7 @@ subroutine rtest_linearadvection_implicit_convergence()
     spacedim          = 3
     nterms_s          = 27
     gq_rule           = 2
-    time_scheme       = 'backward_euler_subiteration'
+    time_integrator   = 'backward_euler_subiteration'
     nonlinear_solver  = 'quasi_newton'
     linear_solver     = 'fgmres'
     preconditioner    = 'identity'
@@ -95,7 +95,7 @@ subroutine rtest_linearadvection_implicit_convergence()
     !
     ! Set ChiDG components
     !
-    call chidg%set('time_scheme',time_scheme,toptions)
+    call chidg%set('time_integrator',time_integrator,toptions)
     call chidg%set('nonlinear_solver',nonlinear_solver,noptions)
     call chidg%set('linear_solver',linear_solver,loptions)
     call chidg%set('preconditioner',preconditioner)
@@ -151,7 +151,7 @@ subroutine rtest_linearadvection_implicit_convergence()
     ! number of inner iterations should be two. This is since the solver will execute a second iteration, which
     ! should compute the residual of zero and indicate the system is converged.
     itime = 1
-    @assertEqual(2,chidg%time_scheme%newton_iterations%at(itime))
+    @assertEqual(2,chidg%time_integrator%newton_iterations%at(itime))
 
 
     !

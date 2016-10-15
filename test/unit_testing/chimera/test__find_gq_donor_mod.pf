@@ -10,7 +10,6 @@ module test__find_gq_donor_mod
     use type_element_info,      only: element_info_t
     use type_face_info,         only: face_info_t
 
-    use mod_hdfio,              only: read_grid_hdf
     use mod_testutils,          only: meshgen
     use mod_chimera,            only: find_gq_donor
     implicit none

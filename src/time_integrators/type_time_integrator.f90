@@ -1,4 +1,4 @@
-module type_time_scheme
+module type_time_integrator
     use messenger,              only: write_line
     use mod_kinds,              only: rk,ik
     use type_linear_solver,     only: linear_solver_t
@@ -18,7 +18,7 @@ module type_time_scheme
     !!
     !!
     !------------------------------------------------------------------------------------------------------
-    type, abstract, public  :: time_scheme_t
+    type, abstract, public  :: time_integrator_t
 
         !real(rk)        :: testing
         logical         :: solverInitialized = .false.
@@ -47,14 +47,14 @@ module type_time_scheme
     contains
 
         procedure   :: init         !< General initialization procedure. Should get called automatically.
-        procedure   :: init_spec    !< Specialized initialization for each different scheme. Gets called by general 'init'
+        procedure   :: init_spec    !< Specialized initialization for each different integrator. Gets called by general 'init'
 
-        procedure   :: set          !< Set time_scheme properties.
+        procedure   :: set          !< Set time_integrator properties.
         procedure   :: report
 
         procedure(data_interface),   deferred   :: iterate   ! Must define this procedures in the extended type
 
-    end type time_scheme_t
+    end type time_integrator_t
     !******************************************************************************************************
 
 
@@ -73,8 +73,8 @@ module type_time_scheme
     
     abstract interface
         subroutine self_interface(self)
-            import time_scheme_t
-            class(time_scheme_t),   intent(inout)   :: self
+            import time_integrator_t
+            class(time_integrator_t),   intent(inout)   :: self
         end subroutine
     end interface
 
@@ -84,8 +84,8 @@ module type_time_scheme
         subroutine init_interface(self,data,options)
             use type_chidg_data, only: chidg_data_t
             use type_dict,       only: dict_t
-            import time_scheme_t
-            class(time_scheme_t),    intent(inout)   :: self
+            import time_integrator_t
+            class(time_integrator_t),    intent(inout)   :: self
             type(chidg_data_t),     intent(inout)   :: data
             type(dict_t), optional, intent(inout)   :: options
         end subroutine
@@ -102,8 +102,8 @@ module type_time_scheme
             use type_nonlinear_solver,  only: nonlinear_solver_t
             use type_linear_solver,     only: linear_solver_t
             use type_preconditioner,    only: preconditioner_t
-            import time_scheme_t
-            class(time_scheme_t),                   intent(inout)   :: self
+            import time_integrator_t
+            class(time_integrator_t),                   intent(inout)   :: self
             type(chidg_data_t),                     intent(inout)   :: data
             class(nonlinear_solver_t),  optional,   intent(inout)   :: nonlinear_solver
             class(linear_solver_t),     optional,   intent(inout)   :: linear_solver
@@ -119,7 +119,7 @@ contains
 
 
 
-    !>  Common time_scheme initialization interface.
+    !>  Common time_integrator initialization interface.
     !!      - Call initialization for options if present
     !!      - Call user-specified initialization routine for concrete type
     !!
@@ -131,7 +131,7 @@ contains
     !!
     !-------------------------------------------------------------------------------------------------------------
     subroutine init(self,data)
-        class(time_scheme_t),   intent(inout)   :: self
+        class(time_integrator_t),   intent(inout)   :: self
         type(chidg_data_t),     intent(inout)   :: data
 
 
@@ -155,7 +155,7 @@ contains
 
 
 
-    !> Procedure for setting base time_scheme options
+    !> Procedure for setting base time_integrator options
     !!
     !!  @author Nathan A. Wukie
     !!  @date   2/8/2016
@@ -164,7 +164,7 @@ contains
     !!
     !------------------------------------------------------------------------------------------------------------
     subroutine set(self,options)
-        class(time_scheme_t),   intent(inout)   :: self
+        class(time_integrator_t),   intent(inout)   :: self
         type(dict_t),           intent(inout)   :: options
 
 
@@ -190,14 +190,14 @@ contains
 
     !> Default blank initialization-specialization routine.
     !! This can be overwritten with specific instructions for a conrete
-    !! time_scheme.
+    !! time_integrator.
     !!
     !!  @author Nathan A. Wukie
     !!  @date   2/8/2016
     !!
     !-------------------------------------------------------------------------------------------------------------
     subroutine init_spec(self,data,options)
-        class(time_scheme_t),   intent(inout)   :: self
+        class(time_integrator_t),   intent(inout)   :: self
         type(chidg_data_t),     intent(inout)   :: data
         type(dict_t), optional, intent(inout)   :: options
 
@@ -215,7 +215,7 @@ contains
 
 
 
-    !>  Print timescheme report
+    !>  Print timeintegrator report
     !!
     !!  @author Nathan A. Wukie
     !!  @date   2/8/2016
@@ -224,7 +224,7 @@ contains
     !!
     !---------------------------------------------------------------------------------------------------------------------
     subroutine report(self)
-        class(time_scheme_t),   intent(in)  :: self
+        class(time_integrator_t),   intent(in)  :: self
 
         integer(ik) :: i
 
@@ -233,10 +233,10 @@ contains
 
 
         !
-        ! Time scheme header
+        ! Time integrator header
         !
         call write_line(' ')
-        call write_line('---------------------------------   Time Scheme Report  ----------------------------------')
+        call write_line('---------------------------------   Time Integrator Report  ----------------------------------')
         call write_line('Newton iterations: ', self%newton_iterations%at(1), columns=.True., column_width=20)
         call write_line('Total time: ', self%total_time%at(1), columns=.True., column_width=20)
         call write_line(' ')
@@ -291,4 +291,4 @@ contains
 
 
 
-end module type_time_scheme
+end module type_time_integrator

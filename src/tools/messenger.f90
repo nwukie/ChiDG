@@ -1,7 +1,7 @@
 module messenger
     use mod_kinds,      only: rk,ik
     use mod_constants,  only: IO_DESTINATION
-    use mod_chidg_mpi,  only: IRANK, GLOBAL_MASTER
+    use mod_chidg_mpi,  only: IRANK, GLOBAL_MASTER, ChiDG_COMM
     implicit none
 
 
@@ -271,7 +271,8 @@ contains
         !
         select case (sig)
             case (3,4)    ! Fatal Error -- Code terminates
-                stop
+                call MPI_Abort(ChiDG_COMM,1)
+                !stop
                 !error stop
 
 

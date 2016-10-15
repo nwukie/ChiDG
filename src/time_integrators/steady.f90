@@ -1,7 +1,7 @@
 module steady
     use messenger,              only: write_line
     use mod_kinds,              only: rk,ik
-    use type_time_scheme,       only: time_scheme_t
+    use type_time_integrator,   only: time_integrator_t
     use type_chidg_data,        only: chidg_data_t
     use type_nonlinear_solver,  only: nonlinear_solver_t
     use type_linear_solver,     only: linear_solver_t
@@ -26,7 +26,7 @@ module steady
     !!  @date   4/29/2016
     !!
     !----------------------------------------------------------------------------------------
-    type, extends(time_scheme_t), public :: steady_t
+    type, extends(time_integrator_t), public :: steady_t
 
 
 

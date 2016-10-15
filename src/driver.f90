@@ -80,10 +80,10 @@ program driver
         !
         ! Set ChiDG components
         !
-        call chidg%set('time_scheme',      time_scheme,      toptions)
-        call chidg%set('nonlinear_solver', nonlinear_solver, noptions)
-        call chidg%set('linear_solver',    linear_solver,    loptions)
-        call chidg%set('preconditioner',   preconditioner)
+        call chidg%set("Time Integrator" , time_integrator,  toptions)
+        call chidg%set("Nonlinear Solver", nonlinear_solver, noptions)
+        call chidg%set("Linear Solver"   , linear_solver,    loptions)
+        call chidg%set("Preconditioner"  , preconditioner            )
 
 
         !

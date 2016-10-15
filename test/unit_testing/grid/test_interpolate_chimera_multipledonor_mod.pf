@@ -15,7 +15,6 @@ module test_interpolate_chimera_multipledonor_mod
                                   XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX, &
                                   NEIGHBOR, IO_DESTINATION
 
-    use mod_hdfio,          only: read_grid_hdf
     use mod_chidg_mpi,      only: IRANK
     use mod_interpolate,    only: interpolate_face_autodiff, interpolate_face_standard
     use mod_grid_operators, only: initialize_variable

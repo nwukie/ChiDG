@@ -15,7 +15,6 @@ subroutine test_update_space_euler()
 
     use mod_grid_operators, only: initialize_variable
     use mod_function,       only: create_function
-    use mod_hdfio,          only: read_grid_hdf
     use mod_spatial,        only: update_space
 
     use operator_chidg_mv,  only: chidg_mv

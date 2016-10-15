@@ -5,7 +5,6 @@ subroutine testIO__read_grid_hdf__D1_E1_M1()
     use type_chidg,             only: chidg_t
     use mod_kinds,              only: rk,ik
     use mod_constants,          only: ZERO, ONE, IO_DESTINATION
-    use mod_hdfio,              only: read_grid_hdf
     use mod_grid,               only: compute_element_mappings
     implicit none
     
@@ -82,7 +81,6 @@ subroutine testIO__read_grid_hdf__D1_E27_M1()
     use type_chidg,             only: chidg_t
     use mod_kinds,              only: rk,ik
     use mod_constants,          only: ZERO, THIRD, NFACES, IO_DESTINATION
-    use mod_hdfio,              only: read_grid_hdf
     use mod_grid,               only: compute_element_mappings
     implicit none
     
@@ -166,7 +164,6 @@ subroutine testIO__read_grid_hdf__D2_E1_M1()
     use type_chidg,             only: chidg_t
     use mod_kinds,              only: rk,ik
     use mod_constants,          only: ZERO, ONE, IO_DESTINATION
-    use mod_hdfio,              only: read_grid_hdf
     use mod_grid,               only: compute_element_mappings
     implicit none
     
@@ -256,7 +253,6 @@ subroutine testIO__read_grid_hdf__D2_E27_M1()
     use type_chidg,             only: chidg_t
     use mod_kinds,              only: rk,ik
     use mod_constants,          only: ZERO, ONE, THIRD, IO_DESTINATION
-    use mod_hdfio,              only: read_grid_hdf
     use mod_grid,               only: compute_element_mappings
     implicit none
     

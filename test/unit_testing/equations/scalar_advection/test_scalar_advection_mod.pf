@@ -12,7 +12,6 @@ module test_scalar_advection_mod
     use mod_function,               only: create_function
     use type_densematrix,           only: densematrix_t
     use mod_testutils,              only: meshgen
-    use mod_hdfio,                  only: read_grid_hdf
     use mod_grid_operators,         only: initialize_variable
     use mod_check_jacobian
     implicit none

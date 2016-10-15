@@ -1,8 +1,8 @@
-module mod_time_scheme
+module mod_time_integrators
 #include <messenger.h>
-    use mod_kinds,          only: rk,ik
-    use type_time_scheme,   only: time_scheme_t
-    use type_dict,          only: dict_t
+    use mod_kinds,              only: rk,ik
+    use type_time_integrator,   only: time_integrator_t
+    use type_dict,              only: dict_t
 
 
 
@@ -29,20 +29,18 @@ contains
 
 
 
-    !> Create a concrete timescheme
+    !>  Create a concrete time integrator
     !!
     !!  @author Nathan A. Wukie
     !!  @date   3/15/2016
     !!
     !!
     !!
-    !!
-    !!
     !--------------------------------------------------------------------------------------------------------------------------
-    subroutine create_time_scheme(time_string,instance,options)
-        character(*),                       intent(in)      :: time_string
-        class(time_scheme_t), allocatable,  intent(inout)   :: instance
-        type(dict_t), optional,             intent(inout)   :: options
+    subroutine create_time_integrator(time_string,instance,options)
+        character(*),                               intent(in)      :: time_string
+        class(time_integrator_t),   allocatable,    intent(inout)   :: instance
+        type(dict_t),               optional,       intent(inout)   :: options
 
         character(len=:), allocatable   :: user_msg, dev_msg
 
@@ -60,7 +58,7 @@ contains
                 user_msg = "We can't seem to find a time integrator that matches the input string. &
                             Maybe check that the time integrator string in the input file or driver &
                             script is valid."
-                dev_msg = "Check that the time integrator is registered properly in create_time_scheme."
+                dev_msg = "Check that the time integrator is registered properly in create_time_integrator."
                 call chidg_signal_two(OOPS, user_msg, trim(time_string), dev_msg=dev_msg)
         end select
 
@@ -80,10 +78,12 @@ contains
         !
         ! Make sure the solver was allocated
         !
-        if (.not. allocated(instance)) call chidg_signal(FATAL,"create_time_scheme: solver was not allocated. Check that the desired solver was registered and instantiated in the mod_time_scheme module")
+        user_msg = "create_time_integrator: solver was not allocated. Check that the desired &
+                                            solver was registered and instantiated in the mod_time_integrator module"
+        if (.not. allocated(instance)) call chidg_signal(FATAL,user_msg)
 
 
-    end subroutine create_time_scheme
+    end subroutine create_time_integrator
     !***********************************************************************************************************************
 
 
@@ -93,4 +93,4 @@ contains
 
 
 
-end module mod_time_scheme
+end module mod_time_integrators

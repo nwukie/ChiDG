@@ -19,7 +19,8 @@ contains
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   5/24/2016
     !!
-    !!  @param[in]      string          Character string used to select a specialized meshgen call
+    !!  @param[in]      string          Character string used to select a specialized 
+    !!                                  meshgen call
     !!  @param[inout]   nodes           Array of node coordinates for the grid
     !!  @param[inout]   connectivity    Connectivity data for the grid
     !--------------------------------------------------------------------
@@ -97,15 +98,17 @@ contains
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   5/24/2016
     !!
-    !!  @param[inout]   pts     points_t array of rank-3 that gets allocated, filled, and returned
-    !---------------------------------------------------------------------
+    !!  @param[inout]   pts     points_t array of rank-3 that gets allocated, 
+    !!                          filled, and returned
+    !--------------------------------------------------------------------------------------
     subroutine meshgen_1x1x1_linear(nodes,connectivity)
         type(point_t),  allocatable,    intent(inout)   :: nodes(:)
         type(domain_connectivity_t),    intent(inout)   :: connectivity
-        !integer(ik),    allocatable,    intent(inout)   :: connectivity(:,:)
 
-        integer(ik) :: ipt_xi, ipt_eta, ipt_zeta, ipt, ierr, npts_x, npts_y, npts_z, npts, nelem, npts_element
-        integer(ik) :: ielem_x, ielem_y, ielem_z, ipt_x, ipt_y, ipt_z, ipt_elem, ielem, xstart, ystart, zstart
+        integer(ik) :: ipt_xi, ipt_eta, ipt_zeta, ipt, ierr, npts_x, &
+                       npts_y, npts_z, npts, nelem, npts_element
+        integer(ik) :: ielem_x, ielem_y, ielem_z, ipt_x, ipt_y, ipt_z, &
+                       ipt_elem, ielem, xstart, ystart, zstart
         real(rk)    :: x,y,z, dx, dy, dz
 
         ! elements (1x1x1) - linear
@@ -184,7 +187,7 @@ contains
 
 
     end subroutine meshgen_1x1x1_linear
-    !***********************************************************************
+    !**************************************************************************************
 
 
 
@@ -202,14 +205,17 @@ contains
     !> Generate a set of points defining a 1x1x1 element mesh
     !!
     !!  @author Nathan A. Wukie
-    !!  @param[inout]   pts     points_t array of rank-3 that gets allocated, filled, and returned
-    !---------------------------------------------------------------------
+    !!  @param[inout]   pts     points_t array of rank-3 that gets allocated, 
+    !!                          filled, and returned
+    !--------------------------------------------------------------------------------------
     subroutine meshgen_1x1x1_unit_linear(nodes,connectivity)
         type(point_t),  allocatable,    intent(inout)   :: nodes(:)
         type(domain_connectivity_t),    intent(inout)   :: connectivity
 
-        integer(ik) :: ipt_xi, ipt_eta, ipt_zeta, ipt, ierr, npts_x, npts_y, npts_z, npts, nelem, npts_element
-        integer(ik) :: ielem_x, ielem_y, ielem_z, ipt_x, ipt_y, ipt_z, ipt_elem, ielem, xstart, ystart, zstart
+        integer(ik) :: ipt_xi, ipt_eta, ipt_zeta, ipt, ierr, npts_x, &
+                       npts_y, npts_z, npts, nelem, npts_element
+        integer(ik) :: ielem_x, ielem_y, ielem_z, ipt_x, ipt_y, ipt_z, &
+                       ipt_elem, ielem, xstart, ystart, zstart
         real(rk)    :: x,y,z, dx, dy, dz
 
         ! elements (1x1x1) - linear
@@ -295,7 +301,7 @@ contains
 
 
     end subroutine meshgen_1x1x1_unit_linear
-    !*************************************************************************
+    !**************************************************************************************
 
 
 
@@ -311,14 +317,17 @@ contains
     !> Generate a set of points defining a 2x2x2 element mesh
     !!
     !!  @author Nathan A. Wukie
-    !!  @param[inout]   pts     points_t array of rank-3 that gets allocated, filled, and returned
-    !---------------------------------------------------------------------
+    !!  @param[inout]   pts     points_t array of rank-3 that gets allocated, 
+    !!                          filled, and returned
+    !--------------------------------------------------------------------------------------
     subroutine meshgen_2x2x2_linear(nodes,connectivity)
         type(point_t),  allocatable,    intent(inout)   :: nodes(:)
         type(domain_connectivity_t),    intent(inout)   :: connectivity
 
-        integer(ik) :: ipt_xi, ipt_eta, ipt_zeta, ipt, ierr, npts_x, npts_y, npts_z, npts, nelem, npts_element
-        integer(ik) :: ielem_x, ielem_y, ielem_z, ipt_x, ipt_y, ipt_z, ipt_elem, ielem, xstart, ystart, zstart
+        integer(ik) :: ipt_xi, ipt_eta, ipt_zeta, ipt, ierr, npts_x, &
+                       npts_y, npts_z, npts, nelem, npts_element
+        integer(ik) :: ielem_x, ielem_y, ielem_z, ipt_x, ipt_y, ipt_z, &
+                       ipt_elem, ielem, xstart, ystart, zstart
 
         integer(ik), parameter      :: npt = 27
         real(rk), dimension(npt)    :: x,y,z
@@ -419,7 +428,7 @@ contains
 
 
     end subroutine meshgen_2x2x2_linear
-    !******************************************************************************
+    !**************************************************************************************
 
 
 
@@ -436,14 +445,17 @@ contains
     !> Generate a set of points defining a 2x2x1 element mesh
     !!
     !!  @author Nathan A. Wukie
-    !!  @param[inout]   pts     points_t array of rank-3 that gets allocated, filled, and returned
-    !---------------------------------------------------------------------
+    !!  @param[inout]   pts     points_t array of rank-3 that gets allocated, 
+    !!                          filled, and returned
+    !--------------------------------------------------------------------------------------
     subroutine meshgen_2x2x1_linear(nodes,connectivity)
         type(point_t),  allocatable,    intent(inout)   :: nodes(:)
         type(domain_connectivity_t),    intent(inout)   :: connectivity
 
-        integer(ik) :: ipt_xi, ipt_eta, ipt_zeta, ipt, ierr, npts_x, npts_y, npts_z, npts, nelem, npts_element
-        integer(ik) :: ielem_x, ielem_y, ielem_z, ipt_x, ipt_y, ipt_z, ipt_elem, ielem, xstart, ystart, zstart
+        integer(ik) :: ipt_xi, ipt_eta, ipt_zeta, ipt, ierr, npts_x, &
+                       npts_y, npts_z, npts, nelem, npts_element
+        integer(ik) :: ielem_x, ielem_y, ielem_z, ipt_x, ipt_y, ipt_z, &
+                       ipt_elem, ielem, xstart, ystart, zstart
 
         integer(ik), parameter      :: npt = 18
         real(rk), dimension(npt)    :: x,y,z
@@ -541,7 +553,7 @@ contains
 
 
     end subroutine meshgen_2x2x1_linear
-    !****************************************************************************
+    !***************************************************************************************
 
 
 
@@ -560,14 +572,17 @@ contains
     !> Generate a set of points defining a 3x3x3 element mesh
     !!
     !!  @author Nathan A. Wukie
-    !!  @param[inout]   pts     points_t array of rank-3 that gets allocated, filled, and returned
-    !---------------------------------------------------------------------
+    !!  @param[inout]   pts     points_t array of rank-3 that gets allocated, 
+    !!                          filled, and returned
+    !---------------------------------------------------------------------------------------
     subroutine meshgen_3x3x3_linear(nodes,connectivity)
         type(point_t),  allocatable,    intent(inout)   :: nodes(:)
         type(domain_connectivity_t),    intent(inout)   :: connectivity
 
-        integer(ik) :: ipt_xi, ipt_eta, ipt_zeta, ipt, ierr, npts_x, npts_y, npts_z, npts, nelem, npts_element
-        integer(ik) :: ielem_x, ielem_y, ielem_z, ipt_x, ipt_y, ipt_z, ipt_elem, ielem, xstart, ystart, zstart
+        integer(ik) :: ipt_xi, ipt_eta, ipt_zeta, ipt, ierr, npts_x, &
+                       npts_y, npts_z, npts, nelem, npts_element
+        integer(ik) :: ielem_x, ielem_y, ielem_z, ipt_x, ipt_y, ipt_z, &
+                       ipt_elem, ielem, xstart, ystart, zstart
 
         integer(ik), parameter      :: npt = 64
         real(rk), dimension(npt)    :: x,y,z
@@ -592,20 +607,30 @@ contains
         !      *-------*-------*-------*
         !
         !
-        x = [ZERO, ONE, TWO, THREE, ZERO, ONE, TWO, THREE, ZERO, ONE, TWO, THREE, ZERO, ONE, TWO, THREE, &
-             ZERO, ONE, TWO, THREE, ZERO, ONE, TWO, THREE, ZERO, ONE, TWO, THREE, ZERO, ONE, TWO, THREE, &
-             ZERO, ONE, TWO, THREE, ZERO, ONE, TWO, THREE, ZERO, ONE, TWO, THREE, ZERO, ONE, TWO, THREE, &
-             ZERO, ONE, TWO, THREE, ZERO, ONE, TWO, THREE, ZERO, ONE, TWO, THREE, ZERO, ONE, TWO, THREE]
+        x = [ZERO, ONE, TWO, THREE, ZERO, ONE, TWO, THREE, ZERO, ONE, TWO, THREE, &
+             ZERO, ONE, TWO, THREE, ZERO, ONE, TWO, THREE, ZERO, ONE, TWO, THREE, &
+             ZERO, ONE, TWO, THREE, ZERO, ONE, TWO, THREE, ZERO, ONE, TWO, THREE, &
+             ZERO, ONE, TWO, THREE, ZERO, ONE, TWO, THREE, ZERO, ONE, TWO, THREE, &
+             ZERO, ONE, TWO, THREE, ZERO, ONE, TWO, THREE, ZERO, ONE, TWO, THREE, &
+             ZERO, ONE, TWO, THREE]
 
-        y = [ZERO, ZERO, ZERO, ZERO, ONE, ONE, ONE, ONE, TWO, TWO, TWO, TWO, THREE, THREE, THREE, THREE, &
-             ZERO, ZERO, ZERO, ZERO, ONE, ONE, ONE, ONE, TWO, TWO, TWO, TWO, THREE, THREE, THREE, THREE, &
-             ZERO, ZERO, ZERO, ZERO, ONE, ONE, ONE, ONE, TWO, TWO, TWO, TWO, THREE, THREE, THREE, THREE, &
-             ZERO, ZERO, ZERO, ZERO, ONE, ONE, ONE, ONE, TWO, TWO, TWO, TWO, THREE, THREE, THREE, THREE]
+        y = [ZERO, ZERO, ZERO, ZERO, ONE, ONE, ONE, ONE, TWO, TWO, TWO, TWO, &
+             THREE, THREE, THREE, THREE, &
+             ZERO, ZERO, ZERO, ZERO, ONE, ONE, ONE, ONE, TWO, TWO, TWO, TWO, &
+             THREE, THREE, THREE, THREE, &
+             ZERO, ZERO, ZERO, ZERO, ONE, ONE, ONE, ONE, TWO, TWO, TWO, TWO, &
+             THREE, THREE, THREE, THREE, &
+             ZERO, ZERO, ZERO, ZERO, ONE, ONE, ONE, ONE, TWO, TWO, TWO, TWO, &
+             THREE, THREE, THREE, THREE]
 
-        z = [ZERO, ZERO, ZERO, ZERO, ZERO, ZERO, ZERO, ZERO, ZERO, ZERO, ZERO, ZERO, ZERO, ZERO, ZERO, ZERO, &
-             ONE, ONE, ONE, ONE, ONE, ONE, ONE, ONE, ONE, ONE, ONE, ONE, ONE, ONE, ONE, ONE, &
-             TWO, TWO, TWO, TWO, TWO, TWO, TWO, TWO, TWO, TWO, TWO, TWO, TWO, TWO, TWO, TWO, &
-             THREE, THREE, THREE, THREE, THREE, THREE, THREE, THREE, THREE, THREE, THREE, THREE, THREE, THREE, THREE, THREE]
+        z = [ZERO, ZERO, ZERO, ZERO, ZERO, ZERO, ZERO, ZERO, ZERO, ZERO, ZERO, &
+             ZERO, ZERO, ZERO, ZERO, ZERO, &
+             ONE, ONE, ONE, ONE, ONE, ONE, ONE, ONE, ONE, ONE, ONE, ONE, ONE, & 
+             ONE, ONE, ONE, &
+             TWO, TWO, TWO, TWO, TWO, TWO, TWO, TWO, TWO, TWO, TWO, TWO, TWO, &
+             TWO, TWO, TWO, &
+             THREE, THREE, THREE, THREE, THREE, THREE, THREE, THREE, THREE, THREE, &
+             THREE, THREE, THREE, THREE, THREE, THREE]
 
 
         ! Allocate point storage
@@ -670,7 +695,7 @@ contains
 
 
     end subroutine meshgen_3x3x3_linear
-    !***************************************************************************
+    !***************************************************************************************
 
 
 
@@ -690,14 +715,17 @@ contains
     !> Generate a set of points defining a 3x3x3 unit-element mesh
     !!
     !!  @author Nathan A. Wukie
-    !!  @param[inout]   pts     points_t array of rank-3 that gets allocated, filled, and returned
+    !!  @param[inout]   pts     points_t array of rank-3 that gets allocated, 
+    !!                          filled, and returned
     !---------------------------------------------------------------------
     subroutine meshgen_3x3x3_unit_linear(nodes,connectivity)
         type(point_t),  allocatable,    intent(inout)   :: nodes(:)
         type(domain_connectivity_t),    intent(inout)   :: connectivity
 
-        integer(ik) :: ipt_xi, ipt_eta, ipt_zeta, ipt, ierr, npts_x, npts_y, npts_z, npts, nelem, npts_element
-        integer(ik) :: ielem_x, ielem_y, ielem_z, ipt_x, ipt_y, ipt_z, ipt_elem, ielem, xstart, ystart, zstart
+        integer(ik) :: ipt_xi, ipt_eta, ipt_zeta, ipt, ierr, npts_x, npts_y, &
+                       npts_z, npts, nelem, npts_element
+        integer(ik) :: ielem_x, ielem_y, ielem_z, ipt_x, ipt_y, ipt_z, ipt_elem, &
+                       ielem, xstart, ystart, zstart
 
         integer(ik), parameter      :: npt = 64
         real(rk), dimension(npt)    :: x,y,z
@@ -805,20 +833,7 @@ contains
 
 
     end subroutine meshgen_3x3x3_unit_linear
-    !**********************************************************************
-
-
-
-
-
-
-
-
-
-
-
-
-
+    !***************************************************************************************
 
 
 
@@ -834,14 +849,17 @@ contains
     !> Generate a set of points defining a 3x3x1 element mesh
     !!
     !!  @author Nathan A. Wukie
-    !!  @param[inout]   pts     points_t array of rank-3 that gets allocated, filled, and returned
-    !---------------------------------------------------------------------
+    !!  @param[inout]   pts     points_t array of rank-3 that gets allocated, 
+    !!                          filled, and returned
+    !---------------------------------------------------------------------------------------
     subroutine meshgen_3x3x1_linear(nodes,connectivity)
         type(point_t),  allocatable,    intent(inout)   :: nodes(:)
         type(domain_connectivity_t),    intent(inout)   :: connectivity
 
-        integer(ik) :: ipt_xi, ipt_eta, ipt_zeta, ipt, ierr, npts_x, npts_y, npts_z, npts, nelem, npts_element
-        integer(ik) :: ielem_x, ielem_y, ielem_z, ipt_x, ipt_y, ipt_z, ipt_elem, ielem, xstart, ystart, zstart
+        integer(ik) :: ipt_xi, ipt_eta, ipt_zeta, ipt, ierr, npts_x, &
+                       npts_y, npts_z, npts, nelem, npts_element
+        integer(ik) :: ielem_x, ielem_y, ielem_z, ipt_x, ipt_y, ipt_z, &
+                       ipt_elem, ielem, xstart, ystart, zstart
 
         integer(ik), parameter      :: npt = 32
         real(rk), dimension(npt)    :: x,y,z
@@ -938,7 +956,7 @@ contains
 
 
     end subroutine meshgen_3x3x1_linear
-    !*************************************************************************
+    !***************************************************************************************
 
 
 
@@ -958,8 +976,9 @@ contains
     !> Generate a set of points defining a 4x1x1 element mesh
     !!
     !!  @author Nathan A. Wukie
-    !!  @param[inout]   pts     points_t array of rank-3 that gets allocated, filled, and returned
-    !---------------------------------------------------------------------
+    !!  @param[inout]   pts     points_t array of rank-3 that gets allocated, 
+    !!                          filled, and returned
+    !---------------------------------------------------------------------------------------
     subroutine meshgen_4x1x1_linear(nodes,connectivity)
         type(point_t),  allocatable,    intent(inout)   :: nodes(:)
         type(domain_connectivity_t),    intent(inout)   :: connectivity
@@ -1060,7 +1079,7 @@ contains
 
 
     end subroutine meshgen_4x1x1_linear
-    !************************************************************************
+    !***************************************************************************************
 
 
 
@@ -1076,14 +1095,17 @@ contains
     !> Generate a set of points defining a 2x1x1 element mesh
     !!
     !!  @author Nathan A. Wukie
-    !!  @param[inout]   pts     points_t array of rank-3 that gets allocated, filled, and returned
-    !---------------------------------------------------------------------
+    !!  @param[inout]   pts     points_t array of rank-3 that gets allocated, 
+    !!                          filled, and returned
+    !---------------------------------------------------------------------------------------
     subroutine meshgen_2x1x1_linear(nodes,connectivity)
         type(point_t),  allocatable,    intent(inout)   :: nodes(:)
         type(domain_connectivity_t),    intent(inout)   :: connectivity
 
-        integer(ik) :: ipt_xi, ipt_eta, ipt_zeta, ipt, ierr, npts_x, npts_y, npts_z, npts, nelem, npts_element
-        integer(ik) :: ielem_x, ielem_y, ielem_z, ipt_x, ipt_y, ipt_z, ipt_elem, ielem, xstart, ystart, zstart
+        integer(ik) :: ipt_xi, ipt_eta, ipt_zeta, ipt, ierr, npts_x, &
+                       npts_y, npts_z, npts, nelem, npts_element
+        integer(ik) :: ielem_x, ielem_y, ielem_z, ipt_x, ipt_y, ipt_z, &
+                       ipt_elem, ielem, xstart, ystart, zstart
 
         integer(ik), parameter      :: npt = 12
         real(rk), dimension(npt)    :: x,y,z
@@ -1178,7 +1200,7 @@ contains
 
 
     end subroutine meshgen_2x1x1_linear
-    !************************************************************************
+    !**************************************************************************************
 
 
 
@@ -1206,14 +1228,17 @@ contains
     !> Generate a set of points defining a 3x1x1 element mesh
     !!
     !!  @author Nathan A. Wukie
-    !!  @param[inout]   pts     points_t array of rank-3 that gets allocated, filled, and returned
-    !---------------------------------------------------------------------
+    !!  @param[inout]   pts     points_t array of rank-3 that gets allocated, 
+    !!                          filled, and returned
+    !---------------------------------------------------------------------------------------
     subroutine meshgen_3x1x1_linear(nodes,connectivity)
         type(point_t),  allocatable,    intent(inout)   :: nodes(:)
         type(domain_connectivity_t),    intent(inout)   :: connectivity
 
-        integer(ik) :: ipt_xi, ipt_eta, ipt_zeta, ipt, ierr, npts_x, npts_y, npts_z, npts, nelem, npts_element
-        integer(ik) :: ielem_x, ielem_y, ielem_z, ipt_x, ipt_y, ipt_z, ipt_elem, ielem, xstart, ystart, zstart
+        integer(ik) :: ipt_xi, ipt_eta, ipt_zeta, ipt, ierr, npts_x, npts_y, &
+                       npts_z, npts, nelem, npts_element
+        integer(ik) :: ielem_x, ielem_y, ielem_z, ipt_x, ipt_y, ipt_z, ipt_elem, &
+                       ielem, xstart, ystart, zstart
 
         integer(ik), parameter      :: npt = 16
         real(rk), dimension(npt)    :: x,y,z
@@ -1305,7 +1330,7 @@ contains
 
 
     end subroutine meshgen_3x1x1_linear
-    !***********************************************************************
+    !**************************************************************************************
 
 
 
@@ -1328,14 +1353,17 @@ contains
     !> Generate a set of points defining a 4x1x1 element mesh
     !!
     !!  @author Nathan A. Wukie
-    !!  @param[inout]   pts     points_t array of rank-3 that gets allocated, filled, and returned
-    !---------------------------------------------------------------------
+    !!  @param[inout]   pts     points_t array of rank-3 that gets allocated, 
+    !!                          filled, and returned
+    !--------------------------------------------------------------------------------------
     subroutine meshgen_40x15x1_linear(nodes,connectivity)
         type(point_t),  allocatable,    intent(inout)   :: nodes(:)
         type(domain_connectivity_t),    intent(inout)   :: connectivity
 
-        integer(ik) :: ipt_xi, ipt_eta, ipt_zeta, ipt, ierr, npts_x, npts_y, npts_z, npts, nelem, npts_element
-        integer(ik) :: ielem_x, ielem_y, ielem_z, ipt_x, ipt_y, ipt_z, ipt_elem, ielem, xstart, ystart, zstart
+        integer(ik) :: ipt_xi, ipt_eta, ipt_zeta, ipt, ierr, npts_x, npts_y, &
+                       npts_z, npts, nelem, npts_element
+        integer(ik) :: ielem_x, ielem_y, ielem_z, ipt_x, ipt_y, ipt_z, ipt_elem, &
+                       ielem, xstart, ystart, zstart
 
         real(rk)    :: x,y,z, dx, dy, dz
 
@@ -1413,7 +1441,7 @@ contains
 
 
     end subroutine meshgen_40x15x1_linear
-    !**********************************************************************
+    !**************************************************************************************
 
 
 
@@ -1430,14 +1458,17 @@ contains
     !> Generate a set of points defining a 4x1x1 element mesh
     !!
     !!  @author Nathan A. Wukie
-    !!  @param[inout]   pts     points_t array of rank-3 that gets allocated, filled, and returned
-    !---------------------------------------------------------------------
+    !!  @param[inout]   pts     points_t array of rank-3 that gets allocated, 
+    !!                          filled, and returned
+    !---------------------------------------------------------------------------------------
     subroutine meshgen_15x15x1_linear(nodes,connectivity)
         type(point_t),  allocatable,    intent(inout)   :: nodes(:)
         type(domain_connectivity_t),    intent(inout)   :: connectivity
 
-        integer(ik) :: ipt_xi, ipt_eta, ipt_zeta, ipt, ierr, npts_x, npts_y, npts_z, npts, nelem, npts_element
-        integer(ik) :: ielem_x, ielem_y, ielem_z, ipt_x, ipt_y, ipt_z, ipt_elem, ielem, xstart, ystart, zstart
+        integer(ik) :: ipt_xi, ipt_eta, ipt_zeta, ipt, ierr, npts_x, &
+                       npts_y, npts_z, npts, nelem, npts_element
+        integer(ik) :: ielem_x, ielem_y, ielem_z, ipt_x, ipt_y, ipt_z, &
+                       ipt_elem, ielem, xstart, ystart, zstart
 
         real(rk)    :: x,y,z, dx, dy, dz
 
@@ -1455,7 +1486,6 @@ contains
         npts  = npts_x*npts_y*npts_z
         nelem = (npts_x-1)*(npts_y-1)*(npts_z-1)
         npts_element = 8    !linear
-        !allocate(nodes(npts), connectivity(nelem,2+npts_element), stat=ierr)
         allocate(nodes(npts), stat=ierr)
         if (ierr /= 0) call AllocationError
         call connectivity%init(nelem,npts)
@@ -1516,7 +1546,7 @@ contains
 
 
     end subroutine meshgen_15x15x1_linear
-    !**************************************************************************
+    !***************************************************************************************
 
 
 
@@ -1532,14 +1562,17 @@ contains
     !> Generate a set of points defining a 15x15x2 element mesh
     !!
     !!  @author Nathan A. Wukie
-    !!  @param[inout]   pts     points_t array of rank-3 that gets allocated, filled, and returned
-    !---------------------------------------------------------------------
+    !!  @param[inout]   pts     points_t array of rank-3 that gets allocated, 
+    !!                          filled, and returned
+    !---------------------------------------------------------------------------------------
     subroutine meshgen_15x15x2_linear(nodes,connectivity)
         type(point_t),  allocatable,    intent(inout)   :: nodes(:)
         type(domain_connectivity_t),    intent(inout)   :: connectivity
 
-        integer(ik) :: ipt_xi, ipt_eta, ipt_zeta, ipt, ierr, npts_x, npts_y, npts_z, npts, nelem, npts_element
-        integer(ik) :: ielem_x, ielem_y, ielem_z, ipt_x, ipt_y, ipt_z, ipt_elem, ielem, xstart, ystart, zstart
+        integer(ik) :: ipt_xi, ipt_eta, ipt_zeta, ipt, ierr, npts_x, npts_y, &
+                       npts_z, npts, nelem, npts_element
+        integer(ik) :: ielem_x, ielem_y, ielem_z, ipt_x, ipt_y, ipt_z, ipt_elem, &
+                       ielem, xstart, ystart, zstart
 
         real(rk)    :: x,y,z, dx, dy, dz
 
@@ -1557,7 +1590,6 @@ contains
         npts  = npts_x*npts_y*npts_z
         nelem = (npts_x-1)*(npts_y-1)*(npts_z-1)
         npts_element = 8    !linear
-        !allocate(nodes(npts), connectivity(nelem,2+npts_element), stat=ierr)
         allocate(nodes(npts), stat=ierr)
         if (ierr /= 0) call AllocationError
         call connectivity%init(nelem,npts)
@@ -1623,7 +1655,7 @@ contains
 
 
     end subroutine meshgen_15x15x2_linear
-    !******************************************************************************
+    !***************************************************************************************
 
 
 
@@ -1646,14 +1678,17 @@ contains
     !> Generate a set of points defining a 15x15x3 element mesh
     !!
     !!  @author Nathan A. Wukie
-    !!  @param[inout]   pts     points_t array of rank-3 that gets allocated, filled, and returned
-    !---------------------------------------------------------------------
+    !!  @param[inout]   pts     points_t array of rank-3 that gets allocated, 
+    !!                          filled, and returned
+    !---------------------------------------------------------------------------------------
     subroutine meshgen_15x15x3_linear(nodes,connectivity)
         type(point_t),  allocatable,    intent(inout)   :: nodes(:)
         type(domain_connectivity_t),    intent(inout)   :: connectivity
 
-        integer(ik) :: ipt_xi, ipt_eta, ipt_zeta, ipt, ierr, npts_x, npts_y, npts_z, npts, nelem, npts_element
-        integer(ik) :: ielem_x, ielem_y, ielem_z, ipt_x, ipt_y, ipt_z, ipt_elem, ielem, xstart, ystart, zstart
+        integer(ik) :: ipt_xi, ipt_eta, ipt_zeta, ipt, ierr, npts_x, npts_y, &
+                       npts_z, npts, nelem, npts_element
+        integer(ik) :: ielem_x, ielem_y, ielem_z, ipt_x, ipt_y, ipt_z, ipt_elem, &
+                       ielem, xstart, ystart, zstart
 
         real(rk)    :: x,y,z, dx, dy, dz
 
@@ -1716,7 +1751,6 @@ contains
                         do ipt_y = ystart,(ystart+1)
                             do ipt_x = xstart,(xstart+1)
                                 ipt = ipt_x  +  (ipt_y-1)*npts_x  +  (ipt_z-1)*(npts_x*npts_y)     
-                                !connectivity(ielem,2+ipt_elem) = ipt
                                 call connectivity%data(ielem)%set_element_node(ipt_elem, ipt)
                                 ipt_elem = ipt_elem + 1
                             end do
@@ -1732,7 +1766,7 @@ contains
 
 
     end subroutine meshgen_15x15x3_linear
-    !**************************************************************************
+    !**************************************************************************************
 
 
 

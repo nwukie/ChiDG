@@ -8,7 +8,7 @@ module test_ILU0_mod
     use type_domain_connectivity,   only: domain_connectivity_t
     use precon_ILU0,                only: precon_ILU0_t
 
-    use mod_testutils,              only: meshgen
+    use mod_testutils,              only: create_mesh
     implicit none
 
 
@@ -70,7 +70,7 @@ contains
         !
         ! Initialize a 3-element geometry
         !
-        call meshgen('311',nodes,connectivity)
+        call create_mesh('311',nodes,connectivity)
 
 
         !

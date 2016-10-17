@@ -29,7 +29,7 @@ module type_chidg
     use mod_chidg_mpi,              only: chidg_mpi_init, chidg_mpi_finalize, ChiDG_COMM, IRANK, NRANK
     use mpi_f08
 
-    use mod_hdfio,                  only: read_grid_partition_hdf, read_boundaryconditions_partition_hdf, &
+    use mod_hdfio,                  only: read_grid_hdf, read_boundaryconditions_hdf, &
                                           read_solution_hdf, write_solution_hdf, read_connectivity_hdf
     use mod_partitioners,           only: partition_connectivity, send_partitions, recv_partition
     implicit none
@@ -380,7 +380,7 @@ contains
 
 
                 if ( extension == '.h5' ) then 
-                    call read_grid_partition_hdf(gridfile,self%partition,meshdata)
+                    call read_grid_hdf(gridfile,self%partition,meshdata)
                 else
                     call chidg_signal(FATAL,"chidg%read_grid: grid file extension not recognized")
                 end if
@@ -458,7 +458,7 @@ contains
 
 
                 if ( extension == '.h5' ) then
-                    call read_boundaryconditions_partition_hdf(gridfile,bcdata,self%partition)
+                    call read_boundaryconditions_hdf(gridfile,bcdata,self%partition)
                 else
                     call chidg_signal(FATAL,"chidg%read_boundaryconditions: grid file extension not recognized")
                 end if

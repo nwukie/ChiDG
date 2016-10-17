@@ -3,12 +3,66 @@ module mod_testutils
     use mod_kinds,                  only: rk,ik
     use mod_constants,              only: ZERO, ONE, TWO, THREE, FOUR, FIVE, SIX
     use mod_chidg_mpi,              only: IRANK
+    use mod_plot3d_utilities,       only: get_block_points_plot3d, &
+                                          get_block_elements_plot3d, &
+                                          get_block_boundary_faces_plot3d
+    use mod_hdf_utilities,          only: initialize_file_hdf, add_domain_hdf, &
+                                          open_domain_hdf, close_domain_hdf, &
+                                          set_bc_patch_hdf, add_bc_state_hdf, &
+                                          set_contains_grid_hdf, close_file_hdf
     use type_point,                 only: point_t
     use type_domain_connectivity,   only: domain_connectivity_t
+    use hdf5
     implicit none
 
 
 contains
+
+
+
+    !>  Create an actual ChiDG-formatted grid file that could be
+    !!  read in by a test. Also with initialized boundary conditions.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   10/17/2016
+    !!
+    !!
+    !---------------------------------------------------------------------------
+    subroutine create_mesh_file(selector, filename)
+        character(*),   intent(in)  :: selector
+        character(*),   intent(in)  :: filename
+
+        integer(ik) :: ierr
+
+        ! Open HDF5.
+        call h5open_f(ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"create_mesh_file: h5open_f")
+
+
+
+        ! Generate grid file base on selector case.
+        select case (trim(selector))
+            case("D2_E8_M1 : Overlapping : Matching")
+                call create_mesh_file_D2E8M1_overlapping_matching(filename)
+
+            case default
+                call chidg_signal(FATAL,"create_mesh_file: There was no valid case that matched the incoming string")
+
+        end select
+
+
+        ! Close HDF5.
+        call h5close_f(ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"create_mesh_file: h5close_f")
+
+
+    end subroutine create_mesh_file
+    !***************************************************************************
+
+
+
+
+
 
 
     !>  Generate a set of points for a mesh. String input calls specialized
@@ -24,7 +78,7 @@ contains
     !!  @param[inout]   nodes           Array of node coordinates for the grid
     !!  @param[inout]   connectivity    Connectivity data for the grid
     !--------------------------------------------------------------------
-    subroutine meshgen(string,nodes,connectivity)
+    subroutine create_mesh(string,nodes,connectivity)
         character(*),                   intent(in)      :: string
         type(point_t),  allocatable,    intent(inout)   :: nodes(:)
         type(domain_connectivity_t),    intent(inout)   :: connectivity
@@ -73,12 +127,13 @@ contains
             case ('15x15x3')
                 call meshgen_15x15x3_linear(nodes,connectivity)
 
+
             case default
                 call chidg_signal(FATAL,'String identifying mesh generation routine was not recognized')
         end select
 
 
-    end subroutine meshgen
+    end subroutine create_mesh
     !****************************************************************************
 
 
@@ -1774,6 +1829,113 @@ contains
 
 
 
+    !>
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   10/17/2016
+    !!
+    !!
+    !!
+    !---------------------------------------------------------------------------------------
+    subroutine create_mesh_file_D2E8M1_overlapping_matching(filename)
+        character(*),   intent(in)  :: filename
+
+        character(8)                                    :: faces(5)
+        integer(HID_T)                                  :: file_id, dom1_id, dom2_id, bcface_id
+        integer(ik)                                     :: spacedim, mapping, bcface
+        type(domain_connectivity_t)                     :: connectivity1, connectivity2
+        type(point_t),  allocatable                     :: nodes1(:), nodes2(:)
+        real(rk),       allocatable, dimension(:,:,:)   :: xcoords1, xcoords2, ycoords, zcoords
+        real(rk)                                        :: xmax
+
+
+        ! Create/initialize file
+        file_id = initialize_file_hdf(file_prefix)
+        
+
+        ! Generate coordinates for first block
+        call meshgen_2x2x2_linear(xcoords,ycoords,zcoords)
+
+
+        !
+        ! Create second block by copying and translating first block.
+        !
+        xmax = max(xcoords)
+        xcoords2 = xcoords1 + 0.95*xmax
+
+
+        !
+        ! Get nodes/elements
+        !
+        mapping = 1
+        nodes1    = get_block_points_plot3d(xcoords1,ycoords,zcoords)
+        nodes2    = get_block_points_plot3d(xcoords2,ycoords,zcoords)
+        elements1 = get_block_elements_plot3d(xcoords1,ycoords,zcoords,mapping,idomain=1)
+        elements2 = get_block_elements_plot3d(xcoords2,ycoords,zcoords,mapping,idomain=2)
+
+
+        !
+        ! Add domains
+        !
+        spacedim = 3
+        call add_domain_hdf(file_id,"01",nodes1,elements1,"Linear Advection",spacedim)
+        call add_domain_hdf(file_id,"02",nodes2,elements2,"Linear Advection",spacedim)
+
+
+        !
+        ! Set boundary conditions patch connectivities
+        !
+        dom1_id = open_domain_hdf(file_id,trim(blockname))
+        dom2_id = open_domain_hdf(file_id,trim(blockname))
+
+        do bcface = 1,6
+            ! Get face node indices for boundary 'bcface'
+            faces1 = get_block_boundary_faces_plot3d(xcoords1,ycoords,zcoords,mapping,bcface)
+            faces2 = get_block_boundary_faces_plot3d(xcoords2,ycoords,zcoords,mapping,bcface)
+
+            ! Set bc patch face indices
+            call set_bc_patch_hdf(dom1_id,faces,bcface)
+            call set_bc_patch_hdf(dom2_id,faces,bcface)
+        end do !bcface
+
+
+        !
+        ! Create bc_state, "Scalar Extrapolate"
+        !
+        call create_bc("Scalar Extrapolate", bc_state)
+
+
+        !
+        ! Set boundary condition states for Domain 1: Leave XI_MAX empty
+        !
+        faces = ["XI_MIN  ", "ETA_MIN ", "ETA_MAX ", "ZETA_MIN", "ZETA_MAX"]
+        do bcface = 1,size(faces)
+            call h5gopen_f(dom1_id,"BoundaryConditions/"//trim(adjustl(faces(bcface))),bcface_id,ierr)
+            call add_bc_state_hdf(bcface_id,bc_state)
+            call h5gclose_f(bcface_id,ierr)
+        end do
+
+        !
+        ! Set boundary condition states for Domain 1: Leave XI_MIN empty
+        !
+        faces = ["XI_MAX  ", "ETA_MIN ", "ETA_MAX ", "ZETA_MIN", "ZETA_MAX"]
+        do bcface = 1,size(faces)
+            call h5gopen_f(dom2_id,"BoundaryConditions/"//trim(adjustl(faces(bcface))),bcface_id,ierr)
+            call add_bc_state_hdf(bcface_id,bc_state)
+            call h5gclose_f(bcface_id,ierr)
+        end do
+
+
+        ! Set 'Contains Grid'
+        call set_contains_grid_hdf(file_id,"True")
+
+        ! Close file
+        call close_domain_hdf(dom1_id)
+        call close_domain_hdf(dom2_id)
+        call close_file_hdf(file_id)
+
+    end subroutine create_mesh_file_D2E8M1_overlapping_matching
+    !*************************************************************************************
 
 
 

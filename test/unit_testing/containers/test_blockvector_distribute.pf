@@ -4,7 +4,7 @@ subroutine test_blockvector_distribute()
     use mod_kinds,                  only: rk,ik
     use mod_constants,              only: ONE, TWO, THREE, FOUR
     use type_blockvector,           only: blockvector_t
-    use mod_testutils,              only: meshgen
+    use mod_testutils,              only: create_mesh
     use type_chidg,                 only: chidg_t
     use type_point,                 only: point_t
     use type_domain_connectivity,   only: domain_connectivity_t
@@ -29,7 +29,7 @@ subroutine test_blockvector_distribute()
     !
     ! Generate points for a 2x2x1 mesh
     !
-    call meshgen('221',nodes,connectivity)
+    call create_mesh('221',nodes,connectivity)
 
 
 

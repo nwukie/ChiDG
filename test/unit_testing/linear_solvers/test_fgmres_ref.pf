@@ -14,7 +14,7 @@ subroutine test_fgmres_ref_solve()
     use type_chidgMatrix
     use type_chidgVector,           only: chidgVector_t
 
-    use mod_testutils,              only: meshgen
+    use mod_testutils,              only: create_mesh
     implicit none
 
     type(chidg_t)               :: chidg
@@ -55,7 +55,7 @@ subroutine test_fgmres_ref_solve()
     !
     ! Get grid points
     !
-    call meshgen('211',nodes,connectivity)
+    call create_mesh('211',nodes,connectivity)
 
 
     !

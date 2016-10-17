@@ -17,7 +17,7 @@ contains
     !!
     !!  Procedures:
     !!  -----------
-    !!  get_block_nodes_plot3d                    - Return nodes
+    !!  get_block_points_plot3d                   - Return nodes
     !!  get_block_elements_plot3d                 - Return element connectivities
     !!  get_block_boundary_faces_plot3d           - Return face connectivities for boundary
     !!  check_block_mapping_conformation_plot3d   - Check mesh conforms to agglomeration

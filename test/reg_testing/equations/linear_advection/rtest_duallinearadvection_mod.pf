@@ -32,7 +32,7 @@ module rtest_duallinearadvection_mod
     use type_point,                 only: point_t
     use type_densematrix,           only: densematrix_t
     use type_domain_connectivity,   only: domain_connectivity_t
-    use mod_testutils,              only: meshgen
+    use mod_testutils,              only: create_mesh
     use mod_check_jacobian
     implicit none
 
@@ -100,7 +100,7 @@ contains
         call this%chidg%init('env')
 
         ! Generate points array for 3x3x3 mesh
-        call meshgen('3x3x3_unit',nodes,connectivity)
+        call create_mesh('3x3x3_unit',nodes,connectivity)
 
         ! Initialize domain
         spacedim = 3

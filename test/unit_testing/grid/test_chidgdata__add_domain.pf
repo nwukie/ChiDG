@@ -5,7 +5,7 @@ subroutine test_chidgdata__add_domain__onedomain()
     use mod_constants,              only: IO_DESTINATION
     use type_chidg,                 only: chidg_t
     use type_point,                 only: point_t
-    use mod_testutils,              only: meshgen
+    use mod_testutils,              only: create_mesh
     use type_domain_connectivity,   only: domain_connectivity_t
     implicit none
 
@@ -27,7 +27,7 @@ subroutine test_chidgdata__add_domain__onedomain()
     !
     ! Generate mesh points
     !
-    call meshgen('333',nodes,connectivity)
+    call create_mesh('333',nodes,connectivity)
 
 
     !

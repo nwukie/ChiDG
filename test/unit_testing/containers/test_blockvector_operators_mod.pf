@@ -7,7 +7,7 @@ module test_blockvector_operators_mod
     use type_point,                 only: point_t
     use type_blockvector
     use type_domain_connectivity,   only: domain_connectivity_t
-    use mod_testutils,              only: meshgen
+    use mod_testutils,              only: create_mesh
     implicit none
 
     public  :: test_blockvector_operators
@@ -61,7 +61,7 @@ contains
         !
         ! Read 2x2x1 element grid
         !
-        call meshgen('221',nodes,connectivity)
+        call create_mesh('221',nodes,connectivity)
 
         spacedim = 3
         nterms_c = 8

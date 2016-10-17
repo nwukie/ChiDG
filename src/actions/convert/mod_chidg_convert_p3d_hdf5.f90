@@ -10,14 +10,15 @@
 !--------------------------------------------------------------------------------------------
 module mod_chidg_convert_p3d_hdf5
 #include <messenger.h>
-    use mod_kinds,          only: rk,ik, rdouble
-    use mod_constants,      only: IO_DESTINATION, XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX
-    use mod_hdf_utilities,  only: initialize_file_hdf, set_ndomains_hdf, set_domain_index_hdf, &
-                                  set_domain_mapping_hdf, set_domain_dimensionality_hdf, set_domain_equation_set_hdf, &
-                                  set_contains_grid_hdf, set_domain_coordinates_hdf, set_domain_elements_hdf, &
-                                  set_bc_patch_hdf
+    use mod_kinds,              only: rk,ik, rdouble
+    use mod_constants,          only: IO_DESTINATION, XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX
+    use mod_hdf_utilities,      only: initialize_file_hdf, set_ndomains_hdf, set_domain_index_hdf, &
+                                      set_domain_mapping_hdf, set_domain_dimensionality_hdf, set_domain_equation_set_hdf, &
+                                      set_contains_grid_hdf, set_domain_coordinates_hdf, set_domain_elements_hdf, &
+                                      set_bc_patch_hdf, add_domain_hdf, open_domain_hdf, close_domain_hdf
     use mod_plot3d_utilities,   only: get_block_elements_plot3d, get_block_boundary_faces_plot3d, &
-                                      check_block_mapping_conformation_plot3d
+                                      check_block_mapping_conformation_plot3d, get_block_points_plot3d
+    use type_point,             only: point_t
     use hdf5
     use h5lt
     implicit none
@@ -44,7 +45,7 @@ contains
         logical                     :: file_exists
 
         ! HDF5 vars
-        integer(HID_T)              :: file_id, block_id,  bc_id
+        integer(HID_T)              :: file_id, dom_id
 
         ! Plot3d vars
         integer(ik)                 :: i, j, k, ext_loc, fileunit, bcface
@@ -53,6 +54,7 @@ contains
         integer(ik),    allocatable :: blkdims(:,:)
         real(rdouble),  allocatable :: xcoords(:,:,:), ycoords(:,:,:), zcoords(:,:,:)
         integer,        allocatable :: elements(:,:), faces(:,:)
+        type(point_t),  allocatable :: nodes(:)
 
         ! equation set string
         character(len=1024)         :: eqnset_string
@@ -99,12 +101,6 @@ contains
         open(newunit=fileunit, file=trim(filename), form='unformatted')
         read(fileunit) nblks
         call write_line(nblks," grid blocks", delimiter=" ")
-
-
-        !
-        ! Set number of domains
-        !
-        call set_ndomains_hdf(file_id,nblks)
 
 
         !
@@ -172,30 +168,13 @@ contains
             ! Create a domain-group for the current block domain
             !
             write(blockname, '(I2.2)') igrid
-            blockgroup = "D_"//trim(blockname)
-            call h5gcreate_f(file_id, trim(blockgroup), block_id, ierr)
-            if (ierr /= 0) stop "Error: h5gcreate_f"
 
 
             !
-            ! Write domain attributes
+            ! Get nodes,elements from block
             !
-            call set_domain_index_hdf(block_id,igrid)
-            call set_domain_mapping_hdf(block_id,mapping)
-            call set_domain_dimensionality_hdf(block_id, spacedim)
-
-
-            !
-            ! Write coordinates
-            !
-            call set_domain_coordinates_hdf(block_id,xcoords,ycoords,zcoords)
-
-
-            !
-            ! Generate and set element connectivities
-            !
+            nodes    = get_block_points_plot3d(xcoords,ycoords,zcoords)
             elements = get_block_elements_plot3d(xcoords,ycoords,zcoords,mapping,igrid)
-            call set_domain_elements_hdf(block_id,elements)
 
 
             !
@@ -207,20 +186,15 @@ contains
 
 
             !
-            ! Write equation set attribute
+            ! Add new domain to file
             !
-            call set_domain_equation_set_hdf(block_id,trim(eqnset_string))
-
+            call add_domain_hdf(file_id, trim(blockname), nodes,elements,eqnset_string,spacedim)
 
 
             !
             ! Create a boundary condition-group within the current block domain
             !
-            call h5gcreate_f(block_id, "BoundaryConditions", bc_id, ierr)
-            if (ierr /= 0) stop "Error: h5gcreate_f"
-            call h5gclose_f(bc_id, ierr)
-            if (ierr /= 0) stop "Error: h5gclose_f"
-
+            dom_id = open_domain_hdf(file_id,trim(blockname))
 
 
             !
@@ -232,16 +206,13 @@ contains
                 faces = get_block_boundary_faces_plot3d(xcoords,ycoords,zcoords,mapping,bcface)
 
                 ! Set bc patch face indices
-                call set_bc_patch_hdf(block_id,faces,bcface)
+                call set_bc_patch_hdf(dom_id,faces,bcface)
 
             end do !bcface
 
 
-            !
-            ! Close block
-            !
-            call h5gclose_f(block_id, ierr)
-            if (ierr /= 0) stop "Error: h5gclose_f"
+            call close_domain_hdf(dom_id)
+
 
         end do !igrid
 
@@ -256,9 +227,9 @@ contains
         !
         ! Close files and interfaces
         !
-        close(fileunit)                 ! Close plot3d file
-        call h5fclose_f(file_id,ierr)   ! Close hdf5 file
-        call h5close_f(ierr)            ! Close hdf5 interface
+        close(fileunit)
+        call h5fclose_f(file_id,ierr)
+        call h5close_f(ierr)
 
 
         

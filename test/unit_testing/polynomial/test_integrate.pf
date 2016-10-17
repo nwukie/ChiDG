@@ -20,7 +20,7 @@ subroutine test_integrate_boundary_unit_constant()
 
     use type_function,      only: function_t
     use mod_function,       only: create_function
-    use mod_testutils,      only: meshgen
+    use mod_testutils,      only: create_mesh
     use mod_grid_operators, only: initialize_variable
     use DNAD_D
     implicit none
@@ -57,7 +57,7 @@ subroutine test_integrate_boundary_unit_constant()
     !
     ! Initialize mesh and scalar equation set
     !
-    call meshgen('111u',nodes,connectivity)
+    call create_mesh('111u',nodes,connectivity)
     idom     = 1
     ielem    = 1
     iface    = 1
@@ -221,7 +221,7 @@ subroutine test_integrate_boundary_nonunit_constant()
 
     use type_function,              only: function_t
     use mod_function,               only: create_function
-    use mod_testutils,              only: meshgen
+    use mod_testutils,              only: create_mesh
     use mod_grid_operators,         only: initialize_variable
     use DNAD_D
     implicit none
@@ -255,7 +255,7 @@ subroutine test_integrate_boundary_nonunit_constant()
     !
     ! Initialize mesh and scalar equation set
     !
-    call meshgen('111',nodes,connectivity)
+    call create_mesh('111',nodes,connectivity)
 
 
     spacedim = 3

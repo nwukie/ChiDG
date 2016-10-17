@@ -39,6 +39,14 @@ subroutine test__detect_chimera_faces()
 
 
     !
+    ! Create grid
+    !
+    call create_mesh_file("D2_E8_M1 : Overlapping : Matching", gridfile)
+
+
+
+
+    !
     ! Initialize ChiDG environment
     !
     call chidg%init('env')
@@ -55,6 +63,7 @@ subroutine test__detect_chimera_faces()
 
     call chidg%initialize_solution_domains(nterms_s)
     call chidg%init('communication')
+
 
 
 

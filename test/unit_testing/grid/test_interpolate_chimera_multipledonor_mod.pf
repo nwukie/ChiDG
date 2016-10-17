@@ -18,7 +18,6 @@ module test_interpolate_chimera_multipledonor_mod
     use mod_chidg_mpi,      only: IRANK
     use mod_interpolate,    only: interpolate_face_autodiff, interpolate_face_standard
     use mod_grid_operators, only: initialize_variable
-    use mod_testutils,      only: meshgen
 
 
     use DNAD_D

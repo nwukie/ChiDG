@@ -2,6 +2,7 @@ module mod_plot3d_utilities
 #include <messenger.h>
     use mod_kinds,      only: ik, rk
     use mod_constants,  only: XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX
+    use type_point,     only: point_t
     implicit none
 
 
@@ -40,7 +41,7 @@ contains
         real(rk),   intent(in)  :: zcoords(:,:,:)
 
         type(point_t),  allocatable :: nodes(:)
-        integer(ik)                 :: nnodes, i,j,k, ierr
+        integer(ik)                 :: inode, nnodes, i,j,k, ierr
 
 
 

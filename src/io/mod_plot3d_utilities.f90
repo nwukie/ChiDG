@@ -16,12 +16,62 @@ contains
     !!
     !!  Procedures:
     !!  -----------
+    !!  get_block_nodes_plot3d                    - Return nodes
     !!  get_block_elements_plot3d                 - Return element connectivities
     !!  get_block_boundary_faces_plot3d           - Return face connectivities for boundary
     !!  check_block_mapping_conformation_plot3d   - Check mesh conforms to agglomeration
     !!      
     !!
     !****************************************************************************************
+
+
+
+
+    !>  Return a linear(1D) array of nodes for the grid.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   10/16/2016
+    !!
+    !!
+    !----------------------------------------------------------------------------------------
+    function get_block_nodes_plot3d(xcoords,ycoords,zcoords) result(nodes)
+        real(rk),   intent(in)  :: xcoords(:,:,:)
+        real(rk),   intent(in)  :: ycoords(:,:,:)
+        real(rk),   intent(in)  :: zcoords(:,:,:)
+
+        type(point_t),  allocatable :: nodes(:)
+        integer(ik)                 :: nnodes, i,j,k, ierr
+
+
+
+        nnodes = size(xcoords,1)*size(xcoords,2)*size(xcoords,3)
+
+        
+        allocate(nodes(nnodes), stat=ierr)
+        if (ierr /= 0) call AllocationError
+
+
+        inode = 1
+        do k = 1,size(xcoords,3)
+            do j = 1,size(xcoords,2)
+                do i = 1,size(xcoords,1)
+
+                    nodes(inode)%c1_ = xcoords(i,j,k)    
+                    nodes(inode)%c2_ = ycoords(i,j,k)    
+                    nodes(inode)%c3_ = zcoords(i,j,k)    
+    
+                    inode = inode + 1
+
+                end do ! i
+            end do ! j
+        end do ! k
+
+
+    end function get_block_nodes_plot3d
+    !****************************************************************************************
+
+
+
 
 
 

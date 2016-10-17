@@ -43,7 +43,7 @@ contains
         !
         ! Set function name
         !
-        call self%add_name("constant")
+        call self%set_name("constant")
 
 
         !

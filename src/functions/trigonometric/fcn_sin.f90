@@ -53,7 +53,7 @@ contains
         !
         ! Set function name
         !
-        call self%add_name("A_p_Bsin(y)")
+        call self%set_name("A_p_Bsin(y)")
 
 
         !

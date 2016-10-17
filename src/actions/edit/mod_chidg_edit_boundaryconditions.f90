@@ -11,8 +11,11 @@ module mod_chidg_edit_boundaryconditions
     use hdf5
     use h5lt
 
-    use mod_hdf_utilities,              only: get_ndomains_hdf, get_domain_names_hdf, get_bcnames_hdf, get_domain_name_hdf, &
-                                              delete_group_attributes
+    use mod_hdf_utilities,              only: get_ndomains_hdf, get_domain_names_hdf, get_bcnames_hdf, &
+                                              get_domain_name_hdf, delete_group_attributes_hdf, &
+                                              add_bc_state_hdf, set_bc_property_function_hdf, &
+                                              check_bc_property_exists_hdf, remove_bc_state_hdf, &
+                                              check_bc_state_exists_hdf
     use mod_chidg_edit_printoverview,   only: print_overview
     implicit none
 
@@ -420,6 +423,7 @@ contains
         character(len=1024)                 :: bc_string, pname
         logical                             :: run_edit_bc_face, get_property, property_exists, set_bc, &
                                                print_bcs, remove_bc, bc_state_exists
+        class(bc_state_t),      allocatable :: bc_state
 
 
         faces = ["  XI_MIN","  XI_MAX"," ETA_MIN"," ETA_MAX","ZETA_MIN","ZETA_MAX"]
@@ -527,7 +531,8 @@ contains
                             else
                             
                                 ! Call routine to set boundary condition in hdf file.
-                                call add_bc_state_hdf(bcface,bc_string)
+                                call create_bc(bc_string,bc_state)
+                                call add_bc_state_hdf(bcface,bc_state)
                                 set_bc = .false.
 
                             end if
@@ -565,10 +570,10 @@ contains
                         read(*,"(A1024)") bc_string
 
                         ! Call routine to remove boundary condition state
-                        bc_state_exists = check_bc_state_exists(bcface,trim(bc_string))
+                        bc_state_exists = check_bc_state_exists_hdf(bcface,trim(bc_string))
 
                         if (bc_state_exists) then
-                            call delete_bc_state_hdf(bcface,trim(bc_string))
+                            call remove_bc_state_hdf(bcface,trim(bc_string))
                             remove_bc = .false.
                         end if
 
@@ -605,7 +610,7 @@ contains
                         end if
 
                         ! Check property exists
-                        property_exists = check_property_exists(bcface,trim(pname))
+                        property_exists = check_bc_property_exists_hdf(bcface,trim(pname))
                         if ( property_exists ) get_property = .false.
 
                     end do 
@@ -634,365 +639,6 @@ contains
 
     end subroutine chidg_edit_boundarycondition_face
     !**************************************************************************************************
-
-
-
-
-
-
-
-
-
-
-
-    !>
-    !!
-    !!  @author Nathan A. Wukie
-    !!  @date   2/4/2016
-    !!
-    !!  @author Nathan A. Wukie (AFRL)
-    !!  @date   9/1/2016
-    !!  @note   Modified to include bc_states
-    !!
-    !!
-    !---------------------------------------------------------------------------------------------------
-    subroutine add_bc_state_hdf(bcface,state_string)
-        integer(HID_T),     intent(in)      :: bcface
-        character(*),       intent(in)      :: state_string
-
-        class(bc_state_t),   allocatable :: bc_state
-        integer(ik)                         :: nfcns, ifcn, ierr
-        integer(HID_T)                      :: op_id
-        logical                             :: link_exists, state_found
-
-
-        if ( trim(state_string) == 'empty' ) then
-            !
-            ! If 'empty' do not allocate new bc
-            !
-            
-        else
-
-            ! Check to make sure the bc_state wasn't previously added
-            call h5lexists_f(bcface, "BCS_"//trim(adjustl(state_string)), link_exists, ierr)
-
-
-            if (.not. link_exists) then
-
-                ! Check bc_state exists in the register. 
-                ! If not, user probably entered the wrong string, so do nothing
-                state_found = check_bc_state_registered(trim(adjustl(state_string)))
-
-                if (state_found) then
-                    ! Create a new group for the bc_state_t
-                    call h5gcreate_f(bcface, "BCS_"//trim(adjustl(state_string)), op_id, ierr)
-                    if (ierr /= 0) call chidg_signal(FATAL,"add_boundarycondition_state_hdf: error creating new group for bcfunction")
-
-                    ! Create an instance of the specified boundary condition to query its options
-                    call create_bc(state_string,bc_state)
-
-                    ! Add bc_state properties to the group that was created
-                    call add_bc_properties_hdf(op_id,bc_state)
-
-                    ! Close function group
-                    call h5gclose_f(op_id,ierr)
-                end if
-
-            end if
-
-        end if
-
-
-
-    end subroutine add_bc_state_hdf
-    !***************************************************************************************************
-
-
-
-
-
-
-
-
-
-    !>
-    !!
-    !!  @author Nathan A. Wukie
-    !!  @date   2/4/2016
-    !!
-    !!  @author Nathan A. Wukie (AFRL)
-    !!  @date   9/1/2016
-    !!  @note   Modified to include bc_states
-    !!
-    !!
-    !----------------------------------------------------------------------------------------------------
-    subroutine add_bc_properties_hdf(op_id,bc_state)
-        integer(HID_T),         intent(in)      :: op_id
-        class(bc_state_t),   intent(inout)   :: bc_state
-
-        integer(HID_T)                  :: prop_id
-        integer(HSIZE_T)                :: adim
-        integer(ik)                     :: iprop, nprop, iopt, nopt, ierr
-        character(len=1024)             :: pstring
-        character(len=:),   allocatable :: option_key, fcn_name
-        real(rk)                        :: option_value
-
-
-        !
-        ! Get number of functions in the boundary condition
-        !
-        nprop = bc_state%get_nproperties()
-
-
-        !
-        ! Loop through and add properties
-        !
-        do iprop = 1,nprop
-
-            !
-            ! Get string the property is associated with
-            !
-            pstring = bc_state%get_property_name(iprop)
-
-
-            !
-            ! Create a new group for the property
-            !
-            call h5gcreate_f(op_id, "BCP_"//trim(adjustl(pstring)), prop_id, ierr)
-            if (ierr /= 0) call chidg_signal(FATAL,"add_bcproperties_hdf: error creating new group for bcfunction")
-
-
-            !
-            ! Print property function attribute
-            !
-            fcn_name = bc_state%bcproperties%bcprop(iprop)%fcn%get_name()
-            call h5ltset_attribute_string_f(prop_id, ".", "function", fcn_name, ierr)
-            if (ierr /= 0) call chidg_signal(FATAL,"add_bcproperties_hdf: error setting function attribute")
-
-
-            !
-            ! Get number of options available for the current property
-            !
-            nopt = bc_state%get_noptions(iprop)
-
-
-            if (nopt > 0 ) then
-                do iopt = 1,nopt
-
-                    !
-                    ! Get the current option and default value.
-                    !
-                    option_key   = bc_state%get_option_key(iprop,iopt)
-                    option_value = bc_state%get_option_value(iprop,option_key)
-
-                    !
-                    ! Set the option as a real attribute
-                    !
-                    adim = 1
-                    call h5ltset_attribute_double_f(prop_id, ".", option_key, [real(option_value,rdouble)], adim, ierr)
-
-                end do
-            end if
-
-
-            !
-            ! Close function group
-            !
-            call h5gclose_f(prop_id,ierr)
-            
-
-
-        end do !ifcn
-
-
-    end subroutine add_bc_properties_hdf
-    !****************************************************************************************************
-
-
-
-
-
-
-
-    !>
-    !!
-    !!  @author Nathan A. Wukie
-    !!  @date   2/4/2016
-    !!
-    !!  @author Nathan A. Wukie (AFRL)
-    !!  @date   9/1/2016
-    !!  @note   Modified to include bc_states
-    !!
-    !----------------------------------------------------------------------------------------------------
-    subroutine delete_bc_state_hdf(bcface,state_string)
-        integer(HID_T),     intent(in)  :: bcface
-        character(len=*),   intent(in)  :: state_string
-
-        integer(HID_T)                          :: bc_state
-
-        integer(HSIZE_T)                        :: iattr, idx
-        integer(ik)                             :: nattr
-        integer                                 :: nmembers, igrp, type, ierr, iter, iprop, nprop
-        character(len=10)                       :: faces(NFACES)
-        character(len=1024),    allocatable     :: anames(:), pnames(:)
-        character(len=1024)                     :: gname
-        type(h5o_info_t), target                :: h5_info
-
-
-
-        !
-        ! Open the bc_state group
-        !
-        call h5gopen_f(bcface, "BCS_"//trim(state_string), bc_state, ierr)
-
-
-        !
-        ! Delete overall boundary condition face attributes
-        !
-        call delete_group_attributes(bc_state)
-
-
-        !
-        !  Get number of groups linked to the current bc_state
-        !
-        call h5gn_members_f(bc_state, ".", nmembers, ierr)
-
-
-        !
-        !  Loop through groups and delete properties
-        !
-        if ( nmembers > 0 ) then
-
-            !
-            ! First get number of states. This could be different than number of groups.
-            !
-            nprop = 0
-            do igrp = 0,nmembers-1
-
-                ! Get group name
-                call h5gget_obj_info_idx_f(bc_state, ".", igrp, gname, type, ierr)
-
-                ! Test if group is a boundary condition function. 'BCP_'
-                if (gname(1:4) == 'BCP_') then
-                    ! increment nprop
-                    nprop = nprop + 1
-                end if
-
-            end do  ! igrp
-
-
-            !
-            ! Second, get all state names
-            !
-            allocate(pnames(nprop), stat=ierr)
-            if (ierr /= 0) call AllocationError
-            iprop = 1
-            do igrp = 0,nmembers-1
-
-                ! Get group name
-                call h5gget_obj_info_idx_f(bc_state, ".", igrp, gname, type, ierr)
-
-                ! Test if group is a boundary condition function. 'BCP_'
-                if (gname(1:4) == 'BCP_') then
-                    ! Store name
-                    pnames(iprop) = gname
-                    iprop = iprop + 1
-                end if
-
-            end do ! igrp
-
-
-
-            !
-            ! Now, go about deleting them all.
-            ! Previously, we were deleting them one at a time, but then the index
-            ! traversal call get_obj_info_idx was failing for more than one property
-            ! because the index was screwed up.
-            !
-            do iprop = 1,nprop
-                call delete_bc_property_hdf(bc_state,pnames(iprop))
-            end do
-
-
-        end if ! nmembers
-
-
-        !
-        ! Close the bc_state group
-        !
-        call h5gclose_f(bc_state,ierr)
-
-        !
-        ! Unlink the bc_state group
-        !
-        call h5gunlink_f(bcface,"BCS_"//trim(state_string),ierr)
-        if (ierr /= 0) call chidg_signal(FATAL,"delete_bc_state_hdf: error unlinking bc_state group")
-
-
-    end subroutine delete_bc_state_hdf
-    !****************************************************************************************************
-
-
-
-
-
-
-
-
-
-
-    !>
-    !!
-    !!  @author Nathan A. Wukie
-    !!  @date   2/4/2016
-    !!
-    !!  @author Nathan A. Wukie (AFRL)
-    !!  @date   9/1/2016
-    !!  @note   Modified to include bc_states
-    !!
-    !!
-    !------------------------------------------------------------------------------------------------------
-    subroutine delete_bc_property_hdf(bc_state,pname)
-        integer(HID_T),     intent(in)      :: bc_state
-        character(*),       intent(in)      :: pname
-
-        integer(HID_T)  :: bcprop
-        integer(ik)     :: ierr
-
-        !
-        ! Open bcproperty group
-        !
-        call h5gopen_f(bc_state, trim(adjustl(pname)), bcprop, ierr)
-        if (ierr /= 0) call chidg_signal(FATAL,"delete_bc_property_hdf: error opening bcproperty group")
-
-
-        !
-        ! Delete bcproperty attributes
-        !
-        call delete_group_attributes(bcprop)
-
-
-        !
-        ! Close bcproperty group
-        !
-        call h5gclose_f(bcprop, ierr)
-        if (ierr /= 0) call chidg_signal(FATAL,"delete_bc_property_hdf: error closing bcproperty group")
-
-
-        !
-        ! Now that the data in bcproperty has been removed, unlink the bcproperty group.
-        !
-        call h5gunlink_f(bc_state,trim(pname),ierr)
-        if (ierr /= 0) call chidg_signal(FATAL,"delete_bcfunction_hdf: error unlinking bcproperty group")
-
-
-    end subroutine delete_bc_property_hdf
-    !******************************************************************************************************
-
-
-
-
-
 
 
 
@@ -1158,7 +804,7 @@ contains
         !
         ! Get property function
         !
-        call h5ltget_attribute_string_f(bcprop, ".", 'function', fcn, ierr)
+        call h5ltget_attribute_string_f(bcprop, ".", 'Function', fcn, ierr)
         if (ierr /= 0) call chidg_signal(FATAL,"print_property_options: error retrieving property function name")
         call write_line(" ")
         call write_line(' f(t,x,y,z) = '//trim(adjustl(fcn)))
@@ -1191,7 +837,7 @@ contains
                 call h5aget_name_by_idx_f(bcprop, ".", H5_INDEX_CRT_ORDER_F, H5_ITER_NATIVE_F, idx, option_keys(iattr), ierr)
                 if (ierr /= 0) call chidg_signal(FATAL,"print_property_options: error reading attribute name")
 
-                if ( trim(option_keys(iattr)) /= 'function' ) then  ! don't read function. not a floating point attribute.
+                if ( trim(option_keys(iattr)) /= 'Function' ) then  ! don't read function. not a floating point attribute.
                     call h5ltget_attribute_double_f(bcprop, ".", option_keys(iattr), buf, ierr)
                     if (ierr /= 0) call chidg_signal(FATAL,"print_property_options: error reading attribute value")
                     option_vals(iattr) = real(buf(1),rk)
@@ -1208,7 +854,7 @@ contains
         ! properties and was printed above.
         !
         do iattr = 1,nattr
-            if ( trim(option_keys(iattr)) == 'function' ) then
+            if ( trim(option_keys(iattr)) == 'Function' ) then
 
             else
                 call write_line(option_keys(iattr), option_vals(iattr), columns=.true., column_width = 15)
@@ -1245,12 +891,13 @@ contains
         integer(HID_T)                  :: bcprop, bc_state
         integer(HSIZE_T)                :: adim
         character(len=:),   allocatable :: command
-        character(len=1024)             :: option, new_function, gname
+        character(len=1024)             :: option, function_string, gname
         logical                         :: option_exists, run, property_found, property_exists
         real(rk)                        :: val
         integer                         :: ierr, type, igrp, iop, nmembers
         type(svector_t)                 :: bc_state_strings
         type(string_t)                  :: string
+        class(function_t),  allocatable :: func
 
 
         !
@@ -1333,16 +980,18 @@ contains
             if ( option_exists ) then
 
 
-                if ( trim(option) == "function" ) then
+                if ( trim(option) == "Function" ) then
 
                     !
                     ! Set function
                     !
                     command = "Set function: "
                     call write_line(command, color='blue')
-                    read(*,*) new_function
+                    read(*,*) function_string
 
-                    call set_function(bcprop, trim(new_function))
+                    !call set_function(bcprop, trim(new_function))
+                    call create_function(func,trim(function_string))
+                    call set_bc_property_function_hdf(bcprop,func)
 
 
                 else
@@ -1389,197 +1038,6 @@ contains
 
 
 
-
-
-    !>
-    !!
-    !!  @author Nathan A. Wukie (AFRL)
-    !!  @date   9/15/2016
-    !!
-    !!
-    !!
-    !--------------------------------------------------------------------------------------------
-    function check_bc_state_exists(bcface,bc_state) result(exist_status)
-        integer(HID_T),     intent(in)  :: bcface
-        character(len=*),   intent(in)  :: bc_state
-
-        integer(ik) :: ierr
-        logical     :: exist_status
-
-        ! Check if face contains the bc_state
-        call h5lexists_f(bcface, "BCS_"//trim(bc_state), exist_status, ierr)
-        if (ierr /= 0) call chidg_signal(FATAL,"check_bc_state_exists: Error in call to h5lexists_f")
-
-
-    end function check_bc_state_exists
-    !*********************************************************************************************
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    !>
-    !!
-    !!  @author Nathan A. Wukie
-    !!  @date   2/5/2016
-    !!
-    !!  @author Nathan A. Wukie (AFRL)
-    !!  @date   9/1/2016
-    !!  @note   Modified to include bc_states
-    !!
-    !!
-    !-------------------------------------------------------------------------------------------
-    function check_property_exists(bcface,pname) result(exist_status)
-        integer(HID_T),     intent(in)  :: bcface
-        character(*),       intent(in)  :: pname
-
-        integer(HID_T)          :: bc_state
-        integer                 :: ierr, nmembers, igrp, type, iop
-        character(len=1024)     :: gname
-        logical                 :: exist_status
-        type(svector_t)         :: bc_state_strings
-        type(string_t)          :: string
-
-        
-        !
-        ! Loop through the states to find the property name
-        !
-        call h5gn_members_f(bcface, ".", nmembers, ierr)
-
-
-        !
-        !  Loop through groups and delete properties
-        !
-        if ( nmembers > 0 ) then
-
-            ! First get number of states. This could be different than number of groups.
-            do igrp = 0,nmembers-1
-
-                ! Get group name
-                call h5gget_obj_info_idx_f(bcface, ".", igrp, gname, type, ierr)
-
-                ! Test if group is a boundary condition function. 'BCS_'
-                if (gname(1:4) == 'BCS_') then
-                    call bc_state_strings%push_back(string_t(trim(gname)))
-                end if
-
-            end do  ! igrp
-
-        end if
-
-
-
-        !
-        ! Find the state with the property
-        !
-        exist_status = .false.
-        do iop = 1,bc_state_strings%size()
-
-            ! Open the state group
-            string = bc_state_strings%at(iop)
-            call h5gopen_f(bcface, string%get(), bc_state, ierr)
-
-            ! Check if it contains a link to the property group
-            call h5lexists_f(bc_state, "BCP_"//trim(pname), exist_status, ierr)
-
-
-
-
-
-            if (exist_status) then
-                ! Close state
-                call h5gclose_f(bc_state,ierr)
-                exit
-            end if
-
-            ! Close state
-            call h5gclose_f(bc_state,ierr)
-
-        end do !iop
-
-
-
-    end function check_property_exists
-    !********************************************************************************************
-
-
-
-
-
-
-
-
-
-    !>
-    !!
-    !!  @author Nathan A. Wukie
-    !!  @date   2/5/2016
-    !!
-    !!
-    !!
-    !--------------------------------------------------------------------------------------------
-    subroutine set_function(bcprop, fname)
-        integer(HID_T),     intent(in)  :: bcprop
-        character(*),       intent(in)  :: fname
-
-        integer(HSIZE_T)                :: adim
-        class(function_t),  allocatable :: fcn
-        character(len=:),   allocatable :: option
-        real(rk)                        :: val
-        integer(ik)                     :: nopt, iopt
-        integer                         :: ierr
-        
-
-        !
-        ! Delete bcproperty attributes
-        !
-        call delete_group_attributes(bcprop)
-
-
-        !
-        ! Set 'function' attribute
-        !
-        call h5ltset_attribute_string_f(bcprop, ".", "function", trim(fname), ierr)
-        if (ierr /= 0) call chidg_signal(FATAL,"set_function: error setting function name")
-
-
-        !
-        ! Create specified function
-        !
-        call create_function(fcn,fname)
-
-
-        !
-        ! Set function options
-        !
-        nopt = fcn%get_noptions()
-
-        do iopt = 1,nopt
-
-            option = fcn%get_option_key(iopt)
-            val    = fcn%get_option_value(option)
-            !
-            ! Set option
-            !
-            adim = 1
-            call h5ltset_attribute_double_f(bcprop, ".", trim(option), [real(val,rdouble)], adim, ierr)
-
-        end do ! iopt
-
-    end subroutine set_function
-    !********************************************************************************************
 
 
 

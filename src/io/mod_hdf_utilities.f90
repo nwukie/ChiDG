@@ -1,10 +1,14 @@
 module mod_hdf_utilities
 #include <messenger.h>
-    use mod_kinds,              only: rk, ik
+    use mod_kinds,              only: rk, ik, rdouble
     use mod_constants,          only: NFACES, TWO_DIM, THREE_DIM
     use mod_file_utilities,     only: delete_file
-    use type_svector,           only: svector_t
+    use mod_bc,                 only: check_bc_state_registered
     use mod_string,             only: string_t
+    use mod_function,           only: create_function
+    use type_function,          only: function_t
+    use type_svector,           only: svector_t
+    use type_bc_state,          only: bc_state_t
     use type_file_properties,   only: file_properties_t
     use hdf5
     use h5lt
@@ -61,7 +65,7 @@ contains
     !!
     !!  set_domain_coordinates_hdf
     !!  set_domain_elements_hdf
-    !!  set_domain_bc_patch_hdf
+    !!
     !!
     !!  set_coordinate_order_hdf
     !!  get_coordinate_order_hdf
@@ -82,9 +86,19 @@ contains
     !!  get_domain_equation_set_hdf
     !!  get_domain_equation_sets_hdf
     !!
+    !!
+    !!  set_bc_patch_hdf
+    !!  add_bc_state_hdf
+    !!  get_nbc_states_hdf
+    !!  add_bc_properties_hdf
+    !!  remove_bc_state_hdf
+    !!  remove_bc_property_hdf
+    !!
     !!  get_bcnames_hdf
     !!
-    !!  delete_group_attributes
+    !!  check_bc_state_exists_hdf
+    !!  check_bc_property_exists_hdf
+    !!  delete_group_attributes_hdf
     !!  check_attribute_exists_hdf
     !!      
     !!
@@ -1016,7 +1030,9 @@ contains
 
 
 
-    !>
+    !>  For a block-domain, set the domain coordinates
+    !!
+    !!  /D_domainname/Grid/Coordinates
     !!
     !!  @author Nathan A. Wukie 
     !!  @date   10/15/2016
@@ -1038,7 +1054,7 @@ contains
         ! Create a grid-group within the current block domain
         !
         call h5gcreate_f(block_id, "Grid", grid_id, ierr)
-        if (ierr /= 0) stop "Error: h5gcreate_f"
+        if (ierr /= 0) call chidg_signal(FATAL,"set_domain_coordinates_hdf: h5gcreate_f")
 
 
 
@@ -1142,6 +1158,8 @@ contains
     !!  Accepts array of element connectivities as
     !!      elements(nelem, size_connectivity)
     !!
+    !!  /D_domainname/Grid/Elements
+    !!
     !!  @author Nathan A. Wukie
     !!  @date   10/15/2016
     !!
@@ -1217,6 +1235,10 @@ contains
 
     !>  Set boundary condition patch face indices for a block boundary.
     !!
+    !!  /D_domainname/BoundaryConditions/"face"/Faces
+    !!
+    !!  "face" is XI_MIN, XI_MAX, ETA_MIN, etc.
+    !!
     !!  @author Nathan A. Wukie
     !!  @date   10/15/2016
     !!
@@ -1225,7 +1247,7 @@ contains
     !!  @param[in]  bcface      Integer specifying which boundary of the block to write to
     !!
     !---------------------------------------------------------------------------------------
-    subroutine set_domain_bc_patch_hdf(block_id,faces,bcface)
+    subroutine set_bc_patch_hdf(block_id,faces,bcface)
         integer(HID_T), intent(in)  :: block_id
         integer(ik),    intent(in)  :: faces(:,:)
         integer(ik),    intent(in)  :: bcface
@@ -1241,7 +1263,7 @@ contains
         ! Create a boundary condition-group within the current block domain
         !
         call h5gopen_f(block_id, "BoundaryConditions", bc_id, ierr)
-        if (ierr /= 0) call chidg_signal(FATAL,"set_domain_bc_patch_hdf: h5gcreate_f")
+        if (ierr /= 0) call chidg_signal(FATAL,"set_bc_patch_hdf: h5gcreate_f")
 
 
         !
@@ -1255,7 +1277,7 @@ contains
         ! Create empty group for boundary condition
         !
         call h5gcreate_f(bc_id,bc_face_string,face_id, ierr)
-        if (ierr /= 0) call chidg_signal(FATAL,"set_domain_bc_patch_hdf: h5gcreate_f")
+        if (ierr /= 0) call chidg_signal(FATAL,"set_bc_patch_hdf: h5gcreate_f")
 
 
         !
@@ -1264,21 +1286,21 @@ contains
         dims(1) = size(faces,1)
         dims(2) = size(faces,2)
         call h5screate_simple_f(2, dims, face_space_id, ierr)
-        if (ierr /= 0) call chidg_signal(FATAL,"set_domain_bc_patch_hdf: h5screate_simple_f")
+        if (ierr /= 0) call chidg_signal(FATAL,"set_bc_patch_hdf: h5screate_simple_f")
 
 
         !
         ! Create datasets for boundary condition connectivity
         !
         call h5dcreate_f(face_id,"Faces", H5T_NATIVE_INTEGER, face_space_id, face_set_id,ierr)
-        if (ierr /= 0) call chidg_signal(FATAL,"set_domain_bc_patch_hdf: h5dcreate_f")
+        if (ierr /= 0) call chidg_signal(FATAL,"set_bc_patch_hdf: h5dcreate_f")
 
 
         !
         ! Write bc faces
         !
         call h5dwrite_f(face_set_id, H5T_NATIVE_INTEGER, faces, dims, ierr)
-        if (ierr /= 0) call chidg_signal(FATAL,"set_domain_bc_patch_hdf: h5dwrite_f")
+        if (ierr /= 0) call chidg_signal(FATAL,"set_bc_patch_hdf: h5dwrite_f")
 
 
         !
@@ -1290,8 +1312,532 @@ contains
         call h5gclose_f(bc_id, ierr)
 
 
-    end subroutine set_domain_bc_patch_hdf
+    end subroutine set_bc_patch_hdf
     !****************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    !>  Add bc_state function for a block boundary condition.
+    !!
+    !!  /D_domainname/BoundaryConditions/"face"/BCS_bc_state
+    !!
+    !!  "face" is XI_MIN, XI_MAX, ETA_MIN, etc.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   10/17/2016
+    !!
+    !!
+    !----------------------------------------------------------------------------------------
+    subroutine add_bc_state_hdf(bcface_id,bc_state)
+        integer(HID_T),     intent(in)      :: bcface_id
+        class(bc_state_t),  intent(inout)   :: bc_state
+
+        integer(ik)                         :: ierr
+        integer(HID_T)                      :: state_id
+        logical                             :: link_exists, state_found
+
+
+        if ( bc_state%get_name() == 'empty' ) then
+            !
+            ! If 'empty' do not allocate new bc
+            !
+            
+        else
+
+            ! Check to make sure the bc_state wasn't previously added
+            call h5lexists_f(bcface_id, "BCS_"//bc_state%get_name(), link_exists, ierr)
+
+
+            if (.not. link_exists) then
+
+                ! Check bc_state exists in the register. 
+                ! If not, user probably entered the wrong string, so do nothing
+                state_found = check_bc_state_registered(bc_state%get_name())
+
+                if (state_found) then
+                    ! Create a new group for the bc_state_t
+                    call h5gcreate_f(bcface_id, "BCS_"//bc_state%get_name(), state_id, ierr)
+                    if (ierr /= 0) call chidg_signal(FATAL,"add_domain_bc_state_hdf: error creating new group for bc_state")
+
+                    ! Add bc_state properties to the group that was created
+                    call add_bc_properties_hdf(state_id,bc_state)
+
+                    ! Close function group
+                    call h5gclose_f(state_id,ierr)
+                end if
+
+            end if
+
+        end if
+
+
+    end subroutine add_bc_state_hdf
+    !*****************************************************************************************
+
+
+
+    
+
+
+
+
+
+
+    !>  Return the number of bc_state's attached to a boundary condition face group.
+    !!
+    !!  @author Nathan A. Wukie 
+    !!  @date   10/17/2016
+    !!
+    !!
+    !----------------------------------------------------------------------------------------
+    function get_nbc_states_hdf(bcface_id) result(nbc_states)
+        integer(HID_T), intent(in)  :: bcface_id
+
+        integer(ik)     :: nbc_states, nmembers, igrp, type, ierr
+        character(1024) :: gname
+
+        nbc_states = 0
+
+        ! Loop over groups and detect bc_state's; Increment nbc_states.
+        call h5gn_members_f(bcface_id, ".", nmembers, ierr)
+        if ( nmembers > 0 ) then
+            do igrp = 0,nmembers-1
+
+                ! Get group name
+                call h5gget_obj_info_idx_f(bcface_id, ".", igrp, gname, type, ierr)
+
+                ! Test if group is a boundary condition state. 'BCS_'
+                if (gname(1:4) == 'BCS_') then
+                    nbc_states = nbc_states + 1
+                end if
+
+            end do  ! igrp
+        end if
+
+
+    end function get_nbc_states_hdf
+    !****************************************************************************************
+
+
+
+
+
+
+
+    
+
+    !>  Return the names of bc_state's attached to a boundary conditions face group.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   10/17/2016
+    !!
+    !!
+    !---------------------------------------------------------------------------------------
+    function get_bc_state_names_hdf(bcface_id) result(bc_state_names)
+        integer(HID_T), intent(in)  :: bcface_id
+
+        integer(ik)     :: nmembers, ierr, igrp, type
+        character(1024) :: gname
+        type(svector_t) :: bc_state_names
+
+
+
+        !  Get number of groups linked to the current bc_face
+        call h5gn_members_f(bcface_id, ".", nmembers, ierr)
+        if ( nmembers > 0 ) then
+            do igrp = 0,nmembers-1
+                ! Get group name
+                call h5gget_obj_info_idx_f(bcface_id, ".", igrp, gname, type, ierr)
+
+                ! Test if group is a boundary condition state. 'BCS_'
+                if (gname(1:4) == 'BCS_') then
+                    call bc_state_names%push_back(string_t(trim(gname)))
+                end if
+            end do  ! igrp
+        end if
+
+    end function get_bc_state_names_hdf
+    !****************************************************************************************
+
+
+
+
+
+
+
+
+
+
+    !>  Add properties to a bc_state on a boundary for a particular domain.
+    !!
+    !!  /D_domainname/BoundaryConditions/"face"/BCS_bc_state/BCP_bc_property
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   10/17/2016
+    !!
+    !!
+    !!  @param[in]      bcstate_id      HDF identifier of the bc_state group in the file to 
+    !!                                  be modified.
+    !!  @param[inout]   bc_state        bc_state class that can be queried for properties to 
+    !!                                  be set.
+    !!
+    !-----------------------------------------------------------------------------------------
+    subroutine add_bc_properties_hdf(bcstate_id, bc_state)
+        integer(HID_T),     intent(in)      :: bcstate_id
+        class(bc_state_t),  intent(inout)   :: bc_state
+
+        integer(HID_T)                  :: prop_id
+        integer(HSIZE_T)                :: adim
+        integer(ik)                     :: iprop, nprop, iopt, nopt, ierr
+        character(len=1024)             :: pstring
+        character(len=:),   allocatable :: option_key, fcn_name
+        real(rk)                        :: option_value
+
+
+        !
+        ! Get number of functions in the boundary condition
+        !
+        nprop = bc_state%get_nproperties()
+
+
+        !
+        ! Loop through and add properties
+        !
+        do iprop = 1,nprop
+
+            !
+            ! Get string the property is associated with
+            !
+            pstring = bc_state%get_property_name(iprop)
+
+
+            !
+            ! Create a new group for the property
+            !
+            call h5gcreate_f(bcstate_id, "BCP_"//trim(adjustl(pstring)), prop_id, ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,"add_bcproperties_hdf: error creating new group for bcfunction")
+
+
+            !
+            ! Print property function attribute
+            !
+            fcn_name = bc_state%bcproperties%bcprop(iprop)%fcn%get_name()
+            call h5ltset_attribute_string_f(prop_id, ".", "function", fcn_name, ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,"add_bcproperties_hdf: error setting function attribute")
+
+
+            !
+            ! Get number of options available for the current property
+            !
+            nopt = bc_state%get_noptions(iprop)
+
+
+            if (nopt > 0 ) then
+                do iopt = 1,nopt
+
+                    !
+                    ! Get the current option and default value.
+                    !
+                    option_key   = bc_state%get_option_key(iprop,iopt)
+                    option_value = bc_state%get_option_value(iprop,option_key)
+
+                    !
+                    ! Set the option as a real attribute
+                    !
+                    adim = 1
+                    call h5ltset_attribute_double_f(prop_id, ".", option_key, [real(option_value,rdouble)], adim, ierr)
+
+                end do
+            end if
+
+
+            !
+            ! Close function group
+            !
+            call h5gclose_f(prop_id,ierr)
+
+
+        end do !ifcn
+
+
+    end subroutine add_bc_properties_hdf
+    !******************************************************************************************
+
+
+
+
+
+
+
+
+
+    !>  Set a function for a bc_state property.
+    !!
+    !!  /D_domainname/BoundaryConditions/"face"/BCS_bcstatename/BCP_bcpropertyname/
+    !!
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   2/5/2016
+    !!
+    !--------------------------------------------------------------------------------------------
+    subroutine set_bc_property_function_hdf(bcprop_id, func)
+        integer(HID_T),     intent(in)  :: bcprop_id
+        class(function_t),  intent(in)  :: func
+
+        integer(HSIZE_T)                :: adim
+        class(function_t),  allocatable :: fcn
+        character(len=:),   allocatable :: option
+        real(rk)                        :: val
+        integer(ik)                     :: nopt, iopt
+        integer                         :: ierr
+        
+
+        !
+        ! Delete bcproperty attributes
+        !
+        call delete_group_attributes_hdf(bcprop_id)
+
+
+        !
+        ! Set 'Function' attribute
+        !
+        call h5ltset_attribute_string_f(bcprop_id, ".", "Function", trim(func%get_name()), ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"set_bc_property_function_hdf: error setting function name")
+
+
+        !
+        ! Set function options
+        !
+        nopt = fcn%get_noptions()
+
+        do iopt = 1,nopt
+
+            option = fcn%get_option_key(iopt)
+            val    = fcn%get_option_value(option)
+            !
+            ! Set option
+            !
+            adim = 1
+            call h5ltset_attribute_double_f(bcprop_id, ".", trim(option), [real(val,rdouble)], adim, ierr)
+
+        end do ! iopt
+
+    end subroutine set_bc_property_function_hdf
+    !********************************************************************************************
+
+
+
+
+
+
+
+
+    !>
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   2/4/2016
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   9/1/2016
+    !!  @note   Modified to include bc_states
+    !!
+    !----------------------------------------------------------------------------------------------------
+    subroutine remove_bc_state_hdf(bcface_id,state_string)
+        integer(HID_T),     intent(in)  :: bcface_id
+        character(len=*),   intent(in)  :: state_string
+
+        integer(HID_T)                          :: bc_state
+
+        integer(HSIZE_T)                        :: iattr, idx
+        integer(ik)                             :: nattr
+        integer                                 :: nmembers, igrp, type, ierr, iter, iprop, nprop
+        character(len=10)                       :: faces(NFACES)
+        character(len=1024),    allocatable     :: anames(:), pnames(:)
+        character(len=1024)                     :: gname
+        type(h5o_info_t), target                :: h5_info
+
+
+
+        !
+        ! Open the bc_state group
+        !
+        call h5gopen_f(bcface_id, "BCS_"//trim(state_string), bc_state, ierr)
+
+
+        !
+        ! Delete overall boundary condition face attributes
+        !
+        call delete_group_attributes_hdf(bc_state)
+
+
+        !
+        !  Get number of groups linked to the current bc_state
+        !
+        call h5gn_members_f(bc_state, ".", nmembers, ierr)
+
+
+        !
+        !  Loop through groups and delete properties
+        !
+        if ( nmembers > 0 ) then
+
+            !
+            ! First get number of states. This could be different than number of groups.
+            !
+            nprop = 0
+            do igrp = 0,nmembers-1
+
+                ! Get group name
+                call h5gget_obj_info_idx_f(bc_state, ".", igrp, gname, type, ierr)
+
+                ! Test if group is a boundary condition function. 'BCP_'
+                if (gname(1:4) == 'BCP_') then
+                    ! increment nprop
+                    nprop = nprop + 1
+                end if
+
+            end do  ! igrp
+
+
+            !
+            ! Second, get all state names
+            !
+            allocate(pnames(nprop), stat=ierr)
+            if (ierr /= 0) call AllocationError
+            iprop = 1
+            do igrp = 0,nmembers-1
+
+                ! Get group name
+                call h5gget_obj_info_idx_f(bc_state, ".", igrp, gname, type, ierr)
+
+                ! Test if group is a boundary condition function. 'BCP_'
+                if (gname(1:4) == 'BCP_') then
+                    ! Store name
+                    pnames(iprop) = gname
+                    iprop = iprop + 1
+                end if
+
+            end do ! igrp
+
+
+
+            !
+            ! Now, go about deleting them all.
+            ! Previously, we were deleting them one at a time, but then the index
+            ! traversal call get_obj_info_idx was failing for more than one property
+            ! because the index was screwed up.
+            !
+            do iprop = 1,nprop
+                call remove_bc_property_hdf(bc_state,pnames(iprop))
+            end do
+
+
+        end if ! nmembers
+
+
+        !
+        ! Close the bc_state group
+        !
+        call h5gclose_f(bc_state,ierr)
+
+        !
+        ! Unlink the bc_state group
+        !
+        call h5gunlink_f(bcface_id,"BCS_"//trim(state_string),ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"delete_bc_state_hdf: error unlinking bc_state group")
+
+
+    end subroutine remove_bc_state_hdf
+    !****************************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+    !>
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   2/4/2016
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   9/1/2016
+    !!  @note   Modified to include bc_states
+    !!
+    !!
+    !------------------------------------------------------------------------------------------------------
+    subroutine remove_bc_property_hdf(bc_state,pname)
+        integer(HID_T),     intent(in)      :: bc_state
+        character(*),       intent(in)      :: pname
+
+        integer(HID_T)  :: bcprop
+        integer(ik)     :: ierr
+
+        !
+        ! Open bcproperty group
+        !
+        call h5gopen_f(bc_state, trim(adjustl(pname)), bcprop, ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"delete_bc_property_hdf: error opening bcproperty group")
+
+
+        !
+        ! Delete bcproperty attributes
+        !
+        call delete_group_attributes_hdf(bcprop)
+
+
+        !
+        ! Close bcproperty group
+        !
+        call h5gclose_f(bcprop, ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"delete_bc_property_hdf: error closing bcproperty group")
+
+
+        !
+        ! Now that the data in bcproperty has been removed, unlink the bcproperty group.
+        !
+        call h5gunlink_f(bc_state,trim(pname),ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"delete_bcfunction_hdf: error unlinking bcproperty group")
+
+
+    end subroutine remove_bc_property_hdf
+    !******************************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1382,8 +1928,8 @@ contains
             !
             !  Get coordinate mapping
             !
-            call h5ltget_attribute_int_f(fid, trim(dnames(idom)), 'Domain Mapping', buf, ierr)
-            if (ierr /= 0) stop "Error: get_coordinate_orders_hdf - h5ltget_attribute_int_f"
+            call h5ltget_attribute_int_f(fid, trim(dnames(idom)), "Domain Mapping", buf, ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,"get_coordinate_orders_hdf: h5ltget_attribute_int_f")
 
 
             !
@@ -1557,7 +2103,7 @@ contains
 
         !  Get coordinate mapping
         call h5ltset_attribute_int_f(block_id,".","Domain Dimensionality",[dimensionality],SIZE_ONE,ierr)
-        if (ierr /= 0) stop "Error: set_domain_dimensionality_hdf - h5ltset_attribute_int_f"
+        if (ierr /= 0) call chidg_signal(FATAL,"set_domain_dimensionality_hdf: h5ltset_attribute_int_f")
 
     end subroutine set_domain_dimensionality_hdf
     !****************************************************************************************
@@ -1580,7 +2126,7 @@ contains
 
         !  Get coordinate mapping
         call h5ltget_attribute_int_f(block_id,".","Domain Dimensionality",buf,ierr)
-        if (ierr /= 0) stop "Error: get_domain_dimensionality_hdf - h5ltget_attribute_int_f"
+        if (ierr /= 0) call chidg_signal(FATAL,"get_domain_dimensionality_hdf: h5ltget_attribute_int_f")
 
         dimensionality = int(buf(1),kind=ik)
 
@@ -1629,7 +2175,7 @@ contains
             !  Get coordinate mapping
             !
             call h5ltget_attribute_int_f(fid, trim(dnames(idom)), "Domain Dimensionality", dimensionality, ierr)
-            if (ierr /= 0) stop "get_domain_dimensionalities_hdf: Error h5ltget_attribute_int_f"
+            if (ierr /= 0) call chidg_signal(FATAL,"get_domain_dimensionalities_hdf: Error h5ltget_attribute_int_f")
 
             dimensionalities(idom) = dimensionality(1)
 
@@ -1659,7 +2205,7 @@ contains
 
         !  Get coordinate mapping
         call h5ltset_attribute_string_f(block_id,".","Equation Set",equation_set,ierr)
-        if (ierr /= 0) stop "Error: set_domain_equation_set_hdf - h5ltset_attribute_string_f"
+        if (ierr /= 0) call chidg_signal(FATAL,"set_domain_equation_set_hdf: h5ltset_attribute_string_f")
 
     end subroutine set_domain_equation_set_hdf
     !****************************************************************************************
@@ -1683,7 +2229,7 @@ contains
 
         !  Get coordinate mapping
         call h5ltget_attribute_string_f(block_id,".","Equation Set",equation_set,ierr)
-        if (ierr /= 0) stop "Error: get_domain_equation_set_hdf - h5ltset_attribute_string_f"
+        if (ierr /= 0) call chidg_signal(FATAL,"get_domain_equation_set_hdf: h5ltset_attribute_string_f")
 
     end function get_domain_equation_set_hdf
     !****************************************************************************************
@@ -1895,6 +2441,127 @@ contains
 
 
 
+    !>
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   9/15/2016
+    !!
+    !!
+    !!
+    !--------------------------------------------------------------------------------------------
+    function check_bc_state_exists_hdf(bcface_id,bc_state) result(exist_status)
+        integer(HID_T),     intent(in)  :: bcface_id
+        character(len=*),   intent(in)  :: bc_state
+
+        integer(ik) :: ierr
+        logical     :: exist_status
+
+        ! Check if face contains the bc_state
+        call h5lexists_f(bcface_id, "BCS_"//trim(bc_state), exist_status, ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"check_bc_state_exists: Error in call to h5lexists_f")
+
+
+    end function check_bc_state_exists_hdf
+    !*********************************************************************************************
+
+
+
+
+
+
+
+
+
+    !>
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   2/5/2016
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   9/1/2016
+    !!  @note   Modified to include bc_states
+    !!
+    !!
+    !-------------------------------------------------------------------------------------------
+    function check_bc_property_exists_hdf(bcface_id,pname) result(exist_status)
+        integer(HID_T),     intent(in)  :: bcface_id
+        character(*),       intent(in)  :: pname
+
+        integer(HID_T)          :: bc_state
+        integer                 :: ierr, nmembers, igrp, type, iop
+        character(len=1024)     :: gname
+        logical                 :: exist_status
+        type(svector_t)         :: bc_state_strings
+        type(string_t)          :: string
+
+        
+        !
+        !  Loop through groups and detect bc_state's that could contain property
+        !
+        call h5gn_members_f(bcface_id, ".", nmembers, ierr)
+        if ( nmembers > 0 ) then
+
+            ! First get number of states. This could be different than number of groups.
+            do igrp = 0,nmembers-1
+
+                ! Get group name
+                call h5gget_obj_info_idx_f(bcface_id, ".", igrp, gname, type, ierr)
+
+                ! Test if group is a boundary condition function. 'BCS_'
+                if (gname(1:4) == 'BCS_') then
+                    call bc_state_strings%push_back(string_t(trim(gname)))
+                end if
+
+            end do  ! igrp
+
+        end if
+
+
+
+        !
+        ! Find the state with the property
+        !
+        exist_status = .false.
+        do iop = 1,bc_state_strings%size()
+
+            ! Open the state group
+            string = bc_state_strings%at(iop)
+            call h5gopen_f(bcface_id, string%get(), bc_state, ierr)
+
+            ! Check if it contains a link to the property group
+            call h5lexists_f(bc_state, "BCP_"//trim(pname), exist_status, ierr)
+
+
+
+            if (exist_status) then
+                ! Close state
+                call h5gclose_f(bc_state,ierr)
+                exit
+            end if
+
+            ! Close state
+            call h5gclose_f(bc_state,ierr)
+
+        end do !iop
+
+
+
+    end function check_bc_property_exists_hdf
+    !********************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
     !>  Delete all the attributes attached to a specified group identifier.
@@ -1905,7 +2572,7 @@ contains
     !!  @param[in]  gid     HDF5 group identifier.
     !!
     !---------------------------------------------------------------------------------------
-    subroutine delete_group_attributes(gid)
+    subroutine delete_group_attributes_hdf(gid)
         integer(HID_T),         intent(in)      :: gid
 
         integer(ik)                             :: nattr, ierr
@@ -1918,7 +2585,7 @@ contains
         !
         call h5oget_info_f(gid, h5_info, ierr)
         nattr = h5_info%num_attrs
-        if (ierr /= 0) call chidg_signal(FATAL,"delete_group_attributes: error getting current number of attributes.")
+        if (ierr /= 0) call chidg_signal(FATAL,"delete_group_attributes_hdf: error getting current number of attributes.")
 
 
         !
@@ -1932,14 +2599,14 @@ contains
             idx = 0
             do iattr = 1,nattr
                 call h5adelete_by_idx_f(gid, ".", H5_INDEX_CRT_ORDER_F, H5_ITER_NATIVE_F, idx, ierr)
-                if (ierr /= 0) call chidg_signal(FATAL,"delete_group_attributes: error deleting attribute")
+                if (ierr /= 0) call chidg_signal(FATAL,"delete_group_attributes_hdf: error deleting attribute")
             end do
 
 
         end if ! nattr
 
 
-    end subroutine delete_group_attributes
+    end subroutine delete_group_attributes_hdf
     !****************************************************************************************
 
 

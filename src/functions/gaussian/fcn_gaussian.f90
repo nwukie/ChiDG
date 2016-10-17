@@ -59,7 +59,7 @@ contains
         !
         ! Set function name
         !
-        call self%add_name("gaussian")
+        call self%set_name("gaussian")
 
 
         !

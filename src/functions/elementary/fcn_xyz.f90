@@ -45,7 +45,7 @@ contains
         !
         ! Set function name
         !
-        call self%add_name("xyz")
+        call self%set_name("xyz")
 
 
         !

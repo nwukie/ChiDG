@@ -51,7 +51,7 @@ contains
         !
         ! Set function name
         !
-        self%name = "roe check  ::  "
+        call self%set_name("roe check  ::  ")
 
 
 

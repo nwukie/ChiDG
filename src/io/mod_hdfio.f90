@@ -299,19 +299,19 @@ contains
             allocate(xpts(npts),stat=ierr)
             cp_pts = c_loc(xpts(1))
             call h5dread_f(did_x, H5T_NATIVE_DOUBLE, cp_pts, ierr)
-            if (ierr /= 0) stop "Error: read_grid_hdf5 -- h5dread_f"
+            if (ierr /= 0) call chidg_signal(FATAL,"read_grid_hdf5 -- h5dread_f")
 
 
             allocate(ypts(npts))
             cp_pts = c_loc(ypts(1))
             call h5dread_f(did_y, H5T_NATIVE_DOUBLE, cp_pts, ierr)
-            if (ierr /= 0) stop "Error: read_grid_hdf5 -- h5dread_f"
+            if (ierr /= 0) call chidg_signal(FATAL,"read_grid_hdf5 -- h5dread_f")
 
 
             allocate(zpts(npts))
             cp_pts = c_loc(zpts(1))
             call h5dread_f(did_z, H5T_NATIVE_DOUBLE, cp_pts, ierr)
-            if (ierr /= 0) stop "Error: read_grid_hdf5 -- h5dread_f"
+            if (ierr /= 0) call chidg_signal(FATAL,"read_grid_hdf5 -- h5dread_f")
 
 
             !
@@ -1360,7 +1360,7 @@ contains
 
 
                 !
-                ! First get number of states. This could be different than number of groups.
+                ! First get number of bc_state's. This could be different than number of groups.
                 !
 
                 !  Get number of groups linked to the current bc_face
@@ -1627,7 +1627,7 @@ contains
                 ! 
                 cp_conn = c_loc(connectivity(1,1))
                 call h5dread_f(did_e, H5T_NATIVE_INTEGER, cp_conn, ierr)
-                if (ierr /= 0) stop "Error: read_connectivity_hdf5 -- h5dread_f"
+                if (ierr /= 0) call chidg_signal(FATAL,"read_connectivity_hdf5 -- h5dread_f")
 
 
 

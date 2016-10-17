@@ -15,7 +15,7 @@ module mod_chidg_convert_p3d_hdf5
     use mod_hdf_utilities,  only: initialize_file_hdf, set_ndomains_hdf, set_domain_index_hdf, &
                                   set_domain_mapping_hdf, set_domain_dimensionality_hdf, set_domain_equation_set_hdf, &
                                   set_contains_grid_hdf, set_domain_coordinates_hdf, set_domain_elements_hdf, &
-                                  set_domain_bc_patch_hdf
+                                  set_bc_patch_hdf
     use mod_plot3d_utilities,   only: get_block_elements_plot3d, get_block_boundary_faces_plot3d, &
                                       check_block_mapping_conformation_plot3d
     use hdf5
@@ -232,7 +232,7 @@ contains
                 faces = get_block_boundary_faces_plot3d(xcoords,ycoords,zcoords,mapping,bcface)
 
                 ! Set bc patch face indices
-                call set_domain_bc_patch_hdf(block_id,faces,bcface)
+                call set_bc_patch_hdf(block_id,faces,bcface)
 
             end do !bcface
 

@@ -43,7 +43,7 @@ contains
         !
         ! Set function name
         !
-        call self%add_name("polynomial")
+        call self%set_name("polynomial")
 
 
         !

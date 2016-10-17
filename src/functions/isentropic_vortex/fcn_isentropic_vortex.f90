@@ -68,7 +68,8 @@ contains
         !
         ! Set function name
         !
-        self%name = "isentropic vortex  ::  weeeee!"
+        !self%name = "isentropic vortex  ::  weeeee!"
+        call self%set_name("isentropic vortex  ::  weeeee!")
 
 
         !

@@ -48,7 +48,7 @@ contains
         !
         ! Set function name
         !
-        self%name = "sod shock tube  ::   "
+        call self%set_name("sod shock tube  ::   ")
 
 
     end subroutine init

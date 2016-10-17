@@ -28,47 +28,47 @@ contains
 
 
 
-    !>  Return a linear(1D) array of nodes for the grid.
+    !>  Return a linear(1D) array of points for the grid.
     !!
     !!  @author Nathan A. Wukie
     !!  @date   10/16/2016
     !!
     !!
     !----------------------------------------------------------------------------------------
-    function get_block_nodes_plot3d(xcoords,ycoords,zcoords) result(nodes)
+    function get_block_points_plot3d(xcoords,ycoords,zcoords) result(points)
         real(rk),   intent(in)  :: xcoords(:,:,:)
         real(rk),   intent(in)  :: ycoords(:,:,:)
         real(rk),   intent(in)  :: zcoords(:,:,:)
 
-        type(point_t),  allocatable :: nodes(:)
-        integer(ik)                 :: inode, nnodes, i,j,k, ierr
+        type(point_t),  allocatable :: points(:)
+        integer(ik)                 :: ipt, npts, i,j,k, ierr
 
 
 
-        nnodes = size(xcoords,1)*size(xcoords,2)*size(xcoords,3)
+        npts = size(xcoords,1)*size(xcoords,2)*size(xcoords,3)
 
         
-        allocate(nodes(nnodes), stat=ierr)
+        allocate(points(npts), stat=ierr)
         if (ierr /= 0) call AllocationError
 
 
-        inode = 1
+        ipt = 1
         do k = 1,size(xcoords,3)
             do j = 1,size(xcoords,2)
                 do i = 1,size(xcoords,1)
 
-                    nodes(inode)%c1_ = xcoords(i,j,k)    
-                    nodes(inode)%c2_ = ycoords(i,j,k)    
-                    nodes(inode)%c3_ = zcoords(i,j,k)    
+                    points(ipt)%c1_ = xcoords(i,j,k)    
+                    points(ipt)%c2_ = ycoords(i,j,k)    
+                    points(ipt)%c3_ = zcoords(i,j,k)    
     
-                    inode = inode + 1
+                    ipt = ipt + 1
 
                 end do ! i
             end do ! j
         end do ! k
 
 
-    end function get_block_nodes_plot3d
+    end function get_block_points_plot3d
     !****************************************************************************************
 
 

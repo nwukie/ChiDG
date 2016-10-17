@@ -8,7 +8,7 @@ module type_function
 
     !>  Function class.
     !!
-    !!  \f$     f = f(t,\vec{x})    \f$
+    !!  f = f(t,\vec{x}) 
     !!
     !!
     !!  @author Nathan A. Wukie
@@ -27,13 +27,14 @@ module type_function
         ! Function initialization
         procedure(init_interface),      deferred    :: init             !< Initialize function and register options
         procedure                                   :: add_option       !< Add option to the function definition. Only use for initialization
-        procedure                                   :: add_name         !< Add function name. Only use for initialization
+
+        procedure                                   :: set_name         !< Add function name. Only use for initialization
+        procedure                                   :: get_name         !< Return the function name
 
         ! Function set
         procedure                                   :: set_option       !< Set option value
 
         ! Function get
-        procedure                                   :: get_name         !< Return the function name
         procedure                                   :: get_noptions     !< Return number of options in the function
         procedure                                   :: get_option_key   !< Return the name of an option,  given an index
         procedure                                   :: get_option_value !< Return the value of an option, given a key
@@ -91,16 +92,36 @@ contains
     !!
     !!
     !--------------------------------------------------------------------------------------------
-    subroutine add_name(self,fname)
+    subroutine set_name(self,fname)
         class(function_t),  intent(inout)   :: self
         character(*),       intent(in)      :: fname
 
         self%name_ = fname
 
-    end subroutine add_name
+    end subroutine set_name
     !********************************************************************************************
 
 
+
+
+
+
+
+    !>  Return the name of the function.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   2/4/2016
+    !!
+    !-----------------------------------------------------------------------------------------
+    function get_name(self) result(fname)
+        class(function_t),  intent(in)  :: self
+
+        character(len=:),   allocatable :: fname
+
+        fname = self%name_
+
+    end function get_name
+    !*****************************************************************************************
 
 
 
@@ -271,21 +292,6 @@ contains
 
 
 
-    !>  Return the name of the function.
-    !!
-    !!  @author Nathan A. Wukie
-    !!  @date   2/4/2016
-    !!
-    !-----------------------------------------------------------------------------------------
-    function get_name(self) result(fname)
-        class(function_t),  intent(in)  :: self
-
-        character(len=:),   allocatable :: fname
-
-        fname = self%name_
-
-    end function get_name
-    !*****************************************************************************************
 
 
 

@@ -59,7 +59,7 @@ contains
         !
         ! Set function name
         !
-        call self%add_name("monopole")
+        call self%set_name("monopole")
 
 
         !

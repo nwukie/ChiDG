@@ -135,6 +135,15 @@ contains
         end select
 
 
+        !
+        ! Generate nodes
+        !
+!        mapping = 1
+!        idomain = 1
+!        nodes    = get_block_points_plot3d(xcoords,ycoords,zcoords)
+!        elements = get_block_elements_plot3d(xcoords,ycoords,zcoords,mapping,idomain)
+
+
     end subroutine create_mesh
     !****************************************************************************
 

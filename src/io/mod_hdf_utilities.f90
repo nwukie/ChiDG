@@ -137,27 +137,40 @@ contains
     function initialize_file_hdf(filename) result(fid)
         character(*),   intent(in)  :: filename
 
-        logical         :: file_exists
+        
+        character(:),   allocatable :: filename_init
         integer(HID_T)  :: fid
-        integer(ik)     :: ierr
+        integer(ik)     :: ierr, loc
+        logical         :: file_exists
+
+
+        !
+        ! Append extension if we need to
+        !
+        loc = index(filename,".h5")
+        if (loc == 0) then
+            filename_init = trim(filename)//".h5"
+        else
+            filename_init = trim(filename)
+        end if
         
 
         !
         ! Check if input file already exists
         !
-        inquire(file=filename, exist=file_exists)
+        inquire(file=filename_init, exist=file_exists)
         if (file_exists) then
-            call write_line("Found "//trim(filename)//" that already exists. Deleting it to create new file...")
-            call delete_file(trim(filename))
+            call write_line("Found "//trim(filename_init)//" that already exists. Deleting it to create new file...")
+            call delete_file(trim(filename_init))
         end if
 
 
         !
         ! Create file
         !
-        call h5fcreate_f(trim(filename)//".h5", H5F_ACC_TRUNC_F, fid, ierr)
+        call h5fcreate_f(trim(filename_init), H5F_ACC_TRUNC_F, fid, ierr)
         if (ierr /= 0) call chidg_signal(FATAL,"initialize_file_hdf: Error h5fcreate_f")
-        call write_line("File created: "//trim(filename)//".h5")
+        call write_line("File created: "//trim(filename_init))
 
 
         !
@@ -205,14 +218,24 @@ contains
         character(*),   intent(in)      :: filename
         integer(HID_T), intent(inout)   :: fid
 
-        integer         :: ierr
+        character(:),   allocatable :: filename_open
+        integer         :: ierr, loc
         logical         :: file_exists
 
+        !
+        ! Append extension if we need to
+        !
+        loc = index(filename,".h5")
+        if (loc == 0) then
+            filename_open = trim(filename)//".h5"
+        else
+            filename_open = trim(filename)
+        end if
 
         !  Check file exists
-        inquire(file=filename, exist=file_exists)
+        inquire(file=filename_open, exist=file_exists)
         if (.not. file_exists) then
-            call chidg_signal_one(FATAL,"open_file_hdf: Could not find grid file",filename)
+            call chidg_signal_one(FATAL,"open_file_hdf: Could not find grid file",filename_open)
         end if
 
 
@@ -226,7 +249,7 @@ contains
         !
         !  Open input file using default properties.
         !
-        call h5fopen_f(filename, H5F_ACC_RDWR_F, fid, ierr)
+        call h5fopen_f(filename_open, H5F_ACC_RDWR_F, fid, ierr)
         if (ierr /= 0) call chidg_signal(FATAL,"open_file_hdf - h5fopen_f: There was an error opening the grid file.")
 
 

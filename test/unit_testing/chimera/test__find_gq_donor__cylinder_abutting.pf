@@ -16,10 +16,9 @@ subroutine test_find_gq_donor_cylinder_abutting()
 
 
     use mod_grid_operators, only: initialize_variable
+    use mod_test_utilities, only: create_mesh_file
+    use mod_file_utilities, only: delete_file
     use mod_function,       only: create_function
-    use mod_spatial,        only: update_space
-
-!    use operator_chidg_mv,  only: chidg_mv
     implicit none
 
 
@@ -32,6 +31,7 @@ subroutine test_find_gq_donor_cylinder_abutting()
     real(rk)                        :: chi_xi, chi_eta, chi_zeta, ref_xi, ref_eta, ref_zeta
     type(point_t)                   :: chimera_node
     real(rk)                        :: tol
+    character(1024)                 :: filename = "cylinder_chimera_matching.h5"
 
 
     tol            = 1.e-12_rk
@@ -46,12 +46,17 @@ subroutine test_find_gq_donor_cylinder_abutting()
     call chidgA%init('env')
 
 
+    !
+    ! Generate cylinder mesh
+    !
+    call create_mesh_file("Cylinder : Diagonal : Matching",trim(filename))
+
 
     !
     ! Read grid
     !
-    call chidgA%read_grid('cylinder_chimera_abutting.h5',spacedim)
-    call chidgA%read_boundaryconditions('cylinder_chimera_abutting.h5')
+    call chidgA%read_grid(trim(filename),spacedim)
+    call chidgA%read_boundaryconditions(trim(filename))
 
 
     !
@@ -60,38 +65,6 @@ subroutine test_find_gq_donor_cylinder_abutting()
     call chidgA%initialize_solution_domains(nterms_s)
     call chidgA%init('communication')
     call chidgA%init('chimera')
-    call chidgA%initialize_solution_solver()
-
-
-
-    !
-    ! Initialize solution
-    !
-    call create_function(constant,'constant')
-
-    call constant%set_option('val',1.13_rk)
-    call initialize_variable(chidgA%data,1,constant)
-
-    call constant%set_option('val',190.0_rk)
-    call initialize_variable(chidgA%data,2,constant)
-
-    call constant%set_option('val',ZERO)
-    call initialize_variable(chidgA%data,3,constant)
-
-    call constant%set_option('val',ZERO)
-    call initialize_variable(chidgA%data,4,constant)
-
-    call constant%set_option('val',248000._rk)
-    call initialize_variable(chidgA%data,5,constant)
-
-
-
-    !
-    ! Call update_space
-    !
-    call write_line("ChiDG - A: Updating Space")
-    call update_space(chidgA%data)
-
 
 
 
@@ -103,10 +76,10 @@ subroutine test_find_gq_donor_cylinder_abutting()
     ielem = 25
     iface = XI_MIN
 
-    ChiID = chidgA%data%mesh(4)%faces(ielem,iface)%ChiID
-    idom_d = chidgA%data%mesh(4)%chimera%recv%data(ChiID)%donor_domain_l%at(1)
+    ChiID   = chidgA%data%mesh(4)%faces(ielem,iface)%ChiID
+    idom_d  = chidgA%data%mesh(4)%chimera%recv%data(ChiID)%donor_domain_l%at(1)
     ielem_d = chidgA%data%mesh(4)%chimera%recv%data(ChiID)%donor_element_l%at(1)
-    ngq = chidgA%data%mesh(idom)%chimera%recv%data(ChiID)%donor_gq_indices(1)%size()
+    ngq     = chidgA%data%mesh(idom)%chimera%recv%data(ChiID)%donor_gq_indices(1)%size()
 
     do igq = 1,ngq
 
@@ -131,8 +104,10 @@ subroutine test_find_gq_donor_cylinder_abutting()
 
 
 
-
+    ! Close ChiDG
     call chidgA%close('core')
 
+    ! Clean-up test
+    call delete_file(trim(filename))
 
 end subroutine test_find_gq_donor_cylinder_abutting

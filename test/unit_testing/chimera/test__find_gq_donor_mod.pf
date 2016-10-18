@@ -1,3 +1,27 @@
+!-------------------------------------------------------------------------------------------
+!!
+!!  @author Nathan A. Wukie
+!!
+!!  Initialize a single 2x2x2-element grid in a ChiDG instance. 
+!!  Specify some random points inside the grid; test to make sure
+!!  find_gq_donor is finding the correct elements.
+!!
+!!  elements (2x2x2) - linear
+!!
+!!          *-------*-------*                                  *-------*-------*
+!!         /       /       /|                                 /       /    (3)/|
+!!        *-------*-------* |   Pick some points inside      *-------*-------* |
+!!       /       /       /| *   the grid((1),(2),(3)),      /       /       /| *
+!!      *-------*-------* |/|   and call find_gq_donor     *-------*-------* |/|
+!!      |       |       | * |                              |       |       | * |
+!!      |       |       |/| *   Since we know the grid,    |       |    (2)|/| *
+!!      *-------*-------* |/    and we know what points    *-------*-------* |/
+!!      |       |       | *     we are picking, we can     |       |       | *
+!!      |       |       |/      check to make sure the     |  (1)  |       |/
+!!      *-------*-------*       correct elements were      *-------*-------*
+!!                              found as donors.
+!!
+!*******************************************************************************************
 module test__find_gq_donor_mod
     use pfunit_mod
     use mod_kinds,              only: rk, ik
@@ -10,7 +34,7 @@ module test__find_gq_donor_mod
     use type_element_info,      only: element_info_t
     use type_face_info,         only: face_info_t
 
-    use mod_testutils,          only: create_mesh
+    use mod_test_utilities,     only: create_mesh
     use mod_chimera,            only: find_gq_donor
     implicit none
 
@@ -86,15 +110,12 @@ contains
     !!
     !!
     !!
-    !----------------------------------------------------------------------------------------------------
+    !--------------------------------------------------------------------------------------
     subroutine setUp(this)
         class(test_find_gq_donor),  intent(inout)   :: this
 
-
         type(meshdata_t)                :: meshdata
-        character(len=100)              :: filename = 'D2_E8_M1.h5'
         integer(ik)                     :: nterms_s, nterms_c, spacedim
-
 
         spacedim        = 3
         nterms_c        = 8
@@ -102,32 +123,28 @@ contains
         IO_DESTINATION  = 'file'
 
 
-        !
         ! Initialize ChiDG environment
-        !
         call this%chidg%init('env')
 
 
-
-        !
-        ! Read 2-Domain overlapping grid
-        !
+        ! Create 2x2x2-element Grid
         call create_mesh('2x2x2',meshdata%points,meshdata%connectivity)
 
 
-
-        !
-        ! Add domain to ChiDG
-        !
+        ! Add domain to ChiDG, initialize
         call this%chidg%data%add_domain('D_01',meshdata%points,meshdata%connectivity,spacedim,nterms_c,'Scalar Advection')
         call this%chidg%initialize_solution_domains(nterms_s)
         call this%chidg%init('communication')
 
+    end subroutine setUp
+    !**************************************************************************************
 
-    end subroutine
 
 
-
+    !>
+    !!
+    !!
+    !--------------------------------------------------------------------------------------
     subroutine tearDown(this)
         class(test_find_gq_donor),  intent(inout)   :: this
 
@@ -136,8 +153,8 @@ contains
         !
         call this%chidg%close('core')
 
-    end subroutine
-    !*************************************************************************************************************************
+    end subroutine tearDown
+    !**************************************************************************************
 
 
 
@@ -226,13 +243,15 @@ contains
 
 
     end function getParameters
+    !**********************************************************************************************
 
 
 
 
-    !
-    ! Reporting in the case of a failed test
-    !
+    !>
+    !! Reporting in the case of a failed test
+    !!
+    !----------------------------------------------------------------------------------------------
     function toString(this) result(string)
         class(node_donor_coord),    intent(in)  :: this
         character(:),   allocatable :: string
@@ -242,13 +261,18 @@ contains
 
         string = trim(buffer)
     end function toString
+    !**********************************************************************************************
 
 
 
 
 
 
-    !>
+    !>  For a given gqnode, try to find a donor using 'find_gq_donor'
+    !!
+    !!  Test:
+    !!      - correct donor element was found
+    !!      - correct location in the donor-local coordinates was computed (xi,eta,zeta)
     !!
     !!  @author Nathan A. Wukie
     !!
@@ -272,7 +296,7 @@ contains
 
 
         !
-        ! Detect Chimera faces. THIS IS BEING TESTED
+        ! Given some point, find a donor element in the grid. THIS IS BEING TESTED
         !
         call find_gq_donor(self%chidg%data%mesh,self%gqnode,receiver,donor,donor_coord)
 

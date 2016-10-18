@@ -23,7 +23,7 @@ module test__project_function_xyz__mod
     !!  @date   2/2/2016
     !!
     !-----------------------------------------------------------------------------------------
-@TestCase
+    @TestCase
     type, extends(TestCase) ::  test_project_function_xyz
 
         type(chidg_t)   :: chidg
@@ -85,7 +85,7 @@ contains
         this%nterms_s = 27
         spacedim      = 3
 
-        call this%chidg%data%add_domain('D_01',nodes,connectivity,spacedim,nterms_c,'LinearAdvection')
+        call this%chidg%data%add_domain('D_01',nodes,connectivity,spacedim,nterms_c,'Scalar Advection')
         call this%chidg%initialize_solution_domains(this%nterms_s)
 
         
@@ -110,14 +110,6 @@ contains
 
 
 
-
-!    @Test
-!    subroutine testing(this)
-!        class(test_project_function_xyz),   intent(inout)   :: this
-!
-!        @assertTrue(.true.)
-!
-!    end subroutine testing
 
     !> Test projection of the function f(t,x,y,z) = x^2
     !!

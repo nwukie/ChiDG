@@ -1362,20 +1362,24 @@ contains
                 ! Open the Domain/Grid group
                 !
                 call h5gopen_f(fid, trim(gname)//"/Grid", gid, ierr, H5P_DEFAULT_F)
-                if (ierr /= 0) call chidg_signal_one(FATAL,"read_connectivity_hdf: Domagin/Grid group did not open properly.", trim(gname)//"/Grid")
+                if (ierr /= 0) call chidg_signal_one(FATAL,"read_connectivity_hdf: Domain/Grid group did not open properly.", trim(gname)//"/Grid")
 
 
                 !
                 ! Get number of nodes in the domain
                 !
                 call h5dopen_f(gid, "CoordinateX", did_x, ierr, H5P_DEFAULT_F)
+                if (ierr /= 0) call chidg_signal(FATAL,"read_connectivity_hdf: Domain/Grid/CoordinateX group did not open properly.")
 
 
                 !
                 !  Get the dataspace id and dimensions
                 !
                 call h5dget_space_f(did_x, sid, ierr)
+                if (ierr /= 0) call chidg_signal(FATAL,"read_connectivity_hdf: h5dget_space_f did not return 'CoordinateX' dataspace properly.")
                 call h5sget_simple_extent_dims_f(sid, rank_one_dims, maxdims, ierr)
+                if (ierr == -1) call chidg_signal(FATAL,"read_connectivity_hdf: h5sget_simple_extend_dims_f did not return extent properly.")
+                call h5sclose_f(sid,ierr)
                 nnodes = rank_one_dims(1)
 
 
@@ -1383,12 +1387,15 @@ contains
                 ! Open Elements connectivity dataset
                 !
                 call h5dopen_f(gid, "Elements", did_e, ierr, H5P_DEFAULT_F)
+                if (ierr /= 0) call chidg_signal(FATAL,"read_connectivity_hdf: h5dopen_f did not open 'Elements' dataset properly.")
 
                 !
                 !  Get the dataspace id and dimensions
                 !
                 call h5dget_space_f(did_e, sid, ierr)
+                if (ierr /= 0) call chidg_signal(FATAL,"read_connectivity_hdf: h5dget_space_f did not return 'Elements dataspace properly.")
                 call h5sget_simple_extent_dims_f(sid, rank_two_dims, maxdims, ierr)
+                if (ierr == -1) call chidg_signal(FATAL,"read_connectivity_hdf: h5sget_simple_extent_dims_f did not return extend properly.")
                 if (allocated(connectivity)) deallocate(connectivity)
                 allocate(connectivity(rank_two_dims(1),rank_two_dims(2)))
 

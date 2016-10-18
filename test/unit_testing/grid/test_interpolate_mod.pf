@@ -18,7 +18,7 @@ module test_interpolate_mod
     use mod_interpolate,    only: interpolate_face_standard, interpolate_face_autodiff, &
                                   interpolate_element_standard, interpolate_element_autodiff
     use mod_grid_operators, only: initialize_variable
-    use mod_testutils,      only: create_mesh
+    use mod_test_utilities, only: create_mesh
     use mod_chidg_mpi,      only: IRANK
     use mod_DNAD_tools,     only: compute_neighbor_element_l, compute_neighbor_face
     use DNAD_D

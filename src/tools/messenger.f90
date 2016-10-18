@@ -271,6 +271,7 @@ contains
         !
         select case (sig)
             case (3,4)    ! Fatal Error -- Code terminates
+                call log_finalize() !Make sure log file is flushed before everything gets killed.
                 call MPI_Abort(ChiDG_COMM,1)
                 !stop
                 !error stop
@@ -483,7 +484,8 @@ contains
         if ( present(color) .and. (.not. present(bold)) ) then
             call set_color(color)
         else if ( (.not. present(color)) .and. present(bold) ) then
-            call set_color('black', bold)
+            call set_color('none', bold)
+            !call set_color(bold=bold)
         else if ( present(color) .and. present(bold) ) then
             call set_color(color, bold)
         else
@@ -635,6 +637,7 @@ contains
 
         character(len=:), allocatable :: writeline
         integer                       :: section_length
+
 
         !
         ! Get line section length
@@ -792,45 +795,50 @@ contains
     !!
     !-------------------------------------------------------------------------------------------
     subroutine set_color(color,bold)
-        character(*),      intent(in)  :: color
-        logical, optional, intent(in)   :: bold
-
-        color_end = achar(27)//'[m'
+        character(*),   optional, intent(in)    :: color
+        logical,        optional, intent(in)    :: bold
 
         color_begin = achar(27)//'['
+        color_end   = achar(27)//'[m'
 
-        select case (color)
-            case ('black')
-                color_begin = color_begin//'30'
+        
+        !
+        ! Add color if present
+        !
+        if (present(color)) then
+            select case (color)
+                case ('black')
+                    color_begin = color_begin//'30'
 
-            case ('red')
-                color_begin = color_begin//'31'
+                case ('red')
+                    color_begin = color_begin//'31'
 
-            case ('green')
-                color_begin = color_begin//'32'
+                case ('green')
+                    color_begin = color_begin//'32'
 
-            case ('yellow')
-                color_begin = color_begin//'33'
+                case ('yellow')
+                    color_begin = color_begin//'33'
 
-            case ('blue')
-                color_begin = color_begin//'34'
+                case ('blue')
+                    color_begin = color_begin//'34'
 
-            case ('purple')
-                color_begin = color_begin//'35'
+                case ('purple')
+                    color_begin = color_begin//'35'
 
-            case ('aqua')
-                color_begin = color_begin//'36'
+                case ('aqua')
+                    color_begin = color_begin//'36'
 
-            case ('pink')
-                color_begin = color_begin//'95'
+                case ('pink')
+                    color_begin = color_begin//'95'
 
-            case ('none')
-                color_begin = color_begin//'30'
+                case ('none')
+                    color_begin = color_begin//''
 
-            case default
-                color_begin = color_begin//'30'
-                call message(__FILE__,__LINE__,1, "set_color: unrecognized color string.",color) ! send warning
-        end select
+                case default
+                    color_begin = color_begin//''
+                    call message(__FILE__,__LINE__,1, "set_color: unrecognized color string.",color) ! send warning
+            end select
+        end if
 
 
 
@@ -849,6 +857,7 @@ contains
         ! Terminate color_begin
         !
         color_begin = color_begin//'m'
+
 
     end subroutine set_color
     !******************************************************************************************

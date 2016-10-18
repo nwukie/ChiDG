@@ -10,7 +10,7 @@ module test_blockvector_mod
     use type_domain_connectivity,   only: domain_connectivity_t
     use DNAD_D
     use fcn_constant,               only: constant_f
-    use mod_testutils,              only: create_mesh
+    use mod_test_utilities,         only: create_mesh
     implicit none
 
     public  :: test_blockvector

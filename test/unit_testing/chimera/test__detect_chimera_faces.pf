@@ -22,6 +22,9 @@ subroutine test__detect_chimera_faces()
     use type_bc,        only: bc_t
     use mod_bc,         only: create_bc
 
+    use mod_test_utilities, only: create_mesh_file
+    use mod_file_utilities, only: delete_file
+
     use mod_chimera,    only: detect_chimera_faces
     implicit none
 
@@ -39,18 +42,15 @@ subroutine test__detect_chimera_faces()
 
 
     !
-    ! Create grid
-    !
-!    call create_mesh_file("D2_E8_M1 : Overlapping : Matching", gridfile)
-
-
-
-
-    !
     ! Initialize ChiDG environment
     !
     call chidg%init('env')
 
+
+    !
+    ! Create grid file
+    !
+    call create_mesh_file("D2_E8_M1 : Overlapping : Matching", filename)
 
 
     !
@@ -115,6 +115,9 @@ subroutine test__detect_chimera_faces()
     !
     call chidg%close('core')
 
+
+    ! Clean-up
+    call delete_file(filename)
 
 end subroutine test__detect_chimera_faces
 !****************************************************************************************

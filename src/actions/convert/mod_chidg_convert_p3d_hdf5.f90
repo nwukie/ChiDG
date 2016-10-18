@@ -15,7 +15,8 @@ module mod_chidg_convert_p3d_hdf5
     use mod_hdf_utilities,      only: initialize_file_hdf, set_ndomains_hdf, set_domain_index_hdf, &
                                       set_domain_mapping_hdf, set_domain_dimensionality_hdf, set_domain_equation_set_hdf, &
                                       set_contains_grid_hdf, set_domain_coordinates_hdf, set_domain_elements_hdf, &
-                                      set_bc_patch_hdf, add_domain_hdf, open_domain_hdf, close_domain_hdf
+                                      set_bc_patch_hdf, add_domain_hdf, open_domain_hdf, close_domain_hdf, &
+                                      close_file_hdf, close_hdf, open_hdf
     use mod_plot3d_utilities,   only: get_block_elements_plot3d, get_block_boundary_faces_plot3d, &
                                       check_block_mapping_conformation_plot3d, get_block_points_plot3d
     use type_point,             only: point_t
@@ -85,8 +86,7 @@ contains
         !
         ! Initialize HDF5
         !
-        call h5open_f(ierr)
-        if (ierr /= 0) call chidg_signal(FATAL,"Error: h5open_f")
+        call open_hdf()
 
 
         !
@@ -228,9 +228,8 @@ contains
         ! Close files and interfaces
         !
         close(fileunit)
-        call h5fclose_f(file_id,ierr)
-        call h5close_f(ierr)
-
+        call close_file_hdf(file_id)
+        call close_hdf()
 
         
         !

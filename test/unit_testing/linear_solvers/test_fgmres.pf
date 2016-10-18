@@ -15,7 +15,7 @@ subroutine test_fgmres_solve()
     use type_chidgMatrix
     use type_chidgVector,           only: chidgVector_t
 
-    use mod_testutils,              only: create_mesh
+    use mod_test_utilities,         only: create_mesh
     implicit none
 
     type(chidg_t)               :: chidg
@@ -44,10 +44,10 @@ subroutine test_fgmres_solve()
     !
     ! Set ChiDG components
     !
-    call chidg%set('time_scheme',       'steady')
-    call chidg%set('nonlinear_solver',  'newton')
-    call chidg%set('linear_solver',     'fgmres')
-    call chidg%set('preconditioner',    'identity')
+    call chidg%set('Time Integrator',  'steady'  )
+    call chidg%set('Nonlinear Solver', 'newton'  )
+    call chidg%set('Linear Solver',    'fgmres'  )
+    call chidg%set('Preconditioner',   'identity')
 
 
     !

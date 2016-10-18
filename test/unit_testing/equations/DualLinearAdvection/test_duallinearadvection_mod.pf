@@ -12,7 +12,7 @@ module test_duallinearadvection_mod
     use type_point,                 only: point_t
     use type_densematrix,           only: densematrix_t
     use type_domain_connectivity,   only: domain_connectivity_t
-    use mod_testutils,              only: create_mesh
+    use mod_test_utilities,         only: create_mesh
     use mod_check_jacobian
     implicit none
 

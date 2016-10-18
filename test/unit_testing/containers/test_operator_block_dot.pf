@@ -10,7 +10,7 @@ subroutine test_operator_block_dot()
     use type_point,                 only: point_t
     use type_domain_connectivity,   only: domain_connectivity_t
 
-    use mod_testutils,              only: create_mesh
+    use mod_test_utilities,         only: create_mesh
 
     use operator_block_dot
     implicit none

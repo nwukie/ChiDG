@@ -12,7 +12,7 @@ subroutine test_blockmatrix__store_1eq_8terms()
     use type_point,                 only: point_t
     use type_blockmatrix,           only: blockmatrix_t
     use type_domain_connectivity,   only: domain_connectivity_t
-    use mod_testutils,              only: create_mesh
+    use mod_test_utilities,         only: create_mesh
     use DNAD_D
     
     implicit none
@@ -146,7 +146,7 @@ subroutine test_blockmatrix__store_2eq_8terms()
     use type_point,                 only: point_t
     use type_blockmatrix,           only: blockmatrix_t
     use type_domain_connectivity,   only: domain_connectivity_t
-    use mod_testutils,              only: create_mesh
+    use mod_test_utilities,         only: create_mesh
     use DNAD_D
     
     implicit none
@@ -275,7 +275,7 @@ subroutine test_blockmatrix__clear_1eq_8terms()
     use type_point,                 only: point_t
     use type_blockmatrix,           only: blockmatrix_t
     use type_domain_connectivity,   only: domain_connectivity_t
-    use mod_testutils,              only: create_mesh
+    use mod_test_utilities,         only: create_mesh
     use DNAD_D
     
     implicit none

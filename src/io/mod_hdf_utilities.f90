@@ -27,6 +27,10 @@ module mod_hdf_utilities
     ! Attribute sizes
     integer(HSIZE_T), parameter :: SIZE_ONE = 1
 
+    
+    ! HDF library status
+    logical    :: HDF_is_open     = .false.
+    integer    :: HDF_nfiles_open = 0
 
 
 contains
@@ -34,6 +38,11 @@ contains
     !----------------------------------------------------------------------------------------
     !!
     !!  ChiDG HDF File Format API
+    !!
+    !!  HDF:
+    !!  ---------------------------
+    !!  open_hdf
+    !!  close_hdf
     !!
     !!  File:
     !!  ---------------------------
@@ -124,6 +133,66 @@ contains
 
 
 
+    !>  Handle opening the HDF library.
+    !!
+    !!  This way, it will only open the library if it needs opened, incase it is called
+    !!  multiple times.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   10/18/2016
+    !!
+    !!
+    !---------------------------------------------------------------------------------------
+    subroutine open_hdf()
+
+        integer(ik) :: ierr
+
+        if (.not. HDF_is_open) then
+            call h5open_f(ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,"open_hdf: h5open_f did not execute successfully.")
+        end if
+
+        HDF_is_open     = .true.
+
+    end subroutine open_hdf
+    !***************************************************************************************
+
+
+
+
+
+    !>  Handle closing the HDF library.
+    !!
+    !!  This way, it will only close the library if it hasn't already been closed, incase 
+    !!  it is called multiple times.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   10/18/2016
+    !!
+    !!
+    !---------------------------------------------------------------------------------------
+    subroutine close_hdf()
+        integer(ik) :: ierr
+
+
+        if (HDF_is_open .and. (HDF_nfiles_open==0)) then
+
+            call h5close_f(ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,"close_hdf: h5close_f did not execute successfully.")
+
+            HDF_is_open     = .false.
+
+        end if
+
+
+    end subroutine close_hdf
+    !***************************************************************************************
+
+
+
+
+
+
     !>  Create a ChiDG-format file, with initialized format structure.
     !!  Return an HDF file identifier
     !!
@@ -168,6 +237,7 @@ contains
         !
         ! Create file
         !
+        call open_hdf()
         call h5fcreate_f(trim(filename_init), H5F_ACC_TRUNC_F, fid, ierr)
         if (ierr /= 0) call chidg_signal(FATAL,"initialize_file_hdf: Error h5fcreate_f")
         call write_line("File created: "//trim(filename_init))
@@ -218,7 +288,7 @@ contains
         character(*),   intent(in)      :: filename
         integer(HID_T), intent(inout)   :: fid
 
-        character(:),   allocatable :: filename_open
+        character(:),   allocatable :: filename_open, user_msg
         integer         :: ierr, loc
         logical         :: file_exists
 
@@ -235,22 +305,18 @@ contains
         !  Check file exists
         inquire(file=filename_open, exist=file_exists)
         if (.not. file_exists) then
-            call chidg_signal_one(FATAL,"open_file_hdf: Could not find grid file",filename_open)
+            call chidg_signal(FATAL,"open_file_hdf: Could not find file: "//trim(filename_open))
         end if
 
-
-        !
-        !  Initialize Fortran interface.
-        !
-        call h5open_f(ierr)
-        if (ierr /= 0) call chidg_signal(FATAL,"open_file_hdf - h5open_f: HDF5 Fortran interface had an error during initialization")
 
 
         !
         !  Open input file using default properties.
         !
+        call open_hdf()
         call h5fopen_f(filename_open, H5F_ACC_RDWR_F, fid, ierr)
-        if (ierr /= 0) call chidg_signal(FATAL,"open_file_hdf - h5fopen_f: There was an error opening the grid file.")
+        user_msg = "open_file_hdf: h5fopen_f, There was an error opening the file: "//trim(filename_open)
+        if (ierr /= 0) call chidg_signal(FATAL,user_msg)
 
 
         !
@@ -258,6 +324,8 @@ contains
         !
         call check_file_storage_version_hdf(fid)
 
+
+        HDF_nfiles_open = HDF_nfiles_open + 1
 
     end subroutine open_file_hdf
     !*****************************************************************************************
@@ -283,23 +351,16 @@ contains
 
         integer :: ierr
 
-        !
         !  Close file and Fortran interface
-        !
         call h5fclose_f(fid, ierr)
         if (ierr /= 0) call chidg_signal(FATAL,"close_file_hdf: error closing file.")
-        call h5close_f(ierr)
-        if (ierr /= 0) call chidg_signal(FATAL,"close_file_hdf: error closing HDF interface.")
     
+        HDF_nfiles_open = HDF_nfiles_open - 1
+
+        call close_hdf()
 
     end subroutine close_file_hdf
     !****************************************************************************************
-
-
-
-
-
-
 
 
 
@@ -677,10 +738,15 @@ contains
         !
         call h5gcreate_f(dom_id, "Grid", grid_id, ierr)
         if (ierr /= 0) call chidg_signal(FATAL,"add_domain_hdf: h5gcreate_f")
+        call h5gclose_f(grid_id,ierr)
+
         call h5gcreate_f(dom_id, "BoundaryConditions", bc_id, ierr)
         if (ierr /= 0) call chidg_signal(FATAL,"add_domain_hdf: h5gcreate_f")
+        call h5gclose_f(bc_id,ierr)
+
         call h5gcreate_f(dom_id, "Variables", var_id, ierr)
         if (ierr /= 0) call chidg_signal(FATAL,"add_domain_hdf: h5gcreate_f")
+        call h5gclose_f(var_id,ierr)
 
 
 
@@ -712,8 +778,8 @@ contains
 
 
         ! Close groups
-
         call h5gclose_f(dom_id,ierr)
+
 
     end subroutine add_domain_hdf
     !****************************************************************************************
@@ -1490,6 +1556,13 @@ contains
         if (exists) then
             call h5dopen_f(grid_id,"Elements", element_set_id, ierr)
             if (ierr /= 0) call chidg_signal(FATAL,"set_domain_elements_hdf: h5dopen_f")
+
+            !
+            ! Write element connectivities
+            !
+            call h5dwrite_f(element_set_id, H5T_NATIVE_INTEGER, elements, dims_rank_two, ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,"set_domain_elements_hdf: h5dwrite_f")
+
         else
             call h5screate_simple_f(2, dims_rank_two, element_space_id, ierr)
             if (ierr /= 0) call chidg_signal(FATAL,"set_domain_elements_hdf: h5screate_simple_f")
@@ -1497,17 +1570,18 @@ contains
             call h5dcreate_f(grid_id, "Elements", H5T_NATIVE_INTEGER, element_space_id, element_set_id, ierr)
             if (ierr /= 0) call chidg_signal(FATAL,"set_domain_elements_hdf: h5dcreate_f")
 
+
+
+            !
+            ! Write element connectivities
+            !
+            call h5dwrite_f(element_set_id, H5T_NATIVE_INTEGER, elements, dims_rank_two, ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,"set_domain_elements_hdf: h5dwrite_f")
+
             call h5sclose_f(element_space_id,ierr)
             if (ierr /= 0) call chidg_signal(FATAL,"set_domain_elements_hdf: h5sclose_f")
+
         end if
-
-
-
-        !
-        ! Write element connectivities
-        !
-        call h5dwrite_f(element_set_id, H5T_NATIVE_INTEGER, elements, dims_rank_two, ierr)
-        if (ierr /= 0) call chidg_signal(FATAL,"set_domain_elements_hdf: h5dwrite_f")
 
 
         !

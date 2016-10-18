@@ -31,6 +31,7 @@ module type_chidg
 
     use mod_hdfio,                  only: read_grid_hdf, read_boundaryconditions_hdf, &
                                           read_solution_hdf, write_solution_hdf, read_connectivity_hdf
+    use mod_hdf_utilities,          only: close_hdf
     use mod_partitioners,           only: partition_connectivity, send_partitions, recv_partition
     implicit none
 
@@ -798,6 +799,7 @@ contains
                     call chidg_mpi_finalize()
                 case ('core')   ! All except mpi
                     call log_finalize()
+                    call close_hdf()
 
                 case default
                     call chidg_signal(FATAL,"chidg%close: invalid close string")

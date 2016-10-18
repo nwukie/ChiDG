@@ -161,7 +161,7 @@ contains
     !!
     !--------------------------------------------------------------------------------------------
     subroutine set_fcn(self,bcprop,fcn)
-        class(bc_state_t),            intent(inout)   :: self
+        class(bc_state_t),      intent(inout)   :: self
         character(*),           intent(in)      :: bcprop
         character(*),           intent(in)      :: fcn
 
@@ -191,7 +191,7 @@ contains
     !!
     !-----------------------------------------------------------------------------------------------
     subroutine set_fcn_option(self,bcprop,option,val)
-        class(bc_state_t),            intent(inout)   :: self
+        class(bc_state_t),      intent(inout)   :: self
         character(*),           intent(in)      :: bcprop
         character(*),           intent(in)      :: option
         real(rk),               intent(in)      :: val
@@ -246,8 +246,8 @@ contains
     !!
     !---------------------------------------------------------------------------------------------------
     function get_property_name(self,iprop) result(pname)
-        class(bc_state_t),    intent(in)  :: self
-        integer(ik),    intent(in)  :: iprop
+        class(bc_state_t),  intent(in)  :: self
+        integer(ik),        intent(in)  :: iprop
 
         character(len=:),   allocatable :: pname
 
@@ -283,9 +283,9 @@ contains
     !!
     !----------------------------------------------------------------------------------------------------
     function get_option_key(self,iprop,ioption) result(key)
-        class(bc_state_t),    intent(inout)   :: self
-        integer(ik),    intent(in)      :: iprop
-        integer(ik),    intent(in)      :: ioption
+        class(bc_state_t),  intent(inout)   :: self
+        integer(ik),        intent(in)      :: iprop
+        integer(ik),        intent(in)      :: ioption
 
         character(len=:),   allocatable :: key
 
@@ -315,9 +315,9 @@ contains
     !!
     !----------------------------------------------------------------------------------------------------
     function get_option_value(self,iprop,key) result(val)
-        class(bc_state_t),    intent(inout)  :: self
-        integer(ik),    intent(in)  :: iprop
-        character(*),   intent(in)  :: key
+        class(bc_state_t),  intent(inout)  :: self
+        integer(ik),        intent(in)  :: iprop
+        character(*),       intent(in)  :: key
 
         real(rk)        :: val
 
@@ -345,8 +345,8 @@ contains
     !!
     !---------------------------------------------------------------------------------------------------
     function get_noptions(self,iprop) result(noptions)
-        class(bc_state_t),    intent(inout)  :: self
-        integer(ik),    intent(in)  :: iprop
+        class(bc_state_t),  intent(inout)   :: self
+        integer(ik),        intent(in)      :: iprop
 
         integer(ik)     :: noptions
 
@@ -367,8 +367,8 @@ contains
     !!
     !---------------------------------------------------------------------------------------------------
     subroutine set_name(self,bcname)
-        class(bc_state_t),    intent(inout)   :: self
-        character(*),   intent(in)      :: bcname
+        class(bc_state_t),  intent(inout)   :: self
+        character(*),       intent(in)      :: bcname
 
         self%name = trim(bcname)
 

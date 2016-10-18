@@ -6,7 +6,7 @@ module test_chidgVector_operators_mod
     use type_chidg,                 only: chidg_t
     use type_point,                 only: point_t
     use type_domain_connectivity,   only: domain_connectivity_t
-    use mod_testutils,              only: create_mesh
+    use mod_test_utilities,         only: create_mesh
     use type_chidgVector,           only: chidgVector_t, mult_real_chidgVector, mult_chidgVector_real, div_real_chidgVector, div_chidgVector_real, &
                                           sub_chidgVector_chidgVector, add_chidgVector_chidgVector
     implicit none

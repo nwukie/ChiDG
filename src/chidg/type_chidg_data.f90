@@ -166,7 +166,8 @@ contains
         integer(ik),                    intent(in)      :: nterms_c
         character(*),                   intent(in)      :: eqnset
 
-        integer(ik) :: idomain_l, ierr, idom
+        integer(ik)                 :: idomain_l, ierr, idom
+        character(:),   allocatable :: user_msg
 
 
         type(domaininfo_t),             allocatable :: temp_info(:)
@@ -216,12 +217,15 @@ contains
 
 
         !
-        ! Check that a domain with the same global index wasn't already added. For example, if a block got split and put on the same processor.
-        ! Some of the MPI communication assumes one unique global domain index for each domain on the processor.
+        ! Check that a domain with the same global index wasn't already added. For example, if a block got 
+        ! split and put on the same processor. Some of the MPI communication assumes one unique global 
+        ! domain index for each domain on the processor.
         !
+        user_msg = "chidg_data%add_domain: Two domains have the same global index. MPI communication assumes &
+                    this does not happen."
         if (self%ndomains_ > 1) then
             do idom = 1,size(self%mesh)
-                if (self%mesh(idom)%idomain_g == temp_mesh(idomain_l)%idomain_g) call chidg_signal(FATAL,"chidg_data%add_domain: Two domains have same global index. MPI communication assumes this does not happen.")
+                if (self%mesh(idom)%idomain_g == temp_mesh(idomain_l)%idomain_g) call chidg_signal(FATAL,user_msg)
             end do !idom
         end if
 

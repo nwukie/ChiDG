@@ -8,7 +8,7 @@ module test_ILU0_mod
     use type_domain_connectivity,   only: domain_connectivity_t
     use precon_ILU0,                only: precon_ILU0_t
 
-    use mod_testutils,              only: create_mesh
+    use mod_test_utilities,         only: create_mesh
     implicit none
 
 
@@ -79,7 +79,7 @@ contains
         spacedim = 3
         nterms_c = 8
         nterms_s = 1
-        call this%chidg%data%add_domain('D_01',nodes,connectivity,spacedim,nterms_c,'LinearAdvection')
+        call this%chidg%data%add_domain('D_01',nodes,connectivity,spacedim,nterms_c,'Scalar Advection')
 
 
         !

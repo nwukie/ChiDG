@@ -35,11 +35,13 @@ module type_element_connectivity
         procedure   :: set_element_index        !< Set domain-global index
         procedure   :: set_element_mapping      !< Set the mapping
         procedure   :: set_element_partition    !< Set partition index that owns the element
-        procedure   :: set_element_node        !< Set the nodes indices defining the element connectivity
+        procedure   :: set_element_node         !< Set the nodes indices defining the element connectivity
         procedure   :: set_element_nodes        !< Set the nodes indices defining the element connectivity
 
-        procedure   :: get_domain_index         !< Return the global domain index                   (index within the unpartitioned group of domains)
-        procedure   :: get_element_index        !< Return the domain-global index of the element    (index within the unpartitioned domain)
+        procedure   :: get_domain_index         !< Return the global domain index                   
+                                                !  (index within the unpartitioned group of domains)
+        procedure   :: get_element_index        !< Return the domain-global index of the element    
+                                                !  (index within the unpartitioned domain)
         procedure   :: get_element_mapping      !< Return the element mapping 
         procedure   :: get_element_partition    !< Return the partition index that owns the element
         procedure   :: get_element_node         !< Return an individual node index

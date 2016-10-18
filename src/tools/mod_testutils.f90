@@ -10,7 +10,9 @@ module mod_testutils
                                           open_domain_hdf, close_domain_hdf, &
                                           set_bc_patch_hdf, add_bc_state_hdf, &
                                           set_contains_grid_hdf, close_file_hdf
+    use mod_bc,                     only: create_bc
     use type_point,                 only: point_t
+    use type_bc_state,              only: bc_state_t
     use type_domain_connectivity,   only: domain_connectivity_t
     use hdf5
     implicit none
@@ -1840,27 +1842,29 @@ contains
     subroutine create_mesh_file_D2E8M1_overlapping_matching(filename)
         character(*),   intent(in)  :: filename
 
+        class(bc_state_t),  allocatable                 :: bc_state
         character(8)                                    :: faces(5)
         integer(HID_T)                                  :: file_id, dom1_id, dom2_id, bcface_id
-        integer(ik)                                     :: spacedim, mapping, bcface
-        type(domain_connectivity_t)                     :: connectivity1, connectivity2
+        integer(ik)                                     :: spacedim, mapping, bcface, ierr
         type(point_t),  allocatable                     :: nodes1(:), nodes2(:)
+        integer(ik),    allocatable                     :: elements1(:,:), elements2(:,:) 
+        integer(ik),    allocatable                     :: faces1(:,:), faces2(:,:)
         real(rk),       allocatable, dimension(:,:,:)   :: xcoords1, xcoords2, ycoords, zcoords
         real(rk)                                        :: xmax
 
 
         ! Create/initialize file
-        file_id = initialize_file_hdf(file_prefix)
+        file_id = initialize_file_hdf(filename)
         
 
         ! Generate coordinates for first block
-        call meshgen_2x2x2_linear(xcoords,ycoords,zcoords)
+!        call meshgen_2x2x2_linear(xcoords,ycoords,zcoords)
 
 
         !
         ! Create second block by copying and translating first block.
         !
-        xmax = max(xcoords)
+        xmax = maxval(xcoords1)
         xcoords2 = xcoords1 + 0.95*xmax
 
 
@@ -1885,8 +1889,8 @@ contains
         !
         ! Set boundary conditions patch connectivities
         !
-        dom1_id = open_domain_hdf(file_id,trim(blockname))
-        dom2_id = open_domain_hdf(file_id,trim(blockname))
+        dom1_id = open_domain_hdf(file_id,"01")
+        dom2_id = open_domain_hdf(file_id,"02")
 
         do bcface = 1,6
             ! Get face node indices for boundary 'bcface'
@@ -1894,8 +1898,8 @@ contains
             faces2 = get_block_boundary_faces_plot3d(xcoords2,ycoords,zcoords,mapping,bcface)
 
             ! Set bc patch face indices
-            call set_bc_patch_hdf(dom1_id,faces,bcface)
-            call set_bc_patch_hdf(dom2_id,faces,bcface)
+            call set_bc_patch_hdf(dom1_id,faces1,bcface)
+            call set_bc_patch_hdf(dom2_id,faces2,bcface)
         end do !bcface
 
 

@@ -41,7 +41,7 @@ subroutine test__detect_chimera_faces()
     !
     ! Create grid
     !
-    call create_mesh_file("D2_E8_M1 : Overlapping : Matching", gridfile)
+!    call create_mesh_file("D2_E8_M1 : Overlapping : Matching", gridfile)
 
 
 

@@ -89,6 +89,7 @@ contains
         ! Initialize solution data storage
         !
         call chidg%initialize_solution_domains(nterms_s)
+        call chidg%init('communication')
         call chidg%initialize_solution_solver()
 
 

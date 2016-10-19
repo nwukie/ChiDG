@@ -6,9 +6,6 @@ module test_interpolate_chimera_mod
     use type_meshdata,      only: meshdata_t
     use type_face_info,     only: face_info_t
     use type_function_info, only: function_info_t
-    use type_bc,            only: bc_t
-    use mod_bc,             only: create_bc
-
 
     use mod_kinds,          only: rk,ik
     use mod_constants,      only: ZERO, ONE, TWO, THREE, FIVE, SIX, EIGHT, NINE, TEN, &
@@ -18,6 +15,9 @@ module test_interpolate_chimera_mod
     use mod_chidg_mpi,      only: IRANK
     use mod_interpolate,    only: interpolate_face_standard, interpolate_face_autodiff
     use mod_grid_operators, only: initialize_variable
+
+    use mod_test_utilities, only: create_mesh_file
+    use mod_file_utilities, only: delete_file
 
 
     use DNAD_D
@@ -43,6 +43,7 @@ module test_interpolate_chimera_mod
     @TestCase
     type, extends(TestCase) ::  test_interpolate_chimera
 
+        character(:),       allocatable :: filename
         type(chidg_t)                   :: chidg
         class(function_t),  allocatable :: fcn
 
@@ -71,7 +72,6 @@ contains
 
         integer(ik)                     :: nterms_s, ivar, idom, spacedim
         type(meshdata_t),   allocatable :: meshdata(:) 
-        class(bc_t),        allocatable :: bc
         
         !
         ! Send log to file
@@ -86,12 +86,18 @@ contains
 
 
         !
+        ! Create mesh file
+        !
+        this%filename = "D2E8M1_abutting_matching.h5"
+        call create_mesh_file("D2 E8 M1 : Abutting : Matching",this%filename)
+
+        !
         ! Read D2_E8_M1. Two domains, 2x2x2 elements in each domain, linear mapping
         !
         spacedim = 3
         nterms_s = 8
-        call this%chidg%read_grid('D2_E8_M1_abutting.h5', spacedim)
-        call this%chidg%read_boundaryconditions('D2_E8_M1_abutting.h5')
+        call this%chidg%read_grid(this%filename, spacedim)
+        call this%chidg%read_boundaryconditions(this%filename)
 
 
 
@@ -106,31 +112,37 @@ contains
         !
         ! Initialized solution to constant values
         !
-        ivar = this%chidg%data%eqnset(1)%prop%get_equation_index('u')    ! Get variable index
+        ivar = this%chidg%data%eqnset(1)%prop%get_equation_index('u')
 
 
         !
         ! Initialize variable
         !
-        call create_function(this%fcn,'constant')                       ! Allocate constant function
-        call this%fcn%set_option('val',5._rk)                           ! Set constant function value
-        call initialize_variable(this%chidg%data,ivar,this%fcn)         ! Initialize variable using constant function
+        call create_function(this%fcn,'constant')                 ! Allocate constant function
+        call this%fcn%set_option('val',5._rk)                     ! Set constant function value
+        call initialize_variable(this%chidg%data,ivar,this%fcn)   ! Initialize variable using constant function
 
     
-    end subroutine
+    end subroutine setUp
+    !***********************************************************************************************
     
+
+    !>
+    !!
+    !!
+    !!
+    !-----------------------------------------------------------------------------------------------
     subroutine tearDown(this)
         class(test_interpolate_chimera),    intent(inout)   :: this
-        
 
-        !
         ! Close ChiDG interface
-        !
         call this%chidg%close('core')
 
-        
-    end subroutine
-    !------------------------------------------------------------------------------------------------------
+        ! Clean-up test file
+        call delete_file(this%filename)
+
+    end subroutine tearDown
+    !************************************************************************************************
 
     
     

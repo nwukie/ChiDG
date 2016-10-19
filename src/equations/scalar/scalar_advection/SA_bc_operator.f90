@@ -111,9 +111,9 @@ contains
         ! Interpolate boundary condition state to face quadrature nodes
         !
         u    = worker%get_face_variable(iu, 'value', BC)
-        dudx = worker%get_face_variable(iu, 'ddx + lift', BC)
-        dudy = worker%get_face_variable(iu, 'ddy + lift', BC)
-        dudz = worker%get_face_variable(iu, 'ddz + lift', BC)
+        dudx = worker%get_face_variable(iu, 'ddx',   BC)
+        dudy = worker%get_face_variable(iu, 'ddy',   BC)
+        dudz = worker%get_face_variable(iu, 'ddz',   BC)
 
 
         !

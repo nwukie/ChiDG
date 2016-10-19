@@ -1,6 +1,8 @@
 module test_init_comm_D1E4_mod
     use mod_kinds,                  only: ik
     use mod_constants,              only: XI_MIN, XI_MAX, BOUNDARY, IO_DESTINATION
+    use mod_test_utilities,         only: create_mesh_file
+    use mod_file_utilities,         only: delete_file
     use type_chidg,                 only: chidg_t
     use mod_chidg_mpi,              only: IRANK, NRANK, GLOBAL_MASTER
     use mpi_f08,                    only: MPI_COMM
@@ -42,8 +44,15 @@ contains
         call chidg%init('env',ChiDG_COMM)
 
 
+        gridfile = "D1E1M1.h5"
+        if (IRANK == GLOBAL_MASTER) then
+            call create_mesh_file("D1 E4 M1",gridfile)
+
+        end if
+        call MPI_Barrier(ChiDG_COMM,ierr)
+
+
         IO_DESTINATION = 'file'
-        gridfile       = 'D1_E4_M1.h5'
         nterms_s       = 27
         spacedim       = 3
 
@@ -292,6 +301,12 @@ contains
 
 
         call chidg%close('core')
+
+
+        if (IRANK == GLOBAL_MASTER) then
+            call delete_file(gridfile)
+        end if
+        call MPI_Barrier(ChiDG_COMM,ierr)
 
     end subroutine test_init_comm_D1E4
     !******************************************************************************************

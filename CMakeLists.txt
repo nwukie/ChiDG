@@ -126,8 +126,14 @@ include_directories(${HDF5_INCLUDE_DIRS})
 
 
 if (HDF5_FOUND)
-    message(STATUS "HDF5_LIBRARIES: " ${HDF5_LIBRARIES})
-    message(STATUS "HDF5_HL_LIBRARIES: " ${HDF5_HL_LIBRARIES})
+    message(STATUS "HDF5 Libraries: ")
+    foreach (L ${HDF5_LIBRARIES})
+        message(STATUS "    " ${L})
+    endforeach()
+    message(STATUS "HDF5 High-Level Libraries: ")
+    foreach (L ${HDF5_HL_LIBRARIES})
+        message(STATUS "    " ${L})
+    endforeach()
 endif()
 
 
@@ -137,7 +143,8 @@ endif()
 #                                         Find Lapack
 #----------------------------------------------------------------------------------------------
 find_package(LAPACK REQUIRED)
-message(STATUS "LAPACK_LIBRARIES: " ${LAPACK_LIBRARIES})
+message(STATUS "LAPACK Libraries: ")
+message(STATUS "    " ${LAPACK_LIBRARIES})
 
 
 
@@ -145,24 +152,39 @@ message(STATUS "LAPACK_LIBRARIES: " ${LAPACK_LIBRARIES})
 
 #----------------------------------------------------------------------------------------------
 #                                          Find MPI
+#
+#   NOTE: It is important to get MPI libraries + modules that were built with a similar 
+#         
+#
+#
 #----------------------------------------------------------------------------------------------
 
 # add -DUSER_MPI=True to config to read environment variables
 if (USER_MPI)
-    message(STATUS "Reading environment variables for \
-                    MPI_Fortran_COMPILER and MPI_Fortran_INCLUDE_PATH. \
-                    Please be sure these are set as environment variables")
+    message(STATUS "Reading environment variables for\n" 
+                   "    MPI_Fortran_COMPILER \n"
+                   "    MPI_Fortran_INCLUDE_PATH \n"
+                   "Please be sure these are set as environment variables")
     set(MPI_Fortran_COMPILER $ENV{MPI_Fortran_COMPILER})
     set(MPI_Fortran_MODULE_PATH $ENV{MPI_Fortran_MODULE_PATH})
     set(MPI_Fortran_INCLUDE_PATH $ENV{MPI_Fortran_INCLUDE_PATH})
 endif()
 
 
-find_package(MPI REQUIRED)
+find_package(MPI REQUIRED COMPONENTS Fortran)
 include_directories(${MPI_Fortran_MODULE_PATH})
 include_directories(${MPI_Fortran_INCLUDE_PATH})
 
 
+
+if (MPI_Fortran_FOUND)
+    message(STATUS "MPI Fortran Libraries: ")
+    foreach (L ${MPI_Fortran_LIBRARIES})
+        message(STATUS "    " ${L})
+    endforeach()
+    message(STATUS "MPI Module Path: " ${MPI_Fortran_MODULE_PATH})
+    message(STATUS "MPI Include Path: " ${MPI_Fortran_INCLUDE_PATH})
+endif()
 
 
 

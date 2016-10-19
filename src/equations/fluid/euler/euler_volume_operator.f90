@@ -158,10 +158,6 @@ contains
         flux_y = (rhow*rhov)*invrho
         flux_z = (rhow*rhow)*invrho  +  p
 
-        flux_x(:)%x_ad_ = 0._rk
-        flux_y(:)%x_ad_ = 0._rk
-        flux_z(:)%x_ad_ = 0._rk
-
         call worker%integrate_volume(irhow, flux_x,flux_y,flux_z)
 
         !============================

@@ -32,7 +32,7 @@ subroutine test__detect_chimera_faces()
     type(chidg_t)                   :: chidg
     class(bc_t),        allocatable :: bc
     type(meshdata_t),   allocatable :: meshdata(:)
-    character(len=100)              :: filename = 'D2_E8_M1_overlapping_matching.h5'
+    character(len=100)              :: filename = 'D2E8M1_overlapping_matching.h5'
     integer(ik)                     :: nterms_s, idom, ndom, ielem, spacedim
 
 
@@ -50,7 +50,7 @@ subroutine test__detect_chimera_faces()
     !
     ! Create grid file
     !
-    call create_mesh_file("D2_E8_M1 : Overlapping : Matching", filename)
+    call create_mesh_file("D2 E8 M1 : Overlapping : Matching", filename)
 
 
     !

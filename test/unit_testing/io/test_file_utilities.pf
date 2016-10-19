@@ -7,13 +7,25 @@
 subroutine test_file_utilties_copy()
     use pfunit_mod
 
+    use type_chidg,         only: chidg_t
+    use mod_test_utilities, only: create_mesh_file
     use mod_file_utilities, only: copy_file, delete_file
     implicit none
-
+    
+    type(chidg_t)       :: chidg
     character(len=11)   :: fileorig = 'D1_E1_M1.h5'
     character(len=16)   :: filecopy = 'test_copy.h5'
 
     integer :: origsize, copysize
+
+
+    call chidg%init('env')
+
+    !
+    ! Create a file
+    !
+    call create_mesh_file("D1 E1 M1",fileorig)
+
 
     !
     ! Copy file. THIS IS BEING TESTED.
@@ -65,9 +77,12 @@ end subroutine test_file_utilties_copy
 subroutine test_file_utilties_delete()
     use pfunit_mod
 
+    use type_chidg,         only: chidg_t
+    use mod_test_utilities, only: create_mesh_file
     use mod_file_utilities, only: copy_file, delete_file
     implicit none
 
+    type(chidg_t)       :: chidg
     character(len=11)   :: fileorig = 'D1_E1_M1.h5'
     character(len=16)   :: filecopy = 'test_delete.h5'
 
@@ -75,7 +90,15 @@ subroutine test_file_utilties_delete()
     logical :: fileexists = .false.
 
 
+    call chidg%init('env')
     
+
+    !
+    ! Create a file
+    !
+    call create_mesh_file("D1 E1 M1",fileorig)
+
+
     !
     ! First, create a copy of a file.
     !

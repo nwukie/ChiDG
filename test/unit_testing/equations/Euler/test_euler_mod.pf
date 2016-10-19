@@ -21,38 +21,55 @@ module test_euler_mod
 
 
 
-    ! This parameter is used to test the linearization for different blocks.
-    ! iblk = [XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX, DIAG]
+    !> This parameter is used to test the linearization for different blocks.
+    !! iblk = [XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX, DIAG]
+    !!
+    !!
+    !--------------------------------------------------------------------------
     @TestParameter(constructor=newBlock)
     type, extends (AbstractTestParameter) :: blockParam
+
         integer(ik)         :: iblk
+
     contains
         procedure :: toString
     end type blockParam
+    !***************************************************************************
     
 
 
     
     
+    !>
+    !!
+    !!
+    !!
+    !!
+    !---------------------------------------------------------------------------
     @TestCase(constructor=newTest)
     type, extends(ParameterizedTestCase) ::  test_eq_euler
+
         type(chidg_t)       :: chidg
         integer(ik)         :: iblk
+
     contains
         procedure   ::  setUp
         procedure   ::  tearDown
     end type test_eq_euler
+    !***************************************************************************
 
 
 
 
 
 contains
-    !---------------------------------------------------------------------------------------------
-    !                               SET-UP  +  TEAR-DOWN
-    !---------------------------------------------------------------------------------------------
-    ! NOTE: make sure to use 'this' instead of 'self' since these are over-writting a derived type 
-    ! procedure. The argument names have to match
+
+    !>  NOTE: make sure to use 'this' instead of 'self' since these are over-writting a 
+    !!  derived type procedure. The argument names have to match
+    !!
+    !!
+    !!
+    !----------------------------------------------------------------------------------------
     subroutine setUp(this)
         class(test_eq_euler),    intent(inout)   :: this
         
@@ -109,8 +126,15 @@ contains
         call fcn%set_option('val',6.0_rk)
         call initialize_variable(this%chidg%data,5,fcn)
             
-    end subroutine
+    end subroutine setUp
+    !*******************************************************************************
     
+
+    !>
+    !!
+    !!
+    !!
+    !-------------------------------------------------------------------------------
     subroutine tearDown(this)
         class(test_eq_euler),    intent(inout)   :: this
 
@@ -119,7 +143,8 @@ contains
         ! Close ChiDG interface
         !
         call this%chidg%close('core')
-    end subroutine
+    end subroutine tearDown
+    !*******************************************************************************
 
 
     !--------------------------
@@ -142,7 +167,7 @@ contains
         newTest%iblk = param%iblk
     end function newTest
 
-    ! ToString - not sure what this is for yet
+    ! ToString - what information to print if there is an error
     function toString(this) result(string)
         class(blockParam), intent(in)   :: this
         character(:), allocatable       :: string
@@ -154,11 +179,12 @@ contains
 
 
 
-!------------------------------------------------------------------------------------------
-!>                                        TESTS
-!------------------------------------------------------------------------------------------
-!> Test Volume Flux jacobian calclation
-@Test(cases = [7])
+    !> Test Volume Flux jacobian calclation
+    !!
+    !!
+    !!
+    !----------------------------------------------------------------------------------------
+    @Test(cases = [7])
     subroutine test_EULER_jacobian_volume_advective_flux(self)
         class(test_eq_euler),    intent(inout)   :: self
         
@@ -168,6 +194,7 @@ contains
         
         tol = 1.0e-5_rk
         
+        ! Center element in 3x3x3 grid
         ielem = 14
         
         ! Block Parameter from cases = []
@@ -179,13 +206,17 @@ contains
                 
         @assertEqual(blk_fd%mat, blk_dnad%mat, tol)
         
-    end subroutine
+    end subroutine test_EULER_jacobian_volume_advective_flux
+    !****************************************************************************************
     
     
 
 
-!> Test Boundary Advective Flux jacobian calculation
-@Test(cases = [1, 2, 3, 4, 5, 6, 7])
+    !> Test Boundary Advective Flux jacobian calculation
+    !!
+    !!
+    !----------------------------------------------------------------------------------------
+    @Test(cases = [1, 2, 3, 4, 5, 6, 7])
     subroutine test_EULER_jacobian_boundary_advective_flux(self)
         class(test_eq_euler),    intent(inout)   :: self
         
@@ -195,8 +226,8 @@ contains
         
         tol = 1.0e-5_rk
         
+        ! Center element in 3x3x3 grid
         ielem = 14
-        !ielem = 1
         
         ! Block Parameter from cases = []
         iblk = self%iblk
@@ -207,7 +238,8 @@ contains
         
         @assertEqual(blk_fd%mat, blk_dnad%mat, tol)
         
-    end subroutine
+    end subroutine test_EULER_jacobian_boundary_advective_flux
+    !****************************************************************************************
     
     
     

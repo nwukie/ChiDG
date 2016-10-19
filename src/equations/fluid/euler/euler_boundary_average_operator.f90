@@ -246,8 +246,6 @@ contains
         ! dot with normal vector
         integrand = HALF*(flux_x*normx + flux_y*normy + flux_z*normz)
 
-        integrand(:)%x_ad_ = 0._rk
-
         call worker%integrate_boundary(irhow, integrand)
 
 

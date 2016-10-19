@@ -77,15 +77,13 @@ subroutine test_chidgMatrix_operator_mv()
     !
     ! Create grid file
     !
-    filename = "D2_E8_M1_overlapping_nonmatching.h5"
-    call create_mesh_file("D2_E8_M1 : Overlapping : NonMatching", filename)
+    filename = "D2E8M1_overlapping_nonmatching.h5"
+    call create_mesh_file("D2 E8 M1 : Overlapping : NonMatching", filename)
 
 
     !
     ! Get grid points
     !
-    !call chidg%read_grid('D2_E8_M1_overlapping_multipledonor.h5',spacedim)
-    !call chidg%read_boundaryconditions('D2_E8_M1_overlapping_multipledonor.h5')
     call chidg%read_grid(filename,spacedim)
     call chidg%read_boundaryconditions(filename)
 

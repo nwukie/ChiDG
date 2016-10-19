@@ -7,11 +7,13 @@ subroutine read_connectivity_hdf__D1_E1_M1()
 
     use mod_kinds,                  only: rk,ik
     use mod_constants,              only: ZERO, ONE, IO_DESTINATION
+    use mod_test_utilities,         only: create_mesh_file
+    use mod_file_utilities,         only: delete_file
     use mod_hdfio,                  only: read_connectivity_hdf
     implicit none
     
     type(chidg_t)                   :: chidg
-    character(100), parameter       :: filename = 'D1_E1_M1.h5'
+    character(100), parameter       :: filename = 'D1E1M1.h5'
     integer(ik)                     :: ndomains
     type(domain_connectivity_t),   allocatable :: connectivities(:)
     
@@ -24,6 +26,10 @@ subroutine read_connectivity_hdf__D1_E1_M1()
     !
     call chidg%init('env')
     
+    !
+    ! Create mesh file
+    !
+    call create_mesh_file("D1 E1 M1",filename)
 
     !
     ! Read and partition connectivity. THIS IS BEING TESTED.
@@ -51,6 +57,9 @@ subroutine read_connectivity_hdf__D1_E1_M1()
     !
     call chidg%close('core')
 
+
+    call delete_file(filename)
+
 end subroutine read_connectivity_hdf__D1_E1_M1
 
 
@@ -73,6 +82,8 @@ subroutine read_connectivity_hdf__D1_E27_M1()
 
     use mod_kinds,                  only: rk,ik
     use mod_constants,              only: ZERO, THIRD, NFACES, IO_DESTINATION
+    use mod_test_utilities,         only: create_mesh_file
+    use mod_file_utilities,         only: delete_file
     use mod_hdfio,                  only: read_connectivity_hdf
     implicit none
     
@@ -89,6 +100,7 @@ subroutine read_connectivity_hdf__D1_E27_M1()
     !
     call chidg%init('env')
     
+    call create_mesh_file("D1 E27 M1",filename)
 
     !
     ! Read and partition connectivity. THIS IS BEING TESTED.
@@ -116,6 +128,8 @@ subroutine read_connectivity_hdf__D1_E27_M1()
     !
     call chidg%close('core')
 
+    call delete_file(filename)
+
 end subroutine read_connectivity_hdf__D1_E27_M1
 
 
@@ -139,6 +153,8 @@ subroutine read_connectivity_hdf__D2_E1_M1()
 
     use mod_kinds,                  only: rk,ik
     use mod_constants,              only: ZERO, ONE, IO_DESTINATION
+    use mod_test_utilities,         only: create_mesh_file
+    use mod_file_utilities,         only: delete_file
     use mod_hdfio,                  only: read_connectivity_hdf
     implicit none
     
@@ -155,6 +171,7 @@ subroutine read_connectivity_hdf__D2_E1_M1()
     call chidg%init('env')
     
 
+    call create_mesh_file("D2 E1 M1",filename)
 
     !
     ! Read and partition connectivity. THIS IS BEING TESTED.
@@ -185,6 +202,8 @@ subroutine read_connectivity_hdf__D2_E1_M1()
     !
     call chidg%close('core')
 
+    call delete_file(filename)
+
 end subroutine read_connectivity_hdf__D2_E1_M1
 
 
@@ -199,7 +218,7 @@ end subroutine read_connectivity_hdf__D2_E1_M1
 
 
 
-!> Test for reading an hdf grid. D2_E27_M1 = One Domain, 27 Elements (3x3x3), Linear Mapping
+!> Test for reading an hdf grid. D2_E27_M1 = Two Domains, 27 Elements (3x3x3), Linear Mapping
 @Test
 subroutine read_connectivity_hdf__D2_E27_M1() 
     use pfunit_mod
@@ -208,6 +227,8 @@ subroutine read_connectivity_hdf__D2_E27_M1()
 
     use mod_kinds,                  only: rk,ik
     use mod_constants,              only: ZERO, THIRD, NFACES, IO_DESTINATION
+    use mod_test_utilities,         only: create_mesh_file
+    use mod_file_utilities,         only: delete_file
     use mod_hdfio,                  only: read_connectivity_hdf
     implicit none
     
@@ -224,6 +245,9 @@ subroutine read_connectivity_hdf__D2_E27_M1()
     !
     call chidg%init('env')
     
+
+    call create_mesh_file("D2 E27 M1",filename)
+
 
     !
     ! Read and partition connectivity. THIS IS BEING TESTED.
@@ -255,6 +279,8 @@ subroutine read_connectivity_hdf__D2_E27_M1()
     ! Close ChiDG
     !
     call chidg%close('core')
+
+    call delete_file(filename)
 
 end subroutine read_connectivity_hdf__D2_E27_M1
 

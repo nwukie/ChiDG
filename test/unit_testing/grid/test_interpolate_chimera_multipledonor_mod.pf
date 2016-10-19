@@ -19,6 +19,8 @@ module test_interpolate_chimera_multipledonor_mod
     use mod_interpolate,    only: interpolate_face_autodiff, interpolate_face_standard
     use mod_grid_operators, only: initialize_variable
 
+    use mod_test_utilities, only: create_mesh_file
+    use mod_file_utilities, only: delete_file
 
     use DNAD_D
 
@@ -37,6 +39,7 @@ module test_interpolate_chimera_multipledonor_mod
     @TestCase
     type, extends(TestCase) ::  test_interpolate_chimera_multipledonor
 
+        character(:),       allocatable :: filename
         type(chidg_t)                   :: chidg
         class(function_t),  allocatable :: fcn
 
@@ -51,10 +54,11 @@ module test_interpolate_chimera_multipledonor_mod
 
 contains
 
-    !
-    ! NOTE: make sure to use 'this' instead of 'self' since these are over-writting a derived type 
-    ! procedure. The argument names have to match
-    !
+    !>  NOTE: make sure to use 'this' instead of 'self' since these are over-writting 
+    !!  a derived type procedure. The argument names have to match
+    !!
+    !!
+    !------------------------------------------------------------------------------
     subroutine setUp(this)
         class(test_interpolate_chimera_multipledonor),    intent(inout)   :: this
 
@@ -72,13 +76,20 @@ contains
         !
         call this%chidg%init('env')
 
+
+        !
+        ! Create mesh file
+        !
+        this%filename = "D2E8M1_overlapping_multipledonor.h5"
+        call create_mesh_file("D2 E8 M1 : Overlapping : NonMatching",this%filename)
+
         !
         ! Read D2_E8_M1. Two domains, 2x2x2 elements in each domain, linear mapping
         !
         spacedim = 3
         nterms_s = 8
-        call this%chidg%read_grid('D2_E8_M1_overlapping_multipledonor.h5',spacedim)
-        call this%chidg%read_boundaryconditions('D2_E8_M1_overlapping_multipledonor.h5')
+        call this%chidg%read_grid(this%filename,spacedim)
+        call this%chidg%read_boundaryconditions(this%filename)
 
 
 
@@ -104,20 +115,27 @@ contains
         call initialize_variable(this%chidg%data,ivar,this%fcn)         ! Initialize variable using constant function
 
     
-    end subroutine
+    end subroutine setUp
+    !**********************************************************************************************
     
+
+
+    !>
+    !!
+    !!
+    !!
+    !----------------------------------------------------------------------------------------------
     subroutine tearDown(this)
         class(test_interpolate_chimera_multipledonor),    intent(inout)   :: this
         
-
-        !
         ! Close ChiDG interface
-        !
         call this%chidg%close('core')
 
+        ! Clear up file
+        call delete_file(this%filename)
 
-    end subroutine
-    !************************************************************************************************************
+    end subroutine tearDown
+    !***********************************************************************************************
 
 
 

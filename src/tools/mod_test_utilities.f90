@@ -11,8 +11,9 @@ module mod_test_utilities
                                           set_bc_patch_hdf, add_bc_state_hdf,  &
                                           set_contains_grid_hdf, close_file_hdf, close_hdf
     use mod_bc,                     only: create_bc
-    use mod_gridgen_blocks,         only: create_mesh_file__D2E8M1_overlapping_matching,    &
-                                          create_mesh_file__D2E8M1_overlapping_nonmatching, &
+    use mod_gridgen_blocks,         only: create_mesh_file__singleblock,                    &
+                                          create_mesh_file__multiblock,                     &
+                                          create_mesh_file__D2E8M1,                         &
                                           meshgen_1x1x1_linear, meshgen_1x1x1_unit_linear,  &
                                           meshgen_2x2x2_linear, meshgen_2x2x1_linear,       &
                                           meshgen_3x3x3_linear, meshgen_3x3x3_unit_linear,  &
@@ -20,7 +21,7 @@ module mod_test_utilities
                                           meshgen_2x1x1_linear, meshgen_3x1x1_linear,       &
                                           meshgen_40x15x1_linear, meshgen_15x15x1_linear,   &
                                           meshgen_15x15x2_linear, meshgen_15x15x3_linear
-    use mod_gridgen_cylinder,       only: create_mesh_file__cylinder_abutting
+    use mod_gridgen_cylinder,       only: create_mesh_file__cylinder
 
     use type_point,                 only: point_t
     use type_bc_state,              only: bc_state_t
@@ -41,26 +42,53 @@ contains
     !!
     !!
     !---------------------------------------------------------------------------
-    subroutine create_mesh_file(selector, filename)
-        character(*),   intent(in)  :: selector
-        character(*),   intent(in)  :: filename
+    subroutine create_mesh_file(selector, filename, option_one, option_two, option_three)
+        character(*),           intent(in)  :: selector
+        character(*),           intent(in)  :: filename
+        real(rk),   optional,   intent(in)  :: option_one
+        real(rk),   optional,   intent(in)  :: option_two
+        real(rk),   optional,   intent(in)  :: option_three
 
-        integer(ik) :: ierr
+        character(:),   allocatable :: user_msg
+        integer(ik)                 :: ierr
 
 
         ! Generate grid file base on selector case.
         select case (trim(selector))
-            case("D2_E8_M1 : Overlapping : Matching")
-                call create_mesh_file__D2E8M1_overlapping_matching(filename)
+            !
+            ! Simple, linear, block grids
+            !
+            case("D1 E1 M1", "D1 E4 M1", "D1 E16 M1", "D1 E27 M1")
+                call create_mesh_file__singleblock(filename,trim(selector))
 
-            case("D2_E8_M1 : Overlapping : NonMatching")
-                call create_mesh_file__D2E8M1_overlapping_nonmatching(filename)
+            case("D2 E1 M1")
+                call create_mesh_file__multiblock(filename,"D1 E1 M1","D1 E1 M1")
+            case("D2 E2 M1")
+                call create_mesh_file__multiblock(filename,"D1 E2 M1","D1 E2 M1")
+            case("D2 E27 M1")
+                call create_mesh_file__multiblock(filename,"D1 E27 M1","D1 E27 M1")
 
+            case("D2 E8 M1 : Abutting : Matching")
+                call create_mesh_file__D2E8M1(filename,abutting=.true.,matching=.true.)
+            case("D2 E8 M1 : Overlapping : Matching")
+                call create_mesh_file__D2E8M1(filename,abutting=.false.,matching=.true.)
+            case("D2 E8 M1 : Overlapping : NonMatching")
+                call create_mesh_file__D2E8M1(filename,abutting=.false.,matching=.false.)
+
+            !
+            ! Circular cylinder
+            !
             case("Cylinder : Diagonal : Matching")
-                call create_mesh_file__cylinder_abutting(filename)
+                call create_mesh_file__cylinder(filename,overlap_deg=0._rk)
+            case("Cylinder : Diagonal : NonMatching SingleDonor")
+                call create_mesh_file__cylinder(filename,overlap_deg=2.5_rk)
+            case("Cylinder : Diagonal : NonMatching MultipleDonor")
+                call create_mesh_file__cylinder(filename,overlap_deg=5.0_rk)
+
 
             case default
-                call chidg_signal(FATAL,"create_mesh_file: There was no valid case that matched the incoming string")
+                user_msg = "create_mesh_file: There was no valid case that matched the incoming string"
+                call chidg_signal(FATAL,user_msg)
 
         end select
 

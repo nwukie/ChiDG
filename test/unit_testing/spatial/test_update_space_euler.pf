@@ -8,12 +8,11 @@ subroutine test_update_space_euler()
                                   IO_DESTINATION, ZERO
 
     use type_chidg,         only: chidg_t
-    use type_meshdata,      only: meshdata_t
     use type_function,      only: function_t
-    use type_bc,            only: bc_t
-    use mod_bc,             only: create_bc
 
     use mod_grid_operators, only: initialize_variable
+    use mod_test_utilities, only: create_mesh_file
+    use mod_file_utilities, only: delete_file
     use mod_function,       only: create_function
     use mod_spatial,        only: update_space
 
@@ -22,8 +21,9 @@ subroutine test_update_space_euler()
 
 
     type(chidg_t)                   :: chidgA, chidgB
-    class(function_t),  allocatable :: constant, gaussian
-    integer(ik)                     :: idom, nterms_s, spacedim
+    character(:),       allocatable :: chidgA_file, chidgB_file
+    class(function_t),  allocatable :: constant
+    integer(ik)                     :: nterms_s, spacedim
     real(rk)                        :: tol
 
 
@@ -39,18 +39,23 @@ subroutine test_update_space_euler()
     call chidgA%init('env')
 
 
+    !
+    ! Create mesh files
+    !
+    chidgA_file = "smoothbump_onedomain.h5"
+    chidgB_file = "smoothbump_twodomain.h5"
+    call create_mesh_file("Smooth Bump : One Domain",chidgA_file)
+    call create_mesh_file("Smooth Bump : Two Domain",chidgB_file)
+
 
     !
     ! Read grid
     !
-    call chidgA%read_grid('smoothbump_onedomain_twobump.h5',spacedim)
-    call chidgB%read_grid('smoothbump_twodomain_twobump_abutting.h5',spacedim)
+    call chidgA%read_grid(chidgA_file,spacedim)
+    call chidgB%read_grid(chidgB_file,spacedim)
 
-    call chidgA%read_boundaryconditions('smoothbump_onedomain_twobump.h5')
-    call chidgB%read_boundaryconditions('smoothbump_twodomain_twobump_abutting.h5')
-
-
-
+    call chidgA%read_boundaryconditions(chidgA_file)
+    call chidgB%read_boundaryconditions(chidgB_file)
 
 
     !
@@ -68,18 +73,16 @@ subroutine test_update_space_euler()
     call chidgB%data%initialize_solution_solver()
 
 
-
-
     !
     ! Initialize solution
     !
     call create_function(constant,'constant')
 
-    call constant%set_option('val',1.13262_rk)
+    call constant%set_option('val',1.13_rk)
     call initialize_variable(chidgA%data,1,constant)
     call initialize_variable(chidgB%data,1,constant)
 
-    call constant%set_option('val',190.339029_rk)
+    call constant%set_option('val',190._rk)
     call initialize_variable(chidgA%data,2,constant)
     call initialize_variable(chidgB%data,2,constant)
 
@@ -91,7 +94,7 @@ subroutine test_update_space_euler()
     call initialize_variable(chidgA%data,4,constant)
     call initialize_variable(chidgB%data,4,constant)
 
-    call constant%set_option('val',248493.425_rk)
+    call constant%set_option('val',248000.0_rk)
     call initialize_variable(chidgA%data,5,constant)
     call initialize_variable(chidgB%data,5,constant)
 
@@ -113,10 +116,10 @@ subroutine test_update_space_euler()
     !
     ! Compare residual vector entries
     !
-    @assertEqual(chidgA%data%sdata%rhs%dom(1)%vecs(6)%vec,  chidgB%data%sdata%rhs%dom(1)%vecs(6)%vec, tol )
-    @assertEqual(chidgA%data%sdata%rhs%dom(1)%vecs(7)%vec,  chidgB%data%sdata%rhs%dom(2)%vecs(1)%vec, tol )
+    @assertEqual(chidgA%data%sdata%rhs%dom(1)%vecs(6)%vec,  chidgB%data%sdata%rhs%dom(1)%vecs(6)%vec,  tol )
+    @assertEqual(chidgA%data%sdata%rhs%dom(1)%vecs(7)%vec,  chidgB%data%sdata%rhs%dom(2)%vecs(1)%vec,  tol )
     @assertEqual(chidgA%data%sdata%rhs%dom(1)%vecs(18)%vec, chidgB%data%sdata%rhs%dom(1)%vecs(12)%vec, tol )
-    @assertEqual(chidgA%data%sdata%rhs%dom(1)%vecs(19)%vec, chidgB%data%sdata%rhs%dom(2)%vecs(7)%vec, tol )
+    @assertEqual(chidgA%data%sdata%rhs%dom(1)%vecs(19)%vec, chidgB%data%sdata%rhs%dom(2)%vecs(7)%vec,  tol )
     @assertEqual(chidgA%data%sdata%rhs%dom(1)%vecs(30)%vec, chidgB%data%sdata%rhs%dom(1)%vecs(18)%vec, tol )
     @assertEqual(chidgA%data%sdata%rhs%dom(1)%vecs(31)%vec, chidgB%data%sdata%rhs%dom(2)%vecs(13)%vec, tol )
     @assertEqual(chidgA%data%sdata%rhs%dom(1)%vecs(42)%vec, chidgB%data%sdata%rhs%dom(1)%vecs(24)%vec, tol )
@@ -131,10 +134,10 @@ subroutine test_update_space_euler()
     !
     ! Domain 1 Chimera Blocks
     !
-    @assertEqual(chidgA%data%sdata%lhs%dom(1)%lblks(6,XI_MAX)%mat,   chidgB%data%sdata%lhs%dom(1)%chi_blks(6,1)%mat, tol)
-    @assertEqual(chidgA%data%sdata%lhs%dom(1)%lblks(7,XI_MIN)%mat,   chidgB%data%sdata%lhs%dom(2)%chi_blks(1,1)%mat, tol)
+    @assertEqual(chidgA%data%sdata%lhs%dom(1)%lblks(6,XI_MAX)%mat,   chidgB%data%sdata%lhs%dom(1)%chi_blks(6,1)%mat,  tol)
+    @assertEqual(chidgA%data%sdata%lhs%dom(1)%lblks(7,XI_MIN)%mat,   chidgB%data%sdata%lhs%dom(2)%chi_blks(1,1)%mat,  tol)
     @assertEqual(chidgA%data%sdata%lhs%dom(1)%lblks(18,XI_MAX)%mat,  chidgB%data%sdata%lhs%dom(1)%chi_blks(12,1)%mat, tol)
-    @assertEqual(chidgA%data%sdata%lhs%dom(1)%lblks(19,XI_MIN)%mat,  chidgB%data%sdata%lhs%dom(2)%chi_blks(7,1)%mat, tol)
+    @assertEqual(chidgA%data%sdata%lhs%dom(1)%lblks(19,XI_MIN)%mat,  chidgB%data%sdata%lhs%dom(2)%chi_blks(7,1)%mat,  tol)
     @assertEqual(chidgA%data%sdata%lhs%dom(1)%lblks(30,XI_MAX)%mat,  chidgB%data%sdata%lhs%dom(1)%chi_blks(18,1)%mat, tol)
     @assertEqual(chidgA%data%sdata%lhs%dom(1)%lblks(31,XI_MIN)%mat,  chidgB%data%sdata%lhs%dom(2)%chi_blks(13,1)%mat, tol)
     @assertEqual(chidgA%data%sdata%lhs%dom(1)%lblks(42,XI_MAX)%mat,  chidgB%data%sdata%lhs%dom(1)%chi_blks(24,1)%mat, tol)
@@ -148,16 +151,10 @@ subroutine test_update_space_euler()
     chidgA%data%sdata%rhs = chidg_mv(chidgA%data%sdata%lhs , chidgA%data%sdata%q)
     chidgB%data%sdata%rhs = chidg_mv(chidgB%data%sdata%lhs , chidgB%data%sdata%q)
 
-
-
-
-    !
-    ! Test
-    !
-    @assertEqual(chidgA%data%sdata%rhs%dom(1)%vecs(6)%vec,  chidgB%data%sdata%rhs%dom(1)%vecs(6)%vec,tol)
-    @assertEqual(chidgA%data%sdata%rhs%dom(1)%vecs(7)%vec,  chidgB%data%sdata%rhs%dom(2)%vecs(1)%vec,tol)
+    @assertEqual(chidgA%data%sdata%rhs%dom(1)%vecs(6)%vec,  chidgB%data%sdata%rhs%dom(1)%vecs(6)%vec, tol)
+    @assertEqual(chidgA%data%sdata%rhs%dom(1)%vecs(7)%vec,  chidgB%data%sdata%rhs%dom(2)%vecs(1)%vec, tol)
     @assertEqual(chidgA%data%sdata%rhs%dom(1)%vecs(18)%vec, chidgB%data%sdata%rhs%dom(1)%vecs(12)%vec,tol)
-    @assertEqual(chidgA%data%sdata%rhs%dom(1)%vecs(19)%vec, chidgB%data%sdata%rhs%dom(2)%vecs(7)%vec,tol)
+    @assertEqual(chidgA%data%sdata%rhs%dom(1)%vecs(19)%vec, chidgB%data%sdata%rhs%dom(2)%vecs(7)%vec, tol)
     @assertEqual(chidgA%data%sdata%rhs%dom(1)%vecs(30)%vec, chidgB%data%sdata%rhs%dom(1)%vecs(18)%vec,tol)
     @assertEqual(chidgA%data%sdata%rhs%dom(1)%vecs(31)%vec, chidgB%data%sdata%rhs%dom(2)%vecs(13)%vec,tol)
     @assertEqual(chidgA%data%sdata%rhs%dom(1)%vecs(42)%vec, chidgB%data%sdata%rhs%dom(1)%vecs(24)%vec,tol)
@@ -171,5 +168,9 @@ subroutine test_update_space_euler()
     !
     call chidgA%close('core')
     call chidgB%close('core')
+
+
+    call delete_file(chidgA_file)
+    call delete_file(chidgB_file)
 
 end subroutine test_update_space_euler

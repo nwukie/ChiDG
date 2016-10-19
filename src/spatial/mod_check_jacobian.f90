@@ -58,14 +58,16 @@ contains
 
 
 
-        associate ( mesh => data%mesh, eqnset => data%eqnset, sdata => data%sdata, q => data%sdata%q%dom(1), rhs => data%sdata%rhs%dom(1), lhs => data%sdata%lhs%dom(1), prop => data%eqnset(1)%prop )
+        associate ( mesh => data%mesh, eqnset => data%eqnset, sdata => data%sdata, &
+                    q => data%sdata%q%dom(1), rhs => data%sdata%rhs%dom(1),        &
+                    lhs => data%sdata%lhs%dom(1), prop => data%eqnset(1)%prop )
 
 
             nelem = mesh(1)%nelem
             nterms = mesh(1)%nterms_s
-            !------------------------------------------------------------------------------------------
-            !                                      Interior Scheme
-            !------------------------------------------------------------------------------------------
+            !---------------------------------------------------------------------------------
+            !                              Interior Scheme
+            !---------------------------------------------------------------------------------
 
             call worker%init(data%mesh,data%sdata,cache)
 
@@ -98,65 +100,53 @@ contains
             call cache_handler%update(worker,data%eqnset,data%bcset)
 
 
-            if (allocated(eqnset(1)%volume_advective_operator)) then
-                nflux = size(eqnset(1)%volume_advective_operator)
-                do iflux = 1,nflux
-
-                    worker%function_info%type    = VOLUME_ADVECTIVE_FLUX
-                    worker%function_info%ifcn    = iflux
-                    worker%function_info%idiff   = iblk
-                    worker%function_info%idepend = 1
-                    worker%function_info%seed    = element_compute_seed(mesh,idom,ielem,idepend,iblk)
-
-                    call data%eqnset(1)%volume_advective_operator(iflux)%op%compute(worker,prop)
-                end do
-
-            else
-                call chidg_signal(WARN,"No volume advective flux was found")
-            end if
+            !
+            ! Evaluate the Volume Advection Operators
+            !
+            call data%eqnset(1)%compute_volume_advective_operators(worker,iblk)
             
 
-           !
-           ! Store linearization from DNAD. This is what we want to check against the FD calculation.
-           !
-           blk_dnad = lhs%lblks(ielem,iblk)
-           blk_fd = blk_dnad                       ! Sourced allocation
-           blk_fd%mat = ZERO                       ! Zero storage
+            !
+            ! Store linearization from DNAD. This is what we want to check against the FD calculation.
+            !
+            blk_dnad = lhs%lblks(ielem,iblk)
+            blk_fd = blk_dnad                       ! Sourced allocation
+            blk_fd%mat = ZERO                       ! Zero storage
 
 
-           !
-           ! Store temporary rhs
-           !
-           rhs_r%vecs(ielem) = rhs%vecs(ielem)
+            !
+            ! Store temporary rhs
+            !
+            rhs_r%vecs(ielem) = rhs%vecs(ielem)
 
 
-           !
-           ! Reset sdata storage
-           !
-           call lhs%clear()
-           call rhs%clear()
-           call sdata%function_status%clear()
+            !
+            ! Reset sdata storage
+            !
+            call lhs%clear()
+            call rhs%clear()
+            call sdata%function_status%clear()
 
 
-           !
-           ! Select in which element, the solution is being perturbed
-           !
-           if (iblk == DIAG) then
-               ielem_p = ielem
-           else
-               ielem_p = mesh(1)%faces(ielem,iblk)%get_neighbor_element_l()
-           end if
+            !
+            ! Select in which element, the solution is being perturbed
+            !
+            if (iblk == DIAG) then
+                ielem_p = ielem
+            else
+                ielem_p = mesh(1)%faces(ielem,iblk)%get_neighbor_element_l()
+            end if
 
 
 
 
-           eps   = 1.e-8_rk ! finite-difference perturbation
+            eps   = 1.e-8_rk ! finite-difference perturbation
 
-           !
-           ! Loop through terms, perturb term, compute rhs, compute finite difference jacobian, return term.
-           !
-           do ivar = 1,eqnset(1)%prop%nequations()
-               do iterm = 1,mesh(1)%nterms_s
+            !
+            ! Loop through terms, perturb term, compute rhs, compute finite difference jacobian, return term.
+            !
+            do ivar = 1,eqnset(1)%prop%nequations()
+                do iterm = 1,mesh(1)%nterms_s
 
                    !
                    ! Perturb the iterm-th term in the solution expansion for variable ivar in element ielem.
@@ -171,27 +161,11 @@ contains
                    call cache_handler%update(worker,data%eqnset,data%bcset)
 
 
-
-
-
                    !
-                   ! For the current element, compute the contributions from volume integrals
+                   ! For the current element, compute the Volume Advective Operators
                    !
-                   if (allocated(eqnset(1)%volume_advective_operator)) then
-                        nflux = size(eqnset(1)%volume_advective_operator)
-                        do iflux = 1,nflux
-                            worker%function_info%type    = VOLUME_ADVECTIVE_FLUX
-                            worker%function_info%ifcn    = iflux
-                            worker%function_info%idiff   = iblk
-                            worker%function_info%idepend = 1
-                            worker%function_info%seed    = element_compute_seed(mesh,idom,ielem,idepend,iblk)
+                   call data%eqnset(1)%compute_volume_advective_operators(worker,iblk)
 
-                            call eqnset(1)%volume_advective_operator(iflux)%op%compute(worker,prop)
-                        end do
-
-                   else
-                       call chidg_signal(WARN,"No volume advective flux was found")
-                   end if
 
 
                    !
@@ -259,7 +233,8 @@ contains
         type(blockvector_t)  :: rhs_r, vec_fd
         real(rk)    :: qhold, eps
         integer(ik) :: nelem, i, iterm, iface, ivar, icol, nterms, iflux, nflux, idom, idonor
-        integer(ik) :: ielem_p              ! ielem_p is the element in which the solution is being perturbed for the finite difference calculation.
+        integer(ik) :: ielem_p              ! ielem_p is the element in which the solution is 
+                                            ! being perturbed for the finite difference calculation.
 
         type(chidg_worker_t)    :: worker
         type(chidg_cache_t)     :: cache
@@ -289,13 +264,14 @@ contains
 
 
 
-        associate ( mesh => data%mesh, q => data%sdata%q%dom(1), rhs => data%sdata%rhs%dom(1), lhs => data%sdata%lhs%dom(1), prop => data%eqnset(1)%prop )
+        associate ( mesh => data%mesh, q => data%sdata%q%dom(1), rhs => data%sdata%rhs%dom(1), &
+                    lhs => data%sdata%lhs%dom(1), prop => data%eqnset(1)%prop )
 
             nelem = mesh(1)%nelem
             nterms = mesh(1)%nterms_s
-            !------------------------------------------------------------------------------------------
-            !                                      Interior Scheme
-            !------------------------------------------------------------------------------------------
+            !-------------------------------------------------------------------------------
+            !                             Interior Scheme
+            !-------------------------------------------------------------------------------
 
             !
             ! Zero data storage
@@ -325,23 +301,7 @@ contains
             !
             ! For the current element, compute the contributions from boundary integrals
             !
-            if (allocated(data%eqnset(1)%boundary_advective_operator)) then
-                nflux = size(data%eqnset(1)%boundary_advective_operator)
-                do iflux = 1,nflux
-
-                    worker%function_info%type    = BOUNDARY_ADVECTIVE_FLUX
-                    worker%function_info%ifcn    = iflux
-                    worker%function_info%idiff   = iblk
-                    worker%function_info%idepend = idonor
-                    worker%function_info%seed    = face_compute_seed(data%mesh,idom,ielem,iface,idonor,iblk)
-
-
-                    call data%eqnset(1)%boundary_advective_operator(iflux)%op%compute(worker,prop)
-                end do
-
-            else
-                call chidg_signal(WARN,"No boundary advective flux was found")
-            end if
+            call data%eqnset(1)%compute_boundary_advective_operators(worker,iblk)
 
 
             !
@@ -365,22 +325,7 @@ contains
             !
             ! Need to use DIAG to get rhs for finite difference calculation. 
             ! This is because RHS is only stored for DIAG in the integrate procedure.
-            if (allocated(data%eqnset(1)%boundary_advective_operator)) then
-                nflux = size(data%eqnset(1)%boundary_advective_operator)
-                do iflux = 1,nflux
-
-                    worker%function_info%type    = BOUNDARY_ADVECTIVE_FLUX
-                    worker%function_info%ifcn    = iflux
-                    worker%function_info%idiff   = DIAG
-                    worker%function_info%idepend = idonor
-
-                    call data%eqnset(1)%boundary_advective_operator(iflux)%op%compute(worker,prop)
-
-                end do
-
-            else
-                call chidg_signal(WARN,"No boundary advective flux was found")
-            end if
+            call data%eqnset(1)%compute_boundary_advective_operators(worker,DIAG)
 
 
             !
@@ -423,26 +368,7 @@ contains
                     !
                     ! Need to use DIAG to get rhs for finite difference calculation. 
                     ! This is because RHS is only stored for DIAG in the integrate procedure.
-                    if (allocated(data%eqnset(1)%boundary_advective_operator)) then
-                        nflux = size(data%eqnset(1)%boundary_advective_operator)
-                        do iflux = 1,nflux
-
-                            worker%function_info%type    = BOUNDARY_ADVECTIVE_FLUX
-                            worker%function_info%ifcn    = iflux
-                            worker%function_info%idiff   = DIAG
-                            worker%function_info%idepend = idonor
-
-                            call data%eqnset(1)%boundary_advective_operator(iflux)%op%compute(worker,prop)
-                        end do
-
-                    else
-                        print*, data%eqnset(1)%name
-                        call chidg_signal(WARN,"No boundary advective flux was found")
-                    end if
-
-
-
-
+                    call data%eqnset(1)%compute_boundary_advective_operators(worker,DIAG)
 
 
                     !
@@ -457,10 +383,10 @@ contains
                     vec_fd = (rhs - rhs_r)/eps
 
 
-                    !
-                    ! Store to column of blk_fd
-                    !
-                    icol = (ivar-1)*nterms + iterm                  ! Compute appropriate column for storing linearization
+                    ! Compute appropriate column for storing linearization
+                    icol = (ivar-1)*nterms + iterm  
+
+                    ! Store in blk_fd
                     blk_fd%mat(:,icol) = vec_fd%vecs(ielem)%vec
 
 

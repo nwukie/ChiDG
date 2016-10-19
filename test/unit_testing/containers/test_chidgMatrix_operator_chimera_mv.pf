@@ -17,6 +17,8 @@ subroutine test_chidgMatrix_operator_chimera_mv()
     use mod_grid_operators, only: initialize_variable
     use mod_function,       only: create_function
     use mod_spatial,        only: update_space
+    use mod_test_utilities, only: create_mesh_file
+    use mod_file_utilities, only: delete_file
 
     use operator_chidg_mv,  only: chidg_mv
     implicit none
@@ -24,6 +26,7 @@ subroutine test_chidgMatrix_operator_chimera_mv()
 
     type(chidg_t)                   :: chidg
     type(meshdata_t),   allocatable :: meshdata(:)
+    character(:),       allocatable :: filename
     class(bc_t),        allocatable :: wall, inlet, outlet
     class(function_t),  allocatable :: constant, gaussian
     real(rk),           allocatable :: density_residual_D4_E31(:), density_residual_D4_E36(:)
@@ -48,17 +51,18 @@ subroutine test_chidgMatrix_operator_chimera_mv()
     !
     call chidg%init('env')
 
+    !
+    ! Create grid file
+    !
+    filename = "cylinder_overlapping_multipledonor.h5"
+    call create_mesh_file("Cylinder : Diagonal : NonMatching MultipleDonor", filename)
 
 
     !
     ! Read grid
     !
-    call chidg%read_grid('cylinder_chimera_overlapping_multipledonor.h5',spacedim)
-    call chidg%read_boundaryconditions('cylinder_chimera_overlapping_multipledonor.h5')
-
-
-
-
+    call chidg%read_grid(filename,spacedim)
+    call chidg%read_boundaryconditions(filename)
 
 
 
@@ -69,15 +73,6 @@ subroutine test_chidgMatrix_operator_chimera_mv()
     call chidg%init('communication')
     call chidg%init('chimera')
     call chidg%initialize_solution_solver()
-
-
-
-
-
-    
-
-
-
 
 
 
@@ -227,10 +222,6 @@ subroutine test_chidgMatrix_operator_chimera_mv()
     ielem_p = chidg%data%sdata%lhs%dom(idom)%lblks(ielem,iblk)%eparent_l()
     refvec = refvec + matmul(chidg%data%sdata%lhs%dom(idom)%lblks(ielem,iblk)%mat, chidg%data%sdata%rhs%dom(idom_p)%vecs(ielem_p)%vec)
 
-    iblk = ZETA_MAX
-    idom_p = chidg%data%sdata%lhs%dom(idom)%lblks(ielem,iblk)%dparent_l()
-    ielem_p = chidg%data%sdata%lhs%dom(idom)%lblks(ielem,iblk)%eparent_l()
-    refvec = refvec + matmul(chidg%data%sdata%lhs%dom(idom)%lblks(ielem,iblk)%mat, chidg%data%sdata%rhs%dom(idom_p)%vecs(ielem_p)%vec)
 
     iblk = DIAG
     idom_p = chidg%data%sdata%lhs%dom(idom)%lblks(ielem,iblk)%dparent_l()
@@ -279,6 +270,12 @@ subroutine test_chidgMatrix_operator_chimera_mv()
     ! Close ChiDG interface
     !
     call chidg%close('core')
+
+
+    !
+    ! Clean-up Test
+    !
+    call delete_file(filename)
 
 
 end subroutine test_chidgMatrix_operator_chimera_mv

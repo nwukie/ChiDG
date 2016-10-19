@@ -6,6 +6,7 @@ module test_hdfio_solution_mod
     use mod_hdfio,          only: read_variable_hdf, write_variable_hdf
     use type_chidg,         only: chidg_t
     use type_meshdata,      only: meshdata_t
+    use mod_test_utilities, only: create_mesh_file
     use mod_file_utilities, only: copy_file, delete_file
     implicit none
 
@@ -65,11 +66,10 @@ contains
         call this%chidgO1%init('env')
 
 
-!        !
-!        ! Read grid data from file 
-!        !
-!        call read_grid_hdf(this%fileorig, meshdata)
-    
+        !
+        ! Create file
+        !
+        call create_mesh_file("D1 E27 M1",this%fileorig)
 
         !
         ! Initialize chidg domain
@@ -77,14 +77,12 @@ contains
         spacedim = 3
         nterms_s = 1
         call this%chidgO1%read_grid(this%fileorig,spacedim)
-!        call this%chidgO1%data%add_domain(meshdata(1)%name,meshdata(1)%points,meshdata(1)%connectivity,spacedim,meshdata(1)%nterms_c,'Scalar Advection')
         call this%chidgO1%initialize_solution_domains(nterms_s)
         call this%chidgO1%init('communication')
         call this%chidgO1%initialize_solution_solver()
 
         spacedim = 3
         nterms_s = 8
-!        call this%chidgO2%data%add_domain(meshdata(1)%name,meshdata(1)%points,meshdata(1)%connectivity,spacedim,meshdata(1)%nterms_c,'Scalar Advection')
         call this%chidgO2%read_grid(this%fileorig,spacedim)
         call this%chidgO2%initialize_solution_domains(nterms_s)
         call this%chidgO2%init('communication')
@@ -109,19 +107,19 @@ contains
     !---------------------------------------------------------------------------------------------------------------
     subroutine tearDown(this)
         class(test_hdfio_solution),    intent(inout)   :: this
-        
-        !
-        ! Delete files that were generated
-        !
-        call delete_file(this%fileO1)
-        call delete_file(this%fileO2)
-
 
         !
         ! Close ChiDG instances
         !
         call this%chidgO1%close('core')
         call this%chidgO2%close('core')
+
+        !
+        ! Delete files that were generated
+        !
+        call delete_file(this%fileorig)
+        call delete_file(this%fileO1)
+        call delete_file(this%fileO2)
 
     end subroutine
     !***************************************************************************************************************

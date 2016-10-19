@@ -194,34 +194,34 @@ contains
         donor(1)%idomain_l  = 1
         donor(1)%ielement_g = 1
         donor(1)%ielement_l = 1
-        call donor_coords(1)%set(-0.5_rk,-0.5_rk,-0.5_rk)
+        call donor_coords(1)%set(0._rk,0._rk,0._rk)
 
         ! Test 2
-        call gqnode(2)%set(1.25_rk,0.25_rk,0.25_rk)
+        call gqnode(2)%set(.75_rk,0.25_rk,0.25_rk)
         donor(2)%idomain_g  = 1
         donor(2)%idomain_l  = 1
         donor(2)%ielement_g = 2
         donor(2)%ielement_l = 2
-        call donor_coords(2)%set(-0.5_rk,-0.5_rk,-0.5_rk)
+        call donor_coords(2)%set(0._rk,0._rk,0._rk)
 
         ! Test 3
-        call gqnode(3)%set(1.25_rk,1.25_rk,1.25_rk)
+        call gqnode(3)%set(.75_rk,.75_rk,.75_rk)
         donor(3)%idomain_g  = 1
         donor(3)%idomain_l  = 1
         donor(3)%ielement_g = 8
         donor(3)%ielement_l = 8
-        call donor_coords(3)%set(-0.5_rk,-0.5_rk,-0.5_rk)
+        call donor_coords(3)%set(0._rk,0._rk,0._rk)
 
         ! Test 4
-        call gqnode(4)%set(0.25_rk,0.25_rk,1.25_rk)
+        call gqnode(4)%set(0.25_rk,0.25_rk,.75_rk)
         donor(4)%idomain_g  = 1
         donor(4)%idomain_l  = 1
         donor(4)%ielement_g = 5
         donor(4)%ielement_l = 5
-        call donor_coords(4)%set(-0.5_rk,-0.5_rk,-0.5_rk)
+        call donor_coords(4)%set(0._rk,0._rk,0._rk)
 
         ! Test 5
-        call gqnode(5)%set(0.75_rk, 0.75_rk, 0.75_rk)
+        call gqnode(5)%set(0.375_rk, 0.375_rk, 0.375_rk)
         donor(5)%idomain_g  = 1
         donor(5)%idomain_l  = 1
         donor(5)%ielement_g = 1

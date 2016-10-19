@@ -3,20 +3,23 @@ module test_cache_data_equation_mod
     use mod_kinds,                  only: rk,ik
     use type_chidg,                 only: chidg_t
     use type_cache_data_equation,   only: cache_data_equation_t
+    use mod_test_utilities,         only: create_mesh_file
+    use mod_file_utilities,         only: delete_file
     implicit none
 
     public  :: test_cache_data_equation
 
 
-    @TestCase
     !>
     !!
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   9/7/2016
     !!
     !--------------------------------------------------------------------------
+    @TestCase
     type, extends(TestCase) ::  test_cache_data_equation
 
+        character(:),   allocatable :: filename
         type(chidg_t)               :: chidg
         integer(ik)                 :: nterms_s = 8
 
@@ -38,11 +41,23 @@ contains
     !--------------------------------------------------------------------------------------------------
     subroutine setUp(this)
         class(test_cache_data_equation),    intent(inout)   :: this
+
         
         call this%chidg%init('env')
-        call this%chidg%read_grid('D1_E27_M1.h5',3)
-        call this%chidg%read_boundaryconditions('D1_E27_M1.h5')
+        
+        !
+        ! Create file
+        !
+        this%filename = "D1E27M1.h5"
+        call create_mesh_file("D1 E27 M1",this%filename)
 
+        !
+        ! Read grid + bcs
+        !
+        call this%chidg%read_grid(this%filename,3)
+        call this%chidg%read_boundaryconditions(this%filename)
+
+        ! Initialize
         call this%chidg%initialize_solution_domains(this%nterms_s)
 
     end subroutine setUp
@@ -63,6 +78,8 @@ contains
         !
         call this%chidg%close('core')
 
+        call delete_file(this%filename)
+
     end subroutine tearDown
     !**************************************************************************************
 
@@ -70,13 +87,13 @@ contains
 
 
 
-    @Test
     !> Test element metric entries at quadrature points
     !!
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   9/7/2016
     !!
     !!-------------------------------------------------------------------------------------
+    @Test
     subroutine test_resize_face_interior__allocated(self)
         class(test_cache_data_equation),    intent(inout)   :: self
         
@@ -108,13 +125,13 @@ contains
 
 
 
-    @Test
     !> Test element metric entries at quadrature points
     !!
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   9/7/2016
     !!
     !!-------------------------------------------------------------------------------------
+    @Test
     subroutine test_resize_face_interior__size(self)
         class(test_cache_data_equation),    intent(inout)   :: self
         
@@ -171,13 +188,13 @@ contains
 
 
 
-    @Test
     !> Test element metric entries at quadrature points
     !!
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   9/7/2016
     !!
     !!-------------------------------------------------------------------------------------
+    @Test
     subroutine test_resize_face_exterior__allocated(self)
         class(test_cache_data_equation),    intent(inout)   :: self
         
@@ -210,13 +227,13 @@ contains
 
 
 
-    @Test
     !> Test element metric entries at quadrature points
     !!
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   9/7/2016
     !!
     !!-------------------------------------------------------------------------------------
+    @Test
     subroutine test_resize_face_exterior__size(self)
         class(test_cache_data_equation),    intent(inout)   :: self
         
@@ -280,13 +297,13 @@ contains
 
 
 
-    @Test
     !> Test element metric entries at quadrature points
     !!
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   9/7/2016
     !!
     !!-------------------------------------------------------------------------------------
+    @Test
     subroutine test_resize_element__allocated(self)
         class(test_cache_data_equation),    intent(inout)   :: self
         
@@ -318,13 +335,13 @@ contains
 
 
 
-    @Test
     !> Test element metric entries at quadrature points
     !!
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   9/7/2016
     !!
     !!-------------------------------------------------------------------------------------
+    @Test
     subroutine test_resize_element__size(self)
         class(test_cache_data_equation),    intent(inout)   :: self
         

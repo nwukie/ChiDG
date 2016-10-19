@@ -23,19 +23,49 @@ module mod_gridgen_blocks
 
 contains
 
-
-
+    !-------------------------------------------------------------------------------------
+    !!
+    !!
+    !!  Create File: Grid + BC's
+    !!  -----------------------------
+    !!  create_mesh_file__singleblock
+    !!  create_mesh_file__multiblock
+    !!  create_mesh_file__D2E8M1
+    !!
+    !!
+    !!  Generate grid: point arrays
+    !!  --------------------------
+    !!  meshgen_1x1x1_linear
+    !!  meshgen_1x1x1_unit_linear
+    !!  meshgen_2x2x2_linear
+    !!  meshgen_2x2x1_linear
+    !!  meshgen_3x3x3_linear
+    !!  meshgen_3x3x3_unit_linear
+    !!  meshgen_3x3x1_linear
+    !!  meshgen_4x1x1_linear
+    !!  meshgen_4x2x2_linear
+    !!  meshgen_3x1x1_linear
+    !!  meshgen_2x1x1_linear
+    !!  meshgen_40x15x1_linear
+    !!  meshgen_15x15x1_linear
+    !!  meshgen_15x15x2_linear
+    !!  meshgen_15x15x3_linear
+    !!
+    !!
+    !!
+    !**************************************************************************************
 
 
 
     !>  Write a ChiDG-formatted grid file consisting of:
     !!
-    !!      - two block domains
-    !!      - overlapping slightly, but just a translated overlap so 
-    !!        a given element overlaps with only one element in the other block
-    !!      - boundary conditions initialized to Scalar Extrapolate. Interior boundaries
-    !!        not set so they are detected as Chimera.
+    !!      - one block domain, D1
+    !!      - Linear element mapping, M1
+    !!      - boundary conditions initialized to Scalar Extrapolate.
     !!
+    !!  Particular block can be specified by the input string 'grid':
+    !!      'grid' = "D1 E1 M1"
+    !!      'grid' = "D1 E27 M1"
     !!
     !!  @author Nathan A. Wukie
     !!  @date   10/17/2016
@@ -43,43 +73,180 @@ contains
     !!
     !!
     !---------------------------------------------------------------------------------------
-    subroutine create_mesh_file__D2E8M1_overlapping_matching(filename)
+    subroutine create_mesh_file__singleblock(filename,grid)
         character(*),   intent(in)  :: filename
+        character(*),   intent(in)  :: grid
 
         class(bc_state_t),  allocatable                 :: bc_state
-        character(8)                                    :: faces(5)
-        integer(HID_T)                                  :: file_id, dom1_id, dom2_id, bcface_id
+        character(8)                                    :: face_strings(6)
+        integer(HID_T)                                  :: file_id, dom_id, bcface_id
         integer(ik)                                     :: spacedim, mapping, bcface, ierr
-        type(point_t),  allocatable                     :: nodes1(:), nodes2(:)
-        integer(ik),    allocatable                     :: elements1(:,:), elements2(:,:) 
-        integer(ik),    allocatable                     :: faces1(:,:), faces2(:,:)
-        real(rk),       allocatable, dimension(:,:,:)   :: xcoords1, xcoords2, ycoords, zcoords
-        real(rk)                                        :: xmax
+        type(point_t),  allocatable                     :: nodes(:)
+        integer(ik),    allocatable                     :: elements(:,:) 
+        integer(ik),    allocatable                     :: faces(:,:)
+        real(rk),       allocatable, dimension(:,:,:)   :: xcoords, ycoords, zcoords
 
 
         ! Create/initialize file
         file_id = initialize_file_hdf(filename)
         
 
+
         ! Generate coordinates for first block
-        call meshgen_2x2x2_linear(xcoords1,ycoords,zcoords)
+        select case (trim(grid))
+            case("D1 E1 M1")
+                call meshgen_1x1x1_linear(xcoords,ycoords,zcoords)
+            case("D1 E4 M1")
+                call meshgen_4x1x1_linear(xcoords,ycoords,zcoords)
+            case("D1 E16 M1")
+                call meshgen_4x2x2_linear(xcoords,ycoords,zcoords)
+            case("D1 E27 M1")
+                call meshgen_3x3x3_linear(xcoords,ycoords,zcoords)
+            case default
+                call chidg_signal(FATAL,"create_mesh_file__singleblock: Invalid string to select grid block")
+        end select
 
-
-        !
-        ! Create second block by copying and translating first block.
-        !
-        xmax = maxval(xcoords1)
-        xcoords2 = xcoords1 + 0.90_rk*xmax
 
 
         !
         ! Get nodes/elements
         !
         mapping = 1
-        nodes1    = get_block_points_plot3d(xcoords1,ycoords,zcoords)
-        nodes2    = get_block_points_plot3d(xcoords2,ycoords,zcoords)
-        elements1 = get_block_elements_plot3d(xcoords1,ycoords,zcoords,mapping,idomain=1)
-        elements2 = get_block_elements_plot3d(xcoords2,ycoords,zcoords,mapping,idomain=2)
+        nodes    = get_block_points_plot3d(xcoords,ycoords,zcoords)
+        elements = get_block_elements_plot3d(xcoords,ycoords,zcoords,mapping,idomain=1)
+
+
+        !
+        ! Add domains
+        !
+        spacedim = 3
+        call add_domain_hdf(file_id,"01",nodes,elements,"Scalar Advection",spacedim)
+
+
+        !
+        ! Set boundary conditions patch connectivities
+        !
+        dom_id = open_domain_hdf(file_id,"01")
+
+        do bcface = 1,6
+            ! Get face node indices for boundary 'bcface'
+            faces = get_block_boundary_faces_plot3d(xcoords,ycoords,zcoords,mapping,bcface)
+
+            ! Set bc patch face indices
+            call set_bc_patch_hdf(dom_id,faces,bcface)
+        end do !bcface
+
+
+        !
+        ! Create bc_state, "Scalar Extrapolate"
+        !
+        call create_bc("Scalar Extrapolate", bc_state)
+
+
+        !
+        ! Set boundary condition states for Domain 1: Leave XI_MAX empty
+        !
+        face_strings = ["XI_MIN  ","XI_MAX  ", "ETA_MIN ", "ETA_MAX ", "ZETA_MIN", "ZETA_MAX"]
+        do bcface = 1,size(face_strings)
+            call h5gopen_f(dom_id,"BoundaryConditions/"//trim(adjustl(face_strings(bcface))),bcface_id,ierr)
+            call add_bc_state_hdf(bcface_id,bc_state)
+            call h5gclose_f(bcface_id,ierr)
+        end do
+
+
+
+        ! Set 'Contains Grid'
+        call set_contains_grid_hdf(file_id,"True")
+
+        ! Close file
+        call close_domain_hdf(dom_id)
+        call close_file_hdf(file_id)
+        call close_hdf()
+
+    end subroutine create_mesh_file__singleblock
+    !*************************************************************************************
+
+
+
+
+
+
+
+
+
+
+    !>
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   10/19/2016
+    !!
+    !!
+    !!
+    !-------------------------------------------------------------------------------------
+    subroutine create_mesh_file__multiblock(filename,block1,block2)
+        character(*),   intent(in)  :: filename
+        character(*),   intent(in)  :: block1
+        character(*),   intent(in)  :: block2
+
+        class(bc_state_t),  allocatable                 :: bc_state
+        character(8)                                    :: faces(6)
+        integer(HID_T)                                  :: file_id, dom1_id, dom2_id, bcface1_id, bcface2_id
+        integer(ik)                                     :: spacedim, mapping, bcface, ierr
+        type(point_t),  allocatable                     :: nodes1(:), nodes2(:)
+        integer(ik),    allocatable                     :: elements1(:,:), elements2(:,:) 
+        integer(ik),    allocatable                     :: faces1(:,:), faces2(:,:)
+        real(rk),       allocatable, dimension(:,:,:)   :: xcoords1, ycoords1, zcoords1, &
+                                                           xcoords2, ycoords2, zcoords2
+        real(rk)                                        :: xmax_block1,xmin_block2
+
+
+        ! Create/initialize file
+        file_id = initialize_file_hdf(filename)
+        
+
+        select case (trim(block1))
+            case("D1 E1 M1")
+                call meshgen_1x1x1_linear(xcoords1,ycoords1,zcoords1)
+            case("D1 E2 M1")
+                call meshgen_2x1x1_linear(xcoords1,ycoords1,zcoords1)
+            case("D1 E27 M1")
+                call meshgen_3x3x3_linear(xcoords1,ycoords1,zcoords1)
+            case default
+                call chidg_signal(FATAL,"create_mesh_file__multiblock: Invalid block1 string")
+        end select
+
+
+
+
+        select case (trim(block2))
+            case("D1 E1 M1")
+                call meshgen_1x1x1_linear(xcoords2,ycoords2,zcoords2)
+            case("D1 E2 M1")
+                call meshgen_2x1x1_linear(xcoords2,ycoords2,zcoords2)
+            case("D1 E27 M1")
+                call meshgen_3x3x3_linear(xcoords2,ycoords2,zcoords2)
+            case default
+                call chidg_signal(FATAL,"create_mesh_file__multiblock: Invalid block2 string")
+        end select
+
+
+        !
+        ! Translate block2 to end of block1
+        !
+        xmax_block1 = maxval(xcoords1)
+        xmin_block2 = minval(xcoords2)
+        xcoords2 = xcoords2 + (xmax_block1-xmin_block2)
+
+
+
+        !
+        ! Get nodes/elements
+        !
+        mapping = 1
+        nodes1    = get_block_points_plot3d(xcoords1,ycoords1,zcoords1)
+        nodes2    = get_block_points_plot3d(xcoords2,ycoords2,zcoords2)
+        elements1 = get_block_elements_plot3d(xcoords1,ycoords1,zcoords1,mapping,idomain=1)
+        elements2 = get_block_elements_plot3d(xcoords2,ycoords2,zcoords2,mapping,idomain=2)
 
 
         !
@@ -98,8 +265,8 @@ contains
 
         do bcface = 1,6
             ! Get face node indices for boundary 'bcface'
-            faces1 = get_block_boundary_faces_plot3d(xcoords1,ycoords,zcoords,mapping,bcface)
-            faces2 = get_block_boundary_faces_plot3d(xcoords2,ycoords,zcoords,mapping,bcface)
+            faces1 = get_block_boundary_faces_plot3d(xcoords1,ycoords1,zcoords1,mapping,bcface)
+            faces2 = get_block_boundary_faces_plot3d(xcoords2,ycoords2,zcoords2,mapping,bcface)
 
             ! Set bc patch face indices
             call set_bc_patch_hdf(dom1_id,faces1,bcface)
@@ -116,22 +283,18 @@ contains
         !
         ! Set boundary condition states for Domain 1: Leave XI_MAX empty
         !
-        faces = ["XI_MIN  ", "ETA_MIN ", "ETA_MAX ", "ZETA_MIN", "ZETA_MAX"]
+        faces = ["XI_MIN  ","XI_MAX  ", "ETA_MIN ", "ETA_MAX ", "ZETA_MIN", "ZETA_MAX"]
         do bcface = 1,size(faces)
-            call h5gopen_f(dom1_id,"BoundaryConditions/"//trim(adjustl(faces(bcface))),bcface_id,ierr)
-            call add_bc_state_hdf(bcface_id,bc_state)
-            call h5gclose_f(bcface_id,ierr)
+            call h5gopen_f(dom1_id,"BoundaryConditions/"//trim(adjustl(faces(bcface))),bcface1_id,ierr)
+            call h5gopen_f(dom2_id,"BoundaryConditions/"//trim(adjustl(faces(bcface))),bcface2_id,ierr)
+
+            call add_bc_state_hdf(bcface1_id,bc_state)
+            call add_bc_state_hdf(bcface2_id,bc_state)
+
+            call h5gclose_f(bcface1_id,ierr)
+            call h5gclose_f(bcface2_id,ierr)
         end do
 
-        !
-        ! Set boundary condition states for Domain 1: Leave XI_MIN empty
-        !
-        faces = ["XI_MAX  ", "ETA_MIN ", "ETA_MAX ", "ZETA_MIN", "ZETA_MAX"]
-        do bcface = 1,size(faces)
-            call h5gopen_f(dom2_id,"BoundaryConditions/"//trim(adjustl(faces(bcface))),bcface_id,ierr)
-            call add_bc_state_hdf(bcface_id,bc_state)
-            call h5gclose_f(bcface_id,ierr)
-        end do
 
 
         ! Set 'Contains Grid'
@@ -143,8 +306,22 @@ contains
         call close_file_hdf(file_id)
         call close_hdf()
 
-    end subroutine create_mesh_file__D2E8M1_overlapping_matching
+    end subroutine create_mesh_file__multiblock
     !*************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -163,6 +340,40 @@ contains
     !!      - boundary conditions initialized to Scalar Extrapolate. Interior boundaries
     !!        not set so they are detected as Chimera.
     !!
+    !!  Incoming Parameter, 'matching' specifies if the elements should overlap with
+    !!  a single, or potentially multiple elements
+    !!
+    !!     Block 1           Block 2 : matching=True        Block 2 : matching=False
+    !!  .-----.-----.             .-----.-----.                  .-----.-----.
+    !!  |     |     |             |     |     |                  |     |     |
+    !!  |     |     |             |     |     |                  |     |     |
+    !!  .-----.-----.             .-----.-----.                  |     |     |
+    !!  |     |     |             |     |     |                  .-----.-----.
+    !!  |     |     |             |     |     |                  |     |     |
+    !!  .-----.-----.             .-----.-----.                  .-----.-----.
+    !!
+    !!  Abutting
+    !!
+    !!       abutting = .true.        abutting = .false.
+    !!           ----.----               ----.-.----
+    !!               |                       | | 
+    !!               |                       | | 
+    !!           ----.----               ----.-.----
+    !!               |                       | |   
+    !!               |                       | | 
+    !!           ----.----               ----.-.----
+    !!
+    !!  Overlap
+    !!
+    !!       matching = .true.        matching = .false.
+    !!          ----.-.----              ----.-.----
+    !!              | |                      | | 
+    !!              | |                      | | 
+    !!          ----.-.----              ----|-.   
+    !!              | |                      .-|----
+    !!              | |                      | | 
+    !!          ----.-.----              ----.-.----
+    !!
     !!
     !!  @author Nathan A. Wukie
     !!  @date   10/17/2016
@@ -170,8 +381,10 @@ contains
     !!
     !!
     !---------------------------------------------------------------------------------------
-    subroutine create_mesh_file__D2E8M1_overlapping_nonmatching(filename)
+    subroutine create_mesh_file__D2E8M1(filename,abutting,matching)
         character(*),   intent(in)  :: filename
+        logical,        intent(in)  :: abutting
+        logical,        intent(in)  :: matching
 
         class(bc_state_t),  allocatable                 :: bc_state
         character(8)                                    :: faces(5)
@@ -197,11 +410,30 @@ contains
         !
         xmax = maxval(xcoords1)
         ymax = maxval(ycoords1)
-        xcoords2 = xcoords1 + 0.90_rk*xmax
+
+
+
+        !
+        ! If abutting=.true., Create block2 by copying block1 and translating
+        ! it by xmax of block1.
+        !
+        ! If abutting=.false., only translate by a fraction of xmax so there is overlap
+        !
+        if (abutting) then
+            xcoords2 = xcoords1 + xmax
+        else
+            xcoords2 = xcoords1 + 0.90_rk*xmax
+        end if
         ycoords2 = ycoords1
 
-        ! Shift centerplane of copied and translated block so faces are no longer matching
-        ycoords2(:,2,:) = ycoords2(:,2,:) - 0.2*ymax
+
+        !
+        ! If matching=false, shift center plane of points so that the overlapping
+        ! faces between blocks to not match exactly, and might have multiple Chimera donors
+        !
+        if (.not. matching) then
+            ycoords2(:,2,:) = ycoords2(:,2,:) - 0.2*ymax
+        end if
 
 
         !
@@ -256,7 +488,7 @@ contains
         end do
 
         !
-        ! Set boundary condition states for Domain 1: Leave XI_MIN empty
+        ! Set boundary condition states for Domain 2: Leave XI_MIN empty
         !
         faces = ["XI_MAX  ", "ETA_MIN ", "ETA_MAX ", "ZETA_MIN", "ZETA_MAX"]
         do bcface = 1,size(faces)
@@ -275,7 +507,7 @@ contains
         call close_file_hdf(file_id)
         call close_hdf()
 
-    end subroutine create_mesh_file__D2E8M1_overlapping_nonmatching
+    end subroutine create_mesh_file__D2E8M1
     !*************************************************************************************
 
 
@@ -382,7 +614,6 @@ contains
         real(rk)    :: x,y,z, dx, dy, dz
 
         ! elements (1x1x1) - linear
-
         npts_xi   = 2
         npts_eta  = 2
         npts_zeta = 2
@@ -444,7 +675,7 @@ contains
                        npts_xi, npts_eta, npts_zeta
 
         integer(ik), parameter      :: npt = 27
-        real(rk), dimension(npt)    :: x,y,z
+        real(rk)                    :: x,y,z
 
         ! elements (2x2x2) - linear
         !
@@ -461,18 +692,6 @@ contains
         !      *-------*-------*
         !
         !
-        x = [ZERO, ONE, TWO, ZERO, ONE, TWO, ZERO, ONE, TWO, &
-             ZERO, ONE, TWO, ZERO, ONE, TWO, ZERO, ONE, TWO, &
-             ZERO, ONE, TWO, ZERO, ONE, TWO, ZERO, ONE, TWO]
-
-        y = [ZERO, ZERO, ZERO, ONE, ONE, ONE, TWO, TWO, TWO, &
-             ZERO, ZERO, ZERO, ONE, ONE, ONE, TWO, TWO, TWO, &
-             ZERO, ZERO, ZERO, ONE, ONE, ONE, TWO, TWO, TWO]
-
-        z = [ZERO, ZERO, ZERO, ZERO, ZERO, ZERO, ZERO, ZERO, ZERO, &
-             ONE, ONE, ONE, ONE, ONE, ONE, ONE, ONE, ONE, &
-             TWO, TWO, TWO, TWO, TWO, TWO, TWO, TWO, TWO]
-
         npts_xi   = 3
         npts_eta  = 3
         npts_zeta = 3
@@ -488,9 +707,13 @@ contains
         do ipt_zeta = 1,npts_zeta
             do ipt_eta = 1,npts_eta
                 do ipt_xi = 1,npts_xi
-                    xcoords(ipt_xi,ipt_eta,ipt_zeta) = x(ipt)
-                    ycoords(ipt_xi,ipt_eta,ipt_zeta) = y(ipt)
-                    zcoords(ipt_xi,ipt_eta,ipt_zeta) = z(ipt)
+                    x = ONE*real(ipt_xi  -1,rk)/real(npts_xi  -1,rk)
+                    y = ONE*real(ipt_eta -1,rk)/real(npts_eta -1,rk)
+                    z = ONE*real(ipt_zeta-1,rk)/real(npts_zeta-1,rk)
+
+                    xcoords(ipt_xi,ipt_eta,ipt_zeta) = x
+                    ycoords(ipt_xi,ipt_eta,ipt_zeta) = y
+                    zcoords(ipt_xi,ipt_eta,ipt_zeta) = z
                     ipt = ipt + 1
                 end do
             end do
@@ -610,7 +833,8 @@ contains
                        npts_xi, npts_eta, npts_zeta
 
         integer(ik), parameter      :: npt = 64
-        real(rk), dimension(npt)    :: x,y,z
+        !real(rk), dimension(npt)    :: x,y,z
+        real(rk)                    :: x,y,z
 
         ! elements (3x3x3) - linear
         !
@@ -632,30 +856,30 @@ contains
         !      *-------*-------*-------*
         !
         !
-        x = [ZERO, ONE, TWO, THREE, ZERO, ONE, TWO, THREE, ZERO, ONE, TWO, THREE, &
-             ZERO, ONE, TWO, THREE, ZERO, ONE, TWO, THREE, ZERO, ONE, TWO, THREE, &
-             ZERO, ONE, TWO, THREE, ZERO, ONE, TWO, THREE, ZERO, ONE, TWO, THREE, &
-             ZERO, ONE, TWO, THREE, ZERO, ONE, TWO, THREE, ZERO, ONE, TWO, THREE, &
-             ZERO, ONE, TWO, THREE, ZERO, ONE, TWO, THREE, ZERO, ONE, TWO, THREE, &
-             ZERO, ONE, TWO, THREE]
-
-        y = [ZERO, ZERO, ZERO, ZERO, ONE, ONE, ONE, ONE, TWO, TWO, TWO, TWO, &
-             THREE, THREE, THREE, THREE, &
-             ZERO, ZERO, ZERO, ZERO, ONE, ONE, ONE, ONE, TWO, TWO, TWO, TWO, &
-             THREE, THREE, THREE, THREE, &
-             ZERO, ZERO, ZERO, ZERO, ONE, ONE, ONE, ONE, TWO, TWO, TWO, TWO, &
-             THREE, THREE, THREE, THREE, &
-             ZERO, ZERO, ZERO, ZERO, ONE, ONE, ONE, ONE, TWO, TWO, TWO, TWO, &
-             THREE, THREE, THREE, THREE]
-
-        z = [ZERO, ZERO, ZERO, ZERO, ZERO, ZERO, ZERO, ZERO, ZERO, ZERO, ZERO, &
-             ZERO, ZERO, ZERO, ZERO, ZERO, &
-             ONE, ONE, ONE, ONE, ONE, ONE, ONE, ONE, ONE, ONE, ONE, ONE, ONE, & 
-             ONE, ONE, ONE, &
-             TWO, TWO, TWO, TWO, TWO, TWO, TWO, TWO, TWO, TWO, TWO, TWO, TWO, &
-             TWO, TWO, TWO, &
-             THREE, THREE, THREE, THREE, THREE, THREE, THREE, THREE, THREE, THREE, &
-             THREE, THREE, THREE, THREE, THREE, THREE]
+!        x = [ZERO, ONE, TWO, THREE, ZERO, ONE, TWO, THREE, ZERO, ONE, TWO, THREE, &
+!             ZERO, ONE, TWO, THREE, ZERO, ONE, TWO, THREE, ZERO, ONE, TWO, THREE, &
+!             ZERO, ONE, TWO, THREE, ZERO, ONE, TWO, THREE, ZERO, ONE, TWO, THREE, &
+!             ZERO, ONE, TWO, THREE, ZERO, ONE, TWO, THREE, ZERO, ONE, TWO, THREE, &
+!             ZERO, ONE, TWO, THREE, ZERO, ONE, TWO, THREE, ZERO, ONE, TWO, THREE, &
+!             ZERO, ONE, TWO, THREE]
+!
+!        y = [ZERO, ZERO, ZERO, ZERO, ONE, ONE, ONE, ONE, TWO, TWO, TWO, TWO, &
+!             THREE, THREE, THREE, THREE, &
+!             ZERO, ZERO, ZERO, ZERO, ONE, ONE, ONE, ONE, TWO, TWO, TWO, TWO, &
+!             THREE, THREE, THREE, THREE, &
+!             ZERO, ZERO, ZERO, ZERO, ONE, ONE, ONE, ONE, TWO, TWO, TWO, TWO, &
+!             THREE, THREE, THREE, THREE, &
+!             ZERO, ZERO, ZERO, ZERO, ONE, ONE, ONE, ONE, TWO, TWO, TWO, TWO, &
+!             THREE, THREE, THREE, THREE]
+!
+!        z = [ZERO, ZERO, ZERO, ZERO, ZERO, ZERO, ZERO, ZERO, ZERO, ZERO, ZERO, &
+!             ZERO, ZERO, ZERO, ZERO, ZERO, &
+!             ONE, ONE, ONE, ONE, ONE, ONE, ONE, ONE, ONE, ONE, ONE, ONE, ONE, & 
+!             ONE, ONE, ONE, &
+!             TWO, TWO, TWO, TWO, TWO, TWO, TWO, TWO, TWO, TWO, TWO, TWO, TWO, &
+!             TWO, TWO, TWO, &
+!             THREE, THREE, THREE, THREE, THREE, THREE, THREE, THREE, THREE, THREE, &
+!             THREE, THREE, THREE, THREE, THREE, THREE]
 
         npts_xi   = 4
         npts_eta  = 4
@@ -670,9 +894,16 @@ contains
         do ipt_zeta = 1,npts_zeta
             do ipt_eta = 1,npts_eta
                 do ipt_xi = 1,npts_xi
-                    xcoords(ipt_xi,ipt_eta,ipt_zeta) = x(ipt)
-                    ycoords(ipt_xi,ipt_eta,ipt_zeta) = y(ipt)
-                    zcoords(ipt_xi,ipt_eta,ipt_zeta) = z(ipt)
+                    x = (real(ipt_xi  -1,rk))/real(npts_xi  -1,rk)
+                    y = (real(ipt_eta -1,rk))/real(npts_eta -1,rk)
+                    z = (real(ipt_zeta-1,rk))/real(npts_zeta-1,rk)
+
+                    !xcoords(ipt_xi,ipt_eta,ipt_zeta) = x(ipt)
+                    !ycoords(ipt_xi,ipt_eta,ipt_zeta) = y(ipt)
+                    !zcoords(ipt_xi,ipt_eta,ipt_zeta) = z(ipt)
+                    xcoords(ipt_xi,ipt_eta,ipt_zeta) = x
+                    ycoords(ipt_xi,ipt_eta,ipt_zeta) = y
+                    zcoords(ipt_xi,ipt_eta,ipt_zeta) = z
                     ipt = ipt + 1
                 end do
             end do
@@ -939,6 +1170,72 @@ contains
     end subroutine meshgen_4x1x1_linear
     !***************************************************************************************
 
+
+
+
+
+
+
+
+
+
+    !> Generate a set of points defining a 4x2x2 element mesh
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @param[inout]   pts     points_t array of rank-3 that gets allocated, 
+    !!                          filled, and returned
+    !---------------------------------------------------------------------------------------
+    subroutine meshgen_4x2x2_linear(xcoords,ycoords,zcoords)
+        real(rk),   allocatable :: xcoords(:,:,:)
+        real(rk),   allocatable :: ycoords(:,:,:)
+        real(rk),   allocatable :: zcoords(:,:,:)
+
+        real(rk)    :: x,y,z
+        integer(ik) :: ipt_xi, ipt_eta, ipt_zeta, ierr, &
+                       npts_xi, npts_eta, npts_zeta
+
+
+        ! elements (4x2x2) - linear
+        !  *---*---*---*---*
+        !  |\   \   \   \   \
+        !  * *---*---*---*---*
+        !  |\|\   \   \   \   \
+        !  * * *---*---*---*---*
+        !   \|\|   |   |   |   | 
+        !    * *---*---*---*---*
+        !     \|   |   |   |   | 
+        !      *---*---*---*---*
+        !
+
+
+        npts_xi   = 5
+        npts_eta  = 3
+        npts_zeta = 3
+
+
+        allocate(xcoords(npts_xi,npts_eta,npts_zeta), ycoords(npts_xi,npts_eta,npts_zeta), &
+                 zcoords(npts_xi,npts_eta,npts_zeta), stat=ierr)
+        if (ierr /= 0) call AllocationError
+
+
+        do ipt_zeta = 1,npts_zeta
+            do ipt_eta = 1,npts_eta
+                do ipt_xi = 1,npts_xi
+                    x = TWO*real(ipt_xi  -1,rk)/real(npts_xi  -1,rk)
+                    y = ONE*real(ipt_eta -1,rk)/real(npts_eta -1,rk)
+                    z = ONE*real(ipt_zeta-1,rk)/real(npts_zeta-1,rk)
+
+                    xcoords(ipt_xi,ipt_eta,ipt_zeta) = x
+                    ycoords(ipt_xi,ipt_eta,ipt_zeta) = y
+                    zcoords(ipt_xi,ipt_eta,ipt_zeta) = z
+                end do
+            end do
+        end do
+
+
+
+    end subroutine meshgen_4x2x2_linear
+    !***************************************************************************************
 
 
 

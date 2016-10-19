@@ -300,8 +300,6 @@ contains
 
         integrand = HALF*(upwind*normx*unormx + upwind*normy*unormy + upwind*normz*unormz)
 
-        integrand(:)%x_ad_ = 0._rk
-
         call worker%integrate_boundary(irhow, integrand)
 
         !================================

@@ -56,8 +56,8 @@ subroutine test__compute_chimera_interpolators()
     !
     ! Create grid file
     !
-    filename = "D2_E8_M1_overlapping_matching.h5"
-    call create_mesh_file("D2_E8_M1 : Overlapping : Matching", filename)
+    filename = "D2E8M1_overlapping_matching.h5"
+    call create_mesh_file("D2 E8 M1 : Overlapping : Matching", filename)
 
 
     !

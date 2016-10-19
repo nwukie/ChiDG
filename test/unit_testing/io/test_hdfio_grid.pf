@@ -5,6 +5,8 @@ subroutine testIO__read_grid_hdf__D1_E1_M1()
     use type_chidg,             only: chidg_t
     use mod_kinds,              only: rk,ik
     use mod_constants,          only: ZERO, ONE, IO_DESTINATION
+    use mod_test_utilities,     only: create_mesh_file
+    use mod_file_utilities,     only: delete_file
     use mod_grid,               only: compute_element_mappings
     implicit none
     
@@ -27,10 +29,14 @@ subroutine testIO__read_grid_hdf__D1_E1_M1()
     
 
     !
+    ! Create mesh file
+    !
+    call create_mesh_file("D1 E1 M1", filename)
+
+    !
     ! Read grid and add domain to chidg
     !
     call chidg%read_grid(filename, spacedim)
-
     call chidg%initialize_solution_domains(nterms_s)
 
 
@@ -44,9 +50,9 @@ subroutine testIO__read_grid_hdf__D1_E1_M1()
     
     ! Test points
     ! This is for element with center at zero
-    x = [-ONE,  ONE, -ONE,  ONE, -ONE,  ONE, -ONE, ONE]
-    y = [-ONE, -ONE,  ONE,  ONE, -ONE, -ONE,  ONE, ONE]
-    z = [-ONE, -ONE, -ONE, -ONE,  ONE,  ONE,  ONE, ONE]
+    x = [ZERO,  ONE, ZERO,  ONE, ZERO,  ONE, ZERO, ONE]
+    y = [ZERO, ZERO,  ONE,  ONE, ZERO, ZERO,  ONE, ONE]
+    z = [ZERO, ZERO, ZERO, ZERO,  ONE,  ONE,  ONE, ONE]
 
     @assertEqual(x,chidg%data%mesh(1)%elems(1)%elem_pts(:)%c1_,tol)
     @assertEqual(y,chidg%data%mesh(1)%elems(1)%elem_pts(:)%c2_,tol)
@@ -60,6 +66,8 @@ subroutine testIO__read_grid_hdf__D1_E1_M1()
     ! Close ChiDG
     !
     call chidg%close('core')
+
+    call delete_file(filename)
 
 end subroutine testIO__read_grid_hdf__D1_E1_M1
 
@@ -80,7 +88,9 @@ subroutine testIO__read_grid_hdf__D1_E27_M1()
     use pfunit_mod
     use type_chidg,             only: chidg_t
     use mod_kinds,              only: rk,ik
-    use mod_constants,          only: ZERO, THIRD, NFACES, IO_DESTINATION
+    use mod_constants,          only: ZERO, ONE, THIRD, NFACES, IO_DESTINATION
+    use mod_test_utilities,     only: create_mesh_file
+    use mod_file_utilities,     only: delete_file
     use mod_grid,               only: compute_element_mappings
     implicit none
     
@@ -102,6 +112,10 @@ subroutine testIO__read_grid_hdf__D1_E27_M1()
     ! Initialize element mapping
     call chidg%init('env')
     
+    !
+    ! Create mesh file
+    !
+    call create_mesh_file("D1 E27 M1", filename)
 
     !
     ! Read grid
@@ -143,6 +157,7 @@ subroutine testIO__read_grid_hdf__D1_E27_M1()
     !
     call chidg%close('core')
 
+    call delete_file(filename)
 end subroutine testIO__read_grid_hdf__D1_E27_M1
 
 
@@ -164,6 +179,8 @@ subroutine testIO__read_grid_hdf__D2_E1_M1()
     use type_chidg,             only: chidg_t
     use mod_kinds,              only: rk,ik
     use mod_constants,          only: ZERO, ONE, IO_DESTINATION
+    use mod_test_utilities,     only: create_mesh_file
+    use mod_file_utilities,     only: delete_file
     use mod_grid,               only: compute_element_mappings
     implicit none
     
@@ -184,6 +201,10 @@ subroutine testIO__read_grid_hdf__D2_E1_M1()
     ! Initialize element mapping
     call chidg%init('env')
     
+    !
+    ! Create mesh file
+    !
+    call create_mesh_file("D2 E1 M1", filename)
 
     !
     ! Read grid
@@ -216,7 +237,7 @@ subroutine testIO__read_grid_hdf__D2_E1_M1()
     @assertEqual(z,chidg%data%mesh(1)%elems(1)%elem_pts(:)%c3_,tol)
     
     
-    x = x + 2._8
+    x = x + 1._8
     y = [ZERO, ZERO, ONE, ONE, ZERO, ZERO, ONE, ONE]
     z = [ZERO, ZERO, ZERO, ZERO, ONE, ONE, ONE, ONE]
     @assertEqual(x,chidg%data%mesh(2)%elems(1)%elem_pts(:)%c1_,tol)
@@ -229,6 +250,7 @@ subroutine testIO__read_grid_hdf__D2_E1_M1()
     !
     call chidg%close('core')
 
+    call delete_file(filename)
 end subroutine testIO__read_grid_hdf__D2_E1_M1
 
 
@@ -253,6 +275,8 @@ subroutine testIO__read_grid_hdf__D2_E27_M1()
     use type_chidg,             only: chidg_t
     use mod_kinds,              only: rk,ik
     use mod_constants,          only: ZERO, ONE, THIRD, IO_DESTINATION
+    use mod_test_utilities,     only: create_mesh_file
+    use mod_file_utilities,     only: delete_file
     use mod_grid,               only: compute_element_mappings
     implicit none
     
@@ -274,6 +298,10 @@ subroutine testIO__read_grid_hdf__D2_E27_M1()
     ! Initialize element mapping
     call chidg%init('env')
     
+    !
+    ! Create mesh file
+    !
+    call create_mesh_file("D2 E27 M1", filename)
 
     !
     ! Read grid
@@ -306,7 +334,7 @@ subroutine testIO__read_grid_hdf__D2_E27_M1()
     @assertEqual(z,chidg%data%mesh(1)%elems(1)%elem_pts(:)%c3_,tol)
     
     
-    x = x + 2._8
+    x = x + 1._8
     y = [ZERO, ZERO, THIRD, THIRD, ZERO, ZERO, THIRD, THIRD]
     z = [ZERO, ZERO, ZERO, ZERO, THIRD, THIRD, THIRD, THIRD]
     @assertEqual(x,chidg%data%mesh(2)%elems(1)%elem_pts(:)%c1_,tol)
@@ -318,6 +346,7 @@ subroutine testIO__read_grid_hdf__D2_E27_M1()
     !
     call chidg%close('core')
 
+    call delete_file(filename)
 end subroutine testIO__read_grid_hdf__D2_E27_M1
 
 

@@ -34,7 +34,7 @@ subroutine test__detect_chimera_donors()
     class(bc_t),        allocatable :: bc
     type(meshdata_t),   allocatable :: meshdata(:)
     type(point_t)                   :: coord
-    character(len=100)              :: filename = 'D2_E8_M1_overlapping_matching.h5'
+    character(len=100)              :: filename = "D2E8M1_overlapping_matching.h5"
     real(rk)                        :: tol
     integer(ik)                     :: nterms_s, ndom, ChiID, ddomain, delement, ndonors, ngq
     integer(ik)                     :: ndonors_component, ndonors_size
@@ -55,7 +55,7 @@ subroutine test__detect_chimera_donors()
     !
     ! Create grid file
     !
-    call create_mesh_file("D2_E8_M1 : Overlapping : Matching", filename)
+    call create_mesh_file("D2 E8 M1 : Overlapping : Matching", filename)
 
 
     !

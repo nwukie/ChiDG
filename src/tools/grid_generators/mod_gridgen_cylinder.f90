@@ -29,13 +29,18 @@ contains
     !!  of the cylinder. This block is then replicated and rotated to
     !!  represent the rest of the cylinder.
     !!
-    !!  .-------.
-    !!  |\  3  /|
-    !!  | \   / |
-    !!  |4 ( ) 2|
-    !!  | /   \ |
-    !!  |/  1  \|
-    !!  .-------.
+    !!  Blocks 1-4
+    !!
+    !!                       Wall
+    !!                   .---------.                    Single-block orientation
+    !!                   |\   3   /|                           
+    !!                   |  \ _ /  |                           ETA_MAX
+    !!            Inlet  |4  (_)  2|  Outlet                      _     
+    !!                   |  /   \  |                    XI_MIN  /   \   XI_MAX
+    !!                   |/   1   \|                          /   1   \ 
+    !!                   .---------.                         .---------.
+    !!                       Wall                              ETA_MIN
+    !!
     !!
     !!  @author Nathan A. Wukie 
     !!  @date   10/18/2016

@@ -13,18 +13,21 @@
 @Test
 subroutine test__compute_chimera_interpolators()
     use pfunit_mod
-    use mod_kinds,      only: rk, ik
-    use mod_constants,  only: XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX, &
-                              INTERIOR, BOUNDARY, CHIMERA, IO_DESTINATION
+    use mod_kinds,          only: rk, ik
+    use mod_constants,      only: XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX, &
+                                  INTERIOR, BOUNDARY, CHIMERA, IO_DESTINATION
+    use mod_file_utilities, only: delete_file
+    use mod_test_utilities, only: create_mesh_file
 
 
-    use type_chidg,     only: chidg_t
-    use type_meshdata,  only: meshdata_t
-    use type_point,     only: point_t
-    use type_bc,        only: bc_t
-    use mod_bc,         only: create_bc
+    use type_chidg,         only: chidg_t
+    use type_meshdata,      only: meshdata_t
+    use type_point,         only: point_t
+    use type_bc,            only: bc_t
+    use mod_bc,             only: create_bc
 
-    use mod_chimera,    only: detect_chimera_faces, detect_chimera_donors, compute_chimera_interpolators
+    use mod_chimera,        only: detect_chimera_faces, detect_chimera_donors, &
+                                  compute_chimera_interpolators
     implicit none
 
 
@@ -32,7 +35,7 @@ subroutine test__compute_chimera_interpolators()
     class(bc_t),        allocatable :: bc
     type(meshdata_t),   allocatable :: meshdata(:)
     type(point_t)                   :: coord
-    character(len=100)              :: filename = 'D2_E8_M1_overlapping_matching.h5'
+    character(:),       allocatable :: filename
     real(rk)                        :: tol
     integer(ik)                     :: nterms_s, ndom, ChiID, ddomain, delement, ndonors, ngq
     integer(ik)                     :: idom, ielem, igq, idonor, iface, spacedim
@@ -49,6 +52,12 @@ subroutine test__compute_chimera_interpolators()
     !
     call chidg%init('env')
 
+
+    !
+    ! Create grid file
+    !
+    filename = "D2_E8_M1_overlapping_matching.h5"
+    call create_mesh_file("D2_E8_M1 : Overlapping : Matching", filename)
 
 
     !
@@ -75,20 +84,16 @@ subroutine test__compute_chimera_interpolators()
     call compute_chimera_interpolators(chidg%data%mesh)
 
 
-
-
-
-
-
-
-
-
-
     !
     ! Close ChiDG interface
     !
     call chidg%close('core')
 
+
+    !
+    ! Clean-up test
+    !
+    call delete_file(filename)
 
 
 end subroutine

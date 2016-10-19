@@ -1,11 +1,42 @@
+!>  Compute a matrix vector multiplication between chidgMatrix and chidgVector
+!!  instances that have been initialized with Chimera grid blocks.
+!!
+!!  The grid block configurations are shown here: 
+!!      - Block1 is 2x2x2 and symmetric.
+!!      - Block2 is 2x2x2 and its center y-constant plane is translated down.
+!!
+!!     Block 1               Block 2
+!!  .-----.-----.         .-----.-----.
+!!  |     |     |         |     |     |
+!!  |     |     |         |     |     |
+!!  .-----.-----.         |     |     |
+!!  |     |     |         .-----.-----.
+!!  |     |     |         |     |     |
+!!  .-----.-----.         .-----.-----.
+!!
+!!
+!!  These blocks overlap, so that there is Chimera communication between the blocks:
+!!
+!!        Block 1       Block 2
+!!        .-----.---.-.---.-----.            
+!!        |     |   | |   |     |            
+!!        |     |   | |   |     |            
+!!        .-----.---|-.   |     |            
+!!        |     |   .-|---.-----.            
+!!        |     |   | |   |     |            
+!!        .-----.---.-.---.-----.            
+!!      
+!!
+!!
+!*****************************************************************************************
 @Test
 subroutine test_chidgMatrix_operator_mv()
     use pfunit_mod
 
     use mod_kinds,          only: rk, ik
-    use mod_constants,      only: ZERO, ONE, TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT, &
-                                  NINE, TEN, DIAG, XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX, &
-                                  IO_DESTINATION
+    use mod_constants,      only: ZERO, ONE, TWO, THREE, FOUR, FIVE, SIX, SEVEN, &
+                                  EIGHT, NINE, TEN, DIAG, XI_MIN, XI_MAX, ETA_MIN, &
+                                  ETA_MAX, ZETA_MIN, ZETA_MAX, IO_DESTINATION
 
     use type_chidg,         only: chidg_t
     use type_chidgMatrix,   only: chidgMatrix_t
@@ -13,7 +44,8 @@ subroutine test_chidgMatrix_operator_mv()
     use type_meshdata,      only: meshdata_t
     use type_bc,            only: bc_t
     use mod_bc,             only: create_bc
-
+    use mod_test_utilities, only: create_mesh_file
+    use mod_file_utilities, only: delete_file
 
     use operator_chidg_mv,  only: chidg_mv
     implicit none
@@ -25,6 +57,7 @@ subroutine test_chidgMatrix_operator_mv()
     integer(ik)                     :: nterms_s, idom, spacedim
     real(rk), dimension(8)          :: bref_1, bref_2
     real(rk)                        :: tol
+    character(:),       allocatable :: filename
 
     type(chidgMatrix_t)             :: A
     type(chidgVector_t)             :: x, b
@@ -42,10 +75,19 @@ subroutine test_chidgMatrix_operator_mv()
 
 
     !
+    ! Create grid file
+    !
+    filename = "D2_E8_M1_overlapping_nonmatching.h5"
+    call create_mesh_file("D2_E8_M1 : Overlapping : NonMatching", filename)
+
+
+    !
     ! Get grid points
     !
-    call chidg%read_grid('D2_E8_M1_overlapping_multipledonor.h5',spacedim)
-    call chidg%read_boundaryconditions('D2_E8_M1_overlapping_multipledonor.h5')
+    !call chidg%read_grid('D2_E8_M1_overlapping_multipledonor.h5',spacedim)
+    !call chidg%read_boundaryconditions('D2_E8_M1_overlapping_multipledonor.h5')
+    call chidg%read_grid(filename,spacedim)
+    call chidg%read_boundaryconditions(filename)
 
 
     call chidg%initialize_solution_domains(nterms_s)
@@ -70,14 +112,13 @@ subroutine test_chidgMatrix_operator_mv()
     !
     ! Initialize chidgMatrix data -- domain 1
     !
-    A%dom(1)%lblks(1,DIAG)%mat  = ONE
-
-
+    A%dom(1)%lblks(1,DIAG)%mat = ONE
     A%dom(1)%chi_blks(2,1)%mat = TWO
     A%dom(1)%chi_blks(2,2)%mat = THREE
 
+    x%dom(1)%vecs(2)%vec = 0.1_rk
 
-    A%dom(2)%chi_blks(1,1)%mat = FOUR
+
 
 
 
@@ -85,24 +126,16 @@ subroutine test_chidgMatrix_operator_mv()
     !
     ! Initialize chidgMatrix data
     !
-    x%dom(1)%vecs(2)%vec = 0.1_rk
+    A%dom(2)%chi_blks(1,1)%mat = FOUR
 
     x%dom(2)%vecs(1)%vec = 0.2_rk
     x%dom(2)%vecs(3)%vec = 0.3_rk
 
 
-
-
-
-
-
     !
     ! Perform matrix-vector multiplication. THIS IS BEING TESTED
     !
-    !b = A*x
     b = chidg_mv(A,x)
-
-
 
 
     !
@@ -112,18 +145,11 @@ subroutine test_chidgMatrix_operator_mv()
     bref_2 = (FOUR * 0.1_rk)*nterms_s
 
 
-
-
-
-
-
     !
     ! Test MV operation
     !
     @assertEqual(bref_1,b%dom(1)%vecs(2)%vec,tol)
     @assertEqual(bref_2,b%dom(2)%vecs(1)%vec,tol)
-
-
 
 
     !
@@ -133,10 +159,15 @@ subroutine test_chidgMatrix_operator_mv()
     @assertEqual(2,size(A%dom(2)%chi_blks,2))
 
 
-
     !
     ! Close ChiDG interface
     !
     call chidg%close('core')
+
+
+    !
+    ! Clean-up
+    !
+    call delete_file(filename)
 
 end subroutine test_chidgMatrix_operator_mv

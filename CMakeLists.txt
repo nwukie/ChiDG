@@ -217,7 +217,7 @@ include_directories(${TECPLOT_INCLUDE_DIR})
 
 
 # Tecplot needs the c++ standard library
-set(CMAKE_Fortran_LINK_FLAGS "${CMAKE_Fortran_LINK_FLAGS} -lstdc++")
+set(CMAKE_Fortran_LINK_FLAGS "${CMAKE_Fortran_LINK_FLAGS} -lstdc++ -lpthread")
 
 
 
@@ -238,7 +238,8 @@ include_directories(${CMAKE_SOURCE_DIR}/src/tools)    # Need include here for ma
 #----------------------------------------------------------------------------------------------
 #                                         Build library
 #----------------------------------------------------------------------------------------------
-add_library(coredg SHARED ${LIB_SRCS})
+#add_library(coredg SHARED ${LIB_SRCS})
+add_library(coredg STATIC ${LIB_SRCS})
 target_link_libraries(coredg 
                       ${HDF5_LIBRARIES} ${HDF5_HL_LIBRARIES} 
                       ${LAPACK_LIBRARIES}

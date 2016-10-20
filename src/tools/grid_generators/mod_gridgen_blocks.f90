@@ -12,8 +12,9 @@ module mod_gridgen_blocks
                                       set_bc_patch_hdf, add_bc_state_hdf, &
                                       set_contains_grid_hdf, close_hdf, open_hdf
 
-    use type_point,     only: point_t
-    use type_bc_state,  only: bc_state_t
+    use type_point,             only: point_t
+    use type_bc_state,          only: bc_state_t
+    use type_bc_state_wrapper,  only: bc_state_wrapper_t
     use hdf5
     implicit none
 
@@ -65,6 +66,8 @@ contains
     !!
     !!  Particular block can be specified by the input string 'grid':
     !!      'grid' = "D1 E1 M1"
+    !!      'grid' = "D1 E8 M1"
+    !!      'grid' = "D1 E16 M1"
     !!      'grid' = "D1 E27 M1"
     !!
     !!  @author Nathan A. Wukie
@@ -73,9 +76,11 @@ contains
     !!
     !!
     !---------------------------------------------------------------------------------------
-    subroutine create_mesh_file__singleblock(filename,grid)
-        character(*),   intent(in)  :: filename
-        character(*),   intent(in)  :: grid
+    subroutine create_mesh_file__singleblock(filename,grid,equation_set1,bc_states1)
+        character(*),               intent(in)              :: filename
+        character(*),               intent(in)              :: grid
+        character(*),               intent(in), optional    :: equation_set1
+        type(bc_state_wrapper_t),   intent(in), optional    :: bc_states1(:)
 
         class(bc_state_t),  allocatable                 :: bc_state
         character(8)                                    :: face_strings(6)
@@ -183,10 +188,14 @@ contains
     !!
     !!
     !-------------------------------------------------------------------------------------
-    subroutine create_mesh_file__multiblock(filename,block1,block2)
-        character(*),   intent(in)  :: filename
-        character(*),   intent(in)  :: block1
-        character(*),   intent(in)  :: block2
+    subroutine create_mesh_file__multiblock(filename,block1,block2,equation_set1,equation_set2,bc_states1,bc_states2)
+        character(*),               intent(in)              :: filename
+        character(*),               intent(in)              :: block1
+        character(*),               intent(in)              :: block2
+        character(*),               intent(in), optional    :: equation_set1
+        character(*),               intent(in), optional    :: equation_set2
+        type(bc_state_wrapper_t),   intent(in), optional    :: bc_states1(:)
+        type(bc_state_wrapper_t),   intent(in), optional    :: bc_states2(:)
 
         class(bc_state_t),  allocatable                 :: bc_state
         character(8)                                    :: faces(6)
@@ -220,11 +229,14 @@ contains
 
         select case (trim(block2))
             case("D1 E1 M1")
-                call meshgen_1x1x1_linear(xcoords2,ycoords2,zcoords2)
+                !call meshgen_1x1x1_linear(xcoords2,ycoords2,zcoords2)
+                call meshgen_NXIxNETAxNZETA_linear(1,1,1,xcoords2,ycoords2,zcoords2)
             case("D1 E2 M1")
-                call meshgen_2x1x1_linear(xcoords2,ycoords2,zcoords2)
+                !call meshgen_2x1x1_linear(xcoords2,ycoords2,zcoords2)
+                call meshgen_NXIxNETAxNZETA_linear(2,1,1,xcoords2,ycoords2,zcoords2)
             case("D1 E27 M1")
-                call meshgen_3x3x3_linear(xcoords2,ycoords2,zcoords2)
+                !call meshgen_3x3x3_linear(xcoords2,ycoords2,zcoords2)
+                call meshgen_NXIxNETAxNZETA_linear(3,3,3,xcoords2,ycoords2,zcoords2)
             case default
                 call chidg_signal(FATAL,"create_mesh_file__multiblock: Invalid block2 string")
         end select
@@ -281,7 +293,7 @@ contains
 
 
         !
-        ! Set boundary condition states for Domain 1: Leave XI_MAX empty
+        ! Set boundary condition states
         !
         faces = ["XI_MIN  ","XI_MAX  ", "ETA_MIN ", "ETA_MAX ", "ZETA_MIN", "ZETA_MAX"]
         do bcface = 1,size(faces)
@@ -381,10 +393,14 @@ contains
     !!
     !!
     !---------------------------------------------------------------------------------------
-    subroutine create_mesh_file__D2E8M1(filename,abutting,matching)
-        character(*),   intent(in)  :: filename
-        logical,        intent(in)  :: abutting
-        logical,        intent(in)  :: matching
+    subroutine create_mesh_file__D2E8M1(filename,abutting,matching,equation_set1,equation_set2,bc_states1,bc_states2)
+        character(*),               intent(in)              :: filename
+        logical,                    intent(in)              :: abutting
+        logical,                    intent(in)              :: matching
+        character(*),               intent(in), optional    :: equation_set1
+        character(*),               intent(in), optional    :: equation_set2
+        type(bc_state_wrapper_t),   intent(in), optional    :: bc_states1(:)
+        type(bc_state_wrapper_t),   intent(in), optional    :: bc_states2(:)
 
         class(bc_state_t),  allocatable                 :: bc_state
         character(8)                                    :: faces(5)
@@ -516,6 +532,60 @@ contains
 
 
 
+
+
+
+    !>  Generate a set of points defining a:
+    !!      - nelem_xi by nelem_eta by nelem_zeta element, single-block, mesh
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   10/20/2016
+    !!
+    !!  @param[inout]   pts     points_t array of rank-3 that gets allocated, 
+    !!                          filled, and returned
+    !!
+    !--------------------------------------------------------------------------------------
+    subroutine meshgen_NXIxNETAxNZETA_linear(nelem_xi,nelem_eta,nelem_zeta,xcoords,ycoords,zcoords)
+        integer(ik)             :: nelem_xi
+        integer(ik)             :: nelem_eta
+        integer(ik)             :: nelem_zeta
+        real(rk),   allocatable :: xcoords(:,:,:)
+        real(rk),   allocatable :: ycoords(:,:,:)
+        real(rk),   allocatable :: zcoords(:,:,:)
+
+        integer(ik) :: ipt_xi, ipt_eta, ipt_zeta, ierr, &
+                       npts_xi, npts_eta, npts_zeta
+        real(rk)    :: x,y,z
+
+
+        npts_xi   = nelem_xi   + 1
+        npts_eta  = nelem_eta  + 1
+        npts_zeta = nelem_zeta + 1
+
+
+        allocate(xcoords(npts_xi,npts_eta,npts_zeta), ycoords(npts_xi,npts_eta,npts_zeta), &
+                 zcoords(npts_xi,npts_eta,npts_zeta), stat=ierr)
+        if (ierr /= 0) call AllocationError
+
+        do ipt_zeta = 1,npts_zeta
+            do ipt_eta = 1,npts_eta
+                do ipt_xi = 1,npts_xi
+
+                    x = real(ipt_xi  -1,rk)/real(npts_xi  -1,rk)
+                    y = real(ipt_eta -1,rk)/real(npts_eta -1,rk)
+                    z = real(ipt_zeta-1,rk)/real(npts_zeta-1,rk)
+
+                    xcoords(ipt_xi,ipt_eta,ipt_zeta) = x
+                    ycoords(ipt_xi,ipt_eta,ipt_zeta) = y
+                    zcoords(ipt_xi,ipt_eta,ipt_zeta) = z
+
+                end do
+            end do
+        end do
+
+
+    end subroutine meshgen_NXIxNETAxNZETA_linear
+    !**************************************************************************************
 
 
 

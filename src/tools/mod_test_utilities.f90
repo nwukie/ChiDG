@@ -24,7 +24,7 @@ module mod_test_utilities
     use mod_gridgen_cylinder,       only: create_mesh_file__cylinder
 
     use type_point,                 only: point_t
-    use type_bc_state,              only: bc_state_t
+    use type_bc_state_wrapper,      only: bc_state_wrapper_t
     use type_domain_connectivity,   only: domain_connectivity_t
     use hdf5
     implicit none
@@ -42,12 +42,13 @@ contains
     !!
     !!
     !---------------------------------------------------------------------------
-    subroutine create_mesh_file(selector, filename, option_one, option_two, option_three)
-        character(*),           intent(in)  :: selector
-        character(*),           intent(in)  :: filename
-        real(rk),   optional,   intent(in)  :: option_one
-        real(rk),   optional,   intent(in)  :: option_two
-        real(rk),   optional,   intent(in)  :: option_three
+    subroutine create_mesh_file(selector, filename, equation_set1, equation_set2, bc_states1, bc_states2)
+        character(*),                           intent(in)  :: selector
+        character(*),                           intent(in)  :: filename
+        character(*),               optional,   intent(in)  :: equation_set1
+        character(*),               optional,   intent(in)  :: equation_set2
+        type(bc_state_wrapper_t),   optional,   intent(in)  :: bc_states1(:)
+        type(bc_state_wrapper_t),   optional,   intent(in)  :: bc_states2(:)
 
         character(:),   allocatable :: user_msg
         integer(ik)                 :: ierr
@@ -59,21 +60,34 @@ contains
             ! Simple, linear, block grids
             !
             case("D1 E1 M1", "D1 E4 M1", "D1 E16 M1", "D1 E27 M1")
-                call create_mesh_file__singleblock(filename,trim(selector))
+                call create_mesh_file__singleblock(filename,trim(selector),equation_set1,bc_states1)
 
             case("D2 E1 M1")
-                call create_mesh_file__multiblock(filename,"D1 E1 M1","D1 E1 M1")
+                call create_mesh_file__multiblock(filename,"D1 E1 M1","D1 E1 M1",equation_set1,equation_set2,bc_states1,bc_states2)
             case("D2 E2 M1")
-                call create_mesh_file__multiblock(filename,"D1 E2 M1","D1 E2 M1")
+                call create_mesh_file__multiblock(filename,"D1 E2 M1","D1 E2 M1",equation_set1,equation_set2,bc_states1,bc_states2)
             case("D2 E27 M1")
-                call create_mesh_file__multiblock(filename,"D1 E27 M1","D1 E27 M1")
+                call create_mesh_file__multiblock(filename,"D1 E27 M1","D1 E27 M1",equation_set1,equation_set2,bc_states1,bc_states2)
 
             case("D2 E8 M1 : Abutting : Matching")
-                call create_mesh_file__D2E8M1(filename,abutting=.true.,matching=.true.)
+                call create_mesh_file__D2E8M1(filename,abutting=.true.,             &
+                                                       matching=.true.,             &
+                                                       equation_set1=equation_set1, &
+                                                       equation_set2=equation_set2, &
+                                                       bc_states1=bc_states1,       &
+                                                       bc_states2=bc_states2)
             case("D2 E8 M1 : Overlapping : Matching")
-                call create_mesh_file__D2E8M1(filename,abutting=.false.,matching=.true.)
+                call create_mesh_file__D2E8M1(filename,abutting=.false.,matching=.true.,    &
+                                                       equation_set1=equation_set1,         &
+                                                       equation_set2=equation_set2,         &
+                                                       bc_states1=bc_states1,               &
+                                                       bc_states2=bc_states2)
             case("D2 E8 M1 : Overlapping : NonMatching")
-                call create_mesh_file__D2E8M1(filename,abutting=.false.,matching=.false.)
+                call create_mesh_file__D2E8M1(filename,abutting=.false.,matching=.false.,   &
+                                                       equation_set1=equation_set1,         &
+                                                       equation_set2=equation_set2,         &
+                                                       bc_states1=bc_states1,               &
+                                                       bc_states2=bc_states2)
 
             !
             ! Circular cylinder

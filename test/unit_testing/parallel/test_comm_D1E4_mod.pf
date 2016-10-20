@@ -2,6 +2,8 @@ module test_comm_D1E4_mod
     use mod_kinds,                  only: rk, ik
     use mod_constants,              only: XI_MIN, XI_MAX, DIAG, BOUNDARY, IO_DESTINATION, &
                                           ONE, TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT, NINE, TEN
+    use mod_test_utilities,         only: create_mesh_file
+    use mod_file_utilities,         only: delete_file
     use type_chidg,                 only: chidg_t
     use type_chidgMatrix,           only: chidgMatrix_t
     use type_chidgVector,           only: chidgVector_t
@@ -25,8 +27,9 @@ module test_comm_D1E4_mod
 
         type(chidg_t)   :: chidg
 
-        integer(ik)     :: nterms_s = 27
-        type(mpi_comm)  :: ChiDG_COMM
+        character(:),   allocatable :: gridfile
+        integer(ik)                 :: nterms_s = 27
+        type(mpi_comm)              :: ChiDG_COMM
 
     contains
         procedure       :: setUp
@@ -51,7 +54,6 @@ contains
     subroutine setUp(this)
         class(test_comm_D1E4), intent(inout) :: this
 
-        character(len=:),   allocatable :: gridfile
         integer(ik)                     :: iread, spacedim, ierr, ielem
         real(rk)                        :: initial_vals(this%nterms_s)
 
@@ -65,15 +67,22 @@ contains
 
 
         IO_DESTINATION = 'file'
-        gridfile       = 'D1_E4_M1.h5'
+        this%gridfile  = 'D1E4M1.h5'
         spacedim       = 3
 
+        !
+        ! Create mesh
+        !
+        if (IRANK == GLOBAL_MASTER) then
+            call create_mesh_file("D1 E4 M1",this%gridfile)
+        end if
+        call MPI_Barrier(this%ChiDG_COMM,ierr)
 
         !
         ! Read partition data: grid, boundary conditions
         !
-        call this%chidg%read_grid(gridfile, spacedim)
-        call this%chidg%read_boundaryconditions(gridfile)
+        call this%chidg%read_grid(this%gridfile, spacedim)
+        call this%chidg%read_boundaryconditions(this%gridfile)
 
 
         !
@@ -108,6 +117,10 @@ contains
         class(test_comm_D1E4), intent(inout) :: this
 
         call this%chidg%close('core')
+
+        if (IRANK == GLOBAL_MASTER) then
+            call delete_file(this%gridfile)
+        end if
 
     end subroutine tearDown
     !******************************************************************************************
@@ -252,10 +265,10 @@ contains
                 @assertEqual(1,size(a%recv%comm(1)%dom))
                 @assertEqual(1,size(a%recv%comm(1)%dom(1)%vecs))
 
-                @assertequal(1,a%recv%comm(1)%dom(1)%vecs(1)%dparent_g())
-                @assertequal(1,a%recv%comm(1)%dom(1)%vecs(1)%dparent_l())
-                @assertequal(3,a%recv%comm(1)%dom(1)%vecs(1)%eparent_g())
-                @assertequal(1,a%recv%comm(1)%dom(1)%vecs(1)%eparent_l())
+                @assertEqual(1,a%recv%comm(1)%dom(1)%vecs(1)%dparent_g())
+                @assertEqual(1,a%recv%comm(1)%dom(1)%vecs(1)%dparent_l())
+                @assertEqual(3,a%recv%comm(1)%dom(1)%vecs(1)%eparent_g())
+                @assertEqual(1,a%recv%comm(1)%dom(1)%vecs(1)%eparent_l())
                 
             else if (IRANK == 1) then
                 @assertEqual(1,size(a%recv%comm))
@@ -263,10 +276,10 @@ contains
                 @assertEqual(1,size(a%recv%comm(1)%dom))
                 @assertEqual(1,size(a%recv%comm(1)%dom(1)%vecs))
 
-                @assertequal(1,a%recv%comm(1)%dom(1)%vecs(1)%dparent_g())
-                @assertequal(1,a%recv%comm(1)%dom(1)%vecs(1)%dparent_l())
-                @assertequal(2,a%recv%comm(1)%dom(1)%vecs(1)%eparent_g())
-                @assertequal(2,a%recv%comm(1)%dom(1)%vecs(1)%eparent_l())
+                @assertEqual(1,a%recv%comm(1)%dom(1)%vecs(1)%dparent_g())
+                @assertEqual(1,a%recv%comm(1)%dom(1)%vecs(1)%dparent_l())
+                @assertEqual(2,a%recv%comm(1)%dom(1)%vecs(1)%eparent_g())
+                @assertEqual(2,a%recv%comm(1)%dom(1)%vecs(1)%eparent_l())
             end if
 
 
@@ -283,38 +296,43 @@ contains
                 @assertEqual(1,size(a%recv%comm(1)%dom))
                 @assertEqual(1,size(a%recv%comm(1)%dom(1)%vecs))
 
-                @assertequal(1,a%recv%comm(1)%dom(1)%vecs(1)%dparent_g())
-                @assertequal(1,a%recv%comm(1)%dom(1)%vecs(1)%dparent_l())
-                @assertequal(3,a%recv%comm(1)%dom(1)%vecs(1)%eparent_g())
-                @assertequal(2,a%recv%comm(1)%dom(1)%vecs(1)%eparent_l())
+                @assertEqual(1,a%recv%comm(1)%dom(1)%vecs(1)%dparent_g())
+                @assertEqual(1,a%recv%comm(1)%dom(1)%vecs(1)%dparent_l())
+                @assertEqual(2,a%recv%comm(1)%dom(1)%vecs(1)%eparent_g())
+                @assertEqual(1,a%recv%comm(1)%dom(1)%vecs(1)%eparent_l())
             else if (IRANK == 1) then
+
                 @assertEqual(2,size(a%recv%comm))
 
                 @assertEqual(1,size(a%recv%comm(1)%dom))
                 @assertEqual(1,size(a%recv%comm(1)%dom(1)%vecs))
 
-                @assertequal(1,a%recv%comm(1)%dom(1)%vecs(1)%dparent_g())
-                @assertequal(1,a%recv%comm(1)%dom(1)%vecs(1)%dparent_l())
-                @assertequal(1,a%recv%comm(1)%dom(1)%vecs(1)%eparent_g())
-                @assertequal(1,a%recv%comm(1)%dom(1)%vecs(1)%eparent_l())
+                @assertEqual(1,a%recv%comm(1)%dom(1)%vecs(1)%dparent_g())
+                @assertEqual(1,a%recv%comm(1)%dom(1)%vecs(1)%dparent_l())
+                @assertEqual(1,a%recv%comm(1)%dom(1)%vecs(1)%eparent_g())
+                @assertEqual(1,a%recv%comm(1)%dom(1)%vecs(1)%eparent_l())
 
                 @assertEqual(1,size(a%recv%comm(2)%dom))
                 @assertEqual(1,size(a%recv%comm(2)%dom(1)%vecs))
 
-                @assertequal(1,a%recv%comm(2)%dom(1)%vecs(1)%dparent_g())
-                @assertequal(1,a%recv%comm(2)%dom(1)%vecs(1)%dparent_l())
-                @assertequal(4,a%recv%comm(2)%dom(1)%vecs(1)%eparent_g())
-                @assertequal(1,a%recv%comm(2)%dom(1)%vecs(1)%eparent_l())
+                @assertEqual(1,a%recv%comm(2)%dom(1)%vecs(1)%dparent_g())
+                @assertEqual(1,a%recv%comm(2)%dom(1)%vecs(1)%dparent_l())
+                @assertEqual(3,a%recv%comm(2)%dom(1)%vecs(1)%eparent_g())
+                @assertEqual(1,a%recv%comm(2)%dom(1)%vecs(1)%eparent_l())
+
+
             else if (IRANK == 2) then
+
                 @assertEqual(1,size(a%recv%comm))
 
                 @assertEqual(1,size(a%recv%comm(1)%dom))
                 @assertEqual(1,size(a%recv%comm(1)%dom(1)%vecs))
 
-                @assertequal(1,a%recv%comm(1)%dom(1)%vecs(1)%dparent_g())
-                @assertequal(1,a%recv%comm(1)%dom(1)%vecs(1)%dparent_l())
-                @assertequal(2,a%recv%comm(1)%dom(1)%vecs(1)%eparent_g())
-                @assertequal(1,a%recv%comm(1)%dom(1)%vecs(1)%eparent_l())
+                @assertEqual(1,a%recv%comm(1)%dom(1)%vecs(1)%dparent_g())
+                @assertEqual(1,a%recv%comm(1)%dom(1)%vecs(1)%dparent_l())
+                @assertEqual(2,a%recv%comm(1)%dom(1)%vecs(1)%eparent_g())
+                @assertEqual(1,a%recv%comm(1)%dom(1)%vecs(1)%eparent_l())
+
             end if
 
 
@@ -325,55 +343,63 @@ contains
         else if (NRANK == 4) then
 
             if (IRANK == 0) then
-                @assertEqual(1,size(a%recv%comm))
 
-                @assertEqual(1,size(a%recv%comm(1)%dom))
-                @assertEqual(1,size(a%recv%comm(1)%dom(1)%vecs))
-                @assertequal(1,a%recv%comm(1)%dom(1)%vecs(1)%dparent_g())
-                @assertequal(1,a%recv%comm(1)%dom(1)%vecs(1)%dparent_l())
-                @assertequal(2,a%recv%comm(1)%dom(1)%vecs(1)%eparent_g())
-                @assertequal(1,a%recv%comm(1)%dom(1)%vecs(1)%eparent_l())
-            else if (IRANK == 1) then
                 @assertEqual(2,size(a%recv%comm))
 
                 @assertEqual(1,size(a%recv%comm(1)%dom))
                 @assertEqual(1,size(a%recv%comm(1)%dom(1)%vecs))
-                @assertequal(1,a%recv%comm(1)%dom(1)%vecs(1)%dparent_g())
-                @assertequal(1,a%recv%comm(1)%dom(1)%vecs(1)%dparent_l())
-                @assertequal(1,a%recv%comm(1)%dom(1)%vecs(1)%eparent_g())
-                @assertequal(1,a%recv%comm(1)%dom(1)%vecs(1)%eparent_l())
+                @assertEqual(1,a%recv%comm(1)%dom(1)%vecs(1)%dparent_g())
+                @assertEqual(1,a%recv%comm(1)%dom(1)%vecs(1)%dparent_l())
+                @assertEqual(1,a%recv%comm(1)%dom(1)%vecs(1)%eparent_g())
+                @assertEqual(1,a%recv%comm(1)%dom(1)%vecs(1)%eparent_l())
 
                 @assertEqual(1,size(a%recv%comm(2)%dom))
                 @assertEqual(1,size(a%recv%comm(2)%dom(1)%vecs))
-                @assertequal(1,a%recv%comm(2)%dom(1)%vecs(1)%dparent_g())
-                @assertequal(1,a%recv%comm(2)%dom(1)%vecs(1)%dparent_l())
-                @assertequal(3,a%recv%comm(2)%dom(1)%vecs(1)%eparent_g())
-                @assertequal(1,a%recv%comm(2)%dom(1)%vecs(1)%eparent_l())
-            else if (IRANK == 2) then
-                @assertEqual(2,size(a%recv%comm))
+                @assertEqual(1,a%recv%comm(2)%dom(1)%vecs(1)%dparent_g())
+                @assertEqual(1,a%recv%comm(2)%dom(1)%vecs(1)%dparent_l())
+                @assertEqual(3,a%recv%comm(2)%dom(1)%vecs(1)%eparent_g())
+                @assertEqual(1,a%recv%comm(2)%dom(1)%vecs(1)%eparent_l())
 
-                @assertEqual(1,size(a%recv%comm(1)%dom))
-                @assertEqual(1,size(a%recv%comm(1)%dom(1)%vecs))
-                @assertequal(1,a%recv%comm(1)%dom(1)%vecs(1)%dparent_g())
-                @assertequal(1,a%recv%comm(1)%dom(1)%vecs(1)%dparent_l())
-                @assertequal(2,a%recv%comm(1)%dom(1)%vecs(1)%eparent_g())
-                @assertequal(1,a%recv%comm(1)%dom(1)%vecs(1)%eparent_l())
 
-                @assertEqual(1,size(a%recv%comm(1)%dom))
-                @assertEqual(1,size(a%recv%comm(1)%dom(1)%vecs))
-                @assertequal(1,a%recv%comm(2)%dom(1)%vecs(1)%dparent_g())
-                @assertequal(1,a%recv%comm(2)%dom(1)%vecs(1)%dparent_l())
-                @assertequal(4,a%recv%comm(2)%dom(1)%vecs(1)%eparent_g())
-                @assertequal(1,a%recv%comm(2)%dom(1)%vecs(1)%eparent_l())
-            else if (IRANK == 3) then
+            else if (IRANK == 1) then
                 @assertEqual(1,size(a%recv%comm))
 
                 @assertEqual(1,size(a%recv%comm(1)%dom))
                 @assertEqual(1,size(a%recv%comm(1)%dom(1)%vecs))
-                @assertequal(1,a%recv%comm(1)%dom(1)%vecs(1)%dparent_g())
-                @assertequal(1,a%recv%comm(1)%dom(1)%vecs(1)%dparent_l())
-                @assertequal(3,a%recv%comm(1)%dom(1)%vecs(1)%eparent_g())
-                @assertequal(1,a%recv%comm(1)%dom(1)%vecs(1)%eparent_l())
+                @assertEqual(1,a%recv%comm(1)%dom(1)%vecs(1)%dparent_g())
+                @assertEqual(1,a%recv%comm(1)%dom(1)%vecs(1)%dparent_l())
+                @assertEqual(2,a%recv%comm(1)%dom(1)%vecs(1)%eparent_g())
+                @assertEqual(1,a%recv%comm(1)%dom(1)%vecs(1)%eparent_l())
+
+
+            else if (IRANK == 2) then
+                @assertEqual(1,size(a%recv%comm))
+
+                @assertEqual(1,size(a%recv%comm(1)%dom))
+                @assertEqual(1,size(a%recv%comm(1)%dom(1)%vecs))
+                @assertEqual(1,a%recv%comm(1)%dom(1)%vecs(1)%dparent_g())
+                @assertEqual(1,a%recv%comm(1)%dom(1)%vecs(1)%dparent_l())
+                @assertEqual(3,a%recv%comm(1)%dom(1)%vecs(1)%eparent_g())
+                @assertEqual(1,a%recv%comm(1)%dom(1)%vecs(1)%eparent_l())
+
+
+            else if (IRANK == 3) then
+                @assertEqual(2,size(a%recv%comm))
+
+                @assertEqual(1,size(a%recv%comm(1)%dom))
+                @assertEqual(1,size(a%recv%comm(1)%dom(1)%vecs))
+                @assertEqual(1,a%recv%comm(1)%dom(1)%vecs(1)%dparent_g())
+                @assertEqual(1,a%recv%comm(1)%dom(1)%vecs(1)%dparent_l())
+                @assertEqual(2,a%recv%comm(1)%dom(1)%vecs(1)%eparent_g())
+                @assertEqual(1,a%recv%comm(1)%dom(1)%vecs(1)%eparent_l())
+
+                @assertEqual(1,size(a%recv%comm(1)%dom))
+                @assertEqual(1,size(a%recv%comm(1)%dom(1)%vecs))
+                @assertEqual(1,a%recv%comm(2)%dom(1)%vecs(1)%dparent_g())
+                @assertEqual(1,a%recv%comm(2)%dom(1)%vecs(1)%dparent_l())
+                @assertEqual(4,a%recv%comm(2)%dom(1)%vecs(1)%eparent_g())
+                @assertEqual(1,a%recv%comm(2)%dom(1)%vecs(1)%eparent_l())
+
             end if
 
 
@@ -480,10 +506,10 @@ contains
         else if (NRANK == 3) then
 
             if (IRANK == 0) then
-                ! element 4
-                A%dom(1)%lblks(1,XI_MIN)%mat = TEN
-                A%dom(1)%lblks(1,DIAG)%mat   = FOUR
-                x%dom(1)%vecs(1)%vec         = 14._rk
+                ! element 1
+                A%dom(1)%lblks(1,DIAG)%mat   = ONE
+                A%dom(1)%lblks(1,XI_MAX)%mat = FIVE
+                x%dom(1)%vecs(1)%vec         = 11._rk
 
             else if (IRANK == 1) then
                 ! element 2
@@ -492,39 +518,7 @@ contains
                 A%dom(1)%lblks(1,XI_MAX)%mat = SIX
                 x%dom(1)%vecs(1)%vec         = 12._rk
 
-                ! element 3
-                A%dom(1)%lblks(2,XI_MIN)%mat = NINE
-                A%dom(1)%lblks(2,DIAG)%mat   = THREE
-                A%dom(1)%lblks(2,XI_MAX)%mat = SEVEN
-                x%dom(1)%vecs(2)%vec         = 13._rk
                 
-            else if (IRANK == 2) then
-                ! element 1
-                A%dom(1)%lblks(1,DIAG)%mat   = ONE
-                A%dom(1)%lblks(1,XI_MAX)%mat = FIVE
-                x%dom(1)%vecs(1)%vec         = 11._rk
-
-            end if
-
-
-        else if (NRANK == 4) then
-
-            if (IRANK == 0) then
-                ! element 1
-                A%dom(1)%lblks(1,DIAG)%mat   = ONE
-                A%dom(1)%lblks(1,XI_MAX)%mat = FIVE
-                x%dom(1)%vecs(1)%vec         = 11._rk
-
-            else if (IRANK == 1) then
-
-                ! element 2
-                A%dom(1)%lblks(1,XI_MIN)%mat = EIGHT
-                A%dom(1)%lblks(1,DIAG)%mat   = TWO
-                A%dom(1)%lblks(1,XI_MAX)%mat = SIX
-                x%dom(1)%vecs(1)%vec         = 12._rk
-
-
-
             else if (IRANK == 2) then
                 ! element 3
                 A%dom(1)%lblks(1,XI_MIN)%mat = NINE
@@ -532,12 +526,41 @@ contains
                 A%dom(1)%lblks(1,XI_MAX)%mat = SEVEN
                 x%dom(1)%vecs(1)%vec         = 13._rk
 
-            else if (IRANK == 3) then
-                
+                ! element 4
+                A%dom(1)%lblks(2,XI_MIN)%mat = TEN
+                A%dom(1)%lblks(2,DIAG)%mat   = FOUR
+                x%dom(1)%vecs(2)%vec         = 14._rk
+            end if
+
+
+        else if (NRANK == 4) then
+
+            if (IRANK == 0) then
+                ! element 2
+                A%dom(1)%lblks(1,XI_MIN)%mat = EIGHT
+                A%dom(1)%lblks(1,DIAG)%mat   = TWO
+                A%dom(1)%lblks(1,XI_MAX)%mat = SIX
+                x%dom(1)%vecs(1)%vec         = 12._rk
+
+            else if (IRANK == 1) then
+                ! element 1
+                A%dom(1)%lblks(1,DIAG)%mat   = ONE
+                A%dom(1)%lblks(1,XI_MAX)%mat = FIVE
+                x%dom(1)%vecs(1)%vec         = 11._rk
+
+            else if (IRANK == 2) then
                 ! element 4
                 A%dom(1)%lblks(1,XI_MIN)%mat = TEN
                 A%dom(1)%lblks(1,DIAG)%mat   = FOUR
                 x%dom(1)%vecs(1)%vec         = 14._rk
+
+            else if (IRANK == 3) then
+                
+                ! element 3
+                A%dom(1)%lblks(1,XI_MIN)%mat = NINE
+                A%dom(1)%lblks(1,DIAG)%mat   = THREE
+                A%dom(1)%lblks(1,XI_MAX)%mat = SEVEN
+                x%dom(1)%vecs(1)%vec         = 13._rk
 
             end if
 
@@ -582,14 +605,14 @@ contains
         else if (NRANK == 3) then
 
             if (IRANK == 0) then
-                @assertEqual(5022._rk,  b%dom(1)%vecs(1)%vec)
+                @assertEqual(1917._rk,  b%dom(1)%vecs(1)%vec)
 
             else if (IRANK == 1) then
                 @assertEqual(5130._rk,  b%dom(1)%vecs(1)%vec)
-                @assertEqual(6615._rk,  b%dom(1)%vecs(2)%vec)
 
             else if (IRANK == 2) then
-                @assertEqual(1917._rk,  b%dom(1)%vecs(1)%vec)
+                @assertEqual(6615._rk,  b%dom(1)%vecs(1)%vec)
+                @assertEqual(5022._rk,  b%dom(1)%vecs(2)%vec)
 
             end if
 
@@ -597,13 +620,13 @@ contains
         else if (NRANK == 4) then
 
             if (IRANK == 0) then
-                @assertEqual(1917._rk,  b%dom(1)%vecs(1)%vec)
-            else if (IRANK == 1) then
                 @assertEqual(5130._rk,  b%dom(1)%vecs(1)%vec)
+            else if (IRANK == 1) then
+                @assertEqual(1917._rk,  b%dom(1)%vecs(1)%vec)
             else if (IRANK == 2) then
-                @assertEqual(6615._rk,  b%dom(1)%vecs(1)%vec)
-            else if (IRANK == 3) then
                 @assertEqual(5022._rk,  b%dom(1)%vecs(1)%vec)
+            else if (IRANK == 3) then
+                @assertEqual(6615._rk,  b%dom(1)%vecs(1)%vec)
             end if
 
         end if

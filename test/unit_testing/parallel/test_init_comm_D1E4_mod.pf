@@ -41,20 +41,28 @@ contains
         ChiDG_COMM%mpi_val = this%getMpiCommunicator()
 
 
+
+        gridfile       = "D1E4M1.h5"
+        IO_DESTINATION = 'file'
+        nterms_s       = 27
+        spacedim       = 3
+
+
+
+        !
+        ! Initialize ChiDG
+        !
         call chidg%init('env',ChiDG_COMM)
 
 
-        gridfile = "D1E1M1.h5"
+        !
+        ! Create mesh file
+        !
         if (IRANK == GLOBAL_MASTER) then
             call create_mesh_file("D1 E4 M1",gridfile)
 
         end if
         call MPI_Barrier(ChiDG_COMM,ierr)
-
-
-        IO_DESTINATION = 'file'
-        nterms_s       = 27
-        spacedim       = 3
 
 
         !
@@ -82,43 +90,43 @@ contains
             @assertEqual(BOUNDARY, chidg%data%mesh(1)%faces(1,XI_MIN)%ftype )
 
             @assertEqual(0, chidg%data%mesh(1)%faces(1,XI_MAX)%ineighbor_proc)
-            @assertEqual(1, chidg%data%mesh(1)%faces(1,XI_MAX)%ineighbor_domain_l)
             @assertEqual(1, chidg%data%mesh(1)%faces(1,XI_MAX)%ineighbor_domain_g)
-            @assertEqual(2, chidg%data%mesh(1)%faces(1,XI_MAX)%ineighbor_element_l)
+            @assertEqual(1, chidg%data%mesh(1)%faces(1,XI_MAX)%ineighbor_domain_l)
             @assertEqual(2, chidg%data%mesh(1)%faces(1,XI_MAX)%ineighbor_element_g)
+            @assertEqual(2, chidg%data%mesh(1)%faces(1,XI_MAX)%ineighbor_element_l)
 
             ! Element 2
             @assertEqual(0, chidg%data%mesh(1)%faces(2,XI_MIN)%ineighbor_proc)
-            @assertEqual(1, chidg%data%mesh(1)%faces(2,XI_MIN)%ineighbor_domain_l)
             @assertEqual(1, chidg%data%mesh(1)%faces(2,XI_MIN)%ineighbor_domain_g)
-            @assertEqual(1, chidg%data%mesh(1)%faces(2,XI_MIN)%ineighbor_element_l)
+            @assertEqual(1, chidg%data%mesh(1)%faces(2,XI_MIN)%ineighbor_domain_l)
             @assertEqual(1, chidg%data%mesh(1)%faces(2,XI_MIN)%ineighbor_element_g)
+            @assertEqual(1, chidg%data%mesh(1)%faces(2,XI_MIN)%ineighbor_element_l)
 
             @assertEqual(0, chidg%data%mesh(1)%faces(2,XI_MAX)%ineighbor_proc)
-            @assertEqual(1, chidg%data%mesh(1)%faces(2,XI_MAX)%ineighbor_domain_l)
             @assertEqual(1, chidg%data%mesh(1)%faces(2,XI_MAX)%ineighbor_domain_g)
-            @assertEqual(3, chidg%data%mesh(1)%faces(2,XI_MAX)%ineighbor_element_l)
+            @assertEqual(1, chidg%data%mesh(1)%faces(2,XI_MAX)%ineighbor_domain_l)
             @assertEqual(3, chidg%data%mesh(1)%faces(2,XI_MAX)%ineighbor_element_g)
+            @assertEqual(3, chidg%data%mesh(1)%faces(2,XI_MAX)%ineighbor_element_l)
 
             ! Element 3
             @assertEqual(0, chidg%data%mesh(1)%faces(3,XI_MIN)%ineighbor_proc)
-            @assertEqual(1, chidg%data%mesh(1)%faces(3,XI_MIN)%ineighbor_domain_l)
             @assertEqual(1, chidg%data%mesh(1)%faces(3,XI_MIN)%ineighbor_domain_g)
-            @assertEqual(2, chidg%data%mesh(1)%faces(3,XI_MIN)%ineighbor_element_l)
+            @assertEqual(1, chidg%data%mesh(1)%faces(3,XI_MIN)%ineighbor_domain_l)
             @assertEqual(2, chidg%data%mesh(1)%faces(3,XI_MIN)%ineighbor_element_g)
+            @assertEqual(2, chidg%data%mesh(1)%faces(3,XI_MIN)%ineighbor_element_l)
 
             @assertEqual(0, chidg%data%mesh(1)%faces(3,XI_MAX)%ineighbor_proc)
-            @assertEqual(1, chidg%data%mesh(1)%faces(3,XI_MAX)%ineighbor_domain_l)
             @assertEqual(1, chidg%data%mesh(1)%faces(3,XI_MAX)%ineighbor_domain_g)
-            @assertEqual(4, chidg%data%mesh(1)%faces(3,XI_MAX)%ineighbor_element_l)
+            @assertEqual(1, chidg%data%mesh(1)%faces(3,XI_MAX)%ineighbor_domain_l)
             @assertEqual(4, chidg%data%mesh(1)%faces(3,XI_MAX)%ineighbor_element_g)
+            @assertEqual(4, chidg%data%mesh(1)%faces(3,XI_MAX)%ineighbor_element_l)
 
             ! Element 4
             @assertEqual(0, chidg%data%mesh(1)%faces(4,XI_MIN)%ineighbor_proc)
-            @assertEqual(1, chidg%data%mesh(1)%faces(4,XI_MIN)%ineighbor_domain_l)
             @assertEqual(1, chidg%data%mesh(1)%faces(4,XI_MIN)%ineighbor_domain_g)
-            @assertEqual(3, chidg%data%mesh(1)%faces(4,XI_MIN)%ineighbor_element_l)
+            @assertEqual(1, chidg%data%mesh(1)%faces(4,XI_MIN)%ineighbor_domain_l)
             @assertEqual(3, chidg%data%mesh(1)%faces(4,XI_MIN)%ineighbor_element_g)
+            @assertEqual(3, chidg%data%mesh(1)%faces(4,XI_MIN)%ineighbor_element_l)
 
             @assertEqual(BOUNDARY, chidg%data%mesh(1)%faces(4,XI_MAX)%ftype )
         end if
@@ -133,46 +141,46 @@ contains
                 @assertEqual(BOUNDARY, chidg%data%mesh(1)%faces(1,XI_MIN)%ftype )
 
                 @assertEqual(0, chidg%data%mesh(1)%faces(1,XI_MAX)%ineighbor_proc)
-                @assertEqual(1, chidg%data%mesh(1)%faces(1,XI_MAX)%ineighbor_domain_l)
                 @assertEqual(1, chidg%data%mesh(1)%faces(1,XI_MAX)%ineighbor_domain_g)
-                @assertEqual(2, chidg%data%mesh(1)%faces(1,XI_MAX)%ineighbor_element_l)
+                @assertEqual(1, chidg%data%mesh(1)%faces(1,XI_MAX)%ineighbor_domain_l)
                 @assertEqual(2, chidg%data%mesh(1)%faces(1,XI_MAX)%ineighbor_element_g)
+                @assertEqual(2, chidg%data%mesh(1)%faces(1,XI_MAX)%ineighbor_element_l)
 
                 ! Element 2
                 @assertEqual(0, chidg%data%mesh(1)%faces(2,XI_MIN)%ineighbor_proc)
-                @assertEqual(1, chidg%data%mesh(1)%faces(2,XI_MIN)%ineighbor_domain_l)
                 @assertEqual(1, chidg%data%mesh(1)%faces(2,XI_MIN)%ineighbor_domain_g)
-                @assertEqual(1, chidg%data%mesh(1)%faces(2,XI_MIN)%ineighbor_element_l)
+                @assertEqual(1, chidg%data%mesh(1)%faces(2,XI_MIN)%ineighbor_domain_l)
                 @assertEqual(1, chidg%data%mesh(1)%faces(2,XI_MIN)%ineighbor_element_g)
+                @assertEqual(1, chidg%data%mesh(1)%faces(2,XI_MIN)%ineighbor_element_l)
 
                 @assertEqual(1, chidg%data%mesh(1)%faces(2,XI_MAX)%ineighbor_proc)
-                @assertEqual(1, chidg%data%mesh(1)%faces(2,XI_MAX)%ineighbor_domain_l)
                 @assertEqual(1, chidg%data%mesh(1)%faces(2,XI_MAX)%ineighbor_domain_g)
-                @assertEqual(1, chidg%data%mesh(1)%faces(2,XI_MAX)%ineighbor_element_l)
+                @assertEqual(1, chidg%data%mesh(1)%faces(2,XI_MAX)%ineighbor_domain_l)
                 @assertEqual(3, chidg%data%mesh(1)%faces(2,XI_MAX)%ineighbor_element_g)
+                @assertEqual(1, chidg%data%mesh(1)%faces(2,XI_MAX)%ineighbor_element_l)
 
 
             else if ( IRANK == 1 ) then
 
                 ! Element 3
                 @assertEqual(0, chidg%data%mesh(1)%faces(1,XI_MIN)%ineighbor_proc)
-                @assertEqual(1, chidg%data%mesh(1)%faces(1,XI_MIN)%ineighbor_domain_l)
                 @assertEqual(1, chidg%data%mesh(1)%faces(1,XI_MIN)%ineighbor_domain_g)
-                @assertEqual(2, chidg%data%mesh(1)%faces(1,XI_MIN)%ineighbor_element_l)
+                @assertEqual(1, chidg%data%mesh(1)%faces(1,XI_MIN)%ineighbor_domain_l)
                 @assertEqual(2, chidg%data%mesh(1)%faces(1,XI_MIN)%ineighbor_element_g)
+                @assertEqual(2, chidg%data%mesh(1)%faces(1,XI_MIN)%ineighbor_element_l)
 
                 @assertEqual(1, chidg%data%mesh(1)%faces(1,XI_MAX)%ineighbor_proc)
-                @assertEqual(1, chidg%data%mesh(1)%faces(1,XI_MAX)%ineighbor_domain_l)
                 @assertEqual(1, chidg%data%mesh(1)%faces(1,XI_MAX)%ineighbor_domain_g)
-                @assertEqual(2, chidg%data%mesh(1)%faces(1,XI_MAX)%ineighbor_element_l)
+                @assertEqual(1, chidg%data%mesh(1)%faces(1,XI_MAX)%ineighbor_domain_l)
                 @assertEqual(4, chidg%data%mesh(1)%faces(1,XI_MAX)%ineighbor_element_g)
+                @assertEqual(2, chidg%data%mesh(1)%faces(1,XI_MAX)%ineighbor_element_l)
 
                 ! Element 4
                 @assertEqual(1, chidg%data%mesh(1)%faces(2,XI_MIN)%ineighbor_proc)
-                @assertEqual(1, chidg%data%mesh(1)%faces(2,XI_MIN)%ineighbor_domain_l)
                 @assertEqual(1, chidg%data%mesh(1)%faces(2,XI_MIN)%ineighbor_domain_g)
-                @assertEqual(1, chidg%data%mesh(1)%faces(2,XI_MIN)%ineighbor_element_l)
+                @assertEqual(1, chidg%data%mesh(1)%faces(2,XI_MIN)%ineighbor_domain_l)
                 @assertEqual(3, chidg%data%mesh(1)%faces(2,XI_MIN)%ineighbor_element_g)
+                @assertEqual(1, chidg%data%mesh(1)%faces(2,XI_MIN)%ineighbor_element_l)
 
                 @assertEqual(BOUNDARY, chidg%data%mesh(1)%faces(2,XI_MAX)%ftype )
 
@@ -185,55 +193,52 @@ contains
         if ( NRANK == 3 ) then
 
             if ( IRANK == 0 ) then
-                ! Element 4
-                @assertEqual(BOUNDARY, chidg%data%mesh(1)%faces(1,XI_MAX)%ftype )
+                ! Element 1
+                @assertEqual(BOUNDARY, chidg%data%mesh(1)%faces(1,XI_MIN)%ftype )
 
-                @assertEqual(1, chidg%data%mesh(1)%faces(1,XI_MIN)%ineighbor_proc)
-                @assertEqual(1, chidg%data%mesh(1)%faces(1,XI_MIN)%ineighbor_domain_l)
-                @assertEqual(1, chidg%data%mesh(1)%faces(1,XI_MIN)%ineighbor_domain_g)
-                @assertEqual(2, chidg%data%mesh(1)%faces(1,XI_MIN)%ineighbor_element_l)
-                @assertEqual(3, chidg%data%mesh(1)%faces(1,XI_MIN)%ineighbor_element_g)
-
-
+                @assertEqual(1, chidg%data%mesh(1)%faces(1,XI_MAX)%ineighbor_proc)
+                @assertEqual(1, chidg%data%mesh(1)%faces(1,XI_MAX)%ineighbor_domain_g)
+                @assertEqual(1, chidg%data%mesh(1)%faces(1,XI_MAX)%ineighbor_domain_l)
+                @assertEqual(2, chidg%data%mesh(1)%faces(1,XI_MAX)%ineighbor_element_g)
+                @assertEqual(1, chidg%data%mesh(1)%faces(1,XI_MAX)%ineighbor_element_l)
 
             else if ( IRANK == 1 ) then
                 ! Element 2
-                @assertEqual(2, chidg%data%mesh(1)%faces(1,XI_MIN)%ineighbor_proc)
-                @assertEqual(1, chidg%data%mesh(1)%faces(1,XI_MIN)%ineighbor_domain_l)
+                @assertEqual(0, chidg%data%mesh(1)%faces(1,XI_MIN)%ineighbor_proc)
                 @assertEqual(1, chidg%data%mesh(1)%faces(1,XI_MIN)%ineighbor_domain_g)
-                @assertEqual(1, chidg%data%mesh(1)%faces(1,XI_MIN)%ineighbor_element_l)
+                @assertEqual(1, chidg%data%mesh(1)%faces(1,XI_MIN)%ineighbor_domain_l)
                 @assertEqual(1, chidg%data%mesh(1)%faces(1,XI_MIN)%ineighbor_element_g)
+                @assertEqual(1, chidg%data%mesh(1)%faces(1,XI_MIN)%ineighbor_element_l)
 
-                @assertEqual(1, chidg%data%mesh(1)%faces(1,XI_MAX)%ineighbor_proc)
-                @assertEqual(1, chidg%data%mesh(1)%faces(1,XI_MAX)%ineighbor_domain_l)
+                @assertEqual(2, chidg%data%mesh(1)%faces(1,XI_MAX)%ineighbor_proc)
                 @assertEqual(1, chidg%data%mesh(1)%faces(1,XI_MAX)%ineighbor_domain_g)
-                @assertEqual(2, chidg%data%mesh(1)%faces(1,XI_MAX)%ineighbor_element_l)
+                @assertEqual(1, chidg%data%mesh(1)%faces(1,XI_MAX)%ineighbor_domain_l)
                 @assertEqual(3, chidg%data%mesh(1)%faces(1,XI_MAX)%ineighbor_element_g)
-
-                ! Element 3
-                @assertEqual(1, chidg%data%mesh(1)%faces(2,XI_MIN)%ineighbor_proc)
-                @assertEqual(1, chidg%data%mesh(1)%faces(2,XI_MIN)%ineighbor_domain_l)
-                @assertEqual(1, chidg%data%mesh(1)%faces(2,XI_MIN)%ineighbor_domain_g)
-                @assertEqual(1, chidg%data%mesh(1)%faces(2,XI_MIN)%ineighbor_element_l)
-                @assertEqual(2, chidg%data%mesh(1)%faces(2,XI_MIN)%ineighbor_element_g)
-
-                @assertEqual(0, chidg%data%mesh(1)%faces(2,XI_MAX)%ineighbor_proc)
-                @assertEqual(1, chidg%data%mesh(1)%faces(2,XI_MAX)%ineighbor_domain_l)
-                @assertEqual(1, chidg%data%mesh(1)%faces(2,XI_MAX)%ineighbor_domain_g)
-                @assertEqual(1, chidg%data%mesh(1)%faces(2,XI_MAX)%ineighbor_element_l)
-                @assertEqual(4, chidg%data%mesh(1)%faces(2,XI_MAX)%ineighbor_element_g)
+                @assertEqual(1, chidg%data%mesh(1)%faces(1,XI_MAX)%ineighbor_element_l)
 
 
             else if ( IRANK == 2 ) then
-                ! Element 1
-                @assertEqual(1, chidg%data%mesh(1)%faces(1,XI_MAX)%ineighbor_proc)
-                @assertEqual(1, chidg%data%mesh(1)%faces(1,XI_MAX)%ineighbor_domain_l)
+                ! Element 3
+                @assertEqual(1, chidg%data%mesh(1)%faces(1,XI_MIN)%ineighbor_proc)
+                @assertEqual(1, chidg%data%mesh(1)%faces(1,XI_MIN)%ineighbor_domain_g)
+                @assertEqual(1, chidg%data%mesh(1)%faces(1,XI_MIN)%ineighbor_domain_l)
+                @assertEqual(2, chidg%data%mesh(1)%faces(1,XI_MIN)%ineighbor_element_g)
+                @assertEqual(1, chidg%data%mesh(1)%faces(1,XI_MIN)%ineighbor_element_l)
+
+                @assertEqual(2, chidg%data%mesh(1)%faces(1,XI_MAX)%ineighbor_proc)
                 @assertEqual(1, chidg%data%mesh(1)%faces(1,XI_MAX)%ineighbor_domain_g)
-                @assertEqual(1, chidg%data%mesh(1)%faces(1,XI_MAX)%ineighbor_element_l)
-                @assertEqual(2, chidg%data%mesh(1)%faces(1,XI_MAX)%ineighbor_element_g)
+                @assertEqual(1, chidg%data%mesh(1)%faces(1,XI_MAX)%ineighbor_domain_l)
+                @assertEqual(4, chidg%data%mesh(1)%faces(1,XI_MAX)%ineighbor_element_g)
+                @assertEqual(2, chidg%data%mesh(1)%faces(1,XI_MAX)%ineighbor_element_l)
 
-                @assertEqual(BOUNDARY, chidg%data%mesh(1)%faces(1,XI_MIN)%ftype )
+                ! Element 4
+                @assertEqual(2, chidg%data%mesh(1)%faces(2,XI_MIN)%ineighbor_proc)
+                @assertEqual(1, chidg%data%mesh(1)%faces(2,XI_MIN)%ineighbor_domain_g)
+                @assertEqual(1, chidg%data%mesh(1)%faces(2,XI_MIN)%ineighbor_domain_l)
+                @assertEqual(3, chidg%data%mesh(1)%faces(2,XI_MIN)%ineighbor_element_g)
+                @assertEqual(1, chidg%data%mesh(1)%faces(2,XI_MIN)%ineighbor_element_l)
 
+                @assertEqual(BOUNDARY, chidg%data%mesh(1)%faces(2,XI_MAX)%ftype )
             end if
         end if
 
@@ -243,54 +248,54 @@ contains
 
         if ( NRANK == 4 ) then
             if ( IRANK == 0 ) then
+                ! Element 2
+                @assertEqual(1, chidg%data%mesh(1)%faces(1,XI_MIN)%ineighbor_proc)
+                @assertEqual(1, chidg%data%mesh(1)%faces(1,XI_MIN)%ineighbor_domain_g)
+                @assertEqual(1, chidg%data%mesh(1)%faces(1,XI_MIN)%ineighbor_domain_l)
+                @assertEqual(1, chidg%data%mesh(1)%faces(1,XI_MIN)%ineighbor_element_g)
+                @assertEqual(1, chidg%data%mesh(1)%faces(1,XI_MIN)%ineighbor_element_l)
+
+                @assertEqual(3, chidg%data%mesh(1)%faces(1,XI_MAX)%ineighbor_proc)
+                @assertEqual(1, chidg%data%mesh(1)%faces(1,XI_MAX)%ineighbor_domain_g)
+                @assertEqual(1, chidg%data%mesh(1)%faces(1,XI_MAX)%ineighbor_domain_l)
+                @assertEqual(3, chidg%data%mesh(1)%faces(1,XI_MAX)%ineighbor_element_g)
+                @assertEqual(1, chidg%data%mesh(1)%faces(1,XI_MAX)%ineighbor_element_l)
+
+            else if ( IRANK == 1 ) then
+
                 ! Element 1
                 @assertEqual(BOUNDARY, chidg%data%mesh(1)%faces(1,XI_MIN)%ftype )
 
-                @assertEqual(1, chidg%data%mesh(1)%faces(1,XI_MAX)%ineighbor_proc)
-                @assertEqual(1, chidg%data%mesh(1)%faces(1,XI_MAX)%ineighbor_domain_l)
+                @assertEqual(0, chidg%data%mesh(1)%faces(1,XI_MAX)%ineighbor_proc)
                 @assertEqual(1, chidg%data%mesh(1)%faces(1,XI_MAX)%ineighbor_domain_g)
-                @assertEqual(1, chidg%data%mesh(1)%faces(1,XI_MAX)%ineighbor_element_l)
+                @assertEqual(1, chidg%data%mesh(1)%faces(1,XI_MAX)%ineighbor_domain_l)
                 @assertEqual(2, chidg%data%mesh(1)%faces(1,XI_MAX)%ineighbor_element_g)
-
-            else if ( IRANK == 1 ) then
-                ! Element 2
-                @assertEqual(0, chidg%data%mesh(1)%faces(1,XI_MIN)%ineighbor_proc)
-                @assertEqual(1, chidg%data%mesh(1)%faces(1,XI_MIN)%ineighbor_domain_l)
-                @assertEqual(1, chidg%data%mesh(1)%faces(1,XI_MIN)%ineighbor_domain_g)
-                @assertEqual(1, chidg%data%mesh(1)%faces(1,XI_MIN)%ineighbor_element_l)
-                @assertEqual(1, chidg%data%mesh(1)%faces(1,XI_MIN)%ineighbor_element_g)
-
-                @assertEqual(2, chidg%data%mesh(1)%faces(1,XI_MAX)%ineighbor_proc)
-                @assertEqual(1, chidg%data%mesh(1)%faces(1,XI_MAX)%ineighbor_domain_l)
-                @assertEqual(1, chidg%data%mesh(1)%faces(1,XI_MAX)%ineighbor_domain_g)
                 @assertEqual(1, chidg%data%mesh(1)%faces(1,XI_MAX)%ineighbor_element_l)
-                @assertEqual(3, chidg%data%mesh(1)%faces(1,XI_MAX)%ineighbor_element_g)
-
 
             else if ( IRANK == 2 ) then
-                ! Element 3
-                @assertEqual(1, chidg%data%mesh(1)%faces(1,XI_MIN)%ineighbor_proc)
-                @assertEqual(1, chidg%data%mesh(1)%faces(1,XI_MIN)%ineighbor_domain_l)
+                ! Element 4
+                @assertEqual(3, chidg%data%mesh(1)%faces(1,XI_MIN)%ineighbor_proc)
                 @assertEqual(1, chidg%data%mesh(1)%faces(1,XI_MIN)%ineighbor_domain_g)
+                @assertEqual(1, chidg%data%mesh(1)%faces(1,XI_MIN)%ineighbor_domain_l)
+                @assertEqual(3, chidg%data%mesh(1)%faces(1,XI_MIN)%ineighbor_element_g)
                 @assertEqual(1, chidg%data%mesh(1)%faces(1,XI_MIN)%ineighbor_element_l)
-                @assertEqual(2, chidg%data%mesh(1)%faces(1,XI_MIN)%ineighbor_element_g)
 
-                @assertEqual(3, chidg%data%mesh(1)%faces(1,XI_MAX)%ineighbor_proc)
-                @assertEqual(1, chidg%data%mesh(1)%faces(1,XI_MAX)%ineighbor_domain_l)
-                @assertEqual(1, chidg%data%mesh(1)%faces(1,XI_MAX)%ineighbor_domain_g)
-                @assertEqual(1, chidg%data%mesh(1)%faces(1,XI_MAX)%ineighbor_element_l)
-                @assertEqual(4, chidg%data%mesh(1)%faces(1,XI_MAX)%ineighbor_element_g)
+                @assertEqual(BOUNDARY, chidg%data%mesh(1)%faces(1,XI_MAX)%ftype )
 
 
             else if ( IRANK == 3 ) then
-                ! Element 4
-                @assertEqual(2, chidg%data%mesh(1)%faces(1,XI_MIN)%ineighbor_proc)
-                @assertEqual(1, chidg%data%mesh(1)%faces(1,XI_MIN)%ineighbor_domain_l)
+                ! Element 3
+                @assertEqual(0, chidg%data%mesh(1)%faces(1,XI_MIN)%ineighbor_proc)
                 @assertEqual(1, chidg%data%mesh(1)%faces(1,XI_MIN)%ineighbor_domain_g)
+                @assertEqual(1, chidg%data%mesh(1)%faces(1,XI_MIN)%ineighbor_domain_l)
+                @assertEqual(2, chidg%data%mesh(1)%faces(1,XI_MIN)%ineighbor_element_g)
                 @assertEqual(1, chidg%data%mesh(1)%faces(1,XI_MIN)%ineighbor_element_l)
-                @assertEqual(3, chidg%data%mesh(1)%faces(1,XI_MIN)%ineighbor_element_g)
 
-                @assertEqual(BOUNDARY, chidg%data%mesh(1)%faces(1,XI_MAX)%ftype )
+                @assertEqual(2, chidg%data%mesh(1)%faces(1,XI_MAX)%ineighbor_proc)
+                @assertEqual(1, chidg%data%mesh(1)%faces(1,XI_MAX)%ineighbor_domain_g)
+                @assertEqual(1, chidg%data%mesh(1)%faces(1,XI_MAX)%ineighbor_domain_l)
+                @assertEqual(4, chidg%data%mesh(1)%faces(1,XI_MAX)%ineighbor_element_g)
+                @assertEqual(1, chidg%data%mesh(1)%faces(1,XI_MAX)%ineighbor_element_l)
 
             end if
 

@@ -2,6 +2,8 @@ module test_comm_chimera_mod
     use mod_kinds,                  only: rk, ik
     use mod_constants,              only: XI_MIN, XI_MAX, DIAG, BOUNDARY, IO_DESTINATION, &
                                           ONE, TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT, NINE, TEN
+    use mod_test_utilities,         only: create_mesh_file
+    use mod_file_utilities,         only: delete_file
     use type_chidg,                 only: chidg_t
     use type_chidgMatrix,           only: chidgMatrix_t
     use type_chidgVector,           only: chidgVector_t
@@ -23,8 +25,9 @@ module test_comm_chimera_mod
 
         type(chidg_t)   :: chidg
 
-        integer(ik)     :: nterms_s = 27
-        type(mpi_comm)  :: ChiDG_COMM
+        character(len=:),   allocatable :: gridfile
+        integer(ik)                     :: nterms_s = 27
+        type(mpi_comm)                  :: ChiDG_COMM
 
     contains
         procedure       :: setUp
@@ -58,7 +61,6 @@ contains
     subroutine setUp(this)
         class(test_comm_chimera), intent(inout) :: this
 
-        character(len=:),   allocatable :: gridfile
         integer(ik)                     :: iread, spacedim, ierr, ielem
         real(rk)                        :: initial_vals(this%nterms_s)
 
@@ -71,18 +73,25 @@ contains
         call this%chidg%init('env',this%ChiDG_COMM)
 
 
-        gridfile       = 'D2_E8_M1_overlapping_matching.h5'
+        this%gridfile  = 'D2E8M1_overlapping_matching.h5'
         IO_DESTINATION = 'file'
         spacedim       = 3
 
+        !
+        ! Create mesh file
+        !
+        if (IRANK == GLOBAL_MASTER) then
+            call create_mesh_file("D2 E8 M1 : Overlapping : Matching",this%gridfile)
+        end if
+        call MPI_Barrier(this%ChiDG_COMM,ierr)
 
 
 
         !
         ! Read partition data: grid, boundary conditions
         !
-        call this%chidg%read_grid(gridfile, spacedim)
-        call this%chidg%read_boundaryconditions(gridfile)
+        call this%chidg%read_grid(this%gridfile, spacedim)
+        call this%chidg%read_boundaryconditions(this%gridfile)
 
 
         !
@@ -108,6 +117,10 @@ contains
         class(test_comm_chimera), intent(inout) :: this
 
         call this%chidg%close('core')
+
+        if (IRANK == GLOBAL_MASTER) then
+            call delete_file(this%gridfile)
+        end if
 
     end subroutine tearDown
     !******************************************************************************************

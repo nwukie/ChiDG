@@ -1,6 +1,8 @@
 module test_comm_D2E2_mod
     use mod_kinds,                  only: rk, ik
     use mod_constants,              only: XI_MIN, XI_MAX, BOUNDARY, IO_DESTINATION, TWO
+    use mod_test_utilities,         only: create_mesh_file
+    use mod_file_utilities,         only: delete_file
     use type_chidg,                 only: chidg_t
     use type_chidgVector,           only: chidgVector_t
     use mod_chidg_mpi,              only: IRANK, NRANK, GLOBAL_MASTER
@@ -22,8 +24,9 @@ module test_comm_D2E2_mod
 
         type(chidg_t)   :: chidg
 
-        integer(ik)     :: nterms_s = 27
-        type(mpi_comm)  :: ChiDG_COMM
+        character(len=:), allocatable   :: gridfile
+        integer(ik)                     :: nterms_s = 27
+        type(mpi_comm)                  :: ChiDG_COMM
 
     contains
         procedure       :: setUp
@@ -49,7 +52,6 @@ contains
     subroutine setUp(this)
         class(test_comm_D2E2), intent(inout) :: this
 
-        character(len=:), allocatable   :: gridfile
         integer(ik)                     :: iread, spacedim, ierr, idom, ielem
         real(rk)                        :: initial_vals(this%nterms_s)
 
@@ -63,15 +65,23 @@ contains
 
 
         IO_DESTINATION = 'file'
-        gridfile       = 'D2_E2_M1.h5'
+        this%gridfile  = 'D2E2M1.h5'
         spacedim       = 3
+
+        !
+        ! Create grid file
+        !
+        if (IRANK == GLOBAL_MASTER) then
+            call create_mesh_file("D2 E2 M1",this%gridfile)
+        end if
+        call MPI_Barrier(this%ChiDG_COMM,ierr)
 
 
         !
         ! Read partition data: grid, boundary conditions
         !
-        call this%chidg%read_grid(gridfile, spacedim)
-        call this%chidg%read_boundaryconditions(gridfile)
+        call this%chidg%read_grid(this%gridfile, spacedim)
+        call this%chidg%read_boundaryconditions(this%gridfile)
 
 
         !
@@ -108,6 +118,10 @@ contains
 
         call this%chidg%close('core')
 
+        if (IRANK == GLOBAL_MASTER) then
+            call delete_file(this%gridfile)
+        end if
+
     end subroutine tearDown
     !******************************************************************************************
 
@@ -126,7 +140,7 @@ contains
     !!  @date   6/23/2016
     !!
     !---------------------------------------------------------------------------------------
-    @Test(npes=[1,2,3,4])
+    @Test(npes=[1,2,4])
     subroutine chidgvector__norm_comm(self)
         class(test_comm_D2E2), intent(inout) :: self
 
@@ -165,7 +179,7 @@ contains
     !!  @date   6/23/2016
     !!
     !---------------------------------------------------------------------------------------
-    @Test(npes=[1,2,3,4])
+    @Test(npes=[1,2,4])
     subroutine chidgvector__dot_comm(self)
         class(test_comm_D2E2), intent(inout) :: self
 

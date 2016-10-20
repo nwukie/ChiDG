@@ -17,9 +17,23 @@ contains
 
     !>  This test reads two 2x1x1 element grids using 1, 2, and 4 processors and tests communication data.
     !!
+    !!
+    !!  .---.---. .---.---.
+    !!  |   |   | |   |   |
+    !!  .---.---. .---.---.
+    !!  Domain 1  Domain 2
+    !!
+    !!
     !!  Using 1 processor, all communication(face neighbors) should be local. Using 4 processors, all communication
     !!  should occur globally, across processors. Here, we just check all the indices defining the communication
     !!  for the different cases, npes=[1, 2, 4].
+    !!
+    !!
+    !!  NOTE: The MPI Asserts seem to be hanging if they fail, instead of failing and 
+    !!        moving on. Maybe some sort of synchronization issue?
+    !!
+    !!  NOTE: Keep in mind, that if the partitioning algorithm changes, then this test
+    !!        could fail, because the elements may be distributed differently.
     !!
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   6/22/2016
@@ -42,6 +56,7 @@ contains
 
 
         call chidg%init('env',ChiDG_COMM)
+
 
 
         gridfile = "D2E2M1.h5"
@@ -187,26 +202,23 @@ contains
 
 
             else if ( IRANK == 2 ) then
-                ! Domain 1, Element 1
-                @assertEqual(BOUNDARY, chidg%data%mesh(1)%faces(1,XI_MIN)%ftype )
-
-                @assertEqual(3, chidg%data%mesh(1)%faces(1,XI_MAX)%ineighbor_proc)
-                @assertEqual(1, chidg%data%mesh(1)%faces(1,XI_MAX)%ineighbor_domain_l)
-                @assertEqual(1, chidg%data%mesh(1)%faces(1,XI_MAX)%ineighbor_domain_g)
-                @assertEqual(1, chidg%data%mesh(1)%faces(1,XI_MAX)%ineighbor_element_l)
-                @assertEqual(2, chidg%data%mesh(1)%faces(1,XI_MAX)%ineighbor_element_g)
-
-
-            else if ( IRANK == 3 ) then
                 ! Domain 1, Element 2
-                @assertEqual(2, chidg%data%mesh(1)%faces(1,XI_MIN)%ineighbor_proc)
+                @assertEqual(3, chidg%data%mesh(1)%faces(1,XI_MIN)%ineighbor_proc)
                 @assertEqual(1, chidg%data%mesh(1)%faces(1,XI_MIN)%ineighbor_domain_l)
                 @assertEqual(1, chidg%data%mesh(1)%faces(1,XI_MIN)%ineighbor_domain_g)
                 @assertEqual(1, chidg%data%mesh(1)%faces(1,XI_MIN)%ineighbor_element_l)
                 @assertEqual(1, chidg%data%mesh(1)%faces(1,XI_MIN)%ineighbor_element_g)
-
                 @assertEqual(BOUNDARY, chidg%data%mesh(1)%faces(1,XI_MAX)%ftype )
 
+            else if ( IRANK == 3 ) then
+
+                ! Domain 1, Element 1
+                @assertEqual(BOUNDARY, chidg%data%mesh(1)%faces(1,XI_MIN)%ftype )
+                @assertEqual(2, chidg%data%mesh(1)%faces(1,XI_MAX)%ineighbor_proc)
+                @assertEqual(1, chidg%data%mesh(1)%faces(1,XI_MAX)%ineighbor_domain_l)
+                @assertEqual(1, chidg%data%mesh(1)%faces(1,XI_MAX)%ineighbor_domain_g)
+                @assertEqual(1, chidg%data%mesh(1)%faces(1,XI_MAX)%ineighbor_element_l)
+                @assertEqual(2, chidg%data%mesh(1)%faces(1,XI_MAX)%ineighbor_element_g)
             end if
 
 
@@ -218,6 +230,7 @@ contains
 
         call chidg%close('core')
 
+        call MPI_Barrier(ChiDG_COMM,ierr)
         if (IRANK == GLOBAL_MASTER) then
             call delete_file(gridfile)
         end if

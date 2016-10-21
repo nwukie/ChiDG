@@ -283,9 +283,9 @@ contains
     !!
     !----------------------------------------------------------------------------------------------------
     function get_option_key(self,iprop,ioption) result(key)
-        class(bc_state_t),  intent(inout)   :: self
-        integer(ik),        intent(in)      :: iprop
-        integer(ik),        intent(in)      :: ioption
+        class(bc_state_t),  intent(in)  :: self
+        integer(ik),        intent(in)  :: iprop
+        integer(ik),        intent(in)  :: ioption
 
         character(len=:),   allocatable :: key
 
@@ -315,7 +315,7 @@ contains
     !!
     !----------------------------------------------------------------------------------------------------
     function get_option_value(self,iprop,key) result(val)
-        class(bc_state_t),  intent(inout)  :: self
+        class(bc_state_t),  intent(in)  :: self
         integer(ik),        intent(in)  :: iprop
         character(*),       intent(in)  :: key
 
@@ -345,8 +345,8 @@ contains
     !!
     !---------------------------------------------------------------------------------------------------
     function get_noptions(self,iprop) result(noptions)
-        class(bc_state_t),  intent(inout)   :: self
-        integer(ik),        intent(in)      :: iprop
+        class(bc_state_t),  intent(in)  :: self
+        integer(ik),        intent(in)  :: iprop
 
         integer(ik)     :: noptions
 

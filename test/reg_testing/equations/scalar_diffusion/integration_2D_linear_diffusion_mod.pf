@@ -30,19 +30,23 @@
 module integration_2D_linear_diffusion_mod
 #include <messenger.h>
     use pfunit_mod
-    use mod_kinds,          only: rk, ik
-    use mod_constants,      only: ZERO, THREE, IO_DESTINATION, ONE, TWO, PI, FOUR
-    use type_chidg,         only: chidg_t
-    use type_chidg_data,    only: chidg_data_t
-    use mod_bc,             only: create_bc
-    use type_function,      only: function_t
-    use type_ivector,       only: ivector_t
-    use mod_function,       only: create_function
-    use mod_grid_operators, only: initialize_variable
-    use mod_interpolate,    only: interpolate_element_standard
+    use mod_kinds,              only: rk, ik
+    use mod_constants,          only: ZERO, THREE, IO_DESTINATION, ONE, TWO, PI, FOUR, &
+                                      XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX
+    use type_chidg,             only: chidg_t
+    use type_chidg_data,        only: chidg_data_t
+    use mod_bc,                 only: create_bc
+    use type_bc_state_wrapper,  only: bc_state_wrapper_t
+    use type_function,          only: function_t
+    use type_ivector,           only: ivector_t
+    use mod_function,           only: create_function
+    use mod_grid_operators,     only: initialize_variable
+    use mod_interpolate,        only: interpolate_element_standard
+    use mod_test_utilities,     only: create_mesh_file
+    use mod_file_utilities,     only: delete_file
 
-    use mod_chidg_mpi,      only: IRANK, NRANK, ChiDG_COMM
-    use mpi_f08,            only: MPI_COMM, MPI_REAL8, MPI_SUM
+    use mod_chidg_mpi,          only: IRANK, NRANK, ChiDG_COMM
+    use mpi_f08,                only: MPI_COMM, MPI_REAL8, MPI_SUM
     use mod_io
 
 
@@ -131,8 +135,11 @@ module integration_2D_linear_diffusion_mod
     !-------------------------------------------------------------------------------
     @TestParameter
     type, extends(MpiTestParameter) :: case_grid_order
-        character(100)  :: gridfile
-        integer(ik)     :: order
+        
+        integer(ik)                 :: nelem_xi
+        integer(ik)                 :: nelem_eta
+        character(:),   allocatable :: gridfile
+        integer(ik)                 :: order
     contains
         procedure   :: toString
     end type case_grid_order
@@ -152,8 +159,11 @@ module integration_2D_linear_diffusion_mod
     !-------------------------------------------------------------------------------
     @TestCase(testParameters={getParameters()}, constructor=newTest)
     type, extends(MpiTestCase) :: linear_diffusion_2D
-        character(100)  :: gridfile
-        integer(ik)     :: order
+        
+        integer(ik)                 :: nelem_xi
+        integer(ik)                 :: nelem_eta
+        character(:),   allocatable :: gridfile
+        integer(ik)                 :: order
 
         type(chidg_t)   :: chidg
         type(mpi_comm)  :: ChiDG_COMM
@@ -340,6 +350,8 @@ contains
         type(case_grid_order),  intent(in)          :: test_parameter
         type(linear_diffusion_2D)    :: test
 
+        test%nelem_xi    = test_parameter%nelem_xi
+        test%nelem_eta   = test_parameter%nelem_eta
         test%gridfile    = test_parameter%gridfile
         test%order       = test_parameter%order
 
@@ -355,10 +367,17 @@ contains
     function getParameters() result(params)
         type(case_grid_order), allocatable :: params(:)
     
+        integer(ik),        allocatable :: nelem_xi(:)
+        integer(ik),        allocatable :: nelem_eta(:)
         type(string),       allocatable :: files(:)
         integer(ik),        allocatable :: orders(:)
         integer(ik) :: icase
 
+        nelem_xi  = [ 16, 16, 16, 16, &
+                      32, 32, 32, 32 ]
+
+        nelem_eta = [ 16, 16, 16, 16, &
+                      32, 32, 32, 32 ]
 
         files = [ string('2D_linear_diffusion_16x16x1.h5'), &
                   string('2D_linear_diffusion_16x16x1.h5'), &
@@ -371,22 +390,17 @@ contains
                   ]
 
 
-        orders = [ 2, &
-                   3, &
-                   4, &
-                   5, &
-                   2, &
-                   3, &
-                   4, &
-                   5  &
-                   ]
+        orders = [ 2, 3, 4, 5, &
+                   2, 3, 4, 5 ]
 
 
         !Initialize the test case container with the parameter
         allocate(params(size(files)))
         do icase = 1,size(files)
-            params(icase)%gridfile    = files(icase)%str
-            params(icase)%order       = orders(icase)
+            params(icase)%nelem_xi  = nelem_xi(icase)
+            params(icase)%nelem_eta = nelem_eta(icase)
+            params(icase)%gridfile  = files(icase)%str
+            params(icase)%order     = orders(icase)
         end do
 
     end function getParameters
@@ -432,6 +446,7 @@ contains
         class(linear_diffusion_2D),  intent(inout)   :: this
 
         class(function_t),  allocatable :: fcn
+        type(bc_state_wrapper_t)        :: bc_states(6)
 
         
         type(test_2D_LD_volume_source_t)           :: source_test_linear_diffusion
@@ -472,15 +487,15 @@ contains
         ! As a result, we don't call chidg%init('io')
         !
         !------------------------------------------------------------------------------
-        basis            = 'legendre'
+        basis            = "legendre"
         spacedim         = 3
         nterms_s         = this%order**THREE
         gq_rule          = 1
-        time_integrator  = 'steady'
-        nonlinear_solver = 'newton'
-        linear_solver    = 'fgmres'
-        preconditioner   = 'ILU0'
-        IO_DESTINATION   = 'file'
+        time_integrator  = "steady"
+        nonlinear_solver = "newton"
+        linear_solver    = "fgmres"
+        preconditioner   = "ILU0"
+        IO_DESTINATION   = "file"
         !------------------------------------------------------------------------------
 
         !
@@ -493,17 +508,17 @@ contains
 
 
         ! Set timescheme options to pass during initialization
-        call toptions%set('dt', 0.1_rk) ! means nothing here
-        call toptions%set('nsteps',100)
-        call toptions%set('nwrite',0)
+        call toptions%set("dt", 0.1_rk) ! means nothing here
+        call toptions%set("nsteps",100)
+        call toptions%set("nwrite",0)
 
         ! Set linear solver options to pass during initialization
-        call loptions%set('tol',1.e-14_rk)
+        call loptions%set("tol",1.e-14_rk)
 
         ! Set nonlinear solver options
-        call noptions%set('tol',5.e-10_rk)
-        call noptions%set('cfl0',1.0_rk)
-        call noptions%set('nsteps',100)
+        call noptions%set("tol",5.e-10_rk)
+        call noptions%set("cfl0",1.0_rk)
+        call noptions%set("nsteps",100)
 
 
 
@@ -511,6 +526,41 @@ contains
         ! Initialize ChiDG environment
         !
         call this%chidg%init('env',this%ChiDG_COMM)
+
+
+
+
+        !
+        ! Create mesh
+        !
+        if (IRANK == GLOBAL_MASTER) then
+            call create_bc("Scalar Value", bc_states(XI_MIN)%state  )
+            call create_bc("Scalar Value", bc_states(XI_MAX)%state  )
+            call create_bc("Scalar Value", bc_states(ETA_MIN)%state )
+            call create_bc("Scalar Value", bc_states(ETA_MAX)%state )
+            call create_bc("Scalar Extrapolate", bc_states(ZETA_MIN)%state)
+            call create_bc("Scalar Extrapolate", bc_states(ZETA_MAX)%state)
+            
+            call bc_states(XI_MIN)%state%set_fcn_option("Value","val",ZERO)
+            call bc_states(XI_MAX)%state%set_fcn_option("Value","val",ZERO)
+            call bc_states(ETA_MIN)%state%set_fcn_option("Value","val",ZERO)
+            call bc_states(ETA_MAX)%state%set_fcn_option("Value","val",ZERO)
+
+
+            call create_mesh_file("D1 NxNxN",this%gridfile,equation_set1="Test 2D Linear Diffusion", &
+                                                           bc_states1=bc_states,                     &
+                                                           nelem_xi  =this%nelem_xi,                 &
+                                                           nelem_eta =this%nelem_eta,                &
+                                                           nelem_zeta=1)
+        end if
+
+
+
+
+
+
+
+
 
 
         !
@@ -522,33 +572,33 @@ contains
 
 
         call this%chidg%initialize_solution_domains(nterms_s)
-        call this%chidg%init('communication')
-        call this%chidg%init('chimera')
+        call this%chidg%init("communication")
+        call this%chidg%init("chimera")
         call this%chidg%initialize_solution_solver()
 
 
         !
         ! Set ChiDG components
         !
-        call this%chidg%set('time_integrator',  time_integrator,  toptions)
-        call this%chidg%set('nonlinear_solver', nonlinear_solver, noptions)
-        call this%chidg%set('linear_solver',    linear_solver,    loptions)
-        call this%chidg%set('preconditioner',   preconditioner)
+        call this%chidg%set("Time Integrator",  time_integrator,  toptions)
+        call this%chidg%set("Nonlinear Solver", nonlinear_solver, noptions)
+        call this%chidg%set("Linear Solver",    linear_solver,    loptions)
+        call this%chidg%set("Preconditioner",   preconditioner)
 
 
         !
         ! Initialize solution
         !
-        call create_function(fcn,'constant')
+        call create_function(fcn,"constant")
 
-        call fcn%set_option('val',0.1_rk)
+        call fcn%set_option("val",0.1_rk)
         call initialize_variable(this%chidg%data,1,fcn) ! u
 
 
         !
         ! Wrap-up initialization activities
         !
-        call this%chidg%init('finalize')
+        call this%chidg%init("finalize")
 
     end subroutine SetUp
     !******************************************************************************************************
@@ -565,6 +615,10 @@ contains
 
         ! Close ChiDG
         call this%chidg%close('core')
+
+        if (IRANK == GLOBAL_MASTER) then
+            call delete_file(this%gridfile)
+        end if
 
     end subroutine tearDown
     !******************************************************************************************************

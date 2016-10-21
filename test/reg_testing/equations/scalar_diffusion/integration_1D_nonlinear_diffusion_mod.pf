@@ -2,7 +2,7 @@
 !
 !           Test a 1D nonlinear diffusion problem with a source term.
 !
-!   -div(mu(u)*grad(u)) = S
+!   div(-mu(u)*grad(u)) = S
 !
 !   Diffusion Flux Definition:
 !       F(u) = -mu(u)*dudx
@@ -37,19 +37,24 @@
 module integration_1D_nonlinear_diffusion_mod
 #include <messenger.h>
     use pfunit_mod
-    use mod_kinds,          only: rk, ik
-    use mod_constants,      only: ZERO, THREE, IO_DESTINATION, ONE, TWO, PI, FOUR
-    use type_chidg,         only: chidg_t
-    use type_chidg_data,    only: chidg_data_t
-    use type_function,      only: function_t
-    use mod_function,       only: create_function
-    use mod_grid_operators, only: initialize_variable
-    use mod_interpolate,    only: interpolate_element_standard
-    use type_scalar,        only: scalar_t
-    use type_fgmres,        only: fgmres_t
+    use mod_kinds,              only: rk, ik
+    use mod_constants,          only: ZERO, THREE, IO_DESTINATION, ONE, TWO, PI, FOUR, &
+                                      XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX
+    use mod_bc,                 only: create_bc
+    use type_bc_state_wrapper,  only: bc_state_wrapper_t
+    use type_chidg,             only: chidg_t
+    use type_chidg_data,        only: chidg_data_t
+    use type_function,          only: function_t
+    use mod_function,           only: create_function
+    use mod_grid_operators,     only: initialize_variable
+    use mod_interpolate,        only: interpolate_element_standard
+    use mod_test_utilities,     only: create_mesh_file
+    use mod_file_utilities,     only: delete_file
+    use type_scalar,            only: scalar_t
+    use type_fgmres,            only: fgmres_t
 
-    use mod_chidg_mpi,      only: IRANK, NRANK, ChiDG_COMM
-    use mpi_f08,            only: MPI_COMM, MPI_REAL8, MPI_SUM
+    use mod_chidg_mpi,          only: IRANK, NRANK, ChiDG_COMM
+    use mpi_f08,                only: MPI_COMM, MPI_REAL8, MPI_SUM
     use mod_io
 
 
@@ -65,6 +70,7 @@ module integration_1D_nonlinear_diffusion_mod
     use type_equation_builder,  only: equation_builder_t
     use type_equation_set,      only: equation_set_t
     implicit none
+
 
 
     ! Store the nonlinear convergence for each test case. This is used 
@@ -136,8 +142,11 @@ module integration_1D_nonlinear_diffusion_mod
     !-------------------------------------------------------------------------------
     @TestParameter
     type, extends(MpiTestParameter) :: case_grid_order
-        character(100)  :: gridfile
-        integer(ik)     :: order
+
+        integer(ik)                 :: nelem_xi
+        character(:),   allocatable :: gridfile
+        integer(ik)                 :: order
+        
     contains
         procedure   :: toString
     end type case_grid_order
@@ -157,11 +166,14 @@ module integration_1D_nonlinear_diffusion_mod
     !-------------------------------------------------------------------------------
     @TestCase(testParameters={getParameters()}, constructor=newTest)
     type, extends(MpiTestCase) :: nonlinear_diffusion_1D
-        character(100)  :: gridfile
-        integer(ik)     :: order
+
+        integer(ik)                 :: nelem_xi
+        character(:),   allocatable :: gridfile
+        integer(ik)                 :: order
 
         type(chidg_t)   :: chidg
         type(mpi_comm)  :: ChiDG_COMM
+
     contains
         procedure   :: setUp
         procedure   :: tearDown
@@ -296,8 +308,9 @@ contains
         type(case_grid_order),  intent(in)          :: test_parameter
         type(nonlinear_diffusion_1D)    :: test
 
-        test%gridfile    = test_parameter%gridfile
-        test%order       = test_parameter%order
+        test%nelem_xi = test_parameter%nelem_xi
+        test%gridfile = test_parameter%gridfile
+        test%order    = test_parameter%order
 
     end function newTest
     !******************************************************************************
@@ -311,10 +324,13 @@ contains
     function getParameters() result(params)
         type(case_grid_order), allocatable :: params(:)
     
+        integer(ik),        allocatable :: nelem_xi(:)
         type(string),       allocatable :: files(:)
         integer(ik),        allocatable :: orders(:)
         integer(ik) :: icase
 
+        nelem_xi = [120, 120, 120, &
+                    240, 240, 240 ]
 
         files = [ string('1D_nonlinear_diffusion_120x1x1.h5'), &
                   string('1D_nonlinear_diffusion_120x1x1.h5'), &
@@ -325,20 +341,16 @@ contains
                   ]
 
 
-        orders = [ 2, &
-                   3, &
-                   4, &
-                   2, &
-                   3, &
-                   4  &
-                   ]
+        orders = [ 2, 3, 4, &
+                   2, 3, 4 ]
 
 
         !Initialize the test case container with the parameter
         allocate(params(size(files)))
         do icase = 1,size(files)
-            params(icase)%gridfile    = files(icase)%str
-            params(icase)%order       = orders(icase)
+            params(icase)%nelem_xi = nelem_xi(icase)
+            params(icase)%gridfile = files(icase)%str
+            params(icase)%order    = orders(icase)
         end do
 
     end function getParameters
@@ -384,7 +396,7 @@ contains
         class(nonlinear_diffusion_1D),  intent(inout)   :: this
 
         class(function_t),  allocatable :: fcn
-
+        type(bc_state_wrapper_t)        :: bc_states(6)
         
         type(test_nonlinear_diffusion_builder_t)   :: builder_test_nonlinear_diffusion
 
@@ -410,11 +422,11 @@ contains
         basis            = 'legendre'
         spacedim         = 3
         nterms_s         = this%order**THREE
-        gq_rule          = 1
+        gq_rule          = 2
         time_integrator  = 'steady'
         nonlinear_solver = 'newton'
         linear_solver    = 'fgmres'
-        preconditioner   = 'ILU0'
+        preconditioner   = 'RASILU0'
         IO_DESTINATION   = 'file'
         !------------------------------------------------------------------------------
 
@@ -448,6 +460,35 @@ contains
         call this%chidg%init('env',this%ChiDG_COMM)
 
 
+
+        !
+        ! Create mesh
+        !
+        if (this%order == 2) then
+            if (IRANK == GLOBAL_MASTER) then
+                call create_bc("Scalar Value",  bc_states(XI_MIN)%state  )
+                call create_bc("Scalar Value",  bc_states(XI_MAX)%state  )
+                call create_bc("Scalar Extrapolate", bc_states(ETA_MIN)%state )
+                call create_bc("Scalar Extrapolate", bc_states(ETA_MAX)%state )
+                call create_bc("Scalar Extrapolate", bc_states(ZETA_MIN)%state)
+                call create_bc("Scalar Extrapolate", bc_states(ZETA_MAX)%state)
+                
+                call bc_states(XI_MIN)%state%set_fcn_option("Value","val", ZERO )
+                call bc_states(XI_MAX)%state%set_fcn_option("Value","val", log(ONE + 50._rk*ONE) )
+
+
+                call create_mesh_file('D1 NxNxN',this%gridfile,equation_set1="Test 1D Nonlinear Diffusion", &
+                                                               bc_states1=bc_states,                        &
+                                                               nelem_xi  =this%nelem_xi,                    &
+                                                               nelem_eta =1,                                &
+                                                               nelem_zeta=1,                                &
+                                                               clusterx=-1)
+            end if
+        end if
+
+
+
+
         !
         ! Read grid
         !
@@ -465,10 +506,10 @@ contains
         !
         ! Set ChiDG components
         !
-        call this%chidg%set('time_integrator',  time_integrator,  toptions)
-        call this%chidg%set('nonlinear_solver', nonlinear_solver, noptions)
-        call this%chidg%set('linear_solver',    linear_solver,    loptions)
-        call this%chidg%set('preconditioner',   preconditioner)
+        call this%chidg%set('Time Integrator',  time_integrator,  toptions)
+        call this%chidg%set('Nonlinear Solver', nonlinear_solver, noptions)
+        call this%chidg%set('Linear Solver',    linear_solver,    loptions)
+        call this%chidg%set('Preconditioner',   preconditioner)
 
 
         !
@@ -492,14 +533,10 @@ contains
         ! the cfl0 needs to be reduced a lot. Setting a linear initial solution here
         ! from 0 to 3.5 on x=[0,1]
         !
-        if (this%order == 2) then
-            call create_function(fcn,'polynomial')
+        call create_function(fcn,'polynomial')
 
-            call fcn%set_option('f',3.5_rk)
-            call initialize_variable(this%chidg%data,1,fcn) ! u
-        else
-            call this%chidg%read_solution(this%gridfile)
-        end if
+        call fcn%set_option('f',3.5_rk)
+        call initialize_variable(this%chidg%data,1,fcn) ! u
 
 
         !
@@ -522,6 +559,10 @@ contains
 
         ! Close ChiDG
         call this%chidg%close('core')
+
+        if (IRANK == GLOBAL_MASTER) then
+            call delete_file(this%gridfile)
+        end if
 
     end subroutine tearDown
     !******************************************************************************************************
@@ -566,12 +607,6 @@ contains
 
 
         !
-        ! Save second-order solution
-        !
-        call self%chidg%write_solution(self%gridfile)
-
-
-        !
         ! Compute error
         !
         computed_error = compute_1D_nonlinear_diffusion_error(self%chidg%data,self%ChiDG_COMM)
@@ -612,6 +647,9 @@ contains
         real(rk)    :: error_previous, error_current, mesh_parameter_previous, mesh_parameter_current, convergence_rate, tol
 
         tol = 0.1_rk
+
+
+
 
 
         do inpes = 1,3

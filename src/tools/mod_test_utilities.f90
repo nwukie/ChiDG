@@ -42,13 +42,20 @@ contains
     !!
     !!
     !---------------------------------------------------------------------------
-    subroutine create_mesh_file(selector, filename, equation_set1, equation_set2, bc_states1, bc_states2)
+    subroutine create_mesh_file(selector, filename, equation_set1, equation_set2, &
+                                                    bc_states1, bc_states2,       &
+                                                    nelem_xi,nelem_eta,nelem_zeta,clusterx)
         character(*),                           intent(in)  :: selector
         character(*),                           intent(in)  :: filename
         character(*),               optional,   intent(in)  :: equation_set1
         character(*),               optional,   intent(in)  :: equation_set2
         type(bc_state_wrapper_t),   optional,   intent(in)  :: bc_states1(:)
         type(bc_state_wrapper_t),   optional,   intent(in)  :: bc_states2(:)
+        integer(ik),                optional,   intent(in)  :: nelem_xi
+        integer(ik),                optional,   intent(in)  :: nelem_eta
+        integer(ik),                optional,   intent(in)  :: nelem_zeta
+        integer(ik),                optional,   intent(in)  :: clusterx
+
 
         character(:),   allocatable :: user_msg
         integer(ik)                 :: ierr
@@ -59,8 +66,8 @@ contains
             !
             ! Simple, linear, block grids
             !
-            case("D1 E1 M1", "D1 E4 M1", "D1 E16 M1", "D1 E27 M1")
-                call create_mesh_file__singleblock(filename,trim(selector),equation_set1,bc_states1)
+            case("D1 E1 M1", "D1 E4 M1", "D1 E16 M1", "D1 E27 M1", "D1 NxNxN")
+                call create_mesh_file__singleblock(filename,trim(selector),equation_set1,bc_states1,nelem_xi,nelem_eta,nelem_zeta,clusterx)
 
             case("D2 E1 M1")
                 call create_mesh_file__multiblock(filename,"D1 E1 M1","D1 E1 M1",equation_set1,equation_set2,bc_states1,bc_states2)

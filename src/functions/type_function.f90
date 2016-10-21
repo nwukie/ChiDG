@@ -306,7 +306,7 @@ contains
     !!
     !---------------------------------------------------------------------------------------------
     function get_option_key(self,iopt) result(key)
-        class(function_t),  intent(inout)  :: self
+        class(function_t),  intent(in)  :: self
         integer(ik),        intent(in)  :: iopt
 
         integer(ik)                     :: noptions
@@ -343,7 +343,7 @@ contains
     !!
     !--------------------------------------------------------------------------------------------
     function get_option_value(self,key) result(val)
-        class(function_t),  intent(inout)  :: self
+        class(function_t),  intent(in)  :: self
         character(*),       intent(in)  :: key
 
         real(rk)        :: val
@@ -390,7 +390,7 @@ contains
     !!
     !---------------------------------------------------------------------------------------------
     function get_noptions(self) result(nopt)
-        class(function_t),  intent(inout)  :: self
+        class(function_t),  intent(in)  :: self
 
         integer(ik)     :: nopt
 
@@ -426,7 +426,7 @@ contains
     !!
     !---------------------------------------------------------------------------------------------
     function check_key_exists(self,key) result(key_exists)
-        class(function_t),  intent(inout)  :: self
+        class(function_t),  intent(in)  :: self
         character(*),       intent(in)  :: key
 
         logical     :: key_exists
@@ -473,7 +473,7 @@ contains
     !!
     !---------------------------------------------------------------------------------------------
     function get_key_index(self,key) result(key_loc)
-        class(function_t),      intent(inout)  :: self
+        class(function_t),      intent(in)  :: self
         character(*),           intent(in)  :: key
 
         integer(ik)     :: noptions, iopt, key_loc

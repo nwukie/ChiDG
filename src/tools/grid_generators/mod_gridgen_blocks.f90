@@ -1,7 +1,7 @@
 module mod_gridgen_blocks
 #include <messenger.h>
     use mod_kinds,              only: rk, ik
-    use mod_constants,          only: ZERO, ONE, TWO, THREE, FOUR, SIX
+    use mod_constants,          only: ZERO, ONE, TWO, THREE, FOUR, SIX, PI
     use mod_bc,                 only: create_bc
     use mod_plot3d_utilities,   only: get_block_points_plot3d, &
                                       get_block_elements_plot3d, &
@@ -76,12 +76,17 @@ contains
     !!
     !!
     !---------------------------------------------------------------------------------------
-    subroutine create_mesh_file__singleblock(filename,grid,equation_set1,bc_states1)
+    subroutine create_mesh_file__singleblock(filename,grid,equation_set1,bc_states1,nelem_xi,nelem_eta,nelem_zeta,clusterx)
         character(*),               intent(in)              :: filename
         character(*),               intent(in)              :: grid
         character(*),               intent(in), optional    :: equation_set1
         type(bc_state_wrapper_t),   intent(in), optional    :: bc_states1(:)
+        integer(ik),                intent(in), optional    :: nelem_xi
+        integer(ik),                intent(in), optional    :: nelem_eta
+        integer(ik),                intent(in), optional    :: nelem_zeta
+        integer(ik),                intent(in), optional    :: clusterx
 
+        character(:),       allocatable                 :: user_msg
         class(bc_state_t),  allocatable                 :: bc_state
         character(8)                                    :: face_strings(6)
         integer(HID_T)                                  :: file_id, dom_id, bcface_id
@@ -107,6 +112,14 @@ contains
                 call meshgen_4x2x2_linear(xcoords,ycoords,zcoords)
             case("D1 E27 M1")
                 call meshgen_3x3x3_linear(xcoords,ycoords,zcoords)
+            case("D1 NxNxN")
+                if ( present(nelem_xi) .and. present(nelem_eta) .and. present(nelem_zeta) ) then
+                    call meshgen_NxNxN_linear(nelem_xi,nelem_eta,nelem_zeta,xcoords,ycoords,zcoords,clusterx)
+                else
+                    user_msg = "create_mesh_file__singleblock: For 'D1 NxNxN', need to specify &
+                                the optional inputs 'nelem_xi', 'nelem_eta', 'nelem_zeta'."
+                    call chidg_signal(FATAL,user_msg)
+                end if
             case default
                 call chidg_signal(FATAL,"create_mesh_file__singleblock: Invalid string to select grid block")
         end select
@@ -125,7 +138,12 @@ contains
         ! Add domains
         !
         spacedim = 3
-        call add_domain_hdf(file_id,"01",nodes,elements,"Scalar Advection",spacedim)
+
+        if ( present(equation_set1) ) then
+            call add_domain_hdf(file_id,"01",nodes,elements,equation_set1,spacedim)
+        else
+            call add_domain_hdf(file_id,"01",nodes,elements,"Scalar Advection",spacedim)
+        end if
 
 
         !
@@ -154,7 +172,13 @@ contains
         face_strings = ["XI_MIN  ","XI_MAX  ", "ETA_MIN ", "ETA_MAX ", "ZETA_MIN", "ZETA_MAX"]
         do bcface = 1,size(face_strings)
             call h5gopen_f(dom_id,"BoundaryConditions/"//trim(adjustl(face_strings(bcface))),bcface_id,ierr)
-            call add_bc_state_hdf(bcface_id,bc_state)
+
+            if (present(bc_states1)) then
+                call add_bc_state_hdf(bcface_id,bc_states1(bcface)%state)
+            else
+                call add_bc_state_hdf(bcface_id,bc_state)
+            end if
+
             call h5gclose_f(bcface_id,ierr)
         end do
 
@@ -230,13 +254,13 @@ contains
         select case (trim(block2))
             case("D1 E1 M1")
                 !call meshgen_1x1x1_linear(xcoords2,ycoords2,zcoords2)
-                call meshgen_NXIxNETAxNZETA_linear(1,1,1,xcoords2,ycoords2,zcoords2)
+                call meshgen_NxNxN_linear(1,1,1,xcoords2,ycoords2,zcoords2)
             case("D1 E2 M1")
                 !call meshgen_2x1x1_linear(xcoords2,ycoords2,zcoords2)
-                call meshgen_NXIxNETAxNZETA_linear(2,1,1,xcoords2,ycoords2,zcoords2)
+                call meshgen_NxNxN_linear(2,1,1,xcoords2,ycoords2,zcoords2)
             case("D1 E27 M1")
                 !call meshgen_3x3x3_linear(xcoords2,ycoords2,zcoords2)
-                call meshgen_NXIxNETAxNZETA_linear(3,3,3,xcoords2,ycoords2,zcoords2)
+                call meshgen_NxNxN_linear(3,3,3,xcoords2,ycoords2,zcoords2)
             case default
                 call chidg_signal(FATAL,"create_mesh_file__multiblock: Invalid block2 string")
         end select
@@ -545,13 +569,14 @@ contains
     !!                          filled, and returned
     !!
     !--------------------------------------------------------------------------------------
-    subroutine meshgen_NXIxNETAxNZETA_linear(nelem_xi,nelem_eta,nelem_zeta,xcoords,ycoords,zcoords)
+    subroutine meshgen_NxNxN_linear(nelem_xi,nelem_eta,nelem_zeta,xcoords,ycoords,zcoords,clusterx)
         integer(ik)             :: nelem_xi
         integer(ik)             :: nelem_eta
         integer(ik)             :: nelem_zeta
         real(rk),   allocatable :: xcoords(:,:,:)
         real(rk),   allocatable :: ycoords(:,:,:)
         real(rk),   allocatable :: zcoords(:,:,:)
+        integer(ik), optional   :: clusterx
 
         integer(ik) :: ipt_xi, ipt_eta, ipt_zeta, ierr, &
                        npts_xi, npts_eta, npts_zeta
@@ -571,8 +596,23 @@ contains
             do ipt_eta = 1,npts_eta
                 do ipt_xi = 1,npts_xi
 
-                    x = real(ipt_xi  -1,rk)/real(npts_xi  -1,rk)
-                    y = real(ipt_eta -1,rk)/real(npts_eta -1,rk)
+                    if (present(clusterx)) then
+                        if ( clusterx == -1 ) then
+                            x = ONE - tanh( (PI/TWO)*(ONE - real(ipt_xi-1,rk)/real(npts_xi-1,rk) ) )/tanh(PI/TWO)
+                        else if ( clusterx == 1 ) then
+                            call chidg_signal(FATAL,"meshgen_NxNxN_linear: 'clusterx'=1 not yet implemented.")
+                        else
+                            call chidg_signal(FATAL,"meshgen_NxNxN_linear: Invalid value for 'clusterx'. -1,0,1.")
+                        end if
+                    else
+                        x = real(ipt_xi-1,rk)/real(npts_xi-1,rk)
+                    end if
+
+                    if (ipt_xi == npts_xi) then
+                        x = ONE
+                    end if
+
+                    y = real(ipt_eta-1,rk)/real(npts_eta-1,rk)
                     z = real(ipt_zeta-1,rk)/real(npts_zeta-1,rk)
 
                     xcoords(ipt_xi,ipt_eta,ipt_zeta) = x
@@ -584,7 +624,7 @@ contains
         end do
 
 
-    end subroutine meshgen_NXIxNETAxNZETA_linear
+    end subroutine meshgen_NxNxN_linear
     !**************************************************************************************
 
 

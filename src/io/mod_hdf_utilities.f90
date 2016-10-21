@@ -1766,8 +1766,8 @@ contains
     !!
     !----------------------------------------------------------------------------------------
     subroutine add_bc_state_hdf(bcface_id,bc_state)
-        integer(HID_T),     intent(in)      :: bcface_id
-        class(bc_state_t),  intent(inout)   :: bc_state
+        integer(HID_T),     intent(in)  :: bcface_id
+        class(bc_state_t),  intent(in)  :: bc_state
 
         integer(ik)                         :: ierr
         integer(HID_T)                      :: state_id
@@ -2029,8 +2029,8 @@ contains
     !!
     !-----------------------------------------------------------------------------------------
     subroutine add_bc_properties_hdf(bcstate_id, bc_state)
-        integer(HID_T),     intent(in)      :: bcstate_id
-        class(bc_state_t),  intent(inout)   :: bc_state
+        integer(HID_T),     intent(in)  :: bcstate_id
+        class(bc_state_t),  intent(in)  :: bc_state
 
         integer(HID_T)                  :: prop_id
         integer(HSIZE_T)                :: adim
@@ -2125,8 +2125,8 @@ contains
     !!
     !--------------------------------------------------------------------------------------------
     subroutine set_bc_property_function_hdf(bcprop_id, fcn)
-        integer(HID_T),     intent(in)      :: bcprop_id
-        class(function_t),  intent(inout)   :: fcn
+        integer(HID_T),     intent(in)  :: bcprop_id
+        class(function_t),  intent(in)  :: fcn
 
         integer(HSIZE_T)                :: adim
         character(len=:),   allocatable :: option

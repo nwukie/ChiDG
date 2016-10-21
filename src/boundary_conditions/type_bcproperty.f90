@@ -111,8 +111,8 @@ contains
     !!
     !----------------------------------------------------------------------------------------
     function get(self,comp_str) result(comp_val)
-        class(bcproperty_t),   intent(inout)   :: self
-        character(*),           intent(in)      :: comp_str
+        class(bcproperty_t),   intent(in)   :: self
+        character(*),          intent(in)   :: comp_str
 
         character(len=:), allocatable   :: comp_val
 
@@ -213,7 +213,7 @@ contains
     !!
     !----------------------------------------------------------------------------------------
     function get_noptions(self) result(noptions)
-        class(bcproperty_t),    intent(inout)  :: self
+        class(bcproperty_t),    intent(in)  :: self
         
         integer(ik) :: noptions
         logical     :: fcn_allocated
@@ -252,8 +252,8 @@ contains
     !!
     !----------------------------------------------------------------------------------------
     function get_option_key(self,iopt) result(key)
-        class(bcproperty_t),    intent(inout)   :: self
-        integer(ik),            intent(in)      :: iopt
+        class(bcproperty_t),    intent(in)  :: self
+        integer(ik),            intent(in)  :: iopt
 
         character(len=:),   allocatable :: key
         logical                         :: fcn_allocated
@@ -289,7 +289,7 @@ contains
     !!
     !-----------------------------------------------------------------------------------------
     function get_option_value(self,key) result(val)
-        class(bcproperty_t),    intent(inout)  :: self
+        class(bcproperty_t),    intent(in)  :: self
         character(*),           intent(in)  :: key
 
         real(rk)        :: val

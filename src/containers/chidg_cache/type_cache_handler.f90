@@ -435,9 +435,9 @@ contains
                 ddy_gq = interpolate_element_autodiff(worker%mesh,worker%solverdata%q,worker%element_info,worker%function_info,ieqn,'ddy')
                 ddz_gq = interpolate_element_autodiff(worker%mesh,worker%solverdata%q,worker%element_info,worker%function_info,ieqn,'ddz')
 
-                call worker%cache%set_data('element',ddx_gq,'derivative',1,worker%function_info%seed,ieqn)
-                call worker%cache%set_data('element',ddy_gq,'derivative',2,worker%function_info%seed,ieqn)
-                call worker%cache%set_data('element',ddz_gq,'derivative',3,worker%function_info%seed,ieqn)
+                call worker%cache%set_data("element",ddx_gq,"derivative",1,worker%function_info%seed,ieqn)
+                call worker%cache%set_data("element",ddy_gq,"derivative",2,worker%function_info%seed,ieqn)
+                call worker%cache%set_data("element",ddz_gq,"derivative",3,worker%function_info%seed,ieqn)
 
         end do !ieqn
 
@@ -607,20 +607,20 @@ contains
                     !   2: Local solve for lift modes in element basis
                     !   3: Interpolate lift modes to face/volume quadrature nodes
                     !
-                    !! Project onto basis
-                    !rhs_x = matmul(val_face_trans,var_diff_x)
-                    !rhs_y = matmul(val_face_trans,var_diff_y)
-                    !rhs_z = matmul(val_face_trans,var_diff_z)
+                    ! Project onto basis
+                    rhs_x = matmul(val_face_trans,var_diff_x)
+                    rhs_y = matmul(val_face_trans,var_diff_y)
+                    rhs_z = matmul(val_face_trans,var_diff_z)
  
-                    !! Local solve for lift modes in element basis
-                    !lift_modes_x = matmul(invmass,rhs_x)
-                    !lift_modes_y = matmul(invmass,rhs_y)
-                    !lift_modes_z = matmul(invmass,rhs_z)
+                    ! Local solve for lift modes in element basis
+                    lift_modes_x = matmul(invmass,rhs_x)
+                    lift_modes_y = matmul(invmass,rhs_y)
+                    lift_modes_z = matmul(invmass,rhs_z)
  
-                    !! Evaluate lift modes at face quadrature nodes
-                    !lift_gq_face_x = matmul(val_face,lift_modes_x)
-                    !lift_gq_face_y = matmul(val_face,lift_modes_y)
-                    !lift_gq_face_z = matmul(val_face,lift_modes_z)
+                    ! Evaluate lift modes at face quadrature nodes
+                    lift_gq_face_x = matmul(val_face,lift_modes_x)
+                    lift_gq_face_y = matmul(val_face,lift_modes_y)
+                    lift_gq_face_z = matmul(val_face,lift_modes_z)
 
                     !
                     ! Improved approach creates a single matrix that performs the
@@ -629,9 +629,9 @@ contains
                     !   br2_face = [val_face][invmass][val_face_trans]
                     !   br2_vol  = [val_vol ][invmass][val_face_trans]
                     !
-                    lift_gq_face_x = matmul(br2_face,var_diff_x)
-                    lift_gq_face_y = matmul(br2_face,var_diff_y)
-                    lift_gq_face_z = matmul(br2_face,var_diff_z)
+!                    lift_gq_face_x = matmul(br2_face,var_diff_x)
+!                    lift_gq_face_y = matmul(br2_face,var_diff_y)
+!                    lift_gq_face_z = matmul(br2_face,var_diff_z)
 
                     
                     ! Store lift
@@ -641,19 +641,19 @@ contains
 
 
                     ! Evaluate lift modes at volume quadrature nodes
-!                    lift_gq_vol_x = matmul(val_vol,lift_modes_x)
-!                    lift_gq_vol_y = matmul(val_vol,lift_modes_y)
-!                    lift_gq_vol_z = matmul(val_vol,lift_modes_z)
+                    lift_gq_vol_x = matmul(val_vol,lift_modes_x)
+                    lift_gq_vol_y = matmul(val_vol,lift_modes_y)
+                    lift_gq_vol_z = matmul(val_vol,lift_modes_z)
 
-                    lift_gq_vol_x = matmul(br2_vol,var_diff_x)
-                    lift_gq_vol_y = matmul(br2_vol,var_diff_y)
-                    lift_gq_vol_z = matmul(br2_vol,var_diff_z)
+!                    lift_gq_vol_x = matmul(br2_vol,var_diff_x)
+!                    lift_gq_vol_y = matmul(br2_vol,var_diff_y)
+!                    lift_gq_vol_z = matmul(br2_vol,var_diff_z)
 
                     
                     ! Store lift
-                    call worker%cache%set_data('face interior', lift_gq_vol_x, 'lift element', 1, worker%function_info%seed, ieqn, iface)
-                    call worker%cache%set_data('face interior', lift_gq_vol_y, 'lift element', 2, worker%function_info%seed, ieqn, iface)
-                    call worker%cache%set_data('face interior', lift_gq_vol_z, 'lift element', 3, worker%function_info%seed, ieqn, iface)
+                    call worker%cache%set_data("face interior", lift_gq_vol_x, "lift element", 1, worker%function_info%seed, ieqn, iface)
+                    call worker%cache%set_data("face interior", lift_gq_vol_y, "lift element", 2, worker%function_info%seed, ieqn, iface)
+                    call worker%cache%set_data("face interior", lift_gq_vol_z, "lift element", 3, worker%function_info%seed, ieqn, iface)
 
 
 
@@ -709,43 +709,43 @@ contains
                     var_diff_y = var_diff_weighted * worker%normal(2)
                     var_diff_z = var_diff_weighted * worker%normal(3)
 
-!                    ! Project onto basis
-!                    rhs_x = matmul(val_face_trans,var_diff_x)
-!                    rhs_y = matmul(val_face_trans,var_diff_y)
-!                    rhs_z = matmul(val_face_trans,var_diff_z)
-!
-!                    ! Local solve for lift modes in element basis
-!                    lift_modes_x = matmul(invmass,rhs_x)
-!                    lift_modes_y = matmul(invmass,rhs_y)
-!                    lift_modes_z = matmul(invmass,rhs_z)
-!
-!
-!                    ! Evaluate lift modes at face quadrature nodes
-!                    lift_gq_face_x = matmul(val_face,lift_modes_x)
-!                    lift_gq_face_y = matmul(val_face,lift_modes_y)
-!                    lift_gq_face_z = matmul(val_face,lift_modes_z)
-                    lift_gq_face_x = matmul(br2_face,var_diff_x)
-                    lift_gq_face_y = matmul(br2_face,var_diff_y)
-                    lift_gq_face_z = matmul(br2_face,var_diff_z)
-                    
-                    ! Store lift
-                    call worker%cache%set_data('face interior', lift_gq_face_x, 'lift face', 1, worker%function_info%seed, ieqn, iface)
-                    call worker%cache%set_data('face interior', lift_gq_face_y, 'lift face', 2, worker%function_info%seed, ieqn, iface)
-                    call worker%cache%set_data('face interior', lift_gq_face_z, 'lift face', 3, worker%function_info%seed, ieqn, iface)
+                    ! Project onto basis
+                    rhs_x = matmul(val_face_trans,var_diff_x)
+                    rhs_y = matmul(val_face_trans,var_diff_y)
+                    rhs_z = matmul(val_face_trans,var_diff_z)
+
+                    ! Local solve for lift modes in element basis
+                    lift_modes_x = matmul(invmass,rhs_x)
+                    lift_modes_y = matmul(invmass,rhs_y)
+                    lift_modes_z = matmul(invmass,rhs_z)
 
 
-!                    ! Evaluate lift modes at volume quadrature nodes
-!                    lift_gq_vol_x = matmul(val_vol,lift_modes_x)
-!                    lift_gq_vol_y = matmul(val_vol,lift_modes_y)
-!                    lift_gq_vol_z = matmul(val_vol,lift_modes_z)
-                    lift_gq_vol_x = matmul(br2_vol,var_diff_x)
-                    lift_gq_vol_y = matmul(br2_vol,var_diff_y)
-                    lift_gq_vol_z = matmul(br2_vol,var_diff_z)
+                    ! Evaluate lift modes at face quadrature nodes
+                    lift_gq_face_x = matmul(val_face,lift_modes_x)
+                    lift_gq_face_y = matmul(val_face,lift_modes_y)
+                    lift_gq_face_z = matmul(val_face,lift_modes_z)
+!                    lift_gq_face_x = matmul(br2_face,var_diff_x)
+!                    lift_gq_face_y = matmul(br2_face,var_diff_y)
+!                    lift_gq_face_z = matmul(br2_face,var_diff_z)
                     
                     ! Store lift
-                    call worker%cache%set_data('face interior', lift_gq_vol_x, 'lift element', 1, worker%function_info%seed, ieqn, iface)
-                    call worker%cache%set_data('face interior', lift_gq_vol_y, 'lift element', 2, worker%function_info%seed, ieqn, iface)
-                    call worker%cache%set_data('face interior', lift_gq_vol_z, 'lift element', 3, worker%function_info%seed, ieqn, iface)
+                    call worker%cache%set_data("face interior", lift_gq_face_x, "lift face", 1, worker%function_info%seed, ieqn, iface)
+                    call worker%cache%set_data("face interior", lift_gq_face_y, "lift face", 2, worker%function_info%seed, ieqn, iface)
+                    call worker%cache%set_data("face interior", lift_gq_face_z, "lift face", 3, worker%function_info%seed, ieqn, iface)
+
+
+                    ! Evaluate lift modes at volume quadrature nodes
+                    lift_gq_vol_x = matmul(val_vol,lift_modes_x)
+                    lift_gq_vol_y = matmul(val_vol,lift_modes_y)
+                    lift_gq_vol_z = matmul(val_vol,lift_modes_z)
+!                    lift_gq_vol_x = matmul(br2_vol,var_diff_x)
+!                    lift_gq_vol_y = matmul(br2_vol,var_diff_y)
+!                    lift_gq_vol_z = matmul(br2_vol,var_diff_z)
+                    
+                    ! Store lift
+                    call worker%cache%set_data("face interior", lift_gq_vol_x, "lift element", 1, worker%function_info%seed, ieqn, iface)
+                    call worker%cache%set_data("face interior", lift_gq_vol_y, "lift element", 2, worker%function_info%seed, ieqn, iface)
+                    call worker%cache%set_data("face interior", lift_gq_vol_z, "lift element", 3, worker%function_info%seed, ieqn, iface)
 
 
 
@@ -991,7 +991,7 @@ contains
 
             invmass          = worker%mesh(idomain_l)%faces(ielement_l,iface)%neighbor_invmass
 
-            call chidg_signal(FATAL,"no remote br2_face")
+!            call chidg_signal(FATAL,"no remote br2_face")
 !            br2_face          = worker%mesh(idomain_l)%faces(ielement_l,iface)%neighbor_br2_face
 
         end if
@@ -1004,8 +1004,8 @@ contains
             normz = -worker%mesh(idomain_l)%faces(ielement_l,iface)%norm(:,3)
 
             ! Get interior/exterior state
-            var_m = worker%cache%get_data('face interior', 'value', 0, worker%function_info%seed, ieqn, iface)
-            var_p = worker%cache%get_data('face exterior', 'value', 0, worker%function_info%seed, ieqn, iface)
+            var_m = worker%cache%get_data("face interior", "value", 0, worker%function_info%seed, ieqn, iface)
+            var_p = worker%cache%get_data("face exterior", "value", 0, worker%function_info%seed, ieqn, iface)
 
             ! Difference. Relative to exterior element, so reversed
             var_diff = HALF*(var_m - var_p) 
@@ -1018,28 +1018,28 @@ contains
             var_diff_y = var_diff_weighted * normy
             var_diff_z = var_diff_weighted * normz
 
-!            ! Project onto basis
-!            rhs_x = matmul(val_face_trans,var_diff_x)
-!            rhs_y = matmul(val_face_trans,var_diff_y)
-!            rhs_z = matmul(val_face_trans,var_diff_z)
-!
-!            ! Local solve for lift modes in element basis
-!            lift_modes_x = matmul(invmass,rhs_x)
-!            lift_modes_y = matmul(invmass,rhs_y)
-!            lift_modes_z = matmul(invmass,rhs_z)
-!
-!            ! Evaluate lift modes at quadrature nodes
-!            lift_gq_face_x = matmul(val_face,lift_modes_x)
-!            lift_gq_face_y = matmul(val_face,lift_modes_y)
-!            lift_gq_face_z = matmul(val_face,lift_modes_z)
-            lift_gq_face_x = matmul(br2_face,var_diff_x)
-            lift_gq_face_y = matmul(br2_face,var_diff_y)
-            lift_gq_face_z = matmul(br2_face,var_diff_z)
+            ! Project onto basis
+            rhs_x = matmul(val_face_trans,var_diff_x)
+            rhs_y = matmul(val_face_trans,var_diff_y)
+            rhs_z = matmul(val_face_trans,var_diff_z)
+
+            ! Local solve for lift modes in element basis
+            lift_modes_x = matmul(invmass,rhs_x)
+            lift_modes_y = matmul(invmass,rhs_y)
+            lift_modes_z = matmul(invmass,rhs_z)
+
+            ! Evaluate lift modes at quadrature nodes
+            lift_gq_face_x = matmul(val_face,lift_modes_x)
+            lift_gq_face_y = matmul(val_face,lift_modes_y)
+            lift_gq_face_z = matmul(val_face,lift_modes_z)
+!            lift_gq_face_x = matmul(br2_face,var_diff_x)
+!            lift_gq_face_y = matmul(br2_face,var_diff_y)
+!            lift_gq_face_z = matmul(br2_face,var_diff_z)
             
             ! Store lift
-            call worker%cache%set_data('face exterior', lift_gq_face_x, 'lift face', 1, worker%function_info%seed, ieqn, iface)
-            call worker%cache%set_data('face exterior', lift_gq_face_y, 'lift face', 2, worker%function_info%seed, ieqn, iface)
-            call worker%cache%set_data('face exterior', lift_gq_face_z, 'lift face', 3, worker%function_info%seed, ieqn, iface)
+            call worker%cache%set_data("face exterior", lift_gq_face_x, "lift face", 1, worker%function_info%seed, ieqn, iface)
+            call worker%cache%set_data("face exterior", lift_gq_face_y, "lift face", 2, worker%function_info%seed, ieqn, iface)
+            call worker%cache%set_data("face exterior", lift_gq_face_z, "lift face", 3, worker%function_info%seed, ieqn, iface)
 
 !            ! Evaluate lift modes at quadrature nodes
 !            lift_gq_vol_x = matmul(val_vol,lift_modes_x)
@@ -1144,8 +1144,8 @@ contains
             normz = -worker%mesh(idomain_l)%faces(ielement_l,iface)%norm(:,3)
 
             ! Get interior/exterior state
-            var_m = worker%cache%get_data('face interior', 'value', 0, worker%function_info%seed, ieqn, iface)
-            var_p = worker%cache%get_data('face exterior', 'value', 0, worker%function_info%seed, ieqn, iface)
+            var_m = worker%cache%get_data("face interior", "value", 0, worker%function_info%seed, ieqn, iface)
+            var_p = worker%cache%get_data("face exterior", "value", 0, worker%function_info%seed, ieqn, iface)
 
 
             ! Difference. Relative to exterior element, so reversed
@@ -1162,31 +1162,31 @@ contains
             var_diff_z = var_diff_weighted * normz
 
 
-!            ! Project onto basis
-!            rhs_x = matmul(val_face_trans,var_diff_x)
-!            rhs_y = matmul(val_face_trans,var_diff_y)
-!            rhs_z = matmul(val_face_trans,var_diff_z)
-!
-!
-!            ! Local solve for lift modes in element basis
-!            lift_modes_x = matmul(invmass,rhs_x)
-!            lift_modes_y = matmul(invmass,rhs_y)
-!            lift_modes_z = matmul(invmass,rhs_z)
-!
-!
-!            ! Evaluate lift modes at quadrature nodes
-!            lift_gq_x = matmul(val_face,lift_modes_x)
-!            lift_gq_y = matmul(val_face,lift_modes_y)
-!            lift_gq_z = matmul(val_face,lift_modes_z)
-            lift_gq_x = matmul(br2_face,var_diff_x)
-            lift_gq_y = matmul(br2_face,var_diff_y)
-            lift_gq_z = matmul(br2_face,var_diff_z)
+            ! Project onto basis
+            rhs_x = matmul(val_face_trans,var_diff_x)
+            rhs_y = matmul(val_face_trans,var_diff_y)
+            rhs_z = matmul(val_face_trans,var_diff_z)
+
+
+            ! Local solve for lift modes in element basis
+            lift_modes_x = matmul(invmass,rhs_x)
+            lift_modes_y = matmul(invmass,rhs_y)
+            lift_modes_z = matmul(invmass,rhs_z)
+
+
+            ! Evaluate lift modes at quadrature nodes
+            lift_gq_x = matmul(val_face,lift_modes_x)
+            lift_gq_y = matmul(val_face,lift_modes_y)
+            lift_gq_z = matmul(val_face,lift_modes_z)
+!            lift_gq_x = matmul(br2_face,var_diff_x)
+!            lift_gq_y = matmul(br2_face,var_diff_y)
+!            lift_gq_z = matmul(br2_face,var_diff_z)
             
 
             ! Store lift
-            call worker%cache%set_data('face exterior', lift_gq_x, 'lift face', 1, worker%function_info%seed, ieqn, iface)
-            call worker%cache%set_data('face exterior', lift_gq_y, 'lift face', 2, worker%function_info%seed, ieqn, iface)
-            call worker%cache%set_data('face exterior', lift_gq_z, 'lift face', 3, worker%function_info%seed, ieqn, iface)
+            call worker%cache%set_data("face exterior", lift_gq_x, "lift face", 1, worker%function_info%seed, ieqn, iface)
+            call worker%cache%set_data("face exterior", lift_gq_y, "lift face", 2, worker%function_info%seed, ieqn, iface)
+            call worker%cache%set_data("face exterior", lift_gq_z, "lift face", 3, worker%function_info%seed, ieqn, iface)
 
 
         end associate
@@ -1268,8 +1268,8 @@ contains
             normz = -worker%mesh(idomain_l)%faces(ielement_l,iface)%norm(:,3)
 
             ! Get interior/exterior state
-            var_m = worker%cache%get_data('face interior', 'value', 0, worker%function_info%seed, ieqn, iface)
-            var_p = worker%cache%get_data('face exterior', 'value', 0, worker%function_info%seed, ieqn, iface)
+            var_m = worker%cache%get_data("face interior", "value", 0, worker%function_info%seed, ieqn, iface)
+            var_p = worker%cache%get_data("face exterior", "value", 0, worker%function_info%seed, ieqn, iface)
 
             ! Difference. Relative to exterior element, so reversed
             var_diff = HALF*(var_m - var_p) 
@@ -1282,28 +1282,28 @@ contains
             var_diff_y = var_diff_weighted * normy
             var_diff_z = var_diff_weighted * normz
 
-!            ! Project onto basis
-!            rhs_x = matmul(val_face_trans,var_diff_x)
-!            rhs_y = matmul(val_face_trans,var_diff_y)
-!            rhs_z = matmul(val_face_trans,var_diff_z)
-!
-!            ! Local solve for lift modes in element basis
-!            lift_modes_x = matmul(invmass,rhs_x)
-!            lift_modes_y = matmul(invmass,rhs_y)
-!            lift_modes_z = matmul(invmass,rhs_z)
-!
-!            ! Evaluate lift modes at quadrature nodes
-!            lift_gq_face_x = matmul(val_face,lift_modes_x)
-!            lift_gq_face_y = matmul(val_face,lift_modes_y)
-!            lift_gq_face_z = matmul(val_face,lift_modes_z)
-            lift_gq_face_x = matmul(br2_face,var_diff_x)
-            lift_gq_face_y = matmul(br2_face,var_diff_y)
-            lift_gq_face_z = matmul(br2_face,var_diff_z)
+            ! Project onto basis
+            rhs_x = matmul(val_face_trans,var_diff_x)
+            rhs_y = matmul(val_face_trans,var_diff_y)
+            rhs_z = matmul(val_face_trans,var_diff_z)
+
+            ! Local solve for lift modes in element basis
+            lift_modes_x = matmul(invmass,rhs_x)
+            lift_modes_y = matmul(invmass,rhs_y)
+            lift_modes_z = matmul(invmass,rhs_z)
+
+            ! Evaluate lift modes at quadrature nodes
+            lift_gq_face_x = matmul(val_face,lift_modes_x)
+            lift_gq_face_y = matmul(val_face,lift_modes_y)
+            lift_gq_face_z = matmul(val_face,lift_modes_z)
+!            lift_gq_face_x = matmul(br2_face,var_diff_x)
+!            lift_gq_face_y = matmul(br2_face,var_diff_y)
+!            lift_gq_face_z = matmul(br2_face,var_diff_z)
             
             ! Store lift
-            call worker%cache%set_data('face exterior', lift_gq_face_x, 'lift face', 1, worker%function_info%seed, ieqn, iface)
-            call worker%cache%set_data('face exterior', lift_gq_face_y, 'lift face', 2, worker%function_info%seed, ieqn, iface)
-            call worker%cache%set_data('face exterior', lift_gq_face_z, 'lift face', 3, worker%function_info%seed, ieqn, iface)
+            call worker%cache%set_data("face exterior", lift_gq_face_x, "lift face", 1, worker%function_info%seed, ieqn, iface)
+            call worker%cache%set_data("face exterior", lift_gq_face_y, "lift face", 2, worker%function_info%seed, ieqn, iface)
+            call worker%cache%set_data("face exterior", lift_gq_face_z, "lift face", 3, worker%function_info%seed, ieqn, iface)
 
 !            ! Evaluate lift modes at quadrature nodes
 !            lift_gq_vol_x = matmul(val_vol,lift_modes_x)

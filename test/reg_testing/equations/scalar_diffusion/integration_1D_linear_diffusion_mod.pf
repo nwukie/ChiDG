@@ -30,19 +30,23 @@
 module integration_1D_linear_diffusion_mod
 #include <messenger.h>
     use pfunit_mod
-    use mod_kinds,          only: rk, ik
-    use mod_constants,      only: ZERO, THREE, IO_DESTINATION, ONE, TWO, PI, FOUR
-    use type_chidg,         only: chidg_t
-    use type_chidg_data,    only: chidg_data_t
-    use mod_bc,             only: create_bc
-    use type_function,      only: function_t
-    use type_ivector,       only: ivector_t
-    use mod_function,       only: create_function
-    use mod_grid_operators, only: initialize_variable
-    use mod_interpolate,    only: interpolate_element_standard
+    use mod_kinds,              only: rk, ik
+    use mod_constants,          only: ZERO, THREE, IO_DESTINATION, ONE, TWO, PI, FOUR, &
+                                      XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX
+    use type_chidg,             only: chidg_t
+    use type_chidg_data,        only: chidg_data_t
+    use mod_bc,                 only: create_bc
+    use type_bc_state_wrapper,  only: bc_state_wrapper_t
+    use type_function,          only: function_t
+    use type_ivector,           only: ivector_t
+    use mod_function,           only: create_function
+    use mod_grid_operators,     only: initialize_variable
+    use mod_interpolate,        only: interpolate_element_standard
+    use mod_test_utilities,     only: create_mesh_file
+    use mod_file_utilities,     only: delete_file
 
-    use mod_chidg_mpi,      only: IRANK, NRANK, ChiDG_COMM
-    use mpi_f08,            only: MPI_COMM, MPI_REAL8, MPI_SUM
+    use mod_chidg_mpi,          only: IRANK, NRANK, ChiDG_COMM
+    use mpi_f08,                only: MPI_COMM, MPI_REAL8, MPI_SUM
     use mod_io
 
 
@@ -133,8 +137,10 @@ module integration_1D_linear_diffusion_mod
     !-------------------------------------------------------------------------------
     @TestParameter
     type, extends(MpiTestParameter) :: case_grid_order
-        character(100)  :: gridfile
-        integer(ik)     :: order
+        integer(ik)                 :: nelem_xi
+        character(:),   allocatable :: gridtype     ! singleblock, chimera
+        character(:),   allocatable :: gridfile 
+        integer(ik)                 :: order
     contains
         procedure   :: toString
     end type case_grid_order
@@ -154,8 +160,11 @@ module integration_1D_linear_diffusion_mod
     !-------------------------------------------------------------------------------
     @TestCase(testParameters={getParameters()}, constructor=newTest)
     type, extends(MpiTestCase) :: linear_diffusion_1D
-        character(100)  :: gridfile
-        integer(ik)     :: order
+
+        integer(ik)                 :: nelem_xi
+        character(:),   allocatable :: gridtype
+        character(:),   allocatable :: gridfile
+        integer(ik)                 :: order
 
         type(chidg_t)   :: chidg
         type(mpi_comm)  :: ChiDG_COMM
@@ -235,9 +244,9 @@ contains
         !
         ! Interpolate solution to quadrature nodes
         !
-        source = worker%get_element_variable(iu, 'ddx + lift')
+        source = worker%get_element_variable(iu, "ddx + lift")
 
-        x = worker%x('volume')
+        x = worker%x("volume")
 
         source = FOUR*PI*PI*dsin(TWO*PI*x)
 
@@ -271,7 +280,7 @@ contains
     subroutine init_builder(self)
         class(test_linear_diffusion_builder_t),   intent(inout)  :: self
 
-        call self%set_name('Test 1D Linear Diffusion')
+        call self%set_name("Test 1D Linear Diffusion")
 
     end subroutine init_builder
     !*********************************************************************************************
@@ -341,8 +350,10 @@ contains
         type(case_grid_order),  intent(in)          :: test_parameter
         type(linear_diffusion_1D)    :: test
 
-        test%gridfile    = test_parameter%gridfile
-        test%order       = test_parameter%order
+        test%nelem_xi   = test_parameter%nelem_xi
+        test%gridtype   = test_parameter%gridtype
+        test%gridfile   = test_parameter%gridfile
+        test%order      = test_parameter%order
 
     end function newTest
     !******************************************************************************
@@ -356,52 +367,70 @@ contains
     function getParameters() result(params)
         type(case_grid_order), allocatable :: params(:)
     
+        integer(ik),        allocatable :: nelem_xi(:)
+        type(string),       allocatable :: gridtype(:)
         type(string),       allocatable :: files(:)
         integer(ik),        allocatable :: orders(:)
         integer(ik) :: icase
 
 
-        files = [ string('1D_linear_diffusion_20x1x1.h5'), &
-                  string('1D_linear_diffusion_20x1x1.h5'), &
-                  string('1D_linear_diffusion_20x1x1.h5'), &
-                  string('1D_linear_diffusion_20x1x1.h5'), &
-                  string('1D_linear_diffusion_30x1x1.h5'), &
-                  string('1D_linear_diffusion_30x1x1.h5'), &
-                  string('1D_linear_diffusion_30x1x1.h5'), &
-                  string('1D_linear_diffusion_30x1x1.h5'), &
-                  string('1D_linear_diffusion_20x1x1_chimera.h5'), &
-                  string('1D_linear_diffusion_20x1x1_chimera.h5'), &
-                  string('1D_linear_diffusion_20x1x1_chimera.h5'), &
-                  string('1D_linear_diffusion_20x1x1_chimera.h5'), &
-                  string('1D_linear_diffusion_30x1x1_chimera.h5'), &
-                  string('1D_linear_diffusion_30x1x1_chimera.h5'), &
-                  string('1D_linear_diffusion_30x1x1_chimera.h5')  &
+        nelem_xi = [ 20, 20, 20, 20, &
+                     30, 30, 30, 30  &
+!                     20, 20, 20, 20, &
+!                     30, 30, 30 
+                     ]
+
+        gridtype = [ string("singleblock"), &
+                     string("singleblock"), &
+                     string("singleblock"), &
+                     string("singleblock"), &
+                     string("singleblock"), &
+                     string("singleblock"), &
+                     string("singleblock"), &
+                     string("singleblock")  &
+!                     string("chimera"), &
+!                     string("chimera"), &
+!                     string("chimera"), &
+!                     string("chimera"), &
+!                     string("chimera"), &
+!                     string("chimera"), &
+!                     string("chimera")  &
+                     ]
+
+
+
+        files = [ string("1D_linear_diffusion_20x1x1.h5"), &
+                  string("1D_linear_diffusion_20x1x1.h5"), &
+                  string("1D_linear_diffusion_20x1x1.h5"), &
+                  string("1D_linear_diffusion_20x1x1.h5"), &
+                  string("1D_linear_diffusion_30x1x1.h5"), &
+                  string("1D_linear_diffusion_30x1x1.h5"), &
+                  string("1D_linear_diffusion_30x1x1.h5"), &
+                  string("1D_linear_diffusion_30x1x1.h5") &
+!                  string("1D_linear_diffusion_20x1x1_chimera.h5"), &
+!                  string("1D_linear_diffusion_20x1x1_chimera.h5"), &
+!                  string("1D_linear_diffusion_20x1x1_chimera.h5"), &
+!                  string("1D_linear_diffusion_20x1x1_chimera.h5"), &
+!                  string("1D_linear_diffusion_30x1x1_chimera.h5"), &
+!                  string("1D_linear_diffusion_30x1x1_chimera.h5"), &
+!                  string("1D_linear_diffusion_30x1x1_chimera.h5")  &
                   ]
 
 
-        orders = [ 2, &
-                   3, &
-                   4, &
-                   5, &
-                   2, &
-                   3, &
-                   4, &
-                   5, &
-                   2, &
-                   3, &
-                   4, &
-                   5, &
-                   2, &
-                   3, &
-                   4  &
+        orders = [ 2, 3, 4, 5, &
+                   2, 3, 4, 5  &
+!                   2, 3, 4, 5, &
+!                   2, 3, 4 
                    ]
 
 
         !Initialize the test case container with the parameter
         allocate(params(size(files)))
         do icase = 1,size(files)
-            params(icase)%gridfile    = files(icase)%str
-            params(icase)%order       = orders(icase)
+            params(icase)%nelem_xi  = nelem_xi(icase)
+            params(icase)%gridtype  = gridtype(icase)%str
+            params(icase)%gridfile  = files(icase)%str
+            params(icase)%order     = orders(icase)
         end do
 
     end function getParameters
@@ -447,6 +476,7 @@ contains
         class(linear_diffusion_1D),  intent(inout)   :: this
 
         class(function_t),  allocatable :: fcn
+        type(bc_state_wrapper_t)        :: bc_states(6)
 
         
         type(test_LD_volume_source_t)           :: source_test_linear_diffusion
@@ -487,15 +517,15 @@ contains
         ! As a result, we don't call chidg%init('io')
         !
         !------------------------------------------------------------------------------
-        basis            = 'legendre'
+        basis            = "legendre"
         spacedim         = 3
         nterms_s         = this%order**THREE
         gq_rule          = 1
-        time_integrator  = 'steady'
-        nonlinear_solver = 'newton'
-        linear_solver    = 'fgmres'
-        preconditioner   = 'ILU0'
-        IO_DESTINATION   = 'file'
+        time_integrator  = "steady"
+        nonlinear_solver = "newton"
+        linear_solver    = "fgmres"
+        preconditioner   = "ILU0"
+        IO_DESTINATION   = "file"
         !------------------------------------------------------------------------------
 
         !
@@ -508,24 +538,52 @@ contains
 
 
         ! Set timescheme options to pass during initialization
-        call toptions%set('dt', 0.1_rk) ! means nothing here
-        call toptions%set('nsteps',100)
-        call toptions%set('nwrite',0)
+        call toptions%set("dt", 0.1_rk) ! means nothing here
+        call toptions%set("nsteps",100)
+        call toptions%set("nwrite",0)
 
         ! Set linear solver options to pass during initialization
-        call loptions%set('tol',1.e-14_rk)
+        call loptions%set("tol",1.e-14_rk)
 
         ! Set nonlinear solver options
-        call noptions%set('tol',5.e-10_rk)
-        call noptions%set('cfl0',1.0_rk)
-        call noptions%set('nsteps',100)
+        call noptions%set("tol",5.e-11_rk)
+        call noptions%set("cfl0",1.0_rk)
+        call noptions%set("nsteps",100)
 
 
 
         !
         ! Initialize ChiDG environment
         !
-        call this%chidg%init('env',this%ChiDG_COMM)
+        call this%chidg%init("env",this%ChiDG_COMM)
+
+
+        !
+        ! Create mesh
+        !
+        if (IRANK == GLOBAL_MASTER) then
+            call create_bc("Scalar Value",       bc_states(XI_MIN)%state  )
+            call create_bc("Scalar Derivative",  bc_states(XI_MAX)%state  )
+            call create_bc("Scalar Extrapolate", bc_states(ETA_MIN)%state )
+            call create_bc("Scalar Extrapolate", bc_states(ETA_MAX)%state )
+            call create_bc("Scalar Extrapolate", bc_states(ZETA_MIN)%state)
+            call create_bc("Scalar Extrapolate", bc_states(ZETA_MAX)%state)
+            
+            call bc_states(XI_MIN)%state%set_fcn_option("Value","val",ONE)
+            call bc_states(XI_MAX)%state%set_fcn_option("Derivative","val",TWO*PI-ONE)
+
+
+            call create_mesh_file('D1 NxNxN',this%gridfile,equation_set1="Test 1D Linear Diffusion", &
+                                                           bc_states1=bc_states,                     &
+                                                           nelem_xi  =this%nelem_xi,                 &
+                                                           nelem_eta =1,                             &
+                                                           nelem_zeta=1)
+        end if
+
+
+
+
+
 
 
         !
@@ -537,33 +595,33 @@ contains
 
 
         call this%chidg%initialize_solution_domains(nterms_s)
-        call this%chidg%init('communication')
-        call this%chidg%init('chimera')
+        call this%chidg%init("communication")
+        call this%chidg%init("chimera")
         call this%chidg%initialize_solution_solver()
 
 
         !
         ! Set ChiDG components
         !
-        call this%chidg%set('time_integrator',  time_integrator,  toptions)
-        call this%chidg%set('nonlinear_solver', nonlinear_solver, noptions)
-        call this%chidg%set('linear_solver',    linear_solver,    loptions)
-        call this%chidg%set('preconditioner',   preconditioner)
+        call this%chidg%set("Time Integrator",  time_integrator,  toptions)
+        call this%chidg%set("Nonlinear Solver", nonlinear_solver, noptions)
+        call this%chidg%set("Linear Solver",    linear_solver,    loptions)
+        call this%chidg%set("Preconditioner",   preconditioner)
 
 
         !
         ! Initialize solution
         !
-        call create_function(fcn,'constant')
+        call create_function(fcn,"constant")
 
-        call fcn%set_option('val',0.1_rk)
+        call fcn%set_option("val",0.1_rk)
         call initialize_variable(this%chidg%data,1,fcn) ! u
 
 
         !
         ! Wrap-up initialization activities
         !
-        call this%chidg%init('finalize')
+        call this%chidg%init("finalize")
 
     end subroutine SetUp
     !******************************************************************************************************
@@ -579,7 +637,11 @@ contains
         class(linear_diffusion_1D),  intent(inout)   :: this
 
         ! Close ChiDG
-        call this%chidg%close('core')
+        call this%chidg%close("core")
+
+        if (IRANK == GLOBAL_MASTER) then
+            call delete_file(this%gridfile)
+        end if
 
     end subroutine tearDown
     !******************************************************************************************************
@@ -628,9 +690,11 @@ contains
         ! so it should converge in 1 Newton Step. Really, just the solution of 1 linear system of equations.
         !
         if (grid_index <= 2 ) then
-            nsteps_convergence(npes_index,grid_index,order_index) = self%chidg%nonlinear_solver%newton_iterations           !conforming grids
+            ! conforming grids
+            nsteps_convergence(npes_index,grid_index,order_index) = self%chidg%nonlinear_solver%newton_iterations
         else
-            nsteps_convergence_chimera(npes_index,grid_index-2,order_index) = self%chidg%nonlinear_solver%newton_iterations !chimera grids
+            ! chimera grids
+            nsteps_convergence_chimera(npes_index,grid_index-2,order_index) = self%chidg%nonlinear_solver%newton_iterations 
         end if
 
 
@@ -699,52 +763,52 @@ contains
 
 
 
-    !>  Access the stored number of steps convergence data(module global variable) and confirm
-    !!  that all simulations converged in 1 step.
-    !!
-    !!  This assumes that the 'run_calculations' routine has already been executed for all cases
-    !!  and numbers of processors to that the 'nsteps_convergence' variable has been populated.
-    !!  So, we are relying on pFUnit to do things in order here. Works now, but I don't think
-    !!  there is a guaruntee that this can't change.
-    !!
-    !!  @author Nathan A. Wukie
-    !!  @author Nathan A. Wukie (AFRL)
-    !!
-    !-------------------------------------------------------------------------------------------------------
-    @Test(npes=[1])
-    subroutine test_conv_chimera(self)
-        class(linear_diffusion_1D),  intent(inout)   :: self
-
-        integer(ik)             :: inpes, igrid, iorder, nsteps
-
-        do inpes = 1,3
-            do igrid = 1,1
-                do iorder = 1,4
-
-                    ! Test that the current convergence for the processor count matches the serial convergence
-                    nsteps = nsteps_convergence_chimera(inpes,igrid,iorder)%size()
-
-                    @assertEqual(1, nsteps)
-
-                end do
-            end do
-        end do
-
-        do inpes = 1,3
-            do igrid = 2,2
-                do iorder = 1,3
-
-                    ! Test that the current convergence for the processor count matches the serial convergence
-                    nsteps = nsteps_convergence_chimera(inpes,igrid,iorder)%size()
-
-                    @assertEqual(1, nsteps)
-
-                end do
-            end do
-        end do
-
-    end subroutine test_conv_chimera
-    !*******************************************************************************************************
+!    !>  Access the stored number of steps convergence data(module global variable) and confirm
+!    !!  that all simulations converged in 1 step.
+!    !!
+!    !!  This assumes that the 'run_calculations' routine has already been executed for all cases
+!    !!  and numbers of processors to that the 'nsteps_convergence' variable has been populated.
+!    !!  So, we are relying on pFUnit to do things in order here. Works now, but I don't think
+!    !!  there is a guaruntee that this can't change.
+!    !!
+!    !!  @author Nathan A. Wukie
+!    !!  @author Nathan A. Wukie (AFRL)
+!    !!
+!    !-------------------------------------------------------------------------------------------------------
+!    @Test(npes=[1])
+!    subroutine test_conv_chimera(self)
+!        class(linear_diffusion_1D),  intent(inout)   :: self
+!
+!        integer(ik)             :: inpes, igrid, iorder, nsteps
+!
+!        do inpes = 1,3
+!            do igrid = 1,1
+!                do iorder = 1,4
+!
+!                    ! Test that the current convergence for the processor count matches the serial convergence
+!                    nsteps = nsteps_convergence_chimera(inpes,igrid,iorder)%size()
+!
+!                    @assertEqual(1, nsteps)
+!
+!                end do
+!            end do
+!        end do
+!
+!        do inpes = 1,3
+!            do igrid = 2,2
+!                do iorder = 1,3
+!
+!                    ! Test that the current convergence for the processor count matches the serial convergence
+!                    nsteps = nsteps_convergence_chimera(inpes,igrid,iorder)%size()
+!
+!                    @assertEqual(1, nsteps)
+!
+!                end do
+!            end do
+!        end do
+!
+!    end subroutine test_conv_chimera
+!    !*******************************************************************************************************
 
 
 
@@ -786,7 +850,8 @@ contains
                     !
                     ! Compute convergence rate of spatial operators. log10(error)/log10(mesh spacing)
                     !
-                    convergence_rate = (log10(error_previous)-log10(error_current))/(log10(mesh_parameter_previous)-log10(mesh_parameter_current))
+                    convergence_rate = (log10(error_previous)-log10(error_current)) / &
+                                       (log10(mesh_parameter_previous)-log10(mesh_parameter_current))
 
                 
                     @assertGreaterThan(convergence_rate, real(iorder+1,rk)-tol)
@@ -802,57 +867,26 @@ contains
 
 
 
-    !>
-    !!
-    !!
-    !!
-    !!  @author Nathan A. Wukie (AFRL)
-    !!  @date   9/16/2016
-    !!
-    !!
-    !--------------------------------------------------------------------------------------------------------
-    @Test(npes=[1])
-    subroutine test_err_chimera(self)
-        class(linear_diffusion_1D),  intent(inout)   :: self
-
-        integer(ik) :: inpes, igrid, iorder
-        real(rk)    :: error_previous, error_current, mesh_parameter_previous, mesh_parameter_current, convergence_rate, tol
-
-        tol = 0.1_rk
-
-        do inpes = 1,3
-            do iorder = 1,3
-                do igrid = 2,2  ! Start at the second grid because we need the previous grid in order to compute a rate 
-
-                    error_previous = error_chimera(inpes,igrid-1,iorder)
-                    error_current  = error_chimera(inpes,igrid  ,iorder)
-
-                    mesh_parameter_previous = mesh_parameter(igrid-1 + 2,iorder)
-                    mesh_parameter_current  = mesh_parameter(igrid   + 2,iorder)
-
-                    
-                    !
-                    ! Compute convergence rate of spatial operators. log10(error)/log10(mesh spacing)
-                    !
-                    convergence_rate = (log10(error_previous)-log10(error_current))/(log10(mesh_parameter_previous)-log10(mesh_parameter_current))
-
-                
-                    @assertGreaterThan(convergence_rate, real(iorder+1,rk)-tol)
-
-                end do
-            end do
-        end do
-
-
-
-
-!        !
-!        ! Fifth order is having some issues demonstrating convergence on the finer grids, I think because of
-!        ! some machine precision issues. We are using a 3D basis to represent a 1D phenomenon so there are
-!        ! a lot of modes doing nothing and probably just contributing to a higher error threshold.
-!        !
+!    !>
+!    !!
+!    !!
+!    !!
+!    !!  @author Nathan A. Wukie (AFRL)
+!    !!  @date   9/16/2016
+!    !!
+!    !!
+!    !--------------------------------------------------------------------------------------------------------
+!    @Test(npes=[1])
+!    subroutine test_err_chimera(self)
+!        class(linear_diffusion_1D),  intent(inout)   :: self
+!
+!        integer(ik) :: inpes, igrid, iorder
+!        real(rk)    :: error_previous, error_current, mesh_parameter_previous, mesh_parameter_current, convergence_rate, tol
+!
+!        tol = 0.1_rk
+!
 !        do inpes = 1,3
-!            do iorder = 4,4
+!            do iorder = 1,3
 !                do igrid = 2,2  ! Start at the second grid because we need the previous grid in order to compute a rate 
 !
 !                    error_previous = error_chimera(inpes,igrid-1,iorder)
@@ -873,14 +907,45 @@ contains
 !                end do
 !            end do
 !        end do
-
-
-
-
-
-
-    end subroutine test_err_chimera
-    !*******************************************************************************************************
+!
+!
+!
+!
+!!        !
+!!        ! Fifth order is having some issues demonstrating convergence on the finer grids, I think because of
+!!        ! some machine precision issues. We are using a 3D basis to represent a 1D phenomenon so there are
+!!        ! a lot of modes doing nothing and probably just contributing to a higher error threshold.
+!!        !
+!!        do inpes = 1,3
+!!            do iorder = 4,4
+!!                do igrid = 2,2  ! Start at the second grid because we need the previous grid in order to compute a rate 
+!!
+!!                    error_previous = error_chimera(inpes,igrid-1,iorder)
+!!                    error_current  = error_chimera(inpes,igrid  ,iorder)
+!!
+!!                    mesh_parameter_previous = mesh_parameter(igrid-1 + 2,iorder)
+!!                    mesh_parameter_current  = mesh_parameter(igrid   + 2,iorder)
+!!
+!!                    
+!!                    !
+!!                    ! Compute convergence rate of spatial operators. log10(error)/log10(mesh spacing)
+!!                    !
+!!                    convergence_rate = (log10(error_previous)-log10(error_current))/(log10(mesh_parameter_previous)-log10(mesh_parameter_current))
+!!
+!!                
+!!                    @assertGreaterThan(convergence_rate, real(iorder+1,rk)-tol)
+!!
+!!                end do
+!!            end do
+!!        end do
+!
+!
+!
+!
+!
+!
+!    end subroutine test_err_chimera
+!    !*******************************************************************************************************
 
 
 
@@ -946,7 +1011,7 @@ contains
                     u_dg = interpolate_element_standard(mesh,sdata%q,idom,ielem,iu,'value')
 
                     !
-                    ! Compute error at GQ nodes
+
                     !                    
                     gq_error_squared = (u_analytical - u_dg)**TWO
 

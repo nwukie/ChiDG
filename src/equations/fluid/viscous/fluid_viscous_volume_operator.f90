@@ -275,7 +275,6 @@ contains
 
         call worker%integrate_volume(irhou, flux_x,flux_y,flux_z)
 
-
         !============================
         !     Y-MOMENTUM FLUX
         !============================
@@ -291,10 +290,6 @@ contains
         flux_x = -tau_xz
         flux_y = -tau_yz
         flux_z = -tau_zz
-
-        flux_x(:)%x_ad_ = 0._rk
-        flux_y(:)%x_ad_ = 0._rk
-        flux_z(:)%x_ad_ = 0._rk
 
         call worker%integrate_volume(irhow, flux_x,flux_y,flux_z)
 

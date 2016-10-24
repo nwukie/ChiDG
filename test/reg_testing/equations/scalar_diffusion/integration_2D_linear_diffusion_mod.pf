@@ -36,6 +36,7 @@ module integration_2D_linear_diffusion_mod
     use type_chidg,             only: chidg_t
     use type_chidg_data,        only: chidg_data_t
     use mod_bc,                 only: create_bc
+    use mod_string,             only: string_t
     use type_bc_state_wrapper,  only: bc_state_wrapper_t
     use type_function,          only: function_t
     use type_ivector,           only: ivector_t
@@ -175,14 +176,14 @@ module integration_2D_linear_diffusion_mod
 
 
 
-    !> Simple container to hold arbitrary length file names. That way, we can have
-    !! an array of filenames that get looped through.
-    !!
-    !-------------------------------------------------------------------------------
-    type :: string
-        character(len=:), allocatable   :: str
-    end type
-    !*******************************************************************************
+!    !> Simple container to hold arbitrary length file names. That way, we can have
+!    !! an array of filenames that get looped through.
+!    !!
+!    !-------------------------------------------------------------------------------
+!    type :: string
+!        character(len=:), allocatable   :: str
+!    end type
+!    !*******************************************************************************
 
 
 
@@ -369,7 +370,7 @@ contains
     
         integer(ik),        allocatable :: nelem_xi(:)
         integer(ik),        allocatable :: nelem_eta(:)
-        type(string),       allocatable :: files(:)
+        type(string_t),     allocatable :: files(:)
         integer(ik),        allocatable :: orders(:)
         integer(ik) :: icase
 
@@ -379,14 +380,14 @@ contains
         nelem_eta = [ 16, 16, 16, 16, &
                       32, 32, 32, 32 ]
 
-        files = [ string('2D_linear_diffusion_16x16x1.h5'), &
-                  string('2D_linear_diffusion_16x16x1.h5'), &
-                  string('2D_linear_diffusion_16x16x1.h5'), &
-                  string('2D_linear_diffusion_16x16x1.h5'), &
-                  string('2D_linear_diffusion_32x32x1.h5'), &
-                  string('2D_linear_diffusion_32x32x1.h5'), &
-                  string('2D_linear_diffusion_32x32x1.h5'), &
-                  string('2D_linear_diffusion_32x32x1.h5')  &
+        files = [ string_t('2D_linear_diffusion_16x16x1.h5'), &
+                  string_t('2D_linear_diffusion_16x16x1.h5'), &
+                  string_t('2D_linear_diffusion_16x16x1.h5'), &
+                  string_t('2D_linear_diffusion_16x16x1.h5'), &
+                  string_t('2D_linear_diffusion_32x32x1.h5'), &
+                  string_t('2D_linear_diffusion_32x32x1.h5'), &
+                  string_t('2D_linear_diffusion_32x32x1.h5'), &
+                  string_t('2D_linear_diffusion_32x32x1.h5')  &
                   ]
 
 
@@ -447,7 +448,7 @@ contains
         class(linear_diffusion_2D),  intent(inout)   :: this
 
         class(function_t),  allocatable :: fcn
-        type(bc_state_wrapper_t)        :: bc_states(6)
+        type(bc_state_wrapper_t)        :: bc_states(1,6)
 
         
         type(test_2D_LD_volume_source_t)           :: source_test_linear_diffusion
@@ -535,21 +536,21 @@ contains
         ! Create mesh
         !
         if (IRANK == GLOBAL_MASTER) then
-            call create_bc("Scalar Value", bc_states(XI_MIN)%state  )
-            call create_bc("Scalar Value", bc_states(XI_MAX)%state  )
-            call create_bc("Scalar Value", bc_states(ETA_MIN)%state )
-            call create_bc("Scalar Value", bc_states(ETA_MAX)%state )
-            call create_bc("Scalar Extrapolate", bc_states(ZETA_MIN)%state)
-            call create_bc("Scalar Extrapolate", bc_states(ZETA_MAX)%state)
+            call create_bc("Scalar Value", bc_states(1,XI_MIN)%state  )
+            call create_bc("Scalar Value", bc_states(1,XI_MAX)%state  )
+            call create_bc("Scalar Value", bc_states(1,ETA_MIN)%state )
+            call create_bc("Scalar Value", bc_states(1,ETA_MAX)%state )
+            call create_bc("Scalar Extrapolate", bc_states(1,ZETA_MIN)%state)
+            call create_bc("Scalar Extrapolate", bc_states(1,ZETA_MAX)%state)
             
-            call bc_states(XI_MIN)%state%set_fcn_option("Value","val",ZERO)
-            call bc_states(XI_MAX)%state%set_fcn_option("Value","val",ZERO)
-            call bc_states(ETA_MIN)%state%set_fcn_option("Value","val",ZERO)
-            call bc_states(ETA_MAX)%state%set_fcn_option("Value","val",ZERO)
+            call bc_states(1,XI_MIN)%state%set_fcn_option("Value","val",ZERO)
+            call bc_states(1,XI_MAX)%state%set_fcn_option("Value","val",ZERO)
+            call bc_states(1,ETA_MIN)%state%set_fcn_option("Value","val",ZERO)
+            call bc_states(1,ETA_MAX)%state%set_fcn_option("Value","val",ZERO)
 
 
-            call create_mesh_file("D1 NxNxN",this%gridfile,equation_set1="Test 2D Linear Diffusion", &
-                                                           bc_states1=bc_states,                     &
+            call create_mesh_file("D1 NxNxN",this%gridfile,equation_sets=[string_t("Test 2D Linear Diffusion")], &
+                                                           bc_states =bc_states,                     &
                                                            nelem_xi  =this%nelem_xi,                 &
                                                            nelem_eta =this%nelem_eta,                &
                                                            nelem_zeta=1)

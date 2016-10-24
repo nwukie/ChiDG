@@ -1,0 +1,614 @@
+!--------------------------------------------------------------------------------
+!
+!                   Euler equations :: Circular Cylinder
+!
+!   This test suite runs a series of tests solving the euler equations on a Chimera
+!   O-grid representing a flow over a cylinder. This grid uses the Chimera interfaces 
+!   with an O-grid representing the cylinder geometry on top of a cartesian grid. 
+!   One grid resolution is used and it is run at solution accuracy of 1,2,3, and 
+!   4th-order on 1, 2, 4, 7, and 10 processors.
+!
+!   The test case 'test_symmetry':
+!       - runs the ChiDG simulation for a test case
+!       - Stores the nonlinear convergence history to be used in a later test
+!       - Compares the solution in some elements located symmetrically about the horizontal axis
+!   
+!   The test case 'test_nonlinear_convergence':
+!       - Compares the nonlinear convergence for a given order of accuracy run using
+!         different numbers of processors. This tests that more processors produces
+!         the same convergence of the solver.
+!
+!
+!   The nonlinear convergence for each case is stored in a module global variable 
+!   that is used to compare convergence between the serial and parallel cases.
+!
+!   The boundary condition settings are:
+!
+!       Inlet:  Total Inlet
+!               TotalPressure    = 110000 (Pa)
+!               TotalTemperature = 300 (k)
+!
+!       Outlet: Pressure Outlet
+!               StaticPressure   = 100000 (Pa)
+!
+!       Walls: Wall
+!
+!   @author Nathan A. Wukie (AFRL)
+!   @date   8/15/2016
+!
+!--------------------------------------------------------------------------------
+module integration_cylinder_mod
+    use pfunit_mod
+    use mod_kinds,              only: rk, ik
+    use mod_constants,          only: ZERO, THREE, IO_DESTINATION, &
+                                      XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX
+    use mod_string,             only: string_t
+    use type_chidg,             only: chidg_t
+    use mod_bc,                 only: create_bc
+    use type_bc_state_wrapper,  only: bc_state_wrapper_t
+    use type_function,          only: function_t
+    use type_rvector,           only: rvector_t
+    use mod_function,           only: create_function
+    use mod_grid_operators,     only: initialize_variable
+    use mod_test_utilities,     only: create_mesh_file
+    use mod_file_utilities,     only: delete_file
+
+    use mod_chidg_mpi,          only: IRANK, NRANK, ChiDG_COMM, GLOBAL_MASTER
+    use mpi_f08,                only: MPI_COMM, MPI_ISend, MPI_Recv, MPI_REAL8, MPI_STATUS, &
+                                      MPI_ANY_SOURCE, MPI_REQUEST, MPI_Barrier
+    use mod_io
+    implicit none
+
+
+    ! Store the nonlinear convergence for each test case. This is used 
+    ! to test the nonlinear convergence between a case running on
+    ! a different number of procs.
+    !
+    ! Procs: 1, 2, 4, 7, 10
+    !
+    type(rvector_t) :: nonlinear_convergence(5,4) ! nprocs, norders
+
+    type(MPI_STATUS)  :: tmp_status
+    type(MPI_REQUEST) :: tmp_request
+
+    public  :: cylinder
+
+
+
+
+    !>  This parameter initialize the state for each test
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @author Nathan A. Wukie (AFRL)
+    !!
+    !-------------------------------------------------------------------------------
+    @TestParameter
+    type, extends(MpiTestParameter) :: case_grid_order
+
+        integer(ik)     :: order
+
+    contains
+        procedure   :: toString
+    end type case_grid_order
+    !*******************************************************************************
+
+
+
+
+
+
+
+    !>  Main testing fixture with test components that get initialized for each test
+    !!
+    !!  @author Nathan A. Wukie 
+    !!  @author Nathan A. Wukie (AFRL)
+    !!
+    !-------------------------------------------------------------------------------
+    @TestCase(testParameters={getParameters()}, constructor=newTest)
+    type, extends(MpiTestCase) :: cylinder
+
+        integer(ik)                     :: order
+        character(:),       allocatable :: gridfile
+        type(chidg_t)                   :: chidg
+        type(mpi_comm)                  :: ChiDG_COMM
+
+    contains
+        procedure   :: setUp
+        procedure   :: tearDown
+    end type cylinder
+    !*******************************************************************************
+
+
+
+
+
+contains
+
+
+    !> Parameter constructors
+    !!
+    !!
+    !!
+    !------------------------------------------------------------------------------
+    function newTest(test_parameter) result(test)
+        type(case_grid_order),  intent(in)          :: test_parameter
+        type(cylinder)    :: test
+
+        test%order = test_parameter%order
+
+    end function newTest
+    !******************************************************************************
+
+
+
+    !> Parameter initialization
+    !!
+    !!
+    !!
+    !------------------------------------------------------------------------------
+    function getParameters() result(params)
+        type(case_grid_order), allocatable :: params(:)
+    
+        integer(ik),        allocatable :: orders(:)
+        real(rk),           allocatable :: entropies(:)
+        integer(ik)                     :: icase
+
+        orders = [1, 2, 3, 4]
+
+        !Initialize the test case container with the parameter
+        allocate(params(size(orders)))
+        do icase = 1,size(orders)
+            params(icase)%order = orders(icase)
+        end do
+
+    end function getParameters
+    !*******************************************************************************************
+
+
+
+    !>  Reporting the parameters of the test
+    !!
+    !!
+    !!
+    !-------------------------------------------------------------------------------------------
+    function toString(this) result(string)
+        class (case_grid_order),    intent(in)  :: this
+        character(:), allocatable   :: string
+
+        character(len=200) :: buffer
+
+        write(buffer,'( "(order)=","(", I2, ")" )') this%order
+        string = trim(buffer)
+
+    end function toString
+    !********************************************************************************************
+
+
+
+
+    !>  Set up test routine.
+    !!
+    !!  This routine reads the grid file, sets up boundary conditions, initializes storage
+    !!  and sets the appropriate configuration options.
+    !!  This routine also gets the numer of processors and the correct MPI communicator for 
+    !!  the test.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @author Nathan A. Wukie (AFRL)
+    !!
+    !!
+    !--------------------------------------------------------------------------------------------
+    subroutine setUp(this)
+        class(cylinder),  intent(inout)   :: this
+
+        type(bc_state_wrapper_t)        :: bc_states(4,6)
+        class(function_t),  allocatable :: fcn
+        real(rk)                        :: tol
+
+        
+        tol = 1.e-6_rk
+
+        !------------------------------------------------------------------------------
+        !
+        ! Define input data here that is normally read through the namelist input file
+        !
+        ! As a result, we don't call chidg%init('io')
+        !
+        !------------------------------------------------------------------------------
+        this%gridfile    = 'cylinder.h5'
+        basis            = 'legendre'
+        spacedim         = 3
+        nterms_s         = this%order**THREE
+        gq_rule          = 2
+        time_integrator  = 'steady'
+        nonlinear_solver = 'quasi_newton'
+        linear_solver    = 'fgmres'
+        preconditioner   = 'RASILU0'
+        IO_DESTINATION   = 'file'
+        !IO_DESTINATION   = 'both'
+        !------------------------------------------------------------------------------
+
+        !
+        ! Get MPI communicator information from pFUnit
+        !
+        IRANK                   = this%getProcessRank()
+        NRANK                   = this%getNumProcessesRequested()
+        this%ChiDG_COMM%mpi_val = this%getMpiCommunicator()
+
+
+
+        ! Set timescheme options to pass during initialization
+        call toptions%set('dt', 0.1_rk) ! means nothing here
+        call toptions%set('nsteps',100)
+        call toptions%set('nwrite',0)
+
+        ! Set linear solver options to pass during initialization
+        call loptions%set('tol',1.e-8_rk)
+
+        ! Set nonlinear solver options
+        call noptions%set('tol',3.e-5_rk)
+        call noptions%set('cfl0',1.0_rk)
+        call noptions%set('nsteps',100)
+
+
+
+        !
+        ! Initialize ChiDG environment
+        !
+        call this%chidg%init('env',this%ChiDG_COMM)
+
+
+
+
+        !
+        ! Create mesh
+        !
+        if (IRANK == GLOBAL_MASTER) then
+            call create_bc("Wall",             bc_states(1,ETA_MIN)%state )
+            call create_bc("Wall",             bc_states(1,ETA_MAX)%state )
+            call create_bc("Wall",             bc_states(1,ZETA_MIN)%state)
+            call create_bc("Wall",             bc_states(1,ZETA_MAX)%state)
+
+            call create_bc("Pressure Outlet",  bc_states(2,ETA_MIN)%state )
+            call create_bc("Wall",             bc_states(2,ETA_MAX)%state )
+            call create_bc("Wall",             bc_states(2,ZETA_MAX)%state )
+            call create_bc("Wall",             bc_states(2,ZETA_MAX)%state )
+
+            call create_bc("Wall",             bc_states(3,ETA_MIN)%state )
+            call create_bc("Wall",             bc_states(3,ETA_MAX)%state )
+            call create_bc("Wall",             bc_states(3,ZETA_MIN)%state)
+            call create_bc("Wall",             bc_states(3,ZETA_MAX)%state)
+
+            call create_bc("Total Inlet",      bc_states(4,ETA_MIN)%state )
+            call create_bc("Wall",             bc_states(4,ETA_MAX)%state )
+            call create_bc("Wall",             bc_states(4,ZETA_MAX)%state )
+            call create_bc("Wall",             bc_states(4,ZETA_MAX)%state )
+
+
+            
+            ! Set Inlet options
+            call bc_states(4,ETA_MIN)%state%set_fcn_option("TotalPressure",   "val", 110000._rk)
+            call bc_states(4,ETA_MIN)%state%set_fcn_option("TotalTemperature","val", 300._rk   )
+
+            ! Set Outlet options
+            call bc_states(2,ETA_MIN)%state%set_fcn_option("Static Pressure", "val", 100000._rk )
+
+
+
+
+
+            call create_mesh_file("Cylinder : Diagonal : NonMatching MultipleDonor",this%gridfile,  &
+                                                            equation_sets=[string_t("Euler")],      &
+                                                            bc_states=bc_states)
+        end if
+
+
+
+
+
+        !
+        ! Read grid
+        !
+        call this%chidg%read_grid(this%gridfile,spacedim)
+        call this%chidg%read_boundaryconditions(this%gridfile)
+
+
+
+        !
+        ! Set ChiDG components
+        !
+        call this%chidg%set('Time Integrator',  time_integrator,  toptions)
+        call this%chidg%set('Nonlinear Solver', nonlinear_solver, noptions)
+        call this%chidg%set('Linear Solver',    linear_solver,    loptions)
+        call this%chidg%set('Preconditioner',   preconditioner)
+
+
+        !
+        ! Initialize solution data storage
+        !
+        call this%chidg%initialize_solution_domains(nterms_s)
+        call this%chidg%init('communication')
+        call this%chidg%init('chimera')
+        call this%chidg%initialize_solution_solver()
+
+
+
+
+        !
+        ! Initialize solution
+        !
+        call create_function(fcn,'constant')
+
+        call fcn%set_option('val',1.15_rk)
+        call initialize_variable(this%chidg%data,1,fcn) ! rho
+        call fcn%set_option('val',50.0_rk)
+        call initialize_variable(this%chidg%data,2,fcn) ! rhou
+        call fcn%set_option('val',ZERO)
+        call initialize_variable(this%chidg%data,3,fcn) ! rhov
+        call fcn%set_option('val',ZERO)
+        call initialize_variable(this%chidg%data,4,fcn) ! rhow
+        call fcn%set_option('val',248000.0_rk)
+        call initialize_variable(this%chidg%data,5,fcn) ! rhoE
+
+
+
+        !
+        ! Wrap-up initialization activities
+        !
+        call this%chidg%init('finalize')
+
+    end subroutine SetUp
+    !******************************************************************************************************
+
+
+    !>
+    !!
+    !!
+    !------------------------------------------------------------------------------------------------------
+    subroutine tearDown(this)
+        class(cylinder),  intent(inout)   :: this
+
+        ! Close ChiDG
+        call this%chidg%close('core')
+
+    end subroutine tearDown
+    !******************************************************************************************************
+
+
+
+
+
+
+
+
+
+
+    !>  Run the simulation.
+    !!
+    !!      - store the nonlinear convergence to the module variable so it can 
+    !!        be used by a test for nonlinear convergence.
+    !!      - test solution symmetry between some elements located symmetrically about the horizontal
+    !!        axis.
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   8/18/2016
+    !!
+    !!
+    !-------------------------------------------------------------------------------------------------------
+    @Test(npes=[1,2,4,7,10])
+    subroutine test_symmetry(self)
+        class(cylinder),  intent(inout)   :: self
+
+        integer(ik) :: npes_index, order_index, ielem_search, dom_search, elem_search, idom, ielem, send_size, ierr
+        integer(ik) :: doms_top(2), elems_top(2), doms_bot(2), elems_bot(2)
+        real(rk), allocatable   :: top_solution(:), bot_solution(:)
+        character(1)    :: leading_int
+
+        !
+        ! Get test case indices
+        !
+        npes_index  = get_npes_index(NRANK)
+        order_index = get_order_index(self%order)
+
+
+        !
+        ! Run ChiDG simulation
+        !
+        call self%chidg%run()
+
+
+        !
+        ! Store the nonlinear convergence of the calculation
+        !
+        nonlinear_convergence(npes_index,order_index) = self%chidg%nonlinear_solver%residual_norm
+
+
+
+        !
+        ! Test symmetry. Do some comparisons of the solution between symmetrically located elements
+        !
+        ! Block 1 is directly below the cylinder
+        ! Block 3 is directly above the cylinder
+        !
+        ! Note, in generating 
+        !
+        doms_top  = [1, 1]
+        elems_top = [33, 34]  !   domain 1. These are the top two middle elements of block 1
+
+
+        doms_bot  = [3, 3]
+        elems_bot = [34, 33]  !   domain 3. These are the bottom two middle elements of block 3
+
+
+        send_size = size(self%chidg%data%sdata%q%dom(1)%vecs(1)%vec)
+        allocate(top_solution(send_size), bot_solution(send_size))
+
+        do ielem_search = 1,size(elems_top)
+            
+            !
+            ! Find the top and bottom solutions and if found, send to the master process so they can be compared
+            !
+            dom_search = doms_top(ielem_search)
+            elem_search = elems_top(ielem_search)
+
+            do idom = 1,self%chidg%data%ndomains()
+                if (self%chidg%data%mesh(idom)%idomain_g == dom_search) then
+
+                    do ielem = 1,size(self%chidg%data%mesh(idom)%elems)
+                        if (self%chidg%data%mesh(idom)%elems(ielem)%ielement_g == elem_search) then
+
+                            call MPI_ISend(self%chidg%data%sdata%q%dom(idom)%vecs(ielem)%vec, send_size, MPI_REAL8, GLOBAL_MASTER, 0, ChiDG_COMM, tmp_request, ierr)
+
+                        end if
+                    end do !ielem
+
+                end if
+            end do !idom
+
+            dom_search = doms_bot(ielem_search)
+            elem_search = elems_bot(ielem_search)
+
+            do idom = 1,self%chidg%data%ndomains()
+                if (self%chidg%data%mesh(idom)%idomain_g == dom_search) then
+
+                    do ielem = 1,size(self%chidg%data%mesh(idom)%elems)
+                        if (self%chidg%data%mesh(idom)%elems(ielem)%ielement_g == elem_search) then
+
+                            call MPI_ISend(self%chidg%data%sdata%q%dom(idom)%vecs(ielem)%vec, send_size, MPI_REAL8, GLOBAL_MASTER, 1, ChiDG_COMM, tmp_request, ierr)
+
+                        end if
+                    end do !ielem
+
+                end if
+            end do !idom
+
+
+
+
+            !
+            ! Receive the top and bottom solutions and compare
+            !
+            if (IRANK == GLOBAL_MASTER) then
+                ! Receive top element solution
+                call MPI_Recv(top_solution, send_size, MPI_REAL8, MPI_ANY_SOURCE, 0, ChiDG_COMM, tmp_status, ierr)
+
+                ! Receive bot element solution
+                call MPI_Recv(bot_solution, send_size, MPI_REAL8, MPI_ANY_SOURCE, 1, ChiDG_COMM, tmp_status, ierr)
+
+                @assertEqual(abs(top_solution),abs(bot_solution), 1.e-2_rk)
+            end if
+
+
+            call MPI_Barrier(ChiDG_COMM,ierr)
+
+        end do !ielem
+
+
+    end subroutine test_symmetry
+    !*******************************************************************************************************
+
+
+
+
+
+
+
+
+    !>  Access the stored nonlinear convergence data(module global variable) and compare the parallel 
+    !!  convergence to the serial convergence for each (order) combination.
+    !!
+    !!  This assumes that the 'test_symmetry' has already been executed for all cases
+    !!  and numbers of processors to that the 'nonlinear_convergence' variable has been populated.
+    !!  So, we are relying on pFUnit to do things in order here. Works now, but I don't think
+    !!  there is a guaruntee that this can't change.
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   8/15/2016
+    !!
+    !-------------------------------------------------------------------------------------------------------
+    @Test(npes=[1])
+    subroutine test_nonlinear_convergence(self)
+        class(cylinder),  intent(inout)   :: self
+
+        integer(ik)             :: inpes, iorder
+        real(rk), allocatable   :: reference_convergence(:), test_convergence(:)
+
+        do inpes = 1,5
+            do iorder = 1,4
+
+                ! Get the serial convergence for this (igrid,iorder)
+                reference_convergence = nonlinear_convergence(1,iorder)%data()
+
+                ! Test that the current convergence for the processor count matches the serial convergence
+                test_convergence = nonlinear_convergence(inpes,iorder)%data()
+
+
+                @assertEqual(reference_convergence, test_convergence, 1.e-5_rk)
+
+            end do
+        end do
+
+
+    end subroutine test_nonlinear_convergence
+    !*******************************************************************************************************
+
+
+
+
+
+
+
+
+
+    ! Utility for returning the index associated with a certain number of procs
+    !------------------------------------------------------------------------------
+    function get_npes_index(numproc) result(inpes)
+        integer(ik) :: numproc
+        integer(ik) :: inpes
+
+        select case (numproc)
+            case(1)
+                inpes = 1
+            case(2)
+                inpes = 2
+            case(4)
+                inpes = 3
+            case(7)
+                inpes = 4
+            case(10)
+                inpes = 5
+
+        end select
+
+    end function get_npes_index
+    !******************************************************************************
+
+
+
+
+    ! Utility for returning the index associated with a certain order of accuracy
+    !------------------------------------------------------------------------------
+    function get_order_index(order) result(iorder)
+        integer(ik) :: order
+        integer(ik) :: iorder
+
+        select case (order)
+            case(1)
+                iorder = 1
+            case(2)
+                iorder = 2
+            case(3)
+                iorder = 3
+            case(4)
+                iorder = 4
+        end select
+
+    end function get_order_index
+    !******************************************************************************
+
+
+
+
+
+
+end module integration_cylinder_mod

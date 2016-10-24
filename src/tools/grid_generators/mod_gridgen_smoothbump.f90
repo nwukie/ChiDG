@@ -3,6 +3,7 @@ module mod_gridgen_smoothbump
     use mod_kinds,              only: rk, ik
     use mod_constants,          only: PI, ZERO, ONE, TWO, THREE, HALF, &
                                       XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX
+    use mod_string,             only: string_t
     use mod_bc,                 only: create_bc
     use type_bc_state_wrapper,  only: bc_state_wrapper_t
     use mod_plot3d_utilities,   only: get_block_points_plot3d, get_block_elements_plot3d, &
@@ -51,15 +52,15 @@ contains
     !!
     !!
     !-----------------------------------------------------------------------------
-    subroutine create_mesh_file__smoothbump(filename,nelem_xi,nelem_eta,nelem_zeta,equation_set1,bc_states1)
+    subroutine create_mesh_file__smoothbump(filename,nelem_xi,nelem_eta,nelem_zeta,equation_sets,bc_states)
         character(*),               intent(in)              :: filename
         integer(ik),                intent(in)              :: nelem_xi
         integer(ik),                intent(in)              :: nelem_eta
         integer(ik),                intent(in)              :: nelem_zeta
-        character(*),               intent(in), optional    :: equation_set1
-        type(bc_state_wrapper_t),   intent(in), optional    :: bc_states1(:)
+        type(string_t),             intent(in), optional    :: equation_sets(:)
+        type(bc_state_wrapper_t),   intent(in), optional    :: bc_states(:,:)
 
-        type(bc_state_wrapper_t)                    :: bc_states(6)
+        type(bc_state_wrapper_t)                    :: bc_states_set(6)
         integer(HID_T)                              :: file_id, dom_id, bcface_id
         integer(ik)                                 :: ierr, spacedim, mapping, bcface
         character(8)                                :: face_strings(6)
@@ -93,8 +94,8 @@ contains
         ! Add domains
         !
         spacedim = 3
-        if (present(equation_set1)) then
-            call add_domain_hdf(file_id,"01",nodes,elements,equation_set1,spacedim)
+        if (present(equation_sets)) then
+            call add_domain_hdf(file_id,"01",nodes,elements,equation_sets(1)%get(),spacedim)
         else
             call add_domain_hdf(file_id,"01",nodes,elements,"Euler",spacedim)
         end if
@@ -119,32 +120,32 @@ contains
 
 
 
-        if (present(bc_states1)) then
+        if (present(bc_states)) then
 
-            bc_states(XI_MIN)   = bc_states1(XI_MIN)
-            bc_states(XI_MAX)   = bc_states1(XI_MAX)
-            bc_states(ETA_MIN)  = bc_states1(ETA_MIN)
-            bc_states(ETA_MAX)  = bc_states1(ETA_MAX)
-            bc_states(ZETA_MIN) = bc_states1(ZETA_MIN)
-            bc_states(ZETA_MAX) = bc_states1(ZETA_MAX)
+            bc_states_set(XI_MIN)   = bc_states(1,XI_MIN)
+            bc_states_set(XI_MAX)   = bc_states(1,XI_MAX)
+            bc_states_set(ETA_MIN)  = bc_states(1,ETA_MIN)
+            bc_states_set(ETA_MAX)  = bc_states(1,ETA_MAX)
+            bc_states_set(ZETA_MIN) = bc_states(1,ZETA_MIN)
+            bc_states_set(ZETA_MAX) = bc_states(1,ZETA_MAX)
 
         else
 
             ! Create boundary conditions
-            call create_bc("Total Inlet",     bc_states(XI_MIN)%state)
-            call create_bc("Pressure Outlet", bc_states(XI_MAX)%state)
-            call create_bc("Wall", bc_states(ETA_MIN)%state )
-            call create_bc("Wall", bc_states(ETA_MAX)%state )
-            call create_bc("Wall", bc_states(ZETA_MIN)%state)
-            call create_bc("Wall", bc_states(ZETA_MAX)%state)
+            call create_bc("Total Inlet",     bc_states_set(XI_MIN)%state)
+            call create_bc("Pressure Outlet", bc_states_set(XI_MAX)%state)
+            call create_bc("Wall", bc_states_set(ETA_MIN)%state )
+            call create_bc("Wall", bc_states_set(ETA_MAX)%state )
+            call create_bc("Wall", bc_states_set(ZETA_MIN)%state)
+            call create_bc("Wall", bc_states_set(ZETA_MAX)%state)
 
 
             ! Set Inlet bc parameters
-            call bc_states(XI_MIN)%state%set_fcn_option("TotalPressure","val",110000._rk)
-            call bc_states(XI_MIN)%state%set_fcn_option("TotalTemperature","val",300._rk)
+            call bc_states_set(XI_MIN)%state%set_fcn_option("TotalPressure","val",110000._rk)
+            call bc_states_set(XI_MIN)%state%set_fcn_option("TotalTemperature","val",300._rk)
 
             ! Set Outlet bc parameter
-            call bc_states(XI_MAX)%state%set_fcn_option("Static Pressure","val",100000._rk)
+            call bc_states_set(XI_MAX)%state%set_fcn_option("Static Pressure","val",100000._rk)
 
         end if
 
@@ -159,7 +160,7 @@ contains
 
             call h5gopen_f(dom_id,"BoundaryConditions/"//trim(adjustl(face_strings(bcface))),bcface_id,ierr)
 
-            call add_bc_state_hdf(bcface_id,bc_states(bcface)%state)
+            call add_bc_state_hdf(bcface_id,bc_states_set(bcface)%state)
 
             call h5gclose_f(bcface_id,ierr)
 

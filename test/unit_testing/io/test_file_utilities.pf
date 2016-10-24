@@ -55,8 +55,9 @@ subroutine test_file_utilties_copy()
 
 
     !
-    ! Clean up by deleting file that was copied.
+    ! Clean-up, delete files
     !
+    call delete_file(fileorig)
     call delete_file(filecopy)
 
 end subroutine test_file_utilties_copy
@@ -124,6 +125,12 @@ subroutine test_file_utilties_delete()
     !
     @assertFalse(fileexists)
 
+
+
+    !
+    ! Clean-up, delete files
+    !
+    call delete_file(fileorig)
 
 end subroutine test_file_utilties_delete
 !####################################################################

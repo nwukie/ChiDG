@@ -2,6 +2,7 @@ module mod_test_utilities
 #include <messenger.h>
     use mod_kinds,                  only: rk,ik
     use mod_constants,              only: ZERO, ONE, TWO, THREE, FOUR, FIVE, SIX
+    use mod_string,                 only: string_t
     use mod_chidg_mpi,              only: IRANK
     use mod_plot3d_utilities,       only: get_block_points_plot3d,   &
                                           get_block_elements_plot3d, &
@@ -43,15 +44,13 @@ contains
     !!
     !!
     !---------------------------------------------------------------------------
-    subroutine create_mesh_file(selector, filename, equation_set1, equation_set2, &
-                                                    bc_states1, bc_states2,       &
+    subroutine create_mesh_file(selector, filename, equation_sets, &
+                                                    bc_states,     &
                                                     nelem_xi,nelem_eta,nelem_zeta,clusterx)
         character(*),                           intent(in)  :: selector
         character(*),                           intent(in)  :: filename
-        character(*),               optional,   intent(in)  :: equation_set1
-        character(*),               optional,   intent(in)  :: equation_set2
-        type(bc_state_wrapper_t),   optional,   intent(in)  :: bc_states1(:)
-        type(bc_state_wrapper_t),   optional,   intent(in)  :: bc_states2(:)
+        type(string_t),             optional,   intent(in)  :: equation_sets(:)
+        type(bc_state_wrapper_t),   optional,   intent(in)  :: bc_states(:,:)
         integer(ik),                optional,   intent(in)  :: nelem_xi
         integer(ik),                optional,   intent(in)  :: nelem_eta
         integer(ik),                optional,   intent(in)  :: nelem_zeta
@@ -68,34 +67,28 @@ contains
             ! Simple, linear, block grids
             !
             case("D1 E1 M1", "D1 E4 M1", "D1 E16 M1", "D1 E27 M1", "D1 NxNxN")
-                call create_mesh_file__singleblock(filename,trim(selector),equation_set1,bc_states1,nelem_xi,nelem_eta,nelem_zeta,clusterx)
+                call create_mesh_file__singleblock(filename,trim(selector),equation_sets,bc_states,nelem_xi,nelem_eta,nelem_zeta,clusterx)
 
             case("D2 E1 M1")
-                call create_mesh_file__multiblock(filename,"D1 E1 M1","D1 E1 M1",equation_set1,equation_set2,bc_states1,bc_states2)
+                call create_mesh_file__multiblock(filename,"D1 E1 M1","D1 E1 M1",equation_sets,bc_states)
             case("D2 E2 M1")
-                call create_mesh_file__multiblock(filename,"D1 E2 M1","D1 E2 M1",equation_set1,equation_set2,bc_states1,bc_states2)
+                call create_mesh_file__multiblock(filename,"D1 E2 M1","D1 E2 M1",equation_sets,bc_states)
             case("D2 E27 M1")
-                call create_mesh_file__multiblock(filename,"D1 E27 M1","D1 E27 M1",equation_set1,equation_set2,bc_states1,bc_states2)
+                call create_mesh_file__multiblock(filename,"D1 E27 M1","D1 E27 M1",equation_sets,bc_states)
 
             case("D2 E8 M1 : Abutting : Matching")
                 call create_mesh_file__D2E8M1(filename,abutting=.true.,             &
                                                        matching=.true.,             &
-                                                       equation_set1=equation_set1, &
-                                                       equation_set2=equation_set2, &
-                                                       bc_states1=bc_states1,       &
-                                                       bc_states2=bc_states2)
+                                                       equation_sets=equation_sets, &
+                                                       bc_states=bc_states)
             case("D2 E8 M1 : Overlapping : Matching")
                 call create_mesh_file__D2E8M1(filename,abutting=.false.,matching=.true.,    &
-                                                       equation_set1=equation_set1,         &
-                                                       equation_set2=equation_set2,         &
-                                                       bc_states1=bc_states1,               &
-                                                       bc_states2=bc_states2)
+                                                       equation_sets=equation_sets,         &
+                                                       bc_states=bc_states)
             case("D2 E8 M1 : Overlapping : NonMatching")
                 call create_mesh_file__D2E8M1(filename,abutting=.false.,matching=.false.,   &
-                                                       equation_set1=equation_set1,         &
-                                                       equation_set2=equation_set2,         &
-                                                       bc_states1=bc_states1,               &
-                                                       bc_states2=bc_states2)
+                                                       equation_sets=equation_sets,         &
+                                                       bc_states=bc_states)
 
             !
             ! Circular cylinder
@@ -115,8 +108,8 @@ contains
                 call create_mesh_file__smoothbump(filename,nelem_xi  =nelem_xi,         &
                                                            nelem_eta =nelem_eta,        &
                                                            nelem_zeta=nelem_zeta,       &
-                                                           equation_set1=equation_set1, &
-                                                           bc_states1=bc_states1)
+                                                           equation_sets=equation_sets, &
+                                                           bc_states=bc_states)
 
             case default
                 user_msg = "create_mesh_file: There was no valid case that matched the incoming string"

@@ -26,6 +26,6 @@ add_test_target(containers unit ${containers_sources})
 
 
 
-# Copy files needed to test containers
-file(GLOB TEST_FILES "*.h5")
-file(COPY ${TEST_FILES} DESTINATION ${CMAKE_BINARY_DIR}/bin)
+## Copy files needed to test containers
+#file(GLOB TEST_FILES "*.h5")
+#file(COPY ${TEST_FILES} DESTINATION ${CMAKE_BINARY_DIR}/bin)

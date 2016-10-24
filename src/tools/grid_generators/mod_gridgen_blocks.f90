@@ -2,6 +2,7 @@ module mod_gridgen_blocks
 #include <messenger.h>
     use mod_kinds,              only: rk, ik
     use mod_constants,          only: ZERO, ONE, TWO, THREE, FOUR, SIX, PI
+    use mod_string,             only: string_t
     use mod_bc,                 only: create_bc
     use mod_plot3d_utilities,   only: get_block_points_plot3d, &
                                       get_block_elements_plot3d, &
@@ -76,11 +77,11 @@ contains
     !!
     !!
     !---------------------------------------------------------------------------------------
-    subroutine create_mesh_file__singleblock(filename,grid,equation_set1,bc_states1,nelem_xi,nelem_eta,nelem_zeta,clusterx)
+    subroutine create_mesh_file__singleblock(filename,grid,equation_sets,bc_states,nelem_xi,nelem_eta,nelem_zeta,clusterx)
         character(*),               intent(in)              :: filename
         character(*),               intent(in)              :: grid
-        character(*),               intent(in), optional    :: equation_set1
-        type(bc_state_wrapper_t),   intent(in), optional    :: bc_states1(:)
+        type(string_t),             intent(in), optional    :: equation_sets(:)
+        type(bc_state_wrapper_t),   intent(in), optional    :: bc_states(:,:)
         integer(ik),                intent(in), optional    :: nelem_xi
         integer(ik),                intent(in), optional    :: nelem_eta
         integer(ik),                intent(in), optional    :: nelem_zeta
@@ -139,8 +140,8 @@ contains
         !
         spacedim = 3
 
-        if ( present(equation_set1) ) then
-            call add_domain_hdf(file_id,"01",nodes,elements,equation_set1,spacedim)
+        if ( present(equation_sets) ) then
+            call add_domain_hdf(file_id,"01",nodes,elements,equation_sets(1)%get(),spacedim)
         else
             call add_domain_hdf(file_id,"01",nodes,elements,"Scalar Advection",spacedim)
         end if
@@ -173,8 +174,8 @@ contains
         do bcface = 1,size(face_strings)
             call h5gopen_f(dom_id,"BoundaryConditions/"//trim(adjustl(face_strings(bcface))),bcface_id,ierr)
 
-            if (present(bc_states1)) then
-                call add_bc_state_hdf(bcface_id,bc_states1(bcface)%state)
+            if (present(bc_states)) then
+                call add_bc_state_hdf(bcface_id,bc_states(1,bcface)%state)
             else
                 call add_bc_state_hdf(bcface_id,bc_state)
             end if
@@ -212,14 +213,12 @@ contains
     !!
     !!
     !-------------------------------------------------------------------------------------
-    subroutine create_mesh_file__multiblock(filename,block1,block2,equation_set1,equation_set2,bc_states1,bc_states2)
+    subroutine create_mesh_file__multiblock(filename,block1,block2,equation_sets,bc_states)
         character(*),               intent(in)              :: filename
         character(*),               intent(in)              :: block1
         character(*),               intent(in)              :: block2
-        character(*),               intent(in), optional    :: equation_set1
-        character(*),               intent(in), optional    :: equation_set2
-        type(bc_state_wrapper_t),   intent(in), optional    :: bc_states1(:)
-        type(bc_state_wrapper_t),   intent(in), optional    :: bc_states2(:)
+        type(string_t),             intent(in), optional    :: equation_sets(:)
+        type(bc_state_wrapper_t),   intent(in), optional    :: bc_states(:,:)
 
         class(bc_state_t),  allocatable                 :: bc_state
         character(8)                                    :: faces(6)
@@ -417,14 +416,12 @@ contains
     !!
     !!
     !---------------------------------------------------------------------------------------
-    subroutine create_mesh_file__D2E8M1(filename,abutting,matching,equation_set1,equation_set2,bc_states1,bc_states2)
+    subroutine create_mesh_file__D2E8M1(filename,abutting,matching,equation_sets,bc_states)
         character(*),               intent(in)              :: filename
         logical,                    intent(in)              :: abutting
         logical,                    intent(in)              :: matching
-        character(*),               intent(in), optional    :: equation_set1
-        character(*),               intent(in), optional    :: equation_set2
-        type(bc_state_wrapper_t),   intent(in), optional    :: bc_states1(:)
-        type(bc_state_wrapper_t),   intent(in), optional    :: bc_states2(:)
+        type(string_t),             intent(in), optional    :: equation_sets(:)
+        type(bc_state_wrapper_t),   intent(in), optional    :: bc_states(:,:)
 
         class(bc_state_t),  allocatable                 :: bc_state
         character(8)                                    :: faces(5)

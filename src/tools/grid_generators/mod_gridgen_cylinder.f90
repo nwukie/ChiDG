@@ -2,6 +2,7 @@ module mod_gridgen_cylinder
 #include <messenger.h>
     use mod_kinds,              only: rk, ik
     use mod_constants,          only: PI, ZERO, ONE, TWO, THREE, HALF
+    use mod_string,             only: string_t
     use mod_bc,                 only: create_bc
     use mod_plot3d_utilities,   only: get_block_points_plot3d, get_block_elements_plot3d, &
                                       get_block_boundary_faces_plot3d
@@ -12,6 +13,7 @@ module mod_gridgen_cylinder
 
     use type_point,             only: point_t
     use type_bc_state,          only: bc_state_t
+    use type_bc_state_wrapper,  only: bc_state_wrapper_t
     implicit none
 
 
@@ -56,9 +58,11 @@ contains
     !!
     !!
     !----------------------------------------------------------------------------
-    subroutine create_mesh_file__cylinder(filename,overlap_deg)
-        character(*),   intent(in)  :: filename
-        real(rk),       intent(in)  :: overlap_deg
+    subroutine create_mesh_file__cylinder(filename,overlap_deg,equation_sets, bc_states)
+        character(*),               intent(in)              :: filename
+        real(rk),                   intent(in)              :: overlap_deg
+        type(string_t),             intent(in), optional    :: equation_sets(:)
+        type(bc_state_wrapper_t),   intent(in), optional    :: bc_states(:,:)
 
         integer(ik) :: npt_xi, npt_eta, npt_zeta, &
                        nelem_xi, nelem_eta, nelem_zeta, &

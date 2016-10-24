@@ -1,8 +1,0 @@
-D2_E8_M1
-
-This is a single domain(D1), block-structured grid, with 8 elements EACH(E8), with linear element mappings(M1).
-
-The block-structure is 2x2x2. There are two of these blocks positioned end-to end with abutting faces.
-
-
-

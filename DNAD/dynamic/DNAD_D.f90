@@ -1575,7 +1575,7 @@ CONTAINS
                        
     END FUNCTION LOG_D_D
 
-!-----------------------------------------
+    !-----------------------------------------
     ! LOG OF dual numbers,defined for u%x>0 only
     ! the error control should be done in the original code
     ! in other words, if u%x<=0, it is not possible to obtain LOG.
@@ -1599,11 +1599,13 @@ CONTAINS
     !
     ! <u,up>.<v,vp>=<u.v,up.v+u.vp>
     !----------------------------------------
-    FUNCTION MATMUL_DD_D(u,v) RESULT(res)
-         TYPE (AD_D), INTENT(IN)::u(:,:),v(:,:)
-         TYPE (AD_D)::res(SIZE(u,1),SIZE(v,2))
-         REAL(DBL_AD) :: xp_ad_u(size(u,1),size(u,2)), xp_ad_v(size(v,1),size(v,2)), xp_ad(size(res,1),size(res,2))
-         INTEGER:: i,j,k
+    function MATMUL_DD_D(u,v) result(res)
+         type(AD_D), intent(in) :: u(:,:)
+         type(AD_D), intent(in) :: v(:,:)
+
+         type(AD_D)     :: res(size(u,1),size(v,2))
+         real(DBL_AD)   :: xp_ad_u(size(u,1),size(u,2)), xp_ad_v(size(v,1),size(v,2)), xp_ad(size(res,1),size(res,2))
+         integer        :: i,j,k
 
          do k = 1,size(v,2)
             do j = 1,size(u,1)
@@ -1612,7 +1614,7 @@ CONTAINS
         end do
 
 
-         res%x_ad_ = MATMUL(u%x_ad_,v%x_ad_)
+         res%x_ad_ = matmul(u%x_ad_,v%x_ad_)
          DO i=1,size(u(1,1)%xp_ad_)
             ! Assemble derivative components for U
             do k = 1,size(u,2)
@@ -1628,7 +1630,7 @@ CONTAINS
                 end do
             end do
 
-            xp_ad = MATMUL(xp_ad_u,v%x_ad_) + MATMUL(u%x_ad_,xp_ad_v)
+            xp_ad = matmul(xp_ad_u,v%x_ad_) + matmul(u%x_ad_,xp_ad_v)
 !            res%xp_ad_(i)= MATMUL(xp_ad_u,v%x_ad_) + MATMUL(u%x_ad_,xp_ad_v)
 
             do k = 1,size(res,2)
@@ -1641,7 +1643,10 @@ CONTAINS
 !         DO i=1,NDV_AD
 !            res%xp_ad_(i)= MATMUL(u%xp_ad_(i),v%x_ad_) + MATMUL(u%x_ad_,v%xp_ad_(i))
 !         ENDDO
-    END FUNCTION MATMUL_DD_D
+    end function MATMUL_DD_D
+    !**************************************************************************
+
+
 
     !-----------------------------------------
     ! MULTIPLY a dual number matrix with a dual number 
@@ -1649,17 +1654,18 @@ CONTAINS
     !
     ! <u,up>.<v,vp>=<u.v,up.v+u.vp>
     !----------------------------------------
-    FUNCTION MATMUL_DV_D(u,v) RESULT(res)
-         TYPE (AD_D), INTENT(IN)::u(:,:),v(:)
-         TYPE (AD_D)::res(SIZE(u,1))
-         REAL(DBL_AD) :: xp_ad_u(size(u,1),size(u,2)), xp_ad_v(size(v)), xp_ad(size(res))
-         INTEGER:: i,j,k
+    function MATMUL_DV_D(u,v) result(res)
+         type(AD_D), intent(in)::u(:,:),v(:)
+
+         type(AD_D)     :: res(size(u,1))
+         real(DBL_AD)   :: xp_ad_u(size(u,1),size(u,2)), xp_ad_v(size(v)), xp_ad(size(res))
+         integer        :: i,j,k
 
          do j = 1,size(u,1)
                 allocate(res(j)%xp_ad_(size(u(1,1)%xp_ad_)))
          end do
 
-         res%x_ad_ = MATMUL(u%x_ad_,v%x_ad_)
+         res%x_ad_ = matmul(u%x_ad_,v%x_ad_)
          DO i=1,size(u(1,1)%xp_ad_)
             ! Assemble derivative components for U
             do k = 1,size(u,2)
@@ -1674,7 +1680,7 @@ CONTAINS
             end do
 
 
-           xp_ad = MATMUL(xp_ad_u,v%x_ad_) + MATMUL(u%x_ad_,xp_ad_v)
+           xp_ad = matmul(xp_ad_u,v%x_ad_) + matmul(u%x_ad_,xp_ad_v)
 
            do j = 1,size(res)
                res(j)%xp_ad_(i) = xp_ad(j)
@@ -1684,7 +1690,7 @@ CONTAINS
 !         DO i=1,NDV_AD
 !            res%xp_ad_(i)= MATMUL(u%xp_ad_(i),v%x_ad_) + MATMUL(u%x_ad_,v%xp_ad_(i))
 !         ENDDO
-    END FUNCTION MATMUL_DV_D
+    end function MATMUL_DV_D
 
 
 
@@ -1782,15 +1788,14 @@ CONTAINS
     !
     ! <u,up>.<v,vp>=<u.v,up.v+u.vp>
     !----------------------------------------
-    FUNCTION MATMUL_MV_RD_D(u,v) RESULT(res)
-        REAL(rk),   intent(in)          :: u(:,:)
-        TYPE(AD_D), intent(in)          :: v(:)
+    function MATMUL_MV_RD_D(u,v) result(res)
+        real(rk),   intent(in)          :: u(:,:)
+        type(AD_D), intent(in)          :: v(:)
 
-        TYPE(AD_D)                                          :: res(size(u,1))  !> Causes memory leak in ifort 15.0.3. Doesn't seem to be deallocating everything correctly
-   !     REAL(rk), dimension(size(u,1),size(v(1)%xp_ad_))    :: res_xp_m
-        real(rk), dimension(size(v))                        :: tmp
-        real(rk), dimension(size(u,1))                      :: tmp2
-        INTEGER:: i,j,vecsize
+        type(AD_D)                      :: res(size(u,1))  !> Causes memory leak in ifort 15.0.3. Doesn't seem to be deallocating everything correctly
+        real(rk), dimension(size(v))    :: tmp
+        real(rk), dimension(size(u,1))  :: tmp2
+        integer                         :: i,j,vecsize
 
 
         do j = 1,size(res)
@@ -1818,8 +1823,8 @@ CONTAINS
         ! Multiply derivatives and accumulate
         !
         vecsize = size(v(1)%xp_ad_)
-        do i = 1,size(u,1)
-            do j = 1,size(u,2)
+        do j = 1,size(u,2)
+            do i = 1,size(u,1)
 !                res(i)%xp_ad_ = res(i)%xp_ad_ + u(i,j)*v(j)%xp_ad_
                 call DAXPY(vecsize,u(i,j),v(j)%xp_ad_,1,res(i)%xp_ad_,1)    ! Noticable improvement
             end do
@@ -1827,7 +1832,8 @@ CONTAINS
 
 
 
-    END FUNCTION MATMUL_MV_RD_D
+    end function MATMUL_MV_RD_D
+    !*****************************************************************************************
 
 
 

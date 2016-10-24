@@ -85,7 +85,7 @@ contains
         val =u
 
         ! Set to constant
-        val = ZERO
+        val = ONE
 
     end function compute_cx
     !*******************************************************************************

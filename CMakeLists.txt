@@ -260,7 +260,8 @@ include_directories(${CMAKE_SOURCE_DIR}/src/tools)    # Need include here for ma
 #----------------------------------------------------------------------------------------------
 #                                         Build library
 #----------------------------------------------------------------------------------------------
-add_library(coredg SHARED ${LIB_SRCS})
+#add_library(coredg SHARED ${LIB_SRCS})
+add_library(coredg STATIC ${LIB_SRCS})
 target_link_libraries(coredg 
                       ${HDF5_LIBRARIES} ${HDF5_HL_LIBRARIES} 
                       ${LAPACK_LIBRARIES}

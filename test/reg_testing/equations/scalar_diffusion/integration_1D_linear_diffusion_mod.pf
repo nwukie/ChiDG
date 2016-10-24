@@ -448,7 +448,8 @@ contains
 
         character(len=200) :: buffer
 
-        write(buffer,'( "(gridfile, order)=","(", A30,",", I2, ")" )') this%gridfile, this%order
+        !write(buffer,'( "(gridfile, order)=","(", A30,",", I2, ")" )') this%gridfile, this%order
+        write(buffer,'( "(nelem_xi, order)=","(", I2,",", I1, ")" )') this%nelem_xi, this%order
         string = trim(buffer)
 
     end function toString

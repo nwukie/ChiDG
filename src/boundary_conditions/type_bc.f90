@@ -82,7 +82,7 @@ contains
         type(boundary_connectivity_t),  intent(in)      :: bconnectivity
 
         type(point_t)                   :: pnt, point_one, point_two, point_three
-        character(len=:),   allocatable :: bcname        
+        character(len=:),   allocatable :: bcname, user_msg
         real(rk)                        :: time, x, y, z
         integer(ik)                     :: nelem_xi, nelem_eta, nelem_zeta, nelem_bc, ielem_bc,         & 
                                            xi_begin, eta_begin, zeta_begin, xi_end, eta_end, zeta_end,  & 
@@ -147,7 +147,7 @@ contains
                     y = mesh%nodes(bconnectivity%data(ielem_bc)%data(1))%c2_
                     z = mesh%nodes(bconnectivity%data(ielem_bc)%data(1))%c3_
                     point_one = mesh%elems(ielem)%computational_point(x,y,z)
-
+                    
 
                     x = mesh%nodes(bconnectivity%data(ielem_bc)%data(2))%c1_
                     y = mesh%nodes(bconnectivity%data(ielem_bc)%data(2))%c2_
@@ -155,15 +155,23 @@ contains
                     point_two = mesh%elems(ielem)%computational_point(x,y,z)
 
 
+
                     x = mesh%nodes(bconnectivity%data(ielem_bc)%data(nface_nodes))%c1_
                     y = mesh%nodes(bconnectivity%data(ielem_bc)%data(nface_nodes))%c2_
                     z = mesh%nodes(bconnectivity%data(ielem_bc)%data(nface_nodes))%c3_
                     point_three = mesh%elems(ielem)%computational_point(x,y,z)
 
+                    ! Check to make sure the computational point coordinates were all valid and found.
+                    user_msg = "bc%init_bc: BC connectivity node not found on element face. Invalid point detected."
+                    if ( (.not. point_one%valid()) .or. &
+                         (.not. point_two%valid()) .or. &
+                         (.not. point_three%valid()) ) call chidg_signal(FATAL,user_msg)
+
 
                     xi_face   = ( (abs(point_one%c1_ - point_two%c1_) < 10000.*RKTOL)  .and. (abs(point_one%c1_ - point_three%c1_) < 10000.*RKTOL) )
                     eta_face  = ( (abs(point_one%c2_ - point_two%c2_) < 10000.*RKTOL)  .and. (abs(point_one%c2_ - point_three%c2_) < 10000.*RKTOL) )
                     zeta_face = ( (abs(point_one%c3_ - point_two%c3_) < 10000.*RKTOL)  .and. (abs(point_one%c3_ - point_three%c3_) < 10000.*RKTOL) )
+
 
 
                     ! Determine iface by value of xi,eta,zeta

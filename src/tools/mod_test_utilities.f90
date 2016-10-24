@@ -22,6 +22,7 @@ module mod_test_utilities
                                           meshgen_40x15x1_linear, meshgen_15x15x1_linear,   &
                                           meshgen_15x15x2_linear, meshgen_15x15x3_linear
     use mod_gridgen_cylinder,       only: create_mesh_file__cylinder
+    use mod_gridgen_smoothbump,     only: create_mesh_file__smoothbump
 
     use type_point,                 only: point_t
     use type_bc_state_wrapper,      only: bc_state_wrapper_t
@@ -106,6 +107,16 @@ contains
             case("Cylinder : Diagonal : NonMatching MultipleDonor")
                 call create_mesh_file__cylinder(filename,overlap_deg=5.0_rk)
 
+
+            !
+            ! Smooth Bump
+            !
+            case("Smooth Bump")
+                call create_mesh_file__smoothbump(filename,nelem_xi  =nelem_xi,         &
+                                                           nelem_eta =nelem_eta,        &
+                                                           nelem_zeta=nelem_zeta,       &
+                                                           equation_set1=equation_set1, &
+                                                           bc_states1=bc_states1)
 
             case default
                 user_msg = "create_mesh_file: There was no valid case that matched the incoming string"

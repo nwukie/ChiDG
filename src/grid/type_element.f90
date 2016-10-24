@@ -1029,14 +1029,12 @@ contains
             zn = self%z(xi,eta,zeta)
 
 
-
             !
             ! Assemble residual vector
             !
             R(1) = -(xn - x)
             R(2) = -(yn - y)
             R(3) = -(zn - z)
-
 
 
             !
@@ -1051,7 +1049,6 @@ contains
             mat(1,3) = self%metric_point(X_DIR,ZETA_DIR,xi,eta,zeta)
             mat(2,3) = self%metric_point(Y_DIR,ZETA_DIR,xi,eta,zeta)
             mat(3,3) = self%metric_point(Z_DIR,ZETA_DIR,xi,eta,zeta)
-
 
 
             !

@@ -1,4 +1,4 @@
-add_test_sources(equations_parallel
+add_test_sources(equations_euler
                  integration_naca2412_mod.pf
                  )
 

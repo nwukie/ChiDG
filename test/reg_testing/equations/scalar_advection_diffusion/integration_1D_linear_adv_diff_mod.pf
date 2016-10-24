@@ -13,6 +13,7 @@
 !       Dirichlet U(x=0) = 1
 !       Dirichlet U(x=1) = 0
 !
+!
 !   Analytical Solution is:
 !       numerator   = 1 - exp( (x-1) * cx/mu )
 !       denominator = 1 - exp(-cx/mu)
@@ -20,26 +21,37 @@
 !       U(x) = numerator/denominator    for x in [0,1]
 !
 !
+!   Scalar coefficient models are:
+!       vec(c) = [1.0, 0.0, 0.0]
+!        mu    = 0.05
+!
 !
 !   Tests that are being run here:
 !       - Run the calculation on multiple grids with order of accuracy 2-5
 !       - Test for convergence in 1 Newton iteration (linear problem)
 !       - Test convergence rates for spatial orders of accuracy
 !
+!   @author Nathan A. Wukie
+!   @date   10/23/2016
+!
 !--------------------------------------------------------------------------------
 module integration_1D_linear_adv_diff_mod
 #include <messenger.h>
     use pfunit_mod
-    use mod_kinds,          only: rk, ik
-    use mod_constants,      only: ZERO, THREE, IO_DESTINATION, ONE, TWO, PI, FOUR
-    use type_chidg,         only: chidg_t
-    use type_chidg_data,    only: chidg_data_t
-    use mod_bc,             only: create_bc
-    use type_function,      only: function_t
-    use type_ivector,       only: ivector_t
-    use mod_function,       only: create_function
-    use mod_grid_operators, only: initialize_variable
-    use mod_interpolate,    only: interpolate_element_standard
+    use mod_kinds,              only: rk, ik
+    use mod_constants,          only: ZERO, THREE, IO_DESTINATION, ONE, TWO, PI, FOUR, &
+                                      XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX
+    use type_chidg,             only: chidg_t
+    use type_chidg_data,        only: chidg_data_t
+    use mod_bc,                 only: create_bc
+    use type_bc_state_wrapper,  only: bc_state_wrapper_t
+    use type_function,          only: function_t
+    use type_ivector,           only: ivector_t
+    use mod_function,           only: create_function
+    use mod_grid_operators,     only: initialize_variable
+    use mod_interpolate,        only: interpolate_element_standard
+    use mod_test_utilities,     only: create_mesh_file
+    use mod_file_utilities,     only: delete_file
 
     use mod_chidg_mpi,      only: IRANK, NRANK, ChiDG_COMM
     use mpi_f08,            only: MPI_COMM, MPI_REAL8, MPI_SUM
@@ -83,13 +95,21 @@ module integration_1D_linear_adv_diff_mod
 
 
 
-    !>
+    !>  A scalar coefficient model for advection and diffusion terms.
+    !!
+    !!     Advection    +     Diffusion
+    !!  div(\vec{c} u)  +  div(-mu grad(u))
+    !!
+    !!  This model defines routines for computing:
+    !!      \vec{c} :: The advection velocity vector
+    !!      mu      :: The scalar diffusion coefficient
+    !!
     !!
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   9/21/2016
     !!
     !!
-    !------------------------------------------------------------------------------
+    !----------------------------------------------------------------------------------------
     type, extends(scalar_t) :: test_1D_advection_diffusion_model_t
 
     contains
@@ -100,7 +120,7 @@ module integration_1D_linear_adv_diff_mod
         procedure   :: compute_cz
 
     end type test_1D_advection_diffusion_model_t
-    !******************************************************************************
+    !****************************************************************************************
 
 
 
@@ -111,7 +131,7 @@ module integration_1D_linear_adv_diff_mod
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   8/19/2016
     !!
-    !-----------------------------------------------------------------------------------------------------
+    !-----------------------------------------------------------------------------------------
     type, extends(equation_builder_t), public :: test_1D_linear_advection_diffusion_builder_t
 
 
@@ -121,7 +141,7 @@ module integration_1D_linear_adv_diff_mod
         procedure   :: build
 
     end type test_1D_linear_advection_diffusion_builder_t
-    !******************************************************************************************************
+    !*****************************************************************************************
 
 
 
@@ -136,15 +156,18 @@ module integration_1D_linear_adv_diff_mod
     !!  @author Nathan A. Wukie
     !!  @author Nathan A. Wukie (AFRL)
     !!
-    !-------------------------------------------------------------------------------
+    !----------------------------------------------------------------------------------------
     @TestParameter
     type, extends(MpiTestParameter) :: case_grid_order
+
+        integer(ik)     :: nelem_xi
         character(100)  :: gridfile
         integer(ik)     :: order
+
     contains
         procedure   :: toString
     end type case_grid_order
-    !*******************************************************************************
+    !****************************************************************************************
 
 
 
@@ -157,30 +180,33 @@ module integration_1D_linear_adv_diff_mod
     !!  @author Nathan A. Wukie 
     !!  @author Nathan A. Wukie (AFRL)
     !!
-    !-------------------------------------------------------------------------------
+    !----------------------------------------------------------------------------------------
     @TestCase(testParameters={getParameters()}, constructor=newTest)
     type, extends(MpiTestCase) :: linear_advection_diffusion_1D
+
+        integer(ik)     :: nelem_xi
         character(100)  :: gridfile
         integer(ik)     :: order
 
         type(chidg_t)   :: chidg
         type(mpi_comm)  :: ChiDG_COMM
+
     contains
         procedure   :: setUp
         procedure   :: tearDown
     end type linear_advection_diffusion_1D
-    !*******************************************************************************
+    !****************************************************************************************
 
 
 
     !> Simple container to hold arbitrary length file names. That way, we can have
     !! an array of filenames that get looped through.
     !!
-    !-------------------------------------------------------------------------------
+    !----------------------------------------------------------------------------------------
     type :: string
         character(len=:), allocatable   :: str
     end type
-    !*******************************************************************************
+    !****************************************************************************************
 
 
 
@@ -196,7 +222,7 @@ contains
 
 
 
-    !>
+    !>  Implement the function for computing the scalar diffusion coefficient, mu
     !!
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   9/21/2016
@@ -223,7 +249,7 @@ contains
 
 
 
-    !>
+    !>  Implement the function for computing the scalar advection coefficient, cx
     !!
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   9/21/2016
@@ -254,7 +280,7 @@ contains
 
 
 
-    !>
+    !>  Implement the function for computing the scalar advection coefficient, cy
     !!
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   9/21/2016
@@ -284,7 +310,7 @@ contains
 
 
 
-    !>
+    !>  Implement the function for computing the scalar advection coefficient, cz
     !!
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   9/21/2016
@@ -326,14 +352,14 @@ contains
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   8/30/2016
     !!
-    !---------------------------------------------------------------------------------------------
+    !-----------------------------------------------------------------------------------------
     subroutine init_builder(self)
         class(test_1D_linear_advection_diffusion_builder_t),   intent(inout)  :: self
 
         call self%set_name('Test 1D Linear Advection Diffusion')
 
     end subroutine init_builder
-    !*********************************************************************************************
+    !*****************************************************************************************
 
     
 
@@ -344,7 +370,7 @@ contains
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   9/19/2016
     !!
-    !-------------------------------------------------------------------------------------------------------
+    !-----------------------------------------------------------------------------------------
     function build(self,blueprint) result(linear_advection_diffusion_eqn)
         class(test_1D_linear_advection_diffusion_builder_t),    intent(in)  :: self
         character(len=*),                                       intent(in)  :: blueprint
@@ -377,7 +403,7 @@ contains
 
 
     end function build
-    !*********************************************************************************************************
+    !*****************************************************************************************
 
 
 
@@ -403,6 +429,7 @@ contains
         type(case_grid_order),  intent(in)          :: test_parameter
         type(linear_advection_diffusion_1D)    :: test
 
+        test%nelem_xi    = test_parameter%nelem_xi
         test%gridfile    = test_parameter%gridfile
         test%order       = test_parameter%order
 
@@ -418,57 +445,54 @@ contains
     function getParameters() result(params)
         type(case_grid_order), allocatable :: params(:)
     
+        integer(ik),        allocatable :: nelem_xi(:)
         type(string),       allocatable :: files(:)
         integer(ik),        allocatable :: orders(:)
         integer(ik) :: icase
 
 
-        files = [ string('1D_linear_advection_diffusion_60x1x1.h5'), &
-                  string('1D_linear_advection_diffusion_60x1x1.h5'), &
-                  string('1D_linear_advection_diffusion_60x1x1.h5'), &
-                  string('1D_linear_advection_diffusion_120x1x1.h5'), &
-                  string('1D_linear_advection_diffusion_120x1x1.h5'), &
-                  string('1D_linear_advection_diffusion_120x1x1.h5'), &
-                  string('1D_linear_advection_diffusion_60x1x1_chimera.h5'), &
-                  string('1D_linear_advection_diffusion_60x1x1_chimera.h5'), &
-                  string('1D_linear_advection_diffusion_60x1x1_chimera.h5'), &
-                  string('1D_linear_advection_diffusion_120x1x1_chimera.h5'), &
-                  string('1D_linear_advection_diffusion_120x1x1_chimera.h5'), &
-                  string('1D_linear_advection_diffusion_120x1x1_chimera.h5')  &
-                  ]
+        nelem_xi = [  60,  60,  60, &
+                     120, 120, 120  ]
 
 
-        orders = [ 2, &
-                   3, &
-                   4, &
-                   2, &
-                   3, &
-                   4, &
-                   2, &
-                   3, &
-                   4, &
-                   2, &
-                   3, &
-                   4  &
-                   ]
+        files = [ string('1D_linear_advection_diffusion_60x1x1.h5'),  &
+                  string('1D_linear_advection_diffusion_60x1x1.h5'),  &
+                  string('1D_linear_advection_diffusion_60x1x1.h5'),  &
+                  string('1D_linear_advection_diffusion_120x1x1.h5'), &
+                  string('1D_linear_advection_diffusion_120x1x1.h5'), &
+                  string('1D_linear_advection_diffusion_120x1x1.h5') ]
+!                  string('1D_linear_advection_diffusion_60x1x1_chimera.h5'), &
+!                  string('1D_linear_advection_diffusion_60x1x1_chimera.h5'), &
+!                  string('1D_linear_advection_diffusion_60x1x1_chimera.h5'), &
+!                  string('1D_linear_advection_diffusion_120x1x1_chimera.h5'), &
+!                  string('1D_linear_advection_diffusion_120x1x1_chimera.h5'), &
+!                  string('1D_linear_advection_diffusion_120x1x1_chimera.h5')  &
+!                  ]
+
+
+        orders = [ 2, 3, 4, &
+!                   2, 3, 4, &
+!                   2, 3, 4, &
+                   2, 3, 4  ]
 
 
         !Initialize the test case container with the parameter
         allocate(params(size(files)))
         do icase = 1,size(files)
-            params(icase)%gridfile    = files(icase)%str
-            params(icase)%order       = orders(icase)
+            params(icase)%nelem_xi = nelem_xi(icase)
+            params(icase)%gridfile = files(icase)%str
+            params(icase)%order    = orders(icase)
         end do
 
     end function getParameters
-    !*******************************************************************************************
+    !*****************************************************************************************
 
 
 
     !>  Reporting the parameters of the test
     !!
     !!
-    !-------------------------------------------------------------------------------------------
+    !----------------------------------------------------------------------------------------
     function toString(this) result(string)
         class (case_grid_order),    intent(in)  :: this
         character(:), allocatable   :: string
@@ -479,7 +503,7 @@ contains
         string = trim(buffer)
 
     end function toString
-    !********************************************************************************************
+    !****************************************************************************************
 
 
 
@@ -498,10 +522,11 @@ contains
     !!  @author Nathan A. Wukie (AFRL)
     !!
     !!
-    !--------------------------------------------------------------------------------------------
+    !----------------------------------------------------------------------------------------
     subroutine setUp(this)
         class(linear_advection_diffusion_1D),  intent(inout)   :: this
 
+        type(bc_state_wrapper_t)        :: bc_states(6)
         class(function_t),  allocatable :: fcn
 
         
@@ -570,6 +595,31 @@ contains
         call this%chidg%init('env',this%ChiDG_COMM)
 
 
+
+        !
+        ! Create mesh
+        !
+        if (IRANK == GLOBAL_MASTER) then
+            call create_bc("Scalar Value", bc_states(XI_MIN)%state )
+            call create_bc("Scalar Value", bc_states(XI_MAX)%state )
+            call create_bc("Scalar Extrapolate", bc_states(ETA_MIN)%state )
+            call create_bc("Scalar Extrapolate", bc_states(ETA_MAX)%state )
+            call create_bc("Scalar Extrapolate", bc_states(ZETA_MIN)%state)
+            call create_bc("Scalar Extrapolate", bc_states(ZETA_MAX)%state)
+            
+            call bc_states(XI_MIN)%state%set_fcn_option("Value","val",ONE)
+            call bc_states(XI_MAX)%state%set_fcn_option("Value","val",ZERO)
+
+
+            call create_mesh_file('D1 NxNxN',this%gridfile,equation_set1="Test 1D Linear Advection Diffusion",  &
+                                                           bc_states1=bc_states,                                &
+                                                           nelem_xi  =this%nelem_xi,                            &
+                                                           nelem_eta =1,                                        &
+                                                           nelem_zeta=1)
+        end if
+
+
+
         !
         ! Read grid
         !
@@ -608,7 +658,7 @@ contains
         call this%chidg%init('finalize')
 
     end subroutine SetUp
-    !******************************************************************************************************
+    !*****************************************************************************************
 
 
 
@@ -616,15 +666,19 @@ contains
     !!
     !!
     !!
-    !------------------------------------------------------------------------------------------------------
+    !-----------------------------------------------------------------------------------------
     subroutine tearDown(this)
         class(linear_advection_diffusion_1D),  intent(inout)   :: this
 
         ! Close ChiDG
         call this%chidg%close('core')
 
+        if (IRANK == GLOBAL_MASTER) then
+            call delete_file(this%gridfile)
+        end if
+
     end subroutine tearDown
-    !******************************************************************************************************
+    !*****************************************************************************************
 
 
 
@@ -645,7 +699,7 @@ contains
     !!  @author Nathan A. Wukie (AFRL)
     !!
     !!
-    !-------------------------------------------------------------------------------------------------------
+    !-----------------------------------------------------------------------------------------
     @Test(npes=[1,2,3])
     subroutine run_calculations(self)
         class(linear_advection_diffusion_1D),  intent(inout)   :: self
@@ -693,7 +747,7 @@ contains
 
 
     end subroutine run_calculations
-    !*******************************************************************************************************
+    !*****************************************************************************************
 
 
 
@@ -713,7 +767,7 @@ contains
     !!  @author Nathan A. Wukie
     !!  @author Nathan A. Wukie (AFRL)
     !!
-    !-------------------------------------------------------------------------------------------------------
+    !-----------------------------------------------------------------------------------------
     @Test(npes=[1])
     subroutine test_conv_conform(self)
         class(linear_advection_diffusion_1D),  intent(inout)   :: self
@@ -735,45 +789,45 @@ contains
 
 
     end subroutine test_conv_conform
-    !*******************************************************************************************************
+    !*****************************************************************************************
 
 
 
 
 
-    !>  Access the stored number of steps convergence data(module global variable) and confirm
-    !!  that all simulations converged in 1 step.
-    !!
-    !!  This assumes that the 'run_calculations' routine has already been executed for all cases
-    !!  and numbers of processors to that the 'nsteps_convergence' variable has been populated.
-    !!  So, we are relying on pFUnit to do things in order here. Works now, but I don't think
-    !!  there is a guaruntee that this can't change.
-    !!
-    !!  @author Nathan A. Wukie
-    !!  @author Nathan A. Wukie (AFRL)
-    !!
-    !-------------------------------------------------------------------------------------------------------
-    @Test(npes=[1])
-    subroutine test_conv_chimera(self)
-        class(linear_advection_diffusion_1D),  intent(inout)   :: self
-
-        integer(ik)             :: inpes, igrid, iorder, nsteps
-
-        do inpes = 1,3
-            do igrid = 1,2
-                do iorder = 1,3
-
-                    ! Test that the current convergence for the processor count matches the serial convergence
-                    nsteps = nsteps_convergence_chimera(inpes,igrid,iorder)%size()
-
-                    @assertEqual(1, nsteps)
-
-                end do
-            end do
-        end do
-
-    end subroutine test_conv_chimera
-    !*******************************************************************************************************
+!    !>  Access the stored number of steps convergence data(module global variable) and confirm
+!    !!  that all simulations converged in 1 step.
+!    !!
+!    !!  This assumes that the 'run_calculations' routine has already been executed for all cases
+!    !!  and numbers of processors to that the 'nsteps_convergence' variable has been populated.
+!    !!  So, we are relying on pFUnit to do things in order here. Works now, but I don't think
+!    !!  there is a guaruntee that this can't change.
+!    !!
+!    !!  @author Nathan A. Wukie
+!    !!  @author Nathan A. Wukie (AFRL)
+!    !!
+!    !-----------------------------------------------------------------------------------------
+!    @Test(npes=[1])
+!    subroutine test_conv_chimera(self)
+!        class(linear_advection_diffusion_1D),  intent(inout)   :: self
+!
+!        integer(ik)             :: inpes, igrid, iorder, nsteps
+!
+!        do inpes = 1,3
+!            do igrid = 1,2
+!                do iorder = 1,3
+!
+!                    ! Test that the current convergence for the processor count matches the serial convergence
+!                    nsteps = nsteps_convergence_chimera(inpes,igrid,iorder)%size()
+!
+!                    @assertEqual(1, nsteps)
+!
+!                end do
+!            end do
+!        end do
+!
+!    end subroutine test_conv_chimera
+!    !*****************************************************************************************
 
 
 
@@ -791,7 +845,7 @@ contains
     !!  @date   9/16/2016
     !!
     !!
-    !--------------------------------------------------------------------------------------------------------
+    !----------------------------------------------------------------------------------------
     @Test(npes=[1])
     subroutine test_err_conforming(self)
         class(linear_advection_diffusion_1D),  intent(inout)   :: self
@@ -827,55 +881,55 @@ contains
 
 
     end subroutine test_err_conforming
-    !*******************************************************************************************************
+    !*****************************************************************************************
 
 
 
 
-    !>
-    !!
-    !!
-    !!
-    !!  @author Nathan A. Wukie (AFRL)
-    !!  @date   9/16/2016
-    !!
-    !!
-    !--------------------------------------------------------------------------------------------------------
-    @Test(npes=[1])
-    subroutine test_err_chimera(self)
-        class(linear_advection_diffusion_1D),  intent(inout)   :: self
-
-        integer(ik) :: inpes, igrid, iorder
-        real(rk)    :: error_previous, error_current, mesh_parameter_previous, mesh_parameter_current, convergence_rate, tol
-
-        tol = 0.1_rk
-
-        do inpes = 1,3
-            do igrid = 2,2  ! Start at the second grid because we need the previous grid in order to compute a rate 
-                do iorder = 1,3
-
-                    error_previous = error_chimera(inpes,igrid-1,iorder)
-                    error_current  = error_chimera(inpes,igrid  ,iorder)
-
-                    mesh_parameter_previous = mesh_parameter(igrid-1 + 2,iorder)
-                    mesh_parameter_current  = mesh_parameter(igrid   + 2,iorder)
-
-                    
-                    !
-                    ! Compute convergence rate of spatial operators. log10(error)/log10(mesh spacing)
-                    !
-                    convergence_rate = (log10(error_previous)-log10(error_current))/(log10(mesh_parameter_previous)-log10(mesh_parameter_current))
-
-                
-                    @assertGreaterThan(convergence_rate, real(iorder+1,rk)-tol)
-
-                end do
-            end do
-        end do
-
-
-    end subroutine test_err_chimera
-    !*******************************************************************************************************
+!    !>
+!    !!
+!    !!
+!    !!
+!    !!  @author Nathan A. Wukie (AFRL)
+!    !!  @date   9/16/2016
+!    !!
+!    !!
+!    !-----------------------------------------------------------------------------------------
+!    @Test(npes=[1])
+!    subroutine test_err_chimera(self)
+!        class(linear_advection_diffusion_1D),  intent(inout)   :: self
+!
+!        integer(ik) :: inpes, igrid, iorder
+!        real(rk)    :: error_previous, error_current, mesh_parameter_previous, mesh_parameter_current, convergence_rate, tol
+!
+!        tol = 0.1_rk
+!
+!        do inpes = 1,3
+!            do igrid = 2,2  ! Start at the second grid because we need the previous grid in order to compute a rate 
+!                do iorder = 1,3
+!
+!                    error_previous = error_chimera(inpes,igrid-1,iorder)
+!                    error_current  = error_chimera(inpes,igrid  ,iorder)
+!
+!                    mesh_parameter_previous = mesh_parameter(igrid-1 + 2,iorder)
+!                    mesh_parameter_current  = mesh_parameter(igrid   + 2,iorder)
+!
+!                    
+!                    !
+!                    ! Compute convergence rate of spatial operators. log10(error)/log10(mesh spacing)
+!                    !
+!                    convergence_rate = (log10(error_previous)-log10(error_current))/(log10(mesh_parameter_previous)-log10(mesh_parameter_current))
+!
+!                
+!                    @assertGreaterThan(convergence_rate, real(iorder+1,rk)-tol)
+!
+!                end do
+!            end do
+!        end do
+!
+!
+!    end subroutine test_err_chimera
+!    !*****************************************************************************************
 
 
 
@@ -891,7 +945,7 @@ contains
     !!  @date   9/16/2016
     !!
     !!
-    !------------------------------------------------------------------------------------
+    !----------------------------------------------------------------------------------------
     function compute_1D_linear_advection_diffusion_error(data,ChiDG_COMM) result(error)
         type(chidg_data_t), intent(inout)   :: data
         type(mpi_comm),     intent(in)      :: ChiDG_COMM
@@ -973,7 +1027,7 @@ contains
         error = sqrt(error_squared_sum_reduced)
 
     end function compute_1D_linear_advection_diffusion_error
-    !**********************************************************************************************
+    !*****************************************************************************************
 
 
 
@@ -996,7 +1050,7 @@ contains
     !!
     !!
     !!
-    !-----------------------------------------------------------------------------
+    !----------------------------------------------------------------------------------------
     function mesh_parameter(igrid,iorder) result(param)
         integer(ik),    intent(in)  :: igrid
         integer(ik),    intent(in)  :: iorder
@@ -1029,7 +1083,7 @@ contains
         param = ONE/(real(nelem,rk)*real(nterms_1d,rk))
 
     end function mesh_parameter
-    !******************************************************************************
+    !****************************************************************************************
 
 
 
@@ -1042,7 +1096,7 @@ contains
 
 
     ! Utility for returning the index associated with a certain number of procs
-    !------------------------------------------------------------------------------
+    !----------------------------------------------------------------------------------------
     function get_npes_index(numproc) result(inpes)
         integer(ik), intent(in) :: numproc
 
@@ -1058,12 +1112,12 @@ contains
         end select
 
     end function get_npes_index
-    !******************************************************************************
+    !****************************************************************************************
 
 
 
     ! Utility for returning the index associated with a certain grid file
-    !------------------------------------------------------------------------------
+    !----------------------------------------------------------------------------------------
     function get_grid_index(grid) result(igrid)
         character(len=*), intent(in)    :: grid
 
@@ -1081,12 +1135,12 @@ contains
         end select
 
     end function get_grid_index
-    !******************************************************************************
+    !****************************************************************************************
 
 
 
     ! Utility for returning the index associated with a certain order of accuracy
-    !------------------------------------------------------------------------------
+    !----------------------------------------------------------------------------------------
     function get_order_index(order) result(iorder)
         integer(ik), intent(in) :: order
 
@@ -1102,7 +1156,7 @@ contains
         end select
 
     end function get_order_index
-    !******************************************************************************
+    !****************************************************************************************
 
 
 

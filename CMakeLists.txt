@@ -239,7 +239,7 @@ include_directories(${TECPLOT_INCLUDE_DIR})
 
 
 # Tecplot needs the c++ standard library
-set(CMAKE_Fortran_LINK_FLAGS "${CMAKE_Fortran_LINK_FLAGS} -lstdc++")
+set(CMAKE_Fortran_LINK_FLAGS "${CMAKE_Fortran_LINK_FLAGS} -lstdc++ -lpthread")
 
 
 

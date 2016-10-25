@@ -8,14 +8,13 @@ module type_element
     use mod_quadrature,         only: GQ, get_quadrature
     use mod_grid,               only: get_element_mapping, face_corners
     use mod_polynomial,         only: polynomialVal, dpolynomialVal
-    use mod_grid_tools,         only: compute_modal_coordinates
     use mod_inv,                only: inv
-    use mod_connectivity_tools, only: connectivity_get_ielem, connectivity_get_mapping, connectivity_get_node
 
 
     use type_point,                 only: point_t
     use type_densevector,           only: densevector_t
     use type_quadrature,            only: quadrature_t
+    use type_function,              only: function_t
     use type_element_connectivity,  only: element_connectivity_t
     use DNAD_D
     implicit none
@@ -97,6 +96,7 @@ module type_element
         procedure, public   :: computational_point    !< Compute a discrete value for a computational coordinate at a given x, y, z.
         procedure, public   :: metric_point           !< Compute a discrete value for a metric term at a given xi, eta, zeta.
         procedure, public   :: solution_point         !< Compute a discrete value for the solution at a given xi,eta, zeta.
+        procedure, public   :: project                !< Compute a projection of a function onto the solution basis
 
 
         ! Get connected face
@@ -149,9 +149,10 @@ contains
         integer(ik),                    intent(in)      :: idomain_l
         integer(ik),                    intent(in)      :: ielem_l
 
-        type(point_t),  allocatable         :: points(:)
-        real(rk),       allocatable         :: element_mapping(:,:)
-        integer(ik)                         :: ierr, nterms_c, ipt, npts_1d, npts, mapping, inode, idomain_g, ielem_g
+        type(point_t),  allocatable :: points(:)
+        real(rk),       allocatable :: element_mapping(:,:)
+        real(rk),       allocatable :: xmodes(:), ymodes(:), zmodes(:)
+        integer(ik)                 :: ierr, nterms_c, ipt, npts_1d, npts, mapping, inode, idomain_g, ielem_g
 
 
         if (self%geomInitialized) call chidg_signal(FATAL,"element%init_geom -- element already initialized")
@@ -216,7 +217,13 @@ contains
         !
         ! Compute mesh x,y,z modes
         !
-        call compute_modal_coordinates(spacedim,self%elem_pts,mapping,self%coords)
+        xmodes = matmul(element_mapping,self%elem_pts(:)%c1_)
+        ymodes = matmul(element_mapping,self%elem_pts(:)%c2_)
+        zmodes = matmul(element_mapping,self%elem_pts(:)%c3_)
+
+        call self%coords%setvar(1,xmodes)
+        call self%coords%setvar(2,ymodes)
+        call self%coords%setvar(3,zmodes)
 
 
         !
@@ -657,7 +664,7 @@ contains
 
 
 
-    !> Convert local(xi,eta,zeta) coordinates to global coordinates(x,y,z)
+    !>  Convert local(xi,eta,zeta) coordinates to global coordinates(x,y,z)
     !!
     !!  @author Nathan A. Wukie
     !!  @date   2/1/2016
@@ -702,7 +709,7 @@ contains
 
 
 
-    !> Convert local(xi,eta,zeta) coordinates to global coordinates(x,y,z)
+    !>  Convert local(xi,eta,zeta) coordinates to global coordinates(x,y,z)
     !!
     !!  @author Nathan A. Wukie
     !!  @date   2/1/2016
@@ -746,7 +753,7 @@ contains
 
 
 
-    !> Convert local(xi,eta,zeta) coordinates to global coordinates(x,y,z)
+    !>  Convert local(xi,eta,zeta) coordinates to global coordinates(x,y,z)
     !!
     !!  @author Nathan A. Wukie
     !!  @date   2/1/2016
@@ -1117,6 +1124,43 @@ contains
 
 
 
+
+
+
+    !>  Project a function to the solution basis. Return modal coefficients.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   10/25/2016
+    !!
+    !!
+    !--------------------------------------------------------------------------------------------
+    function project(self,fcn) result(fmodes)
+        class(element_t),       intent(in)      :: self
+        class(function_t),      intent(inout)   :: fcn
+
+        real(rk),       allocatable     :: fmodes(:)
+
+        type(point_t),  allocatable     :: pts(:)
+        real(rk),       allocatable     :: fvals(:), temp(:)
+        real(rk)                        :: time
+
+
+        !
+        ! Call function for evaluation at quadrature nodes and multiply by quadrature weights
+        !
+        time  = 0._rk
+        fvals = fcn%compute(time,self%quad_pts) * self%gq%vol%weights * self%jinv
+
+
+        !
+        ! Project
+        !
+        temp = matmul(transpose(self%gq%vol%val),fvals)
+        fmodes = matmul(self%invmass,temp)
+
+
+    end function project
+    !*******************************************************************************************
 
 
 

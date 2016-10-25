@@ -103,8 +103,6 @@ contains
         !
         ! Interpolate solution to quadrature nodes
         !
-        !u_m = worker%interpolate(iu, 'value', ME)
-        !u_p = worker%interpolate(iu, 'value', NEIGHBOR)
         u_m    = worker%get_face_variable(iu, 'value' , ME)
         dudx_m = worker%get_face_variable(iu, 'ddx'   , ME)
         dudy_m = worker%get_face_variable(iu, 'ddy'   , ME)

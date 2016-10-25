@@ -1,6 +1,7 @@
 @Test
 subroutine test_partition_connectivity__onedomain_twopartitions()
     use pfunit_mod
+    use mod_kinds,                  only: rk
     use mod_partitioners,           only: partition_connectivity
     use type_domain_connectivity,   only: domain_connectivity_t
     use type_partition,             only: partition_t
@@ -10,6 +11,7 @@ subroutine test_partition_connectivity__onedomain_twopartitions()
 
     type(chidg_t)                               :: chidg
     type(domain_connectivity_t),    allocatable :: connectivities(:)
+    real(rk),                       allocatable :: weights(:)
     type(partition_t),              allocatable :: partitions(:)
     integer :: ielem, nelem
 
@@ -44,7 +46,7 @@ subroutine test_partition_connectivity__onedomain_twopartitions()
     !
     ! Partition connectivities. THIS IS BEING TESTED
     !
-    call partition_connectivity(connectivities, partitions)
+    call partition_connectivity(connectivities, weights, partitions)
 
 
 
@@ -85,6 +87,7 @@ end subroutine test_partition_connectivity__onedomain_twopartitions
 @Test
 subroutine test_partition_connectivity__twodomains_twopartitions()
     use pfunit_mod
+    use mod_kinds,                  only: rk
     use mod_partitioners,           only: partition_connectivity
     use type_domain_connectivity,   only: domain_connectivity_t
     use type_partition,             only: partition_t
@@ -92,6 +95,7 @@ subroutine test_partition_connectivity__twodomains_twopartitions()
     implicit none
 
     type(domain_connectivity_t),    allocatable :: connectivities(:)
+    real(rk),                       allocatable :: weights(:)
     type(partition_t),              allocatable :: partitions(:)
     integer :: ielem, nelem
 
@@ -126,7 +130,7 @@ subroutine test_partition_connectivity__twodomains_twopartitions()
     !
     ! Partition connectivities. THIS IS BEING TESTED
     !
-    call partition_connectivity(connectivities, partitions)
+    call partition_connectivity(connectivities, weights, partitions)
 
 
 

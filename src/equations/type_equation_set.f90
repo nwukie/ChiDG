@@ -500,7 +500,9 @@ contains
         integer(ik),             intent(in)      :: idiff
 
         integer(ik)             :: nfcn, ifcn, idepend, ndepend
-        logical                 :: interior_face, chimera_face, compute_face, compute_function, linearize_function
+        logical                 :: interior_face, chimera_face, compute_face,   &
+                                   differentiate_me, differentiate_neighbor,    &
+                                   compute_function, linearize_function
 
         associate( mesh => worker%mesh, &
                    idom => worker%element_info%idomain_l, ielem => worker%element_info%ielement_l, &
@@ -514,7 +516,9 @@ contains
         !
         interior_face = ( mesh(idom)%faces(ielem,iface)%ftype == INTERIOR )
         chimera_face  = ( mesh(idom)%faces(ielem,iface)%ftype == CHIMERA )
-        compute_face  = (interior_face .or. chimera_face) .and. ( (idiff == iface) .or. (idiff == DIAG) )
+        differentiate_me       = (idiff == DIAG)
+        differentiate_neighbor = (idiff == iface)
+        compute_face  = (interior_face .or. chimera_face) .and. ( differentiate_me .or. differentiate_neighbor )
 
         if (compute_face) then
 
@@ -587,7 +591,9 @@ contains
         integer(ik),            intent(in)      :: idiff
 
         integer(ik)             :: nfcn, ifcn, idepend, ndepend
-        logical                 :: compute_function, linearize_function, interior_face, chimera_Face, compute_face
+        logical                 :: compute_function, linearize_function,                                    &
+                                   interior_face, chimera_face, differentiate_me, differentiate_neighbor,   &
+                                   compute_face
 
         associate( mesh => worker%mesh, &
                    idom => worker%element_info%idomain_l, ielem => worker%element_info%ielement_l, &
@@ -600,7 +606,10 @@ contains
         !
         interior_face = ( mesh(idom)%faces(ielem,iface)%ftype == INTERIOR )
         chimera_face  = ( mesh(idom)%faces(ielem,iface)%ftype == CHIMERA )
-        compute_face  = (interior_face .or. chimera_face) .and. ( (idiff == iface) .or. (idiff == DIAG) )
+        differentiate_me       = (idiff == DIAG)
+        differentiate_neighbor = (idiff == iface)
+        !compute_face  = (interior_face .or. chimera_face) .and. ( (idiff == iface) .or. (idiff == DIAG) )
+        compute_face  = (interior_face .or. chimera_face) .and. ( differentiate_me .or. differentiate_neighbor )
 
         if (compute_face) then
 

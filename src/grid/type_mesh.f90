@@ -805,22 +805,22 @@ contains
             ddx_size(2) = size(self%faces(ielem_l,iface)%ddx,2)
             br2_face_size(1) = size(self%faces(ielem_l,iface)%br2_face,1)
             br2_face_size(2) = size(self%faces(ielem_l,iface)%br2_face,2)
-            br2_vol_size(1) = size(self%faces(ielem_l,iface)%br2_vol,1)
-            br2_vol_size(2) = size(self%faces(ielem_l,iface)%br2_vol,2)
-            invmass_size(1) = size(self%elems(ielem_l)%invmass,1)
-            invmass_size(2) = size(self%elems(ielem_l)%invmass,2)
+            br2_vol_size(1)  = size(self%faces(ielem_l,iface)%br2_vol,1)
+            br2_vol_size(2)  = size(self%faces(ielem_l,iface)%br2_vol,2)
+            invmass_size(1)  = size(self%elems(ielem_l)%invmass,1)
+            invmass_size(2)  = size(self%elems(ielem_l)%invmass,2)
 
-            call MPI_Send(ddx_size,2,MPI_INTEGER4,iproc,5,ChiDG_COMM,ierr)
+            call MPI_Send(ddx_size,     2,MPI_INTEGER4,iproc,5,ChiDG_COMM,ierr)
             call MPI_Send(br2_face_size,2,MPI_INTEGER4,iproc,6,ChiDG_COMM,ierr)
-            call MPI_Send(br2_vol_size,2,MPI_INTEGER4,iproc,7,ChiDG_COMM,ierr)
-            call MPI_Send(invmass_size,2,MPI_INTEGER4,iproc,8,ChiDG_COMM,ierr)
+            call MPI_Send(br2_vol_size, 2,MPI_INTEGER4,iproc,7,ChiDG_COMM,ierr)
+            call MPI_Send(invmass_size, 2,MPI_INTEGER4,iproc,8,ChiDG_COMM,ierr)
 
-            call MPI_Send(self%faces(ielem_l,iface)%ddx,ddx_size(1)*ddx_size(2),MPI_REAL8,iproc,9,ChiDG_COMM,ierr)
-            call MPI_Send(self%faces(ielem_l,iface)%ddy,ddx_size(1)*ddx_size(2),MPI_REAL8,iproc,10,ChiDG_COMM,ierr)
-            call MPI_Send(self%faces(ielem_l,iface)%ddz,ddx_size(1)*ddx_size(2),MPI_REAL8,iproc,11,ChiDG_COMM,ierr)
+            call MPI_Send(self%faces(ielem_l,iface)%ddx,ddx_size(1)*ddx_size(2),               MPI_REAL8,iproc, 9,ChiDG_COMM,ierr)
+            call MPI_Send(self%faces(ielem_l,iface)%ddy,ddx_size(1)*ddx_size(2),               MPI_REAL8,iproc,10,ChiDG_COMM,ierr)
+            call MPI_Send(self%faces(ielem_l,iface)%ddz,ddx_size(1)*ddx_size(2),               MPI_REAL8,iproc,11,ChiDG_COMM,ierr)
             call MPI_Send(self%faces(ielem_l,iface)%br2_face,br2_face_size(1)*br2_face_size(2),MPI_REAL8,iproc,12,ChiDG_COMM,ierr)
-            call MPI_Send(self%faces(ielem_l,iface)%br2_vol,br2_vol_size(1)*br2_vol_size(2),MPI_REAL8,iproc,13,ChiDG_COMM,ierr)
-            call MPI_Send(self%elems(ielem_l)%invmass,invmass_size(1)*invmass_size(2),MPI_REAL8,iproc,14,ChiDG_COMM,ierr)
+            call MPI_Send(self%faces(ielem_l,iface)%br2_vol,br2_vol_size(1)*br2_vol_size(2),   MPI_REAL8,iproc,13,ChiDG_COMM,ierr)
+            call MPI_Send(self%elems(ielem_l)%invmass,invmass_size(1)*invmass_size(2),         MPI_REAL8,iproc,14,ChiDG_COMM,ierr)
         end if
 
 
@@ -1029,12 +1029,13 @@ contains
                         ineighbor_face      = data(5)
                         ineighbor_proc      = iproc
 
-                        call MPI_Recv(ddx_size,2,MPI_INTEGER4,iproc,5,ChiDG_COMM,MPI_STATUS_IGNORE,ierr)
+                        call MPI_Recv(ddx_size,     2,MPI_INTEGER4,iproc,5,ChiDG_COMM,MPI_STATUS_IGNORE,ierr)
                         call MPI_Recv(br2_face_size,2,MPI_INTEGER4,iproc,6,ChiDG_COMM,MPI_STATUS_IGNORE,ierr)
-                        call MPI_Recv(br2_vol_size,2,MPI_INTEGER4,iproc,7,ChiDG_COMM,MPI_STATUS_IGNORE,ierr)
-                        call MPI_Recv(invmass_size,2,MPI_INTEGER4,iproc,8,ChiDG_COMM,MPI_STATUS_IGNORE,ierr)
+                        call MPI_Recv(br2_vol_size, 2,MPI_INTEGER4,iproc,7,ChiDG_COMM,MPI_STATUS_IGNORE,ierr)
+                        call MPI_Recv(invmass_size, 2,MPI_INTEGER4,iproc,8,ChiDG_COMM,MPI_STATUS_IGNORE,ierr)
 
-                        if (allocated(neighbor_ddx)) deallocate(neighbor_ddx,neighbor_ddy,neighbor_ddz,neighbor_invmass)
+                        if (allocated(neighbor_ddx)) deallocate(neighbor_ddx,neighbor_ddy,neighbor_ddz, &
+                                                                neighbor_br2_face, neighbor_br2_vol, neighbor_invmass)
                         allocate(neighbor_ddx(ddx_size(1),ddx_size(2)), &
                                  neighbor_ddy(ddx_size(1),ddx_size(2)), &
                                  neighbor_ddz(ddx_size(1),ddx_size(2)), &
@@ -1047,8 +1048,8 @@ contains
                         call MPI_Recv(neighbor_ddy,ddx_size(1)*ddx_size(2), MPI_REAL8, iproc,10,ChiDG_COMM,MPI_STATUS_IGNORE,ierr)
                         call MPI_Recv(neighbor_ddz,ddx_size(1)*ddx_size(2), MPI_REAL8, iproc,11,ChiDG_COMM,MPI_STATUS_IGNORE,ierr)
                         call MPI_Recv(neighbor_br2_face,br2_face_size(1)*br2_face_size(2), MPI_REAL8, iproc, 12, ChiDG_COMM, MPI_STATUS_IGNORE,ierr)
-                        call MPI_Recv(neighbor_br2_vol,br2_vol_size(1)*br2_vol_size(2), MPI_REAL8, iproc, 13, ChiDG_COMM, MPI_STATUS_IGNORE,ierr)
-                        call MPI_Recv(neighbor_invmass,invmass_size(1)*invmass_size(2), MPI_REAL8, iproc,14,ChiDG_COMM,MPI_STATUS_IGNORE,ierr)
+                        call MPI_Recv(neighbor_br2_vol,br2_vol_size(1)*br2_vol_size(2),    MPI_REAL8, iproc, 13, ChiDG_COMM, MPI_STATUS_IGNORE,ierr)
+                        call MPI_Recv(neighbor_invmass,invmass_size(1)*invmass_size(2),    MPI_REAL8, iproc, 14, ChiDG_COMM, MPI_STATUS_IGNORE,ierr)
 
                         neighbor_status     = NEIGHBOR_FOUND
                     end if

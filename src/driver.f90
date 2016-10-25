@@ -14,7 +14,6 @@ program driver
 #include <messenger.h>
     use mod_kinds,                  only: rk, ik
     use type_chidg,                 only: chidg_t
-    use mod_grid_operators,         only: initialize_variable
     use type_function,              only: function_t
     use mod_function,               only: create_function
     use mod_io
@@ -24,7 +23,6 @@ program driver
     use mod_chidg_convert,      only: chidg_convert
     use mod_chidg_interpolate,  only: chidg_interpolate
     use mod_chidg_post,         only: chidg_post
-!    use mod_kirchoffs,          only: kirchoff
 
     ! MPI
     use mod_chidg_mpi,          only: IRANK, NRANK
@@ -113,34 +111,34 @@ program driver
 
 !            call polynomial%set_option('f',3.5_rk)
 !            call create_function(polynomial,'polynomial')
-!
-!            ! rho
+
+!            ! d
 !            call create_function(constant,'constant')
 !            call constant%set_option('val',0.01_rk)
-!            call initialize_variable(chidg%data,1,constant)
+!            call chidg%data%sdata%q%project(chidg%data%mesh,constant,1)
 
 
             call create_function(constant,'constant')
 
             ! rho
             call constant%set_option('val',1.19_rk)
-            call initialize_variable(chidg%data,1,constant)
+            call chidg%data%sdata%q%project(chidg%data%mesh,constant,1)
 
             ! rho_u
             call constant%set_option('val',17.5_rk)
-            call initialize_variable(chidg%data,2,constant)
+            call chidg%data%sdata%q%project(chidg%data%mesh,constant,2)
 
             ! rho_v
             call constant%set_option('val',0._rk)
-            call initialize_variable(chidg%data,3,constant)
+            call chidg%data%sdata%q%project(chidg%data%mesh,constant,3)
 
             ! rho_w
             call constant%set_option('val',0._rk)
-            call initialize_variable(chidg%data,4,constant)
+            call chidg%data%sdata%q%project(chidg%data%mesh,constant,4)
 
             ! rho_E
             call constant%set_option('val',250000.0_rk)
-            call initialize_variable(chidg%data,5,constant)
+            call chidg%data%sdata%q%project(chidg%data%mesh,constant,5)
 
 
 

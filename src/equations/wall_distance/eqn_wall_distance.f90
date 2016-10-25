@@ -1,8 +1,9 @@
 module eqn_wall_distance
 #include <messenger.h>
-    use type_equation_set,              only: equation_set_t
-    use type_equation_builder,          only: equation_builder_t
-    use type_scalar,                    only: scalar_t
+    use mod_constants,         only: ZERO
+    use type_equation_set,     only: equation_set_t
+    use type_equation_builder, only: equation_builder_t
+    use type_scalar,           only: scalar_t
     use DNAD_D
     implicit none
 
@@ -78,9 +79,13 @@ contains
         class(wall_distance_model), intent(in)  :: self
         type(AD_D),                 intent(in)  :: u
 
-        type(AD_D) :: val
+        type(AD_D)  :: val
+        integer(ik) :: igq
 
-        val = u*0.1_rk
+        val = u*100.01_rk
+        val = 1.0_rk
+
+        !val%xp_ad_ = ZERO
 
     end function compute_mu
     !*******************************************************************************

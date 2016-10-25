@@ -49,7 +49,6 @@ module integration_cylinder_mod
     use type_function,          only: function_t
     use type_rvector,           only: rvector_t
     use mod_function,           only: create_function
-    use mod_grid_operators,     only: initialize_variable
     use mod_test_utilities,     only: create_mesh_file
     use mod_file_utilities,     only: delete_file
 
@@ -340,15 +339,15 @@ contains
         call create_function(fcn,'constant')
 
         call fcn%set_option('val',1.15_rk)
-        call initialize_variable(this%chidg%data,1,fcn) ! rho
+        call this%chidg%data%sdata%q%project(this%chidg%data%mesh,fcn,1)
         call fcn%set_option('val',50.0_rk)
-        call initialize_variable(this%chidg%data,2,fcn) ! rhou
+        call this%chidg%data%sdata%q%project(this%chidg%data%mesh,fcn,2)
         call fcn%set_option('val',ZERO)
-        call initialize_variable(this%chidg%data,3,fcn) ! rhov
+        call this%chidg%data%sdata%q%project(this%chidg%data%mesh,fcn,3)
         call fcn%set_option('val',ZERO)
-        call initialize_variable(this%chidg%data,4,fcn) ! rhow
+        call this%chidg%data%sdata%q%project(this%chidg%data%mesh,fcn,4)
         call fcn%set_option('val',248000.0_rk)
-        call initialize_variable(this%chidg%data,5,fcn) ! rhoE
+        call this%chidg%data%sdata%q%project(this%chidg%data%mesh,fcn,5)
 
 
 

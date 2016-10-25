@@ -5,17 +5,11 @@ add_lib_sources(
                 type_mesh.f90 
                 type_meshdata.f90
                 type_seed.f90
-                type_domaininfo.f90
                 mod_interpolate.f90
-#                mod_chidg_interpolate.f90
                 mod_grid.f90 
-                mod_grid_tools.f90
-                mod_grid_tools_two.f90
-                mod_grid_operators.f90
                 mod_DNAD_tools.f90
                 type_domain_connectivity.f90
                 type_element_connectivity.f90
                 type_boundary_connectivity.f90
                 type_face_connectivity.f90
-                mod_connectivity_tools.f90
                 )

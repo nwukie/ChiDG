@@ -246,7 +246,8 @@ contains
         integer(ik),            intent(in)      :: ivar
         real(rk),               intent(in)      :: vals(:)
 
-        integer(ik) :: istart, iend
+        integer(ik)                 :: istart, iend
+        character(:),   allocatable :: user_msg
 
         !
         ! Compute start and end indices for accessing modes of a variable
@@ -254,6 +255,12 @@ contains
         istart = (ivar-1) * self%nterms_ + 1
         iend   = istart + (self%nterms_-1)
 
+        !
+        ! Bounds-check
+        !
+        user_msg = "densevector%setvar: Variable Index might not be valid. Computed indices to &
+                    set modes in vector were out of bounds."
+        if ((istart > size(self%vec)) .or. (iend > size(self%vec)) ) call chidg_signal(FATAL,user_msg)
 
         !
         ! Set modes

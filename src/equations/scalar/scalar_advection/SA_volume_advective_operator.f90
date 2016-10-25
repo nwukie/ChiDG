@@ -95,11 +95,10 @@ contains
         !
         ! Interpolate solution to quadrature nodes
         !
-!        u = worker%interpolate(iu, 'value')
         u    = worker%get_element_variable(iu, 'value')
-        dudx = worker%get_element_variable(iu, 'ddx'  )
-        dudy = worker%get_element_variable(iu, 'ddy'  )
-        dudz = worker%get_element_variable(iu, 'ddz'  )
+        dudx = worker%get_element_variable(iu, 'ddx')
+        dudy = worker%get_element_variable(iu, 'ddy')
+        dudz = worker%get_element_variable(iu, 'ddz')
 
 
         !

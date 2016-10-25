@@ -49,7 +49,6 @@ module integration_1D_linear_adv_diff_mod
     use type_function,          only: function_t
     use type_ivector,           only: ivector_t
     use mod_function,           only: create_function
-    use mod_grid_operators,     only: initialize_variable
     use mod_interpolate,        only: interpolate_element_standard
     use mod_test_utilities,     only: create_mesh_file
     use mod_file_utilities,     only: delete_file
@@ -650,7 +649,7 @@ contains
         call create_function(fcn,'constant')
 
         call fcn%set_option('val',0.1_rk)
-        call initialize_variable(this%chidg%data,1,fcn) ! u
+        call this%chidg%data%sdata%q%project(this%chidg%data%mesh,fcn,1)
 
 
         !

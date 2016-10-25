@@ -12,7 +12,6 @@ module test_scalar_advection_mod
     use mod_function,               only: create_function
     use type_densematrix,           only: densematrix_t
     use mod_test_utilities,         only: create_mesh
-    use mod_grid_operators,         only: initialize_variable
     use mod_check_jacobian
     implicit none
 
@@ -101,7 +100,7 @@ contains
 
         call create_function(fcn,'constant')
         call fcn%set_option('val',1.0_rk)
-        call initialize_variable(this%chidg%data,1,fcn)
+        call this%chidg%data%sdata%q%project(this%chidg%data%mesh,fcn,1)
 
     end subroutine
     

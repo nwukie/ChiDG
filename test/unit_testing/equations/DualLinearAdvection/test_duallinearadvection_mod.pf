@@ -8,7 +8,6 @@ module test_duallinearadvection_mod
     use type_chidg,                 only: chidg_t
     use type_function,              only: function_t
     use mod_function,               only: create_function
-    use mod_grid_operators,         only: initialize_variable
     use type_point,                 only: point_t
     use type_densematrix,           only: densematrix_t
     use type_domain_connectivity,   only: domain_connectivity_t
@@ -105,9 +104,9 @@ contains
         call create_function(fcn,'constant')
         
         call fcn%set_option('val',1.0_rk)
-        call initialize_variable(this%chidg%data,1,fcn)
+        call this%chidg%data%sdata%q%project(this%chidg%data%mesh,fcn,1)
         call fcn%set_option('val',1.0_rk)
-        call initialize_variable(this%chidg%data,2,fcn)
+        call this%chidg%data%sdata%q%project(this%chidg%data%mesh,fcn,2)
             
     end subroutine
     

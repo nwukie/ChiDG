@@ -11,7 +11,7 @@ module newton
 
     use mod_spatial,    only: update_space
 
-    use mod_tecio,      only: write_tecio_variables
+    use mod_tecio,      only: write_tecio_variables_unstructured
 
     use mod_entropy,    only: compute_entropy_error
     implicit none
@@ -184,12 +184,8 @@ contains
                 !
                 ! Write incremental solution
                 !
-                !if (wcount == self%nwrite) then
-                !    write(filename, "(I7,A4)") 1000000+niter, '.plt'
-                !    call write_tecio_variables(data,trim(filename),niter+1)
-                !    wcount = 0
-                !end if
-                !wcount = wcount + 1
+                !write(filename, "(I7,A4)") 1000000+niter, '.plt'
+                !call write_tecio_variables_unstructured(data,trim(filename),niter+1)
 
 
             end do ! niter

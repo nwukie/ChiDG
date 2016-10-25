@@ -2710,7 +2710,7 @@ contains
 
 
 
-    !>
+    !>  Set the 'Equation Set' string for a domain. Specified by HDF Domain identifier.
     !!
     !!  @author Nathan A. Wukie
     !!  @date   4/11/2016
@@ -2734,7 +2734,7 @@ contains
 
 
 
-    !>
+    !>  Get the 'Equation Set' string for a domain. Specified by HDF Domain identifier.
     !!
     !!  @author Nathan A. Wukie
     !!  @date   4/11/2016
@@ -2759,8 +2759,7 @@ contains
 
 
 
-    !>  Returns an array of integer that specifies the order of the solution expansion for 
-    !!  every domain.
+    !>  Return an array of strings that are the 'Equation Set' attribute of every domain.
     !!
     !!  @author Nathan A. Wukie
     !!  @date   2/3/2016

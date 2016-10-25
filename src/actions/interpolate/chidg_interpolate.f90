@@ -5,16 +5,9 @@ module mod_chidg_interpolate
     use type_point,         only: point_t
     use type_mesh,          only: mesh_t
     use type_chidg,         only: chidg_t
-    use mod_grid_tools_two, only: compute_element_donor
+    !use mod_grid_tools_two, only: compute_element_donor
     use mod_io,             only: nterms_s
     implicit none
-
-
-
-
-
-
-
 
 
 
@@ -48,6 +41,7 @@ contains
         type(point_t)           :: node, new_node, point_comp
 
 
+        call chidg_signal(FATAL,"chidg interpolate: Broken, ask a developer to fix this if you need it.")
 
         !
         ! Initialize ChiDG environment. Actually should only need to be called once.
@@ -143,8 +137,7 @@ contains
                        !
                        ! Find donor domain/element in source chidg instance. Returns point_comp
                        !
-                       call compute_element_donor(chidg_source%data%mesh, node, idom_d, ielem_d, point_comp)
-                       !call compute_element_donor(chidg_source%data%mesh, new_node, idom_d, ielem_d, point_comp)
+                       !call compute_element_donor(chidg_source%data%mesh, node, idom_d, ielem_d, point_comp)
 
 
                        

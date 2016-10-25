@@ -113,6 +113,13 @@ contains
                 q  = q + dq
 
 
+
+                !
+                ! Print diagnostics
+                !
+                call write_line("   R(Q) - Norm: ", rhs%norm(ChiDG_COMM), delimiter='', io_proc=GLOBAL_MASTER)
+
+
                 if (wcount == self%nwrite) then
                     write(filename, "(I7,A4)") 1000000+itime, '.plt'
                     call write_tecio_variables_unstructured(data,trim(filename),itime+1)

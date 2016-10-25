@@ -7,7 +7,6 @@ module test__project_function_xyz__mod
     use type_function,              only: function_t
     use type_domain_connectivity,   only: domain_connectivity_t
     use mod_function,               only: create_function
-    use mod_project,                only: project_function_xyz
     use mod_grid,                   only: compute_element_mappings
     use mod_polynomial,             only: PolynomialVal
     
@@ -162,7 +161,7 @@ contains
             !
             ! Compute projection of function onto polynonmial basis
             !
-            call project_function_xyz(fcn,elem%spacedim,this%nterms_s,elem%coords,fmodes)
+            fmodes = elem%project(fcn)
     
 
             !
@@ -254,7 +253,7 @@ contains
         !
         ! Compute projection of function onto polynonmial basis
         !
-        call project_function_xyz(fcn,elem%spacedim,self%nterms_s,elem%coords,fmodes)
+        fmodes = elem%project(fcn)
 
 
         !
@@ -345,7 +344,7 @@ contains
         !
         ! Compute projection of function onto polynonmial basis
         !
-        call project_function_xyz(fcn,elem%spacedim,self%nterms_s,elem%coords,fmodes)
+        fmodes = elem%project(fcn)
 
 
         !
@@ -446,7 +445,7 @@ contains
         !
         ! Compute projection of function onto polynonmial basis
         !
-        call project_function_xyz(fcn,elem%spacedim,self%nterms_s,elem%coords,fmodes)
+        fmodes = elem%project(fcn)
 
 
         !

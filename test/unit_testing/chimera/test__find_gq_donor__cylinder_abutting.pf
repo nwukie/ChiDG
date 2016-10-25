@@ -15,7 +15,6 @@ subroutine test_find_gq_donor_cylinder_abutting()
     use mod_bc,             only: create_bc
 
 
-    use mod_grid_operators, only: initialize_variable
     use mod_test_utilities, only: create_mesh_file
     use mod_file_utilities, only: delete_file
     use mod_function,       only: create_function

@@ -31,9 +31,10 @@ contains
     !!  @param[inout]   partitions      Mesh partition data returned
     !!
     !-----------------------------------------------------------------------------------------------
-    subroutine partition_connectivity(connectivities, partitions)
+    subroutine partition_connectivity(connectivities, weights, partitions)
         use iso_c_binding,  only: c_ptr, c_int, c_null_ptr
         type(domain_connectivity_t),    intent(inout)   :: connectivities(:)
+        real(rk),                       intent(in)      :: weights(:)
         type(partition_t), allocatable, intent(inout)   :: partitions(:)
 
         logical                     :: serial, parallel

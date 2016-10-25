@@ -17,7 +17,6 @@ module test_interpolate_chimera_multipledonor_mod
 
     use mod_chidg_mpi,      only: IRANK
     use mod_interpolate,    only: interpolate_face_autodiff, interpolate_face_standard
-    use mod_grid_operators, only: initialize_variable
 
     use mod_test_utilities, only: create_mesh_file
     use mod_file_utilities, only: delete_file
@@ -112,7 +111,7 @@ contains
         !
         call create_function(this%fcn,'constant')                       ! Allocate constant function
         call this%fcn%set_option('val',5._rk)                           ! Set constant function value
-        call initialize_variable(this%chidg%data,ivar,this%fcn)         ! Initialize variable using constant function
+        call this%chidg%data%sdata%q%project(this%chidg%data%mesh,this%fcn,ivar)
 
     
     end subroutine setUp

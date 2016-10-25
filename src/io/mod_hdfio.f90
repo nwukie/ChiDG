@@ -1326,7 +1326,8 @@ contains
         !
         !  Allocate number of domains
         !
-        if (ndomains == 0) call chidg_signal(FATAL,"read_connectivity_hdf: No Domains were found in the file")
+        user_msg = "read_connectivity_hdf: No domains were found in the file."
+        if (ndomains == 0) call chidg_signal(FATAL,user_msg)
         allocate(connectivities(ndomains), stat=ierr)
         if (ierr /= 0) call AllocationError
 
@@ -1337,7 +1338,8 @@ contains
         !  Get number of groups in the file root
         !
         call h5gn_members_f(fid, "/", nmembers, ierr)
-        if (ierr /= 0) call chidg_signal(FATAL,"read_connectivity_hdf: error getting number of groups in file root.")
+        user_msg = "read_connectivity_hdf: Error getting number of groups in the file root."
+        if (ierr /= 0) call chidg_signal(FATAL,user_msg)
 
 
 
@@ -1362,23 +1364,27 @@ contains
                 ! Open the Domain/Grid group
                 !
                 call h5gopen_f(fid, trim(gname)//"/Grid", gid, ierr, H5P_DEFAULT_F)
-                if (ierr /= 0) call chidg_signal_one(FATAL,"read_connectivity_hdf: Domain/Grid group did not open properly.", trim(gname)//"/Grid")
+                user_msg = "read_connectivity_hdf: Domain/Grid group did not open properly."
+                if (ierr /= 0) call chidg_signal_one(FATAL,user_msg, trim(gname)//"/Grid")
 
 
                 !
                 ! Get number of nodes in the domain
                 !
                 call h5dopen_f(gid, "CoordinateX", did_x, ierr, H5P_DEFAULT_F)
-                if (ierr /= 0) call chidg_signal(FATAL,"read_connectivity_hdf: Domain/Grid/CoordinateX group did not open properly.")
+                user_msg = "read_connectivity_hdf: Domain/Grid/CoordinateX group did not open properly."
+                if (ierr /= 0) call chidg_signal(FATAL,user_msg)
 
 
                 !
                 !  Get the dataspace id and dimensions
                 !
                 call h5dget_space_f(did_x, sid, ierr)
-                if (ierr /= 0) call chidg_signal(FATAL,"read_connectivity_hdf: h5dget_space_f did not return 'CoordinateX' dataspace properly.")
+                user_msg = "read_connectivity_hdf: h5dget_space_f did not return 'CoordinateX' dataspace properly."
+                if (ierr /= 0) call chidg_signal(FATAL,user_msg)
                 call h5sget_simple_extent_dims_f(sid, rank_one_dims, maxdims, ierr)
-                if (ierr == -1) call chidg_signal(FATAL,"read_connectivity_hdf: h5sget_simple_extend_dims_f did not return extent properly.")
+                user_msg = "read_connectivity_hdf: h5sget_simple_extent_dims_f did not return extent propertly."
+                if (ierr == -1) call chidg_signal(FATAL,user_msg)
                 call h5sclose_f(sid,ierr)
                 nnodes = rank_one_dims(1)
 
@@ -1387,15 +1393,18 @@ contains
                 ! Open Elements connectivity dataset
                 !
                 call h5dopen_f(gid, "Elements", did_e, ierr, H5P_DEFAULT_F)
-                if (ierr /= 0) call chidg_signal(FATAL,"read_connectivity_hdf: h5dopen_f did not open 'Elements' dataset properly.")
+                user_msg = "read_connectivity_hdf: h5dopen_f did not open 'Elements' dataset propertly."
+                if (ierr /= 0) call chidg_signal(FATAL,user_msg)
 
                 !
                 !  Get the dataspace id and dimensions
                 !
                 call h5dget_space_f(did_e, sid, ierr)
-                if (ierr /= 0) call chidg_signal(FATAL,"read_connectivity_hdf: h5dget_space_f did not return 'Elements dataspace properly.")
+                user_msg = "read_connectivity_hdf: h5dget_space_f did not return 'Elements' dataspace propertly."
+                if (ierr /= 0) call chidg_signal(FATAL,user_msg)
                 call h5sget_simple_extent_dims_f(sid, rank_two_dims, maxdims, ierr)
-                if (ierr == -1) call chidg_signal(FATAL,"read_connectivity_hdf: h5sget_simple_extent_dims_f did not return extend properly.")
+                user_msg = "read_connectivity_hdf: h5sget_simple_extent_dims_f did not return extent propertly."
+                if (ierr == -1) call chidg_signal(FATAL,user_msg)
                 if (allocated(connectivity)) deallocate(connectivity)
                 allocate(connectivity(rank_two_dims(1),rank_two_dims(2)))
 
@@ -1460,9 +1469,31 @@ contains
 
 
 
+    !>  Read the weights of each domain.
+    !!
+    !!  The weights here are defined as relative weight of compute intensity.
+    !!  So, for example, a domain solving the Euler equations might be weighted 1, 
+    !!  whereas a domain solving the Navier Stokes equations might be weighted 5.
+    !!  Additionally, the weight might be based on solution order. So, a P1 domain might
+    !!  be weighted 1 and a P2 domain might be weighted 8. 
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   10/25/2016
+    !!
+    !!
+    !!
+    !----------------------------------------------------------------------------------------
+    subroutine read_weights_hdf(chidg_file,weights)
+        character(*),               intent(in)      :: chidg_file
+        real(rk),   allocatable,    intent(inout)   :: weights(:)
 
 
 
+
+
+
+    end subroutine read_weights_hdf
+    !*****************************************************************************************
 
 
 

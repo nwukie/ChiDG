@@ -21,7 +21,6 @@ subroutine test_integrate_boundary_unit_constant()
     use type_function,      only: function_t
     use mod_function,       only: create_function
     use mod_test_utilities, only: create_mesh
-    use mod_grid_operators, only: initialize_variable
     use DNAD_D
     implicit none
 
@@ -109,7 +108,7 @@ subroutine test_integrate_boundary_unit_constant()
     !
     call create_function(constant,'constant')
     call constant%set_option('val',1._rk)
-    call initialize_variable(chidg%data,1,constant)
+    call chidg%data%sdata%q%project(chidg%data%mesh,constant,1)
 
 
     
@@ -222,7 +221,6 @@ subroutine test_integrate_boundary_nonunit_constant()
     use type_function,              only: function_t
     use mod_function,               only: create_function
     use mod_test_utilities,         only: create_mesh
-    use mod_grid_operators,         only: initialize_variable
     use DNAD_D
     implicit none
 
@@ -307,7 +305,7 @@ subroutine test_integrate_boundary_nonunit_constant()
     !
     call create_function(constant,'constant')
     call constant%set_option('val',1._rk)
-    call initialize_variable(chidg%data,1,constant)
+    call chidg%data%sdata%q%project(chidg%data%mesh,constant,1)
 
     
     !

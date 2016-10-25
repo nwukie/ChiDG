@@ -14,7 +14,6 @@ subroutine test_chidgMatrix_operator_chimera_mv()
     use mod_bc,             only: create_bc
 
 
-    use mod_grid_operators, only: initialize_variable
     use mod_function,       only: create_function
     use mod_spatial,        only: update_space
     use mod_test_utilities, only: create_mesh_file
@@ -178,19 +177,19 @@ subroutine test_chidgMatrix_operator_chimera_mv()
     call create_function(constant,'constant')
 
     call constant%set_option('val', 1.13_rk)
-    call initialize_variable(chidg%data,1,constant)
+    call chidg%data%sdata%q%project(chidg%data%mesh,constant,1)
 
     call constant%set_option('val', 190._rk)
-    call initialize_variable(chidg%data,2,constant)
+    call chidg%data%sdata%q%project(chidg%data%mesh,constant,2)
 
     call constant%set_option('val', ZERO)
-    call initialize_variable(chidg%data,3,constant)
+    call chidg%data%sdata%q%project(chidg%data%mesh,constant,3)
 
     call constant%set_option('val', ZERO)
-    call initialize_variable(chidg%data,4,constant)
+    call chidg%data%sdata%q%project(chidg%data%mesh,constant,4)
 
     call constant%set_option('val', 248000._rk)
-    call initialize_variable(chidg%data,5,constant)
+    call chidg%data%sdata%q%project(chidg%data%mesh,constant,5)
 
 
 

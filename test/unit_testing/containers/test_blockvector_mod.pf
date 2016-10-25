@@ -5,7 +5,6 @@ module test_blockvector_mod
     use mod_kinds,                  only: rk,ik
     use mod_constants,              only: ZERO, ONE, TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT, NINE, TEN, &
                                           XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX, IO_DESTINATION
-    use mod_grid_operators,         only: initialize_variable
     use type_blockvector,           only: blockvector_t
     use type_domain_connectivity,   only: domain_connectivity_t
     use DNAD_D

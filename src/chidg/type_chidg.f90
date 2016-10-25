@@ -30,7 +30,8 @@ module type_chidg
     use mpi_f08
 
     use mod_hdfio,                  only: read_grid_hdf, read_boundaryconditions_hdf, &
-                                          read_solution_hdf, write_solution_hdf, read_connectivity_hdf
+                                          read_solution_hdf, write_solution_hdf, read_connectivity_hdf, &
+                                          read_weights_hdf
     use mod_hdf_utilities,          only: close_hdf
     use mod_partitioners,           only: partition_connectivity, send_partitions, recv_partition
     implicit none
@@ -330,7 +331,7 @@ contains
 
 
         type(domain_connectivity_t),    allocatable :: connectivities(:)
-        type(string_t),                 allocatable :: equation_sets(:)
+        real(rk),                       allocatable :: weights(:)
         type(partition_t),              allocatable :: partitions(:)
 
         character(len=5),   dimension(1)    :: extensions
@@ -348,8 +349,9 @@ contains
         if ( IRANK == GLOBAL_MASTER ) then
 
             call read_connectivity_hdf(gridfile,connectivities)
+            call read_weights_hdf(gridfile,weights)
 
-            call partition_connectivity(connectivities, partitions)
+            call partition_connectivity(connectivities, weights, partitions)
 
             call send_partitions(partitions,MPI_COMM_WORLD)
         end if

@@ -5,7 +5,6 @@ module mod_interpolate
                                   ME, NEIGHBOR, ONE, ZERO
                                   
     use mod_polynomial,     only: polynomialVal
-    use mod_grid_tools_two, only: compute_element_donor
     use mod_chidg_mpi,      only: IRANK
     use mod_DNAD_tools,     only: compute_neighbor_face
     use DNAD_D
@@ -52,7 +51,6 @@ contains
                  interpolation_type == 'ddz') then
 
             diff = interpolate_element_autodiff(mesh,q,elem_info,fcn_info,ieqn,interpolation_type)
-!            lift = BR2%get_lift(mesh,elem_info,fcn_info,ieqn,interpolation_type)
 
             var_gq = diff + lift
 
@@ -99,7 +97,6 @@ contains
                  interpolation_type == 'ddz') then
 
             diff = interpolate_face_autodiff(mesh,q,face_info,fcn_info,ieqn,interpolation_type,interpolation_source)
-!            lift = BR2%get_lift(mesh,elem_info,fcn_info,ieqn,interpolation_type)
 
             var_gq = diff + lift
 

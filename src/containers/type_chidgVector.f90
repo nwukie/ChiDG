@@ -4,6 +4,7 @@ module type_chidgVector
     use mod_constants,              only: ZERO, TWO
     use mod_chidg_mpi,              only: GROUP_MASTER, ChiDG_COMM, IRANK
     use type_mesh,                  only: mesh_t
+    use type_function,              only: function_t
     use type_chidgVector_send,      only: chidgVector_send_t
     use type_chidgVector_recv,      only: chidgVector_recv_t
     use type_blockvector
@@ -37,6 +38,7 @@ module type_chidgVector
         generic,    public  :: init => initialize
         procedure,  private :: initialize
 
+        procedure,  public  :: project                          !< Project a function to the global solution basis
         procedure,  public  :: clear                            !< Zero the densevector data nested in the container
         generic,    public  :: norm => norm_local, norm_comm    !< Compute the L2 vector norm
         procedure,  public  :: norm_local                       !< Return the processor-local L2 vector norm of the chidgVector 
@@ -152,6 +154,54 @@ contains
 
 
 
+    !>  Project a function onto the global solution basis.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   10/25/2016
+    !!
+    !!
+    !!
+    !--------------------------------------------------------------------------------------------
+    subroutine project(self,mesh,fcn,ivar)
+        class(chidgVector_t),   intent(inout)   :: self
+        type(mesh_t),           intent(in)      :: mesh(:)
+        class(function_t),      intent(inout)   :: fcn
+        integer(ik),            intent(in)      :: ivar
+
+        integer(ik)                 :: idom, ielem, ierr
+        real(rk),       allocatable :: fmodes(:)
+        character(:),   allocatable :: user_msg
+
+
+        !
+        ! Loop through elements in mesh and call function projection
+        !
+        do idom = 1,size(mesh)
+
+            ! Check that variable index 'ivar' is valid
+            user_msg = 'initialize_variable: variable index ivar exceeds the number of equations.'
+            if (ivar > mesh(idom)%neqns ) call chidg_signal(FATAL,user_msg)
+
+            do ielem = 1,mesh(idom)%nelem
+
+                    !
+                    ! Call function projection
+                    !
+                    fmodes = mesh(idom)%elems(ielem)%project(fcn)
+
+
+                    !
+                    ! Store the projected modes to the solution expansion
+                    !
+                    call self%dom(idom)%vecs(ielem)%setvar(ivar,fmodes)
+
+            end do ! ielem
+
+        end do ! idomain
+
+
+    end subroutine project
+    !*********************************************************************************************
 
 
 

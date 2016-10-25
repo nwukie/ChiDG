@@ -36,7 +36,6 @@ subroutine test_update_space_linearadvection()
     use type_function,      only: function_t
 
     use mod_function,       only: create_function
-    use mod_grid_operators, only: initialize_variable
     use mod_test_utilities, only: create_mesh_file
     use mod_file_utilities, only: delete_file
     use mod_spatial,        only: update_space
@@ -109,8 +108,8 @@ subroutine test_update_space_linearadvection()
     !
     call create_function(gaussian,'gaussian')
 
-    call initialize_variable(chidgA%data,1,gaussian)
-    call initialize_variable(chidgB%data,1,gaussian)
+    call chidgA%data%sdata%q%project(chidgA%data%mesh,gaussian,1)
+    call chidgB%data%sdata%q%project(chidgB%data%mesh,gaussian,1)
 
 
 

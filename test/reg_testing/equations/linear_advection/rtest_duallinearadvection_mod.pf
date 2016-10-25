@@ -28,7 +28,6 @@ module rtest_duallinearadvection_mod
     use type_chidg,                 only: chidg_t
     use type_function,              only: function_t
     use mod_function,               only: create_function
-    use mod_grid_operators,         only: initialize_variable
     use type_point,                 only: point_t
     use type_densematrix,           only: densematrix_t
     use type_domain_connectivity,   only: domain_connectivity_t

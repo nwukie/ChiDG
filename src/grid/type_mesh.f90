@@ -79,7 +79,8 @@ module type_mesh
         ! Utilities
         procedure, private  :: find_neighbor_local      !< Try to find a neighbor for a particular face on the local processor
         procedure, private  :: find_neighbor_global     !< Try to find a neighbor for a particular face across processors
-        procedure           :: handle_neighbor_request  !< When a neighbor request from another processor comes in, check if current processor contains neighbor
+        procedure           :: handle_neighbor_request  !< When a neighbor request from another processor comes in, 
+                                                        !! check if current processor contains neighbor
 
 
         procedure,  public  :: get_recv_procs           !< Return the processor ranks that the mesh is receiving from (neighbor+chimera)
@@ -258,14 +259,15 @@ contains
         !
         npts_1d = 0
         
+        ! Really just computing the cube/square-root of nterms_c, the number of terms in the coordinate expansion.
         if ( spacedim == THREE_DIM ) then
             do while (npts_1d*npts_1d*npts_1d < self%nterms_c)
-                npts_1d = npts_1d + 1       ! really just computing the cubed root of nterms_c, the number of terms in the coordinate expansion
+                npts_1d = npts_1d + 1
             end do
 
         else if ( spacedim == TWO_DIM ) then
             do while (npts_1d*npts_1d < self%nterms_c)
-                npts_1d = npts_1d + 1       ! really just computing the cubed root of nterms_c, the number of terms in the coordinate expansion
+                npts_1d = npts_1d + 1
             end do
 
         end if
@@ -616,7 +618,8 @@ contains
 
         integer(ik)             :: ineighbor_domain_g, ineighbor_domain_l, ineighbor_element_g, ineighbor_element_l, ineighbor_face, ineighbor_proc, neighbor_status
 
-        real(rk), allocatable, dimension(:,:)   :: neighbor_ddx, neighbor_ddy, neighbor_ddz, neighbor_invmass
+        real(rk), allocatable, dimension(:,:)   :: neighbor_ddx, neighbor_ddy, neighbor_ddz, &
+                                                   neighbor_br2_face, neighbor_br2_vol, neighbor_invmass
 
 
 
@@ -643,6 +646,8 @@ contains
                                                    neighbor_ddx,            &
                                                    neighbor_ddy,            &
                                                    neighbor_ddz,            &
+                                                   neighbor_br2_face,       &
+                                                   neighbor_br2_vol,        &
                                                    neighbor_invmass,        &
                                                    neighbor_status,         &
                                                    ChiDG_COMM)
@@ -658,10 +663,12 @@ contains
                         !
                         ! Set neighbor data
                         !
-                        self%faces(ielem,iface)%neighbor_ddx     = neighbor_ddx
-                        self%faces(ielem,iface)%neighbor_ddy     = neighbor_ddy
-                        self%faces(ielem,iface)%neighbor_ddz     = neighbor_ddz
-                        self%faces(ielem,iface)%neighbor_invmass = neighbor_invmass
+                        self%faces(ielem,iface)%neighbor_ddx      = neighbor_ddx
+                        self%faces(ielem,iface)%neighbor_ddy      = neighbor_ddy
+                        self%faces(ielem,iface)%neighbor_ddz      = neighbor_ddz
+                        self%faces(ielem,iface)%neighbor_br2_face = neighbor_br2_face
+                        self%faces(ielem,iface)%neighbor_br2_vol  = neighbor_br2_vol
+                        self%faces(ielem,iface)%neighbor_invmass  = neighbor_invmass
 
                     else
                         ! Default ftype to ORPHAN face and clear neighbor index data.
@@ -679,7 +686,9 @@ contains
                     !
                     ! Call face neighbor initialization routine
                     !
-                    call self%faces(ielem,iface)%init_neighbor(ftype,ineighbor_domain_g,ineighbor_domain_l,ineighbor_element_g,ineighbor_element_l,ineighbor_face,ineighbor_proc)
+                    call self%faces(ielem,iface)%init_neighbor(ftype,ineighbor_domain_g,ineighbor_domain_l,     &
+                                                                     ineighbor_element_g,ineighbor_element_l,   &
+                                                                     ineighbor_face,ineighbor_proc)
 
 
                 end if
@@ -734,7 +743,7 @@ contains
 
         integer(ik) :: ielem_l, iface
         integer(ik) :: ineighbor_domain_g, ineighbor_domain_l, ineighbor_element_g, ineighbor_element_l, ineighbor_face
-        integer(ik) :: data(5), corner_indices(4), ddx_size(2), invmass_size(2)
+        integer(ik) :: data(5), corner_indices(4), ddx_size(2), invmass_size(2), br2_face_size(2), br2_vol_size(2)
         integer     :: ierr
         logical     :: includes_corner_one, includes_corner_two, includes_corner_three, includes_corner_four
         logical     :: neighbor_element
@@ -794,16 +803,24 @@ contains
             !
             ddx_size(1) = size(self%faces(ielem_l,iface)%ddx,1)
             ddx_size(2) = size(self%faces(ielem_l,iface)%ddx,2)
+            br2_face_size(1) = size(self%faces(ielem_l,iface)%br2_face,1)
+            br2_face_size(2) = size(self%faces(ielem_l,iface)%br2_face,2)
+            br2_vol_size(1) = size(self%faces(ielem_l,iface)%br2_vol,1)
+            br2_vol_size(2) = size(self%faces(ielem_l,iface)%br2_vol,2)
             invmass_size(1) = size(self%elems(ielem_l)%invmass,1)
             invmass_size(2) = size(self%elems(ielem_l)%invmass,2)
 
             call MPI_Send(ddx_size,2,MPI_INTEGER4,iproc,5,ChiDG_COMM,ierr)
-            call MPI_Send(invmass_size,2,MPI_INTEGER4,iproc,6,ChiDG_COMM,ierr)
+            call MPI_Send(br2_face_size,2,MPI_INTEGER4,iproc,6,ChiDG_COMM,ierr)
+            call MPI_Send(br2_vol_size,2,MPI_INTEGER4,iproc,7,ChiDG_COMM,ierr)
+            call MPI_Send(invmass_size,2,MPI_INTEGER4,iproc,8,ChiDG_COMM,ierr)
 
-            call MPI_Send(self%faces(ielem_l,iface)%ddx,ddx_size(1)*ddx_size(2),MPI_REAL8,iproc,7,ChiDG_COMM,ierr)
-            call MPI_Send(self%faces(ielem_l,iface)%ddy,ddx_size(1)*ddx_size(2),MPI_REAL8,iproc,8,ChiDG_COMM,ierr)
-            call MPI_Send(self%faces(ielem_l,iface)%ddz,ddx_size(1)*ddx_size(2),MPI_REAL8,iproc,9,ChiDG_COMM,ierr)
-            call MPI_Send(self%elems(ielem_l)%invmass,invmass_size(1)*invmass_size(2),MPI_REAL8,iproc,10,ChiDG_COMM,ierr)
+            call MPI_Send(self%faces(ielem_l,iface)%ddx,ddx_size(1)*ddx_size(2),MPI_REAL8,iproc,9,ChiDG_COMM,ierr)
+            call MPI_Send(self%faces(ielem_l,iface)%ddy,ddx_size(1)*ddx_size(2),MPI_REAL8,iproc,10,ChiDG_COMM,ierr)
+            call MPI_Send(self%faces(ielem_l,iface)%ddz,ddx_size(1)*ddx_size(2),MPI_REAL8,iproc,11,ChiDG_COMM,ierr)
+            call MPI_Send(self%faces(ielem_l,iface)%br2_face,br2_face_size(1)*br2_face_size(2),MPI_REAL8,iproc,12,ChiDG_COMM,ierr)
+            call MPI_Send(self%faces(ielem_l,iface)%br2_vol,br2_vol_size(1)*br2_vol_size(2),MPI_REAL8,iproc,13,ChiDG_COMM,ierr)
+            call MPI_Send(self%elems(ielem_l)%invmass,invmass_size(1)*invmass_size(2),MPI_REAL8,iproc,14,ChiDG_COMM,ierr)
         end if
 
 
@@ -931,6 +948,8 @@ contains
                                                        neighbor_ddx,        &
                                                        neighbor_ddy,        &
                                                        neighbor_ddz,        &
+                                                       neighbor_br2_face,   &
+                                                       neighbor_br2_vol,    &
                                                        neighbor_invmass,    &
                                                        neighbor_status,     &
                                                        ChiDG_COMM)
@@ -946,13 +965,15 @@ contains
         real(rk),   allocatable,        intent(inout)   :: neighbor_ddx(:,:)
         real(rk),   allocatable,        intent(inout)   :: neighbor_ddy(:,:)
         real(rk),   allocatable,        intent(inout)   :: neighbor_ddz(:,:)
+        real(rk),   allocatable,        intent(inout)   :: neighbor_br2_face(:,:)
+        real(rk),   allocatable,        intent(inout)   :: neighbor_br2_vol(:,:)
         real(rk),   allocatable,        intent(inout)   :: neighbor_invmass(:,:)
         integer(ik),                    intent(inout)   :: neighbor_status
         type(mpi_comm),                 intent(in)      :: ChiDG_COMM
 
         integer(ik) :: corner_one, corner_two, corner_three, corner_four
         integer(ik) :: corner_indices(4), data(5), mapping, iproc, idomain_g, ierr
-        integer(ik) :: ddx_size(2), invmass_size(2)
+        integer(ik) :: ddx_size(2), invmass_size(2), br2_face_size(2), br2_vol_size(2)
         logical     :: neighbor_element, has_domain
 
 
@@ -1009,19 +1030,25 @@ contains
                         ineighbor_proc      = iproc
 
                         call MPI_Recv(ddx_size,2,MPI_INTEGER4,iproc,5,ChiDG_COMM,MPI_STATUS_IGNORE,ierr)
-                        call MPI_Recv(invmass_size,2,MPI_INTEGER4,iproc,6,ChiDG_COMM,MPI_STATUS_IGNORE,ierr)
+                        call MPI_Recv(br2_face_size,2,MPI_INTEGER4,iproc,6,ChiDG_COMM,MPI_STATUS_IGNORE,ierr)
+                        call MPI_Recv(br2_vol_size,2,MPI_INTEGER4,iproc,7,ChiDG_COMM,MPI_STATUS_IGNORE,ierr)
+                        call MPI_Recv(invmass_size,2,MPI_INTEGER4,iproc,8,ChiDG_COMM,MPI_STATUS_IGNORE,ierr)
 
                         if (allocated(neighbor_ddx)) deallocate(neighbor_ddx,neighbor_ddy,neighbor_ddz,neighbor_invmass)
                         allocate(neighbor_ddx(ddx_size(1),ddx_size(2)), &
                                  neighbor_ddy(ddx_size(1),ddx_size(2)), &
                                  neighbor_ddz(ddx_size(1),ddx_size(2)), &
+                                 neighbor_br2_face(br2_face_size(1),br2_face_size(2)), &
+                                 neighbor_br2_vol(br2_vol_size(1),br2_vol_size(2)),    &
                                  neighbor_invmass(invmass_size(1),invmass_size(2)),  stat=ierr)
                         if (ierr /= 0) call AllocationError
 
-                        call MPI_Recv(neighbor_ddx,ddx_size(1)*ddx_size(2), MPI_REAL8, iproc,7,ChiDG_COMM,MPI_STATUS_IGNORE,ierr)
-                        call MPI_Recv(neighbor_ddy,ddx_size(1)*ddx_size(2), MPI_REAL8, iproc,8,ChiDG_COMM,MPI_STATUS_IGNORE,ierr)
-                        call MPI_Recv(neighbor_ddz,ddx_size(1)*ddx_size(2), MPI_REAL8, iproc,9,ChiDG_COMM,MPI_STATUS_IGNORE,ierr)
-                        call MPI_Recv(neighbor_invmass,invmass_size(1)*invmass_size(2), MPI_REAL8, iproc,10,ChiDG_COMM,MPI_STATUS_IGNORE,ierr)
+                        call MPI_Recv(neighbor_ddx,ddx_size(1)*ddx_size(2), MPI_REAL8, iproc,9,ChiDG_COMM,MPI_STATUS_IGNORE,ierr)
+                        call MPI_Recv(neighbor_ddy,ddx_size(1)*ddx_size(2), MPI_REAL8, iproc,10,ChiDG_COMM,MPI_STATUS_IGNORE,ierr)
+                        call MPI_Recv(neighbor_ddz,ddx_size(1)*ddx_size(2), MPI_REAL8, iproc,11,ChiDG_COMM,MPI_STATUS_IGNORE,ierr)
+                        call MPI_Recv(neighbor_br2_face,br2_face_size(1)*br2_face_size(2), MPI_REAL8, iproc, 12, ChiDG_COMM, MPI_STATUS_IGNORE,ierr)
+                        call MPI_Recv(neighbor_br2_vol,br2_vol_size(1)*br2_vol_size(2), MPI_REAL8, iproc, 13, ChiDG_COMM, MPI_STATUS_IGNORE,ierr)
+                        call MPI_Recv(neighbor_invmass,invmass_size(1)*invmass_size(2), MPI_REAL8, iproc,14,ChiDG_COMM,MPI_STATUS_IGNORE,ierr)
 
                         neighbor_status     = NEIGHBOR_FOUND
                     end if
@@ -1154,11 +1181,13 @@ contains
         integer(ik),    allocatable :: comm_procs(:)
         integer(ik)                 :: myrank, neighbor_rank, ielem, iface, loc
         logical                     :: has_neighbor, already_added, comm_neighbor
+        character(:),   allocatable :: user_msg
 
         !
         ! Test if global communication has been initialized
         !
-        if ( .not. self%global_comm_initialized) call chidg_signal(WARN,"mesh%get_comm_procs: mesh global communication not initialized")
+        user_msg = "mesh%get_comm_procs: mesh global communication not initialized."
+        if ( .not. self%global_comm_initialized) call chidg_signal(WARN,user_msg)
 
 
         !
@@ -1238,11 +1267,13 @@ contains
         integer(ik),    allocatable :: comm_procs(:)
         integer(ik)                 :: myrank, ielem, iface, loc, ChiID, idonor, donor_rank
         logical                     :: already_added, is_chimera, comm_donor
+        character(:),   allocatable :: user_msg
 
         !
         ! Test if global communication has been initialized
         !
-        if ( .not. self%global_comm_initialized) call chidg_signal(WARN,"mesh%get_comm_procs: mesh global communication not initialized")
+        user_msg = "mesh%get_recv_procs_chimera: mesh global communication not initialized."
+        if ( .not. self%global_comm_initialized) call chidg_signal(WARN,user_msg)
 
 
         !
@@ -1322,13 +1353,15 @@ contains
         integer(ik),    allocatable :: comm_procs(:), comm_procs_local(:), comm_procs_chimera(:)
         integer(ik)                 :: iproc, proc, loc
         logical                     :: already_added
+        character(:),   allocatable :: user_msg
 
 
 
         !
         ! Test if global communication has been initialized
         !
-        if ( .not. self%global_comm_initialized) call chidg_signal(WARN,"mesh%get_comm_procs: mesh global communication not initialized")
+        user_msg = "mesh%get_send_procs: mesh global communication not initialized."
+        if ( .not. self%global_comm_initialized) call chidg_signal(WARN,user_msg)
 
 
 
@@ -1382,81 +1415,6 @@ contains
 
 
 
-
-
-!        !
-!        ! Get current processor rank
-!        !
-!        myrank = IRANK
-!
-!        do ielem = 1,self%nelem
-!            do iface = 1,size(self%faces,2)
-!
-!                !
-!                ! Get face properties
-!                !
-!                has_neighbor = ( self%faces(ielem,iface)%ftype == INTERIOR )
-!
-!                
-!                !
-!                ! For interior neighbor
-!                !
-!                if ( has_neighbor ) then
-!                    !
-!                    ! Get neighbor processor rank
-!                    !
-!                    neighbor_rank = self%faces(ielem,iface)%ineighbor_proc
-!                    comm_neighbor = ( myrank /= neighbor_rank )
-!
-!                    !
-!                    ! If off-processor, add to list, if not already added.
-!                    !
-!                    if ( comm_neighbor ) then
-!                        ! Check if proc was already added to list from another neighbor
-!                        loc = comm_procs_vector%loc(neighbor_rank)
-!                        already_added = ( loc /= 0 )
-!
-!                        if (.not. already_added ) call comm_procs_vector%push_back(neighbor_rank)
-!                    end if
-!
-!                end if
-!                
-!
-!            end do !iface
-!        end do !ielem
-!
-!
-!
-!
-!
-!        !
-!        ! Collect processors that we are sending chimera donor elements to
-!        !
-!        do idonor = 1,self%chimera%send%ndonors()
-!
-!            donor_rank = self%chimera%send%receiver_proc%at(idonor)
-!            comm_donor = (myrank /= donor_rank)
-!
-!
-!            !
-!            ! If off-processor, add to list, if not already added.
-!            !
-!            if ( comm_donor ) then
-!                ! Check if proc was already added to list from another donor or neighbor
-!                loc = comm_procs_vector%loc(donor_rank)
-!                already_added = ( loc /= 0 )
-!
-!                if (.not. already_added) call comm_procs_vector%push_back(donor_rank)
-!            end if
-!
-!
-!        end do !idonor
-!
-!
-!
-!        ! Set vector data to array to be returned.
-!        comm_procs = comm_procs_vector%data()
-
     end function get_send_procs
     !***************************************************************************************************************
 
@@ -1489,11 +1447,13 @@ contains
         integer(ik),    allocatable :: comm_procs(:)
         integer(ik)                 :: myrank, neighbor_rank, ielem, iface, loc
         logical                     :: has_neighbor, already_added, comm_neighbor
+        character(:),   allocatable :: user_msg
 
         !
         ! Test if global communication has been initialized
         !
-        if ( .not. self%global_comm_initialized) call chidg_signal(WARN,"mesh%get_comm_procs: mesh global communication not initialized")
+        user_msg = "mesh%get_send_procs_local: mesh global communication not initialized."
+        if ( .not. self%global_comm_initialized) call chidg_signal(WARN,user_msg)
 
 
         !
@@ -1581,11 +1541,13 @@ contains
         integer(ik),    allocatable :: comm_procs(:)
         integer(ik)                 :: myrank, loc, idonor, donor_rank
         logical                     :: already_added, comm_donor
+        character(:),   allocatable :: user_msg
 
         !
         ! Test if global communication has been initialized
         !
-        if ( .not. self%global_comm_initialized) call chidg_signal(WARN,"mesh%get_comm_procs: mesh global communication not initialized")
+        user_msg = "mesh%get_send_procs_chimera: mesh global communication not initialized."
+        if ( .not. self%global_comm_initialized) call chidg_signal(WARN,user_msg)
 
 
         !

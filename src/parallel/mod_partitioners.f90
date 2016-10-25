@@ -33,8 +33,8 @@ contains
     !-----------------------------------------------------------------------------------------------
     subroutine partition_connectivity(connectivities, partitions)
         use iso_c_binding,  only: c_ptr, c_int, c_null_ptr
-        type(domain_connectivity_t),    intent(inout) :: connectivities(:)
-        type(partition_t), allocatable, intent(inout) :: partitions(:)
+        type(domain_connectivity_t),    intent(inout)   :: connectivities(:)
+        type(partition_t), allocatable, intent(inout)   :: partitions(:)
 
         logical                     :: serial, parallel
 
@@ -46,12 +46,11 @@ contains
         integer                     :: ielem, inode, ielem_node, node_offset, iconn, nconn, mapping, nnodes_element, nnodes_conn
         integer                     :: ipartition, nindices_total, nindices_element, element_partition
 
-        integer(c_int)              :: nelem, nnodes
-        integer(c_int), allocatable :: eptr(:), eind(:), epart(:), npart(:)
-        integer(c_int)              :: n, npartitions, ncommon
-        type(c_ptr)                 :: vwgt, vsize, tpwgts
-        integer(c_int), allocatable, target :: options(:)
-        type(c_ptr)                         :: options_p
+        integer(c_int)                      :: nelem, nnodes
+        integer(c_int), allocatable         :: eptr(:), eind(:), epart(:), npart(:)
+        integer(c_int), allocatable, target :: vwgt(:), options(:)
+        type(c_ptr)                         :: vwgt_p, options_p, vsize, tpwgts
+        integer(c_int)                      :: n, npartitions, ncommon
 
 
         serial   = (NRANK == 1)
@@ -84,7 +83,7 @@ contains
 
 
             ! Unused METIS parameters
-            vwgt    = c_null_ptr
+            vwgt_p  = c_null_ptr
             vsize   = c_null_ptr
             tpwgts  = c_null_ptr
 
@@ -130,7 +129,7 @@ contains
             !
             ! Allocate storage for partitioning
             !
-            allocate(eptr(nelem_total+1), eind(nindices_total), epart(nelem_total), npart(nnodes), stat=ierr)
+            allocate(eptr(nelem_total+1), eind(nindices_total), vwgt(nelem_total), epart(nelem_total), npart(nnodes), stat=ierr)
             if (ierr /= 0) call AllocationError
 
 
@@ -165,6 +164,9 @@ contains
                         inode = inode + 1
                     end do
 
+                    ! Set element weight
+                    !vwgt(ielem) = domain_weights(iconn)
+                    vwgt(ielem) = 1
 
                     ielem = ielem + 1
                 end do ! ielem_domain
@@ -206,7 +208,8 @@ contains
 
 
             ! Standard
-            ierr = METIS_PartMeshDual(nelem_total,nnodes,eptr,eind,vwgt,vsize,ncommon,npartitions,tpwgts,options_p,n,epart,npart)
+            vwgt_p = c_loc(vwgt(1))
+            ierr = METIS_PartMeshDual(nelem_total,nnodes,eptr,eind,vwgt_p,vsize,ncommon,npartitions,tpwgts,options_p,n,epart,npart)
             if (ierr /= 1) call chidg_signal(FATAL,"partition_connectivity: Error in METIS_PartMeshNodal")
 
 

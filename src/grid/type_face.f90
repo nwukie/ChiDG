@@ -61,10 +61,12 @@ module type_face
         integer(ik)                 :: recv_domain         = 0
         integer(ik)                 :: recv_element        = 0
 
-        real(rk),           allocatable :: neighbor_ddx(:,:)             !< Derivative of basis functions in x-direction at quadrature nodes
-        real(rk),           allocatable :: neighbor_ddy(:,:)             !< Derivative of basis functions in y-direction at quadrature nodes
-        real(rk),           allocatable :: neighbor_ddz(:,:)             !< Derivative of basis functions in z-direction at quadrature nodes
-        real(rk),           allocatable :: neighbor_invmass(:,:)
+        real(rk),           allocatable :: neighbor_ddx(:,:)            !< Derivative of basis functions in x-direction at quadrature nodes
+        real(rk),           allocatable :: neighbor_ddy(:,:)            !< Derivative of basis functions in y-direction at quadrature nodes
+        real(rk),           allocatable :: neighbor_ddz(:,:)            !< Derivative of basis functions in z-direction at quadrature nodes
+        real(rk),           allocatable :: neighbor_br2_face(:,:)       !< Matrix for computing/obtaining br2 modes at face nodes
+        real(rk),           allocatable :: neighbor_br2_vol(:,:)        !< Matrix for computing/obtaining br2 modes at volume nodes
+        real(rk),           allocatable :: neighbor_invmass(:,:)    
 
 
         ! Chimera face offset. For periodic boundary condition.
@@ -287,8 +289,8 @@ contains
                  self%metric(3,3,nnodes),                   &
                  self%norm(nnodes,3),                       &
                  self%unorm(nnodes,3),                      &
-                 self%ddx(nnodes,self%nterms_s),           &
-                 self%ddy(nnodes,self%nterms_s),           &
+                 self%ddx(nnodes,self%nterms_s),            &
+                 self%ddy(nnodes,self%nterms_s),            &
                  self%ddz(nnodes,self%nterms_s), stat=ierr) 
         if (ierr /= 0) call AllocationError
 
@@ -505,7 +507,7 @@ contains
                 end do
 
             case default
-                stop "Error: invalid face index in face initialization"
+                call chidg_signal(FATAL,"face%compute_quadrature_normals: Invalid face index in face initialization.")
         end select
 
 

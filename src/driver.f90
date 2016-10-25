@@ -46,7 +46,6 @@ program driver
 
 
 
-
     !
     ! Check for command-line arguments
     !
@@ -80,10 +79,10 @@ program driver
         !
         ! Set ChiDG components
         !
-        call chidg%set("Time Integrator" , time_integrator,  toptions)
-        call chidg%set("Nonlinear Solver", nonlinear_solver, noptions)
-        call chidg%set("Linear Solver"   , linear_solver,    loptions)
-        call chidg%set("Preconditioner"  , preconditioner            )
+        call chidg%set('Time Integrator' , time_integrator,  toptions)
+        call chidg%set('Nonlinear Solver', nonlinear_solver, noptions)
+        call chidg%set('Linear Solver'   , linear_solver,    loptions)
+        call chidg%set('Preconditioner'  , preconditioner            )
 
 
         !
@@ -128,7 +127,7 @@ program driver
             call initialize_variable(chidg%data,1,constant)
 
             ! rho_u
-            call constant%set_option('val',1.5_rk)
+            call constant%set_option('val',17.5_rk)
             call initialize_variable(chidg%data,2,constant)
 
             ! rho_v
@@ -140,7 +139,7 @@ program driver
             call initialize_variable(chidg%data,4,constant)
 
             ! rho_E
-            call constant%set_option('val',275000.0_rk)
+            call constant%set_option('val',250000.0_rk)
             call initialize_variable(chidg%data,5,constant)
 
 

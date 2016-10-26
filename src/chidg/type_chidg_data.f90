@@ -7,7 +7,7 @@ module type_chidg_data
     use type_boundary_connectivity,     only: boundary_connectivity_t
 
     ! Primary chidg_data_t components
-    use type_domaininfo,                only: domaininfo_t
+    use type_domain_info,               only: domain_info_t
     use type_mesh,                      only: mesh_t
     use type_bcset,                     only: bcset_t
     use type_bc,                        only: bc_t
@@ -47,7 +47,8 @@ module type_chidg_data
         integer(ik),        private                 :: spacedim_ = 3    !< Default 3D 
 
         
-        type(domaininfo_t), allocatable :: info(:)          !< General container for domain information
+        
+        type(domain_info_t), allocatable :: info(:)          !< General container for domain information
 
 
 
@@ -170,7 +171,7 @@ contains
         character(:),   allocatable :: user_msg
 
 
-        type(domaininfo_t),             allocatable :: temp_info(:)
+        type(domain_info_t),            allocatable :: temp_info(:)
         type(mesh_t),                   allocatable :: temp_mesh(:)
         type(bcset_t),                  allocatable :: temp_bcset(:)
         type(equation_set_t),           allocatable :: temp_eqnset(:)
@@ -187,7 +188,8 @@ contains
         !
         ! Resize array storage
         !
-        allocate(temp_info(self%ndomains_),   &
+        allocate( &
+                 temp_info(self%ndomains_),   &
                  temp_mesh(self%ndomains_),   &
                  temp_bcset(self%ndomains_),  &
                  temp_eqnset(self%ndomains_), stat=ierr)

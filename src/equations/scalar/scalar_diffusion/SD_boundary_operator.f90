@@ -128,8 +128,8 @@ contains
         !
         ! Compute scalar coefficient
         !
-        mu_m = prop%scalar%compute_mu(u_m)
-        mu_p = prop%scalar%compute_mu(u_p)
+        mu_m = prop%scalar%compute_mu(u_m,dudx_m,dudy_m,dudz_m)
+        mu_p = prop%scalar%compute_mu(u_p,dudx_p,dudy_p,dudz_p)
 
 
         flux_m = -mu_m*dudx_m

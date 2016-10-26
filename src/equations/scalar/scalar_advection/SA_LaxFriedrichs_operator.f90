@@ -131,9 +131,6 @@ contains
         !
         ! Compute boundary upwind flux
         !
-        !flux_x = HALF*(cx_m*u_m - cx_p*u_p)
-        !flux_y = HALF*(cy_m*u_m - cy_p*u_p)
-        !flux_z = HALF*(cz_m*u_m - cz_p*u_p)
         flux_x = max(abs(cx_m),abs(cx_p))*HALF*(u_m - u_p)
         flux_y = max(abs(cy_m),abs(cy_p))*HALF*(u_m - u_p)
         flux_z = max(abs(cz_m),abs(cz_p))*HALF*(u_m - u_p)

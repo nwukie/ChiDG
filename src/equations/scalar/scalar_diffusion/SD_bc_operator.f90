@@ -124,8 +124,9 @@ contains
         !
         ! Compute scalar coefficient
         !
-        mu = prop%scalar%compute_mu(u)
+        mu = prop%scalar%compute_mu(u,dudx,dudy,dudz)
 
+        
 
         !=================================================
         ! Mass flux

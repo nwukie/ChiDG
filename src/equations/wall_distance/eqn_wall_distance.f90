@@ -1,6 +1,6 @@
 module eqn_wall_distance
 #include <messenger.h>
-    use mod_constants,         only: ZERO
+    use mod_constants,         only: ZERO, ONE, TWO, THREE
     use type_equation_set,     only: equation_set_t
     use type_equation_builder, only: equation_builder_t
     use type_scalar,           only: scalar_t
@@ -75,17 +75,34 @@ contains
     !!
     !!
     !-------------------------------------------------------------------------------
-    impure elemental function compute_mu(self,u) result(val)
+    impure elemental function compute_mu(self,u,dudx,dudy,dudz) result(val)
         class(wall_distance_model), intent(in)  :: self
         type(AD_D),                 intent(in)  :: u
+        type(AD_D),                 intent(in), optional    :: dudx
+        type(AD_D),                 intent(in), optional    :: dudy
+        type(AD_D),                 intent(in), optional    :: dudz
 
-        type(AD_D)  :: val
-        integer(ik) :: igq
+        type(AD_D)  :: val, mag2
+        real(rk)    :: p
 
-        val = u*100.01_rk
-        val = 1.0_rk
 
-        !val%xp_ad_ = ZERO
+        !val = u*1.0_rk
+        !val = 1.0_rk
+
+        p = 8._rk
+
+        ! Compute magnitude of gradient
+        mag2 = dudx*dudx + dudy*dudy + dudz*dudz
+
+        
+        if (abs(p-2._rk) > 1.e-14_rk) then
+            val = mag2**((p-TWO)/TWO)
+        else
+            val = mag2
+            val = ONE
+        end if
+
+
 
     end function compute_mu
     !*******************************************************************************
@@ -255,10 +272,10 @@ contains
         select case (trim(blueprint))
 
             case('default')
-                call wall_distance_eqn%add_operator('Scalar Advection Boundary Average Operator')
-                call wall_distance_eqn%add_operator('Scalar Advection Volume Operator')
-                call wall_distance_eqn%add_operator('Scalar Advection LaxFriedrichs Operator')
-                call wall_distance_eqn%add_operator('Scalar Advection BC Operator')
+!                call wall_distance_eqn%add_operator('Scalar Advection Boundary Average Operator')
+!                call wall_distance_eqn%add_operator('Scalar Advection Volume Operator')
+!                call wall_distance_eqn%add_operator('Scalar Advection LaxFriedrichs Operator')
+!                call wall_distance_eqn%add_operator('Scalar Advection BC Operator')
                 call wall_distance_eqn%add_operator("Scalar Diffusion Boundary Average Operator")
                 call wall_distance_eqn%add_operator("Scalar Diffusion Volume Operator")
                 call wall_distance_eqn%add_operator("Scalar Diffusion BC Operator")

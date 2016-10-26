@@ -772,7 +772,7 @@ CONTAINS
          TYPE (AD_D)::res
          allocate(res%xp_ad_(size(u%xp_ad_)))
          
-         tmp=u%x_ad_**(k-1)
+         tmp=u%x_ad_**(real(k,rk)-1._rk)
          res%x_ad_ = u%x_ad_*tmp 
          res%xp_ad_=REAL(k,DBL_AD)*tmp*u%xp_ad_
 
@@ -789,7 +789,7 @@ CONTAINS
          TYPE (AD_D)::res
          allocate(res%xp_ad_(size(u%xp_ad_)))
          
-         tmp=u%x_ad_**(k-1)
+         tmp=u%x_ad_**(k-1._rk)
          res%x_ad_ = u%x_ad_*tmp 
          res%xp_ad_=k*tmp*u%xp_ad_
 
@@ -806,7 +806,7 @@ CONTAINS
          TYPE (AD_D)::res
          allocate(res%xp_ad_(size(u%xp_ad_)))
          
-         tmp=u%x_ad_**(k-1)
+         tmp=u%x_ad_**(real(k,rk)-1._rk)
          res%x_ad_ = u%x_ad_*tmp 
          res%xp_ad_=k*tmp*u%xp_ad_
 

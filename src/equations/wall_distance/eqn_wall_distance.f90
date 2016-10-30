@@ -7,6 +7,7 @@ module eqn_wall_distance
     use DNAD_D
     implicit none
 
+    real(rk),   parameter :: P = 2._rk
 
 
     !>
@@ -16,7 +17,7 @@ module eqn_wall_distance
     !!
     !!
     !!
-    !-----------------------------------------------------------------------------------------------------
+    !------------------------------------------------------------------------------------------
     type, extends(equation_builder_t), public :: wall_distance
 
     contains
@@ -25,7 +26,7 @@ module eqn_wall_distance
         procedure   :: build
 
     end type wall_distance
-    !******************************************************************************************************
+    !******************************************************************************************
 
 
 
@@ -41,7 +42,7 @@ module eqn_wall_distance
     !!
     !!
     !!
-    !-----------------------------------------------------------------------------------------------------
+    !------------------------------------------------------------------------------------------
     type, extends(scalar_t), public :: wall_distance_model
 
 
@@ -49,12 +50,9 @@ module eqn_wall_distance
     contains
 
         procedure   :: compute_mu
-        procedure   :: compute_cx
-        procedure   :: compute_cy
-        procedure   :: compute_cz
 
     end type wall_distance_model
-    !******************************************************************************************************
+    !******************************************************************************************
 
 
 
@@ -74,7 +72,7 @@ contains
     !!  @date   9/30/2016
     !!
     !!
-    !-------------------------------------------------------------------------------
+    !-----------------------------------------------------------------------------------------
     impure elemental function compute_mu(self,u,dudx,dudy,dudz) result(val)
         class(wall_distance_model), intent(in)  :: self
         type(AD_D),                 intent(in)  :: u
@@ -83,13 +81,11 @@ contains
         type(AD_D),                 intent(in), optional    :: dudz
 
         type(AD_D)  :: val, mag2
-        real(rk)    :: p
 
 
         !val = u*1.0_rk
         !val = 1.0_rk
 
-        p = 8._rk
 
         ! Compute magnitude of gradient
         mag2 = dudx*dudx + dudy*dudy + dudz*dudz
@@ -105,121 +101,7 @@ contains
 
 
     end function compute_mu
-    !*******************************************************************************
-
-
-
-
-
-
-    !>
-    !!
-    !!  @author Nathan A. Wukie (AFRL)
-    !!  @date   9/30/2016
-    !!
-    !!
-    !-------------------------------------------------------------------------------
-    impure elemental function compute_cx(self,u,dudx,dudy,dudz) result(val)
-        class(wall_distance_model), intent(in)  :: self
-        type(AD_D),                 intent(in)  :: u
-        type(AD_D),                 intent(in), optional    :: dudx
-        type(AD_D),                 intent(in), optional    :: dudy
-        type(AD_D),                 intent(in), optional    :: dudz
-
-        type(AD_D)  :: val, mag
-
-        ! Compute magnitude of gradient
-        mag = sqrt(dudx*dudx + dudy*dudy + dudz*dudz)
-
-        ! Set to constant
-        val = dudx/mag
-
-    end function compute_cx
-    !*******************************************************************************
-
-
-
-
-
-    !>
-    !!
-    !!  @author Nathan A. Wukie (AFRL)
-    !!  @date   9/30/2016
-    !!
-    !!
-    !-------------------------------------------------------------------------------
-    impure elemental function compute_cy(self,u,dudx,dudy,dudz) result(val)
-        class(wall_distance_model), intent(in)  :: self
-        type(AD_D),                 intent(in)  :: u
-        type(AD_D),                 intent(in), optional    :: dudx
-        type(AD_D),                 intent(in), optional    :: dudy
-        type(AD_D),                 intent(in), optional    :: dudz
-
-        type(AD_D) :: val, mag
-
-        ! Compute magnitude of gradient
-        mag = sqrt(dudx*dudx + dudy*dudy + dudz*dudz)
-
-        ! Set to constant
-        val = dudy/mag
-
-    end function compute_cy
-    !*******************************************************************************
-
-
-
-
-
-
-    !>
-    !!
-    !!  @author Nathan A. Wukie (AFRL)
-    !!  @date   9/30/2016
-    !!
-    !!
-    !-------------------------------------------------------------------------------
-    impure elemental function compute_cz(self,u,dudx,dudy,dudz) result(val)
-        class(wall_distance_model), intent(in)  :: self
-        type(AD_D),                 intent(in)  :: u
-        type(AD_D),                 intent(in), optional    :: dudx
-        type(AD_D),                 intent(in), optional    :: dudy
-        type(AD_D),                 intent(in), optional    :: dudz
-
-        type(AD_D)  :: val, mag
-
-        ! Compute magnitude of gradient
-        mag = sqrt(dudx*dudx + dudy*dudy + dudz*dudz)
-
-        ! Set to constant
-        val = dudz/mag
-
-    end function compute_cz
-    !*******************************************************************************
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    !*****************************************************************************************
 
 
 
@@ -231,14 +113,14 @@ contains
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   8/30/2016
     !!
-    !---------------------------------------------------------------------------------------------
+    !-----------------------------------------------------------------------------------------
     subroutine init(self)
         class(wall_distance),   intent(inout)  :: self
 
         call self%set_name('Wall Distance')
 
     end subroutine init
-    !*********************************************************************************************
+    !*****************************************************************************************
 
 
 
@@ -251,13 +133,14 @@ contains
     !!
     !!
     !!
-    !-------------------------------------------------------------------------------------------------------
+    !-----------------------------------------------------------------------------------------
     function build(self,blueprint) result(wall_distance_eqn)
         class(wall_distance),    intent(in)  :: self
         character(len=*),        intent(in)  :: blueprint
 
-        type(equation_set_t)         :: wall_distance_eqn
-        type(wall_distance_model)    :: wall_distance_model_instance
+        character(:),   allocatable :: user_msg
+        type(equation_set_t)        :: wall_distance_eqn
+        type(wall_distance_model)   :: wall_distance_model_instance
         
 
         !
@@ -272,10 +155,6 @@ contains
         select case (trim(blueprint))
 
             case('default')
-!                call wall_distance_eqn%add_operator('Scalar Advection Boundary Average Operator')
-!                call wall_distance_eqn%add_operator('Scalar Advection Volume Operator')
-!                call wall_distance_eqn%add_operator('Scalar Advection LaxFriedrichs Operator')
-!                call wall_distance_eqn%add_operator('Scalar Advection BC Operator')
                 call wall_distance_eqn%add_operator("Scalar Diffusion Boundary Average Operator")
                 call wall_distance_eqn%add_operator("Scalar Diffusion Volume Operator")
                 call wall_distance_eqn%add_operator("Scalar Diffusion BC Operator")
@@ -285,14 +164,15 @@ contains
                 call wall_distance_eqn%prop%add_scalar(wall_distance_model_instance)
 
             case default
-                call chidg_signal_one(FATAL, "build_wall_distance: I didn't recognize the construction &
-                                              parameter that was passed to build the equation set.", blueprint)
+                user_msg = "build_wall_distance: I didn't recognize the construction &
+                            parameter that was passed to build the equation set."
+                call chidg_signal_one(FATAL,user_msg, blueprint)
 
         end select
 
 
     end function build
-    !*********************************************************************************************************
+    !*****************************************************************************************
 
 
 

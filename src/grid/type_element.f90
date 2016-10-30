@@ -96,6 +96,7 @@ module type_element
         procedure, public   :: computational_point    !< Compute a discrete value for a computational coordinate at a given x, y, z.
         procedure, public   :: metric_point           !< Compute a discrete value for a metric term at a given xi, eta, zeta.
         procedure, public   :: solution_point         !< Compute a discrete value for the solution at a given xi,eta, zeta.
+        procedure, public   :: derivative_point
         procedure, public   :: project                !< Compute a projection of a function onto the solution basis
 
 
@@ -981,6 +982,112 @@ contains
 
 
 
+    !>  Compute a variable value, based on the location in reference space (xi, eta, zeta)
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   2/1/2016
+    !!
+    !!  @param[in]  elem    Element that the solution expansion is associated with.
+    !!  @param[in]  q       Solution expansion for a given element.
+    !!  @param[in]  ivar    Integer corresponding to variable index.
+    !!  @param[in]  xi      Real value for xi-coordinate.
+    !!  @param[in]  eta     Real value for eta-coordinate.
+    !!  @param[in]  zeta    Real value for zeta-coordinate.
+    !!
+    !----------------------------------------------------------------------------------------
+    function derivative_point(self,q,ivar,xi,eta,zeta,dir) result(val)
+        class(element_t),       intent(in)      :: self
+        class(densevector_t),   intent(in)      :: q
+        integer(ik),            intent(in)      :: ivar
+        real(rk),               intent(in)      :: xi,eta,zeta
+        integer(ik),            intent(in)      :: dir
+
+        real(rk)        :: val
+        type(point_t)   :: node
+        real(rk)        :: ddxi(q%nterms()), ddeta(q%nterms()), ddzeta(q%nterms()), &
+                           deriv(q%nterms())
+        real(rk)        :: metric(3,3), jinv, dxi_dx, dxi_dy, dxi_dz, &
+                           deta_dx, deta_dy, deta_dz, dzeta_dx, dzeta_dy, dzeta_dz
+        integer(ik)     :: iterm, spacedim
+
+
+        call node%set(xi,eta,zeta)
+
+        spacedim = self%spacedim
+
+
+
+        !
+        ! Evaluate polynomial mode derivatives at node location
+        !
+        do iterm = 1,q%nterms()
+            ddxi(iterm)   = DpolynomialVal(spacedim,q%nterms(),iterm,node,XI_DIR)
+            ddeta(iterm)  = DpolynomialVal(spacedim,q%nterms(),iterm,node,ETA_DIR)
+            ddzeta(iterm) = DpolynomialVal(spacedim,q%nterms(),iterm,node,ZETA_DIR)
+        end do
+
+
+        !
+        ! Compute metrics at node
+        !
+        metric(1,1) = self%metric_point(X_DIR,XI_DIR,  xi,eta,zeta)
+        metric(2,1) = self%metric_point(Y_DIR,XI_DIR,  xi,eta,zeta)
+        metric(3,1) = self%metric_point(Z_DIR,XI_DIR,  xi,eta,zeta)
+        metric(1,2) = self%metric_point(X_DIR,ETA_DIR, xi,eta,zeta)
+        metric(2,2) = self%metric_point(Y_DIR,ETA_DIR, xi,eta,zeta)
+        metric(3,2) = self%metric_point(Z_DIR,ETA_DIR, xi,eta,zeta)
+        metric(1,3) = self%metric_point(X_DIR,ZETA_DIR,xi,eta,zeta)
+        metric(2,3) = self%metric_point(Y_DIR,ZETA_DIR,xi,eta,zeta)
+        metric(3,3) = self%metric_point(Z_DIR,ZETA_DIR,xi,eta,zeta)
+
+
+        !
+        ! Compute inverse cell mapping jacobian
+        !
+        jinv = metric(1,1)*metric(2,2)*metric(3,3) - metric(1,2)*metric(2,1)*metric(3,3) - &
+               metric(1,1)*metric(2,3)*metric(3,2) + metric(1,3)*metric(2,1)*metric(3,2) + &
+               metric(1,2)*metric(2,3)*metric(3,1) - metric(1,3)*metric(2,2)*metric(3,1)
+
+
+
+
+
+        do iterm = 1,self%nterms_s
+            if (dir == X_DIR) then
+                dxi_dx   = metric(2,2)*metric(3,3) - metric(2,3)*metric(3,2)
+                deta_dx  = metric(2,3)*metric(3,1) - metric(2,1)*metric(3,3)
+                dzeta_dx = metric(2,1)*metric(3,2) - metric(2,2)*metric(3,1)
+                deriv(iterm) = dxi_dx   * ddxi(iterm)   * (ONE/jinv) + &
+                               deta_dx  * ddeta(iterm)  * (ONE/jinv) + &
+                               dzeta_dx * ddzeta(iterm) * (ONE/jinv)
+            else if (dir == Y_DIR) then
+                dxi_dy   = metric(1,3)*metric(3,2) - metric(1,2)*metric(3,3)
+                deta_dy  = metric(1,1)*metric(3,3) - metric(1,3)*metric(3,1)
+                dzeta_dy = metric(1,2)*metric(3,1) - metric(1,1)*metric(3,2)
+                deriv(iterm) = dxi_dy   * ddxi(iterm)   * (ONE/jinv) + &
+                               deta_dy  * ddeta(iterm)  * (ONE/jinv) + &
+                               dzeta_dy * ddzeta(iterm) * (ONE/jinv)
+            else if (dir == Z_DIR) then
+                dxi_dz   = metric(1,2)*metric(2,3) - metric(1,3)*metric(2,2)
+                deta_dz  = metric(1,3)*metric(2,1) - metric(1,1)*metric(2,3)
+                dzeta_dz = metric(1,1)*metric(2,2) - metric(1,2)*metric(2,1)
+                deriv(iterm) = dxi_dz   * ddxi(iterm)   * (ONE/jinv) + &
+                               deta_dz  * ddeta(iterm)  * (ONE/jinv) + &
+                               dzeta_dz * ddzeta(iterm) * (ONE/jinv)
+            else
+                call chidg_signal(FATAL,"element%derivative_point: Invalid value for 'dir' parameter. 'ddx', 'ddy', 'ddz'.")
+            end if
+        end do
+
+
+
+        !
+        ! Evaluate x from dot product of modes and polynomial values
+        !
+        val = dot_product(q%getvar(ivar),deriv)
+
+    end function derivative_point
+    !****************************************************************************************
 
 
 
@@ -999,7 +1106,7 @@ contains
     !!  @param[in]  y       Real value for y-coordinate.
     !!  @param[in]  z       Real value for z-coordinate.
     !!
-    !----------------------------------------------------------------------------------------------------------------
+    !----------------------------------------------------------------------------------------
     function computational_point(self,x,y,z) result(loc)
         class(element_t),   intent(in)  :: self
         real(rk),           intent(in)  :: x
@@ -1116,7 +1223,7 @@ contains
 
 
     end function computational_point
-    !********************************************************************************************
+    !*****************************************************************************************
 
 
 
@@ -1133,7 +1240,7 @@ contains
     !!  @date   10/25/2016
     !!
     !!
-    !--------------------------------------------------------------------------------------------
+    !-----------------------------------------------------------------------------------------
     function project(self,fcn) result(fmodes)
         class(element_t),       intent(in)      :: self
         class(function_t),      intent(inout)   :: fcn
@@ -1160,7 +1267,7 @@ contains
 
 
     end function project
-    !*******************************************************************************************
+    !*****************************************************************************************
 
 
 
@@ -1173,7 +1280,7 @@ contains
     !!  @date   9/20/2016
     !!
     !!
-    !-------------------------------------------------------------------------------------------
+    !-----------------------------------------------------------------------------------------
     function get_face_from_corners(self,corner_indices) result(face_index)
         class(element_t),   intent(in)  :: self
         integer(ik),        intent(in)  :: corner_indices(:)

@@ -112,33 +112,33 @@ program driver
 !            call polynomial%set_option('f',3.5_rk)
 !            call create_function(polynomial,'polynomial')
 
-            ! d
+!            ! d
+!            call create_function(constant,'constant')
+!            call constant%set_option('val',0.001_rk)
+!            call chidg%data%sdata%q%project(chidg%data%mesh,constant,1)
+
+
             call create_function(constant,'constant')
-            call constant%set_option('val',0.001_rk)
+
+            ! rho
+            call constant%set_option('val',1.19_rk)
             call chidg%data%sdata%q%project(chidg%data%mesh,constant,1)
 
+            ! rho_u
+            call constant%set_option('val',150.5_rk)
+            call chidg%data%sdata%q%project(chidg%data%mesh,constant,2)
 
-!            call create_function(constant,'constant')
-!
-!            ! rho
-!            call constant%set_option('val',1.19_rk)
-!            call chidg%data%sdata%q%project(chidg%data%mesh,constant,1)
-!
-!            ! rho_u
-!            call constant%set_option('val',17.5_rk)
-!            call chidg%data%sdata%q%project(chidg%data%mesh,constant,2)
-!
-!            ! rho_v
-!            call constant%set_option('val',0._rk)
-!            call chidg%data%sdata%q%project(chidg%data%mesh,constant,3)
-!
-!            ! rho_w
-!            call constant%set_option('val',0._rk)
-!            call chidg%data%sdata%q%project(chidg%data%mesh,constant,4)
-!
-!            ! rho_E
-!            call constant%set_option('val',250000.0_rk)
-!            call chidg%data%sdata%q%project(chidg%data%mesh,constant,5)
+            ! rho_v
+            call constant%set_option('val',0._rk)
+            call chidg%data%sdata%q%project(chidg%data%mesh,constant,3)
+
+            ! rho_w
+            call constant%set_option('val',0._rk)
+            call chidg%data%sdata%q%project(chidg%data%mesh,constant,4)
+
+            ! rho_E
+            call constant%set_option('val',270000.0_rk)
+            call chidg%data%sdata%q%project(chidg%data%mesh,constant,5)
 
 
 

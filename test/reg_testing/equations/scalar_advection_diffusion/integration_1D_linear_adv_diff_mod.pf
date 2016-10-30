@@ -229,9 +229,12 @@ contains
     !!
     !!
     !-------------------------------------------------------------------------------
-    impure elemental function compute_mu(self,u) result(val)
+    impure elemental function compute_mu(self,u,dudx,dudy,dudz) result(val)
         class(test_1D_advection_diffusion_model_t), intent(in)  :: self
         type(AD_D),                                 intent(in)  :: u
+        type(AD_D), optional,                       intent(in)  :: dudx
+        type(AD_D), optional,                       intent(in)  :: dudy
+        type(AD_D), optional,                       intent(in)  :: dudz
 
         type(AD_D) :: val
 

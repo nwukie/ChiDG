@@ -25,7 +25,8 @@
 !       A = 1, B = 50, D = 1, lambda = 1
 !
 !   Reference:
-!       Polyanin, A. D., and Zaitsev, V. F., "Handbook of Nonlinear Partial Differential Equations", 
+!       Polyanin, A. D., and Zaitsev, V. F., 
+!       "Handbook of Nonlinear Partial Differential Equations", 
 !       Chapman & Hall, 2004
 !
 !
@@ -114,7 +115,7 @@ module integration_1D_nonlinear_diffusion_mod
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   8/19/2016
     !!
-    !-----------------------------------------------------------------------------------------------------
+    !----------------------------------------------------------------------------------------
     type, extends(equation_builder_t), public :: test_nonlinear_diffusion_builder_t
 
 
@@ -124,7 +125,7 @@ module integration_1D_nonlinear_diffusion_mod
         procedure   :: build
 
     end type test_nonlinear_diffusion_builder_t
-    !******************************************************************************************************
+    !****************************************************************************************
 
 
 
@@ -210,17 +211,20 @@ contains
     !!  @date   9/20/2016
     !!
     !!
-    !---------------------------------------------------------------------------------------------
-    impure elemental function compute_mu(self,u) result(val)
+    !----------------------------------------------------------------------------------------
+    impure elemental function compute_mu(self,u,dudx,dudy,dudz) result(val)
         class(nonlinear_coefficient_model_t),   intent(in)  :: self
         type(AD_D),                             intent(in)  :: u
+        type(AD_D), optional,                   intent(in)  :: dudx
+        type(AD_D), optional,                   intent(in)  :: dudy
+        type(AD_D), optional,                   intent(in)  :: dudz
 
         type(AD_D) :: val
 
         val = exp(u)
 
     end function compute_mu
-    !*********************************************************************************************
+    !****************************************************************************************
     
 
 
@@ -235,14 +239,14 @@ contains
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   8/30/2016
     !!
-    !---------------------------------------------------------------------------------------------
+    !----------------------------------------------------------------------------------------
     subroutine init_builder(self)
         class(test_nonlinear_diffusion_builder_t),   intent(inout)  :: self
 
         call self%set_name('Test 1D Nonlinear Diffusion')
 
     end subroutine init_builder
-    !*********************************************************************************************
+    !****************************************************************************************
 
     
 
@@ -253,7 +257,7 @@ contains
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   9/19/2016
     !!
-    !-------------------------------------------------------------------------------------------------------
+    !----------------------------------------------------------------------------------------
     function build(self,blueprint) result(nonlinear_diffusion_eqn)
         class(test_nonlinear_diffusion_builder_t),   intent(in)  :: self
         character(len=*),               intent(in)  :: blueprint
@@ -282,7 +286,7 @@ contains
 
 
     end function build
-    !*********************************************************************************************************
+    !*****************************************************************************************
 
 
 
@@ -303,7 +307,7 @@ contains
     !!
     !!
     !!
-    !------------------------------------------------------------------------------
+    !----------------------------------------------------------------------------------------
     function newTest(test_parameter) result(test)
         type(case_grid_order),  intent(in)          :: test_parameter
         type(nonlinear_diffusion_1D)    :: test
@@ -313,14 +317,14 @@ contains
         test%order    = test_parameter%order
 
     end function newTest
-    !******************************************************************************
+    !****************************************************************************************
 
 
     !> Parameter initialization
     !!
     !!
     !!
-    !------------------------------------------------------------------------------
+    !----------------------------------------------------------------------------------------
     function getParameters() result(params)
         type(case_grid_order), allocatable :: params(:)
     
@@ -354,14 +358,14 @@ contains
         end do
 
     end function getParameters
-    !*******************************************************************************************
+    !****************************************************************************************
 
 
 
     !>  Reporting the parameters of the test
     !!
     !!
-    !-------------------------------------------------------------------------------------------
+    !----------------------------------------------------------------------------------------
     function toString(this) result(string)
         class (case_grid_order),    intent(in)  :: this
         character(:), allocatable   :: string
@@ -373,7 +377,7 @@ contains
         string = trim(buffer)
 
     end function toString
-    !********************************************************************************************
+    !****************************************************************************************
 
 
 
@@ -392,7 +396,7 @@ contains
     !!  @author Nathan A. Wukie (AFRL)
     !!
     !!
-    !--------------------------------------------------------------------------------------------
+    !----------------------------------------------------------------------------------------
     subroutine setUp(this)
         class(nonlinear_diffusion_1D),  intent(inout)   :: this
 
@@ -478,12 +482,13 @@ contains
             call bc_states(1,XI_MAX)%state%set_fcn_option("Value","val", log(ONE + 50._rk*ONE) )
 
 
-            call create_mesh_file('D1 NxNxN',this%gridfile,equation_sets=[string_t("Test 1D Nonlinear Diffusion")], &
-                                                           bc_states =bc_states,                        &
-                                                           nelem_xi  =this%nelem_xi,                    &
-                                                           nelem_eta =1,                                &
-                                                           nelem_zeta=1,                                &
-                                                           clusterx=-1)
+            call create_mesh_file('D1 NxNxN',this%gridfile,                                  &
+                                    equation_sets=[string_t("Test 1D Nonlinear Diffusion")], &
+                                    bc_states =bc_states,                                    &
+                                    nelem_xi  =this%nelem_xi,                                &
+                                    nelem_eta =1,                                            &
+                                    nelem_zeta=1,                                            &
+                                    clusterx=-1)
         end if
         call MPI_Barrier(this%ChiDG_COMM,ierr)
 
@@ -546,7 +551,7 @@ contains
         call this%chidg%init('finalize')
 
     end subroutine SetUp
-    !******************************************************************************************************
+    !****************************************************************************************
 
 
 
@@ -554,7 +559,7 @@ contains
     !!
     !!
     !!
-    !------------------------------------------------------------------------------------------------------
+    !----------------------------------------------------------------------------------------
     subroutine tearDown(this)
         class(nonlinear_diffusion_1D),  intent(inout)   :: this
 
@@ -566,7 +571,7 @@ contains
         end if
 
     end subroutine tearDown
-    !******************************************************************************************************
+    !****************************************************************************************
 
 
 
@@ -587,7 +592,7 @@ contains
     !!  @author Nathan A. Wukie (AFRL)
     !!
     !!
-    !-------------------------------------------------------------------------------------------------------
+    !----------------------------------------------------------------------------------------
     @Test(npes=[1,2,3])
     subroutine run_calculations(self)
         class(nonlinear_diffusion_1D),  intent(inout)   :: self
@@ -619,7 +624,7 @@ contains
         error(npes_index,grid_index,order_index) = computed_error   ! conforming grids
 
     end subroutine run_calculations
-    !*******************************************************************************************************
+    !****************************************************************************************
 
 
 
@@ -639,7 +644,7 @@ contains
     !!  @date   9/16/2016
     !!
     !!
-    !--------------------------------------------------------------------------------------------------------
+    !----------------------------------------------------------------------------------------
     @Test(npes=[1])
     subroutine test_err_conform(self)
         class(nonlinear_diffusion_1D),  intent(inout)   :: self
@@ -678,7 +683,7 @@ contains
 
 
     end subroutine test_err_conform
-    !*******************************************************************************************************
+    !****************************************************************************************
 
 
 
@@ -693,7 +698,7 @@ contains
     !!  @date   9/16/2016
     !!
     !!
-    !------------------------------------------------------------------------------------
+    !----------------------------------------------------------------------------------------
     function compute_1D_nonlinear_diffusion_error(data,ChiDG_COMM) result(error)
         type(chidg_data_t), intent(inout)   :: data
         type(mpi_comm),     intent(in)      :: ChiDG_COMM
@@ -707,7 +712,8 @@ contains
         real(rk)    :: error_squared_sum, error_squared_sum_reduced, element_error_squared, error
 
 
-        associate (mesh => data%mesh, sdata => data%sdata, eqnset => data%eqnset, prop => data%eqnset(1)%prop)
+        associate (mesh => data%mesh, sdata => data%sdata, &
+                   eqnset => data%eqnset, prop => data%eqnset(1)%prop)
 
 
             !
@@ -777,7 +783,7 @@ contains
         error = sqrt(error_squared_sum_reduced)
 
     end function compute_1D_nonlinear_diffusion_error
-    !**********************************************************************************************
+    !****************************************************************************************
 
 
 
@@ -800,7 +806,7 @@ contains
     !!
     !!
     !!
-    !-----------------------------------------------------------------------------
+    !---------------------------------------------------------------------------------------
     function mesh_parameter(igrid,iorder) result(param)
         integer(ik),    intent(in)  :: igrid
         integer(ik),    intent(in)  :: iorder
@@ -833,7 +839,7 @@ contains
         param = ONE/(real(nelem,rk)*real(nterms_1d,rk))
 
     end function mesh_parameter
-    !******************************************************************************
+    !****************************************************************************************
 
 
 
@@ -846,7 +852,7 @@ contains
 
 
     ! Utility for returning the index associated with a certain number of procs
-    !------------------------------------------------------------------------------
+    !---------------------------------------------------------------------------------------
     function get_npes_index(numproc) result(inpes)
         integer(ik), intent(in) :: numproc
 
@@ -862,12 +868,12 @@ contains
         end select
 
     end function get_npes_index
-    !******************************************************************************
+    !****************************************************************************************
 
 
 
     ! Utility for returning the index associated with a certain grid file
-    !------------------------------------------------------------------------------
+    !----------------------------------------------------------------------------------------
     function get_grid_index(grid) result(igrid)
         character(len=*), intent(in)    :: grid
 
@@ -881,12 +887,12 @@ contains
         end select
 
     end function get_grid_index
-    !******************************************************************************
+    !***************************************************************************************
 
 
 
     ! Utility for returning the index associated with a certain order of accuracy
-    !------------------------------------------------------------------------------
+    !---------------------------------------------------------------------------------------
     function get_order_index(order) result(iorder)
         integer(ik), intent(in) :: order
 
@@ -902,7 +908,7 @@ contains
         end select
 
     end function get_order_index
-    !******************************************************************************
+    !****************************************************************************************
 
 
 

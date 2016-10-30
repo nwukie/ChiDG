@@ -18,7 +18,7 @@ module mod_chidg_post_hdf2tec
     use mod_kinds,              only: rk, ik
     use type_chidg,             only: chidg_t
     use type_dict,              only: dict_t
-    use mod_tecio,              only: write_tecio_variables, write_tecio_variables_unstructured
+    use mod_tecio,              only: write_tecio_variables_unstructured
     use type_file_properties,   only: file_properties_t
     use mod_hdf_utilities,      only: get_properties_hdf
     use mod_io,                 only: nterms_s, spacedim

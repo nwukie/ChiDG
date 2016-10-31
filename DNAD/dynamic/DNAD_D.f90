@@ -1436,25 +1436,25 @@ CONTAINS
 
 
 
-!    !-----------------------------------------
-!    !
-!    ! @author   Nathan A. Wukie
-!    ! @date     2/23/2016
-!    !
-!    ! ATAN of dual numbers
-!    ! ATAN<u,up>=<ATAN(u), up/(1+(u%x_ad_)**2)>
-!    !----------------------------------------
-!    ELEMENTAL FUNCTION ATAN_D_D(u) RESULT(res)
-!         TYPE (AD_D), INTENT(IN)::u
-!         TYPE (AD_D)::res
-!         REAL(DBL_AD)::tmp 
-!         allocate(res%xp_ad_(size(u%xp_ad_)))
-!
-!         res%x_ad_ = ATAN(u%x_ad_)
-!
-!         tmp= 1.0d0/(1.0D0+(u%x_ad_)**2)
-!         res%xp_ad_= u%xp_ad_*tmp
-!    END FUNCTION ATAN_D_D
+    !-----------------------------------------
+    !
+    ! @author   Nathan A. Wukie
+    ! @date     2/23/2016
+    !
+    ! ATAN of dual numbers
+    ! ATAN<u,up>=<ATAN(u), up/(1+(u%x_ad_)**2)>
+    !----------------------------------------
+    ELEMENTAL FUNCTION ATAN_D_D(u) RESULT(res)
+         TYPE (AD_D), INTENT(IN)::u
+         TYPE (AD_D)::res
+         REAL(DBL_AD)::tmp 
+         allocate(res%xp_ad_(size(u%xp_ad_)))
+
+         res%x_ad_ = ATAN(u%x_ad_)
+
+         tmp= 1.0d0/(1.0D0+(u%x_ad_)**2)
+         res%xp_ad_= u%xp_ad_*tmp
+    END FUNCTION ATAN_D_D
 
 
 

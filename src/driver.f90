@@ -33,6 +33,7 @@ program driver
     ! Variable declarations
     !
     implicit none
+    type(chidg_t)                               :: wall_distance
     type(chidg_t)                               :: chidg
 
 

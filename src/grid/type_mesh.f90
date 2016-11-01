@@ -549,7 +549,9 @@ contains
 
                     else
                         ! Default ftype to ORPHAN face and clear neighbor index data.
-                        ftype = ORPHAN      ! This should be processed later; either by a boundary condition(ftype=1), or a chimera boundary(ftype=2)
+                        ! ftype should be processed later; either by a boundary conditions (ftype=1), 
+                        ! or a chimera boundary (ftype = 2)
+                        ftype = ORPHAN
                         ineighbor_domain_g  = 0
                         ineighbor_domain_l  = 0
                         ineighbor_element_g = 0
@@ -563,7 +565,9 @@ contains
                     !
                     ! Call face neighbor initialization routine
                     !
-                    call self%faces(ielem,iface)%init_neighbor(ftype,ineighbor_domain_g,ineighbor_domain_l,ineighbor_element_g,ineighbor_element_l,ineighbor_face,ineighbor_proc)
+                    call self%faces(ielem,iface)%init_neighbor(ftype,ineighbor_domain_g, ineighbor_domain_l,    &
+                                                                     ineighbor_element_g,ineighbor_element_l,   &
+                                                                     ineighbor_face,     ineighbor_proc)
 
                 end if
 
@@ -577,12 +581,6 @@ contains
 
     end subroutine init_comm_local
     !**************************************************************************************************************
-
-
-
-
-
-
 
 
 
@@ -1044,9 +1042,9 @@ contains
                                  neighbor_invmass(invmass_size(1),invmass_size(2)),  stat=ierr)
                         if (ierr /= 0) call AllocationError
 
-                        call MPI_Recv(neighbor_ddx,ddx_size(1)*ddx_size(2), MPI_REAL8, iproc,9,ChiDG_COMM,MPI_STATUS_IGNORE,ierr)
-                        call MPI_Recv(neighbor_ddy,ddx_size(1)*ddx_size(2), MPI_REAL8, iproc,10,ChiDG_COMM,MPI_STATUS_IGNORE,ierr)
-                        call MPI_Recv(neighbor_ddz,ddx_size(1)*ddx_size(2), MPI_REAL8, iproc,11,ChiDG_COMM,MPI_STATUS_IGNORE,ierr)
+                        call MPI_Recv(neighbor_ddx,ddx_size(1)*ddx_size(2),                MPI_REAL8, iproc,  9, ChiDG_COMM, MPI_STATUS_IGNORE,ierr)
+                        call MPI_Recv(neighbor_ddy,ddx_size(1)*ddx_size(2),                MPI_REAL8, iproc, 10, ChiDG_COMM, MPI_STATUS_IGNORE,ierr)
+                        call MPI_Recv(neighbor_ddz,ddx_size(1)*ddx_size(2),                MPI_REAL8, iproc, 11, ChiDG_COMM, MPI_STATUS_IGNORE,ierr)
                         call MPI_Recv(neighbor_br2_face,br2_face_size(1)*br2_face_size(2), MPI_REAL8, iproc, 12, ChiDG_COMM, MPI_STATUS_IGNORE,ierr)
                         call MPI_Recv(neighbor_br2_vol,br2_vol_size(1)*br2_vol_size(2),    MPI_REAL8, iproc, 13, ChiDG_COMM, MPI_STATUS_IGNORE,ierr)
                         call MPI_Recv(neighbor_invmass,invmass_size(1)*invmass_size(2),    MPI_REAL8, iproc, 14, ChiDG_COMM, MPI_STATUS_IGNORE,ierr)
@@ -1163,10 +1161,8 @@ contains
 
 
 
-    !>  Return the processor ranks that the current mesh is receiving from.
+    !>  Return the processor ranks that the current mesh is receiving interior neighbor elements from.
     !!
-    !!  This includes interior neighbor elements located on another processor and also chimera
-    !!  donor elements located on another processor.
     !!
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   6/30/2016
@@ -1174,7 +1170,7 @@ contains
     !!
     !!
     !!
-    !---------------------------------------------------------------------------------------------------------------
+    !--------------------------------------------------------------------------------------------------------
     function get_recv_procs_local(self) result(comm_procs)
         class(mesh_t),   intent(in)  :: self
 
@@ -1237,7 +1233,7 @@ contains
         comm_procs = comm_procs_vector%data()
 
     end function get_recv_procs_local
-    !***************************************************************************************************************
+    !********************************************************************************************************
 
 
 
@@ -1249,10 +1245,8 @@ contains
 
 
 
-    !>  Return the processor ranks that the current mesh is receiving from.
+    !>  Return the processor ranks that the current mesh is receiving chimera donor elements from.
     !!
-    !!  This includes interior neighbor elements located on another processor and also chimera
-    !!  donor elements located on another processor.
     !!
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   6/30/2016
@@ -1260,7 +1254,7 @@ contains
     !!
     !!
     !!
-    !---------------------------------------------------------------------------------------------------------------
+    !--------------------------------------------------------------------------------------------------------
     function get_recv_procs_chimera(self) result(comm_procs)
         class(mesh_t),   intent(in)  :: self
 
@@ -1324,7 +1318,7 @@ contains
         comm_procs = comm_procs_vector%data()
 
     end function get_recv_procs_chimera
-    !***************************************************************************************************************
+    !********************************************************************************************************
 
 
 
@@ -1337,7 +1331,7 @@ contains
 
     !>  Return the processor ranks that the current mesh is sending to.
     !!
-    !!  This includes interior neighbor elements located on another processor and also chimera
+    !!  This includes processors that are being sent interior neighbor elements and also chimera
     !!  donor elements.
     !!
     !!  @author Nathan A. Wukie (AFRL)
@@ -1346,7 +1340,7 @@ contains
     !!
     !!
     !!
-    !---------------------------------------------------------------------------------------------------------------
+    !--------------------------------------------------------------------------------------------------------
     function get_send_procs(self) result(comm_procs)
         class(mesh_t),   intent(in)  :: self
 
@@ -1417,7 +1411,7 @@ contains
 
 
     end function get_send_procs
-    !***************************************************************************************************************
+    !********************************************************************************************************
 
 
 
@@ -1431,8 +1425,8 @@ contains
 
     !>  Return the processor ranks that the current mesh is sending to.
     !!
-    !!  This includes interior neighbor elements located on another processor and also chimera
-    !!  donor elements.
+    !!  This includes processors that are being sent interior neighbor elements.
+    !!
     !!
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   6/30/2016
@@ -1440,7 +1434,7 @@ contains
     !!
     !!
     !!
-    !---------------------------------------------------------------------------------------------------------------
+    !--------------------------------------------------------------------------------------------------------
     function get_send_procs_local(self) result(comm_procs)
         class(mesh_t),   intent(in)  :: self
 
@@ -1505,7 +1499,7 @@ contains
         comm_procs = comm_procs_vector%data()
 
     end function get_send_procs_local
-    !***************************************************************************************************************
+    !********************************************************************************************************
 
 
 
@@ -1525,8 +1519,7 @@ contains
 
     !>  Return the processor ranks that the current mesh is sending to.
     !!
-    !!  This includes interior neighbor elements located on another processor and also chimera
-    !!  donor elements.
+    !!  This includes processors that are being sent chimera donor elements.
     !!
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   6/30/2016
@@ -1534,7 +1527,7 @@ contains
     !!
     !!
     !!
-    !---------------------------------------------------------------------------------------------------------------
+    !--------------------------------------------------------------------------------------------------------
     function get_send_procs_chimera(self) result(comm_procs)
         class(mesh_t),   intent(in)  :: self
 
@@ -1587,7 +1580,7 @@ contains
         comm_procs = comm_procs_vector%data()
 
     end function get_send_procs_chimera
-    !***************************************************************************************************************
+    !********************************************************************************************************
 
 
 
@@ -1601,13 +1594,13 @@ contains
     !!
     !!
     !!
-    !----------------------------------------------------------------------------------------------------------------
+    !---------------------------------------------------------------------------------------------------------
     subroutine destructor(self)
         type(mesh_t), intent(inout) :: self
 
     
     end subroutine destructor
-    !****************************************************************************************************************
+    !*********************************************************************************************************
 
 
 end module type_mesh

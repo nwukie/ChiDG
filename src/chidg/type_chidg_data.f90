@@ -239,7 +239,7 @@ contains
 
 
         !
-        ! Move rezied temp allocation back to chidg_data container. 
+        ! Move resized temp allocation back to chidg_data container. 
         ! Be careful about pointer components here! Their location in memory has changed.
         !
         call move_alloc(temp_info,self%info)

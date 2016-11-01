@@ -282,8 +282,10 @@ contains
 
 
         !
-        ! Allocate storage for face data structures.
+        ! (Re)Allocate storage for face data structures.
         !
+        if (allocated(self%jinv)) deallocate(self%jinv, self%quad_pts, self%metric, &
+                                             self%norm, self%unorm, self%ddx, self%ddy, self%ddz)
         allocate(self%quad_pts(nnodes),                     &
                  self%jinv(nnodes),                         &
                  self%metric(3,3,nnodes),                   &

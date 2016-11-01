@@ -88,6 +88,14 @@ contains
                 !
                 !   It gets triggered by calling the intrinsic sqrt. 
                 !
+                ! The explicit 'allocate's and 'deallocate's here work around the bug, but really
+                ! should not be needed, since the arrays are automatically allocated. The compiled
+                ! code just doesn't recognize the size of the automatically allocated arrays
+                ! correctly.
+                !
+                if (allocated(c)) deallocate(c)
+                if (allocated(vmag)) deallocate(vmag)
+                allocate(c(size(p)), vmag(size(p)))
                 c = sqrt(gam * p / rho)
 
 

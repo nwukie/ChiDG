@@ -15,7 +15,6 @@ subroutine testIO__read_grid_hdf__D1_E1_M1()
     integer,        parameter       :: ndomains = 1
     integer(ik),    parameter       :: spacedim = 3
     integer(ik),    parameter       :: nterms_c = 8
-    integer(ik),    parameter       :: nterms_s = 8
     integer,        parameter       :: nelem    = 1
     real(rk)                        :: x(8), y(8), z(8)
     real(rk)                        :: tol
@@ -37,7 +36,10 @@ subroutine testIO__read_grid_hdf__D1_E1_M1()
     ! Read grid and add domain to chidg
     !
     call chidg%read_grid(filename, spacedim)
-    call chidg%initialize_solution_domains(nterms_s)
+
+
+    call chidg%set('Solution Order', integer_input=2)
+    call chidg%initialize_solution_domains()
 
 
 
@@ -99,7 +101,6 @@ subroutine testIO__read_grid_hdf__D1_E27_M1()
     integer,        parameter       :: ndomains = 1
     integer,        parameter       :: spacedim = 3
     integer,        parameter       :: nterms_c = 8
-    integer,        parameter       :: nterms_s = 8
     integer,        parameter       :: nelem    = 27
     real(rk)                        :: x(8), y(8), z(8)
     real(rk)                        :: tol
@@ -121,7 +122,10 @@ subroutine testIO__read_grid_hdf__D1_E27_M1()
     ! Read grid
     !
     call chidg%read_grid(filename,spacedim)
-    call chidg%initialize_solution_domains(nterms_s)
+
+
+    call chidg%set('Solution Order', integer_input=2)
+    call chidg%initialize_solution_domains()
 
     
     ! Test number of allocated domains
@@ -189,7 +193,6 @@ subroutine testIO__read_grid_hdf__D2_E1_M1()
     integer,        parameter       :: ndomains = 2
     integer(ik),    parameter       :: spacedim = 3
     integer(ik),    parameter       :: nterms_c = 8
-    integer(ik),    parameter       :: nterms_s = 8
     integer,        parameter       :: nelem    = 1
     integer(ik)                     :: idom
     real(rk)                        :: x(8), y(8), z(8)
@@ -210,7 +213,9 @@ subroutine testIO__read_grid_hdf__D2_E1_M1()
     ! Read grid
     !
     call chidg%read_grid(filename,spacedim)
-    call chidg%initialize_solution_domains(nterms_s)
+
+    call chidg%set('Solution Order', integer_input=2)
+    call chidg%initialize_solution_domains()
 
 
 
@@ -285,7 +290,6 @@ subroutine testIO__read_grid_hdf__D2_E27_M1()
     integer,        parameter       :: ndomains = 2
     integer(ik),    parameter       :: spacedim = 3
     integer(ik),    parameter       :: nterms_c = 8
-    integer(ik),    parameter       :: nterms_s = 8
     integer,        parameter       :: nelem    = 27
     integer(ik)                     :: idom
     real(rk)                        :: x(8), y(8), z(8)
@@ -307,7 +311,9 @@ subroutine testIO__read_grid_hdf__D2_E27_M1()
     ! Read grid
     !
     call chidg%read_grid(filename,spacedim)
-    call chidg%initialize_solution_domains(nterms_s)
+
+    call chidg%set('Solution Order', integer_input=2)
+    call chidg%initialize_solution_domains()
 
 
 

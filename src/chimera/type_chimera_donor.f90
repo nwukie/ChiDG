@@ -34,6 +34,7 @@ module type_chimera_donor
 
         procedure   :: add_donor
         procedure   :: ndonors
+        procedure   :: clear
 
     end type chimera_donor_t
     !***********************************************************************************
@@ -50,7 +51,7 @@ contains
 
 
 
-    !>
+    !>  For a domain, add an element to the list of elements registered as Chimera donors.
     !!
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   7/12/2016
@@ -134,6 +135,29 @@ contains
     end function ndonors
     !********************************************************************************************
 
+
+
+
+
+
+    !>  Clear the list of registered Chimera donor elements.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   3/11/2016
+    !!
+    !!
+    !-------------------------------------------------------------------------------------------
+    subroutine clear(self)
+        class(chimera_donor_t), intent(inout)   :: self
+
+        call self%donor_domain_g%clear()
+        call self%donor_domain_l%clear()
+        call self%donor_element_g%clear()
+        call self%donor_element_l%clear()
+        call self%receiver_proc%clear()
+
+    end subroutine clear
+    !*******************************************************************************************
 
 
 

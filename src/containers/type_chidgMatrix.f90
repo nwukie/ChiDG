@@ -75,6 +75,13 @@ contains
 
 
         !
+        ! Deallocate storage if necessary in case this is being called as a 
+        ! reinitialization routine.
+        !
+        if (allocated(self%dom)) deallocate(self%dom)
+
+
+        !
         ! Allocate blockmatrix_t for each domain
         !
         ndomains = size(mesh)

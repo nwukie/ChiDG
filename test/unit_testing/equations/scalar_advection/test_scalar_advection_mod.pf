@@ -20,30 +20,49 @@ module test_scalar_advection_mod
 
 
 
-    ! This parameter is used to test the linearization for different blocks.
-    ! iblk = [XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX, DIAG]
+    !>
+    !! This parameter is used to test the linearization for different blocks.
+    !! iblk = [XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX, DIAG]
+    !!
+    !!
+    !!
+    !----------------------------------------------------------------------------------------
     @TestParameter(constructor=newBlock)
     type, extends (AbstractTestParameter) :: blockParam
 
         integer(ik)         :: iblk
 
     contains
+
         procedure :: toString
+        
     end type blockParam
+    !****************************************************************************************
     
     
 
 
 
     
+    !>
+    !!
+    !!
+    !!
+    !!
+    !----------------------------------------------------------------------------------------
     @TestCase(constructor=newTest)
     type, extends(ParameterizedTestCase) ::  test_eq_SA
+
         type(chidg_t)       :: chidg
         integer(ik)         :: iblk
+
     contains
+
         procedure   ::  setUp
         procedure   ::  tearDown
+
     end type test_eq_SA
+    !*****************************************************************************************
 
 
 
@@ -64,7 +83,7 @@ contains
         integer(ik), parameter      :: npt = 64
         type(point_t),  allocatable :: nodes(:)
         type(domain_connectivity_t) :: connectivity
-        integer(ik)                 :: neqns, nterms_s, nterms_c, spacedim
+        integer(ik)                 :: neqns, nterms_c, spacedim
         real(rk), dimension(npt)    :: x,y,z
         class(function_t), allocatable  :: fcn
 
@@ -90,10 +109,11 @@ contains
         ! Initialize domain
         !
         spacedim = 3
-        nterms_s = 8
         nterms_c = 8
         call this%chidg%data%add_domain('D_01',nodes,connectivity,spacedim,nterms_c,'Scalar Advection')
-        call this%chidg%initialize_solution_domains(nterms_s)
+
+        call this%chidg%set('Solution Order', integer_input=2)
+        call this%chidg%initialize_solution_domains()
         call this%chidg%init('communication')
         call this%chidg%initialize_solution_solver()
 
@@ -102,7 +122,7 @@ contains
         call fcn%set_option('val',1.0_rk)
         call this%chidg%data%sdata%q%project(this%chidg%data%mesh,fcn,1)
 
-    end subroutine
+    end subroutine setUp
     
     subroutine tearDown(this)
         class(test_eq_SA),    intent(inout)   :: this
@@ -112,7 +132,7 @@ contains
         ! Close ChiDG interface
         !
         call this%chidg%close('core')
-    end subroutine
+    end subroutine tearDown
 
 
     !--------------------------

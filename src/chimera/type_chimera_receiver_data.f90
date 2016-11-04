@@ -1,9 +1,11 @@
 module type_chimera_receiver_data
     use mod_kinds,      only: ik
+    use mod_constants,  only: NO_PROC
     use type_ivector,   only: ivector_t
     use type_mvector,   only: mvector_t
     use type_pvector,   only: pvector_t
     use type_rvector,   only: rvector_t
+    implicit none
 
 
 
@@ -54,6 +56,7 @@ module type_chimera_receiver_data
     contains
 
         procedure   :: ndonors
+        procedure   :: clear
 
     end type chimera_receiver_data_t
     !***********************************************************************************************
@@ -87,6 +90,52 @@ contains
     !**************************************************************************************************
 
 
+
+
+
+
+
+    !>  Clear the data for the chimera receiver face.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   11/3/2016
+    !!
+    !!
+    !---------------------------------------------------------------------------------------------------
+    subroutine clear(self)
+        class(chimera_receiver_data_t), intent(inout)   :: self
+
+        self%receiver_proc        = NO_PROC
+        self%receiver_domain_g    = 0
+        self%receiver_domain_l    = 0
+        self%receiver_element_g   = 0
+        self%receiver_element_l   = 0
+        self%receiver_face        = 0
+
+
+        call self%donor_neqns%clear()
+        call self%donor_nterms_s%clear()
+        call self%donor_proc%clear()               
+        call self%donor_domain_g%clear()           
+        call self%donor_domain_l%clear()           
+        call self%donor_element_g%clear()         
+        call self%donor_element_l%clear()         
+        call self%donor_interpolator%clear()       
+        call self%donor_interpolator_ddx%clear()
+        call self%donor_interpolator_ddy%clear()
+        call self%donor_interpolator_ddz%clear()
+
+        call self%donor_recv_comm%clear()
+        call self%donor_recv_domain%clear()
+        call self%donor_recv_element%clear()
+
+        if (allocated(self%donor_gq_indices))   deallocate(self%donor_gq_indices) 
+        if (allocated(self%donor_coords))       deallocate(self%donor_coords) 
+        if (allocated(self%donor_metrics))      deallocate(self%donor_metrics) 
+        if (allocated(self%donor_jinv))         deallocate(self%donor_jinv) 
+
+    end subroutine clear
+    !***************************************************************************************************
 
 
 

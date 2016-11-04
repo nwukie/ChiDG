@@ -107,8 +107,8 @@ contains
         !
         ! Interpolate solution to quadrature nodes
         !
-        ua = worker%interpolate(iu_a, 'value')
-        ub = worker%interpolate(iu_b, 'value')
+        ua = worker%get_element_variable(iu_a, 'value')
+        ub = worker%get_element_variable(iu_b, 'value')
 
 
 

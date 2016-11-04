@@ -54,16 +54,8 @@ module mod_io
     logical,                save    :: final_write      = .true.
 !    integer(ik),         save    :: output_res       = 10
      
-    
 
 
-
-    !==================================================================================
-    !           These quantities are used globally, but computed during input.
-    !           So, they do not need explicitly initialized in the namelist file
-    !==================================================================================
-    integer(ik),         save    :: nterms_sol1d    = 1
-    integer(ik),         save    :: nterms_s        = 1
 
 contains
 
@@ -138,22 +130,6 @@ contains
         read(7,nml=nonlinear_solve)
         read(7,nml=linear_solve)
         read(7,nml=io)
-
-
-
-        !
-        ! Compute number of terms in polynomial expansions
-        !
-        nterms_sol1d = (solution_order)
-
-        if ( spacedim == THREE_DIM ) then
-            nterms_s = nterms_sol1d * nterms_sol1d * nterms_sol1d
-        else if ( spacedim == TWO_DIM ) then
-            nterms_s = nterms_sol1d * nterms_sol1d
-        else
-            call chidg_signal(FATAL,"mod_io: Invalid spacedim")
-        end if
-
 
 
 

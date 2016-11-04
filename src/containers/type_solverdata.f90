@@ -143,6 +143,7 @@ contains
         !
         ! Allocate timestep storage
         !
+        if (allocated(self%dt)) deallocate(self%dt)
         allocate(self%dt(ndom,maxelems),stat=ierr)
         if (ierr /= 0) call AllocationError
 
@@ -179,7 +180,16 @@ contains
 
     !>  Add chidgVector for storing an auxiliary field for the problem.
     !!
+    !!  One could call this as:
+    !!      call solverdata%add_auxiliary_field('my field')
     !!
+    !!  which would just add an empty chidgVector for storing the auxiliary field
+    !!
+    !!  One could also call this as:
+    !!      call solverdata%add_auxiliary_field('my field', my_vector)
+    !!
+    !!  which would create space for a new auxiliary vector and assign the incoming 
+    !!  chidgVector, my_vector, to the field.
     !!
     !!  @author Nathan A. Wukie
     !!  @date   11/1/2016
@@ -187,9 +197,10 @@ contains
     !!
     !!
     !-------------------------------------------------------------------------------------------------
-    subroutine add_auxiliary_field(self,fieldname)
-        class(solverdata_t),    intent(inout)   :: self
-        character(*),           intent(in)      :: fieldname
+    subroutine add_auxiliary_field(self,fieldname,auxiliary_vector)
+        class(solverdata_t),    intent(inout)           :: self
+        character(*),           intent(in)              :: fieldname
+        type(chidgVector_t),    intent(in), optional    :: auxiliary_vector
 
         integer(ik) :: naux_vectors, ierr
 
@@ -237,6 +248,12 @@ contains
         call move_alloc(temp_vectors,self%auxiliary_field)
 
 
+        !
+        ! Store incoming vector if present
+        !
+        if (present(auxiliary_vector)) then
+            self%auxiliary_field(naux_vectors) = auxiliary_vector
+        end if
 
     end subroutine add_auxiliary_field
     !********************************************************************************************
@@ -267,11 +284,13 @@ contains
         integer(ik)                 :: field_index, ifield
         character(:),   allocatable :: user_msg
         
+
         ! Check that fields have been allocated
         user_msg = "solverdata%get_auxiliary_field_index: No auxiliary fields seem to have been added. &
                     Make sure the procedure 'solverdata%add_auxiliary_field' was called to create &
                     storage for the new field."
         if (.not. allocated(self%auxiliary_field_name)) call chidg_signal_one(FATAL,user_msg,trim(fieldname))
+
 
 
         ! Loop through names to try and find field

@@ -1,11 +1,19 @@
-!> This module contains procedures for initializing and maintaining the Chimera
-!! interfaces.
+!>  This module contains procedures for initializing and maintaining the Chimera
+!!  interfaces.
+!!
+!!  detect_chimera_faces
+!!  detect_chimera_donors
+!!  compute_chimera_interpolators
+!!  find_gq_donor
+!!
+!!  detect_chimera_faces, detect_chimera_donors, and compute_chimera_interpolators are probably
+!!  called in src/parallel/mod_communication.f90%establish_chimera_communication.
 !!
 !!  @author Nathan A. Wukie
 !!  @date   2/1/2016
 !!
 !!
-!---------------------------------------------------------------
+!-----------------------------------------------------------------------------------------------------
 module mod_chimera
 #include <messenger.h>
     use mod_kinds,              only: rk, ik
@@ -27,7 +35,8 @@ module mod_chimera
     use mod_polynomial,         only: polynomialVal, dpolynomialVal
     use mod_periodic,           only: compute_periodic_offset
     use mod_chidg_mpi,          only: IRANK, NRANK, ChiDG_COMM
-    use mpi_f08,                only: MPI_BCast, MPI_Send, MPI_Recv, MPI_INTEGER4, MPI_REAL8, MPI_LOGICAL, MPI_ANY_TAG, MPI_STATUS_IGNORE
+    use mpi_f08,                only: MPI_BCast, MPI_Send, MPI_Recv, MPI_INTEGER4, MPI_REAL8, &
+                                      MPI_LOGICAL, MPI_ANY_TAG, MPI_STATUS_IGNORE
     implicit none
 
 
@@ -107,18 +116,10 @@ contains
             end do ! ielem
 
 
-
             !
-            ! Set total number of Chimera faces detected for domain - idom
+            ! Initialize chimera%recv with total number of Chimera faces detected for domain
             !
-            mesh(idom)%chimera%recv%nfaces = nchimera_faces
-
-
-            !
-            ! Allocate chimera_receiver_data for each chimera face in the current domain
-            !
-            allocate(mesh(idom)%chimera%recv%data(nchimera_faces), stat=ierr)
-            if (ierr /= 0) call AllocationError
+            call mesh(idom)%chimera%recv%init(nchimera_faces)
 
 
         end do ! idom
@@ -182,6 +183,10 @@ contains
     !>  Routine for generating the data in a chimera_receiver_data instance. This includes donor_domain
     !!  and donor_element indices.
     !!
+    !!  For each Chimera face, find a donor for each quadrature node on the face, for a given node, initialize information
+    !!  about its donor.
+    !!
+    !!
     !!  @author Nathan A. Wukie
     !!  @date   2/1/2016
     !!
@@ -191,22 +196,23 @@ contains
     subroutine detect_chimera_donors(mesh)
         type(mesh_t),   intent(inout)   :: mesh(:)
 
-        integer(ik) :: idom, igq, ichimera_face, idonor, ierr, iproc, idonor_proc, iproc_loop
-        integer(ik) :: ndonors, neqns, nterms_s
-        integer(ik) :: idonor_domain_g, idonor_element_g
-        integer(ik) :: idonor_domain_l, idonor_element_l
-        integer(ik) :: idomain_g_list, idomain_l_list, ielement_g_list, ielement_l_list, neqns_list, nterms_s_list, nterms_c_list, iproc_list
-        integer(ik) :: local_domain_g, parallel_domain_g, donor_domain_g, donor_index
+        integer(ik) :: idom, igq, ichimera_face, idonor, ierr, iproc,                           &
+                       idonor_proc, iproc_loop,                                                 &
+                       ndonors, neqns, nterms_s,                                                &
+                       idonor_domain_g, idonor_element_g, idonor_domain_l, idonor_element_l,    &
+                       idomain_g_list, idomain_l_list, ielement_g_list, ielement_l_list,        &
+                       neqns_list, nterms_s_list, nterms_c_list, iproc_list,                    &
+                       local_domain_g, parallel_domain_g, donor_domain_g, donor_index
         integer(ik), allocatable    :: domains_g(:)
+        integer(ik)                 :: receiver_indices(5), parallel_indices(8)
 
-        integer(ik) :: receiver_indices(5), parallel_indices(8)
-        real(rk)    :: gq_coords(3), parallel_coords(3), donor_vol, local_vol, parallel_vol
+        real(rk)                :: gq_coords(3), parallel_coords(3), donor_vol, local_vol, parallel_vol
         real(rk), allocatable   :: donor_vols(:)
-
-        real(rk)    :: offset_x, offset_y, offset_z
-
-        real(rk)        :: dxdxi, dxdeta, dxdzeta, dydxi, dydeta, dydzeta, dzdxi, dzdeta, dzdzeta, donor_jinv, parallel_jinv
+        real(rk)                :: offset_x, offset_y, offset_z,                                            &
+                                   dxdxi, dxdeta, dxdzeta, dydxi, dydeta, dydzeta, dzdxi, dzdeta, dzdzeta,  &
+                                   donor_jinv, parallel_jinv
         real(rk)        :: donor_metric(3,3), parallel_metric(3,3)
+
         type(mvector_t) :: dmetric
         type(rvector_t) :: djinv
 
@@ -232,7 +238,6 @@ contains
 
 
 
-
         !
         ! Loop through processes. One will process its chimera faces and try to find processor-local donors. If it can't
         ! find on-processor donors, then it will broadcast a search request to all other processors. All other processors
@@ -250,9 +255,6 @@ contains
             if ( iproc == IRANK ) then
     
 
-                !
-                ! Loop over domains
-                !
                 do idom = 1,size(mesh)
 
                     call write_line('Detecting chimera donors for domain: ', idom, delimiter='  ')
@@ -261,7 +263,7 @@ contains
                     !
                     ! Loop over faces and process Chimera-type faces
                     !
-                    do ichimera_face = 1,mesh(idom)%chimera%recv%nfaces
+                    do ichimera_face = 1,mesh(idom)%chimera%recv%nfaces()
 
                         !
                         ! Get location of the face receiving Chimera data
@@ -272,7 +274,7 @@ contains
                         receiver%ielement_l = mesh(idom)%chimera%recv%data(ichimera_face)%receiver_element_l
                         receiver%iface      = mesh(idom)%chimera%recv%data(ichimera_face)%receiver_face
 
-                        call write_line('   Face ', ichimera_face,' of ',mesh(idom)%chimera%recv%nfaces, delimiter='  ')
+                        call write_line('   Face ', ichimera_face,' of ',mesh(idom)%chimera%recv%nfaces(), delimiter='  ')
 
                         !
                         ! Loop through quadrature nodes on Chimera face and find donors
@@ -771,12 +773,7 @@ contains
 
                 end do ! while searching
 
-
-
             end if ! iproc /= IRANK
-
-
-
 
         end do ! iproc
 
@@ -796,6 +793,139 @@ contains
 
 
 
+    !> Compute the matrices that interpolate solution data from a donor element expansion
+    !! to the receiver nodes.
+    !!
+    !! These matrices get stored in:
+    !!      mesh(idom)%chimera%recv%data(ChiID)%donor_interpolator
+    !!      mesh(idom)%chimera%recv%data(ChiID)%donor_interpolator_ddx
+    !!      mesh(idom)%chimera%recv%data(ChiID)%donor_interpolator_ddy
+    !!      mesh(idom)%chimera%recv%data(ChiID)%donor_interpolator_ddz
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   2/1/2016
+    !!
+    !-----------------------------------------------------------------------------------------------------------------
+    subroutine compute_chimera_interpolators(mesh)
+        type(mesh_t),   intent(inout)   :: mesh(:)
+
+        integer(ik)     :: idom, ChiID, idonor, ierr, ipt, iterm,   &
+                           donor_idomain_g, donor_idomain_l, donor_ielement_g, donor_ielement_l, &
+                           npts, donor_nterms_s, spacedim
+        type(point_t)   :: node
+
+        real(rk)        :: jinv, ddxi, ddeta, ddzeta
+        real(rk), allocatable, dimension(:,:)   ::  &
+            interpolator, interpolator_ddx, interpolator_ddy, interpolator_ddz, metric
+
+
+
+        !
+        ! Loop over all domains
+        !
+        do idom = 1,size(mesh)
+
+            spacedim = mesh(idom)%spacedim
+
+            !
+            ! Loop over each chimera face
+            !
+            do ChiID = 1,mesh(idom)%chimera%recv%nfaces()
+
+                
+                !
+                ! For each donor, compute an interpolation matrix
+                !
+                do idonor = 1,mesh(idom)%chimera%recv%data(ChiID)%ndonors()
+
+                    donor_idomain_g  = mesh(idom)%chimera%recv%data(ChiID)%donor_domain_g%at(idonor)
+                    donor_idomain_l  = mesh(idom)%chimera%recv%data(ChiID)%donor_domain_l%at(idonor)
+                    donor_ielement_g = mesh(idom)%chimera%recv%data(ChiID)%donor_element_g%at(idonor)
+                    donor_ielement_l = mesh(idom)%chimera%recv%data(ChiID)%donor_element_l%at(idonor)
+                    donor_nterms_s   = mesh(idom)%chimera%recv%data(ChiID)%donor_nterms_s%at(idonor)
+
+                    !
+                    ! Get number of GQ points this donor is responsible for
+                    !
+                    npts   = mesh(idom)%chimera%recv%data(ChiID)%donor_coords(idonor)%size()
+
+                    !
+                    ! Allocate interpolator matrix
+                    !
+                    if (allocated(interpolator)) deallocate(interpolator, interpolator_ddx, interpolator_ddy, interpolator_ddz)
+                    allocate(interpolator(    npts,donor_nterms_s), &
+                             interpolator_ddx(npts,donor_nterms_s), &
+                             interpolator_ddy(npts,donor_nterms_s), &
+                             interpolator_ddz(npts,donor_nterms_s), stat=ierr)
+                    if (ierr /= 0) call AllocationError
+
+                    !
+                    ! Compute values of modal polynomials at the donor nodes
+                    !
+                    do iterm = 1,donor_nterms_s
+                        do ipt = 1,npts
+
+                            node = mesh(idom)%chimera%recv%data(ChiID)%donor_coords(idonor)%at(ipt)
+
+                            !
+                            ! Compute value interpolator
+                            !
+                            interpolator(ipt,iterm) = polynomialVal(spacedim,donor_nterms_s,iterm,node)
+
+                            
+                            !
+                            ! Compute derivative interpolators, ddx, ddy, ddz
+                            !
+                            ddxi   = DPolynomialVal(spacedim,donor_nterms_s,iterm,node,XI_DIR  )
+                            ddeta  = DPolynomialVal(spacedim,donor_nterms_s,iterm,node,ETA_DIR )
+                            ddzeta = DPolynomialVal(spacedim,donor_nterms_s,iterm,node,ZETA_DIR)
+
+                            ! Get metrics for element mapping
+                            metric = mesh(idom)%chimera%recv%data(ChiID)%donor_metrics(idonor)%at(ipt)
+                            jinv   = mesh(idom)%chimera%recv%data(ChiID)%donor_jinv(idonor)%at(ipt)
+
+                            ! Compute cartesian derivative interpolator for gq node
+                            interpolator_ddx(ipt,iterm) = metric(1,1) * ddxi   * (ONE/jinv) + &
+                                                          metric(2,1) * ddeta  * (ONE/jinv) + &
+                                                          metric(3,1) * ddzeta * (ONE/jinv)
+                            interpolator_ddy(ipt,iterm) = metric(1,2) * ddxi   * (ONE/jinv) + &
+                                                          metric(2,2) * ddeta  * (ONE/jinv) + &
+                                                          metric(3,2) * ddzeta * (ONE/jinv)
+                            interpolator_ddz(ipt,iterm) = metric(1,3) * ddxi   * (ONE/jinv) + &
+                                                          metric(2,3) * ddeta  * (ONE/jinv) + &
+                                                          metric(3,3) * ddzeta * (ONE/jinv)
+
+                        end do ! ipt
+                    end do ! iterm
+
+                    !
+                    ! Store interpolators
+                    !
+                    call mesh(idom)%chimera%recv%data(ChiID)%donor_interpolator%push_back(interpolator)
+                    call mesh(idom)%chimera%recv%data(ChiID)%donor_interpolator_ddx%push_back(interpolator_ddx)
+                    call mesh(idom)%chimera%recv%data(ChiID)%donor_interpolator_ddy%push_back(interpolator_ddy)
+                    call mesh(idom)%chimera%recv%data(ChiID)%donor_interpolator_ddz%push_back(interpolator_ddz)
+
+
+
+                end do  ! idonor
+
+
+
+            end do  ! ChiID
+        end do  ! idom
+
+
+    end subroutine compute_chimera_interpolators
+    !******************************************************************************************************************
+
+
+
+
+
+
+
+
 
 
 
@@ -805,11 +935,13 @@ contains
     !!  @author Nathan A. Wukie
     !!  @date   2/1/2016
     !!
-    !!  @param[in]      mesh            Array of mesh_t instances
-    !!  @param[in]      gq_node         GQ point that needs to find a donor
-    !!  @param[in]      receiver_face   Location of face containing the gq_node
-    !!  @param[inout]   donor_element   Location of the donor element that was found
-    !!  @param[inout]   donor_coord     Point defining the location of the GQ point in the donor coordinate system
+    !!  @param[in]      mesh                Array of mesh_t instances
+    !!  @param[in]      gq_node             GQ point that needs to find a donor
+    !!  @param[in]      receiver_face       Location of face containing the gq_node
+    !!  @param[inout]   donor_element       Location of the donor element that was found
+    !!  @param[inout]   donor_coordinate    Point defining the location of the GQ point in the donor coordinate system
+    !!  @param[inout]   donor_volume        Volume of the donor element that can be used to select between donors if 
+    !!                                      multiple are available.
     !!
     !-----------------------------------------------------------------------------------------------------------------------
     subroutine find_gq_donor(mesh,gq_node,receiver_face,donor_element,donor_coordinate,donor_volume)
@@ -821,23 +953,20 @@ contains
         real(rk),                   intent(inout), optional :: donor_volume
 
 
-        integer(ik)             :: idom, ielem, inewton, spacedim
-        integer(ik)             :: idomain_g, idomain_l, ielement_g, ielement_l
-        integer(ik)             :: icandidate, ncandidates, idonor, ndonors
         integer(ik), allocatable    :: domains_g(:)
+        integer(ik)                 :: idom, ielem, inewton, spacedim,                  &
+                                       idomain_g, idomain_l, ielement_g, ielement_l,    &
+                                       icandidate, ncandidates, idonor, ndonors, donor_index
+
+        real(rk), allocatable   :: xcenter(:), ycenter(:), zcenter(:), dist(:), donor_vols(:)
+        real(rk)                :: xgq, ygq, zgq, dx, dy, dz, xi, eta, zeta, xn, yn, zn,    &
+                                   xmin, xmax, ymin, ymax, zmin, zmax,                      &
+                                   xcenter_recv, ycenter_recv, zcenter_recv
+
         type(point_t)           :: gq_comp
-        real(rk)                :: xgq, ygq, zgq
-        real(rk)                :: dx, dy, dz
-        real(rk)                :: xi,  eta, zeta
-        real(rk)                :: xn,  yn,  zn
-        real(rk)                :: xmin, xmax, ymin, ymax, zmin, zmax
         type(ivector_t)         :: candidate_domains_g, candidate_domains_l, candidate_elements_g, candidate_elements_l
         type(ivector_t)         :: donors
         type(rvector_t)         :: donors_xi, donors_eta, donors_zeta
-
-        integer(ik)             :: donor_index
-        real(rk), allocatable   :: xcenter(:), ycenter(:), zcenter(:), dist(:), donor_vols(:)
-        real(rk)                :: xcenter_recv, ycenter_recv, zcenter_recv
 
         logical                 :: contained = .false.
         logical                 :: receiver  = .false.
@@ -959,10 +1088,6 @@ contains
         end do ! icandidate
 
 
-
-
-
-
         
 
 
@@ -1003,76 +1128,8 @@ contains
 
 
         elseif (ndonors > 1) then
-            !TODO: Account for case of multiple overlapping donors. When a gq node could be filled by two or more elements.
-            !      Maybe, just choose one. Maybe, average contribution from all potential donors.
-            !call chidg_signal(FATAL,"find_gq_donor: Multiple donors found for the same gq_node")
-
             !!
-            !! OPTION 1: Choose donor with minimum global domain index
-            !!
-!
-!            ! Get domain global indices of valid donors
-!            if (allocated(domains_g)) deallocate(domains_g)
-!            allocate(domains_g(donors%size()))
-!            do idonor = 1,donors%size()
-!                domains_g(idonor) = candidate_domains_g%at(donors%at(idonor))
-!            end do
-!
-!            ! Get index of minimum domain
-!            donor_index = minloc(domains_g,1)
-!            idonor = donors%at(donor_index)
-!
-!            donor_element%idomain_g  = candidate_domains_g%at(idonor)
-!            donor_element%idomain_l  = candidate_domains_l%at(idonor)
-!            donor_element%ielement_g = candidate_elements_g%at(idonor)
-!            donor_element%ielement_l = candidate_elements_l%at(idonor)
-!            donor_element%iproc      = IRANK
-!            donor_element%neqns      = mesh(donor_element%idomain_l)%elems(donor_element%ielement_l)%neqns
-!            donor_element%nterms_s   = mesh(donor_element%idomain_l)%elems(donor_element%ielement_l)%nterms_s
-!            donor_element%nterms_c   = mesh(donor_element%idomain_l)%elems(donor_element%ielement_l)%nterms_c
-!
-!
-!            !!
-!            !! OPTION 2: Choose donor with cell center closer to receiver center
-!            !!
-!
-!            ! Get donor cell centers
-!            if (allocated(xcenter) .or. allocated(ycenter) .or. allocated(zcenter) .or. allocated(dist)) deallocate(xcenter, ycenter, zcenter, dist)
-!            allocate(xcenter(donors%size()), ycenter(donors%size()), zcenter(donors%size()), dist(donors%size()))
-!            
-!            do idonor = 1,donors%size()
-!                xcenter(idonor) = mesh(candidate_domains_l%at(donors%at(idonor)))%elems(candidate_elements_l%at(donors%at(idonor)))%coords%getterm(1,1)
-!                ycenter(idonor) = mesh(candidate_domains_l%at(donors%at(idonor)))%elems(candidate_elements_l%at(donors%at(idonor)))%coords%getterm(2,1)
-!                zcenter(idonor) = mesh(candidate_domains_l%at(donors%at(idonor)))%elems(candidate_elements_l%at(donors%at(idonor)))%coords%getterm(3,1)
-!            end do 
-!
-!            ! Get receiver cell center
-!            xcenter_recv = mesh(receiver_face%idomain_l)%elems(receiver_face%ielement_l)%coords%getterm(1,1)
-!            ycenter_recv = mesh(receiver_face%idomain_l)%elems(receiver_face%ielement_l)%coords%getterm(2,1)
-!            zcenter_recv = mesh(receiver_face%idomain_l)%elems(receiver_face%ielement_l)%coords%getterm(3,1)
-!
-!            ! Compute the distance between receiver and donor cell centers
-!            do idonor = 1,donors%size()
-!                dist(idonor) = sqrt((xcenter(idonor)-xcenter_recv)**TWO  +  (ycenter(idonor)-ycenter_recv)**TWO  +  (zcenter(idonor)-zcenter_recv)**TWO)
-!            end do
-!
-!            ! Select the donor element with the minimum distance between cell centers
-!            donor_index = minloc(dist,1)
-!            idonor = donors%at(donor_index)
-!
-!            ! Store donor data to be returned
-!            donor_element%idomain_g  = candidate_domains_g%at(idonor)
-!            donor_element%idomain_l  = candidate_domains_l%at(idonor)
-!            donor_element%ielement_g = candidate_elements_g%at(idonor)
-!            donor_element%ielement_l = candidate_elements_l%at(idonor)
-!            donor_element%iproc      = IRANK
-!            donor_element%neqns      = mesh(donor_element%idomain_l)%elems(donor_element%ielement_l)%neqns
-!            donor_element%nterms_s   = mesh(donor_element%idomain_l)%elems(donor_element%ielement_l)%nterms_s
-!            donor_element%nterms_c   = mesh(donor_element%idomain_l)%elems(donor_element%ielement_l)%nterms_c
-!
-
-            !!
-            !! OPTION 3: Choose donor with minimum volume: should be best resolved
+            !! Handle multiple potential donors: Choose donor with minimum volume - should be best resolved
             !!
             if (allocated(donor_vols) ) deallocate(donor_vols)
             allocate(donor_vols(donors%size()))
@@ -1082,7 +1139,9 @@ contains
             end do 
     
 
-            ! Get index of minimum domain
+            !
+            ! Get index of domain with minimum volume
+            !
             donor_index = minloc(donor_vols,1)
             idonor = donors%at(donor_index)
 
@@ -1094,10 +1153,6 @@ contains
             donor_element%neqns      = mesh(donor_element%idomain_l)%elems(donor_element%ielement_l)%neqns
             donor_element%nterms_s   = mesh(donor_element%idomain_l)%elems(donor_element%ielement_l)%nterms_s
             donor_element%nterms_c   = mesh(donor_element%idomain_l)%elems(donor_element%ielement_l)%nterms_c
-
-
-
-
 
             !
             ! Set donor coordinate and volume if present
@@ -1120,133 +1175,6 @@ contains
     end subroutine find_gq_donor
     !****************************************************************************************************************
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    !> Compute the matrices that interpolate solution data from a donor element expansion
-    !! to the receiver nodes.
-    !!
-    !! These matrices get stored in mesh(idom)%chimera%recv%data(ChiID)%donor_interpolator
-    !!
-    !!  @author Nathan A. Wukie
-    !!  @date   2/1/2016
-    !!
-    !-----------------------------------------------------------------------------------------------------------------
-    subroutine compute_chimera_interpolators(mesh)
-        type(mesh_t),   intent(inout)   :: mesh(:)
-
-        integer(ik)     :: idom, iChiID, idonor, ierr, ipt, iterm
-        integer(ik)     :: donor_idomain_g, donor_idomain_l, donor_ielement_g, donor_ielement_l
-        integer(ik)     :: npts, donor_nterms_s, spacedim
-        type(point_t)   :: node
-
-        real(rk), allocatable, dimension(:,:)   ::  &
-            interpolator, interpolator_ddx, interpolator_ddy, interpolator_ddz, metric
-        real(rk)    :: jinv, ddxi, ddeta, ddzeta
-
-
-
-        !
-        ! Loop over all domains
-        !
-        do idom = 1,size(mesh)
-
-            spacedim = mesh(idom)%spacedim
-
-            !
-            ! Loop over each chimera face
-            !
-            do iChiID = 1,mesh(idom)%chimera%recv%nfaces
-
-                
-                !
-                ! For each donor, compute an interpolation matrix
-                !
-                do idonor = 1,mesh(idom)%chimera%recv%data(iChiID)%ndonors()
-
-                    donor_idomain_g  = mesh(idom)%chimera%recv%data(iChiID)%donor_domain_g%at(idonor)
-                    donor_idomain_l  = mesh(idom)%chimera%recv%data(iChiID)%donor_domain_l%at(idonor)
-                    donor_ielement_g = mesh(idom)%chimera%recv%data(iChiID)%donor_element_g%at(idonor)
-                    donor_ielement_l = mesh(idom)%chimera%recv%data(iChiID)%donor_element_l%at(idonor)
-                    donor_nterms_s   = mesh(idom)%chimera%recv%data(iChiID)%donor_nterms_s%at(idonor)
-
-                    !
-                    ! Get number of GQ points this donor is responsible for
-                    !
-                    npts   = mesh(idom)%chimera%recv%data(iChiID)%donor_coords(idonor)%size()
-
-                    !
-                    ! Allocate interpolator matrix
-                    !
-                    if (allocated(interpolator)) deallocate(interpolator, interpolator_ddx, interpolator_ddy, interpolator_ddz)
-                    allocate(interpolator(    npts,donor_nterms_s), &
-                             interpolator_ddx(npts,donor_nterms_s), &
-                             interpolator_ddy(npts,donor_nterms_s), &
-                             interpolator_ddz(npts,donor_nterms_s), stat=ierr)
-                    if (ierr /= 0) call AllocationError
-
-                    !
-                    ! Compute values of modal polynomials at the donor nodes
-                    !
-                    do iterm = 1,donor_nterms_s
-                        do ipt = 1,npts
-
-                            node = mesh(idom)%chimera%recv%data(iChiID)%donor_coords(idonor)%at(ipt)
-                            interpolator(ipt,iterm) = polynomialVal(spacedim,donor_nterms_s,iterm,node)
-
-                            ddxi   = DPolynomialVal(spacedim,donor_nterms_s,iterm,node,XI_DIR  )
-                            ddeta  = DPolynomialVal(spacedim,donor_nterms_s,iterm,node,ETA_DIR )
-                            ddzeta = DPolynomialVal(spacedim,donor_nterms_s,iterm,node,ZETA_DIR)
-
-                            ! Get metrics for element mapping
-                            metric = mesh(idom)%chimera%recv%data(iChiID)%donor_metrics(idonor)%at(ipt)
-                            jinv   = mesh(idom)%chimera%recv%data(iChiID)%donor_jinv(idonor)%at(ipt)
-
-                            ! Compute cartesian derivative interpolator for gq node
-                            interpolator_ddx(ipt,iterm) = metric(1,1) * ddxi   * (ONE/jinv) + &
-                                                          metric(2,1) * ddeta  * (ONE/jinv) + &
-                                                          metric(3,1) * ddzeta * (ONE/jinv)
-                            interpolator_ddy(ipt,iterm) = metric(1,2) * ddxi   * (ONE/jinv) + &
-                                                          metric(2,2) * ddeta  * (ONE/jinv) + &
-                                                          metric(3,2) * ddzeta * (ONE/jinv)
-                            interpolator_ddz(ipt,iterm) = metric(1,3) * ddxi   * (ONE/jinv) + &
-                                                          metric(2,3) * ddeta  * (ONE/jinv) + &
-                                                          metric(3,3) * ddzeta * (ONE/jinv)
-
-                        end do ! ipt
-                    end do ! iterm
-
-                    !
-                    ! Store interpolators
-                    !
-                    call mesh(idom)%chimera%recv%data(iChiID)%donor_interpolator%push_back(interpolator)
-                    call mesh(idom)%chimera%recv%data(iChiID)%donor_interpolator_ddx%push_back(interpolator_ddx)
-                    call mesh(idom)%chimera%recv%data(iChiID)%donor_interpolator_ddy%push_back(interpolator_ddy)
-                    call mesh(idom)%chimera%recv%data(iChiID)%donor_interpolator_ddz%push_back(interpolator_ddz)
-
-
-
-                end do  ! idonor
-
-
-
-            end do  ! iChiID
-        end do  ! idom
-
-
-    end subroutine compute_chimera_interpolators
-    !******************************************************************************************************************
 
 
 

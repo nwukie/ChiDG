@@ -24,7 +24,6 @@ module type_chidgVector_recv
     contains
 
         procedure, public :: init
-
         procedure, public :: clear
 
     end type chidgVector_recv_t
@@ -53,6 +52,13 @@ contains
         integer(ik),    allocatable :: comm_procs_dom(:)
         type(ivector_t)             :: comm_procs
         logical                     :: not_in_list
+
+
+        !
+        ! Deallocate storage if necessary in case this is being called as a 
+        ! reinitialization routine.
+        !
+        if (allocated(self%comm)) deallocate(self%comm)
 
 
         !
@@ -102,11 +108,10 @@ contains
 
 
 
-    !>
+    !>  Clear the received data, but do NOT deallocated.
     !!
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   7/7/2016
-    !!
     !!
     !!
     !--------------------------------------------------------------------------------------------

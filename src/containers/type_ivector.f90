@@ -214,25 +214,6 @@ contains
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
     !> Clear container contents
     !!
     !!  @author Nathan A. Wukie
@@ -245,7 +226,6 @@ contains
 
         self%size_     = 0
         self%capacity_ = 0
-
         
         if (allocated(self%data_)) deallocate(self%data_)
 

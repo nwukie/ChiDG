@@ -46,7 +46,7 @@ contains
     subroutine setUp(this)
         class(test_blockvector_operators),    intent(inout)   :: this
 
-        integer(ik)                                 :: nterms_s, ivar, nterms_c, spacedim
+        integer(ik)                                 :: ivar, nterms_c, spacedim
         type(point_t),  allocatable                 :: nodes(:)
         type(domain_connectivity_t)                 :: connectivity
         
@@ -65,9 +65,10 @@ contains
 
         spacedim = 3
         nterms_c = 8
-        nterms_s = 8
         call this%chidg%data%add_domain('D_01',nodes,connectivity,spacedim,nterms_c,'Scalar Advection')
-        call this%chidg%initialize_solution_domains(nterms_s)
+
+        call this%chidg%set('Solution Order', integer_input=2)
+        call this%chidg%initialize_solution_domains()
 
 
         !

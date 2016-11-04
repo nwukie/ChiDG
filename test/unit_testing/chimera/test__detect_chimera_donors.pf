@@ -36,14 +36,13 @@ subroutine test__detect_chimera_donors()
     type(point_t)                   :: coord
     character(len=100)              :: filename = "D2E8M1_overlapping_matching.h5"
     real(rk)                        :: tol
-    integer(ik)                     :: nterms_s, ndom, ChiID, ddomain, delement, ndonors, ngq
+    integer(ik)                     :: ndom, ChiID, ddomain, delement, ndonors, ngq
     integer(ik)                     :: ndonors_component, ndonors_size
     integer(ik)                     :: idom, ielem, igq, idonor, iface, spacedim
 
 
     tol             = 1.e-13_rk
     spacedim        = 3
-    nterms_s        = 8
     IO_DESTINATION  = 'file'
 
 
@@ -66,7 +65,8 @@ subroutine test__detect_chimera_donors()
 
 
 
-    call chidg%initialize_solution_domains(nterms_s)
+    call chidg%set('Solution Order', integer_input=2)
+    call chidg%initialize_solution_domains()
     call chidg%init('communication')
 
 

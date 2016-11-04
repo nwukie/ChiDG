@@ -274,12 +274,20 @@ contains
     !!  @param[in]  face        Integer of the block face to which the boundary condition will be applied
     !!  @param[in]  options     Boundary condition options dictionary
     !!
-    !---------------------------------------------------------------------------------------------------------------
-    subroutine add_bc(self,domain,bc_states,bc_connectivity)
-        class(chidg_data_t),            intent(inout)   :: self
-        character(*),                   intent(in)      :: domain
-        type(bcvector_t),               intent(inout)   :: bc_states
-        type(boundary_connectivity_t),  intent(in)      :: bc_connectivity
+    !!  To force a particular bc_state on a boundary condition, one can pass a bc_state_t in as an option
+    !!  for bc_wall, bc_inlet, bc_outlet, bc_symmetry
+    !!
+    !----------------------------------------------------------------------------------------------------------
+    subroutine add_bc(self,domain,bc_states,bc_connectivity,bc_wall,bc_inlet,bc_outlet,bc_symmetry,bc_farfield)
+        class(chidg_data_t),            intent(inout)           :: self
+        character(*),                   intent(in)              :: domain
+        type(bcvector_t),               intent(inout)           :: bc_states
+        type(boundary_connectivity_t),  intent(in)              :: bc_connectivity
+        class(bc_state_t),              intent(in), optional    :: bc_wall
+        class(bc_state_t),              intent(in), optional    :: bc_inlet
+        class(bc_state_t),              intent(in), optional    :: bc_outlet
+        class(bc_state_t),              intent(in), optional    :: bc_symmetry
+        class(bc_state_t),              intent(in), optional    :: bc_farfield
 
         integer(ik)                         :: idom, ierr, istate, BC_ID
         type(bc_t)                          :: bc
@@ -292,12 +300,10 @@ contains
         idom = self%get_domain_index(domain)
 
 
-
         !
         ! Add a new boundary condition and get ID
         !
         BC_ID = self%bcset(idom)%add(bc)
-
 
 
         !
@@ -325,7 +331,7 @@ contains
 
 
     end subroutine add_bc
-    !**********************************************************************************************************
+    !******************************************************************************************************
 
 
 
@@ -342,7 +348,7 @@ contains
     !!
     !!
     !!
-    !----------------------------------------------------------------------------------------------------------
+    !------------------------------------------------------------------------------------------------------
     subroutine initialize_solution_domains(self,nterms_s)
         class(chidg_data_t),    intent(inout)   :: self
         integer(ik),            intent(in)      :: nterms_s
@@ -352,22 +358,15 @@ contains
 
         do idomain = 1,self%ndomains()
 
-            neqns = self%eqnset(idomain)%prop%nequations()
-
-            !
             ! Initialize mesh numerics based on equation set and polynomial expansion order
-            !
+            neqns = self%eqnset(idomain)%prop%nequations()
             call self%mesh(idomain)%init_sol(neqns,nterms_s)
 
         end do
 
 
     end subroutine initialize_solution_domains
-    !**********************************************************************************************************
-
-
-
-
+    !******************************************************************************************************
 
 
 
@@ -389,11 +388,12 @@ contains
     !!  @param[in]  dname           String associated with a given domain
     !!  @return     domain_index    Integer index of the associated domain
     !!
-    !----------------------------------------------------------------------------------------------------------
+    !------------------------------------------------------------------------------------------------------
     function get_domain_index(self,dname) result(domain_index)
         class(chidg_data_t),    intent(in)      :: self
         character(*),           intent(in)      :: dname
 
+        character(:),   allocatable :: user_msg
         integer(ik)  :: idom
         integer(ik)  :: domain_index
         
@@ -401,9 +401,7 @@ contains
 
         do idom = 1,self%ndomains_
 
-            !
             ! Test name
-            !
             if ( trim(dname) == trim(self%info(idom)%name) ) then
                 domain_index = idom
                 exit
@@ -412,7 +410,9 @@ contains
         end do
 
 
-        if (domain_index == 0) call chidg_signal(FATAL,"chidg_data%get_domain_index :: no domain found matching given name")
+        user_msg = "chidg_data%get_domain_index: No domain was found that had a name that matched the &
+                   incoming string"
+        if (domain_index == 0) call chidg_signal_one(FATAL,user_msg,dname)
 
     end function get_domain_index
     !**********************************************************************************************************
@@ -476,13 +476,6 @@ contains
 
 
         end if
-
-
-
-
-
-
-
 
 
 

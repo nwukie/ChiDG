@@ -15,7 +15,6 @@ module mod_hdfio
                                           get_contains_solution_hdf, get_contains_grid_hdf, &
                                           get_bc_state_names_hdf, get_bc_state_hdf, &
                                           get_bc_patch_hdf, open_file_hdf, close_file_hdf
-    use mod_io,                     only: nterms_s
     use mod_chidg_mpi,              only: IRANK
 
     use type_svector,               only: svector_t

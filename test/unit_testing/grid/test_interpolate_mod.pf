@@ -65,7 +65,7 @@ contains
     !---------------------------------------------------------------------------------------------
     subroutine setUp(this)
         class(test_interpolate),    intent(inout)   :: this
-        integer(ik)                                 :: nterms_c, nterms_s, ivar, spacedim
+        integer(ik)                                 :: nterms_c, ivar, spacedim
 
         type(point_t),  allocatable                 :: nodes(:)
         type(domain_connectivity_t)                 :: connectivity
@@ -93,14 +93,14 @@ contains
         !
         spacedim = 3
         nterms_c = 8
-        nterms_s = 8
         call this%chidg%data%add_domain('D_01',nodes,connectivity,spacedim,nterms_c,'Scalar Advection')
 
 
         !
         ! Initialize chidg solution data storage
         !
-        call this%chidg%initialize_solution_domains(nterms_s)
+        call this%chidg%set('Solution Order', integer_input=2)
+        call this%chidg%initialize_solution_domains()
         call this%chidg%init('communication')
         call this%chidg%initialize_solution_solver()
 

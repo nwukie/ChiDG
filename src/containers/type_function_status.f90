@@ -54,7 +54,7 @@ contains
 
 
 
-    !> Initialize class storage.
+    !>  Initialize class storage.
     !!
     !!  @author Nathan A. Wukie
     !!  @date   2/1/2016
@@ -70,8 +70,14 @@ contains
 
         integer :: idom, ndom, ierr
         
-        ndom = size(mesh)
+        !
+        ! Deallocate storage if necessary in case this is being called as a 
+        ! reinitialization routine.
+        !
+        if (allocated(self%dom)) deallocate(self%dom)
 
+
+        ndom = size(mesh)
         allocate(self%dom(ndom), stat=ierr)
         if (ierr /= 0) call AllocationError
 
@@ -93,7 +99,7 @@ contains
 
 
 
-    !> Call to determine if a function needs computed for a given face, element.
+    !>  Call to determine if a function needs computed for a given face, element.
     !!
     !!  @author Nathan A. Wukie
     !!  @date   2/1/2016
@@ -144,7 +150,7 @@ contains
 
 
 
-    !> Call to determine if a particular equation has been contributed to from a given function.
+    !>  Call to determine if a particular equation has been contributed to from a given function.
     !!
     !!  @author Nathan A. Wukie
     !!  @date   2/1/2016
@@ -195,7 +201,7 @@ contains
 
 
 
-    !> Call to determine if a function needs linearized for a given face, element, seed.
+    !>  Call to determine if a function needs linearized for a given face, element, seed.
     !!
     !!  @author Nathan A. Wukie
     !!  @date   2/1/2016
@@ -244,7 +250,7 @@ contains
 
 
 
-    !> Call to determine if a particular equation has been linearized from a given function.
+    !>  Call to determine if a particular equation has been linearized from a given function.
     !!
     !!  @author Nathan A. Wukie
     !!  @date   2/1/2016
@@ -296,7 +302,7 @@ contains
 
 
 
-    !> Register a function as having been computed for a given element/face.
+    !>  Register a function as having been computed for a given element/face.
     !!
     !!  This sets both the 'function_computed' and 'function_equation_computed' logicals.
     !!  So, in this way, because this gets called for every equation, the 'function_computed' value
@@ -341,7 +347,7 @@ contains
 
 
 
-    !> Register a function as having been linearized for a given element/face/blk.
+    !>  Register a function as having been linearized for a given element/face/blk.
     !!
     !!  This sets both the 'function_linearized' and 'function_equation_linearized' logicals.
     !!  So, in this way, because this gets called for every equation, the 'function_linearized' value
@@ -384,8 +390,8 @@ contains
 
 
 
-    !> Call clear on each domain local function status data. Should be called before every
-    !! evaluation of the right-hand side.
+    !>  Call clear on each domain local function status data. Should be called before every
+    !!  evaluation of the right-hand side.
     !!
     !!  @author Nathan A. Wukie
     !!  @date   2/1/2016
@@ -397,10 +403,10 @@ contains
 
         integer :: idom
 
+
         do idom = 1,size(self%dom)
             call self%dom(idom)%clear()
         end do
-
 
     end subroutine clear
     !****************************************************************************************

@@ -33,11 +33,10 @@ subroutine test__detect_chimera_faces()
     class(bc_t),        allocatable :: bc
     type(meshdata_t),   allocatable :: meshdata(:)
     character(len=100)              :: filename = 'D2E8M1_overlapping_matching.h5'
-    integer(ik)                     :: nterms_s, idom, ndom, ielem, spacedim
+    integer(ik)                     :: idom, ndom, ielem, spacedim
 
 
     spacedim        = 3
-    nterms_s        = 8
     IO_DESTINATION  = 'file'
 
 
@@ -61,7 +60,8 @@ subroutine test__detect_chimera_faces()
 
 
 
-    call chidg%initialize_solution_domains(nterms_s)
+    call chidg%set('Solution Order', integer_input=2)
+    call chidg%initialize_solution_domains()
     call chidg%init('communication')
 
 

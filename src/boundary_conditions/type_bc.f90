@@ -22,9 +22,23 @@ module type_bc
 
 
 
-    !> Abstract base-type for boundary conditions
-    !!  - contains a list of associated element indices
-    !!  - contains a list of face indices
+    !>  Primary boundary condition container.
+    !!
+    !!  - contains a bc_family; defining a general classification for the bc
+    !!  - contains a bc_patch;  defining the bc geometry
+    !!  - contains an array of bc_state's; defining the solution state computed by the bc
+    !!
+    !!  Convention is that a given bc_t will exists in an array of bc_t's. Maybe something
+    !!  like:
+    !!
+    !!      type(bc_t), allocatable :: bcs(:)
+    !!
+    !!  The BC_ID component of a boundary condition, is the location of the boundary condition
+    !!  in such an array. In this way, the bc_t knows where it is located and can inform
+    !!  other entities about where it is located.
+    !!
+    !!  bc_family may be:
+    !!      'Wall', 'Inlet', 'Outlet', 'Symmetry', 'Periodic', 'Farfield', 'Scalar'
     !!
     !!  @author Nathan A. Wukie
     !!  @date   2/3/2016
@@ -36,7 +50,11 @@ module type_bc
     !--------------------------------------------------------------------------------------------
     type, public :: bc_t
 
-        integer(ik)                             :: BC_ID     ! Index of the boundary condition in a set. So, a bc knows its location.
+        ! Index of the boundary condition in a set. So a bc knows its location
+        integer(ik)                             :: BC_ID
+
+        ! Boundary condition family
+        character(:),               allocatable :: bc_family
 
         ! Boundary condition patch
         type(bc_patch_t)                        :: bc_patch
@@ -50,9 +68,12 @@ module type_bc
         procedure   :: init_bc_spec         !< Call specialized initialization routine
         procedure   :: init_bc_coupling     !< Initialize book-keeping for coupling interaction between elements.
 
+        procedure   :: set_family
+        procedure   :: get_family
+
         procedure   :: add_bc_state
 
-        procedure   :: get_ncoupled_elems       !< Return the number of elements coupled with a specified boundary element.
+        procedure   :: get_ncoupled_elems   !< Return the number of elements coupled with a specified boundary element.
 
 
     end type bc_t
@@ -412,174 +433,6 @@ contains
 
 
 
-
-
-
-
-!    !>  Apply boundary condition to the mesh and solution
-!    !!      - Loops through the associated elements(faces) and calls the specialized bc_t%compute
-!    !!        procedure for computing the rhs and linearization.
-!    !!
-!    !!
-!    !!  @author Nathan A. Wukie
-!    !!  @date   1/31/2016
-!    !!
-!    !!  @param[in]      mesh    mesh_t defining elements and faces
-!    !!  @param[inout]   sdata   solverdata_t containing solution, rhs, and linearization(lin) data
-!    !!  @param[in]      iblk    Block of the linearization for the current element that is being computed (XI_MIN, XI_MAX, eta.)
-!    !!  @param[inout]   prop    properties_t object containing equationset properties and material_t objects
-!    !!
-!    !---------------------------------------------------------------------------------------------
-!    subroutine compute_bc_operators(self,mesh,sdata,prop)
-!        class(bc_t),            intent(inout)   :: self
-!        type(mesh_t),           intent(in)      :: mesh(:)
-!        class(solverdata_t),    intent(inout)   :: sdata
-!        class(properties_t),    intent(inout)   :: prop
-!
-!        integer(ik) :: ielem_bc, idomain_l, ielement_l, ielement_c, iface, idonor, iflux, &
-!                       icoupled_elem, ncoupled_elems, iop
-!
-!        type(chidg_worker_t)    :: worker
-!        type(chidg_cache_t)     :: cache
-!
-!
-!        call worker%init(mesh,sdata,cache)
-!
-!
-!        !
-!        ! Loop through associated boundary condition elements and call compute routine for the boundary flux calculation
-!        !
-!        do ielem_bc = 1,self%bc_patch%nfaces()
-!            idomain_l   = self%bc_patch%idomain_l(ielem_bc)
-!            ielement_l  = self%bc_patch%ielement_l(ielem_bc)    ! Get index of the element being operated on
-!            iface       = self%bc_patch%iface(ielem_bc)         ! Get face index of element 'ielem' that is being operated on
-!
-!
-!            worker%element_info%idomain_g  = mesh(idomain_l)%elems(ielement_l)%idomain_g
-!            worker%element_info%idomain_l  = mesh(idomain_l)%elems(ielement_l)%idomain_l
-!            worker%element_info%ielement_g = mesh(idomain_l)%elems(ielement_l)%ielement_g
-!            worker%element_info%ielement_l = mesh(idomain_l)%elems(ielement_l)%ielement_l
-!            worker%iface                   = iface
-!
-!            worker%function_info%ifcn     = 0       ! Boundary conditions are not tracked.
-!            worker%function_info%idepend  = 0       ! Chimera interface not applicable on boundary condition.
-!            worker%function_info%idiff    = BC_BLK  ! Indicates to storage routine in LHS to store in BC section.
-!
-!
-!            if (allocated(self%bc_operator)) then
-!                do iop = 1,size(self%bc_operator)
-!                
-!                    ! For current element, get number of coupled elements.
-!                    ncoupled_elems = self%get_ncoupled_elems(ielem_bc)
-!
-!
-!                    ! Compute current element function enough times to linearize all the coupled elements.
-!                    ! If no coupling accross the face, the ncoupled_elems=1 for just the local interior element.
-!                    do icoupled_elem = 1,ncoupled_elems
-!
-!                        !
-!                        ! Get coupled element to linearize against.
-!                        !
-!                        ielement_c = self%bc_patch%coupled_elements(ielem_bc)%at(icoupled_elem)
-!                        worker%function_info%seed%idomain_g  = mesh(idomain_l)%elems(ielement_c)%idomain_g
-!                        worker%function_info%seed%idomain_l  = mesh(idomain_l)%elems(ielement_c)%idomain_l
-!                        worker%function_info%seed%ielement_g = mesh(idomain_l)%elems(ielement_c)%ielement_g
-!                        worker%function_info%seed%ielement_l = mesh(idomain_l)%elems(ielement_c)%ielement_l
-!                        worker%function_info%seed%iproc      = IRANK
-!
-!                        !
-!                        ! For the current boundary element(face), call specialized compute procedure.
-!                        !
-!                        call self%bc_operator(iop)%op%compute(worker,prop)
-!
-!                    end do !ielem_c
-!
-!                end do !iop
-!            end if
-!
-!
-!        end do !ielem_bc
-!
-!
-!    end subroutine compute_bc_operators
-!    !********************************************************************************************
-
-
-
-
-
-
-
-
-
-
-!    !>
-!    !!
-!    !!  @author Nathan A. Wukie (AFRL)
-!    !!  @date   8/30/2016
-!    !!
-!    !!
-!    !!
-!    !-------------------------------------------------------------------------------------------------
-!    subroutine add_bc_operator(self,bc_operator)
-!        class(bc_t),            intent(inout)   :: self
-!        class(bc_operator_t),   intent(in)      :: bc_operator
-!
-!        integer(ik) :: iop, ierr
-!        class(bc_operator_wrapper_t),   allocatable :: temp(:) 
-!
-!
-!        !
-!        ! Allocate temp storage for (size+1), copy current operators to temp
-!        !        
-!        if (allocated(self%bc_operator)) then
-!
-!            allocate(temp(size(self%bc_operator) + 1), stat=ierr)
-!            if (ierr /= 0) call AllocationError
-!
-!            ! Copy previously added operators to temp
-!            do iop = 1,size(self%bc_operator)
-!                allocate(temp(iop)%op, source=self%bc_operator(iop)%op, stat=ierr)
-!                if (ierr /= 0) call AllocationError
-!            end do
-!
-!        else
-!
-!            allocate(temp(1), stat=ierr)
-!            if (ierr /= 0) call AllocationError
-!
-!        end if
-!
-!
-!        !
-!        ! Allocate new operator to end
-!        !
-!        allocate(temp(size(temp))%op, source=bc_operator, stat=ierr)
-!        if (ierr /= 0) call AllocationError
-!
-!
-!
-!        !
-!        ! Move temp allocation to bc
-!        !
-!        call move_alloc(temp, self%bc_operator)
-!
-!
-!    end subroutine add_bc_operator
-!    !**************************************************************************************************
-
-
-
-
-
-
-
-
-
-
-
-
-
     !>
     !!
     !!  @author Nathan A. Wukie (AFRL)
@@ -645,6 +498,81 @@ contains
 
 
 
+
+
+
+    !>  Set the bc_family.
+    !!
+    !!  bc_family may be:
+    !!      'Wall', 'Inlet', 'Outlet', 'Symmetry', 'Periodic', 'Farfield', 'Scalar'
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   11/4/2016
+    !!
+    !!
+    !!
+    !---------------------------------------------------------------------------------------------------
+    subroutine set_family(self,family)
+        class(bc_t),        intent(inout)   :: self
+        character(*),       intent(in)      :: family
+
+        character(:),   allocatable :: user_msg
+
+        if ( (trim(family) == 'Wall'    ) .or. &
+             (trim(family) == 'Inlet'   ) .or. &
+             (trim(family) == 'Outlet'  ) .or. &
+             (trim(family) == 'Symmetry') .or. &
+             (trim(family) == 'Periodic') .or. &
+             (trim(family) == 'Farfield') .or. &
+             (trim(family) == 'Scalar'  ) ) then
+
+            self%bc_family = family
+
+        else
+            user_msg = "bc%set_family: The string passed in to set the boundary condition family did &
+                        not match any of valid boundary condition families. These include: 'Wall', &
+                        'Inlet', 'Outlet', 'Symmetry', 'Periodic', 'Farfield', 'Scalar'"
+            call chidg_signal_one(FATAL,user_msg,family)
+        end if
+
+    end subroutine set_family
+    !***************************************************************************************************
+
+
+
+
+
+
+
+    !>  Get the bc_family.
+    !!
+    !!  bc_family may be:
+    !!      'Wall', 'Inlet', 'Outlet', 'Symmetry', 'Periodic', 'Farfield', 'Scalar'
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   11/4/2016
+    !!
+    !!
+    !---------------------------------------------------------------------------------------------------
+    function get_family(self) result(family)
+        class(bc_t),        intent(inout)   :: self
+
+        character(:),   allocatable :: family
+
+        character(:),   allocatable :: user_msg
+
+
+        if (allocated(self%bc_family)) then
+            family = self%bc_family
+        else
+            user_msg = "bc%get_family: It looks like the boundary condition family was never set.&
+                        Make sure bc%set_family gets called in the boundary condition initialization&
+                        routine"
+            call chidg_signal(FATAL,user_msg)
+        end if
+
+    end function get_family
+    !***************************************************************************************************
 
 
 

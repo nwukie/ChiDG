@@ -26,14 +26,13 @@ subroutine test_fgmres_ref_solve()
     type(fgmres_t)              :: linear_solver
     
     real(rk)    :: tol
-    integer(ik) :: nterms_c, nterms_s, idomain, spacedim
+    integer(ik) :: nterms_c, idomain, spacedim
 
 
     tol             = 1.e-9_rk
     idomain         = 1
     spacedim        = 3
     nterms_c        = 8
-    nterms_s        = 1
     IO_DESTINATION  = 'file'
 
 
@@ -62,7 +61,9 @@ subroutine test_fgmres_ref_solve()
     ! Initialize domain
     !
     call chidg%data%add_domain('D_01',nodes,connectivity,spacedim,nterms_c,'Scalar Advection')
-    call chidg%initialize_solution_domains(nterms_s)
+
+    call chidg%set('Solution Order', integer_input=1)
+    call chidg%initialize_solution_domains()
     call chidg%init('communication')
     call chidg%initialize_solution_solver()
 

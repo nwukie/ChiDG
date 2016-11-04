@@ -116,7 +116,6 @@ contains
         irho_nutilde = prop%get_equation_index("Density * NuTilde")
 
 
-
         !
         ! Interpolate solution to quadrature nodes
         !
@@ -126,9 +125,6 @@ contains
         rhow        = worker%get_element_variable(irhow,       'value')
         rhoE        = worker%get_element_variable(irhoE,       'value')
         rho_nutilde = worker%get_element_variable(irho_nutilde,'value')
-
-
-
 
 
 
@@ -160,6 +156,10 @@ contains
         drho_nutilde_dz = worker%get_element_variable(irho_nutilde, 'ddz+lift')
 
 
+        !
+        ! Interpolate auxiliary field, Wall Distance
+        !
+        dwall = worker%get_element_auxiliary_field('Wall Distance', 'value')
 
         !
         ! Divide by density

@@ -21,7 +21,6 @@ module mod_chidg_post_hdf2tec
     use mod_tecio,              only: write_tecio_variables_unstructured
     use type_file_properties,   only: file_properties_t
     use mod_hdf_utilities,      only: get_properties_hdf
-    use mod_io,                 only: nterms_s, spacedim
     implicit none
 
 
@@ -48,6 +47,7 @@ contains
         type(chidg_t)                       :: chidg
         type(file_properties_t)             :: file_props
         character(:),           allocatable :: eqnset
+        integer(ik)                         :: nterms_s, spacedim, solution_order
 
 
 
@@ -70,9 +70,9 @@ contains
         !
         file_props = get_properties_hdf(filename)
 
-        nterms_s    = file_props%nterms_s(1)    ! Global variable from mod_io
-        eqnset      = file_props%eqnset(1)      ! Global variable from mod_io
-        spacedim    = file_props%spacedim(1)    ! Global variable from mod_io
+        nterms_s    = file_props%nterms_s(1)
+        eqnset      = file_props%eqnset(1)
+        spacedim    = file_props%spacedim(1)
 
 
 
@@ -83,12 +83,17 @@ contains
         call chidg%read_grid(filename,spacedim)
 
 
+        solution_order = 0
+        do while (solution_order*solution_order*solution_order < nterms_s)
+            solution_order = solution_order + 1
+        end do
 
 
         !
         ! Initialize solution data storage
         !
-        call chidg%initialize_solution_domains(nterms_s)
+        call chidg%set('Solution Order', integer_input=solution_order)
+        call chidg%initialize_solution_domains()
         call chidg%init('communication')
         call chidg%initialize_solution_solver()
 

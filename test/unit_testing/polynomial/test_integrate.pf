@@ -33,7 +33,7 @@ subroutine test_integrate_boundary_unit_constant()
     class(bc_state_t),  allocatable     :: bc
     type(bcvector_t)                    :: bc_states
 
-    integer(ik)                         :: nterms_c, nterms_s, iblk, idom, ngq, ielem, iface, ifcn, spacedim, mapping
+    integer(ik)                         :: nterms_c, iblk, idom, ngq, ielem, iface, ifcn, spacedim, mapping
     integer(ik)                         :: idonor, ivar, igq
     type(AD_D),         allocatable     :: integrand(:)
     class(function_t),  allocatable     :: constant
@@ -65,7 +65,6 @@ subroutine test_integrate_boundary_unit_constant()
     spacedim = 3
     mapping  = 1
     nterms_c = 8
-    nterms_s = 1
     call chidg%data%add_domain('D_01',nodes,connectivity,spacedim,nterms_c,'Scalar Advection')
 
 
@@ -96,7 +95,8 @@ subroutine test_integrate_boundary_unit_constant()
     !
     ! Initialize solver data
     !
-    call chidg%initialize_solution_domains(nterms_s)
+    call chidg%set('Solution Order', integer_input=1)
+    call chidg%initialize_solution_domains()
     call chidg%init('communication')
     call chidg%init('chimera')
     call chidg%initialize_solution_solver()
@@ -232,7 +232,7 @@ subroutine test_integrate_boundary_nonunit_constant()
     type(chidg_t)                       :: chidg
     class(bc_state_t),   allocatable :: bc
     type(bcvector_t)                    :: bc_states
-    integer(ik)                         :: nterms_c, nterms_s, igq, ngq, ivar, ifcn, spacedim, mapping
+    integer(ik)                         :: nterms_c, igq, ngq, ivar, ifcn, spacedim, mapping
     integer(ik)                         :: idomain, iblk, idonor
     type(AD_D),         allocatable     :: integrand(:)
     class(function_t),  allocatable     :: constant
@@ -259,7 +259,6 @@ subroutine test_integrate_boundary_nonunit_constant()
     spacedim = 3
     mapping  = 1
     nterms_c = 8
-    nterms_s = 1
 
 
     call chidg%data%add_domain('D_01',nodes,connectivity,spacedim,nterms_c,'Scalar Advection')
@@ -291,10 +290,11 @@ subroutine test_integrate_boundary_nonunit_constant()
     !
     ! Initialize solver data 
     !
-    !call chidg%data%initialize_solution_domains(nterms_s)
+    !call chidg%data%initialize_solution_domains()
     !call chidg%data%initialize_solution_solver()
 
-    call chidg%initialize_solution_domains(nterms_s)
+    call chidg%set('Solution Order', integer_input=1)
+    call chidg%initialize_solution_domains()
     call chidg%init('communication')
     call chidg%init('chimera')
     call chidg%initialize_solution_solver()

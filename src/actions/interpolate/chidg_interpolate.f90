@@ -5,8 +5,6 @@ module mod_chidg_interpolate
     use type_point,         only: point_t
     use type_mesh,          only: mesh_t
     use type_chidg,         only: chidg_t
-    !use mod_grid_tools_two, only: compute_element_donor
-    use mod_io,             only: nterms_s
     implicit none
 
 
@@ -64,14 +62,14 @@ contains
 
         print*, '    ', trim(sourcefile)
 
-        nterms_s = 5*5*5
-        call chidg_source%initialize_solution_domains(nterms_s)
+        call chidg_source%set('Solution Order', integer_input=5)
+        call chidg_source%initialize_solution_domains()
         call chidg_source%initialize_solution_solver()
         print*, '    ', trim(targetfile)
 
-        nterms_s = 5*5*5
         print*, 'initialize_solution_domains'
-        call chidg_target%initialize_solution_domains(nterms_s)
+        call chidg_target%set('Solution Order', integer_input=5)
+        call chidg_target%initialize_solution_domains()
         print*, 'initialize_solution_solver'
         call chidg_target%initialize_solution_solver()
 

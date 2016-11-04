@@ -1,10 +1,37 @@
+!-------------------------------------------------------------------------------------
+!!
+!!                                  A ChiDG Worker
+!!
+!!  Purpose:
+!!  ----------------------------------------
+!!  The chidg_worker_t handles the following activities that might occur within
+!!  an operator_t:
+!!      - interpolate to quadrature nodes. Element and face sets.
+!!      - integrate. Volume and Boundaries
+!!      - return geometric information such as normals, and coordinates.
+!!
+!!  The worker knows what element/face is currently being worked on. So, it can then
+!!  access that element/face for getting data, performing the correct interpolation,
+!!  performing the correct integral. This way, the operator_t flux routines don't
+!!  have to worry about where they are getting data from. 
+!!
+!!  The operator_t's are just concerned with getting information from the worker 
+!!  about the element/face, computing a function value, passing that information
+!!  back to the worker to be integrated and stored.
+!!
+!!
+!!
+!!  @author Nathan A. Wukie
+!!  @date   8/22/2016
+!!
+!!
+!-------------------------------------------------------------------------------------
 module type_chidg_worker
 #include <messenger.h>
     use mod_kinds,          only: ik, rk
     use mod_constants,      only: NFACES, ME, NEIGHBOR, BC, ZERO
-    use mod_interpolate,    only: interpolate_element_autodiff, &
-                                  interpolate_face_autodiff,    &
-                                  get_face_interpolation_info
+    use mod_interpolate,    only: interpolate_element_standard, &
+                                  interpolate_face_standard
 
     use mod_integrate,      only: integrate_boundary_scalar_flux, &
                                   integrate_volume_vector_flux,   &
@@ -24,13 +51,13 @@ module type_chidg_worker
 
 
 
-    !>
+    !>  The ChiDG worker implementation.
     !!
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   8/22/2016
     !!
     !!
-    !----------------------------------------------------------------------------
+    !------------------------------------------------------------------------------
     type, public :: chidg_worker_t
     
         type(mesh_t),           pointer :: mesh(:)
@@ -55,11 +82,7 @@ module type_chidg_worker
         ! Worker get data
         procedure   :: get_face_variable
         procedure   :: get_element_variable
-
-        procedure   :: interpolate_face
-        procedure   :: interpolate_element
-        generic     :: interpolate => interpolate_face, &
-                                      interpolate_element
+        procedure   :: get_element_auxiliary_field
 
         procedure   :: store_bc_state
 
@@ -88,7 +111,7 @@ module type_chidg_worker
         final       :: destructor
     
     end type chidg_worker_t
-    !*****************************************************************************    
+    !*********************************************************************************
 
 
 
@@ -104,7 +127,7 @@ contains
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   8/22/2016
     !!
-    !-------------------------------------------------------------------------------
+    !---------------------------------------------------------------------------------
     subroutine init(self,mesh,solverdata,cache)
         class(chidg_worker_t),  intent(inout)       :: self
         type(mesh_t),           intent(in), target  :: mesh(:)
@@ -117,7 +140,7 @@ contains
         self%cache      => cache
 
     end subroutine init
-    !********************************************************************************
+    !**********************************************************************************
 
 
 
@@ -130,7 +153,7 @@ contains
     !!  @date   8/22/2016
     !!
     !!
-    !---------------------------------------------------------------------------------
+    !----------------------------------------------------------------------------------
     subroutine set_element(self,elem_info)
         class(chidg_worker_t),  intent(inout)   :: self
         type(element_info_t),   intent(in)      :: elem_info
@@ -436,6 +459,63 @@ contains
 
 
 
+    !>  Return an interpolation of an auxiliary chidgVector on the element quadrature node set.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   11/4/2016
+    !!
+    !!
+    !----------------------------------------------------------------------------------------------
+    function get_element_auxiliary_field(self,field,interp_type) result(var_gq)
+        class(chidg_worker_t),  intent(in)  :: self
+        character(*),           intent(in)  :: field
+        character(*),           intent(in)  :: interp_type
+
+        character(:),   allocatable :: user_msg
+        real(rk),       allocatable :: var_gq(:)
+
+        integer(ik) :: ifield
+
+
+        !
+        ! Get index of the auxiliary field vector.
+        !
+        ifield = self%solverdata%get_auxiliary_field_index(field)
+
+
+
+        if ( (trim(interp_type) == 'value') .or. &
+             (trim(interp_type) == 'ddx'  ) .or. &
+             (trim(interp_type) == 'ddy'  ) .or. &
+             (trim(interp_type) == 'ddz'  ) ) then
+
+            ! Here, we implicitly assume that all auxiliary field vectors contain only
+            ! one variable expansion. Hence, ieqn = 1.
+            var_gq = interpolate_element_standard(self%mesh,self%solverdata%auxiliary_field(ifield),    &
+                                                            idomain_l  = self%element_info%idomain_l,   &
+                                                            ielement_l = self%element_info%ielement_l,  &
+                                                            ieqn = 1,                                   &
+                                                            interpolation_type = interp_type)
+
+        elseif ( (trim(interp_type) == 'ddx+lift')   .or. &
+                 (trim(interp_type) == 'ddy+lift')   .or. &
+                 (trim(interp_type) == 'ddz+lift')   .or. &
+                 (trim(interp_type) == 'ddx + lift') .or. &
+                 (trim(interp_type) == 'ddy + lift') .or. &
+                 (trim(interp_type) == 'ddz + lift') ) then
+
+            user_msg = "chidg_worker%get_element_auxiliary_field: Lifted derivatives('ddx + lift') are&
+                        not supported. Only the standard derivatives('ddx','ddy','ddz') are supported."
+            call chidg_signal_one(FATAL,user_msg,trim(interp_type))
+        end if
+
+
+
+
+
+
+    end function get_element_auxiliary_field
+    !***********************************************************************************************
 
 
 
@@ -523,77 +603,77 @@ contains
 
 
 
-    !>
-    !!
-    !!  @author Nathan A. Wukie (AFRL)
-    !!  @date   9/8/2016
-    !!
-    !!
-    !---------------------------------------------------------------------------------------------
-    function interpolate_face(self,ieqn,interp_type,interp_source) result(var_gq)
-        class(chidg_worker_t),  intent(in)  :: self
-        integer(ik),            intent(in)  :: ieqn
-        character(len=*),       intent(in)  :: interp_type
-        integer(ik),            intent(in)  :: interp_source
+!    !>
+!    !!
+!    !!  @author Nathan A. Wukie (AFRL)
+!    !!  @date   9/8/2016
+!    !!
+!    !!
+!    !---------------------------------------------------------------------------------------------
+!    function interpolate_face(self,ieqn,interp_type,interp_source) result(var_gq)
+!        class(chidg_worker_t),  intent(in)  :: self
+!        integer(ik),            intent(in)  :: ieqn
+!        character(len=*),       intent(in)  :: interp_type
+!        integer(ik),            intent(in)  :: interp_source
+!
+!        type(AD_D), allocatable, dimension(:) :: &
+!            var_gq, deriv, lift
+!
+!
+!        if (interp_type == 'value') then
+!            var_gq = interpolate_face_autodiff(self%mesh,self%solverdata%q,self%face_info(),self%function_info,ieqn,interp_type,interp_source)
+!
+!        elseif ((interp_type == 'ddx') .or. &
+!                (interp_type == 'ddy') .or. &
+!                (interp_type == 'ddz') ) then
+!
+!            deriv = interpolate_face_autodiff(self%mesh,self%solverdata%q,self%face_info(),self%function_info,ieqn,interp_type,interp_source)
+!
+!!            lift = self%solverdata%BR2%interpolate_lift_face(self%mesh,self%face_info,self%function_info,ieqn,interp_type,interp_source)
+!!            lift = self%BR2%interpolate_lift_face(self%mesh,self%face_info,self%function_info,ieqn,interp_type,interp_source)
+!
+!            var_gq = deriv + real(NFACES,rk)*lift
+!
+!        end if
+!
+!    end function interpolate_face
+!    !**********************************************************************************************
 
-        type(AD_D), allocatable, dimension(:) :: &
-            var_gq, deriv, lift
 
 
-        if (interp_type == 'value') then
-            var_gq = interpolate_face_autodiff(self%mesh,self%solverdata%q,self%face_info(),self%function_info,ieqn,interp_type,interp_source)
-
-        elseif ((interp_type == 'ddx') .or. &
-                (interp_type == 'ddy') .or. &
-                (interp_type == 'ddz') ) then
-
-            deriv = interpolate_face_autodiff(self%mesh,self%solverdata%q,self%face_info(),self%function_info,ieqn,interp_type,interp_source)
-
-!            lift = self%solverdata%BR2%interpolate_lift_face(self%mesh,self%face_info,self%function_info,ieqn,interp_type,interp_source)
-!            lift = self%BR2%interpolate_lift_face(self%mesh,self%face_info,self%function_info,ieqn,interp_type,interp_source)
-
-            var_gq = deriv + real(NFACES,rk)*lift
-
-        end if
-
-    end function interpolate_face
-    !**********************************************************************************************
-
-
-
-    !>
-    !!
-    !!  @author Nathan A. Wukie (AFRL)
-    !!  @date   9/8/2016
-    !!
-    !!
-    !---------------------------------------------------------------------------------------------
-    function interpolate_element(self,ieqn,interp_type) result(var_gq)
-        class(chidg_worker_t),  intent(in)  :: self
-        integer(ik),            intent(in)  :: ieqn
-        character(len=*),       intent(in)  :: interp_type
-
-        type(AD_D), allocatable, dimension(:) :: &
-            var_gq, deriv, lift
-
-        if (interp_type == 'value') then
-            var_gq = interpolate_element_autodiff(self%mesh,self%solverdata%q,self%element_info,self%function_info,ieqn,interp_type)
-
-        elseif ((interp_type == 'ddx') .or. &
-                (interp_type == 'ddy') .or. &
-                (interp_type == 'ddz') ) then
-
-            deriv = interpolate_element_autodiff(self%mesh,self%solverdata%q,self%element_info,self%function_info,ieqn,interp_type)
-
-!            lift  = self%solverdata%BR2%interpolate_lift_element(self%mesh,self%element_info,self%function_info,ieqn,interp_type)
-!            lift  = self%BR2%interpolate_lift_element(self%mesh,self%element_info,self%function_info,ieqn,interp_type)
-
-            var_gq = deriv + lift
-
-        end if
-
-    end function interpolate_element
-    !**********************************************************************************************
+!    !>
+!    !!
+!    !!  @author Nathan A. Wukie (AFRL)
+!    !!  @date   9/8/2016
+!    !!
+!    !!
+!    !---------------------------------------------------------------------------------------------
+!    function interpolate_element(self,ieqn,interp_type) result(var_gq)
+!        class(chidg_worker_t),  intent(in)  :: self
+!        integer(ik),            intent(in)  :: ieqn
+!        character(len=*),       intent(in)  :: interp_type
+!
+!        type(AD_D), allocatable, dimension(:) :: &
+!            var_gq, deriv, lift
+!
+!        if (interp_type == 'value') then
+!            var_gq = interpolate_element_autodiff(self%mesh,self%solverdata%q,self%element_info,self%function_info,ieqn,interp_type)
+!
+!        elseif ((interp_type == 'ddx') .or. &
+!                (interp_type == 'ddy') .or. &
+!                (interp_type == 'ddz') ) then
+!
+!            deriv = interpolate_element_autodiff(self%mesh,self%solverdata%q,self%element_info,self%function_info,ieqn,interp_type)
+!
+!!            lift  = self%solverdata%BR2%interpolate_lift_element(self%mesh,self%element_info,self%function_info,ieqn,interp_type)
+!!            lift  = self%BR2%interpolate_lift_element(self%mesh,self%element_info,self%function_info,ieqn,interp_type)
+!
+!            var_gq = deriv + lift
+!
+!        end if
+!
+!    end function interpolate_element
+!    !**********************************************************************************************
 
 
 

@@ -69,7 +69,7 @@ contains
     subroutine setUp(this)
         class(test_interpolate_chimera),    intent(inout)   :: this
 
-        integer(ik)                     :: nterms_s, ivar, idom, spacedim
+        integer(ik)                     :: ivar, idom, spacedim
         type(meshdata_t),   allocatable :: meshdata(:) 
         
         !
@@ -94,7 +94,6 @@ contains
         ! Read D2_E8_M1. Two domains, 2x2x2 elements in each domain, linear mapping
         !
         spacedim = 3
-        nterms_s = 8
         call this%chidg%read_grid(this%filename, spacedim)
         call this%chidg%read_boundaryconditions(this%filename)
 
@@ -103,7 +102,8 @@ contains
         !
         ! Initialize chidg solution data storage
         !
-        call this%chidg%initialize_solution_domains(nterms_s)
+        call this%chidg%set('Solution Order', integer_input=2)
+        call this%chidg%initialize_solution_domains()
         call this%chidg%init('communication')
         call this%chidg%init('chimera')
         call this%chidg%initialize_solution_solver()

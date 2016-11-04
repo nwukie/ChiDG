@@ -55,7 +55,7 @@ contains
     subroutine setUp(this)
         class(test_hdfio_solution),    intent(inout)   :: this
 
-        integer(ik)                     :: nterms_s, nterms_c, spacedim
+        integer(ik)                     :: spacedim
         type(meshdata_t), allocatable   :: meshdata(:)
 
         IO_DESTINATION = 'file'
@@ -75,16 +75,16 @@ contains
         ! Initialize chidg domain
         !
         spacedim = 3
-        nterms_s = 1
         call this%chidgO1%read_grid(this%fileorig,spacedim)
-        call this%chidgO1%initialize_solution_domains(nterms_s)
+        call this%chidgO1%set('Solution Order', integer_input=1)
+        call this%chidgO1%initialize_solution_domains()
         call this%chidgO1%init('communication')
         call this%chidgO1%initialize_solution_solver()
 
         spacedim = 3
-        nterms_s = 8
         call this%chidgO2%read_grid(this%fileorig,spacedim)
-        call this%chidgO2%initialize_solution_domains(nterms_s)
+        call this%chidgO2%set('Solution Order', integer_input=2)
+        call this%chidgO2%initialize_solution_domains()
         call this%chidgO2%init('communication')
         call this%chidgO2%initialize_solution_solver()
 

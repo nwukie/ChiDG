@@ -13,6 +13,12 @@ module type_chidgVector_send
     !>  Container for storing information about what parts of chidgVector to send to other
     !!  processors.
     !!
+    !!  For each processor that we are sending data to, a chidgVector_send_comm_t instance exists:
+    !!      self%comm(icomm)
+    !!
+    !!  The chidgVector_send_comm_t instance contains all the information about what
+    !!  data we are sending to a specific processor.
+    !!
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   7/1/2016
     !!
@@ -26,7 +32,7 @@ module type_chidgVector_send
 
     contains
 
-        procedure, public :: init
+        procedure, public   :: init
 
     end type chidgVector_send_t
     !*****************************************************************************************
@@ -57,6 +63,14 @@ contains
         integer(ik), allocatable    :: comm_procs_dom(:)
         type(ivector_t)             :: comm_procs
         logical                     :: already_added
+
+
+        !
+        ! Deallocate storage if necessary in case this is being called as a 
+        ! reinitialization routine.
+        !
+        if (allocated(self%comm)) deallocate(self%comm)
+        if (allocated(self%isend_handles)) deallocate(self%isend_handles)
 
 
         !
@@ -113,6 +127,7 @@ contains
 
     end subroutine init
     !****************************************************************************************
+
 
 
 

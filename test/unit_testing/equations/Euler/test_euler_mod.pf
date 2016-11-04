@@ -76,7 +76,7 @@ contains
         type(point_t),      allocatable     :: nodes(:)
         type(domain_connectivity_t)         :: connectivity
         class(function_t),  allocatable     :: fcn
-        integer(ik)                         :: neqns, nterms_s, nterms_c, spacedim
+        integer(ik)                         :: neqns, nterms_c, spacedim
         real(rk), dimension(npt)            :: x,y,z
 
         !
@@ -101,10 +101,11 @@ contains
         ! Add domain to ChiDG
         !
         spacedim = 3
-        nterms_s = 8
         nterms_c = 8
         call this%chidg%data%add_domain('D_01',nodes,connectivity,spacedim,nterms_c,'euler')
-        call this%chidg%initialize_solution_domains(nterms_s)
+
+        call this%chidg%set('Solution Order', integer_input=2)
+        call this%chidg%initialize_solution_domains()
         call this%chidg%init('communication')
         call this%chidg%initialize_solution_solver()
 

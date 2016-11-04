@@ -119,7 +119,7 @@ contains
 
 
                         
-                        ! Send domain status. If we have a match, initiate handle_comm_request
+                        ! Send domain status. If we have a match, initiate handle_neighbor_request
                         call MPI_Send(has_domain,1,MPI_LOGICAL,iproc,1,ChiDG_COMM,ierr)
 
                         if ( has_domain ) then
@@ -193,7 +193,20 @@ contains
         type(mesh_t),   intent(inout)   :: mesh(:)
         type(mpi_comm)                  :: ChiDG_COMM
 
-        integer :: ierr
+        integer :: idom, ierr
+
+
+        !
+        ! In case establish_chimera_communication is being called as a reinitialization procedure. 
+        ! Calling clear on chimera%send, chimera%recv to wipe out previous data and redetect all 
+        ! chimera faces, donors and reinitialize donor data.
+        !
+        do idom = 1,size(mesh)
+            call mesh(idom)%chimera%send%clear()
+            call mesh(idom)%chimera%recv%clear()
+        end do !idom
+        call MPI_Barrier(ChiDG_COMM,ierr)   ! not sure if this is needed.
+
 
 
         ! Process-local routine, just to flag faces

@@ -32,7 +32,7 @@ contains
         type(chidg_t)                               :: chidg
         type(mpi_comm)                              :: ChiDG_COMM
 
-        integer(ik)                     :: iread, spacedim, ierr, nterms_s
+        integer(ik)                     :: iread, spacedim, ierr
         character(len=:), allocatable   :: gridfile
 
         
@@ -44,7 +44,6 @@ contains
 
         gridfile       = "D1E4M1.h5"
         IO_DESTINATION = 'file'
-        nterms_s       = 27
         spacedim       = 3
 
 
@@ -75,7 +74,8 @@ contains
         !
         ! Initialization
         !
-        call chidg%initialize_solution_domains(nterms_s)
+        call chidg%set('Solution Order', integer_input=3)
+        call chidg%initialize_solution_domains()
         call chidg%init('communication',ChiDG_COMM)
 
 

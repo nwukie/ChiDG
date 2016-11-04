@@ -115,11 +115,10 @@ contains
         class(test_find_gq_donor),  intent(inout)   :: this
 
         type(meshdata_t)                :: meshdata
-        integer(ik)                     :: nterms_s, nterms_c, spacedim
+        integer(ik)                     :: nterms_c, spacedim
 
         spacedim        = 3
         nterms_c        = 8
-        nterms_s        = 8
         IO_DESTINATION  = 'file'
 
 
@@ -133,7 +132,9 @@ contains
 
         ! Add domain to ChiDG, initialize
         call this%chidg%data%add_domain('D_01',meshdata%points,meshdata%connectivity,spacedim,nterms_c,'Scalar Advection')
-        call this%chidg%initialize_solution_domains(nterms_s)
+
+        call this%chidg%set('Solution Order', integer_input=2)
+        call this%chidg%initialize_solution_domains()
         call this%chidg%init('communication')
 
     end subroutine setUp

@@ -97,6 +97,12 @@
 <li class="toctree-l3"><a class="reference internal" href="#chidg-executable-chidg">ChiDG Executable: <code class="docutils literal"><span class="pre">chidg</span></code></a></li>
 </ul>
 </li>
+<li class="toctree-l2"><a class="reference internal" href="#running-chidg">Running ChiDG</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#step-1-create-a-chidg-formatted-grid-file">Step 1: Create a ChiDG-formatted grid file</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#step-2-create-a-chidg-nml-input-file">Step 2: Create a <code class="docutils literal"><span class="pre">chidg.nml</span></code> input file</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#step-3-run-chidg">Step 3: Run <code class="docutils literal"><span class="pre">chidg</span></code></a></li>
+</ul>
+</li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="../examples/example_main.html">Examples</a><ul>
@@ -553,10 +559,90 @@ The ChiDG executable, <code class="docutils literal"><span class="pre">chidg</sp
 <code class="descname">chidg</code><a class="headerlink" href="#chidg" title="Permalink to this definition">¶</a></dt>
 <dd><ul class="simple">
 <li>Run a ChiDG simulation</li>
-<li>Assumes chidg.nml namelist file is present in current directory</li>
+<li>Assumes chidg.nml namelist and grid files are present in the working directory</li>
 </ul>
 </dd></dl>
 
+<div class="line-block">
+<div class="line"><br /></div>
+<div class="line"><br /></div>
+<div class="line"><br /></div>
+<div class="line"><br /></div>
+<div class="line"><br /></div>
+</div>
+</div>
+</div>
+<div class="section" id="running-chidg">
+<span id="id3"></span><h2>Running ChiDG<a class="headerlink" href="#running-chidg" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="step-1-create-a-chidg-formatted-grid-file">
+<h3>Step 1: Create a ChiDG-formatted grid file<a class="headerlink" href="#step-1-create-a-chidg-formatted-grid-file" title="Permalink to this headline">¶</a></h3>
+<p>To create a ChiDG-formatted grid, generate your grid as a <strong>multi-block,
+unformatted, double-precision Plot3D file</strong>. As an example, we will just
+assume you called this file, <code class="docutils literal"><span class="pre">awesome_grid.x</span></code>.</p>
+<blockquote>
+<div><ul class="simple">
+<li>Run <code class="docutils literal"><span class="pre">chidg</span> <span class="pre">convert</span> <span class="pre">awesome_grid.x</span></code> to create a ChiDG-formatted grid, <code class="docutils literal"><span class="pre">awesome_grid.h5</span></code>.</li>
+<li>Run <code class="docutils literal"><span class="pre">chidg</span> <span class="pre">edit</span> <span class="pre">awesome_grid.h5</span></code> and edit the boundary conditions for your grid.</li>
+</ul>
+</div></blockquote>
+<div class="line-block">
+<div class="line"><br /></div>
+<div class="line"><br /></div>
+</div>
+</div>
+<div class="section" id="step-2-create-a-chidg-nml-input-file">
+<h3>Step 2: Create a <code class="docutils literal"><span class="pre">chidg.nml</span></code> input file<a class="headerlink" href="#step-2-create-a-chidg-nml-input-file" title="Permalink to this headline">¶</a></h3>
+<blockquote>
+<div><ul>
+<li><p class="first">Download a default <a class="reference download internal" href="../_downloads/chidg_default.nml" download=""><code class="xref download docutils literal"><span class="pre">chidg.nml</span></code></a> and place it in the
+directory in which you plan to run <code class="docutils literal"><span class="pre">chidg</span></code>.</p>
+</li>
+<li><p class="first">Edit the <code class="docutils literal"><span class="pre">chidg.nml</span></code> entries as:</p>
+<blockquote>
+<div><table border="1" class="docutils">
+<colgroup>
+<col width="100%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td><div class="first last line-block">
+<div class="line"><code class="docutils literal"><span class="pre">gridfile</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <span class="pre">=</span> <span class="pre">'awesome_grid.h5'</span></code></div>
+<div class="line"><code class="docutils literal"><span class="pre">solutionfile_in</span>&nbsp; <span class="pre">=</span> <span class="pre">'none'</span></code></div>
+<div class="line"><code class="docutils literal"><span class="pre">solutionfile_out</span> <span class="pre">=</span> <span class="pre">'awesome_grid.h5'</span></code></div>
+</div>
+</td>
+</tr>
+</tbody>
+</table>
+</div></blockquote>
+</li>
+</ul>
+</div></blockquote>
+<div class="line-block">
+<div class="line"><br /></div>
+<div class="line"><br /></div>
+</div>
+</div>
+<div class="section" id="step-3-run-chidg">
+<h3>Step 3: Run <code class="docutils literal"><span class="pre">chidg</span></code><a class="headerlink" href="#step-3-run-chidg" title="Permalink to this headline">¶</a></h3>
+<p>In the working directory, call the <code class="docutils literal"><span class="pre">chidg</span></code> executable:</p>
+<dl class="attribute">
+<dt>
+<code class="descname">Serial calculation</code></dt>
+<dd><p><code class="docutils literal"><span class="pre">chidg</span></code></p>
+</dd></dl>
+
+<dl class="attribute">
+<dt>
+<code class="descname">Parallel calculation</code></dt>
+<dd><p><code class="docutils literal"><span class="pre">mpirun</span> <span class="pre">-np</span> <span class="pre">3</span> <span class="pre">chidg</span></code></p>
+</dd></dl>
+
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">Once you get the hang of how the process works, you may consider playing around
+with the other entries in <code class="docutils literal"><span class="pre">chidg.nml</span></code> to understand how they affect the behavior
+and performance of the ChiDG</p>
+</div>
 </div>
 </div>
 </div>

@@ -329,5 +329,81 @@ The ChiDG executable, ``chidg``, works as:
 .. attribute:: chidg
 
     - Run a ChiDG simulation
-    - Assumes chidg.nml namelist file is present in current directory
+    - Assumes chidg.nml namelist and grid files are present in the working directory
+
+
+
+
+|
+|
+|
+|
+|
+
+
+
+
+.. _Running ChiDG:
+
+Running ChiDG
+=============
+
+Step 1: Create a ChiDG-formatted grid file
+------------------------------------------
+To create a ChiDG-formatted grid, generate your grid as a **multi-block, 
+unformatted, double-precision Plot3D file**. As an example, we will just 
+assume you called this file, ``awesome_grid.x``.
+
+    - Run ``chidg convert awesome_grid.x`` to create a ChiDG-formatted grid, ``awesome_grid.h5``.
+    - Run ``chidg edit awesome_grid.h5`` and edit the boundary conditions for your grid.
+
+|
+|
+
+Step 2: Create a ``chidg.nml`` input file
+-----------------------------------------
+
+    - Download a default :download:`chidg.nml <../examples/chidg_default.nml>` and place it in the 
+      directory in which you plan to run ``chidg``.
+
+    - Edit the ``chidg.nml`` entries as:
+        
+        +---------------------------------------------+
+        | | ``gridfile         = 'awesome_grid.h5'``  |
+        | | ``solutionfile_in  = 'none'``             |
+        | | ``solutionfile_out = 'awesome_grid.h5'``  |
+        +---------------------------------------------+
+        
+        
+|
+|
+        
+Step 3: Run ``chidg``
+---------------------
+In the working directory, call the ``chidg`` executable:
+
+.. attribute:: Serial calculation
+
+    ``chidg``
+
+
+.. attribute:: Parallel calculation
+
+    ``mpirun -np 3 chidg``
+
+
+
+.. note:: 
+    
+    Once you get the hang of how the process works, you may consider playing around
+    with the other entries in ``chidg.nml`` to understand how they affect the behavior
+    and performance of the ChiDG
+
+
+
+
+
+
+
+
 

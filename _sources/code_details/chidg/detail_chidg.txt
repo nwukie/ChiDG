@@ -12,7 +12,7 @@ A ``chidg_t`` instance contains five primary components. These are:
     
     type :: chidg_t
         type(chidg_data_t)          data
-        type(time_scheme_t)         time_scheme
+        type(time_integrator_t)     time_integrator
         type(nonlinear_solver_t)    nonlinear_solver
         type(linear_solver_t)       linear_solver
         type(preconditioner_t)      preconditioner
@@ -43,9 +43,9 @@ calculation. This includes:
 
 ::
 
-    type(mesh_t)                    mesh(:)
-    type(bcset_t)                   bcset(:)
-    type(equationset_wrapper_t)     eqnset(:)
-    type(solverdata_t)              sdata
+    type(mesh_t)            mesh(:)
+    type(bcset_t)           bcset(:)
+    type(equation_set_t)    eqnset(:)
+    type(solverdata_t)      sdata
 
 

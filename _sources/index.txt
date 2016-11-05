@@ -65,7 +65,7 @@ a Fortran Class that provides an interface to the simulation environment.
 
     type :: chidg_t
         type(chidg_data_t)          data
-        type(time_scheme_t)         time_scheme
+        type(time_integrator_t)     time_integrator
         type(nonlinear_solver_t)    nonlinear_solver
         type(linear_solver_t)       linear_solver
         type(preconditioner_t)      preconditioner

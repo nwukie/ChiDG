@@ -3,33 +3,36 @@ Getting Started
 ===============
 
 
-We need to get a copy of ChiDG up and running on your machine. There are two options 
-to accomplish this:
+We need to get a copy of ChiDG up and running on your machine. Let's do it! The current option
+we have to do this is to build ChiDG from source:
 
-    - :ref:`Install from Python Package`
     - :ref:`Build from source`
 
-|
-|
-|
-|
+
+..     - :ref:`Install from Python Package`
 
 
-.. _Install from Python Package:
-
-Install from Python Package
-===========================
-
-**WARNING: Currently in pre-release. The package-based install is currently being
-developed and not yet well-supported. We are working towards supporting this capability.**
-
-
-ChiDG can be installed using the Python package manager ``pip``.
-
-:: 
-
-    pip install chidg
-
+.. |
+.. |
+.. |
+.. |
+.. 
+.. 
+.. .. _Install from Python Package:
+.. 
+.. Install from Python Package
+.. ===========================
+.. 
+.. **WARNING: Currently in pre-release. The package-based install is currently being
+.. developed and not yet well-supported. We are working towards supporting this capability.**
+.. 
+.. 
+.. ChiDG can be installed using the Python package manager ``pip``.
+.. 
+.. :: 
+.. 
+..     pip install chidg
+.. 
 
 |
 |
@@ -52,23 +55,52 @@ ChiDG is hosted on GitHub and may be cloned using the https protocol as
 
 
 
-Step 2: Install Dependencies
-----------------------------
+Step 2: Check the compilers
+---------------------------
+To build ChiDG, you will need a Fortran compiler that is relatively up-to-date. Here are some
+requirements and recommendations regarding compilers:
+
+.. note:: 
+
+    - The GNU Fortran compiler, ``gfortran``, is recommended. **Version >= 5.0 is required**
+    - The Intel Fortran compiler, ``ifort``, is not recommended. Currently a bug in the compiler creates a memory leak in the compiled code. Intel has been notified and was able to reproduce the issue. 
+    - Other Fortran compilers have not been tested and are not supported.
+
+
+
+Step 3: Install the dependencies
+--------------------------------
+
+.. note::  **Make sure the dependencies listed here are available on your machine or that you build them and install them in an appropriate location.**
+           
+        - `CMake`_
+        - `HDF5`_
+        - `METIS`_
+        - `MPI`_
+        - `BLAS and LAPACK`_
+   
+   
+        **When installing dependencies, please place them somewhere other than the ChiDG project directory.**
+
+
+
+
 
 CMake
 ~~~~~
-ChiDG uses the CMake build-sytem to generate the ``make`` configuration
-files for the project. If you do not already have CMake installed on your
-system, you should be able to download a package/binary from the CMake Website.
+ChiDG uses the CMake build-sytem to generate the ``Makefile`` configuration
+files that are used when you run ``make`` to build the project. If you do not already have 
+CMake installed on your system, you should be able to download a package/binary from 
+the `CMake Website <https://cmake.org>`_. You will run the ``cmake`` executable in 
+`Step 4: Configure the build`_.
 
 
 HDF5
 ~~~~
-HDF5 is used as a container for the ChiDG-formatted grid/solution files and
-is a required dependency of ChiDG. The HDF5 library gives the option to build 
-various portions of the library itself, depending on what the user needs available. 
-ChiDG uses the HDF5 Fortran module interfaces and the high-level API. Be sure to 
-configure with the appropriate flags when building HDF5. Refer to the HDF5 documentation 
+HDF5 is used as a container for the ChiDG-formatted grid/solution files. The HDF5 library 
+gives the option to build various portions of the library itself, depending on what the 
+user needs available. ChiDG uses the HDF5 Fortran module interfaces and the high-level API. 
+Be sure to configure with the appropriate flags when building HDF5. Refer to the HDF5 documentation 
 and installation guide for complete directions. Likely configuration parameters 
 that are needed are:
 
@@ -77,28 +109,96 @@ that are needed are:
     --enable-fortran
     --enable-fortran2003
 
+
 The ChiDG CMake build will try to automatically locate the HDF5 libraries and
-modules. To ensure they are found, **be sure to set the HDF5_ROOT environment 
-variable** such that the directory includes the ``bin``, ``lib``, and ``include``
+modules. If the HDF5 libraries were installed in a non-standard location, you can
+help CMake find them by **setting an environment variable**, ``HDF5_ROOT``, such that 
+the directory includes the ``bin``, ``lib``, and ``include``
 directories where the libraries and modules can be located.
 
-
-``export HDF5_ROOT='HDF5-Install-Directory'``
-
-
-
-
+So, if you installed HDF5 in the directory ``/home/sparky/hdf5``, you might place 
+the line 
+``export HDF5_ROOT=/home/sparky/hdf5``
+in your ``.bashrc`` or ``.bash_profile`` files if you are using the Bash shell. 
 
 
 
-Step 3: Configure the build
+METIS
+~~~~~
+METIS is a partitioning library that is used to facilitate domain decomposition
+for ChiDG and can be obtained from the 
+`METIS Website <http://glaros.dtc.umn.edu/gkhome/metis/metis/overview>`_.
+
+If METIS is installed in a non-standard location and CMake can't find it, 
+you can help CMake find it by **setting an environment variable**: ``METIS_ROOT``.
+
+So, if you installed METIS in the directory ``/home/sparky/metis``, you might place
+the line 
+``export METIS_ROOT=/home/sparky/metis``
+in your ``.bashrc`` or ``.bash_profile`` files if you are using the Bash shell.
+
+
+MPI
+~~~
+MPI is used to facilitate the parallel communication in ChiDG.
+
+If your MPI installation is in a non-standard location, CMake will not be able to find it and
+it will tell you so. You may also want to force CMake to use a particular MPI installation if you
+have multiple installations on your machine. Either way, you can direct CMake find your MPI library 
+by **setting the environment variable**: ``MPI_Fortran_COMPILER``.
+
+So, if your MPI installation is located in the directory ``/home/sparky/mpi``, you might
+place the line
+``export MPI_Fortran_COMPILER=/home/sparky/my_mpi_install/bin/mpif90``
+in your ``.bashrc`` or ``.bash_profile`` files if you are using the Bash shell.
+
+There are many MPI implementations. ChiDG has been tested with `OpenMPI <https://www.open-mpi.org>`_.
+
+
+
+
+BLAS and LAPACK
+~~~~~~~~~~~~~~~
+BLAS and LAPACK are libraries that contain routines for standard linear algebra operations
+and algorithms. There are also many implementations of the BLAS and LAPACK libraries
+by different vendors. Often times, a particular installation will have been optimized
+for running on a given machine. Some common implementations of BLAS and LAPACK are the
+Intel MKL, ATLAS, and the Apple Accelerate Framework.
+
+If you do not have the BLAS and LAPACK libraries installed on your machine, reference
+implementations can be downloaded at:
+
+| `Reference BLAS implementation <http://www.netlib.org/blas>`_
+| `Reference LAPACK implementation <http://www.netlib.org/lapack>`_
+|
+
+These will give the correct answers and can be used to get things up and running, 
+however they are not optimized and so will degrade performance for ChiDG.
+
+If your BLAS/LAPACK installations are in a non-standard location, CMake will not be able
+to find it and it will tell you so. You can help CMake find them by **appending the location
+of the libraries to the Linker path**.
+
+.. note::
+
+    On machines running LINUX:
+        - export LD_LIBRARY_PATH=/my/path/to/blas:$LD_LIBRARY_PATH
+        - export LD_LIBRARY_PATH=/my/path/to/lapack:$LD_LIBRARY_PATH
+
+    On machines running Apple's OS X or macOS operating system:
+        - export DYLD_LIBRARY_PATH=/my/path/to/blas:$DYLD_LIBARARY_PATH
+        - export DYLD_LIBRARY_PATH=/my/path/to/lapack:$DYLD_LIBARARY_PATH
+
+
+
+
+Step 4: Configure the build
 ---------------------------
 
 .. note:: We should probably double-check a few things...
 
-    - **Check** the ``HDF5_ROOT`` environment variable is exported and is set to the install
-      directory of the HDF5 library. The following should be valid: ``$HDF5_ROOT/bin``, ``$HDF5_ROOT/lib``.
-
+    - **Check** that all environment variables that were set for the dependencies are initialized in your environment.
+      You may consider opening a new shell or running ``source ~/.bashrc`` or ``source ~/.bash_profile``.
 
 
 
@@ -135,20 +235,22 @@ different options. They are passed with the ``-D`` flag as:
 
 
 =============================== ======================================================= ================
-Build parameter                 Description                                             Options
+Parameter                       Description                                             Options
 =============================== ======================================================= ================
 CMAKE_Fortran_COMPILER          Specify a Fortran Compiler        
                                                                                         
                                                                                         
 CMAKE_BUILD_TYPE                Specify what type of compiler settings to build with    ``Release``
                                                                                         ``Debug``
-USER_MPI                        Use User environment variables for finding MPI          ``True``
-                                                                                        ``False``
-BUILD_TESTS                     Build the test binaries. Requires pFUnit Library        ``True``
+TESTING                         Build the test binaries. **Requires pFUnit Library.**   ``True``
                                                                                         ``False``
 =============================== ======================================================= ================
 
-**Up-to-date Fortran(F2008) compiler required. Tested with gfortran 5.3**
+.. USER_MPI                        Use User environment variables for finding MPI:         ``True``
+..                                    - MPI_Fortran_COMPILER                               ``False``
+..                                    - MPI_Fortran_INCLUDE_PATH                
+.. 
+.. **Up-to-date Fortran(F2008) compiler required. Tested with gfortran 5.3**
 
 
 
@@ -162,7 +264,7 @@ BUILD_TESTS                     Build the test binaries. Requires pFUnit Library
 
 
 
-Step 4: Build ChiDG
+Step 5: Build ChiDG
 -------------------
 
 

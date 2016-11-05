@@ -91,6 +91,10 @@
 <li class="toctree-l3"><a class="reference internal" href="../../getting_started/getting_started.html#step-4-build-chidg">Step 4: Build ChiDG</a></li>
 </ul>
 </li>
+<li class="toctree-l2"><a class="reference internal" href="../../getting_started/getting_started.html#usage">Usage</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../getting_started/getting_started.html#chidg-executable-chidg">ChiDG Executable: <code class="docutils literal"><span class="pre">chidg</span></code></a></li>
+</ul>
+</li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="../../examples/example_main.html">Examples</a><ul>
@@ -270,7 +274,7 @@
 A <code class="docutils literal"><span class="pre">chidg_t</span></code> instance contains five primary components. These are:</p>
 <div class="highlight-fortran"><div class="highlight"><pre><span></span><span class="k">type</span> <span class="kd">::</span> <span class="n">chidg_t</span>
     <span class="k">type</span><span class="p">(</span><span class="n">chidg_data_t</span><span class="p">)</span>          <span class="k">data</span>
-<span class="k">    type</span><span class="p">(</span><span class="n">time_scheme_t</span><span class="p">)</span>         <span class="n">time_scheme</span>
+<span class="k">    type</span><span class="p">(</span><span class="n">time_integrator_t</span><span class="p">)</span>     <span class="n">time_integrator</span>
     <span class="k">type</span><span class="p">(</span><span class="n">nonlinear_solver_t</span><span class="p">)</span>    <span class="n">nonlinear_solver</span>
     <span class="k">type</span><span class="p">(</span><span class="n">linear_solver_t</span><span class="p">)</span>       <span class="n">linear_solver</span>
     <span class="k">type</span><span class="p">(</span><span class="n">preconditioner_t</span><span class="p">)</span>      <span class="n">preconditioner</span>
@@ -292,10 +296,10 @@ A <code class="docutils literal"><span class="pre">chidg_t</span></code> instanc
 </div>
 <p>The <code class="docutils literal"><span class="pre">chidg_data_t</span></code> data type contains all of the working information to run a ChiDG
 calculation. This includes:</p>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="nb">type</span><span class="p">(</span><span class="n">mesh_t</span><span class="p">)</span>                    <span class="n">mesh</span><span class="p">(:)</span>
-<span class="nb">type</span><span class="p">(</span><span class="n">bcset_t</span><span class="p">)</span>                   <span class="n">bcset</span><span class="p">(:)</span>
-<span class="nb">type</span><span class="p">(</span><span class="n">equationset_wrapper_t</span><span class="p">)</span>     <span class="n">eqnset</span><span class="p">(:)</span>
-<span class="nb">type</span><span class="p">(</span><span class="n">solverdata_t</span><span class="p">)</span>              <span class="n">sdata</span>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="nb">type</span><span class="p">(</span><span class="n">mesh_t</span><span class="p">)</span>            <span class="n">mesh</span><span class="p">(:)</span>
+<span class="nb">type</span><span class="p">(</span><span class="n">bcset_t</span><span class="p">)</span>           <span class="n">bcset</span><span class="p">(:)</span>
+<span class="nb">type</span><span class="p">(</span><span class="n">equation_set_t</span><span class="p">)</span>    <span class="n">eqnset</span><span class="p">(:)</span>
+<span class="nb">type</span><span class="p">(</span><span class="n">solverdata_t</span><span class="p">)</span>      <span class="n">sdata</span>
 </pre></div>
 </div>
 </div>

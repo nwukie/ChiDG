@@ -78,16 +78,19 @@
             
                 <ul class="current">
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Getting Started</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="#install-from-python-package">Install from Python Package</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#build-from-source">Build from source</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#step-1-get-chidg">Step 1: Get ChiDG</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#step-2-install-dependencies">Step 2: Install Dependencies</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#step-2-check-the-compilers">Step 2: Check the compilers</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#step-3-install-the-dependencies">Step 3: Install the dependencies</a><ul>
 <li class="toctree-l4"><a class="reference internal" href="#cmake">CMake</a></li>
 <li class="toctree-l4"><a class="reference internal" href="#hdf5">HDF5</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#metis">METIS</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#mpi">MPI</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#blas-and-lapack">BLAS and LAPACK</a></li>
 </ul>
 </li>
-<li class="toctree-l3"><a class="reference internal" href="#step-3-configure-the-build">Step 3: Configure the build</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#step-4-build-chidg">Step 4: Build ChiDG</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#step-4-configure-the-build">Step 4: Configure the build</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#step-5-build-chidg">Step 5: Build ChiDG</a></li>
 </ul>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="#usage">Usage</a><ul>
@@ -267,11 +270,10 @@
             
   <div class="section" id="getting-started">
 <h1>Getting Started<a class="headerlink" href="#getting-started" title="Permalink to this headline">¶</a></h1>
-<p>We need to get a copy of ChiDG up and running on your machine. There are two options
-to accomplish this:</p>
+<p>We need to get a copy of ChiDG up and running on your machine. Let&#8217;s do it! The current option
+we have to do this is to build ChiDG from source:</p>
 <blockquote>
 <div><ul class="simple">
-<li><a class="reference internal" href="#install-from-python-package"><span class="std std-ref">Install from Python Package</span></a></li>
 <li><a class="reference internal" href="#build-from-source"><span class="std std-ref">Build from source</span></a></li>
 </ul>
 </div></blockquote>
@@ -281,23 +283,8 @@ to accomplish this:</p>
 <div class="line"><br /></div>
 <div class="line"><br /></div>
 </div>
-<div class="section" id="install-from-python-package">
-<span id="id1"></span><h2>Install from Python Package<a class="headerlink" href="#install-from-python-package" title="Permalink to this headline">¶</a></h2>
-<p><strong>WARNING: Currently in pre-release. The package-based install is currently being
-developed and not yet well-supported. We are working towards supporting this capability.</strong></p>
-<p>ChiDG can be installed using the Python package manager <code class="docutils literal"><span class="pre">pip</span></code>.</p>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">pip</span> <span class="n">install</span> <span class="n">chidg</span>
-</pre></div>
-</div>
-<div class="line-block">
-<div class="line"><br /></div>
-<div class="line"><br /></div>
-<div class="line"><br /></div>
-<div class="line"><br /></div>
-</div>
-</div>
 <div class="section" id="build-from-source">
-<span id="id2"></span><h2>Build from source<a class="headerlink" href="#build-from-source" title="Permalink to this headline">¶</a></h2>
+<span id="id1"></span><h2>Build from source<a class="headerlink" href="#build-from-source" title="Permalink to this headline">¶</a></h2>
 <div class="section" id="step-1-get-chidg">
 <h3>Step 1: Get ChiDG<a class="headerlink" href="#step-1-get-chidg" title="Permalink to this headline">¶</a></h3>
 <p>ChiDG is hosted on GitHub and may be cloned using the https protocol as</p>
@@ -305,21 +292,47 @@ developed and not yet well-supported. We are working towards supporting this cap
 </pre></div>
 </div>
 </div>
-<div class="section" id="step-2-install-dependencies">
-<h3>Step 2: Install Dependencies<a class="headerlink" href="#step-2-install-dependencies" title="Permalink to this headline">¶</a></h3>
+<div class="section" id="step-2-check-the-compilers">
+<h3>Step 2: Check the compilers<a class="headerlink" href="#step-2-check-the-compilers" title="Permalink to this headline">¶</a></h3>
+<p>To build ChiDG, you will need a Fortran compiler that is relatively up-to-date. Here are some
+requirements and recommendations regarding compilers:</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<ul class="last simple">
+<li>The GNU Fortran compiler, <code class="docutils literal"><span class="pre">gfortran</span></code>, is recommended. <strong>Version &gt;= 5.0 is required</strong></li>
+<li>The Intel Fortran compiler, <code class="docutils literal"><span class="pre">ifort</span></code>, is not recommended. Currently a bug in the compiler creates a memory leak in the compiled code. Intel has been notified and was able to reproduce the issue.</li>
+<li>Other Fortran compilers have not been tested and are not supported.</li>
+</ul>
+</div>
+</div>
+<div class="section" id="step-3-install-the-dependencies">
+<h3>Step 3: Install the dependencies<a class="headerlink" href="#step-3-install-the-dependencies" title="Permalink to this headline">¶</a></h3>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p><strong>Make sure the dependencies listed here are available on your machine or that you build them and install them in an appropriate location.</strong></p>
+<ul class="simple">
+<li><a class="reference internal" href="#cmake">CMake</a></li>
+<li><a class="reference internal" href="#hdf5">HDF5</a></li>
+<li><a class="reference internal" href="#metis">METIS</a></li>
+<li><a class="reference internal" href="#mpi">MPI</a></li>
+<li><a class="reference internal" href="#blas-and-lapack">BLAS and LAPACK</a></li>
+</ul>
+<p class="last"><strong>When installing dependencies, please place them somewhere other than the ChiDG project directory.</strong></p>
+</div>
 <div class="section" id="cmake">
 <h4>CMake<a class="headerlink" href="#cmake" title="Permalink to this headline">¶</a></h4>
-<p>ChiDG uses the CMake build-sytem to generate the <code class="docutils literal"><span class="pre">make</span></code> configuration
-files for the project. If you do not already have CMake installed on your
-system, you should be able to download a package/binary from the CMake Website.</p>
+<p>ChiDG uses the CMake build-sytem to generate the <code class="docutils literal"><span class="pre">Makefile</span></code> configuration
+files that are used when you run <code class="docutils literal"><span class="pre">make</span></code> to build the project. If you do not already have
+CMake installed on your system, you should be able to download a package/binary from
+the <a class="reference external" href="https://cmake.org">CMake Website</a>. You will run the <code class="docutils literal"><span class="pre">cmake</span></code> executable in
+<a class="reference internal" href="#step-4-configure-the-build">Step 4: Configure the build</a>.</p>
 </div>
 <div class="section" id="hdf5">
 <h4>HDF5<a class="headerlink" href="#hdf5" title="Permalink to this headline">¶</a></h4>
-<p>HDF5 is used as a container for the ChiDG-formatted grid/solution files and
-is a required dependency of ChiDG. The HDF5 library gives the option to build
-various portions of the library itself, depending on what the user needs available.
-ChiDG uses the HDF5 Fortran module interfaces and the high-level API. Be sure to
-configure with the appropriate flags when building HDF5. Refer to the HDF5 documentation
+<p>HDF5 is used as a container for the ChiDG-formatted grid/solution files. The HDF5 library
+gives the option to build various portions of the library itself, depending on what the
+user needs available. ChiDG uses the HDF5 Fortran module interfaces and the high-level API.
+Be sure to configure with the appropriate flags when building HDF5. Refer to the HDF5 documentation
 and installation guide for complete directions. Likely configuration parameters
 that are needed are:</p>
 <div class="highlight-default"><div class="highlight"><pre><span></span><span class="o">--</span><span class="n">enable</span><span class="o">-</span><span class="n">fortran</span>
@@ -327,20 +340,86 @@ that are needed are:</p>
 </pre></div>
 </div>
 <p>The ChiDG CMake build will try to automatically locate the HDF5 libraries and
-modules. To ensure they are found, <strong>be sure to set the HDF5_ROOT environment
-variable</strong> such that the directory includes the <code class="docutils literal"><span class="pre">bin</span></code>, <code class="docutils literal"><span class="pre">lib</span></code>, and <code class="docutils literal"><span class="pre">include</span></code>
+modules. If the HDF5 libraries were installed in a non-standard location, you can
+help CMake find them by <strong>setting an environment variable</strong>, <code class="docutils literal"><span class="pre">HDF5_ROOT</span></code>, such that
+the directory includes the <code class="docutils literal"><span class="pre">bin</span></code>, <code class="docutils literal"><span class="pre">lib</span></code>, and <code class="docutils literal"><span class="pre">include</span></code>
 directories where the libraries and modules can be located.</p>
-<p><code class="docutils literal"><span class="pre">export</span> <span class="pre">HDF5_ROOT='HDF5-Install-Directory'</span></code></p>
+<p>So, if you installed HDF5 in the directory <code class="docutils literal"><span class="pre">/home/sparky/hdf5</span></code>, you might place
+the line
+<code class="docutils literal"><span class="pre">export</span> <span class="pre">HDF5_ROOT=/home/sparky/hdf5</span></code>
+in your <code class="docutils literal"><span class="pre">.bashrc</span></code> or <code class="docutils literal"><span class="pre">.bash_profile</span></code> files if you are using the Bash shell.</p>
+</div>
+<div class="section" id="metis">
+<h4>METIS<a class="headerlink" href="#metis" title="Permalink to this headline">¶</a></h4>
+<p>METIS is a partitioning library that is used to facilitate domain decomposition
+for ChiDG and can be obtained from the
+<a class="reference external" href="http://glaros.dtc.umn.edu/gkhome/metis/metis/overview">METIS Website</a>.</p>
+<p>If METIS is installed in a non-standard location and CMake can&#8217;t find it,
+you can help CMake find it by <strong>setting an environment variable</strong>: <code class="docutils literal"><span class="pre">METIS_ROOT</span></code>.</p>
+<p>So, if you installed METIS in the directory <code class="docutils literal"><span class="pre">/home/sparky/metis</span></code>, you might place
+the line
+<code class="docutils literal"><span class="pre">export</span> <span class="pre">METIS_ROOT=/home/sparky/metis</span></code>
+in your <code class="docutils literal"><span class="pre">.bashrc</span></code> or <code class="docutils literal"><span class="pre">.bash_profile</span></code> files if you are using the Bash shell.</p>
+</div>
+<div class="section" id="mpi">
+<h4>MPI<a class="headerlink" href="#mpi" title="Permalink to this headline">¶</a></h4>
+<p>MPI is used to facilitate the parallel communication in ChiDG.</p>
+<p>If your MPI installation is in a non-standard location, CMake will not be able to find it and
+it will tell you so. You may also want to force CMake to use a particular MPI installation if you
+have multiple installations on your machine. Either way, you can direct CMake find your MPI library
+by <strong>setting the environment variable</strong>: <code class="docutils literal"><span class="pre">MPI_Fortran_COMPILER</span></code>.</p>
+<p>So, if your MPI installation is located in the directory <code class="docutils literal"><span class="pre">/home/sparky/mpi</span></code>, you might
+place the line
+<code class="docutils literal"><span class="pre">export</span> <span class="pre">MPI_Fortran_COMPILER=/home/sparky/my_mpi_install/bin/mpif90</span></code>
+in your <code class="docutils literal"><span class="pre">.bashrc</span></code> or <code class="docutils literal"><span class="pre">.bash_profile</span></code> files if you are using the Bash shell.</p>
+<p>There are many MPI implementations. ChiDG has been tested with <a class="reference external" href="https://www.open-mpi.org">OpenMPI</a>.</p>
+</div>
+<div class="section" id="blas-and-lapack">
+<h4>BLAS and LAPACK<a class="headerlink" href="#blas-and-lapack" title="Permalink to this headline">¶</a></h4>
+<p>BLAS and LAPACK are libraries that contain routines for standard linear algebra operations
+and algorithms. There are also many implementations of the BLAS and LAPACK libraries
+by different vendors. Often times, a particular installation will have been optimized
+for running on a given machine. Some common implementations of BLAS and LAPACK are the
+Intel MKL, ATLAS, and the Apple Accelerate Framework.</p>
+<p>If you do not have the BLAS and LAPACK libraries installed on your machine, reference
+implementations can be downloaded at:</p>
+<div class="line-block">
+<div class="line"><a class="reference external" href="http://www.netlib.org/blas">Reference BLAS implementation</a></div>
+<div class="line"><a class="reference external" href="http://www.netlib.org/lapack">Reference LAPACK implementation</a></div>
+<div class="line"><br /></div>
+</div>
+<p>These will give the correct answers and can be used to get things up and running,
+however they are not optimized and so will degrade performance for ChiDG.</p>
+<p>If your BLAS/LAPACK installations are in a non-standard location, CMake will not be able
+to find it and it will tell you so. You can help CMake find them by <strong>appending the location
+of the libraries to the Linker path</strong>.</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<dl class="last docutils">
+<dt>On machines running LINUX:</dt>
+<dd><ul class="first last simple">
+<li>export LD_LIBRARY_PATH=/my/path/to/blas:$LD_LIBRARY_PATH</li>
+<li>export LD_LIBRARY_PATH=/my/path/to/lapack:$LD_LIBRARY_PATH</li>
+</ul>
+</dd>
+<dt>On machines running Apple&#8217;s OS X or macOS operating system:</dt>
+<dd><ul class="first last simple">
+<li>export DYLD_LIBRARY_PATH=/my/path/to/blas:$DYLD_LIBARARY_PATH</li>
+<li>export DYLD_LIBRARY_PATH=/my/path/to/lapack:$DYLD_LIBARARY_PATH</li>
+</ul>
+</dd>
+</dl>
 </div>
 </div>
-<div class="section" id="step-3-configure-the-build">
-<h3>Step 3: Configure the build<a class="headerlink" href="#step-3-configure-the-build" title="Permalink to this headline">¶</a></h3>
+</div>
+<div class="section" id="step-4-configure-the-build">
+<h3>Step 4: Configure the build<a class="headerlink" href="#step-4-configure-the-build" title="Permalink to this headline">¶</a></h3>
 <div class="admonition note">
 <p class="first admonition-title">Note</p>
 <p>We should probably double-check a few things...</p>
 <ul class="last simple">
-<li><strong>Check</strong> the <code class="docutils literal"><span class="pre">HDF5_ROOT</span></code> environment variable is exported and is set to the install
-directory of the HDF5 library. The following should be valid: <code class="docutils literal"><span class="pre">$HDF5_ROOT/bin</span></code>, <code class="docutils literal"><span class="pre">$HDF5_ROOT/lib</span></code>.</li>
+<li><strong>Check</strong> that all environment variables that were set for the dependencies are initialized in your environment.
+You may consider opening a new shell or running <code class="docutils literal"><span class="pre">source</span> <span class="pre">~/.bashrc</span></code> or <code class="docutils literal"><span class="pre">source</span> <span class="pre">~/.bash_profile</span></code>.</li>
 </ul>
 </div>
 <table border="1" class="docutils">
@@ -377,7 +456,7 @@ different options. They are passed with the <code class="docutils literal"><span
 <col width="16%" />
 </colgroup>
 <thead valign="bottom">
-<tr class="row-odd"><th class="head">Build parameter</th>
+<tr class="row-odd"><th class="head">Parameter</th>
 <th class="head">Description</th>
 <th class="head">Options</th>
 </tr>
@@ -392,22 +471,16 @@ different options. They are passed with the <code class="docutils literal"><span
 <td><code class="docutils literal"><span class="pre">Release</span></code>
 <code class="docutils literal"><span class="pre">Debug</span></code></td>
 </tr>
-<tr class="row-even"><td>USER_MPI</td>
-<td>Use User environment variables for finding MPI</td>
-<td><code class="docutils literal"><span class="pre">True</span></code>
-<code class="docutils literal"><span class="pre">False</span></code></td>
-</tr>
-<tr class="row-odd"><td>BUILD_TESTS</td>
-<td>Build the test binaries. Requires pFUnit Library</td>
+<tr class="row-even"><td>TESTING</td>
+<td>Build the test binaries. <strong>Requires pFUnit Library.</strong></td>
 <td><code class="docutils literal"><span class="pre">True</span></code>
 <code class="docutils literal"><span class="pre">False</span></code></td>
 </tr>
 </tbody>
 </table>
-<p><strong>Up-to-date Fortran(F2008) compiler required. Tested with gfortran 5.3</strong></p>
 </div>
-<div class="section" id="step-4-build-chidg">
-<h3>Step 4: Build ChiDG<a class="headerlink" href="#step-4-build-chidg" title="Permalink to this headline">¶</a></h3>
+<div class="section" id="step-5-build-chidg">
+<h3>Step 5: Build ChiDG<a class="headerlink" href="#step-5-build-chidg" title="Permalink to this headline">¶</a></h3>
 <table border="1" class="docutils">
 <colgroup>
 <col width="49%" />
@@ -430,7 +503,7 @@ different options. They are passed with the <code class="docutils literal"><span
 </div>
 </div>
 <div class="section" id="usage">
-<span id="id3"></span><h2>Usage<a class="headerlink" href="#usage" title="Permalink to this headline">¶</a></h2>
+<span id="id2"></span><h2>Usage<a class="headerlink" href="#usage" title="Permalink to this headline">¶</a></h2>
 <p>So, how does one actually use ChiDG? The interface for using the ChiDG library
 is still being designed and changed. One thing to keep in mind, is that
 the interface provided is just an interface. One could create their own driver

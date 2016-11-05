@@ -1,7 +1,7 @@
 &files
-    gridfile            = 'smoothbump.h5'   ! ChiDG-format HDF file containing a grid.
-    solutionfile_in     = 'none'            ! ChiDG-format HDF file containing a solution. 'none' initializes solution to constant values.
-    solutionfile_out    = 'smoothbump.h5'   ! ChiDG-format HDF file that a solution will be written to.
+    gridfile            = 'default_file.h5'   ! ChiDG-format HDF file containing a grid.
+    solutionfile_in     = 'default_file.h5'   ! ChiDG-format HDF file containing a solution. 'none' initializes solution to constant values.
+    solutionfile_out    = 'default_file.h5'   ! ChiDG-format HDF file that a solution will be written to.
 /
 
 
@@ -51,7 +51,7 @@
 &linear_solve
     linear_solver       = 'fgmres'          ! LINEAR SOLVERS:  'fgmres'
     ltol                = 1.e-8             ! Convergence tolerance to terminate linear solve
-    preconditioner      = 'ILU0'            ! PRECONDITIONERS: 'identity', 'jacobi', 'ILU0'
+    preconditioner      = 'ILU0'            ! PRECONDITIONERS: 'identity', 'jacobi', 'ILU0', 'RASILU0'
 /
 
 

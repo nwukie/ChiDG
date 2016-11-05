@@ -363,7 +363,7 @@ assume you called this file, ``awesome_grid.x``.
 Step 2: Create a ``chidg.nml`` input file
 -----------------------------------------
 
-    - Download a default :download:`chidg.nml <../examples/chidg_default.nml>` and place it in the 
+    - Download a default :download:`chidg.nml <../examples/chidg.nml>` and place it in the 
       directory in which you plan to run ``chidg``.
 
     - Edit the ``chidg.nml`` entries as:

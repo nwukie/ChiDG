@@ -37,14 +37,17 @@ over the volume of the domain and computed as:
 Setup
 ------
 
+| :download:`smoothbump.tar <smoothbump.tar>`
+|
 
 Setup from scratch:
 -------------------
 A Fortran code is attached that can be used to generate a Plot3D grid file for this case:
 
-| :download:`smoothbump_generator.f90 <grids/smoothbump_generator.f90>`
-| :download:`chidg.nml <grids/chidg.nml>`
-|
+
+.. | :download:`smoothbump_generator.f90 <grids/smoothbump_generator.f90>`
+.. | :download:`chidg.nml <grids/chidg.nml>`
+.. |
 
 
 | **Step 1:** compile the provided grid generator file using a Fortran compiler
@@ -62,9 +65,9 @@ Use setup provided:
 Alternatively, a ChiDG-formatted grid file is also provided with the boundary 
 conditions already set:
 
-| :download:`smoothbump.h5 <grids/smoothbump.h5>`
-| :download:`chidg.nml <grids/chidg.nml>`
-|
+.. | :download:`smoothbump.h5 <grids/smoothbump.h5>`
+.. | :download:`chidg.nml <grids/chidg.nml>`
+.. |
 
 | **Step 1:** download the ``smoothbump.h5`` grid file and the ``chidg.nml`` settings file
 | **Step 2:** place the grid and settings file in a new directory

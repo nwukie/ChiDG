@@ -1,5 +1,5 @@
 project(chidg Fortran)
-cmake_minimum_required(VERSION 3.4) 
+cmake_minimum_required(VERSION 3.2)
 
 
 #-----------------------------------------------------------------------------------
@@ -160,15 +160,16 @@ message(STATUS "    " ${LAPACK_LIBRARIES})
 #----------------------------------------------------------------------------------------------
 
 # add -DUSER_MPI=True to config to read environment variables
-if (USER_MPI)
-    message(STATUS "Reading environment variables for\n" 
-                   "    MPI_Fortran_COMPILER \n"
-                   "    MPI_Fortran_INCLUDE_PATH \n"
-                   "Please be sure these are set as environment variables")
-    set(MPI_Fortran_COMPILER $ENV{MPI_Fortran_COMPILER})
-    set(MPI_Fortran_MODULE_PATH $ENV{MPI_Fortran_MODULE_PATH})
-    set(MPI_Fortran_INCLUDE_PATH $ENV{MPI_Fortran_INCLUDE_PATH})
-endif()
+#if (USER_MPI)
+#    message(STATUS "Reading environment variables for\n" 
+#                   "    MPI_Fortran_COMPILER \n"
+#                   "Please be sure this is set as an environment variable")
+#    set(MPI_Fortran_COMPILER $ENV{MPI_Fortran_COMPILER})
+#    #set(MPI_Fortran_MODULE_PATH $ENV{MPI_Fortran_MODULE_PATH})
+#    #set(MPI_Fortran_INCLUDE_PATH $ENV{MPI_Fortran_INCLUDE_PATH})
+#endif()
+set(MPI_Fortran_COMPILER $ENV{MPI_Fortran_COMPILER})
+
 
 
 find_package(MPI REQUIRED COMPONENTS Fortran)

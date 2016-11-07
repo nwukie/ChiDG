@@ -1,3 +1,32 @@
+!>  ChiDG Interpolation Utilities
+!!
+!!  Purpose: 
+!!  ---------------------------------------
+!!  Facilitate interpolation from modal representations 
+!!  to node discrete representations of variables.
+!!
+!!
+!!  Public routines:
+!!  ---------------------------------------
+!!      interpolate_element_autodiff
+!!      interpolate_face_autodiff 
+!!
+!!      interpolate_element_standard
+!!      interpolate_face_standard
+!!
+!!
+!!  Module utility routines:
+!!  ---------------------------------------
+!!      get_face_interpolation_info
+!!      get_face_interpolation_interpolator
+!!      get_face_interpolation_mask
+!!      get_face_interpolation_comm
+!!      get_face_interpolation_ndonors
+!!      get_face_interpolation_style
+!!      get_interpolation_nderiv
+!!
+!!
+!--------------------------------------------------------------------------------------------------------
 module mod_interpolate
 #include <messenger.h>
     use mod_kinds,          only: rk,ik
@@ -24,100 +53,6 @@ contains
 
 
 
-    !>
-    !!
-    !!  @author Nathan A. Wukie (AFRL)
-    !!  @date   8/19/2016
-    !!
-    !!
-    !--------------------------------------------------------------------------------------------------------
-    function chidg_interpolate_element(mesh,q,elem_info,fcn_info,ieqn,interpolation_type) result(var_gq)
-        type(mesh_t),           intent(in)      :: mesh(:)
-        type(chidgVector_t),    intent(in)      :: q
-        type(element_info_t),   intent(in)      :: elem_info
-        type(function_info_t),  intent(in)      :: fcn_info
-        integer(ik),            intent(in)      :: ieqn
-        character(len=*),       intent(in)      :: interpolation_type
-
-        type(AD_D), dimension(mesh(elem_info%idomain_l)%elems(elem_info%ielement_l)%gq%vol%nnodes)  :: &
-            var_gq, diff, lift
-
-        if (interpolation_type == 'value') then
-
-            var_gq = interpolate_element_autodiff(mesh,q,elem_info,fcn_info,ieqn,interpolation_type)
-
-        else if (interpolation_type == 'ddx' .or. &
-                 interpolation_type == 'ddy' .or. & 
-                 interpolation_type == 'ddz') then
-
-            diff = interpolate_element_autodiff(mesh,q,elem_info,fcn_info,ieqn,interpolation_type)
-
-            var_gq = diff + lift
-
-        else
-            call chidg_signal(FATAL,"interpolate: Invalid interpolation type. Options are 'value', 'ddx', 'ddy', 'ddz'")
-        end if
-
-
-
-    end function chidg_interpolate_element
-    !********************************************************************************************************
-
-
-
-
-
-
-
-    !>
-    !!
-    !!  @author Nathan A. Wukie (AFRL)
-    !!  @date   8/19/2016
-    !!
-    !!
-    !--------------------------------------------------------------------------------------------------------
-    function chidg_interpolate_face(mesh,q,face_info,fcn_info,ieqn,interpolation_type,interpolation_source) result(var_gq)
-        type(mesh_t),           intent(in)      :: mesh(:)
-        type(chidgVector_t),    intent(in)      :: q
-        type(face_info_t),      intent(in)      :: face_info
-        type(function_info_t),  intent(in)      :: fcn_info
-        integer(ik),            intent(in)      :: ieqn
-        character(len=*),       intent(in)      :: interpolation_type
-        integer(ik),            intent(in)      :: interpolation_source
-
-        type(AD_D), dimension(mesh(face_info%idomain_l)%elems(face_info%ielement_l)%gq%face%nnodes) :: &
-                var_gq, diff, lift
-
-        if (interpolation_type == 'value') then
-
-            var_gq = interpolate_face_autodiff(mesh,q,face_info,fcn_info,ieqn,interpolation_type,interpolation_source)
-
-        else if (interpolation_type == 'ddx' .or. &
-                 interpolation_type == 'ddy' .or. & 
-                 interpolation_type == 'ddz') then
-
-            diff = interpolate_face_autodiff(mesh,q,face_info,fcn_info,ieqn,interpolation_type,interpolation_source)
-
-            var_gq = diff + lift
-
-        else
-            call chidg_signal(FATAL,"interpolate: Invalid interpolation type. Options are 'value', 'ddx', 'ddy', 'ddz'")
-        end if
-
-
-
-    end function chidg_interpolate_face
-    !********************************************************************************************************
-
-
-
-
-
-
-
-
-
-
     !>  Interpolate polynomial expansion to volume quadrature node set, initializing the
     !!  automatic differentiation process if needed.
     !!
@@ -139,6 +74,7 @@ contains
         integer(ik),            intent(in)      :: ieqn
         character(len=*),       intent(in)      :: interpolation_type
 
+        character(:),   allocatable :: user_msg
         type(AD_D)  :: var_gq(mesh(elem_info%idomain_l)%elems(elem_info%ielement_l)%gq%vol%nnodes)
 
         type(AD_D)  :: qdiff(mesh(elem_info%idomain_l)%elems(elem_info%ielement_l)%nterms_s)
@@ -206,7 +142,10 @@ contains
                 var_gq = matmul(mesh(idom)%elems(ielem)%ddz,qdiff)
 
             case default
-                call chidg_signal(FATAL,"interpolate_element_autodiff: invalid interpolation_type. Valid entries are 'value', 'ddx', 'ddy', 'ddz'.")
+                user_msg = "interpolate_element_autodiff: The 'interpolation_type' incoming parameter was not&
+                            a valid string. Valid strings for 'interpolation_type' include &
+                            'value', 'ddx', 'ddy', 'ddz'."
+                call chidg_signal_one(FATAL,user_msg,interpolation_type)
         end select
 
 
@@ -232,10 +171,9 @@ contains
     !!  the derivative arrays of the values for the polynomial modes must be initialized before any computation. 
     !!  So, before the matrix-vector multiplication.
     !!
-    !!  Some interpolation parameters to note that are used inside here:
+    !!  Some interpolation parameters to note that a user might select:
     !!      - interpolation_type:   'value', 'ddx', 'ddy', 'ddz'
     !!      - interpolation_source: ME, NEIGHBOR
-    !!      - interpolation_comm:   LOCAL, REMOTE
     !!
     !!  @author Nathan A. Wukie
     !!  @date   2/1/2016

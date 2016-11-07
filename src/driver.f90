@@ -33,10 +33,11 @@ program driver
     ! Variable declarations
     !
     implicit none
+    type(chidg_t)                               :: wall_distance
     type(chidg_t)                               :: chidg
 
 
-    integer                                     :: narg
+    integer                                     :: narg, iorder
     character(len=1024)                         :: chidg_action, filename, file_a, file_b
     class(function_t),              allocatable :: constant, monopole, fcn, polynomial
 
@@ -74,19 +75,23 @@ program driver
 
 
 
+
+
         !
         ! Set ChiDG components
         !
-        call chidg%set('Time Integrator' , time_integrator,  toptions)
-        call chidg%set('Nonlinear Solver', nonlinear_solver, noptions)
-        call chidg%set('Linear Solver'   , linear_solver,    loptions)
-        call chidg%set('Preconditioner'  , preconditioner            )
+        call chidg%set('Time Integrator' , algorithm=time_integrator,  options=toptions)
+        call chidg%set('Nonlinear Solver', algorithm=nonlinear_solver, options=noptions)
+        call chidg%set('Linear Solver'   , algorithm=linear_solver,    options=loptions)
+        call chidg%set('Preconditioner'  , algorithm=preconditioner            )
 
 
         !
-        ! Initialize solution data storage
+        ! Initialize domain storage, communication, matrix/vector storage
         !
-        call chidg%initialize_solution_domains(nterms_s)
+        call chidg%set('Solution Order', integer_input=solution_order)
+
+        call chidg%initialize_solution_domains()
         call chidg%init('communication')
         call chidg%init('chimera')
         call chidg%initialize_solution_solver()
@@ -181,6 +186,8 @@ program driver
         ! Write final solution
         !
         if (final_write) call chidg%write_solution(solutionfile_out)
+
+
 
 
 

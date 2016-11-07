@@ -52,7 +52,7 @@ contains
 
         type(point_t),  allocatable :: nodes(:)
         type(domain_connectivity_t) :: connectivity
-        integer(ik)                 :: nterms_c, nterms_s, spacedim
+        integer(ik)                 :: nterms_c, spacedim
 
         
         !
@@ -78,14 +78,14 @@ contains
         !
         spacedim = 3
         nterms_c = 8
-        nterms_s = 1
         call this%chidg%data%add_domain('D_01',nodes,connectivity,spacedim,nterms_c,'Scalar Advection')
 
 
         !
         ! Call sdata initialization
         !
-        call this%chidg%initialize_solution_domains(nterms_s)
+        call this%chidg%set('Solution Order', integer_input=1)
+        call this%chidg%initialize_solution_domains()
         call this%chidg%init('communication')
         call this%chidg%initialize_solution_solver()
 

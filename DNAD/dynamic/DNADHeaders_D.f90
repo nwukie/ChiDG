@@ -192,11 +192,11 @@
    END INTERFACE
 
 
-!   ! Added by Nathan A. Wukie - 2/23/2016
-!   PUBLIC ATAN
-!   INTERFACE ATAN
-!        MODULE PROCEDURE ATAN_D_D ! obtain the arcsine of a dual number, ELEMENTAL
-!   END INTERFACE
+   ! Added by Nathan A. Wukie - 2/23/2016
+   PUBLIC ATAN
+   INTERFACE ATAN
+        MODULE PROCEDURE ATAN_D_D ! obtain the arcsine of a dual number, ELEMENTAL
+   END INTERFACE
 
  
    PUBLIC COS

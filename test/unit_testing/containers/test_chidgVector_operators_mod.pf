@@ -58,6 +58,7 @@ module test_chidgVector_operators_mod
     type, extends(TestCase) :: test_chidgVector
         type(chidg_t)       :: chidg
 
+        integer(ik)         :: solution_order = 2
         integer(ik)         :: nterms_s = 8
         type(chidgVector_t) :: vec_a
         type(chidgVector_t) :: vec_b
@@ -106,7 +107,9 @@ contains
         spacedim = 3
         nterms_c = 8
         call this%chidg%data%add_domain('D_01',nodes,connectivity,spacedim,nterms_c,'Scalar Advection')
-        call this%chidg%initialize_solution_domains(this%nterms_s)
+
+        call this%chidg%set('Solution Order', integer_input=this%solution_order)
+        call this%chidg%initialize_solution_domains()
         call this%chidg%init('communication')
 
 
@@ -359,7 +362,6 @@ contains
         class(test_chidgVector),    intent(inout)   :: self
 
         real(rk)    :: computed_norm, expected_norm
-        integer(ik) :: nterms_s
 
         expected_norm = ONE**TWO   * self%nterms_s + &
                         TWO**TWO   * self%nterms_s + &
@@ -392,7 +394,6 @@ contains
         class(test_chidgVector),    intent(inout)   :: self
 
         real(rk)    :: computed_sumsqr, expected_sumsqr
-        integer(ik) :: nterms_s
 
         expected_sumsqr = ONE**TWO   * self%nterms_s + &
                           TWO**TWO   * self%nterms_s + &

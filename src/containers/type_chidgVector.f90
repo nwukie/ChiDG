@@ -125,6 +125,12 @@ contains
 
         integer(ik) :: ierr, ndomains, idom
 
+        !
+        ! Deallocate storage if necessary in case this is being called as a 
+        ! reinitialization routine.
+        !
+        if (allocated(self%dom)) deallocate(self%dom)
+
 
         ! Allocate blockvector_t for each mesh
         ndomains = size(mesh)
@@ -208,7 +214,7 @@ contains
 
 
 
-    !> Set all floating-point vector entries to zero.
+    !>  Set all floating-point vector entries to zero.
     !!
     !!  @author Nathan A. Wukie
     !!  @date   2/1/2016

@@ -47,14 +47,13 @@ subroutine test_update_space_linearadvection()
     type(chidg_t)                   :: chidgA, chidgB
     character(:),       allocatable :: chidgAfile, chidgBfile
     class(function_t),  allocatable :: gaussian
-    integer(ik)                     :: nterms_s, ChiID, spacedim
+    integer(ik)                     :: ChiID, spacedim
     real(rk)                        :: tol
 
 
 
     tol             = 1.e-15_rk
     spacedim        = 3
-    nterms_s        = 8
     IO_DESTINATION  = 'file'
 
 
@@ -84,8 +83,11 @@ subroutine test_update_space_linearadvection()
     
 
 
-    call chidgA%initialize_solution_domains(nterms_s)
-    call chidgB%initialize_solution_domains(nterms_s)
+    call chidgA%set('Solution Order', integer_input=2)
+    call chidgB%set('Solution Order', integer_input=2)
+
+    call chidgA%initialize_solution_domains()
+    call chidgB%initialize_solution_domains()
 
 
 

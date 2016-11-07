@@ -134,12 +134,11 @@ contains
         !
         ! Interpolate interior solution to quadrature nodes
         !
-        rho_m  = worker%interpolate(irho,  'value', ME)
-        rhou_m = worker%interpolate(irhou, 'value', ME)
-        rhov_m = worker%interpolate(irhov, 'value', ME)
-        rhow_m = worker%interpolate(irhow, 'value', ME)
-        rhoE_m = worker%interpolate(irhoE, 'value', ME)
-
+        rho_m  = worker%get_face_variable(irho,  'value', ME)
+        rhou_m = worker%get_face_variable(irhou, 'value', ME)
+        rhov_m = worker%get_face_variable(irhov, 'value', ME)
+        rhow_m = worker%get_face_variable(irhow, 'value', ME)
+        rhoE_m = worker%get_face_variable(irhoE, 'value', ME)
 
         drho_dx_m  = worker%get_face_variable(irho,  'ddx', ME)
         drho_dy_m  = worker%get_face_variable(irho,  'ddy', ME)

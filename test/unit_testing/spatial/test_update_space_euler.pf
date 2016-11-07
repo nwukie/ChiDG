@@ -23,13 +23,12 @@ subroutine test_update_space_euler()
     type(chidg_t)                   :: chidgA, chidgB
     character(:),       allocatable :: chidgA_file, chidgB_file
     class(function_t),  allocatable :: constant
-    integer(ik)                     :: nterms_s, spacedim
+    integer(ik)                     :: spacedim
     real(rk)                        :: tol
 
 
     tol             = 1.e-6_rk
     spacedim        = 3
-    nterms_s        = 8
     IO_DESTINATION  = 'file'
 
 
@@ -61,8 +60,10 @@ subroutine test_update_space_euler()
     !
     ! Initialize solution data storage
     !
-    call chidgA%initialize_solution_domains(nterms_s)
-    call chidgB%initialize_solution_domains(nterms_s)
+    call chidgA%set('Solution Order', integer_input=2)
+    call chidgA%initialize_solution_domains()
+    call chidgB%set('Solution Order', integer_input=2)
+    call chidgB%initialize_solution_domains()
 
     call chidgA%init('communication')
     call chidgA%init('chimera')

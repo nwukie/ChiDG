@@ -22,7 +22,7 @@ subroutine test_operator_block_dot()
     type(blockvector_t)         :: a, b
 
     real(rk)                    :: tol
-    integer(ik)                 :: nterms_c, nterms_s, idomain, spacedim
+    integer(ik)                 :: nterms_c, idomain, spacedim
     real(rk),   dimension(8)    :: vec_a1, vec_a2, vec_a3, vec_b1, vec_b2, vec_b3
     real(rk)                    :: dot_ref, dot_test
 
@@ -31,7 +31,6 @@ subroutine test_operator_block_dot()
     idomain     = 1
     spacedim    = 3
     nterms_c    = 8
-    nterms_s    = 8
 
     IO_DESTINATION = 'file'
 
@@ -46,7 +45,9 @@ subroutine test_operator_block_dot()
     
     ! Initialize domain
     call chidg%data%add_domain('D_01',nodes,connectivity,spacedim,nterms_c,'Scalar Advection')
-    call chidg%initialize_solution_domains(nterms_s)
+
+    call chidg%set('Solution Order', integer_input=2)
+    call chidg%initialize_solution_domains()
     call chidg%init('communication')
 
 

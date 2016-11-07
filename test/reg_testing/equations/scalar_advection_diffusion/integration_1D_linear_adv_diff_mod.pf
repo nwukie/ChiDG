@@ -559,7 +559,6 @@ contains
         !------------------------------------------------------------------------------
         basis            = 'legendre'
         spacedim         = 3
-        nterms_s         = this%order**THREE
         gq_rule          = 1
         time_integrator  = 'steady'
         nonlinear_solver = 'newton'
@@ -631,7 +630,8 @@ contains
 
 
 
-        call this%chidg%initialize_solution_domains(nterms_s)
+        call this%chidg%set('Solution Order', integer_input=this%order)
+        call this%chidg%initialize_solution_domains()
         call this%chidg%init('communication')
         call this%chidg%init('chimera')
         call this%chidg%initialize_solution_solver()
@@ -640,10 +640,10 @@ contains
         !
         ! Set ChiDG components
         !
-        call this%chidg%set('time_integrator',  time_integrator,  toptions)
-        call this%chidg%set('nonlinear_solver', nonlinear_solver, noptions)
-        call this%chidg%set('linear_solver',    linear_solver,    loptions)
-        call this%chidg%set('preconditioner',   preconditioner)
+        call this%chidg%set('time_integrator',  algorithm=time_integrator,  options=toptions)
+        call this%chidg%set('nonlinear_solver', algorithm=nonlinear_solver, options=noptions)
+        call this%chidg%set('linear_solver',    algorithm=linear_solver,    options=loptions)
+        call this%chidg%set('preconditioner',   algorithm=preconditioner)
 
 
         !

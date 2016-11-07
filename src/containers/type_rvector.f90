@@ -6,31 +6,35 @@ module type_rvector
 
 
 
+    !>
+    !!
+    !!  @author Nathan A. Wukie
+    !!
+    !!
+    !---------------------------------------------------------------------------------
     type, public :: rvector_t
         integer(ik)             :: size_        = 0
         integer(ik)             :: capacity_    = 0
         integer(ik)             :: buffer_      = 20
 
-
-
-
         real(rk),   allocatable :: data_(:)
 
     contains
+
         procedure, public   :: size
         procedure, public   :: capacity
-
 
         !< Data modifiers
         procedure, public   :: push_back
         procedure, public   :: clear
         procedure, private  :: increase_capacity
 
-
         !< Data accessors
         procedure, public   :: at
         procedure, public   :: data
+
     end type rvector_t
+    !***********************************************************************************
 
 
 
@@ -43,14 +47,17 @@ contains
     !!  @author Nathan A. Wukie
     !!
     !!
-    !-------------------------------------------------------------------------
+    !----------------------------------------------------------------------------------
     function size(self) result(res)
         class(rvector_t),   intent(in)  :: self
 
         integer(ik) :: res
 
         res = self%size_
-    end function
+    end function size
+    !**********************************************************************************
+
+
 
 
 
@@ -59,16 +66,16 @@ contains
     !!  @author Nathan A. Wukie
     !!
     !!
-    !-------------------------------------------------------------------------
+    !----------------------------------------------------------------------------------
     function capacity(self) result(res)
         class(rvector_t),   intent(in)  :: self
 
         integer(ik) :: res
 
         res = self%capacity_
-    end function
 
-
+    end function capacity
+    !**********************************************************************************
 
 
 
@@ -81,7 +88,7 @@ contains
     !!  @author Nathan A. Wukie
     !!
     !!
-    !-------------------------------------------------------------------------------------------
+    !----------------------------------------------------------------------------------
     subroutine push_back(self,element)
         class(rvector_t),   intent(inout)   :: self
         real(rk),           intent(in)      :: element
@@ -113,7 +120,7 @@ contains
 
 
     end subroutine push_back
-    !********************************************************************************************
+    !**********************************************************************************
 
 
 
@@ -128,10 +135,9 @@ contains
     !!  @author Nathan A. Wukie
     !!
     !!
-    !------------------------------------------------------------------------------------------
+    !-----------------------------------------------------------------------------------
     subroutine clear(self)
         class(rvector_t),   intent(inout)   :: self
-
 
         self%size_     = 0
         self%capacity_ = 0
@@ -139,7 +145,7 @@ contains
         if (allocated(self%data_)) deallocate(self%data_)
 
     end subroutine clear
-    !*******************************************************************************************
+    !************************************************************************************
 
 
 
@@ -156,7 +162,7 @@ contains
     !!  @author Nathan A. Wukie
     !!
     !!
-    !----------------------------------------------------------------------------------------
+    !-----------------------------------------------------------------------------------
     function at(self,index) result(res)
         class(rvector_t),   intent(in)  :: self
         integer(ik),        intent(in)  :: index
@@ -178,7 +184,8 @@ contains
         !
         res = self%data_(index)
 
-    end function
+    end function at
+    !************************************************************************************
 
 
 
@@ -192,7 +199,7 @@ contains
     !!  @author Nathan A. Wukie
     !!
     !!
-    !----------------------------------------------------------------------------------------
+    !------------------------------------------------------------------------------------
     function data(self) result(res)
         class(rvector_t),   intent(in)  :: self
 
@@ -209,12 +216,8 @@ contains
         !
         res = self%data_(1:size)
 
-    end function
-
-
-
-
-
+    end function data
+    !************************************************************************************
 
 
 
@@ -228,7 +231,7 @@ contains
     !!  @author Nathan A. Wukie
     !!
     !!
-    !------------------------------------------------------------------------------------------
+    !------------------------------------------------------------------------------------
     subroutine increase_capacity(self)
         class(rvector_t),   intent(inout)   :: self
 
@@ -270,6 +273,7 @@ contains
 
 
     end subroutine increase_capacity
+    !****************************************************************************************
 
 
 

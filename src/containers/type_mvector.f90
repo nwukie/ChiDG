@@ -15,6 +15,7 @@ module type_mvector
         real(rk),   allocatable :: mat(:,:)
 
     end type mvector_wrapper_t
+    !**********************************************************
 
 
 
@@ -22,17 +23,22 @@ module type_mvector
 
 
 
+    !>
+    !!
+    !!  @author Nathan A. Wukie
+    !!
+    !!
+    !!
+    !--------------------------------------------------------------------------------
     type, public :: mvector_t
         integer(ik)             :: size_        = 0
         integer(ik)             :: capacity_    = 0
         integer(ik)             :: buffer_      = 20
 
-
-
-
         type(mvector_wrapper_t), allocatable :: data(:)
 
     contains
+
         procedure, public   :: size
         procedure, public   :: capacity
 
@@ -45,7 +51,9 @@ module type_mvector
 
         !< Data accessors
         procedure, public   :: at
+
     end type mvector_t
+    !********************************************************************************
 
 
 
@@ -58,14 +66,16 @@ contains
     !!  @author Nathan A. Wukie
     !!
     !!
-    !-------------------------------------------------------------------------
+    !--------------------------------------------------------------------------------------
     function size(self) result(res)
         class(mvector_t),   intent(in)  :: self
 
         integer(ik) :: res
 
         res = self%size_
-    end function
+
+    end function size
+    !**************************************************************************************
 
 
 
@@ -74,14 +84,16 @@ contains
     !!  @author Nathan A. Wukie
     !!
     !!
-    !-------------------------------------------------------------------------
+    !--------------------------------------------------------------------------------------
     function capacity(self) result(res)
         class(mvector_t),   intent(in)  :: self
 
         integer(ik) :: res
 
         res = self%capacity_
-    end function
+
+    end function capacity
+    !**************************************************************************************
 
 
 
@@ -96,7 +108,7 @@ contains
     !!  @author Nathan A. Wukie
     !!
     !!
-    !-------------------------------------------------------------------------------------------
+    !---------------------------------------------------------------------------------------
     subroutine push_back(self,element)
         class(mvector_t),   intent(inout)   :: self
         real(rk),           intent(in)      :: element(:,:)
@@ -128,6 +140,7 @@ contains
 
 
     end subroutine push_back
+    !****************************************************************************************
 
 
 
@@ -146,9 +159,10 @@ contains
         self%size_      = 0
         self%capacity_  = 0
 
-        deallocate(self%data)
+        if (allocated(self%data)) deallocate(self%data)
 
     end subroutine clear
+    !****************************************************************************************
 
 
 
@@ -184,17 +198,8 @@ contains
         !
         res = self%data(index)%mat
 
-    end function
-
-
-
-
-
-
-
-
-
-
+    end function at
+    !****************************************************************************************
 
 
 
@@ -251,6 +256,7 @@ contains
 
 
     end subroutine increase_capacity
+    !*****************************************************************************************
 
 
 

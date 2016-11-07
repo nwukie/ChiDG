@@ -16,6 +16,7 @@ module type_chidg
     use type_preconditioner,        only: preconditioner_t
     use type_meshdata,              only: meshdata_t
     use type_bcdata,                only: bcdata_t
+    use type_bc_state,              only: bc_state_t
     use type_dict,                  only: dict_t
     use type_domain_connectivity,   only: domain_connectivity_t
     use type_partition,             only: partition_t
@@ -54,12 +55,22 @@ module type_chidg
     !--------------------------------------------------------------------------------------------------------
     type, public    :: chidg_t
 
-        type(chidg_data_t)                          :: data
+
+        integer(ik) :: nterms_s     = 0 ! Number of terms in the 3D solution basis expansion
+        integer(ik) :: nterms_s_1d  = 0 ! Number of terms in the 1D solution basis expansion
+
+
+        ! Primary data container. Mesh, equations, bc's, vectors/matrices
+        type(chidg_data_t)   :: data
+        
+        ! Primary algorithms, selected at run-time
         class(time_integrator_t),   allocatable     :: time_integrator
         class(nonlinear_solver_t),  allocatable     :: nonlinear_solver
         class(linear_solver_t),     allocatable     :: linear_solver
         class(preconditioner_t),    allocatable     :: preconditioner
 
+
+        ! Partition of the global problem that is owned by the present ChiDG instance.
         type(partition_t)                           :: partition
 
         logical :: envInitialized = .false.
@@ -225,7 +236,6 @@ contains
     !!      -   Set nonlinear solver
     !!      -   Set linear solver
     !!      -   Set preconditioner
-    !!      -   Set number of allocated domains (default=1)
     !!
     !!  @author Nathan A. Wukie
     !!  @date   2/1/2016
@@ -235,16 +245,56 @@ contains
     !!  @param[inout]   options     Dictionary for initialization options
     !!
     !--------------------------------------------------------------------------------------------------------
-    subroutine set(self,selector,selection,options)
+    subroutine set(self,selector,algorithm,integer_input,real_input,options)
         class(chidg_t),         intent(inout)   :: self
         character(*),           intent(in)      :: selector
-        character(*),           intent(in)      :: selection
+        character(*), optional, intent(in)      :: algorithm
+        integer(ik),  optional, intent(in)      :: integer_input
+        real(rk),     optional, intent(in)      :: real_input
         type(dict_t), optional, intent(inout)   :: options 
 
-        integer(ik) :: ierr
+        character(:),   allocatable :: user_msg
+        integer(ik)                 :: ierr
+
+
+        !
+        ! Check options for the algorithm family of inputs
+        !
+        select case (trim(selector))
+            
+            case ('Time','time','time_integrator','Time_Integrator','timeintegrator','TimeIntegrator', 'time integrator', 'Time Integrator', &
+                  'nonlinearsolver','NonlinearSolver','nonlinear_solver','Nonlinear_Solver','nonlinear solver', 'Nonlinear Solver', &
+                  'linearsolver','LinearSolver','linear_solver','Linear_Solver','linear solver', 'Linear Solver', &
+                  'preconditioner','Preconditioner')
+
+                user_msg = "chidg%set: The component being set needs an algorithm string passed in &
+                            along with it. Try 'call chidg%set('your component', algorithm='your algorithm string')"
+                if (.not. present(algorithm)) call chidg_signal_one(FATAL,user_msg,trim(selector))
+
+        end select
+
+
+        !
+        ! Check options for integer family of inputs
+        !
+        select case (trim(selector))
+
+            case ('solution order', 'Solution Order', 'solution_order', 'Solution_Order')
+
+                user_msg = "chidg%set: The component being set needs an integer passed in &
+                            along with it. Try 'call chidg%set('your component', integer_input=my_int)"
+                if (.not. present(integer_input)) call chidg_signal_one(FATAL,user_msg,trim(selector))
+
+        end select
 
 
 
+
+
+
+        !
+        ! Actually go in and call the specialized routine based on 'selector'
+        !
         select case (trim(selector))
             !
             ! Allocation for time integrator
@@ -252,9 +302,9 @@ contains
             case ('Time','time','time_integrator','Time_Integrator','timeintegrator','TimeIntegrator', 'time integrator', 'Time Integrator')
                 if (allocated(self%time_integrator)) then
                     deallocate(self%time_integrator)
-                    call create_time_integrator(selection,self%time_integrator,options)
+                    call create_time_integrator(algorithm,self%time_integrator,options)
                 else
-                    call create_time_integrator(selection,self%time_integrator,options)
+                    call create_time_integrator(algorithm,self%time_integrator,options)
                 end if
 
 
@@ -265,9 +315,9 @@ contains
             case ('nonlinearsolver','NonlinearSolver','nonlinear_solver','Nonlinear_Solver','nonlinear solver', 'Nonlinear Solver')
                 if (allocated(self%nonlinear_solver)) then
                     deallocate(self%nonlinear_solver)
-                    call create_nonlinear_solver(selection,self%nonlinear_solver,options)
+                    call create_nonlinear_solver(algorithm,self%nonlinear_solver,options)
                 else
-                    call create_nonlinear_solver(selection,self%nonlinear_solver,options)
+                    call create_nonlinear_solver(algorithm,self%nonlinear_solver,options)
                 end if
 
 
@@ -279,9 +329,9 @@ contains
             case ('linearsolver','LinearSolver','linear_solver','Linear_Solver','linear solver', 'Linear Solver')
                 if (allocated(self%linear_solver)) then
                     deallocate(self%linear_solver)
-                    call create_linear_solver(selection,self%linear_solver,options)
+                    call create_linear_solver(algorithm,self%linear_solver,options)
                 else
-                    call create_linear_solver(selection,self%linear_solver,options)
+                    call create_linear_solver(algorithm,self%linear_solver,options)
                 end if
 
 
@@ -291,12 +341,24 @@ contains
             case ('preconditioner','Preconditioner')
                 if (allocated(self%preconditioner)) deallocate(self%preconditioner)
 
-                call create_preconditioner(selection,self%preconditioner)
+                call create_preconditioner(algorithm,self%preconditioner)
 
 
+
+            !
+            ! Set the 'solution order'. Order-of-accuracy, that is. Compute the number of terms
+            ! in the 1D, 3D solution bases
+            !
+            case ('solution order', 'Solution Order', 'solution_order', 'Solution_Order')
+                self%nterms_s_1d = integer_input
+                self%nterms_s    = self%nterms_s_1d * self%nterms_s_1d * self%nterms_s_1d
+        
+                
 
             case default
-                call chidg_signal_one(FATAL,"chidg%set: component string was not recognized. Check spelling and that the component was registered as an option in the chidg%set routine",selector)
+                user_msg = "chidg%set: component string was not recognized. Check spelling and that the component &
+                            was registered as an option in the chidg%set routine"
+                call chidg_signal_one(FATAL,user_msg,selector)
 
 
         end select
@@ -319,15 +381,17 @@ contains
     !!
     !!  @param[in]  gridfile    String containing a grid file name, including extension.
     !!  @param[in]  spacedim    Number of spatial dimensions
-    !!  @param[in]  partition   Optional partition for partial read of grid data during parallel execution.
+    !!  @param[in]  equation_set    Optionally, specify the equation set to be initialized instead of
     !!
     !!  TODO: Generalize spacedim
     !!
     !------------------------------------------------------------------------------------------------------------
-    subroutine read_grid(self,gridfile,spacedim)
-        class(chidg_t),     intent(inout)           :: self
-        character(*),       intent(in)              :: gridfile
-        integer(ik),        intent(in)              :: spacedim
+    subroutine read_grid(self,gridfile,spacedim,equation_set)
+        class(chidg_t),             intent(inout)           :: self
+        character(*),               intent(in)              :: gridfile
+        character(*),   optional,   intent(in)              :: equation_set
+        integer(ik),    optional,   intent(in)              :: spacedim
+
 
 
         type(domain_connectivity_t),    allocatable :: connectivities(:)
@@ -335,9 +399,9 @@ contains
         type(partition_t),              allocatable :: partitions(:)
 
         character(len=5),   dimension(1)    :: extensions
-        character(len=:),   allocatable     :: extension
+        character(len=:),   allocatable     :: extension, domain_equation_set
         type(meshdata_t),   allocatable     :: meshdata(:)
-        integer                             :: iext, extloc, idom, ndomains, iread, ierr
+        integer                             :: iext, extloc, idom, ndomains, iread, ierr, domain_dimensionality
 
 
         if ( IRANK == GLOBAL_MASTER ) call write_line("Reading grid")
@@ -395,20 +459,38 @@ contains
 
 
 
-
         !
         ! Add domains to ChiDG%data
         !
         ndomains = size(meshdata)
         do idom = 1,ndomains
 
+
+
+            ! Use spacedim if specified, else default to 3D
+            if (present(spacedim)) then
+                domain_dimensionality = spacedim
+            else 
+                domain_dimensionality = 3
+            end if
+
+
+            ! Use equation_set if specified, else default to the grid file data
+            if (present(equation_set)) then
+                domain_equation_set = equation_set
+            else
+                domain_equation_set = meshdata(idom)%eqnset
+            end if
+
+
+
             call self%data%add_domain(                              &
                                       trim(meshdata(idom)%name),    &
                                       meshdata(idom)%points,        &
                                       meshdata(idom)%connectivity,  &
-                                      spacedim,                     &
+                                      domain_dimensionality,        &
                                       meshdata(idom)%nterms_c,      &
-                                      meshdata(idom)%eqnset         &
+                                      domain_equation_set           &
                                       )
 
         end do
@@ -435,12 +517,17 @@ contains
     !!  @param[in]  gridfile    String specifying a gridfile, including extension.
     !!
     !-------------------------------------------------------------------------------------------------------------
-    subroutine read_boundaryconditions(self, gridfile)
-        class(chidg_t),     intent(inout)           :: self
-        character(*),       intent(in)              :: gridfile
+    subroutine read_boundaryconditions(self, gridfile, bc_wall, bc_inlet, bc_outlet, bc_symmetry, bc_farfield)
+        class(chidg_t),     intent(inout)               :: self
+        character(*),       intent(in)                  :: gridfile
+        class(bc_state_t),  intent(in),     optional    :: bc_wall
+        class(bc_state_t),  intent(in),     optional    :: bc_inlet
+        class(bc_state_t),  intent(in),     optional    :: bc_outlet
+        class(bc_state_t),  intent(in),     optional    :: bc_symmetry
+        class(bc_state_t),  intent(in),     optional    :: bc_farfield
 
         character(len=5),   dimension(1)    :: extensions
-        character(len=:),   allocatable     :: extension, dname
+        character(len=:),   allocatable     :: extension
         type(bcdata_t),     allocatable     :: bcdata(:)
         integer                             :: idom, ndomains, iface, ierr, iread
 
@@ -478,16 +565,16 @@ contains
         !
         ndomains = size(bcdata)
         do idom = 1,ndomains
-
-
-            dname = bcdata(idom)%domain_
             do iface = 1,NFACES
 
-                call self%data%add_bc(dname, bcdata(idom)%bcs(iface), bcdata(idom)%bc_connectivity(iface))
+                call self%data%add_bc(bcdata(idom)%domain_, bcdata(idom)%bcs(iface), bcdata(idom)%bc_connectivity(iface), &
+                                      bc_wall,      &
+                                      bc_inlet,     &
+                                      bc_outlet,    &
+                                      bc_symmetry,  &
+                                      bc_farfield)
 
             end do !iface
-
-
         end do !idom
 
 
@@ -571,20 +658,29 @@ contains
     !!  @param[in]  nterms_s    Number of terms in the solution polynomial expansion.
     !!
     !------------------------------------------------------------------------------------------------------------
-    subroutine initialize_solution_domains(self,nterms_s)
+    subroutine initialize_solution_domains(self)
         class(chidg_t),     intent(inout)   :: self
-        integer(ik),        intent(in)      :: nterms_s
+!        integer(ik),        intent(in)      :: nterms_s
+
+        character(:),   allocatable :: user_msg
 
         !
         ! TODO: put in checks for prerequisites
         !
 
 
+        !
+        ! Check that the order for the solution basis expansion has been set.
+        !
+        user_msg = "chidg%initialize_solution_domains: It appears the 'Solution Order' was not set for the &
+                    current ChiDG instance. Try calling 'call chidg%set('Solution Order', integer_input=my_order)' &
+                    where my_order=1-7 indicates the solution order-of-accuracy."
+        if (self%nterms_s == 0) call chidg_signal(FATAL,user_msg)
 
         !
         ! Call domain solution storage initialization: mesh data structures that depend on solution expansion etc.
         !
-        call self%data%initialize_solution_domains(nterms_s)
+        call self%data%initialize_solution_domains(self%nterms_s)
 
 
     end subroutine initialize_solution_domains

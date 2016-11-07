@@ -55,7 +55,7 @@ contains
 
         type(point_t),  allocatable                     :: nodes(:)
         type(domain_connectivity_t)                     :: connectivity
-        integer(ik)                                     :: nterms_c, nterms_s, spacedim
+        integer(ik)                                     :: nterms_c, spacedim
         class(bc_t),    allocatable                     :: bc
 
         IO_DESTINATION = 'file'
@@ -77,9 +77,10 @@ contains
         !
         spacedim = 3
         nterms_c = 8
-        nterms_s = 8
         call this%chidg%data%add_domain('D_01',nodes,connectivity,spacedim,nterms_c,'duallinearadvection')
-        call this%chidg%initialize_solution_domains(nterms_s)
+
+        call this%chidg%set('Solution Order', integer_input=2)
+        call this%chidg%initialize_solution_domains()
 
 
 

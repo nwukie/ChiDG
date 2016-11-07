@@ -292,16 +292,8 @@ contains
         idomain_l = self%idomain_l
         do ielem_l = 1,nelem
 
-            ! Element geometry initialization
             element_connectivity = connectivity%get_element_connectivity(ielem_l)
             call self%elems(ielem_l)%init_geom(spacedim,nodes,element_connectivity,idomain_l,ielem_l)
-
-
-
-!            if ( IRANK == GLOBAL_MASTER ) then
-!                write(*,FMT='(A1,A,t21,F6.2,A)',advance="NO") achar(13), " Initializing element geometry: ", (real(ielem_l)/real(nelem))*100.0, "%"
-!            end if
-
 
         end do ! ielem
 
@@ -353,10 +345,6 @@ contains
 
             call self%elems(ielem)%init_sol(self%neqns,self%nterms_s)
 
-!            if ( IRANK == GLOBAL_MASTER ) then
-!                write(*,FMT='(A1,A,t21,F6.2,A)',advance="NO") achar(13), " Initializing element solution data: ", (real(ielem)/real(self%nelem))*100.0, "%"
-!            end if
-
         end do
 
 
@@ -405,20 +393,10 @@ contains
         do ielem = 1,self%nelem
             do iface = 1,NFACES
 
-                ! Call face geometry initialization
                 call self%faces(ielem,iface)%init_geom(iface,self%elems(ielem))
 
-
             end do !iface
-
-
-!            if ( IRANK == GLOBAL_MASTER ) then
-!                write(*,FMT='(A1,A,t21,F6.2,A)',advance="NO") achar(13), " Initializing face geometry: ", (real(ielem)/real(self%nelem))*100.0, "%"
-!            end if
-
         end do !ielem
-
-
 
 
     end subroutine init_faces_geom
@@ -454,23 +432,14 @@ contains
         integer(ik) :: ielem, iface
 
         !
-        ! Loop through elements
+        ! Loop through elements, faces and call initialization that depends on the solution basis.
         !
         do ielem = 1,self%nelem
-
-            !
-            ! Loop through faces and call numerics initialization routine
-            !
             do iface = 1,NFACES
 
                 call self%faces(ielem,iface)%init_sol(self%elems(ielem))
 
             end do ! iface
-
-!            if ( IRANK == GLOBAL_MASTER ) then
-!                write(*,FMT='(A1,A,t21,F6.2,A)',advance="NO") achar(13), " Initializing face solution data: ", (real(ielem)/real(self%nelem))*100.0, "%"
-!            end if
-
         end do ! ielem
 
 
@@ -491,11 +460,13 @@ contains
 
 
 
-    !>
+    !>  Initialize processor-local, interior neighbor communication.
+    !!
+    !!  For each face without an interior neighbor, search the current mesh for a potential neighbor element/face
+    !!  by trying to match the corner indices of the elements.
     !!
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   6/10/2016
-    !!
     !!
     !!
     !--------------------------------------------------------------------------------------------------------------
@@ -516,14 +487,7 @@ contains
         ! Loop through each local element and call initialization for each face
         !
         do ielem = 1,self%nelem
-
-!            if ( IRANK == GLOBAL_MASTER ) then
-!                write(*,FMT='(A1,A,t21,F6.2,A)',advance="NO") achar(13), " Local Comm Percent Complete: ", (real(ielem)/real(self%nelem))*100.0, "%"
-!            end if
-
-
             do iface = 1,NFACES
-                neighbor_status = NO_NEIGHBOR_FOUND
 
                 !
                 ! Check if face has neighbor on local partition
@@ -549,7 +513,9 @@ contains
 
                     else
                         ! Default ftype to ORPHAN face and clear neighbor index data.
-                        ftype = ORPHAN      ! This should be processed later; either by a boundary condition(ftype=1), or a chimera boundary(ftype=2)
+                        ! ftype should be processed later; either by a boundary conditions (ftype=1), 
+                        ! or a chimera boundary (ftype = 2)
+                        ftype = ORPHAN
                         ineighbor_domain_g  = 0
                         ineighbor_domain_l  = 0
                         ineighbor_element_g = 0
@@ -563,7 +529,9 @@ contains
                     !
                     ! Call face neighbor initialization routine
                     !
-                    call self%faces(ielem,iface)%init_neighbor(ftype,ineighbor_domain_g,ineighbor_domain_l,ineighbor_element_g,ineighbor_element_l,ineighbor_face,ineighbor_proc)
+                    call self%faces(ielem,iface)%init_neighbor(ftype,ineighbor_domain_g, ineighbor_domain_l,    &
+                                                                     ineighbor_element_g,ineighbor_element_l,   &
+                                                                     ineighbor_face,     ineighbor_proc)
 
                 end if
 
@@ -577,12 +545,6 @@ contains
 
     end subroutine init_comm_local
     !**************************************************************************************************************
-
-
-
-
-
-
 
 
 
@@ -625,12 +587,19 @@ contains
 
         do ielem = 1,self%nelem
             do iface = 1,NFACES
-                neighbor_status = NO_NEIGHBOR_FOUND
 
                 !
-                ! Check if face has neighbor on another MPI rank
+                ! Check if face has neighbor on another MPI rank.
                 !
-                if ( self%faces(ielem,iface)%ftype == ORPHAN ) then
+                !   Do this for ORPHAN faces, that are looking for a potential neighbor
+                !   Do this also for INTERIOR faces with off-processor neighbors, in case this is being called as 
+                !    a reinitialization routine, so that element-specific information gets updated, such 
+                !    as neighbor_ddx, etc. because these could have changed if the order of the solution changed
+                !
+                !if ( (self%faces(ielem,iface)%ftype == ORPHAN) ) then
+                if ( (self%faces(ielem,iface)%ftype == ORPHAN) .or. &
+                     ( (self%faces(ielem,iface)%ftype == INTERIOR) .and. (self%faces(ielem,iface)%ineighbor_proc /= IRANK) ) &
+                     ) then
 
                     ! send search request for neighbor face among global MPI ranks.
                     searching = .true.
@@ -824,8 +793,6 @@ contains
         end if
 
 
-
-
     end subroutine handle_neighbor_request
     !**************************************************************************************************************
 
@@ -845,19 +812,18 @@ contains
 
 
 
-
-
-
-    !>
+    !>  Handle, for given element/face indices, try to find a potential interior neighbor. That is, a matching
+    !!  element within the current domain and on the current processor(local).
     !!
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   6/16/2016
     !!
     !!
     !!
-    !!
     !---------------------------------------------------------------------------------------------------------------
-    subroutine find_neighbor_local(self,ielem_l,iface,ineighbor_domain_g,ineighbor_domain_l,ineighbor_element_g,ineighbor_element_l,ineighbor_face,ineighbor_proc,neighbor_status)
+    subroutine find_neighbor_local(self,ielem_l,iface,ineighbor_domain_g, ineighbor_domain_l,   &
+                                                      ineighbor_element_g,ineighbor_element_l,  &
+                                                      ineighbor_face,ineighbor_proc,neighbor_status)
         class(mesh_t),                  intent(inout)   :: self
         integer(ik),                    intent(in)      :: ielem_l
         integer(ik),                    intent(in)      :: iface
@@ -930,26 +896,24 @@ contains
 
 
 
-    !>
+    !>  Search for an interior neighbor element across all processors.
+    !!
+    !!  Pass the corner indices for matching on a potential neighbor element so they can be checked by elements
+    !!  on another processor. If element is found,
+    !!  get the ddx, ddy, ddz, invmass etc. information that is element specific to that neighbor, which is
+    !!  located on another processor. This allows us to compute cartesian derivatives as they would be 
+    !!  computed in the neighbor element, without sending the entire element representation across.
     !!
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   6/16/2016
     !!
     !!
-    !!
-    !!
     !---------------------------------------------------------------------------------------------------------------
-    subroutine find_neighbor_global(self,ielem_l,iface,ineighbor_domain_g,  &
-                                                       ineighbor_domain_l,  &
-                                                       ineighbor_element_g, &
-                                                       ineighbor_element_l, &
-                                                       ineighbor_face,      &
-                                                       ineighbor_proc,      &
-                                                       neighbor_ddx,        &
-                                                       neighbor_ddy,        &
-                                                       neighbor_ddz,        &
-                                                       neighbor_br2_face,   &
-                                                       neighbor_br2_vol,    &
+    subroutine find_neighbor_global(self,ielem_l,iface,ineighbor_domain_g,  ineighbor_domain_l,  &
+                                                       ineighbor_element_g, ineighbor_element_l, &
+                                                       ineighbor_face,      ineighbor_proc,      &
+                                                       neighbor_ddx, neighbor_ddy, neighbor_ddz, &
+                                                       neighbor_br2_face, neighbor_br2_vol,      &
                                                        neighbor_invmass,    &
                                                        neighbor_status,     &
                                                        ChiDG_COMM)
@@ -1044,14 +1008,15 @@ contains
                                  neighbor_invmass(invmass_size(1),invmass_size(2)),  stat=ierr)
                         if (ierr /= 0) call AllocationError
 
-                        call MPI_Recv(neighbor_ddx,ddx_size(1)*ddx_size(2), MPI_REAL8, iproc,9,ChiDG_COMM,MPI_STATUS_IGNORE,ierr)
-                        call MPI_Recv(neighbor_ddy,ddx_size(1)*ddx_size(2), MPI_REAL8, iproc,10,ChiDG_COMM,MPI_STATUS_IGNORE,ierr)
-                        call MPI_Recv(neighbor_ddz,ddx_size(1)*ddx_size(2), MPI_REAL8, iproc,11,ChiDG_COMM,MPI_STATUS_IGNORE,ierr)
+                        call MPI_Recv(neighbor_ddx,ddx_size(1)*ddx_size(2),                MPI_REAL8, iproc,  9, ChiDG_COMM, MPI_STATUS_IGNORE,ierr)
+                        call MPI_Recv(neighbor_ddy,ddx_size(1)*ddx_size(2),                MPI_REAL8, iproc, 10, ChiDG_COMM, MPI_STATUS_IGNORE,ierr)
+                        call MPI_Recv(neighbor_ddz,ddx_size(1)*ddx_size(2),                MPI_REAL8, iproc, 11, ChiDG_COMM, MPI_STATUS_IGNORE,ierr)
                         call MPI_Recv(neighbor_br2_face,br2_face_size(1)*br2_face_size(2), MPI_REAL8, iproc, 12, ChiDG_COMM, MPI_STATUS_IGNORE,ierr)
                         call MPI_Recv(neighbor_br2_vol,br2_vol_size(1)*br2_vol_size(2),    MPI_REAL8, iproc, 13, ChiDG_COMM, MPI_STATUS_IGNORE,ierr)
                         call MPI_Recv(neighbor_invmass,invmass_size(1)*invmass_size(2),    MPI_REAL8, iproc, 14, ChiDG_COMM, MPI_STATUS_IGNORE,ierr)
 
-                        neighbor_status     = NEIGHBOR_FOUND
+                        neighbor_status = NEIGHBOR_FOUND
+
                     end if
                 end if
 
@@ -1163,10 +1128,8 @@ contains
 
 
 
-    !>  Return the processor ranks that the current mesh is receiving from.
+    !>  Return the processor ranks that the current mesh is receiving interior neighbor elements from.
     !!
-    !!  This includes interior neighbor elements located on another processor and also chimera
-    !!  donor elements located on another processor.
     !!
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   6/30/2016
@@ -1174,7 +1137,7 @@ contains
     !!
     !!
     !!
-    !---------------------------------------------------------------------------------------------------------------
+    !--------------------------------------------------------------------------------------------------------
     function get_recv_procs_local(self) result(comm_procs)
         class(mesh_t),   intent(in)  :: self
 
@@ -1237,7 +1200,7 @@ contains
         comm_procs = comm_procs_vector%data()
 
     end function get_recv_procs_local
-    !***************************************************************************************************************
+    !********************************************************************************************************
 
 
 
@@ -1249,10 +1212,8 @@ contains
 
 
 
-    !>  Return the processor ranks that the current mesh is receiving from.
+    !>  Return the processor ranks that the current mesh is receiving chimera donor elements from.
     !!
-    !!  This includes interior neighbor elements located on another processor and also chimera
-    !!  donor elements located on another processor.
     !!
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   6/30/2016
@@ -1260,7 +1221,7 @@ contains
     !!
     !!
     !!
-    !---------------------------------------------------------------------------------------------------------------
+    !--------------------------------------------------------------------------------------------------------
     function get_recv_procs_chimera(self) result(comm_procs)
         class(mesh_t),   intent(in)  :: self
 
@@ -1324,7 +1285,7 @@ contains
         comm_procs = comm_procs_vector%data()
 
     end function get_recv_procs_chimera
-    !***************************************************************************************************************
+    !********************************************************************************************************
 
 
 
@@ -1337,7 +1298,7 @@ contains
 
     !>  Return the processor ranks that the current mesh is sending to.
     !!
-    !!  This includes interior neighbor elements located on another processor and also chimera
+    !!  This includes processors that are being sent interior neighbor elements and also chimera
     !!  donor elements.
     !!
     !!  @author Nathan A. Wukie (AFRL)
@@ -1346,7 +1307,7 @@ contains
     !!
     !!
     !!
-    !---------------------------------------------------------------------------------------------------------------
+    !--------------------------------------------------------------------------------------------------------
     function get_send_procs(self) result(comm_procs)
         class(mesh_t),   intent(in)  :: self
 
@@ -1417,7 +1378,7 @@ contains
 
 
     end function get_send_procs
-    !***************************************************************************************************************
+    !********************************************************************************************************
 
 
 
@@ -1431,8 +1392,8 @@ contains
 
     !>  Return the processor ranks that the current mesh is sending to.
     !!
-    !!  This includes interior neighbor elements located on another processor and also chimera
-    !!  donor elements.
+    !!  This includes processors that are being sent interior neighbor elements.
+    !!
     !!
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   6/30/2016
@@ -1440,7 +1401,7 @@ contains
     !!
     !!
     !!
-    !---------------------------------------------------------------------------------------------------------------
+    !--------------------------------------------------------------------------------------------------------
     function get_send_procs_local(self) result(comm_procs)
         class(mesh_t),   intent(in)  :: self
 
@@ -1505,7 +1466,7 @@ contains
         comm_procs = comm_procs_vector%data()
 
     end function get_send_procs_local
-    !***************************************************************************************************************
+    !********************************************************************************************************
 
 
 
@@ -1525,8 +1486,7 @@ contains
 
     !>  Return the processor ranks that the current mesh is sending to.
     !!
-    !!  This includes interior neighbor elements located on another processor and also chimera
-    !!  donor elements.
+    !!  This includes processors that are being sent chimera donor elements.
     !!
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   6/30/2016
@@ -1534,7 +1494,7 @@ contains
     !!
     !!
     !!
-    !---------------------------------------------------------------------------------------------------------------
+    !--------------------------------------------------------------------------------------------------------
     function get_send_procs_chimera(self) result(comm_procs)
         class(mesh_t),   intent(in)  :: self
 
@@ -1587,7 +1547,7 @@ contains
         comm_procs = comm_procs_vector%data()
 
     end function get_send_procs_chimera
-    !***************************************************************************************************************
+    !********************************************************************************************************
 
 
 
@@ -1601,13 +1561,13 @@ contains
     !!
     !!
     !!
-    !----------------------------------------------------------------------------------------------------------------
+    !---------------------------------------------------------------------------------------------------------
     subroutine destructor(self)
         type(mesh_t), intent(inout) :: self
 
     
     end subroutine destructor
-    !****************************************************************************************************************
+    !*********************************************************************************************************
 
 
 end module type_mesh

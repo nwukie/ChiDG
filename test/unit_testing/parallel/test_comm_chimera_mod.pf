@@ -27,6 +27,7 @@ module test_comm_chimera_mod
 
         character(len=:),   allocatable :: gridfile
         integer(ik)                     :: nterms_s = 27
+        integer(ik)                     :: solution_order = 3
         type(mpi_comm)                  :: ChiDG_COMM
 
     contains
@@ -97,7 +98,8 @@ contains
         !
         ! Initialization
         !
-        call this%chidg%initialize_solution_domains(this%nterms_s)
+        call this%chidg%set('Solution Order', integer_input=this%solution_order)
+        call this%chidg%initialize_solution_domains()
         call this%chidg%init('communication',this%ChiDG_COMM)
         call this%chidg%init('chimera',this%ChiDG_COMM)
 

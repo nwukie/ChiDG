@@ -1,7 +1,7 @@
 module type_chimera
-    use mod_kinds,              only: rk, ik
     use type_chimera_receiver,  only: chimera_receiver_t
     use type_chimera_donor,     only: chimera_donor_t
+    implicit none
 
 
 

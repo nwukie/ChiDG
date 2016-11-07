@@ -12,9 +12,12 @@ module type_bc_state
 
 
 
-    !> Abstract base-type for boundary conditions
-    !!  - contains a list of associated element indices
-    !!  - contains a list of face indices
+    !>  Abstract base-type for computing a boundary condition state
+    !!
+    !!      - contains a procedure for computing the bc state: compute_bc_state
+    !!      - compute_bc_state is deferred and so must be implemented by any new bc_state_t
+    !!      - bc_state_t also contains properties that can hold parameters and functions 
+    !!        that have been set for the boundary.
     !!
     !!  @author Nathan A. Wukie
     !!  @date   2/3/2016
@@ -43,7 +46,6 @@ module type_bc_state
 
         procedure   :: set_fcn               !< Set a particular function definition for a specified bcfunction_t
         procedure   :: set_fcn_option        !< Set function-specific options for a specified bcfunction_t
-
 
         procedure   :: get_nproperties       !< Return the number of properties associated with the boundary condition.
         procedure   :: get_property_name     !< Return the name of a property given a property index.

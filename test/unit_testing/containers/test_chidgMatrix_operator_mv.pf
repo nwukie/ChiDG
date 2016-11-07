@@ -54,7 +54,7 @@ subroutine test_chidgMatrix_operator_mv()
     type(chidg_t)                   :: chidg
     type(meshdata_t),   allocatable :: meshdata(:)
     class(bc_t),        allocatable :: bc
-    integer(ik)                     :: nterms_s, idom, spacedim
+    integer(ik)                     :: idom, spacedim, nterms_s
     real(rk), dimension(8)          :: bref_1, bref_2
     real(rk)                        :: tol
     character(:),       allocatable :: filename
@@ -88,7 +88,8 @@ subroutine test_chidgMatrix_operator_mv()
     call chidg%read_boundaryconditions(filename)
 
 
-    call chidg%initialize_solution_domains(nterms_s)
+    call chidg%set('Solution Order', integer_input=2)
+    call chidg%initialize_solution_domains()
     call chidg%init('communication')
 
     !

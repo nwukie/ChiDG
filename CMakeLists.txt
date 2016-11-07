@@ -1,5 +1,5 @@
 project(chidg Fortran)
-cmake_minimum_required(VERSION 3.2)
+cmake_minimum_required(VERSION 3.0)
 
 
 #-----------------------------------------------------------------------------------
@@ -44,7 +44,6 @@ if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Choose the type of build. Options are: Debug Release" FORCE)
 endif()
 
-set(USER_MPI FALSE CACHE BOOL "Have CMake use user-specified MPI installation")
 set(TESTING  FALSE CACHE BOOL "Enable building unit/regression testing")
 
 
@@ -250,7 +249,8 @@ set(CMAKE_Fortran_LINK_FLAGS "${CMAKE_Fortran_LINK_FLAGS} -lstdc++ -lpthread")
 add_subdirectory(DNAD)                                                                        
 add_subdirectory(src)
 
-include_directories(${CMAKE_SOURCE_DIR}/src/tools)    # Need include here for macro-enhanced message handler messenger.h
+# Need include here for macro-enhanced message handler messenger.h
+include_directories(${CMAKE_SOURCE_DIR}/src/tools)
 
 
 

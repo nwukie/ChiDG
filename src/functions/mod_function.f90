@@ -175,17 +175,31 @@ contains
 
 
 
+    !>  Print a list of the registered functions. Really just a utility for 'chidg edit' to 
+    !!  dynamically list the available 'function_t's.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   11/8/2016
+    !!
+    !!
+    !------------------------------------------------------------------------------------------
+    subroutine list_functions()
+        integer                         :: nfcns, ifcn
+        character(len=:),   allocatable :: fcn_name
+
+        nfcns = registered_fcns%size()
 
 
+        do ifcn = 1,nfcns
+
+            fcn_name = registered_fcns%data(ifcn)%fcn%get_name()
+            call write_line(trim(fcn_name))
+
+        end do ! ifcn
 
 
-
-
-
-
-
-
-
+    end subroutine list_functions
+    !******************************************************************************************
 
 
 

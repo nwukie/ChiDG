@@ -8,6 +8,7 @@ module messenger
     character(len=:), allocatable   :: line                         ! Line that gets assembled and written
     character(len=2), parameter     :: default_delimiter = '  '     ! Delimiter of line parameters
     character(len=:), allocatable   :: current_delimiter            ! Delimiter of line parameters
+    integer                         :: default_column_width = 20    ! Default column width
     integer                         :: unit                         ! Unit of log file
     integer, parameter              :: max_msg_length = 300         ! Maximum width of message line
     integer                         :: msg_length = max_msg_length  ! Default msg_length
@@ -457,7 +458,7 @@ contains
 
         character(100)                  :: write_internal
         character(len=:),   allocatable :: temp, temp_a, temp_b
-        integer(ik)                     :: current_width, extra_space, test_blank
+        integer(ik)                     :: current_width, extra_space, test_blank, width
         logical                         :: blank_line
 
 
@@ -578,20 +579,28 @@ contains
         !
         if ( present(columns) ) then
             if (columns) then
+
+                if (present(column_width)) then
+                    width = column_width
+                else
+                    width = default_column_width
+                end if
+
                 current_width = len_trim(temp_a)  ! length without trailing blanks
-                extra_space = column_width - current_width
+                extra_space = width - current_width
 
                 !
                 ! Add spaces on front and back. Could cause misalignment with dividing integer by 2.
                 !
-                do while ( len(temp_a) < column_width )
+                do while ( len(temp_a) < width )
                     temp_a = ' '//temp_a//' '
                 end do
 
                 !
-                ! Make sure we are at exactly column_width. Could have gone over the the step above.
+                ! Make sure we are at exactly width. Could have gone over the the step above.
                 !
-                temp_b = temp_a(1:column_width)
+                temp_b = temp_a(1:width)
+
                  
             end if
         else

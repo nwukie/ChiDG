@@ -65,23 +65,23 @@ contains
         !
         ! Add functions
         !
-        call self%bcproperties%add('TotalPressure',   'Required')
-        call self%bcproperties%add('TotalTemperature','Required')
+        call self%bcproperties%add('Total Pressure',   'Required')
+        call self%bcproperties%add('Total Temperature','Required')
 
-        call self%bcproperties%add('normal_direction','Required')
-        call self%bcproperties%add('nx',              'Required')
-        call self%bcproperties%add('ny',              'Required')
-        call self%bcproperties%add('nz',              'Required')
-        call self%bcproperties%add('nr',              'Required')
-        call self%bcproperties%add('nt',              'Required')
+        call self%bcproperties%add('X-Normal',         'Required')
+        call self%bcproperties%add('Y-Normal',         'Required')
+        call self%bcproperties%add('Z-Normal',         'Required')
+        !call self%bcproperties%add('nr',              'Required')
+        !call self%bcproperties%add('nt',              'Required')
+        !call self%bcproperties%add('normal_direction','Required')
 
 
         !
         ! Set default angle
         !
-        call self%set_fcn_option('nx', 'val', 1._rk)
-        call self%set_fcn_option('ny', 'val', 0._rk)
-        call self%set_fcn_option('nz', 'val', 0._rk)
+        call self%set_fcn_option('X-Normal', 'val', 1._rk)
+        call self%set_fcn_option('Y-Normal', 'val', 0._rk)
+        call self%set_fcn_option('Z-Normal', 'val', 0._rk)
 
     end subroutine init
     !********************************************************************************
@@ -149,14 +149,14 @@ contains
         !
         coords = worker%coords()
         time   = worker%time()
-        PT = self%bcproperties%compute("TotalPressure",     time, coords)
-        TT = self%bcproperties%compute("TotalTemperature",  time, coords)
+        PT = self%bcproperties%compute("Total Pressure",     time, coords)
+        TT = self%bcproperties%compute("Total Temperature",  time, coords)
 
 
-        normal_direction = self%bcproperties%compute("normal_direction",    time, coords)
-        nx = self%bcproperties%compute("nx",                                time, coords)
-        ny = self%bcproperties%compute("ny",                                time, coords)
-        nz = self%bcproperties%compute("nz",                                time, coords)
+        !normal_direction = self%bcproperties%compute("normal_direction",    time, coords)
+        nx = self%bcproperties%compute("X-Normal",                                time, coords)
+        ny = self%bcproperties%compute("Y-Normal",                                time, coords)
+        nz = self%bcproperties%compute("Z-Normal",                                time, coords)
 
 
 

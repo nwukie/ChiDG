@@ -1,21 +1,14 @@
 module type_bc
 #include <messenger.h>
     use mod_kinds,                  only: rk, ik
-    use mod_chidg_mpi,              only: IRANK
     use mod_constants,              only: XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX, &
-                                          BOUNDARY, CHIMERA, ORPHAN, BC_BLK, ZERO, ONE, TWO, RKTOL
+                                          BOUNDARY, ORPHAN, ZERO, ONE, TWO, RKTOL
 
-    use type_chidg_worker,          only: chidg_worker_t
-    use type_chidg_cache,           only: chidg_cache_t
     use type_bc_patch,              only: bc_patch_t
     use type_bc_state,              only: bc_state_t
     use type_bc_state_wrapper,      only: bc_state_wrapper_t
     use type_mesh,                  only: mesh_t
     use type_point,                 only: point_t
-    use type_ivector,               only: ivector_t
-    use type_solverdata,            only: solverdata_t
-    use type_properties,            only: properties_t
-    use type_bcproperty_set,        only: bcproperty_set_t
     use type_boundary_connectivity, only: boundary_connectivity_t
     implicit none
 
@@ -24,9 +17,9 @@ module type_bc
 
     !>  Primary boundary condition container.
     !!
-    !!  - contains a bc_family; defining a general classification for the bc
-    !!  - contains a bc_patch;  defining the bc geometry
-    !!  - contains an array of bc_state's; defining the solution state computed by the bc
+    !!  - contains a bc_family;             defining a general classification for the bc
+    !!  - contains a bc_patch;              defining the bc geometry
+    !!  - contains an array of bc_state's;  defining the solution state computed by the bc
     !!
     !!  Convention is that a given bc_t will exists in an array of bc_t's. Maybe something
     !!  like:
@@ -64,14 +57,14 @@ module type_bc
 
     contains
 
-        procedure   :: init_bc              !< Boundary condition initialization
-        procedure   :: init_bc_spec         !< Call specialized initialization routine
+        procedure   :: init_bc              !< Boundary condition initialization.
+        procedure   :: init_bc_spec         !< Call specialized initialization routine.
         procedure   :: init_bc_coupling     !< Initialize book-keeping for coupling interaction between elements.
 
-        procedure   :: set_family
-        procedure   :: get_family
+        procedure   :: set_family           !< Set the boundary condition family.
+        procedure   :: get_family           !< Return the boundary condition family.
 
-        procedure   :: add_bc_state
+        procedure   :: add_bc_state         !< Add a bc_state function to the boundary condition.
 
         procedure   :: get_ncoupled_elems   !< Return the number of elements coupled with a specified boundary element.
 
@@ -85,7 +78,13 @@ module type_bc
 
 contains
 
-    !> Initialize boundary condition routine
+    !> Initialize boundary condition
+    !!
+    !!  mesh and boundary_connectivity get passed in:
+    !!      - Process the boundary_connectivity and search mesh for matching faces
+    !!      - If a face matches, set it as a boundary face in mesh
+    !!      - If a face matches, add it to the self%bc_patch
+    !!      - Initialize the boundary coupling information
     !!
     !!  @author Nathan A. Wukie
     !!  @date   1/31/2016
@@ -93,10 +92,10 @@ contains
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   6/10/2016
     !!
-    !!  @param[in]  mesh    mesh_t object containing elements and faces
-    !!  @param[in]  iface   block face index to which the boundary condition is being applied
+    !!  @param[inout]   mesh            mesh_t object containing elements and faces
+    !!  @param[in]      bconnectivity   Connectivity information for faces defining a boundary condition
     !!
-    !------------------------------------------------------------------------------------------
+    !---------------------------------------------------------------------------------------------------
     subroutine init_bc(self,mesh,bconnectivity)
         class(bc_t),                    intent(inout)   :: self
         type(mesh_t),                   intent(inout)   :: mesh
@@ -189,9 +188,12 @@ contains
                          (.not. point_three%valid()) ) call chidg_signal(FATAL,user_msg)
 
 
-                    xi_face   = ( (abs(point_one%c1_ - point_two%c1_) < 10000.*RKTOL)  .and. (abs(point_one%c1_ - point_three%c1_) < 10000.*RKTOL) )
-                    eta_face  = ( (abs(point_one%c2_ - point_two%c2_) < 10000.*RKTOL)  .and. (abs(point_one%c2_ - point_three%c2_) < 10000.*RKTOL) )
-                    zeta_face = ( (abs(point_one%c3_ - point_two%c3_) < 10000.*RKTOL)  .and. (abs(point_one%c3_ - point_three%c3_) < 10000.*RKTOL) )
+                    xi_face   = ( (abs(point_one%c1_ - point_two%c1_  ) < 10000.*RKTOL)  .and. &
+                                  (abs(point_one%c1_ - point_three%c1_) < 10000.*RKTOL) )
+                    eta_face  = ( (abs(point_one%c2_ - point_two%c2_  ) < 10000.*RKTOL)  .and. &
+                                  (abs(point_one%c2_ - point_three%c2_) < 10000.*RKTOL) )
+                    zeta_face = ( (abs(point_one%c3_ - point_two%c3_  ) < 10000.*RKTOL)  .and. &
+                                  (abs(point_one%c3_ - point_three%c3_) < 10000.*RKTOL) )
 
 
 
@@ -433,7 +435,7 @@ contains
 
 
 
-    !>
+    !>  Add a bc_state function to the boundary condition.
     !!
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   8/30/2016

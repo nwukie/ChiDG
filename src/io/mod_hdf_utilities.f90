@@ -106,6 +106,9 @@ contains
     !!
     !!  Boundary Conditions:
     !!  ---------------------------
+    !!  create_bc_state_group_hdf
+    !!  get_nbc_state_groups_hdf
+    !!
     !!  set_bc_patch_hdf
     !!  add_bc_state_hdf
     !!  get_bc_states_hdf
@@ -114,6 +117,7 @@ contains
     !!  get_nbc_states_hdf
     !!  get_bc_state_names_hdf
     !!
+    !!  remove_bc_state_group_hdf
     !!  remove_bc_state_hdf
     !!  remove_bc_property_hdf
     !!
@@ -904,6 +908,14 @@ contains
 
 
 
+
+
+
+
+
+
+
+
     !>  Set status of file attribute "/Contains Grid".
     !!
     !!  'True'/'False'
@@ -1503,867 +1515,6 @@ contains
 
 
 
-
-
-
-
-
-
-    !>  Set the element connectivities for a block.
-    !!
-    !!  Accepts array of element connectivities as
-    !!      elements(nelem, size_connectivity)
-    !!
-    !!  /D_domainname/Grid/Elements
-    !!
-    !!  @author Nathan A. Wukie
-    !!  @date   10/15/2016
-    !!
-    !!
-    !----------------------------------------------------------------------------------------
-    subroutine set_domain_elements_hdf(dom_id,elements)
-        integer(HID_T), intent(in)  :: dom_id
-        integer(ik),    intent(in)  :: elements(:,:)
-
-        integer(ik)         :: ierr
-        integer(HID_T)      :: element_set_id, element_space_id, grid_id
-        integer(HSIZE_T)    :: dims_rank_two(2)
-        logical             :: exists
-
-        !
-        ! Size element connectivities
-        !
-        dims_rank_two(1) = size(elements,1)
-        dims_rank_two(2) = size(elements,2)
-
-
-        !
-        ! Create a grid-group within the current block domain
-        !
-        exists = check_link_exists_hdf(dom_id,"Grid")
-        if (exists) then
-            call h5gopen_f(dom_id, "Grid", grid_id, ierr)
-        else
-            call h5gcreate_f(dom_id,"Grid", grid_id, ierr)
-        end if
-        if (ierr /= 0) call chidg_signal(FATAL,"set_domain_elements_hdf: h5gcreate_f/h5gopen_f")
-
-
-        !
-        ! Create dataset for element connectivity: element_set_id
-        !
-        exists = check_link_exists_hdf(grid_id,"Elements")
-        if (exists) then
-            call h5dopen_f(grid_id,"Elements", element_set_id, ierr)
-            if (ierr /= 0) call chidg_signal(FATAL,"set_domain_elements_hdf: h5dopen_f")
-
-            !
-            ! Write element connectivities
-            !
-            call h5dwrite_f(element_set_id, H5T_NATIVE_INTEGER, elements, dims_rank_two, ierr)
-            if (ierr /= 0) call chidg_signal(FATAL,"set_domain_elements_hdf: h5dwrite_f")
-
-        else
-            call h5screate_simple_f(2, dims_rank_two, element_space_id, ierr)
-            if (ierr /= 0) call chidg_signal(FATAL,"set_domain_elements_hdf: h5screate_simple_f")
-
-            call h5dcreate_f(grid_id, "Elements", H5T_NATIVE_INTEGER, element_space_id, element_set_id, ierr)
-            if (ierr /= 0) call chidg_signal(FATAL,"set_domain_elements_hdf: h5dcreate_f")
-
-
-
-            !
-            ! Write element connectivities
-            !
-            call h5dwrite_f(element_set_id, H5T_NATIVE_INTEGER, elements, dims_rank_two, ierr)
-            if (ierr /= 0) call chidg_signal(FATAL,"set_domain_elements_hdf: h5dwrite_f")
-
-            call h5sclose_f(element_space_id,ierr)
-            if (ierr /= 0) call chidg_signal(FATAL,"set_domain_elements_hdf: h5sclose_f")
-
-        end if
-
-
-        !
-        ! Close dataset, dataspace, Grid group
-        !
-        call h5dclose_f(element_set_id,ierr)
-        if (ierr /= 0) call chidg_signal(FATAL,"set_domain_elements_hdf: h5dclose_f")
-        call h5gclose_f(grid_id,ierr)
-        if (ierr /= 0) call chidg_signal(FATAL,"set_domain_elements_hdf: h5gclose_f")
-
-
-
-    end subroutine set_domain_elements_hdf
-    !****************************************************************************************
-
-
-
-
-
-
-
-
-
-
-
-
-    !>  Set boundary condition patch face indices for a block boundary.
-    !!
-    !!  /D_domainname/BoundaryConditions/"face"/Faces
-    !!
-    !!  "face" is XI_MIN, XI_MAX, ETA_MIN, etc.
-    !!
-    !!  @author Nathan A. Wukie
-    !!  @date   10/15/2016
-    !!
-    !!  @param[in]  dom_id      HDF identifier for the block to be written to
-    !!  @param[in]  faces       Face indices to be set for the boundary condition patch
-    !!  @param[in]  bcface      Integer specifying which boundary of the block to write to
-    !!
-    !---------------------------------------------------------------------------------------
-    subroutine set_bc_patch_hdf(dom_id,faces,bcface)
-        integer(HID_T), intent(in)  :: dom_id
-        integer(ik),    intent(in)  :: faces(:,:)
-        integer(ik),    intent(in)  :: bcface
-
-        character(len=8)            :: bc_face_strings(6)
-        character(:), allocatable   :: bc_face_string
-        integer                     :: ierr
-        integer(HID_T)              :: bc_id, face_id, face_space_id, face_set_id
-        integer(HSIZE_T)            :: dims(2)
-            
-
-        !
-        ! Create a boundary condition-group within the current block domain
-        !
-        call h5gopen_f(dom_id, "BoundaryConditions", bc_id, ierr)
-        if (ierr /= 0) call chidg_signal(FATAL,"set_bc_patch_hdf: h5gcreate_f")
-
-
-        !
-        ! Get boundary condition string
-        !
-        bc_face_strings = ["XI_MIN  ","XI_MAX  ","ETA_MIN ","ETA_MAX ","ZETA_MIN","ZETA_MAX"]
-        bc_face_string  = trim(bc_face_strings(bcface))
-
-
-        !
-        ! Create empty group for boundary condition
-        !
-        call h5gcreate_f(bc_id,bc_face_string,face_id, ierr)
-        if (ierr /= 0) call chidg_signal(FATAL,"set_bc_patch_hdf: h5gcreate_f")
-
-
-        !
-        ! Create dataspaces for boundary condition connectivity
-        !
-        dims(1) = size(faces,1)
-        dims(2) = size(faces,2)
-        call h5screate_simple_f(2, dims, face_space_id, ierr)
-        if (ierr /= 0) call chidg_signal(FATAL,"set_bc_patch_hdf: h5screate_simple_f")
-
-
-        !
-        ! Create datasets for boundary condition connectivity
-        !
-        call h5dcreate_f(face_id,"Faces", H5T_NATIVE_INTEGER, face_space_id, face_set_id,ierr)
-        if (ierr /= 0) call chidg_signal(FATAL,"set_bc_patch_hdf: h5dcreate_f")
-
-
-        !
-        ! Write bc faces
-        !
-        call h5dwrite_f(face_set_id, H5T_NATIVE_INTEGER, faces, dims, ierr)
-        if (ierr /= 0) call chidg_signal(FATAL,"set_bc_patch_hdf: h5dwrite_f")
-
-
-        !
-        ! Close groups
-        !
-        call h5dclose_f(face_set_id, ierr)
-        call h5sclose_f(face_space_id, ierr)
-        call h5gclose_f(face_id, ierr) 
-        call h5gclose_f(bc_id, ierr)
-
-
-    end subroutine set_bc_patch_hdf
-    !****************************************************************************************
-
-
-
-
-
-
-
-
-
-
-
-
-    !>  Return the bc_patch connectivity information for a boundary condition face group.
-    !!
-    !!  @author Nathan A. Wukie
-    !!  @date   10/17/2016
-    !!
-    !!
-    !!
-    !----------------------------------------------------------------------------------------
-    function get_bc_patch_hdf(bcface_id) result(bc_patch)
-        integer(HID_T), intent(in)  :: bcface_id
-
-        integer(HID_T)      :: faces_did, faces_sid
-        integer(HSIZE_T)    :: dims(2), maxdims(2)
-        integer(ik)         :: nbcfaces, npts_face, ierr
-
-        integer(ik), allocatable, target    :: bc_patch(:,:)
-        type(c_ptr)                         :: bc_patch_p
-        
-
-        ! Open Faces patch data
-        ! TODO: WARNING, should replace with XI_MIN, XI_MAX, etc. somehow. Maybe not...
-        call h5dopen_f(bcface_id, "Faces", faces_did, ierr, H5P_DEFAULT_F)
-
-
-        !  Get the dataspace id and dimensions
-        call h5dget_space_f(faces_did, faces_sid, ierr)
-        call h5sget_simple_extent_dims_f(faces_sid, dims, maxdims, ierr)
-        nbcfaces  = dims(1)
-        npts_face = dims(2)
-
-
-        ! Read boundary condition patch connectivity
-        allocate(bc_patch(nbcfaces,npts_face),stat=ierr)
-        if (ierr /= 0) call AllocationError
-        bc_patch_p = c_loc(bc_patch(1,1))
-        call h5dread_f(faces_did, H5T_NATIVE_INTEGER, bc_patch_p, ierr)
-        if (ierr /= 0) call chidg_signal(FATAL,"get_bc_patch_hdf: h5dread_f")
-
-
-        call h5dclose_f(faces_did,ierr)
-        call h5sclose_f(faces_sid,ierr)
-
-    end function get_bc_patch_hdf
-    !***************************************************************************************
-
-
-
-
-
-
-
-
-
-    !>  Add bc_state function for a block boundary condition.
-    !!
-    !!  /D_domainname/BoundaryConditions/"face"/BCS_bc_state
-    !!
-    !!  "face" is XI_MIN, XI_MAX, ETA_MIN, etc.
-    !!
-    !!  @author Nathan A. Wukie
-    !!  @date   10/17/2016
-    !!
-    !!
-    !----------------------------------------------------------------------------------------
-    subroutine add_bc_state_hdf(bcface_id,bc_state)
-        integer(HID_T),     intent(in)  :: bcface_id
-        class(bc_state_t),  intent(in)  :: bc_state
-
-        integer(ik)                         :: ierr
-        integer(HID_T)                      :: state_id
-        logical                             :: link_exists, state_found
-
-
-        if ( bc_state%get_name() == 'empty' ) then
-            !
-            ! If 'empty' do not allocate new bc
-            !
-            
-        else
-
-            ! Check to make sure the bc_state wasn't previously added
-            call h5lexists_f(bcface_id, "BCS_"//bc_state%get_name(), link_exists, ierr)
-
-
-            if (.not. link_exists) then
-
-                ! Check bc_state exists in the register. 
-                ! If not, user probably entered the wrong string, so do nothing
-                state_found = check_bc_state_registered(bc_state%get_name())
-
-                if (state_found) then
-                    ! Create a new group for the bc_state_t
-                    call h5gcreate_f(bcface_id, "BCS_"//bc_state%get_name(), state_id, ierr)
-                    if (ierr /= 0) call chidg_signal(FATAL,"add_domain_bc_state_hdf: error creating new group for bc_state")
-
-                    ! Add bc_state properties to the group that was created
-                    call add_bc_properties_hdf(state_id,bc_state)
-
-                    ! Close function group
-                    call h5gclose_f(state_id,ierr)
-                end if
-
-            end if
-
-        end if
-
-
-    end subroutine add_bc_state_hdf
-    !*****************************************************************************************
-
-
-
-    
-
-
-
-
-
-
-    !>  Return the number of bc_state's attached to a boundary condition face group.
-    !!
-    !!  @author Nathan A. Wukie 
-    !!  @date   10/17/2016
-    !!
-    !!
-    !----------------------------------------------------------------------------------------
-    function get_nbc_states_hdf(bcface_id) result(nbc_states)
-        integer(HID_T), intent(in)  :: bcface_id
-
-        integer(ik)     :: nbc_states, nmembers, igrp, type, ierr
-        character(1024) :: gname
-
-        nbc_states = 0
-
-        ! Loop over groups and detect bc_state's; Increment nbc_states.
-        call h5gn_members_f(bcface_id, ".", nmembers, ierr)
-        if ( nmembers > 0 ) then
-            do igrp = 0,nmembers-1
-
-                ! Get group name
-                call h5gget_obj_info_idx_f(bcface_id, ".", igrp, gname, type, ierr)
-
-                ! Test if group is a boundary condition state. 'BCS_'
-                if (gname(1:4) == 'BCS_') then
-                    nbc_states = nbc_states + 1
-                end if
-
-            end do  ! igrp
-        end if
-
-
-    end function get_nbc_states_hdf
-    !****************************************************************************************
-
-
-
-
-
-
-
-    
-
-    !>  Return the names of bc_state's attached to a boundary condition's face group.
-    !!
-    !!  @author Nathan A. Wukie
-    !!  @date   10/17/2016
-    !!
-    !!
-    !---------------------------------------------------------------------------------------
-    function get_bc_state_names_hdf(bcface_id) result(bc_state_names)
-        integer(HID_T), intent(in)  :: bcface_id
-
-        integer(ik)     :: nmembers, ierr, igrp, type
-        character(1024) :: gname
-        type(svector_t) :: bc_state_names
-
-
-
-        !  Get number of groups linked to the current bc_face
-        call h5gn_members_f(bcface_id, ".", nmembers, ierr)
-        if ( nmembers > 0 ) then
-            do igrp = 0,nmembers-1
-                ! Get group name
-                call h5gget_obj_info_idx_f(bcface_id, ".", igrp, gname, type, ierr)
-
-                ! Test if group is a boundary condition state. 'BCS_'
-                if (gname(1:4) == 'BCS_') then
-                    call bc_state_names%push_back(string_t(trim(gname)))
-                end if
-            end do  ! igrp
-        end if
-
-    end function get_bc_state_names_hdf
-    !****************************************************************************************
-
-
-
-
-
-
-
-    
-
-    !>  Given the name of a bc_state on a face, return an initialized bc_state instance.
-    !!
-    !!  You may consider calling 'get_bc_state_names_hdf' first to get a list of 
-    !!  available bc_state's on a face. Then the names could be passed into this routine
-    !!  to return the bc_state instance.
-    !!
-    !!  @author Nathan A. Wukie
-    !!  @date   10/17/2016
-    !!
-    !!
-    !----------------------------------------------------------------------------------------
-    function get_bc_state_hdf(bcface_id,bcstate_name) result(bc_state)
-        integer(HID_T), intent(in)  :: bcface_id
-        character(*),   intent(in)  :: bcstate_name
-
-
-        class(bc_state_t),  allocatable :: bc_state 
-        character(:),       allocatable :: bcname, pname, oname
-        character(1024)                 :: fname
-        integer(HID_T)                  :: bcstate_id, bcprop_id
-        integer(ik)                     :: ierr, iprop, nprop, iopt, noptions
-        real(rdouble), dimension(1)     :: buf
-        real(rk)                        :: ovalue
-
-
-        ! Open bc_state group
-        call h5gopen_f(bcface_id, trim(bcstate_name), bcstate_id, ierr)
-        if (ierr /= 0) call chidg_signal(FATAL,"get_bc_state_hdf: error opening bc_state group.")
-
-        
-        ! Get boundary condition name string
-        if (bcstate_name(1:4) == "BCS_") then
-            bcname = trim(bcstate_name(5:))
-        else
-            bcname = trim(bcstate_name)
-        end if
-
-
-        ! Create boundary condition state and get number of properties
-        call create_bc(bcname,bc_state)
-        nprop = bc_state%get_nproperties()
-
-        
-        ! Loop through properties
-        do iprop = 1,nprop
-
-
-            ! Get property name + open HDF group
-            pname = bc_state%get_property_name(iprop)
-            call h5gopen_f(bcstate_id, "BCP_"//trim(pname), bcprop_id, ierr)
-            if (ierr /= 0) call chidg_signal(FATAL,"get_bc_state_hdf: error opening bcproperty group.")
-
-
-            ! Read the function name set for the property.
-            call h5ltget_attribute_string_f(bcprop_id, ".", "Function", fname, ierr)
-            if (ierr /= 0) call chidg_signal(FATAL,"get_bc_state_hdf: error getting function name.")
-
-            
-            ! Set/Create the function for the current property
-            call bc_state%set_fcn(trim(pname), trim(fname))
-
-            
-            ! Get number of options for the function
-            noptions = bc_state%get_noptions(iprop)
-
-
-
-            ! Get each option value
-            do iopt = 1,noptions
-                ! Get option name
-                oname = bc_state%get_option_key(iprop,iopt)
-
-                ! Get option value from file
-                call h5ltget_attribute_double_f(bcprop_id, ".", trim(oname), buf, ierr)
-                if (ierr /= 0) call chidg_signal(FATAL,"get_bc_state_hdf: error getting option value")
-                ovalue = real(buf(1),rk)
-
-                ! Set boundary condition option
-                call bc_state%set_fcn_option(trim(pname), trim(oname), ovalue)
-            end do ! iopt
-
-
-
-            ! Close current property group
-            call h5gclose_f(bcprop_id,ierr)
-            if (ierr /= 0) call chidg_signal(FATAL,"get_bc_state_hdf: h5gclose")
-
-
-
-        end do !iprop
-
-
-
-        ! Close boundary condition state group
-        call h5gclose_f(bcstate_id, ierr)
-        if (ierr /= 0) call chidg_signal(FATAL,"get_bc_state_hdf: h5gclose")
-
-
-    end function get_bc_state_hdf
-    !*****************************************************************************************
-
-
-
-
-
-
-
-
-
-
-    !>  Add properties to a bc_state on a boundary for a particular domain.
-    !!
-    !!  /D_domainname/BoundaryConditions/"face"/BCS_bc_state/BCP_bc_property
-    !!
-    !!  @author Nathan A. Wukie
-    !!  @date   10/17/2016
-    !!
-    !!
-    !!  @param[in]      bcstate_id      HDF identifier of the bc_state group in the file to 
-    !!                                  be modified.
-    !!  @param[inout]   bc_state        bc_state class that can be queried for properties to 
-    !!                                  be set.
-    !!
-    !-----------------------------------------------------------------------------------------
-    subroutine add_bc_properties_hdf(bcstate_id, bc_state)
-        integer(HID_T),     intent(in)  :: bcstate_id
-        class(bc_state_t),  intent(in)  :: bc_state
-
-        integer(HID_T)                  :: prop_id
-        integer(HSIZE_T)                :: adim
-        integer(ik)                     :: iprop, nprop, iopt, nopt, ierr
-        character(len=1024)             :: pstring
-        character(len=:),   allocatable :: option_key, fcn_name
-        real(rk)                        :: option_value
-
-
-        !
-        ! Get number of functions in the boundary condition
-        !
-        nprop = bc_state%get_nproperties()
-
-
-        !
-        ! Loop through and add properties
-        !
-        do iprop = 1,nprop
-
-            !
-            ! Get string the property is associated with
-            !
-            pstring = bc_state%get_property_name(iprop)
-
-
-            !
-            ! Create a new group for the property
-            !
-            call h5gcreate_f(bcstate_id, "BCP_"//trim(adjustl(pstring)), prop_id, ierr)
-            if (ierr /= 0) call chidg_signal(FATAL,"add_bcproperties_hdf: error creating new group for bcfunction")
-
-
-            !
-            ! Print property function attribute
-            !
-            call set_bc_property_function_hdf(prop_id, bc_state%bcproperties%bcprop(iprop)%fcn)
-
-
-            !
-            ! Get number of options available for the current property
-            !
-            nopt = bc_state%get_noptions(iprop)
-
-
-            if (nopt > 0 ) then
-                do iopt = 1,nopt
-
-                    !
-                    ! Get the current option and default value.
-                    !
-                    option_key   = bc_state%get_option_key(iprop,iopt)
-                    option_value = bc_state%get_option_value(iprop,option_key)
-
-                    !
-                    ! Set the option as a real attribute
-                    !
-                    adim = 1
-                    call h5ltset_attribute_double_f(prop_id, ".", option_key, [real(option_value,rdouble)], adim, ierr)
-
-                end do
-            end if
-
-
-            !
-            ! Close function group
-            !
-            call h5gclose_f(prop_id,ierr)
-
-
-        end do !ifcn
-
-
-    end subroutine add_bc_properties_hdf
-    !******************************************************************************************
-
-
-
-
-
-
-
-
-
-    !>  Set a function for a bc_state property.
-    !!
-    !!  /D_domainname/BoundaryConditions/"face"/BCS_bcstatename/BCP_bcpropertyname/
-    !!
-    !!
-    !!  @author Nathan A. Wukie
-    !!  @date   2/5/2016
-    !!
-    !--------------------------------------------------------------------------------------------
-    subroutine set_bc_property_function_hdf(bcprop_id, fcn)
-        integer(HID_T),     intent(in)  :: bcprop_id
-        class(function_t),  intent(in)  :: fcn
-
-        integer(HSIZE_T)                :: adim
-        character(len=:),   allocatable :: option
-        real(rk)                        :: val
-        integer(ik)                     :: nopt, iopt
-        integer                         :: ierr
-        
-
-        !
-        ! Delete bcproperty attributes
-        !
-        call delete_group_attributes_hdf(bcprop_id)
-
-
-        !
-        ! Set 'Function' attribute
-        !
-        call h5ltset_attribute_string_f(bcprop_id, ".", "Function", trim(fcn%get_name()), ierr)
-        if (ierr /= 0) call chidg_signal(FATAL,"set_bc_property_function_hdf: error setting function name")
-
-
-        !
-        ! Set function options
-        !
-        nopt = fcn%get_noptions()
-
-        do iopt = 1,nopt
-
-            option = fcn%get_option_key(iopt)
-            val    = fcn%get_option_value(option)
-            !
-            ! Set option
-            !
-            adim = 1
-            call h5ltset_attribute_double_f(bcprop_id, ".", trim(option), [real(val,rdouble)], adim, ierr)
-
-        end do ! iopt
-
-
-    end subroutine set_bc_property_function_hdf
-    !********************************************************************************************
-
-
-
-
-
-
-
-
-    !>
-    !!
-    !!  @author Nathan A. Wukie
-    !!  @date   2/4/2016
-    !!
-    !!  @author Nathan A. Wukie (AFRL)
-    !!  @date   9/1/2016
-    !!  @note   Modified to include bc_states
-    !!
-    !----------------------------------------------------------------------------------------------------
-    subroutine remove_bc_state_hdf(bcface_id,state_string)
-        integer(HID_T),     intent(in)  :: bcface_id
-        character(len=*),   intent(in)  :: state_string
-
-        integer(HID_T)                          :: bc_state
-
-        integer(HSIZE_T)                        :: iattr, idx
-        integer(ik)                             :: nattr
-        integer                                 :: nmembers, igrp, type, ierr, iter, iprop, nprop
-        character(len=10)                       :: faces(NFACES)
-        character(len=1024),    allocatable     :: anames(:), pnames(:)
-        character(len=1024)                     :: gname
-        type(h5o_info_t), target                :: h5_info
-
-
-
-        !
-        ! Open the bc_state group
-        !
-        call h5gopen_f(bcface_id, "BCS_"//trim(state_string), bc_state, ierr)
-
-
-        !
-        ! Delete overall boundary condition face attributes
-        !
-        call delete_group_attributes_hdf(bc_state)
-
-
-        !
-        !  Get number of groups linked to the current bc_state
-        !
-        call h5gn_members_f(bc_state, ".", nmembers, ierr)
-
-
-        !
-        !  Loop through groups and delete properties
-        !
-        if ( nmembers > 0 ) then
-
-            !
-            ! First get number of states. This could be different than number of groups.
-            !
-            nprop = 0
-            do igrp = 0,nmembers-1
-
-                ! Get group name
-                call h5gget_obj_info_idx_f(bc_state, ".", igrp, gname, type, ierr)
-
-                ! Test if group is a boundary condition function. 'BCP_'
-                if (gname(1:4) == 'BCP_') then
-                    ! increment nprop
-                    nprop = nprop + 1
-                end if
-
-            end do  ! igrp
-
-
-            !
-            ! Second, get all state names
-            !
-            allocate(pnames(nprop), stat=ierr)
-            if (ierr /= 0) call AllocationError
-            iprop = 1
-            do igrp = 0,nmembers-1
-
-                ! Get group name
-                call h5gget_obj_info_idx_f(bc_state, ".", igrp, gname, type, ierr)
-
-                ! Test if group is a boundary condition function. 'BCP_'
-                if (gname(1:4) == 'BCP_') then
-                    ! Store name
-                    pnames(iprop) = gname
-                    iprop = iprop + 1
-                end if
-
-            end do ! igrp
-
-
-
-            !
-            ! Now, go about deleting them all.
-            ! Previously, we were deleting them one at a time, but then the index
-            ! traversal call get_obj_info_idx was failing for more than one property
-            ! because the index was screwed up.
-            !
-            do iprop = 1,nprop
-                call remove_bc_property_hdf(bc_state,pnames(iprop))
-            end do
-
-
-        end if ! nmembers
-
-
-        !
-        ! Close the bc_state group
-        !
-        call h5gclose_f(bc_state,ierr)
-
-        !
-        ! Unlink the bc_state group
-        !
-        call h5gunlink_f(bcface_id,"BCS_"//trim(state_string),ierr)
-        if (ierr /= 0) call chidg_signal(FATAL,"delete_bc_state_hdf: error unlinking bc_state group")
-
-
-    end subroutine remove_bc_state_hdf
-    !****************************************************************************************************
-
-
-
-
-
-
-
-
-
-
-
-    !>
-    !!
-    !!  @author Nathan A. Wukie
-    !!  @date   2/4/2016
-    !!
-    !!  @author Nathan A. Wukie (AFRL)
-    !!  @date   9/1/2016
-    !!  @note   Modified to include bc_states
-    !!
-    !!
-    !------------------------------------------------------------------------------------------------------
-    subroutine remove_bc_property_hdf(bc_state,pname)
-        integer(HID_T),     intent(in)      :: bc_state
-        character(*),       intent(in)      :: pname
-
-        integer(HID_T)  :: bcprop
-        integer(ik)     :: ierr
-
-        !
-        ! Open bcproperty group
-        !
-        call h5gopen_f(bc_state, trim(adjustl(pname)), bcprop, ierr)
-        if (ierr /= 0) call chidg_signal(FATAL,"delete_bc_property_hdf: error opening bcproperty group")
-
-
-        !
-        ! Delete bcproperty attributes
-        !
-        call delete_group_attributes_hdf(bcprop)
-
-
-        !
-        ! Close bcproperty group
-        !
-        call h5gclose_f(bcprop, ierr)
-        if (ierr /= 0) call chidg_signal(FATAL,"delete_bc_property_hdf: error closing bcproperty group")
-
-
-        !
-        ! Now that the data in bcproperty has been removed, unlink the bcproperty group.
-        !
-        call h5gunlink_f(bc_state,trim(pname),ierr)
-        if (ierr /= 0) call chidg_signal(FATAL,"delete_bcfunction_hdf: error unlinking bcproperty group")
-
-
-    end subroutine remove_bc_property_hdf
-    !******************************************************************************************************
-
-
-
-
-
-
-
-
-
-
-
-
-
     !>
     !!
     !!  @author Nathan A. Wukie
@@ -2825,6 +1976,1094 @@ contains
 
     end function get_domain_equation_sets_hdf
     !****************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+    !>  Set the element connectivities for a block.
+    !!
+    !!  Accepts array of element connectivities as
+    !!      elements(nelem, size_connectivity)
+    !!
+    !!  /D_domainname/Grid/Elements
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   10/15/2016
+    !!
+    !!
+    !----------------------------------------------------------------------------------------
+    subroutine set_domain_elements_hdf(dom_id,elements)
+        integer(HID_T), intent(in)  :: dom_id
+        integer(ik),    intent(in)  :: elements(:,:)
+
+        integer(ik)         :: ierr
+        integer(HID_T)      :: element_set_id, element_space_id, grid_id
+        integer(HSIZE_T)    :: dims_rank_two(2)
+        logical             :: exists
+
+        !
+        ! Size element connectivities
+        !
+        dims_rank_two(1) = size(elements,1)
+        dims_rank_two(2) = size(elements,2)
+
+
+        !
+        ! Create a grid-group within the current block domain
+        !
+        exists = check_link_exists_hdf(dom_id,"Grid")
+        if (exists) then
+            call h5gopen_f(dom_id, "Grid", grid_id, ierr)
+        else
+            call h5gcreate_f(dom_id,"Grid", grid_id, ierr)
+        end if
+        if (ierr /= 0) call chidg_signal(FATAL,"set_domain_elements_hdf: h5gcreate_f/h5gopen_f")
+
+
+        !
+        ! Create dataset for element connectivity: element_set_id
+        !
+        exists = check_link_exists_hdf(grid_id,"Elements")
+        if (exists) then
+            call h5dopen_f(grid_id,"Elements", element_set_id, ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,"set_domain_elements_hdf: h5dopen_f")
+
+            !
+            ! Write element connectivities
+            !
+            call h5dwrite_f(element_set_id, H5T_NATIVE_INTEGER, elements, dims_rank_two, ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,"set_domain_elements_hdf: h5dwrite_f")
+
+        else
+            call h5screate_simple_f(2, dims_rank_two, element_space_id, ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,"set_domain_elements_hdf: h5screate_simple_f")
+
+            call h5dcreate_f(grid_id, "Elements", H5T_NATIVE_INTEGER, element_space_id, element_set_id, ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,"set_domain_elements_hdf: h5dcreate_f")
+
+
+
+            !
+            ! Write element connectivities
+            !
+            call h5dwrite_f(element_set_id, H5T_NATIVE_INTEGER, elements, dims_rank_two, ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,"set_domain_elements_hdf: h5dwrite_f")
+
+            call h5sclose_f(element_space_id,ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,"set_domain_elements_hdf: h5sclose_f")
+
+        end if
+
+
+        !
+        ! Close dataset, dataspace, Grid group
+        !
+        call h5dclose_f(element_set_id,ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"set_domain_elements_hdf: h5dclose_f")
+        call h5gclose_f(grid_id,ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"set_domain_elements_hdf: h5gclose_f")
+
+
+
+    end subroutine set_domain_elements_hdf
+    !****************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+
+    !>  Set boundary condition patch face indices for a block boundary.
+    !!
+    !!  /D_domainname/BoundaryConditions/"face"/Faces
+    !!
+    !!  "face" is XI_MIN, XI_MAX, ETA_MIN, etc.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   10/15/2016
+    !!
+    !!  @param[in]  dom_id      HDF identifier for the block to be written to
+    !!  @param[in]  faces       Face indices to be set for the boundary condition patch
+    !!  @param[in]  bcface      Integer specifying which boundary of the block to write to
+    !!
+    !---------------------------------------------------------------------------------------
+    subroutine set_bc_patch_hdf(dom_id,faces,bcface)
+        integer(HID_T), intent(in)  :: dom_id
+        integer(ik),    intent(in)  :: faces(:,:)
+        integer(ik),    intent(in)  :: bcface
+
+        character(len=8)            :: bc_face_strings(6)
+        character(:), allocatable   :: bc_face_string
+        integer                     :: ierr
+        integer(HID_T)              :: bc_id, face_id, face_space_id, face_set_id
+        integer(HSIZE_T)            :: dims(2)
+            
+
+        !
+        ! Create a boundary condition-group within the current block domain
+        !
+        call h5gopen_f(dom_id, "BoundaryConditions", bc_id, ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"set_bc_patch_hdf: h5gcreate_f")
+
+
+        !
+        ! Get boundary condition string
+        !
+        bc_face_strings = ["XI_MIN  ","XI_MAX  ","ETA_MIN ","ETA_MAX ","ZETA_MIN","ZETA_MAX"]
+        bc_face_string  = trim(bc_face_strings(bcface))
+
+
+        !
+        ! Create empty group for boundary condition
+        !
+        call h5gcreate_f(bc_id,bc_face_string,face_id, ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"set_bc_patch_hdf: h5gcreate_f")
+
+
+        !
+        ! Create dataspaces for boundary condition connectivity
+        !
+        dims(1) = size(faces,1)
+        dims(2) = size(faces,2)
+        call h5screate_simple_f(2, dims, face_space_id, ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"set_bc_patch_hdf: h5screate_simple_f")
+
+
+        !
+        ! Create datasets for boundary condition connectivity
+        !
+        call h5dcreate_f(face_id,"Faces", H5T_NATIVE_INTEGER, face_space_id, face_set_id,ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"set_bc_patch_hdf: h5dcreate_f")
+
+
+        !
+        ! Write bc faces
+        !
+        call h5dwrite_f(face_set_id, H5T_NATIVE_INTEGER, faces, dims, ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"set_bc_patch_hdf: h5dwrite_f")
+
+
+        !
+        ! Close groups
+        !
+        call h5dclose_f(face_set_id, ierr)
+        call h5sclose_f(face_space_id, ierr)
+        call h5gclose_f(face_id, ierr) 
+        call h5gclose_f(bc_id, ierr)
+
+
+    end subroutine set_bc_patch_hdf
+    !****************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+
+    !>  Return the bc_patch connectivity information for a boundary condition face group.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   10/17/2016
+    !!
+    !!
+    !!
+    !----------------------------------------------------------------------------------------
+    function get_bc_patch_hdf(bcface_id) result(bc_patch)
+        integer(HID_T), intent(in)  :: bcface_id
+
+        integer(HID_T)      :: faces_did, faces_sid
+        integer(HSIZE_T)    :: dims(2), maxdims(2)
+        integer(ik)         :: nbcfaces, npts_face, ierr
+
+        integer(ik), allocatable, target    :: bc_patch(:,:)
+        type(c_ptr)                         :: bc_patch_p
+        
+
+        ! Open Faces patch data
+        ! TODO: WARNING, should replace with XI_MIN, XI_MAX, etc. somehow. Maybe not...
+        call h5dopen_f(bcface_id, "Faces", faces_did, ierr, H5P_DEFAULT_F)
+
+
+        !  Get the dataspace id and dimensions
+        call h5dget_space_f(faces_did, faces_sid, ierr)
+        call h5sget_simple_extent_dims_f(faces_sid, dims, maxdims, ierr)
+        nbcfaces  = dims(1)
+        npts_face = dims(2)
+
+
+        ! Read boundary condition patch connectivity
+        allocate(bc_patch(nbcfaces,npts_face),stat=ierr)
+        if (ierr /= 0) call AllocationError
+        bc_patch_p = c_loc(bc_patch(1,1))
+        call h5dread_f(faces_did, H5T_NATIVE_INTEGER, bc_patch_p, ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"get_bc_patch_hdf: h5dread_f")
+
+
+        call h5dclose_f(faces_did,ierr)
+        call h5sclose_f(faces_sid,ierr)
+
+    end function get_bc_patch_hdf
+    !***************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+    !>  Add a bc_state group to the ChiDG HDF file.
+    !!
+    !!  A bc_state group is a group of bc_state functions. An example might be a fluid inlet.
+    !!  The fluid inlet group might be composed of the Total Inlet and Spalart-Allmaras Inlet
+    !!  bc_state functions. The Total Inlet bc_state defines the boundary state for
+    !!  the Euler/Navier-Stokes equations. The Spalart-Allmaras Inlet defines the boundary state
+    !!  for the extra PDE defined in the Spalart-Allmaras turbulence model.
+    !!  
+    !!      
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   2/3/2016
+    !!
+    !!  @param[in]  fid             HDF file identifier
+    !!  @param[in]  group_name      Unique name for the new boundary condition state group.
+    !!  @param[in]  group_family    The boundary condition state family
+    !!
+    !----------------------------------------------------------------------------------------
+    subroutine create_bc_state_group_hdf(fid,group_name,group_family)
+        integer(HID_T), intent(in)  :: fid
+        character(*),   intent(in)  :: group_name
+        character(*),   intent(in)  :: group_family
+
+        character(:),   allocatable :: user_msg
+        integer(HID_T)              :: bcgroup_id
+        integer(ik)                 :: ierr
+        logical                     :: group_exists
+
+
+        ! Check if bc_state group exists
+        group_exists = check_link_exists_hdf(fid,"BCSG_"//trim(group_name))
+
+        user_msg = "create_bc_state_group_hdf: Boundary condition state group already exists. &
+                    Cannot have two groups with the same name"
+        if (group_exists) call chidg_signal_one(FATAL,user_msg,trim(group_name))
+
+
+        !
+        ! Create a new group for the bc_state_t
+        !
+        call h5gcreate_f(fid, "BCSG_"//trim(group_name), bcgroup_id, ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"create_bc_state_group_hdf: error creating new group for bc_state")
+
+
+        ! Set 'Name'
+        call h5ltset_attribute_string_f(bcgroup_id, ".", "Name", trim(group_name), ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"create_bc_state_group_hdf: error setting the attribute 'Name'")
+
+        ! Set 'Family'
+        call h5ltset_attribute_string_f(bcgroup_id, ".", "Family", trim(group_family), ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"create_bc_state_group_hdf: error setting the attribute 'Family'")
+
+
+        call h5gclose_f(bcgroup_id,ierr)
+
+    end subroutine create_bc_state_group_hdf
+    !****************************************************************************************
+
+
+
+
+
+
+
+
+    !>  Return the number of boundary condition state groups are in the HDF file.
+    !!
+    !!  Boundary condition state groups: 'BCSG_'
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   11/8/2016
+    !!
+    !!
+    !----------------------------------------------------------------------------------------
+    function get_nbc_state_groups_hdf(fid) result(ngroups)
+        integer(HID_T)  :: fid
+        
+        integer(ik)     :: ngroups
+        type(svector_t) :: bc_state_group_names
+
+
+        bc_state_group_names = get_bc_state_group_names_hdf(fid)
+
+        ngroups = bc_state_group_names%size()
+
+    end function get_nbc_state_groups_hdf
+    !****************************************************************************************
+
+
+
+
+
+    
+    !>  Return a vector of the names for each boundary condition state group.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   11/8/2016
+    !!
+    !!
+    !!
+    !----------------------------------------------------------------------------------------
+    function get_bc_state_group_names_hdf(fid) result(bc_state_group_names)
+        integer(HID_T), intent(in)  :: fid
+
+        integer(ik)     :: nmembers, ierr, igrp, type
+        character(1024) :: gname
+        type(svector_t) :: bc_state_group_names
+
+
+        !  Get number of groups linked to the current bc_face
+        call h5gn_members_f(fid, ".", nmembers, ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"get_bc_state_group_names_hdf: error h5gn_members_f")
+
+        if ( nmembers > 0 ) then
+            do igrp = 0,nmembers-1
+                ! Get group name
+                call h5gget_obj_info_idx_f(fid, ".", igrp, gname, type, ierr)
+                if (ierr /= 0) call chidg_signal(FATAL,"get_bc_state_group_names_hdf: error h5gget_obj_info_idx_f")
+
+                ! Test if group is a boundary condition state. 'BCSG_'
+                if (gname(1:4) == 'BCSG_') then
+                    call bc_state_group_names%push_back(string_t(trim(gname)))
+                end if
+            end do  ! igrp
+        end if
+
+    end function get_bc_state_group_names_hdf
+    !***************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+
+    !>  Add bc_state function to a group of bc_states.
+    !!
+    !!  /BCSG_name/BCS_bc_state
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   10/17/2016
+    !!  @date   11/8/2016   moved from domain to groups
+    !!
+    !----------------------------------------------------------------------------------------
+    subroutine add_bc_state_hdf(bcgroup_id,bc_state)
+        integer(HID_T),     intent(in)  :: bcgroup_id
+        class(bc_state_t),  intent(in)  :: bc_state
+
+        integer(ik)                         :: ierr
+        integer(HID_T)                      :: state_id
+        logical                             :: link_exists, state_found
+
+
+        if ( bc_state%get_name() == 'empty' ) then
+            !
+            ! If 'empty' do not allocate new bc
+            !
+            
+        else
+
+            ! Check to make sure the bc_state wasn't previously added
+            !call h5lexists_f(bcgroup_id, "BCS_"//bc_state%get_name(), link_exists, ierr)
+            link_exists = check_link_exists_hdf(bcgroup_id,"BCS_"//bc_state%get_name())
+
+
+            if (.not. link_exists) then
+
+                ! Check bc_state exists in the register. 
+                ! If not, user probably entered the wrong string, so do nothing
+                state_found = check_bc_state_registered(bc_state%get_name())
+
+                if (state_found) then
+                    ! Create a new group for the bc_state_t
+                    call h5gcreate_f(bcgroup_id, "BCS_"//bc_state%get_name(), state_id, ierr)
+                    if (ierr /= 0) call chidg_signal(FATAL,"add_bc_state_hdf: error creating new group for bc_state")
+
+                    ! Add bc_state properties to the group that was created
+                    call add_bc_properties_hdf(state_id,bc_state)
+
+                    ! Close function group
+                    call h5gclose_f(state_id,ierr)
+                end if
+
+            end if
+
+        end if
+
+
+    end subroutine add_bc_state_hdf
+    !*****************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+!    !>  Add bc_state function for a block boundary condition.
+!    !!
+!    !!  /D_domainname/BoundaryConditions/"face"/BCS_bc_state
+!    !!
+!    !!  "face" is XI_MIN, XI_MAX, ETA_MIN, etc.
+!    !!
+!    !!  @author Nathan A. Wukie
+!    !!  @date   10/17/2016
+!    !!
+!    !!
+!    !----------------------------------------------------------------------------------------
+!    subroutine add_bc_state_hdf(bcface_id,bc_state)
+!        integer(HID_T),     intent(in)  :: bcface_id
+!        class(bc_state_t),  intent(in)  :: bc_state
+!
+!        integer(ik)                         :: ierr
+!        integer(HID_T)                      :: state_id
+!        logical                             :: link_exists, state_found
+!
+!
+!        if ( bc_state%get_name() == 'empty' ) then
+!            !
+!            ! If 'empty' do not allocate new bc
+!            !
+!            
+!        else
+!
+!            ! Check to make sure the bc_state wasn't previously added
+!            call h5lexists_f(bcface_id, "BCS_"//bc_state%get_name(), link_exists, ierr)
+!
+!
+!            if (.not. link_exists) then
+!
+!                ! Check bc_state exists in the register. 
+!                ! If not, user probably entered the wrong string, so do nothing
+!                state_found = check_bc_state_registered(bc_state%get_name())
+!
+!                if (state_found) then
+!                    ! Create a new group for the bc_state_t
+!                    call h5gcreate_f(bcface_id, "BCS_"//bc_state%get_name(), state_id, ierr)
+!                    if (ierr /= 0) call chidg_signal(FATAL,"add_bc_state_hdf: error creating new group for bc_state")
+!
+!                    ! Add bc_state properties to the group that was created
+!                    call add_bc_properties_hdf(state_id,bc_state)
+!
+!                    ! Close function group
+!                    call h5gclose_f(state_id,ierr)
+!                end if
+!
+!            end if
+!
+!        end if
+!
+!
+!    end subroutine add_bc_state_hdf
+!    !*****************************************************************************************
+
+
+
+    
+
+
+
+
+
+
+    !>  Return the number of bc_state's attached to a boundary condition face group.
+    !!
+    !!  @author Nathan A. Wukie 
+    !!  @date   10/17/2016
+    !!
+    !!
+    !----------------------------------------------------------------------------------------
+    function get_nbc_states_hdf(bcgroup_id) result(nbc_states)
+        integer(HID_T), intent(in)  :: bcgroup_id
+
+        type(svector_t) :: bc_states
+        integer(ik)     :: nbc_states
+
+        bc_states = get_bc_state_names_hdf(bcgroup_id)
+        nbc_states = bc_states%size()
+
+    end function get_nbc_states_hdf
+    !****************************************************************************************
+
+
+
+
+
+
+
+    
+
+    !>  Return the names of bc_state's attached to a boundary condition state group.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   10/17/2016
+    !!
+    !!
+    !---------------------------------------------------------------------------------------
+    function get_bc_state_names_hdf(bcgroup_id) result(bc_state_names)
+        integer(HID_T), intent(in)  :: bcgroup_id
+
+        integer(ik)     :: nmembers, ierr, igrp, type
+        character(1024) :: gname
+        type(svector_t) :: bc_state_names
+
+
+        !  Get number of groups linked to the current bc_face
+        call h5gn_members_f(bcgroup_id, ".", nmembers, ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"get_bc_states_names_hdf: error h5gn_members_f")
+
+        if ( nmembers > 0 ) then
+            do igrp = 0,nmembers-1
+                ! Get group name
+                call h5gget_obj_info_idx_f(bcgroup_id, ".", igrp, gname, type, ierr)
+                if (ierr /= 0) call chidg_signal(FATAL,"get_bc_state_names_hdf: error h5gget_obj_info_idx_f")
+
+                ! Test if group is a boundary condition state. 'BCS_'
+                if (gname(1:4) == 'BCS_') then
+                    call bc_state_names%push_back(string_t(trim(gname)))
+                end if
+            end do  ! igrp
+        end if
+
+    end function get_bc_state_names_hdf
+    !****************************************************************************************
+
+
+
+
+
+
+
+    
+
+    !>  Given the name of a bc_state on a face, return an initialized bc_state instance.
+    !!
+    !!  You may consider calling 'get_bc_state_names_hdf' first to get a list of 
+    !!  available bc_state's on a face. Then the names could be passed into this routine
+    !!  to return the bc_state instance.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   10/17/2016
+    !!
+    !!
+    !----------------------------------------------------------------------------------------
+    function get_bc_state_hdf(bcgroup_id,bcstate_name) result(bc_state)
+        integer(HID_T), intent(in)  :: bcgroup_id
+        character(*),   intent(in)  :: bcstate_name
+
+
+        class(bc_state_t),  allocatable :: bc_state 
+        character(:),       allocatable :: bcname, pname, oname
+        character(1024)                 :: fname
+        integer(HID_T)                  :: bcstate_id, bcprop_id
+        integer(ik)                     :: ierr, iprop, nprop, iopt, noptions
+        real(rdouble), dimension(1)     :: buf
+        real(rk)                        :: ovalue
+
+
+        ! Open bc_state group
+        call h5gopen_f(bcgroup_id, trim(bcstate_name), bcstate_id, ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"get_bc_state_hdf: error opening bc_state group.")
+
+        
+        ! Get boundary condition name string
+        if (bcstate_name(1:4) == "BCS_") then
+            bcname = trim(bcstate_name(5:))
+        else
+            bcname = trim(bcstate_name)
+        end if
+
+
+        ! Create boundary condition state and get number of properties
+        call create_bc(bcname,bc_state)
+        nprop = bc_state%get_nproperties()
+
+        
+        ! Loop through properties
+        do iprop = 1,nprop
+
+
+            ! Get property name + open HDF group
+            pname = bc_state%get_property_name(iprop)
+            call h5gopen_f(bcstate_id, "BCP_"//trim(pname), bcprop_id, ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,"get_bc_state_hdf: error opening bcproperty group.")
+
+
+            ! Read the function name set for the property.
+            call h5ltget_attribute_string_f(bcprop_id, ".", "Function", fname, ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,"get_bc_state_hdf: error getting function name.")
+
+            
+            ! Set/Create the function for the current property
+            call bc_state%set_fcn(trim(pname), trim(fname))
+
+            
+            ! Get number of options for the function
+            noptions = bc_state%get_noptions(iprop)
+
+
+
+            ! Get each option value
+            do iopt = 1,noptions
+                ! Get option name
+                oname = bc_state%get_option_key(iprop,iopt)
+
+                ! Get option value from file
+                call h5ltget_attribute_double_f(bcprop_id, ".", trim(oname), buf, ierr)
+                if (ierr /= 0) call chidg_signal(FATAL,"get_bc_state_hdf: error getting option value")
+                ovalue = real(buf(1),rk)
+
+                ! Set boundary condition option
+                call bc_state%set_fcn_option(trim(pname), trim(oname), ovalue)
+            end do ! iopt
+
+
+
+            ! Close current property group
+            call h5gclose_f(bcprop_id,ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,"get_bc_state_hdf: h5gclose")
+
+
+
+        end do !iprop
+
+
+
+        ! Close boundary condition state group
+        call h5gclose_f(bcstate_id, ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"get_bc_state_hdf: h5gclose")
+
+
+    end function get_bc_state_hdf
+    !*****************************************************************************************
+
+
+
+
+
+
+
+
+
+
+    !>  Add properties to a bc_state on a boundary for a particular domain.
+    !!
+    !!  /D_domainname/BoundaryConditions/"face"/BCS_bc_state/BCP_bc_property
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   10/17/2016
+    !!
+    !!
+    !!  @param[in]      bcstate_id      HDF identifier of the bc_state group in the file to 
+    !!                                  be modified.
+    !!  @param[inout]   bc_state        bc_state class that can be queried for properties to 
+    !!                                  be set.
+    !!
+    !-----------------------------------------------------------------------------------------
+    subroutine add_bc_properties_hdf(bcstate_id, bc_state)
+        integer(HID_T),     intent(in)  :: bcstate_id
+        class(bc_state_t),  intent(in)  :: bc_state
+
+        integer(HID_T)                  :: prop_id
+        integer(HSIZE_T)                :: adim
+        integer(ik)                     :: iprop, nprop, iopt, nopt, ierr
+        character(len=1024)             :: pstring
+        character(len=:),   allocatable :: option_key, fcn_name
+        real(rk)                        :: option_value
+
+
+        !
+        ! Get number of functions in the boundary condition
+        !
+        nprop = bc_state%get_nproperties()
+
+
+        !
+        ! Loop through and add properties
+        !
+        do iprop = 1,nprop
+
+            ! Get string the property is associated with
+            pstring = bc_state%get_property_name(iprop)
+
+            ! Create a new group for the property
+            call h5gcreate_f(bcstate_id, "BCP_"//trim(adjustl(pstring)), prop_id, ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,"add_bcproperties_hdf: error creating new group for bcfunction")
+
+            ! Print property function attribute
+            call set_bc_property_function_hdf(prop_id, bc_state%bcproperties%bcprop(iprop)%fcn)
+
+
+            !
+            ! Get number of options available for the current property
+            !
+            nopt = bc_state%get_noptions(iprop)
+
+            if (nopt > 0 ) then
+                do iopt = 1,nopt
+
+                    ! Get the current option and default value.
+                    option_key   = bc_state%get_option_key(iprop,iopt)
+                    option_value = bc_state%get_option_value(iprop,option_key)
+
+                    ! Set the option as a real attribute
+                    adim = 1
+                    call h5ltset_attribute_double_f(prop_id, ".", option_key, [real(option_value,rdouble)], adim, ierr)
+
+                end do
+            end if
+
+
+            ! Close function group
+            call h5gclose_f(prop_id,ierr)
+
+        end do !ifcn
+
+
+    end subroutine add_bc_properties_hdf
+    !******************************************************************************************
+
+
+
+
+
+
+
+
+
+    !>  Set a function for a bc_state property.
+    !!
+    !!  /D_domainname/BoundaryConditions/"face"/BCS_bcstatename/BCP_bcpropertyname/
+    !!
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   2/5/2016
+    !!
+    !--------------------------------------------------------------------------------------------
+    subroutine set_bc_property_function_hdf(bcprop_id, fcn)
+        integer(HID_T),     intent(in)  :: bcprop_id
+        class(function_t),  intent(in)  :: fcn
+
+        integer(HSIZE_T)                :: adim
+        character(len=:),   allocatable :: option
+        real(rk)                        :: val
+        integer(ik)                     :: nopt, iopt
+        integer                         :: ierr
+        
+
+        !
+        ! Delete bcproperty attributes
+        !
+        call delete_group_attributes_hdf(bcprop_id)
+
+
+        !
+        ! Set 'Function' attribute
+        !
+        call h5ltset_attribute_string_f(bcprop_id, ".", "Function", trim(fcn%get_name()), ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"set_bc_property_function_hdf: error setting function name")
+
+
+        !
+        ! Set function options
+        !
+        nopt = fcn%get_noptions()
+
+        do iopt = 1,nopt
+
+            option = fcn%get_option_key(iopt)
+            val    = fcn%get_option_value(option)
+            !
+            ! Set option
+            !
+            adim = 1
+            call h5ltset_attribute_double_f(bcprop_id, ".", trim(option), [real(val,rdouble)], adim, ierr)
+
+        end do ! iopt
+
+
+    end subroutine set_bc_property_function_hdf
+    !***********************************************************************************************
+
+
+
+
+
+
+
+    !>  Remove a bc_state group from the HDF file.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   11/8/2016
+    !!
+    !!
+    !-----------------------------------------------------------------------------------------------
+    subroutine remove_bc_state_group_hdf(fid,group_name)
+        integer(HID_T), intent(in)  :: fid
+        character(*),   intent(in)  :: group_name
+
+        integer(HID_T)  :: bcgroup_id
+        integer(ik)     :: istate, ierr
+        logical         :: group_exists
+        type(svector_t) :: bc_state_names
+        type(string_t)  :: state_name
+
+
+        group_exists = check_link_exists_hdf(fid,"BCSG_"//trim(group_name))
+
+        if (group_exists) then
+
+            ! Open boundary condition state group
+            call h5gopen_f(fid,"BCSG_"//trim(group_name),bcgroup_id,ierr)
+
+            ! Get the names of all bc_states in the group
+            bc_state_names = get_bc_state_names_hdf(bcgroup_id)
+
+            ! Call remove for each one
+            do istate = 1,bc_state_names%size()
+                state_name = bc_state_names%at(istate)
+                call remove_bc_state_hdf(bcgroup_id,state_name%get())
+            end do
+
+        end if
+
+    end subroutine remove_bc_state_group_hdf
+    !***********************************************************************************************
+
+
+
+
+
+
+
+
+
+
+    !>  Remove a bc_state from the HDF file.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   2/4/2016
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   9/1/2016
+    !!  @note   Modified to include bc_states
+    !!
+    !----------------------------------------------------------------------------------------------------
+    subroutine remove_bc_state_hdf(bcgroup_id,state_string)
+        integer(HID_T),     intent(in)  :: bcgroup_id
+        character(len=*),   intent(in)  :: state_string
+
+        integer(HID_T)                          :: bc_state
+
+        integer(HSIZE_T)                        :: iattr, idx
+        integer(ik)                             :: nattr
+        integer                                 :: nmembers, igrp, type, ierr, iter, iprop, nprop
+        character(len=10)                       :: faces(NFACES)
+        character(len=1024),    allocatable     :: anames(:), pnames(:)
+        character(len=1024)                     :: gname
+        type(h5o_info_t), target                :: h5_info
+
+
+
+        ! Open the bc_state group
+        call h5gopen_f(bcgroup_id, "BCS_"//trim(state_string), bc_state, ierr)
+
+
+        ! Delete overall boundary condition face attributes
+        call delete_group_attributes_hdf(bc_state)
+
+
+        !  Get number of groups linked to the current bc_state
+        call h5gn_members_f(bc_state, ".", nmembers, ierr)
+
+
+        !
+        !  Loop through groups and delete properties
+        !
+        if ( nmembers > 0 ) then
+
+            !
+            ! First get number of states. This could be different than number of groups.
+            !
+            nprop = 0
+            do igrp = 0,nmembers-1
+
+                ! Get group name
+                call h5gget_obj_info_idx_f(bc_state, ".", igrp, gname, type, ierr)
+
+                ! Test if group is a boundary condition function. 'BCP_'
+                if (gname(1:4) == 'BCP_') then
+                    ! increment nprop
+                    nprop = nprop + 1
+                end if
+
+            end do  ! igrp
+
+
+            !
+            ! Second, get all state names
+            !
+            allocate(pnames(nprop), stat=ierr)
+            if (ierr /= 0) call AllocationError
+            iprop = 1
+            do igrp = 0,nmembers-1
+
+                ! Get group name
+                call h5gget_obj_info_idx_f(bc_state, ".", igrp, gname, type, ierr)
+
+                ! Test if group is a boundary condition function. 'BCP_'
+                if (gname(1:4) == 'BCP_') then
+                    ! Store name
+                    pnames(iprop) = gname
+                    iprop = iprop + 1
+                end if
+
+            end do ! igrp
+
+
+
+            !
+            ! Now, go about deleting them all.
+            ! Previously, we were deleting them one at a time, but then the index
+            ! traversal call get_obj_info_idx was failing for more than one property
+            ! because the index was screwed up.
+            !
+            do iprop = 1,nprop
+                call remove_bc_property_hdf(bc_state,pnames(iprop))
+            end do
+
+
+        end if ! nmembers
+
+
+        !
+        ! Close the bc_state group
+        !
+        call h5gclose_f(bc_state,ierr)
+
+        !
+        ! Unlink the bc_state group
+        !
+        call h5gunlink_f(bcgroup_id,"BCS_"//trim(state_string),ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"delete_bc_state_hdf: error unlinking bc_state group")
+
+
+    end subroutine remove_bc_state_hdf
+    !****************************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+    !>  Remove the properties from a bc_state group in the HDF file
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   2/4/2016
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   9/1/2016
+    !!  @note   Modified to include bc_states
+    !!
+    !!
+    !------------------------------------------------------------------------------------------------------
+    subroutine remove_bc_property_hdf(bc_state,pname)
+        integer(HID_T),     intent(in)      :: bc_state
+        character(*),       intent(in)      :: pname
+
+        integer(HID_T)  :: bcprop
+        integer(ik)     :: ierr
+
+        !
+        ! Open bcproperty group
+        !
+        call h5gopen_f(bc_state, trim(adjustl(pname)), bcprop, ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"delete_bc_property_hdf: error opening bcproperty group")
+
+
+        !
+        ! Delete bcproperty attributes
+        !
+        call delete_group_attributes_hdf(bcprop)
+
+
+        !
+        ! Close bcproperty group
+        !
+        call h5gclose_f(bcprop, ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"delete_bc_property_hdf: error closing bcproperty group")
+
+
+        !
+        ! Now that the data in bcproperty has been removed, unlink the bcproperty group.
+        !
+        call h5gunlink_f(bc_state,trim(pname),ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"delete_bcfunction_hdf: error unlinking bcproperty group")
+
+
+    end subroutine remove_bc_property_hdf
+    !******************************************************************************************************
+
+
+
+
+
+
+
+
 
 
 

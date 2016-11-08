@@ -152,27 +152,21 @@ message(STATUS "    " ${LAPACK_LIBRARIES})
 #----------------------------------------------------------------------------------------------
 #                                          Find MPI
 #
-#   NOTE: It is important to get MPI libraries + modules that were built with a similar 
+#   NOTE: It is important to get MPI libraries + modules were built with a similar compiler
 #         
+#   
+#   If MPI is not detected by default, or a specific implementation needs forced, set
+#   the environment variable: MPI_Fortran_COMPILER
 #
+#       ex.(bash): export MPI_Fortran_COMPILER=/usr/local/bin/mpifort
 #
 #----------------------------------------------------------------------------------------------
 
-# add -DUSER_MPI=True to config to read environment variables
-#if (USER_MPI)
-#    message(STATUS "Reading environment variables for\n" 
-#                   "    MPI_Fortran_COMPILER \n"
-#                   "Please be sure this is set as an environment variable")
-#    set(MPI_Fortran_COMPILER $ENV{MPI_Fortran_COMPILER})
-#    #set(MPI_Fortran_MODULE_PATH $ENV{MPI_Fortran_MODULE_PATH})
-#    #set(MPI_Fortran_INCLUDE_PATH $ENV{MPI_Fortran_INCLUDE_PATH})
-#endif()
 set(MPI_Fortran_COMPILER $ENV{MPI_Fortran_COMPILER})
 
 
 
 find_package(MPI REQUIRED COMPONENTS Fortran)
-include_directories(${MPI_Fortran_MODULE_PATH})
 include_directories(${MPI_Fortran_INCLUDE_PATH})
 
 
@@ -182,7 +176,6 @@ if (MPI_Fortran_FOUND)
     foreach (L ${MPI_Fortran_LIBRARIES})
         message(STATUS "    " ${L})
     endforeach()
-    message(STATUS "MPI Module Path: " ${MPI_Fortran_MODULE_PATH})
     message(STATUS "MPI Include Path: " ${MPI_Fortran_INCLUDE_PATH})
 endif()
 

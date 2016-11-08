@@ -111,7 +111,7 @@ program driver
 !            call fcn%set_option('b_y',1.5_rk)
 !            call fcn%set_option('b_z',1.5_rk)
 !            call fcn%set_option('c',1.0_rk)
-!            call initialize_variable(chidg%data,1,fcn)
+!            call chidg%data%sdata%q%project(chidg%data%mesh,fcn,1)
 
 
 !            call polynomial%set_option('f',3.5_rk)

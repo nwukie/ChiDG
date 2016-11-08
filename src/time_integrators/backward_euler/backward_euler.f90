@@ -1,15 +1,16 @@
 module backward_euler
     use mod_kinds,              only: rk,ik
-    use mod_constants,          only: ZERO, ONE, TWO, DIAG
-    use atype_time_scheme,      only: time_scheme_t
-    use type_domain,            only: domain_t
-    use atype_matrixsolver,     only: matrixsolver_t
+    use mod_constants,          only: ZERO, ONE, TWO, DIAG, XI_MIN, XI_MAX
+    use type_time_integrator,   only: time_integrator_t
+    use type_chidg_data,        only: chidg_data_t
+    use type_nonlinear_solver,  only: nonlinear_solver_t
+    use type_linear_solver,     only: linear_solver_t
     use type_preconditioner,    only: preconditioner_t
-    use type_blockvector
+    use type_chidgVector
 
     use mod_spatial,            only: update_space
 
-    use mod_tecio,              only: write_tecio_variables
+    use mod_tecio,              only: write_tecio_variables_unstructured
     implicit none
     private
 
@@ -20,14 +21,13 @@ module backward_euler
     !!  @author Nathan A. Wukie
     !!
     !------------------------------------------------------------
-    type, extends(time_scheme_t), public :: backward_euler_t
-
-
+    type, extends(time_integrator_t), public :: backward_euler_t
 
     contains
-        procedure   :: solve
+    
+        procedure   :: iterate
+        final       :: destructor
 
-        final :: destructor
     end type backward_euler_t
     !-----------------------------------------------------------
 
@@ -52,64 +52,108 @@ contains
     !!
     !!
     !!
-    !-------------------------------------------------------------------------------------------------
-    subroutine solve(self,domain,matrixsolver,preconditioner)
+    !-----------------------------------------------------------------------------------------
+    subroutine iterate(self,data,nonlinear_solver,linear_solver,preconditioner)
         class(backward_euler_t),                intent(inout)   :: self
-        type(domain_t),                         intent(inout)   :: domain
-        class(matrixsolver_t),      optional,   intent(inout)   :: matrixsolver
+        type(chidg_data_t),                     intent(inout)   :: data
+        class(nonlinear_solver_t),  optional,   intent(inout)   :: nonlinear_solver
+        class(linear_solver_t),     optional,   intent(inout)   :: linear_solver 
         class(preconditioner_t),    optional,   intent(inout)   :: preconditioner
 
         character(100)          :: filename
-        integer(ik)             :: itime, nsteps, ielem, wcount, iblk, iindex, ninner, iinner, ieqn
+        integer(ik)             :: itime, nsteps, ielem, wcount, iblk, iindex, ninner, iinner, ieqn, idom
         integer(ik)             :: rstart, rend, cstart, cend, nterms
         real(rk)                :: resid, rnorm_0, rnorm_n
         real                    :: tstart, tstop, telapsed
         real(rk), allocatable   :: vals(:)
-        type(blockvector_t)     :: b, qn, qold, qnew, dtau
+        type(chidgVector_t)     :: b, qn, qold, qnew, dtau
       
-
-
 
 
         tstart = 0.
         tstop = 0.
         telapsed = 0.
 
+        print*, 'hi - 1'
+
         wcount = 1
         ninner = 10
-        associate ( q => domain%sdata%q, dq => domain%sdata%dq, rhs => domain%sdata%rhs, lin => domain%sdata%lin, dt => self%dt)
+        associate ( q => data%sdata%q, dq => data%sdata%dq, rhs => data%sdata%rhs, lhs => data%sdata%lhs, dt => self%dt)
 
-            print*, 'entering time'
+        !
+        ! TIME STEP LOOP
+        !
+        print*, 'hi - 2'
+        do itime = 1,self%nsteps
+            print*, "Step: ", itime
+
+        print*, 'hi - 3'
+            if (itime == 1) then
+                write(filename, "(I7,A4)") 1000000, '.plt'
+                call write_tecio_variables_unstructured(data,trim(filename),1)
+            end if
+
+        print*, 'hi - 4'
+            !
+            ! Store the value of the current inner iteration solution (k) for the solution update (n+1), q_(n+1)_k
+            !
+            qold = q
+
+
+        print*, 'hi - 5'
+            !
+            ! Write lhs and rhs to file
+            !
+            open(unit=16, file="Q0.txt")
+
+        print*, 'hi - 6'
+            write(16,*) "double Q0(100) = { "
+            do idom = 1,data%ndomains()
+                do ielem = 1,data%mesh(idom)%nelem
+                    write(16,*) q%dom(idom)%vecs(ielem)%vec(1)
+                end do
+            end do
+
+            write(16,*) " } "
+            close(16)
+
+
+
+
+        print*, 'hi - 7'
+
+
+
+
+
+
+
 
             !
-            ! TIME STEP LOOP
+            ! Update Spatial Residual and Linearization (rhs, lin)
             !
-            do itime = 1,self%nsteps
-                print*, "Step: ", itime
+            call update_space(data)
 
 
-                ! Store qn, since q will be operated on in the inner loop
-                qn = q
+        print*, 'hi - 8'
+
+            !
+            ! Compute residual of nonlinear iteration
+            !
+            resid = rhs%norm()
+
+            print*, "||R||: ", resid
 
 
-                !
-                ! NONLINEAR CONVERGENCE INNER LOOP
-                !
-                call cpu_time(tstart)
+        print*, 'hi - 9'
 
-
-                ! Store the value of the current inner iteration solution (k) for the solution update (n+1), q_(n+1)_k
-                qold = q
-
-
-                ! Update Spatial Residual and Linearization (rhs, lin)
-                call update_space(domain)
-
-
-                ! Add mass/dt to sub-block diagonal in dR/dQ
-                do ielem = 1,domain%mesh%nelem
-                    nterms = domain%mesh%nterms_s
-                    do ieqn = 1,domain%eqnset%neqns
+            !
+            ! Add mass/dt to sub-block diagonal in dR/dQ
+            !
+            do idom = 1,data%ndomains()
+                do ielem = 1,data%mesh(idom)%nelem
+                    nterms = data%mesh(idom)%nterms_s
+                    do ieqn = 1,data%eqnset(idom)%prop%nequations()
                         iblk = DIAG
                         ! Need to compute row and column extends in diagonal so we can
                         ! selectively apply the mass matrix to the sub-block diagonal
@@ -118,69 +162,152 @@ contains
                         cstart = rstart                 ! since it is square
                         cend   = rend                   ! since it is square
                    
-                        if (allocated(lin%lblks(ielem,iblk)%mat)) then
+                        if (allocated(lhs%dom(idom)%lblks(ielem,iblk)%mat)) then
                             ! Add mass matrix divided by dt to the block diagonal
-                            lin%lblks(ielem,iblk)%mat(rstart:rend,cstart:cend)  =  lin%lblks(ielem,iblk)%mat(rstart:rend,cstart:cend)  +  domain%mesh%elems(ielem)%mass/self%dt
+                            lhs%dom(idom)%lblks(ielem,iblk)%mat(rstart:rend,cstart:cend)  =  lhs%dom(idom)%lblks(ielem,iblk)%mat(rstart:rend,cstart:cend)  +   data%mesh(idom)%elems(ielem)%mass/self%dt
                         end if
 
                     end do
                 end do
+            end do
+
+        print*, 'hi - 10'
+            !
+            ! Assign rhs to b, which should allocate storage
+            !
+            b = (-ONE)*rhs
+
+            !
+            ! Write lhs and rhs to file
+            !
+            open(unit=11, file="LHS_diagonal.txt")
+            open(unit=12, file="LHS_lower.txt")
+            open(unit=13, file="LHS_upper.txt")
+            open(unit=14, file="RHS.txt")
+
+            write(11,*) "double LHS_diagonal(100) = { "
+            write(12,*) "double LHS_lower(99) = { "
+            write(13,*) "double LHS_upper(99) = { "
+            write(14,*) "double RHS(100) = { "
+            do idom = 1,data%ndomains()
+                do ielem = 1,data%mesh(idom)%nelem
+                   
+                    if (allocated(lhs%dom(idom)%lblks(ielem,DIAG)%mat)) then
+                        write(11,*) lhs%dom(idom)%lblks(ielem,DIAG)%mat(1,1)
+                    end if
+
+                    if (allocated(lhs%dom(idom)%lblks(ielem,XI_MIN)%mat)) then
+                        write(12,*) lhs%dom(idom)%lblks(ielem,XI_MIN)%mat(1,1)
+                    end if
+
+                    if (allocated(lhs%dom(idom)%lblks(ielem,XI_MAX)%mat)) then
+                        write(13,*) lhs%dom(idom)%lblks(ielem,XI_MAX)%mat(1,1)
+                    end if
+
+                    write(14,*) b%dom(idom)%vecs(ielem)%vec(1)
+
+                end do
+            end do
+
+            write(11,*) " } "
+            write(12,*) " } "
+            write(13,*) " } "
+            write(14,*) " } "
+            close(11)
+            close(12)
+            close(13)
+            close(14)
+
+
+
+        print*, 'hi - 11'
+
+
+
+            !
+            ! Solve the matrix system Ax=b for the update vector x (dq)
+            !
+            call linear_solver%solve(lhs,dq,b,preconditioner)
 
 
 
 
-                ! Assign rhs to b, which should allocate storage
-                !b = (rhs)  ! BEWARE: this causes an error. Parentheses operator not defined
-                b = (-ONE)*rhs
+
+            !
+            ! Write lhs and rhs to file
+            !
+            open(unit=15, file="DQ.txt")
+
+            write(15,*) "double DQ(100) = { "
+            do idom = 1,data%ndomains()
+                do ielem = 1,data%mesh(idom)%nelem
+                   
+                    write(15,*) dq%dom(idom)%vecs(ielem)%vec(1)
+
+                end do
+            end do
+
+            write(15,*) " } "
+            close(15)
+
+
+
+        print*, 'hi - 12'
 
 
 
 
 
 
-                ! We need to solve the matrix system Ax=b for the update vector x (dq)
-                call matrixsolver%solve(lin,dq,b,preconditioner)
 
 
 
 
-                ! Advance solution with update vector
-                qnew = qold + dq
+
+            !
+            ! Advance solution with update vector
+            !
+            qnew = qold + dq
 
 
-                ! Compute residual of nonlinear iteration
-                resid = dq%norm()
+            !
+            ! Compute residual of nonlinear iteration
+            !
+            resid = dq%norm()
+
+        print*, 'hi - 13'
+
+            ! Clear working storage
+            call rhs%clear()
+            call dq%clear()
+            call lhs%clear()
+
+            
 
 
-                ! Clear working storage
-                call rhs%clear()
-                call dq%clear()
-                call lin%clear()
-
-                
+            ! Store updated solution vector (qnew) to working solution vector (q)
+            q = qnew
 
 
-                ! Store updated solution vector (qnew) to working solution vector (q)
-                q = qnew
-
-
-                call cpu_time(tstop)
-                telapsed = tstop - tstart
-                print*, "   Iteration time (s): ", telapsed
-                print*, "   DQ - Norm: ", resid
+        print*, 'hi - 14'
+            call cpu_time(tstop)
+            telapsed = tstop - tstart
+            print*, "   Iteration time (s): ", telapsed
+            print*, "   DQ - Norm: ", resid
 
 
 
+        print*, 'hi - 15'
 
-                if (wcount == self%nwrite) then
-                    write(filename, "(I7,A4)") 1000000+itime, '.plt'
-                    call write_tecio_variables(domain,trim(filename),itime+1)
-                    wcount = 0
-                end if
-                wcount = wcount + 1
+            if (wcount == self%nwrite) then
+                write(filename, "(I7,A4)") 1000000+itime, '.plt'
+                call write_tecio_variables_unstructured(data,trim(filename),itime+1)
+                wcount = 0
+            end if
+            wcount = wcount + 1
 
 
-            end do  ! itime
+        end do  ! itime
 
         end associate
 
@@ -188,7 +315,8 @@ contains
 
 
 
-    end subroutine solve
+    end subroutine iterate
+    !*****************************************************************************************
 
 
 

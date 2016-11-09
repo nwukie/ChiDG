@@ -279,16 +279,6 @@ contains
     !!  for bc_wall, bc_inlet, bc_outlet, bc_symmetry
     !!
     !----------------------------------------------------------------------------------------------------------
-!    subroutine add_bc(self,domain,bc_states,bc_connectivity,bc_wall,bc_inlet,bc_outlet,bc_symmetry,bc_farfield)
-!        class(chidg_data_t),            intent(inout)           :: self
-!        character(*),                   intent(in)              :: domain
-!        type(bcvector_t),               intent(inout)           :: bc_states
-!        type(boundary_connectivity_t),  intent(in)              :: bc_connectivity
-!        class(bc_state_t),              intent(in), optional    :: bc_wall
-!        class(bc_state_t),              intent(in), optional    :: bc_inlet
-!        class(bc_state_t),              intent(in), optional    :: bc_outlet
-!        class(bc_state_t),              intent(in), optional    :: bc_symmetry
-!        class(bc_state_t),              intent(in), optional    :: bc_farfield
     subroutine add_bc(self,domain,bc_connectivity,bc_group,bc_groups,bc_wall,bc_inlet,bc_outlet,bc_symmetry,bc_farfield)
         class(chidg_data_t),            intent(inout)           :: self
         character(*),                   intent(in)              :: domain
@@ -332,7 +322,9 @@ contains
 
             if (group_found .and. (.not. group_set)) then
 
-                ! Add all bc_states
+                !
+                ! Add all bc_states in the group to the boundary condition
+                !
                 do istate = 1,bc_groups(igroup)%bc_states%size()
 
                     ! Get boundary condition state

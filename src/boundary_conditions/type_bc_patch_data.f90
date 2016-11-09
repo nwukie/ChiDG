@@ -27,9 +27,6 @@ module type_bc_patch_data
         type(boundary_connectivity_t),  allocatable :: bc_connectivity(:)   !< Face connectivities for faces defining the patch.
         type(svector_t)                             :: bc_group             !< Boundary State Group the patch is associated with.
 
-!        ! Boundary condition state groups
-!        type(bcvector_t),               allocatable :: bcs(:)               !< Vector of boundary condition operators for each face.
-
     end type bc_patch_data_t
     !******************************************************************************
 

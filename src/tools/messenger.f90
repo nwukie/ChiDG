@@ -160,49 +160,49 @@ contains
         !
         ! Print message header
         !
-        call write_line(blankstr)
+        call write_line(blankstr, width=msg_length)
         call write_line(trim(dashstr))
         select case (sig)
             case (0)    ! Normal message  -- Code continues
-                call write_line(trim(user_msg), color='aqua', ltrim=.false., bold=.true.)
+                call write_line(trim(user_msg), color='aqua', ltrim=.false., bold=.true., width=msg_length)
             case (1)    ! Warning message -- Code continues
-                call write_line(trim(warnstr),  color='aqua', ltrim=.false., bold=.true.)
+                call write_line(trim(warnstr),  color='aqua', ltrim=.false., bold=.true., width=msg_length)
             case (2)    ! Non-Fatal Error -- Code continues
-                call write_line(trim(errstr),   color='aqua', ltrim=.false., bold=.true.)
+                call write_line(trim(errstr),   color='aqua', ltrim=.false., bold=.true., width=msg_length)
             case (3)    ! Fatal Error     -- Code terminates
-                call write_line(trim(killstr),  color='aqua', ltrim=.false., bold=.true.)
+                call write_line(trim(killstr),  color='aqua', ltrim=.false., bold=.true., width=msg_length)
             case (4)    ! Oops Error      -- Code terminates
-                call write_line(trim(oopsstr),  color='aqua', ltrim=.false., bold=.true.)
+                call write_line(trim(oopsstr),  color='aqua', ltrim=.false., bold=.true., width=msg_length)
             case default
                 print*, "Messenger:message -- message code not recognized"
                 stop
         end select
-        call write_line(trim(dashstr))
+        call write_line(trim(dashstr), width=msg_length)
 
 
         ! 
         ! Print USER message
         !
-        call write_line(trim(blankstr))
-        call write_line('For users:',   color='blue', bold=.true.)
-        call write_line(trim(user_msg), color='blue')
-        call write_line(trim(blankstr))
+        call write_line(trim(blankstr), width=msg_length)
+        call write_line('For users:',   color='blue', bold=.true., width=msg_length)
+        call write_line(trim(user_msg), color='blue', width=msg_length)
+        call write_line(trim(blankstr), width=msg_length)
 
         !
         ! Print DEVELOPER message
         !
         if (present(dev_msg)) then
-            call write_line('For developers:', color='red', bold=.true.)
-            call write_line(trim(dev_msg),     color='red')
-            call write_line(trim(blankstr))
+            call write_line('For developers:', color='red', bold=.true., width=msg_length)
+            call write_line(trim(dev_msg),     color='red', width=msg_length)
+            call write_line(trim(blankstr), width=msg_length)
         end if
 
         !
         ! Print File/Line information
         !
-        call write_line('Information about the message:', bold=.true.)
-        call write_line(trim(genstr))
-        call write_line(blankstr)
+        call write_line('Information about the message:', bold=.true., width=msg_length)
+        call write_line(trim(genstr), width=msg_length)
+        call write_line(blankstr, width=msg_length)
 
 
 
@@ -223,23 +223,23 @@ contains
             ! auxdata pointer is used to point to current auxiliary data variable and then go through the available IO types
             !
             if ( associated(auxdata) ) then
-                call write_line('Information about the message:', bold=.true.)
+                call write_line('Information about the message:', bold=.true., width=msg_length)
 
                 select type(auxdata)
                     type is(integer)
-                        call write_line(auxdata)
+                        call write_line(auxdata, width=msg_length)
 
                     type is(integer(8))
-                        call write_line(auxdata)
+                        call write_line(auxdata, width=msg_length)
 
                     type is(real)
-                        call write_line(auxdata)
+                        call write_line(auxdata, width=msg_length)
 
                     type is(real(8))
-                        call write_line(auxdata)
+                        call write_line(auxdata, width=msg_length)
 
                     type is(character(*))
-                        call write_line(auxdata)
+                        call write_line(auxdata, width=msg_length)
 
                     class default
                         print*, '', "Data type not implemented for I/O in messege.f90"
@@ -262,8 +262,8 @@ contains
         !
         ! Print message footer
         !
-        call write_line(blankstr)
-        call write_line(dashstr)
+        call write_line(blankstr, width=msg_length)
+        call write_line(dashstr, width=msg_length)
 
 
 
@@ -308,7 +308,7 @@ contains
     !!  Some Options:
     !!      columns = .true. / .false.
     !!      ltrim   = .true. / .false.
-    !!      bolc    = .true. / .false.
+    !!      bold    = .true. / .false.
     !!      color   = 'black', 'red', 'green', 'yellow', 'blue', 'purple', 'aqua', 'pink', 'none'
     !!
     !!  @author Nathan A. Wukie
@@ -324,7 +324,7 @@ contains
     !!  @param[in]  io_proc         Integer specifying MPI Rank responsible for outputing a message
     !!
     !----------------------------------------------------------------------------------------------------------
-    subroutine write_line(a,b,c,d,e,f,g,h,delimiter,columns,column_width,color,ltrim,bold,io_proc)
+    subroutine write_line(a,b,c,d,e,f,g,h,delimiter,columns,column_width,width,color,ltrim,bold,io_proc)
         class(*),           intent(in), target, optional        :: a
         class(*),           intent(in), target, optional        :: b
         class(*),           intent(in), target, optional        :: c
@@ -333,9 +333,10 @@ contains
         class(*),           intent(in), target, optional        :: f
         class(*),           intent(in), target, optional        :: g
         class(*),           intent(in), target, optional        :: h
-        character(len=*),   intent(in),         optional        :: delimiter
+        character(*),       intent(in),         optional        :: delimiter
         logical,            intent(in),         optional        :: columns
         integer(ik),        intent(in),         optional        :: column_width
+        integer(ik),        intent(in),         optional        :: width
         character(*),       intent(in),         optional        :: color
         logical,            intent(in),         optional        :: ltrim
         logical,            intent(in),         optional        :: bold
@@ -365,6 +366,11 @@ contains
         end if
 
 
+
+        !
+        ! Set width
+        !
+        if (present(width)) msg_length = width
 
 
 
@@ -425,6 +431,10 @@ contains
 
         end if ! proc_write
 
+        !
+        ! ReSet width
+        !
+        if (present(width)) msg_length = max_msg_length
 
     end subroutine write_line
     !************************************************************************************************************

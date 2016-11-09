@@ -138,7 +138,7 @@ contains
             !
             call write_line(' ')
             call write_line("Select command: ")
-            call write_line("1:domain info","2:boundary conditions","3:time scheme","4:matrix solver","0:exit", columns=.True., column_width=25, color='blue')
+            call write_line("1:domain info","2:boundary conditions","3:time scheme","4:matrix solver","0:exit", columns=.True., column_width=20, color='blue')
 
             ierr = 1
             do while ( ierr /= 0 )

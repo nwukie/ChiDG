@@ -68,11 +68,13 @@ contains
     subroutine chidg_edit_boundaryconditions(fid)
         integer(HID_T),     intent(in)  :: fid
 
-        integer(ik)                     :: ierr, idom_hdf, ndom, selection
-        logical                         :: run_bc_edit, run
-        character(len=:),   allocatable :: command
+        integer(ik)                     :: ierr, idom_hdf, ndom
+        logical                         :: run_bc_edit, print_help
+        character(len=:),   allocatable :: command, help_message
+        character(1024)                 :: selection
 
         run_bc_edit = .true.
+        print_help  = .false.
         do while ( run_bc_edit )
 
             ! Refresh display
@@ -81,17 +83,40 @@ contains
             call print_bc_overview(fid)
 
 
+            !
             ! Print command options, accept user input.
-            command = "1: Edit Boundary State Groups, 2: Edit Boundary Patches, 0: Exit"
+            !
+            command = "1: Edit Boundary State Groups, 2: Edit Boundary Patches, (0: Exit, ?: Help)"
             call write_line(' ')
             call write_line(command,color='blue')
-            read(*,'(I8)', iostat=ierr) selection
 
-            select case(selection)
-                case(1)
+
+
+            if (print_help) then
+                call write_line(" ")
+                call write_line(" ")
+                call write_line("Select topic to edit: Boundary State Groups or Boundary Patches.", color='red', width=100)
+                call write_line(" ")
+                call print_boundary_state_group_help()
+                call write_line(" ")
+                call print_boundary_patch_help()
+                print_help = .false.
+            end if
+
+
+            read(*,'(A1024)', iostat=ierr) selection
+
+
+            !
+            ! Direct user-selection
+            !
+            select case(trim(selection))
+                case('1')
                     call chidg_edit_boundarycondition_states(fid)
-                case(2)
+                case('2')
                     call chidg_edit_boundarycondition_domains(fid)
+                case('?')
+                    print_help = .true.
                 case default
                     run_bc_edit = .false.
             end select 
@@ -244,7 +269,6 @@ contains
                 call execute_command_line("clear")
                 call print_overview(fid)
                 call print_bc_overview(fid,active_topic='States',active_group=trim(group_name))
-                !call print_bc_state_properties(bcgroup_id)
 
                 command = "1: Add state function, 2: Remove state function, 3: Edit Property, (0 to exit):"
                 call write_line(' ')
@@ -512,7 +536,7 @@ contains
             !
             ! Print command options, accept user selection.
             !
-            command = "Select a patch for editing(0 to exit):"
+            command = "Select a patch for editing(1-6, 0 to exit):"
             call write_line(' ')
             call write_line(command,color='blue')
             ierr = 1
@@ -921,13 +945,23 @@ contains
         type(svector_t)             :: bc_state_groups, bc_state_names
         type(string_t)              :: group_name, bc_state_name
         character(:),   allocatable :: group_family, color
+        logical                     :: bold
+
+
+        color = 'none'
+        if (present(active_topic)) then
+            if (trim(active_topic) == 'States') then
+                color = 'blue'
+            end if
+        end if
+
 
         !
         ! Write boundary state overview header
         !
         if (present(active_topic)) then 
             if (trim(active_topic) == 'States') then
-                call write_line(":[Boundary State Groups]",color='blue')
+                call write_line(":[Boundary State Groups]",color=color,bold=.true.)
             else
                 call write_line(":Boundary State Groups")
             end if
@@ -938,9 +972,9 @@ contains
 
 
         ! Write state group header
-        call write_line("----------------------------------------------------------------------------------------------------------------------")
-        call write_line("Group","Family","States", columns=.true.,column_width=25,delimiter=':')
-        call write_line("----------------------------------------------------------------------------------------------------------------------")
+        call write_line("----------------------------------------------------------------------------------------------------------------------",color=color)
+        call write_line("Group","Family","States", columns=.true.,column_width=25,delimiter=':',color=color)
+        call write_line("----------------------------------------------------------------------------------------------------------------------",color=color)
             
         !
         ! Get boundary condition information
@@ -954,13 +988,15 @@ contains
 
             if (group_name%get() == trim(active_group)) then
                 color = 'blue'
+                bold  = .true.
             else
                 color = 'none'
+                bold = .false.
             end if
 
 
-            call add_to_line(trim(group_name%get()), columns=.true., column_width=25,color=color)
-            call add_to_line(trim(group_family), columns=.true., column_width=25,color=color)
+            call add_to_line(trim(group_name%get()), columns=.true., column_width=25,color=color,bold=bold)
+            call add_to_line(trim(group_family), columns=.true., column_width=25,color=color,bold=bold)
 
 
             call h5gopen_f(fid,"BCSG_"//trim(group_name%get()),bcgroup_id, ierr)
@@ -969,7 +1005,7 @@ contains
             bc_state_names = get_bc_state_names_hdf(bcgroup_id)
             do istate = 1,bc_state_names%size()
                 bc_state_name = bc_state_names%at(istate)
-                call add_to_line(trim(bc_state_name%get()), columns=.true., column_width=25,color=color)
+                call add_to_line(trim(bc_state_name%get()), columns=.true., column_width=25,color=color,bold=bold)
             end do
 
             call h5gclose_f(bcgroup_id, ierr)
@@ -1002,21 +1038,27 @@ contains
         integer(ik),        intent(in), optional    :: active_face
 
 
-        character(len=10)                   :: faces(NFACES)
-        integer(ik)                         :: idom_hdf, ndom, iface, ierr
-        integer(HID_T)                      :: patch_id
-        type(svector_t),    allocatable     :: bcs(:)
-        character(:),       allocatable     :: bc_patch_group
-        type(string_t)                      :: bc_patch_groups(NFACES)
-        character(len=1024)                 :: dname
+        character(len=10)               :: faces(NFACES)
+        integer(ik)                     :: idom_hdf, ndom, iface, ierr
+        integer(HID_T)                  :: patch_id
+        type(svector_t),    allocatable :: bcs(:)
+        character(:),       allocatable :: bc_patch_group
+        type(string_t)                  :: bc_patch_groups(NFACES)
+        character(len=1024)             :: dname
+        character(:),       allocatable :: color
 
+
+        color = 'none'
+        if (present(active_topic)) then
+            if (trim(active_topic) == 'Patches') color = 'blue'
+        end if
 
         !
         ! Write boundary patch overview header
         !
         if (present(active_topic)) then 
             if (trim(active_topic) == 'Patches') then
-                call write_line(":[Boundary Patches]",color='blue')
+                call write_line(":[Boundary Patches]",color=color,bold=.true.)
             else
                 call write_line(":Boundary Patches")
             end if
@@ -1035,15 +1077,15 @@ contains
         ! Write domain and boundary conditions. 
         ! TODO: Assumes NFACES=6. Could generalize.
         !
-        call write_line("----------------------------------------------------------------------------------------------------------------------")
+        call write_line("----------------------------------------------------------------------------------------------------------------------",color=color)
         call write_line("Domain name",  &
                         "1 - XI_MIN",   &
                         "2 - XI_MAX",   &
                         "3 - ETA_MIN",  &
                         "4 - ETA_MAX",  &
                         "5 - ZETA_MIN", &
-                        "6 - ZETA_MAX", columns=.True., column_width=16, delimiter=':')
-        call write_line("----------------------------------------------------------------------------------------------------------------------")
+                        "6 - ZETA_MAX", columns=.True., column_width=16, delimiter=':',color=color)
+        call write_line("----------------------------------------------------------------------------------------------------------------------",color=color)
         do idom_hdf = 1,ndom
 
             !
@@ -1081,7 +1123,7 @@ contains
 
                         if ( present(active_face) ) then
                             if ( iface == active_face ) then
-                                call add_to_line( "["//bc_patch_groups(iface)%get()//"]", columns=.True., column_width=15, color='blue')
+                                call add_to_line( "["//bc_patch_groups(iface)%get()//"]", columns=.True., column_width=15, color='blue',bold=.true.)
                             else
                                 call add_to_line( bc_patch_groups(iface)%get(), columns=.True., column_width=15, color='pink')
                             end if
@@ -1372,11 +1414,49 @@ contains
 
 
 
+    !>
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   11/9/2016
+    !!
+    !------------------------------------------------------------------------------------------
+    subroutine print_boundary_state_group_help()
+        call write_line("Boundary State Groups:", color='blue', width=100)
+        call write_line("These are formed to impose a condition or set of &
+                         conditions on a region. For example, one might do this for the RANS &
+                         equations; creating a group called 'Inlet' and adding a Total Inlet &
+                         boundary state in addition to an &
+                         inlet state for the turbulence working variables. In order for these &
+                         state functions to be applied on a boundary, they must be associated &
+                         with a boundary condition patch, or set of boundary condition patches. &
+                         The association can be made by editing a patch and choosing the association.", color='red', width=100)
+
+    end subroutine print_boundary_state_group_help
+    !******************************************************************************************
 
 
 
+    !>
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   11/9/2016
+    !!
+    !------------------------------------------------------------------------------------------
+    subroutine print_boundary_patch_help()
+        call write_line("Boundary Patches:", color='blue', width=100)
+        call write_line("These specify regions over which Boundary State Groups &
+                         are applied. For a given patch, one can associate a Boundary State Group &
+                         that will be applied over the patch region. Currently, the patches are &
+                         generated in the conversion process for block-structured grids. The &
+                         original faces of the block-structured grids are the patches defining &
+                         the boundary geometry for each domain. By editing a patch, one can choose &
+                         which Boundary State Group the patch is associated with. It might be helpful &
+                         to first, enter the Boundary State Group menu and create a group. Visually, &
+                         it should make a bit more sense when a group exists first. Then a given patch &
+                         can be associated with the group.", color='red', width=100)
 
-
+    end subroutine print_boundary_patch_help
+    !******************************************************************************************
 
 
 

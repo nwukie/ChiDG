@@ -2,22 +2,24 @@ module mod_chidg_edit_boundaryconditions
 #include <messenger.h>
     use mod_kinds,          only: rk, ik, rdouble
     use mod_constants,      only: NFACES, XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX
-    use type_bc_state,   only: bc_state_t
-    use mod_bc,             only: create_bc, list_bcs, check_bc_state_registered
-    use type_svector,       only: svector_t
-    use mod_string,         only: string_t
-    use type_function,      only: function_t
     use mod_function,       only: create_function, list_functions
+    use mod_bc,             only: create_bc, list_bcs, check_bc_state_registered
+    use mod_string,         only: string_t
+    use type_bc_state,      only: bc_state_t
+    use type_svector,       only: svector_t
+    use type_function,      only: function_t
     use hdf5
     use h5lt
 
-    use mod_hdf_utilities,              only: get_ndomains_hdf, get_domain_names_hdf, get_bcnames_hdf, &
-                                              get_domain_name_hdf, delete_group_attributes_hdf, &
-                                              add_bc_state_hdf, set_bc_property_function_hdf, &
-                                              get_bc_state_group_names_hdf,                 &
-                                              check_bc_property_exists_hdf, remove_bc_state_hdf, &
-                                              check_bc_state_exists_hdf
     use mod_chidg_edit_printoverview,   only: print_overview
+    use mod_hdf_utilities,     only: get_ndomains_hdf, get_domain_names_hdf, get_bcnames_hdf,       &
+                                     get_domain_name_hdf, get_bc_state_names_hdf,                   &
+                                     delete_group_attributes_hdf,                                   &
+                                     add_bc_state_hdf, set_bc_property_function_hdf,                &
+                                     create_bc_state_group_hdf, remove_bc_state_group_hdf,          &
+                                     get_bc_state_group_names_hdf, get_bc_state_group_family_hdf,   &
+                                     check_bc_property_exists_hdf, remove_bc_state_hdf,             &
+                                     check_bc_state_exists_hdf, check_link_exists_hdf
     implicit none
 
 
@@ -28,11 +30,14 @@ contains
     !-----------------------------------------------------------------------------------------
     !!
     !!  chidg_edit_boundaryconditions
+    !!
     !!  chidg_edit_boundarycondition_states
+    !!  chidg_edit_boundarycondition_state_group
+    !!  chidg_edit_boundarycondition_property
+    !!
     !!  chidg_edit_boundarycondition_domains
     !!  chidg_edit_boundarycondition_domain_patches
     !!  chidg_edit_boundarycondition_patch
-    !!  chidg_edit_boundarycondition_property
     !!  print_bc_overview
     !!  print_bc_states
     !!  print_bc_patches
@@ -94,7 +99,7 @@ contains
         end do  ! run_bc_edit
 
     end subroutine chidg_edit_boundaryconditions
-    !************************************************************************************************
+    !******************************************************************************************
 
 
 
@@ -107,13 +112,14 @@ contains
     !!  @date   11/8/2016
     !!
     !!
-    !-----------------------------------------------------------------------------------------------
+    !-----------------------------------------------------------------------------------------
     subroutine chidg_edit_boundarycondition_states(fid)
         integer(HID_T), intent(in)  :: fid
 
         character(:),   allocatable :: command
+        character(1024)             :: group_name, group_family
         integer(ik)                 :: selection, ierr
-        logical                     :: run_states
+        logical                     :: run_states, edit_group, open_group
 
         run_states = .true.
         do while(run_states)
@@ -126,18 +132,62 @@ contains
             call print_bc_overview(fid,active_topic='States')
 
 
-            command = "1: Create a group for boundary condition states, 2: Select a group, 3: Remove a group, (0 to exit):"
+            command = "1: Create group, 2: Edit group, 3: Remove group, (0 to exit):"
             call write_line(' ')
             call write_line(command,color='blue')
 
             read(*,'(I8)', iostat=ierr) selection
 
+
             select case(selection)
+                !
+                ! Create group
+                !
                 case(1)
+                    command = "Enter group name: "
+                    call write_line(command, color='blue')
+                    read(*,'(A1024)') group_name
+                    command = "Enter boundary condition family: "
+                    call write_line(command, color='blue')
+                    read(*,'(A1024)') group_family
 
+                    call create_bc_state_group_hdf(fid,group_name,group_family)
+                    call chidg_edit_boundarycondition_state_group(fid,group_name)
+                !
+                ! Edit group
+                !
                 case(2)
+                    edit_group = .true.
+                    open_group = .true.
+                    do while(edit_group)
+                        ! Refresh display
+                        call execute_command_line("clear")
+                        call print_overview(fid)
+                        call print_bc_overview(fid,active_topic='States')
 
+                        command = "Enter group name: "
+                        call write_line(command, color='blue')
+                        read(*,'(A1024)') group_name
+
+                        if (trim(group_name) == '') then
+                            edit_group = .false.
+                            open_group = .false.
+                        else
+                            open_group = .true.
+                        end if
+
+                        if (open_group) call chidg_edit_boundarycondition_state_group(fid,group_name)
+                    end do
+                
+                !
+                ! Remove group
+                !
                 case(3)
+                    command = "Enter group name: "
+                    call write_line(command, color='blue')
+                    read(*,'(A1024)') group_name
+
+                    call remove_bc_state_group_hdf(fid,trim(group_name))
 
                 case default
                     run_states = .false.
@@ -146,7 +196,203 @@ contains
         end do ! run_states
 
     end subroutine chidg_edit_boundarycondition_states
-    !************************************************************************************************
+    !******************************************************************************************
+
+
+
+
+
+
+
+    !>
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   11/8/2016
+    !!
+    !!
+    !!
+    !------------------------------------------------------------------------------------------
+    subroutine chidg_edit_boundarycondition_state_group(fid,group_name)
+        integer(HID_T),     intent(in)  :: fid
+        character(*),       intent(in)  :: group_name
+
+    
+        integer(HID_T)              :: bcgroup_id
+        integer(ik)                 :: ierr, selection
+        character(1024)             :: state_name, bc_string, pname
+        character(:),   allocatable :: command
+        logical                     :: group_exists, edit_state_group, print_bcs, set_bc, found_bc_state, &
+                                       bc_state_exists, remove_bc, get_property, property_exists, edit_property
+        class(bc_state_t), allocatable    :: bc_state
+
+
+        group_exists = check_link_exists_hdf(fid,"BCSG_"//trim(group_name))
+
+        if (group_exists) then
+
+
+            call h5gopen_f(fid,"BCSG_"//trim(group_name),bcgroup_id,ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,"chidg_edit_boundarycondition_state_group: h5gopen_f")
+
+            edit_state_group = .true.
+            do while(edit_state_group)
+
+                !
+                ! Refresh display
+                !
+                call execute_command_line("clear")
+                call print_overview(fid)
+                call print_bc_overview(fid,active_topic='States',active_group=trim(group_name))
+                !call print_bc_state_properties(bcgroup_id)
+
+                command = "1: Add state function, 2: Remove state function, 3: Edit Property, (0 to exit):"
+                call write_line(' ')
+                call write_line(command,color='blue')
+                read(*,'(I8)', iostat=ierr) selection
+
+
+                select case(selection)
+                    !
+                    ! Add bc_state
+                    !
+                    case(1)
+                        set_bc    = .true.
+                        print_bcs = .false.
+                        found_bc_state = .true.
+                        do while (set_bc)
+
+
+                            if (print_bcs) then
+                                call list_bcs()
+                            end if
+
+                            if (.not. found_bc_state) then
+                                call write_line("The boundary condition state specified wasn't found in the ChiDG library. &
+                                                 Maybe check that the string was input correctly?",color='red')
+                            end if
+
+                            ! Get bc_state string from user
+                            command = "Enter boundary condition state(? to list): "
+                            call write_line(' ')
+                            call write_line(command,color='blue')
+                            read(*,"(A1024)") bc_string
+
+                            ! Check for user exit
+                            set_bc = (trim(bc_string) /= "")
+
+
+                            if (set_bc) then
+                                if ( trim(bc_string) == '?' ) then
+                                    print_bcs = .true.
+                                else
+                                
+                                    ! Call routine to set boundary condition in hdf file.
+                                    found_bc_state = check_bc_state_registered(bc_string)
+                                    if (found_bc_state) then
+                                        call create_bc(bc_string,bc_state)
+                                        call add_bc_state_hdf(bcgroup_id,bc_state)
+                                        set_bc = .false.
+                                    end if
+
+                                end if
+                            end if
+
+
+                        end do ! set_bc
+
+
+                    !
+                    ! Remove bc_state
+                    !
+                    case(2)
+                        bc_state_exists = .true.
+                        remove_bc = .true.
+                        do while (remove_bc)
+
+                            if (.not. bc_state_exists) then
+                                call write_line("The boundary condition state specified for removal wasn't found on the face")
+                            end if
+
+
+                            ! Get boundary condition state from user to remove
+                            command = "Enter boundary condition state to remove: "
+                            call write_line(' ')
+                            call write_line(command,color='blue')
+                            read(*,"(A1024)") bc_string
+
+                            ! Call routine to remove boundary condition state
+                            bc_state_exists = check_bc_state_exists_hdf(bcgroup_id,trim(bc_string))
+
+                            if (bc_state_exists) then
+                                call remove_bc_state_hdf(bcgroup_id,trim(bc_string))
+                                remove_bc = .false.
+                            end if
+
+                            ! Exit if blank
+                            if (trim(bc_string) == "") remove_bc = .false.
+
+                        end do !remove_bc
+
+
+                    !
+                    ! Edit property
+                    !
+                    case(3)
+
+                        edit_property = .true.
+                        do while (edit_property)
+                            get_property = .true.
+                            do while ( get_property )
+
+                                ! Refresh display
+                                call execute_command_line("clear")
+                                call print_overview(fid)
+                                call print_bc_overview(fid,active_topic='States',active_group=trim(group_name))
+                                call print_bc_state_properties(bcgroup_id)
+
+                                ! Get property
+                                call write_line(" ")
+                                call write_line("Enter boundary condition property: ",color='blue')
+                                read(*,"(A1024)") pname
+
+                                ! Check for user exit
+                                if (trim(pname) == "") then
+                                    get_property = .false.
+                                    edit_property = .false.
+                                end if
+
+                                ! Check property exists
+                                property_exists = check_bc_property_exists_hdf(bcgroup_id,trim(pname))
+                                if ( property_exists ) get_property = .false.
+
+
+                            end do 
+
+                            call chidg_edit_boundarycondition_property(fid,bcgroup_id,trim(group_name),trim(pname))
+                        end do
+
+
+
+                    case default
+                        edit_state_group = .false.
+                end select
+
+
+
+
+            end do !edit_state_group
+
+
+            ! Close group
+            call h5gclose_f(bcgroup_id,ierr)
+
+        end if !group_exists
+
+    end subroutine chidg_edit_boundarycondition_state_group
+    !******************************************************************************************
+
+
+
 
 
 
@@ -161,7 +407,7 @@ contains
     !!
     !!
     !!
-    !-------------------------------------------------------------------------------------------------
+    !------------------------------------------------------------------------------------------
     subroutine chidg_edit_boundarycondition_domains(fid)
         integer(HID_T),     intent(in)  :: fid
 
@@ -209,7 +455,7 @@ contains
         end do
 
     end subroutine chidg_edit_boundarycondition_domains
-    !*************************************************************************************************
+    !******************************************************************************************
 
 
 
@@ -224,7 +470,7 @@ contains
     !!
     !!
     !!
-    !--------------------------------------------------------------------------------------------------
+    !------------------------------------------------------------------------------------------
     subroutine chidg_edit_boundarycondition_domain_patches(fid,idom_hdf)
         integer(HID_T),     intent(in)  :: fid
         integer(ik),        intent(in)  :: idom_hdf
@@ -305,7 +551,7 @@ contains
 
 
     end subroutine chidg_edit_boundarycondition_domain_patches
-    !**************************************************************************************************
+    !******************************************************************************************
 
 
 
@@ -324,7 +570,7 @@ contains
     !!
     !!
     !!
-    !--------------------------------------------------------------------------------------------------
+    !------------------------------------------------------------------------------------------
     subroutine chidg_edit_boundarycondition_patch(fid,bcgroup,idom_hdf,iface)
         integer(HID_T),     intent(in)  :: fid
         integer(HID_T),     intent(in)  :: bcgroup
@@ -365,12 +611,6 @@ contains
         do while ( run_edit_bc_face )
 
             !
-            ! Get updated boundary conditions
-            !
-            bcnames = get_bcnames_hdf(fid,dname)
-
-
-            !
             ! Refresh display
             !
             call execute_command_line("clear")
@@ -379,17 +619,8 @@ contains
             dname_trim = trim(adjustl(dname)) 
 
 
-            !
-            ! Check current face boundary condition
-            !
-            bcstring = bcnames(iface)%at(1)
-            if ( bcstring%get() == 'empty' ) then
 
-            else
-                call print_bc_state_properties(bcface)
-            end if
-
-
+            call h5ltget_attribute_string_f(bcface,".","Boundary State Group",ierr)
 
             !
             ! Print command options, accept user selection.
@@ -405,136 +636,6 @@ contains
 
 
 
-            !
-            ! Operate on user action
-            !
-            select case (int_action)
-                case (0)
-                    run_edit_bc_face = .false.
-
-
-                !
-                ! Add bc_state case
-                !
-                case (1)
-                    set_bc    = .true.
-                    print_bcs = .false.
-                    found_bc_state = .true.
-                    do while (set_bc)
-
-
-                        if (print_bcs) then
-                            call list_bcs()
-                        end if
-
-                        if (.not. found_bc_state) then
-                            call write_line("The boundary condition state specified wasn't found in the ChiDG library. &
-                                             Maybe check that the string was input correctly?",color='red')
-                        end if
-
-                        ! Get bc_state string from user
-                        command = "Enter boundary condition state(? to list): "
-                        call write_line(' ')
-                        call write_line(command,color='blue')
-                        read(*,"(A1024)") bc_string
-
-                        ! Check for user exit
-                        set_bc = (trim(bc_string) /= "")
-
-
-                        if (set_bc) then
-                            if ( trim(bc_string) == '?' ) then
-                                print_bcs = .true.
-                            else
-                            
-                                ! Call routine to set boundary condition in hdf file.
-                                found_bc_state = check_bc_state_registered(bc_string)
-                                if (found_bc_state) then
-                                    call create_bc(bc_string,bc_state)
-                                    call add_bc_state_hdf(bcface,bc_state)
-                                    set_bc = .false.
-                                end if
-
-                            end if
-                        end if
-
-
-                    end do ! set_bc
-
-
-
-                !
-                ! Remove bc_state case
-                !
-                case (2)
-                    bc_state_exists = .true.
-                    remove_bc = .true.
-                    do while (remove_bc)
-
-                        if (.not. bc_state_exists) then
-                            call write_line("The boundary condition state specified for removal wasn't found on the face")
-                        end if
-
-
-                        ! Get boundary condition state from user to remove
-                        command = "Enter boundary condition state to remove: "
-                        call write_line(' ')
-                        call write_line(command,color='blue')
-                        read(*,"(A1024)") bc_string
-
-                        ! Call routine to remove boundary condition state
-                        bc_state_exists = check_bc_state_exists_hdf(bcface,trim(bc_string))
-
-                        if (bc_state_exists) then
-                            call remove_bc_state_hdf(bcface,trim(bc_string))
-                            remove_bc = .false.
-                        end if
-
-                        ! Exit if blank
-                        if (trim(bc_string) == "") remove_bc = .false.
-
-                    end do !remove_bc
-
-
-
-                !
-                ! Edit property case
-                !
-                case (3)
-
-                    get_property = .true.
-                    do while ( get_property )
-
-                        ! Refresh display
-                        call execute_command_line("clear")
-                        call print_overview(fid,idom_hdf)
-                        call print_bc_overview(fid,active_topic='Patches',active_domain=idom_hdf,active_face=iface)
-                        call print_bc_state_properties(bcface)
-
-                        ! Call edit option
-                        call write_line(" ")
-                        call write_line("Enter boundary condition property: ",color='blue')
-                        read(*,"(A1024)") pname
-
-                        ! Check for user exit
-                        if (trim(pname) == "") then
-                            get_property = .false.
-                        end if
-
-                        ! Check property exists
-                        property_exists = check_bc_property_exists_hdf(bcface,trim(pname))
-                        if ( property_exists ) get_property = .false.
-
-                    end do 
-
-                    call chidg_edit_boundarycondition_property(fid,idom_hdf,iface,bcface,trim(pname))
-
-
-                case default
-
-            end select
-
-
 
         end do  ! run_edit_bc_face
 
@@ -547,7 +648,7 @@ contains
         call h5gclose_f(bcface, ierr)
 
     end subroutine chidg_edit_boundarycondition_patch
-    !**************************************************************************************************
+    !******************************************************************************************
 
 
 
@@ -570,12 +671,17 @@ contains
     !!  @date   9/1/2016
     !!  @note   Modified to include bc_states
     !!
-    !--------------------------------------------------------------------------------------------
-    subroutine chidg_edit_boundarycondition_property(fid,idom_hdf,iface,bcface,pname)
+    !------------------------------------------------------------------------------------------
+!    subroutine chidg_edit_boundarycondition_property(fid,idom_hdf,iface,bcface,pname)
+!        integer(HID_T),     intent(in)  :: fid
+!        integer(ik),        intent(in)  :: idom_hdf
+!        integer(ik),        intent(in)  :: iface
+!        integer(HID_T),     intent(in)  :: bcface
+!        character(*),       intent(in)  :: pname
+    subroutine chidg_edit_boundarycondition_property(fid,bcgroup_id,group_name,pname)
         integer(HID_T),     intent(in)  :: fid
-        integer(ik),        intent(in)  :: idom_hdf
-        integer(ik),        intent(in)  :: iface
-        integer(HID_T),     intent(in)  :: bcface
+        integer(HID_T),     intent(in)  :: bcgroup_id
+        character(*),       intent(in)  :: group_name
         character(*),       intent(in)  :: pname
 
         integer(HID_T)                  :: bcprop, bc_state
@@ -592,14 +698,14 @@ contains
 
         ! Refresh display
         call execute_command_line("clear")
-        call print_overview(fid,idom_hdf)
-        call print_bc_overview(fid,active_topic='Patches',active_domain=idom_hdf,active_face=iface)
-        call print_bc_state_properties(bcface,pname)
+        call print_overview(fid)
+        call print_bc_overview(fid,active_topic='States',active_group=trim(group_name))
+        call print_bc_state_properties(bcgroup_id,trim(pname))
 
         !
         ! Loop through the states to find the property name
         !
-        call h5gn_members_f(bcface, ".", nmembers, ierr)
+        call h5gn_members_f(bcgroup_id, ".", nmembers, ierr)
 
 
         !
@@ -611,7 +717,7 @@ contains
             do igrp = 0,nmembers-1
 
                 ! Get group name
-                call h5gget_obj_info_idx_f(bcface, ".", igrp, gname, type, ierr)
+                call h5gget_obj_info_idx_f(bcgroup_id, ".", igrp, gname, type, ierr)
 
                 ! Test if group is a boundary condition function. 'BCS_'
                 if (gname(1:4) == 'BCS_') then
@@ -632,7 +738,7 @@ contains
 
             ! Open the state group
             string = bc_state_strings%at(iop)
-            call h5gopen_f(bcface, string%get(), bc_state, ierr)
+            call h5gopen_f(bcgroup_id, string%get(), bc_state, ierr)
 
             ! Check if it contains a link to the property group
             call h5lexists_f(bc_state, "BCP_"//trim(pname), property_exists, ierr)
@@ -655,6 +761,12 @@ contains
         list_fcns = .false.
         run = property_found
         do while (run)
+
+            ! Refresh display
+            call execute_command_line("clear")
+            call print_overview(fid)
+            call print_bc_overview(fid,active_topic='States',active_group=trim(group_name))
+            call print_bc_state_properties(bcgroup_id,trim(pname))
 
             !
             ! Read option to edit
@@ -703,7 +815,7 @@ contains
                         if (set_fcn .and. (.not. list_fcns)) then
                             call create_function(func,trim(function_string))
                             call set_bc_property_function_hdf(bcprop,func)
-                            run = .false.
+                            !run = .false.
                         end if
 
 
@@ -742,7 +854,7 @@ contains
         end if
 
     end subroutine chidg_edit_boundarycondition_property
-    !********************************************************************************************
+    !******************************************************************************************
 
 
 
@@ -760,18 +872,18 @@ contains
     !!
     !!
     !!
-    !-----------------------------------------------------------------------------------------------
-    subroutine print_bc_overview(fid,active_topic,active_state,active_domain,active_face)
+    !------------------------------------------------------------------------------------------
+    subroutine print_bc_overview(fid,active_topic,active_group,active_domain,active_face)
         integer(HID_T),     intent(in)              :: fid
         character(*),       intent(in), optional    :: active_topic
-        integer(ik),        intent(in), optional    :: active_state
+        character(*),       intent(in), optional    :: active_group
         integer(ik),        intent(in), optional    :: active_domain
         integer(ik),        intent(in), optional    :: active_face
 
 
         call write_line(' ')
         call write_line(' ')
-        call print_bc_states(fid,active_topic,active_state)
+        call print_bc_states(fid,active_topic,active_group)
 
         call write_line(' ')
         call write_line(' ')
@@ -780,9 +892,10 @@ contains
 
         call print_bc_patches(fid,active_topic,active_domain,active_face)
         call write_line(' ')
+        call write_line(' ')
 
     end subroutine print_bc_overview
-    !************************************************************************************************
+    !******************************************************************************************
 
 
 
@@ -796,13 +909,17 @@ contains
     !!  @date   11/8/2016
     !!
     !!
-    !------------------------------------------------------------------------------------------------
-    subroutine print_bc_states(fid,active_topic,active_state)
+    !------------------------------------------------------------------------------------------
+    subroutine print_bc_states(fid,active_topic,active_group)
         integer(HID_T), intent(in)              :: fid
         character(*),   intent(in), optional    :: active_topic
-        integer(ik),    intent(in), optional    :: active_state
+        character(*),   intent(in), optional    :: active_group
 
-        type(svector_t) :: bc_state_groups
+        integer(HID_T)              :: bcgroup_id
+        integer(ik)                 :: igroup, istate, ierr
+        type(svector_t)             :: bc_state_groups, bc_state_names
+        type(string_t)              :: group_name, bc_state_name
+        character(:),   allocatable :: group_family, color
 
         !
         ! Write boundary state overview header
@@ -829,8 +946,40 @@ contains
         !
         bc_state_groups = get_bc_state_group_names_hdf(fid)
 
+
+        do igroup = 1,bc_state_groups%size()
+            group_name = bc_state_groups%at(igroup)
+            group_family = get_bc_state_group_family_hdf(fid,group_name%get())
+
+            if (group_name%get() == trim(active_group)) then
+                color = 'blue'
+            else
+                color = 'none'
+            end if
+
+
+            call add_to_line(trim(group_name%get()), columns=.true., column_width=25,color=color)
+            call add_to_line(trim(group_family), columns=.true., column_width=25,color=color)
+
+
+            call h5gopen_f(fid,"BCSG_"//trim(group_name%get()),bcgroup_id, ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,"print_bc_states: h5gopen_f")
+
+            bc_state_names = get_bc_state_names_hdf(bcgroup_id)
+            do istate = 1,bc_state_names%size()
+                bc_state_name = bc_state_names%at(istate)
+                call add_to_line(trim(bc_state_name%get()), columns=.true., column_width=25,color=color)
+            end do
+
+            call h5gclose_f(bcgroup_id, ierr)
+
+            call send_line()
+
+        end do !istate
+
+
     end subroutine print_bc_states
-    !************************************************************************************************
+    !******************************************************************************************
 
 
 
@@ -844,7 +993,7 @@ contains
     !!  @date   11/8/2016
     !!
     !!
-    !------------------------------------------------------------------------------------------------
+    !------------------------------------------------------------------------------------------
     subroutine print_bc_patches(fid,active_topic,active_domain,active_face)
         integer(HID_T),     intent(in)              :: fid
         character(*),       intent(in), optional    :: active_topic
@@ -910,6 +1059,9 @@ contains
                     ! Need to add information individually to selectively color the entries.
                     call add_to_line(dname(3:), columns=.True., column_width=15, color='pink')
                     do iface = 1,6
+
+                        bc_group = get_bc_patch_group_hdf(patch_id)
+
                         if ( present(active_face) ) then
                             if ( iface == active_face ) then
                                 bcstring = bcs(iface)%at(1)
@@ -959,7 +1111,7 @@ contains
 
 
     end subroutine print_bc_patches
-    !************************************************************************************************
+    !******************************************************************************************
 
 
 
@@ -983,9 +1135,9 @@ contains
     !!
     !!  @param[in]  bcface  HDF5 group identifier. Should be associated with a boundary condition.
     !!
-    !-------------------------------------------------------------------------------------------------
-    subroutine print_bc_state_properties(bcface,active_property)
-        integer(HID_T),     intent(in)              :: bcface
+    !------------------------------------------------------------------------------------------
+    subroutine print_bc_state_properties(bcgroup_id,active_property)
+        integer(HID_T),     intent(in)              :: bcgroup_id
         character(*),       intent(in), optional    :: active_property
 
         integer(HID_T)          :: bcprop, bc_state
@@ -998,13 +1150,13 @@ contains
         !
         ! Get state groups
         !
-        call h5gn_members_f(bcface, ".", nmembers, ierr)
+        call h5gn_members_f(bcgroup_id, ".", nmembers, ierr)
 
         if (nmembers > 0) then
             do igrp = 0,nmembers-1
                 
                     ! Get group name
-                    call h5gget_obj_info_idx_f(bcface, ".", igrp, gname, type, ierr)
+                    call h5gget_obj_info_idx_f(bcgroup_id, ".", igrp, gname, type, ierr)
 
                     if (gname(1:4) == 'BCS_') then
                         call bc_state_strings%push_back(string_t(trim(gname(5:))))
@@ -1012,6 +1164,7 @@ contains
             end do
         end if
 
+        call write_line("======================================================================================================================")
 
         !
         ! Loop through and print states + properties
@@ -1029,12 +1182,12 @@ contains
             
 
             ! Open state group
-            call h5gopen_f(bcface, "BCS_"//bcstring%get(), bc_state, ierr)
+            call h5gopen_f(bcgroup_id, "BCS_"//bcstring%get(), bc_state, ierr)
             
 
 
             !
-            !  Get number of groups linked to the current bcface
+            !  Get number of groups linked to the current bcgroup_id
             !
             call h5gn_members_f(bc_state, ".", nmembers, ierr)
 
@@ -1075,9 +1228,10 @@ contains
 
         end do !iop
 
+        call write_line("======================================================================================================================")
 
     end subroutine print_bc_state_properties
-    !**********************************************************************************************
+    !******************************************************************************************
 
 
 
@@ -1098,7 +1252,7 @@ contains
     !!
     !!
     !!
-    !----------------------------------------------------------------------------------------------
+    !------------------------------------------------------------------------------------------
     subroutine print_bc_state_property_options(bcprop,property_name,active_property)
         use iso_fortran_env
         integer(HID_T),     intent(in)              :: bcprop
@@ -1196,7 +1350,7 @@ contains
 
 
     end subroutine print_bc_state_property_options
-    !***************************************************************************************************
+    !******************************************************************************************
 
 
 

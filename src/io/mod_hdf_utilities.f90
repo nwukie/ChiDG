@@ -108,6 +108,7 @@ contains
     !!  ---------------------------
     !!  create_bc_state_group_hdf
     !!  get_nbc_state_groups_hdf
+    !!  get_bc_state_group_names_hdf
     !!
     !!  set_bc_patch_hdf
     !!  add_bc_state_hdf
@@ -2230,6 +2231,50 @@ contains
 
 
 
+    
+
+    !>
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   11/8/2016
+    !!
+    !!
+    !!
+    !--------------------------------------------------------------------------------------
+    subroutine set_bc_patch_group_hdf(patch_id,group)
+        integer(HID_T), intent(in)  :: patch_id
+        character(*),   intent(in)  :: group
+
+
+        ! Set 'Boundary State Group'
+        call h5ltset_attribute_string_f(patch_id, ".", "Boundary State Group", trim(group), ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"set_bc_patch_group_hdf: error setting the attribute 'Boundary State Group'")
+
+
+    end subroutine set_bc_patch_group_hdf
+    !***************************************************************************************
+
+    
+    !>
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   11/8/2016
+    !!
+    !!
+    !!
+    !--------------------------------------------------------------------------------------
+    function get_bc_patch_group_hdf(patch_id) result(group)
+        integer(HID_T), intent(in)  :: patch_id
+
+        character(*)    :: group
+
+        ! Get 'Boundary State Group'
+        call h5ltget_attribute_string_f(patch_id, ".", "Boundary State Group", trim(group), ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"set_bc_patch_group_hdf: error setting the attribute 'Boundary State Group'")
+
+    end function get_bc_patch_group_hdf
+    !***************************************************************************************
+
 
 
 
@@ -2278,10 +2323,6 @@ contains
         if (ierr /= 0) call chidg_signal(FATAL,"create_bc_state_group_hdf: error creating new group for bc_state")
 
 
-        ! Set 'Name'
-        call h5ltset_attribute_string_f(bcgroup_id, ".", "Name", trim(group_name), ierr)
-        if (ierr /= 0) call chidg_signal(FATAL,"create_bc_state_group_hdf: error setting the attribute 'Name'")
-
         ! Set 'Family'
         call h5ltset_attribute_string_f(bcgroup_id, ".", "Family", trim(group_family), ierr)
         if (ierr /= 0) call chidg_signal(FATAL,"create_bc_state_group_hdf: error setting the attribute 'Family'")
@@ -2291,6 +2332,43 @@ contains
 
     end subroutine create_bc_state_group_hdf
     !****************************************************************************************
+
+
+
+
+
+
+
+
+    !>
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   11/8/2016
+    !!
+    !!
+    !!
+    !-----------------------------------------------------------------------------------------
+    function get_bc_state_group_family_hdf(fid,group_name) result(family_trimmed)
+        integer(HID_T),     intent(in)  :: fid
+        character(*),       intent(in)  :: group_name
+
+        integer(HID_T)              :: bcgroup_id
+        integer(ik)                 :: ierr
+        character(1024)             :: family
+        character(:),   allocatable :: family_trimmed
+
+        call h5gopen_f(fid,"BCSG_"//trim(group_name),bcgroup_id,ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"get_bc_state_group_family_hdf: Error opening boundary condition group")
+
+        call h5ltget_attribute_string_f(bcgroup_id, ".", "Family", family, ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"check_contains_grid_hdf - h5ltget_attribute_int_f")
+        
+        call h5gclose_f(bcgroup_id,ierr)
+
+        family_trimmed = trim(family)
+
+    end function get_bc_state_group_family_hdf
+    !*****************************************************************************************
 
 
 
@@ -2354,8 +2432,8 @@ contains
                 if (ierr /= 0) call chidg_signal(FATAL,"get_bc_state_group_names_hdf: error h5gget_obj_info_idx_f")
 
                 ! Test if group is a boundary condition state. 'BCSG_'
-                if (gname(1:4) == 'BCSG_') then
-                    call bc_state_group_names%push_back(string_t(trim(gname)))
+                if (gname(1:5) == 'BCSG_') then
+                    call bc_state_group_names%push_back(string_t(trim(gname(6:))))
                 end if
             end do  ! igrp
         end if
@@ -2568,7 +2646,7 @@ contains
 
                 ! Test if group is a boundary condition state. 'BCS_'
                 if (gname(1:4) == 'BCS_') then
-                    call bc_state_names%push_back(string_t(trim(gname)))
+                    call bc_state_names%push_back(string_t(trim(gname(5:))))
                 end if
             end do  ! igrp
         end if
@@ -2873,6 +2951,12 @@ contains
                 call remove_bc_state_hdf(bcgroup_id,state_name%get())
             end do
 
+            ! Close the bc_state group
+            call h5gclose_f(bcgroup_id,ierr)
+
+            ! Unlink the bc_state group
+            call h5gunlink_f(fid,"BCSG_"//trim(group_name),ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,"remove_bc_state_group_hdf: error unlinking bc_state group")
         end if
 
     end subroutine remove_bc_state_group_hdf

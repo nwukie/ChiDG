@@ -13,6 +13,7 @@ module type_chidg_data
     use type_bc,                        only: bc_t
     use type_bc_state,                  only: bc_state_t
     use type_bcvector,                  only: bcvector_t
+    use type_bc_group_data,             only: bc_group_data_t
     use type_equation_set,              only: equation_set_t
     use type_solverdata,                only: solverdata_t
 
@@ -278,20 +279,34 @@ contains
     !!  for bc_wall, bc_inlet, bc_outlet, bc_symmetry
     !!
     !----------------------------------------------------------------------------------------------------------
-    subroutine add_bc(self,domain,bc_states,bc_connectivity,bc_wall,bc_inlet,bc_outlet,bc_symmetry,bc_farfield)
+!    subroutine add_bc(self,domain,bc_states,bc_connectivity,bc_wall,bc_inlet,bc_outlet,bc_symmetry,bc_farfield)
+!        class(chidg_data_t),            intent(inout)           :: self
+!        character(*),                   intent(in)              :: domain
+!        type(bcvector_t),               intent(inout)           :: bc_states
+!        type(boundary_connectivity_t),  intent(in)              :: bc_connectivity
+!        class(bc_state_t),              intent(in), optional    :: bc_wall
+!        class(bc_state_t),              intent(in), optional    :: bc_inlet
+!        class(bc_state_t),              intent(in), optional    :: bc_outlet
+!        class(bc_state_t),              intent(in), optional    :: bc_symmetry
+!        class(bc_state_t),              intent(in), optional    :: bc_farfield
+    subroutine add_bc(self,domain,bc_connectivity,bc_group,bc_groups,bc_wall,bc_inlet,bc_outlet,bc_symmetry,bc_farfield)
         class(chidg_data_t),            intent(inout)           :: self
         character(*),                   intent(in)              :: domain
-        type(bcvector_t),               intent(inout)           :: bc_states
         type(boundary_connectivity_t),  intent(in)              :: bc_connectivity
+        character(*),                   intent(in)              :: bc_group
+        type(bc_group_data_t),          intent(in)              :: bc_groups(:)
         class(bc_state_t),              intent(in), optional    :: bc_wall
         class(bc_state_t),              intent(in), optional    :: bc_inlet
         class(bc_state_t),              intent(in), optional    :: bc_outlet
         class(bc_state_t),              intent(in), optional    :: bc_symmetry
         class(bc_state_t),              intent(in), optional    :: bc_farfield
 
-        integer(ik)                         :: idom, ierr, istate, BC_ID
+
+        character(:),       allocatable     :: user_msg
+        integer(ik)                         :: idom, BC_ID, istate, igroup, ierr
         type(bc_t)                          :: bc
         class(bc_state_t),  allocatable     :: bc_state
+        logical                             :: group_found, group_set
 
 
         !
@@ -306,20 +321,42 @@ contains
         BC_ID = self%bcset(idom)%add(bc)
 
 
+
         !
-        ! Add all bc_states
+        ! Find the correct bc_group in bc_groups(:)
         !
-        do istate = 1,bc_states%size()
+        group_set = .false.
+        do igroup = 1,size(bc_groups)
 
-            ! Get boundary condition state
-            if (allocated(bc_state)) deallocate(bc_state)
-            allocate(bc_state, source=bc_states%at(istate), stat=ierr)
-            if (ierr /= 0) call AllocationError
+            group_found = (trim(bc_group) == bc_groups(igroup)%name) 
 
-            ! Add boundary condition state
-            call self%bcset(idom)%bcs(BC_ID)%add_bc_state(bc_state)
+            if (group_found .and. (.not. group_set)) then
 
-        end do !istate
+                ! Add all bc_states
+                do istate = 1,bc_groups(igroup)%bc_states%size()
+
+                    ! Get boundary condition state
+                    if (allocated(bc_state)) deallocate(bc_state)
+                    allocate(bc_state, source=bc_groups(igroup)%bc_states%at(istate), stat=ierr)
+                    if (ierr /= 0) call AllocationError
+
+                    ! Add boundary condition state
+                    call self%bcset(idom)%bcs(BC_ID)%add_bc_state(bc_state)
+
+                end do !istate
+
+                group_set = .true.
+
+            end if
+
+        end do
+
+
+        user_msg = "chidg_data%add_bc: It looks like we didn't find a boundary state group that &
+                    matches with the string indicated in a boundary patch. Make sure that a &
+                    boundary state group with the correct name exists. Also make sure that the name &
+                    set on the boundary patch corresponds to one of the boundary state groups that exists."
+        if (.not. group_set) call chidg_signal_one(FATAL,user_msg,trim(bc_group))
 
 
         !

@@ -1094,11 +1094,6 @@ contains
         ! Get number of domains
         !
         ndomains = get_ndomains_hdf(fid)
-
-
-        !
-        ! Allocate names
-        !
         allocate(names(ndomains), stat=ierr)
         if (ierr /= 0) call AllocationError
 
@@ -1114,23 +1109,19 @@ contains
         !
         idom = 1
         do igrp = 0,nmembers-1
-            !
+
             ! Get group name
-            !
             call h5gget_obj_info_idx_f(fid,"/", igrp, gname, type, ierr)
 
-            !
             ! Test if group is a 'Domain'
-            !
             if (gname(1:2) == 'D_') then
 
-                !
                 ! Store name
-                !
-                names(idom) = trim(gname)
-
+                names(idom) = trim(gname(3:))
                 idom = idom + 1
+
             end if
+
         end do
 
 
@@ -1296,7 +1287,7 @@ contains
             !
             ! Open domain group
             !
-            call h5gopen_f(fid,trim(adjustl(names(idom))), did, ierr)
+            call h5gopen_f(fid,"D_"//trim(adjustl(names(idom))), did, ierr)
             if (ierr /= 0) call chidg_signal(FATAL,"get_domain_indices_hdf: error opening domain group")
 
             !
@@ -1312,7 +1303,7 @@ contains
             if ( .not. attribute_exists ) then
 
                 ! Set value.
-                call h5ltset_attribute_int_f(fid, trim(adjustl(names(idom))), 'Domain Index', [idom], adim, ierr)
+                call h5ltset_attribute_int_f(fid, "D_"//trim(adjustl(names(idom))), 'Domain Index', [idom], adim, ierr)
                 if (ierr /= 0) call chidg_signal(FATAL,"get_domain_indices_hdf: error writing an initial domain index")
 
             end if
@@ -1321,7 +1312,7 @@ contains
             !
             ! Get value that was just set to be sure. 
             !
-            call h5ltget_attribute_int_f(fid, trim(adjustl(names(idom))), 'Domain Index', buf, ierr)
+            call h5ltget_attribute_int_f(fid, "D_"//trim(adjustl(names(idom))), 'Domain Index', buf, ierr)
             if (ierr /= 0) call chidg_signal(FATAL,"get_domain_indices_hdf: error retrieving domain indices")
 
             !
@@ -1598,7 +1589,7 @@ contains
             !
             !  Get coordinate mapping
             !
-            call h5ltget_attribute_int_f(fid, trim(dnames(idom)), "Domain Mapping", buf, ierr)
+            call h5ltget_attribute_int_f(fid, "D_"//trim(dnames(idom)), "Domain Mapping", buf, ierr)
             if (ierr /= 0) call chidg_signal(FATAL,"get_coordinate_orders_hdf: h5ltget_attribute_int_f")
 
 
@@ -1709,7 +1700,7 @@ contains
             !
             ! Open domain group
             !
-            call h5gopen_f(fid, trim(dnames(idom)), did, ierr)
+            call h5gopen_f(fid, "D_"//trim(dnames(idom)), did, ierr)
             if (ierr /= 0) call chidg_signal_one(FATAL,"get_solution_orders_hdf: error opening domain group.", trim(dnames(idom)) )
 
             
@@ -1846,7 +1837,7 @@ contains
             !
             !  Get coordinate mapping
             !
-            call h5ltget_attribute_int_f(fid, trim(dnames(idom)), "Domain Dimensionality", dimensionality, ierr)
+            call h5ltget_attribute_int_f(fid, "D_"//trim(dnames(idom)), "Domain Dimensionality", dimensionality, ierr)
             if (ierr /= 0) call chidg_signal(FATAL,"get_domain_dimensionalities_hdf: Error h5ltget_attribute_int_f")
 
             dimensionalities(idom) = dimensionality(1)
@@ -1944,7 +1935,7 @@ contains
             !
             ! Open domain
             !
-            call h5gopen_f(fid, trim(dnames(idom)), did, ierr)
+            call h5gopen_f(fid, "D_"//trim(dnames(idom)), did, ierr)
             if (ierr /= 0) call chidg_signal(FATAL,"get_domain_equation_sets_hdf: error opening domain group.")
 
 
@@ -2245,6 +2236,7 @@ contains
         integer(HID_T), intent(in)  :: patch_id
         character(*),   intent(in)  :: group
 
+        integer(ik) :: ierr
 
         ! Set 'Boundary State Group'
         call h5ltset_attribute_string_f(patch_id, ".", "Boundary State Group", trim(group), ierr)
@@ -2255,23 +2247,38 @@ contains
     !***************************************************************************************
 
     
-    !>
+    !>  Return 'Boundary State Group' attribute for a given patch.
+    !!
+    !!
+    !!  If found, returns the group attribute.
+    !!  If not found, returns 'empty'.
+    !!
     !!
     !!  @author Nathan A. Wukie
     !!  @date   11/8/2016
     !!
     !!
-    !!
     !--------------------------------------------------------------------------------------
-    function get_bc_patch_group_hdf(patch_id) result(group)
+    function get_bc_patch_group_hdf(patch_id) result(group_trim)
         integer(HID_T), intent(in)  :: patch_id
 
-        character(*)    :: group
+        character(1024)             :: group
+        character(:),   allocatable :: group_trim
+        integer(ik)                 :: ierr
+        integer(ik)                 :: exists
+
+
+        call check_attribute_exists_hdf(patch_id,"Boundary State Group","Soft Fail",exists)
 
         ! Get 'Boundary State Group'
-        call h5ltget_attribute_string_f(patch_id, ".", "Boundary State Group", trim(group), ierr)
-        if (ierr /= 0) call chidg_signal(FATAL,"set_bc_patch_group_hdf: error setting the attribute 'Boundary State Group'")
-
+        if (exists==0) then
+            call h5ltget_attribute_string_f(patch_id, ".", "Boundary State Group", group, ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,"set_bc_patch_group_hdf: error setting the attribute 'Boundary State Group'")
+            group_trim = trim(group)
+        else
+            group_trim = 'empty'
+        end if
+            
     end function get_bc_patch_group_hdf
     !***************************************************************************************
 
@@ -2688,8 +2695,8 @@ contains
 
 
         ! Open bc_state group
-        call h5gopen_f(bcgroup_id, trim(bcstate_name), bcstate_id, ierr)
-        if (ierr /= 0) call chidg_signal(FATAL,"get_bc_state_hdf: error opening bc_state group.")
+        call h5gopen_f(bcgroup_id, "BCS_"//trim(bcstate_name), bcstate_id, ierr)
+        if (ierr /= 0) call chidg_signal_one(FATAL,"get_bc_state_hdf: error opening bc_state group.",trim(bcstate_name))
 
         
         ! Get boundary condition name string
@@ -3153,129 +3160,256 @@ contains
 
 
 
+!    !>  Return the boundary condition groups from the HDF file that are set for each face of 
+!    !!  a particular domain.
+!    !!
+!    !!  @author Nathan A. Wukie
+!    !!  @date   2/3/2016
+!    !!
+!    !!  @param[in]  fid         ChiDG HDF5 file identifier.
+!    !!  @param[in]  dname       String indicating the boundary condition to query.
+!    !!  @result     bcnames     Array of boundary condition names for the specified domain. 
+!    !!                          bcnames(ibc)
+!    !!
+!    !----------------------------------------------------------------------------------------
+!    function get_bcnames_hdf(fid,dname) result(bcnames)
+!        integer(HID_T),         intent(in)  :: fid
+!        character(len=1024),    intent(in)  :: dname
+!
+!        integer(HID_T)                      :: bc_id, bcface_id
+!        integer(ik)                         :: ndom, ierr, idom, iface
+!        integer                             :: igroup, nmembers, type
+!        type(svector_t),    allocatable     :: bcnames(:)
+!        character(len=1024)                 :: gname
+!        character(len=10)                   :: faces(NFACES)
+!        logical                             :: exists, bcname_exists
+!
+!
+!
+!        !
+!        ! Get file information
+!        !
+!        ndom   = get_ndomains_hdf(fid)
+!
+!        allocate(bcnames(NFACES), stat=ierr)
+!        if (ierr /= 0) call AllocationError
+!
+!
+!
+!
+!        !
+!        ! Check if 'BoundaryConditions' group exists
+!        !
+!        call h5lexists_f(fid, "/"//trim(dname)//"/BoundaryConditions", exists, ierr)
+!        if (ierr /= 0) call chidg_signal(FATAL,"get_bcnames_hdf: h5lexists - checking BoundaryConditions")
+!
+!
+!
+!        !
+!        ! Open the Domain/BoundaryConditions group
+!        !
+!        if (exists) then
+!            call h5gopen_f(fid, "/"//trim(dname)//"/BoundaryConditions", bc_id, ierr)
+!            if (ierr /= 0) call chidg_signal(FATAL,"get_bcnames_hdf: h5gopen - BoundaryConditions")
+!        else
+!            call h5gcreate_f(fid, '/'//trim(dname)//"/BoundaryConditions", bc_id, ierr)
+!            if (ierr /= 0) call chidg_signal(FATAL,"get_bcnames_hdf: h5gcreate - BoundaryConditions")
+!        end if
+!
+!
+!        !
+!        ! Loop through faces
+!        !
+!        faces = ["  XI_MIN","  XI_MAX"," ETA_MIN"," ETA_MAX","ZETA_MIN","ZETA_MAX"]
+!        do iface = 1,NFACES
+!
+!            !
+!            ! Open boundary condition face group
+!            !
+!            call h5gopen_f(bc_id, trim(adjustl(faces(iface))), bcface_id, ierr)
+!            if (ierr /= 0) call chidg_signal(FATAL,"get_bcnames_hdf: h5gopen_f - bcface (ex. XI_MIN)")
+!
+!
+!            !
+!            !  Get number of groups linked to the current bc_op
+!            !
+!            call h5gn_members_f(bcface_id, ".", nmembers, ierr)
+!
+!
+!            !
+!            !  Loop through members and add bc_operators if any exist
+!            !
+!            if (nmembers > 0) then
+!
+!                do igroup = 0,nmembers-1
+!
+!                    ! Get group name
+!                    call h5gget_obj_info_idx_f(bcface_id, ".", igroup, gname, type, ierr)
+!                    if (ierr /= 0) call chidg_signal(FATAL,"get_bcnames_hdf: error getting boundary condition group name")
+!
+!                    ! Test if group is a boundary condition operator. 'BCS_'
+!                    if (gname(1:4) == 'BCS_') then
+!                        call bcnames(iface)%push_back(string_t(trim(gname(5:))))
+!                    end if
+!
+!                end do
+!
+!            end if
+!
+!
+!            ! Set empty string if none detected
+!            if (bcnames(iface)%size() == 0) then
+!                call bcnames(iface)%push_back(string_t('empty'))
+!            end if
+!
+!            
+!            ! Close boundary condition face group
+!            call h5gclose_f(bcface_id,ierr)
+!            if (ierr /= 0) call chidg_signal(FATAL,"get_bcnames_hdf: h5gclose.")
+!
+!
+!        end do !iface
+!
+!
+!        ! Close the boundary condition group
+!        call h5gclose_f(bc_id,ierr)
+!        if (ierr /= 0) call chidg_signal(FATAL,"get_bcnames_hdf: h5gclose.")
+!
+!
+!    end function get_bcnames_hdf
+!    !****************************************************************************************
 
 
 
 
 
-    !>  Return the boundary condition names from the HDF file that are set for each face of 
-    !!  a particular domain.
-    !!
-    !!  @author Nathan A. Wukie
-    !!  @date   2/3/2016
-    !!
-    !!  @param[in]  fid         ChiDG HDF5 file identifier.
-    !!  @param[in]  dname       String indicating the boundary condition to query.
-    !!  @result     bcnames     Array of boundary condition names for the specified domain. 
-    !!                          bcnames(ibc)
-    !!
-    !----------------------------------------------------------------------------------------
-    function get_bcnames_hdf(fid,dname) result(bcnames)
-        integer(HID_T),         intent(in)  :: fid
-        character(len=1024),    intent(in)  :: dname
-
-        integer(HID_T)                      :: bc_id, bcface_id
-        integer(ik)                         :: ndom, ierr, idom, iface
-        integer                             :: igroup, nmembers, type
-        type(svector_t),    allocatable     :: bcnames(:)
-        character(len=1024)                 :: gname
-        character(len=10)                   :: faces(NFACES)
-        logical                             :: exists, bcname_exists
-
-
-
-        !
-        ! Get file information
-        !
-        ndom   = get_ndomains_hdf(fid)
-
-        allocate(bcnames(NFACES), stat=ierr)
-        if (ierr /= 0) call AllocationError
 
 
 
 
-        !
-        ! Check if 'BoundaryConditions' group exists
-        !
-        call h5lexists_f(fid, "/"//trim(dname)//"/BoundaryConditions", exists, ierr)
-        if (ierr /= 0) call chidg_signal(FATAL,"get_bcnames_hdf: h5lexists - checking BoundaryConditions")
 
 
 
-        !
-        ! Open the Domain/BoundaryConditions group
-        !
-        if (exists) then
-            call h5gopen_f(fid, "/"//trim(dname)//"/BoundaryConditions", bc_id, ierr)
-            if (ierr /= 0) call chidg_signal(FATAL,"get_bcnames_hdf: h5gopen - BoundaryConditions")
-        else
-            call h5gcreate_f(fid, '/'//trim(dname)//"/BoundaryConditions", bc_id, ierr)
-            if (ierr /= 0) call chidg_signal(FATAL,"get_bcnames_hdf: h5gcreate - BoundaryConditions")
-        end if
 
 
-        !
-        ! Loop through faces
-        !
-        faces = ["  XI_MIN","  XI_MAX"," ETA_MIN"," ETA_MAX","ZETA_MIN","ZETA_MAX"]
-        do iface = 1,NFACES
-
-            !
-            ! Open boundary condition face group
-            !
-            call h5gopen_f(bc_id, trim(adjustl(faces(iface))), bcface_id, ierr)
-            if (ierr /= 0) call chidg_signal(FATAL,"get_bcnames_hdf: h5gopen_f - bcface (ex. XI_MIN)")
-
-
-            !
-            !  Get number of groups linked to the current bc_op
-            !
-            call h5gn_members_f(bcface_id, ".", nmembers, ierr)
-
-
-            !
-            !  Loop through members and add bc_operators if any exist
-            !
-            if (nmembers > 0) then
-
-                do igroup = 0,nmembers-1
-
-                    ! Get group name
-                    call h5gget_obj_info_idx_f(bcface_id, ".", igroup, gname, type, ierr)
-                    if (ierr /= 0) call chidg_signal(FATAL,"get_bcnames_hdf: error getting boundary condition group name")
-
-                    ! Test if group is a boundary condition operator. 'BCS_'
-                    if (gname(1:4) == 'BCS_') then
-                        call bcnames(iface)%push_back(string_t(trim(gname(5:))))
-                    end if
-
-                end do
-
-            end if
-
-
-            ! Set empty string if none detected
-            if (bcnames(iface)%size() == 0) then
-                call bcnames(iface)%push_back(string_t('empty'))
-            end if
-
-            
-            ! Close boundary condition face group
-            call h5gclose_f(bcface_id,ierr)
-            if (ierr /= 0) call chidg_signal(FATAL,"get_bcnames_hdf: h5gclose.")
-
-
-        end do !iface
-
-
-        ! Close the boundary condition group
-        call h5gclose_f(bc_id,ierr)
-        if (ierr /= 0) call chidg_signal(FATAL,"get_bcnames_hdf: h5gclose.")
-
-
-    end function get_bcnames_hdf
-    !****************************************************************************************
+!    !>  Return the boundary condition groups from the HDF file that are set for each face of 
+!    !!  a particular domain.
+!    !!
+!    !!  @author Nathan A. Wukie
+!    !!  @date   2/3/2016
+!    !!
+!    !!  @param[in]  fid         ChiDG HDF5 file identifier.
+!    !!  @param[in]  dname       String indicating the boundary condition to query.
+!    !!  @result     bcnames     Array of boundary condition names for the specified domain. 
+!    !!                          bcnames(ibc)
+!    !!
+!    !----------------------------------------------------------------------------------------
+!    function get_bcnames_hdf(fid,dname) result(bcnames)
+!        integer(HID_T),         intent(in)  :: fid
+!        character(len=1024),    intent(in)  :: dname
+!
+!        integer(HID_T)                      :: bc_id, bcface_id
+!        integer(ik)                         :: ndom, ierr, idom, iface
+!        integer                             :: igroup, nmembers, type
+!        type(svector_t),    allocatable     :: bcnames(:)
+!        character(len=1024)                 :: gname
+!        character(len=10)                   :: faces(NFACES)
+!        logical                             :: exists, bcname_exists
+!
+!
+!
+!        !
+!        ! Get file information
+!        !
+!        ndom   = get_ndomains_hdf(fid)
+!
+!        allocate(bcnames(NFACES), stat=ierr)
+!        if (ierr /= 0) call AllocationError
+!
+!
+!
+!
+!        !
+!        ! Check if 'BoundaryConditions' group exists
+!        !
+!        call h5lexists_f(fid, "/"//trim(dname)//"/BoundaryConditions", exists, ierr)
+!        if (ierr /= 0) call chidg_signal(FATAL,"get_bcnames_hdf: h5lexists - checking BoundaryConditions")
+!
+!
+!
+!        !
+!        ! Open the Domain/BoundaryConditions group
+!        !
+!        if (exists) then
+!            call h5gopen_f(fid, "/"//trim(dname)//"/BoundaryConditions", bc_id, ierr)
+!            if (ierr /= 0) call chidg_signal(FATAL,"get_bcnames_hdf: h5gopen - BoundaryConditions")
+!        else
+!            call h5gcreate_f(fid, '/'//trim(dname)//"/BoundaryConditions", bc_id, ierr)
+!            if (ierr /= 0) call chidg_signal(FATAL,"get_bcnames_hdf: h5gcreate - BoundaryConditions")
+!        end if
+!
+!
+!        !
+!        ! Loop through faces
+!        !
+!        faces = ["  XI_MIN","  XI_MAX"," ETA_MIN"," ETA_MAX","ZETA_MIN","ZETA_MAX"]
+!        do iface = 1,NFACES
+!
+!            !
+!            ! Open boundary condition face group
+!            !
+!            call h5gopen_f(bc_id, trim(adjustl(faces(iface))), bcface_id, ierr)
+!            if (ierr /= 0) call chidg_signal(FATAL,"get_bcnames_hdf: h5gopen_f - bcface (ex. XI_MIN)")
+!
+!
+!            !
+!            !  Get number of groups linked to the current bc_op
+!            !
+!            call h5gn_members_f(bcface_id, ".", nmembers, ierr)
+!
+!
+!            !
+!            !  Loop through members and add bc_operators if any exist
+!            !
+!            if (nmembers > 0) then
+!
+!                do igroup = 0,nmembers-1
+!
+!                    ! Get group name
+!                    call h5gget_obj_info_idx_f(bcface_id, ".", igroup, gname, type, ierr)
+!                    if (ierr /= 0) call chidg_signal(FATAL,"get_bcnames_hdf: error getting boundary condition group name")
+!
+!                    ! Test if group is a boundary condition operator. 'BCS_'
+!                    if (gname(1:4) == 'BCS_') then
+!                        call bcnames(iface)%push_back(string_t(trim(gname(5:))))
+!                    end if
+!
+!                end do
+!
+!            end if
+!
+!
+!            ! Set empty string if none detected
+!            if (bcnames(iface)%size() == 0) then
+!                call bcnames(iface)%push_back(string_t('empty'))
+!            end if
+!
+!            
+!            ! Close boundary condition face group
+!            call h5gclose_f(bcface_id,ierr)
+!            if (ierr /= 0) call chidg_signal(FATAL,"get_bcnames_hdf: h5gclose.")
+!
+!
+!        end do !iface
+!
+!
+!        ! Close the boundary condition group
+!        call h5gclose_f(bc_id,ierr)
+!        if (ierr /= 0) call chidg_signal(FATAL,"get_bcnames_hdf: h5gclose.")
+!
+!
+!    end function get_bcnames_hdf
+!    !****************************************************************************************
 
 
 
@@ -3460,12 +3594,18 @@ contains
 
 
 
-    !>
+    !>  Check if an attribute exists on an HDF group.
+    !!
+    !!  fail_type
+    !!      = 'Soft Fail'   routine exists and returns a failure status to the caller.
+    !!      = 'Hard Fail'   routine calls a FATAL exit routine and brings down the program.
+    !!
+    !!  fail_status
+    !!      = 1             Attribute was not found, does not exists.
+    !!      = 0             Attribute found, no failure.
     !!
     !!  @author Nathan A. Wukie
     !!  @date   9/25/2016
-    !!
-    !!
     !!
     !----------------------------------------------------------------------------------------
     subroutine check_attribute_exists_hdf(id,attribute,fail_type,fail_status)

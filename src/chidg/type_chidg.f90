@@ -15,7 +15,8 @@ module type_chidg
     use type_nonlinear_solver,      only: nonlinear_solver_t
     use type_preconditioner,        only: preconditioner_t
     use type_meshdata,              only: meshdata_t
-    use type_bcdata,                only: bcdata_t
+    use type_bc_patch_data,         only: bc_patch_data_t
+    use type_bc_group_data,         only: bc_group_data_t
     use type_bc_state,              only: bc_state_t
     use type_dict,                  only: dict_t
     use type_domain_connectivity,   only: domain_connectivity_t
@@ -528,7 +529,9 @@ contains
 
         character(len=5),   dimension(1)    :: extensions
         character(len=:),   allocatable     :: extension
-        type(bcdata_t),     allocatable     :: bcdata(:)
+        type(bc_patch_data_t),  allocatable :: bc_patches(:)
+        type(bc_group_data_t),  allocatable :: bc_groups(:)
+        type(string_t)                      :: group_name
         integer                             :: idom, ndomains, iface, ierr, iread
 
         if (IRANK == GLOBAL_MASTER) call write_line('Reading boundary conditions')
@@ -548,7 +551,7 @@ contains
 
 
                 if ( extension == '.h5' ) then
-                    call read_boundaryconditions_hdf(gridfile,bcdata,self%partition)
+                    call read_boundaryconditions_hdf(gridfile,bc_patches,bc_groups,self%partition)
                 else
                     call chidg_signal(FATAL,"chidg%read_boundaryconditions: grid file extension not recognized")
                 end if
@@ -563,16 +566,18 @@ contains
         !
         ! Add boundary conditions to ChiDG
         !
-        ndomains = size(bcdata)
+        ndomains = size(bc_patches)
         do idom = 1,ndomains
             do iface = 1,NFACES
 
-                call self%data%add_bc(bcdata(idom)%domain_, bcdata(idom)%bcs(iface), bcdata(idom)%bc_connectivity(iface), &
-                                      bc_wall,      &
-                                      bc_inlet,     &
-                                      bc_outlet,    &
-                                      bc_symmetry,  &
-                                      bc_farfield)
+                group_name = bc_patches(idom)%bc_group%at(iface)
+                call self%data%add_bc(bc_patches(idom)%domain_, bc_patches(idom)%bc_connectivity(iface), group_name%get(),bc_groups)
+!                call self%data%add_bc(bcdata(idom)%domain_, bcdata(idom)%bcs(iface), bcdata(idom)%bc_connectivity(iface), &
+!                                      bc_wall,      &
+!                                      bc_inlet,     &
+!                                      bc_outlet,    &
+!                                      bc_symmetry,  &
+!                                      bc_farfield)
 
             end do !iface
         end do !idom

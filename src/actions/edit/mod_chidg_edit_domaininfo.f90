@@ -5,7 +5,7 @@ module mod_chidg_edit_domaininfo
     use hdf5
     use h5lt
 
-    use mod_hdf_utilities,              only: get_ndomains_hdf, get_domain_names_hdf, get_bcnames_hdf, get_domain_indices_hdf
+    use mod_hdf_utilities,              only: get_ndomains_hdf, get_domain_names_hdf, get_domain_indices_hdf
     use mod_chidg_edit_printoverview,   only: print_overview
     implicit none
 
@@ -244,9 +244,7 @@ contains
         !
         do iind = 1,size(dindices)
             if ( dindices(iind) == idom_hdf ) then
-
                 dname_current = dnames(iind)
-
             end if
         end do
 

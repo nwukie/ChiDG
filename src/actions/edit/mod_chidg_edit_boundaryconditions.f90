@@ -12,12 +12,13 @@ module mod_chidg_edit_boundaryconditions
     use h5lt
 
     use mod_chidg_edit_printoverview,   only: print_overview
-    use mod_hdf_utilities,     only: get_ndomains_hdf, get_domain_names_hdf, get_bcnames_hdf,       &
+    use mod_hdf_utilities,     only: get_ndomains_hdf, get_domain_names_hdf,       &
                                      get_domain_name_hdf, get_bc_state_names_hdf,                   &
                                      delete_group_attributes_hdf,                                   &
                                      add_bc_state_hdf, set_bc_property_function_hdf,                &
                                      create_bc_state_group_hdf, remove_bc_state_group_hdf,          &
                                      get_bc_state_group_names_hdf, get_bc_state_group_family_hdf,   &
+                                     get_bc_patch_group_hdf, set_bc_patch_group_hdf,                &
                                      check_bc_property_exists_hdf, remove_bc_state_hdf,             &
                                      check_bc_state_exists_hdf, check_link_exists_hdf
     implicit none
@@ -489,7 +490,7 @@ contains
         !
         ! Open boundary condition group
         !
-        call h5gopen_f(fid, "/"//trim(adjustl(dname))//"/BoundaryConditions", bcgroup, ierr)
+        call h5gopen_f(fid, "/D_"//trim(adjustl(dname))//"/BoundaryConditions", bcgroup, ierr)
         if (ierr /= 0) call chidg_signal(FATAL,"chidg_edit_boundarycondition_domain: h5gopen - BoundaryConditions")
 
 
@@ -578,66 +579,72 @@ contains
         integer(ik),        intent(in)  :: iface
 
 
-        integer(HID_T)                      :: bcface
-        character(len=10)                   :: faces(NFACES)
-        integer(ik)                         :: ierr, int_action
-        type(svector_t),        allocatable :: bcnames(:)
-        type(string_t)                      :: bcstring
-        character(len=1024)                 :: dname
-        character(len=:),       allocatable :: command, dname_trim
-        character(len=1024)                 :: bc_string, pname
-        logical                             :: run_edit_bc_face, get_property, property_exists, set_bc, &
-                                               print_bcs, remove_bc, bc_state_exists, found_bc_state
-        class(bc_state_t),      allocatable :: bc_state
+        integer(HID_T)                      :: patch_id
+        character(len=10)                   :: patches(NFACES)
+        integer(ik)                         :: ierr, selection
+        character(len=1024)                 :: dname, group
+        character(len=:),       allocatable :: command
+        logical                             :: run, run_set, set_group
 
-
-        faces = ["  XI_MIN","  XI_MAX"," ETA_MIN"," ETA_MAX","ZETA_MIN","ZETA_MAX"]
 
         
-        dname = get_domain_name_hdf(fid,idom_hdf)
-
-
         !
         ! Open boundary condition face group
         !
-        call h5gopen_f(bcgroup, trim(adjustl(faces(iface))), bcface, ierr)
+        patches = ["  XI_MIN","  XI_MAX"," ETA_MIN"," ETA_MAX","ZETA_MIN","ZETA_MAX"]
+        call h5gopen_f(bcgroup, trim(adjustl(patches(iface))), patch_id, ierr)
         if (ierr /= 0) call chidg_signal(FATAL,"chidg_edit_boundarycondition_patch: error opening group for boundary condition face")
 
 
         !
         ! edit / boundary condition / domain / face
         !
-        run_edit_bc_face = .true.
-        do while ( run_edit_bc_face )
+        run = .true.
+        do while ( run )
 
-            !
             ! Refresh display
-            !
             call execute_command_line("clear")
             call print_overview(fid,idom_hdf)
             call print_bc_overview(fid,active_topic='Patches',active_domain=idom_hdf,active_face=iface)
-            dname_trim = trim(adjustl(dname)) 
 
 
-
-            call h5ltget_attribute_string_f(bcface,".","Boundary State Group",ierr)
-
-            !
             ! Print command options, accept user selection.
-            !
-            command = "1:Add boundary state, 2:Remove boundary state, 3: Select property, 0:Exit"
+            command = "1:Set boundary state group, 2:Clear boundary state group, 0:Exit"
             call write_line(' ')
             call write_line(command,color='blue')
             ierr = 1
             do while ( ierr /= 0 )
-                read(*,'(I8)', iostat=ierr) int_action
+                read(*,'(I8)', iostat=ierr) selection
                 if ( ierr /= 0 )  call write_line("Invalid input: expecting an integer index.")
             end do
 
 
+            !
+            ! Select option
+            !
+            select case(selection)
+                case(1)
+                    
+                    call write_line('Enter the Boundary State Group to set: ')
+                    read(*,'(A1024)') group
+                    
+                    ! Check for user exit
+                    set_group = (trim(group) /= "")
+
+                    if (set_group) then
+                        call set_bc_patch_group_hdf(patch_id,group)
+                    end if
+
+                case(2)
+
+                    call set_bc_patch_group_hdf(patch_id,'empty')
+
+                case default
+                    run = .false.
+            end select
 
 
-        end do  ! run_edit_bc_face
+        end do  ! run
 
 
 
@@ -645,7 +652,7 @@ contains
         !
         ! Close boundary condition face group
         !
-        call h5gclose_f(bcface, ierr)
+        call h5gclose_f(patch_id, ierr)
 
     end subroutine chidg_edit_boundarycondition_patch
     !******************************************************************************************
@@ -672,12 +679,6 @@ contains
     !!  @note   Modified to include bc_states
     !!
     !------------------------------------------------------------------------------------------
-!    subroutine chidg_edit_boundarycondition_property(fid,idom_hdf,iface,bcface,pname)
-!        integer(HID_T),     intent(in)  :: fid
-!        integer(ik),        intent(in)  :: idom_hdf
-!        integer(ik),        intent(in)  :: iface
-!        integer(HID_T),     intent(in)  :: bcface
-!        character(*),       intent(in)  :: pname
     subroutine chidg_edit_boundarycondition_property(fid,bcgroup_id,group_name,pname)
         integer(HID_T),     intent(in)  :: fid
         integer(HID_T),     intent(in)  :: bcgroup_id
@@ -1001,9 +1002,12 @@ contains
         integer(ik),        intent(in), optional    :: active_face
 
 
-        integer(ik)                         :: idom_hdf, ndom, iface
+        character(len=10)                   :: faces(NFACES)
+        integer(ik)                         :: idom_hdf, ndom, iface, ierr
+        integer(HID_T)                      :: patch_id
         type(svector_t),    allocatable     :: bcs(:)
-        type(string_t)                      :: bcstring
+        character(:),       allocatable     :: bc_patch_group
+        type(string_t)                      :: bc_patch_groups(NFACES)
         character(len=1024)                 :: dname
 
 
@@ -1043,11 +1047,25 @@ contains
         do idom_hdf = 1,ndom
 
             !
-            ! Get domain name and bcs associated with idom_hdf
+            ! Get domain name and bc patch groups associated with idom_hdf
             !
             dname = get_domain_name_hdf(fid,idom_hdf)
-            bcs   = get_bcnames_hdf(fid,dname)
             
+
+            faces = ["  XI_MIN","  XI_MAX"," ETA_MIN"," ETA_MAX","ZETA_MIN","ZETA_MAX"]
+            do iface = 1,NFACES
+
+                call h5gopen_f(fid, "/D_"//trim(dname)//"/BoundaryConditions/"//trim(adjustl(faces(iface))), patch_id, ierr)
+                if (ierr /= 0) call chidg_signal(FATAL,"print_bc_patches: h5gopen_f - patch (ex. XI_MIN)")
+                
+                bc_patch_group = get_bc_patch_group_hdf(patch_id)
+                call bc_patch_groups(iface)%set(bc_patch_group)
+
+                call h5gclose_f(patch_id,ierr)
+
+            end do !iface
+
+
 
             if (present(active_domain)) then
             
@@ -1056,24 +1074,21 @@ contains
                 !
                 if (idom_hdf == active_domain) then
 
-                    ! Need to add information individually to selectively color the entries.
-                    call add_to_line(dname(3:), columns=.True., column_width=15, color='pink')
-                    do iface = 1,6
 
-                        bc_group = get_bc_patch_group_hdf(patch_id)
+                    ! Need to add information individually to selectively color the entries.
+                    call add_to_line(dname, columns=.True., column_width=15, color='pink')
+                    do iface = 1,6
 
                         if ( present(active_face) ) then
                             if ( iface == active_face ) then
-                                bcstring = bcs(iface)%at(1)
-                                call add_to_line( "["//trim(bcstring%get())//"]", columns=.True., column_width=15, color='blue')
+                                call add_to_line( "["//bc_patch_groups(iface)%get()//"]", columns=.True., column_width=15, color='blue')
                             else
-                                bcstring = bcs(iface)%at(1)
-                                call add_to_line( trim(bcstring%get()), columns=.True., column_width=15, color='pink')
+                                call add_to_line( bc_patch_groups(iface)%get(), columns=.True., column_width=15, color='pink')
                             end if
                         else
-                            bcstring = bcs(iface)%at(1)
-                            call add_to_line( trim(bcstring%get()), columns=.True., column_width=15, color='pink')
+                            call add_to_line( bc_patch_groups(iface)%get(), columns=.True., column_width=15, color='pink')
                         end if
+
                     end do
                     call send_line()
 
@@ -1084,10 +1099,9 @@ contains
                 !
                 else
 
-                    call add_to_line( dname(3:), columns=.True., column_width=15)
+                    call add_to_line( dname, columns=.True., column_width=15)
                     do iface = 1,6
-                        bcstring = bcs(iface)%at(1)
-                        call add_to_line( bcstring%get(), columns=.True., column_width=15)
+                        call add_to_line( bc_patch_groups(iface)%get(), columns=.True., column_width=15)
                     end do
                     call send_line()
 
@@ -1097,10 +1111,9 @@ contains
                 !
                 ! Print domain info if no active domain is present
                 !
-                call add_to_line( dname(3:), columns=.True., column_width=15)
+                call add_to_line( dname, columns=.True., column_width=15)
                 do iface = 1,6
-                    bcstring = bcs(iface)%at(1)
-                    call add_to_line( bcstring%get(), columns=.True., column_width=15)
+                    call add_to_line( bc_patch_groups(iface)%get(), columns=.True., column_width=15)
                 end do
                 call send_line()
 

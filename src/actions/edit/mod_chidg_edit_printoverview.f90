@@ -120,13 +120,13 @@ contains
 
                     if (present(active_domain)) then
                         if ( active_domain == idom_hdf ) then
-                            call write_line(idom_hdf,dname_trim(3:), corder(idom), sorder(idom), trim(eqnset(idom)), delimiter='  :  ', columns=.True., column_width=20, color='pink')
+                            call write_line(idom_hdf,dname_trim, corder(idom), sorder(idom), trim(eqnset(idom)), delimiter='  :  ', columns=.True., column_width=20, color='pink')
                         else
-                            call write_line(idom_hdf,dname_trim(3:), corder(idom), sorder(idom), trim(eqnset(idom)), delimiter='  :  ', columns=.True., column_width=20)
+                            call write_line(idom_hdf,dname_trim, corder(idom), sorder(idom), trim(eqnset(idom)), delimiter='  :  ', columns=.True., column_width=20)
                         end if
 
                     else
-                        call write_line(idom_hdf,dname_trim(3:), corder(idom), sorder(idom), trim(eqnset(idom)), delimiter='  :  ', columns=.True., column_width=20)
+                        call write_line(idom_hdf,dname_trim, corder(idom), sorder(idom), trim(eqnset(idom)), delimiter='  :  ', columns=.True., column_width=20)
                     end if
 
                 end if ! dindices

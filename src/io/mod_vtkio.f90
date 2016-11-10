@@ -84,11 +84,10 @@ contains
                 !
                 ! Get number of equations in the equation set
                 !
-<<<<<<< HEAD
+
                 noeq = data%eqnset(1)%prop%nequations()
-=======
+
                 noeq = data%eqnset(idom)%prop%nequations()
->>>>>>> dev_vtk
 
                 !
                 ! Open individual .vtu files for individual domains

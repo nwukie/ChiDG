@@ -77,7 +77,7 @@ contains
         ! Initialize solution data storage
         !
         call chidg%set('Solution Order', integer_input=solution_order)
-        call chidg%initialize_solution_domains(nterms_s)
+        call chidg%initialize_solution_domains()
         call chidg%init('communication')
         call chidg%initialize_solution_solver()
 

@@ -13,7 +13,7 @@ module type_chidg_data
     use type_bc,                        only: bc_t
     use type_bc_state,                  only: bc_state_t
     use type_bcvector,                  only: bcvector_t
-    use type_bc_group_data,             only: bc_group_data_t
+    use type_bc_group,                  only: bc_group_t
     use type_equation_set,              only: equation_set_t
     use type_solverdata,                only: solverdata_t
 
@@ -284,7 +284,7 @@ contains
         character(*),                   intent(in)              :: domain
         type(boundary_connectivity_t),  intent(in)              :: bc_connectivity
         character(*),                   intent(in)              :: bc_group
-        type(bc_group_data_t),          intent(in)              :: bc_groups(:)
+        type(bc_group_t),               intent(in)              :: bc_groups(:)
         class(bc_state_t),              intent(in), optional    :: bc_wall
         class(bc_state_t),              intent(in), optional    :: bc_inlet
         class(bc_state_t),              intent(in), optional    :: bc_outlet

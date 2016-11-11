@@ -16,7 +16,7 @@ module type_chidg
     use type_preconditioner,        only: preconditioner_t
     use type_meshdata,              only: meshdata_t
     use type_bc_patch_data,         only: bc_patch_data_t
-    use type_bc_group_data,         only: bc_group_data_t
+    use type_bc_group,              only: bc_group_t
     use type_bc_state,              only: bc_state_t
     use type_dict,                  only: dict_t
     use type_domain_connectivity,   only: domain_connectivity_t
@@ -530,7 +530,7 @@ contains
         character(len=5),   dimension(1)    :: extensions
         character(len=:),   allocatable     :: extension
         type(bc_patch_data_t),  allocatable :: bc_patches(:)
-        type(bc_group_data_t),  allocatable :: bc_groups(:)
+        type(bc_group_t),       allocatable :: bc_groups(:)
         type(string_t)                      :: group_name
         integer                             :: idom, ndomains, iface, ierr, iread
 

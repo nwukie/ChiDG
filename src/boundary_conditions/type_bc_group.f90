@@ -1,4 +1,4 @@
-module type_bc_group_data
+module type_bc_group
     use type_bcvector,  only: bcvector_t
     implicit none
 
@@ -11,12 +11,12 @@ module type_bc_group_data
     !!  @date   11/9/2016
     !!
     !-------------------------------------------------------------------------
-    type, public :: bc_group_data_t
+    type, public :: bc_group_d
         
         character(:),       allocatable :: name         !< Boundary State Group name
         type(bcvector_t)                :: bc_states    !< Vector of boundary condition state functions for each group.
 
-    end type bc_group_data_t
+    end type bc_group_d
     !*************************************************************************
 
 
@@ -27,4 +27,4 @@ module type_bc_group_data
 
 
 
-end module type_bc_group_data
+end module type_bc_group

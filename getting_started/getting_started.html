@@ -338,11 +338,10 @@ the <a class="reference external" href="https://cmake.org">CMake Website</a>. Yo
 <p>HDF5 is used as a container for the ChiDG-formatted grid/solution files. The HDF5 library
 gives the option to build various portions of the library itself, depending on what the
 user needs available. ChiDG uses the HDF5 Fortran module interfaces and the high-level API.
-Be sure to configure with the appropriate flags when building HDF5. Refer to the HDF5 documentation
-and installation guide for complete directions. Likely configuration parameters
-that are needed are:</p>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="o">--</span><span class="n">enable</span><span class="o">-</span><span class="n">fortran</span>
-<span class="o">--</span><span class="n">enable</span><span class="o">-</span><span class="n">fortran2003</span>
+HDF5 documentation and installation guide can be found on
+<a class="reference external" href="https://support.hdfgroup.org/ftp/HDF5/current/src/unpacked/release_docs/INSTALL">HDF5 Website</a>.
+Be sure to configure with the appropriate flags when building HDF5. You likely need to add the following flags to the configuration:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="o">./</span><span class="n">configure</span> <span class="o">--</span><span class="n">enable</span><span class="o">-</span><span class="n">fortran</span>  <span class="o">--</span><span class="n">enable</span><span class="o">-</span><span class="n">fortran2003</span>
 </pre></div>
 </div>
 <p>The ChiDG CMake build will try to automatically locate the HDF5 libraries and
@@ -455,6 +454,14 @@ different options. They are passed with the <code class="docutils literal"><span
 <div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">cmake</span> <span class="o">-</span><span class="n">DParameter</span><span class="o">=</span><span class="n">Option</span> <span class="o">..</span>
 </pre></div>
 </div>
+<p>A typical build configure looks like:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">cmake</span> <span class="o">-</span><span class="n">DCMAKE_Fortran_COMPILER</span><span class="o">=</span><span class="n">gfortran</span> <span class="o">..</span>
+</pre></div>
+</div>
+<p>A developer might configure the build using the following option:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">cmake</span> <span class="o">-</span><span class="n">DCMAKE_Fortran_COMPILER</span><span class="o">=</span><span class="n">gfortran</span> <span class="o">-</span><span class="n">DCMAKE_BUILD_TYPE</span><span class="o">=</span><span class="n">Debug</span> <span class="o">-</span><span class="n">DTESTING</span><span class="o">=</span><span class="kc">True</span> <span class="o">..</span>
+</pre></div>
+</div>
 <table border="1" class="docutils">
 <colgroup>
 <col width="30%" />
@@ -470,7 +477,7 @@ different options. They are passed with the <code class="docutils literal"><span
 <tbody valign="top">
 <tr class="row-even"><td>CMAKE_Fortran_COMPILER</td>
 <td>Specify a Fortran Compiler</td>
-<td>&nbsp;</td>
+<td><code class="docutils literal"><span class="pre">gfortran</span></code></td>
 </tr>
 <tr class="row-odd"><td>CMAKE_BUILD_TYPE</td>
 <td>Specify what type of compiler settings to build with</td>

@@ -100,14 +100,13 @@ HDF5
 HDF5 is used as a container for the ChiDG-formatted grid/solution files. The HDF5 library 
 gives the option to build various portions of the library itself, depending on what the 
 user needs available. ChiDG uses the HDF5 Fortran module interfaces and the high-level API. 
-Be sure to configure with the appropriate flags when building HDF5. Refer to the HDF5 documentation 
-and installation guide for complete directions. Likely configuration parameters 
-that are needed are:
+HDF5 documentation and installation guide can be found on
+`HDF5 Website <https://support.hdfgroup.org/ftp/HDF5/current/src/unpacked/release_docs/INSTALL>`_.
+Be sure to configure with the appropriate flags when building HDF5. You likely need to add the following flags to the configuration:
 
 ::
 
-    --enable-fortran
-    --enable-fortran2003
+    ./configure --enable-fortran  --enable-fortran2003
 
 
 The ChiDG CMake build will try to automatically locate the HDF5 libraries and
@@ -234,10 +233,23 @@ different options. They are passed with the ``-D`` flag as:
     cmake -DParameter=Option ..
 
 
+A typical build configure looks like:
+
+::
+
+    cmake -DCMAKE_Fortran_COMPILER=gfortran ..
+
+A developer might configure the build using the following option:
+
+::
+
+    cmake -DCMAKE_Fortran_COMPILER=gfortran -DCMAKE_BUILD_TYPE=Debug -DTESTING=True .. 
+
+
 =============================== ======================================================= ================
 Parameter                       Description                                             Options
 =============================== ======================================================= ================
-CMAKE_Fortran_COMPILER          Specify a Fortran Compiler        
+CMAKE_Fortran_COMPILER          Specify a Fortran Compiler       			``gfortran`` 
                                                                                         
                                                                                         
 CMAKE_BUILD_TYPE                Specify what type of compiler settings to build with    ``Release``

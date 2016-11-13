@@ -31,6 +31,9 @@ module type_element
     !!  @author Nathan A. Wukie
     !!  @date   2/1/2016
     !!
+    !!  @author Mayank Sharma
+    !!  @date   11/12/2016
+    !!
     !------------------------------------------------------------------------------------------------------------
     type, public :: element_t
 
@@ -44,7 +47,7 @@ module type_element
         integer(ik)     :: neqns                            !< Number of equations being solved
         integer(ik)     :: nterms_s                         !< Number of terms in solution expansion.  
         integer(ik)     :: nterms_c                         !< Number of terms in coordinate expansion. 
-
+        integer(ik)     :: ntime                            !< Number of time levels in solution
 
         ! Element quadrature points, mesh points and modes
         type(element_connectivity_t)    :: connectivity         !< Connectivity list. Integer indices of the associated nodes in block node list
@@ -141,6 +144,9 @@ contains
     !!  @param[in] nterms_c     Number of terms in the modal representation of the cartesian coordinates
     !!  @param[in] points       Array of cartesian points defining the element
     !!
+    !!  @author Mayank Sharma + Matteo Ugolotti
+    !!  @date   11/5/2016
+    !!
     !---------------------------------------------------------------------------------------
     subroutine init_geom(self,spacedim,nodes,connectivity,idomain_l,ielem_l)
         class(element_t),               intent(inout)   :: self
@@ -154,6 +160,7 @@ contains
         real(rk),       allocatable :: element_mapping(:,:)
         real(rk),       allocatable :: xmodes(:), ymodes(:), zmodes(:)
         integer(ik)                 :: ierr, nterms_c, ipt, npts_1d, npts, mapping, inode, idomain_g, ielem_g
+        integer(ik)                 :: ntime = 1
 
 
         if (self%geomInitialized) call chidg_signal(FATAL,"element%init_geom -- element already initialized")
@@ -205,7 +212,7 @@ contains
         ! Allocate storage
         !
         allocate(self%elem_pts(nterms_c),stat=ierr)
-        call self%coords%init(nterms_c,3,idomain_g,idomain_l,ielem_g,ielem_l)
+        call self%coords%init(nterms_c,3,ntime,idomain_g,idomain_l,ielem_g,ielem_l)
         self%spacedim       = spacedim
         self%idomain_g      = idomain_g
         self%idomain_l      = idomain_l
@@ -222,9 +229,9 @@ contains
         ymodes = matmul(element_mapping,self%elem_pts(:)%c2_)
         zmodes = matmul(element_mapping,self%elem_pts(:)%c3_)
 
-        call self%coords%setvar(1,xmodes)
-        call self%coords%setvar(2,ymodes)
-        call self%coords%setvar(3,zmodes)
+        call self%coords%setvar(1,itime = 1,vals = xmodes)
+        call self%coords%setvar(2,itime = 1,vals = ymodes)
+        call self%coords%setvar(3,itime = 1,vals = zmodes)
 
 
         !
@@ -254,6 +261,11 @@ contains
     !!  @param[in]  nterms_s    Number of terms in the modal representation of the solution
     !!  @param[in]  neqns       Number of equations contained in the element solution
     !!
+    !!  @author Mayank Sharma + Matteo Ugolotti
+    !!  @date   11/12/2016
+    !!
+    !!  TODO: Add ntime as input parameter
+    !!
     !-----------------------------------------------------------------------------------------------------------
     subroutine init_sol(self,neqns,nterms_s)
         class(element_t),   intent(inout) :: self
@@ -262,11 +274,14 @@ contains
 
         integer(ik) :: ierr
         integer(ik) :: nnodes
+        integer(ik) :: ntime
+
 
         !if (self%numInitialized) call chidg_signal(FATAL,"element%init_sol -- element already initialized")
 
         self%nterms_s    = nterms_s     ! Set number of terms in modal expansion of solution
         self%neqns       = neqns        ! Set number of equations being solved
+        self%ntime       = ntime        ! Set number of time steps in solution
 
 
         call self%assign_quadrature()   ! With nterms_s and nterms_c defined, we can assign a quadrature instance
@@ -383,6 +398,9 @@ contains
     !!
     !! TODO: Generalized 2D physical coordinates. Currently assumes x-y
     !!
+    !!  @author Mayank Sharma + Matteo Ugolotti
+    !!  @date   11/5/2016
+    !!
     !--------------------------------------------------------------------------------------------------------------
     subroutine compute_quadrature_metrics(self)
         class(element_t),    intent(inout)   :: self
@@ -400,17 +418,17 @@ contains
         !
         ! Compute element metric terms
         !
-        dxdxi   = matmul(self%gqmesh%vol%ddxi,  self%coords%getvar(1))
-        dxdeta  = matmul(self%gqmesh%vol%ddeta, self%coords%getvar(1))
-        dxdzeta = matmul(self%gqmesh%vol%ddzeta,self%coords%getvar(1))
+        dxdxi   = matmul(self%gqmesh%vol%ddxi,  self%coords%getvar(1,itime = 1))
+        dxdeta  = matmul(self%gqmesh%vol%ddeta, self%coords%getvar(1,itime = 1))
+        dxdzeta = matmul(self%gqmesh%vol%ddzeta,self%coords%getvar(1,itime = 1))
 
-        dydxi   = matmul(self%gqmesh%vol%ddxi,  self%coords%getvar(2))
-        dydeta  = matmul(self%gqmesh%vol%ddeta, self%coords%getvar(2))
-        dydzeta = matmul(self%gqmesh%vol%ddzeta,self%coords%getvar(2))
+        dydxi   = matmul(self%gqmesh%vol%ddxi,  self%coords%getvar(2,itime = 1))
+        dydeta  = matmul(self%gqmesh%vol%ddeta, self%coords%getvar(2,itime = 1))
+        dydzeta = matmul(self%gqmesh%vol%ddzeta,self%coords%getvar(2,itime = 1))
 
-        dzdxi   = matmul(self%gqmesh%vol%ddxi,  self%coords%getvar(3))
-        dzdeta  = matmul(self%gqmesh%vol%ddeta, self%coords%getvar(3))
-        dzdzeta = matmul(self%gqmesh%vol%ddzeta,self%coords%getvar(3))
+        dzdxi   = matmul(self%gqmesh%vol%ddxi,  self%coords%getvar(3,itime = 1))
+        dzdeta  = matmul(self%gqmesh%vol%ddeta, self%coords%getvar(3,itime = 1))
+        dzdzeta = matmul(self%gqmesh%vol%ddzeta,self%coords%getvar(3,itime = 1))
 
 
 
@@ -567,8 +585,8 @@ contains
     !!  @author Nathan A. Wukie
     !!  @date   2/1/2016
     !!
-    !!
-    !!
+    !!  @author Mayank Sharma + Matteo Ugolotti
+    !!  @date   11/5/2016
     !!
     !---------------------------------------------------------------------------------------------------------------
     subroutine compute_quadrature_coords(self)
@@ -582,9 +600,9 @@ contains
         !
         ! compute cartesian coordinates associated with quadrature points
         !
-        x = matmul(self%gqmesh%vol%val,self%coords%getvar(1))
-        y = matmul(self%gqmesh%vol%val,self%coords%getvar(2))
-        z = matmul(self%gqmesh%vol%val,self%coords%getvar(3))
+        x = matmul(self%gqmesh%vol%val,self%coords%getvar(1,itime = 1))
+        y = matmul(self%gqmesh%vol%val,self%coords%getvar(2,itime = 1))
+        z = matmul(self%gqmesh%vol%val,self%coords%getvar(3,itime = 1))
 
 
         !
@@ -673,7 +691,8 @@ contains
     !!  @author Nathan A. Wukie
     !!  @date   2/1/2016
     !!
-    !!
+    !!  @author Mayank Sharma + Matteo Ugolotti
+    !!  @date   11/5/2016
     !!
     !--------------------------------------------------------------------------------------------------------------
     function x(self,xi,eta,zeta) result(xval)
@@ -702,7 +721,7 @@ contains
         !
         ! Evaluate x from dot product of modes and polynomial values
         !
-        xval = dot_product(self%coords%getvar(1),polyvals)
+        xval = dot_product(self%coords%getvar(1,itime = 1),polyvals)
 
     end function x
     !***************************************************************************************************************
@@ -718,7 +737,8 @@ contains
     !!  @author Nathan A. Wukie
     !!  @date   2/1/2016
     !!
-    !!
+    !!  @author Mayank Sharma + Matteo Ugolotti
+    !!  @date   11/5/2016
     !!
     !--------------------------------------------------------------------------------------------------------------
     function y(self,xi,eta,zeta) result(yval)
@@ -747,7 +767,7 @@ contains
         !
         ! Evaluate x from dot product of modes and polynomial values
         !
-        yval = dot_product(self%coords%getvar(2),polyvals)
+        yval = dot_product(self%coords%getvar(2,itime = 1),polyvals)
 
     end function y
     !***************************************************************************************************************
@@ -762,7 +782,8 @@ contains
     !!  @author Nathan A. Wukie
     !!  @date   2/1/2016
     !!
-    !!
+    !!  @author Mayank Sharma + Matteo Ugolotti
+    !!  @date   11/5/2016
     !!
     !--------------------------------------------------------------------------------------------------------------
     function z(self,xi,eta,zeta) result(zval)
@@ -791,7 +812,7 @@ contains
         !
         ! Evaluate x from dot product of modes and polynomial values
         !
-        zval = dot_product(self%coords%getvar(3),polyvals)
+        zval = dot_product(self%coords%getvar(3,itime = 1),polyvals)
 
     end function z
     !***************************************************************************************************************
@@ -817,6 +838,9 @@ contains
     !!  @param[in]  xi      Real value for xi-coordinate
     !!  @param[in]  eta     Real value for eta-coordinate
     !!  @param[in]  zeta    Real value for zeta-coordinate
+    !!
+    !!  @author Mayank Sharma + MAtteo Ugolotti
+    !!  @date   11/5/2016
     !!
     !--------------------------------------------------------------------------------------------------------------
     function grid_point(self,icoord,xi,eta,zeta) result(val)
@@ -849,7 +873,7 @@ contains
         !
         ! Evaluate mesh point from dot product of modes and polynomial values
         !
-        val = dot_product(self%coords%getvar(icoord), polyvals)
+        val = dot_product(self%coords%getvar(icoord,itime = 1), polyvals)
 
     end function grid_point
     !****************************************************************************************************************
@@ -874,6 +898,9 @@ contains
     !!  @param[in]  xi          Computational coordinate - xi
     !!  @param[in]  eta         Computational coordinate - eta
     !!  @param[in]  zeta        Computational coordinate - zeta
+    !!
+    !!  @author Mayank Sharma + Matteo Ugolotti
+    !!  @date   11/5/2016
     !!
     !----------------------------------------------------------------------------------------------------------------
     function metric_point(self,cart_dir,comp_dir,xi,eta,zeta) result(val)
@@ -906,7 +933,7 @@ contains
         !
         ! Evaluate mesh point from dot product of modes and polynomial values
         !
-        val = dot_product(self%coords%getvar(cart_dir), polyvals)
+        val = dot_product(self%coords%getvar(cart_dir,itime = 1), polyvals)
 
 
 
@@ -948,6 +975,11 @@ contains
     !!  @param[in]  eta     Real value for eta-coordinate.
     !!  @param[in]  zeta    Real value for zeta-coordinate.
     !!
+    !!  @author Mayank Sharma + Matteo Ugolotti
+    !!  @date   11/5/2016
+    !!
+    !!  TODO: Add itime as an input parameter  
+    !!
     !----------------------------------------------------------------------------------------------------------------
     function solution_point(self,q,ivar,xi,eta,zeta) result(val)
         class(element_t),       intent(in)      :: self
@@ -959,6 +991,7 @@ contains
         type(point_t)              :: node
         real(rk)                   :: polyvals(q%nterms())
         integer(ik)                :: iterm, spacedim
+        integer(ik)                :: itime
 
 
         call node%set(xi,eta,zeta)
@@ -977,7 +1010,7 @@ contains
         !
         ! Evaluate x from dot product of modes and polynomial values
         !
-        val = dot_product(q%getvar(ivar),polyvals)
+        val = dot_product(q%getvar(ivar,itime),polyvals)
 
     end function solution_point
     !****************************************************************************************************************
@@ -997,6 +1030,11 @@ contains
     !!  @param[in]  eta     Real value for eta-coordinate.
     !!  @param[in]  zeta    Real value for zeta-coordinate.
     !!
+    !!  @author Mayank Sharma + MAtteo Ugolotti
+    !!  @date   11/5/2016
+    !!
+    !!  TODO: Add itime as an input parameter
+    !!
     !----------------------------------------------------------------------------------------
     function derivative_point(self,q,ivar,xi,eta,zeta,dir) result(val)
         class(element_t),       intent(in)      :: self
@@ -1012,6 +1050,7 @@ contains
         real(rk)        :: metric(3,3), jinv, dxi_dx, dxi_dy, dxi_dz, &
                            deta_dx, deta_dy, deta_dz, dzeta_dx, dzeta_dy, dzeta_dz
         integer(ik)     :: iterm, spacedim
+        integer(ik)     :: itime
 
 
         call node%set(xi,eta,zeta)
@@ -1087,7 +1126,7 @@ contains
         !
         ! Evaluate x from dot product of modes and polynomial values
         !
-        val = dot_product(q%getvar(ivar),deriv)
+        val = dot_product(q%getvar(ivar,itime),deriv)
 
     end function derivative_point
     !****************************************************************************************

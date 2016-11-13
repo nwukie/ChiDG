@@ -35,6 +35,9 @@ contains
     !!  @param[inout]   blk_dnad    Densematrix for storing the DNAD jacobian
     !!  @param[inout]   blk_fd      Densematrix for storing the Finite Difference jacobian
     !!
+    !!  @author Mayank Sharma + Matteo Ugolotti
+    !!  @date   11/5/2016
+    !!
     !----------------------------------------------------------------------------------
     subroutine check_jacobian_volume_advective_flux(data,ielem,iblk,blk_dnad,blk_fd)
         type(chidg_data_t),  intent(inout)       :: data
@@ -45,6 +48,7 @@ contains
         real(rk)                            :: qhold, eps
         integer(ik)                         :: nelem, i, iterm, icol, nterms, ivar, iflux, nflux, idom, iel, idepend
         integer(ik)                         :: ielem_p              ! element in which the solution is being perturbed for the FD calculation.
+        integer(ik)                         :: itime = 1
 
         type(chidg_worker_t)                :: worker
         type(chidg_cache_t)                 :: cache
@@ -151,8 +155,8 @@ contains
                    !
                    ! Perturb the iterm-th term in the solution expansion for variable ivar in element ielem.
                    !
-                   qhold = q%vecs(ielem_p)%getterm(ivar,iterm)
-                   call q%vecs(ielem_p)%setterm(ivar,iterm,qhold + eps)
+                   qhold = q%vecs(ielem_p)%getterm(ivar,iterm,itime)
+                   call q%vecs(ielem_p)%setterm(ivar,iterm,itime,qhold + eps)
 
 
                    !
@@ -171,7 +175,7 @@ contains
                    !
                    ! Return perturbed value to normal state
                    !
-                   call q%vecs(ielem_p)%setterm(ivar,iterm,qhold)
+                   call q%vecs(ielem_p)%setterm(ivar,iterm,itime,qhold)
 
 
                    !
@@ -224,6 +228,9 @@ contains
     !!   @param[inout]   blk_dnad    densematrix for storing the dnad jacobian
     !!   @param[inout]   blk_fd      densematrix for storing the finite difference jacobian
     !!
+    !!  @author Mayank Sharma + Matteo Ugolotti
+    !!  @date   11/5/2016
+    !!
     !--------------------------------------------------------------------------------------------
     subroutine check_jacobian_boundary_advective_flux(data,ielem,iblk,blk_dnad,blk_fd)
         type(chidg_data_t),     intent(inout)   :: data
@@ -235,6 +242,8 @@ contains
         integer(ik) :: nelem, i, iterm, iface, ivar, icol, nterms, iflux, nflux, idom, idonor
         integer(ik) :: ielem_p              ! ielem_p is the element in which the solution is 
                                             ! being perturbed for the finite difference calculation.
+        integer(ik) :: ntime, itime         ! Should ntime be an input paramter?
+
 
         type(chidg_worker_t)    :: worker
         type(chidg_cache_t)     :: cache
@@ -346,60 +355,61 @@ contains
 
             eps   = 1.e-8_rk    ! finite-difference perturbation
 
-            !
-            ! Loop through terms, perturb term, compute rhs, compute finite difference jacobian, return term.
-            !
-            do ivar = 1,data%eqnset(1)%prop%nequations()
-                do iterm = 1,data%mesh(1)%nterms_s
+            do itime = 1,ntime
+                !
+                ! Loop through terms, perturb term, compute rhs, compute finite difference jacobian, return term.
+                !
+                do ivar = 1,data%eqnset(1)%prop%nequations()
+                    do iterm = 1,data%mesh(1)%nterms_s
 
-                    !
-                    ! Perturb the iterm-th term in the solution expansion for variable ivar in element ielem.
-                    !
-                    qhold = q%vecs(ielem_p)%getterm(ivar,iterm)
-                    call q%vecs(ielem_p)%setterm(ivar,iterm,qhold + eps)
+                        !
+                        ! Perturb the iterm-th term in the solution expansion for variable ivar in element ielem.
+                        !
+                        qhold = q%vecs(ielem_p)%getterm(ivar,iterm,itime)
+                        call q%vecs(ielem_p)%setterm(ivar,iterm,itime,qhold + eps)
 
-                    !
-                    ! Update the solution cache
-                    !
-                    call cache_handler%update(worker,data%eqnset,data%bcset)
+                        !
+                        ! Update the solution cache
+                        !
+                        call cache_handler%update(worker,data%eqnset,data%bcset)
 
-                    !
-                    ! For the current element, compute the contributions from volume integrals
-                    !
-                    ! Need to use DIAG to get rhs for finite difference calculation. 
-                    ! This is because RHS is only stored for DIAG in the integrate procedure.
-                    call data%eqnset(1)%compute_boundary_advective_operators(worker,DIAG)
-
-
-                    !
-                    ! Return perturbed value to normal state
-                    !
-                    call q%vecs(ielem_p)%setterm(ivar,iterm,qhold)
+                        !
+                        ! For the current element, compute the contributions from volume integrals
+                        !
+                        ! Need to use DIAG to get rhs for finite difference calculation. 
+                        ! This is because RHS is only stored for DIAG in the integrate procedure.
+                        call data%eqnset(1)%compute_boundary_advective_operators(worker,DIAG)
 
 
-                    !
-                    ! Compute finite difference jacobian
-                    !
-                    vec_fd = (rhs - rhs_r)/eps
+                        !
+                        ! Return perturbed value to normal state
+                        !
+                        call q%vecs(ielem_p)%setterm(ivar,iterm,itime,qhold)
 
 
-                    ! Compute appropriate column for storing linearization
-                    icol = (ivar-1)*nterms + iterm  
+                        !
+                        ! Compute finite difference jacobian
+                        !
+                        vec_fd = (rhs - rhs_r)/eps
 
-                    ! Store in blk_fd
-                    blk_fd%mat(:,icol) = vec_fd%vecs(ielem)%vec
+
+                        ! Compute appropriate column for storing linearization
+                        icol = (ivar-1)*nterms + iterm  
+
+                        ! Store in blk_fd
+                        blk_fd%mat(:,icol) = vec_fd%vecs(ielem)%vec
 
 
-                    !
-                    ! Reset sdata storage
-                    !
-                    call lhs%clear()
-                    call rhs%clear()
-                    call data%sdata%function_status%clear()
+                        !
+                        ! Reset sdata storage
+                        !
+                        call lhs%clear()
+                        call rhs%clear()
+                        call data%sdata%function_status%clear()
 
-                end do  ! iterm
-            end do  ! ivar
-
+                    end do  ! iterm
+                end do  ! ivar
+            end do
 
         end associate
 

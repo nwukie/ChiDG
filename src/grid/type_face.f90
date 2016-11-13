@@ -28,11 +28,15 @@ module type_face
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   5/23/2016
     !!
+    !!  @author Mayank Sharma
+    !!  @date   11/12/2016
+    !!
     !-------------------------------------------------------------------------------------------------------------
     type, public :: face_t
         integer(ik)                 :: spacedim             !< Number of spatial dimensions
         integer(ik)                 :: neqns                !< Number of equations in equationset_t
         integer(ik)                 :: nterms_s             !< Number of terms in solution polynomial expansion
+        integer(ik)                 :: ntime                !< Number of time steps in solution
 
         ! Self information
         integer(ik)                 :: ftype                !< INTERIOR, BOUNDARY, CHIMERA, ORPHAN 
@@ -275,6 +279,7 @@ contains
         !
         self%neqns      = elem%neqns
         self%nterms_s   = elem%nterms_s
+        self%ntime      = elem%ntime
         self%gq         => elem%gq
         self%gqmesh     => elem%gqmesh
 
@@ -359,17 +364,17 @@ contains
         ! Evaluate directional derivatives of coordinates at quadrature nodes.
         !
         associate (gq_f => self%gqmesh%face)
-            dxdxi   = matmul(gq_f%ddxi(  :,:,iface), self%coords%getvar(1))
-            dxdeta  = matmul(gq_f%ddeta( :,:,iface), self%coords%getvar(1))
-            dxdzeta = matmul(gq_f%ddzeta(:,:,iface), self%coords%getvar(1))
+            dxdxi   = matmul(gq_f%ddxi(  :,:,iface), self%coords%getvar(1,itime = 1))
+            dxdeta  = matmul(gq_f%ddeta( :,:,iface), self%coords%getvar(1,itime = 1))
+            dxdzeta = matmul(gq_f%ddzeta(:,:,iface), self%coords%getvar(1,itime = 1))
 
-            dydxi   = matmul(gq_f%ddxi(  :,:,iface), self%coords%getvar(2))
-            dydeta  = matmul(gq_f%ddeta( :,:,iface), self%coords%getvar(2))
-            dydzeta = matmul(gq_f%ddzeta(:,:,iface), self%coords%getvar(2))
+            dydxi   = matmul(gq_f%ddxi(  :,:,iface), self%coords%getvar(2,itime = 1))
+            dydeta  = matmul(gq_f%ddeta( :,:,iface), self%coords%getvar(2,itime = 1))
+            dydzeta = matmul(gq_f%ddzeta(:,:,iface), self%coords%getvar(2,itime = 1))
 
-            dzdxi   = matmul(gq_f%ddxi(  :,:,iface), self%coords%getvar(3))
-            dzdeta  = matmul(gq_f%ddeta( :,:,iface), self%coords%getvar(3))
-            dzdzeta = matmul(gq_f%ddzeta(:,:,iface), self%coords%getvar(3))
+            dzdxi   = matmul(gq_f%ddxi(  :,:,iface), self%coords%getvar(3,itime = 1))
+            dzdeta  = matmul(gq_f%ddeta( :,:,iface), self%coords%getvar(3,itime = 1))
+            dzdzeta = matmul(gq_f%ddzeta(:,:,iface), self%coords%getvar(3,itime = 1))
         end associate
 
         
@@ -437,6 +442,9 @@ contains
     !!
     !!  TODO: Generalize 2D physical coordinates. Currently assumes x-y.
     !!
+    !!  @author Mayank Sharma + Matteo Ugolotti  
+    !!  @date   11/5/2016
+    !!
     !------------------------------------------------------------------------------------------------------
     subroutine compute_quadrature_normals(self)
         class(face_t),  intent(inout)   :: self
@@ -455,17 +463,17 @@ contains
         ! Evaluate directional derivatives of coordinates at quadrature nodes.
         !
         associate (gq_f => self%gqmesh%face)
-            dxdxi   = matmul(gq_f%ddxi(:,:,iface),  self%coords%getvar(1))
-            dxdeta  = matmul(gq_f%ddeta(:,:,iface), self%coords%getvar(1))
-            dxdzeta = matmul(gq_f%ddzeta(:,:,iface),self%coords%getvar(1))
+            dxdxi   = matmul(gq_f%ddxi(:,:,iface),  self%coords%getvar(1,itime = 1))
+            dxdeta  = matmul(gq_f%ddeta(:,:,iface), self%coords%getvar(1,itime = 1))
+            dxdzeta = matmul(gq_f%ddzeta(:,:,iface),self%coords%getvar(1,itime = 1))
 
-            dydxi   = matmul(gq_f%ddxi(:,:,iface),  self%coords%getvar(2))
-            dydeta  = matmul(gq_f%ddeta(:,:,iface), self%coords%getvar(2))
-            dydzeta = matmul(gq_f%ddzeta(:,:,iface),self%coords%getvar(2))
+            dydxi   = matmul(gq_f%ddxi(:,:,iface),  self%coords%getvar(2,itime = 1))
+            dydeta  = matmul(gq_f%ddeta(:,:,iface), self%coords%getvar(2,itime = 1))
+            dydzeta = matmul(gq_f%ddzeta(:,:,iface),self%coords%getvar(2,itime = 1))
 
-            dzdxi   = matmul(gq_f%ddxi(:,:,iface),  self%coords%getvar(3))
-            dzdeta  = matmul(gq_f%ddeta(:,:,iface), self%coords%getvar(3))
-            dzdzeta = matmul(gq_f%ddzeta(:,:,iface),self%coords%getvar(3))
+            dzdxi   = matmul(gq_f%ddxi(:,:,iface),  self%coords%getvar(3,itime = 1))
+            dzdeta  = matmul(gq_f%ddeta(:,:,iface), self%coords%getvar(3,itime = 1))
+            dzdzeta = matmul(gq_f%ddzeta(:,:,iface),self%coords%getvar(3,itime = 1))
         end associate
 
 
@@ -604,7 +612,8 @@ contains
     !!  @author Nathan A. Wukie
     !!  @date   2/1/2016
     !!
-    !!
+    !!  @author Mayank Sharma + Matteo Ugolotti  
+    !!  @date   11/5/2016
     !!
     !------------------------------------------------------------------------------------------------------------
     subroutine compute_quadrature_coords(self)
@@ -618,9 +627,9 @@ contains
         ! compute real coordinates associated with quadrature points
         !
         associate(gq_f => self%gqmesh%face)
-            x = matmul(gq_f%val(:,:,iface),self%coords%getvar(1))
-            y = matmul(gq_f%val(:,:,iface),self%coords%getvar(2))
-            z = matmul(gq_f%val(:,:,iface),self%coords%getvar(3))
+            x = matmul(gq_f%val(:,:,iface),self%coords%getvar(1,itime = 1))
+            y = matmul(gq_f%val(:,:,iface),self%coords%getvar(2,itime = 1))
+            z = matmul(gq_f%val(:,:,iface),self%coords%getvar(3,itime = 1))
         end associate
 
         

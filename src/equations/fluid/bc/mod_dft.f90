@@ -35,6 +35,7 @@ contains
 
         type(point_t),  allocatable  :: points(:)
         integer(ik)                  :: nmodes, npoints, ierr, ielem_bc, ielem, var, mode, ipnt, min_y_element, elem_min, iface
+        integer(ik)                  :: itime
         integer(ik)                  :: min_y_loc
         real(rk)                     :: xi, eta, zeta, min_y, dy, xloc, zloc
 
@@ -97,7 +98,7 @@ contains
             ! 
             var  = Y_DIR    ! y-coordinate index
             mode = 1        ! Coordinate average
-            mean_y_coordinates(ielem_bc) = mesh%elems(ielem)%coords%getterm(var,mode)
+            mean_y_coordinates(ielem_bc) = mesh%elems(ielem)%coords%getterm(var,mode,itime)
             mean_y_elements(ielem_bc)    = ielem
 
         end do ! ielem

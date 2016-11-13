@@ -104,6 +104,9 @@ contains
     !!
     !!  @param[in]  mesh    mesh_t instance containing initialized elements and faces
     !!
+    !!  @author Mayank Sharma + Matteo Ugolotti
+    !!  @date   11/5/2016
+    !!
     !---------------------------------------------------------------------------------------------------------------
     subroutine init_local(self,mesh)
         class(blockvector_t),   intent(inout) :: self
@@ -111,6 +114,7 @@ contains
 
         integer(ik) :: nelem, ierr, ielem, nterms, neqns
         integer(ik) :: dparent_g, dparent_l, eparent_g, eparent_l
+        integer(ik) :: ntime    ! Should be an input parameter?
         logical     :: new_elements
 
 
@@ -153,9 +157,10 @@ contains
             eparent_l = mesh%elems(ielem)%ielement_l
             nterms    = mesh%elems(ielem)%nterms_s
             neqns     = mesh%elems(ielem)%neqns
+            !ntime     = mesh%elems(ielem)%ntime    ! NECESSARY?
 
             ! Call densevector initialization routine
-            call self%vecs(ielem)%init(nterms,neqns,dparent_g,dparent_l,eparent_g,eparent_l)
+            call self%vecs(ielem)%init(nterms,neqns,ntime,dparent_g,dparent_l,eparent_g,eparent_l)
 
         end do
 
@@ -184,6 +189,9 @@ contains
     !!
     !!  @param[in]  mesh    mesh_t instance containing initialized elements and faces
     !!
+    !!  @author Mayank Sharma + Matteo Ugolotti
+    !!  @date   11/5/2016
+    !!
     !---------------------------------------------------------------------------------------------------------------
     subroutine init_recv(self,iproc)
         class(blockvector_t),   intent(inout)   :: self
@@ -192,6 +200,7 @@ contains
         type(ivector_t) :: recv_elems
         integer(ik)     :: nelem_recv, ielem_recv, ierr, ielem, iface, nterms, neqns, loc, recv_element
         integer(ik)     :: idomain_g, idomain_l, ielement_g, ielement_l
+        integer(ik)     :: ntime    ! Should be an input parameter?
         logical         :: new_elements, proc_element, already_added, comm_element
 
 
@@ -252,7 +261,7 @@ contains
             !
             ! Call densevector initialization routine
             !
-            call self%vecs(ielem_recv)%init(nterms,neqns,idomain_g,idomain_l,ielement_g,ielement_l)
+            call self%vecs(ielem_recv)%init(nterms,neqns,ntime,idomain_g,idomain_l,ielement_g,ielement_l)
 
 
         end do

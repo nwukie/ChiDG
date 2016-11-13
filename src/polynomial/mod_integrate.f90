@@ -341,6 +341,11 @@ contains
     !!  @param[in]      ieqn        Variable index
     !!  @param[in]      iblk        Block index for the correct linearization block for the current element
     !!
+    !!  @author Mayank Sharma + Matteo Ugolotti
+    !!  @date   11/5/2016
+    !!
+    !!  TODO: Add itime as input parameter
+    !!
     !---------------------------------------------------------------------------------------------------------
     subroutine store_volume_integrals(mesh,sdata,elem_info,fcn_info,ieqn,integral)
         type(mesh_t),           intent(in)      :: mesh(:)
@@ -351,6 +356,7 @@ contains
         type(AD_D),             intent(inout)   :: integral(:)
 
         integer(ik)         :: i
+        integer(ik)         :: itime
         logical             :: conforming_face, boundary_face, chimera_face
         type(face_info_t)   :: face_info
         real(rk)            :: vals(size(integral))
@@ -361,8 +367,8 @@ contains
         ! Only store rhs once. if iblk == DIAG
         !
         if (iblk == DIAG) then
-            vals = sdata%rhs%dom(idom)%vecs(ielem)%getvar(ieqn) - integral(:)%x_ad_
-            call sdata%rhs%dom(idom)%vecs(ielem)%setvar(ieqn,vals)
+            vals = sdata%rhs%dom(idom)%vecs(ielem)%getvar(ieqn,itime) - integral(:)%x_ad_
+            call sdata%rhs%dom(idom)%vecs(ielem)%setvar(ieqn,itime,vals)
         end if
 
         !
@@ -434,6 +440,11 @@ contains
     !!  @param[in]      ieqn        Variable index
     !!  @param[in]      iblk        Block index for the correct linearization block for the current element
     !!
+    !!  @author Mayank Sharma + matteo Ugolotti
+    !!  @date   11/5/2016
+    !!
+    !!  TODO: Add itime as input parameter
+    !!
     !--------------------------------------------------------------------------------------------------------
     subroutine store_boundary_integral_residual(mesh,sdata,face_info,function_info,ieqn,integral)
         type(mesh_t),           intent(in)      :: mesh(:)
@@ -444,6 +455,7 @@ contains
         type(AD_D),             intent(inout)   :: integral(:)
 
         integer(ik)     :: ftype
+        integer(ik)     :: itime
         real(rk)        :: vals(size(integral))
 
         logical         :: add_flux = .false.
@@ -462,15 +474,15 @@ contains
                 !
                 if ( ftype == BOUNDARY .and. ( ielement_l == function_info%seed%ielement_l ) ) then
 
-                    vals = rhs(ielement_l)%getvar(ieqn) + integral(:)%x_ad_
-                    call rhs(ielement_l)%setvar(ieqn,vals)
+                    vals = rhs(ielement_l)%getvar(ieqn,itime) + integral(:)%x_ad_
+                    call rhs(ielement_l)%setvar(ieqn,itime,vals)
 
 
                 else if ( ftype == CHIMERA .and. iblk == DIAG ) then
 
                     if (idonor == 1) then
-                        vals = rhs(ielement_l)%getvar(ieqn) + integral(:)%x_ad_
-                        call rhs(ielement_l)%setvar(ieqn,vals)
+                        vals = rhs(ielement_l)%getvar(ieqn,itime) + integral(:)%x_ad_
+                        call rhs(ielement_l)%setvar(ieqn,itime,vals)
                     end if
 
 
@@ -485,8 +497,8 @@ contains
                     ! Store if needed
                     if ( add_flux ) then
                         ! Add to residual and store
-                        vals = rhs(ielement_l)%getvar(ieqn) + integral(:)%x_ad_
-                        call rhs(ielement_l)%setvar(ieqn,vals)
+                        vals = rhs(ielement_l)%getvar(ieqn,itime) + integral(:)%x_ad_
+                        call rhs(ielement_l)%setvar(ieqn,itime,vals)
 
                         ! Register flux was stored
                         call sdata%function_status%register_function_computed( face_info, function_info, ieqn )

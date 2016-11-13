@@ -65,6 +65,11 @@ contains
     !!  @author Nathan A. Wukie
     !!  @date   2/1/2016
     !!
+    !!  @author Mayank Sharma + Matteo Ugolotti
+    !!  @date   11/5/2016
+    !!
+    !!  TODO: Add itime as input parameter
+    !!
     !-------------------------------------------------------------------------------------------------------
     function interpolate_element_autodiff(mesh,q,elem_info,fcn_info,ieqn,interpolation_type) result(var_gq)
         type(mesh_t),           intent(in)      :: mesh(:)
@@ -80,6 +85,8 @@ contains
         type(AD_D)  :: qdiff(mesh(elem_info%idomain_l)%elems(elem_info%ielement_l)%nterms_s)
         integer(ik) :: nderiv, set_deriv, iterm
         logical     :: differentiate_me
+
+        integer(ik) :: itime
 
         associate( idom => elem_info%idomain_l, ielem => elem_info%ielement_l )
 
@@ -100,7 +107,7 @@ contains
         !
         ! Copy the solution variables from 'q' to 'qdiff'
         !
-        qdiff = q%dom(idom)%vecs(ielem)%getvar(ieqn)
+        qdiff = q%dom(idom)%vecs(ielem)%getvar(ieqn,itime)
 
 
         !
@@ -186,6 +193,11 @@ contains
     !!  @param[in]      interpolation_type      Interpolate 'value', 'ddx', 'ddy', 'ddz'
     !!  @param[in]      interpolation_source    ME/NEIGHBOR indicating which element to interpolate from
     !!
+    !!  @author Mayank Sharma + Matteo Ugolotti
+    !!  @date   11/5/2016
+    !!
+    !!  TODO: Add itime as an input parameter
+    !!
     !-----------------------------------------------------------------------------------------------------------
     function interpolate_face_autodiff(mesh,q,face_info,fcn_info, ieqn, interpolation_type, interpolation_source) result(var_gq)
         type(mesh_t),           intent(in)              :: mesh(:)
@@ -212,6 +224,8 @@ contains
         integer(ik)                 :: ndonors, idonor
         logical,    allocatable     :: mask(:)          ! node mask for distributing Chimera quadrature points
         type(AD_D), allocatable     :: var_gq_chimera(:)
+
+        integer                     :: itime
 
 
         !
@@ -276,9 +290,9 @@ contains
             ! Copy the solution variables from 'q' to 'qdiff'
             !
             if (parallel_interpolation) then
-                qdiff = q%recv%comm(recv_info%comm)%dom(recv_info%domain)%vecs(recv_info%element)%getvar(ieqn)
+                qdiff = q%recv%comm(recv_info%comm)%dom(recv_info%domain)%vecs(recv_info%element)%getvar(ieqn,itime)
             else
-                qdiff = q%dom(iface_info%idomain_l)%vecs(iface_info%ielement_l)%getvar(ieqn)
+                qdiff = q%dom(iface_info%idomain_l)%vecs(iface_info%ielement_l)%getvar(ieqn,itime)
             end if
 
 
@@ -351,6 +365,10 @@ contains
     !!  @author Nathan A. Wukie
     !!  @date   2/1/2016
     !!
+    !!  @author Mayank Sharma + Matteo Ugolotti
+    !!  @date   11/5/2016
+    !!
+    !!  TODO: Add itime as an input parameter
     !!
     !-------------------------------------------------------------------------------------------------------------
     function interpolate_element_standard(mesh,q,idomain_l,ielement_l,ieqn,interpolation_type) result(var_gq)
@@ -363,6 +381,8 @@ contains
 
         real(rk),   dimension(mesh(idomain_l)%elems(ielement_l)%gq%vol%nnodes) :: var_gq
         !real(rk), allocatable, dimension(:) :: var_gq
+        integer(ik)                                                             :: itime
+
 
         !
         ! Use quadrature instance to compute variable at quadrature nodes.
@@ -371,13 +391,13 @@ contains
         !
         select case (interpolation_type)
             case('value')
-                var_gq = matmul(mesh(idomain_l)%elems(ielement_l)%gq%vol%val, q%dom(idomain_l)%vecs(ielement_l)%getvar(ieqn))
+                var_gq = matmul(mesh(idomain_l)%elems(ielement_l)%gq%vol%val, q%dom(idomain_l)%vecs(ielement_l)%getvar(ieqn,itime))
             case('ddx')
-                var_gq = matmul(mesh(idomain_l)%elems(ielement_l)%ddx, q%dom(idomain_l)%vecs(ielement_l)%getvar(ieqn))
+                var_gq = matmul(mesh(idomain_l)%elems(ielement_l)%ddx, q%dom(idomain_l)%vecs(ielement_l)%getvar(ieqn,itime))
             case('ddy')
-                var_gq = matmul(mesh(idomain_l)%elems(ielement_l)%ddy, q%dom(idomain_l)%vecs(ielement_l)%getvar(ieqn))
+                var_gq = matmul(mesh(idomain_l)%elems(ielement_l)%ddy, q%dom(idomain_l)%vecs(ielement_l)%getvar(ieqn,itime))
             case('ddz')
-                var_gq = matmul(mesh(idomain_l)%elems(ielement_l)%ddz, q%dom(idomain_l)%vecs(ielement_l)%getvar(ieqn))
+                var_gq = matmul(mesh(idomain_l)%elems(ielement_l)%ddz, q%dom(idomain_l)%vecs(ielement_l)%getvar(ieqn,itime))
             case default
                 call chidg_signal(FATAL,"interpolate_element_standard: invalid interpolation_type. Options are 'value', 'ddx', 'ddy', 'ddz'.")
         end select
@@ -402,6 +422,10 @@ contains
     !!  @author Nathan A. Wukie
     !!  @date   2/1/2016
     !!
+    !!  @author Mayank Sharma + Matteo Ugolotti
+    !!  @date   11/5/2016
+    !!
+    !!  TODO: Add itime as input parameter
     !!
     !-------------------------------------------------------------------------------------------------------------
     function interpolate_face_standard(mesh,q,idomain_l,ielement_l,iface,ieqn) result(var_gq)
@@ -410,13 +434,14 @@ contains
         integer(ik),            intent(in)      :: idomain_l, ielement_l, iface, ieqn
 
         real(rk),   dimension(mesh(idomain_l)%elems(ielement_l)%gq%face%nnodes) :: var_gq
+        integer(ik)                                                             :: itime
 
         !
         ! Use quadrature instance to compute variable at quadrature nodes.
         ! This takes the form of a matrix multiplication of the face quadrature matrix
         ! with the array of modes for the given variable
         !
-        var_gq = matmul(mesh(idomain_l)%faces(ielement_l,iface)%gq%face%val(:,:,iface), q%dom(idomain_l)%vecs(ielement_l)%getvar(ieqn))
+        var_gq = matmul(mesh(idomain_l)%faces(ielement_l,iface)%gq%face%val(:,:,iface), q%dom(idomain_l)%vecs(ielement_l)%getvar(ieqn,itime))
 
 
     end function interpolate_face_standard

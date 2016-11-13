@@ -76,7 +76,7 @@ contains
         class(preconditioner_t),    optional,   intent(inout)   :: preconditioner
 
         character(100)          :: filename
-        integer(ik)             :: itime, nsteps, ielem, wcount, iblk, ieqn, idom
+        integer(ik)             :: itime = 1, nsteps, ielem, wcount, iblk, ieqn, idom
         real(rk), allocatable   :: vals(:)
 
 
@@ -97,8 +97,8 @@ contains
                     do ielem = 1,data%mesh(idom)%nelem
 
                         do ieqn = 1,data%eqnset(idom)%prop%nequations()
-                            vals = matmul(data%mesh(idom)%elems(ielem)%invmass, rhs%dom(idom)%vecs(ielem)%getvar(ieqn))
-                            call rhs%dom(idom)%vecs(ielem)%setvar(ieqn,vals)
+                            vals = matmul(data%mesh(idom)%elems(ielem)%invmass, rhs%dom(idom)%vecs(ielem)%getvar(ieqn,itime))
+                            call rhs%dom(idom)%vecs(ielem)%setvar(ieqn,itime,vals)
                         end do
 
                     end do !ielem

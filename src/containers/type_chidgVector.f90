@@ -165,7 +165,10 @@ contains
     !!  @author Nathan A. Wukie
     !!  @date   10/25/2016
     !!
+    !!  @author Mayank Sharma
+    !!  @date   11/12/2016
     !!
+    !!  TODO: SHould itime be an input parameter here?
     !!
     !--------------------------------------------------------------------------------------------
     subroutine project(self,mesh,fcn,ivar)
@@ -175,6 +178,7 @@ contains
         integer(ik),            intent(in)      :: ivar
 
         integer(ik)                 :: idom, ielem, ierr
+        integer(ik)                 :: itime
         real(rk),       allocatable :: fmodes(:)
         character(:),   allocatable :: user_msg
 
@@ -199,7 +203,7 @@ contains
                     !
                     ! Store the projected modes to the solution expansion
                     !
-                    call self%dom(idom)%vecs(ielem)%setvar(ivar,fmodes)
+                    call self%dom(idom)%vecs(ielem)%setvar(ivar,itime,fmodes)
 
             end do ! ielem
 

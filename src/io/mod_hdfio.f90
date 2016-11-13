@@ -570,6 +570,9 @@ contains
     !!  @param[in]      dname       Character string of the domain to be read from.
     !!  @param[inout]   data        ChiDG data containing domains. Already allocated.
     !!
+    !!  @author Mayank Sharma + Matteo Ugolotti
+    !!  @date   11/5/2016
+    !!
     !---------------------------------------------------------------------------------------
     subroutine read_variable_hdf(fid,varstring,itime,dname,data)
         integer(HID_T),     intent(in)      :: fid
@@ -710,7 +713,7 @@ contains
             end if
 
             ! Store modes in ChiDG Vector
-            call data%sdata%q%dom(idom)%vecs(ielem)%setvar(ivar,real(bufferterms,rk))
+            call data%sdata%q%dom(idom)%vecs(ielem)%setvar(ivar,itime,real(bufferterms,rk))
 
         end do
 
@@ -759,6 +762,9 @@ contains
     !!                              to be read.
     !!  @param[in]      dname       Character string of the domain name to be read from.
     !!  @param[inout]   data        chidg_data_t instance containing grid and solution.
+    !!
+    !!  @author Mayank Sharma + Matteo Ugolotti
+    !!  @date   11/5/2016
     !!
     !----------------------------------------------------------------------------------------
     subroutine write_variable_hdf(fid,varstring,itime,dname,data)
@@ -936,7 +942,7 @@ contains
             call h5screate_simple_f(ndims,dimsm,memspace,ierr)
 
 
-            var(:,1,1) = real(data%sdata%q%dom(idom)%vecs(ielem)%getvar(ivar),rdouble)
+            var(:,1,1) = real(data%sdata%q%dom(idom)%vecs(ielem)%getvar(ivar,itime),rdouble)
             cp_var = c_loc(var(1,1,1))
 
             call h5dwrite_f(did, H5T_NATIVE_DOUBLE, cp_var, ierr, memspace, sid)

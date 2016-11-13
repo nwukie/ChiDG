@@ -179,24 +179,31 @@ contains
     !!  @param[in]  neqns       Number of equations being solved in the current domain
     !!  @param[in]  nterms_s    Number of terms in the solution expansion
     !!
+    !!  @author Mayank Sharma + Matteo Ugolotti
+    !!  @date   11/9/2016
+    !!
+    !!  TODO: Add ntime as input parameter
+    !!
     !------------------------------------------------------------------------------------------------------------
     subroutine init_sol(self,neqns,nterms_s)
         class(mesh_t),  intent(inout)   :: self
         integer(ik),    intent(in)      :: neqns
         integer(ik),    intent(in)      :: nterms_s
 
+        integer(ik)                     :: ntime
 
         !
         ! Store number of equations and number of terms in solution expansion
         !
         self%neqns    = neqns
         self%nterms_s = nterms_s
-
+        self%ntime    = ntime
 
         !
         ! Call numerics initialization for elements and faces
         !
-        call self%init_elems_sol(neqns,nterms_s) 
+        call self%init_elems_sol(neqns,nterms_s)    ! TODO: Add ntime to the subroutine call after adding it to
+                                                    !       the list of input parameters in element_t
         call self%init_faces_sol()               
 
         
@@ -323,12 +330,19 @@ contains
     !!  @param[in]  neqns       Number of equations in the domain equation set
     !!  @param[in]  nterms_s    Number of terms in the solution expansion
     !!
+    !!  @author Mayank Sharma + Matteo Ugolotti
+    !!  @date   11/5/2016
+    !!
+    !!  TODO: Add ntime as input parameter
+    !!
     !--------------------------------------------------------------------------------------------------------------
     subroutine init_elems_sol(self,neqns,nterms_s)
         class(mesh_t),  intent(inout)   :: self
         integer(ik),    intent(in)      :: neqns
         integer(ik),    intent(in)      :: nterms_s
-        integer(ik) :: ielem
+        integer(ik)                     :: ielem
+
+        integer(ik)                     :: ntime
 
 
         !
@@ -336,14 +350,16 @@ contains
         !
         self%neqns    = neqns
         self%nterms_s = nterms_s
-
+        self%ntime    = ntime
 
         !
         ! Call the numerics initialization procedure for each element
         !
         do ielem = 1,self%nelem
 
-            call self%elems(ielem)%init_sol(self%neqns,self%nterms_s)
+            call self%elems(ielem)%init_sol(self%neqns,self%nterms_s)       ! TODO: Add ntime to the subroutine call
+                                                                            !       after adding as input parameter
+                                                                            !       element_t routine
 
         end do
 

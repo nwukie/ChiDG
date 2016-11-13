@@ -36,6 +36,7 @@ contains
         real(rk)                :: xi, eta, zeta, x, y, z, r
         real(rk),   allocatable :: vals(:), val_modes(:)
         integer(ik)             :: idom, ielem, ivar, inode, idom_d, ielem_d, ierr
+        integer(ik)             :: itime   
         type(point_t)           :: node, new_node, point_comp
 
 
@@ -167,7 +168,7 @@ contains
                     !
                     ! Store the projected modes to the solution expansion
                     !
-                    call chidg_target%data%sdata%q%dom(idom)%vecs(ielem)%setvar(ivar,val_modes)
+                    call chidg_target%data%sdata%q%dom(idom)%vecs(ielem)%setvar(ivar,itime,val_modes)
 
 
                end do ! ivar

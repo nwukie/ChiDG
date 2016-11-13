@@ -29,9 +29,10 @@ module type_densevector
         ! Storage size and equation information
         integer(ik), private    :: nterms_                      !< Number of terms in an expansion
         integer(ik), private    :: nvars_                       !< Number of equations included
-    
+        integer(ik), private    :: ntime_
+
         ! Vector storage
-        real(rk),  dimension(:), allocatable :: vec             !< Vector storage
+        real(rk),  dimension(:), allocatable :: vec           !< Vector storage
 
     contains
 
@@ -44,6 +45,7 @@ module type_densevector
         procedure, public :: nentries       !< return number of vector entries
         procedure, public :: nterms         !< return nterms_
         procedure, public :: nvars          !< return nvars_
+        procedure, public :: ntime          !< return ntime_
 
         procedure, public :: setvar
         procedure, public :: getvar
@@ -120,10 +122,11 @@ contains
     !!  @param[in]  parent  Index of associated parent element
     !!
     !-------------------------------------------------------------------------------------------------------
-    subroutine init(self,nterms,nvars,dparent_g,dparent_l,eparent_g,eparent_l)
+    subroutine init(self,nterms,nvars,ntime,dparent_g,dparent_l,eparent_g,eparent_l)
         class(densevector_t),   intent(inout)   :: self
         integer(ik),            intent(in)      :: nterms
         integer(ik),            intent(in)      :: nvars
+        integer(ik),            intent(in)      :: ntime
         integer(ik),            intent(in)      :: dparent_g
         integer(ik),            intent(in)      :: dparent_l
         integer(ik),            intent(in)      :: eparent_g
@@ -142,12 +145,12 @@ contains
 
         self%nterms_ = nterms
         self%nvars_  = nvars
-
+        self%ntime_  = ntime
 
         !
         ! Compute total number of elements for densevector storage
         !
-        vsize = nterms * nvars
+        vsize = ntime*nterms * nvars
 
 
         !
@@ -196,20 +199,18 @@ contains
     !!  @result     modes_out   Array of modes from the variable, ivar
     !!
     !-------------------------------------------------------------------------------------------------------
-    function getvar(self,ivar) result(modes_out)
+    function getvar(self,ivar,itime) result(modes_out)
         class(densevector_t),   intent(in)      :: self
-        integer(ik),            intent(in)      :: ivar
+        integer(ik),            intent(in)      :: ivar, itime
 
-        real(rk)                                :: modes_out(self%nterms_)
+        real(rk)                                :: modes_out(self%ntime_*self%nterms_)
         integer(ik)                             :: istart, iend
-
-
+        
         !
         ! Compute start and end indices for accessing modes of a variable
         !
-        istart = (ivar-1) * self%nterms_ + 1
-        iend   = istart + (self%nterms_-1)
-
+        istart = (ivar-1) * self%nterms_ + (self%nvars_*self%nterms_)*(itime - 1)
+        iend = istart + (self%nterms_ - 1)
 
         !
         ! Return modes
@@ -218,6 +219,9 @@ contains
 
     end function getvar
     !******************************************************************************************************
+    ! Two different ways of filling out the modes_out array: bunch 1 variable expansion at all times 
+    ! together for all variables in sequence OR bunch all variable expansions for any given time together
+    ! and repeat in time: ASSUMED 2ND
 
 
 
@@ -231,42 +235,36 @@ contains
 
 
 
-
-    !>  Set the modes for a particular variable
+    !>  Set the modes for a particular variable at a particular time
     !!
     !!  @author Nathan A. Wukie
     !!  @date   2/1/2016
     !!
     !!  @param[in]  ivar    Integer index of the variable being set
     !!  @param[in]  vals    Array of mode values that will be set
+    !!  @param[in]  itime   Integer index of the time level
+    !!
+    !!  @author Mayank Sharma + Matteo Ugolotti
+    !!  @date   11/05/2016
     !!
     !-------------------------------------------------------------------------------------------------------
-    subroutine setvar(self,ivar,vals)
+    subroutine setvar(self,ivar,itime,vals)
         class(densevector_t),   intent(inout)   :: self
-        integer(ik),            intent(in)      :: ivar
+        integer(ik),            intent(in)      :: ivar, itime
         real(rk),               intent(in)      :: vals(:)
 
-        integer(ik)                 :: istart, iend
-        character(:),   allocatable :: user_msg
+        integer(ik) :: istart, iend    
 
         !
         ! Compute start and end indices for accessing modes of a variable
         !
-        istart = (ivar-1) * self%nterms_ + 1
-        iend   = istart + (self%nterms_-1)
-
-        !
-        ! Bounds-check
-        !
-        user_msg = "densevector%setvar: Variable Index might not be valid. Computed indices to &
-                    set modes in vector were out of bounds."
-        if ((istart > size(self%vec)) .or. (iend > size(self%vec)) ) call chidg_signal(FATAL,user_msg)
+        istart = (ivar-1) * self%nterms_ + (self%nvars_*self%nterms_)*(itime - 1)
+        iend = istart + (self%nterms_ - 1) 
 
         !
         ! Set modes
         !
         self%vec(istart:iend) = vals
-
 
     end subroutine setvar
     !******************************************************************************************************
@@ -286,21 +284,21 @@ contains
     !!  @param[in]  iterm   Integer index of the mode in the expansion to be returned
     !!
     !-------------------------------------------------------------------------------------------------------
-    function getterm(self,ivar,iterm) result(mode_out)
+    function getterm(self,ivar,iterm,itime) result(mode_out)
         class(densevector_t),   intent(in)  :: self
         integer(ik),            intent(in)  :: ivar
         integer(ik),            intent(in)  :: iterm
+        integer(ik),            intent(in)  :: itime
 
         real(rk)    :: mode_out
         integer(ik) :: istart, iterm_g
-
+ 
         !
         ! Compute start and end indices for accessing modes of a variable
         !
-        istart = (ivar-1) * self%nterms_ + 1
-        iterm_g = istart + (iterm-1)
-    
-
+        istart = (ivar-1) * self%nterms_ + (self%nvars_*self%nterms_)*(itime - 1)
+        iterm_g = istart + iterm
+        
         !
         ! Get mode
         !
@@ -326,9 +324,9 @@ contains
     !!  @param[in]  mode_in     Floating point value, which is the mode amplitude to be set
     !!
     !-------------------------------------------------------------------------------------------------------
-    subroutine setterm(self,ivar,iterm,mode_in)
+    subroutine setterm(self,ivar,iterm,itime,mode_in)
         class(densevector_t),   intent(inout)   :: self
-        integer(ik),            intent(in)      :: ivar, iterm
+        integer(ik),            intent(in)      :: ivar, iterm, itime
         real(rk),               intent(in)      :: mode_in
 
         integer(ik) :: istart, iterm_g
@@ -336,8 +334,8 @@ contains
         !
         ! Compute start and end indices for accessing modes of a variable
         !
-        istart = (ivar-1) * self%nterms_ + 1
-        iterm_g = istart + (iterm-1)
+        istart = (ivar-1) * self%nterms_ + (self%nvars_*self%nterms_)*(itime - 1)
+        iterm_g = istart + iterm
 
 
         !
@@ -420,6 +418,28 @@ contains
 
 
 
+
+
+
+
+
+    !> Function that returns ntime_ private component
+    !!
+    !!  @author Mayank Sharma + Matteo Ugolotti
+    !!  @date   11/03/2016
+    !!
+    !-------------------------------------------------------------------------------------------------------
+    pure function ntime(self) result(ntime_out)
+        class(densevector_t),  intent(in)  :: self
+
+        integer(ik)                        :: ntime_out
+        
+        ntime_out = self%ntime_
+        
+    end function ntime
+    !******************************************************************************************************
+  
+    
 
 
 
@@ -545,6 +565,7 @@ contains
         res%eparent_l_ = right%eparent_l_
         res%nvars_     = right%nvars_
         res%nterms_    = right%nterms_
+        res%ntime_     = right%ntime_
 
         res%vec        = left * right%vec
 
@@ -563,6 +584,7 @@ contains
         res%eparent_l_ = left%eparent_l_
         res%nvars_     = left%nvars_
         res%nterms_    = left%nterms_
+        res%ntime_     = left%ntime_
 
         res%vec        = left%vec * right
 
@@ -587,7 +609,8 @@ contains
         res%eparent_l_ = right%eparent_l_
         res%nvars_     = right%nvars_
         res%nterms_    = right%nterms_
-        
+        res%ntime_     = right%ntime_
+
         res%vec        = left / right%vec
 
     end function
@@ -605,6 +628,7 @@ contains
         res%eparent_l_ = left%eparent_l_
         res%nvars_     = left%nvars_
         res%nterms_    = left%nterms_
+        res%ntime_     = left%ntime_
 
         res%vec        = left%vec / right
 
@@ -628,6 +652,7 @@ contains
         res%eparent_l_ = left%eparent_l_
         res%nvars_     = left%nvars_
         res%nterms_    = left%nterms_
+        res%ntime_     = left%ntime_
 
         res%vec        = left%vec + right%vec
 
@@ -648,6 +673,7 @@ contains
         res%eparent_l_ = left%eparent_l_
         res%nvars_     = left%nvars_
         res%nterms_    = left%nterms_
+        res%ntime_     = left%ntime_
 
         res%vec        = left%vec - right%vec
 

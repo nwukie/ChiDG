@@ -318,7 +318,7 @@ contains
         group_set = .false.
         do igroup = 1,size(bc_groups)
 
-            group_found = (trim(bc_group) == bc_groups(igroup)%name) 
+            group_found = (trim(bc_group) == trim(bc_groups(igroup)%name) )
 
             if (group_found .and. (.not. group_set)) then
 
@@ -348,7 +348,7 @@ contains
                     matches with the string indicated in a boundary patch. Make sure that a &
                     boundary state group with the correct name exists. Also make sure that the name &
                     set on the boundary patch corresponds to one of the boundary state groups that exists."
-        if (.not. group_set) call chidg_signal_one(FATAL,user_msg,trim(bc_group))
+        if (.not. group_set .and. (trim(bc_group) /= 'empty')) call chidg_signal_one(FATAL,user_msg,trim(bc_group))
 
 
         !

@@ -14,6 +14,7 @@ module mod_gridgen_smoothbump
     use hdf5
 
     use type_point,             only: point_t
+    use type_bc_group,          only: bc_group_t
     use type_bc_state,          only: bc_state_t
     implicit none
 
@@ -52,13 +53,14 @@ contains
     !!
     !!
     !-----------------------------------------------------------------------------
-    subroutine create_mesh_file__smoothbump(filename,nelem_xi,nelem_eta,nelem_zeta,equation_sets,bc_states)
-        character(*),               intent(in)              :: filename
-        integer(ik),                intent(in)              :: nelem_xi
-        integer(ik),                intent(in)              :: nelem_eta
-        integer(ik),                intent(in)              :: nelem_zeta
-        type(string_t),             intent(in), optional    :: equation_sets(:)
-        type(bc_state_wrapper_t),   intent(in), optional    :: bc_states(:,:)
+    subroutine create_mesh_file__smoothbump(filename,nelem_xi,nelem_eta,nelem_zeta,equation_sets,group_names,bc_groups)
+        character(*),       intent(in)              :: filename
+        integer(ik),        intent(in)              :: nelem_xi
+        integer(ik),        intent(in)              :: nelem_eta
+        integer(ik),        intent(in)              :: nelem_zeta
+        type(string_t),     intent(in), optional    :: equation_sets(:)
+        type(string_t),     intent(in), optional    :: group_names(:,:)
+        type(bc_group_t),   intent(in), optional    :: bc_groups(:)
 
         type(bc_state_wrapper_t)                    :: bc_states_set(6)
         integer(HID_T)                              :: file_id, dom_id, bcface_id
@@ -120,51 +122,51 @@ contains
 
 
 
-        if (present(bc_states)) then
+!        if (present(bc_states)) then
+!
+!            bc_states_set(XI_MIN)   = bc_states(1,XI_MIN)
+!            bc_states_set(XI_MAX)   = bc_states(1,XI_MAX)
+!            bc_states_set(ETA_MIN)  = bc_states(1,ETA_MIN)
+!            bc_states_set(ETA_MAX)  = bc_states(1,ETA_MAX)
+!            bc_states_set(ZETA_MIN) = bc_states(1,ZETA_MIN)
+!            bc_states_set(ZETA_MAX) = bc_states(1,ZETA_MAX)
+!
+!        else
+!
+!            ! Create boundary conditions
+!            call create_bc("Total Inlet",     bc_states_set(XI_MIN)%state)
+!            call create_bc("Pressure Outlet", bc_states_set(XI_MAX)%state)
+!            call create_bc("Wall", bc_states_set(ETA_MIN)%state )
+!            call create_bc("Wall", bc_states_set(ETA_MAX)%state )
+!            call create_bc("Wall", bc_states_set(ZETA_MIN)%state)
+!            call create_bc("Wall", bc_states_set(ZETA_MAX)%state)
+!
+!
+!            ! Set Inlet bc parameters
+!            call bc_states_set(XI_MIN)%state%set_fcn_option("TotalPressure","val",110000._rk)
+!            call bc_states_set(XI_MIN)%state%set_fcn_option("TotalTemperature","val",300._rk)
+!
+!            ! Set Outlet bc parameter
+!            call bc_states_set(XI_MAX)%state%set_fcn_option("Static Pressure","val",100000._rk)
+!
+!        end if
 
-            bc_states_set(XI_MIN)   = bc_states(1,XI_MIN)
-            bc_states_set(XI_MAX)   = bc_states(1,XI_MAX)
-            bc_states_set(ETA_MIN)  = bc_states(1,ETA_MIN)
-            bc_states_set(ETA_MAX)  = bc_states(1,ETA_MAX)
-            bc_states_set(ZETA_MIN) = bc_states(1,ZETA_MIN)
-            bc_states_set(ZETA_MAX) = bc_states(1,ZETA_MAX)
-
-        else
-
-            ! Create boundary conditions
-            call create_bc("Total Inlet",     bc_states_set(XI_MIN)%state)
-            call create_bc("Pressure Outlet", bc_states_set(XI_MAX)%state)
-            call create_bc("Wall", bc_states_set(ETA_MIN)%state )
-            call create_bc("Wall", bc_states_set(ETA_MAX)%state )
-            call create_bc("Wall", bc_states_set(ZETA_MIN)%state)
-            call create_bc("Wall", bc_states_set(ZETA_MAX)%state)
 
 
-            ! Set Inlet bc parameters
-            call bc_states_set(XI_MIN)%state%set_fcn_option("TotalPressure","val",110000._rk)
-            call bc_states_set(XI_MIN)%state%set_fcn_option("TotalTemperature","val",300._rk)
-
-            ! Set Outlet bc parameter
-            call bc_states_set(XI_MAX)%state%set_fcn_option("Static Pressure","val",100000._rk)
-
-        end if
-
-
-
-        !
-        ! Set all boundary conditions to walls, inlet, outlet...
-        !
-        !
-        face_strings = ["XI_MIN  ","XI_MAX  ", "ETA_MIN ", "ETA_MAX ", "ZETA_MIN", "ZETA_MAX"]
-        do bcface = 1,size(face_strings)
-
-            call h5gopen_f(dom_id,"BoundaryConditions/"//trim(adjustl(face_strings(bcface))),bcface_id,ierr)
-
-            call add_bc_state_hdf(bcface_id,bc_states_set(bcface)%state)
-
-            call h5gclose_f(bcface_id,ierr)
-
-        end do
+!        !
+!        ! Set all boundary conditions to walls, inlet, outlet...
+!        !
+!        !
+!        face_strings = ["XI_MIN  ","XI_MAX  ", "ETA_MIN ", "ETA_MAX ", "ZETA_MIN", "ZETA_MAX"]
+!        do bcface = 1,size(face_strings)
+!
+!            call h5gopen_f(dom_id,"BoundaryConditions/"//trim(adjustl(face_strings(bcface))),bcface_id,ierr)
+!
+!            call add_bc_state_hdf(bcface_id,bc_states_set(bcface)%state)
+!
+!            call h5gclose_f(bcface_id,ierr)
+!
+!        end do
 
 
         call close_domain_hdf(dom_id)

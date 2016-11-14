@@ -2304,7 +2304,7 @@ contains
     !!  @param[in]  group_family    The boundary condition state family
     !!
     !----------------------------------------------------------------------------------------
-    subroutine create_bc_state_group_hdf(fid,group_name,group_family)
+    subroutine create_bc_group_hdf(fid,group_name,group_family)
         integer(HID_T), intent(in)  :: fid
         character(*),   intent(in)  :: group_name
         character(*),   intent(in)  :: group_family
@@ -2337,7 +2337,7 @@ contains
 
         call h5gclose_f(bcgroup_id,ierr)
 
-    end subroutine create_bc_state_group_hdf
+    end subroutine create_bc_group_hdf
     !****************************************************************************************
 
 
@@ -2453,9 +2453,42 @@ contains
 
 
 
+    !>
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   11/11/2016
+    !!
+    !---------------------------------------------------------------------------------------
+    function open_bc_group_hdf(fid,group_name) result(bcgroup_id)
+        integer(HID_T),     intent(in)  :: fid
+        character(*),       intent(in)  :: group_name
+
+        integer(ik)     :: ierr
+        integer(HID_T)  :: bcgroup_id
+
+        call h5gopen_f(fid,"BCSG_"//trim(group_name),bcgroup_id,ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"open_bc_group_hdf: Error opening boundary condition group")
+
+    end function open_bc_group_hdf
+    !***************************************************************************************
 
 
+    !>
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   11/11/2016
+    !!
+    !---------------------------------------------------------------------------------------
+    subroutine close_bc_group_hdf(bcgroup_id)
+        integer(HID_T), intent(in)  :: bcgroup_id
 
+        integer(ik)     :: ierr
+
+        call h5gclose_f(bcgroup_id,ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"open_bc_group_hdf: Error closing bc_group")
+
+    end subroutine close_bc_group_hdf
+    !***************************************************************************************
 
 
 

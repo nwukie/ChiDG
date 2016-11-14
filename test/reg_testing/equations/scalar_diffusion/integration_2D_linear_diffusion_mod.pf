@@ -37,7 +37,8 @@ module integration_2D_linear_diffusion_mod
     use type_chidg_data,        only: chidg_data_t
     use mod_bc,                 only: create_bc
     use mod_string,             only: string_t
-    use type_bc_state_wrapper,  only: bc_state_wrapper_t
+    use type_bc_state,          only: bc_state_t
+    use type_bc_group,          only: bc_group_t
     use type_function,          only: function_t
     use type_ivector,           only: ivector_t
     use mod_function,           only: create_function
@@ -172,18 +173,6 @@ module integration_2D_linear_diffusion_mod
         procedure   :: tearDown
     end type linear_diffusion_2D
     !*******************************************************************************
-
-
-
-!    !> Simple container to hold arbitrary length file names. That way, we can have
-!    !! an array of filenames that get looped through.
-!    !!
-!    !-------------------------------------------------------------------------------
-!    type :: string
-!        character(len=:), allocatable   :: str
-!    end type
-!    !*******************************************************************************
-
 
 
 
@@ -447,7 +436,9 @@ contains
         class(linear_diffusion_2D),  intent(inout)   :: this
 
         class(function_t),  allocatable :: fcn
-        type(bc_state_wrapper_t)        :: bc_states(1,6)
+        class(bc_state_t),  allocatable :: bc_state
+        type(bc_group_t)                :: bc_groups(2)
+        type(string_t)                  :: group_names(1,6)
 
         
         type(test_2D_LD_volume_source_t)           :: source_test_linear_diffusion
@@ -534,24 +525,43 @@ contains
         ! Create mesh
         !
         if (IRANK == GLOBAL_MASTER) then
-            call create_bc("Scalar Value", bc_states(1,XI_MIN)%state  )
-            call create_bc("Scalar Value", bc_states(1,XI_MAX)%state  )
-            call create_bc("Scalar Value", bc_states(1,ETA_MIN)%state )
-            call create_bc("Scalar Value", bc_states(1,ETA_MAX)%state )
-            call create_bc("Scalar Extrapolate", bc_states(1,ZETA_MIN)%state)
-            call create_bc("Scalar Extrapolate", bc_states(1,ZETA_MAX)%state)
-            
-            call bc_states(1,XI_MIN)%state%set_fcn_option("Value","val",ZERO)
-            call bc_states(1,XI_MAX)%state%set_fcn_option("Value","val",ZERO)
-            call bc_states(1,ETA_MIN)%state%set_fcn_option("Value","val",ZERO)
-            call bc_states(1,ETA_MAX)%state%set_fcn_option("Value","val",ZERO)
+            bc_groups(1)%name = "XY Boundaries"
+            bc_groups(2)%name = "Z Boundaries"
+
+
+            call create_bc("Scalar Value", bc_state)
+            call bc_state%set_fcn_option("Value","val",ZERO)
+            call bc_groups(1)%bc_states%push_back(bc_state)
+
+
+            call create_bc("Scalar Extrapolate", bc_state)
+            call bc_groups(2)%bc_states%push_back(bc_state)
+
+
+!            call create_bc("Scalar Value", bc_states(1,ETA_MIN)%state )
+!            call create_bc("Scalar Value", bc_states(1,ETA_MAX)%state )
+!            call create_bc("Scalar Extrapolate", bc_states(1,ZETA_MIN)%state)
+!            call create_bc("Scalar Extrapolate", bc_states(1,ZETA_MAX)%state)
+!            
+!            call bc_states(1,XI_MIN)%state%set_fcn_option("Value","val",ZERO)
+!            call bc_states(1,XI_MAX)%state%set_fcn_option("Value","val",ZERO)
+!            call bc_states(1,ETA_MIN)%state%set_fcn_option("Value","val",ZERO)
+!            call bc_states(1,ETA_MAX)%state%set_fcn_option("Value","val",ZERO)
+
+            group_names(1,:) = [ string_t("XY Boundaries"), &
+                                 string_t("XY Boundaries"), &
+                                 string_t("XY Boundaries"), &
+                                 string_t("XY Boundaries"), &
+                                 string_t("Z Boundaries"), &
+                                 string_t("Z Boundaries") ]
 
 
             call create_mesh_file("D1 NxNxN",this%gridfile,equation_sets=[string_t("Test 2D Linear Diffusion")], &
-                                                           bc_states =bc_states,                     &
-                                                           nelem_xi  =this%nelem_xi,                 &
-                                                           nelem_eta =this%nelem_eta,                &
-                                                           nelem_zeta=1)
+                                                           group_names = group_names,                   &
+                                                           bc_groups   = bc_groups,                     &
+                                                           nelem_xi    = this%nelem_xi,                 &
+                                                           nelem_eta   = this%nelem_eta,                &
+                                                           nelem_zeta  = 1)
         end if
 
 

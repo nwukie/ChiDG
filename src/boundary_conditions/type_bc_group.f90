@@ -11,12 +11,12 @@ module type_bc_group
     !!  @date   11/9/2016
     !!
     !-------------------------------------------------------------------------
-    type, public :: bc_group_d
+    type, public :: bc_group_t
         
         character(:),       allocatable :: name         !< Boundary State Group name
         type(bcvector_t)                :: bc_states    !< Vector of boundary condition state functions for each group.
 
-    end type bc_group_d
+    end type bc_group_t
     !*************************************************************************
 
 

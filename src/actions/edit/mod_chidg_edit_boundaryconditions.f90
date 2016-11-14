@@ -16,7 +16,7 @@ module mod_chidg_edit_boundaryconditions
                                      get_domain_name_hdf, get_bc_state_names_hdf,                   &
                                      delete_group_attributes_hdf,                                   &
                                      add_bc_state_hdf, set_bc_property_function_hdf,                &
-                                     create_bc_state_group_hdf, remove_bc_state_group_hdf,          &
+                                     create_bc_group_hdf, remove_bc_state_group_hdf,          &
                                      get_bc_state_group_names_hdf, get_bc_state_group_family_hdf,   &
                                      get_bc_patch_group_hdf, set_bc_patch_group_hdf,                &
                                      check_bc_property_exists_hdf, remove_bc_state_hdf,             &
@@ -177,7 +177,7 @@ contains
                     call write_line(command, color='blue')
                     read(*,'(A1024)') group_family
 
-                    call create_bc_state_group_hdf(fid,group_name,group_family)
+                    call create_bc_group_hdf(fid,group_name,group_family)
                     call chidg_edit_boundarycondition_state_group(fid,group_name)
                 !
                 ! Edit group

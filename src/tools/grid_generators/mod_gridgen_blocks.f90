@@ -11,9 +11,12 @@ module mod_gridgen_blocks
                                       open_file_hdf, close_file_hdf, &
                                       open_domain_hdf, close_domain_hdf, &
                                       set_bc_patch_hdf, add_bc_state_hdf, &
-                                      set_contains_grid_hdf, close_hdf, open_hdf
+                                      set_contains_grid_hdf, close_hdf, open_hdf, &
+                                      create_bc_group_hdf, open_bc_group_hdf, close_bc_group_hdf, &
+                                      set_bc_patch_group_hdf
 
     use type_point,             only: point_t
+    use type_bc_group,          only: bc_group_t
     use type_bc_state,          only: bc_state_t
     use type_bc_state_wrapper,  only: bc_state_wrapper_t
     use hdf5
@@ -77,25 +80,26 @@ contains
     !!
     !!
     !---------------------------------------------------------------------------------------
-    subroutine create_mesh_file__singleblock(filename,grid,equation_sets,bc_states,nelem_xi,nelem_eta,nelem_zeta,clusterx)
+    subroutine create_mesh_file__singleblock(filename,grid,equation_sets,group_names,bc_groups,nelem_xi,nelem_eta,nelem_zeta,clusterx)
         character(*),               intent(in)              :: filename
         character(*),               intent(in)              :: grid
         type(string_t),             intent(in), optional    :: equation_sets(:)
-        type(bc_state_wrapper_t),   intent(in), optional    :: bc_states(:,:)
+        type(string_t),             intent(in), optional    :: group_names(:,:)
+        type(bc_group_t),           intent(in), optional    :: bc_groups(:)
         integer(ik),                intent(in), optional    :: nelem_xi
         integer(ik),                intent(in), optional    :: nelem_eta
         integer(ik),                intent(in), optional    :: nelem_zeta
         integer(ik),                intent(in), optional    :: clusterx
 
-        character(:),       allocatable                 :: user_msg
-        class(bc_state_t),  allocatable                 :: bc_state
-        character(8)                                    :: face_strings(6)
-        integer(HID_T)                                  :: file_id, dom_id, bcface_id
-        integer(ik)                                     :: spacedim, mapping, bcface, ierr
-        type(point_t),  allocatable                     :: nodes(:)
-        integer(ik),    allocatable                     :: elements(:,:) 
-        integer(ik),    allocatable                     :: faces(:,:)
-        real(rk),       allocatable, dimension(:,:,:)   :: xcoords, ycoords, zcoords
+        character(:),                   allocatable :: user_msg
+        class(bc_state_t),              allocatable :: bc_state
+        character(len=10)                           :: patch_names(6)
+        integer(HID_T)                              :: file_id, dom_id, patch_id, bcgroup_id
+        integer(ik)                                 :: spacedim, mapping, bcface, ierr, igroup, istate
+        type(point_t),                  allocatable :: nodes(:)
+        integer(ik),                    allocatable :: elements(:,:) 
+        integer(ik),                    allocatable :: faces(:,:)
+        real(rk),   dimension(:,:,:),   allocatable :: xcoords, ycoords, zcoords
 
 
         ! Create/initialize file
@@ -152,12 +156,14 @@ contains
         !
         dom_id = open_domain_hdf(file_id,"01")
 
-        do bcface = 1,6
+        do bcface = 1,size(patch_names)
+            
             ! Get face node indices for boundary 'bcface'
             faces = get_block_boundary_faces_plot3d(xcoords,ycoords,zcoords,mapping,bcface)
 
             ! Set bc patch face indices
             call set_bc_patch_hdf(dom_id,faces,bcface)
+
         end do !bcface
 
 
@@ -168,19 +174,49 @@ contains
 
 
         !
-        ! Set boundary condition states for Domain 1: Leave XI_MAX empty
+        ! Add bc_group's
         !
-        face_strings = ["XI_MIN  ","XI_MAX  ", "ETA_MIN ", "ETA_MAX ", "ZETA_MIN", "ZETA_MAX"]
-        do bcface = 1,size(face_strings)
-            call h5gopen_f(dom_id,"BoundaryConditions/"//trim(adjustl(face_strings(bcface))),bcface_id,ierr)
+        if (present(bc_groups)) then
+            do igroup = 1,size(bc_groups)
+                call create_bc_group_hdf(file_id,bc_groups(igroup)%name,'Default')
 
-            if (present(bc_states)) then
-                call add_bc_state_hdf(bcface_id,bc_states(1,bcface)%state)
+                bcgroup_id = open_bc_group_hdf(file_id,bc_groups(igroup)%name)
+
+                do istate = 1,bc_groups(igroup)%bc_states%size()
+                    call add_bc_state_hdf(bcgroup_id, bc_groups(igroup)%bc_states%at(istate))
+                end do
+                call close_bc_group_hdf(bcgroup_id)
+            end do
+        else
+            call create_bc_group_hdf(file_id,'Default','Default')
+
+            bcgroup_id = open_bc_group_hdf(file_id,'Default')
+            call add_bc_state_hdf(bcgroup_id,bc_state)
+            call close_bc_group_hdf(bcgroup_id)
+
+        end if
+
+
+
+        !
+        ! Set boundary condition groups for each patch
+        !
+        patch_names = ["XI_MIN  ","XI_MAX  ", "ETA_MIN ", "ETA_MAX ", "ZETA_MIN", "ZETA_MAX"]
+        do bcface = 1,size(patch_names)
+
+            call h5gopen_f(dom_id,"BoundaryConditions/"//trim(adjustl(patch_names(bcface))),patch_id,ierr)
+
+
+            ! Set bc_group
+            if (present(group_names)) then
+                call set_bc_patch_group_hdf(patch_id,group_names(1,bcface)%get())
             else
-                call add_bc_state_hdf(bcface_id,bc_state)
+                call set_bc_patch_group_hdf(patch_id,'Default')
             end if
 
-            call h5gclose_f(bcface_id,ierr)
+
+            call h5gclose_f(patch_id,ierr)
+
         end do
 
 
@@ -213,17 +249,18 @@ contains
     !!
     !!
     !-------------------------------------------------------------------------------------
-    subroutine create_mesh_file__multiblock(filename,block1,block2,equation_sets,bc_states)
-        character(*),               intent(in)              :: filename
-        character(*),               intent(in)              :: block1
-        character(*),               intent(in)              :: block2
-        type(string_t),             intent(in), optional    :: equation_sets(:)
-        type(bc_state_wrapper_t),   intent(in), optional    :: bc_states(:,:)
+    subroutine create_mesh_file__multiblock(filename,block1,block2,equation_sets,group_names,bc_groups)
+        character(*),       intent(in)              :: filename
+        character(*),       intent(in)              :: block1
+        character(*),       intent(in)              :: block2
+        type(string_t),     intent(in), optional    :: equation_sets(:)
+        type(string_t),     intent(in), optional    :: group_names(:,:)
+        type(bc_group_t),   intent(in), optional    :: bc_groups(:)
 
         class(bc_state_t),  allocatable                 :: bc_state
         character(8)                                    :: faces(6)
-        integer(HID_T)                                  :: file_id, dom1_id, dom2_id, bcface1_id, bcface2_id
-        integer(ik)                                     :: spacedim, mapping, bcface, ierr
+        integer(HID_T)                                  :: file_id, dom1_id, dom2_id, bcface1_id, bcface2_id, bcgroup_id
+        integer(ik)                                     :: spacedim, mapping, bcface, ierr, igroup, istate
         type(point_t),  allocatable                     :: nodes1(:), nodes2(:)
         integer(ik),    allocatable                     :: elements1(:,:), elements2(:,:) 
         integer(ik),    allocatable                     :: faces1(:,:), faces2(:,:)
@@ -252,13 +289,10 @@ contains
 
         select case (trim(block2))
             case("D1 E1 M1")
-                !call meshgen_1x1x1_linear(xcoords2,ycoords2,zcoords2)
                 call meshgen_NxNxN_linear(1,1,1,xcoords2,ycoords2,zcoords2)
             case("D1 E2 M1")
-                !call meshgen_2x1x1_linear(xcoords2,ycoords2,zcoords2)
                 call meshgen_NxNxN_linear(2,1,1,xcoords2,ycoords2,zcoords2)
             case("D1 E27 M1")
-                !call meshgen_3x3x3_linear(xcoords2,ycoords2,zcoords2)
                 call meshgen_NxNxN_linear(3,3,3,xcoords2,ycoords2,zcoords2)
             case default
                 call chidg_signal(FATAL,"create_mesh_file__multiblock: Invalid block2 string")
@@ -315,16 +349,49 @@ contains
         call create_bc("Scalar Extrapolate", bc_state)
 
 
+
+
         !
-        ! Set boundary condition states
+        ! Add bc_group's
+        !
+        if (present(bc_groups)) then
+            do igroup = 1,size(bc_groups)
+                call create_bc_group_hdf(file_id,bc_groups(igroup)%name,'Default')
+
+                bcgroup_id = open_bc_group_hdf(file_id,bc_groups(igroup)%name)
+
+                do istate = 1,bc_groups(igroup)%bc_states%size()
+                    call add_bc_state_hdf(bcgroup_id, bc_groups(igroup)%bc_states%at(istate))
+                end do
+                call close_bc_group_hdf(bcgroup_id)
+            end do
+        else
+            call create_bc_group_hdf(file_id,'Default','Default')
+
+            bcgroup_id = open_bc_group_hdf(file_id,'Default')
+            call add_bc_state_hdf(bcgroup_id,bc_state)
+            call close_bc_group_hdf(bcgroup_id)
+
+        end if
+
+
+
+
+        !
+        ! Assign groups to boundary condition patches
         !
         faces = ["XI_MIN  ","XI_MAX  ", "ETA_MIN ", "ETA_MAX ", "ZETA_MIN", "ZETA_MAX"]
         do bcface = 1,size(faces)
             call h5gopen_f(dom1_id,"BoundaryConditions/"//trim(adjustl(faces(bcface))),bcface1_id,ierr)
             call h5gopen_f(dom2_id,"BoundaryConditions/"//trim(adjustl(faces(bcface))),bcface2_id,ierr)
 
-            call add_bc_state_hdf(bcface1_id,bc_state)
-            call add_bc_state_hdf(bcface2_id,bc_state)
+            if (present(group_names)) then
+                call set_bc_patch_group_hdf(bcface1_id,group_names(1,bcface)%get())
+                call set_bc_patch_group_hdf(bcface2_id,group_names(2,bcface)%get())
+            else
+                call set_bc_patch_group_hdf(bcface1_id,"Default")
+                call set_bc_patch_group_hdf(bcface2_id,"Default")
+            end if
 
             call h5gclose_f(bcface1_id,ierr)
             call h5gclose_f(bcface2_id,ierr)
@@ -387,27 +454,30 @@ contains
     !!  |     |     |             |     |     |                  |     |     |
     !!  .-----.-----.             .-----.-----.                  .-----.-----.
     !!
-    !!  Abutting
+    !!  Abutting/Matching combinations:
+    !!  -------------------------------
     !!
     !!       abutting = .true.        abutting = .false.
-    !!           ----.----               ----.-.----
-    !!               |                       | | 
-    !!               |                       | | 
-    !!           ----.----               ----.-.----
-    !!               |                       | |   
-    !!               |                       | | 
-    !!           ----.----               ----.-.----
+    !!       matching = .true.        matching = .true.
+    !!          ----..----               ----.-.----
+    !!              ||                       | | 
+    !!              ||                       | | 
+    !!          ----..----               ----.-.----
+    !!              ||                       | |   
+    !!              ||                       | | 
+    !!          ----..----               ----.-.----
     !!
-    !!  Overlap
     !!
-    !!       matching = .true.        matching = .false.
-    !!          ----.-.----              ----.-.----
-    !!              | |                      | | 
-    !!              | |                      | | 
-    !!          ----.-.----              ----|-.   
-    !!              | |                      .-|----
-    !!              | |                      | | 
-    !!          ----.-.----              ----.-.----
+    !!       abutting = .true.         abutting = .false.
+    !!       matching = .false.        matching = .false.
+    !!  
+    !!         -----..-----              ----.-.----
+    !!              ||                       | | 
+    !!              ||                       | | 
+    !!         -----.|                   ----|-.   
+    !!              |.-----                  .-|----
+    !!              ||                       | | 
+    !!         -----..-----              ----.-.----
     !!
     !!
     !!  @author Nathan A. Wukie
@@ -416,17 +486,19 @@ contains
     !!
     !!
     !---------------------------------------------------------------------------------------
-    subroutine create_mesh_file__D2E8M1(filename,abutting,matching,equation_sets,bc_states)
-        character(*),               intent(in)              :: filename
-        logical,                    intent(in)              :: abutting
-        logical,                    intent(in)              :: matching
-        type(string_t),             intent(in), optional    :: equation_sets(:)
-        type(bc_state_wrapper_t),   intent(in), optional    :: bc_states(:,:)
+    subroutine create_mesh_file__D2E8M1(filename,abutting,matching,equation_sets,group_names,bc_groups)
+        character(*),       intent(in)              :: filename
+        logical,            intent(in)              :: abutting
+        logical,            intent(in)              :: matching
+        type(string_t),     intent(in), optional    :: equation_sets(:)
+        type(string_t),     intent(in), optional    :: group_names(:,:)
+        type(bc_group_t),   intent(in), optional    :: bc_groups(:)
 
         class(bc_state_t),  allocatable                 :: bc_state
         character(8)                                    :: faces(5)
-        integer(HID_T)                                  :: file_id, dom1_id, dom2_id, bcface_id
-        integer(ik)                                     :: spacedim, mapping, bcface, ierr
+        character(:),   allocatable                     :: user_msg
+        integer(HID_T)                                  :: file_id, dom1_id, dom2_id, bcface_id, bcgroup_id
+        integer(ik)                                     :: spacedim, mapping, bcface, ierr, igroup, istate
         type(point_t),  allocatable                     :: nodes1(:), nodes2(:)
         integer(ik),    allocatable                     :: elements1(:,:), elements2(:,:) 
         integer(ik),    allocatable                     :: faces1(:,:), faces2(:,:)
@@ -508,10 +580,34 @@ contains
         end do !bcface
 
 
+
+
+
         !
         ! Create bc_state, "Scalar Extrapolate"
         !
         call create_bc("Scalar Extrapolate", bc_state)
+
+
+
+        !
+        ! Add bc_group's
+        !
+        if (present(bc_groups)) then
+            user_msg = "create_mesh_file__D2E8M1: Not quite ready to accept custom bc_group sets."
+            call chidg_signal(FATAL,user_msg)
+        else
+            call create_bc_group_hdf(file_id,'Default','Default')
+
+            bcgroup_id = open_bc_group_hdf(file_id,'Default')
+            call add_bc_state_hdf(bcgroup_id,bc_state)
+            call close_bc_group_hdf(bcgroup_id)
+
+        end if
+
+
+
+
 
 
         !
@@ -520,7 +616,7 @@ contains
         faces = ["XI_MIN  ", "ETA_MIN ", "ETA_MAX ", "ZETA_MIN", "ZETA_MAX"]
         do bcface = 1,size(faces)
             call h5gopen_f(dom1_id,"BoundaryConditions/"//trim(adjustl(faces(bcface))),bcface_id,ierr)
-            call add_bc_state_hdf(bcface_id,bc_state)
+            call set_bc_patch_group_hdf(bcface_id,"Default")
             call h5gclose_f(bcface_id,ierr)
         end do
 
@@ -530,7 +626,7 @@ contains
         faces = ["XI_MAX  ", "ETA_MIN ", "ETA_MAX ", "ZETA_MIN", "ZETA_MAX"]
         do bcface = 1,size(faces)
             call h5gopen_f(dom2_id,"BoundaryConditions/"//trim(adjustl(faces(bcface))),bcface_id,ierr)
-            call add_bc_state_hdf(bcface_id,bc_state)
+            call set_bc_patch_group_hdf(bcface_id,"Default")
             call h5gclose_f(bcface_id,ierr)
         end do
 

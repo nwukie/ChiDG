@@ -264,17 +264,16 @@ contains
     !!  @author Mayank Sharma + Matteo Ugolotti
     !!  @date   11/12/2016
     !!
-    !!  TODO: Add ntime as input parameter
     !!
     !-----------------------------------------------------------------------------------------------------------
-    subroutine init_sol(self,neqns,nterms_s)
+    subroutine init_sol(self,neqns,nterms_s,ntime)
         class(element_t),   intent(inout) :: self
         integer(ik),        intent(in)    :: neqns
         integer(ik),        intent(in)    :: nterms_s
+        integer(ik),        intent(in)    :: ntime
 
         integer(ik) :: ierr
         integer(ik) :: nnodes
-        integer(ik) :: ntime
 
 
         !if (self%numInitialized) call chidg_signal(FATAL,"element%init_sol -- element already initialized")
@@ -978,20 +977,18 @@ contains
     !!  @author Mayank Sharma + Matteo Ugolotti
     !!  @date   11/5/2016
     !!
-    !!  TODO: Add itime as an input parameter  
-    !!
     !----------------------------------------------------------------------------------------------------------------
-    function solution_point(self,q,ivar,xi,eta,zeta) result(val)
+    function solution_point(self,q,ivar,xi,eta,zeta,itime) result(val)
         class(element_t),       intent(in)      :: self
         class(densevector_t),   intent(in)      :: q
         integer(ik),            intent(in)      :: ivar
+        integer(ik),            intent(in)      :: itime
         real(rk),               intent(in)      :: xi,eta,zeta
 
         real(rk)                   :: val
         type(point_t)              :: node
         real(rk)                   :: polyvals(q%nterms())
         integer(ik)                :: iterm, spacedim
-        integer(ik)                :: itime
 
 
         call node%set(xi,eta,zeta)
@@ -1030,16 +1027,15 @@ contains
     !!  @param[in]  eta     Real value for eta-coordinate.
     !!  @param[in]  zeta    Real value for zeta-coordinate.
     !!
-    !!  @author Mayank Sharma + MAtteo Ugolotti
+    !!  @author Mayank Sharma + Matteo Ugolotti
     !!  @date   11/5/2016
     !!
-    !!  TODO: Add itime as an input parameter
-    !!
     !----------------------------------------------------------------------------------------
-    function derivative_point(self,q,ivar,xi,eta,zeta,dir) result(val)
+    function derivative_point(self,q,ivar,xi,eta,zeta,dir,itime) result(val)
         class(element_t),       intent(in)      :: self
         class(densevector_t),   intent(in)      :: q
         integer(ik),            intent(in)      :: ivar
+        integer(ik),            intent(in)      :: itime
         real(rk),               intent(in)      :: xi,eta,zeta
         integer(ik),            intent(in)      :: dir
 

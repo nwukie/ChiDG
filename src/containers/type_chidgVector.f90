@@ -168,7 +168,7 @@ contains
     !!  @author Mayank Sharma
     !!  @date   11/12/2016
     !!
-    !!  TODO: SHould itime be an input parameter here?
+    !!  TODO: Should itime be an input parameter here?
     !!
     !--------------------------------------------------------------------------------------------
     subroutine project(self,mesh,fcn,ivar)

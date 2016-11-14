@@ -68,15 +68,16 @@ contains
     !!  @author Mayank Sharma + Matteo Ugolotti
     !!  @date   11/5/2016
     !!
-    !!  TODO: Add itime as input parameter
+    !!  @param[in]  itime - Index for the time step in solution
     !!
     !-------------------------------------------------------------------------------------------------------
-    function interpolate_element_autodiff(mesh,q,elem_info,fcn_info,ieqn,interpolation_type) result(var_gq)
+    function interpolate_element_autodiff(mesh,q,elem_info,fcn_info,ieqn,itime,interpolation_type) result(var_gq)
         type(mesh_t),           intent(in)      :: mesh(:)
         type(chidgVector_t),    intent(in)      :: q
         type(element_info_t),   intent(in)      :: elem_info
         type(function_info_t),  intent(in)      :: fcn_info
         integer(ik),            intent(in)      :: ieqn
+        integer(ik),            intent(in)      :: itime
         character(len=*),       intent(in)      :: interpolation_type
 
         character(:),   allocatable :: user_msg
@@ -85,8 +86,6 @@ contains
         type(AD_D)  :: qdiff(mesh(elem_info%idomain_l)%elems(elem_info%ielement_l)%nterms_s)
         integer(ik) :: nderiv, set_deriv, iterm
         logical     :: differentiate_me
-
-        integer(ik) :: itime
 
         associate( idom => elem_info%idomain_l, ielem => elem_info%ielement_l )
 
@@ -196,15 +195,16 @@ contains
     !!  @author Mayank Sharma + Matteo Ugolotti
     !!  @date   11/5/2016
     !!
-    !!  TODO: Add itime as an input parameter
+    !!  @param[in]      itime                   Index for time step in solution
     !!
     !-----------------------------------------------------------------------------------------------------------
-    function interpolate_face_autodiff(mesh,q,face_info,fcn_info, ieqn, interpolation_type, interpolation_source) result(var_gq)
+    function interpolate_face_autodiff(mesh,q,face_info,fcn_info, ieqn, itime, interpolation_type, interpolation_source) result(var_gq)
         type(mesh_t),           intent(in)              :: mesh(:)
         type(chidgVector_t),    intent(in)              :: q
         type(face_info_t),      intent(in)              :: face_info
         type(function_info_t),  intent(in)              :: fcn_info
         integer(ik),            intent(in)              :: ieqn
+        integer(ik),            intent(in)              :: itime
         character(len=*),       intent(in)              :: interpolation_type
         integer(ik),            intent(in)              :: interpolation_source
 
@@ -224,8 +224,6 @@ contains
         integer(ik)                 :: ndonors, idonor
         logical,    allocatable     :: mask(:)          ! node mask for distributing Chimera quadrature points
         type(AD_D), allocatable     :: var_gq_chimera(:)
-
-        integer                     :: itime
 
 
         !
@@ -368,20 +366,18 @@ contains
     !!  @author Mayank Sharma + Matteo Ugolotti
     !!  @date   11/5/2016
     !!
-    !!  TODO: Add itime as an input parameter
-    !!
     !-------------------------------------------------------------------------------------------------------------
-    function interpolate_element_standard(mesh,q,idomain_l,ielement_l,ieqn,interpolation_type) result(var_gq)
+    function interpolate_element_standard(mesh,q,idomain_l,ielement_l,ieqn,itime,interpolation_type) result(var_gq)
         type(mesh_t),           intent(in)      :: mesh(:)
         type(chidgVector_t),    intent(in)      :: q
         integer(ik),            intent(in)      :: idomain_l
         integer(ik),            intent(in)      :: ielement_l
         integer(ik),            intent(in)      :: ieqn
+        integer(ik),            intent(in)      :: itime
         character(len=*),       intent(in)      :: interpolation_type
 
         real(rk),   dimension(mesh(idomain_l)%elems(ielement_l)%gq%vol%nnodes) :: var_gq
         !real(rk), allocatable, dimension(:) :: var_gq
-        integer(ik)                                                             :: itime
 
 
         !
@@ -425,16 +421,14 @@ contains
     !!  @author Mayank Sharma + Matteo Ugolotti
     !!  @date   11/5/2016
     !!
-    !!  TODO: Add itime as input parameter
-    !!
     !-------------------------------------------------------------------------------------------------------------
-    function interpolate_face_standard(mesh,q,idomain_l,ielement_l,iface,ieqn) result(var_gq)
+    function interpolate_face_standard(mesh,q,idomain_l,ielement_l,iface,ieqn,itime) result(var_gq)
         type(mesh_t),           intent(in)      :: mesh(:)
         type(chidgVector_t),    intent(in)      :: q
         integer(ik),            intent(in)      :: idomain_l, ielement_l, iface, ieqn
+        integer(ik),            intent(in)      :: itime
 
         real(rk),   dimension(mesh(idomain_l)%elems(ielement_l)%gq%face%nnodes) :: var_gq
-        integer(ik)                                                             :: itime
 
         !
         ! Use quadrature instance to compute variable at quadrature nodes.

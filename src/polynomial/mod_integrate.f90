@@ -344,19 +344,17 @@ contains
     !!  @author Mayank Sharma + Matteo Ugolotti
     !!  @date   11/5/2016
     !!
-    !!  TODO: Add itime as input parameter
-    !!
     !---------------------------------------------------------------------------------------------------------
-    subroutine store_volume_integrals(mesh,sdata,elem_info,fcn_info,ieqn,integral)
+    subroutine store_volume_integrals(mesh,sdata,elem_info,fcn_info,ieqn,itime,integral)
         type(mesh_t),           intent(in)      :: mesh(:)
         type(solverdata_t),     intent(inout)   :: sdata
         type(element_info_t),   intent(in)      :: elem_info
         type(function_info_t),  intent(in)      :: fcn_info
         integer(ik),            intent(in)      :: ieqn
+        integer(ik),            intent(in)      :: itime
         type(AD_D),             intent(inout)   :: integral(:)
 
         integer(ik)         :: i
-        integer(ik)         :: itime
         logical             :: conforming_face, boundary_face, chimera_face
         type(face_info_t)   :: face_info
         real(rk)            :: vals(size(integral))
@@ -443,19 +441,17 @@ contains
     !!  @author Mayank Sharma + matteo Ugolotti
     !!  @date   11/5/2016
     !!
-    !!  TODO: Add itime as input parameter
-    !!
     !--------------------------------------------------------------------------------------------------------
-    subroutine store_boundary_integral_residual(mesh,sdata,face_info,function_info,ieqn,integral)
+    subroutine store_boundary_integral_residual(mesh,sdata,face_info,function_info,ieqn,itime,integral)
         type(mesh_t),           intent(in)      :: mesh(:)
         type(solverdata_t),     intent(inout)   :: sdata
         type(face_info_t),      intent(in)      :: face_info
         type(function_info_t),  intent(in)      :: function_info
         integer(ik),            intent(in)      :: ieqn
+        integer(ik),            intent(in)      :: itime
         type(AD_D),             intent(inout)   :: integral(:)
 
         integer(ik)     :: ftype
-        integer(ik)     :: itime
         real(rk)        :: vals(size(integral))
 
         logical         :: add_flux = .false.

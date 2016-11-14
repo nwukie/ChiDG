@@ -182,15 +182,12 @@ contains
     !!  @author Mayank Sharma + Matteo Ugolotti
     !!  @date   11/9/2016
     !!
-    !!  TODO: Add ntime as input parameter
-    !!
     !------------------------------------------------------------------------------------------------------------
-    subroutine init_sol(self,neqns,nterms_s)
+    subroutine init_sol(self,neqns,nterms_s,ntime)
         class(mesh_t),  intent(inout)   :: self
         integer(ik),    intent(in)      :: neqns
         integer(ik),    intent(in)      :: nterms_s
-
-        integer(ik)                     :: ntime
+        integer(ik),    intent(in)      :: ntime
 
         !
         ! Store number of equations and number of terms in solution expansion
@@ -333,16 +330,13 @@ contains
     !!  @author Mayank Sharma + Matteo Ugolotti
     !!  @date   11/5/2016
     !!
-    !!  TODO: Add ntime as input parameter
-    !!
     !--------------------------------------------------------------------------------------------------------------
-    subroutine init_elems_sol(self,neqns,nterms_s)
+    subroutine init_elems_sol(self,neqns,nterms_s,ntime)
         class(mesh_t),  intent(inout)   :: self
         integer(ik),    intent(in)      :: neqns
         integer(ik),    intent(in)      :: nterms_s
+        integer(ik),    intent(in)      :: ntime
         integer(ik)                     :: ielem
-
-        integer(ik)                     :: ntime
 
 
         !
@@ -357,7 +351,7 @@ contains
         !
         do ielem = 1,self%nelem
 
-            call self%elems(ielem)%init_sol(self%neqns,self%nterms_s)       ! TODO: Add ntime to the subroutine call
+            call self%elems(ielem)%init_sol(self%neqns,self%nterms_s,ntime)       ! TODO: Add ntime to the subroutine call
                                                                             !       after adding as input parameter
                                                                             !       element_t routine
 

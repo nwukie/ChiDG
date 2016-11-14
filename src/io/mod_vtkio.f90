@@ -5,7 +5,8 @@ module mod_vtkio
     use mod_kinds,              only: rk,ik,rdouble
     use mod_constants,          only: ONE,HALF,TWO,OUTPUT_RES
 
-    use mod_vtk_file_unstr,     only: open_vtk_unstr,close_vtk_unstr,init_piece_unstr,end_piece_unstr,write_piece_coord,write_piece_data,init_cell,end_cell,write_piece_connectivity_data,write_pvd_final
+    use mod_vtk_file_unstr,     only: open_vtk_unstr,close_vtk_unstr,init_piece_unstr,end_piece_unstr,write_piece_coord, & 
+                                      write_piece_data,init_cell,end_cell,write_piece_connectivity_data,write_pvd_final
     use mod_vtk_calc_func,      only: get_cons_var,get_piece_nums,get_piece_coord,get_piece_data,get_piece_connectivity_data
 
     use type_element,           only: element_t
@@ -30,7 +31,7 @@ contains
     !!
     !!
     !
-    !-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- 
+    !---------------------------------------------------------------------------------------------------------------               
     subroutine write_vtk_file(data,pvd_filename)
 
         type(chidg_data_t),intent(inout)                        ::  data
@@ -78,16 +79,10 @@ contains
 
                 !
                 ! Get number of elements in the current block
-                !
-                nelem = data%mesh(idom)%nelem
-
-                !
                 ! Get number of equations in the equation set
                 !
-
+                nelem = data%mesh(idom)%nelem
                 noeq = data%eqnset(1)%prop%nequations()
-
-                noeq = data%eqnset(idom)%prop%nequations()
 
                 !
                 ! Open individual .vtu files for individual domains
@@ -95,13 +90,10 @@ contains
                 call open_vtk_unstr(file_arr(d + idom),bo_type)
  
                 !
-                ! Get conservative variable names
-                !
-                call get_cons_var(data,idom,noeq,cons_var)
-                
-                !
+                ! Get conservative variable names for the current block (same for all blocks)
                 ! Get number of points and cells created after sub-sampling in the current block
                 !
+                call get_cons_var(data,idom,noeq,cons_var)
                 call get_piece_nums(data,nelem,num_pts,num_cells)
                 
                 !
@@ -110,23 +102,12 @@ contains
                 call init_piece_unstr(file_arr(d + idom),num_pts,num_cells)
                 
                 !
-                ! Get x,y and z coordinates for the current piece
+                ! Get x,y and z coordinates for the current piece and write to .vtu file
+                ! Get conservative variable values for the current piece and write to .vtu file
                 !
                 call get_piece_coord(data,idom,nelem,num_pts,X,Y,Z)
-
-                !
-                ! Write x,y and z coordinates to the current .vtu file
-                !
                 call write_piece_coord(file_arr(d + idom),num_pts,X,Y,Z)
-
-                !
-                ! Get conservative variable values for the current piece
-                !
                 call get_piece_data(data,idom,nelem,num_pts,noeq,cons_var_val)
-
-                !
-                ! Write conservative variable values to the current .vtu file
-                !
                 call write_piece_data(file_arr(d + idom),noeq,num_pts,cons_var,cons_var_val)
 
                 !
@@ -135,28 +116,18 @@ contains
                 call init_cell(file_arr(d + idom))
 
                 !
-                ! Get connectivity, offsets and element types for the current piece
+                ! Get connectivity, offsets and element types for the current piece and write to current .vtu file
                 !
                 call get_piece_connectivity_data(data,idom,nelem,num_pts,num_cells,connectivity,offsets,types)
-
-                !
-                ! Write connectivity, offsets and element types to the current  .vtu file
-                !
                 call write_piece_connectivity_data(file_arr(d + idom),num_cells,connectivity,offsets,types)
 
                 !
                 ! End initialized cells field in the current .vtu file
-                !
-                call end_cell(file_arr(d + idom))
-
-                !
-                ! End current initialized piece
-                !
-                call end_piece_unstr(file_arr(d + idom))
-                 
-                !
+                ! End initialized piece in the current .vtu file
                 ! Close current .vtu file
                 !
+                call end_cell(file_arr(d + idom))
+                call end_piece_unstr(file_arr(d + idom))
                 call close_vtk_unstr(file_arr(d + idom))
 
 
@@ -173,7 +144,7 @@ contains
 
 
     end subroutine write_vtk_file
-   !**************************************************************************************************************************************************************************************************************
+    !***************************************************************************************************************
  
 
 

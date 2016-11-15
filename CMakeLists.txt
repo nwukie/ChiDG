@@ -5,14 +5,11 @@ cmake_minimum_required(VERSION 3.0)
 #-----------------------------------------------------------------------------------
 #                           Check for bad CMake version
 #-----------------------------------------------------------------------------------
-if (CMAKE_MAJOR_VERSION EQUAL 3 AND CMAKE_MINOR_VERSION EQUAL 6 AND CMAKE_PATCH_VERSION EQUAL 0)
-    message(FATAL_ERROR "cmake versions 3.6.0 and 3.6.1 have a regression and \
-                         breaks the build. Please use a different version of cmake.")
-endif()
-
-if (CMAKE_MAJOR_VERSION EQUAL 3 AND CMAKE_MINOR_VERSION EQUAL 6 AND CMAKE_PATCH_VERSION EQUAL 1)
-    message(FATAL_ERROR "cmake versions 3.6.0 and 3.6.1 have a regression and \
-                         breaks the build. Please use a different version of cmake.")
+if ( (CMAKE_MAJOR_VERSION EQUAL 3 AND CMAKE_MINOR_VERSION EQUAL 6 AND CMAKE_PATCH_VERSION EQUAL 0) OR
+     (CMAKE_MAJOR_VERSION EQUAL 3 AND CMAKE_MINOR_VERSION EQUAL 6 AND CMAKE_PATCH_VERSION EQUAL 1) OR
+     (CMAKE_MAJOR_VERSION EQUAL 3 AND CMAKE_MINOR_VERSION EQUAL 7 AND CMAKE_PATCH_VERSION EQUAL 0) )
+    message(FATAL_ERROR "cmake versions 3.6.0, 3.6.1, 3.6.2, and 3.7.0 have regressions that \
+                         break the build. Please use a different version of cmake.")
 endif()
 
 

@@ -5,7 +5,8 @@ module mod_chidg_edit_domaininfo
     use hdf5
     use h5lt
 
-    use mod_hdf_utilities,              only: get_ndomains_hdf, get_domain_names_hdf, get_domain_indices_hdf
+    use mod_hdf_utilities,              only: get_ndomains_hdf, get_domain_names_hdf, get_domain_indices_hdf, &
+                                              open_domain_hdf, close_domain_hdf, set_domain_equation_set_hdf
     use mod_chidg_edit_printoverview,   only: print_overview
     implicit none
 
@@ -157,7 +158,7 @@ contains
             ! Print command options, accept user selection.
             !
             call write_line(' ')
-            call write_line("1: edit domain name", "2: edit coordinate expansion", "0: exit",color='blue')
+            call write_line("1: Edit name", "2: Edit equation set", "0: exit",color='blue')
             ierr = 1
             do while ( ierr /= 0 )
                 read(*,'(I8)', iostat=ierr) iedit
@@ -181,8 +182,8 @@ contains
                 case (1) ! edit name
                     call chidg_edit_domaininfo_domain_name(fid,idom_hdf)
 
-                case (2) ! edit coordinate expansion order. 'mapping'
-                    call chidg_edit_domaininfo_domain_gridorder(fid,idom_hdf)
+                case (2) ! edit equation set
+                    call chidg_edit_domaininfo_domain_equation_set(fid,idom_hdf)
                 
                 case default
                     run_domain_edit = .false.
@@ -287,16 +288,6 @@ contains
 
 
 
-
-
-
-
-
-
-
-
-
-
     !>  Reset the name of a specified domain in a ChiDG HDF file.
     !!
     !!  @author Nathan A. Wukie
@@ -306,15 +297,15 @@ contains
     !!  @param[in]  idom    Domain index to be renamed
     !!
     !------------------------------------------------------------------------------------------------
-    subroutine chidg_edit_domaininfo_domain_gridorder(fid,idom_hdf)
+    subroutine chidg_edit_domaininfo_domain_equation_set(fid,idom_hdf)
         integer(HID_T),     intent(in)  :: fid
         integer(ik),        intent(in)  :: idom_hdf
 
 
-        integer(HSIZE_T)                    :: adim
         integer(ik)                         :: ierr, idom, iind
+        integer(HID_T)                      :: did
         character(len=1024), allocatable    :: dnames(:)
-        integer(ik)                         :: grid_order_new
+        character(len=1024)                 :: equation_set
         character(len=1024)                 :: dname
         integer(ik),        allocatable     :: dindices(:)
 
@@ -346,22 +337,42 @@ contains
         ! Print command options, accept user selection.
         !
         call write_line(' ')
-        call write_line("Enter order of coordinate expansion: ",color='blue')
-        read(*,*) grid_order_new
+        call write_line("Enter equation set: ",color='blue')
+        read(*,'(A1024)') equation_set
 
 
 
         !
-        ! Modify grid mapping attribute
+        ! Set equation set
         !
-        adim = 1
-        call h5ltset_attribute_int_f(fid, trim(dname), 'mapping', [grid_order_new], adim, ierr)
-        if (ierr /= 0) call chidg_signal(FATAL,"chidg_edit_domaininfo_domain_gridorder: error setting 'mapping' attribute.")
+        did = open_domain_hdf(fid,dname)
+        call set_domain_equation_set_hdf(did,trim(adjustl(equation_set)))
+        call close_domain_hdf(did)
 
 
-
-    end subroutine chidg_edit_domaininfo_domain_gridorder
+    end subroutine chidg_edit_domaininfo_domain_equation_set
     !************************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

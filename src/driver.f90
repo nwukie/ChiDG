@@ -34,7 +34,7 @@ program driver
     !
     implicit none
     type(chidg_t)                               :: wall_distance
-    type(chidg_t)                               :: chidg
+    type(chidg_t)                               :: chidg, aux
 
 
     integer                                     :: narg, iorder
@@ -72,7 +72,6 @@ program driver
         !
         call chidg%read_grid(gridfile, spacedim)
         call chidg%read_boundaryconditions(gridfile)
-
 
 
 

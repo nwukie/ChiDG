@@ -340,7 +340,6 @@ contains
         call open_file_hdf(filename,fid)
 
 
-
         !
         ! Check file contains solution
         !
@@ -351,22 +350,17 @@ contains
         if (.not. contains_solution) call chidg_signal(FATAL,user_msg)
 
 
-
         !
         ! Read solution for each domain
         !
         do idom = 1,ndomains
-            !
+
             ! Get name of current domain
-            !
             dname = data%info(idom)%name
             
 
-            !
             ! Get number of equations for the current domain
-            !
             neqns = data%eqnset(idom)%prop%nequations()
-
 
 
             !
@@ -385,9 +379,7 @@ contains
         end do ! idom
 
 
-        !
         ! Close file
-        !
         call close_file_hdf(fid)
 
 
@@ -458,15 +450,12 @@ contains
         ! Read solution for each domain
         !
         do idom = 1,ndomains
-            !
+
             ! Get name of current domain
-            !
             dname = data%info(idom)%name
 
 
-            !
             ! Open domain
-            !
             call h5gopen_f(fid, "D_"//trim(dname), block_id, ierr, H5P_DEFAULT_F)
             
 

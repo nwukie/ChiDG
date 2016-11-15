@@ -199,7 +199,7 @@ contains
         !
         ! Call numerics initialization for elements and faces
         !
-        call self%init_elems_sol(neqns,nterms_s)    ! TODO: Add ntime to the subroutine call after adding it to
+        call self%init_elems_sol(neqns,nterms_s,ntime)    ! TODO: Add ntime to the subroutine call after adding it to
                                                     !       the list of input parameters in element_t
         call self%init_faces_sol()               
 

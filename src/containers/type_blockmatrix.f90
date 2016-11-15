@@ -650,7 +650,7 @@ contains
         type(seed_t),           intent(in)      :: seed
         integer(ik),            intent(in)      :: ivar, itime
 
-        integer(ik) ::  nterms, ival
+        integer(ik) ::  nterms, ival,size_integral
 
         integer(ik) :: ielement_l
         integer(ik) :: idonor_domain_g, idonor_element_g
@@ -673,12 +673,13 @@ contains
         
         ival =  self%lblks(ielement_l,itime)%find(idonor_domain_g,idonor_element_g)
 
-
+        size_integral = size(integral)
+        
         !
         ! Call subroutine on densematrix 
         !
         
-        call self%lblks(ielement_l,itime)%store_dmv(ival,ivar,nterms,integral)
+        call self%lblks(ielement_l,itime)%store_dmv(ival,ivar,nterms,integral,size_integral)
 
 
 
@@ -721,7 +722,7 @@ contains
         type(seed_t),               intent(in)      :: seed
         integer(ik),                intent(in)      :: ivar, itime
 
-        integer(ik) ::  nterms, ival
+        integer(ik) ::  nterms, ival, size_integral
 
         integer(ik) :: ielement_l
         integer(ik) :: idonor_domain_g, idonor_element_g
@@ -744,11 +745,13 @@ contains
 
         ival = self%chi_blks(ielement_l,itime)%find(idonor_domain_g,idonor_element_g)
 
+        size_integral = size(integral)
+
         !
         ! Store derivatives
         !
 
-        call self%chi_blks(ielement_l,itime)%store_dmv(ival,ivar,nterms,integral)
+        call self%chi_blks(ielement_l,itime)%store_dmv(ival,ivar,nterms,integral,size_integral)
 
 
     end subroutine store_chimera
@@ -792,7 +795,7 @@ contains
 
         integer(ik) :: idomain_l, ielement_l
         integer(ik) :: idonor_domain_l, idonor_element_l, ival
-        integer(ik) :: nterms
+        integer(ik) :: nterms, size_integral
         logical     :: local_element_linearization = .false.
 
 
@@ -831,11 +834,13 @@ contains
 
             ival = self%bc_blks(ielement_l,itime)%find(idonor_domain_l,idonor_element_l)
 
+            size_integral = size(integral)
+
             !
             ! Store derivatives
             !
 
-            call self%bc_blks(ielement_l,itime)%store_dmv(ival,ivar,nterms,integral)
+            call self%bc_blks(ielement_l,itime)%store_dmv(ival,ivar,nterms,integral,size_integral)
 
 
         end if ! check local block.

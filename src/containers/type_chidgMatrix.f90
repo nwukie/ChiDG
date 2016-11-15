@@ -136,7 +136,7 @@ contains
         class(chidgMatrix_t),   intent(inout)   :: self
         type(chidgVector_t),    intent(in)      :: x
 
-        integer(ik) :: idom, ielem, iblk, matrix_proc, vector_proc, comm_proc
+        integer(ik) :: idom, ielem, iblk, itime, matrix_proc, vector_proc, comm_proc
         integer(ik) :: dparent_g, eparent_g, parent_proc, icomm, idom_recv, ielem_recv, drecv_g, erecv_g, recv_domain, recv_elem
         logical     :: local_multiply, parallel_multiply, match_found
 
@@ -146,11 +146,11 @@ contains
         !
         do idom = 1,size(self%dom)
             do ielem = 1,size(self%dom(idom)%lblks,1)
-                do iblk = 1,size(self%dom(idom)%lblks,2)
-                    
-                    if (allocated(self%dom(idom)%lblks(ielem,iblk)%mat)) then
+                do itime = 1,size(self%dom(idom)%lblks,2)
+
+                    if (allocated(self%dom(idom)%lblks(ielem,itime)%mat)) then
                         matrix_proc = IRANK
-                        vector_proc = self%dom(idom)%lblks(ielem,iblk)%parent_proc()
+                        vector_proc = self%dom(idom)%lblks(ielem,itime)%parent_proc()
 
                         local_multiply    = ( matrix_proc == vector_proc )
                         parallel_multiply = ( matrix_proc /= vector_proc )
@@ -160,9 +160,9 @@ contains
                             !
                             ! Get information about element we need to multiply with
                             !
-                            dparent_g   = self%dom(idom)%lblks(ielem,iblk)%dparent_g()
-                            eparent_g   = self%dom(idom)%lblks(ielem,iblk)%eparent_g()
-                            parent_proc = self%dom(idom)%lblks(ielem,iblk)%parent_proc()
+                            dparent_g   = self%dom(idom)%lblks(ielem,itime)%dparent_g()
+                            eparent_g   = self%dom(idom)%lblks(ielem,itime)%eparent_g()
+                            parent_proc = self%dom(idom)%lblks(ielem,itime)%parent_proc()
 
 
 
@@ -186,9 +186,9 @@ contains
 
                                             ! If they match the blockmatrix, set the recv indices so chidg_mv knows how to compute matrix-vector product
                                             if ( (drecv_g == dparent_g) .and. (erecv_g == eparent_g) ) then
-                                                self%dom(idom)%lblks(ielem,iblk)%recv_comm    = icomm
-                                                self%dom(idom)%lblks(ielem,iblk)%recv_domain  = idom_recv
-                                                self%dom(idom)%lblks(ielem,iblk)%recv_element = ielem_recv
+                                                self%dom(idom)%lblks(ielem,itime)%recv_comm    = icomm
+                                                self%dom(idom)%lblks(ielem,itime)%recv_domain  = idom_recv
+                                                self%dom(idom)%lblks(ielem,itime)%recv_element = ielem_recv
                                                 match_found = .true.
                                             end if
 

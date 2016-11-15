@@ -120,7 +120,12 @@ contains
     !!  @param[in]  nterms  Number of terms in an expansion
     !!  @param[in]  nvars   Number of equations being represented
     !!  @param[in]  parent  Index of associated parent element
+    !!  
+    !!  @author Mayank Sharma + Matteo Ugolotti
+    !!` @date   11/15/2016
     !!
+    !!  @param[in]  ntime   Number of time levels in solution
+    !! 
     !-------------------------------------------------------------------------------------------------------
     subroutine init(self,nterms,nvars,ntime,dparent_g,dparent_l,eparent_g,eparent_l)
         class(densevector_t),   intent(inout)   :: self
@@ -225,9 +230,6 @@ contains
 
     end function getvar
     !******************************************************************************************************
-    ! Two different ways of filling out the modes_out array: bunch 1 variable expansion at all times 
-    ! together for all variables in sequence OR bunch all variable expansions for any given time together
-    ! and repeat in time: ASSUMED 2ND
 
 
 
@@ -571,6 +573,12 @@ contains
     !-------------------------------------------------------------------
     !-------------      OPERATOR IMPLEMENTATIONS    --------------------
     !-------------------------------------------------------------------
+    !
+    ! @author Mayank Sharma + Matteo Ugolotti
+    ! @date   11/15/2016
+    ! 
+    ! Added ntime_ attribute to all operators
+    !
     elemental function mult_real_dv(left,right) result(res)
         real(rk),               intent(in)  :: left
         type(densevector_t),    intent(in)  :: right

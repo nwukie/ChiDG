@@ -1046,7 +1046,6 @@ contains
         real(rk)        :: metric(3,3), jinv, dxi_dx, dxi_dy, dxi_dz, &
                            deta_dx, deta_dy, deta_dz, dzeta_dx, dzeta_dy, dzeta_dz
         integer(ik)     :: iterm, spacedim
-        integer(ik)     :: itime
 
 
         call node%set(xi,eta,zeta)

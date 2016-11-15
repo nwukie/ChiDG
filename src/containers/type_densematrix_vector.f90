@@ -1,10 +1,10 @@
 module type_densematrix_vector
 #include <messenger.h>
     use mod_kinds,          only: rk, ik
-    use mode_constants,     only: ZERO
+    use mod_constants,      only: ZERO
     use type_densematrix,   only: densematrix_t
     use type_densevector,   only: densevector_t
-    use DNAD
+    use DNAD_D
     implicit none
 
 
@@ -40,7 +40,7 @@ module type_densematrix_vector
         procedure, public   :: at               !< return data from element densematrix_vector%at(ielem)
         procedure, public   :: data             !< return full data vector
         procedure, public   :: dmat             !< return densematrix array from element densematrix_vector%dmat(ielem)
-        procedure, public   :: dparent_g_dmvi   !< return parent domain for the index position densematrix
+        procedure, public   :: dparent_g_dmv    !< return parent domain for the index position densematrix
         procedure, public   :: eparent_g_dmv    !< return parent element for the index position densematrix
         procedure, public   :: find             !< find element in densematrix vector based idonor_domain_g ad i_element_g
 
@@ -387,7 +387,7 @@ contains
     function find(self,donor_domain,donor_element) result (res)
         class(densematrix_vector_t),    intent(in)  :: self
         integer(ik),                    intent(in)  :: donor_domain, donor_element
-        real(rk),                       intent(out) :: res
+        real(rk)                                    :: res
         
         integer(ik)         :: ival
         logical             :: matrix_match = .false.
@@ -436,12 +436,13 @@ contains
     !!
     !!
     !----------------------------------------------------------------------------------------
-    subroutine store_dmv(self,index,ivar,nterms,vector)
+    subroutine store_dmv(self,index,ivar,nterms,vector,vector_size)
         class(densematrix_vector_t),    intent(inout)   :: self
         type(AD_D),                     intent(in)      :: vector(:)
         integer(ik),                    intent(in)      :: ivar,nterms,index
-        
-        integer(ik)             :: iarray,irow_start
+        integer(ik),                    intent(in)      :: vector_size
+
+        integer(ik)             :: iarray,irow,irow_start
 
 
         !
@@ -456,7 +457,7 @@ contains
         ! should be stored as a row in the block matrix
 
 
-        do iarray = 1,size(vector)
+        do iarray = 1,vector_size
 
             !
             ! Do a += operation to add derivaties to any that are currently stored

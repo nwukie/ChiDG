@@ -32,52 +32,66 @@ contains
         character(*),   intent(in)      :: gridfile
         character(*),   intent(in)      :: solutionfile
 
-        type(chidg_t)                   :: chidg
-        class(bc_state_t),  allocatable :: dirichlet_zero, neumann_zero
-
-
-        !
-        ! chidg%init('mpi') should have already been called by another ChiDG instance.
-        !
-        ! Make sure the ChiDG environment is initialized.
-        !
-        call chidg%init('env',MPI_COMM_WORLD)
-
-
-
-        !
-        ! Set up boudary condition states to impose.
-        !
-        ! u = 0 on walls
-        !
-        ! dudn = 0 else where
-        !
-        call create_bc('Scalar Value', dirichlet_zero)
-        call create_bc('Scalar Derivative', neumann_zero)
-
-        call dirichlet_zero%set_fcn_option('Value','val', ZERO)
-        call neumann_zero%set_fcn_option('Derivative','val', ZERO)
-
-
-
-        !
-        ! Read grid, boundary conditions.
-        !
-        ! Override equation_set and boundary conditions with p-Poisson equation
-        ! for approximate wall distance field.
-        !
-        call chidg%read_grid(gridfile, equation_set='p-Poisson')
-        call chidg%read_boundaryconditions(gridfile,bc_wall=dirichlet_zero,     &
-                                                    bc_inlet=neumann_zero,      &
-                                                    bc_outlet=neumann_zero,     &
-                                                    bc_symmetry=neumann_zero,   &
-                                                    bc_farfield=neumann_zero)
-
-
-        !
-        ! Set ChiDG components
-        !
-!        call chidg%set('Time Integrator' , algorithm='Steady',       options=toptions)
+!        type(chidg_t)                   :: chidg
+!        type(dict_t)                    :: noptions, loptions
+!        class(bc_state_t),  allocatable :: dirichlet_zero, neumann_zero
+!
+!
+!        !
+!        ! chidg%init('mpi') should have already been called by another ChiDG instance.
+!        ! chidg%init('io')  should have already been called by another ChiDG instance.
+!        !
+!        ! Make sure this ChiDG environment is initialized.
+!        !
+!        call chidg%init('env',MPI_COMM_WORLD)
+!
+!
+!
+!        !
+!        ! Set up boudary condition states to impose.
+!        !
+!        ! u = 0 on walls
+!        !
+!        ! dudn = 0 else where
+!        !
+!        call create_bc('Scalar Value', dirichlet_zero)
+!        call create_bc('Scalar Derivative', neumann_zero)
+!
+!        call dirichlet_zero%set_fcn_option('Value','val', ZERO)
+!        call neumann_zero%set_fcn_option('Derivative','val', ZERO)
+!
+!
+!
+!
+!        !
+!        ! Read grid, boundary conditions.
+!        !
+!        ! Override equation_set and boundary conditions with p-Poisson equation
+!        ! for approximate wall distance field.
+!        !
+!        call chidg%read_grid(gridfile, equation_set='p-Poisson')
+!        call chidg%read_boundaryconditions(gridfile,bc_wall=dirichlet_zero,     &
+!                                                    bc_inlet=neumann_zero,      &
+!                                                    bc_outlet=neumann_zero,     &
+!                                                    bc_symmetry=neumann_zero,   &
+!                                                    bc_farfield=neumann_zero)
+!
+!
+!        !
+!        ! Initialize options dictionaries
+!        !
+!        call noptions%set('tol',1.e-8_rk)   ! Set nonlinear solver options
+!        call noptions%set('cfl0',2.0_rk)
+!        call noptions%set('nsteps',50)
+!
+!        call loptions%set('tol',1.e-10_rk)  ! Set linear solver options
+!
+!
+!
+!        !
+!        ! Set ChiDG components
+!        !
+!        call chidg%set('Time Integrator' , algorithm='Steady'                        )
 !        call chidg%set('Nonlinear Solver', algorithm='Quasi-Newton', options=noptions)
 !        call chidg%set('Linear Solver'   , algorithm='FGMRES',       options=loptions)
 !        call chidg%set('Preconditioner'  , algorithm='ILU0'                          )

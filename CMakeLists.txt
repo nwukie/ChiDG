@@ -86,7 +86,8 @@ elseif (${Fortran_VENDOR} MATCHES "GNU")
                                      -fmax-stack-var-size=1600 -p -g")    
     set (USER_COMPILE_FLAGS_RELEASE "-O3 -cpp -ffree-form \
                                      -ffree-line-length-none -fexternal-blas \
-                                     -march=native -funroll-loops")
+                                     -funroll-loops")
+                                     #-march=native -funroll-loops")
 
     set (CMAKE_Fortran_LINK_FLAGS_DEBUG "-O0 --coverage")
     set (CMAKE_Fortran_LINK_FLAGS_RELEASE "-O3")

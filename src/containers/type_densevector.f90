@@ -198,6 +198,12 @@ contains
     !!  @param[in]  ivar        Integer index of the variable, for which modes will be returned
     !!  @result     modes_out   Array of modes from the variable, ivar
     !!
+    !!
+    !!  @author Matteo Ugolotti + Sharma Mayank
+    !!  @date   11/14/2016
+    !!
+    !!  @param[in]  itime       Integer index of the time level, for which modes will be returned
+    !!
     !-------------------------------------------------------------------------------------------------------
     function getvar(self,ivar,itime) result(modes_out)
         class(densevector_t),   intent(in)      :: self
@@ -209,7 +215,7 @@ contains
         !
         ! Compute start and end indices for accessing modes of a variable
         !
-        istart = (ivar-1) * self%nterms_ + (self%nvars_*self%nterms_)*(itime - 1)
+        istart = (ivar-1) * self%nterms_ + (self%nvars_*self%nterms_)*(itime - 1) + 1
         iend = istart + (self%nterms_ - 1)
 
         !
@@ -242,10 +248,11 @@ contains
     !!
     !!  @param[in]  ivar    Integer index of the variable being set
     !!  @param[in]  vals    Array of mode values that will be set
-    !!  @param[in]  itime   Integer index of the time level
     !!
-    !!  @author Mayank Sharma + Matteo Ugolotti
-    !!  @date   11/05/2016
+    !!  @author Matteo Ugolotti + Sharma Mayank
+    !!  @date   11/14/2016
+    !!
+    !!  @param[in]  itime   Integer index of the variable time level being set 
     !!
     !-------------------------------------------------------------------------------------------------------
     subroutine setvar(self,ivar,itime,vals)
@@ -258,7 +265,7 @@ contains
         !
         ! Compute start and end indices for accessing modes of a variable
         !
-        istart = (ivar-1) * self%nterms_ + (self%nvars_*self%nterms_)*(itime - 1)
+        istart = (ivar-1) * self%nterms_ + (self%nvars_*self%nterms_)*(itime - 1) + 1
         iend = istart + (self%nterms_ - 1) 
 
         !
@@ -283,6 +290,11 @@ contains
     !!  @param[in]  ivar    Integer index of the variable
     !!  @param[in]  iterm   Integer index of the mode in the expansion to be returned
     !!
+    !!  @author Matteo Ugolotti + Sharma Mayank
+    !!  @date   11/14/2016
+    !!
+    !!  @param[in]  itime   Integer index of the time level, for which modes will be returned
+    !!
     !-------------------------------------------------------------------------------------------------------
     function getterm(self,ivar,iterm,itime) result(mode_out)
         class(densevector_t),   intent(in)  :: self
@@ -296,7 +308,7 @@ contains
         !
         ! Compute start and end indices for accessing modes of a variable
         !
-        istart = (ivar-1) * self%nterms_ + (self%nvars_*self%nterms_)*(itime - 1)
+        istart = (ivar-1) * self%nterms_ + (self%nvars_*self%nterms_)*(itime - 1) + 1
         iterm_g = istart + iterm
         
         !
@@ -323,6 +335,11 @@ contains
     !!  @param[in]  iterm       Integer index of the mode in the expansion to be set
     !!  @param[in]  mode_in     Floating point value, which is the mode amplitude to be set
     !!
+    !!  @author Matteo Ugolotti + Sharma Mayank
+    !!  @date   11/14/2016
+    !!
+    !!  @param[in]  itime       Integer index of the time level, for which modes will be set
+    !!
     !-------------------------------------------------------------------------------------------------------
     subroutine setterm(self,ivar,iterm,itime,mode_in)
         class(densevector_t),   intent(inout)   :: self
@@ -334,7 +351,7 @@ contains
         !
         ! Compute start and end indices for accessing modes of a variable
         !
-        istart = (ivar-1) * self%nterms_ + (self%nvars_*self%nterms_)*(itime - 1)
+        istart = (ivar-1) * self%nterms_ + (self%nvars_*self%nterms_)*(itime - 1) + 1
         iterm_g = istart + iterm
 
 

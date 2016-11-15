@@ -5,12 +5,13 @@ module mod_gridgen_smoothbump
                                       XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX
     use mod_string,             only: string_t
     use mod_bc,                 only: create_bc
-    use type_bc_state_wrapper,  only: bc_state_wrapper_t
     use mod_plot3d_utilities,   only: get_block_points_plot3d, get_block_elements_plot3d, &
                                       get_block_boundary_faces_plot3d
     use mod_hdf_utilities,      only: add_domain_hdf, initialize_file_hdf, open_domain_hdf, &
                                       close_domain_hdf, add_bc_state_hdf, close_file_hdf, &
-                                      close_hdf, set_bc_patch_hdf, set_contains_grid_hdf
+                                      close_hdf, set_bc_patch_hdf, set_contains_grid_hdf, &
+                                      open_bc_group_hdf, close_bc_group_hdf, create_bc_group_hdf, &
+                                      set_bc_patch_group_hdf
     use hdf5
 
     use type_point,             only: point_t
@@ -62,10 +63,10 @@ contains
         type(string_t),     intent(in), optional    :: group_names(:,:)
         type(bc_group_t),   intent(in), optional    :: bc_groups(:)
 
-        type(bc_state_wrapper_t)                    :: bc_states_set(6)
-        integer(HID_T)                              :: file_id, dom_id, bcface_id
-        integer(ik)                                 :: ierr, spacedim, mapping, bcface
-        character(8)                                :: face_strings(6)
+        class(bc_state_t),  allocatable             :: bc_state
+        integer(HID_T)                              :: file_id, dom_id, bcface_id, bcgroup_id, patch_id
+        integer(ik)                                 :: ierr, spacedim, mapping, bcface, igroup, istate
+        character(8)                                :: patch_names(6)
         type(point_t),      allocatable             :: nodes(:)
         integer(ik),        allocatable             :: elements(:,:), faces(:,:)
         class(bc_state_t),  allocatable             :: inlet, outlet, wall
@@ -118,6 +119,98 @@ contains
             call set_bc_patch_hdf(dom_id,faces,bcface)
 
         end do !bcface
+
+
+
+
+
+
+
+        !
+        ! Add bc_group's
+        !
+        if (present(bc_groups)) then
+            do igroup = 1,size(bc_groups)
+                call create_bc_group_hdf(file_id,bc_groups(igroup)%name,'Default')
+
+                bcgroup_id = open_bc_group_hdf(file_id,bc_groups(igroup)%name)
+
+                do istate = 1,bc_groups(igroup)%bc_states%size()
+                    call add_bc_state_hdf(bcgroup_id, bc_groups(igroup)%bc_states%at(istate))
+                end do
+                call close_bc_group_hdf(bcgroup_id)
+            end do
+        else
+
+            ! Create Inlet boundary condition group
+            call create_bc_group_hdf(file_id,'Inlet','Default')
+            bcgroup_id = open_bc_group_hdf(file_id,'Inlet')
+
+            call create_bc("Total Inlet", bc_state)
+            call bc_state%set_fcn_option("Total Pressure",   "val",110000._rk)
+            call bc_state%set_fcn_option("Total Temperature","val",300._rk   )
+
+            call add_bc_state_hdf(bcgroup_id,bc_state)
+            call close_bc_group_hdf(bcgroup_id)
+
+
+            ! Create Outlet boundary condition group
+            call create_bc_group_hdf(file_id,'Outlet','Default')
+            bcgroup_id = open_bc_group_hdf(file_id,'Outlet')
+
+            call create_bc("Pressure Outlet", bc_state)
+            call bc_state%set_fcn_option("Static Pressure","val",100000._rk)
+
+            call add_bc_state_hdf(bcgroup_id,bc_state)
+            call close_bc_group_hdf(bcgroup_id)
+
+
+            ! Create Walls boundary condition group
+            call create_bc_group_hdf(file_id,'Walls','Default')
+            bcgroup_id = open_bc_group_hdf(file_id,'Walls')
+
+            call create_bc("Wall", bc_state)
+
+            call add_bc_state_hdf(bcgroup_id,bc_state)
+            call close_bc_group_hdf(bcgroup_id)
+
+
+
+        end if
+
+
+
+
+
+
+        !
+        ! Set boundary condition groups for each patch
+        !
+        patch_names = ["XI_MIN  ","XI_MAX  ", "ETA_MIN ", "ETA_MAX ", "ZETA_MIN", "ZETA_MAX"]
+        do bcface = 1,size(patch_names)
+
+            call h5gopen_f(dom_id,"BoundaryConditions/"//trim(adjustl(patch_names(bcface))),patch_id,ierr)
+
+
+            ! Set bc_group
+            if (present(group_names)) then
+                call set_bc_patch_group_hdf(patch_id,group_names(1,bcface)%get())
+            else
+                if (trim(adjustl(patch_names(bcface))) == "XI_MIN") then
+                    call set_bc_patch_group_hdf(patch_id,'Inlet')
+                else if (trim(adjustl(patch_names(bcface))) == "XI_MAX") then
+                    call set_bc_patch_group_hdf(patch_id,'Outlet')
+                else
+                    call set_bc_patch_group_hdf(patch_id,'Walls')
+                end if
+            end if
+
+
+            call h5gclose_f(patch_id,ierr)
+
+        end do
+
+
 
 
 

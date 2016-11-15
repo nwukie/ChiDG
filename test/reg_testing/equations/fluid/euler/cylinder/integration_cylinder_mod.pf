@@ -265,25 +265,29 @@ contains
         ! Create mesh
         !
         if (IRANK == GLOBAL_MASTER) then
+
+            ! Set bc_group names
             bc_groups(1)%name = "Inlet"
             bc_groups(2)%name = "Outlet"
             bc_groups(3)%name = "Walls"
 
-            
+            ! Add bc_state to Inlet group            
             call create_bc("Total Inlet", bc_state)
             call bc_state%set_fcn_option("Total Pressure", "val", 110000._rk)
             call bc_state%set_fcn_option("Total Temperature", "val", 300._rk)
             call bc_groups(1)%bc_states%push_back(bc_state)
 
-
+            ! Add bc_state to Outlet group
             call create_bc("Pressure Outlet", bc_state)
             call bc_state%set_fcn_option("Static Pressure", "val", 100000._rk)
             call bc_groups(2)%bc_states%push_back(bc_state)
 
-
+            ! Add bc_state to Walls group
             call create_bc("Wall", bc_state)
             call bc_groups(3)%bc_states%push_back(bc_state)
 
+
+            ! Set bc_group name for each patch on each domain
             ! Domain 1
             group_names(1,:) = [string_t("Empty"),  &
                                 string_t("Empty"),  &
@@ -317,44 +321,10 @@ contains
                                 string_t("Walls")]
 
 
-
-!            call create_bc("Wall",             bc_states(1,ETA_MIN)%state )
-!            call create_bc("Wall",             bc_states(1,ETA_MAX)%state )
-!            call create_bc("Wall",             bc_states(1,ZETA_MIN)%state)
-!            call create_bc("Wall",             bc_states(1,ZETA_MAX)%state)
-!
-!            call create_bc("Pressure Outlet",  bc_states(2,ETA_MIN)%state )
-!            call create_bc("Wall",             bc_states(2,ETA_MAX)%state )
-!            call create_bc("Wall",             bc_states(2,ZETA_MAX)%state )
-!            call create_bc("Wall",             bc_states(2,ZETA_MAX)%state )
-!
-!            call create_bc("Wall",             bc_states(3,ETA_MIN)%state )
-!            call create_bc("Wall",             bc_states(3,ETA_MAX)%state )
-!            call create_bc("Wall",             bc_states(3,ZETA_MIN)%state)
-!            call create_bc("Wall",             bc_states(3,ZETA_MAX)%state)
-!
-!            call create_bc("Total Inlet",      bc_states(4,ETA_MIN)%state )
-!            call create_bc("Wall",             bc_states(4,ETA_MAX)%state )
-!            call create_bc("Wall",             bc_states(4,ZETA_MAX)%state )
-!            call create_bc("Wall",             bc_states(4,ZETA_MAX)%state )
-!
-!
-!            
-!            ! Set Inlet options
-!            call bc_states(4,ETA_MIN)%state%set_fcn_option("TotalPressure",   "val", 110000._rk)
-!            call bc_states(4,ETA_MIN)%state%set_fcn_option("TotalTemperature","val", 300._rk   )
-!
-!            ! Set Outlet options
-!            call bc_states(2,ETA_MIN)%state%set_fcn_option("Static Pressure", "val", 100000._rk )
-
-
-
-
-
             call create_mesh_file("Cylinder : Diagonal : NonMatching MultipleDonor",this%gridfile,  &
                                                             equation_sets=[string_t("Euler")],      &
-                                                            group_names = group_names,              &
-                                                            bc_groups = bc_groups)
+                                                            group_names  = group_names,             &
+                                                            bc_groups    = bc_groups)
         end if
 
 

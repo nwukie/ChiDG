@@ -54,7 +54,7 @@ contains
     !!
     !------------------------------------------------------------------------------------------
     subroutine create_mesh_file(selector, filename, equation_sets,  &
-                                                    group_names, &
+                                                    group_names,    &
                                                     bc_groups,      &
                                                     nelem_xi,nelem_eta,nelem_zeta,clusterx)
         character(*),                           intent(in)  :: selector
@@ -66,7 +66,6 @@ contains
         integer(ik),                optional,   intent(in)  :: nelem_eta
         integer(ik),                optional,   intent(in)  :: nelem_zeta
         integer(ik),                optional,   intent(in)  :: clusterx
-
 
         character(:),   allocatable :: user_msg
         integer(ik)                 :: ierr
@@ -122,11 +121,17 @@ contains
             ! Circular cylinder
             !
             case("Cylinder : Diagonal : Matching")
-                call create_mesh_file__cylinder(filename,overlap_deg=0._rk)
+                call create_mesh_file__cylinder(filename,overlap_deg=0._rk,         &
+                                                         group_names=group_names,   &
+                                                         bc_groups=bc_groups)
             case("Cylinder : Diagonal : NonMatching SingleDonor")
-                call create_mesh_file__cylinder(filename,overlap_deg=2.5_rk)
+                call create_mesh_file__cylinder(filename,overlap_deg=2.5_rk,        &
+                                                         group_names=group_names,   &
+                                                         bc_groups=bc_groups)
             case("Cylinder : Diagonal : NonMatching MultipleDonor")
-                call create_mesh_file__cylinder(filename,overlap_deg=5.0_rk)
+                call create_mesh_file__cylinder(filename,overlap_deg=5.0_rk,        &
+                                                         group_names=group_names,   &
+                                                         bc_groups=bc_groups)
 
 
             !

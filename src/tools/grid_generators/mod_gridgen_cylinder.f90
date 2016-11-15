@@ -72,7 +72,7 @@ contains
         integer(ik) :: npt_xi, npt_eta, npt_zeta, &
                        nelem_xi, nelem_eta, nelem_zeta, &
                        i,j,k,n, ierr, ncoords, ipt_xi, ipt_eta, ipt_zeta, &
-                       bcface, idomain, spacedim
+                       bcface, idomain, spacedim, igroup, istate
 
         real(rk),   allocatable :: coords(:,:,:,:)
         real(rk)                :: x, y, z, alpha
@@ -204,8 +204,19 @@ contains
         ! Add bc_group's
         !
         if (present(bc_groups)) then
-            user_msg = "create_mesh_file__cylinder: Not quite ready to accept custom bc_group sets."
-            call chidg_signal(FATAL,user_msg)
+
+            do igroup = 1,size(bc_groups)
+                call create_bc_group_hdf(file_id,bc_groups(igroup)%name,'Default')
+
+                bcgroup_id = open_bc_group_hdf(file_id,bc_groups(igroup)%name)
+
+                do istate = 1,bc_groups(igroup)%bc_states%size()
+                    call add_bc_state_hdf(bcgroup_id, bc_groups(igroup)%bc_states%at(istate))
+                end do
+                call close_bc_group_hdf(bcgroup_id)
+            end do
+
+
         else
 
             call create_bc_group_hdf(file_id,'Inlet','Inlet')
@@ -217,11 +228,11 @@ contains
             call close_bc_group_hdf(bcgroup_id)
 
             bcgroup_id = open_bc_group_hdf(file_id,'Outlet')
-            call add_bc_state_hdf(bcgroup_id,inlet)
+            call add_bc_state_hdf(bcgroup_id,outlet)
             call close_bc_group_hdf(bcgroup_id)
 
             bcgroup_id = open_bc_group_hdf(file_id,'Walls')
-            call add_bc_state_hdf(bcgroup_id,inlet)
+            call add_bc_state_hdf(bcgroup_id,wall)
             call close_bc_group_hdf(bcgroup_id)
 
         end if
@@ -267,16 +278,6 @@ contains
 
 
 
-
-
-            
-
-
-
-
-
-
-
             !
             ! Set all boundary conditions to walls, inlet, outlet...
             !
@@ -289,13 +290,10 @@ contains
 
                 if ( (idomain == 2) .and. (face_strings(bcface) == "ETA_MIN ") ) then
                     call set_bc_patch_group_hdf(bcface_id,"Outlet")
-!                    call add_bc_state_hdf(bcface_id,outlet)
                 else if ( (idomain == 4) .and. (face_strings(bcface) == "ETA_MIN ") ) then
                     call set_bc_patch_group_hdf(bcface_id,"Inlet")
-!                    call add_bc_state_hdf(bcface_id,inlet)
                 else if ( (face_strings(bcface) /= "XI_MIN  ") .and. (face_strings(bcface) /= "XI_MAX  ") ) then
                     call set_bc_patch_group_hdf(bcface_id,"Walls")
-!                    call add_bc_state_hdf(bcface_id,wall)
                 end if
 
                 call h5gclose_f(bcface_id,ierr)

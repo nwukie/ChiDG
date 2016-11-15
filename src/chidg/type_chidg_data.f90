@@ -48,15 +48,13 @@ module type_chidg_data
         integer(ik),        private                 :: spacedim_ = 3    !< Default 3D 
 
         
-        
-        type(domain_info_t), allocatable :: info(:)          !< General container for domain information
+        type(domain_info_t),            allocatable :: info(:)     !< General container for domain information
 
 
-
-        type(mesh_t),                   allocatable :: mesh(:)          !< Array of mesh instances. One for each domain.
-        type(bcset_t),                  allocatable :: bcset(:)         !< Array of boundary condition set instances. One for each domain.
-        type(equation_set_t),           allocatable :: eqnset(:)        !< Array of equation set instances. One for each domain.
-        type(solverdata_t)                          :: sdata            !< Solver data container for solution vectors and matrices
+        type(mesh_t),                   allocatable :: mesh(:)     !< Array of mesh instances. One for each domain.
+        type(bcset_t),                  allocatable :: bcset(:)    !< Array of boundary condition sets. One for each domain.
+        type(equation_set_t),           allocatable :: eqnset(:)   !< Array of equation set instances. One for each domain.
+        type(solverdata_t)                          :: sdata       !< Solver data container for solution vectors and matrices
 
 
     contains
@@ -114,7 +112,6 @@ contains
         if ( ierr /= 0 ) call AllocationError
 
         do idom = 1,self%ndomains()
-            !function_data(idom) = self%eqnset(idom)%item%function_data
             function_data(idom) = self%eqnset(idom)%function_data
         end do
 
@@ -265,15 +262,20 @@ contains
 
 
 
-    !>  Add a boundary condition to a ChiDG domain
+    !>  For a ChiDG domain, add a boundary condition patche and associate it with a boundary condition group.
+    !!
+    !!
+    !!  Boundary condition groups hold sets of state functions that are used to compute an exterior state
+    !!  on the boundary. The boundary condition groups are defined for the global problem. Here,
+    !!  the individual patches of a given domain are being set to a specific group.
     !!
     !!  @author Nathan A. Wukie
     !!  @date   2/1/2016
     !!
-    !!  @param[in]  domain      Character string of the selected domain
-    !!  @param[in]  bc          Character string indicating the boundary condition to add
-    !!  @param[in]  face        Integer of the block face to which the boundary condition will be applied
-    !!  @param[in]  options     Boundary condition options dictionary
+    !!  @param[in]  domain          Character string of the selected domain.
+    !!  @param[in]  bc_connectivity Face connectivities defining the boundary condition patch.
+    !!  @param[in]  bc_group        Name of the boundary condition group to associate with the patch.
+    !!  @param[in]  bc_groups       bc_group_t's for the global problem that can be searched through and used to initialize.
     !!
     !!  To force a particular bc_state on a boundary condition, one can pass a bc_state_t in as an option
     !!  for bc_wall, bc_inlet, bc_outlet, bc_symmetry
@@ -293,9 +295,9 @@ contains
 
 
         character(:),       allocatable     :: user_msg
-        integer(ik)                         :: idom, BC_ID, istate, igroup, ierr
-        type(bc_t)                          :: bc
         class(bc_state_t),  allocatable     :: bc_state
+        type(bc_t)                          :: bc
+        integer(ik)                         :: idom, BC_ID, istate, igroup, ierr
         logical                             :: group_found, group_set
 
 
@@ -311,7 +313,6 @@ contains
         BC_ID = self%bcset(idom)%add(bc)
 
 
-
         !
         ! Find the correct bc_group in bc_groups(:)
         !
@@ -319,12 +320,9 @@ contains
         do igroup = 1,size(bc_groups)
 
             group_found = (trim(bc_group) == trim(bc_groups(igroup)%name) )
-
             if (group_found .and. (.not. group_set)) then
 
-                !
                 ! Add all bc_states in the group to the boundary condition
-                !
                 do istate = 1,bc_groups(igroup)%bc_states%size()
 
                     ! Get boundary condition state
@@ -338,7 +336,6 @@ contains
                 end do !istate
 
                 group_set = .true.
-
             end if
 
         end do
@@ -385,12 +382,10 @@ contains
         integer(ik) :: idomain, neqns
 
 
+        ! Initialize mesh numerics based on equation set and polynomial expansion order
         do idomain = 1,self%ndomains()
-
-            ! Initialize mesh numerics based on equation set and polynomial expansion order
             neqns = self%eqnset(idomain)%prop%nequations()
             call self%mesh(idomain)%init_sol(neqns,nterms_s)
-
         end do
 
 
@@ -429,13 +424,10 @@ contains
         domain_index = 0
 
         do idom = 1,self%ndomains_
-
-            ! Test name
             if ( trim(dname) == trim(self%info(idom)%name) ) then
                 domain_index = idom
                 exit
             end if
-
         end do
 
 

@@ -122,18 +122,6 @@ module integration_smoothbump_mod
 
 
 
-!    !> Simple container to hold arbitrary length file names. That way, we can have
-!    !! an array of filenames that get looped through.
-!    !!
-!    !-------------------------------------------------------------------------------
-!    type :: string
-!        character(len=:), allocatable   :: str
-!    end type
-!    !*******************************************************************************
-
-
-
-
 
 
 contains
@@ -332,8 +320,8 @@ contains
 
 
             call create_bc("Total Inlet", bc_state)
-            call bc_state%set_fcn_option("TotalPressure",   "val", 110000._rk)
-            call bc_state%set_fcn_option("TotalTemperature","val", 300._rk   )
+            call bc_state%set_fcn_option("Total Pressure",   "val", 110000._rk)
+            call bc_state%set_fcn_option("Total Temperature","val", 300._rk   )
             call bc_groups(1)%bc_states%push_back(bc_state)
 
             call create_bc("Pressure Outlet", bc_state)

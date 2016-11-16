@@ -193,7 +193,7 @@ contains
             if (ivar > mesh(idom)%neqns ) call chidg_signal(FATAL,user_msg)
 
             do ielem = 1,mesh(idom)%nelem
-
+                do itime = 1,mesh(idom)%ntime
                     !
                     ! Call function projection
                     !
@@ -205,8 +205,8 @@ contains
                     !
                     call self%dom(idom)%vecs(ielem)%setvar(ivar,itime,fmodes)
 
+                end do ! itime
             end do ! ielem
-
         end do ! idomain
 
 

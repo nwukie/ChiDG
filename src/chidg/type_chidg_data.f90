@@ -116,7 +116,6 @@ contains
         if ( ierr /= 0 ) call AllocationError
 
         do idom = 1,self%ndomains()
-            !function_data(idom) = self%eqnset(idom)%item%function_data
             function_data(idom) = self%eqnset(idom)%function_data
         end do
 

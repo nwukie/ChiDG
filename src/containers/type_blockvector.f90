@@ -112,9 +112,8 @@ contains
         class(blockvector_t),   intent(inout) :: self
         type(mesh_t),           intent(in)    :: mesh
 
-        integer(ik) :: nelem, ierr, ielem, nterms, neqns
+        integer(ik) :: nelem, ierr, ielem, nterms, neqns, ntime
         integer(ik) :: dparent_g, dparent_l, eparent_g, eparent_l
-        integer(ik) :: ntime    ! Should be an input parameter?
         logical     :: new_elements
 
 
@@ -157,7 +156,7 @@ contains
             eparent_l = mesh%elems(ielem)%ielement_l
             nterms    = mesh%elems(ielem)%nterms_s
             neqns     = mesh%elems(ielem)%neqns
-            !ntime     = mesh%elems(ielem)%ntime    ! NECESSARY?
+            ntime     = mesh%elems(ielem)%ntime
 
             ! Call densevector initialization routine
             call self%vecs(ielem)%init(nterms,neqns,ntime,dparent_g,dparent_l,eparent_g,eparent_l)

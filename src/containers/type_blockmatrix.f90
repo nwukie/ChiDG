@@ -391,11 +391,11 @@ contains
 
                         !lower_block = ( (eparent_l < ielem .and. parent_proc == IRANK) .or. (parent_proc < IRANK) )
                         !upper_block = ( (eparent_l > ielem .and. parent_proc == IRANK) .or. (parent_proc > IRANK) )
-                        if ( lower_block ) then
-                            call self%local_lower_blocks(ielem)%push_back(iblk)
-                        else if ( upper_block ) then
-                            call self%local_upper_blocks(ielem)%push_back(iblk)
-                        end if
+!                        if ( lower_block ) then
+!                            call self%local_lower_blocks(ielem)%push_back(iblk)
+!                        else if ( upper_block ) then
+!                            call self%local_upper_blocks(ielem)%push_back(iblk)
+!                        end if
 
 
                     end if

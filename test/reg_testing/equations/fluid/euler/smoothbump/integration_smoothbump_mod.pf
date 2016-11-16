@@ -41,7 +41,8 @@ module integration_smoothbump_mod
     use mod_string,             only: string_t
     use type_chidg,             only: chidg_t
     use mod_bc,                 only: create_bc
-    use type_bc_state_wrapper,  only: bc_state_wrapper_t
+    use type_bc_state,          only: bc_state_t
+    use type_bc_group,          only: bc_group_t
     use type_function,          only: function_t
     use type_rvector,           only: rvector_t
     use mod_function,           only: create_function
@@ -118,18 +119,6 @@ module integration_smoothbump_mod
         procedure   :: tearDown
     end type smoothbump
     !*******************************************************************************
-
-
-
-!    !> Simple container to hold arbitrary length file names. That way, we can have
-!    !! an array of filenames that get looped through.
-!    !!
-!    !-------------------------------------------------------------------------------
-!    type :: string
-!        character(len=:), allocatable   :: str
-!    end type
-!    !*******************************************************************************
-
 
 
 
@@ -263,7 +252,9 @@ contains
     subroutine setUp(this)
         class(smoothbump),  intent(inout)   :: this
 
-        type(bc_state_wrapper_t)        :: bc_states(1,6)
+        class(bc_state_t),  allocatable :: bc_state
+        type(bc_group_t)                :: bc_groups(3)
+        type(string_t)                  :: group_names(1,6)
         class(function_t),  allocatable :: fcn
         real(rk)                        :: tol, entropy_error
 
@@ -323,26 +314,40 @@ contains
         ! Create mesh
         !
         if (IRANK == GLOBAL_MASTER) then
-            call create_bc("Total Inlet",       bc_states(1,XI_MIN)%state  )
-            call create_bc("Pressure Outlet",   bc_states(1,XI_MAX)%state  )
-            call create_bc("Wall",              bc_states(1,ETA_MIN)%state )
-            call create_bc("Wall",              bc_states(1,ETA_MAX)%state )
-            call create_bc("Wall",              bc_states(1,ZETA_MIN)%state)
-            call create_bc("Wall",              bc_states(1,ZETA_MAX)%state)
-            
-            ! Set Inlet options
-            call bc_states(1,XI_MIN)%state%set_fcn_option("TotalPressure",   "val", 110000._rk)
-            call bc_states(1,XI_MIN)%state%set_fcn_option("TotalTemperature","val", 300._rk   )
+            bc_groups(1)%name = "Inlet"
+            bc_groups(2)%name = "Outlet"
+            bc_groups(3)%name = "Walls"
 
-            ! Set Outlet options
-            call bc_states(1,XI_MAX)%state%set_fcn_option("Static Pressure", "val", 93000._rk )
+
+            call create_bc("Total Inlet", bc_state)
+            call bc_state%set_fcn_option("Total Pressure",   "val", 110000._rk)
+            call bc_state%set_fcn_option("Total Temperature","val", 300._rk   )
+            call bc_groups(1)%bc_states%push_back(bc_state)
+
+            call create_bc("Pressure Outlet", bc_state)
+            call bc_state%set_fcn_option("Static Pressure", "val", 93000._rk )
+            call bc_groups(2)%bc_states%push_back(bc_state)
+
+
+
+            call create_bc("Wall", bc_state)
+            call bc_groups(3)%bc_states%push_back(bc_state)
+
+            ! Define patch group names
+            group_names(1,:) = [string_t("Inlet") , &
+                                string_t("Outlet"), &
+                                string_t("Walls") , &
+                                string_t("Walls") , &
+                                string_t("Walls") , &
+                                string_t("Walls") ]
 
 
             call create_mesh_file('Smooth Bump',this%gridfile,equation_sets=[string_t("Euler")],     &
-                                                              bc_states =bc_states,      &
-                                                              nelem_xi  =this%nelem_xi,  &
-                                                              nelem_eta =this%nelem_eta, &
-                                                              nelem_zeta=1)
+                                                              group_names = group_names,    &
+                                                              bc_groups   = bc_groups,      &
+                                                              nelem_xi    = this%nelem_xi,  &
+                                                              nelem_eta   = this%nelem_eta, &
+                                                              nelem_zeta  = 1)
         end if
 
 

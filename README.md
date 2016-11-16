@@ -73,9 +73,6 @@ Nathan A. Wukie   <nwukie@gmail.com>
 
 
 
-
-
-
 ## Sponsorship Acknowledgement:
 This material is based upon work supported by the National Science Foundation Graduate 
 Research Fellowship Program under Grant No. 1610397. Any opinions, findings, and 
@@ -83,6 +80,9 @@ conclusions or recommendations expressed in this material are those of the autho
 and do not necessarily reflect the views of the National Science Foundation.
 
 
+Some contributions to ChiDG were made by the Air Force Research Laboratory at Wright-Patterson Airforce 
+Base in Dayton, Ohio. These contributions are marked by @author notes in the source appended with (AFRL).
+These contributions were cleared for resease to the public domain under Case Number:88ABW-2016-5744.
 
 
 

@@ -24,7 +24,7 @@ module mod_hdfio
     use type_chidg_data,            only: chidg_data_t
     use type_meshdata,              only: meshdata_t
     use type_bc_patch_data,         only: bc_patch_data_t
-    use type_bc_group_data,         only: bc_group_data_t
+    use type_bc_group,              only: bc_group_t
     use type_bc_state,              only: bc_state_t
     use type_domain_connectivity,   only: domain_connectivity_t
     use type_partition,             only: partition_t
@@ -340,7 +340,6 @@ contains
         call open_file_hdf(filename,fid)
 
 
-
         !
         ! Check file contains solution
         !
@@ -351,22 +350,17 @@ contains
         if (.not. contains_solution) call chidg_signal(FATAL,user_msg)
 
 
-
         !
         ! Read solution for each domain
         !
         do idom = 1,ndomains
-            !
+
             ! Get name of current domain
-            !
             dname = data%info(idom)%name
             
 
-            !
             ! Get number of equations for the current domain
-            !
             neqns = data%eqnset(idom)%prop%nequations()
-
 
 
             !
@@ -385,9 +379,7 @@ contains
         end do ! idom
 
 
-        !
         ! Close file
-        !
         call close_file_hdf(fid)
 
 
@@ -458,15 +450,12 @@ contains
         ! Read solution for each domain
         !
         do idom = 1,ndomains
-            !
+
             ! Get name of current domain
-            !
             dname = data%info(idom)%name
 
 
-            !
             ! Open domain
-            !
             call h5gopen_f(fid, "D_"//trim(dname), block_id, ierr, H5P_DEFAULT_F)
             
 
@@ -1006,7 +995,7 @@ contains
     subroutine read_boundaryconditions_hdf(filename, bc_patches, bc_groups, partition)
         character(*),           intent(in)                  :: filename
         type(bc_patch_data_t),  intent(inout), allocatable  :: bc_patches(:)
-        type(bc_group_data_t),  intent(inout), allocatable  :: bc_groups(:)
+        type(bc_group_t),       intent(inout), allocatable  :: bc_groups(:)
         type(partition_t),      intent(in)                  :: partition
 
         character(len=10)       :: faces(NFACES)
@@ -1177,7 +1166,7 @@ contains
     !---------------------------------------------------------------------------------------
     subroutine read_bc_state_groups_hdf(fid, bc_groups, partition)
         integer(HID_T),         intent(in)                  :: fid
-        type(bc_group_data_t),  intent(inout), allocatable  :: bc_groups(:)
+        type(bc_group_t),       intent(inout), allocatable  :: bc_groups(:)
         type(partition_t),      intent(in)                  :: partition
 
         type(svector_t)                     :: bc_group_names, bc_state_names

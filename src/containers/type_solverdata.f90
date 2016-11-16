@@ -296,12 +296,10 @@ contains
         ! Loop through names to try and find field
         field_index = 0
         do ifield = 1,size(self%auxiliary_field_name)
-            
             if (self%auxiliary_field_name(ifield)%get() == trim(fieldname)) then
                 field_index = ifield
                 exit
             end if
-
         end do
 
 

@@ -33,7 +33,7 @@ program driver
     !
     implicit none
     type(chidg_t)                               :: wall_distance
-    type(chidg_t)                               :: chidg
+    type(chidg_t)                               :: chidg, aux
 
 
     integer                                     :: narg, iorder
@@ -75,14 +75,13 @@ program driver
 
 
 
-
         !
         ! Set ChiDG components
         !
         call chidg%set('Time Integrator' , algorithm=time_integrator,  options=toptions)
         call chidg%set('Nonlinear Solver', algorithm=nonlinear_solver, options=noptions)
         call chidg%set('Linear Solver'   , algorithm=linear_solver,    options=loptions)
-        call chidg%set('Preconditioner'  , algorithm=preconditioner            )
+        call chidg%set('Preconditioner'  , algorithm=preconditioner                    )
 
 
         !

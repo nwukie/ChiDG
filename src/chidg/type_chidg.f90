@@ -16,7 +16,7 @@ module type_chidg
     use type_preconditioner,        only: preconditioner_t
     use type_meshdata,              only: meshdata_t
     use type_bc_patch_data,         only: bc_patch_data_t
-    use type_bc_group_data,         only: bc_group_data_t
+    use type_bc_group,              only: bc_group_t
     use type_bc_state,              only: bc_state_t
     use type_dict,                  only: dict_t
     use type_domain_connectivity,   only: domain_connectivity_t
@@ -532,12 +532,12 @@ contains
         class(bc_state_t),  intent(in),     optional    :: bc_symmetry
         class(bc_state_t),  intent(in),     optional    :: bc_farfield
 
-        character(len=5),   dimension(1)    :: extensions
-        character(len=:),   allocatable     :: extension
-        type(bc_patch_data_t),  allocatable :: bc_patches(:)
-        type(bc_group_data_t),  allocatable :: bc_groups(:)
-        type(string_t)                      :: group_name
-        integer                             :: idom, ndomains, iface, ierr, iread
+        character(len=5),       dimension(1)    :: extensions
+        character(len=:),       allocatable     :: extension
+        type(bc_patch_data_t),  allocatable     :: bc_patches(:)
+        type(bc_group_t),       allocatable     :: bc_groups(:)
+        type(string_t)                          :: group_name
+        integer                                 :: idom, ndomains, iface, ierr, iread
 
         if (IRANK == GLOBAL_MASTER) call write_line('Reading boundary conditions')
 
@@ -567,7 +567,6 @@ contains
         end do
 
 
-
         !
         ! Add boundary conditions to ChiDG
         !
@@ -576,7 +575,7 @@ contains
             do iface = 1,NFACES
 
                 group_name = bc_patches(idom)%bc_group%at(iface)
-                call self%data%add_bc(bc_patches(idom)%domain_, bc_patches(idom)%bc_connectivity(iface), group_name%get(),bc_groups)
+                call self%data%add_bc(bc_patches(idom)%domain_, bc_patches(idom)%bc_connectivity(iface), group_name%get(), bc_groups)
 !                call self%data%add_bc(bcdata(idom)%domain_, bcdata(idom)%bcs(iface), bcdata(idom)%bc_connectivity(iface), &
 !                                      bc_wall,      &
 !                                      bc_inlet,     &

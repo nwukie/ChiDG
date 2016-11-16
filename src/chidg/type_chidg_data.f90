@@ -13,7 +13,7 @@ module type_chidg_data
     use type_bc,                        only: bc_t
     use type_bc_state,                  only: bc_state_t
     use type_bcvector,                  only: bcvector_t
-    use type_bc_group_data,             only: bc_group_data_t
+    use type_bc_group,                  only: bc_group_t
     use type_equation_set,              only: equation_set_t
     use type_solverdata,                only: solverdata_t
 
@@ -40,7 +40,7 @@ module type_chidg_data
     !!  @author Nathan A. Wukie
     !!  @date   2/1/2016
     !!
-    !--------------------------------------------------------------------------------------------------------------
+    !------------------------------------------------------------------------------------------
     type, public  :: chidg_data_t
 
         logical                                     :: solverInitialized = .false.
@@ -49,15 +49,13 @@ module type_chidg_data
         integer(ik),        private                 :: spacedim_ = 3    !< Default 3D 
 
         
-        
-        type(domain_info_t), allocatable :: info(:)          !< General container for domain information
+        type(domain_info_t),            allocatable :: info(:)     !< General container for domain information
 
 
-
-        type(mesh_t),                   allocatable :: mesh(:)          !< Array of mesh instances. One for each domain.
-        type(bcset_t),                  allocatable :: bcset(:)         !< Array of boundary condition set instances. One for each domain.
-        type(equation_set_t),           allocatable :: eqnset(:)        !< Array of equation set instances. One for each domain.
-        type(solverdata_t)                          :: sdata            !< Solver data container for solution vectors and matrices
+        type(mesh_t),                   allocatable :: mesh(:)     !< Array of mesh instances. One for each domain.
+        type(bcset_t),                  allocatable :: bcset(:)    !< Array of boundary condition sets. One for each domain.
+        type(equation_set_t),           allocatable :: eqnset(:)   !< Array of equation set instances. One for each domain.
+        type(solverdata_t)                          :: sdata       !< Solver data container for solution vectors and matrices
 
 
     contains
@@ -78,7 +76,7 @@ module type_chidg_data
         procedure   :: report
 
     end type chidg_data_t
-    !*************************************************************************************************************
+    !*******************************************************************************************
 
 
 
@@ -97,7 +95,7 @@ contains
     !!
     !!
     !!
-    !-------------------------------------------------------------------------------------------------------------
+    !------------------------------------------------------------------------------------------
     subroutine initialize_solution_solver(self)
         class(chidg_data_t),     intent(inout)   :: self
 
@@ -138,7 +136,7 @@ contains
         call self%sdata%init(self%mesh, bcset_coupling, function_data)
 
     end subroutine initialize_solution_solver
-    !*************************************************************************************************************
+    !******************************************************************************************
 
 
 
@@ -159,7 +157,7 @@ contains
     !!  @param[in]  eqnset      Character string defining the equationset_t for the domain
     !!  @param[in]  nterms_s    Integer defining the number of terms in the solution expansion
     !!
-    !---------------------------------------------------------------------------------------------------------------
+    !------------------------------------------------------------------------------------------
     subroutine add_domain(self,name,nodes,connectivity,spacedim,nterms_c,eqnset)
         class(chidg_data_t),            intent(inout)   :: self
         character(*),                   intent(in)      :: name
@@ -252,7 +250,7 @@ contains
 
 
     end subroutine add_domain
-    !***************************************************************************************************************
+    !*******************************************************************************************
 
 
 
@@ -266,26 +264,31 @@ contains
 
 
 
-    !>  Add a boundary condition to a ChiDG domain
+    !>  For a ChiDG domain, add a boundary condition patche and associate it with a boundary condition group.
+    !!
+    !!
+    !!  Boundary condition groups hold sets of state functions that are used to compute an exterior state
+    !!  on the boundary. The boundary condition groups are defined for the global problem. Here,
+    !!  the individual patches of a given domain are being set to a specific group.
     !!
     !!  @author Nathan A. Wukie
     !!  @date   2/1/2016
     !!
-    !!  @param[in]  domain      Character string of the selected domain
-    !!  @param[in]  bc          Character string indicating the boundary condition to add
-    !!  @param[in]  face        Integer of the block face to which the boundary condition will be applied
-    !!  @param[in]  options     Boundary condition options dictionary
+    !!  @param[in]  domain          Character string of the selected domain.
+    !!  @param[in]  bc_connectivity Face connectivities defining the boundary condition patch.
+    !!  @param[in]  bc_group        Name of the boundary condition group to associate with the patch.
+    !!  @param[in]  bc_groups       bc_group_t's for the global problem that can be searched through and used to initialize.
     !!
     !!  To force a particular bc_state on a boundary condition, one can pass a bc_state_t in as an option
     !!  for bc_wall, bc_inlet, bc_outlet, bc_symmetry
     !!
-    !----------------------------------------------------------------------------------------------------------
+    !-------------------------------------------------------------------------------------------
     subroutine add_bc(self,domain,bc_connectivity,bc_group,bc_groups,bc_wall,bc_inlet,bc_outlet,bc_symmetry,bc_farfield)
         class(chidg_data_t),            intent(inout)           :: self
         character(*),                   intent(in)              :: domain
         type(boundary_connectivity_t),  intent(in)              :: bc_connectivity
         character(*),                   intent(in)              :: bc_group
-        type(bc_group_data_t),          intent(in)              :: bc_groups(:)
+        type(bc_group_t),               intent(in)              :: bc_groups(:)
         class(bc_state_t),              intent(in), optional    :: bc_wall
         class(bc_state_t),              intent(in), optional    :: bc_inlet
         class(bc_state_t),              intent(in), optional    :: bc_outlet
@@ -294,9 +297,9 @@ contains
 
 
         character(:),       allocatable     :: user_msg
-        integer(ik)                         :: idom, BC_ID, istate, igroup, ierr
-        type(bc_t)                          :: bc
         class(bc_state_t),  allocatable     :: bc_state
+        type(bc_t)                          :: bc
+        integer(ik)                         :: idom, BC_ID, istate, igroup, ierr
         logical                             :: group_found, group_set
 
 
@@ -312,20 +315,16 @@ contains
         BC_ID = self%bcset(idom)%add(bc)
 
 
-
         !
         ! Find the correct bc_group in bc_groups(:)
         !
         group_set = .false.
         do igroup = 1,size(bc_groups)
 
-            group_found = (trim(bc_group) == bc_groups(igroup)%name) 
-
+            group_found = (trim(bc_group) == trim(bc_groups(igroup)%name) )
             if (group_found .and. (.not. group_set)) then
 
-                !
                 ! Add all bc_states in the group to the boundary condition
-                !
                 do istate = 1,bc_groups(igroup)%bc_states%size()
 
                     ! Get boundary condition state
@@ -339,7 +338,6 @@ contains
                 end do !istate
 
                 group_set = .true.
-
             end if
 
         end do
@@ -349,7 +347,7 @@ contains
                     matches with the string indicated in a boundary patch. Make sure that a &
                     boundary state group with the correct name exists. Also make sure that the name &
                     set on the boundary patch corresponds to one of the boundary state groups that exists."
-        if (.not. group_set) call chidg_signal_one(FATAL,user_msg,trim(bc_group))
+        if (.not. group_set .and. (trim(bc_group) /= 'empty')) call chidg_signal_one(FATAL,user_msg,trim(bc_group))
 
 
         !
@@ -361,7 +359,7 @@ contains
 
 
     end subroutine add_bc
-    !******************************************************************************************************
+    !******************************************************************************************
 
 
 
@@ -378,7 +376,7 @@ contains
     !!
     !!
     !!
-    !------------------------------------------------------------------------------------------------------
+    !------------------------------------------------------------------------------------------
     subroutine initialize_solution_domains(self,nterms_s,ntime)
         class(chidg_data_t),    intent(inout)   :: self
         integer(ik),            intent(in)      :: nterms_s
@@ -388,9 +386,9 @@ contains
 
         self%ntime_ = ntime
 
+        ! Initialize mesh numerics based on equation set and polynomial expansion order
         do idomain = 1,self%ndomains()
 
-            ! Initialize mesh numerics based on equation set and polynomial expansion order
             neqns = self%eqnset(idomain)%prop%nequations()
             call self%mesh(idomain)%init_sol(neqns,nterms_s,ntime)
 
@@ -398,7 +396,7 @@ contains
 
 
     end subroutine initialize_solution_domains
-    !******************************************************************************************************
+    !******************************************************************************************
 
 
 
@@ -420,7 +418,7 @@ contains
     !!  @param[in]  dname           String associated with a given domain
     !!  @return     domain_index    Integer index of the associated domain
     !!
-    !------------------------------------------------------------------------------------------------------
+    !-------------------------------------------------------------------------------------------
     function get_domain_index(self,dname) result(domain_index)
         class(chidg_data_t),    intent(in)      :: self
         character(*),           intent(in)      :: dname
@@ -432,13 +430,10 @@ contains
         domain_index = 0
 
         do idom = 1,self%ndomains_
-
-            ! Test name
             if ( trim(dname) == trim(self%info(idom)%name) ) then
                 domain_index = idom
                 exit
             end if
-
         end do
 
 
@@ -447,7 +442,7 @@ contains
         if (domain_index == 0) call chidg_signal_one(FATAL,user_msg,dname)
 
     end function get_domain_index
-    !**********************************************************************************************************
+    !*******************************************************************************************
 
 
 
@@ -464,7 +459,7 @@ contains
     !!  @date   2/1/2016
     !!
     !!
-    !----------------------------------------------------------------------------------------------------------
+    !-------------------------------------------------------------------------------------------
     function ndomains(self) result(ndom)
         class(chidg_data_t),    intent(in)      :: self
 
@@ -473,7 +468,7 @@ contains
         ndom = self%ndomains_
 
     end function ndomains
-    !**********************************************************************************************************
+    !*******************************************************************************************
 
 
 
@@ -488,7 +483,7 @@ contains
     !!  @date   2/1/2016
     !!
     !!
-    !----------------------------------------------------------------------------------------------------------
+    !-------------------------------------------------------------------------------------------
     function ntime(self) result(ndom)
         class(chidg_data_t),    intent(in)      :: self
 
@@ -497,7 +492,7 @@ contains
         ndom = self%ntime_
 
     end function ntime
-    !**********************************************************************************************************
+    !*******************************************************************************************
 
 
 
@@ -510,7 +505,7 @@ contains
     !!
     !!
     !!
-    !----------------------------------------------------------------------------------------------------------
+    !-------------------------------------------------------------------------------------------
     subroutine report(self,selection)
         class(chidg_data_t),    intent(in)  :: self
         character(*),           intent(in)  :: selection
@@ -533,7 +528,7 @@ contains
 
 
     end subroutine report
-    !***********************************************************************************************************
+    !*******************************************************************************************
 
 
 

@@ -1,4 +1,5 @@
 module mod_vtk_calc_func
+#include <messenger.h>
     
 ! Module containing functions and subroutines for arranging a ChiDG instance data for a vtk file
 
@@ -28,7 +29,7 @@ contains
     !!
     !!
     ! Get equation variable names
-    !----------------------------------------------------------------------------------------------------------------------------------------------------------
+    !-------------------------------------------------------------------------------------------
     subroutine get_cons_var(data,idom,noeq,cons_var)
         
         type(chidg_data_t),                           intent(inout)        :: data
@@ -37,24 +38,16 @@ contains
         character(len = 100),dimension(:),allocatable,intent(inout)        :: cons_var
 
 
-        integer(ik)                                                        :: ieq
+        integer(ik)                                                        :: ieq,ierr
  
   
         ! 
         ! Check if the array storing the conservative variable names is allocated or not and deallocate accordingly
         !  
-        if (allocated(cons_var)) then
-            
-            deallocate(cons_var)
-             
-            allocate(cons_var(noeq))
-            
-        else
-
-            allocate(cons_var(noeq))
-
-        end if
-
+        if (allocated(cons_var)) deallocate(cons_var)
+        allocate(cons_var(noeq), stat = ierr)    
+        if (ierr /= 0) call AllocationError
+        
         ieq = 1
 
         !
@@ -68,7 +61,7 @@ contains
  
 
     end subroutine get_cons_var
-    !**********************************************************************************************************************************************************
+    !*******************************************************************************************
 
 
 
@@ -81,7 +74,7 @@ contains
     !!
     !!
     ! 
-    !----------------------------------------------------------------------------------------------------------------------------------------------------------
+    !-------------------------------------------------------------------------------------------
     subroutine get_piece_nums(data,nelem,num_pts,num_cells)
 
         type(chidg_data_t),intent(inout)        :: data
@@ -95,7 +88,7 @@ contains
         
     
     end subroutine get_piece_nums
-    !**********************************************************************************************************************************************************
+    !*******************************************************************************************
 
     
     
@@ -110,7 +103,7 @@ contains
     !!
     ! Get point coordinates for a structured grid piece
     ! In an individual .vts file, these are the coordinates for each block which consists of only one piece
-    !----------------------------------------------------------------------------------------------------------------------------------------------------------
+    !-------------------------------------------------------------------------------------------
     subroutine get_piece_coord(data,idom,nelem,num_pts,X,Y,Z)
         
         type(chidg_data_t),               intent(inout)       :: data
@@ -126,7 +119,7 @@ contains
         integer(ik)                                           :: npts, icoord
         real(rdouble)                                         :: val(1)
         real(rk)                                              :: xi, eta, zeta
-        integer(ik)                                           :: ival,ielem
+        integer(ik)                                           :: ival, ielem, ierr
 
 
         npts = OUTPUT_RES + 1
@@ -141,17 +134,9 @@ contains
         ! 
         ! Check if the arrays storing the x,y,z coordinates are allocated or not and deallocate accordingly
         !
-        if (allocated(X) .and. allocated(Y) .and. allocated(Z)) then
-             
-            deallocate(X,Y,Z)
-             
-            allocate(X(num_pts),Y(num_pts),Z(num_pts)) 
-            
-        else
-
-            allocate(X(num_pts),Y(num_pts),Z(num_pts))
-
-        end if
+        if (allocated(X) .and. allocated(Y) .and. allocated(Z)) deallocate(X,Y,Z)
+        allocate(X(num_pts),Y(num_pts),Z(num_pts), stat = ierr)
+        if (ierr /= 0) call AllocationError
 
         ival = 0
 
@@ -201,7 +186,7 @@ contains
 
 
     end subroutine get_piece_coord
-    !**********************************************************************************************************************************************************
+    !*******************************************************************************************
 
 
 
@@ -215,7 +200,7 @@ contains
     !!
     ! Get point data for conservative variables at all points for a structured grid piece
     ! In an individual .vts file, these are the conservative variable values for a block, which consists of only piece
-    !----------------------------------------------------------------------------------------------------------------------------------------------------------
+    !-------------------------------------------------------------------------------------------
     subroutine get_piece_data(data,idom,nelem,num_pts,noeq,cons_var_val)
 
         type(chidg_data_t),                 intent(inout)       :: data
@@ -232,7 +217,7 @@ contains
         integer(ik)                                             :: npts
         real(rdouble)                                           :: val(1)
         real(rk)                                                :: xi, eta, zeta
-        integer(ik)                                             :: ieq, ivar, ival,ielem, itime
+        integer(ik)                                             :: ieq, ivar, ival,ielem, itime, ierr
 
 
 
@@ -247,17 +232,9 @@ contains
         ! 
         ! Check if the array storing the conservative variable values is allocated or not and deallocate accordingly
         !
-        if (allocated(cons_var_val)) then
-
-            deallocate(cons_var_val)
-
-            allocate(cons_var_val(noeq,num_pts))
-       
-        else
-
-            allocate(cons_var_val(noeq,num_pts))
-
-        end if
+        if (allocated(cons_var_val)) deallocate(cons_var_val)
+        allocate(cons_var_val(noeq,num_pts), stat = ierr)
+        if (ierr /= 0) call AllocationError
 
         ival = 0
 
@@ -302,7 +279,7 @@ contains
 
 
     end subroutine get_piece_data
-    !**********************************************************************************************************************************************************
+    !*******************************************************************************************
 
 
 
@@ -315,7 +292,7 @@ contains
     !!
     !!
     !  
-    !----------------------------------------------------------------------------------------------------------------------------------------------------------
+    !-------------------------------------------------------------------------------------------
     subroutine get_piece_connectivity_data(data,idom,nelem,num_pts,num_cells,connectivity,offsets,types)
 
         type(chidg_data_t),                    intent(inout)       :: data
@@ -349,18 +326,9 @@ contains
         ! Check if the temporary array is allocated or not
         ! If it is allocated, deallocate it and allocate it again
         !
-        if (allocated(connectivity_temp)) then
-
-            deallocate(connectivity_temp)
-
-            allocate(connectivity_temp(8,num_cells))
-
-        else
-
-            allocate(connectivity_temp(8,num_cells))
-
-        end if
-
+        if (allocated(connectivity_temp)) deallocate(connectivity_temp)
+        allocate(connectivity_temp(8,num_cells), stat = ierr)
+        if (ierr /= 0) call AllocationError
 
         do ielem = 1,nelem
             
@@ -401,18 +369,10 @@ contains
         ! Check if the connectivity array is allocaated or not
         ! If it is allocated, deallocate and allocate it again
         !
-        if (allocated(connectivity)) then
 
-            deallocate(connectivity)
-
-            allocate(connectivity(num_cells,8))
-
-        else
-
-            allocate(connectivity(num_cells,8))
-
-        end if
-       
+        if (allocated(connectivity)) deallocate(connectivity)
+        allocate(connectivity(num_cells,8), stat = ierr)
+        if (ierr /= 0) call AllocationError
 
         !
         ! Transposed to fit vtk connectivity output requirements
@@ -423,18 +383,10 @@ contains
         ! Check if offsets and types arrays are allocated or not
         ! If they are allocated, deallocate and allocate them again
         !
-        if (allocated(offsets) .and. allocated(types)) then
 
-            deallocate(offsets,types)
-
-            allocate(offsets(num_cells), types(num_cells))
-
-        else
-
-            allocate(offsets(num_cells), types(num_cells))
-
-        end if
-
+        if (allocated(offsets) .and. allocated(types)) deallocate(offsets,types)
+        allocate(offsets(num_cells),types(num_cells), stat = ierr)
+        if (ierr /= 0) call AllocationError
 
         !
         ! Offsets and types fields required in the vtk format
@@ -449,7 +401,7 @@ contains
 
 
     end subroutine get_piece_connectivity_data
-    !**********************************************************************************************************************************************************
+    !*******************************************************************************************
 
 
 

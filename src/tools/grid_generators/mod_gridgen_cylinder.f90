@@ -4,11 +4,15 @@ module mod_gridgen_cylinder
     use mod_constants,          only: PI, ZERO, ONE, TWO, THREE, HALF
     use mod_string,             only: string_t
     use mod_bc,                 only: create_bc
+    use type_bc_state,          only: bc_state_t
+    use type_bc_group,          only: bc_group_t
     use mod_plot3d_utilities,   only: get_block_points_plot3d, get_block_elements_plot3d, &
                                       get_block_boundary_faces_plot3d
     use mod_hdf_utilities,      only: add_domain_hdf, initialize_file_hdf, open_domain_hdf, &
                                       close_domain_hdf, add_bc_state_hdf, close_file_hdf, &
-                                      close_hdf, set_bc_patch_hdf, set_contains_grid_hdf
+                                      close_hdf, set_bc_patch_hdf, set_contains_grid_hdf, &
+                                      open_bc_group_hdf, close_bc_group_hdf, set_bc_patch_group_hdf, &
+                                      create_bc_group_hdf
     use hdf5
 
     use type_point,             only: point_t
@@ -58,21 +62,23 @@ contains
     !!
     !!
     !----------------------------------------------------------------------------
-    subroutine create_mesh_file__cylinder(filename,overlap_deg,equation_sets, bc_states)
+    subroutine create_mesh_file__cylinder(filename,overlap_deg,equation_sets, group_names, bc_groups)
         character(*),               intent(in)              :: filename
         real(rk),                   intent(in)              :: overlap_deg
         type(string_t),             intent(in), optional    :: equation_sets(:)
-        type(bc_state_wrapper_t),   intent(in), optional    :: bc_states(:,:)
+        type(string_t),             intent(in), optional    :: group_names(:,:)
+        type(bc_group_t),           intent(in), optional    :: bc_groups(:)
 
         integer(ik) :: npt_xi, npt_eta, npt_zeta, &
                        nelem_xi, nelem_eta, nelem_zeta, &
                        i,j,k,n, ierr, ncoords, ipt_xi, ipt_eta, ipt_zeta, &
-                       bcface, idomain, spacedim
+                       bcface, idomain, spacedim, igroup, istate
 
         real(rk),   allocatable :: coords(:,:,:,:)
         real(rk)                :: x, y, z, alpha
         character(len=100)      :: domainname
         character(8)            :: face_strings(6)
+        character(:),   allocatable :: user_msg
 
         real(rk)                :: xcenter, ycenter, zcenter, cradius, &
                                    xmin, xmax, ymin, ymax, zmin, zmax, &
@@ -81,7 +87,7 @@ contains
 
         real(rk),   allocatable, dimension(:)   :: xupper, yupper, xlower, ylower
 
-        integer(HID_T)                  :: file_id, dom_id, bcface_id
+        integer(HID_T)                  :: file_id, dom_id, bcface_id, bcgroup_id
         class(bc_state_t),  allocatable :: inlet, outlet, wall
         type(point_t),      allocatable :: nodes(:)
         integer(ik),        allocatable :: elements(:,:), faces(:,:)
@@ -179,15 +185,61 @@ contains
 
 
         ! Set bc parameters
-        call inlet%set_fcn_option("TotalPressure","val",110000._rk)
-        call inlet%set_fcn_option("TotalTemperature","val",300._rk)
+        call inlet%set_fcn_option("Total Pressure","val",110000._rk)
+        call inlet%set_fcn_option("Total Temperature","val",300._rk)
         call outlet%set_fcn_option("Static Pressure","val",100000._rk)
 
+        
 
 
 
         ! Create/initialize file
         file_id = initialize_file_hdf(filename)
+
+
+
+
+
+        !
+        ! Add bc_group's
+        !
+        if (present(bc_groups)) then
+
+            do igroup = 1,size(bc_groups)
+                call create_bc_group_hdf(file_id,bc_groups(igroup)%name,'Default')
+
+                bcgroup_id = open_bc_group_hdf(file_id,bc_groups(igroup)%name)
+
+                do istate = 1,bc_groups(igroup)%bc_states%size()
+                    call add_bc_state_hdf(bcgroup_id, bc_groups(igroup)%bc_states%at(istate))
+                end do
+                call close_bc_group_hdf(bcgroup_id)
+            end do
+
+
+        else
+
+            call create_bc_group_hdf(file_id,'Inlet','Inlet')
+            call create_bc_group_hdf(file_id,'Outlet','Inlet')
+            call create_bc_group_hdf(file_id,'Walls','Inlet')
+
+            bcgroup_id = open_bc_group_hdf(file_id,'Inlet')
+            call add_bc_state_hdf(bcgroup_id,inlet)
+            call close_bc_group_hdf(bcgroup_id)
+
+            bcgroup_id = open_bc_group_hdf(file_id,'Outlet')
+            call add_bc_state_hdf(bcgroup_id,outlet)
+            call close_bc_group_hdf(bcgroup_id)
+
+            bcgroup_id = open_bc_group_hdf(file_id,'Walls')
+            call add_bc_state_hdf(bcgroup_id,wall)
+            call close_bc_group_hdf(bcgroup_id)
+
+        end if
+
+
+
+
 
 
 
@@ -226,7 +278,6 @@ contains
 
 
 
-
             !
             ! Set all boundary conditions to walls, inlet, outlet...
             !
@@ -238,11 +289,11 @@ contains
                 call h5gopen_f(dom_id,"BoundaryConditions/"//trim(adjustl(face_strings(bcface))),bcface_id,ierr)
 
                 if ( (idomain == 2) .and. (face_strings(bcface) == "ETA_MIN ") ) then
-                    call add_bc_state_hdf(bcface_id,outlet)
+                    call set_bc_patch_group_hdf(bcface_id,"Outlet")
                 else if ( (idomain == 4) .and. (face_strings(bcface) == "ETA_MIN ") ) then
-                    call add_bc_state_hdf(bcface_id,inlet)
+                    call set_bc_patch_group_hdf(bcface_id,"Inlet")
                 else if ( (face_strings(bcface) /= "XI_MIN  ") .and. (face_strings(bcface) /= "XI_MAX  ") ) then
-                    call add_bc_state_hdf(bcface_id,wall)
+                    call set_bc_patch_group_hdf(bcface_id,"Walls")
                 end if
 
                 call h5gclose_f(bcface_id,ierr)

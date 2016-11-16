@@ -43,9 +43,10 @@ module integration_cylinder_mod
     use mod_constants,          only: ZERO, THREE, IO_DESTINATION, &
                                       XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX
     use mod_string,             only: string_t
-    use type_chidg,             only: chidg_t
     use mod_bc,                 only: create_bc
-    use type_bc_state_wrapper,  only: bc_state_wrapper_t
+    use type_bc_state,          only: bc_state_t
+    use type_bc_group,          only: bc_group_t
+    use type_chidg,             only: chidg_t
     use type_function,          only: function_t
     use type_rvector,           only: rvector_t
     use mod_function,           only: create_function
@@ -200,7 +201,9 @@ contains
     subroutine setUp(this)
         class(cylinder),  intent(inout)   :: this
 
-        type(bc_state_wrapper_t)        :: bc_states(4,6)
+        class(bc_state_t),  allocatable :: bc_state
+        type(bc_group_t)                :: bc_groups(3)
+        type(string_t)                  :: group_names(4,6)
         class(function_t),  allocatable :: fcn
         real(rk)                        :: tol
 
@@ -262,42 +265,66 @@ contains
         ! Create mesh
         !
         if (IRANK == GLOBAL_MASTER) then
-            call create_bc("Wall",             bc_states(1,ETA_MIN)%state )
-            call create_bc("Wall",             bc_states(1,ETA_MAX)%state )
-            call create_bc("Wall",             bc_states(1,ZETA_MIN)%state)
-            call create_bc("Wall",             bc_states(1,ZETA_MAX)%state)
 
-            call create_bc("Pressure Outlet",  bc_states(2,ETA_MIN)%state )
-            call create_bc("Wall",             bc_states(2,ETA_MAX)%state )
-            call create_bc("Wall",             bc_states(2,ZETA_MAX)%state )
-            call create_bc("Wall",             bc_states(2,ZETA_MAX)%state )
+            ! Set bc_group names
+            bc_groups(1)%name = "Inlet"
+            bc_groups(2)%name = "Outlet"
+            bc_groups(3)%name = "Walls"
 
-            call create_bc("Wall",             bc_states(3,ETA_MIN)%state )
-            call create_bc("Wall",             bc_states(3,ETA_MAX)%state )
-            call create_bc("Wall",             bc_states(3,ZETA_MIN)%state)
-            call create_bc("Wall",             bc_states(3,ZETA_MAX)%state)
+            ! Add bc_state to Inlet group            
+            call create_bc("Total Inlet", bc_state)
+            call bc_state%set_fcn_option("Total Pressure", "val", 110000._rk)
+            call bc_state%set_fcn_option("Total Temperature", "val", 300._rk)
+            call bc_groups(1)%bc_states%push_back(bc_state)
 
-            call create_bc("Total Inlet",      bc_states(4,ETA_MIN)%state )
-            call create_bc("Wall",             bc_states(4,ETA_MAX)%state )
-            call create_bc("Wall",             bc_states(4,ZETA_MAX)%state )
-            call create_bc("Wall",             bc_states(4,ZETA_MAX)%state )
+            ! Add bc_state to Outlet group
+            call create_bc("Pressure Outlet", bc_state)
+            call bc_state%set_fcn_option("Static Pressure", "val", 100000._rk)
+            call bc_groups(2)%bc_states%push_back(bc_state)
 
-
-            
-            ! Set Inlet options
-            call bc_states(4,ETA_MIN)%state%set_fcn_option("TotalPressure",   "val", 110000._rk)
-            call bc_states(4,ETA_MIN)%state%set_fcn_option("TotalTemperature","val", 300._rk   )
-
-            ! Set Outlet options
-            call bc_states(2,ETA_MIN)%state%set_fcn_option("Static Pressure", "val", 100000._rk )
+            ! Add bc_state to Walls group
+            call create_bc("Wall", bc_state)
+            call bc_groups(3)%bc_states%push_back(bc_state)
 
 
+            ! Set bc_group name for each patch on each domain
+            ! Domain 1
+            group_names(1,:) = [string_t("Empty"),  &
+                                string_t("Empty"),  &
+                                string_t("Walls"),  &
+                                string_t("Walls"),  &
+                                string_t("Walls"),  &
+                                string_t("Walls")]
 
+            ! Domain 2
+            group_names(2,:) = [string_t("Empty"),  &
+                                string_t("Empty"),  &
+                                string_t("Outlet"), &
+                                string_t("Walls"),  &
+                                string_t("Walls"),  &
+                                string_t("Walls")]
+
+            ! Domain 3
+            group_names(3,:) = [string_t("Empty"),  &
+                                string_t("Empty"),  &
+                                string_t("Walls"),  &
+                                string_t("Walls"),  &
+                                string_t("Walls"),  &
+                                string_t("Walls")]
+
+            ! Domain 4
+            group_names(4,:) = [string_t("Empty"),  &
+                                string_t("Empty"),  &
+                                string_t("Inlet"),  &
+                                string_t("Walls"),  &
+                                string_t("Walls"),  &
+                                string_t("Walls")]
 
 
             call create_mesh_file("Cylinder : Diagonal : NonMatching MultipleDonor",this%gridfile,  &
                                                             equation_sets=[string_t("Euler")],      &
-                                                            bc_states=bc_states)
+                                                            group_names  = group_names,             &
+                                                            bc_groups    = bc_groups)
         end if
 
 

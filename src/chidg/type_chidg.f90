@@ -48,12 +48,17 @@ module type_chidg
 
     !>  The ChiDG Environment container
     !!
-    !!      - Contains an array of domains, a time integrator, a nonlinear solver, a linear solver, and a preconditioner
+    !!  Contains: 
+    !!      - data: mesh, bcs, equations for each domain.
+    !!      - a time integrator
+    !!      - a nonlinear solver
+    !!      - a linear solver
+    !!      - a preconditioner
     !!
     !!  @author Nathan A. Wukie
     !!  @date   2/1/2016
     !!
-    !--------------------------------------------------------------------------------------------------------
+    !-----------------------------------------------------------------------------------------------------
     type, public    :: chidg_t
 
 
@@ -97,7 +102,7 @@ module type_chidg
         procedure   :: initialize_solution_solver
 
     end type chidg_t
-    !*********************************************************************************************************
+    !*****************************************************************************************************
 
 
 
@@ -116,7 +121,11 @@ contains
     !!  @author Nathan A. Wukie
     !!  @date   2/1/2016
     !!
-    !!  @param[in]  level   Initialization level specification. 'env', 'communication', 'io', or 'finalize'
+    !!  @param[in]  level   Initialization level specification.
+    !!  @param[in]  comm    MPI communicator to set for ChiDG.
+    !!
+    !!
+    !!  level: 'env', 'communication', 'io', or 'finalize'
     !!
     !--------------------------------------------------------------------------------------------
     subroutine init(self,level,comm)
@@ -222,7 +231,7 @@ contains
 
 
     end subroutine init
-    !**********************************************************************************************************
+    !*****************************************************************************************************
 
 
 
@@ -245,7 +254,7 @@ contains
     !!  @param[in]      selection   Character string for specializing the component being initialized
     !!  @param[inout]   options     Dictionary for initialization options
     !!
-    !--------------------------------------------------------------------------------------------------------
+    !-----------------------------------------------------------------------------------------------------
     subroutine set(self,selector,algorithm,integer_input,real_input,options)
         class(chidg_t),         intent(inout)   :: self
         character(*),           intent(in)      :: selector
@@ -366,7 +375,7 @@ contains
 
 
     end subroutine set
-    !********************************************************************************************************
+    !*****************************************************************************************************
 
 
 
@@ -386,7 +395,7 @@ contains
     !!
     !!  TODO: Generalize spacedim
     !!
-    !------------------------------------------------------------------------------------------------------------
+    !-----------------------------------------------------------------------------------------------------
     subroutine read_grid(self,gridfile,spacedim,equation_set)
         class(chidg_t),             intent(inout)           :: self
         character(*),               intent(in)              :: gridfile
@@ -498,7 +507,7 @@ contains
 
 
     end subroutine read_grid
-    !**********************************************************************************************************
+    !*****************************************************************************************************
 
 
 
@@ -517,7 +526,7 @@ contains
     !!
     !!  @param[in]  gridfile    String specifying a gridfile, including extension.
     !!
-    !-------------------------------------------------------------------------------------------------------------
+    !-----------------------------------------------------------------------------------------------------
     subroutine read_boundaryconditions(self, gridfile, bc_wall, bc_inlet, bc_outlet, bc_symmetry, bc_farfield)
         class(chidg_t),     intent(inout)               :: self
         character(*),       intent(in)                  :: gridfile
@@ -583,7 +592,7 @@ contains
 
 
     end subroutine read_boundaryconditions
-    !**************************************************************************************************************
+    !****************************************************************************************************
 
 
 
@@ -603,7 +612,7 @@ contains
     !!
     !!  @param[in]  solutionfile    String containing a solution file name, including extension.
     !!
-    !------------------------------------------------------------------------------------------------------------
+    !----------------------------------------------------------------------------------------------------
     subroutine read_solution(self,solutionfile)
         class(chidg_t),     intent(inout)           :: self
         character(*),       intent(in)              :: solutionfile
@@ -639,7 +648,7 @@ contains
 
 
     end subroutine read_solution
-    !************************************************************************************************************
+    !****************************************************************************************************
 
 
 
@@ -661,10 +670,9 @@ contains
     !!
     !!  @param[in]  nterms_s    Number of terms in the solution polynomial expansion.
     !!
-    !------------------------------------------------------------------------------------------------------------
+    !----------------------------------------------------------------------------------------------------
     subroutine initialize_solution_domains(self)
         class(chidg_t),     intent(inout)   :: self
-!        integer(ik),        intent(in)      :: nterms_s
 
         character(:),   allocatable :: user_msg
 
@@ -676,19 +684,21 @@ contains
         !
         ! Check that the order for the solution basis expansion has been set.
         !
-        user_msg = "chidg%initialize_solution_domains: It appears the 'Solution Order' was not set for the &
-                    current ChiDG instance. Try calling 'call chidg%set('Solution Order', integer_input=my_order)' &
-                    where my_order=1-7 indicates the solution order-of-accuracy."
+        user_msg = "chidg%initialize_solution_domains: It appears the 'Solution Order' was not set &
+                    for the current ChiDG instance. Try calling 'call chidg%set('Solution Order',&
+                    integer_input=my_order)' where my_order=1-7 indicates the solution &
+                    order-of-accuracy."
         if (self%nterms_s == 0) call chidg_signal(FATAL,user_msg)
 
         !
-        ! Call domain solution storage initialization: mesh data structures that depend on solution expansion etc.
+        ! Call domain solution storage initialization: mesh data structures that 
+        ! depend on solution expansion etc.
         !
         call self%data%initialize_solution_domains(self%nterms_s)
 
 
     end subroutine initialize_solution_domains
-    !************************************************************************************************************
+    !****************************************************************************************************
 
 
 
@@ -702,7 +712,7 @@ contains
     !!
     !!  @param[in]  nterms_s    Number of terms in the solution polynomial expansion.
     !!
-    !------------------------------------------------------------------------------------------------------------
+    !----------------------------------------------------------------------------------------------------
     subroutine initialize_solution_solver(self)
         class(chidg_t),     intent(inout)   :: self
 
@@ -719,13 +729,7 @@ contains
 
 
     end subroutine initialize_solution_solver
-    !************************************************************************************************************
-
-
-
-
-
-
+    !****************************************************************************************************
 
 
 
@@ -743,7 +747,7 @@ contains
     !!
     !!  @param[in]  solutionfile    String containing a solution file name, including extension.
     !!
-    !------------------------------------------------------------------------------------------------------------
+    !----------------------------------------------------------------------------------------------------
     subroutine write_solution(self,solutionfile)
         class(chidg_t),     intent(inout)           :: self
         character(*),       intent(in)              :: solutionfile
@@ -781,9 +785,7 @@ contains
 
 
     end subroutine write_solution
-    !************************************************************************************************************
-
-
+    !****************************************************************************************************
 
 
 
@@ -804,7 +806,7 @@ contains
     !!  @author Nathan A. Wukie
     !!  @date   2/1/2016
     !!
-    !------------------------------------------------------------------------------------------------------------
+    !----------------------------------------------------------------------------------------------------
     subroutine run(self)
         class(chidg_t),     intent(inout)   :: self
 
@@ -813,7 +815,7 @@ contains
 
 
     end subroutine run
-    !************************************************************************************************************
+    !****************************************************************************************************
 
 
 
@@ -831,7 +833,7 @@ contains
     !!
     !!
     !!
-    !------------------------------------------------------------------------------------------------------------
+    !----------------------------------------------------------------------------------------------------
     subroutine report(self,selection)
         class(chidg_t), intent(inout)   :: self
         character(*),   intent(in)      :: selection
@@ -853,11 +855,6 @@ contains
 
 
 
-
-
-
-
-
         else if ( trim(selection) == 'after' ) then
 
             if ( IRANK == GLOBAL_MASTER ) then
@@ -870,7 +867,7 @@ contains
 
 
     end subroutine report
-    !************************************************************************************************************
+    !****************************************************************************************************
 
 
 
@@ -886,7 +883,7 @@ contains
     !!  @date   2/1/2016
     !!
     !!
-    !------------------------------------------------------------------------------------------------------------
+    !----------------------------------------------------------------------------------------------------
     subroutine close(self,selection)
         class(chidg_t), intent(inout)               :: self
         character(*),   intent(in),     optional    :: selection
@@ -917,7 +914,7 @@ contains
 
 
     end subroutine close
-    !************************************************************************************************************
+    !****************************************************************************************************
 
 
 

@@ -29,7 +29,7 @@ module type_blockmatrix
     !!  elem #3:
     !!    .
     !!    .
-    !-------------------------------------------------------------------------------------------------------------------------------
+    !------------------------------------------------------------------------------------------------------------
     type, public :: blockmatrix_t
 
         !
@@ -73,7 +73,7 @@ module type_blockmatrix
 
         final :: destructor
     end type blockmatrix_t
-    !*******************************************************************************************************************************
+    !*****************************************************************************************
 
 
 
@@ -93,7 +93,7 @@ contains
     !!  @author Matteo Ugolotti + Mayank Sharma
     !!  @date   11/10/2016
     !!
-    !--------------------------------------------------------------------------------------------------------------------------------
+    !-------------------------------------------------------------------------------------------
     subroutine initialize_linearization(self,mesh,bcset_coupling,mtype)
         class(blockmatrix_t),   intent(inout)             :: self
         class(mesh_t),          intent(in)                :: mesh
@@ -602,7 +602,7 @@ contains
 
 
     end subroutine initialize_linearization
-    !*********************************************************************************************************************
+    !******************************************************************************************
 
 
 
@@ -642,18 +642,17 @@ contains
     !!
     !!
     !!
-    !----------------------------------------------------------------------------------------------------------------------------------
+    !-----------------------------------------------------------------------------------------
     subroutine store(self,integral,face_info,seed,ivar,itime)
         class(blockmatrix_t),   intent(inout)   :: self
         type(AD_D),             intent(in)      :: integral(:)
         type(face_info_t),      intent(in)      :: face_info
         type(seed_t),           intent(in)      :: seed
-        integer(ik),            intent(in)      :: ivar, itime
+        integer(ik),            intent(in)      :: ivar
+        integer(ik),            intent(in)      :: itime
 
-        integer(ik) ::  nterms, ival,size_integral
-
-        integer(ik) :: ielement_l
-        integer(ik) :: idonor_domain_g, idonor_element_g
+        integer(ik) :: nterms, imat
+        integer(ik) :: ielement_l, idonor_domain_g, idonor_element_g
         
 
         ielement_l = face_info%ielement_l
@@ -670,21 +669,18 @@ contains
         !
         ! Find donor densematrix location 
         !
-        
-        ival =  self%lblks(ielement_l,itime)%find(idonor_domain_g,idonor_element_g)
+        imat = self%lblks(ielement_l,itime)%find(idonor_domain_g,idonor_element_g)
 
-        size_integral = size(integral)
         
         !
         ! Call subroutine on densematrix 
         !
-        
-        call self%lblks(ielement_l,itime)%store_dmv(ival,ivar,nterms,integral,size_integral)
+        call self%lblks(ielement_l,itime)%store_dmv(imat,ivar,nterms,integral)
 
 
 
     end subroutine store
-    !*******************************************************************************************************************************
+    !******************************************************************************************
 
 
 
@@ -714,18 +710,17 @@ contains
     !!
     !!  @param[in]  itime       Index of a time level for the linearization of the given element [replaced iblk]
     !!
-    !--------------------------------------------------------------------------------------------------------------------------------
+    !------------------------------------------------------------------------------------------
     subroutine store_chimera(self,integral,face_info,seed,ivar,itime)
         class(blockmatrix_t),       intent(inout)   :: self
         type(AD_D),                 intent(in)      :: integral(:)
         type(face_info_t),          intent(in)      :: face_info
         type(seed_t),               intent(in)      :: seed
-        integer(ik),                intent(in)      :: ivar, itime
+        integer(ik),                intent(in)      :: ivar
+        integer(ik),                intent(in)      :: itime
 
-        integer(ik) ::  nterms, ival, size_integral
-
-        integer(ik) :: ielement_l
-        integer(ik) :: idonor_domain_g, idonor_element_g
+        integer(ik) :: nterms, imat
+        integer(ik) :: ielement_l, idonor_domain_g, idonor_element_g
         
 
         ielement_l = face_info%ielement_l
@@ -742,20 +737,17 @@ contains
         !
         ! Find donor densematrix location 
         !
+        imat = self%chi_blks(ielement_l,itime)%find(idonor_domain_g,idonor_element_g)
 
-        ival = self%chi_blks(ielement_l,itime)%find(idonor_domain_g,idonor_element_g)
-
-        size_integral = size(integral)
 
         !
         ! Store derivatives
         !
-
-        call self%chi_blks(ielement_l,itime)%store_dmv(ival,ivar,nterms,integral,size_integral)
+        call self%chi_blks(ielement_l,itime)%store_dmv(imat,ivar,nterms,integral)
 
 
     end subroutine store_chimera
-    !*******************************************************************************************************************************
+    !******************************************************************************************
 
 
 
@@ -785,16 +777,17 @@ contains
     !!
     !!  @param[in]  itime       Index of a time level for the linearization of the given element [replaced iblk]
     !!
-    !--------------------------------------------------------------------------------------------------------------------------------
+    !------------------------------------------------------------------------------------------
     subroutine store_bc(self,integral,face,seed,ivar,itime)
         class(blockmatrix_t),       intent(inout)   :: self
         type(AD_D),                 intent(in)      :: integral(:)
         type(face_info_t),          intent(in)      :: face
         type(seed_t),               intent(in)      :: seed
-        integer(ik),                intent(in)      :: ivar,itime
+        integer(ik),                intent(in)      :: ivar
+        integer(ik),                intent(in)      :: itime
 
         integer(ik) :: idomain_l, ielement_l
-        integer(ik) :: idonor_domain_l, idonor_element_l, ival
+        integer(ik) :: idonor_domain_l, idonor_element_l, imat
         integer(ik) :: nterms, size_integral
         logical     :: local_element_linearization = .false.
 
@@ -831,35 +824,19 @@ contains
             !
             ! Find coupled bc densematrix location 
             !
+            imat = self%bc_blks(ielement_l,itime)%find(idonor_domain_l,idonor_element_l)
 
-            ival = self%bc_blks(ielement_l,itime)%find(idonor_domain_l,idonor_element_l)
-
-            size_integral = size(integral)
 
             !
             ! Store derivatives
             !
-
-            call self%bc_blks(ielement_l,itime)%store_dmv(ival,ivar,nterms,integral,size_integral)
+            call self%bc_blks(ielement_l,itime)%store_dmv(imat,ivar,nterms,integral)
 
 
         end if ! check local block.
 
     end subroutine store_bc
-    !*******************************************************************************************************************************
-
-
-
-
-
-
-
-
-
-
-
-
-
+    !******************************************************************************************
 
 
 
@@ -879,7 +856,7 @@ contains
     !!  @author Matteo Ugolotti + Mayank Sharma
     !!  @date   11/14/2016
     !!
-    !--------------------------------------------------------------------------------------------------------------------------------
+    !------------------------------------------------------------------------------------------
     subroutine clear(self)
         class(blockmatrix_t),   intent(inout)   :: self
 
@@ -951,7 +928,7 @@ contains
 
 
     end subroutine clear
-    !*******************************************************************************************************************************
+    !******************************************************************************************
 
 
 

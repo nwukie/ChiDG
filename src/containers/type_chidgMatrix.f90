@@ -21,7 +21,7 @@ module type_chidgMatrix
     !!  @date   2/1/2016
     !!
     !!
-    !-----------------------------------------------------------------------------------------------------------
+    !------------------------------------------------------------------------------------------
     type, public :: chidgMatrix_t
 
         type(blockmatrix_t), allocatable    :: dom(:)                       !< Array of block-matrices. One for each domain
@@ -46,7 +46,7 @@ module type_chidgMatrix
         final       :: destructor
 
     end type chidgMatrix_t
-    !***********************************************************************************************************
+    !*******************************************************************************************
 
 
 
@@ -64,7 +64,7 @@ contains
     !!  @param[in]  domains     Array of domain_t instances
     !!  
     !!
-    !-----------------------------------------------------------------------------------------------------------
+    !------------------------------------------------------------------------------------------
     subroutine initialize(self,mesh,bcset_coupling,mtype)
         class(chidgMatrix_t),   intent(inout)           :: self
         type(mesh_t),           intent(in)              :: mesh(:)
@@ -114,7 +114,7 @@ contains
         self%local_initialized = .true.
 
     end subroutine initialize
-    !***********************************************************************************************************
+    !******************************************************************************************
 
 
 
@@ -131,13 +131,14 @@ contains
     !!  @date   7/1/2016
     !!
     !!
-    !-----------------------------------------------------------------------------------------------------------
+    !------------------------------------------------------------------------------------------
     subroutine init_recv(self,x)
         class(chidgMatrix_t),   intent(inout)   :: self
         type(chidgVector_t),    intent(in)      :: x
 
         integer(ik) :: idom, ielem, iblk, itime, matrix_proc, vector_proc, comm_proc
-        integer(ik) :: dparent_g, eparent_g, parent_proc, icomm, idom_recv, ielem_recv, drecv_g, erecv_g, recv_domain, recv_elem
+        integer(ik) :: dparent_g, eparent_g, parent_proc, icomm, idom_recv, ielem_recv, &
+                       drecv_g, erecv_g, recv_domain, recv_elem, imat
         logical     :: local_multiply, parallel_multiply, match_found
 
         
@@ -147,10 +148,10 @@ contains
         do idom = 1,size(self%dom)
             do ielem = 1,size(self%dom(idom)%lblks,1)
                 do itime = 1,size(self%dom(idom)%lblks,2)
+                    do imat = 1,self%dom(idom)%lblks(ielem,itime)%size()
 
-                    if (allocated(self%dom(idom)%lblks(ielem,itime)%mat)) then
                         matrix_proc = IRANK
-                        vector_proc = self%dom(idom)%lblks(ielem,itime)%parent_proc()
+                        vector_proc = self%dom(idom)%lblks(ielem,itime)%parent_proc(imat)
 
                         local_multiply    = ( matrix_proc == vector_proc )
                         parallel_multiply = ( matrix_proc /= vector_proc )
@@ -160,9 +161,9 @@ contains
                             !
                             ! Get information about element we need to multiply with
                             !
-                            dparent_g   = self%dom(idom)%lblks(ielem,itime)%dparent_g()
-                            eparent_g   = self%dom(idom)%lblks(ielem,itime)%eparent_g()
-                            parent_proc = self%dom(idom)%lblks(ielem,itime)%parent_proc()
+                            dparent_g   = self%dom(idom)%lblks(ielem,itime)%dparent_g(imat)
+                            eparent_g   = self%dom(idom)%lblks(ielem,itime)%eparent_g(imat)
+                            parent_proc = self%dom(idom)%lblks(ielem,itime)%parent_proc(imat)
 
 
 
@@ -182,13 +183,11 @@ contains
                                             drecv_g = x%recv%comm(icomm)%dom(idom_recv)%vecs(ielem_recv)%dparent_g()
                                             erecv_g = x%recv%comm(icomm)%dom(idom_recv)%vecs(ielem_recv)%eparent_g()
 
-                                
-
                                             ! If they match the blockmatrix, set the recv indices so chidg_mv knows how to compute matrix-vector product
                                             if ( (drecv_g == dparent_g) .and. (erecv_g == eparent_g) ) then
-                                                self%dom(idom)%lblks(ielem,itime)%recv_comm    = icomm
-                                                self%dom(idom)%lblks(ielem,itime)%recv_domain  = idom_recv
-                                                self%dom(idom)%lblks(ielem,itime)%recv_element = ielem_recv
+                                                call self%dom(idom)%lblks(ielem,itime)%set_recv_comm(imat,icomm)
+                                                call self%dom(idom)%lblks(ielem,itime)%set_recv_domain(imat,idom_recv)
+                                                call self%dom(idom)%lblks(ielem,itime)%set_recv_element(imat,ielem_recv)
                                                 match_found = .true.
                                             end if
 
@@ -204,11 +203,11 @@ contains
 
                         end if
 
-                    end if
 
-                end do !iblk
+
+                    end do !imat
+                end do !itime
             end do !ielem
-
         end do ! idom
 
 
@@ -226,11 +225,11 @@ contains
 
             if (allocated(self%dom(idom)%chi_blks)) then
                 do ielem = 1,size(self%dom(idom)%chi_blks,1)
-                    do iblk = 1,size(self%dom(idom)%chi_blks,2)
+                    do itime = 1,size(self%dom(idom)%chi_blks,2)
+                        do imat = 1,self%dom(idom)%chi_blks(ielem,itime)%size()
                         
-                        if (allocated(self%dom(idom)%chi_blks(ielem,iblk)%mat)) then
                             matrix_proc = IRANK
-                            vector_proc = self%dom(idom)%chi_blks(ielem,iblk)%parent_proc()
+                            vector_proc = self%dom(idom)%chi_blks(ielem,itime)%parent_proc(imat)
 
                             local_multiply    = ( matrix_proc == vector_proc )
                             parallel_multiply = ( matrix_proc /= vector_proc )
@@ -240,9 +239,9 @@ contains
                                 !
                                 ! Get information about element we need to multiply with
                                 !
-                                dparent_g   = self%dom(idom)%chi_blks(ielem,iblk)%dparent_g()
-                                eparent_g   = self%dom(idom)%chi_blks(ielem,iblk)%eparent_g()
-                                parent_proc = self%dom(idom)%chi_blks(ielem,iblk)%parent_proc()
+                                dparent_g   = self%dom(idom)%chi_blks(ielem,itime)%dparent_g(imat)
+                                eparent_g   = self%dom(idom)%chi_blks(ielem,itime)%eparent_g(imat)
+                                parent_proc = self%dom(idom)%chi_blks(ielem,itime)%parent_proc(imat)
 
 
 
@@ -263,22 +262,17 @@ contains
                                             do ielem_recv = 1,size(x%recv%comm(icomm)%dom(idom_recv)%vecs)
 
                                                 ! Get recv element indices
-                                                !drecv_g = x%recv%comm(icomm)%dom(idom_recv)%vecs(ielem_recv)%dparent_g()
                                                 recv_elem = x%recv%comm(icomm)%dom(idom_recv)%vecs(ielem_recv)%eparent_g()
-                                                !erecv_g = x%recv%comm(icomm)%dom(idom_recv)%vecs(ielem_recv)%eparent_g()
 
                                     
 
                                                 ! If they match the blockmatrix, set the recv indices so chidg_mv knows how to compute matrix-vector product
-                                                !if ( (drecv_g == dparent_g) .and. (erecv_g == eparent_g) .and. (match_found .eqv. .false.) ) then
                                                 if ( recv_elem == eparent_g )  then
-                                                    self%dom(idom)%chi_blks(ielem,iblk)%recv_comm    = icomm
-                                                    self%dom(idom)%chi_blks(ielem,iblk)%recv_domain  = idom_recv
-                                                    self%dom(idom)%chi_blks(ielem,iblk)%recv_element = ielem_recv
+                                                    call self%dom(idom)%chi_blks(ielem,itime)%set_recv_comm(imat,icomm)
+                                                    call self%dom(idom)%chi_blks(ielem,itime)%set_recv_domain(imat,idom_recv)
+                                                    call self%dom(idom)%chi_blks(ielem,itime)%set_recv_element(imat,ielem_recv)
                                                     match_found = .true.
                                                     exit
-                                                !else if ( (drecv_g == dparent_g) .and. (erecv_g == eparent_g) .and. (match_found .eqv. .true.) ) then
-                                                !    call chidg_signal(FATAL,"chidgMatrix: recv entry already found")
                                                 end if
 
                                             end do !ielem_recv
@@ -295,13 +289,11 @@ contains
 
                                 if (.not. match_found) call chidg_signal(FATAL,"chidgMatrix%init_recv: no matching recv element found in vector")
 
-
-
                             end if
 
-                        end if
 
-                    end do !iblk
+                        end do !imat
+                    end do !itime
                 end do !ielem
             end if
 
@@ -324,13 +316,7 @@ contains
 
 
     end subroutine init_recv
-    !***********************************************************************************************************
-
-
-
-
-
-
+    !*******************************************************************************************
 
 
 
@@ -351,19 +337,37 @@ contains
     !!  @param[in]  iblk        Index of the block for the linearization of the given elemen
     !!  @param[in]  ivar        Index of the variable, for which the linearization was computed
     !!
-    !-----------------------------------------------------------------------------------------------------------
-    subroutine store(self, integral, idom, ielem, iblk, ivar)
+    !------------------------------------------------------------------------------------------
+!    subroutine store(self, integral, idom, ielem, iblk, ivar)
+!        class(chidgMatrix_t),   intent(inout)   :: self
+!        type(AD_D),             intent(in)      :: integral(:)
+!        integer(ik),            intent(in)      :: idom, ielem, iblk, ivar
+!
+!        !
+!        ! Store linearization in associated domain blockmatrix_t
+!        !
+!        call self%dom(idom)%store(integral,ielem,iblk,ivar)
+!
+!    end subroutine store
+    subroutine store(self,integral,face_info,seed,ivar,itime)
         class(chidgMatrix_t),   intent(inout)   :: self
         type(AD_D),             intent(in)      :: integral(:)
-        integer(ik),            intent(in)      :: idom, ielem, iblk, ivar
+        type(face_info_t),      intent(in)      :: face_info
+        type(seed_t),           intent(in)      :: seed
+        integer(ik),            intent(in)      :: ivar 
+        integer(ik),            intent(in)      :: itime
+
+        integer(ik) :: idomain_l
+
+        idomain_l = face_info%idomain_l
 
         !
         ! Store linearization in associated domain blockmatrix_t
         !
-        call self%dom(idom)%store(integral,ielem,iblk,ivar)
+        call self%dom(idomain_l)%store(integral,face_info,seed,ivar,itime)
 
     end subroutine store
-    !***********************************************************************************************************
+    !*******************************************************************************************
 
 
 
@@ -384,13 +388,14 @@ contains
     !!  @param[in]  seed        seed_t containing the indices defining the element against which the Chimera face was linearized
     !!  @param[in]  ivar        Index of the variable, for which the linearization was computed
     !!
-    !-----------------------------------------------------------------------------------------------------------
-    subroutine store_chimera(self,integral,face_info,seed,ivar)
+    !------------------------------------------------------------------------------------------
+    subroutine store_chimera(self,integral,face_info,seed,ivar,itime)
         class(chidgMatrix_t),       intent(inout)   :: self
         type(AD_D),                 intent(in)      :: integral(:)
         type(face_info_t),          intent(in)      :: face_info
         type(seed_t),               intent(in)      :: seed
         integer(ik),                intent(in)      :: ivar 
+        integer(ik),                intent(in)      :: itime
 
         integer(ik) :: idomain_l
 
@@ -399,10 +404,10 @@ contains
         !
         ! Store linearization in associated domain blockmatrix_t
         !
-        call self%dom(idomain_l)%store_chimera(integral,face_info,seed,ivar)
+        call self%dom(idomain_l)%store_chimera(integral,face_info,seed,ivar,itime)
 
     end subroutine store_chimera
-    !***********************************************************************************************************
+    !******************************************************************************************
 
 
 
@@ -423,13 +428,14 @@ contains
     !!  @param[in]  seed        seed_t containing the indices defining the element against which the Chimera face was linearized
     !!  @param[in]  ivar        Index of the variable, for which the linearization was computed
     !!
-    !-----------------------------------------------------------------------------------------------------------
-    subroutine store_bc(self,integral,face_info,seed,ivar)
+    !------------------------------------------------------------------------------------------
+    subroutine store_bc(self,integral,face_info,seed,ivar,itime)
         class(chidgMatrix_t),       intent(inout)   :: self
         type(AD_D),                 intent(in)      :: integral(:)
         type(face_info_t),          intent(in)      :: face_info
         type(seed_t),               intent(in)      :: seed
         integer(ik),                intent(in)      :: ivar 
+        integer(ik),                intent(in)      :: itime
 
         integer(ik) :: idomain_l
 
@@ -438,18 +444,10 @@ contains
         !
         ! Store linearization in associated domain blockmatrix_t
         !
-        call self%dom(idomain_l)%store_bc(integral,face_info,seed,ivar)
+        call self%dom(idomain_l)%store_bc(integral,face_info,seed,ivar,itime)
 
     end subroutine store_bc
-    !***********************************************************************************************************
-
-
-
-
-
-
-
-
+    !******************************************************************************************
 
 
 

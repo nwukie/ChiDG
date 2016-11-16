@@ -27,12 +27,12 @@ module type_densevector
         integer(ik)             :: eparent_l_
 
         ! Storage size and equation information
-        integer(ik), private    :: nterms_                      !< Number of terms in an expansion
-        integer(ik), private    :: nvars_                       !< Number of equations included
-        integer(ik), private    :: ntime_
+        integer(ik), private    :: nterms_                  !< Number of terms in an expansion
+        integer(ik), private    :: nvars_                   !< Number of equations included
+        integer(ik), private    :: ntime_                   !< Number of time instances stored
 
         ! Vector storage
-        real(rk),  dimension(:), allocatable :: vec           !< Vector storage
+        real(rk),  dimension(:), allocatable :: vec         !< Vector storage
 
     contains
 
@@ -47,10 +47,15 @@ module type_densevector
         procedure, public :: nvars          !< return nvars_
         procedure, public :: ntime          !< return ntime_
 
+        procedure, public :: settime
+        procedure, public :: gettime
         procedure, public :: setvar
         procedure, public :: getvar
         procedure, public :: setterm
         procedure, public :: getterm
+
+        procedure, public :: get_time_start
+        procedure, public :: get_time_end
 
         procedure, public :: clear
 
@@ -155,7 +160,7 @@ contains
         !
         ! Compute total number of elements for densevector storage
         !
-        vsize = ntime*nterms * nvars
+        vsize = ntime * nterms * nvars
 
 
         !
@@ -186,6 +191,110 @@ contains
 
 
 
+
+
+
+    !>
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   11/15/2016
+    !!
+    !------------------------------------------------------------------------------------------------------
+    function get_time_start(self,itime) result(istart)
+        class(densevector_t),   intent(in)  :: self
+        integer(ik),            intent(in)  :: itime
+
+        integer(ik) :: istart
+
+        istart = (self%nvars_ * self%nterms_)*(itime - 1) + 1
+
+    end function get_time_start
+    !******************************************************************************************************
+
+
+
+
+
+    !>
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   11/15/2016
+    !!
+    !------------------------------------------------------------------------------------------------------
+    function get_time_end(self,itime) result(iend)
+        class(densevector_t),   intent(in)  :: self
+        integer(ik),            intent(in)  :: itime
+
+        integer(ik) :: iend
+
+        iend = self%nvars_ * self%nterms_ * itime
+
+    end function get_time_end
+    !******************************************************************************************************
+
+
+
+
+
+    !>
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   11/15/2016
+    !!
+    !------------------------------------------------------------------------------------------------------
+    subroutine settime(self,itime,vals)
+        class(densevector_t),   intent(inout)   :: self
+        integer(ik),            intent(in)      :: itime
+        real(rk),               intent(in)      :: vals(:)
+
+        integer(ik) :: istart, iend
+
+        !
+        ! Compute start and end indices for accessing modes of a variable
+        !
+        istart = (self%nvars_ * self%nterms_)*(itime - 1) + 1
+        iend = istart + (self%nvars_ * self%nterms_ - 1)
+
+        !
+        ! Set modes
+        !
+        self%vec(istart:iend) = vals
+
+    end subroutine settime
+    !******************************************************************************************************
+
+
+
+
+
+
+
+    !>
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   11/15/2016
+    !!
+    !------------------------------------------------------------------------------------------------------
+    function gettime(self,itime) result(vals_out)
+        class(densevector_t),   intent(in)      :: self
+        integer(ik),            intent(in)      :: itime
+
+        integer(ik)             :: istart, iend
+        real(rk),   allocatable :: vals_out(:)
+
+        !
+        ! Compute start and end indices for accessing modes of a variable
+        !
+        istart = (self%nvars_ * self%nterms_)*(itime - 1) + 1
+        iend = istart + (self%nvars_ * self%nterms_ - 1)
+
+        !
+        ! Return values at particular time
+        !
+        vals_out = self%vec(istart:iend)
+
+    end function gettime
+    !******************************************************************************************************
 
 
 

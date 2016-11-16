@@ -35,18 +35,17 @@ contains
     !!
     !!
     !------------------------------------------------------------------------------------
-    !function MULT_chidgMatrix_chidgVector(A,x) result(res)
     function chidg_mv(A,x) result(res)
         type(chidgMatrix_t),    intent(inout)   :: A
         type(chidgVector_t),    intent(inout)   :: x
 
         type(chidgVector_t)     :: res
-        integer(ik)             :: idom, ielem, iblk, recv_comm, recv_domain, recv_element
+        integer(ik)             :: idom, ielem, itime, imat, recv_comm, recv_domain, recv_element
         integer(ik)             :: dparent_g, dparent_l, eparent_g, eparent_l
         integer(ik)             :: matrix_proc, vector_proc, nrows, ncols, ierr
+        integer(ik)             :: res_istart, res_iend, x_istart, x_iend
         logical                 :: local_multiply, parallel_multiply
         logical                 :: nonconforming = .false.
-
 
 
         !
@@ -81,47 +80,46 @@ contains
             !
             ! Routine for neighbor/diag blocks (lblks)
             !
-            !$OMP PARALLEL DO PRIVATE(matrix_proc, vector_proc, local_multiply, parallel_multiply, dparent_l, eparent_l, iblk)
             do ielem = 1,size(A%dom(idom)%lblks,1)
-                do iblk = 1,size(A%dom(idom)%lblks,2)
+                do itime = 1,size(A%dom(idom)%lblks,2)
+                    do imat = 1,A%dom(idom)%lblks(ielem,itime)%size()
                     
-                    if (allocated(A%dom(idom)%lblks(ielem,iblk)%mat)) then
                         matrix_proc = IRANK
-                        vector_proc = A%dom(idom)%lblks(ielem,iblk)%parent_proc()
+                        vector_proc = A%dom(idom)%lblks(ielem,itime)%parent_proc(imat)
 
                         local_multiply    = ( matrix_proc == vector_proc )
                         parallel_multiply = ( matrix_proc /= vector_proc )
 
         
                         if ( local_multiply ) then
-                            dparent_l = A%dom(idom)%lblks(ielem,iblk)%dparent_l()
-                            eparent_l = A%dom(idom)%lblks(ielem,iblk)%eparent_l()
+                            dparent_l = A%dom(idom)%lblks(ielem,itime)%dparent_l(imat)
+                            eparent_l = A%dom(idom)%lblks(ielem,itime)%eparent_l(imat)
 
-                            associate ( resvec => res%dom(idom)%vecs(ielem)%vec,    &
-                                        xvec   => x%dom(idom)%vecs(eparent_l)%vec,  &
-                                        Amat   => A%dom(idom)%lblks(ielem,iblk)%mat )
+!                            associate ( resvec => res%dom(idom)%vecs(ielem)%vec,    &
+!                                        xvec   => x%dom(idom)%vecs(eparent_l)%vec,  &
+!                                        Amat   => A%dom(idom)%lblks(ielem,itime)%mat )
+!
+!                                resvec = resvec + matmul(Amat,xvec)
+!
+!                            end associate
 
-                                !resvec = resvec + matmul(Amat,xvec)
-                                !res%dom(idom)%vecs(ielem)%vec = res%dom(idom)%vecs(ielem)%vec + matmul(A%dom(idom)%lblks(ielem,iblk)%mat, x%dom(idom)%vecs(eparent_l)%vec)
+                            res_istart = res%dom(idom)%vecs(ielem)%get_time_start(itime)
+                            res_iend   = res%dom(idom)%vecs(ielem)%get_time_end(itime)
+                            x_istart = x%dom(idom)%vecs(eparent_l)%get_time_start(itime)
+                            x_iend   = x%dom(idom)%vecs(eparent_l)%get_time_end(itime)
+                            associate ( resvec => res%dom(idom)%vecs(ielem)%vec(res_istart:res_iend),    &
+                                        xvec   => x%dom(idom)%vecs(eparent_l)%vec(x_istart:x_iend),  &
+                                        Amat   => A%dom(idom)%lblks(ielem,itime)%data_(imat)%mat )
+
                                 
-                                !nrows = size(Amat,1)
-                                !ncols = size(Amat,2)
-                                !call DGEMV('N', nrows, ncols, ONE, Amat, nrows, xvec, 1, ONE, resvec, 1)
-                                nrows = size(A%dom(idom)%lblks(ielem,iblk)%mat,1)
-                                ncols = size(A%dom(idom)%lblks(ielem,iblk)%mat,2)
-                                call timer_blas%start()
-                                call DGEMV('N', nrows, ncols, ONE, A%dom(idom)%lblks(ielem,iblk)%mat, nrows, x%dom(idom)%vecs(eparent_l)%vec, 1, ONE, res%dom(idom)%vecs(ielem)%vec, 1)
-                                !call chidg_matmul(A%dom(idom)%lblks(ielem,iblk)%mat,x%dom(idom)%vecs(eparent_l)%vec, res%dom(idom)%vecs(ielem)%vec)
-                                call timer_blas%stop()
+                                resvec = resvec + matmul(Amat,xvec)
 
                             end associate
                         end if
 
-                    end if
-
-                end do
-            end do
-            !$OMP END PARALLEL DO
+                    end do !imat
+                end do !itime
+            end do !ielem
 
 
 
@@ -129,26 +127,29 @@ contains
             ! Routine for off-diagonal, chimera blocks
             !
             if (allocated(A%dom(idom)%chi_blks)) then
-                !$OMP PARALLEL DO PRIVATE(matrix_proc, vector_proc, local_multiply, parallel_multiply, dparent_l, eparent_l, iblk, nonconforming)
                 do ielem = 1,size(A%dom(idom)%chi_blks,1)
-                    do iblk = 1,size(A%dom(idom)%chi_blks,2)
+                    do itime = 1,size(A%dom(idom)%chi_blks,2)
+                        do imat = 1,A%dom(idom)%lblks(ielem,itime)%size()
 
-
-                        if (allocated(A%dom(idom)%chi_blks(ielem,iblk)%mat)) then
                             matrix_proc = IRANK
-                            vector_proc = A%dom(idom)%chi_blks(ielem,iblk)%parent_proc()
+                            vector_proc = A%dom(idom)%chi_blks(ielem,itime)%parent_proc(imat)
 
                             local_multiply    = ( matrix_proc == vector_proc )
                             parallel_multiply = ( matrix_proc /= vector_proc )
 
 
                             if ( local_multiply ) then
-                                dparent_l = A%dom(idom)%chi_blks(ielem,iblk)%dparent_l()
-                                eparent_l = A%dom(idom)%chi_blks(ielem,iblk)%eparent_l()
+                                dparent_l = A%dom(idom)%chi_blks(ielem,itime)%dparent_l(imat)
+                                eparent_l = A%dom(idom)%chi_blks(ielem,itime)%eparent_l(imat)
 
-                                associate ( resvec => res%dom(idom)%vecs(ielem)%vec,        &
-                                            xvec   => x%dom(dparent_l)%vecs(eparent_l)%vec, &
-                                            Amat   => A%dom(idom)%chi_blks(ielem,iblk)%mat  ) 
+
+                                res_istart = res%dom(idom)%vecs(ielem)%get_time_start(itime)
+                                res_iend   = res%dom(idom)%vecs(ielem)%get_time_end(itime)
+                                x_istart   = x%dom(idom)%vecs(eparent_l)%get_time_start(itime)
+                                x_iend     = x%dom(idom)%vecs(eparent_l)%get_time_end(itime)
+                                associate ( resvec => res%dom(idom)%vecs(ielem)%vec(res_istart:res_iend),    &
+                                            xvec   => x%dom(dparent_l)%vecs(eparent_l)%vec(x_istart:x_iend), &
+                                            Amat   => A%dom(idom)%chi_blks(ielem,itime)%data_(imat)%mat  ) 
 
                                     !
                                     ! Test matrix vector sizes
@@ -157,23 +158,14 @@ contains
                                     if (nonconforming) call chidg_signal(FATAL,"operator_chidg_mv: nonconforming Chimera m-v operation")
 
                                     resvec = resvec + matmul(Amat,xvec)
-                                    !res%dom(idom)%vecs(ielem)%vec = res%dom(idom)%vecs(ielem)%vec + matmul(A%dom(idom)%chi_blks(ielem,iblk)%mat, x%dom(dparent_l)%vecs(eparent_l)%vec)
-
-
-                                    !nrows = size(A%dom(idom)%chi_blks(ielem,iblk)%mat,1)
-                                    !ncols = size(A%dom(idom)%chi_blks(ielem,iblk)%mat,2)
-                                    call timer_blas%start()
-                                    !call DGEMV('N', nrows, ncols, ONE, A%dom(idom)%chi_blks(ielem,iblk)%mat, nrows, x%dom(dparent_l)%vecs(eparent_l)%vec, 1, ONE, res%dom(idom)%vecs(ielem)%vec, 1)
-                                    call timer_blas%stop()
 
                                 end associate
                             end if
 
-                        end if
 
-                    end do ! iblk
+                        end do !imat
+                    end do ! itime
                 end do ! ielem
-                !OMP END PARALLEL DO
             end if  ! allocated
 
 
@@ -247,48 +239,41 @@ contains
             !
             ! Routine for neighbor/diag blocks (lblks)
             !
-            !$OMP PARALLEL DO PRIVATE(matrix_proc, vector_proc, local_multiply, parallel_multiply, dparent_l, eparent_l, iblk, recv_comm, recv_domain, recv_element)
             do ielem = 1,size(A%dom(idom)%lblks,1)
-                do iblk = 1,size(A%dom(idom)%lblks,2)
+                do itime = 1,size(A%dom(idom)%lblks,2)
+                    do imat = 1,A%dom(idom)%lblks(ielem,itime)%size()
                     
-                    if (allocated(A%dom(idom)%lblks(ielem,iblk)%mat)) then
                         matrix_proc = IRANK
-                        vector_proc = A%dom(idom)%lblks(ielem,iblk)%parent_proc()
+                        vector_proc = A%dom(idom)%lblks(ielem,itime)%parent_proc(imat)
 
                         local_multiply    = ( matrix_proc == vector_proc )
                         parallel_multiply = ( matrix_proc /= vector_proc )
 
         
                         if ( parallel_multiply ) then
-                            dparent_l = A%dom(idom)%lblks(ielem,iblk)%dparent_l()
-                            eparent_l = A%dom(idom)%lblks(ielem,iblk)%eparent_l()
+                            dparent_l = A%dom(idom)%lblks(ielem,itime)%dparent_l(imat)
+                            eparent_l = A%dom(idom)%lblks(ielem,itime)%eparent_l(imat)
 
-                            recv_comm    = A%dom(idom)%lblks(ielem,iblk)%recv_comm
-                            recv_domain  = A%dom(idom)%lblks(ielem,iblk)%recv_domain
-                            recv_element = A%dom(idom)%lblks(ielem,iblk)%recv_element
+                            recv_comm    = A%dom(idom)%lblks(ielem,itime)%get_recv_comm(imat)
+                            recv_domain  = A%dom(idom)%lblks(ielem,itime)%get_recv_domain(imat)
+                            recv_element = A%dom(idom)%lblks(ielem,itime)%get_recv_element(imat)
 
-                            associate ( resvec => res%dom(idom)%vecs(ielem)%vec,                                    &
-                                        xvec   => x%recv%comm(recv_comm)%dom(recv_domain)%vecs(recv_element)%vec,   &
-                                        Amat   => A%dom(idom)%lblks(ielem,iblk)%mat )
+                            res_istart = res%dom(idom)%vecs(ielem)%get_time_start(itime)
+                            res_iend   = res%dom(idom)%vecs(ielem)%get_time_end(itime)
+                            x_istart   = x%recv%comm(recv_comm)%dom(recv_domain)%vecs(recv_element)%get_time_start(itime)
+                            x_iend     = x%recv%comm(recv_comm)%dom(recv_domain)%vecs(recv_element)%get_time_end(itime)
+                            associate ( resvec => res%dom(idom)%vecs(ielem)%vec(res_istart:res_iend),                               &
+                                        xvec   => x%recv%comm(recv_comm)%dom(recv_domain)%vecs(recv_element)%vec(x_istart:x_iend),  &
+                                        Amat   => A%dom(idom)%lblks(ielem,itime)%data_(imat)%mat )
 
-                                !resvec = resvec + matmul(Amat,xvec)
-                                !res%dom(idom)%vecs(ielem)%vec = res%dom(idom)%vecs(ielem)%vec + matmul(A%dom(idom)%lblks(ielem,iblk)%mat, x%recv%comm(recv_comm)%dom(recv_domain)%vecs(recv_element)%vec)
-
-                                nrows = size(A%dom(idom)%lblks(ielem,iblk)%mat,1)
-                                ncols = size(A%dom(idom)%lblks(ielem,iblk)%mat,2)
-                                call timer_blas%start()
-                                call DGEMV('N', nrows, ncols, ONE, A%dom(idom)%lblks(ielem,iblk)%mat, nrows, x%recv%comm(recv_comm)%dom(recv_domain)%vecs(recv_element)%vec, 1, ONE, res%dom(idom)%vecs(ielem)%vec, 1)
-                                !call chidg_matmul(A%dom(idom)%lblks(ielem,iblk)%mat,x%recv%comm(recv_comm)%dom(recv_domain)%vecs(recv_element)%vec, res%dom(idom)%vecs(ielem)%vec)
-                                call timer_blas%stop()
+                                resvec = resvec + matmul(Amat,xvec)
 
                             end associate
                         end if
 
-                    end if
-
-                end do
-            end do
-            !$OMP END PARALLEL DO
+                    end do !imat
+                end do !itime
+            end do !ielem
 
 
 
@@ -296,31 +281,34 @@ contains
             ! Routine for off-diagonal, chimera blocks
             !
             if (allocated(A%dom(idom)%chi_blks)) then
-                !$OMP PARALLEL DO PRIVATE(matrix_proc, vector_proc, local_multiply, parallel_multiply, dparent_l, eparent_l, iblk, recv_comm, recv_domain, recv_element, nonconforming)
                 do ielem = 1,size(A%dom(idom)%chi_blks,1)
-                    do iblk = 1,size(A%dom(idom)%chi_blks,2)
+                    do itime = 1,size(A%dom(idom)%chi_blks,2)
+                        do imat = 1,A%dom(idom)%chi_blks(ielem,itime)%size()
 
 
-                        if (allocated(A%dom(idom)%chi_blks(ielem,iblk)%mat)) then
                             matrix_proc = IRANK
-                            vector_proc = A%dom(idom)%chi_blks(ielem,iblk)%parent_proc()
+                            vector_proc = A%dom(idom)%chi_blks(ielem,itime)%parent_proc(imat)
 
                             local_multiply    = ( matrix_proc == vector_proc )
                             parallel_multiply = ( matrix_proc /= vector_proc )
 
 
                             if ( parallel_multiply ) then
-                                dparent_l = A%dom(idom)%chi_blks(ielem,iblk)%dparent_l()
-                                eparent_l = A%dom(idom)%chi_blks(ielem,iblk)%eparent_l()
+                                dparent_l = A%dom(idom)%chi_blks(ielem,itime)%dparent_l(imat)
+                                eparent_l = A%dom(idom)%chi_blks(ielem,itime)%eparent_l(imat)
 
-                                recv_comm    = A%dom(idom)%chi_blks(ielem,iblk)%recv_comm
-                                recv_domain  = A%dom(idom)%chi_blks(ielem,iblk)%recv_domain
-                                recv_element = A%dom(idom)%chi_blks(ielem,iblk)%recv_element
+                                recv_comm    = A%dom(idom)%chi_blks(ielem,itime)%get_recv_comm(imat)
+                                recv_domain  = A%dom(idom)%chi_blks(ielem,itime)%get_recv_domain(imat)
+                                recv_element = A%dom(idom)%chi_blks(ielem,itime)%get_recv_element(imat)
 
 
+                                res_istart = res%dom(idom)%vecs(ielem)%get_time_start(itime)
+                                res_iend   = res%dom(idom)%vecs(ielem)%get_time_end(itime)
+                                x_istart   = x%recv%comm(recv_comm)%dom(recv_domain)%vecs(recv_element)%get_time_start(itime)
+                                x_iend     = x%recv%comm(recv_comm)%dom(recv_domain)%vecs(recv_element)%get_time_end(itime)
                                 associate ( resvec => res%dom(idom)%vecs(ielem)%vec,                                    &
                                             xvec   => x%recv%comm(recv_comm)%dom(recv_domain)%vecs(recv_element)%vec,   &
-                                            Amat   => A%dom(idom)%chi_blks(ielem,iblk)%mat )
+                                            Amat   => A%dom(idom)%chi_blks(ielem,itime)%data_(imat)%mat )
 
 
                                     !
@@ -330,22 +318,14 @@ contains
                                     if (nonconforming) call chidg_signal(FATAL,"operator_chidg_mv: nonconforming Chimera m-v operation")
 
                                     resvec = resvec + matmul(Amat,xvec)
-                                    !res%dom(idom)%vecs(ielem)%vec = res%dom(idom)%vecs(ielem)%vec + matmul(A%dom(idom)%chi_blks(ielem,iblk)%mat, x%recv%comm(recv_comm)%dom(recv_domain)%vecs(recv_element)%vec)
-
-
-                                    !nrows = size(A%dom(idom)%chi_blks(ielem,iblk)%mat,1)
-                                    !ncols = size(A%dom(idom)%chi_blks(ielem,iblk)%mat,2)
-                                    !call DGEMV('N', nrows, ncols, ONE, A%dom(idom)%chi_blks(ielem,iblk)%mat, nrows, x%recv%comm(recv_comm)%dom(recv_domain)%vecs(recv_element)%vec, 1, ONE, res%dom(idom)%vecs(ielem)%vec, 1)
-
 
                                 end associate
                             end if
 
-                        end if
 
-                    end do ! iblk
+                        end do !imat
+                    end do ! itime
                 end do ! ielem
-                !OMP END PARALLEL DO
             end if  ! allocated
 
 

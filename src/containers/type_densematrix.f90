@@ -31,16 +31,16 @@ module type_densematrix
     !!  @note   Extended for parallel
     !!
     !!
-    !--------------------------------------------------------------------------------------------------------
+    !------------------------------------------------------------------------------------------
     type, public :: densematrix_t
 
 
         ! zero value indicates unassigned
         integer(ik)             :: parent_proc_ = NO_PROC
-        integer(ik)             :: dparent_g_   = 0   !< Global domain index of the element this block was linearized with respect to
-        integer(ik)             :: dparent_l_   = 0   !< Local domain index of the element this block was linearized with respect to
-        integer(ik)             :: eparent_g_   = 0   !< Global element index of the element this block was linearized with respect to
-        integer(ik)             :: eparent_l_   = 0   !< Local element index of the element this block was linearized with respect to
+        integer(ik)             :: dparent_g_   = 0   !< Global domain index of the element matrix was linearized with respect to
+        integer(ik)             :: dparent_l_   = 0   !< Local domain index of the element matrix was linearized with respect to
+        integer(ik)             :: eparent_g_   = 0   !< Global element index of the element matrix was linearized with respect to
+        integer(ik)             :: eparent_l_   = 0   !< Local element index of the element matrix was linearized with respect to
 
         ! If associated parent data is being received from another processor, location in chidgVector%recv to find it
         integer(ik)             :: recv_comm    = 0
@@ -66,13 +66,19 @@ module type_densematrix
         procedure :: idim               !< return i-dimension of matrix storage
         procedure :: jdim               !< return j-dimension of matrix storage
         procedure :: dump               !< print out matrix contents
+        procedure :: get_recv_comm
+        procedure :: get_recv_domain
+        procedure :: get_recv_element
 
         ! Setters
         procedure :: resize             !< resize matrix storage
+        procedure :: set_recv_comm
+        procedure :: set_recv_domain
+        procedure :: set_recv_element
 
 
     end type densematrix_t
-    !*************************************************************************************************************
+    !******************************************************************************************
 
 
 
@@ -97,7 +103,7 @@ contains
     !!  @param[in]  dparent     Integer index of parent domain
     !!  @param[in]  eparent     Integer index of parent element
     !!
-    !------------------------------------------------------------------------------------------------------------------
+    !------------------------------------------------------------------------------------------
     subroutine init(self,idim,jdim,dparent_g,dparent_l,eparent_g,eparent_l,parent_proc)
         class(densematrix_t),   intent(inout)   :: self
         integer(ik),            intent(in)      :: idim
@@ -141,15 +147,7 @@ contains
         self%mat = 0._rk
 
     end subroutine init
-    !******************************************************************************************************************
-
-
-
-
-
-
-
-
+    !*******************************************************************************************
 
 
 
@@ -165,7 +163,7 @@ contains
     !!  
     !!  @return i   Integer of the column-dimension of the stored matrix
     !!
-    !-------------------------------------------------------------------------------------------------------------------
+    !-------------------------------------------------------------------------------------------
     function idim(self) result(i)
         class(densematrix_t), intent(in)    :: self
         integer(ik)                         :: i
@@ -173,14 +171,7 @@ contains
         i = size(self%mat,1)
 
     end function idim
-    !*******************************************************************************************************************
-
-
-
-
-
-
-
+    !*******************************************************************************************
 
 
 
@@ -194,7 +185,7 @@ contains
     !!
     !!  @return j   Integer of the row-dimension of the stored matrix
     !!
-    !-------------------------------------------------------------------------------------------------------------------
+    !------------------------------------------------------------------------------------------
     function jdim(self) result(j)
         class(densematrix_t), intent(in)    :: self
         integer(ik)                         :: j
@@ -202,12 +193,7 @@ contains
         j = size(self%mat,2)
 
     end function jdim
-    !*******************************************************************************************************************
-
-
-
-
-
+    !******************************************************************************************
 
 
 
@@ -223,7 +209,7 @@ contains
     !!
     !!  @return     nentries    Integer of the total number of matrix entries stored
     !!
-    !-------------------------------------------------------------------------------------------------------------------
+    !------------------------------------------------------------------------------------------
     function nentries(self) result(n)
         class(densematrix_t), intent(in)    :: self
         integer(ik)                         :: n
@@ -231,7 +217,7 @@ contains
         n = size(self%mat,1) * size(self%mat,2)
 
     end function nentries
-    !*******************************************************************************************************************
+    !******************************************************************************************
 
 
 
@@ -251,7 +237,7 @@ contains
     !!
     !!  @return     par     Integer index of the parent domain.
     !!
-    !-------------------------------------------------------------------------------------------------------------------
+    !------------------------------------------------------------------------------------------
     function dparent_g(self) result(par)
         class(densematrix_t),   intent(in)  :: self
         integer(ik)                         :: par
@@ -259,7 +245,7 @@ contains
         par = self%dparent_g_
 
     end function dparent_g
-    !*******************************************************************************************************************
+    !******************************************************************************************
 
 
 
@@ -271,7 +257,7 @@ contains
     !!
     !!  @return     par     Integer index of the parent domain.
     !!
-    !-------------------------------------------------------------------------------------------------------------------
+    !------------------------------------------------------------------------------------------
     function dparent_l(self) result(par)
         class(densematrix_t),   intent(in)  :: self
         integer(ik)                         :: par
@@ -279,7 +265,7 @@ contains
         par = self%dparent_l_
 
     end function dparent_l
-    !*******************************************************************************************************************
+    !******************************************************************************************
 
 
 
@@ -294,7 +280,7 @@ contains
     !!
     !!  @return     par     Integer index of the parent element.
     !!
-    !-------------------------------------------------------------------------------------------------------------------
+    !------------------------------------------------------------------------------------------
     function eparent_g(self) result(par)
         class(densematrix_t), intent(in) :: self
         integer(ik)                     :: par
@@ -302,7 +288,7 @@ contains
         par = self%eparent_g_
 
     end function eparent_g
-    !*******************************************************************************************************************
+    !******************************************************************************************
 
 
 
@@ -313,7 +299,7 @@ contains
     !!
     !!  @return     par     Integer index of the parent element.
     !!
-    !-------------------------------------------------------------------------------------------------------------------
+    !------------------------------------------------------------------------------------------
     function eparent_l(self) result(par)
         class(densematrix_t), intent(in) :: self
         integer(ik)                      :: par
@@ -321,7 +307,7 @@ contains
         par = self%eparent_l_
 
     end function eparent_l
-    !*******************************************************************************************************************
+    !******************************************************************************************
 
 
 
@@ -334,7 +320,7 @@ contains
     !!
     !!  @return     par     Integer index of the parent element.
     !!
-    !-------------------------------------------------------------------------------------------------------------------
+    !------------------------------------------------------------------------------------------
     function parent_proc(self) result(par)
         class(densematrix_t), intent(in) :: self
         integer(ik)                      :: par
@@ -342,7 +328,7 @@ contains
         par = self%parent_proc_
 
     end function parent_proc
-    !*******************************************************************************************************************
+    !******************************************************************************************
 
 
 
@@ -354,7 +340,7 @@ contains
     !! @author Nathan A. Wukie
     !!  @date   2/1/2016
     !!
-    !-------------------------------------------------------------------------------------------------------------------
+    !------------------------------------------------------------------------------------------
     subroutine resize(self,idim,jdim)
         class(densematrix_t),   intent(inout)   :: self
         integer(ik),            intent(in)      :: idim
@@ -383,10 +369,163 @@ contains
         if (ierr /= 0) call AllocationError
 
     end subroutine resize
-    !*******************************************************************************************************************
+    !******************************************************************************************
 
 
 
+
+
+
+
+    !>  Set recv_comm component.
+    !!
+    !!  recv_comm is the comm index in a chidgVector that information coming from the parent
+    !!  element can be found.
+    !!
+    !!  chidgVector%recv%comm(recv_comm)%dom(recv_domain)%vec(recv_element)
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   11/15/2016
+    !!
+    !!
+    !-----------------------------------------------------------------------------------------
+    subroutine set_recv_comm(self,recv_comm)
+        class(densematrix_t),   intent(inout)   :: self
+        integer(ik),            intent(in)      :: recv_comm
+
+        self%recv_comm = recv_comm
+
+    end subroutine set_recv_comm
+    !******************************************************************************************
+
+
+
+
+    !>  Set recv_domain component.
+    !!
+    !!  recv_domain is the comm index in a chidgVector that information coming from the parent
+    !!  element can be found.
+    !!
+    !!  chidgVector%recv%comm(recv_comm)%dom(recv_domain)%vec(recv_element)
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   11/15/2016
+    !!
+    !!
+    !-----------------------------------------------------------------------------------------
+    subroutine set_recv_domain(self,recv_domain)
+        class(densematrix_t),   intent(inout)   :: self
+        integer(ik),            intent(in)      :: recv_domain
+
+        self%recv_domain = recv_domain
+
+    end subroutine set_recv_domain
+    !******************************************************************************************
+
+
+
+
+
+    !>  Set recv_element component.
+    !!
+    !!  recv_element is the comm index in a chidgVector that information coming from the parent
+    !!  element can be found.
+    !!
+    !!  chidgVector%recv%comm(recv_comm)%dom(recv_domain)%vec(recv_element)
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   11/15/2016
+    !!
+    !!
+    !-----------------------------------------------------------------------------------------
+    subroutine set_recv_element(self,recv_element)
+        class(densematrix_t),   intent(inout)   :: self
+        integer(ik),            intent(in)      :: recv_element
+
+        self%recv_element = recv_element
+
+    end subroutine set_recv_element
+    !******************************************************************************************
+
+
+
+
+
+    !>  Get recv_comm component.
+    !!
+    !!  recv_comm is the comm index in a chidgVector that information coming from the parent
+    !!  element can be found.
+    !!
+    !!  chidgVector%recv%comm(recv_comm)%dom(recv_domain)%vec(recv_element)
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   11/15/2016
+    !!
+    !!
+    !-----------------------------------------------------------------------------------------
+    function get_recv_comm(self) result(recv_comm)
+        class(densematrix_t),   intent(inout)   :: self
+
+        integer(ik) :: recv_comm
+
+        recv_comm = self%recv_comm
+
+    end function get_recv_comm
+    !******************************************************************************************
+
+
+
+
+
+
+    !>  Get recv_domain component.
+    !!
+    !!  recv_domain is the domain index in a chidgVector that information coming from the parent
+    !!  element can be found.
+    !!
+    !!  chidgVector%recv%comm(recv_comm)%dom(recv_domain)%vec(recv_element)
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   11/15/2016
+    !!
+    !!
+    !-----------------------------------------------------------------------------------------
+    function get_recv_domain(self) result(recv_domain)
+        class(densematrix_t),   intent(inout)   :: self
+
+        integer(ik) :: recv_domain
+
+        recv_domain = self%recv_domain
+
+    end function get_recv_domain
+    !******************************************************************************************
+
+
+
+
+
+
+    !>  Get recv_element component.
+    !!
+    !!  recv_element is the element index in a chidgVector that information coming from the parent
+    !!  element can be found.
+    !!
+    !!  chidgVector%recv%comm(recv_comm)%dom(recv_domain)%vec(recv_element)
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   11/15/2016
+    !!
+    !!
+    !-----------------------------------------------------------------------------------------
+    function get_recv_element(self) result(recv_element)
+        class(densematrix_t),   intent(inout)   :: self
+
+        integer(ik) :: recv_element
+
+        recv_element = self%recv_element
+
+    end function get_recv_element
+    !******************************************************************************************
 
 
 

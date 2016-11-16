@@ -41,7 +41,7 @@ contains
         integer(ik),        optional        :: info
 
         type(timer_t)               :: timer, comm_timer
-        integer(ik)                 :: idom, ielem, iface, idiff, ifcn, ibc, ierr, nelem
+        integer(ik)                 :: idom, ielem, iface, idiff, itime, ierr
         logical                     :: interior_face
         logical                     :: chimera_face 
         logical                     :: compute_face 
@@ -73,13 +73,6 @@ contains
         !                                      Interior Scheme
         !------------------------------------------------------------------------------------------
 
-        !
-        ! Clear function_status data. This tracks if a function has already been called. So, in this way
-        ! we can compute a function on a face and apply it to both elements. The function is just registered
-        ! as computed for both. So we need to reset all of that data here. This is only tracked for the interior scheme.
-        ! Boundary condition evaluations and Chimera faces are not tracked.
-        !
-        call data%sdata%function_status%clear()
 
 
 
@@ -103,56 +96,68 @@ contains
 
 
         ! Loop through domains
-        do idom = 1,data%ndomains()
-            associate ( mesh => data%mesh, eqnset => data%eqnset(idom) )
-            nelem = mesh(idom)%nelem
+        do itime = 1,data%ntime()
 
-            ! Loop through elements in the current domain
-            do ielem = 1,nelem
-
-                elem_info%idomain_g  = mesh(idom)%elems(ielem)%idomain_g
-                elem_info%idomain_l  = mesh(idom)%elems(ielem)%idomain_l
-                elem_info%ielement_g = mesh(idom)%elems(ielem)%ielement_g
-                elem_info%ielement_l = mesh(idom)%elems(ielem)%ielement_l
-                call worker%set_element(elem_info)
+            !
+            ! Clear function_status data. This tracks if a function has already been called. So, in this way
+            ! we can compute a function on a face and apply it to both elements. The function is just registered
+            ! as computed for both. So we need to reset all of that data here. This is only tracked for the interior scheme.
+            ! Boundary condition evaluations and Chimera faces are not tracked.
+            !
+            call data%sdata%function_status%clear()
 
 
+            do idom = 1,data%ndomains()
+                associate ( mesh => data%mesh(idom), eqnset => data%eqnset(idom) )
 
-                ! Update the element cache
-                call cache_handler%update(worker,data%eqnset,data%bcset)
+                ! Loop through elements in the current domain
+                do ielem = 1,mesh%nelem
 
+                    elem_info%idomain_g  = mesh%elems(ielem)%idomain_g
+                    elem_info%idomain_l  = mesh%elems(ielem)%idomain_l
+                    elem_info%ielement_g = mesh%elems(ielem)%ielement_g
+                    elem_info%ielement_l = mesh%elems(ielem)%ielement_l
+                    call worker%set_element(elem_info)
 
-
-                ! 1-6 = linearization of neighbor blocks, 7 = linearization of Q- block(self)
-                do idiff = 1,7
-
-
-                    ! Faces loop. For the current element, compute the contributions from boundary integrals
-                    do iface = 1,NFACES
-
-                        call worker%set_face(iface)
-
-                        call eqnset%compute_boundary_advective_operators(worker, idiff)
-                        call eqnset%compute_boundary_diffusive_operators(worker, idiff)
-                        call eqnset%compute_bc_operators(worker,data%bcset,idiff)
-
-                    end do  ! faces loop
-                    
+                    worker%itime = itime
 
 
-                    !
-                    ! Compute volume fluxes
-                    !
-                    call eqnset%compute_volume_advective_operators(worker, idiff)
-                    call eqnset%compute_volume_diffusive_operators(worker, idiff)
+                    ! Update the element cache
+                    call cache_handler%update(worker,data%eqnset,data%bcset)
 
 
 
-                end do  ! idiff
+                    ! 1-6 = linearization of neighbor blocks, 7 = linearization of Q- block(self)
+                    do idiff = 1,7
 
-            end do  ! ielem
-            end associate
-        end do  ! idom
+
+                        ! Faces loop. For the current element, compute the contributions from boundary integrals
+                        do iface = 1,NFACES
+
+                            call worker%set_face(iface)
+
+                            call eqnset%compute_boundary_advective_operators(worker, idiff)
+                            call eqnset%compute_boundary_diffusive_operators(worker, idiff)
+                            call eqnset%compute_bc_operators(worker,data%bcset,idiff)
+
+                        end do  ! faces loop
+                        
+
+
+                        !
+                        ! Compute volume fluxes
+                        !
+                        call eqnset%compute_volume_advective_operators(worker, idiff)
+                        call eqnset%compute_volume_diffusive_operators(worker, idiff)
+
+
+
+                    end do  ! idiff
+
+                end do  ! ielem
+                end associate
+            end do  ! idom
+        end do ! itime
 
 
 

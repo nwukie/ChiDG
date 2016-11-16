@@ -67,7 +67,7 @@ contains
 
         character(100)          :: filename
         integer(ik)             :: itime, nsteps, ielem, wcount, iblk, iindex, niter, ieqn, idom, ierr
-        integer(ik)             :: rstart, rend, cstart, cend, nterms
+        integer(ik)             :: rstart, rend, cstart, cend, nterms, imat
         real(rk)                :: dtau, amp, cfl, cfln, entropy_error, timing
         real(rk)                :: rnorm0, rnorm, resid, resid_new
         real(rk), allocatable   :: vals(:)
@@ -165,7 +165,7 @@ contains
                 ! Compute element-local pseudo-timestep
                 !
                 !data%sdata%dt = cfln
-                call compute_timestep(data,cfln)
+                call compute_timestep(data,cfln,itime=1)
 
 
 
@@ -194,7 +194,7 @@ contains
                            
                                 ! Add mass matrix divided by dt to the block diagonal
                                 !lhs%dom(idom)%lblks(ielem,iblk)%mat(rstart:rend,cstart:cend)  =  lhs%dom(idom)%lblks(ielem,iblk)%mat(rstart:rend,cstart:cend)  +  data%mesh(idom)%elems(ielem)%mass*(ONE/dtau)
-                                imat = lhs%dom(idom)%lblks(ielem,itime)%find_diagonal()
+                                imat = lhs%dom(idom)%lblks(ielem,itime)%get_diagonal()
                                 lhs%dom(idom)%lblks(ielem,itime)%data_(imat)%mat(rstart:rend,cstart:cend)  =  lhs%dom(idom)%lblks(ielem,itime)%data_(imat)%mat(rstart:rend,cstart:cend)  +  data%mesh(idom)%elems(ielem)%mass*(ONE/dtau)
 
                             end do

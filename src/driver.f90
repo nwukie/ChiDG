@@ -21,7 +21,6 @@ program driver
     ! Actions
     use mod_chidg_edit,         only: chidg_edit
     use mod_chidg_convert,      only: chidg_convert
-    use mod_chidg_interpolate,  only: chidg_interpolate
     use mod_chidg_post,         only: chidg_post,chidg_post_vtk
 
     ! MPI
@@ -250,41 +249,6 @@ program driver
         ! Close ChiDG interface
         !
         call chidg%close('core')
-
-    !
-    ! ChiDG tool execution. 3 arguments.
-    !
-    else if ( narg == 3 ) then
-
-
-        call get_command_argument(1,chidg_action)
-        call get_command_argument(2,file_a)
-        call get_command_argument(3,file_b)
-        
-
-
-        !
-        ! Initialize ChiDG environment
-        !
-        call chidg%init('env')
-
-
-
-        if ( trim(chidg_action) == 'interpolate' ) then
-            call chidg_interpolate(trim(file_a), trim(file_b))
-
-        else
-            call chidg_signal(FATAL,"chidg: unrecognized action '"//trim(chidg_action)//"'. Valid options are: 'edit', 'convert'")
-
-        end if
-
-
-
-        !
-        ! Close ChiDG interface
-        !
-        call chidg%close('core')
-
 
 
 

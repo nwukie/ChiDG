@@ -57,6 +57,7 @@ module type_chidg
     type, public    :: chidg_t
 
 
+        integer(ik) :: ntime        = 1 ! Number of time instances being solved for
         integer(ik) :: nterms_s     = 0 ! Number of terms in the 3D solution basis expansion
         integer(ik) :: nterms_s_1d  = 0 ! Number of terms in the 1D solution basis expansion
 
@@ -280,7 +281,8 @@ contains
         !
         select case (trim(selector))
 
-            case ('solution order', 'Solution Order', 'solution_order', 'Solution_Order')
+            case ('solution order', 'Solution Order', 'solution_order', 'Solution_Order', &
+                  'ntime', 'Number of Time Instances', 'NTIME', 'n time')
 
                 user_msg = "chidg%set: The component being set needs an integer passed in &
                             along with it. Try 'call chidg%set('your component', integer_input=my_int)"
@@ -354,6 +356,9 @@ contains
                 self%nterms_s_1d = integer_input
                 self%nterms_s    = self%nterms_s_1d * self%nterms_s_1d * self%nterms_s_1d
         
+
+            case ('ntime', 'Number of Time Instances', 'NTIME', 'n time')
+                self%ntime = integer_input
                 
 
             case default
@@ -685,7 +690,7 @@ contains
         !
         ! Call domain solution storage initialization: mesh data structures that depend on solution expansion etc.
         !
-        call self%data%initialize_solution_domains(self%nterms_s)
+        call self%data%initialize_solution_domains(self%nterms_s,self%ntime)
 
 
     end subroutine initialize_solution_domains

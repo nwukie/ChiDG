@@ -16,6 +16,11 @@ module type_densematrix_vector
     !-----------------------------------------------------------------------------------------
     type, public :: densematrix_vector_t
 
+        integer(ik)                 :: idomain_g
+        integer(ik)                 :: idomain_l
+        integer(ik)                 :: ielement_g
+        integer(ik)                 :: ielement_l
+
         integer(ik)                 :: size_        = 0
         integer(ik)                 :: capacity_    = 0
         integer(ik)                 :: buffer_      = 7
@@ -45,15 +50,16 @@ module type_densematrix_vector
 
 
         ! Data accessors
-        procedure, public   :: at           !< return data from element densematrix_vector%at(ielem)
-        procedure, public   :: data         !< return full data vector
-        procedure, public   :: dmat         !< return densematrix array from element densematrix_vector%dmat(ielem)
-        procedure, public   :: dparent_g    !< return parent global domain for the index position densematrix
-        procedure, public   :: eparent_g    !< return parent global element for the index position densematrix
-        procedure, public   :: dparent_l    !< return parent local domain for the index position densematrix
-        procedure, public   :: eparent_l    !< return parent local element for the index position densematrix
-        procedure, public   :: parent_proc  !< return parent processor rank
-        procedure, public   :: find         !< find element in densematrix vector based idonor_domain_g ad i_element_g
+        procedure, public   :: at               !< return data from element densematrix_vector%at(ielem)
+        procedure, public   :: data             !< return full data vector
+        procedure, public   :: dmat             !< return densematrix array from element densematrix_vector%dmat(ielem)
+        procedure, public   :: dparent_g        !< return parent global domain for the index position densematrix
+        procedure, public   :: eparent_g        !< return parent global element for the index position densematrix
+        procedure, public   :: dparent_l        !< return parent local domain for the index position densematrix
+        procedure, public   :: eparent_l        !< return parent local element for the index position densematrix
+        procedure, public   :: parent_proc      !< return parent processor rank
+        procedure, public   :: find             !< find element in densematrix vector based idonor_domain_g ad i_element_g
+        procedure, public   :: get_diagonal     !< return index of densematrix representing the diagonal.
 
     end type densematrix_vector_t
     !*****************************************************************************************
@@ -633,6 +639,39 @@ contains
 
     end function find
     !****************************************************************************************
+
+
+
+
+
+
+    !>  Return the index of the densematrix corresponding to the diagonal.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   11/15/2016
+    !!
+    !!
+    !-----------------------------------------------------------------------------------------
+    function get_diagonal(self) result(index)
+        class(densematrix_vector_t),    intent(inout)   :: self
+
+        integer(ik) :: imat, index
+
+
+        index = 0
+        do imat = 1,self%size()
+            if ( (self%data_(imat)%dparent_g() == self%idomain_g) .and. &
+                 (self%data_(imat)%eparent_g() == self%ielement_g) ) then
+                 index = imat
+                 exit
+            end if
+        end do
+
+    end function get_diagonal
+    !*****************************************************************************************
+
+
+
 
 
 

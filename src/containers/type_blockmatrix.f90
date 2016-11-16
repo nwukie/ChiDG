@@ -317,8 +317,15 @@ contains
         ! Loop through elements and call initialization for 'local', 'chimera', and 'boundary condition' denseblock matrices
         !
         do ielem = 1,mesh%nelem
-
             do itime = 1,mesh%ntime 
+                
+                ! Set the element indices that the densematrix_vector is associated with.
+                self%lblks(ielem,itime)%idomain_g  = mesh%elems(ielem)%idomain_g
+                self%lblks(ielem,itime)%idomain_l  = mesh%elems(ielem)%idomain_l
+                self%lblks(ielem,itime)%ielement_g = mesh%elems(ielem)%ielement_g
+                self%lblks(ielem,itime)%ielement_l = mesh%elems(ielem)%ielement_l
+
+
                 !--------------------------------------------
                 !
                 ! Initialization  --  'local blocks'
@@ -405,6 +412,12 @@ contains
                 !
                 !--------------------------------------------
                 if (init_chimera) then
+                    ! Set the element indices that the densematrix_vector is associated with.
+                    self%chi_blks(ielem,itime)%idomain_g  = mesh%elems(ielem)%idomain_g
+                    self%chi_blks(ielem,itime)%idomain_l  = mesh%elems(ielem)%idomain_l
+                    self%chi_blks(ielem,itime)%ielement_g = mesh%elems(ielem)%ielement_g
+                    self%chi_blks(ielem,itime)%ielement_l = mesh%elems(ielem)%ielement_l
+
                     do iface = 1,NFACES
 
                         !
@@ -676,8 +689,6 @@ contains
         ! Call subroutine on densematrix 
         !
         call self%lblks(ielement_l,itime)%store_dmv(imat,ivar,nterms,integral)
-
-
 
     end subroutine store
     !******************************************************************************************

@@ -45,6 +45,7 @@ module type_chidg_data
 
         logical                                     :: solverInitialized = .false.
         integer(ik),        private                 :: ndomains_ = 0
+        integer(ik),        private                 :: ntime_    = 1
         integer(ik),        private                 :: spacedim_ = 3    !< Default 3D 
 
         
@@ -72,6 +73,7 @@ module type_chidg_data
         ! Accessors
         procedure   :: get_domain_index     !< Given a domain name, return domain index
         procedure   :: ndomains             !< Return number of domains in chidg instance
+        procedure   :: ntime
 
         procedure   :: report
 
@@ -378,18 +380,20 @@ contains
     !!
     !!
     !------------------------------------------------------------------------------------------------------
-    subroutine initialize_solution_domains(self,nterms_s)
+    subroutine initialize_solution_domains(self,nterms_s,ntime)
         class(chidg_data_t),    intent(inout)   :: self
         integer(ik),            intent(in)      :: nterms_s
+        integer(ik),            intent(in)      :: ntime
 
         integer(ik) :: idomain, neqns
 
+        self%ntime_ = ntime
 
         do idomain = 1,self%ndomains()
 
             ! Initialize mesh numerics based on equation set and polynomial expansion order
             neqns = self%eqnset(idomain)%prop%nequations()
-            call self%mesh(idomain)%init_sol(neqns,nterms_s)
+            call self%mesh(idomain)%init_sol(neqns,nterms_s,ntime)
 
         end do
 
@@ -474,6 +478,27 @@ contains
 
 
 
+
+
+
+
+
+    !> Return the number of time instances in the chidg_data_t instance.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   2/1/2016
+    !!
+    !!
+    !----------------------------------------------------------------------------------------------------------
+    function ntime(self) result(ndom)
+        class(chidg_data_t),    intent(in)      :: self
+
+        integer :: ndom
+
+        ndom = self%ntime_
+
+    end function ntime
+    !**********************************************************************************************************
 
 
 

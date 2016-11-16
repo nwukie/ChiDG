@@ -175,31 +175,33 @@ contains
                 !
                 do idom = 1,data%ndomains()
                     do ielem = 1,data%mesh(idom)%nelem
-                        nterms = data%mesh(idom)%nterms_s   ! get number of solution terms
+                        do itime = 1,data%mesh(idom)%ntime
 
+                            nterms = data%mesh(idom)%nterms_s   ! get number of solution terms
+                            dtau   = data%sdata%dt(idom,ielem)  ! get element-local timestep
 
-                        dtau   = data%sdata%dt(idom,ielem)  ! get element-local timestep
-
-                        !
-                        ! Loop through equations and add mass matrix
-                        !
-                        do ieqn = 1,data%eqnset(idom)%prop%nequations()
-                            iblk = DIAG
-                            ! Need to compute row and column extends in diagonal so we can
-                            ! selectively apply the mass matrix to the sub-block diagonal
-                            rstart = 1 + (ieqn-1) * nterms
-                            rend   = (rstart-1) + nterms
-                            cstart = rstart                 ! since it is square
-                            cend   = rend                   ! since it is square
-                       
-                            if (allocated(lhs%dom(idom)%lblks(ielem,iblk)%mat)) then
+                            !
+                            ! Loop through equations and add mass matrix
+                            !
+                            do ieqn = 1,data%eqnset(idom)%prop%nequations()
+                                iblk = DIAG
+                                ! Need to compute row and column extends in diagonal so we can
+                                ! selectively apply the mass matrix to the sub-block diagonal
+                                rstart = 1 + (ieqn-1) * nterms
+                                rend   = (rstart-1) + nterms
+                                cstart = rstart                 ! since it is square
+                                cend   = rend                   ! since it is square
+                           
                                 ! Add mass matrix divided by dt to the block diagonal
-                                lhs%dom(idom)%lblks(ielem,iblk)%mat(rstart:rend,cstart:cend)  =  lhs%dom(idom)%lblks(ielem,iblk)%mat(rstart:rend,cstart:cend)  +  data%mesh(idom)%elems(ielem)%mass*(ONE/dtau)
-                            end if
+                                !lhs%dom(idom)%lblks(ielem,iblk)%mat(rstart:rend,cstart:cend)  =  lhs%dom(idom)%lblks(ielem,iblk)%mat(rstart:rend,cstart:cend)  +  data%mesh(idom)%elems(ielem)%mass*(ONE/dtau)
+                                imat = lhs%dom(idom)%lblks(ielem,itime)%find_diagonal()
+                                lhs%dom(idom)%lblks(ielem,itime)%data_(imat)%mat(rstart:rend,cstart:cend)  =  lhs%dom(idom)%lblks(ielem,itime)%data_(imat)%mat(rstart:rend,cstart:cend)  +  data%mesh(idom)%elems(ielem)%mass*(ONE/dtau)
 
-                        end do
-                    end do
-                end do
+                            end do
+
+                        end do !itime
+                    end do !ielem
+                end do !idom
 
 
                 !

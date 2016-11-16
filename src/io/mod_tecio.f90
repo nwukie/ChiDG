@@ -52,7 +52,7 @@ contains
 
         real(rk)           :: xi,eta,zeta
         character(100)     :: varstring
-        integer(ik)        :: ieq, ivar, idom
+        integer(ik)        :: ieq, ivar, idom, itime
         character(len=:),   allocatable     :: zonestring
 
 
@@ -165,7 +165,8 @@ contains
 !                                val = (((p/(p-ONE))*scalar) + mag2**(p/TWO))**((p-ONE)/p) - mag2**((p-ONE)/TWO)
 
                                 ! Get solution value at point
-                                val = real(data%mesh(idom)%elems(ielem)%solution_point(data%sdata%q%dom(idom)%vecs(ielem),ivar,xi,eta,zeta),rdouble)
+                                itime = 1
+                                val = real(data%mesh(idom)%elems(ielem)%solution_point(data%sdata%q%dom(idom)%vecs(ielem),ivar,itime,xi,eta,zeta),rdouble)
                                 tecstat = TECDAT142(1,valeq,1)
                                 if (tecstat /= 0) call chidg_signal(FATAL,"write_tecio_variables_unstructured: Error in call to TECDAT142")
                                     

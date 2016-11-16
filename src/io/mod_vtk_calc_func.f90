@@ -232,7 +232,7 @@ contains
         integer(ik)                                             :: npts
         real(rdouble)                                           :: val(1)
         real(rk)                                                :: xi, eta, zeta
-        integer(ik)                                             :: ieq, ivar, ival,ielem
+        integer(ik)                                             :: ieq, ivar, ival,ielem, itime
 
 
 
@@ -282,7 +282,8 @@ contains
                             xi = (((real(ipt_xi,rk) - ONE)/(real(npts,rk) - ONE)) - HALF)*TWO
 
                             ! Get solution value at a point 
-                            val = real(data%mesh(idom)%elems(ielem)%solution_point(data%sdata%q%dom(idom)%vecs(ielem),ivar,xi,eta,zeta),rdouble)
+                            itime = 1
+                            val = real(data%mesh(idom)%elems(ielem)%solution_point(data%sdata%q%dom(idom)%vecs(ielem),ivar,itime,xi,eta,zeta),rdouble)
                             ival = ival + 1                   ! Counter for conservative variable array
                             cons_var_val(ivar,ival) = val(1)  ! Store values in the array
                                                               ! Each row of the array contains the values for one conservative variable

@@ -8,9 +8,7 @@ module precon_jacobi
     use type_chidg_data,        only: chidg_data_t
     use type_densematrix,       only: densematrix_t
 
-    use mod_inv,    only: inv
-    !use mod_gaussseidel_standard,   only: gaussseidel_standard
-    use mod_fgmres_standard,   only: fgmres_standard
+    use mod_inv,                only: inv
 
 
     !> Block-Jacobi preconditioner
@@ -22,7 +20,7 @@ module precon_jacobi
     !-----------------------------------------------------------------------------
     type, extends(preconditioner_t) :: precon_jacobi_t
 
-        type(densematrix_t), allocatable    :: D(:,:)     !< inverse of block diagonal, (ndom,maxelems)
+        type(densematrix_t), allocatable    :: D(:,:)     !< inverse of block diagonal, (ndom,maxelems,ntime)
 
     contains
         procedure   :: init
@@ -50,11 +48,12 @@ contains
         class(precon_jacobi_t), intent(inout)   :: self
         type(chidg_data_t),     intent(in)      :: data
 
-        integer(ik) :: ndom
+        integer(ik) :: ndom, ntime
         logical     :: increase_maxelems = .false.
 
 
         ndom = data%ndomains()
+        ntime = data%ntime()
 
 
         !
@@ -76,7 +75,7 @@ contains
         ! Allocate storage
         !
         if (allocated(self%D)) deallocate(self%D)
-        allocate(self%D(ndom,maxelems), stat=ierr)
+        allocate(self%D(ndom,maxelems,ntime), stat=ierr)
         if (ierr /= 0) call AllocationError
 
 
@@ -121,7 +120,10 @@ contains
         !
         do idom = 1,ndom
             do ielem = 1,size(A%dom(idom)%lblks,1)
-                self%D(idom,ielem) = A%dom(idom)%lblks(ielem,DIAG)
+                do itime = 1,size(A%dom(idom)%lblks,2)
+                    !self%D(idom,ielem,itime) = A%dom(idom)%lblks(ielem,DIAG)
+                    !self%D(idom,ielem,itime) = A%dom(idom)%lblks(ielem,itime)%data_(index)
+                end do
             end do
         end do
 
@@ -132,7 +134,9 @@ contains
         !
         do idom = 1,ndom
             do ielem = 1,size(A%dom(idom)%lblks,1)
-                self%D(idom,ielem)%mat = inv(self%D(idom,ielem)%mat)
+                do itime = 1,size(A%dom(idom)%lblks,2)
+                    self%D(idom,ielem,itime)%mat = inv(self%D(idom,ielem,itime)%mat)
+                end do
             end do
         end do
 
@@ -179,7 +183,7 @@ contains
         !
         do idom = 1,ndom
             do ielem = 1,size(A%dom(idom)%lblks,1)
-                z%dom(idom)%vecs(ielem)%vec = matmul(self%D(idom,ielem)%mat,v%dom(idom)%vecs(ielem)%vec)
+                z%dom(idom)%vecs(ielem)%vec = matmul(self%D(idom,ielem,itime)%mat,v%dom(idom)%vecs(ielem)%vec)
             end do
         end do
 

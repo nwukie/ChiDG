@@ -978,7 +978,7 @@ contains
     !!  @date   11/5/2016
     !!
     !----------------------------------------------------------------------------------------------------------------
-    function solution_point(self,q,ivar,xi,eta,zeta,itime) result(val)
+    function solution_point(self,q,ivar,itime,xi,eta,zeta) result(val)
         class(element_t),       intent(in)      :: self
         class(densevector_t),   intent(in)      :: q
         integer(ik),            intent(in)      :: ivar
@@ -1031,7 +1031,7 @@ contains
     !!  @date   11/5/2016
     !!
     !----------------------------------------------------------------------------------------
-    function derivative_point(self,q,ivar,xi,eta,zeta,dir,itime) result(val)
+    function derivative_point(self,q,ivar,itime,xi,eta,zeta,dir) result(val)
         class(element_t),       intent(in)      :: self
         class(densevector_t),   intent(in)      :: q
         integer(ik),            intent(in)      :: ivar

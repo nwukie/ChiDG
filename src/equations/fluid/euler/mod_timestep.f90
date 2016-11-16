@@ -18,9 +18,10 @@ contains
     !!  @param[inout]   domain      domain_t instance containing mesh and solution data
     !!
     !-----------------------------------------------------------------------------------
-    subroutine compute_timestep(data,cfl)
+    subroutine compute_timestep(data,cfl,itime)
         type(chidg_data_t), intent(inout)   :: data
         real(rk),           intent(in)      :: cfl
+        integer(ik),        intent(in)      :: itime
 
 
         integer(ik)     :: ielem, nelem, idom
@@ -59,11 +60,11 @@ contains
                 !
                 ! Interpolate variables
                 !
-                rho  = interpolate_element_standard(data%mesh,data%sdata%q,idom,ielem,irho,  'value')
-                rhou = interpolate_element_standard(data%mesh,data%sdata%q,idom,ielem,irhou, 'value')
-                rhov = interpolate_element_standard(data%mesh,data%sdata%q,idom,ielem,irhov, 'value')
-                rhow = interpolate_element_standard(data%mesh,data%sdata%q,idom,ielem,irhow, 'value')
-                rhoE = interpolate_element_standard(data%mesh,data%sdata%q,idom,ielem,irhoE, 'value')
+                rho  = interpolate_element_standard(data%mesh,data%sdata%q,idom,ielem,irho, itime, 'value')
+                rhou = interpolate_element_standard(data%mesh,data%sdata%q,idom,ielem,irhou,itime, 'value')
+                rhov = interpolate_element_standard(data%mesh,data%sdata%q,idom,ielem,irhov,itime, 'value')
+                rhow = interpolate_element_standard(data%mesh,data%sdata%q,idom,ielem,irhow,itime, 'value')
+                rhoE = interpolate_element_standard(data%mesh,data%sdata%q,idom,ielem,irhoE,itime, 'value')
 
 
                 !

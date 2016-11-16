@@ -40,12 +40,13 @@ contains
     !!  @param[inout]   flux_z  z-Flux and derivatives at quadrature points
     !!
     !--------------------------------------------------------------------------------------------------------
-    subroutine integrate_volume_vector_flux(mesh,sdata,elem_info,fcn_info,ieqn,flux_x,flux_y,flux_z)
+    subroutine integrate_volume_vector_flux(mesh,sdata,elem_info,fcn_info,ieqn,itime,flux_x,flux_y,flux_z)
         type(mesh_t),           intent(in)      :: mesh(:)
         type(solverdata_t),     intent(inout)   :: sdata
         type(element_info_t),   intent(in)      :: elem_info
         type(function_info_t),  intent(in)      :: fcn_info
         integer(ik),            intent(in)      :: ieqn
+        integer(ik),            intent(in)      :: itime
         type(AD_D),             intent(inout)   :: flux_x(:), flux_y(:), flux_z(:)
 
 
@@ -96,7 +97,7 @@ contains
         !
         ! Store integral and derivatives
         !
-        call store_volume_integrals(mesh,sdata,elem_info,fcn_info,ieqn,integral)
+        call store_volume_integrals(mesh,sdata,elem_info,fcn_info,ieqn,itime,integral)
 
         end associate
 
@@ -130,12 +131,13 @@ contains
     !!  @param[inout]   flux_z  z-Flux and derivatives at quadrature points
     !!
     !--------------------------------------------------------------------------------------------------------
-    subroutine integrate_volume_scalar_source(mesh,sdata,elem_info,fcn_info,ieqn,source)
+    subroutine integrate_volume_scalar_source(mesh,sdata,elem_info,fcn_info,ieqn,itime,source)
         type(mesh_t),           intent(in)      :: mesh(:)
         type(solverdata_t),     intent(inout)   :: sdata
         type(element_info_t),   intent(in)      :: elem_info
         type(function_info_t),  intent(in)      :: fcn_info
         integer(ik),            intent(in)      :: ieqn
+        integer(ik),            intent(in)      :: itime
         type(AD_D),             intent(inout)   :: source(:)
 
         type(AD_D), dimension(mesh(elem_info%idomain_l)%elems(elem_info%ielement_l)%nterms_s)    :: integral, integral_x, integral_y, integral_z
@@ -160,7 +162,7 @@ contains
         !
         ! Store integral and derivatives
         !
-        call store_volume_integrals(mesh,sdata,elem_info,fcn_info,ieqn,integral)
+        call store_volume_integrals(mesh,sdata,elem_info,fcn_info,ieqn,itime,integral)
 
         end associate
 
@@ -195,12 +197,13 @@ contains
     !!  @param[inout]   flux_z  z-Flux and derivatives at quadrature points
     !!
     !--------------------------------------------------------------------------------------------------------
-    subroutine integrate_boundary_scalar_flux(mesh,sdata,face_info,function_info,ieqn,integrand)
+    subroutine integrate_boundary_scalar_flux(mesh,sdata,face_info,function_info,ieqn,itime,integrand)
         type(mesh_t),           intent(in)      :: mesh(:)
         type(solverdata_t),     intent(inout)   :: sdata
         type(face_info_t),      intent(in)      :: face_info
         type(function_info_t),  intent(in)      :: function_info
         integer(ik),            intent(in)      :: ieqn
+        integer(ik),            intent(in)      :: itime
         type(AD_D),             intent(inout)   :: integrand(:)
         
         ! Data for applying to self and neighbor
@@ -253,8 +256,8 @@ contains
             integral = matmul(valtrans,integrand)
 
 
-            call store_boundary_integral_residual(     mesh,sdata,face_info,function_info,ieqn,integral)
-            call store_boundary_integral_linearization(mesh,sdata,face_info,function_info,ieqn,integral)
+            call store_boundary_integral_residual(     mesh,sdata,face_info,function_info,ieqn,itime,integral)
+            call store_boundary_integral_linearization(mesh,sdata,face_info,function_info,ieqn,itime,integral)
 
 
         end associate
@@ -306,8 +309,8 @@ contains
                     !
                     integral = -matmul(valtrans_n,integrand_n)
 
-                    call store_boundary_integral_residual(     mesh,sdata,face_n,function_n,ieqn,integral)
-                    call store_boundary_integral_linearization(mesh,sdata,face_n,function_n,ieqn,integral)
+                    call store_boundary_integral_residual(     mesh,sdata,face_n,function_n,ieqn,itime,integral)
+                    call store_boundary_integral_linearization(mesh,sdata,face_n,function_n,ieqn,itime,integral)
 
                 end associate
 
@@ -402,11 +405,12 @@ contains
         ! Store linearization
         !
         if ((iblk == DIAG) .or. conforming_face) then
-            call sdata%lhs%store(integral,idom,ielem,iblk,ieqn)
+            !call sdata%lhs%store(integral,idom,ielem,iblk,ieqn)
+            call sdata%lhs%store(integral,face_info,fcn_info%seed,ieqn,itime)
         else if (chimera_face .and. (iblk /= DIAG)) then
-            call sdata%lhs%store_chimera(integral,face_info,fcn_info%seed,ieqn)
+            call sdata%lhs%store_chimera(integral,face_info,fcn_info%seed,ieqn,itime)
         else if (boundary_face .and. (iblk /= DIAG)) then
-            call sdata%lhs%store_bc(integral,face_info,fcn_info%seed,ieqn)
+            call sdata%lhs%store_bc(integral,face_info,fcn_info%seed,ieqn,itime)
         else
             call chidg_signal(FATAL,"store_volume_integrals: Invalid condition for storing integrals. Could be a bad face type or linearization direction")
         end if
@@ -486,7 +490,7 @@ contains
                     !
                     ! Check if particular flux function has been added already
                     !
-                    add_flux = sdata%function_status%compute_function_equation( face_info, function_info, ieqn )
+                    add_flux = sdata%function_status%compute_function_equation( face_info, function_info, ieqn)
 
 
 
@@ -497,7 +501,7 @@ contains
                         call rhs(ielement_l)%setvar(ieqn,itime,vals)
 
                         ! Register flux was stored
-                        call sdata%function_status%register_function_computed( face_info, function_info, ieqn )
+                        call sdata%function_status%register_function_computed( face_info, function_info, ieqn)
                     end if
 
                 end if
@@ -530,12 +534,13 @@ contains
     !!  @param[in]      iblk        Block index for the correct linearization block for the current element
     !!
     !--------------------------------------------------------------------------------------------------------
-    subroutine store_boundary_integral_linearization(mesh,sdata,face_info,function_info,ieqn,integral)
+    subroutine store_boundary_integral_linearization(mesh,sdata,face_info,function_info,ieqn,itime,integral)
         type(mesh_t),           intent(in)      :: mesh(:)
         type(solverdata_t),     intent(inout)   :: sdata
         type(face_info_t),      intent(in)      :: face_info
         type(function_info_t),  intent(in)      :: function_info
         integer(ik),            intent(in)      :: ieqn
+        integer(ik),            intent(in)      :: itime
         type(AD_D),             intent(inout)   :: integral(:)
 
         integer(ik)                 :: i, idomain_l, ielement_l, iface, ftype, ChiID
@@ -568,34 +573,36 @@ contains
 
                 if (iblk /= DIAG) then
                     ! Store linearization of Chimera boundary donor elements.
-                    call lhs%store_chimera(integral,face_info,seed,ieqn)
+                    call lhs%store_chimera(integral,face_info,seed,ieqn,itime)
                 else
                     ! Store linearization of Chimera boundary receiver element. Since this could be computed multiple times,
                     ! we just store it once.
                     if (idonor == 1) then
-                        call lhs%store(integral,idomain_l,ielement_l,iblk,ieqn)
+                        !call lhs%store(integral,idomain_l,ielement_l,iblk,ieqn,itime)
+                        call lhs%store(integral,face_info,seed,ieqn,itime)
                     end if
                 end if
 
 
 
             else if ( (ftype == BOUNDARY) ) then
-                call lhs%store_bc(integral,face_info,seed,ieqn)
+                call lhs%store_bc(integral,face_info,seed,ieqn,itime)
 
 
 
             else if ( ftype == INTERIOR ) then
 
 
-                add_linearization = sdata%function_status%linearize_function_equation( face_info, function_info, ieqn )
+                add_linearization = sdata%function_status%linearize_function_equation( face_info, function_info, ieqn)
 
                 ! Store linearization if not already stored
                 if ( add_linearization ) then
                     ! Store linearization
-                    call lhs%store(integral,idomain_l,ielement_l,iblk,ieqn)
+                    !call lhs%store(integral,idomain_l,ielement_l,iblk,ieqn)
+                    call lhs%store(integral,face_info,seed,ieqn,itime)
 
                     ! Register flux as linearized
-                    call sdata%function_status%register_function_linearized( face_info, function_info, ieqn )
+                    call sdata%function_status%register_function_linearized( face_info, function_info, ieqn)
                 end if
 
 

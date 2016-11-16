@@ -65,6 +65,7 @@ module type_chidg_worker
         type(chidg_cache_t),    pointer :: cache
 
         integer(ik)                 :: iface
+        integer(ik)                 :: itime
         type(element_info_t)        :: element_info
         type(function_info_t)       :: function_info
     
@@ -495,6 +496,7 @@ contains
                                                             idomain_l  = self%element_info%idomain_l,   &
                                                             ielement_l = self%element_info%ielement_l,  &
                                                             ieqn = 1,                                   &
+                                                            itime = self%itime,                         &
                                                             interpolation_type = interp_type)
 
         elseif ( (trim(interp_type) == 'ddx+lift')   .or. &
@@ -596,93 +598,6 @@ contains
 
 
 
-
-
-
-
-
-
-
-!    !>
-!    !!
-!    !!  @author Nathan A. Wukie (AFRL)
-!    !!  @date   9/8/2016
-!    !!
-!    !!
-!    !---------------------------------------------------------------------------------------------
-!    function interpolate_face(self,ieqn,interp_type,interp_source) result(var_gq)
-!        class(chidg_worker_t),  intent(in)  :: self
-!        integer(ik),            intent(in)  :: ieqn
-!        character(len=*),       intent(in)  :: interp_type
-!        integer(ik),            intent(in)  :: interp_source
-!
-!        type(AD_D), allocatable, dimension(:) :: &
-!            var_gq, deriv, lift
-!
-!
-!        if (interp_type == 'value') then
-!            var_gq = interpolate_face_autodiff(self%mesh,self%solverdata%q,self%face_info(),self%function_info,ieqn,interp_type,interp_source)
-!
-!        elseif ((interp_type == 'ddx') .or. &
-!                (interp_type == 'ddy') .or. &
-!                (interp_type == 'ddz') ) then
-!
-!            deriv = interpolate_face_autodiff(self%mesh,self%solverdata%q,self%face_info(),self%function_info,ieqn,interp_type,interp_source)
-!
-!!            lift = self%solverdata%BR2%interpolate_lift_face(self%mesh,self%face_info,self%function_info,ieqn,interp_type,interp_source)
-!!            lift = self%BR2%interpolate_lift_face(self%mesh,self%face_info,self%function_info,ieqn,interp_type,interp_source)
-!
-!            var_gq = deriv + real(NFACES,rk)*lift
-!
-!        end if
-!
-!    end function interpolate_face
-!    !**********************************************************************************************
-
-
-
-!    !>
-!    !!
-!    !!  @author Nathan A. Wukie (AFRL)
-!    !!  @date   9/8/2016
-!    !!
-!    !!
-!    !---------------------------------------------------------------------------------------------
-!    function interpolate_element(self,ieqn,interp_type) result(var_gq)
-!        class(chidg_worker_t),  intent(in)  :: self
-!        integer(ik),            intent(in)  :: ieqn
-!        character(len=*),       intent(in)  :: interp_type
-!
-!        type(AD_D), allocatable, dimension(:) :: &
-!            var_gq, deriv, lift
-!
-!        if (interp_type == 'value') then
-!            var_gq = interpolate_element_autodiff(self%mesh,self%solverdata%q,self%element_info,self%function_info,ieqn,interp_type)
-!
-!        elseif ((interp_type == 'ddx') .or. &
-!                (interp_type == 'ddy') .or. &
-!                (interp_type == 'ddz') ) then
-!
-!            deriv = interpolate_element_autodiff(self%mesh,self%solverdata%q,self%element_info,self%function_info,ieqn,interp_type)
-!
-!!            lift  = self%solverdata%BR2%interpolate_lift_element(self%mesh,self%element_info,self%function_info,ieqn,interp_type)
-!!            lift  = self%BR2%interpolate_lift_element(self%mesh,self%element_info,self%function_info,ieqn,interp_type)
-!
-!            var_gq = deriv + lift
-!
-!        end if
-!
-!    end function interpolate_element
-!    !**********************************************************************************************
-
-
-
-
-
-
-
-
-
     !>
     !!
     !!  @author Nathan A. Wukie (AFRL)
@@ -696,7 +611,7 @@ contains
         type(AD_D),             intent(inout)   :: integrand(:)
 
 
-        call integrate_boundary_scalar_flux(self%mesh,self%solverdata,self%face_info(),self%function_info,ieqn,integrand)
+        call integrate_boundary_scalar_flux(self%mesh,self%solverdata,self%face_info(),self%function_info,ieqn,self%itime,integrand)
 
 
     end subroutine integrate_boundary
@@ -723,7 +638,7 @@ contains
         type(AD_D),             intent(inout)   :: integrand_z(:)
 
 
-        call integrate_volume_vector_flux(self%mesh,self%solverdata,self%element_info,self%function_info,ieqn,integrand_x,integrand_y,integrand_z)
+        call integrate_volume_vector_flux(self%mesh,self%solverdata,self%element_info,self%function_info,ieqn,self%itime,integrand_x,integrand_y,integrand_z)
 
 
     end subroutine integrate_volume_flux
@@ -748,7 +663,7 @@ contains
         type(AD_D),             intent(inout)   :: integrand(:)
 
 
-        call integrate_volume_scalar_source(self%mesh,self%solverdata,self%element_info,self%function_info,ieqn,integrand)
+        call integrate_volume_scalar_source(self%mesh,self%solverdata,self%element_info,self%function_info,ieqn,self%itime,integrand)
 
 
     end subroutine integrate_volume_source

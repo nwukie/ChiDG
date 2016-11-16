@@ -64,7 +64,11 @@ contains
 
 
 
-    !> This function returns the number of elements stored in the container
+    !>  This function returns the number of elements stored in the container. 
+    !!
+    !!  Normally, the name here would just be 'size', but we were getting conflicts with 
+    !!  the intrinsic function 'size', so it was renamed data_size. Then, it is bound
+    !!  to the procedure size in the data type. size => data_size.
     !!
     !!  @author Mayank Sharma + Matteo Ugolotti + Nathan A. Wukie
     !!  @date   11/07/2016
@@ -77,6 +81,7 @@ contains
         integer(ik) :: res
 
         res = self%size_
+
     end function data_size
     !*****************************************************************************************
 

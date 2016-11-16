@@ -8,7 +8,6 @@ module mod_entropy
     use mod_chidg_mpi,      only: ChiDG_COMM
     use mpi_f08,            only: MPI_AllReduce, MPI_REAL8, MPI_SUM
     use DNAD_D
-
     implicit none
 
 
@@ -93,11 +92,11 @@ contains
                     !
                     ! Interpolate variables to GQ nodes
                     !
-                    rho  = interpolate_element_standard(mesh,sdata%q,idom,ielem,irho,  'value')
-                    rhou = interpolate_element_standard(mesh,sdata%q,idom,ielem,irhou, 'value')
-                    rhov = interpolate_element_standard(mesh,sdata%q,idom,ielem,irhov, 'value')
-                    rhow = interpolate_element_standard(mesh,sdata%q,idom,ielem,irhow, 'value')
-                    rhoE = interpolate_element_standard(mesh,sdata%q,idom,ielem,irhoE, 'value')
+                    rho  = interpolate_element_standard(mesh,sdata%q,idom,ielem,irho, 1,  'value')
+                    rhou = interpolate_element_standard(mesh,sdata%q,idom,ielem,irhou,1, 'value')
+                    rhov = interpolate_element_standard(mesh,sdata%q,idom,ielem,irhov,1, 'value')
+                    rhow = interpolate_element_standard(mesh,sdata%q,idom,ielem,irhow,1, 'value')
+                    rhoE = interpolate_element_standard(mesh,sdata%q,idom,ielem,irhoE,1, 'value')
 
 
                     !

@@ -137,12 +137,19 @@ contains
             !
             ! (Re)Initialize domain storage, communication, matrix/vector storage
             !
+            print*, 'wall distance - 1'
             call chidg%set('Solution Order', integer_input=iorder)
+            print*, 'wall distance - 2'
             call chidg%initialize_solution_domains()
+            print*, 'wall distance - 3'
             call chidg%init('communication')
+            print*, 'wall distance - 4'
             call chidg%init('chimera')
+            print*, 'wall distance - 5'
             call chidg%initialize_solution_solver()
+            print*, 'wall distance - 6'
             call chidg%init('finalize')
+            print*, 'wall distance - 7'
 
 
 
@@ -160,6 +167,7 @@ contains
                 call chidg%read_solution(solutionfile)
             end if
 
+            print*, 'wall distance - 8'
 
             !
             ! Run ChiDG simulation

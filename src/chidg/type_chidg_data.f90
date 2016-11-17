@@ -324,7 +324,7 @@ contains
 
                 
                 ! Set default boundary condition states if they were pass in:
-                print*, 'Family: ', bc_groups(igroup)%family
+                call write_line('Family: ', bc_groups(igroup)%family)
                 if ( present(bc_wall) .and. (trim(bc_groups(igroup)%family) == 'Wall') ) then
                     call write_line('Overriding : Wall')
                     if (allocated(bc_state)) deallocate(bc_state)

@@ -11,10 +11,7 @@ module quasi_newton
     use type_preconditioner,    only: preconditioner_t
     use type_chidgVector
 
-
-
     use mod_entropy,            only: compute_entropy_error
-    use mod_timestep,           only: compute_timestep
     implicit none
     private
 
@@ -164,8 +161,7 @@ contains
                 !
                 ! Compute element-local pseudo-timestep
                 !
-                !data%sdata%dt = cfln
-                call compute_timestep(data,cfln)
+                call compute_pseudo_timestep(data,cfln)
 
 
 
@@ -277,6 +273,43 @@ contains
 
     end subroutine solve
     !************************************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+    !>
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   11/17/2016
+    !!
+    !----------------------------------------------------------------------------------------------------
+    subroutine compute_pseudo_timestep(data,cfln)
+        type(chidg_data_t),     intent(inout)   :: data
+        real(rk),               intent(in)      :: cfln
+
+        integer(ik) :: idom
+
+        !
+        ! Loop through elements and compute time-step function
+        !
+        do idom = 1,data%ndomains()
+
+            call data%eqnset(idom)%compute_pseudo_timestep(idom,data%mesh,data%sdata,cfln)
+
+        end do !idom
+
+    end subroutine compute_pseudo_timestep
+    !****************************************************************************************************
+
+
+
 
 
 

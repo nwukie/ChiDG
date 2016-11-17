@@ -1,8 +1,9 @@
 module eqn_navier_stokes
 #include <messenger.h>
-    use type_equation_set,      only: equation_set_t
-    use type_equation_builder,  only: equation_builder_t
-    use perfect_gas,            only: perfect_gas_t
+    use type_equation_set,          only: equation_set_t
+    use type_equation_builder,      only: equation_builder_t
+    use type_fluid_pseudo_timestep, only: fluid_pseudo_timestep_t
+    use perfect_gas,                only: perfect_gas_t
     implicit none
 
 
@@ -51,11 +52,12 @@ contains
     !!
     !---------------------------------------------------------------------------------------------
     function build(self,blueprint) result(navier_stokes_eqns)
-        class(navier_stokes),       intent(in)  :: self
-        character(len=*),   intent(in)  :: blueprint
+        class(navier_stokes),   intent(in)  :: self
+        character(*),           intent(in)  :: blueprint
 
-        type(equation_set_t)    :: navier_stokes_eqns
-        type(perfect_gas_t)     :: perfect_gas
+        type(equation_set_t)            :: navier_stokes_eqns
+        type(perfect_gas_t)             :: perfect_gas
+        type(fluid_pseudo_timestep_t)   :: fluid_pseudo_time
 
         !
         ! Set equation set name
@@ -79,6 +81,7 @@ contains
                 call navier_stokes_eqns%add_operator('Fluid Viscous Boundary Average Operator')
                 call navier_stokes_eqns%add_operator('Fluid Viscous BC Operator')
 
+                call navier_stokes_eqns%add_pseudo_timestep(fluid_pseudo_time)
                 call navier_stokes_eqns%prop%add_fluid(perfect_gas)
 
 

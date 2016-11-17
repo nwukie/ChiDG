@@ -323,7 +323,9 @@ contains
             if (group_found .and. (.not. group_set)) then
 
                 
+                !
                 ! Set default boundary condition states if they were pass in:
+                !
                 call write_line('Family: ', bc_groups(igroup)%family)
                 if ( present(bc_wall) .and. (trim(bc_groups(igroup)%family) == 'Wall') ) then
                     call write_line('Overriding : Wall')
@@ -356,7 +358,9 @@ contains
                     call self%bcset(idom)%bcs(BC_ID)%add_bc_state(bc_state)
 
 
+                !
                 ! If no default boundary condition was set for the group, add the states from the file:
+                !
                 else
                     call write_line('Setting normal boundary conditions:')
 

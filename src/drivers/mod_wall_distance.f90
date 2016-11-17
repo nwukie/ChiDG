@@ -97,7 +97,7 @@ contains
         ! Initialize options dictionaries
         !
         call noptions%set('tol',1.e-8_rk)   ! Set nonlinear solver options
-        call noptions%set('cfl0',2.0_rk)
+        call noptions%set('cfl0',10.0_rk)
         call noptions%set('nsteps',50)
         call loptions%set('tol',1.e-10_rk)  ! Set linear solver options
 
@@ -106,10 +106,10 @@ contains
         !
         ! Set ChiDG components
         !
-        call chidg%set('Time Integrator' , algorithm='Steady'                  )
-        call chidg%set('Nonlinear Solver', algorithm='Newton', options=noptions)
-        call chidg%set('Linear Solver'   , algorithm='FGMRES', options=loptions)
-        call chidg%set('Preconditioner'  , algorithm='ILU0'                    )
+        call chidg%set('Time Integrator' , algorithm='Steady'                        )
+        call chidg%set('Nonlinear Solver', algorithm='Quasi-Newton', options=noptions)
+        call chidg%set('Linear Solver'   , algorithm='FGMRES',       options=loptions)
+        call chidg%set('Preconditioner'  , algorithm='RAS+ILU0'                      )
 
 
 

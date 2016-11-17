@@ -20,7 +20,7 @@ module type_equation_set
     use type_element_info,              only: element_info_t
     use type_face_info,                 only: face_info_t
     use type_function_info,             only: function_info_t
-    use type_properties,                only: properties_t
+    use type_pseudo_timestep,           only: pseudo_timestep_t, default_pseudo_timestep_t
     use type_bcset,                     only: bcset_t
     implicit none
     private
@@ -63,6 +63,10 @@ module type_equation_set
         ! in sdata that keeps track of whether these have been executed or not.
         type(equationset_function_data_t)       :: function_data
 
+
+        ! Time-step calculator
+        class(pseudo_timestep_t),   allocatable :: pseudo_timestep
+
     contains
 
         procedure   :: set_name                             !< Set the name for the set of equations
@@ -70,6 +74,7 @@ module type_equation_set
 
         procedure   :: add_operator
         procedure   :: add_equation                         !< Add an equation, it's string, and index
+        procedure   :: add_pseudo_timestep                  !< Add a pseudo time-step calculator
 
 
         procedure   :: compute_boundary_advective_operators !< Compute all the boundary advective operators
@@ -78,8 +83,11 @@ module type_equation_set
         procedure   :: compute_volume_diffusive_operators   !< Compute all the volume diffusive operators
         procedure   :: compute_bc_operators                 !< Compute all the bc operators
 
+        procedure   :: compute_pseudo_timestep              !< Compute a pseudo-timestep
+
         procedure   :: get_boundary_ndependent_elements     !< return number elements that a boundary function is depending on
         procedure   :: get_volume_ndependent_elements       !< return number elements that a volume function is depending on
+
 
     end type equation_set_t
     !**************************************************************************************************
@@ -112,7 +120,7 @@ contains
     !!
     !!  @param[in]  name_string     Character string indicating the name of the equation set
     !!
-    !---------------------------------------------------------------------------------------------------------
+    !--------------------------------------------------------------------------------------
     subroutine set_name(self,name_string)
         class(equation_set_t),   intent(inout)   :: self
         character(len=*),       intent(in)      :: name_string
@@ -120,7 +128,7 @@ contains
         self%name = name_string
 
     end subroutine set_name
-    !*********************************************************************************************************
+    !**************************************************************************************
 
 
 
@@ -131,7 +139,7 @@ contains
     !!  @date   2/8/2016
     !!
     !!
-    !---------------------------------------------------------------------------------------------------------
+    !--------------------------------------------------------------------------------------
     function get_name(self) result(ename)
         class(equation_set_t),   intent(in)   :: self
 
@@ -140,7 +148,7 @@ contains
         ename = self%name
 
     end function get_name
-    !*********************************************************************************************************
+    !**************************************************************************************
 
 
 
@@ -164,7 +172,7 @@ contains
     !!  @param[in]  varstring   String defining the variable associated with the equation being added
     !!  @param[in]  varindex    The index of the equation in the given set. 
     !!
-    !---------------------------------------------------------------------------------------------------------
+    !--------------------------------------------------------------------------------------
     subroutine add_equation(self,varstring)
         class(equation_set_t),  intent(inout)  :: self
         character(len=*),       intent(in)     :: varstring
@@ -228,7 +236,7 @@ contains
 
 
     end subroutine add_equation
-    !***************************************************************************************************************
+    !***************************************************************************************
 
 
 
@@ -248,7 +256,7 @@ contains
     !!  @date   8/29/2016
     !!
     !!
-    !-----------------------------------------------------------------------------------------------------------------
+    !--------------------------------------------------------------------------------------
     subroutine add_operator(self,string)
         class(equation_set_t),  intent(inout)   :: self
         character(len=*),       intent(in)      :: string
@@ -473,7 +481,40 @@ contains
 
 
     end subroutine add_operator
-    !*************************************************************************************************************************
+    !******************************************************************************************
+
+
+
+
+
+
+
+
+
+
+    !>  Set a pseudo time-step calculator.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   11/17/2016
+    !!
+    !!
+    !------------------------------------------------------------------------------------------
+    subroutine add_pseudo_timestep(self,calculator)
+        class(equation_set_t),      intent(inout)   :: self
+        class(pseudo_timestep_t),   intent(in)      :: calculator
+
+        integer(ik) :: ierr
+
+        if (allocated(self%pseudo_timestep)) deallocate(self%pseudo_timestep)
+
+        allocate(self%pseudo_timestep, source=calculator, stat=ierr)
+        if (ierr /= 0) call AllocationError 
+
+    end subroutine add_pseudo_timestep
+    !******************************************************************************************
+
+
+
 
 
 
@@ -1048,6 +1089,54 @@ contains
 
     end function get_volume_ndependent_elements
     !*****************************************************************************************************************
+
+
+
+
+
+
+
+
+
+    !>  Compute a pseudo-timestep.
+    !!
+    !!  If none was allocated, use the default pseudo time-step based on element volume.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   11/17/2016
+    !!
+    !!
+    !--------------------------------------------------------------------------------------
+    subroutine compute_pseudo_timestep(self,idomain,mesh,sdata,cfln)
+        class(equation_set_t),  intent(in)      :: self
+        integer(ik),            intent(in)      :: idomain
+        type(mesh_t),           intent(in)      :: mesh(:)
+        type(solverdata_t),     intent(inout)   :: sdata
+        real(rk),               intent(in)      :: cfln
+
+        type(default_pseudo_timestep_t) :: default_timestep
+
+        if (allocated(self%pseudo_timestep)) then
+            call self%pseudo_timestep%compute(idomain,mesh,self%prop,sdata,cfln)
+        else
+            call default_timestep%compute(idomain,mesh,self%prop,sdata,cfln)
+        end if
+
+    end subroutine compute_pseudo_timestep
+    !***************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 end module type_equation_set

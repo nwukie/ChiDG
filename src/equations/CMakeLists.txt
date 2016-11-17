@@ -21,5 +21,6 @@ add_lib_sources(type_equation.f90
                 type_properties.f90
                 mock_equation_set.f90
                 type_equationset_function_data.f90
+                type_pseudo_timestep.f90
                 )
 

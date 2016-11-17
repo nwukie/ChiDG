@@ -29,10 +29,8 @@ contains
     !!  @author Mayank Sharma
     !!  @date 10/28/2016
     !!
-    !!	
-    !!	@author mayank Sharma
-	!!	@date	11/17/2016
-	!!
+    !!
+    !
     !---------------------------------------------------------------------------------------------------------------               
     subroutine write_vtk_file(data)
 

@@ -25,9 +25,9 @@ find_library (TECPLOT_LIBRARIES
 #
 # Find stdc++ library used by TecIO
 #
-find_library (CXX_STDLIBS
-              NAMES libstdc++ libstdc++.so libstdc++.a
-              )
+#find_library (CXX_STDLIBS
+#              NAMES libstdc++ libstdc++.so libstdc++.a
+#              )
 
 
 #
@@ -41,6 +41,6 @@ find_package(Threads REQUIRED)
 #
 # Append the TECPLOT_LIBRARIES with the Threads and C++ libraries
 #
-set(TECPLOT_LIBRARIES ${TECPLOT_LIBRARIES} Threads::Threads ${CXX_STDLIBS})
+set(TECPLOT_LIBRARIES ${TECPLOT_LIBRARIES} Threads::Threads "stdc++")
 
 

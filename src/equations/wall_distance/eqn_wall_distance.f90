@@ -50,10 +50,19 @@ module eqn_wall_distance
 
 
 
-    !
-    ! parameter 'p' in the p-Poisson equation
-    !
-    real(rk),   parameter :: p = 2._rk
+    !!
+    !! parameter 'p' in the p-Poisson equation
+    !!
+    !!   p=2 :: linear Poisson equation
+    !!   p>2 :: nonlinear p-Poisson equation
+    !!
+    !! Procedures:
+    !!   set_p_poisson_parameter
+    !!   get_p_poisson_parameter
+    !!
+    real(rk)    :: p = 2._rk
+
+
 
 contains
 
@@ -97,6 +106,46 @@ contains
 
     end function compute_mu
     !*****************************************************************************************
+
+
+
+
+
+
+
+    !>  Set the 'p' parameter in the p-Poisson equation.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   11/16/2016
+    !!
+    !!
+    !-----------------------------------------------------------------------------------------
+    subroutine set_p_poisson_parameter(p_in)
+        real(rk),   intent(in)  :: p_in
+
+        p = p_in
+
+    end subroutine set_p_poisson_parameter
+    !*****************************************************************************************
+
+
+
+    !>  Get the 'p' parameter in the p-Poisson equation.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   11/16/2016
+    !!
+    !!
+    !-----------------------------------------------------------------------------------------
+    function get_p_poisson_parameter() result(p_out)
+        real(rk)    :: p_out
+
+        p_out = p
+
+    end function get_p_poisson_parameter
+    !*****************************************************************************************
+
+
 
 
 

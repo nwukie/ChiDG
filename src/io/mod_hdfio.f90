@@ -15,7 +15,7 @@ module mod_hdfio
                                           get_contains_solution_hdf, get_contains_grid_hdf, &
                                           get_bc_state_names_hdf, get_bc_state_hdf, &
                                           get_nbc_state_groups_hdf, get_bc_state_group_names_hdf, &
-                                          get_bc_patch_group_hdf, &
+                                          get_bc_patch_group_hdf, get_bc_state_group_family_hdf, &
                                           get_bc_patch_hdf, open_file_hdf, close_file_hdf
     use mod_chidg_mpi,              only: IRANK
 
@@ -54,7 +54,7 @@ contains
     !!
     !!  read_boundaryconditions_hdf
     !!      read_bc_patches_hdf
-    !!      read_bc_states_hdf
+    !!      read_bc_state_groups_hdf
     !!
     !!  read_connectivity_hdf
     !!      
@@ -1167,7 +1167,7 @@ contains
         type(string_t)                      :: group_name, state_name
         class(bc_state_t),  allocatable     :: bc
 
-        integer(HID_T)  :: patch_id
+        integer(HID_T)  :: group_id
         integer(ik)     :: igroup, ngroups, istate, ierr
 
 
@@ -1187,20 +1187,24 @@ contains
 
             ! Open face boundary condition group
             group_name = bc_group_names%at(igroup)
-            call h5gopen_f(fid, "BCSG_"//trim(group_name%get()), patch_id, ierr)
+            call h5gopen_f(fid, "BCSG_"//trim(group_name%get()), group_id, ierr)
             if (ierr /= 0) call chidg_signal(FATAL,"read_bc_state_groups_hdf: error opening boundary state group.")
 
+            !
+            ! Get bc_group Family attribute.
+            !
+            bc_groups(igroup)%family = get_bc_state_group_family_hdf(group_id)
 
             !
             ! Loop through and read states + their properties
             !
-            bc_state_names = get_bc_state_names_hdf(patch_id)
+            bc_state_names = get_bc_state_names_hdf(group_id)
             do istate = 1,bc_state_names%size()
 
                 ! Get bc_state name, return bc_state from file and source-allocate
                 state_name = bc_state_names%at(istate)
                 if (allocated(bc)) deallocate(bc)
-                allocate(bc, source = get_bc_state_hdf(patch_id,state_name%get()))
+                allocate(bc, source = get_bc_state_hdf(group_id,state_name%get()))
 
                 ! Save to bc_group_data_t
                 bc_groups(igroup)%name = group_name%get()
@@ -1210,7 +1214,7 @@ contains
 
 
             ! Close face boundary condition group
-            call h5gclose_f(patch_id, ierr)
+            call h5gclose_f(group_id, ierr)
             if (ierr /= 0) call chidg_signal(FATAL,"read_bc_states_hdf: h5gclose")
 
         end do !igroup

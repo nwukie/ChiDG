@@ -1,10 +1,14 @@
 module mod_wall_distance
-    use mod_kinds,      only: rk, ik
-    use mod_constants,  only: ZERO
-    use type_chidg,     only: chidg_t
-    use type_bc_state,  only: bc_state_t
-    use type_dict,      only: dict_t
-    use mod_bc,         only: create_bc
+    use mod_kinds,          only: rk, ik
+    use mod_constants,      only: ZERO
+    use eqn_wall_distance,  only: set_p_poisson_parameter
+    use mod_function,       only: create_function
+    use type_function,      only: function_t
+    use type_chidg,         only: chidg_t
+    use type_bc_state,      only: bc_state_t
+    use type_dict,          only: dict_t
+    use mod_chidg_post,     only: chidg_post,chidg_post_vtk
+    use mod_bc,             only: create_bc
     use mpi_f08
     implicit none
 
@@ -24,8 +28,8 @@ contains
     !!  infinity, the scalar field satisfies the Eikonal equation, which gives the 
     !!  distance function.
     !!
-    !!  @author Nathan A. Wukie
     !!  @date   11/15/2016
+    !!  @author Nathan A. Wukie
     !!
     !!  @param[in]  gridfile        ChiDG-file containing a grid to be read and computed on.
     !!  @param[in]  solutionfile    ChiDG-file the field will be written to.
@@ -41,7 +45,9 @@ contains
         type(chidg_t)                   :: chidg
         type(dict_t)                    :: noptions, loptions
         class(bc_state_t),  allocatable :: dirichlet_zero, neumann_zero
+        class(function_t),  allocatable :: constant
         integer(ik)                     :: iorder, p
+
 
 
         !
@@ -79,7 +85,7 @@ contains
         ! Solid walls get dirichlet zero bc.
         ! All other families get neumann zero bc.
         !
-        call chidg%read_grid(gridfile, equation_set='p-Poisson')
+        call chidg%read_grid(gridfile, equation_set='Wall Distance')
         call chidg%read_boundaryconditions(gridfile,bc_wall=dirichlet_zero,     &
                                                     bc_inlet=neumann_zero,      &
                                                     bc_outlet=neumann_zero,     &
@@ -100,10 +106,10 @@ contains
         !
         ! Set ChiDG components
         !
-        call chidg%set('Time Integrator' , algorithm='Steady'                        )
-        call chidg%set('Nonlinear Solver', algorithm='Quasi-Newton', options=noptions)
-        call chidg%set('Linear Solver'   , algorithm='FGMRES',       options=loptions)
-        call chidg%set('Preconditioner'  , algorithm='ILU0'                          )
+        call chidg%set('Time Integrator' , algorithm='Steady'                  )
+        call chidg%set('Nonlinear Solver', algorithm='Newton', options=noptions)
+        call chidg%set('Linear Solver'   , algorithm='FGMRES', options=loptions)
+        call chidg%set('Preconditioner'  , algorithm='ILU0'                    )
 
 
 
@@ -120,7 +126,13 @@ contains
         !       p = 2,4,6
         !
         iorder = 2
-        do p = 2,2,6
+        do p = 2,6,2
+            
+            !
+            ! Update p-Poisson fidelity
+            !
+            call set_p_poisson_parameter(real(p,rk))
+
 
             !
             ! (Re)Initialize domain storage, communication, matrix/vector storage
@@ -139,7 +151,14 @@ contains
             !
             ! Read solution if it exists.
             !
-            call chidg%read_solution(solutionfile)
+            if (p == 2) then
+                call create_function(constant,'constant')
+                call constant%set_option('val',0._rk)
+                call chidg%data%sdata%q%project(chidg%data%mesh,constant,1)
+
+            else
+                call chidg%read_solution(solutionfile)
+            end if
 
 
             !
@@ -173,8 +192,15 @@ contains
         !   p-Poisson Parameter:
         !       p = 6
         !
+
+        !
+        ! Update p-Poisson fidelity
+        !
         p = 6
+        call set_p_poisson_parameter(real(p,rk))
+
         do iorder = 2,order
+
 
             !
             ! (Re)Initialize domain storage, communication, matrix/vector storage
@@ -213,20 +239,23 @@ contains
         end do
 
 
+        call chidg_post(trim(solutionfile))
+        call chidg_post_vtk(trim(solutionfile))
 
 
 
         
-        !
-        ! Project normalization for better approximation of distance function
-        !
-!        call normalize_wall_distance(chidg)
-
-
-        !
-        ! Write wall distance to auxiliary field
-        !
-        call chidg%write_solution(solutionfile)
+!        !
+!        ! Compute a normalization for better approximation of distance function;
+!        ! project to a modal expansion.
+!        !
+!!        call normalize_wall_distance(chidg)
+!
+!
+!        !
+!        ! Write wall distance to auxiliary field
+!        !
+!        call chidg%write_solution(solutionfile)
 
 
 

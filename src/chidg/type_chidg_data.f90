@@ -322,18 +322,58 @@ contains
             group_found = (trim(bc_group) == trim(bc_groups(igroup)%name) )
             if (group_found .and. (.not. group_set)) then
 
-                ! Add all bc_states in the group to the boundary condition
-                do istate = 1,bc_groups(igroup)%bc_states%size()
-
-                    ! Get boundary condition state
+                
+                ! Set default boundary condition states if they were pass in:
+                print*, 'Family: ', bc_groups(igroup)%family
+                if ( present(bc_wall) .and. (trim(bc_groups(igroup)%family) == 'Wall') ) then
+                    call write_line('Overriding : Wall')
                     if (allocated(bc_state)) deallocate(bc_state)
-                    allocate(bc_state, source=bc_groups(igroup)%bc_states%at(istate), stat=ierr)
-                    if (ierr /= 0) call AllocationError
-
-                    ! Add boundary condition state
+                    allocate(bc_state, source=bc_wall, stat=ierr)
                     call self%bcset(idom)%bcs(BC_ID)%add_bc_state(bc_state)
 
-                end do !istate
+                else if ( present(bc_inlet) .and. (trim(bc_groups(igroup)%family) == 'Inlet') ) then
+                    call write_line('Overriding : Inlet')
+                    if (allocated(bc_state)) deallocate(bc_state)
+                    allocate(bc_state, source=bc_inlet, stat=ierr)
+                    call self%bcset(idom)%bcs(BC_ID)%add_bc_state(bc_state)
+
+                else if ( present(bc_outlet) .and. (trim(bc_groups(igroup)%family) == 'Outlet') ) then
+                    call write_line('Overriding : Outlet')
+                    if (allocated(bc_state)) deallocate(bc_state)
+                    allocate(bc_state, source=bc_outlet, stat=ierr)
+                    call self%bcset(idom)%bcs(BC_ID)%add_bc_state(bc_state)
+
+                else if ( present(bc_symmetry) .and. (trim(bc_groups(igroup)%family) == 'Symmetry') ) then
+                    call write_line('Overriding : Symmetry')
+                    if (allocated(bc_state)) deallocate(bc_state)
+                    allocate(bc_state, source=bc_symmetry, stat=ierr)
+                    call self%bcset(idom)%bcs(BC_ID)%add_bc_state(bc_state)
+
+                else if ( present(bc_farfield) .and. (trim(bc_groups(igroup)%family) == 'Farfield') ) then
+                    call write_line('Overriding : Farfield')
+                    if (allocated(bc_state)) deallocate(bc_state)
+                    allocate(bc_state, source=bc_farfield, stat=ierr)
+                    call self%bcset(idom)%bcs(BC_ID)%add_bc_state(bc_state)
+
+
+                ! If no default boundary condition was set for the group, add the states from the file:
+                else
+                    call write_line('Setting normal boundary conditions:')
+
+                    ! Add all bc_states in the group to the boundary condition
+                    do istate = 1,bc_groups(igroup)%bc_states%size()
+
+                        ! Get boundary condition state
+                        if (allocated(bc_state)) deallocate(bc_state)
+                        allocate(bc_state, source=bc_groups(igroup)%bc_states%at(istate), stat=ierr)
+                        if (ierr /= 0) call AllocationError
+
+                        ! Add boundary condition state
+                        call self%bcset(idom)%bcs(BC_ID)%add_bc_state(bc_state)
+
+                    end do !istate
+
+                end if
 
                 group_set = .true.
             end if

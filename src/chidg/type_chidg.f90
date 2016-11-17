@@ -579,7 +579,16 @@ contains
             do iface = 1,NFACES
 
                 group_name = bc_patches(idom)%bc_group%at(iface)
-                call self%data%add_bc(bc_patches(idom)%domain_, bc_patches(idom)%bc_connectivity(iface), group_name%get(), bc_groups)
+                call self%data%add_bc(bc_patches(idom)%domain_,                 &
+                                      bc_patches(idom)%bc_connectivity(iface),  &
+                                      group_name%get(),                         &
+                                      bc_groups,                                &
+                                      bc_wall=bc_wall,                          &
+                                      bc_inlet=bc_inlet,                        &
+                                      bc_outlet=bc_outlet,                      &
+                                      bc_symmetry=bc_symmetry,                  &
+                                      bc_farfield=bc_farfield)
+                                
 !                call self%data%add_bc(bcdata(idom)%domain_, bcdata(idom)%bcs(iface), bcdata(idom)%bc_connectivity(iface), &
 !                                      bc_wall,      &
 !                                      bc_inlet,     &

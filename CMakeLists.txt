@@ -1,4 +1,4 @@
-project(chidg Fortran)
+project(chidg Fortran C)
 cmake_minimum_required(VERSION 3.0)
 
 
@@ -118,18 +118,20 @@ endif()
 #         The find_package module looks first for $HDF5_ROOT.
 #
 #----------------------------------------------------------------------------------------------
+message(STATUS " ")
+message(STATUS "HDF5 Summary:")
 find_package(HDF5 REQUIRED COMPONENTS Fortran HL Fortran_HL)
 include_directories(${HDF5_INCLUDE_DIRS})
 
 
 if (HDF5_FOUND)
-    message(STATUS "HDF5 Libraries: ")
+    message(STATUS "    HDF5 Libraries: ")
     foreach (L ${HDF5_LIBRARIES})
-        message(STATUS "    " ${L})
+        message(STATUS "        " ${L})
     endforeach()
-    message(STATUS "HDF5 High-Level Libraries: ")
+    message(STATUS "    HDF5 High-Level Libraries: ")
     foreach (L ${HDF5_HL_LIBRARIES})
-        message(STATUS "    " ${L})
+        message(STATUS "        " ${L})
     endforeach()
 endif()
 
@@ -139,9 +141,11 @@ endif()
 #----------------------------------------------------------------------------------------------
 #                                         Find Lapack
 #----------------------------------------------------------------------------------------------
+message(STATUS " ")
+message(STATUS "BLAS/LAPACK Summary:")
 find_package(LAPACK REQUIRED)
-message(STATUS "LAPACK Libraries: ")
-message(STATUS "    " ${LAPACK_LIBRARIES})
+message(STATUS "    LAPACK Libraries: ")
+message(STATUS "        " ${LAPACK_LIBRARIES})
 
 
 
@@ -159,7 +163,8 @@ message(STATUS "    " ${LAPACK_LIBRARIES})
 #       ex.(bash): export MPI_Fortran_COMPILER=/usr/local/bin/mpifort
 #
 #----------------------------------------------------------------------------------------------
-
+message(STATUS " ")
+message(STATUS "MPI Summary:")
 set(MPI_Fortran_COMPILER $ENV{MPI_Fortran_COMPILER})
 
 
@@ -170,11 +175,12 @@ include_directories(${MPI_Fortran_INCLUDE_PATH})
 
 
 if (MPI_Fortran_FOUND)
-    message(STATUS "MPI Fortran Libraries: ")
+    message(STATUS "    MPI Fortran Libraries: ")
     foreach (L ${MPI_Fortran_LIBRARIES})
-        message(STATUS "    " ${L})
+        message(STATUS "        " ${L})
     endforeach()
-    message(STATUS "MPI Include Path: " ${MPI_Fortran_INCLUDE_PATH})
+    message(STATUS "    MPI Include Path: ")
+    message(STATUS "        " ${MPI_Fortran_INCLUDE_PATH})
 endif()
 
 
@@ -186,12 +192,17 @@ endif()
 #----------------------------------------------------------------------------------------------
 #                                           Find METIS
 #----------------------------------------------------------------------------------------------
+message(STATUS " ")
+message(STATUS "METIS Summary: ")
 find_package(METIS)
 include_directories(${METIS_INCLUDE_DIR})
 
 
 if(NOT ${METIS_FOUND})
     message(SEND_ERROR "METIS library not found")
+else()
+    message(STATUS "    METIS Libraries:")
+    message(STATUS "        " ${METIS_LIBRARIES})
 endif()
 
 
@@ -214,6 +225,8 @@ endif()
 # ${TEC_ROOT} gets used by the find_package(Tecplot) module.
 #
 #----------------------------------------------------------------------------------------------
+message(STATUS " ")
+message(STATUS "Tecplot Summary: ")
 
 # Select TecIO library based on detected OS
 if ( ${CMAKE_SYSTEM_NAME} MATCHES "Darwin" ) 
@@ -229,9 +242,8 @@ find_package(Tecplot REQUIRED)
 include_directories(${TECPLOT_INCLUDE_DIR})
 
 
-# Tecplot needs the c++ standard library
-set(CMAKE_Fortran_LINK_FLAGS "${CMAKE_Fortran_LINK_FLAGS} -lstdc++ -lpthread")
-
+message(STATUS "    Tecplot Libraries: ")
+message(STATUS "        " ${TECPLOT_LIBRARIES})
 
 
 #----------------------------------------------------------------------------------------------
@@ -252,6 +264,7 @@ include_directories(${CMAKE_SOURCE_DIR}/src/tools)
 #----------------------------------------------------------------------------------------------
 #                                         Build library
 #----------------------------------------------------------------------------------------------
+message(STATUS " ")
 #add_library(coredg SHARED ${LIB_SRCS})
 add_library(coredg STATIC ${LIB_SRCS})
 target_link_libraries(coredg 
@@ -260,7 +273,8 @@ target_link_libraries(coredg
                       ${BLAS_LIBRARIES} 
                       ${TECPLOT_LIBRARIES} 
                       ${MPI_Fortran_LIBRARIES}
-                      ${METIS_LIBRARIES})
+                      ${METIS_LIBRARIES}
+                      )
 set_target_properties(coredg PROPERTIES 
                              COMPILE_FLAGS "${CMAKE_Fortran_FLAGS}"
                              LINK_FLAGS    "${CMAKE_Fortran_LINK_FLAGS}")

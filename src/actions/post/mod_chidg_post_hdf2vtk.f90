@@ -97,7 +97,7 @@ contains
         !
         ! Close ChiDG
         !
-        call chidg%close('core')
+        call chidg%shut_down('core')
 
 
     end subroutine chidg_post_hdf2vtk 

@@ -153,7 +153,7 @@ contains
             do idom = 1,data%ndomains()
                 do ielem = 1,data%mesh(idom)%nelem
                     nterms = data%mesh(idom)%nterms_s
-                    do ieqn = 1,data%eqnset(idom)%prop%nequations()
+                    do ieqn = 1,data%eqnset(idom)%prop%nprimary_fields()
                         iblk = DIAG
                         ! Need to compute row and column extends in diagonal so we can
                         ! selectively apply the mass matrix to the sub-block diagonal

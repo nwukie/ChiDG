@@ -54,7 +54,8 @@ contains
         ! Store conservative variable names in an array of strings (to be used when writing out point data for a given piece)
         !
         do while (ieq .le. noeq)
-            cons_var(ieq) = trim(data%eqnset(1)%prop%eqns(ieq)%name)
+            !cons_var(ieq) = trim(data%eqnset(1)%prop%eqns(ieq)%name)
+            cons_var(ieq) = trim(data%eqnset(1)%prop%get_primary_field_name(ieq))
             ieq  = ieq + 1
         end do
 
@@ -242,7 +243,7 @@ contains
         !
         ! For each conservative variable in equation set, compute values pointwise and save in the conservative variable array
         !
-        do ivar = 1,data%eqnset(idom)%prop%nequations()
+        do ivar = 1,data%eqnset(idom)%prop%nprimary_fields()
 
             !
             ! For each actual element, create a sub-sampling of elements to resolve solution variation

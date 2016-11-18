@@ -97,7 +97,7 @@ contains
         !
         ! Get equation index
         !
-        iu = prop%get_equation_index("u")
+        iu = prop%get_primary_field_index("u")
 
 
 

@@ -16,7 +16,8 @@ module mod_hdfio
                                           get_bc_state_names_hdf, get_bc_state_hdf, &
                                           get_nbc_state_groups_hdf, get_bc_state_group_names_hdf, &
                                           get_bc_patch_group_hdf, get_bc_state_group_family_hdf, &
-                                          get_bc_patch_hdf, open_file_hdf, close_file_hdf
+                                          get_bc_patch_hdf, open_file_hdf, close_file_hdf, &
+                                          open_domain_hdf, close_domain_hdf
     use mod_chidg_mpi,              only: IRANK
 
     use type_svector,               only: svector_t
@@ -152,7 +153,7 @@ contains
             !
             ! Open domain
             !
-            call h5gopen_f(fid, "D_"//trim(gname), block_id, ierr, H5P_DEFAULT_F)
+            block_id = open_domain_hdf(fid,trim(gname))
 
 
             !
@@ -268,7 +269,7 @@ contains
             ! Close the Domain/Grid group
             !
             call h5gclose_f(gid,ierr)
-            call h5gclose_f(block_id,ierr)
+            call close_domain_hdf(block_id)
 
 
 
@@ -306,18 +307,14 @@ contains
     !!
     !----------------------------------------------------------------------------------------
     subroutine read_solution_hdf(filename,data)
-        use ISO_C_BINDING
         character(*),       intent(in)      :: filename
         type(chidg_data_t), intent(inout)   :: data
 
         integer(HID_T)                  :: fid
         integer                         :: ierr
-        character(:),       allocatable :: dname
 
-        integer(ik)                     :: idom, ndomains
-        integer(ik)                     :: ieqn, neqns
-        integer(ik)                     :: time
-        character(:),       allocatable :: cvar, user_msg
+        integer(ik)                     :: idom, ndomains, ieqn, neqns, itime
+        character(:),       allocatable :: cvar, user_msg, dname
         logical                         :: file_exists, contains_solution
 
 
@@ -331,7 +328,7 @@ contains
         !
         ! Set default time instance
         !
-        time = 1
+        itime = 1
 
 
         !
@@ -355,25 +352,17 @@ contains
         !
         do idom = 1,ndomains
 
-            ! Get name of current domain
+            ! Get domain name and number of primary fields
             dname = data%info(idom)%name
-            
-
-            ! Get number of equations for the current domain
-            neqns = data%eqnset(idom)%prop%nequations()
+            neqns = data%eqnset(idom)%prop%nprimary_fields()
 
 
             !
-            ! For each equation specified for the domain
+            ! For each primary field in the domain, get the field name and read from file.
             ! 
             do ieqn = 1,neqns
-
-                ! Get variable character string
-                cvar = trim(data%eqnset(idom)%prop%eqns(ieqn)%name)
-
-                ! Read variable
-                call read_variable_hdf(fid,cvar,time,trim(dname),data)
-
+                cvar = trim(data%eqnset(idom)%prop%get_primary_field_name(ieqn))
+                call read_variable_hdf(fid,cvar,itime,trim(dname),data)
             end do ! ieqn
 
         end do ! idom
@@ -410,7 +399,6 @@ contains
     !!
     !----------------------------------------------------------------------------------------
     subroutine write_solution_hdf(filename,data)
-        use ISO_C_BINDING
         character(*),       intent(in)      :: filename
         type(chidg_data_t), intent(inout)   :: data
 
@@ -451,12 +439,9 @@ contains
         !
         do idom = 1,ndomains
 
-            ! Get name of current domain
+            ! Get domain name, open group
             dname = data%info(idom)%name
-
-
-            ! Open domain
-            call h5gopen_f(fid, "D_"//trim(dname), block_id, ierr, H5P_DEFAULT_F)
+            block_id = open_domain_hdf(fid,trim(dname))
             
 
             !
@@ -495,22 +480,18 @@ contains
             !
             ! Get number of equations for the current domain
             !
-            neqns = data%eqnset(idom)%prop%nequations()
+            neqns = data%eqnset(idom)%prop%nprimary_fields()
 
 
             !
-            ! For each equation specified for the domain
+            ! For each field: get the name, write to file
             ! 
             do ieqn = 1,neqns
-                ! Get variable character string
-                cvar = trim(data%eqnset(idom)%prop%eqns(ieqn)%name)
-
-                ! Write variable
+                cvar = trim(data%eqnset(idom)%prop%get_primary_field_name(ieqn))
                 call write_variable_hdf(fid,cvar,time,dname,data)
             end do ! ieqn
 
-
-            call h5gclose_f(block_id,ierr)
+            call close_domain_hdf(block_id)
 
 
         end do ! idom
@@ -589,15 +570,9 @@ contains
 
 
         !
-        ! Get name of current domain
+        ! Open domain
         !
-        idom = data%get_domain_index(dname)
-
-
-        !
-        ! Open Domain group
-        !
-        call h5gopen_f(fid, "D_"//trim(dname), block_id, ierr, H5P_DEFAULT_F)
+        block_id = open_domain_hdf(fid,dname)
 
 
         !
@@ -611,7 +586,7 @@ contains
         ! Open the Domain/Variables group
         !
         call h5gopen_f(fid, "D_"//trim(dname)//"/Variables", gid, ierr, H5P_DEFAULT_F)
-        if (ierr /= 0) call chidg_signal(FATAL,"h5gopen_f -- Domain/Variables group did not open properly")
+        if (ierr /= 0) call chidg_signal(FATAL,"read_variable_hdf: h5gopen_f -- Domain/Variables group did not open properly")
 
 
         !
@@ -622,6 +597,7 @@ contains
 
 
 
+        idom = data%get_domain_index(dname)
         spacedim = data%mesh(idom)%spacedim
 
         if ( spacedim == THREE_DIM ) then
@@ -636,7 +612,7 @@ contains
         ! Open the Variable dataset
         !
         call h5dopen_f(gid, trim(varstring), vid, ierr, H5P_DEFAULT_F)
-        if (ierr /= 0) call chidg_signal(FATAL,"read_variable_hdf5 -- variable does not exist or was not opened correctly")
+        if (ierr /= 0) call chidg_signal(FATAL,"read_variable_hdf: variable does not exist or was not opened correctly")
 
 
         !
@@ -655,13 +631,13 @@ contains
         cp_var = c_loc(var(1,1,1))                                      ! Get C-address for buffer
 
         call h5dread_f(vid, H5T_NATIVE_DOUBLE, cp_var, ierr)            ! Fortran 2003 interface
-        if (ierr /= 0) call chidg_signal(FATAL,"read_variable_hdf5 -- h5dread_f")
+        if (ierr /= 0) call chidg_signal(FATAL,"read_variable_hdf: h5dread_f")
 
 
         !
-        !  Get variable index in EquationSet
+        !  Get primary field index
         !
-        ivar = data%eqnset(idom)%prop%get_equation_index(trim(varstring))
+        ivar = data%eqnset(idom)%prop%get_primary_field_index(trim(varstring))
 
 
         !
@@ -681,12 +657,12 @@ contains
             if (allocated(bufferterms)) deallocate(bufferterms)
             allocate(bufferterms(nterms_ielem), stat=ierr)
             if (ierr /= 0) call AllocationError
-            bufferterms = ZERO
 
 
             !
             ! Check for reading lower, higher, or same-order solution
             !
+            bufferterms = ZERO
             if ( nterms_s < nterms_ielem ) then
                 ! Reading a lower-order solution
                 bufferterms(1:nterms_s) = var(1:nterms_s, ielem_g, itime)
@@ -708,9 +684,9 @@ contains
         !
         ! Close variable dataset, domain/variable group.
         !
-        call h5dclose_f(vid,ierr)        ! Close the variable dataset
-        call h5gclose_f(gid,ierr)        ! Close the Domain/Variable group
-        call h5gclose_f(block_id,ierr)   ! Close Domain group
+        call h5dclose_f(vid,ierr)       ! Close the variable dataset
+        call h5gclose_f(gid,ierr)       ! Close the Domain/Variable group
+        call close_domain_hdf(block_id) ! Close Domain group
 
 
     end subroutine read_variable_hdf
@@ -894,7 +870,7 @@ contains
         !
         ! Get variable integer index from variable character string
         !
-        ivar = data%eqnset(idom)%prop%get_equation_index(varstring)
+        ivar = data%eqnset(idom)%prop%get_primary_field_index(varstring)
 
 
 

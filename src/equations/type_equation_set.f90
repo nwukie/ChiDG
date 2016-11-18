@@ -47,9 +47,9 @@ module type_equation_set
     type, public :: equation_set_t
 
         ! Name
-        character(len=:),           allocatable :: name 
+        character(:),               allocatable :: name 
 
-        ! Properties/Equations
+        ! Properties/Fields/Materials
         type(properties_t)                      :: prop
 
         ! Operators
@@ -63,8 +63,7 @@ module type_equation_set
         ! in sdata that keeps track of whether these have been executed or not.
         type(equationset_function_data_t)       :: function_data
 
-
-        ! Time-step calculator
+        ! Pseudo time-step calculator
         class(pseudo_timestep_t),   allocatable :: pseudo_timestep
 
     contains
@@ -73,7 +72,8 @@ module type_equation_set
         procedure   :: get_name                             !< Return the name fo the set of equations
 
         procedure   :: add_operator
-        procedure   :: add_equation                         !< Add an equation, it's string, and index
+        procedure   :: add_primary_field                    !< Add a primary field to the equation set
+        procedure   :: add_auxiliary_field                  !< Add an auxiliary field to the equation set
         procedure   :: add_pseudo_timestep                  !< Add a pseudo time-step calculator
 
 
@@ -121,11 +121,11 @@ contains
     !!  @param[in]  name_string     Character string indicating the name of the equation set
     !!
     !--------------------------------------------------------------------------------------
-    subroutine set_name(self,name_string)
-        class(equation_set_t),   intent(inout)   :: self
-        character(len=*),       intent(in)      :: name_string
+    subroutine set_name(self,ename)
+        class(equation_set_t),  intent(inout)   :: self
+        character(*),           intent(in)      :: ename
 
-        self%name = name_string
+        self%name = ename
 
     end subroutine set_name
     !**************************************************************************************
@@ -143,7 +143,7 @@ contains
     function get_name(self) result(ename)
         class(equation_set_t),   intent(in)   :: self
 
-        character(len=:),   allocatable :: ename
+        character(:),   allocatable :: ename
 
         ename = self%name
 
@@ -157,89 +157,55 @@ contains
 
 
 
-    !>  A an equation to the equation set properties
+    !>  Add a primary field to the equation set properties
     !!
-    !!  Just registers the equation string that is specified. This gets put in the properties container,
-    !!  self%prop that stores all the equations being used by the spatial operators.
+    !!  Just registers the field string that is specified. This gets put in the properties container,
+    !!  self%prop that stores all the fields being used by the spatial operators.
     !!
     !!  @author Nathan A. Wukie
     !!  @date   1/28/2016
     !!
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   8/2/2016
-    !!  @note   modified how the equations are stored.
+    !!  @note   modified how the fields are stored.
     !!
-    !!  @param[in]  varstring   String defining the variable associated with the equation being added
-    !!  @param[in]  varindex    The index of the equation in the given set. 
+    !!  @param[in]  field_string   String defining the variable associated with the field being added
     !!
     !--------------------------------------------------------------------------------------
-    subroutine add_equation(self,varstring)
+    subroutine add_primary_field(self,field_string)
         class(equation_set_t),  intent(inout)  :: self
-        character(len=*),       intent(in)     :: varstring
+        character(*),           intent(in)     :: field_string
 
-        type(equation_t), allocatable    :: temp(:)
-        integer(ik) :: ieq, ierr, ind
-        logical     :: already_added
+        call self%prop%add_primary_field(field_string)
 
-
-        !
-        ! Check if equation was already added by another function
-        !
-        ind = self%prop%get_equation_index(varstring)
-        already_added = (ind /= 0)
-
-
-        !
-        ! Add equation if necessary
-        !
-        if (.not. already_added) then
-
-
-            !
-            ! If there are already equations allocated, reallocate and add new equation
-            !
-            if (allocated(self%prop%eqns)) then
-
-                ! Allocate temp eqn array with one extra slot for new eqn
-                allocate(temp(size(self%prop%eqns) + 1), stat=ierr)
-                if (ierr /= 0) call AllocationError
-
-                ! Copy current eqns to first temp slots
-                do ieq = 1,size(self%prop%eqns)
-                    temp(ieq) = self%prop%eqns(ieq)
-                end do
-
-                ! Add new eqn to last slot
-                call temp(size(temp))%set_name(varstring)
-                call temp(size(temp))%set_index(size(temp))
-
-
-                ! Store temp equation array to equation properties
-                self%prop%eqns = temp
-
-            !
-            ! If there are no equations allocated, allocate one slot and set data
-            !
-            else
-
-                ! Allocate equation
-                allocate(self%prop%eqns(1), stat=ierr)
-                if (ierr /= 0) call AllocationError
-
-
-                self%prop%eqns(1)%name = varstring
-                self%prop%eqns(1)%ind  = 1  ! equation index is set to the index it was added at
-
-            end if
-
-        end if
-
-
-    end subroutine add_equation
+    end subroutine add_primary_field
     !***************************************************************************************
 
 
 
+
+
+
+    !>  Add an auxiliary field to the equation set properties
+    !!
+    !!  Just registers the field string that is specified. This gets put in the properties container,
+    !!  self%prop that stores all the fields being used by the spatial operators.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   11/18/2016
+    !!
+    !!
+    !!  @param[in]  field_string   String defining the variable associated with the field being added
+    !!
+    !--------------------------------------------------------------------------------------
+    subroutine add_auxiliary_field(self,field_string)
+        class(equation_set_t),  intent(inout)  :: self
+        character(*),           intent(in)     :: field_string
+
+        call self%prop%add_auxiliary_field(field_string)
+
+    end subroutine add_auxiliary_field
+    !***************************************************************************************
 
 
 
@@ -263,7 +229,7 @@ contains
 
         class(operator_t),          allocatable :: new_operator
         class(operator_wrapper_t),  allocatable :: temp(:)
-        integer(ik)     :: ierr, iflux, operator_type, ieq
+        integer(ik)     :: ierr, iflux, operator_type, ifield
 
 
         !
@@ -473,12 +439,18 @@ contains
 
 
         !
-        ! Turn on equations for the new operator
+        ! Turn on primary fields from the new operator
         !
-        do ieq = 1,size(new_operator%eqns)
-            call self%add_equation(new_operator%eqns(ieq)%str)
+        do ifield = 1,new_operator%nprimary_fields()
+            call self%add_primary_field(new_operator%primary_fields(ifield)%str)
         end do
 
+        !
+        ! Turn on auxiliary fields from the new operator
+        !
+        do ifield = 1,new_operator%nauxiliary_fields()
+            call self%add_auxiliary_field(new_operator%auxiliary_fields(ifield)%str)
+        end do
 
     end subroutine add_operator
     !******************************************************************************************
@@ -512,11 +484,6 @@ contains
 
     end subroutine add_pseudo_timestep
     !******************************************************************************************
-
-
-
-
-
 
 
 

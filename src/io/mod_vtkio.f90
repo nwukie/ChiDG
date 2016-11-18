@@ -31,53 +31,53 @@ contains
     !!
     !!	
     !!	@author mayank Sharma
-	!!	@date	11/17/2016
-	!!
+    !!	@date	11/17/2016
+    !!
     !---------------------------------------------------------------------------------------------------------------               
     subroutine write_vtk_file(data)
 
         type(chidg_data_t),intent(inout)                        ::  data
 
 
-        integer(ik),parameter                                   ::  bo_type = 0_ik
-        integer(ik)                                             ::  idom,ielem,nelem,noeq,s,num_pts,num_cells,ntime
-        character(len = 100),dimension(:),allocatable           ::  cons_var
-        real(rk),dimension(:),allocatable                       ::  X,Y,Z
-        real(rk),dimension(:,:),allocatable                     ::  cons_var_val
-        integer(ik),dimension(:,:),allocatable                  ::  connectivity,connectivity_A
-        integer(ik),dimension(:),allocatable                    ::  offsets,types
-        character(len = 100),dimension(:),allocatable           ::  file_arr
-        integer(ik)                                             ::  itime,d ! Counters for outer time loop and file name array
-		character(len = 100)									::  cwd,new_dir_path
-		character(len = 100)									::	make_directory,delete_directory		
-		logical													::	dir_exists
-		character(len = 100)									:: 	pvd_filename
-		
+        integer(ik),parameter                                   :: bo_type = 0_ik
+        integer(ik)                                             :: idom,ielem,nelem,noeq,s,num_pts,num_cells,ntime
+        character(len = 100),dimension(:),allocatable           :: cons_var
+        real(rk),dimension(:),allocatable                       :: X,Y,Z
+        real(rk),dimension(:,:),allocatable                     :: cons_var_val
+        integer(ik),dimension(:,:),allocatable                  :: connectivity,connectivity_A
+        integer(ik),dimension(:),allocatable                    :: offsets,types
+        character(len = 100),dimension(:),allocatable           :: file_arr
+        integer(ik)                                             :: itime,d ! Counters for outer time loop and file name array
+        character(len = 100)                                    :: cwd,new_dir_path
+        character(len = 100)                                    :: make_directory,delete_directory
+		logical                                                 :: dir_exists
+        character(len = 100)                                    :: pvd_filename
 
-		!
-		! Get the path of the current working directory and append 
-		! the chidg result folder name to the path
-		! Check if directory already exists, if it does remove it and make it again
-		!
-		call getcwd(cwd)
 
-		new_dir_path = trim(cwd)//'/ChiDG_results/'	
-		
-		delete_directory = 'rm -rf '//trim(new_dir_path)
-		make_directory	 = 'mkdir '//trim(new_dir_path)
+        !
+        ! Get the path of the current working directory and append 
+        ! the chidg result folder name to the path
+        ! Check if directory already exists, if it does remove it and make it again
+        !
+        call getcwd(cwd)
 
-		inquire(file = trim(new_dir_path)//'/.', exist = dir_exists)
-		if (dir_exists) then
-			call system(delete_directory)
-			call system(make_directory)
-		else
-			call system(make_directory)
-		end if
+        new_dir_path = trim(cwd)//'/ChiDG_results/'
 
-		!
-		! Name of the final .pvd file
-		!
-		pvd_filename = trim(new_dir_path)//'/chidg_results.pvd'
+        delete_directory = 'rm -rf '//trim(new_dir_path)
+        make_directory   = 'mkdir '//trim(new_dir_path)
+
+        inquire(file = trim(new_dir_path)//'/.', exist = dir_exists)
+        if (dir_exists) then
+            call system(delete_directory)
+            call system(make_directory)
+        else
+            call system(make_directory)
+        end if
+
+        !
+        ! Name of the final .pvd file
+        !
+        pvd_filename = trim(new_dir_path)//'/chidg_results.pvd'
 
 
         ntime = 1   ! No. of time steps in the solution file (1 for steady cases)
@@ -113,7 +113,7 @@ contains
                 ! Get number of equations in the equation set
                 !
                 nelem = data%mesh(idom)%nelem
-                noeq = data%eqnset(1)%prop%nequations()
+                noeq = data%eqnset(1)%prop%nprimary_fields()
 
                 !
                 ! Open individual .vtu files for individual domains

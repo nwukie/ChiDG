@@ -47,7 +47,7 @@ contains
         call self%set_operator_type("Volume Advective Source")
 
         ! Set operator equations
-        call self%set_equation("u")
+        call self%add_primary_field("u")
 
     end subroutine init
     !********************************************************************************
@@ -80,7 +80,7 @@ contains
         !
         ! Get variable index from equation set
         !
-        iu = prop%get_equation_index("u")
+        iu = prop%get_primary_field_index("u")
 
 
         !

@@ -56,7 +56,7 @@ contains
         !
         ! Make sure this ChiDG environment is initialized.
         !
-        call chidg%init('env',MPI_COMM_WORLD)
+        call chidg%start_up('core')
 
 
 

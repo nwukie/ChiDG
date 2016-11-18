@@ -52,8 +52,8 @@ contains
         call self%set_operator_type("Boundary Advective Flux")
 
         ! Set operator equations
-        call self%set_equation("u_a")
-        call self%set_equation("u_b")
+        call self%add_primary_field("u_a")
+        call self%add_primary_field("u_b")
 
     end subroutine init
     !********************************************************************************
@@ -91,8 +91,8 @@ contains
         !
         ! Get integer data
         !
-        iu_a      = prop%get_equation_index('u_a')
-        iu_b      = prop%get_equation_index('u_b')
+        iu_a      = prop%get_primary_field_index('u_a')
+        iu_b      = prop%get_primary_field_index('u_b')
 
 
 

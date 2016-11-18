@@ -9,19 +9,19 @@ module type_properties
 
 
 
-    !> Base properties type for storing equations, material definitions, 
-    !! and miscelaneous data pertaining to a particular equationset
+    !>  Base properties type for storing equations, material definitions, 
+    !!  and miscellaneous data pertaining to a particular equation set.
     !!
     !!  @author Nathan A. Wukie
     !!  @date   2/25/2016
-    !!
-    !!
+    !!  @date   11/18/2016  auxiliary fields
     !!
     !---------------------------------------------------------------------------------------------
     type, public :: properties_t
         
-        ! Equations
-        type(equation_t),   allocatable :: eqns(:)
+        ! Fields
+        type(equation_t),   allocatable :: primary_fields(:)
+        type(equation_t),   allocatable :: auxiliary_fields(:)
 
         ! Materials
         class(fluid_t),     allocatable :: fluid
@@ -29,10 +29,19 @@ module type_properties
 
     contains
 
-        procedure   :: nequations
-        procedure   :: get_equation_index
         procedure   :: add_fluid
         procedure   :: add_scalar
+
+        procedure   :: add_primary_field
+        procedure   :: add_auxiliary_field
+
+        procedure   :: get_primary_field_name
+        procedure   :: get_primary_field_index
+        procedure   :: get_auxiliary_field_name
+        procedure   :: get_auxiliary_field_index
+
+        procedure   :: nprimary_fields
+        procedure   :: nauxiliary_fields
 
     end type properties_t
     !*********************************************************************************************
@@ -48,7 +57,240 @@ contains
 
 
 
-    !> Search for a equation string in the self%eqns list. If found, return equation index.
+
+    !>  Add an equation to the list.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   11/18/2016
+    !!
+    !--------------------------------------------------------------------------------------------
+    subroutine add_primary_field(self,field_string)
+        class(properties_t),    intent(inout)   :: self
+        character(*),           intent(in)      :: field_string
+
+        type(equation_t),   allocatable :: temp_fields(:)
+        integer(ik) :: ieq, ierr, ind
+        logical     :: already_added
+
+
+        !
+        ! Check if equation was already added by another function
+        !
+        ind = self%get_primary_field_index(field_string)
+        already_added = (ind /= 0)
+
+
+        !
+        ! Add equation if necessary
+        !
+        if (.not. already_added) then
+
+
+            !
+            ! If there are already equations allocated, reallocate and add new equation
+            !
+            if (allocated(self%primary_fields)) then
+
+                ! Allocate temp field array with one extra slot for new field.
+                allocate(temp_fields(size(self%primary_fields) + 1), stat=ierr)
+                if (ierr /= 0) call AllocationError
+
+                ! Copy current fields to first temp slots
+                do ieq = 1,size(self%primary_fields)
+                    temp_fields(ieq) = self%primary_fields(ieq)
+                end do
+
+                ! Add new field to last slot
+                call temp_fields(size(temp_fields))%set_name(field_string)
+                call temp_fields(size(temp_fields))%set_index(size(temp_fields))
+
+
+                ! Store temp equation array to equation properties
+                self%primary_fields = temp_fields
+
+            !
+            ! If there are no equations allocated, allocate one slot and set data
+            !
+            else
+
+                ! Allocate equation
+                allocate(self%primary_fields(1), stat=ierr)
+                if (ierr /= 0) call AllocationError
+
+
+                self%primary_fields(1)%name = field_string
+                self%primary_fields(1)%ind  = 1  ! equation index is set to the index it was added at
+
+            end if
+
+        end if
+
+
+    end subroutine add_primary_field
+    !**********************************************************************************************
+
+
+
+
+
+
+
+
+
+    !>  Add an auxiliary field to the list.
+    !!
+    !!  This would be something like a 'Wall Distance' field or 'Blockage' field. These
+    !!  are not being solved for, but are used in some way by the operator_t's. Maybe
+    !!  in a source term, for example.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   11/18/2016
+    !!
+    !--------------------------------------------------------------------------------------------
+    subroutine add_auxiliary_field(self,field_string)
+        class(properties_t),    intent(inout)   :: self
+        character(*),           intent(in)      :: field_string
+
+        type(equation_t),   allocatable :: temp_fields(:)
+        integer(ik) :: ifield, ierr, ind
+        logical     :: already_added
+
+
+        !
+        ! Check if equation was already added by another function
+        !
+        ind = self%get_auxiliary_field_index(field_string)
+        already_added = (ind /= 0)
+
+
+        !
+        ! Add equation if necessary
+        !
+        if (.not. already_added) then
+
+
+            !
+            ! If there are already equations allocated, reallocate and add new equation
+            !
+            if (allocated(self%auxiliary_fields)) then
+
+                ! Allocate temp field array with one extra slot for new field
+                allocate(temp_fields(size(self%auxiliary_fields) + 1), stat=ierr)
+                if (ierr /= 0) call AllocationError
+
+                ! Copy current fields to first temp slots
+                do ifield = 1,size(self%auxiliary_fields)
+                    temp_fields(ifield) = self%auxiliary_fields(ifield)
+                end do
+
+                ! Add new field to last slot
+                call temp_fields(size(temp_fields))%set_name(field_string)
+                call temp_fields(size(temp_fields))%set_index(size(temp_fields))
+
+
+                ! Store temp equation array to equation properties
+                self%auxiliary_fields = temp_fields
+
+            !
+            ! If there are no equations allocated, allocate one slot and set data
+            !
+            else
+
+                ! Allocate equation
+                allocate(self%auxiliary_fields(1), stat=ierr)
+                if (ierr /= 0) call AllocationError
+
+
+                self%auxiliary_fields(1)%name = field_string
+                self%auxiliary_fields(1)%ind  = 1  ! equation index is set to the index it was added at
+
+            end if
+
+        end if
+
+
+    end subroutine add_auxiliary_field
+    !*******************************************************************************************
+
+
+
+
+
+
+
+
+
+    !>  Given an equation index, return the equation name.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   11/18/2016
+    !!
+    !!
+    !-------------------------------------------------------------------------------------------
+    function get_primary_field_name(self,field_index) result(field_name)
+        class(properties_t),    intent(in)  :: self
+        integer(ik),            intent(in)  :: field_index
+
+        character(:),   allocatable :: user_msg, field_name
+
+        ! Check bounds
+        user_msg = "properties%get_primary_field_name: Incoming index to return an equation is &
+                    out of bounds."
+        if (field_index > self%nprimary_fields()) call chidg_signal_one(FATAL,user_msg,field_index)
+
+
+        ! Get name
+        field_name = self%primary_fields(field_index)%name
+
+
+    end function get_primary_field_name
+    !*******************************************************************************************
+
+
+
+
+
+
+
+
+    !>  Given an auxiliary field index, return the auxiliary field name.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   11/18/2016
+    !!
+    !!
+    !-------------------------------------------------------------------------------------------
+    function get_auxiliary_field_name(self,field_index) result(field_name)
+        class(properties_t),    intent(in)  :: self
+        integer(ik),            intent(in)  :: field_index
+
+        character(:),   allocatable :: user_msg, field_name
+
+        ! Check bounds
+        user_msg = "properties%get_auxiliarya_field_name: Incoming index to return an auxiliary &
+                    field is out of bounds."
+        if (field_index > self%nauxiliary_fields()) call chidg_signal_one(FATAL,user_msg,field_index)
+
+
+        ! Get name
+        field_name = self%auxiliary_fields(field_index)%name
+
+
+    end function get_auxiliary_field_name
+    !*******************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+
+    !> Search for a equation string in the self%primary_fields list. If found, return equation index.
     !! A set of equations could be stored in any order. So, when an equation is initialized, it
     !! is initialized with an index indicating its location in the set. That index is used to 
     !! access the correct solution data values.
@@ -56,40 +298,37 @@ contains
     !!  @author Nathan A. Wukie
     !!  @date   2/25/2016
     !!
-    !!  @param[in]  varstring   Character string identifying the desired variable
+    !!  @param[in]  field_string   Character string identifying the desired variable
     !!
-    !---------------------------------------------------------------------------------------------------
-    function get_equation_index(self,varstring) result(varindex)
+    !--------------------------------------------------------------------------------------------
+    function get_primary_field_index(self,field_string) result(field_index)
         class(properties_t),    intent(in)  :: self
-        character(*),           intent(in)  :: varstring
+        character(*),           intent(in)  :: field_string
 
-        integer(ik) :: varindex, ieq
+        integer(ik) :: field_index, ifield
         logical     :: found = .false.
 
 
-        varindex = 0
+        field_index = 0
 
 
-        ! Search for character string in self%eqns array. If found set index
-        if (allocated(self%eqns)) then
-            do ieq = 1,size(self%eqns)
-                if (varstring == self%eqns(ieq)%name) then
-                    varindex = self%eqns(ieq)%ind
+        ! Search for character string in self%primary_fields array. If found set index
+        if (allocated(self%primary_fields)) then
+            do ifield = 1,size(self%primary_fields)
+                if (field_string == self%primary_fields(ifield)%name) then
+                    field_index = self%primary_fields(ifield)%ind
                     found = .true.
                     exit
                 end if
             end do
 
         else
-            varindex = 0
+            field_index = 0
         end if
 
 
-!        ! Check if index was found
-!        if (.not. found) call chidg_signal(FATAL,"Equation string not found in equation set properties")
-
-    end function get_equation_index
-    !***************************************************************************************************
+    end function get_primary_field_index
+    !*******************************************************************************************
 
 
 
@@ -99,68 +338,127 @@ contains
 
 
 
-
-
-    !>
-    !!
-    !!  @author Nathan A. Wukie (AFRL)
-    !!  @date   8/31/2016
-    !!
-    !!
-    !!
-    !---------------------------------------------------------------------------------------------------
-    function nequations(self) result(neqns)
-        class(properties_t),    intent(in)  :: self
-
-        integer(ik) :: neqns
-
-        if (allocated(self%eqns)) then
-            neqns = size(self%eqns)
-        else
-            neqns = 0
-        end if
-
-    end function nequations
-    !****************************************************************************************************
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    !> Add a fluid definition to the properties type
+    !> Search for a equation string in the self%primary_fields list. If found, return equation index.
+    !! A set of equations could be stored in any order. So, when an equation is initialized, it
+    !! is initialized with an index indicating its location in the set. That index is used to 
+    !! access the correct solution data values.
     !!
     !!  @author Nathan A. Wukie
     !!  @date   2/25/2016
     !!
-    !---------------------------------------------------------------------------------------------------
+    !!  @param[in]  field_string   Character string identifying the desired variable
+    !!
+    !------------------------------------------------------------------------------------------
+    function get_auxiliary_field_index(self,field_string) result(field_index)
+        class(properties_t),    intent(in)  :: self
+        character(*),           intent(in)  :: field_string
+
+        integer(ik) :: field_index, ifield
+        logical     :: found = .false.
+
+
+        field_index = 0
+
+
+        ! Search for character string in self%auxiliary_fields array. If found set index
+        if (allocated(self%auxiliary_fields)) then
+            do ifield = 1,size(self%auxiliary_fields)
+                if (field_string == self%auxiliary_fields(ifield)%name) then
+                    field_index = self%auxiliary_fields(ifield)%ind
+                    found = .true.
+                    exit
+                end if
+            end do
+
+        else
+            field_index = 0
+        end if
+
+
+    end function get_auxiliary_field_index
+    !******************************************************************************************
+
+
+
+
+
+
+    !>  Return number of primary equations that have been added.
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   8/31/2016
+    !!
+    !------------------------------------------------------------------------------------------
+    function nprimary_fields(self) result(nfields)
+        class(properties_t),    intent(in)  :: self
+
+        integer(ik) :: nfields
+
+        if (allocated(self%primary_fields)) then
+            nfields = size(self%primary_fields)
+        else
+            nfields = 0
+        end if
+
+    end function nprimary_fields
+    !******************************************************************************************
+
+
+
+
+
+
+
+
+
+    !>  Return number of auxiliary fields that have been added.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   11/18/2016
+    !!
+    !------------------------------------------------------------------------------------------
+    function nauxiliary_fields(self) result(nfields)
+        class(properties_t),    intent(in)  :: self
+
+        integer(ik) :: nfields
+
+        if (allocated(self%auxiliary_fields)) then
+            nfields = size(self%auxiliary_fields)
+        else
+            nfields = 0
+        end if
+
+    end function nauxiliary_fields
+    !******************************************************************************************
+
+
+
+
+
+
+
+
+
+
+    !>  Add a fluid definition to the properties type
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   2/25/2016
+    !!
+    !------------------------------------------------------------------------------------------
     subroutine add_fluid(self,fluid)
         class(properties_t),    intent(inout)   :: self
         class(fluid_t),         intent(in)      :: fluid
 
         integer(ik) :: ierr
 
-
-        if (allocated(self%fluid)) deallocate(self%fluid)
-
-
-        !
         ! Allocate new material definition
-        !
+        if (allocated(self%fluid)) deallocate(self%fluid)
         allocate(self%fluid, source=fluid, stat=ierr)
         if (ierr /= 0) call AllocationError
 
     end subroutine add_fluid
-    !***************************************************************************************************
+    !******************************************************************************************
 
 
 
@@ -169,30 +467,25 @@ contains
 
 
 
-    !> Add a fluid definition to the properties type
+    !>  Add a fluid definition to the properties type
     !!
     !!  @author Nathan A. Wukie
     !!  @date   2/25/2016
     !!
-    !---------------------------------------------------------------------------------------------------
+    !------------------------------------------------------------------------------------------
     subroutine add_scalar(self,scalar)
         class(properties_t),    intent(inout)   :: self
         class(scalar_t),        intent(in)      :: scalar
 
         integer(ik) :: ierr
 
-
-        if (allocated(self%scalar)) deallocate(self%scalar)
-
-
-        !
         ! Allocate new material definition
-        !
+        if (allocated(self%scalar)) deallocate(self%scalar)
         allocate(self%scalar, source=scalar, stat=ierr)
         if (ierr /= 0) call AllocationError
 
     end subroutine add_scalar
-    !***************************************************************************************************
+    !******************************************************************************************
 
 
 

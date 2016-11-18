@@ -15,27 +15,20 @@ program driver
     use mod_kinds,                  only: rk, ik
     use type_chidg,                 only: chidg_t
     use type_function,              only: function_t
-    use mod_wall_distance,          only: compute_field
     use mod_function,               only: create_function
     use mod_io
 
     ! Actions
     use mod_chidg_edit,         only: chidg_edit
     use mod_chidg_convert,      only: chidg_convert
-    use mod_chidg_interpolate,  only: chidg_interpolate
     use mod_chidg_post,         only: chidg_post,chidg_post_vtk
-
-    ! MPI
-    use mod_chidg_mpi,          only: IRANK, NRANK
-    use mpi_f08,                only: MPI_COMM_WORLD
 
     
     !
     ! Variable declarations
     !
     implicit none
-    type(chidg_t)                               :: wall_distance
-    type(chidg_t)                               :: chidg, aux
+    type(chidg_t)                               :: chidg
 
 
     integer                                     :: narg, iorder
@@ -62,147 +55,139 @@ program driver
         !
         ! Initialize ChiDG environment
         !
-        call chidg%init('mpi')
-        call chidg%init('env',MPI_COMM_WORLD)
-        call chidg%init('io')
+        call chidg%start_up('mpi')
+        call chidg%start_up('core')
+        call chidg%start_up('namelist')
 
 
 
+        !
+        ! Set ChiDG Algorithms
+        !
+        call chidg%set('Time Integrator' , algorithm=time_integrator,  options=toptions)
+        call chidg%set('Nonlinear Solver', algorithm=nonlinear_solver, options=noptions)
+        call chidg%set('Linear Solver'   , algorithm=linear_solver,    options=loptions)
+        call chidg%set('Preconditioner'  , algorithm=preconditioner                    )
 
-        call compute_field('Wall Distance',gridfile,solutionfile_out,solution_order)
+
+        !
+        ! Set ChiDG Files, Order, etc.
+        !
+        !call chidg%set('Grid File',         file=grid_file              )
+        !call chidg%set('Solution File In',  file=solution_file_in       )
+        !call chidg%set('Solution File Out', file=solution_file_out      )
+        call chidg%set('Solution Order',    integer_input=solution_order)
 
 
 
+        !
+        ! Read grid and boundary condition data
+        !
+        call chidg%read_grid(gridfile)
+        call chidg%read_boundaryconditions(gridfile)
 
 
-!        !
-!        ! Read grid and boundary condition data
-!        !
-!        call chidg%read_grid(gridfile, spacedim)
-!        call chidg%read_boundaryconditions(gridfile)
-!
-!
-!
-!
-!        !
-!        ! Set ChiDG components
-!        !
-!        call chidg%set('Time Integrator' , algorithm=time_integrator,  options=toptions)
-!        call chidg%set('Nonlinear Solver', algorithm=nonlinear_solver, options=noptions)
-!        call chidg%set('Linear Solver'   , algorithm=linear_solver,    options=loptions)
-!        call chidg%set('Preconditioner'  , algorithm=preconditioner                    )
-!
-!
-!        !
-!        ! Initialize domain storage, communication, matrix/vector storage
-!        !
-!        call chidg%set('Solution Order', integer_input=solution_order)
-!
-!        call chidg%initialize_solution_domains()
-!        call chidg%init('communication')
-!        call chidg%init('chimera')
-!        call chidg%initialize_solution_solver()
-!
-!
-!
-!        !
-!        ! Initialize solution
-!        !
-!        if (solutionfile_in == 'none') then
-!
-!!            !
-!!            ! Set initial solution
-!!            !
-!!            call create_function(fcn,'gaussian')
-!!            call fcn%set_option('b_x',0._rk)
-!!            call fcn%set_option('b_y',1.5_rk)
-!!            call fcn%set_option('b_z',1.5_rk)
-!!            call fcn%set_option('c',1.0_rk)
-!!            call chidg%data%sdata%q%project(chidg%data%mesh,fcn,1)
-!
-!
-!!            call polynomial%set_option('f',3.5_rk)
-!!            call create_function(polynomial,'polynomial')
-!
-!!            ! d
-!!            call create_function(constant,'constant')
-!!            call constant%set_option('val',0.001_rk)
-!!            call chidg%data%sdata%q%project(chidg%data%mesh,constant,1)
-!
-!
+
+        !
+        ! Initialize communication, storage, auxiliary fields
+        !
+        call chidg%init('all')
+
+
+
+        !
+        ! Initialize solution
+        !
+        if (solutionfile_in == 'none') then
+
+!            !
+!            ! Set initial solution
+!            !
+!            call create_function(fcn,'gaussian')
+!            call fcn%set_option('b_x',0._rk)
+!            call fcn%set_option('b_y',1.5_rk)
+!            call fcn%set_option('b_z',1.5_rk)
+!            call fcn%set_option('c',1.0_rk)
+!            call chidg%data%sdata%q%project(chidg%data%mesh,fcn,1)
+
+
+!            call polynomial%set_option('f',3.5_rk)
+!            call create_function(polynomial,'polynomial')
+
+!            ! d
 !            call create_function(constant,'constant')
-!
-!            ! rho
-!            call constant%set_option('val',1.19_rk)
+!            call constant%set_option('val',0.001_rk)
 !            call chidg%data%sdata%q%project(chidg%data%mesh,constant,1)
-!
-!            ! rho_u
-!            call constant%set_option('val',150.5_rk)
-!            call chidg%data%sdata%q%project(chidg%data%mesh,constant,2)
-!
-!            ! rho_v
-!            call constant%set_option('val',0._rk)
-!            call chidg%data%sdata%q%project(chidg%data%mesh,constant,3)
-!
-!            ! rho_w
-!            call constant%set_option('val',0._rk)
-!            call chidg%data%sdata%q%project(chidg%data%mesh,constant,4)
-!
-!            ! rho_E
-!            call constant%set_option('val',270000.0_rk)
-!            call chidg%data%sdata%q%project(chidg%data%mesh,constant,5)
-!
-!
-!
-!        else
-!
-!            !
-!            ! TODO: put in check that solutionfile actually contains solution
-!            !
-!            call chidg%read_solution(solutionfile_in)
-!
-!        end if
-!
-!        
-!
-!
-!        !
-!        ! Wrap-up initialization activities
-!        !
-!        call chidg%init('finalize')
-!
-!        !
-!        ! Write initial solution
-!        !
-!        if (initial_write) call chidg%write_solution(solutionfile_out)
-!
-!
-!
-!        !
-!        ! Run ChiDG simulation
-!        !
-!        call chidg%report('before')
-!        call chidg%run()
-!        call chidg%report('after')
-!
-!
-!
-!
-!
-!        !
-!        ! Write final solution
-!        !
-!        if (final_write) call chidg%write_solution(solutionfile_out)
-!
-!
-!
-!
-!
+
+
+            call create_function(constant,'constant')
+
+            ! rho
+            call constant%set_option('val',1.19_rk)
+            call chidg%data%sdata%q%project(chidg%data%mesh,constant,1)
+
+            ! rho_u
+            call constant%set_option('val',150.5_rk)
+            call chidg%data%sdata%q%project(chidg%data%mesh,constant,2)
+
+            ! rho_v
+            call constant%set_option('val',0._rk)
+            call chidg%data%sdata%q%project(chidg%data%mesh,constant,3)
+
+            ! rho_w
+            call constant%set_option('val',0._rk)
+            call chidg%data%sdata%q%project(chidg%data%mesh,constant,4)
+
+            ! rho_E
+            call constant%set_option('val',270000.0_rk)
+            call chidg%data%sdata%q%project(chidg%data%mesh,constant,5)
+
+
+
+        else
+
+            !
+            ! TODO: put in check that solutionfile actually contains solution
+            !
+            call chidg%read_solution(solutionfile_in)
+
+        end if
+
+        
+
+
+        !
+        ! Write initial solution
+        !
+        if (initial_write) call chidg%write_solution(solutionfile_out)
+
+
+
+        !
+        ! Run ChiDG simulation
+        !
+        call chidg%report('before')
+        call chidg%run()
+        call chidg%report('after')
+
+
+
+
+
+        !
+        ! Write final solution
+        !
+        if (final_write) call chidg%write_solution(solutionfile_out)
+
+
+
+
+
         !
         ! Close ChiDG
         !
-        call chidg%close('core')
-        call chidg%close('mpi')
+        call chidg%shut_down('core')
+        call chidg%shut_down('mpi')
 
 
 
@@ -227,7 +212,7 @@ program driver
         !
         ! Initialize ChiDG environment
         !
-        call chidg%init('env')
+        call chidg%start_up('core')
 
 
         !
@@ -243,10 +228,6 @@ program driver
             call chidg_post(trim(filename))
             call chidg_post_vtk(trim(filename))
 
-!        else if ( trim(chidg_action) == 'kirchoff' ) then
-!            call kirchoff(filename)
-
-
         else
             call chidg_signal(FATAL,"chidg: unrecognized action '"//trim(chidg_action)//"'. Valid options are: 'edit', 'convert'")
 
@@ -256,43 +237,7 @@ program driver
         !
         ! Close ChiDG interface
         !
-        call chidg%close('core')
-
-    !
-    ! ChiDG tool execution. 3 arguments.
-    !
-    else if ( narg == 3 ) then
-
-
-        call get_command_argument(1,chidg_action)
-        call get_command_argument(2,file_a)
-        call get_command_argument(3,file_b)
-        
-
-
-        !
-        ! Initialize ChiDG environment
-        !
-        call chidg%init('env')
-
-
-
-        if ( trim(chidg_action) == 'interpolate' ) then
-            call chidg_interpolate(trim(file_a), trim(file_b))
-
-        else
-            call chidg_signal(FATAL,"chidg: unrecognized action '"//trim(chidg_action)//"'. Valid options are: 'edit', 'convert'")
-
-        end if
-
-
-
-        !
-        ! Close ChiDG interface
-        !
-        call chidg%close('core')
-
-
+        call chidg%shut_down('core')
 
 
     else

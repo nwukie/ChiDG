@@ -73,8 +73,9 @@ contains
         !
         ! TODO: Generalized TECIO for different equation set in each domain.
         !
-        do while (ieq <= data%eqnset(1)%prop%nequations())
-            varstring = trim(varstring)//" "//trim(data%eqnset(1)%prop%eqns(ieq)%name)
+        do while (ieq <= data%eqnset(1)%prop%nprimary_fields())
+            !varstring = trim(varstring)//" "//trim(data%eqnset(1)%prop%eqns(ieq)%name)
+            varstring = trim(varstring)//" "//trim(data%eqnset(1)%prop%get_primary_field_name(ieq))
             ieq = ieq + 1
         end do
 
@@ -141,7 +142,7 @@ contains
 
 
             ! For each variable in equation set, compute value pointwise and save
-            do ivar = 1,data%eqnset(idom)%prop%nequations()
+            do ivar = 1,data%eqnset(idom)%prop%nprimary_fields()
 
                 ! For each actual element, create a sub-sampling of elements to resolve solution variation
                 do ielem = 1,nelem

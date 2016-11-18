@@ -54,14 +54,17 @@ contains
     subroutine init(self)
         class(spalart_allmaras_source_operator_t),   intent(inout)      :: self
 
-        ! Set operator name
+        ! Set operator name.
         call self%set_name("Fluid Spalart-Allmaras Source Operator")
 
-        ! Set operator type
+        ! Set operator type.
         call self%set_operator_type("Volume Diffusive Operator")
 
-        ! Set operator equations
-        call self%set_equation("Density * NuTilde")
+        ! Set operator equations being integrated.
+        call self%add_primary_field("Density * NuTilde")
+
+        ! Set auxiliary variables being used.
+        call self%add_auxiliary_field("Wall Distance")
 
     end subroutine init
     !********************************************************************************
@@ -108,12 +111,12 @@ contains
         !
         ! Get equation indices
         !
-        irho         = prop%get_equation_index("Density"   )
-        irhou        = prop%get_equation_index("X-Momentum")
-        irhov        = prop%get_equation_index("Y-Momentum")
-        irhow        = prop%get_equation_index("Z-Momentum")
-        irhoE        = prop%get_equation_index("Energy"    )
-        irho_nutilde = prop%get_equation_index("Density * NuTilde")
+        irho         = prop%get_primary_field_index("Density"   )
+        irhou        = prop%get_primary_field_index("X-Momentum")
+        irhov        = prop%get_primary_field_index("Y-Momentum")
+        irhow        = prop%get_primary_field_index("Z-Momentum")
+        irhoE        = prop%get_primary_field_index("Energy"    )
+        irho_nutilde = prop%get_primary_field_index("Density * NuTilde")
 
 
         !
@@ -125,6 +128,7 @@ contains
         rhow        = worker%get_element_variable(irhow,       'value')
         rhoE        = worker%get_element_variable(irhoE,       'value')
         rho_nutilde = worker%get_element_variable(irho_nutilde,'value')
+
 
 
 
@@ -156,10 +160,13 @@ contains
         drho_nutilde_dz = worker%get_element_variable(irho_nutilde, 'ddz+lift')
 
 
+
         !
         ! Interpolate auxiliary field, Wall Distance
         !
         dwall = worker%get_element_auxiliary_field('Wall Distance', 'value')
+
+
 
         !
         ! Divide by density

@@ -33,14 +33,15 @@ find_library (TECPLOT_LIBRARIES
 #
 # Find Threads library used by TecIO. 
 #
-set(THREADS_PREFER_PTHREAD_FLAG ON)
-find_package(Threads REQUIRED)
+#set(THREADS_PREFER_PTHREAD_FLAG ON)
+#find_package(Threads REQUIRED)
 
 
 
 #
 # Append the TECPLOT_LIBRARIES with the Threads and C++ libraries
 #
-set(TECPLOT_LIBRARIES ${TECPLOT_LIBRARIES} Threads::Threads "stdc++")
+#set(TECPLOT_LIBRARIES ${TECPLOT_LIBRARIES} Threads::Threads "stdc++" )
+set(TECPLOT_LIBRARIES ${TECPLOT_LIBRARIES} "stdc++" "pthread")
 
 

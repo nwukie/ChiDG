@@ -50,19 +50,8 @@ mod_tecio.f90
 contains routines for writing ChiDG-data to Tecplot files that can be read in
 Tecplot.
 
-mod_vtk_calc_func.f90
-contains routines for getting coordinate and solution values at all points in 
-the domain using their respective modal solutions. Also computes connectivity
-information for the unstructured grid format
 
-mod_vtk_file_unstr.f90
-contains routines for writing ChiDG-data (from mod_vtk_calc_func.f90) to .pvd
-file which can be read in Paraview. The .pvd file is a collection of blockwise
-.vtu files
 
-mod_vtkio.f90
-uses routines from mod_vtk_calc_func and mod_vtk_file_unstr to write the final
-chidg_results.pvd file
 
 
 

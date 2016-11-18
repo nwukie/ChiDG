@@ -91,7 +91,7 @@ contains
         !
         ! Write solution in vtk format
         !
-        call write_vtk_file(chidg%data)
+        call write_vtk_file(chidg%data,'chidg_results.pvd')
 
 
         !

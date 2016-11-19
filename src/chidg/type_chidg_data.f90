@@ -282,8 +282,8 @@ contains
     !!  To force a particular bc_state on a boundary condition, one can pass a bc_state_t in as an option
     !!  for bc_wall, bc_inlet, bc_outlet, bc_symmetry
     !!
-    !-------------------------------------------------------------------------------------------
-    subroutine add_bc(self,domain,bc_connectivity,bc_group,bc_groups,bc_wall,bc_inlet,bc_outlet,bc_symmetry,bc_farfield)
+    !----------------------------------------------------------------------------------------------------------
+    subroutine add_bc(self,domain,bc_connectivity,bc_group,bc_groups,bc_wall,bc_inlet,bc_outlet,bc_symmetry,bc_farfield,bc_periodic)
         class(chidg_data_t),            intent(inout)           :: self
         character(*),                   intent(in)              :: domain
         type(boundary_connectivity_t),  intent(in)              :: bc_connectivity
@@ -294,6 +294,7 @@ contains
         class(bc_state_t),              intent(in), optional    :: bc_outlet
         class(bc_state_t),              intent(in), optional    :: bc_symmetry
         class(bc_state_t),              intent(in), optional    :: bc_farfield
+        class(bc_state_t),              intent(in), optional    :: bc_periodic
 
 
         character(:),       allocatable     :: user_msg
@@ -315,84 +316,19 @@ contains
         BC_ID = self%bcset(idom)%add(bc)
 
 
-        !
-        ! Find the correct bc_group in bc_groups(:)
-        !
-        group_set = .false.
-        do igroup = 1,size(bc_groups)
-
-            group_found = (trim(bc_group) == trim(bc_groups(igroup)%name) )
-            if (group_found .and. (.not. group_set)) then
-
-                
-                !
-                ! Set default boundary condition states if they were pass in:
-                !
-                if ( present(bc_wall) .and. (trim(bc_groups(igroup)%family) == 'Wall') ) then
-                    if (allocated(bc_state)) deallocate(bc_state)
-                    allocate(bc_state, source=bc_wall, stat=ierr)
-                    call self%bcset(idom)%bcs(BC_ID)%add_bc_state(bc_state)
-
-                else if ( present(bc_inlet) .and. (trim(bc_groups(igroup)%family) == 'Inlet') ) then
-                    if (allocated(bc_state)) deallocate(bc_state)
-                    allocate(bc_state, source=bc_inlet, stat=ierr)
-                    call self%bcset(idom)%bcs(BC_ID)%add_bc_state(bc_state)
-
-                else if ( present(bc_outlet) .and. (trim(bc_groups(igroup)%family) == 'Outlet') ) then
-                    if (allocated(bc_state)) deallocate(bc_state)
-                    allocate(bc_state, source=bc_outlet, stat=ierr)
-                    call self%bcset(idom)%bcs(BC_ID)%add_bc_state(bc_state)
-
-                else if ( present(bc_symmetry) .and. (trim(bc_groups(igroup)%family) == 'Symmetry') ) then
-                    if (allocated(bc_state)) deallocate(bc_state)
-                    allocate(bc_state, source=bc_symmetry, stat=ierr)
-                    call self%bcset(idom)%bcs(BC_ID)%add_bc_state(bc_state)
-
-                else if ( present(bc_farfield) .and. (trim(bc_groups(igroup)%family) == 'Farfield') ) then
-                    if (allocated(bc_state)) deallocate(bc_state)
-                    allocate(bc_state, source=bc_farfield, stat=ierr)
-                    call self%bcset(idom)%bcs(BC_ID)%add_bc_state(bc_state)
-
-
-                !
-                ! If no default boundary condition was set for the group, add the states from the file:
-                !
-                else
-
-                    ! Add all bc_states in the group to the boundary condition
-                    do istate = 1,bc_groups(igroup)%bc_states%size()
-
-                        ! Get boundary condition state
-                        if (allocated(bc_state)) deallocate(bc_state)
-                        allocate(bc_state, source=bc_groups(igroup)%bc_states%at(istate), stat=ierr)
-                        if (ierr /= 0) call AllocationError
-
-                        ! Add boundary condition state
-                        call self%bcset(idom)%bcs(BC_ID)%add_bc_state(bc_state)
-
-                    end do !istate
-
-                end if
-
-                group_set = .true.
-            end if
-
-        end do
-
-
-        user_msg = "chidg_data%add_bc: It looks like we didn't find a boundary state group that &
-                    matches with the string indicated in a boundary patch. Make sure that a &
-                    boundary state group with the correct name exists. Also make sure that the name &
-                    set on the boundary patch corresponds to one of the boundary state groups that exists."
-        if (.not. group_set .and. (trim(bc_group) /= 'empty')) call chidg_signal_one(FATAL,user_msg,trim(bc_group))
-
 
         !
         ! Initialize new boundary condition from mesh data and connectivity information.
         ! NOTE: init_bc needs called after the boundary condition has been added to the 
         !       set so it can inform the mesh about it's BC_ID.
         !
-        call self%bcset(idom)%bcs(BC_ID)%init_bc(self%mesh(idom),bc_connectivity)
+        call self%bcset(idom)%bcs(BC_ID)%init_bc(self%mesh(idom),bc_connectivity,bc_group,bc_groups, &
+                                                                                 bc_wall,            &
+                                                                                 bc_inlet,           &
+                                                                                 bc_outlet,          &
+                                                                                 bc_symmetry,        &
+                                                                                 bc_farfield,        &
+                                                                                 bc_periodic)
 
 
     end subroutine add_bc

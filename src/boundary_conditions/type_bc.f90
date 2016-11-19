@@ -5,6 +5,7 @@ module type_bc
                                           BOUNDARY, ORPHAN, ZERO, ONE, TWO, RKTOL
 
     use type_bc_patch,              only: bc_patch_t
+    use type_bc_group,              only: bc_group_t
     use type_bc_state,              only: bc_state_t
     use type_bc_state_wrapper,      only: bc_state_wrapper_t
     use type_mesh,                  only: mesh_t
@@ -57,9 +58,14 @@ module type_bc
 
     contains
 
-        procedure   :: init_bc              !< Boundary condition initialization.
-        procedure   :: init_bc_spec         !< Call specialized initialization routine.
-        procedure   :: init_bc_coupling     !< Initialize book-keeping for coupling interaction between elements.
+        procedure           :: init_bc              !< Main boundary condition initialization routine.
+
+        procedure           :: init_bc_group        !< Initialize boundary condition group
+        procedure           :: init_bc_patch        !< Initialize boundary condition patch
+        procedure, private  :: init_bc_spec         !< Optional User-specialized initialization routine.
+        procedure, private  :: init_bc_coupling     !< Initialize coupling interaction between bc elements.
+
+
 
         procedure   :: set_family           !< Set the boundary condition family.
         procedure   :: get_family           !< Return the boundary condition family.
@@ -96,10 +102,191 @@ contains
     !!  @param[in]      bconnectivity   Connectivity information for faces defining a boundary condition
     !!
     !---------------------------------------------------------------------------------------------------
-    subroutine init_bc(self,mesh,bconnectivity)
-        class(bc_t),                    intent(inout)   :: self
-        type(mesh_t),                   intent(inout)   :: mesh
-        type(boundary_connectivity_t),  intent(in)      :: bconnectivity
+    subroutine init_bc(self,mesh,bconnectivity,bc_group,bc_groups,bc_wall,bc_inlet,bc_outlet,bc_symmetry,bc_farfield,bc_periodic)
+        class(bc_t),                    intent(inout)           :: self
+        type(mesh_t),                   intent(inout)           :: mesh
+        type(boundary_connectivity_t),  intent(in)              :: bconnectivity
+        character(*),                   intent(in)              :: bc_group
+        type(bc_group_t),               intent(in)              :: bc_groups(:)
+        class(bc_state_t),              intent(in), optional    :: bc_wall
+        class(bc_state_t),              intent(in), optional    :: bc_inlet
+        class(bc_state_t),              intent(in), optional    :: bc_outlet
+        class(bc_state_t),              intent(in), optional    :: bc_symmetry
+        class(bc_state_t),              intent(in), optional    :: bc_farfield
+        class(bc_state_t),              intent(in), optional    :: bc_periodic
+
+
+
+        !
+        ! Boundary condition group initialization
+        !
+        call self%init_bc_group(mesh,bconnectivity,bc_group,bc_groups,bc_wall,bc_inlet,bc_outlet,bc_symmetry,bc_farfield,bc_periodic)
+
+
+
+        !
+        ! Boundary condition patch initialization
+        !
+        call self%init_bc_patch(mesh,bconnectivity,bc_group,bc_groups,bc_wall,bc_inlet,bc_outlet,bc_symmetry,bc_farfield,bc_periodic)
+
+
+    end subroutine init_bc
+    !**********************************************************************************************
+    
+
+
+
+
+
+
+
+
+    !>  Initialize boundary condition group.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   11/19/2016
+    !!
+    !!
+    !-----------------------------------------------------------------------------------------------
+    subroutine init_bc_group(self,mesh,bconnectivity,bc_group,bc_groups,bc_wall,bc_inlet,bc_outlet,bc_symmetry,bc_farfield,bc_periodic)
+        class(bc_t),                    intent(inout)           :: self
+        type(mesh_t),                   intent(inout)           :: mesh
+        type(boundary_connectivity_t),  intent(in)              :: bconnectivity
+        character(*),                   intent(in)              :: bc_group
+        type(bc_group_t),               intent(in)              :: bc_groups(:)
+        class(bc_state_t),              intent(in), optional    :: bc_wall
+        class(bc_state_t),              intent(in), optional    :: bc_inlet
+        class(bc_state_t),              intent(in), optional    :: bc_outlet
+        class(bc_state_t),              intent(in), optional    :: bc_symmetry
+        class(bc_state_t),              intent(in), optional    :: bc_farfield
+        class(bc_state_t),              intent(in), optional    :: bc_periodic
+
+
+        character(:),       allocatable     :: user_msg
+        class(bc_state_t),  allocatable     :: bc_state
+        integer(ik)                         :: istate, igroup, ierr
+        logical                             :: group_found, group_set
+
+
+
+
+
+        !
+        ! Find the correct bc_group in bc_groups(:)
+        !
+        group_set = .false.
+        do igroup = 1,size(bc_groups)
+
+            group_found = (trim(bc_group) == trim(bc_groups(igroup)%name) )
+            if (group_found .and. (.not. group_set)) then
+
+                !
+                ! Set Family
+                !
+                call self%set_family(bc_groups(igroup)%family)
+
+                
+                !
+                ! Set default boundary condition states if they were pass in:
+                !
+                if ( present(bc_wall) .and. (trim(bc_groups(igroup)%family) == 'Wall') ) then
+                    if (allocated(bc_state)) deallocate(bc_state)
+                    allocate(bc_state, source=bc_wall, stat=ierr)
+                    call self%add_bc_state(bc_state)
+
+                else if ( present(bc_inlet) .and. (trim(bc_groups(igroup)%family) == 'Inlet') ) then
+                    if (allocated(bc_state)) deallocate(bc_state)
+                    allocate(bc_state, source=bc_inlet, stat=ierr)
+                    call self%add_bc_state(bc_state)
+
+                else if ( present(bc_outlet) .and. (trim(bc_groups(igroup)%family) == 'Outlet') ) then
+                    if (allocated(bc_state)) deallocate(bc_state)
+                    allocate(bc_state, source=bc_outlet, stat=ierr)
+                    call self%add_bc_state(bc_state)
+
+                else if ( present(bc_symmetry) .and. (trim(bc_groups(igroup)%family) == 'Symmetry') ) then
+                    if (allocated(bc_state)) deallocate(bc_state)
+                    allocate(bc_state, source=bc_symmetry, stat=ierr)
+                    call self%add_bc_state(bc_state)
+
+                else if ( present(bc_farfield) .and. (trim(bc_groups(igroup)%family) == 'Farfield') ) then
+                    if (allocated(bc_state)) deallocate(bc_state)
+                    allocate(bc_state, source=bc_farfield, stat=ierr)
+                    call self%add_bc_state(bc_state)
+                else if ( present(bc_periodic) .and. (trim(bc_groups(igroup)%family) == 'Periodic') ) then
+                    if (allocated(bc_state)) deallocate(bc_state)
+                    allocate(bc_state, source=bc_periodic, stat=ierr)
+                    call self%add_bc_state(bc_state)
+
+
+                !
+                ! If no default boundary condition was set for the group, add the states from the file:
+                !
+                else
+
+                    ! Add all bc_states in the group to the boundary condition
+                    do istate = 1,bc_groups(igroup)%bc_states%size()
+
+                        ! Get boundary condition state
+                        if (allocated(bc_state)) deallocate(bc_state)
+                        allocate(bc_state, source=bc_groups(igroup)%bc_states%at(istate), stat=ierr)
+                        if (ierr /= 0) call AllocationError
+
+                        ! Add boundary condition state
+                        call self%add_bc_state(bc_state)
+
+                    end do !istate
+
+                end if
+
+                group_set = .true.
+            end if
+
+        end do
+
+
+
+
+        user_msg = "chidg_data%add_bc: It looks like we didn't find a boundary state group that &
+                    matches with the string indicated in a boundary patch. Make sure that a &
+                    boundary state group with the correct name exists. Also make sure that the name &
+                    set on the boundary patch corresponds to one of the boundary state groups that exists."
+        if (.not. group_set .and. (trim(bc_group) /= 'empty')) call chidg_signal_one(FATAL,user_msg,trim(bc_group))
+
+
+    end subroutine init_bc_group
+    !***********************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+
+    !>  Initialize boundary condition patch.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   11/19/2016
+    !!
+    !----------------------------------------------------------------------------------------------------
+    subroutine init_bc_patch(self,mesh,bconnectivity,bc_group,bc_groups,bc_wall,bc_inlet,bc_outlet,bc_symmetry,bc_farfield,bc_periodic)
+        class(bc_t),                    intent(inout)           :: self
+        type(mesh_t),                   intent(inout)           :: mesh
+        type(boundary_connectivity_t),  intent(in)              :: bconnectivity
+        character(*),                   intent(in)              :: bc_group
+        type(bc_group_t),               intent(in)              :: bc_groups(:)
+        class(bc_state_t),              intent(in), optional    :: bc_wall
+        class(bc_state_t),              intent(in), optional    :: bc_inlet
+        class(bc_state_t),              intent(in), optional    :: bc_outlet
+        class(bc_state_t),              intent(in), optional    :: bc_symmetry
+        class(bc_state_t),              intent(in), optional    :: bc_farfield
+        class(bc_state_t),              intent(in), optional    :: bc_periodic
+
 
         type(point_t)                   :: pnt, point_one, point_two, point_three
         character(len=:),   allocatable :: bcname, user_msg
@@ -236,38 +423,31 @@ contains
 
 
 
-!                    ! Set face type - 'ftype'
-!                    bcname = self%get_name()
-!                    if ( trim(bcname) == 'periodic' ) then
-!                        !
-!                        ! Set to ORPHAN face so it will be recognized as chimera in the detection process.
-!                        !
-!                        mesh%faces(ielem,iface)%ftype = ORPHAN
-!
-!                        !
-!                        ! Set periodic offset from boundary condition to the face. To be used in detection of gq_donor.
-!                        !
-!                        if ( self%bcproperties%compute('type', time, pnt) == ONE ) then
-!                            mesh%faces(ielem,iface)%periodic_type = 'cartesian'
-!                        else if ( self%bcproperties%compute('type', time, pnt) == TWO ) then
-!                            mesh%faces(ielem,iface)%periodic_type = 'cylindrical'
-!                        end if
-!
-!                        ! time, pnt do nothing here, but interface for function requires them.
-!                        mesh%faces(ielem,iface)%chimera_offset_x     = self%bcproperties%compute('offset_x',     time, pnt)
-!                        mesh%faces(ielem,iface)%chimera_offset_y     = self%bcproperties%compute('offset_y',     time, pnt)
-!                        mesh%faces(ielem,iface)%chimera_offset_z     = self%bcproperties%compute('offset_z',     time, pnt)
-!                        mesh%faces(ielem,iface)%chimera_offset_theta = self%bcproperties%compute('offset_theta', time, pnt)
-!
-!                    else
-!                        !
-!                        ! Set face to boundary condition face
-!                        !
-!                        mesh%faces(ielem,iface)%ftype = BOUNDARY
-!                    end if
+                    !
+                    ! Set face type - 'ftype'
+                    !
+                    if ( self%get_family() == 'Periodic' ) then
+                        !
+                        ! Set to ORPHAN face so it will be recognized as chimera in the detection process.
+                        !
+                        mesh%faces(ielem,iface)%ftype = ORPHAN
 
+                        !
+                        ! Set periodic offset from boundary condition to the face. To be used in detection of gq_donor.
+                        !
+                        if ( self%bc_state(1)%state%bcproperties%compute('type', time, pnt) == ONE ) then
+                            mesh%faces(ielem,iface)%periodic_type = 'cartesian'
+                        else if ( self%bc_state(1)%state%bcproperties%compute('type', time, pnt) == TWO ) then
+                            mesh%faces(ielem,iface)%periodic_type = 'cylindrical'
+                        end if
 
-                    if ( allocated(self%bc_state) ) then
+                        ! time, pnt do nothing here, but interface for function requires them.
+                        mesh%faces(ielem,iface)%chimera_offset_x     = self%bc_state(1)%state%bcproperties%compute('offset_x',     time, pnt)
+                        mesh%faces(ielem,iface)%chimera_offset_y     = self%bc_state(1)%state%bcproperties%compute('offset_y',     time, pnt)
+                        mesh%faces(ielem,iface)%chimera_offset_z     = self%bc_state(1)%state%bcproperties%compute('offset_z',     time, pnt)
+                        mesh%faces(ielem,iface)%chimera_offset_theta = self%bc_state(1)%state%bcproperties%compute('offset_theta', time, pnt)
+
+                    else if ( allocated(self%bc_state) .and. (.not. self%get_family() == 'Periodic') ) then
                         mesh%faces(ielem,iface)%ftype = BOUNDARY
                     else
                         mesh%faces(ielem,iface)%ftype = ORPHAN
@@ -277,7 +457,6 @@ contains
 
                     ! End search
                     exit
-
 
 
                 end if
@@ -323,9 +502,12 @@ contains
 
 
 
-    end subroutine init_bc
+    end subroutine init_bc_patch
     !**********************************************************************************************
-    
+
+
+
+
 
 
 

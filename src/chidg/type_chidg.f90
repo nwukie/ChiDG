@@ -571,7 +571,7 @@ contains
     !!  @param[in]  gridfile    String specifying a gridfile, including extension.
     !!
     !-----------------------------------------------------------------------------------------------------
-    subroutine read_boundaryconditions(self, gridfile, bc_wall, bc_inlet, bc_outlet, bc_symmetry, bc_farfield)
+    subroutine read_boundaryconditions(self, gridfile, bc_wall, bc_inlet, bc_outlet, bc_symmetry, bc_farfield, bc_periodic)
         class(chidg_t),     intent(inout)               :: self
         character(*),       intent(in)                  :: gridfile
         class(bc_state_t),  intent(in),     optional    :: bc_wall
@@ -579,6 +579,7 @@ contains
         class(bc_state_t),  intent(in),     optional    :: bc_outlet
         class(bc_state_t),  intent(in),     optional    :: bc_symmetry
         class(bc_state_t),  intent(in),     optional    :: bc_farfield
+        class(bc_state_t),  intent(in),     optional    :: bc_periodic
 
         character(len=5),       dimension(1)    :: extensions
         character(:),           allocatable     :: extension
@@ -631,7 +632,8 @@ contains
                                       bc_inlet=bc_inlet,                        &
                                       bc_outlet=bc_outlet,                      &
                                       bc_symmetry=bc_symmetry,                  &
-                                      bc_farfield=bc_farfield)
+                                      bc_farfield=bc_farfield,                  &
+                                      bc_periodic=bc_periodic)
 
             end do !iface
         end do !idom

@@ -54,8 +54,8 @@ contains
         !
         ! Initialize ChiDG environment
         !
-        call chidg%init('env')
-        call chidg%init('mpi')
+        call chidg%start_up('core')
+        call chidg%start_up('mpi')
 
 
 

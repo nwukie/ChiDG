@@ -188,12 +188,12 @@ contains
                          (.not. point_three%valid()) ) call chidg_signal(FATAL,user_msg)
 
 
-                    xi_face   = ( (abs(point_one%c1_ - point_two%c1_  ) < 10000.*RKTOL)  .and. &
-                                  (abs(point_one%c1_ - point_three%c1_) < 10000.*RKTOL) )
-                    eta_face  = ( (abs(point_one%c2_ - point_two%c2_  ) < 10000.*RKTOL)  .and. &
-                                  (abs(point_one%c2_ - point_three%c2_) < 10000.*RKTOL) )
-                    zeta_face = ( (abs(point_one%c3_ - point_two%c3_  ) < 10000.*RKTOL)  .and. &
-                                  (abs(point_one%c3_ - point_three%c3_) < 10000.*RKTOL) )
+                    xi_face   = ( (abs(point_one%c1_ - point_two%c1_  ) < 1.e-5_rk)  .and. &
+                                  (abs(point_one%c1_ - point_three%c1_) < 1.e-5_rk) )
+                    eta_face  = ( (abs(point_one%c2_ - point_two%c2_  ) < 1.e-5_rk)  .and. &
+                                  (abs(point_one%c2_ - point_three%c2_) < 1.e-5_rk) )
+                    zeta_face = ( (abs(point_one%c3_ - point_two%c3_  ) < 1.e-5_rk)  .and. &
+                                  (abs(point_one%c3_ - point_three%c3_) < 1.e-5_rk) )
 
 
 

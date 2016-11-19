@@ -23,7 +23,7 @@ subroutine test_linspace()
     !
     ! Initialize log
     !
-    call chidg%init('env')
+    call chidg%start_up('core')
 
 
     !
@@ -40,7 +40,7 @@ subroutine test_linspace()
     !
     ! Close ChiDG
     !
-    call chidg%close('core')
+    call chidg%shut_down('core')
 
 
 end subroutine test_linspace

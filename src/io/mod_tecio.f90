@@ -10,7 +10,7 @@ module mod_tecio
     use type_chidg_data,        only: chidg_data_t
 
     use mod_constants,          only: OUTPUT_RES
-    use eqn_wall_distance,      only: P
+    use eqn_wall_distance,      only: get_p_poisson_parameter
     implicit none
 
 #include "tecio.f90"
@@ -50,7 +50,7 @@ contains
         integer(4), allocatable     :: connectivity(:,:)
 
 
-        real(rk)           :: xi,eta,zeta
+        real(rk)           :: xi,eta,zeta, p
         character(100)     :: varstring
         integer(ik)        :: ieq, ivar, idom, itime
         character(len=:),   allocatable     :: zonestring
@@ -73,8 +73,9 @@ contains
         !
         ! TODO: Generalized TECIO for different equation set in each domain.
         !
-        do while (ieq <= data%eqnset(1)%prop%nequations())
-            varstring = trim(varstring)//" "//trim(data%eqnset(1)%prop%eqns(ieq)%name)
+        do while (ieq <= data%eqnset(1)%prop%nprimary_fields())
+            !varstring = trim(varstring)//" "//trim(data%eqnset(1)%prop%eqns(ieq)%name)
+            varstring = trim(varstring)//" "//trim(data%eqnset(1)%prop%get_primary_field_name(ieq))
             ieq = ieq + 1
         end do
 
@@ -141,7 +142,7 @@ contains
 
 
             ! For each variable in equation set, compute value pointwise and save
-            do ivar = 1,data%eqnset(idom)%prop%nequations()
+            do ivar = 1,data%eqnset(idom)%prop%nprimary_fields()
 
                 ! For each actual element, create a sub-sampling of elements to resolve solution variation
                 do ielem = 1,nelem
@@ -156,13 +157,14 @@ contains
                                 xi = (((real(ipt_xi,rk)-ONE)/(real(npts,rk)-ONE)) - HALF)*TWO
 
 
-!                               ! Routine for wall distance normalization
-!                                scalar = real(data%mesh(idom)%elems(ielem)%solution_point(data%sdata%q%dom(idom)%vecs(ielem),ivar,xi,eta,zeta),rdouble)
-!                                ddx = data%mesh(idom)%elems(ielem)%derivative_point(data%sdata%q%dom(idom)%vecs(ielem),ivar,xi,eta,zeta,X_DIR)
-!                                ddy = data%mesh(idom)%elems(ielem)%derivative_point(data%sdata%q%dom(idom)%vecs(ielem),ivar,xi,eta,zeta,Y_DIR)
-!                                ddz = data%mesh(idom)%elems(ielem)%derivative_point(data%sdata%q%dom(idom)%vecs(ielem),ivar,xi,eta,zeta,Z_DIR)
-!                                mag2 = ddx*ddx + ddy*ddy + ddz*ddz
-!                                val = (((p/(p-ONE))*scalar) + mag2**(p/TWO))**((p-ONE)/p) - mag2**((p-ONE)/TWO)
+                               ! Routine for wall distance normalization
+                                !scalar = real(data%mesh(idom)%elems(ielem)%solution_point(data%sdata%q%dom(idom)%vecs(ielem),ivar,xi,eta,zeta),rdouble)
+                                !ddx = data%mesh(idom)%elems(ielem)%derivative_point(data%sdata%q%dom(idom)%vecs(ielem),ivar,xi,eta,zeta,X_DIR)
+                                !ddy = data%mesh(idom)%elems(ielem)%derivative_point(data%sdata%q%dom(idom)%vecs(ielem),ivar,xi,eta,zeta,Y_DIR)
+                                !ddz = data%mesh(idom)%elems(ielem)%derivative_point(data%sdata%q%dom(idom)%vecs(ielem),ivar,xi,eta,zeta,Z_DIR)
+                                !mag2 = ddx*ddx + ddy*ddy + ddz*ddz
+                                !p = get_p_poisson_parameter()
+                                !val = (((p/(p-ONE))*scalar) + mag2**(p/TWO))**((p-ONE)/p) - mag2**((p-ONE)/TWO)
 
                                 ! Get solution value at point
                                 itime = 1

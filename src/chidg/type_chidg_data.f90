@@ -324,18 +324,55 @@ contains
             group_found = (trim(bc_group) == trim(bc_groups(igroup)%name) )
             if (group_found .and. (.not. group_set)) then
 
-                ! Add all bc_states in the group to the boundary condition
-                do istate = 1,bc_groups(igroup)%bc_states%size()
-
-                    ! Get boundary condition state
+                
+                !
+                ! Set default boundary condition states if they were pass in:
+                !
+                if ( present(bc_wall) .and. (trim(bc_groups(igroup)%family) == 'Wall') ) then
                     if (allocated(bc_state)) deallocate(bc_state)
-                    allocate(bc_state, source=bc_groups(igroup)%bc_states%at(istate), stat=ierr)
-                    if (ierr /= 0) call AllocationError
-
-                    ! Add boundary condition state
+                    allocate(bc_state, source=bc_wall, stat=ierr)
                     call self%bcset(idom)%bcs(BC_ID)%add_bc_state(bc_state)
 
-                end do !istate
+                else if ( present(bc_inlet) .and. (trim(bc_groups(igroup)%family) == 'Inlet') ) then
+                    if (allocated(bc_state)) deallocate(bc_state)
+                    allocate(bc_state, source=bc_inlet, stat=ierr)
+                    call self%bcset(idom)%bcs(BC_ID)%add_bc_state(bc_state)
+
+                else if ( present(bc_outlet) .and. (trim(bc_groups(igroup)%family) == 'Outlet') ) then
+                    if (allocated(bc_state)) deallocate(bc_state)
+                    allocate(bc_state, source=bc_outlet, stat=ierr)
+                    call self%bcset(idom)%bcs(BC_ID)%add_bc_state(bc_state)
+
+                else if ( present(bc_symmetry) .and. (trim(bc_groups(igroup)%family) == 'Symmetry') ) then
+                    if (allocated(bc_state)) deallocate(bc_state)
+                    allocate(bc_state, source=bc_symmetry, stat=ierr)
+                    call self%bcset(idom)%bcs(BC_ID)%add_bc_state(bc_state)
+
+                else if ( present(bc_farfield) .and. (trim(bc_groups(igroup)%family) == 'Farfield') ) then
+                    if (allocated(bc_state)) deallocate(bc_state)
+                    allocate(bc_state, source=bc_farfield, stat=ierr)
+                    call self%bcset(idom)%bcs(BC_ID)%add_bc_state(bc_state)
+
+
+                !
+                ! If no default boundary condition was set for the group, add the states from the file:
+                !
+                else
+
+                    ! Add all bc_states in the group to the boundary condition
+                    do istate = 1,bc_groups(igroup)%bc_states%size()
+
+                        ! Get boundary condition state
+                        if (allocated(bc_state)) deallocate(bc_state)
+                        allocate(bc_state, source=bc_groups(igroup)%bc_states%at(istate), stat=ierr)
+                        if (ierr /= 0) call AllocationError
+
+                        ! Add boundary condition state
+                        call self%bcset(idom)%bcs(BC_ID)%add_bc_state(bc_state)
+
+                    end do !istate
+
+                end if
 
                 group_set = .true.
             end if
@@ -388,10 +425,8 @@ contains
 
         ! Initialize mesh numerics based on equation set and polynomial expansion order
         do idomain = 1,self%ndomains()
-
-            neqns = self%eqnset(idomain)%prop%nequations()
+            neqns = self%eqnset(idomain)%prop%nprimary_fields()
             call self%mesh(idomain)%init_sol(neqns,nterms_s,ntime)
-
         end do
 
 

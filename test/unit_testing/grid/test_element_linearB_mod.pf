@@ -50,7 +50,7 @@ contains
                                            ineighbor_element_l, ineighbor_face, ineighbor_proc
         
         
-        call this%chidg%init('env')
+        call this%chidg%start_up('core')
         allocate(this%faces(6))
         
         
@@ -145,7 +145,7 @@ contains
         !
         ! Close ChiDG interface
         !
-        call this%chidg%close('core')
+        call this%chidg%shut_down('core')
 
     end subroutine tearDown
     !**************************************************************************************************

@@ -584,7 +584,7 @@ contains
         !
         ! Initialize ChiDG environment
         !
-        call this%chidg%init('env',this%ChiDG_COMM)
+        call this%chidg%start_up('core',this%ChiDG_COMM)
 
 
 
@@ -690,7 +690,7 @@ contains
         class(linear_advection_diffusion_1D),  intent(inout)   :: this
 
         ! Close ChiDG
-        call this%chidg%close('core')
+        call this%chidg%shut_down('core')
 
         if (IRANK == GLOBAL_MASTER) then
             call delete_file(this%gridfile)
@@ -985,7 +985,7 @@ contains
             !
             ! Get equation indices
             !
-            iu = prop%get_equation_index("u")
+            iu = prop%get_primary_field_index("u")
 
             !
             ! Zero error accumulator

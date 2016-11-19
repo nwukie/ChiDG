@@ -149,7 +149,7 @@ contains
             !
             ! Loop through terms, perturb term, compute rhs, compute finite difference jacobian, return term.
             !
-            do ivar = 1,eqnset(1)%prop%nequations()
+            do ivar = 1,eqnset(1)%prop%nprimary_fields()
                 do iterm = 1,mesh(1)%nterms_s
 
                    !
@@ -359,7 +359,7 @@ contains
                 !
                 ! Loop through terms, perturb term, compute rhs, compute finite difference jacobian, return term.
                 !
-                do ivar = 1,data%eqnset(1)%prop%nequations()
+                do ivar = 1,data%eqnset(1)%prop%nprimary_fields()
                     do iterm = 1,data%mesh(1)%nterms_s
 
                         !

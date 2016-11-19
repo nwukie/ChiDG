@@ -23,17 +23,12 @@ program driver
     use mod_chidg_convert,      only: chidg_convert
     use mod_chidg_post,         only: chidg_post,chidg_post_vtk
 
-    ! MPI
-    use mod_chidg_mpi,          only: IRANK, NRANK
-    use mpi_f08,                only: MPI_COMM_WORLD
-
     
     !
     ! Variable declarations
     !
     implicit none
-    type(chidg_t)                               :: wall_distance
-    type(chidg_t)                               :: chidg, aux
+    type(chidg_t)                               :: chidg
 
 
     integer                                     :: narg, iorder
@@ -60,23 +55,14 @@ program driver
         !
         ! Initialize ChiDG environment
         !
-        call chidg%init('mpi')
-        call chidg%init('env',MPI_COMM_WORLD)
-        call chidg%init('io')
+        call chidg%start_up('mpi')
+        call chidg%start_up('core')
+        call chidg%start_up('namelist')
 
 
 
         !
-        ! Read grid and boundary condition data
-        !
-        call chidg%read_grid(gridfile, spacedim)
-        call chidg%read_boundaryconditions(gridfile)
-
-
-
-
-        !
-        ! Set ChiDG components
+        ! Set ChiDG Algorithms
         !
         call chidg%set('Time Integrator' , algorithm=time_integrator,  options=toptions)
         call chidg%set('Nonlinear Solver', algorithm=nonlinear_solver, options=noptions)
@@ -85,14 +71,27 @@ program driver
 
 
         !
-        ! Initialize domain storage, communication, matrix/vector storage
+        ! Set ChiDG Files, Order, etc.
         !
-        call chidg%set('Solution Order', integer_input=solution_order)
+        !call chidg%set('Grid File',         file=grid_file              )
+        !call chidg%set('Solution File In',  file=solution_file_in       )
+        !call chidg%set('Solution File Out', file=solution_file_out      )
+        call chidg%set('Solution Order',    integer_input=solution_order)
 
-        call chidg%initialize_solution_domains()
-        call chidg%init('communication')
-        call chidg%init('chimera')
-        call chidg%initialize_solution_solver()
+
+
+        !
+        ! Read grid and boundary condition data
+        !
+        call chidg%read_grid(gridfile)
+        call chidg%read_boundaryconditions(gridfile)
+
+
+
+        !
+        ! Initialize communication, storage, auxiliary fields
+        !
+        call chidg%init('all')
 
 
 
@@ -158,11 +157,6 @@ program driver
 
 
         !
-        ! Wrap-up initialization activities
-        !
-        call chidg%init('finalize')
-
-        !
         ! Write initial solution
         !
         if (initial_write) call chidg%write_solution(solutionfile_out)
@@ -192,8 +186,8 @@ program driver
         !
         ! Close ChiDG
         !
-        call chidg%close('core')
-        call chidg%close('mpi')
+        call chidg%shut_down('core')
+        call chidg%shut_down('mpi')
 
 
 
@@ -218,7 +212,7 @@ program driver
         !
         ! Initialize ChiDG environment
         !
-        call chidg%init('env')
+        call chidg%start_up('core')
 
 
         !
@@ -234,10 +228,6 @@ program driver
             call chidg_post(trim(filename))
             call chidg_post_vtk(trim(filename))
 
-!        else if ( trim(chidg_action) == 'kirchoff' ) then
-!            call kirchoff(filename)
-
-
         else
             call chidg_signal(FATAL,"chidg: unrecognized action '"//trim(chidg_action)//"'. Valid options are: 'edit', 'convert'")
 
@@ -247,8 +237,7 @@ program driver
         !
         ! Close ChiDG interface
         !
-        call chidg%close('core')
-
+        call chidg%shut_down('core')
 
 
     else

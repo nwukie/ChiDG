@@ -22,7 +22,7 @@ subroutine test_blockvector_distribute()
     !
     ! Initialize chidg environment
     !
-    call chidg%init('env')
+    call chidg%start_up('core')
 
 
 
@@ -90,7 +90,7 @@ subroutine test_blockvector_distribute()
     !
     ! Close ChiDG interface
     !
-    call chidg%close('core')
+    call chidg%shut_down('core')
 
 
 end subroutine

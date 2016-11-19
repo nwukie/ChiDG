@@ -39,7 +39,7 @@ subroutine test_fgmres_ref_solve()
     !
     ! Initialize ChiDG
     !
-    call chidg%init('env')
+    call chidg%start_up('core')
 
 
     !
@@ -134,7 +134,7 @@ subroutine test_fgmres_ref_solve()
     !
     ! Close ChiDG interface
     !
-    call chidg%close('core')
+    call chidg%shut_down('core')
 
 
 

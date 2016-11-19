@@ -48,12 +48,17 @@ module type_chidg
 
     !>  The ChiDG Environment container
     !!
-    !!      - Contains an array of domains, a time integrator, a nonlinear solver, a linear solver, and a preconditioner
+    !!  Contains: 
+    !!      - data: mesh, bcs, equations for each domain.
+    !!      - a time integrator
+    !!      - a nonlinear solver
+    !!      - a linear solver
+    !!      - a preconditioner
     !!
     !!  @author Nathan A. Wukie
     !!  @date   2/1/2016
     !!
-    !--------------------------------------------------------------------------------------------------------
+    !-----------------------------------------------------------------------------------------------------
     type, public    :: chidg_t
 
 
@@ -80,9 +85,8 @@ module type_chidg
     contains
 
 
-        procedure   :: init
-        procedure   :: close
-        procedure   :: set
+        procedure   :: start_up
+        procedure   :: shut_down
 
         procedure   :: run
         procedure   :: report
@@ -94,11 +98,13 @@ module type_chidg
         procedure   :: write_solution
 
         ! Initialization
+        procedure   :: set
+        procedure   :: init
         procedure   :: initialize_solution_domains
         procedure   :: initialize_solution_solver
 
     end type chidg_t
-    !*********************************************************************************************************
+    !*****************************************************************************************************
 
 
 
@@ -110,78 +116,120 @@ contains
 
 
 
-    !> ChiDG environment initialization routine
-    !!      - Call initiailization procedures for equations, grid data, reading input
-    !!      - chidg%init('env') should be called before any activity with ChiDG is begun.
+
+
+    !>  ChiDG Start-Up Activities.
+    !!
+    !!  activity:
+    !!      - 'mpi'         :: Call MPI initialization for ChiDG. This would not be called in a test, since pFUnit is calling init.
+    !!      - 'core'        :: Start-up ChiDG framework. Register functions, equations, operators, bcs, etc.
+    !!      - 'namelist'    :: Start-up Namelist IO
     !!
     !!  @author Nathan A. Wukie
-    !!  @date   2/1/2016
+    !!  @date   11/18/2016
     !!
-    !!  @param[in]  level   Initialization level specification. 'env', 'communication', 'io', or 'finalize'
     !!
-    !--------------------------------------------------------------------------------------------
-    subroutine init(self,level,comm)
+    !-------------------------------------------------------------------------------------------
+    subroutine start_up(self,activity,comm)
         class(chidg_t), intent(inout)           :: self
-        character(*),   intent(in)              :: level
+        character(*),   intent(in)              :: activity
         type(mpi_comm), intent(in), optional    :: comm
 
 
 
 
-        ! Valid strings are:
-        !   - 'env'             Basic environment initialization. Equations and supporting grid data
-        !   - 'mpi'             Call MPI initialization for ChiDG. This would not be called in a test, since pFUnit is calling init.
-        !   - 'communication'   Establish local and global communication
-        !   - 'io'              Read namelist input.
-        !   - 'finalize'        Call component initialization routines before run
 
-        ! Call environment initialization routines by default on first init call
-        if (.not. self%envInitialized ) then
-            call log_init()
-
-
-            ! Order matters here. Functions need to come first. Used by equations and bcs.
-            call register_functions()
-            call register_equation_builders()
-            call register_operators()
-            call register_bcs()
-
-            call initialize_grid()
-
-            self%envInitialized = .true.
-
-        end if
-
-
-
-
-
-        select case (trim(level))
+        select case (trim(activity))
 
             !
-            ! Do nothing else. Just to ensure the environment commands above are executed
+            ! Start up MPI
             !
-            case ('env')
+            case ('mpi')
+                call chidg_mpi_init()
 
-                !
+
+            !
+            ! Start up ChiDG core
+            !
+            case ('core')
+
                 ! Default communicator for 'communication' is MPI_COMM_WORLD
-                !
                 if ( present(comm) ) then
                     ChiDG_COMM = comm
                 else
                     ChiDG_COMM = MPI_COMM_WORLD
                 end if
 
+                ! Call environment initialization routines by default on first init call
+                if (.not. self%envInitialized ) then
+                    call log_init()
 
-            case ('mpi')
-                call chidg_mpi_init()
+
+                    ! Order matters here. Functions need to come first. Used by equations and bcs.
+                    call register_functions()
+                    call register_equation_builders()
+                    call register_operators()
+                    call register_bcs()
+
+                    call initialize_grid()
+
+                    self%envInitialized = .true.
+
+                end if
+
 
             !
-            ! Read Namelist input file
+            ! Start up Namelist
             !
-            case ('io')
+            case ('namelist')
                 call read_input()
 
+
+            case default
+                call chidg_signal_one(WARN,'chidg%start_up: Invalid start-up string.',trim(activity))
+
+        end select
+
+
+
+
+
+    end subroutine start_up
+    !********************************************************************************************
+
+
+
+
+
+
+
+
+    !>  ChiDG initialization activities
+    !!
+    !!  activity:
+    !!      - 'communication'   :: Establish local and parallel communication
+    !!      - 'chimera'         :: Establish Chimera communication
+    !!      - 'finalize'        :: 
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   2/1/2016
+    !!
+    !!  @param[in]  activity   Initialization activity specification.
+    !!
+    !--------------------------------------------------------------------------------------------
+    subroutine init(self,activity)
+        class(chidg_t), intent(inout)           :: self
+        character(*),   intent(in)              :: activity
+
+
+        select case (trim(activity))
+
+            case ('all')
+                call self%initialize_solution_domains()
+                call self%init('communication')
+                call self%init('chimera')
+                call self%initialize_solution_solver()
+                call self%init('finalize')
 
             !
             ! Initialize communication. Local face communication. Global parallel communication.
@@ -217,13 +265,13 @@ contains
 
 
             case default
-                call chidg_signal(WARN,'chidg_t: Invalid initialization string')
+                call chidg_signal_one(WARN,'chidg%init: Invalid initialization string',trim(activity))
 
         end select
 
 
     end subroutine init
-    !**********************************************************************************************************
+    !*****************************************************************************************************
 
 
 
@@ -246,7 +294,7 @@ contains
     !!  @param[in]      selection   Character string for specializing the component being initialized
     !!  @param[inout]   options     Dictionary for initialization options
     !!
-    !--------------------------------------------------------------------------------------------------------
+    !-----------------------------------------------------------------------------------------------------
     subroutine set(self,selector,algorithm,integer_input,real_input,options)
         class(chidg_t),         intent(inout)   :: self
         character(*),           intent(in)      :: selector
@@ -371,7 +419,7 @@ contains
 
 
     end subroutine set
-    !********************************************************************************************************
+    !*****************************************************************************************************
 
 
 
@@ -391,7 +439,7 @@ contains
     !!
     !!  TODO: Generalize spacedim
     !!
-    !------------------------------------------------------------------------------------------------------------
+    !-----------------------------------------------------------------------------------------------------
     subroutine read_grid(self,gridfile,spacedim,equation_set)
         class(chidg_t),             intent(inout)           :: self
         character(*),               intent(in)              :: gridfile
@@ -503,7 +551,7 @@ contains
 
 
     end subroutine read_grid
-    !**********************************************************************************************************
+    !*****************************************************************************************************
 
 
 
@@ -522,7 +570,7 @@ contains
     !!
     !!  @param[in]  gridfile    String specifying a gridfile, including extension.
     !!
-    !-------------------------------------------------------------------------------------------------------------
+    !-----------------------------------------------------------------------------------------------------
     subroutine read_boundaryconditions(self, gridfile, bc_wall, bc_inlet, bc_outlet, bc_symmetry, bc_farfield)
         class(chidg_t),     intent(inout)               :: self
         character(*),       intent(in)                  :: gridfile
@@ -533,7 +581,7 @@ contains
         class(bc_state_t),  intent(in),     optional    :: bc_farfield
 
         character(len=5),       dimension(1)    :: extensions
-        character(len=:),       allocatable     :: extension
+        character(:),           allocatable     :: extension
         type(bc_patch_data_t),  allocatable     :: bc_patches(:)
         type(bc_group_t),       allocatable     :: bc_groups(:)
         type(string_t)                          :: group_name
@@ -575,21 +623,22 @@ contains
             do iface = 1,NFACES
 
                 group_name = bc_patches(idom)%bc_group%at(iface)
-                call self%data%add_bc(bc_patches(idom)%domain_, bc_patches(idom)%bc_connectivity(iface), group_name%get(), bc_groups)
-!                call self%data%add_bc(bcdata(idom)%domain_, bcdata(idom)%bcs(iface), bcdata(idom)%bc_connectivity(iface), &
-!                                      bc_wall,      &
-!                                      bc_inlet,     &
-!                                      bc_outlet,    &
-!                                      bc_symmetry,  &
-!                                      bc_farfield)
+                call self%data%add_bc(bc_patches(idom)%domain_,                 &
+                                      bc_patches(idom)%bc_connectivity(iface),  &
+                                      group_name%get(),                         &
+                                      bc_groups,                                &
+                                      bc_wall=bc_wall,                          &
+                                      bc_inlet=bc_inlet,                        &
+                                      bc_outlet=bc_outlet,                      &
+                                      bc_symmetry=bc_symmetry,                  &
+                                      bc_farfield=bc_farfield)
 
             end do !iface
         end do !idom
 
 
     end subroutine read_boundaryconditions
-    !**************************************************************************************************************
-
+    !****************************************************************************************************
 
 
 
@@ -608,7 +657,7 @@ contains
     !!
     !!  @param[in]  solutionfile    String containing a solution file name, including extension.
     !!
-    !------------------------------------------------------------------------------------------------------------
+    !----------------------------------------------------------------------------------------------------
     subroutine read_solution(self,solutionfile)
         class(chidg_t),     intent(inout)           :: self
         character(*),       intent(in)              :: solutionfile
@@ -644,7 +693,7 @@ contains
 
 
     end subroutine read_solution
-    !************************************************************************************************************
+    !****************************************************************************************************
 
 
 
@@ -666,10 +715,9 @@ contains
     !!
     !!  @param[in]  nterms_s    Number of terms in the solution polynomial expansion.
     !!
-    !------------------------------------------------------------------------------------------------------------
+    !----------------------------------------------------------------------------------------------------
     subroutine initialize_solution_domains(self)
         class(chidg_t),     intent(inout)   :: self
-!        integer(ik),        intent(in)      :: nterms_s
 
         character(:),   allocatable :: user_msg
 
@@ -681,19 +729,21 @@ contains
         !
         ! Check that the order for the solution basis expansion has been set.
         !
-        user_msg = "chidg%initialize_solution_domains: It appears the 'Solution Order' was not set for the &
-                    current ChiDG instance. Try calling 'call chidg%set('Solution Order', integer_input=my_order)' &
-                    where my_order=1-7 indicates the solution order-of-accuracy."
+        user_msg = "chidg%initialize_solution_domains: It appears the 'Solution Order' was not set &
+                    for the current ChiDG instance. Try calling 'call chidg%set('Solution Order',&
+                    integer_input=my_order)' where my_order=1-7 indicates the solution &
+                    order-of-accuracy."
         if (self%nterms_s == 0) call chidg_signal(FATAL,user_msg)
 
         !
-        ! Call domain solution storage initialization: mesh data structures that depend on solution expansion etc.
+        ! Call domain solution storage initialization: mesh data structures that 
+        ! depend on solution expansion etc.
         !
         call self%data%initialize_solution_domains(self%nterms_s,self%ntime)
 
 
     end subroutine initialize_solution_domains
-    !************************************************************************************************************
+    !****************************************************************************************************
 
 
 
@@ -707,7 +757,7 @@ contains
     !!
     !!  @param[in]  nterms_s    Number of terms in the solution polynomial expansion.
     !!
-    !------------------------------------------------------------------------------------------------------------
+    !----------------------------------------------------------------------------------------------------
     subroutine initialize_solution_solver(self)
         class(chidg_t),     intent(inout)   :: self
 
@@ -724,13 +774,7 @@ contains
 
 
     end subroutine initialize_solution_solver
-    !************************************************************************************************************
-
-
-
-
-
-
+    !****************************************************************************************************
 
 
 
@@ -748,7 +792,7 @@ contains
     !!
     !!  @param[in]  solutionfile    String containing a solution file name, including extension.
     !!
-    !------------------------------------------------------------------------------------------------------------
+    !----------------------------------------------------------------------------------------------------
     subroutine write_solution(self,solutionfile)
         class(chidg_t),     intent(inout)           :: self
         character(*),       intent(in)              :: solutionfile
@@ -786,9 +830,7 @@ contains
 
 
     end subroutine write_solution
-    !************************************************************************************************************
-
-
+    !****************************************************************************************************
 
 
 
@@ -809,7 +851,7 @@ contains
     !!  @author Nathan A. Wukie
     !!  @date   2/1/2016
     !!
-    !------------------------------------------------------------------------------------------------------------
+    !----------------------------------------------------------------------------------------------------
     subroutine run(self)
         class(chidg_t),     intent(inout)   :: self
 
@@ -818,7 +860,7 @@ contains
 
 
     end subroutine run
-    !************************************************************************************************************
+    !****************************************************************************************************
 
 
 
@@ -836,7 +878,7 @@ contains
     !!
     !!
     !!
-    !------------------------------------------------------------------------------------------------------------
+    !----------------------------------------------------------------------------------------------------
     subroutine report(self,selection)
         class(chidg_t), intent(inout)   :: self
         character(*),   intent(in)      :: selection
@@ -858,11 +900,6 @@ contains
 
 
 
-
-
-
-
-
         else if ( trim(selection) == 'after' ) then
 
             if ( IRANK == GLOBAL_MASTER ) then
@@ -875,7 +912,7 @@ contains
 
 
     end subroutine report
-    !************************************************************************************************************
+    !****************************************************************************************************
 
 
 
@@ -891,8 +928,8 @@ contains
     !!  @date   2/1/2016
     !!
     !!
-    !------------------------------------------------------------------------------------------------------------
-    subroutine close(self,selection)
+    !----------------------------------------------------------------------------------------------------
+    subroutine shut_down(self,selection)
         class(chidg_t), intent(inout)               :: self
         character(*),   intent(in),     optional    :: selection
 
@@ -909,7 +946,7 @@ contains
                     call close_hdf()
 
                 case default
-                    call chidg_signal(FATAL,"chidg%close: invalid close string")
+                    call chidg_signal(FATAL,"chidg%shut_down: invalid shut_down string")
             end select
 
 
@@ -921,8 +958,8 @@ contains
         end if
 
 
-    end subroutine close
-    !************************************************************************************************************
+    end subroutine shut_down
+    !****************************************************************************************************
 
 
 

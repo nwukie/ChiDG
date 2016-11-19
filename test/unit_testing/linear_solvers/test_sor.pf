@@ -31,7 +31,7 @@ subroutine test_sor_solve()
 
 
     ! Initialize ChiDG
-    call chidg%init('env')
+    call chidg%start_up('core')
 
 
     ! Get grid points

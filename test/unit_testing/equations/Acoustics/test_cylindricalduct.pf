@@ -11,7 +11,7 @@ subroutine test_cylindricalduct()
     integer(ik)             :: m, neig
 
     ! Initialize chidg
-    call chidg%init('env')
+    call chidg%start_up('core')
 
     m    = 3    ! Azimuthal mode order
     neig = 3    ! Number of eigenvalues to compute
@@ -30,7 +30,7 @@ subroutine test_cylindricalduct()
 
 
     ! Close ChiDG
-    call chidg%close('core')
+    call chidg%shut_down('core')
 
 
 end subroutine test_cylindricalduct

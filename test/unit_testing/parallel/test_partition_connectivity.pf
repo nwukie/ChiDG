@@ -19,7 +19,7 @@ subroutine test_partition_connectivity__onedomain_twopartitions()
     NRANK = 2
 
 
-    call chidg%init('env')
+    call chidg%start_up('core')
 
 
 

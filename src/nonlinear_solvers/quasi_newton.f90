@@ -11,10 +11,7 @@ module quasi_newton
     use type_preconditioner,    only: preconditioner_t
     use type_chidgVector
 
-
-
     use mod_entropy,            only: compute_entropy_error
-    use mod_timestep,           only: compute_timestep
     implicit none
     private
 
@@ -164,8 +161,7 @@ contains
                 !
                 ! Compute element-local pseudo-timestep
                 !
-                !data%sdata%dt = cfln
-                call compute_timestep(data,cfln,itime=1)
+                call compute_pseudo_timestep(data,cfln)
 
 
 
@@ -183,7 +179,7 @@ contains
                             !
                             ! Loop through equations and add mass matrix
                             !
-                            do ieqn = 1,data%eqnset(idom)%prop%nequations()
+                            do ieqn = 1,data%eqnset(idom)%prop%nprimary_fields()
                                 iblk = DIAG
                                 ! Need to compute row and column extends in diagonal so we can
                                 ! selectively apply the mass matrix to the sub-block diagonal
@@ -191,7 +187,6 @@ contains
                                 rend   = (rstart-1) + nterms
                                 cstart = rstart                 ! since it is square
                                 cend   = rend                   ! since it is square
-                           
                                 ! Add mass matrix divided by dt to the block diagonal
                                 !lhs%dom(idom)%lblks(ielem,iblk)%mat(rstart:rend,cstart:cend)  =  lhs%dom(idom)%lblks(ielem,iblk)%mat(rstart:rend,cstart:cend)  +  data%mesh(idom)%elems(ielem)%mass*(ONE/dtau)
                                 imat = lhs%dom(idom)%lblks(ielem,itime)%get_diagonal()
@@ -279,6 +274,43 @@ contains
 
     end subroutine solve
     !************************************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+    !>
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   11/17/2016
+    !!
+    !----------------------------------------------------------------------------------------------------
+    subroutine compute_pseudo_timestep(data,cfln)
+        type(chidg_data_t),     intent(inout)   :: data
+        real(rk),               intent(in)      :: cfln
+
+        integer(ik) :: idom
+
+        !
+        ! Loop through elements and compute time-step function
+        !
+        do idom = 1,data%ndomains()
+
+            call data%eqnset(idom)%compute_pseudo_timestep(idom,data%mesh,data%sdata,cfln)
+
+        end do !idom
+
+    end subroutine compute_pseudo_timestep
+    !****************************************************************************************************
+
+
+
 
 
 

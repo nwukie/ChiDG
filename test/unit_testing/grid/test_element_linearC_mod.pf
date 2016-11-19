@@ -49,7 +49,7 @@ contains
         integer(ik)                     :: ineighbor_domain_g, ineighbor_domain_l, ineighbor_element_g, ineighbor_element_l, ineighbor_face, ineighbor_proc
         
         
-        call this%chidg%init('env')
+        call this%chidg%start_up('core')
         allocate(this%faces(6))
         
         !> Cube element rotated at 45-degrees along the 0,0,0 y-axis
@@ -137,7 +137,7 @@ contains
         !
         ! Close ChiDG interface
         !
-        call this%chidg%close('core')
+        call this%chidg%shut_down('core')
 
     end subroutine tearDown
     !****************************************************************************************************

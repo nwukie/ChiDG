@@ -63,7 +63,7 @@ contains
         !
         ! Initialize ChiDG environment
         !
-        call this%chidgO1%init('env')
+        call this%chidgO1%start_up('core')
 
 
         !
@@ -111,8 +111,8 @@ contains
         !
         ! Close ChiDG instances
         !
-        call this%chidgO1%close('core')
-        call this%chidgO2%close('core')
+        call this%chidgO1%shut_down('core')
+        call this%chidgO2%shut_down('core')
 
         !
         ! Delete files that were generated

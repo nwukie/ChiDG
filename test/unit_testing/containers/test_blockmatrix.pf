@@ -25,7 +25,7 @@ subroutine test_blockmatrix__store_1eq_8terms()
     integer(ik)                 :: ielem, iblk, ivar, nderiv, i, neqns, nterms_c, nterms_s, idomain, spacedim
     
 
-    call chidg%init('env')
+    call chidg%start_up('core')
 
 
     !
@@ -124,7 +124,7 @@ subroutine test_blockmatrix__store_1eq_8terms()
     !
     ! Close ChiDG interface
     !
-    call chidg%close('core')
+    call chidg%shut_down('core')
 
 end subroutine
 
@@ -158,7 +158,7 @@ subroutine test_blockmatrix__store_2eq_8terms()
     type(AD_D)                  :: integral(8)
     integer(ik)                 :: ielem, iblk, ivar, nderiv, i, neqns, nterms_c, nterms_s, idomain, spacedim
     
-    call chidg%init('env')
+    call chidg%start_up('core')
     
 
     !
@@ -250,7 +250,7 @@ subroutine test_blockmatrix__store_2eq_8terms()
     !
     ! Close ChiDG interface
     !
-    call chidg%close('core')
+    call chidg%shut_down('core')
 end subroutine
 
 
@@ -290,7 +290,7 @@ subroutine test_blockmatrix__clear_1eq_8terms()
 
     tol = 1.e-16_rk
     
-    call chidg%init('env')
+    call chidg%start_up('core')
     
 
 
@@ -406,7 +406,7 @@ subroutine test_blockmatrix__clear_1eq_8terms()
     !
     ! Close ChiDG interface
     !
-    call chidg%close('core')
+    call chidg%shut_down('core')
     
 end subroutine
 

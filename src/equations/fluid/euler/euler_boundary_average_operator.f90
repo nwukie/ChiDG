@@ -66,11 +66,11 @@ contains
         !
         ! Set operator equations
         !
-        call self%set_equation("Density"   )
-        call self%set_equation("X-Momentum")
-        call self%set_equation("Y-Momentum")
-        call self%set_equation("Z-Momentum")
-        call self%set_equation("Energy"    )
+        call self%add_primary_field("Density"   )
+        call self%add_primary_field("X-Momentum")
+        call self%add_primary_field("Y-Momentum")
+        call self%add_primary_field("Z-Momentum")
+        call self%add_primary_field("Energy"    )
 
     end subroutine init
     !********************************************************************************
@@ -112,11 +112,11 @@ contains
             normx, normy, normz
 
 
-        irho  = prop%get_equation_index("Density"   )
-        irhou = prop%get_equation_index("X-Momentum")
-        irhov = prop%get_equation_index("Y-Momentum")
-        irhow = prop%get_equation_index("Z-Momentum")
-        irhoE = prop%get_equation_index("Energy"    )
+        irho  = prop%get_primary_field_index("Density"   )
+        irhou = prop%get_primary_field_index("X-Momentum")
+        irhov = prop%get_primary_field_index("Y-Momentum")
+        irhow = prop%get_primary_field_index("Z-Momentum")
+        irhoE = prop%get_primary_field_index("Energy"    )
 
 
 

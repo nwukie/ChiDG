@@ -230,7 +230,7 @@ contains
         !
         ! Initialize ChiDG environment
         !
-        call this%chidg%init('env',this%ChiDG_COMM)
+        call this%chidg%start_up('core',this%ChiDG_COMM)
 
 
         !
@@ -300,7 +300,7 @@ contains
         class(naca2412),  intent(inout)   :: this
 
         ! Close ChiDG
-        call this%chidg%close('core')
+        call this%chidg%shut_down('core')
 
     end subroutine tearDown
     !******************************************************************************************************

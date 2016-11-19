@@ -90,9 +90,12 @@ contains
                 do iface = 1,NFACES
 
                     !
-                    ! Test if the current face is unattached
+                    ! Test if the current face is unattached. 
+                    ! Test also if the current face is CHIMERA in case this is being 
+                    ! called as a reinitialization procedure.
                     !
-                    orphan_face = ( mesh(idom)%faces(ielem,iface)%ftype == ORPHAN ) 
+                    orphan_face = ( mesh(idom)%faces(ielem,iface)%ftype == ORPHAN .or. &
+                                    mesh(idom)%faces(ielem,iface)%ftype == CHIMERA )
 
 
                     !

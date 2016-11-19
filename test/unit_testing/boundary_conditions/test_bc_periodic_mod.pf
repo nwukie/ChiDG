@@ -39,7 +39,7 @@ contains
         !
         ! Initialize chidg enironment
         !
-        call this%chidg%init('env') 
+        call this%chidg%start_up('core') 
 
 
         !

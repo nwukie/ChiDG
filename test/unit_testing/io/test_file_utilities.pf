@@ -19,7 +19,7 @@ subroutine test_file_utilties_copy()
     integer :: origsize, copysize
 
 
-    call chidg%init('env')
+    call chidg%start_up('core')
 
     !
     ! Create a file
@@ -91,7 +91,7 @@ subroutine test_file_utilties_delete()
     logical :: fileexists = .false.
 
 
-    call chidg%init('env')
+    call chidg%start_up('core')
     
 
     !

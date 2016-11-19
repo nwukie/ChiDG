@@ -40,8 +40,8 @@ contains
 !            case('ilu0','ILU0')
 !                allocate(instance, source=ILU0)
 !
- !           case('rasilu0','RASILU0', 'ras-ilu0', 'RAS-ILU0')
- !               allocate(instance, source=RASILU0)
+!            case('rasilu0','RASILU0', 'ras-ilu0', 'RAS-ILU0')
+!                allocate(instance, source=RASILU0)
 
             case default
                 call chidg_signal(FATAL,'create_preconditioner -- preconditioner string not recognized')

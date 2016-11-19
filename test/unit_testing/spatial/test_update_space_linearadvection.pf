@@ -60,7 +60,7 @@ subroutine test_update_space_linearadvection()
     !
     ! Initialize ChiDG
     !
-    call chidgA%init('env')
+    call chidgA%start_up('core')
 
 
 
@@ -312,8 +312,8 @@ subroutine test_update_space_linearadvection()
     !
     ! Close ChiDG interface
     !
-    call chidgA%close('core')
-    call chidgB%close('core')
+    call chidgA%shut_down('core')
+    call chidgB%shut_down('core')
 
 
 

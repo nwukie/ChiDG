@@ -33,7 +33,7 @@ contains
         integer(ik)                :: nterms_c, nterms_s
         
         ! Initialize chidg environment
-        call this%chidg%init('env')
+        call this%chidg%start_up('core')
         
         ! Generate points for a 2x2x2 element mesh
         call meshgen('222',pts)

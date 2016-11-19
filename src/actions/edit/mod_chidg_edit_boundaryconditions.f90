@@ -20,7 +20,8 @@ module mod_chidg_edit_boundaryconditions
                                      get_bc_state_group_names_hdf, get_bc_state_group_family_hdf,   &
                                      get_bc_patch_group_hdf, set_bc_patch_group_hdf,                &
                                      check_bc_property_exists_hdf, remove_bc_state_hdf,             &
-                                     check_bc_state_exists_hdf, check_link_exists_hdf
+                                     check_bc_state_exists_hdf, check_link_exists_hdf,              &
+                                     open_bc_group_hdf, close_bc_group_hdf, get_bc_state_group_family_hdf
     implicit none
 
 
@@ -983,8 +984,12 @@ contains
 
 
         do igroup = 1,bc_state_groups%size()
+
             group_name = bc_state_groups%at(igroup)
-            group_family = get_bc_state_group_family_hdf(fid,group_name%get())
+            bcgroup_id = open_bc_group_hdf(fid,group_name%get())
+
+            !group_family = get_bc_state_group_family_hdf(fid,group_name%get())
+            group_family = get_bc_state_group_family_hdf(bcgroup_id)
 
             if (group_name%get() == trim(active_group)) then
                 color = 'blue'
@@ -999,8 +1004,8 @@ contains
             call add_to_line(trim(group_family), columns=.true., column_width=25,color=color,bold=bold)
 
 
-            call h5gopen_f(fid,"BCSG_"//trim(group_name%get()),bcgroup_id, ierr)
-            if (ierr /= 0) call chidg_signal(FATAL,"print_bc_states: h5gopen_f")
+!            call h5gopen_f(fid,"BCSG_"//trim(group_name%get()),bcgroup_id, ierr)
+!            if (ierr /= 0) call chidg_signal(FATAL,"print_bc_states: h5gopen_f")
 
             bc_state_names = get_bc_state_names_hdf(bcgroup_id)
             do istate = 1,bc_state_names%size()
@@ -1008,7 +1013,8 @@ contains
                 call add_to_line(trim(bc_state_name%get()), columns=.true., column_width=25,color=color,bold=bold)
             end do
 
-            call h5gclose_f(bcgroup_id, ierr)
+!            call h5gclose_f(bcgroup_id, ierr)
+            call close_bc_group_hdf(bcgroup_id)
 
             call send_line()
 

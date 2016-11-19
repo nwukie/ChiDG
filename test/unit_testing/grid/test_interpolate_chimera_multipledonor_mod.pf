@@ -73,7 +73,7 @@ contains
         !        
         ! Initialize ChiDG environment
         !
-        call this%chidg%init('env')
+        call this%chidg%start_up('core')
 
 
         !
@@ -104,7 +104,7 @@ contains
         !
         ! Initialized solution to constant values
         !
-        ivar = this%chidg%data%eqnset(1)%prop%get_equation_index('u')   ! Get variable index
+        ivar = this%chidg%data%eqnset(1)%prop%get_primary_field_index('u')   ! Get variable index
 
 
         !
@@ -129,7 +129,7 @@ contains
         class(test_interpolate_chimera_multipledonor),    intent(inout)   :: this
         
         ! Close ChiDG interface
-        call this%chidg%close('core')
+        call this%chidg%shut_down('core')
 
         ! Clear up file
         call delete_file(this%filename)
@@ -194,7 +194,7 @@ contains
             fcn%seed        = seed
 
             tol   = 1.e-13_rk
-            ivar  = self%chidg%data%eqnset(1)%prop%get_equation_index('u')
+            ivar  = self%chidg%data%eqnset(1)%prop%get_primary_field_index('u')
 
             ngq = faces(ielem,iface)%gq%nnodes_f
 
@@ -275,7 +275,7 @@ contains
 
 
             tol   = 1.e-13_rk
-            ivar  = self%chidg%data%eqnset(1)%prop%get_equation_index('u')
+            ivar  = self%chidg%data%eqnset(1)%prop%get_primary_field_index('u')
 
             ngq = faces(ielem,iface)%gq%nnodes_f
             nderiv = faces(ielem,iface)%neqns  *  faces(ielem,iface)%nterms_s
@@ -362,7 +362,7 @@ contains
 
 
             tol   = 1.e-13_rk
-            ivar  = self%chidg%data%eqnset(1)%prop%get_equation_index('u')
+            ivar  = self%chidg%data%eqnset(1)%prop%get_primary_field_index('u')
 
             ngq = faces(ielem,iface)%gq%nnodes_f
             
@@ -453,7 +453,7 @@ contains
 
             
             tol   = 1.e-13_rk
-            ivar  = self%chidg%data%eqnset(1)%prop%get_equation_index('u')
+            ivar  = self%chidg%data%eqnset(1)%prop%get_primary_field_index('u')
 
             ngq    = faces(ielem,iface)%gq%nnodes_f
             nderiv = faces(ielem,iface)%neqns  *  faces(ielem,iface)%nterms_s

@@ -89,7 +89,7 @@ subroutine rtest_linearadvection_implicit_convergence()
     !
     ! Initialize ChiDG environment.
     !
-    call chidg%init('env')   
+    call chidg%start_up('core')   
 
 
 

@@ -6,33 +6,26 @@ subroutine test_equationset__add_equation__one()
     use pfunit_mod
     
     use mock_equation_set,  only: mock_equation_set_t
-!    use LA_properties,      only: LA_properties_t
-    !use SCA_properties,     only: SCA_properties_t
 
 
     type(mock_equation_set_t)   :: meq
-!    type(LA_properties_t)      :: LA_prop
-!
-!
-!    ! Allocate a concrete properties component in the equationset, which stores the equations
-!    allocate(LA_properties_t::meq%prop)
 
     !
     ! Add one equation. THIS IS BEING TESTED.
     !
-    call meq%add_equation("a")
+    call meq%add_primary_field("a")
 
 
 
 
     ! Test number of equations
-    @assertEqual(1,size(meq%prop%eqns))
+    @assertEqual(1,size(meq%prop%primary_fields))
 
     ! Test equation name
-    @assertEqual("a",meq%prop%eqns(1)%name)
+    @assertEqual("a",meq%prop%primary_fields(1)%name)
 
     ! Test equation index
-    @assertEqual(1,meq%prop%eqns(1)%ind)
+    @assertEqual(1,meq%prop%primary_fields(1)%ind)
 
 end subroutine
 
@@ -48,32 +41,26 @@ subroutine test_equationset__add_equation__two()
     use pfunit_mod
     
     use mock_equation_set, only: mock_equation_set_t
-!    use LA_properties,     only: LA_properties_t
 
 
     type(mock_equation_set_t)  :: meq
-!    type(LA_properties_t)      :: LA_prop
-!
-!
-!    ! Allocate a concrete properties component in the equationset, which stores the equations
-!    allocate(LA_properties_t::meq%prop)
 
     !
     ! Add two equations. THIS IS BEING TESTED.
     !
-    call meq%add_equation("a")
-    call meq%add_equation("b")
+    call meq%add_primary_field("a")
+    call meq%add_primary_field("b")
 
     ! Test number of equations
-    @assertEqual(2,size(meq%prop%eqns))
+    @assertEqual(2,size(meq%prop%primary_fields))
 
     ! Test equation name
-    @assertEqual("a",meq%prop%eqns(1)%name)
-    @assertEqual("b",meq%prop%eqns(2)%name)
+    @assertEqual("a",meq%prop%primary_fields(1)%name)
+    @assertEqual("b",meq%prop%primary_fields(2)%name)
 
     ! Test equation index
-    @assertEqual(1,meq%prop%eqns(1)%ind)
-    @assertEqual(2,meq%prop%eqns(2)%ind)
+    @assertEqual(1,meq%prop%primary_fields(1)%ind)
+    @assertEqual(2,meq%prop%primary_fields(2)%ind)
 
 end subroutine
 

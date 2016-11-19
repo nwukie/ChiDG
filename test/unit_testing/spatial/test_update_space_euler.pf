@@ -35,7 +35,7 @@ subroutine test_update_space_euler()
     !
     ! Initialize ChiDG
     !
-    call chidgA%init('env')
+    call chidgA%start_up('core')
 
 
     !
@@ -167,8 +167,8 @@ subroutine test_update_space_euler()
     !
     ! Close ChiDG interface
     !
-    call chidgA%close('core')
-    call chidgB%close('core')
+    call chidgA%shut_down('core')
+    call chidgB%shut_down('core')
 
 
     call delete_file(chidgA_file)

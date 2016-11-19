@@ -24,7 +24,7 @@ subroutine read_connectivity_hdf__D1_E1_M1()
     !
     ! Initialize ChiDG
     !
-    call chidg%init('env')
+    call chidg%start_up('core')
     
     !
     ! Create mesh file
@@ -55,7 +55,7 @@ subroutine read_connectivity_hdf__D1_E1_M1()
     !
     ! Close ChiDG
     !
-    call chidg%close('core')
+    call chidg%shut_down('core')
 
 
     call delete_file(filename)
@@ -98,7 +98,7 @@ subroutine read_connectivity_hdf__D1_E27_M1()
     !
     ! Initialize ChiDG
     !
-    call chidg%init('env')
+    call chidg%start_up('core')
     
     call create_mesh_file("D1 E27 M1",filename)
 
@@ -126,7 +126,7 @@ subroutine read_connectivity_hdf__D1_E27_M1()
     !
     ! Close ChiDG
     !
-    call chidg%close('core')
+    call chidg%shut_down('core')
 
     call delete_file(filename)
 
@@ -168,7 +168,7 @@ subroutine read_connectivity_hdf__D2_E1_M1()
     !
     ! Initialize ChiDG
     !
-    call chidg%init('env')
+    call chidg%start_up('core')
     
 
     call create_mesh_file("D2 E1 M1",filename)
@@ -200,7 +200,7 @@ subroutine read_connectivity_hdf__D2_E1_M1()
     !
     ! Close ChiDG
     !
-    call chidg%close('core')
+    call chidg%shut_down('core')
 
     call delete_file(filename)
 
@@ -243,7 +243,7 @@ subroutine read_connectivity_hdf__D2_E27_M1()
     !
     ! Initialize ChiDG
     !
-    call chidg%init('env')
+    call chidg%start_up('core')
     
 
     call create_mesh_file("D2 E27 M1",filename)
@@ -278,7 +278,7 @@ subroutine read_connectivity_hdf__D2_E27_M1()
     !
     ! Close ChiDG
     !
-    call chidg%close('core')
+    call chidg%shut_down('core')
 
     call delete_file(filename)
 

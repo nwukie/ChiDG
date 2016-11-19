@@ -34,7 +34,7 @@ contains
         integer(ik)              :: nterms_c, nterms_s, idomain
         
         
-        call this%chidg%init('env')
+        call this%chidg%start_up('core')
         
         
         !> (x = 0-5 :: y = 0-1 :: z = 0-1)
@@ -78,7 +78,7 @@ contains
         !
         ! Close ChiDG interface
         !
-        call this%chidg%close('core')
+        call this%chidg%shut_down('core')
         
     end subroutine
 

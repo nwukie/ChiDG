@@ -55,7 +55,7 @@ contains
         ChiDG_COMM%mpi_val = this%getMpiCommunicator()
 
 
-        call chidg%init('env',ChiDG_COMM)
+        call chidg%start_up('core',ChiDG_COMM)
 
 
 
@@ -82,7 +82,8 @@ contains
         !
         call chidg%set('Solution Order', integer_input=3)
         call chidg%initialize_solution_domains()
-        call chidg%init('communication',ChiDG_COMM)
+        !call chidg%init('communication',ChiDG_COMM)
+        call chidg%init('communication')
 
 
         !
@@ -228,7 +229,7 @@ contains
 
 
 
-        call chidg%close('core')
+        call chidg%shut_down('core')
 
         call MPI_Barrier(ChiDG_COMM,ierr)
         if (IRANK == GLOBAL_MASTER) then

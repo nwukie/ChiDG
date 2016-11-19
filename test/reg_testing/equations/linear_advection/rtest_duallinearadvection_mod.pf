@@ -100,7 +100,7 @@ contains
         IO_DESTINATION = 'file'
 
         ! Initialize chidg environment
-        call this%chidg%init('env')
+        call this%chidg%start_up('core')
 
         ! Generate points array for 3x3x3 mesh
         call create_mesh('3x3x3_unit',nodes,connectivity)
@@ -133,7 +133,7 @@ contains
         !
         ! Close ChiDG
         !
-        call this%chidg%close('core')
+        call this%chidg%shut_down('core')
 
     end subroutine tearDown
     !******************************************************************************************

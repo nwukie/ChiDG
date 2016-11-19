@@ -53,7 +53,7 @@ contains
         !
         ! Initialize ChiDG environment
         !
-        call this%chidg%init('env')
+        call this%chidg%start_up('core')
 
 
         !
@@ -87,7 +87,7 @@ contains
         !
         ! Close ChiDG interface
         !
-        call this%chidg%close('core')
+        call this%chidg%shut_down('core')
     end subroutine
     !******************************************************************************************************
 

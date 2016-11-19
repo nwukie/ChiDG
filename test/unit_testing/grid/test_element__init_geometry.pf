@@ -102,7 +102,7 @@ subroutine testElement__init_geometry__pts_linear()
     tol = 1.e-13_rk
     npts_1d = 2
 
-    call chidg%init('env')
+    call chidg%start_up('core')
     
     ! Initialize reference element mappings
     !call compute_element_mappings(THREE_DIM)
@@ -163,7 +163,7 @@ subroutine testElement__init_geometry__pts_quadratic()
     npts_1d = 3
 
 
-    call chidg%init('env')
+    call chidg%start_up('core')
 
     
     ! Initialize reference element mappings
@@ -229,7 +229,7 @@ subroutine testElement__init_geometry__pts_cubic()
     npts_1d = 4
 
     
-    call chidg%init('env')
+    call chidg%start_up('core')
     
     ! Initialize reference element mappings
     !call compute_element_mappings(THREE_DIM)
@@ -294,7 +294,7 @@ subroutine testElement__init_geometry__pts_quartic()
     tol = 1.e-13_rk
     npts_1d = 5
 
-    call chidg%init('env')
+    call chidg%start_up('core')
     
     ! Initialize reference element mappings
     !call compute_element_mappings(THREE_DIM)
@@ -371,7 +371,7 @@ subroutine testElement__init_geometry__modes_linear()
     tol = 1.e-13_rk
     npts_1d = 2
 
-    call chidg%init('env')
+    call chidg%start_up('core')
 
     !call compute_element_mappings(THREE_DIM)    ! Compute reference element mappings
     call generate_pts(npts_1d,pts_init,pts_ref) ! Generate pts for test element
@@ -446,7 +446,7 @@ subroutine testElement__init_geometry__modes_quadratic()
     tol = 1.e-13_rk
     npts_1d = 3
 
-    call chidg%init('env')
+    call chidg%start_up('core')
 
     !call compute_element_mappings(THREE_DIM)    ! Compute reference element mappings
     call generate_pts(npts_1d,pts_init,pts_ref) ! Generate pts for test element
@@ -520,7 +520,7 @@ subroutine testElement__init_geometry__modes_cubic()
     tol = 1.e-13_rk
     npts_1d = 4
 
-    call chidg%init('env')
+    call chidg%start_up('core')
 
     !call compute_element_mappings(THREE_DIM)             ! Compute reference element mappings
     call generate_pts(npts_1d,pts_init,pts_ref) ! Generate pts for test element
@@ -596,7 +596,7 @@ subroutine testElement__init_geometry__modes_quartic()
     npts_1d = 5
 
 
-    call chidg%init('env')
+    call chidg%start_up('core')
 
 
     !call compute_element_mappings(THREE_DIM)             !> Compute reference element mappings

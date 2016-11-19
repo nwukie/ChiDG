@@ -48,7 +48,7 @@ subroutine test_chidgMatrix_operator_chimera_mv()
     !
     ! Initialize ChiDG
     !
-    call chidg%init('env')
+    call chidg%start_up('core')
 
     !
     ! Create grid file
@@ -269,7 +269,7 @@ subroutine test_chidgMatrix_operator_chimera_mv()
     !
     ! Close ChiDG interface
     !
-    call chidg%close('core')
+    call chidg%shut_down('core')
 
 
     !

@@ -41,7 +41,7 @@ subroutine test_find_gq_donor_cylinder_abutting()
     !
     ! Initialize ChiDG
     !
-    call chidgA%init('env')
+    call chidgA%start_up('core')
 
 
     !
@@ -104,7 +104,7 @@ subroutine test_find_gq_donor_cylinder_abutting()
 
 
     ! Close ChiDG
-    call chidgA%close('core')
+    call chidgA%shut_down('core')
 
     ! Clean-up test
     call delete_file(trim(filename))

@@ -49,7 +49,7 @@ subroutine test__detect_chimera_donors()
     !
     ! Initialize ChiDG environment
     !
-    call chidg%init('env')
+    call chidg%start_up('core')
 
     !
     ! Create grid file
@@ -217,7 +217,7 @@ subroutine test__detect_chimera_donors()
     !
     ! Close ChiDG interface
     !
-    call chidg%close('core')
+    call chidg%shut_down('core')
 
 
     ! Clean-up

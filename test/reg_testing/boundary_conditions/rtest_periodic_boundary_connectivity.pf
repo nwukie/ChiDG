@@ -67,7 +67,7 @@ subroutine rtest_periodic_boundary_connectivity()
     !
     ! Initialize ChiDG environment.
     !
-    call chidg%init('env')   
+    call chidg%start_up('core')   
 
 
 

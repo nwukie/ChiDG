@@ -40,7 +40,7 @@ contains
     subroutine setUp(this)
         class(test_chidg_cache),    intent(inout)   :: this
         
-        call this%chidg%init('env')
+        call this%chidg%start_up('core')
         call this%chidg%read_grid('D1_E27_M1.h5',3)
         call this%chidg%read_boundaryconditions('D1_E27_M1.h5')
 
@@ -63,7 +63,7 @@ contains
         !
         ! Close ChiDG interface
         !
-        call this%chidg%close('core')
+        call this%chidg%shut_down('core')
 
     end subroutine tearDown
     !**************************************************************************************

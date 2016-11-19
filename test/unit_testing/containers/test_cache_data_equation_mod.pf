@@ -43,7 +43,7 @@ contains
         class(test_cache_data_equation),    intent(inout)   :: this
 
         
-        call this%chidg%init('env')
+        call this%chidg%start_up('core')
         
         !
         ! Create file
@@ -77,7 +77,7 @@ contains
         !
         ! Close ChiDG interface
         !
-        call this%chidg%close('core')
+        call this%chidg%shut_down('core')
 
         call delete_file(this%filename)
 

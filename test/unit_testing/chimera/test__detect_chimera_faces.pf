@@ -43,7 +43,7 @@ subroutine test__detect_chimera_faces()
     !
     ! Initialize ChiDG environment
     !
-    call chidg%init('env')
+    call chidg%start_up('core')
 
 
     !
@@ -113,7 +113,7 @@ subroutine test__detect_chimera_faces()
     !
     ! Close ChiDG interface
     !
-    call chidg%close('core')
+    call chidg%shut_down('core')
 
 
     ! Clean-up

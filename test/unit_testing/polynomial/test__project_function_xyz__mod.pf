@@ -77,7 +77,7 @@ contains
         connectivity%data(1)%data = [1,1,1, 1, 2, 3, 4, 5, 6, 7, 8]
 
         ! Initialize ChiDG environment
-        call this%chidg%init('env')
+        call this%chidg%start_up('core')
 
         
         ! Initialize domain
@@ -105,7 +105,7 @@ contains
         !
         ! Close ChiDG interface
         !
-        call this%chidg%close('core')
+        call this%chidg%shut_down('core')
 
 
     end subroutine tearDown

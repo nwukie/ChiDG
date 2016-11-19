@@ -64,7 +64,7 @@ contains
         !
         ! Initialize ChiDG
         !
-        call this%chidg%init('env')
+        call this%chidg%start_up('core')
 
 
         !
@@ -124,7 +124,7 @@ contains
         class(test_preconditioner_ILU0),    intent(inout)   :: this
 
 
-        call this%chidg%close('core')
+        call this%chidg%shut_down('core')
 
     end subroutine
 

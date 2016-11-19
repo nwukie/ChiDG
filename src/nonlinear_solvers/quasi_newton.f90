@@ -302,7 +302,7 @@ contains
         !
         do idom = 1,data%ndomains()
 
-            call data%eqnset(idom)%compute_pseudo_timestep(idom,data%mesh,data%sdata,cfln)
+            call data%eqnset(idom)%compute_pseudo_timestep(idom,data%mesh,data%sdata,cfln,itime = 1)
 
         end do !idom
 

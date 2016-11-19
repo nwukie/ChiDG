@@ -92,7 +92,7 @@ contains
         call self%timer%start()
         call write_line('           Linear Solver: ', io_proc=GLOBAL_MASTER)
 
-
+        
 
         !
         ! Update preconditioner

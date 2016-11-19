@@ -41,13 +41,14 @@ contains
     !!  @param[inout]   domain      domain_t instance containing mesh and solution data
     !!
     !-----------------------------------------------------------------------------------
-    subroutine compute(self,idomain,mesh,prop,sdata,cfl)
+    subroutine compute(self,idomain,mesh,prop,sdata,cfl,itime)
         class(fluid_pseudo_timestep_t), intent(in)      :: self
         integer(ik),                    intent(in)      :: idomain
         type(mesh_t),                   intent(in)      :: mesh(:)
         type(properties_t),             intent(in)      :: prop
         type(solverdata_t),             intent(inout)   :: sdata
         real(rk),                       intent(in)      :: cfl
+        integer(ik),                    intent(in)      :: itime
 
 
         integer(ik) :: ielem
@@ -80,11 +81,11 @@ contains
             !
             ! Interpolate variables
             !
-            rho  = interpolate_element_standard(mesh,sdata%q,idomain,ielem,irho,  'value')
-            rhou = interpolate_element_standard(mesh,sdata%q,idomain,ielem,irhou, 'value')
-            rhov = interpolate_element_standard(mesh,sdata%q,idomain,ielem,irhov, 'value')
-            rhow = interpolate_element_standard(mesh,sdata%q,idomain,ielem,irhow, 'value')
-            rhoE = interpolate_element_standard(mesh,sdata%q,idomain,ielem,irhoE, 'value')
+            rho  = interpolate_element_standard(mesh,sdata%q,idomain,ielem,irho, itime, 'value')
+            rhou = interpolate_element_standard(mesh,sdata%q,idomain,ielem,irhou,itime, 'value')
+            rhov = interpolate_element_standard(mesh,sdata%q,idomain,ielem,irhov,itime, 'value')
+            rhow = interpolate_element_standard(mesh,sdata%q,idomain,ielem,irhow,itime, 'value')
+            rhoE = interpolate_element_standard(mesh,sdata%q,idomain,ielem,irhoE,itime, 'value')
 
 
             !

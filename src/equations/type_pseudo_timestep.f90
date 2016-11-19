@@ -25,7 +25,7 @@ module type_pseudo_timestep
 
 
     abstract interface
-        subroutine compute_interface(self,idomain,mesh,prop,sdata,cfl)
+        subroutine compute_interface(self,idomain,mesh,prop,sdata,cfl,itime)
             import ik, rk
             import pseudo_timestep_t
             import mesh_t
@@ -37,6 +37,7 @@ module type_pseudo_timestep
             type(properties_t),         intent(in)      :: prop
             type(solverdata_t),         intent(inout)   :: sdata
             real(rk),                   intent(in)      :: cfl
+            integer(ik),                intent(in)      :: itime
         end subroutine
     end interface
 
@@ -84,13 +85,14 @@ contains
     !!  @author Nathan A. Wukie
     !!
     !------------------------------------------------------------------------
-    subroutine compute(self,idomain,mesh,prop,sdata,cfl)
+    subroutine compute(self,idomain,mesh,prop,sdata,cfl,itime)
         class(default_pseudo_timestep_t),   intent(in)      :: self
         integer(ik),                        intent(in)      :: idomain
         type(mesh_t),                       intent(in)      :: mesh(:)
         type(properties_t),                 intent(in)      :: prop
         type(solverdata_t),                 intent(inout)   :: sdata
         real(rk),                           intent(in)      :: cfl
+        integer(ik),                        intent(in)      :: itime
 
         integer(ik) :: ielem
         real(rk)    ::  h

@@ -1074,19 +1074,20 @@ contains
     !!
     !!
     !--------------------------------------------------------------------------------------
-    subroutine compute_pseudo_timestep(self,idomain,mesh,sdata,cfln)
+    subroutine compute_pseudo_timestep(self,idomain,mesh,sdata,cfln,itime)
         class(equation_set_t),  intent(in)      :: self
         integer(ik),            intent(in)      :: idomain
         type(mesh_t),           intent(in)      :: mesh(:)
         type(solverdata_t),     intent(inout)   :: sdata
         real(rk),               intent(in)      :: cfln
+        integer(ik),            intent(in)      :: itime
 
         type(default_pseudo_timestep_t) :: default_timestep
 
         if (allocated(self%pseudo_timestep)) then
-            call self%pseudo_timestep%compute(idomain,mesh,self%prop,sdata,cfln)
+            call self%pseudo_timestep%compute(idomain,mesh,self%prop,sdata,cfln,itime)
         else
-            call default_timestep%compute(idomain,mesh,self%prop,sdata,cfln)
+            call default_timestep%compute(idomain,mesh,self%prop,sdata,cfln,itime)
         end if
 
     end subroutine compute_pseudo_timestep

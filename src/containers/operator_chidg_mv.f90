@@ -129,7 +129,7 @@ contains
             if (allocated(A%dom(idom)%chi_blks)) then
                 do ielem = 1,size(A%dom(idom)%chi_blks,1)
                     do itime = 1,size(A%dom(idom)%chi_blks,2)
-                        do imat = 1,A%dom(idom)%lblks(ielem,itime)%size()
+                        do imat = 1,A%dom(idom)%chi_blks(ielem,itime)%size()
 
                             matrix_proc = IRANK
                             vector_proc = A%dom(idom)%chi_blks(ielem,itime)%parent_proc(imat)

@@ -178,7 +178,7 @@ contains
         !
         if (present(bc_groups)) then
             do igroup = 1,size(bc_groups)
-                call create_bc_group_hdf(file_id,bc_groups(igroup)%name,'Default')
+                call create_bc_group_hdf(file_id,bc_groups(igroup)%name,'Inlet')
 
                 bcgroup_id = open_bc_group_hdf(file_id,bc_groups(igroup)%name)
 
@@ -188,7 +188,7 @@ contains
                 call close_bc_group_hdf(bcgroup_id)
             end do
         else
-            call create_bc_group_hdf(file_id,'Default','Default')
+            call create_bc_group_hdf(file_id,'Default','Inlet')
 
             bcgroup_id = open_bc_group_hdf(file_id,'Default')
             call add_bc_state_hdf(bcgroup_id,bc_state)
@@ -356,7 +356,7 @@ contains
         !
         if (present(bc_groups)) then
             do igroup = 1,size(bc_groups)
-                call create_bc_group_hdf(file_id,bc_groups(igroup)%name,'Default')
+                call create_bc_group_hdf(file_id,bc_groups(igroup)%name,'Inlet')
 
                 bcgroup_id = open_bc_group_hdf(file_id,bc_groups(igroup)%name)
 
@@ -366,7 +366,7 @@ contains
                 call close_bc_group_hdf(bcgroup_id)
             end do
         else
-            call create_bc_group_hdf(file_id,'Default','Default')
+            call create_bc_group_hdf(file_id,'Default','Inlet')
 
             bcgroup_id = open_bc_group_hdf(file_id,'Default')
             call add_bc_state_hdf(bcgroup_id,bc_state)
@@ -597,7 +597,7 @@ contains
             user_msg = "create_mesh_file__D2E8M1: Not quite ready to accept custom bc_group sets."
             call chidg_signal(FATAL,user_msg)
         else
-            call create_bc_group_hdf(file_id,'Default','Default')
+            call create_bc_group_hdf(file_id,'Default','Inlet')
 
             bcgroup_id = open_bc_group_hdf(file_id,'Default')
             call add_bc_state_hdf(bcgroup_id,bc_state)

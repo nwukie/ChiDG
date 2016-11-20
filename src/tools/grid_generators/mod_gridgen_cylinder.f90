@@ -206,7 +206,7 @@ contains
         if (present(bc_groups)) then
 
             do igroup = 1,size(bc_groups)
-                call create_bc_group_hdf(file_id,bc_groups(igroup)%name,'Default')
+                call create_bc_group_hdf(file_id,bc_groups(igroup)%name,'Inlet')
 
                 bcgroup_id = open_bc_group_hdf(file_id,bc_groups(igroup)%name)
 

@@ -271,6 +271,11 @@ contains
             bc_groups(2)%name = "Outlet"
             bc_groups(3)%name = "Walls"
 
+            ! Set bc_group families
+            bc_groups(1)%family = "Inlet"
+            bc_groups(2)%family = "Outlet"
+            bc_groups(3)%family = "Wall"
+
             ! Add bc_state to Inlet group            
             call create_bc("Total Inlet", bc_state)
             call bc_state%set_fcn_option("Total Pressure", "val", 110000._rk)

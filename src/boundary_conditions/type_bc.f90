@@ -170,7 +170,6 @@ contains
 
 
 
-
         !
         ! Find the correct bc_group in bc_groups(:)
         !
@@ -179,6 +178,7 @@ contains
 
             group_found = (trim(bc_group) == trim(bc_groups(igroup)%name) )
             if (group_found .and. (.not. group_set)) then
+
 
                 !
                 ! Set Family
@@ -251,7 +251,12 @@ contains
                     matches with the string indicated in a boundary patch. Make sure that a &
                     boundary state group with the correct name exists. Also make sure that the name &
                     set on the boundary patch corresponds to one of the boundary state groups that exists."
-        if (.not. group_set .and. (trim(bc_group) /= 'empty')) call chidg_signal_one(FATAL,user_msg,trim(bc_group))
+        if ((.not. group_set) .and. ((trim(bc_group) /= 'empty') .and. (trim(bc_group) /= 'Empty')) ) &
+            call chidg_signal_one(FATAL,user_msg,trim(bc_group))
+
+
+        if ( (trim(bc_group) == 'empty') .or. &
+             (trim(bc_group) == 'Empty') ) call self%set_family('Empty')
 
 
     end subroutine init_bc_group
@@ -708,7 +713,8 @@ contains
              (trim(family) == 'Symmetry') .or. &
              (trim(family) == 'Periodic') .or. &
              (trim(family) == 'Farfield') .or. &
-             (trim(family) == 'Scalar'  ) ) then
+             (trim(family) == 'Scalar'  ) .or. &
+             (trim(family) == 'Empty'   ) ) then
 
             self%bc_family = family
 

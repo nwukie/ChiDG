@@ -131,7 +131,7 @@ contains
         !
         if (present(bc_groups)) then
             do igroup = 1,size(bc_groups)
-                call create_bc_group_hdf(file_id,bc_groups(igroup)%name,'Default')
+                call create_bc_group_hdf(file_id,bc_groups(igroup)%name,'Inlet')
 
                 bcgroup_id = open_bc_group_hdf(file_id,bc_groups(igroup)%name)
 
@@ -143,7 +143,7 @@ contains
         else
 
             ! Create Inlet boundary condition group
-            call create_bc_group_hdf(file_id,'Inlet','Default')
+            call create_bc_group_hdf(file_id,'Inlet','Inlet')
             bcgroup_id = open_bc_group_hdf(file_id,'Inlet')
 
             call create_bc("Total Inlet", bc_state)
@@ -155,7 +155,7 @@ contains
 
 
             ! Create Outlet boundary condition group
-            call create_bc_group_hdf(file_id,'Outlet','Default')
+            call create_bc_group_hdf(file_id,'Outlet','Outlet')
             bcgroup_id = open_bc_group_hdf(file_id,'Outlet')
 
             call create_bc("Pressure Outlet", bc_state)
@@ -166,7 +166,7 @@ contains
 
 
             ! Create Walls boundary condition group
-            call create_bc_group_hdf(file_id,'Walls','Default')
+            call create_bc_group_hdf(file_id,'Walls','Wall')
             bcgroup_id = open_bc_group_hdf(file_id,'Walls')
 
             call create_bc("Wall", bc_state)

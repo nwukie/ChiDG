@@ -54,7 +54,7 @@ subroutine test_chidgMatrix_operator_mv()
     type(chidg_t)                   :: chidg
     type(meshdata_t),   allocatable :: meshdata(:)
     class(bc_t),        allocatable :: bc
-    integer(ik)                     :: idom, spacedim, nterms_s
+    integer(ik)                     :: idom, spacedim, nterms_s, idiag, idom_d, ielem_d, itime, ielem
     real(rk), dimension(8)          :: bref_1, bref_2
     real(rk)                        :: tol
     character(:),       allocatable :: filename
@@ -88,13 +88,13 @@ subroutine test_chidgMatrix_operator_mv()
     call chidg%read_boundaryconditions(filename)
 
 
-    call chidg%set('Solution Order', integer_input=2)
-    call chidg%initialize_solution_domains()
-    call chidg%init('communication')
 
     !
     ! Initialize ChiDG Chimera Interfaces
     !
+    call chidg%set('Solution Order', integer_input=2)
+    call chidg%initialize_solution_domains()
+    call chidg%init('communication')
     call chidg%init('chimera')
 
 
@@ -108,14 +108,55 @@ subroutine test_chidgMatrix_operator_mv()
 
 
 
+    !           lblks               chi_blks                 x
+    !   [ 1                 ] [                  ]          [     ]
+    !   [                   ] [ 2   3            ]          [ 0.1 ]
+    !   [                   ] [                  ]          [     ]
+    !   [                   ] [                  ]          [     ]
+    !   [                   ] [                  ]          [     ]
+    !   [                   ] [                  ]          [     ]
+    !   [                   ] [                  ]          [     ]
+    !   [                   ] [                  ]          [     ]
     !
-    ! Initialize chidgMatrix data -- domain 1
+    !         chi_blks               lblks
+    !   [   4               ] [                  ]          [ 0.2 ]
+    !   [                   ] [                  ]          [     ]
+    !   [                   ] [                  ]          [ 0.3 ]
+    !   [                   ] [                  ]          [     ]
+    !   [                   ] [                  ]          [     ]
+    !   [                   ] [                  ]          [     ]
+    !   [                   ] [                  ]          [     ]
+    !   [                   ] [                  ]          [     ]
     !
-    A%dom(1)%lblks(1,DIAG)%mat = ONE
-    A%dom(1)%chi_blks(2,1)%mat = TWO
-    A%dom(1)%chi_blks(2,2)%mat = THREE
 
-    x%dom(1)%vecs(2)%vec = 0.1_rk
+
+
+
+
+    !
+    ! Initialize chidgMatrix and corresponding chidgVector data -- domain 1
+    !
+    ielem = 1
+    itime = 1
+    idiag = A%dom(1)%lblks(ielem,itime)%find(1,1)
+    A%dom(1)%lblks(ielem,itime)%data_(idiag)%mat = ONE
+
+
+    ielem = 2
+    itime = 1
+    idom_d  = A%dom(1)%chi_blks(ielem,itime)%dparent_g(1)
+    ielem_d = A%dom(1)%chi_blks(ielem,itime)%eparent_g(1)
+    A%dom(1)%chi_blks(ielem,itime)%data_(1)%mat = TWO
+    x%dom(idom_d)%vecs(ielem_d)%vec = 0.2_rk
+
+
+    ielem = 2
+    itime = 1
+    idom_d  = A%dom(1)%chi_blks(ielem,itime)%dparent_g(1)
+    ielem_d = A%dom(1)%chi_blks(ielem,itime)%eparent_g(1)
+    A%dom(1)%chi_blks(ielem,itime)%data_(2)%mat = THREE
+    x%dom(idom_d)%vecs(ielem_d)%vec = 0.3_rk
+
 
 
 
@@ -123,12 +164,14 @@ subroutine test_chidgMatrix_operator_mv()
 
 
     !
-    ! Initialize chidgMatrix data
+    ! Initialize chidgMatrix and corresponding chidgVector data -- domain 2
     !
-    A%dom(2)%chi_blks(1,1)%mat = FOUR
-
-    x%dom(2)%vecs(1)%vec = 0.2_rk
-    x%dom(2)%vecs(3)%vec = 0.3_rk
+    ielem = 1
+    itime = 1
+    idom_d  = A%dom(2)%chi_blks(ielem,itime)%dparent_g(1)
+    ielem_d = A%dom(2)%chi_blks(ielem,itime)%eparent_g(1)
+    A%dom(1)%chi_blks(ielem,itime)%data_(1)%mat = FOUR
+    x%dom(idom_d)%vecs(ielem_d)%vec = 0.1_rk
 
 
     !
@@ -149,13 +192,6 @@ subroutine test_chidgMatrix_operator_mv()
     !
     @assertEqual(bref_1,b%dom(1)%vecs(2)%vec,tol)
     @assertEqual(bref_2,b%dom(2)%vecs(1)%vec,tol)
-
-
-    !
-    ! Test max donors
-    !
-    @assertEqual(2,size(A%dom(1)%chi_blks,2))
-    @assertEqual(2,size(A%dom(2)%chi_blks,2))
 
 
     !

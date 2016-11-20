@@ -26,7 +26,7 @@ subroutine test_fgmres_ref_solve()
     type(fgmres_t)              :: linear_solver
     
     real(rk)    :: tol
-    integer(ik) :: nterms_c, idomain, spacedim
+    integer(ik) :: nterms_c, idomain, spacedim, imat, ielem, itime
 
 
     tol             = 1.e-9_rk
@@ -84,11 +84,23 @@ subroutine test_fgmres_ref_solve()
     ! [ 0  1]
     ! [-1  0]
     ! 
-    A%dom(1)%lblks(1,DIAG)%mat   = ZERO
-    A%dom(1)%lblks(1,XI_MAX)%mat = ONE
+    ielem = 1
+    itime = 1
+    imat = A%dom(1)%lblks(ielem,itime)%find(1,1)
+    A%dom(1)%lblks(1,1)%data_(imat)%mat   = ZERO
 
-    A%dom(1)%lblks(2,XI_MIN)%mat = -ONE
-    A%dom(1)%lblks(2,DIAG)%mat   = ZERO
+    imat = A%dom(1)%lblks(ielem,itime)%find(1,2)
+    A%dom(1)%lblks(1,1)%data_(imat)%mat = ONE
+
+
+
+    ielem = 2
+    itime = 1
+    imat = A%dom(1)%lblks(ielem,itime)%find(1,1)
+    A%dom(1)%lblks(ielem,itime)%data_(imat)%mat = -ONE
+
+    imat = A%dom(1)%lblks(ielem,itime)%find(1,2)
+    A%dom(1)%lblks(ielem,itime)%data_(imat)%mat = ZERO
 
 
 

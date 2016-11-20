@@ -49,18 +49,19 @@ contains
     !-------------------------------------------------------------------------------------------------
     subroutine setUp(this)
         class(test_densevector_operators),    intent(inout)   :: this
-        integer(ik)                                 :: nterms, nvars
+        integer(ik)                                 :: nterms, nvars, ntime
         
             
     
             ! Initialization parameters
             nterms = 8
             nvars  = 1
+            ntime  = 1
     
     
             ! Initialize densevectors
-            call this%dv_a%init(nterms,nvars,this%dparent_g,this%dparent_l,this%eparent_g,this%eparent_l)
-            call this%dv_b%init(nterms,nvars,this%dparent_g,this%dparent_l,this%eparent_g,this%eparent_l)
+            call this%dv_a%init(nterms,nvars,ntime,this%dparent_g,this%dparent_l,this%eparent_g,this%eparent_l)
+            call this%dv_b%init(nterms,nvars,ntime,this%dparent_g,this%dparent_l,this%eparent_g,this%eparent_l)
     
 
             ! Initialize blockvector data for operators
@@ -117,10 +118,11 @@ contains
         @assertEqual(self%dparent_l, self%dv_res%dparent_l())
         @assertEqual(self%eparent_g, self%dv_res%eparent_g())
         @assertEqual(self%eparent_l, self%dv_res%eparent_l())
-        ! nterms
+
         @assertEqual(8, self%dv_res%nterms())
-        ! nvars
         @assertEqual(1, self%dv_res%nvars())
+        @assertEqual(1, self%dv_res%ntime())
+        
 
 
 
@@ -174,10 +176,10 @@ contains
         @assertEqual(self%dparent_l, self%dv_res%dparent_l())
         @assertEqual(self%eparent_g, self%dv_res%eparent_g())
         @assertEqual(self%eparent_l, self%dv_res%eparent_l())
-        ! nterms
+
         @assertEqual(8, self%dv_res%nterms())
-        ! nvars
         @assertEqual(1, self%dv_res%nvars())
+        @assertEqual(1, self%dv_res%ntime())
 
 
     end subroutine test_densevector_operators_mult_bv_real
@@ -227,10 +229,10 @@ contains
         @assertEqual(self%dparent_l, self%dv_res%dparent_l())
         @assertEqual(self%eparent_g, self%dv_res%eparent_g())
         @assertEqual(self%eparent_l, self%dv_res%eparent_l())
-        ! nterms
+
         @assertEqual(8, self%dv_res%nterms())
-        ! nvars
         @assertEqual(1, self%dv_res%nvars())
+        @assertEqual(1, self%dv_res%ntime())
 
 
     end subroutine test_densevector_operators_div_real_bv
@@ -282,10 +284,10 @@ contains
         @assertEqual(self%dparent_l, self%dv_res%dparent_l())
         @assertEqual(self%eparent_g, self%dv_res%eparent_g())
         @assertEqual(self%eparent_l, self%dv_res%eparent_l())
-        ! nterms
+
         @assertEqual(8, self%dv_res%nterms())
-        ! nvars
         @assertEqual(1, self%dv_res%nvars())
+        @assertEqual(1, self%dv_res%ntime())
 
 
     end subroutine test_densevector_operators_div_bv_real
@@ -334,10 +336,10 @@ contains
         @assertEqual(self%dparent_l, self%dv_res%dparent_l())
         @assertEqual(self%eparent_g, self%dv_res%eparent_g())
         @assertEqual(self%eparent_l, self%dv_res%eparent_l())
-        ! nterms
+
         @assertEqual(8, self%dv_res%nterms())
-        ! nvars
         @assertEqual(1, self%dv_res%nvars())
+        @assertEqual(1, self%dv_res%ntime())
 
 
     end subroutine test_densevector_operators_add_bv_bv
@@ -390,10 +392,10 @@ contains
         @assertEqual(self%dparent_l, self%dv_res%dparent_l())
         @assertEqual(self%eparent_g, self%dv_res%eparent_g())
         @assertEqual(self%eparent_l, self%dv_res%eparent_l())
-        ! nterms
+
         @assertEqual(8, self%dv_res%nterms())
-        ! nvars
         @assertEqual(1, self%dv_res%nvars())
+        @assertEqual(1, self%dv_res%ntime())
 
 
 

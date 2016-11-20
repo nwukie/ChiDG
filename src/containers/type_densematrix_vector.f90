@@ -601,17 +601,17 @@ contains
 
 
 
-    !>  Find element in densematrix_vector based idonor_domain_g ad i_element_g
+    !>  Find element in densematrix_vector based idomain_g and ielement_g
     !!
     !!  @Matteo Ugolotti
     !!  @date   11/14/2016
     !!
     !!
     !----------------------------------------------------------------------------------------
-    function find(self,donor_domain,donor_element) result (res)
+    function find(self,idomain_g,ielement_g) result (res)
         class(densematrix_vector_t),    intent(in)  :: self
-        integer(ik),                    intent(in)  :: donor_domain
-        integer(ik),                    intent(in)  :: donor_element
+        integer(ik),                    intent(in)  :: idomain_g
+        integer(ik),                    intent(in)  :: ielement_g
         
         integer(ik) :: ival
         logical     :: matrix_match = .false.
@@ -622,8 +622,8 @@ contains
 
         do ival = 1 , self%size()
 
-            matrix_match = ( (donor_domain == self%dparent_g(ival)) .and. &
-                            (donor_element == self%eparent_g(ival)) )
+            matrix_match = ( (idomain_g == self%dparent_g(ival)) .and. &
+                            (ielement_g == self%eparent_g(ival)) )
 
             if ( matrix_match ) then
                 res = ival

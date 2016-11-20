@@ -37,6 +37,8 @@ module type_seed
 
     contains
 
+        procedure   :: init
+
         procedure   :: clear
 
     end type seed_t
@@ -48,6 +50,32 @@ module type_seed
 
 
 contains
+
+
+
+    !>  Initialize seed_t container.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   11/20/2016
+    !!
+    !!
+    !---------------------------------------------------------------------------------------------
+    subroutine init(self,idomain_g,idomain_l,ielement_g,ielement_l,iproc)
+        class(seed_t),  intent(inout)   :: self
+        integer(ik),    intent(in)      :: idomain_g
+        integer(ik),    intent(in)      :: idomain_l
+        integer(ik),    intent(in)      :: ielement_g
+        integer(ik),    intent(in)      :: ielement_l
+        integer(ik),    intent(in)      :: iproc
+
+        self%idomain_g  = idomain_g
+        self%idomain_l  = idomain_l
+        self%ielement_g = ielement_g
+        self%ielement_l = ielement_l
+        self%iproc      = iproc
+
+    end subroutine init
+    !*********************************************************************************************
 
 
 

@@ -13,21 +13,22 @@ subroutine test_densevector_INIT()
     
     implicit none
     type(densevector_t) :: vec
-    integer(ik)         :: nterms, neqns, vsize, nentries
+    integer(ik)         :: nterms, neqns, vsize, nentries, ntime
     integer(ik)         :: dparent_g, dparent_l, eparent_g, eparent_l
     
     
     ! Test initialization procedure
     nterms = 8
     neqns  = 4
-    vsize   = nterms * neqns
+    ntime  = 1
+    vsize   = nterms * neqns * ntime
     nentries = vsize
     dparent_g = 2
     dparent_l = 1
     eparent_g = 55
     eparent_l = 15
     
-    call vec%init(nterms,neqns,dparent_g,dparent_l,eparent_g,eparent_l)
+    call vec%init(nterms,neqns,ntime,dparent_g,dparent_l,eparent_g,eparent_l)
     
     @assertEqual(vsize,vec%nentries())
     @assertEqual(dparent_g,vec%dparent_g())
@@ -39,14 +40,14 @@ subroutine test_densevector_INIT()
     ! Test reinitialization procedure
     nterms = 12
     neqns  = 3
-    vsize   = nterms * neqns
+    vsize   = nterms * neqns * ntime
     nentries = vsize
     dparent_g = 3
     dparent_l = 2
     eparent_g = 22
     eparent_l = 12
     
-    call vec%init(nterms,neqns,dparent_g,dparent_l,eparent_g,eparent_l)
+    call vec%init(nterms,neqns,ntime,dparent_g,dparent_l,eparent_g,eparent_l)
     
     @assertEqual(nentries,vec%nentries())
     @assertEqual(dparent_g,vec%dparent_g())

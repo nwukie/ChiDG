@@ -13,16 +13,18 @@ module test_element_linearC_mod
     public  :: test_element_linearC
 
 
-    @TestCase
     !>
-    !!
+    !!  @author Nathan A. Wukie
     !!
     !!
     !-------------------------------------------------------------------------
+    @TestCase
     type, extends(TestCase) ::  test_element_linearC
-        type(chidg_t)   :: chidg
-        type(element_t) :: elem
+
+        type(chidg_t)               :: chidg
+        type(element_t)             :: elem
         type(face_t), allocatable   :: faces(:)
+
     contains
         procedure   ::  setUp
         procedure   ::  tearDown
@@ -45,8 +47,11 @@ contains
         type(point_t)                   :: nodes(npt)
         type(element_connectivity_t)    :: connectivity
         real(rk)                        :: sqrt_two, inv_sqrt_two
-        integer(ik)                     :: ftype, ineighbor, mapping, ielem, idomain, spacedim
-        integer(ik)                     :: ineighbor_domain_g, ineighbor_domain_l, ineighbor_element_g, ineighbor_element_l, ineighbor_face, ineighbor_proc
+        integer(ik)                     :: ftype, ineighbor, mapping, ielem, idomain, spacedim, &
+                                           neqns, nterms_s, ntime
+        integer(ik)                     :: ineighbor_domain_g, ineighbor_domain_l,   &
+                                           ineighbor_element_g, ineighbor_element_l, &
+                                           ineighbor_face, ineighbor_proc
         
         
         call this%chidg%start_up('core')
@@ -85,10 +90,13 @@ contains
         
         ! Initialize Element geometry and Numerics
         spacedim = 3
-        idomain = 1
-        ielem   = 1
+        idomain  = 1
+        ielem    = 1
+        neqns    = 2
+        nterms_s = 8
+        ntime    = 1
         call this%elem%init_geom(spacedim,nodes,connectivity,idomain,ielem)
-        call this%elem%init_sol(2,8)    ! 2 equations, 8 terms (3*3*3)
+        call this%elem%init_sol(neqns,nterms_s,ntime)
         
 
 
@@ -108,12 +116,24 @@ contains
         ineighbor_element_g = 0
         ineighbor_element_l = 0
         ineighbor_proc      = 0
-        call this%faces(XI_MIN)%init_neighbor(  ftype,ineighbor_domain_g,ineighbor_domain_l,ineighbor_element_g,ineighbor_element_l,ineighbor_face,ineighbor_proc)
-        call this%faces(XI_MAX)%init_neighbor(  ftype,ineighbor_domain_g,ineighbor_domain_l,ineighbor_element_g,ineighbor_element_l,ineighbor_face,ineighbor_proc)
-        call this%faces(ETA_MIN)%init_neighbor( ftype,ineighbor_domain_g,ineighbor_domain_l,ineighbor_element_g,ineighbor_element_l,ineighbor_face,ineighbor_proc)
-        call this%faces(ETA_MAX)%init_neighbor( ftype,ineighbor_domain_g,ineighbor_domain_l,ineighbor_element_g,ineighbor_element_l,ineighbor_face,ineighbor_proc)
-        call this%faces(ZETA_MIN)%init_neighbor(ftype,ineighbor_domain_g,ineighbor_domain_l,ineighbor_element_g,ineighbor_element_l,ineighbor_face,ineighbor_proc)
-        call this%faces(ZETA_MAX)%init_neighbor(ftype,ineighbor_domain_g,ineighbor_domain_l,ineighbor_element_g,ineighbor_element_l,ineighbor_face,ineighbor_proc)
+        call this%faces(XI_MIN)%init_neighbor(  ftype,ineighbor_domain_g,ineighbor_domain_l, &
+                                                      ineighbor_element_g,ineighbor_element_l, &
+                                                      ineighbor_face,ineighbor_proc)
+        call this%faces(XI_MAX)%init_neighbor(  ftype,ineighbor_domain_g,ineighbor_domain_l, &
+                                                      ineighbor_element_g,ineighbor_element_l, &
+                                                      ineighbor_face,ineighbor_proc)
+        call this%faces(ETA_MIN)%init_neighbor( ftype,ineighbor_domain_g,ineighbor_domain_l, &
+                                                      ineighbor_element_g,ineighbor_element_l, &
+                                                      ineighbor_face,ineighbor_proc)
+        call this%faces(ETA_MAX)%init_neighbor( ftype,ineighbor_domain_g,ineighbor_domain_l, &
+                                                      ineighbor_element_g,ineighbor_element_l, &
+                                                      ineighbor_face,ineighbor_proc)
+        call this%faces(ZETA_MIN)%init_neighbor(ftype,ineighbor_domain_g,ineighbor_domain_l, &
+                                                      ineighbor_element_g,ineighbor_element_l, &
+                                                      ineighbor_face,ineighbor_proc)
+        call this%faces(ZETA_MAX)%init_neighbor(ftype,ineighbor_domain_g,ineighbor_domain_l, &
+                                                      ineighbor_element_g,ineighbor_element_l, &
+                                                      ineighbor_face,ineighbor_proc)
         
         call this%faces(XI_MIN)%init_sol(this%elem)
         call this%faces(XI_MAX)%init_sol(this%elem)

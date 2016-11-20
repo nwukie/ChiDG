@@ -163,7 +163,7 @@ contains
     subroutine test__interpolate_face_chimera_AD__values__idE(self)
         class(test_interpolate_chimera),    intent(inout)   :: self
         
-        integer(ik)                 :: ielem, iface, ivar, ngq, idomain
+        integer(ik)                 :: ielem, iface, ivar, ngq, idomain, itime
         type(seed_t)                :: seed
         type(AD_D), allocatable     :: u_gq(:)
         real(rk),   allocatable     :: u_ref(:)
@@ -177,6 +177,7 @@ contains
         associate ( elems => self%chidg%data%mesh(1)%elems, faces => self%chidg%data%mesh(1)%faces, q => self%chidg%data%sdata%q)        
             idomain = 1         ! domain index
             ielem   = 2         ! given element
+            itime   = 1
             iface   = XI_MAX    ! given face
 
 
@@ -215,8 +216,8 @@ contains
             !
             ! PROCEDURE BEING TESTED
             !
+            u_gq = interpolate_face_autodiff(self%chidg%data%mesh,q,face,fcn,ivar,itime,'value', NEIGHBOR)
             !call interpolate_face_autodiff(self%chidg%data%mesh,face,fcn,q,ivar,u_gq, 'value', NEIGHBOR)
-            u_gq = interpolate_face_autodiff(self%chidg%data%mesh,q,face,fcn,ivar,'value', NEIGHBOR)
             
             
             ! Initialize reference
@@ -249,7 +250,7 @@ contains
     subroutine test__interpolate_face_chimera_AD__derivatives__idF(self)
         class(test_interpolate_chimera),    intent(inout)   :: self
         
-        integer(ik)                 :: ielem, iface, ivar, ngq, igq, nderiv, idomain
+        integer(ik)                 :: ielem, iface, ivar, ngq, igq, nderiv, idomain, itime
         type(seed_t)                :: seed
         type(AD_D), allocatable     :: u_gq(:)
         real(rk),   allocatable     :: deriv_ref(:)
@@ -262,6 +263,7 @@ contains
             idomain = 1         ! domain index
             ielem   = 2         ! given element
             iface   = XI_MAX    ! given face
+            itime   = 1
 
 
             !
@@ -301,7 +303,7 @@ contains
             !
             ! PROCEDURE BEING TESTED
             !
-            u_gq = interpolate_face_autodiff(self%chidg%data%mesh,q,face,fcn,ivar,'value', NEIGHBOR)
+            u_gq = interpolate_face_autodiff(self%chidg%data%mesh,q,face,fcn,ivar,itime,'value', NEIGHBOR)
             
             deriv_ref = ZERO
             
@@ -342,7 +344,7 @@ contains
     subroutine test__interpolate_face_chimera_AD__values__idG(self)
         class(test_interpolate_chimera),    intent(inout)   :: self
         
-        integer(ik)                 :: ielem, iface, ivar, ngq, idomain
+        integer(ik)                 :: ielem, iface, ivar, ngq, idomain, itime
         type(seed_t)                :: seed
         type(AD_D), allocatable     :: u_gq(:)
         real(rk),   allocatable     :: u_ref(:)
@@ -355,6 +357,7 @@ contains
             idomain = 1         ! domain index
             ielem   = 2         ! given element
             iface   = XI_MAX    ! given face
+            itime   = 1
 
             !
             ! A seed element, neighbor to ielem/iface. Performing NEIGHBOR interpolation so all dervative arrays should be nonzero
@@ -394,7 +397,7 @@ contains
             !
             ! PROCEDURE BEING TESTED
             !
-            u_gq = interpolate_face_autodiff(self%chidg%data%mesh,q,face,fcn,ivar,'value', NEIGHBOR)
+            u_gq = interpolate_face_autodiff(self%chidg%data%mesh,q,face,fcn,ivar,itime,'value', NEIGHBOR)
             
             
             !
@@ -427,7 +430,7 @@ contains
     subroutine test__interpolate_face_chimera_AD__derivatives__idH(self)
         class(test_interpolate_chimera),    intent(inout)   :: self
         
-        integer(ik)                 :: ielem, iface, ivar, igq, ngq, nderiv, idomain
+        integer(ik)                 :: ielem, iface, ivar, igq, ngq, nderiv, idomain, itime
         type(seed_t)                :: seed
         type(AD_D), allocatable     :: u_gq(:)
         real(rk),   allocatable     :: deriv_ref(:)
@@ -443,6 +446,7 @@ contains
             idomain = 1         ! domain index
             ielem   = 2         ! given element
             iface   = XI_MAX    ! given face
+            itime   = 1
             idonor  = 1
 
             ChiID = self%chidg%data%mesh(idomain)%faces(ielem,iface)%ChiID
@@ -483,7 +487,7 @@ contains
             !
             ! PROCEDURE BEING TESTED
             !
-            u_gq = interpolate_face_autodiff(self%chidg%data%mesh,q,face,fcn,ivar,'value', NEIGHBOR)
+            u_gq = interpolate_face_autodiff(self%chidg%data%mesh,q,face,fcn,ivar,itime,'value', NEIGHBOR)
               
             
             

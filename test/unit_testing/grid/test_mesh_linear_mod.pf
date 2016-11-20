@@ -53,7 +53,7 @@ contains
         type(domain_connectivity_t) :: connectivity
         integer(ik)                 :: ftype, ineighbor, mapping, ielem, &
                                        ipt_xi, ipt_eta, ipt_zeta, ipt
-        integer(ik)                 :: neqns, nterms_s, nterms_c, idomain, spacedim
+        integer(ik)                 :: neqns, nterms_s, nterms_c, idomain, spacedim, ntime
         real(rk), dimension(npt)    :: x,y,z
 
         !
@@ -92,10 +92,11 @@ contains
         idomain  = 1
         spacedim = 3
         nterms_c = 8
-        neqns = 1
+        neqns    = 1
         nterms_s = 8
+        ntime    = 1
         call this%mesh%init_geom(idomain,spacedim,nterms_c,nodes,connectivity)
-        call this%mesh%init_sol(neqns,nterms_s)
+        call this%mesh%init_sol(neqns,nterms_s,ntime)
         call this%mesh%init_comm_local()
 
     end subroutine
@@ -123,18 +124,17 @@ contains
     @Test
     subroutine testMesh_integers(self)
         class(test_mesh_linear),    intent(inout)   :: self
-        integer(ik) :: neqns, nterms_s, nterms_c, nelem_xi, nelem_eta, nelem_zeta, nelem, idomain
+        integer(ik) :: neqns, nterms_s, nterms_c, nelem_xi, nelem_eta, nelem_zeta, nelem, idomain, ntime
         
         neqns       = 1
+        ntime       = 1
         idomain     = 1
         nterms_s    = 8
         nterms_c    = 8
-        nelem_xi    = 3
-        nelem_eta   = 3
-        nelem_zeta  = 3
         nelem       = 27
 
         @assertEqual(neqns,self%mesh%neqns)
+        @assertEqual(ntime,self%mesh%ntime)
         @assertEqual(nterms_s,self%mesh%nterms_s)
         @assertEqual(nterms_c,self%mesh%nterms_c)
         @assertEqual(nelem,self%mesh%nelem)

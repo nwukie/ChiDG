@@ -34,7 +34,7 @@ subroutine test_integrate_boundary_unit_constant()
     type(bc_group_t)                    :: bc_groups(1)
 
     integer(ik)                         :: nterms_c, iblk, idom, ngq, ielem, iface, ifcn, spacedim, mapping
-    integer(ik)                         :: idonor, ivar, igq
+    integer(ik)                         :: idonor, ieqn, itime, igq
     type(AD_D),         allocatable     :: integrand(:)
     class(function_t),  allocatable     :: constant
     real(rk)                            :: integral, ref_integral
@@ -166,8 +166,9 @@ subroutine test_integrate_boundary_unit_constant()
     !
     ! Integrate boundary. THIS IS BEING TESTED
     !
-    ivar    = 1
-    call integrate_boundary_scalar_flux(chidg%data%mesh,sdata,face,flux,ivar,integrand)
+    ieqn  = 1
+    itime = 1
+    call integrate_boundary_scalar_flux(chidg%data%mesh,sdata,face,flux,ieqn,itime,integrand)
 
 
     integral = sdata%rhs%dom(1)%vecs(1)%vec(1)
@@ -235,7 +236,7 @@ subroutine test_integrate_boundary_nonunit_constant()
     type(chidg_t)                       :: chidg
     class(bc_state_t),   allocatable    :: bc
     type(bc_group_t)                    :: bc_groups(1)
-    integer(ik)                         :: nterms_c, igq, ngq, ivar, ifcn, spacedim, mapping
+    integer(ik)                         :: nterms_c, igq, ngq, ieqn, itime, ifcn, spacedim, mapping
     integer(ik)                         :: idomain, iblk, idonor
     type(AD_D),         allocatable     :: integrand(:)
     class(function_t),  allocatable     :: constant
@@ -295,8 +296,6 @@ subroutine test_integrate_boundary_nonunit_constant()
     !
     ! Initialize solver data 
     !
-    !call chidg%data%initialize_solution_domains()
-    !call chidg%data%initialize_solution_solver()
 
     call chidg%set('Solution Order', integer_input=1)
     call chidg%initialize_solution_domains()
@@ -343,10 +342,10 @@ subroutine test_integrate_boundary_nonunit_constant()
     face%ielement_g = 1
     face%ielement_l = 1
     face%iface      = XI_MIN
-!    face%seed       = seed
 
     idomain = 1
-    ivar    = 1
+    ieqn    = 1
+    itime   = 1
     iblk    = 7
     idonor  = 1
     ifcn    = 1
@@ -368,7 +367,7 @@ subroutine test_integrate_boundary_nonunit_constant()
     !
     ! Integrate boundary. THIS IS BEING TESTED
     !
-    call integrate_boundary_scalar_flux(chidg%data%mesh,sdata,face,flux,ivar,integrand)
+    call integrate_boundary_scalar_flux(chidg%data%mesh,sdata,face,flux,ieqn,itime,integrand)
 
 
     integral = sdata%rhs%dom(1)%vecs(1)%vec(1)
@@ -389,7 +388,7 @@ subroutine test_integrate_boundary_nonunit_constant()
     ! Integrate boundary. THIS IS BEING TESTED
     !
     integrand = ONE*faces(1,XI_MAX)%norm(:,1)
-    call integrate_boundary_scalar_flux(chidg%data%mesh,sdata,face,flux,ivar,integrand)
+    call integrate_boundary_scalar_flux(chidg%data%mesh,sdata,face,flux,ieqn,itime,integrand)
 
 
     integral = sdata%rhs%dom(1)%vecs(1)%vec(1)
@@ -412,7 +411,7 @@ subroutine test_integrate_boundary_nonunit_constant()
     ! Integrate boundary. THIS IS BEING TESTED
     !
     integrand = ONE*faces(1,ETA_MIN)%norm(:,2)
-    call integrate_boundary_scalar_flux(chidg%data%mesh,sdata,face,flux,ivar,integrand)
+    call integrate_boundary_scalar_flux(chidg%data%mesh,sdata,face,flux,ieqn,itime,integrand)
 
 
     integral = sdata%rhs%dom(1)%vecs(1)%vec(1)
@@ -437,7 +436,7 @@ subroutine test_integrate_boundary_nonunit_constant()
     ! Integrate boundary. THIS IS BEING TESTED
     !
     integrand = ONE*faces(1,ETA_MAX)%norm(:,2)
-    call integrate_boundary_scalar_flux(chidg%data%mesh,sdata,face,flux,ivar,integrand)
+    call integrate_boundary_scalar_flux(chidg%data%mesh,sdata,face,flux,ieqn,itime,integrand)
 
 
     integral = sdata%rhs%dom(1)%vecs(1)%vec(1)
@@ -461,7 +460,7 @@ subroutine test_integrate_boundary_nonunit_constant()
     ! Integrate boundary. THIS IS BEING TESTED
     !
     integrand = ONE*faces(1,ZETA_MIN)%norm(:,3)
-    call integrate_boundary_scalar_flux(chidg%data%mesh,sdata,face,flux,ivar,integrand)
+    call integrate_boundary_scalar_flux(chidg%data%mesh,sdata,face,flux,ieqn,itime,integrand)
 
 
     integral = sdata%rhs%dom(1)%vecs(1)%vec(1)
@@ -485,7 +484,7 @@ subroutine test_integrate_boundary_nonunit_constant()
     ! Integrate boundary. THIS IS BEING TESTED
     !
     integrand = ONE*faces(1,ZETA_MAX)%norm(:,3)
-    call integrate_boundary_scalar_flux(chidg%data%mesh,sdata,face,flux,ivar,integrand)
+    call integrate_boundary_scalar_flux(chidg%data%mesh,sdata,face,flux,ieqn,itime,integrand)
 
 
     integral = sdata%rhs%dom(1)%vecs(1)%vec(1)

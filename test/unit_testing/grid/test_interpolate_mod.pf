@@ -65,7 +65,7 @@ contains
     !---------------------------------------------------------------------------------------------
     subroutine setUp(this)
         class(test_interpolate),    intent(inout)   :: this
-        integer(ik)                                 :: nterms_c, ivar, spacedim
+        integer(ik)                                 :: nterms_c, ieqn, spacedim
 
         type(point_t),  allocatable                 :: nodes(:)
         type(domain_connectivity_t)                 :: connectivity
@@ -108,7 +108,7 @@ contains
         !
         ! Initialized solution to constant values
         !
-        ivar = this%chidg%data%eqnset(1)%prop%get_primary_field_index('u')   ! Get variable index
+        ieqn = this%chidg%data%eqnset(1)%prop%get_primary_field_index('u')   ! Get variable index
 
 
         !
@@ -116,7 +116,7 @@ contains
         !
         call create_function(this%fcn,'constant')                       ! Allocate constant function
         call this%fcn%set_option('val',5._rk)                           ! Set constant function value
-        call this%chidg%data%sdata%q%project(this%chidg%data%mesh,this%fcn,ivar)
+        call this%chidg%data%sdata%q%project(this%chidg%data%mesh,this%fcn,ieqn)
 
     
     end subroutine
@@ -148,7 +148,7 @@ contains
     subroutine test_interpolate_element_standard(self)
         class(test_interpolate),    intent(inout)   :: self
         
-        integer(ik)                 :: ielem, ivar, ngq, idomain
+        integer(ik)                 :: ielem, ieqn, ngq, idomain, itime
         real(rk), allocatable       :: u_gq(:), u_ref(:)
         real(rk)                    :: tol, val
         
@@ -156,7 +156,8 @@ contains
         tol     = 1.e-13_rk
         idomain = 1
         ielem   = 14
-        ivar    = 1
+        ieqn    = 1
+        itime   = 1
 
 
         ngq = self%chidg%data%mesh(1)%elems(ielem)%gq%nnodes_v
@@ -169,7 +170,7 @@ contains
         !
         ! PROCEDURE BEING TESTED
         !
-        u_gq = interpolate_element_standard(self%chidg%data%mesh, self%chidg%data%sdata%q, idomain, ielem, ivar, 'value')
+        u_gq = interpolate_element_standard(self%chidg%data%mesh, self%chidg%data%sdata%q, idomain, ielem, ieqn, itime,'value')
 
 
 
@@ -203,7 +204,7 @@ contains
     subroutine test_interpolate_face_standard(self)
         class(test_interpolate),    intent(inout)   :: self
         
-        integer(ik)                 :: ielem, iface, ivar, ngq, idomain
+        integer(ik)                 :: ielem, iface, ieqn, ngq, idomain, itime
         real(rk), allocatable       :: u_gq(:), u_ref(:)
         real(rk)                    :: tol, val
         
@@ -213,7 +214,8 @@ contains
         idomain = 1
         ielem   = 14
         iface   = 1
-        ivar    = 1
+        ieqn    = 1
+        itime   = 1
 
         ngq = self%chidg%data%mesh(1)%faces(ielem,iface)%gq%nnodes_f
 
@@ -224,7 +226,7 @@ contains
         !
         ! PROCEDURE BEING TESTED
         !
-        u_gq = interpolate_face_standard(self%chidg%data%mesh,self%chidg%data%sdata%q,idomain,ielem,iface,ivar)
+        u_gq = interpolate_face_standard(self%chidg%data%mesh,self%chidg%data%sdata%q,idomain,ielem,iface,ieqn, itime)
         
         
         ! Initialize reference
@@ -260,7 +262,7 @@ contains
     subroutine test__interpolate_element_autodiff__values__neighbor(self)
         class(test_interpolate),    intent(inout)   :: self
         
-        integer(ik)                 :: ielem, ielem_s, ivar, ngq, idomain
+        integer(ik)                 :: ielem, ielem_s, ieqn, ngq, idomain, itime
         type(AD_D), allocatable     :: u_gq(:)
         real(rk),   allocatable     :: u_ref(:)
         real(rk)                    :: tol, val
@@ -273,6 +275,7 @@ contains
 
             idomain = 1
             ielem   = 14    ! given element
+            itime   = 1
 
             !
             ! A seed element, so all derivative arrays should be seeded to zero
@@ -284,7 +287,7 @@ contains
             seed%iproc      = IRANK
 
             tol   = 1.e-13_rk
-            ivar  = self%chidg%data%eqnset(1)%prop%get_primary_field_index('u')
+            ieqn  = self%chidg%data%eqnset(1)%prop%get_primary_field_index('u')
             ngq   = elems(ielem)%gq%nnodes_v
 
             ! Allocate number of AD variables for data at GQ nodes. Derivative arrays are not yet allocated
@@ -305,7 +308,7 @@ contains
             !
             ! PROCEDURE BEING TESTED
             !
-            u_gq = interpolate_element_autodiff(self%chidg%data%mesh,q,elem_info,function_info,ivar, 'value')
+            u_gq = interpolate_element_autodiff(self%chidg%data%mesh,q,elem_info,function_info,ieqn, itime, 'value')
             
             
             ! Initialize reference
@@ -337,7 +340,7 @@ contains
     subroutine test__interpolate_element_autodiff__derivs__neighbor(self)
         class(test_interpolate),    intent(inout)   :: self
         
-        integer(ik)                 :: ielem, ivar, ngq, igq, nderiv, idomain
+        integer(ik)                 :: ielem, ieqn, ngq, igq, nderiv, idomain, itime
         type(seed_t)                :: seed
         type(AD_D), allocatable     :: u_gq(:)
         real(rk),   allocatable     :: deriv_ref(:)
@@ -350,6 +353,7 @@ contains
 
             idomain = 1     ! domain index
             ielem   = 14    ! given element index
+            itime   = 1
 
             !
             ! A seed element, so all derivative arrays should be seeded to zero
@@ -362,7 +366,7 @@ contains
 
 
             tol   = 1.e-13_rk
-            ivar  = self%chidg%data%eqnset(1)%prop%get_primary_field_index('u')
+            ieqn  = self%chidg%data%eqnset(1)%prop%get_primary_field_index('u')
 
             ngq    = elems(ielem)%gq%nnodes_v
             nderiv = elems(ielem)%neqns  *  elems(ielem)%nterms_s
@@ -385,7 +389,7 @@ contains
             !
             ! PROCEDURE BEING TESTED
             !
-            u_gq = interpolate_element_autodiff(self%chidg%data%mesh,q,elem_info,function_info,ivar, 'value')
+            u_gq = interpolate_element_autodiff(self%chidg%data%mesh,q,elem_info,function_info,ieqn, itime, 'value')
             
             
             ! Initialize reference
@@ -420,7 +424,7 @@ contains
     subroutine test__interpolate_element_autodiff__values__current(self)
         class(test_interpolate),    intent(inout)   :: self
         
-        integer(ik)                 :: ielem, ivar, ngq, idomain
+        integer(ik)                 :: ielem, ieqn, ngq, idomain, itime
         type(seed_t)                :: seed
         type(AD_D), allocatable     :: u_gq(:)
         real(rk),   allocatable     :: u_ref(:)
@@ -432,6 +436,7 @@ contains
         associate ( elems => self%chidg%data%mesh(1)%elems, q => self%chidg%data%sdata%q, rhs => self%chidg%data%sdata%rhs )
             idomain = 1     ! domain index
             ielem   = 14    ! given element
+            itime   = 1
 
 
             !
@@ -445,7 +450,7 @@ contains
 
 
             tol   = 1.e-13_rk
-            ivar  = self%chidg%data%eqnset(1)%prop%get_primary_field_index('u')
+            ieqn  = self%chidg%data%eqnset(1)%prop%get_primary_field_index('u')
             
             ngq = elems(ielem)%gq%nnodes_v  !> Number of quadrature nodes
             
@@ -467,7 +472,7 @@ contains
             !
             ! PROCEDURE BEING TESTED
             !
-            u_gq = interpolate_element_autodiff(self%chidg%data%mesh,q,elem_info,function_info,ivar, 'value')
+            u_gq = interpolate_element_autodiff(self%chidg%data%mesh,q,elem_info,function_info,ieqn, itime, 'value')
             
             
             ! Initialize reference
@@ -499,7 +504,7 @@ contains
     subroutine test__interpolate_element_autodiff__derivs__current(self)
         class(test_interpolate),    intent(inout)   :: self
         
-        integer(ik)                 :: ielem, ivar, ngq, igq, nderiv, idomain
+        integer(ik)                 :: ielem, ieqn, ngq, igq, nderiv, idomain, itime
         type(seed_t)                :: seed
         type(AD_D), allocatable     :: u_gq(:)
         real(rk),   allocatable     :: deriv_ref(:)
@@ -511,6 +516,7 @@ contains
         associate ( elems => self%chidg%data%mesh(1)%elems, q => self%chidg%data%sdata%q, rhs => self%chidg%data%sdata%rhs )
             idomain = 1     ! domain index
             ielem   = 14    ! given element
+            itime   = 1
 
 
             !
@@ -524,7 +530,7 @@ contains
 
 
             tol   = 1.e-13_rk
-            ivar  = self%chidg%data%eqnset(1)%prop%get_primary_field_index('u')
+            ieqn  = self%chidg%data%eqnset(1)%prop%get_primary_field_index('u')
 
             ngq = elems(ielem)%gq%nnodes_v      !> Number of quadrature nodes
             nderiv = elems(ielem)%neqns  *  elems(ielem)%nterms_s
@@ -548,7 +554,7 @@ contains
             !
             ! PROCEDURE BEING TESTED
             !
-            u_gq = interpolate_element_autodiff(self%chidg%data%mesh,q,elem_info,function_info,ivar, 'value')
+            u_gq = interpolate_element_autodiff(self%chidg%data%mesh,q,elem_info,function_info,ieqn, itime, 'value')
             
             
             ! Initialize reference
@@ -595,7 +601,7 @@ contains
     subroutine test__interpolate_face_autodiff__values__idA(self)
         class(test_interpolate),    intent(inout)   :: self
         
-        integer(ik)                 :: ielem, iface, ivar, ngq, idomain
+        integer(ik)                 :: ielem, iface, ieqn, ngq, idomain, itime
         type(seed_t)                :: seed
         type(AD_D), allocatable     :: u_gq(:)
         real(rk),   allocatable     :: u_ref(:)
@@ -608,6 +614,7 @@ contains
             idomain = 1     ! domain index
             ielem   = 14    ! given element
             iface   = 1     ! given face
+            itime   = 1
 
             !
             ! A seed element, this is a neighbor for this test - so all derivative arrays should be seeded to zero
@@ -627,12 +634,11 @@ contains
             face%ielement_g = ielem
             face%ielement_l = ielem
             face%iface      = iface
-!            face%seed     = seed
             fcn%seed        = seed
 
 
             tol   = 1.e-13_rk
-            ivar  = self%chidg%data%eqnset(1)%prop%get_primary_field_index('u')
+            ieqn  = self%chidg%data%eqnset(1)%prop%get_primary_field_index('u')
 
             ngq = faces(ielem,iface)%gq%nnodes_f
 
@@ -644,7 +650,7 @@ contains
             !
             ! PROCEDURE BEING TESTED
             !
-            u_gq = interpolate_face_autodiff(self%chidg%data%mesh,q,face,fcn,ivar,'value',ME)
+            u_gq = interpolate_face_autodiff(self%chidg%data%mesh,q,face,fcn,ieqn, itime,'value',ME)
             
             
             ! Initialize reference
@@ -681,7 +687,7 @@ contains
     subroutine test__interpolate_face_autodiff__derivatives__idB(self)
         class(test_interpolate),    intent(inout)   :: self
         
-        integer(ik)                 :: ielem, iface, ivar, ngq, igq, nderiv, idomain
+        integer(ik)                 :: ielem, iface, ieqn, ngq, igq, nderiv, idomain, itime
         type(seed_t)                :: seed
         type(AD_D), allocatable     :: u_gq(:)
         real(rk),   allocatable     :: deriv_ref(:)
@@ -694,6 +700,7 @@ contains
             idomain = 1     ! domain index
             ielem   = 14    ! given element
             iface   = 1     ! given face
+            itime   = 1
 
 
             !
@@ -715,14 +722,13 @@ contains
             face%ielement_g = ielem
             face%ielement_l = ielem
             face%iface      = iface
-!            face%seed       = seed
             fcn%seed        = seed
 
 
 
 
             tol   = 1.e-13_rk
-            ivar  = self%chidg%data%eqnset(1)%prop%get_primary_field_index('u')
+            ieqn  = self%chidg%data%eqnset(1)%prop%get_primary_field_index('u')
 
             ngq = faces(ielem,iface)%gq%nnodes_f
             nderiv = faces(ielem,iface)%neqns  *  faces(ielem,iface)%nterms_s
@@ -735,7 +741,7 @@ contains
             !
             ! PROCEDURE BEING TESTED
             !
-            u_gq = interpolate_face_autodiff(self%chidg%data%mesh,q,face,fcn,ivar,'value',ME)
+            u_gq = interpolate_face_autodiff(self%chidg%data%mesh,q,face,fcn,ieqn, itime,'value',ME)
             
             deriv_ref = ZERO
             
@@ -768,7 +774,7 @@ contains
     subroutine test__interpolate_face_autodiff__values__idC(self)
         class(test_interpolate),    intent(inout)   :: self
         
-        integer(ik)                 :: ielem, iface, ivar, ngq, idomain
+        integer(ik)                 :: ielem, iface, ieqn, ngq, idomain, itime
         type(seed_t)                :: seed
         type(AD_D), allocatable     :: u_gq(:)
         real(rk),   allocatable     :: u_ref(:)
@@ -781,6 +787,7 @@ contains
             idomain = 1     ! domain index
             ielem   = 14    ! given element
             iface   = 1     ! given face
+            itime   = 1
 
             !
             ! A seed element, same as ielem - so all derivative arrays should include non-zeros
@@ -800,7 +807,6 @@ contains
             face%ielement_g = ielem
             face%ielement_l = ielem
             face%iface      = iface
-!            face%seed       = seed
             fcn%seed        = seed
 
 
@@ -808,7 +814,7 @@ contains
 
 
             tol   = 1.e-13_rk
-            ivar  = self%chidg%data%eqnset(1)%prop%get_primary_field_index('u')
+            ieqn  = self%chidg%data%eqnset(1)%prop%get_primary_field_index('u')
 
             ngq = faces(ielem,iface)%gq%nnodes_f
             
@@ -820,7 +826,7 @@ contains
             !
             ! PROCEDURE BEING TESTED
             !
-            u_gq = interpolate_face_autodiff(self%chidg%data%mesh,q,face,fcn,ivar,'value',ME)
+            u_gq = interpolate_face_autodiff(self%chidg%data%mesh,q,face,fcn,ieqn, itime,'value',ME)
             
             
             !
@@ -858,7 +864,7 @@ contains
     subroutine test__interpolate_face_autodiff__derivatives__idD(self)
         class(test_interpolate),    intent(inout)   :: self
         
-        integer(ik)                 :: ielem, iface, ivar, igq, ngq, nderiv, idomain
+        integer(ik)                 :: ielem, iface, ieqn, igq, ngq, nderiv, idomain, itime
         type(seed_t)                :: seed
         type(AD_D), allocatable     :: u_gq(:)
         real(rk),   allocatable     :: deriv_ref(:)
@@ -871,6 +877,7 @@ contains
             idomain = 1     ! domain index
             ielem   = 14    ! given element
             iface   = 1     ! given face
+            itime   = 1
 
             !
             ! A seed element, same as ielem - so all derivative arrays should include non-zeros
@@ -890,14 +897,13 @@ contains
             face%ielement_g = ielem
             face%ielement_l = ielem
             face%iface      = iface
-!            face%seed       = seed
             fcn%seed        = seed
 
 
 
             
             tol   = 1.e-13_rk
-            ivar  = self%chidg%data%eqnset(1)%prop%get_primary_field_index('u')
+            ieqn  = self%chidg%data%eqnset(1)%prop%get_primary_field_index('u')
 
             ngq    = faces(ielem,iface)%gq%nnodes_f
             nderiv = faces(ielem,iface)%neqns  *  faces(ielem,iface)%nterms_s
@@ -910,7 +916,7 @@ contains
             !
             ! PROCEDURE BEING TESTED
             !
-            u_gq = interpolate_face_autodiff(self%chidg%data%mesh,q,face,fcn,ivar,'value',ME)
+            u_gq = interpolate_face_autodiff(self%chidg%data%mesh,q,face,fcn,ieqn, itime,'value',ME)
               
             
             
@@ -949,7 +955,7 @@ contains
     subroutine test__interpolate_face_autodiff__values__idE(self)
         class(test_interpolate),    intent(inout)   :: self
         
-        integer(ik)                 :: ielem, iface, ivar, ngq, idomain
+        integer(ik)                 :: ielem, iface, ieqn, ngq, idomain, itime
         type(seed_t)                :: seed
         type(AD_D), allocatable     :: u_gq(:)
         real(rk),   allocatable     :: u_ref(:)
@@ -962,6 +968,7 @@ contains
             idomain = 1     ! domain index
             ielem   = 14    ! given element
             iface   = 1     ! given face
+            itime   = 1
 
             !
             ! A seed element, this is a neighbor for this test - so all derivative arrays should be seeded to zero
@@ -981,7 +988,6 @@ contains
             face%ielement_g = ielem
             face%ielement_l = ielem
             face%iface      = iface
-!            face%seed       = seed
             fcn%seed        = seed
 
 
@@ -989,7 +995,7 @@ contains
 
 
             tol   = 1.e-13_rk
-            ivar  = self%chidg%data%eqnset(1)%prop%get_primary_field_index('u')
+            ieqn  = self%chidg%data%eqnset(1)%prop%get_primary_field_index('u')
 
             ngq = faces(ielem,iface)%gq%nnodes_f
 
@@ -1001,7 +1007,7 @@ contains
             !
             ! PROCEDURE BEING TESTED
             !
-            u_gq = interpolate_face_autodiff(self%chidg%data%mesh,q,face,fcn,ivar,'value',NEIGHBOR)
+            u_gq = interpolate_face_autodiff(self%chidg%data%mesh,q,face,fcn,ieqn, itime,'value',NEIGHBOR)
             
             
             ! Initialize reference
@@ -1036,7 +1042,7 @@ contains
     subroutine test__interpolate_face_autodiff__derivatives__idF(self)
         class(test_interpolate),    intent(inout)   :: self
         
-        integer(ik)                 :: ielem, iface, ivar, ngq, igq, nderiv, idomain
+        integer(ik)                 :: ielem, iface, ieqn, ngq, igq, nderiv, idomain, itime
         type(seed_t)                :: seed
         type(AD_D), allocatable     :: u_gq(:)
         real(rk),   allocatable     :: deriv_ref(:)
@@ -1049,6 +1055,7 @@ contains
             idomain = 1     ! domain index
             ielem   = 14    ! given element
             iface   = 1     ! given face
+            itime   = 1
 
 
             !
@@ -1068,7 +1075,6 @@ contains
             face%ielement_g = ielem
             face%ielement_l = ielem
             face%iface      = iface
-!            face%seed       = seed
             fcn%seed        = seed
 
 
@@ -1076,7 +1082,7 @@ contains
 
 
             tol   = 1.e-13_rk
-            ivar  = self%chidg%data%eqnset(1)%prop%get_primary_field_index('u')
+            ieqn  = self%chidg%data%eqnset(1)%prop%get_primary_field_index('u')
 
             ngq = faces(ielem,iface)%gq%nnodes_f
             nderiv = faces(ielem,iface)%neqns  *  faces(ielem,iface)%nterms_s
@@ -1089,7 +1095,7 @@ contains
             !
             ! PROCEDURE BEING TESTED
             !
-            u_gq = interpolate_face_autodiff(self%chidg%data%mesh,q,face,fcn,ivar,'value',NEIGHBOR)
+            u_gq = interpolate_face_autodiff(self%chidg%data%mesh,q,face,fcn,ieqn, itime,'value',NEIGHBOR)
             
             deriv_ref = ZERO
             
@@ -1131,7 +1137,7 @@ contains
     subroutine test__interpolate_face_autodiff__values__idG(self)
         class(test_interpolate),    intent(inout)   :: self
         
-        integer(ik)                 :: ielem, iface, ivar, ngq, idomain
+        integer(ik)                 :: ielem, iface, ieqn, ngq, idomain, itime
         type(seed_t)                :: seed
         type(AD_D), allocatable     :: u_gq(:)
         real(rk),   allocatable     :: u_ref(:)
@@ -1144,6 +1150,7 @@ contains
             idomain = 1     ! domain index
             ielem   = 14    ! given element
             iface   = 1     ! given face
+            itime   = 1
 
             !
             ! A seed element, same as ielem - so all derivative arrays should include non-zeros
@@ -1163,14 +1170,13 @@ contains
             face%ielement_g = ielem
             face%ielement_l = ielem
             face%iface      = iface
-!            face%seed       = seed
             fcn%seed        = seed
 
 
 
 
             tol   = 1.e-13_rk
-            ivar  = self%chidg%data%eqnset(1)%prop%get_primary_field_index('u')
+            ieqn  = self%chidg%data%eqnset(1)%prop%get_primary_field_index('u')
 
             ngq = faces(ielem,iface)%gq%nnodes_f
             
@@ -1182,7 +1188,7 @@ contains
             !
             ! PROCEDURE BEING TESTED
             !
-            u_gq = interpolate_face_autodiff(self%chidg%data%mesh,q,face,fcn,ivar,'value',NEIGHBOR)
+            u_gq = interpolate_face_autodiff(self%chidg%data%mesh,q,face,fcn,ieqn, itime,'value',NEIGHBOR)
             
             
             !
@@ -1217,7 +1223,7 @@ contains
     subroutine test__interpolate_face_autodiff__derivatives__idH(self)
         class(test_interpolate),    intent(inout)   :: self
         
-        integer(ik)                 :: ielem, iface, ivar, igq, ngq, nderiv, idomain
+        integer(ik)                 :: ielem, iface, ieqn, igq, ngq, nderiv, idomain, itime
         type(seed_t)                :: seed
         type(AD_D), allocatable     :: u_gq(:)
         real(rk),   allocatable     :: deriv_ref(:)
@@ -1232,6 +1238,7 @@ contains
             idomain = 1     ! domain index
             ielem   = 14    ! given element
             iface   = 1     ! given face
+            itime   = 1
             idonor  = 1
 
             !
@@ -1252,13 +1259,12 @@ contains
             face%ielement_g = ielem
             face%ielement_l = ielem
             face%iface      = iface
-!            face%seed       = seed
             fcn%seed        = seed
 
 
             
             tol   = 1.e-13_rk
-            ivar  = self%chidg%data%eqnset(1)%prop%get_primary_field_index('u')
+            ieqn  = self%chidg%data%eqnset(1)%prop%get_primary_field_index('u')
 
             ngq    = faces(ielem,iface)%gq%nnodes_f
             nderiv = faces(ielem,iface)%neqns  *  faces(ielem,iface)%nterms_s
@@ -1271,7 +1277,7 @@ contains
             !
             ! PROCEDURE BEING TESTED
             !
-            u_gq = interpolate_face_autodiff(self%chidg%data%mesh,q,face,fcn,ivar,'value',NEIGHBOR)
+            u_gq = interpolate_face_autodiff(self%chidg%data%mesh,q,face,fcn,ieqn,itime,'value',NEIGHBOR)
               
             
             

@@ -30,7 +30,7 @@ subroutine test_chidgMatrix_operator_chimera_mv()
     class(function_t),  allocatable :: constant, gaussian
     real(rk),           allocatable :: density_residual_D4_E31(:), density_residual_D4_E36(:)
     integer(ik)                     :: ChiID, iface, ndonors, gq_index, igq, ngq, neqns, spacedim, nterms_s
-    integer(ik)                     :: idom, ielem, idom_d, ielem_d, idonor, idom_p, ielem_p, iblk
+    integer(ik)                     :: idom, ielem, idom_d, ielem_d, idonor, idom_p, ielem_p, imat, itime
     real(rk)                        :: chi_xi, chi_eta, chi_zeta, ref_xi, ref_eta, ref_zeta
     type(point_t)                   :: chimera_node
     real(rk)                        :: tol
@@ -81,38 +81,39 @@ subroutine test_chidgMatrix_operator_chimera_mv()
     !
     idom = 4
     ielem = 19
+    itime = 1
     iface = XI_MIN
     ChiID   = chidg%data%mesh(idom)%faces(ielem,iface)%ChiID
 
 
 
     !
-    ! Set some chimera matrix values
+    ! Donor 1, Set some chimera matrix and vector values
     !
     idonor = 1
-    ! Set matrix values corresponding to first donor
-    chidg%data%sdata%lhs%dom(idom)%chi_blks(ielem,idonor)%mat = ONE
-
-    idom_d = chidg%data%mesh(idom)%chimera%recv%data(ChiID)%donor_domain_l%at(idonor)
+    idom_d  = chidg%data%mesh(idom)%chimera%recv%data(ChiID)%donor_domain_l%at(idonor)
     ielem_d = chidg%data%mesh(idom)%chimera%recv%data(ChiID)%donor_element_l%at(idonor)
-    
+
+    ! Set matrix values corresponding to first donor
+    imat = chidg%data%sdata%lhs%dom(idom)%chi_blks(ielem,itime)%find(idom_d,ielem_d)
+    chidg%data%sdata%lhs%dom(idom)%chi_blks(ielem,itime)%data_(imat)%mat = ONE
 
     ! Set vector values for first donor
     chidg%data%sdata%rhs%dom(idom_d)%vecs(ielem_d)%vec = THREE
 
 
 
+    
+    !
+    ! Donor 2, Set some chimera matrix and vector values
+    !
     idonor = 2
-    ! Set matrix values corresponding to first donor
-    chidg%data%sdata%lhs%dom(idom)%chi_blks(ielem,idonor)%mat = TWO
-
-
-
     idom_d = chidg%data%mesh(idom)%chimera%recv%data(ChiID)%donor_domain_l%at(idonor)
     ielem_d = chidg%data%mesh(idom)%chimera%recv%data(ChiID)%donor_element_l%at(idonor)
 
-
-
+    ! Set matrix values corresponding to first donor
+    imat = chidg%data%sdata%lhs%dom(idom)%chi_blks(ielem,itime)%find(idom_d,ielem_d)
+    chidg%data%sdata%lhs%dom(idom)%chi_blks(ielem,imat)%data_(imat)%mat = TWO
 
     ! Set vector values for first donor
     chidg%data%sdata%rhs%dom(idom_d)%vecs(ielem_d)%vec = FOUR
@@ -120,9 +121,10 @@ subroutine test_chidgMatrix_operator_chimera_mv()
 
 
 
+    !
+    ! Compute matrix-vector Product
+    !
     chidg%data%sdata%dq = chidg_mv(chidg%data%sdata%lhs , chidg%data%sdata%rhs)
-
-
 
 
 
@@ -130,16 +132,13 @@ subroutine test_chidgMatrix_operator_chimera_mv()
     !
     ! Allocate storage to compute refrence expected values
     !
-    allocate(mat_a(nterms_s*neqns, nterms_s*neqns))
+    allocate(mat_a(nterms_s*neqns, nterms_s*neqns), &
+             vec_a(nterms_s*neqns) )
     mat_a = ZERO
     mat_b = mat_a
 
-
-
-
-    allocate(vec_a(nterms_s*neqns))
-    vec_a = ZERO
-    vec_b = vec_a
+    vec_a  = ZERO
+    vec_b  = vec_a
     refvec = vec_a
 
 
@@ -150,11 +149,16 @@ subroutine test_chidgMatrix_operator_chimera_mv()
     vec_b = FOUR
 
 
+    !
+    ! This is the reference actions of the Mat-Vec multiplication from the Chimera terms
+    !
     refvec = matmul(mat_a,vec_a) + matmul(mat_b,vec_b)
 
 
 
-
+    !
+    ! Test the result vector of the Mat-Vec multiplication
+    !
     @assertEqual(refvec, chidg%data%sdata%dq%dom(idom)%vecs(ielem)%vec, tol)
 
 
@@ -198,48 +202,64 @@ subroutine test_chidgMatrix_operator_chimera_mv()
 
 
 
-
-    refvec = 0
+    !
+    ! Zero reference vector
+    !
+    refvec = 0.
 
 
     !
     ! Manual multiplication of one line of the matrix with the residual vector, Including Chimera blocks
     !
-    iblk = XI_MAX
-    idom_p = chidg%data%sdata%lhs%dom(idom)%lblks(ielem,iblk)%dparent_l()
-    ielem_p = chidg%data%sdata%lhs%dom(idom)%lblks(ielem,iblk)%eparent_l()
-    refvec = refvec + matmul(chidg%data%sdata%lhs%dom(idom)%lblks(ielem,iblk)%mat, chidg%data%sdata%rhs%dom(idom_p)%vecs(ielem_p)%vec)
+    idom = 4
+    ielem = 19
+    itime = 1
+
+    ! XI_MAX
+    idom_p = 4
+    ielem_p = 20
+    imat = chidg%data%sdata%lhs%dom(idom)%lblks(ielem,itime)%find(idom_p,ielem_p)
+    refvec = refvec + matmul(chidg%data%sdata%lhs%dom(idom)%lblks(ielem,itime)%data_(imat)%mat, &
+                             chidg%data%sdata%rhs%dom(idom_p)%vecs(ielem_p)%vec)
+
+
+    ! ETA_MIN
+    idom_p = 4
+    ielem_p = 14
+    imat = chidg%data%sdata%lhs%dom(idom)%lblks(ielem,itime)%find(idom_p,ielem_p)
+    refvec = refvec + matmul(chidg%data%sdata%lhs%dom(idom)%lblks(ielem,itime)%data_(imat)%mat, &
+                             chidg%data%sdata%rhs%dom(idom_p)%vecs(ielem_p)%vec)
+
+
+    ! ETA_MAX
+    idom_p = 4
+    ielem_p = 25
+    imat = chidg%data%sdata%lhs%dom(idom)%lblks(ielem,itime)%find(idom_p,ielem_p)
+    refvec = refvec + matmul(chidg%data%sdata%lhs%dom(idom)%lblks(ielem,itime)%data_(imat)%mat, &
+                             chidg%data%sdata%rhs%dom(idom_p)%vecs(ielem_p)%vec)
+
+
+    ! DIAG
+    idom_p = 4
+    ielem_p = 19
+    imat = chidg%data%sdata%lhs%dom(idom)%lblks(ielem,itime)%find(idom_p,ielem_p)
+    refvec = refvec + matmul(chidg%data%sdata%lhs%dom(idom)%lblks(ielem,itime)%data_(imat)%mat, &
+                             chidg%data%sdata%rhs%dom(idom_p)%vecs(ielem_p)%vec)
 
 
 
-    iblk = ETA_MIN
-    idom_p = chidg%data%sdata%lhs%dom(idom)%lblks(ielem,iblk)%dparent_l()
-    ielem_p = chidg%data%sdata%lhs%dom(idom)%lblks(ielem,iblk)%eparent_l()
-    refvec = refvec + matmul(chidg%data%sdata%lhs%dom(idom)%lblks(ielem,iblk)%mat, chidg%data%sdata%rhs%dom(idom_p)%vecs(ielem_p)%vec)
-
-    iblk = ETA_MAX
-    idom_p = chidg%data%sdata%lhs%dom(idom)%lblks(ielem,iblk)%dparent_l()
-    ielem_p = chidg%data%sdata%lhs%dom(idom)%lblks(ielem,iblk)%eparent_l()
-    refvec = refvec + matmul(chidg%data%sdata%lhs%dom(idom)%lblks(ielem,iblk)%mat, chidg%data%sdata%rhs%dom(idom_p)%vecs(ielem_p)%vec)
+    idonor  = 1
+    idom_p  = chidg%data%sdata%lhs%dom(idom)%chi_blks(ielem,itime)%dparent_l(idonor)
+    ielem_p = chidg%data%sdata%lhs%dom(idom)%chi_blks(ielem,itime)%eparent_l(idonor)
+    refvec = refvec + matmul(chidg%data%sdata%lhs%dom(idom)%chi_blks(ielem,itime)%data_(idonor)%mat, &
+                             chidg%data%sdata%rhs%dom(idom_p)%vecs(ielem_p)%vec)
 
 
-    iblk = DIAG
-    idom_p = chidg%data%sdata%lhs%dom(idom)%lblks(ielem,iblk)%dparent_l()
-    ielem_p = chidg%data%sdata%lhs%dom(idom)%lblks(ielem,iblk)%eparent_l()
-    refvec = refvec + matmul(chidg%data%sdata%lhs%dom(idom)%lblks(ielem,iblk)%mat, chidg%data%sdata%rhs%dom(idom_p)%vecs(ielem_p)%vec)
-
-
-
-    idonor = 1
-    idom_p = chidg%data%sdata%lhs%dom(idom)%chi_blks(ielem,idonor)%dparent_l()
-    ielem_p = chidg%data%sdata%lhs%dom(idom)%chi_blks(ielem,idonor)%eparent_l()
-    refvec = refvec + matmul(chidg%data%sdata%lhs%dom(idom)%chi_blks(ielem,idonor)%mat, chidg%data%sdata%rhs%dom(idom_p)%vecs(ielem_p)%vec)
-
-
-    idonor = 2
-    idom_p = chidg%data%sdata%lhs%dom(idom)%chi_blks(ielem,idonor)%dparent_l()
-    ielem_p = chidg%data%sdata%lhs%dom(idom)%chi_blks(ielem,idonor)%eparent_l()
-    refvec = refvec + matmul(chidg%data%sdata%lhs%dom(idom)%chi_blks(ielem,idonor)%mat, chidg%data%sdata%rhs%dom(idom_p)%vecs(ielem_p)%vec)
+    idonor  = 2
+    idom_p  = chidg%data%sdata%lhs%dom(idom)%chi_blks(ielem,idonor)%dparent_l(idonor)
+    ielem_p = chidg%data%sdata%lhs%dom(idom)%chi_blks(ielem,idonor)%eparent_l(idonor)
+    refvec = refvec + matmul(chidg%data%sdata%lhs%dom(idom)%chi_blks(ielem,itime)%data_(idonor)%mat, &
+                             chidg%data%sdata%rhs%dom(idom_p)%vecs(ielem_p)%vec)
 
 
 

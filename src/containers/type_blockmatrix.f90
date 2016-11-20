@@ -33,45 +33,36 @@ module type_blockmatrix
     type, public :: blockmatrix_t
 
         !
-        ! Primary storage
+        ! Primary storage, (nelem,ntime)
         !
-        !type(densematrix_t),    allocatable :: lblks(:,:)                   !< Local domain blocks  (nelem, NBLK)
-        !type(densematrix_t),    allocatable :: chi_blks(:,:)                !< Chimera inter-domain blocks         (nelem, MaxDonors)
-        !type(densematrix_t),    allocatable :: bc_blks(:,:)                 !< Boundary condition coupling blocks  (nelem, Max coupled elems)
-
-        type(densematrix_vector_t),     allocatable :: lblks(:,:)       
-        type(densematrix_vector_t),     allocatable :: chi_blks(:,:)       
-        type(densematrix_vector_t),     allocatable :: bc_blks(:,:)       
+        type(densematrix_vector_t), allocatable :: lblks(:,:)       
+        type(densematrix_vector_t), allocatable :: chi_blks(:,:)       
+        type(densematrix_vector_t), allocatable :: bc_blks(:,:)       
 
         !
         ! Supporting data
         !
-        integer(ik),            allocatable :: ldata(:,:)                   !< Block-local  data    (ielem, 1) -> nvars, (ielem, 2) -> nterms (nvars, nterms)
-        integer(ik),            allocatable :: local_transpose(:,:)         !< Block index of the transposed location (nelem,6)
-        type(ivector_t),        allocatable :: local_lower_blocks(:)        !< For each element, which blocks (1-6) are lower blocks
-        type(ivector_t),        allocatable :: local_upper_blocks(:)        !< For each element, which blocks (1-6) are upper blocks
+        integer(ik),            allocatable :: ldata(:,:)               !< Block-local data, (ielem, 1) -> nvars, (ielem, 2) -> nterms (nvars, nterms)
+        integer(ik),            allocatable :: local_transpose(:,:)     !< Block index of the transposed location (nelem,6)
+        type(ivector_t),        allocatable :: local_lower_blocks(:)    !< For each element, which blocks (1-6) are lower blocks
+        type(ivector_t),        allocatable :: local_upper_blocks(:)    !< For each element, which blocks (1-6) are upper blocks
 
-
-
-
-!        type(blockmatrix_send_t)    :: send
-!        type(blockmatrix_recv_t)    :: recv
 
     contains
+
         ! Initializers
-        generic,   public  :: init => initialize_linearization              !< Initialize full linearization matrix
+        generic,   public  :: init => initialize_linearization          !< Initialize full linearization matrix
         procedure, private :: initialize_linearization
 
 
         ! Setters
-        procedure :: store                                                  !< Store linearization data for local blocks
-        procedure :: store_chimera                                          !< Store linearization data for chimera blocks
-        procedure :: store_bc                                               !< Store linearization data for boundary condition blocks
-        procedure :: clear                                                  !< Zero all data storage
-
-
+        procedure :: store                                              !< Store linearization data for local blocks
+        procedure :: store_chimera                                      !< Store linearization data for chimera blocks
+        procedure :: store_bc                                           !< Store linearization data for boundary condition blocks
+        procedure :: clear                                              !< Zero all data storage
 
         final :: destructor
+
     end type blockmatrix_t
     !*****************************************************************************************
 

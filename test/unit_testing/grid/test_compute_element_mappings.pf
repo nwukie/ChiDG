@@ -62,14 +62,22 @@ subroutine testElementMapping_reversability_linear()
     type(point_t)       :: pts_init(8), pts_test(8), pts_ref(8)   !> Linear Element
     real(rk)            :: mat(8,8), tol
     real(rk)            :: x, y, z, x_ref, y_ref, z_ref, pert
-    integer(ik)         :: ipt, iterm, inode, i, j, k
+    integer(ik)         :: ipt, iterm, inode, i, j, k, nterms, neqns, ntime, &
+                           idomain_g, idomain_l, ielement_g, ielement_l
     
     tol = 1.e-13_rk
     
     
     call compute_element_mappings(THREE_DIM)
     
-    call coords%init(8,3,1,1,1,1)   !> 8 terms, 3 coordinates (x,y,z), ielem = 1
+    nterms = 8      ! linear elements
+    neqns  = 3      ! 3 coordinates (x,y,z)
+    ntime  = 1
+    idomain_g  = 1
+    idomain_l  = 1
+    ielement_g = 1
+    ielement_l = 1
+    call coords%init(nterms,neqns,ntime,idomain_g,idomain_l,ielement_g,ielement_g)
     
     ! Compute coordinates of a Hex-element with appropriate number of points
     call random_seed()
@@ -120,9 +128,9 @@ subroutine testElementMapping_reversability_linear()
     end do
     
     ! Compute modal coordinates
-    call coords%setvar(1,matmul(ELEM_MAP_3D(1)%mat,pts_init(:)%c1_))
-    call coords%setvar(2,matmul(ELEM_MAP_3D(1)%mat,pts_init(:)%c2_))
-    call coords%setvar(3,matmul(ELEM_MAP_3D(1)%mat,pts_init(:)%c3_))
+    call coords%setvar(1,itime=1,vals=matmul(ELEM_MAP_3D(1)%mat,pts_init(:)%c1_))
+    call coords%setvar(2,itime=1,vals=matmul(ELEM_MAP_3D(1)%mat,pts_init(:)%c2_))
+    call coords%setvar(3,itime=1,vals=matmul(ELEM_MAP_3D(1)%mat,pts_init(:)%c3_))
     
     
     ! Compute matrix of polynomial values for reverse calculation
@@ -133,9 +141,9 @@ subroutine testElementMapping_reversability_linear()
     end do
     
     ! Recompute coordinate point values from modes
-    pts_test(:)%c1_ = matmul(mat,coords%getvar(1))
-    pts_test(:)%c2_ = matmul(mat,coords%getvar(2))
-    pts_test(:)%c3_ = matmul(mat,coords%getvar(3))
+    pts_test(:)%c1_ = matmul(mat,coords%getvar(1,itime=1))
+    pts_test(:)%c2_ = matmul(mat,coords%getvar(2,itime=1))
+    pts_test(:)%c3_ = matmul(mat,coords%getvar(3,itime=1))
     
     
     ! Test that recomputed coordinates are equal to the original coordinate values
@@ -169,14 +177,22 @@ subroutine testElementMapping_reversability_quadratic()
     type(point_t)       :: pts_init(27), pts_test(27), pts_ref(27)   !> Quadratic Element
     real(rk)            :: mat(27,27), tol
     real(rk)            :: x, y, z, x_ref, y_ref, z_ref, pert
-    integer(ik)         :: ipt, iterm, inode, i, j, k, npt_1d
+    integer(ik)         :: ipt, iterm, inode, i, j, k, npt_1d, nterms, neqns, ntime, &
+                           idomain_g, idomain_l, ielement_g, ielement_l
     
     tol    = 1.e-13_rk
     npt_1d = 3
     
     call compute_element_mappings(THREE_DIM)
     
-    call coords%init(27,3,1,1,1,1)   !> 27 terms, 3 coordinates (x,y,z), ielem = 1
+    nterms = 27     ! quadratic elements
+    neqns  = 3      ! 3 coordinates (x,y,z)
+    ntime  = 1
+    idomain_g  = 1
+    idomain_l  = 1
+    ielement_g = 1
+    ielement_l = 1
+    call coords%init(nterms,neqns,ntime,idomain_g,idomain_l,ielement_g,ielement_g)
     
     ! Compute coordinates of a Hex-element with appropriate number of points
     
@@ -228,9 +244,9 @@ subroutine testElementMapping_reversability_quadratic()
     end do
     
     ! Compute modal coordinates
-    call coords%setvar(1,matmul(ELEM_MAP_3D(2)%mat,pts_init(:)%c1_))
-    call coords%setvar(2,matmul(ELEM_MAP_3D(2)%mat,pts_init(:)%c2_))
-    call coords%setvar(3,matmul(ELEM_MAP_3D(2)%mat,pts_init(:)%c3_))
+    call coords%setvar(1,itime=1,vals=matmul(ELEM_MAP_3D(2)%mat,pts_init(:)%c1_))
+    call coords%setvar(2,itime=1,vals=matmul(ELEM_MAP_3D(2)%mat,pts_init(:)%c2_))
+    call coords%setvar(3,itime=1,vals=matmul(ELEM_MAP_3D(2)%mat,pts_init(:)%c3_))
     
     
     ! Compute matrix of polynomial values for reverse calculation
@@ -241,9 +257,9 @@ subroutine testElementMapping_reversability_quadratic()
     end do
     
     ! Recompute coordinate point values from modes
-    pts_test(:)%c1_ = matmul(mat,coords%getvar(1))
-    pts_test(:)%c2_ = matmul(mat,coords%getvar(2))
-    pts_test(:)%c3_ = matmul(mat,coords%getvar(3))
+    pts_test(:)%c1_ = matmul(mat,coords%getvar(1,itime=1))
+    pts_test(:)%c2_ = matmul(mat,coords%getvar(2,itime=1))
+    pts_test(:)%c3_ = matmul(mat,coords%getvar(3,itime=1))
     
     
     ! Test that recomputed coordinates are equal to the original coordinate values
@@ -276,14 +292,22 @@ subroutine testElementMapping_reversability_cubic()
     type(point_t)       :: pts_init(64), pts_test(64), pts_ref(64)   !> Cubic Element
     real(rk)            :: mat(64,64), tol
     real(rk)            :: x, y, z, x_ref, y_ref, z_ref, pert
-    integer(ik)         :: ipt, iterm, inode, i, j, k, npt_1d
+    integer(ik)         :: ipt, iterm, inode, i, j, k, npt_1d, nterms, neqns, ntime, &
+                           idomain_g, idomain_l, ielement_g, ielement_l
     
     tol = 1.e-13_rk
     npt_1d = 4
     
     call compute_element_mappings(THREE_DIM)
     
-    call coords%init(64,3,1,1,1,1)   ! 64 terms, 3 coordinates (x,y,z), ielem = 1
+    nterms = 64     ! cubic elements
+    neqns  = 3      ! 3 coordinates (x,y,z)
+    ntime  = 1
+    idomain_g  = 1
+    idomain_l  = 1
+    ielement_g = 1
+    ielement_l = 1
+    call coords%init(nterms,neqns,ntime,idomain_g,idomain_l,ielement_g,ielement_g)
     
     ! Compute coordinates of a Hex-element with appropriate number of points
     
@@ -335,9 +359,9 @@ subroutine testElementMapping_reversability_cubic()
     end do
     
     ! Compute modal coordinates
-    call coords%setvar(1,matmul(ELEM_MAP_3D(3)%mat,pts_init(:)%c1_))
-    call coords%setvar(2,matmul(ELEM_MAP_3D(3)%mat,pts_init(:)%c2_))
-    call coords%setvar(3,matmul(ELEM_MAP_3D(3)%mat,pts_init(:)%c3_))
+    call coords%setvar(1,itime=1,vals=matmul(ELEM_MAP_3D(3)%mat,pts_init(:)%c1_))
+    call coords%setvar(2,itime=1,vals=matmul(ELEM_MAP_3D(3)%mat,pts_init(:)%c2_))
+    call coords%setvar(3,itime=1,vals=matmul(ELEM_MAP_3D(3)%mat,pts_init(:)%c3_))
     
     
     ! Compute matrix of polynomial values for reverse calculation
@@ -348,9 +372,9 @@ subroutine testElementMapping_reversability_cubic()
     end do
     
     ! Recompute coordinate point values from modes
-    pts_test(:)%c1_ = matmul(mat,coords%getvar(1))
-    pts_test(:)%c2_ = matmul(mat,coords%getvar(2))
-    pts_test(:)%c3_ = matmul(mat,coords%getvar(3))
+    pts_test(:)%c1_ = matmul(mat,coords%getvar(1,itime=1))
+    pts_test(:)%c2_ = matmul(mat,coords%getvar(2,itime=1))
+    pts_test(:)%c3_ = matmul(mat,coords%getvar(3,itime=1))
     
     
     ! Test that recomputed coordinates are equal to the original coordinate values
@@ -383,14 +407,22 @@ subroutine testElementMapping_reversability_quartic()
     type(point_t)       :: pts_init(125), pts_test(125), pts_ref(125)   !> Quartic Element
     real(rk)            :: mat(125,125), tol
     real(rk)            :: x, y, z, x_ref, y_ref, z_ref, pert
-    integer(ik)         :: ipt, iterm, inode, i, j, k, npt_1d
+    integer(ik)         :: ipt, iterm, inode, i, j, k, npt_1d, nterms, neqns, ntime, &
+                           idomain_g, idomain_l, ielement_g, ielement_l
     
     tol = 1.e-13_rk
     npt_1d = 5
     
     call compute_element_mappings(THREE_DIM)
     
-    call coords%init(125,3,1,1,1,1)   ! 125 terms, 3 coordinates (x,y,z)
+    nterms = 125    ! quartic elements
+    neqns  = 3      ! 3 coordinates (x,y,z)
+    ntime  = 1
+    idomain_g  = 1
+    idomain_l  = 1
+    ielement_g = 1
+    ielement_l = 1
+    call coords%init(nterms,neqns,ntime,idomain_g,idomain_l,ielement_g,ielement_g)
     
     ! Compute coordinates of a Hex-element with appropriate number of points
     
@@ -442,9 +474,9 @@ subroutine testElementMapping_reversability_quartic()
     end do
     
     ! Compute modal coordinates
-    call coords%setvar(1,matmul(ELEM_MAP_3D(4)%mat,pts_init(:)%c1_))
-    call coords%setvar(2,matmul(ELEM_MAP_3D(4)%mat,pts_init(:)%c2_))
-    call coords%setvar(3,matmul(ELEM_MAP_3D(4)%mat,pts_init(:)%c3_))
+    call coords%setvar(1,itime=1,vals=matmul(ELEM_MAP_3D(4)%mat,pts_init(:)%c1_))
+    call coords%setvar(2,itime=1,vals=matmul(ELEM_MAP_3D(4)%mat,pts_init(:)%c2_))
+    call coords%setvar(3,itime=1,vals=matmul(ELEM_MAP_3D(4)%mat,pts_init(:)%c3_))
     
     
     ! Compute matrix of polynomial values for reverse calculation
@@ -455,9 +487,9 @@ subroutine testElementMapping_reversability_quartic()
     end do
     
     ! Recompute coordinate point values from modes
-    pts_test(:)%c1_ = matmul(mat,coords%getvar(1))
-    pts_test(:)%c2_ = matmul(mat,coords%getvar(2))
-    pts_test(:)%c3_ = matmul(mat,coords%getvar(3))
+    pts_test(:)%c1_ = matmul(mat,coords%getvar(1,itime=1))
+    pts_test(:)%c2_ = matmul(mat,coords%getvar(2,itime=1))
+    pts_test(:)%c3_ = matmul(mat,coords%getvar(3,itime=1))
     
     
     ! Test that recomputed coordinates are equal to the original coordinate values

@@ -42,7 +42,7 @@ contains
     !! procedure. The argument names have to match
     !!
     !!
-    !-----------------------------------------------------------------------------------------------
+    !--------------------------------------------------------------------------------------------
     subroutine setUp(this)
         class(test_blockmatrix),    intent(inout)   :: this
 
@@ -72,6 +72,7 @@ contains
         call this%chidg%data%add_domain('D_01',nodes,connectivity,spacedim,nterms_c,'Scalar Advection')
 
         call this%chidg%set('Solution Order', integer_input=2)
+        call this%chidg%set('ntime',          integer_input=2)
 
         call this%chidg%initialize_solution_domains()
         call this%chidg%init('communication')
@@ -83,27 +84,31 @@ contains
         call this%bmat%init(this%chidg%data%mesh(1),mtype='full')
 
     
-    end subroutine
+    end subroutine setUp
+    !*****************************************************************************************
     
 
 
 
 
+    !>
+    !!
+    !!
+    !-----------------------------------------------------------------------------------------
     subroutine tearDown(this)
         class(test_blockmatrix),    intent(inout)   :: this
         
-        !
         ! Close ChiDG interface
-        !
         call this%chidg%shut_down('core')
+
     end subroutine
-    !*****************************************************************************************************
+    !*****************************************************************************************
 
 
 
-    !------------------------------------------------------------------------------------------------------
-    !------------------------------------------------------------------------------------------------------
-    !------------------------------------------------------------------------------------------------------
+    !-----------------------------------------------------------------------------------------
+    !                                       Tests
+    !-----------------------------------------------------------------------------------------
 
 
 
@@ -114,22 +119,23 @@ contains
     !!
     !-----------------------------------------------------------------------------------
     @Test
-    subroutine test_blockmatrix__init_linearization__nrows(self)
+    subroutine test_blockmatrix__init_linearization__nelem(self)
         class(test_blockmatrix),    intent(inout)   :: self
         
         integer(ik)                 :: nelem
 
         nelem = self%chidg%data%mesh(1)%nelem
         @assertEqual(nelem,size(self%bmat%lblks,1))  
+        @assertEqual(nelem,size(self%bmat%chi_blks,1))  
 
-    end subroutine test_blockmatrix__init_linearization__nrows
+    end subroutine test_blockmatrix__init_linearization__nelem
     !************************************************************************************
     
     
     
 
 
-    !>  Test that number of columns equals number of neighbor elems plus one(diag)
+    !>  Test that number of columns equals number of time levels.
     !!
     !!  @author Nathan A. Wukie
     !!
@@ -137,13 +143,13 @@ contains
     !!
     !------------------------------------------------------------------------------------
     @Test
-    subroutine test_blockmatrix__init_linearization__ncols(self)
+    subroutine test_blockmatrix__init_linearization__ntime(self)
         class(test_blockmatrix),    intent(inout)   :: self
 
-        @assertEqual(7,size(self%bmat%lblks,2))  
-
+        @assertEqual(2,size(self%bmat%lblks,2))  
+        @assertEqual(2,size(self%bmat%chi_blks,2))  
         
-    end subroutine test_blockmatrix__init_linearization__ncols
+    end subroutine test_blockmatrix__init_linearization__ntime
     !*************************************************************************************
     
     
@@ -156,91 +162,100 @@ contains
     !!  @author Nathan A. Wukie
     !!
     !!
-    !!
     !-------------------------------------------------------------------------------------
     @Test
     subroutine test_blockmatrix__init_linearization__denseblocks(self)
         class(test_blockmatrix),    intent(inout)   :: self
         
-        integer(ik) :: nelem, ielem, size1d
+        integer(ik)                 :: ielem, size1d, nmat, imat, itime
+        integer(ik), allocatable    :: idomain_g(:), ielement_g(:)
+        integer(ik), allocatable    :: idomain_g_known(:), ielement_g_known(:)
+        real(rk),    allocatable    :: mat(:,:)
         
         associate ( mesh => self%chidg%data%mesh(1), lblks => self%bmat%lblks)
         
             
-            nelem = mesh%nelem
             
             !
-            ! Test appropriate blocks are allocated or not allocated for the first element            
+            ! Test the first element            
             !
             ielem = 1
-            @assertFalse(allocated(lblks(ielem,1)%mat))
-            @assertTrue(allocated(lblks(ielem,2)%mat))
-            @assertFalse(allocated(lblks(ielem,3)%mat))
-            @assertTrue(allocated(lblks(ielem,4)%mat))
-            @assertFalse(allocated(lblks(ielem,5)%mat))
-            @assertTrue(allocated(lblks(ielem,6)%mat))
-            @assertTrue(allocated(lblks(ielem,7)%mat))
+            itime = 1
             
+
+            ! Test number of linearization dense matrices, 3 neighbors + self = 4
+            nmat = lblks(ielem,itime)%size()
+            @assertEqual(4,nmat)
+
+
+            ! Test domain/element indices are valid.
+            allocate(idomain_g(nmat), ielement_g(nmat))
+            idomain_g_known = [1]
+            ielement_g_known = [1,2,4,10]
+            do imat = 1,lblks(ielem,itime)%size()
+                idomain_g(imat)  = lblks(ielem,itime)%dparent_g(imat)
+                ielement_g(imat) = lblks(ielem,itime)%eparent_g(imat)
+            end do
+
+            @assertTrue(any(idomain_g == idomain_g_known))
+            @assertTrue(any(ielement_g == ielement_g_known))
+
             
-            !
             ! Test first element, linearization block sizes
+            size1d = mesh%nterms_s * mesh%neqns
+            do imat = 1,lblks(ielem,itime)%size()
+                mat = lblks(ielem,itime)%dmat(imat)
+
+                @assertEqual(size1d,size(mat,1))
+                @assertEqual(size1d,size(mat,2))
+
+            end do
+
+            
+            
+
+
+
+
+
             !
-            size1d = mesh%nterms_s  *  mesh%neqns
-            @assertEqual(size1d,size(lblks(ielem,2)%mat,1))
-            @assertEqual(size1d,size(lblks(ielem,2)%mat,2))
-            
-            @assertEqual(size1d,size(lblks(ielem,4)%mat,1))
-            @assertEqual(size1d,size(lblks(ielem,4)%mat,2))
-            
-            @assertEqual(size1d,size(lblks(ielem,6)%mat,1))
-            @assertEqual(size1d,size(lblks(ielem,6)%mat,2))
-            
-            @assertEqual(size1d,size(lblks(ielem,7)%mat,1))
-            @assertEqual(size1d,size(lblks(ielem,7)%mat,2))
-            
-            
-            
-            
-            !
-            ! Test appropriate blocks are allocated or not allocated for the middle element
-            ! All linearization blocks should be initialized            
+            ! Test the middle element            
             !
             ielem = 14
-            @assertTrue(allocated(lblks(ielem,1)%mat))
-            @assertTrue(allocated(lblks(ielem,2)%mat))
-            @assertTrue(allocated(lblks(ielem,3)%mat))
-            @assertTrue(allocated(lblks(ielem,4)%mat))
-            @assertTrue(allocated(lblks(ielem,5)%mat))
-            @assertTrue(allocated(lblks(ielem,6)%mat))
-            @assertTrue(allocated(lblks(ielem,7)%mat))
+            itime = 1
             
+
+            ! Test number of linearization dense matrices, 6 neighbors + self = 7
+            nmat = lblks(ielem,itime)%size()
+            @assertEqual(7,nmat)
+
+
+            ! Test domain/element indices are valid.
+            deallocate(idomain_g,ielement_g)
+            allocate(idomain_g(nmat), ielement_g(nmat))
+            idomain_g_known = [1]
+            ielement_g_known = [5,11,13,14,15,20]
+            do imat = 1,lblks(ielem,itime)%size()
+                idomain_g(imat)  = lblks(ielem,itime)%dparent_g(imat)
+                ielement_g(imat) = lblks(ielem,itime)%eparent_g(imat)
+            end do
+
+            @assertTrue(any(idomain_g == idomain_g_known))
+            @assertTrue(any(ielement_g == ielement_g_known))
+
             
-            !
-            ! Test middle element, linearization block sizes
-            !
-            size1d = mesh%nterms_s  *  mesh%neqns
-            
-            @assertEqual(size1d,size(lblks(ielem,1)%mat,1))
-            @assertEqual(size1d,size(lblks(ielem,1)%mat,2))
-            
-            @assertEqual(size1d,size(lblks(ielem,2)%mat,1))
-            @assertEqual(size1d,size(lblks(ielem,2)%mat,2))
-            
-            @assertEqual(size1d,size(lblks(ielem,3)%mat,1))
-            @assertEqual(size1d,size(lblks(ielem,3)%mat,2))
-            
-            @assertEqual(size1d,size(lblks(ielem,4)%mat,1))
-            @assertEqual(size1d,size(lblks(ielem,4)%mat,2))
-            
-            @assertEqual(size1d,size(lblks(ielem,5)%mat,1))
-            @assertEqual(size1d,size(lblks(ielem,5)%mat,2))
-            
-            @assertEqual(size1d,size(lblks(ielem,6)%mat,1))
-            @assertEqual(size1d,size(lblks(ielem,6)%mat,2))
-            
-            @assertEqual(size1d,size(lblks(ielem,7)%mat,1))
-            @assertEqual(size1d,size(lblks(ielem,7)%mat,2))
-            
+            ! Test  linearization block sizes
+            size1d = mesh%nterms_s * mesh%neqns
+            do imat = 1,lblks(ielem,itime)%size()
+                mat = lblks(ielem,itime)%dmat(imat)
+
+                @assertEqual(size1d,size(mat,1))
+                @assertEqual(size1d,size(mat,2))
+
+            end do
+
+
+
     
     
         end associate   
@@ -254,99 +269,6 @@ contains
 
 
 
-
-    
-    !>  Test STORE procedure for storing derivative information
-    !!
-    !!  @author Nathan A. Wukie
-    !!
-    !!
-    !!
-    !-------------------------------------------------------------------------------------
-    @Test
-    subroutine test_blockmatrix__store(self)
-        class(test_blockmatrix),    intent(inout)   :: self
-        
-        type(AD_D)  :: integral(8)
-        integer(ik) :: ielem, iblk, ivar, nderiv, i
-        
-        associate (bmat => self%bmat)
-    
-            ielem  = 14
-            iblk   = 1
-            ivar   = 1
-            nderiv = 8
-        
-            !
-            ! Initialize AD variables with allocated derivative arrays
-            !
-            do i = 1,8
-                integral(i) = AD_D(nderiv)
-            end do
-        
-            !
-            ! Set the first and last element of each derivative array so they aren't just zeros
-            !
-            integral = [ONE, TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT]
-
-            integral(1)%xp_ad_(1) = ONE
-            integral(1)%xp_ad_(8) = ONE
-            
-            integral(2)%xp_ad_(1) = TWO
-            integral(2)%xp_ad_(8) = TWO
-            
-            integral(3)%xp_ad_(1) = THREE
-            integral(3)%xp_ad_(8) = THREE
-            
-            integral(4)%xp_ad_(1) = FOUR
-            integral(4)%xp_ad_(8) = FOUR
-            
-            integral(5)%xp_ad_(1) = FIVE
-            integral(5)%xp_ad_(8) = FIVE
-            
-            integral(6)%xp_ad_(1) = SIX
-            integral(6)%xp_ad_(8) = SIX
-            
-            integral(7)%xp_ad_(1) = SEVEN
-            integral(7)%xp_ad_(8) = SEVEN
-            
-            integral(8)%xp_ad_(1) = EIGHT
-            integral(8)%xp_ad_(8) = EIGHT
-        
-        
-        
-            !
-            ! STORE integral data. THIS IS BEING TESTED
-            !
-            call bmat%store(integral,ielem,iblk,ivar)
-        
-        
-        
-            !
-            ! Check that the derivatives were assigned to their correct locations in the block matrix.
-            ! The xp_ad_ arrays should be stored as rows of the block matrix.
-            !
-            @assertEqual(integral(1)%xp_ad_, bmat%lblks(ielem,iblk)%mat(1,1:8) )
-            @assertEqual(integral(2)%xp_ad_, bmat%lblks(ielem,iblk)%mat(2,1:8) )
-            @assertEqual(integral(3)%xp_ad_, bmat%lblks(ielem,iblk)%mat(3,1:8) )
-            @assertEqual(integral(4)%xp_ad_, bmat%lblks(ielem,iblk)%mat(4,1:8) )
-            @assertEqual(integral(5)%xp_ad_, bmat%lblks(ielem,iblk)%mat(5,1:8) )
-            @assertEqual(integral(6)%xp_ad_, bmat%lblks(ielem,iblk)%mat(6,1:8) )
-            @assertEqual(integral(7)%xp_ad_, bmat%lblks(ielem,iblk)%mat(7,1:8) )
-            @assertEqual(integral(8)%xp_ad_, bmat%lblks(ielem,iblk)%mat(8,1:8) )
-                
-                
-        end associate
-    
-    
-    end subroutine test_blockmatrix__store
-    !********************************************************************************************
-    
-    
-    
-    
-    
-    
 
 
 end module test_blockmatrix_mod

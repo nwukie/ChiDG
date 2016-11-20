@@ -23,7 +23,7 @@ subroutine test_fgmres_solve()
     type(domain_connectivity_t) :: connectivity
 
     real(rk)    :: tol
-    integer(ik) :: nterms_c, idomain, spacedim
+    integer(ik) :: nterms_c, idomain, spacedim, ixi_min, ixi_max, idiag
 
 
     tol      = 1.e-9_rk
@@ -75,15 +75,24 @@ subroutine test_fgmres_solve()
         ! [3  4 -1]
         ! [0 -1  4]
         !
-        A%dom(1)%lblks(1,DIAG)%mat   = 4._rk
-        A%dom(1)%lblks(1,XI_MAX)%mat = THREE
+        idiag   = A%dom(1)%lblks(1,1)%find(1,1)
+        ixi_max = A%dom(1)%lblks(1,1)%find(1,2)
+        A%dom(1)%lblks(1,1)%data_(idiag)%mat   = FOUR
+        A%dom(1)%lblks(1,1)%data_(ixi_max)%mat = THREE
 
-        A%dom(1)%lblks(2,XI_MIN)%mat = THREE
-        A%dom(1)%lblks(2,DIAG)%mat   = 4._rk
-        A%dom(1)%lblks(2,XI_MAX)%mat = -ONE
 
-        A%dom(1)%lblks(3,XI_MIN)%mat = -ONE
-        A%dom(1)%lblks(3,DIAG)%mat   = 4._rk
+        ixi_min = A%dom(1)%lblks(2,1)%find(1,1)
+        idiag   = A%dom(1)%lblks(2,1)%find(1,2)
+        ixi_max = A%dom(1)%lblks(2,1)%find(1,3)
+        A%dom(1)%lblks(2,1)%data_(ixi_min)%mat = THREE
+        A%dom(1)%lblks(2,1)%data_(idiag)%mat   = 4._rk
+        A%dom(1)%lblks(2,1)%data_(ixi_max)%mat = -ONE
+
+
+        ixi_min = A%dom(1)%lblks(3,1)%find(1,2)
+        idiag   = A%dom(1)%lblks(3,1)%find(1,3)
+        A%dom(1)%lblks(3,1)%data_(ixi_min)%mat = -ONE
+        A%dom(1)%lblks(3,1)%data_(idiag)%mat   = 4._rk
 
 
 
@@ -94,8 +103,8 @@ subroutine test_fgmres_solve()
         ! [ 30]
         ! [-24]
         !
-        b%dom(1)%vecs(1)%vec = 24._rk
-        b%dom(1)%vecs(2)%vec = 30._rk
+        b%dom(1)%vecs(1)%vec =  24._rk
+        b%dom(1)%vecs(2)%vec =  30._rk
         b%dom(1)%vecs(3)%vec = -24._rk
 
         

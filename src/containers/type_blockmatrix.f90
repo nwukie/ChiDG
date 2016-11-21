@@ -439,8 +439,9 @@ contains
                                 donor_already_called = .false.
                                 do iblk = 1,self%chi_blks(ielem,itime)%size()
                                     
-                                    temp1 = self%chi_blks(ielem,itime)%at(iblk) !dummy densematrix to get a specific densematrix inside the chi_blk densematrix_vector
-                                                                                !temporary variable to access densematrix routine
+                                    ! dummy densematrix to get a specific densematrix inside the chi_blks
+                                    ! densematrix_vector temporary variable to access densematrix routine
+                                    temp1 = self%chi_blks(ielem,itime)%at(iblk)
                                     
                                     donor_already_called = ( dparent_g == temp1%dparent_g() .and. &
                                                              dparent_l == temp1%dparent_l() .and. &

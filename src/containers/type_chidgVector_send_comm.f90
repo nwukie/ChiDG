@@ -217,6 +217,7 @@ contains
                 call MPI_ISend(mesh(idom)%elems(ielem)%ielement_l, 1, MPI_INTEGER4, self%proc, 0, ChiDG_COMM, null_request, ierr)
                 call MPI_ISend(mesh(idom)%elems(ielem)%nterms_s,   1, MPI_INTEGER4, self%proc, 0, ChiDG_COMM, null_request, ierr)
                 call MPI_ISend(mesh(idom)%elems(ielem)%neqns,      1, MPI_INTEGER4, self%proc, 0, ChiDG_COMM, null_request, ierr)
+                call MPI_ISend(mesh(idom)%elems(ielem)%ntime,      1, MPI_INTEGER4, self%proc, 0, ChiDG_COMM, null_request, ierr)
             end do ! ielem_send
 
         end do ! idom_send

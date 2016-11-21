@@ -53,7 +53,7 @@ contains
     subroutine setUp(this)
         class(test_comm_D2E2), intent(inout) :: this
 
-        integer(ik)                     :: iread, spacedim, ierr, idom, ielem
+        integer(ik)                     :: iread, spacedim, ierr, idom, ielem, ivar, itime
         real(rk)                        :: initial_vals(this%nterms_s)
 
         
@@ -90,7 +90,6 @@ contains
         !
         call this%chidg%set('Solution Order', integer_input=this%solution_order)
         call this%chidg%initialize_solution_domains()
-        !call this%chidg%init('communication',this%ChiDG_COMM)
         call this%chidg%init('communication')
         call this%chidg%initialize_solution_solver()
 
@@ -99,9 +98,11 @@ contains
         ! Initialize solution vector
         !
         initial_vals = 1.2_rk
+        ivar  = 1
+        itime = 1
         do idom = 1,size(this%chidg%data%mesh)
             do ielem = 1,this%chidg%data%mesh(idom)%nelem
-                call this%chidg%data%sdata%q%dom(idom)%vecs(ielem)%setvar(1,initial_vals)
+                call this%chidg%data%sdata%q%dom(idom)%vecs(ielem)%setvar(ivar,itime,initial_vals)
             end do
         end do
 

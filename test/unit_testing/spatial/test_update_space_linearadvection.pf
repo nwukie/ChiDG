@@ -47,7 +47,8 @@ subroutine test_update_space_linearadvection()
     type(chidg_t)                   :: chidgA, chidgB
     character(:),       allocatable :: chidgAfile, chidgBfile
     class(function_t),  allocatable :: gaussian
-    integer(ik)                     :: ChiID, spacedim
+    integer(ik)                     :: ChiID, spacedim, idomA, idomB, ielemA, ielemB, itime, &
+                                       imatA, imatB
     real(rk)                        :: tol
 
 
@@ -214,6 +215,7 @@ subroutine test_update_space_linearadvection()
     ! Compare jacobian matrix entries
     !
     ! Comparing the Single-Domain 16 element block jacobians to the Two-Domain, 8-element block Chimera jacobians
+    itime  = 1
 
     !
     ! Domain 1 Chimera Blocks

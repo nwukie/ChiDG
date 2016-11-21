@@ -55,7 +55,7 @@ contains
     subroutine setUp(this)
         class(test_comm_D1E4), intent(inout) :: this
 
-        integer(ik)                     :: iread, spacedim, ierr, ielem
+        integer(ik)                     :: iread, spacedim, ierr, ielem, ivar, itime
         real(rk)                        :: initial_vals(this%nterms_s)
 
         
@@ -91,7 +91,6 @@ contains
         !
         call this%chidg%set('Solution Order', integer_input=this%solution_order)
         call this%chidg%initialize_solution_domains()
-        !call this%chidg%init('communication',this%ChiDG_COMM)
         call this%chidg%init('communication')
         call this%chidg%initialize_solution_solver()
 
@@ -100,8 +99,10 @@ contains
         ! Initialize solution vector
         !
         initial_vals = 1.2_rk
+        ivar = 1
+        itime = 1
         do ielem = 1,this%chidg%data%mesh(1)%nelem
-            call this%chidg%data%sdata%q%dom(1)%vecs(ielem)%setvar(1,initial_vals)
+            call this%chidg%data%sdata%q%dom(1)%vecs(ielem)%setvar(ivar,itime,initial_vals)
         end do
 
 
@@ -209,8 +210,8 @@ contains
         expected_dot = (1.2_rk*1.2_rk) * self%nterms_s * nelem
 
 
-
         @assertEqual(expected_dot,computed_dot,1.e-12_rk)
+
 
     end subroutine chidgvector__dot_comm
     !******************************************************************************************
@@ -432,140 +433,208 @@ contains
     !!  @date   7/1/2016
     !!
     !---------------------------------------------------------------------------------------
-    @Test(npes=[1,2,3,4])
+    !@Test(npes=[1,2,3,4])
+    @Test(npes=[1])
     subroutine parallel_chidg_mv(self)
         class(test_comm_D1E4), intent(inout) :: self
 
         type(chidgMatrix_t) :: A
         type(chidgVector_t) :: x, b
-        integer(ik)         :: nelem
+        integer(ik)         :: nelem, imat,itime
         real(rk)            :: computed_dot, expected_dot
 
         IRANK = self%getProcessRank()
 
+        !
         ! Create chidgMatrix and two chidgVectors
+        !
         A = self%chidg%data%sdata%lhs
         x = self%chidg%data%sdata%q
         b = self%chidg%data%sdata%q
 
 
+        !
         ! Initialize with some data
+        !
         if (NRANK == 1) then
 
-            ! element 1
-            A%dom(1)%lblks(1,DIAG)%mat   = ONE
-            A%dom(1)%lblks(1,XI_MAX)%mat = FIVE
-            x%dom(1)%vecs(1)%vec         = 11._rk
+            !
+            ! Element 1
+            !
+            ! DIAG
+            imat = A%dom(1)%lblks(1,1)%find(1,1)
+            A%dom(1)%lblks(1,1)%data_(imat)%mat = ONE
+            ! XI_MAX
+            imat = A%dom(1)%lblks(1,1)%find(1,2)
+            A%dom(1)%lblks(1,1)%data_(imat)%mat = FIVE
 
-            ! element 2
-            A%dom(1)%lblks(2,XI_MIN)%mat = EIGHT
-            A%dom(1)%lblks(2,DIAG)%mat   = TWO
-            A%dom(1)%lblks(2,XI_MAX)%mat = SIX
-            x%dom(1)%vecs(2)%vec         = 12._rk
-
-            ! element 3
-            A%dom(1)%lblks(3,XI_MIN)%mat = NINE
-            A%dom(1)%lblks(3,DIAG)%mat   = THREE
-            A%dom(1)%lblks(3,XI_MAX)%mat = SEVEN
-            x%dom(1)%vecs(3)%vec         = 13._rk
+            ! X-Vector
+            x%dom(1)%vecs(1)%vec = 11._rk
             
-            ! element 4
-            A%dom(1)%lblks(4,XI_MIN)%mat = TEN
-            A%dom(1)%lblks(4,DIAG)%mat   = FOUR
-            x%dom(1)%vecs(4)%vec         = 14._rk
+            !
+            ! Element 2
+            !
+            ! XI_MIN
+            imat = A%dom(1)%lblks(2,1)%find(1,1)
+            A%dom(1)%lblks(2,1)%data_(imat)%mat = EIGHT
+
+            ! DIAG
+            imat = A%dom(1)%lblks(2,1)%find(1,2)
+            A%dom(1)%lblks(2,1)%data_(imat)%mat = TWO
+
+            ! XI_MAX
+            imat = A%dom(1)%lblks(2,1)%find(1,3)
+            A%dom(1)%lblks(2,1)%data_(imat)%mat = SIX
+
+            ! X-Vector
+            x%dom(1)%vecs(2)%vec = 12._rk
+
+            !
+            ! Element 3
+            !
+            ! XI_MIN
+            imat = A%dom(1)%lblks(3,1)%find(1,2)
+            A%dom(1)%lblks(3,1)%data_(imat)%mat = NINE
+
+            ! DIAG 
+            imat = A%dom(1)%lblks(3,1)%find(1,3)
+            A%dom(1)%lblks(3,1)%data_(imat)%mat = THREE
+
+            ! XI_MAX
+            imat = A%dom(1)%lblks(3,1)%find(1,4)
+            A%dom(1)%lblks(3,1)%data_(imat)%mat = SEVEN
+
+            ! X-Vector
+            x%dom(1)%vecs(3)%vec = 13._rk
+
+            !
+            ! Element 4
+            !
+            ! XI_MIN
+            imat = A%dom(1)%lblks(4,1)%find(1,3)
+            A%dom(1)%lblks(4,1)%data_(imat)%mat = TEN
+
+            ! DIAG 
+            imat = A%dom(1)%lblks(4,1)%find(1,4)
+            A%dom(1)%lblks(4,1)%data_(imat)%mat = FOUR
+            
+            ! X-Vector
+            x%dom(1)%vecs(4)%vec = 14._rk
+
+!            ! element 1
+!            A%dom(1)%lblks(1,DIAG)%mat   = ONE
+!            A%dom(1)%lblks(1,XI_MAX)%mat = FIVE
+!            x%dom(1)%vecs(1)%vec         = 11._rk
+!
+!            ! element 2
+!            A%dom(1)%lblks(2,XI_MIN)%mat = EIGHT
+!            A%dom(1)%lblks(2,DIAG)%mat   = TWO
+!            A%dom(1)%lblks(2,XI_MAX)%mat = SIX
+!            x%dom(1)%vecs(2)%vec         = 12._rk
+!
+!            ! element 3
+!            A%dom(1)%lblks(3,XI_MIN)%mat = NINE
+!            A%dom(1)%lblks(3,DIAG)%mat   = THREE
+!            A%dom(1)%lblks(3,XI_MAX)%mat = SEVEN
+!            x%dom(1)%vecs(3)%vec         = 13._rk
+!            
+!            ! element 4
+!            A%dom(1)%lblks(4,XI_MIN)%mat = TEN
+!            A%dom(1)%lblks(4,DIAG)%mat   = FOUR
+!            x%dom(1)%vecs(4)%vec         = 14._rk
 
 
-        else if (NRANK == 2) then
-
-            if (IRANK == 0) then
-                ! element 1
-                A%dom(1)%lblks(1,DIAG)%mat   = ONE
-                A%dom(1)%lblks(1,XI_MAX)%mat = FIVE
-                x%dom(1)%vecs(1)%vec         = 11._rk
-
-                ! element 2
-                A%dom(1)%lblks(2,XI_MIN)%mat = EIGHT
-                A%dom(1)%lblks(2,DIAG)%mat   = TWO
-                A%dom(1)%lblks(2,XI_MAX)%mat = SIX
-                x%dom(1)%vecs(2)%vec         = 12._rk
-
-
-
-            else if (IRANK == 1) then
-                ! element 3
-                A%dom(1)%lblks(1,XI_MIN)%mat = NINE
-                A%dom(1)%lblks(1,DIAG)%mat   = THREE
-                A%dom(1)%lblks(1,XI_MAX)%mat = SEVEN
-                x%dom(1)%vecs(1)%vec         = 13._rk
-                
-                ! element 4
-                A%dom(1)%lblks(2,XI_MIN)%mat = TEN
-                A%dom(1)%lblks(2,DIAG)%mat   = FOUR
-                x%dom(1)%vecs(2)%vec         = 14._rk
-
-            end if
-
-
-        else if (NRANK == 3) then
-
-            if (IRANK == 0) then
-                ! element 1
-                A%dom(1)%lblks(1,DIAG)%mat   = ONE
-                A%dom(1)%lblks(1,XI_MAX)%mat = FIVE
-                x%dom(1)%vecs(1)%vec         = 11._rk
-
-            else if (IRANK == 1) then
-                ! element 2
-                A%dom(1)%lblks(1,XI_MIN)%mat = EIGHT
-                A%dom(1)%lblks(1,DIAG)%mat   = TWO
-                A%dom(1)%lblks(1,XI_MAX)%mat = SIX
-                x%dom(1)%vecs(1)%vec         = 12._rk
-
-                
-            else if (IRANK == 2) then
-                ! element 3
-                A%dom(1)%lblks(1,XI_MIN)%mat = NINE
-                A%dom(1)%lblks(1,DIAG)%mat   = THREE
-                A%dom(1)%lblks(1,XI_MAX)%mat = SEVEN
-                x%dom(1)%vecs(1)%vec         = 13._rk
-
-                ! element 4
-                A%dom(1)%lblks(2,XI_MIN)%mat = TEN
-                A%dom(1)%lblks(2,DIAG)%mat   = FOUR
-                x%dom(1)%vecs(2)%vec         = 14._rk
-            end if
-
-
-        else if (NRANK == 4) then
-
-            if (IRANK == 0) then
-                ! element 2
-                A%dom(1)%lblks(1,XI_MIN)%mat = EIGHT
-                A%dom(1)%lblks(1,DIAG)%mat   = TWO
-                A%dom(1)%lblks(1,XI_MAX)%mat = SIX
-                x%dom(1)%vecs(1)%vec         = 12._rk
-
-            else if (IRANK == 1) then
-                ! element 1
-                A%dom(1)%lblks(1,DIAG)%mat   = ONE
-                A%dom(1)%lblks(1,XI_MAX)%mat = FIVE
-                x%dom(1)%vecs(1)%vec         = 11._rk
-
-            else if (IRANK == 2) then
-                ! element 4
-                A%dom(1)%lblks(1,XI_MIN)%mat = TEN
-                A%dom(1)%lblks(1,DIAG)%mat   = FOUR
-                x%dom(1)%vecs(1)%vec         = 14._rk
-
-            else if (IRANK == 3) then
-                
-                ! element 3
-                A%dom(1)%lblks(1,XI_MIN)%mat = NINE
-                A%dom(1)%lblks(1,DIAG)%mat   = THREE
-                A%dom(1)%lblks(1,XI_MAX)%mat = SEVEN
-                x%dom(1)%vecs(1)%vec         = 13._rk
-
-            end if
+!        else if (NRANK == 2) then
+!
+!            if (IRANK == 0) then
+!                ! element 1
+!                A%dom(1)%lblks(1,DIAG)%mat   = ONE
+!                A%dom(1)%lblks(1,XI_MAX)%mat = FIVE
+!                x%dom(1)%vecs(1)%vec         = 11._rk
+!
+!                ! element 2
+!                A%dom(1)%lblks(2,XI_MIN)%mat = EIGHT
+!                A%dom(1)%lblks(2,DIAG)%mat   = TWO
+!                A%dom(1)%lblks(2,XI_MAX)%mat = SIX
+!                x%dom(1)%vecs(2)%vec         = 12._rk
+!
+!
+!
+!            else if (IRANK == 1) then
+!                ! element 3
+!                A%dom(1)%lblks(1,XI_MIN)%mat = NINE
+!                A%dom(1)%lblks(1,DIAG)%mat   = THREE
+!                A%dom(1)%lblks(1,XI_MAX)%mat = SEVEN
+!                x%dom(1)%vecs(1)%vec         = 13._rk
+!                
+!                ! element 4
+!                A%dom(1)%lblks(2,XI_MIN)%mat = TEN
+!                A%dom(1)%lblks(2,DIAG)%mat   = FOUR
+!                x%dom(1)%vecs(2)%vec         = 14._rk
+!
+!            end if
+!
+!
+!        else if (NRANK == 3) then
+!
+!            if (IRANK == 0) then
+!                ! element 1
+!                A%dom(1)%lblks(1,DIAG)%mat   = ONE
+!                A%dom(1)%lblks(1,XI_MAX)%mat = FIVE
+!                x%dom(1)%vecs(1)%vec         = 11._rk
+!
+!            else if (IRANK == 1) then
+!                ! element 2
+!                A%dom(1)%lblks(1,XI_MIN)%mat = EIGHT
+!                A%dom(1)%lblks(1,DIAG)%mat   = TWO
+!                A%dom(1)%lblks(1,XI_MAX)%mat = SIX
+!                x%dom(1)%vecs(1)%vec         = 12._rk
+!
+!                
+!            else if (IRANK == 2) then
+!                ! element 3
+!                A%dom(1)%lblks(1,XI_MIN)%mat = NINE
+!                A%dom(1)%lblks(1,DIAG)%mat   = THREE
+!                A%dom(1)%lblks(1,XI_MAX)%mat = SEVEN
+!                x%dom(1)%vecs(1)%vec         = 13._rk
+!
+!                ! element 4
+!                A%dom(1)%lblks(2,XI_MIN)%mat = TEN
+!                A%dom(1)%lblks(2,DIAG)%mat   = FOUR
+!                x%dom(1)%vecs(2)%vec         = 14._rk
+!            end if
+!
+!
+!        else if (NRANK == 4) then
+!
+!            if (IRANK == 0) then
+!                ! element 2
+!                A%dom(1)%lblks(1,XI_MIN)%mat = EIGHT
+!                A%dom(1)%lblks(1,DIAG)%mat   = TWO
+!                A%dom(1)%lblks(1,XI_MAX)%mat = SIX
+!                x%dom(1)%vecs(1)%vec         = 12._rk
+!
+!            else if (IRANK == 1) then
+!                ! element 1
+!                A%dom(1)%lblks(1,DIAG)%mat   = ONE
+!                A%dom(1)%lblks(1,XI_MAX)%mat = FIVE
+!                x%dom(1)%vecs(1)%vec         = 11._rk
+!
+!            else if (IRANK == 2) then
+!                ! element 4
+!                A%dom(1)%lblks(1,XI_MIN)%mat = TEN
+!                A%dom(1)%lblks(1,DIAG)%mat   = FOUR
+!                x%dom(1)%vecs(1)%vec         = 14._rk
+!
+!            else if (IRANK == 3) then
+!                
+!                ! element 3
+!                A%dom(1)%lblks(1,XI_MIN)%mat = NINE
+!                A%dom(1)%lblks(1,DIAG)%mat   = THREE
+!                A%dom(1)%lblks(1,XI_MAX)%mat = SEVEN
+!                x%dom(1)%vecs(1)%vec         = 13._rk
+!
+!            end if
 
 
         end if

@@ -107,7 +107,7 @@ contains
     !!  @author Mayank Sharma + Matteo Ugolotti
     !!  @date   11/5/2016
     !!
-    !---------------------------------------------------------------------------------------------------------------
+    !------------------------------------------------------------------------------------------------
     subroutine init_local(self,mesh)
         class(blockvector_t),   intent(inout) :: self
         type(mesh_t),           intent(in)    :: mesh
@@ -167,7 +167,7 @@ contains
 
 
     end subroutine init_local
-    !*******************************************************************************************************************
+    !******************************************************************************************************
 
 
 
@@ -191,15 +191,14 @@ contains
     !!  @author Mayank Sharma + Matteo Ugolotti
     !!  @date   11/5/2016
     !!
-    !---------------------------------------------------------------------------------------------------------------
+    !------------------------------------------------------------------------------------------------------
     subroutine init_recv(self,iproc)
         class(blockvector_t),   intent(inout)   :: self
         integer(ik),            intent(in)      :: iproc
 
         type(ivector_t) :: recv_elems
         integer(ik)     :: nelem_recv, ielem_recv, ierr, ielem, iface, nterms, neqns, loc, recv_element
-        integer(ik)     :: idomain_g, idomain_l, ielement_g, ielement_l
-        integer(ik)     :: ntime    ! Should be an input parameter?
+        integer(ik)     :: idomain_g, idomain_l, ielement_g, ielement_l, ntime
         logical         :: new_elements, proc_element, already_added, comm_element
 
 
@@ -254,8 +253,9 @@ contains
 
             call MPI_Recv(ielement_g, 1, MPI_INTEGER4, iproc, MPI_ANY_TAG, ChiDG_COMM, MPI_STATUS_IGNORE, ierr)
             call MPI_Recv(ielement_l, 1, MPI_INTEGER4, iproc, MPI_ANY_TAG, ChiDG_COMM, MPI_STATUS_IGNORE, ierr)
-            call MPI_Recv(nterms, 1, MPI_INTEGER4, iproc, MPI_ANY_TAG, ChiDG_COMM, MPI_STATUS_IGNORE, ierr)
-            call MPI_Recv(neqns, 1, MPI_INTEGER4, iproc, MPI_ANY_TAG, ChiDG_COMM, MPI_STATUS_IGNORE, ierr)
+            call MPI_Recv(nterms,     1, MPI_INTEGER4, iproc, MPI_ANY_TAG, ChiDG_COMM, MPI_STATUS_IGNORE, ierr)
+            call MPI_Recv(neqns,      1, MPI_INTEGER4, iproc, MPI_ANY_TAG, ChiDG_COMM, MPI_STATUS_IGNORE, ierr)
+            call MPI_Recv(ntime,      1, MPI_INTEGER4, iproc, MPI_ANY_TAG, ChiDG_COMM, MPI_STATUS_IGNORE, ierr)
 
             !
             ! Call densevector initialization routine
@@ -269,33 +269,7 @@ contains
 
 
     end subroutine init_recv
-    !*******************************************************************************************************************
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    !************************************************************************************
 
 
 
@@ -313,7 +287,7 @@ contains
     !!
     !!  @param[in]  fullvec     Full-vector
     !!
-    !--------------------------------------------------------------------------------------------------------------------
+    !------------------------------------------------------------------------------------
     subroutine distribute(self,fullvec)
         class(blockvector_t),    intent(inout)   :: self
         real(rk),                intent(in)      :: fullvec(:) 
@@ -362,10 +336,7 @@ contains
 
 
     end subroutine distribute
-    !***************************************************************************************************************************************
-
-
-
+    !***********************************************************************************
 
 
 
@@ -383,7 +354,7 @@ contains
     !!  @date   2/1/2016
     !!
     !!
-    !----------------------------------------------------------------------------------------------------------------------------------------
+    !----------------------------------------------------------------------------------
     subroutine clear(self)
         class(blockvector_t),   intent(inout)   :: self
 
@@ -395,9 +366,7 @@ contains
         end do
 
     end subroutine clear
-    !****************************************************************************************************************************************
-
-
+    !*********************************************************************************
 
 
 
@@ -416,7 +385,7 @@ contains
     !!  @date   2/1/2016
     !!
     !!
-    !----------------------------------------------------------------------------------------------------------------------------------------
+    !---------------------------------------------------------------------------------
     function norm(self) result(res)
         class(blockvector_t),   intent(in)  :: self
 
@@ -436,7 +405,7 @@ contains
         res = sqrt(res)
 
     end function norm
-    !*****************************************************************************************************************************************
+    !**********************************************************************************
 
 
 
@@ -452,7 +421,7 @@ contains
     !!  @date   2/1/2016
     !!
     !!
-    !----------------------------------------------------------------------------------------------------------------------------------------
+    !----------------------------------------------------------------------------------
     function sumsqr(self) result(res)
         class(blockvector_t),   intent(in)  :: self
 
@@ -469,19 +438,7 @@ contains
 
 
     end function sumsqr
-    !*****************************************************************************************************************************************
-
-
-
-
-
-
-
-
-
-
-
-
+    !**********************************************************************************
 
 
 
@@ -496,7 +453,7 @@ contains
     !!  @date   2/1/2016
     !!
     !!
-    !----------------------------------------------------------------------------------------------------------------------------------
+    !---------------------------------------------------------------------------------
     function nentries(self) result(res)
         class(blockvector_t),   intent(in)  :: self
 
@@ -513,7 +470,7 @@ contains
         end do
 
     end function nentries
-    !**********************************************************************************************************************************
+    !*********************************************************************************
 
 
 

@@ -122,7 +122,7 @@ contains
     subroutine test_blockmatrix__init_linearization__nelem(self)
         class(test_blockmatrix),    intent(inout)   :: self
         
-        integer(ik)                 :: nelem
+        integer(ik) :: nelem
 
         nelem = self%chidg%data%mesh(1)%nelem
         @assertEqual(nelem,size(self%bmat%lblks,1))  
@@ -146,8 +146,11 @@ contains
     subroutine test_blockmatrix__init_linearization__ntime(self)
         class(test_blockmatrix),    intent(inout)   :: self
 
-        @assertEqual(2,size(self%bmat%lblks,2))  
-        @assertEqual(2,size(self%bmat%chi_blks,2))  
+        integer(ik) :: ntime
+
+        ntime = self%chidg%data%mesh(1)%ntime
+        @assertEqual(ntime,size(self%bmat%lblks,2))  
+        @assertEqual(ntime,size(self%bmat%chi_blks,2))  
         
     end subroutine test_blockmatrix__init_linearization__ntime
     !*************************************************************************************
@@ -167,7 +170,7 @@ contains
     subroutine test_blockmatrix__init_linearization__denseblocks(self)
         class(test_blockmatrix),    intent(inout)   :: self
         
-        integer(ik)                 :: ielem, size1d, nmat, imat, itime
+        integer(ik)                 :: ielem, size1d, nmat, imat, itime, ientry
         integer(ik), allocatable    :: idomain_g(:), ielement_g(:)
         integer(ik), allocatable    :: idomain_g_known(:), ielement_g_known(:)
         real(rk),    allocatable    :: mat(:,:)
@@ -197,9 +200,13 @@ contains
                 ielement_g(imat) = lblks(ielem,itime)%eparent_g(imat)
             end do
 
-            @assertTrue(any(idomain_g == idomain_g_known))
-            @assertTrue(any(ielement_g == ielement_g_known))
+            do ientry = 1,size(idomain_g)
+                @assertTrue(any(idomain_g(ientry)  == idomain_g_known ))
+            end do
 
+            do ientry = 1,size(ielement_g)
+                @assertTrue(any(ielement_g(ientry) == ielement_g_known))
+            end do
             
             ! Test first element, linearization block sizes
             size1d = mesh%nterms_s * mesh%neqns
@@ -234,7 +241,7 @@ contains
             deallocate(idomain_g,ielement_g)
             allocate(idomain_g(nmat), ielement_g(nmat))
             idomain_g_known = [1]
-            ielement_g_known = [5,11,13,14,15,20]
+            ielement_g_known = [5,11,13,14,15,23]
             do imat = 1,lblks(ielem,itime)%size()
                 idomain_g(imat)  = lblks(ielem,itime)%dparent_g(imat)
                 ielement_g(imat) = lblks(ielem,itime)%eparent_g(imat)

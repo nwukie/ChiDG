@@ -973,14 +973,11 @@ contains
             u_dg, u_analytical, x_gq, gq_error_squared
 
 
-        integer(ik) :: iu
-        integer(ik) :: ielem, idom, ierr
+        integer(ik) :: ielem, idom, ierr, itime, iu
         real(rk)    :: error_squared_sum, error_squared_sum_reduced, element_error_squared, error
 
 
         associate (mesh => data%mesh, sdata => data%sdata, eqnset => data%eqnset, prop => data%eqnset(1)%prop)
-
-
 
             !
             ! Get equation indices
@@ -995,6 +992,7 @@ contains
             !
             ! Loop over elements and accumulate error
             !
+            itime = 1
             do idom = 1,data%ndomains()
                 do ielem = 1,data%mesh(idom)%nelem
 
@@ -1009,8 +1007,7 @@ contains
                     !
                     ! Interpolate DG numerical solution
                     !
-                    u_dg = interpolate_element_standard(mesh,sdata%q,idom,ielem,iu,'value')
-
+                    u_dg = interpolate_element_standard(mesh,sdata%q,idom,ielem,iu,itime,'value')
 
 
                     !
@@ -1036,7 +1033,6 @@ contains
 
 
         end associate
-
 
 
         ! Reduce the total error across processors

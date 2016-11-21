@@ -363,7 +363,6 @@ contains
 
         character(len=200) :: buffer
 
-        !write(buffer,'( "(gridfile, order)=","(", A30,",", I2, ")" )') this%gridfile, this%order
         write(buffer,'( "(nelem_xi, order)=","(", I3,",", I1, ")" )') this%nelem_xi, this%order
         string = trim(buffer)
 
@@ -479,16 +478,6 @@ contains
 
             call create_bc("Scalar Extrapolate", bc_state)
             call bc_groups(3)%bc_states%push_back(bc_state)
-
-!            call create_bc("Scalar Value",  bc_states(1,XI_MIN)%state  )
-!            call create_bc("Scalar Value",  bc_states(1,XI_MAX)%state  )
-!            call create_bc("Scalar Extrapolate", bc_states(1,ETA_MIN)%state )
-!            call create_bc("Scalar Extrapolate", bc_states(1,ETA_MAX)%state )
-!            call create_bc("Scalar Extrapolate", bc_states(1,ZETA_MIN)%state)
-!            call create_bc("Scalar Extrapolate", bc_states(1,ZETA_MAX)%state)
-!            
-!            call bc_states(1,XI_MIN)%state%set_fcn_option("Value","val", ZERO )
-!            call bc_states(1,XI_MAX)%state%set_fcn_option("Value","val", log(ONE + 50._rk*ONE) )
 
 
             group_names(1,:) = [string_t("Left Boundary")  , &
@@ -728,7 +717,7 @@ contains
 
 
         integer(ik) :: iu
-        integer(ik) :: ielem, idom, ierr
+        integer(ik) :: ielem, idom, ierr, itime
         real(rk)    :: error_squared_sum, error_squared_sum_reduced, element_error_squared, error
 
 
@@ -752,8 +741,8 @@ contains
             !
             ! Loop over elements and accumulate error
             !
+            itime = 1
             do idom = 1,data%ndomains()
-
                 do ielem = 1,data%mesh(idom)%nelem
 
 
@@ -767,7 +756,7 @@ contains
                     !
                     ! Interpolate DG numerical solution
                     !
-                    u_dg = interpolate_element_standard(mesh,sdata%q,idom,ielem,iu,'value')
+                    u_dg = interpolate_element_standard(mesh,sdata%q,idom,ielem,iu,itime,'value')
 
                     !
                     ! Compute error at GQ nodes

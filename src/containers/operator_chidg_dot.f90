@@ -34,9 +34,7 @@ contains
 
         ! Compute vector dot-product
         do idom = 1,size(a%dom)
-            
             res = res + block_dot(a%dom(idom),b%dom(idom))
-
         end do
 
     end function dot_local

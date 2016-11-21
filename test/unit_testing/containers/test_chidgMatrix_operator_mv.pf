@@ -152,8 +152,8 @@ subroutine test_chidgMatrix_operator_mv()
 
     ielem = 2
     itime = 1
-    idom_d  = A%dom(1)%chi_blks(ielem,itime)%dparent_g(1)
-    ielem_d = A%dom(1)%chi_blks(ielem,itime)%eparent_g(1)
+    idom_d  = A%dom(1)%chi_blks(ielem,itime)%dparent_g(2)
+    ielem_d = A%dom(1)%chi_blks(ielem,itime)%eparent_g(2)
     A%dom(1)%chi_blks(ielem,itime)%data_(2)%mat = THREE
     x%dom(idom_d)%vecs(ielem_d)%vec = 0.3_rk
 
@@ -170,7 +170,7 @@ subroutine test_chidgMatrix_operator_mv()
     itime = 1
     idom_d  = A%dom(2)%chi_blks(ielem,itime)%dparent_g(1)
     ielem_d = A%dom(2)%chi_blks(ielem,itime)%eparent_g(1)
-    A%dom(1)%chi_blks(ielem,itime)%data_(1)%mat = FOUR
+    A%dom(2)%chi_blks(ielem,itime)%data_(1)%mat = FOUR
     x%dom(idom_d)%vecs(ielem_d)%vec = 0.1_rk
 
 

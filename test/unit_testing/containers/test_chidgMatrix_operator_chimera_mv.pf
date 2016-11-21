@@ -113,7 +113,7 @@ subroutine test_chidgMatrix_operator_chimera_mv()
 
     ! Set matrix values corresponding to first donor
     imat = chidg%data%sdata%lhs%dom(idom)%chi_blks(ielem,itime)%find(idom_d,ielem_d)
-    chidg%data%sdata%lhs%dom(idom)%chi_blks(ielem,imat)%data_(imat)%mat = TWO
+    chidg%data%sdata%lhs%dom(idom)%chi_blks(ielem,itime)%data_(imat)%mat = TWO
 
     ! Set vector values for first donor
     chidg%data%sdata%rhs%dom(idom_d)%vecs(ielem_d)%vec = FOUR
@@ -225,7 +225,7 @@ subroutine test_chidgMatrix_operator_chimera_mv()
 
     ! ETA_MIN
     idom_p = 4
-    ielem_p = 14
+    ielem_p = 13
     imat = chidg%data%sdata%lhs%dom(idom)%lblks(ielem,itime)%find(idom_p,ielem_p)
     refvec = refvec + matmul(chidg%data%sdata%lhs%dom(idom)%lblks(ielem,itime)%data_(imat)%mat, &
                              chidg%data%sdata%rhs%dom(idom_p)%vecs(ielem_p)%vec)
@@ -256,8 +256,8 @@ subroutine test_chidgMatrix_operator_chimera_mv()
 
 
     idonor  = 2
-    idom_p  = chidg%data%sdata%lhs%dom(idom)%chi_blks(ielem,idonor)%dparent_l(idonor)
-    ielem_p = chidg%data%sdata%lhs%dom(idom)%chi_blks(ielem,idonor)%eparent_l(idonor)
+    idom_p  = chidg%data%sdata%lhs%dom(idom)%chi_blks(ielem,itime)%dparent_l(idonor)
+    ielem_p = chidg%data%sdata%lhs%dom(idom)%chi_blks(ielem,itime)%eparent_l(idonor)
     refvec = refvec + matmul(chidg%data%sdata%lhs%dom(idom)%chi_blks(ielem,itime)%data_(idonor)%mat, &
                              chidg%data%sdata%rhs%dom(idom_p)%vecs(ielem_p)%vec)
 

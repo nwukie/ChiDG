@@ -95,7 +95,7 @@ contains
         integer(ik)                 :: nelem, nblk, ierr, ielem, iblk, size1d, parent, block_index, neqns, nterms_s, ntime
         integer(ik)                 :: nchimera_elements, maxdonors, idonor, iface, itime
         integer(ik)                 :: dparent_g, dparent_l, eparent_g, eparent_l, parent_proc, eparent_l_trans, iblk_trans
-        integer(ik)                 :: iopen, ChiID, ndonors, max_coupled_elems, ncoupled_elems, icoupled_elem, icoupled_elem_bc, ielem_bc, ibc
+        integer(ik)                 :: ChiID, ndonors, max_coupled_elems, ncoupled_elems, icoupled_elem, icoupled_elem_bc, ielem_bc, ibc
         logical                     :: new_elements, chimera_face, more_donors, donor_already_called, contains_chimera_face, block_initialized
         logical                     :: lower_block, upper_block, transposed_block
         logical                     :: init_chimera = .false.
@@ -241,12 +241,8 @@ contains
         !
         ! Allocate Chimera blocks
         !
-        if (init_chimera) then
-
-            allocate(self%chi_blks(nelem,ntime), stat=ierr)
-            if (ierr /= 0) call AllocationError
-
-        end if
+        if (init_chimera) allocate(self%chi_blks(nelem,ntime), stat=ierr)
+        if (ierr  /=   0) call AllocationError
 
 
 
@@ -440,6 +436,7 @@ contains
                                 !
                                 ! Check if block initialization was already called for current donor
                                 !
+                                donor_already_called = .false.
                                 do iblk = 1,self%chi_blks(ielem,itime)%size()
                                     
                                     temp1 = self%chi_blks(ielem,itime)%at(iblk) !dummy densematrix to get a specific densematrix inside the chi_blk densematrix_vector
@@ -472,7 +469,7 @@ contains
                                     ! Call block initialization
                                     !
                                     call temp_blk%init(size1d,size1d,dparent_g,dparent_l,eparent_g,eparent_l,parent_proc)
-                                    call self%chi_blks(ielem,iopen)%push_back(temp_blk)
+                                    call self%chi_blks(ielem,itime)%push_back(temp_blk)
 
                                 end if
 
@@ -675,7 +672,6 @@ contains
         !
         imat = self%lblks(ielement_l,itime)%find(idonor_domain_g,idonor_element_g)
 
-        
         !
         ! Call subroutine on densematrix 
         !

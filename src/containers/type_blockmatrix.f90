@@ -29,7 +29,7 @@ module type_blockmatrix
     !!  elem #3:
     !!    .
     !!    .
-    !------------------------------------------------------------------------------------------------------------
+    !-------------------------------------------------------------------------------------------
     type, public :: blockmatrix_t
 
         !
@@ -42,8 +42,9 @@ module type_blockmatrix
         !
         ! Supporting data
         !
-        integer(ik),            allocatable :: ldata(:,:)               !< Block-local data, (ielem, 1) -> nvars, (ielem, 2) -> nterms (nvars, nterms)
-        integer(ik),            allocatable :: local_transpose(:,:)     !< Block index of the transposed location (nelem,6)
+        integer(ik),            allocatable :: ldata(:,:)               !< Block-local data, (nelem,3) nvars, nterms, ntime.
+        !integer(ik),            allocatable :: local_transpose(:,:)     !< Block index of the transposed location (nelem,6)
+        !type(ivector_t),        allocatable :: local_transpose(:)
         type(ivector_t),        allocatable :: local_lower_blocks(:)    !< For each element, which blocks (1-6) are lower blocks
         type(ivector_t),        allocatable :: local_upper_blocks(:)    !< For each element, which blocks (1-6) are upper blocks
 
@@ -64,7 +65,7 @@ module type_blockmatrix
         final :: destructor
 
     end type blockmatrix_t
-    !*****************************************************************************************
+    !*******************************************************************************************
 
 
 
@@ -79,7 +80,8 @@ contains
     !!  @date   2/1/2016
     !!
     !!  @param[in]  mesh    mesh_t containing arrays of elements and faces
-    !!  @param[in]  mtype   character string indicating the type of matrix to be initialized (ie. Full, Lower-Diagonal, Upper-Diagonal
+    !!  @param[in]  mtype   character string indicating the type of matrix to be initialized
+    !!                      (ie. Full, Lower-Diagonal, Upper-Diagonal
     !!
     !!  @author Matteo Ugolotti + Mayank Sharma
     !!  @date   11/10/2016
@@ -91,13 +93,20 @@ contains
         type(bcset_coupling_t), intent(in), optional      :: bcset_coupling
         character(*),           intent(in)                :: mtype
 
-        integer(ik), allocatable    :: blocks(:)
-        integer(ik)                 :: nelem, nblk, ierr, ielem, iblk, size1d, parent, block_index, neqns, nterms_s, ntime
-        integer(ik)                 :: nchimera_elements, maxdonors, idonor, iface, itime
-        integer(ik)                 :: dparent_g, dparent_l, eparent_g, eparent_l, parent_proc, eparent_l_trans, iblk_trans
-        integer(ik)                 :: ChiID, ndonors, max_coupled_elems, ncoupled_elems, icoupled_elem, icoupled_elem_bc, ielem_bc, ibc
-        logical                     :: new_elements, chimera_face, more_donors, donor_already_called, contains_chimera_face, block_initialized
-        logical                     :: lower_block, upper_block, transposed_block
+        character(:),   allocatable :: user_msg
+        integer(ik),    allocatable :: blocks(:)
+        integer(ik)                 :: nelem, ierr, ielem, iblk, size1d, parent,  &
+                                       block_index, neqns, nterms_s, ntime,             &
+                                       nchimera_elements, maxdonors, idonor, iface,     &
+                                       itime, dparent_g, dparent_l, eparent_g,          &
+                                       eparent_l, parent_proc, eparent_l_trans,         &
+                                       imat_trans, ChiID, ndonors, max_coupled_elems,   &
+                                       ncoupled_elems, icoupled_elem, icoupled_elem_bc, &
+                                       ielem_bc, ibc, imat
+        logical                     :: new_elements, chimera_face, more_donors,         &
+                                       donor_already_called, contains_chimera_face,     &
+                                       block_initialized, lower_block, upper_block,     &
+                                       transposed_block
         logical                     :: init_chimera = .false.
         logical                     :: init_bc      = .false.
 
@@ -131,6 +140,11 @@ contains
                 init_chimera = .false.
                 init_bc      = .false.
 
+            case ('D', 'd', 'Diagonal', 'diagonal')
+                blocks       = [DIAG]
+                init_chimera = .false.
+                init_bc      = .false.
+
             case default
                 call chidg_signal(FATAL,'blockmatrix%init: unrecognized matrix type')
 
@@ -138,109 +152,30 @@ contains
 
 
 
-        nelem = mesh%nelem      ! Number of elements in the local block
-        nblk  = 7               ! Number of potential blocks in the linearization for a given element (1D => 3, 2D => 5, 3D => 7)
-        ntime = mesh%ntime      ! Number of time levels
-
-        !
         ! Check to make sure the mesh numerics were initialized
+        user_msg = "blockmatrix%initialize_linearization: Incoming mesh_t was not &
+                    initialized. Make sure to call mesh%init_sol"
+        if (.not. mesh%solInitialized) call chidg_signal(FATAL,user_msg)
+
+
+
+        nelem = mesh%nelem      ! Number of elements in the local block
+        ntime = mesh%ntime      ! Number of time levels
         !
-        if (.not. mesh%solInitialized) call chidg_signal(FATAL,'blockmatrix_t%initialize_linearization: Incoming mesh_t was not initialized. Make sure to call mesh%init_sol')
-
-
-        !------------------------------------------------------------------------------
+        ! Allocation for 'local blocks'
         !
-        !                       Allocation for 'local blocks'
-        !
-        !------------------------------------------------------------------------------
-        ! If matrix was already allocated, deallocate and then reallocate matrix size
-        ! Reallocation would take place if the number of elements were changed
-        !
-        if (allocated(self%lblks)) then
-            !
-            ! If the size is already allocated, check if the number of elements has changed.
-            ! If so (new_elements), then reallocate matrix size.
-            ! If not, do nothing
-            !
-            new_elements = (mesh%nelem /= size(self%lblks,1))
-            if (new_elements) then
-                deallocate(self%lblks, self%ldata)
-                allocate(self%lblks(nelem,ntime),            &
-                         self%ldata(nelem,3),   stat=ierr)
-                         !self%local_transpose(nelem,6),     &
-                         !self%local_lower_blocks(nelem),    &
-                         !self%local_upper_blocks(nelem), stat=ierr)
-            end if
-
-        else
-
-            allocate(self%lblks(nelem,ntime),                &
-                     self%ldata(nelem,3), stat=ierr)
-                     !self%local_transpose(nelem,6),         &
-                     !self%local_lower_blocks(nelem),        &
-                     !self%local_upper_blocks(nelem), stat=ierr)
-
-        end if
+        if (allocated(self%lblks)) deallocate(self%lblks)
+        allocate(self%lblks(nelem,ntime),           &
+                 self%ldata(nelem,3),               &
+                 self%local_lower_blocks(nelem),    &
+                 self%local_upper_blocks(nelem), stat=ierr)
         if (ierr /= 0) call AllocationError
 
 
-
-
-        !------------------------------------------------------------------------------
         !
-        !                       Allocation for 'chimera blocks'
+        ! Allocation for 'chimera blocks'
         !
-        !------------------------------------------------------------------------------
         if (allocated(self%chi_blks)) deallocate(self%chi_blks)
-        !
-        ! Assemble some Chimera data
-        !
-        
-        !
-        ! Get maximum number of donor elements to a given element. May include donors from multiple faces
-        !
-!        maxdonors = 0
-!        nchimera_elements = 0
-!        do ielem = 1,mesh%nelem
-!
-!            ndonors = 0
-!            contains_chimera_face = .false.
-!            do iface = 1,NFACES
-!
-!                !
-!                ! Check for Chimera face type and add to element donor count
-!                !
-!                if (mesh%faces(ielem,iface)%ftype == CHIMERA) then
-!                    ChiID = mesh%faces(ielem,iface)%ChiID
-!                    ndonors = ndonors + mesh%chimera%recv%data(ChiID)%ndonors()
-!                    contains_chimera_face = .true.
-!                end if
-!
-!            end do
-!
-!
-!            !
-!            ! If current face has more donors than the current max, update the max number of donors
-!            !
-!            more_donors = ( ndonors > maxdonors )
-!            if (more_donors) then
-!                maxdonors = ndonors
-!            end if
-!
-!            !
-!            ! Increment number of chimera elements
-!            !
-!            if (contains_chimera_face) then
-!                nchimera_elements = nchimera_elements + 1
-!            end if
-!
-!        end do
-
-
-
-        !
-        ! Allocate Chimera blocks
-        !
         if (init_chimera) allocate(self%chi_blks(nelem,ntime), stat=ierr)
         if (ierr  /=   0) call AllocationError
 
@@ -301,10 +236,12 @@ contains
 
 
         !
-        ! Loop through elements and call initialization for 'local', 'chimera', and 'boundary condition' denseblock matrices
+        ! Loop through elements and call initialization for 'local', 'chimera', and 
+        ! 'boundary condition' denseblock matrices.
         !
         do ielem = 1,mesh%nelem
             do itime = 1,mesh%ntime 
+                imat = 1
                 
                 ! Set the element indices that the densematrix_vector is associated with.
                 self%lblks(ielem,itime)%idomain_g  = mesh%elems(ielem)%idomain_g
@@ -342,12 +279,10 @@ contains
 
 
 
-
                     !
-                    ! Call initialization procedure if parent is not 0 (0 meaning there is no parent for that block, probably a boundary)
+                    ! Call initialization procedure if parent is not 0 (0 meaning there is no parent, probably a boundary)
                     !
                     if (eparent_l /= NO_INTERIOR_NEIGHBOR) then
-
 
                         ! Initialize dense block
                         call temp_blk%init(size1d,size1d,dparent_g,dparent_l,eparent_g,eparent_l,parent_proc)
@@ -358,33 +293,38 @@ contains
                         self%ldata(ielem,2) = mesh%elems(ielem)%nterms_s
                         self%ldata(ielem,3) = mesh%elems(ielem)%ntime
 
+
+                        !
                         ! If off-diagonal, store block index as 'upper' or 'lower'
-    !                    if ( parent_proc == IRANK ) then
-    !                        lower_block = (eparent_l < ielem)
-    !                    else if (parent_proc < IRANK) then
-    !                        lower_block = .true.
-    !                    else if (parent_proc > IRANK ) then
-    !                        lower_block = .false.
-    !                    end if
-    !
-    !                    if ( parent_proc == IRANK ) then
-    !                        upper_block = (eparent_l > ielem)
-    !                    else if (parent_proc > IRANK) then
-    !                        upper_block = .true.
-    !                    else if (parent_proc < IRANK ) then
-    !                        upper_block = .false.
-    !                    end if
+                        !
+                        ! TODO: Add consideration for ntime and how that affects upper/lower status.
+                        !
+                        if ( parent_proc == IRANK ) then
+                            lower_block = (eparent_l < ielem)
+                        else if ( parent_proc < IRANK ) then
+                            lower_block = .true.
+                        else if ( parent_proc > IRANK ) then
+                            lower_block = .false.
+                        end if
+    
+                        if ( parent_proc == IRANK ) then
+                            upper_block = (eparent_l > ielem)
+                        else if ( parent_proc > IRANK ) then
+                            upper_block = .true.
+                        else if ( parent_proc < IRANK ) then
+                            upper_block = .false.
+                        end if
 
 
-                        !lower_block = ( (eparent_l < ielem .and. parent_proc == IRANK) .or. (parent_proc < IRANK) )
-                        !upper_block = ( (eparent_l > ielem .and. parent_proc == IRANK) .or. (parent_proc > IRANK) )
-!                        if ( lower_block ) then
-!                            call self%local_lower_blocks(ielem)%push_back(iblk)
-!                        else if ( upper_block ) then
-!                            call self%local_upper_blocks(ielem)%push_back(iblk)
-!                        end if
+                        lower_block = ( (eparent_l < ielem .and. parent_proc == IRANK) .or. (parent_proc < IRANK) )
+                        upper_block = ( (eparent_l > ielem .and. parent_proc == IRANK) .or. (parent_proc > IRANK) )
+                        if ( lower_block ) then
+                            call self%local_lower_blocks(ielem)%push_back(imat)
+                        else if ( upper_block ) then
+                            call self%local_upper_blocks(ielem)%push_back(imat)
+                        end if
 
-
+                        imat = imat + 1
                     end if
 
                 end do ! init local
@@ -437,11 +377,11 @@ contains
                                 ! Check if block initialization was already called for current donor
                                 !
                                 donor_already_called = .false.
-                                do iblk = 1,self%chi_blks(ielem,itime)%size()
+                                do imat = 1,self%chi_blks(ielem,itime)%size()
                                     
                                     ! dummy densematrix to get a specific densematrix inside the chi_blks
                                     ! densematrix_vector temporary variable to access densematrix routine
-                                    temp1 = self%chi_blks(ielem,itime)%at(iblk)
+                                    temp1 = self%chi_blks(ielem,itime)%at(imat)
                                     
                                     donor_already_called = ( dparent_g == temp1%dparent_g() .and. &
                                                              dparent_l == temp1%dparent_l() .and. &
@@ -457,17 +397,7 @@ contains
                                 if (.not. donor_already_called) then
 
                                     !
-                                    ! Find next open block to initialize for the current element
-                                    !
-    !                                do iblk = 1,maxdonors
-    !                                    if (.not. allocated(self%chi_blks(ielem,iblk)%mat) ) then
-    !                                        iopen = iblk
-    !                                        exit
-    !                                    end if
-    !                                end do
-
-                                    !
-                                    ! Call block initialization
+                                    ! Call block initialization, store
                                     !
                                     call temp_blk%init(size1d,size1d,dparent_g,dparent_l,eparent_g,eparent_l,parent_proc)
                                     call self%chi_blks(ielem,itime)%push_back(temp_blk)
@@ -562,43 +492,44 @@ contains
         ! 
         ! Initialize transpose data
         !
-!        select case (trim(mt!!ype))
-!            case ('full','Full','FULL')
-!
-!                self%local_transpose = 0
-!                do ielem = 1,mesh%nelem
-!                    do iblk = 1,6
-!
-!                        if ( allocated(self%lblks(ielem,iblk)%mat) .and. self%lblks(ielem,iblk)%parent_proc() == IRANK ) then
-!
-!                                ! Get parent element of off-diagonal block
-!                                eparent_l = self%lblks(ielem,iblk)%eparent_l()
-!
-!                                !
-!                                ! Find block index of transposed location in parent lblks
-!                                !
-!                                do iblk_trans = 1,6
-!                                    ! Make sure the block we are seaching is on-proc
-!                                    if ( allocated(self%lblks(eparent_l,iblk_trans)%mat) .and. self%lblks(eparent_l,iblk_trans)%parent_proc() == IRANK ) then
-!                                        eparent_l_trans = self%lblks(eparent_l,iblk_trans)%eparent_l()
-!
-!                                        transposed_block = ( eparent_l_trans == ielem )
-!                                        if ( transposed_block ) then
-!                                            self%local_transpose(ielem,iblk) = iblk_trans
-!                                            exit
-!                                        end if
-!                                    end if
-!
-!                                    if ( (iblk_trans == 6 ) .and. (transposed_block .eqv. .false.) ) call chidg_signal(FATAL,"blockmatrix%init: no transposed element found")
-!                                end do !iblk_trans
-!
-!                        end if
-!
-!
-!                    end do !iblk
-!                end do !ielem
-!
-!        end select
+        select case (trim(mtype))
+            case ('full','Full','FULL')
+
+                do ielem = 1,mesh%nelem
+                    do itime = 1,mesh%ntime
+                        do imat = 1,self%lblks(ielem,itime)%size()
+
+                            if ( self%lblks(ielem,itime)%parent_proc(imat) == IRANK ) then
+
+                                    ! Get parent element of off-diagonal block
+                                    eparent_l = self%lblks(ielem,itime)%eparent_l(imat)
+
+                                    !
+                                    ! Find block index of transposed location in parent lblks
+                                    !
+                                    do imat_trans = 1,self%lblks(eparent_l,itime)%size()
+                                        ! Make sure the block we are seaching is on-proc
+                                        if ( self%lblks(eparent_l,itime)%parent_proc(imat_trans) == IRANK ) then
+                                            eparent_l_trans = self%lblks(eparent_l,itime)%eparent_l(imat_trans)
+
+                                            transposed_block = ( eparent_l_trans == ielem )
+                                            if ( transposed_block ) then
+                                                call self%lblks(ielem,itime)%set_itranspose(imat,imat_trans)
+                                                exit
+                                            end if
+                                        end if
+
+                                        if ( (imat_trans == self%lblks(eparent_l,itime)%size() ) .and. &
+                                             (transposed_block .eqv. .false.) ) call chidg_signal(FATAL,"blockmatrix%init: no transposed element found")
+                                    end do !imat_trans
+
+                            end if
+
+                        end do !imat
+                    end do !itime
+                end do !ielem
+
+        end select
 
 
 
@@ -628,21 +559,14 @@ contains
     !!  @author Nathan A. Wukie
     !!  @date   2/1/2016
     !!
-    !!  @param[in]  integral    Array of modes from the spatial scheme, with embedded partial derivatives for the linearization matrix
-    !!  @param[in]  ielem       Element for which the linearization was computed
-    !!  @param[in]  iblk        Index of a block for the linearization of the given element
-    !!  @param[in]  ivar        Index of the variable
-    !!
     !!  @author Matteo Ugolotti
     !!  @date   11/10/2016
     !!
+    !!  @param[in]  integral    Array of modes with embedded partial derivatives for the linearization
     !!  @param[in]  face        face_info_t containing indices for the location of the face being linearized.
-    !!  @param[in]  seed        seed_t containing indices of the element against which the linearization was computed.
-    !!  @param[in]  ielem       Element for which the linearization was computed [removed]
-    !!  @param[in]  itime       Index of a time level for the linearization of the given element [replaced iblk]
+    !!  @param[in]  seed        seed_t containing indices of element against which the linearization was computed.
     !!  @param[in]  ivar        Index of the variable
-    !!
-    !!
+    !!  @param[in]  itime       Index of a time level for the linearization of the given element
     !!
     !-----------------------------------------------------------------------------------------
     subroutine store(self,integral,face_info,seed,ivar,itime)
@@ -663,26 +587,17 @@ contains
         idonor_element_g = seed%ielement_g
 
 
-        !
         ! Get stored information for the block
-        !
         nterms = self%ldata(ielement_l,2)  
 
-        !
         ! Find donor densematrix location 
-        !
         imat = self%lblks(ielement_l,itime)%find(idonor_domain_g,idonor_element_g)
 
-        !
         ! Call subroutine on densematrix 
-        !
         call self%lblks(ielement_l,itime)%store_dmv(imat,ivar,nterms,integral)
 
     end subroutine store
     !******************************************************************************************
-
-
-
 
 
 
@@ -698,16 +613,14 @@ contains
     !!  @author Nathan A. Wukie
     !!  @date   2/1/2016
     !!
-    !!  @param[in]  integral    Array of modes from the spatial scheme, with embedded partial derivatives for the linearization matrix
-    !!  @param[in]  face        face_info_t containing indices for the location of the face being linearized.
-    !!  @param[in]  seed        seed_t containing indices of the element against which the linearization was computed.
-    !!  @param[in]  ivar        Index of the variable
-    !!  @param[in]  iblk        Index of the blocks
-    !!
     !!  @author Matteo Ugolotti
     !!  @date   11/10/2015
     !!
-    !!  @param[in]  itime       Index of a time level for the linearization of the given element [replaced iblk]
+    !!  @param[in]  integral    Array of modes with embedded partial derivatives for the linearization matrix
+    !!  @param[in]  face        face_info_t containing indices for the location of the face being linearized.
+    !!  @param[in]  seed        seed_t containing indices of the element against which the linearization was computed.
+    !!  @param[in]  ivar        Index of the variable
+    !!  @param[in]  itime       Index of a time level for the linearization of the given element
     !!
     !------------------------------------------------------------------------------------------
     subroutine store_chimera(self,integral,face_info,seed,ivar,itime)
@@ -728,20 +641,15 @@ contains
         idonor_element_g = seed%ielement_g
 
 
-        !
         ! Get stored information for the block
-        !
         nterms = self%ldata(ielement_l,2)
 
-        !
+
         ! Find donor densematrix location 
-        !
         imat = self%chi_blks(ielement_l,itime)%find(idonor_domain_g,idonor_element_g)
 
 
-        !
         ! Store derivatives
-        !
         call self%chi_blks(ielement_l,itime)%store_dmv(imat,ivar,nterms,integral)
 
 
@@ -765,16 +673,14 @@ contains
     !!  @author Nathan A. Wukie
     !!  @date   2/1/2016
     !!
-    !!  @param[in]  integral    Array of modes from the spatial scheme, with embedded partial derivatives for the linearization matrix
-    !!  @param[in]  face        face_info_t containing indices for the location of the face being linearized.
-    !!  @param[in]  seed        seed_t containing indices of the element against which the linearization was computed.
-    !!  @param[in]  ivar        Index of the variable
-    !!
-    !!
     !!  @author Matteo Ugolotti
     !!  @date   11/14/2016
     !!
-    !!  @param[in]  itime       Index of a time level for the linearization of the given element [replaced iblk]
+    !!  @param[in]  integral    Array of modes with embedded partial derivatives for the linearization matrix
+    !!  @param[in]  face        face_info_t containing indices for the location of the face being linearized.
+    !!  @param[in]  seed        seed_t containing indices of the element against which the linearization was computed.
+    !!  @param[in]  ivar        Index of the variable
+    !!  @param[in]  itime       Index of a time level for the linearization of the given element
     !!
     !------------------------------------------------------------------------------------------
     subroutine store_bc(self,integral,face,seed,ivar,itime)
@@ -814,21 +720,13 @@ contains
         else
 
 
-            !
             ! Get stored information for the block
-            !
-            
             nterms = self%ldata(ielement_l,2)
 
-            !
             ! Find coupled bc densematrix location 
-            !
             imat = self%bc_blks(ielement_l,itime)%find(idonor_domain_l,idonor_element_l)
 
-
-            !
             ! Store derivatives
-            !
             call self%bc_blks(ielement_l,itime)%store_dmv(imat,ivar,nterms,integral)
 
 
@@ -867,60 +765,26 @@ contains
         do ielem = 1,size(self%lblks,1)
 
 
-
-            !
-            ! For each local block linearization for the current element
-            !
+            ! Clear local matrices
             do itime = 1,size(self%lblks,2)
-
-
-                !
-                ! If so, set densematrix_vector_t to ZERO
-                !
                 call self%lblks(ielem,itime)%setzero()
-
-
-
             end do  ! itime
 
 
-
-            !
-            ! For each Chimera block linearization for the current element
-            !
+            ! Clear chimera matrices
             if (allocated(self%chi_blks)) then
                 do itime = 1,size(self%chi_blks,2)
-
-
-                !
-                ! If so, set densematrix_vector_t to ZERO
-                !
-                call self%chi_blks(ielem,itime)%setzero()
-
-
+                    call self%chi_blks(ielem,itime)%setzero()
                 end do ! itime
-            
             end if
 
 
-
-
-            !
-            ! For each boundary condition block linearization for the current element
-            !
+            ! Clear bc matrices
             if (allocated(self%bc_blks)) then
                 do itime = 1,size(self%bc_blks,2)
-
-                !
-                ! If so, set densematrix_vector_t to ZERO
-                !
-                call self%bc_blks(ielem,itime)%setzero()
-
+                    call self%bc_blks(ielem,itime)%setzero()
                 end do ! itime
             end if
-
-
-
 
 
         end do ! ielem
@@ -928,14 +792,6 @@ contains
 
     end subroutine clear
     !******************************************************************************************
-
-
-
-
-
-
-
-
 
 
 

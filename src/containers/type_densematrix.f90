@@ -36,16 +36,19 @@ module type_densematrix
 
 
         ! zero value indicates unassigned
-        integer(ik)             :: parent_proc_ = NO_PROC
-        integer(ik)             :: dparent_g_   = 0   !< Global domain index of the element matrix was linearized with respect to
-        integer(ik)             :: dparent_l_   = 0   !< Local domain index of the element matrix was linearized with respect to
-        integer(ik)             :: eparent_g_   = 0   !< Global element index of the element matrix was linearized with respect to
-        integer(ik)             :: eparent_l_   = 0   !< Local element index of the element matrix was linearized with respect to
+        integer(ik)     :: parent_proc_ = NO_PROC
+        integer(ik)     :: dparent_g_   = 0   !< Global domain index of the element matrix was linearized with respect to
+        integer(ik)     :: dparent_l_   = 0   !< Local domain index of the element matrix was linearized with respect to
+        integer(ik)     :: eparent_g_   = 0   !< Global element index of the element matrix was linearized with respect to
+        integer(ik)     :: eparent_l_   = 0   !< Local element index of the element matrix was linearized with respect to
+
+        ! imat index of transposed densematrix
+        integer(ik)     :: itranspose_  = 0
 
         ! If associated parent data is being received from another processor, location in chidgVector%recv to find it
-        integer(ik)             :: recv_comm    = 0
-        integer(ik)             :: recv_domain  = 0
-        integer(ik)             :: recv_element = 0
+        integer(ik)     :: recv_comm    = 0
+        integer(ik)     :: recv_domain  = 0
+        integer(ik)     :: recv_element = 0
 
         ! Block storage
         integer(ik)             :: nrows_
@@ -62,6 +65,7 @@ module type_densematrix
         procedure :: eparent_g          !< return parent element
         procedure :: eparent_l          !< return parent element
         procedure :: parent_proc        !< return the processor rank of the parent
+        procedure :: itranspose         !< return imat index of transposed densematrix
         procedure :: nentries           !< return number of matrix entries
         procedure :: idim               !< return i-dimension of matrix storage
         procedure :: jdim               !< return j-dimension of matrix storage
@@ -75,6 +79,7 @@ module type_densematrix
         procedure :: set_recv_comm
         procedure :: set_recv_domain
         procedure :: set_recv_element
+        procedure :: set_itranspose
 
 
     end type densematrix_t
@@ -335,6 +340,31 @@ contains
 
 
 
+    !>  Return itranspose, imat index of transposed densematrix.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   11/22/2016
+    !!
+    !!  @return     itranspose     Integer index(imat) of the densematrix in the transposed location.
+    !!
+    !------------------------------------------------------------------------------------------
+    function itranspose(self) result(par)
+        class(densematrix_t), intent(in) :: self
+        integer(ik)                      :: par
+
+        par = self%itranspose_
+
+    end function itranspose
+    !******************************************************************************************
+
+
+
+
+
+
+
+
+
     !> Resize dense-block storage
     !!
     !! @author Nathan A. Wukie
@@ -525,6 +555,26 @@ contains
         recv_element = self%recv_element
 
     end function get_recv_element
+    !******************************************************************************************
+
+
+
+
+
+
+    !>  Set itranspose component.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   11/22/2016
+    !!
+    !-----------------------------------------------------------------------------------------
+    subroutine set_itranspose(self,itranspose)
+        class(densematrix_t),   intent(inout)   :: self
+        integer(ik),            intent(in)      :: itranspose
+
+        self%itranspose_ = itranspose
+
+    end subroutine set_itranspose
     !******************************************************************************************
 
 

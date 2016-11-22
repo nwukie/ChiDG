@@ -24,6 +24,7 @@ module type_densematrix_vector
         integer(ik)                 :: size_        = 0
         integer(ik)                 :: capacity_    = 0
         integer(ik)                 :: buffer_      = 7
+
         type(densematrix_t),   allocatable  :: data_(:)
 
     contains
@@ -41,6 +42,7 @@ module type_densematrix_vector
         procedure, public   :: store_dmv
         procedure, private  :: increase_capacity
 
+        procedure, public   :: set_itranspose
         procedure, public   :: set_recv_comm
         procedure, public   :: set_recv_domain
         procedure, public   :: set_recv_element
@@ -58,6 +60,7 @@ module type_densematrix_vector
         procedure, public   :: dparent_l        !< return parent local domain for the index position densematrix
         procedure, public   :: eparent_l        !< return parent local element for the index position densematrix
         procedure, public   :: parent_proc      !< return parent processor rank
+        procedure, public   :: itranspose       !< return itranspose, imat index of densematrix in transposed location.
         procedure, public   :: find             !< find element in densematrix vector based idonor_domain_g ad i_element_g
         procedure, public   :: get_diagonal     !< return index of densematrix representing the diagonal.
 
@@ -448,6 +451,49 @@ contains
 
 
 
+
+
+    !>  Return itranspose for a densematrix.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   11/15/2016
+    !!
+    !----------------------------------------------------------------------------------------
+    function itranspose(self,index) result(proc)
+        class(densematrix_vector_t),    intent(in)  :: self
+        integer(ik),                    intent(in)  :: index
+
+        integer(ik) :: proc
+
+        proc = self%data_(index)%itranspose()
+
+    end function itranspose
+    !****************************************************************************************
+
+
+
+
+    !>  Set itranspose for a given densematrix.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   11/15/2016
+    !!
+    !---------------------------------------------------------------------------------------
+    subroutine set_itranspose(self,index,itranspose)
+        class(densematrix_vector_t),    intent(inout)   :: self
+        integer(ik),                    intent(in)      :: index
+        integer(ik),                    intent(in)      :: itranspose
+
+        call self%data_(index)%set_itranspose(itranspose)
+
+    end subroutine set_itranspose
+    !****************************************************************************************
+
+
+
+
+
+
     !>  Set recv_comm component for a given densematrix.
     !!
     !!  recv_comm is the comm index in a chidgVector that information coming from the parent
@@ -653,7 +699,7 @@ contains
     !!
     !-----------------------------------------------------------------------------------------
     function get_diagonal(self) result(index)
-        class(densematrix_vector_t),    intent(inout)   :: self
+        class(densematrix_vector_t),    intent(in)   :: self
 
         integer(ik) :: imat, index
 

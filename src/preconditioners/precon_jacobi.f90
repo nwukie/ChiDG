@@ -20,7 +20,8 @@ module precon_jacobi
     !-----------------------------------------------------------------------------
     type, extends(preconditioner_t) :: precon_jacobi_t
 
-        type(densematrix_t), allocatable    :: D(:,:)     !< inverse of block diagonal, (ndom,maxelems,ntime)
+        !type(densematrix_t), allocatable    :: D(:,:,:)     !< inverse of block diagonal, (ndom,maxelems,ntime)
+        type(chidgMatrix_t) :: D     !< inverse of block diagonal, (ndom,maxelems,ntime)
 
     contains
         procedure   :: init
@@ -48,39 +49,38 @@ contains
         class(precon_jacobi_t), intent(inout)   :: self
         type(chidg_data_t),     intent(in)      :: data
 
-        integer(ik) :: ndom, ntime
-        logical     :: increase_maxelems = .false.
+!        integer(ik) :: ndom, ntime
+!        logical     :: increase_maxelems = .false.
+!
+!
+!        ndom = data%ndomains()
+!        ntime = data%ntime()
+!
+!
+!        !
+!        ! Get maximum number of elements
+!        !
+!        maxelems = 0
+!        do idom = 1,ndom
+!
+!            increase_maxelems = ( data%mesh(idom)%nelem > maxelems )
+!
+!            if (increase_maxelems) then
+!                maxelems = data%mesh(idom)%nelem
+!            end if
+!        
+!        end do ! idom
+!
+!
+!        !
+!        ! Allocate storage
+!        !
+!        if (allocated(self%D)) deallocate(self%D)
+!        allocate(self%D(ndom,maxelems,ntime), stat=ierr)
+!        if (ierr /= 0) call AllocationError
 
 
-        ndom = data%ndomains()
-        ntime = data%ntime()
-
-
-        !
-        ! Get maximum number of elements
-        !
-        maxelems = 0
-        do idom = 1,ndom
-
-            increase_maxelems = ( data%mesh(idom)%nelem > maxelems )
-
-            if (increase_maxelems) then
-                maxelems = data%mesh(idom)%nelem
-            end if
-        
-        end do ! idom
-
-
-        !
-        ! Allocate storage
-        !
-        if (allocated(self%D)) deallocate(self%D)
-        allocate(self%D(ndom,maxelems,ntime), stat=ierr)
-        if (ierr /= 0) call AllocationError
-
-
-
-
+        call self%D%init(data%mesh,mtype='Diagonal')
 
 
     end subroutine init
@@ -109,18 +109,17 @@ contains
         type(chidgVector_t),    intent(in)      :: b
 
 
-        integer(ik) :: ielem, ndom
-        logical     :: reallocate   !< logical test for reallocating preconditioner storage
-        type(densematrix_t) :: junk
+        integer(ik) :: idom, ielem, itime, diag
 
-        ndom = size(A%dom)
 
         !
         ! Copy the block diagonal from A to the preconditioner storage
         !
-        do idom = 1,ndom
+        do idom = 1,size(A%dom)
             do ielem = 1,size(A%dom(idom)%lblks,1)
                 do itime = 1,size(A%dom(idom)%lblks,2)
+                    diag = A%dom(idom)%lblks(ielem,itime)%get_diagonal()
+                    self%D%dom(idom)%lblks(ielem,itime)%data_(1)%mat = A%dom(idom)%lblks(ielem,itime)%dmat(diag)
                     !self%D(idom,ielem,itime) = A%dom(idom)%lblks(ielem,DIAG)
                     !self%D(idom,ielem,itime) = A%dom(idom)%lblks(ielem,itime)%data_(index)
                 end do
@@ -132,10 +131,10 @@ contains
         !
         ! Replace the block diagonal D with Dinv
         !
-        do idom = 1,ndom
+        do idom = 1,size(A%dom)
             do ielem = 1,size(A%dom(idom)%lblks,1)
                 do itime = 1,size(A%dom(idom)%lblks,2)
-                    self%D(idom,ielem,itime)%mat = inv(self%D(idom,ielem,itime)%mat)
+                    self%D%dom(idom)%lblks(ielem,itime)%data_(1)%mat = inv(self%D%dom(idom)%lblks(ielem,itime)%data_(1)%mat)
                 end do
             end do
         end do
@@ -165,11 +164,10 @@ contains
         type(chidgVector_t),    intent(in)      :: v
 
         type(chidgVector_t) :: z
-        integer(ik)         :: ielem, idom, ndom
+        integer(ik)         :: idom, ielem, itime
 
         call self%timer%start()
 
-        ndom = size(A%dom)
 
         !
         ! Allocate 'z'
@@ -181,9 +179,12 @@ contains
         !
         ! Apply Block-Diagonal preconditioner
         !
-        do idom = 1,ndom
+        do idom = 1,size(A%dom)
             do ielem = 1,size(A%dom(idom)%lblks,1)
-                z%dom(idom)%vecs(ielem)%vec = matmul(self%D(idom,ielem,itime)%mat,v%dom(idom)%vecs(ielem)%vec)
+                do itime = 1,size(A%dom(idom)%lblks,2)
+                    z%dom(idom)%vecs(ielem)%vec = &
+                        matmul(self%D%dom(idom)%lblks(ielem,itime)%data_(1)%mat,v%dom(idom)%vecs(ielem)%vec)
+                end do
             end do
         end do
 

@@ -301,14 +301,6 @@ contains
 
 
 
-
-
-
-
-
-
-
-
         !
         ! Set recv initialization to true
         !
@@ -331,24 +323,14 @@ contains
     !!  @date   2/1/2016
     !!
     !!
-    !!  @param[in]  integral    Array of modes from the spatial scheme, with embedded partial derivatives for the linearization matrix
+    !!  @param[in]  integral    Array of modes from the spatial scheme, with embedded partial 
+    !!                          derivatives for the linearization matrix
     !!  @param[in]  idom        Domain index for storing the linearization
     !!  @param[in]  ielem       Element index for which the linearization was computed
     !!  @param[in]  iblk        Index of the block for the linearization of the given elemen
     !!  @param[in]  ivar        Index of the variable, for which the linearization was computed
     !!
     !------------------------------------------------------------------------------------------
-!    subroutine store(self, integral, idom, ielem, iblk, ivar)
-!        class(chidgMatrix_t),   intent(inout)   :: self
-!        type(AD_D),             intent(in)      :: integral(:)
-!        integer(ik),            intent(in)      :: idom, ielem, iblk, ivar
-!
-!        !
-!        ! Store linearization in associated domain blockmatrix_t
-!        !
-!        call self%dom(idom)%store(integral,ielem,iblk,ivar)
-!
-!    end subroutine store
     subroutine store(self,integral,face_info,seed,ivar,itime)
         class(chidgMatrix_t),   intent(inout)   :: self
         type(AD_D),             intent(in)      :: integral(:)
@@ -383,9 +365,11 @@ contains
     !!  @date   2/1/2016
     !!
     !!
-    !!  @param[in]  integral    Array of modes from the spatial scheme, with embedded partial derivatives for the linearization matrix
+    !!  @param[in]  integral    Array of modes from the spatial scheme, with embedded partial 
+    !!                          derivatives for the linearization matrix
     !!  @param[in]  face        face_info_t containing the indices defining the Chimera face
-    !!  @param[in]  seed        seed_t containing the indices defining the element against which the Chimera face was linearized
+    !!  @param[in]  seed        seed_t containing the indices defining the element against 
+    !!                          which the Chimera face was linearized
     !!  @param[in]  ivar        Index of the variable, for which the linearization was computed
     !!
     !------------------------------------------------------------------------------------------
@@ -417,18 +401,20 @@ contains
 
 
 
-    !> Procedure for stiring linearization information for boundary condition faces
+    !>  Procedure for stiring linearization information for boundary condition faces
     !!
     !!  @author Nathan A. Wukie
     !!  @date   2/1/2016
     !!
     !!
-    !!  @param[in]  integral    Array of modes from the spatial scheme, with embedded partial derivatives for the linearization matrix
+    !!  @param[in]  integral    Array of modes from the spatial scheme, with embedded partial
+    !!                          derivatives for the linearization matrix
     !!  @param[in]  face        face_info_t containing the indices defining the Chimera face
-    !!  @param[in]  seed        seed_t containing the indices defining the element against which the Chimera face was linearized
+    !!  @param[in]  seed        seed_t containing the indices defining the element against 
+    !!                          which the Chimera face was linearized
     !!  @param[in]  ivar        Index of the variable, for which the linearization was computed
     !!
-    !------------------------------------------------------------------------------------------
+    !------------------------------------------------------------------------------------------*
     subroutine store_bc(self,integral,face_info,seed,ivar,itime)
         class(chidgMatrix_t),       intent(inout)   :: self
         type(AD_D),                 intent(in)      :: integral(:)
@@ -447,7 +433,7 @@ contains
         call self%dom(idomain_l)%store_bc(integral,face_info,seed,ivar,itime)
 
     end subroutine store_bc
-    !******************************************************************************************
+    !*******************************************************************************************
 
 
 
@@ -464,7 +450,7 @@ contains
     !!  @date   2/1/2016
     !! 
     !! 
-    !----------------------------------------------------------------------------------------------------------
+    !-------------------------------------------------------------------------------------------
     subroutine clear(self)
         class(chidgMatrix_t),   intent(inout)   :: self
 
@@ -480,7 +466,7 @@ contains
     
     
     end subroutine clear
-    !***********************************************************************************************************
+    !*******************************************************************************************
 
 
 

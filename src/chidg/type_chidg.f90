@@ -467,8 +467,11 @@ contains
         if ( IRANK == GLOBAL_MASTER ) then
 
             call read_connectivity_hdf(gridfile,connectivities)
+            
             call read_weights_hdf(gridfile,weights)
 
+            call read_weights_hdf(gridfile,weights)
+            
             call partition_connectivity(connectivities, weights, partitions)
 
             call send_partitions(partitions,MPI_COMM_WORLD)

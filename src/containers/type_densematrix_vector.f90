@@ -61,7 +61,7 @@ module type_densematrix_vector
         procedure, public   :: eparent_l        !< return parent local element for the index position densematrix
         procedure, public   :: parent_proc      !< return parent processor rank
         procedure, public   :: itranspose       !< return itranspose, imat index of densematrix in transposed location.
-        procedure, public   :: find             !< find element in densematrix vector based idonor_domain_g ad i_element_g
+        procedure, public   :: find             !< find element in densematrix vector based idonor_domain_g ad i_element_g NB: see procedure header!
         procedure, public   :: get_diagonal     !< return index of densematrix representing the diagonal.
 
     end type densematrix_vector_t
@@ -652,6 +652,9 @@ contains
     !!  @Matteo Ugolotti
     !!  @date   11/14/2016
     !!
+    !!  This procedure is very similar to procedure "loc", the only difference
+    !!  is that "find" returns an error when the densematrix is not found.
+    !!  This procedure is used in blockmatrix!
     !!
     !----------------------------------------------------------------------------------------
     function find(self,idomain_g,ielement_g) result (res)

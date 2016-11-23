@@ -49,7 +49,7 @@ contains
 
         integer(c_int)                      :: nelem, nnodes
         integer(c_int), allocatable         :: eptr(:), eind(:), epart(:), npart(:)
-        integer(c_int), allocatable, target :: vwgt(:), options(:)
+        integer(c_long), allocatable, target :: vwgt(:), options(:)
         type(c_ptr)                         :: vwgt_p, options_p, vsize, tpwgts
         integer(c_int)                      :: n, npartitions, ncommon
 
@@ -89,13 +89,19 @@ contains
             tpwgts  = c_null_ptr
 
             ! METIS Options
-            allocate(options(0:39))
+            !allocate(options(0:39),stat=ierr)
+            allocate(options(0:40),stat=ierr)
+            if (ierr /= 0) call AllocationError
+
             call METIS_SetDefaultOptions(options)
-            options_p = c_loc(options(0))
+            options_p = c_loc(options(1))
 
             options(0)  = 0      ! PTYPE
             options(3)  = 0      ! IPTYPE
             options(10) = 2
+            !options(1)  = 0      ! PTYPE
+            !options(4)  = 0      ! IPTYPE
+            !options(11) = 2
             !options(16) = 1
 
             !

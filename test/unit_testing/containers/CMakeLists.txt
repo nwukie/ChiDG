@@ -19,6 +19,7 @@ add_test_sources(containers
                 test_function_status_mod.pf
                 test_cache_data_equation_mod.pf
                 test_cache_data_mod.pf
+                test_densematrix_vector.pf
 #                test_chidg_cache_mod.pf
                 )
                

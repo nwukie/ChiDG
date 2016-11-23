@@ -24,8 +24,8 @@ module type_nonlinear_solver
         ! OPTIONS
         real(rk)        :: cfl0     = 1.0_rk        !< Initial CFL number
         real(rk)        :: tol      = 1.e-13_rk     !< Convergence tolerance
-        integer(ik)     :: nsteps   = 100           !< Number of time steps to compute
-!        integer(ik)     :: nwrite   = 10            !< Write data every 'nwrite' steps
+        integer(ik)     :: nsteps   = 100           !< Max number of steps to take in the nonlinear solver
+        integer(ik)     :: nwrite   = 100           !< Write data every 'nwrite' steps
 
 
         type(timer_t)   :: timer                    !< Timer data-type
@@ -161,10 +161,10 @@ contains
         class(nonlinear_solver_t),  intent(inout)   :: self
         type(dict_t),               intent(inout)   :: options
 
-
-        call options%get('tol',self%tol)
-        call options%get('cfl0',self%cfl0)
-        call options%get('nsteps',self%nsteps)
+        if (options%contains('tol'   )) call options%get('tol',   self%tol   )
+        if (options%contains('cfl0'  )) call options%get('cfl0',  self%cfl0  )
+        if (options%contains('nsteps')) call options%get('nsteps',self%nsteps)
+        if (options%contains('nwrite')) call options%get('nwrite',self%nwrite)
 
     end subroutine set
     !*************************************************************************************************************

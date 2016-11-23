@@ -188,7 +188,7 @@ contains
             !
             ! Add new domain to file
             !
-            call add_domain_hdf(file_id, trim(blockname), nodes,elements,eqnset_string,spacedim)
+            call add_domain_hdf(file_id,trim(blockname),nodes,elements,trim(eqnset_string),spacedim)
 
 
             !

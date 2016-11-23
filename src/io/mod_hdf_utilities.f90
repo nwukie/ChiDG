@@ -11,6 +11,7 @@ module mod_hdf_utilities
     use type_bc_state,          only: bc_state_t
     use type_point,             only: point_t
     use type_file_properties,   only: file_properties_t
+    use type_chidg_data,        only: chidg_data_t
     use hdf5
     use h5lt
     implicit none
@@ -47,6 +48,7 @@ contains
     !!  File:
     !!  ---------------------------
     !!  initialize_file_hdf
+    !!  initialize_file_structure_hdf
     !!  open_file_hdf
     !!  close_file_hdf
     !!  check_file_storage_version_hdf
@@ -68,6 +70,7 @@ contains
     !!  Domains:
     !!  ---------------------------
     !!  add_domain_hdf
+    !!  create_domain_hdf
     !!  open_domain_hdf
     !!  close_domain_hdf
     !!
@@ -131,6 +134,8 @@ contains
     !!  delete_group_attributes_hdf
     !!  check_attribute_exists_hdf
     !!  check_link_exists_hdf
+    !!  check_file_exists_hdf
+    !!  check_file_has_extension_hdf
     !!      
     !!
     !****************************************************************************************
@@ -157,7 +162,7 @@ contains
             if (ierr /= 0) call chidg_signal(FATAL,"open_hdf: h5open_f did not execute successfully.")
         end if
 
-        HDF_is_open     = .true.
+        HDF_is_open = .true.
 
     end subroutine open_hdf
     !***************************************************************************************
@@ -177,18 +182,15 @@ contains
     !!
     !---------------------------------------------------------------------------------------
     subroutine close_hdf()
+
         integer(ik) :: ierr
 
-
         if (HDF_is_open .and. (HDF_nfiles_open==0)) then
-
             call h5close_f(ierr)
             if (ierr /= 0) call chidg_signal(FATAL,"close_hdf: h5close_f did not execute successfully.")
-
-            HDF_is_open     = .false.
-
         end if
 
+        HDF_is_open = .false.
 
     end subroutine close_hdf
     !***************************************************************************************
@@ -211,11 +213,10 @@ contains
     function initialize_file_hdf(filename) result(fid)
         character(*),   intent(in)  :: filename
 
-        
         character(:),   allocatable :: filename_init
-        integer(HID_T)  :: fid
-        integer(ik)     :: ierr, loc
-        logical         :: file_exists
+        integer(HID_T)              :: fid
+        integer(ik)                 :: ierr, loc
+        logical                     :: file_exists
 
 
         !
@@ -232,7 +233,7 @@ contains
         !
         ! Check if input file already exists
         !
-        inquire(file=filename_init, exist=file_exists)
+        file_exists = check_file_exists_hdf(filename_init)
         if (file_exists) then
             call write_line("Found "//trim(filename_init)//" that already exists. Deleting it to create new file...")
             call delete_file(trim(filename_init))
@@ -277,6 +278,45 @@ contains
 
 
 
+
+
+    !>
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   11/23/2016
+    !!
+    !!
+    !----------------------------------------------------------------------------------------
+    subroutine initialize_file_structure_hdf(fid,data)
+        integer(HID_T),     intent(in)  :: fid
+        type(chidg_data_t), intent(in)  :: data
+
+        integer(ik)                 :: idom
+        character(:),   allocatable :: domain_name
+
+
+
+        do idom = 1,data%ndomains()
+
+            ! Create domain group
+            domain_name = data%info(idom)%name
+            call create_domain_hdf(fid,domain_name)
+
+        end do !idom
+
+
+    end subroutine initialize_file_structure_hdf
+    !***************************************************************************************
+
+
+
+
+
+
+
+
+
+
     !>  Open a ChiDG-formatted HDF file and return an HDF file identifier
     !!
     !!      - Check file existence
@@ -289,11 +329,11 @@ contains
     !!
     !!
     !----------------------------------------------------------------------------------------
-    subroutine open_file_hdf(filename,fid)
+    function open_file_hdf(filename) result(fid)
         character(*),   intent(in)      :: filename
-        integer(HID_T), intent(inout)   :: fid
 
         character(:),   allocatable :: filename_open, user_msg
+        integer(HID_T)  :: fid
         integer         :: ierr, loc
         logical         :: file_exists
 
@@ -332,7 +372,7 @@ contains
 
         HDF_nfiles_open = HDF_nfiles_open + 1
 
-    end subroutine open_file_hdf
+    end function open_file_hdf
     !*****************************************************************************************
 
 
@@ -701,11 +741,10 @@ contains
 
 
 
-    !>
+    !>  Add a domain to the file.
     !!
     !!  @author Nathan A. Wukie
     !!  @date   10/17/2016
-    !!
     !!
     !---------------------------------------------------------------------------------------
     subroutine add_domain_hdf(fid,domain_name,nodes,elements,equation_set,spacedim)
@@ -718,77 +757,127 @@ contains
 
 
         integer(HID_T)  :: dom_id, grid_id, bc_id, var_id
-        integer(ik)     :: idomain, ndomains, mapping, ierr
-
-        !
-        ! Get current number of domains
-        !
-        ndomains = get_ndomains_hdf(fid)
-
-        ! Increment ndomains, reset in file
-        ndomains = ndomains + 1
-        call set_ndomains_hdf(fid,ndomains)
-
+        integer(ik)     :: mapping, ierr
 
 
         !
-        ! Create domain group
+        ! Create new domain
         !
-        call h5gcreate_f(fid, "D_"//trim(domain_name), dom_id, ierr)
-        if (ierr /= 0) call chidg_signal(FATAL,"add_domain_hdf: h5gcreate_f")
+        call create_domain_hdf(fid,domain_name)
 
 
         !
-        ! Create default groups
+        ! Open Domain
         !
-        call h5gcreate_f(dom_id, "Grid", grid_id, ierr)
-        if (ierr /= 0) call chidg_signal(FATAL,"add_domain_hdf: h5gcreate_f")
-        call h5gclose_f(grid_id,ierr)
-
-        call h5gcreate_f(dom_id, "BoundaryConditions", bc_id, ierr)
-        if (ierr /= 0) call chidg_signal(FATAL,"add_domain_hdf: h5gcreate_f")
-        call h5gclose_f(bc_id,ierr)
-
-        call h5gcreate_f(dom_id, "Variables", var_id, ierr)
-        if (ierr /= 0) call chidg_signal(FATAL,"add_domain_hdf: h5gcreate_f")
-        call h5gclose_f(var_id,ierr)
-
+        dom_id = open_domain_hdf(fid,domain_name)
 
 
         !
         ! Write domain attributes
         !
-        idomain  = ndomains
         mapping  = elements(1,3)
-        call set_domain_index_hdf(dom_id,ndomains)
         call set_domain_mapping_hdf(dom_id,mapping)
         call set_domain_dimensionality_hdf(dom_id, spacedim)
 
 
-        !
         ! Set nodes
-        !
         call set_domain_coordinates_hdf(dom_id,nodes)
 
-
-        !
         ! Set elements
-        !
         call set_domain_elements_hdf(dom_id,elements)
 
-        !
         ! Write equation set attribute
-        !
         call set_domain_equation_set_hdf(dom_id,trim(equation_set))
 
 
+        !
         ! Close groups
-        call h5gclose_f(dom_id,ierr)
+        !
+        call close_domain_hdf(dom_id)
 
 
     end subroutine add_domain_hdf
     !****************************************************************************************
 
+
+
+
+
+
+
+
+
+
+    !>  Create a new Domain group.
+    !!
+    !!  Activities:
+    !!      - Create a new domain group
+    !!      - Increment number of domains in the file
+    !!      - Set the domain index
+    !!      - Close the domain group
+    !!
+    !!  Convention:
+    !!      - Group Prefix: D_
+    !!      - Example: D_MyDomain
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   11/23/2016
+    !!
+    !!
+    !--------------------------------------------------------------------------------------
+    subroutine create_domain_hdf(fid,domain_name)
+        integer(HID_T),     intent(in)  :: fid
+        character(*),       intent(in)  :: domain_name
+
+        integer(ik)     :: ndomains, ierr
+        integer(HID_T)  :: domain_id, grid_id, bc_id, var_id
+        logical         :: domain_exists
+
+        !
+        ! Check if the domain group already exists
+        !
+        domain_exists = check_link_exists_hdf(fid,"D_"//trim(domain_name))
+
+        
+        if (.not. domain_exists) then
+
+            ! Create domain group
+            call h5gcreate_f(fid, "D_"//trim(domain_name), domain_id, ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,"create_domain_hdf: h5gcreate_f")
+
+            call h5gcreate_f(domain_id, "Grid", grid_id, ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,"create_domain_hdf: h5gcreate_f")
+            call h5gclose_f(grid_id,ierr)
+
+            call h5gcreate_f(domain_id, "BoundaryConditions", bc_id, ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,"create_domain_hdf: h5gcreate_f")
+            call h5gclose_f(bc_id,ierr)
+
+            call h5gcreate_f(domain_id, "Variables", var_id, ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,"create_domain_hdf: h5gcreate_f")
+            call h5gclose_f(var_id,ierr)
+
+
+
+            ! Get current number of domains, increment, and reset ndomains.
+            ndomains = get_ndomains_hdf(fid)
+            ndomains = ndomains + 1
+            call set_ndomains_hdf(fid,ndomains)
+
+
+            ! Set domain index
+            call set_domain_index_hdf(domain_id,ndomains)
+
+
+            ! Close domain
+            call close_domain_hdf(domain_id)
+
+        end if
+
+    end subroutine create_domain_hdf
+    !***************************************************************************************
+
+    
 
 
 
@@ -1301,11 +1390,8 @@ contains
             !
             adim = 1
             if ( .not. attribute_exists ) then
-
-                ! Set value.
                 call h5ltset_attribute_int_f(fid, "D_"//trim(adjustl(names(idom))), 'Domain Index', [idom], adim, ierr)
                 if (ierr /= 0) call chidg_signal(FATAL,"get_domain_indices_hdf: error writing an initial domain index")
-
             end if
 
 
@@ -2505,7 +2591,7 @@ contains
         integer(ik)     :: ierr
 
         call h5gclose_f(bcgroup_id,ierr)
-        if (ierr /= 0) call chidg_signal(FATAL,"open_bc_group_hdf: Error closing bc_group")
+        if (ierr /= 0) call chidg_signal(FATAL,"close_bc_group_hdf: Error closing bc_group")
 
     end subroutine close_bc_group_hdf
     !***************************************************************************************
@@ -3435,7 +3521,7 @@ contains
     !--------------------------------------------------------------------------------------------
     function check_link_exists_hdf(id,linkname) result(exist_status)
         integer(HID_T),     intent(in)  :: id
-        character(len=*),   intent(in)  :: linkname
+        character(*),       intent(in)  :: linkname
 
         integer(ik) :: ierr
         logical     :: exist_status
@@ -3447,6 +3533,33 @@ contains
 
     end function check_link_exists_hdf
     !*********************************************************************************************
+
+
+
+
+
+
+
+
+    !>  Check if a ChiDG file exists.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   11/23/2016
+    !!
+    !----------------------------------------------------------------------------------------------
+    function check_file_exists_hdf(filename) result(exist_status)
+        character(*),   intent(in)  :: filename
+
+        logical                     :: exist_status
+
+
+        ! Check file exists
+        inquire(file=filename, exist=exist_status)
+
+
+    end function check_file_exists_hdf
+    !*********************************************************************************************
+
 
 
 

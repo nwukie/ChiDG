@@ -88,8 +88,8 @@ module type_equation_set
         procedure   :: get_boundary_ndependent_elements     !< return number elements that a boundary function is depending on
         procedure   :: get_volume_ndependent_elements       !< return number elements that a volume function is depending on
 
-        procedure   :: uses_primary_field
-        procedure   :: uses_auxiliary_field
+!        procedure   :: uses_primary_field
+!        procedure   :: uses_auxiliary_field
 
     end type equation_set_t
     !**************************************************************************************************
@@ -1101,49 +1101,49 @@ contains
     
 
     
-    !>  Return .true. if equation_set uses the specified primary field.
-    !!
-    !!  @author Nathan A. Wukie
-    !!  @date   11/21/2016
-    !!
-    !---------------------------------------------------------------------------------------
-    function uses_primary_field(self,field) result(status)
-        class(equation_set_t),  intent(in)  :: self
-        character(*),           intent(in)  :: field
-
-        integer(ik) :: index
-        logical     :: status
-
-        index = self%prop%get_primary_field_index(trim(field))
-        status = (index /= 0)
-
-    end function uses_primary_field
-    !***************************************************************************************
-
-
-
-
-
-
-
-    !>  Return .true. if equation_set uses the specified auxiliary field.
-    !!
-    !!  @author Nathan A. Wukie
-    !!  @date   11/21/2016
-    !!
-    !---------------------------------------------------------------------------------------
-    function uses_auxiliary_field(self,field) result(status)
-        class(equation_set_t),  intent(in)  :: self
-        character(*),           intent(in)  :: field
-
-        integer(ik) :: index
-        logical     :: status
-
-        index = self%prop%get_auxiliary_field_index(trim(field))
-        status = (index /= 0)
-
-    end function uses_auxiliary_field
-    !***************************************************************************************
+!    !>  Return .true. if equation_set uses the specified primary field.
+!    !!
+!    !!  @author Nathan A. Wukie
+!    !!  @date   11/21/2016
+!    !!
+!    !---------------------------------------------------------------------------------------
+!    function uses_primary_field(self,field) result(status)
+!        class(equation_set_t),  intent(in)  :: self
+!        character(*),           intent(in)  :: field
+!
+!        integer(ik) :: index
+!        logical     :: status
+!
+!        index = self%prop%get_primary_field_index(trim(field))
+!        status = (index /= 0)
+!
+!    end function uses_primary_field
+!    !***************************************************************************************
+!
+!
+!
+!
+!
+!
+!
+!    !>  Return .true. if equation_set uses the specified auxiliary field.
+!    !!
+!    !!  @author Nathan A. Wukie
+!    !!  @date   11/21/2016
+!    !!
+!    !---------------------------------------------------------------------------------------
+!    function uses_auxiliary_field(self,field) result(status)
+!        class(equation_set_t),  intent(in)  :: self
+!        character(*),           intent(in)  :: field
+!
+!        integer(ik) :: index
+!        logical     :: status
+!
+!        index = self%prop%get_auxiliary_field_index(trim(field))
+!        status = (index /= 0)
+!
+!    end function uses_auxiliary_field
+!    !***************************************************************************************
 
 
 

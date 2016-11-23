@@ -108,29 +108,10 @@ module type_chidg
         procedure   :: init
         procedure   :: initialize_solution_domains
         procedure   :: initialize_solution_solver
-        procedure   :: check_auxiliary_fields
+!        procedure   :: check_auxiliary_fields
 
     end type chidg_t
     !*******************************************************************************************
-
-
-
-
-
-
-
-
-    type, public :: chidg_factory_t
-
-        type(chidg_t),  allocatable :: chidg_instances(:)
-
-    contains
-
-        procedure   :: register
-        procedure   :: produce
-
-    end type chidg_factory_t
-
 
 
 
@@ -242,8 +223,10 @@ contains
 
         select case (trim(activity))
 
+            !
+            ! Call all initialization routines.
+            !
             case ('all')
-                call self%init('auxiliary fields')
                 call self%initialize_solution_domains()
                 call self%init('communication')
                 call self%init('chimera')
@@ -263,12 +246,6 @@ contains
             case ('chimera')
                 call establish_chimera_communication(self%data%mesh,ChiDG_COMM)
 
-
-            !
-            ! Initialize auxiliary states
-            !
-            case ('auxiliary fields')
-                call self%check_auxiliary_fields()
 
 
             !
@@ -804,64 +781,64 @@ contains
 
 
 
-    !>  Check the equation_set's for any auxiliary fields that are required. 
-    !!
-    !!      #1: Check equation_set's for auxiliary fields
-    !!      #2: For auxiliary fields that are found, check the file for the auxiliary field.
-    !!      #3: If no auxiliary field in file, check auxiliary drivers for a rule to compute the field
-    !!      #4: If no rule, error. We don't have the field, and we also don't know how to compute it.
-    !!
-    !!  @author Nathan A. Wukie
-    !!  @date   11/21/2016
-    !!
-    !!
-    !!
-    !----------------------------------------------------------------------------------------------------
-    subroutine check_auxiliary_fields(self)
-        class(chidg_t), intent(inout)   :: self
-
-        type(string_t), allocatable :: auxiliary_fields(:)
-        logical,        allocatable :: domain_needs_aux_field(:)
-        logical,        allocatable :: file_has_aux_field(:)
-        logical,        allocatable :: field_in_file
-
-
-
-!        aux_fields = self%data%get_auxiliary_fields()
+!    !>  Check the equation_set's for any auxiliary fields that are required. 
+!    !!
+!    !!      #1: Check equation_set's for auxiliary fields
+!    !!      #2: For auxiliary fields that are found, check the file for the auxiliary field.
+!    !!      #3: If no auxiliary field in file, check auxiliary drivers for a rule to compute the field
+!    !!      #4: If no rule, error. We don't have the field, and we also don't know how to compute it.
+!    !!
+!    !!  @author Nathan A. Wukie
+!    !!  @date   11/21/2016
+!    !!
+!    !!
+!    !!
+!    !----------------------------------------------------------------------------------------------------
+!    subroutine check_auxiliary_fields(self)
+!        class(chidg_t), intent(inout)   :: self
+!
+!        type(string_t), allocatable :: auxiliary_fields(:)
+!        logical,        allocatable :: domain_needs_aux_field(:)
+!        logical,        allocatable :: file_has_aux_field(:)
+!        logical,        allocatable :: field_in_file
 !
 !
-!        do iaux = 1,size(aux_fields)
+!
+!!        aux_fields = self%data%get_auxiliary_fields()
+!!
+!!
+!!        do iaux = 1,size(aux_fields)
+!!
+!!
+!!            !
+!!            ! Check which domains use the auxiliary field
+!!            !
+!!            do idom = 1,self%data%ndomains()
+!!                domain_uses_field(idom) = self%data%eqnset(idom)%uses_auxiliary_field(aux_fields(iaux))
+!!            end do !idom
+!!
+!!
+!!            !
+!!            do idom = 1,self%data%ndomains()
+!!                file_has_aux_field(idom) = file%domain_has_field(idom,aux_field(iaux))
+!!            end do !idom
+!!
+!!
+!!            !
+!!            ! If any domain doesn't have the field in file, get from a pre-defined rule
+!!            !
+!!            if (any(file_has_aux_field == .false.)) then
+!!                call initialize_auxiliary_field(aux_field(iaux))
+!!            end if
+!!
+!!
+!!        end do !iaux
+!
+!        
 !
 !
-!            !
-!            ! Check which domains use the auxiliary field
-!            !
-!            do idom = 1,self%data%ndomains()
-!                domain_uses_field(idom) = self%data%eqnset(idom)%uses_auxiliary_field(aux_fields(iaux))
-!            end do !idom
-!
-!
-!            !
-!            do idom = 1,self%data%ndomains()
-!                file_has_aux_field(idom) = file%domain_has_field(idom,aux_field(iaux))
-!            end do !idom
-!
-!
-!            !
-!            ! If any domain doesn't have the field in file, get from a pre-defined rule
-!            !
-!            if (any(file_has_aux_field == .false.)) then
-!                call initialize_auxiliary_field(aux_field(iaux))
-!            end if
-!
-!
-!        end do !iaux
-
-        
-
-
-    end subroutine check_auxiliary_fields
-    !****************************************************************************************************
+!    end subroutine check_auxiliary_fields
+!    !****************************************************************************************************
 
 
 
@@ -904,7 +881,7 @@ contains
 
 
                 if ( extension == '.h5' ) then
-                    call write_solution_hdf(solutionfile,self%data)
+                    call write_solution_hdf(self%data,solutionfile)
                 else
                     call chidg_signal(FATAL,"chidg%write_solution: grid file extension not recognized")
                 end if

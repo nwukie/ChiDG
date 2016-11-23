@@ -14,6 +14,8 @@ module type_chidg_data
     use type_bc_state,                  only: bc_state_t
     use type_bcvector,                  only: bcvector_t
     use type_bc_group,                  only: bc_group_t
+    use type_svector,                   only: svector_t
+    use mod_string,                     only: string_t
     use type_equation_set,              only: equation_set_t
     use type_solverdata,                only: solverdata_t
 
@@ -67,8 +69,9 @@ module type_chidg_data
         procedure   :: initialize_solution_solver
 
         ! Accessors
-        procedure   :: get_domain_index     !< Given a domain name, return domain index
-        procedure   :: ndomains             !< Return number of domains in chidg instance
+        procedure   :: get_domain_index             !< Given a domain name, return domain index
+        procedure   :: ndomains                     !< Return number of domains in chidg instance
+        procedure   :: get_auxiliary_field_names    !< Return the auxiliary fields that are required
 
         procedure   :: report
 
@@ -279,7 +282,7 @@ contains
     !!  To force a particular bc_state on a boundary condition, one can pass a bc_state_t in as an option
     !!  for bc_wall, bc_inlet, bc_outlet, bc_symmetry
     !!
-    !----------------------------------------------------------------------------------------------------------
+    !-----------------------------------------------------------------------------------------------
     subroutine add_bc(self,domain,bc_connectivity,bc_group,bc_groups,bc_wall,bc_inlet,bc_outlet,bc_symmetry,bc_farfield,bc_periodic)
         class(chidg_data_t),            intent(inout)           :: self
         character(*),                   intent(in)              :: domain
@@ -329,7 +332,7 @@ contains
 
 
     end subroutine add_bc
-    !******************************************************************************************************
+    !**********************************************************************************************
 
 
 
@@ -346,7 +349,7 @@ contains
     !!
     !!
     !!
-    !------------------------------------------------------------------------------------------------------
+    !----------------------------------------------------------------------------------------------
     subroutine initialize_solution_domains(self,nterms_s)
         class(chidg_data_t),    intent(inout)   :: self
         integer(ik),            intent(in)      :: nterms_s
@@ -362,12 +365,7 @@ contains
 
 
     end subroutine initialize_solution_domains
-    !******************************************************************************************************
-
-
-
-
-
+    !**********************************************************************************************
 
 
 
@@ -387,7 +385,7 @@ contains
     !!  @param[in]  dname           String associated with a given domain
     !!  @return     domain_index    Integer index of the associated domain
     !!
-    !------------------------------------------------------------------------------------------------------
+    !----------------------------------------------------------------------------------------------
     function get_domain_index(self,dname) result(domain_index)
         class(chidg_data_t),    intent(in)      :: self
         character(*),           intent(in)      :: dname
@@ -411,11 +409,7 @@ contains
         if (domain_index == 0) call chidg_signal_one(FATAL,user_msg,dname)
 
     end function get_domain_index
-    !**********************************************************************************************************
-
-
-
-
+    !*********************************************************************************************
 
 
 
@@ -428,7 +422,7 @@ contains
     !!  @date   2/1/2016
     !!
     !!
-    !----------------------------------------------------------------------------------------------------------
+    !---------------------------------------------------------------------------------------------
     function ndomains(self) result(ndom)
         class(chidg_data_t),    intent(in)      :: self
 
@@ -437,7 +431,47 @@ contains
         ndom = self%ndomains_
 
     end function ndomains
-    !**********************************************************************************************************
+    !*********************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+    !>  Return a vector of auxiliary fields that are required.
+    !!
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   11/23/2016
+    !!
+    !---------------------------------------------------------------------------------------------
+    function get_auxiliary_field_names(self) result(field_names)
+        class(chidg_data_t),    intent(in)  :: self
+
+        integer(ik)                 :: idom, ifield
+        type(svector_t)             :: field_names
+        character(:),   allocatable :: field_name
+
+
+
+        do idom = 1,self%ndomains()
+            do ifield = 1,self%eqnset(idom)%prop%nauxiliary_fields()
+
+                field_name = self%eqnset(idom)%prop%get_auxiliary_field_name(ifield)
+                call field_names%push_back_unique(string_t(field_name))
+
+            end do !ifield
+        end do !idom
+
+
+
+    end function get_auxiliary_field_names
+    !*********************************************************************************************
 
 
 
@@ -453,7 +487,7 @@ contains
     !!
     !!
     !!
-    !----------------------------------------------------------------------------------------------------------
+    !-------------------------------------------------------------------------------------------------
     subroutine report(self,selection)
         class(chidg_data_t),    intent(in)  :: self
         character(*),           intent(in)  :: selection
@@ -476,7 +510,7 @@ contains
 
 
     end subroutine report
-    !***********************************************************************************************************
+    !*************************************************************************************************
 
 
 

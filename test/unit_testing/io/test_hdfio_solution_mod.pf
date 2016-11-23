@@ -3,7 +3,6 @@ module test_hdfio_solution_mod
     use type_chidg,         only: chidg_t
     use mod_kinds,          only: rk,ik
     use mod_constants,      only: ONE, TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT, ZERO, IO_DESTINATION
-    use mod_hdfio,          only: read_variable_hdf, write_variable_hdf
     use type_chidg,         only: chidg_t
     use type_meshdata,      only: meshdata_t
     use mod_test_utilities, only: create_mesh_file

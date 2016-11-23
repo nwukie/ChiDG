@@ -290,10 +290,12 @@ contains
 
 
 
-    !> Search for a equation string in the self%primary_fields list. If found, return equation index.
-    !! A set of equations could be stored in any order. So, when an equation is initialized, it
-    !! is initialized with an index indicating its location in the set. That index is used to 
-    !! access the correct solution data values.
+    !>  Search for a equation string in the self%primary_fields list. If found, return equation index.
+    !!  A set of equations could be stored in any order. So, when an equation is initialized, it
+    !!  is initialized with an index indicating its location in the set. That index is used to 
+    !!  access the correct solution data values.
+    !!
+    !!  Return 0 if not found.
     !!
     !!  @author Nathan A. Wukie
     !!  @date   2/25/2016

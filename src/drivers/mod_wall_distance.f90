@@ -1,4 +1,5 @@
 module mod_wall_distance
+#include <messenger.h>
     use mod_kinds,          only: rk, ik
     use mod_constants,      only: ZERO
     use eqn_wall_distance,  only: set_p_poisson_parameter
@@ -9,7 +10,6 @@ module mod_wall_distance
     use type_dict,          only: dict_t
     use mod_chidg_post,     only: chidg_post,chidg_post_vtk
     use mod_bc,             only: create_bc
-    use mpi_f08
     implicit none
 
 
@@ -33,23 +33,18 @@ contains
     !!  @param[in]  order           Polynomial order, the field will be computed with.
     !!
     !-------------------------------------------------------------------------------------
-    !subroutine compute_field(field_name,gridfile,solutionfile,order)
-    !    character(*),   intent(in)      :: field_name
-    !    character(*),   intent(in)      :: gridfile
-    !    character(*),   intent(in)      :: solutionfile
-    !    integer(ik),    intent(in)      :: order
-    subroutine compute_field(chidg)
-        type(chidg_t),  intent(inout), pointer   :: chidg
+    subroutine wall_distance_driver(chidg,fileout)
+        type(chidg_t),  intent(inout)           :: chidg
+        character(*),   intent(in), optional    :: fileout
 
-        character(:), allocatable   :: field_name
-        character(:), allocatable   :: gridfile
-        character(:), allocatable   :: solutionfile
-        integer(ik)     :: order
-    !    type(chidg_t)                   :: chidg
+        character(:), allocatable   :: gridfile, solutionfile, user_msg
+        integer(ik)                 :: order
+
+        type(chidg_t)                   :: wall_distance
         type(dict_t)                    :: noptions, loptions
         class(bc_state_t),  allocatable :: dirichlet_zero, neumann_zero
         class(function_t),  allocatable :: constant
-        integer(ik)                     :: iorder, p
+        integer(ik)                     :: iorder, p, aux_field_index
 
 
 
@@ -59,7 +54,7 @@ contains
         !
         ! Make sure this ChiDG environment is initialized.
         !
-        call chidg%start_up('core')
+        call wall_distance%start_up('core')
 
 
 
@@ -70,11 +65,11 @@ contains
         !
         ! dudn = 0 else where
         !
-        call create_bc('Scalar Value', dirichlet_zero)
-        call create_bc('Scalar Derivative', neumann_zero)
+        call create_bc('Scalar Value',      dirichlet_zero)
+        call create_bc('Scalar Derivative', neumann_zero  )
 
-        call dirichlet_zero%set_fcn_option( 'Value',     'val', ZERO)
-        call neumann_zero%set_fcn_option(   'Derivative','val', ZERO)
+        call dirichlet_zero%set_fcn_option( 'Value'     , 'val', ZERO)
+        call neumann_zero%set_fcn_option(   'Derivative', 'val', ZERO)
 
 
 
@@ -88,12 +83,12 @@ contains
         ! Solid walls get dirichlet zero bc.
         ! All other families get neumann zero bc.
         !
-        call chidg%read_grid(gridfile, equation_set='Wall Distance')
-        call chidg%read_boundaryconditions(gridfile,bc_wall=dirichlet_zero,     &
-                                                    bc_inlet=neumann_zero,      &
-                                                    bc_outlet=neumann_zero,     &
-                                                    bc_symmetry=neumann_zero,   &
-                                                    bc_farfield=neumann_zero)
+        call wall_distance%read_grid(gridfile, equation_set='Wall Distance')
+        call wall_distance%read_boundaryconditions(gridfile, bc_wall     = dirichlet_zero, &
+                                                             bc_inlet    = neumann_zero,   &
+                                                             bc_outlet   = neumann_zero,   &
+                                                             bc_symmetry = neumann_zero,   &
+                                                             bc_farfield = neumann_zero)
 
 
         !
@@ -109,11 +104,10 @@ contains
         !
         ! Set ChiDG components
         !
-        call chidg%set('Time Integrator' , algorithm='Steady'                        )
-        call chidg%set('Nonlinear Solver', algorithm='Quasi-Newton', options=noptions)
-        call chidg%set('Linear Solver'   , algorithm='FGMRES',       options=loptions)
-        call chidg%set('Preconditioner'  , algorithm='RAS+ILU0'                      )
-
+        call wall_distance%set('Time Integrator' , algorithm='Steady'                        )
+        call wall_distance%set('Nonlinear Solver', algorithm='Quasi-Newton', options=noptions)
+        call wall_distance%set('Linear Solver'   , algorithm='FGMRES',       options=loptions)
+        call wall_distance%set('Preconditioner'  , algorithm='RAS+ILU0'                      )
 
 
 
@@ -140,13 +134,8 @@ contains
             !
             ! (Re)Initialize domain storage, communication, matrix/vector storage
             !
-            call chidg%set('Solution Order', integer_input=iorder)
-            call chidg%initialize_solution_domains()
-            call chidg%init('communication')
-            call chidg%init('chimera')
-            call chidg%initialize_solution_solver()
-            call chidg%init('finalize')
-
+            call wall_distance%set('Solution Order', integer_input=iorder)
+            call wall_distance%init('all')
 
 
             !
@@ -155,25 +144,25 @@ contains
             if (p == 2) then
                 call create_function(constant,'constant')
                 call constant%set_option('val',0._rk)
-                call chidg%data%sdata%q%project(chidg%data%mesh,constant,1)
+                call wall_distance%data%sdata%q%project(chidg%data%mesh,constant,1)
 
             else
-                call chidg%read_solution(solutionfile)
+                call wall_distance%read_solution(solutionfile)
             end if
 
 
             !
             ! Run ChiDG simulation
             !
-            call chidg%report('before')
-            call chidg%run()
-            call chidg%report('after')
+            call wall_distance%report('before')
+            call wall_distance%run()
+            call wall_distance%report('after')
 
 
             !
             ! Write wall distance to auxiliary field
             !
-            call chidg%write_solution(solutionfile)
+            call wall_distance%write_solution(solutionfile)
 
 
         end do
@@ -206,35 +195,28 @@ contains
             !
             ! (Re)Initialize domain storage, communication, matrix/vector storage
             !
-            call chidg%set('Solution Order', integer_input=iorder)
-            call chidg%initialize_solution_domains()
-            call chidg%init('communication')
-            call chidg%init('chimera')
-            call chidg%initialize_solution_solver()
-            call chidg%init('finalize')
-
-
-
+            call wall_distance%set('Solution Order', integer_input=iorder)
+            call wall_distance%init('all')
 
 
             !
             ! Read solution if it exists.
             !
-            call chidg%read_solution(solutionfile)
+            call wall_distance%read_solution(solutionfile)
 
 
             !
             ! Run ChiDG simulation
             !
-            call chidg%report('before')
-            call chidg%run()
-            call chidg%report('after')
+            call wall_distance%report('before')
+            call wall_distance%run()
+            call wall_distance%report('after')
 
 
             !
             ! Write wall distance to auxiliary field
             !
-            call chidg%write_solution(solutionfile)
+            call wall_distance%write_solution(solutionfile)
 
 
         end do
@@ -245,30 +227,22 @@ contains
 
 
 
+        aux_field_index = chidg%data%sdata%get_auxiliary_field_index('Wall Distance')
+
+        user_msg = "wall_distance_driver: An auxiliary field vector was not found in the primary &
+                    chidg environment to store the Wall Distance field."
+        if (aux_field_index == 0) call chidg_signal(FATAL,user_msg)
 
 
 
-        call chidg_post(trim(solutionfile))
-        call chidg_post_vtk(trim(solutionfile))
+        !
+        ! Copy Wall Distance to working ChiDG environment.
+        !
+        chidg%data%sdata%auxiliary_field(aux_field_index) = wall_distance%data%sdata%q
 
 
 
-        
-!        !
-!        ! Compute a normalization for better approximation of distance function;
-!        ! project to a modal expansion.
-!        !
-!!        call normalize_wall_distance(chidg)
-!
-!
-!        !
-!        ! Write wall distance to auxiliary field
-!        !
-!        call chidg%write_solution(solutionfile)
-
-
-
-    end subroutine compute_field
+    end subroutine wall_distance_driver
     !**************************************************************************************
 
 

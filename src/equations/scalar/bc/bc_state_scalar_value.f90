@@ -47,6 +47,7 @@ contains
         ! Set name
         !
         call self%set_name('Scalar Value')
+        call self%set_family('Scalar')
 
 
         !

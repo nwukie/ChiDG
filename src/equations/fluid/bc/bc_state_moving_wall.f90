@@ -48,6 +48,7 @@ contains
         ! Set operator name
         !
         call self%set_name("Moving Wall")
+        call self%set_family("Wall")
 
 
 !        !

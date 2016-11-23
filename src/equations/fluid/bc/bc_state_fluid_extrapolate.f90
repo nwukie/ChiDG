@@ -47,6 +47,7 @@ contains
         ! Set operator name
         !
         call self%set_name("Fluid Extrapolate")
+        call self%set_family("Symmetry")
 
 
 !        !

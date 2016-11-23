@@ -40,7 +40,7 @@ module type_chidg_data
     !!  @author Nathan A. Wukie
     !!  @date   2/1/2016
     !!
-    !--------------------------------------------------------------------------------------------------------------
+    !----------------------------------------------------------------------------------------------
     type, public  :: chidg_data_t
 
         logical                                     :: solverInitialized = .false.
@@ -49,11 +49,10 @@ module type_chidg_data
 
         
         type(domain_info_t),            allocatable :: info(:)     !< General container for domain information
-
-
         type(mesh_t),                   allocatable :: mesh(:)     !< Array of mesh instances. One for each domain.
         type(bcset_t),                  allocatable :: bcset(:)    !< Array of boundary condition sets. One for each domain.
         type(equation_set_t),           allocatable :: eqnset(:)   !< Array of equation set instances. One for each domain.
+
         type(solverdata_t)                          :: sdata       !< Solver data container for solution vectors and matrices
 
 
@@ -74,7 +73,7 @@ module type_chidg_data
         procedure   :: report
 
     end type chidg_data_t
-    !*************************************************************************************************************
+    !**********************************************************************************************
 
 
 
@@ -93,7 +92,7 @@ contains
     !!
     !!
     !!
-    !-------------------------------------------------------------------------------------------------------------
+    !----------------------------------------------------------------------------------------------
     subroutine initialize_solution_solver(self)
         class(chidg_data_t),     intent(inout)   :: self
 
@@ -134,7 +133,7 @@ contains
         call self%sdata%init(self%mesh, bcset_coupling, function_data)
 
     end subroutine initialize_solution_solver
-    !*************************************************************************************************************
+    !************************************************************************************************
 
 
 
@@ -155,7 +154,7 @@ contains
     !!  @param[in]  eqnset      Character string defining the equationset_t for the domain
     !!  @param[in]  nterms_s    Integer defining the number of terms in the solution expansion
     !!
-    !---------------------------------------------------------------------------------------------------------------
+    !------------------------------------------------------------------------------------------------
     subroutine add_domain(self,name,nodes,connectivity,spacedim,nterms_c,eqnset)
         class(chidg_data_t),            intent(inout)   :: self
         character(*),                   intent(in)      :: name
@@ -248,7 +247,7 @@ contains
 
 
     end subroutine add_domain
-    !***************************************************************************************************************
+    !************************************************************************************************
 
 
 
@@ -364,6 +363,9 @@ contains
 
     end subroutine initialize_solution_domains
     !******************************************************************************************************
+
+
+
 
 
 

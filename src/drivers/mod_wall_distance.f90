@@ -16,9 +16,6 @@ module mod_wall_distance
 
 
 
-
-
-
 contains
 
 
@@ -36,13 +33,19 @@ contains
     !!  @param[in]  order           Polynomial order, the field will be computed with.
     !!
     !-------------------------------------------------------------------------------------
-    subroutine compute_field(field_name,gridfile,solutionfile,order)
-        character(*),   intent(in)      :: field_name
-        character(*),   intent(in)      :: gridfile
-        character(*),   intent(in)      :: solutionfile
-        integer(ik),    intent(in)      :: order
+    !subroutine compute_field(field_name,gridfile,solutionfile,order)
+    !    character(*),   intent(in)      :: field_name
+    !    character(*),   intent(in)      :: gridfile
+    !    character(*),   intent(in)      :: solutionfile
+    !    integer(ik),    intent(in)      :: order
+    subroutine compute_field(chidg)
+        type(chidg_t),  intent(inout), pointer   :: chidg
 
-        type(chidg_t)                   :: chidg
+        character(:), allocatable   :: field_name
+        character(:), allocatable   :: gridfile
+        character(:), allocatable   :: solutionfile
+        integer(ik)     :: order
+    !    type(chidg_t)                   :: chidg
         type(dict_t)                    :: noptions, loptions
         class(bc_state_t),  allocatable :: dirichlet_zero, neumann_zero
         class(function_t),  allocatable :: constant
@@ -158,7 +161,6 @@ contains
                 call chidg%read_solution(solutionfile)
             end if
 
-            print*, 'wall distance - 8'
 
             !
             ! Run ChiDG simulation

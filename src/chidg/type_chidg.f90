@@ -58,16 +58,23 @@ module type_chidg
     !!  @author Nathan A. Wukie
     !!  @date   2/1/2016
     !!
-    !-----------------------------------------------------------------------------------------------------
-    type, public    :: chidg_t
+    !------------------------------------------------------------------------------------------
+    type, public :: chidg_t
 
+        ! Auxiliary ChiDG environment that can be used to solve sub-problems
+        class(chidg_t), pointer  :: auxiliary_environment
 
-        integer(ik) :: nterms_s     = 0 ! Number of terms in the 3D solution basis expansion
-        integer(ik) :: nterms_s_1d  = 0 ! Number of terms in the 1D solution basis expansion
+        ! Number of terms in 3D/1D solution basis expansion
+        integer(ik)     :: nterms_s     = 0
+        integer(ik)     :: nterms_s_1d  = 0
 
+        ! ChiDG Files
+        !type(chidg_file_t)        :: grid_file
+        !type(chidg_file_t)        :: solution_file_in
+        !type(chidg_file_t)        :: solution_file_out
 
         ! Primary data container. Mesh, equations, bc's, vectors/matrices
-        type(chidg_data_t)   :: data
+        type(chidg_data_t)                          :: data
         
         ! Primary algorithms, selected at run-time
         class(time_integrator_t),   allocatable     :: time_integrator
@@ -101,10 +108,28 @@ module type_chidg
         procedure   :: init
         procedure   :: initialize_solution_domains
         procedure   :: initialize_solution_solver
+        procedure   :: check_auxiliary_fields
 
     end type chidg_t
-    !*****************************************************************************************************
+    !*******************************************************************************************
 
+
+
+
+
+
+
+
+    type, public :: chidg_factory_t
+
+        type(chidg_t),  allocatable :: chidg_instances(:)
+
+    contains
+
+        procedure   :: register
+        procedure   :: produce
+
+    end type chidg_factory_t
 
 
 
@@ -135,9 +160,6 @@ contains
         type(mpi_comm), intent(in), optional    :: comm
 
 
-
-
-
         select case (trim(activity))
 
             !
@@ -163,15 +185,12 @@ contains
                 if (.not. self%envInitialized ) then
                     call log_init()
 
-
                     ! Order matters here. Functions need to come first. Used by equations and bcs.
                     call register_functions()
                     call register_equation_builders()
                     call register_operators()
                     call register_bcs()
-
                     call initialize_grid()
-
                     self%envInitialized = .true.
 
                 end if
@@ -224,6 +243,7 @@ contains
         select case (trim(activity))
 
             case ('all')
+                call self%init('auxiliary fields')
                 call self%initialize_solution_domains()
                 call self%init('communication')
                 call self%init('chimera')
@@ -245,6 +265,13 @@ contains
 
 
             !
+            ! Initialize auxiliary states
+            !
+            case ('auxiliary fields')
+                call self%check_auxiliary_fields()
+
+
+            !
             ! Allocate components, based on input or default input data
             !
             case ('finalize')
@@ -254,7 +281,7 @@ contains
                 !
                 if (.not. allocated(self%time_integrator))  call chidg_signal(FATAL,"chidg%time_integrator component was not allocated")
                 if (.not. allocated(self%nonlinear_solver)) call chidg_signal(FATAL,"chidg%nonlinear_solver component was not allocated")
-                if (.not. allocated(self%linear_solver))    call chidg_signal(FATAL,"chidg%linearsolver component was not allocated")
+                if (.not. allocated(self%linear_solver))    call chidg_signal(FATAL,"chidg%linear_solver component was not allocated")
                 if (.not. allocated(self%preconditioner))   call chidg_signal(FATAL,"chidg%preconditioner component was not allocated")
 
 
@@ -697,12 +724,6 @@ contains
 
 
 
-
-
-
-
-
-
     
 
     !>  Initialize all solution and solver storage.
@@ -747,6 +768,8 @@ contains
 
 
 
+
+
     !>  Initialize all solution and solver storage.
     !!
     !!  @author Nathan A. Wukie
@@ -781,8 +804,74 @@ contains
 
 
 
+    !>  Check the equation_set's for any auxiliary fields that are required. 
+    !!
+    !!      #1: Check equation_set's for auxiliary fields
+    !!      #2: For auxiliary fields that are found, check the file for the auxiliary field.
+    !!      #3: If no auxiliary field in file, check auxiliary drivers for a rule to compute the field
+    !!      #4: If no rule, error. We don't have the field, and we also don't know how to compute it.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   11/21/2016
+    !!
+    !!
+    !!
+    !----------------------------------------------------------------------------------------------------
+    subroutine check_auxiliary_fields(self)
+        class(chidg_t), intent(inout)   :: self
 
-    !> Write solution to file.
+        type(string_t), allocatable :: auxiliary_fields(:)
+        logical,        allocatable :: domain_needs_aux_field(:)
+        logical,        allocatable :: file_has_aux_field(:)
+        logical,        allocatable :: field_in_file
+
+
+
+!        aux_fields = self%data%get_auxiliary_fields()
+!
+!
+!        do iaux = 1,size(aux_fields)
+!
+!
+!            !
+!            ! Check which domains use the auxiliary field
+!            !
+!            do idom = 1,self%data%ndomains()
+!                domain_uses_field(idom) = self%data%eqnset(idom)%uses_auxiliary_field(aux_fields(iaux))
+!            end do !idom
+!
+!
+!            !
+!            do idom = 1,self%data%ndomains()
+!                file_has_aux_field(idom) = file%domain_has_field(idom,aux_field(iaux))
+!            end do !idom
+!
+!
+!            !
+!            ! If any domain doesn't have the field in file, get from a pre-defined rule
+!            !
+!            if (any(file_has_aux_field == .false.)) then
+!                call initialize_auxiliary_field(aux_field(iaux))
+!            end if
+!
+!
+!        end do !iaux
+
+        
+
+
+    end subroutine check_auxiliary_fields
+    !****************************************************************************************************
+
+
+
+
+
+
+
+
+
+    !>  Write solution to file.
     !!
     !!  @author Nathan A. Wukie
     !!  @date   2/1/2016

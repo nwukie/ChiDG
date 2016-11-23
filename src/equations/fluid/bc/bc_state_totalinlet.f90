@@ -47,9 +47,10 @@ contains
         class(totalinlet_t),   intent(inout) :: self
         
         !
-        ! Set operator name
+        ! Set name, family
         !
         call self%set_name("Total Inlet")
+        call self%set_family("Inlet")
 
 
 !        !

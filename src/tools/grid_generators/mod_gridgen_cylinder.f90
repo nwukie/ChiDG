@@ -206,7 +206,7 @@ contains
         if (present(bc_groups)) then
 
             do igroup = 1,size(bc_groups)
-                call create_bc_group_hdf(file_id,bc_groups(igroup)%name,'Inlet')
+                call create_bc_group_hdf(file_id,bc_groups(igroup)%name)
 
                 bcgroup_id = open_bc_group_hdf(file_id,bc_groups(igroup)%name)
 
@@ -219,9 +219,9 @@ contains
 
         else
 
-            call create_bc_group_hdf(file_id,'Inlet','Inlet')
-            call create_bc_group_hdf(file_id,'Outlet','Inlet')
-            call create_bc_group_hdf(file_id,'Walls','Inlet')
+            call create_bc_group_hdf(file_id,'Inlet')
+            call create_bc_group_hdf(file_id,'Outlet')
+            call create_bc_group_hdf(file_id,'Walls')
 
             bcgroup_id = open_bc_group_hdf(file_id,'Inlet')
             call add_bc_state_hdf(bcgroup_id,inlet)

@@ -44,9 +44,10 @@ contains
         class(pressureoutlet_t),   intent(inout) :: self
         
         !
-        ! Set operator name
+        ! Set name, family
         !
         call self%set_name("Pressure Outlet")
+        call self%set_family("Outlet")
 
 
 !        !

@@ -48,6 +48,7 @@ contains
         ! Set name
         !
         call self%set_name('Scalar Derivative')
+        call self%set_family('Scalar')
 
 
         !

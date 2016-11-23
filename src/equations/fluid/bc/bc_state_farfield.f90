@@ -45,9 +45,10 @@ contains
         
 
         !
-        ! Set operator name
+        ! Set operator name, family
         !
         call self%set_name("Farfield")
+        call self%set_family("Farfield")
 
 
 

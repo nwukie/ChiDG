@@ -47,6 +47,7 @@ contains
         ! Set operator name
         !
         call self%set_name("Symmetry")
+        call self%set_family("Symmetry")
 
 
 !        !

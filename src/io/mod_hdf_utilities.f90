@@ -2301,13 +2301,11 @@ contains
     !!
     !!  @param[in]  fid             HDF file identifier
     !!  @param[in]  group_name      Unique name for the new boundary condition state group.
-    !!  @param[in]  group_family    The boundary condition state family
     !!
     !----------------------------------------------------------------------------------------
-    subroutine create_bc_group_hdf(fid,group_name,group_family)
+    subroutine create_bc_group_hdf(fid,group_name)
         integer(HID_T), intent(in)  :: fid
         character(*),   intent(in)  :: group_name
-        character(*),   intent(in)  :: group_family
 
         character(:),   allocatable :: user_msg
         integer(HID_T)              :: bcgroup_id
@@ -2327,11 +2325,11 @@ contains
         ! Create a new group for the bc_state_t
         !
         call h5gcreate_f(fid, "BCSG_"//trim(group_name), bcgroup_id, ierr)
-        if (ierr /= 0) call chidg_signal(FATAL,"create_bc_state_group_hdf: error creating new group for bc_state")
+        if (ierr /= 0) call chidg_signal(FATAL,'create_bc_state_group_hdf: error creating new group for bc_state.')
 
 
         ! Set 'Family'
-        call h5ltset_attribute_string_f(bcgroup_id, ".", "Family", trim(group_family), ierr)
+        call h5ltset_attribute_string_f(bcgroup_id, '.', 'Family', 'none', ierr)
         if (ierr /= 0) call chidg_signal(FATAL,"create_bc_state_group_hdf: error setting the attribute 'Family'")
 
 
@@ -2361,17 +2359,6 @@ contains
         integer(ik)                 :: ierr
         character(1024)             :: family
         character(:),   allocatable :: family_trimmed
-
-!        call h5gopen_f(fid,"BCSG_"//trim(group_name),bcgroup_id,ierr)
-!        if (ierr /= 0) call chidg_signal(FATAL,"get_bc_state_group_family_hdf: Error opening boundary condition group")
-!
-!        call h5ltget_attribute_string_f(bcgroup_id, ".", "Family", family, ierr)
-!        if (ierr /= 0) call chidg_signal(FATAL,"check_contains_grid_hdf - h5ltget_attribute_int_f")
-!        
-!        call h5gclose_f(bcgroup_id,ierr)
-!
-!        family_trimmed = trim(family)
-
 
         call h5ltget_attribute_string_f(bcgroup_id, ".", "Family", family, ierr)
         if (ierr /= 0) call chidg_signal(FATAL,"get_bc_state_group_family_hdf: h5ltget_attribute_int_f")
@@ -2408,13 +2395,6 @@ contains
 
     end subroutine set_bc_state_group_family_hdf
     !*****************************************************************************************
-
-
-
-
-
-
-
 
 
 
@@ -2547,6 +2527,7 @@ contains
 
         integer(ik)                         :: ierr
         integer(HID_T)                      :: state_id
+        character(:),   allocatable         :: current_family, user_msg
         logical                             :: link_exists, state_found
 
 
@@ -2558,7 +2539,6 @@ contains
         else
 
             ! Check to make sure the bc_state wasn't previously added
-            !call h5lexists_f(bcgroup_id, "BCS_"//bc_state%get_name(), link_exists, ierr)
             link_exists = check_link_exists_hdf(bcgroup_id,"BCS_"//bc_state%get_name())
 
 
@@ -2569,15 +2549,34 @@ contains
                 state_found = check_bc_state_registered(bc_state%get_name())
 
                 if (state_found) then
-                    ! Create a new group for the bc_state_t
-                    call h5gcreate_f(bcgroup_id, "BCS_"//bc_state%get_name(), state_id, ierr)
-                    if (ierr /= 0) call chidg_signal(FATAL,"add_bc_state_hdf: error creating new group for bc_state")
 
-                    ! Add bc_state properties to the group that was created
-                    call add_bc_properties_hdf(state_id,bc_state)
+                    ! Get bcgroup family
+                    current_family = get_bc_state_group_family_hdf(bcgroup_id)
 
-                    ! Close function group
-                    call h5gclose_f(state_id,ierr)
+                    !
+                    ! Check if new bc_state is of same family
+                    !
+                    if ( (trim(current_family) == 'none') .or. &
+                         (trim(current_family) == trim(bc_state%get_family())) ) then
+
+                        ! Set group 'Family'
+                        call set_bc_state_group_family_hdf(bcgroup_id, bc_state%get_family())
+
+                        ! Create a new group for the bc_state_t
+                        call h5gcreate_f(bcgroup_id, "BCS_"//bc_state%get_name(), state_id, ierr)
+                        if (ierr /= 0) call chidg_signal(FATAL,"add_bc_state_hdf: error creating new group for bc_state")
+
+                        ! Add bc_state properties to the group that was created
+                        call add_bc_properties_hdf(state_id,bc_state)
+
+                        ! Close function group
+                        call h5gclose_f(state_id,ierr)
+
+                    else
+                        user_msg = "add_bc_state_hdf: Boundary condition state functions in a group &
+                                    must be of the same family"
+                        call chidg_signal_one(FATAL,user_msg,bc_state%get_family())
+                    end if
                 end if
 
             end if
@@ -2592,80 +2591,6 @@ contains
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-!    !>  Add bc_state function for a block boundary condition.
-!    !!
-!    !!  /D_domainname/BoundaryConditions/"face"/BCS_bc_state
-!    !!
-!    !!  "face" is XI_MIN, XI_MAX, ETA_MIN, etc.
-!    !!
-!    !!  @author Nathan A. Wukie
-!    !!  @date   10/17/2016
-!    !!
-!    !!
-!    !----------------------------------------------------------------------------------------
-!    subroutine add_bc_state_hdf(bcface_id,bc_state)
-!        integer(HID_T),     intent(in)  :: bcface_id
-!        class(bc_state_t),  intent(in)  :: bc_state
-!
-!        integer(ik)                         :: ierr
-!        integer(HID_T)                      :: state_id
-!        logical                             :: link_exists, state_found
-!
-!
-!        if ( bc_state%get_name() == 'empty' ) then
-!            !
-!            ! If 'empty' do not allocate new bc
-!            !
-!            
-!        else
-!
-!            ! Check to make sure the bc_state wasn't previously added
-!            call h5lexists_f(bcface_id, "BCS_"//bc_state%get_name(), link_exists, ierr)
-!
-!
-!            if (.not. link_exists) then
-!
-!                ! Check bc_state exists in the register. 
-!                ! If not, user probably entered the wrong string, so do nothing
-!                state_found = check_bc_state_registered(bc_state%get_name())
-!
-!                if (state_found) then
-!                    ! Create a new group for the bc_state_t
-!                    call h5gcreate_f(bcface_id, "BCS_"//bc_state%get_name(), state_id, ierr)
-!                    if (ierr /= 0) call chidg_signal(FATAL,"add_bc_state_hdf: error creating new group for bc_state")
-!
-!                    ! Add bc_state properties to the group that was created
-!                    call add_bc_properties_hdf(state_id,bc_state)
-!
-!                    ! Close function group
-!                    call h5gclose_f(state_id,ierr)
-!                end if
-!
-!            end if
-!
-!        end if
-!
-!
-!    end subroutine add_bc_state_hdf
-!    !*****************************************************************************************
-
-
-
-    
 
 
 
@@ -3158,6 +3083,16 @@ contains
         !
         call h5gunlink_f(bcgroup_id,"BCS_"//trim(state_string),ierr)
         if (ierr /= 0) call chidg_signal(FATAL,"delete_bc_state_hdf: error unlinking bc_state group")
+
+
+
+        !
+        ! If no bc_state's are left attached, clear group family.
+        !
+        if (get_nbc_states_hdf(bcgroup_id) == 0) then
+            call set_bc_state_group_family_hdf(bcgroup_id,'none')
+        end if
+
 
 
     end subroutine remove_bc_state_hdf

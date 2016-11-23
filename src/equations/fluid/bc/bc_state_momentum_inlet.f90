@@ -50,6 +50,7 @@ contains
         ! Set operator name
         !
         call self%set_name("Momentum Inlet")
+        call self%set_family("Inlet")
 
 
 !        !

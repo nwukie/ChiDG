@@ -1,3 +1,50 @@
+
+!>  Test push_back to append a general densematrix to the densematrix_vector_t
+!!
+!!
+!!  @author Matteo Ugolotti
+!!
+!---------------------------------------------------------------------------------
+
+@Test
+subroutine test_densematrix_vector__init()
+    use pfunit_mod
+    use mod_kinds,                  only: rk, ik
+    use type_densematrix_vector,    only: densematrix_vector_t
+    use type_densematrix,           only: densematrix_t
+    implicit none
+
+    type(densematrix_vector_t)      :: vec
+
+
+    !
+    ! Initialize a densematrix_vector   THIS IS BEING TESTED
+    !
+    
+    call vec%init(1,2,3,4)
+
+    !
+    ! test the init subroutine
+    !
+
+    @assertEqual(1,vec%get_idomain_g())
+    @assertEqual(2,vec%get_ielement_g())
+    @assertEqual(3,vec%get_idomain_l())
+    @assertEqual(4,vec%get_ielement_l())
+    @assertEqual(0,vec%capacity())
+    @assertEqual(0,vec%size())
+
+end subroutine
+
+
+
+
+
+
+
+
+
+
 !>  Test push_back to append a general densematrix to the densematrix_vector_t
 !!
 !!
@@ -55,6 +102,10 @@ subroutine test_densematrix_vector__push_back__onedensematrix()
     @assertEqual(7,vec%capacity())
 
 end subroutine
+
+
+
+
 
 
 

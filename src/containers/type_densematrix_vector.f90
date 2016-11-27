@@ -28,6 +28,9 @@ module type_densematrix_vector
         type(densematrix_t),   allocatable  :: data_(:)
 
     contains
+        ! Initializers
+        procedure, public   :: init                 !< initialize with size and capacity = 0
+
 
         procedure, public   :: capacity             !< return the current allocated capacity
         procedure, public   :: loc                  !< return the location of a stored value
@@ -63,6 +66,11 @@ module type_densematrix_vector
         procedure, public   :: itranspose       !< return itranspose, imat index of densematrix in transposed location.
         !procedure, public   :: find             !< find element in densematrix vector based idonor_domain_g ad i_element_g NB (not used anymore in blockmatrix)!
         procedure, public   :: get_diagonal     !< return index of densematrix representing the diagonal.
+        procedure, public   :: get_idomain_g    !< return the global domain index which the densematrix_vector is associated with
+        procedure, public   :: get_ielement_g   !< return the global element index which the densematrix vector is associated with
+        procedure, public   :: get_idomain_l    !< return the local domain index which the densematrix_vector is associated with
+        procedure, public   :: get_ielement_l   !< return the local element indexwhich the densematrix vector is associated with
+
 
     end type densematrix_vector_t
     !*****************************************************************************************
@@ -70,6 +78,145 @@ module type_densematrix_vector
 
 
 contains
+
+
+    !>  Subroutine for initializing general densematrix_vector
+    !!
+    !!  @author Matteo Ugolotti
+    !!  @date 11/26/2016
+    !!
+    !!  @param[in]  idomain_g       global domain index which the densematrix_vector is associated with
+    !!  @param[in]  ielement_g      global element index which the densematrix_vector is associated with
+    !!  @param[in]  idomain_l       local domain index which the densematrix_vector is associated with
+    !!  @param[in]  ielement_l      local element index which the densematrix_vector is associated with
+    !!
+    !!
+    !-----------------------------------------------------------------------------------------
+    subroutine init(self,idomain_g,ielement_g,idomain_l,ielement_l)
+        class(densematrix_vector_t),    intent(inout)   :: self
+        integer(ik),                    intent(in)      :: idomain_g,ielement_g,idomain_l,ielement_l
+        
+        !
+        ! set domain and element index
+        !
+
+        self%idomain_g  = idomain_g
+        self%ielement_g = ielement_g
+        self%idomain_l  = idomain_l
+        self%ielement_l = ielement_l
+
+        !
+        ! set size and capacity to zero
+        !
+        
+        self%size_      = ZERO
+        self%capacity_  = ZERO
+
+
+    end subroutine init
+    !*****************************************************************************************
+
+
+
+
+
+    !>  This function returns idomain_g for the densematrix_vector
+    !!
+    !!  @author Matteo Ugolotti
+    !!  @date 11/26/2016
+    !!
+    !!
+    !-----------------------------------------------------------------------------------------
+    function get_idomain_g(self) result(res)
+        class(densematrix_vector_t),    intent(inout)   :: self
+        integer(ik)      :: res
+        
+        !
+        ! retrieve the attribute
+        !
+
+        res = self%idomain_g
+
+    end function get_idomain_g
+    !*****************************************************************************************
+
+
+
+
+
+
+    !>  This function returns idomain_l for the densematrix_vector
+    !!
+    !!  @author Matteo Ugolotti
+    !!  @date 11/26/2016
+    !!
+    !!
+    !-----------------------------------------------------------------------------------------
+    function get_idomain_l(self) result(res)
+        class(densematrix_vector_t),    intent(inout)   :: self
+        integer(ik)      :: res
+        
+        !
+        ! retrieve the attribute
+        !
+
+        res = self%idomain_l
+
+    end function get_idomain_l
+    !*****************************************************************************************
+
+
+
+
+
+
+    !>  This function returns ielement_g for the densematrix_vector
+    !!
+    !!  @author Matteo Ugolotti
+    !!  @date 11/26/2016
+    !!
+    !!
+    !-----------------------------------------------------------------------------------------
+    function get_ielement_g(self) result(res)
+        class(densematrix_vector_t),    intent(inout)   :: self
+        integer(ik)      :: res
+        
+        !
+        ! retrieve the attribute
+        !
+
+        res = self%ielement_g
+
+    end function get_ielement_g
+    !*****************************************************************************************
+
+
+
+
+
+
+    !>  This function returns ielement_l for the densematrix_vector
+    !!
+    !!  @author Matteo Ugolotti
+    !!  @date 11/26/2016
+    !!
+    !!
+    !-----------------------------------------------------------------------------------------
+    function get_ielement_l(self) result(res)
+        class(densematrix_vector_t),    intent(inout)   :: self
+        integer(ik)      :: res
+        
+        !
+        ! retrieve the attribute
+        !
+
+        res = self%ielement_l
+
+    end function get_ielement_l
+    !*****************************************************************************************
+
+
+
 
 
 

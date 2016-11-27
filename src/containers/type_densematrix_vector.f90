@@ -39,7 +39,7 @@ module type_densematrix_vector
         procedure, public   :: push_back
         procedure, public   :: clear
         procedure, public   :: setzero
-        procedure, public   :: store_dmv
+        procedure, public   :: store
         procedure, private  :: increase_capacity
 
         procedure, public   :: set_itranspose
@@ -61,7 +61,7 @@ module type_densematrix_vector
         procedure, public   :: eparent_l        !< return parent local element for the index position densematrix
         procedure, public   :: parent_proc      !< return parent processor rank
         procedure, public   :: itranspose       !< return itranspose, imat index of densematrix in transposed location.
-        procedure, public   :: find             !< find element in densematrix vector based idonor_domain_g ad i_element_g NB: see procedure header!
+        !procedure, public   :: find             !< find element in densematrix vector based idonor_domain_g ad i_element_g NB (not used anymore in blockmatrix)!
         procedure, public   :: get_diagonal     !< return index of densematrix representing the diagonal.
 
     end type densematrix_vector_t
@@ -647,47 +647,47 @@ contains
 
 
 
-    !>  Find element in densematrix_vector based idomain_g and ielement_g
-    !!
-    !!  @Matteo Ugolotti
-    !!  @date   11/14/2016
-    !!
-    !!  This procedure is very similar to procedure "loc", the only difference
-    !!  is that "find" returns an error when the densematrix is not found.
-    !!  This procedure is used in blockmatrix!
-    !!
-    !----------------------------------------------------------------------------------------
-    function find(self,idomain_g,ielement_g) result (res)
-        class(densematrix_vector_t),    intent(in)  :: self
-        integer(ik),                    intent(in)  :: idomain_g
-        integer(ik),                    intent(in)  :: ielement_g
-        
-        integer(ik) :: ival
-        logical     :: matrix_match = .false.
-        logical     :: no_donor_matrix = .false. 
-        integer(ik) :: res
-
-        res = 0
-
-        do ival = 1 , self%size()
-
-            matrix_match = ( (idomain_g == self%dparent_g(ival)) .and. &
-                            (ielement_g == self%eparent_g(ival)) )
-
-            if ( matrix_match ) then
-                res = ival
-                exit
-            end if
-            
-
-        end do ! ival
-        
-    
-        no_donor_matrix = (res == 0)
-        if (no_donor_matrix) call chidg_signal(MSG, 'densematrix_vector%find: no donor densematrix found to store derivative')
-
-    end function find
-    !****************************************************************************************
+!    !>  Find element in densematrix_vector based idomain_g and ielement_g
+!    !!
+!    !!  @Matteo Ugolotti
+!    !!  @date   11/14/2016
+!    !!
+!    !!  This procedure is very similar to procedure "loc", the only difference
+!    !!  is that "find" returns an error when the densematrix is not found.
+!    !!  This procedure is used in blockmatrix!
+!    !!
+!    !----------------------------------------------------------------------------------------
+!    function find(self,idomain_g,ielement_g) result (res)
+!        class(densematrix_vector_t),    intent(in)  :: self
+!        integer(ik),                    intent(in)  :: idomain_g
+!        integer(ik),                    intent(in)  :: ielement_g
+!        
+!        integer(ik) :: ival
+!        logical     :: matrix_match = .false.
+!        logical     :: no_donor_matrix = .false. 
+!        integer(ik) :: res
+!
+!        res = 0
+!
+!        do ival = 1 , self%size()
+!
+!            matrix_match = ( (idomain_g == self%dparent_g(ival)) .and. &
+!                            (ielement_g == self%eparent_g(ival)) )
+!
+!            if ( matrix_match ) then
+!                res = ival
+!                exit
+!            end if
+!            
+!
+!        end do ! ival
+!        
+!    
+!        no_donor_matrix = (res == 0)
+!        if (no_donor_matrix) call chidg_signal(MSG, 'densematrix_vector%find: no donor densematrix found to store derivative')
+!
+!    end function find
+!    !****************************************************************************************
 
 
 
@@ -737,7 +737,7 @@ contains
     !!
     !!
     !----------------------------------------------------------------------------------------
-    subroutine store_dmv(self,index,ivar,nterms,integral)
+    subroutine store(self,index,ivar,nterms,integral)
         class(densematrix_vector_t),    intent(inout)   :: self
         integer(ik),                    intent(in)      :: index
         integer(ik),                    intent(in)      :: ivar
@@ -767,7 +767,7 @@ contains
         end do
 
 
-    end subroutine store_dmv
+    end subroutine store
     !****************************************************************************************
 
 

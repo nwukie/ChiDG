@@ -228,23 +228,23 @@ subroutine test_update_space_linearadvection()
     ielemB = 2
 
     ! XI_MIN
-    imatA = chidgA%data%sdata%lhs%dom(idomA)%lblks(ielemA,itime)%find(1,1)
-    imatB = chidgB%data%sdata%lhs%dom(idomB)%lblks(ielemB,itime)%find(1,1)
+    imatA = chidgA%data%sdata%lhs%dom(idomA)%lblks(ielemA,itime)%loc(1,1)
+    imatB = chidgB%data%sdata%lhs%dom(idomB)%lblks(ielemB,itime)%loc(1,1)
     @assertEqual(chidgA%data%sdata%lhs%dom(idomA)%lblks(ielemA,itime)%data_(imatA)%mat, chidgB%data%sdata%lhs%dom(idomB)%lblks(ielemB,itime)%data_(imatB)%mat)
 
     ! XI_MAX
-    imatA = chidgA%data%sdata%lhs%dom(idomA)%lblks(ielemA,itime)%find(1,3)
-    imatB = chidgB%data%sdata%lhs%dom(idomB)%chi_blks(ielemB,itime)%find(2,1)
+    imatA = chidgA%data%sdata%lhs%dom(idomA)%lblks(ielemA,itime)%loc(1,3)
+    imatB = chidgB%data%sdata%lhs%dom(idomB)%chi_blks(ielemB,itime)%loc(2,1)
     @assertEqual(chidgA%data%sdata%lhs%dom(idomA)%lblks(ielemA,itime)%data_(imatA)%mat, chidgB%data%sdata%lhs%dom(idomB)%chi_blks(ielemB,itime)%data_(imatB)%mat)
 
     ! ETA_MAX
-    imatA = chidgA%data%sdata%lhs%dom(idomA)%lblks(ielemA,itime)%find(1,6)
-    imatB = chidgB%data%sdata%lhs%dom(idomB)%lblks(ielemB,itime)%find(1,4)
+    imatA = chidgA%data%sdata%lhs%dom(idomA)%lblks(ielemA,itime)%loc(1,6)
+    imatB = chidgB%data%sdata%lhs%dom(idomB)%lblks(ielemB,itime)%loc(1,4)
     @assertEqual(chidgA%data%sdata%lhs%dom(idomA)%lblks(ielemA,itime)%data_(imatA)%mat, chidgB%data%sdata%lhs%dom(idomB)%lblks(ielemB,itime)%data_(imatB)%mat)
 
     ! ZETA_MAX
-    imatA = chidgA%data%sdata%lhs%dom(idomA)%lblks(ielemA,itime)%find(1,10)
-    imatB = chidgB%data%sdata%lhs%dom(idomB)%lblks(ielemB,itime)%find(1,6)
+    imatA = chidgA%data%sdata%lhs%dom(idomA)%lblks(ielemA,itime)%loc(1,10)
+    imatB = chidgB%data%sdata%lhs%dom(idomB)%lblks(ielemB,itime)%loc(1,6)
     @assertEqual(chidgA%data%sdata%lhs%dom(idomA)%lblks(ielemA,itime)%data_(imatA)%mat, chidgB%data%sdata%lhs%dom(idomB)%lblks(ielemB,itime)%data_(imatB)%mat)
 
 
@@ -257,25 +257,25 @@ subroutine test_update_space_linearadvection()
 
 
     ! XI_MIN
-    imatA = chidgA%data%sdata%lhs%dom(idomA)%lblks(ielemA,itime)%find(1,5)
-    imatB = chidgB%data%sdata%lhs%dom(idomB)%lblks(ielemB,itime)%find(1,3)
+    imatA = chidgA%data%sdata%lhs%dom(idomA)%lblks(ielemA,itime)%loc(1,5)
+    imatB = chidgB%data%sdata%lhs%dom(idomB)%lblks(ielemB,itime)%loc(1,3)
     @assertEqual(chidgA%data%sdata%lhs%dom(idomA)%lblks(ielemA,itime)%data_(imatA)%mat, chidgB%data%sdata%lhs%dom(idomB)%lblks(ielemB,itime)%data_(imatB)%mat)
 
 
     ! XI_MAX
-    imatA = chidgA%data%sdata%lhs%dom(idomA)%lblks(ielemA,itime)%find(1,7)
-    imatB = chidgB%data%sdata%lhs%dom(idomB)%chi_blks(ielemB,itime)%find(2,3)
+    imatA = chidgA%data%sdata%lhs%dom(idomA)%lblks(ielemA,itime)%loc(1,7)
+    imatB = chidgB%data%sdata%lhs%dom(idomB)%chi_blks(ielemB,itime)%loc(2,3)
     @assertEqual(chidgA%data%sdata%lhs%dom(idomA)%lblks(ielemA,itime)%data_(imatA)%mat, chidgB%data%sdata%lhs%dom(idomB)%chi_blks(ielemB,itime)%data_(imatB)%mat)
 
 
     ! ETA_MIN
-    imatA = chidgA%data%sdata%lhs%dom(idomA)%lblks(ielemA,itime)%find(1,2)
-    imatB = chidgB%data%sdata%lhs%dom(idomB)%lblks(ielemB,itime)%find(1,2)
+    imatA = chidgA%data%sdata%lhs%dom(idomA)%lblks(ielemA,itime)%loc(1,2)
+    imatB = chidgB%data%sdata%lhs%dom(idomB)%lblks(ielemB,itime)%loc(1,2)
     @assertEqual(chidgA%data%sdata%lhs%dom(idomA)%lblks(ielemA,itime)%data_(imatA)%mat, chidgB%data%sdata%lhs%dom(idomB)%lblks(ielemB,itime)%data_(imatB)%mat)
 
     ! ZETA_MAX
-    imatA = chidgA%data%sdata%lhs%dom(idomA)%lblks(ielemA,itime)%find(1,14)
-    imatB = chidgB%data%sdata%lhs%dom(idomB)%lblks(ielemB,itime)%find(1,8)
+    imatA = chidgA%data%sdata%lhs%dom(idomA)%lblks(ielemA,itime)%loc(1,14)
+    imatB = chidgB%data%sdata%lhs%dom(idomB)%lblks(ielemB,itime)%loc(1,8)
     @assertEqual(chidgA%data%sdata%lhs%dom(idomA)%lblks(ielemA,itime)%data_(imatA)%mat, chidgB%data%sdata%lhs%dom(idomB)%lblks(ielemB,itime)%data_(imatB)%mat)
 
 !    @assertEqual(chidgA%data%sdata%lhs%dom(1)%lblks(6,XI_MIN)%mat,   chidgB%data%sdata%lhs%dom(1)%lblks(4,XI_MIN)%mat)
@@ -294,25 +294,25 @@ subroutine test_update_space_linearadvection()
 
 
     ! XI_MIN
-    imatA = chidgA%data%sdata%lhs%dom(idomA)%lblks(ielemA,itime)%find(1,9)
-    imatB = chidgB%data%sdata%lhs%dom(idomB)%lblks(ielemB,itime)%find(1,5)
+    imatA = chidgA%data%sdata%lhs%dom(idomA)%lblks(ielemA,itime)%loc(1,9)
+    imatB = chidgB%data%sdata%lhs%dom(idomB)%lblks(ielemB,itime)%loc(1,5)
     @assertEqual(chidgA%data%sdata%lhs%dom(idomA)%lblks(ielemA,itime)%data_(imatA)%mat, chidgB%data%sdata%lhs%dom(idomB)%lblks(ielemB,itime)%data_(imatB)%mat)
 
 
     ! XI_MAX
-    imatA = chidgA%data%sdata%lhs%dom(idomA)%lblks(ielemA,itime)%find(1,11)
-    imatB = chidgB%data%sdata%lhs%dom(idomB)%chi_blks(ielemB,itime)%find(2,5)
+    imatA = chidgA%data%sdata%lhs%dom(idomA)%lblks(ielemA,itime)%loc(1,11)
+    imatB = chidgB%data%sdata%lhs%dom(idomB)%chi_blks(ielemB,itime)%loc(2,5)
     @assertEqual(chidgA%data%sdata%lhs%dom(idomA)%lblks(ielemA,itime)%data_(imatA)%mat, chidgB%data%sdata%lhs%dom(idomB)%chi_blks(ielemB,itime)%data_(imatB)%mat)
 
 
     ! ETA_MAX
-    imatA = chidgA%data%sdata%lhs%dom(idomA)%lblks(ielemA,itime)%find(1,14)
-    imatB = chidgB%data%sdata%lhs%dom(idomB)%lblks(ielemB,itime)%find(1,8)
+    imatA = chidgA%data%sdata%lhs%dom(idomA)%lblks(ielemA,itime)%loc(1,14)
+    imatB = chidgB%data%sdata%lhs%dom(idomB)%lblks(ielemB,itime)%loc(1,8)
     @assertEqual(chidgA%data%sdata%lhs%dom(idomA)%lblks(ielemA,itime)%data_(imatA)%mat, chidgB%data%sdata%lhs%dom(idomB)%lblks(ielemB,itime)%data_(imatB)%mat)
 
     ! ZETA_MIN
-    imatA = chidgA%data%sdata%lhs%dom(idomA)%lblks(ielemA,itime)%find(1,2)
-    imatB = chidgB%data%sdata%lhs%dom(idomB)%lblks(ielemB,itime)%find(1,2)
+    imatA = chidgA%data%sdata%lhs%dom(idomA)%lblks(ielemA,itime)%loc(1,2)
+    imatB = chidgB%data%sdata%lhs%dom(idomB)%lblks(ielemB,itime)%loc(1,2)
     @assertEqual(chidgA%data%sdata%lhs%dom(idomA)%lblks(ielemA,itime)%data_(imatA)%mat, chidgB%data%sdata%lhs%dom(idomB)%lblks(ielemB,itime)%data_(imatB)%mat)
     
 !    @assertEqual(chidgA%data%sdata%lhs%dom(1)%lblks(10,XI_MIN)%mat,   chidgB%data%sdata%lhs%dom(1)%lblks(6,XI_MIN)%mat)
@@ -329,26 +329,26 @@ subroutine test_update_space_linearadvection()
 
 
     ! XI_MIN
-    imatA = chidgA%data%sdata%lhs%dom(idomA)%lblks(ielemA,itime)%find(1,13)
-    imatB = chidgB%data%sdata%lhs%dom(idomB)%lblks(ielemB,itime)%find(1,7)
+    imatA = chidgA%data%sdata%lhs%dom(idomA)%lblks(ielemA,itime)%loc(1,13)
+    imatB = chidgB%data%sdata%lhs%dom(idomB)%lblks(ielemB,itime)%loc(1,7)
     @assertEqual(chidgA%data%sdata%lhs%dom(idomA)%lblks(ielemA,itime)%data_(imatA)%mat, chidgB%data%sdata%lhs%dom(idomB)%lblks(ielemB,itime)%data_(imatB)%mat)
 
 
     ! XI_MAX
-    imatA = chidgA%data%sdata%lhs%dom(idomA)%lblks(ielemA,itime)%find(1,15)
-    imatB = chidgB%data%sdata%lhs%dom(idomB)%chi_blks(ielemB,itime)%find(2,7)
+    imatA = chidgA%data%sdata%lhs%dom(idomA)%lblks(ielemA,itime)%loc(1,15)
+    imatB = chidgB%data%sdata%lhs%dom(idomB)%chi_blks(ielemB,itime)%loc(2,7)
     @assertEqual(chidgA%data%sdata%lhs%dom(idomA)%lblks(ielemA,itime)%data_(imatA)%mat, chidgB%data%sdata%lhs%dom(idomB)%chi_blks(ielemB,itime)%data_(imatB)%mat)
 
 
     ! ETA_MIN
-    imatA = chidgA%data%sdata%lhs%dom(idomA)%lblks(ielemA,itime)%find(1,10)
-    imatB = chidgB%data%sdata%lhs%dom(idomB)%lblks(ielemB,itime)%find(1,6)
+    imatA = chidgA%data%sdata%lhs%dom(idomA)%lblks(ielemA,itime)%loc(1,10)
+    imatB = chidgB%data%sdata%lhs%dom(idomB)%lblks(ielemB,itime)%loc(1,6)
     @assertEqual(chidgA%data%sdata%lhs%dom(idomA)%lblks(ielemA,itime)%data_(imatA)%mat, chidgB%data%sdata%lhs%dom(idomB)%lblks(ielemB,itime)%data_(imatB)%mat)
 
 
     ! ZETA_MIN
-    imatA = chidgA%data%sdata%lhs%dom(idomA)%lblks(ielemA,itime)%find(1,6)
-    imatB = chidgB%data%sdata%lhs%dom(idomB)%lblks(ielemB,itime)%find(1,4)
+    imatA = chidgA%data%sdata%lhs%dom(idomA)%lblks(ielemA,itime)%loc(1,6)
+    imatB = chidgB%data%sdata%lhs%dom(idomB)%lblks(ielemB,itime)%loc(1,4)
     @assertEqual(chidgA%data%sdata%lhs%dom(idomA)%lblks(ielemA,itime)%data_(imatA)%mat, chidgB%data%sdata%lhs%dom(idomB)%lblks(ielemB,itime)%data_(imatB)%mat)
     
 !    @assertEqual(chidgA%data%sdata%lhs%dom(1)%lblks(14,XI_MIN)%mat,   chidgB%data%sdata%lhs%dom(1)%lblks(8,XI_MIN)%mat)

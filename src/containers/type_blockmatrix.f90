@@ -591,10 +591,10 @@ contains
         nterms = self%ldata(ielement_l,2)  
 
         ! Find donor densematrix location 
-        imat = self%lblks(ielement_l,itime)%find(idonor_domain_g,idonor_element_g)
+        imat = self%lblks(ielement_l,itime)%loc(idonor_domain_g,idonor_element_g)
 
         ! Call subroutine on densematrix 
-        call self%lblks(ielement_l,itime)%store_dmv(imat,ivar,nterms,integral)
+        call self%lblks(ielement_l,itime)%store(imat,ivar,nterms,integral)
 
     end subroutine store
     !******************************************************************************************
@@ -646,11 +646,11 @@ contains
 
 
         ! Find donor densematrix location 
-        imat = self%chi_blks(ielement_l,itime)%find(idonor_domain_g,idonor_element_g)
+        imat = self%chi_blks(ielement_l,itime)%loc(idonor_domain_g,idonor_element_g)
 
 
         ! Store derivatives
-        call self%chi_blks(ielement_l,itime)%store_dmv(imat,ivar,nterms,integral)
+        call self%chi_blks(ielement_l,itime)%store(imat,ivar,nterms,integral)
 
 
     end subroutine store_chimera
@@ -724,10 +724,10 @@ contains
             nterms = self%ldata(ielement_l,2)
 
             ! Find coupled bc densematrix location 
-            imat = self%bc_blks(ielement_l,itime)%find(idonor_domain_l,idonor_element_l)
+            imat = self%bc_blks(ielement_l,itime)%loc(idonor_domain_l,idonor_element_l)
 
             ! Store derivatives
-            call self%bc_blks(ielement_l,itime)%store_dmv(imat,ivar,nterms,integral)
+            call self%bc_blks(ielement_l,itime)%store(imat,ivar,nterms,integral)
 
 
         end if ! check local block.

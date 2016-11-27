@@ -86,20 +86,20 @@ subroutine test_fgmres_ref_solve()
     ! 
     ielem = 1
     itime = 1
-    imat = A%dom(1)%lblks(ielem,itime)%find(1,1)
+    imat = A%dom(1)%lblks(ielem,itime)%loc(1,1)
     A%dom(1)%lblks(1,1)%data_(imat)%mat   = ZERO
 
-    imat = A%dom(1)%lblks(ielem,itime)%find(1,2)
+    imat = A%dom(1)%lblks(ielem,itime)%loc(1,2)
     A%dom(1)%lblks(1,1)%data_(imat)%mat = ONE
 
 
 
     ielem = 2
     itime = 1
-    imat = A%dom(1)%lblks(ielem,itime)%find(1,1)
+    imat = A%dom(1)%lblks(ielem,itime)%loc(1,1)
     A%dom(1)%lblks(ielem,itime)%data_(imat)%mat = -ONE
 
-    imat = A%dom(1)%lblks(ielem,itime)%find(1,2)
+    imat = A%dom(1)%lblks(ielem,itime)%loc(1,2)
     A%dom(1)%lblks(ielem,itime)%data_(imat)%mat = ZERO
 
 

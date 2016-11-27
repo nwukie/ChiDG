@@ -131,7 +131,7 @@ subroutine test_blockmatrix__store_1eq_8terms()
     ! Check that the derivatives were assigned to their correct locations in the block matrix.
     ! The xp_ad_ arrays should be stored as rows of the block matrix.
     !
-    imat = bmat%lblks(ielement_l,itime)%find(idomain_g=1,ielement_g=13)
+    imat = bmat%lblks(ielement_l,itime)%loc(idomain_g=1,ielem_g=13)
     mat  = bmat%lblks(ielement_l,itime)%dmat(imat)
     @assertEqual(integral(1)%xp_ad_, mat(1,:) )
     @assertEqual(integral(2)%xp_ad_, mat(2,:) )
@@ -273,7 +273,7 @@ subroutine test_blockmatrix__store_2eq_8terms()
     ! Check that the derivatives were assigned to their correct locations in the block matrix.
     ! The xp_ad_ arrays should be stored as rows of the block matrix.
     !
-    imat = bmat%lblks(ielem,itime)%find(idomain_g=1,ielement_g=13)
+    imat = bmat%lblks(ielem,itime)%loc(idomain_g=1,ielem_g=13)
     mat  = bmat%lblks(ielem,itime)%dmat(imat)
     @assertEqual(integral(1)%xp_ad_, mat(9,:) )
     @assertEqual(integral(2)%xp_ad_, mat(10,:) )

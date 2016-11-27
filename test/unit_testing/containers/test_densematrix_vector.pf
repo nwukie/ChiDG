@@ -337,67 +337,67 @@ end subroutine
 
 
 
-!>  Test find function which locates a given densematrix based on idomain_g and ielem_g
-!!  and return an error when nothing is found
-!!
-!!  @author Matteo Ugolotti
-!!
-!---------------------------------------------------------------------------------
-
-@Test
-subroutine test_densematrix_vector__find()
-    use pfunit_mod
-    use mod_kinds,                  only: rk, ik
-    use type_densematrix_vector,    only: densematrix_vector_t
-    use type_densematrix,           only: densematrix_t
-    implicit none
-
-    type(densematrix_t)         :: inmat1, inmat2, inmat3
-    type(densematrix_vector_t)  :: vec
-    integer(ik)                 :: idim, jdim, dparent_g_1, dparent_g_2, dparent_g_3, dparent_l, eparent_g_1, eparent_g_2, eparent_g_3, eparent_l, parent_proc
-
-
-    
-    ! Test initialization procedure
-
-    idim = 3
-    jdim = 3
-    dparent_g_1   = 1
-    dparent_g_2   = 2
-    dparent_g_3   = 3
-    eparent_g_1   = 4
-    eparent_g_2   = 5
-    eparent_g_3   = 6
-    dparent_l   = 31
-    eparent_l   = 33
-    parent_proc = 2
-
-    ! Test initialization of densematrix to push
-    
-    call inmat1%init(idim,jdim,dparent_g_1,dparent_l,eparent_g_1,eparent_l,parent_proc)
-    call inmat2%init(idim,jdim,dparent_g_2,dparent_l,eparent_g_2,eparent_l,parent_proc)
-    call inmat3%init(idim,jdim,dparent_g_3,dparent_l,eparent_g_3,eparent_l,parent_proc)
-    
-
-    
-
-    !
-    ! Store densematrix. THIS IS BEING TESTED
-    !
-    call vec%push_back(inmat1)
-    call vec%push_back(inmat2)
-    call vec%push_back(inmat3)
-
-    
-
-    ! Test location
-    @assertEqual(1,vec%find(1,4))
-    @assertEqual(2,vec%find(2,5))
-    @assertEqual(3,vec%find(3,6))
-    !@assertEqual(0,vec%find(7,2))
-
-
-end subroutine
+!!>  Test find function which locates a given densematrix based on idomain_g and ielem_g
+!!!  and return an error when nothing is found
+!!!
+!!!  @author Matteo Ugolotti
+!!!
+!!---------------------------------------------------------------------------------
+!
+!@Test
+!subroutine test_densematrix_vector__find()
+!    use pfunit_mod
+!    use mod_kinds,                  only: rk, ik
+!    use type_densematrix_vector,    only: densematrix_vector_t
+!    use type_densematrix,           only: densematrix_t
+!    implicit none
+!
+!    type(densematrix_t)         :: inmat1, inmat2, inmat3
+!    type(densematrix_vector_t)  :: vec
+!    integer(ik)                 :: idim, jdim, dparent_g_1, dparent_g_2, dparent_g_3, dparent_l, eparent_g_1, eparent_g_2, eparent_g_3, eparent_l, parent_proc
+!
+!
+!    
+!    ! Test initialization procedure
+!
+!    idim = 3
+!    jdim = 3
+!    dparent_g_1   = 1
+!    dparent_g_2   = 2
+!    dparent_g_3   = 3
+!    eparent_g_1   = 4
+!    eparent_g_2   = 5
+!    eparent_g_3   = 6
+!    dparent_l   = 31
+!    eparent_l   = 33
+!    parent_proc = 2
+!
+!    ! Test initialization of densematrix to push
+!    
+!    call inmat1%init(idim,jdim,dparent_g_1,dparent_l,eparent_g_1,eparent_l,parent_proc)
+!    call inmat2%init(idim,jdim,dparent_g_2,dparent_l,eparent_g_2,eparent_l,parent_proc)
+!    call inmat3%init(idim,jdim,dparent_g_3,dparent_l,eparent_g_3,eparent_l,parent_proc)
+!    
+!
+!    
+!
+!    !
+!    ! Store densematrix. THIS IS BEING TESTED
+!    !
+!    call vec%push_back(inmat1)
+!    call vec%push_back(inmat2)
+!    call vec%push_back(inmat3)
+!
+!    
+!
+!    ! Test location
+!    @assertEqual(1,vec%find(1,4))
+!    @assertEqual(2,vec%find(2,5))
+!    @assertEqual(3,vec%find(3,6))
+!    !@assertEqual(0,vec%find(7,2))
+!
+!
+!end subroutine
 
 
 
@@ -486,5 +486,501 @@ subroutine test_densematrix_vector__clear()
 
 
 end subroutine
+
+
+
+
+
+!>  Test setzero  which sets all the densematrixes to zero
+!!
+!!
+!!  @author Matteo Ugolotti
+!!
+!---------------------------------------------------------------------------------
+
+@Test
+subroutine test_densematrix_vector__setzero()
+    use pfunit_mod
+    use mod_kinds,                  only: rk, ik
+    use mod_constants,              only: ZERO
+    use type_densematrix_vector,    only: densematrix_vector_t
+    use type_densematrix,           only: densematrix_t
+    implicit none
+
+    type(densematrix_t)         :: inmat
+    type(densematrix_vector_t)  :: vec
+    integer(ik)                 :: idim, jdim, dparent_g, dparent_l, eparent_g, eparent_l, parent_proc
+
+    integer(ik),dimension(3,3)              :: matval, res, matzero = 0
+    
+    
+    ! Test initialization procedure
+
+    idim = 3
+    jdim = 3
+    dparent_g   = 23
+    dparent_l   = 31
+    eparent_g   = 19
+    eparent_l   = 33
+    parent_proc = 2
+    matval = transpose(reshape((/1, 2, 3, 4, 5, 6, 7, 8, 9/),shape(matval)))
+
+    ! Test initialization of densematrix to push
+     
+    call inmat%init(idim,jdim,dparent_g,dparent_l,eparent_g,eparent_l,parent_proc)
+    
+    inmat%mat = matval
+
+    
+
+    !
+    ! Store densematrix.
+    !
+    call vec%push_back(inmat)
+    call vec%push_back(inmat)
+    call vec%push_back(inmat)
+
+    !
+    ! Set densematrixes to zero.  THIS IS BEING TESTED
+    !
+
+    call vec%setzero()
+
+    ! Test value
+
+    @assertEqual(matzero,vec%dmat(1))
+    @assertEqual(matzero,vec%dmat(2))
+    @assertEqual(matzero,vec%dmat(3))
+
+
+end subroutine
+
+
+
+
+
+
+
+!>  Test set_itranspose  which define the itranspose attribute of a densematrix at an index location
+!!
+!!
+!!  @author Matteo Ugolotti
+!!
+!---------------------------------------------------------------------------------
+
+@Test
+subroutine test_densematrix_vector__set_itranspose()
+    use pfunit_mod
+    use mod_kinds,                  only: rk, ik
+    use mod_constants,              only: ZERO
+    use type_densematrix_vector,    only: densematrix_vector_t
+    use type_densematrix,           only: densematrix_t
+    implicit none
+
+    type(densematrix_t)         :: inmat
+    type(densematrix_vector_t)  :: vec
+    integer(ik)                 :: idim, jdim, dparent_g, dparent_l, eparent_g, eparent_l, parent_proc
+
+    
+    
+    ! Test initialization procedure
+
+    idim = 3
+    jdim = 3
+    dparent_g   = 23
+    dparent_l   = 31
+    eparent_g   = 19
+    eparent_l   = 33
+    parent_proc = 2
+
+    ! Test initialization of densematrix to push
+     
+    call inmat%init(idim,jdim,dparent_g,dparent_l,eparent_g,eparent_l,parent_proc)
+    
+
+    
+
+    !
+    ! Store densematrix.
+    !
+    call vec%push_back(inmat)
+    call vec%push_back(inmat)
+    call vec%push_back(inmat)
+
+    !
+    ! Set the itranspose attribute for each densematrix. THIS IS BEING TESTED
+    !
+
+    call vec%set_itranspose(1,20)
+    call vec%set_itranspose(2,30)
+    call vec%set_itranspose(3,40)
+
+
+    ! Test value
+
+    @assertEqual(20,vec%itranspose(1))
+    @assertEqual(30,vec%itranspose(2))
+    @assertEqual(40,vec%itranspose(3))
+
+
+end subroutine
+
+
+
+
+
+
+!>  Test set_recv_comm 
+!!
+!!
+!!  @author Matteo Ugolotti
+!!
+!---------------------------------------------------------------------------------
+
+@Test
+subroutine test_densematrix_vector__set_recv_comm()
+    use pfunit_mod
+    use mod_kinds,                  only: rk, ik
+    use type_densematrix_vector,    only: densematrix_vector_t
+    use type_densematrix,           only: densematrix_t
+    implicit none
+
+    type(densematrix_t)         :: inmat
+    type(densematrix_vector_t)  :: vec
+    integer(ik)                 :: idim, jdim, dparent_g, dparent_l, eparent_g, eparent_l, parent_proc
+
+    
+    
+    ! Test initialization procedure
+
+    idim = 3
+    jdim = 3
+    dparent_g   = 23
+    dparent_l   = 31
+    eparent_g   = 19
+    eparent_l   = 33
+    parent_proc = 2
+
+    ! Test initialization of densematrix to push
+     
+    call inmat%init(idim,jdim,dparent_g,dparent_l,eparent_g,eparent_l,parent_proc)
+    
+
+    
+
+    !
+    ! Store densematrix.
+    !
+    call vec%push_back(inmat)
+    call vec%push_back(inmat)
+    call vec%push_back(inmat)
+
+    !
+    ! Set receiver comm attribute for each densematrix. THIS IS BEING TESTED
+    !
+
+    call vec%set_recv_comm(1,4)
+    call vec%set_recv_comm(2,6)
+    call vec%set_recv_comm(3,8)
+
+
+    ! Test value
+
+    @assertEqual(4,vec%get_recv_comm(1))
+    @assertEqual(6,vec%get_recv_comm(2))
+    @assertEqual(8,vec%get_recv_comm(3))
+
+
+end subroutine
+
+
+
+
+
+
+
+!>  Test set_recv_domain 
+!!
+!!
+!!  @author Matteo Ugolotti
+!!
+!---------------------------------------------------------------------------------
+
+@Test
+subroutine test_densematrix_vector__set_recv_domain()
+    use pfunit_mod
+    use mod_kinds,                  only: rk, ik
+    use type_densematrix_vector,    only: densematrix_vector_t
+    use type_densematrix,           only: densematrix_t
+    implicit none
+
+    type(densematrix_t)         :: inmat
+    type(densematrix_vector_t)  :: vec
+    integer(ik)                 :: idim, jdim, dparent_g, dparent_l, eparent_g, eparent_l, parent_proc
+
+    
+    
+    ! Test initialization procedure
+
+    idim = 3
+    jdim = 3
+    dparent_g   = 23
+    dparent_l   = 31
+    eparent_g   = 19
+    eparent_l   = 33
+    parent_proc = 2
+
+    ! Test initialization of densematrix to push
+     
+    call inmat%init(idim,jdim,dparent_g,dparent_l,eparent_g,eparent_l,parent_proc)
+    
+
+    
+
+    !
+    ! Store densematrix.
+    !
+    call vec%push_back(inmat)
+    call vec%push_back(inmat)
+    call vec%push_back(inmat)
+
+    !
+    ! Set receiver domain attribute for each densematrix. THIS IS BEING TESTED
+    !
+
+    call vec%set_recv_domain(1,4)
+    call vec%set_recv_domain(2,6)
+    call vec%set_recv_domain(3,8)
+
+
+    ! Test value
+
+    @assertEqual(4,vec%get_recv_domain(1))
+    @assertEqual(6,vec%get_recv_domain(2))
+    @assertEqual(8,vec%get_recv_domain(3))
+
+
+end subroutine
+
+
+
+
+
+
+!>  Test set_recv_element 
+!!
+!!
+!!  @author Matteo Ugolotti
+!!
+!---------------------------------------------------------------------------------
+
+@Test
+subroutine test_densematrix_vector__set_recv_element()
+    use pfunit_mod
+    use mod_kinds,                  only: rk, ik
+    use type_densematrix_vector,    only: densematrix_vector_t
+    use type_densematrix,           only: densematrix_t
+    implicit none
+
+    type(densematrix_t)         :: inmat
+    type(densematrix_vector_t)  :: vec
+    integer(ik)                 :: idim, jdim, dparent_g, dparent_l, eparent_g, eparent_l, parent_proc
+
+    
+    
+    ! Test initialization procedure
+
+    idim = 3
+    jdim = 3
+    dparent_g   = 23
+    dparent_l   = 31
+    eparent_g   = 19
+    eparent_l   = 33
+    parent_proc = 2
+
+    ! Test initialization of densematrix to push
+     
+    call inmat%init(idim,jdim,dparent_g,dparent_l,eparent_g,eparent_l,parent_proc)
+    
+
+    
+
+    !
+    ! Store densematrix.
+    !
+    call vec%push_back(inmat)
+    call vec%push_back(inmat)
+    call vec%push_back(inmat)
+
+    !
+    ! Set receiver element attribute for each densematrix. THIS IS BEING TESTED
+    !
+
+    call vec%set_recv_element(1,4)
+    call vec%set_recv_element(2,6)
+    call vec%set_recv_element(3,8)
+
+
+    ! Test value
+
+    @assertEqual(4,vec%get_recv_element(1))
+    @assertEqual(6,vec%get_recv_element(2))
+    @assertEqual(8,vec%get_recv_element(3))
+
+
+end subroutine
+
+
+
+
+
+
+
+!>  Test dparent, eparent and parent_proc
+!!
+!!
+!!  @author Matteo Ugolotti
+!!
+!---------------------------------------------------------------------------------
+
+@Test
+subroutine test_densematrix_vector__eparent_dparent_parent_proc()
+    use pfunit_mod
+    use mod_kinds,                  only: rk, ik
+    use type_densematrix_vector,    only: densematrix_vector_t
+    use type_densematrix,           only: densematrix_t
+    implicit none
+
+    type(densematrix_t)         :: inmat1, inmat2
+    type(densematrix_vector_t)  :: vec
+    integer(ik)                 :: idim, jdim, dparent_g_1, dparent_l_1, eparent_g_1, eparent_l_1,parent_proc_1, dparent_g_2, dparent_l_2, eparent_g_2, eparent_l_2, parent_proc_2
+
+    
+    
+    ! Test initialization procedure
+
+    idim = 3
+    jdim = 3
+    dparent_g_1   = 23; dparent_g_2   = 11
+    dparent_l_1   = 31; dparent_l_2   = 56
+    eparent_g_1   = 19; eparent_g_2   = 98
+    eparent_l_1   = 33; eparent_l_2   = 32
+    parent_proc_1 = 2;  parent_proc_2 = 1
+
+    ! Test initialization of densematrix to push
+     
+    call inmat1%init(idim,jdim,dparent_g_1,dparent_l_1,eparent_g_1,eparent_l_1,parent_proc_1)
+    call inmat2%init(idim,jdim,dparent_g_2,dparent_l_2,eparent_g_2,eparent_l_2,parent_proc_2)
+    
+
+    
+
+    !
+    ! Store densematrix.
+    !
+    call vec%push_back(inmat1)
+    call vec%push_back(inmat2)
+
+
+    ! Test value
+
+    @assertEqual(23,vec%dparent_g(1))
+    @assertEqual(31,vec%dparent_l(1))
+    @assertEqual(19,vec%eparent_g(1))
+    @assertEqual(33,vec%eparent_l(1))
+    @assertEqual(2,vec%parent_proc(1))
+    @assertEqual(11,vec%dparent_g(2))
+    @assertEqual(56,vec%dparent_l(2))
+    @assertEqual(98,vec%eparent_g(2))
+    @assertEqual(32,vec%eparent_l(2))
+    @assertEqual(1,vec%parent_proc(2))
+
+
+end subroutine
+
+
+
+
+
+
+
+!>  Test get_diagonal
+!!
+!!
+!!  @author Matteo Ugolotti
+!!
+!---------------------------------------------------------------------------------
+
+@Test
+subroutine test_densematrix_vector__get_diagonal()
+    use pfunit_mod
+    use mod_kinds,                  only: rk, ik
+    use type_densematrix_vector,    only: densematrix_vector_t
+    use type_densematrix,           only: densematrix_t
+    implicit none
+
+    type(densematrix_t)         :: inmat1, inmat2
+    type(densematrix_vector_t)  :: vec
+    integer(ik)                 :: idim, jdim, dparent_g_1, dparent_l_1, eparent_g_1, eparent_l_1,parent_proc_1, dparent_g_2, dparent_l_2, eparent_g_2, eparent_l_2, parent_proc_2
+
+    
+    
+    ! Test initialization procedure
+
+    idim = 3
+    jdim = 3
+    dparent_g_1   = 23; dparent_g_2   = 11
+    dparent_l_1   = 31; dparent_l_2   = 56
+    eparent_g_1   = 19; eparent_g_2   = 98
+    eparent_l_1   = 33; eparent_l_2   = 32
+    parent_proc_1 = 2;  parent_proc_2 = 1
+
+
+    ! Test initialization of densematrix to push
+     
+    call inmat1%init(idim,jdim,dparent_g_1,dparent_l_1,eparent_g_1,eparent_l_1,parent_proc_1)
+    call inmat2%init(idim,jdim,dparent_g_2,dparent_l_2,eparent_g_2,eparent_l_2,parent_proc_2)
+    
+
+    
+
+    !
+    ! Store densematrix.
+    !
+    call vec%push_back(inmat1)
+    call vec%push_back(inmat2)
+    
+
+    ! Test value get_diagonal
+
+    vec%idomain_g = 23
+    vec%ielement_g = 19
+    @assertEqual(1,vec%get_diagonal())
+
+    vec%idomain_g = 11
+    vec%ielement_g = 98
+    @assertEqual(2,vec%get_diagonal())
+
+    vec%idomain_g = 2
+    vec%ielement_g = 19
+    @assertEqual(0,vec%get_diagonal())
+
+
+
+
+end subroutine
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 

@@ -462,10 +462,10 @@ contains
             ! Element 1
             !
             ! DIAG
-            imat = A%dom(1)%lblks(1,1)%find(1,1)
+            imat = A%dom(1)%lblks(1,1)%loc(1,1)
             A%dom(1)%lblks(1,1)%data_(imat)%mat = ONE
             ! XI_MAX
-            imat = A%dom(1)%lblks(1,1)%find(1,2)
+            imat = A%dom(1)%lblks(1,1)%loc(1,2)
             A%dom(1)%lblks(1,1)%data_(imat)%mat = FIVE
 
             ! X-Vector
@@ -475,15 +475,15 @@ contains
             ! Element 2
             !
             ! XI_MIN
-            imat = A%dom(1)%lblks(2,1)%find(1,1)
+            imat = A%dom(1)%lblks(2,1)%loc(1,1)
             A%dom(1)%lblks(2,1)%data_(imat)%mat = EIGHT
 
             ! DIAG
-            imat = A%dom(1)%lblks(2,1)%find(1,2)
+            imat = A%dom(1)%lblks(2,1)%loc(1,2)
             A%dom(1)%lblks(2,1)%data_(imat)%mat = TWO
 
             ! XI_MAX
-            imat = A%dom(1)%lblks(2,1)%find(1,3)
+            imat = A%dom(1)%lblks(2,1)%loc(1,3)
             A%dom(1)%lblks(2,1)%data_(imat)%mat = SIX
 
             ! X-Vector
@@ -493,15 +493,15 @@ contains
             ! Element 3
             !
             ! XI_MIN
-            imat = A%dom(1)%lblks(3,1)%find(1,2)
+            imat = A%dom(1)%lblks(3,1)%loc(1,2)
             A%dom(1)%lblks(3,1)%data_(imat)%mat = NINE
 
             ! DIAG 
-            imat = A%dom(1)%lblks(3,1)%find(1,3)
+            imat = A%dom(1)%lblks(3,1)%loc(1,3)
             A%dom(1)%lblks(3,1)%data_(imat)%mat = THREE
 
             ! XI_MAX
-            imat = A%dom(1)%lblks(3,1)%find(1,4)
+            imat = A%dom(1)%lblks(3,1)%loc(1,4)
             A%dom(1)%lblks(3,1)%data_(imat)%mat = SEVEN
 
             ! X-Vector
@@ -511,11 +511,11 @@ contains
             ! Element 4
             !
             ! XI_MIN
-            imat = A%dom(1)%lblks(4,1)%find(1,3)
+            imat = A%dom(1)%lblks(4,1)%loc(1,3)
             A%dom(1)%lblks(4,1)%data_(imat)%mat = TEN
 
             ! DIAG 
-            imat = A%dom(1)%lblks(4,1)%find(1,4)
+            imat = A%dom(1)%lblks(4,1)%loc(1,4)
             A%dom(1)%lblks(4,1)%data_(imat)%mat = FOUR
             
             ! X-Vector

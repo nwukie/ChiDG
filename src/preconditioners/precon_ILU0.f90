@@ -143,7 +143,7 @@ contains
                     dparent_g_lower = A%dom(idom)%lblks(irow,itime)%dparent_g(ilowerA)
                     eparent_g_lower = A%dom(idom)%lblks(irow,itime)%eparent_g(ilowerA)
 
-                    ilowerLD = self%LD%dom(idom)%lblks(irow,itime)%find(dparent_g_lower,eparent_g_lower)
+                    ilowerLD = self%LD%dom(idom)%lblks(irow,itime)%loc(dparent_g_lower,eparent_g_lower)
 
                     if (A%dom(idom)%lblks(irow,itime)%parent_proc(ilowerA) == IRANK) then
 
@@ -243,7 +243,7 @@ contains
                     dparent_g_lower = A%dom(idom)%lblks(irow,itime)%dparent_g(ilowerA)
                     eparent_g_lower = A%dom(idom)%lblks(irow,itime)%eparent_g(ilowerA)
 
-                    ilowerLD = self%LD%dom(idom)%lblks(irow,itime)%find(dparent_g_lower,eparent_g_lower)
+                    ilowerLD = self%LD%dom(idom)%lblks(irow,itime)%loc(dparent_g_lower,eparent_g_lower)
 
                     if ( A%dom(idom)%lblks(irow,itime)%parent_proc(ilowerA) == IRANK ) then
                         

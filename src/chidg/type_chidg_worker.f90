@@ -483,6 +483,10 @@ contains
         ifield = self%solverdata%get_auxiliary_field_index(field)
 
 
+        user_msg = "chidg_worker%get_element_auxiliary_field: There was no field data found for the &
+                    specified field string."
+        if (ifield == 0) call chidg_signal_one(FATAL,user_msg,trim(field))
+
 
         if ( (trim(interp_type) == 'value') .or. &
              (trim(interp_type) == 'ddx'  ) .or. &

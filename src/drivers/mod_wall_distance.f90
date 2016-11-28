@@ -189,6 +189,7 @@ contains
         p = 6
         call set_p_poisson_parameter(real(p,rk))
 
+        order = chidg%nterms_s_1d
         do iorder = 2,order
 
 
@@ -225,20 +226,48 @@ contains
 
 
 
-
-
+        !
+        ! Try to find 'Wall Distance' auxiliary field storage.
+        !
         aux_field_index = chidg%data%sdata%get_auxiliary_field_index('Wall Distance')
 
-        user_msg = "wall_distance_driver: An auxiliary field vector was not found in the primary &
-                    chidg environment to store the Wall Distance field."
-        if (aux_field_index == 0) call chidg_signal(FATAL,user_msg)
+
+
+
+
+!
+!        scalar = real(data%mesh(idom)%elems(ielem)%solution_point(data%sdata%q%dom(idom)%vecs(ielem),ivar,xi,eta,zeta),rdouble)
+!        ddx = data%mesh(idom)%elems(ielem)%derivative_point(data%sdata%q%dom(idom)%vecs(ielem),ivar,xi,eta,zeta,X_DIR)
+!        ddy = data%mesh(idom)%elems(ielem)%derivative_point(data%sdata%q%dom(idom)%vecs(ielem),ivar,xi,eta,zeta,Y_DIR)
+!        ddz = data%mesh(idom)%elems(ielem)%derivative_point(data%sdata%q%dom(idom)%vecs(ielem),ivar,xi,eta,zeta,Z_DIR)
+!        mag2 = ddx*ddx + ddy*ddy + ddz*ddz
+!        p = get_p_poisson_parameter()
+!        val = (((p/(p-ONE))*scalar) + mag2**(p/TWO))**((p-ONE)/p) - mag2**((p-ONE)/TWO)
+!
+
+
+
+
+
+
 
 
 
         !
-        ! Copy Wall Distance to working ChiDG environment.
+        ! If no 'Wall Distance' auxiliary field storage was not found, create one.
         !
-        chidg%data%sdata%auxiliary_field(aux_field_index) = wall_distance%data%sdata%q
+        if (aux_field_index == 0) then
+
+            call chidg%data%sdata%add_auxiliary_field('Wall Distance', wall_distance%data%sdata%q)
+
+        !
+        ! If 'Wall Distance' auxiliar field storage was found, copy Wall Distance solution 
+        ! to working ChiDG environment.
+        !
+        else
+            chidg%data%sdata%auxiliary_field(aux_field_index) = wall_distance%data%sdata%q
+
+        end if
 
 
 

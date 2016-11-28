@@ -108,7 +108,6 @@ module type_chidg
         procedure   :: init
         procedure   :: initialize_solution_domains
         procedure   :: initialize_solution_solver
-!        procedure   :: check_auxiliary_fields
 
     end type chidg_t
     !*******************************************************************************************

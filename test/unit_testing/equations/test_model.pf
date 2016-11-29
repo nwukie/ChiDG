@@ -1,0 +1,37 @@
+!>  Procedures being tested:
+!!      model%set_name
+!!      model%get_name
+!!
+!!  Tests on mock implementation. 
+!!      Reference file: src/equations/mock_model.f90
+!!
+!!  @author Nathan A. Wukie
+!!  @date   11/29/2016
+!!
+!-------------------------------------------------------
+@Test
+subroutine test_model_name()
+    use pfunit_mod
+    use type_model, only: model_t
+    use mock_model, only: mock_model_t
+    implicit none
+
+    type(mock_model_t)  :: model
+
+
+    !
+    ! Call model initialization
+    !
+    call model%init()
+
+
+    !
+    ! Test model properties
+    !
+    @assertEqual('Mock Model'   , model%get_name())
+    @assertEqual(2              , model%nparameters())
+    @assertEqual('Parameter One', model%get_parameter(1))
+    @assertEqual('Parameter Two', model%get_parameter(2))
+
+end subroutine test_model_name
+!********************************************************

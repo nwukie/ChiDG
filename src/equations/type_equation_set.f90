@@ -7,11 +7,13 @@ module type_equation_set
                                               XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX,     &
                                               BOUNDARY
     use mod_operators,                  only: operator_factory
+    use mod_models,                     only: model_factory
     use mod_DNAD_tools,                 only: element_compute_seed, face_compute_seed
 
     use type_operator,                  only: operator_t
     use type_operator_wrapper,          only: operator_wrapper_t
-    use type_equation,                  only: equation_t
+    use type_model,                     only: model_t
+    use type_model_wrapper,             only: model_wrapper_t
     use type_properties,                only: properties_t
     use type_equationset_function_data, only: equationset_function_data_t
     use type_chidg_worker,              only: chidg_worker_t
@@ -59,6 +61,9 @@ module type_equation_set
         type(operator_wrapper_t),   allocatable :: volume_diffusive_operator(:) 
         type(operator_wrapper_t),   allocatable :: bc_operator(:)
 
+        ! Models
+        type(model_wrapper_t),      allocatable :: models(:)
+
         ! Data for the flux and source functions. Ex how many. This gets passed to a container 
         ! in sdata that keeps track of whether these have been executed or not.
         type(equationset_function_data_t)       :: function_data
@@ -71,7 +76,8 @@ module type_equation_set
         procedure   :: set_name                             !< Set the name for the set of equations
         procedure   :: get_name                             !< Return the name fo the set of equations
 
-        procedure   :: add_operator                         !< Add an operator to the equation set.
+        procedure   :: add_operator                         !< Add an operator to the equation set
+        procedure   :: add_model                            !< Add a model to the equation set
         procedure   :: add_primary_field                    !< Add a primary field to the equation set
         procedure   :: add_auxiliary_field                  !< Add an auxiliary field to the equation set
         procedure   :: add_pseudo_timestep                  !< Add a pseudo time-step calculator
@@ -87,9 +93,6 @@ module type_equation_set
 
         procedure   :: get_boundary_ndependent_elements     !< return number elements that a boundary function is depending on
         procedure   :: get_volume_ndependent_elements       !< return number elements that a volume function is depending on
-
-!        procedure   :: uses_primary_field
-!        procedure   :: uses_auxiliary_field
 
     end type equation_set_t
     !**************************************************************************************************
@@ -458,6 +461,32 @@ contains
     !******************************************************************************************
 
 
+
+
+
+
+
+
+
+    !>  Add a model to the equation set.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   11/29/2016
+    !!
+    !-----------------------------------------------------------------------------------------
+    subroutine add_model(self,model)
+        class(equation_set_t),  intent(inout)   :: self
+        character(*),           intent(in)      :: model
+        
+
+
+
+
+
+
+
+    end subroutine add_model
+    !*****************************************************************************************
 
 
 
@@ -1099,53 +1128,6 @@ contains
 
 
     
-
-    
-!    !>  Return .true. if equation_set uses the specified primary field.
-!    !!
-!    !!  @author Nathan A. Wukie
-!    !!  @date   11/21/2016
-!    !!
-!    !---------------------------------------------------------------------------------------
-!    function uses_primary_field(self,field) result(status)
-!        class(equation_set_t),  intent(in)  :: self
-!        character(*),           intent(in)  :: field
-!
-!        integer(ik) :: index
-!        logical     :: status
-!
-!        index = self%prop%get_primary_field_index(trim(field))
-!        status = (index /= 0)
-!
-!    end function uses_primary_field
-!    !***************************************************************************************
-!
-!
-!
-!
-!
-!
-!
-!    !>  Return .true. if equation_set uses the specified auxiliary field.
-!    !!
-!    !!  @author Nathan A. Wukie
-!    !!  @date   11/21/2016
-!    !!
-!    !---------------------------------------------------------------------------------------
-!    function uses_auxiliary_field(self,field) result(status)
-!        class(equation_set_t),  intent(in)  :: self
-!        character(*),           intent(in)  :: field
-!
-!        integer(ik) :: index
-!        logical     :: status
-!
-!        index = self%prop%get_auxiliary_field_index(trim(field))
-!        status = (index /= 0)
-!
-!    end function uses_auxiliary_field
-!    !***************************************************************************************
-
-
 
 
 end module type_equation_set

@@ -27,11 +27,11 @@ module type_operator
     !----------------------------------------------------------------------------------
     type, abstract, public :: operator_t
 
-        integer(ik)                         :: operator_type
-        character(len=:),       allocatable :: name
+        integer(ik)                     :: operator_type
+        character(:),       allocatable :: name
 
-        type(string_t),         allocatable :: primary_fields(:)
-        type(string_t),         allocatable :: auxiliary_fields(:)
+        type(string_t),     allocatable :: primary_fields(:)
+        type(string_t),     allocatable :: auxiliary_fields(:)
 
     contains
 

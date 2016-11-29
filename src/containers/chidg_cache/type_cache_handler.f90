@@ -81,7 +81,6 @@ contains
         integer(ik) :: idomain_l
 
         call self%update_value(worker,equation_set,bc_set)
-
         call self%update_derivative(worker,equation_set,bc_set)
 
         !
@@ -212,29 +211,10 @@ contains
 
 
             else if ( (worker%face_type() == BOUNDARY) ) then
-
-
-!                do istate = 1,size(bc_set(idomain_l)%bcs(BC_ID)%bc_state)
-!                    do idepend = 1,ndepend
-!
-!
-!                        !
-!                        ! Get coupled bc element to linearize against.
-!                        !
-!                        ielement_c = bc_set(idomain_l)%bcs(BC_ID)%bc_patch%coupled_elements(BC_face)%at(idepend)
-!                        worker%function_info%seed%idomain_g  = worker%mesh(idomain_l)%elems(ielement_c)%idomain_g
-!                        worker%function_info%seed%idomain_l  = worker%mesh(idomain_l)%elems(ielement_c)%idomain_l
-!                        worker%function_info%seed%ielement_g = worker%mesh(idomain_l)%elems(ielement_c)%ielement_g
-!                        worker%function_info%seed%ielement_l = worker%mesh(idomain_l)%elems(ielement_c)%ielement_l
-!                        worker%function_info%seed%iproc      = IRANK
-!
-!                        call bc_set(idomain_l)%bcs(BC_ID)%bc_state(istate)%state%compute_bc_state(worker,equation_set(idomain_l)%prop)
-!
-!                    end do !idepend
-!                end do
-
-
-
+                !
+                ! Do nothing here. Boundary condition states(value and derivative) are both updated in 'update_derivative' 
+                ! since they are both handled by the bc_state functions.
+                !
             end if
 
 
@@ -456,29 +436,6 @@ contains
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
     !>
     !!
     !!  @author Nathan A. Wukie (AFRL)
@@ -492,7 +449,6 @@ contains
         type(equation_set_t),       intent(inout)   :: equation_set(:)
         type(bcset_t),              intent(inout)   :: bc_set(:)
 
-        real(rk) :: start_time, stop_time
 
         call self%update_lift_faces_internal(worker,equation_set,bc_set)
 
@@ -500,11 +456,6 @@ contains
 
     end subroutine update_lift
     !************************************************************************************************
-
-
-
-
-
 
 
 

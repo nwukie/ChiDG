@@ -48,15 +48,15 @@ contains
     !-------------------------------------------------------------------------------
     subroutine resize(self,cache_component,mesh,idomain_l,ielement_l,iface)
         class(cache_data_t),    intent(inout)           :: self
-        character(len=*),       intent(in)              :: cache_component
+        character(*),           intent(in)              :: cache_component
         type(mesh_t),           intent(in)              :: mesh(:)
         integer(ik),            intent(in)              :: idomain_l
         integer(ik),            intent(in)              :: ielement_l
         integer(ik),            intent(in), optional    :: iface
 
-        integer(ik)                     :: neqns, ierr, ChiID, donor_idomain, ieqn
-        logical                         :: interior_face, chimera_face, boundary_face
-        character(len=:),   allocatable :: msg
+        integer(ik)                 :: neqns, ierr, ChiID, donor_idomain, ieqn
+        logical                     :: interior_face, chimera_face, boundary_face
+        character(:),   allocatable :: user_msg
 
 
         !
@@ -65,9 +65,9 @@ contains
         if ((trim(cache_component) == 'face interior') .or. &
             (trim(cache_component) == 'face exterior')) then
             if (.not. present(iface)) then
-                msg = "chidg_data%resize: Tried to resize face cache, but &
-                        no face index was specified. Try providing iface to the call"
-                call chidg_signal(FATAL,msg)
+                user_msg = "chidg_data%resize: Tried to resize face cache, but &
+                            no face index was specified. Try providing iface to the call"
+                call chidg_signal(FATAL,user_msg)
             end if
         end if
         
@@ -102,11 +102,11 @@ contains
 
 
             case default
-                msg = "chidg_data%resize: An invalid value for the parameter 'type' from cache_info  &
-                                          was returned in the accept call. cache_type is supposed to &
-                                          be either 'element', 'face interior', or 'face exterior',  &
-                                          to indicate the cache type where the data is to be stored."
-                call chidg_signal_one(FATAL,msg,cache_component)
+                user_msg = "chidg_data%resize: An invalid value for the parameter 'type' from cache_info  &
+                                               was returned in the accept call. cache_type is supposed to &
+                                               be either 'element', 'face interior', or 'face exterior',  &
+                                               to indicate the cache type where the data is to be stored."
+                call chidg_signal_one(FATAL,user_msg,cache_component)
 
         end select
 
@@ -161,7 +161,7 @@ contains
     subroutine set_data(self,cache_data,data_type,idirection,seed,ieqn)
         class(cache_data_t),    intent(inout)   :: self
         type(AD_D),             intent(in)      :: cache_data(:)
-        character(len=*),       intent(in)      :: data_type
+        character(*),           intent(in)      :: data_type
         integer(ik),            intent(in)      :: idirection
         type(seed_t),           intent(in)      :: seed
         integer(ik),            intent(in)      :: ieqn
@@ -189,7 +189,7 @@ contains
     !--------------------------------------------------------------------------------
     function get_data(self,cache_type,idirection,seed,ieqn) result(cache_data)
         class(cache_data_t),    intent(inout)           :: self
-        character(len=*),       intent(in)              :: cache_type
+        character(*),           intent(in)              :: cache_type
         integer(ik),            intent(in)              :: idirection
         type(seed_t),           intent(in)              :: seed
         integer(ik),            intent(in)              :: ieqn
@@ -197,8 +197,9 @@ contains
         
         type(AD_D), allocatable, dimension(:) :: cache_data
         
-        integer(ik) :: igq, iseed
-        logical     :: seed_found, has_seed
+        integer(ik)                 :: igq, iseed
+        logical                     :: seed_found, has_seed
+        character(:),   allocatable :: user_msg
 
 
 
@@ -325,7 +326,9 @@ contains
 
             case default
 
-                call chidg_signal(FATAL,"cache_data%get_data: Invalid data type for getting data. Options are 'value', 'derivative', 'lift face', or 'lift element'")
+                user_msg = "cache_data%get_data: Invalid data type for getting data. Options are &
+                            'value', 'derivative', 'lift face', or 'lift element'"
+                call chidg_signal_one(FATAL,user_msg,trim(cache_type))
 
 
         end select

@@ -3,6 +3,7 @@ module type_chidg
     use mod_constants,              only: NFACES
     use mod_equations,              only: register_equation_builders
     use mod_operators,              only: register_operators
+    use mod_models,                 only: register_models
     use mod_bc,                     only: register_bcs
     use mod_function,               only: register_functions
     use mod_grid,                   only: initialize_grid
@@ -27,15 +28,17 @@ module type_chidg
     use mod_nonlinear_solver,       only: create_nonlinear_solver
     use mod_preconditioner,         only: create_preconditioner
 
-    use mod_communication,          only: establish_neighbor_communication, establish_chimera_communication
-    use mod_chidg_mpi,              only: chidg_mpi_init, chidg_mpi_finalize, ChiDG_COMM, IRANK, NRANK
-    use mpi_f08
-
+    use mod_communication,          only: establish_neighbor_communication, &
+                                          establish_chimera_communication
+    use mod_chidg_mpi,              only: chidg_mpi_init, chidg_mpi_finalize, ChiDG_COMM, &
+                                          IRANK, NRANK
     use mod_hdfio,                  only: read_grid_hdf, read_boundaryconditions_hdf, &
-                                          read_solution_hdf, write_solution_hdf, read_connectivity_hdf, &
-                                          read_weights_hdf
+                                          read_solution_hdf, write_solution_hdf,        &
+                                          read_connectivity_hdf, read_weights_hdf
     use mod_hdf_utilities,          only: close_hdf
-    use mod_partitioners,           only: partition_connectivity, send_partitions, recv_partition
+    use mod_partitioners,           only: partition_connectivity, send_partitions, &
+                                          recv_partition
+    use mpi_f08
     implicit none
 
 
@@ -167,6 +170,7 @@ contains
 
                     ! Order matters here. Functions need to come first. Used by equations and bcs.
                     call register_functions()
+                    call register_models()
                     call register_equation_builders()
                     call register_operators()
                     call register_bcs()

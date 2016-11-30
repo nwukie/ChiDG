@@ -220,7 +220,7 @@ contains
     !!  @date   9/8/2016
     !!
     !!
-    !--------------------------------------------------------------------------------------------
+    !---------------------------------------------------------------------------------------
     function face_info(self) result(face_info_)
         class(chidg_worker_t),  intent(in)  :: self
         
@@ -233,7 +233,7 @@ contains
         face_info_%iface      = self%iface
 
     end function face_info
-    !********************************************************************************************
+    !***************************************************************************************
 
 
 
@@ -250,7 +250,7 @@ contains
     !!  @date   9/8/2016
     !!
     !!
-    !---------------------------------------------------------------------------------------------
+    !--------------------------------------------------------------------------------------
     function get_face_variable(self,ieqn,interp_type,interp_source) result(var_gq)
         class(chidg_worker_t),  intent(in)  :: self
         integer(ik),            intent(in)  :: ieqn
@@ -340,7 +340,7 @@ contains
 
 
     end function get_face_variable
-    !**********************************************************************************************
+    !***************************************************************************************
 
 
 
@@ -357,7 +357,7 @@ contains
     !!  @date   9/8/2016
     !!
     !!
-    !---------------------------------------------------------------------------------------------
+    !---------------------------------------------------------------------------------------
     function get_element_variable(self,ieqn,interp_type) result(var_gq)
         class(chidg_worker_t),  intent(in)  :: self
         integer(ik),            intent(in)  :: ieqn
@@ -445,7 +445,7 @@ contains
 
 
     end function get_element_variable
-    !**********************************************************************************************
+    !****************************************************************************************
 
 
 
@@ -465,7 +465,7 @@ contains
     !!  @date   11/4/2016
     !!
     !!
-    !----------------------------------------------------------------------------------------------
+    !----------------------------------------------------------------------------------------
     function get_element_auxiliary_field(self,field,interp_type) result(var_gq)
         class(chidg_worker_t),  intent(in)  :: self
         character(*),           intent(in)  :: field
@@ -519,7 +519,7 @@ contains
 
 
     end function get_element_auxiliary_field
-    !***********************************************************************************************
+    !****************************************************************************************
 
 
 
@@ -538,7 +538,7 @@ contains
     !!  @date   9/8/2016
     !!
     !!
-    !----------------------------------------------------------------------------------------------
+    !---------------------------------------------------------------------------------------
     subroutine store_bc_state(self,ieqn,cache_data,data_type)
         class(chidg_worker_t),  intent(inout)   :: self
         integer(ik),            intent(in)      :: ieqn
@@ -588,96 +588,13 @@ contains
 
 
     end subroutine store_bc_state
-    !***********************************************************************************************
+    !***************************************************************************************
 
 
 
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-!    !>
-!    !!
-!    !!  @author Nathan A. Wukie (AFRL)
-!    !!  @date   9/8/2016
-!    !!
-!    !!
-!    !---------------------------------------------------------------------------------------------
-!    function interpolate_face(self,ieqn,interp_type,interp_source) result(var_gq)
-!        class(chidg_worker_t),  intent(in)  :: self
-!        integer(ik),            intent(in)  :: ieqn
-!        character(len=*),       intent(in)  :: interp_type
-!        integer(ik),            intent(in)  :: interp_source
-!
-!        type(AD_D), allocatable, dimension(:) :: &
-!            var_gq, deriv, lift
-!
-!
-!        if (interp_type == 'value') then
-!            var_gq = interpolate_face_autodiff(self%mesh,self%solverdata%q,self%face_info(),self%function_info,ieqn,interp_type,interp_source)
-!
-!        elseif ((interp_type == 'ddx') .or. &
-!                (interp_type == 'ddy') .or. &
-!                (interp_type == 'ddz') ) then
-!
-!            deriv = interpolate_face_autodiff(self%mesh,self%solverdata%q,self%face_info(),self%function_info,ieqn,interp_type,interp_source)
-!
-!!            lift = self%solverdata%BR2%interpolate_lift_face(self%mesh,self%face_info,self%function_info,ieqn,interp_type,interp_source)
-!!            lift = self%BR2%interpolate_lift_face(self%mesh,self%face_info,self%function_info,ieqn,interp_type,interp_source)
-!
-!            var_gq = deriv + real(NFACES,rk)*lift
-!
-!        end if
-!
-!    end function interpolate_face
-!    !**********************************************************************************************
-
-
-
-!    !>
-!    !!
-!    !!  @author Nathan A. Wukie (AFRL)
-!    !!  @date   9/8/2016
-!    !!
-!    !!
-!    !---------------------------------------------------------------------------------------------
-!    function interpolate_element(self,ieqn,interp_type) result(var_gq)
-!        class(chidg_worker_t),  intent(in)  :: self
-!        integer(ik),            intent(in)  :: ieqn
-!        character(len=*),       intent(in)  :: interp_type
-!
-!        type(AD_D), allocatable, dimension(:) :: &
-!            var_gq, deriv, lift
-!
-!        if (interp_type == 'value') then
-!            var_gq = interpolate_element_autodiff(self%mesh,self%solverdata%q,self%element_info,self%function_info,ieqn,interp_type)
-!
-!        elseif ((interp_type == 'ddx') .or. &
-!                (interp_type == 'ddy') .or. &
-!                (interp_type == 'ddz') ) then
-!
-!            deriv = interpolate_element_autodiff(self%mesh,self%solverdata%q,self%element_info,self%function_info,ieqn,interp_type)
-!
-!!            lift  = self%solverdata%BR2%interpolate_lift_element(self%mesh,self%element_info,self%function_info,ieqn,interp_type)
-!!            lift  = self%BR2%interpolate_lift_element(self%mesh,self%element_info,self%function_info,ieqn,interp_type)
-!
-!            var_gq = deriv + lift
-!
-!        end if
-!
-!    end function interpolate_element
-!    !**********************************************************************************************
 
 
 
@@ -693,7 +610,7 @@ contains
     !!  @date   8/22/2016
     !!
     !!
-    !---------------------------------------------------------------------------------------------
+    !----------------------------------------------------------------------------------------
     subroutine integrate_boundary(self,ieqn,integrand)
         class(chidg_worker_t),  intent(in)      :: self
         integer(ik),            intent(in)      :: ieqn
@@ -704,7 +621,7 @@ contains
 
 
     end subroutine integrate_boundary
-    !*********************************************************************************************
+    !****************************************************************************************
 
 
 
@@ -718,7 +635,7 @@ contains
     !!  @date   8/22/2016
     !!
     !!
-    !---------------------------------------------------------------------------------------------
+    !---------------------------------------------------------------------------------------
     subroutine integrate_volume_flux(self,ieqn,integrand_x,integrand_y,integrand_z)
         class(chidg_worker_t),  intent(in)      :: self
         integer(ik),            intent(in)      :: ieqn
@@ -731,7 +648,7 @@ contains
 
 
     end subroutine integrate_volume_flux
-    !*********************************************************************************************
+    !***************************************************************************************
 
 
 
@@ -745,7 +662,7 @@ contains
     !!  @date   8/22/2016
     !!
     !!
-    !---------------------------------------------------------------------------------------------
+    !---------------------------------------------------------------------------------------
     subroutine integrate_volume_source(self,ieqn,integrand)
         class(chidg_worker_t),  intent(in)      :: self
         integer(ik),            intent(in)      :: ieqn
@@ -756,7 +673,7 @@ contains
 
 
     end subroutine integrate_volume_source
-    !*********************************************************************************************
+    !***************************************************************************************
 
 
 
@@ -775,7 +692,7 @@ contains
     !!
     !!
     !!
-    !---------------------------------------------------------------------------------------------
+    !---------------------------------------------------------------------------------------
     function normal(self,direction) result(norm_gq)
         class(chidg_worker_t),  intent(in)  :: self
         integer(ik),            intent(in)  :: direction
@@ -787,7 +704,7 @@ contains
 
 
     end function normal
-    !**********************************************************************************************
+    !***************************************************************************************
 
 
 
@@ -804,7 +721,7 @@ contains
     !!
     !!
     !!
-    !---------------------------------------------------------------------------------------------
+    !---------------------------------------------------------------------------------------
     function unit_normal(self,direction) result(unorm_gq)
         class(chidg_worker_t),  intent(in)  :: self
         integer(ik),            intent(in)  :: direction
@@ -816,7 +733,7 @@ contains
 
 
     end function unit_normal
-    !**********************************************************************************************
+    !***************************************************************************************
 
 
 
@@ -830,7 +747,7 @@ contains
     !!
     !!
     !!
-    !---------------------------------------------------------------------------------------------
+    !---------------------------------------------------------------------------------------
     function coords(self) result(coords_gq)
         class(chidg_worker_t),  intent(in)  :: self
 
@@ -839,12 +756,7 @@ contains
         coords_gq = self%mesh(self%element_info%idomain_l)%faces(self%element_info%ielement_l,self%iface)%quad_pts(:)
 
     end function coords
-    !**********************************************************************************************
-
-
-
-
-
+    !***************************************************************************************
 
 
 
@@ -860,7 +772,7 @@ contains
     !!
     !!
     !!
-    !---------------------------------------------------------------------------------------------
+    !--------------------------------------------------------------------------------------
     function x(self,source) result(x_gq)
         class(chidg_worker_t),  intent(in)  :: self
         character(len=*),       intent(in)  :: source
@@ -878,7 +790,7 @@ contains
 
 
     end function x
-    !**********************************************************************************************
+    !**************************************************************************************
 
 
 
@@ -889,7 +801,7 @@ contains
     !!
     !!
     !!
-    !---------------------------------------------------------------------------------------------
+    !--------------------------------------------------------------------------------------
     function y(self,source) result(y_gq)
         class(chidg_worker_t),  intent(in)  :: self
         character(len=*),       intent(in)  :: source
@@ -908,7 +820,7 @@ contains
 
 
     end function y
-    !**********************************************************************************************
+    !**************************************************************************************
 
 
 
@@ -919,7 +831,7 @@ contains
     !!
     !!
     !!
-    !---------------------------------------------------------------------------------------------
+    !--------------------------------------------------------------------------------------
     function z(self,source) result(z_gq)
         class(chidg_worker_t),  intent(in)  :: self
         character(len=*),       intent(in)  :: source
@@ -937,7 +849,7 @@ contains
 
 
     end function z
-    !**********************************************************************************************
+    !**************************************************************************************
 
 
 
@@ -952,7 +864,7 @@ contains
     !!  @date   9/8/2016
     !!
     !!
-    !---------------------------------------------------------------------------------------------
+    !--------------------------------------------------------------------------------------
     function face_type(self) result(face_type_)
         class(chidg_worker_t),  intent(in)  :: self
 
@@ -968,7 +880,7 @@ contains
 
 
     end function face_type
-    !**********************************************************************************************
+    !**************************************************************************************
 
 
 
@@ -983,7 +895,7 @@ contains
     !!
     !!
     !!
-    !---------------------------------------------------------------------------------------------
+    !--------------------------------------------------------------------------------------
     function time(self) result(solution_time)
         class(chidg_worker_t),  intent(in)  :: self
 
@@ -992,7 +904,7 @@ contains
         solution_time = self%solverdata%t
 
     end function time
-    !**********************************************************************************************
+    !**************************************************************************************
 
 
 
@@ -1006,7 +918,7 @@ contains
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   9/8/2016
     !!
-    !-----------------------------------------------------------------------------------
+    !-------------------------------------------------------------------------------------
     subroutine destructor(self)
         type(chidg_worker_t),   intent(inout)   :: self
 
@@ -1015,6 +927,6 @@ contains
         if (associated(self%cache))      nullify(self%cache)
 
     end subroutine destructor
-    !**********************************************************************************
+    !*************************************************************************************
 
 end module type_chidg_worker

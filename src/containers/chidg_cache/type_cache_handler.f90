@@ -115,8 +115,8 @@ contains
         type(equation_set_t),       intent(inout)   :: equation_set(:)
         type(bcset_t),              intent(inout)   :: bc_set(:)
 
-        integer(ik)         :: iface, iside, ieqn, idomain_l, ielement_l, idepend, ndepend, ChiID, &
-                               BC_ID, BC_face, ielement_c, istate
+        integer(ik) :: iface, iside, ieqn, idomain_l, ielement_l, idepend, ndepend, ChiID, &
+                       BC_ID, BC_face, ielement_c, istate
 
         type(AD_D), allocatable, dimension(:) :: value_gq
 
@@ -129,7 +129,7 @@ contains
         !
         ! Resize cache
         !
-        call worker%cache%resize(worker%mesh,idomain_l,ielement_l)
+        call worker%cache%resize(worker%mesh,equation_set(:)%prop,idomain_l,ielement_l)
 
 
         !

@@ -110,13 +110,13 @@ contains
         !
         ! Call resize routine. THIS IS BEING TESTED.
         !
-        call cache_data%resize('face interior',self%chidg%data%mesh,idomain,ielem,iface)
+        call cache_data%resize('face interior',self%chidg%data%mesh,self%chidg%data%eqnset(:)%prop,idomain,ielem,iface)
 
 
         !
         ! Test that the cache allocated the correct component
         !
-        @assertTrue(allocated(cache_data%eqn))
+        @assertTrue(allocated(cache_data%fields))
         
     end subroutine test_resize_face_interior__allocated
     !***************************************************************************************
@@ -146,12 +146,12 @@ contains
         !
         ! Call resize routine. THIS IS BEING TESTED.
         !
-        call cache_data%resize('face interior',self%chidg%data%mesh,idomain,ielem,iface)
+        call cache_data%resize('face interior',self%chidg%data%mesh,self%chidg%data%eqnset(:)%prop,idomain,ielem,iface)
 
 
 
         ! Number of equations
-        @assertEqual(size(cache_data%eqn), 1)
+        @assertEqual(size(cache_data%fields), 1)
 
         
     end subroutine test_resize_face_interior__size
@@ -185,13 +185,13 @@ contains
         !
         ! Call resize routine. THIS IS BEING TESTED.
         !
-        call cache_data%resize('face exterior',self%chidg%data%mesh,idomain,ielem,iface)
+        call cache_data%resize('face exterior',self%chidg%data%mesh,self%chidg%data%eqnset(:)%prop,idomain,ielem,iface)
 
 
         !
         ! Test that the cache allocated the correct component
         !
-        @assertTrue(allocated(cache_data%eqn))
+        @assertTrue(allocated(cache_data%fields))
         
     end subroutine test_resize_face_exterior__allocated
     !***************************************************************************************
@@ -221,12 +221,12 @@ contains
         !
         ! Call resize routine. THIS IS BEING TESTED.
         !
-        call cache_data%resize('face exterior',self%chidg%data%mesh,idomain,ielem,iface)
+        call cache_data%resize('face exterior',self%chidg%data%mesh,self%chidg%data%eqnset(:)%prop,idomain,ielem,iface)
 
 
 
         ! Number of ndoes
-        @assertEqual(size(cache_data%eqn), 1)
+        @assertEqual(size(cache_data%fields), 1)
 
         
     end subroutine test_resize_face_exterior__size
@@ -266,13 +266,13 @@ contains
         !
         ! Call resize routine. THIS IS BEING TESTED.
         !
-        call cache_data%resize('element',self%chidg%data%mesh,idomain,ielem)
+        call cache_data%resize('element',self%chidg%data%mesh,self%chidg%data%eqnset(:)%prop,idomain,ielem)
 
 
         !
         ! Test that the cache allocated the correct component
         !
-        @assertTrue(allocated(cache_data%eqn))
+        @assertTrue(allocated(cache_data%fields))
         
     end subroutine test_resize_element__allocated
     !***************************************************************************************
@@ -301,12 +301,12 @@ contains
         !
         ! Call resize routine. THIS IS BEING TESTED.
         !
-        call cache_data%resize('element',self%chidg%data%mesh,idomain,ielem)
+        call cache_data%resize('element',self%chidg%data%mesh,self%chidg%data%eqnset(:)%prop,idomain,ielem)
 
 
 
         ! Number of ndoes
-        @assertEqual(size(cache_data%eqn), 1)
+        @assertEqual(size(cache_data%fields), 1)
 
         
     end subroutine test_resize_element__size

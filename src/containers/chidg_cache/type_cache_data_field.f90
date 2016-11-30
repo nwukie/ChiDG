@@ -1,8 +1,9 @@
-module type_cache_data_equation
+module type_cache_data_field
 #include <messenger.h>
     use mod_kinds,          only: ik
     use mod_constants,      only: INTERIOR, BOUNDARY, CHIMERA, NFACES
     use type_mesh,          only: mesh_t
+    use type_properties,    only: properties_t
     use type_seed,          only: seed_t
     use DNAD_D
     implicit none
@@ -18,7 +19,7 @@ module type_cache_data_equation
     !!
     !!
     !-------------------------------------------------------------------------------------
-    type, public :: cache_data_equation_t
+    type, public :: cache_data_field_t
 
         type(AD_D),     allocatable :: value(:,:)           ! (nnodes, ndepend_value)
         type(seed_t),   allocatable :: value_seeds(:)
@@ -32,9 +33,6 @@ module type_cache_data_equation
         type(AD_D),     allocatable :: lift_element(:,:,:)  ! (nnodes_vol,  ndimension, ndepend_deriv)
         type(seed_t),   allocatable :: lift_seeds(:)
 
-
-
-
     contains
 
         procedure   :: resize
@@ -42,7 +40,7 @@ module type_cache_data_equation
         
         procedure   :: get_ndepend_face_exterior
 
-    end type cache_data_equation_t
+    end type cache_data_field_t
     !*************************************************************************************
 
 
@@ -57,7 +55,7 @@ contains
 
 
 
-    !>  Resize the cache storage for a given equation.
+    !>  Resize the cache storage for a given field.
     !!
     !!  Note: For cache_types = 'face interior' and 'face exterior', iface must be provided
     !!        in the subroutine call.
@@ -67,22 +65,26 @@ contains
     !!
     !!
     !-------------------------------------------------------------------------------------
-    subroutine resize(self,cache_component,mesh,idomain_l,ielement_l,iface)
-        class(cache_data_equation_t),   intent(inout)           :: self
-        character(len=*),               intent(in)              :: cache_component
-        type(mesh_t),                   intent(in)              :: mesh(:)
-        integer(ik),                    intent(in)              :: idomain_l
-        integer(ik),                    intent(in)              :: ielement_l
-        integer(ik),                    intent(in), optional    :: iface
+    subroutine resize(self,cache_component,mesh,prop,idomain_l,ielement_l,iface)
+        class(cache_data_field_t),  intent(inout)           :: self
+        character(*),               intent(in)              :: cache_component
+        type(mesh_t),               intent(in)              :: mesh(:)
+        type(properties_t),         intent(in)              :: prop(:)
+        integer(ik),                intent(in)              :: idomain_l
+        integer(ik),                intent(in)              :: ielement_l
+        integer(ik),                intent(in), optional    :: iface
 
-        integer(ik) :: nnodes, nnodes_vol, nnodes_face, ndepend_value, ndepend_deriv, ierr, iface_loop, iseed
-        logical     :: reallocate
+        character(:),   allocatable :: user_msg
+        integer(ik)                 :: nnodes, nnodes_vol, nnodes_face, ndepend_value, &
+                                       ndepend_deriv, ierr, iface_loop, iseed
+        logical                     :: reallocate
 
 
 
         !
-        ! Get number of nodes(nnodes - face/element), number of elements that the function value depends on(ndepend_value), number of 
-        ! elements that the function derivative depends on(ndepend_deriv).
+        ! Get number of nodes(nnodes - face/element), number of elements that the function 
+        ! value depends on(ndepend_value), number of elements that the function derivative 
+        ! depends on(ndepend_deriv).
         !
         select case (trim(cache_component))
 
@@ -134,8 +136,9 @@ contains
 
 
             case default
-                call chidg_signal_one(FATAL,"cache_data_equation%resize: cache_type string wasn't an acceptable value. &
-                                                make sure it is either 'element', 'face interior', or 'face exterior'.", cache_component)
+                user_msg = "cache_data_field%resize: cache_type string wasn't an acceptable value. &
+                            Make sure it is 'element', 'face interior', or 'face exterior'."
+                call chidg_signal_one(FATAL,user_msg, cache_component)
         end select
 
 
@@ -233,15 +236,15 @@ contains
     !!
     !------------------------------------------------------------------------------------
     subroutine set_data(self,cache_data,data_type,idirection,seed)
-        class(cache_data_equation_t),   intent(inout)   :: self
-        type(AD_D),                     intent(in)      :: cache_data(:)
-        character(len=*),               intent(in)      :: data_type
-        integer(ik),                    intent(in)      :: idirection
-        type(seed_t),                   intent(in)      :: seed
+        class(cache_data_field_t),  intent(inout)   :: self
+        type(AD_D),                 intent(in)      :: cache_data(:)
+        character(*),               intent(in)      :: data_type
+        integer(ik),                intent(in)      :: idirection
+        type(seed_t),               intent(in)      :: seed
 
-        character(len=:), allocatable   :: msg
-        logical     :: seed_found, empty_seed
-        integer(ik) :: iseed, seed_location
+        character(:), allocatable   :: user_msg
+        logical                     :: seed_found, empty_seed
+        integer(ik)                 :: iseed, seed_location
 
 
         
@@ -279,7 +282,9 @@ contains
                     end do
                 end if
 
-                if (seed_location == 0) call chidg_signal(FATAL,"cache_data_equation%set_data: Did not find a location to put the data")
+                
+                user_msg = "cache_data_field%set_data: Did not find a location to put the data."
+                if (seed_location == 0) call chidg_signal(FATAL,user_msg)
 
                 ! Store data
                 self%value(:,seed_location) = cache_data
@@ -319,7 +324,8 @@ contains
                 end if
 
                 
-                if (seed_location == 0) call chidg_signal(FATAL,"cache_data_equation%set_data: Did not find a location to put the data")
+                user_msg = "cache_data_field%set_data: Did not find a location to put the data."
+                if (seed_location == 0) call chidg_signal(FATAL,user_msg)
 
 
                 ! Store data
@@ -360,7 +366,8 @@ contains
                 end if
 
 
-                if (seed_location == 0) call chidg_signal(FATAL,"cache_data_equation%set_data: Did not find a location to put the data")
+                user_msg = "cache_data_field%set_data: Did not find a location to put the data."
+                if (seed_location == 0) call chidg_signal(FATAL,user_msg)
                 
                 ! Store data
                 self%lift_face(:,idirection,seed_location) = cache_data
@@ -398,7 +405,8 @@ contains
                 end if
 
 
-                if (seed_location == 0) call chidg_signal(FATAL,"cache_data_equation%set_data: Did not find a location to put the data")
+                user_msg = "cache_data_field%set_data: Did not find a location to put the data."
+                if (seed_location == 0) call chidg_signal(FATAL,user_msg)
                 
                 ! Store data
                 self%lift_element(:,idirection,seed_location) = cache_data
@@ -409,20 +417,16 @@ contains
 
 
             case default
-                msg = "cache_data_equation%store: The incoming variable data_type did not have an &
-                             valid value. Acceptable entries are 'value', 'derivative', 'lift face', or 'lift element'"
-                call chidg_signal_one(FATAL,msg,data_type)
+                user_msg = "cache_data_field%store: The incoming variable data_type did &
+                            not have an valid value. Acceptable entries are 'value', &
+                            'derivative', 'lift face', or 'lift element'"
+                call chidg_signal_one(FATAL,user_msg,data_type)
 
         end select
 
 
     end subroutine set_data
     !************************************************************************************
-
-
-
-
-
 
 
 
@@ -440,7 +444,7 @@ contains
     !!
     !------------------------------------------------------------------------------------
     function get_ndepend_face_exterior(self,mesh,idomain_l,ielement_l,iface) result(ndepend)
-        class(cache_data_equation_t),   intent(in)  :: self
+        class(cache_data_field_t),   intent(in)  :: self
         type(mesh_t),                   intent(in)  :: mesh(:)
         integer(ik),                    intent(in)  :: idomain_l
         integer(ik),                    intent(in)  :: ielement_l
@@ -486,4 +490,4 @@ contains
 
 
 
-end module type_cache_data_equation
+end module type_cache_data_field

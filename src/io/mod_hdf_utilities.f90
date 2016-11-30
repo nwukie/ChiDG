@@ -87,6 +87,8 @@ contains
     !!  set_domain_coordinates_hdf
     !!  set_domain_elements_hdf
     !!
+    !!  get_domain_nelements_hdf
+    !!
     !!  set_coordinate_order_hdf
     !!  get_coordinate_order_hdf
     !!  get_coordinate_orders_hdf
@@ -2155,6 +2157,71 @@ contains
 
 
 
+
+
+
+
+
+
+    !>  Given a domain identifier, return the number of elements in the domain.
+    !!
+    !!  TODO: Switch this to read an attribute. That way we can use this is 
+    !!        solution files without grids.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   11/30/2016
+    !!
+    !---------------------------------------------------------------------------------------
+    function get_domain_nelements_hdf(domain_id) result(nelements)
+        integer(HID_T), intent(in)  :: domain_id
+
+        integer(ik)                 :: nelements, ierr
+        integer(HID_T)              :: elements_id, space_id
+        integer(HSIZE_T)            :: dims(2), maxdims(2)
+        character(:), allocatable   :: user_msg
+        logical                     :: grid_exists
+
+
+        ! Check file has a grid.
+        grid_exists = check_link_exists_hdf(domain_id,"Grid/Elements")
+        user_msg = "get_domain_nelements_hdf: Trying to determine the number of elements in a &
+                    domain without a 'Grid/Elements' group. This file probably doesn't contain &
+                    a grid, so you will want to figure out how to remedy this."
+        if (.not. grid_exists) call chidg_signal(FATAL,user_msg)
+
+
+        ! Open 'Elements' data set.
+        call h5dopen_f(domain_id,"Grid/Elements", elements_id, ierr)
+        user_msg = "get_domain_nelements_hdf: There was an error opening the 'Grid/Elements' &
+                    data set."
+        if (ierr /= 0) call chidg_signal(FATAL,user_msg)
+
+
+        ! Get the dataspace id.
+        call h5dget_space_f(elements_id, space_id, ierr)
+        user_msg = "get_domain_nelements_hdf: There was an error opening the 'Grid/Elements' &
+                    data space."
+        if (ierr /= 0) call chidg_signal(FATAL,user_msg)
+
+
+        ! Get the data space dimensions.
+        call h5sget_simple_extent_dims_f(space_id, dims, maxdims, ierr)
+        user_msg = "get_domain_nelements_hdf: There was an error returning the dimensions of &
+                    the 'Grid/Elements' data space."
+        if (ierr == -1) call chidg_signal(FATAL,user_msg)
+
+
+        ! Close groups.
+        call h5sclose_f(space_id,ierr)
+        call h5dclose_f(elements_id,ierr)
+
+
+        ! Return number of elements. Size of first dimension.
+        nelements = int(dims(1), kind=ik)
+
+
+    end function get_domain_nelements_hdf
+    !***************************************************************************************
 
 
 

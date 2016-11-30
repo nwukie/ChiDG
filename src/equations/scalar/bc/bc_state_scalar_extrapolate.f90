@@ -1,6 +1,6 @@
 module bc_state_scalar_extrapolate
     use mod_kinds,          only: rk,ik
-    use mod_constants,      only: ME, ZERO
+    use mod_constants,      only: ZERO
     use type_bc_state,      only: bc_state_t
     use type_chidg_worker,  only: chidg_worker_t
     use type_properties,    only: properties_t
@@ -95,15 +95,15 @@ contains
         !
         ! Get u_m from face interior to extrapolate
         !
-        u_bc    = worker%get_face_variable(iu, 'value', ME)
+        u_bc    = worker%get_primary_field_face(iu, 'value', 'face interior')
 
 
         !
         ! Get gradient of u from interior and extrapolate to boundary condition gradient
         !
-        dudx_bc = worker%get_face_variable(iu, 'ddx', ME)
-        dudy_bc = worker%get_face_variable(iu, 'ddy', ME)
-        dudz_bc = worker%get_face_variable(iu, 'ddz', ME)
+        dudx_bc = worker%get_primary_field_face(iu, 'ddx', 'face interior')
+        dudy_bc = worker%get_primary_field_face(iu, 'ddy', 'face interior')
+        dudz_bc = worker%get_primary_field_face(iu, 'ddz', 'face interior')
 
 
         !

@@ -1,13 +1,13 @@
-module test_cache_data_equation_mod
+module test_cache_data_field_mod
     use pfunit_mod
     use mod_kinds,                  only: rk,ik
     use type_chidg,                 only: chidg_t
-    use type_cache_data_equation,   only: cache_data_equation_t
+    use type_cache_data_field,   only: cache_data_field_t
     use mod_test_utilities,         only: create_mesh_file
     use mod_file_utilities,         only: delete_file
     implicit none
 
-    public  :: test_cache_data_equation
+    public  :: test_cache_data_field
 
 
     !>
@@ -17,7 +17,7 @@ module test_cache_data_equation_mod
     !!
     !--------------------------------------------------------------------------
     @TestCase
-    type, extends(TestCase) ::  test_cache_data_equation
+    type, extends(TestCase) ::  test_cache_data_field
 
         character(:),   allocatable :: filename
         type(chidg_t)               :: chidg
@@ -26,7 +26,7 @@ module test_cache_data_equation_mod
     contains
         procedure   ::  setUp
         procedure   ::  tearDown
-    end type test_cache_data_equation
+    end type test_cache_data_field
     !***************************************************************************
 
 
@@ -40,7 +40,7 @@ contains
     !!
     !--------------------------------------------------------------------------------------------------
     subroutine setUp(this)
-        class(test_cache_data_equation),    intent(inout)   :: this
+        class(test_cache_data_field),    intent(inout)   :: this
 
         
         call this%chidg%start_up('core')
@@ -72,7 +72,7 @@ contains
     !!
     !-------------------------------------------------------------------------------------
     subroutine tearDown(this)
-        class(test_cache_data_equation),    intent(inout)   :: this
+        class(test_cache_data_field),    intent(inout)   :: this
 
         !
         ! Close ChiDG interface
@@ -96,10 +96,10 @@ contains
     !!-------------------------------------------------------------------------------------
     @Test
     subroutine test_resize_face_interior__allocated(self)
-        class(test_cache_data_equation),    intent(inout)   :: self
+        class(test_cache_data_field),    intent(inout)   :: self
         
         integer(ik)                 :: idomain, ielem, iface
-        type(cache_data_equation_t) :: cache_data_equation
+        type(cache_data_field_t) :: cache_data_field
 
         idomain = 1
         ielem   = 14
@@ -108,16 +108,16 @@ contains
         !
         ! Call resize routine. THIS IS BEING TESTED.
         !
-        call cache_data_equation%resize('face interior',self%chidg%data%mesh,idomain,ielem,iface)
+        call cache_data_field%resize('face interior',self%chidg%data%mesh,self%chidg%data%eqnset(:)%prop,idomain,ielem,iface)
 
 
         !
         ! Test that the cache allocated the correct component
         !
-        @assertTrue(allocated(cache_data_equation%value))
-        @assertTrue(allocated(cache_data_equation%derivative))
-        @assertTrue(allocated(cache_data_equation%lift_face))
-        @assertTrue(allocated(cache_data_equation%lift_element))
+        @assertTrue(allocated(cache_data_field%value))
+        @assertTrue(allocated(cache_data_field%derivative))
+        @assertTrue(allocated(cache_data_field%lift_face))
+        @assertTrue(allocated(cache_data_field%lift_element))
         
     end subroutine test_resize_face_interior__allocated
     !***************************************************************************************
@@ -134,10 +134,10 @@ contains
     !!-------------------------------------------------------------------------------------
     @Test
     subroutine test_resize_face_interior__size(self)
-        class(test_cache_data_equation),    intent(inout)   :: self
+        class(test_cache_data_field),    intent(inout)   :: self
         
         integer(ik)                 :: idomain, ielem, iface, nnodes_face, nnodes_vol
-        type(cache_data_equation_t) :: cache_data_equation
+        type(cache_data_field_t) :: cache_data_field
 
         idomain = 1
         ielem   = 14
@@ -148,7 +148,7 @@ contains
         !
         ! Call resize routine. THIS IS BEING TESTED.
         !
-        call cache_data_equation%resize('face interior',self%chidg%data%mesh,idomain,ielem,iface)
+        call cache_data_field%resize('face interior',self%chidg%data%mesh,self%chidg%data%eqnset(:)%prop,idomain,ielem,iface)
 
 
         !
@@ -158,26 +158,26 @@ contains
         nnodes_vol = self%chidg%data%mesh(idomain)%faces(ielem,iface)%gq%vol%nnodes
 
         ! Number of ndoes
-        @assertEqual(size(cache_data_equation%value,1), nnodes_face)
+        @assertEqual(size(cache_data_field%value,1), nnodes_face)
         ! Number of dependent elements
-        @assertEqual(size(cache_data_equation%value,2), 1)
+        @assertEqual(size(cache_data_field%value,2), 1)
 
         ! Number of nodes
-        @assertEqual(size(cache_data_equation%derivative,1), nnodes_face)
+        @assertEqual(size(cache_data_field%derivative,1), nnodes_face)
         ! Number of spatial dimentions
-        @assertEqual(size(cache_data_equation%derivative,2), 3)
+        @assertEqual(size(cache_data_field%derivative,2), 3)
         ! Number of dependent elements
-        @assertEqual(size(cache_data_equation%derivative,3), 2)
+        @assertEqual(size(cache_data_field%derivative,3), 2)
 
         ! Number of nodes
-        @assertEqual(size(cache_data_equation%lift_face,1), nnodes_face)
-        @assertEqual(size(cache_data_equation%lift_element,1), nnodes_vol)
+        @assertEqual(size(cache_data_field%lift_face,1), nnodes_face)
+        @assertEqual(size(cache_data_field%lift_element,1), nnodes_vol)
         ! Number of spatial dimentions
-        @assertEqual(size(cache_data_equation%lift_face,2), 3)
-        @assertEqual(size(cache_data_equation%lift_element,2), 3)
+        @assertEqual(size(cache_data_field%lift_face,2), 3)
+        @assertEqual(size(cache_data_field%lift_element,2), 3)
         ! Number of dependent elements
-        @assertEqual(size(cache_data_equation%lift_face,3), 2)
-        @assertEqual(size(cache_data_equation%lift_element,3), 2)
+        @assertEqual(size(cache_data_field%lift_face,3), 2)
+        @assertEqual(size(cache_data_field%lift_element,3), 2)
         
     end subroutine test_resize_face_interior__size
     !***************************************************************************************
@@ -197,10 +197,10 @@ contains
     !!-------------------------------------------------------------------------------------
     @Test
     subroutine test_resize_face_exterior__allocated(self)
-        class(test_cache_data_equation),    intent(inout)   :: self
+        class(test_cache_data_field),    intent(inout)   :: self
         
         integer(ik)                 :: idomain, ielem, iface
-        type(cache_data_equation_t) :: cache_data_equation
+        type(cache_data_field_t) :: cache_data_field
 
         idomain = 1
         ielem   = 14
@@ -210,16 +210,16 @@ contains
         !
         ! Call resize routine. THIS IS BEING TESTED.
         !
-        call cache_data_equation%resize('face exterior',self%chidg%data%mesh,idomain,ielem,iface)
+        call cache_data_field%resize('face exterior',self%chidg%data%mesh,self%chidg%data%eqnset(:)%prop,idomain,ielem,iface)
 
 
         !
         ! Test that the cache allocated the correct component
         !
-        @assertTrue(allocated(cache_data_equation%value))
-        @assertTrue(allocated(cache_data_equation%derivative))
-        @assertTrue(allocated(cache_data_equation%lift_face))
-        @assertTrue(allocated(cache_data_equation%lift_element))
+        @assertTrue(allocated(cache_data_field%value))
+        @assertTrue(allocated(cache_data_field%derivative))
+        @assertTrue(allocated(cache_data_field%lift_face))
+        @assertTrue(allocated(cache_data_field%lift_element))
         
     end subroutine test_resize_face_exterior__allocated
     !***************************************************************************************
@@ -236,10 +236,10 @@ contains
     !!-------------------------------------------------------------------------------------
     @Test
     subroutine test_resize_face_exterior__size(self)
-        class(test_cache_data_equation),    intent(inout)   :: self
+        class(test_cache_data_field),    intent(inout)   :: self
         
         integer(ik)                 :: idomain, ielem, iface, nnodes_face, nnodes_vol
-        type(cache_data_equation_t) :: cache_data_equation
+        type(cache_data_field_t) :: cache_data_field
 
         idomain = 1
         ielem   = 14
@@ -250,7 +250,7 @@ contains
         !
         ! Call resize routine. THIS IS BEING TESTED.
         !
-        call cache_data_equation%resize('face exterior',self%chidg%data%mesh,idomain,ielem,iface)
+        call cache_data_field%resize('face exterior',self%chidg%data%mesh,self%chidg%data%eqnset(:)%prop,idomain,ielem,iface)
 
 
         !
@@ -260,26 +260,26 @@ contains
         nnodes_vol  = self%chidg%data%mesh(idomain)%faces(ielem,iface)%gq%vol%nnodes
 
         ! Number of ndoes
-        @assertEqual(size(cache_data_equation%value,1), nnodes_face)
+        @assertEqual(size(cache_data_field%value,1), nnodes_face)
         ! Number of dependent elements
-        @assertEqual(size(cache_data_equation%value,2), 1)
+        @assertEqual(size(cache_data_field%value,2), 1)
 
         ! Number of nodes
-        @assertEqual(size(cache_data_equation%derivative,1), nnodes_face)
+        @assertEqual(size(cache_data_field%derivative,1), nnodes_face)
         ! Number of spatial dimentions
-        @assertEqual(size(cache_data_equation%derivative,2), 3)
+        @assertEqual(size(cache_data_field%derivative,2), 3)
         ! Number of dependent elements
-        @assertEqual(size(cache_data_equation%derivative,3), 2)
+        @assertEqual(size(cache_data_field%derivative,3), 2)
 
         ! Number of nodes
-        @assertEqual(size(cache_data_equation%lift_face,1), nnodes_face)
-        @assertEqual(size(cache_data_equation%lift_element,1), nnodes_vol)
+        @assertEqual(size(cache_data_field%lift_face,1), nnodes_face)
+        @assertEqual(size(cache_data_field%lift_element,1), nnodes_vol)
         ! Number of spatial dimentions
-        @assertEqual(size(cache_data_equation%lift_face,2), 3)
-        @assertEqual(size(cache_data_equation%lift_element,2), 3)
+        @assertEqual(size(cache_data_field%lift_face,2), 3)
+        @assertEqual(size(cache_data_field%lift_element,2), 3)
         ! Number of dependent elements
-        @assertEqual(size(cache_data_equation%lift_face,3), 2)
-        @assertEqual(size(cache_data_equation%lift_element,3), 2)
+        @assertEqual(size(cache_data_field%lift_face,3), 2)
+        @assertEqual(size(cache_data_field%lift_element,3), 2)
         
     end subroutine test_resize_face_exterior__size
     !***************************************************************************************
@@ -306,10 +306,10 @@ contains
     !!-------------------------------------------------------------------------------------
     @Test
     subroutine test_resize_element__allocated(self)
-        class(test_cache_data_equation),    intent(inout)   :: self
+        class(test_cache_data_field),    intent(inout)   :: self
         
         integer(ik)                 :: idomain, ielem
-        type(cache_data_equation_t) :: cache_data_equation
+        type(cache_data_field_t) :: cache_data_field
 
         idomain = 1
         ielem   = 14
@@ -318,16 +318,16 @@ contains
         !
         ! Call resize routine. THIS IS BEING TESTED.
         !
-        call cache_data_equation%resize('element',self%chidg%data%mesh,idomain,ielem)
+        call cache_data_field%resize('element',self%chidg%data%mesh,self%chidg%data%eqnset(:)%prop,idomain,ielem)
 
 
         !
         ! Test that the cache allocated the correct component
         !
-        @assertTrue(allocated(cache_data_equation%value))
-        @assertTrue(allocated(cache_data_equation%derivative))
-        @assertTrue(allocated(cache_data_equation%lift_face))
-        @assertTrue(allocated(cache_data_equation%lift_element))
+        @assertTrue(allocated(cache_data_field%value))
+        @assertTrue(allocated(cache_data_field%derivative))
+        @assertTrue(allocated(cache_data_field%lift_face))
+        @assertTrue(allocated(cache_data_field%lift_element))
         
     end subroutine test_resize_element__allocated
     !***************************************************************************************
@@ -344,10 +344,10 @@ contains
     !!-------------------------------------------------------------------------------------
     @Test
     subroutine test_resize_element__size(self)
-        class(test_cache_data_equation),    intent(inout)   :: self
+        class(test_cache_data_field),    intent(inout)   :: self
         
         integer(ik)                 :: idomain, ielem, nnodes_face, nnodes_vol
-        type(cache_data_equation_t) :: cache_data_equation
+        type(cache_data_field_t) :: cache_data_field
 
         idomain = 1
         ielem   = 14
@@ -356,7 +356,7 @@ contains
         !
         ! Call resize routine. THIS IS BEING TESTED.
         !
-        call cache_data_equation%resize('element',self%chidg%data%mesh,idomain,ielem)
+        call cache_data_field%resize('element',self%chidg%data%mesh,self%chidg%data%eqnset(:)%prop,idomain,ielem)
 
 
         !
@@ -366,26 +366,26 @@ contains
         nnodes_vol  = self%chidg%data%mesh(idomain)%elems(ielem)%gq%vol%nnodes
 
         ! Number of ndoes
-        @assertEqual(size(cache_data_equation%value,1), nnodes_vol)
+        @assertEqual(size(cache_data_field%value,1), nnodes_vol)
         ! Number of dependent elements
-        @assertEqual(size(cache_data_equation%value,2), 1)
+        @assertEqual(size(cache_data_field%value,2), 1)
 
         ! Number of nodes
-        @assertEqual(size(cache_data_equation%derivative,1), nnodes_vol)
+        @assertEqual(size(cache_data_field%derivative,1), nnodes_vol)
         ! Number of spatial dimentions
-        @assertEqual(size(cache_data_equation%derivative,2), 3)
+        @assertEqual(size(cache_data_field%derivative,2), 3)
         ! Number of dependent elements
-        @assertEqual(size(cache_data_equation%derivative,3), 7)
+        @assertEqual(size(cache_data_field%derivative,3), 7)
 
         ! Number of nodes
-        @assertEqual(size(cache_data_equation%lift_face,1), nnodes_face)
-        @assertEqual(size(cache_data_equation%lift_element,1), nnodes_vol)
+        @assertEqual(size(cache_data_field%lift_face,1), nnodes_face)
+        @assertEqual(size(cache_data_field%lift_element,1), nnodes_vol)
         ! Number of spatial dimentions
-        @assertEqual(size(cache_data_equation%lift_face,2), 3)
-        @assertEqual(size(cache_data_equation%lift_element,2), 3)
+        @assertEqual(size(cache_data_field%lift_face,2), 3)
+        @assertEqual(size(cache_data_field%lift_element,2), 3)
         ! Number of dependent elements
-        @assertEqual(size(cache_data_equation%lift_face,3), 7)
-        @assertEqual(size(cache_data_equation%lift_element,3), 7)
+        @assertEqual(size(cache_data_field%lift_face,3), 7)
+        @assertEqual(size(cache_data_field%lift_element,3), 7)
         
     end subroutine test_resize_element__size
     !***************************************************************************************
@@ -410,4 +410,4 @@ contains
 
 
 
-end module test_cache_data_equation_mod
+end module test_cache_data_field_mod

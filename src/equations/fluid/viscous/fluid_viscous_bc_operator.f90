@@ -1,6 +1,6 @@
 module fluid_viscous_bc_operator
     use mod_kinds,          only: ik, rk
-    use mod_constants,      only: BC, HALF, ONE, TWO
+    use mod_constants,      only: HALF, ONE, TWO
     use type_operator,      only: operator_t
     use type_chidg_worker,  only: chidg_worker_t
     use type_properties,    only: properties_t
@@ -128,11 +128,11 @@ contains
         !
         ! Interpolate boundary condition state to face quadrature nodes
         !
-        rho  = worker%get_face_variable(irho,  'value', BC)
-        rhou = worker%get_face_variable(irhou, 'value', BC)
-        rhov = worker%get_face_variable(irhov, 'value', BC)
-        rhow = worker%get_face_variable(irhow, 'value', BC)
-        rhoE = worker%get_face_variable(irhoE, 'value', BC)
+        rho  = worker%get_primary_field_face(irho,  'value', 'boundary')
+        rhou = worker%get_primary_field_face(irhou, 'value', 'boundary')
+        rhov = worker%get_primary_field_face(irhov, 'value', 'boundary')
+        rhow = worker%get_primary_field_face(irhow, 'value', 'boundary')
+        rhoE = worker%get_primary_field_face(irhoE, 'value', 'boundary')
 
 
         !
@@ -145,25 +145,25 @@ contains
         !
         ! Interpolate solution gradients to quadrature nodes
         !
-        drho_dx  = worker%get_face_variable(irho,  'ddx+lift', BC)
-        drho_dy  = worker%get_face_variable(irho,  'ddy+lift', BC)
-        drho_dz  = worker%get_face_variable(irho,  'ddz+lift', BC)
+        drho_dx  = worker%get_primary_field_face(irho,  'ddx+lift', 'boundary')
+        drho_dy  = worker%get_primary_field_face(irho,  'ddy+lift', 'boundary')
+        drho_dz  = worker%get_primary_field_face(irho,  'ddz+lift', 'boundary')
 
-        drhou_dx = worker%get_face_variable(irhou, 'ddx+lift', BC)
-        drhou_dy = worker%get_face_variable(irhou, 'ddy+lift', BC)
-        drhou_dz = worker%get_face_variable(irhou, 'ddz+lift', BC)
+        drhou_dx = worker%get_primary_field_face(irhou, 'ddx+lift', 'boundary')
+        drhou_dy = worker%get_primary_field_face(irhou, 'ddy+lift', 'boundary')
+        drhou_dz = worker%get_primary_field_face(irhou, 'ddz+lift', 'boundary')
 
-        drhov_dx = worker%get_face_variable(irhov, 'ddx+lift', BC)
-        drhov_dy = worker%get_face_variable(irhov, 'ddy+lift', BC)
-        drhov_dz = worker%get_face_variable(irhov, 'ddz+lift', BC)
+        drhov_dx = worker%get_primary_field_face(irhov, 'ddx+lift', 'boundary')
+        drhov_dy = worker%get_primary_field_face(irhov, 'ddy+lift', 'boundary')
+        drhov_dz = worker%get_primary_field_face(irhov, 'ddz+lift', 'boundary')
 
-        drhow_dx = worker%get_face_variable(irhow, 'ddx+lift', BC)
-        drhow_dy = worker%get_face_variable(irhow, 'ddy+lift', BC)
-        drhow_dz = worker%get_face_variable(irhow, 'ddz+lift', BC)
+        drhow_dx = worker%get_primary_field_face(irhow, 'ddx+lift', 'boundary')
+        drhow_dy = worker%get_primary_field_face(irhow, 'ddy+lift', 'boundary')
+        drhow_dz = worker%get_primary_field_face(irhow, 'ddz+lift', 'boundary')
 
-        drhoE_dx = worker%get_face_variable(irhoE, 'ddx+lift', BC)
-        drhoE_dy = worker%get_face_variable(irhoE, 'ddy+lift', BC)
-        drhoE_dz = worker%get_face_variable(irhoE, 'ddz+lift', BC)
+        drhoE_dx = worker%get_primary_field_face(irhoE, 'ddx+lift', 'boundary')
+        drhoE_dy = worker%get_primary_field_face(irhoE, 'ddy+lift', 'boundary')
+        drhoE_dz = worker%get_primary_field_face(irhoE, 'ddz+lift', 'boundary')
 
 
         invrho = ONE/rho

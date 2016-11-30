@@ -68,6 +68,7 @@ module type_chidg_worker
         type(element_info_t)        :: element_info
         type(function_info_t)       :: function_info
     
+        character(:),   allocatable :: interpolation_source
 
     contains 
     
@@ -80,9 +81,10 @@ module type_chidg_worker
 
 
         ! Worker get data
-        procedure   :: get_face_variable
-        procedure   :: get_element_variable
-        procedure   :: get_element_auxiliary_field
+        procedure   :: get_primary_field_general
+        procedure   :: get_primary_field_face
+        procedure   :: get_primary_field_element
+        procedure   :: get_auxiliary_field_element
 
         procedure   :: store_bc_state
 
@@ -244,41 +246,86 @@ contains
 
 
 
-    !>
+
+    !>  Return a primary field evaluated at a quadrature node set. The source here
+    !!  is determined by chidg_worker.
+    !!
+    !!  This routine is specifically for model_t's, because we want them to be evaluated
+    !!  on face and element sets the same way. So in a model implementation, we just
+    !!  want the model to get some quadrature node set to operate on. The chidg_worker
+    !!  handles what node set is currently being returned.
+    !!  
+    !!
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   11/30/2016
+    !!
+    !--------------------------------------------------------------------------------------
+    function get_primary_field_general(self,ieqn,interp_type) result(var_gq)
+        class(chidg_worker_t),  intent(in)  :: self
+        integer(ik),            intent(in)  :: ieqn
+        character(*),           intent(in)  :: interp_type
+
+        type(AD_D), allocatable :: var_gq(:)
+
+
+        if (self%interpolation_source == 'element') then
+            var_gq = self%get_primary_field_element(ieqn,interp_type) 
+        else if (self%interpolation_source == 'face interior') then
+            var_gq = self%get_primary_field_face(ieqn,interp_type,'face interior')
+        else if (self%interpolation_source == 'face exterior') then
+            var_gq = self%get_primary_field_face(ieqn,interp_type,'face exterior')
+        else if (self%interpolation_source == 'boundary') then
+            var_gq = self%get_primary_field_face(ieqn,interp_type,'boundary')
+        end if
+
+    end function get_primary_field_general
+    !**************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+
+    !>  Return a primary field interpolated to a face quadrature node set.
     !!
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   9/8/2016
     !!
     !!
     !--------------------------------------------------------------------------------------
-    function get_face_variable(self,ieqn,interp_type,interp_source) result(var_gq)
+    function get_primary_field_face(self,ieqn,interp_type,interp_source) result(var_gq)
         class(chidg_worker_t),  intent(in)  :: self
         integer(ik),            intent(in)  :: ieqn
-        character(len=*),       intent(in)  :: interp_type
-        integer(ik),            intent(in)  :: interp_source
+        character(*),           intent(in)  :: interp_type
+        character(*),           intent(in)  :: interp_source
 
-        type(AD_D), allocatable, dimension(:) :: &
-            var_gq
-
-        type(face_info_t)               :: face_info
-        character(len=:), allocatable   :: cache_component, cache_type
-        integer(ik)                     :: idirection, igq
-        logical                         :: keep_linearization
+        type(AD_D),     allocatable, dimension(:)   :: var_gq
+        character(:),   allocatable                 :: cache_component, cache_type, user_msg
+        type(face_info_t)                           :: face_info
+        integer(ik)                                 :: idirection, igq
 
 
 
         !
         ! Set cache_component
         !
-        if (interp_source == ME) then
+        if (interp_source == 'face interior') then
             cache_component = 'face interior'
-        else if (interp_source == NEIGHBOR .or. &
-                 interp_source == BC) then
+        else if (interp_source == 'face exterior' .or. &
+                 interp_source == 'boundary') then
             cache_component = 'face exterior'
         else
-            call chidg_signal(FATAL,"chidg_worker%get_face_variable: Invalid value for interp_source. Try ME, NEIGHBOR, or BC.")
+            user_msg = "chidg_worker%get_primary_field_face: Invalid value for interpolation source. &
+                        Try 'face interior', 'face exterior', or 'boundary'"
+            call chidg_signal_one(FATAL,user_msg,trim(interp_source))
         end if
-
 
 
         !
@@ -287,8 +334,6 @@ contains
         if (interp_type == 'value') then
             cache_type = 'value'
             idirection = 0
-
-
         else if (interp_type == 'ddx') then
             cache_type = 'derivative'
             idirection = 1
@@ -339,7 +384,7 @@ contains
         end if
 
 
-    end function get_face_variable
+    end function get_primary_field_face
     !***************************************************************************************
 
 
@@ -351,25 +396,23 @@ contains
 
 
 
-    !>
+    !>  Return a primary field interpolated to an element quadrature node set.
     !!
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   9/8/2016
     !!
     !!
     !---------------------------------------------------------------------------------------
-    function get_element_variable(self,ieqn,interp_type) result(var_gq)
+    function get_primary_field_element(self,ieqn,interp_type) result(var_gq)
         class(chidg_worker_t),  intent(in)  :: self
         integer(ik),            intent(in)  :: ieqn
-        character(len=*),       intent(in)  :: interp_type
+        character(*),           intent(in)  :: interp_type
 
-        type(AD_D), allocatable, dimension(:) :: &
-            var_gq, tmp_gq
+        type(AD_D),     allocatable, dimension(:) :: var_gq, tmp_gq
 
         type(face_info_t)               :: face_info
-        character(len=:), allocatable   :: cache_component, cache_type
+        character(:),   allocatable     :: cache_component, cache_type
         integer(ik)                     :: idirection, igq, iface
-        logical                         :: keep_linearization
 
 
 
@@ -380,8 +423,6 @@ contains
         if (interp_type == 'value') then
             cache_type = 'value'
             idirection = 0
-
-
         else if (interp_type == 'ddx') then
             cache_type = 'derivative'
             idirection = 1
@@ -406,9 +447,6 @@ contains
             cache_type = 'derivative + lift'
             idirection = 3
         end if
-
-
-
 
 
 
@@ -444,7 +482,7 @@ contains
 
 
 
-    end function get_element_variable
+    end function get_primary_field_element
     !****************************************************************************************
 
 
@@ -466,7 +504,7 @@ contains
     !!
     !!
     !----------------------------------------------------------------------------------------
-    function get_element_auxiliary_field(self,field,interp_type) result(var_gq)
+    function get_auxiliary_field_element(self,field,interp_type) result(var_gq)
         class(chidg_worker_t),  intent(in)  :: self
         character(*),           intent(in)  :: field
         character(*),           intent(in)  :: interp_type
@@ -518,7 +556,7 @@ contains
 
 
 
-    end function get_element_auxiliary_field
+    end function get_auxiliary_field_element
     !****************************************************************************************
 
 

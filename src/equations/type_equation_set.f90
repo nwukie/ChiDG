@@ -65,12 +65,12 @@ module type_equation_set
         ! Models
         type(model_wrapper_t),      allocatable :: models(:)
 
+        ! Pseudo time-step calculator
+        class(pseudo_timestep_t),   allocatable :: pseudo_timestep
+
         ! Data for the flux and source functions. Ex how many. This gets passed to a container 
         ! in sdata that keeps track of whether these have been executed or not.
         type(equationset_function_data_t)       :: function_data
-
-        ! Pseudo time-step calculator
-        class(pseudo_timestep_t),   allocatable :: pseudo_timestep
 
     contains
 
@@ -79,8 +79,6 @@ module type_equation_set
 
         procedure   :: add_operator 
         procedure   :: add_model
-        procedure   :: add_primary_field                    
-        procedure   :: add_auxiliary_field                  
         procedure   :: add_pseudo_timestep                  
 
 
@@ -163,65 +161,6 @@ contains
 
 
 
-    !>  Add a primary field to the equation set properties
-    !!
-    !!  Just registers the field string that is specified. This gets put in the 
-    !!  properties container, self%prop that stores all the fields being used by 
-    !!  the spatial operators.
-    !!
-    !!  @author Nathan A. Wukie
-    !!  @date   1/28/2016
-    !!
-    !!  @author Nathan A. Wukie (AFRL)
-    !!  @date   8/2/2016
-    !!  @note   modified how the fields are stored.
-    !!
-    !!  @param[in]  field_string   String defining the variable associated with the field 
-    !!                             being added.
-    !!
-    !--------------------------------------------------------------------------------------
-    subroutine add_primary_field(self,field_string)
-        class(equation_set_t),  intent(inout)  :: self
-        character(*),           intent(in)     :: field_string
-
-        call self%prop%add_primary_field(field_string)
-
-    end subroutine add_primary_field
-    !***************************************************************************************
-
-
-
-
-
-
-    !>  Add an auxiliary field to the equation set properties
-    !!
-    !!  Just registers the field string that is specified. This gets put in the 
-    !!  properties container, self%prop that stores all the fields being used by the 
-    !!  spatial operators.
-    !!
-    !!  @author Nathan A. Wukie
-    !!  @date   11/18/2016
-    !!
-    !!
-    !!  @param[in]  field_string   String defining the variable associated with the field 
-    !!                             being added.
-    !!
-    !--------------------------------------------------------------------------------------
-    subroutine add_auxiliary_field(self,field_string)
-        class(equation_set_t),  intent(inout)  :: self
-        character(*),           intent(in)     :: field_string
-
-        call self%prop%add_auxiliary_field(field_string)
-
-    end subroutine add_auxiliary_field
-    !***************************************************************************************
-
-
-
-
-
-
     !>  Add a spatial operator to the equation set.
     !!
     !!  This accepts a string that is the name of an operator to add. This function then 
@@ -239,7 +178,7 @@ contains
 
         class(operator_t),          allocatable :: new_operator
         class(operator_wrapper_t),  allocatable :: temp(:)
-        integer(ik)     :: ierr, iflux, operator_type, ifield
+        integer(ik)     :: ierr, iflux, operator_type, ifield, imodel
 
 
         !
@@ -452,14 +391,22 @@ contains
         ! Turn on primary fields from the new operator
         !
         do ifield = 1,new_operator%nprimary_fields()
-            call self%add_primary_field(new_operator%primary_fields(ifield)%str)
+            call self%prop%add_primary_field(new_operator%get_primary_field(ifield))
         end do
 
         !
         ! Turn on auxiliary fields from the new operator
         !
         do ifield = 1,new_operator%nauxiliary_fields()
-            call self%add_auxiliary_field(new_operator%auxiliary_fields(ifield)%str)
+            call self%prop%add_auxiliary_field(new_operator%get_auxiliary_field(ifield))
+        end do
+
+
+        !
+        ! Add models attached to the operator
+        !
+        do imodel = 1,new_operator%nmodels()
+            call self%add_model(new_operator%get_model(imodel))
         end do
 
     end subroutine add_operator
@@ -479,15 +426,64 @@ contains
     !!  @date   11/29/2016
     !!
     !---------------------------------------------------------------------------------------
-    subroutine add_model(self,model)
+    subroutine add_model(self,string)
         class(equation_set_t),  intent(inout)   :: self
-        character(*),           intent(in)      :: model
+        character(*),           intent(in)      :: string
         
+        integer(ik)                         :: imodel, ierr
+        logical                             :: already_added
+        class(model_t),         allocatable :: new_model
+        type(model_wrapper_t),  allocatable :: temp(:)
+
+
+        !
+        ! Check that the model wasn't already added.
+        !
+        do imodel = 1,size(self%models)
+            already_added = (trim(string) == self%models(imodel)%model%get_name())
+            if (already_added) exit
+        end do
 
 
 
+        !
+        ! Add the model if it wasn't added already by another operator.
+        !
+        if (.not. already_added) then
+
+            ! Create new model
+            allocate(new_model, source=model_factory%produce(string), stat=ierr)
+            if (ierr /= 0) call AllocationError
 
 
+            ! Allocate temporary flux array with one additional slot
+            if (allocated(self%models)) then
+
+                allocate(temp(size(self%models) + 1), stat=ierr)
+                if (ierr /= 0) call AllocationError
+
+                ! Copy current flux components to temp array
+                do imodel = 1,size(self%models)
+                    allocate(temp(imodel)%model,source=self%models(imodel)%model, stat=ierr)
+                    if (ierr /= 0) call AllocationError
+                end do
+
+            else
+
+                ! Allocate new slot
+                allocate(temp(1), stat=ierr)
+                if (ierr /= 0) call AllocationError
+
+            end if
+
+        end if
+
+
+
+        !
+        ! Move extended temp allocation to data type
+        !
+        call move_alloc(from=temp, to=self%models)
 
 
     end subroutine add_model
@@ -520,9 +516,6 @@ contains
 
     end subroutine add_pseudo_timestep
     !****************************************************************************************
-
-
-
 
 
 

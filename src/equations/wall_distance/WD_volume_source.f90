@@ -86,7 +86,7 @@ contains
         !
         ! Interpolate solution to quadrature nodes to initialize derivatives
         !
-        source = worker%get_element_variable(iu, "value")
+        source = worker%get_primary_field_element(iu, "value")
 
 
         source = ONE

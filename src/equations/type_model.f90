@@ -41,7 +41,7 @@ module type_model
     !!  @author Nathan A. Wukie
     !!  @date   11/29/2016
     !!
-    !------------------------------------------------------------------
+    !------------------------------------------------------------------------------------
     type, public, abstract :: model_t
 
         character(:),   allocatable :: name
@@ -60,7 +60,7 @@ module type_model
         procedure   :: nparameters
 
     end type model_t
-    !******************************************************************
+    !*************************************************************************************
 
 
 
@@ -71,8 +71,6 @@ module type_model
             class(model_t), intent(inout)   :: self
         end subroutine
     end interface
-
-
 
 
     abstract interface
@@ -99,7 +97,7 @@ contains
     !!  @author Nathan A. Wukie
     !!  @date   11/29/2016
     !!
-    !-------------------------------------------------------------------
+    !-------------------------------------------------------------------------------------
     subroutine set_name(self,string)
         class(model_t), intent(inout)   :: self
         character(*),   intent(in)      :: string
@@ -107,7 +105,7 @@ contains
         self%name = string
 
     end subroutine set_name
-    !*******************************************************************
+    !*************************************************************************************
 
 
 
@@ -117,7 +115,7 @@ contains
     !!  @author Nathan A. Wukie
     !!  @date   11/29/2016
     !!
-    !------------------------------------------------------------------
+    !-------------------------------------------------------------------------------------
     function get_name(self) result(string)
         class(model_t), intent(in)  :: self
 
@@ -126,7 +124,7 @@ contains
         string = self%name
 
     end function get_name
-    !******************************************************************
+    !*************************************************************************************
 
 
 
@@ -140,7 +138,7 @@ contains
     !!  @date   11/29/2016
     !!
     !!
-    !------------------------------------------------------------------
+    !-------------------------------------------------------------------------------------
     subroutine add_parameter(self,string)
         class(model_t), intent(inout)   :: self
         character(*),   intent(in)      :: string
@@ -178,7 +176,7 @@ contains
 
 
     end subroutine add_parameter
-    !******************************************************************
+    !*************************************************************************************
 
 
 
@@ -191,7 +189,7 @@ contains
     !!  @author Nathan A. Wukie
     !!  @date   11/29/2016
     !!
-    !------------------------------------------------------------------
+    !-------------------------------------------------------------------------------------
     function get_parameter(self,iparam) result(string)
         class(model_t), intent(in)  :: self
         integer(ik),    intent(in)  :: iparam
@@ -201,7 +199,7 @@ contains
         string = self%parameters(iparam)%get()
 
     end function get_parameter
-    !******************************************************************
+    !*************************************************************************************
 
 
 
@@ -217,16 +215,21 @@ contains
     !!  @date   11/29/2016
     !!
     !!
-    !------------------------------------------------------------------
+    !-------------------------------------------------------------------------------------
     function nparameters(self) result(nparams)
         class(model_t), intent(in)  :: self
 
         integer(ik) :: nparams
 
-        nparams = size(self%parameters)
+        if (allocated(self%parameters)) then
+            nparams = size(self%parameters)
+        else
+            nparams = 0
+        end if
+
 
     end function nparameters
-    !******************************************************************
+    !*************************************************************************************
 
 
 

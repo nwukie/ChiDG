@@ -89,10 +89,10 @@ contains
         !
         ! Interpolate solution to quadrature nodes
         !
-        u    = worker%get_element_variable(iu, 'value'     )
-        dudx = worker%get_element_variable(iu, 'ddx + lift')
-        dudy = worker%get_element_variable(iu, 'ddy + lift')
-        dudz = worker%get_element_variable(iu, 'ddz + lift')
+        u    = worker%get_primary_field_element(iu, 'value'     )
+        dudx = worker%get_primary_field_element(iu, 'ddx + lift')
+        dudy = worker%get_primary_field_element(iu, 'ddy + lift')
+        dudz = worker%get_primary_field_element(iu, 'ddz + lift')
 
 
         !

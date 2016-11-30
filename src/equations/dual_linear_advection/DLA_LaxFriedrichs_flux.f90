@@ -116,11 +116,11 @@ contains
         !
         ! Interpolate solution to quadrature nodes
         !
-        ua_r = worker%get_face_variable(iu_a, 'value', ME)
-        ua_l = worker%get_face_variable(iu_a, 'value', NEIGHBOR)
+        ua_r = worker%get_primary_field_face(iu_a, 'value', 'face interior')
+        ua_l = worker%get_primary_field_face(iu_a, 'value', 'face exterior')
 
-        ub_r = worker%get_face_variable(iu_b, 'value', ME)
-        ub_l = worker%get_face_variable(iu_b, 'value', NEIGHBOR)
+        ub_r = worker%get_primary_field_face(iu_b, 'value', 'face interior')
+        ub_l = worker%get_primary_field_face(iu_b, 'value', 'face exterior')
 
 
 

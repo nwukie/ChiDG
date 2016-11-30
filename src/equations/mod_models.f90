@@ -154,12 +154,16 @@ contains
     !!  @date   11/29/2016
     !!
     !-------------------------------------------------------------------------------------
-    function nmodels(self) result(n)
+    function nmodels(self) result(nmodels_)
         class(model_factory_t), intent(in)  :: self
 
-        integer(ik) :: n
+        integer(ik) :: nmodels_
 
-        n = size(self%models)
+        if (allocated(self%models)) then
+            nmodels_ = size(self%models)
+        else
+            nmodels_ = 0
+        end if
 
     end function nmodels
     !*************************************************************************************

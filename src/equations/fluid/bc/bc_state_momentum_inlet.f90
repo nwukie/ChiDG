@@ -1,7 +1,7 @@
 module bc_state_momentum_inlet
 #include <messenger.h>
     use mod_kinds,              only: rk,ik
-    use mod_constants,          only: ONE, TWO, ME
+    use mod_constants,          only: ONE, TWO
 
     use type_bc_state,          only: bc_state_t
     use type_chidg_worker,      only: chidg_worker_t
@@ -135,31 +135,31 @@ contains
         !
         ! Interpolate interior solution to quadrature nodes
         !
-        rho_m  = worker%get_face_variable(irho,  'value', ME)
-        rhou_m = worker%get_face_variable(irhou, 'value', ME)
-        rhov_m = worker%get_face_variable(irhov, 'value', ME)
-        rhow_m = worker%get_face_variable(irhow, 'value', ME)
-        rhoE_m = worker%get_face_variable(irhoE, 'value', ME)
+        rho_m  = worker%get_primary_field_face(irho,  'value', 'face interior')
+        rhou_m = worker%get_primary_field_face(irhou, 'value', 'face interior')
+        rhov_m = worker%get_primary_field_face(irhov, 'value', 'face interior')
+        rhow_m = worker%get_primary_field_face(irhow, 'value', 'face interior')
+        rhoE_m = worker%get_primary_field_face(irhoE, 'value', 'face interior')
 
-        drho_dx_m  = worker%get_face_variable(irho,  'ddx', ME)
-        drho_dy_m  = worker%get_face_variable(irho,  'ddy', ME)
-        drho_dz_m  = worker%get_face_variable(irho,  'ddz', ME)
+        drho_dx_m  = worker%get_primary_field_face(irho,  'ddx', 'face interior')
+        drho_dy_m  = worker%get_primary_field_face(irho,  'ddy', 'face interior')
+        drho_dz_m  = worker%get_primary_field_face(irho,  'ddz', 'face interior')
 
-        drhou_dx_m = worker%get_face_variable(irhou, 'ddx', ME)
-        drhou_dy_m = worker%get_face_variable(irhou, 'ddy', ME)
-        drhou_dz_m = worker%get_face_variable(irhou, 'ddz', ME)
+        drhou_dx_m = worker%get_primary_field_face(irhou, 'ddx', 'face interior')
+        drhou_dy_m = worker%get_primary_field_face(irhou, 'ddy', 'face interior')
+        drhou_dz_m = worker%get_primary_field_face(irhou, 'ddz', 'face interior')
 
-        drhov_dx_m = worker%get_face_variable(irhov, 'ddx', ME)
-        drhov_dy_m = worker%get_face_variable(irhov, 'ddy', ME)
-        drhov_dz_m = worker%get_face_variable(irhov, 'ddz', ME)
+        drhov_dx_m = worker%get_primary_field_face(irhov, 'ddx', 'face interior')
+        drhov_dy_m = worker%get_primary_field_face(irhov, 'ddy', 'face interior')
+        drhov_dz_m = worker%get_primary_field_face(irhov, 'ddz', 'face interior')
 
-        drhow_dx_m = worker%get_face_variable(irhow, 'ddx', ME)
-        drhow_dy_m = worker%get_face_variable(irhow, 'ddy', ME)
-        drhow_dz_m = worker%get_face_variable(irhow, 'ddz', ME)
+        drhow_dx_m = worker%get_primary_field_face(irhow, 'ddx', 'face interior')
+        drhow_dy_m = worker%get_primary_field_face(irhow, 'ddy', 'face interior')
+        drhow_dz_m = worker%get_primary_field_face(irhow, 'ddz', 'face interior')
         
-        drhoE_dx_m = worker%get_face_variable(irhoE, 'ddx', ME)
-        drhoE_dy_m = worker%get_face_variable(irhoE, 'ddy', ME)
-        drhoE_dz_m = worker%get_face_variable(irhoE, 'ddz', ME)
+        drhoE_dx_m = worker%get_primary_field_face(irhoE, 'ddx', 'face interior')
+        drhoE_dy_m = worker%get_primary_field_face(irhoE, 'ddy', 'face interior')
+        drhoE_dz_m = worker%get_primary_field_face(irhoE, 'ddz', 'face interior')
 
 
         !

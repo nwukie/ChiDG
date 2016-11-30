@@ -10,7 +10,7 @@ add_subdirectory(wall_distance)
 
 
 
-add_lib_sources(type_equation.f90 
+add_lib_sources(type_field.f90 
                 type_equation_set.f90 
                 type_equation_builder.f90
                 type_equation_builder_wrapper.f90

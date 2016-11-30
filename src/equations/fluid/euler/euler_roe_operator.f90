@@ -1,7 +1,6 @@
 module euler_roe_operator
     use mod_kinds,              only: rk,ik
-    use mod_constants,          only: NFACES,ZERO,ONE,TWO,HALF, ME, NEIGHBOR
-
+    use mod_constants,          only: ZERO,ONE,TWO,HALF
     use type_operator,          only: operator_t
     use type_properties,        only: properties_t
     use type_chidg_worker,      only: chidg_worker_t
@@ -123,20 +122,20 @@ contains
         !
         ! Interpolate solution to quadrature nodes
         !
-        rho_m  = worker%get_face_variable(irho,  'value', ME)
-        rho_p  = worker%get_face_variable(irho,  'value', NEIGHBOR)
+        rho_m  = worker%get_primary_field_face(irho,  'value', 'face interior')
+        rho_p  = worker%get_primary_field_face(irho,  'value', 'face exterior')
 
-        rhou_m = worker%get_face_variable(irhou, 'value', ME)
-        rhou_p = worker%get_face_variable(irhou, 'value', NEIGHBOR)
+        rhou_m = worker%get_primary_field_face(irhou, 'value', 'face interior')
+        rhou_p = worker%get_primary_field_face(irhou, 'value', 'face exterior')
 
-        rhov_m = worker%get_face_variable(irhov, 'value', ME)
-        rhov_p = worker%get_face_variable(irhov, 'value', NEIGHBOR)
+        rhov_m = worker%get_primary_field_face(irhov, 'value', 'face interior')
+        rhov_p = worker%get_primary_field_face(irhov, 'value', 'face exterior')
 
-        rhow_m = worker%get_face_variable(irhow, 'value', ME)
-        rhow_p = worker%get_face_variable(irhow, 'value', NEIGHBOR)
+        rhow_m = worker%get_primary_field_face(irhow, 'value', 'face interior')
+        rhow_p = worker%get_primary_field_face(irhow, 'value', 'face exterior')
 
-        rhoE_m = worker%get_face_variable(irhoE, 'value', ME)
-        rhoE_p = worker%get_face_variable(irhoE, 'value', NEIGHBOR)
+        rhoE_m = worker%get_primary_field_face(irhoE, 'value', 'face interior')
+        rhoE_p = worker%get_primary_field_face(irhoE, 'value', 'face exterior')
 
 
 

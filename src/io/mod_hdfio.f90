@@ -5,7 +5,7 @@ module mod_hdfio
     use mod_bc,                     only: create_bc
     use mod_chidg_mpi,              only: IRANK, NRANK, ChiDG_COMM
     use mod_hdf_utilities,          only: get_ndomains_hdf, get_domain_names_hdf,                   &
-                                          get_domain_equation_set_hdf, set_solution_order_hdf,     &
+                                          get_domain_equation_set_hdf, set_solution_order_hdf,      &
                                           get_solution_order_hdf, set_coordinate_order_hdf,         &
                                           get_domain_mapping_hdf, get_domain_dimensionality_hdf,    &
                                           set_contains_solution_hdf, set_domain_equation_set_hdf,   &
@@ -31,6 +31,7 @@ module mod_hdfio
     use iso_c_binding,              only: c_ptr
     use hdf5
     use h5lt
+    use mpi_f08
     implicit none
 
 

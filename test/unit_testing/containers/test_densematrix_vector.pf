@@ -1,4 +1,3 @@
-
 !>  Test push_back to append a general densematrix to the densematrix_vector_t
 !!
 !!
@@ -36,6 +35,121 @@ subroutine test_densematrix_vector__init()
 
 end subroutine
 
+
+
+
+
+
+
+
+
+!>  Test store integral vector in densematrix in index location
+!!
+!!
+!!  @author Matteo Ugolotti
+!!
+!---------------------------------------------------------------------------------
+
+@Test
+subroutine test_densematrix_vector__store()
+    use pfunit_mod
+    use mod_kinds,                  only: rk, ik
+    use type_densematrix_vector,    only: densematrix_vector_t
+    use type_densematrix,           only: densematrix_t
+    use mod_constants,              only: ZERO, ONE, TWO
+    use DNAD_D
+
+
+    implicit none
+
+    type(densematrix_vector_t)      :: vec
+    integer(ik)                     :: nterms_s
+    type(AD_D)                      :: integral_s(2)
+
+    integer(ik)                     :: neqns
+    integer(ik)                     :: nderiv
+    type(densematrix_t)             :: inmat
+    integer(ik)                     :: matval(6,6), mat(6,6)
+    integer(ik)                     :: idim, jdim, dparent_g, dparent_l, eparent_g, eparent_l, parent_proc
+    integer(ik)                     :: i
+    
+    
+    nterms_s = 2
+    neqns    = 3
+    matval   = 0
+    idim     = 6
+    jdim     = 6
+    dparent_g   = 1
+    dparent_l   = 1
+    eparent_g   = 1
+    eparent_l   = 1
+    parent_proc = 1
+
+
+
+    nderiv = neqns*nterms_s
+
+    !
+    ! Initialize AD variables with allocated derivative arrays
+    !
+    do i = 1,nterms_s
+        integral_s(i) = AD_D(nderiv)
+    end do
+
+    
+    !
+    ! Define the functional value for each AD_D in integral vector
+    !
+    integral_s = [ONE, TWO]
+    
+    !
+    ! Set the first and last element of each derivative array sot they are not just zeros
+    !
+    integral_s(1)%xp_ad_(1) = ONE
+    integral_s(1)%xp_ad_(6) = ONE
+    
+    integral_s(2)%xp_ad_(1) = TWO
+    integral_s(2)%xp_ad_(6) = TWO
+    
+
+    !
+    ! Initialize the densematrix to push twice
+    !
+    call inmat%init(idim,jdim,dparent_g,dparent_l,eparent_g,eparent_l,parent_proc)
+
+    !
+    ! Assign a matrix of zeros to inmat
+    !
+    inmat%mat = matval
+
+    !
+    ! Push the densematrix twice
+    !
+    call vec%push_back(inmat)
+    call vec%push_back(inmat)
+
+    !
+    ! Store the integral vector in the second densematrix THIS IS BEING TESTED
+    !
+    do i = 1,neqns
+        call vec%store(2,i,nterms_s,integral_s)
+    end do
+
+
+    !
+    ! Check that the derivatives were assigned to their right locations in the right densematrix
+    !
+    mat = vec%dmat(2)
+    @assertEqual(matval,vec%dmat(1))
+    @assertEqual(integral_s(1)%xp_ad_, mat(1,:) )
+    @assertEqual(integral_s(2)%xp_ad_, mat(2,:) )
+    @assertEqual(integral_s(1)%xp_ad_, mat(3,:) )
+    @assertEqual(integral_s(2)%xp_ad_, mat(4,:) )
+    @assertEqual(integral_s(1)%xp_ad_, mat(5,:) )
+    @assertEqual(integral_s(2)%xp_ad_, mat(6,:) )
+
+
+end subroutine
 
 
 

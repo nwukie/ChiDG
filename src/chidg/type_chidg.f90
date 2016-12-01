@@ -864,7 +864,7 @@ contains
         character(*),       intent(in)              :: solutionfile
 
         character(len=5),   dimension(1)    :: extensions
-        character(len=:),   allocatable     :: extension
+        character(:),       allocatable     :: extension
         type(meshdata_t),   allocatable     :: solutiondata(:)
         integer                             :: iext, extloc, idom, ndomains, iwrite, ierr
 

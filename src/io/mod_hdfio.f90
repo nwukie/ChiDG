@@ -3,13 +3,15 @@ module mod_hdfio
     use mod_kinds,                  only: rk,ik,rdouble
     use mod_constants,              only: ZERO, NFACES, TWO_DIM, THREE_DIM, NO_PROC
     use mod_bc,                     only: create_bc
+    use mod_chidg_mpi,              only: IRANK, NRANK, ChiDG_COMM
     use mod_hdf_utilities,          only: get_ndomains_hdf, get_domain_names_hdf,                   &
-                                          get_domain_equation_sets_hdf, set_solution_order_hdf,     &
+                                          get_domain_equation_set_hdf, set_solution_order_hdf,     &
                                           get_solution_order_hdf, set_coordinate_order_hdf,         &
                                           get_domain_mapping_hdf, get_domain_dimensionality_hdf,    &
                                           set_contains_solution_hdf, set_domain_equation_set_hdf,   &
                                           check_file_storage_version_hdf, check_file_exists_hdf,    &
-                                          get_domain_indices_hdf, get_domain_name_hdf,              &
+                                          !get_domain_indices_hdf, get_domain_index_hdf
+                                          get_domain_name_hdf,              &
                                           get_contains_solution_hdf, get_contains_grid_hdf,         &
                                           get_bc_state_names_hdf, get_bc_state_hdf,                 &
                                           get_nbc_state_groups_hdf, get_bc_state_group_names_hdf,   &
@@ -17,7 +19,7 @@ module mod_hdfio
                                           get_bc_patch_hdf, open_file_hdf, close_file_hdf,          &
                                           open_domain_hdf, close_domain_hdf, initialize_file_hdf,   &
                                           initialize_file_structure_hdf, open_bc_group_hdf,         &
-                                          close_bc_group_hdf, get_domain_index_hdf, get_domain_nelements_hdf
+                                          close_bc_group_hdf, get_domain_nelements_hdf
 
     use type_svector,               only: svector_t
     use mod_string,                 only: string_t
@@ -93,11 +95,10 @@ contains
         real(rdouble), dimension(:), allocatable, target    :: xpts, ypts, zpts
         type(c_ptr)                                         :: cp_pts, cp_conn
 
-        character(len=1024),    allocatable     :: dnames(:), eqnset(:)
-        character(1024)                         :: gname
-        character(:),           allocatable     :: user_msg
+!        character(len=1024),    allocatable     :: dnames(:), eqnset(:)
+        character(:),           allocatable     :: user_msg, domain_name
         integer                                 :: nmembers, type, ierr, ndomains, igrp,    &
-                                                   npts, izeta, ieta, ixi, idom, nterms_1d, &
+                                                   npts, izeta, ieta, ixi, nterms_1d,       &
                                                    mapping, nterms_c, spacedim, ipt, iconn, &
                                                    nconn, nelements, nnodes
         integer, dimension(1)                   :: mapping_buf, spacedim_buf
@@ -127,40 +128,27 @@ contains
 
 
 
-
-        !
-        ! Get equationset strings.
-        !
-        dnames   = get_domain_names_hdf(fid)
-        eqnset   = get_domain_equation_sets_hdf(fid,dnames)
-
-
         !
         !  Loop through groups and read domains
         !
         do iconn = 1,nconn
 
 
-            ! Get connectivity domain index 
-            idom = partition%connectivities(iconn)%get_domain_index()
-
+            ! Get domain name
+            domain_name = partition%connectivities(iconn)%get_domain_name()
             
-            ! Get the name of the current domain from the HDF file
-            gname = get_domain_name_hdf(fid,idom)
-
-
-
+            
             !
             ! Open domain
             !
-            domain_id = open_domain_hdf(fid,trim(gname))
+            domain_id = open_domain_hdf(fid,trim(domain_name))
 
 
             !
             ! Open the Domain/Grid group
             !
             call h5gopen_f(domain_id, "Grid", gid, ierr, H5P_DEFAULT_F)
-            if (ierr /= 0) call chidg_signal_one(FATAL,"read_grid_hdf: Domagin/Grid group did not open properly.", trim(gname)//'/Grid')
+            if (ierr /= 0) call chidg_signal_one(FATAL,"read_grid_hdf: Domagin/Grid group did not open properly.", trim(domain_name)//'/Grid')
 
 
             !
@@ -183,7 +171,7 @@ contains
             end if
 
             meshdata(iconn)%nterms_c = nterms_c
-            meshdata(iconn)%name     = gname
+            meshdata(iconn)%name     = domain_name
             meshdata(iconn)%spacedim = spacedim
 
 
@@ -241,14 +229,14 @@ contains
             !
             nelements = partition%connectivities(iconn)%get_nelements()
             nnodes    = partition%connectivities(iconn)%get_nnodes()
-            call meshdata(iconn)%connectivity%init(nelements,nnodes)
+            call meshdata(iconn)%connectivity%init(domain_name,nelements,nnodes)
             meshdata(iconn)%connectivity%data = partition%connectivities(iconn)%data
 
 
             !
             ! Read equation set attribute
             !
-            meshdata(iconn)%eqnset = eqnset(idom)
+            meshdata(iconn)%eqnset = get_domain_equation_set_hdf(domain_id)
 
 
             !
@@ -415,113 +403,137 @@ contains
         character(:),   allocatable     :: field_name, domain_name
         integer(HID_T)                  :: fid, domain_id
         integer(HSIZE_T)                :: adim
-        integer(ik)                     :: idom, ieqn, neqns, spacedim, time, field_index
+        integer(ik)                     :: idom, ieqn, neqns, iwrite, spacedim, time, field_index, iproc
         integer                         :: ierr, order_s
         logical                         :: file_exists
-
 
         !
         ! Open file. If it doesn't exist, create a new one.
         !
         file_exists = check_file_exists_hdf(file_name)
+        call MPI_Barrier(ChiDG_COMM,ierr)
 
-        if (file_exists) then
-            fid = open_file_hdf(file_name)
-        else
-            fid = initialize_file_hdf(file_name)
-            call initialize_file_structure_hdf(fid,data)
+
+        if (.not. file_exists) then
+            ! Create a new file
+            if (IRANK == GLOBAL_MASTER) then
+                call initialize_file_hdf(file_name)
+            end if
+            call MPI_Barrier(ChiDG_COMM,ierr)
+
+            ! Initialize the file structure.
+            do iproc = 0,NRANK-1
+                if (iproc == IRANK) then
+                    fid = open_file_hdf(file_name)
+                    call initialize_file_structure_hdf(fid,data)
+                    call close_file_hdf(fid)
+                end if
+                call MPI_Barrier(ChiDG_COMM,ierr)
+            end do
+
         end if
 
 
 
-        !
-        ! Read solution for each domain
-        !
-        time = 1
-        do idom = 1,data%ndomains()
-
-            ! Get domain name, open group
-            domain_name = data%info(idom)%name
-            domain_id   = open_domain_hdf(fid,trim(domain_name))
-            
-
-            !
-            ! Write domain attributes: solution order, equation set
-            !
-            adim = 1
-            order_s = 0
-            spacedim = data%mesh(idom)%spacedim
-
-            if ( spacedim == THREE_DIM ) then
-                do while ( order_s*order_s*order_s /= data%mesh(idom)%nterms_s )
-                   order_s = order_s + 1 
-                end do
-                order_s = order_s - 1 ! to be consistent with he definition of 'Order of the polynomial'
-
-            else if ( spacedim == TWO_DIM ) then
-                do while ( order_s*order_s /= data%mesh(idom)%nterms_s )
-                   order_s = order_s + 1 
-                end do
-                order_s = order_s - 1 ! to be consistent with he definition of 'Order of the polynomial'
-
-            end if
+        do iwrite = 0,NRANK-1
+            if ( iwrite == IRANK ) then
 
 
+                ! Open file
+                fid = open_file_hdf(file_name)
 
-            !
-            ! Set some data about the block: solution order + equation set
-            !
-            call set_solution_order_hdf(domain_id,order_s)
-
-
-
-            !
-            ! If specified, only write specified field.
-            !
-            if (present(field)) then
-
-                field_index = data%eqnset(idom)%prop%get_primary_field_index(trim(field))
-
-                if (field_index /= 0) then
-                    call write_field_domain_hdf(data,domain_id,field,time)
-                end if
-
-
-            !
-            ! Else, write each field in the file.
-            !
-            else
 
                 !
-                ! For each field: get the name, write to file
-                ! 
-                neqns = data%eqnset(idom)%prop%nprimary_fields()
-                do ieqn = 1,neqns
-                    field_name = trim(data%eqnset(idom)%prop%get_primary_field_name(ieqn))
-                    print*, 'Writing field:', ieqn
-                    call write_field_domain_hdf(data,domain_id,field_name,time)
-                    print*, 'Done writing field:', ieqn
-                end do ! ieqn
+                ! Read solution for each domain
+                !
+                time = 1
+                do idom = 1,data%ndomains()
+
+                    ! Get domain name, open group
+                    domain_name = data%info(idom)%name
+                    domain_id   = open_domain_hdf(fid,trim(domain_name))
+                    
+
+                    !
+                    ! Write domain attributes: solution order, equation set
+                    !
+                    adim = 1
+                    order_s = 0
+                    spacedim = data%mesh(idom)%spacedim
+
+                    if ( spacedim == THREE_DIM ) then
+                        do while ( order_s*order_s*order_s /= data%mesh(idom)%nterms_s )
+                           order_s = order_s + 1 
+                        end do
+                        order_s = order_s - 1 ! to be consistent with he definition of 'Order of the polynomial'
+
+                    else if ( spacedim == TWO_DIM ) then
+                        do while ( order_s*order_s /= data%mesh(idom)%nterms_s )
+                           order_s = order_s + 1 
+                        end do
+                        order_s = order_s - 1 ! to be consistent with he definition of 'Order of the polynomial'
+
+                    end if
+
+
+
+                    !
+                    ! Set some data about the block: solution order + equation set
+                    !
+                    call set_solution_order_hdf(domain_id,order_s)
+
+
+
+                    !
+                    ! If specified, only write specified field.
+                    !
+                    if (present(field)) then
+
+                        field_index = data%eqnset(idom)%prop%get_primary_field_index(trim(field))
+
+                        if (field_index /= 0) then
+                            call write_field_domain_hdf(data,domain_id,field,time)
+                        end if
+
+
+                    !
+                    ! Else, write each field in the file.
+                    !
+                    else
+
+                        !
+                        ! For each field: get the name, write to file
+                        ! 
+                        neqns = data%eqnset(idom)%prop%nprimary_fields()
+                        do ieqn = 1,neqns
+                            field_name = trim(data%eqnset(idom)%prop%get_primary_field_name(ieqn))
+                            print*, 'Writing field:', ieqn
+                            call write_field_domain_hdf(data,domain_id,field_name,time)
+                            print*, 'Done writing field:', ieqn
+                        end do ! ieqn
+
+                    end if
+
+                    call close_domain_hdf(domain_id)
+
+
+                end do ! idom
+
+
+                !
+                ! Set contains solution
+                !
+                call set_contains_solution_hdf(fid,"True")
+
+
+                !
+                ! Close file
+                !
+                call close_file_hdf(fid)
 
             end if
-
-            call close_domain_hdf(domain_id)
-
-
-        end do ! idom
-
-
-        !
-        ! Set contains solution
-        !
-        call set_contains_solution_hdf(fid,"True")
-
-
-        !
-        ! Close file
-        !
-        call close_file_hdf(fid)
-
+            call MPI_Barrier(ChiDG_COMM,ierr)
+        end do
 
     end subroutine write_solution_hdf
     !*****************************************************************************************
@@ -566,7 +578,7 @@ contains
         integer(HSIZE_T)        :: maxdims(3), dims(3)
         integer, dimension(1)   :: ibuf
 
-        character(:),   allocatable         :: user_msg
+        character(:),   allocatable         :: user_msg, domain_name
         character(100)                      :: cbuf, var_gqp
 
         real(rdouble),  allocatable, target :: var(:,:,:)
@@ -613,8 +625,8 @@ contains
         nterms_1d = (order + 1) ! To be consistent with the definition of (Order = 'Order of the polynomial')
 
 
-
-        idom     = get_domain_index_hdf(domain_id)
+        domain_name = get_domain_name_hdf(domain_id)
+        idom     = data%get_domain_index(domain_name)
         spacedim = data%mesh(idom)%spacedim
 
         if ( spacedim == THREE_DIM ) then
@@ -991,6 +1003,7 @@ contains
         integer                             :: ndims
         integer, dimension(1)               :: ibuf
         character(100)                      :: cbuf, var_grp, ctime
+        character(:),   allocatable         :: domain_name
 
         real(rdouble), allocatable, target  :: var(:,:,:)
         type(c_ptr)                         :: cp_var
@@ -1027,11 +1040,10 @@ contains
         !
         ! Set dimensions of dataspace to write
         !
-        !idom    = data%get_domain_index(dname)
-        !nelem_g = get_domain_nelements_hdf(domain_id)
-        idom    = get_domain_index_hdf(domain_id)
-        nelem_g = data%mesh(idom)%get_nelements_global()
-        ndims   = 3
+        domain_name = get_domain_name_hdf(domain_id)
+        idom        = data%get_domain_index(domain_name)
+        nelem_g     = data%mesh(idom)%get_nelements_global()
+        ndims       = 3
 
         dims(1) = data%mesh(idom)%nterms_s
         dims(2) = nelem_g
@@ -1288,7 +1300,7 @@ contains
         type(bc_patch_data_t),  intent(inout)   :: bc_patches(:)
         type(partition_t),      intent(in)      :: partition
 
-        integer(ik)                 :: iconn, nconn, idom, iface, ierr
+        integer(ik)                 :: iconn, nconn, iface, ierr
         integer(ik),    allocatable :: bc_patch(:,:)
         character(:),   allocatable :: bc_state_group
         integer                     :: ibc_face, nbcfaces
@@ -1308,13 +1320,10 @@ contains
         do iconn = 1,nconn
 
 
-            ! Get domain index of current connectivity
-            idom = partition%connectivities(iconn)%get_domain_index()
-
             !
             ! Get name of current domain
             !
-            domain = get_domain_name_hdf(fid,idom)
+            domain = partition%connectivities(iconn)%get_domain_name()
             bc_patches(iconn)%domain_ = domain
 
 
@@ -1485,10 +1494,8 @@ contains
         integer,                     allocatable, target    :: connectivity(:,:)
         type(c_ptr)                                         :: cp_conn
 
-        integer(ik),            allocatable :: domain_indices(:)
-        character(len=1024),    allocatable :: dnames(:), eqnset(:)
-        character(1024)                     :: gname
-        character(:),           allocatable :: user_msg
+        character(len=1024),    allocatable :: domain_names(:)
+        character(:),           allocatable :: user_msg, domain_name
         integer                             :: nmembers, type, ierr, ndomains, igrp,    &
                                                idom, idomain, nelements, ielem, nnodes, mapping
         logical                             :: contains_grid
@@ -1536,11 +1543,9 @@ contains
 
 
         !
-        ! Get equationset strings.
+        ! Get domain names in the file.
         !
-        dnames         = get_domain_names_hdf(fid)
-        domain_indices = get_domain_indices_hdf(fid)
-        eqnset         = get_domain_equation_sets_hdf(fid,dnames)
+        domain_names = get_domain_names_hdf(fid)
 
 
 
@@ -1548,16 +1553,16 @@ contains
         !  Loop through groups and read domain connectivities
         !
         idom = 1
-        do idom = 1,size(dnames)
+        do idom = 1,size(domain_names)
 
-                gname = dnames(idom)
+                domain_name = domain_names(idom)
 
                 !
                 ! Open the Domain/Grid group
                 !
-                call h5gopen_f(fid, "D_"//trim(gname)//"/Grid", gid, ierr, H5P_DEFAULT_F)
+                call h5gopen_f(fid, "D_"//trim(domain_name)//"/Grid", gid, ierr, H5P_DEFAULT_F)
                 user_msg = "read_connectivity_hdf: Domain/Grid group did not open properly."
-                if (ierr /= 0) call chidg_signal_one(FATAL,user_msg, trim(gname)//"/Grid")
+                if (ierr /= 0) call chidg_signal_one(FATAL,user_msg, trim(domain_name)//"/Grid")
 
 
                 !
@@ -1612,9 +1617,8 @@ contains
 
 
                 ! Initialize domain connectivity structure
-                idomain   = domain_indices(idom)    ! prob don't need this
                 nelements = size(connectivity,1)
-                call connectivities(idom)%init(nelements, nnodes)
+                call connectivities(idom)%init(domain_name,nelements, nnodes)
 
 
                 !connectivities(idom)%data = connectivity

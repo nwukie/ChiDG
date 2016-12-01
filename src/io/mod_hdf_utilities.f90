@@ -6,6 +6,7 @@ module mod_hdf_utilities
     use mod_bc,                 only: check_bc_state_registered, create_bc
     use mod_string,             only: string_t
     use mod_function,           only: create_function
+    use mod_chidg_mpi,          only: IRANK, NRANK, ChiDG_COMM, GLOBAL_MASTER
     use type_function,          only: function_t
     use type_svector,           only: svector_t
     use type_bc_state,          only: bc_state_t
@@ -212,7 +213,8 @@ contains
     !!
     !!
     !----------------------------------------------------------------------------------------
-    function initialize_file_hdf(filename) result(fid)
+    !function initialize_file_hdf(filename) result(fid)
+    subroutine initialize_file_hdf(filename)
         character(*),   intent(in)  :: filename
 
         character(:),   allocatable :: filename_init
@@ -271,7 +273,7 @@ contains
         call set_ndomains_hdf(fid,0)
 
 
-    end function initialize_file_hdf
+    end subroutine initialize_file_hdf
     !****************************************************************************************
 
 
@@ -868,7 +870,8 @@ contains
 
 
             ! Set domain index
-            call set_domain_index_hdf(domain_id,ndomains)
+            call set_domain_name_hdf(domain_id,domain_name)
+            !call set_domain_index_hdf(domain_id,ndomains)
 
 
             ! Close domain
@@ -880,9 +883,6 @@ contains
     !***************************************************************************************
 
     
-
-
-
 
 
 
@@ -996,6 +996,138 @@ contains
 
     end function get_ndomains_hdf
     !****************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+
+    !>  Given a domain identifier, set the domain name.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   11/30/2016
+    !!
+    !!  @param[in]  domain_id       HDF domain identifier
+    !!  @param[in]  domain_name     String holding the name to be set.
+    !!
+    !----------------------------------------------------------------------------------------
+    subroutine set_domain_name_hdf(domain_id,domain_name)
+        integer(HID_T), intent(in)  :: domain_id
+        character(*),   intent(in)  :: domain_name
+
+        integer(ik) :: ierr
+
+        call h5ltset_attribute_string_f(domain_id, ".", "Domain Name", trim(domain_name), ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"set_domain_name_hdf: Error h5ltset_attribute_string_f")
+
+    end subroutine set_domain_name_hdf
+    !****************************************************************************************
+
+
+
+
+
+
+
+    !>  Given a domain identifier, return the domain name.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   11/30/2016
+    !!
+    !!  @param[in]  domain_id       HDF domain identifier
+    !!
+    !----------------------------------------------------------------------------------------
+    function get_domain_name_hdf(domain_id) result(domain_name)
+        integer(HID_T), intent(in)  :: domain_id
+
+        character(1024)             :: temp_string
+        character(:),   allocatable :: domain_name
+        integer(ik)                 :: ierr
+
+        call h5ltget_attribute_string_f(domain_id, ".", "Domain Name", temp_string, ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"get_domain_name_hdf: Error h5ltget_attribute_string_f")
+
+        domain_name = trim(temp_string)
+
+    end function get_domain_name_hdf
+    !****************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    !>  Return a list of domain names from an HDF5 file identifier.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   2/3/2016
+    !!
+    !!  @param[in]  fid     HDF file identifier
+    !!
+    !----------------------------------------------------------------------------------------
+    function get_domain_names_hdf(fid) result(names)
+        integer(HID_T),     intent(in)  :: fid
+
+        character(len=1024), allocatable    :: names(:)
+        character(len=1024)                 :: gname
+        integer                             :: ndomains, nmembers, type
+        integer                             :: igrp, idom, ierr
+
+        !
+        ! Get number of domains
+        !
+        ndomains = get_ndomains_hdf(fid)
+        allocate(names(ndomains), stat=ierr)
+        if (ierr /= 0) call AllocationError
+
+
+        !
+        !  Get number of groups in the file root
+        !
+        call h5gn_members_f(fid, "/", nmembers, ierr)
+
+
+        !
+        !  Loop through groups and read domain names
+        !
+        idom = 1
+        do igrp = 0,nmembers-1
+
+            ! Get group name
+            call h5gget_obj_info_idx_f(fid,"/", igrp, gname, type, ierr)
+
+            ! Test if group is a 'Domain'
+            if (gname(1:2) == 'D_') then
+
+                ! Store name
+                names(idom) = trim(gname(3:))
+                idom = idom + 1
+
+            end if
+
+        end do
+
+
+    end function get_domain_names_hdf
+    !****************************************************************************************
+
 
 
 
@@ -1165,261 +1297,208 @@ contains
 
 
 
-    !>  Return a list of domain names from an HDF5 file identifier.
-    !!
-    !!  @author Nathan A. Wukie
-    !!  @date   2/3/2016
-    !!
-    !!  @param[in]  fid     HDF file identifier
-    !!
-    !----------------------------------------------------------------------------------------
-    function get_domain_names_hdf(fid) result(names)
-        integer(HID_T),     intent(in)  :: fid
 
-        character(len=1024), allocatable    :: names(:)
-        character(len=1024)                 :: gname
-        integer                             :: ndomains, nmembers, type
-        integer                             :: igrp, idom, ierr
 
-        !
-        ! Get number of domains
-        !
-        ndomains = get_ndomains_hdf(fid)
-        allocate(names(ndomains), stat=ierr)
-        if (ierr /= 0) call AllocationError
 
 
-        !
-        !  Get number of groups in the file root
-        !
-        call h5gn_members_f(fid, "/", nmembers, ierr)
 
 
-        !
-        !  Loop through groups and read domain names
-        !
-        idom = 1
-        do igrp = 0,nmembers-1
 
-            ! Get group name
-            call h5gget_obj_info_idx_f(fid,"/", igrp, gname, type, ierr)
 
-            ! Test if group is a 'Domain'
-            if (gname(1:2) == 'D_') then
 
-                ! Store name
-                names(idom) = trim(gname(3:))
-                idom = idom + 1
-
-            end if
-
-        end do
-
-
-    end function get_domain_names_hdf
-    !****************************************************************************************
-
-
-
-
-
-
-
-
-
-    !>  Return a domain name given a domain index.
-    !!
-    !!  @author Nathan A. Wukie
-    !!  @date   2/3/2016
-    !!
-    !!  @param[in]  fid         HDF file identifier
-    !!  @param[in]  idom_hdf    A specified domain index to be queried. This is an attribute of each domain in 
-    !!                          the HDF file, per the ChiDG convention.
-    !!
-    !----------------------------------------------------------------------------------------
-    function get_domain_name_hdf(fid,idom_hdf) result(dname)
-        integer(HID_T),     intent(in)  :: fid
-        integer(ik),        intent(in)  :: idom_hdf
-
-        character(len=1024)                 :: dname
-        character(len=1024), allocatable    :: dnames(:)
-        integer(ik),         allocatable    :: dindices(:)
-        integer                             :: iind, ndomains
-
-        !
-        ! Get number of domains, domain names, and domain indices
-        !
-        ndomains = get_ndomains_hdf(fid)
-        dnames   = get_domain_names_hdf(fid)
-        dindices = get_domain_indices_hdf(fid)
-
-
-
-        do iind = 1,ndomains
-
-            if ( dindices(iind) == idom_hdf ) then
-               dname = dnames(iind) 
-            end if
-
-        end do
-
-
-
-    end function get_domain_name_hdf
-    !****************************************************************************************
-
-
-
-
-
-
-
-
-
-    !>  Set "Domain Index" for a domain group.
-    !!
-    !!  @author Nathan A. Wukie
-    !!  @date   2/3/2016
-    !!
-    !!  @param[in]  fid     HDF file identifier
-    !!
-    !----------------------------------------------------------------------------------------
-    subroutine set_domain_index_hdf(dom_id,domain_index)
-        integer(HID_T),     intent(in)  :: dom_id
-        integer(ik),        intent(in)  :: domain_index
-
-        integer(ik)         :: ierr
-
-        call h5ltset_attribute_int_f(dom_id,".","Domain Index",[domain_index],SIZE_ONE,ierr)
-        if (ierr /= 0) call chidg_signal(FATAL,"set_domain_index_hdf: Error h5ltset_attribute_int_f")
-
-
-    end subroutine set_domain_index_hdf
-    !****************************************************************************************
-
-
-
-
-
-    !>  Return a list of domain indices from an HDF5 file identifier. This is because, the 
-    !!  current method of detecting domains by name can change the order they are detected 
-    !!  in. So, each domain is given an idomain attribute that is independent of the order of 
-    !!  discovery from the file.
-    !!
-    !!  @author Nathan A. Wukie
-    !!  @date   2/3/2016
-    !!
-    !!  @param[in]  fid     HDF file identifier
-    !!
-    !----------------------------------------------------------------------------------------
-    function get_domain_index_hdf(dom_id) result(domain_index)
-        integer(HID_T),     intent(in)  :: dom_id
-
-        integer(ik) :: domain_index, ierr
-        integer, dimension(1) :: buf
-
-        call h5ltget_attribute_int_f(dom_id,".","Domain Index",buf,ierr)
-        if (ierr /= 0) call chidg_signal(FATAL,"get_domain_index_hdf: Error h5ltget_attribute_int_f")
-
-        domain_index = int(buf(1), kind=ik)
-
-    end function get_domain_index_hdf
-    !****************************************************************************************
-
-
-
-
-
-
-
-    !> Return a list of domain indices from an HDF5 file identifier. This is because, 
-    !! the current method of detecting domains by name can change the order they are 
-    !! detected in. So, each domain is given an idomain attribute that is independent 
-    !! of the order of discovery from the file.
-    !!
-    !!  @author Nathan A. Wukie
-    !!  @date   2/3/2016
-    !!
-    !!  @param[in]  fid     HDF file identifier
-    !!
-    !---------------------------------------------------------------------------------------
-    function get_domain_indices_hdf(fid) result(indices)
-        integer(HID_T),     intent(in)  :: fid
-
-        integer(HID_T)                          :: did
-        integer(ik),            allocatable     :: indices(:)
-        character(len=1024),    allocatable     :: names(:)
-        integer(ik)                             :: idom, ndomains, ierr
-        integer, dimension(1)                   :: buf
-        integer(HSIZE_T)                        :: adim
-        logical                                 :: attribute_exists
-
-
-        !
-        ! Get number of domains
-        !
-        ndomains = get_ndomains_hdf(fid)
-        names    = get_domain_names_hdf(fid)
-
-
-
-        !
-        ! Allocate indices
-        !
-        allocate(indices(ndomains), stat=ierr)
-        if (ierr /= 0) call AllocationError
-
-
-        !
-        !  Loop through groups and read domain names
-        !
-        idom = 1
-        do idom = 1,ndomains
-            !
-            ! Open domain group
-            !
-            call h5gopen_f(fid,"D_"//trim(adjustl(names(idom))), did, ierr)
-            if (ierr /= 0) call chidg_signal(FATAL,"get_domain_indices_hdf: error opening domain group")
-
-            !
-            ! Get idomain attribute from fid/domain/idomain
-            !
-            call h5aexists_f(did, 'Domain Index', attribute_exists, ierr)
-
-            
-            !
-            ! If it doesn't exist, set to the current value of idom
-            !
-            adim = 1
-            if ( .not. attribute_exists ) then
-                call h5ltset_attribute_int_f(fid, "D_"//trim(adjustl(names(idom))), 'Domain Index', [idom], adim, ierr)
-                if (ierr /= 0) call chidg_signal(FATAL,"get_domain_indices_hdf: error writing an initial domain index")
-            end if
-
-
-            !
-            ! Get value that was just set to be sure. 
-            !
-            call h5ltget_attribute_int_f(fid, "D_"//trim(adjustl(names(idom))), 'Domain Index', buf, ierr)
-            if (ierr /= 0) call chidg_signal(FATAL,"get_domain_indices_hdf: error retrieving domain indices")
-
-            !
-            ! Set value detected to indices array that will be passed back from the function
-            !
-            indices(idom) = buf(1)
-
-
-            !
-            ! Close domain
-            !
-            call h5gclose_f(did,ierr)
-            if (ierr /= 0) call chidg_signal(FATAL,"get_domain_indices_hdf: h5gclose")
-
-        end do ! idom
-
-
-    end function get_domain_indices_hdf
-    !****************************************************************************************
+!    !>  Return a domain name given a domain index.
+!    !!
+!    !!  @author Nathan A. Wukie
+!    !!  @date   2/3/2016
+!    !!
+!    !!  @param[in]  fid         HDF file identifier
+!    !!  @param[in]  idom_hdf    A specified domain index to be queried. This is an attribute of each domain in 
+!    !!                          the HDF file, per the ChiDG convention.
+!    !!
+!    !----------------------------------------------------------------------------------------
+!    function get_domain_name_hdf(fid,idom_hdf) result(dname)
+!        integer(HID_T),     intent(in)  :: fid
+!        integer(ik),        intent(in)  :: idom_hdf
+!
+!        character(len=1024)                 :: dname
+!        character(len=1024), allocatable    :: dnames(:)
+!        integer(ik),         allocatable    :: dindices(:)
+!        integer                             :: iind, ndomains
+!
+!        !
+!        ! Get number of domains, domain names, and domain indices
+!        !
+!        ndomains = get_ndomains_hdf(fid)
+!        dnames   = get_domain_names_hdf(fid)
+!        dindices = get_domain_indices_hdf(fid)
+!
+!
+!
+!        do iind = 1,ndomains
+!
+!            if ( dindices(iind) == idom_hdf ) then
+!               dname = dnames(iind) 
+!            end if
+!
+!        end do
+!
+!
+!
+!    end function get_domain_name_hdf
+!    !****************************************************************************************
+
+
+
+
+
+
+
+
+!
+!    !>  Set "Domain Index" for a domain group.
+!    !!
+!    !!  @author Nathan A. Wukie
+!    !!  @date   2/3/2016
+!    !!
+!    !!  @param[in]  fid     HDF file identifier
+!    !!
+!    !----------------------------------------------------------------------------------------
+!    subroutine set_domain_index_hdf(dom_id,domain_index)
+!        integer(HID_T),     intent(in)  :: dom_id
+!        integer(ik),        intent(in)  :: domain_index
+!
+!        integer(ik)         :: ierr
+!
+!        call h5ltset_attribute_int_f(dom_id,".","Domain Index",[domain_index],SIZE_ONE,ierr)
+!        if (ierr /= 0) call chidg_signal(FATAL,"set_domain_index_hdf: Error h5ltset_attribute_int_f")
+!
+!
+!    end subroutine set_domain_index_hdf
+!    !****************************************************************************************
+!
+
+
+
+
+!    !>  Return a list of domain indices from an HDF5 file identifier. This is because, the 
+!    !!  current method of detecting domains by name can change the order they are detected 
+!    !!  in. So, each domain is given an idomain attribute that is independent of the order of 
+!    !!  discovery from the file.
+!    !!
+!    !!  @author Nathan A. Wukie
+!    !!  @date   2/3/2016
+!    !!
+!    !!  @param[in]  fid     HDF file identifier
+!    !!
+!    !----------------------------------------------------------------------------------------
+!    function get_domain_index_hdf(dom_id) result(domain_index)
+!        integer(HID_T),     intent(in)  :: dom_id
+!
+!        integer(ik) :: domain_index, ierr
+!        integer, dimension(1) :: buf
+!
+!        call h5ltget_attribute_int_f(dom_id,".","Domain Index",buf,ierr)
+!        if (ierr /= 0) call chidg_signal(FATAL,"get_domain_index_hdf: Error h5ltget_attribute_int_f")
+!
+!        domain_index = int(buf(1), kind=ik)
+!
+!    end function get_domain_index_hdf
+!    !****************************************************************************************
+
+
+
+
+
+
+
+!    !> Return a list of domain indices from an HDF5 file identifier. This is because, 
+!    !! the current method of detecting domains by name can change the order they are 
+!    !! detected in. So, each domain is given an idomain attribute that is independent 
+!    !! of the order of discovery from the file.
+!    !!
+!    !!  @author Nathan A. Wukie
+!    !!  @date   2/3/2016
+!    !!
+!    !!  @param[in]  fid     HDF file identifier
+!    !!
+!    !---------------------------------------------------------------------------------------
+!    function get_domain_indices_hdf(fid) result(indices)
+!        integer(HID_T),     intent(in)  :: fid
+!
+!        integer(HID_T)                          :: did
+!        integer(ik),            allocatable     :: indices(:)
+!        character(len=1024),    allocatable     :: names(:)
+!        integer(ik)                             :: idom, ndomains, ierr
+!        integer, dimension(1)                   :: buf
+!        integer(HSIZE_T)                        :: adim
+!        logical                                 :: attribute_exists
+!
+!
+!        !
+!        ! Get number of domains
+!        !
+!        ndomains = get_ndomains_hdf(fid)
+!        names    = get_domain_names_hdf(fid)
+!
+!
+!
+!        !
+!        ! Allocate indices
+!        !
+!        allocate(indices(ndomains), stat=ierr)
+!        if (ierr /= 0) call AllocationError
+!
+!
+!        !
+!        !  Loop through groups and read domain names
+!        !
+!        idom = 1
+!        do idom = 1,ndomains
+!            !
+!            ! Open domain group
+!            !
+!            call h5gopen_f(fid,"D_"//trim(adjustl(names(idom))), did, ierr)
+!            if (ierr /= 0) call chidg_signal(FATAL,"get_domain_indices_hdf: error opening domain group")
+!
+!            !
+!            ! Get idomain attribute from fid/domain/idomain
+!            !
+!            call h5aexists_f(did, 'Domain Index', attribute_exists, ierr)
+!
+!            
+!            !
+!            ! If it doesn't exist, set to the current value of idom
+!            !
+!            adim = 1
+!            if ( .not. attribute_exists ) then
+!                call h5ltset_attribute_int_f(fid, "D_"//trim(adjustl(names(idom))), 'Domain Index', [idom], adim, ierr)
+!                if (ierr /= 0) call chidg_signal(FATAL,"get_domain_indices_hdf: error writing an initial domain index")
+!            end if
+!
+!
+!            !
+!            ! Get value that was just set to be sure. 
+!            !
+!            call h5ltget_attribute_int_f(fid, "D_"//trim(adjustl(names(idom))), 'Domain Index', buf, ierr)
+!            if (ierr /= 0) call chidg_signal(FATAL,"get_domain_indices_hdf: error retrieving domain indices")
+!
+!            !
+!            ! Set value detected to indices array that will be passed back from the function
+!            !
+!            indices(idom) = buf(1)
+!
+!
+!            !
+!            ! Close domain
+!            !
+!            call h5gclose_f(did,ierr)
+!            if (ierr /= 0) call chidg_signal(FATAL,"get_domain_indices_hdf: h5gclose")
+!
+!        end do ! idom
+!
+!
+!    end function get_domain_indices_hdf
+!    !****************************************************************************************
 
 
 

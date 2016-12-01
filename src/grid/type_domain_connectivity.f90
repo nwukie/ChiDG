@@ -15,14 +15,17 @@ module type_domain_connectivity
     !------------------------------------------------------------------------------
     type, public :: domain_connectivity_t
 
-        integer(ik)                                 :: nnodes           !< Number of nodes in the global node array
-        integer(ik)                                 :: nelements
+        character(:),                   allocatable :: name 
+        integer(ik)                                 :: nelements    !< Number of elements in the current domain connectivity
+        integer(ik)                                 :: nnodes       !< Number of nodes in the global node array
+
         type(element_connectivity_t),   allocatable :: data(:)
 
     contains
         
         procedure   :: init
 
+        procedure   :: get_domain_name          !< Return the domain name.
         procedure   :: get_domain_index         !< Return the global domain index of a given element
         procedure   :: get_element_index        !< Return the index of a given element
         procedure   :: get_element_mapping      !< Return the mapping of a given element
@@ -48,18 +51,20 @@ contains
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   6/8/2016
     !!
-    !!  @param[in]  idomain_l       Integer specifying the partition-local index of the domain
+    !!  @param[in]  domain_name     Name of the domain the connectivity is associated with.
     !!  @param[in]  nelements       Number of elements in the connectivity
-    !!  @param[in]  max_mapping     Maximum mapping order in the connectivity list
+    !!  @param[in]  nnodes          Total number of nodes in the connectivity
     !!
     !--------------------------------------------------------------------------------
-    subroutine init(self,nelements,nnodes)
+    subroutine init(self,domain_name,nelements,nnodes)
         class(domain_connectivity_t),   intent(inout)   :: self
+        character(*),                   intent(in)      :: domain_name
         integer(ik),                    intent(in)      :: nelements
         integer(ik),                    intent(in)      :: nnodes
         
         integer(ik) :: ierr
 
+        self%name      = trim(domain_name)
         self%nnodes    = nnodes
         self%nelements = nelements
 
@@ -74,6 +79,26 @@ contains
 
 
 
+
+
+
+
+    !>  Return the name of the domain the connectivity is associated with.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   11/30/2016
+    !!
+    !!
+    !-------------------------------------------------------------------------------
+    function get_domain_name(self) result(domain_name)
+        class(domain_connectivity_t),   intent(in)  :: self
+
+        character(:),   allocatable :: domain_name
+
+        domain_name = trim(self%name)
+
+    end function get_domain_name
+    !********************************************************************************
 
 
 

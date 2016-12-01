@@ -12,7 +12,7 @@ module mod_chidg_convert_p3d_hdf5
 #include <messenger.h>
     use mod_kinds,              only: rk,ik, rdouble
     use mod_constants,          only: IO_DESTINATION, XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX
-    use mod_hdf_utilities,      only: initialize_file_hdf, set_ndomains_hdf, set_domain_index_hdf, &
+    use mod_hdf_utilities,      only: initialize_file_hdf, set_ndomains_hdf, open_file_hdf, &
                                       set_domain_mapping_hdf, set_domain_dimensionality_hdf, set_domain_equation_set_hdf, &
                                       set_contains_grid_hdf, set_domain_coordinates_hdf, set_domain_elements_hdf, &
                                       set_bc_patch_hdf, add_domain_hdf, open_domain_hdf, close_domain_hdf, &
@@ -92,8 +92,8 @@ contains
         !
         ! Create base ChiDG file and get file identifier
         !
-        file_id = initialize_file_hdf(file_prefix)
-
+        call initialize_file_hdf(file_prefix)
+        file_id = open_file_hdf(file_prefix)
 
         !
         ! Open plot3d grid, read number of domains

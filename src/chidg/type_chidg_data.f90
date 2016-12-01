@@ -382,13 +382,13 @@ contains
     !!  @date   2/1/2016
     !!
     !!
-    !!  @param[in]  dname           String associated with a given domain
+    !!  @param[in]  domain_name     String associated with a given domain
     !!  @return     domain_index    Integer index of the associated domain
     !!
     !----------------------------------------------------------------------------------------------
-    function get_domain_index(self,dname) result(domain_index)
+    function get_domain_index(self,domain_name) result(domain_index)
         class(chidg_data_t),    intent(in)      :: self
-        character(*),           intent(in)      :: dname
+        character(*),           intent(in)      :: domain_name
 
         character(:),   allocatable :: user_msg
         integer(ik)  :: idom
@@ -397,7 +397,7 @@ contains
         domain_index = 0
 
         do idom = 1,self%ndomains_
-            if ( trim(dname) == trim(self%info(idom)%name) ) then
+            if ( trim(domain_name) == trim(self%info(idom)%name) ) then
                 domain_index = idom
                 exit
             end if
@@ -406,7 +406,7 @@ contains
 
         user_msg = "chidg_data%get_domain_index: No domain was found that had a name that matched the &
                    incoming string"
-        if (domain_index == 0) call chidg_signal_one(FATAL,user_msg,dname)
+        if (domain_index == 0) call chidg_signal_one(FATAL,user_msg,domain_name)
 
     end function get_domain_index
     !*********************************************************************************************

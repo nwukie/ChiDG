@@ -6,7 +6,7 @@ module mod_chidg_edit_printoverview
 
     use mod_hdf_utilities,  only: get_properties_hdf, get_ndomains_hdf, get_domain_names_hdf,       &
                                   get_coordinate_orders_hdf, get_solution_orders_hdf, get_domain_equation_sets_hdf, &
-                                  get_domain_indices_hdf, get_contains_grid_hdf, get_contains_solution_hdf
+                                  get_contains_grid_hdf, get_contains_solution_hdf
 
     implicit none
 
@@ -56,7 +56,8 @@ contains
         !
         ndom     = get_ndomains_hdf(fid)
         dnames   = get_domain_names_hdf(fid)
-        dindices = get_domain_indices_hdf(fid)
+        !dindices = get_domain_indices_hdf(fid)
+        eqnset   = get_domain_equation_sets_hdf(fid,dnames)
 
 
 
@@ -93,47 +94,32 @@ contains
 
 
         
-        !
-        ! Get equationset strings.
-        !
-        eqnset   = get_domain_equation_sets_hdf(fid,dnames)
-
-
-
         
         !
         ! Print information
         !
         call write_line('Domain index', 'Domain name', 'Coordinate expansion', 'Solution expansion', 'Equation set', delimiter='  :  ', columns=.True., column_width=20)
-        do idom_hdf = 1,ndom
+        !
+        ! Find the correct hdf domain index to print so they are in order
+        !
+        do idom = 1,ndom
 
-            !
-            ! Find the correct hdf domain index to print so they are in order
-            !
-            do idom = 1,ndom
-                if ( (dindices(idom) == idom_hdf) ) then
+                dname_trim = trim(dnames(idom))
 
-                    !
-                    ! Trim domain identifier. Use dname_trim(3:) to remove 'D_'
-                    !
-                    dname_trim = trim(dnames(idom))
-
-                    if (present(active_domain)) then
-                        if ( active_domain == idom_hdf ) then
-                            call write_line(idom_hdf,dname_trim, corder(idom), sorder(idom), trim(eqnset(idom)), delimiter='  :  ', columns=.True., column_width=20, color='pink')
-                        else
-                            call write_line(idom_hdf,dname_trim, corder(idom), sorder(idom), trim(eqnset(idom)), delimiter='  :  ', columns=.True., column_width=20)
-                        end if
-
+                if (present(active_domain)) then
+                    if ( active_domain == idom ) then
+                        call write_line(idom,dname_trim, corder(idom), sorder(idom), trim(eqnset(idom)), delimiter='  :  ', columns=.True., column_width=20, color='pink')
                     else
-                        call write_line(idom_hdf,dname_trim, corder(idom), sorder(idom), trim(eqnset(idom)), delimiter='  :  ', columns=.True., column_width=20)
+                        call write_line(idom,dname_trim, corder(idom), sorder(idom), trim(eqnset(idom)), delimiter='  :  ', columns=.True., column_width=20)
                     end if
 
-                end if ! dindices
+                else
+                    call write_line(idom,dname_trim, corder(idom), sorder(idom), trim(eqnset(idom)), delimiter='  :  ', columns=.True., column_width=20)
+                end if
 
-            end do !idom
 
-        end do  ! idom_hdf
+        end do !idom
+
         
 
         call write_line(" ")

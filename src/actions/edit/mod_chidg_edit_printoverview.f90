@@ -4,9 +4,10 @@ module mod_chidg_edit_printoverview
     use hdf5
     use h5lt
 
-    use mod_hdf_utilities,  only: get_properties_hdf, get_ndomains_hdf, get_domain_names_hdf,       &
-                                  get_coordinate_orders_hdf, get_solution_orders_hdf, get_domain_equation_sets_hdf, &
-                                  get_contains_grid_hdf, get_contains_solution_hdf
+    use mod_hdf_utilities,  only: get_properties_hdf, get_ndomains_hdf, get_domain_names_hdf,   &
+                                  get_coordinate_orders_hdf, get_solution_orders_hdf,           &
+                                  get_domain_equation_sets_hdf, get_contains_grid_hdf,          &
+                                  get_contains_solution_hdf, get_domain_name_hdf
 
     implicit none
 
@@ -32,13 +33,13 @@ contains
     !-----------------------------------------------------------------------------------
     subroutine print_overview(fid,active_domain)
         integer(HID_T),     intent(in)              :: fid
-        integer(ik),        intent(in), optional    :: active_domain
+        integer(HID_T),     intent(in), optional    :: active_domain
 
 
         integer(ik)                         :: ndom, idom, idom_hdf, ierr
         integer(ik),            allocatable :: dindices(:)
         character(len=1024),    allocatable :: dnames(:), eqnset(:)
-        character(len=:),       allocatable :: dname_trim
+        character(len=:),       allocatable :: dname_trim, active_domain_name
         integer(ik),            allocatable :: corder(:), sorder(:)
         logical                             :: contains_grid, contains_solution
 
@@ -56,7 +57,6 @@ contains
         !
         ndom     = get_ndomains_hdf(fid)
         dnames   = get_domain_names_hdf(fid)
-        !dindices = get_domain_indices_hdf(fid)
         eqnset   = get_domain_equation_sets_hdf(fid,dnames)
 
 
@@ -93,12 +93,15 @@ contains
         end if
 
 
+
+
         
         
         !
         ! Print information
         !
-        call write_line('Domain index', 'Domain name', 'Coordinate expansion', 'Solution expansion', 'Equation set', delimiter='  :  ', columns=.True., column_width=20)
+        call write_line('Domain name', 'Coordinate expansion', 'Solution expansion', 'Equation set', delimiter='  :  ', columns=.True., column_width=20)
+
         !
         ! Find the correct hdf domain index to print so they are in order
         !
@@ -107,14 +110,16 @@ contains
                 dname_trim = trim(dnames(idom))
 
                 if (present(active_domain)) then
-                    if ( active_domain == idom ) then
-                        call write_line(idom,dname_trim, corder(idom), sorder(idom), trim(eqnset(idom)), delimiter='  :  ', columns=.True., column_width=20, color='pink')
+                    active_domain_name = get_domain_name_hdf(active_domain)
+                    !if ( active_domain_name == idom ) then
+                    if ( active_domain_name == dname_trim ) then
+                        call write_line(dname_trim, corder(idom), sorder(idom), trim(eqnset(idom)), delimiter='  :  ', columns=.True., column_width=20, color='pink')
                     else
-                        call write_line(idom,dname_trim, corder(idom), sorder(idom), trim(eqnset(idom)), delimiter='  :  ', columns=.True., column_width=20)
+                        call write_line(dname_trim, corder(idom), sorder(idom), trim(eqnset(idom)), delimiter='  :  ', columns=.True., column_width=20)
                     end if
 
                 else
-                    call write_line(idom,dname_trim, corder(idom), sorder(idom), trim(eqnset(idom)), delimiter='  :  ', columns=.True., column_width=20)
+                    call write_line(dname_trim, corder(idom), sorder(idom), trim(eqnset(idom)), delimiter='  :  ', columns=.True., column_width=20)
                 end if
 
 

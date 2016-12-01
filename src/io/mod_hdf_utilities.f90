@@ -23,7 +23,7 @@ module mod_hdf_utilities
     ! HDF5 storage format
     !
     integer, parameter :: STORAGE_FORMAT_MAJOR = 1
-    integer, parameter :: STORAGE_FORMAT_MINOR = 1
+    integer, parameter :: STORAGE_FORMAT_MINOR = 2
 
 
     ! Attribute sizes
@@ -249,8 +249,11 @@ contains
         !
         call open_hdf()
         call h5fcreate_f(trim(filename_init), H5F_ACC_TRUNC_F, fid, ierr)
-        if (ierr /= 0) call chidg_signal(FATAL,"initialize_file_hdf: Error h5fcreate_f")
+        if (ierr /= 0) call chidg_signal(FATAL,"initialize_file_hdf: Error h5fcreate_f.")
         call write_line("File created: "//trim(filename_init))
+
+
+
 
 
         !
@@ -272,6 +275,8 @@ contains
         !
         call set_ndomains_hdf(fid,0)
 
+
+        call h5fclose_f(fid,ierr)
 
     end subroutine initialize_file_hdf
     !****************************************************************************************
@@ -461,7 +466,8 @@ contains
                    Proceed anyways and try your luck!"//NEW_LINE('A')//"     &
                    Options: Exit(1), Continue(2)."
 
-            call write_line(msg)
+            call chidg_signal(MSG,msg)
+            !call write_line(msg)
 
             read_user_input = .true.
             do while(read_user_input)
@@ -469,6 +475,7 @@ contains
                 read(*,*) user_option
 
                 if (user_option == 1) then
+                    call chidg_abort()
                     stop
                 else if (user_option == 2) then
                     read_user_input = .false.
@@ -871,7 +878,6 @@ contains
 
             ! Set domain index
             call set_domain_name_hdf(domain_id,domain_name)
-            !call set_domain_index_hdf(domain_id,ndomains)
 
 
             ! Close domain
@@ -1085,10 +1091,12 @@ contains
     function get_domain_names_hdf(fid) result(names)
         integer(HID_T),     intent(in)  :: fid
 
+        character(:),       allocatable     :: user_msg
         character(len=1024), allocatable    :: names(:)
         character(len=1024)                 :: gname
+        integer(HSIZE_T)                    :: igrp
         integer                             :: ndomains, nmembers, type
-        integer                             :: igrp, idom, ierr
+        integer                             :: idom, ierr
 
         !
         ! Get number of domains
@@ -1111,7 +1119,11 @@ contains
         do igrp = 0,nmembers-1
 
             ! Get group name
-            call h5gget_obj_info_idx_f(fid,"/", igrp, gname, type, ierr)
+            !call h5gget_obj_info_idx_f(fid,"/", igrp, gname, type, ierr)
+            !call h5lget_name_by_idx_f(fid,".",H5_INDEX_CRT_ORDER_F,H5_ITER_INC_F,igrp,gname,ierr)
+            call h5lget_name_by_idx_f(fid,".",H5_INDEX_NAME_F,H5_ITER_INC_F,igrp,gname,ierr)
+            user_msg = "get_domain_names_hdf: Error iterating through links to detect domain groups."
+            if (ierr /= 0) call chidg_signal(FATAL,user_msg)
 
             ! Test if group is a 'Domain'
             if (gname(1:2) == 'D_') then
@@ -3512,6 +3524,26 @@ contains
 
 
 
+    !>
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   11/30/2016
+    !!
+    !--------------------------------------------------------------------------------------------
+    function check_domain_exists_hdf(fid,domain_name) result(exist_status)
+        integer(HID_T),     intent(in)  :: fid
+        character(len=*),   intent(in)  :: domain_name
+
+        integer(ik) :: ierr
+        logical     :: exist_status
+
+        ! Check if face contains the bc_state
+        call h5lexists_f(fid, "D_"//trim(domain_name), exist_status, ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"check_domain_exists_hdf: Error in call to h5lexists_f")
+
+
+    end function check_domain_exists_hdf
+    !*********************************************************************************************
 
 
 
@@ -3696,7 +3728,7 @@ contains
     function check_file_exists_hdf(filename) result(exist_status)
         character(*),   intent(in)  :: filename
 
-        logical                     :: exist_status
+        logical :: exist_status
 
 
         ! Check file exists

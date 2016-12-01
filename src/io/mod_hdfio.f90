@@ -10,8 +10,6 @@ module mod_hdfio
                                           get_domain_mapping_hdf, get_domain_dimensionality_hdf,    &
                                           set_contains_solution_hdf, set_domain_equation_set_hdf,   &
                                           check_file_storage_version_hdf, check_file_exists_hdf,    &
-                                          !get_domain_indices_hdf, get_domain_index_hdf
-                                          get_domain_name_hdf,              &
                                           get_contains_solution_hdf, get_contains_grid_hdf,         &
                                           get_bc_state_names_hdf, get_bc_state_hdf,                 &
                                           get_nbc_state_groups_hdf, get_bc_state_group_names_hdf,   &
@@ -19,7 +17,7 @@ module mod_hdfio
                                           get_bc_patch_hdf, open_file_hdf, close_file_hdf,          &
                                           open_domain_hdf, close_domain_hdf, initialize_file_hdf,   &
                                           initialize_file_structure_hdf, open_bc_group_hdf,         &
-                                          close_bc_group_hdf, get_domain_nelements_hdf
+                                          close_bc_group_hdf, get_domain_nelements_hdf, get_domain_name_hdf
 
     use type_svector,               only: svector_t
     use mod_string,                 only: string_t
@@ -390,9 +388,6 @@ contains
     !!  @param[in]      filename    Character string of the file to be written to
     !!  @param[inout]   data        chidg_data_t containing solution to be written
     !!
-    !!  @TODO   Allow for creation of a new solution file. Currently, incoming 
-    !!          filename needs to exist already.
-    !!
     !----------------------------------------------------------------------------------------
     subroutine write_solution_hdf(data,file_name,field)
         type(chidg_data_t), intent(in)              :: data
@@ -410,8 +405,14 @@ contains
         !
         ! Open file. If it doesn't exist, create a new one.
         !
-        file_exists = check_file_exists_hdf(file_name)
-        call MPI_Barrier(ChiDG_COMM,ierr)
+        do iwrite = 0,NRANK-1
+            if (iwrite == IRANK) then
+                file_exists = check_file_exists_hdf(file_name)
+            end if
+            call MPI_Barrier(ChiDG_COMM,ierr)
+        end do
+
+
 
 
         if (.not. file_exists) then
@@ -507,9 +508,7 @@ contains
                         neqns = data%eqnset(idom)%prop%nprimary_fields()
                         do ieqn = 1,neqns
                             field_name = trim(data%eqnset(idom)%prop%get_primary_field_name(ieqn))
-                            print*, 'Writing field:', ieqn
                             call write_field_domain_hdf(data,domain_id,field_name,time)
-                            print*, 'Done writing field:', ieqn
                         end do ! ieqn
 
                     end if
@@ -1013,7 +1012,6 @@ contains
                        ielement_g
         logical     :: DataExists, ElementsEqual, exists
 
-        print*, 'write_field_domain - 1'
 
         !
         ! Check if 'Variables' group exists
@@ -1035,7 +1033,6 @@ contains
         end if
 
 
-        print*, 'write_field_domain - 2'
 
         !
         ! Set dimensions of dataspace to write
@@ -1055,7 +1052,6 @@ contains
 
 
 
-        print*, 'write_field_domain - 3'
 
         !
         ! Open the Field dataset given by varstring, check if dataset already exists
@@ -1076,39 +1072,33 @@ contains
         call h5pset_chunk_f(crp_list, ndims, dimsc, ierr)
         if (ierr /= 0) call chidg_signal(FATAL, "write_field_domain_hdf: h5pset_chunk_f error setting chunk properties.")
 
-        print*, 'write_field_domain - 4'
 
 
         !
         ! Reset dataspace size if necessary
         !
         if (exists) then
-        print*, 'write_field_domain - 4.1'
             ! Open the existing dataset
             call h5dopen_f(gid, trim(field_name), did, ierr, H5P_DEFAULT_F)
             if (ierr /= 0) call chidg_signal(FATAL,"write_field_domain_hdf: variable does not exist or was not opened correctly.")
 
 
             ! Extend dataset if necessary
-        print*, 'write_field_domain - 4.2'
             call h5dset_extent_f(did, dims, ierr)
             if (ierr /= 0) call chidg_signal(FATAL, "write_field_domain_hdf: h5dset_extent_f.")
 
 
             ! Update existing dataspace ID since it may have been expanded
-        print*, 'write_field_domain - 4.3'
             call h5dget_space_f(did, sid, ierr)
             if (ierr /= 0) call chidg_signal(FATAL, "write_field_domain_hdf: h5dget_space_f.")
 
         else
-        print*, 'write_field_domain - 4.4'
             ! Create a new dataspace
             call h5screate_simple_f(ndims,dims,sid,ierr,maxdims)
             if (ierr /= 0) call chidg_signal(FATAL,"write_field_domain_hdf: h5screate_simple_f.")
 
 
             ! Create a new dataset
-        print*, 'write_field_domain - 4.5'
             call h5dcreate_f(gid, trim(field_name), H5T_NATIVE_DOUBLE, sid, did, ierr, crp_list)
             if (ierr /= 0) call chidg_signal(FATAL,"write_field_domain_hdf: h5dcreate_f.")
         end if
@@ -1118,11 +1108,9 @@ contains
         !
         ! Get variable integer index from variable character string
         !
-        print*, 'write_field_domain - 4.6'
         ivar = data%eqnset(idom)%prop%get_primary_field_index(field_name)
 
 
-        print*, 'write_field_domain - 5'
 
         !
         ! Assemble variable buffer matrix that gets written to file
@@ -1132,7 +1120,6 @@ contains
 
         do ielem = 1,data%mesh(idom)%nelem
 
-        print*, 'write_field_domain - 6'
             !
             ! get domain-global element index
             !
@@ -1142,14 +1129,12 @@ contains
             count(2) = 1
             count(3) = 1
 
-        print*, 'write_field_domain - 7'
             !
             ! Select subset of dataspace - sid
             !
             call h5sselect_hyperslab_f(sid, H5S_SELECT_SET_F, start, count, ierr)
 
 
-        print*, 'write_field_domain - 8'
             !
             ! Create a memory dataspace
             !
@@ -1159,7 +1144,6 @@ contains
             call h5screate_simple_f(ndims,dimsm,memspace,ierr)
 
 
-        print*, 'write_field_domain - 9'
             !
             ! Write modes
             !
@@ -1175,7 +1159,6 @@ contains
 
 
 
-        print*, 'write_field_domain - 10'
 
         call h5pclose_f(crp_list, ierr) ! Close dataset creation property
         call h5dclose_f(did,ierr)       ! Close Variable datasets

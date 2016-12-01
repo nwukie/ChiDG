@@ -30,7 +30,7 @@ subroutine test_partition_connectivity__onedomain_twopartitions()
     !
     ! Initialize connectivity storage
     !
-    call connectivities(1)%init(3,16)
+    call connectivities(1)%init('test domain',3,16)
 
 
     
@@ -109,8 +109,8 @@ subroutine test_partition_connectivity__twodomains_twopartitions()
     !
     ! Initialize connectivity storage
     !
-    call connectivities(1)%init(2,12)
-    call connectivities(2)%init(3,16)
+    call connectivities(1)%init('test domain one',2,12)
+    call connectivities(2)%init('test domain two',3,16)
 
 
     

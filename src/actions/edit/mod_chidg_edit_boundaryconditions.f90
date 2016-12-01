@@ -12,16 +12,17 @@ module mod_chidg_edit_boundaryconditions
     use h5lt
 
     use mod_chidg_edit_printoverview,   only: print_overview
-    use mod_hdf_utilities,     only: get_ndomains_hdf, get_domain_names_hdf,       &
+    use mod_hdf_utilities,     only: get_ndomains_hdf, get_domain_names_hdf,                        &
                                      get_domain_name_hdf, get_bc_state_names_hdf,                   &
                                      delete_group_attributes_hdf,                                   &
                                      add_bc_state_hdf, set_bc_property_function_hdf,                &
-                                     create_bc_group_hdf, remove_bc_state_group_hdf,          &
+                                     create_bc_group_hdf, remove_bc_state_group_hdf,                &
                                      get_bc_state_group_names_hdf, get_bc_state_group_family_hdf,   &
                                      get_bc_patch_group_hdf, set_bc_patch_group_hdf,                &
                                      check_bc_property_exists_hdf, remove_bc_state_hdf,             &
                                      check_bc_state_exists_hdf, check_link_exists_hdf,              &
-                                     open_bc_group_hdf, close_bc_group_hdf, get_bc_state_group_family_hdf
+                                     open_bc_group_hdf, close_bc_group_hdf, get_bc_state_group_family_hdf, &
+                                     open_domain_hdf, close_domain_hdf, check_domain_exists_hdf
     implicit none
 
 
@@ -174,12 +175,10 @@ contains
                     command = "Enter group name: "
                     call write_line(command, color='blue')
                     read(*,'(A1024)') group_name
-                    !command = "Enter boundary condition family: "
-                    !call write_line(command, color='blue')
-                    !read(*,'(A1024)') group_family
 
                     call create_bc_group_hdf(fid,group_name)
                     call chidg_edit_boundarycondition_state_group(fid,group_name)
+
                 !
                 ! Edit group
                 !
@@ -439,7 +438,8 @@ contains
 
         integer(ik)                         :: ierr, idom_hdf, ndom
         character(len=:),       allocatable :: command
-        logical                             :: run_domains
+        character(1024)                     :: domain_name
+        logical                             :: run_domains, open_domain, domain_exists
 
 
         run_domains = .true.
@@ -453,30 +453,48 @@ contains
             call print_bc_overview(fid,active_topic='Patches')
 
 
-            command = "Select a domain for editing(0 to exit):"
+            command = "Enter a domain to edit(Enter nothing to exit):"
             call write_line(' ')
             call write_line(command,color='blue')
+            read(*,'(A1024)') domain_name
+
+            
+            domain_exists = check_domain_exists_hdf(fid,trim(domain_name))
 
 
-            ndom = get_ndomains_hdf(fid)
-            ierr = 1
-            do while ( ierr /= 0 )
-                read(*,'(I8)', iostat=ierr) idom_hdf
-                if ( ierr /= 0 )  call write_line("Invalid input: expecting an integer index.")
-
-                if ( idom_hdf > ndom ) then
-                    ierr = 1
-                    call write_line("Invalid domain range. Enter a number between 1 and ",ndom)
-                end if
-
-            end do
-
-
-            if (idom_hdf /= 0) then
-                call chidg_edit_boundarycondition_domain_patches(fid,idom_hdf)
-            else
+            if (trim(domain_name) == '') then
                 run_domains = .false.
+                open_domain = .false.
+            else if ( (trim(domain_name) /= '') .and. (.not. domain_exists) ) then
+                run_domains = .true.
+                open_domain = .false.
+            else
+                open_domain = .true.
             end if
+
+
+
+            if (open_domain) call chidg_edit_boundarycondition_domain_patches(fid,trim(domain_name))
+
+!            ndom = get_ndomains_hdf(fid)
+!            ierr = 1
+!            do while ( ierr /= 0 )
+!                read(*,'(I8)', iostat=ierr) idom_hdf
+!                if ( ierr /= 0 )  call write_line("Invalid input: expecting an integer index.")
+!
+!                if ( idom_hdf > ndom ) then
+!                    ierr = 1
+!                    call write_line("Invalid domain range. Enter a number between 1 and ",ndom)
+!                end if
+!
+!            end do
+!
+!
+!            if (idom_hdf /= 0) then
+!                call chidg_edit_boundarycondition_domain_patches(fid,idom_hdf)
+!            else
+!                run_domains = .false.
+!            end if
 
         end do
 
@@ -497,25 +515,24 @@ contains
     !!
     !!
     !------------------------------------------------------------------------------------------
-    subroutine chidg_edit_boundarycondition_domain_patches(fid,idom_hdf)
+    !subroutine chidg_edit_boundarycondition_domain_patches(fid,idom_hdf)
+    subroutine chidg_edit_boundarycondition_domain_patches(fid,domain_name)
         integer(HID_T),     intent(in)  :: fid
-        integer(ik),        intent(in)  :: idom_hdf
+        character(*),       intent(in)  :: domain_name
 
-        integer(HID_T)              :: bcgroup
+        integer(HID_T)              :: bcgroup, domain_id
         integer(ik)                 :: ierr, iface
         character(:),   allocatable :: dname, dname_trim, command
         logical                     :: run_edit_bc_domain
 
-        !
-        ! Get domain name associated with idom_hdf, the domain index as represented in the hdf file.
-        !
-        dname = get_domain_name_hdf(fid,idom_hdf)
+        ! Open domain
+        domain_id = open_domain_hdf(fid,domain_name)
 
 
         !
         ! Open boundary condition group
         !
-        call h5gopen_f(fid, "/D_"//trim(adjustl(dname))//"/BoundaryConditions", bcgroup, ierr)
+        call h5gopen_f(domain_id, "BoundaryConditions", bcgroup, ierr)
         if (ierr /= 0) call chidg_signal(FATAL,"chidg_edit_boundarycondition_domain: h5gopen - BoundaryConditions")
 
 
@@ -529,9 +546,9 @@ contains
             ! Refresh display
             !
             call execute_command_line("clear")
-            call print_overview(fid,idom_hdf)
-            call print_bc_overview(fid,active_topic='Patches',active_domain=idom_hdf)
-            dname_trim = trim(adjustl(dname)) 
+            call print_overview(fid,domain_id)
+            call print_bc_overview(fid,active_topic='Patches',active_domain=domain_id)
+            dname_trim = trim(adjustl(domain_name)) 
 
 
             !
@@ -562,7 +579,8 @@ contains
                     run_edit_bc_domain = .false.
 
                 case default
-                    call chidg_edit_boundarycondition_patch(fid,bcgroup,idom_hdf,iface)
+                    !call chidg_edit_boundarycondition_patch(fid,bcgroup,idom_hdf,iface)
+                    call chidg_edit_boundarycondition_patch(fid,bcgroup,domain_id,iface)
 
             end select
 
@@ -571,10 +589,11 @@ contains
 
 
         !
-        ! Close BoundaryCondition group
+        ! Close groups
         !
         call h5gclose_f(bcgroup,ierr)
 
+        call close_domain_hdf(domain_id)
 
     end subroutine chidg_edit_boundarycondition_domain_patches
     !******************************************************************************************
@@ -597,19 +616,19 @@ contains
     !!
     !!
     !------------------------------------------------------------------------------------------
-    subroutine chidg_edit_boundarycondition_patch(fid,bcgroup,idom_hdf,iface)
+    subroutine chidg_edit_boundarycondition_patch(fid,bcgroup,domain_id,iface)
         integer(HID_T),     intent(in)  :: fid
         integer(HID_T),     intent(in)  :: bcgroup
-        integer(ik),        intent(in)  :: idom_hdf
+        integer(HID_T),     intent(in)  :: domain_id
         integer(ik),        intent(in)  :: iface
 
 
-        integer(HID_T)                      :: patch_id
-        character(len=10)                   :: patches(NFACES)
-        integer(ik)                         :: ierr, selection
-        character(len=1024)                 :: dname, group
-        character(len=:),       allocatable :: command
-        logical                             :: run, run_set, set_group
+        integer(HID_T)              :: patch_id
+        character(10)               :: patches(NFACES)
+        integer(ik)                 :: ierr, selection
+        character(1024)             :: dname, group
+        character(:),   allocatable :: command
+        logical                     :: run, run_set, set_group
 
 
         
@@ -629,8 +648,8 @@ contains
 
             ! Refresh display
             call execute_command_line("clear")
-            call print_overview(fid,idom_hdf)
-            call print_bc_overview(fid,active_topic='Patches',active_domain=idom_hdf,active_face=iface)
+            call print_overview(fid,domain_id)
+            call print_bc_overview(fid,active_topic='Patches',active_domain=domain_id,active_face=iface)
 
 
             ! Print command options, accept user selection.
@@ -903,7 +922,7 @@ contains
         integer(HID_T),     intent(in)              :: fid
         character(*),       intent(in), optional    :: active_topic
         character(*),       intent(in), optional    :: active_group
-        integer(ik),        intent(in), optional    :: active_domain
+        integer(HID_T),     intent(in), optional    :: active_domain
         integer(ik),        intent(in), optional    :: active_face
 
 
@@ -1036,18 +1055,18 @@ contains
     subroutine print_bc_patches(fid,active_topic,active_domain,active_face)
         integer(HID_T),     intent(in)              :: fid
         character(*),       intent(in), optional    :: active_topic
-        integer(ik),        intent(in), optional    :: active_domain
+        integer(HID_T),     intent(in), optional    :: active_domain
         integer(ik),        intent(in), optional    :: active_face
 
 
-        character(len=10)               :: faces(NFACES)
-        integer(ik)                     :: idom_hdf, ndom, iface, ierr
-        integer(HID_T)                  :: patch_id
-        type(svector_t),    allocatable :: bcs(:)
-        character(:),       allocatable :: bc_patch_group
-        type(string_t)                  :: bc_patch_groups(NFACES)
-        character(len=1024)             :: dname
-        character(:),       allocatable :: color
+        character(len=10)                   :: faces(NFACES)
+        integer(ik)                         :: idom_hdf, iface, ierr
+        integer(HID_T)                      :: patch_id
+        type(svector_t),    allocatable     :: bcs(:)
+        character(:),       allocatable     :: bc_patch_group
+        type(string_t)                      :: bc_patch_groups(NFACES)
+        character(len=1024), allocatable    :: dnames(:)
+        character(:),       allocatable     :: color, domain_name, active_domain_name
 
 
         color = 'none'
@@ -1072,7 +1091,7 @@ contains
         !
         ! Get boundary condition information
         !
-        ndom   = get_ndomains_hdf(fid)
+        dnames = get_domain_names_hdf(fid)
 
 
         !
@@ -1088,18 +1107,18 @@ contains
                         "5 - ZETA_MIN", &
                         "6 - ZETA_MAX", columns=.True., column_width=16, delimiter=':',color=color)
         call write_line("----------------------------------------------------------------------------------------------------------------------",color=color)
-        do idom_hdf = 1,ndom
+        do idom_hdf = 1,size(dnames)
 
             !
             ! Get domain name and bc patch groups associated with idom_hdf
             !
-            dname = get_domain_name_hdf(fid,idom_hdf)
+            domain_name = dnames(idom_hdf)
             
 
             faces = ["  XI_MIN","  XI_MAX"," ETA_MIN"," ETA_MAX","ZETA_MIN","ZETA_MAX"]
             do iface = 1,NFACES
 
-                call h5gopen_f(fid, "/D_"//trim(dname)//"/BoundaryConditions/"//trim(adjustl(faces(iface))), patch_id, ierr)
+                call h5gopen_f(fid, "/D_"//trim(domain_name)//"/BoundaryConditions/"//trim(adjustl(faces(iface))), patch_id, ierr)
                 if (ierr /= 0) call chidg_signal(FATAL,"print_bc_patches: h5gopen_f - patch (ex. XI_MIN)")
                 
                 bc_patch_group = get_bc_patch_group_hdf(patch_id)
@@ -1112,15 +1131,18 @@ contains
 
 
             if (present(active_domain)) then
+
+                active_domain_name = get_domain_name_hdf(active_domain)
             
                 !
                 ! Print active domain
                 !
-                if (idom_hdf == active_domain) then
+                !if (idom_hdf == active_domain) then
+                if (trim(active_domain_name) == trim(domain_name)) then
 
 
                     ! Need to add information individually to selectively color the entries.
-                    call add_to_line(dname, columns=.True., column_width=15, color='pink')
+                    call add_to_line(domain_name, columns=.True., column_width=15, color='pink')
                     do iface = 1,6
 
                         if ( present(active_face) ) then
@@ -1143,7 +1165,7 @@ contains
                 !
                 else
 
-                    call add_to_line( dname, columns=.True., column_width=15)
+                    call add_to_line( domain_name, columns=.True., column_width=15)
                     do iface = 1,6
                         call add_to_line( bc_patch_groups(iface)%get(), columns=.True., column_width=15)
                     end do
@@ -1155,7 +1177,7 @@ contains
                 !
                 ! Print domain info if no active domain is present
                 !
-                call add_to_line( dname, columns=.True., column_width=15)
+                call add_to_line( domain_name, columns=.True., column_width=15)
                 do iface = 1,6
                     call add_to_line( bc_patch_groups(iface)%get(), columns=.True., column_width=15)
                 end do

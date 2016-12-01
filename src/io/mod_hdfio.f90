@@ -403,19 +403,20 @@ contains
         logical                         :: file_exists
 
         !
-        ! Open file. If it doesn't exist, create a new one.
+        ! Check for file existence
         !
-        do iwrite = 0,NRANK-1
-            if (iwrite == IRANK) then
-                file_exists = check_file_exists_hdf(file_name)
-            end if
-            call MPI_Barrier(ChiDG_COMM,ierr)
-        end do
+        if (IRANK == GLOBAL_MASTER) then
+            file_exists = check_file_exists_hdf(file_name)
+        end if
+        call MPI_Bcast(file_exists,1,MPI_LOGICAL,GLOBAL_MASTER,ChiDG_COMM,ierr)
 
 
 
-
+        !
+        ! Create new file if necessary
+        !
         if (.not. file_exists) then
+
             ! Create a new file
             if (IRANK == GLOBAL_MASTER) then
                 call initialize_file_hdf(file_name)
@@ -436,6 +437,9 @@ contains
 
 
 
+        !
+        ! Each process, write its own portion of the solution
+        !
         do iwrite = 0,NRANK-1
             if ( iwrite == IRANK ) then
 
@@ -519,15 +523,11 @@ contains
                 end do ! idom
 
 
-                !
                 ! Set contains solution
-                !
                 call set_contains_solution_hdf(fid,"True")
 
 
-                !
                 ! Close file
-                !
                 call close_file_hdf(fid)
 
             end if

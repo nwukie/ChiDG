@@ -406,11 +406,10 @@ contains
         !
         ! Check for file existence
         !
-        if (IRANK == GLOBAL_MASTER) then
-            file_exists = check_file_exists_hdf(file_name)
-        end if
-        call MPI_Bcast(file_exists,1,MPI_LOGICAL,GLOBAL_MASTER,ChiDG_COMM,ierr)
-
+        file_exists = check_file_exists_hdf(file_name)
+        !if (IRANK == GLOBAL_MASTER) then
+        !end if
+        !call MPI_Bcast(file_exists,1,MPI_LOGICAL,GLOBAL_MASTER,ChiDG_COMM,ierr)
 
 
         !

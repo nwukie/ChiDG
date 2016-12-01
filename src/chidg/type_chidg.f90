@@ -879,20 +879,11 @@ contains
         !
         ! Call grid reader based on file extension
         !
-        do iwrite = 0,NRANK-1
-            if ( iwrite == IRANK ) then
-
-
-                if ( extension == '.h5' ) then
-                    call write_solution_hdf(self%data,solutionfile)
-                else
-                    call chidg_signal(FATAL,"chidg%write_solution: grid file extension not recognized")
-                end if
-
-
-            end if
-            call MPI_Barrier(ChiDG_COMM,ierr)
-        end do
+        if ( extension == '.h5' ) then
+            call write_solution_hdf(self%data,solutionfile)
+        else
+            call chidg_signal(FATAL,"chidg%write_solution: grid file extension not recognized")
+        end if
 
 
     end subroutine write_solution

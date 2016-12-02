@@ -39,8 +39,8 @@ contains
         call self%set_name('Mock Model')
 
         ! Add model parameters
-        call self%add_parameter('Parameter One')
-        call self%add_parameter('Parameter Two')
+        call self%add_model_field('Parameter One')
+        call self%add_model_field('Parameter Two')
 
     end subroutine init
     !*************************************************************

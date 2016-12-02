@@ -61,7 +61,8 @@ contains
         !
         call getcwd(cwd)
 
-        new_dir_path = trim(cwd)//'/ChiDG_results/'
+        !new_dir_path = trim(cwd)//'/ChiDG_results/'
+        new_dir_path = trim(cwd)//'ChiDG_results'
 
         delete_directory = 'rm -rf '//trim(new_dir_path)
         make_directory   = 'mkdir '//trim(new_dir_path)

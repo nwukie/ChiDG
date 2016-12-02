@@ -129,7 +129,7 @@ contains
         !
         ! Resize cache
         !
-        call worker%cache%resize(worker%mesh,equation_set(:)%prop,idomain_l,ielement_l)
+        call worker%cache%resize(worker%mesh,equation_set%prop,idomain_l,ielement_l)
 
 
         !

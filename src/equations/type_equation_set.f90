@@ -93,6 +93,8 @@ module type_equation_set
         procedure   :: get_boundary_ndependent_elements    
         procedure   :: get_volume_ndependent_elements       
 
+        procedure   :: nmodels
+
     end type equation_set_t
     !**************************************************************************************
 
@@ -387,24 +389,17 @@ contains
 
 
 
-        !
         ! Turn on primary fields from the new operator
-        !
         do ifield = 1,new_operator%nprimary_fields()
             call self%prop%add_primary_field(new_operator%get_primary_field(ifield))
         end do
 
-        !
         ! Turn on auxiliary fields from the new operator
-        !
         do ifield = 1,new_operator%nauxiliary_fields()
             call self%prop%add_auxiliary_field(new_operator%get_auxiliary_field(ifield))
         end do
 
-
-        !
-        ! Add models attached to the operator
-        !
+        ! Turn on models from the new operator
         do imodel = 1,new_operator%nmodels()
             call self%add_model(new_operator%get_model(imodel))
         end do
@@ -439,7 +434,7 @@ contains
         !
         ! Check that the model wasn't already added.
         !
-        do imodel = 1,size(self%models)
+        do imodel = 1,self%nmodels()
             already_added = (trim(string) == self%models(imodel)%model%get_name())
             if (already_added) exit
         end do
@@ -451,12 +446,10 @@ contains
         !
         if (.not. already_added) then
 
-            ! Create new model
-            allocate(new_model, source=model_factory%produce(string), stat=ierr)
-            if (ierr /= 0) call AllocationError
 
-
-            ! Allocate temporary flux array with one additional slot
+            !
+            ! Extend storage
+            !
             if (allocated(self%models)) then
 
                 allocate(temp(size(self%models) + 1), stat=ierr)
@@ -470,21 +463,26 @@ contains
 
             else
 
-                ! Allocate new slot
                 allocate(temp(1), stat=ierr)
                 if (ierr /= 0) call AllocationError
 
             end if
 
+
+
+            !
+            ! Allocate new model to end of extended array
+            !
+            allocate(temp(size(temp))%model, source=model_factory%produce(string), stat=ierr)
+            if (ierr /= 0) call AllocationError
+
+
+            !
+            ! Move extended temp allocation to data type
+            !
+            call move_alloc(from=temp, to=self%models)
+
         end if
-
-
-
-        !
-        ! Move extended temp allocation to data type
-        !
-        call move_alloc(from=temp, to=self%models)
-
 
     end subroutine add_model
     !***************************************************************************************
@@ -1118,6 +1116,33 @@ contains
 
 
 
+
+
+
+
+
+
+    !>  Return the number of models allocated in the equation set.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   12/1/2016
+    !!
+    !!
+    !--------------------------------------------------------------------------------------
+    function nmodels(self) result(nmodels_)
+        class(equation_set_t),  intent(in)  :: self
+
+        integer(ik) :: nmodels_
+
+
+        if (allocated(self%models)) then
+            nmodels_ = size(self%models)
+        else
+            nmodels_ = 0
+        end if
+
+    end function nmodels
+    !**************************************************************************************
 
 
     

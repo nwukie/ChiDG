@@ -104,10 +104,11 @@ contains
 
 
             case default
-                user_msg = "chidg_data%resize: An invalid value for the parameter 'type' from cache_info  &
-                                               was returned in the accept call. cache_type is supposed to &
-                                               be either 'element', 'face interior', or 'face exterior',  &
-                                               to indicate the cache type where the data is to be stored."
+                user_msg = "chidg_data%resize: An invalid value for the parameter 'type' &
+                            from cache_info was returned in the accept call. cache_type &
+                            is supposed to be either 'element', 'face interior', or &
+                            'face exterior',  to indicate the cache type where the data &
+                            is to be stored."
                 call chidg_signal_one(FATAL,user_msg,cache_component)
 
         end select

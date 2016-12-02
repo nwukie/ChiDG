@@ -454,7 +454,7 @@ contains
     !! access the correct solution data values.
     !!
     !!  @author Nathan A. Wukie
-    !!  @date   2/25/2016
+    !!  @date   11/20/2016
     !!
     !!  @param[in]  field_string   Character string identifying the desired variable
     !!
@@ -496,13 +496,13 @@ contains
 
 
 
-    !> Search for a field string in the self%model_fields list. If found, return index of the field.
-    !! A set of fields could be stored in any order. So, when a field is initialized, it
-    !! is initialized with an index indicating its location in the set. That index is used to 
-    !! access the correct solution data values.
+    !>  Search for a field string in the self%model_fields list. If found, return index of the field.
+    !!  A set of fields could be stored in any order. So, when a field is initialized, it
+    !!  is initialized with an index indicating its location in the set. That index is used to 
+    !!  access the correct solution data values.
     !!
     !!  @author Nathan A. Wukie
-    !!  @date   2/30/2016
+    !!  @date   11/30/2016
     !!
     !!  @param[in]  field_string   Character string identifying the desired variable
     !!
@@ -622,12 +622,6 @@ contains
 
     end function nmodel_fields
     !******************************************************************************************
-
-
-
-
-
-
 
 
 

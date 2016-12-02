@@ -8,32 +8,32 @@ module type_model
 
 
 
-    !>  A class for implementing model parameters.
+    !>  A class for implementing models.
     !!
     !!
     !!  Examples: 
     !!  ---------
     !!  Equation of state:
-    !!      name       = "Perfect Gas Law"
-    !!      parameters = "Pressure" , "Temperature"
+    !!      name         = "Perfect Gas Law"
+    !!      model fields = "Pressure" , "Temperature"
     !!
     !!  Viscosity model:
-    !!      name       = "Sutherland's Law"
-    !!      parameters = "Viscosity"
+    !!      name         = "Sutherland's Law"
+    !!      model fields = "Viscosity"
     !!
     !!
     !!  Usage:
     !!  ---------
     !!  Every new model is required to implement the 'init' and 'compute'
     !!  procedures. 'init' is executed by the framework at start-up 
-    !!  and informs the model of what parameters it is contributing to.
+    !!  and informs the model of what fields it is contributing to.
     !!  'compute' is responsible for computing a contribution to the 
-    !!  parameter.
+    !!  field.
     !!
     !!
     !!  Note:
     !!  ---------
-    !!  Multiple models can contribute to the same parameter. Examples
+    !!  Multiple models can contribute to the same field. Examples
     !!  of this would be viscosity models - laminar + turbulent eddy 
     !!  viscosity. Also the equation of state can have source terms
     !!  that could be accounted for by including extra models.
@@ -45,7 +45,7 @@ module type_model
     type, public, abstract :: model_t
 
         character(:),   allocatable :: name
-        type(string_t), allocatable :: parameters(:)
+        type(string_t), allocatable :: model_fields(:)
 
     contains
 
@@ -55,9 +55,9 @@ module type_model
         procedure   :: set_name
         procedure   :: get_name
 
-        procedure   :: add_parameter
-        procedure   :: get_parameter
-        procedure   :: nparameters
+        procedure   :: add_model_field
+        procedure   :: get_model_field
+        procedure   :: nmodel_fields
 
     end type model_t
     !*************************************************************************************
@@ -130,7 +130,7 @@ contains
 
 
 
-    !>  Add a parameter that the model is providing a definition for.
+    !>  Add a model field that the model is providing a definition for.
     !!
     !!  This should be called from 'init' in a model implementation.
     !!
@@ -139,7 +139,7 @@ contains
     !!
     !!
     !-------------------------------------------------------------------------------------
-    subroutine add_parameter(self,string)
+    subroutine add_model_field(self,string)
         class(model_t), intent(inout)   :: self
         character(*),   intent(in)      :: string
 
@@ -150,11 +150,11 @@ contains
         !
         ! Extend fields if necessary
         !
-        if (allocated(self%parameters)) then
+        if (allocated(self%model_fields)) then
             
-            allocate(temp(size(self%parameters) + 1), stat=ierr)
-            do ieq = 1,size(self%parameters)
-                temp(ieq) = self%parameters(ieq)
+            allocate(temp(size(self%model_fields) + 1), stat=ierr)
+            do ieq = 1,size(self%model_fields)
+                temp(ieq) = self%model_fields(ieq)
             end do
             
         else
@@ -172,10 +172,10 @@ contains
         !
         ! Copy temp back to self
         !
-        self%parameters = temp
+        self%model_fields = temp
 
 
-    end subroutine add_parameter
+    end subroutine add_model_field
     !*************************************************************************************
 
 
@@ -184,21 +184,26 @@ contains
 
 
 
-    !>  Return the parameter from an index location in self%parameters.
+    !>  Return the field from an index location in self%model_fields.
     !!
     !!  @author Nathan A. Wukie
     !!  @date   11/29/2016
     !!
     !-------------------------------------------------------------------------------------
-    function get_parameter(self,iparam) result(string)
+    function get_model_field(self,ifield) result(string)
         class(model_t), intent(in)  :: self
-        integer(ik),    intent(in)  :: iparam
+        integer(ik),    intent(in)  :: ifield
 
-        character(:),   allocatable :: string
+        character(:),   allocatable :: string, user_msg
 
-        string = self%parameters(iparam)%get()
+        ! Check bounds
+        user_msg = "get_model_field: field index is out of bounds."
+        if (ifield > self%nmodel_fields()) call chidg_signal(FATAL,user_msg)
 
-    end function get_parameter
+
+        string = self%model_fields(ifield)%get()
+
+    end function get_model_field
     !*************************************************************************************
 
 
@@ -208,27 +213,26 @@ contains
 
 
 
-
-    !>  Return number of parameters the model is contributing to.
+    !>  Return number of model fields the model is contributing to.
     !!
     !!  @author Nathan A. Wukie
     !!  @date   11/29/2016
     !!
     !!
     !-------------------------------------------------------------------------------------
-    function nparameters(self) result(nparams)
+    function nmodel_fields(self) result(nfields)
         class(model_t), intent(in)  :: self
 
-        integer(ik) :: nparams
+        integer(ik) :: nfields
 
-        if (allocated(self%parameters)) then
-            nparams = size(self%parameters)
+        if (allocated(self%model_fields)) then
+            nfields = size(self%model_fields)
         else
-            nparams = 0
+            nfields = 0
         end if
 
 
-    end function nparameters
+    end function nmodel_fields
     !*************************************************************************************
 
 

@@ -69,7 +69,7 @@ contains
             !                              Interior Scheme
             !---------------------------------------------------------------------------------
 
-            call worker%init(data%mesh,data%sdata,cache)
+            call worker%init(data%mesh,data%eqnset%prop,data%sdata,cache)
 
             !
             ! Clear all working data
@@ -241,7 +241,7 @@ contains
         type(cache_handler_t)   :: cache_handler
 
 
-        call worker%init(data%mesh,data%sdata,cache)
+        call worker%init(data%mesh,data%eqnset%prop,data%sdata,cache)
 
 
         !

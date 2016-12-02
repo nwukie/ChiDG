@@ -30,9 +30,9 @@ module type_chidg
 
     use mod_communication,          only: establish_neighbor_communication, &
                                           establish_chimera_communication
-    use mod_chidg_mpi,              only: chidg_mpi_init, chidg_mpi_finalize, ChiDG_COMM, &
-                                          IRANK, NRANK
-    use mod_hdfio,                  only: read_grid_hdf, read_boundaryconditions_hdf, &
+    use mod_chidg_mpi,              only: chidg_mpi_init, chidg_mpi_finalize,   &
+                                          IRANK, NRANK, ChiDG_COMM
+    use mod_hdfio,                  only: read_grid_hdf, read_boundaryconditions_hdf,   &
                                           read_solution_hdf, write_solution_hdf,        &
                                           read_connectivity_hdf, read_weights_hdf
     use mod_hdf_utilities,          only: close_hdf

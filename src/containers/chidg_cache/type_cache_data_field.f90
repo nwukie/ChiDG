@@ -177,21 +177,21 @@ contains
 
             if (reallocate) then
                 deallocate(self%derivative, self%lift_face, self%lift_element, self%derivative_seeds, self%lift_seeds)
-                allocate(self%derivative(nnodes,3,ndepend_deriv), &
-                         self%derivative_seeds(ndepend_deriv),    &
-                         self%lift_face(nnodes_face,3,ndepend_deriv), &
+                allocate(self%derivative(nnodes,3,ndepend_deriv),       &
+                         self%derivative_seeds(ndepend_deriv),          &
+                         self%lift_face(nnodes_face,3,ndepend_deriv),   &
                          self%lift_element(nnodes_vol,3,ndepend_deriv), &
-                         self%lift_seeds(      ndepend_deriv), stat=ierr)
+                         self%lift_seeds(ndepend_deriv),    stat=ierr)
                 if (ierr /= 0) call AllocationError
             end if
 
         else
 
-            allocate(self%derivative(nnodes,3,ndepend_deriv), &
-                     self%derivative_seeds(ndepend_deriv),    &
-                     self%lift_face(nnodes_face,3,ndepend_deriv), &
+            allocate(self%derivative(nnodes,3,ndepend_deriv),       &
+                     self%derivative_seeds(ndepend_deriv),          &
+                     self%lift_face(nnodes_face,3,ndepend_deriv),   &
                      self%lift_element(nnodes_vol,3,ndepend_deriv), &
-                     self%lift_seeds(ndepend_deriv), stat=ierr)
+                     self%lift_seeds(ndepend_deriv),    stat=ierr)
             if (ierr /= 0) call AllocationError
 
         end if

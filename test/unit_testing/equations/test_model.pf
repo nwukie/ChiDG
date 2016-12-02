@@ -29,9 +29,9 @@ subroutine test_model_name()
     ! Test model properties
     !
     @assertEqual('Mock Model'   , model%get_name())
-    @assertEqual(2              , model%nparameters())
-    @assertEqual('Parameter One', model%get_parameter(1))
-    @assertEqual('Parameter Two', model%get_parameter(2))
+    @assertEqual(2              , model%nmodel_fields())
+    @assertEqual('Parameter One', model%get_model_field(1))
+    @assertEqual('Parameter Two', model%get_model_field(2))
 
 end subroutine test_model_name
 !********************************************************

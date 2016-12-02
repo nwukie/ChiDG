@@ -213,7 +213,6 @@ contains
     !!
     !!
     !----------------------------------------------------------------------------------------
-    !function initialize_file_hdf(filename) result(fid)
     subroutine initialize_file_hdf(filename)
         character(*),   intent(in)  :: filename
 
@@ -301,6 +300,7 @@ contains
         type(chidg_data_t), intent(in)  :: data
 
         integer(ik)                 :: idom
+        integer(HID_T)              :: domain_id
         character(:),   allocatable :: domain_name
 
 
@@ -310,6 +310,13 @@ contains
             ! Create domain group
             domain_name = data%info(idom)%name
             call create_domain_hdf(fid,domain_name)
+
+
+            ! Set additional attributes
+            domain_id = open_domain_hdf(fid,trim(domain_name))
+            call set_domain_dimensionality_hdf(domain_id, data%get_dimensionality())
+            call set_domain_equation_set_hdf(domain_id,data%eqnset(idom)%get_name())
+            call close_domain_hdf(domain_id)
 
         end do !idom
 
@@ -876,7 +883,7 @@ contains
             call set_ndomains_hdf(fid,ndomains)
 
 
-            ! Set domain index
+            ! Set domain name
             call set_domain_name_hdf(domain_id,domain_name)
 
 
@@ -2013,9 +2020,6 @@ contains
         !
         do idom = 1,size(dnames)
 
-            !
-            !  Get coordinate mapping
-            !
             call h5ltget_attribute_int_f(fid, "D_"//trim(dnames(idom)), "Domain Dimensionality", dimensionality, ierr)
             if (ierr /= 0) call chidg_signal(FATAL,"get_domain_dimensionalities_hdf: Error h5ltget_attribute_int_f")
 
@@ -3065,7 +3069,7 @@ contains
             call h5gcreate_f(bcstate_id, "BCP_"//trim(adjustl(pstring)), prop_id, ierr)
             if (ierr /= 0) call chidg_signal(FATAL,"add_bcproperties_hdf: error creating new group for bcfunction")
 
-            ! Print property function attribute
+            ! Set property function attribute
             call set_bc_property_function_hdf(prop_id, bc_state%bcproperties%bcprop(iprop)%fcn)
 
 

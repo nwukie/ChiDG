@@ -71,6 +71,7 @@ module type_chidg_data
         ! Accessors
         procedure   :: get_domain_index             !< Given a domain name, return domain index
         procedure   :: ndomains                     !< Return number of domains in chidg instance
+        procedure   :: get_dimensionality
         procedure   :: get_auxiliary_field_names    !< Return the auxiliary fields that are required
 
         procedure   :: report
@@ -436,6 +437,26 @@ contains
 
 
 
+
+
+
+
+
+    !>  Return the dimensionality of the chidg_data_t instance.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   11/30/2016
+    !!
+    !---------------------------------------------------------------------------------------------
+    function get_dimensionality(self) result(dimensionality)
+        class(chidg_data_t),    intent(in)      :: self
+
+        integer :: dimensionality
+
+        dimensionality = self%spacedim_
+
+    end function get_dimensionality
+    !*********************************************************************************************
 
 
 

@@ -44,6 +44,7 @@ module type_chidg_worker
     use type_face_info,     only: face_info_t
     use type_function_info, only: function_info_t
     use type_chidg_cache,   only: chidg_cache_t
+    use type_properties,    only: properties_t
     use DNAD_D
     implicit none
 
@@ -61,6 +62,7 @@ module type_chidg_worker
     type, public :: chidg_worker_t
     
         type(mesh_t),           pointer :: mesh(:)
+        type(properties_t),     pointer :: prop(:)
         type(solverdata_t),     pointer :: solverdata
         type(chidg_cache_t),    pointer :: cache
 
@@ -87,6 +89,7 @@ module type_chidg_worker
         procedure   :: get_auxiliary_field_element
 
         procedure   :: store_bc_state
+        procedure   :: store_model_field
 
         procedure   :: normal
         procedure   :: unit_normal
@@ -130,14 +133,16 @@ contains
     !!  @date   8/22/2016
     !!
     !---------------------------------------------------------------------------------
-    subroutine init(self,mesh,solverdata,cache)
+    subroutine init(self,mesh,prop,solverdata,cache)
         class(chidg_worker_t),  intent(inout)       :: self
         type(mesh_t),           intent(in), target  :: mesh(:)
+        type(properties_t),     intent(in), target  :: prop(:)
         type(solverdata_t),     intent(in), target  :: solverdata
         type(chidg_cache_t),    intent(in), target  :: cache
 
 
         self%mesh       => mesh
+        self%prop       => prop
         self%solverdata => solverdata
         self%cache      => cache
 
@@ -256,27 +261,27 @@ contains
     !!  handles what node set is currently being returned.
     !!  
     !!
-    !!
     !!  @author Nathan A. Wukie
     !!  @date   11/30/2016
     !!
     !--------------------------------------------------------------------------------------
-    function get_primary_field_general(self,ieqn,interp_type) result(var_gq)
+    function get_primary_field_general(self,field,interp_type) result(var_gq)
         class(chidg_worker_t),  intent(in)  :: self
-        integer(ik),            intent(in)  :: ieqn
+        character(*),           intent(in)  :: field
         character(*),           intent(in)  :: interp_type
 
         type(AD_D), allocatable :: var_gq(:)
+        integer(ik)             :: ifield
 
 
         if (self%interpolation_source == 'element') then
-            var_gq = self%get_primary_field_element(ieqn,interp_type) 
+            var_gq = self%get_primary_field_element(ifield,interp_type) 
         else if (self%interpolation_source == 'face interior') then
-            var_gq = self%get_primary_field_face(ieqn,interp_type,'face interior')
+            var_gq = self%get_primary_field_face(ifield,interp_type,'face interior')
         else if (self%interpolation_source == 'face exterior') then
-            var_gq = self%get_primary_field_face(ieqn,interp_type,'face exterior')
+            var_gq = self%get_primary_field_face(ifield,interp_type,'face exterior')
         else if (self%interpolation_source == 'boundary') then
-            var_gq = self%get_primary_field_face(ieqn,interp_type,'boundary')
+            var_gq = self%get_primary_field_face(ifield,interp_type,'boundary')
         end if
 
     end function get_primary_field_general
@@ -581,10 +586,10 @@ contains
         class(chidg_worker_t),  intent(inout)   :: self
         integer(ik),            intent(in)      :: ieqn
         type(AD_D),             intent(in)      :: cache_data(:)
-        character(len=*),       intent(in)      :: data_type
+        character(*),           intent(in)      :: data_type
 
-        character(len=:), allocatable   :: cache_type
-        integer(ik)                     :: idirection
+        character(:),   allocatable :: cache_type, user_msg
+        integer(ik)                 :: idirection
 
 
         !
@@ -603,12 +608,10 @@ contains
             cache_type = 'derivative'
             idirection = 3
         else
-            call chidg_signal(FATAL,"worker%store_bc_state: Invalid data_type specification. Options are 'value', 'ddx', 'ddy', 'ddz'.")
+            user_msg = "chidg_worker%store_bc_state: Invalid data_type specification. &
+                        Options are 'value', 'ddx', 'ddy', 'ddz'."
+            call chidg_signal_one(FATAL,user_msg,trim(data_type))
         end if
-
-
-
-
 
 
 
@@ -627,6 +630,72 @@ contains
 
     end subroutine store_bc_state
     !***************************************************************************************
+
+
+
+
+
+
+
+
+
+
+    !>
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   9/8/2016
+    !!
+    !!
+    !---------------------------------------------------------------------------------------
+    subroutine store_model_field(self,model_field,data_type,cache_data)
+        class(chidg_worker_t),  intent(inout)   :: self
+        character(*),           intent(in)      :: model_field
+        character(*),           intent(in)      :: data_type
+        type(AD_D),             intent(in)      :: cache_data(:)
+
+        character(:),   allocatable :: cache_type, user_msg
+        integer(ik)                 :: idirection, ifield
+
+
+        !
+        ! Set cache_type
+        !
+        if (data_type == 'value') then
+            cache_type = 'value'
+            idirection = 0
+        else if (data_type == 'ddx') then
+            cache_type = 'derivative'
+            idirection = 1
+        else if (data_type == 'ddy') then
+            cache_type = 'derivative'
+            idirection = 2
+        else if (data_type == 'ddz') then
+            cache_type = 'derivative'
+            idirection = 3
+        else
+            user_msg = "chidg_worker%store_model_field: Invalid data_type specification. &
+                        Options are 'value', 'ddx', 'ddy', 'ddz'."
+            call chidg_signal_one(FATAL,user_msg,trim(data_type))
+        end if
+
+
+
+        !
+        ! Store bc state in cache, face exterior component
+        !
+        if (cache_type == 'value') then
+            call self%cache%set_data('face exterior',cache_data,'value',0,self%function_info%seed,ifield,self%iface)
+
+        else if (cache_type == 'derivative') then
+            call self%cache%set_data('face exterior',cache_data,'derivative',idirection,self%function_info%seed,ifield,self%iface)
+
+        end if
+
+
+
+    end subroutine store_model_field
+    !***************************************************************************************
+
 
 
 

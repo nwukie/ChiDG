@@ -4,6 +4,8 @@ module mod_models
     use mod_string,         only: string_to_upper
     use type_model_wrapper, only: model_wrapper_t
     use type_model,         only: model_t
+
+    use type_ideal_gas,     only: ideal_gas_t
     implicit none
 
 
@@ -224,9 +226,11 @@ contains
     subroutine register_models()
         integer(ik) :: imodel
 
+        type(ideal_gas_t)   :: IDEAL_GAS
 
         if (.not. models_initialized) then
 
+            call model_factory%register(IDEAL_GAS)
 
 
             ! Initialize all models

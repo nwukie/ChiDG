@@ -59,13 +59,13 @@ contains
         ! the chidg result folder name to the path
         ! Check if directory already exists, if it does remove it and make it again
         !
-        call execute_command_line('pwd > pwd.txt')
-        
-        open(10, file = 'pwd.txt')
-        read(10,'(a100)') cwd
-        close(10)
-
-        call execute_command_line('rm pwd.txt')
+!        call execute_command_line('pwd > pwd.txt')
+!       
+!        open(10, file = 'pwd.txt')
+!        read(10,'(a100)') cwd
+!        close(10)
+!
+!        call execute_command_line('rm pwd.txt')
 
         !new_dir_path = trim(cwd)//'/ChiDG_results/'
         new_dir_path = trim(cwd)//'ChiDG_results'

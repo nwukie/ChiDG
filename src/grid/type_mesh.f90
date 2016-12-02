@@ -49,7 +49,7 @@ module type_mesh
         !
         ! Primary mesh data
         !
-        type(point_t),    allocatable   :: nodes(:)                     !< Original node points for the domain
+        type(point_t),    allocatable   :: nodes(:)                     !< Original node points for the domain, Global.
         type(element_t),  allocatable   :: elems(:)                     !< Element storage (1:nelem)
         type(face_t),     allocatable   :: faces(:,:)                   !< Face storage    (1:nelem,1:nfaces)
         type(chimera_t)                 :: chimera                      !< Chimera interface data
@@ -90,6 +90,9 @@ module type_mesh
         procedure,  public  :: get_send_procs           !< Return the processor ranks that the mesh is sending to (neighbor+chimera)
         procedure,  public  :: get_send_procs_local     !< Return the processor ranks that the mesh is sending neighbor data to
         procedure,  public  :: get_send_procs_chimera   !< Return the processor ranks that the mesh is sending chimera data to
+
+        procedure,  public  :: get_nelements_global
+        procedure,  public  :: get_nelements_local
 
         final               :: destructor
 
@@ -1547,12 +1550,56 @@ contains
         comm_procs = comm_procs_vector%data()
 
     end function get_send_procs_chimera
-    !********************************************************************************************************
+    !**************************************************************************************
 
 
 
 
 
+
+
+
+
+
+
+    !>  Return the number of elements in the original unpartitioned domain.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   11/30/2016
+    !!
+    !!
+    !--------------------------------------------------------------------------------------
+    function get_nelements_global(self) result(nelements)
+        class(mesh_t),   intent(in)  :: self
+
+        integer(ik) :: nelements
+
+        nelements = size(self%nodes)
+
+    end function get_nelements_global
+    !**************************************************************************************
+
+
+
+
+
+
+    !>  Return the number of elements in the local, possibly partitioned, domain.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   11/30/2016
+    !!
+    !!
+    !--------------------------------------------------------------------------------------
+    function get_nelements_local(self) result(nelements)
+        class(mesh_t),   intent(in)  :: self
+
+        integer(ik) :: nelements
+
+        nelements = self%nelem
+
+    end function get_nelements_local
+    !**************************************************************************************
 
 
 

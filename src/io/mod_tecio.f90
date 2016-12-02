@@ -74,7 +74,6 @@ contains
         ! TODO: Generalized TECIO for different equation set in each domain.
         !
         do while (ieq <= data%eqnset(1)%prop%nprimary_fields())
-            !varstring = trim(varstring)//" "//trim(data%eqnset(1)%prop%eqns(ieq)%name)
             varstring = trim(varstring)//" "//trim(data%eqnset(1)%prop%get_primary_field_name(ieq))
             ieq = ieq + 1
         end do
@@ -156,15 +155,6 @@ contains
                             do ipt_xi = 1,xilim
                                 xi = (((real(ipt_xi,rk)-ONE)/(real(npts,rk)-ONE)) - HALF)*TWO
 
-
-                               ! Routine for wall distance normalization
-                                !scalar = real(data%mesh(idom)%elems(ielem)%solution_point(data%sdata%q%dom(idom)%vecs(ielem),ivar,xi,eta,zeta),rdouble)
-                                !ddx = data%mesh(idom)%elems(ielem)%derivative_point(data%sdata%q%dom(idom)%vecs(ielem),ivar,xi,eta,zeta,X_DIR)
-                                !ddy = data%mesh(idom)%elems(ielem)%derivative_point(data%sdata%q%dom(idom)%vecs(ielem),ivar,xi,eta,zeta,Y_DIR)
-                                !ddz = data%mesh(idom)%elems(ielem)%derivative_point(data%sdata%q%dom(idom)%vecs(ielem),ivar,xi,eta,zeta,Z_DIR)
-                                !mag2 = ddx*ddx + ddy*ddy + ddz*ddz
-                                !p = get_p_poisson_parameter()
-                                !val = (((p/(p-ONE))*scalar) + mag2**(p/TWO))**((p-ONE)/p) - mag2**((p-ONE)/TWO)
 
                                 ! Get solution value at point
                                 val = real(data%mesh(idom)%elems(ielem)%solution_point(data%sdata%q%dom(idom)%vecs(ielem),ivar,xi,eta,zeta),rdouble)

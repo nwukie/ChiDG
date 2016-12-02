@@ -104,11 +104,11 @@ contains
         !
         ! Interpolate solution to quadrature nodes
         !
-        rho  = worker%get_element_variable(irho,  'value')
-        rhou = worker%get_element_variable(irhou, 'value')
-        rhov = worker%get_element_variable(irhov, 'value')
-        rhow = worker%get_element_variable(irhow, 'value')
-        rhoE = worker%get_element_variable(irhoE, 'value')
+        rho  = worker%get_primary_field_element(irho,  'value')
+        rhou = worker%get_primary_field_element(irhou, 'value')
+        rhov = worker%get_primary_field_element(irhov, 'value')
+        rhow = worker%get_primary_field_element(irhow, 'value')
+        rhoE = worker%get_primary_field_element(irhoE, 'value')
 
 
         invrho = ONE/rho

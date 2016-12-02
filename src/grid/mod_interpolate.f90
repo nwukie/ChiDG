@@ -1066,15 +1066,6 @@ contains
 
 
 
-
-
-
-
-
-
-
-
-
     !>  Return the number of elements contributing to the interpolation. 
     !!
     !!  For standard conforming interpolations this will be ==1. For Chimera interpolations, this could be >=1.

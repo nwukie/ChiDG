@@ -107,8 +107,8 @@ contains
         !
         ! Interpolate solution to quadrature nodes
         !
-        ua = worker%get_element_variable(iu_a, 'value')
-        ub = worker%get_element_variable(iu_b, 'value')
+        ua = worker%get_primary_field_element(iu_a, 'value')
+        ub = worker%get_primary_field_element(iu_b, 'value')
 
 
 

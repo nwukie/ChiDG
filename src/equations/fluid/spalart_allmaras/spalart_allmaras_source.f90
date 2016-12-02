@@ -122,12 +122,12 @@ contains
         !
         ! Interpolate solution to quadrature nodes
         !
-        rho         = worker%get_element_variable(irho,        'value')
-        rhou        = worker%get_element_variable(irhou,       'value')
-        rhov        = worker%get_element_variable(irhov,       'value')
-        rhow        = worker%get_element_variable(irhow,       'value')
-        rhoE        = worker%get_element_variable(irhoE,       'value')
-        rho_nutilde = worker%get_element_variable(irho_nutilde,'value')
+        rho         = worker%get_primary_field_element(irho,        'value')
+        rhou        = worker%get_primary_field_element(irhou,       'value')
+        rhov        = worker%get_primary_field_element(irhov,       'value')
+        rhow        = worker%get_primary_field_element(irhow,       'value')
+        rhoE        = worker%get_primary_field_element(irhoE,       'value')
+        rho_nutilde = worker%get_primary_field_element(irho_nutilde,'value')
 
 
 
@@ -135,36 +135,36 @@ contains
         !
         ! Interpolate solution gradients to quadrature nodes
         !
-        drho_dx  = worker%get_element_variable(irho,  'ddx+lift')
-        drho_dy  = worker%get_element_variable(irho,  'ddy+lift')
-        drho_dz  = worker%get_element_variable(irho,  'ddz+lift')
+        drho_dx  = worker%get_primary_field_element(irho,  'ddx+lift')
+        drho_dy  = worker%get_primary_field_element(irho,  'ddy+lift')
+        drho_dz  = worker%get_primary_field_element(irho,  'ddz+lift')
 
-        drhou_dx = worker%get_element_variable(irhou, 'ddx+lift')
-        drhou_dy = worker%get_element_variable(irhou, 'ddy+lift')
-        drhou_dz = worker%get_element_variable(irhou, 'ddz+lift')
+        drhou_dx = worker%get_primary_field_element(irhou, 'ddx+lift')
+        drhou_dy = worker%get_primary_field_element(irhou, 'ddy+lift')
+        drhou_dz = worker%get_primary_field_element(irhou, 'ddz+lift')
 
-        drhov_dx = worker%get_element_variable(irhov, 'ddx+lift')
-        drhov_dy = worker%get_element_variable(irhov, 'ddy+lift')
-        drhov_dz = worker%get_element_variable(irhov, 'ddz+lift')
+        drhov_dx = worker%get_primary_field_element(irhov, 'ddx+lift')
+        drhov_dy = worker%get_primary_field_element(irhov, 'ddy+lift')
+        drhov_dz = worker%get_primary_field_element(irhov, 'ddz+lift')
 
-        drhow_dx = worker%get_element_variable(irhow, 'ddx+lift')
-        drhow_dy = worker%get_element_variable(irhow, 'ddy+lift')
-        drhow_dz = worker%get_element_variable(irhow, 'ddz+lift')
+        drhow_dx = worker%get_primary_field_element(irhow, 'ddx+lift')
+        drhow_dy = worker%get_primary_field_element(irhow, 'ddy+lift')
+        drhow_dz = worker%get_primary_field_element(irhow, 'ddz+lift')
 
-        drhoE_dx = worker%get_element_variable(irhoE, 'ddx+lift')
-        drhoE_dy = worker%get_element_variable(irhoE, 'ddy+lift')
-        drhoE_dz = worker%get_element_variable(irhoE, 'ddz+lift')
+        drhoE_dx = worker%get_primary_field_element(irhoE, 'ddx+lift')
+        drhoE_dy = worker%get_primary_field_element(irhoE, 'ddy+lift')
+        drhoE_dz = worker%get_primary_field_element(irhoE, 'ddz+lift')
 
-        drho_nutilde_dx = worker%get_element_variable(irho_nutilde, 'ddx+lift')
-        drho_nutilde_dy = worker%get_element_variable(irho_nutilde, 'ddy+lift')
-        drho_nutilde_dz = worker%get_element_variable(irho_nutilde, 'ddz+lift')
+        drho_nutilde_dx = worker%get_primary_field_element(irho_nutilde, 'ddx+lift')
+        drho_nutilde_dy = worker%get_primary_field_element(irho_nutilde, 'ddy+lift')
+        drho_nutilde_dz = worker%get_primary_field_element(irho_nutilde, 'ddz+lift')
 
 
 
         !
         ! Interpolate auxiliary field, Wall Distance
         !
-        dwall = worker%get_element_auxiliary_field('Wall Distance', 'value')
+        dwall = worker%get_auxiliary_field_element('Wall Distance', 'value')
 
 
 

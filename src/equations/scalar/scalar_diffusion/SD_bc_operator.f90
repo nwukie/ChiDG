@@ -1,6 +1,5 @@
 module SD_bc_operator
     use mod_kinds,          only: ik, rk
-    use mod_constants,      only: BC
     use type_operator,      only: operator_t
     use type_chidg_worker,  only: chidg_worker_t
     use type_properties,    only: properties_t
@@ -110,10 +109,10 @@ contains
         !
         ! Interpolate boundary condition state to face quadrature nodes
         !
-        u     = worker%get_face_variable(iu, 'value'     , BC)
-        dudx  = worker%get_face_variable(iu, 'ddx + lift', BC)
-        dudy  = worker%get_face_variable(iu, 'ddy + lift', BC)
-        dudz  = worker%get_face_variable(iu, 'ddz + lift', BC)
+        u     = worker%get_primary_field_face(iu, 'value'     , 'boundary')
+        dudx  = worker%get_primary_field_face(iu, 'ddx + lift', 'boundary')
+        dudy  = worker%get_primary_field_face(iu, 'ddy + lift', 'boundary')
+        dudz  = worker%get_primary_field_face(iu, 'ddz + lift', 'boundary')
 
 
         normx = worker%normal(1)

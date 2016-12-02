@@ -1,6 +1,5 @@
 module euler_bc_operator
     use mod_kinds,          only: ik, rk
-    use mod_constants,      only: BC
     use type_operator,      only: operator_t
     use type_chidg_worker,  only: chidg_worker_t
     use type_properties,    only: properties_t
@@ -119,11 +118,11 @@ contains
         !
         ! Interpolate boundary condition state to face quadrature nodes
         !
-        rho_bc  = worker%get_face_variable(irho,  'value', BC)
-        rhou_bc = worker%get_face_variable(irhou, 'value', BC)
-        rhov_bc = worker%get_face_variable(irhov, 'value', BC)
-        rhow_bc = worker%get_face_variable(irhow, 'value', BC)
-        rhoE_bc = worker%get_face_variable(irhoE, 'value', BC)
+        rho_bc  = worker%get_primary_field_face(irho,  'value', 'boundary')
+        rhou_bc = worker%get_primary_field_face(irhou, 'value', 'boundary')
+        rhov_bc = worker%get_primary_field_face(irhov, 'value', 'boundary')
+        rhow_bc = worker%get_primary_field_face(irhow, 'value', 'boundary')
+        rhoE_bc = worker%get_primary_field_face(irhoE, 'value', 'boundary')
 
 
         normx = worker%normal(1)

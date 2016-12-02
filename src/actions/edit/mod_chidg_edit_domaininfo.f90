@@ -5,8 +5,9 @@ module mod_chidg_edit_domaininfo
     use hdf5
     use h5lt
 
-    use mod_hdf_utilities,              only: get_ndomains_hdf, get_domain_names_hdf, get_domain_indices_hdf, &
-                                              open_domain_hdf, close_domain_hdf, set_domain_equation_set_hdf
+    use mod_hdf_utilities,              only: get_ndomains_hdf, get_domain_names_hdf, get_domain_name_hdf,  &
+                                              open_domain_hdf, close_domain_hdf, set_domain_equation_set_hdf, &
+                                              check_domain_exists_hdf, set_domain_name_hdf
     use mod_chidg_edit_printoverview,   only: print_overview
     implicit none
 
@@ -31,21 +32,15 @@ contains
         integer(HID_T),     intent(in)  :: fid
 
 
-        integer(ik)                     :: ierr, idom_hdf, ndom
-        logical                         :: run_bc_edit
+        integer(ik)                     :: ierr
+        logical                         :: run, open_domain, domain_exists
+        character(1024)                 :: domain_name
         character(len=:),   allocatable :: bc_commands
 
 
 
-        ndom = get_ndomains_hdf(fid)
-
-
-
-        bc_commands = "Select a domain for editing(0 to exit):"
-
-
-        run_bc_edit = .true.
-        do while ( run_bc_edit )
+        run = .true.
+        do while ( run )
 
             !
             ! Refresh display
@@ -58,37 +53,42 @@ contains
             !
             ! Print command options, accept user selection.
             !
+            bc_commands = "Enter a domain to edit(Enter blank to exit):"
             call write_line(' ')
             call write_line(bc_commands,color='blue')
-            ierr = 1
-            do while ( ierr /= 0 )
-                read(*,'(I8)', iostat=ierr) idom_hdf
-                if ( ierr /= 0 )  call write_line("Invalid input: expecting an integer index.")
 
-                if ( idom_hdf > ndom ) then
-                    ierr = 1
-                    call write_line("Invalid domain range. Enter a number between 1 and ",ndom)
-                end if
-
-            end do
-
-
-
-            !
-            ! Operate on particular domain
-            !
-            select case (idom_hdf)
-                case (0)
-                    run_bc_edit = .false.
-
-                case default
-                    call chidg_edit_domaininfo_domain(fid,idom_hdf)
-
-            end select
+!            ierr = 1
+!            do while ( ierr /= 0 )
+!                read(*,'(I8)', iostat=ierr) idom_hdf
+!                if ( ierr /= 0 )  call write_line("Invalid input: expecting an integer index.")
+!
+!                if ( idom_hdf > ndom ) then
+!                    ierr = 1
+!                    call write_line("Invalid domain range. Enter a number between 1 and ",ndom)
+!                end if
+!
+!            end do
 
 
+            read(*,'(A1024)') domain_name
+
+            domain_exists = check_domain_exists_hdf(fid,trim(domain_name))
+
+            if (trim(domain_name) == '') then
+                run         = .false.
+                open_domain = .false.
+            else if ( (trim(domain_name) /= '' ) .and. &
+                      (domain_exists .eqv. .false.) ) then
+                run         = .true.
+                open_domain = .false.
+            else
+                run         = .true.
+                open_domain = .true.
+            end if
 
 
+
+            if (open_domain) call chidg_edit_domaininfo_domain(fid,trim(domain_name))
 
 
 
@@ -126,20 +126,19 @@ contains
     !!
     !!
     !------------------------------------------------------------------------------------------------
-    subroutine chidg_edit_domaininfo_domain(fid,idom_hdf)
+    subroutine chidg_edit_domaininfo_domain(fid,domain_name)
         integer(HID_T),     intent(in)  :: fid
-        integer(ik),        intent(in)  :: idom_hdf
+        character(*),       intent(in)  :: domain_name
 
-
-        integer(ik)                     :: ierr, ndom, iedit
+        integer(HID_T)                  :: domain_id
+        integer(ik)                     :: ierr, iedit
         logical                         :: run_domain_edit
         character(len=:),   allocatable :: domain_commands
 
 
 
-        ndom = get_ndomains_hdf(fid)
 
-
+        domain_id = open_domain_hdf(fid,trim(domain_name))
 
 
 
@@ -150,7 +149,7 @@ contains
             ! Refresh display
             !
             call execute_command_line("clear")
-            call print_overview(fid,idom_hdf)
+            call print_overview(fid,domain_id)
 
 
 
@@ -180,10 +179,10 @@ contains
                     run_domain_edit = .false.
 
                 case (1) ! edit name
-                    call chidg_edit_domaininfo_domain_name(fid,idom_hdf)
+                    call chidg_edit_domaininfo_domain_name(fid,domain_id)
 
                 case (2) ! edit equation set
-                    call chidg_edit_domaininfo_domain_equation_set(fid,idom_hdf)
+                    call chidg_edit_domaininfo_domain_equation_set(fid,domain_id)
                 
                 case default
                     run_domain_edit = .false.
@@ -195,6 +194,7 @@ contains
 
 
 
+        call close_domain_hdf(domain_id)
 
 
     end subroutine chidg_edit_domaininfo_domain
@@ -225,36 +225,24 @@ contains
     !!  @param[in]  idom    Domain index to be renamed
     !!
     !------------------------------------------------------------------------------------------------
-    subroutine chidg_edit_domaininfo_domain_name(fid,idom_hdf)
+    subroutine chidg_edit_domaininfo_domain_name(fid,domain_id)
         integer(HID_T),     intent(in)  :: fid
-        integer(ik),        intent(in)  :: idom_hdf
+        integer(HID_T),     intent(in)  :: domain_id
 
 
         integer(ik)                         :: ierr, idom, iind
-        character(len=1024), allocatable    :: dnames(:)
         character(len=1024)                 :: dname_current, dname_new
-        integer(ik),        allocatable     :: dindices(:)
 
 
-        dindices      = get_domain_indices_hdf(fid)
-        dnames        = get_domain_names_hdf(fid)
 
-
-        !
-        ! Find idom_hdf in the list
-        !
-        do iind = 1,size(dindices)
-            if ( dindices(iind) == idom_hdf ) then
-                dname_current = dnames(iind)
-            end if
-        end do
+        dname_current = get_domain_name_hdf(domain_id)
 
 
         !
         ! Refresh display
         !
         call execute_command_line("clear")
-        call print_overview(fid,idom_hdf)
+        call print_overview(fid,domain_id)
 
 
         !
@@ -262,15 +250,19 @@ contains
         !
         call write_line(' ')
         call write_line("Enter new domain name: ",color='blue')
-        read(*,*) dname_new
+        read(*,'(A1024)') dname_new
 
 
         !
-        ! Modify domain name
+        ! Move link to rename
         !
-        call h5gmove_f(fid, trim(adjustl(dname_current)), "D_"//trim(adjustl(dname_new)), ierr)
-        if (ierr /= 0) call chidg_signal(FATAL,"chidg_edit_domaininfo_domain_name: error renaming domain")
+        if ( (trim(dname_new) /= '') .and. (trim(dname_new) /= trim(dname_current)) ) then
+            !call h5gmove_f(fid, trim(adjustl(dname_current)), "D_"//trim(adjustl(dname_new)), ierr)
+            call h5lmove_f(fid, "D_"//trim(adjustl(dname_current)), fid, "D_"//trim(adjustl(dname_new)), ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,"chidg_edit_domaininfo_domain_name: error renaming domain")
 
+            call set_domain_name_hdf(domain_id,trim(dname_new))
+        end if
 
     end subroutine chidg_edit_domaininfo_domain_name
     !************************************************************************************************
@@ -297,9 +289,9 @@ contains
     !!  @param[in]  idom    Domain index to be renamed
     !!
     !------------------------------------------------------------------------------------------------
-    subroutine chidg_edit_domaininfo_domain_equation_set(fid,idom_hdf)
+    subroutine chidg_edit_domaininfo_domain_equation_set(fid,domain_id)
         integer(HID_T),     intent(in)  :: fid
-        integer(ik),        intent(in)  :: idom_hdf
+        integer(HID_T),     intent(in)  :: domain_id
 
 
         integer(ik)                         :: ierr, idom, iind
@@ -314,22 +306,7 @@ contains
         ! Refresh display
         !
         call execute_command_line("clear")
-        call print_overview(fid,idom_hdf)
-
-
-        !
-        ! Find idom_hdf in the list
-        !
-        dindices = get_domain_indices_hdf(fid)
-        dnames   = get_domain_names_hdf(fid)
-
-        do iind = 1,size(dindices)
-            if ( dindices(iind) == idom_hdf ) then
-
-                dname = dnames(iind)
-
-            end if
-        end do
+        call print_overview(fid,domain_id)
 
 
 
@@ -345,10 +322,9 @@ contains
         !
         ! Set equation set
         !
-        did = open_domain_hdf(fid,dname)
-        call set_domain_equation_set_hdf(did,trim(adjustl(equation_set)))
-        call close_domain_hdf(did)
-
+        if (trim(equation_set) /= '') then
+            call set_domain_equation_set_hdf(domain_id,trim(adjustl(equation_set)))
+        end if
 
     end subroutine chidg_edit_domaininfo_domain_equation_set
     !************************************************************************************************

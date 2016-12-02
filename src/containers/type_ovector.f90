@@ -209,8 +209,8 @@ contains
 
 
 
-    !>  Given an identifying string(key), return the index of the item in the vector. Case insensitive
-    !!  because both comparison strings are converted to all upper-case.
+    !>  Given an identifying string(key), return the index of the item in the vector. 
+    !!  Case insensitive because both comparison strings are converted to all upper-case.
     !!
     !!  @author Nathan A. Wukie
     !!  @date   2/8/2016
@@ -218,7 +218,7 @@ contains
     !!
     !!  @param[in]  key     String indicating the equation set to return the index of.
     !!
-    !------------------------------------------------------------------------------------------------
+    !----------------------------------------------------------------------------------------
     function index_by_name(self,key) result(ind)
         class(ovector_t),   intent(inout)   :: self
         character(*),       intent(in)      :: key
@@ -266,7 +266,7 @@ contains
 
 
     end function index_by_name
-    !************************************************************************************************
+    !**************************************************************************************
 
 
 

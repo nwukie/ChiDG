@@ -82,6 +82,8 @@ contains
                 call euler_eqns%add_pseudo_timestep(fluid_pseudo_time)
                 call euler_eqns%prop%add_fluid(perfect_gas)
 
+                call euler_eqns%add_model('Ideal Gas')
+
 
 
             case default

@@ -240,7 +240,7 @@ contains
         nodes    = get_block_points_plot3d(xcoords,ycoords,zcoords)
         elements = get_block_elements_plot3d(xcoords,ycoords,zcoords,mapping,idomain)
 
-        call connectivity%init(size(elements,1),size(nodes))
+        call connectivity%init(trim(string),size(elements,1),size(nodes))
         do ielem = 1,size(elements,1)
             call connectivity%data(ielem)%init(1)
             call connectivity%data(ielem)%set_element_partition(IRANK)

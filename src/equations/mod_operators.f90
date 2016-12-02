@@ -43,7 +43,7 @@ module mod_operators
     !!  @date   9/19/2016
     !!
     !!
-    !-------------------------------------------------------------------------------------------------
+    !---------------------------------------------------------------------------------------
     type, public :: operator_factory_t
 
         type(ovector_t) :: operators
@@ -54,7 +54,7 @@ module mod_operators
         procedure   :: produce
 
     end type operator_factory_t
-    !**************************************************************************************************
+    !***************************************************************************************
 
 
 
@@ -71,7 +71,7 @@ contains
     !!  @date   9/19/2016
     !!
     !!
-    !--------------------------------------------------------------------------------------------------
+    !---------------------------------------------------------------------------------------
     subroutine register(self,operator_instance)
         class(operator_factory_t),  intent(inout)   :: self
         class(operator_t),          intent(inout)   :: operator_instance
@@ -79,7 +79,7 @@ contains
         call self%operators%push_back(operator_instance)
 
     end subroutine register
-    !**************************************************************************************************
+    !***************************************************************************************
 
 
 
@@ -90,12 +90,13 @@ contains
     !!  @date   8/29/2016
     !!
     !!
-    !----------------------------------------------------------------------------------------------------
+    !---------------------------------------------------------------------------------------
     function produce(self,string) result(op)
         class(operator_factory_t),  intent(inout)   :: self
-        character(len=*),           intent(in)      :: string
+        character(*),               intent(in)      :: string
 
         integer(ik)                     :: oindex, ierr
+        character(:),       allocatable :: user_msg
         class(operator_t),  allocatable :: op
 
         !
@@ -107,7 +108,10 @@ contains
         !
         ! Check equationset was found in 'available_equations'
         !
-        if (oindex == 0) call chidg_signal_one(FATAL,"build_operator: We couldn't find the operator string in the list of registered operators.", trim(string))
+        user_msg = "operator_factory%produce: We couldn't find the operator string in &
+                    the list of registered operators. Make sure the operator was registered &
+                    in the operator factory."
+        if (oindex == 0) call chidg_signal_one(FATAL,user_msg,trim(string))
 
 
         !
@@ -117,10 +121,11 @@ contains
         if (ierr /= 0) call AllocationError
 
 
-        if (.not. allocated(op)) call chidg_signal(FATAL,"build_operator: For some reason, the operator didn't get allocated.")
+        user_msg = "operator_factory%produce: For some reason, the operator didn't get allocated"
+        if (.not. allocated(op)) call chidg_signal(FATAL,user_msg)
 
     end function produce
-    !*****************************************************************************************************
+    !***************************************************************************************
 
 
 
@@ -140,7 +145,7 @@ contains
     !!  @date   8/30/2016
     !!
     !!
-    !----------------------------------------------------------------------------------------------------
+    !--------------------------------------------------------------------------------------
     subroutine register_operators()
         integer(ik) :: iop
 
@@ -229,19 +234,7 @@ contains
 
 
     end subroutine register_operators
-    !*****************************************************************************************************
-
-
-
-
-
-
-
-
-
-
-
-
+    !**************************************************************************************
 
 
 

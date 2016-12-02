@@ -2,16 +2,19 @@ module type_equation_set
 #include <messenger.h>
     use mod_kinds,                      only: rk,ik
     use mod_constants,                  only: INTERIOR, CHIMERA, DIAG, &
-                                              BOUNDARY_ADVECTIVE_FLUX, BOUNDARY_DIFFUSIVE_FLUX,         &
-                                              VOLUME_ADVECTIVE_FLUX, VOLUME_DIFFUSIVE_FLUX, BC_FLUX,    &
-                                              XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX,     &
-                                              BOUNDARY
+                                              BOUNDARY_ADVECTIVE_FLUX, &
+                                              BOUNDARY_DIFFUSIVE_FLUX, &
+                                              VOLUME_ADVECTIVE_FLUX, VOLUME_DIFFUSIVE_FLUX, &
+                                              BC_FLUX, XI_MIN, XI_MAX, ETA_MIN, ETA_MAX,    &
+                                              ZETA_MIN, ZETA_MAX, BOUNDARY
     use mod_operators,                  only: operator_factory
+    use mod_models,                     only: model_factory
     use mod_DNAD_tools,                 only: element_compute_seed, face_compute_seed
 
     use type_operator,                  only: operator_t
     use type_operator_wrapper,          only: operator_wrapper_t
-    use type_equation,                  only: equation_t
+    use type_model,                     only: model_t
+    use type_model_wrapper,             only: model_wrapper_t
     use type_properties,                only: properties_t
     use type_equationset_function_data, only: equationset_function_data_t
     use type_chidg_worker,              only: chidg_worker_t
@@ -29,12 +32,12 @@ module type_equation_set
 
     !>  Abstract equation-set type. Can be extended to implement a concrete equation set.
     !!      - Contains name and number of equations.
-    !!      - Contains properties type with equations and material(ex. fluid) properties and definitions
+    !!      - Contains properties type with equations and definitions
     !!      - Contains arrays of flux components
     !!
-    !!  When a new equation set is defined. It should extend from this abstract type. It must then 
-    !!  implement the 'init' function where equations/variables can be added, and fluxes can be 
-    !!  added to the definition of the equation set.
+    !!  When a new equation set is defined. It should extend from this abstract type. 
+    !!  It must then implement the 'init' function where equations/variables can be added, 
+    !!  and fluxes can be added to the definition of the equation set.
     !!
     !!  @author Nathan A. Wukie
     !!  @date   2/8/2016
@@ -43,7 +46,7 @@ module type_equation_set
     !!  @date   8/16/2016
     !!  @note   Reorganized to contain operators instead of fluxes
     !!
-    !-------------------------------------------------------------------------------------------------
+    !----------------------------------------------------------------------------------------
     type, public :: equation_set_t
 
         ! Name
@@ -59,40 +62,41 @@ module type_equation_set
         type(operator_wrapper_t),   allocatable :: volume_diffusive_operator(:) 
         type(operator_wrapper_t),   allocatable :: bc_operator(:)
 
-        ! Data for the flux and source functions. Ex how many. This gets passed to a container 
-        ! in sdata that keeps track of whether these have been executed or not.
-        type(equationset_function_data_t)       :: function_data
+        ! Models
+        type(model_wrapper_t),      allocatable :: models(:)
 
         ! Pseudo time-step calculator
         class(pseudo_timestep_t),   allocatable :: pseudo_timestep
 
+        ! Data for the flux and source functions. Ex how many. This gets passed to a container 
+        ! in sdata that keeps track of whether these have been executed or not.
+        type(equationset_function_data_t)       :: function_data
+
     contains
 
-        procedure   :: set_name                             !< Set the name for the set of equations
-        procedure   :: get_name                             !< Return the name fo the set of equations
+        procedure   :: set_name                             
+        procedure   :: get_name                             
 
-        procedure   :: add_operator                         !< Add an operator to the equation set.
-        procedure   :: add_primary_field                    !< Add a primary field to the equation set
-        procedure   :: add_auxiliary_field                  !< Add an auxiliary field to the equation set
-        procedure   :: add_pseudo_timestep                  !< Add a pseudo time-step calculator
+        procedure   :: add_operator 
+        procedure   :: add_model
+        procedure   :: add_pseudo_timestep                  
 
 
-        procedure   :: compute_boundary_advective_operators !< Compute all the boundary advective operators
-        procedure   :: compute_boundary_diffusive_operators !< Compute all the boundary diffusive operators
-        procedure   :: compute_volume_advective_operators   !< Compute all the volume advective operators
-        procedure   :: compute_volume_diffusive_operators   !< Compute all the volume diffusive operators
-        procedure   :: compute_bc_operators                 !< Compute all the bc operators
+        procedure   :: compute_boundary_advective_operators 
+        procedure   :: compute_boundary_diffusive_operators 
+        procedure   :: compute_volume_advective_operators   
+        procedure   :: compute_volume_diffusive_operators   
+        procedure   :: compute_bc_operators                 
 
-        procedure   :: compute_pseudo_timestep              !< Compute a pseudo-timestep
+        procedure   :: compute_pseudo_timestep
 
-        procedure   :: get_boundary_ndependent_elements     !< return number elements that a boundary function is depending on
-        procedure   :: get_volume_ndependent_elements       !< return number elements that a volume function is depending on
+        procedure   :: get_boundary_ndependent_elements    
+        procedure   :: get_volume_ndependent_elements       
 
-        procedure   :: uses_primary_field
-        procedure   :: uses_auxiliary_field
+        procedure   :: nmodels
 
     end type equation_set_t
-    !**************************************************************************************************
+    !**************************************************************************************
 
 
 
@@ -159,66 +163,11 @@ contains
 
 
 
-    !>  Add a primary field to the equation set properties
-    !!
-    !!  Just registers the field string that is specified. This gets put in the properties container,
-    !!  self%prop that stores all the fields being used by the spatial operators.
-    !!
-    !!  @author Nathan A. Wukie
-    !!  @date   1/28/2016
-    !!
-    !!  @author Nathan A. Wukie (AFRL)
-    !!  @date   8/2/2016
-    !!  @note   modified how the fields are stored.
-    !!
-    !!  @param[in]  field_string   String defining the variable associated with the field being added
-    !!
-    !--------------------------------------------------------------------------------------
-    subroutine add_primary_field(self,field_string)
-        class(equation_set_t),  intent(inout)  :: self
-        character(*),           intent(in)     :: field_string
-
-        call self%prop%add_primary_field(field_string)
-
-    end subroutine add_primary_field
-    !***************************************************************************************
-
-
-
-
-
-
-    !>  Add an auxiliary field to the equation set properties
-    !!
-    !!  Just registers the field string that is specified. This gets put in the properties container,
-    !!  self%prop that stores all the fields being used by the spatial operators.
-    !!
-    !!  @author Nathan A. Wukie
-    !!  @date   11/18/2016
-    !!
-    !!
-    !!  @param[in]  field_string   String defining the variable associated with the field being added
-    !!
-    !--------------------------------------------------------------------------------------
-    subroutine add_auxiliary_field(self,field_string)
-        class(equation_set_t),  intent(inout)  :: self
-        character(*),           intent(in)     :: field_string
-
-        call self%prop%add_auxiliary_field(field_string)
-
-    end subroutine add_auxiliary_field
-    !***************************************************************************************
-
-
-
-
-
-
     !>  Add a spatial operator to the equation set.
     !!
-    !!  This accepts a string that is the name of an operator to add. This function then searched the operator
-    !!  register for an operator that matches the incoming string. If one is found, it is created and added 
-    !!  to the equation set.
+    !!  This accepts a string that is the name of an operator to add. This function then 
+    !!  searched the operator register for an operator that matches the incoming string. 
+    !!  If one is found, it is created and added to the equation set.
     !!
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   8/29/2016
@@ -231,7 +180,7 @@ contains
 
         class(operator_t),          allocatable :: new_operator
         class(operator_wrapper_t),  allocatable :: temp(:)
-        integer(ik)     :: ierr, iflux, operator_type, ifield
+        integer(ik)     :: ierr, iflux, operator_type, ifield, imodel
 
 
         !
@@ -440,24 +389,103 @@ contains
 
 
 
-        !
         ! Turn on primary fields from the new operator
-        !
         do ifield = 1,new_operator%nprimary_fields()
-            call self%add_primary_field(new_operator%primary_fields(ifield)%str)
+            call self%prop%add_primary_field(new_operator%get_primary_field(ifield))
         end do
 
-        !
         ! Turn on auxiliary fields from the new operator
-        !
         do ifield = 1,new_operator%nauxiliary_fields()
-            call self%add_auxiliary_field(new_operator%auxiliary_fields(ifield)%str)
+            call self%prop%add_auxiliary_field(new_operator%get_auxiliary_field(ifield))
+        end do
+
+        ! Turn on models from the new operator
+        do imodel = 1,new_operator%nmodels()
+            call self%add_model(new_operator%get_model(imodel))
         end do
 
     end subroutine add_operator
-    !******************************************************************************************
+    !****************************************************************************************
 
 
+
+
+
+
+
+
+
+    !>  Add a model to the equation set.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   11/29/2016
+    !!
+    !---------------------------------------------------------------------------------------
+    subroutine add_model(self,string)
+        class(equation_set_t),  intent(inout)   :: self
+        character(*),           intent(in)      :: string
+        
+        integer(ik)                         :: imodel, ierr
+        logical                             :: already_added
+        class(model_t),         allocatable :: new_model
+        type(model_wrapper_t),  allocatable :: temp(:)
+
+
+        !
+        ! Check that the model wasn't already added.
+        !
+        do imodel = 1,self%nmodels()
+            already_added = (trim(string) == self%models(imodel)%model%get_name())
+            if (already_added) exit
+        end do
+
+
+
+        !
+        ! Add the model if it wasn't added already by another operator.
+        !
+        if (.not. already_added) then
+
+
+            !
+            ! Extend storage
+            !
+            if (allocated(self%models)) then
+
+                allocate(temp(size(self%models) + 1), stat=ierr)
+                if (ierr /= 0) call AllocationError
+
+                ! Copy current flux components to temp array
+                do imodel = 1,size(self%models)
+                    allocate(temp(imodel)%model,source=self%models(imodel)%model, stat=ierr)
+                    if (ierr /= 0) call AllocationError
+                end do
+
+            else
+
+                allocate(temp(1), stat=ierr)
+                if (ierr /= 0) call AllocationError
+
+            end if
+
+
+
+            !
+            ! Allocate new model to end of extended array
+            !
+            allocate(temp(size(temp))%model, source=model_factory%produce(string), stat=ierr)
+            if (ierr /= 0) call AllocationError
+
+
+            !
+            ! Move extended temp allocation to data type
+            !
+            call move_alloc(from=temp, to=self%models)
+
+        end if
+
+    end subroutine add_model
+    !***************************************************************************************
 
 
 
@@ -472,7 +500,7 @@ contains
     !!  @date   11/17/2016
     !!
     !!
-    !------------------------------------------------------------------------------------------
+    !----------------------------------------------------------------------------------------
     subroutine add_pseudo_timestep(self,calculator)
         class(equation_set_t),      intent(inout)   :: self
         class(pseudo_timestep_t),   intent(in)      :: calculator
@@ -485,10 +513,7 @@ contains
         if (ierr /= 0) call AllocationError 
 
     end subroutine add_pseudo_timestep
-    !******************************************************************************************
-
-
-
+    !****************************************************************************************
 
 
 
@@ -503,7 +528,7 @@ contains
     !!  @date   8/15/2016
     !!
     !!
-    !--------------------------------------------------------------------------------------------------------------
+    !---------------------------------------------------------------------------------------
     subroutine compute_boundary_advective_operators(self,worker,idiff)
         class(equation_set_t),   intent(inout)   :: self
         type(chidg_worker_t),    intent(inout)   :: worker
@@ -521,8 +546,9 @@ contains
 
         !
         ! Only call the following routines for interior faces -- ftype == 0
-        ! Furthermore, only call the routines if we are computing derivatives for the neighbor of
-        ! iface or for the current element(DIAG). This saves a lot of unnecessary compute_boundary calls.
+        ! Furthermore, only call the routines if we are computing derivatives for the 
+        ! neighbor of iface or for the current element(DIAG). This saves a lot of 
+        ! unnecessary compute_boundary calls.
         !
         interior_face = ( mesh(idom)%faces(ielem,iface)%ftype == INTERIOR )
         chimera_face  = ( mesh(idom)%faces(ielem,iface)%ftype == CHIMERA )
@@ -578,7 +604,7 @@ contains
         end associate
 
     end subroutine compute_boundary_advective_operators
-    !*****************************************************************************************************************
+    !***************************************************************************************
 
 
 
@@ -594,7 +620,7 @@ contains
     !!  @date   8/15/2016
     !!
     !!
-    !--------------------------------------------------------------------------------------------------------------
+    !--------------------------------------------------------------------------------------
     subroutine compute_boundary_diffusive_operators(self,worker,idiff)
         class(equation_set_t),   intent(inout)   :: self
         type(chidg_worker_t),   intent(inout)   :: worker
@@ -611,15 +637,16 @@ contains
 
         !
         ! Only call the following routines for interior faces -- ftype == 0
-        ! Furthermore, only call the routines if we are computing derivatives for the neighbor of
-        ! iface or for the current element(DIAG). This saves a lot of unnecessary compute_boundary calls.
+        ! Furthermore, only call the routines if we are computing derivatives for the 
+        ! neighbor of iface or for the current element(DIAG). This saves a lot of 
+        ! unnecessary compute_boundary calls.
         !
         interior_face = ( mesh(idom)%faces(ielem,iface)%ftype == INTERIOR )
         chimera_face  = ( mesh(idom)%faces(ielem,iface)%ftype == CHIMERA )
         differentiate_me       = (idiff == DIAG)
         differentiate_neighbor = (idiff == iface)
-        !compute_face  = (interior_face .or. chimera_face) .and. ( (idiff == iface) .or. (idiff == DIAG) )
-        compute_face  = (interior_face .or. chimera_face) .and. ( differentiate_me .or. differentiate_neighbor )
+        compute_face  = (interior_face    .or. chimera_face           ) .and. &
+                        (differentiate_me .or. differentiate_neighbor )
 
         if (compute_face) then
 
@@ -668,7 +695,7 @@ contains
         end associate
 
     end subroutine compute_boundary_diffusive_operators
-    !*****************************************************************************************************************
+    !***************************************************************************************
 
 
 
@@ -688,7 +715,7 @@ contains
     !!  @date   8/15/2016
     !!
     !!
-    !-----------------------------------------------------------------------------------------------------------------
+    !--------------------------------------------------------------------------------------
     subroutine compute_volume_advective_operators(self,worker,idiff)
         class(equation_set_t),       intent(inout)   :: self
         type(chidg_worker_t),       intent(inout)   :: worker
@@ -728,7 +755,7 @@ contains
 
 
     end subroutine compute_volume_advective_operators
-    !******************************************************************************************************************
+    !***************************************************************************************
 
 
 
@@ -745,7 +772,7 @@ contains
     !!  @date   8/16/2016
     !!
     !!
-    !-----------------------------------------------------------------------------------------------------------------
+    !--------------------------------------------------------------------------------------
     subroutine compute_volume_diffusive_operators(self,worker,idiff)
         class(equation_set_t),       intent(inout)   :: self
         type(chidg_worker_t),       intent(inout)   :: worker
@@ -756,7 +783,8 @@ contains
         logical                 :: linearize_me, compute_function
 
         associate( mesh => worker%mesh, elem_info => worker%element_info, &
-                   idom => worker%element_info%idomain_l, ielem => worker%element_info%ielement_l, prop => self%prop)
+                   idom => worker%element_info%idomain_l,                 &
+                   ielem => worker%element_info%ielement_l, prop => self%prop)
 
 
         !
@@ -807,7 +835,7 @@ contains
 
 
     end subroutine compute_volume_diffusive_operators
-    !******************************************************************************************************************
+    !***************************************************************************************
 
 
 
@@ -827,7 +855,7 @@ contains
     !!  @date   8/15/2016
     !!
     !!
-    !--------------------------------------------------------------------------------------------------------------
+    !--------------------------------------------------------------------------------------
     subroutine compute_bc_operators(self,worker,bcset,idiff)
         class(equation_set_t),      intent(inout)   :: self
         type(chidg_worker_t),       intent(inout)   :: worker
@@ -845,12 +873,12 @@ contains
 
         !
         ! Only call the following routines for interior faces -- ftype == 0
-        ! Furthermore, only call the routines if we are computing derivatives for the neighbor of
-        ! iface or for the current element(DIAG). This saves a lot of unnecessary compute_boundary calls.
+        ! Furthermore, only call the routines if we are computing derivatives for the 
+        ! neighbor of iface or for the current element(DIAG). This saves a lot of 
+        ! unnecessary compute_boundary calls.
         !
         boundary_face = (mesh(idom)%faces(ielem,iface)%ftype == BOUNDARY)
-        !compute_face  = (boundary_face) .and. ( (idiff == iface) .or. (idiff == DIAG) )
-        compute_face  = (boundary_face) .and. ( (idiff == DIAG) )
+        compute_face  = (boundary_face) .and.  (idiff == DIAG) 
 
         if (compute_face) then
 
@@ -861,7 +889,8 @@ contains
 
 
             !
-            ! Get index of boundary condition. Get index in bc_patch that corresponds to current face.
+            ! Get index of boundary condition. Get index in bc_patch that 
+            ! corresponds to current face.
             !
             BC_ID   = mesh(idom)%faces(ielem,iface)%BC_ID
             BC_face = mesh(idom)%faces(ielem,iface)%BC_face
@@ -911,7 +940,7 @@ contains
         end associate
 
     end subroutine compute_bc_operators
-    !*****************************************************************************************************************
+    !**************************************************************************************
 
 
 
@@ -923,30 +952,19 @@ contains
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-    !>  Return the number of elements that a boundary function depends on in the linearization direction 'idiff'.
+    !>  Return the number of elements that a boundary function depends on in the 
+    !!  linearization direction 'idiff'.
     !!
-    !!  Often, this may be just 1. Because a flux linearized wrt its owner element just has 1 dependent element; itself.
-    !!  A flux linearized wrt its neighbor element has just 1 dependent element; it's neighbor. If however, a face
-    !!  is a Chimera face, then when linearized with respect to its donors, ndepend will be equal to the number of
+    !!  Often, this may be just 1. Because a flux linearized wrt its owner element just has 
+    !!  1 dependent element; itself. A flux linearized wrt its neighbor element has just 
+    !!  1 dependent element; it's neighbor. If however, a face is a Chimera face, then when 
+    !!  linearized with respect to its donors, ndepend will be equal to the number of
     !!  donor elements that are providing information to that face.
     !!
     !!  @author Nathan A. Wukie(AFRL)
     !!  @date   8/15/2016
     !!
-    !!
-    !!
-    !----------------------------------------------------------------------------------------------------------------
+    !--------------------------------------------------------------------------------------
     function get_boundary_ndependent_elements(self,mesh,face_info,idiff) result(ndepend)
         class(equation_set_t),   intent(in)   :: self
         type(mesh_t),           intent(in)   :: mesh(:)
@@ -956,7 +974,8 @@ contains
         integer(ik) :: ChiID, ndepend
         logical     :: depend_me, depend_neighbor, chimera_face, bc_face
 
-        associate( idom => face_info%idomain_l, ielem => face_info%ielement_l, iface => face_info%iface )
+        associate( idom => face_info%idomain_l, ielem => face_info%ielement_l, &
+                   iface => face_info%iface )
 
         depend_me       = (idiff == DIAG)
         depend_neighbor = (idiff == XI_MIN   .or. idiff == XI_MAX  .or. &
@@ -993,25 +1012,25 @@ contains
         end associate
 
     end function get_boundary_ndependent_elements
-    !*****************************************************************************************************************
+    !**************************************************************************************
 
 
 
 
 
-    !>  Return the number of elements that a volume function depends on in the linearization direction 'idiff'.
+    !>  Return the number of elements that a volume function depends on in the linearization 
+    !!  direction 'idiff'.
     !!
-    !!  Often, this may be just 1. Because a flux linearized wrt its owner element just has 1 dependent element; itself.
-    !!  A flux linearized wrt its neighbor element has just 1 dependent element; it's neighbor. If however, a face
-    !!  is a Chimera face, then when linearized with respect to its donors, ndepend will be equal to the number of
+    !!  Often, this may be just 1. Because a flux linearized wrt its owner element just has 
+    !!  1 dependent element; itself. A flux linearized wrt its neighbor element has just 
+    !!  1 dependent element; it's neighbor. If however, a face is a Chimera face, then 
+    !!  when linearized with respect to its donors, ndepend will be equal to the number of
     !!  donor elements that are providing information to that face.
     !!
     !!  @author Nathan A. Wukie(AFRL)
     !!  @date   8/16/2016
     !!
-    !!
-    !!
-    !----------------------------------------------------------------------------------------------------------------
+    !--------------------------------------------------------------------------------------
     function get_volume_ndependent_elements(self,mesh,elem_info,idiff) result(ndepend)
         class(equation_set_t),   intent(in)   :: self
         type(mesh_t),           intent(in)   :: mesh(:)
@@ -1043,7 +1062,8 @@ contains
             chimera_face  = ( mesh(idom)%faces(ielem,iface)%ftype == CHIMERA )
 
             if ( chimera_face ) then
-                ! only need to compute multiple times when we need the linearization of the chimera neighbors
+                ! only need to compute multiple times when we need the linearization of 
+                ! the chimera neighbors
                 ChiID  = mesh(idom)%faces(ielem,iface)%ChiID
                 ndepend = mesh(idom)%chimera%recv%data(ChiID)%ndonors()
             else
@@ -1057,7 +1077,7 @@ contains
         end associate
 
     end function get_volume_ndependent_elements
-    !*****************************************************************************************************************
+    !**************************************************************************************
 
 
 
@@ -1098,54 +1118,34 @@ contains
 
 
 
-    
 
-    
-    !>  Return .true. if equation_set uses the specified primary field.
+
+
+
+    !>  Return the number of models allocated in the equation set.
     !!
     !!  @author Nathan A. Wukie
-    !!  @date   11/21/2016
+    !!  @date   12/1/2016
     !!
-    !---------------------------------------------------------------------------------------
-    function uses_primary_field(self,field) result(status)
+    !!
+    !--------------------------------------------------------------------------------------
+    function nmodels(self) result(nmodels_)
         class(equation_set_t),  intent(in)  :: self
-        character(*),           intent(in)  :: field
 
-        integer(ik) :: index
-        logical     :: status
-
-        index = self%prop%get_primary_field_index(trim(field))
-        status = (index /= 0)
-
-    end function uses_primary_field
-    !***************************************************************************************
+        integer(ik) :: nmodels_
 
 
+        if (allocated(self%models)) then
+            nmodels_ = size(self%models)
+        else
+            nmodels_ = 0
+        end if
+
+    end function nmodels
+    !**************************************************************************************
 
 
-
-
-
-    !>  Return .true. if equation_set uses the specified auxiliary field.
-    !!
-    !!  @author Nathan A. Wukie
-    !!  @date   11/21/2016
-    !!
-    !---------------------------------------------------------------------------------------
-    function uses_auxiliary_field(self,field) result(status)
-        class(equation_set_t),  intent(in)  :: self
-        character(*),           intent(in)  :: field
-
-        integer(ik) :: index
-        logical     :: status
-
-        index = self%prop%get_auxiliary_field_index(trim(field))
-        status = (index /= 0)
-
-    end function uses_auxiliary_field
-    !***************************************************************************************
-
-
+    
 
 
 end module type_equation_set

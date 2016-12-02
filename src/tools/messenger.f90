@@ -113,10 +113,10 @@ contains
         character(*), intent(in),           optional    :: dev_msg
 
         integer                         :: iaux, pathstart
-        integer(ik)                     :: ierr
+        integer(ik)                     :: ierr, chidg_signal_length
         character(len=:), allocatable   :: subpath, temppath, genstr
         class(*), pointer               :: auxdata => null()
-        character(100)                  :: warnstr, errstr, killstr, starstr, linechar, dashstr, blankstr, oopsstr
+        character(100)                  :: warnstr, errstr, killstr, starstr, linechar, dashstr, blankstr, oopsstr, msgstr
         logical                         :: print_info_one   = .false.
         logical                         :: print_info_two   = .false.
         logical                         :: print_info_three = .false.
@@ -124,6 +124,7 @@ contains
 
 
         oopsstr  = '                                         ... Oops :/                                           '
+        msgstr   = '                                        ChiDG Message                                          '
         warnstr  = '******************************************  Warning  ******************************************'
         errstr   = '**************************************  Non-fatal error  **************************************'
         killstr  = '****************************************  Fatal error  ****************************************'
@@ -136,7 +137,7 @@ contains
         !
         ! Set message length 
         !
-        msg_length = 105
+        chidg_signal_length = 105
 
         !
         ! Chop off unimportant beginning of file path
@@ -160,49 +161,49 @@ contains
         !
         ! Print message header
         !
-        call write_line(blankstr, width=msg_length)
+        call write_line(blankstr, width=chidg_signal_length)
         call write_line(trim(dashstr))
         select case (sig)
             case (0)    ! Normal message  -- Code continues
-                call write_line(trim(user_msg), color='aqua', ltrim=.false., bold=.true., width=msg_length)
+                call write_line(trim(msgstr),   color='aqua', ltrim=.false., bold=.true., width=chidg_signal_length)
             case (1)    ! Warning message -- Code continues
-                call write_line(trim(warnstr),  color='aqua', ltrim=.false., bold=.true., width=msg_length)
+                call write_line(trim(warnstr),  color='aqua', ltrim=.false., bold=.true., width=chidg_signal_length)
             case (2)    ! Non-Fatal Error -- Code continues
-                call write_line(trim(errstr),   color='aqua', ltrim=.false., bold=.true., width=msg_length)
+                call write_line(trim(errstr),   color='aqua', ltrim=.false., bold=.true., width=chidg_signal_length)
             case (3)    ! Fatal Error     -- Code terminates
-                call write_line(trim(killstr),  color='aqua', ltrim=.false., bold=.true., width=msg_length)
+                call write_line(trim(killstr),  color='aqua', ltrim=.false., bold=.true., width=chidg_signal_length)
             case (4)    ! Oops Error      -- Code terminates
-                call write_line(trim(oopsstr),  color='aqua', ltrim=.false., bold=.true., width=msg_length)
+                call write_line(trim(oopsstr),  color='aqua', ltrim=.false., bold=.true., width=chidg_signal_length)
             case default
                 print*, "Messenger:message -- message code not recognized"
                 stop
         end select
-        call write_line(trim(dashstr), width=msg_length)
+        call write_line(trim(dashstr), width=chidg_signal_length)
 
 
         ! 
         ! Print USER message
         !
-        call write_line(trim(blankstr), width=msg_length)
-        call write_line('For users:',   color='blue', bold=.true., width=msg_length)
-        call write_line(trim(user_msg), color='blue', width=msg_length)
-        call write_line(trim(blankstr), width=msg_length)
+        call write_line(trim(blankstr), width=chidg_signal_length)
+        call write_line('For users:',   color='blue', bold=.true., width=chidg_signal_length)
+        call write_line(trim(user_msg), color='blue', width=chidg_signal_length-10)
+        call write_line(trim(blankstr), width=chidg_signal_length)
 
         !
         ! Print DEVELOPER message
         !
         if (present(dev_msg)) then
-            call write_line('For developers:', color='red', bold=.true., width=msg_length)
-            call write_line(trim(dev_msg),     color='red', width=msg_length)
-            call write_line(trim(blankstr), width=msg_length)
+            call write_line('For developers:', color='red', bold=.true., width=chidg_signal_length)
+            call write_line(trim(dev_msg),     color='red', width=chidg_signal_length-10)
+            call write_line(trim(blankstr), width=chidg_signal_length)
         end if
 
         !
         ! Print File/Line information
         !
-        call write_line('Information about the message:', bold=.true., width=msg_length)
-        call write_line(trim(genstr), width=msg_length)
-        call write_line(blankstr, width=msg_length)
+        call write_line('Information about the message:', bold=.true., width=chidg_signal_length)
+        call write_line(trim(genstr), width=chidg_signal_length)
+        call write_line(blankstr, width=chidg_signal_length)
 
 
 
@@ -223,23 +224,23 @@ contains
             ! auxdata pointer is used to point to current auxiliary data variable and then go through the available IO types
             !
             if ( associated(auxdata) ) then
-                call write_line('Information about the message:', bold=.true., width=msg_length)
+                call write_line('Information about the message:', bold=.true., width=chidg_signal_length)
 
                 select type(auxdata)
                     type is(integer)
-                        call write_line(auxdata, width=msg_length)
+                        call write_line(auxdata, width=chidg_signal_length)
 
                     type is(integer(8))
-                        call write_line(auxdata, width=msg_length)
+                        call write_line(auxdata, width=chidg_signal_length)
 
                     type is(real)
-                        call write_line(auxdata, width=msg_length)
+                        call write_line(auxdata, width=chidg_signal_length)
 
                     type is(real(8))
-                        call write_line(auxdata, width=msg_length)
+                        call write_line(auxdata, width=chidg_signal_length)
 
                     type is(character(*))
-                        call write_line(auxdata, width=msg_length)
+                        call write_line(auxdata, width=chidg_signal_length)
 
                     class default
                         print*, '', "Data type not implemented for I/O in messege.f90"
@@ -262,8 +263,8 @@ contains
         !
         ! Print message footer
         !
-        call write_line(blankstr, width=msg_length)
-        call write_line(dashstr, width=msg_length)
+        call write_line(blankstr, width=chidg_signal_length)
+        call write_line(dashstr, width=chidg_signal_length)
 
 
 
@@ -273,7 +274,7 @@ contains
         select case (sig)
             case (3,4)    ! Fatal Error -- Code terminates
                 call log_finalize() !Make sure log file is flushed before everything gets killed.
-                call MPI_Abort(ChiDG_COMM,1)
+                call chidg_abort()
                 !stop
                 !error stop
 
@@ -281,12 +282,6 @@ contains
             case default
 
         end select
-
-
-        !
-        ! ReSet message length 
-        !
-        msg_length = max_msg_length
 
 
     end subroutine message
@@ -888,7 +883,18 @@ contains
 
 
 
+    !>
+    !!
+    !!
+    !!
+    !------------------------------------------------------------------------------------------
+    subroutine chidg_abort()
+        integer(ik) :: ierr
 
+        call MPI_Abort(ChiDG_COMM,ierr)
+
+    end subroutine chidg_abort
+    !******************************************************************************************
 
 
 

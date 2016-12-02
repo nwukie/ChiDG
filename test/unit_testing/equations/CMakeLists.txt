@@ -5,8 +5,8 @@ add_subdirectory(DualLinearAdvection)
 
 add_test_sources(equations
                 test_equationset.pf
-                test_equationset__add_equation.pf
                 test_equationset__add_operator.pf
+                test_model.f90
                 )
 
 add_test_target(equations unit ${equations_sources})

@@ -17,7 +17,7 @@ add_test_sources(containers
                 test_chidgMatrix_operator_mv.pf
                 test_chidgMatrix_operator_chimera_mv.pf
                 test_function_status_mod.pf
-                test_cache_data_equation_mod.pf
+                test_cache_data_field_mod.pf
                 test_cache_data_mod.pf
 #                test_chidg_cache_mod.pf
                 )

@@ -103,7 +103,8 @@ contains
 
 
         ! Create/initialize file
-        file_id = initialize_file_hdf(filename)
+        call initialize_file_hdf(filename)
+        file_id = open_file_hdf(filename)
         
 
 
@@ -270,7 +271,8 @@ contains
 
 
         ! Create/initialize file
-        file_id = initialize_file_hdf(filename)
+        call initialize_file_hdf(filename)
+        file_id = open_file_hdf(filename)
         
 
         select case (trim(block1))
@@ -507,7 +509,8 @@ contains
 
 
         ! Create/initialize file
-        file_id = initialize_file_hdf(filename)
+        call initialize_file_hdf(filename)
+        file_id = open_file_hdf(filename)
         
 
         ! Generate coordinates for first block

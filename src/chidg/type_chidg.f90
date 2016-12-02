@@ -3,6 +3,7 @@ module type_chidg
     use mod_constants,              only: NFACES
     use mod_equations,              only: register_equation_builders
     use mod_operators,              only: register_operators
+    use mod_models,                 only: register_models
     use mod_bc,                     only: register_bcs
     use mod_function,               only: register_functions
     use mod_grid,                   only: initialize_grid
@@ -27,15 +28,17 @@ module type_chidg
     use mod_nonlinear_solver,       only: create_nonlinear_solver
     use mod_preconditioner,         only: create_preconditioner
 
-    use mod_communication,          only: establish_neighbor_communication, establish_chimera_communication
-    use mod_chidg_mpi,              only: chidg_mpi_init, chidg_mpi_finalize, ChiDG_COMM, IRANK, NRANK
-    use mpi_f08
-
-    use mod_hdfio,                  only: read_grid_hdf, read_boundaryconditions_hdf, &
-                                          read_solution_hdf, write_solution_hdf, read_connectivity_hdf, &
-                                          read_weights_hdf
+    use mod_communication,          only: establish_neighbor_communication, &
+                                          establish_chimera_communication
+    use mod_chidg_mpi,              only: chidg_mpi_init, chidg_mpi_finalize,   &
+                                          IRANK, NRANK, ChiDG_COMM
+    use mod_hdfio,                  only: read_grid_hdf, read_boundaryconditions_hdf,   &
+                                          read_solution_hdf, write_solution_hdf,        &
+                                          read_connectivity_hdf, read_weights_hdf
     use mod_hdf_utilities,          only: close_hdf
-    use mod_partitioners,           only: partition_connectivity, send_partitions, recv_partition
+    use mod_partitioners,           only: partition_connectivity, send_partitions, &
+                                          recv_partition
+    use mpi_f08
     implicit none
 
 
@@ -108,29 +111,9 @@ module type_chidg
         procedure   :: init
         procedure   :: initialize_solution_domains
         procedure   :: initialize_solution_solver
-        procedure   :: check_auxiliary_fields
 
     end type chidg_t
     !*******************************************************************************************
-
-
-
-
-
-
-
-
-    type, public :: chidg_factory_t
-
-        type(chidg_t),  allocatable :: chidg_instances(:)
-
-    contains
-
-        procedure   :: register
-        procedure   :: produce
-
-    end type chidg_factory_t
-
 
 
 
@@ -187,6 +170,7 @@ contains
 
                     ! Order matters here. Functions need to come first. Used by equations and bcs.
                     call register_functions()
+                    call register_models()
                     call register_equation_builders()
                     call register_operators()
                     call register_bcs()
@@ -242,8 +226,10 @@ contains
 
         select case (trim(activity))
 
+            !
+            ! Call all initialization routines.
+            !
             case ('all')
-                call self%init('auxiliary fields')
                 call self%initialize_solution_domains()
                 call self%init('communication')
                 call self%init('chimera')
@@ -263,12 +249,6 @@ contains
             case ('chimera')
                 call establish_chimera_communication(self%data%mesh,ChiDG_COMM)
 
-
-            !
-            ! Initialize auxiliary states
-            !
-            case ('auxiliary fields')
-                call self%check_auxiliary_fields()
 
 
             !
@@ -804,64 +784,64 @@ contains
 
 
 
-    !>  Check the equation_set's for any auxiliary fields that are required. 
-    !!
-    !!      #1: Check equation_set's for auxiliary fields
-    !!      #2: For auxiliary fields that are found, check the file for the auxiliary field.
-    !!      #3: If no auxiliary field in file, check auxiliary drivers for a rule to compute the field
-    !!      #4: If no rule, error. We don't have the field, and we also don't know how to compute it.
-    !!
-    !!  @author Nathan A. Wukie
-    !!  @date   11/21/2016
-    !!
-    !!
-    !!
-    !----------------------------------------------------------------------------------------------------
-    subroutine check_auxiliary_fields(self)
-        class(chidg_t), intent(inout)   :: self
-
-        type(string_t), allocatable :: auxiliary_fields(:)
-        logical,        allocatable :: domain_needs_aux_field(:)
-        logical,        allocatable :: file_has_aux_field(:)
-        logical,        allocatable :: field_in_file
-
-
-
-!        aux_fields = self%data%get_auxiliary_fields()
+!    !>  Check the equation_set's for any auxiliary fields that are required. 
+!    !!
+!    !!      #1: Check equation_set's for auxiliary fields
+!    !!      #2: For auxiliary fields that are found, check the file for the auxiliary field.
+!    !!      #3: If no auxiliary field in file, check auxiliary drivers for a rule to compute the field
+!    !!      #4: If no rule, error. We don't have the field, and we also don't know how to compute it.
+!    !!
+!    !!  @author Nathan A. Wukie
+!    !!  @date   11/21/2016
+!    !!
+!    !!
+!    !!
+!    !----------------------------------------------------------------------------------------------------
+!    subroutine check_auxiliary_fields(self)
+!        class(chidg_t), intent(inout)   :: self
+!
+!        type(string_t), allocatable :: auxiliary_fields(:)
+!        logical,        allocatable :: domain_needs_aux_field(:)
+!        logical,        allocatable :: file_has_aux_field(:)
+!        logical,        allocatable :: field_in_file
 !
 !
-!        do iaux = 1,size(aux_fields)
+!
+!!        aux_fields = self%data%get_auxiliary_fields()
+!!
+!!
+!!        do iaux = 1,size(aux_fields)
+!!
+!!
+!!            !
+!!            ! Check which domains use the auxiliary field
+!!            !
+!!            do idom = 1,self%data%ndomains()
+!!                domain_uses_field(idom) = self%data%eqnset(idom)%uses_auxiliary_field(aux_fields(iaux))
+!!            end do !idom
+!!
+!!
+!!            !
+!!            do idom = 1,self%data%ndomains()
+!!                file_has_aux_field(idom) = file%domain_has_field(idom,aux_field(iaux))
+!!            end do !idom
+!!
+!!
+!!            !
+!!            ! If any domain doesn't have the field in file, get from a pre-defined rule
+!!            !
+!!            if (any(file_has_aux_field == .false.)) then
+!!                call initialize_auxiliary_field(aux_field(iaux))
+!!            end if
+!!
+!!
+!!        end do !iaux
+!
+!        
 !
 !
-!            !
-!            ! Check which domains use the auxiliary field
-!            !
-!            do idom = 1,self%data%ndomains()
-!                domain_uses_field(idom) = self%data%eqnset(idom)%uses_auxiliary_field(aux_fields(iaux))
-!            end do !idom
-!
-!
-!            !
-!            do idom = 1,self%data%ndomains()
-!                file_has_aux_field(idom) = file%domain_has_field(idom,aux_field(iaux))
-!            end do !idom
-!
-!
-!            !
-!            ! If any domain doesn't have the field in file, get from a pre-defined rule
-!            !
-!            if (any(file_has_aux_field == .false.)) then
-!                call initialize_auxiliary_field(aux_field(iaux))
-!            end if
-!
-!
-!        end do !iaux
-
-        
-
-
-    end subroutine check_auxiliary_fields
-    !****************************************************************************************************
+!    end subroutine check_auxiliary_fields
+!    !****************************************************************************************************
 
 
 
@@ -884,7 +864,7 @@ contains
         character(*),       intent(in)              :: solutionfile
 
         character(len=5),   dimension(1)    :: extensions
-        character(len=:),   allocatable     :: extension
+        character(:),       allocatable     :: extension
         type(meshdata_t),   allocatable     :: solutiondata(:)
         integer                             :: iext, extloc, idom, ndomains, iwrite, ierr
 
@@ -899,20 +879,11 @@ contains
         !
         ! Call grid reader based on file extension
         !
-        do iwrite = 0,NRANK-1
-            if ( iwrite == IRANK ) then
-
-
-                if ( extension == '.h5' ) then
-                    call write_solution_hdf(solutionfile,self%data)
-                else
-                    call chidg_signal(FATAL,"chidg%write_solution: grid file extension not recognized")
-                end if
-
-
-            end if
-            call MPI_Barrier(ChiDG_COMM,ierr)
-        end do
+        if ( extension == '.h5' ) then
+            call write_solution_hdf(self%data,solutionfile)
+        else
+            call chidg_signal(FATAL,"chidg%write_solution: grid file extension not recognized")
+        end if
 
 
     end subroutine write_solution

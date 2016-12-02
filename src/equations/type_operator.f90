@@ -237,10 +237,10 @@ contains
     !--------------------------------------------------------------------------------------------------
     subroutine add_primary_field(self,string)
         class(operator_t),  intent(inout)   :: self
-        character(len=*),   intent(in)      :: string
+        character(*),       intent(in)      :: string
 
-        integer(ik)     :: ierr, ieq
-        type(string_t), allocatable  :: temp(:)
+        integer(ik)                     :: ierr, ieq
+        type(string_t), allocatable     :: temp(:)
 
 
         !
@@ -294,7 +294,7 @@ contains
     !--------------------------------------------------------------------------------------------------
     subroutine add_auxiliary_field(self,string)
         class(operator_t),  intent(inout)   :: self
-        character(len=*),   intent(in)      :: string
+        character(*),       intent(in)      :: string
 
         integer(ik)     :: ierr, ieq
         type(string_t), allocatable  :: temp(:)

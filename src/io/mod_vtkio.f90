@@ -35,23 +35,22 @@ contains
     !!
     !---------------------------------------------------------------------------------------------------------------               
     subroutine write_vtk_file(data)
-
         type(chidg_data_t),intent(inout)                        ::  data
 
 
         integer(ik),parameter                                   :: bo_type = 0_ik
         integer(ik)                                             :: idom,ielem,nelem,noeq,s,num_pts,num_cells,ntime
-        character(len = 100),dimension(:),allocatable           :: cons_var
-        real(rk),dimension(:),allocatable                       :: X,Y,Z
-        real(rk),dimension(:,:),allocatable                     :: cons_var_val
-        integer(ik),dimension(:,:),allocatable                  :: connectivity,connectivity_A
-        integer(ik),dimension(:),allocatable                    :: offsets,types
-        character(len = 100),dimension(:),allocatable           :: file_arr
         integer(ik)                                             :: itime,d ! Counters for outer time loop and file name array
-        character(len = 100)                                    :: cwd,new_dir_path
+        character(len = 100),   dimension(:),   allocatable     :: cons_var
+        real(rk),               dimension(:),   allocatable     :: X,Y,Z
+        real(rk),               dimension(:,:), allocatable     :: cons_var_val
+        integer(ik),            dimension(:,:), allocatable     :: connectivity,connectivity_A
+        integer(ik),            dimension(:),   allocatable     :: offsets,types
+        character(len = 100),   dimension(:),   allocatable     :: file_arr
+        character(len = 100)                                    :: new_dir_path
         character(len = 100)                                    :: make_directory,delete_directory
-		logical                                                 :: dir_exists
         character(len = 100)                                    :: pvd_filename
+		logical                                                 :: dir_exists
 
 
         !
@@ -59,16 +58,17 @@ contains
         ! the chidg result folder name to the path
         ! Check if directory already exists, if it does remove it and make it again
         !
-        call execute_command_line('pwd > pwd.txt')
-        
-        open(10, file = 'pwd.txt')
-        read(10,'(a100)') cwd
-        close(10)
-
-        call execute_command_line('rm pwd.txt')
-
-        !new_dir_path = trim(cwd)//'/ChiDG_results/'
-        new_dir_path = trim(cwd)//'ChiDG_results'
+!        call execute_command_line('pwd > pwd.txt')
+!        
+!        open(10, file = 'pwd.txt')
+!        read(10,'(a100)') cwd
+!        close(10)
+!
+!        call execute_command_line('rm pwd.txt')
+!
+!        !new_dir_path = trim(cwd)//'/ChiDG_results/'
+!        !new_dir_path = trim(cwd)//'ChiDG_results'
+        new_dir_path = 'ChiDG_results'
 
         delete_directory = 'rm -rf '//trim(new_dir_path)
         make_directory   = 'mkdir '//trim(new_dir_path)

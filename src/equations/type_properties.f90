@@ -97,11 +97,11 @@ contains
             if (allocated(self%primary_fields)) then
 
                 ! Allocate temp field array with one extra slot for new field.
-                allocate(temp_fields(size(self%primary_fields) + 1), stat=ierr)
+                allocate(temp_fields(self%nprimary_fields() + 1), stat=ierr)
                 if (ierr /= 0) call AllocationError
 
                 ! Copy current fields to first temp slots
-                do ieq = 1,size(self%primary_fields)
+                do ieq = 1,self%nprimary_fields()
                     temp_fields(ieq) = self%primary_fields(ieq)
                 end do
 
@@ -173,11 +173,11 @@ contains
             if (allocated(self%auxiliary_fields)) then
 
                 ! Allocate temp field array with one extra slot for new field
-                allocate(temp_fields(size(self%auxiliary_fields) + 1), stat=ierr)
+                allocate(temp_fields(self%nauxiliary_fields() + 1), stat=ierr)
                 if (ierr /= 0) call AllocationError
 
                 ! Copy current fields to first temp slots
-                do ifield = 1,size(self%auxiliary_fields)
+                do ifield = 1,self%nauxiliary_fields()
                     temp_fields(ifield) = self%auxiliary_fields(ifield)
                 end do
 
@@ -251,11 +251,11 @@ contains
             if (allocated(self%model_fields)) then
 
                 ! Allocate temp field array with one extra slot for new field
-                allocate(temp_fields(size(self%model_fields) + 1), stat=ierr)
+                allocate(temp_fields(self%nmodel_fields() + 1), stat=ierr)
                 if (ierr /= 0) call AllocationError
 
                 ! Copy current fields to first temp slots
-                do ifield = 1,size(self%model_fields)
+                do ifield = 1,self%nmodel_fields()
                     temp_fields(ifield) = self%model_fields(ifield)
                 end do
 
@@ -293,12 +293,6 @@ contains
 
 
 
-
-
-
-
-
-
     !>  Given an equation index, return the equation name.
     !!
     !!  @author Nathan A. Wukie
@@ -312,8 +306,9 @@ contains
 
         character(:),   allocatable :: user_msg, field_name
 
+
         ! Check bounds
-        user_msg = "properties%get_primary_field_name: Incoming index to return an equation is &
+        user_msg = "properties%get_primary_field_name: Incoming index to return a field name is &
                     out of bounds."
         if (field_index > self%nprimary_fields()) call chidg_signal_one(FATAL,user_msg,field_index)
 
@@ -423,18 +418,13 @@ contains
 
 
         ! Search for character string in self%primary_fields array. If found set index
-        if (allocated(self%primary_fields)) then
-            do ifield = 1,size(self%primary_fields)
-                if (field_string == self%primary_fields(ifield)%name) then
-                    field_index = ifield
-                    found = .true.
-                    exit
-                end if
-            end do
-
-        else
-            field_index = 0
-        end if
+        do ifield = 1,self%nprimary_fields()
+            if (field_string == self%primary_fields(ifield)%name) then
+                field_index = ifield
+                found = .true.
+                exit
+            end if
+        end do
 
 
     end function get_primary_field_index
@@ -471,18 +461,13 @@ contains
 
 
         ! Search for character string in self%auxiliary_fields array. If found set index
-        if (allocated(self%auxiliary_fields)) then
-            do ifield = 1,size(self%auxiliary_fields)
-                if (field_string == self%auxiliary_fields(ifield)%name) then
-                    field_index = ifield
-                    found = .true.
-                    exit
-                end if
-            end do
-
-        else
-            field_index = 0
-        end if
+        do ifield = 1,self%nauxiliary_fields()
+            if (field_string == self%auxiliary_fields(ifield)%name) then
+                field_index = ifield
+                found = .true.
+                exit
+            end if
+        end do
 
 
     end function get_auxiliary_field_index
@@ -519,18 +504,13 @@ contains
 
 
         ! Search for character string in self%auxiliary_fields array. If found set index
-        if (allocated(self%model_fields)) then
-            do ifield = 1,size(self%model_fields)
-                if (field_string == self%model_fields(ifield)%name) then
-                    field_index = ifield
-                    found = .true.
-                    exit
-                end if
-            end do
-
-        else
-            field_index = 0
-        end if
+        do ifield = 1,self%nmodel_fields()
+            if (field_string == self%model_fields(ifield)%name) then
+                field_index = ifield
+                found = .true.
+                exit
+            end if
+        end do
 
 
     end function get_model_field_index

@@ -35,8 +35,7 @@ contains
     !!
     !------------------------------------------------------------------------------------------------------------------
     subroutine update_space(data,timing,info)
-        implicit none
-        type(chidg_data_t), intent(inout)   :: data
+        type(chidg_data_t), intent(inout), target :: data
         real(rk),           optional        :: timing
         integer(ik),        optional        :: info
 
@@ -59,7 +58,7 @@ contains
 
 
         ! Initialize Chidg Worker references
-        call worker%init(data%mesh, data%eqnset%prop, data%sdata, cache)
+        call worker%init(data%mesh, data%eqnset(:)%prop, data%sdata, cache)
 
 
         !

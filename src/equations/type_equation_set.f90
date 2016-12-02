@@ -176,11 +176,11 @@ contains
     !--------------------------------------------------------------------------------------
     subroutine add_operator(self,string)
         class(equation_set_t),  intent(inout)   :: self
-        character(len=*),       intent(in)      :: string
+        character(*),           intent(in)      :: string
 
         class(operator_t),          allocatable :: new_operator
         class(operator_wrapper_t),  allocatable :: temp(:)
-        integer(ik)     :: ierr, iflux, operator_type, ifield, imodel
+        integer(ik)                             :: ierr, iflux, operator_type, ifield, imodel
 
 
         !

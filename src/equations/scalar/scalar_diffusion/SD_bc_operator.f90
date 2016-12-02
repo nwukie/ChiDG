@@ -109,10 +109,10 @@ contains
         !
         ! Interpolate boundary condition state to face quadrature nodes
         !
-        u     = worker%get_primary_field_face(iu, 'value'     , 'boundary')
-        dudx  = worker%get_primary_field_face(iu, 'ddx + lift', 'boundary')
-        dudy  = worker%get_primary_field_face(iu, 'ddy + lift', 'boundary')
-        dudz  = worker%get_primary_field_face(iu, 'ddz + lift', 'boundary')
+        u     = worker%get_primary_field_face('u',iu, 'value'     , 'boundary')
+        dudx  = worker%get_primary_field_face('u',iu, 'ddx + lift', 'boundary')
+        dudy  = worker%get_primary_field_face('u',iu, 'ddy + lift', 'boundary')
+        dudz  = worker%get_primary_field_face('u',iu, 'ddz + lift', 'boundary')
 
 
         normx = worker%normal(1)
@@ -136,7 +136,7 @@ contains
 
         integrand = flux_x*normx + flux_y*normy + flux_z*normz
 
-        call worker%integrate_boundary(iu, integrand)
+        call worker%integrate_boundary('u',iu, integrand)
 
 
     end subroutine compute

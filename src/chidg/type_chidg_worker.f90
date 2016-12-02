@@ -62,7 +62,7 @@ module type_chidg_worker
     type, public :: chidg_worker_t
     
         type(mesh_t),           pointer :: mesh(:)
-        type(properties_t),     pointer :: prop(:)
+        type(properties_t), allocatable :: prop(:)
         type(solverdata_t),     pointer :: solverdata
         type(chidg_cache_t),    pointer :: cache
 
@@ -140,9 +140,15 @@ contains
         type(solverdata_t),     intent(in), target  :: solverdata
         type(chidg_cache_t),    intent(in), target  :: cache
 
+        character(:),   allocatable :: temp_name
 
         self%mesh       => mesh
-        self%prop       => prop
+        ! having issue with using a pointer here for prop. Theory is that the compiler
+        ! creates a temporary array of prop(:) from eqnset(:)%prop when it is passing it in. 
+        ! Then after this routine exists, that array ceases to exists and so
+        ! points to nothing. For now we will just assign, but probably want this
+        ! linked back up in the future.
+        self%prop       =  prop
         self%solverdata => solverdata
         self%cache      => cache
 
@@ -275,13 +281,13 @@ contains
 
 
         if (self%interpolation_source == 'element') then
-            var_gq = self%get_primary_field_element(ifield,interp_type) 
+            var_gq = self%get_primary_field_element(field,ifield,interp_type) 
         else if (self%interpolation_source == 'face interior') then
-            var_gq = self%get_primary_field_face(ifield,interp_type,'face interior')
+            var_gq = self%get_primary_field_face(field,ifield,interp_type,'face interior')
         else if (self%interpolation_source == 'face exterior') then
-            var_gq = self%get_primary_field_face(ifield,interp_type,'face exterior')
+            var_gq = self%get_primary_field_face(field,ifield,interp_type,'face exterior')
         else if (self%interpolation_source == 'boundary') then
-            var_gq = self%get_primary_field_face(ifield,interp_type,'boundary')
+            var_gq = self%get_primary_field_face(field,ifield,interp_type,'boundary')
         end if
 
     end function get_primary_field_general
@@ -305,8 +311,9 @@ contains
     !!
     !!
     !--------------------------------------------------------------------------------------
-    function get_primary_field_face(self,ieqn,interp_type,interp_source) result(var_gq)
+    function get_primary_field_face(self,field,ieqn,interp_type,interp_source) result(var_gq)
         class(chidg_worker_t),  intent(in)  :: self
+        character(*),           intent(in)  :: field
         integer(ik),            intent(in)  :: ieqn
         character(*),           intent(in)  :: interp_type
         character(*),           intent(in)  :: interp_source
@@ -314,7 +321,7 @@ contains
         type(AD_D),     allocatable, dimension(:)   :: var_gq
         character(:),   allocatable                 :: cache_component, cache_type, user_msg
         type(face_info_t)                           :: face_info
-        integer(ik)                                 :: idirection, igq
+        integer(ik)                                 :: idirection, igq, ifield
 
 
 
@@ -370,21 +377,16 @@ contains
         ! Retrieve data from cache
         !
         if (cache_type == 'value') then
-            var_gq = self%cache%get_data(cache_component,cache_type,idirection,self%function_info%seed,ieqn,self%iface)
+            var_gq = self%cache%get_data(field,cache_component,cache_type,idirection,self%function_info%seed,ieqn,self%iface)
 
         else if (cache_type == 'derivative') then
-
-            ! Get DG derivative on face
-            var_gq = self%cache%get_data(cache_component,'derivative',idirection,self%function_info%seed,ieqn,self%iface)
-
+            var_gq = self%cache%get_data(field,cache_component,'derivative',idirection,self%function_info%seed,ieqn,self%iface)
 
         else if (cache_type == 'derivative + lift') then
-
-            ! Get DG derivative on face
-            var_gq = self%cache%get_data(cache_component,'derivative',idirection,self%function_info%seed,ieqn,self%iface)
+            var_gq = self%cache%get_data(field,cache_component,'derivative',idirection,self%function_info%seed,ieqn,self%iface)
 
             ! Modify derivative by face lift stabilized by a factor of NFACES
-            var_gq = var_gq + real(NFACES,rk)*self%cache%get_data(cache_component,'lift face',idirection,self%function_info%seed,ieqn,self%iface)
+            var_gq = var_gq + real(NFACES,rk)*self%cache%get_data(field,cache_component,'lift face',idirection,self%function_info%seed,ieqn,self%iface)
 
         end if
 
@@ -408,8 +410,9 @@ contains
     !!
     !!
     !---------------------------------------------------------------------------------------
-    function get_primary_field_element(self,ieqn,interp_type) result(var_gq)
+    function get_primary_field_element(self,field,ieqn,interp_type) result(var_gq)
         class(chidg_worker_t),  intent(in)  :: self
+        character(*),           intent(in)  :: field
         integer(ik),            intent(in)  :: ieqn
         character(*),           intent(in)  :: interp_type
 
@@ -418,8 +421,6 @@ contains
         type(face_info_t)               :: face_info
         character(:),   allocatable     :: cache_component, cache_type
         integer(ik)                     :: idirection, igq, iface
-
-
 
 
         !
@@ -460,30 +461,21 @@ contains
         ! Retrieve data from cache
         !
         if ( cache_type == 'value') then
-            var_gq = self%cache%get_data('element',cache_type,idirection,self%function_info%seed,ieqn)
-
-
+            var_gq = self%cache%get_data(field,'element',cache_type,idirection,self%function_info%seed,ieqn)
 
         else if (cache_type == 'derivative') then
-            ! Get DG derivative
-            var_gq = self%cache%get_data('element','derivative',idirection,self%function_info%seed,ieqn)
-
-
+            var_gq = self%cache%get_data(field,'element','derivative',idirection,self%function_info%seed,ieqn)
 
         else if (cache_type == 'derivative + lift') then
-            ! Get DG derivative
-            var_gq = self%cache%get_data('element','derivative',idirection,self%function_info%seed,ieqn)
+            var_gq = self%cache%get_data(field,'element','derivative',idirection,self%function_info%seed,ieqn)
 
             ! Add lift contributions from each face
             do iface = 1,NFACES
-                tmp_gq = self%cache%get_data('face interior', 'lift element', idirection, self%function_info%seed,ieqn,iface)
+                tmp_gq = self%cache%get_data(field,'face interior', 'lift element', idirection, self%function_info%seed,ieqn,iface)
                 var_gq = var_gq + tmp_gq
             end do
 
         end if
-
-
-
 
 
 
@@ -582,8 +574,9 @@ contains
     !!
     !!
     !---------------------------------------------------------------------------------------
-    subroutine store_bc_state(self,ieqn,cache_data,data_type)
+    subroutine store_bc_state(self,field,ieqn,cache_data,data_type)
         class(chidg_worker_t),  intent(inout)   :: self
+        character(*),           intent(in)      :: field
         integer(ik),            intent(in)      :: ieqn
         type(AD_D),             intent(in)      :: cache_data(:)
         character(*),           intent(in)      :: data_type
@@ -619,10 +612,10 @@ contains
         ! Store bc state in cache, face exterior component
         !
         if (cache_type == 'value') then
-            call self%cache%set_data('face exterior',cache_data,'value',0,self%function_info%seed,ieqn,self%iface)
+            call self%cache%set_data(field,'face exterior',cache_data,'value',0,self%function_info%seed,ieqn,self%iface)
 
         else if (cache_type == 'derivative') then
-            call self%cache%set_data('face exterior',cache_data,'derivative',idirection,self%function_info%seed,ieqn,self%iface)
+            call self%cache%set_data(field,'face exterior',cache_data,'derivative',idirection,self%function_info%seed,ieqn,self%iface)
 
         end if
 
@@ -684,10 +677,10 @@ contains
         ! Store bc state in cache, face exterior component
         !
         if (cache_type == 'value') then
-            call self%cache%set_data('face exterior',cache_data,'value',0,self%function_info%seed,ifield,self%iface)
+            call self%cache%set_data(model_field,self%interpolation_source,cache_data,'value',0,self%function_info%seed,ifield,self%iface)
 
         else if (cache_type == 'derivative') then
-            call self%cache%set_data('face exterior',cache_data,'derivative',idirection,self%function_info%seed,ifield,self%iface)
+            call self%cache%set_data(model_field,self%interpolation_source,cache_data,'derivative',idirection,self%function_info%seed,ifield,self%iface)
 
         end if
 
@@ -718,13 +711,18 @@ contains
     !!
     !!
     !----------------------------------------------------------------------------------------
-    subroutine integrate_boundary(self,ieqn,integrand)
+    subroutine integrate_boundary(self,primary_field,ieqn,integrand)
         class(chidg_worker_t),  intent(in)      :: self
+        character(*),           intent(in)      :: primary_field
         integer(ik),            intent(in)      :: ieqn
         type(AD_D),             intent(inout)   :: integrand(:)
 
+        integer(ik) :: ifield, idomain_l
 
-        call integrate_boundary_scalar_flux(self%mesh,self%solverdata,self%face_info(),self%function_info,ieqn,integrand)
+        idomain_l = self%element_info%idomain_l
+        ifield    = self%prop(idomain_l)%get_primary_field_index(primary_field)
+
+        call integrate_boundary_scalar_flux(self%mesh,self%solverdata,self%face_info(),self%function_info,ifield,integrand)
 
 
     end subroutine integrate_boundary
@@ -743,15 +741,21 @@ contains
     !!
     !!
     !---------------------------------------------------------------------------------------
-    subroutine integrate_volume_flux(self,ieqn,integrand_x,integrand_y,integrand_z)
+    subroutine integrate_volume_flux(self,primary_field,ieqn,integrand_x,integrand_y,integrand_z)
         class(chidg_worker_t),  intent(in)      :: self
+        character(*),           intent(in)      :: primary_field
         integer(ik),            intent(in)      :: ieqn
         type(AD_D),             intent(inout)   :: integrand_x(:)
         type(AD_D),             intent(inout)   :: integrand_y(:)
         type(AD_D),             intent(inout)   :: integrand_z(:)
 
+        integer(ik) :: ifield, idomain_l
 
-        call integrate_volume_vector_flux(self%mesh,self%solverdata,self%element_info,self%function_info,ieqn,integrand_x,integrand_y,integrand_z)
+
+        idomain_l = self%element_info%idomain_l
+        ifield    = self%prop(idomain_l)%get_primary_field_index(primary_field)
+
+        call integrate_volume_vector_flux(self%mesh,self%solverdata,self%element_info,self%function_info,ifield,integrand_x,integrand_y,integrand_z)
 
 
     end subroutine integrate_volume_flux
@@ -770,13 +774,19 @@ contains
     !!
     !!
     !---------------------------------------------------------------------------------------
-    subroutine integrate_volume_source(self,ieqn,integrand)
+    subroutine integrate_volume_source(self,primary_field,ieqn,integrand)
         class(chidg_worker_t),  intent(in)      :: self
+        character(*),           intent(in)      :: primary_field
         integer(ik),            intent(in)      :: ieqn
         type(AD_D),             intent(inout)   :: integrand(:)
 
+        integer(ik) :: ifield, idomain_l
 
-        call integrate_volume_scalar_source(self%mesh,self%solverdata,self%element_info,self%function_info,ieqn,integrand)
+
+        idomain_l = self%element_info%idomain_l
+        ifield    = self%prop(idomain_l)%get_primary_field_index(primary_field)
+
+        call integrate_volume_scalar_source(self%mesh,self%solverdata,self%element_info,self%function_info,ifield,integrand)
 
 
     end subroutine integrate_volume_source

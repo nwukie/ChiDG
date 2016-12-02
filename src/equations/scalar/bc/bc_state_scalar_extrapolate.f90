@@ -93,26 +93,21 @@ contains
 
 
         !
-        ! Get u_m from face interior to extrapolate
+        ! Get u and grad(u) from face interior to extrapolate
         !
-        u_bc    = worker%get_primary_field_face(iu, 'value', 'face interior')
-
-
-        !
-        ! Get gradient of u from interior and extrapolate to boundary condition gradient
-        !
-        dudx_bc = worker%get_primary_field_face(iu, 'ddx', 'face interior')
-        dudy_bc = worker%get_primary_field_face(iu, 'ddy', 'face interior')
-        dudz_bc = worker%get_primary_field_face(iu, 'ddz', 'face interior')
+        u_bc    = worker%get_primary_field_face('u',iu, 'value', 'face interior')
+        dudx_bc = worker%get_primary_field_face('u',iu, 'ddx'  , 'face interior')
+        dudy_bc = worker%get_primary_field_face('u',iu, 'ddy'  , 'face interior')
+        dudz_bc = worker%get_primary_field_face('u',iu, 'ddz'  , 'face interior')
 
 
         !
         ! Store as extrpolated boundary condition value and gradient
         !
-        call worker%store_bc_state(iu, u_bc,    'value')
-        call worker%store_bc_state(iu, dudx_bc, 'ddx'  )
-        call worker%store_bc_state(iu, dudy_bc, 'ddy'  )
-        call worker%store_bc_state(iu, dudz_bc, 'ddz'  )
+        call worker%store_bc_state('u',iu, u_bc,    'value')
+        call worker%store_bc_state('u',iu, dudx_bc, 'ddx'  )
+        call worker%store_bc_state('u',iu, dudy_bc, 'ddy'  )
+        call worker%store_bc_state('u',iu, dudz_bc, 'ddz'  )
 
 
     end subroutine compute_bc_state

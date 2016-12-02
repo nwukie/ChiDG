@@ -118,11 +118,11 @@ contains
         !
         ! Interpolate boundary condition state to face quadrature nodes
         !
-        rho_bc  = worker%get_primary_field_face(irho,  'value', 'boundary')
-        rhou_bc = worker%get_primary_field_face(irhou, 'value', 'boundary')
-        rhov_bc = worker%get_primary_field_face(irhov, 'value', 'boundary')
-        rhow_bc = worker%get_primary_field_face(irhow, 'value', 'boundary')
-        rhoE_bc = worker%get_primary_field_face(irhoE, 'value', 'boundary')
+        rho_bc  = worker%get_primary_field_face("Density"   ,irho,  'value', 'boundary')
+        rhou_bc = worker%get_primary_field_face("X-Momentum",irhou, 'value', 'boundary')
+        rhov_bc = worker%get_primary_field_face("Y-Momentum",irhov, 'value', 'boundary')
+        rhow_bc = worker%get_primary_field_face("Z-Momentum",irhow, 'value', 'boundary')
+        rhoE_bc = worker%get_primary_field_face("Energy"    ,irhoE, 'value', 'boundary')
 
 
         normx = worker%normal(1)
@@ -165,7 +165,7 @@ contains
 
         integrand = flux_x*normx + flux_y*normy + flux_z*normz
 
-        call worker%integrate_boundary(irho, integrand)
+        call worker%integrate_boundary('Density',irho, integrand)
 
         !=================================================
         ! x-momentum flux
@@ -176,7 +176,7 @@ contains
 
         integrand = flux_x*normx + flux_y*normy + flux_z*normz
 
-        call worker%integrate_boundary(irhou, integrand)
+        call worker%integrate_boundary('X-Momentum',irhou, integrand)
 
         !=================================================
         ! y-momentum flux
@@ -187,7 +187,7 @@ contains
 
         integrand = flux_x*normx + flux_y*normy + flux_z*normz
 
-        call worker%integrate_boundary(irhov, integrand)
+        call worker%integrate_boundary('Y-Momentum',irhov, integrand)
 
         !=================================================
         ! z-momentum flux
@@ -198,7 +198,7 @@ contains
 
         integrand = flux_x*normx + flux_y*normy + flux_z*normz
 
-        call worker%integrate_boundary(irhow, integrand)
+        call worker%integrate_boundary('Z-Momentum',irhow, integrand)
 
         !=================================================
         ! Energy flux
@@ -209,7 +209,7 @@ contains
 
         integrand = flux_x*normx + flux_y*normy + flux_z*normz
 
-        call worker%integrate_boundary(irhoE, integrand)
+        call worker%integrate_boundary('Energy',irhoE, integrand)
 
     end subroutine compute
     !**********************************************************************************************

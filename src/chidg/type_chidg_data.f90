@@ -239,6 +239,7 @@ contains
         temp_eqnset(idomain_l) = equation_builder_factory%produce(eqnset,'default')
 
 
+
         !
         ! Move resized temp allocation back to chidg_data container. 
         ! Be careful about pointer components here! Their location in memory has changed.
@@ -247,7 +248,6 @@ contains
         call move_alloc(temp_mesh,self%mesh)
         call move_alloc(temp_bcset,self%bcset)
         call move_alloc(temp_eqnset,self%eqnset)
-
 
 
     end subroutine add_domain

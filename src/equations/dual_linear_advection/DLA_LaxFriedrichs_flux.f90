@@ -116,11 +116,11 @@ contains
         !
         ! Interpolate solution to quadrature nodes
         !
-        ua_r = worker%get_primary_field_face(iu_a, 'value', 'face interior')
-        ua_l = worker%get_primary_field_face(iu_a, 'value', 'face exterior')
+        ua_r = worker%get_primary_field_face('u_a',iu_a, 'value', 'face interior')
+        ua_l = worker%get_primary_field_face('u_a',iu_a, 'value', 'face exterior')
 
-        ub_r = worker%get_primary_field_face(iu_b, 'value', 'face interior')
-        ub_l = worker%get_primary_field_face(iu_b, 'value', 'face exterior')
+        ub_r = worker%get_primary_field_face('u_b',iu_b, 'value', 'face interior')
+        ub_l = worker%get_primary_field_face('u_b',iu_b, 'value', 'face exterior')
 
 
 
@@ -140,7 +140,7 @@ contains
         flux_z = (cz * (ua_l - ua_r)/TWO )  *  normz * unormz
 
         integrand = flux_x + flux_y + flux_z
-        call worker%integrate_boundary(iu_a,integrand)
+        call worker%integrate_boundary('u_a',iu_a,integrand)
 
 
 
@@ -152,7 +152,7 @@ contains
         flux_z = (cz * (ub_l - ub_r)/TWO )  *  normz * unormz
 
         integrand = flux_x + flux_y + flux_z
-        call worker%integrate_boundary(iu_b,integrand)
+        call worker%integrate_boundary('u_b',iu_b,integrand)
 
 
 

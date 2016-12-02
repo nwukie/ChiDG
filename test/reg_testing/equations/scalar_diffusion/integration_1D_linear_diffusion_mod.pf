@@ -245,7 +245,7 @@ contains
         !
         ! Interpolate solution to quadrature nodes
         !
-        source = worker%get_primary_field_element(iu, "ddx + lift")
+        source = worker%get_primary_field_element('u',iu, "ddx + lift")
 
         x = worker%x("volume")
 
@@ -256,7 +256,7 @@ contains
         !
         ! Integrate volume flux
         !
-        call worker%integrate_volume(iu, source)
+        call worker%integrate_volume('u',iu, source)
 
 
     end subroutine compute

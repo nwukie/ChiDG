@@ -83,21 +83,24 @@ contains
         !
         ! Interpolate solution to quadrature nodes
         !
+        print*, 'ideal_gas - 1'
         rho  = worker%get_primary_field_general('Density',    'value')
         rhou = worker%get_primary_field_general('X-Momentum', 'value')
         rhov = worker%get_primary_field_general('Y-Momentum', 'value')
         rhow = worker%get_primary_field_general('Z-Momentum', 'value')
         rhoE = worker%get_primary_field_general('Energy',     'value')
-
-
+        print*, 'ideal_gas - 2'
 
         P = (self%gam-ONE)*(rhoE - HALF*( (rhou*rhou) + (rhov*rhov) + (rhow*rhow) )/rho )
         T = P/(rho*self%R)
 
 
 
+        print*, 'ideal_gas - 3'
         call worker%store_model_field('Pressure',    'value', P)
+        print*, 'ideal_gas - 4'
         call worker%store_model_field('Temperature', 'value', T)
+        print*, 'ideal_gas - 5'
 
 
     end subroutine compute

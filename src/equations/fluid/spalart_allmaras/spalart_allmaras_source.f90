@@ -111,23 +111,23 @@ contains
         !
         ! Get equation indices
         !
-        irho         = prop%get_primary_field_index("Density"   )
-        irhou        = prop%get_primary_field_index("X-Momentum")
-        irhov        = prop%get_primary_field_index("Y-Momentum")
-        irhow        = prop%get_primary_field_index("Z-Momentum")
-        irhoE        = prop%get_primary_field_index("Energy"    )
+        irho         = prop%get_primary_field_index("Density"          )
+        irhou        = prop%get_primary_field_index("X-Momentum"       )
+        irhov        = prop%get_primary_field_index("Y-Momentum"       )
+        irhow        = prop%get_primary_field_index("Z-Momentum"       )
+        irhoE        = prop%get_primary_field_index("Energy"           )
         irho_nutilde = prop%get_primary_field_index("Density * NuTilde")
 
 
         !
         ! Interpolate solution to quadrature nodes
         !
-        rho         = worker%get_primary_field_element(irho,        'value')
-        rhou        = worker%get_primary_field_element(irhou,       'value')
-        rhov        = worker%get_primary_field_element(irhov,       'value')
-        rhow        = worker%get_primary_field_element(irhow,       'value')
-        rhoE        = worker%get_primary_field_element(irhoE,       'value')
-        rho_nutilde = worker%get_primary_field_element(irho_nutilde,'value')
+        rho         = worker%get_primary_field_element("Density"          ,irho,        'value')
+        rhou        = worker%get_primary_field_element("X-Momentum"       ,irhou,       'value')
+        rhov        = worker%get_primary_field_element("Y-Momentum"       ,irhov,       'value')
+        rhow        = worker%get_primary_field_element("Z-Momentum"       ,irhow,       'value')
+        rhoE        = worker%get_primary_field_element("Energy"           ,irhoE,       'value')
+        rho_nutilde = worker%get_primary_field_element("Density * NuTilde",irho_nutilde,'value')
 
 
 
@@ -135,29 +135,29 @@ contains
         !
         ! Interpolate solution gradients to quadrature nodes
         !
-        drho_dx  = worker%get_primary_field_element(irho,  'ddx+lift')
-        drho_dy  = worker%get_primary_field_element(irho,  'ddy+lift')
-        drho_dz  = worker%get_primary_field_element(irho,  'ddz+lift')
+        drho_dx  = worker%get_primary_field_element("Density"   ,irho,  'ddx+lift')
+        drho_dy  = worker%get_primary_field_element("Density"   ,irho,  'ddy+lift')
+        drho_dz  = worker%get_primary_field_element("Density"   ,irho,  'ddz+lift')
 
-        drhou_dx = worker%get_primary_field_element(irhou, 'ddx+lift')
-        drhou_dy = worker%get_primary_field_element(irhou, 'ddy+lift')
-        drhou_dz = worker%get_primary_field_element(irhou, 'ddz+lift')
+        drhou_dx = worker%get_primary_field_element("X-Momentum",irhou, 'ddx+lift')
+        drhou_dy = worker%get_primary_field_element("X-Momentum",irhou, 'ddy+lift')
+        drhou_dz = worker%get_primary_field_element("X-Momentum",irhou, 'ddz+lift')
 
-        drhov_dx = worker%get_primary_field_element(irhov, 'ddx+lift')
-        drhov_dy = worker%get_primary_field_element(irhov, 'ddy+lift')
-        drhov_dz = worker%get_primary_field_element(irhov, 'ddz+lift')
+        drhov_dx = worker%get_primary_field_element("Z-Momentum",irhov, 'ddx+lift')
+        drhov_dy = worker%get_primary_field_element("Z-Momentum",irhov, 'ddy+lift')
+        drhov_dz = worker%get_primary_field_element("Z-Momentum",irhov, 'ddz+lift')
 
-        drhow_dx = worker%get_primary_field_element(irhow, 'ddx+lift')
-        drhow_dy = worker%get_primary_field_element(irhow, 'ddy+lift')
-        drhow_dz = worker%get_primary_field_element(irhow, 'ddz+lift')
+        drhow_dx = worker%get_primary_field_element("Z-Momentum",irhow, 'ddx+lift')
+        drhow_dy = worker%get_primary_field_element("Z-Momentum",irhow, 'ddy+lift')
+        drhow_dz = worker%get_primary_field_element("Z-Momentum",irhow, 'ddz+lift')
 
-        drhoE_dx = worker%get_primary_field_element(irhoE, 'ddx+lift')
-        drhoE_dy = worker%get_primary_field_element(irhoE, 'ddy+lift')
-        drhoE_dz = worker%get_primary_field_element(irhoE, 'ddz+lift')
+        drhoE_dx = worker%get_primary_field_element("Energy"    ,irhoE, 'ddx+lift')
+        drhoE_dy = worker%get_primary_field_element("Energy"    ,irhoE, 'ddy+lift')
+        drhoE_dz = worker%get_primary_field_element("Energy"    ,irhoE, 'ddz+lift')
 
-        drho_nutilde_dx = worker%get_primary_field_element(irho_nutilde, 'ddx+lift')
-        drho_nutilde_dy = worker%get_primary_field_element(irho_nutilde, 'ddy+lift')
-        drho_nutilde_dz = worker%get_primary_field_element(irho_nutilde, 'ddz+lift')
+        drho_nutilde_dx = worker%get_primary_field_element("Density * NuTilde",irho_nutilde, 'ddx+lift')
+        drho_nutilde_dy = worker%get_primary_field_element("Density * NuTilde",irho_nutilde, 'ddy+lift')
+        drho_nutilde_dz = worker%get_primary_field_element("Density * NuTilde",irho_nutilde, 'ddz+lift')
 
 
 
@@ -330,7 +330,7 @@ contains
                   (SA_c_b2/SA_sigma)*rho*(dnutilde_dx*dnutilde_dx + dnutilde_dy*dnutilde_dy + dnutilde_dz*dnutilde_dz)  +  &
                   (ONE/SA_sigma)*(nu + f_n1*nutilde)*(drho_dx*dnutilde_dx + drho_dy*dnutilde_dy + drho_dz*dnutilde_dz)
 
-        call worker%integrate_volume(irho_nutilde, source)
+        call worker%integrate_volume("Density * NuTilde",irho_nutilde, source)
 
     end subroutine compute
     !*********************************************************************************************************

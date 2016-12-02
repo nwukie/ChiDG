@@ -93,15 +93,15 @@ contains
         !
         ! Interpolate solution to quadrature nodes
         !
-        u_m    = worker%get_primary_field_face(iu, 'value', 'face interior')
-        dudx_m = worker%get_primary_field_face(iu, 'ddx'  , 'face interior')
-        dudy_m = worker%get_primary_field_face(iu, 'ddy'  , 'face interior')
-        dudz_m = worker%get_primary_field_face(iu, 'ddz'  , 'face interior')
+        u_m    = worker%get_primary_field_face('u',iu, 'value', 'face interior')
+        dudx_m = worker%get_primary_field_face('u',iu, 'ddx'  , 'face interior')
+        dudy_m = worker%get_primary_field_face('u',iu, 'ddy'  , 'face interior')
+        dudz_m = worker%get_primary_field_face('u',iu, 'ddz'  , 'face interior')
 
-        u_p    = worker%get_primary_field_face(iu, 'value', 'face exterior')
-        dudx_p = worker%get_primary_field_face(iu, 'ddx'  , 'face exterior')
-        dudy_p = worker%get_primary_field_face(iu, 'ddy'  , 'face exterior')
-        dudz_p = worker%get_primary_field_face(iu, 'ddz'  , 'face exterior')
+        u_p    = worker%get_primary_field_face('u',iu, 'value', 'face exterior')
+        dudx_p = worker%get_primary_field_face('u',iu, 'ddx'  , 'face exterior')
+        dudy_p = worker%get_primary_field_face('u',iu, 'ddy'  , 'face exterior')
+        dudz_p = worker%get_primary_field_face('u',iu, 'ddz'  , 'face exterior')
 
 
         !
@@ -141,7 +141,7 @@ contains
         !
         ! Integrate flux
         !
-        call worker%integrate_boundary(iu,integrand)
+        call worker%integrate_boundary('u',iu,integrand)
 
 
     end subroutine compute

@@ -89,10 +89,10 @@ contains
         !
         ! Interpolate solution to quadrature nodes
         !
-        u    = worker%get_primary_field_element(iu, 'value'     )
-        dudx = worker%get_primary_field_element(iu, 'ddx + lift')
-        dudy = worker%get_primary_field_element(iu, 'ddy + lift')
-        dudz = worker%get_primary_field_element(iu, 'ddz + lift')
+        u    = worker%get_primary_field_element('u',iu, 'value'     )
+        dudx = worker%get_primary_field_element('u',iu, 'ddx + lift')
+        dudy = worker%get_primary_field_element('u',iu, 'ddy + lift')
+        dudz = worker%get_primary_field_element('u',iu, 'ddz + lift')
 
 
         !
@@ -111,7 +111,7 @@ contains
         !
         ! Integrate volume flux
         !
-        call worker%integrate_volume(iu, flux_x, flux_y, flux_z)
+        call worker%integrate_volume('u',iu, flux_x, flux_y, flux_z)
 
 
 

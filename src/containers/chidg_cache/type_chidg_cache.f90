@@ -106,8 +106,9 @@ contains
     !!
     !!
     !----------------------------------------------------------------------------------------
-    subroutine set_data(self,cache_component,cache_data,data_type,idirection,seed,ifield,iface)
+    subroutine set_data(self,field,cache_component,cache_data,data_type,idirection,seed,ifield,iface)
         class(chidg_cache_t),   intent(inout)           :: self
+        character(*),           intent(in)              :: field
         character(*),           intent(in)              :: cache_component
         type(AD_D),             intent(in)              :: cache_data(:)
         character(*),           intent(in)              :: data_type
@@ -140,13 +141,13 @@ contains
         !
         select case(cache_component)
             case('element')
-                call self%element%set_data(cache_data,data_type,idirection,seed,ifield)
+                call self%element%set_data(field,cache_data,data_type,idirection,seed,ifield)
 
             case('face interior')
-                call self%faces(iface,1)%set_data(cache_data,data_type,idirection,seed,ifield)
+                call self%faces(iface,1)%set_data(field,cache_data,data_type,idirection,seed,ifield)
 
             case('face exterior')
-                call self%faces(iface,2)%set_data(cache_data,data_type,idirection,seed,ifield)
+                call self%faces(iface,2)%set_data(field,cache_data,data_type,idirection,seed,ifield)
 
             case default 
                 user_msg = "chidg_cache%set_data: An invalid value for the cache_component incoming parameter  &
@@ -177,8 +178,9 @@ contains
     !!
     !!
     !----------------------------------------------------------------------------------------
-    function get_data(self,cache_component,cache_type,idirection,seed,ifield,iface) result(cache_data)
+    function get_data(self,field,cache_component,cache_type,idirection,seed,ifield,iface) result(cache_data)
         class(chidg_cache_t),   intent(inout)           :: self
+        character(*),           intent(in)              :: field
         character(*),           intent(in)              :: cache_component
         character(*),           intent(in)              :: cache_type
         integer(ik),            intent(in)              :: idirection
@@ -193,13 +195,13 @@ contains
 
         select case (trim(cache_component))
             case ('element')
-                cache_data = self%element%get_data(cache_type,idirection,seed,ifield)
+                cache_data = self%element%get_data(field,cache_type,idirection,seed,ifield)
 
             case ('face interior')
-                cache_data = self%faces(iface,1)%get_data(cache_type,idirection,seed,ifield)
+                cache_data = self%faces(iface,1)%get_data(field,cache_type,idirection,seed,ifield)
 
             case ('face exterior')
-                cache_data = self%faces(iface,2)%get_data(cache_type,idirection,seed,ifield)
+                cache_data = self%faces(iface,2)%get_data(field,cache_type,idirection,seed,ifield)
 
             case default
                 call chidg_signal(FATAL,'chidg_cache%get_data: Error in cache_component string')

@@ -128,36 +128,36 @@ contains
         !
         ! Interpolate interior solution to quadrature nodes
         !
-        rho_m  = worker%get_primary_field_face(irho,  'value', 'face interior')
-        rhou_m = worker%get_primary_field_face(irhou, 'value', 'face interior')
-        rhov_m = worker%get_primary_field_face(irhov, 'value', 'face interior')
-        rhow_m = worker%get_primary_field_face(irhow, 'value', 'face interior')
-        rhoE_m = worker%get_primary_field_face(irhoE, 'value', 'face interior')
+        rho_m  = worker%get_primary_field_face("Density"   ,irho,  'value', 'face interior')
+        rhou_m = worker%get_primary_field_face("X-Momentum",irhou, 'value', 'face interior')
+        rhov_m = worker%get_primary_field_face("Y-Momentum",irhov, 'value', 'face interior')
+        rhow_m = worker%get_primary_field_face("Z-Momentum",irhow, 'value', 'face interior')
+        rhoE_m = worker%get_primary_field_face("Energy"    ,irhoE, 'value', 'face interior')
         p_m = prop%fluid%compute_pressure(rho_m,rhou_m,rhov_m,rhow_m,rhoE_m)
         gam_m = prop%fluid%compute_gamma(rho_m,rhou_m,rhov_m,rhow_m,rhoE_m)
         u_m = rhou_m/rho_m
         v_m = rhov_m/rho_m
         w_m = rhow_m/rho_m
 
-        drho_dx_m  = worker%get_primary_field_face(irho,  'ddx', 'face interior')
-        drho_dy_m  = worker%get_primary_field_face(irho,  'ddy', 'face interior')
-        drho_dz_m  = worker%get_primary_field_face(irho,  'ddz', 'face interior')
+        drho_dx_m  = worker%get_primary_field_face("Density"   ,irho,  'ddx', 'face interior')
+        drho_dy_m  = worker%get_primary_field_face("Density"   ,irho,  'ddy', 'face interior')
+        drho_dz_m  = worker%get_primary_field_face("Density"   ,irho,  'ddz', 'face interior')
 
-        drhou_dx_m = worker%get_primary_field_face(irhou, 'ddx', 'face interior')
-        drhou_dy_m = worker%get_primary_field_face(irhou, 'ddy', 'face interior')
-        drhou_dz_m = worker%get_primary_field_face(irhou, 'ddz', 'face interior')
+        drhou_dx_m = worker%get_primary_field_face("X-Momentum",irhou, 'ddx', 'face interior')
+        drhou_dy_m = worker%get_primary_field_face("X-Momentum",irhou, 'ddy', 'face interior')
+        drhou_dz_m = worker%get_primary_field_face("X-Momentum",irhou, 'ddz', 'face interior')
 
-        drhov_dx_m = worker%get_primary_field_face(irhov, 'ddx', 'face interior')
-        drhov_dy_m = worker%get_primary_field_face(irhov, 'ddy', 'face interior')
-        drhov_dz_m = worker%get_primary_field_face(irhov, 'ddz', 'face interior')
+        drhov_dx_m = worker%get_primary_field_face("Y-Momentum",irhov, 'ddx', 'face interior')
+        drhov_dy_m = worker%get_primary_field_face("Y-Momentum",irhov, 'ddy', 'face interior')
+        drhov_dz_m = worker%get_primary_field_face("Y-Momentum",irhov, 'ddz', 'face interior')
 
-        drhow_dx_m = worker%get_primary_field_face(irhow, 'ddx', 'face interior')
-        drhow_dy_m = worker%get_primary_field_face(irhow, 'ddy', 'face interior')
-        drhow_dz_m = worker%get_primary_field_face(irhow, 'ddz', 'face interior')
+        drhow_dx_m = worker%get_primary_field_face("Z-Momentum",irhow, 'ddx', 'face interior')
+        drhow_dy_m = worker%get_primary_field_face("Z-Momentum",irhow, 'ddy', 'face interior')
+        drhow_dz_m = worker%get_primary_field_face("Z-Momentum",irhow, 'ddz', 'face interior')
         
-        drhoE_dx_m = worker%get_primary_field_face(irhoE, 'ddx', 'face interior')
-        drhoE_dy_m = worker%get_primary_field_face(irhoE, 'ddy', 'face interior')
-        drhoE_dz_m = worker%get_primary_field_face(irhoE, 'ddz', 'face interior')
+        drhoE_dx_m = worker%get_primary_field_face("Energy"    ,irhoE, 'ddx', 'face interior')
+        drhoE_dy_m = worker%get_primary_field_face("Energy"    ,irhoE, 'ddy', 'face interior')
+        drhoE_dz_m = worker%get_primary_field_face("Energy"    ,irhoE, 'ddz', 'face interior')
 
 
 
@@ -198,38 +198,38 @@ contains
         !
         ! Store boundary condition state
         !
-        call worker%store_bc_state(irho, rho_bc, 'value')
-        call worker%store_bc_state(irhou,rhou_bc,'value')
-        call worker%store_bc_state(irhov,rhov_bc,'value')
-        call worker%store_bc_state(irhow,rhow_bc,'value')
-        call worker%store_bc_state(irhoE,rhoE_bc,'value')
+        call worker%store_bc_state("Density"   ,irho, rho_bc, 'value')
+        call worker%store_bc_state("X-Momentum",irhou,rhou_bc,'value')
+        call worker%store_bc_state("Y-Momentum",irhov,rhov_bc,'value')
+        call worker%store_bc_state("Z-Momentum",irhow,rhow_bc,'value')
+        call worker%store_bc_state("Energy"    ,irhoE,rhoE_bc,'value')
 
 
         drho_dx_m = ZERO
         drho_dy_m = ZERO
         drho_dz_m = ZERO
-        call worker%store_bc_state(irho,  drho_dx_m,  'ddx')
-        call worker%store_bc_state(irho,  drho_dy_m,  'ddy')
-        call worker%store_bc_state(irho,  drho_dz_m,  'ddz')
-
-        call worker%store_bc_state(irhou, drhou_dx_m, 'ddx')
-        call worker%store_bc_state(irhou, drhou_dy_m, 'ddy')
-        call worker%store_bc_state(irhou, drhou_dz_m, 'ddz')
-
-        call worker%store_bc_state(irhov, drhov_dx_m, 'ddx')
-        call worker%store_bc_state(irhov, drhov_dy_m, 'ddy')
-        call worker%store_bc_state(irhov, drhov_dz_m, 'ddz')
-
-        call worker%store_bc_state(irhow, drhow_dx_m, 'ddx')
-        call worker%store_bc_state(irhow, drhow_dy_m, 'ddy')
-        call worker%store_bc_state(irhow, drhow_dz_m, 'ddz')
+        call worker%store_bc_state("Density"   ,irho,  drho_dx_m,  'ddx')
+        call worker%store_bc_state("Density"   ,irho,  drho_dy_m,  'ddy')
+        call worker%store_bc_state("Density"   ,irho,  drho_dz_m,  'ddz')
+                                                
+        call worker%store_bc_state("X-Momentum",irhou, drhou_dx_m, 'ddx')
+        call worker%store_bc_state("X-Momentum",irhou, drhou_dy_m, 'ddy')
+        call worker%store_bc_state("X-Momentum",irhou, drhou_dz_m, 'ddz')
+                                                
+        call worker%store_bc_state("Y-Momentum",irhov, drhov_dx_m, 'ddx')
+        call worker%store_bc_state("Y-Momentum",irhov, drhov_dy_m, 'ddy')
+        call worker%store_bc_state("Y-Momentum",irhov, drhov_dz_m, 'ddz')
+                                                
+        call worker%store_bc_state("Z-Momentum",irhow, drhow_dx_m, 'ddx')
+        call worker%store_bc_state("Z-Momentum",irhow, drhow_dy_m, 'ddy')
+        call worker%store_bc_state("Z-Momentum",irhow, drhow_dz_m, 'ddz')
 
         drhoE_dx_m = ZERO
         drhoE_dy_m = ZERO
         drhoE_dz_m = ZERO
-        call worker%store_bc_state(irhoE, drhoE_dx_m, 'ddx')
-        call worker%store_bc_state(irhoE, drhoE_dy_m, 'ddy')
-        call worker%store_bc_state(irhoE, drhoE_dz_m, 'ddz')
+        call worker%store_bc_state("Energy"    ,irhoE, drhoE_dx_m, 'ddx')
+        call worker%store_bc_state("Energy"    ,irhoE, drhoE_dy_m, 'ddy')
+        call worker%store_bc_state("Energy"    ,irhoE, drhoE_dz_m, 'ddz')
 
 
 

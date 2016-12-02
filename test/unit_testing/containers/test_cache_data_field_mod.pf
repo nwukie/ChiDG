@@ -108,12 +108,13 @@ contains
         !
         ! Call resize routine. THIS IS BEING TESTED.
         !
-        call cache_data_field%resize('face interior',self%chidg%data%mesh,self%chidg%data%eqnset(:)%prop,idomain,ielem,iface)
+        call cache_data_field%resize('Test Field','face interior',self%chidg%data%mesh,self%chidg%data%eqnset(:)%prop,idomain,ielem,iface)
 
 
         !
         ! Test that the cache allocated the correct component
         !
+        @assertEqual(cache_data_field%name,'Test Field')
         @assertTrue(allocated(cache_data_field%value))
         @assertTrue(allocated(cache_data_field%derivative))
         @assertTrue(allocated(cache_data_field%lift_face))
@@ -148,14 +149,14 @@ contains
         !
         ! Call resize routine. THIS IS BEING TESTED.
         !
-        call cache_data_field%resize('face interior',self%chidg%data%mesh,self%chidg%data%eqnset(:)%prop,idomain,ielem,iface)
+        call cache_data_field%resize('Test Field','face interior',self%chidg%data%mesh,self%chidg%data%eqnset(:)%prop,idomain,ielem,iface)
 
 
         !
         ! Test that the cache allocated the correct component
         !
         nnodes_face = self%chidg%data%mesh(idomain)%faces(ielem,iface)%gq%face%nnodes
-        nnodes_vol = self%chidg%data%mesh(idomain)%faces(ielem,iface)%gq%vol%nnodes
+        nnodes_vol  = self%chidg%data%mesh(idomain)%faces(ielem,iface)%gq%vol%nnodes
 
         ! Number of ndoes
         @assertEqual(size(cache_data_field%value,1), nnodes_face)
@@ -210,12 +211,13 @@ contains
         !
         ! Call resize routine. THIS IS BEING TESTED.
         !
-        call cache_data_field%resize('face exterior',self%chidg%data%mesh,self%chidg%data%eqnset(:)%prop,idomain,ielem,iface)
+        call cache_data_field%resize('Test Field','face exterior',self%chidg%data%mesh,self%chidg%data%eqnset(:)%prop,idomain,ielem,iface)
 
 
         !
         ! Test that the cache allocated the correct component
         !
+        @assertEqual(cache_data_field%name, 'Test Field')
         @assertTrue(allocated(cache_data_field%value))
         @assertTrue(allocated(cache_data_field%derivative))
         @assertTrue(allocated(cache_data_field%lift_face))
@@ -250,7 +252,7 @@ contains
         !
         ! Call resize routine. THIS IS BEING TESTED.
         !
-        call cache_data_field%resize('face exterior',self%chidg%data%mesh,self%chidg%data%eqnset(:)%prop,idomain,ielem,iface)
+        call cache_data_field%resize('Test Field','face exterior',self%chidg%data%mesh,self%chidg%data%eqnset(:)%prop,idomain,ielem,iface)
 
 
         !
@@ -318,12 +320,13 @@ contains
         !
         ! Call resize routine. THIS IS BEING TESTED.
         !
-        call cache_data_field%resize('element',self%chidg%data%mesh,self%chidg%data%eqnset(:)%prop,idomain,ielem)
+        call cache_data_field%resize('Test Field','element',self%chidg%data%mesh,self%chidg%data%eqnset(:)%prop,idomain,ielem)
 
 
         !
         ! Test that the cache allocated the correct component
         !
+        @assertEqual(cache_data_field%name,'Test Field')
         @assertTrue(allocated(cache_data_field%value))
         @assertTrue(allocated(cache_data_field%derivative))
         @assertTrue(allocated(cache_data_field%lift_face))
@@ -356,7 +359,7 @@ contains
         !
         ! Call resize routine. THIS IS BEING TESTED.
         !
-        call cache_data_field%resize('element',self%chidg%data%mesh,self%chidg%data%eqnset(:)%prop,idomain,ielem)
+        call cache_data_field%resize('Test Field','element',self%chidg%data%mesh,self%chidg%data%eqnset(:)%prop,idomain,ielem)
 
 
         !

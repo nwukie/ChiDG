@@ -107,8 +107,8 @@ contains
         !
         ! Interpolate solution to quadrature nodes
         !
-        ua = worker%get_primary_field_element(iu_a, 'value')
-        ub = worker%get_primary_field_element(iu_b, 'value')
+        ua = worker%get_primary_field_element('u_a',iu_a, 'value')
+        ub = worker%get_primary_field_element('u_b',iu_b, 'value')
 
 
 
@@ -119,7 +119,7 @@ contains
         flux_y = cy  *  ua
         flux_z = cz  *  ua
 
-        call worker%integrate_volume(iu_a, flux_x, flux_y, flux_z)
+        call worker%integrate_volume('u_a',iu_a, flux_x, flux_y, flux_z)
 
 
 
@@ -128,7 +128,7 @@ contains
         flux_y = cy  *  ub
         flux_z = cz  *  ub
 
-        call worker%integrate_volume(iu_b, flux_x, flux_y, flux_z)
+        call worker%integrate_volume('u_b',iu_b, flux_x, flux_y, flux_z)
 
 
 

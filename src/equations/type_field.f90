@@ -1,4 +1,5 @@
 module type_field
+#include <messenger.h>
     use mod_kinds,      only: rk,ik
     implicit none
 
@@ -42,6 +43,9 @@ contains
         class(field_t), intent(inout)   :: self
         character(*),   intent(in)      :: string
 
+        ! Check for blank string
+        if (trim(string) == '') call chidg_signal(FATAL,"field%set_name: empty string.")
+
         self%name = string
 
     end subroutine set_name
@@ -62,7 +66,12 @@ contains
 
         character(:),   allocatable :: name_
 
-        name_ = self%name
+        if (allocated(self%name)) then
+            name_ = self%name
+        else
+            call chidg_signal(FATAL,"field%get_name: The field has not been set with a name.")
+        end if
+
 
     end function get_name
     !***********************************************************************************

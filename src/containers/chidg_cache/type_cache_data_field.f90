@@ -21,6 +21,8 @@ module type_cache_data_field
     !-------------------------------------------------------------------------------------
     type, public :: cache_data_field_t
 
+        character(:),   allocatable :: name
+
         type(AD_D),     allocatable :: value(:,:)           ! (nnodes, ndepend_value)
         type(seed_t),   allocatable :: value_seeds(:)
 
@@ -65,8 +67,9 @@ contains
     !!
     !!
     !-------------------------------------------------------------------------------------
-    subroutine resize(self,cache_component,mesh,prop,idomain_l,ielement_l,iface)
+    subroutine resize(self,field,cache_component,mesh,prop,idomain_l,ielement_l,iface)
         class(cache_data_field_t),  intent(inout)           :: self
+        character(*),               intent(in)              :: field
         character(*),               intent(in)              :: cache_component
         type(mesh_t),               intent(in)              :: mesh(:)
         type(properties_t),         intent(in)              :: prop(:)
@@ -80,6 +83,11 @@ contains
         logical                     :: reallocate
 
 
+        !
+        ! Set name
+        !
+        self%name = field
+
 
         !
         ! Get number of nodes(nnodes - face/element), number of elements that the function 
@@ -90,8 +98,7 @@ contains
 
 
             case('element')
-                nnodes = mesh(idomain_l)%elems(ielement_l)%gq%vol%nnodes
-
+                nnodes      = mesh(idomain_l)%elems(ielement_l)%gq%vol%nnodes
                 nnodes_vol  = mesh(idomain_l)%elems(ielement_l)%gq%vol%nnodes
                 nnodes_face = mesh(idomain_l)%elems(ielement_l)%gq%face%nnodes
 
@@ -108,30 +115,27 @@ contains
 
             case('face interior')
 
-                nnodes = mesh(idomain_l)%faces(ielement_l,iface)%gq%face%nnodes
-
+                nnodes      = mesh(idomain_l)%faces(ielement_l,iface)%gq%face%nnodes
                 nnodes_vol  = mesh(idomain_l)%faces(ielement_l,iface)%gq%vol%nnodes
                 nnodes_face = mesh(idomain_l)%faces(ielement_l,iface)%gq%face%nnodes
 
                 ! Interior element
                 ndepend_value = 1
 
-                ! Interior element + Exterior Elements
+                ! Interior element + Face Exterior Elements
                 ndepend_deriv = 1 + self%get_ndepend_face_exterior(mesh,idomain_l,ielement_l,iface)
-
-                ! Interior element + Exterior Elements
 
 
             case('face exterior')
-                nnodes = mesh(idomain_l)%faces(ielement_l,iface)%gq%face%nnodes
 
+                nnodes      = mesh(idomain_l)%faces(ielement_l,iface)%gq%face%nnodes
                 nnodes_vol  = mesh(idomain_l)%faces(ielement_l,iface)%gq%vol%nnodes
                 nnodes_face = mesh(idomain_l)%faces(ielement_l,iface)%gq%face%nnodes
 
                 ! Exterior Elements
                 ndepend_value = self%get_ndepend_face_exterior(mesh,idomain_l,ielement_l,iface)
 
-                ! Interior element + Exterior Elements
+                ! Interior element + Face Exterior Elements
                 ndepend_deriv = 1 + self%get_ndepend_face_exterior(mesh,idomain_l,ielement_l,iface)
 
 
@@ -147,22 +151,16 @@ contains
         ! Re/Allocate 'value' component
         !
         if (allocated(self%value)) then
+            reallocate = (size(self%value,1) /= nnodes) .or. &
+                         (size(self%value,2) /= ndepend_value)
 
-            reallocate = (size(self%value,1) /= nnodes) .or. (size(self%value,2) /= ndepend_value)
-            if (reallocate) then
-                deallocate(self%value, self%value_seeds)
-                allocate(self%value(nnodes,ndepend_value), self%value_seeds(ndepend_value), stat=ierr)
-                if (ierr /= 0) call AllocationError
-            end if
-
-        else
-
-            allocate(self%value(nnodes,ndepend_value), self%value_seeds(ndepend_value), stat=ierr)
-            if (ierr /= 0) call AllocationError
-
+            if (reallocate) deallocate(self%value, self%value_seeds)
         end if
 
-
+        if (.not. allocated(self%value)) then
+            allocate(self%value(nnodes,ndepend_value), self%value_seeds(ndepend_value), stat=ierr)
+            if (ierr /= 0) call AllocationError
+        end if
 
 
 
@@ -170,33 +168,23 @@ contains
         ! Re/Allocate 'derivative', 'lift' components
         !
         if (allocated(self%derivative)) then
-
             reallocate = ( (size(self%derivative,1) /= nnodes)       .or. &
                            (size(self%derivative,2) /= 3)            .or. &
                            (size(self%derivative,3) /= ndepend_deriv) )
 
-            if (reallocate) then
-                deallocate(self%derivative, self%lift_face, self%lift_element, self%derivative_seeds, self%lift_seeds)
-                allocate(self%derivative(nnodes,3,ndepend_deriv),       &
-                         self%derivative_seeds(ndepend_deriv),          &
-                         self%lift_face(nnodes_face,3,ndepend_deriv),   &
-                         self%lift_element(nnodes_vol,3,ndepend_deriv), &
-                         self%lift_seeds(ndepend_deriv),    stat=ierr)
-                if (ierr /= 0) call AllocationError
-            end if
+            if (reallocate) deallocate(self%derivative, self%derivative_seeds, &
+                                       self%lift_face, self%lift_element, self%lift_seeds)
+        end if
 
-        else
 
+        if ( .not. allocated(self%derivative) ) then
             allocate(self%derivative(nnodes,3,ndepend_deriv),       &
                      self%derivative_seeds(ndepend_deriv),          &
                      self%lift_face(nnodes_face,3,ndepend_deriv),   &
                      self%lift_element(nnodes_vol,3,ndepend_deriv), &
                      self%lift_seeds(ndepend_deriv),    stat=ierr)
             if (ierr /= 0) call AllocationError
-
         end if
-
-
 
 
 
@@ -255,7 +243,7 @@ contains
             ! Set variable 'value' data
             !
             case('value')
-                ! Search to see if a value differentiated wrt seed already exist
+                ! Search to see if a value differentiated wrt seed already exists
                 seed_location = 0
                 seed_found = .false.
                 do iseed = 1,size(self%value_seeds)

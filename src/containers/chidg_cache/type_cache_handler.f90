@@ -78,15 +78,26 @@ contains
         type(equation_set_t),       intent(inout)   :: equation_set(:)
         type(bcset_t),              intent(inout)   :: bc_set(:)
 
-        integer(ik) :: idomain_l
+        integer(ik) :: idomain_l, ielement_l
 
-        print*, 'handler - 1'
+
+        !
+        ! Resize cache
+        !
+        idomain_l  = worker%element_info%idomain_l 
+        ielement_l = worker%element_info%ielement_l 
+        call worker%cache%resize(worker%mesh,worker%prop,idomain_l,ielement_l)
+
+
+
         call self%update_value(worker,equation_set,bc_set)
-        print*, 'handler - 2'
         call self%update_derivative(worker,equation_set,bc_set)
+        call self%update_models(worker,equation_set,bc_set)
 
+
+        !
         ! Update lift terms if diffusive operators are present
-        print*, 'handler - 3'
+        !
         idomain_l = worker%element_info%idomain_l
         if (allocated(equation_set(idomain_l)%volume_diffusive_operator) .or. &
             allocated(equation_set(idomain_l)%boundary_diffusive_operator)) then
@@ -96,11 +107,7 @@ contains
         end if
 
 
-        print*, 'handler - 4'
-        ! Update model field contributions
-        call self%update_models(worker,equation_set,bc_set)
 
-        print*, 'handler - 5'
 
     end subroutine update
     !****************************************************************************************
@@ -138,7 +145,7 @@ contains
         !
         ! Resize cache
         !
-        call worker%cache%resize(worker%mesh,worker%prop,idomain_l,ielement_l)
+        !call worker%cache%resize(worker%mesh,worker%prop,idomain_l,ielement_l)
 
 
         !
@@ -173,7 +180,7 @@ contains
 
                 ! Store gq data in cache
                 field = worker%prop(idomain_l)%get_primary_field_name(ieqn)
-                call worker%cache%set_data(field,'face interior',value_gq,'value',0,worker%function_info%seed,ieqn,iface)
+                call worker%cache%set_data(field,'face interior',value_gq,'value',0,worker%function_info%seed,iface)
 
             end do !ieqn
 
@@ -216,7 +223,7 @@ contains
 
                         value_gq = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,worker%face_info(),worker%function_info,ieqn,'value',NEIGHBOR)
 
-                        call worker%cache%set_data(field,'face exterior',value_gq,'value',0,worker%function_info%seed,ieqn,iface)
+                        call worker%cache%set_data(field,'face exterior',value_gq,'value',0,worker%function_info%seed,iface)
 
                     end do !idepend
                 end do !ieqn
@@ -250,7 +257,7 @@ contains
                 value_gq = interpolate_element_autodiff(worker%mesh,worker%solverdata%q,worker%element_info,worker%function_info,ieqn,'value')
 
                 field = worker%prop(idomain_l)%get_primary_field_name(ieqn)
-                call worker%cache%set_data(field,'element',value_gq,'value',0,worker%function_info%seed,ieqn)
+                call worker%cache%set_data(field,'element',value_gq,'value',0,worker%function_info%seed)
 
         end do !ieqn
 
@@ -331,9 +338,9 @@ contains
 
                 ! Store gq data in cache
                 field = worker%prop(idomain_l)%get_primary_field_name(ieqn)
-                call worker%cache%set_data(field,'face interior',ddx_gq,'derivative',1,worker%function_info%seed,ieqn,iface)
-                call worker%cache%set_data(field,'face interior',ddy_gq,'derivative',2,worker%function_info%seed,ieqn,iface)
-                call worker%cache%set_data(field,'face interior',ddz_gq,'derivative',3,worker%function_info%seed,ieqn,iface)
+                call worker%cache%set_data(field,'face interior',ddx_gq,'derivative',1,worker%function_info%seed,iface)
+                call worker%cache%set_data(field,'face interior',ddy_gq,'derivative',2,worker%function_info%seed,iface)
+                call worker%cache%set_data(field,'face interior',ddz_gq,'derivative',3,worker%function_info%seed,iface)
 
             end do !ieqn
 
@@ -378,9 +385,9 @@ contains
                         ddy_gq = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,worker%face_info(),worker%function_info,ieqn,'ddy',NEIGHBOR)
                         ddz_gq = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,worker%face_info(),worker%function_info,ieqn,'ddz',NEIGHBOR)
 
-                        call worker%cache%set_data(field,'face exterior',ddx_gq,'derivative',1,worker%function_info%seed,ieqn,iface)
-                        call worker%cache%set_data(field,'face exterior',ddy_gq,'derivative',2,worker%function_info%seed,ieqn,iface)
-                        call worker%cache%set_data(field,'face exterior',ddz_gq,'derivative',3,worker%function_info%seed,ieqn,iface)
+                        call worker%cache%set_data(field,'face exterior',ddx_gq,'derivative',1,worker%function_info%seed,iface)
+                        call worker%cache%set_data(field,'face exterior',ddy_gq,'derivative',2,worker%function_info%seed,iface)
+                        call worker%cache%set_data(field,'face exterior',ddz_gq,'derivative',3,worker%function_info%seed,iface)
 
                     end do !idepend
                 end do !ieqn
@@ -436,9 +443,9 @@ contains
                 ddz_gq = interpolate_element_autodiff(worker%mesh,worker%solverdata%q,worker%element_info,worker%function_info,ieqn,'ddz')
 
                 field = worker%prop(idomain_l)%get_primary_field_name(ieqn)
-                call worker%cache%set_data(field,"element",ddx_gq,"derivative",1,worker%function_info%seed,ieqn)
-                call worker%cache%set_data(field,"element",ddy_gq,"derivative",2,worker%function_info%seed,ieqn)
-                call worker%cache%set_data(field,"element",ddz_gq,"derivative",3,worker%function_info%seed,ieqn)
+                call worker%cache%set_data(field,"element",ddx_gq,"derivative",1,worker%function_info%seed)
+                call worker%cache%set_data(field,"element",ddy_gq,"derivative",2,worker%function_info%seed)
+                call worker%cache%set_data(field,"element",ddz_gq,"derivative",3,worker%function_info%seed)
 
         end do !ieqn
 
@@ -508,7 +515,6 @@ contains
         ielement_l = worker%element_info%ielement_l 
 
 
-        print*, 'update_models - 1'
 
         !
         ! Loop through faces and cache internal, external interpolated states
@@ -519,26 +525,19 @@ contains
             ! Update worker face index
             call worker%set_face(iface)
 
-        print*, 'update_models - 2'
 
             ! Update models for face interior. Only depends on interior element.
             idepend = 1
             worker%interpolation_source = 'face interior'
             do imodel = 1,equation_set(idomain_l)%nmodels()
 
-        print*, 'update_models - 2.1'
                     worker%function_info%seed    = face_compute_seed(worker%mesh,idomain_l,ielement_l,iface,idepend,DIAG)
-        print*, 'update_models - 2.2'
                     worker%function_info%idepend = idepend
-        print*, 'update_models - 2.3'
                     worker%function_info%idiff   = DIAG
-        print*, 'update_models - 2.4'
 
                     call equation_set(idomain_l)%models(imodel)%model%compute(worker)
-        print*, 'update_models - 2.5'
             end do
 
-        print*, 'update_models - 3'
 
 
             ! 
@@ -559,7 +558,6 @@ contains
             end if
 
 
-        print*, 'update_models - 4'
 
 
             !
@@ -580,7 +578,6 @@ contains
                 end do !imodel
 
 
-        print*, 'update_models - 5'
 
 
             !
@@ -605,7 +602,6 @@ contains
                     end do !idepend
                 end do !imodel
 
-        print*, 'update_models - 6'
 
 
 
@@ -617,7 +613,6 @@ contains
 
 
 
-        print*, 'update_models - 7'
 
 
 
@@ -625,7 +620,7 @@ contains
         ! Element volume cache. Models only depend on interior element
         !
         idepend = 1
-        worker%interpolation_source = 'face element'
+        worker%interpolation_source = 'element'
         do imodel = 1,equation_set(idomain_l)%nmodels()
 
                 worker%function_info%seed    = element_compute_seed(worker%mesh,idomain_l,ielement_l,idepend,DIAG)
@@ -634,7 +629,7 @@ contains
                 call equation_set(idomain_l)%models(imodel)%model%compute(worker)
 
         end do !imodel
-        print*, 'update_models - 8'
+
 
     end subroutine update_models
     !************************************************************************************************
@@ -684,8 +679,8 @@ contains
         type(bcset_t),              intent(inout)   :: bc_set(:)
 
         character(:),   allocatable :: field
-        integer(ik)                 :: idomain_l, ielement_l, iface, idepend, ieqn, &
-                                       ndepend, BC_ID, BC_face, ChiID
+        integer(ik)                 :: idomain_l, ielement_l, iface, idepend, &
+                                       ndepend, BC_ID, BC_face, ChiID, ieqn
 
         type(AD_D), allocatable, dimension(:), save   ::    &
             var_m, var_p, var_diff, var_diff_weighted,      &
@@ -747,8 +742,8 @@ contains
 
 
                     ! Get interior/exterior state
-                    var_m = worker%cache%get_data(field,'face interior', 'value', 0, worker%function_info%seed, ieqn, iface)
-                    var_p = worker%cache%get_data(field,'face exterior', 'value', 0, worker%function_info%seed, ieqn, iface)
+                    var_m = worker%cache%get_data(field,'face interior', 'value', 0, worker%function_info%seed, iface)
+                    var_p = worker%cache%get_data(field,'face exterior', 'value', 0, worker%function_info%seed, iface)
 
                     ! Difference
                     var_diff = HALF*(var_p - var_m) 
@@ -796,9 +791,9 @@ contains
 
                     
                     ! Store lift
-                    call worker%cache%set_data(field,'face interior', lift_gq_face_x, 'lift face', 1, worker%function_info%seed, ieqn, iface)
-                    call worker%cache%set_data(field,'face interior', lift_gq_face_y, 'lift face', 2, worker%function_info%seed, ieqn, iface)
-                    call worker%cache%set_data(field,'face interior', lift_gq_face_z, 'lift face', 3, worker%function_info%seed, ieqn, iface)
+                    call worker%cache%set_data(field,'face interior', lift_gq_face_x, 'lift face', 1, worker%function_info%seed, iface)
+                    call worker%cache%set_data(field,'face interior', lift_gq_face_y, 'lift face', 2, worker%function_info%seed, iface)
+                    call worker%cache%set_data(field,'face interior', lift_gq_face_z, 'lift face', 3, worker%function_info%seed, iface)
 
 
 !                    ! Evaluate lift modes at volume quadrature nodes
@@ -812,9 +807,9 @@ contains
 
                     
                     ! Store lift
-                    call worker%cache%set_data(field,'face interior', lift_gq_vol_x, 'lift element', 1, worker%function_info%seed, ieqn, iface)
-                    call worker%cache%set_data(field,'face interior', lift_gq_vol_y, 'lift element', 2, worker%function_info%seed, ieqn, iface)
-                    call worker%cache%set_data(field,'face interior', lift_gq_vol_z, 'lift element', 3, worker%function_info%seed, ieqn, iface)
+                    call worker%cache%set_data(field,'face interior', lift_gq_vol_x, 'lift element', 1, worker%function_info%seed, iface)
+                    call worker%cache%set_data(field,'face interior', lift_gq_vol_y, 'lift element', 2, worker%function_info%seed, iface)
+                    call worker%cache%set_data(field,'face interior', lift_gq_vol_z, 'lift element', 3, worker%function_info%seed, iface)
 
 
 
@@ -856,8 +851,8 @@ contains
 
 
                     ! Get interior/exterior state
-                    var_m = worker%cache%get_data(field,'face interior', 'value', 0, worker%function_info%seed, ieqn, iface)
-                    var_p = worker%cache%get_data(field,'face exterior', 'value', 0, worker%function_info%seed, ieqn, iface)
+                    var_m = worker%cache%get_data(field,'face interior', 'value', 0, worker%function_info%seed, iface)
+                    var_p = worker%cache%get_data(field,'face exterior', 'value', 0, worker%function_info%seed, iface)
 
                     ! Difference
                     var_diff = HALF*(var_p - var_m) 
@@ -890,9 +885,9 @@ contains
                     lift_gq_face_z = matmul(br2_face,var_diff_z)
                     
                     ! Store lift
-                    call worker%cache%set_data(field,'face interior', lift_gq_face_x, 'lift face', 1, worker%function_info%seed, ieqn, iface)
-                    call worker%cache%set_data(field,'face interior', lift_gq_face_y, 'lift face', 2, worker%function_info%seed, ieqn, iface)
-                    call worker%cache%set_data(field,'face interior', lift_gq_face_z, 'lift face', 3, worker%function_info%seed, ieqn, iface)
+                    call worker%cache%set_data(field,'face interior', lift_gq_face_x, 'lift face', 1, worker%function_info%seed, iface)
+                    call worker%cache%set_data(field,'face interior', lift_gq_face_y, 'lift face', 2, worker%function_info%seed, iface)
+                    call worker%cache%set_data(field,'face interior', lift_gq_face_z, 'lift face', 3, worker%function_info%seed, iface)
 
 
                     ! Evaluate lift modes at volume quadrature nodes
@@ -904,9 +899,9 @@ contains
                     lift_gq_vol_z = matmul(br2_vol,var_diff_z)
                     
                     ! Store lift
-                    call worker%cache%set_data(field,'face interior', lift_gq_vol_x, 'lift element', 1, worker%function_info%seed, ieqn, iface)
-                    call worker%cache%set_data(field,'face interior', lift_gq_vol_y, 'lift element', 2, worker%function_info%seed, ieqn, iface)
-                    call worker%cache%set_data(field,'face interior', lift_gq_vol_z, 'lift element', 3, worker%function_info%seed, ieqn, iface)
+                    call worker%cache%set_data(field,'face interior', lift_gq_vol_x, 'lift element', 1, worker%function_info%seed, iface)
+                    call worker%cache%set_data(field,'face interior', lift_gq_vol_y, 'lift element', 2, worker%function_info%seed, iface)
+                    call worker%cache%set_data(field,'face interior', lift_gq_vol_z, 'lift element', 3, worker%function_info%seed, iface)
 
 
 
@@ -1170,8 +1165,8 @@ contains
             normz = -worker%mesh(idomain_l)%faces(ielement_l,iface)%norm(:,3)
 
             ! Get interior/exterior state
-            var_m = worker%cache%get_data(field,'face interior', 'value', 0, worker%function_info%seed, ieqn, iface)
-            var_p = worker%cache%get_data(field,'face exterior', 'value', 0, worker%function_info%seed, ieqn, iface)
+            var_m = worker%cache%get_data(field,'face interior', 'value', 0, worker%function_info%seed, iface)
+            var_p = worker%cache%get_data(field,'face exterior', 'value', 0, worker%function_info%seed, iface)
 
             ! Difference. Relative to exterior element, so reversed
             var_diff = HALF*(var_m - var_p) 
@@ -1203,9 +1198,9 @@ contains
             lift_gq_face_z = matmul(br2_face,var_diff_z)
             
             ! Store lift
-            call worker%cache%set_data(field,'face exterior', lift_gq_face_x, 'lift face', 1, worker%function_info%seed, ieqn, iface)
-            call worker%cache%set_data(field,'face exterior', lift_gq_face_y, 'lift face', 2, worker%function_info%seed, ieqn, iface)
-            call worker%cache%set_data(field,'face exterior', lift_gq_face_z, 'lift face', 3, worker%function_info%seed, ieqn, iface)
+            call worker%cache%set_data(field,'face exterior', lift_gq_face_x, 'lift face', 1, worker%function_info%seed, iface)
+            call worker%cache%set_data(field,'face exterior', lift_gq_face_y, 'lift face', 2, worker%function_info%seed, iface)
+            call worker%cache%set_data(field,'face exterior', lift_gq_face_z, 'lift face', 3, worker%function_info%seed, iface)
 
 !            ! Evaluate lift modes at quadrature nodes
 !            lift_gq_vol_x = matmul(val_vol,lift_modes_x)
@@ -1319,8 +1314,8 @@ contains
             normz = -worker%mesh(idomain_l)%faces(ielement_l,iface)%norm(:,3)
 
             ! Get interior/exterior state
-            var_m = worker%cache%get_data(field,'face interior', 'value', 0, worker%function_info%seed, ieqn, iface)
-            var_p = worker%cache%get_data(field,'face exterior', 'value', 0, worker%function_info%seed, ieqn, iface)
+            var_m = worker%cache%get_data(field,'face interior', 'value', 0, worker%function_info%seed, iface)
+            var_p = worker%cache%get_data(field,'face exterior', 'value', 0, worker%function_info%seed, iface)
 
 
             ! Difference. Relative to exterior element, so reversed
@@ -1359,9 +1354,9 @@ contains
             
 
             ! Store lift
-            call worker%cache%set_data(field,'face exterior', lift_gq_x, 'lift face', 1, worker%function_info%seed, ieqn, iface)
-            call worker%cache%set_data(field,'face exterior', lift_gq_y, 'lift face', 2, worker%function_info%seed, ieqn, iface)
-            call worker%cache%set_data(field,'face exterior', lift_gq_z, 'lift face', 3, worker%function_info%seed, ieqn, iface)
+            call worker%cache%set_data(field,'face exterior', lift_gq_x, 'lift face', 1, worker%function_info%seed, iface)
+            call worker%cache%set_data(field,'face exterior', lift_gq_y, 'lift face', 2, worker%function_info%seed, iface)
+            call worker%cache%set_data(field,'face exterior', lift_gq_z, 'lift face', 3, worker%function_info%seed, iface)
 
 
         end associate
@@ -1448,8 +1443,8 @@ contains
             normz = -worker%mesh(idomain_l)%faces(ielement_l,iface)%norm(:,3)
 
             ! Get interior/exterior state
-            var_m = worker%cache%get_data(field,'face interior', 'value', 0, worker%function_info%seed, ieqn, iface)
-            var_p = worker%cache%get_data(field,'face exterior', 'value', 0, worker%function_info%seed, ieqn, iface)
+            var_m = worker%cache%get_data(field,'face interior', 'value', 0, worker%function_info%seed, iface)
+            var_p = worker%cache%get_data(field,'face exterior', 'value', 0, worker%function_info%seed, iface)
 
             ! Difference. Relative to exterior element, so reversed
             var_diff = HALF*(var_m - var_p) 
@@ -1481,9 +1476,9 @@ contains
             lift_gq_face_z = matmul(br2_face,var_diff_z)
             
             ! Store lift
-            call worker%cache%set_data(field,'face exterior', lift_gq_face_x, 'lift face', 1, worker%function_info%seed, ieqn, iface)
-            call worker%cache%set_data(field,'face exterior', lift_gq_face_y, 'lift face', 2, worker%function_info%seed, ieqn, iface)
-            call worker%cache%set_data(field,'face exterior', lift_gq_face_z, 'lift face', 3, worker%function_info%seed, ieqn, iface)
+            call worker%cache%set_data(field,'face exterior', lift_gq_face_x, 'lift face', 1, worker%function_info%seed, iface)
+            call worker%cache%set_data(field,'face exterior', lift_gq_face_y, 'lift face', 2, worker%function_info%seed, iface)
+            call worker%cache%set_data(field,'face exterior', lift_gq_face_z, 'lift face', 3, worker%function_info%seed, iface)
 
 !            ! Evaluate lift modes at quadrature nodes
 !            lift_gq_vol_x = matmul(val_vol,lift_modes_x)

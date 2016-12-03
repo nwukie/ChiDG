@@ -96,8 +96,8 @@ contains
         type(AD_D), allocatable, dimension(:) ::                                    &
             rho_m, rhou_m, rhov_m, rhow_m, rhoE_m,                                  &
             rho_p, rhou_p, rhov_p, rhow_p, rhoE_p,                                  &
-            p_m, T_m, u_m, v_m, w_m, invrho_m, gam_m, mu_m, lamda_m,                &
-            p_p, T_p, u_p, v_p, w_p, invrho_p, gam_p, mu_p, lamda_p,                &
+            p_m, T_m, u_m, v_m, w_m, invrho_m, mu_m, lamda_m,                       &
+            p_p, T_p, u_p, v_p, w_p, invrho_p, mu_p, lamda_p,                       &
             drho_dx_m, drhou_dx_m, drhov_dx_m, drhow_dx_m, drhoE_dx_m,              &
             drho_dy_m, drhou_dy_m, drhov_dy_m, drhow_dy_m, drhoE_dy_m,              &
             drho_dz_m, drhou_dz_m, drhov_dz_m, drhow_dz_m, drhoE_dz_m,              &
@@ -128,8 +128,7 @@ contains
         real(rk), allocatable, dimension(:) ::      &
             normx, normy, normz
 
-
-        real(rk) :: const
+        real(rk) :: const, gam_m, gam_p
 
         irho  = prop%get_primary_field_index("Density"   )
         irhou = prop%get_primary_field_index("X-Momentum")
@@ -137,64 +136,65 @@ contains
         irhow = prop%get_primary_field_index("Z-Momentum")
         irhoE = prop%get_primary_field_index("Energy"    )
 
+        
 
 
         !
         ! Interpolate solution to quadrature nodes
         !
-        rho_m  = worker%get_primary_field_face("Density"   ,irho, 'value', 'face interior')
-        rho_p  = worker%get_primary_field_face("Density"   ,irho, 'value', 'face exterior')
+        rho_m  = worker%get_primary_field_face("Density"   , 'value', 'face interior')
+        rho_p  = worker%get_primary_field_face("Density"   , 'value', 'face exterior')
 
-        rhou_m = worker%get_primary_field_face('X-Momentum',irhou, 'value', 'face interior')
-        rhou_p = worker%get_primary_field_face('X-Momentum',irhou, 'value', 'face exterior')
+        rhou_m = worker%get_primary_field_face('X-Momentum', 'value', 'face interior')
+        rhou_p = worker%get_primary_field_face('X-Momentum', 'value', 'face exterior')
 
-        rhov_m = worker%get_primary_field_face('Y-Momentum',irhov, 'value', 'face interior')
-        rhov_p = worker%get_primary_field_face('Y-Momentum',irhov, 'value', 'face exterior')
+        rhov_m = worker%get_primary_field_face('Y-Momentum', 'value', 'face interior')
+        rhov_p = worker%get_primary_field_face('Y-Momentum', 'value', 'face exterior')
 
-        rhow_m = worker%get_primary_field_face('Z-Momentum',irhow, 'value', 'face interior')
-        rhow_p = worker%get_primary_field_face('Z-Momentum',irhow, 'value', 'face exterior')
+        rhow_m = worker%get_primary_field_face('Z-Momentum', 'value', 'face interior')
+        rhow_p = worker%get_primary_field_face('Z-Momentum', 'value', 'face exterior')
 
-        rhoE_m = worker%get_primary_field_face('Energy'    ,irhoE, 'value', 'face interior')
-        rhoE_p = worker%get_primary_field_face('Energy'    ,irhoE, 'value', 'face exterior')
+        rhoE_m = worker%get_primary_field_face('Energy'    , 'value', 'face interior')
+        rhoE_p = worker%get_primary_field_face('Energy'    , 'value', 'face exterior')
 
 
         !
         ! Interpolate gradient to quadrature nodes
         !
-        drho_dx_m  = worker%get_primary_field_face("Density"   ,irho,  'ddx+lift', 'face interior')
-        drho_dy_m  = worker%get_primary_field_face("Density"   ,irho,  'ddy+lift', 'face interior')
-        drho_dz_m  = worker%get_primary_field_face("Density"   ,irho,  'ddz+lift', 'face interior')
-        drho_dx_p  = worker%get_primary_field_face("Density"   ,irho,  'ddx+lift', 'face exterior')
-        drho_dy_p  = worker%get_primary_field_face("Density"   ,irho,  'ddy+lift', 'face exterior')
-        drho_dz_p  = worker%get_primary_field_face("Density"   ,irho,  'ddz+lift', 'face exterior')
+        drho_dx_m  = worker%get_primary_field_face("Density"   , 'ddx+lift', 'face interior')
+        drho_dy_m  = worker%get_primary_field_face("Density"   , 'ddy+lift', 'face interior')
+        drho_dz_m  = worker%get_primary_field_face("Density"   , 'ddz+lift', 'face interior')
+        drho_dx_p  = worker%get_primary_field_face("Density"   , 'ddx+lift', 'face exterior')
+        drho_dy_p  = worker%get_primary_field_face("Density"   , 'ddy+lift', 'face exterior')
+        drho_dz_p  = worker%get_primary_field_face("Density"   , 'ddz+lift', 'face exterior')
 
-        drhou_dx_m = worker%get_primary_field_face('X-Momentum',irhou, 'ddx+lift', 'face interior')
-        drhou_dy_m = worker%get_primary_field_face('X-Momentum',irhou, 'ddy+lift', 'face interior')
-        drhou_dz_m = worker%get_primary_field_face('X-Momentum',irhou, 'ddz+lift', 'face interior')
-        drhou_dx_p = worker%get_primary_field_face('X-Momentum',irhou, 'ddx+lift', 'face exterior')
-        drhou_dy_p = worker%get_primary_field_face('X-Momentum',irhou, 'ddy+lift', 'face exterior')
-        drhou_dz_p = worker%get_primary_field_face('X-Momentum',irhou, 'ddz+lift', 'face exterior')
+        drhou_dx_m = worker%get_primary_field_face('X-Momentum', 'ddx+lift', 'face interior')
+        drhou_dy_m = worker%get_primary_field_face('X-Momentum', 'ddy+lift', 'face interior')
+        drhou_dz_m = worker%get_primary_field_face('X-Momentum', 'ddz+lift', 'face interior')
+        drhou_dx_p = worker%get_primary_field_face('X-Momentum', 'ddx+lift', 'face exterior')
+        drhou_dy_p = worker%get_primary_field_face('X-Momentum', 'ddy+lift', 'face exterior')
+        drhou_dz_p = worker%get_primary_field_face('X-Momentum', 'ddz+lift', 'face exterior')
 
-        drhov_dx_m = worker%get_primary_field_face('Y-Momentum',irhov, 'ddx+lift', 'face interior')
-        drhov_dy_m = worker%get_primary_field_face('Y-Momentum',irhov, 'ddy+lift', 'face interior')
-        drhov_dz_m = worker%get_primary_field_face('Y-Momentum',irhov, 'ddz+lift', 'face interior')
-        drhov_dx_p = worker%get_primary_field_face('Y-Momentum',irhov, 'ddx+lift', 'face exterior')
-        drhov_dy_p = worker%get_primary_field_face('Y-Momentum',irhov, 'ddy+lift', 'face exterior')
-        drhov_dz_p = worker%get_primary_field_face('Y-Momentum',irhov, 'ddz+lift', 'face exterior')
+        drhov_dx_m = worker%get_primary_field_face('Y-Momentum', 'ddx+lift', 'face interior')
+        drhov_dy_m = worker%get_primary_field_face('Y-Momentum', 'ddy+lift', 'face interior')
+        drhov_dz_m = worker%get_primary_field_face('Y-Momentum', 'ddz+lift', 'face interior')
+        drhov_dx_p = worker%get_primary_field_face('Y-Momentum', 'ddx+lift', 'face exterior')
+        drhov_dy_p = worker%get_primary_field_face('Y-Momentum', 'ddy+lift', 'face exterior')
+        drhov_dz_p = worker%get_primary_field_face('Y-Momentum', 'ddz+lift', 'face exterior')
 
-        drhow_dx_m = worker%get_primary_field_face('Z-Momentum',irhow, 'ddx+lift', 'face interior')
-        drhow_dy_m = worker%get_primary_field_face('Z-Momentum',irhow, 'ddy+lift', 'face interior')
-        drhow_dz_m = worker%get_primary_field_face('Z-Momentum',irhow, 'ddz+lift', 'face interior')
-        drhow_dx_p = worker%get_primary_field_face('Z-Momentum',irhow, 'ddx+lift', 'face exterior')
-        drhow_dy_p = worker%get_primary_field_face('Z-Momentum',irhow, 'ddy+lift', 'face exterior')
-        drhow_dz_p = worker%get_primary_field_face('Z-Momentum',irhow, 'ddz+lift', 'face exterior')
+        drhow_dx_m = worker%get_primary_field_face('Z-Momentum', 'ddx+lift', 'face interior')
+        drhow_dy_m = worker%get_primary_field_face('Z-Momentum', 'ddy+lift', 'face interior')
+        drhow_dz_m = worker%get_primary_field_face('Z-Momentum', 'ddz+lift', 'face interior')
+        drhow_dx_p = worker%get_primary_field_face('Z-Momentum', 'ddx+lift', 'face exterior')
+        drhow_dy_p = worker%get_primary_field_face('Z-Momentum', 'ddy+lift', 'face exterior')
+        drhow_dz_p = worker%get_primary_field_face('Z-Momentum', 'ddz+lift', 'face exterior')
 
-        drhoE_dx_m = worker%get_primary_field_face('Energy'    ,irhoE, 'ddx+lift', 'face interior')
-        drhoE_dy_m = worker%get_primary_field_face('Energy'    ,irhoE, 'ddy+lift', 'face interior')
-        drhoE_dz_m = worker%get_primary_field_face('Energy'    ,irhoE, 'ddz+lift', 'face interior')
-        drhoE_dx_p = worker%get_primary_field_face('Energy'    ,irhoE, 'ddx+lift', 'face exterior')
-        drhoE_dy_p = worker%get_primary_field_face('Energy'    ,irhoE, 'ddy+lift', 'face exterior')
-        drhoE_dz_p = worker%get_primary_field_face('Energy'    ,irhoE, 'ddz+lift', 'face exterior')
+        drhoE_dx_m = worker%get_primary_field_face('Energy'    , 'ddx+lift', 'face interior')
+        drhoE_dy_m = worker%get_primary_field_face('Energy'    , 'ddy+lift', 'face interior')
+        drhoE_dz_m = worker%get_primary_field_face('Energy'    , 'ddz+lift', 'face interior')
+        drhoE_dx_p = worker%get_primary_field_face('Energy'    , 'ddx+lift', 'face exterior')
+        drhoE_dy_p = worker%get_primary_field_face('Energy'    , 'ddy+lift', 'face exterior')
+        drhoE_dz_p = worker%get_primary_field_face('Energy'    , 'ddz+lift', 'face exterior')
 
 
         invrho_m = ONE/rho_m
@@ -213,11 +213,15 @@ contains
         !
         ! Compute pressure and total enthalpy
         !
-        p_m = prop%fluid%compute_pressure(rho_m,rhou_m,rhov_m,rhow_m,rhoE_m)
-        p_p = prop%fluid%compute_pressure(rho_p,rhou_p,rhov_p,rhow_p,rhoE_p)
+        !p_m = prop%fluid%compute_pressure(rho_m,rhou_m,rhov_m,rhow_m,rhoE_m)
+        !p_p = prop%fluid%compute_pressure(rho_p,rhou_p,rhov_p,rhow_p,rhoE_p)
+        !gam_m = prop%fluid%compute_gamma(rho_m,rhou_m,rhov_m,rhow_m,rhoE_m)
+        !gam_p = prop%fluid%compute_gamma(rho_p,rhou_p,rhov_p,rhow_p,rhoE_p)
+        p_m = worker%get_model_field_face('Pressure', 'value', 'face interior')
+        p_p = worker%get_model_field_face('Pressure', 'value', 'face exterior')
+        gam_m = 1.4_rk
+        gam_p = 1.4_rk
 
-        gam_m = prop%fluid%compute_gamma(rho_m,rhou_m,rhov_m,rhow_m,rhoE_m)
-        gam_p = prop%fluid%compute_gamma(rho_p,rhou_p,rhov_p,rhow_p,rhoE_p)
 
 
         !
@@ -280,12 +284,14 @@ contains
         dp_drhou_m = -(gam_m-ONE)*dke_drhou_m
         dp_drhov_m = -(gam_m-ONE)*dke_drhov_m
         dp_drhow_m = -(gam_m-ONE)*dke_drhow_m
+        dp_drhoE_m =  dp_drhow_m    ! Initialize derivatives
         dp_drhoE_m =  (gam_m-ONE)   ! No negative sign
 
         dp_drho_p  = -(gam_p-ONE)*dke_drho_p
         dp_drhou_p = -(gam_p-ONE)*dke_drhou_p
         dp_drhov_p = -(gam_p-ONE)*dke_drhov_p
         dp_drhow_p = -(gam_p-ONE)*dke_drhow_p
+        dp_drhoE_p =  dp_drhow_p    ! Initialize derivatives
         dp_drhoE_p =  (gam_p-ONE)   ! No negative sign
 
 
@@ -339,19 +345,27 @@ contains
         !
         ! Compute temperature
         !
-        T_m = prop%fluid%compute_temperature(rho_m,rhou_m,rhov_m,rhow_m,rhoE_m)
-        T_p = prop%fluid%compute_temperature(rho_p,rhou_p,rhov_p,rhow_p,rhoE_p)
+        !T_m = prop%fluid%compute_temperature(rho_m,rhou_m,rhov_m,rhow_m,rhoE_m)
+        !T_p = prop%fluid%compute_temperature(rho_p,rhou_p,rhov_p,rhow_p,rhoE_p)
+        T_m = worker%get_model_field_face('Temperature', 'value', 'face interior')
+        T_p = worker%get_model_field_face('Temperature', 'value', 'face exterior')
 
 
         !
         ! Compute dynamic viscosity, second coefficient of viscosity
         !
-        mu_m    = prop%fluid%compute_viscosity_dynamic(T_m)
-        mu_p    = prop%fluid%compute_viscosity_dynamic(T_p)
+        !mu_m    = prop%fluid%compute_viscosity_dynamic(T_m)
+        !mu_p    = prop%fluid%compute_viscosity_dynamic(T_p)
 
-        lamda_m = prop%fluid%compute_viscosity_second(mu_m,T_m)
-        lamda_p = prop%fluid%compute_viscosity_second(mu_p,T_p)
+        !lamda_m = prop%fluid%compute_viscosity_second(mu_m,T_m)
+        !lamda_p = prop%fluid%compute_viscosity_second(mu_p,T_p)
 
+        mu_m = worker%get_model_field_face('Viscosity', 'value', 'face interior')
+        mu_p = worker%get_model_field_face('Viscosity', 'value', 'face exterior')
+
+
+        lamda_m = worker%get_model_field_face('Second Coefficient of Viscosity', 'value', 'face interior')
+        lamda_p = worker%get_model_field_face('Second Coefficient of Viscosity', 'value', 'face exterior')
 
 
 
@@ -419,7 +433,7 @@ contains
         ! dot with normal vector
         integrand = HALF*(flux_x*normx + flux_y*normy + flux_z*normz)
 
-        call worker%integrate_boundary('X-Momentum',irhou, integrand)
+        call worker%integrate_boundary('X-Momentum',integrand)
 
 
         !================================
@@ -441,7 +455,7 @@ contains
         ! dot with normal vector
         integrand = HALF*(flux_x*normx + flux_y*normy + flux_z*normz)
 
-        call worker%integrate_boundary('Y-Momentum',irhov, integrand)
+        call worker%integrate_boundary('Y-Momentum',integrand)
 
 
         !================================
@@ -464,7 +478,7 @@ contains
         ! dot with normal vector
         integrand = HALF*(flux_x*normx + flux_y*normy + flux_z*normz)
 
-        call worker%integrate_boundary('Z-Momentum',irhow, integrand)
+        call worker%integrate_boundary('Z-Momentum',integrand)
 
 
         !================================
@@ -487,7 +501,7 @@ contains
         ! dot with normal vector
         integrand = HALF*(flux_x*normx + flux_y*normy + flux_z*normz)
 
-        call worker%integrate_boundary('Energy',irhoE, integrand)
+        call worker%integrate_boundary('Energy',integrand)
 
 
     end subroutine compute

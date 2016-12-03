@@ -86,7 +86,7 @@ contains
         !
         ! Interpolate solution to quadrature nodes to initialize derivatives
         !
-        source = worker%get_primary_field_element('u',iu, "value")
+        source = worker%get_primary_field_element('u','value')
 
 
         source = ONE
@@ -95,7 +95,7 @@ contains
         !
         ! Integrate volume flux
         !
-        call worker%integrate_volume('u',iu, source)
+        call worker%integrate_volume('u',source)
 
 
     end subroutine compute

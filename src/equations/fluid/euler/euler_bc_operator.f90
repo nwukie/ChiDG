@@ -96,12 +96,14 @@ contains
         type(AD_D), allocatable, dimension(:)   ::          &
             rho_bc,  rhou_bc, rhov_bc, rhow_bc, rhoE_bc,    &
             u_bc,    v_bc,    w_bc,                         &
-            H_bc,    gam_bc,  p_bc,                         &
+            H_bc,    p_bc,                                  &
             flux_x,  flux_y,  flux_z,  integrand
 
 
         real(rk),   allocatable, dimension(:)   ::          &
             normx, normy, normz
+            
+        real(rk) :: gam_bc
 
 
         !
@@ -118,11 +120,11 @@ contains
         !
         ! Interpolate boundary condition state to face quadrature nodes
         !
-        rho_bc  = worker%get_primary_field_face("Density"   ,irho,  'value', 'boundary')
-        rhou_bc = worker%get_primary_field_face("X-Momentum",irhou, 'value', 'boundary')
-        rhov_bc = worker%get_primary_field_face("Y-Momentum",irhov, 'value', 'boundary')
-        rhow_bc = worker%get_primary_field_face("Z-Momentum",irhow, 'value', 'boundary')
-        rhoE_bc = worker%get_primary_field_face("Energy"    ,irhoE, 'value', 'boundary')
+        rho_bc  = worker%get_primary_field_face("Density"   ,'value', 'boundary')
+        rhou_bc = worker%get_primary_field_face("X-Momentum",'value', 'boundary')
+        rhov_bc = worker%get_primary_field_face("Y-Momentum",'value', 'boundary')
+        rhow_bc = worker%get_primary_field_face("Z-Momentum",'value', 'boundary')
+        rhoE_bc = worker%get_primary_field_face("Energy"    ,'value', 'boundary')
 
 
         normx = worker%normal(1)
@@ -134,8 +136,10 @@ contains
         !
         ! Compute gamma
         !
-        gam_bc = prop%fluid%compute_gamma(rho_bc,rhou_bc,rhov_bc,rhow_bc,rhoE_bc)
-        p_bc   = prop%fluid%compute_pressure(rho_bc,rhou_bc,rhov_bc,rhow_bc,rhoE_bc)
+        !gam_bc = prop%fluid%compute_gamma(rho_bc,rhou_bc,rhov_bc,rhow_bc,rhoE_bc)
+        !p_bc   = prop%fluid%compute_pressure(rho_bc,rhou_bc,rhov_bc,rhow_bc,rhoE_bc)
+        gam_bc = 1.4_rk
+        p_bc   = worker%get_model_field_face('Pressure','value','boundary')
 
 
 
@@ -165,7 +169,7 @@ contains
 
         integrand = flux_x*normx + flux_y*normy + flux_z*normz
 
-        call worker%integrate_boundary('Density',irho, integrand)
+        call worker%integrate_boundary('Density',integrand)
 
         !=================================================
         ! x-momentum flux
@@ -176,7 +180,7 @@ contains
 
         integrand = flux_x*normx + flux_y*normy + flux_z*normz
 
-        call worker%integrate_boundary('X-Momentum',irhou, integrand)
+        call worker%integrate_boundary('X-Momentum',integrand)
 
         !=================================================
         ! y-momentum flux
@@ -187,7 +191,7 @@ contains
 
         integrand = flux_x*normx + flux_y*normy + flux_z*normz
 
-        call worker%integrate_boundary('Y-Momentum',irhov, integrand)
+        call worker%integrate_boundary('Y-Momentum',integrand)
 
         !=================================================
         ! z-momentum flux
@@ -198,7 +202,7 @@ contains
 
         integrand = flux_x*normx + flux_y*normy + flux_z*normz
 
-        call worker%integrate_boundary('Z-Momentum',irhow, integrand)
+        call worker%integrate_boundary('Z-Momentum',integrand)
 
         !=================================================
         ! Energy flux
@@ -209,7 +213,7 @@ contains
 
         integrand = flux_x*normx + flux_y*normy + flux_z*normz
 
-        call worker%integrate_boundary('Energy',irhoE, integrand)
+        call worker%integrate_boundary('Energy',integrand)
 
     end subroutine compute
     !**********************************************************************************************

@@ -93,7 +93,6 @@ contains
         ! Storage at quadrature nodes
         type(AD_D), allocatable, dimension(:)   ::  &
             u, cx, cy, cz,                          &
-            dudx,dudy,dudz,                         &
             flux_x, flux_y, flux_z, integrand
 
         real(rk),   allocatable, dimension(:)   ::  &
@@ -109,18 +108,15 @@ contains
         !
         ! Interpolate boundary condition state to face quadrature nodes
         !
-        u    = worker%get_primary_field_face('u',iu, 'value', 'boundary')
-        dudx = worker%get_primary_field_face('u',iu, 'ddx',   'boundary')
-        dudy = worker%get_primary_field_face('u',iu, 'ddy',   'boundary')
-        dudz = worker%get_primary_field_face('u',iu, 'ddz',   'boundary')
+        u  = worker%get_primary_field_face('u', 'value', 'boundary')
 
 
         !
         ! Get model coefficients
         !
-        cx = prop%scalar%compute_cx(u,dudx,dudy,dudz)
-        cy = prop%scalar%compute_cy(u,dudx,dudy,dudz)
-        cz = prop%scalar%compute_cz(u,dudx,dudy,dudz)
+        cx = worker%get_model_field_face('Scalar X-Advection Velocity', 'value', 'boundary')
+        cy = worker%get_model_field_face('Scalar Y-Advection Velocity', 'value', 'boundary')
+        cz = worker%get_model_field_face('Scalar Z-Advection Velocity', 'value', 'boundary')
 
         
         !
@@ -140,7 +136,7 @@ contains
 
         integrand = flux_x*normx + flux_y*normy + flux_z*normz
 
-        call worker%integrate_boundary('u',iu, integrand)
+        call worker%integrate_boundary('u',integrand)
 
 
     end subroutine compute

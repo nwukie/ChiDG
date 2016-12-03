@@ -88,12 +88,7 @@ contains
         !
         ! Interpolate solution to quadrature nodes
         !
-        source = worker%get_primary_field_element('u',iu, 'ddx + lift')
-
-
-        !x = worker%x('volume')
-        !source = FOUR*PI*PI*dsin(TWO*PI*x)
-
+        source = worker%get_primary_field_element('u','ddx + lift')
 
         x = worker%x('volume')
         y = worker%y('volume')
@@ -104,7 +99,7 @@ contains
         !
         ! Integrate volume flux
         !
-        call worker%integrate_volume('u',iu, source)
+        call worker%integrate_volume('u',source)
 
 
     end subroutine compute

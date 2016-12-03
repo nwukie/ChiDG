@@ -177,14 +177,13 @@ contains
     !!
     !!
     !-------------------------------------------------------------------------------
-    subroutine set_data(self,field,cache_data,data_type,idirection,seed,ifield)
+    subroutine set_data(self,field,cache_data,data_type,idirection,seed)
         class(cache_data_t),    intent(inout)   :: self
         character(*),           intent(in)      :: field
         type(AD_D),             intent(in)      :: cache_data(:)
         character(*),           intent(in)      :: data_type
         integer(ik),            intent(in)      :: idirection
         type(seed_t),           intent(in)      :: seed
-        integer(ik),            intent(in)      :: ifield
 
         integer(ik) :: field_index
 
@@ -211,13 +210,12 @@ contains
     !!
     !!
     !--------------------------------------------------------------------------------
-    function get_data(self,field,cache_type,idirection,seed,ifield) result(cache_data)
+    function get_data(self,field,cache_type,idirection,seed) result(cache_data)
         class(cache_data_t),    intent(inout)           :: self
         character(*),           intent(in)              :: field
         character(*),           intent(in)              :: cache_type
         integer(ik),            intent(in)              :: idirection
         type(seed_t),           intent(in)              :: seed
-        integer(ik),            intent(in)              :: ifield
 
         
         type(AD_D), allocatable, dimension(:) :: cache_data

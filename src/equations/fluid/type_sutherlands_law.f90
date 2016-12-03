@@ -1,7 +1,7 @@
-module type_ideal_gas
+module type_sutherlands_law
 #include <messenger.h>
     use mod_kinds,          only: rk
-    use mod_constants,      only: HALF, ONE
+    use mod_constants,      only: THREE, TWO
     use type_model,         only: model_t
     use type_chidg_worker,  only: chidg_worker_t
     use DNAD_D
@@ -11,27 +11,23 @@ module type_ideal_gas
     
 
 
-    !>  An equation of state model for an ideal gas.
+    !>  Sutherland's Law for Laminary Viscosity.
     !!
     !!  Model Fields:
-    !!      - Pressure
-    !!      - Temperature
+    !!      - Viscosity
     !!
     !!  @author Nathan A. Wukie
-    !!  @date   12/1/2016
+    !!  @date   12/3/2016
     !!
     !---------------------------------------------------------------------------------------
-    type, extends(model_t)  :: ideal_gas_t
-
-        real(rk)    :: gam = 1.4_rk     ! ratio of specific heats
-        real(rk)    :: R   = 273.15_rk  ! ideal gas constant [J/(kg*K)]
+    type, extends(model_t)  :: sutherlands_law_t
 
     contains
 
         procedure   :: init
         procedure   :: compute
 
-    end type ideal_gas_t
+    end type sutherlands_law_t
     !***************************************************************************************
 
 
@@ -50,12 +46,11 @@ contains
     !!
     !---------------------------------------------------------------------------------------
     subroutine init(self)   
-        class(ideal_gas_t), intent(inout)   :: self
+        class(sutherlands_law_t), intent(inout)   :: self
 
-        call self%set_name('Ideal Gas')
+        call self%set_name('Sutherlands Law')
 
-        call self%add_model_field('Pressure')
-        call self%add_model_field('Temperature')
+        call self%add_model_field('Viscosity')
 
 
     end subroutine init
@@ -66,37 +61,39 @@ contains
 
 
 
-    !>  Routine for computing the Pressure and Temperature.
+    !>  Routine for computing a viscosity contribution from Sutherland's Law.
     !!
     !!  @author Nathan A. Wukie
     !!  @date   12/1/2016
     !!
     !--------------------------------------------------------------------------------------
     subroutine compute(self,worker)
-        class(ideal_gas_t),     intent(in)      :: self
+        class(sutherlands_law_t),     intent(in)      :: self
         type(chidg_worker_t),   intent(inout)   :: worker
 
         type(AD_D), dimension(:),   allocatable :: &
-            rho, rhou, rhov, rhow, rhoE, P, T
+            viscosity, T
 
+        real(rk) :: mu0 = 1.7894e-5_rk  ! [kg/(m*s)]
+        real(rk) :: T0  = 273.11_rk     ! [K]
+        real(rk) :: S   = 110.56_rk     ! [K]
 
         !
         ! Interpolate solution to quadrature nodes
         !
-        rho  = worker%get_primary_field_general('Density',    'value')
-        rhou = worker%get_primary_field_general('X-Momentum', 'value')
-        rhov = worker%get_primary_field_general('Y-Momentum', 'value')
-        rhow = worker%get_primary_field_general('Z-Momentum', 'value')
-        rhoE = worker%get_primary_field_general('Energy',     'value')
+        T = worker%get_model_field_general('Temperature','value')
 
 
-        P = (self%gam-ONE)*(rhoE - HALF*( (rhou*rhou) + (rhov*rhov) + (rhow*rhow) )/rho )
-        T = P/(rho*self%R)
+        !
+        ! Sutherlands Law for Laminar Viscosity
+        !
+        viscosity = mu0*((T/T0)**(THREE/TWO))*(T0+S)/(T+S)
 
 
-
-        call worker%store_model_field('Pressure',    'value', P)
-        call worker%store_model_field('Temperature', 'value', T)
+        !
+        ! Contribute laminar viscosity
+        !
+        call worker%store_model_field('Viscosity', 'value', viscosity)
 
 
     end subroutine compute
@@ -105,4 +102,4 @@ contains
 
 
 
-end module type_ideal_gas
+end module type_sutherlands_law

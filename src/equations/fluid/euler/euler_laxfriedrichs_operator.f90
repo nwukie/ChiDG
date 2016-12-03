@@ -101,11 +101,12 @@ contains
             a_m,        a_p,                     &
             wave_m,     wave_p,                  &
             upwind,     wave,                    &
-            gam_m,      gam_p,                   &
             integrand
 
         real(rk), allocatable, dimension(:)    :: &
             norm_mag, normx, normy, normz, unormx, unormy, unormz
+
+        real(rk) :: gam_m, gam_p
 
 
         irho  = prop%get_primary_field_index("Density"   )
@@ -119,20 +120,20 @@ contains
         !
         ! Interpolate solution to quadrature nodes
         !
-        rho_m  = worker%get_primary_field_face('Density'   ,irho,  'value', 'face interior')
-        rho_p  = worker%get_primary_field_face('Density'   ,irho,  'value', 'face exterior')
+        rho_m  = worker%get_primary_field_face('Density'   , 'value', 'face interior')
+        rho_p  = worker%get_primary_field_face('Density'   , 'value', 'face exterior')
 
-        rhou_m = worker%get_primary_field_face('X-Momentum',irhou, 'value', 'face interior')
-        rhou_p = worker%get_primary_field_face('X-Momentum',irhou, 'value', 'face exterior')
+        rhou_m = worker%get_primary_field_face('X-Momentum', 'value', 'face interior')
+        rhou_p = worker%get_primary_field_face('X-Momentum', 'value', 'face exterior')
 
-        rhov_m = worker%get_primary_field_face('Y-Momentum',irhov, 'value', 'face interior')
-        rhov_p = worker%get_primary_field_face('Y-Momentum',irhov, 'value', 'face exterior')
+        rhov_m = worker%get_primary_field_face('Y-Momentum', 'value', 'face interior')
+        rhov_p = worker%get_primary_field_face('Y-Momentum', 'value', 'face exterior')
 
-        rhow_m = worker%get_primary_field_face('Z-Momentum',irhow, 'value', 'face interior')
-        rhow_p = worker%get_primary_field_face('Z-Momentum',irhow, 'value', 'face exterior')
+        rhow_m = worker%get_primary_field_face('Z-Momentum', 'value', 'face interior')
+        rhow_p = worker%get_primary_field_face('Z-Momentum', 'value', 'face exterior')
 
-        rhoE_m = worker%get_primary_field_face('Energy'    ,irhoE, 'value', 'face interior')
-        rhoE_p = worker%get_primary_field_face('Energy'    ,irhoE, 'value', 'face exterior')
+        rhoE_m = worker%get_primary_field_face('Energy'    , 'value', 'face interior')
+        rhoE_p = worker%get_primary_field_face('Energy'    , 'value', 'face exterior')
 
 
 
@@ -153,10 +154,14 @@ contains
         !
         ! Compute pressure and gamma
         !
-        p_m = prop%fluid%compute_pressure(rho_m,rhou_m,rhov_m,rhow_m,rhoE_m)
-        p_p = prop%fluid%compute_pressure(rho_p,rhou_p,rhov_p,rhow_p,rhoE_p)
-        gam_m = prop%fluid%compute_gamma(rho_m,rhou_m,rhov_m,rhow_m,rhoE_m)
-        gam_p = prop%fluid%compute_gamma(rho_p,rhou_p,rhov_p,rhow_p,rhoE_p)
+        !p_m = prop%fluid%compute_pressure(rho_m,rhou_m,rhov_m,rhow_m,rhoE_m)
+        !p_p = prop%fluid%compute_pressure(rho_p,rhou_p,rhov_p,rhow_p,rhoE_p)
+        !gam_m = prop%fluid%compute_gamma(rho_m,rhou_m,rhov_m,rhow_m,rhoE_m)
+        !gam_p = prop%fluid%compute_gamma(rho_p,rhou_p,rhov_p,rhow_p,rhoE_p)
+        p_m = worker%get_model_field_face('Pressure','value','face interior')
+        p_p = worker%get_model_field_face('Pressure','value','face exterior')
+        gam_m = 1.4_rk
+        gam_p = 1.4_rk
 
 
         !
@@ -190,7 +195,7 @@ contains
 
         integrand = HALF * upwind * norm_mag
 
-        call worker%integrate_boundary('Density',irho,integrand)
+        call worker%integrate_boundary('Density',integrand)
 
 
         !================================
@@ -200,7 +205,7 @@ contains
 
         integrand = HALF * upwind * norm_mag
 
-        call worker%integrate_boundary('X-Momentum',irhou,integrand)
+        call worker%integrate_boundary('X-Momentum',integrand)
 
 
         !================================
@@ -210,7 +215,7 @@ contains
 
         integrand = HALF * upwind * norm_mag
 
-        call worker%integrate_boundary('Y-Momentum',irhov,integrand)
+        call worker%integrate_boundary('Y-Momentum',integrand)
 
         !================================
         !       Z-MOMENTUM FLUX
@@ -219,7 +224,7 @@ contains
 
         integrand = HALF * upwind * norm_mag
 
-        call worker%integrate_boundary('Z-Momentum',irhow,integrand)
+        call worker%integrate_boundary('Z-Momentum',integrand)
 
         !================================
         !          ENERGY FLUX
@@ -228,7 +233,7 @@ contains
 
         integrand = HALF * upwind * norm_mag
 
-        call worker%integrate_boundary('Energy',irhoE,integrand)
+        call worker%integrate_boundary('Energy',integrand)
 
 
     end subroutine compute

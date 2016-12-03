@@ -1,7 +1,7 @@
 module type_cache_data_field
 #include <messenger.h>
     use mod_kinds,          only: ik
-    use mod_constants,      only: INTERIOR, BOUNDARY, CHIMERA, NFACES
+    use mod_constants,      only: INTERIOR, BOUNDARY, CHIMERA, NFACES, ZERO
     use type_mesh,          only: mesh_t
     use type_properties,    only: properties_t
     use type_seed,          only: seed_t
@@ -39,6 +39,7 @@ module type_cache_data_field
 
         procedure   :: resize
         procedure   :: set_data
+        procedure   :: clear
         
         procedure   :: get_ndepend_face_exterior
 
@@ -158,7 +159,8 @@ contains
         end if
 
         if (.not. allocated(self%value)) then
-            allocate(self%value(nnodes,ndepend_value), self%value_seeds(ndepend_value), stat=ierr)
+            allocate(self%value(nnodes,ndepend_value), &
+                     self%value_seeds(ndepend_value), stat=ierr)
             if (ierr /= 0) call AllocationError
         end if
 
@@ -189,19 +191,23 @@ contains
 
 
         !
-        ! Clear seed contents
+        ! Clear entries
         !
-        do iseed = 1,size(self%value_seeds)
-            call self%value_seeds(iseed)%clear()
-        end do
-
-        do iseed = 1,size(self%derivative_seeds)
-            call self%derivative_seeds(iseed)%clear()
-        end do
-
-        do iseed = 1,size(self%lift_seeds)
-            call self%lift_seeds(iseed)%clear()
-        end do
+        call self%clear()
+!        !
+!        ! Clear seed contents, zero values
+!        !
+!        do iseed = 1,size(self%value_seeds)
+!            call self%value_seeds(iseed)%clear()
+!        end do
+!
+!        do iseed = 1,size(self%derivative_seeds)
+!            call self%derivative_seeds(iseed)%clear()
+!        end do
+!
+!        do iseed = 1,size(self%lift_seeds)
+!            call self%lift_seeds(iseed)%clear()
+!        end do
 
 
 
@@ -467,7 +473,59 @@ contains
 
 
 
+    
+    !>  Clear cache data field entries.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   12/3/2016
+    !!
+    !-----------------------------------------------------------------------------------
+    subroutine clear(self)
+        class(cache_data_field_t),  intent(inout)   :: self
 
+        integer(ik) :: iseed
+
+
+!        !
+!        ! Zero values, derivatives, lift
+!        !
+!        if (allocated(self%value)) then
+!            self%value = ZERO
+!        end if
+!
+!        if (allocated(self%derivative)) then
+!            self%derivative = ZERO
+!        end if
+!
+!        if (allocated(self%lift_face)) then
+!            self%lift_face = ZERO
+!        end if
+!
+!        if (allocated(self%lift_element)) then
+!            self%lift_element = ZERO
+!        end if
+
+
+
+        !
+        ! Clear seed contents, zero values
+        !
+        do iseed = 1,size(self%value_seeds)
+            call self%value_seeds(iseed)%clear()
+        end do
+
+        do iseed = 1,size(self%derivative_seeds)
+            call self%derivative_seeds(iseed)%clear()
+        end do
+
+        do iseed = 1,size(self%lift_seeds)
+            call self%lift_seeds(iseed)%clear()
+        end do
+
+
+
+    end subroutine clear
+    !***********************************************************************************
 
 
 

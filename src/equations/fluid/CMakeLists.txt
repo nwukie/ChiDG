@@ -8,5 +8,7 @@ add_lib_sources(
                 eqn_navier_stokes.f90
                 type_fluid_pseudo_timestep.f90
                 type_ideal_gas.f90
+                type_sutherlands_law.f90
+                type_stokes_hypothesis.f90
                 )
 

@@ -76,7 +76,7 @@ contains
         integer(ik)             :: iu
 
         type(AD_D), allocatable, dimension(:)   ::  &
-            flux_x, flux_y, flux_z, dudx, dudy, dudz, u, mu
+            flux_x, flux_y, flux_z, dudx, dudy, dudz, mu
 
 
         !
@@ -89,16 +89,15 @@ contains
         !
         ! Interpolate solution to quadrature nodes
         !
-        u    = worker%get_primary_field_element('u',iu, 'value'     )
-        dudx = worker%get_primary_field_element('u',iu, 'ddx + lift')
-        dudy = worker%get_primary_field_element('u',iu, 'ddy + lift')
-        dudz = worker%get_primary_field_element('u',iu, 'ddz + lift')
+        dudx = worker%get_primary_field_element('u','ddx + lift')
+        dudy = worker%get_primary_field_element('u','ddy + lift')
+        dudz = worker%get_primary_field_element('u','ddz + lift')
 
 
         !
         ! Compute scalar coefficient
         ! 
-        mu = prop%scalar%compute_mu(u,dudx,dudy,dudz)
+        mu = worker%get_model_field_element('Scalar Diffusion Coefficient', 'value')
 
         !
         ! Compute volume flux at quadrature nodes
@@ -111,7 +110,7 @@ contains
         !
         ! Integrate volume flux
         !
-        call worker%integrate_volume('u',iu, flux_x, flux_y, flux_z)
+        call worker%integrate_volume('u',flux_x,flux_y,flux_z)
 
 
 

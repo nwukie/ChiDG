@@ -2,10 +2,13 @@
 !
 !           Test a 1D linear diffusion problem with a source term.
 !
-!   div(-grad(u)) = S
+!   div(-mu(u)*grad(u)) = S
 !
 !   Linear Diffusion Flux Definition:
-!       F(u) = -dudx
+!       F(u) = -mu(u)*dudx
+!
+!   Diffusion Coefficient Model:
+!       mu(u) = 1.0
 !
 !   Source Definition:
 !       S(x) = -4*pi*pi*sin(2*pi*x)
@@ -50,13 +53,15 @@ module integration_1D_linear_diffusion_mod
     use mpi_f08,                only: MPI_COMM, MPI_REAL8, MPI_SUM
     use mod_io
 
-
-    ! Imports for defining a new operator
-    use mod_operators,          only: operator_factory
-    use type_operator,          only: operator_t
     use type_chidg_worker,      only: chidg_worker_t
     use type_properties,        only: properties_t
     use DNAD_D
+
+    ! Imports for defining a new operator and model
+    use mod_operators,          only: operator_factory
+    use type_operator,          only: operator_t
+    use mod_models,             only: model_factory
+    use type_model,             only: model_t
 
     ! Imports for defining a new equation builder
     use mod_equations,                  only: equation_builder_factory
@@ -91,17 +96,41 @@ module integration_1D_linear_diffusion_mod
     !!
     !!  S(x) = 4*pi*pi*sin(2*pi*x)
     !!
-    !-------------------------------------------------------------------------
+    !---------------------------------------------------------------------------------------
     type, extends(operator_t), public :: test_LD_volume_source_t
 
 
     contains
 
-        procedure   :: init
-        procedure   :: compute
+        procedure   :: init    => init_source
+        procedure   :: compute => compute_source
 
     end type test_LD_volume_source_t
-    !*************************************************************************
+    !***************************************************************************************
+
+
+
+
+    !>  The diffusion coefficient model.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   12/3/2016
+    !!
+    !!
+    !---------------------------------------------------------------------------------------
+    type, extends(model_t), public :: testing_1D_linear_diffusion_model_t
+
+    contains
+
+        procedure   :: init    => init_model
+        procedure   :: compute => compute_model
+
+    end type testing_1D_linear_diffusion_model_t
+    !***************************************************************************************
+
+
+
+
 
 
     !>  A new equation set builder to build a linear diffusion equation set with the 
@@ -110,7 +139,7 @@ module integration_1D_linear_diffusion_mod
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   8/19/2016
     !!
-    !-----------------------------------------------------------------------------------------------------
+    !----------------------------------------------------------------------------------------
     type, extends(equation_builder_t), public :: test_linear_diffusion_builder_t
 
 
@@ -120,7 +149,7 @@ module integration_1D_linear_diffusion_mod
         procedure   :: build
 
     end type test_linear_diffusion_builder_t
-    !******************************************************************************************************
+    !****************************************************************************************
 
 
 
@@ -177,19 +206,6 @@ module integration_1D_linear_diffusion_mod
 
 
 
-!    !> Simple container to hold arbitrary length file names. That way, we can have
-!    !! an array of filenames that get looped through.
-!    !!
-!    !-------------------------------------------------------------------------------
-!    type :: string
-!        character(len=:), allocatable   :: str
-!    end type
-!    !*******************************************************************************
-
-
-
-
-
 
 contains
 
@@ -203,7 +219,7 @@ contains
     !!  @date   8/29/2016
     !!
     !--------------------------------------------------------------------------------
-    subroutine init(self)
+    subroutine init_source(self)
         class(test_LD_volume_source_t),   intent(inout)      :: self
 
         ! Set operator name
@@ -215,7 +231,7 @@ contains
         ! Set operator equations
         call self%add_primary_field("u")
 
-    end subroutine init
+    end subroutine init_source
     !********************************************************************************
 
 
@@ -227,7 +243,7 @@ contains
     !!
     !!
     !------------------------------------------------------------------------------------
-    subroutine compute(self,worker,prop)
+    subroutine compute_source(self,worker,prop)
         class(test_LD_volume_source_t),     intent(inout)   :: self
         type(chidg_worker_t),               intent(inout)   :: worker
         class(properties_t),                intent(inout)   :: prop
@@ -245,7 +261,7 @@ contains
         !
         ! Interpolate solution to quadrature nodes
         !
-        source = worker%get_primary_field_element('u',iu, "ddx + lift")
+        source = worker%get_primary_field_element('u',"ddx + lift")
 
         x = worker%x("volume")
 
@@ -256,20 +272,72 @@ contains
         !
         ! Integrate volume flux
         !
-        call worker%integrate_volume('u',iu, source)
+        call worker%integrate_volume('u',source)
 
 
-    end subroutine compute
-    !****************************************************************************************************
+    end subroutine compute_source
+    !***************************************************************************************
+
+
+
+
+
+
+    !----------------------------------------------------------------------------------------
+    !                       Scalar Diffusion Coefficient Model Methods
+    !----------------------------------------------------------------------------------------
+
+    !>  Initialize scalar diffusion coefficient model with name and model field being 
+    !!  provided.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   12/3/2016
+    !!
+    !----------------------------------------------------------------------------------------
+    subroutine init_model(self)
+        class(testing_1D_linear_diffusion_model_t),    intent(inout)   :: self
+
+        call self%set_name('Testing 1D Linear Diffusion :: Coefficient Model')
+
+        call self%add_model_field('Scalar Diffusion Coefficient')
+
+    end subroutine init_model
+    !****************************************************************************************
+
+
+
+    !>  Implement the function for providing the scalar diffusion coefficient field.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   12/3/2016
+    !!
+    !----------------------------------------------------------------------------------------
+    subroutine compute_model(self,worker)
+        class(testing_1D_linear_diffusion_model_t), intent(in)      :: self
+        type(chidg_worker_t),                       intent(inout)   :: worker
+
+        type(AD_D), allocatable, dimension(:)   :: u, mu
+
+
+        u = worker%get_primary_field_general('u', 'value')
+
+        ! mu(u) = 1.0
+        mu = u
+        mu = 1._rk
+
+        call worker%store_model_field('Scalar Diffusion Coefficient', 'value', mu)
+
+    end subroutine compute_model
+    !****************************************************************************************
 
 
 
 
 
     
-    !-------------------------------------------------------------------------------
+    !----------------------------------------------------------------------------------------
     !                           Builder Methods for new equation set
-    !-------------------------------------------------------------------------------
+    !----------------------------------------------------------------------------------------
 
 
     !>  Initialize the new linear diffusion builder.
@@ -277,14 +345,14 @@ contains
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   8/30/2016
     !!
-    !---------------------------------------------------------------------------------------------
+    !----------------------------------------------------------------------------------------
     subroutine init_builder(self)
         class(test_linear_diffusion_builder_t),   intent(inout)  :: self
 
         call self%set_name("Test 1D Linear Diffusion")
 
     end subroutine init_builder
-    !*********************************************************************************************
+    !****************************************************************************************
 
     
 
@@ -295,10 +363,10 @@ contains
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   9/19/2016
     !!
-    !-------------------------------------------------------------------------------------------------------
+    !----------------------------------------------------------------------------------------
     function build(self,blueprint) result(linear_diffusion_eqn)
-        class(test_linear_diffusion_builder_t),   intent(in)  :: self
-        character(len=*),               intent(in)  :: blueprint
+        class(test_linear_diffusion_builder_t), intent(in)  :: self
+        character(*),                           intent(in)  :: blueprint
 
         type(equation_set_t)                :: linear_diffusion_eqn
         type(linear_coefficient_model_t)    :: linear_coefficient_model
@@ -321,11 +389,12 @@ contains
         !
         ! Add model for 'compute_mu' scalar coefficient
         !
-        call linear_diffusion_eqn%prop%add_scalar(linear_coefficient_model)
+        !call linear_diffusion_eqn%prop%add_scalar(linear_coefficient_model)
+        call linear_diffusion_eqn%add_model("Testing 1D Linear Diffusion :: Coefficient Model")
 
 
     end function build
-    !*********************************************************************************************************
+    !***************************************************************************************
 
 
 
@@ -435,14 +504,14 @@ contains
         end do
 
     end function getParameters
-    !*******************************************************************************************
+    !****************************************************************************************
 
 
 
     !>  Reporting the parameters of the test
     !!
     !!
-    !-------------------------------------------------------------------------------------------
+    !----------------------------------------------------------------------------------------
     function toString(this) result(string)
         class (case_grid_order),    intent(in)  :: this
         character(:), allocatable   :: string
@@ -454,7 +523,7 @@ contains
         string = trim(buffer)
 
     end function toString
-    !********************************************************************************************
+    !****************************************************************************************
 
 
 
@@ -473,7 +542,7 @@ contains
     !!  @author Nathan A. Wukie (AFRL)
     !!
     !!
-    !--------------------------------------------------------------------------------------------
+    !---------------------------------------------------------------------------------------
     subroutine setUp(this)
         class(linear_diffusion_1D),  intent(inout)   :: this
 
@@ -481,11 +550,19 @@ contains
         type(string_t)                  :: group_names(1,6)
         type(bc_group_t)                :: bc_groups(3)
         class(bc_state_t),  allocatable :: bc_state
-!        type(bc_state_wrapper_t)        :: bc_states(1,6)
 
         
-        type(test_LD_volume_source_t)           :: source_test_linear_diffusion
-        type(test_linear_diffusion_builder_t)   :: builder_test_linear_diffusion
+        type(testing_1D_linear_diffusion_model_t)   :: diffusion_coefficient_model
+        type(test_LD_volume_source_t)               :: source_test_linear_diffusion
+        type(test_linear_diffusion_builder_t)       :: builder_test_linear_diffusion
+
+
+
+        !-------------------------------------------------------------------------------
+        !               Initialize and register the diffusion coefficient model
+        !-------------------------------------------------------------------------------
+        call diffusion_coefficient_model%init()
+        call model_factory%register(diffusion_coefficient_model)
 
 
 

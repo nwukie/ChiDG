@@ -1,11 +1,13 @@
 module mod_models
 #include <messenger.h>
-    use mod_kinds,          only: ik
-    use mod_string,         only: string_to_upper
-    use type_model_wrapper, only: model_wrapper_t
-    use type_model,         only: model_t
+    use mod_kinds,              only: ik
+    use mod_string,             only: string_to_upper
+    use type_model_wrapper,     only: model_wrapper_t
+    use type_model,             only: model_t
 
-    use type_ideal_gas,     only: ideal_gas_t
+    use type_ideal_gas,         only: ideal_gas_t
+    use type_sutherlands_law,   only: sutherlands_law_t
+    use type_stokes_hypothesis, only: stokes_hypothesis_t
     implicit none
 
 
@@ -226,11 +228,15 @@ contains
     subroutine register_models()
         integer(ik) :: imodel
 
-        type(ideal_gas_t)   :: IDEAL_GAS
+        type(ideal_gas_t)           :: IDEAL_GAS
+        type(sutherlands_law_t)     :: SUTHERLANDS_LAW
+        type(stokes_hypothesis_t)   :: STOKES_HYPOTHESIS
 
         if (.not. models_initialized) then
 
             call model_factory%register(IDEAL_GAS)
+            call model_factory%register(SUTHERLANDS_LAW)
+            call model_factory%register(STOKES_HYPOTHESIS)
 
 
             ! Initialize all models

@@ -88,15 +88,9 @@ contains
         iu_b = prop%get_primary_field_index('u_b')
 
 
-!        !
-!        ! Get equation set properties
-!        !
-!        select type(prop)
-!            type is (DLA_properties_t)
-!                cx = prop%c(1)
-!                cy = prop%c(2)
-!                cz = prop%c(3)
-!        end select
+        !
+        ! Get equation set properties
+        !
         cx = 1._rk
         cy = 0._rk
         cz = 0._rk
@@ -107,8 +101,8 @@ contains
         !
         ! Interpolate solution to quadrature nodes
         !
-        ua = worker%get_primary_field_element('u_a',iu_a, 'value')
-        ub = worker%get_primary_field_element('u_b',iu_b, 'value')
+        ua = worker%get_primary_field_element('u_a', 'value')
+        ub = worker%get_primary_field_element('u_b', 'value')
 
 
 
@@ -119,7 +113,7 @@ contains
         flux_y = cy  *  ua
         flux_z = cz  *  ua
 
-        call worker%integrate_volume('u_a',iu_a, flux_x, flux_y, flux_z)
+        call worker%integrate_volume('u_a',flux_x,flux_y,flux_z)
 
 
 
@@ -128,7 +122,7 @@ contains
         flux_y = cy  *  ub
         flux_z = cz  *  ub
 
-        call worker%integrate_volume('u_b',iu_b, flux_x, flux_y, flux_z)
+        call worker%integrate_volume('u_b',flux_x,flux_y,flux_z)
 
 
 

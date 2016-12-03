@@ -425,7 +425,7 @@ contains
         class(equation_set_t),  intent(inout)   :: self
         character(*),           intent(in)      :: string
         
-        integer(ik)                         :: imodel, ierr
+        integer(ik)                         :: imodel, ierr, ifield
         logical                             :: already_added
         class(model_t),         allocatable :: new_model
         type(model_wrapper_t),  allocatable :: temp(:)
@@ -434,6 +434,7 @@ contains
         !
         ! Check that the model wasn't already added.
         !
+        already_added = .false.
         do imodel = 1,self%nmodels()
             already_added = (trim(string) == self%models(imodel)%model%get_name())
             if (already_added) exit
@@ -446,6 +447,8 @@ contains
         !
         if (.not. already_added) then
 
+            allocate(new_model, source=model_factory%produce(string), stat=ierr)
+            if (ierr /= 0) call AllocationError
 
             !
             ! Extend storage
@@ -473,8 +476,14 @@ contains
             !
             ! Allocate new model to end of extended array
             !
-            allocate(temp(size(temp))%model, source=model_factory%produce(string), stat=ierr)
+            allocate(temp(size(temp))%model, source=new_model, stat=ierr)
             if (ierr /= 0) call AllocationError
+
+
+            ! Turn on model fields from the new model
+            do ifield = 1,new_model%nmodel_fields()
+                call self%prop%add_model_field(new_model%get_model_field(ifield))
+            end do
 
 
             !
@@ -483,6 +492,7 @@ contains
             call move_alloc(from=temp, to=self%models)
 
         end if
+
 
     end subroutine add_model
     !***************************************************************************************

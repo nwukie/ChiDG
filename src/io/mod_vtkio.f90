@@ -68,7 +68,7 @@ contains
 !        call execute_command_line('rm pwd.txt')
 
         !new_dir_path = trim(cwd)//'/ChiDG_results/'
-        new_dir_path = trim(cwd)//'ChiDG_results'
+        new_dir_path = 'ChiDG_results'
 
         delete_directory = 'rm -rf '//trim(new_dir_path)
         make_directory   = 'mkdir '//trim(new_dir_path)
@@ -76,15 +76,13 @@ contains
         inquire(file = trim(new_dir_path)//'/.', exist = dir_exists)
         if (dir_exists) then
             call system(delete_directory)
-            call system(make_directory)
-        else
-            call system(make_directory)
         end if
+        call system(make_directory)
 
         !
         ! Name of the final .pvd file
         !
-        pvd_filename = trim(new_dir_path)//'/chidg_results.pvd'
+        pvd_filename = 'chidg_results.pvd'
 
 
         ntime = 1   ! No. of time steps in the solution file (1 for steady cases)

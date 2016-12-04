@@ -152,7 +152,7 @@ contains
         else
             print *, 'Error: vtk file does not exist'
         end if
-            write(funit,'(A,I5,A,I5,A)' ) '    <Piece NumberOfPoints="',num_pts,'" NumberOfCells="',num_cells,'">'
+            write(funit,'(A,I15,A,I15,A)' ) '    <Piece NumberOfPoints="',num_pts,'" NumberOfCells="',num_cells,'">'
             close(funit)
 
 
@@ -532,7 +532,7 @@ contains
 
                 do ifile = 1,data%ndomains()
 
-                    write(funit,'(A,I5,A,I5,3A)') '        <DataSet timestep="',itime - 1,'" part="',ifile - 1,'" file="',trim(file_arr(d + ifile)),'"/>'
+                    write(funit,'(A,I15,A,I15,3A)') '        <DataSet timestep="',itime - 1,'" part="',ifile - 1,'" file="',trim(file_arr(d + ifile)),'"/>'
                     
                 end do
                 

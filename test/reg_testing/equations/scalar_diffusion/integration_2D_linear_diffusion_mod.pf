@@ -134,12 +134,6 @@ module integration_2D_linear_diffusion_mod
 
 
 
-
-
-
-
-
-
     !>  A new equation set builder to build a linear diffusion equation set with the 
     !!  new custom volume source.
     !!
@@ -156,10 +150,6 @@ module integration_2D_linear_diffusion_mod
 
     end type test_2D_linear_diffusion_builder_t
     !******************************************************************************************************
-
-
-
-
 
 
 
@@ -349,14 +339,6 @@ contains
 
 
 
-
-
-
-
-
-
-
-
     
     !-------------------------------------------------------------------------------
     !                           Builder Methods for new equation set
@@ -388,11 +370,10 @@ contains
     !!
     !-------------------------------------------------------------------------------------------------------
     function build(self,blueprint) result(linear_diffusion_eqn)
-        class(test_2D_linear_diffusion_builder_t),   intent(in)  :: self
-        character(len=*),               intent(in)  :: blueprint
+        class(test_2D_linear_diffusion_builder_t),  intent(in)  :: self
+        character(*),                               intent(in)  :: blueprint
 
-        type(equation_set_t)                :: linear_diffusion_eqn
-        type(linear_coefficient_model_t)    :: linear_coefficient_model
+        type(equation_set_t)    :: linear_diffusion_eqn
         
 
         !
@@ -412,7 +393,7 @@ contains
         !
         ! Add model for 'compute_mu' scalar coefficient
         !
-        call linear_diffusion_eqn%prop%add_scalar(linear_coefficient_model)
+        call linear_diffusion_eqn%add_model('Testing 2D Linear Diffusion :: Coefficient Model')
 
 
     end function build
@@ -649,16 +630,6 @@ contains
             call create_bc("Scalar Extrapolate", bc_state)
             call bc_groups(2)%bc_states%push_back(bc_state)
 
-
-!            call create_bc("Scalar Value", bc_states(1,ETA_MIN)%state )
-!            call create_bc("Scalar Value", bc_states(1,ETA_MAX)%state )
-!            call create_bc("Scalar Extrapolate", bc_states(1,ZETA_MIN)%state)
-!            call create_bc("Scalar Extrapolate", bc_states(1,ZETA_MAX)%state)
-!            
-!            call bc_states(1,XI_MIN)%state%set_fcn_option("Value","val",ZERO)
-!            call bc_states(1,XI_MAX)%state%set_fcn_option("Value","val",ZERO)
-!            call bc_states(1,ETA_MIN)%state%set_fcn_option("Value","val",ZERO)
-!            call bc_states(1,ETA_MAX)%state%set_fcn_option("Value","val",ZERO)
 
             group_names(1,:) = [ string_t("XY Boundaries"), &
                                  string_t("XY Boundaries"), &

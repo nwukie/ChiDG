@@ -332,13 +332,11 @@ contains
     !!
     !----------------------------------------------------------------------------------------
     function build(self,blueprint) result(nonlinear_diffusion_eqn)
-        class(test_nonlinear_diffusion_builder_t),   intent(in)  :: self
-        character(len=*),               intent(in)  :: blueprint
+        class(test_nonlinear_diffusion_builder_t),  intent(in)  :: self
+        character(*),                               intent(in)  :: blueprint
 
         type(equation_set_t)    :: nonlinear_diffusion_eqn
         
-        !type(nonlinear_coefficient_model_t) :: nonlinear_coefficient_model
-
         !
         ! Set equationset name.
         !
@@ -355,7 +353,6 @@ contains
         !
         ! Add nonlinear coefficient model
         !
-        !call nonlinear_diffusion_eqn%prop%add_scalar(nonlinear_coefficient_model)
         call nonlinear_diffusion_eqn%add_model('Testing 1D Nonlinear Diffusion :: Coefficient Model')
 
     end function build

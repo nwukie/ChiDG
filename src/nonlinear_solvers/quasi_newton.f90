@@ -218,12 +218,7 @@ contains
                 ! Write solution if the count is right
                 !
                 if (wcount == self%nwrite) then
-                    do iwrite = 0,NRANK-1
-                        if ( iwrite == IRANK ) then
-                            call write_solution_hdf(data,'chidg_restart.h5')
-                        end if
-                        call MPI_Barrier(ChiDG_COMM,ierr)
-                    end do
+                    call write_solution_hdf(data,'chidg_restart.h5')
                     wcount = 0
                 end if
                 wcount = wcount + 1

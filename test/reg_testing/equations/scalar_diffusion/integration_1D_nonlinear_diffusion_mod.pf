@@ -10,7 +10,7 @@
 !   Source Definition: no source
 !       S(x) = 0
 !
-!   Nonlinear Viscosity Coefficient:
+!   Scalar Diffusion Coefficient model:
 !       mu(u) = exp(lambda * u)
 !
 !
@@ -59,13 +59,16 @@ module integration_1D_nonlinear_diffusion_mod
     use mpi_f08,                only: MPI_COMM, MPI_REAL8, MPI_SUM
     use mod_io
 
+    use type_chidg_worker,      only: chidg_worker_t
+    use type_properties,        only: properties_t
+    use DNAD_D
+
 
     ! Imports for defining a new operator
     use mod_operators,          only: operator_factory
     use type_operator,          only: operator_t
-    use type_chidg_worker,      only: chidg_worker_t
-    use type_properties,        only: properties_t
-    use DNAD_D
+    use mod_models,             only: model_factory
+    use type_model,             only: model_t
 
     ! Imports for defining a new equation builder
     use mod_equations,          only: equation_builder_factory
@@ -89,22 +92,43 @@ module integration_1D_nonlinear_diffusion_mod
 
 
 
+!    !>  Nonlinear coefficient model for nonlinear scalar diffusion problem
+!    !!
+!    !!  mu(u) = exp(lambda*u)
+!    !!
+!    !!  @author Nathan A. Wukie (AFRL)
+!    !!  @date   9/20/2016
+!    !!
+!    !----------------------------------------------------------------------------------------
+!    type, extends(scalar_t), public :: nonlinear_coefficient_model_t
+!
+!    contains
+!
+!        procedure, public :: compute_mu
+!
+!    end type nonlinear_coefficient_model_t
+!    !*****************************************************************************************
+
+
+
     !>  Nonlinear coefficient model for nonlinear scalar diffusion problem
     !!
     !!  mu(u) = exp(lambda*u)
     !!
-    !!  @author Nathan A. Wukie (AFRL)
-    !!  @date   9/20/2016
+    !!  @author Nathan A. Wukie
+    !!  @date   12/3/2016
     !!
-    !----------------------------------------------------------------------------------------
-    type, extends(scalar_t), public :: nonlinear_coefficient_model_t
+    !!
+    !---------------------------------------------------------------------------------------
+    type, extends(model_t), public :: testing_1D_nonlinear_diffusion_model_t
 
     contains
 
-        procedure, public :: compute_mu
+        procedure   :: init    => init_model
+        procedure   :: compute => compute_model
 
-    end type nonlinear_coefficient_model_t
-    !*****************************************************************************************
+    end type testing_1D_nonlinear_diffusion_model_t
+    !***************************************************************************************
 
 
 
@@ -127,8 +151,6 @@ module integration_1D_nonlinear_diffusion_mod
 
     end type test_nonlinear_diffusion_builder_t
     !****************************************************************************************
-
-
 
 
 
@@ -196,27 +218,87 @@ contains
 
 
 
-    !>  Nonlinear Scalar Coefficient Model
+!    !>  Nonlinear Scalar Coefficient Model
+!    !!
+!    !!  @author Nathan A. Wukie (AFRL)
+!    !!  @date   9/20/2016
+!    !!
+!    !!
+!    !----------------------------------------------------------------------------------------
+!    impure elemental function compute_mu(self,u,dudx,dudy,dudz) result(val)
+!        class(nonlinear_coefficient_model_t),   intent(in)  :: self
+!        type(AD_D),                             intent(in)  :: u
+!        type(AD_D), optional,                   intent(in)  :: dudx
+!        type(AD_D), optional,                   intent(in)  :: dudy
+!        type(AD_D), optional,                   intent(in)  :: dudz
+!
+!        type(AD_D) :: val
+!
+!        val = exp(u)
+!
+!    end function compute_mu
+!    !****************************************************************************************
+    
+
+
+
+    !----------------------------------------------------------------------------------------
+    !                       Scalar Diffusion Coefficient Model Methods
+    !----------------------------------------------------------------------------------------
+
+    !>  Initialize scalar diffusion coefficient model with name and model field being 
+    !!  provided.
     !!
-    !!  @author Nathan A. Wukie (AFRL)
-    !!  @date   9/20/2016
-    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   12/3/2016
     !!
     !----------------------------------------------------------------------------------------
-    impure elemental function compute_mu(self,u,dudx,dudy,dudz) result(val)
-        class(nonlinear_coefficient_model_t),   intent(in)  :: self
-        type(AD_D),                             intent(in)  :: u
-        type(AD_D), optional,                   intent(in)  :: dudx
-        type(AD_D), optional,                   intent(in)  :: dudy
-        type(AD_D), optional,                   intent(in)  :: dudz
+    subroutine init_model(self)
+        class(testing_1D_nonlinear_diffusion_model_t),    intent(inout)   :: self
 
-        type(AD_D) :: val
+        call self%set_name('Testing 1D Nonlinear Diffusion :: Coefficient Model')
 
-        val = exp(u)
+        call self%add_model_field('Scalar Diffusion Coefficient')
 
-    end function compute_mu
+    end subroutine init_model
     !****************************************************************************************
-    
+
+
+
+    !>  Implement the function for providing the scalar diffusion coefficient field.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   12/3/2016
+    !!
+    !----------------------------------------------------------------------------------------
+    subroutine compute_model(self,worker)
+        class(testing_1D_nonlinear_diffusion_model_t), intent(in)      :: self
+        type(chidg_worker_t),                       intent(inout)   :: worker
+
+        type(AD_D), allocatable, dimension(:)   :: u, mu
+
+
+        u = worker%get_primary_field_general('u', 'value')
+
+        ! mu(u) = exp(u)
+        mu = exp(u)
+
+        call worker%store_model_field('Scalar Diffusion Coefficient', 'value', mu)
+
+    end subroutine compute_model
+    !****************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -255,7 +337,7 @@ contains
 
         type(equation_set_t)    :: nonlinear_diffusion_eqn
         
-        type(nonlinear_coefficient_model_t) :: nonlinear_coefficient_model
+        !type(nonlinear_coefficient_model_t) :: nonlinear_coefficient_model
 
         !
         ! Set equationset name.
@@ -273,16 +355,11 @@ contains
         !
         ! Add nonlinear coefficient model
         !
-        call nonlinear_diffusion_eqn%prop%add_scalar(nonlinear_coefficient_model)
-
+        !call nonlinear_diffusion_eqn%prop%add_scalar(nonlinear_coefficient_model)
+        call nonlinear_diffusion_eqn%add_model('Testing 1D Nonlinear Diffusion :: Coefficient Model')
 
     end function build
     !*****************************************************************************************
-
-
-
-
-
 
 
 
@@ -398,14 +475,21 @@ contains
         type(string_t)                  :: group_names(1,6)
 
         
-        type(test_nonlinear_diffusion_builder_t)   :: builder_test_nonlinear_diffusion
+        type(test_nonlinear_diffusion_builder_t)        :: builder_test_nonlinear_diffusion
+        type(testing_1D_nonlinear_diffusion_model_t)    :: diffusion_coefficient_model
 
 
 
         !-------------------------------------------------------------------------------
-        !
+        !          Initialize and register the diffusion coefficient model
+        !-------------------------------------------------------------------------------
+        call diffusion_coefficient_model%init()
+        call model_factory%register(diffusion_coefficient_model)
+
+
+
+        !-------------------------------------------------------------------------------
         !                 Initialize and register equation set builder
-        !
         !-------------------------------------------------------------------------------
         call builder_test_nonlinear_diffusion%init()
         call equation_builder_factory%register(builder_test_nonlinear_diffusion)

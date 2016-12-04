@@ -54,17 +54,19 @@ module integration_1D_linear_adv_diff_mod
     use mod_test_utilities,     only: create_mesh_file
     use mod_file_utilities,     only: delete_file
 
-    use mod_chidg_mpi,      only: IRANK, NRANK, ChiDG_COMM
-    use mpi_f08,            only: MPI_COMM, MPI_REAL8, MPI_SUM
+    use mod_chidg_mpi,          only: IRANK, NRANK, ChiDG_COMM
+    use mpi_f08,                only: MPI_COMM, MPI_REAL8, MPI_SUM
     use mod_io
 
+    use type_chidg_worker,      only: chidg_worker_t
+    use type_properties,        only: properties_t
+    use DNAD_D
 
     ! Imports for defining a new operator
     use mod_operators,          only: operator_factory
     use type_operator,          only: operator_t
-    use type_chidg_worker,      only: chidg_worker_t
-    use type_properties,        only: properties_t
-    use DNAD_D
+    use mod_models,             only: model_factory
+    use type_model,             only: model_t
 
     ! Imports for defining a new equation builder
     use mod_equations,                  only: equation_builder_factory
@@ -96,32 +98,53 @@ module integration_1D_linear_adv_diff_mod
 
 
 
-    !>  A scalar coefficient model for advection and diffusion terms.
+!    !>  A scalar coefficient model for advection and diffusion terms.
+!    !!
+!    !!     Advection    +     Diffusion
+!    !!  div(\vec{c} u)  +  div(-mu grad(u))
+!    !!
+!    !!  This model defines routines for computing:
+!    !!      \vec{c} :: The advection velocity vector
+!    !!      mu      :: The scalar diffusion coefficient
+!    !!
+!    !!
+!    !!  @author Nathan A. Wukie (AFRL)
+!    !!  @date   9/21/2016
+!    !!
+!    !!
+!    !----------------------------------------------------------------------------------------
+!    type, extends(scalar_t) :: test_1D_advection_diffusion_model_t
+!
+!    contains
+!
+!        procedure   :: compute_mu
+!        procedure   :: compute_cx
+!        procedure   :: compute_cy
+!        procedure   :: compute_cz
+!
+!    end type test_1D_advection_diffusion_model_t
+!    !****************************************************************************************
+
+
+
+    !>  The advection-diffusion coefficient model.
     !!
-    !!     Advection    +     Diffusion
-    !!  div(\vec{c} u)  +  div(-mu grad(u))
-    !!
-    !!  This model defines routines for computing:
-    !!      \vec{c} :: The advection velocity vector
-    !!      mu      :: The scalar diffusion coefficient
+    !!  @author Nathan A. Wukie
+    !!  @date   12/3/2016
     !!
     !!
-    !!  @author Nathan A. Wukie (AFRL)
-    !!  @date   9/21/2016
-    !!
-    !!
-    !----------------------------------------------------------------------------------------
-    type, extends(scalar_t) :: test_1D_advection_diffusion_model_t
+    !---------------------------------------------------------------------------------------
+    type, extends(model_t), public :: testing_1D_linear_adv_diff_model_t
 
     contains
 
-        procedure   :: compute_mu
-        procedure   :: compute_cx
-        procedure   :: compute_cy
-        procedure   :: compute_cz
+        procedure   :: init    => init_model
+        procedure   :: compute => compute_model
 
-    end type test_1D_advection_diffusion_model_t
-    !****************************************************************************************
+    end type testing_1D_linear_adv_diff_model_t
+    !***************************************************************************************
+
+
 
 
 
@@ -143,8 +166,6 @@ module integration_1D_linear_adv_diff_mod
 
     end type test_1D_linear_advection_diffusion_builder_t
     !*****************************************************************************************
-
-
 
 
 
@@ -204,127 +225,195 @@ module integration_1D_linear_adv_diff_mod
 contains
 
 
-    !-------------------------------------------------------------------------------
-    !                      Scalar equation model for cx,cy,cz,mu
-    !-------------------------------------------------------------------------------
 
 
+    !----------------------------------------------------------------------------------------
+    !                       Scalar Diffusion Coefficient Model Methods
+    !----------------------------------------------------------------------------------------
 
-    !>  Implement the function for computing the scalar diffusion coefficient, mu
+    !>  Initialize scalar diffusion coefficient model with name and model field being 
+    !!  provided.
     !!
-    !!  @author Nathan A. Wukie (AFRL)
-    !!  @date   9/21/2016
+    !!  @author Nathan A. Wukie
+    !!  @date   12/3/2016
     !!
+    !----------------------------------------------------------------------------------------
+    subroutine init_model(self)
+        class(testing_1D_linear_adv_diff_model_t),    intent(inout)   :: self
+
+        call self%set_name('Testing 1D Linear Advection Diffusion :: Coefficient Model')
+
+        call self%add_model_field('Scalar X-Advection Velocity')
+        call self%add_model_field('Scalar Y-Advection Velocity')
+        call self%add_model_field('Scalar Z-Advection Velocity')
+        call self%add_model_field('Scalar Diffusion Coefficient')
+
+    end subroutine init_model
+    !****************************************************************************************
+
+
+
+    !>  Implement the function for providing the scalar diffusion coefficient field.
     !!
-    !-------------------------------------------------------------------------------
-    impure elemental function compute_mu(self,u,dudx,dudy,dudz) result(val)
-        class(test_1D_advection_diffusion_model_t), intent(in)  :: self
-        type(AD_D),                                 intent(in)  :: u
-        type(AD_D), optional,                       intent(in)  :: dudx
-        type(AD_D), optional,                       intent(in)  :: dudy
-        type(AD_D), optional,                       intent(in)  :: dudz
-
-        type(AD_D) :: val
-
-        ! Allocate vals
-        val =u
-
-        ! Set to constant
-        val = mu
-
-    end function compute_mu
-    !*******************************************************************************
-
-
-
-
-
-
-    !>  Implement the function for computing the scalar advection coefficient, cx
+    !!  @author Nathan A. Wukie
+    !!  @date   12/3/2016
     !!
-    !!  @author Nathan A. Wukie (AFRL)
-    !!  @date   9/21/2016
-    !!
-    !!
-    !-------------------------------------------------------------------------------
-    impure elemental function compute_cx(self,u,dudx,dudy,dudz) result(val)
-        class(test_1D_advection_diffusion_model_t), intent(in)  :: self
-        type(AD_D),                                 intent(in)  :: u
-        type(AD_D),         intent(in), optional    :: dudx
-        type(AD_D),         intent(in), optional    :: dudy
-        type(AD_D),         intent(in), optional    :: dudz
+    !----------------------------------------------------------------------------------------
+    subroutine compute_model(self,worker)
+        class(testing_1D_linear_adv_diff_model_t),  intent(in)      :: self
+        type(chidg_worker_t),                       intent(inout)   :: worker
+
+        type(AD_D), allocatable, dimension(:)   :: u, cx_model,cy_model,cz_model,mu_model
 
 
+        u = worker%get_primary_field_general('u', 'value')
 
-        type(AD_D)  :: val
+        ! Initialize derivative arrays
+        cx_model = u
+        cy_model = u
+        cz_model = u
+        mu_model = u
 
-        ! Allocate vals
-        val =u
+        ! mu(u) = 1.0
+        cx_model = cx
+        cy_model = cy
+        cz_model = cz
+        mu_model = mu
 
-        ! Set to constant
-        val = cx
+        call worker%store_model_field('Scalar X-Advection Velocity',  'value', cx_model)
+        call worker%store_model_field('Scalar Y-Advection Velocity',  'value', cy_model)
+        call worker%store_model_field('Scalar Z-Advection Velocity',  'value', cz_model)
+        call worker%store_model_field('Scalar Diffusion Coefficient', 'value', mu_model)
 
-    end function compute_cx
-    !*******************************************************************************
-
-
-
-
-
-    !>  Implement the function for computing the scalar advection coefficient, cy
-    !!
-    !!  @author Nathan A. Wukie (AFRL)
-    !!  @date   9/21/2016
-    !!
-    !!
-    !-------------------------------------------------------------------------------
-    impure elemental function compute_cy(self,u,dudx,dudy,dudz) result(val)
-        class(test_1D_advection_diffusion_model_t), intent(in)  :: self
-        type(AD_D),                                 intent(in)  :: u
-        type(AD_D),         intent(in), optional    :: dudx
-        type(AD_D),         intent(in), optional    :: dudy
-        type(AD_D),         intent(in), optional    :: dudz
-
-        type(AD_D) :: val
-
-        ! Allocate vals
-        val =u
-
-        ! Set to constant
-        val = cy
-
-    end function compute_cy
-    !*******************************************************************************
+    end subroutine compute_model
+    !****************************************************************************************
 
 
 
 
 
 
-    !>  Implement the function for computing the scalar advection coefficient, cz
-    !!
-    !!  @author Nathan A. Wukie (AFRL)
-    !!  @date   9/21/2016
-    !!
-    !!
-    !-------------------------------------------------------------------------------
-    impure elemental function compute_cz(self,u,dudx,dudy,dudz) result(val)
-        class(test_1D_advection_diffusion_model_t), intent(in)  :: self
-        type(AD_D),                                 intent(in)  :: u
-        type(AD_D),         intent(in), optional    :: dudx
-        type(AD_D),         intent(in), optional    :: dudy
-        type(AD_D),         intent(in), optional    :: dudz
-
-        type(AD_D)  :: val
-
-        ! Allocate vals
-        val =u
-
-        ! Set to constant
-        val = cz
-
-    end function compute_cz
-    !*******************************************************************************
+!    !-------------------------------------------------------------------------------
+!    !                      Scalar equation model for cx,cy,cz,mu
+!    !-------------------------------------------------------------------------------
+!
+!
+!
+!    !>  Implement the function for computing the scalar diffusion coefficient, mu
+!    !!
+!    !!  @author Nathan A. Wukie (AFRL)
+!    !!  @date   9/21/2016
+!    !!
+!    !!
+!    !-------------------------------------------------------------------------------
+!    impure elemental function compute_mu(self,u,dudx,dudy,dudz) result(val)
+!        class(test_1D_advection_diffusion_model_t), intent(in)  :: self
+!        type(AD_D),                                 intent(in)  :: u
+!        type(AD_D), optional,                       intent(in)  :: dudx
+!        type(AD_D), optional,                       intent(in)  :: dudy
+!        type(AD_D), optional,                       intent(in)  :: dudz
+!
+!        type(AD_D) :: val
+!
+!        ! Allocate vals
+!        val =u
+!
+!        ! Set to constant
+!        val = mu
+!
+!    end function compute_mu
+!    !*******************************************************************************
+!
+!
+!
+!
+!
+!
+!    !>  Implement the function for computing the scalar advection coefficient, cx
+!    !!
+!    !!  @author Nathan A. Wukie (AFRL)
+!    !!  @date   9/21/2016
+!    !!
+!    !!
+!    !-------------------------------------------------------------------------------
+!    impure elemental function compute_cx(self,u,dudx,dudy,dudz) result(val)
+!        class(test_1D_advection_diffusion_model_t), intent(in)  :: self
+!        type(AD_D),                                 intent(in)  :: u
+!        type(AD_D),         intent(in), optional    :: dudx
+!        type(AD_D),         intent(in), optional    :: dudy
+!        type(AD_D),         intent(in), optional    :: dudz
+!
+!
+!
+!        type(AD_D)  :: val
+!
+!        ! Allocate vals
+!        val =u
+!
+!        ! Set to constant
+!        val = cx
+!
+!    end function compute_cx
+!    !*******************************************************************************
+!
+!
+!
+!
+!
+!    !>  Implement the function for computing the scalar advection coefficient, cy
+!    !!
+!    !!  @author Nathan A. Wukie (AFRL)
+!    !!  @date   9/21/2016
+!    !!
+!    !!
+!    !-------------------------------------------------------------------------------
+!    impure elemental function compute_cy(self,u,dudx,dudy,dudz) result(val)
+!        class(test_1D_advection_diffusion_model_t), intent(in)  :: self
+!        type(AD_D),                                 intent(in)  :: u
+!        type(AD_D),         intent(in), optional    :: dudx
+!        type(AD_D),         intent(in), optional    :: dudy
+!        type(AD_D),         intent(in), optional    :: dudz
+!
+!        type(AD_D) :: val
+!
+!        ! Allocate vals
+!        val =u
+!
+!        ! Set to constant
+!        val = cy
+!
+!    end function compute_cy
+!    !*******************************************************************************
+!
+!
+!
+!
+!
+!
+!    !>  Implement the function for computing the scalar advection coefficient, cz
+!    !!
+!    !!  @author Nathan A. Wukie (AFRL)
+!    !!  @date   9/21/2016
+!    !!
+!    !!
+!    !-------------------------------------------------------------------------------
+!    impure elemental function compute_cz(self,u,dudx,dudy,dudz) result(val)
+!        class(test_1D_advection_diffusion_model_t), intent(in)  :: self
+!        type(AD_D),                                 intent(in)  :: u
+!        type(AD_D),         intent(in), optional    :: dudx
+!        type(AD_D),         intent(in), optional    :: dudy
+!        type(AD_D),         intent(in), optional    :: dudz
+!
+!        type(AD_D)  :: val
+!
+!        ! Allocate vals
+!        val =u
+!
+!        ! Set to constant
+!        val = cz
+!
+!    end function compute_cz
+!    !*******************************************************************************
 
 
 
@@ -367,7 +456,7 @@ contains
         character(len=*),                                       intent(in)  :: blueprint
 
         type(equation_set_t)                        :: linear_advection_diffusion_eqn
-        type(test_1D_advection_diffusion_model_t)   :: scalar_model
+        !type(test_1D_advection_diffusion_model_t)   :: scalar_model
         
 
         !
@@ -390,8 +479,8 @@ contains
         !
         ! Add model for 'compute_mu' scalar coefficient
         !
-        call linear_advection_diffusion_eqn%prop%add_scalar(scalar_model)
-
+        !call linear_advection_diffusion_eqn%prop%add_scalar(scalar_model)
+        call linear_advection_diffusion_eqn%add_model('Testing 1D Linear Advection Diffusion :: Coefficient Model')
 
     end function build
     !*****************************************************************************************
@@ -524,20 +613,24 @@ contains
 
         
         type(test_1D_linear_advection_diffusion_builder_t)  :: builder_test_linear_advection_diffusion
+        type(testing_1D_linear_adv_diff_model_t)            :: diffusion_coefficient_model
 
 
 
         !-------------------------------------------------------------------------------
-        !
+        !               Initialize and register the diffusion coefficient model
+        !-------------------------------------------------------------------------------
+        call diffusion_coefficient_model%init()
+        call model_factory%register(diffusion_coefficient_model)
+
+
+
+
+        !-------------------------------------------------------------------------------
         !                 Initialize and register equation set builder
-        !
         !-------------------------------------------------------------------------------
         call builder_test_linear_advection_diffusion%init()
         call equation_builder_factory%register(builder_test_linear_advection_diffusion)
-
-
-
-
 
 
         !------------------------------------------------------------------------------

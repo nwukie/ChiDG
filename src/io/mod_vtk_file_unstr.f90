@@ -152,7 +152,7 @@ contains
         else
             print *, 'Error: vtk file does not exist'
         end if
-            write(funit,'(A,I5,A,I5,A)' ) '    <Piece NumberOfPoints="',num_pts,'" NumberOfCells="',num_cells,'">'
+            write(funit,'(A,I10,A,I10,A)' ) '    <Piece NumberOfPoints="',num_pts,'" NumberOfCells="',num_cells,'">'
             close(funit)
 
 

@@ -107,7 +107,7 @@ contains
             dp_drho, dp_drhou, dp_drhov, dp_drhow, dp_drhoE,                    &
             dke_drho, dke_drhou, dke_drhov, dke_drhow,                          &
             tau_xx, tau_yy, tau_zz, tau_xy, tau_xz, tau_yz,                     &
-            flux_x, flux_y, flux_z, integrand, p_old, mu_old, lamda_old, T_old
+            flux_x, flux_y, flux_z, integrand
 
         real(rk),   allocatable, dimension(:)   ::          &
             normx, normy, normz
@@ -138,7 +138,7 @@ contains
         !
         ! Compute model values
         !
-        p_old   = prop%fluid%compute_pressure(rho,rhou,rhov,rhow,rhoE)
+        !p_old   = prop%fluid%compute_pressure(rho,rhou,rhov,rhow,rhoE)
         !gam = prop%fluid%compute_gamma(rho,rhou,rhov,rhow,rhoE)
         p   = worker%get_model_field_face("Pressure", 'value', 'boundary')
         gam = 1.4_rk
@@ -256,15 +256,15 @@ contains
         !
         ! Compute temperature
         !
-        T_old = prop%fluid%compute_temperature(rho,rhou,rhov,rhow,rhoE)
+        !T_old = prop%fluid%compute_temperature(rho,rhou,rhov,rhow,rhoE)
         T = worker%get_model_field_face("Temperature", 'value', 'boundary')
 
 
         !
         ! Compute dynamic viscosity, second coefficient of viscosity
         !
-        mu_old    = prop%fluid%compute_viscosity_dynamic(T_old)
-        lamda_old = prop%fluid%compute_viscosity_second(mu_old,T_old)
+        !mu_old    = prop%fluid%compute_viscosity_dynamic(T_old)
+        !lamda_old = prop%fluid%compute_viscosity_second(mu_old,T_old)
         mu    = worker%get_model_field_face('Viscosity',                       'value', 'boundary')
         lamda = worker%get_model_field_face('Second Coefficient of Viscosity', 'value', 'boundary')
 
@@ -289,32 +289,6 @@ contains
         tau_yz = mu*(dw_dy + dv_dz)
 
 
-
-
-        print*, 'Pressure:'
-        print*, "OLD"
-        print*, p_old(:)%x_ad_
-        print*, "NEW"
-        print*, p(:)%x_ad_
-
-
-        print*, 'Temperature:'
-        print*, "OLD"
-        print*, T_old(:)%x_ad_
-        print*, "NEW"
-        print*, T(:)%x_ad_
-
-        print*, 'mu:'
-        print*, "OLD"
-        print*, mu_old(:)%x_ad_
-        print*, "NEW"
-        print*, mu(:)%x_ad_
-
-        print*, 'lamda:' 
-        print*, "OLD"
-        print*, lamda_old(:)%x_ad_
-        print*, "NEW"
-        print*, lamda(:)%x_ad_
 
         !=================================================
         ! Mass flux

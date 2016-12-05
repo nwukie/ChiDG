@@ -155,8 +155,10 @@ contains
         
         !p_m = prop%fluid%compute_pressure(rho_m,rhou_m,rhov_m,rhow_m,rhoE_m)
         !T_m = p_m/(rho_m*287.15_rk)
-        p_m = worker%get_model_field_face('Pressure',    'value', 'face interior')
-        T_m = worker%get_model_field_face('Temperature', 'value', 'face interior')
+        !p_m = worker%get_model_field_face('Pressure',    'value', 'face interior')
+        !T_m = worker%get_model_field_face('Temperature', 'value', 'face interior')
+        p_m = (1.4_rk - ONE)*(rhoE_m - HALF*(rhou_m*rhou_m + rhov_m*rhov_m + rhow_m*rhow_m)/rho_m)
+        T_m = p_m/(rho_m*287.15_rk)
 
 
         c_m = sqrt(1.4_rk*287.15_rk*T_m)

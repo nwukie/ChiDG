@@ -4,12 +4,29 @@ module eqn_wall_distance
     use type_equation_set,     only: equation_set_t
     use type_equation_builder, only: equation_builder_t
     use type_scalar,           only: scalar_t
+    use type_chidg_worker,      only: chidg_worker_t
+    use type_properties,        only: properties_t
+    use type_operator,          only: operator_t
+    use type_model,             only: model_t
+    use mod_operators,          only: operator_factory
+    use mod_models,             only: model_factory
     use DNAD_D
     implicit none
 
 
 
     !>  A builder for an approximate Wall Distance equation set based on a p-Poisson equation.
+    !!
+    !!  Build using the standard scalar diffusion operators:
+    !!      Scalar Diffusion Boundary Average Operator
+    !!      Scalar Diffusion Volume Operator
+    !!      Scalar Diffusion BC Operator
+    !!
+    !!  Use the p-Laplace model implemented in this file:
+    !!      p-Laplace
+    !!
+    !!  Use the Source term(S = 1.0) implemented in this file:
+    !!      Wall Distance Source
     !!
     !!  @author Nathan A. Wukie
     !!  @date   11/16/2016
@@ -27,26 +44,60 @@ module eqn_wall_distance
 
 
 
-
-
-
-
     !>  A new diffusion coefficient model for the scalar equations. This facilitates
-    !!  the implementation of a p-Poisson equation, which is like a normal
-    !!  Poisson equation, but with a nonlinear diffusion coefficient.
+    !!  the implementation of a p-Laplace operator, which is like a normal
+    !!  laplace operator, but with a nonlinear diffusion coefficient:
+    !!
+    !!      grad(mu * u)
+    !!
+    !!  where
+    !!
+    !!      mu = (dudx**2 + dudy**2 + dudz**2)**((p-2)/2)
+    !!
+    !!  and 'p' is the p-Laplace parameter.
     !!
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   9/30/2016
     !!
     !------------------------------------------------------------------------------------------
-    type, extends(scalar_t), public :: wall_distance_model
+    type, extends(model_t), public :: p_laplace_model
 
     contains
 
-        procedure   :: compute_mu
+        procedure   :: init    => init_model
+        procedure   :: compute => compute_model
 
-    end type wall_distance_model
+    end type p_laplace_model
     !******************************************************************************************
+
+
+
+
+
+
+    !>  A source term in the p-Poisson equation for computing Wall Distance.
+    !!
+    !!  S = 1.0
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   8/19/2016
+    !!
+    !------------------------------------------------------------------------------------------
+    type, extends(operator_t), public :: wall_distance_source_t
+
+
+    contains
+
+        procedure   :: init    => init_source
+        procedure   :: compute => compute_source
+
+    end type wall_distance_source_t
+    !******************************************************************************************
+
+
+
+
+
 
 
 
@@ -68,44 +119,283 @@ contains
 
 
 
-    !-------------------------------------------------------------------------------
-    !                      Scalar equation model mu
-    !-------------------------------------------------------------------------------
+    !---------------------------------------------------------------------------------------
+    !
+    !                   Scalar Diffusion Coefficient Model : p-Poisson
+    !
+    !---------------------------------------------------------------------------------------
 
 
-    !>  Diffusion coefficient function for the p-Poisson equation.
+    !>  Initialize the model with a name and the model fields it is contributing to.
     !!
-    !!  @author Nathan A. Wukie (AFRL)
-    !!  @date   9/30/2016
+    !!  @author Nathan A. Wukie
+    !!  @date   12/5/2016
+    !!
+    !---------------------------------------------------------------------------------------
+    subroutine init_model(self)   
+        class(p_laplace_model), intent(inout)   :: self
+
+        call self%set_name('p-Laplace')
+
+        call self%add_model_field('Scalar Diffusion Coefficient')
+
+    end subroutine init_model
+    !***************************************************************************************
+
+
+
+
+
+
+    !>  Compute a p-Laplace diffusion coefficient.
+    !!
+    !!  In the scalar diffusion equation: 
+    !!      grad(mu * u) = S
+    !!
+    !!  The p-Laplace equation is given by defining the diffusion coefficient as:
+    !!      mu = (dudx**2 + dudy**2 + dudz**2)**((p-2)/2)
     !!
     !!
-    !-----------------------------------------------------------------------------------------
-    impure elemental function compute_mu(self,u,dudx,dudy,dudz) result(val)
-        class(wall_distance_model), intent(in)  :: self
-        type(AD_D),                 intent(in)  :: u
-        type(AD_D),                 intent(in), optional    :: dudx
-        type(AD_D),                 intent(in), optional    :: dudy
-        type(AD_D),                 intent(in), optional    :: dudz
+    !!  @author Nathan A. Wukie
+    !!  @date   12/5/2016
+    !!
+    !--------------------------------------------------------------------------------------
+    subroutine compute_model(self,worker)
+        class(p_laplace_model),     intent(in)      :: self
+        type(chidg_worker_t),       intent(inout)   :: worker
 
-        type(AD_D)  :: val, mag2
+        type(AD_D), dimension(:),   allocatable :: &
+            u, dudx, dudy, dudz, mag2, mu
+
+        real(rk) :: p
+
+
+        !
+        ! Interpolate solution to quadrature nodes
+        !
+        u    = worker%get_primary_field_general('u', 'value')
+        dudx = worker%get_primary_field_general('u', 'ddx'  )
+        dudy = worker%get_primary_field_general('u', 'ddy'  )
+        dudz = worker%get_primary_field_general('u', 'ddz'  )
 
 
 
+        !
         ! Compute magnitude of gradient
+        !
         mag2 = dudx*dudx + dudy*dudy + dudz*dudz
 
         
+        !
+        ! Compute p-Laplace diffusion coefficient
+        !
+        ! mu = (dudx**2 + dudy**2 + dudz**2)**((p-2)/2)
+        !
         if (abs(p-2._rk) > 1.e-14_rk) then
-            val = mag2**((p-TWO)/TWO)
+            mu = mag2**((p-TWO)/TWO)
         else
-            val = mag2
-            val = ONE
+            mu = mag2
+            mu = ONE
         end if
 
 
 
-    end function compute_mu
+        call worker%store_model_field('Scalar Diffusion Coefficient','value',mu)
+
+
+    end subroutine compute_model
+    !***************************************************************************************
+
+
+
+
+
+
+
+
+    !-----------------------------------------------------------------------------------------
+    !
+    !                Methods implementing the Wall Distance Source term
+    !
+    !-----------------------------------------------------------------------------------------
+
+
+    !>  Initialize Wall Distance source term.
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   8/29/2016
+    !!
+    !-----------------------------------------------------------------------------------------
+    subroutine init_source(self)
+        class(wall_distance_source_t),   intent(inout)      :: self
+
+        ! Set operator name
+        call self%set_name("Wall Distance Source")
+
+        ! Set operator type
+        call self%set_operator_type("Volume Advective Source")
+
+        ! Set operator equations
+        call self%add_primary_field("u")
+
+    end subroutine init_source
+    !******************************************************************************************
+
+
+
+
+
+    !>  Implement Wall Distance source term.
+    !!
+    !!  S = 1.0
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   8/19/2016
+    !!
+    !------------------------------------------------------------------------------------------
+    subroutine compute_source(self,worker,prop)
+        class(wall_distance_source_t),      intent(inout)   :: self
+        type(chidg_worker_t),               intent(inout)   :: worker
+        class(properties_t),                intent(inout)   :: prop
+
+        integer(ik)                             :: iu
+        type(AD_D), allocatable, dimension(:)   :: source
+        real(rk),   allocatable, dimension(:)   :: x, y
+
+        !
+        ! Get variable index from equation set
+        !
+        iu = prop%get_primary_field_index("u")
+
+
+        !
+        ! Interpolate solution to quadrature nodes to initialize derivatives
+        !
+        source = worker%get_primary_field_element('u','value')
+        source = ONE
+
+
+        !
+        ! Integrate volume flux
+        !
+        call worker%integrate_volume('u',source)
+
+
+    end subroutine compute_source
+    !*******************************************************************************************
+
+
+
+
+
+
+
+
+    !-----------------------------------------------------------------------------------------
+    !
+    !                Methods implementing the Wall Distance equation builder.
+    !
+    !-----------------------------------------------------------------------------------------
+
+    !>  Wall Distance builder initialization.
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   8/30/2016
+    !!
+    !-----------------------------------------------------------------------------------------
+    subroutine init(self)
+        class(wall_distance),   intent(inout)  :: self
+
+        call self%set_name('Wall Distance')
+
+    end subroutine init
     !*****************************************************************************************
+
+
+
+
+
+    !>  Build a p-Poisson equation.
+    !!
+    !!  This substitutes the standard Laplace operator in the Poisson equation 
+    !!  with a p-Laplace operator, creating a p-Poisson equation.
+    !!
+    !!  A nice property of the p-Poisson equation is that as 'p' goes to infinity,
+    !!  the solution approaches the distance field, satisfying the Eikonal equation.
+    !!  This allows one to obtain approximate distance fields, selecting the fidelity
+    !!  of the approximation that is required.
+    !!
+    !!  The practical implementation of this is to create a new nonlinear diffusion 
+    !!  coefficient model that will then be used in the regular scalar diffusion equation.
+    !!  A source term is also implemented so that the equation is an approximation of the
+    !!  distance field.
+    !!
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   11/16/2016
+    !!
+    !-----------------------------------------------------------------------------------------
+    function build(self,blueprint) result(wall_distance_eqn)
+        class(wall_distance),   intent(in)  :: self
+        character(*),           intent(in)  :: blueprint
+
+        character(:),   allocatable     :: user_msg
+        type(equation_set_t)            :: wall_distance_eqn
+        type(p_laplace_model)           :: p_laplace
+        type(wall_distance_source_t)    :: wall_distance_source
+        
+
+
+        !
+        ! Register p-Poisson model and wall distance source term
+        !
+        call model_factory%register(p_laplace)
+        call operator_factory%register(wall_distance_source)
+
+
+        !
+        ! Set equationset name.
+        !
+        call wall_distance_eqn%set_name("Wall Distance")
+
+
+        !
+        ! Add spatial operators
+        !
+        select case (trim(blueprint))
+
+            case('default')
+                ! Add the operators for the standard scalar diffusion equation:
+                !
+                !   grad(mu*u) = 0
+                !
+                call wall_distance_eqn%add_operator("Scalar Diffusion Boundary Average Operator")
+                call wall_distance_eqn%add_operator("Scalar Diffusion Volume Operator")
+                call wall_distance_eqn%add_operator("Scalar Diffusion BC Operator")
+
+
+                ! Add a definition for mu
+                call wall_distance_eqn%add_model('p-Laplace')
+
+                ! Add a source term (S=1)
+                call wall_distance_eqn%add_operator("Wall Distance Source")
+
+            case default
+                user_msg = "build_wall_distance: I didn't recognize the construction &
+                            parameter that was passed to build the equation set."
+                call chidg_signal_one(FATAL,user_msg, blueprint)
+
+        end select
+
+
+    end function build
+    !*****************************************************************************************
+
+
+
+
+
+
 
 
 
@@ -149,86 +439,6 @@ contains
 
 
 
-
-
-
-    !>  Wall Distance builder initialization.
-    !!
-    !!  @author Nathan A. Wukie (AFRL)
-    !!  @date   8/30/2016
-    !!
-    !-----------------------------------------------------------------------------------------
-    subroutine init(self)
-        class(wall_distance),   intent(inout)  :: self
-
-        call self%set_name('Wall Distance')
-
-    end subroutine init
-    !*****************************************************************************************
-
-
-
-
-
-    !>  Build a p-Poisson equation.
-    !!
-    !!  This substitutes the standard Laplace operator in the Poisson equation 
-    !!  with a p-Laplace operator, creating a p-Poisson equation.
-    !!
-    !!  A nice property of the p-Poisson equation is that as 'p' goes to infinity,
-    !!  the solution approaches the distance field, satisfying the Eikonal equation.
-    !!  This allows one to obtain approximate distance fields, selecting the fidelity
-    !!  of the approximation that is required.
-    !!
-    !!  The practical implementation of this is to create a new nonlinear diffusion 
-    !!  coefficient model that will then be used in the regular scalar diffusion equation.
-    !!  A source term is also implemented so that the equation is an approximation of the
-    !!  distance field.
-    !!
-    !!
-    !!  @author Nathan A. Wukie
-    !!  @date   11/16/2016
-    !!
-    !-----------------------------------------------------------------------------------------
-    function build(self,blueprint) result(wall_distance_eqn)
-        class(wall_distance),   intent(in)  :: self
-        character(len=*),       intent(in)  :: blueprint
-
-        character(:),   allocatable :: user_msg
-        type(equation_set_t)        :: wall_distance_eqn
-        type(wall_distance_model)   :: wall_distance_model_instance
-        
-
-        !
-        ! Set equationset name.
-        !
-        call wall_distance_eqn%set_name("Wall Distance")
-
-
-        !
-        ! Add spatial operators
-        !
-        select case (trim(blueprint))
-
-            case('default')
-                call wall_distance_eqn%add_operator("Scalar Diffusion Boundary Average Operator")
-                call wall_distance_eqn%add_operator("Scalar Diffusion Volume Operator")
-                call wall_distance_eqn%add_operator("Scalar Diffusion BC Operator")
-                call wall_distance_eqn%add_operator("Wall Distance Volume Source")
-
-
-                call wall_distance_eqn%prop%add_scalar(wall_distance_model_instance)
-
-            case default
-                user_msg = "build_wall_distance: I didn't recognize the construction &
-                            parameter that was passed to build the equation set."
-                call chidg_signal_one(FATAL,user_msg, blueprint)
-
-        end select
-
-
-    end function build
-    !*****************************************************************************************
 
 
 

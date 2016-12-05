@@ -10,12 +10,12 @@ module WD_volume_source
     implicit none
     private
 
+
+
     !>
     !!
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   8/19/2016
-    !!
-    !!
     !!
     !-------------------------------------------------------------------------
     type, extends(operator_t), public :: WD_volume_source_t
@@ -28,6 +28,8 @@ module WD_volume_source
 
     end type WD_volume_source_t
     !*************************************************************************
+
+
 
 contains
 
@@ -65,8 +67,6 @@ contains
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   8/19/2016
     !!
-    !!
-    !!
     !------------------------------------------------------------------------------------
     subroutine compute(self,worker,prop)
         class(WD_volume_source_t),          intent(inout)   :: self
@@ -87,8 +87,6 @@ contains
         ! Interpolate solution to quadrature nodes to initialize derivatives
         !
         source = worker%get_primary_field_element('u','value')
-
-
         source = ONE
 
 

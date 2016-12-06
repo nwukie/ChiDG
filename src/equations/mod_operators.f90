@@ -20,7 +20,7 @@ module mod_operators
     use SD_boundary_operator,                       only: SD_boundary_operator_t
     use SD_volume_source,                           only: SD_volume_source_t
     use SD_bc_operator,                             only: SD_bc_operator_t
-    use WD_volume_source,                           only: WD_volume_source_t
+!    use WD_volume_source,                           only: WD_volume_source_t
 
     ! Fluid Inviscid Operators
     use euler_volume_operator,                      only: euler_volume_operator_t
@@ -76,6 +76,10 @@ contains
         class(operator_factory_t),  intent(inout)   :: self
         class(operator_t),          intent(inout)   :: operator_instance
 
+        ! Initialize the new operator
+        call operator_instance%init()
+
+        ! Add to the list of registered operators
         call self%operators%push_back(operator_instance)
 
     end subroutine register
@@ -162,7 +166,7 @@ contains
         type(SD_volume_source_t)                        :: SD_volume_source
 
         ! Wall Distance Source Operator
-        type(WD_volume_source_t)                        :: WD_volume_source
+        !type(WD_volume_source_t)                        :: WD_volume_source
 
         ! Dual Linear Advection Operators
         type(DLA_volume_advective_flux_t)               :: DLA_volume_operator
@@ -201,7 +205,7 @@ contains
             call operator_factory%register(SD_bc_operator)
 
             ! Register Wall Distance Source
-            call operator_factory%register(WD_volume_source)
+            !call operator_factory%register(WD_volume_source)
 
             ! Register Dual Linear Advection
             call operator_factory%register(DLA_volume_operator)
@@ -222,10 +226,10 @@ contains
             call operator_factory%register(fluid_viscous_bc_operator)
 
 
-            ! Initialize all operators
-            do iop = 1,operator_factory%operators%size()
-                call operator_factory%operators%data(iop)%op%init()
-            end do
+!            ! Initialize all operators
+!            do iop = 1,operator_factory%operators%size()
+!                call operator_factory%operators%data(iop)%op%init()
+!            end do
             
 
             operators_initialized = .true.

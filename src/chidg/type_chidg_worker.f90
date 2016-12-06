@@ -89,6 +89,7 @@ module type_chidg_worker
         procedure   :: get_model_field_general
         procedure   :: get_model_field_face
         procedure   :: get_model_field_element
+        procedure   :: get_auxiliary_field_face
         procedure   :: get_auxiliary_field_element
 
         procedure   :: store_bc_state
@@ -109,7 +110,6 @@ module type_chidg_worker
 
         ! Worker process data
         procedure   :: integrate_boundary
-
         generic     :: integrate_volume => integrate_volume_flux, &
                                            integrate_volume_source
         procedure   :: integrate_volume_flux
@@ -690,6 +690,113 @@ contains
 
 
 
+    !>  Return an interpolation of an auxiliary chidgVector on the element quadrature node set.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   11/4/2016
+    !!
+    !!
+    !----------------------------------------------------------------------------------------
+    function get_auxiliary_field_face(self,field,interp_type,interp_source) result(var_gq)
+        class(chidg_worker_t),  intent(in)  :: self
+        character(*),           intent(in)  :: field
+        character(*),           intent(in)  :: interp_type
+        character(*),           intent(in)  :: interp_source
+
+        character(:),   allocatable :: user_msg
+        type(AD_D),     allocatable :: var_gq_ad(:)
+        real(rk),       allocatable :: var_gq(:)
+
+        integer(ik) :: ifield, ieqn
+
+
+        !
+        ! Get index of the auxiliary field vector.
+        !
+        ifield = self%solverdata%get_auxiliary_field_index(field)
+
+
+        user_msg = "chidg_worker%get_element_auxiliary_field: There was no field data found for the &
+                    specified field string."
+        if (ifield == 0) call chidg_signal_one(FATAL,user_msg,trim(field))
+
+
+
+
+        !
+        ! Set cache_component
+        !
+        if (interp_source == 'face interior') then
+            source = ME
+        else if (interp_source == 'face exterior' .or. &
+            source = NEIGHBOR
+            cache_component = 'face exterior'
+
+        else if (interp_source == 'boundary') then
+            user_msg = "chidg_worker%get_auxiliary_field_face: Auxiliary fields not implemented &
+                        for external bc boundaries. Not defined at that location."
+            call chidg_signal_one(FATAL,user_msg,trim(interp_source))
+                        
+
+        else
+            user_msg = "chidg_worker%get_model_field_face: Invalid value for interpolation source. &
+                        Try 'face interior', 'face exterior', or 'boundary'"
+            call chidg_signal_one(FATAL,user_msg,trim(interp_source))
+        end if
+
+
+
+
+
+
+
+
+
+        if ( (trim(interp_type) == 'value') .or. &
+             (trim(interp_type) == 'ddx'  ) .or. &
+             (trim(interp_type) == 'ddy'  ) .or. &
+             (trim(interp_type) == 'ddz'  ) ) then
+
+            ! Here, we implicitly assume that all auxiliary field vectors contain only
+            ! one variable expansion. Hence, ieqn = 1.
+            ieqn = 1
+            var_gq_ad = interpolate_face_autodiff(self%mesh,self%solverdata%q,self%face_info(),self%function_info,ieqn,interp_type,source)
+
+
+            ! Just take values
+            var_gq = var_gq_ad(:)%x_ad_
+
+
+        elseif ( (trim(interp_type) == 'ddx+lift')   .or. &
+                 (trim(interp_type) == 'ddy+lift')   .or. &
+                 (trim(interp_type) == 'ddz+lift')   .or. &
+                 (trim(interp_type) == 'ddx + lift') .or. &
+                 (trim(interp_type) == 'ddy + lift') .or. &
+                 (trim(interp_type) == 'ddz + lift') ) then
+
+            user_msg = "chidg_worker%get_auxiliary_field_face: Lifted derivatives('ddx + lift') are&
+                        not supported. Only the standard derivatives('ddx','ddy','ddz') are supported."
+            call chidg_signal_one(FATAL,user_msg,trim(interp_type))
+        end if
+
+
+
+
+
+
+    end function get_auxiliary_field_face
+    !****************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
 
 
     !>  Return an interpolation of an auxiliary chidgVector on the element quadrature node set.
@@ -753,6 +860,8 @@ contains
 
     end function get_auxiliary_field_element
     !****************************************************************************************
+
+
 
 
 
@@ -896,11 +1005,6 @@ contains
 
     end subroutine store_model_field
     !***************************************************************************************
-
-
-
-
-
 
 
 

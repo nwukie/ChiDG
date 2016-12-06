@@ -1,3 +1,67 @@
+!>  This module implements the models, source terms, and equation set for
+!!  computing an approximate wall-distance field using by solving a p-Poisson
+!!  equation within the DG-Chimera framework.
+!!
+!!  OVERVIEW:
+!!  ---------
+!!  This approach extends prior work that used regular Poisson equations to compute
+!!  an approximate wall distance field. The prior work using Poisson equations is published 
+!!  largely by Paul Tucker. The Poisson-based approach is not as accurate as some
+!!  other approaches, but is easy to implement.
+!!      Tucker, et al. "Transport Equation Based Wall Distance Computations Aimed at
+!!                      Flows With Time-Dependent Geometry," NASA/TM-2003-212680
+!!
+!!  Tucker investigates some other methods based on Hamilton-Jacobi equations as well.
+!!  Hamilton-Jacobi equations are not directly discretizable in a DG framework.
+!!
+!!  The approach taken here follows the work by Belyaev and Fayolle.
+!!      Belyaev, et al. "On Variational and PDE-based Distance Function Approximations,"
+!!                       COMPUTER GRAPHICS, Vol. 34, No. 8, 2015, pp. 104-118.
+!!
+!!  Belyaev, et al. extended the Poisson approach by using a p-Laplacian operator
+!!  to create a p-Poisson equation. This has the property, that as 'p' goes to infinity,
+!!  the solution of this equation satisfies the distance field. The benefit is that
+!!  the approach is easy to implement, and can be made as accurate as one wants by
+!!  increasing 'p' in the governing equation.
+!!
+!!  
+!!  EQUATIONS:
+!!  ----------
+!!  
+!!  Scalar equation: 
+!!      - working variable(u)
+!!      - parameter(p)
+!!  
+!!  div( |grad(u)|**(p-2) * grad(u) ) = 1
+!!
+!!
+!!  Here, |grad(u)|**(p-2) is some norm of the gradient of 'u'. For the p-Laplacian it is:
+!!  
+!!      |grad(u)|**(p-2) = (dudx**2  +  dudy**2  +  dudz**2)**(p-2/2)
+!!
+!!  This can be thought of as just a nonlinear diffusion coefficient in our original
+!!  scalar diffusion equation:
+!!      div( mu(u) * grad(u) ) = 1
+!!
+!!  To implement this, we can reuse the scalar diffusion operators that have already 
+!!  been implemented:
+!!      - Scalar Diffusion Boundary Average Operator
+!!      - Scalar Diffusion Volume Operator
+!!      - Scalar Diffusion BC Operator
+!!
+!!  We need to implement the nonlinear diffusion coefficient model for mu(u):
+!!      - Implement p-laplacian diffusion coefficient model. Used by 
+!!        scalar diffusion operators.
+!!
+!!  We need to implement the source term:
+!!      - Implement new operator (S=1)
+!!
+!!
+!!  In the end, we build a new equation set by composing the standard scalar
+!!  diffusion operators with the p-laplacian model and a unit source term.
+!!
+!!
+!----------------------------------------------------------------------------------------
 module eqn_wall_distance
 #include <messenger.h>
     use mod_constants,         only: ZERO, ONE, TWO, THREE
@@ -48,7 +112,7 @@ module eqn_wall_distance
     !!  the implementation of a p-Laplace operator, which is like a normal
     !!  laplace operator, but with a nonlinear diffusion coefficient:
     !!
-    !!      grad(mu * u)
+    !!      dif(mu * grad(u))
     !!
     !!  where
     !!
@@ -101,17 +165,19 @@ module eqn_wall_distance
 
 
 
-    !!
-    !! parameter 'p' in the p-Poisson equation
+    !>  Parameter 'p' in the p-Poisson equation
     !!
     !!   p=2 :: linear Poisson equation
     !!   p>2 :: nonlinear p-Poisson equation
+    !!
+    !!  Default: p=2
     !!
     !! Procedures:
     !!   set_p_poisson_parameter
     !!   get_p_poisson_parameter
     !!
-    real(rk)    :: p = 2._rk
+    !------------------------------------------
+    real(rk)    :: p = 8._rk
 
 
 
@@ -121,7 +187,7 @@ contains
 
     !---------------------------------------------------------------------------------------
     !
-    !                   Scalar Diffusion Coefficient Model : p-Poisson
+    !                   Scalar Diffusion Coefficient Model : p-Laplacian
     !
     !---------------------------------------------------------------------------------------
 
@@ -150,7 +216,7 @@ contains
     !>  Compute a p-Laplace diffusion coefficient.
     !!
     !!  In the scalar diffusion equation: 
-    !!      grad(mu * u) = S
+    !!      dif(mu * grad(u)) = S
     !!
     !!  The p-Laplace equation is given by defining the diffusion coefficient as:
     !!      mu = (dudx**2 + dudy**2 + dudz**2)**((p-2)/2)
@@ -166,9 +232,6 @@ contains
 
         type(AD_D), dimension(:),   allocatable :: &
             u, dudx, dudy, dudz, mag2, mu
-
-        real(rk) :: p
-
 
         !
         ! Interpolate solution to quadrature nodes
@@ -367,7 +430,7 @@ contains
             case('default')
                 ! Add the operators for the standard scalar diffusion equation:
                 !
-                !   grad(mu*u) = 0
+                !   div(mu*grad(u)) = 0
                 !
                 call wall_distance_eqn%add_operator("Scalar Diffusion Boundary Average Operator")
                 call wall_distance_eqn%add_operator("Scalar Diffusion Volume Operator")

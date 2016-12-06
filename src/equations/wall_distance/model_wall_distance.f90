@@ -77,21 +77,34 @@ contains
 
         real(rk) :: p
 
+        ! Get primary field to initialize derivatives
+        rho  = worker%get_primary_field_general('Density', 'value')
+        d    = rho
+        dddx = rho
+        dddy = rho
+        dddz = rho
+
 
         !
         ! Interpolate solution to quadrature nodes
         !
-!        d    = worker%get_auxiliary_field_general('Wall Distance : p-Poisson', 'value')
-!        dddx = worker%get_auxiliary_field_general('Wall Distance : p-Poisson', 'ddx'  )
-!        dddy = worker%get_auxiliary_field_general('Wall Distance : p-Poisson', 'ddy'  )
-!        dddz = worker%get_auxiliary_field_general('Wall Distance : p-Poisson', 'ddz'  )
+        d    = worker%get_auxiliary_field_general('Wall Distance : p-Poisson', 'value')
+        dddx = worker%get_auxiliary_field_general('Wall Distance : p-Poisson', 'ddx'  )
+        dddy = worker%get_auxiliary_field_general('Wall Distance : p-Poisson', 'ddy'  )
+        dddz = worker%get_auxiliary_field_general('Wall Distance : p-Poisson', 'ddz'  )
 
 
+        !
+        ! Compute wall distance normalization
+        !
         p = get_p_poisson_parameter()
         mag2 = dddx*dddx + dddy*dddy + dddz*dddz
         d_normalization = (((p/(p-ONE))*d) + mag2**(p/TWO))**((p-ONE)/p) - mag2**((p-ONE)/TWO)
 
 
+        !
+        ! Store Wall Distance to model field
+        !
         call worker%store_model_field('Wall Distance','value', d_normalization)
 
 

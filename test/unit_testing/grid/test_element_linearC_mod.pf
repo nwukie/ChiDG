@@ -46,7 +46,9 @@ contains
         type(element_connectivity_t)    :: connectivity
         real(rk)                        :: sqrt_two, inv_sqrt_two
         integer(ik)                     :: ftype, ineighbor, mapping, ielem, idomain, spacedim
-        integer(ik)                     :: ineighbor_domain_g, ineighbor_domain_l, ineighbor_element_g, ineighbor_element_l, ineighbor_face, ineighbor_proc
+        integer(ik)                     :: ineighbor_domain_g, ineighbor_domain_l, ineighbor_element_g, &
+                                           ineighbor_element_l, ineighbor_face, ineighbor_proc,         &
+                                           ineighbor_neqns, ineighbor_nterms_s
         
         
         call this%chidg%start_up('core')
@@ -108,12 +110,26 @@ contains
         ineighbor_element_g = 0
         ineighbor_element_l = 0
         ineighbor_proc      = 0
-        call this%faces(XI_MIN)%init_neighbor(  ftype,ineighbor_domain_g,ineighbor_domain_l,ineighbor_element_g,ineighbor_element_l,ineighbor_face,ineighbor_proc)
-        call this%faces(XI_MAX)%init_neighbor(  ftype,ineighbor_domain_g,ineighbor_domain_l,ineighbor_element_g,ineighbor_element_l,ineighbor_face,ineighbor_proc)
-        call this%faces(ETA_MIN)%init_neighbor( ftype,ineighbor_domain_g,ineighbor_domain_l,ineighbor_element_g,ineighbor_element_l,ineighbor_face,ineighbor_proc)
-        call this%faces(ETA_MAX)%init_neighbor( ftype,ineighbor_domain_g,ineighbor_domain_l,ineighbor_element_g,ineighbor_element_l,ineighbor_face,ineighbor_proc)
-        call this%faces(ZETA_MIN)%init_neighbor(ftype,ineighbor_domain_g,ineighbor_domain_l,ineighbor_element_g,ineighbor_element_l,ineighbor_face,ineighbor_proc)
-        call this%faces(ZETA_MAX)%init_neighbor(ftype,ineighbor_domain_g,ineighbor_domain_l,ineighbor_element_g,ineighbor_element_l,ineighbor_face,ineighbor_proc)
+        ineighbor_neqns     = 2
+        ineighbor_nterms_s  = 8
+        call this%faces(XI_MIN)%init_neighbor(  ftype,ineighbor_domain_g,ineighbor_domain_l,ineighbor_element_g,    &
+                                                      ineighbor_element_l,ineighbor_face,ineighbor_neqns,           &
+                                                      ineighbor_nterms_s,ineighbor_proc)
+        call this%faces(XI_MAX)%init_neighbor(  ftype,ineighbor_domain_g,ineighbor_domain_l,ineighbor_element_g,    &
+                                                      ineighbor_element_l,ineighbor_face,ineighbor_neqns,           &
+                                                      ineighbor_nterms_s,ineighbor_proc)
+        call this%faces(ETA_MIN)%init_neighbor( ftype,ineighbor_domain_g,ineighbor_domain_l,ineighbor_element_g,    &
+                                                      ineighbor_element_l,ineighbor_face,ineighbor_neqns,           &
+                                                      ineighbor_nterms_s,ineighbor_proc)
+        call this%faces(ETA_MAX)%init_neighbor( ftype,ineighbor_domain_g,ineighbor_domain_l,ineighbor_element_g,    &
+                                                      ineighbor_element_l,ineighbor_face,ineighbor_neqns,           &
+                                                      ineighbor_nterms_s,ineighbor_proc)
+        call this%faces(ZETA_MIN)%init_neighbor(ftype,ineighbor_domain_g,ineighbor_domain_l,ineighbor_element_g,    &
+                                                      ineighbor_element_l,ineighbor_face,ineighbor_neqns,           &
+                                                      ineighbor_nterms_s,ineighbor_proc)
+        call this%faces(ZETA_MAX)%init_neighbor(ftype,ineighbor_domain_g,ineighbor_domain_l,ineighbor_element_g,    &
+                                                      ineighbor_element_l,ineighbor_face,ineighbor_neqns,           &
+                                                      ineighbor_nterms_s,ineighbor_proc)
         
         call this%faces(XI_MIN)%init_sol(this%elem)
         call this%faces(XI_MAX)%init_sol(this%elem)
@@ -147,12 +163,12 @@ contains
 
 
 
-    @Test
     !>
     !!
     !!
     !!
     !----------------------------------------------------------------------------------------------------
+    @Test
     subroutine testElement_metric(self)
         class(test_element_linearC),    intent(inout)   :: self
         real(rk)    :: test_metric(3,3,self%elem%gq%vol%nnodes)
@@ -183,12 +199,12 @@ contains
 
 
 
-    @Test
     !>
     !!
     !!
     !!
     !------------------------------------------------------------------------------------------------------
+    @Test
     subroutine testElement_jinv(self)
         class(test_element_linearC),    intent(inout)   :: self
         real(rk)    :: test_jinv(self%elem%gq%vol%nnodes), tol
@@ -204,12 +220,12 @@ contains
 
 
 
-    @Test
     !>
     !!
     !!
     !!
     !------------------------------------------------------------------------------------------------------
+    @Test
     subroutine testElement_mass(self)
         class(test_element_linearC),    intent(inout)   :: self
         real(rk)    :: test_mass(self%elem%nterms_s,self%elem%nterms_s)
@@ -238,12 +254,12 @@ contains
 
 
 
-    @Test
     !>
     !!
     !!
     !!
     !------------------------------------------------------------------------------------------------------
+    @Test
     subroutine testElement_volume(self)
         class(test_element_linearC),    intent(inout)   :: self
         real(rk)    :: test_mass(self%elem%nterms_s,self%elem%nterms_s)
@@ -266,12 +282,12 @@ contains
     !------------------------------------------------------------------------------
 
 
-    @Test
     !>
     !!
     !!
     !!
     !-------------------------------------------------------------------------------------------------------
+    @Test
     subroutine testElement_face_metrics(self)
         class(test_element_linearC),    intent(inout)   :: self
         real(rk)    :: test_metric(3,3,self%faces(XI_MAX)%gq%face%nnodes)
@@ -303,12 +319,12 @@ contains
 
 
 
-    @Test
     !>
     !!
     !!
     !!
     !-------------------------------------------------------------------------------------------------------
+    @Test
     subroutine testElement_face_normals(self)
         class(test_element_linearC),    intent(inout)   :: self
         real(rk), dimension(self%faces(XI_MAX)%gq%face%nnodes) :: test_norm_x, test_norm_y, test_norm_z

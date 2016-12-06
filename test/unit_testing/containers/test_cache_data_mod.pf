@@ -11,13 +11,13 @@ module test_cache_data_mod
     public  :: test_cache_data
 
 
-    @TestCase
     !>
     !!
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   9/7/2016
     !!
     !--------------------------------------------------------------------------
+    @TestCase
     type, extends(TestCase) ::  test_cache_data
 
         character(:),   allocatable :: filename
@@ -150,8 +150,10 @@ contains
 
 
 
-        ! Number of equations
-        @assertEqual(size(cache_data%fields), 1)
+        ! Number of Fields
+        !   1 Primary Field + 3 Model Fields(cx,cy,cz) = 4
+        !
+        @assertEqual(size(cache_data%fields), 4)
 
         
     end subroutine test_resize_face_interior__size
@@ -225,9 +227,10 @@ contains
 
 
 
-        ! Number of ndoes
-        @assertEqual(size(cache_data%fields), 1)
-
+        ! Number of Fields
+        !   1 Primary Field + 3 Model Fields(cx,cy,cz) = 4
+        !
+        @assertEqual(size(cache_data%fields), 4)
         
     end subroutine test_resize_face_exterior__size
     !***************************************************************************************
@@ -305,8 +308,10 @@ contains
 
 
 
-        ! Number of ndoes
-        @assertEqual(size(cache_data%fields), 1)
+        ! Number of Fields
+        !   1 Primary Field + 3 Model Fields(cx,cy,cz) = 4
+        !
+        @assertEqual(size(cache_data%fields), 4)
 
         
     end subroutine test_resize_element__size

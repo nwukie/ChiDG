@@ -23,6 +23,7 @@ module test_euler_mod
     !> This parameter is used to test the linearization for different blocks.
     !! iblk = [XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX, DIAG]
     !!
+    !!  @author Nathan A. Wukie
     !!
     !--------------------------------------------------------------------------
     @TestParameter(constructor=newBlock)
@@ -41,7 +42,7 @@ module test_euler_mod
     
     !>
     !!
-    !!
+    !!  @author Nathan A. Wukie
     !!
     !!
     !---------------------------------------------------------------------------
@@ -66,6 +67,7 @@ contains
     !>  NOTE: make sure to use 'this' instead of 'self' since these are over-writting a 
     !!  derived type procedure. The argument names have to match
     !!
+    !!  @author Nathan A. Wukie
     !!
     !!
     !----------------------------------------------------------------------------------------
@@ -139,10 +141,9 @@ contains
         class(test_eq_euler),    intent(inout)   :: this
 
 
-        !
         ! Close ChiDG interface
-        !
         call this%chidg%shut_down('core')
+
     end subroutine tearDown
     !*******************************************************************************
 
@@ -151,6 +152,7 @@ contains
     ! PARAMETER CONSTRUCTORS
     !--------------------------
     
+    !-------------------------------------------------------------------------------
     ! Function for setting the correct parameter value in the constructor
     function newBlock(iblk) result(param)
         type(blockParam)        :: param
@@ -176,14 +178,15 @@ contains
         write(str,'(i0)') this%iblk
         string = str
     end function toString
+    !********************************************************************************
 
 
 
     !> Test Volume Flux jacobian calclation
     !!
+    !!  @author Nathan A. Wukie
     !!
-    !!
-    !----------------------------------------------------------------------------------------
+    !--------------------------------------------------------------------------------
     @Test(cases = [7])
     subroutine test_EULER_jacobian_volume_advective_flux(self)
         class(test_eq_euler),    intent(inout)   :: self
@@ -199,6 +202,7 @@ contains
         
         ! Block Parameter from cases = []
         iblk = self%iblk
+
         
         ! Compute Automatic and Finite Difference jacobians
         call check_jacobian_volume_advective_flux(self%chidg%data,ielem,iblk,blk_dnad,blk_fd)
@@ -207,15 +211,16 @@ contains
         @assertEqual(blk_fd%mat, blk_dnad%mat, tol)
         
     end subroutine test_EULER_jacobian_volume_advective_flux
-    !****************************************************************************************
+    !*********************************************************************************
     
     
 
 
     !> Test Boundary Advective Flux jacobian calculation
     !!
+    !!  @author Nathan A. Wukie
     !!
-    !----------------------------------------------------------------------------------------
+    !---------------------------------------------------------------------------------
     @Test(cases = [1, 2, 3, 4, 5, 6, 7])
     subroutine test_EULER_jacobian_boundary_advective_flux(self)
         class(test_eq_euler),    intent(inout)   :: self
@@ -232,6 +237,7 @@ contains
         ! Block Parameter from cases = []
         iblk = self%iblk
         
+
         ! Compute Automatic and Finite Difference jacobians
         call check_jacobian_boundary_advective_flux(self%chidg%data,ielem,iblk,blk_dnad,blk_fd)
         
@@ -239,7 +245,7 @@ contains
         @assertEqual(blk_fd%mat, blk_dnad%mat, tol)
         
     end subroutine test_EULER_jacobian_boundary_advective_flux
-    !****************************************************************************************
+    !**********************************************************************************
     
     
     

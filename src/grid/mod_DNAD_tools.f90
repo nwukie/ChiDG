@@ -216,18 +216,6 @@ contains
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
     !> Computes the face index of matching face in neighboring element
     !!
     !!  @author Nathan A. Wukie
@@ -332,11 +320,16 @@ contains
         !
         if ( linearize_me ) then
 
-            seed%idomain_g  = mesh(idomain_l)%elems(ielement_l)%idomain_g
-            seed%idomain_l  = mesh(idomain_l)%elems(ielement_l)%idomain_l
-            seed%ielement_g = mesh(idomain_l)%elems(ielement_l)%ielement_g
-            seed%ielement_l = mesh(idomain_l)%elems(ielement_l)%ielement_l
-            seed%iproc      = IRANK
+            call seed%init(idomain_g    = mesh(idomain_l)%elems(ielement_l)%idomain_g,  &
+                           idomain_l    = mesh(idomain_l)%elems(ielement_l)%idomain_l,  &
+                           ielement_g   = mesh(idomain_l)%elems(ielement_l)%ielement_g, &
+                           ielement_l   = mesh(idomain_l)%elems(ielement_l)%ielement_l, &
+                           neqns        = mesh(idomain_l)%elems(ielement_l)%neqns,      &
+                           nterms_s     = mesh(idomain_l)%elems(ielement_l)%nterms_s,   &
+                           iproc        = IRANK,                                        &
+                           recv_comm    = 0,                                            &
+                           recv_domain  = 0,                                            &
+                           recv_element = 0)
 
 
         !
@@ -359,14 +352,16 @@ contains
             !
             if ( interior_face ) then
 
-                seed%idomain_g    = mesh(idomain_l)%faces(ielement_l,iface)%ineighbor_domain_g
-                seed%idomain_l    = mesh(idomain_l)%faces(ielement_l,iface)%ineighbor_domain_l
-                seed%ielement_g   = mesh(idomain_l)%faces(ielement_l,iface)%ineighbor_element_g
-                seed%ielement_l   = mesh(idomain_l)%faces(ielement_l,iface)%ineighbor_element_l
-                seed%iproc        = mesh(idomain_l)%faces(ielement_l,iface)%ineighbor_proc
-                seed%recv_comm    = mesh(idomain_l)%faces(ielement_l,iface)%recv_comm
-                seed%recv_domain  = mesh(idomain_l)%faces(ielement_l,iface)%recv_domain
-                seed%recv_element = mesh(idomain_l)%faces(ielement_l,iface)%recv_element
+                call seed%init(idomain_g    = mesh(idomain_l)%faces(ielement_l,iface)%ineighbor_domain_g,   &
+                               idomain_l    = mesh(idomain_l)%faces(ielement_l,iface)%ineighbor_domain_l,   &
+                               ielement_g   = mesh(idomain_l)%faces(ielement_l,iface)%ineighbor_element_g,  &
+                               ielement_l   = mesh(idomain_l)%faces(ielement_l,iface)%ineighbor_element_l,  &
+                               neqns        = mesh(idomain_l)%faces(ielement_l,iface)%ineighbor_neqns,      &
+                               nterms_s     = mesh(idomain_l)%faces(ielement_l,iface)%ineighbor_nterms_s,   &
+                               iproc        = mesh(idomain_l)%faces(ielement_l,iface)%ineighbor_proc,       &
+                               recv_comm    = mesh(idomain_l)%faces(ielement_l,iface)%recv_comm,            &
+                               recv_domain  = mesh(idomain_l)%faces(ielement_l,iface)%recv_domain,          &
+                               recv_element = mesh(idomain_l)%faces(ielement_l,iface)%recv_element)
 
 
             !
@@ -375,42 +370,45 @@ contains
             elseif ( chimera_face ) then
                 ChiID = mesh(idomain_l)%faces(ielement_l,iface)%ChiID
 
-                seed%idomain_g    = mesh(idomain_l)%chimera%recv%data(ChiID)%donor_domain_g%at(idonor)
-                seed%idomain_l    = mesh(idomain_l)%chimera%recv%data(ChiID)%donor_domain_l%at(idonor)
-                seed%ielement_g   = mesh(idomain_l)%chimera%recv%data(ChiID)%donor_element_g%at(idonor)
-                seed%ielement_l   = mesh(idomain_l)%chimera%recv%data(ChiID)%donor_element_l%at(idonor)
-                seed%iproc        = mesh(idomain_l)%chimera%recv%data(ChiID)%donor_proc%at(idonor)
-                seed%recv_comm    = mesh(idomain_l)%chimera%recv%data(ChiID)%donor_recv_comm%at(idonor)
-                seed%recv_domain  = mesh(idomain_l)%chimera%recv%data(ChiID)%donor_recv_domain%at(idonor)
-                seed%recv_element = mesh(idomain_l)%chimera%recv%data(ChiID)%donor_recv_element%at(idonor)
+                call seed%init(idomain_g    = mesh(idomain_l)%chimera%recv%data(ChiID)%donor_domain_g%at(idonor),       &
+                               idomain_l    = mesh(idomain_l)%chimera%recv%data(ChiID)%donor_domain_l%at(idonor),       &
+                               ielement_g   = mesh(idomain_l)%chimera%recv%data(ChiID)%donor_element_g%at(idonor),      &
+                               ielement_l   = mesh(idomain_l)%chimera%recv%data(ChiID)%donor_element_l%at(idonor),      &
+                               neqns        = mesh(idomain_l)%chimera%recv%data(ChiID)%donor_neqns%at(idonor),          &
+                               nterms_s     = mesh(idomain_l)%chimera%recv%data(ChiID)%donor_nterms_s%at(idonor),       &
+                               iproc        = mesh(idomain_l)%chimera%recv%data(ChiID)%donor_proc%at(idonor),           &
+                               recv_comm    = mesh(idomain_l)%chimera%recv%data(ChiID)%donor_recv_comm%at(idonor),      &
+                               recv_domain  = mesh(idomain_l)%chimera%recv%data(ChiID)%donor_recv_domain%at(idonor),    &
+                               recv_element = mesh(idomain_l)%chimera%recv%data(ChiID)%donor_recv_element%at(idonor) )
+
 
 
             !
             ! Boudnary face, linearize wrt Current element
             !
             elseif ( boundary_face ) then
-!                call chidg_signal(FATAL,"face_compute_seed: Tried to get seed for boundary condition face, but the logic is not implemented.")
-                seed%idomain_g  = mesh(idomain_l)%elems(ielement_l)%idomain_g
-                seed%idomain_l  = mesh(idomain_l)%elems(ielement_l)%idomain_l
-                seed%ielement_g = mesh(idomain_l)%elems(ielement_l)%ielement_g
-                seed%ielement_l = mesh(idomain_l)%elems(ielement_l)%ielement_l
-                seed%iproc      = IRANK
+
+                call seed%init(idomain_g    = mesh(idomain_l)%elems(ielement_l)%idomain_g,  &
+                               idomain_l    = mesh(idomain_l)%elems(ielement_l)%idomain_l,  &
+                               ielement_g   = mesh(idomain_l)%elems(ielement_l)%ielement_g, &
+                               ielement_l   = mesh(idomain_l)%elems(ielement_l)%ielement_l, &
+                               neqns        = mesh(idomain_l)%elems(ielement_l)%neqns,      &
+                               nterms_s     = mesh(idomain_l)%elems(ielement_l)%nterms_s,   &
+                               iproc        = IRANK,                                        &
+                               recv_comm    = 0,                                            &
+                               recv_domain  = 0,                                            &
+                               recv_element = 0)
 
 
-            !
             ! Invalid Case
-            !
             else
                 call chidg_signal(FATAL,"face_compute_seed: invalid face type - face(ielem,iface)%ftype")
             end if
 
 
-        !
         ! Invalid value for iface
-        !
         else
             call chidg_signal(FATAL,"face_compute_seed: invalid value for iface")
-
         end if
 
 
@@ -476,11 +474,16 @@ contains
         !
         if ( linearize_me ) then
 
-            seed%idomain_g  = mesh(idomain_l)%elems(ielement_l)%idomain_g
-            seed%idomain_l  = mesh(idomain_l)%elems(ielement_l)%idomain_l
-            seed%ielement_g = mesh(idomain_l)%elems(ielement_l)%ielement_g
-            seed%ielement_l = mesh(idomain_l)%elems(ielement_l)%ielement_l
-            seed%iproc      = IRANK
+            call seed%init(idomain_g    = mesh(idomain_l)%elems(ielement_l)%idomain_g,  &
+                           idomain_l    = mesh(idomain_l)%elems(ielement_l)%idomain_l,  &
+                           ielement_g   = mesh(idomain_l)%elems(ielement_l)%ielement_g, &
+                           ielement_l   = mesh(idomain_l)%elems(ielement_l)%ielement_l, &
+                           neqns        = mesh(idomain_l)%elems(ielement_l)%neqns,      &
+                           nterms_s     = mesh(idomain_l)%elems(ielement_l)%nterms_s,   &
+                           iproc        = IRANK,                                        &
+                           recv_comm    = 0,                                            &
+                           recv_domain  = 0,                                            &
+                           recv_element = 0)
 
 
         !
@@ -506,14 +509,16 @@ contains
             !
             if ( interior_face ) then
 
-                seed%idomain_g    = mesh(idomain_l)%faces(ielement_l,iface)%ineighbor_domain_g
-                seed%idomain_l    = mesh(idomain_l)%faces(ielement_l,iface)%ineighbor_domain_l
-                seed%ielement_g   = mesh(idomain_l)%faces(ielement_l,iface)%ineighbor_element_g
-                seed%ielement_l   = mesh(idomain_l)%faces(ielement_l,iface)%ineighbor_element_l
-                seed%iproc        = mesh(idomain_l)%faces(ielement_l,iface)%ineighbor_proc
-                seed%recv_comm    = mesh(idomain_l)%faces(ielement_l,iface)%recv_comm
-                seed%recv_domain  = mesh(idomain_l)%faces(ielement_l,iface)%recv_domain
-                seed%recv_element = mesh(idomain_l)%faces(ielement_l,iface)%recv_element
+                call seed%init(idomain_g    = mesh(idomain_l)%faces(ielement_l,iface)%ineighbor_domain_g,   &
+                               idomain_l    = mesh(idomain_l)%faces(ielement_l,iface)%ineighbor_domain_l,   &
+                               ielement_g   = mesh(idomain_l)%faces(ielement_l,iface)%ineighbor_element_g,  &
+                               ielement_l   = mesh(idomain_l)%faces(ielement_l,iface)%ineighbor_element_l,  &
+                               neqns        = mesh(idomain_l)%faces(ielement_l,iface)%ineighbor_neqns,      &
+                               nterms_s     = mesh(idomain_l)%faces(ielement_l,iface)%ineighbor_nterms_s,   &
+                               iproc        = mesh(idomain_l)%faces(ielement_l,iface)%ineighbor_proc,       &
+                               recv_comm    = mesh(idomain_l)%faces(ielement_l,iface)%recv_comm,            &
+                               recv_domain  = mesh(idomain_l)%faces(ielement_l,iface)%recv_domain,          &
+                               recv_element = mesh(idomain_l)%faces(ielement_l,iface)%recv_element)
 
 
             !
@@ -522,25 +527,33 @@ contains
             elseif ( chimera_face ) then
                 ChiID = mesh(idomain_l)%faces(ielement_l,iface)%ChiID
 
-                seed%idomain_g    = mesh(idomain_l)%chimera%recv%data(ChiID)%donor_domain_g%at(idonor)
-                seed%idomain_l    = mesh(idomain_l)%chimera%recv%data(ChiID)%donor_domain_l%at(idonor)
-                seed%ielement_g   = mesh(idomain_l)%chimera%recv%data(ChiID)%donor_element_g%at(idonor)
-                seed%ielement_l   = mesh(idomain_l)%chimera%recv%data(ChiID)%donor_element_l%at(idonor)
-                seed%iproc        = mesh(idomain_l)%chimera%recv%data(ChiID)%donor_proc%at(idonor)
-                seed%recv_comm    = mesh(idomain_l)%chimera%recv%data(ChiID)%donor_recv_comm%at(idonor)
-                seed%recv_domain  = mesh(idomain_l)%chimera%recv%data(ChiID)%donor_recv_domain%at(idonor)
-                seed%recv_element = mesh(idomain_l)%chimera%recv%data(ChiID)%donor_recv_element%at(idonor)
+                call seed%init(idomain_g    = mesh(idomain_l)%chimera%recv%data(ChiID)%donor_domain_g%at(idonor),       &
+                               idomain_l    = mesh(idomain_l)%chimera%recv%data(ChiID)%donor_domain_l%at(idonor),       &
+                               ielement_g   = mesh(idomain_l)%chimera%recv%data(ChiID)%donor_element_g%at(idonor),      &
+                               ielement_l   = mesh(idomain_l)%chimera%recv%data(ChiID)%donor_element_l%at(idonor),      &
+                               neqns        = mesh(idomain_l)%chimera%recv%data(ChiID)%donor_neqns%at(idonor),          &
+                               nterms_s     = mesh(idomain_l)%chimera%recv%data(ChiID)%donor_nterms_s%at(idonor),       &
+                               iproc        = mesh(idomain_l)%chimera%recv%data(ChiID)%donor_proc%at(idonor),           &
+                               recv_comm    = mesh(idomain_l)%chimera%recv%data(ChiID)%donor_recv_comm%at(idonor),      &
+                               recv_domain  = mesh(idomain_l)%chimera%recv%data(ChiID)%donor_recv_domain%at(idonor),    &
+                               recv_element = mesh(idomain_l)%chimera%recv%data(ChiID)%donor_recv_element%at(idonor) )
 
 
             !
             ! Boudnary face, linearize wrt Current element
             !
             elseif ( boundary_face ) then
-                seed%idomain_g  = mesh(idomain_l)%elems(ielement_l)%idomain_g
-                seed%idomain_l  = mesh(idomain_l)%elems(ielement_l)%idomain_l
-                seed%ielement_g = mesh(idomain_l)%elems(ielement_l)%ielement_g
-                seed%ielement_l = mesh(idomain_l)%elems(ielement_l)%ielement_l
-                seed%iproc      = IRANK
+
+                call seed%init(idomain_g    = mesh(idomain_l)%elems(ielement_l)%idomain_g,  &
+                               idomain_l    = mesh(idomain_l)%elems(ielement_l)%idomain_l,  &
+                               ielement_g   = mesh(idomain_l)%elems(ielement_l)%ielement_g, &
+                               ielement_l   = mesh(idomain_l)%elems(ielement_l)%ielement_l, &
+                               neqns        = mesh(idomain_l)%elems(ielement_l)%neqns,      &
+                               nterms_s     = mesh(idomain_l)%elems(ielement_l)%nterms_s,   &
+                               iproc        = IRANK,                                        &
+                               recv_comm    = 0,                                            &
+                               recv_domain  = 0,                                            &
+                               recv_element = 0)
 
 
             !
@@ -553,7 +566,6 @@ contains
 
         else
             call chidg_signal(FATAL,"element_compute_seed: invalid value for iface")
-
         end if
 
 

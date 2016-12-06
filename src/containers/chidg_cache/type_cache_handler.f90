@@ -143,12 +143,6 @@ contains
 
 
         !
-        ! Resize cache
-        !
-        !call worker%cache%resize(worker%mesh,worker%prop,idomain_l,ielement_l)
-
-
-        !
         ! Loop through faces and cache internal, external interpolated states
         !
         do iface = 1,NFACES
@@ -169,7 +163,6 @@ contains
             idepend = 1
 
             do ieqn = 1,worker%mesh(idomain_l)%neqns
-
 
                 worker%function_info%seed    = face_compute_seed(worker%mesh,idomain_l,ielement_l,iface,idepend,DIAG)
                 worker%function_info%idepend = idepend
@@ -633,22 +626,6 @@ contains
 
     end subroutine update_models
     !************************************************************************************************
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 

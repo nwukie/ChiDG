@@ -55,11 +55,16 @@ contains
     !--------------------------------------------------------------------------------------
     subroutine register(self,model)
         class(model_factory_t), intent(inout)   :: self
-        class(model_t),         intent(in)      :: model
+        class(model_t),         intent(inout)   :: model
 
         integer(ik)                         :: ierr, imodel
         type(model_wrapper_t),  allocatable :: temp(:)
 
+        
+        !
+        ! Initialize the incoming model
+        !
+        call model%init()
 
 
         !
@@ -239,10 +244,10 @@ contains
             call model_factory%register(STOKES_HYPOTHESIS)
 
 
-            ! Initialize all models
-            do imodel = 1,model_factory%nmodels()
-                call model_factory%models(imodel)%model%init()
-            end do
+!            ! Initialize all models
+!            do imodel = 1,model_factory%nmodels()
+!                call model_factory%models(imodel)%model%init()
+!            end do
 
             models_initialized = .true.
 

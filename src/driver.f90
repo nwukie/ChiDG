@@ -116,7 +116,7 @@ program driver
 
 !            call polynomial%set_option('f',3.5_rk)
 !            call create_function(polynomial,'polynomial')
-
+!
 !            ! d
 !            call create_function(constant,'constant')
 !            call constant%set_option('val',0.001_rk)

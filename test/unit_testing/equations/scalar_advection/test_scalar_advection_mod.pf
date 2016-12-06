@@ -20,36 +20,37 @@ module test_scalar_advection_mod
 
 
 
-    !>
-    !! This parameter is used to test the linearization for different blocks.
+    !> This parameter is used to test the linearization for different blocks.
     !! iblk = [XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX, DIAG]
     !!
+    !!  @author Nathan A. Wukie
     !!
     !!
-    !----------------------------------------------------------------------------------------
+    !--------------------------------------------------------------------------------------------
     @TestParameter(constructor=newBlock)
     type, extends (AbstractTestParameter) :: blockParam
 
-        integer(ik)         :: iblk
+        integer(ik) :: iblk
 
     contains
 
         procedure :: toString
         
     end type blockParam
-    !****************************************************************************************
+    !*********************************************************************************************
     
     
 
 
 
     
-    !>
+    !>  This holds an initialized test case.
     !!
     !!
+    !!  @author Nathan A. Wukie
     !!
     !!
-    !----------------------------------------------------------------------------------------
+    !---------------------------------------------------------------------------------------------
     @TestCase(constructor=newTest)
     type, extends(ParameterizedTestCase) ::  test_eq_SA
 
@@ -62,7 +63,7 @@ module test_scalar_advection_mod
         procedure   ::  tearDown
 
     end type test_eq_SA
-    !*****************************************************************************************
+    !*********************************************************************************************
 
 
 
@@ -72,11 +73,14 @@ module test_scalar_advection_mod
 
 
 contains
-    !----------------------------------------------------------------------------------------------
-    !                                    SET-UP  +  TEAR-DOWN
-    !----------------------------------------------------------------------------------------------
-    ! NOTE: make sure to use 'this' instead of 'self' since these are over-writting a derived type 
-    ! procedure. The argument names have to match
+
+
+    !> NOTE: make sure to use 'this' instead of 'self' since these are over-writting a derived type 
+    !! procedure. The argument names have to match
+    !!
+    !!  This tests up the test case. Initializes chidg, reads grid, initialize data. 
+    !!
+    !---------------------------------------------------------------------------------------------
     subroutine setUp(this)
         class(test_eq_SA),    intent(inout)   :: this
         
@@ -118,44 +122,56 @@ contains
         call this%chidg%initialize_solution_solver()
 
 
-        call create_function(fcn,'constant')
-        call fcn%set_option('val',1.0_rk)
+        !
+        ! Initialize solution
+        !
+        call create_function(fcn,'gaussian')
         call this%chidg%data%sdata%q%project(this%chidg%data%mesh,fcn,1)
 
     end subroutine setUp
+    !*****************************************************************************************
     
+    
+    !>
+    !!
+    !!
+    !!
+    !-----------------------------------------------------------------------------------------
     subroutine tearDown(this)
         class(test_eq_SA),    intent(inout)   :: this
 
 
-        !
         ! Close ChiDG interface
-        !
         call this%chidg%shut_down('core')
+
     end subroutine tearDown
+    !*****************************************************************************************
 
 
     !--------------------------
     ! PARAMETER CONSTRUCTORS
     !--------------------------
     
-    ! Function for setting the correct parameter value in the constructor
+    !-----------------------------------------------------------------------------------------
+    !> Function for setting the correct parameter value in the constructor
     function newBlock(iblk) result(param)
         type(blockParam)        :: param
         integer(ik), intent(in) :: iblk
         
         param%iblk = iblk
+
     end function newBlock
     
-    ! TestCase constructor for parameter specification
+    !> TestCase constructor for parameter specification
     function newTest(param)
-        type(test_eq_SA) :: newTest
-        type(blockParam)                    :: param
+        type(test_eq_SA)    :: newTest
+        type(blockParam)    :: param
         
         newTest%iblk = param%iblk
+
     end function newTest
  
-    ! ToString
+    !> ToString
     function toString(this) result(string)
         class(blockParam), intent(in)   :: this
         character(:), allocatable       :: string
@@ -163,15 +179,24 @@ contains
          
         write(str,'(i0)') this%iblk
         string = str
+
     end function toString
+    !****************************************************************************************
  
 
 
-!------------------------------------------------------------------------------------------
-!                                        TESTS
-!------------------------------------------------------------------------------------------
-! Test Volume Flux jacobian calclation
-@Test(cases = [1, 2, 3, 4, 5, 6, 7])
+    !----------------------------------------------------------------------------------------
+    !                                        TESTS
+    !----------------------------------------------------------------------------------------
+
+
+    !> Test Volume Flux jacobian calclation
+    !!
+    !!
+    !!
+    !!
+    !----------------------------------------------------------------------------------------
+    @Test(cases = [1, 2, 3, 4, 5, 6, 7])
     subroutine test_SA_jacobian_volume_advective_flux(self)
         class(test_eq_SA),    intent(inout)   :: self
         
@@ -179,28 +204,33 @@ contains
         integer(ik) :: ielem, ivar, iblk, irow
         real(rk)    :: tol
         
-        tol = 1.0e-5_rk
-        
+        tol   = 1.0e-5_rk
         ielem = 14
         
         ! Block Parameter from cases = []
         iblk = self%iblk
         
+
         ! Compute Automatic and Finite Difference jacobians
         call check_jacobian_volume_advective_flux(self%chidg%data,ielem,iblk,blk_dnad,blk_fd)
         
 
         @assertEqual(blk_fd%mat, blk_dnad%mat, tol)
         
-    end subroutine
+    end subroutine test_SA_jacobian_volume_advective_flux
+    !****************************************************************************************
     
     
     
      
 
 
-!> Test Boundary Average Flux jacobian calclation
-@Test(cases = [1, 2, 3, 4, 5, 6, 7])
+    !> Test Boundary Average Flux jacobian calculation
+    !!
+    !!  @author Nathan A. Wukie
+    !!
+    !-----------------------------------------------------------------------------------------
+    @Test(cases = [1, 2, 3, 4, 5, 6, 7])
     subroutine test_SA_jacobian_boundary_advective_flux(self)
         class(test_eq_SA),    intent(inout)   :: self
         
@@ -217,13 +247,15 @@ contains
         ! Block Parameter from cases = []
         iblk = self%iblk
         
+
         ! Compute Automatic and Finite Difference jacobians
         call check_jacobian_boundary_advective_flux(self%chidg%data,ielem,iblk,blk_dnad,blk_fd)
         
         
         @assertEqual(blk_fd%mat, blk_dnad%mat, tol)
         
-    end subroutine
+    end subroutine test_SA_jacobian_boundary_advective_flux
+    !*****************************************************************************************
     
     
     

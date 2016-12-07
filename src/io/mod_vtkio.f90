@@ -5,9 +5,12 @@ module mod_vtkio
     use mod_kinds,              only: rk,ik,rdouble
     use mod_constants,          only: ONE,HALF,TWO,OUTPUT_RES
 
-    use mod_vtk_file_unstr,     only: open_vtk_unstr,close_vtk_unstr,init_piece_unstr,end_piece_unstr,write_piece_coord, & 
-                                      write_piece_data,init_cell,end_cell,write_piece_connectivity_data,write_pvd_final
-    use mod_vtk_calc_func,      only: get_cons_var,get_piece_nums,get_piece_coord,get_piece_data,get_piece_connectivity_data
+    use mod_vtk_file_unstr,     only: open_vtk_unstr,close_vtk_unstr,init_piece_unstr,      &
+                                      end_piece_unstr,write_piece_coord, write_piece_data,  &
+                                      init_cell,end_cell,write_piece_connectivity_data,     &
+                                      write_pvd_final
+    use mod_vtk_calc_func,      only: get_cons_var,get_piece_nums,get_piece_coord,     &
+                                      get_piece_data,get_piece_connectivity_data
 
     use type_element,           only: element_t
     use type_blockvector,       only: blockvector_t
@@ -33,25 +36,24 @@ contains
     !!	@author mayank Sharma
     !!	@date	11/17/2016
     !!
-    !---------------------------------------------------------------------------------------------------------------               
+    !-----------------------------------------------------------------------------------------
     subroutine write_vtk_file(data)
-
         type(chidg_data_t),intent(inout)                        ::  data
 
 
         integer(ik),parameter                                   :: bo_type = 0_ik
         integer(ik)                                             :: idom,ielem,nelem,noeq,s,num_pts,num_cells,ntime
-        character(len = 100),dimension(:),allocatable           :: cons_var
-        real(rk),dimension(:),allocatable                       :: X,Y,Z
-        real(rk),dimension(:,:),allocatable                     :: cons_var_val
-        integer(ik),dimension(:,:),allocatable                  :: connectivity,connectivity_A
-        integer(ik),dimension(:),allocatable                    :: offsets,types
-        character(len = 100),dimension(:),allocatable           :: file_arr
         integer(ik)                                             :: itime,d ! Counters for outer time loop and file name array
-        character(len = 100)                                    :: cwd,new_dir_path
+        character(len = 100),   dimension(:),   allocatable     :: cons_var
+        real(rk),               dimension(:),   allocatable     :: X,Y,Z
+        real(rk),               dimension(:,:), allocatable     :: cons_var_val
+        integer(ik),            dimension(:,:), allocatable     :: connectivity,connectivity_A
+        integer(ik),            dimension(:),   allocatable     :: offsets,types
+        character(len = 100),   dimension(:),   allocatable     :: file_arr
+        character(len = 100)                                    :: new_dir_path
         character(len = 100)                                    :: make_directory,delete_directory
-		logical                                                 :: dir_exists
         character(len = 100)                                    :: pvd_filename
+		logical                                                 :: dir_exists
 
 
         !
@@ -59,9 +61,7 @@ contains
         ! the chidg result folder name to the path
         ! Check if directory already exists, if it does remove it and make it again
         !
-        call getcwd(cwd)
-
-        new_dir_path = trim(cwd)//'/ChiDG_results/'
+        new_dir_path = 'ChiDG_results'
 
         delete_directory = 'rm -rf '//trim(new_dir_path)
         make_directory   = 'mkdir '//trim(new_dir_path)
@@ -69,22 +69,21 @@ contains
         inquire(file = trim(new_dir_path)//'/.', exist = dir_exists)
         if (dir_exists) then
             call system(delete_directory)
-            call system(make_directory)
-        else
-            call system(make_directory)
         end if
+        call system(make_directory)
 
         !
         ! Name of the final .pvd file
         !
-        pvd_filename = trim(new_dir_path)//'/chidg_results.pvd'
+        pvd_filename = 'chidg_results.pvd'
 
 
         ntime = 1   ! No. of time steps in the solution file (1 for steady cases)
 
 
         !
-        ! Allocate array for storing individual .vtu file names for each block over all time steps
+        ! Allocate array for storing individual .vtu file names for each block over 
+        ! all time steps.
         ! Each block corresponds to a ChiDG domain
         !
         allocate(file_arr(data%ndomains()*ntime))
@@ -147,7 +146,8 @@ contains
                 call init_cell(file_arr(d + idom))
 
                 !
-                ! Get connectivity, offsets and element types for the current piece and write to current .vtu file
+                ! Get connectivity, offsets and element types for the current piece and write 
+                ! to current .vtu file.
                 !
                 call get_piece_connectivity_data(data,idom,nelem,num_pts,num_cells,connectivity,offsets,types)
                 call write_piece_connectivity_data(file_arr(d + idom),num_cells,connectivity,offsets,types)
@@ -175,7 +175,7 @@ contains
 
 
     end subroutine write_vtk_file
-    !***************************************************************************************************************
+    !******************************************************************************************
  
 
 

@@ -72,7 +72,7 @@ contains
         call nodes(7)%set(0._rk, 1._rk, 1._rk)
         call nodes(8)%set(5._rk, 1._rk, 1._rk)
 
-        call connectivity%init(1,8)
+        call connectivity%init('test domain',1,8)
         call connectivity%data(1)%init(1)
         connectivity%data(1)%data = [1,1,1, 1, 2, 3, 4, 5, 6, 7, 8]
 

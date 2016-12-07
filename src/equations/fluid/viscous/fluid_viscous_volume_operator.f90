@@ -85,7 +85,7 @@ contains
 
 
         type(AD_D), allocatable, dimension(:) ::                                &
-            rho, rhou, rhov, rhow, rhoE, p, T, u, v, w, invrho, gam, mu, lamda, &
+            rho, rhou, rhov, rhow, rhoE, p, T, u, v, w, invrho, mu, lamda,      &
             drho_dx, drhou_dx, drhov_dx, drhow_dx, drhoE_dx,                    &
             drho_dy, drhou_dy, drhov_dy, drhow_dy, drhoE_dy,                    &
             drho_dz, drhou_dz, drhov_dz, drhow_dz, drhoE_dz,                    &
@@ -99,7 +99,7 @@ contains
             tau_xx, tau_yy, tau_zz, tau_xy, tau_xz, tau_yz,                     &
             flux_x, flux_y, flux_z
 
-        real(rk)    :: const
+        real(rk)    :: const, gam
 
         !
         ! Get equation indices
@@ -115,42 +115,44 @@ contains
         !
         ! Interpolate solution to quadrature nodes
         !
-        rho  = worker%get_element_variable(irho,  'value')
-        rhou = worker%get_element_variable(irhou, 'value')
-        rhov = worker%get_element_variable(irhov, 'value')
-        rhow = worker%get_element_variable(irhow, 'value')
-        rhoE = worker%get_element_variable(irhoE, 'value')
+        rho  = worker%get_primary_field_element("Density"   ,'value')
+        rhou = worker%get_primary_field_element("X-Momentum",'value')
+        rhov = worker%get_primary_field_element("Y-Momentum",'value')
+        rhow = worker%get_primary_field_element("Z-Momentum",'value')
+        rhoE = worker%get_primary_field_element("Energy"    ,'value')
 
 
         !
         ! Compute model values
         !
-        p   = prop%fluid%compute_pressure(rho,rhou,rhov,rhow,rhoE)
-        gam = prop%fluid%compute_gamma(rho,rhou,rhov,rhow,rhoE)
+        !p   = prop%fluid%compute_pressure(rho,rhou,rhov,rhow,rhoE)
+        !gam = prop%fluid%compute_gamma(rho,rhou,rhov,rhow,rhoE)
+        p   = worker%get_model_field_element('Pressure', 'value')
+        gam = 1.4_rk
 
 
         !
         ! Interpolate solution gradients to quadrature nodes
         !
-        drho_dx  = worker%get_element_variable(irho,  'ddx+lift')
-        drho_dy  = worker%get_element_variable(irho,  'ddy+lift')
-        drho_dz  = worker%get_element_variable(irho,  'ddz+lift')
+        drho_dx  = worker%get_primary_field_element("Density"   ,'ddx+lift')
+        drho_dy  = worker%get_primary_field_element("Density"   ,'ddy+lift')
+        drho_dz  = worker%get_primary_field_element("Density"   ,'ddz+lift')
 
-        drhou_dx = worker%get_element_variable(irhou, 'ddx+lift')
-        drhou_dy = worker%get_element_variable(irhou, 'ddy+lift')
-        drhou_dz = worker%get_element_variable(irhou, 'ddz+lift')
+        drhou_dx = worker%get_primary_field_element("X-Momentum",'ddx+lift')
+        drhou_dy = worker%get_primary_field_element("X-Momentum",'ddy+lift')
+        drhou_dz = worker%get_primary_field_element("X-Momentum",'ddz+lift')
 
-        drhov_dx = worker%get_element_variable(irhov, 'ddx+lift')
-        drhov_dy = worker%get_element_variable(irhov, 'ddy+lift')
-        drhov_dz = worker%get_element_variable(irhov, 'ddz+lift')
+        drhov_dx = worker%get_primary_field_element("Y-Momentum",'ddx+lift')
+        drhov_dy = worker%get_primary_field_element("Y-Momentum",'ddy+lift')
+        drhov_dz = worker%get_primary_field_element("Y-Momentum",'ddz+lift')
 
-        drhow_dx = worker%get_element_variable(irhow, 'ddx+lift')
-        drhow_dy = worker%get_element_variable(irhow, 'ddy+lift')
-        drhow_dz = worker%get_element_variable(irhow, 'ddz+lift')
+        drhow_dx = worker%get_primary_field_element("Z-Momentum",'ddx+lift')
+        drhow_dy = worker%get_primary_field_element("Z-Momentum",'ddy+lift')
+        drhow_dz = worker%get_primary_field_element("Z-Momentum",'ddz+lift')
 
-        drhoE_dx = worker%get_element_variable(irhoE, 'ddx+lift')
-        drhoE_dy = worker%get_element_variable(irhoE, 'ddy+lift')
-        drhoE_dz = worker%get_element_variable(irhoE, 'ddz+lift')
+        drhoE_dx = worker%get_primary_field_element("Energy"    ,'ddx+lift')
+        drhoE_dy = worker%get_primary_field_element("Energy"    ,'ddy+lift')
+        drhoE_dz = worker%get_primary_field_element("Energy"    ,'ddz+lift')
 
 
 
@@ -196,6 +198,7 @@ contains
         dp_drhou = -(gam-ONE)*dke_drhou
         dp_drhov = -(gam-ONE)*dke_drhov
         dp_drhow = -(gam-ONE)*dke_drhow
+        dp_drhoE =  dp_drhow    ! Initialize derivatives
         dp_drhoE =  (gam-ONE)   ! No negative sign
 
         
@@ -230,14 +233,17 @@ contains
         !
         ! Compute temperature
         !
-        T = prop%fluid%compute_temperature(rho,rhou,rhov,rhow,rhoE)
+        !T = prop%fluid%compute_temperature(rho,rhou,rhov,rhow,rhoE)
+        T = worker%get_model_field_element('Temperature', 'value')
 
 
         !
         ! Compute dynamic viscosity, second coefficient of viscosity
         !
-        mu    = prop%fluid%compute_viscosity_dynamic(T)
-        lamda = prop%fluid%compute_viscosity_second(mu,T)
+        !mu    = prop%fluid%compute_viscosity_dynamic(T)
+        !lamda = prop%fluid%compute_viscosity_second(mu,T)
+        mu    = worker%get_model_field_element('Viscosity',                       'value')
+        lamda = worker%get_model_field_element('Second Coefficient of Viscosity', 'value')
 
 
         !
@@ -273,7 +279,7 @@ contains
         flux_y = -tau_xy
         flux_z = -tau_xz
 
-        call worker%integrate_volume(irhou, flux_x,flux_y,flux_z)
+        call worker%integrate_volume('X-Momentum',flux_x,flux_y,flux_z)
 
         !============================
         !     Y-MOMENTUM FLUX
@@ -282,7 +288,7 @@ contains
         flux_y = -tau_yy
         flux_z = -tau_yz
 
-        call worker%integrate_volume(irhov, flux_x,flux_y,flux_z)
+        call worker%integrate_volume('Y-Momentum',flux_x,flux_y,flux_z)
 
         !============================
         !     Z-MOMENTUM FLUX
@@ -291,7 +297,7 @@ contains
         flux_y = -tau_yz
         flux_z = -tau_zz
 
-        call worker%integrate_volume(irhow, flux_x,flux_y,flux_z)
+        call worker%integrate_volume('Z-Momentum',flux_x,flux_y,flux_z)
 
         !============================
         !       ENERGY FLUX
@@ -300,7 +306,7 @@ contains
         flux_y = -(1003._rk*mu/0.8_rk)*dT_dy  -  (u*tau_xy + v*tau_yy + w*tau_yz)
         flux_z = -(1003._rk*mu/0.8_rk)*dT_dz  -  (u*tau_xz + v*tau_yz + w*tau_zz)
 
-        call worker%integrate_volume(irhoE, flux_x,flux_y,flux_z)
+        call worker%integrate_volume('Energy',flux_x,flux_y,flux_z)
 
     end subroutine compute
     !*********************************************************************************************************

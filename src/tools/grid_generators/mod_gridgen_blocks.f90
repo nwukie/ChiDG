@@ -103,7 +103,8 @@ contains
 
 
         ! Create/initialize file
-        file_id = initialize_file_hdf(filename)
+        call initialize_file_hdf(filename)
+        file_id = open_file_hdf(filename)
         
 
 
@@ -178,7 +179,7 @@ contains
         !
         if (present(bc_groups)) then
             do igroup = 1,size(bc_groups)
-                call create_bc_group_hdf(file_id,bc_groups(igroup)%name,'Inlet')
+                call create_bc_group_hdf(file_id,bc_groups(igroup)%name)
 
                 bcgroup_id = open_bc_group_hdf(file_id,bc_groups(igroup)%name)
 
@@ -188,7 +189,7 @@ contains
                 call close_bc_group_hdf(bcgroup_id)
             end do
         else
-            call create_bc_group_hdf(file_id,'Default','Inlet')
+            call create_bc_group_hdf(file_id,'Default')
 
             bcgroup_id = open_bc_group_hdf(file_id,'Default')
             call add_bc_state_hdf(bcgroup_id,bc_state)
@@ -270,7 +271,8 @@ contains
 
 
         ! Create/initialize file
-        file_id = initialize_file_hdf(filename)
+        call initialize_file_hdf(filename)
+        file_id = open_file_hdf(filename)
         
 
         select case (trim(block1))
@@ -356,7 +358,7 @@ contains
         !
         if (present(bc_groups)) then
             do igroup = 1,size(bc_groups)
-                call create_bc_group_hdf(file_id,bc_groups(igroup)%name,'Inlet')
+                call create_bc_group_hdf(file_id,bc_groups(igroup)%name)
 
                 bcgroup_id = open_bc_group_hdf(file_id,bc_groups(igroup)%name)
 
@@ -366,7 +368,7 @@ contains
                 call close_bc_group_hdf(bcgroup_id)
             end do
         else
-            call create_bc_group_hdf(file_id,'Default','Inlet')
+            call create_bc_group_hdf(file_id,'Default')
 
             bcgroup_id = open_bc_group_hdf(file_id,'Default')
             call add_bc_state_hdf(bcgroup_id,bc_state)
@@ -507,7 +509,8 @@ contains
 
 
         ! Create/initialize file
-        file_id = initialize_file_hdf(filename)
+        call initialize_file_hdf(filename)
+        file_id = open_file_hdf(filename)
         
 
         ! Generate coordinates for first block
@@ -597,7 +600,7 @@ contains
             user_msg = "create_mesh_file__D2E8M1: Not quite ready to accept custom bc_group sets."
             call chidg_signal(FATAL,user_msg)
         else
-            call create_bc_group_hdf(file_id,'Default','Inlet')
+            call create_bc_group_hdf(file_id,'Default')
 
             bcgroup_id = open_bc_group_hdf(file_id,'Default')
             call add_bc_state_hdf(bcgroup_id,bc_state)

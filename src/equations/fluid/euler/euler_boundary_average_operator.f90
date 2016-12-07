@@ -1,7 +1,6 @@
 module euler_boundary_average_operator
     use mod_kinds,              only: rk,ik
-    use mod_constants,          only: ONE, TWO, HALF, ME, NEIGHBOR
-
+    use mod_constants,          only: ONE, TWO, HALF
     use type_operator,          only: operator_t
     use type_chidg_worker,      only: chidg_worker_t
     use type_properties,        only: properties_t
@@ -94,7 +93,7 @@ contains
 
         ! Storage at quadrature nodes
         type(AD_D), allocatable,    dimension(:) :: &
-            rho_m, rho_m_new,      rho_p,                      &
+            rho_m,      rho_p,                      &
             rhou_m,     rhou_p,                     &
             rhov_m,     rhov_p,                     &
             rhow_m,     rhow_p,                     &
@@ -123,20 +122,20 @@ contains
         !
         ! Interpolate solution to quadrature nodes
         !
-        rho_m  = worker%get_face_variable(irho, 'value', ME)
-        rho_p  = worker%get_face_variable(irho, 'value', NEIGHBOR)
+        rho_m  = worker%get_primary_field_face('Density'   , 'value', 'face interior')
+        rho_p  = worker%get_primary_field_face('Density'   , 'value', 'face exterior')
 
-        rhou_m = worker%get_face_variable(irhou, 'value', ME)
-        rhou_p = worker%get_face_variable(irhou, 'value', NEIGHBOR)
+        rhou_m = worker%get_primary_field_face('X-Momentum', 'value', 'face interior')
+        rhou_p = worker%get_primary_field_face('X-Momentum', 'value', 'face exterior')
 
-        rhov_m = worker%get_face_variable(irhov, 'value', ME)
-        rhov_p = worker%get_face_variable(irhov, 'value', NEIGHBOR)
+        rhov_m = worker%get_primary_field_face('Y-Momentum', 'value', 'face interior')
+        rhov_p = worker%get_primary_field_face('Y-Momentum', 'value', 'face exterior')
 
-        rhow_m = worker%get_face_variable(irhow, 'value', ME)
-        rhow_p = worker%get_face_variable(irhow, 'value', NEIGHBOR)
+        rhow_m = worker%get_primary_field_face('Z-Momentum', 'value', 'face interior')
+        rhow_p = worker%get_primary_field_face('Z-Momentum', 'value', 'face exterior')
 
-        rhoE_m = worker%get_face_variable(irhoE, 'value', ME)
-        rhoE_p = worker%get_face_variable(irhoE, 'value', NEIGHBOR)
+        rhoE_m = worker%get_primary_field_face('Energy'    , 'value', 'face interior')
+        rhoE_p = worker%get_primary_field_face('Energy'    , 'value', 'face exterior')
 
 
         invrho_m = ONE/rho_m
@@ -153,8 +152,10 @@ contains
         !
         ! Compute pressure and total enthalpy
         !
-        p_m = prop%fluid%compute_pressure(rho_m,rhou_m,rhov_m,rhow_m,rhoE_m)
-        p_p = prop%fluid%compute_pressure(rho_p,rhou_p,rhov_p,rhow_p,rhoE_p)
+        !p_m = prop%fluid%compute_pressure(rho_m,rhou_m,rhov_m,rhow_m,rhoE_m)
+        !p_p = prop%fluid%compute_pressure(rho_p,rhou_p,rhov_p,rhow_p,rhoE_p)
+        p_m = worker%get_model_field_face('Pressure', 'value', 'face interior')
+        p_p = worker%get_model_field_face('Pressure', 'value', 'face exterior')
 
         H_m = (rhoE_m + p_m)*invrho_m
         H_p = (rhoE_p + p_p)*invrho_p
@@ -180,7 +181,7 @@ contains
         ! dot with normal vector
         integrand = HALF*(flux_x*normx + flux_y*normy + flux_z*normz)
 
-        call worker%integrate_boundary(irho, integrand)
+        call worker%integrate_boundary('Density',integrand)
 
 
         !================================
@@ -202,7 +203,7 @@ contains
         ! dot with normal vector
         integrand = HALF*(flux_x*normx + flux_y*normy + flux_z*normz)
 
-        call worker%integrate_boundary(irhou, integrand)
+        call worker%integrate_boundary('X-Momentum',integrand)
 
 
         !================================
@@ -224,7 +225,7 @@ contains
         ! dot with normal vector
         integrand = HALF*(flux_x*normx + flux_y*normy + flux_z*normz)
 
-        call worker%integrate_boundary(irhov, integrand)
+        call worker%integrate_boundary('Y-Momentum',integrand)
 
 
         !================================
@@ -246,7 +247,7 @@ contains
         ! dot with normal vector
         integrand = HALF*(flux_x*normx + flux_y*normy + flux_z*normz)
 
-        call worker%integrate_boundary(irhow, integrand)
+        call worker%integrate_boundary('Z-Momentum',integrand)
 
 
         !================================
@@ -268,7 +269,7 @@ contains
         ! dot with normal vector
         integrand = HALF*(flux_x*normx + flux_y*normy + flux_z*normz)
 
-        call worker%integrate_boundary(irhoE, integrand)
+        call worker%integrate_boundary('Energy',integrand)
 
 
     end subroutine compute

@@ -104,11 +104,11 @@ contains
         !
         ! Interpolate solution to quadrature nodes
         !
-        rho  = worker%get_element_variable(irho,  'value')
-        rhou = worker%get_element_variable(irhou, 'value')
-        rhov = worker%get_element_variable(irhov, 'value')
-        rhow = worker%get_element_variable(irhow, 'value')
-        rhoE = worker%get_element_variable(irhoE, 'value')
+        rho  = worker%get_primary_field_element("Density"   ,'value')
+        rhou = worker%get_primary_field_element("X-Momentum",'value')
+        rhov = worker%get_primary_field_element("Y-Momentum",'value')
+        rhow = worker%get_primary_field_element("Z-Momentum",'value')
+        rhoE = worker%get_primary_field_element("Energy"    ,'value')
 
 
         invrho = ONE/rho
@@ -118,7 +118,8 @@ contains
         !
         ! Compute pressure and total enthalpy
         !
-        p = prop%fluid%compute_pressure(rho,rhou,rhov,rhow,rhoE)
+        !p = prop%fluid%compute_pressure(rho,rhou,rhov,rhow,rhoE)
+        p = worker%get_model_field_element('Pressure','value')
 
         H = (rhoE + p)*invrho
 
@@ -129,7 +130,7 @@ contains
         flux_y = rhov
         flux_z = rhow
 
-        call worker%integrate_volume(irho, flux_x,flux_y,flux_z)
+        call worker%integrate_volume('Density',flux_x,flux_y,flux_z)
 
 
         !===========================
@@ -139,7 +140,7 @@ contains
         flux_y = (rhou*rhov)*invrho
         flux_z = (rhou*rhow)*invrho
 
-        call worker%integrate_volume(irhou, flux_x,flux_y,flux_z)
+        call worker%integrate_volume('X-Momentum',flux_x,flux_y,flux_z)
 
 
         !============================
@@ -149,7 +150,7 @@ contains
         flux_y = (rhov*rhov)*invrho  +  p
         flux_z = (rhov*rhow)*invrho
 
-        call worker%integrate_volume(irhov, flux_x,flux_y,flux_z)
+        call worker%integrate_volume('Y-Momentum',flux_x,flux_y,flux_z)
 
         !============================
         !     Z-MOMENTUM FLUX
@@ -158,7 +159,7 @@ contains
         flux_y = (rhow*rhov)*invrho
         flux_z = (rhow*rhow)*invrho  +  p
 
-        call worker%integrate_volume(irhow, flux_x,flux_y,flux_z)
+        call worker%integrate_volume('Z-Momentum',flux_x,flux_y,flux_z)
 
         !============================
         !       ENERGY FLUX
@@ -167,7 +168,7 @@ contains
         flux_y = rhov*H
         flux_z = rhow*H
 
-        call worker%integrate_volume(irhoE, flux_x,flux_y,flux_z)
+        call worker%integrate_volume('Energy',flux_x,flux_y,flux_z)
 
     end subroutine compute
     !*********************************************************************************************************

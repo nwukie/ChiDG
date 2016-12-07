@@ -2,8 +2,8 @@ module type_chidg_cache
 #include <messenger.h>
     use mod_kinds,          only: rk, ik
     use mod_constants,      only: NFACES, CACHE_FACE_INTERIOR, CACHE_FACE_EXTERIOR
-
     use type_mesh,          only: mesh_t
+    use type_properties,    only: properties_t
     use type_seed,          only: seed_t
     use DNAD_D
 
@@ -54,9 +54,10 @@ contains
     !!
     !!
     !--------------------------------------------------------------------------------------
-    subroutine resize(self,mesh,idomain_l,ielement_l)
+    subroutine resize(self,mesh,prop,idomain_l,ielement_l)
         class(chidg_cache_t),   intent(inout)   :: self
         type(mesh_t),           intent(in)      :: mesh(:)
+        type(properties_t),     intent(in)      :: prop(:)
         integer(ik),            intent(in)      :: idomain_l
         integer(ik),            intent(in)      :: ielement_l
 
@@ -76,7 +77,7 @@ contains
         !
         ! Allocate storage for element cache
         !
-        call self%element%resize('element',mesh,idomain_l,ielement_l)
+        call self%element%resize('element',mesh,prop,idomain_l,ielement_l)
 
 
 
@@ -85,9 +86,8 @@ contains
         !
         do iface = 1,size(self%faces,1)
 
-            ! Interior faces
-            call self%faces(iface,CACHE_FACE_INTERIOR)%resize('face interior',mesh,idomain_l,ielement_l,iface)
-            call self%faces(iface,CACHE_FACE_EXTERIOR)%resize('face exterior',mesh,idomain_l,ielement_l,iface)
+            call self%faces(iface,CACHE_FACE_INTERIOR)%resize('face interior',mesh,prop,idomain_l,ielement_l,iface)
+            call self%faces(iface,CACHE_FACE_EXTERIOR)%resize('face exterior',mesh,prop,idomain_l,ielement_l,iface)
 
         end do
 
@@ -106,18 +106,18 @@ contains
     !!
     !!
     !----------------------------------------------------------------------------------------
-    subroutine set_data(self,cache_component,cache_data,data_type,idirection,seed,ieqn,iface)
+    subroutine set_data(self,field,cache_component,cache_data,data_type,idirection,seed,iface)
         class(chidg_cache_t),   intent(inout)           :: self
-        character(len=*),       intent(in)              :: cache_component
+        character(*),           intent(in)              :: field
+        character(*),           intent(in)              :: cache_component
         type(AD_D),             intent(in)              :: cache_data(:)
-        character(len=*),       intent(in)              :: data_type
+        character(*),           intent(in)              :: data_type
         integer(ik),            intent(in)              :: idirection
         type(seed_t),           intent(in)              :: seed
-        integer(ik),            intent(in)              :: ieqn
         integer(ik),            intent(in), optional    :: iface
 
 
-        character(len=:),   allocatable :: msg
+        character(:),   allocatable :: user_msg
 
 
         !
@@ -126,9 +126,9 @@ contains
         if ((trim(cache_component) == 'face interior') .or. &
             (trim(cache_component) == 'face exterior')) then
             if (.not. present(iface)) then
-                msg = "chidg_data%resize: Tried to resize face cache, but &
-                        no face index was specified. Try providing iface to the call"
-                call chidg_signal(FATAL,msg)
+                user_msg = "chidg_data%resize: Tried to resize face cache, but &
+                            no face index was specified. Try providing iface to the call"
+                call chidg_signal(FATAL,user_msg)
             end if
         end if
 
@@ -140,19 +140,19 @@ contains
         !
         select case(cache_component)
             case('element')
-                call self%element%set_data(cache_data,data_type,idirection,seed,ieqn)
+                call self%element%set_data(field,cache_data,data_type,idirection,seed)
 
             case('face interior')
-                call self%faces(iface,1)%set_data(cache_data,data_type,idirection,seed,ieqn)
+                call self%faces(iface,1)%set_data(field,cache_data,data_type,idirection,seed)
 
             case('face exterior')
-                call self%faces(iface,2)%set_data(cache_data,data_type,idirection,seed,ieqn)
+                call self%faces(iface,2)%set_data(field,cache_data,data_type,idirection,seed)
 
             case default 
-                msg = "chidg_cache%set_data: An invalid value for the cache_component incoming parameter  &
-                                           Valid values are either 'element', 'face interior', or 'face exterior' &
-                                           to indicate the cache type where the data is to be stored."
-                call chidg_signal_one(FATAL,msg,cache_component)
+                user_msg = "chidg_cache%set_data: An invalid value for the cache_component incoming parameter  &
+                            Valid values are either 'element', 'face interior', or 'face exterior' to indicate &
+                            the cache type where the data is to be stored."
+                call chidg_signal_one(FATAL,user_msg,cache_component)
 
         end select
 
@@ -177,13 +177,13 @@ contains
     !!
     !!
     !----------------------------------------------------------------------------------------
-    function get_data(self,cache_component,cache_type,idirection,seed,ieqn,iface) result(cache_data)
+    function get_data(self,field,cache_component,cache_type,idirection,seed,iface) result(cache_data)
         class(chidg_cache_t),   intent(inout)           :: self
-        character(len=*),       intent(in)              :: cache_component
-        character(len=*),       intent(in)              :: cache_type
+        character(*),           intent(in)              :: field
+        character(*),           intent(in)              :: cache_component
+        character(*),           intent(in)              :: cache_type
         integer(ik),            intent(in)              :: idirection
         type(seed_t),           intent(in)              :: seed
-        integer(ik),            intent(in)              :: ieqn
         integer(ik),            intent(in), optional    :: iface
 
 
@@ -193,13 +193,13 @@ contains
 
         select case (trim(cache_component))
             case ('element')
-                cache_data = self%element%get_data(cache_type,idirection,seed,ieqn)
+                cache_data = self%element%get_data(field,cache_type,idirection,seed)
 
             case ('face interior')
-                cache_data = self%faces(iface,1)%get_data(cache_type,idirection,seed,ieqn)
+                cache_data = self%faces(iface,1)%get_data(field,cache_type,idirection,seed)
 
             case ('face exterior')
-                cache_data = self%faces(iface,2)%get_data(cache_type,idirection,seed,ieqn)
+                cache_data = self%faces(iface,2)%get_data(field,cache_type,idirection,seed)
 
             case default
                 call chidg_signal(FATAL,'chidg_cache%get_data: Error in cache_component string')

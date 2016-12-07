@@ -69,7 +69,7 @@ contains
         !
         ! Initialize chidg environment
         !
-        call chidg%init('env')
+        call chidg%start_up('core')
 
         !
         ! Send ChiDG output to screen
@@ -110,13 +110,6 @@ contains
         !
         call h5fopen_f(filename, H5F_ACC_RDWR_F, fid, ierr)
         if (ierr /= 0) call chidg_signal_one(FATAL,"chidg_edit: Error opening HDF5 file for editing.",filename)
-
-
-
-
-
-
-
 
 
 

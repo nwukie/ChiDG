@@ -31,12 +31,9 @@ module type_face
     !!  @author Mayank Sharma
     !!  @date   11/12/2016
     !!
-    !-------------------------------------------------------------------------------------------------------------
+    !------------------------------------------------------------------------------------------
     type, public :: face_t
         integer(ik)                 :: spacedim             !< Number of spatial dimensions
-        integer(ik)                 :: neqns                !< Number of equations in equationset_t
-        integer(ik)                 :: nterms_s             !< Number of terms in solution polynomial expansion
-        integer(ik)                 :: ntime                !< Number of time steps in solution
 
         ! Self information
         integer(ik)                 :: ftype                !< INTERIOR, BOUNDARY, CHIMERA, ORPHAN 
@@ -52,6 +49,9 @@ module type_face
         integer(ik)                 :: idomain_l            !< Processor-local index of the parent domain
         integer(ik)                 :: iparent_g            !< Domain-global index of the parent element
         integer(ik)                 :: iparent_l            !< Processor-local index of the parent element
+        integer(ik)                 :: neqns                !< Number of equations in equationset_t
+        integer(ik)                 :: nterms_s             !< Number of terms in solution polynomial expansion
+        integer(ik)                 :: ntime
 
 
         ! Neighbor information
@@ -61,6 +61,8 @@ module type_face
         integer(ik)                 :: ineighbor_element_g = 0          !< Domain-global index of the neighboring element
         integer(ik)                 :: ineighbor_element_l = 0          !< Processor-local index of the neighboring element
         integer(ik)                 :: ineighbor_face      = 0
+        integer(ik)                 :: ineighbor_neqns     = 0
+        integer(ik)                 :: ineighbor_nterms_s  = 0
         integer(ik)                 :: recv_comm           = 0
         integer(ik)                 :: recv_domain         = 0
         integer(ik)                 :: recv_element        = 0
@@ -220,7 +222,10 @@ contains
     !!
     !!
     !----------------------------------------------------------------------------------------------------------
-    subroutine init_neighbor(self,ftype,ineighbor_domain_g,ineighbor_domain_l,ineighbor_element_g,ineighbor_element_l,ineighbor_face,ineighbor_proc)
+    subroutine init_neighbor(self,ftype,ineighbor_domain_g,ineighbor_domain_l,              &
+                                        ineighbor_element_g,ineighbor_element_l,            &
+                                        ineighbor_face,ineighbor_neqns, ineighbor_nterms_s, &
+                                        ineighbor_proc)
         class(face_t),  intent(inout)   :: self
         integer(ik),    intent(in)      :: ftype
         integer(ik),    intent(in)      :: ineighbor_domain_g
@@ -228,6 +233,8 @@ contains
         integer(ik),    intent(in)      :: ineighbor_element_g
         integer(ik),    intent(in)      :: ineighbor_element_l
         integer(ik),    intent(in)      :: ineighbor_face
+        integer(ik),    intent(in)      :: ineighbor_neqns
+        integer(ik),    intent(in)      :: ineighbor_nterms_s
         integer(ik),    intent(in)      :: ineighbor_proc
 
 
@@ -237,6 +244,8 @@ contains
         self%ineighbor_element_g = ineighbor_element_g
         self%ineighbor_element_l = ineighbor_element_l
         self%ineighbor_face      = ineighbor_face
+        self%ineighbor_neqns     = ineighbor_neqns
+        self%ineighbor_nterms_s  = ineighbor_nterms_s
         self%ineighbor_proc      = ineighbor_proc
 
 

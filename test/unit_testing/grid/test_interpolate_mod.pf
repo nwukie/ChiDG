@@ -2,7 +2,6 @@ module test_interpolate_mod
     use pfunit_mod
     use type_chidg,                 only: chidg_t
     use type_point,                 only: point_t
-    use type_seed,                  only: seed_t
     use type_element_info,          only: element_info_t
     use type_face_info,             only: face_info_t
     use type_function_info,         only: function_info_t
@@ -65,7 +64,7 @@ contains
     !---------------------------------------------------------------------------------------------
     subroutine setUp(this)
         class(test_interpolate),    intent(inout)   :: this
-        integer(ik)                                 :: nterms_c, ieqn, spacedim
+        integer(ik)                                 :: nterms_c, ivar, spacedim
 
         type(point_t),  allocatable                 :: nodes(:)
         type(domain_connectivity_t)                 :: connectivity
@@ -108,31 +107,35 @@ contains
         !
         ! Initialized solution to constant values
         !
-        ieqn = this%chidg%data%eqnset(1)%prop%get_primary_field_index('u')   ! Get variable index
+        ivar = this%chidg%data%eqnset(1)%prop%get_primary_field_index('u')
 
 
         !
         ! Initialize variable
         !
-        call create_function(this%fcn,'constant')                       ! Allocate constant function
-        call this%fcn%set_option('val',5._rk)                           ! Set constant function value
-        call this%chidg%data%sdata%q%project(this%chidg%data%mesh,this%fcn,ieqn)
+        call create_function(this%fcn,'constant')
+        call this%fcn%set_option('val',5._rk)
+        call this%chidg%data%sdata%q%project(this%chidg%data%mesh,this%fcn,ivar)
 
     
-    end subroutine
+    end subroutine setUp
+    !*******************************************************************************************
     
+    !>
+    !!
+    !!
+    !!
+    !-------------------------------------------------------------------------------------------
     subroutine tearDown(this)
         class(test_interpolate),    intent(inout)   :: this
         
 
-        !
         ! Close ChiDG interface
-        !
         call this%chidg%shut_down('core')
 
         
-    end subroutine
-    !******************************************************************************************************
+    end subroutine tearDown
+    !*******************************************************************************************
 
 
 
@@ -143,7 +146,7 @@ contains
     !!
     !!
     !!
-    !------------------------------------------------------------------------------------------------------
+    !-------------------------------------------------------------------------------------------
     @Test
     subroutine test_interpolate_element_standard(self)
         class(test_interpolate),    intent(inout)   :: self
@@ -175,9 +178,8 @@ contains
 
 
         ! Initialize reference
-        val = self%fcn%get_option_value('val')
+        val   = self%fcn%get_option_value('val')
         u_ref = val
-        !u_ref = self%fcn%value_
 
 
         ! Test that standard interpolation to quadrature 
@@ -185,7 +187,7 @@ contains
         @assertEqual(u_ref,u_gq,tol)
 
     end subroutine test_interpolate_element_standard
-    !********************************************************************************************************
+    !*******************************************************************************************
     
     
     
@@ -196,10 +198,7 @@ contains
     !!  @author Nathan A. Wukie
     !!
     !!
-    !!
-    !!
-    !!
-    !---------------------------------------------------------------------------------------------------------
+    !-------------------------------------------------------------------------------------------
     @Test
     subroutine test_interpolate_face_standard(self)
         class(test_interpolate),    intent(inout)   :: self
@@ -239,15 +238,15 @@ contains
         
         
     end subroutine test_interpolate_face_standard
-    !***********************************************************************************************************
+    !********************************************************************************************
 
 
 
 
 
-    !-----------------------------------------------------------------------------------------------------
+    !--------------------------------------------------------------------------------------------
     !                               ELEMENT - volume interpolation - Autodiff
-    !-----------------------------------------------------------------------------------------------------
+    !--------------------------------------------------------------------------------------------
 
 
     !> Interpolation of modes to volume quadrature nodes. Seeding neighbor element. Testing fuction values. 
@@ -257,7 +256,7 @@ contains
     !!
     !!
     !!
-    !-------------------------------------------------------------------------------------------------------------
+    !--------------------------------------------------------------------------------------------
     @Test
     subroutine test__interpolate_element_autodiff__values__neighbor(self)
         class(test_interpolate),    intent(inout)   :: self
@@ -266,7 +265,6 @@ contains
         type(AD_D), allocatable     :: u_gq(:)
         real(rk),   allocatable     :: u_ref(:)
         real(rk)                    :: tol, val
-        type(seed_t)                :: seed
         type(element_info_t)        :: elem_info
         type(function_info_t)       :: function_info
         
@@ -280,11 +278,20 @@ contains
             !
             ! A seed element, so all derivative arrays should be seeded to zero
             !
-            seed%idomain_g  = 1
-            seed%idomain_l  = 1
-            seed%ielement_g = 15
-            seed%ielement_l = 15
-            seed%iproc      = IRANK
+            function_info%type    = VOLUME_ADVECTIVE_FLUX
+            function_info%ifcn    = 1
+            function_info%idepend = 1
+            function_info%idiff   = 1
+            call function_info%seed%init(idomain_g    = 1,     &
+                                         idomain_l    = 1,     &
+                                         ielement_g   = 15,    &
+                                         ielement_l   = 15,    &
+                                         neqns        = 1,     &
+                                         nterms_s     = 8,     &
+                                         iproc        = IRANK, &
+                                         recv_comm    = 0,     &
+                                         recv_domain  = 0,     &
+                                         recv_element = 0)
 
             tol   = 1.e-13_rk
             ieqn  = self%chidg%data%eqnset(1)%prop%get_primary_field_index('u')
@@ -299,11 +306,6 @@ contains
             elem_info%ielement_g = ielem
             elem_info%ielement_l = ielem
 
-            function_info%type    = VOLUME_ADVECTIVE_FLUX
-            function_info%ifcn    = 1
-            function_info%idepend = 1
-            function_info%idiff   = 1
-            function_info%seed    = seed
             
             !
             ! PROCEDURE BEING TESTED
@@ -323,11 +325,12 @@ contains
         end associate
         
     end subroutine test__interpolate_element_autodiff__values__neighbor
-    !*********************************************************************************************************
+    !*********************************************************************************************
 
 
 
-    !> Interpolation of modes to volume quadrature nodes. Seeding neighbor element. Testing derivative values.
+    !>  Interpolation of modes to volume quadrature nodes. Seeding neighbor element. Testing 
+    !!  derivative values.
     !!
     !!  @author Nathan A. Wukie
     !!
@@ -335,13 +338,12 @@ contains
     !!
     !!
     !!
-    !-------------------------------------------------------------------------------------------------------------
+    !---------------------------------------------------------------------------------------------
     @Test
     subroutine test__interpolate_element_autodiff__derivs__neighbor(self)
         class(test_interpolate),    intent(inout)   :: self
         
-        integer(ik)                 :: ielem, ieqn, ngq, igq, nderiv, idomain, itime
-        type(seed_t)                :: seed
+        integer(ik)                 :: ielem, ivar, ngq, igq, nderiv, idomain, itime
         type(AD_D), allocatable     :: u_gq(:)
         real(rk),   allocatable     :: deriv_ref(:)
         real(rk)                    :: tol
@@ -358,16 +360,24 @@ contains
             !
             ! A seed element, so all derivative arrays should be seeded to zero
             !
-            seed%idomain_g  = 1
-            seed%idomain_l  = 1
-            seed%ielement_g = 15
-            seed%ielement_l = 15
-            seed%iproc      = IRANK
+            function_info%type    = VOLUME_ADVECTIVE_FLUX
+            function_info%ifcn    = 1
+            function_info%idepend = 1
+            function_info%idiff   = 1
+            call function_info%seed%init(idomain_g    = 1,     &
+                                         idomain_l    = 1,     &
+                                         ielement_g   = 15,    &
+                                         ielement_l   = 15,    &
+                                         neqns        = 1,     &
+                                         nterms_s     = 8,     &
+                                         iproc        = IRANK, &
+                                         recv_comm    = 0,     &
+                                         recv_domain  = 0,     &
+                                         recv_element = 0)
 
 
-            tol   = 1.e-13_rk
-            ieqn  = self%chidg%data%eqnset(1)%prop%get_primary_field_index('u')
-
+            tol    = 1.e-13_rk
+            ivar   = self%chidg%data%eqnset(1)%prop%get_primary_field_index('u')
             ngq    = elems(ielem)%gq%nnodes_v
             nderiv = elems(ielem)%neqns  *  elems(ielem)%nterms_s
 
@@ -380,16 +390,11 @@ contains
             elem_info%ielement_g = ielem
             elem_info%ielement_l = ielem
 
-            function_info%type    = VOLUME_ADVECTIVE_FLUX
-            function_info%ifcn    = 1
-            function_info%idepend = 1
-            function_info%idiff   = 1
-            function_info%seed    = seed
             
             !
             ! PROCEDURE BEING TESTED
             !
-            u_gq = interpolate_element_autodiff(self%chidg%data%mesh,q,elem_info,function_info,ieqn, itime, 'value')
+            u_gq = interpolate_element_autodiff(self%chidg%data%mesh,q,elem_info,function_info,ivar, itime, 'value')
             
             
             ! Initialize reference
@@ -404,7 +409,7 @@ contains
         end associate
         
     end subroutine test__interpolate_element_autodiff__derivs__neighbor
-    !***************************************************************************************************************
+    !***********************************************************************************************
     
     
     
@@ -417,15 +422,12 @@ contains
     !!
     !!
     !!
-    !!
-    !!
-    !-------------------------------------------------------------------------------------------------------------
+    !------------------------------------------------------------------------------------------------
     @Test
     subroutine test__interpolate_element_autodiff__values__current(self)
         class(test_interpolate),    intent(inout)   :: self
         
-        integer(ik)                 :: ielem, ieqn, ngq, idomain, itime
-        type(seed_t)                :: seed
+        integer(ik)                 :: ielem, ivar, ngq, idomain, itime
         type(AD_D), allocatable     :: u_gq(:)
         real(rk),   allocatable     :: u_ref(:)
         real(rk)                    :: tol, val
@@ -442,17 +444,25 @@ contains
             !
             ! A seed element, so all derivative arrays should be seeded to zero
             !
-            seed%idomain_g  = 1
-            seed%idomain_l  = 1
-            seed%ielement_g = 14    ! a seed element, so all derivative arrays should be seeded to zero
-            seed%ielement_l = 14    ! a seed element, so all derivative arrays should be seeded to zero
-            seed%iproc      = IRANK
+            function_info%type    = VOLUME_ADVECTIVE_FLUX
+            function_info%ifcn    = 1
+            function_info%idepend = 1
+            function_info%idiff   = 1
+            call function_info%seed%init(idomain_g    = 1,     &
+                                         idomain_l    = 1,     &
+                                         ielement_g   = 14,    &
+                                         ielement_l   = 14,    &
+                                         neqns        = 1,     &
+                                         nterms_s     = 8,     &
+                                         iproc        = IRANK, &
+                                         recv_comm    = 0,     &
+                                         recv_domain  = 0,     &
+                                         recv_element = 0)
 
 
-            tol   = 1.e-13_rk
-            ieqn  = self%chidg%data%eqnset(1)%prop%get_primary_field_index('u')
-            
-            ngq = elems(ielem)%gq%nnodes_v  !> Number of quadrature nodes
+            tol  = 1.e-13_rk
+            ivar = self%chidg%data%eqnset(1)%prop%get_primary_field_index('u')
+            ngq  = elems(ielem)%gq%nnodes_v  !> Number of quadrature nodes
             
             ! Allocate number of AD variables for data at GQ nodes. Derivative arrays are not yet allocated
             allocate(u_gq(ngq))
@@ -463,16 +473,11 @@ contains
             elem_info%ielement_g = ielem
             elem_info%ielement_l = ielem
 
-            function_info%type    = VOLUME_ADVECTIVE_FLUX
-            function_info%ifcn    = 1
-            function_info%idepend = 1
-            function_info%idiff   = 1
-            function_info%seed    = seed
             
             !
             ! PROCEDURE BEING TESTED
             !
-            u_gq = interpolate_element_autodiff(self%chidg%data%mesh,q,elem_info,function_info,ieqn, itime, 'value')
+            u_gq = interpolate_element_autodiff(self%chidg%data%mesh,q,elem_info,function_info,ivar,itime,'value')
             
             
             ! Initialize reference
@@ -486,26 +491,27 @@ contains
         end associate
         
     end subroutine test__interpolate_element_autodiff__values__current
-    !*****************************************************************************************************************
+    !***********************************************************************************************
 
 
 
 
 
-    !> Interpolation of modes to volume quadrature nodes. Seeding neighbor current. Testing derivative values.
+
+
+
+    !>  Interpolation of modes to volume quadrature nodes. Seeding neighbor current. Testing 
+    !!  derivative values.
     !!
     !!  @author Nathan A. Wukie
     !!
     !!
-    !!
-    !!
-    !-------------------------------------------------------------------------------------------------------------
+    !-----------------------------------------------------------------------------------------------
     @Test
     subroutine test__interpolate_element_autodiff__derivs__current(self)
         class(test_interpolate),    intent(inout)   :: self
         
-        integer(ik)                 :: ielem, ieqn, ngq, igq, nderiv, idomain, itime
-        type(seed_t)                :: seed
+        integer(ik)                 :: ielem, ivar, ngq, igq, nderiv, idomain, itime
         type(AD_D), allocatable     :: u_gq(:)
         real(rk),   allocatable     :: deriv_ref(:)
         real(rk)                    :: tol
@@ -522,17 +528,25 @@ contains
             !
             ! A seed element, so all derivative arrays should be seeded to zero
             !
-            seed%idomain_g  = 1
-            seed%idomain_l  = 1
-            seed%ielement_g = 14
-            seed%ielement_l = 14
-            seed%iproc      = IRANK
+            function_info%type    = VOLUME_ADVECTIVE_FLUX
+            function_info%ifcn    = 1
+            function_info%idepend = 1
+            function_info%idiff   = 1
+            call function_info%seed%init(idomain_g    = 1,     &
+                                         idomain_l    = 1,     &
+                                         ielement_g   = 14,    &
+                                         ielement_l   = 14,    &
+                                         neqns        = 1,     &
+                                         nterms_s     = 8,     &
+                                         iproc        = IRANK, &
+                                         recv_comm    = 0,     &
+                                         recv_domain  = 0,     &
+                                         recv_element = 0)
 
 
-            tol   = 1.e-13_rk
-            ieqn  = self%chidg%data%eqnset(1)%prop%get_primary_field_index('u')
-
-            ngq = elems(ielem)%gq%nnodes_v      !> Number of quadrature nodes
+            tol    = 1.e-13_rk
+            ivar   = self%chidg%data%eqnset(1)%prop%get_primary_field_index('u')
+            ngq    = elems(ielem)%gq%nnodes_v      !> Number of quadrature nodes
             nderiv = elems(ielem)%neqns  *  elems(ielem)%nterms_s
 
             ! Allocate number of AD variables for data at GQ nodes. Derivative arrays are not yet allocated
@@ -544,17 +558,12 @@ contains
             elem_info%ielement_g = ielem
             elem_info%ielement_l = ielem
 
-            function_info%type    = VOLUME_ADVECTIVE_FLUX
-            function_info%ifcn    = 1
-            function_info%idepend = 1
-            function_info%idiff   = 1
-            function_info%seed    = seed
 
             
             !
             ! PROCEDURE BEING TESTED
             !
-            u_gq = interpolate_element_autodiff(self%chidg%data%mesh,q,elem_info,function_info,ieqn, itime, 'value')
+            u_gq = interpolate_element_autodiff(self%chidg%data%mesh,q,elem_info,function_info,ivar,itime,'value')
             
             
             ! Initialize reference
@@ -574,7 +583,7 @@ contains
         end associate
         
     end subroutine test__interpolate_element_autodiff__derivs__current
-    !****************************************************************************************************************
+    !**********************************************************************************************
     
     
     
@@ -583,26 +592,24 @@ contains
     
     
     
-    !-----------------------------------------------------------------------------------------------------
+    !----------------------------------------------------------------------------------------------
     !                               Face - surface interpolation - Autodiff
-    !-----------------------------------------------------------------------------------------------------
+    !----------------------------------------------------------------------------------------------
         
         
         
-    !>  Interpolation of modes to surface quadrature nodes. Seeding neighbor element. source=ME. Testing fuction values. 
+    !>  Interpolation of modes to surface quadrature nodes. Seeding neighbor element. source=ME. 
+    !!  Testing fuction values. 
     !!
     !!  @author Nathan A. Wukie
     !!
     !!
-    !!
-    !!
-    !-------------------------------------------------------------------------------------------------------------
+    !-----------------------------------------------------------------------------------------------
     @Test
     subroutine test__interpolate_face_autodiff__values__idA(self)
         class(test_interpolate),    intent(inout)   :: self
         
-        integer(ik)                 :: ielem, iface, ieqn, ngq, idomain, itime
-        type(seed_t)                :: seed
+        integer(ik)                 :: ielem, iface, ivar, ngq, idomain, itime
         type(AD_D), allocatable     :: u_gq(:)
         real(rk),   allocatable     :: u_ref(:)
         real(rk)                    :: tol, val
@@ -619,11 +626,16 @@ contains
             !
             ! A seed element, this is a neighbor for this test - so all derivative arrays should be seeded to zero
             !
-            seed%idomain_g  = 1
-            seed%idomain_l  = 1
-            seed%ielement_g = 15
-            seed%ielement_l = 15
-            seed%iproc      = IRANK
+            call fcn%seed%init(idomain_g    = 1,     &
+                               idomain_l    = 1,     &
+                               ielement_g   = 15,    &
+                               ielement_l   = 15,    &
+                               neqns        = 1,     &
+                               nterms_s     = 8,     &
+                               iproc        = IRANK, &
+                               recv_comm    = 0,     &
+                               recv_domain  = 0,     &
+                               recv_element = 0)
 
 
             !
@@ -634,13 +646,11 @@ contains
             face%ielement_g = ielem
             face%ielement_l = ielem
             face%iface      = iface
-            fcn%seed        = seed
 
 
-            tol   = 1.e-13_rk
-            ieqn  = self%chidg%data%eqnset(1)%prop%get_primary_field_index('u')
-
-            ngq = faces(ielem,iface)%gq%nnodes_f
+            tol  = 1.e-13_rk
+            ivar = self%chidg%data%eqnset(1)%prop%get_primary_field_index('u')
+            ngq  = faces(ielem,iface)%gq%nnodes_f
 
             ! Allocate number of AD variables for data at GQ nodes. Derivative arrays are not yet allocated
             allocate(u_gq(ngq))
@@ -650,13 +660,12 @@ contains
             !
             ! PROCEDURE BEING TESTED
             !
-            u_gq = interpolate_face_autodiff(self%chidg%data%mesh,q,face,fcn,ieqn, itime,'value',ME)
+            u_gq = interpolate_face_autodiff(self%chidg%data%mesh,q,face,fcn,ivar,itime,'value',ME)
             
             
             ! Initialize reference
             val = self%fcn%get_option_value('val')
             u_ref = val
-            !u_ref = self%fcn%value_ 
 
             
             
@@ -667,28 +676,26 @@ contains
         end associate
         
     end subroutine test__interpolate_face_autodiff__values__idA
-    !****************************************************************************************************************
+    !*******************************************************************************************
     
     
     
     
     
         
-    !>  Interpolation of modes to surface quadrature nodes. Seeding neighbor element. source=ME. Testing fuction values. 
+    !>  Interpolation of modes to surface quadrature nodes. Seeding neighbor element. source=ME. 
+    !!  Testing fuction values. 
     !!
     !!  @author Nathan A. Wukie
     !!
     !!
     !!
-    !!
-    !!
-    !-------------------------------------------------------------------------------------------------------------
+    !-------------------------------------------------------------------------------------------
     @Test
     subroutine test__interpolate_face_autodiff__derivatives__idB(self)
         class(test_interpolate),    intent(inout)   :: self
         
-        integer(ik)                 :: ielem, iface, ieqn, ngq, igq, nderiv, idomain, itime
-        type(seed_t)                :: seed
+        integer(ik)                 :: ielem, iface, ivar, ngq, igq, nderiv, idomain, itime
         type(AD_D), allocatable     :: u_gq(:)
         real(rk),   allocatable     :: deriv_ref(:)
         real(rk)                    :: tol
@@ -706,11 +713,16 @@ contains
             !
             ! A seed element, this is a neihgbor for this test - so all derivative arrays should be seeded to zero
             !
-            seed%idomain_g  = 1
-            seed%idomain_l  = 1
-            seed%ielement_g = 15
-            seed%ielement_l = 15
-            seed%iproc      = IRANK
+            call fcn%seed%init(idomain_g    = 1,     &
+                               idomain_l    = 1,     &
+                               ielement_g   = 15,    &
+                               ielement_l   = 15,    &
+                               neqns        = 1,     &
+                               nterms_s     = 8,     &
+                               iproc        = IRANK, &
+                               recv_comm    = 0,     &
+                               recv_domain  = 0,     &
+                               recv_element = 0)
 
 
 
@@ -722,15 +734,12 @@ contains
             face%ielement_g = ielem
             face%ielement_l = ielem
             face%iface      = iface
-            fcn%seed        = seed
 
 
 
-
-            tol   = 1.e-13_rk
-            ieqn  = self%chidg%data%eqnset(1)%prop%get_primary_field_index('u')
-
-            ngq = faces(ielem,iface)%gq%nnodes_f
+            tol    = 1.e-13_rk
+            ivar   = self%chidg%data%eqnset(1)%prop%get_primary_field_index('u')
+            ngq    = faces(ielem,iface)%gq%nnodes_f
             nderiv = faces(ielem,iface)%neqns  *  faces(ielem,iface)%nterms_s
 
             ! Allocate number of AD variables for data at GQ nodes. Derivative arrays are not yet allocated
@@ -741,7 +750,7 @@ contains
             !
             ! PROCEDURE BEING TESTED
             !
-            u_gq = interpolate_face_autodiff(self%chidg%data%mesh,q,face,fcn,ieqn, itime,'value',ME)
+            u_gq = interpolate_face_autodiff(self%chidg%data%mesh,q,face,fcn,ivar,itime,'value',ME)
             
             deriv_ref = ZERO
             
@@ -752,7 +761,7 @@ contains
         end associate
         
     end subroutine test__interpolate_face_autodiff__derivatives__idB
-    !*****************************************************************************************************************
+    !******************************************************************************************
     
 
 
@@ -762,20 +771,20 @@ contains
 
     
     
-    !>  Interpolation of modes to surface quadrature nodes. Seeding current element. source=ME. Testing fuction values. 
+    !>  Interpolation of modes to surface quadrature nodes. Seeding current element. source=ME. 
+    !!  Testing fuction values. 
     !!
     !!  @author Nathan A. Wukie
     !!
     !!
     !!
     !!
-    !-------------------------------------------------------------------------------------------------------------
+    !------------------------------------------------------------------------------------------
     @Test
     subroutine test__interpolate_face_autodiff__values__idC(self)
         class(test_interpolate),    intent(inout)   :: self
         
-        integer(ik)                 :: ielem, iface, ieqn, ngq, idomain, itime
-        type(seed_t)                :: seed
+        integer(ik)                 :: ielem, iface, ivar, ngq, idomain, itime
         type(AD_D), allocatable     :: u_gq(:)
         real(rk),   allocatable     :: u_ref(:)
         real(rk)                    :: tol, val
@@ -792,11 +801,16 @@ contains
             !
             ! A seed element, same as ielem - so all derivative arrays should include non-zeros
             !
-            seed%idomain_g  = 1
-            seed%idomain_l  = 1
-            seed%ielement_g = 14
-            seed%ielement_l = 14
-            seed%iproc      = IRANK
+            call fcn%seed%init(idomain_g    = 1,     &
+                               idomain_l    = 1,     &
+                               ielement_g   = 14,    &
+                               ielement_l   = 14,    &
+                               neqns        = 1,     &
+                               nterms_s     = 8,     &
+                               iproc        = IRANK, &
+                               recv_comm    = 0,     &
+                               recv_domain  = 0,     &
+                               recv_element = 0)
 
 
             !
@@ -807,16 +821,13 @@ contains
             face%ielement_g = ielem
             face%ielement_l = ielem
             face%iface      = iface
-            fcn%seed        = seed
 
 
 
 
-
-            tol   = 1.e-13_rk
-            ieqn  = self%chidg%data%eqnset(1)%prop%get_primary_field_index('u')
-
-            ngq = faces(ielem,iface)%gq%nnodes_f
+            tol  = 1.e-13_rk
+            ivar = self%chidg%data%eqnset(1)%prop%get_primary_field_index('u')
+            ngq  = faces(ielem,iface)%gq%nnodes_f
             
             ! Allocate number of AD variables for data at GQ nodes. Derivative arrays are not yet allocated
             allocate(u_gq(ngq))
@@ -826,7 +837,7 @@ contains
             !
             ! PROCEDURE BEING TESTED
             !
-            u_gq = interpolate_face_autodiff(self%chidg%data%mesh,q,face,fcn,ieqn, itime,'value',ME)
+            u_gq = interpolate_face_autodiff(self%chidg%data%mesh,q,face,fcn,ivar,itime,'value',ME)
             
             
             !
@@ -834,7 +845,6 @@ contains
             !
             val = self%fcn%get_option_value('val')
             u_ref = val
-            !u_ref = self%fcn%value_ 
             
             
             ! Test that interpolation to quadrature nodes from modes to autodiff variables 
@@ -844,7 +854,7 @@ contains
         end associate
         
     end subroutine test__interpolate_face_autodiff__values__idC
-    !******************************************************************************************************************
+    !*******************************************************************************************
     
     
     
@@ -852,20 +862,20 @@ contains
     
 
 
-    !>  Interpolation of modes to surface quadrature nodes. Seeding current element. source=ME. Testing fuction values. 
+    !>  Interpolation of modes to surface quadrature nodes. Seeding current element. source=ME. 
+    !!  Testing fuction values. 
     !!
     !!  @author Nathan A. Wukie
     !!
     !!
     !!
     !!
-    !-------------------------------------------------------------------------------------------------------------
+    !-------------------------------------------------------------------------------------------
     @Test
     subroutine test__interpolate_face_autodiff__derivatives__idD(self)
         class(test_interpolate),    intent(inout)   :: self
         
-        integer(ik)                 :: ielem, iface, ieqn, igq, ngq, nderiv, idomain, itime
-        type(seed_t)                :: seed
+        integer(ik)                 :: ielem, iface, ivar, igq, ngq, nderiv, idomain, itime
         type(AD_D), allocatable     :: u_gq(:)
         real(rk),   allocatable     :: deriv_ref(:)
         real(rk)                    :: tol
@@ -882,11 +892,16 @@ contains
             !
             ! A seed element, same as ielem - so all derivative arrays should include non-zeros
             !
-            seed%idomain_g  = 1
-            seed%idomain_l  = 1
-            seed%ielement_g = 14
-            seed%ielement_l = 14
-            seed%iproc      = IRANK
+            call fcn%seed%init(idomain_g    = 1,     &
+                               idomain_l    = 1,     &
+                               ielement_g   = 14,    &
+                               ielement_l   = 14,    &
+                               neqns        = 1,     &
+                               nterms_s     = 8,     &
+                               iproc        = IRANK, &
+                               recv_comm    = 0,     &
+                               recv_domain  = 0,     &
+                               recv_element = 0)
 
 
             !
@@ -897,14 +912,10 @@ contains
             face%ielement_g = ielem
             face%ielement_l = ielem
             face%iface      = iface
-            fcn%seed        = seed
-
-
 
             
-            tol   = 1.e-13_rk
-            ieqn  = self%chidg%data%eqnset(1)%prop%get_primary_field_index('u')
-
+            tol    = 1.e-13_rk
+            ivar   = self%chidg%data%eqnset(1)%prop%get_primary_field_index('u')
             ngq    = faces(ielem,iface)%gq%nnodes_f
             nderiv = faces(ielem,iface)%neqns  *  faces(ielem,iface)%nterms_s
 
@@ -916,23 +927,26 @@ contains
             !
             ! PROCEDURE BEING TESTED
             !
-            u_gq = interpolate_face_autodiff(self%chidg%data%mesh,q,face,fcn,ieqn, itime,'value',ME)
+            u_gq = interpolate_face_autodiff(self%chidg%data%mesh,q,face,fcn,ivar,itime,'value',ME)
               
             
             
             ! Test that interpolation to quadrature nodes from modes to autodiff variables 
             ! on an element volume is producing expected results
             do igq = 1,ngq
-                deriv_ref = faces(ielem,iface)%gq%face%val(igq,:,iface)     !> Set expected derivatives
+                ! Set expected derivatives
+                deriv_ref = faces(ielem,iface)%gq%face%val(igq,:,iface)
                 
+                ! Test derivatives
                 @assertEqual(deriv_ref,u_gq(igq)%xp_ad_,tol)
                 
-                deriv_ref = ZERO                                            !> Reset to zero
+                ! Reset to zero
+                deriv_ref = ZERO
             end do
         end associate
         
     end subroutine test__interpolate_face_autodiff__derivatives__idD
-    !*****************************************************************************************************************
+    !************************************************************************************************
 
 
 
@@ -944,19 +958,19 @@ contains
 
 
     
-    !>  Interpolation of modes to surface quadrature nodes. Seeding neighbor element. source=NEIGHBOR. Testing fuction values. 
+    !>  Interpolation of modes to surface quadrature nodes. Seeding neighbor element. source=NEIGHBOR. 
+    !!  Testing fuction values. 
     !!
     !!  @author Nathan A. Wukie
     !!
     !!
     !!
-    !-------------------------------------------------------------------------------------------------------------
+    !------------------------------------------------------------------------------------------------
     @Test
     subroutine test__interpolate_face_autodiff__values__idE(self)
         class(test_interpolate),    intent(inout)   :: self
         
-        integer(ik)                 :: ielem, iface, ieqn, ngq, idomain, itime
-        type(seed_t)                :: seed
+        integer(ik)                 :: ielem, iface, ivar, ngq, idomain, itime
         type(AD_D), allocatable     :: u_gq(:)
         real(rk),   allocatable     :: u_ref(:)
         real(rk)                    :: tol, val
@@ -973,11 +987,16 @@ contains
             !
             ! A seed element, this is a neighbor for this test - so all derivative arrays should be seeded to zero
             !
-            seed%idomain_g  = 1
-            seed%idomain_l  = 1
-            seed%ielement_g = 15
-            seed%ielement_l = 15
-            seed%iproc      = IRANK
+            call fcn%seed%init(idomain_g    = 1,     &
+                               idomain_l    = 1,     &
+                               ielement_g   = 15,    &
+                               ielement_l   = 15,    &
+                               neqns        = 1,     &
+                               nterms_s     = 8,     &
+                               iproc        = IRANK, &
+                               recv_comm    = 0,     &
+                               recv_domain  = 0,     &
+                               recv_element = 0)
 
 
             !
@@ -988,16 +1007,11 @@ contains
             face%ielement_g = ielem
             face%ielement_l = ielem
             face%iface      = iface
-            fcn%seed        = seed
 
 
-
-
-
-            tol   = 1.e-13_rk
-            ieqn  = self%chidg%data%eqnset(1)%prop%get_primary_field_index('u')
-
-            ngq = faces(ielem,iface)%gq%nnodes_f
+            tol  = 1.e-13_rk
+            ivar = self%chidg%data%eqnset(1)%prop%get_primary_field_index('u')
+            ngq  = faces(ielem,iface)%gq%nnodes_f
 
             ! Allocate number of AD variables for data at GQ nodes. Derivative arrays are not yet allocated
             allocate(u_gq(ngq))
@@ -1007,13 +1021,12 @@ contains
             !
             ! PROCEDURE BEING TESTED
             !
-            u_gq = interpolate_face_autodiff(self%chidg%data%mesh,q,face,fcn,ieqn, itime,'value',NEIGHBOR)
+            u_gq = interpolate_face_autodiff(self%chidg%data%mesh,q,face,fcn,ivar,itime,'value',NEIGHBOR)
             
             
             ! Initialize reference
-            val = self%fcn%get_option_value('val')
+            val   = self%fcn%get_option_value('val')
             u_ref = val
-            !u_ref = self%fcn%value_ 
             
             
             ! Test that interpolation to quadrature nodes from modes to autodiff variables 
@@ -1023,27 +1036,27 @@ contains
         end associate
         
     end subroutine test__interpolate_face_autodiff__values__idE
-    !****************************************************************************************************************
+    !**********************************************************************************************
     
     
     
     
     
         
-    !>  Interpolation of modes to surface quadrature nodes. Seeding neighbor element. source=NEIGHBOR. Testing fuction values. 
+    !>  Interpolation of modes to surface quadrature nodes. Seeding neighbor element. source=NEIGHBOR. 
+    !!  Testing fuction values. 
     !!
     !!  @author Nathan A. Wukie
     !!
     !!
     !!
     !!
-    !-------------------------------------------------------------------------------------------------------------
+    !---------------------------------------------------------------------------------------------
     @Test
     subroutine test__interpolate_face_autodiff__derivatives__idF(self)
         class(test_interpolate),    intent(inout)   :: self
         
-        integer(ik)                 :: ielem, iface, ieqn, ngq, igq, nderiv, idomain, itime
-        type(seed_t)                :: seed
+        integer(ik)                 :: ielem, iface, ivar, ngq, igq, nderiv, idomain, itime
         type(AD_D), allocatable     :: u_gq(:)
         real(rk),   allocatable     :: deriv_ref(:)
         real(rk)                    :: tol
@@ -1061,11 +1074,16 @@ contains
             !
             ! A seed element, this is a neihgbor for this test - so all derivative arrays should be seeded to zero
             !
-            seed%idomain_g  = 1
-            seed%idomain_l  = 1
-            seed%ielement_g = 15
-            seed%ielement_l = 15
-            seed%iproc      = IRANK
+            call fcn%seed%init(idomain_g    = 1,     &
+                               idomain_l    = 1,     &
+                               ielement_g   = 15,    &
+                               ielement_l   = 15,    &
+                               neqns        = 1,     &
+                               nterms_s     = 8,     &
+                               iproc        = IRANK, &
+                               recv_comm    = 0,     &
+                               recv_domain  = 0,     &
+                               recv_element = 0)
 
             !
             ! Set face
@@ -1075,16 +1093,12 @@ contains
             face%ielement_g = ielem
             face%ielement_l = ielem
             face%iface      = iface
-            fcn%seed        = seed
 
 
 
-
-
-            tol   = 1.e-13_rk
-            ieqn  = self%chidg%data%eqnset(1)%prop%get_primary_field_index('u')
-
-            ngq = faces(ielem,iface)%gq%nnodes_f
+            tol    = 1.e-13_rk
+            ivar   = self%chidg%data%eqnset(1)%prop%get_primary_field_index('u')
+            ngq    = faces(ielem,iface)%gq%nnodes_f
             nderiv = faces(ielem,iface)%neqns  *  faces(ielem,iface)%nterms_s
 
             ! Allocate number of AD variables for data at GQ nodes. Derivative arrays are not yet allocated
@@ -1095,7 +1109,7 @@ contains
             !
             ! PROCEDURE BEING TESTED
             !
-            u_gq = interpolate_face_autodiff(self%chidg%data%mesh,q,face,fcn,ieqn, itime,'value',NEIGHBOR)
+            u_gq = interpolate_face_autodiff(self%chidg%data%mesh,q,face,fcn,ivar,itime,'value',NEIGHBOR)
             
             deriv_ref = ZERO
             
@@ -1106,7 +1120,7 @@ contains
         end associate
         
     end subroutine test__interpolate_face_autodiff__derivatives__idF
-    !***************************************************************************************************************
+    !************************************************************************************************
     
 
 
@@ -1125,20 +1139,20 @@ contains
 
     
     
-    !> Interpolation of modes to surface quadrature nodes. Seeding current element. source=NEIGHBOR. Testing fuction values. 
+    !>  Interpolation of modes to surface quadrature nodes. Seeding current element. source=NEIGHBOR. 
+    !!  Testing fuction values. 
     !!
     !!  @author Nathan A. Wukie
     !!
     !!
     !!
     !!
-    !-------------------------------------------------------------------------------------------------------------
+    !------------------------------------------------------------------------------------------------
     @Test
     subroutine test__interpolate_face_autodiff__values__idG(self)
         class(test_interpolate),    intent(inout)   :: self
         
-        integer(ik)                 :: ielem, iface, ieqn, ngq, idomain, itime
-        type(seed_t)                :: seed
+        integer(ik)                 :: ielem, iface, ivar, ngq, idomain, itime
         type(AD_D), allocatable     :: u_gq(:)
         real(rk),   allocatable     :: u_ref(:)
         real(rk)                    :: tol, val
@@ -1155,11 +1169,16 @@ contains
             !
             ! A seed element, same as ielem - so all derivative arrays should include non-zeros
             !
-            seed%idomain_g  = 1
-            seed%idomain_l  = 1
-            seed%ielement_g = 13     ! neighbor to element 14 about face 1
-            seed%ielement_l = 13     ! neighbor to element 14 about face 1
-            seed%iproc      = IRANK
+            call fcn%seed%init(idomain_g    = 1,     &
+                               idomain_l    = 1,     &
+                               ielement_g   = 13,    &
+                               ielement_l   = 13,    &
+                               neqns        = 1,     &
+                               nterms_s     = 8,     &
+                               iproc        = IRANK, &
+                               recv_comm    = 0,     &
+                               recv_domain  = 0,     &
+                               recv_element = 0)
 
 
             !
@@ -1170,15 +1189,11 @@ contains
             face%ielement_g = ielem
             face%ielement_l = ielem
             face%iface      = iface
-            fcn%seed        = seed
 
 
-
-
-            tol   = 1.e-13_rk
-            ieqn  = self%chidg%data%eqnset(1)%prop%get_primary_field_index('u')
-
-            ngq = faces(ielem,iface)%gq%nnodes_f
+            tol  = 1.e-13_rk
+            ivar = self%chidg%data%eqnset(1)%prop%get_primary_field_index('u')
+            ngq  = faces(ielem,iface)%gq%nnodes_f
             
             ! Allocate number of AD variables for data at GQ nodes. Derivative arrays are not yet allocated
             allocate(u_gq(ngq))
@@ -1188,7 +1203,7 @@ contains
             !
             ! PROCEDURE BEING TESTED
             !
-            u_gq = interpolate_face_autodiff(self%chidg%data%mesh,q,face,fcn,ieqn, itime,'value',NEIGHBOR)
+            u_gq = interpolate_face_autodiff(self%chidg%data%mesh,q,face,fcn,ivar,itime,'value',NEIGHBOR)
             
             
             !
@@ -1205,26 +1220,26 @@ contains
         end associate
         
     end subroutine test__interpolate_face_autodiff__values__idG
-    !******************************************************************************************************************
+    !**********************************************************************************************
     
     
     
     
     
-    !>  Interpolation of modes to surface quadrature nodes. Seeding current element. source=NEIGHBOR. Testing fuction derivatives. 
+    !>  Interpolation of modes to surface quadrature nodes. Seeding current element. source=NEIGHBOR. 
+    !!  Testing fuction derivatives. 
     !!
     !!  @author Nathan A. Wukie
     !!
     !!
     !!
     !!
-    !-------------------------------------------------------------------------------------------------------------
+    !----------------------------------------------------------------------------------------------
     @Test
     subroutine test__interpolate_face_autodiff__derivatives__idH(self)
         class(test_interpolate),    intent(inout)   :: self
         
-        integer(ik)                 :: ielem, iface, ieqn, igq, ngq, nderiv, idomain, itime
-        type(seed_t)                :: seed
+        integer(ik)                 :: ielem, iface, ivar, igq, ngq, nderiv, idomain, itime
         type(AD_D), allocatable     :: u_gq(:)
         real(rk),   allocatable     :: deriv_ref(:)
         real(rk)                    :: tol
@@ -1244,11 +1259,16 @@ contains
             !
             ! A seed element, same as ielem - so all derivative arrays should include non-zeros
             !
-            seed%idomain_g  = 1
-            seed%idomain_l  = 1
-            seed%ielement_g = 13     ! neighbor to element 14 about face 1
-            seed%ielement_l = 13     ! neighbor to element 14 about face 1
-            seed%iproc      = IRANK
+            call fcn%seed%init(idomain_g    = 1,     &
+                               idomain_l    = 1,     &
+                               ielement_g   = 13,    &
+                               ielement_l   = 13,    &
+                               neqns        = 1,     &
+                               nterms_s     = 8,     &
+                               iproc        = IRANK, &
+                               recv_comm    = 0,     &
+                               recv_domain  = 0,     &
+                               recv_element = 0)
 
 
             !
@@ -1259,13 +1279,10 @@ contains
             face%ielement_g = ielem
             face%ielement_l = ielem
             face%iface      = iface
-            fcn%seed        = seed
-
 
             
-            tol   = 1.e-13_rk
-            ieqn  = self%chidg%data%eqnset(1)%prop%get_primary_field_index('u')
-
+            tol    = 1.e-13_rk
+            ivar   = self%chidg%data%eqnset(1)%prop%get_primary_field_index('u')
             ngq    = faces(ielem,iface)%gq%nnodes_f
             nderiv = faces(ielem,iface)%neqns  *  faces(ielem,iface)%nterms_s
 
@@ -1277,27 +1294,30 @@ contains
             !
             ! PROCEDURE BEING TESTED
             !
-            u_gq = interpolate_face_autodiff(self%chidg%data%mesh,q,face,fcn,ieqn,itime,'value',NEIGHBOR)
+            u_gq = interpolate_face_autodiff(self%chidg%data%mesh,q,face,fcn,ivar,itime,'value',NEIGHBOR)
               
             
             
             ! Test that interpolation to quadrature nodes from modes to autodiff variables 
             ! on an element volume is producing expected results
             ielem_n = compute_neighbor_element_l(self%chidg%data%mesh,idomain,ielem,iface,idonor)
-            iface_n = compute_neighbor_face(   self%chidg%data%mesh,idomain,ielem,iface,idonor)
+            iface_n = compute_neighbor_face(     self%chidg%data%mesh,idomain,ielem,iface,idonor)
 
 
             do igq = 1,ngq
-                deriv_ref = faces(ielem_n,iface_n)%gq%face%val(igq,:,iface_n)     !> Set expected derivatives
+                ! Set expected derivatives
+                deriv_ref = faces(ielem_n,iface_n)%gq%face%val(igq,:,iface_n)
                 
+                ! Test derivatives
                 @assertEqual(deriv_ref,u_gq(igq)%xp_ad_,tol)
                 
-                deriv_ref = ZERO                                            !> Reset to zero
+                ! Reset to zero
+                deriv_ref = ZERO
             end do
         end associate
         
     end subroutine test__interpolate_face_autodiff__derivatives__idH
-    !***************************************************************************************************************
+    !*******************************************************************************************
 
 
 

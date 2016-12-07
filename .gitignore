@@ -7,5 +7,6 @@ run*
 media
 testrun
 *.swp
+*~
 *.out
 tags

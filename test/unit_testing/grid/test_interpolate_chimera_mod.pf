@@ -2,7 +2,6 @@ module test_interpolate_chimera_mod
     use pfunit_mod
     use type_chidg,         only: chidg_t
     use type_point,         only: point_t
-    use type_seed,          only: seed_t
     use type_meshdata,      only: meshdata_t
     use type_face_info,     only: face_info_t
     use type_function_info, only: function_info_t
@@ -11,16 +10,12 @@ module test_interpolate_chimera_mod
     use mod_constants,      only: ZERO, ONE, TWO, THREE, FIVE, SIX, EIGHT, NINE, TEN, &
                                   XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX, &
                                   NEIGHBOR, IO_DESTINATION
-
     use mod_chidg_mpi,      only: IRANK
+    use mod_DNAD_tools,     only: compute_neighbor_element_l, compute_neighbor_face
     use mod_interpolate,    only: interpolate_face_standard, interpolate_face_autodiff
-
     use mod_test_utilities, only: create_mesh_file
     use mod_file_utilities, only: delete_file
-
-
     use DNAD_D
-    use mod_DNAD_tools,     only: compute_neighbor_element_l, compute_neighbor_face
 
     use type_function,      only: function_t
     use mod_function,       only: create_function
@@ -43,8 +38,8 @@ module test_interpolate_chimera_mod
     type, extends(TestCase) ::  test_interpolate_chimera
 
         character(:),       allocatable :: filename
-        type(chidg_t)                   :: chidg
         class(function_t),  allocatable :: fcn
+        type(chidg_t)                   :: chidg
 
     contains
         procedure   ::  setUp
@@ -146,9 +141,9 @@ contains
     
     
     
-    !-----------------------------------------------------------------------------------------------------
+    !------------------------------------------------------------------------------------------------
     !                               Face - surface interpolation - Autodiff
-    !-----------------------------------------------------------------------------------------------------
+    !------------------------------------------------------------------------------------------------
         
     
     
@@ -158,13 +153,12 @@ contains
     !!
     !!
     !!
-    !-------------------------------------------------------------------------------------------------------------
+    !------------------------------------------------------------------------------------------------
     @Test
     subroutine test__interpolate_face_chimera_AD__values__idE(self)
         class(test_interpolate_chimera),    intent(inout)   :: self
         
         integer(ik)                 :: ielem, iface, ivar, ngq, idomain, itime
-        type(seed_t)                :: seed
         type(AD_D), allocatable     :: u_gq(:)
         real(rk),   allocatable     :: u_ref(:)
         real(rk)                    :: tol, val
@@ -185,11 +179,17 @@ contains
             !
             ! A seed element, this is a neighbor for this test - so all derivative arrays should be seeded to zero
             !
-            seed%idomain_g  = 1
-            seed%idomain_l  = 1
-            seed%ielement_g = 2
-            seed%ielement_l = 2
-            seed%iproc      = IRANK
+            call fcn%seed%init(idomain_g    = 1,     &
+                               idomain_l    = 1,     &
+                               ielement_g   = 2,     &
+                               ielement_l   = 2,     &
+                               neqns        = 1,     &
+                               nterms_s     = 8,     &
+                               iproc        = IRANK, &
+                               recv_comm    = 0,     &
+                               recv_domain  = 0,     &
+                               recv_element = 0)
+
 
             !
             ! Set face indices
@@ -199,14 +199,11 @@ contains
             face%ielement_g = ielem
             face%ielement_l = ielem
             face%iface      = iface
-            !face%seed       = seed
-            fcn%seed   = seed
 
 
-            tol   = 1.e-13_rk
-            ivar  = self%chidg%data%eqnset(1)%prop%get_primary_field_index('u')
-
-            ngq = faces(ielem,iface)%gq%nnodes_f
+            tol  = 1.e-13_rk
+            ivar = self%chidg%data%eqnset(1)%prop%get_primary_field_index('u')
+            ngq  = faces(ielem,iface)%gq%nnodes_f
 
             ! Allocate number of AD variables for data at GQ nodes. Derivative arrays are not yet allocated
             allocate(u_gq(ngq))
@@ -217,7 +214,6 @@ contains
             ! PROCEDURE BEING TESTED
             !
             u_gq = interpolate_face_autodiff(self%chidg%data%mesh,q,face,fcn,ivar,itime,'value', NEIGHBOR)
-            !call interpolate_face_autodiff(self%chidg%data%mesh,face,fcn,q,ivar,u_gq, 'value', NEIGHBOR)
             
             
             ! Initialize reference
@@ -232,7 +228,7 @@ contains
         end associate
         
     end subroutine test__interpolate_face_chimera_AD__values__idE
-    !*************************************************************************************************************
+    !***********************************************************************************************
     
     
     
@@ -245,13 +241,12 @@ contains
     !!
     !!
     !!
-    !-------------------------------------------------------------------------------------------------------------
+    !-----------------------------------------------------------------------------------------------
     @Test
     subroutine test__interpolate_face_chimera_AD__derivatives__idF(self)
         class(test_interpolate_chimera),    intent(inout)   :: self
         
         integer(ik)                 :: ielem, iface, ivar, ngq, igq, nderiv, idomain, itime
-        type(seed_t)                :: seed
         type(AD_D), allocatable     :: u_gq(:)
         real(rk),   allocatable     :: deriv_ref(:)
         real(rk)                    :: tol
@@ -267,13 +262,19 @@ contains
 
 
             !
-            ! A seed element, this is the current element. Since we are performing a NEIGHBOR interpolation, derivatives should be zero
+            ! A seed element, this is the current element. Since we are performing a NEIGHBOR interpolation, 
+            ! derivatives should be zero
             !
-            seed%idomain_g  = 1
-            seed%idomain_l  = 1
-            seed%ielement_g = 2
-            seed%ielement_l = 2
-            seed%iproc      = IRANK
+            call fcn%seed%init(idomain_g    = 1,     &
+                               idomain_l    = 1,     &
+                               ielement_g   = 2,     &
+                               ielement_l   = 2,     &
+                               neqns        = 1,     &
+                               nterms_s     = 8,     &
+                               iproc        = IRANK, &
+                               recv_comm    = 0,     &
+                               recv_domain  = 0,     &
+                               recv_element = 0)
 
 
             !
@@ -284,15 +285,12 @@ contains
             face%ielement_g = ielem
             face%ielement_l = ielem
             face%iface      = iface
-            !face%seed     = seed
-            fcn%seed   = seed
 
 
 
-            tol   = 1.e-13_rk
-            ivar  = self%chidg%data%eqnset(1)%prop%get_primary_field_index('u')
-
-            ngq = faces(ielem,iface)%gq%nnodes_f
+            tol    = 1.e-13_rk
+            ivar   = self%chidg%data%eqnset(1)%prop%get_primary_field_index('u')
+            ngq    = faces(ielem,iface)%gq%nnodes_f
             nderiv = faces(ielem,iface)%neqns  *  faces(ielem,iface)%nterms_s
 
             ! Allocate number of AD variables for data at GQ nodes. Derivative arrays are not yet allocated
@@ -314,17 +312,8 @@ contains
         end associate
         
     end subroutine test__interpolate_face_chimera_AD__derivatives__idF
-    !*************************************************************************************************************
+    !**********************************************************************************************
     
-
-
-
-
-
-
-
-
-
 
 
 
@@ -339,13 +328,12 @@ contains
     !!
     !!
     !!
-    !-------------------------------------------------------------------------------------------------------------
+    !----------------------------------------------------------------------------------------------
     @Test
     subroutine test__interpolate_face_chimera_AD__values__idG(self)
         class(test_interpolate_chimera),    intent(inout)   :: self
         
         integer(ik)                 :: ielem, iface, ivar, ngq, idomain, itime
-        type(seed_t)                :: seed
         type(AD_D), allocatable     :: u_gq(:)
         real(rk),   allocatable     :: u_ref(:)
         real(rk)                    :: tol, val
@@ -360,14 +348,19 @@ contains
             itime   = 1
 
             !
-            ! A seed element, neighbor to ielem/iface. Performing NEIGHBOR interpolation so all dervative arrays should be nonzero
+            ! A seed element, neighbor to ielem/iface. Performing NEIGHBOR interpolation so all dervative 
+            ! arrays should be nonzero
             !
-            seed%idomain_g  = 2
-            seed%idomain_l  = 2
-            seed%ielement_g = 1     ! neighbor to element 14 about face 1
-            seed%ielement_l = 1     ! neighbor to element 14 about face 1
-            seed%iproc      = IRANK
-
+            call fcn%seed%init(idomain_g    = 2,     &
+                               idomain_l    = 2,     &
+                               ielement_g   = 1,     &
+                               ielement_l   = 1,     &
+                               neqns        = 1,     &
+                               nterms_s     = 8,     &
+                               iproc        = IRANK, &
+                               recv_comm    = 0,     &
+                               recv_domain  = 0,     &
+                               recv_element = 0)
 
 
 
@@ -379,15 +372,12 @@ contains
             face%ielement_g = ielem
             face%ielement_l = ielem
             face%iface      = iface
-            !face%seed       = seed
-            fcn%seed   = seed
 
 
 
-            tol   = 1.e-13_rk
-            ivar  = self%chidg%data%eqnset(1)%prop%get_primary_field_index('u')
-
-            ngq = faces(ielem,iface)%gq%nnodes_f
+            tol  = 1.e-13_rk
+            ivar = self%chidg%data%eqnset(1)%prop%get_primary_field_index('u')
+            ngq  = faces(ielem,iface)%gq%nnodes_f
             
             ! Allocate number of AD variables for data at GQ nodes. Derivative arrays are not yet allocated
             allocate(u_gq(ngq))
@@ -414,24 +404,24 @@ contains
         end associate
         
     end subroutine test__interpolate_face_chimera_AD__values__idG
-    !*************************************************************************************************************
+    !*************************************************************************************************
     
     
     
     
     
-    !> Interpolation of modes to surface quadrature nodes. Seeding current element. source=NEIGHBOR. Testing fuction derivatives. 
+    !>  Interpolation of modes to surface quadrature nodes. Seeding current element. source=NEIGHBOR. 
+    !!  Testing fuction derivatives. 
     !!
     !!  @author Nathan A. Wukie
     !!
     !!
-    !-------------------------------------------------------------------------------------------------------------
+    !-------------------------------------------------------------------------------------------------
     @Test
     subroutine test__interpolate_face_chimera_AD__derivatives__idH(self)
         class(test_interpolate_chimera),    intent(inout)   :: self
         
         integer(ik)                 :: ielem, iface, ivar, igq, ngq, nderiv, idomain, itime
-        type(seed_t)                :: seed
         type(AD_D), allocatable     :: u_gq(:)
         real(rk),   allocatable     :: deriv_ref(:)
         real(rk)                    :: tol
@@ -452,13 +442,19 @@ contains
             ChiID = self%chidg%data%mesh(idomain)%faces(ielem,iface)%ChiID
 
             !
-            ! A seed element, neighbor to ielem/iface. Performing NEIGHBOR interpolation so all dervative arrays should be nonzero
+            ! A seed element, neighbor to ielem/iface. Performing NEIGHBOR interpolation so all 
+            ! dervative arrays should be nonzero
             !
-            seed%idomain_g  = 2
-            seed%idomain_l  = 2
-            seed%ielement_g = 1
-            seed%ielement_l = 1
-            seed%iproc      = IRANK
+            call fcn%seed%init(idomain_g    = 2,     &
+                               idomain_l    = 2,     &
+                               ielement_g   = 1,     &
+                               ielement_l   = 1,     &
+                               neqns        = 1,     &
+                               nterms_s     = 8,     &
+                               iproc        = IRANK, &
+                               recv_comm    = 0,     &
+                               recv_domain  = 0,     &
+                               recv_element = 0)
 
 
             !
@@ -469,13 +465,11 @@ contains
             face%ielement_g = ielem
             face%ielement_l = ielem
             face%iface      = iface
-            fcn%seed   = seed
 
 
             
-            tol   = 1.e-13_rk
-            ivar  = self%chidg%data%eqnset(1)%prop%get_primary_field_index('u')
-
+            tol    = 1.e-13_rk
+            ivar   = self%chidg%data%eqnset(1)%prop%get_primary_field_index('u')
             ngq    = faces(ielem,iface)%gq%nnodes_f
             nderiv = faces(ielem,iface)%neqns  *  faces(ielem,iface)%nterms_s
 
@@ -501,34 +495,19 @@ contains
             ndonor_nodes = self%chidg%data%mesh(idomain)%chimera%recv%data(ChiID)%donor_gq_indices(idonor)%size()
 
             do igq = 1,ndonor_nodes
-
-                deriv_ref = mat(igq,:)     !> Set expected derivatives
+                ! Set expected derivatives
+                deriv_ref = mat(igq,:)
                 
+                ! Test derivatives
                 @assertEqual(deriv_ref,u_gq(igq)%xp_ad_,tol)
                 
-                deriv_ref = ZERO                                            !> Reset to zero
+                ! Reset to zero
+                deriv_ref = ZERO
             end do
         end associate
         
     end subroutine test__interpolate_face_chimera_AD__derivatives__idH
-    !*****************************************************************************************************************
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    !*************************************************************************************************
 
 
 

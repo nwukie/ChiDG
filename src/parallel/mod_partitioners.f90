@@ -37,8 +37,8 @@ contains
         real(rk),                       intent(in)      :: weights(:)
         type(partition_t), allocatable, intent(inout)   :: partitions(:)
 
+        character(:),   allocatable :: domain_name
         logical                     :: serial, parallel
-
         logical                     :: element_in_partition
         integer(ik),    allocatable :: npartition_elements_in_domain(:), element_nodes(:)
         integer(ik)                 :: ielem_part, ipart_conn, ndomains_in_partition, ipart_elem
@@ -308,9 +308,10 @@ contains
 
 
                         ! Initialize partition connectivity
+                        domain_name = connectivities(iconn)%get_domain_name()
                         nelem = npartition_elements_in_domain(iconn)
                         nnodes = connectivities(iconn)%get_nnodes()
-                        call partitions(ipartition)%connectivities(ipart_conn)%init(nelem,nnodes)
+                        call partitions(ipartition)%connectivities(ipart_conn)%init(domain_name,nelem,nnodes)
                          
                         
                         ! Collect elements
@@ -389,7 +390,7 @@ contains
 
         integer                     :: ipartition, npartitions, ierr
         integer                     :: ielem, data_size
-        integer(ik)                 :: iconn , nelements
+        integer(ik)                 :: iconn , nelements, string_length
         integer(ik)                 :: nconn
         type(MPI_Request)           :: handle
 
@@ -411,8 +412,11 @@ contains
             nconn = partitions(ipartition)%nconn
             do iconn = 1,nconn
 
-                call MPI_ISend(partitions(ipartition)%connectivities(iconn)%nelements,1,MPI_INTEGER4, ipartition-1, 0, ChiDG_COMM, handle, ierr)
-                call MPI_ISend(partitions(ipartition)%connectivities(iconn)%nnodes,1,MPI_INTEGER4, ipartition-1, 0, ChiDG_COMM, handle, ierr)
+                string_length = len(partitions(ipartition)%connectivities(iconn)%name)
+                call MPI_ISend(string_length,                                         1,             MPI_INTEGER4,  ipartition-1, 0, ChiDG_COMM, handle, ierr)
+                call MPI_ISend(partitions(ipartition)%connectivities(iconn)%name,     string_length, MPI_CHARACTER, ipartition-1, 0, ChiDG_COMM, handle, ierr)
+                call MPI_ISend(partitions(ipartition)%connectivities(iconn)%nelements,1,             MPI_INTEGER4,  ipartition-1, 0, ChiDG_COMM, handle, ierr)
+                call MPI_ISend(partitions(ipartition)%connectivities(iconn)%nnodes,   1,             MPI_INTEGER4,  ipartition-1, 0, ChiDG_COMM, handle, ierr)
 
 
                 ! Send a connectivity for each element. Would be more efficient to assemble a consolodated array, but must
@@ -458,9 +462,10 @@ contains
         integer                     :: ipartition, npartitions, ierr
         integer                     :: dims(3), iconn, idomain, ielem
         integer                     :: idomain_g, ielement_g, mapping, nnodes_element
-        integer(ik)                 :: conn_size, nnodes, nelements, nconn
-        integer,    allocatable     :: nodes(:)
-        integer(ik), allocatable    :: conn(:)
+        integer(ik)                 :: conn_size, nnodes, nelements, nconn, string_length
+        integer,        allocatable :: nodes(:)
+        integer(ik),    allocatable :: conn(:)
+        character(:),   allocatable :: domain_name
 
 
 
@@ -472,12 +477,20 @@ contains
         ! Receive connectivities
         do iconn = 1,nconn
 
+            call MPI_Recv(string_length,1,MPI_INTEGER4, GLOBAL_MASTER, MPI_ANY_TAG, ChiDG_COMM, MPI_STATUS_IGNORE, ierr)
+
+            if (allocated(domain_name)) deallocate(domain_name)
+            allocate(character(len=string_length) :: domain_name, stat=ierr)
+            if (ierr /= 0) call AllocationError
+
+            call MPI_Recv(domain_name,string_length,MPI_CHARACTER, GLOBAL_MASTER, MPI_ANY_TAG, ChiDG_COMM, MPI_STATUS_IGNORE, ierr)
+
 
             ! Recv connectivity information
             call MPI_Recv(nelements,1,MPI_INTEGER4, GLOBAL_MASTER, MPI_ANY_TAG, ChiDG_COMM, MPI_STATUS_IGNORE, ierr)
-            call MPI_Recv(nnodes,1,MPI_INTEGER4, GLOBAL_MASTER, MPI_ANY_TAG, ChiDG_COMM, MPI_STATUS_IGNORE, ierr)
+            call MPI_Recv(nnodes,   1,MPI_INTEGER4, GLOBAL_MASTER, MPI_ANY_TAG, ChiDG_COMM, MPI_STATUS_IGNORE, ierr)
 
-            call partition%connectivities(iconn)%init(nelements,nnodes)
+            call partition%connectivities(iconn)%init(domain_name,nelements,nnodes)
 
 
 

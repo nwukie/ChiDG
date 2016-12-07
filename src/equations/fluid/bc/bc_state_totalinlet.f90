@@ -1,8 +1,7 @@
 module bc_state_totalinlet
 #include <messenger.h>
     use mod_kinds,              only: rk,ik
-    use mod_constants,          only: ONE, TWO, ME
-
+    use mod_constants,          only: ONE, TWO
     use type_bc_state,          only: bc_state_t
     use type_chidg_worker,      only: chidg_worker_t
     use type_properties,        only: properties_t
@@ -47,9 +46,10 @@ contains
         class(totalinlet_t),   intent(inout) :: self
         
         !
-        ! Set operator name
+        ! Set name, family
         !
         call self%set_name("Total Inlet")
+        call self%set_family("Inlet")
 
 
 !        !
@@ -154,54 +154,43 @@ contains
 
 
         !normal_direction = self%bcproperties%compute("normal_direction",    time, coords)
-        nx = self%bcproperties%compute("X-Normal",                                time, coords)
-        ny = self%bcproperties%compute("Y-Normal",                                time, coords)
-        nz = self%bcproperties%compute("Z-Normal",                                time, coords)
+        nx = self%bcproperties%compute("X-Normal", time, coords)
+        ny = self%bcproperties%compute("Y-Normal", time, coords)
+        nz = self%bcproperties%compute("Z-Normal", time, coords)
 
 
 
         !
         ! Interpolate interior solution to quadrature nodes
         !
-        !rho_m  = worker%interpolate(irho,  'value', ME)
-        !rhou_m = worker%interpolate(irhou, 'value', ME)
-        !rhov_m = worker%interpolate(irhov, 'value', ME)
-        !rhow_m = worker%interpolate(irhow, 'value', ME)
-        !rhoE_m = worker%interpolate(irhoE, 'value', ME)
-        rho_m  = worker%get_face_variable(irho,  'value', ME)
-        rhou_m = worker%get_face_variable(irhou, 'value', ME)
-        rhov_m = worker%get_face_variable(irhov, 'value', ME)
-        rhow_m = worker%get_face_variable(irhow, 'value', ME)
-        rhoE_m = worker%get_face_variable(irhoE, 'value', ME)
+        rho_m  = worker%get_primary_field_face("Density"   , 'value', 'face interior')
+        rhou_m = worker%get_primary_field_face("X-Momentum", 'value', 'face interior')
+        rhov_m = worker%get_primary_field_face("Y-Momentum", 'value', 'face interior')
+        rhow_m = worker%get_primary_field_face("Z-Momentum", 'value', 'face interior')
+        rhoE_m = worker%get_primary_field_face("Energy"    , 'value', 'face interior')
 
 
 
 
-        drho_dx_m  = worker%get_face_variable(irho,  'ddx', ME)
-        drho_dy_m  = worker%get_face_variable(irho,  'ddy', ME)
-        drho_dz_m  = worker%get_face_variable(irho,  'ddz', ME)
+        drho_dx_m  = worker%get_primary_field_face("Density"   ,'ddx', 'face interior')
+        drho_dy_m  = worker%get_primary_field_face("Density"   ,'ddy', 'face interior')
+        drho_dz_m  = worker%get_primary_field_face("Density"   ,'ddz', 'face interior')
 
-        drhou_dx_m = worker%get_face_variable(irhou, 'ddx', ME)
-        drhou_dy_m = worker%get_face_variable(irhou, 'ddy', ME)
-        drhou_dz_m = worker%get_face_variable(irhou, 'ddz', ME)
+        drhou_dx_m = worker%get_primary_field_face("X-Momentum",'ddx', 'face interior')
+        drhou_dy_m = worker%get_primary_field_face("X-Momentum",'ddy', 'face interior')
+        drhou_dz_m = worker%get_primary_field_face("X-Momentum",'ddz', 'face interior')
 
-        drhov_dx_m = worker%get_face_variable(irhov, 'ddx', ME)
-        drhov_dy_m = worker%get_face_variable(irhov, 'ddy', ME)
-        drhov_dz_m = worker%get_face_variable(irhov, 'ddz', ME)
+        drhov_dx_m = worker%get_primary_field_face("Y-Momentum",'ddx', 'face interior')
+        drhov_dy_m = worker%get_primary_field_face("Y-Momentum",'ddy', 'face interior')
+        drhov_dz_m = worker%get_primary_field_face("Y-Momentum",'ddz', 'face interior')
 
-        drhow_dx_m = worker%get_face_variable(irhow, 'ddx', ME)
-        drhow_dy_m = worker%get_face_variable(irhow, 'ddy', ME)
-        drhow_dz_m = worker%get_face_variable(irhow, 'ddz', ME)
+        drhow_dx_m = worker%get_primary_field_face("Z-Momentum",'ddx', 'face interior')
+        drhow_dy_m = worker%get_primary_field_face("Z-Momentum",'ddy', 'face interior')
+        drhow_dz_m = worker%get_primary_field_face("Z-Momentum",'ddz', 'face interior')
         
-        drhoE_dx_m = worker%get_face_variable(irhoE, 'ddx', ME)
-        drhoE_dy_m = worker%get_face_variable(irhoE, 'ddy', ME)
-        drhoE_dz_m = worker%get_face_variable(irhoE, 'ddz', ME)
-
-
-
-
-
-
+        drhoE_dx_m = worker%get_primary_field_face("Energy"    ,'ddx', 'face interior')
+        drhoE_dy_m = worker%get_primary_field_face("Energy"    ,'ddy', 'face interior')
+        drhoE_dz_m = worker%get_primary_field_face("Energy"    ,'ddz', 'face interior')
 
 
 
@@ -238,10 +227,6 @@ contains
 
 
 
-
-
-
-
         !
         ! Compute boundary condition temperature and pressure
         !
@@ -257,7 +242,7 @@ contains
         !
         ! Compute boundary condition density from ideal gas law
         !
-         rho_bc = p_bc/(T_bc*287.15_rk)
+        rho_bc = p_bc/(T_bc*287.15_rk)
 
 
         !
@@ -278,34 +263,34 @@ contains
         !
         ! Store computed boundary state
         !
-        call worker%store_bc_state(irho, rho_bc, 'value')
-        call worker%store_bc_state(irhou,rhou_bc,'value')
-        call worker%store_bc_state(irhov,rhov_bc,'value')
-        call worker%store_bc_state(irhow,rhow_bc,'value')
-        call worker%store_bc_state(irhoE,rhoE_bc,'value')
+        call worker%store_bc_state("Density"   ,rho_bc, 'value')
+        call worker%store_bc_state("X-Momentum",rhou_bc,'value')
+        call worker%store_bc_state("Y-Momentum",rhov_bc,'value')
+        call worker%store_bc_state("Z-Momentum",rhow_bc,'value')
+        call worker%store_bc_state("Energy"    ,rhoE_bc,'value')
 
 
 
 
-        call worker%store_bc_state(irho, drho_dx_m, 'ddx')
-        call worker%store_bc_state(irho, drho_dy_m, 'ddy')
-        call worker%store_bc_state(irho, drho_dz_m, 'ddz')
-
-        call worker%store_bc_state(irhou, drhou_dx_m, 'ddx')
-        call worker%store_bc_state(irhou, drhou_dy_m, 'ddy')
-        call worker%store_bc_state(irhou, drhou_dz_m, 'ddz')
-
-        call worker%store_bc_state(irhov, drhov_dx_m, 'ddx')
-        call worker%store_bc_state(irhov, drhov_dy_m, 'ddy')
-        call worker%store_bc_state(irhov, drhov_dz_m, 'ddz')
-
-        call worker%store_bc_state(irhow, drhow_dx_m, 'ddx')
-        call worker%store_bc_state(irhow, drhow_dy_m, 'ddy')
-        call worker%store_bc_state(irhow, drhow_dz_m, 'ddz')
-
-        call worker%store_bc_state(irhoE, drhoE_dx_m, 'ddx')
-        call worker%store_bc_state(irhoE, drhoE_dy_m, 'ddy')
-        call worker%store_bc_state(irhoE, drhoE_dz_m, 'ddz')
+        call worker%store_bc_state("Density"   , drho_dx_m, 'ddx')
+        call worker%store_bc_state("Density"   , drho_dy_m, 'ddy')
+        call worker%store_bc_state("Density"   , drho_dz_m, 'ddz')
+                                                
+        call worker%store_bc_state("X-Momentum", drhou_dx_m, 'ddx')
+        call worker%store_bc_state("X-Momentum", drhou_dy_m, 'ddy')
+        call worker%store_bc_state("X-Momentum", drhou_dz_m, 'ddz')
+                                                
+        call worker%store_bc_state("Y-Momentum", drhov_dx_m, 'ddx')
+        call worker%store_bc_state("Y-Momentum", drhov_dy_m, 'ddy')
+        call worker%store_bc_state("Y-Momentum", drhov_dz_m, 'ddz')
+                                                
+        call worker%store_bc_state("Z-Momentum", drhow_dx_m, 'ddx')
+        call worker%store_bc_state("Z-Momentum", drhow_dy_m, 'ddy')
+        call worker%store_bc_state("Z-Momentum", drhow_dz_m, 'ddz')
+                                                
+        call worker%store_bc_state("Energy"    , drhoE_dx_m, 'ddx')
+        call worker%store_bc_state("Energy"    , drhoE_dy_m, 'ddy')
+        call worker%store_bc_state("Energy"    , drhoE_dz_m, 'ddz')
 
 
 

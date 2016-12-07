@@ -1,6 +1,6 @@
 module fluid_viscous_bc_operator
     use mod_kinds,          only: ik, rk
-    use mod_constants,      only: BC, HALF, ONE, TWO
+    use mod_constants,      only: HALF, ONE, TWO
     use type_operator,      only: operator_t
     use type_chidg_worker,  only: chidg_worker_t
     use type_properties,    only: properties_t
@@ -95,7 +95,7 @@ contains
 
         ! Storage at quadrature nodes
         type(AD_D), allocatable, dimension(:) ::                                &
-            rho, rhou, rhov, rhow, rhoE, p, T, u, v, w, invrho, gam, mu, lamda, &
+            rho, rhou, rhov, rhow, rhoE, p, T, u, v, w, invrho, mu, lamda,      &
             drho_dx, drhou_dx, drhov_dx, drhow_dx, drhoE_dx,                    &
             drho_dy, drhou_dy, drhov_dy, drhow_dy, drhoE_dy,                    &
             drho_dz, drhou_dz, drhov_dz, drhow_dz, drhoE_dz,                    &
@@ -112,7 +112,7 @@ contains
         real(rk),   allocatable, dimension(:)   ::          &
             normx, normy, normz
 
-        real(rk) :: const
+        real(rk) :: const, gam
 
         !
         ! Get equation indices
@@ -128,42 +128,44 @@ contains
         !
         ! Interpolate boundary condition state to face quadrature nodes
         !
-        rho  = worker%get_face_variable(irho,  'value', BC)
-        rhou = worker%get_face_variable(irhou, 'value', BC)
-        rhov = worker%get_face_variable(irhov, 'value', BC)
-        rhow = worker%get_face_variable(irhow, 'value', BC)
-        rhoE = worker%get_face_variable(irhoE, 'value', BC)
+        rho  = worker%get_primary_field_face("Density"   ,'value', 'boundary')
+        rhou = worker%get_primary_field_face("X-Momentum",'value', 'boundary')
+        rhov = worker%get_primary_field_face("Y-Momentum",'value', 'boundary')
+        rhow = worker%get_primary_field_face("Z-Momentum",'value', 'boundary')
+        rhoE = worker%get_primary_field_face("Energy"    ,'value', 'boundary')
 
 
         !
         ! Compute model values
         !
-        p   = prop%fluid%compute_pressure(rho,rhou,rhov,rhow,rhoE)
-        gam = prop%fluid%compute_gamma(rho,rhou,rhov,rhow,rhoE)
+        !p_old   = prop%fluid%compute_pressure(rho,rhou,rhov,rhow,rhoE)
+        !gam = prop%fluid%compute_gamma(rho,rhou,rhov,rhow,rhoE)
+        p   = worker%get_model_field_face("Pressure", 'value', 'boundary')
+        gam = 1.4_rk
 
 
         !
         ! Interpolate solution gradients to quadrature nodes
         !
-        drho_dx  = worker%get_face_variable(irho,  'ddx+lift', BC)
-        drho_dy  = worker%get_face_variable(irho,  'ddy+lift', BC)
-        drho_dz  = worker%get_face_variable(irho,  'ddz+lift', BC)
+        drho_dx  = worker%get_primary_field_face("Density"   ,'ddx+lift', 'boundary')
+        drho_dy  = worker%get_primary_field_face("Density"   ,'ddy+lift', 'boundary')
+        drho_dz  = worker%get_primary_field_face("Density"   ,'ddz+lift', 'boundary')
 
-        drhou_dx = worker%get_face_variable(irhou, 'ddx+lift', BC)
-        drhou_dy = worker%get_face_variable(irhou, 'ddy+lift', BC)
-        drhou_dz = worker%get_face_variable(irhou, 'ddz+lift', BC)
+        drhou_dx = worker%get_primary_field_face("X-Momentum",'ddx+lift', 'boundary')
+        drhou_dy = worker%get_primary_field_face("X-Momentum",'ddy+lift', 'boundary')
+        drhou_dz = worker%get_primary_field_face("X-Momentum",'ddz+lift', 'boundary')
 
-        drhov_dx = worker%get_face_variable(irhov, 'ddx+lift', BC)
-        drhov_dy = worker%get_face_variable(irhov, 'ddy+lift', BC)
-        drhov_dz = worker%get_face_variable(irhov, 'ddz+lift', BC)
+        drhov_dx = worker%get_primary_field_face("Y-Momentum",'ddx+lift', 'boundary')
+        drhov_dy = worker%get_primary_field_face("Y-Momentum",'ddy+lift', 'boundary')
+        drhov_dz = worker%get_primary_field_face("Y-Momentum",'ddz+lift', 'boundary')
 
-        drhow_dx = worker%get_face_variable(irhow, 'ddx+lift', BC)
-        drhow_dy = worker%get_face_variable(irhow, 'ddy+lift', BC)
-        drhow_dz = worker%get_face_variable(irhow, 'ddz+lift', BC)
+        drhow_dx = worker%get_primary_field_face("Z-Momentum",'ddx+lift', 'boundary')
+        drhow_dy = worker%get_primary_field_face("Z-Momentum",'ddy+lift', 'boundary')
+        drhow_dz = worker%get_primary_field_face("Z-Momentum",'ddz+lift', 'boundary')
 
-        drhoE_dx = worker%get_face_variable(irhoE, 'ddx+lift', BC)
-        drhoE_dy = worker%get_face_variable(irhoE, 'ddy+lift', BC)
-        drhoE_dz = worker%get_face_variable(irhoE, 'ddz+lift', BC)
+        drhoE_dx = worker%get_primary_field_face("Energy"    ,'ddx+lift', 'boundary')
+        drhoE_dy = worker%get_primary_field_face("Energy"    ,'ddy+lift', 'boundary')
+        drhoE_dz = worker%get_primary_field_face("Energy"    ,'ddz+lift', 'boundary')
 
 
         invrho = ONE/rho
@@ -219,6 +221,7 @@ contains
         dp_drhou = -(gam-ONE)*dke_drhou
         dp_drhov = -(gam-ONE)*dke_drhov
         dp_drhow = -(gam-ONE)*dke_drhow
+        dp_drhoE =  dp_drhow    ! Initialize derivatives
         dp_drhoE =  (gam-ONE)   ! No negative sign
 
         
@@ -253,14 +256,17 @@ contains
         !
         ! Compute temperature
         !
-        T = prop%fluid%compute_temperature(rho,rhou,rhov,rhow,rhoE)
+        !T_old = prop%fluid%compute_temperature(rho,rhou,rhov,rhow,rhoE)
+        T = worker%get_model_field_face("Temperature", 'value', 'boundary')
 
 
         !
         ! Compute dynamic viscosity, second coefficient of viscosity
         !
-        mu    = prop%fluid%compute_viscosity_dynamic(T)
-        lamda = prop%fluid%compute_viscosity_second(mu,T)
+        !mu_old    = prop%fluid%compute_viscosity_dynamic(T_old)
+        !lamda_old = prop%fluid%compute_viscosity_second(mu_old,T_old)
+        mu    = worker%get_model_field_face('Viscosity',                       'value', 'boundary')
+        lamda = worker%get_model_field_face('Second Coefficient of Viscosity', 'value', 'boundary')
 
 
         !
@@ -284,8 +290,6 @@ contains
 
 
 
-
-
         !=================================================
         ! Mass flux
         !=================================================
@@ -300,7 +304,7 @@ contains
 
         integrand = flux_x*normx + flux_y*normy + flux_z*normz
 
-        call worker%integrate_boundary(irhou, integrand)
+        call worker%integrate_boundary('X-Momentum',integrand)
 
         !=================================================
         ! y-momentum flux
@@ -311,7 +315,7 @@ contains
 
         integrand = flux_x*normx + flux_y*normy + flux_z*normz
 
-        call worker%integrate_boundary(irhov, integrand)
+        call worker%integrate_boundary('Y-Momentum',integrand)
 
         !=================================================
         ! z-momentum flux
@@ -322,7 +326,7 @@ contains
 
         integrand = flux_x*normx + flux_y*normy + flux_z*normz
 
-        call worker%integrate_boundary(irhow, integrand)
+        call worker%integrate_boundary('Z-Momentum',integrand)
 
         !=================================================
         ! Energy flux
@@ -333,7 +337,7 @@ contains
 
         integrand = flux_x*normx + flux_y*normy + flux_z*normz
 
-        call worker%integrate_boundary(irhoE, integrand)
+        call worker%integrate_boundary('Energy',integrand)
 
     end subroutine compute
     !**********************************************************************************************

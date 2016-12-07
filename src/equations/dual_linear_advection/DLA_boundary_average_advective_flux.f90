@@ -1,10 +1,7 @@
 module DLA_boundary_average_advective_flux
 #include <messenger.h>
     use mod_kinds,              only: rk,ik
-    use mod_constants,          only: NFACES,ZERO,ONE,TWO,HALF, &
-                                      XI_MIN,XI_MAX,ETA_MIN,ETA_MAX,ZETA_MIN,ZETA_MAX,DIAG, &
-                                      ME, NEIGHBOR
-
+    use mod_constants,          only: ZERO,ONE,TWO,HALF
     use type_operator,          only: operator_t
     use type_chidg_worker,      only: chidg_worker_t
     use type_properties,        only: properties_t
@@ -93,29 +90,22 @@ contains
 
 
 
-!        !
-!        ! Get equation set properties
-!        !
-!        select type(prop)
-!            type is (DLA_properties_t)
-!                cx = prop%c(1)
-!                cy = prop%c(2)
-!                cz = prop%c(3)
-!        end select
+        !
+        ! Get equation set properties
+        !
         cx = 1._rk
         cy = 0._rk
         cz = 0._rk
 
 
-
         !
         ! Interpolate solution to quadrature nodes
         !
-        ua_r = worker%get_face_variable(iu_a, 'value', ME)
-        ua_l = worker%get_face_variable(iu_a, 'value', NEIGHBOR)
+        ua_r = worker%get_primary_field_face('u_a', 'value', 'face interior')
+        ua_l = worker%get_primary_field_face('u_a', 'value', 'face exterior')
 
-        ub_r = worker%get_face_variable(iu_b, 'value', ME)
-        ub_l = worker%get_face_variable(iu_b, 'value', NEIGHBOR)
+        ub_r = worker%get_primary_field_face('u_b', 'value', 'face interior')
+        ub_l = worker%get_primary_field_face('u_b', 'value', 'face exterior')
 
 
         normx = worker%normal(1)
@@ -131,7 +121,7 @@ contains
 
         integrand = flux_x + flux_y + flux_z
 
-        call worker%integrate_boundary(iu_a, integrand)
+        call worker%integrate_boundary('u_a',integrand)
 
 
 
@@ -144,7 +134,7 @@ contains
 
         integrand = flux_x + flux_y + flux_z
 
-        call worker%integrate_boundary(iu_b, integrand)
+        call worker%integrate_boundary('u_b',integrand)
 
 
     end subroutine compute

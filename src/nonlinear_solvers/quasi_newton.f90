@@ -2,16 +2,15 @@ module quasi_newton
     use mod_kinds,              only: rk,ik
     use mod_constants,          only: ZERO, ONE, TWO, DIAG
     use mod_spatial,            only: update_space
-    use mod_tecio,              only: write_tecio_variables_unstructured
-    use mod_chidg_mpi,          only: ChiDG_COMM, GLOBAL_MASTER
+    use mod_hdfio,              only: write_solution_hdf
+    use mod_chidg_mpi,          only: ChiDG_COMM, GLOBAL_MASTER, IRANK, NRANK
+    use mpi_f08,                only: MPI_Barrier
 
     use type_chidg_data,        only: chidg_data_t
     use type_nonlinear_solver,  only: nonlinear_solver_t
     use type_linear_solver,     only: linear_solver_t
     use type_preconditioner,    only: preconditioner_t
     use type_chidgVector
-
-    use mod_entropy,            only: compute_entropy_error
     implicit none
     private
 
@@ -49,7 +48,7 @@ contains
 
 
 
-    !> Solve for update 'dq'
+    !>  Solve for update 'dq'
     !!
     !!  @author Nathan A. Wukie
     !!  @date   2/8/2016
@@ -63,15 +62,14 @@ contains
         class(preconditioner_t),    optional,   intent(inout)   :: preconditioner
 
         character(100)          :: filename
-        integer(ik)             :: itime, nsteps, ielem, wcount, iblk, iindex, niter, ieqn, idom, ierr
-        integer(ik)             :: rstart, rend, cstart, cend, nterms, imat
-        real(rk)                :: dtau, amp, cfl, cfln, entropy_error, timing
-        real(rk)                :: rnorm0, rnorm, resid, resid_new
+        integer(ik)             :: itime, nsteps, ielem, wcount, iblk, iindex,  &
+                                   niter, ieqn, idom, ierr,                     &
+                                   rstart, rend, cstart, cend, nterms, imat, iwrite
+        real(rk)                :: dtau, amp, cfl, cfln, timing,                &
+                                   rnorm0, rnorm, resid, resid_new
         real(rk), allocatable   :: vals(:)
         type(chidgVector_t)     :: b, qn, qold, qnew, dqdtau
       
-
-
 
         wcount = 1
         associate ( q => data%sdata%q, dq => data%sdata%dq, rhs => data%sdata%rhs, lhs => data%sdata%lhs)
@@ -96,14 +94,9 @@ contains
             rnorm = ONE    ! Force inner loop entry
             niter = 0      ! Initialize inner loop counter
 
-            dtau = 1._rk
-
-
-
             do while ( rnorm > self%tol )
                 niter = niter + 1
                 call write_line("   niter: ", niter, delimiter='', columns=.True., column_width=20, io_proc=GLOBAL_MASTER)
-
 
 
                 !
@@ -119,18 +112,10 @@ contains
                 resid = rhs%norm(ChiDG_COMM)
 
 
-
-
-
                 !
-                ! Print diagnostics
+                ! Print diagnostics, check tolerance.
                 !
                 call write_line("   R(Q) - Norm: ", resid, delimiter='', columns=.True., column_width=20, io_proc=GLOBAL_MASTER)
-
-
-                !
-                ! Tolerance check
-                !
                 if ( resid < self%tol ) exit
                 call self%residual_time%push_back(timing)
                 call self%residual_norm%push_back(resid)
@@ -139,31 +124,22 @@ contains
                 !
                 ! Compute and store residual norm
                 !
-                ! Store residual norm for first iteration
                 if (niter == 1) then
                     rnorm0 = rhs%norm(ChiDG_COMM)
                 end if
                 rnorm = rhs%norm(ChiDG_COMM)
 
 
-
-
                 !
                 ! Compute new cfl for pseudo-timestep
                 !
-                !cfln = min(self%cfl0*(rnorm0/rnorm),5._rk)
                 cfln = self%cfl0*(rnorm0/rnorm)
-
-
-                
 
 
                 !
                 ! Compute element-local pseudo-timestep
                 !
                 call compute_pseudo_timestep(data,cfln)
-
-
 
 
                 !
@@ -187,6 +163,7 @@ contains
                                 rend   = (rstart-1) + nterms
                                 cstart = rstart                 ! since it is square
                                 cend   = rend                   ! since it is square
+
                                 ! Add mass matrix divided by dt to the block diagonal
                                 !lhs%dom(idom)%lblks(ielem,iblk)%mat(rstart:rend,cstart:cend)  =  lhs%dom(idom)%lblks(ielem,iblk)%mat(rstart:rend,cstart:cend)  +  data%mesh(idom)%elems(ielem)%mass*(ONE/dtau)
                                 imat = lhs%dom(idom)%lblks(ielem,itime)%get_diagonal()
@@ -240,12 +217,14 @@ contains
 
 
 
-                !if (wcount == self%nwrite) then
-                !    write(filename, "(I7,A4)") 1000000+niter, '.plt'
-                !    call write_tecio_variables_unstructured(data,trim(filename),niter+1)
-                !    wcount = 0
-                !end if
-                !wcount = wcount + 1
+                !
+                ! Write solution if the count is right
+                !
+                if (wcount == self%nwrite) then
+                    call write_solution_hdf(data,'chidg_restart.h5')
+                    wcount = 0
+                end if
+                wcount = wcount + 1
 
                 call MPI_Barrier(ChiDG_COMM,ierr)
 
@@ -267,10 +246,6 @@ contains
 
         call self%newton_iterations%push_back(niter)
 
-
-
-        !entropy_error = compute_entropy_error(data)
-        !call write_line('Entropy error: ', entropy_error, delimiter='', columns=.True., column_width=20)
 
     end subroutine solve
     !************************************************************************************************************

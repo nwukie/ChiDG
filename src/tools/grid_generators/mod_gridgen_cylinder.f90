@@ -9,10 +9,10 @@ module mod_gridgen_cylinder
     use mod_plot3d_utilities,   only: get_block_points_plot3d, get_block_elements_plot3d, &
                                       get_block_boundary_faces_plot3d
     use mod_hdf_utilities,      only: add_domain_hdf, initialize_file_hdf, open_domain_hdf, &
-                                      close_domain_hdf, add_bc_state_hdf, close_file_hdf, &
-                                      close_hdf, set_bc_patch_hdf, set_contains_grid_hdf, &
-                                      open_bc_group_hdf, close_bc_group_hdf, set_bc_patch_group_hdf, &
-                                      create_bc_group_hdf
+                                      close_domain_hdf, add_bc_state_hdf, open_file_hdf,    &
+                                      close_file_hdf, close_hdf, set_bc_patch_hdf,          &
+                                      set_contains_grid_hdf, open_bc_group_hdf,             &
+                                      close_bc_group_hdf, set_bc_patch_group_hdf, create_bc_group_hdf
     use hdf5
 
     use type_point,             only: point_t
@@ -194,7 +194,8 @@ contains
 
 
         ! Create/initialize file
-        file_id = initialize_file_hdf(filename)
+        call initialize_file_hdf(filename)
+        file_id = open_file_hdf(filename)
 
 
 
@@ -206,7 +207,7 @@ contains
         if (present(bc_groups)) then
 
             do igroup = 1,size(bc_groups)
-                call create_bc_group_hdf(file_id,bc_groups(igroup)%name,'Inlet')
+                call create_bc_group_hdf(file_id,bc_groups(igroup)%name)
 
                 bcgroup_id = open_bc_group_hdf(file_id,bc_groups(igroup)%name)
 
@@ -219,9 +220,9 @@ contains
 
         else
 
-            call create_bc_group_hdf(file_id,'Inlet','Inlet')
-            call create_bc_group_hdf(file_id,'Outlet','Inlet')
-            call create_bc_group_hdf(file_id,'Walls','Inlet')
+            call create_bc_group_hdf(file_id,'Inlet')
+            call create_bc_group_hdf(file_id,'Outlet')
+            call create_bc_group_hdf(file_id,'Walls')
 
             bcgroup_id = open_bc_group_hdf(file_id,'Inlet')
             call add_bc_state_hdf(bcgroup_id,inlet)

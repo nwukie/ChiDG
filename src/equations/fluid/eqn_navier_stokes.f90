@@ -81,10 +81,13 @@ contains
                 call navier_stokes_eqns%add_operator('Fluid Viscous Boundary Average Operator')
                 call navier_stokes_eqns%add_operator('Fluid Viscous BC Operator')
 
-                call navier_stokes_eqns%add_pseudo_timestep(fluid_pseudo_time)
                 call navier_stokes_eqns%prop%add_fluid(perfect_gas)
 
+                call navier_stokes_eqns%add_model('Ideal Gas')
+                call navier_stokes_eqns%add_model('Sutherlands Law')
+                call navier_stokes_eqns%add_model('Stokes Hypothesis')
 
+                call navier_stokes_eqns%add_pseudo_timestep(fluid_pseudo_time)
 
             case default
                 call chidg_signal_one(FATAL, "build_navier_stokes: I didn't recognize the construction parameter &

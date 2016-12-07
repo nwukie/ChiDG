@@ -29,10 +29,11 @@ module type_bc_state
     !--------------------------------------------------------------------------------------------
     type, public, abstract :: bc_state_t
 
-        character(len=:), allocatable   :: name
+        character(:),   allocatable :: name
+        character(:),   allocatable :: family
 
         ! Boundary condition options
-        type(bcproperty_set_t)          :: bcproperties
+        type(bcproperty_set_t)      :: bcproperties
 
     contains
 
@@ -43,6 +44,8 @@ module type_bc_state
 
         procedure   :: set_name
         procedure   :: get_name
+        procedure   :: set_family
+        procedure   :: get_family
 
         procedure   :: set_fcn               !< Set a particular function definition for a specified bcfunction_t
         procedure   :: set_fcn_option        !< Set function-specific options for a specified bcfunction_t
@@ -394,7 +397,7 @@ contains
     function get_name(self) result(bcname)
         class(bc_state_t),    intent(in)  :: self
 
-        character(len=:), allocatable :: bcname
+        character(:),   allocatable :: bcname
 
         bcname = self%name
 
@@ -402,6 +405,92 @@ contains
     !***************************************************************************************************
 
 
+
+
+
+
+
+    !>  Set the boundary condition family.
+    !!
+    !!  Allowable families:
+    !!      - Inlet
+    !!      - Oulet
+    !!      - Wall
+    !!      - Symmetry
+    !!      - Periodic
+    !!      - Farfield
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   11/21/2016
+    !!
+    !!
+    !---------------------------------------------------------------------------------------------------
+    subroutine set_family(self,bc_family)
+        class(bc_state_t),  intent(inout)   :: self
+        character(*),       intent(in)      :: bc_family
+
+        character(:),   allocatable :: user_msg
+
+
+        !
+        ! Check incoming bc_state family
+        !
+        if ( (trim(bc_family) == "Inlet")           .or. &
+             (trim(bc_family) == "Outlet")          .or. &
+             (trim(bc_family) == "Wall")            .or. &
+             (trim(bc_family) == "Symmetry")        .or. &
+             (trim(bc_family) == "Periodic")        .or. &
+             (trim(bc_family) == "Farfield")        .or. &
+             (trim(bc_family) == "Scalar")          .or. &
+             (trim(bc_family) == "Extrapolation")   .or. &
+             (trim(bc_family) == "Empty") ) then
+
+
+            self%family = trim(bc_family)
+
+        else
+
+             user_msg = "bc_state%set_family: An invalid Family was trying to be set for the &
+                         bc_state. Valid Families are: 'Inlet', 'Outlet', 'Wall', Symmetry', &
+                         'Periodic', 'Farfield', 'Scalar', 'Extrapolation'."
+             call chidg_signal_one(FATAL,user_msg,trim(bc_family))
+
+        end if
+
+
+
+    end subroutine set_family
+    !***************************************************************************************************
+
+
+
+
+
+
+
+
+    !>  Return the boundary condition family.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   11/21/2016
+    !!
+    !!
+    !--------------------------------------------------------------------------------------------------
+    function get_family(self) result(bc_family)
+        class(bc_state_t),    intent(in)  :: self
+
+        character(:),   allocatable :: bc_family, user_msg
+
+
+        user_msg = "bc_state%get_family: It looks like the Family component for the bc_state was &
+                    not set. Make sure self%set_family('my_family') is being called in the bc_state &
+                    initialization procedure."
+        if (.not. allocated(self%family)) call chidg_signal(FATAL,user_msg)
+
+        bc_family = self%family
+
+    end function get_family
+    !***************************************************************************************************
 
 
 

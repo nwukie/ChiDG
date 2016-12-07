@@ -707,13 +707,14 @@ contains
 
         character(:),   allocatable :: user_msg
 
-        if ( (trim(family) == 'Wall'    ) .or. &
-             (trim(family) == 'Inlet'   ) .or. &
-             (trim(family) == 'Outlet'  ) .or. &
-             (trim(family) == 'Symmetry') .or. &
-             (trim(family) == 'Periodic') .or. &
-             (trim(family) == 'Farfield') .or. &
-             (trim(family) == 'Scalar'  ) .or. &
+        if ( (trim(family) == 'Wall'    )       .or. &
+             (trim(family) == 'Inlet'   )       .or. &
+             (trim(family) == 'Outlet'  )       .or. &
+             (trim(family) == 'Symmetry')       .or. &
+             (trim(family) == 'Periodic')       .or. &
+             (trim(family) == 'Farfield')       .or. &
+             (trim(family) == 'Scalar'  )       .or. &
+             (trim(family) == 'Extrapolation')  .or. &
              (trim(family) == 'Empty'   ) ) then
 
             self%bc_family = family
@@ -721,7 +722,7 @@ contains
         else
             user_msg = "bc%set_family: The string passed in to set the boundary condition family did &
                         not match any of valid boundary condition families. These include: 'Wall', &
-                        'Inlet', 'Outlet', 'Symmetry', 'Periodic', 'Farfield', 'Scalar'"
+                        'Inlet', 'Outlet', 'Symmetry', 'Periodic', 'Farfield', 'Scalar', 'Extrapolation'"
             call chidg_signal_one(FATAL,user_msg,family)
         end if
 

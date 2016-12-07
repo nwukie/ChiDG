@@ -31,7 +31,8 @@ module type_chidg_worker
     use mod_kinds,          only: ik, rk
     use mod_constants,      only: NFACES, ME, NEIGHBOR, BC, ZERO
     use mod_interpolate,    only: interpolate_element_standard, &
-                                  interpolate_face_standard
+                                  interpolate_face_standard,    &
+                                  interpolate_face_autodiff
 
     use mod_integrate,      only: integrate_boundary_scalar_flux, &
                                   integrate_volume_vector_flux,   &
@@ -44,6 +45,7 @@ module type_chidg_worker
     use type_face_info,     only: face_info_t
     use type_function_info, only: function_info_t
     use type_chidg_cache,   only: chidg_cache_t
+    use type_properties,    only: properties_t
     use DNAD_D
     implicit none
 
@@ -61,6 +63,7 @@ module type_chidg_worker
     type, public :: chidg_worker_t
     
         type(mesh_t),           pointer :: mesh(:)
+        type(properties_t), allocatable :: prop(:)
         type(solverdata_t),     pointer :: solverdata
         type(chidg_cache_t),    pointer :: cache
 
@@ -69,6 +72,7 @@ module type_chidg_worker
         type(element_info_t)        :: element_info
         type(function_info_t)       :: function_info
     
+        character(:),   allocatable :: interpolation_source
 
     contains 
     
@@ -81,11 +85,17 @@ module type_chidg_worker
 
 
         ! Worker get data
-        procedure   :: get_face_variable
-        procedure   :: get_element_variable
-        procedure   :: get_element_auxiliary_field
+        procedure   :: get_primary_field_general
+        procedure   :: get_primary_field_face
+        procedure   :: get_primary_field_element
+        procedure   :: get_model_field_general
+        procedure   :: get_model_field_face
+        procedure   :: get_model_field_element
+        procedure   :: get_auxiliary_field_face
+        procedure   :: get_auxiliary_field_element
 
         procedure   :: store_bc_state
+        procedure   :: store_model_field
 
         procedure   :: normal
         procedure   :: unit_normal
@@ -102,7 +112,6 @@ module type_chidg_worker
 
         ! Worker process data
         procedure   :: integrate_boundary
-
         generic     :: integrate_volume => integrate_volume_flux, &
                                            integrate_volume_source
         procedure   :: integrate_volume_flux
@@ -129,14 +138,22 @@ contains
     !!  @date   8/22/2016
     !!
     !---------------------------------------------------------------------------------
-    subroutine init(self,mesh,solverdata,cache)
+    subroutine init(self,mesh,prop,solverdata,cache)
         class(chidg_worker_t),  intent(inout)       :: self
         type(mesh_t),           intent(in), target  :: mesh(:)
+        type(properties_t),     intent(in), target  :: prop(:)
         type(solverdata_t),     intent(in), target  :: solverdata
         type(chidg_cache_t),    intent(in), target  :: cache
 
+        character(:),   allocatable :: temp_name
 
         self%mesh       => mesh
+        ! having issue with using a pointer here for prop. Theory is that the compiler
+        ! creates a temporary array of prop(:) from eqnset(:)%prop when it is passing it in. 
+        ! Then after this routine exists, that array ceases to exists and so
+        ! points to nothing. For now we will just assign, but probably want this
+        ! linked back up in the future.
+        self%prop       =  prop
         self%solverdata => solverdata
         self%cache      => cache
 
@@ -221,7 +238,7 @@ contains
     !!  @date   9/8/2016
     !!
     !!
-    !--------------------------------------------------------------------------------------------
+    !---------------------------------------------------------------------------------------
     function face_info(self) result(face_info_)
         class(chidg_worker_t),  intent(in)  :: self
         
@@ -234,7 +251,7 @@ contains
         face_info_%iface      = self%iface
 
     end function face_info
-    !********************************************************************************************
+    !***************************************************************************************
 
 
 
@@ -245,41 +262,85 @@ contains
 
 
 
-    !>
+
+    !>  Return a primary field evaluated at a quadrature node set. The source here
+    !!  is determined by chidg_worker.
+    !!
+    !!  This routine is specifically for model_t's, because we want them to be evaluated
+    !!  on face and element sets the same way. So in a model implementation, we just
+    !!  want the model to get some quadrature node set to operate on. The chidg_worker
+    !!  handles what node set is currently being returned.
+    !!  
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   11/30/2016
+    !!
+    !--------------------------------------------------------------------------------------
+    function get_primary_field_general(self,field,interp_type) result(var_gq)
+        class(chidg_worker_t),  intent(in)  :: self
+        character(*),           intent(in)  :: field
+        character(*),           intent(in)  :: interp_type
+
+        type(AD_D), allocatable :: var_gq(:)
+
+
+        if (self%interpolation_source == 'element') then
+            var_gq = self%get_primary_field_element(field,interp_type) 
+        else if (self%interpolation_source == 'face interior') then
+            var_gq = self%get_primary_field_face(field,interp_type,'face interior')
+        else if (self%interpolation_source == 'face exterior') then
+            var_gq = self%get_primary_field_face(field,interp_type,'face exterior')
+        else if (self%interpolation_source == 'boundary') then
+            var_gq = self%get_primary_field_face(field,interp_type,'boundary')
+        end if
+
+    end function get_primary_field_general
+    !**************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+
+    !>  Return a primary field interpolated to a face quadrature node set.
     !!
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   9/8/2016
     !!
     !!
-    !---------------------------------------------------------------------------------------------
-    function get_face_variable(self,ieqn,interp_type,interp_source) result(var_gq)
+    !--------------------------------------------------------------------------------------
+    function get_primary_field_face(self,field,interp_type,interp_source) result(var_gq)
         class(chidg_worker_t),  intent(in)  :: self
-        integer(ik),            intent(in)  :: ieqn
-        character(len=*),       intent(in)  :: interp_type
-        integer(ik),            intent(in)  :: interp_source
+        character(*),           intent(in)  :: field
+        character(*),           intent(in)  :: interp_type
+        character(*),           intent(in)  :: interp_source
 
-        type(AD_D), allocatable, dimension(:) :: &
-            var_gq
-
-        type(face_info_t)               :: face_info
-        character(len=:), allocatable   :: cache_component, cache_type
-        integer(ik)                     :: idirection, igq
-        logical                         :: keep_linearization
+        type(AD_D),     allocatable, dimension(:)   :: var_gq
+        character(:),   allocatable                 :: cache_component, cache_type, user_msg
+        type(face_info_t)                           :: face_info
+        integer(ik)                                 :: idirection, igq
 
 
 
         !
         ! Set cache_component
         !
-        if (interp_source == ME) then
+        if (interp_source == 'face interior') then
             cache_component = 'face interior'
-        else if (interp_source == NEIGHBOR .or. &
-                 interp_source == BC) then
+        else if (interp_source == 'face exterior' .or. &
+                 interp_source == 'boundary') then
             cache_component = 'face exterior'
         else
-            call chidg_signal(FATAL,"chidg_worker%get_face_variable: Invalid value for interp_source. Try ME, NEIGHBOR, or BC.")
+            user_msg = "chidg_worker%get_primary_field_face: Invalid value for interpolation source. &
+                        Try 'face interior', 'face exterior', or 'boundary'"
+            call chidg_signal_one(FATAL,user_msg,trim(interp_source))
         end if
-
 
 
         !
@@ -288,8 +349,6 @@ contains
         if (interp_type == 'value') then
             cache_type = 'value'
             idirection = 0
-
-
         else if (interp_type == 'ddx') then
             cache_type = 'derivative'
             idirection = 1
@@ -321,27 +380,22 @@ contains
         ! Retrieve data from cache
         !
         if (cache_type == 'value') then
-            var_gq = self%cache%get_data(cache_component,cache_type,idirection,self%function_info%seed,ieqn,self%iface)
+            var_gq = self%cache%get_data(field,cache_component,cache_type,idirection,self%function_info%seed,self%iface)
 
         else if (cache_type == 'derivative') then
-
-            ! Get DG derivative on face
-            var_gq = self%cache%get_data(cache_component,'derivative',idirection,self%function_info%seed,ieqn,self%iface)
-
+            var_gq = self%cache%get_data(field,cache_component,'derivative',idirection,self%function_info%seed,self%iface)
 
         else if (cache_type == 'derivative + lift') then
-
-            ! Get DG derivative on face
-            var_gq = self%cache%get_data(cache_component,'derivative',idirection,self%function_info%seed,ieqn,self%iface)
+            var_gq = self%cache%get_data(field,cache_component,'derivative',idirection,self%function_info%seed,self%iface)
 
             ! Modify derivative by face lift stabilized by a factor of NFACES
-            var_gq = var_gq + real(NFACES,rk)*self%cache%get_data(cache_component,'lift face',idirection,self%function_info%seed,ieqn,self%iface)
+            var_gq = var_gq + real(NFACES,rk)*self%cache%get_data(field,cache_component,'lift face',idirection,self%function_info%seed,self%iface)
 
         end if
 
 
-    end function get_face_variable
-    !**********************************************************************************************
+    end function get_primary_field_face
+    !***************************************************************************************
 
 
 
@@ -352,27 +406,23 @@ contains
 
 
 
-    !>
+    !>  Return a primary field interpolated to an element quadrature node set.
     !!
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   9/8/2016
     !!
     !!
-    !---------------------------------------------------------------------------------------------
-    function get_element_variable(self,ieqn,interp_type) result(var_gq)
+    !---------------------------------------------------------------------------------------
+    function get_primary_field_element(self,field,interp_type) result(var_gq)
         class(chidg_worker_t),  intent(in)  :: self
-        integer(ik),            intent(in)  :: ieqn
-        character(len=*),       intent(in)  :: interp_type
+        character(*),           intent(in)  :: field
+        character(*),           intent(in)  :: interp_type
 
-        type(AD_D), allocatable, dimension(:) :: &
-            var_gq, tmp_gq
+        type(AD_D),     allocatable, dimension(:) :: var_gq, tmp_gq
 
         type(face_info_t)               :: face_info
-        character(len=:), allocatable   :: cache_component, cache_type
+        character(:),   allocatable     :: cache_component, cache_type
         integer(ik)                     :: idirection, igq, iface
-        logical                         :: keep_linearization
-
-
 
 
         !
@@ -381,8 +431,6 @@ contains
         if (interp_type == 'value') then
             cache_type = 'value'
             idirection = 0
-
-
         else if (interp_type == 'ddx') then
             cache_type = 'derivative'
             idirection = 1
@@ -411,30 +459,21 @@ contains
 
 
 
-
-
-
         !
         ! Retrieve data from cache
         !
         if ( cache_type == 'value') then
-            var_gq = self%cache%get_data('element',cache_type,idirection,self%function_info%seed,ieqn)
-
-
+            var_gq = self%cache%get_data(field,'element',cache_type,idirection,self%function_info%seed)
 
         else if (cache_type == 'derivative') then
-            ! Get DG derivative
-            var_gq = self%cache%get_data('element','derivative',idirection,self%function_info%seed,ieqn)
-
-
+            var_gq = self%cache%get_data(field,'element','derivative',idirection,self%function_info%seed)
 
         else if (cache_type == 'derivative + lift') then
-            ! Get DG derivative
-            var_gq = self%cache%get_data('element','derivative',idirection,self%function_info%seed,ieqn)
+            var_gq = self%cache%get_data(field,'element','derivative',idirection,self%function_info%seed)
 
             ! Add lift contributions from each face
             do iface = 1,NFACES
-                tmp_gq = self%cache%get_data('face interior', 'lift element', idirection, self%function_info%seed,ieqn,iface)
+                tmp_gq = self%cache%get_data(field,'face interior', 'lift element', idirection, self%function_info%seed,iface)
                 var_gq = var_gq + tmp_gq
             end do
 
@@ -442,11 +481,204 @@ contains
 
 
 
+    end function get_primary_field_element
+    !****************************************************************************************
 
 
 
-    end function get_element_variable
-    !**********************************************************************************************
+
+
+
+    !>  Return a model field evaluated at a quadrature node set. The source here
+    !!  is determined by chidg_worker.
+    !!
+    !!  This routine is specifically for model_t's, because we want them to be evaluated
+    !!  on face and element sets the same way. So in a model implementation, we just
+    !!  want the model to get some quadrature node set to operate on. The chidg_worker
+    !!  handles what node set is currently being returned.
+    !!  
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   11/30/2016
+    !!
+    !--------------------------------------------------------------------------------------
+    function get_model_field_general(self,field,interp_type) result(var_gq)
+        class(chidg_worker_t),  intent(in)  :: self
+        character(*),           intent(in)  :: field
+        character(*),           intent(in)  :: interp_type
+
+        type(AD_D), allocatable :: var_gq(:)
+
+
+        if (self%interpolation_source == 'element') then
+            var_gq = self%get_model_field_element(field,interp_type) 
+        else if (self%interpolation_source == 'face interior') then
+            var_gq = self%get_model_field_face(field,interp_type,'face interior')
+        else if (self%interpolation_source == 'face exterior') then
+            var_gq = self%get_model_field_face(field,interp_type,'face exterior')
+        else if (self%interpolation_source == 'boundary') then
+            var_gq = self%get_model_field_face(field,interp_type,'boundary')
+        end if
+
+    end function get_model_field_general
+    !**************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    !>  Return a primary field interpolated to a face quadrature node set.
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   9/8/2016
+    !!
+    !!
+    !--------------------------------------------------------------------------------------
+    function get_model_field_face(self,field,interp_type,interp_source) result(var_gq)
+        class(chidg_worker_t),  intent(in)  :: self
+        character(*),           intent(in)  :: field
+        character(*),           intent(in)  :: interp_type
+        character(*),           intent(in)  :: interp_source
+
+        type(AD_D),     allocatable, dimension(:)   :: var_gq
+        character(:),   allocatable                 :: cache_component, cache_type, user_msg
+        type(face_info_t)                           :: face_info
+        integer(ik)                                 :: idirection, igq
+
+
+
+        !
+        ! Set cache_component
+        !
+        if (interp_source == 'face interior') then
+            cache_component = 'face interior'
+        else if (interp_source == 'face exterior' .or. &
+                 interp_source == 'boundary') then
+            cache_component = 'face exterior'
+        else
+            user_msg = "chidg_worker%get_model_field_face: Invalid value for interpolation source. &
+                        Try 'face interior', 'face exterior', or 'boundary'"
+            call chidg_signal_one(FATAL,user_msg,trim(interp_source))
+        end if
+
+
+        !
+        ! Set cache_type
+        !
+        if (interp_type == 'value') then
+            cache_type = 'value'
+            idirection = 0
+        else if ( (interp_type == 'ddx')          .or. &
+                  (interp_type == 'ddy')          .or. &
+                  (interp_type == 'ddz')          .or. &
+                  (interp_type == 'ddx + lift')   .or. &
+                  (interp_type == 'ddx+lift'  )   .or. &
+                  (interp_type == 'ddy + lift')   .or. &
+                  (interp_type == 'ddy+lift'  )   .or. &
+                  (interp_type == 'ddz + lift')   .or. &
+                  (interp_type == 'ddz+lift'  ) ) then
+                user_msg = 'chidg_worker%get_model_field_face: Computing derivatives for model &
+                            fields is not yet implemented.'
+                call chidg_signal(FATAL,user_msg)
+                                    
+        end if
+
+
+
+        !
+        ! Retrieve data from cache
+        !
+        if (cache_type == 'value') then
+            var_gq = self%cache%get_data(field,cache_component,cache_type,idirection,self%function_info%seed,self%iface)
+
+        end if
+
+
+    end function get_model_field_face
+    !***************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+
+    !>  Return a primary field interpolated to an element quadrature node set.
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   9/8/2016
+    !!
+    !!
+    !---------------------------------------------------------------------------------------
+    function get_model_field_element(self,field,interp_type) result(var_gq)
+        class(chidg_worker_t),  intent(in)  :: self
+        character(*),           intent(in)  :: field
+        character(*),           intent(in)  :: interp_type
+
+        type(AD_D),     allocatable, dimension(:) :: var_gq
+
+        type(face_info_t)               :: face_info
+        character(:),   allocatable     :: cache_component, cache_type, user_msg
+        integer(ik)                     :: idirection, igq, iface
+
+
+        !
+        ! Set cache_type
+        !
+        if (interp_type == 'value') then
+            cache_type = 'value'
+            idirection = 0
+        else if ( (interp_type == 'ddx')        .or. &
+                  (interp_type == 'ddy')        .or. &
+                  (interp_type == 'ddz')        .or. &
+                  (interp_type == 'ddx + lift') .or. &
+                  (interp_type == 'ddx+lift'  ) .or. &
+                  (interp_type == 'ddy + lift') .or. &
+                  (interp_type == 'ddy+lift'  ) .or. &
+                  (interp_type == 'ddz + lift') .or. &
+                  (interp_type == 'ddz+lift'  ) ) then
+            user_msg = 'chidg_worker%get_model_field_element: Computing derivatives for model &
+                        fields is not yet implemented.'
+            call chidg_signal(FATAL,user_msg)
+        end if
+
+
+
+
+        !
+        ! Retrieve data from cache
+        !
+        if ( cache_type == 'value') then
+            var_gq = self%cache%get_data(field,'element',cache_type,idirection,self%function_info%seed)
+
+        end if
+
+
+
+    end function get_model_field_element
+    !****************************************************************************************
+
+
 
 
 
@@ -466,8 +698,117 @@ contains
     !!  @date   11/4/2016
     !!
     !!
-    !----------------------------------------------------------------------------------------------
-    function get_element_auxiliary_field(self,field,interp_type) result(var_gq)
+    !----------------------------------------------------------------------------------------
+    function get_auxiliary_field_face(self,field,interp_type,interp_source) result(var_gq)
+        class(chidg_worker_t),  intent(in)  :: self
+        character(*),           intent(in)  :: field
+        character(*),           intent(in)  :: interp_type
+        character(*),           intent(in)  :: interp_source
+
+        character(:),   allocatable :: user_msg, cache_component
+        type(AD_D),     allocatable :: var_gq_ad(:)
+        real(rk),       allocatable :: var_gq(:)
+
+        integer(ik) :: ifield, ieqn, source
+
+
+        !
+        ! Get index of the auxiliary field vector.
+        !
+        ifield = self%solverdata%get_auxiliary_field_index(field)
+
+
+        user_msg = "chidg_worker%get_element_auxiliary_field: There was no field data found for the &
+                    specified field string."
+        if (ifield == 0) call chidg_signal_one(FATAL,user_msg,trim(field))
+
+
+
+
+        !
+        ! Set cache_component
+        !
+        if (interp_source == 'face interior') then
+            source = ME
+        else if (interp_source == 'face exterior') then
+            source = NEIGHBOR
+            cache_component = 'face exterior'
+
+        else if (interp_source == 'boundary') then
+            user_msg = "chidg_worker%get_auxiliary_field_face: Auxiliary fields not implemented &
+                        for external bc boundaries. Not defined at that location."
+            call chidg_signal_one(FATAL,user_msg,trim(interp_source))
+                        
+
+        else
+            user_msg = "chidg_worker%get_model_field_face: Invalid value for interpolation source. &
+                        Try 'face interior', 'face exterior', or 'boundary'"
+            call chidg_signal_one(FATAL,user_msg,trim(interp_source))
+        end if
+
+
+
+
+
+
+
+
+
+        if ( (trim(interp_type) == 'value') .or. &
+             (trim(interp_type) == 'ddx'  ) .or. &
+             (trim(interp_type) == 'ddy'  ) .or. &
+             (trim(interp_type) == 'ddz'  ) ) then
+
+            ! Here, we implicitly assume that all auxiliary field vectors contain only
+            ! one variable expansion. Hence, ieqn = 1.
+            ieqn = 1
+            var_gq_ad = interpolate_face_autodiff(self%mesh,self%solverdata%q,self%face_info(),self%function_info,ieqn,self%itime,interp_type,source)
+
+
+            ! Just take values
+            var_gq = var_gq_ad(:)%x_ad_
+
+
+        elseif ( (trim(interp_type) == 'ddx+lift')   .or. &
+                 (trim(interp_type) == 'ddy+lift')   .or. &
+                 (trim(interp_type) == 'ddz+lift')   .or. &
+                 (trim(interp_type) == 'ddx + lift') .or. &
+                 (trim(interp_type) == 'ddy + lift') .or. &
+                 (trim(interp_type) == 'ddz + lift') ) then
+
+            user_msg = "chidg_worker%get_auxiliary_field_face: Lifted derivatives('ddx + lift') are&
+                        not supported. Only the standard derivatives('ddx','ddy','ddz') are supported."
+            call chidg_signal_one(FATAL,user_msg,trim(interp_type))
+        end if
+
+
+
+
+
+
+    end function get_auxiliary_field_face
+    !****************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+
+
+    !>  Return an interpolation of an auxiliary chidgVector on the element quadrature node set.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   11/4/2016
+    !!
+    !!
+    !----------------------------------------------------------------------------------------
+    function get_auxiliary_field_element(self,field,interp_type) result(var_gq)
         class(chidg_worker_t),  intent(in)  :: self
         character(*),           intent(in)  :: field
         character(*),           intent(in)  :: interp_type
@@ -483,6 +824,10 @@ contains
         !
         ifield = self%solverdata%get_auxiliary_field_index(field)
 
+
+        user_msg = "chidg_worker%get_element_auxiliary_field: There was no field data found for the &
+                    specified field string."
+        if (ifield == 0) call chidg_signal_one(FATAL,user_msg,trim(field))
 
 
         if ( (trim(interp_type) == 'value') .or. &
@@ -516,8 +861,10 @@ contains
 
 
 
-    end function get_element_auxiliary_field
-    !***********************************************************************************************
+    end function get_auxiliary_field_element
+    !****************************************************************************************
+
+
 
 
 
@@ -536,15 +883,15 @@ contains
     !!  @date   9/8/2016
     !!
     !!
-    !----------------------------------------------------------------------------------------------
-    subroutine store_bc_state(self,ieqn,cache_data,data_type)
+    !---------------------------------------------------------------------------------------
+    subroutine store_bc_state(self,field,cache_data,data_type)
         class(chidg_worker_t),  intent(inout)   :: self
-        integer(ik),            intent(in)      :: ieqn
+        character(*),           intent(in)      :: field
         type(AD_D),             intent(in)      :: cache_data(:)
-        character(len=*),       intent(in)      :: data_type
+        character(*),           intent(in)      :: data_type
 
-        character(len=:), allocatable   :: cache_type
-        integer(ik)                     :: idirection
+        character(:),   allocatable :: cache_type, user_msg
+        integer(ik)                 :: idirection
 
 
         !
@@ -563,12 +910,10 @@ contains
             cache_type = 'derivative'
             idirection = 3
         else
-            call chidg_signal(FATAL,"worker%store_bc_state: Invalid data_type specification. Options are 'value', 'ddx', 'ddy', 'ddz'.")
+            user_msg = "chidg_worker%store_bc_state: Invalid data_type specification. &
+                        Options are 'value', 'ddx', 'ddy', 'ddz'."
+            call chidg_signal_one(FATAL,user_msg,trim(data_type))
         end if
-
-
-
-
 
 
 
@@ -576,17 +921,93 @@ contains
         ! Store bc state in cache, face exterior component
         !
         if (cache_type == 'value') then
-            call self%cache%set_data('face exterior',cache_data,'value',0,self%function_info%seed,ieqn,self%iface)
+            call self%cache%set_data(field,'face exterior',cache_data,'value',0,self%function_info%seed,self%iface)
 
         else if (cache_type == 'derivative') then
-            call self%cache%set_data('face exterior',cache_data,'derivative',idirection,self%function_info%seed,ieqn,self%iface)
+            call self%cache%set_data(field,'face exterior',cache_data,'derivative',idirection,self%function_info%seed,self%iface)
 
         end if
 
 
 
     end subroutine store_bc_state
-    !***********************************************************************************************
+    !***************************************************************************************
+
+
+
+
+
+
+
+
+
+
+    !>
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   9/8/2016
+    !!
+    !!
+    !---------------------------------------------------------------------------------------
+    subroutine store_model_field(self,model_field,data_type,cache_data)
+        class(chidg_worker_t),  intent(inout)   :: self
+        character(*),           intent(in)      :: model_field
+        character(*),           intent(in)      :: data_type
+        type(AD_D),             intent(in)      :: cache_data(:)
+
+        type(AD_D),     allocatable, dimension(:)   :: field_current, field_update
+        character(:),   allocatable :: cache_type, user_msg
+        integer(ik)                 :: idirection
+
+
+        !
+        ! Set cache_type
+        !
+        if (data_type == 'value') then
+            cache_type = 'value'
+            idirection = 0
+        else if (data_type == 'ddx') then
+            cache_type = 'derivative'
+            idirection = 1
+        else if (data_type == 'ddy') then
+            cache_type = 'derivative'
+            idirection = 2
+        else if (data_type == 'ddz') then
+            cache_type = 'derivative'
+            idirection = 3
+        else
+            user_msg = "chidg_worker%store_model_field: Invalid data_type specification. &
+                        Options are 'value', 'ddx', 'ddy', 'ddz'."
+            call chidg_signal_one(FATAL,user_msg,trim(data_type))
+        end if
+
+
+
+        !
+        ! Add data to model field cache
+        !
+        if (cache_type == 'value') then
+
+!            field_current = self%cache%get_data(model_field,self%interpolation_source,'value',0,self%function_info%seed,self%iface)
+!            field_update = field_current + cache_data
+            field_update = cache_data
+
+            call self%cache%set_data(model_field,self%interpolation_source,field_update,'value',0,self%function_info%seed,self%iface)
+
+        else if (cache_type == 'derivative') then
+
+!            field_current = self%cache%get_data(model_field,self%interpolation_source,'derivative',idirection,self%function_info%seed,self%iface)
+!            field_update = field_current + cache_data
+            field_update = cache_data
+
+            call self%cache%set_data(model_field,self%interpolation_source,field_update,'derivative',idirection,self%function_info%seed,self%iface)
+
+        end if
+
+
+
+    end subroutine store_model_field
+    !***************************************************************************************
 
 
 
@@ -604,18 +1025,22 @@ contains
     !!  @date   8/22/2016
     !!
     !!
-    !---------------------------------------------------------------------------------------------
-    subroutine integrate_boundary(self,ieqn,integrand)
+    !----------------------------------------------------------------------------------------
+    subroutine integrate_boundary(self,primary_field,integrand)
         class(chidg_worker_t),  intent(in)      :: self
-        integer(ik),            intent(in)      :: ieqn
+        character(*),           intent(in)      :: primary_field
         type(AD_D),             intent(inout)   :: integrand(:)
 
+        integer(ik) :: ifield, idomain_l
 
-        call integrate_boundary_scalar_flux(self%mesh,self%solverdata,self%face_info(),self%function_info,ieqn,self%itime,integrand)
+        idomain_l = self%element_info%idomain_l
+        ifield    = self%prop(idomain_l)%get_primary_field_index(primary_field)
+
+        call integrate_boundary_scalar_flux(self%mesh,self%solverdata,self%face_info(),self%function_info,ifield,self%itime,integrand)
 
 
     end subroutine integrate_boundary
-    !*********************************************************************************************
+    !****************************************************************************************
 
 
 
@@ -629,20 +1054,25 @@ contains
     !!  @date   8/22/2016
     !!
     !!
-    !---------------------------------------------------------------------------------------------
-    subroutine integrate_volume_flux(self,ieqn,integrand_x,integrand_y,integrand_z)
+    !---------------------------------------------------------------------------------------
+    subroutine integrate_volume_flux(self,primary_field,integrand_x,integrand_y,integrand_z)
         class(chidg_worker_t),  intent(in)      :: self
-        integer(ik),            intent(in)      :: ieqn
+        character(*),           intent(in)      :: primary_field
         type(AD_D),             intent(inout)   :: integrand_x(:)
         type(AD_D),             intent(inout)   :: integrand_y(:)
         type(AD_D),             intent(inout)   :: integrand_z(:)
 
+        integer(ik) :: ifield, idomain_l
 
-        call integrate_volume_vector_flux(self%mesh,self%solverdata,self%element_info,self%function_info,ieqn,self%itime,integrand_x,integrand_y,integrand_z)
+
+        idomain_l = self%element_info%idomain_l
+        ifield    = self%prop(idomain_l)%get_primary_field_index(primary_field)
+
+        call integrate_volume_vector_flux(self%mesh,self%solverdata,self%element_info,self%function_info,ifield,self%itime,integrand_x,integrand_y,integrand_z)
 
 
     end subroutine integrate_volume_flux
-    !*********************************************************************************************
+    !***************************************************************************************
 
 
 
@@ -656,22 +1086,23 @@ contains
     !!  @date   8/22/2016
     !!
     !!
-    !---------------------------------------------------------------------------------------------
-    subroutine integrate_volume_source(self,ieqn,integrand)
+    !---------------------------------------------------------------------------------------
+    subroutine integrate_volume_source(self,primary_field,integrand)
         class(chidg_worker_t),  intent(in)      :: self
-        integer(ik),            intent(in)      :: ieqn
+        character(*),           intent(in)      :: primary_field
         type(AD_D),             intent(inout)   :: integrand(:)
 
+        integer(ik) :: ifield, idomain_l
 
-        call integrate_volume_scalar_source(self%mesh,self%solverdata,self%element_info,self%function_info,ieqn,self%itime,integrand)
+
+        idomain_l = self%element_info%idomain_l
+        ifield    = self%prop(idomain_l)%get_primary_field_index(primary_field)
+
+        call integrate_volume_scalar_source(self%mesh,self%solverdata,self%element_info,self%function_info,ifield,self%itime,integrand)
 
 
     end subroutine integrate_volume_source
-    !*********************************************************************************************
-
-
-
-
+    !***************************************************************************************
 
 
 
@@ -686,7 +1117,7 @@ contains
     !!
     !!
     !!
-    !---------------------------------------------------------------------------------------------
+    !---------------------------------------------------------------------------------------
     function normal(self,direction) result(norm_gq)
         class(chidg_worker_t),  intent(in)  :: self
         integer(ik),            intent(in)  :: direction
@@ -698,7 +1129,7 @@ contains
 
 
     end function normal
-    !**********************************************************************************************
+    !***************************************************************************************
 
 
 
@@ -715,7 +1146,7 @@ contains
     !!
     !!
     !!
-    !---------------------------------------------------------------------------------------------
+    !---------------------------------------------------------------------------------------
     function unit_normal(self,direction) result(unorm_gq)
         class(chidg_worker_t),  intent(in)  :: self
         integer(ik),            intent(in)  :: direction
@@ -727,7 +1158,7 @@ contains
 
 
     end function unit_normal
-    !**********************************************************************************************
+    !***************************************************************************************
 
 
 
@@ -741,7 +1172,7 @@ contains
     !!
     !!
     !!
-    !---------------------------------------------------------------------------------------------
+    !---------------------------------------------------------------------------------------
     function coords(self) result(coords_gq)
         class(chidg_worker_t),  intent(in)  :: self
 
@@ -750,12 +1181,7 @@ contains
         coords_gq = self%mesh(self%element_info%idomain_l)%faces(self%element_info%ielement_l,self%iface)%quad_pts(:)
 
     end function coords
-    !**********************************************************************************************
-
-
-
-
-
+    !***************************************************************************************
 
 
 
@@ -771,7 +1197,7 @@ contains
     !!
     !!
     !!
-    !---------------------------------------------------------------------------------------------
+    !--------------------------------------------------------------------------------------
     function x(self,source) result(x_gq)
         class(chidg_worker_t),  intent(in)  :: self
         character(len=*),       intent(in)  :: source
@@ -789,7 +1215,7 @@ contains
 
 
     end function x
-    !**********************************************************************************************
+    !**************************************************************************************
 
 
 
@@ -800,7 +1226,7 @@ contains
     !!
     !!
     !!
-    !---------------------------------------------------------------------------------------------
+    !--------------------------------------------------------------------------------------
     function y(self,source) result(y_gq)
         class(chidg_worker_t),  intent(in)  :: self
         character(len=*),       intent(in)  :: source
@@ -819,7 +1245,7 @@ contains
 
 
     end function y
-    !**********************************************************************************************
+    !**************************************************************************************
 
 
 
@@ -830,7 +1256,7 @@ contains
     !!
     !!
     !!
-    !---------------------------------------------------------------------------------------------
+    !--------------------------------------------------------------------------------------
     function z(self,source) result(z_gq)
         class(chidg_worker_t),  intent(in)  :: self
         character(len=*),       intent(in)  :: source
@@ -848,7 +1274,7 @@ contains
 
 
     end function z
-    !**********************************************************************************************
+    !**************************************************************************************
 
 
 
@@ -863,7 +1289,7 @@ contains
     !!  @date   9/8/2016
     !!
     !!
-    !---------------------------------------------------------------------------------------------
+    !--------------------------------------------------------------------------------------
     function face_type(self) result(face_type_)
         class(chidg_worker_t),  intent(in)  :: self
 
@@ -879,7 +1305,7 @@ contains
 
 
     end function face_type
-    !**********************************************************************************************
+    !**************************************************************************************
 
 
 
@@ -894,7 +1320,7 @@ contains
     !!
     !!
     !!
-    !---------------------------------------------------------------------------------------------
+    !--------------------------------------------------------------------------------------
     function time(self) result(solution_time)
         class(chidg_worker_t),  intent(in)  :: self
 
@@ -903,7 +1329,7 @@ contains
         solution_time = self%solverdata%t
 
     end function time
-    !**********************************************************************************************
+    !**************************************************************************************
 
 
 
@@ -917,7 +1343,7 @@ contains
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   9/8/2016
     !!
-    !-----------------------------------------------------------------------------------
+    !-------------------------------------------------------------------------------------
     subroutine destructor(self)
         type(chidg_worker_t),   intent(inout)   :: self
 
@@ -926,6 +1352,6 @@ contains
         if (associated(self%cache))      nullify(self%cache)
 
     end subroutine destructor
-    !**********************************************************************************
+    !*************************************************************************************
 
 end module type_chidg_worker

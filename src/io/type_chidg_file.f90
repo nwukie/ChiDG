@@ -21,8 +21,8 @@ module type_chidg_file
         ! HDF identifier for the file
         integer(HID_T)  :: file_id
 
-        ! HDF identifier for a block that is open
-        integer(HID_T)  :: block_id
+        ! HDF identifier for a domain that is open
+        integer(HID_T)  :: domain_id
 
     contains
 
@@ -54,7 +54,7 @@ contains
         character(*),           intent(in)      :: filename
 
 
-        call open_file_hdf(filename,self%file_id)
+        self%file_id = open_file_hdf(filename)
 
 
     end subroutine open

@@ -1,6 +1,5 @@
 module SD_bc_operator
     use mod_kinds,          only: ik, rk
-    use mod_constants,      only: BC
     use type_operator,      only: operator_t
     use type_chidg_worker,  only: chidg_worker_t
     use type_properties,    only: properties_t
@@ -93,7 +92,7 @@ contains
 
         ! Storage at quadrature nodes
         type(AD_D), allocatable, dimension(:)   ::  &
-            u, mu, dudx, dudy, dudz, flux_x, flux_y, flux_z, integrand
+            mu, dudx, dudy, dudz, flux_x, flux_y, flux_z, integrand
 
 
         real(rk),   allocatable, dimension(:)   ::  &
@@ -110,10 +109,9 @@ contains
         !
         ! Interpolate boundary condition state to face quadrature nodes
         !
-        u     = worker%get_face_variable(iu, 'value'     , BC)
-        dudx  = worker%get_face_variable(iu, 'ddx + lift', BC)
-        dudy  = worker%get_face_variable(iu, 'ddy + lift', BC)
-        dudz  = worker%get_face_variable(iu, 'ddz + lift', BC)
+        dudx  = worker%get_primary_field_face('u','ddx + lift', 'boundary')
+        dudy  = worker%get_primary_field_face('u','ddy + lift', 'boundary')
+        dudz  = worker%get_primary_field_face('u','ddz + lift', 'boundary')
 
 
         normx = worker%normal(1)
@@ -124,7 +122,7 @@ contains
         !
         ! Compute scalar coefficient
         !
-        mu = prop%scalar%compute_mu(u,dudx,dudy,dudz)
+        mu = worker%get_model_field_face('Scalar Diffusion Coefficient', 'value', 'boundary')
 
         
 
@@ -137,7 +135,7 @@ contains
 
         integrand = flux_x*normx + flux_y*normy + flux_z*normz
 
-        call worker%integrate_boundary(iu, integrand)
+        call worker%integrate_boundary('u',integrand)
 
 
     end subroutine compute

@@ -1,8 +1,7 @@
 module SA_LaxFriedrichs_operator
 #include <messenger.h>
     use mod_kinds,              only: rk,ik
-    use mod_constants,          only: ZERO,ONE,TWO,HALF, ME, NEIGHBOR
-
+    use mod_constants,          only: ZERO,ONE,TWO,HALF
     use type_operator,          only: operator_t
     use type_chidg_worker,      only: chidg_worker_t
     use type_properties,        only: properties_t
@@ -71,12 +70,9 @@ contains
 
 
         integer(ik)              :: iu
-        real(rk)                 :: cx, cy, cz
 
         type(AD_D), dimension(:), allocatable   ::  &
             u_m,  u_p,                              &
-            dudx_m,dudy_m,dudz_m,                   &
-            dudx_p,dudy_p,dudz_p,                   &
             cx_m, cy_m, cz_m,                       &
             cx_p, cy_p, cz_p,                       &
             flux_x, flux_y, flux_z, integrand
@@ -94,27 +90,20 @@ contains
         !
         ! Interpolate solution to quadrature nodes
         !
-        u_m    = worker%get_face_variable(iu, 'value', ME)
-        dudx_m = worker%get_face_variable(iu, 'ddx'  , ME)
-        dudy_m = worker%get_face_variable(iu, 'ddy'  , ME)
-        dudz_m = worker%get_face_variable(iu, 'ddz'  , ME)
-
-        u_p    = worker%get_face_variable(iu, 'value', NEIGHBOR)
-        dudx_p = worker%get_face_variable(iu, 'ddx'  , NEIGHBOR)
-        dudy_p = worker%get_face_variable(iu, 'ddy'  , NEIGHBOR)
-        dudz_p = worker%get_face_variable(iu, 'ddz'  , NEIGHBOR)
+        u_m    = worker%get_primary_field_face('u', 'value', 'face interior')
+        u_p    = worker%get_primary_field_face('u', 'value', 'face exterior')
 
 
         !
         ! Get model coefficients
         !
-        cx_m = prop%scalar%compute_cx(u_m,dudx_m,dudy_m,dudz_m)
-        cy_m = prop%scalar%compute_cy(u_m,dudx_m,dudy_m,dudz_m)
-        cz_m = prop%scalar%compute_cz(u_m,dudx_m,dudy_m,dudz_m)
-        cx_p = prop%scalar%compute_cx(u_p,dudx_p,dudy_p,dudz_p)
-        cy_p = prop%scalar%compute_cy(u_p,dudx_p,dudy_p,dudz_p)
-        cz_p = prop%scalar%compute_cz(u_p,dudx_p,dudy_p,dudz_p)
-
+        cx_m = worker%get_model_field_face('Scalar X-Advection Velocity', 'value', 'face interior')
+        cy_m = worker%get_model_field_face('Scalar Y-Advection Velocity', 'value', 'face interior')
+        cz_m = worker%get_model_field_face('Scalar Z-Advection Velocity', 'value', 'face interior')
+        cx_p = worker%get_model_field_face('Scalar X-Advection Velocity', 'value', 'face exterior')
+        cy_p = worker%get_model_field_face('Scalar Y-Advection Velocity', 'value', 'face exterior')
+        cz_p = worker%get_model_field_face('Scalar Z-Advection Velocity', 'value', 'face exterior')
+        
 
         !
         ! Get normal vector
@@ -142,7 +131,7 @@ contains
         !
         ! Integrate flux
         !
-        call worker%integrate_boundary(iu,integrand)
+        call worker%integrate_boundary('u',integrand)
 
 
     end subroutine compute

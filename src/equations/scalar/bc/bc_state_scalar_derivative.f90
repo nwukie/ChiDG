@@ -1,6 +1,6 @@
 module bc_state_scalar_derivative
     use mod_kinds,          only: rk,ik
-    use mod_constants,      only: ME, ZERO
+    use mod_constants,      only: ZERO
     use type_bc_state,      only: bc_state_t
     use type_chidg_worker,  only: chidg_worker_t
     use type_properties,    only: properties_t
@@ -48,6 +48,7 @@ contains
         ! Set name
         !
         call self%set_name('Scalar Derivative')
+        call self%set_family('Scalar')
 
 
         !
@@ -102,14 +103,14 @@ contains
         !
         ! Get 'u' value from face interior to extrapolate
         !
-        u_bc = worker%get_face_variable(iu, 'value', ME)
+        u_bc = worker%get_primary_field_face('u', 'value', 'face interior')
 
 
 
         !
         ! Initialize derivative arrays
         !
-        dudx_bc = ZERO * worker%get_face_variable(iu,'ddx',ME)
+        dudx_bc = ZERO * worker%get_primary_field_face('u', 'ddx','face interior')
         dudy_bc = ZERO * dudx_bc
         dudz_bc = ZERO * dudx_bc
 
@@ -121,10 +122,10 @@ contains
 
 
 
-        call worker%store_bc_state(iu, u_bc,    'value')
-        call worker%store_bc_state(iu, dudx_bc, 'ddx'  )
-        call worker%store_bc_state(iu, dudy_bc, 'ddy'  )
-        call worker%store_bc_state(iu, dudz_bc, 'ddz'  )
+        call worker%store_bc_state('u', u_bc,    'value')
+        call worker%store_bc_state('u', dudx_bc, 'ddx'  )
+        call worker%store_bc_state('u', dudy_bc, 'ddy'  )
+        call worker%store_bc_state('u', dudz_bc, 'ddz'  )
 
 
 

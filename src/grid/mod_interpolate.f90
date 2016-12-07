@@ -92,7 +92,7 @@ contains
         !
         ! Get number of derivatives to initialize for automatic differentiation
         !
-        nderiv = get_interpolation_nderiv(mesh,q,fcn_info)
+        nderiv = get_interpolation_nderiv(mesh,fcn_info)
 
 
         !
@@ -243,7 +243,7 @@ contains
         !
         ! Get number of derivatives to initialize for automatic differentiation
         !
-        nderiv = get_interpolation_nderiv(mesh,q,fcn_info)
+        nderiv = get_interpolation_nderiv(mesh,fcn_info)
 
 
         !
@@ -1085,15 +1085,6 @@ contains
 
 
 
-
-
-
-
-
-
-
-
-
     !>  Return the number of elements contributing to the interpolation. 
     !!
     !!  For standard conforming interpolations this will be ==1. For Chimera interpolations, this could be >=1.
@@ -1220,9 +1211,8 @@ contains
     !!  @date   8/17/2016
     !!
     !--------------------------------------------------------------------------------------------------------
-    function get_interpolation_nderiv(mesh,q,function_info) result(nderiv)
+    function get_interpolation_nderiv(mesh,function_info) result(nderiv)
         type(mesh_t),           intent(in)  :: mesh(:)
-        type(chidgVector_t),    intent(in)  :: q
         type(function_info_t),  intent(in)  :: function_info
 
         integer(ik) :: nderiv, neqns_seed, nterms_s_seed
@@ -1238,21 +1228,13 @@ contains
         else
 
             !
-            ! Get number of equations and terms in solution expansions
+            ! Compute number of unknowns in the seed element, which is the number of 
+            ! partial derivatives we are tracking.
             !
-            parallel_seed = (function_info%seed%iproc /= IRANK)
-            if ( parallel_seed ) then
-                neqns_seed    = q%recv%comm(function_info%seed%recv_comm)%dom(function_info%seed%recv_domain)%vecs(function_info%seed%recv_element)%nvars()
-                nterms_s_seed = q%recv%comm(function_info%seed%recv_comm)%dom(function_info%seed%recv_domain)%vecs(function_info%seed%recv_element)%nterms()
-            else
-                neqns_seed    = mesh(function_info%seed%idomain_l)%elems(function_info%seed%ielement_l)%neqns
-                nterms_s_seed = mesh(function_info%seed%idomain_l)%elems(function_info%seed%ielement_l)%nterms_s
-            end if
-
-            !
-            ! Compute number of unknowns in the seed element, which is the number of partial derivatives we are tracking
-            !
+            neqns_seed    = function_info%seed%neqns
+            nterms_s_seed = function_info%seed%nterms_s
             nderiv = neqns_seed  *  nterms_s_seed
+
         end if
 
 

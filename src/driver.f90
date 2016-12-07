@@ -14,6 +14,7 @@ program driver
 #include <messenger.h>
     use mod_kinds,                  only: rk, ik
     use type_chidg,                 only: chidg_t
+    use type_chidg_manager,         only: chidg_manager_t
     use type_function,              only: function_t
     use mod_function,               only: create_function
     use mod_io
@@ -28,11 +29,12 @@ program driver
     ! Variable declarations
     !
     implicit none
+    type(chidg_manager_t)                       :: manager
     type(chidg_t)                               :: chidg
 
 
     integer                                     :: narg, iorder
-    character(len=1024)                         :: chidg_action, filename, file_a, file_b
+    character(len=1024)                         :: chidg_action, filename
     class(function_t),              allocatable :: constant, monopole, fcn, polynomial
 
 
@@ -91,6 +93,7 @@ program driver
         !
         ! Initialize communication, storage, auxiliary fields
         !
+        call manager%process(chidg)
         call chidg%init('all')
 
 
@@ -113,7 +116,7 @@ program driver
 
 !            call polynomial%set_option('f',3.5_rk)
 !            call create_function(polynomial,'polynomial')
-
+!
 !            ! d
 !            call create_function(constant,'constant')
 !            call constant%set_option('val',0.001_rk)
@@ -127,7 +130,7 @@ program driver
             call chidg%data%sdata%q%project(chidg%data%mesh,constant,1)
 
             ! rho_u
-            call constant%set_option('val',150.5_rk)
+            call constant%set_option('val',10.0_rk)
             call chidg%data%sdata%q%project(chidg%data%mesh,constant,2)
 
             ! rho_v
@@ -139,7 +142,7 @@ program driver
             call chidg%data%sdata%q%project(chidg%data%mesh,constant,4)
 
             ! rho_E
-            call constant%set_option('val',270000.0_rk)
+            call constant%set_option('val',250000.0_rk)
             call chidg%data%sdata%q%project(chidg%data%mesh,constant,5)
 
 

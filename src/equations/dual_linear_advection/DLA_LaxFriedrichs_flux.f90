@@ -96,31 +96,22 @@ contains
 
 
 
-!        !
-!        ! Get equation set property data
-!        !
-!        select type(prop)
-!            type is (DLA_properties_t)
-!                cx = prop%c(1)
-!                cy = prop%c(2)
-!                cz = prop%c(3)
-!        end select
+        !
+        ! Get equation set property data
+        !
         cx = 1._rk
         cy = 0._rk
         cz = 0._rk
 
 
-
-
-
         !
         ! Interpolate solution to quadrature nodes
         !
-        ua_r = worker%get_face_variable(iu_a, 'value', ME)
-        ua_l = worker%get_face_variable(iu_a, 'value', NEIGHBOR)
+        ua_r = worker%get_primary_field_face('u_a','value', 'face interior')
+        ua_l = worker%get_primary_field_face('u_a','value', 'face exterior')
 
-        ub_r = worker%get_face_variable(iu_b, 'value', ME)
-        ub_l = worker%get_face_variable(iu_b, 'value', NEIGHBOR)
+        ub_r = worker%get_primary_field_face('u_b','value', 'face interior')
+        ub_l = worker%get_primary_field_face('u_b','value', 'face exterior')
 
 
 
@@ -140,7 +131,7 @@ contains
         flux_z = (cz * (ua_l - ua_r)/TWO )  *  normz * unormz
 
         integrand = flux_x + flux_y + flux_z
-        call worker%integrate_boundary(iu_a,integrand)
+        call worker%integrate_boundary('u_a',integrand)
 
 
 
@@ -152,7 +143,7 @@ contains
         flux_z = (cz * (ub_l - ub_r)/TWO )  *  normz * unormz
 
         integrand = flux_x + flux_y + flux_z
-        call worker%integrate_boundary(iu_b,integrand)
+        call worker%integrate_boundary('u_b',integrand)
 
 
 

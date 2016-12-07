@@ -272,9 +272,10 @@ contains
     !!  The field represented as a chidgVector would then be accessed as:
     !!      solverdata%auxiliary_field(index)
     !!
+    !!  If not found, returns 0.
+    !!
     !!  @author Nathan A. Wukie
     !!  @date   11/1/2016
-    !!
     !!
     !------------------------------------------------------------------------------------------
     function get_auxiliary_field_index(self,fieldname) result(field_index)
@@ -282,34 +283,27 @@ contains
         character(*),           intent(in)  :: fieldname
 
         integer(ik)                 :: field_index, ifield
-        character(:),   allocatable :: user_msg
         
 
-        ! Check that fields have been allocated
-        user_msg = "solverdata%get_auxiliary_field_index: No auxiliary fields seem to have been added. &
-                    Make sure the procedure 'solverdata%add_auxiliary_field' was called to create &
-                    storage for the new field."
-        if (.not. allocated(self%auxiliary_field_name)) call chidg_signal_one(FATAL,user_msg,trim(fieldname))
-
-
-
+        !
         ! Loop through names to try and find field
-        field_index = 0
-        do ifield = 1,size(self%auxiliary_field_name)
-            if (self%auxiliary_field_name(ifield)%get() == trim(fieldname)) then
-                field_index = ifield
-                exit
-            end if
-        end do
-
-
         !
-        ! Check that field was found
-        !
-        user_msg = "solverdata%get_auxiliary_field_index: No auxiliary field was found for the field name &
-                    that was requested. Make sure the procedure 'solverdata%add_auxiliary_field' was called &
-                    to create storage for then new field."
-        if (field_index == 0) call chidg_signal_one(FATAL,user_msg,trim(fieldname))
+        if (.not. allocated(self%auxiliary_field_name)) then
+
+            field_index = 0
+
+        else
+
+            field_index = 0
+            do ifield = 1,size(self%auxiliary_field_name)
+                if (self%auxiliary_field_name(ifield)%get() == trim(fieldname)) then
+                    field_index = ifield
+                    exit
+                end if
+            end do
+
+        end if
+
 
     end function get_auxiliary_field_index
     !******************************************************************************************

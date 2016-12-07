@@ -1,8 +1,9 @@
-module type_cache_data_equation
+module type_cache_data_field
 #include <messenger.h>
     use mod_kinds,          only: ik
-    use mod_constants,      only: INTERIOR, BOUNDARY, CHIMERA, NFACES
+    use mod_constants,      only: INTERIOR, BOUNDARY, CHIMERA, NFACES, ZERO
     use type_mesh,          only: mesh_t
+    use type_properties,    only: properties_t
     use type_seed,          only: seed_t
     use DNAD_D
     implicit none
@@ -18,7 +19,9 @@ module type_cache_data_equation
     !!
     !!
     !-------------------------------------------------------------------------------------
-    type, public :: cache_data_equation_t
+    type, public :: cache_data_field_t
+
+        character(:),   allocatable :: name
 
         type(AD_D),     allocatable :: value(:,:)           ! (nnodes, ndepend_value)
         type(seed_t),   allocatable :: value_seeds(:)
@@ -32,17 +35,15 @@ module type_cache_data_equation
         type(AD_D),     allocatable :: lift_element(:,:,:)  ! (nnodes_vol,  ndimension, ndepend_deriv)
         type(seed_t),   allocatable :: lift_seeds(:)
 
-
-
-
     contains
 
         procedure   :: resize
         procedure   :: set_data
+        procedure   :: clear
         
         procedure   :: get_ndepend_face_exterior
 
-    end type cache_data_equation_t
+    end type cache_data_field_t
     !*************************************************************************************
 
 
@@ -57,7 +58,7 @@ contains
 
 
 
-    !>  Resize the cache storage for a given equation.
+    !>  Resize the cache storage for a given field.
     !!
     !!  Note: For cache_types = 'face interior' and 'face exterior', iface must be provided
     !!        in the subroutine call.
@@ -67,29 +68,38 @@ contains
     !!
     !!
     !-------------------------------------------------------------------------------------
-    subroutine resize(self,cache_component,mesh,idomain_l,ielement_l,iface)
-        class(cache_data_equation_t),   intent(inout)           :: self
-        character(len=*),               intent(in)              :: cache_component
-        type(mesh_t),                   intent(in)              :: mesh(:)
-        integer(ik),                    intent(in)              :: idomain_l
-        integer(ik),                    intent(in)              :: ielement_l
-        integer(ik),                    intent(in), optional    :: iface
+    subroutine resize(self,field,cache_component,mesh,prop,idomain_l,ielement_l,iface)
+        class(cache_data_field_t),  intent(inout)           :: self
+        character(*),               intent(in)              :: field
+        character(*),               intent(in)              :: cache_component
+        type(mesh_t),               intent(in)              :: mesh(:)
+        type(properties_t),         intent(in)              :: prop(:)
+        integer(ik),                intent(in)              :: idomain_l
+        integer(ik),                intent(in)              :: ielement_l
+        integer(ik),                intent(in), optional    :: iface
 
-        integer(ik) :: nnodes, nnodes_vol, nnodes_face, ndepend_value, ndepend_deriv, ierr, iface_loop, iseed
-        logical     :: reallocate
-
+        character(:),   allocatable :: user_msg
+        integer(ik)                 :: nnodes, nnodes_vol, nnodes_face, ndepend_value, &
+                                       ndepend_deriv, ierr, iface_loop, iseed
+        logical                     :: reallocate
 
 
         !
-        ! Get number of nodes(nnodes - face/element), number of elements that the function value depends on(ndepend_value), number of 
-        ! elements that the function derivative depends on(ndepend_deriv).
+        ! Set name
+        !
+        self%name = field
+
+
+        !
+        ! Get number of nodes(nnodes - face/element), number of elements that the function 
+        ! value depends on(ndepend_value), number of elements that the function derivative 
+        ! depends on(ndepend_deriv).
         !
         select case (trim(cache_component))
 
 
             case('element')
-                nnodes = mesh(idomain_l)%elems(ielement_l)%gq%vol%nnodes
-
+                nnodes      = mesh(idomain_l)%elems(ielement_l)%gq%vol%nnodes
                 nnodes_vol  = mesh(idomain_l)%elems(ielement_l)%gq%vol%nnodes
                 nnodes_face = mesh(idomain_l)%elems(ielement_l)%gq%face%nnodes
 
@@ -106,36 +116,34 @@ contains
 
             case('face interior')
 
-                nnodes = mesh(idomain_l)%faces(ielement_l,iface)%gq%face%nnodes
-
+                nnodes      = mesh(idomain_l)%faces(ielement_l,iface)%gq%face%nnodes
                 nnodes_vol  = mesh(idomain_l)%faces(ielement_l,iface)%gq%vol%nnodes
                 nnodes_face = mesh(idomain_l)%faces(ielement_l,iface)%gq%face%nnodes
 
                 ! Interior element
                 ndepend_value = 1
 
-                ! Interior element + Exterior Elements
+                ! Interior element + Face Exterior Elements
                 ndepend_deriv = 1 + self%get_ndepend_face_exterior(mesh,idomain_l,ielement_l,iface)
-
-                ! Interior element + Exterior Elements
 
 
             case('face exterior')
-                nnodes = mesh(idomain_l)%faces(ielement_l,iface)%gq%face%nnodes
 
+                nnodes      = mesh(idomain_l)%faces(ielement_l,iface)%gq%face%nnodes
                 nnodes_vol  = mesh(idomain_l)%faces(ielement_l,iface)%gq%vol%nnodes
                 nnodes_face = mesh(idomain_l)%faces(ielement_l,iface)%gq%face%nnodes
 
                 ! Exterior Elements
                 ndepend_value = self%get_ndepend_face_exterior(mesh,idomain_l,ielement_l,iface)
 
-                ! Interior element + Exterior Elements
+                ! Interior element + Face Exterior Elements
                 ndepend_deriv = 1 + self%get_ndepend_face_exterior(mesh,idomain_l,ielement_l,iface)
 
 
             case default
-                call chidg_signal_one(FATAL,"cache_data_equation%resize: cache_type string wasn't an acceptable value. &
-                                                make sure it is either 'element', 'face interior', or 'face exterior'.", cache_component)
+                user_msg = "cache_data_field%resize: cache_type string wasn't an acceptable value. &
+                            Make sure it is 'element', 'face interior', or 'face exterior'."
+                call chidg_signal_one(FATAL,user_msg, cache_component)
         end select
 
 
@@ -144,22 +152,17 @@ contains
         ! Re/Allocate 'value' component
         !
         if (allocated(self%value)) then
+            reallocate = (size(self%value,1) /= nnodes) .or. &
+                         (size(self%value,2) /= ndepend_value)
 
-            reallocate = (size(self%value,1) /= nnodes) .or. (size(self%value,2) /= ndepend_value)
-            if (reallocate) then
-                deallocate(self%value, self%value_seeds)
-                allocate(self%value(nnodes,ndepend_value), self%value_seeds(ndepend_value), stat=ierr)
-                if (ierr /= 0) call AllocationError
-            end if
-
-        else
-
-            allocate(self%value(nnodes,ndepend_value), self%value_seeds(ndepend_value), stat=ierr)
-            if (ierr /= 0) call AllocationError
-
+            if (reallocate) deallocate(self%value, self%value_seeds)
         end if
 
-
+        if (.not. allocated(self%value)) then
+            allocate(self%value(nnodes,ndepend_value), &
+                     self%value_seeds(ndepend_value), stat=ierr)
+            if (ierr /= 0) call AllocationError
+        end if
 
 
 
@@ -167,50 +170,44 @@ contains
         ! Re/Allocate 'derivative', 'lift' components
         !
         if (allocated(self%derivative)) then
-
             reallocate = ( (size(self%derivative,1) /= nnodes)       .or. &
                            (size(self%derivative,2) /= 3)            .or. &
                            (size(self%derivative,3) /= ndepend_deriv) )
 
-            if (reallocate) then
-                deallocate(self%derivative, self%lift_face, self%lift_element, self%derivative_seeds, self%lift_seeds)
-                allocate(self%derivative(nnodes,3,ndepend_deriv), &
-                         self%derivative_seeds(ndepend_deriv),    &
-                         self%lift_face(nnodes_face,3,ndepend_deriv), &
-                         self%lift_element(nnodes_vol,3,ndepend_deriv), &
-                         self%lift_seeds(      ndepend_deriv), stat=ierr)
-                if (ierr /= 0) call AllocationError
-            end if
+            if (reallocate) deallocate(self%derivative, self%derivative_seeds, &
+                                       self%lift_face, self%lift_element, self%lift_seeds)
+        end if
 
-        else
 
-            allocate(self%derivative(nnodes,3,ndepend_deriv), &
-                     self%derivative_seeds(ndepend_deriv),    &
-                     self%lift_face(nnodes_face,3,ndepend_deriv), &
+        if ( .not. allocated(self%derivative) ) then
+            allocate(self%derivative(nnodes,3,ndepend_deriv),       &
+                     self%derivative_seeds(ndepend_deriv),          &
+                     self%lift_face(nnodes_face,3,ndepend_deriv),   &
                      self%lift_element(nnodes_vol,3,ndepend_deriv), &
-                     self%lift_seeds(ndepend_deriv), stat=ierr)
+                     self%lift_seeds(ndepend_deriv),    stat=ierr)
             if (ierr /= 0) call AllocationError
-
         end if
 
 
 
-
-
         !
-        ! Clear seed contents
+        ! Clear entries
         !
-        do iseed = 1,size(self%value_seeds)
-            call self%value_seeds(iseed)%clear()
-        end do
-
-        do iseed = 1,size(self%derivative_seeds)
-            call self%derivative_seeds(iseed)%clear()
-        end do
-
-        do iseed = 1,size(self%lift_seeds)
-            call self%lift_seeds(iseed)%clear()
-        end do
+        call self%clear()
+!        !
+!        ! Clear seed contents, zero values
+!        !
+!        do iseed = 1,size(self%value_seeds)
+!            call self%value_seeds(iseed)%clear()
+!        end do
+!
+!        do iseed = 1,size(self%derivative_seeds)
+!            call self%derivative_seeds(iseed)%clear()
+!        end do
+!
+!        do iseed = 1,size(self%lift_seeds)
+!            call self%lift_seeds(iseed)%clear()
+!        end do
 
 
 
@@ -233,15 +230,15 @@ contains
     !!
     !------------------------------------------------------------------------------------
     subroutine set_data(self,cache_data,data_type,idirection,seed)
-        class(cache_data_equation_t),   intent(inout)   :: self
-        type(AD_D),                     intent(in)      :: cache_data(:)
-        character(len=*),               intent(in)      :: data_type
-        integer(ik),                    intent(in)      :: idirection
-        type(seed_t),                   intent(in)      :: seed
+        class(cache_data_field_t),  intent(inout)   :: self
+        type(AD_D),                 intent(in)      :: cache_data(:)
+        character(*),               intent(in)      :: data_type
+        integer(ik),                intent(in)      :: idirection
+        type(seed_t),               intent(in)      :: seed
 
-        character(len=:), allocatable   :: msg
-        logical     :: seed_found, empty_seed
-        integer(ik) :: iseed, seed_location
+        character(:), allocatable   :: user_msg
+        logical                     :: seed_found, empty_seed
+        integer(ik)                 :: iseed, seed_location
 
 
         
@@ -252,7 +249,7 @@ contains
             ! Set variable 'value' data
             !
             case('value')
-                ! Search to see if a value differentiated wrt seed already exist
+                ! Search to see if a value differentiated wrt seed already exists
                 seed_location = 0
                 seed_found = .false.
                 do iseed = 1,size(self%value_seeds)
@@ -279,7 +276,9 @@ contains
                     end do
                 end if
 
-                if (seed_location == 0) call chidg_signal(FATAL,"cache_data_equation%set_data: Did not find a location to put the data")
+                
+                user_msg = "cache_data_field%set_data: Did not find a location to put the data."
+                if (seed_location == 0) call chidg_signal(FATAL,user_msg)
 
                 ! Store data
                 self%value(:,seed_location) = cache_data
@@ -319,7 +318,8 @@ contains
                 end if
 
                 
-                if (seed_location == 0) call chidg_signal(FATAL,"cache_data_equation%set_data: Did not find a location to put the data")
+                user_msg = "cache_data_field%set_data: Did not find a location to put the data."
+                if (seed_location == 0) call chidg_signal(FATAL,user_msg)
 
 
                 ! Store data
@@ -360,7 +360,8 @@ contains
                 end if
 
 
-                if (seed_location == 0) call chidg_signal(FATAL,"cache_data_equation%set_data: Did not find a location to put the data")
+                user_msg = "cache_data_field%set_data: Did not find a location to put the data."
+                if (seed_location == 0) call chidg_signal(FATAL,user_msg)
                 
                 ! Store data
                 self%lift_face(:,idirection,seed_location) = cache_data
@@ -398,7 +399,8 @@ contains
                 end if
 
 
-                if (seed_location == 0) call chidg_signal(FATAL,"cache_data_equation%set_data: Did not find a location to put the data")
+                user_msg = "cache_data_field%set_data: Did not find a location to put the data."
+                if (seed_location == 0) call chidg_signal(FATAL,user_msg)
                 
                 ! Store data
                 self%lift_element(:,idirection,seed_location) = cache_data
@@ -409,20 +411,16 @@ contains
 
 
             case default
-                msg = "cache_data_equation%store: The incoming variable data_type did not have an &
-                             valid value. Acceptable entries are 'value', 'derivative', 'lift face', or 'lift element'"
-                call chidg_signal_one(FATAL,msg,data_type)
+                user_msg = "cache_data_field%store: The incoming variable data_type did &
+                            not have an valid value. Acceptable entries are 'value', &
+                            'derivative', 'lift face', or 'lift element'"
+                call chidg_signal_one(FATAL,user_msg,data_type)
 
         end select
 
 
     end subroutine set_data
     !************************************************************************************
-
-
-
-
-
 
 
 
@@ -440,7 +438,7 @@ contains
     !!
     !------------------------------------------------------------------------------------
     function get_ndepend_face_exterior(self,mesh,idomain_l,ielement_l,iface) result(ndepend)
-        class(cache_data_equation_t),   intent(in)  :: self
+        class(cache_data_field_t),   intent(in)  :: self
         type(mesh_t),                   intent(in)  :: mesh(:)
         integer(ik),                    intent(in)  :: idomain_l
         integer(ik),                    intent(in)  :: ielement_l
@@ -475,6 +473,59 @@ contains
 
 
 
+    
+    !>  Clear cache data field entries.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   12/3/2016
+    !!
+    !-----------------------------------------------------------------------------------
+    subroutine clear(self)
+        class(cache_data_field_t),  intent(inout)   :: self
+
+        integer(ik) :: iseed
+
+
+!        !
+!        ! Zero values, derivatives, lift
+!        !
+!        if (allocated(self%value)) then
+!            self%value = ZERO
+!        end if
+!
+!        if (allocated(self%derivative)) then
+!            self%derivative = ZERO
+!        end if
+!
+!        if (allocated(self%lift_face)) then
+!            self%lift_face = ZERO
+!        end if
+!
+!        if (allocated(self%lift_element)) then
+!            self%lift_element = ZERO
+!        end if
+
+
+
+        !
+        ! Clear seed contents, zero values
+        !
+        do iseed = 1,size(self%value_seeds)
+            call self%value_seeds(iseed)%clear()
+        end do
+
+        do iseed = 1,size(self%derivative_seeds)
+            call self%derivative_seeds(iseed)%clear()
+        end do
+
+        do iseed = 1,size(self%lift_seeds)
+            call self%lift_seeds(iseed)%clear()
+        end do
+
+
+
+    end subroutine clear
+    !***********************************************************************************
 
 
 
@@ -485,5 +536,4 @@ contains
 
 
 
-
-end module type_cache_data_equation
+end module type_cache_data_field

@@ -82,7 +82,7 @@ contains
         integer(ik)             :: iu
 
         type(AD_D), allocatable, dimension(:)   ::  &
-            u, dudx, dudy, dudz, flux_x, flux_y, flux_z, cx, cy, cz
+            u, flux_x, flux_y, flux_z, cx, cy, cz
 
 
 
@@ -95,18 +95,15 @@ contains
         !
         ! Interpolate solution to quadrature nodes
         !
-        u    = worker%get_element_variable(iu, 'value')
-        dudx = worker%get_element_variable(iu, 'ddx')
-        dudy = worker%get_element_variable(iu, 'ddy')
-        dudz = worker%get_element_variable(iu, 'ddz')
+        u  = worker%get_primary_field_element('u','value')
 
 
         !
         ! Get model coefficients
         !
-        cx = prop%scalar%compute_cx(u,dudx,dudy,dudz)
-        cy = prop%scalar%compute_cy(u,dudx,dudy,dudz)
-        cz = prop%scalar%compute_cz(u,dudx,dudy,dudz)
+        cx = worker%get_model_field_element('Scalar X-Advection Velocity', 'value')
+        cy = worker%get_model_field_element('Scalar Y-Advection Velocity', 'value')
+        cz = worker%get_model_field_element('Scalar Z-Advection Velocity', 'value')
 
 
         !
@@ -120,7 +117,7 @@ contains
         !
         ! Integrate volume flux
         !
-        call worker%integrate_volume(iu, flux_x, flux_y, flux_z)
+        call worker%integrate_volume('u',flux_x,flux_y,flux_z)
 
 
 

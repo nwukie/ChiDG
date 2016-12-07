@@ -1,6 +1,6 @@
 module type_fluid_pseudo_timestep
     use mod_kinds,              only: rk, ik
-    use mod_constants,          only: THIRD
+    use mod_constants,          only: THIRD, ONE, HALF
     use type_pseudo_timestep,   only: pseudo_timestep_t
     use type_mesh,              only: mesh_t
     use type_properties,        only: properties_t
@@ -57,11 +57,10 @@ contains
 
         real(rk), allocatable, dimension(:) ::  &
                 rho, rhou, rhov, rhow, rhoE,    &
-                gam, p, vmag, c
+                p, vmag, c
 
 
-        real(rk)    ::  h, &    !< element spacing parameter
-                        lam     !< characteristic speed
+        real(rk)    ::  h, lam, gam
 
         
         !
@@ -91,13 +90,14 @@ contains
             !
             ! Compute pressure
             !
-            p = prop%fluid%compute_pressure(rho,rhou,rhov,rhow,rhoE)
-        
+            !p = prop%fluid%compute_pressure(rho,rhou,rhov,rhow,rhoE)
+            gam = 1.4_rk
+            p = (gam - ONE)*(rhoE - HALF*(rhou*rhou + rhov*rhov + rhow*rhow)/rho )
 
             !
             ! Compute cell sound speed
             !
-            gam = prop%fluid%compute_gamma(rho,rhou,rhov,rhow,rhoE)
+            !gam = prop%fluid%compute_gamma(rho,rhou,rhov,rhow,rhoE)
 
 
             

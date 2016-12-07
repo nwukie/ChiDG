@@ -1,8 +1,7 @@
 module SD_boundary_operator
 #include <messenger.h>
     use mod_kinds,                  only: rk,ik
-    use mod_constants,              only: ZERO,ONE,TWO,HALF, ME, NEIGHBOR
-
+    use mod_constants,              only: ZERO,ONE,TWO,HALF
     use type_operator,              only: operator_t
     use type_chidg_worker,          only: chidg_worker_t
     use type_properties,            only: properties_t
@@ -94,7 +93,7 @@ contains
         type(AD_D), allocatable, dimension(:)   :: &
             dudx_m, dudy_m, dudz_m, dudx_p, dudy_p, dudz_p, &
             flux_x, flux_y, flux_z, flux_m, flux_p, flux, integrand, &
-            u_m, u_p, mu_m, mu_p
+            mu_m, mu_p
 
         real(rk),   allocatable, dimension(:)   :: &
             normx, normy, normz
@@ -113,23 +112,21 @@ contains
         !
         ! Interpolate solution to quadrature nodes
         !
-        u_m    = worker%get_face_variable(iu, 'value'     , ME)
-        dudx_m = worker%get_face_variable(iu, 'ddx + lift', ME)
-        dudy_m = worker%get_face_variable(iu, 'ddy + lift', ME)
-        dudz_m = worker%get_face_variable(iu, 'ddz + lift', ME)
+        dudx_m = worker%get_primary_field_face('u', 'ddx + lift', 'face interior')
+        dudy_m = worker%get_primary_field_face('u', 'ddy + lift', 'face interior')
+        dudz_m = worker%get_primary_field_face('u', 'ddz + lift', 'face interior')
 
 
-        u_p    = worker%get_face_variable(iu, 'value'     , NEIGHBOR)
-        dudx_p = worker%get_face_variable(iu, 'ddx + lift', NEIGHBOR)
-        dudy_p = worker%get_face_variable(iu, 'ddy + lift', NEIGHBOR)
-        dudz_p = worker%get_face_variable(iu, 'ddz + lift', NEIGHBOR)
+        dudx_p = worker%get_primary_field_face('u', 'ddx + lift', 'face exterior')
+        dudy_p = worker%get_primary_field_face('u', 'ddy + lift', 'face exterior')
+        dudz_p = worker%get_primary_field_face('u', 'ddz + lift', 'face exterior')
 
 
         !
         ! Compute scalar coefficient
         !
-        mu_m = prop%scalar%compute_mu(u_m,dudx_m,dudy_m,dudz_m)
-        mu_p = prop%scalar%compute_mu(u_p,dudx_p,dudy_p,dudz_p)
+        mu_m = worker%get_model_field_face('Scalar Diffusion Coefficient', 'value', 'face interior')
+        mu_p = worker%get_model_field_face('Scalar Diffusion Coefficient', 'value', 'face exterior')
 
 
         flux_m = -mu_m*dudx_m
@@ -153,7 +150,7 @@ contains
         !
         ! Integrate flux
         !
-        call worker%integrate_boundary(iu, integrand)
+        call worker%integrate_boundary('u',integrand)
 
 
     end subroutine compute

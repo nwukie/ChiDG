@@ -4,8 +4,9 @@ module test_blockmatrix_mod
     use type_point,                 only: point_t
     use type_domain_connectivity,   only: domain_connectivity_t
     use mod_kinds,                  only: rk,ik
-    use mod_constants,              only: ZERO, ONE, TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT, NINE, TEN, &
-                                          XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX, IO_DESTINATION
+    use mod_constants,              only: ZERO, ONE, TWO, THREE, FOUR, FIVE, SIX, SEVEN, &
+                                          EIGHT, NINE, TEN, XI_MIN, XI_MAX, ETA_MIN,     &
+                                          ETA_MAX, ZETA_MIN, ZETA_MAX, IO_DESTINATION
     use mod_test_utilities,         only: create_mesh
     use type_blockmatrix,           only: blockmatrix_t
     use DNAD_D
@@ -20,7 +21,7 @@ module test_blockmatrix_mod
     !!
     !!
     !!
-    !--------------------------------------------------------------------------------------------
+    !-----------------------------------------------------------------------------------------
     @TestCase
     type, extends(TestCase) ::  test_blockmatrix
 
@@ -32,17 +33,16 @@ module test_blockmatrix_mod
         procedure   ::  setUp
         procedure   ::  tearDown
     end type test_blockmatrix
-    !********************************************************************************************
+    !*****************************************************************************************
 
 
 contains
 
-    !>
-    !! NOTE: make sure to use 'this' instead of 'self' since these are over-writting a derived type 
-    !! procedure. The argument names have to match
+    !>  NOTE: make sure to use 'this' instead of 'self' since these are over-writting a 
+    !!  derived type procedure. The argument names have to match
     !!
     !!
-    !--------------------------------------------------------------------------------------------
+    !-----------------------------------------------------------------------------------------
     subroutine setUp(this)
         class(test_blockmatrix),    intent(inout)   :: this
 
@@ -193,7 +193,7 @@ contains
 
             ! Test domain/element indices are valid.
             allocate(idomain_g(nmat), ielement_g(nmat))
-            idomain_g_known = [1]
+            idomain_g_known = [1,1,1,1]
             ielement_g_known = [1,2,4,10]
             do imat = 1,lblks(ielem,itime)%size()
                 idomain_g(imat)  = lblks(ielem,itime)%dparent_g(imat)
@@ -241,14 +241,19 @@ contains
             deallocate(idomain_g,ielement_g)
             allocate(idomain_g(nmat), ielement_g(nmat))
             idomain_g_known = [1]
-            ielement_g_known = [5,11,13,14,15,23]
+            ielement_g_known = [5,11,13,14,15,17,23]
             do imat = 1,lblks(ielem,itime)%size()
                 idomain_g(imat)  = lblks(ielem,itime)%dparent_g(imat)
                 ielement_g(imat) = lblks(ielem,itime)%eparent_g(imat)
             end do
 
-            @assertTrue(any(idomain_g == idomain_g_known))
-            @assertTrue(any(ielement_g == ielement_g_known))
+            do ientry = 1,size(idomain_g)
+                @assertTrue(any(idomain_g(ientry)  == idomain_g_known ))
+            end do
+
+            do ientry = 1,size(ielement_g)
+                @assertTrue(any(ielement_g(ientry) == ielement_g_known))
+            end do
 
             
             ! Test  linearization block sizes

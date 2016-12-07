@@ -126,7 +126,7 @@ contains
 
 
 
-    !> Test element metric entries at quadrature points
+    !>  Test 'face interior' cache gets sized appropriately.
     !!
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   9/7/2016
@@ -155,7 +155,7 @@ contains
         ! Test that the cache allocated the correct component
         !
         nnodes_face = self%chidg%data%mesh(idomain)%faces(ielem,iface)%gq%face%nnodes
-        nnodes_vol = self%chidg%data%mesh(idomain)%faces(ielem,iface)%gq%vol%nnodes
+        nnodes_vol  = self%chidg%data%mesh(idomain)%faces(ielem,iface)%gq%vol%nnodes
 
         ! Number of ndoes
         @assertEqual(size(cache_data_equation%value,1), nnodes_face)

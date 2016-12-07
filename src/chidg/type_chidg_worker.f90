@@ -90,6 +90,7 @@ module type_chidg_worker
         procedure   :: get_model_field_general
         procedure   :: get_model_field_face
         procedure   :: get_model_field_element
+        procedure   :: get_auxiliary_field_general
         procedure   :: get_auxiliary_field_face
         procedure   :: get_auxiliary_field_element
 
@@ -303,6 +304,50 @@ contains
 
 
 
+    !>  Return an auxiliary field evaluated at a quadrature node set. The source here
+    !!  is determined by chidg_worker.
+    !!
+    !!  This routine is specifically for model_t's, because we want them to be evaluated
+    !!  on face and element sets the same way. So in a model implementation, we just
+    !!  want the model to get some quadrature node set to operate on. The chidg_worker
+    !!  handles what node set is currently being returned.
+    !!  
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   12/7/2016
+    !!
+    !--------------------------------------------------------------------------------------
+    function get_auxiliary_field_general(self,field,interp_type) result(var_gq)
+        class(chidg_worker_t),  intent(in)  :: self
+        character(*),           intent(in)  :: field
+        character(*),           intent(in)  :: interp_type
+
+        type(AD_D), allocatable :: var_gq(:)
+
+
+        if (self%interpolation_source == 'element') then
+            var_gq = self%get_auxiliary_field_element(field,interp_type) 
+        else if (self%interpolation_source == 'face interior') then
+            var_gq = self%get_auxiliary_field_face(field,interp_type,'face interior')
+        else if (self%interpolation_source == 'face exterior') then
+            var_gq = self%get_auxiliary_field_face(field,interp_type,'face exterior')
+        else if (self%interpolation_source == 'boundary') then
+            var_gq = self%get_auxiliary_field_face(field,interp_type,'boundary')
+        end if
+
+    end function get_auxiliary_field_general
+    !**************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -379,7 +424,7 @@ contains
         ! Retrieve data from cache
         !
         if (cache_type == 'value') then
-            var_gq = self%cache%get_data(field,cache_component,cache_type,idirection,self%function_info%seed,self%iface)
+            var_gq = self%cache%get_data(field,cache_component,'value',idirection,self%function_info%seed,self%iface)
 
         else if (cache_type == 'derivative') then
             var_gq = self%cache%get_data(field,cache_component,'derivative',idirection,self%function_info%seed,self%iface)
@@ -462,7 +507,7 @@ contains
         ! Retrieve data from cache
         !
         if ( cache_type == 'value') then
-            var_gq = self%cache%get_data(field,'element',cache_type,idirection,self%function_info%seed)
+            var_gq = self%cache%get_data(field,'element','value',idirection,self%function_info%seed)
 
         else if (cache_type == 'derivative') then
             var_gq = self%cache%get_data(field,'element','derivative',idirection,self%function_info%seed)
@@ -521,16 +566,6 @@ contains
 
     end function get_model_field_general
     !**************************************************************************************
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -602,10 +637,7 @@ contains
         !
         ! Retrieve data from cache
         !
-        if (cache_type == 'value') then
-            var_gq = self%cache%get_data(field,cache_component,cache_type,idirection,self%function_info%seed,self%iface)
-
-        end if
+        var_gq = self%cache%get_data(field,cache_component,cache_type,idirection,self%function_info%seed,self%iface)
 
 
     end function get_model_field_face
@@ -650,12 +682,12 @@ contains
         else if ( (interp_type == 'ddx')        .or. &
                   (interp_type == 'ddy')        .or. &
                   (interp_type == 'ddz')        .or. &
-                  (interp_type == 'ddx + lift') .or. &
                   (interp_type == 'ddx+lift'  ) .or. &
-                  (interp_type == 'ddy + lift') .or. &
                   (interp_type == 'ddy+lift'  ) .or. &
-                  (interp_type == 'ddz + lift') .or. &
-                  (interp_type == 'ddz+lift'  ) ) then
+                  (interp_type == 'ddz+lift'  ) .or. &
+                  (interp_type == 'ddx + lift') .or. &
+                  (interp_type == 'ddy + lift') .or. &
+                  (interp_type == 'ddz + lift') ) then
             user_msg = 'chidg_worker%get_model_field_element: Computing derivatives for model &
                         fields is not yet implemented.'
             call chidg_signal(FATAL,user_msg)
@@ -667,10 +699,7 @@ contains
         !
         ! Retrieve data from cache
         !
-        if ( cache_type == 'value') then
-            var_gq = self%cache%get_data(field,'element',cache_type,idirection,self%function_info%seed)
-
-        end if
+        var_gq = self%cache%get_data(field,'element',cache_type,idirection,self%function_info%seed)
 
 
 
@@ -687,40 +716,24 @@ contains
 
 
 
-
-
-
-
-    !>  Return an interpolation of an auxiliary chidgVector on the element quadrature node set.
+    !>  Return an auxiliary field interpolated to a face quadrature node set.
     !!
-    !!  @author Nathan A. Wukie
-    !!  @date   11/4/2016
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   12/7/2016
     !!
     !!
-    !----------------------------------------------------------------------------------------
+    !--------------------------------------------------------------------------------------
     function get_auxiliary_field_face(self,field,interp_type,interp_source) result(var_gq)
         class(chidg_worker_t),  intent(in)  :: self
         character(*),           intent(in)  :: field
         character(*),           intent(in)  :: interp_type
         character(*),           intent(in)  :: interp_source
 
-        character(:),   allocatable :: user_msg, cache_component
-        type(AD_D),     allocatable :: var_gq_ad(:)
-        real(rk),       allocatable :: var_gq(:)
-
-        integer(ik) :: ifield, ieqn, source
-
-
-        !
-        ! Get index of the auxiliary field vector.
-        !
-        ifield = self%solverdata%get_auxiliary_field_index(field)
-
-
-        user_msg = "chidg_worker%get_element_auxiliary_field: There was no field data found for the &
-                    specified field string."
-        if (ifield == 0) call chidg_signal_one(FATAL,user_msg,trim(field))
-
+        type(AD_D),     allocatable, dimension(:)   :: var_gq
+        real(rk),       allocatable, dimension(:)   :: var_gq_real
+        character(:),   allocatable                 :: cache_component, cache_type, user_msg
+        type(face_info_t)                           :: face_info
+        integer(ik)                                 :: idirection, igq
 
 
 
@@ -728,65 +741,61 @@ contains
         ! Set cache_component
         !
         if (interp_source == 'face interior') then
-            source = ME
-        else if (interp_source == 'face exterior') then 
-            source = NEIGHBOR
+            cache_component = 'face interior'
+        else if (interp_source == 'face exterior' .or. &
+                 interp_source == 'boundary') then
             cache_component = 'face exterior'
-
-        else if (interp_source == 'boundary') then
-            user_msg = "chidg_worker%get_auxiliary_field_face: Auxiliary fields not implemented &
-                        for external bc boundaries. Not defined at that location."
-            call chidg_signal_one(FATAL,user_msg,trim(interp_source))
-                        
-
         else
-            user_msg = "chidg_worker%get_model_field_face: Invalid value for interpolation source. &
+            user_msg = "chidg_worker%get_auxiliary_field_face: Invalid value for interpolation source. &
                         Try 'face interior', 'face exterior', or 'boundary'"
             call chidg_signal_one(FATAL,user_msg,trim(interp_source))
         end if
 
 
+        !
+        ! Set cache_type
+        !
+        if (interp_type == 'value') then
+            cache_type = 'value'
+            idirection = 0
+        else if (interp_type == 'ddx') then
+            cache_type = 'derivative'
+            idirection = 1
+        else if (interp_type == 'ddy') then
+            cache_type = 'derivative'
+            idirection = 2
+        else if (interp_type == 'ddz') then
+            cache_type = 'derivative'
+            idirection = 3
 
-
-
-
-
-
-
-        if ( (trim(interp_type) == 'value') .or. &
-             (trim(interp_type) == 'ddx'  ) .or. &
-             (trim(interp_type) == 'ddy'  ) .or. &
-             (trim(interp_type) == 'ddz'  ) ) then
-
-            ! Here, we implicitly assume that all auxiliary field vectors contain only
-            ! one variable expansion. Hence, ieqn = 1.
-            ieqn = 1
-            var_gq_ad = interpolate_face_autodiff(self%mesh,self%solverdata%q,self%face_info(),self%function_info,ieqn,interp_type,source)
-
-
-            ! Just take values
-            var_gq = var_gq_ad(:)%x_ad_
-
-
-        elseif ( (trim(interp_type) == 'ddx+lift')   .or. &
-                 (trim(interp_type) == 'ddy+lift')   .or. &
-                 (trim(interp_type) == 'ddz+lift')   .or. &
-                 (trim(interp_type) == 'ddx + lift') .or. &
-                 (trim(interp_type) == 'ddy + lift') .or. &
-                 (trim(interp_type) == 'ddz + lift') ) then
-
-            user_msg = "chidg_worker%get_auxiliary_field_face: Lifted derivatives('ddx + lift') are&
-                        not supported. Only the standard derivatives('ddx','ddy','ddz') are supported."
-            call chidg_signal_one(FATAL,user_msg,trim(interp_type))
+        else if ( (interp_type == 'ddx+lift'  ) .or. &
+                  (interp_type == 'ddy+lift'  ) .or. &
+                  (interp_type == 'ddz+lift'  ) .or. &
+                  (interp_type == 'ddx + lift') .or. &
+                  (interp_type == 'ddy + lift') .or. &
+                  (interp_type == 'ddz + lift') ) then
+                user_msg = 'chidg_worker%get_auxiliary_field_face: Computing lifted derivatives for auxiliary &
+                            fields is not supported.'
+                call chidg_signal(FATAL,user_msg)
+                                    
         end if
 
 
 
+        !
+        ! Retrieve data from cache
+        !
+        var_gq = self%cache%get_data(field,cache_component,cache_type,idirection,self%function_info%seed,self%iface)
 
+
+        !
+        ! Return a real array
+        !
+        var_gq_real = var_gq(:)%x_ad_
 
 
     end function get_auxiliary_field_face
-    !****************************************************************************************
+    !***************************************************************************************
 
 
 
@@ -797,66 +806,72 @@ contains
 
 
 
-
-
-
-    !>  Return an interpolation of an auxiliary chidgVector on the element quadrature node set.
+    !>  Return an auxiliary field interpolated to an element quadrature node set.
     !!
-    !!  @author Nathan A. Wukie
-    !!  @date   11/4/2016
+    !!  NOTE: Returns a real array
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   12/7/2016
     !!
     !!
-    !----------------------------------------------------------------------------------------
-    function get_auxiliary_field_element(self,field,interp_type) result(var_gq)
+    !---------------------------------------------------------------------------------------
+    function get_auxiliary_field_element(self,field,interp_type) result(var_gq_real)
         class(chidg_worker_t),  intent(in)  :: self
         character(*),           intent(in)  :: field
         character(*),           intent(in)  :: interp_type
 
-        character(:),   allocatable :: user_msg
-        real(rk),       allocatable :: var_gq(:)
+        type(AD_D),     allocatable, dimension(:)   :: var_gq
+        real(rk),       allocatable, dimension(:)   :: var_gq_real
 
-        integer(ik) :: ifield
+        type(face_info_t)               :: face_info
+        character(:),   allocatable     :: cache_component, cache_type, user_msg
+        integer(ik)                     :: idirection, igq, iface
 
 
         !
-        ! Get index of the auxiliary field vector.
+        ! Set cache_type
         !
-        ifield = self%solverdata%get_auxiliary_field_index(field)
+        if (interp_type == 'value') then
+            cache_type = 'value'
+            idirection = 0
+        else if (interp_type == 'ddx') then
+            cache_type = 'derivative'
+            idirection = 1
+        else if (interp_type == 'ddy') then
+            cache_type = 'derivative'
+            idirection = 2
+        else if (interp_type == 'ddz') then
+            cache_type = 'derivative'
+            idirection = 3
 
 
-        user_msg = "chidg_worker%get_element_auxiliary_field: There was no field data found for the &
-                    specified field string."
-        if (ifield == 0) call chidg_signal_one(FATAL,user_msg,trim(field))
+        else if ( (interp_type == 'ddx+lift'  ) .or. &
+                  (interp_type == 'ddy+lift'  ) .or. &
+                  (interp_type == 'ddz+lift'  ) .or. &
+                  (interp_type == 'ddx + lift') .or. &
+                  (interp_type == 'ddy + lift') .or. &
+                  (interp_type == 'ddz + lift') ) then
 
+            user_msg = 'chidg_worker%get_auxiliary_field_element: Computing lifted derivatives for auxiliary &
+                        fields is not supported.'
+            call chidg_signal(FATAL,user_msg)
 
-        if ( (trim(interp_type) == 'value') .or. &
-             (trim(interp_type) == 'ddx'  ) .or. &
-             (trim(interp_type) == 'ddy'  ) .or. &
-             (trim(interp_type) == 'ddz'  ) ) then
-
-            ! Here, we implicitly assume that all auxiliary field vectors contain only
-            ! one variable expansion. Hence, ieqn = 1.
-            var_gq = interpolate_element_standard(self%mesh,self%solverdata%auxiliary_field(ifield),    &
-                                                            idomain_l  = self%element_info%idomain_l,   &
-                                                            ielement_l = self%element_info%ielement_l,  &
-                                                            ieqn = 1,                                   &
-                                                            interpolation_type = interp_type)
-
-        elseif ( (trim(interp_type) == 'ddx+lift')   .or. &
-                 (trim(interp_type) == 'ddy+lift')   .or. &
-                 (trim(interp_type) == 'ddz+lift')   .or. &
-                 (trim(interp_type) == 'ddx + lift') .or. &
-                 (trim(interp_type) == 'ddy + lift') .or. &
-                 (trim(interp_type) == 'ddz + lift') ) then
-
-            user_msg = "chidg_worker%get_element_auxiliary_field: Lifted derivatives('ddx + lift') are&
-                        not supported. Only the standard derivatives('ddx','ddy','ddz') are supported."
-            call chidg_signal_one(FATAL,user_msg,trim(interp_type))
         end if
 
 
 
 
+        !
+        ! Retrieve data from cache
+        !
+        var_gq = self%cache%get_data(field,'element',cache_type,idirection,self%function_info%seed)
+
+
+
+        !
+        ! Copy real values to be returned.
+        !
+        var_gq_real = var_gq(:)%x_ad_
 
 
     end function get_auxiliary_field_element
@@ -875,7 +890,8 @@ contains
 
 
 
-    !>
+    !>  Store a primary field being defined from a boundary condition state function
+    !!  to the 'face exterior' cache component.
     !!
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   9/8/2016

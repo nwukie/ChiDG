@@ -83,7 +83,7 @@ contains
         ! Solid walls get dirichlet zero bc.
         ! All other families get neumann zero bc.
         !
-        call wall_distance%read_grid(gridfile, equation_set='Wall Distance')
+        call wall_distance%read_grid(gridfile, equation_set='Wall Distance : p-Poisson')
         call wall_distance%read_boundaryconditions(gridfile, bc_wall     = dirichlet_zero, &
                                                              bc_inlet    = neumann_zero,   &
                                                              bc_outlet   = neumann_zero,   &
@@ -229,26 +229,7 @@ contains
         !
         ! Try to find 'Wall Distance' auxiliary field storage.
         !
-        aux_field_index = chidg%data%sdata%get_auxiliary_field_index('Wall Distance')
-
-
-
-
-
-!
-!        scalar = real(data%mesh(idom)%elems(ielem)%solution_point(data%sdata%q%dom(idom)%vecs(ielem),ivar,xi,eta,zeta),rdouble)
-!        ddx = data%mesh(idom)%elems(ielem)%derivative_point(data%sdata%q%dom(idom)%vecs(ielem),ivar,xi,eta,zeta,X_DIR)
-!        ddy = data%mesh(idom)%elems(ielem)%derivative_point(data%sdata%q%dom(idom)%vecs(ielem),ivar,xi,eta,zeta,Y_DIR)
-!        ddz = data%mesh(idom)%elems(ielem)%derivative_point(data%sdata%q%dom(idom)%vecs(ielem),ivar,xi,eta,zeta,Z_DIR)
-!        mag2 = ddx*ddx + ddy*ddy + ddz*ddz
-!        p = get_p_poisson_parameter()
-!        val = (((p/(p-ONE))*scalar) + mag2**(p/TWO))**((p-ONE)/p) - mag2**((p-ONE)/TWO)
-!
-
-
-
-
-
+        aux_field_index = chidg%data%sdata%get_auxiliary_field_index('Wall Distance : p-Poisson')
 
 
 
@@ -258,10 +239,10 @@ contains
         !
         if (aux_field_index == 0) then
 
-            call chidg%data%sdata%add_auxiliary_field('Wall Distance', wall_distance%data%sdata%q)
+            call chidg%data%sdata%add_auxiliary_field('Wall Distance : p-Poisson', wall_distance%data%sdata%q)
 
         !
-        ! If 'Wall Distance' auxiliar field storage was found, copy Wall Distance solution 
+        ! If 'Wall Distance' auxiliary field storage was found, copy Wall Distance solution 
         ! to working ChiDG environment.
         !
         else

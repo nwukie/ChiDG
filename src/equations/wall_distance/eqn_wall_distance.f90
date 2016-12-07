@@ -177,7 +177,7 @@ module eqn_wall_distance
     !!   get_p_poisson_parameter
     !!
     !------------------------------------------
-    real(rk)    :: p = 8._rk
+    real(rk)    :: p = 2._rk
 
 
 
@@ -237,9 +237,9 @@ contains
         ! Interpolate solution to quadrature nodes
         !
         u    = worker%get_primary_field_general('u', 'value')
-        dudx = worker%get_primary_field_general('u', 'ddx'  )
-        dudy = worker%get_primary_field_general('u', 'ddy'  )
-        dudz = worker%get_primary_field_general('u', 'ddz'  )
+        dudx = worker%get_primary_field_general('u', 'ddx')
+        dudy = worker%get_primary_field_general('u', 'ddy')
+        dudz = worker%get_primary_field_general('u', 'ddz')
 
 
 
@@ -369,7 +369,7 @@ contains
     subroutine init(self)
         class(wall_distance),   intent(inout)  :: self
 
-        call self%set_name('Wall Distance')
+        call self%set_name('Wall Distance : p-Poisson')
 
     end subroutine init
     !*****************************************************************************************
@@ -419,7 +419,7 @@ contains
         !
         ! Set equationset name.
         !
-        call wall_distance_eqn%set_name("Wall Distance")
+        call wall_distance_eqn%set_name("Wall Distance : p-Poisson")
 
 
         !

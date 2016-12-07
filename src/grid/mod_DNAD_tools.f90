@@ -288,105 +288,38 @@ contains
     !!  @param[in]  idom    Domain index of the current element
     !!  @param[in]  ielem   Element index for mesh(idom)%elems(ielem)
     !!  @param[in]  iface   Face index for mesh(idom)%faces(ielem,iface)
-    !!  @param[in]  idonor  Index of potential donor elements. For example, Chimera faces could have more than one donor element
+    !!  @param[in]  idepend Index of external dependent element. For example, Chimera faces could have more than one dependent element
     !!  @param[in]  iblk    Linearization index
     !!
     !-------------------------------------------------------------------------------------------------------------------------
-    function face_compute_seed(mesh,idomain_l,ielement_l,iface,idonor,iblk) result(seed)
+    function face_compute_seed(mesh,idomain_l,ielement_l,iface,idepend,iblk) result(seed)
         type(mesh_t),   intent(in)  :: mesh(:)
         integer(ik),    intent(in)  :: idomain_l
         integer(ik),    intent(in)  :: ielement_l
         integer(ik),    intent(in)  :: iface
-        integer(ik),    intent(in)  :: idonor
+        integer(ik),    intent(in)  :: idepend
         integer(ik),    intent(in)  :: iblk
 
 
         type(seed_t)    :: seed
         integer(ik)     :: ChiID
-        logical         :: linearize_me, linearize_neighbor
+        logical         :: linearize_me, linearize_neighbor, linearize
         logical         :: chimera_face, interior_face, boundary_face
 
 
-
+        linearize           = (idepend /= 0)
         linearize_me        = ( iblk == DIAG )
         linearize_neighbor  = ( iblk == XI_MIN   .or. iblk == XI_MAX   .or. &
                                 iblk == ETA_MIN  .or. iblk == ETA_MAX  .or. &
                                 iblk == ZETA_MIN .or. iblk == ZETA_MAX )
 
 
-
-        !
-        ! Check for linearization of current element (ielem)
-        !
-        if ( linearize_me ) then
-
-            call seed%init(idomain_g    = mesh(idomain_l)%elems(ielement_l)%idomain_g,  &
-                           idomain_l    = mesh(idomain_l)%elems(ielement_l)%idomain_l,  &
-                           ielement_g   = mesh(idomain_l)%elems(ielement_l)%ielement_g, &
-                           ielement_l   = mesh(idomain_l)%elems(ielement_l)%ielement_l, &
-                           neqns        = mesh(idomain_l)%elems(ielement_l)%neqns,      &
-                           nterms_s     = mesh(idomain_l)%elems(ielement_l)%nterms_s,   &
-                           iproc        = IRANK,                                        &
-                           recv_comm    = 0,                                            &
-                           recv_domain  = 0,                                            &
-                           recv_element = 0)
-
-
-        !
-        ! Check for linearization of neighbor element (neighbor of face(ielem,iface) )
-        !
-        elseif ( linearize_neighbor ) then
-
-
+        if (linearize) then
 
             !
-            ! Check if linearization direction (iface) is a Interior or Chimera face
+            ! Check for linearization of current element (ielem)
             !
-            chimera_face  = ( mesh(idomain_l)%faces(ielement_l,iface)%ftype == CHIMERA  )
-            interior_face = ( mesh(idomain_l)%faces(ielement_l,iface)%ftype == INTERIOR )
-            boundary_face = ( mesh(idomain_l)%faces(ielement_l,iface)%ftype == BOUNDARY )
-
-
-            !
-            ! Linearize wrt Standard Interior Neighbor
-            !
-            if ( interior_face ) then
-
-                call seed%init(idomain_g    = mesh(idomain_l)%faces(ielement_l,iface)%ineighbor_domain_g,   &
-                               idomain_l    = mesh(idomain_l)%faces(ielement_l,iface)%ineighbor_domain_l,   &
-                               ielement_g   = mesh(idomain_l)%faces(ielement_l,iface)%ineighbor_element_g,  &
-                               ielement_l   = mesh(idomain_l)%faces(ielement_l,iface)%ineighbor_element_l,  &
-                               neqns        = mesh(idomain_l)%faces(ielement_l,iface)%ineighbor_neqns,      &
-                               nterms_s     = mesh(idomain_l)%faces(ielement_l,iface)%ineighbor_nterms_s,   &
-                               iproc        = mesh(idomain_l)%faces(ielement_l,iface)%ineighbor_proc,       &
-                               recv_comm    = mesh(idomain_l)%faces(ielement_l,iface)%recv_comm,            &
-                               recv_domain  = mesh(idomain_l)%faces(ielement_l,iface)%recv_domain,          &
-                               recv_element = mesh(idomain_l)%faces(ielement_l,iface)%recv_element)
-
-
-            !
-            ! Linearize wrt Chimera Interior Neighbor
-            !
-            elseif ( chimera_face ) then
-                ChiID = mesh(idomain_l)%faces(ielement_l,iface)%ChiID
-
-                call seed%init(idomain_g    = mesh(idomain_l)%chimera%recv%data(ChiID)%donor_domain_g%at(idonor),       &
-                               idomain_l    = mesh(idomain_l)%chimera%recv%data(ChiID)%donor_domain_l%at(idonor),       &
-                               ielement_g   = mesh(idomain_l)%chimera%recv%data(ChiID)%donor_element_g%at(idonor),      &
-                               ielement_l   = mesh(idomain_l)%chimera%recv%data(ChiID)%donor_element_l%at(idonor),      &
-                               neqns        = mesh(idomain_l)%chimera%recv%data(ChiID)%donor_neqns%at(idonor),          &
-                               nterms_s     = mesh(idomain_l)%chimera%recv%data(ChiID)%donor_nterms_s%at(idonor),       &
-                               iproc        = mesh(idomain_l)%chimera%recv%data(ChiID)%donor_proc%at(idonor),           &
-                               recv_comm    = mesh(idomain_l)%chimera%recv%data(ChiID)%donor_recv_comm%at(idonor),      &
-                               recv_domain  = mesh(idomain_l)%chimera%recv%data(ChiID)%donor_recv_domain%at(idonor),    &
-                               recv_element = mesh(idomain_l)%chimera%recv%data(ChiID)%donor_recv_element%at(idonor) )
-
-
-
-            !
-            ! Boudnary face, linearize wrt Current element
-            !
-            elseif ( boundary_face ) then
+            if ( linearize_me ) then
 
                 call seed%init(idomain_g    = mesh(idomain_l)%elems(ielement_l)%idomain_g,  &
                                idomain_l    = mesh(idomain_l)%elems(ielement_l)%idomain_l,  &
@@ -400,18 +333,103 @@ contains
                                recv_element = 0)
 
 
-            ! Invalid Case
+            !
+            ! Check for linearization of neighbor element (neighbor of face(ielem,iface) )
+            !
+            elseif ( linearize_neighbor ) then
+
+
+
+                !
+                ! Check if linearization direction (iface) is a Interior or Chimera face
+                !
+                chimera_face  = ( mesh(idomain_l)%faces(ielement_l,iface)%ftype == CHIMERA  )
+                interior_face = ( mesh(idomain_l)%faces(ielement_l,iface)%ftype == INTERIOR )
+                boundary_face = ( mesh(idomain_l)%faces(ielement_l,iface)%ftype == BOUNDARY )
+
+
+                !
+                ! Linearize wrt Standard Interior Neighbor
+                !
+                if ( interior_face ) then
+
+                    call seed%init(idomain_g    = mesh(idomain_l)%faces(ielement_l,iface)%ineighbor_domain_g,   &
+                                   idomain_l    = mesh(idomain_l)%faces(ielement_l,iface)%ineighbor_domain_l,   &
+                                   ielement_g   = mesh(idomain_l)%faces(ielement_l,iface)%ineighbor_element_g,  &
+                                   ielement_l   = mesh(idomain_l)%faces(ielement_l,iface)%ineighbor_element_l,  &
+                                   neqns        = mesh(idomain_l)%faces(ielement_l,iface)%ineighbor_neqns,      &
+                                   nterms_s     = mesh(idomain_l)%faces(ielement_l,iface)%ineighbor_nterms_s,   &
+                                   iproc        = mesh(idomain_l)%faces(ielement_l,iface)%ineighbor_proc,       &
+                                   recv_comm    = mesh(idomain_l)%faces(ielement_l,iface)%recv_comm,            &
+                                   recv_domain  = mesh(idomain_l)%faces(ielement_l,iface)%recv_domain,          &
+                                   recv_element = mesh(idomain_l)%faces(ielement_l,iface)%recv_element)
+
+
+                !
+                ! Linearize wrt Chimera Interior Neighbor
+                !
+                elseif ( chimera_face ) then
+                    ChiID = mesh(idomain_l)%faces(ielement_l,iface)%ChiID
+
+                    call seed%init(idomain_g    = mesh(idomain_l)%chimera%recv%data(ChiID)%donor_domain_g%at(idepend),       &
+                                   idomain_l    = mesh(idomain_l)%chimera%recv%data(ChiID)%donor_domain_l%at(idepend),       &
+                                   ielement_g   = mesh(idomain_l)%chimera%recv%data(ChiID)%donor_element_g%at(idepend),      &
+                                   ielement_l   = mesh(idomain_l)%chimera%recv%data(ChiID)%donor_element_l%at(idepend),      &
+                                   neqns        = mesh(idomain_l)%chimera%recv%data(ChiID)%donor_neqns%at(idepend),          &
+                                   nterms_s     = mesh(idomain_l)%chimera%recv%data(ChiID)%donor_nterms_s%at(idepend),       &
+                                   iproc        = mesh(idomain_l)%chimera%recv%data(ChiID)%donor_proc%at(idepend),           &
+                                   recv_comm    = mesh(idomain_l)%chimera%recv%data(ChiID)%donor_recv_comm%at(idepend),      &
+                                   recv_domain  = mesh(idomain_l)%chimera%recv%data(ChiID)%donor_recv_domain%at(idepend),    &
+                                   recv_element = mesh(idomain_l)%chimera%recv%data(ChiID)%donor_recv_element%at(idepend) )
+
+
+
+                !
+                ! Boudnary face, linearize wrt Current element
+                !
+                elseif ( boundary_face ) then
+
+                    call seed%init(idomain_g    = mesh(idomain_l)%elems(ielement_l)%idomain_g,  &
+                                   idomain_l    = mesh(idomain_l)%elems(ielement_l)%idomain_l,  &
+                                   ielement_g   = mesh(idomain_l)%elems(ielement_l)%ielement_g, &
+                                   ielement_l   = mesh(idomain_l)%elems(ielement_l)%ielement_l, &
+                                   neqns        = mesh(idomain_l)%elems(ielement_l)%neqns,      &
+                                   nterms_s     = mesh(idomain_l)%elems(ielement_l)%nterms_s,   &
+                                   iproc        = IRANK,                                        &
+                                   recv_comm    = 0,                                            &
+                                   recv_domain  = 0,                                            &
+                                   recv_element = 0)
+
+
+                ! Invalid Case
+                else
+                    call chidg_signal(FATAL,"face_compute_seed: invalid face type - face(ielem,iface)%ftype")
+                end if
+
+
+            ! Invalid value for iface
             else
-                call chidg_signal(FATAL,"face_compute_seed: invalid face type - face(ielem,iface)%ftype")
-            end if
+                call chidg_signal(FATAL,"face_compute_seed: invalid value for iface")
+            end if ! linearize_me or linearize_neighbor
 
 
-        ! Invalid value for iface
         else
-            call chidg_signal(FATAL,"face_compute_seed: invalid value for iface")
-        end if
+
+            ! If idepend == 0 then no linearization. 
+            call seed%init(idomain_g    = 0, &
+                           idomain_l    = 0, &
+                           ielement_g   = 0, &
+                           ielement_l   = 0, &
+                           neqns        = 0, &
+                           nterms_s     = 0, &
+                           iproc        = 0, &
+                           recv_comm    = 0, &
+                           recv_domain  = 0, &
+                           recv_element = 0)
 
 
+
+        end if ! linearize
 
 
 
@@ -443,106 +461,38 @@ contains
     !!  @param[in]  idom    Domain index of the current element
     !!  @param[in]  ielem   Element index for mesh(idom)%elems(ielem)
     !!  @param[in]  iface   Face index for mesh(idom)%faces(ielem,iface)
-    !!  @param[in]  idonor  Index of potential donor elements. For example, Chimera faces could have more than one donor element
+    !!  @param[in]  idepend Index of potential dependent exterior elements. For example, Chimera faces could 
+    !!                      have more than one dependent element
     !!  @param[in]  iblk    Linearization index
     !!
-    !-------------------------------------------------------------------------------------------------------------------------
-    function element_compute_seed(mesh,idomain_l,ielement_l,idonor,iblk) result(seed)
+    !-----------------------------------------------------------------------------------------------------------
+    function element_compute_seed(mesh,idomain_l,ielement_l,idepend,iblk) result(seed)
         type(mesh_t),   intent(in)  :: mesh(:)
         integer(ik),    intent(in)  :: idomain_l
         integer(ik),    intent(in)  :: ielement_l
-        integer(ik),    intent(in)  :: idonor
+        integer(ik),    intent(in)  :: idepend
         integer(ik),    intent(in)  :: iblk
 
 
         type(seed_t)    :: seed
         integer(ik)     :: ChiID, iface
-        logical         :: linearize_me, linearize_neighbor
+        logical         :: linearize_me, linearize_neighbor, linearize
         logical         :: chimera_face, interior_face, boundary_face
 
 
-
+        linearize           = (idepend /= 0)
         linearize_me        = ( iblk == DIAG )
         linearize_neighbor  = ( iblk == XI_MIN   .or. iblk == XI_MAX   .or. &
                                 iblk == ETA_MIN  .or. iblk == ETA_MAX  .or. &
                                 iblk == ZETA_MIN .or. iblk == ZETA_MAX )
 
 
-
-        !
-        ! Check for linearization of current element (ielem)
-        !
-        if ( linearize_me ) then
-
-            call seed%init(idomain_g    = mesh(idomain_l)%elems(ielement_l)%idomain_g,  &
-                           idomain_l    = mesh(idomain_l)%elems(ielement_l)%idomain_l,  &
-                           ielement_g   = mesh(idomain_l)%elems(ielement_l)%ielement_g, &
-                           ielement_l   = mesh(idomain_l)%elems(ielement_l)%ielement_l, &
-                           neqns        = mesh(idomain_l)%elems(ielement_l)%neqns,      &
-                           nterms_s     = mesh(idomain_l)%elems(ielement_l)%nterms_s,   &
-                           iproc        = IRANK,                                        &
-                           recv_comm    = 0,                                            &
-                           recv_domain  = 0,                                            &
-                           recv_element = 0)
-
-
-        !
-        ! Check for linearization of neighbor element (neighbor of face(ielem,iface) )
-        !
-        elseif ( linearize_neighbor ) then
+        if (linearize) then
 
             !
-            ! Check face in the direction of iblk
+            ! Check for linearization of current element (ielem)
             !
-            iface = iblk
-
-            !
-            ! Check if linearization direction (iface) is a Interior or Chimera face
-            !
-            chimera_face  = ( mesh(idomain_l)%faces(ielement_l,iface)%ftype == CHIMERA  )
-            interior_face = ( mesh(idomain_l)%faces(ielement_l,iface)%ftype == INTERIOR )
-            boundary_face = ( mesh(idomain_l)%faces(ielement_l,iface)%ftype == BOUNDARY )
-
-
-            !
-            ! Linearize wrt Standard Interior Neighbor
-            !
-            if ( interior_face ) then
-
-                call seed%init(idomain_g    = mesh(idomain_l)%faces(ielement_l,iface)%ineighbor_domain_g,   &
-                               idomain_l    = mesh(idomain_l)%faces(ielement_l,iface)%ineighbor_domain_l,   &
-                               ielement_g   = mesh(idomain_l)%faces(ielement_l,iface)%ineighbor_element_g,  &
-                               ielement_l   = mesh(idomain_l)%faces(ielement_l,iface)%ineighbor_element_l,  &
-                               neqns        = mesh(idomain_l)%faces(ielement_l,iface)%ineighbor_neqns,      &
-                               nterms_s     = mesh(idomain_l)%faces(ielement_l,iface)%ineighbor_nterms_s,   &
-                               iproc        = mesh(idomain_l)%faces(ielement_l,iface)%ineighbor_proc,       &
-                               recv_comm    = mesh(idomain_l)%faces(ielement_l,iface)%recv_comm,            &
-                               recv_domain  = mesh(idomain_l)%faces(ielement_l,iface)%recv_domain,          &
-                               recv_element = mesh(idomain_l)%faces(ielement_l,iface)%recv_element)
-
-
-            !
-            ! Linearize wrt Chimera Interior Neighbor
-            !
-            elseif ( chimera_face ) then
-                ChiID = mesh(idomain_l)%faces(ielement_l,iface)%ChiID
-
-                call seed%init(idomain_g    = mesh(idomain_l)%chimera%recv%data(ChiID)%donor_domain_g%at(idonor),       &
-                               idomain_l    = mesh(idomain_l)%chimera%recv%data(ChiID)%donor_domain_l%at(idonor),       &
-                               ielement_g   = mesh(idomain_l)%chimera%recv%data(ChiID)%donor_element_g%at(idonor),      &
-                               ielement_l   = mesh(idomain_l)%chimera%recv%data(ChiID)%donor_element_l%at(idonor),      &
-                               neqns        = mesh(idomain_l)%chimera%recv%data(ChiID)%donor_neqns%at(idonor),          &
-                               nterms_s     = mesh(idomain_l)%chimera%recv%data(ChiID)%donor_nterms_s%at(idonor),       &
-                               iproc        = mesh(idomain_l)%chimera%recv%data(ChiID)%donor_proc%at(idonor),           &
-                               recv_comm    = mesh(idomain_l)%chimera%recv%data(ChiID)%donor_recv_comm%at(idonor),      &
-                               recv_domain  = mesh(idomain_l)%chimera%recv%data(ChiID)%donor_recv_domain%at(idonor),    &
-                               recv_element = mesh(idomain_l)%chimera%recv%data(ChiID)%donor_recv_element%at(idonor) )
-
-
-            !
-            ! Boudnary face, linearize wrt Current element
-            !
-            elseif ( boundary_face ) then
+            if ( linearize_me ) then
 
                 call seed%init(idomain_g    = mesh(idomain_l)%elems(ielement_l)%idomain_g,  &
                                idomain_l    = mesh(idomain_l)%elems(ielement_l)%idomain_l,  &
@@ -557,17 +507,103 @@ contains
 
 
             !
-            ! Invalid Case
+            ! Check for linearization of neighbor element (neighbor of face(ielem,iface) )
             !
+            elseif ( linearize_neighbor ) then
+
+                !
+                ! Check face in the direction of iblk
+                !
+                iface = iblk
+
+                !
+                ! Check if linearization direction (iface) is a Interior or Chimera face
+                !
+                chimera_face  = ( mesh(idomain_l)%faces(ielement_l,iface)%ftype == CHIMERA  )
+                interior_face = ( mesh(idomain_l)%faces(ielement_l,iface)%ftype == INTERIOR )
+                boundary_face = ( mesh(idomain_l)%faces(ielement_l,iface)%ftype == BOUNDARY )
+
+
+                !
+                ! Linearize wrt Standard Interior Neighbor
+                !
+                if ( interior_face ) then
+
+                    call seed%init(idomain_g    = mesh(idomain_l)%faces(ielement_l,iface)%ineighbor_domain_g,   &
+                                   idomain_l    = mesh(idomain_l)%faces(ielement_l,iface)%ineighbor_domain_l,   &
+                                   ielement_g   = mesh(idomain_l)%faces(ielement_l,iface)%ineighbor_element_g,  &
+                                   ielement_l   = mesh(idomain_l)%faces(ielement_l,iface)%ineighbor_element_l,  &
+                                   neqns        = mesh(idomain_l)%faces(ielement_l,iface)%ineighbor_neqns,      &
+                                   nterms_s     = mesh(idomain_l)%faces(ielement_l,iface)%ineighbor_nterms_s,   &
+                                   iproc        = mesh(idomain_l)%faces(ielement_l,iface)%ineighbor_proc,       &
+                                   recv_comm    = mesh(idomain_l)%faces(ielement_l,iface)%recv_comm,            &
+                                   recv_domain  = mesh(idomain_l)%faces(ielement_l,iface)%recv_domain,          &
+                                   recv_element = mesh(idomain_l)%faces(ielement_l,iface)%recv_element)
+
+
+                !
+                ! Linearize wrt Chimera Interior Neighbor
+                !
+                elseif ( chimera_face ) then
+                    ChiID = mesh(idomain_l)%faces(ielement_l,iface)%ChiID
+
+                    call seed%init(idomain_g    = mesh(idomain_l)%chimera%recv%data(ChiID)%donor_domain_g%at(idepend),       &
+                                   idomain_l    = mesh(idomain_l)%chimera%recv%data(ChiID)%donor_domain_l%at(idepend),       &
+                                   ielement_g   = mesh(idomain_l)%chimera%recv%data(ChiID)%donor_element_g%at(idepend),      &
+                                   ielement_l   = mesh(idomain_l)%chimera%recv%data(ChiID)%donor_element_l%at(idepend),      &
+                                   neqns        = mesh(idomain_l)%chimera%recv%data(ChiID)%donor_neqns%at(idepend),          &
+                                   nterms_s     = mesh(idomain_l)%chimera%recv%data(ChiID)%donor_nterms_s%at(idepend),       &
+                                   iproc        = mesh(idomain_l)%chimera%recv%data(ChiID)%donor_proc%at(idepend),           &
+                                   recv_comm    = mesh(idomain_l)%chimera%recv%data(ChiID)%donor_recv_comm%at(idepend),      &
+                                   recv_domain  = mesh(idomain_l)%chimera%recv%data(ChiID)%donor_recv_domain%at(idepend),    &
+                                   recv_element = mesh(idomain_l)%chimera%recv%data(ChiID)%donor_recv_element%at(idepend) )
+
+
+                !
+                ! Boudnary face, linearize wrt Current element
+                !
+                elseif ( boundary_face ) then
+
+                    call seed%init(idomain_g    = mesh(idomain_l)%elems(ielement_l)%idomain_g,  &
+                                   idomain_l    = mesh(idomain_l)%elems(ielement_l)%idomain_l,  &
+                                   ielement_g   = mesh(idomain_l)%elems(ielement_l)%ielement_g, &
+                                   ielement_l   = mesh(idomain_l)%elems(ielement_l)%ielement_l, &
+                                   neqns        = mesh(idomain_l)%elems(ielement_l)%neqns,      &
+                                   nterms_s     = mesh(idomain_l)%elems(ielement_l)%nterms_s,   &
+                                   iproc        = IRANK,                                        &
+                                   recv_comm    = 0,                                            &
+                                   recv_domain  = 0,                                            &
+                                   recv_element = 0)
+
+
+                !
+                ! Invalid Case
+                !
+                else
+                    call chidg_signal(FATAL,"element_compute_seed: invalid face type - face(ielem,iface)%ftype")
+                end if
+
+
             else
-                call chidg_signal(FATAL,"element_compute_seed: invalid face type - face(ielem,iface)%ftype")
+                call chidg_signal(FATAL,"element_compute_seed: invalid value for iface")
             end if
 
-
         else
-            call chidg_signal(FATAL,"element_compute_seed: invalid value for iface")
-        end if
 
+            ! If idepend == 0 then no linearization. 
+            call seed%init(idomain_g    = 0, &
+                           idomain_l    = 0, &
+                           ielement_g   = 0, &
+                           ielement_l   = 0, &
+                           neqns        = 0, &
+                           nterms_s     = 0, &
+                           iproc        = 0, &
+                           recv_comm    = 0, &
+                           recv_domain  = 0, &
+                           recv_element = 0)
+
+
+        end if
 
 
 

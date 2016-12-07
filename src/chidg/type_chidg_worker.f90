@@ -31,7 +31,8 @@ module type_chidg_worker
     use mod_kinds,          only: ik, rk
     use mod_constants,      only: NFACES, ME, NEIGHBOR, BC, ZERO
     use mod_interpolate,    only: interpolate_element_standard, &
-                                  interpolate_face_standard
+                                  interpolate_face_standard,    &
+                                  interpolate_face_autodiff
 
     use mod_integrate,      only: integrate_boundary_scalar_flux, &
                                   integrate_volume_vector_flux,   &
@@ -703,11 +704,11 @@ contains
         character(*),           intent(in)  :: interp_type
         character(*),           intent(in)  :: interp_source
 
-        character(:),   allocatable :: user_msg
+        character(:),   allocatable :: user_msg, cache_component
         type(AD_D),     allocatable :: var_gq_ad(:)
         real(rk),       allocatable :: var_gq(:)
 
-        integer(ik) :: ifield, ieqn
+        integer(ik) :: ifield, ieqn, source
 
 
         !
@@ -728,7 +729,7 @@ contains
         !
         if (interp_source == 'face interior') then
             source = ME
-        else if (interp_source == 'face exterior' .or. &
+        else if (interp_source == 'face exterior') then 
             source = NEIGHBOR
             cache_component = 'face exterior'
 

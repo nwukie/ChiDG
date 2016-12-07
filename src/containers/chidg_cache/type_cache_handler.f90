@@ -51,8 +51,15 @@ module type_cache_handler
         procedure   :: update_lift
         procedure   :: update_models
 
-        procedure   :: update_lift_faces_internal
-        procedure   :: update_lift_faces_external
+        procedure   :: update_value_primary_interior
+        procedure   :: update_value_primary_exterior
+!        procedure   :: update_value_auxiliary_interior
+!        procedure   :: update_value_auxiliary_exterior
+!        procedure   :: update_value_model_interior
+!        procedure   :: update_value_model_exterior
+
+        procedure, private :: update_lift_faces_internal
+        procedure, private :: update_lift_faces_external
 
     end type cache_handler_t
     !****************************************************************************************
@@ -160,22 +167,7 @@ contains
             !
             ! Face interior state. 'values' only depends on interior element.
             !
-            idepend = 1
-
-            do ieqn = 1,worker%mesh(idomain_l)%neqns
-
-                worker%function_info%seed    = face_compute_seed(worker%mesh,idomain_l,ielement_l,iface,idepend,DIAG)
-                worker%function_info%idepend = idepend
-                worker%function_info%idiff   = DIAG
-
-                ! Interpolate modes to nodes
-                value_gq = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,worker%face_info(),worker%function_info,ieqn,'value',ME)
-
-                ! Store gq data in cache
-                field = worker%prop(idomain_l)%get_primary_field_name(ieqn)
-                call worker%cache%set_data(field,'face interior',value_gq,'value',0,worker%function_info%seed,iface)
-
-            end do !ieqn
+            call self%update_value_primary_interior(worker,equation_set,bc_set)
 
 
 
@@ -630,6 +622,114 @@ contains
 
 
 
+
+
+
+
+
+
+
+    !>  Update the primary field 'value', 'face interior' cache entries.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   12/7/2016
+    !!
+    !!
+    !------------------------------------------------------------------------------------------------
+    subroutine update_value_primary_interior(self,worker,equation_set,bc_set)
+        class(cache_handler_t),     intent(inout)   :: self
+        type(chidg_worker_t),       intent(inout)   :: worker
+        type(equation_set_t),       intent(inout)   :: equation_set(:)
+        type(bcset_t),              intent(inout)   :: bc_set(:)
+
+        integer(ik)                 :: idepend, ieqn, idomain_l, ielement_l, iface
+        character(:),   allocatable :: field
+        type(AD_D),     allocatable :: value_gq(:)
+
+
+        idomain_l  = worker%element_info%idomain_l 
+        ielement_l = worker%element_info%ielement_l 
+        iface      = worker%iface
+
+        !
+        ! Face interior state. 'values' only depends on interior element.
+        !
+        idepend = 1
+
+        do ieqn = 1,worker%mesh(idomain_l)%neqns
+
+            worker%function_info%seed    = face_compute_seed(worker%mesh,idomain_l,ielement_l,iface,idepend,DIAG)
+            worker%function_info%idepend = idepend
+            worker%function_info%idiff   = DIAG
+
+            ! Interpolate modes to nodes
+            value_gq = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,worker%face_info(),worker%function_info,ieqn,'value',ME)
+
+            ! Store gq data in cache
+            field = worker%prop(idomain_l)%get_primary_field_name(ieqn)
+            call worker%cache%set_data(field,'face interior',value_gq,'value',0,worker%function_info%seed,iface)
+
+        end do !ieqn
+
+
+
+    end subroutine update_value_primary_interior
+    !*************************************************************************************************
+
+
+
+
+
+
+
+
+
+    !>  Update the primary field 'value', 'face exterior' cache entries.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   12/7/2016
+    !!
+    !!
+    !------------------------------------------------------------------------------------------------
+    subroutine update_value_primary_exterior(self,worker,equation_set,bc_set)
+        class(cache_handler_t),     intent(inout)   :: self
+        type(chidg_worker_t),       intent(inout)   :: worker
+        type(equation_set_t),       intent(inout)   :: equation_set(:)
+        type(bcset_t),              intent(inout)   :: bc_set(:)
+
+        integer(ik)                 :: idepend, ieqn, idomain_l, ielement_l, iface
+        character(:),   allocatable :: field
+        type(AD_D),     allocatable :: value_gq(:)
+
+
+        idomain_l  = worker%element_info%idomain_l 
+        ielement_l = worker%element_info%ielement_l 
+        iface      = worker%iface
+
+        !
+        ! Face interior state. 'values' only depends on interior element.
+        !
+        idepend = 1
+
+        do ieqn = 1,worker%mesh(idomain_l)%neqns
+
+            worker%function_info%seed    = face_compute_seed(worker%mesh,idomain_l,ielement_l,iface,idepend,DIAG)
+            worker%function_info%idepend = idepend
+            worker%function_info%idiff   = DIAG
+
+            ! Interpolate modes to nodes
+            value_gq = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,worker%face_info(),worker%function_info,ieqn,'value',ME)
+
+            ! Store gq data in cache
+            field = worker%prop(idomain_l)%get_primary_field_name(ieqn)
+            call worker%cache%set_data(field,'face interior',value_gq,'value',0,worker%function_info%seed,iface)
+
+        end do !ieqn
+
+
+
+    end subroutine update_value_primary_exterior
+    !*************************************************************************************************
 
 
 
